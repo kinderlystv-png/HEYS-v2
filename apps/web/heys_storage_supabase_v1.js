@@ -3294,6 +3294,71 @@
                 logCritical(`🎮 [GAME] MERGED: XP ${localTotalXP} → ${remoteTotalXP}, achievements: ${mergedAchievements.length}`);
               }
             }
+            
+            // 🛡️ ЗАЩИТА WIDGET LAYOUT: Не затираем локальный layout облачным с более старым updatedAt
+            // Widget layout — критичные данные, потеря = сброс настроек пользователя
+            // Проверяем ТОЛЬКО основной layout, НЕ meta (widget_layout_meta_v1)
+            if (key.includes('widget_layout_v1') && !key.includes('_meta_')) {
+              // Извлекаем updatedAt из обоих источников
+              // Новый формат: { widgets: [...], updatedAt: number }
+              // Старый формат: прямой массив (нет updatedAt)
+              const remoteHasUpdatedAt = row.v && typeof row.v.updatedAt === 'number';
+              const localHasUpdatedAt = local && typeof local.updatedAt === 'number';
+              
+              // Количество виджетов (для логирования)
+              const remoteWidgetCount = row.v?.widgets?.length || (Array.isArray(row.v) ? row.v.length : 0);
+              const localWidgetCount = local?.widgets?.length || (Array.isArray(local) ? local.length : 0);
+              
+              // Если локальный layout новее — НЕ затираем
+              if (localHasUpdatedAt && remoteHasUpdatedAt && local.updatedAt >= row.v.updatedAt) {
+                logCritical(`🧩 [WIDGET LAYOUT] KEEP LOCAL: local.updatedAt (${local.updatedAt}) >= remote.updatedAt (${row.v.updatedAt})`);
+                logCritical(`   Local: ${localWidgetCount} widgets, Remote: ${remoteWidgetCount} widgets`);
+                return; // Пропускаем сохранение — локальные данные актуальнее
+              }
+              
+              // Если локальный имеет updatedAt, а remote — нет (старый формат в облаке)
+              if (localHasUpdatedAt && !remoteHasUpdatedAt) {
+                logCritical(`🧩 [WIDGET LAYOUT] KEEP LOCAL: local has updatedAt (${local.updatedAt}), remote is legacy format`);
+                logCritical(`   Local: ${localWidgetCount} widgets, Remote: ${remoteWidgetCount} widgets`);
+                // Отправим локальные в облако чтобы обновить формат
+                const upsertObj = {
+                  user_id: user.id,
+                  client_id: client_id,
+                  k: normalizeKeyForSupabase(row.k, client_id),
+                  v: local, // Отправляем локальные данные в новом формате
+                  updated_at: (new Date()).toISOString(),
+                };
+                clientUpsertQueue.push(upsertObj);
+                scheduleClientPush();
+                return; // Пропускаем сохранение remote
+              }
+              
+              // Если оба без updatedAt (старый формат) — не трогаем, пусть будет как есть
+              // Это позволит избежать потери данных при миграции
+              if (!localHasUpdatedAt && !remoteHasUpdatedAt && localWidgetCount > 0) {
+                logCritical(`🧩 [WIDGET LAYOUT] KEEP LOCAL: both legacy format, preserving ${localWidgetCount} local widgets`);
+                return;
+              }
+              
+              // 🛡️ КРИТИЧНО: Если локальный layout имеет данные с updatedAt, а remote пустой или без данных — KEEP LOCAL!
+              // Это предотвращает затирание данных пустым ответом из облака
+              if (localHasUpdatedAt && localWidgetCount > 0 && remoteWidgetCount === 0) {
+                logCritical(`🧩 [WIDGET LAYOUT] KEEP LOCAL: local has ${localWidgetCount} widgets with updatedAt, remote is EMPTY`);
+                // Отправим локальные в облако чтобы восстановить данные
+                const upsertObj = {
+                  user_id: user.id,
+                  client_id: client_id,
+                  k: normalizeKeyForSupabase(row.k, client_id),
+                  v: local, // Отправляем локальные данные
+                  updated_at: (new Date()).toISOString(),
+                };
+                clientUpsertQueue.push(upsertObj);
+                scheduleClientPush();
+                return; // Пропускаем сохранение пустого remote
+              }
+              
+              logCritical(`🧩 [WIDGET LAYOUT] ACCEPTING REMOTE: ${remoteWidgetCount} widgets (updatedAt: ${row.v?.updatedAt || 'none'})`);
+            }
           }
           
           // ЗАЩИТА И MERGE: Умное объединение продуктов (не затираем локальные)
@@ -3580,6 +3645,16 @@
             if (dateMatch) {
               window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: dateMatch[1], source: 'cloud-sync' } }));
               log(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (cloud-sync)`);
+            }
+          }
+          
+          // 🧩 Dispatch event for widget_layout updates (для виджетов)
+          if (key.includes('widget_layout')) {
+            if (typeof window !== 'undefined' && window.dispatchEvent) {
+              logCritical(`🧩 [EVENT] heys:widget-layout-updated dispatched (cloud-sync)`);
+              window.dispatchEvent(new CustomEvent('heys:widget-layout-updated', { 
+                detail: { layout: valueToSave, source: 'cloud-sync' } 
+              }));
             }
           }
           

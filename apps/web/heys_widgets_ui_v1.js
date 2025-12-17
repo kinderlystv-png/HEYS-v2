@@ -290,15 +290,22 @@
     const endResizeDrag = useCallback((reason = 'up') => {
       const ref = resizeDragRef.current;
       
-      // Сбрасываем глобальный флаг resize
+      // КРИТИЧНО: Проверяем ref.active ПЕРЕД сбросом флага!
+      if (!ref.active) return;
+      
+      // Сбрасываем ref.active СРАЗУ чтобы повторные вызовы игнорились
+      ref.active = false;
+      
+      // И только теперь сбрасываем глобальный флаг resize + очищаем safety timeout
       try {
         if (HEYS.Widgets.dnd) {
           HEYS.Widgets.dnd._resizeActive = false;
+          if (HEYS.Widgets.dnd._resizeTimeout) {
+            clearTimeout(HEYS.Widgets.dnd._resizeTimeout);
+            HEYS.Widgets.dnd._resizeTimeout = null;
+          }
         }
       } catch (err) { /* ignore */ }
-      
-      if (!ref.active) return;
-      ref.active = false;
       ref.startedAt = null; // Сбрасываем timestamp для следующего resize
 
       // Коммитим только если реально выбран другой размер
@@ -357,35 +364,39 @@
 
     // Стартует resize drag (вызывается из onPointerDown или onTouchStart)
     const startResizeDrag = useCallback((direction, e, isTouchEvent = false) => {
-      if (!isEditMode) {
-        return;
-      }
+      if (!isEditMode) return;
       
       const ref = resizeDragRef.current;
       const now = Date.now();
       
       // Защита от двойного вызова (pointerdown + touchstart на одно касание)
-      // Если resize стартовал менее 100ms назад — игнорируем
-      if (ref?.startedAt && now - ref.startedAt < 100) {
-        return;
-      }
+      if (ref?.startedAt && now - ref.startedAt < 100) return;
       
       // Защита от повторного запуска resize пока предыдущий активен
-      if (ref?.active) {
-        return;
-      }
+      if (ref?.active) return;
       
       e.stopPropagation();
-      // Для pointer events вызываем preventDefault здесь
-      // Для touch events preventDefault уже вызван в native listener (с { passive: false })
-      if (!isTouchEvent) {
-        e.preventDefault();
-      }
+      if (!isTouchEvent) e.preventDefault();
+
+      // КРИТИЧНО: Устанавливаем ref.active СРАЗУ после проверок
+      ref.active = true;
+      ref.startedAt = now;
 
       // CRITICAL: Устанавливаем глобальный флаг чтобы DnD не перехватывал события
       try {
         if (HEYS.Widgets.dnd) {
           HEYS.Widgets.dnd._resizeActive = true;
+          
+          // Safety timeout: сбросить флаг через 5 секунд если resize завис
+          if (HEYS.Widgets.dnd._resizeTimeout) {
+            clearTimeout(HEYS.Widgets.dnd._resizeTimeout);
+          }
+          HEYS.Widgets.dnd._resizeTimeout = setTimeout(() => {
+            if (HEYS.Widgets.dnd?._resizeActive) {
+              console.log('[Widgets UI] Safety timeout: resetting _resizeActive');
+              HEYS.Widgets.dnd._resizeActive = false;
+            }
+          }, 5000);
         }
         // Отменяем DnD если он уже начался
         if (HEYS.Widgets.dnd?.isDragging?.()) {
@@ -409,9 +420,7 @@
       const currentCols = sizeInfo?.cols || widget.cols || 1;
       const currentRows = sizeInfo?.rows || widget.rows || 1;
 
-      // ref уже объявлен выше (строка 336)
-      ref.active = true;
-      ref.startedAt = now; // Для debounce защиты от двойного вызова
+      // ref.active и ref.startedAt уже установлены выше
       ref.pointerId = isTouchEvent ? 'touch' : (e.pointerId ?? null);
       ref.isTouchBased = isTouchEvent;
       ref.direction = direction;
@@ -505,7 +514,8 @@
         };
 
         ref.touchEndHandler = () => {
-          ref.active = false; // ВАЖНО: сбрасываем active при touchend
+          // НЕ сбрасываем ref.active здесь! endResizeDrag сам сбросит
+          // ref.active = false; // УБРАНО - вызывало race condition
           ref.startedAt = null; // Сбрасываем timestamp
           if (ref.touchMoveHandler) {
             // CRITICAL: удаляем с теми же options что и добавляли (capture: true)
@@ -957,6 +967,23 @@
         }
       });
       
+      // 🆕 Оптимистичное обновление для виджета воды
+      // Слушаем DOM событие heysWaterAdded которое содержит актуальные данные (total)
+      // Это решает проблему debounce 500ms в useDayAutosave
+      const handleWaterAdded = (e) => {
+        if (widget.type !== 'water') return;
+        const { total, ml } = e.detail || {};
+        if (typeof total === 'number') {
+          // Оптимистично обновляем данные с актуальным total
+          setData(prev => ({
+            ...prev,
+            drunk: total,
+            pct: prev.target > 0 ? Math.round((total / prev.target) * 100) : 0
+          }));
+        }
+      };
+      window.addEventListener('heysWaterAdded', handleWaterAdded);
+      
       return () => {
         unsubData?.();
         heysEvents.forEach(evt => {
@@ -964,6 +991,7 @@
             HEYS.events.off(evt, loadData);
           }
         });
+        window.removeEventListener('heysWaterAdded', handleWaterAdded);
       };
     }, [widget.id, widget.type]);
     
@@ -2533,6 +2561,7 @@
     const [catalogOpen, setCatalogOpen] = useState(false);
     const [settingsWidget, setSettingsWidget] = useState(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
+    const [waterAnim, setWaterAnim] = useState(null); // '+200ml' или null
     const containerRef = useRef(null);
     const gridRef = useRef(null);
 
@@ -2583,6 +2612,19 @@
         HEYS.Widgets.data._selectedDate = selectedDate;
       }
     }, [selectedDate]);
+    
+    // 🔄 Реинициализация виджетов при смене клиента
+    // Критично: каждый клиент имеет свой layout виджетов!
+    useEffect(() => {
+      if (clientId) {
+        console.log(`[WidgetsTab] clientId changed: "${clientId.slice(0,8)}...", reinitializing widgets`);
+        // Передаём clientId явно, т.к. HEYS.currentClientId может ещё не обновиться (race condition)
+        HEYS.Widgets.state?.reinit?.(clientId);
+        // Обновляем локальный state после reinit
+        setWidgets(HEYS.Widgets.state?.getWidgets?.() || []);
+        updateHistoryInfo();
+      }
+    }, [clientId]);
     
     // Initialize and subscribe to state changes
     useEffect(() => {
@@ -2723,6 +2765,71 @@
       }, 600);
     }, [setTab]);
     
+    // 💧 Добавить воду БЕЗ переключения вкладки — анимация прямо здесь
+    const handleAddWater = useCallback((ml = 200) => {
+      // Сначала показываем локальную анимацию
+      setWaterAnim('+' + ml + 'мл');
+      
+      // Вибрация
+      if (navigator.vibrate) navigator.vibrate(50);
+      
+      // Вызываем HEYS.Day.addWater напрямую (skipScroll=true, чтобы не скроллить)
+      const addWaterFn = window.HEYS?.Day?.addWater;
+      if (typeof addWaterFn === 'function') {
+        try {
+          addWaterFn(ml, true); // skipScroll = true
+          // 🔴 КРИТИЧНО: Принудительно сохраняем данные в localStorage ПЕРЕД отправкой события!
+          // Иначе виджеты прочитают старые данные (debounce 500ms в useDayAutosave)
+          if (typeof HEYS.Day?.requestFlush === 'function') {
+            HEYS.Day.requestFlush();
+          }
+          // Отправляем событие для обновления виджетов (с небольшой задержкой для гарантии записи)
+          setTimeout(() => {
+            if (typeof HEYS.events?.emit === 'function') {
+              HEYS.events.emit('water:added', { ml });
+            }
+          }, 50);
+        } catch (e) {
+          // silent
+        }
+      } else {
+        // Fallback: если Day еще не смонтирован, сохраняем напрямую в localStorage
+        try {
+          const dateKey = selectedDate || new Date().toISOString().slice(0, 10);
+          // heys_client_current хранится как JSON-строка, нужно распарсить
+          let clientCurrent = '';
+          try {
+            const raw = localStorage.getItem('heys_client_current');
+            clientCurrent = raw ? JSON.parse(raw) : '';
+          } catch (e) {
+            clientCurrent = localStorage.getItem('heys_client_current') || '';
+          }
+          const storageKey = clientCurrent 
+            ? `heys_${clientCurrent}_dayv2_${dateKey}` 
+            : `heys_dayv2_${dateKey}`;
+          const dayData = JSON.parse(localStorage.getItem(storageKey) || '{}');
+          dayData.waterMl = (dayData.waterMl || 0) + ml;
+          dayData.lastWaterTime = Date.now();
+          dayData.updatedAt = Date.now();
+          localStorage.setItem(storageKey, JSON.stringify(dayData));
+          
+          // Dispatch event для синхронизации других компонентов
+          window.dispatchEvent(new CustomEvent('heysWaterAdded', { 
+            detail: { ml, total: dayData.waterMl } 
+          }));
+          // Также отправляем событие для виджетов
+          if (typeof HEYS.events?.emit === 'function') {
+            HEYS.events.emit('water:added', { ml, total: dayData.waterMl });
+          }
+        } catch (e) {
+          // silent
+        }
+      }
+      
+      // Скрыть анимацию через 800мс
+      setTimeout(() => setWaterAnim(null), 800);
+    }, [selectedDate]);
+    
     // Undo/Redo handlers
     const handleUndo = useCallback(() => {
       HEYS.Widgets.undo?.();
@@ -2838,9 +2945,14 @@
           }, '🍽️'),
           React.createElement('button', {
             className: 'water-fab',
-            onClick: () => goToDayAndRun('stats', 'addWater', [200]),
+            onClick: () => handleAddWater(200),
             'aria-label': 'Добавить стакан воды'
-          }, '🥛')
+          }, '🥛'),
+          // 💧 Анимация добавления воды
+          waterAnim && React.createElement('div', {
+            className: 'water-fab-anim',
+            key: Date.now() // Force re-render for animation
+          }, waterAnim)
         )
       )
     );

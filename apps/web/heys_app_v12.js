@@ -3227,7 +3227,77 @@ const HEYS = window.HEYS = window.HEYS || {};
           }
 
           function App() {
+            // === DEFAULT TAB ===
+            // Читаем домашнюю вкладку из профиля (по умолчанию 'stats')
+            const getDefaultTabFromProfile = () => {
+              const U = window.HEYS?.utils;
+              const profile = U?.lsGet?.('heys_profile', {}) || {};
+              const validTabs = ['widgets', 'stats', 'diary', 'insights'];
+              const savedTab = validTabs.includes(profile.defaultTab) ? profile.defaultTab : 'stats';
+              return savedTab;
+            };
+            
+            const [defaultTab, setDefaultTabState] = useState('stats');
             const [tab, setTab] = useState('stats');
+            const [initialTabLoaded, setInitialTabLoaded] = useState(false);
+            
+            // Читаем defaultTab из профиля ПОСЛЕ загрузки HEYS.utils
+            useEffect(() => {
+              if (initialTabLoaded) return;
+              
+              const tryLoadDefaultTab = () => {
+                const U = window.HEYS?.utils;
+                if (!U?.lsGet) return false;
+                
+                const savedTab = getDefaultTabFromProfile();
+                console.log(`[App] 🏠 Loading default tab from profile: ${savedTab}`);
+                setDefaultTabState(savedTab);
+                setTab(savedTab);
+                setInitialTabLoaded(true);
+                return true;
+              };
+              
+              // Пробуем сразу
+              if (tryLoadDefaultTab()) return;
+              
+              // Если не загрузился, ждём событие heysReady или таймаут
+              const handleReady = () => tryLoadDefaultTab();
+              window.addEventListener('heysReady', handleReady);
+              
+              // Также пробуем через небольшие интервалы
+              const interval = setInterval(() => {
+                if (tryLoadDefaultTab()) clearInterval(interval);
+              }, 100);
+              
+              // Cleanup
+              const timeout = setTimeout(() => {
+                clearInterval(interval);
+                if (!initialTabLoaded) {
+                  tryLoadDefaultTab();
+                  setInitialTabLoaded(true);
+                }
+              }, 2000);
+              
+              return () => {
+                window.removeEventListener('heysReady', handleReady);
+                clearInterval(interval);
+                clearTimeout(timeout);
+              };
+            }, [initialTabLoaded]);
+            
+            // Функция для установки домашней вкладки (сохраняет в профиль и облако)
+            const setDefaultTab = useCallback((newDefaultTab) => {
+              const validTabs = ['widgets', 'stats', 'diary', 'insights'];
+              if (!validTabs.includes(newDefaultTab)) return;
+              
+              const U = window.HEYS?.utils;
+              const profile = U?.lsGet?.('heys_profile', {}) || {};
+              const updatedProfile = { ...profile, defaultTab: newDefaultTab };
+              U?.lsSet?.('heys_profile', updatedProfile);
+              setDefaultTabState(newDefaultTab);
+              
+              console.log(`[App] 🏠 Default tab changed to: ${newDefaultTab}`);
+            }, []);
             
             // Экспортируем setTab для доступа из DayTab (FAB)
             useEffect(() => {
@@ -3235,13 +3305,17 @@ const HEYS = window.HEYS = window.HEYS || {};
               window.HEYS.App = window.HEYS.App || {};
               window.HEYS.App.setTab = setTab;
               window.HEYS.App.getTab = () => tab;
+              window.HEYS.App.getDefaultTab = () => defaultTab;
+              window.HEYS.App.setDefaultTab = setDefaultTab;
               return () => {
                 if (window.HEYS?.App) {
                   delete window.HEYS.App.setTab;
                   delete window.HEYS.App.getTab;
+                  delete window.HEYS.App.getDefaultTab;
+                  delete window.HEYS.App.setDefaultTab;
                 }
               };
-            }, [tab, setTab]);
+            }, [tab, setTab, defaultTab, setDefaultTab]);
             
             const { theme, resolvedTheme, cycleTheme } = useThemePreference();
             useEffect(() => {
@@ -3304,6 +3378,26 @@ const HEYS = window.HEYS = window.HEYS || {};
             });
             // ...все остальные useState...
             // useEffect автосмены клиента — ниже всех useState!
+            
+            // === WIDGETS EDIT MODE TRACKING ===
+            // Отслеживаем режим редактирования виджетов для индикатора "домика" в нижнем меню
+            const [widgetsEditMode, setWidgetsEditMode] = useState(false);
+            useEffect(() => {
+              // Слушаем события режима редактирования виджетов
+              const handleEditEnter = () => setWidgetsEditMode(true);
+              const handleEditExit = () => setWidgetsEditMode(false);
+              
+              const unsubEnter = window.HEYS?.Widgets?.on?.('editmode:enter', handleEditEnter);
+              const unsubExit = window.HEYS?.Widgets?.on?.('editmode:exit', handleEditExit);
+              
+              // Проверяем текущее состояние при монтировании
+              setWidgetsEditMode(window.HEYS?.Widgets?.state?.isEditMode?.() || false);
+              
+              return () => {
+                unsubEnter?.();
+                unsubExit?.();
+              };
+            }, []);
             
             // === SWIPE NAVIGATION ===
             // Свайп работает только между 4 вкладками переключателя (по кругу)
@@ -3770,12 +3864,15 @@ const HEYS = window.HEYS = window.HEYS || {};
               [clientId, listDayKeysForClient, setProducts, setSyncVer],
             );
 
-            // Автопереключение на вкладку статистики дня при выборе клиента
+            // Автопереключение на домашнюю вкладку при выборе клиента
             // (пропускаем если это PWA shortcut action)
             const skipTabSwitchRef = useRef(false);
             useEffect(() => {
-              if (clientId && !skipTabSwitchRef.current) setTab('stats');
-            }, [clientId]);
+              if (clientId && !skipTabSwitchRef.current) {
+                // Используем сохранённую домашнюю вкладку вместо захардкоженной 'stats'
+                setTab(defaultTab);
+              }
+            }, [clientId, defaultTab]);
 
             // === PWA Shortcut: обработка ?action=add-meal ===
             useEffect(() => {
@@ -5413,13 +5510,20 @@ const HEYS = window.HEYS = window.HEYS || {};
                 ),
                 React.createElement(
                   'div',
-                  { className: 'tabs' },
-                  // Рацион — доступен на всех устройствах
+                  { className: 'tabs' + (widgetsEditMode ? ' tabs--edit-mode' : '') },
+                  // Подсказка в режиме редактирования (внутри tabs для абсолютного позиционирования)
+                  widgetsEditMode && React.createElement(
+                    'div',
+                    { className: 'default-tab-hint' },
+                    React.createElement('span', { className: 'default-tab-hint__icon' }, '🏠'),
+                    React.createElement('span', { className: 'default-tab-hint__text' }, 'Нажми на вкладку, чтобы сделать её домашней'),
+                  ),
+                  // Рацион — доступен на всех устройствах (не домашняя)
                   React.createElement(
                     'div',
                     {
-                      className: 'tab ' + (tab === 'ration' ? 'active' : ''),
-                      onClick: () => setTab('ration'),
+                      className: 'tab ' + (tab === 'ration' ? 'active' : '') + (widgetsEditMode ? ' tab--disabled-home' : ''),
+                      onClick: () => !widgetsEditMode && setTab('ration'),
                     },
                     React.createElement('span', { className: 'tab-icon' }, '📦'),
                     React.createElement('span', { className: 'tab-text' }, 'База'),
@@ -5428,12 +5532,17 @@ const HEYS = window.HEYS = window.HEYS || {};
                   React.createElement(
                     'div',
                     {
-                      className: 'tab ' + (tab === 'widgets' ? 'active' : ''),
+                      className: 'tab ' + (tab === 'widgets' ? 'active' : '') + (widgetsEditMode ? ' tab--home-candidate' : '') + (widgetsEditMode && defaultTab === 'widgets' ? ' default-tab-indicator' : ''),
                       onClick: () => {
-                        window.HEYS?.debugPanel?.handleTap();
+                        if (widgetsEditMode) {
+                          setDefaultTab('widgets');
+                        } else {
+                          window.HEYS?.debugPanel?.handleTap();
+                        }
                         setTab('widgets');
                       },
                     },
+                    widgetsEditMode && defaultTab === 'widgets' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
                     React.createElement('span', { className: 'tab-icon' }, '🎛️'),
                     React.createElement('span', { className: 'tab-text' }, 'Виджеты'),
                   ),
@@ -5447,27 +5556,40 @@ const HEYS = window.HEYS = window.HEYS || {};
                       React.createElement(
                         'div',
                         {
-                          className: 'tab tab-switch ' + (tab === 'stats' ? 'active' : ''),
-                          onClick: () => setTab('stats'),
+                          className: 'tab tab-switch ' + (tab === 'stats' ? 'active' : '') + (widgetsEditMode && defaultTab === 'stats' ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
+                          onClick: () => {
+                            if (widgetsEditMode) setDefaultTab('stats');
+                            setTab('stats');
+                          },
                         },
+                        // Индикатор домика в режиме редактирования виджетов
+                        widgetsEditMode && defaultTab === 'stats' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
                         React.createElement('span', { className: 'tab-icon' }, '📊'),
                         React.createElement('span', { className: 'tab-text' }, 'Итоги'),
                       ),
                       React.createElement(
                         'div',
                         {
-                          className: 'tab tab-switch ' + (tab === 'diary' ? 'active' : ''),
-                          onClick: () => setTab('diary'),
+                          className: 'tab tab-switch ' + (tab === 'diary' ? 'active' : '') + (widgetsEditMode && defaultTab === 'diary' ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
+                          onClick: () => {
+                            if (widgetsEditMode) setDefaultTab('diary');
+                            setTab('diary');
+                          },
                         },
+                        widgetsEditMode && defaultTab === 'diary' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
                         React.createElement('span', { className: 'tab-icon' }, '🍴'),
                         React.createElement('span', { className: 'tab-text' }, 'Еда'),
                       ),
                       React.createElement(
                         'div',
                         {
-                          className: 'tab tab-switch ' + (tab === 'insights' ? 'active' : ''),
-                          onClick: () => setTab('insights'),
+                          className: 'tab tab-switch ' + (tab === 'insights' ? 'active' : '') + (widgetsEditMode && defaultTab === 'insights' ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
+                          onClick: () => {
+                            if (widgetsEditMode) setDefaultTab('insights');
+                            setTab('insights');
+                          },
                         },
+                        widgetsEditMode && defaultTab === 'insights' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
                         React.createElement('span', { className: 'tab-icon' }, '🔮'),
                         React.createElement('span', { className: 'tab-text' }, 'Инсайты'),
                       ),
@@ -5485,7 +5607,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                   React.createElement(
                     'div',
                     {
-                      className: 'tab tab-desktop-only ' + (tab === 'reports' ? 'active' : ''),
+                      className: 'tab tab-desktop-only ' + (tab === 'reports' ? 'active' : '') + (widgetsEditMode ? ' tab--disabled-home' : ''),
                       onClick: () => {
                         if (
                           window.HEYS &&
@@ -5507,7 +5629,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                   React.createElement(
                     'div',
                     {
-                      className: 'tab tab-advice',
+                      className: 'tab tab-advice' + (widgetsEditMode ? ' tab--disabled-home' : ''),
                       onClick: () => {
                         // Переключаемся на stats если не там, и показываем советы
                         if (tab !== 'stats' && tab !== 'diary') {
@@ -5524,7 +5646,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                   React.createElement(
                     'div',
                     {
-                      className: 'tab ' + (tab === 'user' ? 'active' : ''),
+                      className: 'tab ' + (tab === 'user' ? 'active' : '') + (widgetsEditMode ? ' tab--disabled-home' : ''),
                       onClick: () => setTab('user'),
                     },
                     React.createElement('span', { className: 'tab-icon' }, '⚙️'),
@@ -5705,6 +5827,21 @@ const HEYS = window.HEYS = window.HEYS || {};
                     onClick: dismissUpdateToast
                   }, '✕')
                 )
+              ),
+              // === FAB редактирования виджетов (глобальный, показывается на ВСЕХ вкладках в режиме редактирования) ===
+              widgetsEditMode && tab !== 'widgets' && React.createElement(
+                'div',
+                { className: 'widgets-fab-left widgets-fab-global' },
+                React.createElement('button', {
+                  className: 'widgets-edit-fab active',
+                  onClick: () => {
+                    // Выходим из режима редактирования
+                    if (window.HEYS?.Widgets?.toggleEditMode) {
+                      window.HEYS.Widgets.toggleEditMode();
+                    }
+                  },
+                  'aria-label': 'Завершить выбор домашней вкладки'
+                }, '✓')
               ),
             );
           }

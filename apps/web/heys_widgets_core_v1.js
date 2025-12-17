@@ -1,7 +1,7 @@
 /**
  * heys_widgets_core_v1.js
  * Ядро виджетов: Grid Engine, Drag & Drop, State Manager
- * Version: 1.2.0 — Phase 1: Core Engine + saveLayout fix
+ * Version: 1.3.0 — Phase 1: Core Engine + Cloud Sync Protection
  * Created: 2025-12-15
  * Updated: 2025-12-16
  * 
@@ -11,6 +11,12 @@
  * - Long press detection (500ms)
  * - Improved collision detection
  * - Debounced persistence
+ * 
+ * v1.3.0 FIX (2025-12-16):
+ * - saveLayout() теперь сохраняет { widgets, updatedAt } вместо простого массива
+ * - loadLayout() поддерживает оба формата (legacy array + new object)
+ * - Защита cloud sync: локальный layout не затирается облачным если локальный новее
+ * - Событие heys:widget-layout-updated для синхронизации после cloud sync
  * 
  * v1.2.0 FIX (2025-12-16):
  * - saveLayout() НЕ сохраняет пустой массив (предотвращает потерю данных)
@@ -89,13 +95,12 @@
       }
 
       if (saved && Array.isArray(saved) && saved.length > 0) {
-        // 🔍 DEBUG: логируем raw данные из storage
-        console.log('[Widgets Core] Loading from storage:', saved.map(w => ({
-          id: w.id?.substring(0, 20),
+        // 🔍 DEBUG: логируем raw данные из storage (JSON для раскрытия)
+        console.log('[Widgets Core] RAW from storage:', JSON.stringify(saved.map(w => ({
           type: w.type,
           size: w.size,
-          position: w.position
-        })));
+          pos: w.position
+        }))));
         this._widgets = saved.map(w => this._normalizeWidget(w));
       } else {
         this._widgets = this._createDefaultLayout();
@@ -118,6 +123,42 @@
         cols: w.cols,
         rows: w.rows
       })));
+    },
+
+    /**
+     * Полная реинициализация при смене клиента
+     * Сбрасывает состояние и загружает layout для нового clientId
+     * @param {string} [forClientId] - явный clientId (иначе берём из HEYS.currentClientId)
+     */
+    reinit(forClientId) {
+      // Используем переданный clientId, чтобы не зависеть от race condition с HEYS.currentClientId
+      const cid = forClientId || window.HEYS?.currentClientId || '';
+      console.log(`[Widgets Core] reinit: clientId="${cid ? cid.slice(0,8) + '...' : 'EMPTY!'}" (explicit: ${!!forClientId})`);
+      
+      // Сбрасываем флаг инициализации
+      this._initialized = false;
+      this._widgets = [];
+      this._history = [];
+      this._future = [];
+      
+      // Очищаем memory cache в HEYS.store для виджетов
+      if (HEYS.store?.invalidate) {
+        HEYS.store.invalidate(STORAGE_KEY);
+        HEYS.store.invalidate(STORAGE_META_KEY);
+      }
+      
+      // Временно устанавливаем clientId если передан явно (чтобы init() использовал правильный)
+      const prevClientId = window.HEYS?.currentClientId;
+      if (forClientId && window.HEYS) {
+        window.HEYS.currentClientId = forClientId;
+      }
+      
+      // Заново инициализируем (теперь с новым clientId)
+      this.init();
+      
+      // Восстанавливаем предыдущий clientId если он отличался (на случай если App ещё не обновил его)
+      // Это нужно только если init() зависит от HEYS.currentClientId внутри
+      // В текущей реализации HEYS.store.get() использует HEYS.currentClientId для scoping
     },
 
     /**
@@ -365,6 +406,11 @@
         : rawSizeId;
 
       const size = registry?.getSize(normalizedSizeId);
+      
+      // 🔍 DEBUG: если размер изменился при нормализации — логируем
+      if (rawSizeId !== normalizedSizeId || !w.size) {
+        console.log(`[Widgets Core] _normalizeWidget ${w.type}: raw=${w.size || 'undefined'} → normalized=${normalizedSizeId} (default=${type?.defaultSize})`);
+      }
       
       return {
         id: w.id || `widget_${w.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -651,11 +697,13 @@
      * @param {{col:number,row:number}|null} position
      */
     resizeWidgetAt(id, size, position = null) {
+      console.log(`[Widgets Core] resizeWidgetAt called: id=${id}, size=${size}, position=`, position);
       const widget = this.getWidget(id);
       if (!widget) return false;
 
       const registry = HEYS.Widgets.registry;
       const normalizedSize = registry?.normalizeSizeId ? (registry.normalizeSizeId(size) || size) : size;
+      console.log(`[Widgets Core] resizeWidgetAt: widget.type=${widget.type}, oldSize=${widget.size}, newSize=${normalizedSize}`);
       if (!registry.supportsSize(widget.type, normalizedSize)) {
         console.warn(`[Widgets Core] Widget ${widget.type} does not support size ${normalizedSize}`);
         return false;
@@ -691,7 +739,7 @@
         return;
       }
       
-      const layoutData = (Array.isArray(layoutOverride) && layoutOverride.length > 0)
+      const widgetsData = (Array.isArray(layoutOverride) && layoutOverride.length > 0)
         ? layoutOverride
         : this._widgets.map(w => ({
             id: w.id,
@@ -703,10 +751,20 @@
           }));
       
       // 🔧 FIX: Не сохраняем пустой layout (опасность потери данных)
-      if (!layoutData || layoutData.length === 0) {
-        console.warn('[Widgets Core] saveLayout skipped: empty layout');
+      if (!widgetsData || widgetsData.length === 0) {
+        console.warn('[Widgets Core] saveLayout skipped: empty widgets array');
         return;
       }
+      
+      // 🔧 Оборачиваем в объект с updatedAt для cloud sync conflict resolution
+      const layoutData = {
+        widgets: widgetsData,
+        updatedAt: Date.now()
+      };
+      
+      // 🔍 DEBUG: Проверяем clientId при сохранении
+      const cid = window.HEYS?.currentClientId || '';
+      console.log(`[Widgets Core] saveLayout: clientId="${cid ? cid.slice(0,8) + '...' : 'EMPTY!'}", widgets=${widgetsData.length}, key=${STORAGE_KEY}`);
       
       // Используем HEYS.store для cloud sync
       if (HEYS.store?.set) {
@@ -729,15 +787,38 @@
      * @returns {Object[]|null}
      */
     loadLayout() {
+      // 🔍 DEBUG: Проверяем clientId при загрузке
+      const cid = window.HEYS?.currentClientId || '';
+      console.log(`[Widgets Core] loadLayout: clientId="${cid ? cid.slice(0,8) + '...' : 'EMPTY!'}", key=${STORAGE_KEY}`);
+      
       try {
+        let stored = null;
         if (HEYS.store?.get) {
-          return HEYS.store.get(STORAGE_KEY, null);
+          stored = HEYS.store.get(STORAGE_KEY, null);
         } else if (HEYS.utils?.lsGet) {
-          return HEYS.utils.lsGet(STORAGE_KEY, null);
+          stored = HEYS.utils.lsGet(STORAGE_KEY, null);
         } else {
-          const stored = localStorage.getItem(STORAGE_KEY);
-          return stored ? JSON.parse(stored) : null;
+          const raw = localStorage.getItem(STORAGE_KEY);
+          stored = raw ? JSON.parse(raw) : null;
         }
+        
+        // 🔧 МИГРАЦИЯ: поддержка старого формата (массив) и нового (объект с updatedAt)
+        if (!stored) return null;
+        
+        // Новый формат: { widgets: [...], updatedAt: number }
+        if (stored.widgets && Array.isArray(stored.widgets)) {
+          console.log('[Widgets Core] loadLayout: new format, updatedAt =', stored.updatedAt);
+          return stored.widgets;
+        }
+        
+        // Старый формат: прямой массив виджетов
+        if (Array.isArray(stored)) {
+          console.log('[Widgets Core] loadLayout: legacy format (array), no updatedAt');
+          return stored;
+        }
+        
+        console.warn('[Widgets Core] loadLayout: unknown format', stored);
+        return null;
       } catch (e) {
         console.error('[Widgets Core] Failed to load layout:', e);
         return null;
@@ -793,6 +874,10 @@
     
     exitEditMode() {
       if (!this._editMode) return;
+      
+      // 🛡️ CRITICAL: Не выходить из edit mode если resize активен!
+      if (HEYS.Widgets.dnd?._resizeActive) return;
+      
       this._editMode = false;
       document.body.classList.remove('widgets-edit-mode');
       
@@ -886,9 +971,16 @@
      * 🆕 Вытеснить перекрывающиеся виджеты на свободные места
      * Вызывается после move/resize чтобы гарантировать отсутствие наложений
      * @param {string} priorityWidgetId - ID виджета который остаётся на месте
+     * @param {number} depth - глубина рекурсии для защиты от бесконечного цикла
      * @returns {boolean} true если были вытеснения
      */
-    displaceCollidingWidgets(priorityWidgetId) {
+    displaceCollidingWidgets(priorityWidgetId, depth = 0) {
+      // 🔧 FIX v1.3.1: Защита от бесконечной рекурсии
+      if (depth > 10) {
+        console.warn(`[GridEngine] ⚠️ Max recursion depth reached, stopping displacement`);
+        return false;
+      }
+      
       const priorityWidget = state.getWidget(priorityWidgetId);
       if (!priorityWidget) return false;
       
@@ -921,18 +1013,28 @@
       });
       
       let displaced = false;
+      const movedWidgets = new Set(); // Отслеживаем перемещённые виджеты
+      
       for (const widget of colliding) {
         // 🔧 FIX: Получаем размер из registry для вытесняемого виджета
         const sizeInfo = HEYS.Widgets.registry.getSize(widget.size);
         const wCols = sizeInfo?.cols || widget.cols || 1;
         const wRows = sizeInfo?.rows || widget.rows || 1;
         
-        // Ищем свободное место для этого виджета (исключая его самого и priority)
-        const freePos = this.findFreePositionExcluding(wCols, wRows, [priorityWidgetId, widget.id]);
+        // 🔧 FIX v1.3.1: Исключаем ТОЛЬКО перемещаемый виджет, а НЕ приоритетный!
+        // Приоритетный виджет должен оставаться "занятым", чтобы не размещать на нём
+        const freePos = this.findFreePositionExcluding(wCols, wRows, [widget.id]);
         if (freePos) {
           console.log(`[GridEngine] Moving ${widget.id} from (${widget.position.col},${widget.position.row}) to (${freePos.col},${freePos.row})`);
           state.updateWidget(widget.id, { position: freePos }, true);
           displaced = true;
+          movedWidgets.add(widget.id);
+          
+          // 🔧 FIX v1.3.1: После перемещения проверяем, не создали ли мы новую коллизию
+          // Рекурсивно вытесняем виджеты, с которыми теперь пересекается перемещённый
+          this.displaceCollidingWidgets(widget.id, depth + 1);
+        } else {
+          console.warn(`[GridEngine] ⚠️ No free position for ${widget.id} (${wCols}x${wRows}), will overlap!`);
         }
       }
       
@@ -2034,6 +2136,49 @@
     }
   });
 
+  // 🧩 Слушатель cloud sync — НЕ перезагружаем layout если он свежий локально
+  // Это предотвращает "мерцание" виджетов после cloud sync
+  window.addEventListener('heys:widget-layout-updated', (e) => {
+    const { layout: cloudLayout, source } = e.detail || {};
+    
+    // Если не инициализирован — игнорируем
+    if (!state._initialized) {
+      console.log('[Widgets Core] Cloud update ignored: not initialized');
+      return;
+    }
+    
+    // Читаем текущий local layout с updatedAt
+    const localRaw = state.loadLayout();
+    const localUpdatedAt = (() => {
+      try {
+        if (HEYS.store?.get) {
+          const stored = HEYS.store.get('heys_widget_layout_v1', null);
+          return stored?.updatedAt || 0;
+        }
+        return 0;
+      } catch { return 0; }
+    })();
+    
+    const cloudUpdatedAt = cloudLayout?.updatedAt || 0;
+    
+    console.log(`[Widgets Core] Cloud sync event: localUpdatedAt=${localUpdatedAt}, cloudUpdatedAt=${cloudUpdatedAt}`);
+    
+    // Если локальный layout новее или равен — игнорируем cloud update
+    if (localUpdatedAt >= cloudUpdatedAt) {
+      console.log('[Widgets Core] Cloud update skipped: local is newer or same');
+      return;
+    }
+    
+    // Облачный layout новее — перезагружаем
+    console.warn('[Widgets Core] Cloud layout is newer, reloading...');
+    const widgets = cloudLayout?.widgets || (Array.isArray(cloudLayout) ? cloudLayout : []);
+    
+    if (widgets.length > 0) {
+      state._widgets = widgets.map(w => state._normalizeWidget(w));
+      HEYS.Widgets.emit('layout:changed', { layout: state._widgets, source: 'cloud-sync' });
+    }
+  });
+
   // === Exports ===
   HEYS.Widgets.state = state;
   HEYS.Widgets.grid = gridEngine;
@@ -2053,6 +2198,6 @@
   HEYS.Widgets.canUndo = () => state.canUndo();
   HEYS.Widgets.canRedo = () => state.canRedo();
   
-  console.log('[HEYS] Widgets Core v1.1.0 loaded');
+  console.log('[HEYS] Widgets Core v1.3.1 loaded — fix collision displacement on resize');
   
 })(typeof window !== 'undefined' ? window : global);

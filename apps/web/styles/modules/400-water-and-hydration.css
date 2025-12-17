@@ -652,6 +652,46 @@ html.dark .water-tip-text {
   z-index: 1001; /* Выше меню .tabs (z-index: 1000) */
 }
 
+/* 💧 Анимация добавления воды около FAB */
+.water-fab-anim {
+  position: absolute;
+  bottom: 52px; /* Чуть выше water-fab */
+  right: 0;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+  white-space: nowrap;
+  animation: water-fab-pop 0.8s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes water-fab-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.8);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(-5px) scale(1.1);
+  }
+  40% {
+    transform: translateY(-12px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.9);
+  }
+}
+
+[data-theme="dark"] .water-fab-anim {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+}
+
 /* === 03. FAB для советов (💡) === */
 .advice-fab {
   height: 44px;

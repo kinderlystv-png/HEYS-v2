@@ -144,6 +144,8 @@
   let _isShowingNotification = false;
   const DEBOUNCE_MS = 100;
   const STORAGE_KEY = 'heys_game';
+  const DATA_VERSION = 2; // Версия структуры данных для миграций
+  const MAX_DAILY_XP_DAYS = 30; // Хранить историю XP максимум 30 дней
 
   // ========== ХЕЛПЕРЫ ==========
 
@@ -156,15 +158,89 @@
     
     const stored = U.lsGet ? U.lsGet(STORAGE_KEY, null) : null;
     if (stored) {
-      _data = stored;
+      _data = validateAndMigrate(stored);
     } else {
       _data = createDefaultData();
     }
     return _data;
   }
 
+  /**
+   * Валидация и миграция данных
+   * Гарантирует что все поля существуют и имеют правильный тип
+   */
+  function validateAndMigrate(data) {
+    const defaults = createDefaultData();
+    
+    // Проверка базовой структуры
+    if (!data || typeof data !== 'object') {
+      console.warn('[HEYS.game] Invalid data structure, resetting');
+      return defaults;
+    }
+    
+    // Миграция: добавляем недостающие поля
+    const migrated = {
+      ...defaults,
+      ...data,
+      // Гарантируем правильные типы
+      totalXP: typeof data.totalXP === 'number' ? data.totalXP : 0,
+      level: typeof data.level === 'number' ? data.level : 1,
+      unlockedAchievements: Array.isArray(data.unlockedAchievements) ? data.unlockedAchievements : [],
+      dailyXP: (data.dailyXP && typeof data.dailyXP === 'object') ? data.dailyXP : {},
+      stats: { ...defaults.stats, ...(data.stats || {}) },
+      dailyActions: data.dailyActions || defaults.dailyActions,
+      weeklyChallenge: data.weeklyChallenge || defaults.weeklyChallenge,
+      // v2: Добавляем прогресс достижений
+      achievementProgress: data.achievementProgress || {},
+      // Версия данных
+      version: DATA_VERSION
+    };
+    
+    // Пересчитываем уровень на случай повреждения
+    migrated.level = calculateLevel(migrated.totalXP);
+    
+    // Cleanup старых dailyXP (>30 дней)
+    migrated.dailyXP = cleanupOldDailyXP(migrated.dailyXP);
+    
+    // Логируем миграцию если версия изменилась
+    if (data.version !== DATA_VERSION) {
+      console.log(`[HEYS.game] Data migrated from v${data.version || 1} to v${DATA_VERSION}`);
+    }
+    
+    return migrated;
+  }
+
+  /**
+   * Удаляет записи dailyXP старше MAX_DAILY_XP_DAYS дней
+   */
+  function cleanupOldDailyXP(dailyXP) {
+    if (!dailyXP || typeof dailyXP !== 'object') return {};
+    
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - MAX_DAILY_XP_DAYS);
+    const cutoffStr = cutoffDate.toISOString().slice(0, 10);
+    
+    const cleaned = {};
+    let removedCount = 0;
+    
+    for (const [date, xp] of Object.entries(dailyXP)) {
+      if (date >= cutoffStr) {
+        cleaned[date] = xp;
+      } else {
+        removedCount++;
+      }
+    }
+    
+    if (removedCount > 0) {
+      console.log(`[HEYS.game] Cleaned up ${removedCount} old dailyXP entries`);
+    }
+    
+    return cleaned;
+  }
+
   function createDefaultData() {
     return {
+      version: DATA_VERSION,
       totalXP: 0,
       level: 1,
       unlockedAchievements: [],
@@ -179,7 +255,13 @@
       weeklyChallenge: {
         weekStart: null,      // '2025-12-01' — начало недели
         target: 500,          // цель XP
-        earned: 0             // набрано XP
+        earned: 0,            // набрано XP
+        type: 'xp'            // тип челленджа
+      },
+      // Прогресс к достижениям (для UI)
+      achievementProgress: {
+        // perfect_week: { current: 3, target: 7 }
+        // water_master: { current: 5, target: 7, dates: ['2025-12-01', ...] }
       },
       stats: {
         totalProducts: 0,
@@ -718,29 +800,85 @@
 
   // ========== ДОСТИЖЕНИЯ ==========
 
+  /**
+   * Обновляет прогресс достижения и возвращает true если цель достигнута
+   */
+  function updateAchievementProgress(achId, current, target, extraData = {}) {
+    const data = loadData();
+    if (!data.achievementProgress) data.achievementProgress = {};
+    
+    data.achievementProgress[achId] = {
+      current: Math.min(current, target),
+      target,
+      ...extraData,
+      updatedAt: Date.now()
+    };
+    saveData();
+    
+    return current >= target;
+  }
+
+  /**
+   * Получить прогресс конкретного достижения
+   */
+  function getAchievementProgress(achId) {
+    const data = loadData();
+    return data.achievementProgress?.[achId] || null;
+  }
+
+  /**
+   * Подсчёт последовательных дней с условием
+   * @param {Function} conditionFn - (dayData, dateStr) => boolean
+   * @param {number} maxDays - максимум дней для проверки
+   */
+  function countConsecutiveDays(conditionFn, maxDays = 14) {
+    let count = 0;
+    const today = new Date();
+    
+    for (let i = 0; i < maxDays; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().slice(0, 10);
+      
+      const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${dateStr}`, null) : null;
+      
+      if (dayData && conditionFn(dayData, dateStr)) {
+        count++;
+      } else if (i > 0) {
+        // Цепочка прервалась (пропускаем сегодня если данных нет)
+        break;
+      }
+    }
+    
+    return count;
+  }
+
   function checkAchievements(reason) {
     const data = loadData();
     const newAchievements = [];
 
-    // Streak achievements
+    // ========== STREAK ACHIEVEMENTS ==========
     const streak = HEYS.Day && HEYS.Day.getStreak ? HEYS.Day.getStreak() : 0;
-    if (streak >= 3 && !data.unlockedAchievements.includes('streak_3')) {
-      newAchievements.push('streak_3');
-    }
-    if (streak >= 7 && !data.unlockedAchievements.includes('streak_7')) {
-      newAchievements.push('streak_7');
-    }
-    if (streak >= 14 && !data.unlockedAchievements.includes('streak_14')) {
-      newAchievements.push('streak_14');
-    }
-    if (streak >= 30 && !data.unlockedAchievements.includes('streak_30')) {
-      newAchievements.push('streak_30');
-    }
-    if (streak >= 100 && !data.unlockedAchievements.includes('streak_100')) {
-      newAchievements.push('streak_100');
+    
+    const streakMilestones = [
+      { days: 3, id: 'streak_3' },
+      { days: 7, id: 'streak_7' },
+      { days: 14, id: 'streak_14' },
+      { days: 30, id: 'streak_30' },
+      { days: 100, id: 'streak_100' }
+    ];
+    
+    for (const m of streakMilestones) {
+      if (streak >= m.days && !data.unlockedAchievements.includes(m.id)) {
+        newAchievements.push(m.id);
+      }
+      // Обновляем прогресс для UI
+      if (!data.unlockedAchievements.includes(m.id)) {
+        updateAchievementProgress(m.id, streak, m.days);
+      }
     }
 
-    // First actions
+    // ========== FIRST ACTIONS ==========
     if (reason === 'product_added' && !data.unlockedAchievements.includes('first_meal')) {
       newAchievements.push('first_meal');
     }
@@ -754,35 +892,37 @@
       newAchievements.push('first_weight');
     }
 
-    // Level achievements
-    if (data.level >= 5 && !data.unlockedAchievements.includes('level_5')) {
-      newAchievements.push('level_5');
-    }
-    if (data.level >= 10 && !data.unlockedAchievements.includes('level_10')) {
-      newAchievements.push('level_10');
-    }
-    if (data.level >= 15 && !data.unlockedAchievements.includes('level_15')) {
-      newAchievements.push('level_15');
-    }
-    if (data.level >= 20 && !data.unlockedAchievements.includes('level_20')) {
-      newAchievements.push('level_20');
-    }
-    if (data.level >= 25 && !data.unlockedAchievements.includes('level_25')) {
-      newAchievements.push('level_25');
+    // ========== LEVEL ACHIEVEMENTS ==========
+    const levelMilestones = [5, 10, 15, 20, 25];
+    for (const lvl of levelMilestones) {
+      const achId = `level_${lvl}`;
+      if (data.level >= lvl && !data.unlockedAchievements.includes(achId)) {
+        newAchievements.push(achId);
+      }
+      if (!data.unlockedAchievements.includes(achId)) {
+        updateAchievementProgress(achId, data.level, lvl);
+      }
     }
 
-    // === НОВЫЕ ТРИГГЕРЫ ===
+    // ========== QUALITY ACHIEVEMENTS ==========
     
     // Perfect day (проверяется извне через checkDayCompleted)
     if (reason === 'perfect_day' && !data.unlockedAchievements.includes('perfect_day')) {
       newAchievements.push('perfect_day');
     }
 
-    // Water day — проверка 100% воды
-    if (reason === 'water_added' && !data.unlockedAchievements.includes('water_day')) {
-      // Проверяем waterPct из DayTab если доступно
-      if (HEYS.Day && HEYS.Day.getWaterPercent && HEYS.Day.getWaterPercent() >= 100) {
-        newAchievements.push('water_day');
+    // Perfect week — 7 идеальных дней подряд
+    if ((reason === 'perfect_day' || reason === 'day_completed') && !data.unlockedAchievements.includes('perfect_week')) {
+      const perfectDays = countConsecutiveDays((dayData, dateStr) => {
+        if (!dayData.meals || dayData.meals.length === 0) return false;
+        // Проверяем ratio в dailyXP или вычисляем
+        const dayXP = data.dailyXP[dateStr];
+        return dayXP && dayXP.perfect_day > 0;
+      }, 14);
+      
+      updateAchievementProgress('perfect_week', perfectDays, 7);
+      if (perfectDays >= 7) {
+        newAchievements.push('perfect_week');
       }
     }
 
@@ -798,22 +938,60 @@
       }
     }
 
-    // Early bird — завтрак до 9:00
-    if (reason === 'product_added' && !data.unlockedAchievements.includes('early_bird')) {
-      const hour = new Date().getHours();
-      if (hour < 9) {
-        // Трекаем early bird дни
-        if (!data.earlyBirdDays) data.earlyBirdDays = [];
+    // Fiber champion — клетчатка ≥100% 7 дней
+    if ((reason === 'product_added' || reason === 'day_completed') && !data.unlockedAchievements.includes('fiber_champion')) {
+      const fiberDays = countConsecutiveDays((dayData) => {
+        if (!dayData.meals || dayData.meals.length === 0) return false;
+        // Нужна проверка клетчатки — используем achievementProgress для трекинга
+        return data.achievementProgress?.fiber_champion?.dates?.includes(dayData.date);
+      }, 14);
+      
+      // Проверяем сегодняшнюю клетчатку
+      if (HEYS.Day && HEYS.Day.getFiberPercent && HEYS.Day.getFiberPercent() >= 100) {
         const today = getToday();
-        if (!data.earlyBirdDays.includes(today)) {
-          data.earlyBirdDays.push(today);
-          // Оставляем только последние 7 дней
-          data.earlyBirdDays = data.earlyBirdDays.slice(-7);
-          saveData();
+        if (!data.achievementProgress) data.achievementProgress = {};
+        if (!data.achievementProgress.fiber_champion) {
+          data.achievementProgress.fiber_champion = { current: 0, target: 7, dates: [] };
         }
-        if (data.earlyBirdDays.length >= 7) {
-          newAchievements.push('early_bird');
+        if (!data.achievementProgress.fiber_champion.dates.includes(today)) {
+          data.achievementProgress.fiber_champion.dates.push(today);
+          // Оставляем только последние 14 дней
+          data.achievementProgress.fiber_champion.dates = 
+            data.achievementProgress.fiber_champion.dates.slice(-14);
         }
+        
+        // Проверяем последовательность
+        const consecutiveFiber = countConsecutiveFiberDays(data.achievementProgress.fiber_champion.dates);
+        data.achievementProgress.fiber_champion.current = consecutiveFiber;
+        saveData();
+        
+        if (consecutiveFiber >= 7) {
+          newAchievements.push('fiber_champion');
+        }
+      }
+    }
+
+    // ========== WATER & ACTIVITY ACHIEVEMENTS ==========
+
+    // Water day — 100% воды
+    if (reason === 'water_added' && !data.unlockedAchievements.includes('water_day')) {
+      if (HEYS.Day && HEYS.Day.getWaterPercent && HEYS.Day.getWaterPercent() >= 100) {
+        newAchievements.push('water_day');
+      }
+    }
+
+    // Water master — 100% воды 7 дней подряд
+    if (reason === 'water_added' && !data.unlockedAchievements.includes('water_master')) {
+      const waterDays = countConsecutiveDays((dayData) => {
+        if (!dayData.waterMl) return false;
+        // Базовая норма ~2000мл, проверяем ≥90%
+        const waterGoal = 2000; // TODO: использовать динамическую норму
+        return dayData.waterMl >= waterGoal * 0.9;
+      }, 14);
+      
+      updateAchievementProgress('water_master', waterDays, 7);
+      if (waterDays >= 7) {
+        newAchievements.push('water_master');
       }
     }
 
@@ -825,21 +1003,78 @@
         data.weeklyTrainings = { week: currentWeek, count: 0 };
       }
       data.weeklyTrainings.count++;
+      updateAchievementProgress('training_week', data.weeklyTrainings.count, 5);
       saveData();
       if (data.weeklyTrainings.count >= 5) {
         newAchievements.push('training_week');
       }
     }
 
+    // Steps champion — 10000+ шагов 7 дней
+    if (!data.unlockedAchievements.includes('steps_champion')) {
+      const stepsDays = countConsecutiveDays((dayData) => {
+        return dayData.steps && dayData.steps >= 10000;
+      }, 14);
+      
+      updateAchievementProgress('steps_champion', stepsDays, 7);
+      if (stepsDays >= 7) {
+        newAchievements.push('steps_champion');
+      }
+    }
+
+    // ========== HABITS ACHIEVEMENTS ==========
+
+    // Early bird — завтрак до 9:00 7 дней
+    if (reason === 'product_added' && !data.unlockedAchievements.includes('early_bird')) {
+      const hour = new Date().getHours();
+      if (hour < 9) {
+        if (!data.earlyBirdDays) data.earlyBirdDays = [];
+        const today = getToday();
+        if (!data.earlyBirdDays.includes(today)) {
+          data.earlyBirdDays.push(today);
+          data.earlyBirdDays = data.earlyBirdDays.slice(-14);
+          saveData();
+        }
+        
+        const consecutiveEarly = countConsecutiveFromDates(data.earlyBirdDays);
+        updateAchievementProgress('early_bird', consecutiveEarly, 7);
+        
+        if (consecutiveEarly >= 7) {
+          newAchievements.push('early_bird');
+        }
+      }
+    }
+
+    // Night owl safe — нет еды после 22:00 7 дней
+    if ((reason === 'day_completed' || reason === 'product_added') && !data.unlockedAchievements.includes('night_owl_safe')) {
+      const safeDays = countConsecutiveDays((dayData) => {
+        if (!dayData.meals || dayData.meals.length === 0) return false;
+        // Проверяем что нет еды после 22:00
+        for (const meal of dayData.meals) {
+          if (meal.time) {
+            const [h] = meal.time.split(':').map(Number);
+            if (h >= 22 || h < 3) return false; // После 22 или до 3 ночи
+          }
+        }
+        return true;
+      }, 14);
+      
+      updateAchievementProgress('night_owl_safe', safeDays, 7);
+      if (safeDays >= 7) {
+        newAchievements.push('night_owl_safe');
+      }
+    }
+
     // Advice achievements — за прочтение советов
     if (reason === 'advice_read') {
-      // Инкрементируем счётчик прочитанных советов
       if (!data.stats) data.stats = {};
       if (!data.stats.totalAdvicesRead) data.stats.totalAdvicesRead = 0;
       data.stats.totalAdvicesRead++;
       saveData();
 
-      // Проверяем достижения
+      updateAchievementProgress('advice_reader', data.stats.totalAdvicesRead, 50);
+      updateAchievementProgress('advice_master', data.stats.totalAdvicesRead, 200);
+
       if (data.stats.totalAdvicesRead >= 50 && !data.unlockedAchievements.includes('advice_reader')) {
         newAchievements.push('advice_reader');
       }
@@ -854,6 +1089,38 @@
     }
 
     return newAchievements;
+  }
+
+  /**
+   * Подсчёт последовательных дней из массива дат
+   */
+  function countConsecutiveFromDates(dates) {
+    if (!dates || dates.length === 0) return 0;
+    
+    const sortedDates = [...dates].sort().reverse();
+    let count = 0;
+    const today = new Date();
+    
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().slice(0, 10);
+      
+      if (sortedDates.includes(dateStr)) {
+        count++;
+      } else if (i > 0) {
+        break;
+      }
+    }
+    
+    return count;
+  }
+
+  /**
+   * Подсчёт последовательных дней клетчатки
+   */
+  function countConsecutiveFiberDays(dates) {
+    return countConsecutiveFromDates(dates);
   }
 
   function unlockAchievement(achievementId) {
@@ -952,14 +1219,56 @@
     },
 
     /**
-     * Получить все достижения с статусом
+     * Получить все достижения с статусом и прогрессом
      */
     getAchievements() {
       const data = loadData();
-      return Object.values(ACHIEVEMENTS).map(ach => ({
-        ...ach,
-        unlocked: data.unlockedAchievements.includes(ach.id)
-      }));
+      return Object.values(ACHIEVEMENTS).map(ach => {
+        const progress = data.achievementProgress?.[ach.id] || null;
+        return {
+          ...ach,
+          unlocked: data.unlockedAchievements.includes(ach.id),
+          progress: progress ? {
+            current: progress.current || 0,
+            target: progress.target || 1,
+            percent: progress.target ? Math.round((progress.current / progress.target) * 100) : 0
+          } : null
+        };
+      });
+    },
+
+    /**
+     * Получить прогресс конкретного достижения
+     */
+    getAchievementProgress(achId) {
+      return getAchievementProgress(achId);
+    },
+
+    /**
+     * Получить достижения "в процессе" (не разблокированы, но есть прогресс)
+     */
+    getInProgressAchievements() {
+      const data = loadData();
+      const achievements = [];
+      
+      for (const [achId, progress] of Object.entries(data.achievementProgress || {})) {
+        if (!data.unlockedAchievements.includes(achId) && progress.current > 0) {
+          const achDef = ACHIEVEMENTS[achId];
+          if (achDef) {
+            achievements.push({
+              ...achDef,
+              progress: {
+                current: progress.current,
+                target: progress.target,
+                percent: Math.round((progress.current / progress.target) * 100)
+              }
+            });
+          }
+        }
+      }
+      
+      // Сортируем по проценту выполнения (ближайшие к разблокировке первые)
+      return achievements.sort((a, b) => b.progress.percent - a.progress.percent);
     },
 
     getAchievementCategories() {

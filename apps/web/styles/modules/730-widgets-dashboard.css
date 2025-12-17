@@ -120,20 +120,37 @@
 }
 
 /* ===== Tab Container ===== */
+/* Убираем overflow: hidden с родителя чтобы full-bleed работал */
+.tab-content-swipeable:has(.widgets-tab) {
+  overflow: visible;
+}
+
 .widgets-tab {
+  position: relative;
   min-height: calc(100vh - 120px);
   padding-bottom: 100px; /* safe area для navbar */
-  /* iOS-like system background (subtle) */
-  background:
-    radial-gradient(1200px 800px at 20% 0%, rgba(10, 132, 255, 0.08), transparent 55%),
-    radial-gradient(900px 600px at 80% 20%, rgba(175, 82, 222, 0.08), transparent 55%),
+  /* Full-bleed: компенсируем padding родителя (18px боковые) */
+  margin-left: -18px;
+  margin-right: -18px;
+  margin-top: -20px; /* Заходим под шапку глубже для перекрытия закруглённых углов */
+  padding-left: 18px;
+  padding-right: 18px;
+  padding-top: 20px; /* Компенсируем отрицательный margin */
+  /* Фон с бесшовным переходом — цвет как у .hdr (родитель шапки) #f8f9fa */
+  background-color: var(--bg-primary, #f8f9fa);
+  background-image:
+    /* Декоративные радиальные градиенты — сдвинуты вниз, чтобы не влиять на стык с шапкой */
+    radial-gradient(1200px 800px at 20% 25%, rgba(10, 132, 255, 0.08), transparent 55%),
+    radial-gradient(900px 600px at 80% 35%, rgba(175, 82, 222, 0.08), transparent 55%),
     radial-gradient(900px 700px at 50% 100%, rgba(255, 149, 0, 0.06), transparent 60%);
 }
 
 [data-theme="dark"] .widgets-tab {
-  background:
-    radial-gradient(1200px 800px at 20% 0%, rgba(10, 132, 255, 0.12), transparent 55%),
-    radial-gradient(900px 600px at 80% 20%, rgba(175, 82, 222, 0.12), transparent 55%),
+  background-color: var(--bg-primary, #1a1a1a);
+  background-image:
+    /* Декоративные радиальные градиенты — сдвинуты вниз */
+    radial-gradient(1200px 800px at 20% 25%, rgba(10, 132, 255, 0.12), transparent 55%),
+    radial-gradient(900px 600px at 80% 35%, rgba(175, 82, 222, 0.12), transparent 55%),
     radial-gradient(900px 700px at 50% 100%, rgba(255, 149, 0, 0.10), transparent 60%);
 }
 
@@ -193,16 +210,13 @@
   padding: var(--widget-spacing-sm) var(--widget-spacing-md);
   position: sticky;
   top: 0;
-  /* Glassy iOS header */
-  background: color-mix(in srgb, var(--bg-primary, #f8f9fa) 72%, transparent);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  /* Прозрачный фон — сливается с основным */
+  background: transparent;
   z-index: 100;
 }
 
 [data-theme="dark"] .widgets-header {
-  border-bottom-color: rgba(255, 255, 255, 0.08);
+  /* Без границы */
 }
 
 .widgets-header__left {
@@ -1453,27 +1467,58 @@
   z-index: 1001;
 }
 
+/* Глобальный FAB редактирования (показывается на других вкладках) */
+.widgets-fab-global {
+  z-index: 1100;
+}
+
 .widgets-edit-fab {
-  width: 50px;
-  height: 50px;
+  width: 36px;
+  height: 36px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: linear-gradient(180deg, rgba(59, 130, 246, 0.95), rgba(37, 99, 235, 0.95));
-  color: #fff;
-  box-shadow: 0 18px 44px rgba(2, 6, 23, 0.22);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #6b7280;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.widgets-edit-fab:hover {
+  background: rgba(255, 255, 255, 0.95);
+  color: #3b82f6;
 }
 
 .widgets-edit-fab.active {
-  background: linear-gradient(180deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
 }
 
 .widgets-edit-fab:active {
   transform: translateY(1px) scale(0.98);
+}
+
+[data-theme="dark"] .widgets-edit-fab {
+  background: rgba(30, 30, 30, 0.85);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .widgets-edit-fab:hover {
+  background: rgba(40, 40, 40, 0.95);
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .widgets-edit-fab.active {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
 }
 
 /* ===== Dragging States ===== */
