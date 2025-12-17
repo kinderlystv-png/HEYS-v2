@@ -6,33 +6,71 @@
 
 ## 🎉 Декабрь 2025
 
+### 🔄 Refeed Day (Загрузочный день) ✅ (2025-12-17)
+
+**Файл**: `apps/web/heys_refeed_v1.js` (v1.3.3, 785 строк) | **Стили**:
+`styles/modules/710-refeed.css`
+
+- [x] **Модуль** — константы (REFEED_BOOST_PCT 35%, REFEED_OK_RATIO 1.35,
+      thresholds)
+- [x] **Причины** — 4 типа (deficit 💰, training 💪, holiday 🎉, rest 🧘)
+- [x] **Зоны выполнения** — refeed_under/ok/over/binge (70-135% = зелёный
+      streak)
+- [x] **React компоненты** — RefeedDayStepComponent, RefeedCard, RefeedBadge,
+      RefeedToggle
+- [x] **Шаг в чек-ине** — автоматическая регистрация в HEYS.StepModal, toggle
+      Да/Нет, выбор причины
+- [x] **Интеграция day_v12** — toggle в goal progress (строка 13984), card в
+      статистике (18054)
+- [x] **Утилиты** — getRefeedZone, shouldRecommendRefeed, getRefeedOptimum,
+      isStreakPreserved, getHistoryStats, getDayMeta (единая точка правды)
+- [x] **Советы** — 5 типов (recommended, in_progress, completed, over, missed)
+- [x] **API хелперы** — renderRefeedToggle, renderRefeedCard, renderRefeedStats
+- [x] **Документация** — DATA_MODEL_REFERENCE.md (строки 535-650)
+- [x] `pnpm build` PASS ✅
+
+**Архив**:
+[2025-12-12-refeed-day-checkin.md](./docs/tasks/2025-12-12-refeed-day-checkin.md)
+
 ### 🌐 Shared Products + модерация ✅ (2025-12-17)
 
-- [x] **Database** — `shared_products`, `shared_products_blocklist`, `shared_products_pending` таблицы
-- [x] **VIEW** — `shared_products_public` с `is_mine` флагом, скрывает `created_by_user_id`
-- [x] **RLS** — SELECT всем, INSERT authenticated, UPDATE автору, DELETE куратор/автор
-- [x] **Fingerprint** — SHA-256 дедупликация, `normalizeProductName()` (ё→е, lowercase)
-- [x] **Storage Layer** — 10 cloud методов (search, publish, delete, pending CRUD, blocklist)
+- [x] **Database** — `shared_products`, `shared_products_blocklist`,
+      `shared_products_pending` таблицы
+- [x] **VIEW** — `shared_products_public` с `is_mine` флагом, скрывает
+      `created_by_user_id`
+- [x] **RLS** — SELECT всем, INSERT authenticated, UPDATE автору, DELETE
+      куратор/автор
+- [x] **Fingerprint** — SHA-256 дедупликация, `normalizeProductName()` (ё→е,
+      lowercase)
+- [x] **Storage Layer** — 10 cloud методов (search, publish, delete, pending
+      CRUD, blocklist)
 - [x] **UI подвкладки** — «👤 Продукты клиента» и «🌐 Общая база»
 - [x] **Переключатель источника** — 👤 Мои / 🌐 Общие / 👤+🌐 Оба
 - [x] **Pending** — заявки от PIN-клиентов, Approve/Reject в curator режиме
 - [x] **Кнопки действий** — ➕ клонировать, 🚫 скрыть (blocklist), 🗑️ удалить
-- [x] **Автоклонирование** — `HEYS.products.addFromShared()` при добавлении в приём
+- [x] **Автоклонирование** — `HEYS.products.addFromShared()` при добавлении в
+      приём
 - [x] **Поиск shared** — в модалке создания продукта с вычислением `kcal100`
 - [x] `pnpm build` PASS ✅
 
-**Архив**: [2025-12-16-shared-products-DONE.md](./docs/tasks/archive/2025-12-16-shared-products-DONE.md)
+**Архив**:
+[2025-12-16-shared-products-DONE.md](./docs/tasks/archive/2025-12-16-shared-products-DONE.md)
 
 ### 🎛️ Вкладка-конструктор виджетов (Widgets Dashboard) ✅ (2025-12-15)
 
-- [x] **Phase 0: Foundation** — CSS (730-widgets-dashboard.css), JS modules wiring
-- [x] **Phase 1: Core Engine** — Grid Engine (2 columns), DnD Manager, State Manager
-- [x] **Phase 2: Widget Framework** — Registry (10 types), Events pub/sub, Data layer
-- [x] **Phase 3-4: Widgets + UI** — 10 виджетов (calories, water, sleep, streak, weight, steps, macros, insulin, heatmap, cycle)
+- [x] **Phase 0: Foundation** — CSS (730-widgets-dashboard.css), JS modules
+      wiring
+- [x] **Phase 1: Core Engine** — Grid Engine (2 columns), DnD Manager, State
+      Manager
+- [x] **Phase 2: Widget Framework** — Registry (10 types), Events pub/sub, Data
+      layer
+- [x] **Phase 3-4: Widgets + UI** — 10 виджетов (calories, water, sleep, streak,
+      weight, steps, macros, insulin, heatmap, cycle)
 - [x] **CatalogModal** — категории (nutrition, health, motivation, advanced)
 - [x] **SettingsModal** — выбор размера (compact, wide, tall, large)
 - [x] **WidgetsTab** — основной контейнер с edit mode toggle
-- [x] **Phase 5: Advanced** — Undo/Redo (20 steps), Keyboard (Escape, Ctrl+Z), Presets (minimal, balanced, fitness, detailed)
+- [x] **Phase 5: Advanced** — Undo/Redo (20 steps), Keyboard (Escape, Ctrl+Z),
+      Presets (minimal, balanced, fitness, detailed)
 - [x] **PWA precache** — все модули в sw.js
 - [x] **Navigation** — SWIPEABLE_TABS, swipe блокировка в edit mode
 - [x] `pnpm type-check && pnpm build` PASS ✅

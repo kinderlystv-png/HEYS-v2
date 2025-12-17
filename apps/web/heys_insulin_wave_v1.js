@@ -5572,32 +5572,6 @@
         )
       ),
       
-      // 🆕 v3.7.1: Кнопка "Показать расчёт"
-      React.createElement('div', {
-        style: { 
-          display: 'flex', 
-          justifyContent: 'flex-end', 
-          marginTop: '8px'
-        }
-      },
-        React.createElement('button', {
-          onClick: () => setShowWaveDetails(true),
-          style: {
-            background: 'rgba(59, 130, 246, 0.1)',
-            border: 'none',
-            borderRadius: '6px',
-            padding: '4px 10px',
-            fontSize: '11px',
-            color: '#3b82f6',
-            fontWeight: 500,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }
-        }, 'ℹ️ Показать расчёт')
-      ),
-      
       // 🆕 v3.7.1: Popup детализации волны
       showWaveDetails && React.createElement('div', {
         className: 'wave-details-overlay',

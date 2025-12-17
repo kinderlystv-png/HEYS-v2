@@ -2197,6 +2197,7 @@
         ? prevWave.endMin - currentWave.startMin
         : 0;
     const [waveExpanded, setWaveExpanded] = React.useState(true);
+    const [showWaveCalcPopup, setShowWaveCalcPopup] = React.useState(false);
     const isCurrentActiveMeal = !!(currentWave && currentWave.isActive);
     const showWaveButton = !!(currentWave && meal.time && (meal.items || []).length > 0);
     const formatMinutes = React.useCallback((mins) => {
@@ -2763,7 +2764,7 @@
           className: 'meal-wave-block' + (waveExpanded ? ' expanded' : ''),
           style: {
             marginTop: '10px',
-            background: hasAnyOverlap ? 'rgba(239,68,68,0.08)' : 'rgba(59,130,246,0.08)',
+            background: 'transparent',
             borderRadius: '12px',
             overflow: 'hidden'
           }
@@ -2789,6 +2790,24 @@
                     : '🟢 последний приём'
               )
             ),
+            // Кнопка "расчёт" между названием и стрелочкой
+            React.createElement('button', {
+              onClick: (e) => {
+                e.stopPropagation();
+                setShowWaveCalcPopup(true);
+              },
+              style: {
+                background: 'rgba(59, 130, 246, 0.12)',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '3px 8px',
+                fontSize: '11px',
+                color: '#3b82f6',
+                fontWeight: 500,
+                cursor: 'pointer',
+                marginLeft: '8px'
+              }
+            }, 'расчёт'),
             React.createElement('span', { className: 'toggle-arrow' }, waveExpanded ? '▴' : '▾')
           ),
           // Expand-секция (график) — внутри того же блока
@@ -2866,26 +2885,25 @@
             },
             title: 'Качество приёма — нажми для деталей',
             style: {
-              display: 'inline-flex',
+              display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              gap: '2px',
-              padding: '4px 6px',
-              borderRadius: '12px',
+              padding: '2px 6px',
+              borderRadius: '8px',
               border: 'none',
               background: mealQuality.color + '20',
               color: mealQuality.color,
-              fontSize: '12px',
-              fontWeight: 700,
               cursor: 'pointer',
               marginRight: '4px',
               transition: 'transform 0.15s, box-shadow 0.15s',
-              flexShrink: 0
+              flexShrink: 0,
+              minWidth: '28px'
             }
           },
             React.createElement('span', { style: { fontSize: '12px' } }, 
               mealQuality.score >= 80 ? '⭐' : mealQuality.score >= 50 ? '📊' : '⚠️'
             ),
-            mealQuality.score
+            React.createElement('span', { style: { fontSize: '11px', fontWeight: 600 } }, mealQuality.score)
           ),
           // На мобильных — оценки вертикальные (эмодзи сверху, значение снизу)
           isMobile
@@ -3103,7 +3121,178 @@
           pIndex,
           mealIndex,
           addProductToMeal
-        }))
+        })),
+        
+        // Popup расчёта волны
+        showWaveCalcPopup && currentWave && React.createElement('div', {
+          className: 'wave-details-overlay',
+          onClick: (e) => { if (e.target === e.currentTarget) setShowWaveCalcPopup(false); },
+          style: {
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }
+        },
+          React.createElement('div', {
+            className: 'wave-details-popup',
+            style: {
+              background: '#fff',
+              borderRadius: '16px',
+              padding: '20px',
+              maxWidth: '360px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+            }
+          },
+            // Заголовок
+            React.createElement('div', {
+              style: { 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: '16px'
+              }
+            },
+              React.createElement('h3', { 
+                style: { margin: 0, fontSize: '16px', fontWeight: 600, color: '#1f2937' }
+              }, 'Расчёт волны'),
+              React.createElement('button', {
+                onClick: () => setShowWaveCalcPopup(false),
+                style: {
+                  background: 'none', border: 'none', fontSize: '20px', 
+                  cursor: 'pointer', color: '#9ca3af', padding: '4px'
+                }
+              }, '×')
+            ),
+            
+            // Итоговая длина волны
+            React.createElement('div', {
+              style: {
+                background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '16px',
+                textAlign: 'center',
+                color: '#fff'
+              }
+            },
+              React.createElement('div', { style: { fontSize: '12px', opacity: 0.9, marginBottom: '4px' } }, 
+                'Длина волны'
+              ),
+              React.createElement('div', { style: { fontSize: '28px', fontWeight: 700 } }, 
+                (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'
+              ),
+              React.createElement('div', { style: { fontSize: '11px', opacity: 0.8, marginTop: '4px' } }, 
+                currentWave.timeDisplay + ' → ' + currentWave.endTimeDisplay
+              )
+            ),
+            
+            // Формула
+            React.createElement('div', {
+              style: {
+                background: '#f8fafc',
+                borderRadius: '10px',
+                padding: '12px',
+                marginBottom: '16px',
+                fontSize: '11px',
+                fontFamily: 'monospace',
+                color: '#64748b',
+                textAlign: 'center'
+              }
+            }, 'База × Множитель = ' + (currentWave.baseWaveHours || 3).toFixed(1) + 'ч × ' + 
+               (currentWave.finalMultiplier || 1).toFixed(2) + ' = ' +
+               (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'
+            ),
+            
+            // Факторы еды
+            React.createElement('div', { style: { marginBottom: '12px' } },
+              React.createElement('div', { 
+                style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' }
+              }, '🍽️ Факторы еды'),
+              
+              // GI
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'ГИ'),
+                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.gi || 0))
+              ),
+              // GL
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'GL (нагрузка)'),
+                React.createElement('span', { style: { fontWeight: 500, color: currentWave.gl < 10 ? '#22c55e' : currentWave.gl > 20 ? '#ef4444' : '#1f2937' } }, 
+                  (currentWave.gl || 0).toFixed(1)
+                )
+              ),
+              // Белок
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Белок'),
+                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.protein || 0) + 'г')
+              ),
+              // Клетчатка
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Клетчатка'),
+                React.createElement('span', { style: { fontWeight: 500, color: currentWave.fiber >= 5 ? '#22c55e' : '#1f2937' } }, 
+                  Math.round(currentWave.fiber || 0) + 'г'
+                )
+              ),
+              // Жиры
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Жиры'),
+                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.fat || 0) + 'г')
+              ),
+              // Углеводы
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Углеводы'),
+                React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.carbs || 0) + 'г')
+              )
+            ),
+            
+            // Дневные факторы
+            React.createElement('div', { style: { marginBottom: '12px' } },
+              React.createElement('div', { 
+                style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' }
+              }, '⏰ Дневные факторы'),
+              
+              // Циркадный ритм
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+                React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
+                React.createElement('span', { style: { fontWeight: 500, color: currentWave.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } }, 
+                  '×' + (currentWave.circadianMultiplier || 1).toFixed(2)
+                )
+              ),
+              // Активность
+              currentWave.activityBonus && currentWave.activityBonus !== 0 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
+                React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
+                React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } }, 
+                  (currentWave.activityBonus * 100).toFixed(0) + '%'
+                )
+              )
+            ),
+            
+            // Кнопка закрытия
+            React.createElement('button', {
+              onClick: () => setShowWaveCalcPopup(false),
+              style: {
+                width: '100%',
+                background: '#3b82f6',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '12px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                marginTop: '8px'
+              }
+            }, 'Закрыть')
+          )
+        )
       )
     );
   }, (prevProps, nextProps) => {
