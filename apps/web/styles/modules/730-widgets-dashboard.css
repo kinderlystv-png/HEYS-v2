@@ -120,6 +120,18 @@
 }
 
 /* ===== Tab Container ===== */
+/* Убираем ограничения родительских контейнеров для виджетов */
+.wrap:has(.widgets-tab) {
+  max-width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  background-color: var(--bg-primary, #f8f9fa);
+}
+
+[data-theme="dark"] .wrap:has(.widgets-tab) {
+  background-color: var(--bg-primary, #1a1a1a);
+}
+
 /* Плавный скролл для виджетов */
 .tab-content-swipeable:has(.widgets-tab) {
   /* Важно: переопределяем overflow для плавного скролла */
@@ -131,23 +143,32 @@
   /* Даём контейнеру определённую высоту */
   max-height: calc(100vh - 60px); /* высота экрана минус nav bar */
   height: auto;
+  /* Убираем padding родителя — widgets-tab сам управляет отступами */
+  padding: 0 !important;
+  /* Фон на родителе для устранения белых полос */
+  background-color: var(--bg-primary, #f8f9fa);
+}
+
+[data-theme="dark"] .tab-content-swipeable:has(.widgets-tab) {
+  background-color: var(--bg-primary, #1a1a1a);
 }
 
 .widgets-tab {
   position: relative;
   /* Контент определяет высоту + отступ для воздуха снизу */
   padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); /* navbar + safe area + воздух */
-  /* Full-bleed: компенсируем padding родителя (18px боковые) */
-  margin-left: -18px;
-  margin-right: -18px;
-  margin-top: -20px; /* Заходим под шапку глубже для перекрытия закруглённых углов */
+  /* Отступы для контента */
   padding-left: 18px;
   padding-right: 18px;
-  padding-top: 20px; /* Компенсируем отрицательный margin */
-  /* Фон с бесшовным переходом — цвет как у .hdr (родитель шапки) #f8f9fa */
+  padding-top: 20px;
+  box-sizing: border-box;
+  /* Предотвращаем горизонтальный overflow */
+  width: 100%;
+  overflow-x: hidden;
+  /* Фон с бесшовным переходом */
   background-color: var(--bg-primary, #f8f9fa);
   background-image:
-    /* Декоративные радиальные градиенты — сдвинуты вниз, чтобы не влиять на стык с шапкой */
+    /* Декоративные радиальные градиенты */
     radial-gradient(1200px 800px at 20% 25%, rgba(10, 132, 255, 0.08), transparent 55%),
     radial-gradient(900px 600px at 80% 35%, rgba(175, 82, 222, 0.08), transparent 55%),
     radial-gradient(900px 700px at 50% 100%, rgba(255, 149, 0, 0.06), transparent 60%);

@@ -2,17 +2,17 @@
 > @heys/search@14.0.0 build /Users/poplavskijanton/HEYS-v2/packages/search
 > tsup
 
-[34mCLI[39m Building entry: src/index.ts
-[34mCLI[39m Using tsconfig: tsconfig.json
-[34mCLI[39m tsup v7.3.0
-[34mCLI[39m Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/search/tsup.config.ts
-[34mCLI[39m Target: es2022
-[34mCLI[39m Cleaning output folder
-[34mCJS[39m Build start
-[34mESM[39m Build start
-[32mCJS[39m [1mdist/index.cjs     [22m[32m5.88 KB[39m
-[32mCJS[39m [1mdist/index.cjs.map [22m[32m16.77 KB[39m
-[32mCJS[39m ⚡️ Build success in 320ms
-[32mESM[39m [1mdist/index.js     [22m[32m5.87 KB[39m
-[32mESM[39m [1mdist/index.js.map [22m[32m16.77 KB[39m
-[32mESM[39m ⚡️ Build success in 314ms
+CLI Building entry: src/index.ts
+CLI Using tsconfig: tsconfig.json
+CLI tsup v7.3.0
+CLI Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/search/tsup.config.ts
+CLI Target: es2022
+CLI Cleaning output folder
+CJS Build start
+ESM Build start
+ESM dist/index.js     5.87 KB
+ESM dist/index.js.map 16.77 KB
+ESM ⚡️ Build success in 505ms
+CJS dist/index.cjs     5.88 KB
+CJS dist/index.cjs.map 16.77 KB
+CJS ⚡️ Build success in 506ms
