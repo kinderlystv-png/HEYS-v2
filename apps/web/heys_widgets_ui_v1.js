@@ -2931,35 +2931,8 @@
       className: `widgets-tab ${isEditMode ? 'widgets-tab--editing' : ''}`,
       ref: containerRef
     },
-      // Header with edit button
-      React.createElement('div', { className: 'widgets-header' },
-        React.createElement('div', { className: 'widgets-header__left' },
-          isEditMode && React.createElement(React.Fragment, null,
-            React.createElement('button', {
-              className: 'widgets-header__btn widgets-header__btn--add',
-              onClick: () => setCatalogOpen(true)
-            }, '+ Добавить'),
-            // Undo/Redo buttons
-            React.createElement('button', {
-              className: `widgets-header__btn widgets-header__btn--undo ${!historyInfo.canUndo ? 'disabled' : ''}`,
-              onClick: handleUndo,
-              disabled: !historyInfo.canUndo,
-              title: 'Отменить (Ctrl+Z)'
-            }, '↩'),
-            React.createElement('button', {
-              className: `widgets-header__btn widgets-header__btn--redo ${!historyInfo.canRedo ? 'disabled' : ''}`,
-              onClick: handleRedo,
-              disabled: !historyInfo.canRedo,
-              title: 'Повторить (Ctrl+Shift+Z)'
-            }, '↪')
-          )
-        ),
-        // На мобиле кнопку "Изменить" переносим в FAB снизу слева
-        !isMobile && React.createElement('button', {
-          className: `widgets-header__btn widgets-header__btn--edit ${isEditMode ? 'active' : ''}`,
-          onClick: toggleEdit
-        }, isEditMode ? '✓ Готово' : '✏️ Изменить')
-      ),
+      // Header (пустой - кнопки перенесены в fixed блок снизу)
+      React.createElement('div', { className: 'widgets-header' }),
       
       // Widgets Grid
       React.createElement('div', {
@@ -2989,6 +2962,34 @@
         onClose: () => setSettingsWidget(null),
         onSave: handleSettingsSave
       }),
+
+      // === Fixed bottom edit controls (для всех устройств) ===
+      React.createElement('div', { className: 'widgets-edit-controls' },
+        // Кнопки добавить/отменить/вернуть - показываем только в edit mode
+        isEditMode && React.createElement('div', { className: 'widgets-edit-controls__actions' },
+          React.createElement('button', {
+            className: 'widgets-header__btn widgets-header__btn--add',
+            onClick: () => setCatalogOpen(true)
+          }, '+ Добавить'),
+          React.createElement('button', {
+            className: `widgets-header__btn widgets-header__btn--undo ${!historyInfo.canUndo ? 'disabled' : ''}`,
+            onClick: handleUndo,
+            disabled: !historyInfo.canUndo,
+            title: 'Отменить (Ctrl+Z)'
+          }, '↩'),
+          React.createElement('button', {
+            className: `widgets-header__btn widgets-header__btn--redo ${!historyInfo.canRedo ? 'disabled' : ''}`,
+            onClick: handleRedo,
+            disabled: !historyInfo.canRedo,
+            title: 'Повторить (Ctrl+Shift+Z)'
+          }, '↪')
+        ),
+        // FAB кнопка редактирования - всегда видна (только на desktop)
+        !isMobile && React.createElement('button', {
+          className: `widgets-edit-controls__fab ${isEditMode ? 'active' : ''}`,
+          onClick: toggleEdit
+        }, isEditMode ? '✓ Готово' : '✏️ Изменить')
+      ),
 
       // === FABs (mobile) ===
       isMobile && React.createElement(React.Fragment, null,

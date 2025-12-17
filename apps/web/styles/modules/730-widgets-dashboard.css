@@ -165,7 +165,7 @@
   /* Отступы для контента */
   padding-left: 18px;
   padding-right: 18px;
-  padding-top: 20px;
+  padding-top: 0; /* Минимальный отступ сверху */
   box-sizing: border-box;
   /* Предотвращаем горизонтальный overflow */
   width: 100%;
@@ -241,45 +241,100 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--widget-spacing-sm) var(--widget-spacing-md);
+  padding: 0; /* Теперь пустой, кнопки перенесены вниз */
   position: sticky;
   top: 0;
-  /* Прозрачный фон — сливается с основным */
   background: transparent;
   z-index: 100;
 }
 
-[data-theme="dark"] .widgets-header {
-  /* Без границы */
+/* ===== Fixed Bottom Edit Controls (над меню) ===== */
+.widgets-edit-controls {
+  position: fixed;
+  bottom: calc(var(--safe-bottom, 0px) + 90px); /* Над нижним меню + отступ от подсказок */
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--widget-spacing-sm);
+  padding: var(--widget-spacing-sm) var(--widget-spacing-md);
+  z-index: 200; /* Выше виджетов */
+  pointer-events: none; /* Не блокируем клики по виджетам */
 }
 
-.widgets-header__left {
+.widgets-edit-controls__actions {
   display: flex;
   gap: var(--widget-spacing-sm);
   align-items: center;
+  pointer-events: auto; /* Включаем клики только на кнопках */
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 6px 10px;
+  border-radius: 999px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
+[data-theme="dark"] .widgets-edit-controls__actions {
+  background: rgba(20, 20, 20, 0.85);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.widgets-edit-controls__fab {
+  pointer-events: auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary, #3b82f6);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.widgets-edit-controls__fab:hover {
+  background: var(--primary-dark, #2563eb);
+  transform: scale(1.05);
+}
+
+.widgets-edit-controls__fab.active {
+  background: #22c55e;
+  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
+}
+
+/* Стили для кнопок внутри edit controls */
 .widgets-header__btn {
   padding: 8px 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow: var(--widget-shadow-subtle);
+  background: transparent; /* Прозрачный, т.к. внутри контейнера с фоном */
+  border: none;
   font-size: 14px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 4px;
   transition: all 0.2s ease;
+  color: var(--text-primary, #1f2937);
 }
 
 [data-theme="dark"] .widgets-header__btn {
-  background: rgba(30, 30, 30, 0.72);
-  border-color: rgba(255, 255, 255, 0.10);
+  color: var(--text-primary, #e5e7eb);
 }
 
 .widgets-header__btn:hover:not(.disabled) {
-  background: var(--bg-hover, #f3f4f6);
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+}
+
+[data-theme="dark"] .widgets-header__btn:hover:not(.disabled) {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .widgets-header__btn.disabled {
@@ -287,31 +342,26 @@
   cursor: not-allowed;
 }
 
-.widgets-header__btn--edit {
-  background: var(--primary, #3b82f6);
-  color: white;
-  border-color: var(--primary, #3b82f6);
-}
-
-.widgets-header__btn--edit:hover {
-  background: var(--primary-dark, #2563eb);
-}
-
-.widgets-header__btn--edit.active {
-  background: #22c55e;
-  border-color: #22c55e;
-}
-
 .widgets-header__btn--add {
   background: var(--primary, #3b82f6);
   color: white;
-  border-color: var(--primary, #3b82f6);
+  padding: 8px 16px;
+  border-radius: 999px;
+}
+
+.widgets-header__btn--add:hover {
+  background: var(--primary-dark, #2563eb);
 }
 
 .widgets-header__btn--undo,
 .widgets-header__btn--redo {
   padding: 8px 10px;
   font-size: 16px;
+}
+
+
+[data-theme="dark"] .widgets-header {
+  /* Пустой */
 }
 
 /* ===== Grid Container — Premium Layout ===== */
@@ -1084,25 +1134,26 @@
   text-align: center;
 }
 
-/* Delete Button */
+/* Delete Button — внутри виджета */
 .widget__delete-btn {
   position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 24px;
-  height: 24px;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: #ef4444;
+  background: rgba(239, 68, 68, 0.9);
   color: white;
-  border: 2px solid var(--widget-control-ring, rgba(255, 255, 255, 0.92));
+  border: none;
   display: none;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: bold;
   cursor: pointer;
-  z-index: 10;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 15;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
 }
 
 .widget--editing .widget__delete-btn {
@@ -1110,21 +1161,25 @@
 }
 
 .widget__delete-btn:hover {
-  background: #dc2626;
+  background: #ef4444;
   transform: scale(1.1);
 }
 
-/* Settings Button */
+.widget__delete-btn:active {
+  transform: scale(0.95);
+}
+
+/* Settings Button — внутри виджета */
 .widget__settings-btn {
   position: absolute;
-  top: -8px;
-  left: -8px;
-  width: 24px;
-  height: 24px;
+  top: 6px;
+  left: 6px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: var(--primary, #3b82f6);
+  background: rgba(59, 130, 246, 0.9);
   color: white;
-  border: 2px solid var(--widget-control-ring, rgba(255, 255, 255, 0.92));
+  border: none;
   display: none;
   align-items: center;
   justify-content: center;
@@ -1142,24 +1197,25 @@
   display: flex;
 }
 
-/* Resize Button (cycle sizes) */
+/* Resize Button (cycle sizes) — внутри виджета слева */
 .widget__resize-btn {
   position: absolute;
-  top: -8px;
-  left: 18px;
-  width: 24px;
-  height: 24px;
+  top: 6px;
+  left: 32px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: #0ea5e9;
+  background: rgba(14, 165, 233, 0.9);
   color: white;
-  border: 2px solid var(--widget-control-ring, rgba(255, 255, 255, 0.92));
+  border: none;
   display: none;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
-  z-index: 10;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 15;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
 }
 
 .widget--editing .widget__resize-btn {
@@ -1167,32 +1223,40 @@
 }
 
 .widget__resize-btn:hover {
-  background: #0284c7;
+  background: #0ea5e9;
   transform: scale(1.1);
+}
+
+.widget__resize-btn:active {
+  transform: scale(0.95);
 }
 
 .widget__settings-btn:hover {
-  background: #2563eb;
+  background: #3b82f6;
   transform: scale(1.1);
 }
 
-/* Size Badge (edit-mode) — компактный индикатор NxM, не перекрывает контент */
+.widget__settings-btn:active {
+  transform: scale(0.95);
+}
+
+/* Size Badge (edit-mode) — компактный индикатор NxM внизу справа внутри виджета */
 .widget__size-badge {
   position: absolute;
-  right: -8px;
-  bottom: -8px;
+  right: 6px;
+  bottom: 6px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.18);
-  font-size: 11px;
-  font-weight: 800;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  font-size: 10px;
+  font-weight: 700;
   letter-spacing: 0.02em;
-  color: rgba(15, 23, 42, 0.88);
+  color: white;
   z-index: 11;
   pointer-events: auto;
   -webkit-user-select: none;
