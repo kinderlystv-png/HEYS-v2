@@ -6186,14 +6186,14 @@ body:has(.offline-banner) .wrap {
     align-items: center;
     gap: 6px;
     background: transparent;
-    border: 1px solid #e5e7eb;
+    border: none;
     border-radius: 8px;
-    padding: 4px 8px;
+    padding: 4px 0;
     cursor: pointer;
   }
   
   .mobile-mood-btn:active {
-    background: #f3f4f6;
+    background: transparent;
   }
   
   /* Компактные цветные badge оценок в приёмах пищи (как в тренировках) */
