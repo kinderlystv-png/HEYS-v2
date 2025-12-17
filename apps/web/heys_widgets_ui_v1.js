@@ -326,10 +326,14 @@
 
       const posChanged = !!finalPos && (finalPos.col !== basePos.col || finalPos.row !== basePos.row);
 
-      console.log(`[endResizeDrag] finalSizeId=${finalSizeId}, baseSizeId=${baseSizeId}, posChanged=${posChanged}, finalPos=`, finalPos);
+      if (HEYS.debug) {
+        console.log(`[endResizeDrag] finalSizeId=${finalSizeId}, baseSizeId=${baseSizeId}, posChanged=${posChanged}, finalPos=`, finalPos);
+      }
 
       if (finalSizeId && (finalSizeId !== baseSizeId || posChanged)) {
-        console.log(`[endResizeDrag] Calling resizeWidgetAt(${widget.id}, ${finalSizeId}, ...)`, finalPos);
+        if (HEYS.debug) {
+          console.log(`[endResizeDrag] Calling resizeWidgetAt(${widget.id}, ${finalSizeId}, ...)`, finalPos);
+        }
         const st = HEYS.Widgets.state;
         if (typeof st?.resizeWidgetAt === 'function') {
           st.resizeWidgetAt(widget.id, finalSizeId, finalPos);

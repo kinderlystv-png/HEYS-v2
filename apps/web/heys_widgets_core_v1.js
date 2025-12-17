@@ -1,9 +1,9 @@
 /**
  * heys_widgets_core_v1.js
  * Ядро виджетов: Grid Engine, Drag & Drop, State Manager
- * Version: 1.1.0 — Phase 1: Core Engine
+ * Version: 1.2.0 — Phase 1: Core Engine + saveLayout fix
  * Created: 2025-12-15
- * Updated: 2025-12-15
+ * Updated: 2025-12-16
  * 
  * Phase 1 features:
  * - Undo/Redo history stack
@@ -11,6 +11,11 @@
  * - Long press detection (500ms)
  * - Improved collision detection
  * - Debounced persistence
+ * 
+ * v1.2.0 FIX (2025-12-16):
+ * - saveLayout() НЕ сохраняет пустой массив (предотвращает потерю данных)
+ * - saveLayout() НЕ сохраняет до инициализации (предотвращает перезапись storage)
+ * - beforeunload/visibilitychange проверяют _initialized перед сохранением
  */
 (function(global) {
   'use strict';
@@ -56,20 +61,41 @@
       if (this._initialized) return;
 
       const meta = this.loadLayoutMeta();
-      let saved = this.loadLayout();
+      let saved = this.loadLayout() || [];
 
       // Миграция layout 2-колоночной сетки → 4-колоночную.
       // Важно: делаем ОДИН раз и фиксируем в meta.
       const needsMigration = !meta || meta.gridVersion !== GRID_VERSION || meta.gridCols !== GRID_COLS;
       if (needsMigration && saved && Array.isArray(saved) && saved.length > 0) {
-        saved = this._migrateLayout(saved, meta);
+        // Важно: saveLayout() раньше сохранял this._widgets (ещё пустой) → мог перезатирать storage.
+        // Поэтому: нормализуем мигрированный layout и сохраняем ИМЕННО его.
+        const migrated = this._migrateLayout(saved, meta);
+        const normalizedWidgets = migrated.map(w => this._normalizeWidget(w));
+        const normalizedLayoutData = normalizedWidgets.map(w => ({
+          id: w.id,
+          type: w.type,
+          size: w.size,
+          position: w.position,
+          settings: w.settings,
+          createdAt: w.createdAt
+        }));
+
+        saved = normalizedLayoutData;
+
         // После миграции — сохраняем meta + текущий layout
         this.saveLayoutMeta({ gridVersion: GRID_VERSION, gridCols: GRID_COLS, migratedAt: Date.now() });
-        // saveLayout сделает storage в debounced, но тут хотим сразу
-        try { this.saveLayout(); } catch (e) {}
+        // Сохраняем сразу (без debounce)
+        try { this.saveLayout(normalizedLayoutData); } catch (e) {}
       }
 
       if (saved && Array.isArray(saved) && saved.length > 0) {
+        // 🔍 DEBUG: логируем raw данные из storage
+        console.log('[Widgets Core] Loading from storage:', saved.map(w => ({
+          id: w.id?.substring(0, 20),
+          type: w.type,
+          size: w.size,
+          position: w.position
+        })));
         this._widgets = saved.map(w => this._normalizeWidget(w));
       } else {
         this._widgets = this._createDefaultLayout();
@@ -84,6 +110,14 @@
       this._initialized = true;
       HEYS.Widgets.emit('layout:loaded', { layout: this._widgets });
       console.log('[Widgets Core] State initialized with', this._widgets.length, 'widgets');
+      // 🔍 DEBUG: логируем финальное состояние
+      console.log('[Widgets Core] Final widgets:', this._widgets.map(w => ({
+        id: w.id?.substring(0, 20),
+        type: w.type,
+        size: w.size,
+        cols: w.cols,
+        rows: w.rows
+      })));
     },
 
     /**
@@ -462,11 +496,26 @@
       }
       
       const oldWidget = { ...widget, position: { ...widget.position } };
-      Object.assign(widget, updates);
+
+      // 🔒 Нормализуем sizeId в одном месте, чтобы:
+      // - поддерживать legacy id (mini/compact/large)
+      // - поддерживать символ "×" (например, "1×1")
+      // - гарантировать пересчёт cols/rows и корректный DnD placeholder
+      let nextUpdates = updates;
+      if (updates && Object.prototype.hasOwnProperty.call(updates, 'size')) {
+        const reg = HEYS.Widgets.registry;
+        const raw = updates.size;
+        const normalized = reg?.normalizeSizeId ? (reg.normalizeSizeId(raw) || raw) : raw;
+        if (normalized !== raw) {
+          nextUpdates = { ...updates, size: normalized };
+        }
+      }
+
+      Object.assign(widget, nextUpdates);
       
       // Обновить cols/rows если изменился size
-      if (updates.size) {
-        const size = HEYS.Widgets.registry?.getSize(updates.size);
+      if (nextUpdates && nextUpdates.size) {
+        const size = HEYS.Widgets.registry?.getSize(nextUpdates.size);
         if (size) {
           widget.cols = size.cols;
           widget.rows = size.rows;
@@ -474,23 +523,23 @@
       }
       
       // Обновить позицию если указана
-      if (updates.position) {
-        widget.position = { ...updates.position };
+      if (nextUpdates && nextUpdates.position) {
+        widget.position = { ...nextUpdates.position };
       }
       
       this._debouncedSave();
       
-      if (updates.position) {
+      if (nextUpdates && nextUpdates.position) {
         HEYS.Widgets.emit('widget:moved', { widget, from: oldWidget.position, to: updates.position });
         // Вибрация при перемещении
         if (navigator.vibrate) {
           navigator.vibrate(10);
         }
       }
-      if (updates.size) {
-        HEYS.Widgets.emit('widget:resized', { widget, from: oldWidget.size, to: updates.size });
+      if (nextUpdates && nextUpdates.size) {
+        HEYS.Widgets.emit('widget:resized', { widget, from: oldWidget.size, to: nextUpdates.size });
       }
-      if (updates.settings) {
+      if (nextUpdates && nextUpdates.settings) {
         HEYS.Widgets.emit('widget:settings', { widget, settings: updates.settings });
       }
       
@@ -606,8 +655,9 @@
       if (!widget) return false;
 
       const registry = HEYS.Widgets.registry;
-      if (!registry.supportsSize(widget.type, size)) {
-        console.warn(`[Widgets Core] Widget ${widget.type} does not support size ${size}`);
+      const normalizedSize = registry?.normalizeSizeId ? (registry.normalizeSizeId(size) || size) : size;
+      if (!registry.supportsSize(widget.type, normalizedSize)) {
+        console.warn(`[Widgets Core] Widget ${widget.type} does not support size ${normalizedSize}`);
         return false;
       }
 
@@ -615,23 +665,17 @@
         ? { col: position.col, row: position.row }
         : { ...widget.position };
 
-      // 🔍 DEBUG: Логируем что происходит
-      const sizeInfo = registry.getSize(size);
-      console.log(`[resizeWidgetAt] Widget ${id}: size ${widget.size} → ${size}, pos (${widget.position.col},${widget.position.row}) → (${nextPos.col},${nextPos.row}), new dims: ${sizeInfo?.cols}x${sizeInfo?.rows}`);
-
       // 1) Одна запись в историю
       this._pushHistory();
 
       // 2) Меняем размер (+ якорную позицию)
-      const resized = this.updateWidget(id, { size, position: nextPos }, true);
+      const resized = this.updateWidget(id, { size: normalizedSize, position: nextPos }, true);
       if (!resized) {
         return false;
       }
 
       // 3) 🆕 Вытесняем перекрывающиеся виджеты на свободные места
-      console.log(`[resizeWidgetAt] Calling displaceCollidingWidgets for ${id}`);
-      const displaced = gridEngine.displaceCollidingWidgets(id);
-      console.log(`[resizeWidgetAt] Displacement result: ${displaced}`);
+      gridEngine.displaceCollidingWidgets(id);
 
       // layout:changed эмитится внутри updateWidget
       return true;
@@ -640,15 +684,29 @@
     /**
      * Сохранить layout в storage (cloud sync)
      */
-    saveLayout() {
-      const layoutData = this._widgets.map(w => ({
-        id: w.id,
-        type: w.type,
-        size: w.size,
-        position: w.position,
-        settings: w.settings,
-        createdAt: w.createdAt
-      }));
+    saveLayout(layoutOverride = null) {
+      // 🔧 FIX: Не сохраняем до инициализации (иначе затрём storage пустым массивом)
+      if (!this._initialized && !Array.isArray(layoutOverride)) {
+        console.warn('[Widgets Core] saveLayout skipped: not initialized');
+        return;
+      }
+      
+      const layoutData = (Array.isArray(layoutOverride) && layoutOverride.length > 0)
+        ? layoutOverride
+        : this._widgets.map(w => ({
+            id: w.id,
+            type: w.type,
+            size: w.size,
+            position: w.position,
+            settings: w.settings,
+            createdAt: w.createdAt
+          }));
+      
+      // 🔧 FIX: Не сохраняем пустой layout (опасность потери данных)
+      if (!layoutData || layoutData.length === 0) {
+        console.warn('[Widgets Core] saveLayout skipped: empty layout');
+        return;
+      }
       
       // Используем HEYS.store для cloud sync
       if (HEYS.store?.set) {
@@ -1522,10 +1580,24 @@
       placeholder.style.transition = 'all 0.15s ease-out';
       
       // Сохраняем размер виджета для placeholder (важно сделать ДО updatePlaceholderPosition)
-      // 🔧 FIX: Получаем размер из registry
-      const sizeInfo = HEYS.Widgets.registry.getSize(widget.size);
-      this._placeholderCols = sizeInfo?.cols || widget.cols || 1;
-      this._placeholderRows = sizeInfo?.rows || widget.rows || 1;
+      // 🔧 FIX: нормализуем sizeId (поддержка legacy id и символа "×")
+      const reg = HEYS.Widgets.registry;
+      const normalizedSize = reg?.normalizeSizeId ? (reg.normalizeSizeId(widget?.size) || widget?.size) : widget?.size;
+      const sizeInfo = reg?.getSize?.(normalizedSize) || reg?.getSize?.(widget?.size);
+      this._placeholderCols = sizeInfo?.cols || widget?.cols || 1;
+      this._placeholderRows = sizeInfo?.rows || widget?.rows || 1;
+      
+      // 🔍 DEBUG: Проверяем какой размер используется для placeholder
+      console.log('[DnD] _createPlaceholder:', {
+        widgetId: widget?.id,
+        widgetSize: widget?.size,
+        widgetCols: widget?.cols,
+        widgetRows: widget?.rows,
+        normalizedSize,
+        sizeInfo,
+        placeholderCols: this._placeholderCols,
+        placeholderRows: this._placeholderRows
+      });
       
       // Привязываем placeholder и ставим в нужную grid-позицию
       this._placeholderElement = placeholder;
@@ -1597,10 +1669,14 @@
         
         const newGridPos = gridEngine.pixelsToGrid(relX, relY);
         
-        // 🔧 FIX: Получаем размер из registry
-        const draggedSizeInfo = HEYS.Widgets.registry.getSize(this._draggedWidget.size);
-        const draggedCols = draggedSizeInfo?.cols || this._draggedWidget.cols || 1;
-        const draggedRows = draggedSizeInfo?.rows || this._draggedWidget.rows || 1;
+        // 🔧 FIX: Получаем размер из registry (через normalize)
+        const reg = HEYS.Widgets.registry;
+        const normalizedDraggedSize = reg?.normalizeSizeId
+          ? (reg.normalizeSizeId(this._draggedWidget?.size) || this._draggedWidget?.size)
+          : this._draggedWidget?.size;
+        const draggedSizeInfo = reg?.getSize?.(normalizedDraggedSize) || reg?.getSize?.(this._draggedWidget?.size);
+        const draggedCols = draggedSizeInfo?.cols || this._draggedWidget?.cols || 1;
+        const draggedRows = draggedSizeInfo?.rows || this._draggedWidget?.rows || 1;
         
         // Ограничиваем позицию с учётом размера виджета
         newGridPos.col = Math.min(newGridPos.col, GRID_COLS - draggedCols);
@@ -1611,10 +1687,12 @@
         if (!isValid) {
           const colliding = gridEngine.getCollidingWidget(this._draggedWidget.id, newGridPos);
           if (colliding) {
-            // 🔧 FIX: Получаем размеры обоих виджетов из registry для сравнения
-            const collidingSizeInfo = HEYS.Widgets.registry.getSize(colliding.size);
-            const collidingCols = collidingSizeInfo?.cols || colliding.cols || 1;
-            const collidingRows = collidingSizeInfo?.rows || colliding.rows || 1;
+            // 🔧 FIX: Получаем размеры обоих виджетов из registry для сравнения (через normalize)
+            const reg = HEYS.Widgets.registry;
+            const normalizedCollidingSize = reg?.normalizeSizeId ? (reg.normalizeSizeId(colliding?.size) || colliding?.size) : colliding?.size;
+            const collidingSizeInfo = reg?.getSize?.(normalizedCollidingSize) || reg?.getSize?.(colliding?.size);
+            const collidingCols = collidingSizeInfo?.cols || colliding?.cols || 1;
+            const collidingRows = collidingSizeInfo?.rows || colliding?.rows || 1;
             
             if (collidingCols === draggedCols && collidingRows === draggedRows) {
               swapWith = colliding;
@@ -1920,6 +1998,9 @@
   // Принудительное сохранение перед закрытием страницы
   // чтобы не потерять данные из debounced save
   window.addEventListener('beforeunload', () => {
+    // 🔧 FIX: Не сохраняем если state не инициализирован
+    if (!state._initialized) return;
+    
     // Отменяем debounced timeout
     if (state._saveTimeout) {
       clearTimeout(state._saveTimeout);
@@ -1936,6 +2017,9 @@
   // Также сохраняем при visibilitychange (переключение вкладок на мобилке)
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
+      // 🔧 FIX: Не сохраняем если state не инициализирован
+      if (!state._initialized) return;
+      
       // Отменяем debounced timeout
       if (state._saveTimeout) {
         clearTimeout(state._saveTimeout);

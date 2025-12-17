@@ -11,6 +11,11 @@
   
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.Widgets = HEYS.Widgets || {};
+
+  // Чтобы не убивать консоль во время drag (dnd:move летит десятки раз/сек)
+  // По умолчанию НЕ логируем dnd:move даже при HEYS.debug.
+  // Если очень надо — включи в консоли: HEYS.debugDndMove = true
+  let _lastDndMoveLogAt = 0;
   
   // === Event Bus Implementation ===
   const events = {
@@ -118,6 +123,13 @@
       
       // Debug логирование
       if (HEYS.debug && event !== 'data:updated') {
+        // dnd:move — высокочастотное событие, логировать его можно только явно.
+        if (event === 'dnd:move' && !HEYS.debugDndMove) return;
+        if (event === 'dnd:move') {
+          const now = Date.now();
+          if (now - _lastDndMoveLogAt < 250) return; // throttle
+          _lastDndMoveLogAt = now;
+        }
         console.log(`[Widgets Events] ${event}`, data);
       }
     },
