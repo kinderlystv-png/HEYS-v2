@@ -126,6 +126,9 @@
   padding-left: 0 !important;
   padding-right: 0 !important;
   background-color: var(--bg-primary, #f8f9fa);
+  /* Разрешаем скролл на wrap */
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
 }
 
 [data-theme="dark"] .wrap:has(.widgets-tab) {
@@ -135,13 +138,13 @@
 /* Плавный скролл для виджетов */
 .tab-content-swipeable:has(.widgets-tab) {
   /* Важно: переопределяем overflow для плавного скролла */
-  overflow-y: auto;
+  overflow-y: visible !important;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   scroll-behavior: smooth;
-  /* Даём контейнеру определённую высоту */
-  max-height: calc(100vh - 60px); /* высота экрана минус nav bar */
+  /* Убираем ограничение высоты — пусть контент определяет */
+  max-height: none;
   height: auto;
   /* Убираем padding родителя — widgets-tab сам управляет отступами */
   padding: 0 !important;
@@ -155,8 +158,10 @@
 
 .widgets-tab {
   position: relative;
-  /* Контент определяет высоту + отступ для воздуха снизу */
-  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); /* navbar + safe area + воздух */
+  /* Контент определяет высоту + большой отступ для воздуха снизу */
+  padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px)); /* navbar + safe area + воздух */
+  /* Минимальная высота чтобы был скролл */
+  min-height: calc(100vh - 60px);
   /* Отступы для контента */
   padding-left: 18px;
   padding-right: 18px;
