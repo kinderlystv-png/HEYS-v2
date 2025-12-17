@@ -485,6 +485,10 @@ const HEYS = window.HEYS = window.HEYS || {};
           // Устанавливаем флаг что это явное обновление (не случайная перезагрузка)
           sessionStorage.setItem('heys_pending_update', 'true');
           
+          // 🔄 Флаг для форсированной синхронизации данных после перезагрузки
+          // При обновлении PWA нужно заново загрузить данные из облака (не из кэша)
+          sessionStorage.setItem('heys_force_sync_after_update', 'true');
+          
           // Запоминаем старую версию, чтобы после перезагрузки runVersionGuard увидел рассинхрон
           // и выполнил auto-logout + баннер об обновлении
           localStorage.setItem(VERSION_KEY, APP_VERSION);
@@ -631,6 +635,29 @@ const HEYS = window.HEYS = window.HEYS || {};
             
             // НЕ выходим из системы — это плохой UX!
             // Пользователь не должен терять сессию при обновлении.
+            
+            // 🔄 Форсированная синхронизация данных после обновления
+            // Обновляем кэш данных из облака, чтобы пользователь видел актуальные данные
+            const needForceSync = sessionStorage.getItem('heys_force_sync_after_update') === 'true';
+            sessionStorage.removeItem('heys_force_sync_after_update');
+            
+            if (needForceSync) {
+              console.log('[HEYS] 🔄 Force syncing data after update...');
+              const clientId = localStorage.getItem('heys_client_current')?.replace(/^"|"$/g, '');
+              if (clientId && HEYS.cloud?.syncClient) {
+                // Немного задержки чтобы cloud модуль успел инициализироваться
+                setTimeout(() => {
+                  HEYS.cloud.syncClient(clientId, { force: true })
+                    .then(() => {
+                      console.log('[HEYS] ✅ Data synced after update');
+                      // Обновляем UI после синхронизации
+                      if (HEYS.products?.reload) HEYS.products.reload();
+                      if (HEYS.Day?.reloadFromStorage) HEYS.Day.reloadFromStorage();
+                    })
+                    .catch(err => console.warn('[HEYS] ⚠️ Sync after update failed:', err));
+                }, 1000);
+              }
+            }
             
             // Показать баннер об успешном обновлении
             setTimeout(() => {
