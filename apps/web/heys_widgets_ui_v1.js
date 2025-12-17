@@ -2036,6 +2036,82 @@
       );
     }
     
+    // 4x1 — Компактный горизонтальный layout с минимальными интервалами
+    if (size === '4x1') {
+      const MacroBarCompact = ({ label, value, target, pct, color }) => {
+        return React.createElement('div', { className: 'widget-macros__item-4x1' },
+          React.createElement('div', { className: 'widget-macros__label-4x1', style: { color } }, label),
+          React.createElement('div', { className: 'widget-macros__bar-4x1' },
+            React.createElement('div', {
+              className: 'widget-macros__bar-fill',
+              style: { width: `${Math.min(100, pct)}%`, background: color }
+            })
+          ),
+          React.createElement('span', { className: 'widget-macros__value-4x1' }, `${Math.round(value)}г`)
+        );
+      };
+      
+      return React.createElement('div', { className: 'widget-macros widget-macros--4x1' },
+        React.createElement(MacroBarCompact, { label: 'Б', value: protein || 0, target: proteinTarget || 100, pct: pctP, color: '#ef4444' }),
+        React.createElement(MacroBarCompact, { label: 'Ж', value: fat || 0, target: fatTarget || 70, pct: pctF, color: '#eab308' }),
+        React.createElement(MacroBarCompact, { label: 'У', value: carbs || 0, target: carbsTarget || 250, pct: pctC, color: '#3b82f6' })
+      );
+    }
+    
+    // 4x2 — Расширенный layout с дополнительной информацией
+    if (size === '4x2') {
+      const totalGrams = (protein || 0) + (fat || 0) + (carbs || 0);
+      const totalTarget = (proteinTarget || 100) + (fatTarget || 70) + (carbsTarget || 250);
+      const totalPct = totalTarget > 0 ? Math.round(totalGrams / totalTarget * 100) : 0;
+      // Расчёт калорий: белки*4 + жиры*9 + углеводы*4
+      const kcalEaten = Math.round((protein || 0) * 4 + (fat || 0) * 9 + (carbs || 0) * 4);
+      const kcalTarget = Math.round((proteinTarget || 100) * 4 + (fatTarget || 70) * 9 + (carbsTarget || 250) * 4);
+      
+      const MacroRowExtended = ({ label, emoji, value, target, pct, color }) => {
+        const isGood = pct >= 80 && pct <= 120;
+        const statusEmoji = pct < 80 ? '⬇️' : pct > 120 ? '⬆️' : '✅';
+        return React.createElement('div', { className: 'widget-macros__row-4x2' },
+          React.createElement('div', { className: 'widget-macros__row-header' },
+            React.createElement('span', { className: 'widget-macros__emoji' }, emoji),
+            React.createElement('span', { className: 'widget-macros__label-text' }, label),
+            React.createElement('span', { className: 'widget-macros__grams-4x2' }, `${Math.round(value)}/${target}г`),
+            React.createElement('span', { 
+              className: 'widget-macros__pct-badge',
+              style: { background: isGood ? '#22c55e20' : `${color}20`, color: isGood ? '#22c55e' : color }
+            }, `${pct}%`),
+            React.createElement('span', { className: 'widget-macros__status-emoji' }, statusEmoji)
+          ),
+          React.createElement('div', { className: 'widget-macros__bar-4x2' },
+            React.createElement('div', {
+              className: 'widget-macros__bar-fill',
+              style: { width: `${Math.min(100, pct)}%`, background: color }
+            })
+          )
+        );
+      };
+      
+      return React.createElement('div', { className: 'widget-macros widget-macros--4x2' },
+        // Заголовок с общей статистикой
+        React.createElement('div', { className: 'widget-macros__summary-4x2' },
+          React.createElement('div', { className: 'widget-macros__summary-item' },
+            React.createElement('span', { className: 'widget-macros__summary-label' }, '🔥 Калории'),
+            React.createElement('span', { className: 'widget-macros__summary-value' }, `${kcalEaten} / ${kcalTarget}`)
+          ),
+          React.createElement('div', { className: 'widget-macros__summary-item' },
+            React.createElement('span', { className: 'widget-macros__summary-label' }, '📊 Баланс'),
+            React.createElement('span', { 
+              className: 'widget-macros__summary-value',
+              style: { color: avgPct >= 80 && avgPct <= 120 ? '#22c55e' : avgPct < 80 ? '#ef4444' : '#eab308' }
+            }, `${avgPct}%`)
+          )
+        ),
+        // Три бара БЖУ
+        React.createElement(MacroRowExtended, { label: 'Белки', emoji: '🍖', value: protein || 0, target: proteinTarget || 100, pct: pctP, color: '#ef4444' }),
+        React.createElement(MacroRowExtended, { label: 'Жиры', emoji: '🧈', value: fat || 0, target: fatTarget || 70, pct: pctF, color: '#eab308' }),
+        React.createElement(MacroRowExtended, { label: 'Углеводы', emoji: '🍞', value: carbs || 0, target: carbsTarget || 250, pct: pctC, color: '#3b82f6' })
+      );
+    }
+    
     // 2x2 — Оптимальный layout с барами и числами
     if (size === '2x2') {
       const MacroRow = ({ label, emoji, value, target, pct, color }) => {

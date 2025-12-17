@@ -120,15 +120,23 @@
 }
 
 /* ===== Tab Container ===== */
-/* Убираем overflow: hidden с родителя чтобы full-bleed работал */
+/* Плавный скролл для виджетов */
 .tab-content-swipeable:has(.widgets-tab) {
-  overflow: visible;
+  /* Важно: переопределяем overflow для плавного скролла */
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+  /* Даём контейнеру определённую высоту */
+  max-height: calc(100vh - 60px); /* высота экрана минус nav bar */
+  height: auto;
 }
 
 .widgets-tab {
   position: relative;
-  min-height: calc(100vh - 120px);
-  padding-bottom: 100px; /* safe area для navbar */
+  /* Контент определяет высоту + отступ для воздуха снизу */
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); /* navbar + safe area + воздух */
   /* Full-bleed: компенсируем padding родителя (18px боковые) */
   margin-left: -18px;
   margin-right: -18px;
@@ -287,7 +295,7 @@
   gap: var(--widget-grid-gap);
   grid-auto-rows: var(--widget-row-height);
   padding: var(--widget-spacing-md);
-  min-height: calc(100vh - 180px);
+  padding-bottom: var(--widget-spacing-xl); /* Воздух под последним виджетом */
   align-content: start;
 }
 
@@ -2724,6 +2732,9 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .widget-macros--compact {
@@ -3432,6 +3443,138 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
+}
+
+/* --- Macros Widget 4×1 — Компактный горизонтальный --- */
+.widget-macros--4x1 {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 12px;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.widget-macros__item-4x1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.widget-macros__label-4x1 {
+  width: 14px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.widget-macros__bar-4x1 {
+  flex: 1 1 0%;
+  height: 6px;
+  background: rgba(128, 128, 128, 0.15);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.widget-macros__bar-4x1 .widget-macros__bar-fill {
+  height: 100%;
+  min-height: 6px;
+}
+
+.widget-macros__value-4x1 {
+  width: 36px;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: right;
+  color: var(--text-secondary, #6b7280);
+  font-feature-settings: 'tnum' on;
+  flex-shrink: 0;
+}
+
+/* --- Macros Widget 4×2 — Расширенный с доп. информацией --- */
+.widget-macros--4x2 {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+}
+
+.widget-macros__summary-4x2 {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--widget-surface-muted);
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+
+.widget-macros__summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.widget-macros__summary-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.widget-macros__summary-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-feature-settings: 'tnum' on;
+}
+
+.widget-macros__row-4x2 {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.widget-macros__row-4x2 .widget-macros__row-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.widget-macros__label-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 55px;
+}
+
+.widget-macros__grams-4x2 {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-feature-settings: 'tnum' on;
+}
+
+.widget-macros__status-emoji {
+  font-size: 11px;
+  margin-left: auto;
+}
+
+.widget-macros__bar-4x2 {
+  height: 5px;
+  background: var(--widget-surface-muted);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.widget-macros__row-4x2 .widget-macros__pct-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 999px;
 }
 
 .widget-macros__row-2x2 {
