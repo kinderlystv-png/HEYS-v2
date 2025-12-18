@@ -850,6 +850,7 @@
   let modalRoot = null;
   let currentModalElement = null;
   let savedScrollY = 0; // Сохраняем позицию скролла
+  let modalCleanup = null; // Cleanup функция для ModalManager
 
   function showStepModal(options) {
     // Создаём контейнер если нет
@@ -857,6 +858,13 @@
       modalRoot = document.createElement('div');
       modalRoot.id = 'heys-step-modal-root';
       document.body.appendChild(modalRoot);
+    }
+
+    // Регистрируем в ModalManager
+    if (HEYS.ModalManager) {
+      modalCleanup = HEYS.ModalManager.register('step-modal', () => {
+        hideStepModal({ skipManagerNotify: true });
+      });
     }
 
     // Сохраняем текущую позицию скролла
@@ -891,6 +899,12 @@
     // 🔓 Восстанавливаем прокрутку body при закрытии
     document.body.style.overflow = '';
     document.documentElement.style.overflow = '';
+    
+    // Дерегистрируем из ModalManager (если не вызвано из менеджера)
+    if (modalCleanup && !options.skipManagerNotify) {
+      modalCleanup();
+      modalCleanup = null;
+    }
     
     // Если указано scrollToDiary — моментально прокручиваем к заголовку дневника
     if (options.scrollToDiary) {

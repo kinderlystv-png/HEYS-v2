@@ -582,23 +582,19 @@
       // hourValue — это число (час) из HOURS_ORDER
       const newIndex = HOURS_ORDER.indexOf(hourValue);
       onChange({ ...data, hourIndex: newIndex >= 0 ? newIndex : 0, minutes: data.minutes ?? minutes });
-
-      // Первое взаимодействие с колесом — проверяем волну
-      maybeShowInsulinWaveWarning();
+      // Предупреждение о волне теперь показывается при переходе на следующий шаг, не при касании колеса
     };
     
     const updateMinutes = (newMinutes) => {
       onChange({ ...data, hourIndex: currentHourIndex, minutes: newMinutes });
-
-      // Первое взаимодействие с колесом — проверяем волну
-      maybeShowInsulinWaveWarning();
+      // Предупреждение о волне теперь показывается при переходе на следующий шаг, не при касании колеса
     };
 
     // Единый callback для linkedScroll — решает проблему React batching
     const updateTime = (hourValue, newMinutes) => {
       const newIndex = HOURS_ORDER.indexOf(hourValue);
       onChange({ ...data, hourIndex: newIndex >= 0 ? newIndex : 0, minutes: newMinutes });
-      maybeShowInsulinWaveWarning();
+      // Предупреждение о волне теперь показывается при переходе на следующий шаг, не при касании колеса
     };
     
     const selectType = (type) => {
@@ -675,16 +671,30 @@
       return wave;
     }, [shouldSkipWarning, insulinWave, mealsForWave, pIndexForWave, getProductFromItemFn, baseWaveHours, trainingsForWave, context?.dayData, context?.deficitPct]);
 
+    // Проверяем, близко ли выбранное время к текущему (в пределах 30 минут)
+    const isSelectedTimeCloseToNow = useCallback(() => {
+      const now = new Date();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      const selectedMinutes = realHours * 60 + minutes;
+      // Разница в минутах (учитываем переход через полночь)
+      let diff = Math.abs(selectedMinutes - nowMinutes);
+      if (diff > 720) diff = 1440 - diff; // Если больше 12 часов — считаем с другой стороны
+      return diff <= 30; // В пределах 30 минут от текущего времени
+    }, [realHours, minutes]);
+
     const maybeShowInsulinWaveWarning = useCallback(() => {
-      if (hasShownWarning) return;
-      if (shouldSkipWarning) return;
+      if (hasShownWarning) return false;
+      if (shouldSkipWarning) return false;
+      // Не показываем предупреждение если заполняем приём из прошлого
+      if (!isSelectedTimeCloseToNow()) return false;
       const wave = cachedWave || computeWaveData();
-      if (!wave) return;
-      if (wave.status === 'lipolysis') return;
+      if (!wave) return false;
+      if (wave.status === 'lipolysis') return false;
       setHasShownWarning(true);
       setWarningOpen(true);
       trackInsulinEvent('show', wave);
-    }, [hasShownWarning, shouldSkipWarning, cachedWave, computeWaveData, trackInsulinEvent]);
+      return true; // Вернули true — предупреждение показано
+    }, [hasShownWarning, shouldSkipWarning, isSelectedTimeCloseToNow, cachedWave, computeWaveData, trackInsulinEvent]);
 
     const handleWait = useCallback(() => {
       setWarningOpen(false);
@@ -696,7 +706,11 @@
       setWarningOpen(false);
       setHasShownWarning(true);
       trackInsulinEvent('continue', cachedWave);
-    }, [cachedWave, trackInsulinEvent]);
+      // После подтверждения — переходим к следующему шагу
+      if (context?.onNext) {
+        context.onNext();
+      }
+    }, [cachedWave, trackInsulinEvent, context]);
 
     // Keyboard Escape handler
     useEffect(() => {
@@ -707,6 +721,16 @@
       document.addEventListener('keydown', handleEscape);
       return () => document.removeEventListener('keydown', handleEscape);
     }, [warningOpen, handleWait]);
+
+    // Обработчик перехода к следующему шагу — проверяем инсулиновую волну
+    const handleNextStep = useCallback(() => {
+      // Показываем предупреждение если нужно
+      const warningShown = maybeShowInsulinWaveWarning();
+      // Если предупреждение не показано — сразу переходим к следующему шагу
+      if (!warningShown && context?.onNext) {
+        context.onNext();
+      }
+    }, [maybeShowInsulinWaveWarning, context]);
 
     return React.createElement('div', { className: 'meal-time-step' },
       warningOpen && React.createElement('div', {
@@ -829,7 +853,27 @@
         types: MEAL_TYPES, 
         currentType, 
         onSelect: selectType 
-      })
+      }),
+      
+      // Кнопка "Далее" — внутри компонента для проверки инсулиновой волны при переходе
+      React.createElement('button', {
+        className: 'meal-time-next-btn',
+        onClick: handleNextStep,
+        style: {
+          marginTop: '16px',
+          width: '100%',
+          padding: '14px 24px',
+          borderRadius: '12px',
+          backgroundColor: '#10b981',
+          color: '#fff',
+          fontWeight: 600,
+          fontSize: '16px',
+          border: 'none',
+          cursor: 'pointer',
+          minHeight: '48px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+        }
+      }, 'Далее →')
     );
   }
 
@@ -1078,7 +1122,8 @@
           mealType: null // авто
         };
       },
-      validate: () => true
+      validate: () => true,
+      hideHeaderNext: true // Кнопка "Далее" внутри компонента для проверки волны при переходе
     });
     
     // Шаг 2: Оценки и комментарий

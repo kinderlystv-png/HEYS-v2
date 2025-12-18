@@ -2309,6 +2309,7 @@
     }
     
     // 2x2 — Оптимальный layout: заголовок + сетка 7 дней + стрик
+    // v3.22.0: с training/stress indicators
     if (size === '2x2') {
       const weekDays = days.slice(-7);
       const dayLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -2329,23 +2330,35 @@
           weekDays.map((day, i) => {
             const dayIndex = (startDayIndex - 6 + i + 7) % 7;
             const isToday = i === weekDays.length - 1;
+            // 🆕 v3.22.0: training/stress indicators
+            const hasTraining = day.hasTraining;
+            const highStress = day.highStress;
+            
             return React.createElement('div', {
               key: i,
-              className: `widget-heatmap__day-col ${isToday ? 'widget-heatmap__day-col--today' : ''}`
+              className: `widget-heatmap__day-col ${isToday ? 'widget-heatmap__day-col--today' : ''} ${hasTraining ? 'widget-heatmap__day-col--training' : ''}`
             },
               React.createElement('div', { className: 'widget-heatmap__day-label' }, dayLabels[dayIndex]),
               React.createElement('div', {
-                className: `widget-heatmap__cell widget-heatmap__cell--${day.status || 'empty'}`,
-                title: day.date
-              })
+                className: `widget-heatmap__cell widget-heatmap__cell--${day.status || 'empty'} ${hasTraining ? 'widget-heatmap__cell--training' : ''} ${highStress ? 'widget-heatmap__cell--stress' : ''}`,
+                title: `${day.date}${hasTraining ? ' 💪' : ''}${highStress ? ' 😰' : ''}`
+              },
+                // 🆕 Training/Stress mini badges
+                (hasTraining || highStress) && React.createElement('div', { className: 'widget-heatmap__cell-badges' },
+                  hasTraining && React.createElement('span', { className: 'widget-heatmap__cell-badge widget-heatmap__cell-badge--training' }, '💪'),
+                  highStress && React.createElement('span', { className: 'widget-heatmap__cell-badge widget-heatmap__cell-badge--stress' }, '😰')
+                )
+              )
             );
           })
         ),
-        // Легенда
+        // Легенда — добавлена training/stress
         React.createElement('div', { className: 'widget-heatmap__legend' },
           React.createElement('span', { className: 'widget-heatmap__legend-item widget-heatmap__legend-item--green' }, '✔'),
           React.createElement('span', { className: 'widget-heatmap__legend-item widget-heatmap__legend-item--yellow' }, '≈'),
-          React.createElement('span', { className: 'widget-heatmap__legend-item widget-heatmap__legend-item--red' }, '✖')
+          React.createElement('span', { className: 'widget-heatmap__legend-item widget-heatmap__legend-item--red' }, '✖'),
+          React.createElement('span', { className: 'widget-heatmap__legend-item widget-heatmap__legend-item--training' }, '💪'),
+          React.createElement('span', { className: 'widget-heatmap__legend-item widget-heatmap__legend-item--stress' }, '😰')
         )
       );
     }

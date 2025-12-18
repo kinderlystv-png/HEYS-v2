@@ -1304,6 +1304,69 @@
   color: #ef4444;
 }
 
+/* 🆕 v3.22.0: Extended Analytics — Factor Variants */
+.risk-panel__factor--protective {
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.08), transparent);
+  border-radius: 8px;
+  margin: 4px -8px;
+  padding: 8px;
+}
+
+.risk-panel__factor--protective .risk-panel__factor-label {
+  color: #059669;
+}
+
+.risk-panel__factor-weight--negative {
+  color: #22c55e !important;
+}
+
+.risk-panel__factor--emotional {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.08), rgba(249, 115, 22, 0.05));
+  border-radius: 8px;
+  margin: 4px -8px;
+  padding: 8px;
+  animation: pulse-factor-emotional 2s ease-in-out infinite;
+}
+
+.risk-panel__factor--emotional .risk-panel__factor-label {
+  color: #dc2626;
+}
+
+.risk-panel__factor-pmid {
+  font-size: 12px;
+  text-decoration: none;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
+.risk-panel__factor-pmid:hover {
+  opacity: 1;
+}
+
+@keyframes pulse-factor-emotional {
+  0%, 100% { background: linear-gradient(90deg, rgba(239, 68, 68, 0.08), rgba(249, 115, 22, 0.05)); }
+  50% { background: linear-gradient(90deg, rgba(239, 68, 68, 0.12), rgba(249, 115, 22, 0.08)); }
+}
+
+/* Dark mode variants */
+.dark .risk-panel__factor--protective {
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.15), transparent);
+}
+
+.dark .risk-panel__factor--emotional {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.15), rgba(249, 115, 22, 0.10));
+}
+
+.dark .risk-panel__factor--protective .risk-panel__factor-label {
+  color: #34d399;
+}
+
+.dark .risk-panel__factor--emotional .risk-panel__factor-label {
+  color: #f87171;
+}
+
 /* Risk Meter */
 .risk-meter {
   position: relative;

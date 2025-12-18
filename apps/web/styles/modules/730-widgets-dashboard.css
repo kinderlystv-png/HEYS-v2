@@ -3914,6 +3914,79 @@
 .widget-heatmap__legend-item--green { color: #22c55e; }
 .widget-heatmap__legend-item--yellow { color: #eab308; }
 .widget-heatmap__legend-item--red { color: #ef4444; }
+.widget-heatmap__legend-item--training { color: #3b82f6; }
+.widget-heatmap__legend-item--stress { color: #f87171; }
+
+/* Heatmap Training/Stress Indicators */
+.widget-heatmap__day-col--training .widget-heatmap__day-label {
+  color: #3b82f6;
+  font-weight: 700;
+}
+
+.widget-heatmap__cell--training {
+  position: relative;
+  box-shadow: 0 0 0 2px #3b82f6 !important;
+}
+
+.widget-heatmap__cell--stress {
+  position: relative;
+}
+
+.widget-heatmap__cell--stress::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 6px;
+  height: 6px;
+  background: #f87171;
+  border-radius: 50%;
+  animation: heatmapStressPulse 1.5s infinite;
+}
+
+@keyframes heatmapStressPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+}
+
+.widget-heatmap__cell-badges {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  font-size: 8px;
+  line-height: 1;
+  z-index: 1;
+}
+
+.widget-heatmap__cell-badge--training {
+  filter: drop-shadow(0 1px 2px rgba(59, 130, 246, 0.5));
+}
+
+.widget-heatmap__cell-badge--stress {
+  filter: drop-shadow(0 1px 2px rgba(248, 113, 113, 0.5));
+  animation: heatmapStressBadge 2s infinite;
+}
+
+@keyframes heatmapStressBadge {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Dark mode heatmap training/stress */
+[data-theme="dark"] .widget-heatmap__cell--training {
+  box-shadow: 0 0 0 2px #60a5fa !important;
+}
+
+[data-theme="dark"] .widget-heatmap__cell--stress::after {
+  background: #f87171;
+}
+
+[data-theme="dark"] .widget-heatmap__legend-item--training {
+  color: #60a5fa;
+}
 
 /* --- Cycle Widget 2×2 --- */
 .widget-cycle--2x2 {

@@ -16,6 +16,7 @@
   let currentModal = null;
   let setModalState = null;
   let modalRoot = null;
+  let modalCleanup = null; // Cleanup функция для ModalManager
   
   // === Дефолтные настройки ===
   const DEFAULTS = {
@@ -180,6 +181,13 @@
   function show(options = {}) {
     ensureRoot();
     
+    // Регистрируем в ModalManager
+    if (HEYS.ModalManager) {
+      modalCleanup = HEYS.ModalManager.register('confirm-modal', () => {
+        hide(true); // skipManagerNotify = true
+      });
+    }
+    
     return new Promise((resolve) => {
       const modal = {
         ...DEFAULTS,
@@ -203,7 +211,13 @@
   /**
    * Скрыть модалку
    */
-  function hide() {
+  function hide(skipManagerNotify = false) {
+    // Дерегистрируем из ModalManager (если не вызвано из менеджера)
+    if (modalCleanup && !skipManagerNotify) {
+      modalCleanup();
+      modalCleanup = null;
+    }
+    
     if (setModalState) {
       setModalState(null);
     }

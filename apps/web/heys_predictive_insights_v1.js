@@ -4906,7 +4906,11 @@
   /**
    * Health Ring — кольцевой индикатор прогресса (v2.0: с InfoButton)
    */
-  function HealthRing({ score, category, label, color, size = 80, onClick, infoKey, debugData }) {
+  /**
+   * HealthRing — кольцо здоровья для категории
+   * v3.22.0: Поддержка emotionalWarning overlay для Recovery
+   */
+  function HealthRing({ score, category, label, color, size = 80, onClick, infoKey, debugData, emotionalWarning }) {
     const radius = (size - 16) / 2;
     const circumference = 2 * Math.PI * radius;
     const progress = Math.min(100, Math.max(0, score || 0));
@@ -4914,6 +4918,10 @@
     
     const [showTooltip, setShowTooltip] = useState(false);
     const [isPressed, setIsPressed] = useState(false);
+    
+    // 🆕 v3.22.0: emotionalWarning влияет на цвет и отображение
+    const hasEmotionalRisk = emotionalWarning?.hasRisk;
+    const effectiveColor = hasEmotionalRisk ? '#f87171' : color;
     
     const handleClick = () => {
       // Haptic feedback
@@ -4923,7 +4931,7 @@
     };
     
     return h('div', {
-      className: `insights-ring insights-ring--${category} ${showTooltip ? 'insights-ring--active' : ''} ${isPressed ? 'insights-ring--pressed' : ''}`,
+      className: `insights-ring insights-ring--${category} ${showTooltip ? 'insights-ring--active' : ''} ${isPressed ? 'insights-ring--pressed' : ''} ${hasEmotionalRisk ? 'insights-ring--emotional-warning' : ''}`,
       onClick: handleClick,
       onTouchStart: () => setIsPressed(true),
       onTouchEnd: () => setIsPressed(false),
@@ -4949,7 +4957,7 @@
           style: {
             strokeDasharray: circumference,
             strokeDashoffset: offset,
-            stroke: color
+            stroke: effectiveColor
           }
         })
       ),
@@ -4958,10 +4966,28 @@
         h('span', { className: 'insights-ring__label' },
           label,
           infoKey && h(InfoButton, { infoKey, debugData, size: 'small' })
+        ),
+        // 🆕 v3.22.0: Emotional risk badge в кольце
+        hasEmotionalRisk && h('div', { className: 'insights-ring__emotional' },
+          h('span', { 
+            className: 'insights-ring__emotional-badge',
+            title: `Эмоц. риск: ${emotionalWarning.bingeRisk}%\nФакторы: ${emotionalWarning.factors.join(', ')}`
+          }, '🧠'),
+          h('span', { className: 'insights-ring__emotional-pct' }, `${emotionalWarning.bingeRisk}%`),
+          // PMID link
+          emotionalWarning.level !== 'low' && h('a', {
+            href: 'https://pubmed.ncbi.nlm.nih.gov/11070333/',
+            target: '_blank',
+            className: 'insights-ring__pmid',
+            title: 'Epel 2001 — кортизол и пищевое поведение',
+            onClick: (e) => e.stopPropagation()
+          }, '🔬')
         )
       ),
       showTooltip && h('div', { className: 'insights-ring__tooltip' },
-        `${label}: ${score}/100`
+        hasEmotionalRisk 
+          ? `${label}: ${score}/100\n🧠 Эмоц. риск: ${emotionalWarning.bingeRisk}%`
+          : `${label}: ${score}/100`
       )
     );
   }
@@ -5724,8 +5750,43 @@
     );
   }
 
-  function HealthRingsGrid({ healthScore, onCategoryClick, compact }) {
+  /**
+   * HealthRingsGrid — сетка колец здоровья
+   * v3.22.0: Интеграция emotionalRisk overlay для Recovery
+   */
+  function HealthRingsGrid({ healthScore, onCategoryClick, compact, lsGet }) {
     if (!healthScore || !healthScore.breakdown) return null;
+    
+    // 🆕 v3.22.0: Вычисляем emotionalRisk для Recovery overlay
+    const emotionalRiskData = useMemo(() => {
+      const U = window.HEYS?.utils;
+      const getter = lsGet || U?.lsGet || ((k, d) => {
+        try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+      });
+      const profile = getter('heys_profile', {});
+      const todayDate = new Date().toISOString().split('T')[0];
+      const day = getter(`heys_dayv2_${todayDate}`, {});
+      
+      const stressAvg = day.stressAvg || 0;
+      const factors = [];
+      let bingeRisk = 0;
+      
+      if (stressAvg >= 6) { factors.push('Стресс'); bingeRisk += 35; }
+      else if (stressAvg >= 4) { factors.push('Стресс'); bingeRisk += 15; }
+      
+      const hour = new Date().getHours();
+      if (hour >= 20) bingeRisk += 20;
+      
+      const sleepDeficit = (profile.sleepHours || 8) - (day.sleepHours || 0);
+      if (sleepDeficit > 2) { factors.push('Недосып'); bingeRisk += 15; }
+      
+      return {
+        hasRisk: bingeRisk >= 30,
+        bingeRisk: Math.min(90, bingeRisk),
+        factors,
+        level: bingeRisk >= 60 ? 'high' : bingeRisk >= 40 ? 'medium' : 'low'
+      };
+    }, [lsGet]);
     
     const categories = [
       { key: 'nutrition', label: 'Питание', color: '#22c55e', infoKey: 'CATEGORY_NUTRITION' },
@@ -5743,9 +5804,12 @@
           const circumference = 2 * Math.PI * radius;
           const offset = circumference - (score / 100) * circumference;
           
+          // 🆕 emotionalRisk overlay для Recovery
+          const hasEmotionalWarning = cat.key === 'recovery' && emotionalRiskData.hasRisk;
+          
           return h('div', { 
             key: cat.key,
-            className: `insights-ring-card insights-ring-card--${cat.key}`,
+            className: `insights-ring-card insights-ring-card--${cat.key} ${hasEmotionalWarning ? 'insights-ring-card--emotional-warning' : ''}`,
             onClick: () => onCategoryClick && onCategoryClick(cat.key)
           },
             // Mini ring
@@ -5760,7 +5824,7 @@
                 h('circle', {
                   cx: 24, cy: 24, r: radius,
                   fill: 'none',
-                  stroke: cat.color,
+                  stroke: hasEmotionalWarning ? '#f87171' : cat.color, // красный при риске
                   strokeWidth: 4,
                   strokeLinecap: 'round',
                   strokeDasharray: circumference,
@@ -5768,7 +5832,12 @@
                   style: { transition: 'stroke-dashoffset 0.8s ease' }
                 })
               ),
-              h('span', { className: 'insights-ring-card__value' }, Math.round(score))
+              h('span', { className: 'insights-ring-card__value' }, Math.round(score)),
+              // 🆕 Emotional warning badge
+              hasEmotionalWarning && h('span', { 
+                className: 'insights-ring-card__emotional-badge',
+                title: `Эмоц. риск: ${emotionalRiskData.bingeRisk}%\n${emotionalRiskData.factors.join(', ')}`
+              }, '🧠')
             ),
             // Info
             h('div', { className: 'insights-ring-card__info' },
@@ -5777,8 +5846,18 @@
                 h(InfoButton, { infoKey: cat.infoKey, size: 'small' })
               ),
               h('div', { className: 'insights-ring-card__title' }, 
-                score >= 80 ? 'Отлично' : score >= 60 ? 'Хорошо' : score >= 40 ? 'Норма' : 'Улучшить'
-              )
+                hasEmotionalWarning 
+                  ? `🧠 ${emotionalRiskData.bingeRisk}%`
+                  : score >= 80 ? 'Отлично' : score >= 60 ? 'Хорошо' : score >= 40 ? 'Норма' : 'Улучшить'
+              ),
+              // 🆕 PMID link при высоком риске
+              hasEmotionalWarning && emotionalRiskData.level !== 'low' && h('a', {
+                href: 'https://pubmed.ncbi.nlm.nih.gov/11070333/',
+                target: '_blank',
+                className: 'insights-ring-card__pmid',
+                title: 'Epel 2001 — стресс и кортизол',
+                onClick: (e) => e.stopPropagation()
+              }, '🔬')
             )
           );
         })
@@ -5793,10 +5872,11 @@
           score: healthScore.breakdown[cat.key]?.score,
           category: cat.key,
           label: cat.label,
-          color: cat.color,
+          color: cat.key === 'recovery' && emotionalRiskData.hasRisk ? '#f87171' : cat.color,
           onClick: onCategoryClick,
           infoKey: cat.infoKey,
-          debugData: healthScore.breakdown[cat.key]
+          debugData: healthScore.breakdown[cat.key],
+          emotionalWarning: cat.key === 'recovery' ? emotionalRiskData : null
         })
       )
     );
@@ -6572,8 +6652,84 @@
   /**
    * Weekly Wrap — итоги недели (v2.0: с InfoButton)
    */
-  function WeeklyWrap({ wrap }) {
+  /**
+   * WeeklyWrap — итоги недели
+   * v3.22.0: Интеграция Extended Analytics summary
+   */
+  function WeeklyWrap({ wrap, lsGet }) {
     if (!wrap) return null;
+    
+    // 🆕 v3.22.0: Extended Analytics Summary за неделю
+    const extendedSummary = useMemo(() => {
+      const U = window.HEYS?.utils;
+      const getter = lsGet || U?.lsGet || ((k, d) => {
+        try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+      });
+      const profile = getter('heys_profile', {});
+      const pIndex = window.HEYS?.products?.getIndex?.();
+      
+      let proteinDeficitDays = 0;
+      let highStressDays = 0;
+      let trainingDays = 0;
+      let avgEmotionalRisk = 0;
+      let totalDays = 0;
+      
+      // Анализ за 7 дней
+      for (let i = 0; i < 7; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const day = getter(`heys_dayv2_${dateStr}`, {});
+        
+        if (!day.meals || day.meals.length === 0) continue;
+        totalDays++;
+        
+        // Protein analysis
+        let dayProtein = 0;
+        let dayKcal = 0;
+        
+        for (const meal of day.meals) {
+          for (const item of (meal.items || [])) {
+            const product = pIndex?.byId?.get(item.product_id) || item;
+            const grams = item.grams || 0;
+            dayProtein += (product.protein100 || 0) * grams / 100;
+            dayKcal += (product.kcal100 || 0) * grams / 100;
+          }
+        }
+        
+        const targetProtein = (dayKcal * 0.25) / 4;
+        if (targetProtein > 0 && dayProtein < targetProtein * 0.8) {
+          proteinDeficitDays++;
+        }
+        
+        // Stress
+        if (day.stressAvg >= 6) highStressDays++;
+        
+        // Training
+        if (day.trainings?.length > 0) trainingDays++;
+        
+        // Emotional risk accumulator
+        let dayRisk = 0;
+        if (day.stressAvg >= 6) dayRisk += 35;
+        else if (day.stressAvg >= 4) dayRisk += 15;
+        const sleepDef = (profile.sleepHours || 8) - (day.sleepHours || 0);
+        if (sleepDef > 2) dayRisk += 15;
+        avgEmotionalRisk += dayRisk;
+      }
+      
+      if (totalDays > 0) {
+        avgEmotionalRisk = Math.round(avgEmotionalRisk / totalDays);
+      }
+      
+      return {
+        proteinDeficitDays,
+        highStressDays,
+        trainingDays,
+        avgEmotionalRisk,
+        totalDays,
+        hasData: totalDays >= 3
+      };
+    }, [wrap, lsGet]);
     
     return h('div', { className: 'insights-wrap' },
       h('div', { className: 'insights-wrap__header' },
@@ -6598,6 +6754,69 @@
           h('div', { className: 'insights-wrap__stat-label' }, 'Health Score')
         )
       ),
+      
+      // 🆕 v3.22.0: Extended Analytics Summary
+      extendedSummary.hasData && h('div', { className: 'insights-wrap__extended' },
+        h('div', { className: 'insights-wrap__extended-title' }, '🧠 Расширенная аналитика'),
+        h('div', { className: 'insights-wrap__extended-grid' },
+          // Protein Debt Days
+          h('div', { 
+            className: `insights-wrap__extended-item ${extendedSummary.proteinDeficitDays >= 3 ? 'insights-wrap__extended-item--warning' : ''}`
+          },
+            h('span', { className: 'insights-wrap__extended-value' }, 
+              extendedSummary.proteinDeficitDays === 0 ? '✅' : extendedSummary.proteinDeficitDays
+            ),
+            h('span', { className: 'insights-wrap__extended-label' }, 
+              extendedSummary.proteinDeficitDays === 0 ? 'Белок ОК' : 'дн. мало белка'
+            ),
+            extendedSummary.proteinDeficitDays >= 3 && h('a', {
+              href: 'https://pubmed.ncbi.nlm.nih.gov/20095013/',
+              target: '_blank',
+              className: 'insights-wrap__extended-pmid',
+              title: 'Mettler 2010 — белок при дефиците'
+            }, '🔬')
+          ),
+          
+          // High Stress Days
+          h('div', { 
+            className: `insights-wrap__extended-item ${extendedSummary.highStressDays >= 3 ? 'insights-wrap__extended-item--warning' : ''}`
+          },
+            h('span', { className: 'insights-wrap__extended-value' }, 
+              extendedSummary.highStressDays === 0 ? '😌' : extendedSummary.highStressDays
+            ),
+            h('span', { className: 'insights-wrap__extended-label' }, 
+              extendedSummary.highStressDays === 0 ? 'Стресс ОК' : 'дн. стресс ≥6'
+            ),
+            extendedSummary.highStressDays >= 3 && h('a', {
+              href: 'https://pubmed.ncbi.nlm.nih.gov/11070333/',
+              target: '_blank',
+              className: 'insights-wrap__extended-pmid',
+              title: 'Epel 2001 — стресс и переедание'
+            }, '🔬')
+          ),
+          
+          // Training Days
+          h('div', { className: 'insights-wrap__extended-item insights-wrap__extended-item--positive' },
+            h('span', { className: 'insights-wrap__extended-value' }, 
+              extendedSummary.trainingDays === 0 ? '—' : `💪 ${extendedSummary.trainingDays}`
+            ),
+            h('span', { className: 'insights-wrap__extended-label' }, 'тренировок')
+          ),
+          
+          // Avg Emotional Risk
+          h('div', { 
+            className: `insights-wrap__extended-item ${extendedSummary.avgEmotionalRisk >= 40 ? 'insights-wrap__extended-item--warning' : ''}`
+          },
+            h('span', { className: 'insights-wrap__extended-value' }, 
+              extendedSummary.avgEmotionalRisk < 20 ? '🧘' : `${extendedSummary.avgEmotionalRisk}%`
+            ),
+            h('span', { className: 'insights-wrap__extended-label' }, 
+              extendedSummary.avgEmotionalRisk < 20 ? 'Эмоц. ОК' : 'ср. эмоц.риск'
+            )
+          )
+        )
+      ),
+      
       wrap.bestDay && h('div', { className: 'insights-wrap__highlight' },
         h('div', { className: 'insights-wrap__highlight-title' }, '🏆 Лучший день'),
         h('div', { className: 'insights-wrap__highlight-value' },
@@ -7555,6 +7774,106 @@
       });
     }, [lsGet, profile, pIndex, selectedDate]);
     
+    // 🆕 v3.22.0: Extended Analytics (proteinDebt, emotionalRisk, trainingContext)
+    const extendedAnalytics = useMemo(() => {
+      const getter = lsGet || window.HEYS?.utils?.lsGet;
+      if (!getter) return null;
+      
+      const dateStr = selectedDate || new Date().toISOString().split('T')[0];
+      const prof = profile || getter('heys_profile', {});
+      const day = getter('heys_dayv2_' + dateStr, {});
+      
+      // Protein Debt: анализ последних 3 дней
+      let proteinDebt = { hasDebt: false, severity: 'none', avgProteinPct: 0 };
+      try {
+        const proteinDays = [];
+        for (let i = 1; i <= 3; i++) {
+          const d = new Date(dateStr);
+          d.setDate(d.getDate() - i);
+          const dStr = d.toISOString().split('T')[0];
+          const dData = getter('heys_dayv2_' + dStr, {});
+          if (dData.meals?.length > 0) {
+            const idx = pIndex || window.HEYS?.products?.buildIndex?.();
+            let prot = 0, kcal = 0;
+            (dData.meals || []).forEach(m => {
+              (m.items || []).forEach(item => {
+                const prod = idx?.byId?.get?.(item.product_id) || item;
+                const g = item.grams || 0;
+                prot += (prod.protein100 || 0) * g / 100;
+                kcal += (prod.kcal100 || 0) * g / 100;
+              });
+            });
+            if (kcal > 500) proteinDays.push({ prot, kcal, protPct: prot * 4 / kcal });
+          }
+        }
+        if (proteinDays.length >= 2) {
+          const avgPct = proteinDays.reduce((s, d) => s + d.protPct, 0) / proteinDays.length;
+          proteinDebt.avgProteinPct = Math.round(avgPct * 100);
+          if (avgPct < 0.18) {
+            proteinDebt = { hasDebt: true, severity: 'critical', avgProteinPct: Math.round(avgPct * 100), pmid: '20095013' };
+          } else if (avgPct < 0.21) {
+            proteinDebt = { hasDebt: true, severity: 'moderate', avgProteinPct: Math.round(avgPct * 100), pmid: '20095013' };
+          }
+        }
+      } catch (e) { console.warn('[ExtendedAnalytics] proteinDebt error:', e); }
+      
+      // Emotional Risk: стресс + недобор + время
+      let emotionalRisk = { level: 'low', bingeRisk: 0, factors: [] };
+      try {
+        const avgStress = (day.meals || []).reduce((s, m) => s + (m.stress || 0), 0) / Math.max(1, (day.meals || []).length);
+        const currentHour = new Date().getHours();
+        const isEvening = currentHour >= 18;
+        
+        if (avgStress >= 6) emotionalRisk.factors.push('Высокий стресс');
+        if (isEvening) emotionalRisk.factors.push('Вечер (пик уязвимости)');
+        
+        // Проверяем недобор за вчера
+        const yesterday = new Date(dateStr);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yData = getter('heys_dayv2_' + yesterday.toISOString().split('T')[0], {});
+        if (yData.meals?.length > 0) {
+          const idx = pIndex || window.HEYS?.products?.buildIndex?.();
+          let yKcal = 0;
+          (yData.meals || []).forEach(m => {
+            (m.items || []).forEach(item => {
+              const prod = idx?.byId?.get?.(item.product_id) || item;
+              yKcal += (prod.kcal100 || 0) * (item.grams || 0) / 100;
+            });
+          });
+          const normAbs = prof.normAbs?.kcal || 2000;
+          if (yKcal < normAbs * 0.7) emotionalRisk.factors.push('Вчерашний недобор');
+        }
+        
+        emotionalRisk.bingeRisk = Math.min(100, emotionalRisk.factors.length * 25);
+        if (emotionalRisk.bingeRisk >= 75) emotionalRisk.level = 'critical';
+        else if (emotionalRisk.bingeRisk >= 50) emotionalRisk.level = 'high';
+        else if (emotionalRisk.bingeRisk >= 25) emotionalRisk.level = 'medium';
+        emotionalRisk.pmid = '11070333'; // Epel 2001
+      } catch (e) { console.warn('[ExtendedAnalytics] emotionalRisk error:', e); }
+      
+      // Training Day Context
+      let trainingContext = { isTrainingDay: false, type: null, intensity: 'none' };
+      if (day.trainings?.length > 0) {
+        trainingContext.isTrainingDay = true;
+        const types = { strength: 0, cardio: 0, hobby: 0 };
+        let totalMin = 0, highMin = 0;
+        day.trainings.forEach(t => {
+          types[t.type || 'hobby']++;
+          if (t.z) {
+            const total = t.z.reduce((s, m) => s + (+m || 0), 0);
+            totalMin += total;
+            highMin += (+t.z[2] || 0) + (+t.z[3] || 0);
+          }
+        });
+        trainingContext.type = Object.entries(types).sort((a, b) => b[1] - a[1])[0]?.[0] || 'hobby';
+        if (totalMin >= 60 || highMin >= 20) trainingContext.intensity = 'high';
+        else if (totalMin >= 30) trainingContext.intensity = 'moderate';
+        else trainingContext.intensity = 'light';
+      }
+      
+      return { proteinDebt, emotionalRisk, trainingContext };
+    }, [lsGet, profile, pIndex, selectedDate]);
+    
     // Use riskLevel from status (same source as PredictiveDashboard)
     const risk = useMemo(() => {
       const riskData = {
@@ -7654,7 +7973,59 @@
           risk.label
         )
       )
-      ) // Close __cards
+      ), // Close __cards
+      
+      // 🆕 v3.22.0: Extended Analytics Row (proteinDebt, emotionalRisk, trainingContext)
+      (extendedAnalytics?.proteinDebt?.hasDebt || extendedAnalytics?.emotionalRisk?.level !== 'low' || extendedAnalytics?.trainingContext?.isTrainingDay) && 
+        h('div', { className: 'metabolic-quick-status__extended' },
+          // Protein Debt Badge
+          extendedAnalytics?.proteinDebt?.hasDebt && h('div', { 
+            className: `metabolic-quick-status__badge metabolic-quick-status__badge--${extendedAnalytics.proteinDebt.severity}`,
+            title: `Средний белок за 3 дня: ${extendedAnalytics.proteinDebt.avgProteinPct}% (норма 25%)\n🔬 PMID: ${extendedAnalytics.proteinDebt.pmid}`
+          },
+            h('span', { className: 'metabolic-quick-status__badge-icon' }, '🥩'),
+            h('span', { className: 'metabolic-quick-status__badge-text' }, 
+              extendedAnalytics.proteinDebt.severity === 'critical' ? 'Белок ↓↓' : 'Белок ↓'
+            ),
+            h('a', { 
+              href: `https://pubmed.ncbi.nlm.nih.gov/${extendedAnalytics.proteinDebt.pmid}/`,
+              target: '_blank',
+              className: 'metabolic-quick-status__pmid',
+              onClick: (e) => e.stopPropagation()
+            }, '?')
+          ),
+          
+          // Emotional Risk Badge
+          extendedAnalytics?.emotionalRisk?.level !== 'low' && h('div', { 
+            className: `metabolic-quick-status__badge metabolic-quick-status__badge--${extendedAnalytics.emotionalRisk.level}`,
+            title: `Риск срыва: ${extendedAnalytics.emotionalRisk.bingeRisk}%\nФакторы: ${extendedAnalytics.emotionalRisk.factors.join(', ')}\n🔬 PMID: ${extendedAnalytics.emotionalRisk.pmid}`
+          },
+            h('span', { className: 'metabolic-quick-status__badge-icon' }, '😰'),
+            h('span', { className: 'metabolic-quick-status__badge-text' }, 
+              `${extendedAnalytics.emotionalRisk.bingeRisk}%`
+            ),
+            h('a', { 
+              href: `https://pubmed.ncbi.nlm.nih.gov/${extendedAnalytics.emotionalRisk.pmid}/`,
+              target: '_blank',
+              className: 'metabolic-quick-status__pmid',
+              onClick: (e) => e.stopPropagation()
+            }, '?')
+          ),
+          
+          // Training Context Badge
+          extendedAnalytics?.trainingContext?.isTrainingDay && h('div', { 
+            className: `metabolic-quick-status__badge metabolic-quick-status__badge--training metabolic-quick-status__badge--${extendedAnalytics.trainingContext.intensity}`,
+            title: `Тренировочный день: ${extendedAnalytics.trainingContext.type}\nИнтенсивность: ${extendedAnalytics.trainingContext.intensity}`
+          },
+            h('span', { className: 'metabolic-quick-status__badge-icon' }, 
+              extendedAnalytics.trainingContext.type === 'strength' ? '💪' : 
+              extendedAnalytics.trainingContext.type === 'cardio' ? '🏃' : '⚽'
+            ),
+            h('span', { className: 'metabolic-quick-status__badge-text' }, 
+              extendedAnalytics.trainingContext.intensity === 'high' ? 'Интенсив' : 'Трени'
+            )
+          )
+        )
     );
   }
 
@@ -8069,6 +8440,7 @@
   /**
    * DualRiskPanel — два полукруга рядом: Сегодня + Завтра
    * v3.0: Убрана навигация по дням, сразу видно оба риска
+   * v3.22.0: Интеграция emotionalRisk в факторы (Epel 2001, PMID: 11070333)
    */
   function DualRiskPanel({ predictionToday, predictionTomorrow, riskColors }) {
     // Определяем какой риск выше для акцента
@@ -8079,7 +8451,122 @@
     // Активный прогноз для деталей (показываем тот где риск выше, если оба есть)
     const [activePrediction, setActivePrediction] = useState(tomorrowRisk > todayRisk ? 'tomorrow' : 'today');
     
-    const activePredictionData = activePrediction === 'today' ? predictionToday : predictionTomorrow;
+    // 🆕 v3.22.0: Extended Analytics для emotional risk
+    const extendedAnalytics = useMemo(() => {
+      const U = window.HEYS?.utils;
+      const lsGet = U?.lsGet || ((k, d) => {
+        try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+      });
+      const profile = lsGet('heys_profile', {});
+      const todayDate = new Date().toISOString().split('T')[0];
+      const dayKey = `heys_dayv2_${todayDate}`;
+      const day = lsGet(dayKey, {});
+      
+      // Emotional Risk (Epel 2001, PMID: 11070333)
+      const stressAvg = day.stressAvg || 0;
+      const factors = [];
+      let bingeRisk = 0;
+      
+      if (stressAvg >= 6) {
+        factors.push('Высокий стресс');
+        bingeRisk += 35;
+      } else if (stressAvg >= 4) {
+        factors.push('Умеренный стресс');
+        bingeRisk += 15;
+      }
+      
+      const hour = new Date().getHours();
+      if (hour >= 20) {
+        factors.push('Вечер');
+        bingeRisk += 20;
+      } else if (hour >= 18) {
+        bingeRisk += 10;
+      }
+      
+      const sleepDeficit = (profile.sleepHours || 8) - (day.sleepHours || 0);
+      if (sleepDeficit > 2) {
+        factors.push('Недосып');
+        bingeRisk += 15;
+      }
+      
+      // День дефицита? (недобор калорий)
+      const deficitDays = [];
+      for (let i = 1; i <= 3; i++) {
+        const d = new Date(todayDate);
+        d.setDate(d.getDate() - i);
+        const pastDay = lsGet(`heys_dayv2_${d.toISOString().split('T')[0]}`, {});
+        const optimum = 2000; // примерно
+        const eaten = pastDay.meals?.reduce((sum, m) => {
+          return sum + (m.items?.reduce((s, item) => s + (item.kcal || 0), 0) || 0);
+        }, 0) || 0;
+        if (eaten > 0 && eaten < optimum * 0.75) deficitDays.push(i);
+      }
+      if (deficitDays.length >= 2) {
+        factors.push('Калорийный долг');
+        bingeRisk += 20;
+      }
+      
+      const emotionalRisk = {
+        hasRisk: bingeRisk >= 30 || factors.length >= 2,
+        level: bingeRisk >= 60 ? 'high' : bingeRisk >= 40 ? 'medium' : 'low',
+        bingeRisk: Math.min(90, bingeRisk),
+        factors,
+        stressLevel: stressAvg,
+        pmid: '11070333'
+      };
+      
+      // Training Context (Aragon 2013, PMID: 23360586)
+      const trainings = day.trainings || [];
+      const isTrainingDay = trainings.length > 0;
+      let trainingType = null;
+      let trainingIntensity = 'moderate';
+      
+      if (isTrainingDay) {
+        const t = trainings[0];
+        trainingType = t.type || 'cardio';
+        const totalMins = (t.z || []).reduce((a, b) => a + b, 0);
+        const highZoneMins = (t.z?.[2] || 0) + (t.z?.[3] || 0);
+        if (highZoneMins > totalMins * 0.4) trainingIntensity = 'high';
+        else if (totalMins < 30) trainingIntensity = 'light';
+      }
+      
+      return { emotionalRisk, isTrainingDay, trainingType, trainingIntensity };
+    }, []);
+    
+    // Расширяем factors emotionalRisk если есть риск
+    const getEnhancedFactors = (prediction) => {
+      if (!prediction?.factors) return [];
+      const factors = [...prediction.factors];
+      
+      // Добавляем emotionalRisk если высокий
+      if (extendedAnalytics.emotionalRisk.hasRisk) {
+        const { bingeRisk, factors: riskFactors } = extendedAnalytics.emotionalRisk;
+        factors.push({
+          label: `🧠 Эмоц. риск: ${riskFactors.slice(0, 2).join(', ')}`,
+          weight: Math.round(bingeRisk * 0.3), // переводим в +weight
+          pmid: '11070333',
+          isEmotional: true
+        });
+      }
+      
+      // Добавляем training context как защитный фактор (отрицательный вес)
+      if (extendedAnalytics.isTrainingDay) {
+        const typeLabels = { strength: '💪 Силовая', cardio: '🏃 Кардио', hobby: '⚽ Хобби' };
+        factors.push({
+          label: `${typeLabels[extendedAnalytics.trainingType] || '🏋️ Трен.'} сегодня`,
+          weight: extendedAnalytics.trainingIntensity === 'high' ? -15 : -10,
+          isProtective: true
+        });
+      }
+      
+      return factors;
+    };
+    
+    const basePredictionData = activePrediction === 'today' ? predictionToday : predictionTomorrow;
+    const activePredictionData = basePredictionData ? {
+      ...basePredictionData,
+      factors: getEnhancedFactors(basePredictionData)
+    } : null;
     const activeLabel = activePrediction === 'today' ? 'Сегодня' : 'Завтра';
     
     const getRiskLevel = (risk) => risk < 30 ? 'low' : risk < 60 ? 'medium' : 'high';
@@ -8156,17 +8643,30 @@
           )
         ),
         
-        // Risk Factors
+        // Risk Factors — 🆕 v3.22.0: улучшенный рендеринг с PMID и защитными факторами
         activePredictionData.factors && activePredictionData.factors.length > 0 && 
         h('div', { className: 'risk-panel__factors' },
           h('div', { className: 'risk-panel__factors-header' },
             h('span', { className: 'risk-panel__factors-title' }, '📋 Факторы риска'),
             h(InfoButton, { infoKey: 'RISK_FACTORS', size: 'small' })
           ),
-          activePredictionData.factors.slice(0, 5).map((factor, idx) =>
-            h('div', { key: idx, className: 'risk-panel__factor' },
+          activePredictionData.factors.slice(0, 6).map((factor, idx) =>
+            h('div', { 
+              key: idx, 
+              className: `risk-panel__factor ${factor.isProtective ? 'risk-panel__factor--protective' : ''} ${factor.isEmotional ? 'risk-panel__factor--emotional' : ''}`
+            },
               h('span', { className: 'risk-panel__factor-label' }, factor.label),
-              h('span', { className: 'risk-panel__factor-weight' }, `+${factor.weight || factor.impact}`)
+              h('span', { 
+                className: `risk-panel__factor-weight ${factor.weight < 0 ? 'risk-panel__factor-weight--negative' : ''}`
+              }, factor.weight < 0 ? factor.weight : `+${factor.weight || factor.impact}`),
+              factor.pmid && h('a', {
+                href: `https://pubmed.ncbi.nlm.nih.gov/${factor.pmid}/`,
+                target: '_blank',
+                rel: 'noopener noreferrer',
+                className: 'risk-panel__factor-pmid',
+                title: `PMID: ${factor.pmid}`,
+                onClick: (e) => e.stopPropagation()
+              }, '🔬')
             )
           )
         )
@@ -8942,6 +9442,10 @@
    * DataCompletenessCard — карточка полноты данных
    * Показывает прогресс заполнения и что разблокируется
    */
+  /**
+   * DataCompletenessCard — показывает прогресс сбора данных и разблокировку фичей
+   * v3.22.0: Добавлена Extended Analytics как премиум-фича (7+ дней)
+   */
   function DataCompletenessCard({ lsGet, profile, daysRequired = 30 }) {
     const completeness = useMemo(() => {
       if (!HEYS.Metabolic?.getDaysHistory) return null;
@@ -8956,16 +9460,45 @@
       const inventory = HEYS.Metabolic.inventoryData ? HEYS.Metabolic.inventoryData(today) : null;
       const todayCompleteness = inventory ? HEYS.Metabolic.calculateDataCompleteness(inventory) : 0;
       
-      // Определяем разблокированные фичи
+      // 🆕 v3.22.0: Extended Analytics features с научными обоснованиями
       const features = [
         { name: 'Базовый статус', required: 1, emoji: '📊', unlocked: daysWithData >= 1 },
         { name: 'Риск срыва', required: 3, emoji: '⚠️', unlocked: daysWithData >= 3 },
         { name: 'Паттерны', required: 7, emoji: '🔍', unlocked: daysWithData >= 7 },
+        { 
+          name: '🧠 Эмоц. риск', 
+          required: 7, 
+          emoji: '🧠', 
+          unlocked: daysWithData >= 7,
+          pmid: '11070333',
+          science: 'Epel 2001 — стресс-переедание'
+        },
+        { 
+          name: '🥩 Белковый долг', 
+          required: 7, 
+          emoji: '🥩', 
+          unlocked: daysWithData >= 7,
+          pmid: '20095013',
+          science: 'Mettler 2010 — белок при дефиците'
+        },
         { name: 'Персональные пороги', required: 14, emoji: '🎯', unlocked: daysWithData >= 14 },
+        { 
+          name: '🔬 Циркадный контекст', 
+          required: 14, 
+          emoji: '🌅', 
+          unlocked: daysWithData >= 14,
+          pmid: '9331550',
+          science: 'Van Cauter 1997 — циркадные ритмы'
+        },
         { name: 'Метаболический фенотип', required: 30, emoji: '🧬', unlocked: daysWithData >= 30 }
       ];
       
       const nextFeature = features.find(f => !f.unlocked);
+      
+      // 🆕 Считаем сколько extended analytics разблокировано
+      const extendedFeatures = features.filter(f => f.pmid);
+      const extendedUnlocked = extendedFeatures.filter(f => f.unlocked).length;
+      const extendedTotal = extendedFeatures.length;
       
       return {
         daysWithData,
@@ -8974,7 +9507,9 @@
         daysRemaining,
         todayCompleteness,
         features,
-        nextFeature
+        nextFeature,
+        extendedUnlocked,
+        extendedTotal
       };
     }, [lsGet, daysRequired]);
     
@@ -9011,21 +9546,37 @@
         }, `${completeness.todayCompleteness}% заполнено`)
       ),
       
+      // 🆕 v3.22.0: Extended Analytics Status
+      h('div', { className: 'data-completeness-card__extended' },
+        h('span', { className: 'data-completeness-card__extended-label' }, '🧠 Extended Analytics: '),
+        h('span', { 
+          className: 'data-completeness-card__extended-value',
+          style: { color: completeness.extendedUnlocked === completeness.extendedTotal ? '#22c55e' : '#6366f1' }
+        }, `${completeness.extendedUnlocked}/${completeness.extendedTotal}`),
+        completeness.extendedUnlocked === completeness.extendedTotal && h('span', { className: 'data-completeness-card__extended-badge' }, '✓')
+      ),
+      
       // Следующая разблокировка
       completeness.nextFeature && h('div', { className: 'data-completeness-card__next' },
         h('span', { className: 'data-completeness-card__next-emoji' }, completeness.nextFeature.emoji),
         h('span', { className: 'data-completeness-card__next-text' },
           `${completeness.nextFeature.name} через ${completeness.nextFeature.required - completeness.daysWithData} дн.`
-        )
+        ),
+        completeness.nextFeature.pmid && h('a', {
+          href: `https://pubmed.ncbi.nlm.nih.gov/${completeness.nextFeature.pmid}/`,
+          target: '_blank',
+          className: 'data-completeness-card__next-pmid',
+          title: completeness.nextFeature.science
+        }, '🔬')
       ),
       
-      // Разблокированные фичи (иконки)
+      // Разблокированные фичи (иконки) — 🆕 с tooltip для extended
       h('div', { className: 'data-completeness-card__features' },
         completeness.features.map((feature, idx) =>
           h('div', { 
             key: idx,
-            className: `data-completeness-card__feature ${feature.unlocked ? 'data-completeness-card__feature--unlocked' : ''}`,
-            title: `${feature.name} (${feature.required} дней)`
+            className: `data-completeness-card__feature ${feature.unlocked ? 'data-completeness-card__feature--unlocked' : ''} ${feature.pmid ? 'data-completeness-card__feature--science' : ''}`,
+            title: `${feature.name} (${feature.required} дней)${feature.science ? '\n' + feature.science : ''}`
           }, feature.emoji)
         )
       )
@@ -9318,25 +9869,52 @@
             )
           ),
           
-          // Tab: Chart
+          // Tab: Chart — v3.22.0: с training/stress overlay
           activeTab === 'chart' && h('div', { className: 'weekly-wrap-card__chart' },
             h('div', { className: 'weekly-wrap-card__chart-title' }, 'Score по дням'),
             h('div', { className: 'weekly-wrap-card__chart-bars' },
-              dailyData.map(day =>
-                h('div', { 
+              dailyData.map(day => {
+                // 🆕 v3.22.0: training/stress overlay
+                const hasTraining = day.trainings?.length > 0 || day.hasTraining;
+                const hasHighStress = day.stressAvg >= 6 || day.highStress;
+                
+                return h('div', { 
                   key: day.date,
-                  className: 'weekly-wrap-card__bar-container'
+                  className: `weekly-wrap-card__bar-container ${hasTraining ? 'weekly-wrap-card__bar-container--training' : ''} ${hasHighStress ? 'weekly-wrap-card__bar-container--stress' : ''}`
                 },
+                  // Training/Stress indicators
+                  h('div', { className: 'weekly-wrap-card__bar-indicators' },
+                    hasTraining && h('span', { 
+                      className: 'weekly-wrap-card__bar-indicator weekly-wrap-card__bar-indicator--training',
+                      title: 'Тренировочный день'
+                    }, '💪'),
+                    hasHighStress && h('span', { 
+                      className: 'weekly-wrap-card__bar-indicator weekly-wrap-card__bar-indicator--stress',
+                      title: 'Высокий стресс'
+                    }, '😰')
+                  ),
                   h('div', { 
                     className: 'weekly-wrap-card__bar',
                     style: { 
                       height: `${day.score}%`,
-                      backgroundColor: getScoreColor(day.score)
+                      backgroundColor: hasHighStress ? '#f87171' : getScoreColor(day.score)
                     }
                   }),
                   h('div', { className: 'weekly-wrap-card__bar-label' }, day.dayName),
                   h('div', { className: 'weekly-wrap-card__bar-value' }, day.score)
-                )
+                );
+              })
+            ),
+            
+            // Chart Legend
+            h('div', { className: 'weekly-wrap-card__chart-legend' },
+              h('div', { className: 'weekly-wrap-card__legend-item' },
+                h('span', { className: 'weekly-wrap-card__legend-indicator weekly-wrap-card__legend-indicator--training' }),
+                'Тренировка'
+              ),
+              h('div', { className: 'weekly-wrap-card__legend-item' },
+                h('span', { className: 'weekly-wrap-card__legend-indicator weekly-wrap-card__legend-indicator--stress' }),
+                'Стресс'
               )
             ),
             

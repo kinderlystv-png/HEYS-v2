@@ -17,29 +17,20 @@
 
 ## ⚡ Быстро (<1ч)
 
-- 🗺️ Mini-heatmap 7 дней | [задача](./docs/tasks/2025-11-30-week-heatmap.md) |
-  20м
-- 📈 Sparkline v2 — streak + прогноз |
-  [задача](./docs/tasks/2025-11-29-sparkline-enhancements-v2.md) | 45м
 - 🎯 Progress к weightGoal | 30м
-- 📲 PWA extras — Badge/BG Sync/Wake Lock |
-  [задача](./docs/tasks/2025-11-30-pwa-features.md) | 45м
+- 📲 PWA extras — BG Sync/Wake Lock | 45м
 
 ## 🟡 Средне (1-2ч)
 
-- 📊 Data overview для куратора |
-  [задача](./docs/tasks/2025-11-30-data-overview-tab.md) | 90м
-- 📰 Weekly Digest (вс) | 1.5ч
-- 📷 Фото еды upload | 1ч
+- � Weekly Digest (вс) | 1.5ч
 
 ## 🟠 Крупно (2-4ч)
 
-- 🍽️ Insulin factors — форма пищи, resistant starch, UI |
-  [задача](./docs/tasks/2025-12-10-insulin-wave-new-factors.md) | 2-3ч
-- 🧩 Рефакторинг day_v12 → модули |
-  [задача](./docs/tasks/2025-12-09-refactor-heys-day-v12.md) | 4-6ч
+- 🧩 Рефакторинг day_v12 → модули | 4-6ч
 - 🌑 Dark mode покрытие | 2ч
 - 🔍 Персональные паттерны (30+ дней) | 2-3ч
+- 🪟 Универсальный попап: аудит и дизайн компонента |
+  [задача](./docs/tasks/2025-12-19-popup-audit-universal-component.md) | 2-3ч
 
 ## 🔬 Deep (>4ч)
 

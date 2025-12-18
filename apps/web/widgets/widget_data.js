@@ -59,8 +59,6 @@
       const dayTot = this._getDayTotals();
       const optimum = this._getOptimum();
       
-      console.log('[WidgetData] getCaloriesData:', { dayTot, optimum, clientId: HEYS.currentClientId });
-      
       return {
         eaten: dayTot?.kcal || 0,
         target: optimum || 2000,
@@ -236,7 +234,8 @@
     /**
      * Получить данные для heatmap
      * @param {string} period - 'week' или 'month'
-     * @returns {Object} { days: Array }
+     * @returns {Object} { days: Array, currentStreak }
+     * v3.22.0: добавлено hasTraining, highStress в каждый день
      */
     getHeatmapData(period = 'week') {
       const days = [];
@@ -258,9 +257,15 @@
           status = HEYS.ratioZones?.getHeatmapStatus?.(ratio) || 'empty';
         }
         
+        // 🆕 v3.22.0: Extended analytics — training & stress
+        const hasTraining = dayData?.trainings?.length > 0;
+        const highStress = (dayData?.stressAvg || 0) >= 6;
+        
         days.push({
           date: dateStr,
-          status
+          status,
+          hasTraining,
+          highStress
         });
       }
       
@@ -296,7 +301,6 @@
       // Используем selectedDate из WidgetsTab, или текущую дату как fallback
       const dateStr = this._selectedDate || this._formatDate(new Date());
       const day = this._getDayByDate(dateStr);
-      console.log('[WidgetData] _getDay:', dateStr, '->', day ? 'found' : 'null', 'clientId:', HEYS.currentClientId);
       return day;
     },
     
@@ -310,19 +314,13 @@
         // 1. Используем HEYS.store.get (добавляет clientId namespace)
         if (HEYS.store?.get) {
           result = HEYS.store.get(key, null);
-          if (result) {
-            console.log('[WidgetData] _getDayByDate via store.get:', key);
-            return result;
-          }
+          if (result) return result;
         }
         
         // 2. Пробуем HEYS.utils.lsGet
         if (HEYS.utils?.lsGet) {
           result = HEYS.utils.lsGet(key, null);
-          if (result) {
-            console.log('[WidgetData] _getDayByDate via lsGet:', key);
-            return result;
-          }
+          if (result) return result;
         }
         
         // 3. Fallback: пробуем scoped key напрямую в localStorage
@@ -332,23 +330,21 @@
           if (stored) {
             try {
               result = JSON.parse(stored);
-              console.log('[WidgetData] _getDayByDate via direct scopedKey:', scopedKey);
               return result;
-            } catch (e) {}
+            } catch (e) {
+              // Ignore parse errors for scoped key
+            }
           }
         }
         
         // 4. Последний fallback: unscoped key
         const stored = localStorage.getItem(key);
         if (stored) {
-          console.log('[WidgetData] _getDayByDate via unscoped key:', key);
           return JSON.parse(stored);
         }
         
-        console.log('[WidgetData] _getDayByDate: no data for', key, 'clientId:', clientId);
         return null;
       } catch (e) {
-        console.error('[WidgetData] _getDayByDate error:', e);
         return null;
       }
     },
@@ -389,7 +385,6 @@
       // Вычисляем из данных дня
       const day = this._getDay();
       const totals = this._calculateDayTotals(day);
-      console.log('[WidgetData] _getDayTotals:', totals);
       return totals;
     },
     
@@ -420,7 +415,6 @@
     _getOptimum() {
       // Базовый расчёт калорийной нормы
       const prof = this._getProfile();
-      console.log('[WidgetData] _getOptimum profile:', prof);
       if (!prof.weight || !prof.height || !prof.age) {
         return 2000; // Дефолт
       }
@@ -635,7 +629,5 @@
   
   // === Export ===
   HEYS.Widgets.data = data;
-  
-  console.log('[HEYS] Widgets Data Layer v1.0.0 loaded');
   
 })(typeof window !== 'undefined' ? window : global);

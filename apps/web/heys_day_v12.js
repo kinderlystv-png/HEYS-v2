@@ -3520,6 +3520,56 @@
   
   const {useState,useMemo,useEffect,useRef}=React;
   
+  // === POPUP WITH BACKDROP — переиспользуемый компонент ===
+  // Универсальная обёртка для попапов с backdrop'ом для закрытия по клику вне попапа
+  const PopupWithBackdrop = React.useCallback(({ children, onClose, backdropStyle = {}, zIndex = 9998 }) => {
+    return React.createElement('div', {
+      className: 'popup-backdrop-invisible',
+      style: {
+        position: 'fixed',
+        inset: 0,
+        zIndex: zIndex,
+        pointerEvents: 'all',
+        ...backdropStyle
+      },
+      onClick: (e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }
+    }, children);
+  }, []);
+  
+  // === SWIPE TO DISMISS — хук для swipe-жестов на попапах ===
+  // Возвращает { onTouchStart, onTouchEnd } для передачи в props попапа
+  const useSwipeToDismiss = (onClose, threshold = 50) => {
+    const startYRef = React.useRef(0);
+    return {
+      onTouchStart: (e) => { startYRef.current = e.touches[0].clientY; },
+      onTouchEnd: (e) => {
+        const deltaY = e.changedTouches[0].clientY - startYRef.current;
+        if (deltaY > threshold) {
+          onClose();
+          if (typeof haptic === 'function') haptic('light');
+        }
+      }
+    };
+  };
+  
+  // === POPUP CLOSE BUTTON — универсальная кнопка закрытия ===
+  // className: опционально для кастомных стилей (sparkline-popup-close, metric-popup-close, etc.)
+  const PopupCloseButton = ({ onClose, className = 'popup-close-btn', style = {} }) => {
+    return React.createElement('button', {
+      className,
+      'aria-label': 'Закрыть',
+      onClick: (e) => {
+        e.stopPropagation();
+        onClose();
+      },
+      style
+    }, '✕');
+  };
+  
   // Дата приходит из шапки App (DatePicker в header)
   const { selectedDate, setSelectedDate } = props;
   
@@ -4339,6 +4389,9 @@
     // === Popup для объяснения формулы цели ===
     const [goalPopup, setGoalPopup] = useState(null); // { x, y, data }
 
+    // === Popup для науки о калорийном долге ===
+    const [debtSciencePopup, setDebtSciencePopup] = useState(null); // { title, content, links }
+
     // === Данные замеров для карточки статистики ===
     const measurementFields = useMemo(() => ([
       { key: 'waist', label: 'Обхват талии', icon: '📏' },
@@ -4576,6 +4629,7 @@
       setMealQualityPopup(type === 'mealQuality' ? payload : null);
       setWeekNormPopup(type === 'weekNorm' ? payload : null);
       setGoalPopup(type === 'goal' ? payload : null);
+      setDebtSciencePopup(type === 'debt-science' ? payload : null);
     }, []);
     
     // === Slider для интерактивного просмотра графика ===
@@ -4626,6 +4680,7 @@
         if (goalPopup && !e.target.closest('.goal-popup')) {
           setGoalPopup(null);
         }
+        // debtSciencePopup теперь закрывается через overlay onClick
       };
       // Delay to avoid closing immediately on the same click
       const timerId = setTimeout(() => {
@@ -8382,8 +8437,19 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     // Тренировки выводятся в sideBlock (side-compare)
 
     // === HERO METRICS CARDS ===
-    const remainingKcal = r0(optimum - eatenKcal); // сколько ещё можно съесть
-    const currentRatio = eatenKcal / (optimum || 1);
+    // Примечание: полный расчёт долга (caloricDebt) вычисляется позже, 
+    // currentRatio будет пересчитан через displayOptimum после рендера
+    // Для начального рендера используем базовый optimum или refeed
+    const effectiveOptimumForCards = (() => {
+      // 1. Refeed day — +35%
+      if (day.isRefeedDay && HEYS.Refeed) {
+        return HEYS.Refeed.getRefeedOptimum(optimum, true);
+      }
+      // 2. Базовый optimum (долг будет учтён через displayOptimum позже)
+      return optimum;
+    })();
+    const remainingKcal = r0(effectiveOptimumForCards - eatenKcal); // сколько ещё можно съесть
+    const currentRatio = eatenKcal / (effectiveOptimumForCards || 1);
     
     // Цвета для карточек — используем ratioZones
     function getEatenColor() {
@@ -8730,21 +8796,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const daysSinceFirstData = Math.floor((realToday - firstDataDate) / (24 * 60 * 60 * 1000)) + 1;
         
         // === КЛЮЧЕВАЯ ЛОГИКА: Определяем диапазон дат для графика ===
+        // НОВОЕ: Всегда оставляем 1 слот справа для прогноза на завтра
+        // Показываем chartPeriod-1 реальных дней + 1 прогнозный
         let startDate;
         let daysToShow;
-        let futureDaysCount = 0;
         
-        if (daysSinceFirstData >= chartPeriod) {
-          // Данных достаточно — показываем последние chartPeriod дней
+        if (daysSinceFirstData >= chartPeriod - 1) {
+          // Данных достаточно — показываем последние (chartPeriod-1) дней + 1 прогноз
           startDate = new Date(realToday);
-          startDate.setDate(startDate.getDate() - (chartPeriod - 1));
-          daysToShow = chartPeriod;
+          startDate.setDate(startDate.getDate() - (chartPeriod - 2)); // -1 для прогноза
+          daysToShow = chartPeriod - 1; // Оставляем 1 слот для прогноза
         } else {
-          // Данных мало — показываем от первого дня с данными
-          // Остальные слоты справа заполним прогнозом
+          // Данных мало — показываем все от первого дня с данными до сегодня
           startDate = firstDataDate;
           daysToShow = daysSinceFirstData;
-          futureDaysCount = chartPeriod - daysSinceFirstData;
         }
         
         // Собираем данные за период (от startDate до сегодня)
@@ -8799,10 +8864,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           }
         }
         
-        // === НОВОЕ: Добавляем будущие дни как прогноз ===
-        if (futureDaysCount > 0 && days.length >= 2) {
-          // Рассчитываем тренд веса по имеющимся данным
-          const weights = days.map(d => d.weight);
+        // === ВСЕГДА добавляем прогноз на завтра по тренду последних 7 дней ===
+        if (days.length >= 2) {
+          // Берём только последние 7 дней с данными для расчёта тренда
+          const recentDays = days.slice(-7);
+          const weights = recentDays.map(d => d.weight);
           const n = weights.length;
           
           // Линейная регрессия для тренда
@@ -8820,58 +8886,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           const clampedSlope = Math.max(-0.3, Math.min(0.3, slope));
           
           const lastWeight = weights[n - 1];
-          // Целевой вес из профиля (приводим к числу!) или текущий вес для стабилизации
-          const targetWeight = +prof?.weightGoal > 0 ? +prof.weightGoal : lastWeight;
           
-          // Реалистичная скорость изменения веса на основе дефицита
-          // 0.4-0.8 кг/неделю = 0.06-0.11 кг/день (безопасный темп)
-          const deficitPct = Math.abs(+prof?.deficitPctTarget || 0);
-          let weeklyRate; // кг в неделю
-          if (deficitPct >= 15) weeklyRate = 0.8;
-          else if (deficitPct >= 10) weeklyRate = 0.6;
-          else if (deficitPct >= 5) weeklyRate = 0.4;
-          else weeklyRate = 0.2; // Поддержание или лёгкий набор
+          // Прогноз на завтра — продолжение текущего тренда
+          const tomorrowDate = new Date(realToday);
+          tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+          const tomorrowStr = fmtDate(tomorrowDate);
           
-          const dailyRate = weeklyRate / 7; // ~0.06-0.11 кг/день
-          const direction = targetWeight < lastWeight ? -1 : (targetWeight > lastWeight ? 1 : 0);
+          const forecastWeight = lastWeight + clampedSlope;
           
-          let prevWeight = lastWeight;
-          for (let i = 1; i <= futureDaysCount; i++) {
-            const d = new Date(realToday);
-            d.setDate(d.getDate() + i);
-            const dateStr = fmtDate(d);
-            
-            let forecastWeight;
-            if (i <= 2) {
-              // Первые 2 дня — продолжаем текущий тренд
-              forecastWeight = lastWeight + clampedSlope * i;
-            } else {
-              // Дни 3+ — реалистичное изменение к цели с dailyRate
-              // Не превышаем цель
-              const idealChange = direction * dailyRate;
-              const newWeight = prevWeight + idealChange;
-              
-              // Ограничиваем: не перескакиваем через цель
-              if (direction < 0) {
-                forecastWeight = Math.max(targetWeight, newWeight);
-              } else if (direction > 0) {
-                forecastWeight = Math.min(targetWeight, newWeight);
-              } else {
-                forecastWeight = prevWeight; // Стабилизация
-              }
-            }
-            prevWeight = forecastWeight;
-            
-            days.push({ 
-              date: dateStr, 
-              weight: Math.round(forecastWeight * 10) / 10, // Округление до 0.1 кг
-              isToday: false,
-              isFuture: true,  // Маркер будущего дня
-              dayNum: dateStr.slice(-2).replace(/^0/, ''),
-              cycleDay: null,
-              hasWaterRetention: false
-            });
-          }
+          days.push({ 
+            date: tomorrowStr, 
+            weight: Math.round(forecastWeight * 10) / 10, // Округление до 0.1 кг
+            isToday: false,
+            isFuture: true,  // Маркер прогнозного дня
+            dayNum: tomorrowStr.slice(-2).replace(/^0/, ''),
+            cycleDay: null,
+            hasWaterRetention: false
+          });
         }
         
         return days;
@@ -9215,10 +9246,18 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     // Включает: долг, перебор, тренд, рекомендации кардио, учёт шагов и тренировок
     const caloricDebt = React.useMemo(() => {
       // === КОНСТАНТЫ ===
+      // 🔬 Научное обоснование:
+      // - Leibel 1995 (PMID: 7632212): Метаболизм адаптируется на ~15% при дефиците
+      // - Hall 2011 (PMID: 21872751): Постепенные изменения эффективнее резких
+      // - Практика: компенсировать 70-85% долга за 1-3 дня оптимально
       const CFG = {
         MAX_DEBT: 1500,              // Максимум учитываемого долга
-        RECOVERY_DAYS: 2,            // На сколько дней распределить долг
-        MAX_BOOST_PCT: 0.25,         // Максимум +25% к норме
+        // ГИБКОЕ ВОССТАНОВЛЕНИЕ: зависит от размера долга
+        // < 300 ккал → 1 день (маленький долг)
+        // 300-700 ккал → 2 дня (средний долг)
+        // > 700 ккал → 3 дня (большой долг)
+        RECOVERY_TARGET: 0.75,       // Компенсируем только 75% долга (метаболизм адаптировался)
+        MAX_BOOST_PCT: 0.20,         // Максимум +20% к норме
         TRAINING_MULT: 1.3,          // Недобор в тренировочный день ×1.3
         REFEED_THRESHOLD: 1000,      // Порог для refeed
         REFEED_CONSECUTIVE: 5,       // Дней подряд в дефиците >20%
@@ -9226,7 +9265,47 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         EXCESS_THRESHOLD: 100,       // Показывать перебор если > 100 ккал
         CARDIO_KCAL_PER_MIN: 6,      // ~6 ккал/мин лёгкого кардио
         STEPS_KCAL_PER_1000: 40,     // ~40 ккал на 1000 шагов
-        KCAL_PER_GRAM: 7.7           // Калории в грамме жира
+        KCAL_PER_GRAM: 7.7,          // Калории в грамме жира
+        
+        // 🆕 v3.1: TRAINING DAY ENHANCEMENT (#3)
+        // Разные типы тренировок требуют разного восстановления
+        TRAINING_TYPE_MULT: {
+          strength: 1.4,  // Силовая: больше белка + углеводов нужно
+          cardio: 1.25,   // Кардио: умеренное восстановление
+          hobby: 1.1      // Хобби: минимальное влияние
+        },
+        TRAINING_INTENSITY_MULT: {
+          light: 0.8,     // Лёгкая (< 30 мин зоны 1-2)
+          moderate: 1.0,  // Умеренная (30-60 мин)
+          high: 1.3,      // Интенсивная (> 60 мин или зоны 3-4)
+          extreme: 1.5    // Экстремальная (> 90 мин высокой интенсивности)
+        },
+        
+        // 🆕 v3.1: BMI-BASED PERSONALIZATION (#6)
+        // 🔬 Kahn & Flier 2000, DeFronzo 1979
+        BMI_RECOVERY_MULT: {
+          underweight: { threshold: 18.5, mult: 1.3, boost: 1.2 },   // Больше ешь!
+          normal: { threshold: 25, mult: 1.0, boost: 1.0 },          // Стандарт
+          overweight: { threshold: 30, mult: 0.85, boost: 0.9 },     // Можно агрессивнее
+          obese: { threshold: Infinity, mult: 0.7, boost: 0.8 }      // Ещё агрессивнее
+        },
+        
+        // 🆕 v3.1: PROTEIN DEBT (#2)
+        // 🔬 Mettler 2010 (PMID: 20095013): 1.8-2.7г/кг на дефиците
+        PROTEIN_DEBT_WINDOW: 3,      // Дней для анализа белкового долга
+        PROTEIN_TARGET_PCT: 0.25,    // 25% калорий из белка (норма)
+        PROTEIN_CRITICAL_PCT: 0.18,  // <18% = критический недобор
+        PROTEIN_RECOVERY_MULT: 1.2,  // Бонус к белковым рекомендациям
+        
+        // 🆕 v3.1: EMOTIONAL RISK (#5)
+        // 🔬 Epel 2001: Стресс → кортизол → тяга к сладкому
+        STRESS_HIGH_THRESHOLD: 6,    // Стресс >= 6 = высокий
+        STRESS_DEBT_RISK_MULT: 1.5,  // Риск срыва при стресс + долг
+        
+        // 🆕 v3.1: CIRCADIAN CONTEXT (#4)
+        // 🔬 Van Cauter 1997: Утренняя инсулиночувствительность выше
+        CIRCADIAN_MORNING_MULT: 0.7, // Утренний недобор менее критичен
+        CIRCADIAN_EVENING_MULT: 1.3  // Вечерний недобор более срочный
       };
       
       // === GOAL-AWARE THRESHOLDS ===
@@ -9369,7 +9448,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         if (absBalance > 800) severity = 2;
         else if (absBalance > 400) severity = 1;
         
-        // === REFEED ===
+        // === REFEED (только рекомендация, НЕ автоматический boost) ===
         const hasHardTrainingToday = (day.trainings || []).some(t => {
           if (!t || !t.z) return false;
           const totalMin = t.z.reduce((s, m) => s + (+m || 0), 0);
@@ -9381,18 +9460,115 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           maxConsecutiveDeficit >= CFG.REFEED_CONSECUTIVE ||
           (cappedDebt > 500 && hasHardTrainingToday);
         
-        // === BOOST (добавка к норме при долге) ===
+        // === ГИБКОЕ ВОССТАНОВЛЕНИЕ ===
+        // 🔬 Научная логика:
+        // 1. Компенсируем только 75% долга — организм адаптировался (Leibel 1995)
+        // 2. Дни восстановления зависят от размера долга:
+        //    - < 300 ккал → 1 день (быстро закрыть)
+        //    - 300-700 ккал → 2 дня (умеренно)
+        //    - > 700 ккал → 3 дня (постепенно)
+        const getRecoveryDays = (debt) => {
+          if (debt < 300) return 1;
+          if (debt < 700) return 2;
+          return 3;
+        };
+        
         let dailyBoost = 0;
         let refeedBoost = 0;
+        let recoveryDays = 0;
+        let effectiveDebt = 0; // Сколько реально компенсируем
         
-        if (needsRefeed) {
-          refeedBoost = Math.round(optimum * CFG.REFEED_BOOST_PCT);
-          dailyBoost = refeedBoost;
-        } else if (hasDebt) {
-          const rawBoost = cappedDebt / CFG.RECOVERY_DAYS;
+        if (hasDebt) {
+          // Компенсируем только 75% долга
+          effectiveDebt = Math.round(cappedDebt * CFG.RECOVERY_TARGET);
+          
+          // Гибкое количество дней
+          recoveryDays = getRecoveryDays(cappedDebt);
+          
+          // Расчёт boost
+          const rawBoost = effectiveDebt / recoveryDays;
           const maxBoost = optimum * CFG.MAX_BOOST_PCT;
           dailyBoost = Math.round(Math.min(rawBoost, maxBoost));
+          
+          // Refeed boost (для рекомендации)
+          if (needsRefeed) {
+            refeedBoost = Math.round(optimum * CFG.REFEED_BOOST_PCT);
+          }
         }
+        
+        // === МЯГКАЯ КОРРЕКЦИЯ ПРИ ПЕРЕБОРЕ ===
+        // 🔬 Философия: НЕ наказываем за переедание (провоцирует срыв!)
+        // Вместо этого:
+        // 1. Главное — рекомендация активности (кардио, шаги)
+        // 2. Мягкий акцент — небольшое снижение нормы (5-10%)
+        // 3. Позитивный тон — "баланс", а не "штраф"
+        // 
+        // Научное обоснование:
+        // - Herman & Polivy, 1984 (PMID: 6727817): Жёсткие ограничения → срывы
+        // - Tomiyama, 2018 (PMID: 29866473): Самокритика ухудшает результаты
+        // - Практика: мягкая коррекция + активность эффективнее "наказания"
+        
+        const EXCESS_CFG = {
+          SOFT_REDUCTION_PCT: 0.05,      // Мягкое снижение: 5% от нормы
+          MODERATE_REDUCTION_PCT: 0.08,  // Умеренное: 8%
+          MAX_REDUCTION_PCT: 0.10,       // Максимум: 10% (НЕ больше!)
+          ACTIVITY_PRIORITY: 0.7,        // 70% компенсации через активность
+          SOFT_THRESHOLD: 200,           // До 200 ккал — игнорируем
+          MODERATE_THRESHOLD: 400,       // 200-400 — мягкая коррекция
+          SIGNIFICANT_THRESHOLD: 600     // >400 — умеренная коррекция
+        };
+        
+        let dailyReduction = 0;           // Снижение нормы (мягкий акцент)
+        let effectiveExcess = 0;          // Чистый перебор после учёта активности
+        let excessRecoveryDays = 0;       // Дней на компенсацию
+        let activityCompensation = 0;     // Сколько компенсируем активностью
+        
+        if (hasExcess && netExcess > EXCESS_CFG.SOFT_THRESHOLD) {
+          // Сколько компенсируем активностью (приоритет!)
+          activityCompensation = Math.round(netExcess * EXCESS_CFG.ACTIVITY_PRIORITY);
+          
+          // Остаток — через мягкое снижение нормы
+          const remainingExcess = netExcess - activityCompensation;
+          effectiveExcess = Math.round(remainingExcess);
+          
+          // Определяем степень коррекции
+          let reductionPct;
+          if (netExcess < EXCESS_CFG.MODERATE_THRESHOLD) {
+            // Маленький перебор — минимальная коррекция
+            reductionPct = EXCESS_CFG.SOFT_REDUCTION_PCT;
+            excessRecoveryDays = 1;
+          } else if (netExcess < EXCESS_CFG.SIGNIFICANT_THRESHOLD) {
+            // Средний перебор — умеренная коррекция
+            reductionPct = EXCESS_CFG.MODERATE_REDUCTION_PCT;
+            excessRecoveryDays = 2;
+          } else {
+            // Большой перебор — максимальная (но мягкая!) коррекция
+            reductionPct = EXCESS_CFG.MAX_REDUCTION_PCT;
+            excessRecoveryDays = 2; // Не больше 2 дней — не растягиваем "наказание"
+          }
+          
+          // Расчёт снижения: распределяем остаток на дни
+          const rawReduction = Math.round(effectiveExcess / excessRecoveryDays);
+          const maxReduction = Math.round(optimum * reductionPct);
+          dailyReduction = Math.min(rawReduction, maxReduction);
+          
+          // Если снижение слишком маленькое — не показываем (не создаём шум)
+          if (dailyReduction < 30) {
+            dailyReduction = 0;
+            excessRecoveryDays = 0;
+          }
+        }
+        
+        // === ПРОГНОЗ ВОССТАНОВЛЕНИЯ ===
+        const daysToRecover = dailyBoost > 0 ? Math.ceil(effectiveDebt / dailyBoost) : 0;
+        const recoveryDate = new Date(todayDate);
+        recoveryDate.setDate(recoveryDate.getDate() + daysToRecover);
+        const recoveryDayName = dayNames[recoveryDate.getDay()];
+        
+        // === ПРОГРЕСС ВОССТАНОВЛЕНИЯ (если был долг вчера) ===
+        const yesterdayDebt = dayBreakdown.length > 0 ? Math.abs(dayBreakdown[dayBreakdown.length - 1].delta) : 0;
+        const isRecovering = yesterdayDebt > 0 && dayBreakdown.length > 1 && 
+          dayBreakdown[dayBreakdown.length - 1].delta > dayBreakdown[dayBreakdown.length - 2].delta;
         
         // === РЕКОМЕНДАЦИЯ КАРДИО (при переборе) ===
         let cardioRecommendation = null;
@@ -10586,17 +10762,234 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // Главный инсайт дня (самый важный)
         const mainInsight = scientificInsights[0] || null;
         
+        // ═══════════════════════════════════════════════════════════════════
+        // 🆕 v3.1: РАСШИРЕННАЯ АНАЛИТИКА (6 новых фич)
+        // ═══════════════════════════════════════════════════════════════════
+        
+        // --- #2: PROTEIN DEBT (Белковый долг) ---
+        // 🔬 Mettler 2010: При дефиците нужно 1.8-2.7г/кг белка для сохранения мышц
+        let proteinDebt = {
+          hasDebt: false,
+          debt: 0,
+          avgProteinPct: 0,
+          targetPct: CFG.PROTEIN_TARGET_PCT,
+          daysAnalyzed: 0,
+          severity: 'none', // none | mild | moderate | critical
+          recommendation: null,
+          pmid: '20095013'
+        };
+        
+        const proteinDays = pastDays.filter(d => d.prot > 0 && d.target > 0);
+        if (proteinDays.length >= 2) {
+          const avgProtPct = proteinDays.reduce((s, d) => s + (d.prot * 4 / d.target), 0) / proteinDays.length;
+          const targetPct = CFG.PROTEIN_TARGET_PCT;
+          const deficitPct = targetPct - avgProtPct;
+          
+          proteinDebt.avgProteinPct = Math.round(avgProtPct * 100);
+          proteinDebt.daysAnalyzed = proteinDays.length;
+          
+          if (avgProtPct < CFG.PROTEIN_CRITICAL_PCT) {
+            proteinDebt.hasDebt = true;
+            proteinDebt.severity = 'critical';
+            proteinDebt.debt = Math.round((targetPct - avgProtPct) * optimum / 4); // граммы
+            proteinDebt.recommendation = `Критический недобор белка! Добавь ${Math.round(proteinDebt.debt * 0.5)}г белка сегодня`;
+          } else if (avgProtPct < targetPct * 0.85) {
+            proteinDebt.hasDebt = true;
+            proteinDebt.severity = 'moderate';
+            proteinDebt.debt = Math.round((targetPct - avgProtPct) * optimum / 4);
+            proteinDebt.recommendation = `Маловато белка. Добавь ${Math.round(proteinDebt.debt * 0.3)}г к обычному рациону`;
+          } else if (avgProtPct < targetPct * 0.95) {
+            proteinDebt.hasDebt = true;
+            proteinDebt.severity = 'mild';
+            proteinDebt.debt = Math.round((targetPct - avgProtPct) * optimum / 4);
+            proteinDebt.recommendation = 'Белок немного ниже оптимума. Добавь яйцо или порцию творога';
+          }
+        }
+        
+        // --- #3: TRAINING DAY CONTEXT (Контекст тренировочного дня) ---
+        // Разные типы тренировок требуют разного восстановления
+        let trainingDayContext = {
+          isTrainingDay: false,
+          trainingType: null,
+          trainingIntensity: 'none',
+          recoveryMultiplier: 1.0,
+          recommendations: [],
+          nutritionPriority: 'balanced' // balanced | protein | carbs | recovery
+        };
+        
+        const todayTrainingsForContext = day.trainings || [];
+        if (todayTrainingsForContext.length > 0) {
+          trainingDayContext.isTrainingDay = true;
+          
+          // Определяем доминирующий тип
+          const typeCounts = { strength: 0, cardio: 0, hobby: 0 };
+          let totalZoneMinutes = 0;
+          let highIntensityMinutes = 0; // Зоны 3-4
+          
+          todayTrainingsForContext.forEach(t => {
+            typeCounts[t.type || 'hobby']++;
+            if (t.z) {
+              const total = t.z.reduce((s, m) => s + (+m || 0), 0);
+              totalZoneMinutes += total;
+              highIntensityMinutes += (+t.z[2] || 0) + (+t.z[3] || 0); // Зоны 3-4
+            }
+          });
+          
+          // Доминирующий тип
+          trainingDayContext.trainingType = Object.entries(typeCounts)
+            .sort((a, b) => b[1] - a[1])[0]?.[0] || 'hobby';
+          
+          // Интенсивность по времени в зонах 3-4
+          if (totalZoneMinutes >= 90 && highIntensityMinutes >= 30) {
+            trainingDayContext.trainingIntensity = 'extreme';
+          } else if (totalZoneMinutes >= 60 || highIntensityMinutes >= 20) {
+            trainingDayContext.trainingIntensity = 'high';
+          } else if (totalZoneMinutes >= 30) {
+            trainingDayContext.trainingIntensity = 'moderate';
+          } else {
+            trainingDayContext.trainingIntensity = 'light';
+          }
+          
+          // Множитель восстановления
+          const typeMult = CFG.TRAINING_TYPE_MULT[trainingDayContext.trainingType] || 1.0;
+          const intensityMult = CFG.TRAINING_INTENSITY_MULT[trainingDayContext.trainingIntensity] || 1.0;
+          trainingDayContext.recoveryMultiplier = Math.round((typeMult * intensityMult) * 100) / 100;
+          
+          // Приоритет питания
+          if (trainingDayContext.trainingType === 'strength') {
+            trainingDayContext.nutritionPriority = 'protein';
+            trainingDayContext.recommendations.push('💪 Силовая: фокус на белок (1.6-2.2г/кг)');
+          } else if (trainingDayContext.trainingType === 'cardio' && trainingDayContext.trainingIntensity !== 'light') {
+            trainingDayContext.nutritionPriority = 'carbs';
+            trainingDayContext.recommendations.push('🏃 Кардио: восполни гликоген углеводами');
+          }
+          
+          if (trainingDayContext.trainingIntensity === 'extreme' || trainingDayContext.trainingIntensity === 'high') {
+            trainingDayContext.nutritionPriority = 'recovery';
+            trainingDayContext.recommendations.push('🔥 Интенсивная: добавь +10-15% калорий для восстановления');
+          }
+        }
+        
+        // --- #4: CIRCADIAN CONTEXT (Циркадный контекст) ---
+        // 🔬 Van Cauter 1997: Утренняя инсулиночувствительность выше
+        // currentHour уже объявлен выше (строка 10018)
+        let circadianContext = {
+          period: 'day', // morning | day | evening | night
+          urgency: 'low', // low | medium | high
+          debtMultiplier: 1.0,
+          advice: null
+        };
+        
+        if (currentHour >= 6 && currentHour < 12) {
+          circadianContext.period = 'morning';
+          circadianContext.urgency = 'low';
+          circadianContext.debtMultiplier = CFG.CIRCADIAN_MORNING_MULT;
+          if (hasDebt && rawDebt < 500) {
+            circadianContext.advice = 'Утро — ещё рано переживать о недоборе. Впереди весь день!';
+          }
+        } else if (currentHour >= 12 && currentHour < 18) {
+          circadianContext.period = 'day';
+          circadianContext.urgency = 'medium';
+          circadianContext.debtMultiplier = 1.0;
+        } else if (currentHour >= 18 && currentHour < 23) {
+          circadianContext.period = 'evening';
+          circadianContext.urgency = hasDebt && rawDebt > 400 ? 'high' : 'medium';
+          circadianContext.debtMultiplier = CFG.CIRCADIAN_EVENING_MULT;
+          if (hasDebt && rawDebt > 500) {
+            circadianContext.advice = 'Вечер — нужно поесть! Большой недобор ухудшит сон и повысит грелин завтра.';
+          }
+        } else {
+          circadianContext.period = 'night';
+          circadianContext.urgency = 'high';
+          circadianContext.debtMultiplier = CFG.CIRCADIAN_EVENING_MULT;
+        }
+        
+        // --- #5: EMOTIONAL RISK (Эмоциональный риск срыва) ---
+        // 🔬 Epel 2001: Стресс + голод = высокий риск срыва
+        // avgStress уже объявлен выше (строка 9746)
+        const isHighStress = avgStress >= CFG.STRESS_HIGH_THRESHOLD;
+        
+        let emotionalRisk = {
+          level: 'low', // low | medium | high | critical
+          stressLevel: avgStress,
+          factors: [],
+          bingeRisk: 0, // 0-100%
+          recommendation: null,
+          pmid: '11070333' // Epel 2001
+        };
+        
+        // Факторы риска
+        if (isHighStress) emotionalRisk.factors.push('Высокий стресс');
+        if (hasDebt && rawDebt > 400) emotionalRisk.factors.push('Накопленный недобор');
+        if (cortisolAnalysis.stressEatingDetected) emotionalRisk.factors.push('Паттерн стрессового переедания');
+        if (circadianContext.period === 'evening' || circadianContext.period === 'night') {
+          emotionalRisk.factors.push('Вечер/ночь (пик уязвимости)');
+        }
+        
+        // Расчёт риска
+        emotionalRisk.bingeRisk = Math.min(100, emotionalRisk.factors.length * 25);
+        
+        if (emotionalRisk.bingeRisk >= 75) {
+          emotionalRisk.level = 'critical';
+          emotionalRisk.recommendation = '🚨 Высокий риск срыва! Съешь что-то прямо сейчас — это предотвратит переедание позже';
+        } else if (emotionalRisk.bingeRisk >= 50) {
+          emotionalRisk.level = 'high';
+          emotionalRisk.recommendation = '⚠️ Будь внимательней — стресс + голод провоцируют переедание';
+        } else if (emotionalRisk.bingeRisk >= 25) {
+          emotionalRisk.level = 'medium';
+          emotionalRisk.recommendation = 'Следи за собой — один из факторов риска присутствует';
+        }
+        
+        // --- #6: BMI-BASED PERSONALIZATION ---
+        // 🔬 Kahn & Flier 2000, DeFronzo 1979: Разный BMI = разный метаболизм
+        const weight = prof?.weight || 70;
+        const height = prof?.height || 170;
+        const bmi = weight / Math.pow(height / 100, 2);
+        
+        let bmiContext = {
+          value: Math.round(bmi * 10) / 10,
+          category: 'normal',
+          recoveryMultiplier: 1.0,
+          boostMultiplier: 1.0,
+          recommendation: null
+        };
+        
+        // Определяем категорию
+        for (const [cat, cfg] of Object.entries(CFG.BMI_RECOVERY_MULT)) {
+          if (bmi < cfg.threshold) {
+            bmiContext.category = cat;
+            bmiContext.recoveryMultiplier = cfg.mult;
+            bmiContext.boostMultiplier = cfg.boost;
+            break;
+          }
+        }
+        
+        // Рекомендации по BMI
+        if (bmiContext.category === 'underweight') {
+          bmiContext.recommendation = 'При низком BMI важнее НАБРАТЬ, чем терять. Увеличь калории!';
+        } else if (bmiContext.category === 'obese') {
+          bmiContext.recommendation = 'При высоком BMI можно чуть агрессивнее с дефицитом, но сохраняй белок!';
+        }
+        
         // === РЕЗУЛЬТАТ ===
         return {
           // Долг (недобор)
           hasDebt,
           debt: Math.round(cappedDebt),
           rawDebt: Math.round(rawDebt),
+          effectiveDebt,  // Сколько реально компенсируем (75% от долга)
+          recoveryDays,   // Гибкое кол-во дней (1-3)
           dailyBoost,
           adjustedOptimum: optimum + dailyBoost,
           needsRefeed,
           refeedBoost,
+          refeedOptimum: optimum + Math.round(optimum * CFG.REFEED_BOOST_PCT),
           consecutiveDeficitDays: maxConsecutiveDeficit,
+          
+          // Прогноз восстановления
+          daysToRecover,
+          recoveryDayName,
+          isRecovering,
           
           // Перебор
           hasExcess,
@@ -10604,6 +10997,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           rawExcess: Math.round(rawExcess),
           totalTrainingKcal: Math.round(totalTrainingKcal),
           cardioRecommendation,
+          // Мягкая коррекция перебора
+          dailyReduction,                   // Снижение нормы (акцент)
+          effectiveExcess,                  // Чистый перебор после активности
+          excessRecoveryDays,               // Дней на компенсацию
+          activityCompensation,             // Сколько через активность
+          adjustedOptimumWithExcess: optimum - dailyReduction, // Норма с учётом перебора
           
           // Общее
           dayBreakdown,
@@ -10640,7 +11039,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           waterInsight,
           lastWeekComparison,
           smartTiming,
-          cycleInsight
+          cycleInsight,
+          
+          // 🆕 v3.1: Расширенная аналитика
+          proteinDebt,           // #2 Белковый долг
+          trainingDayContext,    // #3 Контекст тренировочного дня
+          circadianContext,      // #4 Циркадный контекст
+          emotionalRisk,         // #5 Эмоциональный риск срыва
+          bmiContext             // #6 BMI-персонализация
         };
       } catch (e) {
         console.warn('[CaloricDebt] Error:', e);
@@ -10947,16 +11353,25 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       };
     }, [caloricDebt, eatenKcal, optimum, day.trainings, day.meals, pIndex, prof]);
     
-    // === displayOptimum — норма с учётом калорийного долга и refeed ===
+    // === displayOptimum — норма с учётом калорийного долга/перебора и refeed ===
     // Используется для UI отображения "сколько можно съесть сегодня"
+    // 🔬 Философия:
+    // - Долг → УВЕЛИЧИВАЕМ норму (помогаем восполнить)
+    // - Перебор → МЯГКО снижаем норму (акцент, не наказание)
+    // - Refeed → +35% (override всего остального)
     const displayOptimum = useMemo(() => {
       // 1. Refeed day — +35% к норме (приоритет над caloricDebt)
       if (day.isRefeedDay && HEYS.Refeed) {
         return HEYS.Refeed.getRefeedOptimum(optimum, true);
       }
-      // 2. Caloric debt — добавляем долг к норме
+      // 2. Caloric debt — добавляем к норме
       if (caloricDebt && caloricDebt.dailyBoost > 0) {
         return optimum + caloricDebt.dailyBoost;
+      }
+      // 3. Caloric excess — мягкое снижение нормы (акцент)
+      // НЕ применяем одновременно с долгом (логически невозможно)
+      if (caloricDebt && caloricDebt.dailyReduction > 0 && !caloricDebt.hasDebt) {
+        return optimum - caloricDebt.dailyReduction;
       }
       return optimum;
     }, [optimum, caloricDebt, day.isRefeedDay]);
@@ -10965,6 +11380,77 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     const displayRemainingKcal = React.useMemo(() => {
       return r0(displayOptimum - eatenKcal);
     }, [displayOptimum, eatenKcal]);
+    
+    // 🔧 FIX: Корректный ratio с учётом долга для статуса
+    // Это значение используется для определения "перебор/норма/недобор"
+    const displayCurrentRatio = React.useMemo(() => {
+      return eatenKcal / (displayOptimum || optimum || 1);
+    }, [eatenKcal, displayOptimum, optimum]);
+    
+    // 🔧 FIX: Корректный статус с учётом долга
+    // Пересчитывает getRatioStatus() логику с displayCurrentRatio вместо currentRatio
+    const displayRatioStatus = React.useMemo(() => {
+      if (eatenKcal === 0) {
+        return { emoji: '👋', text: 'Хорошего дня!', color: '#64748b' };
+      }
+      
+      const ratio = displayCurrentRatio;
+      
+      // Абсолютные пороги перебора/недобора
+      if (ratio >= 1.3) {
+        return { emoji: '🚨', text: 'Перебор!', color: '#ef4444' };
+      }
+      if (ratio >= 1.1) {
+        return { emoji: '😅', text: 'Чуть больше', color: '#eab308' };
+      }
+      
+      // Адаптивная оценка по времени дня
+      const now = new Date();
+      const currentHour = now.getHours();
+      
+      // Ожидаемый прогресс
+      let expectedProgress;
+      if (currentHour < 6) {
+        expectedProgress = 0;
+      } else if (currentHour <= 9) {
+        expectedProgress = (currentHour - 6) * 0.08;
+      } else if (currentHour <= 14) {
+        expectedProgress = 0.24 + (currentHour - 9) * 0.10;
+      } else if (currentHour <= 20) {
+        expectedProgress = 0.74 + (currentHour - 14) * 0.04;
+      } else {
+        expectedProgress = 0.98;
+      }
+      
+      const progressDiff = ratio - expectedProgress;
+      
+      // Утро (6-12)
+      if (currentHour < 12) {
+        if (progressDiff >= -0.15) return { emoji: '👍', text: 'Хорошо!', color: '#22c55e' };
+        if (progressDiff >= -0.25) return { emoji: '🍽️', text: 'Пора кушать', color: '#eab308' };
+        return { emoji: '⚠️', text: 'Маловато', color: '#f97316' };
+      }
+      
+      // День (12-15)
+      if (currentHour < 15) {
+        if (progressDiff >= -0.1) return { emoji: '👍', text: 'Так держать!', color: '#22c55e' };
+        if (progressDiff >= -0.25) return { emoji: '🍽️', text: 'Время обеда', color: '#eab308' };
+        return { emoji: '⚠️', text: 'Мало для обеда', color: '#f97316' };
+      }
+      
+      // Вечер (15-19)
+      if (currentHour < 19) {
+        if (progressDiff >= -0.1) return { emoji: '👍', text: 'Хорошо!', color: '#22c55e' };
+        if (progressDiff >= -0.2) return { emoji: '🍽️', text: 'Пора перекусить', color: '#eab308' };
+        return { emoji: '⚠️', text: 'Маловато', color: '#f97316' };
+      }
+      
+      // Поздний вечер (19+)
+      if (ratio >= 0.75) return { emoji: '👍', text: 'Хорошо!', color: '#22c55e' };
+      if (ratio >= 0.6) return { emoji: '🍽️', text: 'Нужен ужин', color: '#eab308' };
+      if (ratio >= 0.4) return { emoji: '⚠️', text: 'Мало калорий', color: '#f97316' };
+      return { emoji: '💀', text: 'Критически мало!', color: '#ef4444' };
+    }, [eatenKcal, displayCurrentRatio]);
     
     // Данные для heatmap текущей недели (пн-вс)
     const weekHeatmapData = React.useMemo(() => {
@@ -11975,7 +12461,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Адаптивная шкала Y: от минимума до максимума с отступами
       // Это делает разницу между точками более заметной
       const allKcalValues = [...chartData, ...forecastPoints].map(d => d.kcal).filter(v => v > 0);
-      const allTargetValues = [...chartData, ...forecastPoints].map(d => d.target || goal);
+      // 🔧 FIX: Для сегодняшнего дня используем goal (displayOptimum с долгом)
+      const allTargetValues = [...chartData, ...forecastPoints].map(d => d.isToday ? goal : (d.target || goal));
       const allValues = [...allKcalValues, ...allTargetValues];
       
       const dataMin = Math.min(...allValues);
@@ -11994,11 +12481,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // Нормализуем к scaleMin-scaleMax
         const yNorm = scaleRange > 0 ? (d.kcal - scaleMin) / scaleRange : 0.5;
         const y = paddingTop + chartHeight - yNorm * chartHeight;
-        const targetNorm = scaleRange > 0 ? ((d.target || goal) - scaleMin) / scaleRange : 0.5;
+        // 🔧 FIX: Для сегодняшнего дня используем goal (displayOptimum с долгом), для прошлых — d.target
+        const effectiveTarget = d.isToday ? goal : (d.target || goal);
+        const targetNorm = scaleRange > 0 ? (effectiveTarget - scaleMin) / scaleRange : 0.5;
         const targetY = paddingTop + chartHeight - targetNorm * chartHeight;
         // Извлекаем день из даты (последние 2 символа)
         const dayNum = d.date ? d.date.slice(-2).replace(/^0/, '') : '';
-        const ratio = (d.target || goal) > 0 ? d.kcal / (d.target || goal) : 0;
+        const ratio = effectiveTarget > 0 ? d.kcal / effectiveTarget : 0;
         // Хороший день: используем централизованный ratioZones с учётом refeed
         const rz = HEYS.ratioZones;
         // isPerfect учитывает refeed (расширенный диапазон 0.70-1.35)
@@ -12010,7 +12499,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // День недели (0=Вс, 1=Пн, ...)
         const dayOfWeek = d.date ? new Date(d.date).getDay() : 0;
         return { 
-          x, y, kcal: d.kcal, target: d.target || goal, targetY, ratio,
+          x, y, kcal: d.kcal, target: effectiveTarget, targetY, ratio,
           isToday: d.isToday, dayNum, date: d.date, isPerfect,
           isUnknown: d.isUnknown || false, // флаг неизвестного дня
           hasTraining: d.hasTraining, trainingTypes: d.trainingTypes || [],
@@ -13485,11 +13974,35 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       });
       
       // Прогнозная линия (от последней реальной точки ко всем прогнозным) — пунктирная
+      // Используем плавную кривую, продолжающую тренд основной линии
       let forecastLineD = '';
-      if (futurePoints.length > 0 && realPoints.length >= 1) {
+      if (futurePoints.length > 0 && realPoints.length >= 2) {
         const lastRealPoint = realPoints[realPoints.length - 1];
-        const allForecastPts = [lastRealPoint, ...futurePoints];
-        forecastLineD = smoothPath(allForecastPts);
+        const prevRealPoint = realPoints[realPoints.length - 2];
+        const futurePt = futurePoints[0];
+        
+        // Вычисляем контрольные точки для плавного продолжения тренда
+        // Используем тот же tension что и в smoothPath
+        const tension = 0.25;
+        
+        // Направление от предпоследней к последней точке (тренд)
+        const dx = lastRealPoint.x - prevRealPoint.x;
+        const dy = lastRealPoint.y - prevRealPoint.y;
+        
+        // Контрольная точка 1: продолжение тренда от последней реальной точки
+        const cp1x = lastRealPoint.x + dx * tension;
+        const cp1y = lastRealPoint.y + dy * tension;
+        
+        // Контрольная точка 2: притяжение к прогнозной точке
+        const cp2x = futurePt.x - (futurePt.x - lastRealPoint.x) * tension;
+        const cp2y = futurePt.y - (futurePt.y - lastRealPoint.y) * tension;
+        
+        forecastLineD = `M${lastRealPoint.x},${lastRealPoint.y} C${cp1x},${cp1y} ${cp2x},${cp2y} ${futurePt.x},${futurePt.y}`;
+      } else if (futurePoints.length > 0 && realPoints.length === 1) {
+        // Fallback: прямая линия если только 1 реальная точка
+        const lastRealPoint = realPoints[0];
+        const futurePt = futurePoints[0];
+        forecastLineD = `M${lastRealPoint.x},${lastRealPoint.y} L${futurePt.x},${futurePt.y}`;
       }
       
       return React.createElement('svg', { 
@@ -13854,11 +14367,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     const goalProgressBar = React.createElement('div', { className: 'goal-progress-card' },
       React.createElement('div', { 
         className: 'goal-progress-bar' + 
-          (eatenKcal / (optimum || 1) >= 0.9 && eatenKcal / (optimum || 1) <= 1.1 ? ' pulse-perfect' : '')
+          (eatenKcal / (displayOptimum || optimum || 1) >= 0.9 && eatenKcal / (displayOptimum || optimum || 1) <= 1.1 ? ' pulse-perfect' : '')
       },
-        // Вычисляем цвета на основе ratio
+        // Вычисляем цвета на основе ratio (с учётом калорийного долга!)
         (() => {
-          const ratio = eatenKcal / (optimum || 1);
+          // 🔧 FIX: Используем displayOptimum (с учётом долга) для определения статуса
+          const effectiveOptimum = displayOptimum || optimum || 1;
+          const ratio = eatenKcal / effectiveOptimum;
           
           // === ДИНАМИЧЕСКИЙ ГРАДИЕНТ ПО ВСЕЙ ПОЛОСЕ ===
           // Зоны: 0-80% жёлтый → 80-100% зелёный → 100-105% зелёный → 105-110% жёлтый → 110%+ красный
@@ -14179,6 +14694,91 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           );
         })()
       ),
+      // 🆕 v3.20.0: Context badges row (circadian + training + emotional)
+      // Научное обоснование: Van Cauter 1997, Aragon 2013, Epel 2001
+      (caloricDebt?.circadianContext || caloricDebt?.trainingDayContext || caloricDebt?.emotionalRisk) && 
+        React.createElement('div', { 
+          className: 'goal-context-badges',
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            padding: '6px 12px',
+            marginTop: '8px',
+            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+            borderRadius: '8px',
+            fontSize: '11px',
+            flexWrap: 'wrap'
+          }
+        },
+          // Циркадный контекст — срочность питания по времени суток
+          // PMID: 9331550 (Van Cauter 1997) — инсулиновая чувствительность выше утром
+          caloricDebt?.circadianContext?.urgency && caloricDebt.circadianContext.urgency !== 'low' &&
+            React.createElement('span', {
+              className: 'context-badge context-badge-circadian',
+              style: {
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '3px 8px',
+                borderRadius: '12px',
+                background: caloricDebt.circadianContext.urgency === 'high' ? '#fef3c7' : '#dbeafe',
+                color: caloricDebt.circadianContext.urgency === 'high' ? '#92400e' : '#1e40af',
+                fontWeight: 500,
+                cursor: 'help'
+              },
+              title: caloricDebt.circadianContext.urgency === 'high' 
+                ? '⏰ Вечер — инсулин менее эффективен, еда усваивается хуже. PMID: 9331550'
+                : '🌤 День — оптимальное время для еды. PMID: 9331550'
+            },
+              caloricDebt.circadianContext.urgency === 'high' ? '⏰' : '🌤',
+              caloricDebt.circadianContext.urgency === 'high' ? 'Поесть до сна!' : 'Оптимальное время'
+            ),
+          // Тренировочный контекст — приоритет питания
+          // PMID: 23360586 (Aragon 2013) — тайминг нутриентов для мышц
+          caloricDebt?.trainingDayContext?.isTrainingDay &&
+            React.createElement('span', {
+              className: 'context-badge context-badge-training',
+              style: {
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '3px 8px',
+                borderRadius: '12px',
+                background: caloricDebt.trainingDayContext.nutritionPriority === 'high' ? '#dcfce7' : '#e0e7ff',
+                color: caloricDebt.trainingDayContext.nutritionPriority === 'high' ? '#166534' : '#3730a3',
+                fontWeight: 500,
+                cursor: 'help'
+              },
+              title: `${caloricDebt.trainingDayContext.trainingType === 'strength' ? '💪 Силовая' : '🏃 Кардио'} — приоритет питания ${caloricDebt.trainingDayContext.nutritionPriority}. PMID: 23360586`
+            },
+              caloricDebt.trainingDayContext.trainingType === 'strength' ? '💪' : '🏃',
+              caloricDebt.trainingDayContext.nutritionPriority === 'high' ? 'Важно поесть!' : 'Тренировочный день'
+            ),
+          // Эмоциональный риск — предупреждение о срыве
+          // PMID: 11070333 (Epel 2001) — кортизол → тяга к еде
+          caloricDebt?.emotionalRisk?.bingeRisk >= 40 &&
+            React.createElement('span', {
+              className: 'context-badge context-badge-emotional',
+              style: {
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '3px 8px',
+                borderRadius: '12px',
+                background: caloricDebt.emotionalRisk.bingeRisk >= 70 ? '#fee2e2' : '#fef9c3',
+                color: caloricDebt.emotionalRisk.bingeRisk >= 70 ? '#991b1b' : '#854d0e',
+                fontWeight: 500,
+                cursor: 'help',
+                animation: caloricDebt.emotionalRisk.bingeRisk >= 70 ? 'pulse 2s infinite' : 'none'
+              },
+              title: `⚠️ Риск срыва ${caloricDebt.emotionalRisk.bingeRisk}% (стресс + недоедание + вечер). PMID: 11070333`
+            },
+              caloricDebt.emotionalRisk.bingeRisk >= 70 ? '🚨' : '⚡',
+              `Риск срыва ${caloricDebt.emotionalRisk.bingeRisk}%`
+            )
+        ),
       // Confetti overlay
       showConfetti && React.createElement('div', { className: 'confetti-container' },
         Array.from({length: 50}).map((_, i) => 
@@ -14296,9 +14896,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       React.createElement('div', { className: 'compact-card-header stats-header-with-badge' },
         React.createElement('span', null, '📊 СТАТИСТИКА'),
         React.createElement('span', { 
-          className: 'ratio-status-badge' + (ratioStatus.emoji === '🔥' ? ' perfect' : ''),
-          style: { color: ratioStatus.color }
-        }, ratioStatus.emoji + ' ' + ratioStatus.text)
+          className: 'ratio-status-badge' + (displayRatioStatus.emoji === '🔥' ? ' perfect' : ''),
+          style: { color: displayRatioStatus.color }
+        }, displayRatioStatus.emoji + ' ' + displayRatioStatus.text)
       ),
       // 4 карточки метрик внутри статистики
       React.createElement('div', { className: 'metrics-cards' },
@@ -14325,7 +14925,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 weight,
                 steps: day.steps || 0,
                 householdMin: day.householdMin || 0,
-                trainings: TR
+                trainings: TR,
+                // 🆕 v3.20.0: Extended analytics for TDEE popup
+                ndteData: caloricDebt?.ndteData,
+                bmiContext: caloricDebt?.bmiContext
               }
             });
             haptic('light');
@@ -14491,133 +15094,335 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           className: chartTransitioning ? 'sparkline-transitioning' : '',
           style: { transition: 'opacity 0.15s ease' }
         },
-          renderSparkline(sparklineData, optimum)
+          // 🔧 FIX: Используем displayOptimum (с учётом долга) для линии цели
+          renderSparkline(sparklineData, displayOptimum)
         )
       );
       })(),
-      // === CALORIC DEBT CARD — Карточка калорийного долга ===
+      // === CALORIC DEBT CARD v2 — Чистая и понятная карточка долга ===
       caloricDebt && caloricDebt.hasDebt && (() => {
-        const { debt, dailyBoost, adjustedOptimum, needsRefeed, dayBreakdown, totalBalance, consecutiveDeficitDays, trend, weightImpact } = caloricDebt;
+        const { debt, effectiveDebt, recoveryDays, dailyBoost, adjustedOptimum, needsRefeed, refeedBoost, refeedOptimum, dayBreakdown, daysToRecover, recoveryDayName } = caloricDebt;
         
-        // Цвет и иконка по уровню долга
-        const getDebtStyle = () => {
-          if (needsRefeed) return { icon: '🍕', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.3)', label: 'Загрузка рекомендуется' };
-          if (debt > 700) return { icon: '⚠️', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.08)', border: 'rgba(239, 68, 68, 0.2)', label: 'Значительный долг' };
-          if (debt > 400) return { icon: '📊', color: '#eab308', bg: 'rgba(234, 179, 8, 0.08)', border: 'rgba(234, 179, 8, 0.2)', label: 'Накопился долг' };
-          return { icon: '📈', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.08)', border: 'rgba(59, 130, 246, 0.2)', label: 'Небольшой долг' };
-        };
-        const style = getDebtStyle();
+        // Цвет по уровню долга
+        const accentColor = debt > 700 ? '#ef4444' : debt > 400 ? '#f59e0b' : '#3b82f6';
         
-        // Форматирование дельты
-        const formatDelta = (d) => {
-          if (d >= 0) return '+' + d;
-          return String(d);
+        // Popup науки
+        const showSciencePopup = (e) => {
+          e.stopPropagation();
+          openExclusivePopup('debt-science', {
+            title: '🔬 Как работает восстановление',
+            content: [
+              { label: 'Почему не 100%?', value: 'Организм адаптируется к дефициту, снижая метаболизм на ~15% (Leibel 1995). Компенсировать весь долг — перебор.' },
+              { label: 'Почему ' + recoveryDays + ' дня?', value: debt < 300 ? 'Маленький долг (<300 ккал) — можно закрыть за 1 день без стресса.' : debt < 700 ? 'Средний долг (300-700 ккал) — оптимально 2 дня для плавного восстановления.' : 'Большой долг (>700 ккал) — 3 дня чтобы не перегружать ЖКТ и метаболизм.' },
+              { label: 'Формула', value: effectiveDebt + ' ккал (75% от ' + debt + ') ÷ ' + recoveryDays + ' дн = +' + dailyBoost + ' ккал/день' }
+            ],
+            links: [
+              { text: 'Leibel 1995', url: 'https://pubmed.ncbi.nlm.nih.gov/7632212/' },
+              { text: 'Hall 2011', url: 'https://pubmed.ncbi.nlm.nih.gov/21872751/' }
+            ]
+          });
         };
         
         return React.createElement('div', {
-          className: 'caloric-balance-card' + (balanceCardExpanded ? ' expanded' : ''),
-          style: { 
-            background: style.bg, 
-            borderColor: style.border,
-            '--balance-color': style.color
-          },
+          className: 'debt-card' + (balanceCardExpanded ? ' expanded' : ''),
           onClick: (e) => {
             e.stopPropagation();
             setBalanceCardExpanded(!balanceCardExpanded);
           }
         },
-          // === HEADER (всегда виден) — компактная строка ===
-          React.createElement('div', { className: 'caloric-balance-header' },
-            React.createElement('span', { className: 'caloric-balance-icon' }, style.icon),
-            React.createElement('div', { className: 'caloric-balance-summary' },
-              React.createElement('span', { className: 'caloric-balance-label' }, 
-                needsRefeed ? 'Нужна загрузка' : 'Недобор за ' + dayBreakdown.length + ' дн'
+          // === COLLAPSED VIEW ===
+          React.createElement('div', { className: 'debt-card-row' },
+            React.createElement('div', { className: 'debt-card-left' },
+              React.createElement('span', { className: 'debt-card-icon', style: { color: accentColor } }, '💰'),
+              React.createElement('span', { className: 'debt-card-label' }, 
+                'Недобор ' + debt + ' ккал'
               ),
-              dailyBoost > 0 && React.createElement('span', { className: 'caloric-balance-boost' }, 
-                '→ +' + dailyBoost + ' ккал сегодня'
+              dailyBoost > 0 && React.createElement('span', { className: 'debt-card-boost' }, 
+                '+' + dailyBoost + '/день'
               )
             ),
-            React.createElement('span', { 
-              className: 'caloric-balance-badge',
-              style: { backgroundColor: style.color }
-            }, '-' + debt),
-            React.createElement('span', { className: 'caloric-balance-chevron' }, 
-              balanceCardExpanded ? '▲' : '▼'
+            // Кнопка "?" для науки + chevron
+            React.createElement('div', { className: 'debt-card-right' },
+              React.createElement('button', {
+                className: 'debt-science-btn',
+                onClick: showSciencePopup,
+                title: 'Как это работает?'
+              }, '?'),
+              React.createElement('span', { className: 'debt-card-chevron' }, 
+                balanceCardExpanded ? '▲' : '▼'
+              )
             )
           ),
           
-          // === DETAILS (только при раскрытии) ===
-          balanceCardExpanded && React.createElement('div', { className: 'caloric-balance-details' },
-            // Breakdown по дням
-            React.createElement('div', { className: 'caloric-debt-days' },
-              dayBreakdown.map((d, i) => {
-                const isPositive = d.delta >= 0;
-                const isNegative = d.delta < 0;
-                const isTraining = d.hasTraining;
-                
-                // Tooltip для дня
-                const tooltip = `Съедено: ${d.eaten} ккал\nЦель: ${d.target} ккал\nБаланс: ${d.delta > 0 ? '+' : ''}${d.delta} ккал`;
-                
+          // === EXPANDED VIEW ===
+          balanceCardExpanded && React.createElement('div', { className: 'debt-card-expanded' },
+            // Мини-график по дням
+            React.createElement('div', { className: 'debt-days-row' },
+              dayBreakdown.map((d) => {
+                const pct = Math.min(100, Math.abs(d.delta) / 500 * 100);
+                const isPos = d.delta >= 0;
                 return React.createElement('div', {
                   key: d.date,
-                  className: 'caloric-debt-day' + 
-                    (isPositive ? ' positive' : '') + 
-                    (isNegative ? ' negative' : '') +
-                    (isTraining ? ' training' : ''),
-                  title: tooltip
+                  className: 'debt-day-col',
+                  title: d.dayName + ': ' + (d.delta > 0 ? '+' : '') + d.delta + ' ккал'
                 },
-                  React.createElement('span', { className: 'caloric-debt-day-name' }, d.dayName),
-                  React.createElement('span', { 
-                    className: 'caloric-debt-day-delta',
-                    style: { color: isPositive ? '#22c55e' : '#ef4444' }
-                  }, formatDelta(d.delta)),
-                  isTraining && React.createElement('span', { 
-                    className: 'caloric-debt-day-train',
-                    title: 'Была тренировка (эффект учтён в NDTE сегодня)'
-                  }, '🏋️')
+                  React.createElement('div', { className: 'debt-day-bar-wrap' },
+                    React.createElement('div', { 
+                      className: 'debt-day-bar ' + (isPos ? 'pos' : 'neg'),
+                      style: { height: pct + '%' }
+                    })
+                  ),
+                  React.createElement('span', { className: 'debt-day-label' }, d.dayName),
+                  d.hasTraining && React.createElement('span', { className: 'debt-day-train' }, '🏋️')
                 );
               })
             ),
             
-            // Рекомендация
-            dailyBoost > 0 && React.createElement('div', { className: 'caloric-debt-recommendation' },
-              React.createElement('span', { className: 'caloric-debt-rec-icon' }, needsRefeed ? '🍽️' : '💡'),
-              React.createElement('span', { className: 'caloric-debt-rec-text' },
-                needsRefeed 
-                  ? 'Загрузка: сегодня можно ' + adjustedOptimum + ' ккал'
-                  : 'Сегодня норма увеличена до ' + adjustedOptimum + ' ккал'
+            // План восстановления — главный блок
+            React.createElement('div', { className: 'debt-plan-block' },
+              React.createElement('div', { className: 'debt-plan-header' }, '📋 План'),
+              React.createElement('div', { className: 'debt-plan-content' },
+                React.createElement('span', { className: 'debt-plan-formula' },
+                  effectiveDebt + ' ккал' + ' ÷ ' + recoveryDays + ' дн = '
+                ),
+                React.createElement('strong', { className: 'debt-plan-result' }, '+' + dailyBoost + ' ккал/день')
+              ),
+              React.createElement('div', { className: 'debt-plan-note' },
+                '75% от долга за ' + recoveryDays + ' ' + (recoveryDays === 1 ? 'день' : 'дня')
               )
             ),
             
-            // Влияние на вес
-            weightImpact && React.createElement('div', { className: 'caloric-balance-weight' },
-              React.createElement('span', null, '⚖️ ' + weightImpact.text)
+            // Итоговая норма
+            React.createElement('div', { className: 'debt-summary-row' },
+              React.createElement('span', null, '🎯 Норма сегодня: '),
+              React.createElement('strong', null, adjustedOptimum + ' ккал')
             ),
             
-            // Предупреждение
-            consecutiveDeficitDays >= 3 && React.createElement('div', { className: 'caloric-debt-warning' },
-              React.createElement('span', null, '⚠️ ' + consecutiveDeficitDays + ' дней подряд в сильном дефиците')
+            // 🆕 v3.20: PROTEIN DEBT — Секция белкового долга
+            // 🔬 Mettler 2010 (PMID: 20095013): При дефиците белок критичен для мышц
+            caloricDebt.proteinDebt?.hasDebt && React.createElement('div', { 
+              className: 'debt-insight-row protein-debt',
+              style: { 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                padding: '8px 12px',
+                background: caloricDebt.proteinDebt.severity === 'critical' 
+                  ? 'rgba(239, 68, 68, 0.08)' 
+                  : 'rgba(245, 158, 11, 0.08)',
+                borderRadius: '8px',
+                borderLeft: '3px solid ' + (caloricDebt.proteinDebt.severity === 'critical' ? '#ef4444' : '#f59e0b')
+              }
+            },
+              React.createElement('span', { style: { fontSize: '16px' } }, '🥩'),
+              React.createElement('div', { style: { flex: 1 } },
+                React.createElement('div', { 
+                  style: { 
+                    fontWeight: 600, 
+                    fontSize: '12px', 
+                    color: caloricDebt.proteinDebt.severity === 'critical' ? '#dc2626' : '#d97706' 
+                  } 
+                },
+                  caloricDebt.proteinDebt.severity === 'critical' 
+                    ? '⚠️ Критический недобор белка!' 
+                    : '💪 Белка маловато'
+                ),
+                React.createElement('div', { style: { fontSize: '11px', color: '#64748b' } },
+                  caloricDebt.proteinDebt.recommendation || 
+                  ('Среднее: ' + caloricDebt.proteinDebt.avgProteinPct + '% от нормы')
+                )
+              ),
+              // PMID ссылка
+              React.createElement('a', {
+                href: 'https://pubmed.ncbi.nlm.nih.gov/20095013/',
+                target: '_blank',
+                rel: 'noopener',
+                onClick: (e) => e.stopPropagation(),
+                style: { fontSize: '9px', color: '#94a3b8', textDecoration: 'none' },
+                title: 'Mettler 2010: Белок сохраняет мышцы при дефиците'
+              }, '📚')
             ),
             
-            // Пояснение
-            React.createElement('div', { className: 'caloric-balance-explanation' },
-              debt > 400 
-                ? '💡 Недобор накопился — бонусные калории помогут восстановить энергию'
-                : '💡 Небольшой недобор. Можешь съесть чуть больше'
+            // 🆕 v3.20: EMOTIONAL RISK — Предупреждение о риске срыва
+            // 🔬 Epel 2001 (PMID: 11070333): Стресс + голод = binge eating
+            caloricDebt.emotionalRisk?.level !== 'low' && React.createElement('div', { 
+              className: 'debt-insight-row emotional-risk',
+              style: { 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                padding: '8px 12px',
+                background: caloricDebt.emotionalRisk.level === 'critical' 
+                  ? 'rgba(239, 68, 68, 0.12)' 
+                  : caloricDebt.emotionalRisk.level === 'high'
+                    ? 'rgba(239, 68, 68, 0.08)'
+                    : 'rgba(245, 158, 11, 0.06)',
+                borderRadius: '8px',
+                borderLeft: '3px solid ' + (
+                  caloricDebt.emotionalRisk.level === 'critical' ? '#ef4444' 
+                  : caloricDebt.emotionalRisk.level === 'high' ? '#f97316' 
+                  : '#eab308'
+                ),
+                animation: caloricDebt.emotionalRisk.level === 'critical' ? 'pulse 2s infinite' : 'none'
+              }
+            },
+              React.createElement('span', { style: { fontSize: '16px' } }, 
+                caloricDebt.emotionalRisk.level === 'critical' ? '🚨' : '😰'
+              ),
+              React.createElement('div', { style: { flex: 1 } },
+                React.createElement('div', { 
+                  style: { 
+                    fontWeight: 600, 
+                    fontSize: '12px', 
+                    color: caloricDebt.emotionalRisk.level === 'critical' ? '#dc2626' : '#92400e' 
+                  } 
+                },
+                  'Риск срыва: ' + caloricDebt.emotionalRisk.bingeRisk + '%'
+                ),
+                React.createElement('div', { style: { fontSize: '11px', color: '#64748b' } },
+                  caloricDebt.emotionalRisk.recommendation || caloricDebt.emotionalRisk.factors.join(' • ')
+                )
+              ),
+              // PMID ссылка
+              React.createElement('a', {
+                href: 'https://pubmed.ncbi.nlm.nih.gov/11070333/',
+                target: '_blank',
+                rel: 'noopener',
+                onClick: (e) => e.stopPropagation(),
+                style: { fontSize: '9px', color: '#94a3b8', textDecoration: 'none' },
+                title: 'Epel 2001: Кортизол → тяга к сладкому'
+              }, '📚')
+            ),
+            
+            // 🆕 v3.20: CIRCADIAN CONTEXT — Срочность по времени суток
+            // 🔬 Van Cauter 1997 (PMID: 9331550): Инсулин лучше утром
+            caloricDebt.circadianContext?.urgency === 'high' && React.createElement('div', { 
+              className: 'debt-insight-row circadian-hint',
+              style: { 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                padding: '8px 12px',
+                background: 'rgba(99, 102, 241, 0.08)',
+                borderRadius: '8px',
+                borderLeft: '3px solid #6366f1'
+              }
+            },
+              React.createElement('span', { style: { fontSize: '16px' } }, 
+                caloricDebt.circadianContext.period === 'morning' ? '🌅' : '🌙'
+              ),
+              React.createElement('div', { style: { flex: 1 } },
+                React.createElement('div', { style: { fontWeight: 600, fontSize: '12px', color: '#4f46e5' } },
+                  caloricDebt.circadianContext.period === 'evening' || caloricDebt.circadianContext.period === 'night'
+                    ? '⏰ Вечер — время поесть!'
+                    : '☀️ Утро — впереди целый день'
+                ),
+                React.createElement('div', { style: { fontSize: '11px', color: '#64748b' } },
+                  caloricDebt.circadianContext.period === 'evening' || caloricDebt.circadianContext.period === 'night'
+                    ? 'Не откладывай — поздний ужин хуже усваивается'
+                    : 'Можно спокойно добрать калории'
+                )
+              ),
+              // PMID ссылка
+              React.createElement('a', {
+                href: 'https://pubmed.ncbi.nlm.nih.gov/9331550/',
+                target: '_blank',
+                rel: 'noopener',
+                onClick: (e) => e.stopPropagation(),
+                style: { fontSize: '9px', color: '#94a3b8', textDecoration: 'none' },
+                title: 'Van Cauter 1997: Циркадные ритмы инсулина'
+              }, '📚')
+            ),
+            
+            // 🆕 v3.20: TRAINING DAY CONTEXT — Приоритет питания
+            // 🔬 Aragon 2013 (PMID: 23360586): Тайминг белка критичен
+            caloricDebt.trainingDayContext?.isTrainingDay && caloricDebt.trainingDayContext.nutritionPriority === 'highest' && React.createElement('div', { 
+              className: 'debt-insight-row training-context',
+              style: { 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                padding: '8px 12px',
+                background: 'rgba(34, 197, 94, 0.08)',
+                borderRadius: '8px',
+                borderLeft: '3px solid #22c55e'
+              }
+            },
+              React.createElement('span', { style: { fontSize: '16px' } }, '💪'),
+              React.createElement('div', { style: { flex: 1 } },
+                React.createElement('div', { style: { fontWeight: 600, fontSize: '12px', color: '#166534' } },
+                  caloricDebt.trainingDayContext.trainingType === 'strength' 
+                    ? '🏋️ Силовая — белок критичен!'
+                    : '🏃 Кардио — восполни гликоген!'
+                ),
+                React.createElement('div', { style: { fontSize: '11px', color: '#64748b' } },
+                  'Недоедание в тренировочный день = потеря результатов'
+                )
+              ),
+              // PMID ссылка
+              React.createElement('a', {
+                href: 'https://pubmed.ncbi.nlm.nih.gov/23360586/',
+                target: '_blank',
+                rel: 'noopener',
+                onClick: (e) => e.stopPropagation(),
+                style: { fontSize: '9px', color: '#94a3b8', textDecoration: 'none' },
+                title: 'Aragon 2013: Нутриент тайминг для мышц'
+              }, '📚')
+            ),
+            
+            // 🆕 v3.20: BMI CONTEXT — Персонализированная рекомендация
+            // 🔬 DeFronzo 1979 (PMID: 510806): BMI влияет на метаболизм
+            caloricDebt.bmiContext?.recommendation && React.createElement('div', { 
+              className: 'debt-insight-row bmi-context',
+              style: { 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                padding: '8px 12px',
+                background: 'rgba(148, 163, 184, 0.08)',
+                borderRadius: '8px',
+                fontSize: '11px',
+                color: '#64748b'
+              }
+            },
+              React.createElement('span', null, 'ℹ️'),
+              React.createElement('span', null, caloricDebt.bmiContext.recommendation),
+              React.createElement('a', {
+                href: 'https://pubmed.ncbi.nlm.nih.gov/510806/',
+                target: '_blank',
+                rel: 'noopener',
+                onClick: (e) => e.stopPropagation(),
+                style: { fontSize: '9px', color: '#94a3b8', textDecoration: 'none', marginLeft: 'auto' },
+                title: 'DeFronzo 1979: Возраст и инсулинорезистентность'
+              }, '📚')
+            ),
+            
+            // Refeed suggestion (если нужен)
+            needsRefeed && refeedBoost > 0 && React.createElement('div', { className: 'debt-refeed-hint' },
+              React.createElement('span', null, '🍕 Или refeed: до ' + refeedOptimum + ' ккал'),
+              React.createElement('span', { className: 'debt-refeed-tip' }, ' — отметь в чек-ине')
             )
           )
         );
       })(),
       
       // === CALORIC EXCESS CARD — Карточка перебора (раскрывающаяся) ===
+      // 🔬 Философия: НЕ наказываем, а мягко подталкиваем к балансу
+      // - Основной акцент на АКТИВНОСТЬ (кардио, шаги)
+      // - Снижение нормы — мягкий акцент (5-10%), не штраф
+      // - Herman & Polivy 1984: строгие ограничения → срывы
       caloricDebt && caloricDebt.hasExcess && !caloricDebt.hasDebt && (() => {
-        const { excess, rawExcess, cardioRecommendation, totalTrainingKcal, dayBreakdown, trend, severity, weightImpact, goalMode } = caloricDebt;
+        const { 
+          excess, rawExcess, cardioRecommendation, totalTrainingKcal, dayBreakdown, trend, severity, weightImpact, goalMode,
+          // 🆕 Мягкая коррекция
+          dailyReduction, effectiveExcess, activityCompensation, excessRecoveryDays 
+        } = caloricDebt;
         
-        // Стиль по severity
+        // Стиль по severity (мягче, без красного для малых переборов)
         const getExcessStyle = () => {
-          if (severity === 2) return { icon: '🚨', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.08)', border: 'rgba(239, 68, 68, 0.2)', label: 'Значительный перебор' };
-          if (severity === 1) return { icon: '📊', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.08)', border: 'rgba(245, 158, 11, 0.2)', label: 'Умеренный перебор' };
-          return { icon: '📈', color: '#eab308', bg: 'rgba(234, 179, 8, 0.08)', border: 'rgba(234, 179, 8, 0.2)', label: 'Небольшой перебор' };
+          if (severity === 2) return { icon: '📊', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.06)', border: 'rgba(245, 158, 11, 0.15)', label: 'Значительный профицит' };
+          if (severity === 1) return { icon: '📈', color: '#eab308', bg: 'rgba(234, 179, 8, 0.06)', border: 'rgba(234, 179, 8, 0.15)', label: 'Умеренный профицит' };
+          return { icon: '➕', color: '#a3a3a3', bg: 'rgba(163, 163, 163, 0.05)', border: 'rgba(163, 163, 163, 0.12)', label: 'Небольшой плюс' };
         };
         const style = getExcessStyle();
         
@@ -14627,7 +15432,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // Краткая рекомендация для header
         const shortRec = cardioRecommendation 
           ? (cardioRecommendation.compensatedBySteps 
-              ? '✓ шаги компенсировали' 
+              ? '✓ сбалансировано' 
               : cardioRecommendation.activityIcon + ' ' + cardioRecommendation.minutes + ' мин')
           : null;
         
@@ -14648,9 +15453,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             React.createElement('span', { className: 'caloric-balance-icon' }, style.icon),
             React.createElement('div', { className: 'caloric-balance-summary' },
               React.createElement('span', { className: 'caloric-balance-label' }, 
-                'Перебор за ' + dayBreakdown.length + ' дн'
+                'Профицит за ' + dayBreakdown.length + ' дн'
               ),
-              shortRec && React.createElement('span', { className: 'caloric-balance-rec-short' }, shortRec)
+              // 🆕 Показываем мягкую коррекцию если есть
+              dailyReduction > 0 && React.createElement('span', { 
+                className: 'caloric-balance-rec-short',
+                style: { color: '#94a3b8' }
+              }, '−' + dailyReduction + ' ккал'),
+              // Или рекомендацию по активности
+              !dailyReduction && shortRec && React.createElement('span', { className: 'caloric-balance-rec-short' }, shortRec)
             ),
             React.createElement('span', { 
               className: 'caloric-balance-badge',
@@ -14682,6 +15493,48 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           
           // === DETAILS (только при раскрытии) ===
           balanceCardExpanded && React.createElement('div', { className: 'caloric-balance-details' },
+            
+            // 🆕 МЯГКАЯ КОРРЕКЦИЯ — акцент (не наказание!)
+            dailyReduction > 0 && React.createElement('div', { 
+              className: 'caloric-excess-soft-correction',
+              style: { 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '10px',
+                padding: '10px 12px',
+                background: 'rgba(148, 163, 184, 0.08)',
+                borderRadius: '8px',
+                marginBottom: '10px'
+              }
+            },
+              React.createElement('span', { style: { fontSize: '20px' } }, '🎯'),
+              React.createElement('div', { style: { flex: 1 } },
+                React.createElement('div', { style: { fontWeight: 500, color: '#475569', fontSize: '13px' } },
+                  'Норма сегодня: ' + Math.round(optimum - dailyReduction) + ' ккал'
+                ),
+                React.createElement('div', { style: { fontSize: '11px', color: '#94a3b8', marginTop: '2px' } },
+                  'Мягкая коррекция −' + dailyReduction + ' ккал • ' + 
+                  (activityCompensation > 0 ? Math.round(activityCompensation) + ' ккал через активность' : 'основной акцент — активность')
+                )
+              ),
+              // "?" кнопка с научным обоснованием
+              React.createElement('span', {
+                style: { 
+                  fontSize: '11px', 
+                  color: '#94a3b8', 
+                  cursor: 'pointer',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  background: 'rgba(148, 163, 184, 0.1)'
+                },
+                title: 'Herman & Polivy 1984: строгие ограничения провоцируют срывы. Мягкая коррекция 5-10% эффективнее.',
+                onClick: (e) => {
+                  e.stopPropagation();
+                  alert('🔬 Научное обоснование:\n\nHerman & Polivy (1984): Жёсткие ограничения ведут к срывам.\n\nТomiyama (2018): Самокритика ухудшает результаты.\n\n✅ HEYS использует мягкую коррекцию (5-10%) + акцент на активности — это научно обосновано и не провоцирует переедание.');
+                }
+              }, '?')
+            ),
+            
             // 🔬 Научная сводка — Forbes equation
             balanceViz && balanceViz.fatGain > 0 && React.createElement('div', { 
               className: 'caloric-excess-science-summary',
@@ -14751,11 +15604,19 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               })
             ),
             
-            // Рекомендация кардио (подробная)
-            cardioRecommendation && !cardioRecommendation.compensatedBySteps && React.createElement('div', { className: 'caloric-excess-cardio' },
-              React.createElement('span', { className: 'caloric-excess-rec-icon' }, cardioRecommendation.activityIcon),
+            // Рекомендация кардио (подробная) — ГЛАВНЫЙ способ компенсации
+            cardioRecommendation && !cardioRecommendation.compensatedBySteps && React.createElement('div', { 
+              className: 'caloric-excess-cardio',
+              style: { 
+                background: 'rgba(34, 197, 94, 0.08)', 
+                borderRadius: '8px', 
+                padding: '10px 12px',
+                marginTop: '8px'
+              }
+            },
+              React.createElement('span', { className: 'caloric-excess-rec-icon', style: { fontSize: '20px' } }, cardioRecommendation.activityIcon),
               React.createElement('div', { className: 'caloric-excess-rec-content' },
-                React.createElement('span', { className: 'caloric-excess-rec-title' }, 'Рекомендация:'),
+                React.createElement('span', { className: 'caloric-excess-rec-title', style: { fontWeight: 600, color: '#166534' } }, '✨ Лучший способ:'),
                 React.createElement('span', { className: 'caloric-excess-rec-text' }, cardioRecommendation.text),
                 cardioRecommendation.stepsCompensation > 0 && 
                   React.createElement('span', { className: 'caloric-excess-steps-note' }, 
@@ -14765,19 +15626,31 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             ),
             
             // Успех — шаги компенсировали всё
-            cardioRecommendation && cardioRecommendation.compensatedBySteps && React.createElement('div', { className: 'caloric-excess-success' },
-              React.createElement('span', null, '🎉 ' + cardioRecommendation.text)
+            cardioRecommendation && cardioRecommendation.compensatedBySteps && React.createElement('div', { 
+              className: 'caloric-excess-success',
+              style: { 
+                background: 'rgba(34, 197, 94, 0.12)', 
+                borderRadius: '8px', 
+                padding: '12px',
+                marginTop: '8px',
+                textAlign: 'center'
+              }
+            },
+              React.createElement('span', { style: { fontSize: '15px' } }, '🎉 ' + cardioRecommendation.text)
             ),
             
-            // Severity-dependent пояснение
-            React.createElement('div', { className: 'caloric-balance-explanation' },
+            // Позитивное пояснение (НЕ наказываем!)
+            React.createElement('div', { 
+              className: 'caloric-balance-explanation',
+              style: { marginTop: '10px', fontSize: '12px', color: '#64748b' }
+            },
               goalMode === 'bulk'
-                ? '💡 При наборе массы небольшой профицит — это нормально!'
+                ? '💪 При наборе массы профицит — это часть плана!'
                 : severity >= 2
-                  ? '⚠️ Серьёзный перебор. Рекомендуем активность и контроль порций.'
+                  ? '🏃 Активность — лучший способ выровнять баланс. Это данные, не приговор.'
                   : goalMode === 'loss'
-                  ? '💡 Перебор можно компенсировать активностью. Это не срыв, это данные.'
-                  : '💡 Баланс в плюсе. Лёгкая активность поможет выровнять.'
+                  ? '💡 Лёгкая прогулка или тренировка сбалансирует день. Без стресса!'
+                  : '🌟 Баланс немного в плюсе — отличный повод для активности!'
             )
           )
         );
@@ -14825,33 +15698,27 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           return 'linear-gradient(90deg, #eab308 0%, #ef4444 100%)';
         };
         
-        // Swipe
-        let startY = 0;
-        const onTouchStart = (e) => { startY = e.touches[0].clientY; };
-        const onTouchEnd = (e) => {
-          const deltaY = e.changedTouches[0].clientY - startY;
-          if (deltaY > 50) { 
-            setSparklinePopup(null); 
-            haptic('light'); 
-          }
-        };
+        // Swipe — используем хук
+        const swipeHandlers = useSwipeToDismiss(() => setSparklinePopup(null));
         
-        return React.createElement('div', {
-          className: 'sparkline-popup sparkline-popup-v2' + (showAbove ? ' show-above' : ''),
-          role: 'dialog',
-          'aria-label': (point.isToday ? 'Сегодня' : point.dayNum) + ' — ' + pct + '% от нормы',
-          'aria-modal': 'true',
-          style: { 
-            position: 'fixed',
-            left: left + 'px', 
-            top: top + 'px',
-            width: popupW + 'px',
-            zIndex: 9999
+        // POPUP с использованием PopupWithBackdrop
+        return PopupWithBackdrop({
+          onClose: () => setSparklinePopup(null),
+          children: React.createElement('div', {
+            className: 'sparkline-popup sparkline-popup-v2' + (showAbove ? ' show-above' : ''),
+            role: 'dialog',
+            'aria-label': (point.isToday ? 'Сегодня' : point.dayNum) + ' — ' + pct + '% от нормы',
+            'aria-modal': 'true',
+            style: { 
+              position: 'fixed',
+              left: left + 'px', 
+              top: top + 'px',
+              width: popupW + 'px',
+              zIndex: 9999
+            },
+            onClick: (e) => e.stopPropagation(),
+            ...swipeHandlers
           },
-          onClick: (e) => e.stopPropagation(),
-          onTouchStart: onTouchStart,
-          onTouchEnd: onTouchEnd
-        },
           // Цветная полоса
           React.createElement('div', { 
             className: 'sparkline-popup-stripe',
@@ -14943,7 +15810,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('div', { 
             className: 'sparkline-popup-arrow' + (arrowPos !== 'center' ? ' ' + arrowPos : '')
           })
-        );
+        ) // Закрываем popup div внутри PopupWithBackdrop
+        }); // Закрываем PopupWithBackdrop
       })(),
       // Popup для идеального дня 🔥 — ЗОЛОТОЙ СТИЛЬ
       sparklinePopup && sparklinePopup.type === 'perfect' && (() => {
@@ -14957,15 +15825,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         if (left < 10) { left = 10; arrowPos = 'left'; }
         if (left + popupW > window.innerWidth - 10) { left = window.innerWidth - popupW - 10; arrowPos = 'right'; }
         
-        // Swipe
-        let startY = 0;
-        const onTouchStart = (e) => { startY = e.touches[0].clientY; };
-        const onTouchEnd = (e) => {
-          const deltaY = e.changedTouches[0].clientY - startY;
-          if (deltaY > 50) { setSparklinePopup(null); haptic('light'); }
-        };
+        // Swipe — используем хук
+        const swipeHandlers = useSwipeToDismiss(() => setSparklinePopup(null));
         
-        return React.createElement('div', {
+        return PopupWithBackdrop({
+          onClose: () => setSparklinePopup(null),
+          children: React.createElement('div', {
           className: 'sparkline-popup sparkline-popup-v2 sparkline-popup-perfect-v2',
           role: 'dialog',
           'aria-label': 'Идеальный день — ' + pct + '% от нормы',
@@ -14978,8 +15843,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             zIndex: 9999
           },
           onClick: (e) => e.stopPropagation(),
-          onTouchStart: onTouchStart,
-          onTouchEnd: onTouchEnd
+          ...swipeHandlers
         },
           // Золотая полоса
           React.createElement('div', { 
@@ -15057,7 +15921,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('div', { 
             className: 'sparkline-popup-arrow perfect' + (arrowPos !== 'center' ? ' ' + arrowPos : '')
           })
-        );
+        ) // Закрываем popup div
+        }); // Закрываем PopupWithBackdrop
       })(),
       // Popup для бейджей БЖУ
       macroBadgePopup && (() => {
@@ -15224,15 +16089,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           return 'linear-gradient(90deg, #f97316 0%, #ef4444 100%)';
         };
         
-        // Swipe handler
-        let startY = 0;
-        const onTouchStart = (e) => { startY = e.touches[0].clientY; };
-        const onTouchEnd = (e) => {
-          const diff = e.changedTouches[0].clientY - startY;
-          if (diff > 50) setMacroBadgePopup(null); // swipe down
-        };
+        // Swipe — используем хук
+        const swipeHandlers = useSwipeToDismiss(() => setMacroBadgePopup(null));
         
-        return React.createElement('div', {
+        return PopupWithBackdrop({
+          onClose: () => setMacroBadgePopup(null),
+          children: React.createElement('div', {
           className: 'macro-badge-popup' + (showAbove ? ' show-above' : ''),
           role: 'dialog',
           'aria-label': macroBadgePopup.macro + ' — ' + Math.round(macroBadgePopup.ratio * 100) + '% от нормы',
@@ -15244,8 +16106,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             width: popupWidth + 'px'
           },
           onClick: (e) => e.stopPropagation(),
-          onTouchStart: onTouchStart,
-          onTouchEnd: onTouchEnd
+          ...swipeHandlers
         },
           // Цветная полоса сверху
           React.createElement('div', { 
@@ -15365,7 +16226,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('div', { 
             className: 'macro-badge-popup-arrow' + (arrowPos !== 'center' ? ' ' + arrowPos : '')
           })
-        );
+        ) // Закрываем popup div
+        }); // Закрываем PopupWithBackdrop
       })(),
       // === TDEE POPUP (расшифровка затрат) ===
       tdeePopup && (() => {
@@ -15396,15 +16258,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           return t.z.reduce((sum, m) => sum + (+m || 0), 0);
         };
         
-        // Swipe handler
-        let startY = 0;
-        const onTouchStart = (e) => { startY = e.touches[0].clientY; };
-        const onTouchEnd = (e) => {
-          const diffY = e.changedTouches[0].clientY - startY;
-          if (diffY > 50) setTdeePopup(null);
-        };
+        // Swipe — используем хук
+        const swipeHandlers = useSwipeToDismiss(() => setTdeePopup(null));
         
-        return React.createElement('div', {
+        return PopupWithBackdrop({
+          onClose: () => setTdeePopup(null),
+          children: React.createElement('div', {
           className: 'tdee-popup',
           role: 'dialog',
           'aria-label': 'Расшифровка затрат: ' + d.tdee + ' ккал',
@@ -15422,8 +16281,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             animation: 'fadeIn 0.15s ease-out'
           },
           onClick: (e) => e.stopPropagation(),
-          onTouchStart: onTouchStart,
-          onTouchEnd: onTouchEnd
+          ...swipeHandlers
         },
           // Header
           React.createElement('div', { 
@@ -15516,6 +16374,59 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 ),
                 React.createElement('span', { className: 'tdee-row-value tdee-positive' }, '+' + d.tefKcal + ' ккал')
               ),
+              // 🆕 v3.20.0: NDTE (Next-Day Training Effect)
+              // PMID: 18583478 (Magkos 2008) — тренировка вчера → повышенный расход сегодня
+              d.ndteData?.active && React.createElement('div', { className: 'tdee-row' },
+                React.createElement('span', { className: 'tdee-row-icon' }, '🔥'),
+                React.createElement('span', { 
+                  className: 'tdee-row-label',
+                  style: { display: 'flex', alignItems: 'center', gap: '4px' }
+                }, 
+                  'Эффект вчера трени',
+                  React.createElement('a', {
+                    href: 'https://pubmed.ncbi.nlm.nih.gov/18583478/',
+                    target: '_blank',
+                    rel: 'noopener noreferrer',
+                    title: 'PMID: 18583478 — Magkos 2008',
+                    style: { fontSize: '9px', color: '#6366f1', textDecoration: 'none' },
+                    onClick: (e) => e.stopPropagation()
+                  }, '📚')
+                ),
+                React.createElement('span', { className: 'tdee-row-value tdee-positive' }, 
+                  '+' + Math.round(d.bmr * d.ndteData.tdeeBoost) + ' ккал'
+                )
+              ),
+              // 🆕 v3.20.0: BMI Context — персонализация по BMI
+              // PMID: 10953022 (Kahn & Flier 2000) — BMI влияет на метаболизм
+              d.bmiContext && React.createElement('div', { 
+                className: 'tdee-row tdee-row-hint',
+                style: { marginTop: '4px', padding: '6px 8px', background: '#f8fafc', borderRadius: '8px' }
+              },
+                React.createElement('span', { 
+                  style: { 
+                    fontSize: '10px', 
+                    color: '#64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }
+                }, 
+                  d.bmiContext.category === 'underweight' ? '⚠️' :
+                  d.bmiContext.category === 'obese' ? '📊' : '✅',
+                  ' BMI ' + (d.bmiContext.bmi || '—').toFixed?.(1) + ' (' + 
+                    (d.bmiContext.category === 'normal' ? 'норма' :
+                     d.bmiContext.category === 'underweight' ? 'недовес' :
+                     d.bmiContext.category === 'overweight' ? 'избыток' : 'ожирение') + ')',
+                  React.createElement('a', {
+                    href: 'https://pubmed.ncbi.nlm.nih.gov/10953022/',
+                    target: '_blank',
+                    rel: 'noopener noreferrer',
+                    title: 'PMID: 10953022 — Kahn & Flier 2000',
+                    style: { fontSize: '9px', color: '#6366f1', textDecoration: 'none', marginLeft: 'auto' },
+                    onClick: (e) => e.stopPropagation()
+                  }, '📚')
+                )
+              ),
               // Если нет активности
               actTotal === 0 && !d.tefKcal && React.createElement('div', { className: 'tdee-row tdee-row-empty' },
                 React.createElement('span', { className: 'tdee-row-icon' }, '💤'),
@@ -15554,7 +16465,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               setTdeePopup(null);
             }
           }, '✕')
-        );
+        ) // Закрываем popup div
+        }); // Закрываем PopupWithBackdrop
       })(),
       // === WEEK NORM POPUP (детали недели X/Y в норме) ===
       weekNormPopup && (() => {
@@ -15570,7 +16482,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const { left, top } = pos;
         const rz = HEYS.ratioZones;
         
-        return React.createElement('div', {
+        return PopupWithBackdrop({
+          onClose: () => setWeekNormPopup(null),
+          children: React.createElement('div', {
           className: 'week-norm-popup sparkline-popup sparkline-popup-v2',
           role: 'dialog',
           style: {
@@ -15636,7 +16550,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               onClick: () => setWeekNormPopup(null)
             }, '✕')
           )
-        );
+        ) // Закрываем popup div
+        }); // Закрываем PopupWithBackdrop
       })(),
       // === WEEK DEFICIT POPUP (научный расчёт сожжённого жира) ===
       weekDeficitPopup && (() => {
@@ -15684,7 +16599,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         
         const formatWeight = (g) => g >= 1000 ? (g / 1000).toFixed(2) + ' кг' : g + ' г';
         
-        return React.createElement('div', {
+        return PopupWithBackdrop({
+          onClose: () => setWeekDeficitPopup(null),
+          children: React.createElement('div', {
           className: 'week-deficit-popup sparkline-popup sparkline-popup-v2',
           role: 'dialog',
           style: {
@@ -15901,7 +16818,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               onClick: () => setWeekDeficitPopup(null)
             }, '✕')
           )
-        );
+        ) // Закрываем popup div
+        }); // Закрываем PopupWithBackdrop
       })(),
       
       // === BALANCE DAY POPUP — детали дня при клике на столбик баланса ===
@@ -15921,19 +16839,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             ? '#f59e0b'  // Недобор (оранжевый)
             : '#ef4444'; // Перебор (красный)
         
-        return React.createElement(React.Fragment, null,
-          // Overlay для закрытия по клику вне
-          React.createElement('div', {
-            className: 'balance-day-popup-overlay',
-            style: {
-              position: 'fixed',
-              inset: 0,
-              zIndex: 10000,
-              background: 'transparent'
-            },
-            onClick: () => setBalanceDayPopup(null)
-          }),
-          React.createElement('div', {
+        return ReactDOM.createPortal(
+          PopupWithBackdrop({
+            onClose: () => setBalanceDayPopup(null),
+            children: React.createElement('div', {
             className: 'balance-day-popup sparkline-popup-v2',
             style: {
               position: 'fixed',
@@ -16038,7 +16947,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 color: '#94a3b8',
                 textAlign: 'center'
               }
-            }, 'Выполнение: ' + Math.round(v.ratio * 100) + '%'),
+            }, 'Выполнение: ' + Math.round(v.ratio * 100) + '%')
+          ), // Закрываем "Контент" div
             // Кнопка закрытия
             React.createElement('button', {
               style: {
@@ -16062,8 +16972,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 setBalanceDayPopup(null);
               }
             }, '✕')
-          )
-        ));
+          ) // Закрываем popup div
+          }), // Закрываем PopupWithBackdrop
+          document.body
+        ); // Закрываем createPortal
       })(),
       
       // === TEF INFO POPUP — научная информация о TEF ===
@@ -16093,20 +17005,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           }
         };
         
-        return React.createElement(React.Fragment, null,
-          // Overlay
-          React.createElement('div', {
-            className: 'tef-info-popup-overlay',
-            style: {
-              position: 'fixed',
-              inset: 0,
-              zIndex: 10000,
-              background: 'rgba(0, 0, 0, 0.3)'
-            },
-            onClick: () => setTefInfoPopup(null)
-          }),
-          React.createElement('div', {
-            className: 'tef-info-popup sparkline-popup-v2',
+        return PopupWithBackdrop({
+          onClose: () => setTefInfoPopup(null),
+          children: React.createElement('div', {
+          className: 'tef-info-popup sparkline-popup-v2',
             role: 'dialog',
             'aria-label': 'Информация о TEF',
             style: {
@@ -16311,9 +17213,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   setTefInfoPopup(null);
                 }
               }, '✕')
-            )
-          )
-        );
+            ) // Закрываем "Контент" div
+        ) // Закрываем popup div
+        }); // Закрываем PopupWithBackdrop
       })(),
 
       // === GOAL POPUP (объяснение формулы цели) ===
@@ -16333,7 +17235,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // Формула: baseExpenditure × (1 + deficitPct/100) + dailyBoost = displayOptimum
         const baseOptimumCalc = Math.round(d.baseExpenditure * (1 + d.deficitPct / 100));
         
-        return React.createElement('div', {
+        return PopupWithBackdrop({
+          onClose: () => setGoalPopup(null),
+          children: React.createElement('div', {
           className: 'goal-popup',
           style: {
             position: 'fixed',
@@ -16432,7 +17336,108 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               setGoalPopup(null);
             }
           }, '✕')
-        );
+        ) // Закрываем popup div
+        }); // Закрываем PopupWithBackdrop
+      })(),
+      
+      // === DEBT SCIENCE POPUP (научное объяснение калорийного долга) ===
+      debtSciencePopup && (() => {
+        const popupW = 320;
+        const popupH = 340;
+        const { title, content, links } = debtSciencePopup;
+        
+        return PopupWithBackdrop({
+          onClose: () => setDebtSciencePopup(null),
+          children: React.createElement('div', {
+            className: 'debt-science-popup',
+            style: {
+              width: popupW + 'px',
+              maxWidth: '90vw',
+              background: 'white',
+              borderRadius: '20px',
+              boxShadow: '0 16px 64px rgba(0,0,0,0.2)',
+              padding: '20px',
+              position: 'relative',
+              animation: 'scaleIn 0.2s ease-out'
+            },
+            onClick: (e) => e.stopPropagation()
+          },
+          // Заголовок
+          React.createElement('div', {
+            style: { fontSize: '15px', fontWeight: 700, marginBottom: '16px', color: '#0f172a' }
+          }, title),
+          
+          // Контент — вопросы и ответы
+          React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '14px' } },
+            content.map((item, idx) => 
+              React.createElement('div', { key: idx, style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
+                React.createElement('div', {
+                  style: { fontSize: '13px', fontWeight: 600, color: '#3b82f6' }
+                }, item.label),
+                React.createElement('div', {
+                  style: { fontSize: '13px', color: '#475569', lineHeight: '1.5' }
+                }, item.value)
+              )
+            )
+          ),
+          
+          // Научные ссылки
+          links && links.length > 0 && React.createElement('div', {
+            style: { 
+              marginTop: '16px', 
+              paddingTop: '12px', 
+              borderTop: '1px solid #e2e8f0',
+              display: 'flex',
+              gap: '8px',
+              flexWrap: 'wrap'
+            }
+          },
+            React.createElement('span', { 
+              style: { fontSize: '11px', color: '#94a3b8' } 
+            }, '📚 Источники:'),
+            links.map((link, idx) => 
+              React.createElement('a', {
+                key: idx,
+                href: link.url,
+                target: '_blank',
+                rel: 'noopener noreferrer',
+                style: { 
+                  fontSize: '11px', 
+                  color: '#3b82f6', 
+                  textDecoration: 'none',
+                  padding: '2px 6px',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  borderRadius: '4px'
+                }
+              }, link.text)
+            )
+          ),
+          
+          // Кнопка закрытия
+          React.createElement('button', {
+            style: {
+              position: 'absolute',
+              top: '14px',
+              right: '14px',
+              width: '28px',
+              height: '28px',
+              background: 'rgba(0,0,0,0.05)',
+              border: 'none',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              fontSize: '16px',
+              color: '#64748b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            },
+            onClick: (e) => {
+              e.stopPropagation();
+              setDebtSciencePopup(null);
+            }
+          }, '✕')
+        ) // Закрываем popup div
+        }); // Закрываем PopupWithBackdrop
       })(),
       
       // === METRIC POPUP (вода, шаги, калории) ===
@@ -16524,15 +17529,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           return 'linear-gradient(90deg, #eab308 0%, #ef4444 100%)';
         };
         
-        // Swipe handler
-        let startY = 0;
-        const onTouchStart = (e) => { startY = e.touches[0].clientY; };
-        const onTouchEnd = (e) => {
-          const diffY = e.changedTouches[0].clientY - startY;
-          if (diffY > 50) setMetricPopup(null);
-        };
+        // Swipe — используем хук
+        const swipeHandlers = useSwipeToDismiss(() => setMetricPopup(null));
         
-        return React.createElement('div', {
+        return PopupWithBackdrop({
+          onClose: () => setMetricPopup(null),
+          children: React.createElement('div', {
           className: 'metric-popup' + (showAbove ? ' show-above' : ''),
           role: 'dialog',
           'aria-label': config.name + ' — ' + pct + '% от нормы',
@@ -16545,8 +17547,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             zIndex: 9999
           },
           onClick: (e) => e.stopPropagation(),
-          onTouchStart: onTouchStart,
-          onTouchEnd: onTouchEnd
+          ...swipeHandlers
         },
           // Цветная полоса
           React.createElement('div', { 
@@ -16669,7 +17670,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('div', { 
             className: 'metric-popup-arrow' + (arrowPos !== 'center' ? ' ' + arrowPos : '')
           })
-        );
+        ) // Закрываем popup div
+        }); // Закрываем PopupWithBackdrop
       })(),
       // Fallback: нет данных о весе, но есть калории
       (!weightTrend && kcalTrend) && React.createElement('div', { 
@@ -16977,18 +17979,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const color = trend < -0.05 ? '#22c55e' : trend > 0.05 ? '#ef4444' : '#6b7280';
         const trendIcon = trend < -0.05 ? '↓' : trend > 0.05 ? '↑' : '→';
         
-        // Swipe
-        let startY = 0;
-        const onTouchStart = (e) => { startY = e.touches[0].clientY; };
-        const onTouchEnd = (e) => {
-          const deltaY = e.changedTouches[0].clientY - startY;
-          if (deltaY > 50) { 
-            setSparklinePopup(null); 
-            haptic('light'); 
-          }
-        };
+        // Swipe — используем хук
+        const swipeHandlers = useSwipeToDismiss(() => setSparklinePopup(null));
         
-        return React.createElement('div', {
+        return PopupWithBackdrop({
+          onClose: () => setSparklinePopup(null),
+          children: React.createElement('div', {
           className: 'sparkline-popup sparkline-popup-v2' + (showAbove ? ' show-above' : ''),
           role: 'dialog',
           'aria-label': 'Вес ' + point.weight + ' кг',
@@ -17001,8 +17997,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             zIndex: 9999
           },
           onClick: (e) => e.stopPropagation(),
-          onTouchStart: onTouchStart,
-          onTouchEnd: onTouchEnd
+          ...swipeHandlers
         },
           // Цветная полоса
           React.createElement('div', { 
@@ -17059,7 +18054,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('div', { 
             className: 'sparkline-popup-arrow' + (arrowPos !== 'center' ? ' ' + arrowPos : '')
           })
-        );
+        ) // Закрываем popup div
+        }); // Закрываем PopupWithBackdrop
       })(),
       // Popup для прогноза веса — V2 STYLE
       sparklinePopup && sparklinePopup.type === 'weight-forecast' && (() => {
@@ -17080,18 +18076,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const color = change < -0.05 ? '#22c55e' : change > 0.05 ? '#ef4444' : '#6b7280';
         const trendIcon = change < -0.05 ? '↓' : change > 0.05 ? '↑' : '→';
         
-        // Swipe
-        let startY = 0;
-        const onTouchStart = (e) => { startY = e.touches[0].clientY; };
-        const onTouchEnd = (e) => {
-          const deltaY = e.changedTouches[0].clientY - startY;
-          if (deltaY > 50) { 
-            setSparklinePopup(null); 
-            haptic('light'); 
-          }
-        };
+        // Swipe — используем хук
+        const swipeHandlers = useSwipeToDismiss(() => setSparklinePopup(null));
         
-        return React.createElement('div', {
+        return PopupWithBackdrop({
+          onClose: () => setSparklinePopup(null),
+          children: React.createElement('div', {
           className: 'sparkline-popup sparkline-popup-v2' + (showAbove ? ' show-above' : ''),
           role: 'dialog',
           'aria-label': 'Прогноз веса ~' + point.weight + ' кг',
@@ -17104,8 +18094,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             zIndex: 9999
           },
           onClick: (e) => e.stopPropagation(),
-          onTouchStart: onTouchStart,
-          onTouchEnd: onTouchEnd
+          ...swipeHandlers
         },
           // Цветная полоса (градиент для прогноза)
           React.createElement('div', { 
@@ -17147,7 +18136,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('div', { 
             className: 'sparkline-popup-arrow' + (arrowPos !== 'center' ? ' ' + arrowPos : '')
           })
-        );
+        ) // Закрываем popup div
+        }); // Закрываем PopupWithBackdrop
       })(),
       // Контейнер: Макро-кольца + Плашка веса
         React.createElement('div', { className: 'macro-weight-row' },
@@ -18099,7 +19089,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       // === ПОД-ВКЛАДКА 2: Дневник питания (или всё на десктопе) ===
       (!isMobile || mobileSubTab === 'diary') && goalProgressBar,
-      (!isMobile || mobileSubTab === 'diary') && daySummary,
       
       // === Мини-график распределения калорий по приёмам ===
       (!isMobile || mobileSubTab === 'diary') && mealsChartData && mealsChartData.meals.length > 0 && React.createElement('div', { 
@@ -18137,7 +19126,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 color: mealsChartData.avgQualityScore >= 80 ? '#166534' : mealsChartData.avgQualityScore >= 50 ? '#92400e' : '#991b1b',
                 fontWeight: '600'
               }
-            }, 'avg ' + mealsChartData.avgQualityScore),
+            }, 'средняя оценка ' + mealsChartData.avgQualityScore),
             // Comparison с вчера
             mealsChartData.yesterdayAvgScore > 0 && (() => {
               const diff = mealsChartData.avgQualityScore - mealsChartData.yesterdayAvgScore;
@@ -18150,13 +19139,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 }
               }, diff > 0 ? '↑+' + diff : '↓' + diff);
             })()
-          ),
-          React.createElement('span', { 
-            style: { 
-              fontSize: '12px', 
-              color: mealsChartData.totalKcal > mealsChartData.targetKcal ? '#dc2626' : '#059669'
-            }
-          }, mealsChartData.totalKcal + ' / ' + Math.round(mealsChartData.targetKcal) + ' ккал')
+          )
         ),
         // Подсказка нажми для деталей (скрывается после первого клика)
         !mealChartHintShown && React.createElement('div', { 
@@ -19227,6 +20210,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         }, '+ Добавить приём')
       ),
       (!isMobile || mobileSubTab === 'diary') && mealsUI,
+      
+      // === СУТОЧНЫЕ ИТОГИ (таблица под приёмами пищи) ===
+      (!isMobile || mobileSubTab === 'diary') && daySummary,
+      
       React.createElement('div',{className:'row desktop-only',style:{justifyContent:'flex-start',marginTop:'8px'}}, React.createElement('button',{className:'btn',onClick:addMeal},'+ Приём')),
       
       // === Manual Advice List (полноэкранный список советов) ===
@@ -21268,12 +22255,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         };
         const color = getColor(quality.score);
         
-        let startY = 0;
-        const onTouchStart = (e) => { startY = e.touches[0].clientY; };
-        const onTouchEnd = (e) => {
-          const diffY = e.changedTouches[0].clientY - startY;
-          if (diffY > 50) setMealQualityPopup(null);
-        };
+        // Swipe — используем хук
+        const swipeHandlers = useSwipeToDismiss(() => setMealQualityPopup(null));
         
         // Подготовка данных для расчёта
         const getTotals = () => {
@@ -21583,8 +22566,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             zIndex: 10000
           },
           onClick: (e) => e.stopPropagation(),
-          onTouchStart: onTouchStart,
-          onTouchEnd: onTouchEnd
+          ...swipeHandlers
         },
           React.createElement('div', { className: 'metric-popup-stripe', style: { background: color } }),
           React.createElement('div', { className: 'metric-popup-content', style: { padding: '12px' } },
