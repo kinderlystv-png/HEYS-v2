@@ -3540,14 +3540,15 @@
     }, children);
   }, []);
   
-  // === SWIPE TO DISMISS — хук для swipe-жестов на попапах ===
+  // === SWIPE TO DISMISS — функция для swipe-жестов на попапах ===
   // Возвращает { onTouchStart, onTouchEnd } для передачи в props попапа
-  const useSwipeToDismiss = (onClose, threshold = 50) => {
-    const startYRef = React.useRef(0);
+  // НЕ хук! Можно вызывать условно внутри попапов
+  const createSwipeHandlers = (onClose, threshold = 50) => {
+    let startY = 0;
     return {
-      onTouchStart: (e) => { startYRef.current = e.touches[0].clientY; },
+      onTouchStart: (e) => { startY = e.touches[0].clientY; },
       onTouchEnd: (e) => {
-        const deltaY = e.changedTouches[0].clientY - startYRef.current;
+        const deltaY = e.changedTouches[0].clientY - startY;
         if (deltaY > threshold) {
           onClose();
           if (typeof haptic === 'function') haptic('light');
@@ -15699,7 +15700,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         };
         
         // Swipe — используем хук
-        const swipeHandlers = useSwipeToDismiss(() => setSparklinePopup(null));
+        const swipeHandlers = createSwipeHandlers(() => setSparklinePopup(null));
         
         // POPUP с использованием PopupWithBackdrop
         return PopupWithBackdrop({
@@ -15826,7 +15827,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         if (left + popupW > window.innerWidth - 10) { left = window.innerWidth - popupW - 10; arrowPos = 'right'; }
         
         // Swipe — используем хук
-        const swipeHandlers = useSwipeToDismiss(() => setSparklinePopup(null));
+        const swipeHandlers = createSwipeHandlers(() => setSparklinePopup(null));
         
         return PopupWithBackdrop({
           onClose: () => setSparklinePopup(null),
@@ -16090,7 +16091,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         };
         
         // Swipe — используем хук
-        const swipeHandlers = useSwipeToDismiss(() => setMacroBadgePopup(null));
+        const swipeHandlers = createSwipeHandlers(() => setMacroBadgePopup(null));
         
         return PopupWithBackdrop({
           onClose: () => setMacroBadgePopup(null),
@@ -16259,7 +16260,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         };
         
         // Swipe — используем хук
-        const swipeHandlers = useSwipeToDismiss(() => setTdeePopup(null));
+        const swipeHandlers = createSwipeHandlers(() => setTdeePopup(null));
         
         return PopupWithBackdrop({
           onClose: () => setTdeePopup(null),
@@ -17351,14 +17352,18 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           children: React.createElement('div', {
             className: 'debt-science-popup',
             style: {
+              position: 'fixed',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
               width: popupW + 'px',
               maxWidth: '90vw',
               background: 'white',
               borderRadius: '20px',
               boxShadow: '0 16px 64px rgba(0,0,0,0.2)',
               padding: '20px',
-              position: 'relative',
-              animation: 'scaleIn 0.2s ease-out'
+              animation: 'fadeIn 0.2s ease-out',
+              zIndex: 10001
             },
             onClick: (e) => e.stopPropagation()
           },
@@ -17530,7 +17535,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         };
         
         // Swipe — используем хук
-        const swipeHandlers = useSwipeToDismiss(() => setMetricPopup(null));
+        const swipeHandlers = createSwipeHandlers(() => setMetricPopup(null));
         
         return PopupWithBackdrop({
           onClose: () => setMetricPopup(null),
@@ -17980,7 +17985,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const trendIcon = trend < -0.05 ? '↓' : trend > 0.05 ? '↑' : '→';
         
         // Swipe — используем хук
-        const swipeHandlers = useSwipeToDismiss(() => setSparklinePopup(null));
+        const swipeHandlers = createSwipeHandlers(() => setSparklinePopup(null));
         
         return PopupWithBackdrop({
           onClose: () => setSparklinePopup(null),
@@ -18077,7 +18082,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const trendIcon = change < -0.05 ? '↓' : change > 0.05 ? '↑' : '→';
         
         // Swipe — используем хук
-        const swipeHandlers = useSwipeToDismiss(() => setSparklinePopup(null));
+        const swipeHandlers = createSwipeHandlers(() => setSparklinePopup(null));
         
         return PopupWithBackdrop({
           onClose: () => setSparklinePopup(null),
@@ -22256,7 +22261,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const color = getColor(quality.score);
         
         // Swipe — используем хук
-        const swipeHandlers = useSwipeToDismiss(() => setMealQualityPopup(null));
+        const swipeHandlers = createSwipeHandlers(() => setMealQualityPopup(null));
         
         // Подготовка данных для расчёта
         const getTotals = () => {
