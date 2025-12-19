@@ -1559,6 +1559,7 @@
 
   /**
    * Вычисление релевантности результата
+   * 🆕 v2.8.0: Улучшенное ранжирование для substring matches
    */
   function calculateRelevance(item, query, matchType = 'exact') {
     const itemName = normalizeText(item.name || '');
@@ -1569,9 +1570,19 @@
     switch (matchType) {
       case 'exact':
         if (itemName === normalizedQuery) relevance = 100;
-        else if (itemName.startsWith(normalizedQuery)) relevance = 85;
-        else if (itemName.includes(' ' + normalizedQuery)) relevance = 75; // слово в начале
-        else if (itemName.includes(normalizedQuery)) relevance = 60;
+        else if (itemName.startsWith(normalizedQuery)) relevance = 90; // 🆕 Повышено: супер... → Суперсемечковый
+        else if (itemName.includes(' ' + normalizedQuery)) relevance = 85; // слово целиком
+        else if (itemName.includes(normalizedQuery + ' ')) relevance = 85; // слово в начале названия части
+        else {
+          // 🆕 v2.8.0: Проверяем, является ли query началом какого-либо слова
+          const words = itemName.split(/\s+/);
+          const startsWord = words.some(w => w.startsWith(normalizedQuery));
+          if (startsWord) {
+            relevance = 80; // 🆕 черк → Черкизово (начало слова)
+          } else {
+            relevance = 60; // Просто contains внутри слова
+          }
+        }
         break;
       case 'keyboard':   // 🆕 Исправление раскладки (высокий приоритет!)
         relevance = 82;
@@ -1602,14 +1613,16 @@
         break;
     }
     
-    // Бонусы
-    if (item.usageCount) relevance += Math.min(item.usageCount * 2, 15); // часто используемые
-    if (item.isFavorite) relevance += 10; // избранные
-    if (commonWords.has(normalizedQuery)) relevance += 5;
+    // 🆕 v2.8.0: Бонусы уменьшены — не должны переворачивать порядок по типу совпадения
+    // Было: usageCount до +15, favorite +10 = до +25 — могло превысить разницу exact vs phonetic
+    // Стало: usageCount до +8, favorite +5 = до +13 — в пределах одного типа совпадения
+    if (item.usageCount) relevance += Math.min(item.usageCount, 8); // часто используемые (max +8)
+    if (item.isFavorite) relevance += 5; // избранные (было +10, теперь +5)
     
-    // Штраф за длинные названия (короткие = точнее)
+    // Бонус за короткое название (точнее совпадение)
     const lengthRatio = normalizedQuery.length / itemName.length;
-    if (lengthRatio > 0.5) relevance += 5;
+    if (lengthRatio > 0.7) relevance += 4;      // Очень короткое название
+    else if (lengthRatio > 0.5) relevance += 2; // Среднее
     
     return Math.max(0, relevance);
   }

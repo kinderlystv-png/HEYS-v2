@@ -327,27 +327,27 @@
           }
         }
         
-        // Fallback с нормализацией ё→е
+        // Fallback с нормализацией ё→е (только если SmartSearch не дал результатов)
         if (!results.length) {
           results = latestProducts.filter(p => 
             normalizeSearch(p.name).includes(lc)
           );
+          
+          // Сортировка ТОЛЬКО для fallback — SmartSearch уже отсортирован по relevance!
+          results.sort((a, b) => {
+            const aName = normalizeSearch(a.name);
+            const bName = normalizeSearch(b.name);
+            const aStartsWith = aName.startsWith(lc) ? 0 : 1;
+            const bStartsWith = bName.startsWith(lc) ? 0 : 1;
+            if (aStartsWith !== bStartsWith) return aStartsWith - bStartsWith;
+            // Затем по точному вхождению слова
+            const aExact = aName.split(/\s+/).some(w => w === lc) ? 0 : 1;
+            const bExact = bName.split(/\s+/).some(w => w === lc) ? 0 : 1;
+            if (aExact !== bExact) return aExact - bExact;
+            // Затем по длине названия (короткие = точнее)
+            return aName.length - bName.length;
+          });
         }
-        
-        // Умная сортировка: точные совпадения первыми
-        results.sort((a, b) => {
-          const aName = normalizeSearch(a.name);
-          const bName = normalizeSearch(b.name);
-          const aStartsWith = aName.startsWith(lc) ? 0 : 1;
-          const bStartsWith = bName.startsWith(lc) ? 0 : 1;
-          if (aStartsWith !== bStartsWith) return aStartsWith - bStartsWith;
-          // Затем по точному вхождению слова
-          const aExact = aName.split(/\s+/).some(w => w === lc) ? 0 : 1;
-          const bExact = bName.split(/\s+/).some(w => w === lc) ? 0 : 1;
-          if (aExact !== bExact) return aExact - bExact;
-          // Затем по длине названия (короткие = точнее)
-          return aName.length - bName.length;
-        });
       }
       
       // Фильтр по категории

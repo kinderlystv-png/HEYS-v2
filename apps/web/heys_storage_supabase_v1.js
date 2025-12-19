@@ -131,9 +131,128 @@
     Object.defineProperty(cloud, '_pinAuthClientId', { get: () => _pinAuthClientId });
   }
 
+  // ═══════════════════════════════════════════════════════════════════
+  // 🔄 AUTO TOKEN REFRESH — автоматическое обновление истёкшего токена
+  // ═══════════════════════════════════════════════════════════════════
+  /**
+   * Проверяет токен и обновляет его если истёк.
+   * Вызывается перед sync операциями.
+   * 
+   * @returns {Promise<{valid: boolean, refreshed: boolean, error?: string}>}
+   */
+  let _refreshInProgress = null; // Deduplication
+  const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000; // 5 минут до истечения — уже обновляем
+  
+  cloud.ensureValidToken = async function() {
+    // PIN auth не использует токены куратора
+    if (_rpcOnlyMode) {
+      return { valid: true, refreshed: false };
+    }
+    
+    // Deduplication: если refresh уже в процессе — ждём его
+    if (_refreshInProgress) {
+      log('🔄 [TOKEN] Refresh already in progress, waiting...');
+      return _refreshInProgress;
+    }
+    
+    // Проверяем текущий токен
+    const AUTH_KEY = 'heys_supabase_auth_token';
+    let storedToken;
+    try {
+      const stored = global.localStorage?.getItem(AUTH_KEY);
+      storedToken = stored ? JSON.parse(stored) : null;
+    } catch (_) {
+      storedToken = null;
+    }
+    
+    if (!storedToken || !storedToken.access_token) {
+      // Нет токена — нужен вход
+      return { valid: false, refreshed: false, error: 'no_token' };
+    }
+    
+    // Проверяем expires_at
+    const now = Date.now();
+    const expiresAtMs = (storedToken.expires_at || 0) * 1000;
+    const timeUntilExpiry = expiresAtMs - now;
+    
+    // Если токен ещё свежий — всё ОК
+    if (timeUntilExpiry > TOKEN_REFRESH_BUFFER_MS) {
+      return { valid: true, refreshed: false };
+    }
+    
+    // Токен истекает скоро или уже истёк — нужен refresh
+    const isExpired = timeUntilExpiry <= 0;
+    const minutesUntilExpiry = Math.round(timeUntilExpiry / 60000);
+    logCritical(`🔄 [TOKEN] ${isExpired ? 'Токен истёк' : `Токен истекает через ${minutesUntilExpiry} мин`}, пробуем refresh...`);
+    
+    // Запускаем refresh с deduplication
+    _refreshInProgress = (async () => {
+      try {
+        if (!client) {
+          return { valid: false, refreshed: false, error: 'no_client' };
+        }
+        
+        // Пробуем refreshSession
+        const { data, error } = await client.auth.refreshSession();
+        
+        if (error) {
+          // RTR ошибка или refresh_token уже использован
+          const isRTRError = error.message?.includes('Refresh Token') || 
+                            error.message?.includes('Already Used') ||
+                            error.message?.includes('refresh_token');
+          
+          if (isRTRError) {
+            logCritical('🔐 [TOKEN] RTR ошибка — требуется перелогин:', error.message);
+            // Очищаем старый токен
+            try { global.localStorage.removeItem(AUTH_KEY); } catch(_) {}
+            user = null;
+            status = CONNECTION_STATUS.OFFLINE;
+            return { valid: false, refreshed: false, error: 'rtr_expired' };
+          }
+          
+          logCritical('⚠️ [TOKEN] Ошибка refresh:', error.message);
+          return { valid: false, refreshed: false, error: error.message };
+        }
+        
+        // Refresh успешен — сохраняем новый токен
+        if (data?.session) {
+          const freshExpiresAt = Math.floor(Date.now() / 1000) + 3600;
+          const tokenData = {
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+            expires_at: freshExpiresAt,
+            user: data.session.user
+          };
+          
+          try {
+            const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
+            setFn(AUTH_KEY, JSON.stringify(tokenData));
+            logCritical('✅ [TOKEN] Токен обновлён, expires_at:', new Date(freshExpiresAt * 1000).toISOString());
+          } catch (e) {
+            logCritical('⚠️ [TOKEN] Ошибка сохранения:', e?.message);
+          }
+          
+          user = data.session.user;
+          status = CONNECTION_STATUS.ONLINE;
+          return { valid: true, refreshed: true };
+        }
+        
+        return { valid: false, refreshed: false, error: 'no_session' };
+      } catch (e) {
+        logCritical('⚠️ [TOKEN] Exception:', e?.message);
+        return { valid: false, refreshed: false, error: e?.message };
+      } finally {
+        _refreshInProgress = null;
+      }
+    })();
+    
+    return _refreshInProgress;
+  };
+
   /**
    * 🔐 Универсальный sync — выбирает правильную стратегию (RPC для PIN auth, bootstrap для обычной)
    * In-flight deduplication: если sync уже в процессе — возвращаем тот же Promise
+   * Автоматически обновляет токен если он истёк.
    * @param {string} clientId - ID клиента
    * @param {Object} options - { force: boolean }
    * @returns {Promise<void>}
@@ -148,6 +267,20 @@
     }
     
     const isPinAuth = _rpcOnlyMode && _pinAuthClientId === clientId;
+    
+    // 🔄 AUTO REFRESH: Проверяем и обновляем токен перед sync (только для куратора)
+    if (!isPinAuth && typeof cloud.ensureValidToken === 'function') {
+      const tokenResult = await cloud.ensureValidToken();
+      if (!tokenResult.valid) {
+        logCritical('🔐 [SYNC] Токен недействителен:', tokenResult.error);
+        // Если токен невалиден — sync бессмысленен
+        // UI должен показать экран входа (user = null установлен в ensureValidToken)
+        return;
+      }
+      if (tokenResult.refreshed) {
+        logCritical('🔄 [SYNC] Токен обновлён перед синхронизацией');
+      }
+    }
     
     // Создаём Promise и сохраняем его для deduplication
     const syncPromise = (async () => {
