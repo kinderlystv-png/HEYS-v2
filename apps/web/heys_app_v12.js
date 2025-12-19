@@ -1267,6 +1267,123 @@ const HEYS = window.HEYS = window.HEYS || {};
           window.HEYS.ErrorBoundary = ErrorBoundary;
 
           /* ═══════════════════════════════════════════════════════════════════════════════
+           * 🖥️ КОМПОНЕНТ: DesktopGateScreen — Заглушка для клиентов на десктопе
+           * Показывается если: !isCurator && width > 768px && !profile.desktopAllowed
+           * ═══════════════════════════════════════════════════════════════════════════════
+           */
+          function DesktopGateScreen({ onLogout }) {
+            const currentUrl = window.location.origin;
+            
+            return React.createElement('div', { 
+              className: 'desktop-gate',
+              style: {
+                minHeight: '100vh',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '40px 20px',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: '#fff',
+                textAlign: 'center'
+              }
+            },
+              // Иконка
+              React.createElement('div', { 
+                style: { fontSize: 80, marginBottom: 24 } 
+              }, '📱'),
+              
+              // Заголовок
+              React.createElement('h1', { 
+                style: { 
+                  fontSize: 28, 
+                  fontWeight: 700, 
+                  marginBottom: 12,
+                  lineHeight: 1.3
+                } 
+              }, 'Откройте на телефоне'),
+              
+              // Подзаголовок
+              React.createElement('p', { 
+                style: { 
+                  fontSize: 16, 
+                  opacity: 0.9, 
+                  marginBottom: 32,
+                  maxWidth: 320,
+                  lineHeight: 1.5
+                } 
+              }, 'HEYS оптимизирован для мобильных устройств. Отсканируйте QR-код или откройте ссылку на телефоне.'),
+              
+              // QR-код (через API)
+              React.createElement('div', { 
+                style: { 
+                  background: '#fff',
+                  padding: 16,
+                  borderRadius: 16,
+                  marginBottom: 24,
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+                } 
+              },
+                React.createElement('img', {
+                  src: `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(currentUrl)}`,
+                  alt: 'QR Code',
+                  style: { display: 'block', width: 180, height: 180 }
+                })
+              ),
+              
+              // Ссылка
+              React.createElement('div', { 
+                style: { 
+                  background: 'rgba(255,255,255,0.15)',
+                  padding: '12px 20px',
+                  borderRadius: 12,
+                  fontSize: 14,
+                  fontFamily: 'monospace',
+                  marginBottom: 32,
+                  wordBreak: 'break-all',
+                  maxWidth: 320
+                } 
+              }, currentUrl),
+              
+              // Инструкция PWA
+              React.createElement('div', { 
+                style: { 
+                  background: 'rgba(255,255,255,0.1)',
+                  padding: '16px 20px',
+                  borderRadius: 12,
+                  maxWidth: 320,
+                  marginBottom: 32
+                } 
+              },
+                React.createElement('div', { 
+                  style: { fontWeight: 600, marginBottom: 8, fontSize: 15 } 
+                }, '💡 Совет'),
+                React.createElement('div', { 
+                  style: { fontSize: 14, opacity: 0.9, lineHeight: 1.5 } 
+                }, 'Для лучшего опыта установите приложение: в браузере телефона нажмите "Добавить на экран"')
+              ),
+              
+              // Кнопка выхода
+              onLogout && React.createElement('button', {
+                onClick: onLogout,
+                style: {
+                  background: 'rgba(255,255,255,0.2)',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  color: '#fff',
+                  padding: '12px 24px',
+                  borderRadius: 12,
+                  fontSize: 15,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }
+              }, '← Выйти из аккаунта')
+            );
+          }
+
+          // Экспортируем для использования
+          window.HEYS.DesktopGateScreen = DesktopGateScreen;
+
+          /* ═══════════════════════════════════════════════════════════════════════════════
            * 🎨 КОМПОНЕНТ: AppLoader — Красивый скелетон-прелоадер
            * ═══════════════════════════════════════════════════════════════════════════════
            */
@@ -4884,6 +5001,47 @@ const HEYS = window.HEYS = window.HEYS || {};
                 )) // ← Закрываем modal-backdrop и тернарный isInitializing
               : null;
 
+            // 🖥️ Desktop Gate — заглушка для клиентов на широких экранах
+            // Определяем куратор ли это (есть Supabase session и НЕ RPC-only режим)
+            const [isDesktop, setIsDesktop] = React.useState(() => window.innerWidth > 768);
+            const [isCurator, setIsCurator] = React.useState(false);
+            
+            // Слушаем resize для обновления isDesktop
+            React.useEffect(() => {
+              const handleResize = () => setIsDesktop(window.innerWidth > 768);
+              window.addEventListener('resize', handleResize);
+              return () => window.removeEventListener('resize', handleResize);
+            }, []);
+            
+            // Проверяем куратор ли (аналогично логике в heys_core_v12.js)
+            React.useEffect(() => {
+              const checkCurator = () => {
+                const cloudUserLocal = window.HEYS?.cloud?.getUser?.();
+                const rpcOnly = window.HEYS?.cloud?._rpcOnlyMode === true;
+                setIsCurator(cloudUserLocal != null && !rpcOnly);
+              };
+              checkCurator();
+              const interval = setInterval(checkCurator, 1000);
+              return () => clearInterval(interval);
+            }, []);
+            
+            // Читаем desktopAllowed из профиля
+            const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+            const desktopAllowed = profile.desktopAllowed === true;
+            
+            // Desktop Gate: если клиент на десктопе и десктоп НЕ разрешён
+            const desktopGate = !gate && isDesktop && !isCurator && !desktopAllowed
+              ? React.createElement(DesktopGateScreen, { 
+                  onLogout: () => {
+                    // Выход из PIN auth
+                    localStorage.removeItem('heys_pin_auth_client');
+                    window.HEYS?.cloud?._setPinAuthMode?.(false, null);
+                    setClientId(null);
+                    window.location.reload();
+                  }
+                })
+              : null;
+
             useEffect(() => {
               // Минимальная инициализация — только загрузка из localStorage
               const initLocalData = () => {
@@ -5078,6 +5236,7 @@ const HEYS = window.HEYS = window.HEYS || {};
               React.Fragment,
               null,
               gate,
+              desktopGate,
               // === MORNING CHECK-IN (вес, сон, шаги — показывается ВМЕСТО контента) ===
               isMorningCheckinBlocking && React.createElement(HEYS.MorningCheckin, {
                 onComplete: (data) => {

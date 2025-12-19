@@ -1011,6 +1011,8 @@
     
     // Render based on widget type
     switch (widget.type) {
+      case 'status':
+        return React.createElement(StatusWidgetContent, { widget, data });
       case 'calories':
         return React.createElement(CaloriesWidgetContent, { widget, data });
       case 'water':
@@ -1041,6 +1043,57 @@
   
   // === Individual Widget Content Components ===
   
+  // === Status Widget Content (Статус 0-100) ===
+  function StatusWidgetContent({ widget, data }) {
+    const d = getWidgetDims(widget);
+    
+    // Используем HEYS.Status.StatusWidget если доступен
+    if (HEYS.Status?.StatusWidget) {
+      // Передаём status из data или вычисляем
+      const status = data.status || HEYS.Status?.calculateStatus?.({
+        dayData: data.dayData || {},
+        profile: data.profile || {},
+        dayTot: data.dayTot || {},
+        normAbs: data.normAbs || {},
+        waterGoal: data.waterGoal || 2000
+      });
+      
+      if (status) {
+        return React.createElement(HEYS.Status.StatusWidget, {
+          status,
+          size: d.isMicro ? 'micro' : d.isTiny ? 'tiny' : 'standard',
+          showActions: widget.settings?.showActions !== false,
+          showIssues: widget.settings?.showIssues !== false
+        });
+      }
+    }
+    
+    // Fallback если модуль не загружен
+    const score = data.status?.score ?? data.score ?? 0;
+    const level = data.status?.level ?? 'okay';
+    
+    const getColor = () => {
+      if (score >= 85) return '#10b981'; // excellent
+      if (score >= 70) return '#22c55e'; // good
+      if (score >= 50) return '#eab308'; // okay
+      if (score >= 30) return '#f97316'; // low
+      return '#ef4444'; // critical
+    };
+    
+    // 1x1 Micro
+    if (d.isMicro) {
+      return React.createElement('div', { className: 'widget-status widget-status--micro' },
+        React.createElement('div', { className: 'widget-status__score', style: { color: getColor() } }, Math.round(score))
+      );
+    }
+    
+    // Standard
+    return React.createElement('div', { className: 'widget-status widget-status--standard' },
+      React.createElement('div', { className: 'widget-status__score-big', style: { color: getColor() } }, Math.round(score)),
+      React.createElement('div', { className: 'widget-status__label' }, 'из 100')
+    );
+  }
+
   function CaloriesWidgetContent({ widget, data }) {
     const eaten = data.eaten || 0;
     const target = data.target || 2000;

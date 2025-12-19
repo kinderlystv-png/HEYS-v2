@@ -1058,7 +1058,9 @@
         dayScore: +dayData.dayScore || 0,
         cycleDay: dayData.cycleDay || null, // День менструального цикла (1-N или null)
         isRefeedDay: dayData.isRefeedDay || false, // Загрузочный день
-        refeedReason: dayData.refeedReason || null // Причина refeed
+        refeedReason: dayData.refeedReason || null, // Причина refeed
+        // 🔧 FIX: Сохранённая норма с учётом долга — используется для корректного отображения в sparkline
+        savedDisplayOptimum: +dayData.savedDisplayOptimum || 0
       };
     } catch (e) {
       return null;
@@ -1383,7 +1385,11 @@
         const tdee = bmr + stepsK + householdK + trainingsK;
         // Используем дефицит дня если есть (не пустая строка и не null), иначе из профиля
         const dayDeficit = (dayInfo.deficitPct !== '' && dayInfo.deficitPct != null) ? +dayInfo.deficitPct : deficitPct;
-        const target = Math.round(tdee * (1 + dayDeficit / 100));
+        const calculatedTarget = Math.round(tdee * (1 + dayDeficit / 100));
+        
+        // 🔧 FIX: Используем сохранённую норму с долгом если есть, иначе расчётную
+        // Это позволяет показывать корректную линию нормы в sparkline для прошлых дней
+        const target = dayInfo.savedDisplayOptimum > 0 ? dayInfo.savedDisplayOptimum : calculatedTarget;
         
         // ratio: 1.0 = идеально в цель, <1 недоел, >1 переел
         const ratio = target > 0 ? dayInfo.kcal / target : 0;

@@ -25,6 +25,7 @@
     stepsGoal: 10000, // целевая дневная активность по шагам
     cycleTrackingEnabled: false, // ручное включение трекинга цикла (для любого пола)
     profileCompleted: false, // флаг заполненности профиля (для wizard первого входа)
+    desktopAllowed: false, // 🖥️ Разрешён ли доступ с десктопа (куратор может включить)
 
     // 💊 Витамины / добавки
     // plannedSupplements остаётся string[] — критично для совместимости текущего UI
@@ -1308,6 +1309,31 @@
         onToggle: () => toggleSection('system')
       },
         React.createElement('div', {className:'profile-section__fields'},
+          // 🖥️ Доступ с компьютера
+          React.createElement('div', {className:'profile-field-group'},
+            React.createElement('div', {className:'profile-field-group__header'},
+              React.createElement('span', {className:'profile-field-group__icon'}, '🖥️'),
+              React.createElement('span', {className:'profile-field-group__title'}, 'Доступ с компьютера')
+            ),
+            React.createElement('div', {style:{marginTop:'8px', display:'flex', alignItems:'center', justifyContent:'space-between'}},
+              React.createElement('span', {style:{color:'var(--gray-600)'}}, 
+                'Разрешить вход с десктопа'
+              ),
+              React.createElement('label', {className:'toggle-switch'},
+                React.createElement('input', {
+                  type:'checkbox', 
+                  checked:!!profile.desktopAllowed, 
+                  onChange:e=>updateProfileField('desktopAllowed', e.target.checked)
+                }),
+                React.createElement('span', {className:'toggle-slider'})
+              )
+            ),
+            React.createElement('div', {className:'muted', style:{marginTop:'6px', fontSize:'13px'}},
+              profile.desktopAllowed 
+                ? '✓ Можно открывать на компьютере'
+                : 'Приложение работает только на телефоне'
+            )
+          ),
           // Статистика советов
           React.createElement(HEYS_AdviceStatsCard, null),
           // Настройки советов

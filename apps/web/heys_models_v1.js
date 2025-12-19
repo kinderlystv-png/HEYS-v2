@@ -402,7 +402,8 @@
       if(found) return found; 
     } 
     // FALLBACK: если продукт не найден в индексе, но в item есть нутриенты — возвращаем сам item как продукт
-    if(it.kcal100 !== undefined || it.protein100 !== undefined) {
+    // v3.8.2: Расширен для snapshot данных (simple100, complex100, carbs100)
+    if(it.kcal100 !== undefined || it.protein100 !== undefined || it.simple100 !== undefined || it.complex100 !== undefined || it.carbs100 !== undefined) {
       return it;
     }
     return null; 

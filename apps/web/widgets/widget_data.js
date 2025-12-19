@@ -26,6 +26,8 @@
      */
     getDataForWidget(widget) {
       switch (widget.type) {
+        case 'status':
+          return this.getStatusData();
         case 'calories':
           return this.getCaloriesData();
         case 'water':
@@ -49,6 +51,36 @@
         default:
           return {};
       }
+    },
+    
+    /**
+     * Получить данные для статуса 0-100
+     * @returns {Object} { status, dayData, profile, dayTot, normAbs, waterGoal }
+     */
+    getStatusData() {
+      const dayData = this._getDay() || {};
+      const profile = this._getProfile() || {};
+      const dayTot = this._getDayTotals() || {};
+      const normAbs = this._getNormAbs() || {};
+      const waterGoal = this._getWaterGoal() || 2000;
+      
+      // Вычисляем статус если модуль доступен
+      const status = HEYS.Status?.calculateStatus?.({
+        dayData,
+        profile,
+        dayTot,
+        normAbs,
+        waterGoal
+      }) || { score: 0, level: 'okay' };
+      
+      return {
+        status,
+        dayData,
+        profile,
+        dayTot,
+        normAbs,
+        waterGoal
+      };
     },
     
     /**

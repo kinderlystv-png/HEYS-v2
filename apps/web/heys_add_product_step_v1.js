@@ -1327,10 +1327,15 @@
 
   // === Компонент выбора граммов (Шаг 2) ===
   function GramsStep({ data, onChange, context, stepData }) {
-    // Продукт берём: 1) из context (для edit mode), 2) из своих данных, 3) из create, 4) из search
-    const product = context?.editProduct || data.selectedProduct || stepData?.create?.selectedProduct || stepData?.search?.selectedProduct;
+    // Продукт берём: 1) из context (для edit mode), 2) из своих данных, 3) из create (newProduct или selectedProduct), 4) из search
+    // ВАЖНО: stepData?.create проверяется т.к. при создании нового продукта data.selectedProduct может не успеть обновиться
+    const product = context?.editProduct 
+      || data.selectedProduct 
+      || stepData?.create?.newProduct 
+      || stepData?.create?.selectedProduct 
+      || stepData?.search?.selectedProduct;
     const lastGrams = stepData?.search?.lastGrams || stepData?.create?.lastGrams; // Последние использованные
-    const grams = data.grams || context?.editGrams || stepData?.search?.grams || stepData?.create?.grams || 100;
+    const grams = data.grams || context?.editGrams || stepData?.create?.grams || stepData?.search?.grams || 100;
     
     // Режим ввода: grams или kcal
     const [inputMode, setInputMode] = useState('grams');
@@ -1722,10 +1727,17 @@
         // Данные шагов
         const searchData = stepData.search || {};
         const gramsData = stepData.grams || {};
+        const createData = stepData.create || {};
         
-        // Приоритет: продукт из grams (последний шаг) или из поиска
-        const selectedProduct = gramsData.selectedProduct || searchData.selectedProduct;
-        const grams = gramsData.grams || searchData.grams || 100;
+        // Приоритет: продукт из grams (последний шаг), затем create (новый продукт), затем search
+        // ВАЖНО: create проверяется перед search, т.к. при создании нового продукта 
+        // stepData.grams может не успеть обновиться из-за React batching
+        // newProduct — это поле которое всегда устанавливается при создании
+        const selectedProduct = gramsData.selectedProduct 
+          || createData.newProduct 
+          || createData.selectedProduct 
+          || searchData.selectedProduct;
+        const grams = gramsData.grams || createData.grams || searchData.grams || 100;
         
         // console.log('[AddProductStep] selectedProduct:', selectedProduct?.name, 'grams:', grams);
         

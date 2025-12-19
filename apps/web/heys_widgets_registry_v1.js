@@ -154,6 +154,22 @@
     },
     
     // === Категория: Здоровье ===
+    status: {
+      type: 'status',
+      name: 'Статус',
+      category: 'health',
+      icon: '🎯',
+      description: 'Общий статус 0-100 с подсказками',
+      defaultSize: '2x2',
+      availableSizes: ALL_SIZES_4X4,
+      dataKeys: ['dayData', 'profile', 'dayTot', 'normAbs', 'waterGoal'],
+      component: 'WidgetStatus',
+      settings: {
+        showActions: { type: 'boolean', default: true, label: 'Показывать действия' },
+        showIssues: { type: 'boolean', default: true, label: 'Показывать проблемы' }
+      }
+    },
+    
     sleep: {
       type: 'sleep',
       name: 'Сон',

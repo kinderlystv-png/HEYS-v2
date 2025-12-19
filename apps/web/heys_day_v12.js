@@ -1604,6 +1604,13 @@
             }
             
             const productId = finalProduct.id ?? finalProduct.product_id ?? finalProduct.name;
+            // TEF-aware kcal100: пересчитываем по формуле 3*protein + 4*carbs + 9*fat
+            // чтобы snapshot совпадал с UI (computeDerivedProduct)
+            const computeTEFKcal100 = (p) => {
+              const carbs = (+p.carbs100) || ((+p.simple100||0) + (+p.complex100||0));
+              const fat = (+p.fat100) || ((+p.badFat100||0) + (+p.goodFat100||0) + (+p.trans100||0));
+              return Math.round((3*(+p.protein100||0) + 4*carbs + 9*fat) * 10) / 10;
+            };
             const newItem = {
               id: uid('it_'),
               product_id: finalProduct.id ?? finalProduct.product_id,
@@ -1611,7 +1618,7 @@
               grams: grams || 100,
               // Для новых продуктов сохраняем нутриенты напрямую (fallback если продукт не в индексе)
               ...(finalProduct.kcal100 !== undefined && {
-                kcal100: finalProduct.kcal100,
+                kcal100: computeTEFKcal100(finalProduct), // TEF-aware пересчёт
                 protein100: finalProduct.protein100,
                 carbs100: finalProduct.carbs100,
                 fat100: finalProduct.fat100,
@@ -4642,6 +4649,9 @@
     const [sparklinePan, setSparklinePan] = useState(0); // смещение по X в %
     const sparklineZoomRef = React.useRef({ initialDistance: 0, initialZoom: 1 });
     
+    // === Refresh key для принудительного пересчёта sparklineData после sync ===
+    const [sparklineRefreshKey, setSparklineRefreshKey] = useState(0);
+    
     // === Brush selection — выбор диапазона ===
     const [brushRange, setBrushRange] = useState(null); // { start: idx, end: idx }
     const [brushing, setBrushing] = useState(false);
@@ -5493,6 +5503,15 @@
         window.removeEventListener('heys:profile-updated', handleProfileUpdate);
       };
     }, []); // Пустой массив — слушатели регистрируются один раз
+    
+    // === Refresh sparklineData при синхронизации (для корректного отображения savedDisplayOptimum) ===
+    React.useEffect(() => {
+      const handleSyncRefresh = () => {
+        setSparklineRefreshKey(prev => prev + 1);
+      };
+      window.addEventListener('heysSyncCompleted', handleSyncRefresh);
+      return () => window.removeEventListener('heysSyncCompleted', handleSyncRefresh);
+    }, []);
     
     // === Открытие StepModal для веса и шагов ===
     function openWeightPicker() {
@@ -6552,6 +6571,12 @@
                       dateKey: date,
                       onAdd: ({ product, grams, mealIndex: targetMealIndex }) => {
                         const productId = product.id ?? product.product_id ?? product.name;
+                        // TEF-aware kcal100: пересчитываем по формуле 3*protein + 4*carbs + 9*fat
+                        const computeTEFKcal100 = (p) => {
+                          const carbs = (+p.carbs100) || ((+p.simple100||0) + (+p.complex100||0));
+                          const fat = (+p.fat100) || ((+p.badFat100||0) + (+p.goodFat100||0) + (+p.trans100||0));
+                          return Math.round((3*(+p.protein100||0) + 4*carbs + 9*fat) * 10) / 10;
+                        };
                         const newItem = {
                           id: uid('it_'),
                           product_id: product.id ?? product.product_id,
@@ -6559,7 +6584,7 @@
                           grams: grams || 100,
                           // ✅ FIX: Spread нутриентов (было пропущено, вызывало пустые items)
                           ...(product.kcal100 !== undefined && {
-                            kcal100: product.kcal100,
+                            kcal100: computeTEFKcal100(product), // TEF-aware пересчёт
                             protein100: product.protein100,
                             carbs100: product.carbs100,
                             fat100: product.fat100,
@@ -9046,11 +9071,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               sleepHours = (endMin - startMin) / 60;
             }
             const todayKcal = Math.round(eatenKcal || 0);
-            const todayRatio = optimum > 0 ? todayKcal / optimum : 0;
+            // Используем savedDisplayOptimum (с учётом долга) если есть, иначе optimum
+            const todayTarget = day.savedDisplayOptimum > 0 ? day.savedDisplayOptimum : optimum;
+            const todayRatio = todayTarget > 0 ? todayKcal / todayTarget : 0;
             return { 
               date: dateStr, 
               kcal: todayKcal, 
-              target: optimum,
+              target: todayTarget,
               ratio: todayRatio, // 🆕 Ratio для инсайтов
               isToday: true,
               hasTraining,
@@ -9200,7 +9227,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       } catch (e) {
         return [];
       }
-    }, [date, eatenKcal, chartPeriod, optimum, prof, products, day.trainings, day.sleepStart, day.sleepEnd, day.moodAvg, day.dayScore]);
+    }, [date, eatenKcal, chartPeriod, optimum, prof, products, day.trainings, day.sleepStart, day.sleepEnd, day.moodAvg, day.dayScore, day.savedDisplayOptimum, day.updatedAt, sparklineRefreshKey]);
     
     // Тренд калорий за последние N дней (среднее превышение/дефицит)
     const kcalTrend = React.useMemo(() => {
@@ -11376,6 +11403,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       }
       return optimum;
     }, [optimum, caloricDebt, day.isRefeedDay]);
+    
+    // 🔧 FIX: Сохраняем displayOptimum в данные дня для корректного отображения в sparkline
+    // Это позволяет показывать правильную норму (с учётом долга) при просмотре исторических дней
+    React.useEffect(() => {
+      if (!displayOptimum || displayOptimum <= 0) return;
+      // Только если значение изменилось (избегаем лишних ре-рендеров)
+      if (day.savedDisplayOptimum === displayOptimum) return;
+      
+      setDay(prev => ({
+        ...prev,
+        savedDisplayOptimum: displayOptimum,
+        updatedAt: Date.now(), // 🔧 Обновляем timestamp для гарантированного autosave
+      }));
+    }, [displayOptimum, day.savedDisplayOptimum, setDay]);
     
     // Осталось калорий с учётом долга
     const displayRemainingKcal = React.useMemo(() => {

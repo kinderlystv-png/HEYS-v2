@@ -2785,18 +2785,35 @@
       const grams = item.grams || 100;
       const prod = getProductFromItem(item, pIndex);
       
-      const gi = prod?.gi || prod?.gi100 || prod?.GI || 50;
+      // 🔧 FIX v3.8.2: Тройной fallback для ВСЕХ полей — prod → item snapshot → default
+      const gi = prod?.gi ?? prod?.gi100 ?? prod?.GI ?? item.gi ?? 50;
       totalGrams += grams;
       
-      totalProtein += (prod?.protein100 || 0) * grams / 100;
-      totalFiber += (prod?.fiber100 || 0) * grams / 100;
+      const protein100 = prod?.protein100 ?? item.protein100 ?? 0;
+      const fiber100 = prod?.fiber100 ?? item.fiber100 ?? 0;
+      totalProtein += protein100 * grams / 100;
+      totalFiber += fiber100 * grams / 100;
       
       // Углеводы для расчёта силы инсулиновой реакции
-      const simple = prod?.simple100 || 0;
-      const complex = prod?.complex100 || 0;
-      const itemCarbs = (simple + complex) * grams / 100;
+      // 🔧 FIX v3.8.2: Тройной fallback — prod → item snapshot → 0
+      // Когда pIndex не готов, prod=null, но item может иметь snapshot данные
+      const simple = prod?.simple100 ?? item.simple100 ?? 0;
+      const complex = prod?.complex100 ?? item.complex100 ?? 0;
+      const carbsFromBreakdown = simple + complex;
+      // Fallback на carbs100 если simple/complex не заданы
+      const carbsPer100 = carbsFromBreakdown > 0 ? carbsFromBreakdown : (prod?.carbs100 ?? item.carbs100 ?? 0);
+      const itemCarbs = carbsPer100 * grams / 100;
       totalSimple += simple * grams / 100;
       totalCarbs += itemCarbs;
+      
+      // 🔍 DEBUG: Проверка источника данных для GL
+      const dataSource = prod ? 'pIndex' : (item.simple100 !== undefined ? 'snapshot' : 'default');
+      const debugItemGL = gi * itemCarbs / 100;
+      console.log('[InsulinWave DEBUG] Item:', {
+        name: item.name, grams, dataSource,
+        simple100: simple, complex100: complex, carbsPer100, itemCarbs, gi,
+        calculatedGL: debugItemGL
+      });
       
       // 🔬 v3.0.1: Взвешиваем ГИ по УГЛЕВОДАМ, не по граммам!
       // Сыр без углеводов не должен влиять на средний ГИ
@@ -2809,9 +2826,10 @@
       const itemGL = gi * itemCarbs / 100;
       
       // Жиры — замедляют переваривание (gastric emptying)
-      const badFat = prod?.badFat100 || 0;
-      const goodFat = prod?.goodFat100 || 0;
-      const transFat = prod?.trans100 || 0;
+      // 🔧 FIX v3.8.2: Тройной fallback для жиров
+      const badFat = prod?.badFat100 ?? item.badFat100 ?? 0;
+      const goodFat = prod?.goodFat100 ?? item.goodFat100 ?? 0;
+      const transFat = prod?.trans100 ?? item.trans100 ?? 0;
       totalFat += (badFat + goodFat + transFat) * grams / 100;
       totalTrans += transFat * grams / 100;  // 🆕 v2.0: Отдельный учёт транс-жиров
       
@@ -2830,17 +2848,29 @@
       // 🆕 v3.2.2: Применяем Insulin Index к GL продукта
       // Научное обоснование: Holt 1997 — молочка вызывает инсулиновый ответ
       // в 2-3 раза выше чем предсказывает её GI
+      // 🔧 FIX v3.8.3: INSULIN_INDEX_FACTORS теперь объекты с .glBoost!
       let iiFactor = 1.0;
-      if (insBonus.type === 'liquidDairy') iiFactor = INSULIN_INDEX_FACTORS.liquidDairy; // ×3
-      else if (insBonus.type === 'softDairy') iiFactor = INSULIN_INDEX_FACTORS.softDairy; // ×2.5
-      else if (insBonus.type === 'hardDairy') iiFactor = INSULIN_INDEX_FACTORS.hardDairy; // ×1.5
-      else if (insBonus.type === 'protein') iiFactor = INSULIN_INDEX_FACTORS.pureProtein; // ×1.8
+      if (insBonus.type === 'liquidDairy') iiFactor = INSULIN_INDEX_FACTORS.liquidDairy?.glBoost || 1.5;
+      else if (insBonus.type === 'softDairy') iiFactor = INSULIN_INDEX_FACTORS.softDairy?.glBoost || 1.3;
+      else if (insBonus.type === 'hardDairy') iiFactor = INSULIN_INDEX_FACTORS.hardDairy?.glBoost || 1.1;
+      else if (insBonus.type === 'protein') iiFactor = INSULIN_INDEX_FACTORS.pureProtein?.glBoost || 1.2;
       
-      // Ограничиваем максимальное увеличение (не более ×1.5 от базовой GL)
-      const maxBoost = itemGL * INSULIN_INDEX_FACTORS.maxBoost;
+      // Ограничиваем максимальное увеличение (не более maxGLBoost от базовой GL)
+      // 🔧 FIX v3.8.3: maxBoost → maxGLBoost
+      const maxBoost = itemGL * (INSULIN_INDEX_FACTORS.maxGLBoost || 2.0);
       const boostedItemGL = Math.min(itemGL * iiFactor, itemGL + maxBoost);
       
       insulinIndexAdjustedGL += boostedItemGL;
+      
+      // 🔍 DEBUG v2: Проверка накопления GL
+      console.log('[InsulinWave DEBUG v2] GL accumulation:', {
+        name: item.name,
+        itemGL,
+        iiFactor,
+        maxBoost,
+        boostedItemGL,
+        insulinIndexAdjustedGL_afterAdd: insulinIndexAdjustedGL
+      });
       
       // 🌶️ Острая пища — ускоряет метаболизм
       if (isSpicyFood(prod)) {
@@ -2871,9 +2901,22 @@
     const baseGlycemicLoad = Math.round(avgGI * totalCarbs / 100 * 10) / 10;
     const glycemicLoad = Math.round(insulinIndexAdjustedGL * 10) / 10;
     
+    // 🔍 DEBUG v3: Финальный glycemicLoad
+    console.log('[InsulinWave DEBUG v3] Final GL:', {
+      insulinIndexAdjustedGL,
+      glycemicLoad,
+      baseGlycemicLoad,
+      avgGI,
+      totalCarbs
+    });
+    
     // Доля жидкой пищи (если >50% — приём считается жидким)
     const liquidRatio = totalGrams > 0 ? liquidGrams / totalGrams : 0;
     const hasLiquid = liquidRatio > 0.5;
+    
+    // 🆕 v3.8.5: Simple Ratio — доля простых углеводов (сахара)
+    // Влияет на форму волны: больше сахара = быстрее пик, короче волна
+    const simpleRatio = totalCarbs > 0 ? totalSimple / totalCarbs : 0;
     
     return {
       avgGI,
@@ -2886,6 +2929,7 @@
       totalTrans: Math.round(totalTrans * 10) / 10,  // 🆕 v2.0: Транс-жиры
       glycemicLoad,
       baseGlycemicLoad,  // 🆕 v3.2.2: Для отладки — GL без II
+      simpleRatio: Math.round(simpleRatio * 100) / 100,  // 🆕 v3.8.5: 0-1 (доля сахара)
       // Факторы v1.3
       hasLiquid,
       liquidRatio: Math.round(liquidRatio * 100),
@@ -3802,11 +3846,14 @@
     // 🔬 НАУЧНЫЙ АУДИТ 2025-12-09 v2: GL-скалирование всех дневных факторов
     // При низкой GL дневные факторы применяются частично
     // КЛЮЧЕВАЯ КОРРЕКЦИЯ: усилено ослабление циркадного множителя при GL < 10
+    // 🔧 FIX v3.8.3: Добавлена проверка на NaN + isFinite
     const gl = nutrients.glycemicLoad;
     let dayFactorsScale = 1.0;
     let circadianScale = 1.0;
     
-    if (gl !== null && gl < 20) {
+    // GL-скалирование: при низкой GL (< 20) факторы применяются частично
+    // NaN или undefined → пропускаем скалирование (используем полные факторы)
+    if (gl != null && isFinite(gl) && gl < 20) {
       // Формула: 0.3 + (GL/20) * 0.7 
       // GL=0 → 0.3, GL=10 → 0.65, GL=20 → 1.0
       dayFactorsScale = Math.max(0.3, 0.3 + (gl / 20) * 0.7);
@@ -3822,10 +3869,31 @@
       // GL=7 → базу приближаем к стандартным 3ч
       // Формула: 0.4 + (GL/20) * 0.6 → GL=7: 0.61, GL=15: 0.85, GL=20: 1.0
       const baseScaleFactor = Math.max(0.4, 0.4 + (gl / 20) * 0.6);
-      // Скалируем только "надбавку" от персональных факторов
-      const standardBase = PERSONAL_BASELINE.defaultWaveHours;
-      const personalDiff = effectiveBaseWaveHours - standardBase;
-      effectiveBaseWaveHours = standardBase + personalDiff * baseScaleFactor;
+      // 🔧 FIX v3.8.4: Скалируем ВСЮ базу, а не только персональную надбавку!
+      // При GL=11.3 база должна быть ~2.2ч, а не 3ч
+      // Старая логика: скалировала только personalDiff (0.04ч) → почти без эффекта
+      // Новая логика: скалируем всю базу напрямую
+      effectiveBaseWaveHours = effectiveBaseWaveHours * baseScaleFactor;
+      
+      // DEBUG: показать скалирование
+      console.log('[GL-scaling]', { gl: gl.toFixed(1), baseScaleFactor: baseScaleFactor.toFixed(3), newBase: effectiveBaseWaveHours.toFixed(2) });
+    }
+    
+    // 🆕 v3.8.5: Simple Ratio Modifier — соотношение простых/сложных углеводов
+    // Научное обоснование: простые углеводы (сахар) дают быстрый пик и короткую волну
+    // Сложные углеводы (крахмал) — медленный пик, длинная волна
+    // При >70% сахара волна укорачивается на 5-10%
+    const simpleRatio = nutrients.simpleRatio || 0;
+    let simpleRatioMultiplier = 1.0;
+    if (simpleRatio > 0.7) {
+      // >70% простых = быстрое всасывание = короче волна (−10%)
+      simpleRatioMultiplier = 0.90;
+    } else if (simpleRatio > 0.5) {
+      // 50-70% простых = умеренно короче (−5%)
+      simpleRatioMultiplier = 0.95;
+    } else if (simpleRatio < 0.2 && nutrients.totalCarbs > 20) {
+      // <20% простых + много углеводов = медленное всасывание = длиннее волна (+5%)
+      simpleRatioMultiplier = 1.05;
     }
     
     // Финальный множитель: все факторы
@@ -3947,7 +4015,8 @@
     
     // 🆕 v3.6.0: NDTE применяется как отдельный множитель (независимо от состава еды)
     // 🆕 v3.8.0: Insulin Index Wave Mult — молочка делает волну КОРОЧЕ (Holt 1997)
-    let finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier * insulinIndexWaveMult;
+    // 🆕 v3.8.5: Simple Ratio Mult — сахар = быстрее пик, короче волна
+    let finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier * insulinIndexWaveMult * simpleRatioMultiplier;
     
     // 🔬 v3.7.5: Физиологический лимит — волна не может быть больше ×1.5 от базы
     // Научное обоснование: реальные исследования показывают что даже при
@@ -3970,11 +4039,13 @@
         ndteMultiplier: ndteMultiplier.toFixed(3),
         scaledCircadian: scaledCircadian.toFixed(3),
         spicyMultiplier: spicyMultiplier.toFixed(3),
-        insulinIndexWaveMult: insulinIndexWaveMult.toFixed(3)  // 🆕 v3.8.0
+        insulinIndexWaveMult: insulinIndexWaveMult.toFixed(3),  // 🆕 v3.8.0
+        simpleRatioMultiplier: simpleRatioMultiplier.toFixed(3)  // 🆕 v3.8.5
       },
       foodDetails: {
         'multipliers.total': multipliers.total.toFixed(3),
-        otherBonuses: otherBonuses.toFixed(3)
+        otherBonuses: otherBonuses.toFixed(3),
+        simpleRatio: (simpleRatio * 100).toFixed(0) + '%'  // 🆕 v3.8.5
       },
       // 🆕 Детали otherBonuses
       otherBonusesDetails: {
@@ -4228,11 +4299,19 @@
       const duration = Math.round(scaledBaseWaveHours * finalMultiplier * 60);
       const endMin = startMin + duration;
       
-      // 🔬 DEBUG waveHistory (отключено для production)
-      // Раскомментировать для отладки:
-      // if (idx === sorted.length - 1) {
-      //   console.log('[waveHistory DEBUG]', { mealTime: t, GL: mealNutrients.glycemicLoad, finalMultiplier, duration });
-      // }
+      // 🔬 DEBUG waveHistory (включено для отладки)
+      console.log('[waveHistory DEBUG]', { 
+        idx, 
+        mealTime: t, 
+        mealName: meal.name || 'Meal',
+        GL: mealNutrients.glycemicLoad, 
+        GI: mealNutrients.weightedGI,
+        carbs: mealNutrients.carbs,
+        scaledBaseWaveHours,
+        baseScaleFactor: gl != null && gl < 20 ? (0.4 + (gl/20) * 0.6) : 1.0,
+        finalMultiplier, 
+        durationMin: duration 
+      });
       
       // 🆕 v3.4.0: Activity Context для каждого приёма в истории
       const mealActivityContext = calculateActivityContext({

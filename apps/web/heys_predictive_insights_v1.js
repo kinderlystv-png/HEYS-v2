@@ -7145,7 +7145,7 @@
 
   // === INSIGHTS TAB — Полноэкранная вкладка ===
   // Секции отсортированы по приоритету: CRITICAL → HIGH → MEDIUM → LOW
-  function InsightsTab({ lsGet, profile, pIndex, optimum, selectedDate }) {
+  function InsightsTab({ lsGet, profile, pIndex, optimum, selectedDate, dayData, dayTot, normAbs, waterGoal }) {
     const [activeTab, setActiveTab] = useState('today');
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [priorityFilter, setPriorityFilter] = useState(null); // null = показать всё
@@ -7157,6 +7157,18 @@
         daysBack: activeTab === 'today' ? 7 : 30
       });
     }, [lsGet, activeTab, selectedDate]);
+    
+    // 🆕 Расчёт статуса 0-100
+    const status = useMemo(() => {
+      if (!HEYS.Status?.calculateStatus) return null;
+      return HEYS.Status.calculateStatus({
+        dayData: dayData || {},
+        profile: profile || {},
+        dayTot: dayTot || {},
+        normAbs: normAbs || {},
+        waterGoal: waterGoal || 2000
+      });
+    }, [dayData, profile, dayTot, normAbs, waterGoal]);
     
     // Получить все метрики для фильтров
     const allMetrics = useMemo(() => getAllMetricsByPriority(), []);
@@ -7234,36 +7246,36 @@
         // 🔴 КРИТИЧЕСКИЙ ПРИОРИТЕТ — Самое важное сверху
         // ═══════════════════════════════════════════════════════════
         
-        // L0: Health Score Card (CRITICAL — показывается всегда)
+        // L0: Status 0-100 Card (CRITICAL — показывается всегда)
         shouldShowSection('CRITICAL') && h('div', { className: 'insights-tab__section insights-tab__section--critical' },
           h('div', { className: 'insights-tab__section-badge' },
             h(PriorityBadge, { priority: 'CRITICAL', showLabel: true })
           ),
           
-          // Score Ring
-          h('div', { className: 'insights-tab__score-card' },
-            h('div', { className: 'insights-tab__score' },
-              h(TotalHealthRing, {
-                score: insights.healthScore.total,
-                size: 140,
-                strokeWidth: 12,
-                debugData: insights.healthScore.debug || {
-                  mode: insights.healthScore.mode,
-                  weights: insights.healthScore.weights,
-                  breakdown: insights.healthScore.breakdown
-                }
-              })
-            )
-          ),
-          
-          // 4 кольца категорий
-          h('div', { className: 'insights-tab__rings' },
-            h(HealthRingsGrid, {
-              healthScore: insights.healthScore,
-              onCategoryClick: setSelectedCategory,
-              compact: true
-            })
-          )
+          // 🆕 StatusCard вместо TotalHealthRing + HealthRingsGrid
+          status && HEYS.Status?.StatusCard 
+            ? h(HEYS.Status.StatusCard, { status })
+            : h('div', { className: 'insights-tab__score-card' },
+                h('div', { className: 'insights-tab__score' },
+                  h(TotalHealthRing, {
+                    score: insights.healthScore.total,
+                    size: 140,
+                    strokeWidth: 12,
+                    debugData: insights.healthScore.debug || {
+                      mode: insights.healthScore.mode,
+                      weights: insights.healthScore.weights,
+                      breakdown: insights.healthScore.breakdown
+                    }
+                  })
+                ),
+                h('div', { className: 'insights-tab__rings' },
+                  h(HealthRingsGrid, {
+                    healthScore: insights.healthScore,
+                    onCategoryClick: setSelectedCategory,
+                    compact: true
+                  })
+                )
+              )
         ),
         
         // Metabolic Status + Risk (CRITICAL) — собственный заголовок внутри
