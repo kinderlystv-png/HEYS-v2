@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HEYS SMS Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 500px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 { margin-top: 0; color: #333; }
+    input {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      margin: 8px 0;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      background: #22c55e;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+    button:hover { background: #16a34a; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .success { background: #dcfce7; color: #166534; }
+    .error { background: #fee2e2; color: #991b1b; }
+    .info { background: #dbeafe; color: #1e40af; }
+    .log {
+      margin-top: 20px;
+      padding: 12px;
+      background: #1e1e1e;
+      color: #0f0;
+      font-family: monospace;
+      font-size: 12px;
+      border-radius: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .warning {
+      background: #fef3c7;
+      color: #92400e;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔐 HEYS SMS Test</h1>
+    
+    <div class="warning">
+      ⚠️ Это тестовая страница для проверки SMS.ru API.<br>
+      Каждая SMS стоит ~2-3 рубля.
+    </div>
+    
+    <div>
+      <label>Номер телефона:</label>
+      <input type="tel" id="phone" value="+7 962 455-61-11" placeholder="+7 XXX XXX-XX-XX">
+    </div>
+    
+    <button id="sendBtn" onclick="sendTestSms()">📤 Отправить тестовую SMS</button>
+    
+    <div>
+      <label>Код из SMS:</label>
+      <input type="text" id="code" placeholder="1234" maxlength="4">
+    </div>
+    
+    <button id="verifyBtn" onclick="verifyTestCode()" disabled>✅ Проверить код</button>
+    
+    <div id="status"></div>
+    
+    <div class="log" id="log"></div>
+  </div>
+
+  <script>
+    // API ключ SMS.ru
+    const API_KEY = '78608003-ED53-BC7C-0C47-788283EBCC3F';
+    
+    // Текущий код (для проверки)
+    let currentCode = null;
+    
+    function log(msg) {
+      const logEl = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      logEl.innerHTML += `[${time}] ${msg}\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(msg);
+    }
+    
+    function setStatus(msg, type = 'info') {
+      document.getElementById('status').innerHTML = `<div class="status ${type}">${msg}</div>`;
+    }
+    
+    function normalizePhone(phone) {
+      let digits = phone.replace(/\D/g, '');
+      if (digits.startsWith('8') && digits.length === 11) {
+        digits = '7' + digits.slice(1);
+      }
+      if (digits.length === 10) {
+        digits = '7' + digits;
+      }
+      return digits;
+    }
+    
+    function generateCode() {
+      return Math.floor(1000 + Math.random() * 9000).toString();
+    }
+    
+    async function sendTestSms() {
+      const phone = document.getElementById('phone').value;
+      const normalizedPhone = normalizePhone(phone);
+      
+      if (normalizedPhone.length !== 11) {
+        setStatus('❌ Неверный номер телефона', 'error');
+        return;
+      }
+      
+      // Генерируем код
+      currentCode = generateCode();
+      const message = `HEYS: Ваш код подтверждения: ${currentCode}. Тестовая отправка.`;
+      
+      log(`📱 Отправка на ${normalizedPhone}...`);
+      log(`📝 Код: ${currentCode}`);
+      
+      document.getElementById('sendBtn').disabled = true;
+      setStatus('⏳ Отправка...', 'info');
+      
+      try {
+        // SMS.ru API через JSONP (обход CORS)
+        // Альтернатива: использовать прокси
+        
+        // Формируем URL
+        const params = new URLSearchParams({
+          api_id: API_KEY,
+          to: normalizedPhone,
+          msg: message,
+          json: '1'
+        });
+        
+        // Пробуем через fetch (может быть CORS)
+        const url = `https://sms.ru/sms/send?${params.toString()}`;
+        log(`🔗 URL: ${url.substring(0, 50)}...`);
+        
+        const response = await fetch(url);
+        const result = await response.json();
+        
+        log(`📬 Ответ: ${JSON.stringify(result)}`);
+        
+        if (result.status_code === 100) {
+          setStatus(`✅ SMS отправлена! Код: <b>${currentCode}</b>`, 'success');
+          document.getElementById('verifyBtn').disabled = false;
+        } else {
+          const errors = {
+            200: 'Неверный api_id',
+            201: 'Не хватает средств',
+            202: 'Неверный номер',
+            204: 'Отправитель не согласован',
+            206: 'Дневной лимит'
+          };
+          setStatus(`❌ Ошибка: ${errors[result.status_code] || result.status_code}`, 'error');
+        }
+        
+      } catch (error) {
+        log(`❌ Ошибка: ${error.message}`);
+        
+        // Если CORS — покажем инструкцию
+        if (error.message.includes('CORS') || error.message.includes('fetch')) {
+          setStatus(`
+            ⚠️ CORS блокировка. Используй консоль браузера:<br><br>
+            <code>Код: <b>${currentCode}</b></code><br><br>
+            Или открой эту страницу на сервере (localhost:3001)
+          `, 'error');
+          document.getElementById('verifyBtn').disabled = false;
+        } else {
+          setStatus(`❌ Ошибка: ${error.message}`, 'error');
+        }
+      }
+      
+      document.getElementById('sendBtn').disabled = false;
+    }
+    
+    function verifyTestCode() {
+      const inputCode = document.getElementById('code').value.trim();
+      
+      if (!currentCode) {
+        setStatus('❌ Сначала отправьте SMS', 'error');
+        return;
+      }
+      
+      if (inputCode === currentCode) {
+        setStatus('✅ Код верный! ПЭП подтверждено.', 'success');
+        log('✅ Верификация успешна');
+      } else {
+        setStatus(`❌ Неверный код. Правильный: ${currentCode}`, 'error');
+        log(`❌ Неверный код: ${inputCode} !== ${currentCode}`);
+      }
+    }
+    
+    // Init
+    log('🚀 HEYS SMS Test ready');
+    log(`💰 API Key: ${API_KEY.substring(0, 8)}...`);
+  </script>
+</body>
+</html>
