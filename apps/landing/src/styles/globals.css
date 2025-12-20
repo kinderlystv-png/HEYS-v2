@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+@theme {
+  --color-heys-primary: #3B82F6;
+  --color-heys-secondary: #10B981;
+  --color-heys-accent: #F97316;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-heys-primary), var(--color-heys-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Hero gradient */
+.hero-gradient {
+  background: linear-gradient(180deg, #F8FAFC 0%, #EEF2FF 100%);
+}
+
+/* CTA Button */
+.btn-cta {
+  padding: 1rem 2rem;
+  background: linear-gradient(to right, #f97316, #ea580c);
+  color: white;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+}
+
+.btn-cta:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  padding: 0.75rem 1.5rem;
+  border: 2px solid #3B82F6;
+  color: #2563eb;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: #eff6ff;
+}
+
+/* Feature card */
+.feature-card {
+  background-color: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s;
+}
+
+.feature-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* Pricing card */
+.pricing-card {
+  background-color: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  border: 1px solid #f3f4f6;
+}
+
+.pricing-card.featured {
+  border: 2px solid #3B82F6;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+/* Landing hero animations */
+@keyframes heysHeroFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes heysHeroRise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.hero-anim-bg {
+  opacity: 0;
+  animation: heysHeroFade 0.9s ease-out forwards;
+  animation-delay: var(--hero-delay, 0s);
+}
+
+.hero-anim-fade {
+  opacity: 0;
+  animation: heysHeroFade 0.7s ease-out forwards;
+  animation-delay: var(--hero-delay, 0s);
+}
+
+.hero-anim-rise {
+  opacity: 0;
+  transform: translateY(18px);
+  filter: blur(4px);
+  animation: heysHeroRise 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: var(--hero-delay, 0s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-anim-bg,
+  .hero-anim-fade,
+  .hero-anim-rise {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes heysPulseRing {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.55;
+  }
+  70% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+
+@keyframes heysPulseRingHint {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.75;
+  }
+  65% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+.hero-scroll-cue {
+  position: relative;
+}
+
+.hero-scroll-cue::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 1px solid rgba(17, 24, 39, 0.25);
+  animation: heysPulseRing 1.8s ease-out infinite;
+}
+
+.hero-scroll-cue--hint::after {
+  border-color: rgba(17, 24, 39, 0.38);
+  animation: heysPulseRingHint 1.35s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-scroll-cue::after {
+    animation: none;
+    display: none;
+  }
+}
