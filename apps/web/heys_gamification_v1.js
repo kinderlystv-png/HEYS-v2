@@ -2058,14 +2058,12 @@
     if (!_initialSyncDone) {
       _initialSyncDone = true;
       _lastSyncTime = now;
-      console.log('[HEYS.game] ♻️ Cache invalidated after initial sync (skip UI update to prevent flicker)');
       return;
     }
     
     // 🔒 Cooldown: не реагируем на sync если прошло < 5 секунд
     // Это предотвращает цепную реакцию sync → save → sync
     if (now - _lastSyncTime < SYNC_COOLDOWN_MS) {
-      console.log('[HEYS.game] ♻️ Cache invalidated (cooldown active, skip UI update)');
       return;
     }
     _lastSyncTime = now;
@@ -2078,13 +2076,11 @@
         newStats.xp === oldXP && 
         newStats.level === oldLevel && 
         newStats.streak === oldStreak) {
-      console.log('[HEYS.game] ♻️ Cache invalidated after cloud sync (no changes, skip UI update)');
       return;
     }
     
     // Уведомляем UI об обновлении (GamificationBar перечитает stats)
     window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: newStats }));
-    console.log('[HEYS.game] ♻️ Cache invalidated after cloud sync (stats changed)');
   });
 
   // ========== ЭКСПОРТ ==========

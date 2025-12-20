@@ -15,6 +15,11 @@ export default defineConfig({
         {
           src: 'styles/modules',
           dest: 'styles'
+        },
+        // Юридические документы для ConsentScreen
+        {
+          src: '../../docs/legal',
+          dest: 'docs'
         }
       ]
     })
@@ -120,11 +125,19 @@ export default defineConfig({
       port: parseInt(process.env.PORT || '3001'),
     },
     proxy: {
+      '/api/sms': {
+        target: `http://localhost:${process.env.API_PORT || '4001'}`,
+        changeOrigin: true,
+      },
       '/api': {
         target: `http://localhost:${process.env.API_PORT || '4001'}`,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
+    },
+    // Static files из корня проекта (для docs/legal)
+    fs: {
+      allow: ['..', '../..', '../../docs'],
     },
   },
   // Предварительная оптимизация зависимостей - Performance Sprint

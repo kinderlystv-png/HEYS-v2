@@ -700,5 +700,5 @@
   M.computeProductFingerprint = computeProductFingerprint;
   M.normalizeProductName = normalizeProductName;
   
-  console.log('HEYS: Loaded', Object.keys(AUTO_PORTIONS).length, 'portion patterns');
+  // Verbose init log removed
 })(window);

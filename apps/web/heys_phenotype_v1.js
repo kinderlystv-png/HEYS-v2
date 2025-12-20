@@ -505,6 +505,6 @@
     VERSION: '1.1.0'
   };
   
-  console.log('[HEYS] 🧬 Phenotype Module v1.1.0 loaded');
+  // Verbose init log removed
   
 })(typeof window !== 'undefined' ? window : global);

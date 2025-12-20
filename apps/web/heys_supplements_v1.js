@@ -3185,6 +3185,6 @@
   // Загружаем кастомные добавки при инициализации
   loadCustomSupplements();
 
-  console.log('[HEYS] Supplements module v3.5 loaded: settings/history scaffolding, science UI, 29+ supplements');
+  // Verbose init log removed
 
 })(typeof window !== 'undefined' ? window : global);

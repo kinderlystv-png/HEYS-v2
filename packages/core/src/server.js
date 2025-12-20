@@ -82,6 +82,36 @@ app.get('/api/analytics', (req, res) => {
   res.json({ message: 'Analytics API endpoint', database: DATABASE_NAME });
 });
 
+// SMS Proxy endpoint (обход CORS для SMS.ru)
+app.post('/api/sms', async (req, res) => {
+  try {
+    const { api_id, to, msg } = req.body;
+
+    if (!api_id || !to || !msg) {
+      return res.status(400).json({ error: 'Missing required fields: api_id, to, msg' });
+    }
+
+    // Формируем URL для SMS.ru
+    const params = new URLSearchParams({
+      api_id,
+      to,
+      msg,
+      json: '1',
+      from: 'HEYS' // Одобренный отправитель
+    });
+
+    const smsResponse = await fetch(`https://sms.ru/sms/send?${params.toString()}`);
+    const result = await smsResponse.json();
+
+    console.log(`📲 SMS to ${to}: status ${result.status_code}`);
+    return res.json(result);
+
+  } catch (error) {
+    console.error('[SMS Proxy] Error:', error);
+    return res.status(500).json({ error: 'SMS proxy error', details: error.message });
+  }
+});
+
 app.use(serverRouter);
 
 // 404 handler

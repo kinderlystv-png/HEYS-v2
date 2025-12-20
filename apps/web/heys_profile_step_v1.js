@@ -1303,7 +1303,6 @@
         validate: () => true,
         save: () => {} // Ничего не сохраняем, это информационный шаг
       });
-      console.log('[heys_profile_step_v1] Welcome step registered');
       return true;
     }
     return false;
@@ -1420,12 +1419,5 @@
     calcSleepNorm,
     showCongratulationsModal
   };
-
-  console.log('[heys_profile_step_v1] Profile steps registered:', [
-    'profile-personal',
-    'profile-body',
-    'profile-goals',
-    'profile-metabolism'
-  ]);
 
 })(window);

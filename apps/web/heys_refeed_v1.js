@@ -643,10 +643,6 @@
       
       xpAction: 'refeed_marked'
     });
-    
-    if (window.location?.hostname === 'localhost') {
-      console.log('[Refeed] ✅ Шаг зарегистрирован');
-    }
   }
 
   // === RENDER HELPERS ===
@@ -774,11 +770,6 @@
     document.addEventListener('DOMContentLoaded', registerRefeedStep);
   } else {
     setTimeout(registerRefeedStep, 100);
-  }
-  
-  // Логируем только в dev режиме
-  if (typeof window !== 'undefined' && window.location?.hostname === 'localhost') {
-    console.log('[HEYS] 🔄 Refeed Module v1.3.3 loaded');
   }
 
 })(typeof window !== 'undefined' ? window : global);

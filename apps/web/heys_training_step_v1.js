@@ -487,6 +487,6 @@
     HR_ZONES
   };
 
-  console.log('[HEYS] TrainingStep v1 (2 steps) loaded');
+  // Verbose init log removed
 
 })(typeof window !== 'undefined' ? window : global);

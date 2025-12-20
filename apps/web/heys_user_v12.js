@@ -1298,7 +1298,22 @@
         )
       ), // end ProfileSection security
 
-      // === СЕКЦИЯ 5: Система и аналитика ===
+      // === СЕКЦИЯ 5: Подписка ===
+      window.HEYS?.Subscriptions?.SubscriptionSection
+        ? React.createElement(ProfileSection, {
+            id: 'subscription',
+            icon: '💎',
+            title: 'Подписка',
+            subtitle: window.HEYS.Subscriptions.getStatusLabel ? window.HEYS.Subscriptions.getStatusLabel() : 'Тариф и оплата',
+            tone: 'emerald',
+            expanded: expandedSections.subscription,
+            onToggle: () => toggleSection('subscription')
+          },
+            React.createElement(window.HEYS.Subscriptions.SubscriptionSection)
+          )
+        : null,
+
+      // === СЕКЦИЯ 6: Система и аналитика ===
       React.createElement(ProfileSection, {
         id: 'system',
         icon: '⚙️',

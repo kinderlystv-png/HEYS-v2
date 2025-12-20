@@ -46,6 +46,37 @@
       }
     },
     {
+      "label": "Start Landing (Port 3003)",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["--filter", "@heys/landing", "run", "dev"],
+      "group": "build",
+      "options": {
+        "env": {
+          "PORT": "3003"
+        }
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "."
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "ready",
+          "endsPattern": "Local:.*http://localhost:3003"
+        }
+      }
+    },
+    {
       "label": "Start TG Mini (Port 3002)",
       "type": "shell",
       "command": "pnpm",

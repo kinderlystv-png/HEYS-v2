@@ -1118,8 +1118,15 @@
               console.log('[CreateProductStep] ✅ Результат publishToShared:', result);
             } else if (HEYS.cloud.createPendingProduct) {
               console.log('[CreateProductStep] 📤 Вызываем createPendingProduct...');
-              const result = await HEYS.cloud.createPendingProduct(parsedPreview);
-              console.log('[CreateProductStep] ✅ Результат createPendingProduct:', result);
+              // Получаем clientId из localStorage
+              let clientId = localStorage.getItem('heys_client_current');
+              try { clientId = JSON.parse(clientId); } catch(e) { /* already string */ }
+              if (!clientId) {
+                console.error('[CreateProductStep] ❌ Нет clientId для pending продукта!');
+              } else {
+                const result = await HEYS.cloud.createPendingProduct(clientId, parsedPreview);
+                console.log('[CreateProductStep] ✅ Результат createPendingProduct:', result);
+              }
             } else {
               console.log('[CreateProductStep] ❌ Нет подходящей функции для публикации!');
             }

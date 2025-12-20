@@ -491,7 +491,6 @@
         category: widgetDef.category || 'advanced'
       };
       
-      console.log(`[Widgets Registry] Registered widget type: ${widgetDef.type}`);
       return true;
     }
   };
@@ -503,6 +502,6 @@
   HEYS.Widgets.LEGACY_SIZE_ALIASES = LEGACY_SIZE_ALIASES;
   HEYS.Widgets.WIDGET_TYPES = WIDGET_TYPES;
   
-  console.log('[HEYS] Widgets Registry v1.0.0 loaded');
+  // Verbose init log removed
   
 })(typeof window !== 'undefined' ? window : global);

@@ -1,6 +1,6 @@
 // heys_tdee_v1.js — Модуль расчёта затрат калорий (TDEE)
 // Единый источник правды для всех компонентов: hero, статистика, недельный отчёт
-// v1.0.0
+// v1.1.2 — Добавлено totalHouseholdMin для UI
 
 (function(global) {
   const HEYS = global.HEYS = global.HEYS || {};
@@ -24,9 +24,10 @@
    * @returns {number} ккал/день
    */
   const calcBMR = (weight, profile) => {
-    const age = +profile.age || 30;
-    const height = +profile.height || 170;
-    const isMale = profile.gender !== 'Женский';
+    const p = profile || {};
+    const age = +p.age || 30;
+    const height = +p.height || 170;
+    const isMale = p.gender !== 'Женский';
     // Mifflin-St Jeor: 10×вес + 6.25×рост − 5×возраст + (5 муж / −161 жен)
     return r0(10 * weight + 6.25 * height - 5 * age + (isMale ? 5 : -161));
   };
@@ -105,16 +106,16 @@
     const actTotal = r0(trainingsKcal + stepsK + householdKcal);
     
     // 🔬 TEF v1.0.0: используем единый модуль HEYS.TEF
-    let tefKcal = 0;
+    let tefData = { total: 0, breakdown: { protein: 0, carbs: 0, fat: 0 } };
     if (options.dayMacros) {
       // Если макросы переданы явно
-      tefKcal = HEYS.TEF?.calculateFromMacros?.(options.dayMacros)?.total || 0;
+      tefData = HEYS.TEF?.calculateFromMacros?.(options.dayMacros) || tefData;
     } else if (day.meals && Array.isArray(day.meals) && options.pIndex) {
       // Расчёт из приёмов пищи через модуль
       const getProduct = (item) => options.pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
-      const tefResult = HEYS.TEF?.calculateFromMeals?.(day.meals, options.pIndex, (item) => getProduct(item));
-      tefKcal = tefResult?.total || 0;
+      tefData = HEYS.TEF?.calculateFromMeals?.(day.meals, options.pIndex, (item) => getProduct(item)) || tefData;
     }
+    const tefKcal = tefData.total || 0;
 
     // NDTE (Next-Day Training Effect) — буст от вчерашней тренировки
     let ndteBoost = 0;
@@ -160,12 +161,17 @@
       train3k,
       stepsKcal: stepsK,
       householdKcal,
+      totalHouseholdMin,  // 🆕 v1.1.2: Минуты для UI
       ndteBoost,
+      ndteData: ndteBoost > 0 ? { active: true, tdeeBoost: ndteBoost / bmr } : { active: false, tdeeBoost: 0 }, // 🆕 v1.1.0
       tefKcal,             // 🆕 v3.9.1: TEF
+      tefData,             // 🆕 v1.1.1: Full TEF data with breakdown
       baseExpenditure,     // 🆕 v3.9.1: без TEF (для optimum)
       tdee,                // с TEF (для UI)
       optimum,
       weight,
+      mets,                // 🆕 v1.1.0: MET зоны для UI
+      kcalMin: mets.map(m => kcalPerMin(m, weight)), // 🆕 v1.1.0: ккал/мин для UI
       deficitPct: dayTargetDef,
       cycleMultiplier: cycleKcalMultiplier
     };
@@ -222,7 +228,7 @@
   
   // === Экспорт ===
   HEYS.TDEE = {
-    VERSION: '1.0.0',
+    VERSION: '1.1.0',
     
     // Основные функции
     calculate: calculateTDEE,

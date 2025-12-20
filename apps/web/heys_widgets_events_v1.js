@@ -205,6 +205,6 @@
   HEYS.Widgets.off = events.off.bind(events);
   HEYS.Widgets.emit = events.emit.bind(events);
   
-  console.log('[HEYS] Widgets Events v1.0.0 loaded');
+  // Verbose init log removed
   
 })(typeof window !== 'undefined' ? window : global);

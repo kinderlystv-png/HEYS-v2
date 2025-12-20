@@ -2143,7 +2143,6 @@
     
     // Если не инициализирован — игнорируем
     if (!state._initialized) {
-      console.log('[Widgets Core] Cloud update ignored: not initialized');
       return;
     }
     
@@ -2198,6 +2197,6 @@
   HEYS.Widgets.canUndo = () => state.canUndo();
   HEYS.Widgets.canRedo = () => state.canRedo();
   
-  console.log('[HEYS] Widgets Core v1.3.1 loaded — fix collision displacement on resize');
+  // Verbose init log removed
   
 })(typeof window !== 'undefined' ? window : global);

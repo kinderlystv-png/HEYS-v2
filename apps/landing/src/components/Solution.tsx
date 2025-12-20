@@ -1,103 +1,87 @@
 export default function Solution() {
   return (
-    <section className="py-20 bg-gradient-to-b from-blue-50 to-white" id="solution">
+    <section className="py-24 bg-gradient-to-b from-blue-50 to-white" id="solution">
       <div className="container mx-auto px-6">
         <div className="max-w-4xl mx-auto">
-          {/* Section header */}
+          {/* Main answer */}
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              HEYS — это <span className="gradient-text">другой подход</span>
+            <p className="text-lg text-blue-600 mb-4 font-medium">
+              Поэтому HEYS — это не приложение
+            </p>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+              Это человек, которому
+              <br />
+              <span className="text-blue-600">не всё равно</span>
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Не приложение с цифрами, а экосистема: приложение + живой куратор + протоколы сопровождения.
+              Куратор, который ведёт ваш дневник, держит фокус и рядом в моменты слабости.
             </p>
           </div>
           
-          {/* Solution cards */}
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="feature-card text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <span className="text-3xl">📱</span>
+          {/* Central card - Curator */}
+          <div className="bg-white rounded-3xl p-8 md:p-12 shadow-xl border border-gray-100 mb-12">
+            <div className="flex flex-col md:flex-row gap-8 items-center">
+              <div className="flex-shrink-0">
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl flex items-center justify-center shadow-lg">
+                  <span className="text-5xl">👤</span>
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                Экосистема (не трекер)
-              </h3>
-              <p className="text-gray-600">
-                Приложение и аналитика, которые помогают держать курс: понятно «где я сейчас» и «что делать дальше».
-              </p>
-            </div>
-            
-            <div className="feature-card text-center border-2 border-blue-200">
-              <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <span className="text-3xl">👤</span>
+              <div className="text-center md:text-left">
+                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                  Ваш личный куратор
+                </h3>
+                <p className="text-lg text-gray-600 mb-4">
+                  Живой человек, который ведёт ваш дневник питания — вам не нужно ничего считать. 
+                  Присылаете фото еды → куратор вносит. Просто и без рутины.
+                </p>
+                <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+                  <span className="bg-green-100 text-green-700 text-sm font-medium px-4 py-1.5 rounded-full">
+                    Ведёт дневник
+                  </span>
+                  <span className="bg-blue-100 text-blue-700 text-sm font-medium px-4 py-1.5 rounded-full">
+                    Отвечает ≤30 мин
+                  </span>
+                  <span className="bg-purple-100 text-purple-700 text-sm font-medium px-4 py-1.5 rounded-full">
+                    Рядом при срыве
+                  </span>
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                Живой куратор
-              </h3>
-              <p className="text-gray-600">
-                В Pro/Pro+ куратор ведёт дневник и помогает удерживать фокус — особенно в моменты риска и срывов.
-              </p>
-              <div className="mt-4 inline-block bg-blue-50 text-blue-600 text-sm font-medium px-3 py-1 rounded-full">
-                Главная ценность
-              </div>
-            </div>
-            
-            <div className="feature-card text-center">
-              <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <span className="text-3xl">🎯</span>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                Контур ответственности
-              </h3>
-              <p className="text-gray-600">
-                Вас не оставляют один на один с цифрами: есть ритм, договорённости и понятный «следующий шаг».
-              </p>
-            </div>
-
-            <div className="feature-card text-center">
-              <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <span className="text-3xl">🛟</span>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                Анти‑срыв и честная связь
-              </h3>
-              <p className="text-gray-600">
-                В Pro/Pro+ есть окно связи и понятный SLA: в рабочие часы отвечаем быстро и предсказуемо.
-              </p>
             </div>
           </div>
-
-          {/* 5-я идея — отдельным блоком */}
-          <div className="mt-10 bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-              <div>
-                <h3 className="text-lg md:text-xl font-semibold text-gray-900">
-                  «Паспорт движения» — протокол сопровождения
-                </h3>
-                <p className="mt-2 text-gray-600">
-                  Чтобы всегда было понятно: что делать дальше и как выглядит ритм сопровождения.
-                </p>
-              </div>
-              <div className="text-sm text-gray-600">
-                <div className="font-medium text-gray-900 mb-2">Примеры ритма:</div>
-                <ul className="space-y-1">
-                  <li>• Утро: план/фокус дня</li>
-                  <li>• Днём: корректировка по факту</li>
-                  <li>• Вечер: итоги и поддержка</li>
-                  <li>• Раз в неделю: созвон 20–45 минут</li>
-                  <li>• Pro+: mid‑week чек‑ин</li>
-                </ul>
-              </div>
+          
+          {/* What else you get */}
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 text-center">
+              <div className="text-3xl mb-3">📱</div>
+              <h4 className="font-semibold text-gray-900 mb-2">Приложение</h4>
+              <p className="text-gray-600 text-sm">
+                Где я сейчас? Что дальше? Вся аналитика понятно и без перегруза.
+              </p>
+            </div>
+            
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 text-center">
+              <div className="text-3xl mb-3">🎯</div>
+              <h4 className="font-semibold text-gray-900 mb-2">Ритм</h4>
+              <p className="text-gray-600 text-sm">
+                Утро → план. День → корректировка. Вечер → итоги. Неделя → созвон.
+              </p>
+            </div>
+            
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 text-center">
+              <div className="text-3xl mb-3">🛟</div>
+              <h4 className="font-semibold text-gray-900 mb-2">Анти-срыв</h4>
+              <p className="text-gray-600 text-sm">
+                В сложный момент — не один. Написать можно сразу, ответят быстро.
+              </p>
             </div>
           </div>
           
           {/* Key message */}
-          <div className="mt-16 bg-white rounded-2xl p-8 shadow-lg border border-gray-100 text-center">
-            <p className="text-2xl font-medium text-gray-900">
-              «Вас <span className="text-blue-600 font-bold">ведут</span>, а не оставляют с цифрами»
-            </p>
-            <p className="mt-4 text-gray-600">
-              Есть человек, которому не всё равно на вашу жизнь и здоровье
+          <div className="text-center">
+            <p className="text-2xl md:text-3xl font-medium text-gray-900">
+              «Вас <span className="text-blue-600 font-bold">ведут</span>, 
+              <br className="md:hidden" />
+              а не оставляют с цифрами»
             </p>
           </div>
         </div>

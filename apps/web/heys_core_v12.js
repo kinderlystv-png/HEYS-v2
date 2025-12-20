@@ -380,13 +380,23 @@
         }
         
         // 🛡️ ЗАЩИТА от race condition: не сохраняем если в storage больше продуктов
+        // ИСКЛЮЧЕНИЕ: если установлен флаг _intentionalProductDelete — это намеренное удаление
         const existingProducts = (window.HEYS && window.HEYS.store && window.HEYS.store.get && window.HEYS.store.get('heys_products', null)) || 
                                 (window.HEYS && window.HEYS.utils && window.HEYS.utils.lsGet && window.HEYS.utils.lsGet('heys_products', null));
         if (existingProducts && Array.isArray(existingProducts) && existingProducts.length > products.length) {
-          if (window.DEV) {
-            window.DEV.log('⚠️ [useEffect] BLOCKED: не уменьшаем', existingProducts.length, '→', products.length);
+          // Проверяем флаг намеренного удаления
+          if (window.HEYS && window.HEYS._intentionalProductDelete) {
+            if (window.DEV) {
+              window.DEV.log('✅ [useEffect] ALLOWED: intentional delete', existingProducts.length, '→', products.length);
+            }
+            // Сбрасываем флаг после использования
+            window.HEYS._intentionalProductDelete = false;
+          } else {
+            if (window.DEV) {
+              window.DEV.log('⚠️ [useEffect] BLOCKED: не уменьшаем', existingProducts.length, '→', products.length);
+            }
+            return;
           }
-          return;
         }
         
         if (window.DEV) {
@@ -858,6 +868,10 @@
       }
     }
     function deleteRow(id){ 
+      // Устанавливаем флаг намеренного удаления, чтобы useEffect не заблокировал сохранение
+      if (window.HEYS) {
+        window.HEYS._intentionalProductDelete = true;
+      }
       setProducts(products.filter(p=>p.id!==id)); 
       if (window.HEYS && window.HEYS.analytics) {
         window.HEYS.analytics.trackDataOperation('storage-op');

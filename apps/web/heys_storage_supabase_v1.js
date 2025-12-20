@@ -167,6 +167,9 @@
     
     if (!storedToken || !storedToken.access_token) {
       // Нет токена — нужен вход
+      // 🚨 КРИТИЧНО: Сбрасываем user чтобы UI мог отреагировать
+      user = null;
+      status = CONNECTION_STATUS.OFFLINE;
       return { valid: false, refreshed: false, error: 'no_token' };
     }
     
@@ -255,7 +258,7 @@
    * Автоматически обновляет токен если он истёк.
    * @param {string} clientId - ID клиента
    * @param {Object} options - { force: boolean }
-   * @returns {Promise<void>}
+   * @returns {Promise<{ success?: boolean, authRequired?: boolean, error?: string }>}
    */
   let _syncInFlight = null; // { clientId, promise }
   
@@ -273,9 +276,13 @@
       const tokenResult = await cloud.ensureValidToken();
       if (!tokenResult.valid) {
         logCritical('🔐 [SYNC] Токен недействителен:', tokenResult.error);
-        // Если токен невалиден — sync бессмысленен
-        // UI должен показать экран входа (user = null установлен в ensureValidToken)
-        return;
+        // 🚨 КРИТИЧНО: Возвращаем authRequired чтобы UI мог показать экран логина
+        // user уже установлен в null в ensureValidToken
+        return { 
+          success: false, 
+          authRequired: true, 
+          error: tokenResult.error 
+        };
       }
       if (tokenResult.refreshed) {
         logCritical('🔄 [SYNC] Токен обновлён перед синхронизацией');
@@ -1239,8 +1246,12 @@
   }
   function err(){ try{ console.error.apply(console, ['[HEYS.cloud:ERR]'].concat([].slice.call(arguments))); }catch(e){} }
   
-  // Критический лог — всегда выводится (для важных событий синхронизации)
-  function logCritical(){ try{ console.info.apply(console, ['[HEYS]'].concat([].slice.call(arguments))); }catch(e){} }
+  // Критический лог — тоже тихий по умолчанию (включается через isDebugSync)
+  function logCritical(){
+    if (isDebugSync()) {
+      try{ console.info.apply(console, ['[HEYS]'].concat([].slice.call(arguments))); }catch(e){}
+    }
+  }
 
   /**
    * Проверка, является ли ошибка сетевой (QUIC, fetch failed, network error)

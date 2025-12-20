@@ -3185,6 +3185,6 @@
     shouldShowCycleStep
   };
 
-  console.log('[HEYS] Steps registered: weight, sleepTime, sleepQuality, stepsGoal, deficit, household_minutes, household_stats, cycle, measurements, cold_exposure, supplements, morningRoutine');
+  // Verbose init log removed
 
 })(typeof window !== 'undefined' ? window : global);

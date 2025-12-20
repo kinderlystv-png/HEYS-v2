@@ -202,11 +202,29 @@
       const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
       const steps = getCheckinSteps(profile);
       
+      // Определяем: это регистрационный чек-ин (есть profile-шаги)?
+      const isRegistrationCheckin = steps.includes('profile-personal');
+      
       // Обёртка для onComplete: обновляем данные дня
       const wrappedOnComplete = () => {
         // 🎉 Поздравительная модалка теперь показывается как шаг 'welcome' внутри flow
         
-        // � Устанавливаем флаг для советов по витаминам
+        // 🎫 Автостарт триала при первом чек-ине после регистрации
+        // Условие: это регистрационный чек-ин (профиль был пуст) И подписка не активна
+        if (isRegistrationCheckin && HEYS.Subscriptions) {
+          const subStatus = HEYS.Subscriptions.getStatus();
+          // Стартуем триал только если статус null/undefined (новый пользователь)
+          if (!subStatus || !subStatus.status) {
+            console.log('[MorningCheckin] 🎫 Registration complete — starting Pro trial');
+            HEYS.Subscriptions.startTrial('pro').then(() => {
+              console.log('[MorningCheckin] ✅ Pro trial started successfully');
+            }).catch(err => {
+              console.error('[MorningCheckin] ❌ Failed to start trial:', err);
+            });
+          }
+        }
+        
+        // 🔔 Устанавливаем флаг для советов по витаминам
         try {
           sessionStorage.setItem('heys_morning_checkin_done', 'true');
           // Очищаем флаг показа совета — чтобы он показался после чек-ина
@@ -271,11 +289,27 @@
         const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
         const steps = getCheckinSteps(profile);
         
+        // Определяем: это регистрационный чек-ин (есть profile-шаги)?
+        const isRegistrationCheckin = steps.includes('profile-personal');
+        
         // Обёртка для onComplete: обновляем данные дня
         const wrappedOnComplete = () => {
           // 🎉 Поздравительная модалка теперь показывается как шаг 'welcome' внутри flow
           
-          // � Устанавливаем флаг для советов по витаминам
+          // 🎫 Автостарт триала при первом чек-ине после регистрации
+          if (isRegistrationCheckin && HEYS.Subscriptions) {
+            const subStatus = HEYS.Subscriptions.getStatus();
+            if (!subStatus || !subStatus.status) {
+              console.log('[showCheckin.morning] 🎫 Registration complete — starting Pro trial');
+              HEYS.Subscriptions.startTrial('pro').then(() => {
+                console.log('[showCheckin.morning] ✅ Pro trial started successfully');
+              }).catch(err => {
+                console.error('[showCheckin.morning] ❌ Failed to start trial:', err);
+              });
+            }
+          }
+          
+          // 🔔 Устанавливаем флаг для советов по витаминам
           try {
             sessionStorage.setItem('heys_morning_checkin_done', 'true');
             // Очищаем флаг показа совета — чтобы он показался после чек-ина

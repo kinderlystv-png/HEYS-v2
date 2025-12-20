@@ -144,7 +144,7 @@
       
       // Генерируем код
       currentCode = generateCode();
-      const message = `HEYS: Ваш код подтверждения: ${currentCode}. Тестовая отправка.`;
+      const message = `HEYS: Ваш код подтверждения: ${currentCode}`;
       
       log(`📱 Отправка на ${normalizedPhone}...`);
       log(`📝 Код: ${currentCode}`);
@@ -153,22 +153,24 @@
       setStatus('⏳ Отправка...', 'info');
       
       try {
-        // SMS.ru API через JSONP (обход CORS)
-        // Альтернатива: использовать прокси
+        // Используем серверный прокси для обхода CORS
+        const isLocalhost = window.location.hostname === 'localhost';
+        const proxyUrl = isLocalhost 
+          ? '/api/sms'  // Локально через Vite proxy или Vercel dev
+          : 'https://heys-v2-web.vercel.app/api/sms';  // Продакшн
         
-        // Формируем URL
-        const params = new URLSearchParams({
-          api_id: API_KEY,
-          to: normalizedPhone,
-          msg: message,
-          json: '1'
+        log(`🔗 Proxy: ${proxyUrl}`);
+        
+        const response = await fetch(proxyUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api_id: API_KEY,
+            to: normalizedPhone,
+            msg: message
+          })
         });
         
-        // Пробуем через fetch (может быть CORS)
-        const url = `https://sms.ru/sms/send?${params.toString()}`;
-        log(`🔗 URL: ${url.substring(0, 50)}...`);
-        
-        const response = await fetch(url);
         const result = await response.json();
         
         log(`📬 Ответ: ${JSON.stringify(result)}`);

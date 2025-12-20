@@ -2806,14 +2806,14 @@
       totalSimple += simple * grams / 100;
       totalCarbs += itemCarbs;
       
-      // 🔍 DEBUG: Проверка источника данных для GL
-      const dataSource = prod ? 'pIndex' : (item.simple100 !== undefined ? 'snapshot' : 'default');
-      const debugItemGL = gi * itemCarbs / 100;
-      console.log('[InsulinWave DEBUG] Item:', {
-        name: item.name, grams, dataSource,
-        simple100: simple, complex100: complex, carbsPer100, itemCarbs, gi,
-        calculatedGL: debugItemGL
-      });
+      // 🔍 DEBUG: Проверка источника данных для GL (отключено — слишком много логов)
+      // const dataSource = prod ? 'pIndex' : (item.simple100 !== undefined ? 'snapshot' : 'default');
+      // const debugItemGL = gi * itemCarbs / 100;
+      // console.log('[InsulinWave DEBUG] Item:', {
+      //   name: item.name, grams, dataSource,
+      //   simple100: simple, complex100: complex, carbsPer100, itemCarbs, gi,
+      //   calculatedGL: debugItemGL
+      // });
       
       // 🔬 v3.0.1: Взвешиваем ГИ по УГЛЕВОДАМ, не по граммам!
       // Сыр без углеводов не должен влиять на средний ГИ
@@ -2862,15 +2862,15 @@
       
       insulinIndexAdjustedGL += boostedItemGL;
       
-      // 🔍 DEBUG v2: Проверка накопления GL
-      console.log('[InsulinWave DEBUG v2] GL accumulation:', {
-        name: item.name,
-        itemGL,
-        iiFactor,
-        maxBoost,
-        boostedItemGL,
-        insulinIndexAdjustedGL_afterAdd: insulinIndexAdjustedGL
-      });
+      // 🔍 DEBUG v2: Проверка накопления GL (отключено — слишком много логов)
+      // console.log('[InsulinWave DEBUG v2] GL accumulation:', {
+      //   name: item.name,
+      //   itemGL,
+      //   iiFactor,
+      //   maxBoost,
+      //   boostedItemGL,
+      //   insulinIndexAdjustedGL_afterAdd: insulinIndexAdjustedGL
+      // });
       
       // 🌶️ Острая пища — ускоряет метаболизм
       if (isSpicyFood(prod)) {
@@ -2900,15 +2900,6 @@
     // Это БОЛЕЕ ТОЧНО предсказывает реальный инсулиновый ответ (Holt 1997)
     const baseGlycemicLoad = Math.round(avgGI * totalCarbs / 100 * 10) / 10;
     const glycemicLoad = Math.round(insulinIndexAdjustedGL * 10) / 10;
-    
-    // 🔍 DEBUG v3: Финальный glycemicLoad
-    console.log('[InsulinWave DEBUG v3] Final GL:', {
-      insulinIndexAdjustedGL,
-      glycemicLoad,
-      baseGlycemicLoad,
-      avgGI,
-      totalCarbs
-    });
     
     // Доля жидкой пищи (если >50% — приём считается жидким)
     const liquidRatio = totalGrams > 0 ? liquidGrams / totalGrams : 0;
@@ -3874,9 +3865,6 @@
       // Старая логика: скалировала только personalDiff (0.04ч) → почти без эффекта
       // Новая логика: скалируем всю базу напрямую
       effectiveBaseWaveHours = effectiveBaseWaveHours * baseScaleFactor;
-      
-      // DEBUG: показать скалирование
-      console.log('[GL-scaling]', { gl: gl.toFixed(1), baseScaleFactor: baseScaleFactor.toFixed(3), newBase: effectiveBaseWaveHours.toFixed(2) });
     }
     
     // 🆕 v3.8.5: Simple Ratio Modifier — соотношение простых/сложных углеводов
@@ -4024,76 +4012,8 @@
     // Brand-Miller 2003: High-GL meal ≈ 3-4 часа инсулинового ответа
     const MAX_MULTIPLIER = 1.50;
     if (finalMultiplier > MAX_MULTIPLIER) {
-      console.log('[InsulinWave] ⚠️ Multiplier capped:', finalMultiplier.toFixed(3), '→', MAX_MULTIPLIER);
       finalMultiplier = MAX_MULTIPLIER;
     }
-    
-    // 🔬 DEBUG: Детальный расчёт инсулиновой волны
-    console.log('[InsulinWave DEBUG]', { 
-      effectiveBaseWaveHours: effectiveBaseWaveHours.toFixed(2),
-      finalMultiplier: finalMultiplier.toFixed(3),
-      expected: (effectiveBaseWaveHours * finalMultiplier).toFixed(2) + 'ч',
-      components: {
-        foodMultiplier: foodMultiplier.toFixed(3),
-        activityMultiplier: activityMultiplier.toFixed(3),
-        ndteMultiplier: ndteMultiplier.toFixed(3),
-        scaledCircadian: scaledCircadian.toFixed(3),
-        spicyMultiplier: spicyMultiplier.toFixed(3),
-        insulinIndexWaveMult: insulinIndexWaveMult.toFixed(3),  // 🆕 v3.8.0
-        simpleRatioMultiplier: simpleRatioMultiplier.toFixed(3)  // 🆕 v3.8.5
-      },
-      foodDetails: {
-        'multipliers.total': multipliers.total.toFixed(3),
-        otherBonuses: otherBonuses.toFixed(3),
-        simpleRatio: (simpleRatio * 100).toFixed(0) + '%'  // 🆕 v3.8.5
-      },
-      // 🆕 Детали otherBonuses
-      otherBonusesDetails: {
-        metabolicBonuses: metabolicBonuses.toFixed(3),
-        personalBonuses: personalBonuses.toFixed(3),
-        mealStackingBonus: mealStackingBonus.toFixed(3),
-        resistantStarchBonus: resistantStarchBonus.toFixed(3),
-        coldExposureBonus: coldExposureBonus.toFixed(3),
-        supplementsBonusValue: supplementsBonusValue.toFixed(3),
-        autophagyBonus: autophagyBonus.toFixed(3),
-        // 🆕 v3.8.0: Новые факторы
-        temperatureBonus: temperatureBonus.toFixed(3),
-        largePortionBonus: largePortionBonus.bonus.toFixed(3)
-      },
-      // 🆕 v3.8.0: Новые факторы (отдельная секция)
-      v380NewFactors: {
-        temperature: foodTemperature.temperature,
-        temperatureBonus: temperatureBonus.toFixed(3),
-        mealKcal,
-        largePortionBonus: largePortionBonus.bonus.toFixed(3),
-        hypoglycemiaRisk: hypoglycemiaRisk.hasRisk,
-        insulinIndexType: nutrients.insulinogenicType,
-        insulinIndexWaveMult: insulinIndexWaveMult.toFixed(3),
-        circadianSmooth: circadian.isSmooth,
-        circadianMultiplier: circadian.multiplier.toFixed(3)
-      },
-      // 🆕 v3.7.5: Детали personalBonuses (что именно даёт бонус)
-      personalBonusesBreakdown: {
-        sleepQualityBonus: sleepQualityBonus.toFixed(3),
-        hydrationBonus: hydrationBonus.toFixed(3),
-        transFatBonus: transFatBonus.toFixed(3),
-        cycleBonusValue: cycleBonusValue.toFixed(3),
-        dayFactorsScale: dayFactorsScale.toFixed(3)
-      },
-      // 🆕 Детали multipliers.total
-      multipliersDetails: {
-        gi: multipliers.gi?.toFixed(3),
-        protein: multipliers.protein?.toFixed(3),
-        fiber: multipliers.fiber?.toFixed(3),
-        fat: multipliers.fat?.toFixed(3),
-        carbs: multipliers.carbs?.toFixed(3),
-        liquid: multipliers.liquid?.toFixed(3),
-        foodForm: multipliers.foodForm?.toFixed(3),
-        insulinogenic: multipliers.insulinogenic?.toFixed(3)
-      },
-      gl: nutrients.glycemicLoad?.toFixed(1) || 'null',
-      insulinogenicType: nutrients.insulinogenicType
-    });
     
     // 🆕 v3.0.0: Используем персональную базу вместо фиксированных 3 часов
     // Скорректированная длина волны
@@ -4298,20 +4218,6 @@
       // 🆕 v3.0.1: Используем scaledBaseWaveHours (персональная база, скалированная по GL)
       const duration = Math.round(scaledBaseWaveHours * finalMultiplier * 60);
       const endMin = startMin + duration;
-      
-      // 🔬 DEBUG waveHistory (включено для отладки)
-      console.log('[waveHistory DEBUG]', { 
-        idx, 
-        mealTime: t, 
-        mealName: meal.name || 'Meal',
-        GL: mealNutrients.glycemicLoad, 
-        GI: mealNutrients.weightedGI,
-        carbs: mealNutrients.carbs,
-        scaledBaseWaveHours,
-        baseScaleFactor: gl != null && gl < 20 ? (0.4 + (gl/20) * 0.6) : 1.0,
-        finalMultiplier, 
-        durationMin: duration 
-      });
       
       // 🆕 v3.4.0: Activity Context для каждого приёма в истории
       const mealActivityContext = calculateActivityContext({
@@ -6788,6 +6694,6 @@
   // Алиас
   HEYS.IW = HEYS.InsulinWave;
   
-  console.log('[HEYS] InsulinWave v3.8.0 loaded (Scientific: smooth circadian, temperature, large portions, hypoglycemia UI)');
+  // Verbose init log removed
   
 })(typeof window !== 'undefined' ? window : global);

@@ -23,8 +23,8 @@
         firstSeen: Date.now(),
         hasInlineData: item.kcal100 != null
       });
-      // Первое обнаружение — логируем
-      console.warn(`[HEYS] Orphan product: "${name}" — используются данные из штампа`);
+      // Первое обнаружение — логируем с датой
+      console.warn(`[HEYS] Orphan product: "${name}" — используются данные из штампа (день: ${dateStr || 'unknown'})`);
     } else {
       orphanProductsMap.get(name).usedInDays.add(dateStr);
     }
@@ -211,7 +211,6 @@
         // Используем HEYS.products.setAll для синхронизации с облаком и React state
         if (HEYS.products?.setAll) {
           HEYS.products.setAll(newProducts);
-          console.log('[HEYS] Products saved via HEYS.products.setAll (cloud sync enabled)');
         } else {
           lsSet('heys_products', newProducts);
           console.warn('[HEYS] ⚠️ Products saved via lsSet only (no cloud sync)');
@@ -507,19 +506,68 @@
     }; 
   }
   
+  // 🔬 TDEE v1.1.0: Делегируем в единый модуль HEYS.TDEE с fallback для legacy
   function calcBMR(w,prof){ 
-    const h=+prof.height||175,a=+prof.age||30,sex=(prof.sex||'male'); 
-    return Math.round(10*(+w||0)+6.25*h-5*a+(sex==='female'?-161:5)); 
+    // Fallback: Mifflin-St Jeor (всегда должен быть доступен)
+    const fallback = () => {
+      const h=+prof.height||175,a=+prof.age||30,sex=(prof.sex||'male');
+      return Math.round(10*(+w||0)+6.25*h-5*a+(sex==='female'?-161:5));
+    };
+
+    // Делегируем в единый модуль, но НИКОГДА не даём ошибке “убить” UI.
+    // В противном случае getActiveDaysForMonth вернёт пустой Map из-за try/catch.
+    try {
+      if (typeof HEYS !== 'undefined' && HEYS.TDEE && HEYS.TDEE.calcBMR) {
+        const v = HEYS.TDEE.calcBMR({ ...prof, weight: w });
+        const num = +v;
+        if (Number.isFinite(num) && num > 0) return Math.round(num);
+      }
+    } catch (e) {
+      try {
+        if (typeof HEYS !== 'undefined' && HEYS.analytics && HEYS.analytics.trackError) {
+          HEYS.analytics.trackError(e, { where: 'day_utils.calcBMR', hasTDEE: !!HEYS.TDEE });
+        }
+      } catch (_) {}
+    }
+
+    return fallback();
   }
   
+  // 🔬 TDEE v1.1.0: Делегируем в единый модуль с fallback
   function kcalPerMin(met,w){ 
-    return Math.round((((+met||0)*(+w||0)*0.0175)-1)*10)/10; 
+    try {
+      if (typeof HEYS !== 'undefined' && HEYS.TDEE && HEYS.TDEE.kcalPerMin) {
+        const v = HEYS.TDEE.kcalPerMin(met, w);
+        const num = +v;
+        if (Number.isFinite(num)) return num;
+      }
+    } catch (e) {
+      try {
+        if (typeof HEYS !== 'undefined' && HEYS.analytics && HEYS.analytics.trackError) {
+          HEYS.analytics.trackError(e, { where: 'day_utils.kcalPerMin', hasTDEE: !!HEYS.TDEE });
+        }
+      } catch (_) {}
+    }
+    return Math.round((((+met||0)*(+w||0)*0.0175)-1)*10)/10;
   }
   
   function stepsKcal(steps,w,sex,len){ 
-    const coef=(sex==='female'?0.5:0.57); 
-    const km=(+steps||0)*(len||0.7)/1000; 
-    return Math.round(coef*(+w||0)*km*10)/10; 
+    try {
+      if (typeof HEYS !== 'undefined' && HEYS.TDEE && HEYS.TDEE.stepsKcal) {
+        const v = HEYS.TDEE.stepsKcal(steps, w, sex, len);
+        const num = +v;
+        if (Number.isFinite(num)) return num;
+      }
+    } catch (e) {
+      try {
+        if (typeof HEYS !== 'undefined' && HEYS.analytics && HEYS.analytics.trackError) {
+          HEYS.analytics.trackError(e, { where: 'day_utils.stepsKcal', hasTDEE: !!HEYS.TDEE });
+        }
+      } catch (_) {}
+    }
+    const coef=(sex==='female'?0.5:0.57);
+    const km=(+steps||0)*(len||0.7)/1000;
+    return Math.round(coef*(+w||0)*km*10)/10;
   }
 
   // === Time/Sleep Utilities ===
@@ -1014,10 +1062,17 @@
           
           if (src.kcal100 != null || src.protein100 != null) {
             const mult = grams / 100;
-            totalKcal += (+src.kcal100 || 0) * mult;
-            totalProt += (+src.protein100 || 0) * mult;
-            totalFat += (+src.fat100 || 0) * mult;
-            totalCarbs += (+src.carbs100 || (+src.simple100 || 0) + (+src.complex100 || 0)) * mult;
+            const prot = (+src.protein100 || 0) * mult;
+            const fat = (+src.fat100 || 0) * mult;
+            const carbs = (+src.carbs100 || (+src.simple100 || 0) + (+src.complex100 || 0)) * mult;
+            
+            // 🔄 v3.9.2: Используем TEF-формулу как в mealTotals (белок 3 ккал/г вместо 4)
+            // TEF-aware: protein 3 kcal/g (25% TEF), carbs 4 kcal/g, fat 9 kcal/g
+            const kcalTEF = 3 * prot + 4 * carbs + 9 * fat;
+            totalKcal += kcalTEF;
+            totalProt += prot;
+            totalFat += fat;
+            totalCarbs += carbs;
           }
         });
       });
@@ -1043,6 +1098,7 @@
       
       return {
         kcal: Math.round(totalKcal),
+        savedEatenKcal: +dayData.savedEatenKcal || 0, // 🆕 Сохранённые калории (приоритет над пересчитанными)
         prot: Math.round(totalProt),
         fat: Math.round(totalFat),
         carbs: Math.round(totalCarbs),
@@ -1328,9 +1384,10 @@
         const dateStr = fmtDate(new Date(year, month, d));
         const dayInfo = getDayData(dateStr, productsMap, profile);
         
-        // Пропускаем дни без данных, НО добавляем дни с cycleDay даже без еды
+        // Пропускаем дни без данных. Если есть цикл или хотя бы один приём пищи — показываем даже при низких ккал
         const hasCycleDay = dayInfo && dayInfo.cycleDay != null;
-        if (!dayInfo || (dayInfo.kcal < threshold && !hasCycleDay)) continue;
+        const hasMeals = !!(dayInfo && Array.isArray(dayInfo.meals) && dayInfo.meals.length > 0);
+        if (!dayInfo || (dayInfo.kcal < threshold && !hasCycleDay && !hasMeals)) continue;
         
         // Если день только с cycleDay (без еды) — добавляем минимальную запись
         if (dayInfo.kcal < threshold && hasCycleDay) {
@@ -1391,8 +1448,12 @@
         // Это позволяет показывать корректную линию нормы в sparkline для прошлых дней
         const target = dayInfo.savedDisplayOptimum > 0 ? dayInfo.savedDisplayOptimum : calculatedTarget;
         
+        // 🔧 FIX: Используем сохранённые калории если есть, иначе пересчитанные
+        // savedEatenKcal гарантирует точное значение, которое показывалось пользователю в тот день
+        const kcal = dayInfo.savedEatenKcal > 0 ? dayInfo.savedEatenKcal : dayInfo.kcal;
+        
         // ratio: 1.0 = идеально в цель, <1 недоел, >1 переел
-        const ratio = target > 0 ? dayInfo.kcal / target : 0;
+        const ratio = target > 0 ? kcal / target : 0;
         
         // moodAvg для mood-полосы на графике
         const moodAvg = dayInfo.moodAvg ? +dayInfo.moodAvg : null;
@@ -1410,7 +1471,7 @@
         const weightMorning = dayInfo.weightMorning || 0; // 🆕 Вес для персонализированных инсайтов
         
         daysData.set(dateStr, { 
-          kcal: dayInfo.kcal, target, ratio, 
+          kcal, target, ratio, // 🔧 FIX: kcal теперь использует savedEatenKcal если есть
           hasTraining, trainingTypes, trainingMinutes,
           moodAvg, sleepHours, dayScore,
           prot, fat, carbs,
@@ -1421,7 +1482,19 @@
         });
       }
     } catch (e) {
-      // Тихий fallback — activeDays для календаря не критичны
+      // Тихий fallback — activeDays для календаря не критичны,
+      // но ошибку стоит залогировать, иначе отладка невозможна.
+      try {
+        if (typeof HEYS !== 'undefined' && HEYS.analytics && HEYS.analytics.trackError) {
+          HEYS.analytics.trackError(e, {
+            where: 'day_utils.getActiveDaysForMonth',
+            year,
+            month,
+            hasProfile: !!profile,
+            productsLen: Array.isArray(products) ? products.length : null,
+          });
+        }
+      } catch (_) {}
     }
     
     return daysData;
@@ -1490,6 +1563,7 @@
     getDayCalories,
     getProductsMap,
     getActiveDaysForMonth,
+    getDayData,
     // 🚀 Lazy-loading API
     loadRecentDays,
     loadDay,

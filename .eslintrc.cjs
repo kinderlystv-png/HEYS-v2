@@ -188,6 +188,15 @@ module.exports = {
         'no-console': 'off',
       },
     },
+    // Logger files - это сам логгер, он ДОЛЖЕН использовать console
+    {
+      files: ['**/lib/logger.ts', '**/logger/**/*.ts', 'packages/logger/**/*.ts'],
+      rules: {
+        'no-console': 'off',
+        'no-restricted-globals': 'off',
+        'no-restricted-syntax': 'off',
+      },
+    },
   ],
   ignorePatterns: [
     'dist/',

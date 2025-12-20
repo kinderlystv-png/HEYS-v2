@@ -445,35 +445,34 @@
     },
     
     _getOptimum() {
-      // Базовый расчёт калорийной нормы
+      // 🔬 TDEE v1.1.0: Использование консолидированного модуля
+      const day = this._getDay();
       const prof = this._getProfile();
+      
+      // Если есть модуль TDEE — используем его
+      if (HEYS.TDEE?.calculate) {
+        const tdeeResult = HEYS.TDEE.calculate(day, prof, {});
+        return tdeeResult?.optimum || 2000;
+      }
+      
+      // Fallback: упрощённый расчёт если модуль недоступен
       if (!prof.weight || !prof.height || !prof.age) {
-        return 2000; // Дефолт
+        return 2000;
       }
       
-      // BMR по Mifflin-St Jeor
-      let bmr;
-      if (prof.gender === 'Мужской') {
-        bmr = 10 * prof.weight + 6.25 * prof.height - 5 * prof.age + 5;
-      } else {
-        bmr = 10 * prof.weight + 6.25 * prof.height - 5 * prof.age - 161;
-      }
+      const bmr = HEYS.TDEE?.calcBMR?.(prof) || (
+        prof.gender === 'Мужской'
+          ? 10 * prof.weight + 6.25 * prof.height - 5 * prof.age + 5
+          : 10 * prof.weight + 6.25 * prof.height - 5 * prof.age - 161
+      );
       
-      // Activity multiplier (default moderate)
       const activityMultipliers = {
-        sedentary: 1.2,
-        light: 1.375,
-        moderate: 1.55,
-        active: 1.725,
-        very_active: 1.9
+        sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9
       };
-      
       const multiplier = activityMultipliers[prof.activityLevel] || 1.55;
-      const tdee = Math.round(bmr * multiplier);
-      
-      // Apply deficit/surplus
       const deficitPct = prof.deficitPctTarget || 0;
-      return Math.round(tdee * (1 + deficitPct / 100));
+      
+      return Math.round(bmr * multiplier * (1 + deficitPct / 100));
     },
     
     _getNormAbs() {

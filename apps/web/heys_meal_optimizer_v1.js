@@ -1822,9 +1822,6 @@
     VERSION: '1.0.0'
   };
 
-  console.log('[MealOptimizer] ✅ Module loaded v1.0.0 |', 
-    SYNERGY_RULES.length, 'synergy rules,',
-    BALANCE_RULES.length, 'balance rules,',
-    TIMING_RULES.length, 'timing rules');
+  // Verbose init log removed
 
 })(typeof window !== 'undefined' ? window : global);

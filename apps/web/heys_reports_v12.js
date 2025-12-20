@@ -255,81 +255,29 @@
     }
 
     // =========================================================================
-    // ТОЧНАЯ КОПИЯ логики расчёта энергозатрат из heys_day_v12.js
-    // Все переменные, порядок операций и округления должны совпадать дословно
+    // 🔬 TDEE v1.1.0: Консолидированный расчёт через единый модуль HEYS.TDEE
     // =========================================================================
     
-    const weight = toNum(dayObj.weightMorning || profile.weight || 70);
-    const prof = {height: profile.height||175, age: profile.age||30, sex: profile.sex||'male'};
-    
-    // Функция calcBMR из heys_day_v12.js:
-    // function calcBMR(w,prof){ const h=+prof.height||175,a=+prof.age||30,sex=(prof.sex||'male'); return Math.round(10*(+w||0)+6.25*h-5*a+(sex==='female'?-161:5)); }
-    const bmr = Math.round(10*(+weight||0) + 6.25*(+prof.height||175) - 5*(+prof.age||30) + ((prof.sex||'male')==='female'?-161:5));
-    
-    // Функция kcalPerMin из heys_day_v12.js:
-    // function kcalPerMin(met,w){ return Math.round((((+met||0)*(+w||0)*0.0175)-1)*10)/10; }
-    const kcalPerMin = (met,w) => Math.round((((+met||0)*(+w||0)*0.0175)-1)*10)/10;
-    
-    // Функция stepsKcal из heys_day_v12.js:
-    // function stepsKcal(steps,w,sex,len){ const coef=(sex==='female'?0.5:0.57); const km=(+steps||0)*(len||0.7)/1000; return Math.round(coef*(+w||0)*km*10)/10; }
-    const stepsKcal = (steps,w,sex,len) => { const coef=(sex==='female'?0.5:0.57); const km=(+steps||0)*(len||0.7)/1000; return Math.round(coef*(+w||0)*km*10)/10; };
-    
-    // Зоны и их kcal/мин из heys_day_v12.js:
-    // const z= (lsGet('heys_hr_zones',[]).map(x=>+x.MET||0)); const mets=[2.5,6,8,10].map((_,i)=>z[i]||[2.5,6,8,10][i]);
-    // ТОЧНО ТАК ЖЕ, как в heys_day_v12.js: всегда берём из localStorage, игнорируем переданные zones
-    const z = (U.lsGet ? U.lsGet('heys_hr_zones', []) : []).map(x => (+x.MET||0));
-    const mets = [2.5,6,8,10].map((_,i) => z[i]||[2.5,6,8,10][i]);
-    const kcalMin = mets.map(m => kcalPerMin(m, weight));
-    
-    // Функция trainK из heys_day_v12.js:
-    // const trainK= t=>(t.z||[0,0,0,0]).reduce((s,min,i)=> s+r1((+min||0)*(kcalMin[i]||0)),0);
-    // ВАЖНО: используем r1 внутри reduce, как в DayTab
-    const trainK = t => (t.z||[0,0,0,0]).reduce((s,min,i) => s+r1((+min||0)*(kcalMin[i]||0)), 0);
-    
-    // Тренировки из heys_day_v12.js:
-    // const TR=(day.trainings&&Array.isArray(day.trainings)&&day.trainings.length>=2)?day.trainings:[{z:[0,0,0,0]},{z:[0,0,0,0]}];
-    const TR = (dayObj.trainings && Array.isArray(dayObj.trainings) && dayObj.trainings.length >= 2) ? 
-               dayObj.trainings : [{z:[0,0,0,0]},{z:[0,0,0,0]}];
-    const train1k = trainK(TR[0]);
-    const train2k = trainK(TR[1]);
-    
-    // Шаги и быт из heys_day_v12.js:
-    // const stepsK=stepsKcal(day.steps||0,weight,prof.sex,0.7);
-    // const householdK=r1((+day.householdMin||0)*kcalPerMin(2.5,weight));
-    const stepsK = stepsKcal(dayObj.steps||0, weight, prof.sex||'male', 0.7);
-    const householdK = r1((+dayObj.householdMin||0) * kcalPerMin(2.5, weight));
-    
-    // Итоговые затраты из heys_day_v12.js:
-    // const actTotal=r1(train1k+train2k+stepsK+householdK);
-    // const tdee=r1(bmr+actTotal);
-    const actTotal = r1(train1k + train2k + stepsK + householdK);
-    
-    // 🔬 TEF v1.0.0: используем единый модуль HEYS.TEF
-    const tefData = HEYS.TEF?.calculateFromDayTot?.(totals) || { total: 0 };
-    const tefKcal = r1(tefData.total);
-    // baseExpenditure — без TEF, для расчёта optimum (норма не зависит от съеденного)
-    const baseExpenditure = r1(bmr + actTotal);
-    // dailyExp — с TEF, для отображения фактических затрат
-    const dailyExp = r1(baseExpenditure + tefKcal);
+    const tdeeResult = HEYS.TDEE?.calculate?.(dayObj, profile, { lsGet: U.lsGet }) || {};
+    const {
+      bmr = 0,
+      actTotal = 0,
+      trainingsKcal = 0,
+      train1k = 0,
+      train2k = 0,
+      stepsKcal: stepsK = 0,
+      householdKcal: householdK = 0,
+      tefKcal = 0,
+      baseExpenditure = 0,
+      tdee: dailyExp = 0,
+      weight = profile.weight || 70
+    } = tdeeResult;
 
     // Диагностический лог для отладки расхождений между Днём и Отчётностью
     if (window._HEYS_DEBUG_TDEE) {
       console.group('HEYS_TDEE_DEBUG [REPORTS] Расчёт для', dateStr);
-      console.log('HEYS_TDEE_DEBUG [REPORTS] Входные данные:');
-      console.log('HEYS_TDEE_DEBUG [REPORTS]   dayObj.weightMorning:', dayObj.weightMorning, '| профиль weight:', profile.weight, '| итог weight:', weight);
-      console.log('HEYS_TDEE_DEBUG [REPORTS]   steps:', dayObj.steps, '| householdMin:', dayObj.householdMin);
-      console.log('HEYS_TDEE_DEBUG [REPORTS]   trainings:', JSON.stringify(TR));
-      console.log('HEYS_TDEE_DEBUG [REPORTS]   HR zones (MET):', JSON.stringify(z));
-      console.log('HEYS_TDEE_DEBUG [REPORTS] Промежуточные расчёты:');
-      console.log('HEYS_TDEE_DEBUG [REPORTS]   BMR:', bmr);
-      console.log('HEYS_TDEE_DEBUG [REPORTS]   train1k:', train1k, '| train2k:', train2k);
-      console.log('HEYS_TDEE_DEBUG [REPORTS]   stepsK:', stepsK, '| householdK:', householdK);
-      console.log('HEYS_TDEE_DEBUG [REPORTS]   actTotal:', actTotal);
-      console.log('HEYS_TDEE_DEBUG [REPORTS]   tefKcal:', tefKcal);
-      console.log('HEYS_TDEE_DEBUG [REPORTS] Итоговые значения:');
-      console.log('HEYS_TDEE_DEBUG [REPORTS]   baseExpenditure (без TEF):', baseExpenditure);
-      console.log('HEYS_TDEE_DEBUG [REPORTS]   dailyExp (с TEF):', dailyExp);
-      console.log('HEYS_TDEE_DEBUG [REPORTS]   totals.kcal (съедено):', round1(totals.kcal));
+      console.log('HEYS_TDEE_DEBUG [REPORTS] Использован HEYS.TDEE.calculate()');
+      console.log('HEYS_TDEE_DEBUG [REPORTS] Результат:', JSON.stringify(tdeeResult, null, 2));
       console.groupEnd();
     }
 

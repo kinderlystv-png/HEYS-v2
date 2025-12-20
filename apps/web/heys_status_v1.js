@@ -496,6 +496,6 @@
     VERSION: '1.0.0'
   };
   
-  console.log('[HEYS] Status module v1.0.0 loaded');
+  // Verbose init log removed
   
 })(typeof window !== 'undefined' ? window : global);

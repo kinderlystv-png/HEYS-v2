@@ -1233,8 +1233,15 @@
   
   /**
    * Рассчитать BMR (Mifflin-St Jeor)
+   * 🔬 TDEE v1.1.0: делегируем в HEYS.TDEE.calcBMR() если доступен
    */
   function calculateBMR(profile) {
+    // Если есть модуль TDEE — используем его
+    if (HEYS.TDEE?.calcBMR) {
+      return HEYS.TDEE.calcBMR(profile);
+    }
+    
+    // Fallback: inline расчёт
     const weight = profile?.weight || 70;
     const height = profile?.height || 170;
     const age = profile?.age || 30;

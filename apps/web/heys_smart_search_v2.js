@@ -2740,9 +2740,6 @@
   HEYS.SmartSearchWithTypos = SmartSearchWithTypos;
   HEYS.SmartSearch = SmartSearchWithTypos; // alias
   
-  // Лог инициализации
-  console.log('🔍 HEYS SmartSearch v2.7.0 инициализирован');
-  console.log(`   📚 Синонимов: ${Object.keys(synonyms).length}, Транслит-пар: ${Object.keys(TRANSLIT_PAIRS).length}, Сокращений: ${Object.keys(ABBREVIATIONS).length}`);
-  console.log(`   🏷️ Категорий: ${Object.keys(CATEGORY_KEYWORDS).length}, Брендов: ${Object.keys(BRAND_DICTIONARY).length}, Кластеров: ${Object.keys(SEMANTIC_CLUSTERS).length}`);
+  // Verbose init log removed
 
 })(typeof window !== 'undefined' ? window : globalThis);

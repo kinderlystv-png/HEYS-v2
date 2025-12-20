@@ -8,17 +8,15 @@
         // 🔍 EARLY DEBUG: Проверяем auth token ДО любого кода
         try {
           const _earlyToken = localStorage.getItem('heys_supabase_auth_token');
-          console.log('[HEYS] 🚀 BOOT: auth token exists?', _earlyToken ? 'YES (' + _earlyToken.length + ' chars)' : 'NO');
           bootLog('auth token: ' + (_earlyToken ? 'YES' : 'NO'));
         } catch (e) {
-          console.log('[HEYS] 🚀 BOOT: error checking token', e.message);
           bootLog('auth check error: ' + e.message);
         }
         
 const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2025.12.17.1608.9e75988'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2025.12.20.1729.bf8351e'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
@@ -476,7 +474,6 @@ const HEYS = window.HEYS = window.HEYS || {};
         
         // === Принудительное обновление ===
         function forceUpdateAndReload(showModal = true) {
-          console.log('[HEYS] 🔄 Forcing update and reload...');
           
           if (showModal) {
             showUpdateModal('reloading');
@@ -532,7 +529,6 @@ const HEYS = window.HEYS = window.HEYS || {};
             
             // Сравниваем версии семантически (серверная должна быть НОВЕЕ)
             if (data.version && isNewerVersion(data.version, APP_VERSION)) {
-              console.log(`[HEYS] 🆕 Server has new version: ${data.version} (current: ${APP_VERSION})`);
               
               // === Защита от бесконечного цикла обновлений ===
               const attempt = JSON.parse(localStorage.getItem(UPDATE_ATTEMPT_KEY) || '{}');
@@ -540,7 +536,6 @@ const HEYS = window.HEYS = window.HEYS || {};
               
               // Cooldown — не пытаться чаще чем раз в минуту
               if (attempt.timestamp && (now - attempt.timestamp) < UPDATE_COOLDOWN_MS) {
-                console.log('[HEYS] Update cooldown active, skipping');
                 return false;
               }
               
@@ -563,7 +558,6 @@ const HEYS = window.HEYS = window.HEYS || {};
               
               // Предотвращаем дублирование обновления (надёжный флаг в localStorage)
               if (isUpdateLocked()) {
-                console.log('[HEYS] Update already in progress (locked), skipping');
                 return true;
               }
               setUpdateLock();
@@ -593,14 +587,11 @@ const HEYS = window.HEYS = window.HEYS || {};
               return true;
             } else if (data.version && data.version !== APP_VERSION) {
               // Серверная версия отличается, но НЕ новее — пропускаем
-              console.log(`[HEYS] ⏭️ Server version ${data.version} is older than current ${APP_VERSION}, skipping update`);
               return false;
             } else {
-              console.log(`[HEYS] ✅ Version up-to-date: ${APP_VERSION}`);
               return false;
             }
           } catch (e) {
-            console.log('[HEYS] ⚠️ Version check failed (offline?)');
             return false;
           }
         }
@@ -626,12 +617,10 @@ const HEYS = window.HEYS = window.HEYS || {};
           
           // === Сброс счётчика попыток при успешном обновлении ===
           if (isRealVersionChange || attempt.targetVersion === APP_VERSION) {
-            console.log('[HEYS] ✅ Update target reached, clearing attempts');
             localStorage.removeItem(UPDATE_ATTEMPT_KEY);
           }
           
           if (isRealVersionChange && hadPendingUpdate) {
-            console.log(`[HEYS] ✅ Updated: ${storedVersion} → ${APP_VERSION}`);
             
             // НЕ выходим из системы — это плохой UX!
             // Пользователь не должен терять сессию при обновлении.
@@ -642,14 +631,12 @@ const HEYS = window.HEYS = window.HEYS || {};
             sessionStorage.removeItem('heys_force_sync_after_update');
             
             if (needForceSync) {
-              console.log('[HEYS] 🔄 Force syncing data after update...');
               const clientId = localStorage.getItem('heys_client_current')?.replace(/^"|"$/g, '');
               if (clientId && HEYS.cloud?.syncClient) {
                 // Немного задержки чтобы cloud модуль успел инициализироваться
                 setTimeout(() => {
                   HEYS.cloud.syncClient(clientId, { force: true })
                     .then(() => {
-                      console.log('[HEYS] ✅ Data synced after update');
                       // Обновляем UI после синхронизации
                       if (HEYS.products?.reload) HEYS.products.reload();
                       if (HEYS.Day?.reloadFromStorage) HEYS.Day.reloadFromStorage();
@@ -736,7 +723,7 @@ const HEYS = window.HEYS = window.HEYS || {};
           try {
             await checkServerVersion(true);
           } catch (e) {
-            console.log('[HEYS] ⚠️ Silent version check failed (offline?)');
+            // Silent fail
           }
         };
         
@@ -1170,7 +1157,6 @@ const HEYS = window.HEYS = window.HEYS || {};
           }
           
           if (isReactReady() && isHeysReady()) {
-            console.log('[HEYS] ✅ Dependencies ready, initializing app...');
             bootLog('deps ready, init app');
             // Убираем loader если показывали
             document.getElementById('heys-init-loader')?.remove();
@@ -2021,8 +2007,7 @@ const HEYS = window.HEYS = window.HEYS || {};
             // 🔥 Warm-up ping — прогреваем Vercel serverless до первого реального запроса
             if (isProduction) {
               fetch(`${window.location.origin}/api/health`, { method: 'GET' })
-                .then(() => console.log('[HEYS] 🔥 Proxy warm-up OK'))
-                .catch(() => {}); // Игнорируем ошибки warm-up
+                .catch(() => {}); // Warm-up ping
             }
             
             HEYS.cloud.init({
@@ -3056,6 +3041,8 @@ const HEYS = window.HEYS = window.HEYS || {};
             const [cloudUser, setCloudUser] = useState(null);
             const [isInitializing, setIsInitializing] = useState(true);
             const [products, setProducts] = useState([]);
+            const [needsConsent, setNeedsConsent] = useState(false); // 📋 Требуются ли согласия
+            const [checkingConsent, setCheckingConsent] = useState(false); // 📋 Проверка согласий
             const [backupMeta, setBackupMeta] = useState(() => {
               if (U && typeof U.lsGet === 'function') {
                 try {
@@ -3073,6 +3060,8 @@ const HEYS = window.HEYS = window.HEYS || {};
               clients, setClients,
               clientsSource, setClientsSource,
               clientId, setClientId,
+              needsConsent, setNeedsConsent,
+              checkingConsent, setCheckingConsent,
               newName, setNewName,
               cloudUser, setCloudUser,
               isInitializing, setIsInitializing,
@@ -3500,6 +3489,8 @@ const HEYS = window.HEYS = window.HEYS || {};
               products, setProducts,
               backupMeta, setBackupMeta,
               backupBusy, setBackupBusy,
+              needsConsent, setNeedsConsent,
+              checkingConsent, setCheckingConsent,
             } = useClientState(cloud, U);
             const [loginError, setLoginError] = useState('');
             const {
@@ -3542,6 +3533,38 @@ const HEYS = window.HEYS = window.HEYS || {};
                 unsubExit?.();
               };
             }, []);
+            
+            // === CONSENT CHECK AFTER LOGIN ===
+            // Проверяем согласия клиента после входа (только для клиентов, не кураторов)
+            useEffect(() => {
+              if (!clientId) {
+                setNeedsConsent(false);
+                setCheckingConsent(false);
+                return;
+              }
+              // Кураторы (cloudUser) не требуют согласий
+              if (cloudUser) {
+                setNeedsConsent(false);
+                setCheckingConsent(false);
+                return;
+              }
+              // Проверяем согласия клиента
+              if (HEYS.Consents?.api?.checkRequired) {
+                setCheckingConsent(true);
+                HEYS.Consents.api.checkRequired(clientId).then(result => {
+                  setNeedsConsent(!result.valid);
+                  setCheckingConsent(false);
+                  if (!result.valid) {
+                    console.log('[CONSENTS] Client needs to accept consents:', result.missing);
+                  }
+                }).catch(err => {
+                  console.error('[CONSENTS] Error checking consents:', err);
+                  setCheckingConsent(false);
+                  // При ошибке НЕ блокируем вход — лучше пустить и исправить позже
+                  setNeedsConsent(false);
+                });
+              }
+            }, [clientId, cloudUser]);
             
             // === SWIPE NAVIGATION ===
             // Свайп работает только между 4 вкладками переключателя (по кругу)
@@ -4277,7 +4300,6 @@ const HEYS = window.HEYS = window.HEYS || {};
             useEffect(() => {
               const handleClientsUpdated = (e) => {
                 if (e.detail && e.detail.clients) {
-                  console.log('[HEYS] Clients updated from:', e.detail.source);
                   setClients(e.detail.clients);
                 }
               };
@@ -4580,6 +4602,11 @@ const HEYS = window.HEYS = window.HEYS || {};
                                   U.lsSet('heys_client_current', res.clientId);
                                 }
                                 try { localStorage.setItem('heys_last_client_id', res.clientId); } catch (_) {}
+                                // 📱 Сохраняем телефон для ПЭП (SMS-верификация согласий)
+                                try { 
+                                  const phoneNorm = HEYS.auth?.normalizePhone?.(phone) || phone;
+                                  localStorage.setItem('heys_client_phone', phoneNorm); 
+                                } catch (_) {}
                                 setClientId(res.clientId);
                                 
                                 // 🔄 Диспатчим событие для показа утреннего чек-ина (как после облачной синхронизации)
@@ -5042,6 +5069,29 @@ const HEYS = window.HEYS = window.HEYS || {};
                 })
               : null;
 
+            // 📜 Consent Gate: если клиенту нужно подписать согласия
+            // Показывается после логина, но ДО основного приложения
+            const clientPhone = typeof localStorage !== 'undefined' ? localStorage.getItem('heys_client_phone') : null;
+            const consentGate = !gate && !desktopGate && clientId && needsConsent && !checkingConsent && HEYS.Consents?.ConsentScreen
+              ? React.createElement(HEYS.Consents.ConsentScreen, {
+                  clientId: clientId,
+                  phone: clientPhone,
+                  onComplete: () => {
+                    console.log('[CONSENTS] ✅ Согласия приняты');
+                    setNeedsConsent(false);
+                  },
+                  onCancel: () => {
+                    // Отмена = выход (нельзя использовать приложение без согласий)
+                    console.log('[CONSENTS] ❌ Отказ от согласий — выход');
+                    localStorage.removeItem('heys_pin_auth_client');
+                    localStorage.removeItem('heys_client_phone');
+                    window.HEYS?.cloud?._setPinAuthMode?.(false, null);
+                    setClientId(null);
+                    window.location.reload();
+                  }
+                })
+              : null;
+
             useEffect(() => {
               // Минимальная инициализация — только загрузка из localStorage
               const initLocalData = () => {
@@ -5079,7 +5129,6 @@ const HEYS = window.HEYS = window.HEYS || {};
                   setClientId(pinAuthClient);
                   window.HEYS = window.HEYS || {};
                   window.HEYS.currentClientId = pinAuthClient;
-                  console.log('[HEYS] 🔐 PIN auth client restored:', pinAuthClient.slice(0, 8) + '...');
                 }
 
                 setSyncVer((v) => v + 1);
@@ -5100,14 +5149,27 @@ const HEYS = window.HEYS = window.HEYS || {};
                 return;
               }
 
-              // Есть сеть — пробуем восстановить сессию куратора
-              // Читаем сохранённого пользователя из localStorage
-              // ⚠️ Проверка expires_at отключена — токены отключены в Supabase
+              // 🔐 Проверяем expires_at — если токен истёк, не восстанавливаем сессию
               const readStoredAuthUser = () => {
                 try {
                   const stored = localStorage.getItem('heys_supabase_auth_token');
                   if (!stored) return null;
                   const parsed = JSON.parse(stored);
+                  
+                  // 🚨 КРИТИЧНО: Проверяем expires_at
+                  const expiresAt = parsed?.expires_at;
+                  if (expiresAt) {
+                    const now = Date.now();
+                    const expiresAtMs = expiresAt * 1000;
+                    // Даём буфер 5 минут — если токен истекает через <5 мин, считаем его невалидным
+                    const BUFFER_MS = 5 * 60 * 1000;
+                    if (expiresAtMs - now < BUFFER_MS) {
+                      // Очищаем невалидный токен
+                      try { localStorage.removeItem('heys_supabase_auth_token'); } catch (_) {}
+                      return null;
+                    }
+                  }
+                  
                   return parsed?.user || null;
                 } catch (e) { 
                   return null; 
@@ -5125,7 +5187,6 @@ const HEYS = window.HEYS = window.HEYS || {};
                 // Ставим пользователя, затем пробуем сделать лёгкий запрос
                 setCloudUser(storedUser);
                 setStatus('online');
-                console.log('[HEYS] ✅ Сессия восстановлена (storage):', storedUser.email || storedUser.id);
 
                 // Тестируем доступ к таблице clients — если RLS/сессия не ок, просто оставим gate для входа
                 cloud.client
@@ -5134,11 +5195,11 @@ const HEYS = window.HEYS = window.HEYS || {};
                   .limit(1)
                   .then(({ error: testError }) => {
                     if (testError) {
-                      console.log('[HEYS] ⚠️ Сессия невалидна (test failed), требуется вход');
+                      // Сессия невалидна — требуется вход
                     }
                   })
                   .catch(() => {
-                    console.log('[HEYS] ⚠️ Сессия невалидна (exception), требуется вход');
+                    // Сессия невалидна — требуется вход
                   })
                   .finally(() => {
                     setIsInitializing(false);
@@ -5231,14 +5292,18 @@ const HEYS = window.HEYS = window.HEYS || {};
             
             // Morning Check-in блокирует основной контент (показывается ДО загрузки)
             const isMorningCheckinBlocking = showMorningCheckin === true && HEYS.MorningCheckin;
+            
+            // Проверка согласий блокирует всё (показывается ДО morning checkin)
+            const isConsentBlocking = needsConsent || checkingConsent;
 
             return React.createElement(
               React.Fragment,
               null,
               gate,
               desktopGate,
-              // === MORNING CHECK-IN (вес, сон, шаги — показывается ВМЕСТО контента) ===
-              isMorningCheckinBlocking && React.createElement(HEYS.MorningCheckin, {
+              consentGate,
+              // === MORNING CHECK-IN (вес, сон, шаги — показывается ВМЕСТО контента, НО после согласий) ===
+              !isConsentBlocking && isMorningCheckinBlocking && React.createElement(HEYS.MorningCheckin, {
                 onComplete: (data) => {
                   // console.log('[App] 🎉 MorningCheckin onComplete вызван');
                   // НЕ инкрементим syncVer — данные обновляются через событие 'heys:day-updated'
@@ -5253,7 +5318,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                 }
               }),
               // === OFFLINE BANNER (показывается 3 сек при потере сети) ===
-              !isMorningCheckinBlocking && showOfflineBanner && React.createElement(
+              !isConsentBlocking && !isMorningCheckinBlocking && showOfflineBanner && React.createElement(
                 'div',
                 { className: 'offline-banner' },
                 React.createElement('span', { className: 'offline-banner-icon' }, '📡'),
@@ -5262,7 +5327,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                 )
               ),
               // === ONLINE BANNER (показывается 2 сек при восстановлении сети) ===
-              !isMorningCheckinBlocking && showOnlineBanner && React.createElement(
+              !isConsentBlocking && !isMorningCheckinBlocking && showOnlineBanner && React.createElement(
                 'div',
                 { className: 'online-banner' },
                 React.createElement('span', { className: 'online-banner-icon' }, '✓'),
@@ -5271,12 +5336,12 @@ const HEYS = window.HEYS = window.HEYS || {};
                 )
               ),
               // Toast убран — отвлекает
-              // Основной контент — скрыт во время Morning Check-in или когда показывается gate (login/client select)
+              // Основной контент — скрыт во время Morning Check-in, Consent Screen или когда показывается gate (login/client select)
               React.createElement(
                 'div',
                 { 
                   className: 'wrap',
-                  style: (isMorningCheckinBlocking || !clientId) ? { display: 'none' } : undefined
+                  style: (isConsentBlocking || isMorningCheckinBlocking || !clientId) ? { display: 'none' } : undefined
                 },
                 React.createElement(
                   'div',
@@ -5678,11 +5743,13 @@ const HEYS = window.HEYS = window.HEYS || {};
                                       : (window.HEYS.products?.getAll?.() || [])
                                       .length > 0 ? window.HEYS.products.getAll()
                                       : (U.lsGet?.('heys_products', []) || []);
+                                    // Fallback chain для profile
+                                    const effectiveProfile = cachedProfile || (U && U.lsGet ? U.lsGet('heys_profile', {}) : {});
                                     if (!getActiveDaysForMonthFn || !clientId || effectiveProducts.length === 0) {
                                       return new Map();
                                     }
                                     try {
-                                      return getActiveDaysForMonthFn(year, month, cachedProfile, effectiveProducts);
+                                      return getActiveDaysForMonthFn(year, month, effectiveProfile, effectiveProducts);
                                     } catch (e) {
                                       return new Map();
                                     }

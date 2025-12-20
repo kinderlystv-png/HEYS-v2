@@ -15,5 +15,11 @@
     "key": "ctrl+shift+h",
     "command": "workbench.action.tasks.runTask",
     "args": "Start Frontend (Port 3001)"
+  },
+  // 4. запуск лендинга на Ctrl+Shift+J
+  {
+    "key": "ctrl+shift+j",
+    "command": "workbench.action.tasks.runTask",
+    "args": "Start Landing (Port 3003)"
   }
 ]

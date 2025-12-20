@@ -444,6 +444,6 @@
   // Для совместимости — алиас
   HEYS.EC = HEYS.ExpandableCard;
   
-  console.log('[HEYS] ExpandableCard v1.0.0 loaded');
+  // Verbose init log removed
   
 })(typeof window !== 'undefined' ? window : global);

@@ -1659,6 +1659,19 @@
               return { ...prevDay, meals, updatedAt: Date.now() };
             });
 
+            // 🔧 FIX: Сразу сохраняем день после добавления продукта
+            // Без этого setDay() только ставит debounce 500ms, а гонка с облачным sync
+            // может привести к тому что heys_grams_* сохранятся раньше чем day
+            // requestAnimationFrame + setTimeout гарантирует выполнение после React re-render и useEffect
+            requestAnimationFrame(() => {
+              setTimeout(() => {
+                if (HEYS.Day?.requestFlush) {
+                  HEYS.Day.requestFlush();
+                  console.log('[DayTab] 💾 Forced flush after product add');
+                }
+              }, 50);
+            });
+
             try { navigator.vibrate?.(10); } catch(e) {}
 
             window.dispatchEvent(new CustomEvent('heysProductAdded', {
@@ -1712,7 +1725,6 @@
               return { ...prevDay, meals, updatedAt: Date.now() };
             });
             
-            console.log('[HEYS] Photo added to meal', mealIndex, '(pending upload)');
             try { navigator.vibrate?.(10); } catch(e) {}
             
             // Асинхронно загружаем в облако
@@ -1736,7 +1748,6 @@
                     });
                     return { ...prevDay, meals, updatedAt: Date.now() };
                   });
-                  console.log('[HEYS] Photo uploaded to cloud:', result.url);
                 } else if (result?.pending) {
                   // Сохранено для загрузки позже (offline)
                   setDay((prevDay = {}) => {
@@ -1753,7 +1764,6 @@
                     });
                     return { ...prevDay, meals, updatedAt: Date.now() };
                   });
-                  console.log('[HEYS] Photo saved for later upload (offline)');
                 }
               } catch (e) {
                 // Убираем флаг uploading при ошибке
@@ -3525,7 +3535,27 @@
 
   HEYS.DayTab=function DayTab(props){
   
+  // === CRITICAL: Глобальный флаг logout — проверяем ДО любых хуков! ===
+  // React требует чтобы хуки вызывались всегда в одном порядке,
+  // но мы можем сделать return ДО первого хука
+  if (window.HEYS?._isLoggingOut) {
+    return React.createElement('div', { 
+      className: 'flex items-center justify-center h-screen',
+      style: { background: 'var(--bg-primary, #fff)' }
+    }, 'Выход...');
+  }
+  
   const {useState,useMemo,useEffect,useRef}=React;
+  
+  // === EARLY RETURN: защита при logout/auth clearing ===
+  // Во время logout очищаются данные → компонент может получить undefined
+  // Вместо краша просто показываем loading
+  if (!props || props._isLoggingOut) {
+    return React.createElement('div', { 
+      className: 'flex items-center justify-center h-screen',
+      style: { background: 'var(--bg-primary, #fff)' }
+    }, 'Загрузка...');
+  }
   
   // === POPUP WITH BACKDROP — переиспользуемый компонент ===
   // Универсальная обёртка для попапов с backdrop'ом для закрытия по клику вне попапа
@@ -3785,6 +3815,18 @@
   
   const setDay = setDayRaw;
   const day = dayRaw;
+  
+  // === EARLY RETURN #2: защита если day стал undefined при logout ===
+  // Это может произойти при race condition когда localStorage очищается во время рендера
+  if (!day) {
+    return React.createElement('div', { 
+      className: 'flex items-center justify-center h-screen',
+      style: { background: 'var(--bg-primary, #fff)' }
+    }, 'Загрузка...');
+  }
+  
+  // ЗАЩИТА ОТ КРАША: safeMeals всегда массив, даже когда day=undefined при logout
+  const safeMeals = day?.meals || [];
 
   // cleanEmptyTrainings определена выше (для совместимости с прежним кодом вызовы остаются)
 
@@ -3854,7 +3896,6 @@
           // ЗАЩИТА: не перезаписываем более свежие данные
           // handleDayUpdated может уже загрузить sync данные
           if (v.updatedAt && lastLoadedUpdatedAtRef.current > 0 && v.updatedAt < lastLoadedUpdatedAtRef.current) {
-            console.log('[HEYS] 📅 doLocal() SKIPPED — newer data already loaded | storage:', v.updatedAt, '| loaded:', lastLoadedUpdatedAtRef.current);
             return;
           }
           lastLoadedUpdatedAtRef.current = v.updatedAt || Date.now();
@@ -3912,7 +3953,6 @@
             dayComment: ''
           }, profNow);
           setDay(defaultDay);
-          console.log('[HEYS] 📅 doLocal() created NEW day | date:', date);
         }
         
         // ВАЖНО: данные загружены, теперь можно сохранять
@@ -3958,19 +3998,15 @@
         const forceReload = e.detail?.forceReload || false;
         const field = e.detail?.field || 'unknown';
         
-        console.log('[HEYS] 📅 handleDayUpdated RECEIVED | date:', updatedDate, '| field:', field, '| source:', source, '| forceReload:', forceReload, '| currentDate:', date);
-        
         // 🔒 Игнорируем события во время начальной синхронизации
         // doLocal() в конце синхронизации загрузит все финальные данные
         if (isSyncingRef.current && (source === 'cloud' || source === 'merge')) {
-          console.log('[HEYS] 📅 Ignored event during initial sync | source:', source);
           return;
         }
         
         // Блокируем ВСЕ внешние обновления на 3 секунды после локального изменения
         // Но НЕ блокируем forceReload (от шагов модалки)
         if (!forceReload && Date.now() < blockCloudUpdatesUntilRef.current) {
-          console.log('[HEYS] 📅 Blocked external update during local edit | source:', source, '| remaining:', blockCloudUpdatesUntilRef.current - Date.now(), 'ms');
           return;
         }
         
@@ -4057,72 +4093,42 @@
       };
     }, [date]);
 
-    const z= (lsGet('heys_hr_zones',[]).map(x=>+x.MET||0)); const mets=[2.5,6,8,10].map((_,i)=>z[i]||[2.5,6,8,10][i]);
-    const weight=+day.weightMorning||+prof.weight||70; const kcalMin=mets.map(m=>kcalPerMin(m,weight));
-    const trainK= t=>(t.z||[0,0,0,0]).reduce((s,min,i)=> s+r0((+min||0)*(kcalMin[i]||0)),0);
-    const TR=(day.trainings&&Array.isArray(day.trainings))?day.trainings:[];
-  const train1k=trainK(TR[0]||{z:[0,0,0,0]}), train2k=trainK(TR[1]||{z:[0,0,0,0]}), train3k=trainK(TR[2]||{z:[0,0,0,0]});
-  const stepsK=r0(stepsKcal(day.steps||0,weight,prof.sex,0.7));
-  // Backward compatible: householdActivities массив или legacy householdMin
-  const householdActivities = day.householdActivities || (day.householdMin > 0 ? [{ minutes: day.householdMin, time: day.householdTime || '' }] : []);
-  const totalHouseholdMin = householdActivities.reduce((sum, h) => sum + (+h.minutes || 0), 0);
-  const householdK=r0(totalHouseholdMin*kcalPerMin(2.5,weight));
-  const actTotal=r0(train1k+train2k+train3k+stepsK+householdK);
-  const bmr=calcBMR(weight,prof);
-  
-  // 🆕 v3.6.0: Next-Day Training Effect (NDTE) — буст метаболизма от вчерашней тренировки
-  // Научное обоснование: Magkos 2008, Jamurtas 2004 — 500-1000 ккал тренировка → +5-15% к REE
-  let ndteData = { active: false, tdeeBoost: 0 };
-  if (HEYS.InsulinWave?.calculateNDTE && HEYS.InsulinWave?.getPreviousDayTrainings) {
-    const prevTrainings = HEYS.InsulinWave.getPreviousDayTrainings(day.date, lsGet);
-    if (prevTrainings.totalKcal >= 200) {
-      const heightM = (+prof.height || 170) / 100;
-      const bmi = weight && heightM ? r0(weight / (heightM * heightM) * 10) / 10 : 22;
-      ndteData = HEYS.InsulinWave.calculateNDTE({
-        trainingKcal: prevTrainings.totalKcal,
-        hoursSince: prevTrainings.hoursSince,
-        bmi,
-        trainingType: prevTrainings.dominantType || 'cardio',
-        trainingsCount: prevTrainings.trainings.length
-      });
-    }
-  }
-  const ndteBoostKcal = r0(bmr * ndteData.tdeeBoost);
-  
-  // 🆕 v3.9.0: TEF (Thermic Effect of Food) — затраты на переваривание
-  // Научное обоснование: Westerterp 2004, Tappy 1996 — белок 20-30%, углеводы 5-10%, жиры 0-3%
-  const dayMacros = (function() {
-    let prot = 0, carbs = 0, fat = 0;
-    (day.meals||[]).forEach(m => {
-      const t = M.mealTotals ? M.mealTotals(m, pIndex) : { prot: 0, carbs: 0, fat: 0 };
-      prot += t.prot || 0;
-      carbs += t.carbs || 0;
-      fat += t.fat || 0;
-    });
-    return { prot, carbs, fat };
-  })();
-  // 🔬 TEF v1.0.0: используем единый модуль HEYS.TEF
-  const tefData = HEYS.TEF?.calculateFromMacros?.(dayMacros) || { total: 0 };
-  const tefKcal = tefData.total;
-  
-  // 🔬 v3.9.1: Разделение baseExpenditure (для нормы) и tdee (для UI)
-  // baseExpenditure — стабильная база без TEF, используется для расчёта optimum
-  // tdee — включает TEF, показывается пользователю как фактические затраты
-  const baseExpenditure = r0(bmr + actTotal + ndteBoostKcal);  // БЕЗ TEF — для нормы
-  const tdee = r0(baseExpenditure + tefKcal);                   // С TEF — для UI
-  
-  const profileTargetDef=+(lsGet('heys_profile',{}).deficitPctTarget)||0; // отрицательное число для дефицита
-  // day.deficitPct может быть '', null, undefined — проверяем все случаи (как в currentDeficit для UI)
-  const dayTargetDef = (day.deficitPct !== '' && day.deficitPct != null) ? +day.deficitPct : profileTargetDef;
-  
-  // Коррекция на менструальный цикл (×1.05-1.10 в менструальную фазу)
-  const cycleKcalMultiplier = HEYS.Cycle?.getKcalMultiplier?.(day.cycleDay) || 1;
-  // Optimum рассчитывается от baseExpenditure (без TEF), чтобы норма не "догоняла" съеденное
-  const baseOptimum = r0(baseExpenditure*(1+dayTargetDef/100));
-  const optimum = r0(baseOptimum * cycleKcalMultiplier);
+    // 🔬 TDEE v1.1.0: Консолидированный расчёт через единый модуль HEYS.TDEE
+    // Заменяет ~60 строк inline кода — bmr, actTotal, TEF, NDTE, optimum
+    const tdeeResult = HEYS.TDEE?.calculate?.(day, prof, { lsGet, pIndex }) || {};
+    const {
+      bmr = 0,
+      actTotal = 0,
+      trainingsKcal: trainingsK = 0,
+      train1k = 0,
+      train2k = 0,
+      train3k = 0,
+      stepsKcal: stepsK = 0,
+      householdKcal: householdK = 0,
+      totalHouseholdMin = 0,
+      ndteBoost: ndteBoostKcal = 0,
+      ndteData = { active: false, tdeeBoost: 0 },
+      tefKcal = 0,
+      tefData = { total: 0, breakdown: { protein: 0, carbs: 0, fat: 0 } },
+      baseExpenditure = 0,
+      tdee = 0,
+      optimum = 0,
+      weight = 70,
+      mets = [2.5, 6, 8, 10],
+      kcalMin = [0, 0, 0, 0],
+      deficitPct: dayTargetDef = 0,
+      cycleMultiplier: cycleKcalMultiplier = 1
+    } = tdeeResult;
+    
+    // Дополнительные переменные для UI (не входят в модуль TDEE)
+    const TR = (day.trainings && Array.isArray(day.trainings)) ? day.trainings : [];
+    const householdActivities = (day.householdActivities && Array.isArray(day.householdActivities)) ? day.householdActivities : [];
+    const z = mets; // Алиас для debug лога (совместимость)
+    const trainK = t => (t.z || [0, 0, 0, 0]).reduce((s, min, i) => s + r0((+min || 0) * (kcalMin[i] || 0)), 0);
+    const profileTargetDef = +(lsGet('heys_profile', {}).deficitPctTarget) || 0;
 
-  const eatenKcal=(day.meals||[]).reduce((a,m)=>{ const t=(M.mealTotals? M.mealTotals(m,pIndex): {kcal:0}); return a+(t.kcal||0); },0);
-  const factDefPct = tdee? r0(((eatenKcal - tdee)/tdee)*100) : 0; // <0 значит дефицит
+    const eatenKcal = (day.meals || []).reduce((a, m) => { const t = (M.mealTotals ? M.mealTotals(m, pIndex) : { kcal: 0 }); return a + (t.kcal || 0); }, 0);
+    const factDefPct = tdee ? r0(((eatenKcal - tdee) / tdee) * 100) : 0; // <0 значит дефицит
 
   // Диагностический лог для отладки расхождений между Днём и Отчётностью
   if (window._HEYS_DEBUG_TDEE) {
@@ -6512,6 +6518,19 @@
     // addMeal теперь открывает новую модульную модалку
     const addMeal = React.useCallback(() => { 
       console.log('[HEYS] 🍽 addMeal() called | date:', date, '| isHydrated:', isHydrated);
+      
+      // 🔒 Read-only гейтинг: проверяем подписку
+      if (HEYS.Subscriptions && !HEYS.Subscriptions.canEdit()) {
+        console.log('[HEYS] 🚫 addMeal blocked — subscription inactive');
+        // Показываем уведомление о необходимости оплаты
+        if (HEYS.Subscriptions.showPaymentRequired) {
+          HEYS.Subscriptions.showPaymentRequired();
+        } else {
+          alert('Подписка не активна. Оформите подписку для продолжения.');
+        }
+        return;
+      }
+      
       if (isMobile && HEYS.MealStep) {
         // Новая модульная модалка с шагами
         HEYS.MealStep.showAddMeal({
@@ -6978,7 +6997,7 @@
         delete HEYS.getMealQualityScore;
         delete HEYS.getMealType;
       };
-    }, [day.meals, pIndex]);
+    }, [safeMeals, pIndex]);
 
     // === Advice Module Integration ===
     // Собираем uiState для проверки занятости пользователя
@@ -7894,7 +7913,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         avgGI, giCategory: { color: giMultiplier === 1.2 ? '#22c55e' : giMultiplier === 1.0 ? '#eab308' : giMultiplier === 0.85 ? '#f97316' : '#ef4444', text: giCategory }, giMultiplier,
         waveHistory: [], overlaps: [], hasOverlaps: false, gapQuality: 'unknown'
       };
-    }, [day.meals, pIndex, currentMinute]); // currentMinute для авто-обновления
+    }, [safeMeals, pIndex, currentMinute]); // currentMinute для авто-обновления
 
     // Сортируем приёмы для отображения (последние наверху)
     const sortedMealsForDisplay = React.useMemo(() => {
@@ -7912,7 +7931,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // Обратный порядок: последние (позже) наверху
         return timeB - timeA;
       });
-    }, [day.meals]);
+    }, [safeMeals]);
 
     const mealsUI = sortedMealsForDisplay.map((sortedMeal, displayIndex) => {
       const mi = (day.meals || []).findIndex(m => m.id === sortedMeal.id);
@@ -8097,14 +8116,38 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       waterGoal    // Динамическая норма воды из waterGoalBreakdown
     }) : emptyAdviceResult;
     
-    const { primary: advicePrimary, relevant: adviceRelevant, adviceCount, allAdvices, badgeAdvices, markShown, rateAdvice, scheduleAdvice, scheduledCount } = adviceResult;
+    // 🛡️ Защита от краша при logout (adviceResult может быть undefined в race condition)
+    const safeAdviceResult = adviceResult || emptyAdviceResult;
+    const { 
+      primary: advicePrimary = null, 
+      relevant: adviceRelevant = [], 
+      adviceCount = 0, 
+      allAdvices = [], 
+      badgeAdvices = [], 
+      markShown = null, 
+      rateAdvice = null, 
+      scheduleAdvice = null, 
+      scheduledCount = 0 
+    } = safeAdviceResult || {};
+    
+    // 🛡️ Стабильные ссылки для React зависимостей (защита от undefined в race condition)
+    const safeBadgeAdvices = badgeAdvices || [];
+    const safeDismissedAdvices = dismissedAdvices || new Set();
+    const safeHiddenUntilTomorrow = hiddenUntilTomorrow || new Set();
     
     // Количество непрочитанных советов (для badge на FAB кнопке)
     // badgeAdvices — массив советов с полной фильтрацией (как trigger='manual')
     const totalAdviceCount = React.useMemo(() => {
-      if (!badgeAdvices?.length) return 0;
-      return badgeAdvices.filter(a => !dismissedAdvices.has(a.id) && !hiddenUntilTomorrow.has(a.id)).length;
-    }, [badgeAdvices, dismissedAdvices, hiddenUntilTomorrow]);
+      // 🛡️ Защита от краша при logout (race condition)
+      if (!Array.isArray(safeBadgeAdvices) || safeBadgeAdvices.length === 0) return 0;
+      try {
+        return safeBadgeAdvices.filter(a => 
+          a && a.id && !safeDismissedAdvices.has(a.id) && !safeHiddenUntilTomorrow.has(a.id)
+        ).length;
+      } catch (e) {
+        return 0;
+      }
+    }, [safeBadgeAdvices, safeDismissedAdvices, safeHiddenUntilTomorrow]);
     
     // Обновляем badge в нижней навигации
     React.useEffect(() => {
@@ -8979,23 +9022,26 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const days = [];
         const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
         
-        // Строим Map продуктов из state (ключ = name для поиска по названию)
+        // Строим Map продуктов из state (ключ = lowercase name для поиска по названию)
+        // ВАЖНО: getDayData ищет по lowercase, поэтому ключ тоже должен быть lowercase
         const productsMap = new Map();
         (products || []).forEach(p => { 
           if (p && p.name) {
-            const name = String(p.name).trim();
+            const name = String(p.name).trim().toLowerCase();
             if (name) productsMap.set(name, p);
           }
         });
         
         // Получаем данные activeDays для нескольких месяцев
         const getActiveDaysForMonth = (HEYS.dayUtils && HEYS.dayUtils.getActiveDaysForMonth) || (() => new Map());
+        
         const allActiveDays = new Map();
         
         // Собираем данные за 3 месяца назад (для поиска первого дня с данными)
         for (let monthOffset = 0; monthOffset >= -3; monthOffset--) {
           const checkDate = new Date(realToday);
           checkDate.setMonth(checkDate.getMonth() + monthOffset);
+          
           const monthData = getActiveDaysForMonth(checkDate.getFullYear(), checkDate.getMonth(), prof, products);
           monthData.forEach((v, k) => allActiveDays.set(k, v));
         }
@@ -9163,11 +9209,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               fallbackSleepHours = (endMin - startMin) / 60;
             }
             const fallbackTotalKcal = Math.round(totalKcal);
+            // 🔧 FIX: Используем сохранённую норму дня если есть, иначе текущий optimum
+            const fallbackTarget = +dayData.savedDisplayOptimum > 0 ? +dayData.savedDisplayOptimum : optimum;
+            // 🔧 FIX: Используем сохранённые калории если есть, иначе пересчитанные
+            const fallbackKcal = +dayData.savedEatenKcal > 0 ? +dayData.savedEatenKcal : fallbackTotalKcal;
             return { 
               date: dateStr, 
-              kcal: fallbackTotalKcal, 
-              target: optimum,
-              ratio: optimum > 0 ? fallbackTotalKcal / optimum : 0, // 🆕 Ratio для инсайтов
+              kcal: fallbackKcal, 
+              target: fallbackTarget,
+              ratio: fallbackTarget > 0 ? fallbackKcal / fallbackTarget : 0, // 🆕 Ratio для инсайтов
               isToday: false, 
               hasTraining: dayTrainings.length > 0, 
               trainingTypes: dayTrainings.map(t => t.type || 'cardio'),
@@ -9184,6 +9234,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             };
           }
           
+          // Нет данных дня — используем текущий optimum как fallback (день пустой, delta не важна)
           return { date: dateStr, kcal: 0, target: optimum, ratio: 0, isToday: false, hasTraining: false, trainingTypes: [], sleepHours: 0, sleepQuality: 0, dayScore: 0, steps: 0, waterMl: 0, weightMorning: 0, prot: 0, fat: 0, carbs: 0, isRefeedDay: false };
         };
         
@@ -11404,19 +11455,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       return optimum;
     }, [optimum, caloricDebt, day.isRefeedDay]);
     
-    // 🔧 FIX: Сохраняем displayOptimum в данные дня для корректного отображения в sparkline
-    // Это позволяет показывать правильную норму (с учётом долга) при просмотре исторических дней
+    // 🔧 FIX: Сохраняем displayOptimum и eatenKcal в данные дня для корректного отображения в sparkline
+    // Это позволяет показывать правильную норму (с учётом долга) и калории при просмотре исторических дней
+    // savedEatenKcal нужен чтобы не пересчитывать калории из продуктов (которые могут измениться)
     React.useEffect(() => {
       if (!displayOptimum || displayOptimum <= 0) return;
-      // Только если значение изменилось (избегаем лишних ре-рендеров)
-      if (day.savedDisplayOptimum === displayOptimum) return;
+      // Только если значения изменились (избегаем лишних ре-рендеров)
+      const roundedEaten = r0(eatenKcal);
+      const needsUpdate = day.savedDisplayOptimum !== displayOptimum || day.savedEatenKcal !== roundedEaten;
+      if (!needsUpdate) return;
       
       setDay(prev => ({
         ...prev,
         savedDisplayOptimum: displayOptimum,
+        savedEatenKcal: roundedEaten, // 🆕 Сохраняем фактические калории для корректного sparkline
         updatedAt: Date.now(), // 🔧 Обновляем timestamp для гарантированного autosave
       }));
-    }, [displayOptimum, day.savedDisplayOptimum, setDay]);
+    }, [displayOptimum, eatenKcal, day.savedDisplayOptimum, day.savedEatenKcal, setDay]);
     
     // Осталось калорий с учётом долга
     const displayRemainingKcal = React.useMemo(() => {
@@ -11806,7 +11861,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       } catch (e) {}
       
       return { meals: data, totalKcal, maxKcal, targetKcal: optimum || 2000, qualityStreak, avgQualityScore, bestMealIndex, yesterdayAvgScore };
-    }, [day.meals, pIndex, optimum]);
+    }, [safeMeals, pIndex, optimum]);
 
     // Делаем данные волны доступными глобально для карточек приёмов
     React.useEffect(() => {
@@ -11959,7 +12014,52 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             console.log('[PullRefresh] 🚀 Starting force sync for client:', clientId.substring(0, 8));
             
             // 🔐 Универсальный sync — автоматически выбирает RPC для PIN auth
-            await cloud.syncClient(clientId, { force: true });
+            const syncResult = await cloud.syncClient(clientId, { force: true });
+            
+            // 🚨 Проверяем нужна ли авторизация (токен истёк/отсутствует)
+            if (syncResult?.authRequired) {
+              console.log('[PullRefresh] 🔐 Auth required — triggering logout');
+              
+              // 🚨 CRITICAL: Устанавливаем глобальный флаг ПЕРЕД очисткой данных
+              // Это предотвращает краш хуков при попытке React перерендерить компонент
+              window.HEYS = window.HEYS || {};
+              window.HEYS._isLoggingOut = true;
+              console.log('[PullRefresh] 🚫 Set _isLoggingOut flag');
+              
+              // Сбрасываем ВСЁ состояние авторизации для показа экрана логина
+              try {
+                // 🔧 FIX: Используем lsSet для правильной очистки (включая memory cache)
+                // и localStorage.removeItem для гарантии удаления сырого ключа
+                localStorage.removeItem('heys_supabase_auth_token');
+                localStorage.removeItem('heys_pin_auth_client');
+                localStorage.removeItem('heys_client_current');
+                localStorage.removeItem('heys_last_client_id');
+                
+                // Также очищаем через storage layer для сброса memory cache
+                if (lsSet) {
+                  lsSet('heys_client_current', null);
+                }
+                
+                // Сбрасываем глобальный clientId
+                if (window.HEYS) {
+                  window.HEYS.currentClientId = null;
+                }
+                
+                // Очищаем memory cache полностью
+                if (window.HEYS?.store?.flushMemory) {
+                  window.HEYS.store.flushMemory();
+                }
+                
+                console.log('[PullRefresh] 🗑️ All auth keys cleared');
+              } catch (e) {
+                console.warn('[PullRefresh] Error clearing auth keys:', e);
+              }
+              // Задержка 100ms для гарантии записи + подавления React ошибок
+              await new Promise(r => setTimeout(r, 100));
+              // Перезагрузка покажет экран логина (gate сработает т.к. clientId = null)
+              window.location.reload();
+              return;
+            }
             
             // 🔄 ГАРАНТИЯ: Явно инвалидируем кэш перед чтением (на случай если sync не вызвал)
             if (window.HEYS?.store?.flushMemory) {
@@ -12167,7 +12267,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       } else if (isSuccess) {
         // ✅ Успех — пульсация при загрузке
         shakeTimerRef.current = setTimeout(() => {
-          console.log('✨ SUCCESS: Пульсация карточки');
           setPulseSuccess(true);
           // Пульсация длится 1.5с (3 цикла по 0.5с)
           setTimeout(() => setPulseSuccess(false), 1500);
@@ -13439,7 +13538,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           if (p.isUnknown) dayClass += ' sparkline-day-unknown';
           
           // Дельта: разница между съеденным и нормой
-          const delta = p.kcal - p.target;
+          // Для сегодня используем goal (= displayOptimum с учётом долга), т.к. p.target может быть устаревшим на первом рендере
+          const effectiveTarget = p.isToday && goal > 0 ? goal : p.target;
+          const delta = p.kcal - effectiveTarget;
           const deltaText = delta >= 0 ? '+' + Math.round(delta) : Math.round(delta);
           // Цвет дельты: минус (дефицит) = зелёный, плюс (переел) = красный
           const deltaColor = delta >= 0 ? '#ef4444' : '#22c55e';
@@ -13502,7 +13603,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           const leadTime = 0.15; // точки появляются чуть раньше линии
           
           return points.map((p, i) => {
-            const ratio = p.target > 0 ? p.kcal / p.target : 0;
+            // Для сегодня используем goal (= displayOptimum с учётом долга), т.к. p.target может быть устаревшим на первом рендере
+            const effectiveTarget = p.isToday && goal > 0 ? goal : p.target;
+            const ratio = effectiveTarget > 0 ? p.kcal / effectiveTarget : 0;
             // Задержка пропорциональна реальной длине пути до точки
             const pathProgress = cumulativeLengths[i] / totalPathLength;
             const animDelay = Math.max(0, pathProgress * lineDrawDuration - leadTime);
@@ -14896,10 +14999,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             } 
           },
             (HEYS.orphanProducts?.getAll?.() || []).map((o, i) => 
-              React.createElement('li', { key: o.name || i, style: { marginBottom: '2px' } },
+              React.createElement('li', { key: o.name || i, style: { marginBottom: '4px' } },
                 React.createElement('strong', null, o.name),
-                ` — ${o.hasInlineData ? '✓ можно восстановить' : '⚠️ нет данных, нельзя восстановить!'}`,
-                o.daysCount > 1 && ` (${o.daysCount} дней)`
+                ` — ${o.hasInlineData ? '✓ можно восстановить' : '⚠️ нет данных'}`,
+                // Показываем даты использования
+                o.usedInDays && o.usedInDays.length > 0 && React.createElement('div', {
+                  style: { fontSize: '11px', color: '#92400e', marginTop: '2px' }
+                }, `📅 ${o.usedInDays.slice(0, 5).join(', ')}${o.usedInDays.length > 5 ? ` и ещё ${o.usedInDays.length - 5}...` : ''}`)
               )
             )
           ),

@@ -297,24 +297,17 @@
     try {
       // Проверяем поддержку API
       if (!navigator.storage || !navigator.storage.persist) {
-        console.log('[Storage] Persistent Storage API не поддерживается');
         return result;
       }
       
       // Проверяем текущий статус
       const alreadyPersisted = await navigator.storage.persisted();
       if (alreadyPersisted) {
-        console.log('[Storage] ✅ Хранилище уже защищено от очистки');
         result.persisted = true;
       } else {
         // Запрашиваем постоянное хранилище
         const granted = await navigator.storage.persist();
         result.persisted = granted;
-        if (granted) {
-          console.log('[Storage] ✅ Постоянное хранилище предоставлено');
-        } else {
-          console.log('[Storage] ⚠️ Браузер отклонил запрос (недостаточно взаимодействия)');
-        }
       }
       
       // Получаем информацию о квоте
@@ -325,7 +318,6 @@
           quota: Math.round(estimate.quota / 1024 / 1024 * 100) / 100, // MB
           usedPct: Math.round(estimate.usage / estimate.quota * 100)
         };
-        console.log(`[Storage] Использовано: ${result.estimate.usage}MB / ${result.estimate.quota}MB (${result.estimate.usedPct}%)`);
       }
       
     } catch (e) {

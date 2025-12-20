@@ -1640,6 +1640,6 @@
     generateEveningSupplementAdvice   // 🆕 Генерация вечернего совета
   });
 
-  console.log('[HEYS] Supplements Science v1.2 loaded: +morning/evening advice, 25+ supplement timings');
+  // Verbose init log removed
 
 })(typeof window !== 'undefined' ? window : global);

@@ -9,16 +9,103 @@ const openSans = Open_Sans({
   display: 'swap',
 })
 
+// Базовый URL для продакшена
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://heys.ru'
+
 export const metadata: Metadata = {
-  title: 'HEYS — Персональное сопровождение питания',
-  description: 'HEYS — не трекер калорий, а экосистема с живым куратором. 7 дней Pro бесплатно. Куратор ведёт дневник за вас, поддерживает при срывах.',
-  keywords: 'питание, похудение, диетолог, нутрициолог, контроль веса, дневник питания',
+  // Основные мета-теги
+  title: {
+    default: 'HEYS — Персональное сопровождение питания с куратором',
+    template: '%s | HEYS',
+  },
+  description: 'Не сила воли — а человек рядом. HEYS — экосистема с живым куратором, который ведёт дневник за вас и поддерживает при срывах. 7 дней Pro бесплатно.',
+  keywords: [
+    'питание',
+    'похудение', 
+    'куратор питания',
+    'персональный диетолог',
+    'контроль веса',
+    'дневник питания',
+    'сопровождение похудения',
+    'нутрициолог онлайн',
+    'трекер калорий с куратором',
+  ],
+  authors: [{ name: 'HEYS Team' }],
+  creator: 'HEYS',
+  publisher: 'HEYS',
+  
+  // Формат телефона и цвет темы
+  formatDetection: {
+    telephone: true,
+    email: true,
+  },
+  
+  // Канонический URL
+  metadataBase: new URL(baseUrl),
+  alternates: {
+    canonical: '/',
+  },
+  
+  // Open Graph для соцсетей (VK, Facebook, Telegram)
   openGraph: {
-    title: 'HEYS — Персональное сопровождение питания',
-    description: 'Экосистема с живым куратором. 7 дней Pro бесплатно.',
+    title: 'HEYS — Не сила воли, а человек рядом',
+    description: 'Экосистема с живым куратором. Дневник ведём мы. 7 дней Pro бесплатно.',
     type: 'website',
     locale: 'ru_RU',
+    url: baseUrl,
+    siteName: 'HEYS',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'HEYS — Персональное сопровождение питания',
+        type: 'image/png',
+      },
+    ],
   },
+  
+  // Twitter Card (также используется Telegram)
+  twitter: {
+    card: 'summary_large_image',
+    title: 'HEYS — Не сила воли, а человек рядом',
+    description: 'Экосистема с живым куратором. 7 дней Pro бесплатно.',
+    images: ['/og-image.png'],
+  },
+  
+  // Роботы и индексация
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  
+  // Иконки
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
+  
+  // Манифест для PWA
+  manifest: '/manifest.json',
+  
+  // Верификация (заполнить при необходимости)
+  // verification: {
+  //   google: 'google-site-verification-code',
+  //   yandex: 'yandex-verification-code',
+  // },
 }
 
 // Env variables для аналитики
