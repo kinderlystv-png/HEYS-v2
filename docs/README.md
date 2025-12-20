@@ -7,6 +7,8 @@
 
 ### Essential Documents
 
+- [HEYS Brief (Product v1)](HEYS_BRIEF.md) ⭐⭐⭐⭐⭐ - Current product brief
+  (Light-only, Widgets, Desktop Gate, PIN auth)
 - [Project Context](HEYS_Project_Context.md) ⭐⭐⭐⭐⭐ - Core project overview
   and tech stack
 - [Development Methodology](HEYS_Development_Methodology.md) ⭐⭐⭐⭐⭐ -

@@ -7,6 +7,7 @@
 ### Essential Files
 
 - [Project Overview](README.md)
+- [HEYS Brief (Product v1)](HEYS_BRIEF.md) ⭐
 - [Quick Start Checklist](Quick%20Start%20Checklist.md)
 - [Project Context](HEYS_Project_Context.md)
 - [Development Methodology](HEYS_Development_Methodology.md)

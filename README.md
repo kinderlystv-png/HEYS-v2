@@ -148,6 +148,11 @@ The project has been migrated from legacy v12 structure to modern monorepo:
 > 📖 **[Посмотреть полную документацию](docs/README.md)** - мастер-индекс со
 > всеми руководствами, отчетами и anchor системой
 
+### 📌 Бриф продукта (актуально)
+
+- **[HEYS Brief (Product v1)](docs/HEYS_BRIEF.md)** — Light-only, Widgets
+  Dashboard + popup, Desktop Gate, PIN auth
+
 ### 📖 Основная документация
 
 - 🏗️ **[Architecture Guide](docs/ARCHITECTURE.md)** - System architecture
