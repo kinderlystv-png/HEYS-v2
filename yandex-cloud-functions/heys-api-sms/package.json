@@ -1,0 +1,7 @@
+{
+  "name": "heys-api-sms",
+  "version": "1.0.0",
+  "description": "HEYS SMS API for Yandex Cloud Functions",
+  "main": "index.js",
+  "dependencies": {}
+}

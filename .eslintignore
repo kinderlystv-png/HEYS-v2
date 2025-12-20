@@ -21,3 +21,5 @@ emt-v3-stable-clean/
 docs/automation/
 archive/legacy-v12/
 TOOLS/
+# Yandex Cloud Functions — standalone Node.js runtime
+yandex-cloud-functions/**/*.js

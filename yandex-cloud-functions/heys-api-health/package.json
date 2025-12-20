@@ -1,0 +1,7 @@
+{
+  "name": "heys-api-health",
+  "version": "1.0.0",
+  "description": "HEYS Health Check for Yandex Cloud Functions",
+  "main": "index.js",
+  "dependencies": {}
+}
