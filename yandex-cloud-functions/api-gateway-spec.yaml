@@ -1,0 +1,160 @@
+openapi: 3.0.0
+info:
+  title: HEYS API
+  version: 1.0.1
+  description: HEYS Nutrition Tracker API (Yandex Cloud Functions)
+
+servers:
+  - url: https://d5d7939njvjp27ofsok0.3zvepvee.apigw.yandexcloud.net
+  - url: https://api.heyslab.ru
+
+# Реальные ID функций (Yandex Cloud)
+# heys-api-rpc:    d4e9e90es31bgjp87j8i
+# heys-api-rest:   d4ea4j7eh05rtkjubipt
+# heys-api-sms:    d4ejimndqnd8q72r9g00
+# heys-api-leads:  d4eml8vh341v41642cdu
+# heys-api-health: d4e0rqplbonspm84pk3n
+
+paths:
+  # ═══════════════════════════════════════════════════════════════
+  # RPC — PostgreSQL функции
+  # ═══════════════════════════════════════════════════════════════
+  /rpc:
+    post:
+      summary: PostgreSQL RPC calls
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e9e90es31bgjp87j8i
+    options:
+      summary: CORS preflight for RPC
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e9e90es31bgjp87j8i
+
+  # ═══════════════════════════════════════════════════════════════
+  # REST — CRUD операции с таблицами (query param: ?table=xxx)
+  # ═══════════════════════════════════════════════════════════════
+  /rest:
+    get:
+      summary: REST GET (SELECT) — ?table=xxx
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ea4j7eh05rtkjubipt
+    post:
+      summary: REST POST (INSERT)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ea4j7eh05rtkjubipt
+    patch:
+      summary: REST PATCH (UPDATE)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ea4j7eh05rtkjubipt
+    delete:
+      summary: REST DELETE
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ea4j7eh05rtkjubipt
+    options:
+      summary: CORS preflight for REST
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ea4j7eh05rtkjubipt
+
+  # REST с path parameter (альтернативный путь)
+  /rest/{table}:
+    get:
+      summary: REST GET (SELECT) — /rest/table_name
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ea4j7eh05rtkjubipt
+    post:
+      summary: REST POST (INSERT)
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ea4j7eh05rtkjubipt
+    patch:
+      summary: REST PATCH (UPDATE)
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ea4j7eh05rtkjubipt
+    delete:
+      summary: REST DELETE
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ea4j7eh05rtkjubipt
+    options:
+      summary: CORS preflight for REST with path
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ea4j7eh05rtkjubipt
+
+  # ═══════════════════════════════════════════════════════════════
+  # SMS — Отправка SMS через SMS.ru
+  # ═══════════════════════════════════════════════════════════════
+  /sms:
+    post:
+      summary: SMS sending via SMS.ru
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ejimndqnd8q72r9g00
+    options:
+      summary: CORS preflight for SMS
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ejimndqnd8q72r9g00
+
+  # ═══════════════════════════════════════════════════════════════
+  # Leads — Лиды с лендинга
+  # ═══════════════════════════════════════════════════════════════
+  /leads:
+    post:
+      summary: Landing page leads
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4eml8vh341v41642cdu
+    options:
+      summary: CORS preflight for leads
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4eml8vh341v41642cdu
+
+  # ═══════════════════════════════════════════════════════════════
+  # Health — Healthcheck
+  # ═══════════════════════════════════════════════════════════════
+  /health:
+    get:
+      summary: Healthcheck
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e0rqplbonspm84pk3n

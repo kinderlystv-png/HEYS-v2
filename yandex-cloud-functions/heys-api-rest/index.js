@@ -66,14 +66,37 @@ module.exports.handler = async function (event, context) {
     };
   }
 
-  // Получаем имя таблицы
-  const tableName = event.queryStringParameters?.table || event.params?.table;
+  // Debug: логируем структуру event для диагностики
+  console.log('[REST Debug] Event:', JSON.stringify({
+    path: event.path,
+    pathParameters: event.pathParameters,
+    params: event.params,
+    queryStringParameters: event.queryStringParameters,
+    httpMethod: event.httpMethod
+  }));
+
+  // Получаем имя таблицы из разных источников:
+  // 1. pathParameters.table (Yandex API Gateway path param {table})
+  // 2. path /rest/TABLE_NAME (парсинг пути)
+  // 3. queryStringParameters.table (legacy)
+  // 4. params.table (legacy)
+  let tableName = event.pathParameters?.table 
+    || event.params?.table
+    || event.queryStringParameters?.table;
+  
+  // Если не нашли в параметрах, парсим из path
+  if (!tableName && event.path) {
+    const pathMatch = event.path.match(/\/rest\/([a-zA-Z_]+)/);
+    if (pathMatch) {
+      tableName = pathMatch[1];
+    }
+  }
   
   if (!tableName) {
     return {
       statusCode: 400,
       headers: corsHeaders,
-      body: JSON.stringify({ error: 'Missing table name' })
+      body: JSON.stringify({ error: 'Missing table name', debug: { path: event.path, pathParameters: event.pathParameters } })
     };
   }
 
@@ -106,11 +129,46 @@ module.exports.handler = async function (event, context) {
         let i = 1;
         
         for (const [key, value] of Object.entries(params)) {
-          if (key.startsWith('eq.')) {
-            const field = key.replace('eq.', '');
-            conditions.push(`"${field}" = $${i++}`);
-            values.push(value);
+          // PostgREST style: field=eq.value, field=gt.value, etc.
+          if (typeof value === 'string' && value.startsWith('eq.')) {
+            const actualValue = value.replace('eq.', '');
+            conditions.push(`"${key}" = $${i++}`);
+            values.push(actualValue);
+          } else if (typeof value === 'string' && value.startsWith('neq.')) {
+            const actualValue = value.replace('neq.', '');
+            conditions.push(`"${key}" != $${i++}`);
+            values.push(actualValue);
+          } else if (typeof value === 'string' && value.startsWith('gt.')) {
+            const actualValue = value.replace('gt.', '');
+            conditions.push(`"${key}" > $${i++}`);
+            values.push(actualValue);
+          } else if (typeof value === 'string' && value.startsWith('lt.')) {
+            const actualValue = value.replace('lt.', '');
+            conditions.push(`"${key}" < $${i++}`);
+            values.push(actualValue);
+          } else if (typeof value === 'string' && value.startsWith('gte.')) {
+            const actualValue = value.replace('gte.', '');
+            conditions.push(`"${key}" >= $${i++}`);
+            values.push(actualValue);
+          } else if (typeof value === 'string' && value.startsWith('lte.')) {
+            const actualValue = value.replace('lte.', '');
+            conditions.push(`"${key}" <= $${i++}`);
+            values.push(actualValue);
+          } else if (typeof value === 'string' && value.startsWith('like.')) {
+            const actualValue = value.replace('like.', '').replace(/\*/g, '%');
+            conditions.push(`"${key}" ILIKE $${i++}`);
+            values.push(actualValue);
+          } else if (typeof value === 'string' && value.startsWith('is.')) {
+            const actualValue = value.replace('is.', '');
+            if (actualValue === 'null') {
+              conditions.push(`"${key}" IS NULL`);
+            } else if (actualValue === 'true') {
+              conditions.push(`"${key}" = true`);
+            } else if (actualValue === 'false') {
+              conditions.push(`"${key}" = false`);
+            }
           } else if (!['select', 'order', 'limit'].includes(key)) {
+            // Простое равенство без оператора
             conditions.push(`"${key}" = $${i++}`);
             values.push(value);
           }
@@ -141,7 +199,14 @@ module.exports.handler = async function (event, context) {
         // INSERT
         const body = typeof event.body === 'string' ? JSON.parse(event.body || '{}') : (event.body || {});
         const keys = Object.keys(body);
-        const values = Object.values(body);
+        // Для jsonb колонок (например, 'v' в client_kv_store) нужно сериализовать в JSON
+        const values = Object.values(body).map((val, idx) => {
+          const key = keys[idx];
+          if (key === 'v' && typeof val === 'object' && val !== null) {
+            return JSON.stringify(val);
+          }
+          return val;
+        });
         
         // Защита от пустого body
         if (keys.length === 0) {
@@ -171,7 +236,15 @@ module.exports.handler = async function (event, context) {
         delete params.table;
         
         const setKeys = Object.keys(body);
-        const setValues = Object.values(body);
+        // Для jsonb колонок (например, 'v' в client_kv_store) нужно сериализовать в JSON
+        const setValues = Object.values(body).map((val, idx) => {
+          const key = setKeys[idx];
+          // Если значение объект/массив И колонка 'v' (jsonb) — сериализуем
+          if (key === 'v' && typeof val === 'object' && val !== null) {
+            return JSON.stringify(val);
+          }
+          return val;
+        });
         const setClause = setKeys.map((k, i) => `"${k}" = $${i + 1}`).join(', ');
         
         const conditions = [];
@@ -179,9 +252,16 @@ module.exports.handler = async function (event, context) {
         let i = setKeys.length + 1;
         
         for (const [key, value] of Object.entries(params)) {
-          if (!['select', 'order'].includes(key)) {
-            const field = key.replace('eq.', '');
-            conditions.push(`"${field}" = $${i++}`);
+          if (['select', 'order'].includes(key)) continue;
+          
+          // PostgREST style: field=eq.value
+          if (typeof value === 'string' && value.startsWith('eq.')) {
+            const actualValue = value.replace('eq.', '');
+            conditions.push(`"${key}" = $${i++}`);
+            whereValues.push(actualValue);
+          } else {
+            // Простое равенство без оператора
+            conditions.push(`"${key}" = $${i++}`);
             whereValues.push(value);
           }
         }
@@ -205,9 +285,16 @@ module.exports.handler = async function (event, context) {
         let i = 1;
         
         for (const [key, value] of Object.entries(params)) {
-          const field = key.replace('eq.', '');
-          conditions.push(`"${field}" = $${i++}`);
-          values.push(value);
+          // PostgREST style: field=eq.value
+          if (typeof value === 'string' && value.startsWith('eq.')) {
+            const actualValue = value.replace('eq.', '');
+            conditions.push(`"${key}" = $${i++}`);
+            values.push(actualValue);
+          } else {
+            // Простое равенство без оператора
+            conditions.push(`"${key}" = $${i++}`);
+            values.push(value);
+          }
         }
         
         if (conditions.length === 0) {

@@ -7,9 +7,28 @@ const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
+// Логирование для дебага
+console.log('[RPC Init] Starting...');
+console.log('[RPC Init] PG_HOST:', process.env.PG_HOST);
+console.log('[RPC Init] PG_PORT:', process.env.PG_PORT);
+console.log('[RPC Init] PG_DATABASE:', process.env.PG_DATABASE);
+console.log('[RPC Init] PG_USER:', process.env.PG_USER);
+console.log('[RPC Init] PG_PASSWORD:', process.env.PG_PASSWORD ? '***SET***' : '***MISSING***');
+console.log('[RPC Init] PG_SSL:', process.env.PG_SSL);
+
 // Загрузка CA сертификата Yandex Cloud
 const CA_CERT_PATH = path.join(__dirname, 'certs', 'root.crt');
-const CA_CERT = fs.existsSync(CA_CERT_PATH) ? fs.readFileSync(CA_CERT_PATH, 'utf8') : null;
+let CA_CERT = null;
+try {
+  if (fs.existsSync(CA_CERT_PATH)) {
+    CA_CERT = fs.readFileSync(CA_CERT_PATH, 'utf8');
+    console.log('[RPC Init] CA cert loaded, length:', CA_CERT.length);
+  } else {
+    console.log('[RPC Init] CA cert NOT FOUND at:', CA_CERT_PATH);
+  }
+} catch (e) {
+  console.error('[RPC Init] CA cert error:', e.message);
+}
 
 // Конфигурация PostgreSQL
 const PG_CONFIG = {
@@ -23,8 +42,13 @@ const PG_CONFIG = {
     ca: CA_CERT
   } : {
     rejectUnauthorized: false
-  }
+  },
+  // Таймауты
+  connectionTimeoutMillis: 5000,
+  query_timeout: 10000
 };
+
+console.log('[RPC Init] PG_CONFIG ssl:', CA_CERT ? 'verify-full with cert' : 'no verify');
 
 const ALLOWED_ORIGINS = [
   'https://heyslab.ru',
@@ -49,6 +73,7 @@ const ALLOWED_FUNCTIONS = [
   'save_consent',
   'get_consents',
   'upsert_client_kv',
+  'batch_upsert_client_kv',
   'get_curator_clients'
 ];
 
@@ -70,6 +95,11 @@ function getCorsHeaders(origin) {
 }
 
 module.exports.handler = async function (event, context) {
+  console.log('[RPC Handler] Request received');
+  console.log('[RPC Handler] Method:', event.httpMethod);
+  console.log('[RPC Handler] Path:', event.path);
+  console.log('[RPC Handler] Query:', JSON.stringify(event.queryStringParameters));
+  
   const origin = event.headers?.origin || event.headers?.Origin || '';
   const corsHeaders = getCorsHeaders(origin);
 
@@ -142,7 +172,8 @@ module.exports.handler = async function (event, context) {
     // Формируем вызов RPC функции
     const paramKeys = Object.keys(params);
     const paramPlaceholders = paramKeys.map((_, i) => `$${i + 1}`).join(', ');
-    const paramNames = paramKeys.map(k => `"${k}" := $${paramKeys.indexOf(k) + 1}`).join(', ');
+    // PostgreSQL 14+ named parameters: p_phone => $1 (без кавычек, стрелка вместо :=)
+    const paramNames = paramKeys.map((k, i) => `${k} => $${i + 1}`).join(', ');
     
     let query;
     let values;

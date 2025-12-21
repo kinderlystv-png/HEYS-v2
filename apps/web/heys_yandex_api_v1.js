@@ -270,109 +270,342 @@
   }
   
   // ═══════════════════════════════════════════════════════════════════
-  // 🔐 AUTH МЕТОДЫ (обёртки для совместимости)
+  // 🔐 AUTH МЕТОДЫ (REST-based — надёжнее чем RPC!)
   // ═══════════════════════════════════════════════════════════════════
   
   /**
-   * Получить соль для PIN
+   * Получить соль для PIN (REST-based)
    * @param {string} phone - Нормализованный телефон
    * @returns {Promise<{data: {salt, client_id, locked_until}[], error: any}>}
    */
   async function getClientSalt(phone) {
-    return rpc('get_client_salt', { p_phone: phone });
+    try {
+      log(`getClientSalt (REST): phone=${phone}`);
+      
+      // Запрашиваем данные клиента по телефону
+      const result = await rest('clients', {
+        filters: { 'eq.phone': phone },
+        select: 'id,pin_salt,pin_locked_until,pin_failed_attempts'
+      });
+      
+      if (result.error) {
+        return { data: null, error: result.error };
+      }
+      
+      const client = result.data?.[0];
+      if (!client) {
+        return { data: [], error: null }; // Пустой массив = клиент не найден
+      }
+      
+      // Проверяем блокировку
+      if (client.pin_locked_until) {
+        const lockedUntil = new Date(client.pin_locked_until);
+        if (lockedUntil > new Date()) {
+          return { 
+            data: [{ 
+              salt: null, 
+              client_id: client.id, 
+              locked_until: client.pin_locked_until 
+            }], 
+            error: null 
+          };
+        }
+      }
+      
+      return { 
+        data: [{ 
+          salt: client.pin_salt, 
+          client_id: client.id, 
+          locked_until: null 
+        }], 
+        error: null 
+      };
+    } catch (e) {
+      err('getClientSalt failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
   }
   
   /**
-   * Верифицировать PIN
+   * Верифицировать PIN (REST-based)
    * @param {string} phone - Нормализованный телефон
    * @param {string} pinHash - Хеш PIN
    * @returns {Promise<{data: {success, client_id, name, error, remaining_attempts}[], error: any}>}
    */
   async function verifyClientPin(phone, pinHash) {
-    return rpc('verify_client_pin', { p_phone: phone, p_pin_hash: pinHash });
+    try {
+      log(`verifyClientPin (REST): phone=${phone}`);
+      
+      // Получаем клиента с pin_hash
+      const result = await rest('clients', {
+        filters: { 'eq.phone': phone },
+        select: 'id,name,pin_hash,pin_salt,pin_failed_attempts,pin_locked_until'
+      });
+      
+      if (result.error) {
+        return { data: null, error: result.error };
+      }
+      
+      const client = result.data?.[0];
+      if (!client) {
+        return { 
+          data: [{ success: false, error: 'client_not_found' }], 
+          error: null 
+        };
+      }
+      
+      // Проверяем блокировку
+      if (client.pin_locked_until) {
+        const lockedUntil = new Date(client.pin_locked_until);
+        if (lockedUntil > new Date()) {
+          return { 
+            data: [{ 
+              success: false, 
+              client_id: client.id,
+              error: 'account_locked',
+              locked_until: client.pin_locked_until
+            }], 
+            error: null 
+          };
+        }
+      }
+      
+      // Проверяем PIN hash
+      if (client.pin_hash === pinHash) {
+        // Успех! Сбрасываем счётчик попыток
+        await rest('clients', {
+          method: 'PATCH',
+          filters: { 'eq.id': client.id },
+          data: { 
+            pin_failed_attempts: 0,
+            pin_locked_until: null
+          }
+        });
+        
+        return { 
+          data: [{ 
+            success: true, 
+            client_id: client.id, 
+            name: client.name 
+          }], 
+          error: null 
+        };
+      }
+      
+      // Неверный PIN — увеличиваем счётчик
+      const attempts = (client.pin_failed_attempts || 0) + 1;
+      const maxAttempts = 5;
+      const remainingAttempts = maxAttempts - attempts;
+      
+      const updateData = { pin_failed_attempts: attempts };
+      
+      // Блокируем после 5 попыток на 15 минут
+      if (attempts >= maxAttempts) {
+        const lockUntil = new Date(Date.now() + 15 * 60 * 1000); // +15 минут
+        updateData.pin_locked_until = lockUntil.toISOString();
+      }
+      
+      await rest('clients', {
+        method: 'PATCH',
+        filters: { 'eq.id': client.id },
+        data: updateData
+      });
+      
+      return { 
+        data: [{ 
+          success: false, 
+          client_id: client.id,
+          error: 'invalid_pin',
+          remaining_attempts: Math.max(0, remainingAttempts)
+        }], 
+        error: null 
+      };
+    } catch (e) {
+      err('verifyClientPin failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
   }
   
   /**
-   * Получить shared products
+   * Получить shared products (REST-based)
    * @param {object} options - { search, limit, offset }
    * @returns {Promise<{data: Product[], error: any}>}
    */
   async function getSharedProducts(options = {}) {
-    return rpc('get_shared_products', {
-      p_search: options.search || null,
-      p_limit: options.limit || 100,
-      p_offset: options.offset || 0
-    });
+    try {
+      const { search, limit = 100, offset = 0 } = options;
+      
+      // Базовый запрос
+      const filters = {};
+      
+      // TODO: поиск по имени (ilike не поддерживается в простом REST)
+      // Для MVP — просто вернём все продукты
+      
+      const result = await rest('shared_products', {
+        filters,
+        limit,
+        offset
+      });
+      
+      if (result.error) {
+        return { data: null, error: result.error };
+      }
+      
+      let products = result.data || [];
+      
+      // Фильтрация на клиенте если есть search
+      if (search && search.trim()) {
+        const searchLower = search.toLowerCase().trim();
+        products = products.filter(p => 
+          p.name?.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      return { data: products, error: null };
+    } catch (e) {
+      err('getSharedProducts failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
   }
   
   // ═══════════════════════════════════════════════════════════════════
-  // 💾 KV STORE МЕТОДЫ
+  // 💾 KV STORE МЕТОДЫ (REST-based для надёжности)
+  // ═══════════════════════════════════════════════════════════════════
+  
+  // ═══════════════════════════════════════════════════════════════════
+  // 🔑 KV ОПЕРАЦИИ (через RPC, не REST)
   // ═══════════════════════════════════════════════════════════════════
   
   /**
-   * Сохранить данные в client_kv_store
+   * Сохранить данные в client_kv_store (RPC)
    * @param {string} clientId - ID клиента
    * @param {string} key - Ключ
-   * @param {any} value - Значение (будет JSON.stringify)
+   * @param {any} value - Значение
    * @returns {Promise<{success: boolean, error?: string}>}
    */
   async function saveKV(clientId, key, value) {
-    const result = await rpc('upsert_client_kv', {
-      p_client_id: clientId,
-      p_key: key,
-      p_value: JSON.stringify(value)
-    });
-    
-    if (result.error) {
-      return { success: false, error: result.error.message };
+    try {
+      const result = await rpc('save_client_kv', {
+        p_client_id: clientId,
+        p_key: key,
+        p_value: value
+      });
+      
+      if (result.error) {
+        return { success: false, error: result.error.message || result.error };
+      }
+      
+      // RPC возвращает {success: true/false, error?: string}
+      const data = result.data;
+      if (data?.success === false) {
+        return { success: false, error: data.error || 'Unknown error' };
+      }
+      
+      return { success: true };
+    } catch (e) {
+      err('saveKV failed:', e.message);
+      return { success: false, error: e.message };
     }
-    return { success: true };
   }
   
   /**
-   * Получить данные из client_kv_store
+   * Получить данные из client_kv_store (RPC)
    * @param {string} clientId - ID клиента
    * @param {string} key - Ключ (опционально, если не указан — все ключи)
    * @returns {Promise<{data: any, error?: string}>}
    */
   async function getKV(clientId, key = null) {
-    const result = await rpc('get_client_kv', {
-      p_client_id: clientId,
-      p_key: key
-    });
-    
-    if (result.error) {
-      return { data: null, error: result.error.message };
+    try {
+      const params = { p_client_id: clientId };
+      if (key) {
+        params.p_key = key;
+      }
+      
+      const result = await rpc('get_client_kv', params);
+      
+      if (result.error) {
+        return { data: null, error: result.error.message || result.error };
+      }
+      
+      // RPC возвращает массив [{k, v, updated_at}, ...]
+      const rows = Array.isArray(result.data) ? result.data : [result.data].filter(Boolean);
+      
+      if (key) {
+        // Для конкретного ключа возвращаем только значение
+        return { data: rows[0]?.v };
+      }
+      return { data: rows };
+    } catch (e) {
+      err('getKV failed:', e.message);
+      return { data: null, error: e.message };
     }
-    
-    // Парсим JSON значения
-    if (Array.isArray(result.data)) {
-      const parsed = result.data.map(row => ({
-        ...row,
-        v: row.v ? JSON.parse(row.v) : null
-      }));
-      return { data: key ? parsed[0]?.v : parsed };
-    }
-    
-    return { data: result.data };
   }
   
   /**
-   * Удалить данные из client_kv_store
+   * Получить ВСЕ KV данные клиента для синхронизации
+   * @param {string} clientId - ID клиента
+   * @returns {Promise<{data: Array<{k: string, v: any}>, error?: string}>}
+   */
+  async function getAllKV(clientId) {
+    return getKV(clientId, null);
+  }
+  
+  /**
+   * Пакетное сохранение KV данных (RPC)
+   * @param {string} clientId - ID клиента
+   * @param {Array<{k: string, v: any}>} items - Массив данных
+   * @returns {Promise<{success: boolean, saved: number, error?: string}>}
+   */
+  async function batchSaveKV(clientId, items) {
+    if (!items || items.length === 0) {
+      return { success: true, saved: 0 };
+    }
+    
+    try {
+      const result = await rpc('batch_upsert_client_kv', {
+        p_client_id: clientId,
+        p_items: items
+      });
+      
+      if (result.error) {
+        return { success: false, saved: 0, error: result.error.message || result.error };
+      }
+      
+      // RPC возвращает {success: true/false, saved: number, error?: string}
+      const data = result.data;
+      return { 
+        success: data?.success !== false, 
+        saved: data?.saved || 0,
+        error: data?.error
+      };
+    } catch (e) {
+      err('batchSaveKV failed:', e.message);
+      return { success: false, saved: 0, error: e.message };
+    }
+  }
+  
+  /**
+   * Удалить данные из client_kv_store (RPC)
    * @param {string} clientId - ID клиента
    * @param {string} key - Ключ
    * @returns {Promise<{success: boolean, error?: string}>}
    */
   async function deleteKV(clientId, key) {
-    const result = await rpc('delete_client_kv', {
-      p_client_id: clientId,
-      p_key: key
-    });
-    
-    if (result.error) {
-      return { success: false, error: result.error.message };
+    try {
+      const result = await rpc('delete_client_kv', {
+        p_client_id: clientId,
+        p_key: key
+      });
+      
+      if (result.error) {
+        return { success: false, error: result.error.message || result.error };
+      }
+      
+      return { success: true };
+    } catch (e) {
+      err('deleteKV failed:', e.message);
+      return { success: false, error: e.message };
     }
-    return { success: true };
   }
   
   // ═══════════════════════════════════════════════════════════════════
@@ -401,24 +634,26 @@
     // Products
     getSharedProducts,
     
-    // KV Store
+    // KV Store (REST-based для надёжности)
     saveKV,
     getKV,
+    getAllKV,
+    batchSaveKV,
     deleteKV,
     
     // Алиасы для совместимости с Supabase SDK
     from: (table) => ({
       select: (columns = '*') => ({
-        eq: (col, val) => rest(table, { select: columns, filters: { [`${col}__eq`]: val } }),
+        eq: (col, val) => rest(table, { select: columns, filters: { [`eq.${col}`]: val } }),
         limit: (n) => rest(table, { select: columns, limit: n }),
         single: () => rest(table, { select: columns, limit: 1 }).then(r => ({ ...r, data: r.data?.[0] }))
       }),
       insert: (data) => rest(table, { method: 'POST', data }),
       update: (data) => ({
-        eq: (col, val) => rest(table, { method: 'PATCH', data, filters: { [`${col}__eq`]: val } })
+        eq: (col, val) => rest(table, { method: 'PATCH', data, filters: { [`eq.${col}`]: val } })
       }),
       delete: () => ({
-        eq: (col, val) => rest(table, { method: 'DELETE', filters: { [`${col}__eq`]: val } })
+        eq: (col, val) => rest(table, { method: 'DELETE', filters: { [`eq.${col}`]: val } })
       })
     })
   };

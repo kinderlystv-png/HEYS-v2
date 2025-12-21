@@ -1891,17 +1891,17 @@
           _rpcSyncInProgress = true; // 🔐 Блокируем bootstrapClientSync
           logCritical('🔐 PIN auth восстановлен для клиента:', pinAuthClient.substring(0, 8) + '...');
           
-          // 🔄 Запускаем RPC sync сразу при восстановлении
+          // 🔄 Запускаем Yandex sync сразу при восстановлении
           cloud.syncClientViaRPC(pinAuthClient).then(result => {
             _rpcSyncInProgress = false;
             if (result.success) {
-              logCritical('✅ [RPC RESTORE] Sync завершён:', result.loaded, 'ключей');
+              logCritical('✅ [YANDEX RESTORE] Sync завершён:', result.loaded, 'ключей');
             } else {
-              logCritical('⚠️ [RPC RESTORE] Sync failed:', result.error);
+              logCritical('⚠️ [YANDEX RESTORE] Sync failed:', result.error);
             }
           }).catch(e => {
             _rpcSyncInProgress = false;
-            logCritical('❌ [RPC RESTORE] Error:', e.message);
+            logCritical('❌ [YANDEX RESTORE] Error:', e.message);
           });
         } else if (pinAuthClient && hasCuratorSession) {
           // Есть сессия куратора — НЕ включаем PIN auth режим, удаляем флаг
@@ -2872,39 +2872,44 @@
   };
 
   // ═══════════════════════════════════════════════════════════════════
-  // 🔐 SYNC VIA RPC — для входа клиента по телефону+PIN (без Supabase сессии)
+  // 🔐 SYNC VIA YANDEX API — для входа клиента по телефону+PIN (РФ 152-ФЗ)
   // ═══════════════════════════════════════════════════════════════════
   
   /**
-   * Синхронизирует данные клиента через RPC-функции (без auth.uid())
+   * Синхронизирует данные клиента через Yandex API (без Supabase сессии)
    * Используется после успешной верификации PIN клиента
    * @param {string} clientId - UUID клиента
    * @param {Object} options - { force: boolean }
    * @returns {Promise<{success: boolean, loaded?: number, error?: string}>}
    */
   cloud.syncClientViaRPC = async function(clientId, options = {}) {
-    if (!client || !clientId) {
-      return { success: false, error: 'no_client_or_id' };
+    // Используем YandexAPI вместо Supabase для соответствия 152-ФЗ
+    const YandexAPI = global.HEYS?.YandexAPI;
+    if (!YandexAPI) {
+      logCritical('❌ [YANDEX SYNC] YandexAPI not loaded!');
+      return { success: false, error: 'yandex_api_not_loaded' };
+    }
+    
+    if (!clientId) {
+      return { success: false, error: 'no_client_id' };
     }
     
     const ls = global.localStorage;
     
     try {
-      logCritical(`🔐 [RPC SYNC] Загрузка данных клиента ${clientId.slice(0,8)}...`);
+      logCritical(`🇷🇺 [YANDEX SYNC] Загрузка данных клиента ${clientId.slice(0,8)}...`);
       
       // Уведомляем UI о начале синхронизации
       if (typeof window !== 'undefined' && window.dispatchEvent) {
         window.dispatchEvent(new CustomEvent('heysSyncStarting', { detail: { clientId } }));
       }
       
-      // Вызываем RPC функцию для получения данных
-      const { data, error } = await client.rpc('get_client_kv_data', {
-        p_client_id: clientId
-      });
+      // Вызываем Yandex REST API для получения данных (вместо Supabase RPC)
+      const { data, error } = await YandexAPI.getAllKV(clientId);
       
       if (error) {
-        logCritical(`❌ [RPC SYNC] Ошибка: ${error.message}`);
-        return { success: false, error: error.message };
+        logCritical(`❌ [YANDEX SYNC] Ошибка: ${error}`);
+        return { success: false, error: error };
       }
       
       // Записываем данные в localStorage
@@ -2931,14 +2936,14 @@
           ls.setItem(localKey, JSON.stringify(row.v));
           loadedCount++;
         } catch(e) {
-          console.warn('[RPC SYNC] Failed to save key:', row.k, e);
+          console.warn('[YANDEX SYNC] Failed to save key:', row.k, e);
         }
       });
       
       muteMirror = false;
       
       // Обновляем timestamp последней синхронизации
-      cloud._lastClientSync = { clientId, ts: Date.now(), viaRPC: true };
+      cloud._lastClientSync = { clientId, ts: Date.now(), viaYandex: true };
       
       // Помечаем initial sync как завершённый и отменяем failsafe
       if (!initialSyncCompleted) {
@@ -2946,12 +2951,12 @@
         cancelFailsafeTimer(); // 🔐 Отменяем failsafe — sync успешен
       }
       
-      logCritical(`✅ [RPC SYNC] Загружено ${loadedCount} ключей для клиента ${clientId.slice(0,8)}`);
+      logCritical(`✅ [YANDEX SYNC] Загружено ${loadedCount} ключей для клиента ${clientId.slice(0,8)}`);
       
       // Уведомляем UI о завершении
       if (typeof window !== 'undefined' && window.dispatchEvent) {
         window.dispatchEvent(new CustomEvent('heysSyncCompleted', { 
-          detail: { clientId, loaded: loadedCount, viaRPC: true } 
+          detail: { clientId, loaded: loadedCount, viaYandex: true } 
         }));
       }
       
@@ -2959,88 +2964,64 @@
       
     } catch(e) {
       muteMirror = false;
-      logCritical(`❌ [RPC SYNC] Exception: ${e.message}`);
+      logCritical(`❌ [YANDEX SYNC] Exception: ${e.message}`);
       return { success: false, error: e.message };
     }
   };
   
   /**
-   * Сохраняет данные клиента через RPC (без auth.uid())
+   * Сохраняет данные клиента через Yandex API (без auth.uid())
    * Используется для клиентов, вошедших по PIN
    * @param {string} clientId - UUID клиента
    * @param {Array<{k: string, v: any, updated_at?: string}>} items - массив данных для сохранения
    * @returns {Promise<{success: boolean, saved?: number, error?: string}>}
    */
   cloud.saveClientViaRPC = async function(clientId, items) {
-    if (!client || !clientId || !items || items.length === 0) {
+    // Используем YandexAPI вместо Supabase
+    const YandexAPI = global.HEYS?.YandexAPI;
+    if (!YandexAPI) {
+      logCritical('❌ [YANDEX SAVE] YandexAPI not loaded!');
+      return { success: false, error: 'yandex_api_not_loaded' };
+    }
+    
+    if (!clientId || !items || items.length === 0) {
       return { success: false, error: 'invalid_params' };
     }
     
     try {
-      // Преобразуем items в формат для RPC
-      const rpcItems = items.map(item => ({
+      // Преобразуем items в формат для YandexAPI
+      const yandexItems = items.map(item => ({
         k: normalizeKeyForSupabase(item.k, clientId),
         v: item.v,
         updated_at: item.updated_at || new Date().toISOString()
       }));
       
       // 🔧 Логируем размер для диагностики больших данных
-      const jsonSize = JSON.stringify(rpcItems).length;
+      const jsonSize = JSON.stringify(yandexItems).length;
       const jsonSizeKB = Math.round(jsonSize / 1024);
       
       if (jsonSize > 100000) {
-        logCritical(`⚠️ [RPC SAVE] Large payload: ${jsonSizeKB}KB, ${rpcItems.length} items`);
-      }
-      
-      // 🔧 Helper: выполнить RPC с retry
-      async function rpcWithRetry(payload, maxRetries = 3) {
-        let lastError = null;
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-          try {
-            const { data, error } = await client.rpc('set_client_kv_data', {
-              p_client_id: clientId,
-              p_items: payload
-            });
-            if (error) {
-              lastError = error;
-              if (attempt < maxRetries) {
-                const delay = Math.pow(2, attempt) * 500; // 1s, 2s, 4s
-                logCritical(`⚠️ [RPC SAVE] Attempt ${attempt} failed: ${error.message}, retry in ${delay}ms`);
-                await new Promise(r => setTimeout(r, delay));
-                continue;
-              }
-            }
-            return { data, error };
-          } catch (e) {
-            lastError = { message: e.message };
-            if (attempt < maxRetries) {
-              const delay = Math.pow(2, attempt) * 500;
-              logCritical(`⚠️ [RPC SAVE] Attempt ${attempt} exception: ${e.message}, retry in ${delay}ms`);
-              await new Promise(r => setTimeout(r, delay));
-              continue;
-            }
-          }
-        }
-        return { data: null, error: lastError };
+        logCritical(`⚠️ [YANDEX SAVE] Large payload: ${jsonSizeKB}KB, ${yandexItems.length} items`);
       }
       
       // 🔧 Для очень больших данных (>500KB) логируем и предупреждаем
       if (jsonSize > 500000) {
-        logCritical(`🚨 [RPC SAVE] VERY LARGE payload: ${jsonSizeKB}KB — may timeout!`);
+        logCritical(`🚨 [YANDEX SAVE] VERY LARGE payload: ${jsonSizeKB}KB — may timeout!`);
       }
       
-      const { data, error } = await rpcWithRetry(rpcItems);
+      // 🆕 Используем YandexAPI.batchSaveKV вместо RPC
+      const result = await YandexAPI.batchSaveKV(clientId, yandexItems);
       
-      if (error) {
-        logCritical(`❌ [RPC SAVE] Ошибка после retry: ${error.message}`);
-        return { success: false, error: error.message };
+      if (!result.success) {
+        logCritical(`❌ [YANDEX SAVE] Ошибка: ${result.error || 'Unknown error'}`);
+        return { success: false, error: result.error || 'Unknown error' };
       }
       
-      logCritical(`☁️ [RPC SAVE] Сохранено ${data} записей (${jsonSizeKB}KB) для клиента ${clientId.slice(0,8)}`);
-      return { success: true, saved: data };
+      logCritical(`☁️ [YANDEX SAVE] Сохранено ${result.saved} записей (${jsonSizeKB}KB) для клиента ${clientId.slice(0,8)}`);
+      return { success: true, saved: result.saved };
       
     } catch(e) {
-      logCritical(`❌ [RPC SAVE] Exception: ${e.message}`);
+      logCritical(`❌ [YANDEX SAVE] Exception: ${e.message}`);
       return { success: false, error: e.message };
     }
   };
@@ -3052,14 +3033,14 @@
     // 🔐 PIN-авторизация: работаем без user, если client_id проверен через verify_client_pin
     const isPinAuth = _pinAuthClientId && _pinAuthClientId === client_id;
     
-    // 🔐 Если RPC sync в процессе или уже завершён — пропускаем
+    // 🔐 Если Yandex sync в процессе или уже завершён — пропускаем
     if (_rpcOnlyMode && isPinAuth) {
       if (_rpcSyncInProgress) {
-        log('[RPC MODE] Skipping bootstrapClientSync — RPC sync in progress');
+        log('[YANDEX MODE] Skipping bootstrapClientSync — Yandex sync in progress');
         return;
       }
       if (initialSyncCompleted) {
-        log('[RPC MODE] Skipping bootstrapClientSync — already synced via RPC');
+        log('[YANDEX MODE] Skipping bootstrapClientSync — already synced via Yandex');
         return;
       }
     }
@@ -4067,7 +4048,7 @@
             scheduleClientPush();
           } else {
             resetRetry();
-            logCritical(`☁️ [RPC] Сохранено в облако: ${totalSaved} записей`);
+            logCritical(`☁️ [YANDEX] Сохранено в облако: ${totalSaved} записей`);
           }
           
           savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
