@@ -36,16 +36,27 @@ const ALLOWED_ORIGINS = [
 
 // Разрешённые RPC функции
 const ALLOWED_FUNCTIONS = [
+  'get_client_salt',
+  'verify_client_pin',
   'client_pin_auth',
   'create_client_with_pin',
+  'reset_client_pin',
   'get_client_data',
   'save_client_kv',
   'get_client_kv',
   'delete_client_kv',
   'get_shared_products',
   'save_consent',
-  'get_consents'
+  'get_consents',
+  'upsert_client_kv',
+  'get_curator_clients'
 ];
+
+// Маппинг параметров (если нужно)
+// Сейчас не используем, т.к. функции ожидают те же имена что и фронтенд
+const PARAM_MAPPING = {
+  // 'p_phone': 'p_phone_normalized',  // НЕ НУЖНО — функции уже используют p_phone
+};
 
 function getCorsHeaders(origin) {
   const isAllowed = ALLOWED_ORIGINS.some(allowed => origin?.startsWith(allowed));
@@ -113,6 +124,14 @@ module.exports.handler = async function (event, context) {
       body: JSON.stringify({ error: 'Invalid JSON body' })
     };
   }
+
+  // Применяем маппинг параметров
+  const mappedParams = {};
+  for (const [key, value] of Object.entries(params)) {
+    const mappedKey = PARAM_MAPPING[key] || key;
+    mappedParams[mappedKey] = value;
+  }
+  params = mappedParams;
 
   // Подключаемся к PostgreSQL
   const client = new Client(PG_CONFIG);

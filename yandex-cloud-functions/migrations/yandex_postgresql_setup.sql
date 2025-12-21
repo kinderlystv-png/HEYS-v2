@@ -75,14 +75,19 @@ RETURNS TABLE(salt TEXT, client_id UUID, locked_until TIMESTAMPTZ)
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
+DECLARE
+    v_phone_clean TEXT;
 BEGIN
+    -- Убираем + из начала телефона если есть
+    v_phone_clean := LTRIM(p_phone, '+');
+    
     RETURN QUERY
     SELECT 
         c.pin_salt,
         c.id,
         c.pin_locked_until
     FROM public.clients c
-    WHERE c.phone = p_phone
+    WHERE c.phone = v_phone_clean OR c.phone = p_phone
     LIMIT 1;
 END;
 $$;
@@ -103,11 +108,15 @@ DECLARE
     v_client RECORD;
     v_max_attempts INTEGER := 5;
     v_lockout_minutes INTEGER := 15;
+    v_phone_clean TEXT;
 BEGIN
+    -- Убираем + из начала телефона если есть
+    v_phone_clean := LTRIM(p_phone, '+');
+    
     -- Получаем клиента
     SELECT * INTO v_client
     FROM public.clients c
-    WHERE c.phone = p_phone
+    WHERE c.phone = v_phone_clean OR c.phone = p_phone
     LIMIT 1;
     
     -- Клиент не найден

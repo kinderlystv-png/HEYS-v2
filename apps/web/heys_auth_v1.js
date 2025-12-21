@@ -182,15 +182,18 @@
     // fake delay to reduce timing attacks
     await sleep(350 + Math.floor(Math.random() * 250));
 
-    const cloud = HEYS.cloud;
-    if (!cloud || !cloud.client) {
-      return { ok: false, error: 'cloud_not_ready', _debug: { stage: 'init' } };
+    // Используем YandexAPI вместо Supabase
+    const api = HEYS.YandexAPI;
+    if (!api) {
+      return { ok: false, error: 'api_not_ready', _debug: { stage: 'init' } };
     }
 
     try {
-      const saltRes = await cloud.client.rpc('get_client_salt', {
-        p_phone_normalized: phoneNorm,
+      // 1. Получаем соль
+      const saltRes = await api.rpc('get_client_salt', {
+        p_phone: phoneNorm,
       });
+      
       if (saltRes.error) {
         registerFail('login', phoneNorm);
         return {
@@ -200,9 +203,7 @@
           _debug: {
             stage: 'get_salt',
             rpc: 'get_client_salt',
-            sbCode: saltRes.error.code,
-            sbDetails: saltRes.error.details,
-            sbHint: saltRes.error.hint,
+            code: saltRes.error.code,
           },
         };
       }
@@ -223,10 +224,12 @@
         };
       }
 
+      // 2. Хешируем PIN
       const pinHash = await hashPin(pin, salt);
 
-      const vRes = await cloud.client.rpc('verify_client_pin', {
-        p_phone_normalized: phoneNorm,
+      // 3. Верифицируем
+      const vRes = await api.rpc('verify_client_pin', {
+        p_phone: phoneNorm,
         p_pin_hash: pinHash,
       });
 
@@ -238,9 +241,7 @@
           _debug: {
             stage: 'verify_pin',
             rpc: 'verify_client_pin',
-            sbCode: vRes.error.code,
-            sbDetails: vRes.error.details,
-            sbHint: vRes.error.hint,
+            code: vRes.error.code,
           },
         };
       }
@@ -285,17 +286,17 @@
       return { ok: false, error: 'invalid_pin' };
     }
 
-    const cloud = HEYS.cloud;
-    if (!cloud || !cloud.client) {
-      return { ok: false, error: 'cloud_not_ready' };
+    const api = HEYS.YandexAPI;
+    if (!api) {
+      return { ok: false, error: 'api_not_ready' };
     }
 
     const salt = generateSalt();
     const pinHash = await hashPin(pin, salt);
 
-    const res = await cloud.client.rpc('create_client_with_pin', {
+    const res = await api.rpc('create_client_with_pin', {
       p_name: String(name || '').trim(),
-      p_phone_normalized: phoneNorm,
+      p_phone: phoneNorm,
       p_pin_salt: salt,
       p_pin_hash: pinHash,
     });
@@ -319,15 +320,15 @@
     if (!clientId) return { ok: false, error: 'missing_client_id' };
     if (!validatePin(newPin)) return { ok: false, error: 'invalid_pin' };
 
-    const cloud = HEYS.cloud;
-    if (!cloud || !cloud.client) {
-      return { ok: false, error: 'cloud_not_ready' };
+    const api = HEYS.YandexAPI;
+    if (!api) {
+      return { ok: false, error: 'api_not_ready' };
     }
 
     const salt = generateSalt();
     const pinHash = await hashPin(newPin, salt);
 
-    const res = await cloud.client.rpc('reset_client_pin', {
+    const res = await api.rpc('reset_client_pin', {
       p_client_id: clientId,
       p_pin_salt: salt,
       p_pin_hash: pinHash,
