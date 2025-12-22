@@ -100,7 +100,7 @@ jobs:
             --exclude "*.html" \
             --exclude "sw.js" \
             --exclude "version.json" \
-            --exclude "manifest.webmanifest"
+            --exclude "manifest.json"
 
           # HTML файлы без кэширования (для обновлений PWA)
           aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_PWA }}/ \
@@ -116,8 +116,13 @@ jobs:
             --cache-control "no-cache, no-store, must-revalidate" \
             --content-type "application/javascript"
 
-          # Manifest без кэширования  
-          aws s3 cp apps/web/dist/manifest.webmanifest s3://${{ env.YC_BUCKET_PWA }}/manifest.webmanifest \
+          # Manifest без кэширования (manifest.json → также копируем как .webmanifest для совместимости)
+          aws s3 cp apps/web/dist/manifest.json s3://${{ env.YC_BUCKET_PWA }}/manifest.json \
+            --endpoint-url=${{ env.YC_ENDPOINT }} \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --content-type "application/manifest+json"
+
+          aws s3 cp apps/web/dist/manifest.json s3://${{ env.YC_BUCKET_PWA }}/manifest.webmanifest \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
             --content-type "application/manifest+json"
@@ -150,8 +155,9 @@ jobs:
         env:
           YC_TOKEN: ${{ secrets.YC_OAUTH_TOKEN }}
           YC_FOLDER: ${{ secrets.YC_FOLDER_ID }}
-          CDN_PWA_ID: ${{ secrets.YC_CDN_PWA_ID }}
-          CDN_LANDING_ID: ${{ secrets.YC_CDN_LANDING_ID }}
+          # CDN Resource IDs (из infra/README.md)
+          CDN_PWA_ID: bc8rvrvenqslkmti5yts
+          CDN_LANDING_ID: bc8rk3pnqppsfime3nth
         run: |
           # Пропускаем если нет токена
           if [ -z "$YC_TOKEN" ]; then
@@ -167,13 +173,16 @@ jobs:
           yc config set token "$YC_TOKEN"
           yc config set folder-id "$YC_FOLDER"
 
-          # Инвалидируем кэш обоих CDN ресурсов
-          if [ -n "$CDN_PWA_ID" ]; then
-            yc cdn cache purge --resource-id "$CDN_PWA_ID" --path "/*" || true
-          fi
-          if [ -n "$CDN_LANDING_ID" ]; then
-            yc cdn cache purge --resource-id "$CDN_LANDING_ID" --path "/*" || true
-          fi
+          # Инвалидируем только критичные пути (не весь кэш)
+          echo "🔄 Purging CDN cache for PWA..."
+          yc cdn cache purge --resource-id "$CDN_PWA_ID" \
+            --path "/" --path "/index.html" --path "/sw.js" --path "/manifest.webmanifest" || true
+
+          echo "🔄 Purging CDN cache for Landing..."
+          yc cdn cache purge --resource-id "$CDN_LANDING_ID" \
+            --path "/" --path "/index.html" || true
+
+          echo "✅ CDN cache purged for critical paths"
 
       - name: Deployment summary
         run: |
