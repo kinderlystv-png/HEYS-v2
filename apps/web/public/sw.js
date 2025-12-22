@@ -103,6 +103,27 @@ self.addEventListener('activate', (event) => {
         );
       })
       .then(() => {
+        // Очистка юридических документов (.md) из ВСЕХ кэшей
+        // Чтобы пользователь видел актуальную версию после обновления
+        console.log('[SW] Purging cached .md files (legal docs)...');
+        return caches.keys().then(names => {
+          return Promise.all(names.map(cacheName => {
+            return caches.open(cacheName).then(cache => {
+              return cache.keys().then(requests => {
+                return Promise.all(
+                  requests
+                    .filter(req => req.url.endsWith('.md') || req.url.includes('/docs/'))
+                    .map(req => {
+                      console.log('[SW] Purging cached doc:', req.url);
+                      return cache.delete(req);
+                    })
+                );
+              });
+            });
+          }));
+        });
+      })
+      .then(() => {
         // Принудительно берём контроль над всеми клиентами
         // Это критично для обновления PWA!
         console.log('[SW] Claiming clients...');
