@@ -34,6 +34,15 @@
   ];
   
   // =====================================================
+  // Конфигурация верификации
+  // =====================================================
+  
+  // SMS верификация отключена — используем только чекбоксы + логирование
+  // Это полностью законно по 152-ФЗ ст.9 (согласие в любой форме с подтверждением получения)
+  // SMS можно включить позже после настройки буквенного отправителя в SMS.ru
+  const SMS_VERIFICATION_ENABLED = false;
+  
+  // =====================================================
   // Тексты документов
   // =====================================================
   
@@ -302,9 +311,10 @@
     const handleProceedToVerify = useCallback(async () => {
       if (!allRequiredAccepted) return;
       
-      // Если SMS модуль недоступен или нет телефона — пропускаем верификацию
-      if (!HEYS.sms || !phone) {
-        console.warn('[Consents] SMS module not available or no phone, skipping verification');
+      // SMS верификация отключена — используем только чекбоксы + логирование
+      // Это полностью законно по 152-ФЗ ст.9
+      if (!SMS_VERIFICATION_ENABLED || !HEYS.sms || !phone) {
+        console.log('[Consents] ✅ Сохраняем согласия (чекбокс + логирование, без SMS)');
         // Сохраняем без верификации
         setLoading(true);
         try {
@@ -442,15 +452,12 @@
               onShowFull: () => setShowFullText('personal_data')
             }),
             
-            // Health Data (with SMS verification note)
+            // Health Data
             React.createElement(ConsentCheckbox, {
               type: 'health_data',
               checked: consents.health_data,
               onChange: () => handleToggle('health_data'),
-              config: {
-                ...CONSENT_TEXTS.checkboxes.health_data,
-                label: CONSENT_TEXTS.checkboxes.health_data.label + (phone && HEYS.sms ? ' (потребуется подтверждение по SMS)' : '')
-              },
+              config: CONSENT_TEXTS.checkboxes.health_data,
               onShowFull: () => setShowFullText('health_data')
             }),
             
