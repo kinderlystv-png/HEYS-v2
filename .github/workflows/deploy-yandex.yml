@@ -145,23 +145,33 @@ jobs:
             --include "*.html"
 
       - name: Invalidate CDN cache (optional)
-        if: ${{ secrets.YC_OAUTH_TOKEN != '' }}
         continue-on-error: true
+        env:
+          YC_TOKEN: ${{ secrets.YC_OAUTH_TOKEN }}
+          YC_FOLDER: ${{ secrets.YC_FOLDER_ID }}
+          CDN_PWA_ID: ${{ secrets.YC_CDN_PWA_ID }}
+          CDN_LANDING_ID: ${{ secrets.YC_CDN_LANDING_ID }}
         run: |
+          # Пропускаем если нет токена
+          if [ -z "$YC_TOKEN" ]; then
+            echo "⏭️ Skipping CDN invalidation (no YC_OAUTH_TOKEN)"
+            exit 0
+          fi
+
           # Устанавливаем YC CLI
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
           export PATH="$HOME/yandex-cloud/bin:$PATH"
 
           # Конфигурируем
-          yc config set token ${{ secrets.YC_OAUTH_TOKEN }}
-          yc config set folder-id ${{ secrets.YC_FOLDER_ID }}
+          yc config set token "$YC_TOKEN"
+          yc config set folder-id "$YC_FOLDER"
 
           # Инвалидируем кэш обоих CDN ресурсов
-          if [ -n "${{ secrets.YC_CDN_PWA_ID }}" ]; then
-            yc cdn cache purge --resource-id ${{ secrets.YC_CDN_PWA_ID }} --path "/*" || true
+          if [ -n "$CDN_PWA_ID" ]; then
+            yc cdn cache purge --resource-id "$CDN_PWA_ID" --path "/*" || true
           fi
-          if [ -n "${{ secrets.YC_CDN_LANDING_ID }}" ]; then
-            yc cdn cache purge --resource-id ${{ secrets.YC_CDN_LANDING_ID }} --path "/*" || true
+          if [ -n "$CDN_LANDING_ID" ]; then
+            yc cdn cache purge --resource-id "$CDN_LANDING_ID" --path "/*" || true
           fi
 
       - name: Deployment summary
