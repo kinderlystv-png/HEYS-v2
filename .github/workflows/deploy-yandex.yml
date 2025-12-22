@@ -9,7 +9,8 @@ env:
   NODE_VERSION: "18"
   PNPM_VERSION: "8"
   # Yandex Cloud Object Storage
-  YC_BUCKET_NAME: heys-static
+  YC_BUCKET_PWA: heys-app # PWA приложение → app.heyslab.ru
+  YC_BUCKET_LANDING: heys-static # Лендинг → heyslab.ru
   YC_ENDPOINT: https://storage.yandexcloud.net
 
 jobs:
@@ -20,6 +21,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # Для определения изменённых файлов
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -57,10 +60,13 @@ jobs:
             "__tests__/products-protection.test.js" \
             "__tests__/data-models.test.js"
 
-      - name: Build web app
+      - name: Build web app (PWA)
         run: pnpm --filter @heys/web run build
         env:
           VITE_API_URL: https://api.heyslab.ru
+
+      - name: Build landing page
+        run: pnpm --filter @heys/landing run build
 
       - name: Generate build version
         run: |
@@ -82,10 +88,11 @@ jobs:
           aws configure set aws_secret_access_key ${{ secrets.YC_SECRET_ACCESS_KEY }}
           aws configure set default.region ru-central1
 
-      - name: Deploy to Yandex Object Storage
+      - name: Deploy PWA to Yandex Object Storage
         run: |
+          # === PWA Application → heys-app bucket ===
           # Синхронизируем файлы (удаляем старые, загружаем новые)
-          aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_NAME }}/ \
+          aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_PWA }}/ \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --delete \
             --cache-control "public, max-age=31536000" \
@@ -95,7 +102,7 @@ jobs:
             --exclude "manifest.webmanifest"
 
           # HTML файлы без кэширования (для обновлений PWA)
-          aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_NAME }}/ \
+          aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_PWA }}/ \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
             --content-type "text/html; charset=utf-8" \
@@ -103,32 +110,59 @@ jobs:
             --include "*.html"
 
           # Service Worker без кэширования
-          aws s3 cp apps/web/dist/sw.js s3://${{ env.YC_BUCKET_NAME }}/sw.js \
+          aws s3 cp apps/web/dist/sw.js s3://${{ env.YC_BUCKET_PWA }}/sw.js \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
             --content-type "application/javascript"
 
           # Manifest без кэширования  
-          aws s3 cp apps/web/dist/manifest.webmanifest s3://${{ env.YC_BUCKET_NAME }}/manifest.webmanifest \
+          aws s3 cp apps/web/dist/manifest.webmanifest s3://${{ env.YC_BUCKET_PWA }}/manifest.webmanifest \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
             --content-type "application/manifest+json"
 
           # Version file без кэширования
-          aws s3 cp apps/web/dist/version.json s3://${{ env.YC_BUCKET_NAME }}/version.json \
+          aws s3 cp apps/web/dist/version.json s3://${{ env.YC_BUCKET_PWA }}/version.json \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
             --content-type "application/json"
 
-      - name: Invalidate CDN cache (optional)
-        if: ${{ secrets.YC_CDN_RESOURCE_ID != '' }}
+      - name: Deploy Landing to Yandex Object Storage
         run: |
-          # Если настроен CDN, инвалидируем кэш
-          curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.YC_IAM_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{"paths": ["/*"]}' \
-            "https://cdn.api.cloud.yandex.net/cdn/v1/resources/${{ secrets.YC_CDN_RESOURCE_ID }}:purge"
+          # === Landing Page → heys-static bucket ===
+          aws s3 sync apps/landing/out/ s3://${{ env.YC_BUCKET_LANDING }}/ \
+            --endpoint-url=${{ env.YC_ENDPOINT }} \
+            --delete \
+            --cache-control "public, max-age=31536000" \
+            --exclude "*.html"
+
+          # HTML файлы без кэширования
+          aws s3 sync apps/landing/out/ s3://${{ env.YC_BUCKET_LANDING }}/ \
+            --endpoint-url=${{ env.YC_ENDPOINT }} \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --content-type "text/html; charset=utf-8" \
+            --exclude "*" \
+            --include "*.html"
+
+      - name: Invalidate CDN cache (optional)
+        if: ${{ secrets.YC_OAUTH_TOKEN != '' }}
+        continue-on-error: true
+        run: |
+          # Устанавливаем YC CLI
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          export PATH="$HOME/yandex-cloud/bin:$PATH"
+
+          # Конфигурируем
+          yc config set token ${{ secrets.YC_OAUTH_TOKEN }}
+          yc config set folder-id ${{ secrets.YC_FOLDER_ID }}
+
+          # Инвалидируем кэш обоих CDN ресурсов
+          if [ -n "${{ secrets.YC_CDN_PWA_ID }}" ]; then
+            yc cdn cache purge --resource-id ${{ secrets.YC_CDN_PWA_ID }} --path "/*" || true
+          fi
+          if [ -n "${{ secrets.YC_CDN_LANDING_ID }}" ]; then
+            yc cdn cache purge --resource-id ${{ secrets.YC_CDN_LANDING_ID }} --path "/*" || true
+          fi
 
       - name: Deployment summary
         run: |
@@ -137,19 +171,22 @@ jobs:
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Version | ${{ env.BUILD_VERSION }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${GITHUB_SHA::7}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Branch | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Bucket | ${{ env.YC_BUCKET_NAME }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| URL | https://heys.app (pending DNS) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🌐 Deployed URLs" >> $GITHUB_STEP_SUMMARY
+          echo "| Site | URL |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| PWA | https://app.heyslab.ru |" >> $GITHUB_STEP_SUMMARY
+          echo "| Landing | https://heyslab.ru |" >> $GITHUB_STEP_SUMMARY
+          echo "| API | https://api.heyslab.ru |" >> $GITHUB_STEP_SUMMARY
 
-  # Деплой Cloud Functions (опционально, при изменении)
+  # Деплой Cloud Functions (только при изменении их файлов)
   deploy-functions:
     name: Deploy Cloud Functions
     runs-on: ubuntu-latest
-    needs: build-and-deploy
-    if: |
-      contains(github.event.head_commit.modified, 'yandex-cloud-functions/') ||
-      contains(github.event.head_commit.added, 'yandex-cloud-functions/')
+    # Запускается параллельно, не зависит от build-and-deploy
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(toJSON(github.event.commits.*.modified), 'yandex-cloud-functions/') || contains(toJSON(github.event.commits.*.added), 'yandex-cloud-functions/') }}
 
     steps:
       - name: Checkout code
@@ -157,7 +194,7 @@ jobs:
 
       - name: Install Yandex Cloud CLI
         run: |
-          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
           echo "$HOME/yandex-cloud/bin" >> $GITHUB_PATH
 
       - name: Configure Yandex Cloud CLI
@@ -166,8 +203,22 @@ jobs:
           yc config set cloud-id ${{ secrets.YC_CLOUD_ID }}
           yc config set folder-id ${{ secrets.YC_FOLDER_ID }}
 
+      - name: Check which functions changed
+        id: changes
+        run: |
+          # Получаем список изменённых файлов
+          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          echo "Changed files: $CHANGED"
+
+          # Проверяем каждую функцию
+          echo "rpc_changed=$([[ "$CHANGED" == *"heys-api-rpc"* ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          echo "rest_changed=$([[ "$CHANGED" == *"heys-api-rest"* ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          echo "sms_changed=$([[ "$CHANGED" == *"heys-api-sms"* ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          echo "leads_changed=$([[ "$CHANGED" == *"heys-api-leads"* ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          echo "auth_changed=$([[ "$CHANGED" == *"heys-api-auth"* ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+
       - name: Deploy heys-api-rpc
-        if: contains(github.event.head_commit.modified, 'heys-api-rpc/')
+        if: steps.changes.outputs.rpc_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           cd yandex-cloud-functions/heys-api-rpc
           yc serverless function version create \
@@ -176,10 +227,11 @@ jobs:
             --entrypoint index.handler \
             --memory 256m \
             --execution-timeout 30s \
-            --source-path .
+            --source-path . \
+            --environment "PG_HOST=${{ secrets.PG_HOST }},PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=${{ secrets.PG_USER }},PG_PASSWORD=${{ secrets.PG_PASSWORD }},PG_SSL=verify-full"
 
       - name: Deploy heys-api-rest
-        if: contains(github.event.head_commit.modified, 'heys-api-rest/')
+        if: steps.changes.outputs.rest_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           cd yandex-cloud-functions/heys-api-rest
           yc serverless function version create \
@@ -188,4 +240,44 @@ jobs:
             --entrypoint index.handler \
             --memory 256m \
             --execution-timeout 30s \
-            --source-path .
+            --source-path . \
+            --environment "PG_HOST=${{ secrets.PG_HOST }},PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=${{ secrets.PG_USER }},PG_PASSWORD=${{ secrets.PG_PASSWORD }},PG_SSL=verify-full"
+
+      - name: Deploy heys-api-sms
+        if: steps.changes.outputs.sms_changed == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          cd yandex-cloud-functions/heys-api-sms
+          yc serverless function version create \
+            --function-name heys-api-sms \
+            --runtime nodejs18 \
+            --entrypoint index.handler \
+            --memory 128m \
+            --execution-timeout 10s \
+            --source-path . \
+            --environment "SMS_API_KEY=${{ secrets.SMS_API_KEY }}"
+
+      - name: Deploy heys-api-leads
+        if: steps.changes.outputs.leads_changed == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          cd yandex-cloud-functions/heys-api-leads
+          yc serverless function version create \
+            --function-name heys-api-leads \
+            --runtime nodejs18 \
+            --entrypoint index.handler \
+            --memory 256m \
+            --execution-timeout 30s \
+            --source-path . \
+            --environment "PG_HOST=${{ secrets.PG_HOST }},PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=${{ secrets.PG_USER }},PG_PASSWORD=${{ secrets.PG_PASSWORD }},PG_SSL=verify-full,TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }},TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}"
+
+      - name: Deploy heys-api-auth
+        if: steps.changes.outputs.auth_changed == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          cd yandex-cloud-functions/heys-api-auth
+          yc serverless function version create \
+            --function-name heys-api-auth \
+            --runtime nodejs18 \
+            --entrypoint index.handler \
+            --memory 256m \
+            --execution-timeout 30s \
+            --source-path . \
+            --environment "PG_HOST=${{ secrets.PG_HOST }},PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=${{ secrets.PG_USER }},PG_PASSWORD=${{ secrets.PG_PASSWORD }},PG_SSL=verify-full,JWT_SECRET=${{ secrets.JWT_SECRET }}"
