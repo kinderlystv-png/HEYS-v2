@@ -20,6 +20,11 @@ export default defineConfig({
         {
           src: '../../docs/legal',
           dest: 'docs'
+        },
+        // Виджеты для InsightsTab
+        {
+          src: 'widgets',
+          dest: '.'
         }
       ]
     })
