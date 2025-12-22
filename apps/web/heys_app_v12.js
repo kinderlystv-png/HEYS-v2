@@ -16,7 +16,7 @@
 const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2025.12.22.2334.6f911ef'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2025.12.23.0007.1f2fff2'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление

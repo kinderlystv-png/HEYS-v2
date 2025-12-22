@@ -1921,11 +1921,19 @@
   };
 
   // Emoji style management (twemoji | system)
-  const getEmojiStyle = () => localStorage.getItem('heys_emoji_style') || 'twemoji';
+  const getEmojiStyle = () => {
+    try {
+      const U = window.HEYS?.utils || {};
+      return U.lsGet ? U.lsGet('heys_emoji_style', 'twemoji') : (localStorage.getItem('heys_emoji_style') || 'twemoji');
+    } catch { return 'twemoji'; }
+  };
   const setEmojiStyle = (style) => {
     const validStyles = ['twemoji', 'system'];
     if (!validStyles.includes(style)) style = 'twemoji';
-    localStorage.setItem('heys_emoji_style', style);
+    try {
+      const U = window.HEYS?.utils || {};
+      U.lsSet ? U.lsSet('heys_emoji_style', style) : localStorage.setItem('heys_emoji_style', style);
+    } catch {}
     document.body.className = document.body.className.replace(/emoji-\w+/g, '') + ' emoji-' + style;
     // Reparse emoji if twemoji selected - multiple times to ensure all are caught
     if (style === 'twemoji' && window.applyTwemoji) {

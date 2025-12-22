@@ -5391,7 +5391,10 @@
     
     // === Подсказка "нажми для деталей" ===
     const [mealChartHintShown, setMealChartHintShown] = useState(() => {
-      try { return localStorage.getItem('heys_meal_hint_shown') === '1'; } catch { return false; }
+      try {
+        const U = window.HEYS?.utils || {};
+        return U.lsGet ? U.lsGet('heys_meal_hint_shown', null) === '1' : localStorage.getItem('heys_meal_hint_shown') === '1';
+      } catch { return false; }
     });
     
     // === Ачивка "Первый идеальный приём" ===
@@ -19565,7 +19568,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                       // Скрываем подсказку
                       if (!mealChartHintShown) {
                         setMealChartHintShown(true);
-                        try { localStorage.setItem('heys_meal_hint_shown', '1'); } catch {}
+                        try {
+                          const U = window.HEYS?.utils || {};
+                          U.lsSet ? U.lsSet('heys_meal_hint_shown', '1') : localStorage.setItem('heys_meal_hint_shown', '1');
+                        } catch {}
                       }
                       // Confetti при идеальном score
                       if (quality.score >= 95) {
@@ -19634,7 +19640,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               e.stopPropagation();
               const rect = e.currentTarget.getBoundingClientRect();
               console.log('[HEYS] openQualityModal:', { meal: meal.name, quality, rect });
-              // Скрываем подсказку после первого клика
+              // Скры
+                  const U = window.HEYS?.utils || {};
+                  U.lsSet ? U.lsSet('heys_meal_hint_shown', '1') : localStorage.setItem('heys_meal_hint_shown', '1');
+               
               if (!mealChartHintShown) {
                 setMealChartHintShown(true);
                 try { localStorage.setItem('heys_meal_hint_shown', '1'); } catch {}
