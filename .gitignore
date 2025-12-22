@@ -70,6 +70,8 @@ dist
 # Gatsby files
 .cache/
 public
+# But keep legal docs in apps/web/public/docs
+!apps/web/public/docs/
 
 # Vite build output
 dist/
