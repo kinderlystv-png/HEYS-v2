@@ -5,8 +5,8 @@ packages:
 
   # Applications
   - 'apps/web'
+  - 'apps/landing'
   # - 'apps/*' # Temporarily disabled other apps
-
 
   # Development tools
   - 'tools/*'
