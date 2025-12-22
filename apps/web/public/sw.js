@@ -164,6 +164,12 @@ self.addEventListener('fetch', (event) => {
       }
     }
     
+    // Markdown документы (юридика) — ВСЕГДА с сервера
+    if (url.pathname.endsWith('.md')) {
+      event.respondWith(fetch(request));
+      return;
+    }
+    
     // Остальное (CSS/Images) — Stale While Revalidate
     event.respondWith(staleWhileRevalidate(request));
     return;
