@@ -1,8 +1,10 @@
+/* eslint-disable no-console, no-restricted-globals, no-restricted-syntax */
 // HEYS Service Worker v1.1
 // Стратегия: Cache-First для статики, Network-First для API
 // Версия обновляется автоматически при билде
+// NOTE: Service Worker runs in isolated context - no access to @heys/logger
 
-const CACHE_VERSION = 'heys-1766437676400';
+const CACHE_VERSION = 'heys-1766441438768';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
@@ -316,6 +318,7 @@ async function staleWhileRevalidate(request) {
 
 // === Background Sync ===
 const SYNC_TAG = 'heys-sync';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Reserved for future sync queue implementation
 const SYNC_QUEUE_KEY = 'heys-sync-queue';
 
 self.addEventListener('sync', (event) => {

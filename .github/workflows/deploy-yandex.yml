@@ -93,6 +93,14 @@ jobs:
         run: |
           # === PWA Application → heys-app bucket ===
 
+          # Берём версию юридических документов из исходника (единый источник правды)
+          DOCS_VERSION=$(node -e "const fs=require('fs'); const s=fs.readFileSync('apps/web/heys_consents_v1.js','utf8'); const m=s.match(/user_agreement:\\s*'([^']+)'/); process.stdout.write(m?m[1]:'');")
+          if [ -z "$DOCS_VERSION" ]; then
+            echo "❌ Failed to detect docs version from apps/web/heys_consents_v1.js"
+            exit 1
+          fi
+          echo "Legal docs version: $DOCS_VERSION"
+
           # 1. Статические ассеты с долгим кэшем (CSS, шрифты, картинки)
           #    НО исключаем JS файлы (они содержат версию и должны обновляться)
           #    И исключаем docs/*.md (юридика — всегда актуальная)
@@ -115,12 +123,26 @@ jobs:
             --include "*.js" \
             --exclude "sw.js"
 
-          # 3. Юридические документы БЕЗ кэширования (152-ФЗ compliance)
-          # Важно: инспектор РКН должен всегда видеть актуальную версию!
-          aws s3 sync apps/web/dist/docs/ s3://${{ env.YC_BUCKET_PWA }}/docs/ \
+          # 3. Юридические документы (двойная публикация):
+          #   3.1) Версионированный путь: /docs/v<version>/...  (можно кэшировать "вечно", т.к. immutable)
+          #   3.2) Latest путь: /docs/...  (без кэша, чтобы можно было открыть прямую ссылку)
+          # Важно: UI использует /docs/v<version>/... как "неубиваемую" защиту от CDN-старья.
+
+          # 3.1 Versioned (immutable)
+          aws s3 cp apps/web/dist/docs/ s3://${{ env.YC_BUCKET_PWA }}/docs/v${DOCS_VERSION}/ \
+            --recursive \
+            --endpoint-url=${{ env.YC_ENDPOINT }} \
+            --cache-control "public, max-age=31536000, immutable" \
+            --content-type "text/markdown; charset=utf-8" \
+            --metadata-directive REPLACE
+
+          # 3.2 Latest (no-cache)
+          aws s3 cp apps/web/dist/docs/ s3://${{ env.YC_BUCKET_PWA }}/docs/ \
+            --recursive \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
-            --content-type "text/markdown; charset=utf-8"
+            --content-type "text/markdown; charset=utf-8" \
+            --metadata-directive REPLACE
 
           # 4. HTML файлы без кэширования (для обновлений PWA)
           aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_PWA }}/ \
@@ -200,11 +222,23 @@ jobs:
 
           # Юридические документы — ВСЕГДА инвалидируем (152-ФЗ compliance)
           echo "🔄 Purging legal docs from CDN cache..."
+          DOCS_VERSION=$(node -e "const fs=require('fs'); const s=fs.readFileSync('apps/web/heys_consents_v1.js','utf8'); const m=s.match(/user_agreement:\\s*'([^']+)'/); process.stdout.write(m?m[1]:'');")
+          echo "Legal docs version for purge: ${DOCS_VERSION:-unknown}"
+
           yc cdn cache purge --resource-id "$CDN_PWA_ID" \
             --path "/docs/user-agreement.md" \
             --path "/docs/privacy-policy.md" \
             --path "/docs/consent-forms.md" \
             --path "/docs/chat-rules.md" || true
+
+          # На всякий случай инвалидируем и версионированные пути (если версия переиспользовалась при правках)
+          if [ -n "$DOCS_VERSION" ]; then
+            yc cdn cache purge --resource-id "$CDN_PWA_ID" \
+              --path "/docs/v${DOCS_VERSION}/user-agreement.md" \
+              --path "/docs/v${DOCS_VERSION}/privacy-policy.md" \
+              --path "/docs/v${DOCS_VERSION}/consent-forms.md" \
+              --path "/docs/v${DOCS_VERSION}/chat-rules.md" || true
+          fi
 
           echo "🔄 Purging CDN cache for Landing..."
           yc cdn cache purge --resource-id "$CDN_LANDING_ID" \

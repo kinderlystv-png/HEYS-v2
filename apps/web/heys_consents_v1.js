@@ -702,16 +702,54 @@
   
   // === Маппинг типов согласий на markdown файлы ===
   // Файлы находятся в public/docs/ (симлинк на docs/legal/)
-  // Cache-busting: v=CURRENT_VERSIONS.user_agreement чтобы браузер перезагрузил документы при обновлении
+  // ⚠️ ВАЖНО (радикально против CDN-кэша):
+  // - НИКОГДА не перезаписываем одну и ту же версию документа по одному и тому же URL.
+  // - При изменении текста документа — увеличиваем CURRENT_VERSIONS.
+  // - Приложение грузит документы по УНИКАЛЬНОМУ пути: /docs/v<version>/...
+  // - /docs/... остаётся как "latest" (для прямых ссылок/инспекции), но может залипать на edge.
+  function buildVersionedDocPath(fileName, version) {
+    return `/docs/v${version}/${fileName}`;
+  }
+
+  function buildLatestDocPath(fileName, version) {
+    // Query — как дополнительный cache-busting на стороне браузера/Service Worker.
+    // Важно: CDN может игнорировать query, поэтому это НЕ основная защита.
+    return `/docs/${fileName}?v=${version}`;
+  }
+
+  function escapeRegExp(str) {
+    return String(str || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function isExpectedDocVersion(markdown, expectedVersion) {
+    // Не все документы версионируются (например, chat rules) — тогда проверка не нужна.
+    if (!expectedVersion) return true;
+    if (!markdown) return false;
+
+    // Ищем маркер вида: **Версия:** 1.2
+    const re = new RegExp(`\\*\\*Версия:\\*\\*\\s*${escapeRegExp(expectedVersion)}(\\b|\\s|$)`);
+    return re.test(markdown);
+  }
+
   const DOC_PATHS = {
-    user_agreement: `/docs/user-agreement.md?v=${CURRENT_VERSIONS.user_agreement}`,
-    personal_data: `/docs/privacy-policy.md?v=${CURRENT_VERSIONS.personal_data}`,
-    health_data: `/docs/privacy-policy.md?v=${CURRENT_VERSIONS.health_data}` // Раздел 2.1 "Данные о здоровье"
+    user_agreement: {
+      versioned: buildVersionedDocPath('user-agreement.md', CURRENT_VERSIONS.user_agreement),
+      latest: buildLatestDocPath('user-agreement.md', CURRENT_VERSIONS.user_agreement)
+    },
+    personal_data: {
+      versioned: buildVersionedDocPath('privacy-policy.md', CURRENT_VERSIONS.personal_data),
+      latest: buildLatestDocPath('privacy-policy.md', CURRENT_VERSIONS.personal_data)
+    },
+    health_data: {
+      // Раздел 2.1 "Данные о здоровье"
+      versioned: buildVersionedDocPath('privacy-policy.md', CURRENT_VERSIONS.health_data),
+      latest: buildLatestDocPath('privacy-policy.md', CURRENT_VERSIONS.health_data)
+    }
   };
   
   // Кеш загруженных документов (с версией)
   const docCache = {};
-  const docCacheVersion = `${CURRENT_VERSIONS.user_agreement}-${CURRENT_VERSIONS.personal_data}`;
+  const docCacheVersion = `${CURRENT_VERSIONS.user_agreement}-${CURRENT_VERSIONS.personal_data}-${CURRENT_VERSIONS.health_data}`;
   
   // При изменении версии — очищаем localStorage кэш
   (() => {
@@ -814,9 +852,9 @@
         setError(null);
         setHasScrolledToEnd(false);
         
-        const docPath = DOC_PATHS[type];
+        const docInfo = DOC_PATHS[type];
         
-        if (!docPath) {
+        if (!docInfo) {
           setError('Документ не найден');
           setLoading(false);
           return;
@@ -829,14 +867,40 @@
           return;
         }
         
-        try {
-          const response = await fetch(docPath);
-          
+        async function fetchMarkdown(url) {
+          const response = await fetch(url, { cache: 'no-store' });
+
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
           }
-          
-          const markdown = await response.text();
+
+          return response.text();
+        }
+
+        try {
+          // 1) Сначала пробуем "неубиваемый" версионированный путь.
+          // 2) Если /docs/vX ещё не задеплоены — пробуем /docs/latest, НО только если версия в тексте совпадает.
+          //    Это принципиально: нельзя показывать пользователю устаревший юридический документ из CDN-кэша.
+          let markdown;
+          const expectedVersion = CURRENT_VERSIONS[type];
+
+          try {
+            markdown = await fetchMarkdown(docInfo.versioned);
+            if (!isExpectedDocVersion(markdown, expectedVersion)) {
+              throw new Error('DOC_VERSION_MISMATCH');
+            }
+          } catch (e) {
+            markdown = await fetchMarkdown(docInfo.latest);
+            if (!isExpectedDocVersion(markdown, expectedVersion)) {
+              const exp = expectedVersion ? `v${expectedVersion}` : 'актуальная версия';
+              setError(
+                `Сейчас CDN отдаёт устаревшую версию документа (ожидается ${exp}).\n\n` +
+                `Пожалуйста, обновите страницу или попробуйте позже.`
+              );
+              setLoading(false);
+              return;
+            }
+          }
           
           // Для health_data берём только релевантную секцию
           let relevantMarkdown = markdown;
