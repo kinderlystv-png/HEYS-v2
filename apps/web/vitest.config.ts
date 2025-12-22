@@ -13,9 +13,22 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'happy-dom',
-    setupFiles: [],
+    // setupFiles: ['./vitest.setup.ts'], // Отключено - импорт в тестах
     include: ['src/**/*.{test,spec}.{ts,tsx}', '__tests__/**/*.{test,spec}.{ts,tsx,js}'],
+    // OOM prevention: один процесс, без параллелизма
+    threads: false,
+    isolate: false,
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
+    // Доп. ограничения
+    passWithNoTests: true,
+    reporters: ['basic'],
     coverage: {
+      enabled: false, // Отключаем в CI
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       exclude: [

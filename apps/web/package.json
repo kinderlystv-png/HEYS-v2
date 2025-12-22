@@ -16,8 +16,9 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",
     "preview": "cross-env PORT=3001 vite preview",
-    "test": "vitest run",
-    "test:coverage": "vitest --coverage",
+    "test": "pnpm exec vitest run",
+    "test:ci": "NODE_OPTIONS='--max-old-space-size=4096' VITEST_MAX_THREADS=1 VITEST_MIN_THREADS=1 pnpm exec vitest run --no-coverage",
+    "test:coverage": "pnpm exec vitest --coverage",
     "test:e2e": "playwright test",
     "test:watch": "vitest --watch",
     "type-check": "tsc --noEmit"
@@ -29,12 +30,14 @@
     "@heys/shared": "workspace:*",
     "@heys/storage": "workspace:*",
     "@heys/ui": "workspace:*",
+    "@supabase/auth-helpers-nextjs": "^0.15.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.15.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.37.0",
+    "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
