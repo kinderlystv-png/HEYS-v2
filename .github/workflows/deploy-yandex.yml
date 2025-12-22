@@ -184,6 +184,24 @@ jobs:
 
           echo "✅ CDN cache purged for critical paths"
 
+      - name: Health check
+        run: |
+          echo "🏥 Running health checks..."
+          sleep 10
+
+          PWA_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://app.heyslab.ru/)
+          LANDING_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://heyslab.ru/)
+          API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.heyslab.ru/health)
+
+          echo "PWA: $PWA_STATUS | Landing: $LANDING_STATUS | API: $API_STATUS"
+
+          if [ "$PWA_STATUS" != "200" ]; then
+            echo "❌ PWA health check failed"
+            exit 1
+          fi
+
+          echo "✅ Health checks passed"
+
       - name: Deployment summary
         run: |
           echo "## 🚀 Deployment Complete!" >> $GITHUB_STEP_SUMMARY
