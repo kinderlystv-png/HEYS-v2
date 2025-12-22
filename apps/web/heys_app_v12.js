@@ -3313,8 +3313,14 @@ const HEYS = window.HEYS = window.HEYS || {};
               try {
                 if (cloud && typeof cloud.signOut === 'function') await cloud.signOut();
               } catch (_) {}
+              // Важно: при выходе из аккаунта куратора сбрасываем “client mode”,
+              // иначе на следующем запуске может открыться ConsentGate по старому clientId.
+              try { localStorage.removeItem('heys_client_current'); } catch (_) {}
+              try { localStorage.removeItem('heys_pin_auth_client'); } catch (_) {}
+              try { localStorage.removeItem('heys_client_phone'); } catch (_) {}
+              try { localStorage.removeItem('heys_supabase_auth_token'); } catch (_) {}
               setCloudUser(null);
-              setClientId(null);
+              setClientId('');
               setClients([]);
               setProducts([]);
               setStatus('offline');
@@ -5050,7 +5056,7 @@ const HEYS = window.HEYS = window.HEYS || {};
             // 📜 Consent Gate: если клиенту нужно подписать согласия
             // Показывается после логина, но ДО основного приложения
             const clientPhone = typeof localStorage !== 'undefined' ? localStorage.getItem('heys_client_phone') : null;
-            const consentGate = !gate && !desktopGate && clientId && needsConsent && !checkingConsent && HEYS.Consents?.ConsentScreen
+            const consentGate = !gate && !desktopGate && !cloudUser && clientId && needsConsent && !checkingConsent && HEYS.Consents?.ConsentScreen
               ? React.createElement(HEYS.Consents.ConsentScreen, {
                   clientId: clientId,
                   phone: clientPhone,
@@ -5072,7 +5078,11 @@ const HEYS = window.HEYS = window.HEYS || {};
 
             useEffect(() => {
               // Минимальная инициализация — только загрузка из localStorage
-              const initLocalData = () => {
+              // opts.skipClientRestore: не восстанавливать выбранного клиента из heys_client_current
+              // opts.skipPinAuthRestore: не восстанавливать PIN-auth клиента
+              const initLocalData = (opts = {}) => {
+                const skipClientRestore = opts.skipClientRestore === true;
+                const skipPinAuthRestore = opts.skipPinAuthRestore === true;
                 // Загружаем продукты из localStorage
                 const storedProducts = U.lsGet('heys_products', []);
                 if (Array.isArray(storedProducts)) {
@@ -5097,12 +5107,12 @@ const HEYS = window.HEYS = window.HEYS || {};
                 // 🔐 PIN auth: проверяем также heys_pin_auth_client (клиент вошедший по PIN)
                 const pinAuthClient = localStorage.getItem('heys_pin_auth_client');
                 
-                if (currentClient && storedClientsArray.some((c) => c.id === currentClient)) {
+                if (!skipClientRestore && currentClient && storedClientsArray.some((c) => c.id === currentClient)) {
                   // Куратор выбрал клиента из списка
                   setClientId(currentClient);
                   window.HEYS = window.HEYS || {};
                   window.HEYS.currentClientId = currentClient;
-                } else if (pinAuthClient) {
+                } else if (!skipPinAuthRestore && pinAuthClient) {
                   // 🔐 PIN auth: клиент вошёл по телефону+PIN — устанавливаем его clientId
                   setClientId(pinAuthClient);
                   window.HEYS = window.HEYS || {};
@@ -5158,13 +5168,13 @@ const HEYS = window.HEYS = window.HEYS || {};
               const savedEmail = storedUser?.email || localStorage.getItem('heys_remember_email') || localStorage.getItem('heys_saved_email');
               
               if (storedUser && cloud) {
-                // Есть сохранённая сессия — восстанавливаем
+                // Есть сохранённая сессия куратора — восстанавливаем.
+                // Важно: ставим cloudUser ДО любых восстановлений clientId, чтобы не запускался consent-flow как для клиента.
                 if (savedEmail) setEmail(savedEmail);
-                initLocalData();
-                
-                // Ставим пользователя, затем пробуем сделать лёгкий запрос
                 setCloudUser(storedUser);
                 setStatus('online');
+                // Для куратора не восстанавливаем clientId/PIN автоматически — куратор выбирает клиента сам.
+                initLocalData({ skipClientRestore: true, skipPinAuthRestore: true });
 
                 // 🔄 Тестируем доступ через YandexAPI вместо Supabase
                 HEYS.YandexAPI.getClients(storedUser.id)
