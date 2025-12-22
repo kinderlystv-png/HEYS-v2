@@ -702,14 +702,28 @@
   
   // === Маппинг типов согласий на markdown файлы ===
   // Файлы находятся в public/docs/ (симлинк на docs/legal/)
+  // Cache-busting: v=CURRENT_VERSIONS.user_agreement чтобы браузер перезагрузил документы при обновлении
   const DOC_PATHS = {
-    user_agreement: '/docs/user-agreement.md',
-    personal_data: '/docs/privacy-policy.md',
-    health_data: '/docs/privacy-policy.md' // Раздел 2.1 "Данные о здоровье"
+    user_agreement: `/docs/user-agreement.md?v=${CURRENT_VERSIONS.user_agreement}`,
+    personal_data: `/docs/privacy-policy.md?v=${CURRENT_VERSIONS.personal_data}`,
+    health_data: `/docs/privacy-policy.md?v=${CURRENT_VERSIONS.health_data}` // Раздел 2.1 "Данные о здоровье"
   };
   
-  // Кеш загруженных документов
+  // Кеш загруженных документов (с версией)
   const docCache = {};
+  const docCacheVersion = `${CURRENT_VERSIONS.user_agreement}-${CURRENT_VERSIONS.personal_data}`;
+  
+  // При изменении версии — очищаем localStorage кэш
+  (() => {
+    const cacheKey = 'heys_docs_cache_version';
+    const storedVersion = localStorage.getItem(cacheKey);
+    if (storedVersion !== docCacheVersion) {
+      console.log('[Consents] 🔄 Документы обновлены, очищаем кэш');
+      localStorage.setItem(cacheKey, docCacheVersion);
+      // Очищаем in-memory кэш (уже пустой при загрузке, но для надёжности)
+      Object.keys(docCache).forEach(key => delete docCache[key]);
+    }
+  })();
   
   /**
    * Простой парсер Markdown → HTML
