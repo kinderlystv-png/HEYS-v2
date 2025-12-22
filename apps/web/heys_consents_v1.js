@@ -21,10 +21,10 @@
   };
   
   const CURRENT_VERSIONS = {
-    user_agreement: '1.0',
-    personal_data: '1.0',
-    health_data: '1.0',
-    marketing: '1.0'
+    user_agreement: '1.2',
+    personal_data: '1.2',
+    health_data: '1.2',
+    marketing: '1.2'
   };
   
   const REQUIRED_CONSENTS = [
