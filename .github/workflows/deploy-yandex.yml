@@ -92,16 +92,27 @@ jobs:
       - name: Deploy PWA to Yandex Object Storage
         run: |
           # === PWA Application → heys-app bucket ===
-          # Синхронизируем файлы (без --delete, т.к. нет прав на удаление в IAM)
+
+          # 1. Статические ассеты с долгим кэшем (CSS, шрифты, картинки)
+          #    НО исключаем JS файлы (они содержат версию и должны обновляться)
           aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_PWA }}/ \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "public, max-age=31536000" \
             --exclude "*.html" \
+            --exclude "*.js" \
             --exclude "sw.js" \
             --exclude "version.json" \
             --exclude "manifest.json"
 
-          # HTML файлы без кэширования (для обновлений PWA)
+          # 2. JS файлы с коротким кэшем (10 мин) — содержат APP_VERSION
+          aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_PWA }}/ \
+            --endpoint-url=${{ env.YC_ENDPOINT }} \
+            --cache-control "public, max-age=600" \
+            --exclude "*" \
+            --include "*.js" \
+            --exclude "sw.js"
+
+          # 3. HTML файлы без кэширования (для обновлений PWA)
           aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_PWA }}/ \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
