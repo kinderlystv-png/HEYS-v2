@@ -87,6 +87,22 @@ function updateVersion() {
     console.log('⚠️ CACHE_VERSION not found in sw.js');
   }
   
+  // 4. Обновляем cache-busting query string в index.html для heys_app_v12.js
+  const INDEX_HTML = path.join(__dirname, '..', 'index.html');
+  let htmlContent = fs.readFileSync(INDEX_HTML, 'utf8');
+  // Регулярка: src="heys_app_v12.js?v=..." — только в атрибуте src, не в комментариях
+  const scriptRegex = /src="heys_app_v12\.js\?v=[^"]+"/g;
+  const newScriptSrc = `src="heys_app_v12.js?v=${newVersion}"`;
+  
+  const matches = htmlContent.match(scriptRegex);
+  if (matches && matches.length > 0) {
+    htmlContent = htmlContent.replace(scriptRegex, newScriptSrc);
+    fs.writeFileSync(INDEX_HTML, htmlContent);
+    console.log(`✅ index.html script src updated: heys_app_v12.js?v=${newVersion}`);
+  } else {
+    console.log('⚠️ heys_app_v12.js not found in index.html (looking for src="heys_app_v12.js?v=...")');
+  }
+  
   return newVersion;
 }
 

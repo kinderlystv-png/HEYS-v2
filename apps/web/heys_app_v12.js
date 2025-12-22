@@ -16,7 +16,7 @@
 const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2025.12.22.1931.1686468'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2025.12.22.2334.6f911ef'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
@@ -1790,7 +1790,8 @@ const HEYS = window.HEYS = window.HEYS || {};
                     const current = html.getAttribute('data-theme') || 'light';
                     const next = current === 'dark' ? 'light' : 'dark';
                     html.setAttribute('data-theme', next);
-                    localStorage.setItem('heys_theme', next);
+                    const U = window.HEYS?.utils || {};
+                    U.lsSet ? U.lsSet('heys_theme', next) : localStorage.setItem('heys_theme', next);
                   },
                   title: 'Сменить тему'
                 }, document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙')
@@ -2644,8 +2645,11 @@ const HEYS = window.HEYS = window.HEYS || {};
           // Тема: light / dark / auto
           function useThemePreference() {
             const [theme, setTheme] = useState(() => {
-              const saved = localStorage.getItem('heys_theme');
-              return ['light', 'dark', 'auto'].includes(saved) ? saved : 'light';
+              try {
+                const U = window.HEYS?.utils || {};
+                const saved = U.lsGet ? U.lsGet('heys_theme', 'light') : localStorage.getItem('heys_theme');
+                return ['light', 'dark', 'auto'].includes(saved) ? saved : 'light';
+              } catch { return 'light'; }
             });
             
             const resolvedTheme = useMemo(() => {
@@ -2657,7 +2661,10 @@ const HEYS = window.HEYS = window.HEYS || {};
             
             useEffect(() => {
               document.documentElement.setAttribute('data-theme', resolvedTheme);
-              localStorage.setItem('heys_theme', theme);
+              try {
+                const U = window.HEYS?.utils || {};
+                U.lsSet ? U.lsSet('heys_theme', theme) : localStorage.setItem('heys_theme', theme);
+              } catch {}
               
               if (theme !== 'auto') return;
               
