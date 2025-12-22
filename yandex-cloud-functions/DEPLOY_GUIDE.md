@@ -38,6 +38,18 @@ cd heys-api-health
 npm install
 zip -r ../heys-api-health.zip .
 cd ..
+
+# Auth функция
+cd heys-api-auth
+npm install
+zip -r ../heys-api-auth.zip .
+cd ..
+
+# 💳 Payments функция (ЮKassa)
+cd heys-api-payments
+npm install
+zip -r ../heys-api-payments.zip .
+cd ..
 ```
 
 ---
@@ -82,6 +94,32 @@ SMS_API_KEY=<api_key_от_sms.ru>
 TELEGRAM_BOT_TOKEN=<токен_бота>
 TELEGRAM_CHAT_ID=<chat_id_куратора>
 ```
+
+Для **heys-api-auth**:
+
+```
+PG_HOST=rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net
+PG_PORT=6432
+PG_DATABASE=heys_production
+PG_USER=heys_admin
+PG_PASSWORD=<пароль_от_базы>
+JWT_SECRET=<секретный_ключ_jwt>
+```
+
+Для **heys-api-payments** (💳 ЮKassa):
+
+```
+PG_HOST=rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net
+PG_PORT=6432
+PG_DATABASE=heys_production
+PG_USER=heys_admin
+PG_PASSWORD=<пароль_от_базы>
+YUKASSA_SHOP_ID=<shop_id_из_юкассы>
+YUKASSA_SECRET_KEY=<secret_key_из_юкассы>
+```
+
+> ⚠️ **Важно**: Для тестирования используйте тестовый Shop ID и Secret Key из
+> личного кабинета ЮKassa (раздел "Интеграция" → "Ключи API").
 
 ---
 
@@ -258,6 +296,58 @@ curl -X POST "https://api.heyslab.ru/leads" \
   -d '{"name":"Тест","phone":"79001234567","messenger":"telegram"}'
 ```
 
+### 6.4 Payments (ЮKassa)
+
+```bash
+# Проверка health
+curl https://api.heyslab.ru/payments
+
+# Создание тестового платежа
+curl -X POST "https://api.heyslab.ru/payments/create" \
+  -H "Content-Type: application/json" \
+  -d '{"clientId":"test-client-id","plan":"base","returnUrl":"https://heyslab.ru/payment-success"}'
+```
+
+---
+
+## Шаг 7: Настройка ЮKassa Webhook
+
+### 7.1 Зайти в личный кабинет ЮKassa
+
+https://yookassa.ru/my/merchant/integration
+
+### 7.2 Настроить webhook
+
+1. Перейти в раздел **"HTTP-уведомления"**
+2. Добавить URL:
+   ```
+   https://api.heyslab.ru/payments/webhook
+   ```
+3. Выбрать события:
+   - `payment.succeeded` — платёж успешен
+   - `payment.canceled` — платёж отменён
+   - `refund.succeeded` — возврат выполнен
+
+### 7.3 Проверить IP адреса ЮKassa
+
+ЮKassa отправляет уведомления с IP:
+- 185.71.76.0/27
+- 185.71.77.0/27
+- 77.75.153.0/25
+- 77.75.154.128/25
+- 2a02:5180::/32
+
+### 7.4 Тестирование в песочнице
+
+1. В личном кабинете ЮKassa активировать **тестовый магазин**
+2. Использовать тестовые данные карты:
+   - Номер: `5555555555554444`
+   - Срок: любой в будущем
+   - CVV: любые 3 цифры
+3. Для симуляции различных статусов использовать специальные суммы:
+   - Любая сумма → успешный платёж
+   - Сумма с копейками `.01` → отклонённый платёж
+
 ---
 
 ## Оценка стоимости
@@ -273,11 +363,20 @@ curl -X POST "https://api.heyslab.ru/leads" \
 
 ## Чеклист
 
-- [ ] Создать ZIP архивы для каждой функции
-- [ ] Создать 5 функций в Yandex Cloud
+- [ ] Создать ZIP архивы для каждой функции (7 штук)
+- [ ] Создать функции в Yandex Cloud:
+  - [ ] heys-api-rpc
+  - [ ] heys-api-rest
+  - [ ] heys-api-sms
+  - [ ] heys-api-leads
+  - [ ] heys-api-health
+  - [ ] heys-api-auth
+  - [ ] heys-api-payments (💳 ЮKassa)
 - [ ] Задать переменные окружения
-- [ ] Создать API Gateway со спецификацией
+- [ ] Создать/обновить API Gateway со спецификацией
 - [ ] Настроить DNS api.heyslab.ru
 - [ ] Обновить URL в фронтенде
 - [ ] Протестировать все endpoint'ы
+- [ ] Настроить webhook ЮKassa
+- [ ] Протестировать платежи в песочнице
 - [ ] Отключить Vercel API routes

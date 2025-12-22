@@ -982,16 +982,16 @@
             detail: { clients: updatedClients, source: 'profile-wizard' } 
           }));
           
-          // Обновляем в Supabase если есть облако
-          if (HEYS.cloud && HEYS.cloud.client) {
-            HEYS.cloud.client
-              .from('clients')
-              .update({ name: updatedProfile.firstName })
-              .eq('id', currentClientId)
-              .then(({ error }) => {
-                if (error) console.warn('[ProfileSteps] Cloud sync failed:', error.message);
-                else console.log('[ProfileSteps] Client name synced to cloud');
-              });
+          // Обновляем в Yandex Cloud если есть API
+          if (HEYS.YandexAPI) {
+            HEYS.YandexAPI.rest('clients', {
+              method: 'PATCH',
+              'eq.id': currentClientId,
+              body: { name: updatedProfile.firstName }
+            }).then(({ error }) => {
+              if (error) console.warn('[ProfileSteps] Cloud sync failed:', error.message);
+              else console.log('[ProfileSteps] Client name synced to cloud');
+            });
           }
         } catch (e) {
           console.warn('[ProfileSteps] Failed to sync client name:', e);

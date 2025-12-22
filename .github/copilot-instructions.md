@@ -18,7 +18,7 @@ calendar, sparkline, heatmap, advice.
 `rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net:6432/heys_production` (152-ФЗ
 compliant)
 
-🎯 **[HEYS_BRIEF.md](../docs/HEYS_BRIEF.md)** — операционный бриф MVP (бизнес +
+🎯 **[HEYS_BRIEF.md](../docs/HEYS_BRIEF.md)** — операционный бриф (бизнес +
 продукт + чеклисты задач + техническая связка)
 
 ---

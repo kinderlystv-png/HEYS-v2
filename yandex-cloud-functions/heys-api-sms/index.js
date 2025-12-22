@@ -8,6 +8,7 @@ const SMS_API_KEY = process.env.SMS_API_KEY;
 const ALLOWED_ORIGINS = [
   'https://heyslab.ru',
   'https://www.heyslab.ru',
+  'https://heys-static.website.yandexcloud.net',
   'https://heys-v2-web.vercel.app',
   'http://localhost:3001',
   'http://localhost:5173',
@@ -57,7 +58,7 @@ module.exports.handler = async function (event, context) {
   try {
     // Парсим тело запроса
     const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-    const { to, msg, api_id } = body;
+    const { to, msg, ip } = body;
 
     if (!to || !msg) {
       return {
@@ -67,13 +68,21 @@ module.exports.handler = async function (event, context) {
       };
     }
 
+    // Получаем IP клиента (из тела запроса или заголовков)
+    const clientIP = ip || 
+      event.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ||
+      event.headers?.['x-real-ip'] ||
+      event.requestContext?.identity?.sourceIp ||
+      '127.0.0.1';
+
     // Формируем URL для SMS.ru
     const params = new URLSearchParams({
-      api_id: api_id || SMS_API_KEY,
+      api_id: SMS_API_KEY,
       to: to,
       msg: msg,
+      ip: clientIP,  // IP пользователя для защиты от спама
       json: '1'
-      // from: 'HEYS' — требует согласования с операторами
+      // from: 'HEYS' — не используем, т.к. не подключен к операторам
     });
 
     const response = await fetch(`https://sms.ru/sms/send?${params.toString()}`);

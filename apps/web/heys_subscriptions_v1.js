@@ -1,8 +1,8 @@
 // heys_subscriptions_v1.js — Модуль подписок и платежей
-// Версия: 1.0.0 | Дата: 2025-12-20
+// Версия: 1.1.0 | Дата: 2025-12-22
 // 
-// Управление статусами подписки, триалом, mock-оплатой
-// Реальная интеграция ЮKassa будет добавлена позже
+// Управление статусами подписки, триалом, оплатой через ЮKassa
+// Интегрировано с YandexAPI.createPayment / getPaymentStatus
 
 (function(global) {
   'use strict';
@@ -15,6 +15,8 @@
   
   const CONFIG = {
     TRIAL_DAYS: 7,
+    PAYMENT_CHECK_INTERVAL: 3000, // Проверка статуса каждые 3 секунды
+    PAYMENT_CHECK_MAX_ATTEMPTS: 60, // Максимум 3 минуты ожидания
     
     PLANS: {
       base: {
@@ -85,6 +87,114 @@
   }
   
   // =====================================================
+  // ПРОВЕРКА PENDING ПЛАТЕЖА
+  // =====================================================
+  
+  /**
+   * Проверить pending платёж после редиректа с ЮKassa
+   * Вызывается при загрузке приложения
+   * @returns {Promise<{success: boolean, plan?: string}>}
+   */
+  async function checkPendingPayment() {
+    try {
+      // Читаем сохранённый pending payment
+      const pendingRaw = localStorage.getItem('heys_pending_payment');
+      if (!pendingRaw) return { success: false };
+      
+      const pending = JSON.parse(pendingRaw);
+      const { paymentId, clientId, plan, createdAt } = pending;
+      
+      // Проверяем не старый ли это платёж (>1 час)
+      if (Date.now() - createdAt > 60 * 60 * 1000) {
+        console.log('[Subscriptions] Pending payment expired');
+        localStorage.removeItem('heys_pending_payment');
+        return { success: false };
+      }
+      
+      console.log('[Subscriptions] Checking pending payment:', paymentId);
+      
+      // Запрашиваем статус платежа
+      const YandexAPI = window.HEYS?.YandexAPI;
+      if (!YandexAPI?.getPaymentStatus) {
+        console.warn('[Subscriptions] YandexAPI.getPaymentStatus недоступен');
+        return { success: false };
+      }
+      
+      const { data, error } = await YandexAPI.getPaymentStatus(paymentId, clientId);
+      
+      if (error) {
+        console.error('[Subscriptions] getPaymentStatus error:', error);
+        return { success: false, error: error.message };
+      }
+      
+      console.log('[Subscriptions] Payment status:', data);
+      
+      // Платёж успешен?
+      if (data.paid && data.status === 'succeeded') {
+        // Очищаем pending и возвращаем успех
+        localStorage.removeItem('heys_pending_payment');
+        return { success: true, plan, paymentId };
+      }
+      
+      // Платёж отменён или ошибка?
+      if (data.status === 'canceled' || data.status === 'failed') {
+        localStorage.removeItem('heys_pending_payment');
+        return { success: false, status: data.status };
+      }
+      
+      // Платёж ещё в процессе (pending/waiting_for_capture)
+      return { success: false, pending: true, status: data.status };
+      
+    } catch (err) {
+      console.error('[Subscriptions] checkPendingPayment error:', err);
+      return { success: false, error: err.message };
+    }
+  }
+  
+  /**
+   * Ожидать завершения платежа (polling)
+   * @param {Function} onSuccess - Callback при успехе
+   * @param {Function} onError - Callback при ошибке
+   */
+  async function waitForPayment(onSuccess, onError) {
+    let attempts = 0;
+    
+    const check = async () => {
+      attempts++;
+      
+      if (attempts > CONFIG.PAYMENT_CHECK_MAX_ATTEMPTS) {
+        console.log('[Subscriptions] Payment check timeout');
+        onError?.({ message: 'Таймаут ожидания оплаты' });
+        return;
+      }
+      
+      const result = await checkPendingPayment();
+      
+      if (result.success) {
+        console.log('[Subscriptions] Payment succeeded!', result);
+        onSuccess?.(result);
+        return;
+      }
+      
+      if (result.pending) {
+        // Продолжаем ждать
+        setTimeout(check, CONFIG.PAYMENT_CHECK_INTERVAL);
+        return;
+      }
+      
+      // Платёж не удался или нет pending
+      if (result.error || result.status === 'canceled' || result.status === 'failed') {
+        onError?.(result);
+        return;
+      }
+      
+      // Нет pending payment — ничего не делаем
+    };
+    
+    check();
+  }
+  
+  // =====================================================
   // API МЕТОДЫ
   // =====================================================
   
@@ -93,14 +203,14 @@
    */
   async function getStatus(clientId) {
     try {
-      // Сначала проверяем и обновляем статус (на случай истечения)
-      if (HEYS.cloud?.client) {
-        const { data, error } = await HEYS.cloud.client.rpc('check_subscription_status', {
-          p_client_id: clientId
-        });
-        
-        if (error) throw error;
-        return data;
+      // Используем YandexAPI
+      if (HEYS.YandexAPI) {
+        const result = await HEYS.YandexAPI.checkSubscriptionStatus(clientId);
+        if (result.error) throw new Error(result.error.message || result.error);
+        // Распаковываем данные: { data: { check_subscription_status: {...} } }
+        const statusData = result.data?.check_subscription_status || result.data || result;
+        console.log('[Subscriptions] getStatus result:', statusData);
+        return statusData;
       }
       
       // Fallback: читаем из localStorage
@@ -124,14 +234,12 @@
    */
   async function startTrial(clientId) {
     try {
-      if (HEYS.cloud?.client) {
-        const { data, error } = await HEYS.cloud.client.rpc('start_trial', {
-          p_client_id: clientId
-        });
-        
-        if (error) throw error;
-        console.log('[Subscriptions] Trial started:', data);
-        return data;
+      // Используем YandexAPI
+      if (HEYS.YandexAPI) {
+        const result = await HEYS.YandexAPI.startTrial(clientId);
+        if (result.error) throw new Error(result.error);
+        console.log('[Subscriptions] Trial started:', result);
+        return result;
       }
       
       // Fallback: сохраняем локально
@@ -164,16 +272,12 @@
         throw new Error('Invalid plan: ' + plan);
       }
       
-      if (HEYS.cloud?.client) {
-        const { data, error } = await HEYS.cloud.client.rpc('activate_subscription', {
-          p_client_id: clientId,
-          p_plan: plan,
-          p_months: months
-        });
-        
-        if (error) throw error;
-        console.log('[Subscriptions] Subscription activated:', data);
-        return data;
+      // Используем YandexAPI
+      if (HEYS.YandexAPI) {
+        const result = await HEYS.YandexAPI.activateSubscription(clientId, plan, months);
+        if (result.error) throw new Error(result.error);
+        console.log('[Subscriptions] Subscription activated:', result);
+        return result;
       }
       
       // Fallback: сохраняем локально
@@ -345,14 +449,53 @@
       setError(null);
       
       try {
-        const result = await activateSubscription(clientId, selectedPlan, 1);
+        // Используем YandexAPI для создания реального платежа ЮKassa
+        const YandexAPI = window.HEYS?.YandexAPI;
         
-        if (result.success) {
-          onSuccess?.(result);
-        } else {
-          setError(result.error || 'Ошибка оплаты');
+        if (!YandexAPI?.createPayment) {
+          // Fallback на прямую активацию (для тестов без платёжки)
+          console.warn('[Subscriptions] YandexAPI.createPayment недоступен, используем прямую активацию');
+          const result = await activateSubscription(clientId, selectedPlan, 1);
+          
+          if (result.success) {
+            onSuccess?.(result);
+          } else {
+            setError(result.error || 'Ошибка оплаты');
+          }
+          return;
         }
+        
+        // Создаём платёж через ЮKassa
+        const returnUrl = window.location.origin + '/payment-result?clientId=' + clientId;
+        const { data, error: apiError } = await YandexAPI.createPayment(clientId, selectedPlan, returnUrl);
+        
+        if (apiError || !data) {
+          setError(apiError?.message || 'Ошибка создания платежа');
+          return;
+        }
+        
+        // Сохраняем paymentId для проверки после редиректа
+        try {
+          localStorage.setItem('heys_pending_payment', JSON.stringify({
+            paymentId: data.paymentId,
+            clientId,
+            plan: selectedPlan,
+            createdAt: Date.now()
+          }));
+        } catch (e) {
+          console.warn('[Subscriptions] Не удалось сохранить pending payment:', e);
+        }
+        
+        // Редирект на страницу оплаты ЮKassa
+        if (data.confirmationUrl) {
+          window.location.href = data.confirmationUrl;
+        } else {
+          // Если confirmationUrl нет, значит платёж уже успешен (редкий кейс)
+          onSuccess?.({ plan: selectedPlan });
+        }
+        
       } catch (err) {
+        console.error('[Subscriptions] handlePayment error:', err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -730,6 +873,10 @@
     activateSubscription,
     canEdit,
     showPaymentRequired,
+    
+    // Payment (ЮKassa)
+    checkPendingPayment,
+    waitForPayment,
     
     // Components
     SubscriptionBadge,

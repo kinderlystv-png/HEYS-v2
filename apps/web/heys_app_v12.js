@@ -16,7 +16,7 @@
 const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2025.12.20.1729.bf8351e'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2025.12.22.1328.456b87f'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
@@ -1987,35 +1987,24 @@ const HEYS = window.HEYS = window.HEYS || {};
           window.HEYS.GamificationBar = GamificationBar;
 
           // init cloud (safe if no cloud module)
-          // 🌐 Используем proxy через Vercel для обхода блокировок Supabase в РФ
-          // В production: /api/supabase → ukqolcziqcuplqfgrmsh.supabase.co (через Vercel Edge Function)
-          // 🔄 Выбор URL для Supabase
-          // На production: всегда через proxy (обход блокировки РФ)
-          // На localhost: пробуем direct, но если заблокировано — proxy через production
+          // 🇷🇺 Основной трафик идёт через Yandex Cloud API (api.heyslab.ru)
+          // Legacy cloud модуль оставлен для обратной совместимости
           if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
-            const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
+            // 🔥 Warm-up ping — прогреваем Yandex Cloud Functions
+            fetch('https://api.heyslab.ru/health', { method: 'GET' })
+              .catch(() => {}); // Warm-up ping
             
-            // На localhost: direct к Supabase (если работает), fallback на production proxy
-            // На production: через наш proxy
-            const supabaseUrl = isProduction 
-              ? `${window.location.origin}/api/supabase`  // Production — через proxy
-              : 'https://ukqolcziqcuplqfgrmsh.supabase.co';  // Dev — пробуем direct
-            
-            // Для localhost: сохраняем production proxy URL для fallback
-            const localhostProxyUrl = 'https://heys-v2-web.vercel.app/api/supabase';
-            
-            // 🔥 Warm-up ping — прогреваем Vercel serverless до первого реального запроса
-            if (isProduction) {
-              fetch(`${window.location.origin}/api/health`, { method: 'GET' })
-                .catch(() => {}); // Warm-up ping
-            }
+            // 🆕 v2025-12-22: На production используем ТОЛЬКО Yandex Cloud API
+            // Supabase SDK инициализируется для совместимости cloud.signIn/signOut,
+            // но основной трафик идёт через HEYS.YandexAPI
+            const supabaseUrl = 'https://api.heyslab.ru';  // Yandex Cloud API для всех сред
             
             HEYS.cloud.init({
               url: supabaseUrl,
               anonKey:
                 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds',
-              // Для localhost: передаём production proxy как fallback
-              localhostProxyUrl: !isProduction ? localhostProxyUrl : undefined
+              // localhost fallback больше не нужен — используем Yandex API везде
+              localhostProxyUrl: undefined
             });
           }
 
@@ -3098,7 +3087,7 @@ const HEYS = window.HEYS = window.HEYS || {};
             };
             
             const fetchClientsFromCloud = useCallback(async (curatorId) => {
-              if (!cloud.client || !curatorId) {
+              if (!curatorId) {
                 return { data: [], source: 'error' };
               }
               
@@ -3111,22 +3100,8 @@ const HEYS = window.HEYS = window.HEYS || {};
               setClientsSource('loading');
               
               try {
-                // � На localhost — быстрый fallback на localStorage при ошибке сети
-                const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-                
-                // 🔄 Используем fetchWithRetry с retry + fallback routing
-                const result = await (cloud.fetchWithRetry || defaultFetchWithRetry)(
-                  () => cloud.client
-                    .from('clients')
-                    .select('id, name')
-                    .eq('curator_id', curatorId)
-                    .order('updated_at', { ascending: true }),
-                  { 
-                    label: 'fetchClients', 
-                    maxRetries: isLocalhost ? 0 : 2,  // На localhost — без retry
-                    timeoutMs: isLocalhost ? 3000 : 8000  // На localhost — короткий таймаут
-                  }
-                );
+                // 🔄 Используем YandexAPI вместо Supabase
+                const result = await HEYS.YandexAPI.getClients(curatorId);
                 
                 fetchingClientsRef.current = false;
                 
@@ -3173,7 +3148,7 @@ const HEYS = window.HEYS = window.HEYS || {};
               const clientPhone = (payload.phone || '').trim();
               const clientPin = (payload.pin || '').trim();
 
-              if (!cloud.client || !cloudUser || !cloudUser.id) {
+              if (!cloudUser || !cloudUser.id) {
                 const newClient = {
                   id: `local-user-${Date.now()}`,
                   name: clientName,
@@ -3214,24 +3189,26 @@ const HEYS = window.HEYS = window.HEYS || {};
                 // Падаем в fallback insert ниже
               }
 
-              const { data, error } = await cloud.client
-                .from('clients')
-                .insert([{ name: clientName, curator_id: userId }])
-                .select('id, name')
-                .single();
-              if (error) {
+              // 🔄 Используем YandexAPI вместо Supabase
+              try {
+                const data = await HEYS.YandexAPI.createClient(clientName, userId);
+                if (!data || !data.id) {
+                  console.error('Ошибка создания клиента');
+                  alert('Ошибка создания клиента');
+                  return;
+                }
+                const result = await fetchClientsFromCloud(userId);
+                setClients(result.data);
+                setClientId(data.id);
+                U.lsSet('heys_client_current', data.id);
+              } catch (error) {
                 console.error('Ошибка создания клиента:', error);
                 alert('Ошибка создания клиента: ' + error.message);
-                return;
               }
-              const result = await fetchClientsFromCloud(userId);
-              setClients(result.data);
-              setClientId(data.id);
-              U.lsSet('heys_client_current', data.id);
-            }, [clients, cloud, cloudUser, fetchClientsFromCloud, setClientId, setClients, U]);
+            }, [clients, cloudUser, fetchClientsFromCloud, setClientId, setClients, U]);
             
             const renameClient = useCallback(async (id, name) => {
-              if (!cloud.client || !cloudUser || !cloudUser.id) {
+              if (!cloudUser || !cloudUser.id) {
                 const updatedClients = clients.map((c) => (c.id === id ? { ...c, name } : c));
                 setClients(updatedClients);
                 U.lsSet('heys_clients', updatedClients);
@@ -3239,13 +3216,14 @@ const HEYS = window.HEYS = window.HEYS || {};
               }
 
               const userId = cloudUser.id;
-              await cloud.client.from('clients').update({ name }).eq('id', id);
+              // 🔄 Используем YandexAPI вместо Supabase
+              await HEYS.YandexAPI.updateClient(id, { name });
               const result = await fetchClientsFromCloud(userId);
               setClients(result.data);
-            }, [clients, cloud, cloudUser, fetchClientsFromCloud, setClients, U]);
+            }, [clients, cloudUser, fetchClientsFromCloud, setClients, U]);
             
             const removeClient = useCallback(async (id) => {
-              if (!cloud.client || !cloudUser || !cloudUser.id) {
+              if (!cloudUser || !cloudUser.id) {
                 const updatedClients = clients.filter((c) => c.id !== id);
                 setClients(updatedClients);
                 U.lsSet('heys_clients', updatedClients);
@@ -3257,14 +3235,15 @@ const HEYS = window.HEYS = window.HEYS || {};
               }
 
               const userId = cloudUser.id;
-              await cloud.client.from('clients').delete().eq('id', id);
+              // 🔄 Используем YandexAPI вместо Supabase
+              await HEYS.YandexAPI.deleteClient(id);
               const result = await fetchClientsFromCloud(userId);
               setClients(result.data);
               if (clientId === id) {
                 setClientId('');
                 U.lsSet('heys_client_current', '');
               }
-            }, [clientId, clients, cloud, cloudUser, fetchClientsFromCloud, setClientId, setClients, U]);
+            }, [clientId, clients, cloudUser, fetchClientsFromCloud, setClientId, setClients, U]);
             
             const cloudSignIn = useCallback(async (email, password, opts = {}) => {
               if (!email || !password) {
@@ -4309,15 +4288,14 @@ const HEYS = window.HEYS = window.HEYS || {};
 
             // Создать тестовых клиентов
             async function createTestClients() {
-              if (!cloud.client || !cloudUser || !cloudUser.id) return;
+              if (!cloudUser || !cloudUser.id) return;
               const userId = cloudUser.id; // Сохраняем локально
               const testClients = [{ name: 'Иван Петров' }, { name: 'Анна Сидорова' }];
 
               for (const testClient of testClients) {
                 try {
-                  await cloud.client
-                    .from('clients')
-                    .insert([{ name: testClient.name, curator_id: userId }]);
+                  // 🔄 Используем YandexAPI вместо Supabase
+                  await HEYS.YandexAPI.createClient(testClient.name, userId);
                 } catch (error) {
                   console.error('Ошибка создания тестового клиента:', error);
                 }
@@ -5179,7 +5157,7 @@ const HEYS = window.HEYS = window.HEYS || {};
               const storedUser = readStoredAuthUser();
               const savedEmail = storedUser?.email || localStorage.getItem('heys_remember_email') || localStorage.getItem('heys_saved_email');
               
-              if (storedUser && cloud && cloud.client) {
+              if (storedUser && cloud) {
                 // Есть сохранённая сессия — восстанавливаем
                 if (savedEmail) setEmail(savedEmail);
                 initLocalData();
@@ -5188,13 +5166,10 @@ const HEYS = window.HEYS = window.HEYS || {};
                 setCloudUser(storedUser);
                 setStatus('online');
 
-                // Тестируем доступ к таблице clients — если RLS/сессия не ок, просто оставим gate для входа
-                cloud.client
-                  .from('clients')
-                  .select('id')
-                  .limit(1)
-                  .then(({ error: testError }) => {
-                    if (testError) {
+                // 🔄 Тестируем доступ через YandexAPI вместо Supabase
+                HEYS.YandexAPI.getClients(storedUser.id)
+                  .then((clients) => {
+                    if (!clients || clients.error) {
                       // Сессия невалидна — требуется вход
                     }
                   })

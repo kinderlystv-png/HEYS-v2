@@ -32,6 +32,7 @@ const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const ALLOWED_ORIGINS = [
   'https://heyslab.ru',
   'https://www.heyslab.ru',
+  'https://heys-static.website.yandexcloud.net',
   'http://localhost:3003',
 ];
 

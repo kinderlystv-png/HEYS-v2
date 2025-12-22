@@ -53,6 +53,7 @@ console.log('[RPC Init] PG_CONFIG ssl:', CA_CERT ? 'verify-full with cert' : 'no
 const ALLOWED_ORIGINS = [
   'https://heyslab.ru',
   'https://www.heyslab.ru',
+  'https://heys-static.website.yandexcloud.net',
   'https://heys-v2-web.vercel.app',
   'http://localhost:3001',
   'http://localhost:5173',
@@ -70,11 +71,16 @@ const ALLOWED_FUNCTIONS = [
   'get_client_kv',
   'delete_client_kv',
   'get_shared_products',
-  'save_consent',
-  'get_consents',
   'upsert_client_kv',
   'batch_upsert_client_kv',
-  'get_curator_clients'
+  'get_curator_clients',
+  'create_pending_product', // Создание заявки на модерацию продукта
+  'check_subscription_status', // Проверка статуса подписки
+  // Согласия (consents)
+  'log_consents',             // Логирование согласий с ПЭП
+  'check_required_consents',  // Проверка обязательных согласий
+  'revoke_consent',           // Отзыв согласия
+  'get_client_consents'       // Получение всех согласий клиента
 ];
 
 // Маппинг параметров (если нужно)

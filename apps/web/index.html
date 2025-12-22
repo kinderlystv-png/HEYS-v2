@@ -269,7 +269,9 @@
     <!-- Smart search with typo correction, synonyms, phonetic (ё→е) -->
     <script defer src="heys_smart_search_v2.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_core_v12.js" fetchpriority="high"></script>
-    <script defer src="heys_storage_supabase_v1.js?v=29" fetchpriority="low"></script>
+    <!-- Yandex Cloud API adapter (152-ФЗ compliant) - должен быть ДО supabase для auth -->
+    <script defer src="heys_yandex_api_v1.js?v=2" fetchpriority="high"></script>
+    <script defer src="heys_storage_supabase_v1.js?v=30" fetchpriority="low"></script>
     <script defer src="heys_models_v1.js?v=20" fetchpriority="low"></script>
     <script defer src="heys_storage_layer_v1.js?v=20" fetchpriority="low"></script>
     <script defer src="heys_wheel_picker.js?v=20" fetchpriority="low"></script>
@@ -328,8 +330,6 @@
     <script defer src="heys_widgets_core_v1.js?v=1" fetchpriority="low"></script>
     <script defer src="widgets/widget_data.js?v=3" fetchpriority="low"></script>
     <script defer src="heys_widgets_ui_v1.js?v=2" fetchpriority="low"></script>
-    <!-- Yandex Cloud API adapter (152-ФЗ compliant) -->
-    <script defer src="heys_yandex_api_v1.js?v=1" fetchpriority="high"></script>
     <!-- Auth + Login (client phone+PIN, curator email+password) -->
     <script defer src="heys_auth_v1.js?v=2" fetchpriority="high"></script>
     <script defer src="heys_login_screen_v1.js?v=2" fetchpriority="high"></script>

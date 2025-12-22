@@ -800,12 +800,16 @@
           // Вычисляем fingerprint для проверки дубликатов
           const fingerprint = window.HEYS?.models?.computeProductFingerprint?.(newProduct);
           if (fingerprint) {
-            // Проверяем: есть ли в shared продукт с таким fingerprint
-            const { data: existing } = await window.HEYS.cloud.client
-              .from('shared_products')
-              .select('id, name, simple100, complex100, protein100, badfat100, goodfat100, trans100, fiber100, gi, harm')
-              .eq('fingerprint', fingerprint)
-              .maybeSingle();
+            // Проверяем: есть ли в shared продукт с таким fingerprint (через YandexAPI)
+            let existing = null;
+            if (window.HEYS.YandexAPI) {
+              const { data } = await window.HEYS.YandexAPI.rest('shared_products', {
+                select: 'id,name,simple100,complex100,protein100,badfat100,goodfat100,trans100,fiber100,gi,harm',
+                'eq.fingerprint': fingerprint,
+                limit: 1
+              });
+              existing = data?.[0] || null;
+            }
             
             if (existing) {
               // Показываем модалку мягкого merge
@@ -821,18 +825,21 @@
               console.error('[SHARED] Failed to publish:', err);
             });
           } else {
-            // PIN-клиент — в pending очередь (через RPC)
+            // PIN-клиент — в pending очередь (через YandexAPI)
             const clientId = window.HEYS?.currentClientId;
             if (clientId && fingerprint) {
               const nameNorm = window.HEYS?.models?.normalizeProductName?.(name) || name.toLowerCase().trim();
-              window.HEYS.cloud.client.rpc('create_pending_product', {
-                p_client_id: clientId,
-                p_product_data: newProduct,
-                p_name_norm: nameNorm,
-                p_fingerprint: fingerprint
-              }).catch(err => {
-                console.error('[SHARED] Failed to create pending:', err);
-              });
+              // Используем YandexAPI вместо Supabase RPC
+              if (window.HEYS.YandexAPI) {
+                window.HEYS.YandexAPI.createPendingProduct({
+                  client_id: clientId,
+                  product_data: newProduct,
+                  name_norm: nameNorm,
+                  fingerprint: fingerprint
+                }).catch(err => {
+                  console.error('[SHARED] Failed to create pending:', err);
+                });
+              }
             }
           }
         } catch (err) {

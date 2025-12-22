@@ -1,0 +1,10 @@
+{
+  "name": "heys-api-payments",
+  "version": "1.0.0",
+  "description": "HEYS Payments API - YuKassa integration",
+  "main": "index.js",
+  "dependencies": {
+    "pg": "^8.11.3",
+    "uuid": "^9.0.0"
+  }
+}

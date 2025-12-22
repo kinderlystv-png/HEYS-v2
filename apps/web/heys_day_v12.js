@@ -6516,19 +6516,23 @@
     }, []);
 
     // addMeal теперь открывает новую модульную модалку
-    const addMeal = React.useCallback(() => { 
+    const addMeal = React.useCallback(async () => { 
       console.log('[HEYS] 🍽 addMeal() called | date:', date, '| isHydrated:', isHydrated);
       
       // 🔒 Read-only гейтинг: проверяем подписку
-      if (HEYS.Subscriptions && !HEYS.Subscriptions.canEdit()) {
-        console.log('[HEYS] 🚫 addMeal blocked — subscription inactive');
-        // Показываем уведомление о необходимости оплаты
-        if (HEYS.Subscriptions.showPaymentRequired) {
-          HEYS.Subscriptions.showPaymentRequired();
-        } else {
-          alert('Подписка не активна. Оформите подписку для продолжения.');
+      const clientId = HEYS.utils?.getCurrentClientId?.() || window.HEYS?.currentClientId;
+      if (HEYS.Subscriptions && clientId) {
+        const canEditResult = await HEYS.Subscriptions.canEdit(clientId);
+        if (!canEditResult) {
+          console.log('[HEYS] 🚫 addMeal blocked — subscription inactive');
+          // Показываем уведомление о необходимости оплаты
+          if (HEYS.Subscriptions.showPaymentRequired) {
+            HEYS.Subscriptions.showPaymentRequired();
+          } else {
+            alert('Подписка не активна. Оформите подписку для продолжения.');
+          }
+          return;
         }
-        return;
       }
       
       if (isMobile && HEYS.MealStep) {
@@ -9408,21 +9412,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       }
       
       try {
-        // === ОПРЕДЕЛЯЕМ ПЕРИОД: последние 7 дней (для инсайтов недели) ===
+        // === ОПРЕДЕЛЯЕМ ПЕРИОД: последние 3 дня (научно обоснованный минимум) ===
+        // Leibel 1995, Hall 2011: 3-5 дней достаточно для выявления тренда
+        const DEBT_WINDOW = 3;
         const todayDate = new Date(date + 'T12:00:00');
         const todayStr = date;
         
-        // Берём последние 7 дней (не включая сегодня)
-        const weekAgo = new Date(todayDate);
-        weekAgo.setDate(todayDate.getDate() - 7);
-        const weekAgoStr = fmtDate(weekAgo);
+        // Берём последние 3 дня (не включая сегодня)
+        const windowStart = new Date(todayDate);
+        windowStart.setDate(todayDate.getDate() - DEBT_WINDOW);
+        const windowStartStr = fmtDate(windowStart);
         
-        // Фильтруем дни: последние 7 дней до вчера (сегодня не считаем — ещё едим)
+        // Фильтруем дни: последние 3 дня до вчера (сегодня не считаем — ещё едим)
         const pastDays = sparklineData.filter(d => {
           if (d.isToday) return false;
           if (d.isFuture) return false;
           if (d.kcal <= 0) return false;
-          if (d.date < weekAgoStr) return false; // Старше 7 дней не берём
+          if (d.date < windowStartStr) return false; // Старше 3 дней не берём
           if (d.date >= todayStr) return false; // Сегодня и позже не берём
           return true;
         });

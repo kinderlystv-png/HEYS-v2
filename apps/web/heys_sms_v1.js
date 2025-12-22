@@ -55,71 +55,48 @@
   // =====================================================
   
   /**
-   * Отправляет SMS через SMS.ru API
+   * Отправляет SMS через YandexAPI (Cloud Function)
    * @param {string} phone - Номер телефона (79XXXXXXXXX)
    * @param {string} message - Текст сообщения
    * @returns {Promise<{success: boolean, error?: string}>}
    */
   async function sendSms(phone, message) {
-    if (!SMS_CONFIG.apiKey) {
-      console.error('[SMS] API key not configured');
-      return { success: false, error: 'SMS not configured' };
-    }
-    
     // Нормализуем номер
     const normalizedPhone = normalizePhone(phone);
     if (!normalizedPhone) {
       return { success: false, error: 'Invalid phone number' };
     }
     
+    // Dev режим — не отправляем реальные SMS
+    if (SMS_CONFIG.devMode) {
+      console.log('[SMS] DEV MODE — код будет в консоли');
+      return { success: true, devMode: true };
+    }
+    
+    // Используем YandexAPI для отправки SMS через Cloud Function
+    if (window.HEYS?.YandexAPI?.sendSMS) {
+      console.log('[SMS] Отправка через YandexAPI...');
+      return await window.HEYS.YandexAPI.sendSMS(normalizedPhone, message);
+    }
+    
+    // Fallback: прямой вызов API (если YandexAPI не загружен)
     try {
-      // Формируем URL с параметрами
-      const params = new URLSearchParams({
-        api_id: SMS_CONFIG.apiKey,
-        to: normalizedPhone,
-        msg: message,
-        json: '1'
+      console.log('[SMS] Fallback: прямой вызов api.heyslab.ru...');
+      const response = await fetch('https://api.heyslab.ru/sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: normalizedPhone, msg: message })
       });
       
-      // Добавляем отправителя если согласован
-      if (SMS_CONFIG.sender) {
-        params.append('from', SMS_CONFIG.sender);
-      }
-      
-      const response = await fetch(`${SMS_CONFIG.apiUrl}?${params.toString()}`);
       const result = await response.json();
       
-      // SMS.ru возвращает status_code: 100 при успехе
-      if (result.status_code === 100) {
-        return { success: true };
+      if (!response.ok || result.status_code !== 100) {
+        const errorMsg = result.status_text || result.error || `SMS error: ${result.status_code}`;
+        console.error('[SMS] Error:', errorMsg);
+        return { success: false, error: errorMsg };
       }
       
-      // Обработка ошибок SMS.ru
-      const errorMessages = {
-        100: 'Успешно',
-        200: 'Неверный api_id',
-        201: 'Не хватает средств',
-        202: 'Неверный номер получателя',
-        203: 'Нет текста сообщения',
-        204: 'Имя отправителя не согласовано',
-        205: 'Сообщение слишком длинное',
-        206: 'Дневной лимит исчерпан',
-        207: 'Нельзя отправить на этот номер',
-        208: 'Неверное время отправки',
-        209: 'Добавлен в стоп-лист',
-        210: 'Используйте POST',
-        211: 'Метод не найден',
-        212: 'Текст нужно кодировать в UTF-8',
-        220: 'Сервис временно недоступен',
-        230: 'Превышен лимит сообщений в день',
-        231: 'Превышен лимит одинаковых сообщений',
-        232: 'Превышен лимит на один номер'
-      };
-      
-      const errorMsg = errorMessages[result.status_code] || `Unknown error: ${result.status_code}`;
-      console.error('[SMS] Error:', errorMsg);
-      return { success: false, error: errorMsg };
-      
+      return { success: true };
     } catch (error) {
       console.error('[SMS] Network error:', error);
       return { success: false, error: 'Network error' };

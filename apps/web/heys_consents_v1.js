@@ -87,30 +87,20 @@
   
   const consentsAPI = {
     /**
-     * Логирование согласий через Supabase RPC
+     * Логирование согласий через YandexAPI
      */
     async logConsents(clientId, consents) {
-      if (!HEYS.cloud?.client) {
-        console.warn('[Consents] Supabase client not available');
-        return { success: false, error: 'No cloud client' };
-      }
-      
       try {
-        const { data, error } = await HEYS.cloud.client.rpc('log_consents', {
-          p_client_id: clientId,
-          p_consents: consents.map(c => ({
-            type: c.type,
-            version: CURRENT_VERSIONS[c.type] || '1.0',
-            granted: c.granted !== false
-          })),
-          p_ip: null, // Будет заполнено на сервере при необходимости
-          p_user_agent: navigator.userAgent
-        });
+        // Используем YandexAPI
+        if (HEYS.YandexAPI) {
+          const result = await HEYS.YandexAPI.logConsents(clientId, consents, navigator.userAgent);
+          if (result.error) throw new Error(result.error);
+          console.log('[Consents] ✅ Logged:', result);
+          return result;
+        }
         
-        if (error) throw error;
-        
-        console.log('[Consents] ✅ Logged:', data);
-        return data;
+        console.warn('[Consents] YandexAPI not available');
+        return { success: false, error: 'No API client' };
       } catch (err) {
         console.error('[Consents] ❌ Error logging:', err);
         return { success: false, error: err.message };
@@ -121,17 +111,15 @@
      * Проверка наличия всех обязательных согласий
      */
     async checkRequired(clientId) {
-      if (!HEYS.cloud?.client) {
-        return { valid: false, missing: REQUIRED_CONSENTS };
-      }
-      
       try {
-        const { data, error } = await HEYS.cloud.client.rpc('check_required_consents', {
-          p_client_id: clientId
-        });
+        // Используем YandexAPI
+        if (HEYS.YandexAPI) {
+          const result = await HEYS.YandexAPI.checkRequiredConsents(clientId);
+          if (result.error) throw new Error(result.error);
+          return result;
+        }
         
-        if (error) throw error;
-        return data;
+        return { valid: false, missing: REQUIRED_CONSENTS };
       } catch (err) {
         console.error('[Consents] ❌ Error checking:', err);
         return { valid: false, missing: REQUIRED_CONSENTS, error: err.message };
@@ -142,20 +130,16 @@
      * Отзыв согласия
      */
     async revoke(clientId, consentType) {
-      if (!HEYS.cloud?.client) {
-        return { success: false, error: 'No cloud client' };
-      }
-      
       try {
-        const { data, error } = await HEYS.cloud.client.rpc('revoke_consent', {
-          p_client_id: clientId,
-          p_consent_type: consentType
-        });
+        // Используем YandexAPI
+        if (HEYS.YandexAPI) {
+          const result = await HEYS.YandexAPI.revokeConsent(clientId, consentType);
+          if (result.error) throw new Error(result.error);
+          console.log('[Consents] ✅ Revoked:', consentType);
+          return result;
+        }
         
-        if (error) throw error;
-        
-        console.log('[Consents] ✅ Revoked:', consentType);
-        return data;
+        return { success: false, error: 'No API client' };
       } catch (err) {
         console.error('[Consents] ❌ Error revoking:', err);
         return { success: false, error: err.message };

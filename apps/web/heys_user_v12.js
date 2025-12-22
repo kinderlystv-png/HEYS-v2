@@ -468,15 +468,15 @@
             detail: { clients: updatedClients, source: 'profile-settings' } 
           }));
           
-          // Обновляем в Supabase
-          if (window.HEYS && window.HEYS.cloud && window.HEYS.cloud.client) {
-            window.HEYS.cloud.client
-              .from('clients')
-              .update({ name: profile.firstName })
-              .eq('id', currentClientId)
-              .then(({ error }) => {
-                if (error) console.warn('[Profile] Cloud sync failed:', error.message);
-              });
+          // Обновляем в Yandex Cloud
+          if (window.HEYS && window.HEYS.YandexAPI) {
+            window.HEYS.YandexAPI.rest('clients', {
+              method: 'PATCH',
+              'eq.id': currentClientId,
+              body: { name: profile.firstName }
+            }).then(({ error }) => {
+              if (error) console.warn('[Profile] Cloud sync failed:', error.message);
+            });
           }
         } catch (e) {
           console.warn('[Profile] Failed to sync client name:', e);

@@ -1720,9 +1720,9 @@
       return;
     }
     
-    // Сохраняем оба URL для fallback
-    cloud._proxyUrl = localhostProxyUrl || url; // На localhost: production proxy как fallback
-    cloud._directUrl = 'https://ukqolcziqcuplqfgrmsh.supabase.co';
+    // Legacy: URL для fallback (не используется при активном YandexAPI)
+    cloud._proxyUrl = localhostProxyUrl || url;
+    cloud._directUrl = null; // Supabase отключён — используем Yandex Cloud
     cloud._anonKey = anonKey;
     
     // Определяем среду
@@ -1765,17 +1765,15 @@
       try {
         log('[ROUTING] 🏥 Health-check подключения...');
 
-        // ⚠️ КРИТИЧНО (RTR): НЕ используем client.from(...)
-        // Любой запрос через Supabase SDK вызывает auth._useSession/__loadSession
-        // и может триггерить refresh_token запрос (400 refresh_token_already_used).
-        // Для health-check используем анонимный PostgREST fetch по anonKey.
-        const url = `${initialUrl.replace(/\/$/, '')}/rest/v1/kv_store?select=k&limit=1`;
+        // 🆕 Используем /health эндпоинт Yandex Cloud Functions
+        // вместо Supabase-формата /rest/v1/... который не поддерживается API Gateway
+        const healthUrl = `${initialUrl.replace(/\/$/, '')}/health`;
 
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Health-check timeout')), 3000),
         );
 
-        const fetchPromise = fetch(url, {
+        const fetchPromise = fetch(healthUrl, {
           method: 'GET',
           headers: {
             apikey: anonKey,
@@ -2176,11 +2174,15 @@
   };
 
   cloud.signIn = async function(email, password){
-    if (!client) { 
-      err('client not initialized'); 
-      const reason = cloud._loadError || 'Сервис авторизации недоступен. Попробуйте позже.';
-      return { error: { message: reason } }; 
+    // 🆕 v2.0: Используем собственный Yandex Cloud Auth (не Supabase SDK)
+    // Это решает проблемы с CORS и соответствует 152-ФЗ
+    
+    // Проверяем YandexAPI
+    if (!HEYS.YandexAPI) {
+      err('YandexAPI not initialized');
+      return { error: { message: 'API сервис недоступен. Попробуйте позже.' } };
     }
+    
     // Проверяем сеть перед попыткой входа
     if (!navigator.onLine) {
       status = 'offline';
@@ -2199,27 +2201,17 @@
     
     _signInInProgress = true;
     
-    try{
+    try {
       status = 'signin';
 
       // 🧹 Перед входом удаляем любые старые токены из storage.
-      // Это предотвращает попытки refresh одноразового refresh_token (RTR) из прошлых сессий.
       try {
         localStorage.removeItem('heys_supabase_auth_token');
         localStorage.removeItem('sb-ukqolcziqcuplqfgrmsh-auth-token');
       } catch (_) {}
       
-      // ⚠️ НЕ вызываем signOut() здесь!
-      // Supabase SDK сам заменит сессию при signInWithPassword.
-      // Вызов signOut() инвалидирует refresh token на сервере,
-      // но SDK в фоне всё ещё может попытаться его использовать → 400 Bad Request.
-      
-      // Увеличен таймаут до 15 секунд для мобильных сетей
-      const { data, error } = await withTimeout(
-        client.auth.signInWithPassword({ email, password }),
-        15000,
-        'signIn'
-      );
+      // 🆕 Используем наш Yandex Cloud Auth endpoint
+      const { data, error } = await HEYS.YandexAPI.curatorLogin(email, password);
       
       if (error) { 
         status = 'offline'; 
@@ -2227,58 +2219,54 @@
         logCritical('❌ Ошибка входа:', error.message || error);
         return { error }; 
       }
-      user = data?.user;
-      if (!user) { status = 'offline'; _signInInProgress = false; err('no user after signin'); return { error: 'no user' }; }
       
-      // ✅ signInWithPassword() уже возвращает сессию в data.session
-      // НЕ вызываем getSession() — это триггерит 400 Bad Request
-      // если SDK пытается обновить токен который уже в storage
-      if (data?.session) {
-        log('[AUTH] Session from signIn:', data.session.user?.email);
-        // 🔄 RTR-safe v4: Сохраняем сессию вручную (persistSession=false)
-        // ⚠️ Используем originalSetItem напрямую чтобы обойти перехват
-        try {
-          // ⚠️ КРИТИЧНО: SDK возвращает expires_at из кэша (может быть 45ч назад!)
-          // Используем свежий expires_at = сейчас + 1 час (стандартный lifetime access_token)
-          const freshExpiresAt = Math.floor(Date.now() / 1000) + 3600;
-          const tokenData = {
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token,
-            expires_at: freshExpiresAt,  // ✅ Свежий expires_at
-            user: data.session.user
-          };
-          const tokenJson = JSON.stringify(tokenData);
-          // Используем оригинальный setItem если доступен
-          const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
-          setFn('heys_supabase_auth_token', tokenJson);
-          logCritical('[AUTH] ✅ Сессия сохранена (signIn), expires_at:', new Date(freshExpiresAt * 1000).toISOString());
-          // Верификация
-          const check = global.localStorage.getItem('heys_supabase_auth_token');
-          if (!check) {
-            logCritical('[AUTH] ❌ ВЕРИФИКАЦИЯ ПРОВАЛЕНА: токен не читается обратно!');
-          } else {
-            logCritical('[AUTH] ✅ Верификация OK, токен сохранён');
-          }
-        } catch (saveErr) {
-          logCritical('[AUTH] ❌ Ошибка сохранения сессии:', saveErr?.message || saveErr);
+      if (!data?.user) { 
+        status = 'offline'; 
+        _signInInProgress = false; 
+        err('no user after signin'); 
+        return { error: { message: 'no user' } }; 
+      }
+      
+      user = data.user;
+      
+      // 🔄 Сохраняем токен в localStorage (в формате совместимом со старым кодом)
+      try {
+        const tokenData = {
+          access_token: data.access_token,
+          refresh_token: null, // Наш JWT не имеет refresh token
+          expires_at: data.expires_at,
+          user: data.user
+        };
+        const tokenJson = JSON.stringify(tokenData);
+        const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
+        setFn('heys_supabase_auth_token', tokenJson);
+        logCritical('[AUTH] ✅ Сессия сохранена (Yandex Auth), expires_at:', new Date(data.expires_at * 1000).toISOString());
+        
+        // Верификация
+        const check = global.localStorage.getItem('heys_supabase_auth_token');
+        if (!check) {
+          logCritical('[AUTH] ❌ ВЕРИФИКАЦИЯ ПРОВАЛЕНА: токен не читается обратно!');
+        } else {
+          logCritical('[AUTH] ✅ Верификация OK, токен сохранён');
         }
+      } catch (saveErr) {
+        logCritical('[AUTH] ❌ Ошибка сохранения сессии:', saveErr?.message || saveErr);
       }
       
       status = 'sync';
       await cloud.bootstrapSync();
       status = 'online';
       
-      // � При входе куратора — отключаем RPC-only режим
+      // 🔐 При входе куратора — отключаем RPC-only режим
       _rpcOnlyMode = false;
       
-      // �🛡️ Защитный период: игнорируем SIGNED_OUT в течение 10 секунд после signIn
-      // SDK может асинхронно выбросить SIGNED_OUT от старого токена
+      // 🛡️ Защитный период: игнорируем SIGNED_OUT в течение 10 секунд после signIn
       _ignoreSignedOutUntil = Date.now() + 10000;
       
       _signInInProgress = false;
       logCritical('✅ Вход выполнен:', user.email);
       return { user };
-    }catch(e){
+    } catch (e) {
       status = 'offline';
       _signInInProgress = false;
       logCritical('❌ Ошибка входа (exception):', e.message || e);
@@ -2349,9 +2337,8 @@
     
     console.log(`📤 Pushing ${valid.length} products to cloud for client ${clientId.substring(0,8)}...`);
     
-    // Сохраняем в Supabase
-    const { error } = await client
-      .from('client_kv_store')
+    // Сохраняем через YandexAPI
+    const { error } = await YandexAPI.from('client_kv_store')
       .upsert({
         user_id: user.id,
         client_id: clientId,
@@ -2403,9 +2390,8 @@
     console.log(`📤 Pushing day ${date} to cloud for client ${clientId.substring(0,8)}...`);
     console.log(`   Meals: ${dayData.meals?.length || 0}, Items: ${dayData.meals?.reduce((s,m) => s + (m.items?.length || 0), 0) || 0}`);
     
-    // Сохраняем в Supabase
-    const { error } = await client
-      .from('client_kv_store')
+    // Сохраняем через YandexAPI
+    const { error } = await YandexAPI.from('client_kv_store')
       .upsert({
         user_id: user.id,
         client_id: clientId,
@@ -2645,8 +2631,7 @@
       let totalRecords = 0;
       
       // ===== 1. ОЧИСТКА kv_store (глобальные данные) =====
-      const { data: kvData, error: kvError } = await client
-        .from('kv_store')
+      const { data: kvData, error: kvError } = await YandexAPI.from('kv_store')
         .select('k,v')
         .eq('user_id', userId)
         .like('k', '%products%');
@@ -2669,8 +2654,7 @@
       }
       
       // ===== 2. ОЧИСТКА client_kv_store (данные клиента) =====
-      const { data: clientData, error: clientError } = await client
-        .from('client_kv_store')
+      const { data: clientData, error: clientError } = await YandexAPI.from('client_kv_store')
         .select('k,v')
         .eq('client_id', clientId)
         .like('k', '%products%');
@@ -2722,13 +2706,14 @@
     
     // Пустой массив или не массив — удаляем запись
     if (!Array.isArray(products) || products.length === 0) {
-      let query = client.from(table).delete();
+      // Строим filters объект для YandexAPI.rest()
+      const deleteFilters = {};
       for (const [key, val] of Object.entries(filters)) {
-        query = query.eq(key, val);
+        deleteFilters[`eq.${key}`] = val;
       }
-      query = query.eq('k', row.k);
+      deleteFilters['eq.k'] = row.k;
       
-      const { error: deleteError } = await query;
+      const { error: deleteError } = await YandexAPI.rest(table, { method: 'DELETE', filters: deleteFilters });
       
       if (!deleteError) {
         logCritical(`☁️ [CLOUD CLEANUP] DELETED empty ${table}.${row.k}`);
@@ -2747,13 +2732,14 @@
     
     // 🚨 Если ВСЕ продукты невалидные — удаляем запись полностью!
     if (after === 0) {
-      let query = client.from(table).delete();
+      // Строим filters объект для YandexAPI.rest()
+      const deleteFilters = {};
       for (const [key, val] of Object.entries(filters)) {
-        query = query.eq(key, val);
+        deleteFilters[`eq.${key}`] = val;
       }
-      query = query.eq('k', row.k);
+      deleteFilters['eq.k'] = row.k;
       
-      const { error: deleteError } = await query;
+      const { error: deleteError } = await YandexAPI.rest(table, { method: 'DELETE', filters: deleteFilters });
       
       if (deleteError) {
         logCritical(`☁️ [CLOUD CLEANUP] Failed to delete ${table}.${row.k}:`, deleteError.message);
@@ -2777,7 +2763,7 @@
     }
     
     const onConflict = table === 'kv_store' ? 'user_id,k' : 'client_id,k';
-    const { error: upsertError } = await client.from(table).upsert(upsertData, { onConflict });
+    const { error: upsertError } = await YandexAPI.from(table).upsert(upsertData, { onConflict });
     
     if (upsertError) {
       logCritical(`☁️ [CLOUD CLEANUP] Failed to save ${table}.${row.k}:`, upsertError.message);
@@ -2796,11 +2782,15 @@
       // 🧹 Очистка невалидных продуктов перед синхронизацией
       cloud.cleanupProducts();
       
-      // Retry с exponential backoff для сетевых ошибок (QUIC, network)
-      const { data, error } = await fetchWithRetry(
-        () => client.from('kv_store').select('k,v,updated_at'),
-        { maxRetries: 3, timeoutMs: 20000, label: 'bootstrapSync' }
-      );
+      // 🇷🇺 Используем Yandex API вместо Supabase (152-ФЗ compliant)
+      const YandexAPI = global.HEYS?.YandexAPI;
+      if (!YandexAPI) {
+        err('bootstrapSync: YandexAPI not loaded');
+        muteMirror = false;
+        return;
+      }
+      
+      const { data, error } = await YandexAPI.from('kv_store').select('k,v,updated_at');
       
       // Graceful degradation: если сеть не работает — продолжаем с localStorage
       if (error) { 
@@ -3120,16 +3110,12 @@
       
       // Проверяем, действительно ли нужна синхронизация
       // Сначала пробуем загрузить только метаданные для проверки
-      // Retry для сетевых ошибок
-      const { data: metaData, error: metaError } = await fetchWithRetry(
-        () => client
-          .from('client_kv_store')
-          .select('k,updated_at')
-          .eq('client_id', client_id)
-          .order('updated_at', { ascending: false })
-          .limit(5),
-        { maxRetries: 2, timeoutMs: 10000, label: 'clientSync meta check' }
-      );
+      // YandexAPI имеет встроенный retry
+      const { data: metaData, error: metaError } = await YandexAPI.from('client_kv_store')
+        .select('k,updated_at')
+        .eq('client_id', client_id)
+        .order('updated_at', { ascending: false })
+        .limit(5);
         
       if (metaError) { 
         // Graceful degradation для сетевых ошибок
@@ -3166,11 +3152,10 @@
       
       // Теперь загружаем полные данные только если есть обновления
       log('🔄 [CLIENT_SYNC] Loading data for client:', client_id);
-      // Retry для сетевых ошибок
-      const { data, error } = await fetchWithRetry(
-        () => client.from('client_kv_store').select('k,v,updated_at').eq('client_id', client_id),
-        { maxRetries: 2, timeoutMs: 20000, label: 'clientSync full data' }
-      );
+      // YandexAPI имеет встроенный retry
+      const { data, error } = await YandexAPI.from('client_kv_store')
+        .select('k,v,updated_at')
+        .eq('client_id', client_id);
       if (error) { 
         // Graceful degradation
         if (error.isNetworkFailure) {
@@ -3886,18 +3871,18 @@
   };
 
   cloud.fetchDays = async function(dates) {
-    if (!client || !user) return [];
+    // YandexAPI не требует client/user — работает через API Gateway
     if (!Array.isArray(dates) || dates.length === 0) return [];
     const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
     if (!clientId) return [];
 
     const dayKeys = dates.map((d) => `dayv2_${d}`);
     try {
-      const { data, error } = await withTimeout(
-        client.from('client_kv_store').select('k,v,updated_at').eq('client_id', clientId).in('k', dayKeys),
-        15000,
-        'fetchDays',
-      );
+      // YandexAPI имеет встроенный timeout
+      const { data, error } = await YandexAPI.from('client_kv_store')
+        .select('k,v,updated_at')
+        .eq('client_id', clientId)
+        .in('k', dayKeys);
       if (error) {
         err('fetchDays select', error);
         return [];
@@ -4370,24 +4355,26 @@
     // Функция только проверяет существование клиента (больше НЕ создаём автоматически)
     // 🔐 Для PIN-авторизации: проверяем только по id (без curator_id)
     cloud.ensureClient = async function(clientId) {
-        if (!client || !clientId) return false;
+        if (!clientId) return false;
         
         // 🔐 PIN-авторизация: клиент уже проверен через verify_client_pin
         const isPinAuth = _pinAuthClientId && _pinAuthClientId === clientId;
         
         try {
-            let query = client
-              .from('clients')
-              .select('id')
-              .eq('id', clientId);
+            // Строим фильтры динамически
+            const filters = { 'eq.id': clientId };
             
             // Для обычной авторизации проверяем curator_id
             // Для PIN — только существование клиента (RLS на таблице clients запретит доступ чужим)
             if (user && !isPinAuth) {
-              query = query.eq('curator_id', user.id);
+              filters['eq.curator_id'] = user.id;
             }
             
-            const { data, error } = await query.limit(1);
+            const { data, error } = await YandexAPI.rest('clients', { 
+              select: 'id', 
+              filters, 
+              limit: 1 
+            });
             if (error) return false;
             return (data && data.length > 0);
         } catch(e){
@@ -4400,8 +4387,8 @@
     cloud.upsert = async function(tableName, obj, conflictKey) {
         const isPinAuth = _pinAuthClientId && obj.client_id === _pinAuthClientId;
         
-        if (!client || (!user && !isPinAuth)) {
-            throw new Error('Client or user not available');
+        if (!user && !isPinAuth) {
+            throw new Error('User not available');
         }
         
         try {
@@ -4414,8 +4401,7 @@
                 }
             }
             
-            const { error } = await client
-                .from(tableName)
+            const { error } = await YandexAPI.from(tableName)
                 .upsert(obj, { onConflict: conflictKey || 'user_id,client_id,k' });
             
             if (error) {
@@ -4473,7 +4459,8 @@
       }
       
       try{
-        const { error } = await client.from('kv_store').upsert(uniqueBatch, { onConflict: 'user_id,k' });
+        // YandexAPI для curator mode upsert
+        const { error } = await YandexAPI.from('kv_store').upsert(uniqueBatch, { onConflict: 'user_id,k' });
         if (error) { 
           // При ошибке — вернуть в очередь
           upsertQueue.push(...uniqueBatch);
@@ -5162,13 +5149,10 @@
    * @returns {Promise<{data: Array, error: any}>}
    */
   cloud.getAllSharedProducts = async function(options = {}) {
-    if (!client) return { data: null, error: 'Client not initialized' };
-    
     const { limit = 500, excludeBlocklist = true } = options;
     
     try {
-      const { data, error } = await client
-        .from('shared_products_public')
+      const { data, error } = await YandexAPI.from('shared_products_public')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(limit);
@@ -5201,30 +5185,29 @@
    * @returns {Promise<{data: Array, error: any}>}
    */
   cloud.searchSharedProducts = async function(query, options = {}) {
-    console.log('[SHARED SEARCH] Called with query:', query, 'client:', !!client, 'user:', !!user);
-    if (!client) return { data: null, error: 'Client not initialized' };
+    console.log('[SHARED SEARCH] Called with query:', query, 'user:', !!user);
     
     const { limit = 50, excludeBlocklist = true, fingerprint = null } = options;
     const normQuery = query.toLowerCase().trim();
     console.log('[SHARED SEARCH] Normalized query:', normQuery);
     
     try {
-      let queryBuilder = client
-        .from('shared_products_public')
-        .select('*');
+      // Строим фильтры для YandexAPI.rest()
+      const filters = {};
       
       // Поиск по fingerprint (точное совпадение) ИЛИ по названию
       if (fingerprint) {
-        queryBuilder = queryBuilder.eq('fingerprint', fingerprint);
+        filters['eq.fingerprint'] = fingerprint;
       } else if (normQuery) {
-        queryBuilder = queryBuilder.ilike('name_norm', `%${normQuery}%`);
+        filters['ilike.name_norm'] = `%${normQuery}%`;
       }
       
-      queryBuilder = queryBuilder
-        .order('created_at', { ascending: false })
-        .limit(limit);
-      
-      const { data, error } = await queryBuilder;
+      const { data, error } = await YandexAPI.rest('shared_products_public', {
+        select: '*',
+        filters,
+        order: 'created_at.desc',
+        limit
+      });
       console.log('[SHARED SEARCH] Query result:', data?.length, 'error:', error);
       
       if (error) {
@@ -5255,14 +5238,13 @@
    */
   cloud.publishToShared = async function(product) {
     console.log('[SHARED] 📤 publishToShared called:', {
-      hasClient: !!client,
       hasUser: !!user,
       userId: user?.id,
       productName: product?.name
     });
     
-    if (!client || !user) {
-      console.log('[SHARED] ❌ Not authenticated:', { client: !!client, user: !!user });
+    if (!user) {
+      console.log('[SHARED] ❌ Not authenticated:', { user: !!user });
       return { data: null, error: 'Not authenticated', status: 'error' };
     }
     
@@ -5275,8 +5257,7 @@
       
       // Проверяем: продукт уже существует?
       console.log('[SHARED] 🔍 Checking if exists...');
-      const { data: existing, error: checkError } = await client
-        .from('shared_products')
+      const { data: existing, error: checkError } = await YandexAPI.from('shared_products')
         .select('id')
         .eq('fingerprint', fingerprint)
         .maybeSingle();
@@ -5316,8 +5297,7 @@
       
       console.log('[SHARED] 📝 Inserting:', insertData);
       
-      const { data, error } = await client
-        .from('shared_products')
+      const { data, error } = await YandexAPI.from('shared_products')
         .insert(insertData)
         .select()
         .single();
@@ -5348,15 +5328,14 @@
   cloud.deleteSharedProduct = async function(productId) {
     console.log('[SHARED] 🗑️ deleteSharedProduct called:', productId);
     
-    if (!client || !user) {
+    if (!user) {
       console.log('[SHARED] ❌ Not authenticated');
       return { success: false, error: 'Not authenticated' };
     }
     
     try {
       // Удаляем продукт (RLS проверит права: только автор или куратор)
-      const { error } = await client
-        .from('shared_products')
+      const { error } = await YandexAPI.from('shared_products')
         .delete()
         .eq('id', productId);
       
@@ -5380,15 +5359,11 @@
    * @returns {Promise<{data: any, error: any, status: string}>}
    */
   cloud.createPendingProduct = async function(clientId, product) {
-    if (!client) {
-      return { data: null, error: 'Client not initialized', status: 'error' };
-    }
-    
     try {
       const fingerprint = await HEYS.models.computeProductFingerprint(product);
       const name_norm = HEYS.models.normalizeProductName(product.name);
       
-      const { data, error } = await client.rpc('create_pending_product', {
+      const { data, error } = await YandexAPI.rpc('create_pending_product', {
         p_client_id: clientId,
         p_product_data: product,
         p_name_norm: name_norm,
@@ -5418,17 +5393,19 @@
    * @returns {Promise<{data: Array, error: any}>}
    */
   cloud.getPendingProducts = async function() {
-    if (!client || !user) {
+    if (!user) {
       return { data: null, error: 'Not authenticated' };
     }
     
     try {
-      const { data, error } = await client
-        .from('shared_products_pending')
-        .select('*')
-        .eq('curator_id', user.id)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+      const { data, error } = await YandexAPI.rest('shared_products_pending', {
+        select: '*',
+        filters: {
+          'eq.curator_id': user.id,
+          'eq.status': 'pending'
+        },
+        order: 'created_at.desc'
+      });
       
       if (error) {
         err('[SHARED PRODUCTS] Get pending error:', error);
@@ -5450,7 +5427,7 @@
    * @returns {Promise<{data: any, error: any, status: string}>}
    */
   cloud.approvePendingProduct = async function(pendingId, productData) {
-    if (!client || !user) {
+    if (!user) {
       return { data: null, error: 'Not authenticated', status: 'error' };
     }
     
@@ -5463,14 +5440,15 @@
       }
       
       // 2. Обновляем статус заявки
-      const { error: updateError } = await client
-        .from('shared_products_pending')
-        .update({
+      const { error: updateError } = await YandexAPI.rest('shared_products_pending', {
+        method: 'PATCH',
+        filters: { 'eq.id': pendingId },
+        data: {
           status: 'approved',
           moderated_at: new Date().toISOString(),
           moderated_by: user.id
-        })
-        .eq('id', pendingId);
+        }
+      });
       
       if (updateError) {
         err('[SHARED PRODUCTS] Approve update error:', updateError);
@@ -5497,22 +5475,23 @@
    * @returns {Promise<{data: any, error: any}>}
    */
   cloud.rejectPendingProduct = async function(pendingId, reason = '') {
-    if (!client || !user) {
+    if (!user) {
       return { data: null, error: 'Not authenticated' };
     }
     
     try {
-      const { data, error } = await client
-        .from('shared_products_pending')
-        .update({
+      const { data, error } = await YandexAPI.rest('shared_products_pending', {
+        method: 'PATCH',
+        filters: { 'eq.id': pendingId },
+        data: {
           status: 'rejected',
           reject_reason: reason,
           moderated_at: new Date().toISOString(),
           moderated_by: user.id
-        })
-        .eq('id', pendingId)
-        .select()
-        .single();
+        },
+        select: '*',
+        limit: 1
+      });
       
       if (error) {
         err('[SHARED PRODUCTS] Reject error:', error);
@@ -5532,13 +5511,13 @@
    * @returns {Promise<Array<string>>} - Массив ID заблокированных продуктов
    */
   cloud.getBlocklist = async function() {
-    if (!client || !user) return [];
+    if (!user) return [];
     
     try {
-      const { data, error } = await client
-        .from('shared_products_blocklist')
-        .select('product_id')
-        .eq('curator_id', user.id);
+      const { data, error } = await YandexAPI.rest('shared_products_blocklist', {
+        select: 'product_id',
+        filters: { 'eq.curator_id': user.id }
+      });
       
       if (error) {
         err('[SHARED PRODUCTS] Get blocklist error:', error);
@@ -5558,19 +5537,20 @@
    * @returns {Promise<{data: any, error: any}>}
    */
   cloud.blockProduct = async function(productId) {
-    if (!client || !user) {
+    if (!user) {
       return { data: null, error: 'Not authenticated' };
     }
     
     try {
-      const { data, error } = await client
-        .from('shared_products_blocklist')
-        .insert({
+      const { data, error } = await YandexAPI.rest('shared_products_blocklist', {
+        method: 'POST',
+        data: {
           curator_id: user.id,
           product_id: productId
-        })
-        .select()
-        .single();
+        },
+        select: '*',
+        limit: 1
+      });
       
       if (error) {
         err('[SHARED PRODUCTS] Block error:', error);
@@ -5591,16 +5571,18 @@
    * @returns {Promise<{data: any, error: any}>}
    */
   cloud.unblockProduct = async function(productId) {
-    if (!client || !user) {
+    if (!user) {
       return { data: null, error: 'Not authenticated' };
     }
     
     try {
-      const { error } = await client
-        .from('shared_products_blocklist')
-        .delete()
-        .eq('curator_id', user.id)
-        .eq('product_id', productId);
+      const { error } = await YandexAPI.rest('shared_products_blocklist', {
+        method: 'DELETE',
+        filters: {
+          'eq.curator_id': user.id,
+          'eq.product_id': productId
+        }
+      });
       
       if (error) {
         err('[SHARED PRODUCTS] Unblock error:', error);
