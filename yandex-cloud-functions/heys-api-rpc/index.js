@@ -53,6 +53,7 @@ console.log('[RPC Init] PG_CONFIG ssl:', CA_CERT ? 'verify-full with cert' : 'no
 const ALLOWED_ORIGINS = [
   'https://heyslab.ru',
   'https://www.heyslab.ru',
+  'https://app.heyslab.ru',
   'https://heys-static.website.yandexcloud.net',
   'https://heys-v2-web.vercel.app',
   'http://localhost:3001',
