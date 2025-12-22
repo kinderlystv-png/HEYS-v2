@@ -4845,16 +4845,17 @@
     const [displayedAdvice, setDisplayedAdvice] = useState(null);
     const [displayedAdviceList, setDisplayedAdviceList] = useState([]);
     // Автопоказ тостов (FAB работает всегда)
+    // 🔧 FIX: Используем U.lsGet для синхронизации с облаком
     const [toastsEnabled, setToastsEnabled] = useState(() => {
       try {
-        const settings = JSON.parse(localStorage.getItem('heys_advice_settings') || '{}');
+        const settings = U.lsGet('heys_advice_settings', {});
         return settings.toastsEnabled !== false; // true по умолчанию
       } catch(e) { return true; }
     });
     // Звук для модуля советов (ding/whoosh/pop)
     const [adviceSoundEnabled, setAdviceSoundEnabled] = useState(() => {
       try {
-        const settings = JSON.parse(localStorage.getItem('heys_advice_settings') || '{}');
+        const settings = U.lsGet('heys_advice_settings', {});
         // true по умолчанию, выключить можно вручную
         return settings.adviceSoundEnabled !== false;
       } catch(e) { return true; }
@@ -4862,11 +4863,12 @@
     // Прочитанные советы (свайп влево) — сохраняются на день
     const [dismissedAdvices, setDismissedAdvices] = useState(() => {
       try {
-        const saved = localStorage.getItem('heys_advice_read_today');
+        const U = window.HEYS?.utils || {};
+        const saved = U.lsGet ? U.lsGet('heys_advice_read_today', null) : localStorage.getItem('heys_advice_read_today');
         if (saved) {
-          const { date, ids } = JSON.parse(saved);
-          if (date === new Date().toISOString().slice(0, 10)) {
-            return new Set(ids);
+          const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
+          if (parsed.date === new Date().toISOString().slice(0, 10)) {
+            return new Set(parsed.ids);
           }
         }
       } catch(e) {}
@@ -4875,11 +4877,12 @@
     // Скрытые до завтра советы (свайп вправо)
     const [hiddenUntilTomorrow, setHiddenUntilTomorrow] = useState(() => {
       try {
-        const saved = localStorage.getItem('heys_advice_hidden_today');
+        const U = window.HEYS?.utils || {};
+        const saved = U.lsGet ? U.lsGet('heys_advice_hidden_today', null) : localStorage.getItem('heys_advice_hidden_today');
         if (saved) {
-          const { date, ids } = JSON.parse(saved);
-          if (date === new Date().toISOString().slice(0, 10)) {
-            return new Set(ids);
+          const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
+          if (parsed.date === new Date().toISOString().slice(0, 10)) {
+            return new Set(parsed.ids);
           }
         }
       } catch(e) {}
@@ -4989,13 +4992,14 @@
     }, [adviceSoundEnabled]);
     
     // Toggle автопоказа тостов (FAB всегда работает)
+    // 🔧 FIX: Используем U.lsSet для синхронизации с облаком
     const toggleToastsEnabled = React.useCallback(() => {
       setToastsEnabled(prev => {
         const newVal = !prev;
         try {
-          const settings = JSON.parse(localStorage.getItem('heys_advice_settings') || '{}');
+          const settings = U.lsGet('heys_advice_settings', {});
           settings.toastsEnabled = newVal;
-          localStorage.setItem('heys_advice_settings', JSON.stringify(settings));
+          U.lsSet('heys_advice_settings', settings);
           window.dispatchEvent(new CustomEvent('heysAdviceSettingsChanged', { detail: settings }));
         } catch(e) {}
         // Haptic feedback
@@ -5005,13 +5009,14 @@
     }, [haptic]);
 
     // Вкл/выкл звук в модуле советов
+    // 🔧 FIX: Используем U.lsSet для синхронизации с облаком
     const toggleAdviceSoundEnabled = React.useCallback(() => {
       setAdviceSoundEnabled(prev => {
         const newVal = !prev;
         try {
-          const settings = JSON.parse(localStorage.getItem('heys_advice_settings') || '{}');
+          const settings = U.lsGet('heys_advice_settings', {});
           settings.adviceSoundEnabled = newVal;
-          localStorage.setItem('heys_advice_settings', JSON.stringify(settings));
+          U.lsSet('heys_advice_settings', settings);
           window.dispatchEvent(new CustomEvent('heysAdviceSettingsChanged', { detail: settings }));
         } catch(e) {}
         if (typeof haptic === 'function') haptic('light');
@@ -5033,10 +5038,12 @@
           const newSet = new Set(prev);
           newSet.delete(id);
           try {
-            localStorage.setItem('heys_advice_read_today', JSON.stringify({
+            const U = window.HEYS?.utils || {};
+            const saveData = {
               date: new Date().toISOString().slice(0, 10),
               ids: [...newSet]
-            }));
+            };
+            U.lsSet ? U.lsSet('heys_advice_read_today', saveData) : localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
           } catch(e) {}
           return newSet;
         });
@@ -5046,10 +5053,12 @@
           const newSet = new Set(prev);
           newSet.delete(id);
           try {
-            localStorage.setItem('heys_advice_hidden_today', JSON.stringify({
+            const U = window.HEYS?.utils || {};
+            const saveData = {
               date: new Date().toISOString().slice(0, 10),
               ids: [...newSet]
-            }));
+            };
+            U.lsSet ? U.lsSet('heys_advice_hidden_today', saveData) : localStorage.setItem('heys_advice_hidden_today', JSON.stringify(saveData));
           } catch(e) {}
           return newSet;
         });
@@ -5084,7 +5093,8 @@
             ids: [...newSet]
           };
           try {
-            localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
+            const U = window.HEYS?.utils || {};
+            U.lsSet ? U.lsSet('heys_advice_read_today', saveData) : localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
           } catch(e) {
             // Тихо игнорируем ошибки localStorage
           }
@@ -5114,10 +5124,12 @@
         setHiddenUntilTomorrow(prev => {
           const newSet = new Set([...prev, adviceId]);
           try {
-            localStorage.setItem('heys_advice_hidden_today', JSON.stringify({
+            const U = window.HEYS?.utils || {};
+            const saveData = {
               date: new Date().toISOString().slice(0, 10),
               ids: [...newSet]
-            }));
+            };
+            U.lsSet ? U.lsSet('heys_advice_hidden_today', saveData) : localStorage.setItem('heys_advice_hidden_today', JSON.stringify(saveData));
           } catch(e) {}
           return newSet;
         });
@@ -5125,10 +5137,12 @@
         setDismissedAdvices(prev => {
           const newSet = new Set([...prev, adviceId]);
           try {
-            localStorage.setItem('heys_advice_read_today', JSON.stringify({
+            const U = window.HEYS?.utils || {};
+            const saveData = {
               date: new Date().toISOString().slice(0, 10),
               ids: [...newSet]
-            }));
+            };
+            U.lsSet ? U.lsSet('heys_advice_read_today', saveData) : localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
           } catch(e) {}
           return newSet;
         });
@@ -5187,10 +5201,12 @@
             // Сохраняем на последнем шаге
             if (index === advices.length - 1) {
               try {
-                localStorage.setItem('heys_advice_read_today', JSON.stringify({
+                const U = window.HEYS?.utils || {};
+                const saveData = {
                   date: new Date().toISOString().slice(0, 10),
                   ids: [...newSet]
-                }));
+                };
+                U.lsSet ? U.lsSet('heys_advice_read_today', saveData) : localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
               } catch(e) {}
             }
             return newSet;
@@ -5329,7 +5345,8 @@
 
     // === Dark Theme (3 modes: light / dark / auto) ===
     const [theme, setTheme] = useState(() => {
-      const saved = localStorage.getItem('heys_theme');
+      const U = window.HEYS?.utils || {};
+      const saved = U.lsGet ? U.lsGet('heys_theme', 'light') : localStorage.getItem('heys_theme');
       // Валидация: только light/dark/auto, иначе light
       return ['light', 'dark', 'auto'].includes(saved) ? saved : 'light';
     });
@@ -5346,7 +5363,8 @@
     React.useEffect(() => {
       document.documentElement.setAttribute('data-theme', resolvedTheme);
       try {
-        localStorage.setItem('heys_theme', theme);
+        const U = window.HEYS?.utils || {};
+        U.lsSet ? U.lsSet('heys_theme', theme) : localStorage.setItem('heys_theme', theme);
       } catch (e) {
         // QuotaExceeded — игнорируем, тема применится через data-theme
       }
@@ -8203,7 +8221,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     React.useEffect(() => {
       const checkScheduled = () => {
         try {
-          const scheduled = JSON.parse(localStorage.getItem('heys_scheduled_advices') || '[]');
+          const U = window.HEYS?.utils || {};
+          const scheduled = U.lsGet ? U.lsGet('heys_scheduled_advices', []) : JSON.parse(localStorage.getItem('heys_scheduled_advices') || '[]');
           const now = Date.now();
           const ready = scheduled.filter(s => s.showAt <= now);
           if (ready.length > 0) {
@@ -11746,7 +11765,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             ids: [...newSet]
           };
           try {
-            localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
+            const U = window.HEYS?.utils || {};
+            U.lsSet ? U.lsSet('heys_advice_read_today', saveData) : localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
           } catch(e) {}
           return newSet;
         });
@@ -11940,10 +11960,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       if (hasPerfect && !firstPerfectShownRef.current) {
         try {
-          const alreadyAchieved = localStorage.getItem('heys_first_perfect_meal') === '1';
+          const U = window.HEYS?.utils || {};
+          const alreadyAchieved = U.lsGet ? U.lsGet('heys_first_perfect_meal', null) === '1' : localStorage.getItem('heys_first_perfect_meal') === '1';
           if (!alreadyAchieved) {
             // Первый раз! Показываем ачивку
-            localStorage.setItem('heys_first_perfect_meal', '1');
+            U.lsSet ? U.lsSet('heys_first_perfect_meal', '1') : localStorage.setItem('heys_first_perfect_meal', '1');
             setShowFirstPerfectAchievement(true);
             setShowConfetti(true);
             try { HEYS.dayUtils?.haptic?.('success'); } catch(e) {}

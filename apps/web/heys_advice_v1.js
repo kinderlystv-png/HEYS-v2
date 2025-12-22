@@ -1192,13 +1192,15 @@
   
   /**
    * Получает настройки советов
+   * 🔧 FIX: Используем U.lsGet для синхронизации с облаком
    * @returns {Object}
    */
   function getAdviceSettings() {
     try {
-      const stored = localStorage.getItem(ADVICE_SETTINGS_KEY);
+      const U = window.HEYS?.utils || {};
+      const stored = U.lsGet ? U.lsGet(ADVICE_SETTINGS_KEY, null) : JSON.parse(localStorage.getItem(ADVICE_SETTINGS_KEY) || 'null');
       if (stored) {
-        return { ...DEFAULT_ADVICE_SETTINGS, ...JSON.parse(stored) };
+        return { ...DEFAULT_ADVICE_SETTINGS, ...stored };
       }
     } catch (e) {}
     return { ...DEFAULT_ADVICE_SETTINGS };
@@ -1206,13 +1208,19 @@
   
   /**
    * Сохраняет настройки советов
+   * 🔧 FIX: Используем U.lsSet для синхронизации с облаком
    * @param {Object} settings
    */
   function setAdviceSettings(settings) {
     try {
       const current = getAdviceSettings();
       const merged = { ...current, ...settings };
-      localStorage.setItem(ADVICE_SETTINGS_KEY, JSON.stringify(merged));
+      const U = window.HEYS?.utils || {};
+      if (U.lsSet) {
+        U.lsSet(ADVICE_SETTINGS_KEY, merged);
+      } else {
+        localStorage.setItem(ADVICE_SETTINGS_KEY, JSON.stringify(merged));
+      }
       // Emit event для UI
       window.dispatchEvent(new CustomEvent('heysAdviceSettingsChanged', { detail: merged }));
     } catch (e) {}

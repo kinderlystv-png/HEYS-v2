@@ -55,9 +55,11 @@
   }
   
   // Проверка настроек
+  // 🔧 FIX: Используем U.lsGet для синхронизации с облаком
   function isSoundEnabled() {
     try {
-      const settings = JSON.parse(localStorage.getItem('heys_advice_settings') || '{}');
+      const U = window.HEYS?.utils || {};
+      const settings = U.lsGet ? U.lsGet('heys_advice_settings', {}) : JSON.parse(localStorage.getItem('heys_advice_settings') || '{}');
       return settings.soundEnabled !== false; // true по умолчанию
     } catch { return true; }
   }

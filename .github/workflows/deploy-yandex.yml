@@ -183,10 +183,10 @@ jobs:
           yc config set token "$YC_TOKEN"
           yc config set folder-id "$YC_FOLDER"
 
-          # Инвалидируем только критичные пути (не весь кэш)
+          # Инвалидируем критичные пути + JS файлы (содержат APP_VERSION)
           echo "🔄 Purging CDN cache for PWA..."
           yc cdn cache purge --resource-id "$CDN_PWA_ID" \
-            --path "/" --path "/index.html" --path "/sw.js" --path "/manifest.webmanifest" || true
+            --path "/" --path "/index.html" --path "/sw.js" --path "/manifest.webmanifest" --path "/*.js" || true
 
           echo "🔄 Purging CDN cache for Landing..."
           yc cdn cache purge --resource-id "$CDN_LANDING_ID" \
