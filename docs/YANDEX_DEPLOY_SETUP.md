@@ -1,7 +1,36 @@
 # 🚀 Настройка деплоя на Yandex Cloud
 
-> Этот документ описывает настройку автоматического деплоя фронтенда на Yandex
-> Cloud Object Storage + CDN.
+> Этот документ описывает настройку автоматического деплоя на Yandex Cloud:
+> - **PWA** (apps/web) → `heys-app` bucket → `app.heyslab.ru`
+> - **Landing** (apps/landing) → `heys-static` bucket → `heyslab.ru`
+> - **API** → Cloud Functions → `api.heyslab.ru`
+
+## Архитектура
+
+```
+GitHub Actions (deploy-yandex.yml)
+├── build-and-deploy (Job 1)
+│   ├── Build PWA + Landing
+│   ├── Deploy PWA → heys-app bucket
+│   ├── Deploy Landing → heys-static bucket
+│   └── CDN Cache Invalidation
+│
+└── deploy-functions (Job 2, параллельно)
+    └── Deploy Cloud Functions (5 штук)
+
+Yandex Cloud Infrastructure:
+├── Object Storage
+│   ├── heys-app (PWA) ← app.heyslab.ru
+│   └── heys-static (Landing) ← heyslab.ru
+├── CDN
+│   ├── bc8rktbgbmpyezsxnzrn (app.heyslab.ru)
+│   └── bc8rk3pnqppsfime3nth (heyslab.ru)
+├── Certificate Manager
+│   ├── fpq2cb4ir6jje51dnsbu (app.heyslab.ru)
+│   └── fpqps3bjl3agvqj0k5uq (heyslab.ru)
+└── Cloud Functions (5 functions)
+    └── API Gateway: api.heyslab.ru
+```
 
 ## Предварительные требования
 
@@ -9,15 +38,22 @@
 2. Созданный folder для проекта
 3. Сервисный аккаунт с ролями:
    - `storage.editor` — для Object Storage
-   - `cdn.editor` — для CDN (опционально)
-   - `serverless.functions.invoker` — для Cloud Functions
+   - `cdn.editor` — для CDN
+   - `serverless.functions.admin` — для Cloud Functions
+   - `certificate-manager.certificates.downloader` — для сертификатов
 
 ---
 
-## Шаг 1: Создание Object Storage bucket
+## Шаг 1: Создание Object Storage buckets
 
 ```bash
-# Через консоль Yandex Cloud или CLI:
+# Bucket для PWA (app.heyslab.ru)
+yc storage bucket create \
+  --name heys-app \
+  --default-storage-class standard \
+  --max-size 1073741824
+
+# Bucket для Landing (heyslab.ru)  
 yc storage bucket create \
   --name heys-static \
   --default-storage-class standard \
@@ -76,12 +112,34 @@ yc iam access-key create --service-account-name heys-deploy
 
 В репозитории GitHub → Settings → Secrets and variables → Actions:
 
-| Secret Name            | Описание                            | Пример значения            |
-| ---------------------- | ----------------------------------- | -------------------------- |
-| `YC_ACCESS_KEY_ID`     | Access Key ID сервисного аккаунта   | `YCAJEwbN...`              |
-| `YC_SECRET_ACCESS_KEY` | Secret Access Key                   | `YCNm...`                  |
-| `YC_OAUTH_TOKEN`       | OAuth токен (для yc CLI)            | Из `yc config get token`   |
-| `YC_CLOUD_ID`          | ID облака                           | `b1g...`                   |
+### 🔑 Основные секреты (обязательные)
+
+| Secret Name            | Описание                          | Как получить                           |
+| ---------------------- | --------------------------------- | -------------------------------------- |
+| `YC_ACCESS_KEY_ID`     | Access Key ID сервисного аккаунта | `yc iam access-key create`             |
+| `YC_SECRET_ACCESS_KEY` | Secret Access Key                 | `yc iam access-key create`             |
+| `YC_OAUTH_TOKEN`       | OAuth токен для YC CLI            | `yc config get token`                  |
+| `YC_CLOUD_ID`          | ID облака                         | `yc config get cloud-id`               |
+| `YC_FOLDER_ID`         | ID папки                          | `yc config get folder-id`              |
+
+### 🌐 CDN секреты (опционально, для cache invalidation)
+
+| Secret Name           | Описание          | Текущее значение          |
+| --------------------- | ----------------- | ------------------------- |
+| `YC_CDN_PWA_ID`       | CDN для PWA       | `bc8rktbgbmpyezsxnzrn`    |
+| `YC_CDN_LANDING_ID`   | CDN для Landing   | `bc8rk3pnqppsfime3nth`    |
+
+### ⚡ Cloud Functions секреты (для деплоя функций)
+
+| Secret Name           | Описание                      | Функции которые используют |
+| --------------------- | ----------------------------- | -------------------------- |
+| `PG_HOST`             | PostgreSQL хост               | rpc, rest, leads, auth     |
+| `PG_USER`             | PostgreSQL пользователь       | rpc, rest, leads, auth     |
+| `PG_PASSWORD`         | PostgreSQL пароль             | rpc, rest, leads, auth     |
+| `JWT_SECRET`          | Секрет для JWT токенов        | auth                       |
+| `SMS_API_KEY`         | API ключ SMS.ru               | sms                        |
+| `TELEGRAM_BOT_TOKEN`  | Токен Telegram бота           | leads                      |
+| `TELEGRAM_CHAT_ID`    | Chat ID для уведомлений       | leads                      |
 | `YC_FOLDER_ID`         | ID папки                            | `b1g...`                   |
 | `YC_CDN_RESOURCE_ID`   | ID CDN ресурса (опционально)        | `bc8...`                   |
 | `YC_IAM_TOKEN`         | IAM токен для CDN API (опционально) | Генерируется автоматически |

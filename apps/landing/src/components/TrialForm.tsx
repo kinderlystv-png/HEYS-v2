@@ -86,7 +86,8 @@ export default function TrialForm() {
     setFormState('loading')
     
     try {
-      const response = await fetch('/api/trial-signup', {
+      // Yandex Cloud Function API (152-ФЗ compliant, данные хранятся в РФ)
+      const response = await fetch('https://api.heyslab.ru/leads', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

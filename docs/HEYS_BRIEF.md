@@ -173,11 +173,13 @@
         `client_kv_store`
   - [x] **FIX 2025-12-22**: Исправлены env vars (PG*\* вместо DB*\*)
 
-- [ ] **Этап 4: Landing Page** (~2ч)
+- [x] **Этап 4: Landing Page** ✅ ОБНОВЛЕНО 2025-12-22
   - [ ] Создать отдельный bucket `heys-landing`
   - [ ] Перенести Next.js static export
   - [x] Создать функцию `heys-api-leads` для формы ✅
-  - [ ] Обновить API routes (переключить на Yandex)
+  - [x] Обновить TrialForm.tsx → `api.heyslab.ru/leads` ✅
+  - [x] Удалён `vercel.json` из apps/landing ✅
+  - [x] Обновлён `.env.example` (убран Supabase) ✅
 
 - [ ] **Этап 5: DNS и финализация** (~1ч)
   - [ ] Перенести DNS на Yandex Cloud DNS
@@ -186,7 +188,8 @@
   - [ ] Smoke-тест всех endpoint'ов
 
 - [x] **Этап 6: Отключение Vercel** ✅ ВЫПОЛНЕНО 2025-12-22
-  - [x] Удалён `vercel.json` из apps/web
+  - [x] Удалён `vercel.json` из apps/web ✅
+  - [x] Удалён `vercel.json` из apps/landing ✅
   - [ ] Удалить проект из Vercel Dashboard
   - [ ] Архивировать старые API файлы
 
