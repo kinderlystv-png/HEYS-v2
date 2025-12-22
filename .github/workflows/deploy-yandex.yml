@@ -198,6 +198,14 @@ jobs:
           yc cdn cache purge --resource-id "$CDN_PWA_ID" \
             --path "/" --path "/index.html" --path "/sw.js" --path "/manifest.webmanifest" --path "/version.json" --path "/heys_app_v12.js" || true
 
+          # Юридические документы — ВСЕГДА инвалидируем (152-ФЗ compliance)
+          echo "🔄 Purging legal docs from CDN cache..."
+          yc cdn cache purge --resource-id "$CDN_PWA_ID" \
+            --path "/docs/user-agreement.md" \
+            --path "/docs/privacy-policy.md" \
+            --path "/docs/consent-forms.md" \
+            --path "/docs/chat-rules.md" || true
+
           echo "🔄 Purging CDN cache for Landing..."
           yc cdn cache purge --resource-id "$CDN_LANDING_ID" \
             --path "/" --path "/index.html" || true
