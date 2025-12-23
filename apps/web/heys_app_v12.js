@@ -16,7 +16,7 @@
 const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2025.12.23.1938.f0c4d14'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2025.12.23.1957.342ff7c'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
@@ -559,11 +559,15 @@ const HEYS = window.HEYS = window.HEYS || {};
                 console.log('[SW] 🔄 New version downloading...');
                 
                 // 🔒 Показываем модалку ТОЛЬКО если это реальное обновление (есть предыдущий SW)
-                // При первичной регистрации SW — controller = null, модалку не показываем
-                if (!navigator.serviceWorker.controller) {
+                // Используем registration.active — он показывает есть ли АКТИВНЫЙ SW до этого
+                // controller может быть null если страница загружена до активации SW
+                const hasExistingSW = registration.active || navigator.serviceWorker.controller;
+                if (!hasExistingSW) {
                   console.log('[SW] First-time install, no update modal needed');
                   return;
                 }
+                
+                console.log('[SW] 🆕 Update detected! Existing SW:', registration.active?.state || 'controller');
                 
                 // Предотвращаем дублирование обновления (надёжный флаг в localStorage)
                 if (isUpdateLocked()) {
@@ -619,13 +623,19 @@ const HEYS = window.HEYS = window.HEYS || {};
           // Слушаем контроллер изменений (когда SW взял контроль)
           // ✅ АВТОМАТИЧЕСКИЙ reload при смене SW для бесшовного обновления PWA
           let refreshing = false;
+          let hadControllerBefore = !!navigator.serviceWorker.controller;
+          
           navigator.serviceWorker.addEventListener('controllerchange', () => {
             console.log('[SW] Controller changed — new SW activated!');
             if (refreshing) return;
             
             // 🔒 Показываем модалку и делаем reload ТОЛЬКО если это реальное обновление
-            // При первичной установке SW (после очистки кэша) — НЕ делаем reload
-            const isRealUpdate = sessionStorage.getItem('heys_pending_update') === 'true' || isUpdateLocked();
+            // Реальное обновление: был контроллер до этого ИЛИ есть флаг pending_update
+            const isRealUpdate = hadControllerBefore || 
+                                 sessionStorage.getItem('heys_pending_update') === 'true' || 
+                                 isUpdateLocked();
+            
+            console.log('[SW] Update check:', { hadControllerBefore, isRealUpdate });
             
             if (isRealUpdate) {
               // Реальное обновление — показываем модалку и делаем reload
