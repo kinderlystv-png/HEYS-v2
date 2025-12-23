@@ -95,5 +95,21 @@
   "handle_links": "preferred",
   "launch_handler": {
     "client_mode": ["navigate-existing", "auto"]
-  }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+heys",
+      "url": "/?protocol=%s"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "image/*": [".jpg", ".jpeg", ".png", ".webp", ".gif"]
+      },
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }],
+      "launch_type": "single-client"
+    }
+  ]
 }

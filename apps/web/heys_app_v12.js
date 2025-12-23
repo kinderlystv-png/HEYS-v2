@@ -16,7 +16,7 @@
 const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2025.12.23.1928.55379dd'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2025.12.23.1938.f0c4d14'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
@@ -979,6 +979,1009 @@ const HEYS = window.HEYS = window.HEYS || {};
         if (window.matchMedia('(display-mode: window-controls-overlay)').matches) {
           initWindowControlsOverlay();
         }
+        
+        // === Barcode Detection API ===
+        // Сканирование штрих-кодов продуктов с камеры
+        let barcodeDetector = null;
+        
+        async function initBarcodeDetector() {
+          if (!('BarcodeDetector' in window)) {
+            console.log('[Barcode] BarcodeDetector API not supported');
+            return null;
+          }
+          
+          try {
+            // Получаем поддерживаемые форматы
+            const formats = await BarcodeDetector.getSupportedFormats();
+            console.log('[Barcode] Supported formats:', formats);
+            
+            // Создаём детектор для типичных продуктовых штрих-кодов
+            const productFormats = formats.filter(f => 
+              ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'].includes(f)
+            );
+            
+            if (productFormats.length === 0) {
+              console.log('[Barcode] No product barcode formats supported');
+              return null;
+            }
+            
+            barcodeDetector = new BarcodeDetector({ formats: productFormats });
+            console.log('[Barcode] ✅ Detector initialized with formats:', productFormats);
+            return barcodeDetector;
+          } catch (e) {
+            console.error('[Barcode] Error initializing:', e);
+            return null;
+          }
+        }
+        
+        // Сканирование из изображения
+        async function scanBarcodeFromImage(imageSource) {
+          if (!barcodeDetector) {
+            await initBarcodeDetector();
+          }
+          
+          if (!barcodeDetector) {
+            return { success: false, error: 'BarcodeDetector not available' };
+          }
+          
+          try {
+            const barcodes = await barcodeDetector.detect(imageSource);
+            
+            if (barcodes.length > 0) {
+              const barcode = barcodes[0];
+              console.log('[Barcode] 📦 Detected:', barcode.rawValue, barcode.format);
+              
+              // Вибрация при успешном сканировании
+              if (window.HEYS?.haptic) {
+                HEYS.haptic.medium();
+              }
+              
+              return {
+                success: true,
+                value: barcode.rawValue,
+                format: barcode.format,
+                bounds: barcode.boundingBox
+              };
+            }
+            
+            return { success: false, error: 'No barcode found' };
+          } catch (e) {
+            console.error('[Barcode] Scan error:', e);
+            return { success: false, error: e.message };
+          }
+        }
+        
+        // Сканирование в реальном времени из видеопотока
+        async function startBarcodeScanning(videoElement, onDetected) {
+          if (!barcodeDetector) {
+            await initBarcodeDetector();
+          }
+          
+          if (!barcodeDetector) {
+            return { success: false, error: 'BarcodeDetector not available' };
+          }
+          
+          let scanning = true;
+          let lastDetectedCode = null;
+          let lastDetectedTime = 0;
+          
+          const scanFrame = async () => {
+            if (!scanning || videoElement.paused || videoElement.ended) return;
+            
+            try {
+              const barcodes = await barcodeDetector.detect(videoElement);
+              
+              if (barcodes.length > 0) {
+                const barcode = barcodes[0];
+                const now = Date.now();
+                
+                // Debounce — не срабатываем на один и тот же код чаще чем раз в 2 секунды
+                if (barcode.rawValue !== lastDetectedCode || (now - lastDetectedTime) > 2000) {
+                  lastDetectedCode = barcode.rawValue;
+                  lastDetectedTime = now;
+                  
+                  console.log('[Barcode] 📦 Scanned:', barcode.rawValue);
+                  
+                  if (window.HEYS?.haptic) {
+                    HEYS.haptic.medium();
+                  }
+                  
+                  onDetected?.({
+                    value: barcode.rawValue,
+                    format: barcode.format,
+                    bounds: barcode.boundingBox
+                  });
+                }
+              }
+            } catch (e) {
+              // Игнорируем ошибки отдельных кадров
+            }
+            
+            if (scanning) {
+              requestAnimationFrame(scanFrame);
+            }
+          };
+          
+          requestAnimationFrame(scanFrame);
+          
+          return {
+            success: true,
+            stop: () => { scanning = false; }
+          };
+        }
+        
+        // Проверяем поддержку при старте
+        initBarcodeDetector();
+        
+        // Экспортируем
+        HEYS.barcode = {
+          isSupported: () => 'BarcodeDetector' in window,
+          scanImage: scanBarcodeFromImage,
+          startScanning: startBarcodeScanning
+        };
+        
+        // === Web Share API (исходящий) ===
+        // Поделиться прогрессом, рецептами, результатами
+        async function shareContent(data) {
+          if (!navigator.share) {
+            console.log('[Share] Web Share API not supported');
+            // Fallback на clipboard
+            if (navigator.clipboard && data.text) {
+              await navigator.clipboard.writeText(data.text);
+              HEYS.Toast?.success?.('Скопировано в буфер!');
+              return { success: true, method: 'clipboard' };
+            }
+            return { success: false, error: 'Share not supported' };
+          }
+          
+          try {
+            await navigator.share(data);
+            console.log('[Share] ✅ Shared successfully');
+            
+            if (window.HEYS?.haptic) {
+              HEYS.haptic.light();
+            }
+            
+            return { success: true, method: 'native' };
+          } catch (e) {
+            if (e.name === 'AbortError') {
+              // Пользователь отменил — это нормально
+              return { success: false, error: 'cancelled' };
+            }
+            console.error('[Share] Error:', e);
+            return { success: false, error: e.message };
+          }
+        }
+        
+        // Проверяем возможность шаринга файлов
+        function canShareFiles() {
+          return navigator.canShare && navigator.canShare({ files: [new File([''], 'test.txt')] });
+        }
+        
+        // Экспортируем
+        HEYS.share = {
+          isSupported: () => !!navigator.share,
+          canShareFiles: canShareFiles,
+          share: shareContent,
+          
+          // Удобные методы для типичных сценариев
+          async shareProgress(stats) {
+            const text = `🎯 Мой прогресс в HEYS:\n` +
+              `📊 ${stats.streak || 0} дней подряд в норме\n` +
+              `🔥 ${stats.kcal || 0} ккал сегодня\n` +
+              `💧 ${stats.water || 0} мл воды\n\n` +
+              `Попробуй HEYS: https://app.heyslab.ru`;
+            
+            return shareContent({ title: 'Мой прогресс в HEYS', text });
+          },
+          
+          async shareDay(date, stats) {
+            const text = `📅 ${date}\n` +
+              `🔥 Калории: ${stats.kcal || 0}/${stats.norm || 0}\n` +
+              `🥩 Белок: ${stats.protein || 0}г\n` +
+              `💧 Вода: ${stats.water || 0} мл\n` +
+              `👟 Шаги: ${stats.steps || 0}`;
+            
+            return shareContent({ title: `День ${date}`, text });
+          }
+        };
+        
+        // === Contact Picker API ===
+        // Выбор контактов для приглашения друзей
+        async function pickContacts(options = {}) {
+          if (!('contacts' in navigator && 'ContactsManager' in window)) {
+            console.log('[Contacts] Contact Picker API not supported');
+            return { success: false, error: 'Not supported' };
+          }
+          
+          try {
+            const properties = options.properties || ['name', 'tel'];
+            const opts = { multiple: options.multiple ?? true };
+            
+            const contacts = await navigator.contacts.select(properties, opts);
+            
+            if (contacts.length > 0) {
+              console.log(`[Contacts] ✅ Selected ${contacts.length} contacts`);
+              
+              if (window.HEYS?.haptic) {
+                HEYS.haptic.light();
+              }
+              
+              return { success: true, contacts };
+            }
+            
+            return { success: false, error: 'No contacts selected' };
+          } catch (e) {
+            if (e.name === 'InvalidStateError') {
+              // Уже открыт picker — нормальная ситуация
+              return { success: false, error: 'picker_busy' };
+            }
+            console.error('[Contacts] Error:', e);
+            return { success: false, error: e.message };
+          }
+        }
+        
+        // Проверяем какие свойства контактов поддерживаются
+        async function getSupportedContactProperties() {
+          if (!('contacts' in navigator)) {
+            return [];
+          }
+          
+          try {
+            return await navigator.contacts.getProperties();
+          } catch (e) {
+            return [];
+          }
+        }
+        
+        // Экспортируем
+        HEYS.contacts = {
+          isSupported: () => 'contacts' in navigator && 'ContactsManager' in window,
+          pick: pickContacts,
+          getSupportedProperties: getSupportedContactProperties
+        };
+        
+        // === Speech Recognition API ===
+        // Голосовой ввод продуктов
+        let speechRecognition = null;
+        
+        function initSpeechRecognition() {
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          
+          if (!SpeechRecognition) {
+            console.log('[Speech] Speech Recognition not supported');
+            return null;
+          }
+          
+          const recognition = new SpeechRecognition();
+          recognition.lang = 'ru-RU';
+          recognition.continuous = false;
+          recognition.interimResults = true;
+          recognition.maxAlternatives = 3;
+          
+          return recognition;
+        }
+        
+        // Распознать речь (Promise-based)
+        function recognizeSpeech(options = {}) {
+          return new Promise((resolve, reject) => {
+            const recognition = initSpeechRecognition();
+            
+            if (!recognition) {
+              reject(new Error('Speech recognition not supported'));
+              return;
+            }
+            
+            let finalTranscript = '';
+            let interimCallback = options.onInterim;
+            
+            recognition.onresult = (event) => {
+              let interim = '';
+              
+              for (let i = event.resultIndex; i < event.results.length; i++) {
+                const result = event.results[i];
+                
+                if (result.isFinal) {
+                  finalTranscript += result[0].transcript;
+                } else {
+                  interim += result[0].transcript;
+                }
+              }
+              
+              if (interimCallback && interim) {
+                interimCallback(interim);
+              }
+            };
+            
+            recognition.onend = () => {
+              if (finalTranscript) {
+                console.log('[Speech] ✅ Recognized:', finalTranscript);
+                
+                if (window.HEYS?.haptic) {
+                  HEYS.haptic.light();
+                }
+                
+                resolve({ success: true, text: finalTranscript.trim() });
+              } else {
+                resolve({ success: false, error: 'No speech detected' });
+              }
+            };
+            
+            recognition.onerror = (event) => {
+              console.error('[Speech] Error:', event.error);
+              reject(new Error(event.error));
+            };
+            
+            try {
+              recognition.start();
+              console.log('[Speech] 🎤 Listening...');
+              
+              if (window.HEYS?.haptic) {
+                HEYS.haptic.light();
+              }
+            } catch (e) {
+              reject(e);
+            }
+            
+            // Таймаут — останавливаем через N секунд
+            const timeout = options.timeout || 10000;
+            setTimeout(() => {
+              try {
+                recognition.stop();
+              } catch (e) {}
+            }, timeout);
+            
+            // Возвращаем способ остановить вручную
+            speechRecognition = recognition;
+          });
+        }
+        
+        function stopSpeechRecognition() {
+          if (speechRecognition) {
+            try {
+              speechRecognition.stop();
+            } catch (e) {}
+            speechRecognition = null;
+          }
+        }
+        
+        // Экспортируем
+        HEYS.speech = {
+          isSupported: () => !!(window.SpeechRecognition || window.webkitSpeechRecognition),
+          recognize: recognizeSpeech,
+          stop: stopSpeechRecognition
+        };
+        
+        // === Launch Handler API ===
+        // Обработка запуска приложения из разных источников
+        if ('launchQueue' in window) {
+          window.launchQueue.setConsumer((launchParams) => {
+            console.log('[Launch] 🚀 App launched with params:', launchParams);
+            
+            // Если запущено с файлами (например, фото еды)
+            if (launchParams.files?.length > 0) {
+              console.log('[Launch] Files:', launchParams.files.map(f => f.name));
+              
+              // Сохраняем файлы для обработки
+              window.HEYS_LAUNCH_FILES = launchParams.files;
+              
+              // Диспатчим событие для компонентов
+              window.dispatchEvent(new CustomEvent('heys:launch-files', {
+                detail: { files: launchParams.files }
+              }));
+            }
+            
+            // Если есть целевой URL
+            if (launchParams.targetURL) {
+              const url = new URL(launchParams.targetURL);
+              console.log('[Launch] Target URL:', url.href);
+              
+              // Обрабатываем параметры URL
+              const action = url.searchParams.get('action');
+              const tab = url.searchParams.get('tab');
+              
+              if (action) {
+                window.dispatchEvent(new CustomEvent('heys:url-action', {
+                  detail: { action }
+                }));
+              }
+              
+              if (tab) {
+                window.dispatchEvent(new CustomEvent('heys:url-tab', {
+                  detail: { tab }
+                }));
+              }
+            }
+          });
+          console.log('[Launch] ✅ Launch handler registered');
+        }
+        
+        // === Protocol Handler ===
+        // Регистрируем кастомный протокол web+heys://
+        function registerProtocolHandler() {
+          if (!navigator.registerProtocolHandler) {
+            console.log('[Protocol] Protocol handler not supported');
+            return false;
+          }
+          
+          try {
+            navigator.registerProtocolHandler(
+              'web+heys',
+              '/?protocol=%s',
+              'HEYS Nutrition'
+            );
+            console.log('[Protocol] ✅ Registered web+heys:// protocol');
+            return true;
+          } catch (e) {
+            console.error('[Protocol] Registration error:', e);
+            return false;
+          }
+        }
+        
+        // Обработка protocol deep links
+        function handleProtocolUrl() {
+          const params = new URLSearchParams(window.location.search);
+          const protocolUrl = params.get('protocol');
+          
+          if (protocolUrl) {
+            console.log('[Protocol] Handling:', protocolUrl);
+            
+            // Парсим web+heys://action/params
+            const match = protocolUrl.match(/^web\+heys:\/\/([^/]+)\/?(.*)$/);
+            
+            if (match) {
+              const [, action, data] = match;
+              
+              window.dispatchEvent(new CustomEvent('heys:protocol-action', {
+                detail: { action, data: decodeURIComponent(data) }
+              }));
+              
+              // Очищаем URL от protocol параметра
+              params.delete('protocol');
+              const newUrl = params.toString() 
+                ? `${window.location.pathname}?${params.toString()}`
+                : window.location.pathname;
+              window.history.replaceState({}, '', newUrl);
+            }
+          }
+        }
+        
+        // Вызываем обработку при старте
+        handleProtocolUrl();
+        
+        // Экспортируем
+        HEYS.protocol = {
+          register: registerProtocolHandler,
+          handleUrl: handleProtocolUrl
+        };
+        
+        // === File System Access API ===
+        // Для экспорта/импорта данных пользователя
+        
+        // Сохранить данные в файл
+        async function saveToFile(data, filename = 'heys-export.json', type = 'application/json') {
+          // Современный File System Access API
+          if ('showSaveFilePicker' in window) {
+            try {
+              const handle = await window.showSaveFilePicker({
+                suggestedName: filename,
+                types: [{
+                  description: type === 'application/json' ? 'JSON файл' : 'Текстовый файл',
+                  accept: { [type]: [filename.split('.').pop() ? `.${filename.split('.').pop()}` : '.json'] }
+                }]
+              });
+              
+              const writable = await handle.createWritable();
+              await writable.write(typeof data === 'string' ? data : JSON.stringify(data, null, 2));
+              await writable.close();
+              
+              console.log('[FileSystem] ✅ Saved to:', handle.name);
+              
+              if (window.HEYS?.haptic) {
+                HEYS.haptic.success();
+              }
+              
+              return { success: true, filename: handle.name };
+            } catch (e) {
+              if (e.name === 'AbortError') {
+                return { success: false, cancelled: true };
+              }
+              console.error('[FileSystem] Save error:', e);
+            }
+          }
+          
+          // Fallback: download link
+          const blob = new Blob([typeof data === 'string' ? data : JSON.stringify(data, null, 2)], { type });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          console.log('[FileSystem] 📥 Downloaded:', filename);
+          return { success: true, filename, fallback: true };
+        }
+        
+        // Открыть и прочитать файл
+        async function openFile(accept = ['.json']) {
+          // Современный File System Access API
+          if ('showOpenFilePicker' in window) {
+            try {
+              const [handle] = await window.showOpenFilePicker({
+                types: [{
+                  description: 'Файлы данных',
+                  accept: { 'application/*': accept }
+                }],
+                multiple: false
+              });
+              
+              const file = await handle.getFile();
+              const content = await file.text();
+              
+              console.log('[FileSystem] ✅ Opened:', file.name);
+              
+              return {
+                success: true,
+                filename: file.name,
+                content,
+                data: accept.includes('.json') ? JSON.parse(content) : content
+              };
+            } catch (e) {
+              if (e.name === 'AbortError') {
+                return { success: false, cancelled: true };
+              }
+              console.error('[FileSystem] Open error:', e);
+            }
+          }
+          
+          // Fallback: input file
+          return new Promise((resolve) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = accept.join(',');
+            
+            input.onchange = async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) {
+                resolve({ success: false, cancelled: true });
+                return;
+              }
+              
+              const content = await file.text();
+              resolve({
+                success: true,
+                filename: file.name,
+                content,
+                data: accept.includes('.json') ? JSON.parse(content) : content,
+                fallback: true
+              });
+            };
+            
+            input.oncancel = () => resolve({ success: false, cancelled: true });
+            input.click();
+          });
+        }
+        
+        // Экспорт всех данных пользователя
+        async function exportUserData() {
+          const data = {
+            exportDate: new Date().toISOString(),
+            appVersion: APP_VERSION,
+            profile: HEYS.utils?.lsGet?.('heys_profile') || {},
+            norms: HEYS.utils?.lsGet?.('heys_norms') || {},
+            products: HEYS.products?.getAll?.() || [],
+            // Последние 90 дней данных
+            days: []
+          };
+          
+          // Собираем данные за 90 дней
+          const today = new Date();
+          for (let i = 0; i < 90; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            const dayData = HEYS.utils?.lsGet?.(`heys_dayv2_${dateStr}`);
+            if (dayData) {
+              data.days.push({ date: dateStr, ...dayData });
+            }
+          }
+          
+          const filename = `heys-export-${today.toISOString().split('T')[0]}.json`;
+          return saveToFile(data, filename);
+        }
+        
+        // Импорт данных пользователя
+        async function importUserData() {
+          const result = await openFile(['.json']);
+          
+          if (!result.success || result.cancelled) {
+            return result;
+          }
+          
+          const data = result.data;
+          
+          // Валидация
+          if (!data.appVersion || !data.exportDate) {
+            return { success: false, error: 'Invalid export file' };
+          }
+          
+          // Импортируем данные
+          let imported = { profile: false, norms: false, products: 0, days: 0 };
+          
+          if (data.profile && HEYS.utils?.lsSet) {
+            HEYS.utils.lsSet('heys_profile', data.profile);
+            imported.profile = true;
+          }
+          
+          if (data.norms && HEYS.utils?.lsSet) {
+            HEYS.utils.lsSet('heys_norms', data.norms);
+            imported.norms = true;
+          }
+          
+          if (data.products?.length && HEYS.products?.setAll) {
+            const existing = HEYS.products.getAll() || [];
+            const merged = [...existing];
+            
+            for (const product of data.products) {
+              if (!merged.find(p => p.id === product.id)) {
+                merged.push(product);
+                imported.products++;
+              }
+            }
+            
+            HEYS.products.setAll(merged);
+          }
+          
+          if (data.days?.length && HEYS.utils?.lsSet) {
+            for (const day of data.days) {
+              const key = `heys_dayv2_${day.date}`;
+              const existing = HEYS.utils.lsGet(key);
+              
+              // Не перезаписываем существующие данные
+              if (!existing) {
+                HEYS.utils.lsSet(key, day);
+                imported.days++;
+              }
+            }
+          }
+          
+          console.log('[FileSystem] ✅ Imported:', imported);
+          
+          if (window.HEYS?.haptic) {
+            HEYS.haptic.success();
+          }
+          
+          return { success: true, imported, fromFile: result.filename };
+        }
+        
+        HEYS.fileSystem = {
+          isSupported: () => 'showSaveFilePicker' in window,
+          saveToFile,
+          openFile,
+          exportUserData,
+          importUserData
+        };
+        
+        // === Credential Management API ===
+        // Безопасное хранение учётных данных
+        
+        async function saveCredentials(phone, pin, name = 'HEYS Nutrition') {
+          if (!('credentials' in navigator) || !window.PasswordCredential) {
+            console.log('[Credentials] API not supported');
+            return { success: false, reason: 'not_supported' };
+          }
+          
+          try {
+            const credential = new PasswordCredential({
+              id: phone,
+              password: pin,
+              name: name
+            });
+            
+            await navigator.credentials.store(credential);
+            console.log('[Credentials] ✅ Saved credentials');
+            return { success: true };
+          } catch (e) {
+            console.error('[Credentials] Save error:', e);
+            return { success: false, error: e.message };
+          }
+        }
+        
+        async function getCredentials() {
+          if (!('credentials' in navigator)) {
+            return { success: false, reason: 'not_supported' };
+          }
+          
+          try {
+            const credential = await navigator.credentials.get({
+              password: true,
+              mediation: 'optional'
+            });
+            
+            if (credential) {
+              console.log('[Credentials] ✅ Retrieved credentials for:', credential.id);
+              return {
+                success: true,
+                phone: credential.id,
+                pin: credential.password,
+                name: credential.name
+              };
+            }
+            
+            return { success: false, reason: 'no_credentials' };
+          } catch (e) {
+            console.error('[Credentials] Get error:', e);
+            return { success: false, error: e.message };
+          }
+        }
+        
+        async function clearCredentials() {
+          if (!('credentials' in navigator)) {
+            return { success: false, reason: 'not_supported' };
+          }
+          
+          try {
+            await navigator.credentials.preventSilentAccess();
+            console.log('[Credentials] ✅ Cleared silent access');
+            return { success: true };
+          } catch (e) {
+            console.error('[Credentials] Clear error:', e);
+            return { success: false, error: e.message };
+          }
+        }
+        
+        HEYS.credentials = {
+          isSupported: () => 'credentials' in navigator && !!window.PasswordCredential,
+          save: saveCredentials,
+          get: getCredentials,
+          clear: clearCredentials
+        };
+        
+        // === Screen Orientation API ===
+        // Управление ориентацией экрана
+        
+        async function lockOrientation(orientation = 'portrait') {
+          if (!screen.orientation?.lock) {
+            console.log('[Orientation] Lock not supported');
+            return { success: false, reason: 'not_supported' };
+          }
+          
+          try {
+            await screen.orientation.lock(orientation);
+            console.log('[Orientation] ✅ Locked to:', orientation);
+            return { success: true, orientation };
+          } catch (e) {
+            console.error('[Orientation] Lock error:', e);
+            return { success: false, error: e.message };
+          }
+        }
+        
+        function unlockOrientation() {
+          if (!screen.orientation?.unlock) {
+            return { success: false, reason: 'not_supported' };
+          }
+          
+          screen.orientation.unlock();
+          console.log('[Orientation] ✅ Unlocked');
+          return { success: true };
+        }
+        
+        HEYS.orientation = {
+          isSupported: () => !!screen.orientation?.lock,
+          lock: lockOrientation,
+          unlock: unlockOrientation,
+          get current() { return screen.orientation?.type || 'unknown'; },
+          get angle() { return screen.orientation?.angle || 0; },
+          onChange: (callback) => {
+            screen.orientation?.addEventListener('change', callback);
+            return () => screen.orientation?.removeEventListener('change', callback);
+          }
+        };
+        
+        // === Fullscreen API ===
+        // Управление полноэкранным режимом
+        
+        async function enterFullscreen(element = document.documentElement) {
+          try {
+            if (element.requestFullscreen) {
+              await element.requestFullscreen();
+            } else if (element.webkitRequestFullscreen) {
+              await element.webkitRequestFullscreen();
+            } else if (element.msRequestFullscreen) {
+              await element.msRequestFullscreen();
+            } else {
+              return { success: false, reason: 'not_supported' };
+            }
+            
+            console.log('[Fullscreen] ✅ Entered fullscreen');
+            
+            if (window.HEYS?.haptic) {
+              HEYS.haptic.light();
+            }
+            
+            return { success: true };
+          } catch (e) {
+            console.error('[Fullscreen] Enter error:', e);
+            return { success: false, error: e.message };
+          }
+        }
+        
+        async function exitFullscreen() {
+          try {
+            if (document.exitFullscreen) {
+              await document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+              await document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+              await document.msExitFullscreen();
+            } else {
+              return { success: false, reason: 'not_supported' };
+            }
+            
+            console.log('[Fullscreen] ✅ Exited fullscreen');
+            return { success: true };
+          } catch (e) {
+            console.error('[Fullscreen] Exit error:', e);
+            return { success: false, error: e.message };
+          }
+        }
+        
+        function isFullscreen() {
+          return !!(
+            document.fullscreenElement ||
+            document.webkitFullscreenElement ||
+            document.msFullscreenElement
+          );
+        }
+        
+        HEYS.fullscreen = {
+          isSupported: () => !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen),
+          enter: enterFullscreen,
+          exit: exitFullscreen,
+          toggle: async (element) => isFullscreen() ? exitFullscreen() : enterFullscreen(element),
+          get isActive() { return isFullscreen(); },
+          onChange: (callback) => {
+            const events = ['fullscreenchange', 'webkitfullscreenchange', 'msfullscreenchange'];
+            events.forEach(e => document.addEventListener(e, callback));
+            return () => events.forEach(e => document.removeEventListener(e, callback));
+          }
+        };
+        
+        // === Vibration Pattern API ===
+        // Расширенные паттерны вибрации
+        
+        const VIBRATION_PATTERNS = {
+          success: [50, 30, 50],           // Короткий двойной
+          error: [100, 50, 100, 50, 100],  // Тройной
+          warning: [200, 100, 200],        // Двойной длинный
+          notification: [50, 100, 50, 100, 50], // Быстрая серия
+          heartbeat: [100, 200, 100, 400], // Как сердцебиение
+          sos: [100, 50, 100, 50, 100, 200, 300, 50, 300, 50, 300, 200, 100, 50, 100, 50, 100], // SOS
+          countdown: [100, 800, 100, 800, 100, 800, 500], // Обратный отсчёт
+          levelUp: [50, 50, 50, 50, 50, 50, 200] // Нарастающий
+        };
+        
+        function vibratePattern(pattern) {
+          if (!navigator.vibrate) {
+            return false;
+          }
+          
+          const p = typeof pattern === 'string' ? VIBRATION_PATTERNS[pattern] : pattern;
+          
+          if (!p) {
+            console.warn('[Vibration] Unknown pattern:', pattern);
+            return false;
+          }
+          
+          navigator.vibrate(p);
+          return true;
+        }
+        
+        HEYS.vibration = {
+          isSupported: () => 'vibrate' in navigator,
+          patterns: VIBRATION_PATTERNS,
+          play: vibratePattern,
+          stop: () => navigator.vibrate?.(0),
+          // Удобные методы
+          success: () => vibratePattern('success'),
+          error: () => vibratePattern('error'),
+          warning: () => vibratePattern('warning'),
+          notification: () => vibratePattern('notification'),
+          heartbeat: () => vibratePattern('heartbeat'),
+          levelUp: () => vibratePattern('levelUp')
+        };
+        
+        // === Web Animations API utilities ===
+        // Утилиты для анимаций
+        
+        function animateElement(element, keyframes, options = {}) {
+          if (!element?.animate) {
+            return null;
+          }
+          
+          const defaultOptions = {
+            duration: 300,
+            easing: 'ease-out',
+            fill: 'forwards'
+          };
+          
+          return element.animate(keyframes, { ...defaultOptions, ...options });
+        }
+        
+        // Готовые анимации
+        const ANIMATIONS = {
+          fadeIn: [
+            { opacity: 0 },
+            { opacity: 1 }
+          ],
+          fadeOut: [
+            { opacity: 1 },
+            { opacity: 0 }
+          ],
+          slideUp: [
+            { transform: 'translateY(100%)', opacity: 0 },
+            { transform: 'translateY(0)', opacity: 1 }
+          ],
+          slideDown: [
+            { transform: 'translateY(-100%)', opacity: 0 },
+            { transform: 'translateY(0)', opacity: 1 }
+          ],
+          scaleIn: [
+            { transform: 'scale(0.8)', opacity: 0 },
+            { transform: 'scale(1)', opacity: 1 }
+          ],
+          scaleOut: [
+            { transform: 'scale(1)', opacity: 1 },
+            { transform: 'scale(0.8)', opacity: 0 }
+          ],
+          shake: [
+            { transform: 'translateX(0)' },
+            { transform: 'translateX(-10px)' },
+            { transform: 'translateX(10px)' },
+            { transform: 'translateX(-10px)' },
+            { transform: 'translateX(10px)' },
+            { transform: 'translateX(0)' }
+          ],
+          pulse: [
+            { transform: 'scale(1)' },
+            { transform: 'scale(1.05)' },
+            { transform: 'scale(1)' }
+          ],
+          bounce: [
+            { transform: 'translateY(0)' },
+            { transform: 'translateY(-20px)' },
+            { transform: 'translateY(0)' },
+            { transform: 'translateY(-10px)' },
+            { transform: 'translateY(0)' }
+          ],
+          spin: [
+            { transform: 'rotate(0deg)' },
+            { transform: 'rotate(360deg)' }
+          ],
+          confetti: [
+            { transform: 'translateY(0) rotate(0deg)', opacity: 1 },
+            { transform: 'translateY(-200px) rotate(720deg)', opacity: 0 }
+          ]
+        };
+        
+        HEYS.animate = {
+          isSupported: () => !!document.documentElement.animate,
+          element: animateElement,
+          presets: ANIMATIONS,
+          fadeIn: (el, opts) => animateElement(el, ANIMATIONS.fadeIn, opts),
+          fadeOut: (el, opts) => animateElement(el, ANIMATIONS.fadeOut, opts),
+          slideUp: (el, opts) => animateElement(el, ANIMATIONS.slideUp, opts),
+          slideDown: (el, opts) => animateElement(el, ANIMATIONS.slideDown, opts),
+          scaleIn: (el, opts) => animateElement(el, ANIMATIONS.scaleIn, opts),
+          scaleOut: (el, opts) => animateElement(el, ANIMATIONS.scaleOut, opts),
+          shake: (el, opts = { duration: 500 }) => animateElement(el, ANIMATIONS.shake, opts),
+          pulse: (el, opts = { duration: 400, iterations: 2 }) => animateElement(el, ANIMATIONS.pulse, opts),
+          bounce: (el, opts = { duration: 600 }) => animateElement(el, ANIMATIONS.bounce, opts),
+          spin: (el, opts = { duration: 500 }) => animateElement(el, ANIMATIONS.spin, opts)
+        };
         
         // === Проверка версии с сервера (обход кэша) ===
         async function checkServerVersion(silent = true) {
