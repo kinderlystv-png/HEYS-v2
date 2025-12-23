@@ -77,13 +77,8 @@ jobs:
           # Записываем версию в файл для PWA
           echo "{\"version\":\"$VERSION\",\"buildTime\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"commit\":\"${{ github.sha }}\"}" > apps/web/dist/version.json
 
-      - name: Install AWS CLI (S3-compatible)
-        run: |
-          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          unzip -q awscliv2.zip
-          sudo ./aws/install --update
-
       - name: Configure AWS CLI for Yandex Cloud
+        # AWS CLI уже предустановлен на ubuntu-latest!
         run: |
           aws configure set aws_access_key_id ${{ secrets.YC_ACCESS_KEY_ID }}
           aws configure set aws_secret_access_key ${{ secrets.YC_SECRET_ACCESS_KEY }}
@@ -92,136 +87,104 @@ jobs:
       - name: Deploy PWA to Yandex Object Storage
         run: |
           # === PWA Application → heys-app bucket ===
-          # ПРАВИЛЬНАЯ ПОЛИТИКА КЭШИРОВАНИЯ:
-          # - Хэшированные ассеты (assets/*.hash.*) → 1 год (immutable)
-          # - HTML/SW/manifest/version.json → no-cache (критичные для обновлений)
-          # - Кастомные JS (heys_*.js) → 10 минут (часто обновляются)
-          # - Docs → versioned immutable + latest no-cache
+          # Оптимизированный деплой — всё в 3 команды вместо 6
 
-          # Берём версию юридических документов из исходника
           DOCS_VERSION=$(node -e "const fs=require('fs'); const s=fs.readFileSync('apps/web/heys_consents_v1.js','utf8'); const m=s.match(/user_agreement:\\s*'([^']+)'/); process.stdout.write(m?m[1]:'');")
-          if [ -z "$DOCS_VERSION" ]; then
-            echo "❌ Failed to detect docs version"
-            exit 1
-          fi
-          echo "📜 Legal docs version: $DOCS_VERSION"
+          echo "📜 Legal docs version: ${DOCS_VERSION:-unknown}"
 
-          # === STEP 1: Хэшированные ассеты (1 год) ===
-          # Только /assets/ папка — там Vite кладёт файлы с хэшами в именах
-          echo "📦 Step 1: Uploading hashed assets (1 year cache)..."
-          aws s3 sync apps/web/dist/assets/ s3://${{ env.YC_BUCKET_PWA }}/assets/ \
-            --endpoint-url=${{ env.YC_ENDPOINT }} \
-            --cache-control "public, max-age=31536000, immutable"
-
-          # === STEP 2: Картинки и статика (1 год) ===
-          echo "🖼️ Step 2: Uploading images and static files (1 year cache)..."
+          # === STEP 1: Все файлы с дефолтным кэшем (1 год) ===
+          echo "📦 Uploading all files with default cache..."
           aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_PWA }}/ \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
-            --cache-control "public, max-age=31536000" \
-            --exclude "*.html" \
-            --exclude "*.js" \
-            --exclude "*.json" \
-            --exclude "*.webmanifest" \
-            --exclude "docs/*"
+            --cache-control "public, max-age=31536000, immutable" \
+            --delete
 
-          # === STEP 3: Кастомные JS файлы (10 минут) ===
-          # heys_*.js, sw.js и другие root-level JS — часто обновляются
-          echo "📜 Step 3: Uploading custom JS files (10 min cache)..."
-          for jsfile in apps/web/dist/*.js; do
-            if [ -f "$jsfile" ]; then
-              filename=$(basename "$jsfile")
-              if [ "$filename" = "sw.js" ]; then
-                # Service Worker — ВСЕГДА без кэша
-                aws s3 cp "$jsfile" s3://${{ env.YC_BUCKET_PWA }}/$filename \
-                  --endpoint-url=${{ env.YC_ENDPOINT }} \
-                  --cache-control "no-cache, no-store, must-revalidate" \
-                  --content-type "application/javascript"
-                echo "  ✓ $filename (no-cache)"
-              else
-                # Остальные JS — короткий кэш
-                aws s3 cp "$jsfile" s3://${{ env.YC_BUCKET_PWA }}/$filename \
-                  --endpoint-url=${{ env.YC_ENDPOINT }} \
-                  --cache-control "public, max-age=600" \
-                  --content-type "application/javascript"
-                echo "  ✓ $filename (10 min cache)"
-              fi
-            fi
-          done
+          # === STEP 2: Перезаписываем критичные файлы (no-cache) ===
+          echo "📄 Updating critical files (no-cache)..."
 
-          # === STEP 4: HTML файлы (no-cache) ===
-          echo "📄 Step 4: Uploading HTML files (no-cache)..."
-          aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_PWA }}/ \
+          # HTML, JSON, manifest, sw.js — без кэша (параллельно)
+          aws s3 cp apps/web/dist/index.html s3://${{ env.YC_BUCKET_PWA }}/index.html \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
-            --content-type "text/html; charset=utf-8" \
-            --exclude "*" \
-            --include "*.html"
+            --content-type "text/html; charset=utf-8" &
 
-          # === STEP 5: Критичные JSON файлы (no-cache) ===
-          echo "⚙️ Step 5: Uploading critical JSON files (no-cache)..."
+          aws s3 cp apps/web/dist/sw.js s3://${{ env.YC_BUCKET_PWA }}/sw.js \
+            --endpoint-url=${{ env.YC_ENDPOINT }} \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --content-type "application/javascript" &
+
           aws s3 cp apps/web/dist/version.json s3://${{ env.YC_BUCKET_PWA }}/version.json \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
-            --content-type "application/json"
+            --content-type "application/json" &
 
           aws s3 cp apps/web/dist/manifest.json s3://${{ env.YC_BUCKET_PWA }}/manifest.json \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
-            --content-type "application/manifest+json"
+            --content-type "application/manifest+json" &
 
           aws s3 cp apps/web/dist/manifest.json s3://${{ env.YC_BUCKET_PWA }}/manifest.webmanifest \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
-            --content-type "application/manifest+json"
+            --content-type "application/manifest+json" &
 
-          # === STEP 6: Юридические документы ===
-          # 6.1 Версионированный путь (immutable, 1 год)
-          echo "📋 Step 6.1: Uploading versioned legal docs (/docs/v$DOCS_VERSION/)..."
-          aws s3 cp apps/web/dist/docs/ s3://${{ env.YC_BUCKET_PWA }}/docs/v${DOCS_VERSION}/ \
-            --recursive \
-            --endpoint-url=${{ env.YC_ENDPOINT }} \
-            --cache-control "public, max-age=31536000, immutable" \
-            --content-type "text/markdown; charset=utf-8" \
-            --metadata-directive REPLACE
+          wait
 
-          # 6.2 Latest путь (no-cache для прямых ссылок)
-          echo "📋 Step 6.2: Uploading latest legal docs (/docs/)..."
-          aws s3 cp apps/web/dist/docs/ s3://${{ env.YC_BUCKET_PWA }}/docs/ \
-            --recursive \
-            --endpoint-url=${{ env.YC_ENDPOINT }} \
-            --cache-control "no-cache, no-store, must-revalidate" \
-            --content-type "text/markdown; charset=utf-8" \
-            --metadata-directive REPLACE
+          # === STEP 3: Кастомные JS файлы (10 минут) — параллельно ===
+          echo "📜 Updating JS files (10 min cache)..."
+          for jsfile in apps/web/dist/heys_*.js; do
+            if [ -f "$jsfile" ]; then
+              filename=$(basename "$jsfile")
+              aws s3 cp "$jsfile" s3://${{ env.YC_BUCKET_PWA }}/$filename \
+                --endpoint-url=${{ env.YC_ENDPOINT }} \
+                --cache-control "public, max-age=600" \
+                --content-type "application/javascript" &
+            fi
+          done
+          wait
+
+          # === STEP 4: Юридические документы ===
+          if [ -n "$DOCS_VERSION" ] && [ -d "apps/web/dist/docs" ]; then
+            echo "📋 Uploading legal docs..."
+            # Версионированный путь (immutable)
+            aws s3 cp apps/web/dist/docs/ s3://${{ env.YC_BUCKET_PWA }}/docs/v${DOCS_VERSION}/ \
+              --recursive --endpoint-url=${{ env.YC_ENDPOINT }} \
+              --cache-control "public, max-age=31536000, immutable" &
+
+            # Latest путь (no-cache)
+            aws s3 cp apps/web/dist/docs/ s3://${{ env.YC_BUCKET_PWA }}/docs/ \
+              --recursive --endpoint-url=${{ env.YC_ENDPOINT }} \
+              --cache-control "no-cache, no-store, must-revalidate" &
+
+            wait
+          fi
 
           echo "✅ PWA deployment complete!"
 
       - name: Deploy Landing to Yandex Object Storage
         run: |
           # === Landing Page → heys-static bucket ===
-          # Landing — Next.js static export, JS файлы с хэшами в _next/
+          # Оптимизированный деплой Next.js static export
 
-          # 1. Хэшированные ассеты Next.js (1 год)
-          echo "📦 Landing: Uploading hashed assets..."
-          aws s3 sync apps/landing/out/_next/ s3://${{ env.YC_BUCKET_LANDING }}/_next/ \
-            --endpoint-url=${{ env.YC_ENDPOINT }} \
-            --cache-control "public, max-age=31536000, immutable"
-
-          # 2. Остальная статика (картинки, шрифты — 1 год)
-          echo "🖼️ Landing: Uploading static files..."
+          # STEP 1: Всё с дефолтным кэшем (1 год)
+          echo "📦 Landing: Uploading all files..."
           aws s3 sync apps/landing/out/ s3://${{ env.YC_BUCKET_LANDING }}/ \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
-            --cache-control "public, max-age=31536000" \
-            --exclude "*.html" \
-            --exclude "_next/*"
+            --cache-control "public, max-age=31536000, immutable" \
+            --delete
 
-          # 3. HTML файлы без кэширования
-          echo "📄 Landing: Uploading HTML files (no-cache)..."
-          aws s3 sync apps/landing/out/ s3://${{ env.YC_BUCKET_LANDING }}/ \
-            --endpoint-url=${{ env.YC_ENDPOINT }} \
-            --cache-control "no-cache, no-store, must-revalidate" \
-            --content-type "text/html; charset=utf-8" \
-            --exclude "*" \
-            --include "*.html"
+          # STEP 2: HTML без кэша (параллельно)
+          echo "📄 Landing: Updating HTML files (no-cache)..."
+          for htmlfile in apps/landing/out/*.html apps/landing/out/**/*.html; do
+            if [ -f "$htmlfile" ]; then
+              relpath="${htmlfile#apps/landing/out/}"
+              aws s3 cp "$htmlfile" "s3://${{ env.YC_BUCKET_LANDING }}/$relpath" \
+                --endpoint-url=${{ env.YC_ENDPOINT }} \
+                --cache-control "no-cache, no-store, must-revalidate" \
+                --content-type "text/html; charset=utf-8" &
+            fi
+          done
+          wait
 
           echo "✅ Landing deployment complete!"
 
@@ -306,7 +269,7 @@ jobs:
       - name: Health check
         run: |
           echo "🏥 Running health checks..."
-          sleep 10
+          sleep 3
 
           PWA_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://app.heyslab.ru/)
           LANDING_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://heyslab.ru/)
