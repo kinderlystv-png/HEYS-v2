@@ -96,8 +96,7 @@ jobs:
           echo "📦 Uploading all files with default cache..."
           aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_PWA }}/ \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
-            --cache-control "public, max-age=31536000, immutable" \
-            --delete
+            --cache-control "public, max-age=31536000, immutable"
 
           # === STEP 2: Перезаписываем критичные файлы (no-cache) ===
           echo "📄 Updating critical files (no-cache)..."
@@ -170,8 +169,7 @@ jobs:
           echo "📦 Landing: Uploading all files..."
           aws s3 sync apps/landing/out/ s3://${{ env.YC_BUCKET_LANDING }}/ \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
-            --cache-control "public, max-age=31536000, immutable" \
-            --delete
+            --cache-control "public, max-age=31536000, immutable"
 
           # STEP 2: HTML без кэша (параллельно)
           echo "📄 Landing: Updating HTML files (no-cache)..."
