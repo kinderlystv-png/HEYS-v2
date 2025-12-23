@@ -311,6 +311,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # Нужно для git diff HEAD~1
 
       - name: Install Yandex Cloud CLI
         run: |
