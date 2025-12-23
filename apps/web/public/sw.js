@@ -310,7 +310,8 @@ async function networkFirstNoStore(request) {
   } catch (error) {
     // игнорируем и пытаемся взять из кеша
   }
-  const cached = await caches.match(request, { ignoreSearch: true });
+  // 🔧 НЕ игнорируем query params (версия в URL важна для cache-busting)
+  const cached = await caches.match(request);
   if (cached) return cached;
   return new Response('Offline', { status: 503 });
 }
