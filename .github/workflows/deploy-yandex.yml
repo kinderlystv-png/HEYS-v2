@@ -278,20 +278,33 @@ jobs:
       - name: Health check
         run: |
           echo "🏥 Running health checks..."
-          sleep 3
+          echo "⏳ Waiting 30s for CDN cache propagation..."
+          sleep 30
 
-          PWA_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://app.heyslab.ru/)
-          LANDING_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://heyslab.ru/)
-          API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.heyslab.ru/health)
+          # Retry logic for CDN propagation delays
+          MAX_RETRIES=3
+          RETRY_DELAY=10
 
-          echo "PWA: $PWA_STATUS | Landing: $LANDING_STATUS | API: $API_STATUS"
+          for i in $(seq 1 $MAX_RETRIES); do
+            PWA_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://app.heyslab.ru/)
+            LANDING_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://heyslab.ru/)
+            API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.heyslab.ru/health)
 
-          if [ "$PWA_STATUS" != "200" ]; then
-            echo "❌ PWA health check failed"
-            exit 1
-          fi
+            echo "Attempt $i: PWA: $PWA_STATUS | Landing: $LANDING_STATUS | API: $API_STATUS"
 
-          echo "✅ Health checks passed"
+            if [ "$PWA_STATUS" = "200" ] && [ "$LANDING_STATUS" = "200" ] && [ "$API_STATUS" = "200" ]; then
+              echo "✅ Health checks passed"
+              exit 0
+            fi
+
+            if [ $i -lt $MAX_RETRIES ]; then
+              echo "⏳ Retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Health check failed after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Deployment summary
         run: |
