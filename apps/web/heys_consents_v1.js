@@ -103,9 +103,10 @@
         // Используем YandexAPI
         if (HEYS.YandexAPI) {
           const result = await HEYS.YandexAPI.logConsents(clientId, consents, navigator.userAgent);
-          if (result.error) throw new Error(result.error);
+          if (result.error) throw new Error(result.error?.message || result.error);
           console.log('[Consents] ✅ Logged:', result);
-          return result;
+          // Нормализуем результат — YandexAPI возвращает { data: { log_consents: { success, logged_count } }, error: null }
+          return { success: result.data?.log_consents?.success ?? !result.error, data: result.data };
         }
         
         console.warn('[Consents] YandexAPI not available');
@@ -124,8 +125,13 @@
         // Используем YandexAPI
         if (HEYS.YandexAPI) {
           const result = await HEYS.YandexAPI.checkRequiredConsents(clientId);
-          if (result.error) throw new Error(result.error);
-          return result;
+          if (result.error) throw new Error(result.error?.message || result.error);
+          // Нормализуем результат — YandexAPI возвращает { data: { check_required_consents: { valid, missing } }, error: null }
+          const data = result.data?.check_required_consents || result.data;
+          return { 
+            valid: data?.valid ?? false, 
+            missing: data?.missing || REQUIRED_CONSENTS 
+          };
         }
         
         return { valid: false, missing: REQUIRED_CONSENTS };
@@ -143,9 +149,10 @@
         // Используем YandexAPI
         if (HEYS.YandexAPI) {
           const result = await HEYS.YandexAPI.revokeConsent(clientId, consentType);
-          if (result.error) throw new Error(result.error);
+          if (result.error) throw new Error(result.error?.message || result.error);
           console.log('[Consents] ✅ Revoked:', consentType);
-          return result;
+          // Нормализуем результат
+          return { success: result.data?.revoke_consent?.success ?? !result.error };
         }
         
         return { success: false, error: 'No API client' };
@@ -336,12 +343,12 @@
           }));
           
           const result = await consentsAPI.logConsents(clientId, consentList);
-          if (!result.success) throw new Error(result.error);
+          if (!result.success) throw new Error(result.error || 'Ошибка сохранения согласий');
           
           consentsAPI.saveLocal(clientId, consentList);
           onComplete?.(consentList);
         } catch (err) {
-          setError(err.message);
+          setError(err.message || 'Неизвестная ошибка');
           onError?.(err);
         } finally {
           setLoading(false);
