@@ -16,7 +16,7 @@
 const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2025.12.23.0110.9b5c631'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2025.12.23.1545.4b5c0db'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
@@ -5197,10 +5197,44 @@ const HEYS = window.HEYS = window.HEYS || {};
                     setIsInitializing(false);
                   });
               } else {
-                // Нет сохранённой сессии куратора — это нормально для клиентского входа по PIN
-                initLocalData();
-                setStatus('offline');
-                setIsInitializing(false);
+                // Нет сохранённой сессии куратора — проверяем PIN auth
+                const pinAuthClient = localStorage.getItem('heys_pin_auth_client');
+                
+                if (pinAuthClient && cloud) {
+                  // 🔐 PIN auth: восстанавливаем сессию клиента
+                  console.log('[App] 🔐 Восстановление PIN-сессии:', pinAuthClient.substring(0, 8) + '...');
+                  
+                  // Восстанавливаем RPC-режим
+                  if (cloud.setPinAuthClient) {
+                    cloud.setPinAuthClient(pinAuthClient);
+                  }
+                  
+                  // Загружаем локальные данные
+                  initLocalData();
+                  setStatus('online');
+                  
+                  // Синхронизируем с сервером
+                  cloud.syncClient(pinAuthClient)
+                    .then(() => {
+                      console.log('[App] ✅ PIN-сессия восстановлена');
+                      // Отправляем событие для обновления UI
+                      window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: pinAuthClient } }));
+                    })
+                    .catch((err) => {
+                      console.error('[App] ❌ Ошибка восстановления PIN-сессии:', err);
+                      // При ошибке показываем экран логина
+                      localStorage.removeItem('heys_pin_auth_client');
+                      setClientId(null);
+                    })
+                    .finally(() => {
+                      setIsInitializing(false);
+                    });
+                } else {
+                  // Нет сохранённой сессии — показываем экран логина
+                  initLocalData();
+                  setStatus('offline');
+                  setIsInitializing(false);
+                }
               }
             }, []);
 
