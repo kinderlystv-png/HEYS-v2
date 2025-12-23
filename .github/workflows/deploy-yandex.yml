@@ -278,19 +278,19 @@ jobs:
       - name: Health check
         run: |
           echo "🏥 Running health checks..."
-          echo "⏳ Waiting 30s for CDN cache propagation..."
-          sleep 30
+          echo "⏳ Waiting 60s for CDN cache propagation..."
+          sleep 60
 
-          # Retry logic for CDN propagation delays
-          MAX_RETRIES=3
-          RETRY_DELAY=10
+          # Retry logic for CDN propagation delays (up to ~2 min total)
+          MAX_RETRIES=6
+          RETRY_DELAY=15
 
           for i in $(seq 1 $MAX_RETRIES); do
             PWA_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://app.heyslab.ru/)
             LANDING_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://heyslab.ru/)
             API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.heyslab.ru/health)
 
-            echo "Attempt $i: PWA: $PWA_STATUS | Landing: $LANDING_STATUS | API: $API_STATUS"
+            echo "Attempt $i/$MAX_RETRIES: PWA: $PWA_STATUS | Landing: $LANDING_STATUS | API: $API_STATUS"
 
             if [ "$PWA_STATUS" = "200" ] && [ "$LANDING_STATUS" = "200" ] && [ "$API_STATUS" = "200" ]; then
               echo "✅ Health checks passed"
