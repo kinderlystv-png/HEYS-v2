@@ -22,7 +22,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2 # Для определения изменённых файлов
+          fetch-depth: 0 # Full history for git commands
+
+      - name: Fix git safe directory
+        run: git config --global --add safe.directory $GITHUB_WORKSPACE
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
