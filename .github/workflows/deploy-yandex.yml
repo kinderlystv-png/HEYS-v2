@@ -307,11 +307,11 @@ jobs:
           fi
 
           # 2) Validate CDN — best effort. CDN propagation can lag by region and return cached 404.
-          echo "⏳ Waiting 60s for CDN propagation..."
-          sleep 60
+          echo "⏳ Waiting 10s for CDN propagation..."
+          sleep 10
 
-          MAX_RETRIES=10
-          RETRY_DELAY=30
+          MAX_RETRIES=3
+          RETRY_DELAY=10
           CACHE_BUST="v=${BUILD_VERSION}&ts=$(date +%s)"
 
           PWA_CDN_URL="https://app.heyslab.ru/version.json?${CACHE_BUST}"
