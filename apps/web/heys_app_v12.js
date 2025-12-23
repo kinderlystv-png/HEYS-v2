@@ -544,7 +544,31 @@ const HEYS = window.HEYS = window.HEYS || {};
                   showUpdateBadge(event.data.version);
                 }
                 if (event.data?.type === 'CACHES_CLEARED') {
-                  console.log('[SW] ✅ Caches cleared notification received');
+                  console.log('[SW] ✅ Caches cleared — resetting session for fresh data from cloud');
+                  
+                  // 🔄 Полный сброс сессии после очистки кэша
+                  // Данные уже синхронизированы в облако, после reload подтянутся свежие
+                  try {
+                    // 1. Завершаем auth сессию (если есть)
+                    if (HEYS.cloud?.signOut) {
+                      HEYS.cloud.signOut();
+                    }
+                    
+                    // 2. Очищаем localStorage (все данные подтянутся из облака)
+                    localStorage.clear();
+                    
+                    // 3. Очищаем sessionStorage
+                    sessionStorage.clear();
+                    
+                    console.log('[SW] 🗑️ Session cleared, reloading...');
+                  } catch (e) {
+                    console.warn('[SW] Session clear error:', e);
+                  }
+                  
+                  // 4. Перезагружаем страницу — пользователь увидит экран входа
+                  setTimeout(() => {
+                    location.reload();
+                  }, 100);
                 }
               });
               
