@@ -92,59 +92,64 @@ jobs:
       - name: Deploy PWA to Yandex Object Storage
         run: |
           # === PWA Application → heys-app bucket ===
+          # ПРАВИЛЬНАЯ ПОЛИТИКА КЭШИРОВАНИЯ:
+          # - Хэшированные ассеты (assets/*.hash.*) → 1 год (immutable)
+          # - HTML/SW/manifest/version.json → no-cache (критичные для обновлений)
+          # - Кастомные JS (heys_*.js) → 10 минут (часто обновляются)
+          # - Docs → versioned immutable + latest no-cache
 
-          # Берём версию юридических документов из исходника (единый источник правды)
+          # Берём версию юридических документов из исходника
           DOCS_VERSION=$(node -e "const fs=require('fs'); const s=fs.readFileSync('apps/web/heys_consents_v1.js','utf8'); const m=s.match(/user_agreement:\\s*'([^']+)'/); process.stdout.write(m?m[1]:'');")
           if [ -z "$DOCS_VERSION" ]; then
-            echo "❌ Failed to detect docs version from apps/web/heys_consents_v1.js"
+            echo "❌ Failed to detect docs version"
             exit 1
           fi
-          echo "Legal docs version: $DOCS_VERSION"
+          echo "📜 Legal docs version: $DOCS_VERSION"
 
-          # 1. Статические ассеты с долгим кэшем (CSS, шрифты, картинки)
-          #    НО исключаем JS файлы (они содержат версию и должны обновляться)
-          #    И исключаем docs/*.md (юридика — всегда актуальная)
+          # === STEP 1: Хэшированные ассеты (1 год) ===
+          # Только /assets/ папка — там Vite кладёт файлы с хэшами в именах
+          echo "📦 Step 1: Uploading hashed assets (1 year cache)..."
+          aws s3 sync apps/web/dist/assets/ s3://${{ env.YC_BUCKET_PWA }}/assets/ \
+            --endpoint-url=${{ env.YC_ENDPOINT }} \
+            --cache-control "public, max-age=31536000, immutable"
+
+          # === STEP 2: Картинки и статика (1 год) ===
+          echo "🖼️ Step 2: Uploading images and static files (1 year cache)..."
           aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_PWA }}/ \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "public, max-age=31536000" \
             --exclude "*.html" \
             --exclude "*.js" \
-            --exclude "sw.js" \
-            --exclude "version.json" \
-            --exclude "manifest.json" \
-            --exclude "docs/*" \
-            --exclude "*.md"
+            --exclude "*.json" \
+            --exclude "*.webmanifest" \
+            --exclude "docs/*"
 
-          # 2. JS файлы с коротким кэшем (10 мин) — содержат APP_VERSION
-          aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_PWA }}/ \
-            --endpoint-url=${{ env.YC_ENDPOINT }} \
-            --cache-control "public, max-age=600" \
-            --exclude "*" \
-            --include "*.js" \
-            --exclude "sw.js"
+          # === STEP 3: Кастомные JS файлы (10 минут) ===
+          # heys_*.js, sw.js и другие root-level JS — часто обновляются
+          echo "📜 Step 3: Uploading custom JS files (10 min cache)..."
+          for jsfile in apps/web/dist/*.js; do
+            if [ -f "$jsfile" ]; then
+              filename=$(basename "$jsfile")
+              if [ "$filename" = "sw.js" ]; then
+                # Service Worker — ВСЕГДА без кэша
+                aws s3 cp "$jsfile" s3://${{ env.YC_BUCKET_PWA }}/$filename \
+                  --endpoint-url=${{ env.YC_ENDPOINT }} \
+                  --cache-control "no-cache, no-store, must-revalidate" \
+                  --content-type "application/javascript"
+                echo "  ✓ $filename (no-cache)"
+              else
+                # Остальные JS — короткий кэш
+                aws s3 cp "$jsfile" s3://${{ env.YC_BUCKET_PWA }}/$filename \
+                  --endpoint-url=${{ env.YC_ENDPOINT }} \
+                  --cache-control "public, max-age=600" \
+                  --content-type "application/javascript"
+                echo "  ✓ $filename (10 min cache)"
+              fi
+            fi
+          done
 
-          # 3. Юридические документы (двойная публикация):
-          #   3.1) Версионированный путь: /docs/v<version>/...  (можно кэшировать "вечно", т.к. immutable)
-          #   3.2) Latest путь: /docs/...  (без кэша, чтобы можно было открыть прямую ссылку)
-          # Важно: UI использует /docs/v<version>/... как "неубиваемую" защиту от CDN-старья.
-
-          # 3.1 Versioned (immutable)
-          aws s3 cp apps/web/dist/docs/ s3://${{ env.YC_BUCKET_PWA }}/docs/v${DOCS_VERSION}/ \
-            --recursive \
-            --endpoint-url=${{ env.YC_ENDPOINT }} \
-            --cache-control "public, max-age=31536000, immutable" \
-            --content-type "text/markdown; charset=utf-8" \
-            --metadata-directive REPLACE
-
-          # 3.2 Latest (no-cache)
-          aws s3 cp apps/web/dist/docs/ s3://${{ env.YC_BUCKET_PWA }}/docs/ \
-            --recursive \
-            --endpoint-url=${{ env.YC_ENDPOINT }} \
-            --cache-control "no-cache, no-store, must-revalidate" \
-            --content-type "text/markdown; charset=utf-8" \
-            --metadata-directive REPLACE
-
-          # 4. HTML файлы без кэширования (для обновлений PWA)
+          # === STEP 4: HTML файлы (no-cache) ===
+          echo "📄 Step 4: Uploading HTML files (no-cache)..."
           aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_PWA }}/ \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
@@ -152,13 +157,13 @@ jobs:
             --exclude "*" \
             --include "*.html"
 
-          # Service Worker без кэширования
-          aws s3 cp apps/web/dist/sw.js s3://${{ env.YC_BUCKET_PWA }}/sw.js \
+          # === STEP 5: Критичные JSON файлы (no-cache) ===
+          echo "⚙️ Step 5: Uploading critical JSON files (no-cache)..."
+          aws s3 cp apps/web/dist/version.json s3://${{ env.YC_BUCKET_PWA }}/version.json \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
-            --content-type "application/javascript"
+            --content-type "application/json"
 
-          # Manifest без кэширования (manifest.json → также копируем как .webmanifest для совместимости)
           aws s3 cp apps/web/dist/manifest.json s3://${{ env.YC_BUCKET_PWA }}/manifest.json \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
@@ -169,22 +174,48 @@ jobs:
             --cache-control "no-cache, no-store, must-revalidate" \
             --content-type "application/manifest+json"
 
-          # Version file без кэширования
-          aws s3 cp apps/web/dist/version.json s3://${{ env.YC_BUCKET_PWA }}/version.json \
+          # === STEP 6: Юридические документы ===
+          # 6.1 Версионированный путь (immutable, 1 год)
+          echo "📋 Step 6.1: Uploading versioned legal docs (/docs/v$DOCS_VERSION/)..."
+          aws s3 cp apps/web/dist/docs/ s3://${{ env.YC_BUCKET_PWA }}/docs/v${DOCS_VERSION}/ \
+            --recursive \
+            --endpoint-url=${{ env.YC_ENDPOINT }} \
+            --cache-control "public, max-age=31536000, immutable" \
+            --content-type "text/markdown; charset=utf-8" \
+            --metadata-directive REPLACE
+
+          # 6.2 Latest путь (no-cache для прямых ссылок)
+          echo "📋 Step 6.2: Uploading latest legal docs (/docs/)..."
+          aws s3 cp apps/web/dist/docs/ s3://${{ env.YC_BUCKET_PWA }}/docs/ \
+            --recursive \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
-            --content-type "application/json"
+            --content-type "text/markdown; charset=utf-8" \
+            --metadata-directive REPLACE
+
+          echo "✅ PWA deployment complete!"
 
       - name: Deploy Landing to Yandex Object Storage
         run: |
           # === Landing Page → heys-static bucket ===
-          # Синхронизируем файлы (без --delete, т.к. нет прав на удаление в IAM)
+          # Landing — Next.js static export, JS файлы с хэшами в _next/
+
+          # 1. Хэшированные ассеты Next.js (1 год)
+          echo "📦 Landing: Uploading hashed assets..."
+          aws s3 sync apps/landing/out/_next/ s3://${{ env.YC_BUCKET_LANDING }}/_next/ \
+            --endpoint-url=${{ env.YC_ENDPOINT }} \
+            --cache-control "public, max-age=31536000, immutable"
+
+          # 2. Остальная статика (картинки, шрифты — 1 год)
+          echo "🖼️ Landing: Uploading static files..."
           aws s3 sync apps/landing/out/ s3://${{ env.YC_BUCKET_LANDING }}/ \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "public, max-age=31536000" \
-            --exclude "*.html"
+            --exclude "*.html" \
+            --exclude "_next/*"
 
-          # HTML файлы без кэширования
+          # 3. HTML файлы без кэширования
+          echo "📄 Landing: Uploading HTML files (no-cache)..."
           aws s3 sync apps/landing/out/ s3://${{ env.YC_BUCKET_LANDING }}/ \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
@@ -192,7 +223,9 @@ jobs:
             --exclude "*" \
             --include "*.html"
 
-      - name: Invalidate CDN cache (optional)
+          echo "✅ Landing deployment complete!"
+
+      - name: Invalidate CDN cache
         continue-on-error: true
         env:
           YC_TOKEN: ${{ secrets.YC_OAUTH_TOKEN }}
@@ -215,15 +248,37 @@ jobs:
           yc config set token "$YC_TOKEN"
           yc config set folder-id "$YC_FOLDER"
 
-          # Инвалидируем критичные пути (конкретные файлы, НЕ wildcards - они ненадёжны)
+          # === PWA CDN Invalidation ===
           echo "🔄 Purging CDN cache for PWA..."
+
+          # Критичные файлы (без кэша)
           yc cdn cache purge --resource-id "$CDN_PWA_ID" \
-            --path "/" --path "/index.html" --path "/sw.js" --path "/manifest.webmanifest" --path "/version.json" --path "/heys_app_v12.js" || true
+            --path "/" \
+            --path "/index.html" \
+            --path "/sw.js" \
+            --path "/manifest.json" \
+            --path "/manifest.webmanifest" \
+            --path "/version.json" || true
+
+          # ВСЕ кастомные JS файлы — динамический список!
+          echo "🔄 Purging all heys_*.js files..."
+          JS_PATHS=""
+          for jsfile in apps/web/dist/heys_*.js; do
+            if [ -f "$jsfile" ]; then
+              filename=$(basename "$jsfile")
+              JS_PATHS="$JS_PATHS --path /$filename"
+              echo "  → /$filename"
+            fi
+          done
+
+          if [ -n "$JS_PATHS" ]; then
+            yc cdn cache purge --resource-id "$CDN_PWA_ID" $JS_PATHS || true
+          fi
 
           # Юридические документы — ВСЕГДА инвалидируем (152-ФЗ compliance)
           echo "🔄 Purging legal docs from CDN cache..."
           DOCS_VERSION=$(node -e "const fs=require('fs'); const s=fs.readFileSync('apps/web/heys_consents_v1.js','utf8'); const m=s.match(/user_agreement:\\s*'([^']+)'/); process.stdout.write(m?m[1]:'');")
-          echo "Legal docs version for purge: ${DOCS_VERSION:-unknown}"
+          echo "  Legal docs version: ${DOCS_VERSION:-unknown}"
 
           yc cdn cache purge --resource-id "$CDN_PWA_ID" \
             --path "/docs/user-agreement.md" \
@@ -231,7 +286,7 @@ jobs:
             --path "/docs/consent-forms.md" \
             --path "/docs/chat-rules.md" || true
 
-          # На всякий случай инвалидируем и версионированные пути (если версия переиспользовалась при правках)
+          # Версионированные пути юридики
           if [ -n "$DOCS_VERSION" ]; then
             yc cdn cache purge --resource-id "$CDN_PWA_ID" \
               --path "/docs/v${DOCS_VERSION}/user-agreement.md" \
@@ -240,11 +295,13 @@ jobs:
               --path "/docs/v${DOCS_VERSION}/chat-rules.md" || true
           fi
 
+          # === Landing CDN Invalidation ===
           echo "🔄 Purging CDN cache for Landing..."
           yc cdn cache purge --resource-id "$CDN_LANDING_ID" \
-            --path "/" --path "/index.html" || true
+            --path "/" \
+            --path "/index.html" || true
 
-          echo "✅ CDN cache purged for critical paths"
+          echo "✅ CDN cache purged for all critical paths"
 
       - name: Health check
         run: |
