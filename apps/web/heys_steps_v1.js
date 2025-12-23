@@ -1880,24 +1880,13 @@
       // Используем дату из context или сегодня
       const dateKey = context.dateKey || getTodayKey();
       
-      // Получаем clientId для правильного ключа
-      const clientId = HEYS.currentClientId || (() => {
-        try { 
-          const raw = localStorage.getItem('heys_client_current'); 
-          return raw ? JSON.parse(raw) : ''; 
-        } catch { return ''; }
-      })();
-      const fullKey = clientId ? `heys_${clientId}_dayv2_${dateKey}` : `heys_dayv2_${dateKey}`;
+      // Используем lsGet — он:
+      // 1. Работает со scoped-ключами (clientId)
+      // 2. Декомпрессирует данные (¤Z¤ prefix)
+      // 3. Синхронизирован с облаком через HEYS.store
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
       
-      let rawData = null;
-      try {
-        const raw = localStorage.getItem(fullKey);
-        rawData = raw ? JSON.parse(raw) : null;
-      } catch (e) {
-        console.error('[MEASUREMENTS] Read error:', e);
-      }
-      
-      const m = rawData?.measurements || {};
+      const m = dayData?.measurements || {};
       return {
         waist: m.waist ?? null,
         hips: m.hips ?? null,

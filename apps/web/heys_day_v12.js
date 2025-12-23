@@ -9189,7 +9189,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               prot: dayInfo.prot || 0,
               fat: dayInfo.fat || 0,
               carbs: dayInfo.carbs || 0,
-              isRefeedDay: dayInfo.isRefeedDay || false  // 🔄 Refeed day flag
+              isRefeedDay: dayInfo.isRefeedDay || false,  // 🔄 Refeed day flag
+              isFastingDay: dayInfo.isFastingDay || false, // 🆕 Голодание (данные корректны)
+              isIncomplete: dayInfo.isIncomplete || false  // 🆕 Незаполненный день (исключить из статистики)
             };
           }
           
@@ -9257,12 +9259,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               prot: 0, // fallback — нет детальных данных
               fat: 0,
               carbs: 0,
-              isRefeedDay: dayData.isRefeedDay || false  // 🔄 Refeed day flag
+              isRefeedDay: dayData.isRefeedDay || false,  // 🔄 Refeed day flag
+              isFastingDay: dayData.isFastingDay || false, // 🆕 Голодание (данные корректны)
+              isIncomplete: dayData.isIncomplete || false  // 🆕 Незаполненный день (исключить из статистики)
             };
           }
           
           // Нет данных дня — используем текущий optimum как fallback (день пустой, delta не важна)
-          return { date: dateStr, kcal: 0, target: optimum, ratio: 0, isToday: false, hasTraining: false, trainingTypes: [], sleepHours: 0, sleepQuality: 0, dayScore: 0, steps: 0, waterMl: 0, weightMorning: 0, prot: 0, fat: 0, carbs: 0, isRefeedDay: false };
+          return { date: dateStr, kcal: 0, target: optimum, ratio: 0, isToday: false, hasTraining: false, trainingTypes: [], sleepHours: 0, sleepQuality: 0, dayScore: 0, steps: 0, waterMl: 0, weightMorning: 0, prot: 0, fat: 0, carbs: 0, isRefeedDay: false, isFastingDay: false, isIncomplete: false };
         };
         
         // Собираем данные за период (от startDate до сегодня)
@@ -9448,11 +9452,25 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         
         // Фильтруем дни: последние 3 дня до вчера (сегодня не считаем — ещё едим)
         // 🔧 FIX: Исключаем дни с < 1/3 от нормы — это значит данные не внесены полностью
+        // 🆕 v1.1: Учитываем isFastingDay (данные корректны) и isIncomplete (исключаем)
         const minKcalThreshold = optimum / 3; // ~600-700 ккал для большинства людей
         const pastDays = sparklineData.filter(d => {
           if (d.isToday) return false;
           if (d.isFuture) return false;
           if (d.kcal <= 0) return false;
+          
+          // 🆕 Если помечен как incomplete (незаполненные данные) — не учитываем
+          if (d.isIncomplete) return false;
+          
+          // 🆕 Если помечен как fasting (реальное голодание) — учитываем как есть
+          // даже если kcal < threshold
+          if (d.isFastingDay) {
+            // Но всё равно проверяем временные рамки
+            if (d.date < windowStartStr) return false;
+            if (d.date >= todayStr) return false;
+            return true;
+          }
+          
           if (d.kcal < minKcalThreshold) return false; // 🆕 День без полных данных — не учитываем
           if (d.date < windowStartStr) return false; // Старше 3 дней не берём
           if (d.date >= todayStr) return false; // Сегодня и позже не берём
@@ -12036,12 +12054,28 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       });
       
       try {
-        // 1. Тихая проверка версии (без UI)
-        if (window.HEYS?.checkVersionSilent) {
-          window.HEYS.checkVersionSilent();
+        // 🆕 1. ПРИНУДИТЕЛЬНАЯ проверка версии PWA (очистка кэшей + reload если есть обновление)
+        if (window.HEYS?.forceCheckAndUpdate) {
+          console.log('[PullRefresh] 🔍 Checking for PWA updates...');
+          const updateResult = await window.HEYS.forceCheckAndUpdate();
+          
+          if (updateResult.hasUpdate) {
+            console.log('[PullRefresh] 🆕 PWA update found! Reloading...');
+            setRefreshStatus('updating');
+            triggerHaptic(30);
+            
+            // Небольшая задержка для показа статуса + cache invalidation
+            await new Promise(r => setTimeout(r, 500));
+            
+            // Hard reload с cache-bust
+            const url = new URL(window.location.href);
+            url.searchParams.set('_v', Date.now().toString());
+            window.location.href = url.toString();
+            return; // Не продолжаем — страница перезагрузится
+          }
         }
-
-        // 1a. Тихая проверка версии SW (без модалки — SW сам обновится в фоне)
+        
+        // 1a. Тихая проверка/обновление SW (без reload если нет новой версии)
         if (navigator.serviceWorker?.controller) {
           navigator.serviceWorker.ready.then(reg => reg.update?.()).catch(() => {});
         }
@@ -12434,8 +12468,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         }
         
         // Пустой день или <50% нормы = неизвестный
+        // Исключения:
+        // - isFastingDay === true → данные корректны (осознанное голодание)
+        // - isIncomplete === true → точно неизвестный (незаполненные данные)
         const ratio = d.target > 0 ? d.kcal / d.target : 0;
-        const isUnknown = d.kcal === 0 || (!d.isToday && ratio < 0.5);
+        const isLowRatio = d.kcal === 0 || (!d.isToday && ratio < 0.5);
+        
+        // Если явно помечен как fasting — считаем данные корректными
+        if (d.isFastingDay) {
+          return { ...d, isUnknown: false, excludeFromChart: false };
+        }
+        
+        // Если явно помечен как incomplete — исключаем
+        if (d.isIncomplete) {
+          return { ...d, isUnknown: true, excludeFromChart: false };
+        }
+        
+        const isUnknown = isLowRatio;
         
         return { ...d, isUnknown, excludeFromChart: false };
       });

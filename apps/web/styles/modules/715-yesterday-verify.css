@@ -1,0 +1,277 @@
+/* ============================================================
+   715-yesterday-verify.css — Стили модуля верификации вчера
+   v1.0.0 | 2025-12-23
+   ============================================================ */
+
+/* ============================================================
+   YESTERDAY VERIFY STEP — Шаг верификации данных за вчера
+   ============================================================ */
+
+.yv-step {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px 0;
+}
+
+/* Информационная карточка с данными вчера */
+.yv-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 16px;
+  border: 2px solid #fbbf24;
+}
+
+.yv-info-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.yv-info-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.yv-info-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: #92400e;
+}
+
+.yv-info-stats {
+  font-size: 18px;
+  color: #78350f;
+}
+
+.yv-info-kcal {
+  font-weight: 700;
+  color: #dc2626;
+}
+
+.yv-info-target {
+  color: #78350f;
+}
+
+.yv-info-percent {
+  font-size: 14px;
+  color: #b45309;
+  margin-left: 4px;
+}
+
+/* Вопрос / подзаголовок */
+.yv-question {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  text-align: center;
+  padding: 8px 0;
+}
+
+.yv-subtitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* Варианты выбора */
+.yv-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.yv-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 60px;
+  position: relative;
+  text-align: left;
+  width: 100%;
+}
+
+.yv-option:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+}
+
+.yv-option--selected {
+  background: #f0fdf4;
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
+
+/* Вариант "Незаполненные данные" — оранжевый акцент при выборе */
+.yv-option--selected[style*="border-color: rgb(249, 115, 22)"],
+.yv-option--selected[style*="border-color:#f97316"] {
+  background: #fff7ed;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+}
+
+.yv-option-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.yv-option-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.yv-option-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.yv-option-desc {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.yv-option-check {
+  font-size: 18px;
+  font-weight: 700;
+  color: #22c55e;
+}
+
+/* Кнопка "Назад" */
+.yv-back {
+  align-self: flex-start;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.yv-back:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+/* Подсказка */
+.yv-hint {
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 10px;
+}
+
+/* Предупреждение */
+.yv-warning {
+  font-size: 13px;
+  color: #dc2626;
+  text-align: center;
+  padding: 12px 16px;
+  background: #fef2f2;
+  border-radius: 10px;
+  border: 1px solid #fecaca;
+}
+
+/* Загрузка */
+.yv-loading {
+  padding: 40px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+
+.dark .yv-info {
+  background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
+  border-color: #b45309;
+}
+
+.dark .yv-info-date {
+  color: #fbbf24;
+}
+
+.dark .yv-info-stats {
+  color: #fde68a;
+}
+
+.dark .yv-info-target {
+  color: #fde68a;
+}
+
+.dark .yv-info-percent {
+  color: #fbbf24;
+}
+
+.dark .yv-question {
+  color: #f3f4f6;
+}
+
+.dark .yv-subtitle {
+  color: #9ca3af;
+}
+
+.dark .yv-option {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.dark .yv-option:hover {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+.dark .yv-option--selected {
+  background: #14532d;
+  border-color: #22c55e;
+}
+
+.dark .yv-option-title {
+  color: #f3f4f6;
+}
+
+.dark .yv-option-desc {
+  color: #9ca3af;
+}
+
+.dark .yv-back {
+  color: #9ca3af;
+  border-color: #374151;
+}
+
+.dark .yv-back:hover {
+  background: #374151;
+  color: #f3f4f6;
+}
+
+.dark .yv-hint {
+  background: #1f2937;
+  color: #9ca3af;
+}
+
+.dark .yv-warning {
+  background: #450a0a;
+  border-color: #dc2626;
+  color: #fecaca;
+}

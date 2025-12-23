@@ -4,9 +4,12 @@
   "description": "Отслеживание питания и тренировок",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
   "orientation": "portrait-primary",
+  "scope": "/",
+  "id": "/",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -24,13 +27,73 @@
   "categories": ["health", "fitness", "lifestyle"],
   "lang": "ru",
   "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "screenshots": [
+    {
+      "src": "/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Главный экран HEYS на десктопе"
+    },
+    {
+      "src": "/screenshot-narrow.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Главный экран HEYS на мобильном"
+    }
+  ],
   "shortcuts": [
     {
       "name": "Добавить приём пищи",
-      "short_name": "+ Приём",
+      "short_name": "+ Еда",
       "description": "Быстро добавить новый приём пищи",
       "url": "/?action=add-meal",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Добавить воду",
+      "short_name": "+ Вода",
+      "description": "Быстро записать воду",
+      "url": "/?action=add-water",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Статистика дня",
+      "short_name": "День",
+      "description": "Посмотреть статистику за сегодня",
+      "url": "/?tab=day",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Отчёты",
+      "short_name": "Отчёты",
+      "description": "Аналитика и прогресс",
+      "url": "/?tab=reports",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/?share-target=true",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "photos",
+          "accept": ["image/jpeg", "image/png", "image/webp", "image/gif"]
+        }
+      ]
+    }
+  },
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "auto"]
+  }
 }

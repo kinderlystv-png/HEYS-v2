@@ -3051,6 +3051,40 @@ td:first-child input {
   animation: slideDown 0.3s ease;
 }
 
+/* 🆕 Улучшенный offline banner с flex-direction для показа времени */
+.offline-banner-enhanced {
+  flex-direction: column;
+  padding: 10px 16px;
+  gap: 4px;
+}
+
+.offline-banner-enhanced .offline-banner-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 🆕 Пульсирующая анимация для иконки офлайн */
+.offline-banner-icon.pulse {
+  animation: pulse-icon 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-icon {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+}
+
+/* 🆕 Время в офлайне */
+.offline-banner-duration {
+  font-size: 11px;
+  opacity: 0.9;
+  font-weight: 400;
+  background: rgba(255,255,255,0.15);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
 @keyframes slideDown {
   from { transform: translateY(-100%); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }

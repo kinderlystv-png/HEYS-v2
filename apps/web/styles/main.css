@@ -14,6 +14,7 @@
  * 07. Steps & APS Flow ........... modules/600-steps-and-aps.css
  * 08. Profile Wizard ............. modules/700-profile-wizard.css
  * 09. Refeed Day ................. modules/710-refeed.css
+ * 09a. Yesterday Verify .......... modules/715-yesterday-verify.css
  * 10. Predictive Insights ........ modules/720-predictive-insights.css
  * 11. Metabolic Intelligence ..... modules/725-metabolic-intelligence.css
  * 12. Widgets Dashboard .......... modules/730-widgets-dashboard.css
@@ -29,6 +30,7 @@
 @import url("./modules/600-steps-and-aps.css");
 @import url("./modules/700-profile-wizard.css");
 @import url("./modules/710-refeed.css");
+@import url("./modules/715-yesterday-verify.css");
 @import url("./modules/720-predictive-insights.css");
 @import url("./modules/725-metabolic-intelligence.css");
 @import url("./modules/730-widgets-dashboard.css");

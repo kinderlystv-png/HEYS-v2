@@ -1116,7 +1116,11 @@
         isRefeedDay: dayData.isRefeedDay || false, // Загрузочный день
         refeedReason: dayData.refeedReason || null, // Причина refeed
         // 🔧 FIX: Сохранённая норма с учётом долга — используется для корректного отображения в sparkline
-        savedDisplayOptimum: +dayData.savedDisplayOptimum || 0
+        savedDisplayOptimum: +dayData.savedDisplayOptimum || 0,
+        // 🆕 v1.1: Флаги верификации низкокалорийных дней
+        isFastingDay: dayData.isFastingDay || false, // Осознанное голодание — данные корректны
+        isIncomplete: dayData.isIncomplete || false, // Не заполнен — исключить из статистик
+        meals: dayData.meals || [] // 🆕 v1.1: Для определения пустого дня
       };
     } catch (e) {
       return null;
@@ -1479,7 +1483,10 @@
           steps, waterMl, weightMorning, // 🆕 Добавлены для персонализированных инсайтов
           cycleDay,
           isRefeedDay: dayInfo.isRefeedDay || false,
-          refeedReason: dayInfo.refeedReason || null
+          refeedReason: dayInfo.refeedReason || null,
+          // 🆕 v1.1: Флаги верификации низкокалорийных дней
+          isFastingDay: dayInfo.isFastingDay || false,
+          isIncomplete: dayInfo.isIncomplete || false
         });
       }
     } catch (e) {

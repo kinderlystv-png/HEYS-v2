@@ -16,7 +16,7 @@
 const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2025.12.23.1545.4b5c0db'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2025.12.23.1928.55379dd'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
@@ -90,6 +90,149 @@ const HEYS = window.HEYS = window.HEYS || {};
         
         function clearUpdateLock() {
           localStorage.removeItem(UPDATE_LOCK_KEY);
+        }
+        
+        // === UPDATE AVAILABLE BADGE ===
+        // Ненавязчивый индикатор "есть обновление" (как в топовых приложениях)
+        let _updateAvailable = false;
+        let _updateVersion = null;
+        
+        function showUpdateBadge(version) {
+          _updateAvailable = true;
+          _updateVersion = version;
+          
+          // Удаляем предыдущий badge если есть
+          document.getElementById('heys-update-badge')?.remove();
+          
+          const badge = document.createElement('div');
+          badge.id = 'heys-update-badge';
+          badge.innerHTML = `
+            <style>
+              @keyframes heys-badge-pulse {
+                0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+                50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+              }
+              @keyframes heys-badge-slide {
+                from { transform: translateY(-100px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+              }
+              #heys-update-badge-btn:hover {
+                transform: scale(1.02);
+                box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+              }
+              #heys-update-badge-btn:active {
+                transform: scale(0.98);
+              }
+            </style>
+            <button id="heys-update-badge-btn" onclick="window.HEYS?.installUpdate?.()" style="
+              position: fixed;
+              top: calc(env(safe-area-inset-top, 0px) + 12px);
+              left: 50%;
+              transform: translateX(-50%);
+              background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+              color: white;
+              border: none;
+              border-radius: 50px;
+              padding: 10px 20px;
+              font-family: system-ui, -apple-system, sans-serif;
+              font-size: 14px;
+              font-weight: 600;
+              cursor: pointer;
+              z-index: 99998;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+              animation: heys-badge-slide 0.4s ease-out, heys-badge-pulse 2s ease-in-out infinite;
+              transition: all 0.2s ease;
+            ">
+              <span style="font-size: 16px;">🆕</span>
+              <span>Обновить HEYS</span>
+              <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 20px; font-size: 11px;">v${version?.split('.').slice(0,3).join('.') || 'new'}</span>
+            </button>
+          `;
+          document.body.appendChild(badge);
+          
+          // Вибрация если поддерживается (лёгкая)
+          if (navigator.vibrate) navigator.vibrate(50);
+        }
+        
+        function hideUpdateBadge() {
+          _updateAvailable = false;
+          _updateVersion = null;
+          const badge = document.getElementById('heys-update-badge');
+          if (badge) {
+            badge.style.opacity = '0';
+            badge.style.transform = 'translateY(-50px)';
+            badge.style.transition = 'all 0.3s ease';
+            setTimeout(() => badge.remove(), 300);
+          }
+        }
+        
+        // Экспорт для вызова из badge
+        HEYS.installUpdate = async () => {
+          hideUpdateBadge();
+          showUpdateModal('found');
+          setTimeout(() => updateModalStage('downloading'), 800);
+          setTimeout(() => updateModalStage('installing'), 1600);
+          setTimeout(() => {
+            updateModalStage('reloading');
+            forceUpdateAndReload(false);
+          }, 2400);
+        };
+        
+        // === NETWORK QUALITY INDICATOR ===
+        // Определяем качество сети для адаптивных стратегий
+        function getNetworkQuality() {
+          const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+          if (!connection) return { type: 'unknown', quality: 'good' };
+          
+          const effectiveType = connection.effectiveType; // 'slow-2g', '2g', '3g', '4g'
+          const downlink = connection.downlink; // Mbps
+          const rtt = connection.rtt; // ms
+          
+          let quality = 'good';
+          if (effectiveType === 'slow-2g' || effectiveType === '2g' || rtt > 500) {
+            quality = 'poor';
+          } else if (effectiveType === '3g' || rtt > 200 || downlink < 1) {
+            quality = 'moderate';
+          }
+          
+          return { type: effectiveType || 'unknown', downlink, rtt, quality, saveData: connection.saveData };
+        }
+        
+        // === SMART PERIODIC CHECKS ===
+        // Адаптивный интервал проверок с exponential backoff
+        let _checkInterval = 30 * 60 * 1000; // Начинаем с 30 минут
+        let _consecutiveFailures = 0;
+        let _lastSuccessfulCheck = Date.now();
+        
+        async function smartVersionCheck() {
+          const network = getNetworkQuality();
+          
+          // Не проверяем при плохой сети или режиме экономии трафика
+          if (network.quality === 'poor' || network.saveData) {
+            console.log('[PWA] ⏸️ Skipping check: poor network or save-data mode');
+            return;
+          }
+          
+          try {
+            const hasUpdate = await checkServerVersion(true);
+            
+            if (hasUpdate) {
+              // Показываем badge вместо модалки (ненавязчиво)
+              showUpdateBadge(_updateVersion);
+              _consecutiveFailures = 0;
+            } else {
+              _consecutiveFailures = 0;
+              _lastSuccessfulCheck = Date.now();
+            }
+          } catch (e) {
+            _consecutiveFailures++;
+            // Exponential backoff при ошибках (max 2 часа)
+            _checkInterval = Math.min(_checkInterval * 1.5, 2 * 60 * 60 * 1000);
+            console.log('[PWA] Check failed, next interval:', _checkInterval / 60000, 'min');
+          }
         }
         
         // === Update UI ===
@@ -376,6 +519,35 @@ const HEYS = window.HEYS = window.HEYS || {};
                 }
               };
               
+              // 🆕 Periodic Background Sync — автоматическая проверка обновлений в фоне
+              // (раз в час когда приложение не активно, с WiFi)
+              if ('periodicSync' in registration) {
+                (async () => {
+                  try {
+                    const status = await navigator.permissions.query({ name: 'periodic-background-sync' });
+                    if (status.state === 'granted') {
+                      await registration.periodicSync.register('heys-periodic-update', {
+                        minInterval: 60 * 60 * 1000, // 1 час
+                      });
+                      console.log('[SW] ⏰ Periodic Background Sync registered (1h)');
+                    }
+                  } catch (e) {
+                    console.log('[SW] Periodic Background Sync not supported');
+                  }
+                })();
+              }
+              
+              // Слушаем сообщения от SW (включая UPDATE_AVAILABLE)
+              navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data?.type === 'UPDATE_AVAILABLE') {
+                  console.log('[SW] 🆕 Background update detected:', event.data.version);
+                  showUpdateBadge(event.data.version);
+                }
+                if (event.data?.type === 'CACHES_CLEARED') {
+                  console.log('[SW] ✅ Caches cleared notification received');
+                }
+              });
+              
               // Проверяем обновления каждые 60 секунд
               setInterval(() => {
                 registration.update().catch(() => {});
@@ -511,6 +683,301 @@ const HEYS = window.HEYS = window.HEYS || {};
               window.location.href = url.toString();
             }
           }, 5000);
+        }
+        
+        // === Persistent Storage API ===
+        // Защищает данные приложения от автоматического удаления браузером при нехватке места
+        // Это критически важно для PWA с офлайн-данными
+        async function requestPersistentStorage() {
+          if (!navigator.storage?.persist) {
+            console.log('[Storage] Persistent Storage API not supported');
+            return false;
+          }
+          
+          try {
+            // Проверяем текущий статус
+            const isPersisted = await navigator.storage.persisted();
+            
+            if (isPersisted) {
+              console.log('[Storage] ✅ Already persistent');
+              return true;
+            }
+            
+            // Запрашиваем постоянное хранение
+            const granted = await navigator.storage.persist();
+            
+            if (granted) {
+              console.log('[Storage] ✅ Persistent storage granted!');
+              // Вибрация-подтверждение
+              if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+              return true;
+            } else {
+              console.log('[Storage] ⚠️ Persistent storage denied by browser');
+              return false;
+            }
+          } catch (e) {
+            console.error('[Storage] Error requesting persistence:', e);
+            return false;
+          }
+        }
+        
+        // Storage Estimate — показывает сколько места используется
+        async function getStorageEstimate() {
+          if (!navigator.storage?.estimate) {
+            return { usage: 0, quota: 0, usageDetails: {} };
+          }
+          
+          try {
+            const estimate = await navigator.storage.estimate();
+            const usageMB = (estimate.usage / (1024 * 1024)).toFixed(2);
+            const quotaMB = (estimate.quota / (1024 * 1024)).toFixed(2);
+            const usagePercent = ((estimate.usage / estimate.quota) * 100).toFixed(1);
+            
+            console.log(`[Storage] 📊 Usage: ${usageMB}MB / ${quotaMB}MB (${usagePercent}%)`);
+            
+            // Детализация по типам (если доступна)
+            if (estimate.usageDetails) {
+              Object.entries(estimate.usageDetails).forEach(([key, value]) => {
+                console.log(`[Storage]   - ${key}: ${(value / (1024 * 1024)).toFixed(2)}MB`);
+              });
+            }
+            
+            return {
+              usage: estimate.usage,
+              quota: estimate.quota,
+              usageMB: parseFloat(usageMB),
+              quotaMB: parseFloat(quotaMB),
+              usagePercent: parseFloat(usagePercent),
+              usageDetails: estimate.usageDetails || {}
+            };
+          } catch (e) {
+            console.error('[Storage] Error getting estimate:', e);
+            return { usage: 0, quota: 0, usageDetails: {} };
+          }
+        }
+        
+        // Экспортируем для использования в приложении
+        HEYS.storage = HEYS.storage || {};
+        HEYS.storage.requestPersistent = requestPersistentStorage;
+        HEYS.storage.getEstimate = getStorageEstimate;
+        
+        // Запрашиваем Persistent Storage автоматически после первого использования
+        // (когда есть данные, которые стоит защитить)
+        setTimeout(async () => {
+          // Проверяем, есть ли у нас значимые данные
+          const hasLocalData = Object.keys(localStorage).some(k => k.startsWith('heys_'));
+          if (hasLocalData) {
+            await requestPersistentStorage();
+          }
+        }, 5000);
+        
+        // === Device Capabilities API ===
+        // Определяем возможности устройства для адаптивной производительности
+        function getDeviceCapabilities() {
+          const capabilities = {
+            // Память устройства (GB) — используем для адаптации размера кэша
+            memory: navigator.deviceMemory || 4, // fallback 4GB
+            
+            // Количество логических процессоров — для Web Workers
+            cores: navigator.hardwareConcurrency || 4,
+            
+            // Тип соединения
+            connection: navigator.connection ? {
+              type: navigator.connection.effectiveType || 'unknown',
+              downlink: navigator.connection.downlink || 0,
+              rtt: navigator.connection.rtt || 0,
+              saveData: navigator.connection.saveData || false
+            } : { type: 'unknown', downlink: 0, rtt: 0, saveData: false },
+            
+            // Размер экрана
+            screen: {
+              width: window.screen.width,
+              height: window.screen.height,
+              pixelRatio: window.devicePixelRatio || 1,
+              colorDepth: window.screen.colorDepth || 24
+            },
+            
+            // Touch capabilities
+            hasTouch: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+            maxTouchPoints: navigator.maxTouchPoints || 0,
+            
+            // Платформа
+            platform: navigator.platform || 'unknown',
+            isStandalone: window.matchMedia('(display-mode: standalone)').matches,
+            
+            // Предпочтения пользователя
+            prefersReducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+            prefersColorScheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+            prefersReducedData: window.matchMedia('(prefers-reduced-data: reduce)').matches
+          };
+          
+          // Определяем уровень производительности устройства
+          let performanceLevel = 'high'; // default
+          
+          if (capabilities.memory <= 2 || capabilities.cores <= 2) {
+            performanceLevel = 'low';
+          } else if (capabilities.memory <= 4 || capabilities.cores <= 4) {
+            performanceLevel = 'medium';
+          }
+          
+          // Если включён режим экономии данных — снижаем уровень
+          if (capabilities.connection.saveData) {
+            performanceLevel = 'low';
+          }
+          
+          capabilities.performanceLevel = performanceLevel;
+          
+          console.log(`[Device] 📱 Capabilities:`, {
+            memory: `${capabilities.memory}GB`,
+            cores: capabilities.cores,
+            connection: capabilities.connection.type,
+            performanceLevel,
+            standalone: capabilities.isStandalone
+          });
+          
+          return capabilities;
+        }
+        
+        // Экспортируем capabilities
+        HEYS.device = getDeviceCapabilities();
+        
+        // Обновляем при изменении соединения
+        if (navigator.connection) {
+          navigator.connection.addEventListener('change', () => {
+            HEYS.device = getDeviceCapabilities();
+          });
+        }
+        
+        // === Idle Detection API ===
+        // Отслеживаем когда пользователь возвращается к устройству
+        // Полезно для синхронизации данных и умных напоминаний
+        let idleDetector = null;
+        let lastIdleTime = null;
+        
+        async function startIdleDetection() {
+          if (!('IdleDetector' in window)) {
+            console.log('[Idle] IdleDetector API not supported');
+            return false;
+          }
+          
+          try {
+            // Запрашиваем разрешение
+            const state = await IdleDetector.requestPermission();
+            if (state !== 'granted') {
+              console.log('[Idle] Permission denied');
+              return false;
+            }
+            
+            idleDetector = new IdleDetector();
+            
+            idleDetector.addEventListener('change', () => {
+              const { userState, screenState } = idleDetector;
+              
+              // Пользователь стал активен после простоя
+              if (userState === 'active' && lastIdleTime) {
+                const idleDuration = Date.now() - lastIdleTime;
+                const idleMinutes = Math.round(idleDuration / 60000);
+                
+                console.log(`[Idle] 👋 User returned after ${idleMinutes} min`);
+                
+                // Если был неактивен больше 5 минут — синхронизируем данные
+                if (idleMinutes >= 5 && window.HEYS?.cloud?.sync) {
+                  console.log('[Idle] Syncing after idle period...');
+                  window.HEYS.cloud.sync().catch(() => {});
+                }
+                
+                // Если был неактивен больше 30 минут — проверяем обновления
+                if (idleMinutes >= 30) {
+                  checkServerVersion(true);
+                }
+                
+                // Dispatch custom event для компонентов
+                window.dispatchEvent(new CustomEvent('heys:user-returned', {
+                  detail: { idleMinutes }
+                }));
+                
+                lastIdleTime = null;
+              }
+              
+              // Пользователь стал неактивен
+              if (userState === 'idle' || screenState === 'locked') {
+                lastIdleTime = Date.now();
+                console.log('[Idle] 💤 User went idle/screen locked');
+              }
+            });
+            
+            // Порог простоя — 60 секунд
+            await idleDetector.start({ threshold: 60000 });
+            console.log('[Idle] ✅ Idle detection started');
+            return true;
+            
+          } catch (e) {
+            console.error('[Idle] Error starting detection:', e);
+            return false;
+          }
+        }
+        
+        function stopIdleDetection() {
+          if (idleDetector) {
+            idleDetector.abort();
+            idleDetector = null;
+            console.log('[Idle] Stopped');
+          }
+        }
+        
+        // Экспортируем
+        HEYS.idle = {
+          start: startIdleDetection,
+          stop: stopIdleDetection
+        };
+        
+        // Автоматический запуск если в standalone режиме
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+          setTimeout(startIdleDetection, 10000); // Запускаем через 10 сек после старта
+        }
+        
+        // === Window Controls Overlay API ===
+        // Для десктопных PWA — получаем информацию о области заголовка окна
+        function initWindowControlsOverlay() {
+          if (!('windowControlsOverlay' in navigator)) {
+            console.log('[WCO] Window Controls Overlay not supported');
+            return;
+          }
+          
+          const overlay = navigator.windowControlsOverlay;
+          
+          // Получаем начальную геометрию
+          function updateTitlebarGeometry() {
+            const { visible, x, y, width, height } = overlay.getTitlebarAreaRect?.() || {};
+            
+            if (visible) {
+              console.log(`[WCO] 📐 Titlebar area: ${width}x${height} at (${x}, ${y})`);
+              
+              // Устанавливаем CSS переменные для использования в стилях
+              document.documentElement.style.setProperty('--titlebar-area-x', `${x}px`);
+              document.documentElement.style.setProperty('--titlebar-area-y', `${y}px`);
+              document.documentElement.style.setProperty('--titlebar-area-width', `${width}px`);
+              document.documentElement.style.setProperty('--titlebar-area-height', `${height}px`);
+              
+              // Добавляем класс для стилизации
+              document.body.classList.add('wco-enabled');
+            } else {
+              document.body.classList.remove('wco-enabled');
+            }
+          }
+          
+          // Слушаем изменения
+          overlay.addEventListener('geometrychange', updateTitlebarGeometry);
+          
+          // Начальное обновление
+          updateTitlebarGeometry();
+          
+          console.log('[WCO] ✅ Window Controls Overlay initialized');
+        }
+        
+        // Инициализируем WCO если это десктоп PWA
+        if (window.matchMedia('(display-mode: window-controls-overlay)').matches) {
+          initWindowControlsOverlay();
         }
         
         // === Проверка версии с сервера (обход кэша) ===
@@ -696,10 +1163,51 @@ const HEYS = window.HEYS = window.HEYS || {};
           // Регистрируем SW (только на production)
           registerServiceWorker();
           
-          // Проверяем версию с сервера (только на production)
-          // На localhost это не нужно — мешает разработке
+          // === ПРОВЕРКА ОБНОВЛЕНИЙ (только на production) ===
           if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-            setTimeout(checkServerVersion, 3000);
+            // 1️⃣ Немедленная проверка при загрузке (через 1 сек — даём странице загрузиться)
+            setTimeout(checkServerVersion, 1000);
+            
+            // 2️⃣ Smart периодическая проверка с адаптивным интервалом
+            let periodicCheckTimer = null;
+            function scheduleNextCheck() {
+              periodicCheckTimer = setTimeout(() => {
+                console.log('[PWA] ⏰ Smart periodic check...');
+                smartVersionCheck().finally(scheduleNextCheck);
+              }, _checkInterval);
+            }
+            scheduleNextCheck();
+            
+            // 3️⃣ Проверка при возврате на вкладку (когда пользователь возвращается после бэкграунда)
+            let lastVisibilityCheck = 0;
+            document.addEventListener('visibilitychange', () => {
+              if (document.visibilityState === 'visible') {
+                const now = Date.now();
+                // Проверяем не чаще чем раз в 30 секунд при переключении вкладок
+                if (now - lastVisibilityCheck > 30000) {
+                  lastVisibilityCheck = now;
+                  setTimeout(() => smartVersionCheck(), 1000);
+                }
+              }
+            });
+            
+            // 4️⃣ Проверка при восстановлении сети
+            window.addEventListener('online', () => {
+              console.log('[PWA] 📶 Back online, checking for updates...');
+              setTimeout(() => smartVersionCheck(), 2000);
+            });
+            
+            // 5️⃣ Слушаем изменения качества сети (для адаптивных стратегий)
+            if (navigator.connection) {
+              navigator.connection.addEventListener('change', () => {
+                const network = getNetworkQuality();
+                console.log('[PWA] 📶 Network changed:', network.type, network.quality);
+                // При улучшении сети — сразу проверяем
+                if (network.quality === 'good' && _consecutiveFailures > 0) {
+                  setTimeout(() => smartVersionCheck(), 1000);
+                }
+              });
+            }
           }
         }
         
@@ -724,6 +1232,74 @@ const HEYS = window.HEYS = window.HEYS || {};
             await checkServerVersion(true);
           } catch (e) {
             // Silent fail
+          }
+        };
+        
+        // === Принудительная проверка и обновление (для pull-to-refresh) ===
+        // Возвращает Promise<{ hasUpdate: boolean, version?: string }>
+        HEYS.forceCheckAndUpdate = async function() {
+          try {
+            // 1. Проверяем версию с сервера (без UI)
+            const cacheBust = Date.now();
+            const response = await fetch(`/version.json?_cb=${cacheBust}`, {
+              cache: 'no-store',
+              headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+            });
+            
+            if (!response.ok) {
+              console.log('[PWA Update] version.json not available');
+              return { hasUpdate: false };
+            }
+            
+            const data = await response.json();
+            
+            // 2. Сравниваем версии
+            if (!data.version || !isNewerVersion(data.version, APP_VERSION)) {
+              console.log('[PWA Update] No update available | server:', data.version, '| local:', APP_VERSION);
+              return { hasUpdate: false };
+            }
+            
+            console.log('[PWA Update] 🆕 Update available!', APP_VERSION, '→', data.version);
+            
+            // 3. Принудительная очистка всех кэшей через SW
+            if (navigator.serviceWorker?.controller) {
+              console.log('[PWA Update] 🗑️ Clearing all caches...');
+              navigator.serviceWorker.controller.postMessage('clearAllCaches');
+              
+              // Ждём подтверждения очистки кэшей (макс 2 сек)
+              await new Promise((resolve) => {
+                const timeout = setTimeout(resolve, 2000);
+                const handler = (event) => {
+                  if (event.data?.type === 'CACHES_CLEARED') {
+                    clearTimeout(timeout);
+                    navigator.serviceWorker.removeEventListener('message', handler);
+                    resolve();
+                  }
+                };
+                navigator.serviceWorker.addEventListener('message', handler);
+              });
+              
+              // 4. Принудительно обновляем SW
+              console.log('[PWA Update] 🔄 Updating Service Worker...');
+              const registration = await navigator.serviceWorker.getRegistration();
+              if (registration) {
+                await registration.update();
+              }
+              
+              // 5. skipWaiting для немедленной активации нового SW
+              navigator.serviceWorker.controller.postMessage('skipWaiting');
+            }
+            
+            // 6. Устанавливаем флаги для корректного reload
+            sessionStorage.setItem('heys_pending_update', 'true');
+            sessionStorage.setItem('heys_force_sync_after_update', 'true');
+            localStorage.setItem(VERSION_KEY, APP_VERSION);
+            
+            return { hasUpdate: true, version: data.version };
+            
+          } catch (e) {
+            console.warn('[PWA Update] Check failed:', e.message);
+            return { hasUpdate: false, error: e.message };
           }
         };
         
@@ -2756,6 +3332,94 @@ const HEYS = window.HEYS = window.HEYS || {};
             return { showPwaBanner, showIosPwaBanner, handlePwaInstall, dismissPwaBanner, dismissIosPwaBanner };
           }
 
+          // === 📱 Screen Wake Lock API — предотвращение выключения экрана ===
+          // Используется когда пользователь активно работает (таймер инсулиновой волны, готовка)
+          function useWakeLock() {
+            const wakeLockRef = React.useRef(null);
+            const [isWakeLockActive, setIsWakeLockActive] = React.useState(false);
+            
+            // Проверка поддержки
+            const isSupported = React.useMemo(() => {
+              return 'wakeLock' in navigator;
+            }, []);
+            
+            // Запрос Wake Lock
+            const requestWakeLock = React.useCallback(async () => {
+              if (!isSupported) {
+                console.warn('[WakeLock] Not supported in this browser');
+                return false;
+              }
+              
+              try {
+                wakeLockRef.current = await navigator.wakeLock.request('screen');
+                setIsWakeLockActive(true);
+                console.log('[WakeLock] 🔆 Screen wake lock acquired');
+                
+                // Слушаем release (например, при сворачивании приложения)
+                wakeLockRef.current.addEventListener('release', () => {
+                  console.log('[WakeLock] Wake lock released');
+                  setIsWakeLockActive(false);
+                });
+                
+                // Haptic feedback
+                if (navigator.vibrate) navigator.vibrate(10);
+                
+                return true;
+              } catch (err) {
+                console.warn('[WakeLock] Failed to acquire:', err.message);
+                setIsWakeLockActive(false);
+                return false;
+              }
+            }, [isSupported]);
+            
+            // Освобождение Wake Lock
+            const releaseWakeLock = React.useCallback(async () => {
+              if (wakeLockRef.current) {
+                try {
+                  await wakeLockRef.current.release();
+                  wakeLockRef.current = null;
+                  setIsWakeLockActive(false);
+                  console.log('[WakeLock] 🔅 Screen wake lock released manually');
+                } catch (err) {
+                  console.warn('[WakeLock] Failed to release:', err.message);
+                }
+              }
+            }, []);
+            
+            // Автоматическое перезапрашивание при возвращении на вкладку
+            React.useEffect(() => {
+              if (!isSupported || !isWakeLockActive) return;
+              
+              const handleVisibilityChange = async () => {
+                if (document.visibilityState === 'visible' && !wakeLockRef.current) {
+                  // Перезапрашиваем wake lock после возвращения на вкладку
+                  await requestWakeLock();
+                }
+              };
+              
+              document.addEventListener('visibilitychange', handleVisibilityChange);
+              return () => {
+                document.removeEventListener('visibilitychange', handleVisibilityChange);
+              };
+            }, [isSupported, isWakeLockActive, requestWakeLock]);
+            
+            // Cleanup при unmount
+            React.useEffect(() => {
+              return () => {
+                if (wakeLockRef.current) {
+                  wakeLockRef.current.release().catch(() => {});
+                }
+              };
+            }, []);
+            
+            return {
+              isSupported,
+              isWakeLockActive,
+              requestWakeLock,
+              releaseWakeLock
+            };
+          }
+
           function useCloudSyncStatus() {
             const [cloudStatus, setCloudStatus] = useState(() => navigator.onLine ? 'idle' : 'offline');
             const [pendingCount, setPendingCount] = useState(0);
@@ -2764,6 +3428,10 @@ const HEYS = window.HEYS = window.HEYS || {};
             const [showOnlineBanner, setShowOnlineBanner] = useState(false);
             const [syncProgress, setSyncProgress] = useState({ synced: 0, total: 0 });
             const [retryCountdown, setRetryCountdown] = useState(0);
+            // 🆕 Время офлайн для улучшенного UX
+            const [offlineDuration, setOfflineDuration] = useState(0);
+            const offlineStartRef = useRef(null);
+            const offlineDurationIntervalRef = useRef(null);
             
             const cloudSyncTimeoutRef = useRef(null);
             const pendingChangesRef = useRef(false);
@@ -2940,8 +3608,23 @@ const HEYS = window.HEYS = window.HEYS || {};
               };
               
               const handleOnline = () => {
+                // 🆕 Остановить таймер офлайн
+                if (offlineDurationIntervalRef.current) {
+                  clearInterval(offlineDurationIntervalRef.current);
+                  offlineDurationIntervalRef.current = null;
+                }
+                const wasOfflineFor = offlineStartRef.current ? Math.floor((Date.now() - offlineStartRef.current) / 1000) : 0;
+                offlineStartRef.current = null;
+                setOfflineDuration(0);
+                
                 setShowOfflineBanner(false);
                 setShowOnlineBanner(true);
+                
+                // 🆕 Haptic feedback при восстановлении связи
+                if ('vibrate' in navigator) {
+                  navigator.vibrate([50, 30, 50]); // Два коротких вибро — "всё ок"
+                }
+                
                 setTimeout(() => setShowOnlineBanner(false), 2000);
                 
                 if (pendingChangesRef.current || pendingCount > 0) {
@@ -2957,14 +3640,37 @@ const HEYS = window.HEYS = window.HEYS || {};
                 } else {
                   setCloudStatus('idle');
                 }
+                
+                // 🆕 Логируем время офлайн для аналитики
+                if (wasOfflineFor > 5 && window.HEYS?.analytics?.trackDataOperation) {
+                  window.HEYS.analytics.trackDataOperation('offline_session', 1, wasOfflineFor * 1000);
+                }
               };
               
               const handleOffline = () => {
+                // 🆕 Запустить таймер офлайн
+                offlineStartRef.current = Date.now();
+                setOfflineDuration(0);
+                
+                // Обновлять время каждую секунду
+                if (offlineDurationIntervalRef.current) {
+                  clearInterval(offlineDurationIntervalRef.current);
+                }
+                offlineDurationIntervalRef.current = setInterval(() => {
+                  if (offlineStartRef.current) {
+                    setOfflineDuration(Math.floor((Date.now() - offlineStartRef.current) / 1000));
+                  }
+                }, 1000);
+                
                 setShowOfflineBanner(true);
                 setCloudStatus('offline');
-                setTimeout(() => {
-                  setShowOfflineBanner(false);
-                }, 3000);
+                
+                // 🆕 Haptic feedback при потере связи
+                if ('vibrate' in navigator) {
+                  navigator.vibrate(100); // Одна длинная вибрация — внимание
+                }
+                
+                // Не скрываем баннер автоматически — он исчезнет когда связь вернётся
               };
               
               window.addEventListener('heysSyncCompleted', handleSyncComplete);
@@ -3007,6 +3713,8 @@ const HEYS = window.HEYS = window.HEYS || {};
                 window.removeEventListener('offline', handleOffline);
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
                 if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
+                // 🆕 Очистка таймера офлайн
+                if (offlineDurationIntervalRef.current) clearInterval(offlineDurationIntervalRef.current);
               };
             }, [pendingCount, showSyncedWithMinDuration, syncProgress.total]);
             
@@ -3027,6 +3735,7 @@ const HEYS = window.HEYS = window.HEYS || {};
               syncProgress,
               retryCountdown,
               handleRetrySync,
+              offlineDuration, // 🆕 Время офлайн в секундах
             };
           }
 
@@ -3679,6 +4388,7 @@ const HEYS = window.HEYS = window.HEYS || {};
               syncProgress,
               retryCountdown,
               handleRetrySync,
+              offlineDuration, // 🆕 Время офлайн в секундах
             } = useCloudSyncStatus();
             
             // === Update Toast (новая версия доступна) ===
@@ -4045,19 +4755,21 @@ const HEYS = window.HEYS = window.HEYS || {};
               }
             }, [clientId, defaultTab]);
 
-            // === PWA Shortcut: обработка ?action=add-meal ===
+            // === PWA Shortcut: обработка ?action=add-meal, ?action=add-water, ?tab=..., ?share-received ===
             useEffect(() => {
               const params = new URLSearchParams(window.location.search);
               const action = params.get('action');
+              const tabParam = params.get('tab');
+              const shareReceived = params.get('share-received');
+              
+              // Очищаем URL в любом случае
+              const url = new URL(window.location.href);
+              let needsUrlCleanup = false;
               
               if (action === 'add-meal') {
                 // Блокируем переключение вкладки при смене clientId
                 skipTabSwitchRef.current = true;
-                
-                // Очищаем URL чтобы не триггерить повторно
-                const url = new URL(window.location.href);
-                url.searchParams.delete('action');
-                window.history.replaceState({}, '', url.pathname + url.search);
+                needsUrlCleanup = true;
                 
                 // Переключаемся на вкладку stats (там DayTab)
                 setTab('stats');
@@ -4077,6 +4789,114 @@ const HEYS = window.HEYS = window.HEYS || {};
                 };
                 // Даём время на рендер
                 setTimeout(tryAddMeal, 150);
+              } else if (action === 'add-water') {
+                // 🆕 Shortcut для добавления воды
+                skipTabSwitchRef.current = true;
+                needsUrlCleanup = true;
+                setTab('stats');
+                
+                const tryAddWater = () => {
+                  if (window.HEYS?.Day?.addWater) {
+                    window.HEYS.Day.addWater(250); // Добавляем 250мл по умолчанию
+                    if (navigator.vibrate) navigator.vibrate(15);
+                    setTimeout(() => { skipTabSwitchRef.current = false; }, 500);
+                  } else {
+                    setTimeout(tryAddWater, 100);
+                  }
+                };
+                setTimeout(tryAddWater, 150);
+              } else if (shareReceived === 'true') {
+                // 🆕 Share Target API — обработка поделённых изображений
+                needsUrlCleanup = true;
+                console.log('[HEYS] 📤 Share Target received, checking for shared images...');
+                
+                // Открываем IndexedDB и получаем поделённые изображения
+                const processSharedImages = async () => {
+                  try {
+                    const db = await openShareDB();
+                    const tx = db.transaction('shared-images', 'readonly');
+                    const store = tx.objectStore('shared-images');
+                    const images = await getAllFromStore(store);
+                    
+                    if (images.length > 0) {
+                      console.log('[HEYS] 📤 Found', images.length, 'shared images');
+                      // Вибрация при получении
+                      if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+                      
+                      // Показываем уведомление пользователю
+                      setNotification({
+                        message: `📤 Получено ${images.length} фото`,
+                        type: 'success',
+                        duration: 3000
+                      });
+                      
+                      // Переходим на вкладку дня для добавления еды
+                      skipTabSwitchRef.current = true;
+                      setTab('stats');
+                      setTimeout(() => {
+                        skipTabSwitchRef.current = false;
+                        // TODO: Открыть модал добавления еды с превью изображения
+                        // Пока просто показываем что фото получено
+                        if (window.HEYS?.Day?.addMeal) {
+                          window.HEYS.Day.addMeal();
+                        }
+                      }, 500);
+                      
+                      // Очищаем использованные изображения
+                      const clearTx = db.transaction('shared-images', 'readwrite');
+                      const clearStore = clearTx.objectStore('shared-images');
+                      for (const img of images) {
+                        clearStore.delete(img.id);
+                      }
+                    }
+                  } catch (err) {
+                    console.warn('[HEYS] Share Target error:', err);
+                  }
+                };
+                
+                // Helper: открытие IndexedDB
+                function openShareDB() {
+                  return new Promise((resolve, reject) => {
+                    const request = indexedDB.open('heys-share-db', 1);
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onupgradeneeded = (e) => {
+                      const db = e.target.result;
+                      if (!db.objectStoreNames.contains('shared-images')) {
+                        db.createObjectStore('shared-images', { keyPath: 'id' });
+                      }
+                    };
+                  });
+                }
+                
+                // Helper: получить все записи из store
+                function getAllFromStore(store) {
+                  return new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result || []);
+                    request.onerror = () => reject(request.error);
+                  });
+                }
+                
+                processSharedImages();
+              } else if (tabParam) {
+                // 🆕 Shortcut для переключения вкладок: ?tab=day, ?tab=reports и т.д.
+                needsUrlCleanup = true;
+                const validTabs = ['stats', 'ration', 'reports', 'user', 'day'];
+                const mappedTab = tabParam === 'day' ? 'stats' : tabParam;
+                if (validTabs.includes(mappedTab)) {
+                  skipTabSwitchRef.current = true;
+                  setTab(mappedTab);
+                  setTimeout(() => { skipTabSwitchRef.current = false; }, 500);
+                }
+              }
+              
+              // Чистим URL параметры
+              if (needsUrlCleanup) {
+                url.searchParams.delete('action');
+                url.searchParams.delete('tab');
+                url.searchParams.delete('share-received');
+                window.history.replaceState({}, '', url.pathname + url.search);
               }
             }, []);
 
@@ -5364,13 +6184,19 @@ const HEYS = window.HEYS = window.HEYS || {};
                   setShowMorningCheckin(false);
                 }
               }),
-              // === OFFLINE BANNER (показывается 3 сек при потере сети) ===
+              // === OFFLINE BANNER (показывается пока нет сети) ===
               !isConsentBlocking && !isMorningCheckinBlocking && showOfflineBanner && React.createElement(
                 'div',
-                { className: 'offline-banner' },
-                React.createElement('span', { className: 'offline-banner-icon' }, '📡'),
-                React.createElement('span', { className: 'offline-banner-text' }, 
-                  'Нет сети — данные сохраняются локально'
+                { className: 'offline-banner offline-banner-enhanced' },
+                React.createElement('span', { className: 'offline-banner-icon pulse' }, '📡'),
+                React.createElement('div', { className: 'offline-banner-content' },
+                  React.createElement('span', { className: 'offline-banner-text' }, 
+                    'Нет сети — данные сохраняются локально'
+                  ),
+                  // 🆕 Показываем время офлайн если >10 секунд
+                  offlineDuration > 10 && React.createElement('span', { className: 'offline-banner-duration' },
+                    `Офлайн ${offlineDuration < 60 ? `${offlineDuration} сек` : `${Math.floor(offlineDuration / 60)} мин`}`
+                  )
                 )
               ),
               // === ONLINE BANNER (показывается 2 сек при восстановлении сети) ===
