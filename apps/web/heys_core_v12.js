@@ -781,13 +781,13 @@
     async function addProduct(){ 
       const name = (draft.name || '').trim();
       if (!name) {
-        alert('Введите название продукта');
+        HEYS.Toast?.warning('Введите название продукта') || alert('Введите название продукта');
         return;
       }
       // Проверка уникальности названия в личной базе
       const existingProduct = products.find(p => p.name && p.name.trim().toLowerCase() === name.toLowerCase());
       if (existingProduct) {
-        alert(`Продукт "${name}" уже существует в базе!\\nИспользуйте другое название или отредактируйте существующий.`);
+        HEYS.Toast?.warning(`Продукт "${name}" уже существует в базе! Используйте другое название.`) || alert(`Продукт "${name}" уже существует в базе!`);
         return;
       }
       const base = { id: uuid(), name: name, simple100: toNum(draft.simple100), complex100: toNum(draft.complex100), protein100: toNum(draft.protein100), badFat100: toNum(draft.badFat100), goodFat100: toNum(draft.goodFat100), trans100: toNum(draft.trans100), fiber100: toNum(draft.fiber100), gi: toNum(draft.gi), harmScore: toNum(draft.harmScore), createdAt: Date.now() }; 
@@ -859,12 +859,12 @@
       if (patch.name !== undefined) {
         const newName = (patch.name || '').trim();
         if (!newName) {
-          alert('Название не может быть пустым');
+          HEYS.Toast?.warning('Название не может быть пустым') || alert('Название не может быть пустым');
           return;
         }
         const existingProduct = products.find(p => p.id !== id && p.name && p.name.trim().toLowerCase() === newName.toLowerCase());
         if (existingProduct) {
-          alert(`Продукт "${newName}" уже существует в базе!`);
+          HEYS.Toast?.warning(`Продукт "${newName}" уже существует в базе!`) || alert(`Продукт "${newName}" уже существует!`);
           return;
         }
         patch.name = newName;
@@ -910,14 +910,14 @@
         if (window.HEYS && window.HEYS.analytics) {
           window.HEYS.analytics.trackApiCall('parsePasted', duration, false);
         }
-        alert('Ошибка парсинга: '+e.message); 
+        HEYS.Toast?.error('Ошибка парсинга: '+e.message) || alert('Ошибка парсинга: '+e.message); 
         return; 
       }
       
       if(!rows.length){ 
         DEV.warn('⚠️ [IMPORT] Не удалось распознать данные');
         DEV.log('📄 [IMPORT] Исходный текст:', paste);
-        alert('Не удалось распознать данные'); 
+        HEYS.Toast?.warning('Не удалось распознать данные') || alert('Не удалось распознать данные'); 
         return; 
       }
       
@@ -962,14 +962,14 @@
         if (window.HEYS && window.HEYS.analytics) {
           window.HEYS.analytics.trackApiCall('parsePasted', duration, false);
         }
-        alert('Ошибка парсинга: '+e.message); 
+        HEYS.Toast?.error('Ошибка парсинга: '+e.message) || alert('Ошибка парсинга: '+e.message); 
         return; 
       }
       
       if(!rows.length){ 
         DEV.warn('⚠️ [IMPORT] Не удалось распознать данные');
         DEV.log('📄 [IMPORT] Исходный текст:', paste);
-        alert('Не удалось распознать данные'); 
+        HEYS.Toast?.warning('Не удалось распознать данные') || alert('Не удалось распознать данные'); 
         return; 
       }
 
@@ -1016,12 +1016,12 @@
         }
       } catch(e) { 
         console.error('❌ [IMPORT] Ошибка при парсинге:', e);
-        alert('Ошибка парсинга: '+e.message); 
+        HEYS.Toast?.error('Ошибка парсинга: '+e.message) || alert('Ошибка парсинга: '+e.message); 
         return; 
       }
       
       if(!rows.length){ 
-        alert('Не удалось распознать данные'); 
+        HEYS.Toast?.warning('Не удалось распознать данные') || alert('Не удалось распознать данные'); 
         return; 
       }
 
@@ -1060,7 +1060,7 @@
       setProducts(newProducts);
       
       DEV.log(`✅ [IMPORT] Слияние завершено: +${added} новых, ↻${updated} обновлено`);
-      alert(`Импорт завершён:\n• Добавлено новых: ${added}\n• Обновлено существующих: ${updated}`);
+      HEYS.Toast?.success(`Импорт завершён: +${added} новых, ${updated} обновлено`) || alert(`Импорт завершён!`);
       
       if (window.HEYS?.analytics) {
         window.HEYS.analytics.trackDataOperation('products-merged', rows.length);
@@ -1070,7 +1070,7 @@
     // Функция экспорта только продуктов
     function exportProductsOnly() {
       if (!products || products.length === 0) {
-        alert('Нет продуктов для экспорта');
+        HEYS.Toast?.warning('Нет продуктов для экспорта') || alert('Нет продуктов для экспорта');
         return;
       }
       
@@ -1097,7 +1097,7 @@
       URL.revokeObjectURL(url);
       
       DEV.log(`✅ [EXPORT] Экспортировано ${products.length} продуктов в ${fileName}`);
-      alert(`✅ Экспортировано ${products.length} продуктов!`);
+      HEYS.Toast?.success(`Экспортировано ${products.length} продуктов!`) || alert(`Экспортировано ${products.length} продуктов!`);
     }
 
     // Функция импорта из JSON файла
@@ -1125,12 +1125,12 @@
           DEV.log('[IMPORT FILE] Формат: массив продуктов, штук:', importedProducts.length);
         }
         else {
-          alert('Неизвестный формат файла. Ожидается JSON с полем "products" или массив продуктов.');
+          HEYS.Toast?.error('Неизвестный формат файла. Ожидается JSON.') || alert('Неизвестный формат файла.');
           return;
         }
         
         if (importedProducts.length === 0) {
-          alert('В файле не найдено продуктов для импорта.');
+          HEYS.Toast?.warning('В файле не найдено продуктов для импорта') || alert('В файле не найдено продуктов.');
           return;
         }
         
@@ -1159,7 +1159,7 @@
         });
         
         if (validProducts.length === 0) {
-          alert('Не найдено валидных продуктов для импорта.');
+          HEYS.Toast?.warning('Не найдено валидных продуктов для импорта') || alert('Не найдено валидных продуктов.');
           return;
         }
         
@@ -1210,7 +1210,7 @@
         setProducts(newProducts);
         
         DEV.log(`✅ [IMPORT FILE] Завершено: +${added} новых, ↻${updated} обновлено`);
-        alert(`✅ Импорт из файла завершён!\\n\\n• Добавлено новых: ${added}\\n• Обновлено существующих: ${updated}`);
+        HEYS.Toast?.success(`Импорт завершён: +${added} новых, ${updated} обновлено`) || alert(`Импорт завершён!`);
         
         if (window.HEYS?.analytics) {
           window.HEYS.analytics.trackDataOperation('products-imported-file', validProducts.length);
@@ -1218,7 +1218,7 @@
         
       } catch (err) {
         console.error('[IMPORT FILE] Ошибка:', err);
-        alert('Ошибка чтения файла: ' + err.message);
+        HEYS.Toast?.error('Ошибка чтения файла: ' + err.message) || alert('Ошибка чтения файла: ' + err.message);
       }
     }
 
@@ -1230,19 +1230,19 @@
         // Передаём и pendingId и productData
         const result = await window.HEYS?.cloud?.approvePendingProduct?.(pending.id, pending.product_data);
         if (result?.error) {
-          alert('Ошибка: ' + result.error.message);
+          HEYS.Toast?.error('Ошибка: ' + result.error.message) || alert('Ошибка: ' + result.error.message);
           return;
         }
         // Обновляем список
         setPendingProducts(prev => prev.filter(p => p.id !== pending.id));
         if (result.existing) {
-          alert(`ℹ️ Продукт "${pending.product_data?.name || pending.name_norm}" уже существует в общей базе`);
+          HEYS.Toast?.info(`Продукт "${pending.product_data?.name || pending.name_norm}" уже существует в общей базе`) || alert(`ℹ️ Продукт "${pending.product_data?.name || pending.name_norm}" уже существует в общей базе`);
         } else {
-          alert(`✅ Продукт "${pending.product_data?.name || pending.name_norm}" добавлен в общую базу!`);
+          HEYS.Toast?.success(`Продукт "${pending.product_data?.name || pending.name_norm}" добавлен в общую базу!`) || alert(`✅ Продукт "${pending.product_data?.name || pending.name_norm}" добавлен в общую базу!`);
         }
       } catch (err) {
         console.error('[APPROVE] Error:', err);
-        alert('Ошибка при подтверждении: ' + err.message);
+        HEYS.Toast?.error('Ошибка при подтверждении: ' + err.message) || alert('Ошибка при подтверждении: ' + err.message);
       }
     }
     
@@ -1251,15 +1251,15 @@
       try {
         const result = await window.HEYS?.cloud?.rejectPendingProduct?.(pending.id, reason);
         if (result?.error) {
-          alert('Ошибка: ' + result.error.message);
+          HEYS.Toast?.error('Ошибка: ' + result.error.message) || alert('Ошибка: ' + result.error.message);
           return;
         }
         // Обновляем список
         setPendingProducts(prev => prev.filter(p => p.id !== pending.id));
-        alert(`❌ Заявка "${pending.product_data?.name || pending.name_norm}" отклонена`);
+        HEYS.Toast?.info(`Заявка "${pending.product_data?.name || pending.name_norm}" отклонена`) || alert(`❌ Заявка "${pending.product_data?.name || pending.name_norm}" отклонена`);
       } catch (err) {
         console.error('[REJECT] Error:', err);
-        alert('Ошибка при отклонении: ' + err.message);
+        HEYS.Toast?.error('Ошибка при отклонении: ' + err.message) || alert('Ошибка при отклонении: ' + err.message);
       }
     }
     
@@ -1268,7 +1268,7 @@
       // Проверяем, нет ли уже клона этого продукта
       const existingClone = products.find(p => p.shared_origin_id === sharedProduct.id);
       if (existingClone) {
-        alert(`⚠️ Продукт "${sharedProduct.name}" уже есть в вашей базе!`);
+        HEYS.Toast?.warning(`Продукт "${sharedProduct.name}" уже есть в вашей базе!`) || alert(`⚠️ Продукт "${sharedProduct.name}" уже есть в вашей базе!`);
         return existingClone;
       }
       
@@ -1298,7 +1298,7 @@
       const newProducts = [...products, withDerived];
       setProducts(newProducts);
       
-      alert(`✅ Продукт "${sharedProduct.name}" добавлен в вашу базу!`);
+      HEYS.Toast?.success(`Продукт "${sharedProduct.name}" добавлен в вашу базу!`) || alert(`✅ Продукт "${sharedProduct.name}" добавлен в вашу базу!`);
       return withDerived;
     }
     
@@ -1307,15 +1307,15 @@
       try {
         const result = await window.HEYS?.cloud?.blockProduct?.(productId);
         if (result?.error) {
-          alert('Ошибка: ' + result.error.message);
+          HEYS.Toast?.error('Ошибка: ' + result.error.message) || alert('Ошибка: ' + result.error.message);
           return;
         }
         // Убираем из результатов поиска
         setSharedResults(prev => prev.filter(p => p.id !== productId));
-        alert('🚫 Продукт скрыт для вас и ваших клиентов');
+        HEYS.Toast?.info('Продукт скрыт для вас и ваших клиентов') || alert('🚫 Продукт скрыт для вас и ваших клиентов');
       } catch (err) {
         console.error('[BLOCKLIST] Error:', err);
-        alert('Ошибка: ' + err.message);
+        HEYS.Toast?.error('Ошибка: ' + err.message) || alert('Ошибка: ' + err.message);
       }
     }
     
@@ -1327,7 +1327,7 @@
       try {
         const result = await window.HEYS?.cloud?.deleteSharedProduct?.(productId);
         if (!result?.success) {
-          alert('Ошибка: ' + (result?.error || 'Неизвестная ошибка'));
+          HEYS.Toast?.error('Ошибка: ' + (result?.error || 'Неизвестная ошибка')) || alert('Ошибка: ' + (result?.error || 'Неизвестная ошибка'));
           return;
         }
         
@@ -1335,10 +1335,10 @@
         setAllSharedProducts(prev => prev.filter(p => p.id !== productId));
         setSharedResults(prev => prev.filter(p => p.id !== productId));
         
-        alert(`✅ Продукт "${productName}" удалён из общей базы`);
+        HEYS.Toast?.success(`Продукт "${productName}" удалён из общей базы`) || alert(`✅ Продукт "${productName}" удалён из общей базы`);
       } catch (err) {
         console.error('[DELETE SHARED] Error:', err);
-        alert('Ошибка: ' + err.message);
+        HEYS.Toast?.error('Ошибка: ' + err.message) || alert('Ошибка: ' + err.message);
       }
     }
     
@@ -1520,10 +1520,10 @@
               if (window.HEYS && window.HEYS.exportFullBackup) {
                 const result = await window.HEYS.exportFullBackup();
                 if (result && result.ok) {
-                  alert(`✅ Бэкап сохранён!\\n📦 Продуктов: ${result.products}\\n📅 Дней: ${result.days}`);
+                  HEYS.Toast?.success(`Бэкап сохранён! 📦 Продуктов: ${result.products}, 📅 Дней: ${result.days}`) || alert(`✅ Бэкап сохранён!\n📦 Продуктов: ${result.products}\n📅 Дней: ${result.days}`);
                 }
               } else {
-                alert('Функция экспорта недоступна');
+                HEYS.Toast?.warning('Функция экспорта недоступна') || alert('Функция экспорта недоступна');
               }
             },
             style:{whiteSpace:'nowrap'}

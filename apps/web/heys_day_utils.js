@@ -1472,6 +1472,7 @@
         
         daysData.set(dateStr, { 
           kcal, target, ratio, // 🔧 FIX: kcal теперь использует savedEatenKcal если есть
+          baseTarget: calculatedTarget, // 🔧 Базовая норма БЕЗ долга — для расчёта caloricDebt
           hasTraining, trainingTypes, trainingMinutes,
           moodAvg, sleepHours, dayScore,
           prot, fat, carbs,

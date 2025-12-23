@@ -732,7 +732,7 @@ const HEYS = window.HEYS = window.HEYS || {};
         HEYS.exportFullBackup = async function() {
           let clientId = localStorage.getItem('heys_client_current');
           if (!clientId) {
-            alert('Нет активного клиента');
+            HEYS.Toast?.warning('Нет активного клиента') || alert('Нет активного клиента');
             return { ok: false, error: 'no_client' };
           }
           
@@ -895,7 +895,7 @@ const HEYS = window.HEYS = window.HEYS || {};
             
           } catch (err) {
             console.error('[BACKUP] Export failed:', err);
-            alert('Ошибка экспорта: ' + err.message);
+            HEYS.Toast?.error('Ошибка экспорта: ' + err.message) || alert('Ошибка экспорта: ' + err.message);
             return { ok: false, error: err.message };
           }
         };
@@ -1028,7 +1028,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                     style="background:#00f;color:#fff;border:none;padding:8px 16px;border-radius:4px;">
                     🔄 Force Sync
                   </button>
-                  <button onclick="navigator.clipboard?.writeText(JSON.stringify(HEYS.cloud?.getSyncLog?.(),null,2));alert('Copied!');" 
+                  <button onclick="navigator.clipboard?.writeText(JSON.stringify(HEYS.cloud?.getSyncLog?.(),null,2));HEYS.Toast?.success('Скопировано в буфер!');" 
                     style="background:#555;color:#fff;border:none;padding:8px 16px;border-radius:4px;">
                     📋 Copy Log
                   </button>
@@ -1079,7 +1079,10 @@ const HEYS = window.HEYS = window.HEYS || {};
                 break;
               }
             }
-            alert(dayData ? `Key: ${dayKey}\n\n${JSON.stringify(JSON.parse(dayData), null, 2).slice(0, 1500)}` : `No day data found for ${today}`);
+            // Debug: показываем JSON в alert (большой объём данных)
+            const msg = dayData ? `Key: ${dayKey}\n\n${JSON.stringify(JSON.parse(dayData), null, 2).slice(0, 1500)}` : `No day data found for ${today}`;
+            console.log('[DEBUG] Day data:', msg);
+            alert(msg);
           },
           
           showAllKeys() {
@@ -1091,7 +1094,10 @@ const HEYS = window.HEYS = window.HEYS || {};
                 keys.push(`${k} (${size}b)`);
               }
             }
-            alert(`HEYS keys (${keys.length}):\n\n${keys.slice(0, 30).join('\n')}${keys.length > 30 ? '\n...' : ''}`);
+            // Debug: показываем список ключей в alert (большой объём данных)
+            const msg = `HEYS keys (${keys.length}):\n\n${keys.slice(0, 30).join('\n')}${keys.length > 30 ? '\n...' : ''}`;
+            console.log('[DEBUG] All keys:', keys);
+            alert(msg);
           }
         };
         }
@@ -2898,7 +2904,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                 if (code === 'auth_required') {
                   setCloudStatus('offline');
                   setRetryCountdown(0);
-                  try { window.alert('Требуется повторный вход для синхронизации'); } catch (_) {}
+                  try { HEYS.Toast?.warning('Требуется повторный вход для синхронизации') || alert('Требуется повторный вход для синхронизации'); } catch (_) {}
                   return;
                 }
                 
@@ -3183,12 +3189,12 @@ const HEYS = window.HEYS = window.HEYS || {};
                     setClientId(created.clientId);
                     U.lsSet('heys_client_current', created.clientId);
                     try {
-                      alert('✅ Клиент создан\n\nТелефон: ' + created.phone + '\nPIN: ' + created.pin);
+                      HEYS.Toast?.success('Клиент создан! Телефон: ' + created.phone + ', PIN: ' + created.pin) || alert('✅ Клиент создан\n\nТелефон: ' + created.phone + '\nPIN: ' + created.pin);
                     } catch (_) {}
                     return;
                   }
                   if (created && created.error) {
-                    alert('Ошибка создания клиента: ' + created.error);
+                    HEYS.Toast?.error('Ошибка создания клиента: ' + created.error) || alert('Ошибка создания клиента: ' + created.error);
                     return;
                   }
                 }
@@ -3201,7 +3207,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                 const data = await HEYS.YandexAPI.createClient(clientName, userId);
                 if (!data || !data.id) {
                   console.error('Ошибка создания клиента');
-                  alert('Ошибка создания клиента');
+                  HEYS.Toast?.error('Ошибка создания клиента') || alert('Ошибка создания клиента');
                   return;
                 }
                 const result = await fetchClientsFromCloud(userId);
@@ -3210,7 +3216,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                 U.lsSet('heys_client_current', data.id);
               } catch (error) {
                 console.error('Ошибка создания клиента:', error);
-                alert('Ошибка создания клиента: ' + error.message);
+                HEYS.Toast?.error('Ошибка создания клиента: ' + error.message) || alert('Ошибка создания клиента: ' + error.message);
               }
             }, [clients, cloudUser, fetchClientsFromCloud, setClientId, setClients, U]);
             
@@ -3268,7 +3274,7 @@ const HEYS = window.HEYS = window.HEYS || {};
               
               const rememberMe = opts.rememberMe === true;
               if (!cloud || typeof cloud.signIn !== 'function') {
-                alert('Облачный модуль не загружен');
+                HEYS.Toast?.warning('Облачный модуль не загружен') || alert('Облачный модуль не загружен');
                 return;
               }
               
@@ -3839,7 +3845,7 @@ const HEYS = window.HEYS = window.HEYS || {};
             const backupAllKeys = React.useCallback(
               (options = {}) => {
                 if (!clientId) {
-                  if (!options.silent) alert('Сначала выберите клиента');
+                  if (!options.silent) HEYS.Toast?.warning('Сначала выберите клиента') || alert('Сначала выберите клиента');
                   return { ok: false, reason: 'no-client' };
                 }
                 const timestamp = new Date().toISOString();
@@ -3936,7 +3942,10 @@ const HEYS = window.HEYS = window.HEYS || {};
                   downloadBackupFile(filePayload, clientId, timestamp);
                 }
                 if (!options.silent) {
-                  alert(
+                  (processed
+                    ? HEYS.Toast?.success(`Бэкап готов: ${processed} разделов`)
+                    : HEYS.Toast?.warning('Нет данных для резервного копирования')
+                  ) || alert(
                     processed
                       ? `Бэкап готов: ${processed} разделов`
                       : 'Нет данных для резервного копирования',
@@ -3953,7 +3962,7 @@ const HEYS = window.HEYS = window.HEYS || {};
             const restoreFromBackup = React.useCallback(
               (target = 'heys_products', options = {}) => {
                 if (!clientId) {
-                  if (!options.silent) alert('Сначала выберите клиента');
+                  if (!options.silent) HEYS.Toast?.warning('Сначала выберите клиента') || alert('Сначала выберите клиента');
                   return { ok: false, reason: 'no-client' };
                 }
                 const keysList =
@@ -4012,7 +4021,10 @@ const HEYS = window.HEYS = window.HEYS || {};
                   }
                 }
                 if (!options.silent) {
-                  alert(
+                  (restored
+                    ? HEYS.Toast?.success(`Восстановлено разделов: ${restored}`)
+                    : HEYS.Toast?.warning('Не удалось найти подходящий бэкап')
+                  ) || alert(
                     restored
                       ? `Восстановлено разделов: ${restored}`
                       : 'Не удалось найти подходящий бэкап',
@@ -4330,7 +4342,7 @@ const HEYS = window.HEYS = window.HEYS || {};
 
             async function handleManualBackup() {
               if (!clientId) {
-                alert('Сначала выберите клиента');
+                HEYS.Toast?.warning('Сначала выберите клиента') || alert('Сначала выберите клиента');
                 return;
               }
               if (backupBusy) return;
@@ -4344,7 +4356,7 @@ const HEYS = window.HEYS = window.HEYS || {};
 
             async function handleExportBackup() {
               if (!clientId) {
-                alert('Сначала выберите клиента');
+                HEYS.Toast?.warning('Сначала выберите клиента') || alert('Сначала выберите клиента');
                 return;
               }
               if (backupBusy) return;
@@ -4356,7 +4368,10 @@ const HEYS = window.HEYS = window.HEYS || {};
                   includeDays: true,
                   silent: true,
                 });
-                alert(
+                (result && result.processed
+                  ? HEYS.Toast?.success(`Файл бэкапа скачан (${result.processed} разделов)`)
+                  : HEYS.Toast?.warning('Нет данных для экспорта')
+                ) || alert(
                   result && result.processed
                     ? `Файл бэкапа скачан (${result.processed} разделов)`
                     : 'Нет данных для экспорта',
@@ -4368,22 +4383,28 @@ const HEYS = window.HEYS = window.HEYS || {};
 
             function handleRestoreProducts() {
               if (!clientId) {
-                alert('Сначала выберите клиента');
+                HEYS.Toast?.warning('Сначала выберите клиента') || alert('Сначала выберите клиента');
                 return;
               }
               if (!confirm('Восстановить список продуктов из последнего бэкапа?')) return;
               const result = restoreFromBackup('heys_products', { silent: true });
-              alert(result && result.ok ? 'Продукты восстановлены.' : 'Не найден бэкап продуктов.');
+              (result && result.ok
+                ? HEYS.Toast?.success('Продукты восстановлены.')
+                : HEYS.Toast?.warning('Не найден бэкап продуктов.')
+              ) || alert(result && result.ok ? 'Продукты восстановлены.' : 'Не найден бэкап продуктов.');
             }
 
             function handleRestoreAll() {
               if (!clientId) {
-                alert('Сначала выберите клиента');
+                HEYS.Toast?.warning('Сначала выберите клиента') || alert('Сначала выберите клиента');
                 return;
               }
               if (!confirm('Восстановить все доступные данные из бэкапа?')) return;
               const result = restoreFromBackup('all', { silent: true });
-              alert(
+              (result && result.ok
+                ? HEYS.Toast?.success(`Восстановлено разделов: ${result.restored}`)
+                : HEYS.Toast?.warning('Не найдено подходящих бэкапов.')
+              ) || alert(
                 result && result.ok
                   ? `Восстановлено разделов: ${result.restored}`
                   : 'Не найдено подходящих бэкапов.',
@@ -5135,10 +5156,10 @@ const HEYS = window.HEYS = window.HEYS || {};
                 initLocalData();
                 setIsInitializing(false);
                 setStatus('offline');
-                // Показываем alert только если нет сохранённых данных
+                // Показываем предупреждение только если нет сохранённых данных
                 if (!U.lsGet('heys_client_current')) {
                   setTimeout(() => {
-                    alert('Нет подключения к интернету. Для первого входа нужна сеть.');
+                    HEYS.Toast?.warning('Нет подключения к интернету. Для первого входа нужна сеть.') || alert('Нет подключения к интернету. Для первого входа нужна сеть.');
                   }, 100);
                 }
                 return;

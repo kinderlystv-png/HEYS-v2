@@ -1810,7 +1810,7 @@
                                   const effect = prompt('Опишите побочный эффект (можно коротко). Отмена — не сохраняем:');
                                   if (effect && effect.trim()) {
                                     logSupplementSideEffect(id, dateKey, { note: effect.trim(), symptom: 'other' });
-                                    alert('Записано. Если повторяется — попробуйте сменить время/форму или снизить дозу.');
+                                    HEYS.Toast?.tip('Записано. Если повторяется — попробуйте сменить время/форму или снизить дозу.') || alert('Записано. Если повторяется — попробуйте сменить время/форму или снизить дозу.');
                                     ReactDOM.render(renderScreen(), container);
                                   }
                                 },

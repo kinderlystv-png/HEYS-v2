@@ -1692,7 +1692,7 @@
             const meal = day?.meals?.[mealIndex];
             const currentPhotos = meal?.photos?.length || 0;
             if (currentPhotos >= PHOTO_LIMIT_PER_MEAL) {
-              alert(`Максимум ${PHOTO_LIMIT_PER_MEAL} фото на приём пищи`);
+              HEYS.Toast?.warning(`Максимум ${PHOTO_LIMIT_PER_MEAL} фото на приём пищи`) || alert(`Максимум ${PHOTO_LIMIT_PER_MEAL} фото на приём пищи`);
               return;
             }
             
@@ -6550,7 +6550,7 @@
           if (HEYS.Subscriptions.showPaymentRequired) {
             HEYS.Subscriptions.showPaymentRequired();
           } else {
-            alert('Подписка не активна. Оформите подписку для продолжения.');
+            HEYS.Toast?.warning('Подписка не активна. Оформите подписку для продолжения.') || alert('Подписка не активна. Оформите подписку для продолжения.');
           }
           return;
         }
@@ -9174,6 +9174,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               date: dateStr, 
               kcal: dayInfo.kcal, 
               target: dayInfo.target,
+              baseTarget: dayInfo.baseTarget || dayInfo.target, // 🔧 Базовая норма для caloricDebt
               ratio: dayInfo.ratio || (dayInfo.target > 0 ? dayInfo.kcal / dayInfo.target : 0), // 🆕 Ratio для инсайтов
               isToday: false,
               hasTraining: dayInfo.hasTraining || false,
@@ -9446,10 +9447,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const windowStartStr = fmtDate(windowStart);
         
         // Фильтруем дни: последние 3 дня до вчера (сегодня не считаем — ещё едим)
+        // 🔧 FIX: Исключаем дни с < 1/3 от нормы — это значит данные не внесены полностью
+        const minKcalThreshold = optimum / 3; // ~600-700 ккал для большинства людей
         const pastDays = sparklineData.filter(d => {
           if (d.isToday) return false;
           if (d.isFuture) return false;
           if (d.kcal <= 0) return false;
+          if (d.kcal < minKcalThreshold) return false; // 🆕 День без полных данных — не учитываем
           if (d.date < windowStartStr) return false; // Старше 3 дней не берём
           if (d.date >= todayStr) return false; // Сегодня и позже не берём
           return true;
@@ -9475,8 +9479,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const midPoint = Math.floor(totalDays / 2);
         
         pastDays.forEach((d, idx) => {
-          const target = d.target || optimum;
+          // 🔧 CRITICAL FIX: Используем БАЗОВУЮ норму (без долга) для расчёта нового долга!
+          // d.target = savedDisplayOptimum (уже включает предыдущий долг) — НЕПРАВИЛЬНО для расчёта
+          // d.baseTarget = пересчитанная норма TDEE * (1 + deficit%) — ПРАВИЛЬНО
+          const target = d.baseTarget || d.target || optimum;
           const rawDelta = d.kcal - target;  // > 0 переел, < 0 недоел
+          
           let delta = rawDelta;
           // УБРАН множитель тренировки — NDTE уже учитывает эффект тренировки в TDEE
           // Раньше было: delta *= 1.3 при тренировке, но это двойной учёт
@@ -12783,16 +12791,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         return lengths;
       };
       
-      const cumulativeLengths = calcCumulativeLengths(points, 'y');
-      const totalPathLength = cumulativeLengths[cumulativeLengths.length - 1] || 1;
-      
-      // === Известные точки для построения path ===
+      // === Известные точки для интерполяции Y у unknown ===
       const knownPoints = points.filter(p => !p.isUnknown);
       
-      // Path строится ТОЛЬКО по известным точкам — плавная кривая
-      const pathD = smoothPath(knownPoints, 'y');
-      
       // === Вычисляем Y для unknown точек на кривой Безье ===
+      // Сначала интерполируем Y, потом строим path по ВСЕМ точкам (для непрерывной линии)
       // Cubic Bezier formula: B(t) = (1-t)³P0 + 3(1-t)²tP1 + 3(1-t)t²P2 + t³P3
       const cubicBezier = (t, p0, cp1, cp2, p3) => {
         const u = 1 - t;
@@ -12850,6 +12853,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // Вычисляем Y по найденному t
         p.y = cubicBezier(t, p1.y, cp1y, cp2y, p2.y);
       });
+      
+      // === Path строится по ВСЕМ точкам (включая unknown с интерполированным Y) ===
+      // Это обеспечивает непрерывную линию через все дни, включая пропущенные
+      const pathD = smoothPath(points, 'y');
+      
+      // === Вычисляем длины сегментов для анимации точек ===
+      const cumulativeLengths = calcCumulativeLengths(points, 'y');
+      const totalPathLength = cumulativeLengths[cumulativeLengths.length - 1] || 1;
       
       // Линия цели — плавная пунктирная
       const goalPathD = smoothPath(points, 'targetY');
@@ -15058,10 +15069,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             onClick: async () => {
               const result = await HEYS.orphanProducts?.restore?.();
               if (result?.success) {
-                alert(`✅ Восстановлено ${result.count} продуктов!\nОбновите страницу для применения.`);
+                HEYS.Toast?.success(`Восстановлено ${result.count} продуктов! Обновите страницу для применения.`) || alert(`✅ Восстановлено ${result.count} продуктов!\nОбновите страницу для применения.`);
                 window.location.reload();
               } else {
-                alert('⚠️ Не удалось восстановить — нет данных в штампах.');
+                HEYS.Toast?.warning('Не удалось восстановить — нет данных в штампах.') || alert('⚠️ Не удалось восстановить — нет данных в штампах.');
               }
             }
           }, '🔧 Восстановить в базу')
@@ -15695,7 +15706,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   (activityCompensation > 0 ? Math.round(activityCompensation) + ' ккал через активность' : 'основной акцент — активность')
                 )
               ),
-              // "?" кнопка с научным обоснованием
+              // "?" кнопка с научным обоснованием — открывает popup
               React.createElement('span', {
                 style: { 
                   fontSize: '11px', 
@@ -15705,10 +15716,30 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   borderRadius: '4px',
                   background: 'rgba(148, 163, 184, 0.1)'
                 },
-                title: 'Herman & Polivy 1984: строгие ограничения провоцируют срывы. Мягкая коррекция 5-10% эффективнее.',
+                title: 'Научное обоснование',
                 onClick: (e) => {
                   e.stopPropagation();
-                  alert('🔬 Научное обоснование:\n\nHerman & Polivy (1984): Жёсткие ограничения ведут к срывам.\n\nТomiyama (2018): Самокритика ухудшает результаты.\n\n✅ HEYS использует мягкую коррекцию (5-10%) + акцент на активности — это научно обосновано и не провоцирует переедание.');
+                  setDebtSciencePopup({
+                    title: '🔬 Почему мягкая коррекция?',
+                    content: [
+                      { 
+                        label: '❌ Проблема жёстких ограничений', 
+                        value: 'Строгие диеты (>15% дефицит) провоцируют срывы и переедание. Организм воспринимает это как угрозу.' 
+                      },
+                      { 
+                        label: '✅ Решение HEYS', 
+                        value: 'Мягкая коррекция 5-10% + акцент на активности. Это не наказание, а баланс.' 
+                      },
+                      { 
+                        label: '🏃 Почему активность?', 
+                        value: '70% компенсации через движение. Это здоровее и приятнее, чем голодать.' 
+                      }
+                    ],
+                    links: [
+                      { text: 'Herman & Polivy 1984', url: 'https://pubmed.ncbi.nlm.nih.gov/6727817/' },
+                      { text: 'Tomiyama 2018', url: 'https://pubmed.ncbi.nlm.nih.gov/29866473/' }
+                    ]
+                  });
                 }
               }, '?')
             ),
