@@ -87,21 +87,42 @@ jobs:
       - name: Deploy PWA to Yandex Object Storage
         run: |
           # === PWA Application → heys-app bucket ===
-          # Оптимизированный деплой — всё в 3 команды вместо 6
+          # GOLDEN STANDARD CACHING STRATEGY
 
           DOCS_VERSION=$(node -e "const fs=require('fs'); const s=fs.readFileSync('apps/web/heys_consents_v1.js','utf8'); const m=s.match(/user_agreement:\\s*'([^']+)'/); process.stdout.write(m?m[1]:'');")
           echo "📜 Legal docs version: ${DOCS_VERSION:-unknown}"
 
-          # === STEP 1: Все файлы с дефолтным кэшем (1 год) ===
-          echo "📦 Uploading all files with default cache..."
+          # === STEP 1: Immutable Assets (1 year cache) ===
+          # Images, fonts, hashed assets in assets/ folder
+          echo "📦 Uploading immutable assets..."
           aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_PWA }}/ \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
+            --exclude "index.html" \
+            --exclude "sw.js" \
+            --exclude "version.json" \
+            --exclude "manifest.json" \
+            --exclude "manifest.webmanifest" \
+            --exclude "heys_*.js" \
             --cache-control "public, max-age=31536000, immutable"
 
-          # === STEP 2: Перезаписываем критичные файлы (no-cache) ===
-          echo "📄 Updating critical files (no-cache)..."
+          # === STEP 2: Mutable JS Files (0 cache, must-revalidate) ===
+          # These files change often but keep the same name
+          echo "📜 Updating mutable JS files (max-age=0)..."
+          for jsfile in apps/web/dist/heys_*.js; do
+            if [ -f "$jsfile" ]; then
+              filename=$(basename "$jsfile")
+              aws s3 cp "$jsfile" s3://${{ env.YC_BUCKET_PWA }}/$filename \
+                --endpoint-url=${{ env.YC_ENDPOINT }} \
+                --cache-control "public, max-age=0, must-revalidate" \
+                --content-type "application/javascript" &
+            fi
+          done
+          wait
 
-          # HTML, JSON, manifest, sw.js — без кэша (параллельно)
+          # === STEP 3: Entry Points (NO CACHE AT ALL) ===
+          # index.html, sw.js, version.json - must always be fresh
+          echo "📄 Updating entry points (no-store)..."
+
           aws s3 cp apps/web/dist/index.html s3://${{ env.YC_BUCKET_PWA }}/index.html \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
             --cache-control "no-cache, no-store, must-revalidate" \
@@ -129,28 +150,15 @@ jobs:
 
           wait
 
-          # === STEP 3: Кастомные JS файлы (10 минут) — параллельно ===
-          echo "📜 Updating JS files (10 min cache)..."
-          for jsfile in apps/web/dist/heys_*.js; do
-            if [ -f "$jsfile" ]; then
-              filename=$(basename "$jsfile")
-              aws s3 cp "$jsfile" s3://${{ env.YC_BUCKET_PWA }}/$filename \
-                --endpoint-url=${{ env.YC_ENDPOINT }} \
-                --cache-control "public, max-age=600" \
-                --content-type "application/javascript" &
-            fi
-          done
-          wait
-
-          # === STEP 4: Юридические документы ===
+          # === STEP 4: Legal Docs ===
           if [ -n "$DOCS_VERSION" ] && [ -d "apps/web/dist/docs" ]; then
             echo "📋 Uploading legal docs..."
-            # Версионированный путь (immutable)
+            # Versioned path (immutable)
             aws s3 cp apps/web/dist/docs/ s3://${{ env.YC_BUCKET_PWA }}/docs/v${DOCS_VERSION}/ \
               --recursive --endpoint-url=${{ env.YC_ENDPOINT }} \
               --cache-control "public, max-age=31536000, immutable" &
 
-            # Latest путь (no-cache)
+            # Latest path (no-cache)
             aws s3 cp apps/web/dist/docs/ s3://${{ env.YC_BUCKET_PWA }}/docs/ \
               --recursive --endpoint-url=${{ env.YC_ENDPOINT }} \
               --cache-control "no-cache, no-store, must-revalidate" &
