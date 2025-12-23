@@ -200,6 +200,7 @@
    */
   function ConsentScreen({ clientId, phone, onComplete, onCancel, onError }) {
     // Шаги: 'consents' → 'verify_code' → done
+    // ВАЖНО: если SMS выключен — verify_code никогда не используется!
     const [step, setStep] = useState('consents');
     const [consents, setConsents] = useState({
       user_agreement: false,
@@ -218,6 +219,16 @@
     const codeInputRef = useRef(null);
     
     const allRequiredAccepted = REQUIRED_CONSENTS.every(type => consents[type]);
+    
+    // =====================================================
+    // АВАРИЙНЫЙ ВЫКЛЮЧАТЕЛЬ: если SMS выключен — verify_code невозможен
+    // =====================================================
+    useEffect(() => {
+      if (!SMS_VERIFICATION_ENABLED && step === 'verify_code') {
+        console.warn('[Consents] ⚠️ SMS выключен, но step=verify_code — принудительный сброс');
+        setStep('consents');
+      }
+    }, [step]);
     
     const handleToggle = useCallback((type) => {
       setConsents(prev => ({ ...prev, [type]: !prev[type] }));
