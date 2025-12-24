@@ -1,31 +1,51 @@
 # HEYS Infrastructure — Yandex Cloud
 
-> **Источники правды для CDN/Storage конфигурации**  
-> Обновлено: 2025-12-22
+> **Источники правды для CDN/Storage/VM конфигурации**  
+> Обновлено: 2025-12-24
 
 ---
 
-## 🌐 PWA `app.heyslab.ru`
+## 🌐 PWA `app.heyslab.ru` — Nginx Reverse Proxy
 
-| Параметр            | Значение                                    |
-| ------------------- | ------------------------------------------- |
-| **CDN Resource ID** | `bc8rvrvenqslkmti5yts`                      |
-| **Origin Group ID** | `1046384460070918226`                       |
-| **Origin**          | `heys-app.website.yandexcloud.net`          |
-| **Host Header**     | `heys-app.website.yandexcloud.net`          |
-| **Provider CNAME**  | `e1e14e1dabe6ab92.a.yccdn.cloud.yandex.net` |
-| **SSL Certificate** | `fpq2cb4ir6jje51dnsbu` (CM managed)         |
-| **S3 Bucket**       | `heys-app`                                  |
+> ⚠️ **Миграция 2025-12-24**: PWA перенесена с Yandex CDN на Nginx VM из-за
+> проблем с кэшированием Service Worker.
 
-**DNS (Yandex Cloud DNS):**
+| Параметр      | Значение                           |
+| ------------- | ---------------------------------- |
+| **VM Name**   | `app-heyslab-proxy`                |
+| **VM IP**     | `158.160.53.194`                   |
+| **Zone**      | `ru-central1-a`                    |
+| **OS**        | Ubuntu 20.04 LTS                   |
+| **Nginx**     | 1.18.0                             |
+| **Origin**    | `heys-app.website.yandexcloud.net` |
+| **SSL**       | Let's Encrypt (expires 2026-03-24) |
+| **S3 Bucket** | `heys-app`                         |
+
+**DNS (reg.ru):**
 
 ```
-app.heyslab.ru → CNAME → e1e14e1dabe6ab92.a.yccdn.cloud.yandex.net
+app.heyslab.ru → A → 158.160.53.194
 ```
+
+**Nginx Config:** `/etc/nginx/sites-available/app.heyslab.ru`
+
+**SSH доступ:**
+
+```bash
+ssh yc-user@158.160.53.194
+```
+
+### Почему Nginx вместо CDN?
+
+Yandex CDN добавлял `Cache-Control: public, max-age=3600` ко всем файлам,
+игнорируя заголовки из S3. Это приводило к тому, что PWA Service Worker не
+обновлялся у пользователей (застревали на старой версии).
+
+Nginx позволяет явно переопределять заголовки через `add_header ... always`.
 
 ---
 
-## 🏠 Landing `heyslab.ru`
+## 🏠 Landing `heyslab.ru` — Yandex CDN
 
 | Параметр            | Значение                                    |
 | ------------------- | ------------------------------------------- |
@@ -37,54 +57,78 @@ app.heyslab.ru → CNAME → e1e14e1dabe6ab92.a.yccdn.cloud.yandex.net
 | **SSL Certificate** | `fpq9tvrkni47ogh6jgkk` (CM managed)         |
 | **S3 Bucket**       | `heys-static`                               |
 
-**DNS (Yandex Cloud DNS):**
+**DNS (reg.ru):**
 
 ```
-heyslab.ru → CNAME → e1e14e1dabe6ab92.a.yccdn.cloud.yandex.net
+heyslab.ru     → A     → 188.72.103.3 (CDN edge)
+www.heyslab.ru → CNAME → e1e14e1dabe6ab92.a.yccdn.cloud.yandex.net
 ```
 
 ---
 
 ## 🔧 Полезные команды
 
-### Диагностика
+### PWA (Nginx VM)
+
+```bash
+# SSH на VM
+ssh yc-user@158.160.53.194
+
+# Проверить конфиг nginx
+sudo nginx -t
+
+# Перезагрузить nginx
+sudo systemctl reload nginx
+
+# Логи nginx
+sudo tail -f /var/log/nginx/access.log
+sudo tail -f /var/log/nginx/error.log
+
+# Статус firewall
+sudo ufw status verbose
+
+# Обновить SSL сертификат (автоматически по cron, но можно вручную)
+sudo certbot renew --dry-run
+```
+
+### Проверка Cache-Control (PWA)
+
+```bash
+# Должно быть: no-cache, no-store, must-revalidate
+curl -sI https://app.heyslab.ru/sw.js | grep -iE "cache-control|pragma"
+curl -sI https://app.heyslab.ru/index.html | grep -iE "cache-control|pragma"
+
+# Должно быть: no-cache, must-revalidate
+curl -sI https://app.heyslab.ru/heys_app_v12.js | grep -iE "cache-control"
+
+# Должно быть: max-age=31536000, immutable
+curl -sI "https://app.heyslab.ru/assets/index-*.js" | grep -iE "cache-control"
+```
+
+### Landing (CDN)
 
 ```bash
 # Статус CDN ресурсов
 yc cdn resource list
 
 # Детали ресурса
-yc cdn resource get bc8rvrvenqslkmti5yts --format yaml
-
-# Origin groups (должно быть только 2!)
-yc cdn origin-group list
+yc cdn resource get bc8rk3pnqppsfime3nth --format yaml
 
 # Проверка origin напрямую (минуя CDN)
-curl -sI https://heys-app.website.yandexcloud.net/index.html
 curl -sI https://heys-static.website.yandexcloud.net/index.html
+
+# Health check
+curl -sI https://heyslab.ru/ | head -5
 ```
 
-### Purge кэша
+### Purge кэша Landing (CDN)
 
 ```bash
 # Только критичные файлы (рекомендуется)
-yc cdn cache purge --resource-id bc8rvrvenqslkmti5yts --path "/" --path "/index.html" --path "/sw.js"
+yc cdn cache purge --resource-id bc8rk3pnqppsfime3nth --path "/" --path "/index.html"
 
 # Полный purge (только при катастрофе, rate limit!)
-yc cdn cache purge --resource-id bc8rvrvenqslkmti5yts --path "/*"
-```
-
-### Health check после деплоя
-
-```bash
-# PWA
-curl -sI https://app.heyslab.ru/ | head -5
-curl -sI https://app.heyslab.ru/manifest.json | head -5
-curl -sI https://app.heyslab.ru/sw.js | head -5
-curl -sI https://app.heyslab.ru/random/deep/route | head -5  # SPA fallback
-
-# Landing
-curl -sI https://heyslab.ru/ | head -5
+yc cdn cache purge --resource-id bc8rk3pnqppsfime3nth --path "/*"
 ```
 
 ---
@@ -142,13 +186,54 @@ Yandex CDN ограничивает количество purge запросов.
 - `/*` — только при катастрофе
 - Между purge — пауза 1-2 минуты
 
+### PWA застряла на старой версии
+
+1. Проверь Cache-Control на VM:
+   `curl -sI https://app.heyslab.ru/sw.js | grep cache`
+2. Должно быть `no-cache, no-store, must-revalidate`
+3. Если не то — проверь nginx конфиг:
+   ```bash
+   ssh yc-user@158.160.53.194 "cat /etc/nginx/sites-available/app.heyslab.ru"
+   ```
+
+### VM недоступна
+
+1. Проверь статус в Yandex Cloud Console → Compute Cloud
+2. Проверь firewall: `ssh yc-user@158.160.53.194 "sudo ufw status"`
+3. Проверь nginx: `ssh yc-user@158.160.53.194 "sudo systemctl status nginx"`
+
 ---
 
-## 📋 Чеклист деплоя
+## 🔐 Безопасность VM
 
-- [ ] Собрать билд
-- [ ] Загрузить assets/\* с `Cache-Control: public, max-age=31536000, immutable`
-- [ ] Загрузить sw.js, manifest.json с `Cache-Control: no-cache`
-- [ ] Загрузить index.html **ПОСЛЕДНИМ** с `Cache-Control: no-cache`
-- [ ] Purge: `/`, `/index.html`, `/sw.js`
-- [ ] Health check: `curl -sI https://app.heyslab.ru/`
+| Компонент      | Статус     | Детали                    |
+| -------------- | ---------- | ------------------------- |
+| UFW Firewall   | ✅ Активен | 80, 443 открыты; 22 по IP |
+| SSH            | ✅ Ключи   | PasswordAuthentication no |
+| fail2ban       | ✅ Активен | Защита от brute-force     |
+| SSL Auto-renew | ✅ Активен | certbot.timer             |
+
+**SSH разрешён только с IP:** `144.31.90.83`
+
+При смене IP:
+
+```bash
+ssh yc-user@158.160.53.194 "sudo ufw delete allow from 144.31.90.83/32 to any port 22 && sudo ufw allow from NEW_IP/32 to any port 22 proto tcp"
+```
+
+---
+
+## 📋 Чеклист деплоя PWA
+
+- [ ] Собрать билд: `pnpm build`
+- [ ] GitHub Actions автоматически загрузит в S3
+- [ ] Проверить: `curl -sI https://app.heyslab.ru/sw.js | grep cache`
+- [ ] Открыть https://app.heyslab.ru, DevTools → Application → Service Workers
+- [ ] Убедиться что новая версия SW активна
+
+### При смене IP VM
+
+1. Обновить DNS: reg.ru → `app.heyslab.ru` A → новый IP
+2. Подождать ~1 час (или Premium DNS ~10 мин)
+3. Получить новый SSL: `sudo certbot --nginx -d app.heyslab.ru`
+4. Обновить UFW: добавить свой IP для SSH

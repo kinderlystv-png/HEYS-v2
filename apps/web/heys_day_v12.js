@@ -20467,6 +20467,34 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         }
       }, 'ДНЕВНИК ПИТАНИЯ'),
       
+      // === БОЛЬШАЯ КНОПКА ДОБАВЛЕНИЯ ПРИЁМА ПИЩИ ===
+      (!isMobile || mobileSubTab === 'diary') && React.createElement('button', {
+        className: 'add-meal-btn-full',
+        onClick: addMeal,
+        style: {
+          width: '100%',
+          padding: '18px 24px',
+          marginBottom: '20px',
+          fontSize: '17px',
+          fontWeight: '700',
+          color: '#fff',
+          background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+          border: 'none',
+          borderRadius: '16px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '10px',
+          boxShadow: '0 4px 14px rgba(34, 197, 94, 0.35)',
+          transition: 'all 0.2s ease',
+          WebkitTapHighlightColor: 'transparent'
+        }
+      }, 
+        React.createElement('span', { style: { fontSize: '22px' } }, '➕'),
+        'Добавить приём пищи'
+      ),
+      
       // Empty state когда нет приёмов пищи
       (!isMobile || mobileSubTab === 'diary') && (!day.meals || day.meals.length === 0) && React.createElement('div', { className: 'empty-state' },
         React.createElement('div', { className: 'empty-state-icon' }, '🍽️'),

@@ -7207,6 +7207,49 @@
   height: 120px;
   opacity: 1;
 }
+
+/* === БОЛЬШАЯ КНОПКА ДОБАВЛЕНИЯ ПРИЁМА ПИЩИ === */
+.add-meal-btn-full {
+  width: 100%;
+  padding: 18px 24px;
+  margin-bottom: 20px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35);
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.add-meal-btn-full:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.45);
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+}
+
+.add-meal-btn-full:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+}
+
+/* Dark theme */
+[data-theme="dark"] .add-meal-btn-full {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.25);
+}
+
+[data-theme="dark"] .add-meal-btn-full:hover {
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
+}
+
 /* MODULE 02 — Metrics & Graphs
  * Scope: metrics cards, sparkline, heatmap, sliders/brush, correlation/weight charts.
  */

@@ -51,6 +51,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
+      # Turbo cache для ускорения инкрементных сборок
+      - name: Setup Turbo cache
+        uses: actions/cache@v3
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -65,13 +74,16 @@ jobs:
       #       "__tests__/products-protection.test.js" \
       #       "__tests__/data-models.test.js"
 
-      - name: Build web app (PWA)
-        run: pnpm --filter @heys/web run build
+      # Параллельная сборка PWA и Landing
+      - name: Build apps (parallel)
+        run: |
+          pnpm --filter @heys/web run build &
+          PID_PWA=$!
+          pnpm --filter @heys/landing run build &
+          PID_LANDING=$!
+          wait $PID_PWA $PID_LANDING
         env:
           VITE_API_URL: https://api.heyslab.ru
-
-      - name: Build landing page
-        run: pnpm --filter @heys/landing run build
 
       - name: Generate build version
         run: |
@@ -288,7 +300,7 @@ jobs:
         run: |
           echo "🏥 Running health checks..."
 
-          # 1) Validate ORIGIN (Object Storage) — this is the real signal that deploy succeeded.
+          # Validate ORIGIN (Object Storage) — this is the real signal that deploy succeeded.
           PWA_ORIGIN_URL="${YC_ENDPOINT}/${YC_BUCKET_PWA}/index.html"
           LANDING_ORIGIN_URL="${YC_ENDPOINT}/${YC_BUCKET_LANDING}/index.html"
           API_URL="https://api.heyslab.ru/health"
@@ -297,51 +309,14 @@ jobs:
           LANDING_ORIGIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$LANDING_ORIGIN_URL")
           API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL")
 
-          echo "Origin: PWA $PWA_ORIGIN_STATUS ($PWA_ORIGIN_URL)"
-          echo "Origin: Landing $LANDING_ORIGIN_STATUS ($LANDING_ORIGIN_URL)"
-          echo "API: $API_STATUS ($API_URL)"
+          echo "Origin: PWA $PWA_ORIGIN_STATUS | Landing $LANDING_ORIGIN_STATUS | API $API_STATUS"
 
           if [ "$PWA_ORIGIN_STATUS" != "200" ] || [ "$LANDING_ORIGIN_STATUS" != "200" ] || [ "$API_STATUS" != "200" ]; then
-            echo "❌ Origin/API health check failed (deployment likely broken)"
+            echo "❌ Origin/API health check failed"
             exit 1
           fi
 
-          # 2) Validate CDN — best effort. CDN propagation can lag by region and return cached 404.
-          echo "⏳ Waiting 10s for CDN propagation..."
-          sleep 10
-
-          MAX_RETRIES=3
-          RETRY_DELAY=10
-          CACHE_BUST="v=${BUILD_VERSION}&ts=$(date +%s)"
-
-          PWA_CDN_URL="https://app.heyslab.ru/version.json?${CACHE_BUST}"
-          LANDING_CDN_URL="https://heyslab.ru/?${CACHE_BUST}"
-
-          CDN_OK=0
-          for i in $(seq 1 $MAX_RETRIES); do
-            PWA_CDN_STATUS=$(curl -s -H "Cache-Control: no-cache" -o /dev/null -w "%{http_code}" "$PWA_CDN_URL")
-            LANDING_CDN_STATUS=$(curl -s -H "Cache-Control: no-cache" -o /dev/null -w "%{http_code}" "$LANDING_CDN_URL")
-
-            echo "CDN attempt $i/$MAX_RETRIES: PWA $PWA_CDN_STATUS | Landing $LANDING_CDN_STATUS"
-
-            if [ "$PWA_CDN_STATUS" = "200" ] && [ "$LANDING_CDN_STATUS" = "200" ]; then
-              CDN_OK=1
-              break
-            fi
-
-            if [ $i -lt $MAX_RETRIES ]; then
-              echo "⏳ Retrying in ${RETRY_DELAY}s..."
-              sleep $RETRY_DELAY
-            fi
-          done
-
-          if [ $CDN_OK -eq 1 ]; then
-            echo "✅ Health checks passed (origin + CDN)"
-            exit 0
-          fi
-
-          echo "⚠️ CDN still not fully propagated in this runner region (origin is OK). Not failing deployment."
-          exit 0
+          echo "✅ Health checks passed (origin OK, CDN propagation is async)"
 
       - name: Deployment summary
         run: |
