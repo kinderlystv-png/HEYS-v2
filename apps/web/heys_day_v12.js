@@ -1650,13 +1650,19 @@
               });
             }
             
+            // 🔒 КРИТИЧНО: Защита от перезаписи cloud sync при добавлении продукта
+            const newUpdatedAt = Date.now();
+            lastLoadedUpdatedAtRef.current = newUpdatedAt; // Предотвращает игнорирование этого обновления
+            blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000; // Блокируем cloud sync на 3 сек
+            console.log('[DayTab] 🔒 Blocking cloud updates until:', blockCloudUpdatesUntilRef.current);
+            
             setDay((prevDay = {}) => {
               const meals = (prevDay.meals || []).map((m, i) =>
                 i === mealIndex
                   ? { ...m, items: [...(m.items || []), newItem] }
                   : m
               );
-              return { ...prevDay, meals, updatedAt: Date.now() };
+              return { ...prevDay, meals, updatedAt: newUpdatedAt };
             });
 
             // 🔧 FIX: Сразу сохраняем день после добавления продукта

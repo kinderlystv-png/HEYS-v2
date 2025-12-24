@@ -108,26 +108,26 @@
   
   /**
    * Рассчитать норму калорий для дня
+   * 🔬 TDEE v1.2.0: Консолидировано — делегируем в единый модуль HEYS.TDEE
    */
   function calculateDayTarget(dayData, profile, norms) {
-    // Упрощённый расчёт TDEE
-    // Полный расчёт в heys_day_v12.js слишком сложный для дублирования
-    // Используем базовый BMR × коэффициент активности
+    // Если доступен единый модуль TDEE — используем его (точный расчёт)
+    if (HEYS.TDEE?.calculate) {
+      const result = HEYS.TDEE.calculate(dayData, profile, { lsGet });
+      return result.optimum || 2000; // optimum = baseExpenditure * (1 + deficitPct/100)
+    }
     
+    // Fallback: упрощённый расчёт (legacy, на случай если модуль не загружен)
     const weight = profile.weight || 70;
     const height = profile.height || 170;
     const age = profile.age || 30;
     const gender = profile.gender || 'Мужской';
     
     // Mifflin-St Jeor formula
-    let bmr;
-    if (gender === 'Мужской') {
-      bmr = 10 * weight + 6.25 * height - 5 * age + 5;
-    } else {
-      bmr = 10 * weight + 6.25 * height - 5 * age - 161;
-    }
+    const isMale = gender !== 'Женский';
+    const bmr = 10 * weight + 6.25 * height - 5 * age + (isMale ? 5 : -161);
     
-    // Коэффициент активности
+    // Коэффициент активности (fallback — не учитывает реальные тренировки/шаги)
     const activityMultiplier = {
       'sedentary': 1.2,
       'light': 1.375,
