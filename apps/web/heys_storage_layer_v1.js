@@ -113,8 +113,18 @@
   
   function rawSet(k, v){ 
     try{ 
-      localStorage.setItem(k, compress(v)); 
-    } catch(e) {} 
+      const compressed = compress(v);
+      localStorage.setItem(k, compressed);
+      
+      // 🔍 DEBUG: Проверяем что записали и что прочитали обратно
+      if (k.includes('dayv2_2025-12-24')) {
+        const readBack = localStorage.getItem(k);
+        const parsed = decompress(readBack);
+        console.log(`🔍 [rawSet] WRITTEN ${k} | meals: ${parsed?.meals?.length || 0} | updatedAt: ${parsed?.updatedAt}`);
+      }
+    } catch(e) {
+      console.error('[rawSet] ERROR:', k, e);
+    } 
   }
 
   function ns(){ return (global.HEYS && global.HEYS.currentClientId) || ''; }
@@ -189,12 +199,18 @@
           // sk уже содержит heys_<clientId>_<key>
           // Не отправлять в облако если v не объект (например, строка совпадает с ключом)
           if (typeof v !== 'object' || v === null) {
+            console.log('[Store.set] ⏭️ Skipped cloud save (not object):', k);
             return;
           }
+          console.log('[Store.set] ☁️ Calling saveClientKey:', k, 'cid:', cid?.slice(0,8));
           global.HEYS.saveClientKey(cid, sk, v);
+        } else {
+          console.warn('[Store.set] ⚠️ No cid (clientId) for cloud save:', k);
         }
+      } else {
+        console.warn('[Store.set] ⚠️ saveClientKey not available:', k);
       }
-    }catch(e){}
+    }catch(e){ console.error('[Store.set] Error:', e); }
   };
 
   Store.watch = function(k, fn){ const sk=scoped(k); if(!watchers.has(sk)) watchers.set(sk,new Set()); watchers.get(sk).add(fn); return ()=>{ const set=watchers.get(sk); if(set){ set.delete(fn); if(!set.size) watchers.delete(sk); } }; };

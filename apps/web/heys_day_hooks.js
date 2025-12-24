@@ -290,13 +290,22 @@
     return isMobile;
   }
 
+  // 🔧 v3.19.2: Глобальный кэш prefetch для предотвращения повторных запросов
+  // Сохраняется между размонтированиями компонента
+  const globalPrefetchCache = {
+    prefetched: new Set(),
+    lastPrefetchTime: 0,
+    PREFETCH_COOLDOWN: 5000 // 5 секунд между prefetch
+  };
+
   // Хук для Smart Prefetch — предзагрузка данных ±N дней при наличии интернета
   function useSmartPrefetch({
     currentDate,
     daysRange = 7,  // ±7 дней
     enabled = true
   }) {
-    const prefetchedRef = React.useRef(new Set());
+    // 🔧 v3.19.2: Используем глобальный кэш вместо локального ref
+    const prefetchedRef = React.useRef(globalPrefetchCache.prefetched);
     const utils = getDayUtils();
     const lsGet = utils.lsGet || HEYS.utils?.lsGet;
     
@@ -319,10 +328,19 @@
       if (!navigator.onLine) return;
       if (!HEYS.cloud?.isAuthenticated?.()) return;
       
+      // 🔧 v3.19.2: Cooldown защита от частых вызовов
+      const now = Date.now();
+      if (now - globalPrefetchCache.lastPrefetchTime < globalPrefetchCache.PREFETCH_COOLDOWN) {
+        return; // Слишком частые вызовы — пропускаем
+      }
+      
       const toFetch = dates.filter(d => !prefetchedRef.current.has(d));
       if (toFetch.length === 0) return;
       
       try {
+        // 🔧 v3.19.2: Обновляем время последнего prefetch
+        globalPrefetchCache.lastPrefetchTime = now;
+        
         // Пометим как "в процессе" чтобы избежать дублирования
         toFetch.forEach(d => prefetchedRef.current.add(d));
         
@@ -340,13 +358,17 @@
     React.useEffect(() => {
       if (!enabled || !currentDate) return;
       
+      // 🔧 v3.19.2: Логируем prefetch для диагностики
+      console.log('[HEYS] 🔄 useSmartPrefetch triggered | date:', currentDate, '| cached:', prefetchedRef.current.size);
+      
       const dates = getDatesToPrefetch(currentDate);
       prefetchFromCloud(dates);
       
       // Подписка на восстановление соединения
       const handleOnline = () => {
-        // Сбрасываем prefetch cache при восстановлении
-        prefetchedRef.current.clear();
+        // 🔧 v3.19.2: НЕ сбрасываем глобальный кэш при online
+        // prefetchedRef.current.clear(); — убрано, используем cooldown вместо этого
+        console.log('[HEYS] 🌐 Online event — triggering prefetch');
         prefetchFromCloud(getDatesToPrefetch(currentDate));
       };
       

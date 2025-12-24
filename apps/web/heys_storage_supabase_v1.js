@@ -1013,9 +1013,14 @@
     } catch (e) {}
   }
   
-  /** Получить количество ожидающих изменений */
+  /** Получить количество ожидающих изменений (включая in-flight) */
   cloud.getPendingCount = function() {
-    return clientUpsertQueue.length + upsertQueue.length;
+    return clientUpsertQueue.length + upsertQueue.length + (_uploadInProgress ? _uploadInFlightCount : 0);
+  };
+  
+  /** Проверить есть ли данные в процессе отправки */
+  cloud.isUploadInProgress = function() {
+    return _uploadInProgress;
   };
   
   /** Получить детализацию pending (для UI) */
@@ -1034,6 +1039,88 @@
     return details;
   };
   
+  /**
+   * 🔄 Flush pending queue — дождаться отправки всех pending изменений в облако
+   * Критично для PullRefresh: сначала сохраняем локальные изменения, потом загружаем с сервера
+   * 
+   * v=34 FIX: Используем doImmediateClientUpload() для немедленной отправки
+   * вместо scheduleClientPush() который создавал 500ms debounce!
+   * 
+   * @param {number} timeoutMs - максимальное время ожидания (default: 5000ms)
+   * @returns {Promise<boolean>} - true если очередь очищена, false если timeout
+   */
+  cloud.flushPendingQueue = async function(timeoutMs = 5000) {
+    const queueLen = clientUpsertQueue.length + upsertQueue.length;
+    const inFlight = _uploadInProgress ? _uploadInFlightCount : 0;
+    const total = queueLen + inFlight;
+    
+    // 🔄 v=34: ВСЕГДА логируем flush — это критическая операция!
+    console.log(`🔄 [FLUSH] Check: queue=${queueLen}, inFlight=${inFlight}, uploading=${_uploadInProgress}`);
+    
+    // Если очередь пуста И ничего не в полёте — готово
+    if (queueLen === 0 && !_uploadInProgress) {
+      console.log('✅ [FLUSH] Queue already empty and no uploads in progress');
+      return true;
+    }
+    
+    console.log(`🔄 [FLUSH] Need to upload ${total} pending items IMMEDIATELY...`);
+    
+    // 🔄 v=34 FIX: Немедленный upload вместо debounce!
+    // Это критическое изменение — раньше scheduleClientPush создавал 500ms задержку
+    // и sync успевал скачать старые данные с сервера ДО upload
+    if (queueLen > 0) {
+      console.log('🔄 [FLUSH] Starting IMMEDIATE upload (no debounce)...');
+      try {
+        await doImmediateClientUpload();
+        console.log('✅ [FLUSH] Immediate upload completed');
+      } catch (e) {
+        console.error('❌ [FLUSH] Immediate upload failed:', e);
+      }
+    }
+    
+    // Проверяем снова после immediate upload
+    const stillInQueue = clientUpsertQueue.length + upsertQueue.length;
+    if (stillInQueue === 0 && !_uploadInProgress) {
+      console.log('✅ [FLUSH] All uploaded after immediate push');
+      return true;
+    }
+    
+    // Если всё ещё что-то осталось — ждём событие queue-drained с таймаутом
+    console.log(`🔄 [FLUSH] ${stillInQueue} items still pending, waiting for queue-drained event...`);
+    
+    return new Promise((resolve) => {
+      const startTime = Date.now();
+      
+      // Таймаут
+      const timeoutId = setTimeout(() => {
+        const stillPending = cloud.getPendingCount();
+        console.log(`⚠️ [FLUSH] Timeout after ${timeoutMs}ms, ${stillPending} items still pending, inFlight=${_uploadInProgress}`);
+        window.removeEventListener('heys:queue-drained', handler);
+        resolve(false);
+      }, timeoutMs);
+      
+      // Слушаем событие queue-drained
+      const handler = () => {
+        // Дополнительная проверка что действительно всё отправлено
+        if (_uploadInProgress) {
+          console.log('🔄 [FLUSH] queue-drained fired but upload still in progress, waiting...');
+          return; // Не снимаем listener, ждём ещё
+        }
+        clearTimeout(timeoutId);
+        const elapsed = Date.now() - startTime;
+        console.log(`✅ [FLUSH] Queue drained in ${elapsed}ms`);
+        window.removeEventListener('heys:queue-drained', handler);
+        resolve(true);
+      };
+      window.addEventListener('heys:queue-drained', handler);
+      
+      // Если всё уже в полёте — просто ждём queue-drained
+      if (stillInQueue === 0 && _uploadInProgress) {
+        console.log('🔄 [FLUSH] Queue empty but upload in progress, waiting for completion...');
+      }
+    });
+  };
+
   /** Получить информацию о storage */
   cloud.getStorageInfo = function() {
     const sizeMB = getStorageSize();
@@ -1990,14 +2077,19 @@
           logCritical('🔄 Сессия восстановлена:', user.email || user.id);
           logCritical('[AUTH] ✅ user установлен из restore:', user?.email, '| user:', !!user);
           
-          // 🔐 КРИТИЧНО: Если восстановлена сессия куратора — отключаем PIN auth режим!
-          if (_rpcOnlyMode || _pinAuthClientId) {
-            logCritical('🔐 Куратор восстановлен — сбрасываем PIN auth режим');
-            _rpcOnlyMode = false;
+          // 🔐 v=35 FIX: После миграции на Yandex API — ВКЛЮЧАЕМ RPC режим!
+          // Supabase SDK удалён, все операции через REST API
+          // PIN auth client сбрасываем только _pinAuthClientId (это для клиента по PIN)
+          // но _rpcOnlyMode оставляем = true для куратора!
+          if (_pinAuthClientId) {
+            logCritical('🔐 Куратор восстановлен — сбрасываем PIN auth clientId, но RPC mode остаётся ON');
             _pinAuthClientId = null;
             _rpcSyncInProgress = false;
             try { global.localStorage.removeItem('heys_pin_auth_client'); } catch(_) {}
           }
+          // 🔄 RPC режим ВКЛЮЧЁН для куратора (Yandex API)
+          _rpcOnlyMode = true;
+          console.log('🔐 [RESTORE] RPC mode ENABLED for curator (Yandex API)');
           
           // Устанавливаем status = ONLINE и делаем sync если есть clientId
           // ⚠️ НЕ используем Supabase SDK (client.auth.setSession) — он удалён!
@@ -2153,8 +2245,10 @@
       await cloud.bootstrapSync();
       status = 'online';
       
-      // 🔐 При входе куратора — отключаем RPC-only режим
-      _rpcOnlyMode = false;
+      // 🔐 v=35 FIX: После миграции на Yandex API ВКЛЮЧАЕМ RPC режим для ВСЕХ!
+      // Supabase SDK отключён, все операции через REST API (= RPC режим)
+      // Раньше было _rpcOnlyMode = false, что ломало sync (canSync = false)
+      _rpcOnlyMode = true;
       
       // 🛡️ Защитный период: игнорируем SIGNED_OUT в течение 10 секунд после signIn
       _ignoreSignedOutUntil = Date.now() + 10000;
@@ -3015,6 +3109,19 @@
         window.dispatchEvent(new CustomEvent('heysSyncStarting', { detail: { clientId: client_id } }));
       }
       
+      // 🛡️ КРИТИЧНО: При force sync (PullRefresh) — СНАЧАЛА отправляем pending изменения в облако!
+      // Иначе локальные изменения будут затёрты при загрузке старых данных с сервера
+      if (forceSync) {
+        const pendingCount = cloud.getPendingCount();
+        if (pendingCount > 0) {
+          logCritical(`🔄 [FORCE SYNC] Flushing ${pendingCount} pending items BEFORE downloading...`);
+          const flushed = await cloud.flushPendingQueue(5000);
+          if (!flushed) {
+            logCritical('⚠️ [FORCE SYNC] Queue flush timeout — some changes may be lost!');
+          }
+        }
+      }
+      
       // 🧹 Очистка невалидных продуктов перед синхронизацией (локальные)
       cloud.cleanupProducts();
       
@@ -3195,6 +3302,10 @@
           
           // Для данных дня используем MERGE вместо "last write wins"
           if (key.includes('dayv2_')) {
+            // 🔒 КРИТИЧНО: Перечитываем localStorage свежим для dayv2!
+            // Проблема: `local` был прочитан в начале цикла, а store.set() мог записать позже
+            try { local = JSON.parse(ls.getItem(key)); } catch(e){ local = null; }
+            
             // 🔒 КРИТИЧНО: Проверка на блокировку cloud sync во время локального редактирования
             // Если HEYS.Day.isBlockingCloudUpdates() = true, НЕ затираем localStorage!
             // Это предотвращает race condition когда sync читает старые данные до flush
@@ -3208,22 +3319,57 @@
             const remoteUpdatedAt = row.v?.updatedAt || 0;
             const localUpdatedAt = local?.updatedAt || 0;
             
+            // 🔍 ДИАГНОСТИКА: логируем состояние для отладки race conditions
+            logCritical(`📅 [SYNC dayv2] key=${key} | local: ${local?.meals?.length || 0} meals, updatedAt=${localUpdatedAt} | remote: ${row.v?.meals?.length || 0} meals, updatedAt=${remoteUpdatedAt} | forceSync=${forceSync}`);
+            
             // 🔄 FORCE MODE (pull-to-refresh): ВСЕГДА применять облачные данные
             // При force берём remote как базу, remote items ПОБЕЖДАЮТ при конфликте
             if (forceSync && row.v) {
-              logCritical(`🔄 [FORCE SYNC] Processing day | key: ${key} | local: ${local?.meals?.length || 0} meals | remote: ${row.v.meals?.length || 0} meals`);
+              // local уже перечитан выше (свежие данные из localStorage)
+              logCritical(`🔄 [FORCE SYNC] Processing day | key: ${key}`);
+              logCritical(`   📦 local: ${local?.meals?.length || 0} meals, updatedAt: ${local?.updatedAt}`);
+              logCritical(`   ☁️ remote: ${row.v.meals?.length || 0} meals, updatedAt: ${row.v?.updatedAt}`);
               
               let valueToSave;
               if (local && local.meals?.length > 0) {
-                // Есть локальные данные — merge с preferRemote чтобы удаления из облака применились
-                const merged = mergeDayData(local, row.v, { forceKeepAll: true, preferRemote: true });
-                valueToSave = merged || row.v; // Если merge вернул null — берём remote
+                // 🔄 ЗАЩИТА: Если local БОЛЬШЕ данных чем remote — это race condition!
+                // Remote ещё не получил последние изменения. Сохраняем local как есть.
+                // ⚠️ Условие: local больше данных ИЛИ local новее (не И!) — защищаем от потери любых данных
+                const localHasMore = local.meals.length > (row.v.meals?.length || 0);
+                const localIsNewer = (local.updatedAt || 0) > (row.v.updatedAt || 0);
+                
+                logCritical(`   🔍 CHECK: localHasMore=${localHasMore} (${local.meals.length} > ${row.v.meals?.length || 0}), localIsNewer=${localIsNewer} (${local.updatedAt} > ${row.v.updatedAt})`);
+                
+                if (localHasMore || localIsNewer) {
+                  logCritical(`🛡️ [FORCE SYNC] PROTECTED! Local wins: hasMore=${localHasMore}, isNewer=${localIsNewer}. Keeping local.`);
+                  valueToSave = local;
+                  
+                  // 🔄 Отправляем local в облако чтобы следующий sync получил актуальные данные
+                  const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+                  if (dateMatch) {
+                    const dayKey = `heys_dayv2_${dateMatch[1]}`;
+                    local.updatedAt = Date.now(); // Обновляем timestamp
+                    const upsertObj = {
+                      client_id: client_id,
+                      k: dayKey,
+                      v: local,
+                      updated_at: new Date().toISOString()
+                    };
+                    clientUpsertQueue.push(upsertObj);
+                    scheduleClientPush();
+                    logCritical(`☁️ [FORCE SYNC] Queued local data upload to cloud for ${dayKey}`);
+                  }
+                } else {
+                  // Есть локальные данные — merge с preferRemote чтобы удаления из облака применились
+                  const merged = mergeDayData(local, row.v, { forceKeepAll: true, preferRemote: true });
+                  valueToSave = merged || row.v; // Если merge вернул null — берём remote
+                }
               } else {
                 // Нет локальных данных — просто берём remote
                 valueToSave = row.v;
               }
               
-              logCritical(`🔄 [FORCE SYNC] Saving ${valueToSave.meals?.length || 0} meals to localStorage`);
+              logCritical(`🔄 [FORCE SYNC] Saving ${valueToSave.meals?.length || 0} meals to localStorage | key: ${key}`);
               ls.setItem(key, JSON.stringify(valueToSave));
               
               const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
@@ -3878,14 +4024,44 @@
             localVal = JSON.parse(ls.getItem(targetKey));
           } catch (e2) {}
 
-          // Не затираем непустые дни пустыми ответами
+          // Не затираем непустые дни пустыми ответами ИЛИ данными с меньшим количеством meals
           if (isDayKey) {
-            const remoteHasMeals = Array.isArray(row.v?.meals) && row.v.meals.length > 0;
-            const localHasMeals = Array.isArray(localVal?.meals) && localVal.meals.length > 0;
-            if (!remoteHasMeals && localHasMeals) return;
+            // 🔍 DEBUG: Перечитываем localStorage СЕЙЧАС (не из кэша выше!)
+            // Это критично для race condition — localVal мог устареть
+            let freshLocalVal = null;
+            try {
+              freshLocalVal = JSON.parse(ls.getItem(targetKey));
+            } catch (e2) {}
+            
+            const remoteMealsCount = Array.isArray(row.v?.meals) ? row.v.meals.length : 0;
+            const localMealsCount = Array.isArray(freshLocalVal?.meals) ? freshLocalVal.meals.length : 0;
+            const remoteHasMeals = remoteMealsCount > 0;
+            const localHasMeals = localMealsCount > 0;
+            
+            // 🔍 DEBUG: Логируем что видим
+            if (originalKey.includes('2025-12-24')) {
+              console.log(`🔍 [fetchDays] CHECK for ${originalKey} | targetKey: ${targetKey} | remote meals: ${remoteMealsCount} | local meals: ${localMealsCount} | localVal exists: ${!!freshLocalVal}`);
+            }
+            
+            // 🛡️ ЗАЩИТА 1: Не затираем непустые данные пустыми
+            if (!remoteHasMeals && localHasMeals) {
+              logCritical(`🛡️ [fetchDays] PROTECTED: Not overwriting local (${localMealsCount} meals) with empty remote`);
+              return;
+            }
+            
+            // 🛡️ ЗАЩИТА 2: Не затираем если local имеет БОЛЬШЕ meals (race condition)
+            if (localMealsCount > remoteMealsCount) {
+              logCritical(`🛡️ [fetchDays] PROTECTED: Local has MORE meals (${localMealsCount} > ${remoteMealsCount}), keeping local`);
+              return;
+            }
+            
+            // 🛡️ ЗАЩИТА 3: Если одинаковое количество meals — сравниваем по timestamp
             const remoteUpdated = new Date(row.updated_at || 0).getTime();
-            const localUpdated = localVal?.updatedAt || 0;
-            if (localUpdated > remoteUpdated) return;
+            const localUpdated = freshLocalVal?.updatedAt || 0;
+            if (localUpdated > remoteUpdated) {
+              logCritical(`🛡️ [fetchDays] PROTECTED: Local is newer (${localUpdated} > ${remoteUpdated}), keeping local`);
+              return;
+            }
           }
 
           ls.setItem(targetKey, JSON.stringify(row.v));
@@ -3948,8 +4124,263 @@
   // Дебаунсинг для клиентских данных
   let clientUpsertQueue = loadPendingQueue(PENDING_CLIENT_QUEUE_KEY);
   let clientUpsertTimer = null;
+  let _uploadInProgress = false;  // 🔄 Флаг: данные в процессе отправки (in-flight)
+  let _uploadInFlightCount = 0;   // 🔄 Кол-во записей в in-flight запросе
   
-  function scheduleClientPush(){
+  /**
+   * 🔄 v=34: Выделенная функция upload — используется как с debounce, так и immediately
+   * @param {Array} batch - массив items для отправки
+   * @returns {Promise<void>}
+   */
+  async function doClientUpload(batch) {
+    if (!batch.length) {
+      _uploadInProgress = false;
+      _uploadInFlightCount = 0;
+      notifySyncCompletedIfDrained();
+      return;
+    }
+    
+    // 🔄 Помечаем что данные "в полёте"
+    _uploadInProgress = true;
+    _uploadInFlightCount = batch.length;
+    
+    // 🔐 v=36 FIX: После миграции на Yandex API client=null, проверяем только _rpcOnlyMode
+    // Нужен либо RPC режим (Yandex API), либо старый client+user (legacy)
+    const canSync = _rpcOnlyMode || (client && user);
+    // Debug: console.log('🔐 [SYNC] canSync check:', { _rpcOnlyMode, hasClient: !!client, hasUser: !!user, canSync });
+    if (!canSync) {
+      // Вернуть в очередь
+      clientUpsertQueue.push(...batch);
+      _uploadInProgress = false;
+      _uploadInFlightCount = 0;
+      savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+      notifyPendingChange();
+      notifySyncCompletedIfDrained();
+      return;
+    }
+    
+    // Не пытаемся отправить если нет сети — данные уже в localStorage
+    if (!navigator.onLine) {
+      // Вернуть в очередь для повторной отправки когда сеть появится
+      clientUpsertQueue.push(...batch);
+      _uploadInProgress = false;
+      _uploadInFlightCount = 0;
+      incrementRetry();
+      savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+      notifyPendingChange();
+      // Запланировать повторную попытку с exponential backoff
+      scheduleClientPush();
+      notifySyncCompletedIfDrained();
+      return;
+    }
+    
+    // Удаляем дубликаты по комбинации client_id+k, оставляя последние значения
+    const uniqueBatch = [];
+    const seenKeys = new Set();
+    for (let i = batch.length - 1; i >= 0; i--) {
+      const item = batch[i];
+      const key = `${item.client_id}:${item.k}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        uniqueBatch.unshift(item);
+      }
+    }
+    
+    try {
+      // ═══════════════════════════════════════════════════════════════
+      // 🔐 RPC MODE: сохраняем через RPC без Supabase сессии
+      // ═══════════════════════════════════════════════════════════════
+      if (_rpcOnlyMode && !user) {
+        // Группируем по client_id
+        const byClientId = {};
+        uniqueBatch.forEach(item => {
+          const cid = item.client_id;
+          if (!byClientId[cid]) byClientId[cid] = [];
+          byClientId[cid].push({ k: item.k, v: item.v, updated_at: item.updated_at });
+        });
+        
+        // Сохраняем каждый клиент отдельно
+        let totalSaved = 0;
+        let anyError = null;
+        for (const [clientId, items] of Object.entries(byClientId)) {
+          const result = await cloud.saveClientViaRPC(clientId, items);
+          if (result.success) {
+            totalSaved += result.saved || items.length;
+          } else {
+            anyError = result.error;
+            // Вернуть в очередь
+            items.forEach(item => clientUpsertQueue.push({ ...item, client_id: clientId }));
+          }
+        }
+        
+        if (anyError) {
+          incrementRetry();
+          savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+          notifyPendingChange();
+          scheduleClientPush();
+        } else {
+          resetRetry();
+          logCritical(`☁️ [YANDEX] Сохранено в облако: ${totalSaved} записей`);
+        }
+        
+        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+        notifyPendingChange();
+        
+        // 🔄 Сбрасываем флаг и уведомляем о завершении
+        _uploadInProgress = false;
+        _uploadInFlightCount = 0;
+        notifySyncCompletedIfDrained();
+        return;
+      }
+      
+      // ═══════════════════════════════════════════════════════════════
+      // ОБЫЧНЫЙ РЕЖИМ: через Supabase session (куратор)
+      // ═══════════════════════════════════════════════════════════════
+      // 🔐 Если нет user — нельзя сохранять в обычном режиме
+      if (!user) {
+        log('⚠️ [SAVE] No user session, returning items to queue');
+        clientUpsertQueue.push(...uniqueBatch);
+        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+        notifyPendingChange();
+        _uploadInProgress = false;
+        _uploadInFlightCount = 0;
+        notifySyncCompletedIfDrained();
+        return;
+      }
+      
+      const promises = uniqueBatch.map(item => {
+        // Добавляем user_id если его нет (таблица требует NOT NULL)
+        const itemWithUser = item.user_id ? item : { ...item, user_id: user.id };
+        
+        // Primary key = (user_id, client_id, k), используем его для onConflict
+        return cloud.upsert('client_kv_store', itemWithUser, 'user_id,client_id,k')
+          .then(() => ({ success: true, item: itemWithUser }))
+          .catch(err => {
+            console.error('[DEBUG] Upsert error:', err?.message || err, 'for key:', itemWithUser?.k);
+            return { success: false, item: itemWithUser, error: err };
+          });
+      });
+      
+      const results = await Promise.all(promises);
+      const failedItems = results.filter(r => !r.success).map(r => r.item);
+      const successItems = results.filter(r => r.success).map(r => r.item);
+      
+      // Обработка неудачных
+      if (failedItems.length > 0) {
+        // Вернуть в очередь
+        clientUpsertQueue.push(...failedItems);
+        incrementRetry();
+        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+        notifyPendingChange();
+        
+        const authError = results.find(r => !r.success && isAuthError(r.error))?.error;
+        if (authError) {
+          handleAuthFailure(authError);
+          _uploadInProgress = false;
+          _uploadInFlightCount = 0;
+          notifySyncCompletedIfDrained();
+          return;
+        }
+        
+        // Запланировать повторную попытку
+        scheduleClientPush();
+      } else {
+        // Полный успех — сбрасываем retry счётчик
+        resetRetry();
+      }
+      
+      // Критический лог: данные отправлены в облако (только успешные)
+      if (successItems.length > 0) {
+        const types = {};
+        const otherKeys = []; // DEBUG: какие ключи попадают в "other"
+        successItems.forEach(item => {
+          const t = item.k.includes('dayv2_') ? 'day' : 
+                   item.k.includes('products') ? 'products' : 
+                   item.k.includes('profile') ? 'profile' : 'other';
+          types[t] = (types[t] || 0) + 1;
+          if (t === 'other') otherKeys.push(item.k);
+        });
+        const summary = Object.entries(types).map(([k,v]) => `${k}:${v}`).join(' ');
+        logCritical('☁️ Сохранено в облако:', summary);
+        // DEBUG: показываем какие ключи попадают в "other"
+        if (otherKeys.length > 0) {
+          logCritical('  └ other keys:', otherKeys.join(', '));
+        }
+        
+        // Уведомляем о завершении UPLOAD (НЕ heysSyncCompleted — то для initial download!)
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('heys:data-uploaded', { detail: { saved: successItems.length } }));
+        }
+      }
+      
+      // Обновляем персистентную очередь (если были ошибки, failedItems уже там)
+      savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+      notifyPendingChange();
+    } catch(e) {
+      // При ошибке — вернуть в очередь и увеличить retry
+      clientUpsertQueue.push(...uniqueBatch);
+      incrementRetry();
+      savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+      notifyPendingChange();
+      logCritical('❌ Ошибка сохранения в облако:', e.message || e);
+      
+      // Авторизационные ошибки — требуем вход
+      if (isAuthError(e)) {
+        handleAuthFailure(e);
+        _uploadInProgress = false;
+        _uploadInFlightCount = 0;
+        notifySyncCompletedIfDrained();
+        return;
+      }
+      
+      // Уведомляем об ошибке с временем до retry (exponential backoff)
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        const retryIn = Math.min(5, Math.ceil(getRetryDelay() / 1000)); // секунд до retry
+        notifySyncError(e, retryIn);
+      }
+      
+      // Запланировать повторную попытку
+      scheduleClientPush();
+    }
+    
+    // Прогресс и завершение
+    syncProgressDone += uniqueBatch.length;
+    if (syncProgressTotal < syncProgressDone) {
+      syncProgressTotal = syncProgressDone;
+    }
+    notifySyncProgress(syncProgressTotal, syncProgressDone);
+    
+    // 🔄 Сбрасываем флаг "в полёте" ПЕРЕД уведомлением о завершении
+    _uploadInProgress = false;
+    _uploadInFlightCount = 0;
+    
+    notifySyncCompletedIfDrained();
+  }
+  
+  /**
+   * 🔄 v=34: Немедленный upload без debounce — для flush перед sync
+   * @returns {Promise<void>}
+   */
+  async function doImmediateClientUpload() {
+    // Отменяем существующий таймер если есть
+    if (clientUpsertTimer) {
+      clearTimeout(clientUpsertTimer);
+      clientUpsertTimer = null;
+    }
+    
+    // Забираем всю очередь
+    const batch = clientUpsertQueue.splice(0, clientUpsertQueue.length);
+    savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+    notifyPendingChange();
+    
+    // Выполняем upload
+    await doClientUpload(batch);
+  }
+  
+  /**
+   * Debounced upload — стандартный способ с 500ms задержкой
+   */
+  function scheduleClientPush() {
     if (clientUpsertTimer) return;
     
     // Сохраняем очередь в localStorage для персистентности
@@ -3961,190 +4392,7 @@
     clientUpsertTimer = setTimeout(async () => {
       const batch = clientUpsertQueue.splice(0, clientUpsertQueue.length);
       clientUpsertTimer = null;
-      
-      // Нужен либо user (куратор), либо RPC режим (клиент по PIN)
-      const canSync = (client && user) || (client && _rpcOnlyMode);
-      if (!canSync || !batch.length) {
-        // Вернуть в очередь
-        if (batch.length) clientUpsertQueue.push(...batch);
-        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
-        notifyPendingChange();
-        return;
-      }
-      // Не пытаемся отправить если нет сети — данные уже в localStorage
-      if (!navigator.onLine) {
-        // Вернуть в очередь для повторной отправки когда сеть появится
-        clientUpsertQueue.push(...batch);
-        incrementRetry();
-        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
-        notifyPendingChange();
-        // Запланировать повторную попытку с exponential backoff
-        scheduleClientPush();
-        return;
-      }
-      
-      // Удаляем дубликаты по комбинации client_id+k, оставляя последние значения
-      const uniqueBatch = [];
-      const seenKeys = new Set();
-      for (let i = batch.length - 1; i >= 0; i--) {
-        const item = batch[i];
-        const key = `${item.client_id}:${item.k}`;
-        if (!seenKeys.has(key)) {
-          seenKeys.add(key);
-          uniqueBatch.unshift(item);
-        }
-      }
-      
-      try{
-        // ═══════════════════════════════════════════════════════════════
-        // 🔐 RPC MODE: сохраняем через RPC без Supabase сессии
-        // ═══════════════════════════════════════════════════════════════
-        if (_rpcOnlyMode && !user) {
-          // Группируем по client_id
-          const byClientId = {};
-          uniqueBatch.forEach(item => {
-            const cid = item.client_id;
-            if (!byClientId[cid]) byClientId[cid] = [];
-            byClientId[cid].push({ k: item.k, v: item.v, updated_at: item.updated_at });
-          });
-          
-          // Сохраняем каждый клиент отдельно
-          let totalSaved = 0;
-          let anyError = null;
-          for (const [clientId, items] of Object.entries(byClientId)) {
-            const result = await cloud.saveClientViaRPC(clientId, items);
-            if (result.success) {
-              totalSaved += result.saved || items.length;
-            } else {
-              anyError = result.error;
-              // Вернуть в очередь
-              items.forEach(item => clientUpsertQueue.push({ ...item, client_id: clientId }));
-            }
-          }
-          
-          if (anyError) {
-            incrementRetry();
-            savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
-            notifyPendingChange();
-            scheduleClientPush();
-          } else {
-            resetRetry();
-            logCritical(`☁️ [YANDEX] Сохранено в облако: ${totalSaved} записей`);
-          }
-          
-          savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
-          notifyPendingChange();
-          return;
-        }
-        
-        // ═══════════════════════════════════════════════════════════════
-        // ОБЫЧНЫЙ РЕЖИМ: через Supabase session (куратор)
-        // ═══════════════════════════════════════════════════════════════
-        // 🔐 Если нет user — нельзя сохранять в обычном режиме
-        if (!user) {
-          log('⚠️ [SAVE] No user session, returning items to queue');
-          clientUpsertQueue.push(...uniqueBatch);
-          savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
-          notifyPendingChange();
-          return;
-        }
-        
-        const promises = uniqueBatch.map(item => {
-          // Добавляем user_id если его нет (таблица требует NOT NULL)
-          const itemWithUser = item.user_id ? item : { ...item, user_id: user.id };
-          
-          // Primary key = (user_id, client_id, k), используем его для onConflict
-          return cloud.upsert('client_kv_store', itemWithUser, 'user_id,client_id,k')
-            .then(() => ({ success: true, item: itemWithUser }))
-            .catch(err => {
-              console.error('[DEBUG] Upsert error:', err?.message || err, 'for key:', itemWithUser?.k);
-              return { success: false, item: itemWithUser, error: err };
-            });
-        });
-        
-        const results = await Promise.all(promises);
-        const failedItems = results.filter(r => !r.success).map(r => r.item);
-        const successItems = results.filter(r => r.success).map(r => r.item);
-        
-        // Обработка неудачных
-        if (failedItems.length > 0) {
-          // Вернуть в очередь
-          clientUpsertQueue.push(...failedItems);
-          incrementRetry();
-          savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
-          notifyPendingChange();
-          
-          const authError = results.find(r => !r.success && isAuthError(r.error))?.error;
-          if (authError) {
-            handleAuthFailure(authError);
-            return;
-          }
-          
-          // Запланировать повторную попытку
-          scheduleClientPush();
-        } else {
-          // Полный успех — сбрасываем retry счётчик
-          resetRetry();
-        }
-        
-        // Критический лог: данные отправлены в облако (только успешные)
-        if (successItems.length > 0) {
-          const types = {};
-          const otherKeys = []; // DEBUG: какие ключи попадают в "other"
-          successItems.forEach(item => {
-            const t = item.k.includes('dayv2_') ? 'day' : 
-                     item.k.includes('products') ? 'products' : 
-                     item.k.includes('profile') ? 'profile' : 'other';
-            types[t] = (types[t] || 0) + 1;
-            if (t === 'other') otherKeys.push(item.k);
-          });
-          const summary = Object.entries(types).map(([k,v]) => `${k}:${v}`).join(' ');
-          logCritical('☁️ Сохранено в облако:', summary);
-          // DEBUG: показываем какие ключи попадают в "other"
-          if (otherKeys.length > 0) {
-            logCritical('  └ other keys:', otherKeys.join(', '));
-          }
-          
-          // Уведомляем о завершении UPLOAD (НЕ heysSyncCompleted — то для initial download!)
-          if (typeof window !== 'undefined' && window.dispatchEvent) {
-            window.dispatchEvent(new CustomEvent('heys:data-uploaded', { detail: { saved: successItems.length } }));
-          }
-        }
-        
-        // Обновляем персистентную очередь (если были ошибки, failedItems уже там)
-        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
-        notifyPendingChange();
-      }catch(e){
-        // При ошибке — вернуть в очередь и увеличить retry
-        clientUpsertQueue.push(...uniqueBatch);
-        incrementRetry();
-        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
-        notifyPendingChange();
-        logCritical('❌ Ошибка сохранения в облако:', e.message || e);
-        
-        // Авторизационные ошибки — требуем вход
-        if (isAuthError(e)) {
-          handleAuthFailure(e);
-          return;
-        }
-        
-        // Уведомляем об ошибке с временем до retry (exponential backoff)
-        if (typeof window !== 'undefined' && window.dispatchEvent) {
-          const retryIn = Math.min(5, Math.ceil(getRetryDelay() / 1000)); // секунд до retry
-          notifySyncError(e, retryIn);
-        }
-        
-        // Запланировать повторную попытку
-        scheduleClientPush();
-      }
-      
-      // Прогресс и завершение
-      syncProgressDone += uniqueBatch.length;
-      if (syncProgressTotal < syncProgressDone) {
-        syncProgressTotal = syncProgressDone;
-      }
-      notifySyncProgress(syncProgressTotal, syncProgressDone);
-      notifySyncCompletedIfDrained();
+      await doClientUpload(batch);
     }, delay);
   }
 
@@ -4847,6 +5095,7 @@
       
       // Если есть Supabase user (куратор) — используем обычную синхронизацию
       // Если нет (вход по PIN) — используем RPC и включаем RPC-режим для сохранений
+      // 🔐 v=37 FIX: После миграции на Yandex API ВСЕГДА используем RPC режим!
       if (user || hasCuratorSession) {
         // Куратор — если user ещё не установлен, восстанавливаем из токена
         if (!user && hasCuratorSession) {
@@ -4858,7 +5107,9 @@
             logCritical('🔄 [SWITCH] Восстановлен user из токена:', user.email);
           } catch (_) {}
         }
-        _rpcOnlyMode = false; // Куратор — обычный режим
+        // 🔐 v=37 FIX: После миграции на Yandex API ВСЕГДА RPC режим!
+        _rpcOnlyMode = true;
+        // Debug: console.log('🔐 [SWITCH] RPC mode ENABLED for curator (Yandex API)');
         _pinAuthClientId = null; // Очищаем PIN auth
         try { global.localStorage.removeItem('heys_pin_auth_client'); } catch(_) {}
         await cloud.bootstrapClientSync(newClientId);

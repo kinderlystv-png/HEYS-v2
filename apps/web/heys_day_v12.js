@@ -1651,10 +1651,16 @@
             }
             
             // 🔒 КРИТИЧНО: Защита от перезаписи cloud sync при добавлении продукта
+            // Используем глобальный API вместо ref (MealAddProduct - отдельный компонент)
             const newUpdatedAt = Date.now();
-            lastLoadedUpdatedAtRef.current = newUpdatedAt; // Предотвращает игнорирование этого обновления
-            blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000; // Блокируем cloud sync на 3 сек
-            console.log('[DayTab] 🔒 Blocking cloud updates until:', blockCloudUpdatesUntilRef.current);
+            if (HEYS.Day?.setBlockCloudUpdates) {
+              HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
+              console.log('[MealAddProduct] 🔒 Blocking cloud updates until:', newUpdatedAt + 3000);
+            }
+            // 🔒 ВАЖНО: Обновляем lastLoadedUpdatedAt чтобы handleDayUpdated не перезаписал
+            if (HEYS.Day?.setLastLoadedUpdatedAt) {
+              HEYS.Day.setLastLoadedUpdatedAt(newUpdatedAt);
+            }
             
             setDay((prevDay = {}) => {
               const meals = (prevDay.meals || []).map((m, i) =>
@@ -3845,14 +3851,19 @@
     useEffect(() => {
       HEYS.Day = HEYS.Day || {};
       HEYS.Day.requestFlush = flush;
-      // 🔒 Экспортируем функцию проверки блокировки для cloud sync
+      // 🔒 Экспортируем функции для проверки и установки блокировки cloud sync
       HEYS.Day.isBlockingCloudUpdates = () => Date.now() < blockCloudUpdatesUntilRef.current;
       HEYS.Day.getBlockUntil = () => blockCloudUpdatesUntilRef.current;
+      HEYS.Day.setBlockCloudUpdates = (until) => { blockCloudUpdatesUntilRef.current = until; };
+      // 🔒 Setter для lastLoadedUpdatedAt — защита от перезаписи старыми данными
+      HEYS.Day.setLastLoadedUpdatedAt = (ts) => { lastLoadedUpdatedAtRef.current = ts; };
       return () => {
         if (HEYS.Day && HEYS.Day.requestFlush === flush) {
           delete HEYS.Day.requestFlush;
           delete HEYS.Day.isBlockingCloudUpdates;
           delete HEYS.Day.getBlockUntil;
+          delete HEYS.Day.setBlockCloudUpdates;
+          delete HEYS.Day.setLastLoadedUpdatedAt;
         }
       };
     }, [flush]);
@@ -12187,6 +12198,19 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             
             // 🔄 ЯВНАЯ перезагрузка данных после sync (не полагаемся только на событие)
             const dayKey = 'heys_dayv2_' + date;
+            
+            // 🔍 DEBUG: Проверяем какой clientId используется при чтении
+            const actualClientId = window.HEYS?.currentClientId || 
+              (localStorage.getItem('heys_client_current') ? JSON.parse(localStorage.getItem('heys_client_current')) : 'none');
+            const actualKey = actualClientId !== 'none' ? `heys_${actualClientId}_dayv2_${date}` : dayKey;
+            console.log('[PullRefresh] 🔍 Reading with clientId:', actualClientId?.substring?.(0, 8) || actualClientId, '| actualKey:', actualKey);
+            
+            // 🔍 DEBUG: Читаем напрямую из localStorage для сравнения
+            const rawValue = localStorage.getItem(actualKey);
+            let rawDay = null;
+            try { rawDay = rawValue ? JSON.parse(rawValue) : null; } catch(e) {}
+            console.log('[PullRefresh] 🔍 RAW localStorage | meals:', rawDay?.meals?.length, '| updatedAt:', rawDay?.updatedAt);
+            
             const freshDay = lsGet(dayKey, null);
             
             if (freshDay && freshDay.date) {
