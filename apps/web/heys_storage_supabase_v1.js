@@ -1725,11 +1725,12 @@
   cloud.init = function({ url, anonKey, localhostProxyUrl }){
     // Idempotent init: avoid double creation & duplicate intercept logs
     if (cloud._inited) { return; }
+    
+    // ✅ 2025-12-25: Supabase SDK УДАЛЁН — используем YandexAPI
+    // Теперь НЕ проверяем global.supabase, модуль работает через heys_yandex_api_v1.js
     if (!global.supabase || !global.supabase.createClient){
-      err('supabase-js не загружен — CDN заблокирован?');
-      // Сохраняем флаг для показа сообщения пользователю
-      cloud._loadError = 'Библиотека Supabase не загружена. Возможно, CDN заблокирован провайдером.';
-      return;
+      // НЕ прерываем инициализацию! Работаем через YandexAPI.
+      log('Supabase SDK отсутствует — используем YandexAPI mode');
     }
     
     // Legacy: URL для fallback (не используется при активном YandexAPI)
@@ -1860,19 +1861,24 @@
         }
       } catch (_) {}
       
-      // Единый storageKey для auth — сессия сохраняется при переключении proxy↔direct
-      client = global.supabase.createClient(initialUrl, anonKey, {
-        auth: {
-          // ⚠️ RTR-safe v4: ПОЛНОСТЬЮ отключаем авто-управление сессией
-          // persistSession=false — SDK НЕ сохраняет и НЕ восстанавливает сессию
-          // autoRefreshToken=false — SDK НЕ пытается refresh
-          // Мы управляем сессией вручную через setSession() после signIn
-          persistSession: false,
-          autoRefreshToken: false,
-          // storageKey не нужен при persistSession=false
-        }
-      });
-      cloud.client = client;
+      // ✅ 2025-12-25: Supabase SDK УДАЛЁН — НЕ создаём клиент
+      // Все операции идут через YandexAPI (heys_yandex_api_v1.js)
+      if (global.supabase && global.supabase.createClient) {
+        // Если SDK вдруг появился — создаём клиент (legacy fallback)
+        client = global.supabase.createClient(initialUrl, anonKey, {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+          }
+        });
+        cloud.client = client;
+      } else {
+        // 🆕 YandexAPI mode — клиент не нужен
+        client = null;
+        cloud.client = null;
+        log('☁️ YandexAPI mode — Supabase client не создан');
+      }
+      
       status = 'offline';
       interceptSetItem();
       cloud._inited = true;
@@ -2988,6 +2994,7 @@
       
       // Проверяем что клиент существует (без автосоздания)
       const _exists = await cloud.ensureClient(client_id);
+      logCritical(`🔍 [SYNC DEBUG] ensureClient result: ${_exists}, client_id: ${client_id}`);
       if (!_exists){
         log('client bootstrap skipped (no such client)', client_id);
         return;
@@ -3001,6 +3008,8 @@
         .eq('client_id', client_id)
         .order('updated_at', { ascending: false })
         .limit(5);
+      
+      logCritical(`🔍 [SYNC DEBUG] meta query result: rows=${metaData?.length}, error=${metaError?.message || 'none'}`);
         
       if (metaError) { 
         // Graceful degradation для сетевых ошибок
@@ -3025,6 +3034,8 @@
         new Date(row.updated_at).getTime() > lastSyncTime
       );
       
+      logCritical(`🔍 [SYNC DEBUG] hasUpdates=${hasUpdates}, forceSync=${forceSync}, lastSyncTime=${lastSyncTime}, lastClientId=${cloud._lastClientSync?.clientId}`);
+      
       if (!forceSync && !hasUpdates && cloud._lastClientSync?.clientId === client_id) {
         log('client bootstrap skipped (no updates)', client_id);
         cloud._lastClientSync.ts = now; // Обновляем timestamp для throttling
@@ -3041,6 +3052,9 @@
       const { data, error } = await YandexAPI.from('client_kv_store')
         .select('k,v,updated_at')
         .eq('client_id', client_id);
+      
+      logCritical(`🔍 [SYNC DEBUG] main data query: rows=${data?.length}, error=${error?.message || 'none'}, isNetworkFailure=${error?.isNetworkFailure}`);
+      
       if (error) { 
         // Graceful degradation
         if (error.isNetworkFailure) {
@@ -3761,7 +3775,8 @@
     const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
     if (!clientId) return [];
 
-    const dayKeys = dates.map((d) => `dayv2_${d}`);
+    // 🔧 FIX: Ключи в базе хранятся с prefix heys_ (после normalizeKeyForSupabase)
+    const dayKeys = dates.map((d) => `heys_dayv2_${d}`);
     try {
       // YandexAPI имеет встроенный timeout
       const { data, error } = await YandexAPI.from('client_kv_store')
@@ -3779,9 +3794,17 @@
         try {
           const originalKey = row.k || '';
           const isDayKey = originalKey.includes('dayv2_');
+          
+          // 🔧 FIX: Формируем ключ в формате scoped(k) — heys_{clientId}_...
+          // Ключи из базы приходят как "heys_dayv2_2025-12-24" (нормализованные, без clientId)
+          // Store.get использует scoped() который добавляет clientId: "heys_{clientId}_dayv2_..."
           let targetKey = originalKey;
-          if (!targetKey.startsWith('heys_')) {
-            targetKey = `heys_${clientId}_${targetKey}`;
+          if (clientId && !originalKey.includes(clientId)) {
+            if (originalKey.startsWith('heys_')) {
+              targetKey = 'heys_' + clientId + '_' + originalKey.substring('heys_'.length);
+            } else {
+              targetKey = `heys_${clientId}_${originalKey}`;
+            }
           }
 
           let localVal = null;
@@ -3793,14 +3816,10 @@
           if (isDayKey) {
             const remoteHasMeals = Array.isArray(row.v?.meals) && row.v.meals.length > 0;
             const localHasMeals = Array.isArray(localVal?.meals) && localVal.meals.length > 0;
-            if (!remoteHasMeals && localHasMeals) {
-              return;
-            }
+            if (!remoteHasMeals && localHasMeals) return;
             const remoteUpdated = new Date(row.updated_at || 0).getTime();
             const localUpdated = localVal?.updatedAt || 0;
-            if (localUpdated > remoteUpdated) {
-              return;
-            }
+            if (localUpdated > remoteUpdated) return;
           }
 
           ls.setItem(targetKey, JSON.stringify(row.v));

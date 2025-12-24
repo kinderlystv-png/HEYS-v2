@@ -192,6 +192,9 @@
       const response = await fetchWithRetry(url, fetchOptions);
       const result = await response.json();
       
+      // DEBUG: показываем что вернул API
+      log(`REST RESPONSE: ${table}`, { status: response.status, rowCount: Array.isArray(result) ? result.length : 'not array', error: result?.error });
+      
       if (!response.ok) {
         return { data: null, error: { message: result.error || 'REST error', code: response.status } };
       }

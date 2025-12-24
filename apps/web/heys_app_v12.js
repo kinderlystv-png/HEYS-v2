@@ -16,7 +16,7 @@
 const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2025.12.23.2241.71b506d'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2025.12.24.1723.23ed6a4'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
@@ -7064,8 +7064,11 @@ const HEYS = window.HEYS = window.HEYS || {};
                 if (savedEmail) setEmail(savedEmail);
                 setCloudUser(storedUser);
                 setStatus('online');
-                // Для куратора не восстанавливаем clientId/PIN автоматически — куратор выбирает клиента сам.
-                initLocalData({ skipClientRestore: true, skipPinAuthRestore: true });
+                
+                // ✅ FIX 2025-12-25: Восстанавливаем выбранного клиента из localStorage!
+                // Ранее skipClientRestore: true мешало куратору видеть данные после рефреша
+                // Теперь восстанавливаем clientId, но не PIN auth (куратор не использует PIN)
+                initLocalData({ skipClientRestore: false, skipPinAuthRestore: true });
 
                 // 🔄 Тестируем доступ через YandexAPI вместо Supabase
                 HEYS.YandexAPI.getClients(storedUser.id)
@@ -7144,12 +7147,29 @@ const HEYS = window.HEYS = window.HEYS || {};
                 fetchClientsFromCloud(cloudUser.id).then(result => {
                   if (result.data && result.data.length > 0) {
                     setClients(result.data);
+                    
+                    // ✅ FIX 2025-12-25: Восстанавливаем выбранного клиента из localStorage!
+                    // После загрузки клиентов из облака — проверяем heys_client_current
+                    const savedClientId = localStorage.getItem('heys_client_current');
+                    if (savedClientId && result.data.some(c => c.id === savedClientId)) {
+                      // Клиент есть в списке — устанавливаем его
+                      console.log('[HEYS] ✅ Восстановлен clientId из localStorage:', savedClientId.substring(0, 8) + '...');
+                      setClientId(savedClientId);
+                      window.HEYS = window.HEYS || {};
+                      window.HEYS.currentClientId = savedClientId;
+                    } else if (!clientId && result.data.length === 1) {
+                      // Только один клиент — автовыбор
+                      console.log('[HEYS] ✅ Автовыбор единственного клиента:', result.data[0].id.substring(0, 8) + '...');
+                      setClientId(result.data[0].id);
+                      window.HEYS = window.HEYS || {};
+                      window.HEYS.currentClientId = result.data[0].id;
+                    }
                   }
                 }).catch(e => {
                   console.error('[HEYS] Ошибка загрузки клиентов из облака:', e);
                 });
               }
-            }, [cloudUser, clientsSource, fetchClientsFromCloud, setClients]);
+            }, [cloudUser, clientsSource, fetchClientsFromCloud, setClients, setClientId, clientId]);
 
             // debounced save products
             const saveTimerRef = React.useRef(null);
