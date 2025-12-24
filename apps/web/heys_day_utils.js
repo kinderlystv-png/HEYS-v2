@@ -1047,15 +1047,23 @@
               } catch (e) { /* ignore */ }
             }
             
-            const hasProductsLoaded = productsMap.size > 0 || freshProducts.length > 0;
+            // 🔧 v3.19.0: Получаем также shared products из кэша
+            const sharedProducts = global.HEYS?.cloud?.getCachedSharedProducts?.() || [];
+            
+            const hasProductsLoaded = productsMap.size > 0 || freshProducts.length > 0 || sharedProducts.length > 0;
             
             // Дополнительная проверка: ищем продукт напрямую в свежей базе
             const foundInFresh = freshProducts.find(p => 
               String(p.name || '').trim().toLowerCase() === itemNameLower
             );
             
-            // Трекаем только если база загружена И продукт реально не найден
-            if (hasProductsLoaded && !foundInFresh) {
+            // 🔧 v3.19.0: Также ищем в shared products
+            const foundInShared = sharedProducts.find(p =>
+              String(p.name || '').trim().toLowerCase() === itemNameLower
+            );
+            
+            // Трекаем только если база загружена И продукт реально не найден в обеих базах
+            if (hasProductsLoaded && !foundInFresh && !foundInShared) {
               trackOrphanProduct(item, dateStr);
             }
           }

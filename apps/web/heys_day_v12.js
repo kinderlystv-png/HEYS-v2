@@ -3997,12 +3997,26 @@
 
     // Слушаем событие обновления данных дня (от Morning Check-in или внешних изменений)
     // НЕ слушаем heysSyncCompleted — это вызывает бесконечный цикл при каждом сохранении
+    // 🔧 v3.19.1: Защита от дублирующихся событий fetchDays
+    const lastProcessedEventRef = React.useRef({ date: null, source: null, timestamp: 0 });
+    
     React.useEffect(() => {
       const handleDayUpdated = (e) => {
         const updatedDate = e.detail?.date;
         const source = e.detail?.source || 'unknown';
         const forceReload = e.detail?.forceReload || false;
         const field = e.detail?.field || 'unknown';
+        
+        // 🔧 v3.19.1: Дедупликация событий — игнорируем одинаковые события в течение 100мс
+        const now = Date.now();
+        const last = lastProcessedEventRef.current;
+        if (source === 'fetchDays' && 
+            last.date === updatedDate && 
+            last.source === source && 
+            now - last.timestamp < 100) {
+          return; // Пропускаем дубликат
+        }
+        lastProcessedEventRef.current = { date: updatedDate, source, timestamp: now };
         
         // 🔒 Игнорируем события во время начальной синхронизации
         // doLocal() в конце синхронизации загрузит все финальные данные
@@ -4033,7 +4047,8 @@
             console.log('[HEYS] 📅 handleDayUpdated | source:', source, '| storage meals:', storageMealsCount, '| storageUpdatedAt:', storageUpdatedAt, '| currentUpdatedAt:', currentUpdatedAt, '| forceReload:', forceReload);
             
             // Пропускаем проверку timestamp если forceReload
-            if (!forceReload && storageUpdatedAt <= currentUpdatedAt) {
+            // ВАЖНО: используем < вместо <= чтобы обрабатывать первую загрузку (когда оба = 0)
+            if (!forceReload && storageUpdatedAt < currentUpdatedAt) {
               console.log('[HEYS] 📅 Ignoring outdated day update | storage:', storageUpdatedAt, '| current:', currentUpdatedAt, '| meals in storage:', storageMealsCount);
               return; // Не перезаписываем более новые данные старыми
             }
@@ -4866,6 +4881,31 @@
         return settings.adviceSoundEnabled !== false;
       } catch(e) { return true; }
     });
+    
+    // 🔧 FIX: Обновляем advice settings после загрузки из облака
+    // Без этого toggle сбрасывается к дефолту после очистки кэша
+    React.useEffect(() => {
+      const handleSyncCompleted = () => {
+        try {
+          const settings = U.lsGet('heys_advice_settings', {});
+          // Обновляем только если значение изменилось
+          setToastsEnabled(prev => {
+            const cloudVal = settings.toastsEnabled !== false;
+            return prev !== cloudVal ? cloudVal : prev;
+          });
+          setAdviceSoundEnabled(prev => {
+            const cloudVal = settings.adviceSoundEnabled !== false;
+            return prev !== cloudVal ? cloudVal : prev;
+          });
+        } catch(e) {
+          console.warn('[Advice] Failed to update settings from cloud:', e);
+        }
+      };
+      
+      window.addEventListener('heysSyncCompleted', handleSyncCompleted);
+      return () => window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
+    }, []);
+    
     // Прочитанные советы (свайп влево) — сохраняются на день
     const [dismissedAdvices, setDismissedAdvices] = useState(() => {
       try {

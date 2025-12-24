@@ -275,6 +275,8 @@
   let _syncInFlight = null; // { clientId, promise }
   
   cloud.syncClient = async function(clientId, options = {}) {
+    logCritical('[syncClient] START clientId:', clientId?.slice(0,8), 'user:', !!user, 'isPinAuth:', _rpcOnlyMode && _pinAuthClientId === clientId);
+    
     // Deduplication: если sync для этого же клиента уже идёт — вернём тот же Promise
     if (_syncInFlight && _syncInFlight.clientId === clientId && !options.force) {
       log('🔄 [SYNC] Already in flight for', clientId.slice(0,8) + '..., reusing promise');
@@ -1986,6 +1988,7 @@
           user = restored.user;
           status = CONNECTION_STATUS.SYNC;
           logCritical('🔄 Сессия восстановлена:', user.email || user.id);
+          logCritical('[AUTH] ✅ user установлен из restore:', user?.email, '| user:', !!user);
           
           // 🔐 КРИТИЧНО: Если восстановлена сессия куратора — отключаем PIN auth режим!
           if (_rpcOnlyMode || _pinAuthClientId) {
@@ -2003,6 +2006,7 @@
             status = CONNECTION_STATUS.ONLINE;
             
             const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
+            logCritical('[restoreSession] setTimeout fired, clientId:', clientId ? clientId.slice(0,8) + '...' : 'NULL');
             if (clientId) {
               logCritical('🔄 Запускаем bootstrap sync для клиента:', clientId.substring(0, 8) + '...');
               cloud.syncClient(clientId).then(result => {
@@ -2119,6 +2123,7 @@
       }
       
       user = data.user;
+      logCritical('[AUTH] ✅ user установлен:', user?.email);
       
       // 🔄 Сохраняем токен в localStorage (в формате совместимом со старым кодом)
       try {
@@ -2808,13 +2813,15 @@
       }
       keysToRemove.forEach(key => ls.removeItem(key));
       
-      // Записываем новые данные
+      // Записываем новые данные и собираем ключи для инвалидации кэша
+      const syncedKeys = [];
       (data || []).forEach(row => {
         try {
           // Ключи в client_kv_store уже нормализованы (heys_profile, heys_dayv2_2025-12-12)
           // Нужно добавить clientId для локального хранения
           const localKey = `heys_${clientId}_${row.k.replace(/^heys_/, '')}`;
           ls.setItem(localKey, JSON.stringify(row.v));
+          syncedKeys.push(row.k); // Сохраняем оригинальный ключ для инвалидации
           loadedCount++;
         } catch(e) {
           console.warn('[YANDEX SYNC] Failed to save key:', row.k, e);
@@ -2822,6 +2829,15 @@
       });
       
       muteMirror = false;
+      
+      // 🔄 CRITICAL: Инвалидируем memory cache для всех синхронизированных ключей
+      // Без этого Store.get() будет возвращать устаревшие данные из памяти
+      if (global.HEYS && global.HEYS.store && global.HEYS.store.invalidate) {
+        syncedKeys.forEach(k => {
+          global.HEYS.store.invalidate(k);
+        });
+        logCritical(`🗑️ [YANDEX SYNC] Инвалидирован кэш для ${syncedKeys.length} ключей`);
+      }
       
       // Обновляем timestamp последней синхронизации
       cloud._lastClientSync = { clientId, ts: Date.now(), viaYandex: true };
@@ -2911,7 +2927,10 @@
   let _syncInProgress = null; // null | Promise
   // options.force = true — bypass throttling (для pull-to-refresh)
   cloud.bootstrapClientSync = async function(client_id, options){
-    // 🔐 PIN-авторизация: работаем без user, если client_id проверен через verify_client_pin
+    // � DEBUG: Входные параметры
+    logCritical('[bootstrapClientSync] START client_id:', client_id, 'user:', !!user, 'user.email:', user?.email);
+    
+    // �🔐 PIN-авторизация: работаем без user, если client_id проверен через verify_client_pin
     const isPinAuth = _pinAuthClientId && _pinAuthClientId === client_id;
     
     // 🔐 Если Yandex sync в процессе или уже завершён — пропускаем
@@ -2926,9 +2945,23 @@
       }
     }
     
-    // Для обычной авторизации нужен client и user, для PIN — только client
-    if (!client || !client_id) return;
-    if (!user && !isPinAuth) return; // Нет ни user, ни PIN-авторизации
+    // Проверка: нужен client_id
+    // 🔧 FIX 2025-12-24: Убрана проверка `client` — для Yandex API режима client=null
+    // Для PIN-авторизации не нужен user, для куратора — нужен user через YandexAPI
+    if (!client_id) {
+      log('[SYNC] Skipping — no client_id');
+      return;
+    }
+    
+    // Проверка авторизации: либо PIN auth, либо curator (переменная user)
+    // 🔧 FIX 2025-12-24: Используем переменную `user` из scope (устанавливается при signIn)
+    const hasAuth = isPinAuth || user;
+    if (!hasAuth) {
+      log('[SYNC] Skipping — no auth (no PIN, no curator user). isPinAuth:', isPinAuth, 'user:', !!user);
+      return;
+    }
+    
+    logCritical('[bootstrapClientSync] ✅ Auth check PASSED, hasAuth:', hasAuth, 'isPinAuth:', isPinAuth, 'user:', !!user);
     
     // Дедупликация: если sync уже в процессе для этого клиента — ждём его завершения
     if (_syncInProgress) {
@@ -3081,6 +3114,10 @@
       });
       const summary = Object.entries(stats).filter(([,v]) => v > 0).map(([k,v]) => `${k}: ${v}`).join(', ');
       log(`✅ [CLIENT_SYNC] Loaded ${data?.length || 0} keys (${summary})`);
+      
+      // 🔍 ДИАГНОСТИКА: показать все ключи из базы
+      const allKeys = (data||[]).map(row => row.k);
+      console.log('🔍 [SYNC DEBUG] Все ключи из базы:', allKeys);
       
       const ls = global.localStorage;
       muteMirror = true;
@@ -3372,6 +3409,8 @@
           
           // ЗАЩИТА И MERGE: Умное объединение продуктов (не затираем локальные)
           if (key.includes('_products')) {
+            console.log('📦 [PRODUCTS DEBUG] Processing products key:', key, 'raw row.k:', row.k, 'row.v length:', Array.isArray(row.v) ? row.v.length : 'not array');
+            
             // Читаем актуальное локальное значение по scoped ключу
             let currentLocal = null;
             try { 
@@ -3729,6 +3768,29 @@
         }, 2000); // Задержка 2 сек чтобы не блокировать UI
       }
 
+      // 🔧 v3.19.1: Загружаем shared products в фоне для orphan check
+      // Это нужно чтобы orphan-трекер мог найти продукты из общей базы
+      // Проверяем кэш — если уже загружены (другим компонентом), не грузим повторно
+      const cachedShared = cloud.getCachedSharedProducts?.() || [];
+      if (!cloud._sharedProductsLoaded && cachedShared.length === 0) {
+        cloud._sharedProductsLoaded = true;
+        setTimeout(() => {
+          // Двойная проверка — за 1.5 сек кэш мог заполниться
+          const stillEmpty = (cloud.getCachedSharedProducts?.() || []).length === 0;
+          if (!stillEmpty) {
+            logCritical(`📦 [SHARED PRODUCTS] Already cached, skip pre-load`);
+            return;
+          }
+          cloud.getAllSharedProducts({ limit: 1000, excludeBlocklist: true }).then(result => {
+            if (result.data && result.data.length > 0) {
+              logCritical(`📦 [SHARED PRODUCTS] Pre-loaded ${result.data.length} products for orphan check`);
+            }
+          }).catch(e => {
+            console.warn('[SHARED PRODUCTS] Pre-load error:', e);
+          });
+        }, 1500); // Задержка 1.5 сек — после основных данных
+      }
+
       // Уведомляем приложение о завершении синхронизации (для обновления stepsGoal и т.д.)
       // Задержка 300мс чтобы localStorage успел обновиться и React перечитал данные
       // ВСЕГДА отправляем событие — дедупликация на стороне получателя (проверка clientId)
@@ -3790,6 +3852,10 @@
 
       const ls = global.localStorage;
       muteMirror = true;
+      
+      // 🔧 v3.19.1: Собираем даты для batch-события (вместо 11 отдельных)
+      const updatedDates = [];
+      
       (data || []).forEach((row) => {
         try {
           const originalKey = row.k || '';
@@ -3823,10 +3889,36 @@
           }
 
           ls.setItem(targetKey, JSON.stringify(row.v));
+          
+          // 🔧 FIX: Инвалидируем memory кэш Store чтобы следующий lsGet прочитал новые данные
+          // Без этого Store.get возвращает старый кэш, игнорируя прямую запись в localStorage
+          if (global.HEYS?.store?.invalidate) {
+            global.HEYS.store.invalidate(targetKey);
+          }
+          
+          // 🔧 v3.19.1: Собираем даты вместо отправки отдельных событий
+          if (isDayKey && row.v?.date) {
+            updatedDates.push(row.v.date);
+          }
         } catch (e3) {
           // игнорируем отдельные ошибки записи
         }
       });
+      
+      // 🔧 v3.19.1: Отправляем ОДНО batch-событие вместо N отдельных
+      // Это значительно уменьшает логи и улучшает производительность
+      if (updatedDates.length > 0) {
+        // Убираем дубликаты (на случай если API вернул повторяющиеся строки)
+        const uniqueDates = [...new Set(updatedDates)];
+        log(`[fetchDays] Notifying UI about ${uniqueDates.length} updated days (from ${data?.length || 0} rows)`);
+        // Отправляем событие для каждой уникальной даты
+        uniqueDates.forEach(date => {
+          global.dispatchEvent(new CustomEvent('heys:day-updated', {
+            detail: { date, source: 'fetchDays', forceReload: true }
+          }));
+        });
+      }
+      
       muteMirror = false;
       return data || [];
     } catch (e) {
@@ -5047,6 +5139,19 @@
   
   // === Shared Products API (v3.18.0) ===
   
+  // 🔧 v3.19.0: Кэш shared products для доступа из утилит (orphan check и др.)
+  let _sharedProductsCache = [];
+  let _sharedProductsCacheTime = 0;
+  const SHARED_PRODUCTS_CACHE_TTL = 5 * 60 * 1000; // 5 минут
+  
+  /**
+   * Получить shared products из кэша (синхронно)
+   * @returns {Array} Массив продуктов или пустой массив
+   */
+  cloud.getCachedSharedProducts = function() {
+    return _sharedProductsCache || [];
+  };
+  
   /**
    * Получить все продукты из общей базы (для таблицы)
    * @param {Object} options - { limit, excludeBlocklist }
@@ -5074,7 +5179,11 @@
         filtered = filtered.filter(p => !blocklistSet.has(p.id));
       }
       
-      log(`[SHARED PRODUCTS] Loaded ${filtered.length} products total`);
+      // 🔧 v3.19.0: Сохраняем в кэш для orphan check и других утилит
+      _sharedProductsCache = filtered;
+      _sharedProductsCacheTime = Date.now();
+      log(`[SHARED PRODUCTS] Loaded ${filtered.length} products total, cached`);
+      
       return { data: filtered, error: null };
     } catch (e) {
       err('[SHARED PRODUCTS] Unexpected error:', e);
