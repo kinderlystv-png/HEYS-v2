@@ -23,7 +23,7 @@
   const CURRENT_VERSIONS = {
     user_agreement: '1.2',
     personal_data: '1.2',
-    health_data: '1.2',
+    health_data: '1.0',  // Отдельный документ согласия на данные о здоровье
     marketing: '1.2'
   };
   
@@ -61,7 +61,7 @@
       },
       health_data: {
         label: 'Даю явное согласие на обработку данных о здоровье (питание, вес, активность) в целях предоставления услуг Сервиса',
-        link: '/legal/privacy-policy#health-data',
+        link: '/legal/health-data-consent',  // Отдельный документ по 152-ФЗ ст.10
         required: true
       },
       marketing: {
@@ -759,9 +759,9 @@
       latest: buildLatestDocPath('privacy-policy.md', CURRENT_VERSIONS.personal_data)
     },
     health_data: {
-      // Раздел 2.1 "Данные о здоровье"
-      versioned: buildVersionedDocPath('privacy-policy.md', CURRENT_VERSIONS.health_data),
-      latest: buildLatestDocPath('privacy-policy.md', CURRENT_VERSIONS.health_data)
+      // Отдельный документ согласия на данные о здоровье (152-ФЗ ст.10)
+      versioned: buildVersionedDocPath('health-data-consent.md', CURRENT_VERSIONS.health_data),
+      latest: buildLatestDocPath('health-data-consent.md', CURRENT_VERSIONS.health_data)
     }
   };
   
@@ -920,17 +920,8 @@
             }
           }
           
-          // Для health_data берём только релевантную секцию
-          let relevantMarkdown = markdown;
-          if (type === 'health_data') {
-            // Ищем секцию про данные о здоровье
-            const healthSection = markdown.match(/###?\s*2\.1\..*?(?=###?\s*2\.2\.|##\s*3\.|$)/s);
-            if (healthSection) {
-              relevantMarkdown = '# Обработка данных о здоровье\n\n' + healthSection[0];
-            }
-          }
-          
-          const html = parseMarkdown(relevantMarkdown);
+          // Теперь health_data имеет свой отдельный документ — парсим полностью
+          const html = parseMarkdown(markdown);
           
           // Сохраняем в кеш
           docCache[type] = html;

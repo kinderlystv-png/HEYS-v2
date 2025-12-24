@@ -60,26 +60,20 @@ async function sendTelegramNotification(lead) {
     max: '🟣 MAX'
   };
 
-  const messengerLink = lead.messenger === 'telegram' 
-    ? `tg://resolve?phone=${lead.phone}`
-    : lead.messenger === 'whatsapp'
-    ? `https://wa.me/${lead.phone}`
-    : null;
+  // ⚠️ МИНИМИЗАЦИЯ ПДн: Telegram сервера за рубежом (ст.12 152-ФЗ)
+  // Отправляем ТОЛЬКО lead_id для идентификации, без ПДн
+  // Куратор смотрит полные данные в PostgreSQL (Yandex.Cloud РФ)
+  const text = `🆕 *Новая заявка #${lead.id || 'N/A'}*
 
-  const text = `🆕 *Новая заявка на триал!*
-
-👤 *Имя:* ${lead.name}
-📞 *Телефон:* +${lead.phone}
-${messengerLabels[lead.messenger] || lead.messenger}
-
+📋 Мессенджер: ${messengerLabels[lead.messenger] || lead.messenger}
 ${lead.utm_source ? `📊 UTM: ${lead.utm_source}` : ''}
-${lead.referrer ? `🔗 Referrer: ${lead.referrer}` : ''}`;
+
+👉 Полные данные в базе (PostgreSQL РФ)`;
 
   const keyboard = {
     inline_keyboard: [
-      messengerLink ? [{ text: `Написать в ${lead.messenger}`, url: messengerLink }] : [],
       [{ text: '✅ Взял в работу', callback_data: `lead_taken_${lead.id || Date.now()}` }]
-    ].filter(row => row.length > 0)
+    ]
   };
 
   try {

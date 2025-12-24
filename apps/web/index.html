@@ -61,7 +61,7 @@
     <!-- Resource hints for better caching (prefetch, not preload to avoid warnings) -->
     <link rel="prefetch" href="heys_core_v12.js" />
     <link rel="prefetch" href="heys_simple_analytics.js" />
-    <link rel="prefetch" href="heys_storage_supabase_v1.js" />
+    <!-- heys_storage_supabase_v1.js — prefetch удалён, файл локальный, SDK удалён -->
     <link rel="prefetch" href="heys_models_v1.js" />
 
     <!-- Load non-critical CSS asynchronously -->
@@ -255,13 +255,11 @@
       fetchpriority="high"
       crossorigin="anonymous"
     ></script>
-    <!-- Supabase CDN -->
-    <script
-      defer
-      src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"
-      fetchpriority="low"
-      crossorigin="anonymous"
-    ></script>
+    <!-- Supabase CDN — УДАЛЁН 2025-12-24 (152-ФЗ compliance)
+         Причина: SDK делал запросы к серверам Supabase (Германия), 
+         нарушая ст.18 ч.5 152-ФЗ о локализации ПДн.
+         Замена: YandexAPI (heys_yandex_api_v1.js) → api.heyslab.ru
+    -->
 
     <!-- app modules with defer and optimized priority -->
     <script defer src="heys_dev_utils.js" fetchpriority="high"></script>

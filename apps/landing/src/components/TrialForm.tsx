@@ -113,9 +113,11 @@ export default function TrialForm() {
       // Успех
       setFormState('success')
       
-      // Отправляем событие в аналитику (если есть)
+      // ⚠️ GA4/Meta Pixel ОТКЛЮЧЕНЫ для 152-ФЗ compliance (трансграничная передача)
+      // Вызовы ниже не выполнятся пока GA4_ID/META_PIXEL_ID = null в layout.tsx
+      // TODO: Включить после уведомления РКН о трансграничной передаче
       if (typeof window !== 'undefined') {
-        // Google Analytics 4
+        // Google Analytics 4 (disabled until RKN notification)
         if (window.gtag) {
           window.gtag('event', 'trial_signup', {
             event_category: 'conversion',
@@ -124,7 +126,7 @@ export default function TrialForm() {
             utm_source: utmParams.utm_source
           })
         }
-        // Meta Pixel
+        // Meta Pixel (disabled until RKN notification)
         if (window.fbq) {
           window.fbq('track', 'Lead', {
             content_name: 'trial_signup',

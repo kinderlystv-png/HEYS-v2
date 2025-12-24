@@ -7022,25 +7022,31 @@ const HEYS = window.HEYS = window.HEYS || {};
                 return;
               }
 
-              // 🔐 Проверяем expires_at — если токен истёк, не восстанавливаем сессию
+              // 🔐 Проверяем expires_at — если токен РЕАЛЬНО истёк, не восстанавливаем сессию
+              // ✅ FIX 2025-12-25: НЕ удаляем токен если он ещё не истёк!
+              // ensureValidToken() может продлить его через серверную проверку
               const readStoredAuthUser = () => {
                 try {
                   const stored = localStorage.getItem('heys_supabase_auth_token');
                   if (!stored) return null;
                   const parsed = JSON.parse(stored);
                   
-                  // 🚨 КРИТИЧНО: Проверяем expires_at
+                  // 🚨 Проверяем expires_at — но НЕ удаляем токен преждевременно!
                   const expiresAt = parsed?.expires_at;
                   if (expiresAt) {
                     const now = Date.now();
                     const expiresAtMs = expiresAt * 1000;
-                    // Даём буфер 5 минут — если токен истекает через <5 мин, считаем его невалидным
-                    const BUFFER_MS = 5 * 60 * 1000;
-                    if (expiresAtMs - now < BUFFER_MS) {
-                      // Очищаем невалидный токен
+                    // ✅ FIX: Только если токен РЕАЛЬНО истёк (не "скоро истечёт")
+                    // Раньше здесь был буфер 5 минут который вызывал ложные логауты
+                    if (expiresAtMs < now) {
+                      console.log('[AUTH] Token expired at', new Date(expiresAtMs).toISOString());
+                      // Очищаем только РЕАЛЬНО истёкший токен
                       try { localStorage.removeItem('heys_supabase_auth_token'); } catch (_) {}
                       return null;
                     }
+                    // Если токен скоро истекает — это ОК, ensureValidToken() обновит его
+                    const minutesLeft = Math.round((expiresAtMs - now) / 60000);
+                    console.log('[AUTH] Token valid, expires in', minutesLeft, 'min');
                   }
                   
                   return parsed?.user || null;

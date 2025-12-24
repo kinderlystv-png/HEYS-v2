@@ -109,8 +109,18 @@ export const metadata: Metadata = {
 }
 
 // Env variables для аналитики
-const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID
-const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID
+// ⚠️ ОТКЛЮЧЕНО 2025-12-24: GA4 + Meta Pixel = трансграничная передача ПДн (ст.12 152-ФЗ)
+// Для включения требуется:
+// 1. Уведомление РКН о трансграничной передаче (до начала!)
+// 2. Обновление Политики конфиденциальности с описанием передачи
+// 3. Обновление Cookie-политики (сейчас: "только технические")
+// 4. Добавление opt-in cookie consent banner
+// 
+// TODO: После compliance включить обратно:
+// const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID
+// const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID
+const GA4_ID = null; // disabled for 152-FZ compliance
+const META_PIXEL_ID = null; // disabled for 152-FZ compliance
 
 export default function RootLayout({
   children,
