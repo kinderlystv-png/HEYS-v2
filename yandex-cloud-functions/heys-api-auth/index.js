@@ -170,7 +170,7 @@ function verifyPassword(password, hash, salt) {
 // Handlers
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function handleLogin(body) {
+async function handleLogin(body, jwtSecret) {
   const { email, password } = body;
   
   if (!email || !password) {
@@ -219,7 +219,7 @@ async function handleLogin(body) {
       sub: curator.id,
       email: curator.email,
       role: 'curator'
-    }, JWT_SECRET);
+    }, jwtSecret);
     
     // Формируем ответ в формате совместимом с Supabase
     return {
@@ -251,7 +251,7 @@ async function handleLogin(body) {
   }
 }
 
-async function handleVerify(body, authHeader) {
+async function handleVerify(body, authHeader, jwtSecret) {
   // Извлекаем токен из Authorization header
   let token = body?.token;
   
@@ -267,7 +267,7 @@ async function handleVerify(body, authHeader) {
     };
   }
   
-  const result = verifyJwt(token, JWT_SECRET);
+  const result = verifyJwt(token, jwtSecret);
   
   if (!result.valid) {
     return {
@@ -290,7 +290,7 @@ async function handleVerify(body, authHeader) {
   };
 }
 
-async function handleRegister(body) {
+async function handleRegister(body, jwtSecret) {
   const { email, password, name } = body;
   
   if (!email || !password) {
@@ -343,7 +343,7 @@ async function handleRegister(body) {
       sub: curator.id,
       email: curator.email,
       role: 'curator'
-    }, JWT_SECRET);
+    }, jwtSecret);
     
     return {
       statusCode: 201,
@@ -443,13 +443,13 @@ module.exports.handler = async function(event, context) {
   
   switch (action) {
     case 'login':
-      result = await handleLogin(body);
+      result = await handleLogin(body, JWT_SECRET);
       break;
     case 'verify':
-      result = await handleVerify(body, authHeader);
+      result = await handleVerify(body, authHeader, JWT_SECRET);
       break;
     case 'register':
-      result = await handleRegister(body);
+      result = await handleRegister(body, JWT_SECRET);
       break;
     default:
       result = {
