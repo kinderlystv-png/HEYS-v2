@@ -110,26 +110,41 @@ export class SmartSearchEngine<TItem extends Record<string, unknown> = Record<st
     );
 
     for (let i = 0; i <= str1.length; i += 1) {
-      matrix[0]![i] = i;
+      const firstRow = matrix[0];
+      if (!firstRow) {
+        throw new Error('Levenshtein matrix initialization failed');
+      }
+      firstRow[i] = i;
     }
     for (let j = 0; j <= str2.length; j += 1) {
-      matrix[j]![0] = j;
+      const row = matrix[j];
+      if (!row) {
+        throw new Error('Levenshtein matrix initialization failed');
+      }
+      row[0] = j;
     }
 
     for (let j = 1; j <= str2.length; j += 1) {
       for (let i = 1; i <= str1.length; i += 1) {
         const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
-        const row = matrix[j]!;
-        const prevRow = matrix[j - 1]!;
+        const row = matrix[j];
+        const prevRow = matrix[j - 1];
+        if (!row || !prevRow) {
+          throw new Error('Levenshtein matrix access failed');
+        }
         row[i] = Math.min(
-          row[i - 1]! + 1, // deletion
-          prevRow[i]! + 1, // insertion
-          prevRow[i - 1]! + indicator, // substitution
+          (row[i - 1] ?? 0) + 1, // deletion
+          (prevRow[i] ?? 0) + 1, // insertion
+          (prevRow[i - 1] ?? 0) + indicator, // substitution
         );
       }
     }
 
-    return matrix[str2.length]![str1.length]!;
+    const lastRow = matrix[str2.length];
+    if (!lastRow) {
+      throw new Error('Levenshtein matrix access failed');
+    }
+    return lastRow[str1.length] ?? 0;
   }
 
   /**
