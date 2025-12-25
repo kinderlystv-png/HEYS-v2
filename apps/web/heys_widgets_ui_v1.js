@@ -1033,6 +1033,8 @@
         return React.createElement(HeatmapWidgetContent, { widget, data });
       case 'cycle':
         return React.createElement(CycleWidgetContent, { widget, data });
+      case 'crashRisk':
+        return React.createElement(CrashRiskWidgetContent, { widget, data });
       default:
         return React.createElement('div', { className: 'widget__placeholder' },
           widgetType?.icon || '📊',
@@ -2513,6 +2515,434 @@
         React.createElement('div', { className: 'widget-cycle__phase' },
           phase.icon, ' ', phase.name
         )
+    );
+  }
+  
+  // === Crash Risk Widget Content (Риск срыва) ===
+  function CrashRiskWidgetContent({ widget, data }) {
+    const d = getWidgetDims(widget);
+    const size = widget?.size || '2x2';
+    const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
+    
+    const risk = data.risk || 0;
+    const level = data.level || 'low';
+    const factors = data.factors || [];
+    const positiveFactors = data.positiveFactors || [];
+    const recommendation = data.recommendation || '';
+    const color = data.color || '#22c55e';
+    const emoji = data.emoji || '🟢';
+    const levelText = data.levelText || 'Низкий';
+    const riskHistory = data.riskHistory || [];
+    
+    // State для popup с деталями
+    const [showPopup, setShowPopup] = useState(false);
+    
+    // Звук/вибрация при критическом риске (high + risk >= 70)
+    const alertedRef = useRef(false);
+    useEffect(() => {
+      if (level === 'high' && risk >= 70 && !alertedRef.current) {
+        alertedRef.current = true;
+        
+        // Вибрация (если поддерживается)
+        if (navigator.vibrate) {
+          navigator.vibrate([200, 100, 200]); // Двойная вибрация
+        }
+        
+        // Звуковое уведомление (тихий beep)
+        try {
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          oscillator.frequency.value = 440; // Нота A4
+          oscillator.type = 'sine';
+          gainNode.gain.value = 0.1; // Тихий
+          
+          oscillator.start();
+          oscillator.stop(audioContext.currentTime + 0.15);
+        } catch (e) {
+          // Игнорируем ошибки аудио
+        }
+      }
+      
+      // Сброс флага при смене уровня
+      if (level !== 'high') {
+        alertedRef.current = false;
+      }
+    }, [level, risk]);
+    
+    // Функция для генерации tooltip текста
+    const getFactorTooltip = (factor) => {
+      const tooltips = {
+        sleepDebt: 'Недосып влияет на гормоны голода (грелин ↑, лептин ↓)',
+        stress: 'Стресс повышает кортизол → тяга к сладкому',
+        chronicDeficit: 'Длительный дефицит калорий истощает волю',
+        eveningRisk: 'Вечером самоконтроль ослабевает',
+        weekendTrigger: 'Выходные снижают дисциплину питания',
+        moodDrop: 'Падение настроения → эмоциональное переедание',
+        lowProtein: 'Недостаток белка → постоянный голод',
+        trainingStress: 'Интенсивная тренировка без восстановления'
+      };
+      return tooltips[factor.id] || factor.desc || `Влияние на риск: +${factor.impact || 0}%`;
+    };
+    
+    // Sparkline SVG генератор
+    const renderSparkline = (historyData, width = 80, height = 24) => {
+      if (!historyData || historyData.length < 2) return null;
+      
+      const maxRisk = Math.max(...historyData.map(d => d.risk), 100);
+      const minRisk = Math.min(...historyData.map(d => d.risk), 0);
+      const range = maxRisk - minRisk || 1;
+      
+      const points = historyData.map((d, i) => {
+        const x = (i / (historyData.length - 1)) * width;
+        const y = height - ((d.risk - minRisk) / range) * height;
+        return `${x},${y}`;
+      }).join(' ');
+      
+      // Цвет последней точки
+      const lastLevel = historyData[historyData.length - 1]?.level || 'low';
+      const strokeColor = lastLevel === 'high' ? '#ef4444' : lastLevel === 'medium' ? '#eab308' : '#22c55e';
+      
+      return React.createElement('svg', {
+        width,
+        height,
+        className: 'widget-crash-risk__sparkline',
+        style: { overflow: 'visible' }
+      },
+        // Линия
+        React.createElement('polyline', {
+          points,
+          fill: 'none',
+          stroke: strokeColor,
+          strokeWidth: 2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round'
+        }),
+        // Точка на последнем значении
+        React.createElement('circle', {
+          cx: width,
+          cy: height - ((historyData[historyData.length - 1]?.risk - minRisk) / range) * height,
+          r: 3,
+          fill: strokeColor
+        })
+      );
+    };
+    
+    // Цвета светофора
+    const getLevelStyle = () => ({
+      color: color,
+      background: `${color}15`
+    });
+    
+    // Popup с детальной информацией (через Portal в body)
+    const renderPopup = () => {
+      if (!showPopup) return null;
+      
+      const popup = React.createElement('div', {
+        className: 'widget-crash-risk__popup-overlay',
+        onClick: (e) => {
+          e.stopPropagation();
+          setShowPopup(false);
+        }
+      },
+        React.createElement('div', {
+          className: 'widget-crash-risk__popup',
+          onClick: (e) => e.stopPropagation()
+        },
+          // Header
+          React.createElement('div', { className: 'widget-crash-risk__popup-header' },
+            React.createElement('div', { className: 'widget-crash-risk__popup-title' },
+              React.createElement('span', { style: { fontSize: '24px' } }, emoji),
+              React.createElement('span', null, 'Риск срыва')
+            ),
+            React.createElement('button', {
+              className: 'widget-crash-risk__popup-close',
+              onClick: () => setShowPopup(false)
+            }, '✕')
+          ),
+          
+          // Значение риска
+          React.createElement('div', { className: 'widget-crash-risk__popup-value' },
+            React.createElement('div', { 
+              className: 'widget-crash-risk__popup-risk-number',
+              style: { color }
+            }, `${risk}%`),
+            React.createElement('div', { 
+              className: 'widget-crash-risk__popup-level',
+              style: { color, background: `${color}20` }
+            }, levelText)
+          ),
+          
+          // Sparkline
+          riskHistory.length > 1 &&
+            React.createElement('div', { className: 'widget-crash-risk__popup-section' },
+              React.createElement('div', { className: 'widget-crash-risk__popup-section-title' }, '📈 Динамика за 7 дней'),
+              React.createElement('div', { className: 'widget-crash-risk__popup-sparkline' },
+                renderSparkline(riskHistory, 200, 40)
+              )
+            ),
+          
+          // Факторы
+          factors.length > 0 &&
+            React.createElement('div', { className: 'widget-crash-risk__popup-section' },
+              React.createElement('div', { className: 'widget-crash-risk__popup-section-title' }, '⚠️ Факторы риска'),
+              React.createElement('div', { className: 'widget-crash-risk__popup-factors' },
+                factors.map((factor, i) =>
+                  React.createElement('div', { 
+                    key: i,
+                    className: 'widget-crash-risk__popup-factor'
+                  },
+                    React.createElement('div', { className: 'widget-crash-risk__popup-factor-header' },
+                      React.createElement('span', { className: 'widget-crash-risk__popup-factor-label' }, factor.label || factor.id),
+                      factor.impact && React.createElement('span', { 
+                        className: 'widget-crash-risk__popup-factor-impact',
+                        style: { 
+                          color: factor.impact > 20 ? '#ef4444' : factor.impact > 10 ? '#eab308' : '#22c55e',
+                          background: factor.impact > 20 ? '#ef444420' : factor.impact > 10 ? '#eab30820' : '#22c55e20'
+                        }
+                      }, `+${factor.impact}%`)
+                    ),
+                    React.createElement('div', { className: 'widget-crash-risk__popup-factor-tooltip' }, 
+                      getFactorTooltip(factor)
+                    )
+                  )
+                )
+              )
+            ),
+          
+          // Позитивные факторы (что держит риск низким)
+          positiveFactors.length > 0 &&
+            React.createElement('div', { className: 'widget-crash-risk__popup-section' },
+              React.createElement('div', { className: 'widget-crash-risk__popup-section-title' }, '✅ Что держит риск низким'),
+              React.createElement('div', { className: 'widget-crash-risk__popup-factors widget-crash-risk__popup-factors--positive' },
+                positiveFactors.map((factor, i) =>
+                  React.createElement('div', { 
+                    key: i,
+                    className: 'widget-crash-risk__popup-factor widget-crash-risk__popup-factor--positive'
+                  },
+                    React.createElement('div', { className: 'widget-crash-risk__popup-factor-header' },
+                      React.createElement('span', { className: 'widget-crash-risk__popup-factor-label' }, factor.label || factor.id),
+                      factor.impact && React.createElement('span', { 
+                        className: 'widget-crash-risk__popup-factor-impact widget-crash-risk__popup-factor-impact--positive',
+                        style: { 
+                          color: '#22c55e',
+                          background: '#22c55e20'
+                        }
+                      }, `${factor.impact}%`)
+                    ),
+                    factor.details && React.createElement('div', { className: 'widget-crash-risk__popup-factor-tooltip' }, 
+                      factor.details
+                    )
+                  )
+                )
+              )
+            ),
+          
+          // Рекомендация
+          recommendation &&
+            React.createElement('div', { className: 'widget-crash-risk__popup-section' },
+              React.createElement('div', { className: 'widget-crash-risk__popup-section-title' }, '💡 Рекомендация'),
+              React.createElement('div', { className: 'widget-crash-risk__popup-recommendation' }, recommendation)
+            )
+        )
+      );
+      
+      // Рендерим через Portal в document.body
+      return ReactDOM.createPortal(popup, document.body);
+    };
+    
+    // 1x1 Micro — только светофор
+    if (d.isMicro) {
+      return React.createElement('div', { 
+        className: 'widget-crash-risk widget-crash-risk--micro',
+        style: getLevelStyle(),
+        onClick: () => setShowPopup(true)
+      },
+        React.createElement('div', { className: 'widget-crash-risk__emoji' }, emoji),
+        React.createElement('div', { 
+          className: 'widget-crash-risk__level-text',
+          style: { color }
+        }, risk),
+        renderPopup()
+      );
+    }
+    
+    // 1x2 / 2x1 Tiny — светофор + уровень
+    if (d.isTiny) {
+      return React.createElement('div', { 
+        className: 'widget-crash-risk widget-crash-risk--tiny',
+        style: getLevelStyle(),
+        onClick: () => setShowPopup(true)
+      },
+        React.createElement('div', { className: 'widget-crash-risk__header' },
+          React.createElement('span', { className: 'widget-crash-risk__emoji' }, emoji),
+          React.createElement('span', { 
+            className: 'widget-crash-risk__risk-value',
+            style: { color }
+          }, `${risk}%`)
+        ),
+        React.createElement('div', { 
+          className: 'widget-crash-risk__level-text',
+          style: { color }
+        }, levelText),
+        renderPopup()
+      );
+    }
+    
+    // 2x2 — Оптимальный layout со светофором, факторами и рекомендацией
+    if (size === '2x2') {
+      const topFactors = factors.slice(0, 2);
+      
+      return React.createElement('div', { 
+        className: 'widget-crash-risk widget-crash-risk--2x2',
+        onClick: () => setShowPopup(true)
+      },
+        // Верх: светофор + значение
+        React.createElement('div', { className: 'widget-crash-risk__top' },
+          // Светофор (3 круга)
+          React.createElement('div', { className: 'widget-crash-risk__traffic-light' },
+            React.createElement('div', { 
+              className: `widget-crash-risk__light widget-crash-risk__light--red ${level === 'high' ? 'active' : ''}` 
+            }),
+            React.createElement('div', { 
+              className: `widget-crash-risk__light widget-crash-risk__light--yellow ${level === 'medium' ? 'active' : ''}` 
+            }),
+            React.createElement('div', { 
+              className: `widget-crash-risk__light widget-crash-risk__light--green ${level === 'low' ? 'active' : ''}` 
+            })
+          ),
+          // Значение риска
+          React.createElement('div', { className: 'widget-crash-risk__value-block' },
+            React.createElement('div', { 
+              className: 'widget-crash-risk__risk-value widget-crash-risk__risk-value--lg',
+              style: { color }
+            }, `${risk}%`),
+            React.createElement('div', { 
+              className: 'widget-crash-risk__level-text',
+              style: { color }
+            }, levelText)
+          )
+        ),
+        
+        // Середина: топ-2 фактора с tooltip
+        widget.settings?.showFactors !== false && topFactors.length > 0 && 
+          React.createElement('div', { className: 'widget-crash-risk__factors' },
+            topFactors.map((factor, i) =>
+              React.createElement('div', { 
+                key: i,
+                className: 'widget-crash-risk__factor',
+                title: getFactorTooltip(factor)
+              },
+                React.createElement('span', { className: 'widget-crash-risk__factor-label' }, factor.label || factor.id),
+                factor.impact && React.createElement('span', { 
+                  className: 'widget-crash-risk__factor-impact',
+                  style: { color: factor.impact > 20 ? '#ef4444' : factor.impact > 10 ? '#eab308' : '#9ca3af' }
+                }, `+${factor.impact}`)
+              )
+            )
+          ),
+        
+        // Sparkline истории риска
+        riskHistory.length > 0 &&
+          React.createElement('div', { className: 'widget-crash-risk__sparkline-container' },
+            renderSparkline(riskHistory, 70, 20)
+          ),
+        
+        // Низ: рекомендация
+        widget.settings?.showRecommendation !== false && recommendation &&
+          React.createElement('div', { className: 'widget-crash-risk__recommendation' },
+            recommendation.length > 60 ? recommendation.slice(0, 57) + '...' : recommendation
+          ),
+        
+        // Popup
+        renderPopup()
+      );
+    }
+    
+    // 4x2 и больше — расширенный layout
+    if (d.cols >= 4) {
+      return React.createElement('div', { 
+        className: 'widget-crash-risk widget-crash-risk--wide',
+        onClick: () => setShowPopup(true)
+      },
+        // Левая часть: светофор
+        React.createElement('div', { className: 'widget-crash-risk__left' },
+          React.createElement('div', { className: 'widget-crash-risk__traffic-light widget-crash-risk__traffic-light--vertical' },
+            React.createElement('div', { 
+              className: `widget-crash-risk__light widget-crash-risk__light--red ${level === 'high' ? 'active' : ''}` 
+            }),
+            React.createElement('div', { 
+              className: `widget-crash-risk__light widget-crash-risk__light--yellow ${level === 'medium' ? 'active' : ''}` 
+            }),
+            React.createElement('div', { 
+              className: `widget-crash-risk__light widget-crash-risk__light--green ${level === 'low' ? 'active' : ''}` 
+            })
+          ),
+          React.createElement('div', { 
+            className: 'widget-crash-risk__risk-value widget-crash-risk__risk-value--lg',
+            style: { color }
+          }, `${risk}%`),
+          React.createElement('div', { 
+            className: 'widget-crash-risk__level-text',
+            style: { color }
+          }, levelText)
+        ),
+        
+        // Правая часть: все факторы + рекомендация + sparkline
+        React.createElement('div', { className: 'widget-crash-risk__right' },
+          // Sparkline истории
+          riskHistory.length > 0 &&
+            React.createElement('div', { className: 'widget-crash-risk__sparkline-container widget-crash-risk__sparkline-container--wide' },
+              React.createElement('span', { className: 'widget-crash-risk__sparkline-label' }, '7 дней'),
+              renderSparkline(riskHistory, 120, 28)
+            ),
+          widget.settings?.showFactors !== false && factors.length > 0 &&
+            React.createElement('div', { className: 'widget-crash-risk__factors widget-crash-risk__factors--full' },
+              React.createElement('div', { className: 'widget-crash-risk__factors-title' }, 'Факторы:'),
+              factors.slice(0, 4).map((factor, i) =>
+                React.createElement('div', { 
+                  key: i,
+                  className: 'widget-crash-risk__factor',
+                  title: getFactorTooltip(factor)
+                },
+                  React.createElement('span', { className: 'widget-crash-risk__factor-label' }, factor.label || factor.id),
+                  factor.impact && React.createElement('span', { 
+                    className: 'widget-crash-risk__factor-impact',
+                    style: { color: factor.impact > 20 ? '#ef4444' : factor.impact > 10 ? '#eab308' : '#9ca3af' }
+                  }, `+${factor.impact}`)
+                )
+              )
+            ),
+          widget.settings?.showRecommendation !== false && recommendation &&
+            React.createElement('div', { className: 'widget-crash-risk__recommendation widget-crash-risk__recommendation--full' },
+              recommendation
+            )
+        ),
+        
+        // Popup
+        renderPopup()
+      );
+    }
+    
+    // Стандартный fallback
+    return React.createElement('div', { 
+      className: `widget-crash-risk widget-crash-risk--${variant}`,
+      onClick: () => setShowPopup(true)
+    },
+      React.createElement('div', { className: 'widget-crash-risk__emoji' }, emoji),
+      React.createElement('div', { 
+        className: 'widget-crash-risk__risk-value',
+        style: { color }
+      }, `${risk}%`),
+      React.createElement('div', { 
+        className: 'widget-crash-risk__level-text',
+        style: { color }
+      }, levelText),
+      renderPopup()
     );
   }
   

@@ -358,17 +358,11 @@
     React.useEffect(() => {
       if (!enabled || !currentDate) return;
       
-      // 🔧 v3.19.2: Логируем prefetch для диагностики
-      console.log('[HEYS] 🔄 useSmartPrefetch triggered | date:', currentDate, '| cached:', prefetchedRef.current.size);
-      
       const dates = getDatesToPrefetch(currentDate);
       prefetchFromCloud(dates);
       
       // Подписка на восстановление соединения
       const handleOnline = () => {
-        // 🔧 v3.19.2: НЕ сбрасываем глобальный кэш при online
-        // prefetchedRef.current.clear(); — убрано, используем cooldown вместо этого
-        console.log('[HEYS] 🌐 Online event — triggering prefetch');
         prefetchFromCloud(getDatesToPrefetch(currentDate));
       };
       

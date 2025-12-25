@@ -45,7 +45,9 @@
   // ═══════════════════════════════════════════════════════════════════
   
   function log(...args) {
-    console.log('[YandexAPI]', ...args);
+    if (global.HEYS?.debug) {
+      console.log('[YandexAPI]', ...args);
+    }
   }
   
   function err(...args) {
@@ -578,20 +580,39 @@
   // ═══════════════════════════════════════════════════════════════════
   
   // ═══════════════════════════════════════════════════════════════════
-  // 🔑 KV ОПЕРАЦИИ (через RPC, не REST)
+  // 🔑 KV ОПЕРАЦИИ (через RPC, session-safe — 🔐 P1 IDOR fix!)
   // ═══════════════════════════════════════════════════════════════════
   
   /**
-   * Сохранить данные в client_kv_store (RPC)
-   * @param {string} clientId - ID клиента
+   * Получить session_token для KV операций
+   * @returns {string|null}
+   */
+  function getSessionTokenForKV() {
+    // Пробуем через HEYS.Auth, затем напрямую из localStorage
+    if (typeof HEYS !== 'undefined' && HEYS.Auth && typeof HEYS.Auth.getSessionToken === 'function') {
+      return HEYS.Auth.getSessionToken();
+    }
+    // Fallback: напрямую из localStorage (global, без clientId namespace)
+    return localStorage.getItem('heys_session_token');
+  }
+  
+  /**
+   * Сохранить данные в client_kv_store (RPC) — 🔐 session-safe!
+   * @param {string} clientId - ID клиента (IGNORED для безопасности!)
    * @param {string} key - Ключ
    * @param {any} value - Значение
    * @returns {Promise<{success: boolean, error?: string}>}
    */
   async function saveKV(clientId, key, value) {
     try {
-      const result = await rpc('save_client_kv', {
-        p_client_id: clientId,
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) {
+        return { success: false, error: 'No session token' };
+      }
+      
+      // 🔐 P1: Используем session-версию (client_id извлекается на сервере!)
+      const result = await rpc('upsert_client_kv_by_session', {
+        p_session_token: sessionToken,
         p_key: key,
         p_value: value
       });
@@ -614,32 +635,41 @@
   }
   
   /**
-   * Получить данные из client_kv_store (RPC)
-   * @param {string} clientId - ID клиента
+   * Получить данные из client_kv_store (RPC) — 🔐 session-safe!
+   * @param {string} clientId - ID клиента (IGNORED для безопасности!)
    * @param {string} key - Ключ (опционально, если не указан — все ключи)
    * @returns {Promise<{data: any, error?: string}>}
    */
   async function getKV(clientId, key = null) {
     try {
-      const params = { p_client_id: clientId };
-      if (key) {
-        params.p_key = key;
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) {
+        return { data: null, error: 'No session token' };
       }
       
-      const result = await rpc('get_client_kv', params);
+      // 🔐 P1: Используем session-версию
+      // Примечание: для "все ключи" пока нет session-версии, возвращаем ошибку
+      if (!key) {
+        // TODO: Создать get_all_client_kv_by_session если нужно
+        warn('getKV without key not supported in session mode');
+        return { data: [], error: null };
+      }
+      
+      const result = await rpc('get_client_kv_by_session', {
+        p_session_token: sessionToken,
+        p_key: key
+      });
       
       if (result.error) {
         return { data: null, error: result.error.message || result.error };
       }
       
-      // RPC возвращает массив [{k, v, updated_at}, ...]
-      const rows = Array.isArray(result.data) ? result.data : [result.data].filter(Boolean);
-      
-      if (key) {
-        // Для конкретного ключа возвращаем только значение
-        return { data: rows[0]?.v };
+      // RPC возвращает {success, found, key, value}
+      const data = result.data;
+      if (data?.found) {
+        return { data: data.value };
       }
-      return { data: rows };
+      return { data: null };
     } catch (e) {
       err('getKV failed:', e.message);
       return { data: null, error: e.message };
@@ -648,16 +678,18 @@
   
   /**
    * Получить ВСЕ KV данные клиента для синхронизации
-   * @param {string} clientId - ID клиента
+   * @param {string} clientId - ID клиента (IGNORED)
    * @returns {Promise<{data: Array<{k: string, v: any}>, error?: string}>}
    */
   async function getAllKV(clientId) {
-    return getKV(clientId, null);
+    // TODO: Создать get_all_client_kv_by_session
+    warn('getAllKV not supported in session mode');
+    return { data: [], error: null };
   }
   
   /**
-   * Пакетное сохранение KV данных (RPC)
-   * @param {string} clientId - ID клиента
+   * Пакетное сохранение KV данных (RPC) — 🔐 session-safe!
+   * @param {string} clientId - ID клиента (IGNORED для безопасности!)
    * @param {Array<{k: string, v: any}>} items - Массив данных
    * @returns {Promise<{success: boolean, saved: number, error?: string}>}
    */
@@ -667,8 +699,14 @@
     }
     
     try {
-      const result = await rpc('batch_upsert_client_kv', {
-        p_client_id: clientId,
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) {
+        return { success: false, saved: 0, error: 'No session token' };
+      }
+      
+      // 🔐 P1: Используем session-версию
+      const result = await rpc('batch_upsert_client_kv_by_session', {
+        p_session_token: sessionToken,
         p_items: items
       });
       
@@ -690,15 +728,21 @@
   }
   
   /**
-   * Удалить данные из client_kv_store (RPC)
-   * @param {string} clientId - ID клиента
+   * Удалить данные из client_kv_store (RPC) — 🔐 session-safe!
+   * @param {string} clientId - ID клиента (IGNORED для безопасности!)
    * @param {string} key - Ключ
    * @returns {Promise<{success: boolean, error?: string}>}
    */
   async function deleteKV(clientId, key) {
     try {
-      const result = await rpc('delete_client_kv', {
-        p_client_id: clientId,
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) {
+        return { success: false, error: 'No session token' };
+      }
+      
+      // 🔐 P1: Используем session-версию
+      const result = await rpc('delete_client_kv_by_session', {
+        p_session_token: sessionToken,
         p_key: key
       });
       
@@ -706,7 +750,7 @@
         return { success: false, error: result.error.message || result.error };
       }
       
-      return { success: true };
+      return { success: result.data?.success !== false };
     } catch (e) {
       err('deleteKV failed:', e.message);
       return { success: false, error: e.message };
@@ -985,7 +1029,7 @@
   // ═══════════════════════════════════════════════════════════════════
   
   /**
-   * Создать pending продукт
+   * Создать pending продукт (🔐 P1: session-версия)
    * @param {object} product - Данные продукта
    * @returns {Promise<{data: object, error: any}>}
    */
@@ -993,7 +1037,17 @@
     try {
       log(`createPendingProduct:`, product.name);
       
-      const result = await rpc('create_pending_product', product);
+      // 🔐 P1: Используем session-версию (IDOR fix)
+      const sessionToken = getSessionToken();
+      if (!sessionToken) {
+        return { data: null, error: { message: 'No session token' } };
+      }
+      
+      const result = await rpc('create_pending_product_by_session', {
+        p_session_token: sessionToken,
+        p_name: product.name,
+        p_product_data: product
+      });
       
       return result;
     } catch (e) {

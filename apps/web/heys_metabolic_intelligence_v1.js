@@ -426,9 +426,59 @@
       });
     }
     
+    // === ПОЗИТИВНЫЕ ФАКТОРЫ (показываем что хорошо) ===
+    const positiveFactors = [];
+    
+    // Хороший сон (если заполнен и >= норма)
+    if (sleepHours > 0 && sleepHours >= sleepNorm) {
+      positiveFactors.push({
+        id: 'good_sleep',
+        label: 'Выспался',
+        impact: -10,
+        positive: true,
+        details: `Сон ${sleepHours}ч — отличная база для контроля`
+      });
+    }
+    
+    // Низкий стресс (если заполнен 1-3, или не заполнен = нет стресса)
+    if (stress <= 3) {
+      positiveFactors.push({
+        id: 'low_stress',
+        label: stress > 0 ? 'Низкий стресс' : 'Нет стресса',
+        impact: -10,
+        positive: true,
+        details: stress > 0 
+          ? `Стресс ${stress}/10 — хороший эмоциональный фон`
+          : 'Стресс не отмечен — хороший знак!'
+      });
+    }
+    
+    // Стабильное питание (нет дефицита)
+    if (consecutiveDeficitDays === 0) {
+      positiveFactors.push({
+        id: 'stable_eating',
+        label: 'Стабильное питание',
+        impact: -15,
+        positive: true,
+        details: 'Нет хронического дефицита — организм не в режиме стресса'
+      });
+    }
+    
+    // Будний день (меньше соц-триггеров)
+    if (!isFridayOrWeekend) {
+      positiveFactors.push({
+        id: 'weekday',
+        label: 'Будний день',
+        impact: -5,
+        positive: true,
+        details: 'Будние дни — меньше социальных триггеров'
+      });
+    }
+    
     return {
       risk: Math.min(100, riskScore),
       factors,
+      positiveFactors,
       level: riskScore < 30 ? 'low' : riskScore < 60 ? 'medium' : 'high'
     };
   }
@@ -1075,8 +1125,11 @@
     return {
       risk: finalRisk,
       riskLevel: finalRisk < 30 ? 'low' : finalRisk < 60 ? 'medium' : 'high',
+      level: finalRisk < 30 ? 'low' : finalRisk < 60 ? 'medium' : 'high', // Алиас для совместимости
       primaryTrigger,
       triggers,
+      factors: currentRisk.factors || [], // Факторы из базового расчёта
+      positiveFactors: currentRisk.positiveFactors || [], // 🆕 Позитивные факторы
       preventionStrategy,
       timeframe: '24-48 часов',
       confidence: triggers.length > 0 ? 0.75 : 0.5,

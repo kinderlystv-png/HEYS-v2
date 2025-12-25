@@ -412,7 +412,6 @@
       return null;
     },
     save: (data, ctx, allStepData) => {
-      console.log('[TrainingStep] SAVE called:', { data, ctx, allStepData });
       const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
       const trainingIndex = ctx?.trainingIndex ?? 0;
       const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
@@ -436,15 +435,11 @@
         comment: infoData.comment || zonesData.comment || ''
       };
       
-      console.log('[TrainingStep] Saving training:', finalTraining);
-      
       trainings[trainingIndex] = finalTraining;
       
       day.trainings = trainings;
       day.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, day);
-      
-      console.log('[TrainingStep] Saved day:', day.trainings[trainingIndex]);
       
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'trainings', source: 'training-step', forceReload: true }

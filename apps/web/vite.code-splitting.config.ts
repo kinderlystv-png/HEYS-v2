@@ -1,7 +1,8 @@
 // filepath: apps/web/vite.code-splitting.config.ts
 
-import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
+
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 /**

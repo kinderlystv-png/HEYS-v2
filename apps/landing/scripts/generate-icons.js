@@ -13,9 +13,10 @@
  * - og-image.png (1200x630)
  */
 
-const sharp = require('sharp')
-const path = require('path')
 const fs = require('fs')
+const path = require('path')
+
+const sharp = require('sharp')
 
 const SOURCE_SVG = path.join(__dirname, '../public/icon.svg')
 const OG_SVG = path.join(__dirname, '../public/og-image-template.svg')

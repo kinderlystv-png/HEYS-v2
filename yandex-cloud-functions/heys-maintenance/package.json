@@ -1,0 +1,9 @@
+{
+  "name": "heys-maintenance",
+  "version": "1.0.0",
+  "description": "Scheduled maintenance tasks for HEYS (cleanup security logs)",
+  "main": "index.js",
+  "dependencies": {
+    "pg": "^8.11.3"
+  }
+}

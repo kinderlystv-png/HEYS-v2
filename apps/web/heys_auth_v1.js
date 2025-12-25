@@ -227,8 +227,8 @@
       // 2. Хешируем PIN
       const pinHash = await hashPin(pin, salt);
 
-      // 3. Верифицируем
-      const vRes = await api.rpc('verify_client_pin', {
+      // 3. Верифицируем через v2 (возвращает session_token!)
+      const vRes = await api.rpc('verify_client_pin_v2', {
         p_phone: phoneNorm,
         p_pin_hash: pinHash,
       });
@@ -240,7 +240,7 @@
           error: 'invalid_credentials',
           _debug: {
             stage: 'verify_pin',
-            rpc: 'verify_client_pin',
+            rpc: 'verify_client_pin_v2',
             code: vRes.error.code,
           },
         };
@@ -248,23 +248,27 @@
 
       const vRow = Array.isArray(vRes.data) ? vRes.data[0] : vRes.data;
       const clientId = vRow && vRow.client_id;
-      if (!clientId) {
+      const sessionToken = vRow && vRow.session_token;
+      
+      if (!clientId || !sessionToken) {
         registerFail('login', phoneNorm);
         return {
           ok: false,
           error: 'invalid_credentials',
           _debug: {
             stage: 'verify_pin',
-            rpc: 'verify_client_pin',
+            rpc: 'verify_client_pin_v2',
             dataType: Array.isArray(vRes.data) ? 'array' : typeof vRes.data,
-            hasClientId: false,
-            // Важно: server-side lockout сейчас не отличим от неверного PIN (оба возвращают client_id=null)
-            note: 'lockout_indistinguishable_without_rpc_v2',
+            hasClientId: !!clientId,
+            hasSessionToken: !!sessionToken,
           },
         };
       }
 
-      return { ok: true, clientId };
+      // 🔐 Сохраняем session_token для безопасных RPC вызовов
+      U.lsSet('heys_session_token', sessionToken);
+
+      return { ok: true, clientId, sessionToken };
     } catch (e) {
       registerFail('login', phoneNorm);
       return {
@@ -341,6 +345,48 @@
     return { ok: true };
   }
 
+  // === Session Token Management ===
+  
+  /**
+   * Получить текущий session_token
+   */
+  function getSessionToken() {
+    return U.lsGet('heys_session_token', null);
+  }
+
+  /**
+   * Проверить, есть ли активная сессия
+   */
+  function hasSession() {
+    return !!getSessionToken();
+  }
+
+  /**
+   * Logout — отозвать сессию на сервере и очистить локально
+   */
+  async function logout() {
+    const token = getSessionToken();
+    
+    if (token) {
+      const api = HEYS.YandexAPI;
+      if (api) {
+        try {
+          await api.rpc('revoke_session', { p_session_token: token });
+        } catch (e) {
+          console.warn('[HEYS Auth] revoke_session failed:', e);
+        }
+      }
+    }
+
+    // Очищаем локально
+    try {
+      localStorage.removeItem('heys_session_token');
+      localStorage.removeItem('heys_client_current');
+    } catch (_) {}
+
+    return { ok: true };
+  }
+
   HEYS.auth = {
     normalizePhone,
     isValidPhone,
@@ -351,5 +397,9 @@
     loginClient,
     createClientWithPin,
     resetClientPin,
+    // 🔐 Session management
+    getSessionToken,
+    hasSession,
+    logout,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -185,6 +185,102 @@
     );
   }
 
+  // === SubscriptionStatusSection — отображение статуса подписки ===
+  function SubscriptionStatusSection() {
+    const [statusData, setStatusData] = React.useState(null);
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+      if (!window.HEYS?.Subscription) {
+        setLoading(false);
+        return;
+      }
+      
+      window.HEYS.Subscription.getStatus(true).then(data => {
+        setStatusData(data);
+        setLoading(false);
+      }).catch(() => setLoading(false));
+    }, []);
+
+    if (loading) {
+      return React.createElement('div', { className: 'profile-section__fields' },
+        React.createElement('div', { style: { textAlign: 'center', padding: '20px', color: 'var(--gray-500)' } }, 
+          'Загрузка...'
+        )
+      );
+    }
+
+    if (!window.HEYS?.Subscription) {
+      return React.createElement('div', { className: 'profile-section__fields' },
+        React.createElement('div', { style: { textAlign: 'center', padding: '20px', color: 'var(--gray-500)' } }, 
+          'Модуль подписок не загружен'
+        )
+      );
+    }
+
+    const status = statusData?.status || 'none';
+    const meta = window.HEYS.Subscription.getStatusMeta(status);
+    const daysLeft = statusData?.days_left || 0;
+
+    return React.createElement('div', { className: 'profile-section__fields' },
+      // Статус карточка
+      React.createElement('div', { 
+        className: 'profile-field-group',
+        style: { 
+          backgroundColor: meta?.bg || 'var(--gray-100)', 
+          borderRadius: '12px', 
+          padding: '16px',
+          border: `2px solid ${meta?.color || 'var(--gray-300)'}`
+        }
+      },
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' } },
+          React.createElement('span', { style: { fontSize: '32px' } }, meta?.emoji || '💎'),
+          React.createElement('div', null,
+            React.createElement('div', { style: { fontSize: '18px', fontWeight: '600', color: meta?.color || 'inherit' } }, 
+              meta?.label || 'Подписка'
+            ),
+            React.createElement('div', { style: { fontSize: '14px', color: 'var(--gray-600)' } }, 
+              meta?.desc || ''
+            )
+          )
+        ),
+        
+        // Дни до окончания
+        (status === 'trial' || status === 'active') && daysLeft > 0 && 
+          React.createElement('div', { 
+            style: { 
+              backgroundColor: 'rgba(0,0,0,0.05)', 
+              borderRadius: '8px', 
+              padding: '12px', 
+              textAlign: 'center',
+              marginBottom: '12px'
+            } 
+          },
+            React.createElement('div', { style: { fontSize: '24px', fontWeight: '700', color: meta?.color } }, 
+              daysLeft
+            ),
+            React.createElement('div', { style: { fontSize: '12px', color: 'var(--gray-600)' } }, 
+              daysLeft === 1 ? 'день осталось' : (daysLeft < 5 ? 'дня осталось' : 'дней осталось')
+            )
+          ),
+        
+        // Кнопка оплаты (для read_only или none)
+        (status === 'read_only' || status === 'none') &&
+          React.createElement('button', {
+            className: 'btn btn-primary',
+            style: { width: '100%', marginTop: '8px' },
+            onClick: () => {
+              if (window.HEYS?.Paywall?.show) {
+                window.HEYS.Paywall.show();
+              } else {
+                alert('Оплата скоро будет доступна! 💎');
+              }
+            }
+          }, status === 'read_only' ? '🔓 Продлить подписку' : '🚀 Начать пробный период')
+      )
+    );
+  }
+
   // === ProfileSection — FAQ-style collapsible section ===
   function ProfileSection({ 
     id, 
@@ -1298,20 +1394,24 @@
         )
       ), // end ProfileSection security
 
-      // === СЕКЦИЯ 5: Подписка ===
-      window.HEYS?.Subscriptions?.SubscriptionSection
-        ? React.createElement(ProfileSection, {
-            id: 'subscription',
-            icon: '💎',
-            title: 'Подписка',
-            subtitle: window.HEYS.Subscriptions.getStatusLabel ? window.HEYS.Subscriptions.getStatusLabel() : 'Тариф и оплата',
-            tone: 'emerald',
-            expanded: expandedSections.subscription,
-            onToggle: () => toggleSection('subscription')
-          },
-            React.createElement(window.HEYS.Subscriptions.SubscriptionSection)
-          )
-        : null,
+      // === СЕКЦИЯ 5: Подписка (новый модуль HEYS.Subscription) ===
+      React.createElement(ProfileSection, {
+        id: 'subscription',
+        icon: '💎',
+        title: 'Подписка',
+        subtitle: (() => {
+          const cached = window.HEYS?.Subscription?.getCachedStatus?.();
+          if (!cached) return 'Загрузка...';
+          const meta = window.HEYS.Subscription.getStatusMeta(cached.status);
+          return meta?.label || 'Тариф и оплата';
+        })(),
+        tone: 'emerald',
+        expanded: expandedSections.subscription,
+        onToggle: () => toggleSection('subscription')
+      },
+        // Простой компонент статуса подписки
+        React.createElement(SubscriptionStatusSection)
+      ),
 
       // === СЕКЦИЯ 6: Система и аналитика ===
       React.createElement(ProfileSection, {

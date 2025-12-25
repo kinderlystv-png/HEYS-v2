@@ -1,3 +1,4 @@
+import TrialCapacity from './TrialCapacity'
 import TrialForm from './TrialForm'
 
 export default function Trial() {
@@ -8,9 +9,12 @@ export default function Trial() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Левая часть - текст */}
             <div className="text-center lg:text-left">
-              {/* Badge */}
-              <div className="inline-block bg-white/20 backdrop-blur text-white text-sm font-medium px-4 py-2 rounded-full mb-8">
-                🎁 Бесплатный триал
+              {/* Capacity Widget + Badge */}
+              <div className="flex flex-col sm:flex-row items-center gap-3 mb-8">
+                <div className="inline-block bg-white/20 backdrop-blur text-white text-sm font-medium px-4 py-2 rounded-full">
+                  🎁 Бесплатный триал
+                </div>
+                <TrialCapacity compact className="bg-white/10 border-white/20" />
               </div>
               
               {/* Heading */}

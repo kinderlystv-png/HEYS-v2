@@ -598,7 +598,8 @@
         const preferLocal = preferRemote ? false : localIsNewer;
         
         if (preferRemote) {
-          logCritical(`🔄 [MERGE] preferRemote: meal "${meal.name}" | local items: ${meal.items?.length || 0} | remote items: ${existing.items?.length || 0} → using remote`);
+          // 🔇 PERF: Отключено — слишком много логов при merge
+          // logCritical(`🔄 [MERGE] preferRemote: meal "${meal.name}" | local items: ${meal.items?.length || 0} | remote items: ${existing.items?.length || 0} → using remote`);
         }
         
         const mergedItems = mergeItemsById(existing.items || [], meal.items || [], preferLocal);
@@ -3222,9 +3223,12 @@
       const summary = Object.entries(stats).filter(([,v]) => v > 0).map(([k,v]) => `${k}: ${v}`).join(', ');
       log(`✅ [CLIENT_SYNC] Loaded ${data?.length || 0} keys (${summary})`);
       
-      // 🔍 ДИАГНОСТИКА: показать все ключи из базы
-      const allKeys = (data||[]).map(row => row.k);
-      console.log('🔍 [SYNC DEBUG] Все ключи из базы:', allKeys);
+      // 🔍 ДИАГНОСТИКА: показать все ключи из базы (ОТКЛЮЧЕНО — слишком много логов)
+      // const allKeys = (data||[]).map(row => row.k);
+      // console.log('🔍 [SYNC DEBUG] Все ключи из базы:', allKeys);
+      
+      // ⏱️ TIMING: засекаем время обработки
+      const syncStartTime = performance.now();
       
       const ls = global.localStorage;
       muteMirror = true;
@@ -3291,6 +3295,10 @@
       
       log(`📊 [DEDUP] ${data?.length || 0} DB keys → ${deduped.length} unique scoped keys`);
       
+      // ⏱️ TIMING: Отслеживаем время обработки 
+      let keyProcessingStart = performance.now();
+      let keysProcessed = 0;
+      
       // 🔄 ФАЗ 2: ОБРАБОТКА дедуплицированных ключей
       deduped.forEach(({ scopedKey, row }) => {
         try {
@@ -3319,16 +3327,17 @@
             const remoteUpdatedAt = row.v?.updatedAt || 0;
             const localUpdatedAt = local?.updatedAt || 0;
             
-            // 🔍 ДИАГНОСТИКА: логируем состояние для отладки race conditions
-            logCritical(`📅 [SYNC dayv2] key=${key} | local: ${local?.meals?.length || 0} meals, updatedAt=${localUpdatedAt} | remote: ${row.v?.meals?.length || 0} meals, updatedAt=${remoteUpdatedAt} | forceSync=${forceSync}`);
+            // 🔍 ДИАГНОСТИКА: логируем состояние для отладки race conditions (ОТКЛЮЧЕНО - слишком много логов)
+            // logCritical(`📅 [SYNC dayv2] key=${key} | local: ${local?.meals?.length || 0} meals, updatedAt=${localUpdatedAt} | remote: ${row.v?.meals?.length || 0} meals, updatedAt=${remoteUpdatedAt} | forceSync=${forceSync}`);
             
             // 🔄 FORCE MODE (pull-to-refresh): ВСЕГДА применять облачные данные
             // При force берём remote как базу, remote items ПОБЕЖДАЮТ при конфликте
             if (forceSync && row.v) {
               // local уже перечитан выше (свежие данные из localStorage)
-              logCritical(`🔄 [FORCE SYNC] Processing day | key: ${key}`);
-              logCritical(`   📦 local: ${local?.meals?.length || 0} meals, updatedAt: ${local?.updatedAt}`);
-              logCritical(`   ☁️ remote: ${row.v.meals?.length || 0} meals, updatedAt: ${row.v?.updatedAt}`);
+              // 🔇 PERF: Отключено — слишком много логов на 256 ключей
+              // logCritical(`🔄 [FORCE SYNC] Processing day | key: ${key}`);
+              // logCritical(`   📦 local: ${local?.meals?.length || 0} meals, updatedAt: ${local?.updatedAt}`);
+              // logCritical(`   ☁️ remote: ${row.v.meals?.length || 0} meals, updatedAt: ${row.v?.updatedAt}`);
               
               let valueToSave;
               if (local && local.meals?.length > 0) {
@@ -3338,10 +3347,12 @@
                 const localHasMore = local.meals.length > (row.v.meals?.length || 0);
                 const localIsNewer = (local.updatedAt || 0) > (row.v.updatedAt || 0);
                 
-                logCritical(`   🔍 CHECK: localHasMore=${localHasMore} (${local.meals.length} > ${row.v.meals?.length || 0}), localIsNewer=${localIsNewer} (${local.updatedAt} > ${row.v.updatedAt})`);
+                // 🔇 PERF: Отключено
+                // logCritical(`   🔍 CHECK: localHasMore=${localHasMore} (${local.meals.length} > ${row.v.meals?.length || 0}), localIsNewer=${localIsNewer} (${local.updatedAt} > ${row.v.updatedAt})`);
                 
                 if (localHasMore || localIsNewer) {
-                  logCritical(`🛡️ [FORCE SYNC] PROTECTED! Local wins: hasMore=${localHasMore}, isNewer=${localIsNewer}. Keeping local.`);
+                  // 🔇 PERF: Отключено
+                  // logCritical(`🛡️ [FORCE SYNC] PROTECTED! Local wins: hasMore=${localHasMore}, isNewer=${localIsNewer}. Keeping local.`);
                   valueToSave = local;
                   
                   // 🔄 Отправляем local в облако чтобы следующий sync получил актуальные данные
@@ -3357,7 +3368,8 @@
                     };
                     clientUpsertQueue.push(upsertObj);
                     scheduleClientPush();
-                    logCritical(`☁️ [FORCE SYNC] Queued local data upload to cloud for ${dayKey}`);
+                    // 🔇 PERF: Отключено
+                    // logCritical(`☁️ [FORCE SYNC] Queued local data upload to cloud for ${dayKey}`);
                   }
                 } else {
                   // Есть локальные данные — merge с preferRemote чтобы удаления из облака применились
@@ -3369,7 +3381,8 @@
                 valueToSave = row.v;
               }
               
-              logCritical(`🔄 [FORCE SYNC] Saving ${valueToSave.meals?.length || 0} meals to localStorage | key: ${key}`);
+              // 🔇 PERF: Отключено
+              // logCritical(`🔄 [FORCE SYNC] Saving ${valueToSave.meals?.length || 0} meals to localStorage | key: ${key}`);
               ls.setItem(key, JSON.stringify(valueToSave));
               
               const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
@@ -3381,7 +3394,8 @@
                     forceReload: true  // Обязательно! Иначе событие будет заблокировано
                   } 
                 }));
-                logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (force-sync, forceReload=true)`);
+                // 🔇 PERF: Отключено
+                // logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (force-sync, forceReload=true)`);
               }
               return; // Готово
             }
@@ -3391,14 +3405,16 @@
               // MERGE: объединяем данные вместо перезаписи
               const merged = mergeDayData(local, row.v);
               if (merged) {
-                logCritical(`🔀 [MERGE] Day conflict resolved | key: ${key} | local: ${new Date(localUpdatedAt).toLocaleTimeString()} | remote: ${new Date(remoteUpdatedAt).toLocaleTimeString()}`);
+                // 🔇 PERF: Отключено
+                // logCritical(`🔀 [MERGE] Day conflict resolved | key: ${key} | local: ${new Date(localUpdatedAt).toLocaleTimeString()} | remote: ${new Date(remoteUpdatedAt).toLocaleTimeString()}`);
                 ls.setItem(key, JSON.stringify(merged));
                 
                 // Уведомляем UI об обновлении данных дня (для pull-to-refresh)
                 const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
                 if (dateMatch) {
                   window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: dateMatch[1], source: 'merge' } }));
-                  logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (merge)`);
+                  // 🔇 PERF: Отключено
+                  // logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (merge)`);
                 }
                 
                 // Отправляем merged версию обратно в облако через очередь (гарантия доставки)
@@ -3555,7 +3571,8 @@
           
           // ЗАЩИТА И MERGE: Умное объединение продуктов (не затираем локальные)
           if (key.includes('_products')) {
-            console.log('📦 [PRODUCTS DEBUG] Processing products key:', key, 'raw row.k:', row.k, 'row.v length:', Array.isArray(row.v) ? row.v.length : 'not array');
+            // 🔇 PERF: Отключено — много логов
+            // console.log('📦 [PRODUCTS DEBUG] Processing products key:', key, 'raw row.k:', row.k, 'row.v length:', Array.isArray(row.v) ? row.v.length : 'not array');
             
             // Читаем актуальное локальное значение по scoped ключу
             let currentLocal = null;
@@ -3845,7 +3862,8 @@
           // 🧩 Dispatch event for widget_layout updates (для виджетов)
           if (key.includes('widget_layout')) {
             if (typeof window !== 'undefined' && window.dispatchEvent) {
-              logCritical(`🧩 [EVENT] heys:widget-layout-updated dispatched (cloud-sync)`);
+              // 🔇 PERF: Отключено
+              // logCritical(`🧩 [EVENT] heys:widget-layout-updated dispatched (cloud-sync)`);
               window.dispatchEvent(new CustomEvent('heys:widget-layout-updated', { 
                 detail: { layout: valueToSave, source: 'cloud-sync' } 
               }));
@@ -3866,20 +3884,26 @@
             const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
             if (dateMatch) {
               window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: dateMatch[1], source: 'cloud' } }));
-              logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (cloud sync)`);
+              // 🔇 PERF: Отключено
+              // logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (cloud sync)`);
             }
             
+            // 🔇 PERF: Отключено — слишком много логов
             // 🔍 Диагностика: логируем загрузку данных дня с шагами
-            const steps = row.v.steps || 0;
-            if (steps > 0) {
-              logCritical(`📅 [DAY SYNC] Loaded day ${key} with steps: ${steps}`);
-            }
+            // const steps = row.v.steps || 0;
+            // if (steps > 0) {
+            //   logCritical(`📅 [DAY SYNC] Loaded day ${key} with steps: ${steps}`);
+            // }
           }
         } catch(e){}
       });
       
       muteMirror = false;
       cloud._lastClientSync = { clientId: client_id, ts: now };
+      
+      // ⏱️ TIMING: логируем время обработки
+      const syncDuration = Math.round(performance.now() - syncStartTime);
+      console.log(`⏱️ [SYNC TIMING] Processing ${deduped.length} keys took ${syncDuration}ms`);
       
       // 🧹 Очистка дублирующихся ключей после синхронизации
       cleanupDuplicateKeys();
@@ -5617,21 +5641,23 @@
   };
 
   /**
-   * Создание pending-заявки для PIN-клиента
-   * @param {string} clientId - ID клиента
+   * Создание pending-заявки для PIN-клиента (🔐 P1: session-версия)
+   * @param {string} clientId - ID клиента (ignored, используется session_token)
    * @param {Object} product - Объект продукта
    * @returns {Promise<{data: any, error: any, status: string}>}
    */
   cloud.createPendingProduct = async function(clientId, product) {
     try {
-      const fingerprint = await HEYS.models.computeProductFingerprint(product);
-      const name_norm = HEYS.models.normalizeProductName(product.name);
+      // 🔐 P1: Используем session_token вместо client_id
+      const sessionToken = U.lsGetGlobal?.('heys_session_token') || localStorage.getItem('heys_session_token');
+      if (!sessionToken) {
+        return { data: null, error: 'No session token', status: 'error' };
+      }
       
-      const { data, error } = await YandexAPI.rpc('create_pending_product', {
-        p_client_id: clientId,
-        p_product_data: product,
-        p_name_norm: name_norm,
-        p_fingerprint: fingerprint
+      const { data, error } = await YandexAPI.rpc('create_pending_product_by_session', {
+        p_session_token: sessionToken,
+        p_name: product.name,
+        p_product_data: product
       });
       
       if (error) {

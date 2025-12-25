@@ -635,9 +635,6 @@
       if (!container) return;
       
       const handleTouchMove = (e) => {
-        // DEBUG: логируем что происходит
-        console.log('[TouchMove NATIVE] target:', e.target.tagName, e.target.type, e.target.className);
-        
         // Разрешаем touch на range inputs (слайдерах) — проверяем ВСЕ возможные варианты
         const isRangeInput = e.target.tagName === 'INPUT' && e.target.type === 'range';
         const hasRangeClass = e.target.classList && e.target.classList.contains('mc-quality-slider');
@@ -648,12 +645,8 @@
         // Разрешаем touch на wheel picker (для выбора времени)
         const closestWheelPicker = e.target.closest ? e.target.closest('.mc-wheel-picker') : null;
         
-        console.log('[TouchMove NATIVE] isRangeInput:', isRangeInput, 'hasRangeClass:', hasRangeClass);
-        console.log('[TouchMove NATIVE] closestRange:', closestRange, 'closestSliderClass:', closestSliderClass, 'closestMoodCard:', closestMoodCard);
-        
         // Если это слайдер или внутри mood-rating-card или wheel-picker — НЕ блокируем
         if (isRangeInput || hasRangeClass || closestRange || closestSliderClass || closestMoodCard || closestWheelPicker) {
-          console.log('[TouchMove NATIVE] ALLOWED — слайдер, карточка настроения или wheel picker');
           return;
         }
         

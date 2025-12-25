@@ -216,17 +216,21 @@
         
         // 🎫 Автостарт триала при первом чек-ине после регистрации
         // Условие: это регистрационный чек-ин (профиль был пуст) И подписка не активна
-        if (isRegistrationCheckin && HEYS.Subscriptions) {
-          const subStatus = HEYS.Subscriptions.getStatus();
-          // Стартуем триал только если статус null/undefined (новый пользователь)
-          if (!subStatus || !subStatus.status) {
-            console.log('[MorningCheckin] 🎫 Registration complete — starting Pro trial');
-            HEYS.Subscriptions.startTrial('pro').then(() => {
-              console.log('[MorningCheckin] ✅ Pro trial started successfully');
-            }).catch(err => {
-              console.error('[MorningCheckin] ❌ Failed to start trial:', err);
-            });
-          }
+        if (isRegistrationCheckin && HEYS.Subscription) {
+          // Используем async/await внутри .then() т.к. wrappedOnComplete не async
+          HEYS.Subscription.getStatus().then(statusData => {
+            // Стартуем триал только если статус 'none' (новый пользователь без подписки)
+            if (statusData?.status === HEYS.Subscription.STATUS.NONE) {
+              console.log('[MorningCheckin] 🎫 Registration complete — starting Pro trial');
+              return HEYS.Subscription.startTrial();
+            }
+          }).then(result => {
+            if (result) {
+              console.log('[MorningCheckin] ✅ Pro trial started successfully:', result);
+            }
+          }).catch(err => {
+            console.error('[MorningCheckin] ❌ Failed to start trial:', err);
+          });
         }
         
         // 🔔 Устанавливаем флаг для советов по витаминам
@@ -301,17 +305,10 @@
         const wrappedOnComplete = () => {
           // 🎉 Поздравительная модалка теперь показывается как шаг 'welcome' внутри flow
           
-          // 🎫 Автостарт триала при первом чек-ине после регистрации
-          if (isRegistrationCheckin && HEYS.Subscriptions) {
-            const subStatus = HEYS.Subscriptions.getStatus();
-            if (!subStatus || !subStatus.status) {
-              console.log('[showCheckin.morning] 🎫 Registration complete — starting Pro trial');
-              HEYS.Subscriptions.startTrial('pro').then(() => {
-                console.log('[showCheckin.morning] ✅ Pro trial started successfully');
-              }).catch(err => {
-                console.error('[showCheckin.morning] ❌ Failed to start trial:', err);
-              });
-            }
+          // 🎫 Автостарт триала уже произошёл в стартовом useEffect (через HEYS.Subscription)
+          // Этот блок оставлен для логирования
+          if (isRegistrationCheckin) {
+            console.log('[showCheckin.morning] ✅ Registration checkin completed');
           }
           
           // 🔔 Устанавливаем флаг для советов по витаминам

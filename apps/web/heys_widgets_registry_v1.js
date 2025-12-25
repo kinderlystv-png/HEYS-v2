@@ -289,6 +289,23 @@
         showPhase: { type: 'boolean', default: true, label: 'Показывать фазу' },
         showCorrections: { type: 'boolean', default: true, label: 'Показывать коррекции' }
       }
+    },
+    
+    // === Категория: Продвинутое ===
+    crashRisk: {
+      type: 'crashRisk',
+      name: 'Риск срыва',
+      category: 'advanced',
+      icon: '⚠️',
+      description: 'Прогноз риска срыва на основе паттернов',
+      defaultSize: '2x2',
+      availableSizes: ALL_SIZES_4X4,
+      dataKeys: ['crashRisk'],
+      component: 'WidgetCrashRisk',
+      settings: {
+        showFactors: { type: 'boolean', default: true, label: 'Показывать факторы' },
+        showRecommendation: { type: 'boolean', default: true, label: 'Показывать совет' }
+      }
     }
   };
   

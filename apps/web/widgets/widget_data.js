@@ -48,6 +48,8 @@
           return this.getHeatmapData(widget.settings?.period || 'week');
         case 'cycle':
           return this.getCycleData();
+        case 'crashRisk':
+          return this.getCrashRiskData();
         default:
           return {};
       }
@@ -500,6 +502,173 @@
       // Fallback: базовый расчёт (30мл на кг веса)
       const prof = this._getProfile();
       return Math.round((prof.weight || 70) * 30);
+    },
+    
+    /**
+     * Получить данные о риске срыва
+     * @returns {Object} { risk, level, factors, recommendation, color }
+     */
+    getCrashRiskData() {
+      try {
+        const profile = this._getProfile() || {};
+        const today = this._formatDate(new Date());
+        
+        // Собираем историю за 7 дней
+        const history = [];
+        for (let i = 0; i < 7; i++) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          const dateStr = this._formatDate(date);
+          const dayData = this._getDayByDate(dateStr);
+          if (dayData) history.push({ date: dateStr, ...dayData });
+        }
+        
+        // Используем calculateCrashRisk24h если доступен
+        let crashData = null;
+        try {
+          if (HEYS.Metabolic?.calculateCrashRisk24h) {
+            crashData = HEYS.Metabolic.calculateCrashRisk24h(today, profile, history);
+          } else if (HEYS.Metabolic?.calculateCrashRisk) {
+            crashData = HEYS.Metabolic.calculateCrashRisk(today, profile, history);
+          }
+        } catch (calcError) {
+          console.warn('[getCrashRiskData] calculateCrashRisk error:', calcError);
+          crashData = null;
+        }
+        
+        // Fallback если модуль не загружен или ошибка
+        if (!crashData) {
+          crashData = { risk: 0, level: 'low', factors: [], recommendation: null };
+        }
+        
+        // Определяем цвет светофора
+        const getColor = (level) => {
+          switch (level) {
+            case 'high': return '#ef4444';   // Красный
+            case 'medium': return '#eab308'; // Жёлтый
+            case 'low': 
+            default: return '#22c55e';       // Зелёный
+          }
+        };
+        
+        // Определяем эмодзи
+        const getEmoji = (level) => {
+          switch (level) {
+            case 'high': return '🔴';
+            case 'medium': return '🟡';
+            case 'low':
+            default: return '🟢';
+          }
+        };
+        
+        // Определяем текст уровня
+        const getLevelText = (level) => {
+          switch (level) {
+            case 'high': return 'Высокий';
+            case 'medium': return 'Средний';
+            case 'low':
+            default: return 'Низкий';
+          }
+        };
+        
+        return {
+          risk: crashData.risk || 0,
+          level: crashData.level || 'low',
+          factors: crashData.factors || [],
+          positiveFactors: crashData.positiveFactors || [], // 🆕 Положительные факторы
+          recommendation: crashData.recommendation || this._getDefaultRecommendation(crashData.level),
+          color: getColor(crashData.level),
+          emoji: getEmoji(crashData.level),
+          levelText: getLevelText(crashData.level),
+          // Sparkline: история риска за 7 дней
+          riskHistory: this._calculateRiskHistory(history, profile)
+        };
+      } catch (e) {
+        console.error('[getCrashRiskData] Error:', e);
+        return {
+          risk: 0,
+          level: 'low',
+          factors: [],
+          recommendation: 'Всё под контролем!',
+          color: '#22c55e',
+          emoji: '🟢',
+          levelText: 'Низкий',
+          riskHistory: []
+        };
+      }
+    },
+    
+    /**
+     * Рассчитать историю риска за 7 дней для sparkline
+     * Упрощённая версия - используем сохранённые данные дней без пересчёта
+     * @param {Array} history - данные за 7 дней
+     * @param {Object} profile - профиль пользователя
+     * @returns {Array} [{ date, risk, level }]
+     */
+    _calculateRiskHistory(history, profile) {
+      const result = [];
+      
+      try {
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          const dateStr = this._formatDate(date);
+          
+          // Находим данные этого дня
+          const dayData = history.find(h => h.date === dateStr);
+          
+          // Упрощённый расчёт риска на основе данных дня
+          let risk = 0;
+          let level = 'low';
+          
+          if (dayData) {
+            // Базовый риск от недосыпа
+            const sleepHours = dayData.sleepHours || 0;
+            if (sleepHours > 0 && sleepHours < 6) risk += 25;
+            else if (sleepHours > 0 && sleepHours < 7) risk += 15;
+            
+            // Риск от стресса
+            const stress = dayData.stressAvg || 0;
+            if (stress >= 7) risk += 20;
+            else if (stress >= 5) risk += 10;
+            
+            // Риск от недоедания (ratio калорий)
+            const meals = dayData.meals || [];
+            if (meals.length === 0) risk += 15;
+            
+            // Определяем уровень
+            if (risk >= 50) level = 'high';
+            else if (risk >= 25) level = 'medium';
+          }
+          
+          result.push({
+            date: dateStr,
+            risk: Math.min(risk, 100),
+            level
+          });
+        }
+      } catch (e) {
+        // В случае ошибки возвращаем пустой массив
+        console.warn('[getCrashRiskData] Error calculating risk history:', e);
+        return [];
+      }
+      
+      return result;
+    },
+    
+    /**
+     * Дефолтная рекомендация по уровню риска
+     */
+    _getDefaultRecommendation(level) {
+      switch (level) {
+        case 'high':
+          return 'Высокий риск срыва. Добавьте перекус или лёгкую физическую активность.';
+        case 'medium':
+          return 'Умеренный риск. Следите за режимом питания и отдыхом.';
+        case 'low':
+        default:
+          return 'Всё под контролем! Продолжайте в том же духе.';
+      }
     },
     
     _calculateWeightTrend() {

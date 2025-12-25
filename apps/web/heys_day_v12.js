@@ -5768,6 +5768,12 @@
 
     // Быстрое добавление воды с анимацией
     function addWater(ml, skipScroll = false) {
+      // 🔒 Read-only gating
+      if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
+        HEYS.Paywall.showBlockedToast('Добавление воды недоступно');
+        return;
+      }
+      
       // Сначала прокручиваем к карточке воды (если вызвано из FAB)
       const waterCardEl = document.getElementById('water-card');
       if (!skipScroll && waterCardEl) {
@@ -6597,20 +6603,11 @@
     const addMeal = React.useCallback(async () => { 
       console.log('[HEYS] 🍽 addMeal() called | date:', date, '| isHydrated:', isHydrated);
       
-      // 🔒 Read-only гейтинг: проверяем подписку
-      const clientId = HEYS.utils?.getCurrentClientId?.() || window.HEYS?.currentClientId;
-      if (HEYS.Subscriptions && clientId) {
-        const canEditResult = await HEYS.Subscriptions.canEdit(clientId);
-        if (!canEditResult) {
-          console.log('[HEYS] 🚫 addMeal blocked — subscription inactive');
-          // Показываем уведомление о необходимости оплаты
-          if (HEYS.Subscriptions.showPaymentRequired) {
-            HEYS.Subscriptions.showPaymentRequired();
-          } else {
-            HEYS.Toast?.warning('Подписка не активна. Оформите подписку для продолжения.') || alert('Подписка не активна. Оформите подписку для продолжения.');
-          }
-          return;
-        }
+      // 🔒 Read-only gating: проверяем подписку через новый модуль
+      if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
+        console.log('[HEYS] 🚫 addMeal blocked — read-only mode');
+        HEYS.Paywall.showBlockedToast('Добавление приёма пищи недоступно');
+        return;
       }
       
       if (isMobile && HEYS.MealStep) {
@@ -6829,6 +6826,12 @@
     const [newItemIds, setNewItemIds] = useState(new Set());
     
     const addProductToMeal = React.useCallback((mi,p)=>{ 
+      // 🔒 Read-only gating
+      if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
+        HEYS.Paywall.showBlockedToast('Добавление продуктов недоступно');
+        return;
+      }
+      
       haptic('light'); // Вибрация при добавлении
       // Сохраняем ключевые нутриенты inline чтобы не зависеть от базы продуктов
       const item = {
@@ -19307,10 +19310,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     //   return React.createElement('div', { className: 'page page-day' }, skeletonLoader);
     // }
   
+    // === READ-ONLY BANNER: показываем если триал истёк ===
+    const subscriptionStatus = HEYS.Subscription?.getStatus?.() || {};
+    const isReadOnly = subscriptionStatus.status === 'read_only';
+    
     return React.createElement(React.Fragment, null,
       React.createElement('div',{
       className: 'page page-day'
     },
+      // === READ-ONLY BANNER ===
+      isReadOnly && HEYS.Paywall?.ReadOnlyBanner && React.createElement(HEYS.Paywall.ReadOnlyBanner, {
+        compact: false,
+        onClick: () => HEYS.Paywall?.showPaywall?.('trial_expired')
+      }),
+      
       // === МОБИЛЬНЫЕ ПОД-ВКЛАДКИ УБРАНЫ ===
       // Теперь переключение stats/diary через нижнее меню (5 вкладок в App)
       
