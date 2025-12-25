@@ -59,6 +59,7 @@ export {
 } from './realtime';
 
 // Import for internal use
+import { getGlobalLogger } from './logger';
 import type { MonitoringConfig as LegacyMonitoringConfig } from './performance';
 import { measure, measureAsync, monitor, recordError, recordMetric } from './performance';
 
@@ -66,7 +67,9 @@ import { measure, measureAsync, monitor, recordError, recordMetric } from './per
  * Проверка production-окружения (Browser + Node.js)
  */
 const isProductionEnvironment = (): boolean => {
-  if (typeof import.meta !== 'undefined' && (import.meta as any).env?.MODE === 'production') {
+  const metaEnv =
+    typeof import.meta !== 'undefined' ? (import.meta as { env?: { MODE?: string } }).env : undefined;
+  if (metaEnv?.MODE === 'production') {
     return true;
   }
   if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
@@ -88,12 +91,14 @@ export const createMonitoringConfig = (
 
 // Global monitoring setup with new services
 export const setupMonitoring = (config?: Partial<LegacyMonitoringConfig>) => {
+  const logger = getGlobalLogger();
   const monitoringConfig = createMonitoringConfig(config);
 
   // Setup error boundary for unhandled errors
   if (typeof window !== 'undefined') {
     window.addEventListener('error', (event) => {
-      monitor.recordError(event.error || event.message, 'high', {
+      const errorValue = event.error instanceof Error ? event.error : event.message;
+      monitor.recordError(errorValue, 'high', {
         filename: event.filename,
         lineno: event.lineno,
         colno: event.colno,
@@ -101,7 +106,8 @@ export const setupMonitoring = (config?: Partial<LegacyMonitoringConfig>) => {
     });
 
     window.addEventListener('unhandledrejection', (event) => {
-      monitor.recordError(event.reason, 'high', {
+      const reasonValue = event.reason instanceof Error ? event.reason : String(event.reason);
+      monitor.recordError(reasonValue, 'high', {
         type: 'unhandled_promise_rejection',
       });
     });
@@ -121,9 +127,13 @@ export const setupMonitoring = (config?: Partial<LegacyMonitoringConfig>) => {
       // First Input Delay
       const fidObserver = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
-          monitor.recordMetric('fid', (entry as any).processingStart - entry.startTime, 'ms', {
-            type: 'core_web_vital',
-          });
+          if ('processingStart' in entry) {
+            const processingStart = (entry as PerformanceEntry & { processingStart: number })
+              .processingStart;
+            monitor.recordMetric('fid', processingStart - entry.startTime, 'ms', {
+              type: 'core_web_vital',
+            });
+          }
         }
       });
       fidObserver.observe({ entryTypes: ['first-input'] });
@@ -131,14 +141,24 @@ export const setupMonitoring = (config?: Partial<LegacyMonitoringConfig>) => {
       // Cumulative Layout Shift
       const clsObserver = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
-          if (!(entry as any).hadRecentInput) {
-            monitor.recordMetric('cls', (entry as any).value, 'score', { type: 'core_web_vital' });
+          if ('hadRecentInput' in entry && 'value' in entry) {
+            const layoutShift = entry as PerformanceEntry & {
+              hadRecentInput: boolean;
+              value: number;
+            };
+            if (!layoutShift.hadRecentInput) {
+              monitor.recordMetric('cls', layoutShift.value, 'score', {
+                type: 'core_web_vital',
+              });
+            }
           }
         }
       });
       clsObserver.observe({ entryTypes: ['layout-shift'] });
     } catch (error) {
-      console.warn('Failed to setup Core Web Vitals monitoring:', error);
+      logger.warn('Failed to setup Core Web Vitals monitoring', {
+        metadata: { error },
+      });
     }
   }
 

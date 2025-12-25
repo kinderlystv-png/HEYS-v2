@@ -7,6 +7,8 @@
 import { EventEmitter } from 'events';
 import { performance } from 'perf_hooks';
 
+import { getGlobalLogger } from './structured-logger';
+
 // Audit Event Types
 export enum AuditEventType {
   USER_ACTION = 'user_action',
@@ -121,6 +123,26 @@ export interface ComplianceContext {
   dataSubjectRights?: string[];
 }
 
+export type RequestContext = {
+  ip?: string;
+  sessionID?: string;
+  method?: string;
+  path: string;
+  originalUrl?: string;
+  query?: unknown;
+  headers?: Record<string, unknown>;
+  user?: { id?: string };
+  correlationId?: string;
+  get?: (name: string) => string | undefined;
+};
+
+export type ResponseContext = {
+  statusCode: number;
+  send: (data?: unknown) => unknown;
+};
+
+export type NextFunction = () => void;
+
 /**
  * Advanced Audit Logger Class
  * Provides enterprise-grade audit logging capabilities
@@ -131,7 +153,13 @@ export class AdvancedAuditLogger extends EventEmitter {
   private memoryStorage: AuditLogEntry[] = [];
   private correlationIdMap = new Map<string, string>();
   private statistics: AuditStatistics;
-  private flushTimer?: NodeJS.Timeout;
+  private flushTimer?: ReturnType<typeof setInterval>;
+  private logger = getGlobalLogger().child({ component: 'AdvancedAuditLogger' });
+
+  private requestContextToString(request?: RequestContext): string | undefined {
+    if (!request) return undefined;
+    return request.get?.('User-Agent');
+  }
 
   constructor(config: Partial<AuditLoggerConfig> = {}) {
     super();
@@ -221,7 +249,7 @@ export class AdvancedAuditLogger extends EventEmitter {
     action: string,
     resource?: string,
     metadata: Record<string, unknown> = {},
-    request?: any,
+    request?: RequestContext,
   ): Promise<string> {
     return this.logEvent(AuditEventType.USER_ACTION, action, {
       userId,
@@ -229,7 +257,7 @@ export class AdvancedAuditLogger extends EventEmitter {
       severity: AuditSeverity.MEDIUM,
       source: 'user_interface',
       ipAddress: request?.ip,
-      userAgent: request?.get?.('User-Agent'),
+      userAgent: this.requestContextToString(request),
       sessionId: request?.sessionID,
       metadata: {
         ...metadata,
@@ -268,7 +296,7 @@ export class AdvancedAuditLogger extends EventEmitter {
   ): Promise<string> {
     const complianceContext: ComplianceContext = {
       regulation: 'GDPR',
-      dataCategory: dataCategory as any,
+      dataCategory: dataCategory as ComplianceContext['dataCategory'],
       lawfulBasis,
       dataSubjectRights: ['access', 'rectification', 'erasure'],
     };
@@ -301,12 +329,14 @@ export class AdvancedAuditLogger extends EventEmitter {
         this.config.storage === 'memory' ? [...this.memoryStorage, ...this.buffer] : this.buffer;
 
       // Apply filters
-      if (query.startTime) {
-        allLogs = allLogs.filter((log) => new Date(log.timestamp) >= query.startTime!);
+      const startTime = query.startTime;
+      if (startTime) {
+        allLogs = allLogs.filter((log) => new Date(log.timestamp) >= startTime);
       }
 
-      if (query.endTime) {
-        allLogs = allLogs.filter((log) => new Date(log.timestamp) <= query.endTime!);
+      const endTime = query.endTime;
+      if (endTime) {
+        allLogs = allLogs.filter((log) => new Date(log.timestamp) <= endTime);
       }
 
       if (query.userId) {
@@ -321,10 +351,9 @@ export class AdvancedAuditLogger extends EventEmitter {
         allLogs = allLogs.filter((log) => log.severity === query.severity);
       }
 
-      if (query.action) {
-        allLogs = allLogs.filter((log) =>
-          log.action.toLowerCase().includes(query.action!.toLowerCase()),
-        );
+      const actionQuery = query.action?.toLowerCase();
+      if (actionQuery) {
+        allLogs = allLogs.filter((log) => log.action.toLowerCase().includes(actionQuery));
       }
 
       if (query.success !== undefined) {
@@ -340,10 +369,11 @@ export class AdvancedAuditLogger extends EventEmitter {
       }
 
       // Sort
-      if (query.sortBy) {
+      const sortBy = query.sortBy;
+      if (sortBy) {
         allLogs.sort((a, b) => {
-          const aVal = a[query.sortBy!];
-          const bVal = b[query.sortBy!];
+          const aVal = a[sortBy];
+          const bVal = b[sortBy];
 
           if (aVal === undefined && bVal === undefined) return 0;
           if (aVal === undefined) return 1;
@@ -352,7 +382,7 @@ export class AdvancedAuditLogger extends EventEmitter {
           const order = query.sortOrder === 'desc' ? -1 : 1;
 
           // Special handling for severity (low < medium < high < critical)
-          if (query.sortBy === 'severity') {
+          if (sortBy === 'severity') {
             const severityOrder = { low: 1, medium: 2, high: 3, critical: 4 };
             const aOrder = severityOrder[aVal as keyof typeof severityOrder] || 0;
             const bOrder = severityOrder[bVal as keyof typeof severityOrder] || 0;
@@ -393,7 +423,7 @@ export class AdvancedAuditLogger extends EventEmitter {
     regulation: 'GDPR' | 'CCPA' | 'HIPAA' | 'SOX' | 'PCI_DSS',
     startDate: Date,
     endDate: Date,
-  ): Promise<any> {
+  ): Promise<Record<string, unknown>> {
     const query: AuditQuery = {
       startTime: startDate,
       endTime: endDate,
@@ -551,7 +581,7 @@ export class AdvancedAuditLogger extends EventEmitter {
 
   private setupEventHandlers(): void {
     this.on('error', (error) => {
-      console.error('Audit Logger Error:', error);
+      this.logger.error('Audit Logger Error', { metadata: { error } });
     });
   }
 
@@ -654,22 +684,22 @@ export class AdvancedAuditLogger extends EventEmitter {
 
   private async sendAlert(entry: AuditLogEntry): Promise<void> {
     // Implement alert sending logic (webhook, Slack, email, etc.)
-    console.warn('CRITICAL AUDIT EVENT:', entry);
+    this.logger.warn('CRITICAL AUDIT EVENT', { metadata: entry as unknown as Record<string, unknown> });
   }
 
   private async writeToFile(logs: AuditLogEntry[]): Promise<void> {
     // File writing implementation
-    console.log(`Would write ${logs.length} logs to file`);
+    this.logger.info('Would write logs to file', { metadata: { count: logs.length } });
   }
 
   private async writeToDatabase(logs: AuditLogEntry[]): Promise<void> {
     // Database writing implementation
-    console.log(`Would write ${logs.length} logs to database`);
+    this.logger.info('Would write logs to database', { metadata: { count: logs.length } });
   }
 
   private async writeToElasticsearch(logs: AuditLogEntry[]): Promise<void> {
     // Elasticsearch writing implementation
-    console.log(`Would write ${logs.length} logs to Elasticsearch`);
+    this.logger.info('Would write logs to Elasticsearch', { metadata: { count: logs.length } });
   }
 
   private convertToCSV(logs: AuditLogEntry[]): string {
@@ -729,7 +759,8 @@ export function createAuditMiddleware(
     sensitiveHeaders = ['authorization', 'cookie', 'x-api-key'],
   } = options;
 
-  function sanitizeHeaders(headers: any, sensitiveHeaders: string[]): any {
+  type HeaderMap = Record<string, unknown>;
+  function sanitizeHeaders(headers: HeaderMap, sensitiveHeaders: string[]): HeaderMap {
     const sanitized = { ...headers };
     sensitiveHeaders.forEach((header) => {
       if (sanitized[header]) {
@@ -739,14 +770,14 @@ export function createAuditMiddleware(
     return sanitized;
   }
 
-  return (req: any, res: any, next: any) => {
+  return (req: RequestContext, res: ResponseContext, next: NextFunction) => {
     const startTime = performance.now();
     const correlationId =
-      req.get('X-Correlation-ID') ||
+      req.get?.('X-Correlation-ID') ||
       `corr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Set correlation ID for request tracking
-    logger.setCorrelationId(req.sessionID || req.ip, correlationId);
+    logger.setCorrelationId(req.sessionID || req.ip || 'unknown', correlationId);
     req.correlationId = correlationId;
 
     // Skip excluded paths
@@ -761,20 +792,20 @@ export function createAuditMiddleware(
         sessionId: req.sessionID,
         source: 'api_middleware',
         ipAddress: req.ip,
-        userAgent: req.get('User-Agent'),
+        userAgent: req.get?.('User-Agent'),
         severity: AuditSeverity.LOW,
         metadata: {
           method: req.method,
           url: req.originalUrl,
           query: req.query,
-          headers: sanitizeHeaders(req.headers, sensitiveHeaders),
+          headers: sanitizeHeaders(req.headers || {}, sensitiveHeaders),
         },
       });
     }
 
     if (logResponses) {
       const originalSend = res.send;
-      res.send = function (data: any) {
+      res.send = function (data: unknown) {
         const duration = performance.now() - startTime;
 
         logger.logEvent(AuditEventType.API_REQUEST, `${req.method} ${req.path} - Response`, {
@@ -787,7 +818,7 @@ export function createAuditMiddleware(
           duration,
           metadata: {
             statusCode: res.statusCode,
-            contentLength: data?.length || 0,
+            contentLength: typeof data === 'string' ? data.length : 0,
           },
         });
 

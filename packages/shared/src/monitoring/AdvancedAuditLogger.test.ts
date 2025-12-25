@@ -34,7 +34,6 @@ describe('AdvancedAuditLogger', () => {
   afterEach(async () => {
     if (auditLogger) {
       await auditLogger.destroy();
-      auditLogger = null as any;
     }
   });
 
@@ -354,7 +353,8 @@ describe('AdvancedAuditLogger', () => {
     });
 
     it('should throw error for unsupported format', async () => {
-      await expect(auditLogger.exportLogs({}, 'invalid' as any)).rejects.toThrow(
+      const invalidFormat = 'invalid' as unknown as 'json' | 'csv' | 'xml';
+      await expect(auditLogger.exportLogs({}, invalidFormat)).rejects.toThrow(
         'Unsupported export format',
       );
     });
@@ -427,9 +427,12 @@ describe('AdvancedAuditLogger', () => {
 
       // Force an error by providing invalid input
       const invalidLogger = new AdvancedAuditLogger();
+      const invalidLoggerWithInternals = invalidLogger as unknown as {
+        performRealTimeAnalysis: () => Promise<void>;
+      };
 
       // Mock a method to throw error
-      vi.spyOn(invalidLogger as any, 'performRealTimeAnalysis').mockRejectedValue(
+      vi.spyOn(invalidLoggerWithInternals, 'performRealTimeAnalysis').mockRejectedValue(
         new Error('Analysis failed'),
       );
 
@@ -441,7 +444,12 @@ describe('AdvancedAuditLogger', () => {
       auditLogger.on('error', errorSpy);
 
       // Mock flush to fail
-      vi.spyOn(auditLogger as any, 'writeToFile').mockRejectedValue(new Error('Write failed'));
+      const auditLoggerWithInternals = auditLogger as unknown as {
+        writeToFile: () => Promise<void>;
+      };
+      vi.spyOn(auditLoggerWithInternals, 'writeToFile').mockRejectedValue(
+        new Error('Write failed'),
+      );
 
       // This should not throw but emit an error
       await auditLogger.flush();
@@ -454,9 +462,23 @@ describe('AdvancedAuditLogger', () => {
 
 describe('Audit Middleware', () => {
   let auditLogger: AdvancedAuditLogger;
-  let mockReq: any;
-  let mockRes: any;
-  let mockNext: any;
+  let mockReq: {
+    method: string;
+    path: string;
+    originalUrl: string;
+    ip: string;
+    sessionID: string;
+    query: Record<string, string>;
+    headers: Record<string, string>;
+    get: (header: string) => string | undefined;
+    user?: { id?: string };
+    correlationId?: string;
+  };
+  let mockRes: {
+    statusCode: number;
+    send: (body?: unknown) => void;
+  };
+  let mockNext: () => void;
 
   beforeEach(() => {
     auditLogger = new AdvancedAuditLogger({ storage: 'memory' });
@@ -541,7 +563,8 @@ describe('Audit Middleware', () => {
     const query = await auditLogger.queryLogs({});
     const logEntry = query.logs[0];
     expect(logEntry).toBeDefined();
-    expect((logEntry?.metadata as any)?.headers?.authorization).toBe('[REDACTED]');
+    const metadata = logEntry?.metadata as { headers?: Record<string, string> } | undefined;
+    expect(metadata?.headers?.authorization).toBe('[REDACTED]');
   });
 
   it('should set correlation ID from header', () => {

@@ -92,7 +92,7 @@ export class StructuredLogger {
       },
       base: {
         pid: process.pid,
-        hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
+        hostname: typeof window !== 'undefined' && window.location?.hostname ? window.location.hostname : 'unknown',
         environment: this.config.environment,
         version: this.config.version,
       },
@@ -106,8 +106,10 @@ export class StructuredLogger {
 
     // Browser environment
     if (typeof window !== 'undefined') {
-      const consoleApi = typeof globalThis.console !== 'undefined' ? globalThis.console : undefined;
-      const levelToConsoleMethod: Record<string, keyof Console> = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const consoleApi = (globalThis as unknown as { console?: Record<string, (...args: unknown[]) => void> })
+        .console;
+      const levelToConsoleMethod: Record<string, string> = {
         trace: 'debug',
         debug: 'debug',
         info: 'info',
@@ -132,10 +134,10 @@ export class StructuredLogger {
                 : (pino.levels.labels[levelValue ?? 30] ?? 'info');
 
             const consoleMethodName = levelToConsoleMethod[levelLabel] ?? 'log';
-            const consoleMethod = consoleApi[consoleMethodName];
+            const consoleMethod = consoleApi?.[consoleMethodName];
 
             if (typeof consoleMethod === 'function') {
-              (consoleMethod as (descriptor: LogDescriptor) => void).call(consoleApi, log);
+              consoleMethod.call(consoleApi, log);
             }
           },
         },

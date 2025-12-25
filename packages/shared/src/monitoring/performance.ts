@@ -5,6 +5,8 @@
  * error reporting, and real-time monitoring capabilities.
  */
 
+import { getGlobalLogger } from './logger';
+
 export interface PerformanceMetric {
   name: string;
   value: number;
@@ -37,7 +39,7 @@ export class PerformanceMonitor {
   private metrics: PerformanceMetric[] = [];
   private errors: ErrorReport[] = [];
   private config: MonitoringConfig;
-  private batchTimer?: NodeJS.Timeout | undefined;
+  private batchTimer?: ReturnType<typeof setInterval>;
 
   constructor(config: MonitoringConfig) {
     this.config = config;
@@ -184,7 +186,8 @@ export class PerformanceMonitor {
       this.metrics = [];
       this.errors = [];
     } catch (error) {
-      console.warn('Failed to send monitoring data:', error);
+      const logger = getGlobalLogger();
+      logger.warn('Failed to send monitoring data', { metadata: { error } });
     }
   }
 
@@ -207,7 +210,7 @@ export class PerformanceMonitor {
   stop(): void {
     if (this.batchTimer) {
       clearInterval(this.batchTimer);
-      this.batchTimer = undefined;
+      delete this.batchTimer;
     }
 
     // Final flush
@@ -236,7 +239,9 @@ export class PerformanceMonitor {
  * Проверка production-окружения
  */
 const isProductionEnvironment = (): boolean => {
-  if (typeof import.meta !== 'undefined' && (import.meta as any).env?.MODE === 'production') {
+  const metaEnv =
+    typeof import.meta !== 'undefined' ? (import.meta as { env?: { MODE?: string } }).env : undefined;
+  if (metaEnv?.MODE === 'production') {
     return true;
   }
   if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {

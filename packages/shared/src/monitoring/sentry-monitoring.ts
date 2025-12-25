@@ -6,6 +6,8 @@
 import * as Sentry from '@sentry/browser';
 import { z } from 'zod';
 
+import { getGlobalLogger } from './logger';
+
 // Configuration schema
 const SentryConfigSchema = z.object({
   dsn: z.string().url(),
@@ -28,14 +30,14 @@ interface ErrorContext {
   route?: string;
   component?: string;
   action?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 interface PerformanceMetrics {
   name: string;
   duration: number;
   tags?: Record<string, string>;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 
 export class SentryMonitoring {
@@ -51,12 +53,12 @@ export class SentryMonitoring {
    */
   public initialize(): void {
     if (this.initialized) {
-      console.warn('Sentry already initialized');
+      getGlobalLogger().warn('Sentry already initialized');
       return;
     }
 
     try {
-      const initConfig: any = {
+      const initConfig: Sentry.BrowserOptions = {
         dsn: this.config.dsn,
         environment: this.config.environment,
         sampleRate: this.config.sampleRate,
@@ -68,12 +70,14 @@ export class SentryMonitoring {
           ...(this.config.enableSessionReplay ? [Sentry.replayIntegration()] : []),
         ],
 
-        beforeSend: (event: any, _hint: any) => {
-          console.log('Sending event to Sentry:', event.event_id);
+        beforeSend: (event: Sentry.ErrorEvent): Sentry.ErrorEvent | null => {
+          getGlobalLogger().debug('Sending event to Sentry', {
+            metadata: { eventId: event.event_id },
+          });
           return event;
         },
 
-        beforeSendTransaction: (transaction: any, _hint: any) => {
+        beforeSendTransaction: (transaction) => {
           return transaction;
         },
       };
@@ -86,9 +90,9 @@ export class SentryMonitoring {
       Sentry.init(initConfig);
 
       this.initialized = true;
-      console.log('Sentry monitoring initialized successfully');
+      getGlobalLogger().info('Sentry monitoring initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize Sentry:', error);
+      getGlobalLogger().error('Failed to initialize Sentry', { metadata: { error } });
       throw new Error('Sentry initialization failed');
     }
   }
@@ -100,7 +104,7 @@ export class SentryMonitoring {
     id?: string;
     email?: string;
     username?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   }): void {
     Sentry.setUser(user);
   }
@@ -108,7 +112,7 @@ export class SentryMonitoring {
   /**
    * Set additional context for error tracking
    */
-  public setContext(key: string, context: Record<string, any>): void {
+  public setContext(key: string, context: Record<string, unknown>): void {
     Sentry.setContext(key, context);
   }
 
@@ -122,7 +126,7 @@ export class SentryMonitoring {
   /**
    * Set extra data for error reports
    */
-  public setExtra(key: string, extra: any): void {
+  public setExtra(key: string, extra: unknown): void {
     Sentry.setExtra(key, extra);
   }
 
@@ -241,16 +245,18 @@ export class SentryMonitoring {
       },
       (span) => {
         if (span) {
-          const attributes: Record<string, any> = {
-            duration: metric.duration,
-          };
+          const attributes: Record<string, string | number> = { duration: metric.duration };
 
           if (metric.tags) {
             Object.assign(attributes, metric.tags);
           }
 
           if (metric.data) {
-            Object.assign(attributes, metric.data);
+            Object.entries(metric.data).forEach(([key, value]) => {
+              if (typeof value === 'string' || typeof value === 'number') {
+                attributes[key] = value;
+              }
+            });
           }
 
           span.setAttributes(attributes);
@@ -266,9 +272,9 @@ export class SentryMonitoring {
     message: string,
     category: string = 'default',
     level: 'debug' | 'info' | 'warning' | 'error' | 'fatal' = 'info',
-    data?: Record<string, any>,
+    data?: Record<string, unknown>,
   ): void {
-    const breadcrumb: any = {
+    const breadcrumb: Sentry.Breadcrumb = {
       message,
       category,
       level,
@@ -348,11 +354,15 @@ export class SentryMonitoring {
 
 // Performance monitoring decorator
 export function MonitorPerformance(operationName?: string) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value;
+  return function (
+    target: { constructor: { name: string } },
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+  ) {
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
     const name = operationName || `${target.constructor.name}.${propertyKey}`;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       const monitoring = globalMonitoring || new SentryMonitoring();
 
       return monitoring.measurePerformance(name, () => originalMethod.apply(this, args), {
@@ -367,10 +377,14 @@ export function MonitorPerformance(operationName?: string) {
 
 // Error boundary decorator
 export function CaptureErrors(context?: Partial<ErrorContext>) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value;
+  return function (
+    target: { constructor: { name: string } },
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+  ) {
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       try {
         return await originalMethod.apply(this, args);
       } catch (error) {
@@ -431,7 +445,7 @@ if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
     if (globalMonitoring) {
       globalMonitoring.captureError(
-        event.reason instanceof Error ? event.reason : new Error(event.reason),
+        event.reason instanceof Error ? event.reason : new Error(String(event.reason)),
         { action: 'unhandled_promise_rejection' },
       );
     }

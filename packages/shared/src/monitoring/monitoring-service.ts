@@ -5,8 +5,8 @@
 
 import { z } from 'zod';
 
-import StructuredLogger from './logger';
-import SentryMonitoring from './sentry-monitoring';
+import StructuredLogger, { getGlobalLogger, type LoggerConfig } from './logger';
+import SentryMonitoring, { type SentryConfig } from './sentry-monitoring';
 
 // Monitoring configuration schema
 const MonitoringConfigSchema = z.object({
@@ -14,13 +14,13 @@ const MonitoringConfigSchema = z.object({
   sentry: z
     .object({
       enabled: z.boolean().default(true),
-      config: z.any().optional(),
+      config: z.unknown().optional(),
     })
     .optional(),
   logging: z
     .object({
       enabled: z.boolean().default(true),
-      config: z.any().optional(),
+      config: z.unknown().optional(),
     })
     .optional(),
   performance: z
@@ -76,21 +76,21 @@ export class MonitoringService {
    */
   public async initialize(): Promise<void> {
     if (!this.config.enabled) {
-      console.log('Monitoring disabled');
+      getGlobalLogger().info('Monitoring disabled');
       return;
     }
 
     try {
       // Initialize Sentry monitoring
       if (this.config.sentry?.enabled) {
-        this.sentry = new SentryMonitoring(this.config.sentry.config);
+        this.sentry = new SentryMonitoring(this.config.sentry.config as Partial<SentryConfig>);
         this.sentry.initialize();
         this.metrics.health.sentryConnected = this.sentry.isHealthy();
       }
 
       // Initialize structured logging
       if (this.config.logging?.enabled) {
-        this.logger = new StructuredLogger(this.config.logging.config);
+        this.logger = new StructuredLogger(this.config.logging.config as Partial<LoggerConfig>);
         this.metrics.health.loggingActive = true;
       }
 
@@ -105,7 +105,7 @@ export class MonitoringService {
       // Setup error handlers
       this.setupGlobalErrorHandlers();
     } catch (error) {
-      console.error('Failed to initialize monitoring service:', error);
+      getGlobalLogger().error('Failed to initialize monitoring service', { metadata: { error } });
       throw error;
     }
   }
@@ -140,10 +140,15 @@ export class MonitoringService {
     // This is handled by individual services
     // Just update metrics here
     if (typeof window !== 'undefined') {
-      const originalConsoleError = console.error;
-      console.error = (...args) => {
+      const consoleRef = (globalThis as { console?: { error?: (...args: unknown[]) => void } })
+        .console;
+      const originalConsoleError = consoleRef?.error?.bind(consoleRef);
+      if (!consoleRef?.error) {
+        return;
+      }
+      consoleRef.error = (...args: unknown[]) => {
         this.updateErrorMetrics('error', args.join(' '));
-        originalConsoleError.apply(console, args);
+        originalConsoleError?.(...args);
       };
     }
   }
@@ -154,7 +159,7 @@ export class MonitoringService {
   public log(
     level: 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal',
     message: string,
-    context?: Record<string, any>,
+    context?: Record<string, unknown>,
   ): void {
     if (!this.initialized) return;
 
@@ -183,7 +188,7 @@ export class MonitoringService {
       userId?: string;
       component?: string;
       operation?: string;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     },
   ): string | null {
     if (!this.initialized) return null;
@@ -226,7 +231,7 @@ export class MonitoringService {
     context?: {
       component?: string;
       userId?: string;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     },
   ): Promise<T> {
     if (!this.initialized) {
@@ -267,7 +272,7 @@ export class MonitoringService {
     context?: {
       component?: string;
       userId?: string;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     },
   ): void {
     // Update metrics
@@ -348,7 +353,7 @@ export class MonitoringService {
   /**
    * Log user action
    */
-  public logUserAction(action: string, userId: string, metadata?: Record<string, any>): void {
+  public logUserAction(action: string, userId: string, metadata?: Record<string, unknown>): void {
     if (!this.initialized) return;
 
     if (this.logger) {
@@ -369,7 +374,7 @@ export class MonitoringService {
     statusCode?: number,
     duration?: number,
     userId?: string,
-    metadata?: Record<string, any>,
+    metadata?: Record<string, unknown>,
   ): void {
     if (!this.initialized) return;
 
@@ -396,7 +401,7 @@ export class MonitoringService {
     event: string,
     severity: 'low' | 'medium' | 'high' | 'critical',
     userId?: string,
-    metadata?: Record<string, any>,
+    metadata?: Record<string, unknown>,
   ): void {
     if (!this.initialized) return;
 
@@ -420,7 +425,7 @@ export class MonitoringService {
     id: string;
     email?: string;
     username?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   }): void {
     if (!this.initialized) return;
 
@@ -432,7 +437,7 @@ export class MonitoringService {
   /**
    * Add monitoring context
    */
-  public setContext(key: string, context: Record<string, any>): void {
+  public setContext(key: string, context: Record<string, unknown>): void {
     if (!this.initialized) return;
 
     if (this.sentry) {
@@ -479,9 +484,9 @@ export class MonitoringService {
    */
   public async healthCheck(): Promise<{
     status: 'healthy' | 'degraded' | 'unhealthy';
-    details: Record<string, any>;
+    details: Record<string, unknown>;
   }> {
-    const details: Record<string, any> = {
+    const details: Record<string, unknown> = {
       initialized: this.initialized,
       sentry: this.sentry?.isHealthy() || false,
       logging: !!this.logger,
@@ -503,7 +508,7 @@ export class MonitoringService {
    * Flush all monitoring data
    */
   public async flush(): Promise<void> {
-    const promises: Promise<any>[] = [];
+    const promises: Promise<unknown>[] = [];
 
     if (this.sentry) {
       promises.push(this.sentry.flush());
@@ -528,11 +533,15 @@ export class MonitoringService {
 
 // Performance monitoring decorator for methods
 export function MonitorMethod(operation?: string) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value;
+  return function (
+    target: { constructor: { name: string } },
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+  ) {
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
     const operationName = operation || `${target.constructor.name}.${propertyKey}`;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       const monitoring = globalMonitoringService;
 
       if (!monitoring) {
@@ -550,10 +559,14 @@ export function MonitorMethod(operation?: string) {
 
 // Error capture decorator for methods
 export function CaptureMethodErrors() {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value;
+  return function (
+    target: { constructor: { name: string } },
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+  ) {
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       try {
         return await originalMethod.apply(this, args);
       } catch (error) {

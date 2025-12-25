@@ -32,7 +32,7 @@ interface LogContext {
   component?: string;
   operation?: string;
   duration?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   tags?: string[];
 }
 
@@ -42,7 +42,7 @@ interface PerformanceLog {
   duration: number;
   success: boolean;
   component?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Error log interface
@@ -51,7 +51,7 @@ interface ErrorLog {
   component?: string;
   operation?: string;
   userId?: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 // Log entry interface
@@ -87,10 +87,10 @@ export class StructuredLogger {
   /**
    * Redact sensitive information from object
    */
-  private redactSensitiveData(obj: any): any {
+  private redactSensitiveData<T>(obj: T): T {
     if (!obj || typeof obj !== 'object') return obj;
 
-    const redacted = { ...obj };
+    const redacted = { ...(obj as Record<string, unknown>) };
 
     for (const path of this.config.redactPaths) {
       if (redacted[path] !== undefined) {
@@ -99,13 +99,14 @@ export class StructuredLogger {
     }
 
     // Recursively redact nested objects
-    for (const key in redacted) {
-      if (typeof redacted[key] === 'object' && redacted[key] !== null) {
-        redacted[key] = this.redactSensitiveData(redacted[key]);
+    for (const key of Object.keys(redacted)) {
+      const value = redacted[key];
+      if (value && typeof value === 'object') {
+        redacted[key] = this.redactSensitiveData(value);
       }
     }
 
-    return redacted;
+    return redacted as T;
   }
 
   /**
@@ -156,16 +157,25 @@ export class StructuredLogger {
       if (typeof window !== 'undefined') {
         // Browser environment
         const consoleMethod = entry.level === 'fatal' ? 'error' : entry.level;
-        const method = console[consoleMethod as keyof Console] as (...args: any[]) => void;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const consoleRef = (globalThis as unknown as { console?: Record<string, (...args: unknown[]) => void> })
+          .console;
+        const method = consoleRef?.[consoleMethod] ?? consoleRef?.log;
 
-        if (this.config.prettyPrint) {
-          method(`[${entry.level.toUpperCase()}] ${entry.message}`, entry.context);
-        } else {
-          method(formattedEntry);
+        if (method) {
+          if (this.config.prettyPrint) {
+            method(`[${entry.level.toUpperCase()}] ${entry.message}`, entry.context);
+          } else {
+            method(formattedEntry);
+          }
         }
-      } else {
+      } else if (typeof process !== 'undefined') {
         // Node.js environment
-        console.log(formattedEntry);
+        const stream =
+          entry.level === 'error' || entry.level === 'fatal' || entry.level === 'warn'
+            ? process.stderr
+            : process.stdout;
+        stream.write(`${formattedEntry}\n`);
       }
     }
 
@@ -186,9 +196,7 @@ export class StructuredLogger {
   private async sendToRemote(entry: LogEntry): Promise<void> {
     // This would implement remote logging to services like Logstash, etc.
     // For now, it's a placeholder
-    if (this.config.enableRemote) {
-      console.log('Remote logging not implemented yet:', entry);
-    }
+    void entry;
   }
 
   /**
@@ -314,7 +322,7 @@ export class StructuredLogger {
     operation: string,
     success: boolean = true,
     component?: string,
-    metadata?: Record<string, any>,
+    metadata?: Record<string, unknown>,
   ): number {
     const startTime = this.startTimes.get(operationId);
     if (!startTime) {
@@ -339,7 +347,7 @@ export class StructuredLogger {
   /**
    * Log user action
    */
-  public logUserAction(action: string, userId: string, metadata?: Record<string, any>): void {
+  public logUserAction(action: string, userId: string, metadata?: Record<string, unknown>): void {
     const context: LogContext = {
       userId,
       operation: action,
@@ -359,7 +367,7 @@ export class StructuredLogger {
     statusCode?: number,
     duration?: number,
     userId?: string,
-    metadata?: Record<string, any>,
+    metadata?: Record<string, unknown>,
   ): void {
     const context: LogContext = {
       ...(userId && { userId }),
@@ -387,7 +395,7 @@ export class StructuredLogger {
     event: string,
     severity: 'low' | 'medium' | 'high' | 'critical',
     userId?: string,
-    metadata?: Record<string, any>,
+    metadata?: Record<string, unknown>,
   ): void {
     const context: LogContext = {
       ...(userId && { userId }),
@@ -451,11 +459,15 @@ export class StructuredLogger {
 
 // Performance logging decorator
 export function LogPerformance(operation?: string) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value;
+  return function (
+    target: { constructor: { name: string } },
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+  ) {
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
     const operationName = operation || `${target.constructor.name}.${propertyKey}`;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       const logger = globalLogger || new StructuredLogger();
       const operationId = `${operationName}-${Date.now()}-${Math.random()}`;
 
@@ -479,11 +491,15 @@ export function LogPerformance(operation?: string) {
 
 // Error logging decorator
 export function LogErrors(component?: string) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value;
+  return function (
+    target: { constructor: { name: string } },
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+  ) {
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
     const componentName = component || target.constructor.name;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       try {
         return await originalMethod.apply(this, args);
       } catch (error) {
