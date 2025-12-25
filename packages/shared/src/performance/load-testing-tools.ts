@@ -298,7 +298,7 @@ export class LoadTestingEngine {
 
       this.logger.info(`Load test completed: ${this.results.status}`);
     } catch (error) {
-      this.logger.error('Load test failed', { metadata: { error } });
+      this.logger.error({ error }, 'Load test failed');
       this.recordError('test_execution', (error as Error).message, { error });
       throw error;
     } finally {

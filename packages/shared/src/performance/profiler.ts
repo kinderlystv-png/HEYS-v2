@@ -425,7 +425,7 @@ export class PerformanceProfiler {
   getMemoryUsage(): PerformanceMetric[] {
     const memMetrics: PerformanceMetric[] = [];
 
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && window.performance) {
       const memory = (window.performance as Performance & { memory?: PerformanceMemory }).memory;
       if (!memory) {
         return memMetrics;

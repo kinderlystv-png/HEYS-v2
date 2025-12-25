@@ -1,8 +1,9 @@
 // filepath: packages/shared/src/performance/components/LazyImage.tsx
 
 import React, { memo, useEffect, useRef, useState } from 'react';
-import { LazyLoader } from '../LazyLoader';
+
 import { balancedLazyConfig } from '../lazy-loading-config';
+import { LazyLoader, LazyLoadingConfig } from '../LazyLoader';
 
 interface LazyImageProps {
   src: string;
@@ -17,7 +18,7 @@ interface LazyImageProps {
   loading?: 'lazy' | 'eager';
   onLoad?: () => void;
   onError?: () => void;
-  config?: unknown; // LazyLoadingConfig
+  config?: LazyLoadingConfig;
 }
 
 /**

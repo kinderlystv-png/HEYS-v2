@@ -292,7 +292,7 @@ export class HTTPCacheStrategy {
         // For relative URLs, use as-is
       } catch (error) {
         // If URL parsing fails, use the original URL
-        this.logger.warn('URL parsing failed', { metadata: { error } });
+        this.logger.warn({ error }, 'URL parsing failed');
       }
 
       const cachedETag = this.etagCache.get(normalizedUrl);
@@ -360,7 +360,7 @@ export class HTTPCacheStrategy {
           this.logger.info(`Preloaded: ${url}`);
         }
       } catch (error) {
-        this.logger.warn(`Failed to preload ${url}`, { metadata: { error } });
+        this.logger.warn({ error }, `Failed to preload ${url}`);
       }
     });
 
@@ -415,7 +415,7 @@ export class HTTPCacheStrategy {
 
       return response.ok;
     } catch (error) {
-      this.logger.error('CDN cache purge failed', { metadata: { error } });
+      this.logger.error({ error }, 'CDN cache purge failed');
       return false;
     }
   }

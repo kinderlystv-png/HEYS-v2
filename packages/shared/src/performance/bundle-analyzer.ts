@@ -26,6 +26,8 @@ type WebpackModule = {
   size?: number;
   reasons?: WebpackReason[];
   chunks?: string[];
+  providedExports?: string[] | boolean;
+  usedExports?: string[] | boolean;
 };
 
 type WebpackChunkModule = {
@@ -101,11 +103,11 @@ export class BundleAnalyzer {
     if (stats.modules) {
       stats.modules.forEach((module: WebpackModule) => {
         modules.push({
-          name: this.cleanModuleName(module.name || module.identifier),
+          name: this.cleanModuleName(module.name || module.identifier || ''),
           size: module.size || 0,
           gzippedSize: this.estimateModuleGzippedSize(module.size || 0),
           path: module.name || module.identifier || '',
-          reasons: module.reasons?.map((reason) => reason.moduleName) || [],
+          reasons: module.reasons?.map((reason) => reason.moduleName).filter((name): name is string => !!name) || [],
           chunks: module.chunks || [],
         });
       });
@@ -125,7 +127,7 @@ export class BundleAnalyzer {
         chunks.push({
           name: chunk.name || `chunk-${chunk.id}`,
           size: chunk.size || 0,
-          modules: chunk.modules?.map((module) => module.name || module.identifier) || [],
+          modules: chunk.modules?.map((module) => module.name || module.identifier).filter((name): name is string => !!name) || [],
           entry: chunk.entry || false,
           async: !chunk.entry,
         });
@@ -145,7 +147,7 @@ export class BundleAnalyzer {
     // Extract from modules
     if (stats.modules) {
       stats.modules.forEach((module: WebpackModule) => {
-        const packageName = this.extractPackageName(module.name || module.identifier);
+        const packageName = this.extractPackageName(module.name || module.identifier || '');
         if (packageName && packageName.startsWith('node_modules')) {
           const cleanName = packageName.replace(/.*node_modules\/(@[^/]+\/[^/]+|[^/]+).*/, '$1');
           const currentSize = packageSizes.get(cleanName) || 0;
@@ -223,7 +225,7 @@ export class BundleAnalyzer {
             const estimatedEliminated =
               (module.size || 0) * ((providedCount - usedCount) / providedCount);
             eliminatedSize += estimatedEliminated;
-            eliminatedModules.push(module.name || module.identifier);
+            eliminatedModules.push(module.name || module.identifier || 'unknown');
           }
         }
       });

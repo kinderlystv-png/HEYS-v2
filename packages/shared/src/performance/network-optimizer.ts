@@ -217,7 +217,7 @@ export class NetworkOptimizer {
       this.isInitialized = true;
       logger.info('Network Optimizer initialized successfully');
     } catch (error) {
-      logger.error('Failed to initialize Network Optimizer', { metadata: { error } });
+      logger.error({ error }, 'Failed to initialize Network Optimizer');
     }
   }
 
@@ -481,11 +481,11 @@ class ConnectionMonitor {
 
   private updateConnection(conn: NavigatorConnection): void {
     this.connection = {
-      effectiveType: conn.effectiveType || 'unknown',
+      effectiveType: (conn.effectiveType || 'unknown') as NetworkConnection['effectiveType'],
       downlink: conn.downlink || 0,
       rtt: conn.rtt || 0,
       saveData: conn.saveData || false,
-      type: conn.type || 'unknown',
+      type: (conn.type || 'unknown') as NetworkConnection['type'],
     };
 
     this.notifyObservers();
@@ -630,7 +630,7 @@ class PrefetchManager {
         logger.info(`Prefetched: ${request.url}`);
       }
     } catch (error) {
-      logger.warn(`Prefetch failed for ${request.url}`, { metadata: { error } });
+      logger.warn({ error }, `Prefetch failed for ${request.url}`);
     } finally {
       this.activeRequests.delete(request.url);
     }
@@ -1140,7 +1140,7 @@ class NetworkMetricsCollector {
 
   private reportMetrics(): void {
     // Report metrics to monitoring system
-    logger.info('Network metrics', { metadata: { metrics: this.metrics } });
+    logger.info({ metrics: this.metrics }, 'Network metrics');
   }
 
   destroy(): void {

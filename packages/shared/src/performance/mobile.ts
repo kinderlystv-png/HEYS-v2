@@ -145,7 +145,7 @@ export class MobilePerformanceOptimizer {
   private getNetworkType(): DeviceCapabilities['network'] {
     if ('connection' in navigator) {
       const connection = (navigator as NavigatorWithConnection).connection;
-      if (connection.effectiveType) {
+      if (connection && connection.effectiveType) {
         return connection.effectiveType as DeviceCapabilities['network'];
       }
     }
@@ -210,11 +210,13 @@ export class MobilePerformanceOptimizer {
 
     if ('connection' in navigator) {
       const connection = (navigator as NavigatorWithConnection).connection;
-      condition.type = connection.effectiveType || 'unknown';
-      condition.effectiveType = connection.effectiveType || 'unknown';
-      condition.downlink = connection.downlink || 10;
-      condition.rtt = connection.rtt || 100;
-      condition.saveData = connection.saveData || false;
+      if (connection) {
+        condition.type = (connection.effectiveType || 'unknown') as NetworkCondition['type'];
+        condition.effectiveType = connection.effectiveType || 'unknown';
+        condition.downlink = connection.downlink || 10;
+        condition.rtt = connection.rtt || 100;
+        condition.saveData = connection.saveData || false;
+      }
     }
 
     return condition;
@@ -289,7 +291,7 @@ export class MobilePerformanceOptimizer {
       longTaskObserver.observe({ entryTypes: ['longtask'] });
       this.observers.set('longtask', longTaskObserver);
     } catch (e) {
-      logger.warn('Long task monitoring not supported', { metadata: { error: e } });
+      logger.warn({ error: e }, 'Long task monitoring not supported');
     }
 
     // Monitor Layout Shifts
@@ -302,7 +304,7 @@ export class MobilePerformanceOptimizer {
       clsObserver.observe({ entryTypes: ['layout-shift'] });
       this.observers.set('layout-shift', clsObserver);
     } catch (e) {
-      logger.warn('Layout shift monitoring not supported', { metadata: { error: e } });
+      logger.warn({ error: e }, 'Layout shift monitoring not supported');
     }
 
     // Monitor First Input Delay
@@ -315,7 +317,7 @@ export class MobilePerformanceOptimizer {
       fidObserver.observe({ entryTypes: ['first-input'] });
       this.observers.set('first-input', fidObserver);
     } catch (e) {
-      logger.warn('First input delay monitoring not supported', { metadata: { error: e } });
+      logger.warn({ error: e }, 'First input delay monitoring not supported');
     }
   }
 

@@ -360,7 +360,7 @@ export class LighthouseOptimizer {
       this.logger.info(`Аудит завершен. Скор: ${mockResults.overallScore}`);
       return mockResults;
     } catch (error) {
-      this.logger.error('Ошибка запуска Lighthouse', { metadata: { error } });
+      this.logger.error({ error }, 'Ошибка запуска Lighthouse');
       throw new Error(
         `Ошибка Lighthouse аудита: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
       );

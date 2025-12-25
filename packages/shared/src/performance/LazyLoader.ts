@@ -255,9 +255,7 @@ export class LazyLoader {
       lazyElement.loading = false;
       this.metrics.failedItems++;
 
-      this.logger.warn('Ошибка ленивой загрузки', {
-        metadata: { error },
-      });
+      this.logger.warn({ err: error as Error }, 'Ошибка ленивой загрузки');
     } finally {
       this.loadingElements.delete(element);
       this.loadPromises.delete(element);
@@ -576,7 +574,7 @@ export class LazyLoader {
     this.metrics.performanceScore = Math.round(successRate * 70 + avgTimeScore * 30);
 
     // Обновление использования памяти (приблизительно)
-    const memory = (performance as Performance & { memory?: PerformanceMemory }).memory;
+    const memory = (performance as unknown as Performance & { memory?: PerformanceMemory }).memory;
     if (memory) {
       this.metrics.memoryUsage = memory.usedJSHeapSize;
     }
@@ -585,7 +583,8 @@ export class LazyLoader {
   /**
    * Дебаунс функция
    */
-  private debounce<T extends (...args: unknown[]) => void>(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private debounce<T extends (...args: any[]) => void>(
     func: T,
     delay: number,
   ): (...args: Parameters<T>) => void {

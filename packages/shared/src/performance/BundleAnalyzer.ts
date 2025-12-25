@@ -94,13 +94,11 @@ export class BundleAnalyzer {
     this.baselineHistory.push(baseline);
     this.saveToStorage(baseline);
 
-    this.logger.info(`Baseline сохранен для версии ${version}`, {
-      metadata: {
-        totalSize: this.formatBytes(baseline.metrics.totalSize),
-        lighthouseScore: baseline.lighthouseScore,
-        grade: baseline.performanceGrade,
-      },
-    });
+    this.logger.info({
+      totalSize: this.formatBytes(baseline.metrics.totalSize),
+      lighthouseScore: baseline.lighthouseScore,
+      grade: baseline.performanceGrade,
+    }, `Baseline сохранен для версии ${version}`);
   }
 
   /**
@@ -273,9 +271,7 @@ FCP: ${changes.firstContentfulPaint.change < 0 ? '✅' : '❌'} ${changes.firstC
 
       localStorage.setItem('heys-performance-baselines', JSON.stringify(baselines));
     } catch (error) {
-      this.logger.warn('Не удалось сохранить baseline в localStorage', {
-        metadata: { error },
-      });
+      this.logger.warn({ err: error as Error }, 'Не удалось сохранить baseline в localStorage');
     }
   }
 
@@ -289,9 +285,7 @@ FCP: ${changes.firstContentfulPaint.change < 0 ? '✅' : '❌'} ${changes.firstC
         this.baselineHistory = JSON.parse(stored);
       }
     } catch (error) {
-      this.logger.warn('Не удалось загрузить baselines из localStorage', {
-        metadata: { error },
-      });
+      this.logger.warn({ err: error as Error }, 'Не удалось загрузить baselines из localStorage');
     }
   }
 

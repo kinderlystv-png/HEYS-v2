@@ -172,7 +172,7 @@ export class AdvancedCacheManager {
 
       this.logger.info('AdvancedCacheManager initialized successfully');
     } catch (error) {
-      this.logger.error('Failed to initialize AdvancedCacheManager', { metadata: { error } });
+      this.logger.error({ error }, 'Failed to initialize AdvancedCacheManager');
     }
   }
 
@@ -203,7 +203,7 @@ export class AdvancedCacheManager {
         this.serviceWorkerRegistration?.update();
       }, this.config.strategies.serviceWorker.updateInterval);
     } catch (error) {
-      this.logger.error('Service Worker registration failed', { metadata: { error } });
+      this.logger.error({ error }, 'Service Worker registration failed');
     }
   }
 
@@ -237,7 +237,7 @@ export class AdvancedCacheManager {
       const blob = new Blob([workerCode], { type: 'application/javascript' });
       this.compressionWorker = new Worker(URL.createObjectURL(blob));
     } catch (error) {
-      this.logger.warn('Compression worker initialization failed', { metadata: { error } });
+      this.logger.warn({ error }, 'Compression worker initialization failed');
     }
   }
 
@@ -315,7 +315,7 @@ export class AdvancedCacheManager {
       this.updatePerformanceMetrics(Date.now() - startTime, true);
       return true;
     } catch (error) {
-      this.logger.error('Cache store failed', { metadata: { error } });
+      this.logger.error({ error }, 'Cache store failed');
       this.updatePerformanceMetrics(Date.now() - startTime, false);
       return false;
     }
@@ -380,7 +380,7 @@ export class AdvancedCacheManager {
 
       return result;
     } catch (error) {
-      this.logger.error('Cache retrieve failed', { metadata: { error } });
+      this.logger.error({ error }, 'Cache retrieve failed');
       this.performanceMetrics.misses++;
       this.updatePerformanceMetrics(Date.now() - startTime, false);
       return null;
@@ -422,7 +422,7 @@ export class AdvancedCacheManager {
 
       localStorage.setItem(storageKey, serializedEntry);
     } catch (error) {
-      this.logger.warn('localStorage store failed', { metadata: { error } });
+      this.logger.warn({ error }, 'localStorage store failed');
     }
   }
 
@@ -436,7 +436,7 @@ export class AdvancedCacheManager {
       const storageKey = `heys_session_cache_${key}`;
       sessionStorage.setItem(storageKey, JSON.stringify(entry));
     } catch (error) {
-      this.logger.warn('sessionStorage store failed', { metadata: { error } });
+      this.logger.warn({ error }, 'sessionStorage store failed');
     }
   }
 
@@ -457,7 +457,7 @@ export class AdvancedCacheManager {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      this.logger.warn('IndexedDB store failed', { metadata: { error } });
+      this.logger.warn({ error }, 'IndexedDB store failed');
     }
   }
 
@@ -470,7 +470,7 @@ export class AdvancedCacheManager {
   ): Promise<CacheEntry<string> | null> {
     switch (strategy) {
       case 'memory':
-        return this.memoryCache.get(key) || null;
+        return (this.memoryCache.get(key) as CacheEntry<string> | undefined) || null;
 
       case 'localStorage':
         try {
@@ -531,7 +531,7 @@ export class AdvancedCacheManager {
         store.delete(key);
       }
     } catch (error) {
-      this.logger.warn('Cache invalidation partially failed', { metadata: { error } });
+      this.logger.warn({ error }, 'Cache invalidation partially failed');
     }
 
     // Cascade invalidation for dependent entries
@@ -759,7 +759,7 @@ export class AdvancedCacheManager {
   private async cleanupExpiredEntries(): Promise<void> {
     // Cleanup memory cache
     for (const [key, entry] of this.memoryCache.entries()) {
-      if (this.isExpired(entry)) {
+      if (this.isExpired(entry as CacheEntry<string>)) {
         this.memoryCache.delete(key);
       }
     }
@@ -786,17 +786,13 @@ export class AdvancedCacheManager {
     if (event.data?.type) {
       switch (event.data.type) {
         case 'CACHE_STATS':
-          this.logger.info('Service Worker Cache Stats', {
-            metadata: { stats: event.data.stats },
-          });
+          this.logger.info({ stats: event.data.stats }, 'Service Worker Cache Stats');
           break;
         case 'CACHE_CLEARED':
           this.logger.info('Service Worker cache cleared');
           break;
         case 'SYNC_COMPLETE':
-          this.logger.info('Background sync completed', {
-            metadata: { processed: event.data.processed },
-          });
+          this.logger.info({ processed: event.data.processed }, 'Background sync completed');
           break;
       }
     }
@@ -877,7 +873,7 @@ export class AdvancedCacheManager {
       }
       keysToRemove.forEach((key) => localStorage.removeItem(key));
     } catch (error) {
-      this.logger.warn('localStorage clear failed', { metadata: { error } });
+      this.logger.warn({ error }, 'localStorage clear failed');
     }
 
     // Clear sessionStorage
@@ -896,14 +892,14 @@ export class AdvancedCacheManager {
         store.clear();
       }
     } catch (error) {
-      this.logger.warn('IndexedDB clear failed', { metadata: { error } });
+      this.logger.warn({ error }, 'IndexedDB clear failed');
     }
 
     // Clear Service Worker cache
     if (this.serviceWorkerRegistration) {
       const messageChannel = new MessageChannel();
       messageChannel.port1.onmessage = (event) => {
-        this.logger.info('Service Worker cache cleared', { metadata: { data: event.data } });
+        this.logger.info({ data: event.data }, 'Service Worker cache cleared');
       };
 
       navigator.serviceWorker.controller?.postMessage({ type: 'CLEAR_CACHE' }, [

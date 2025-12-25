@@ -210,7 +210,7 @@ export class NetworkOptimizationIntegration {
 
       logger.info('Network Optimization Integration initialized successfully');
     } catch (error) {
-      logger.error('Failed to initialize Network Optimization Integration', { metadata: { error } });
+      logger.error({ error }, 'Failed to initialize Network Optimization Integration');
       this.events.onError?.(error as Error);
       throw error;
     }
@@ -236,7 +236,7 @@ export class NetworkOptimizationIntegration {
       logger.info('Network optimization started');
     } catch (error) {
       this.isRunning = false;
-      logger.error('Failed to start network optimization', { metadata: { error } });
+      logger.error({ error }, 'Failed to start network optimization');
       this.events.onError?.(error as Error);
       throw error;
     }
@@ -267,7 +267,7 @@ export class NetworkOptimizationIntegration {
       this.events.onOptimizationStop?.();
       logger.info('Network optimization stopped');
     } catch (error) {
-      logger.error('Failed to stop network optimization', { metadata: { error } });
+      logger.error({ error }, 'Failed to stop network optimization');
       this.events.onError?.(error as Error);
     }
   }
@@ -281,7 +281,7 @@ export class NetworkOptimizationIntegration {
     }
 
     await this.dashboard.initialize(containerId);
-    logger.info('Network dashboard initialized in container', { metadata: { containerId } });
+    logger.info({ containerId }, 'Network dashboard initialized in container');
   }
 
   /**
@@ -302,7 +302,7 @@ export class NetworkOptimizationIntegration {
       this.events.onConfigChange?.(this.config);
       logger.info('Network optimization configuration updated');
     } catch (error) {
-      logger.error('Failed to update configuration', { metadata: { error } });
+      logger.error({ error }, 'Failed to update configuration');
       this.events.onError?.(error as Error);
       throw error;
     }
@@ -393,7 +393,7 @@ export class NetworkOptimizationIntegration {
 
       logger.info('Network optimization state reset');
     } catch (error) {
-      logger.error('Failed to reset optimization state', { metadata: { error } });
+      logger.error({ error }, 'Failed to reset optimization state');
       this.events.onError?.(error as Error);
     }
   }
@@ -439,7 +439,7 @@ export class NetworkOptimizationIntegration {
       this.isInitialized = false;
       logger.info('Network Optimization Integration destroyed');
     } catch (error) {
-      logger.error('Failed to destroy integration', { metadata: { error } });
+      logger.error({ error }, 'Failed to destroy integration');
       this.events.onError?.(error as Error);
     }
   }
@@ -472,7 +472,7 @@ export class NetworkOptimizationIntegration {
         this.config = this.mergeConfig(savedConfig);
       }
     } catch (error) {
-      logger.warn('Failed to load saved configuration', { metadata: { error } });
+      logger.warn({ error }, 'Failed to load saved configuration');
     }
   }
 
@@ -484,7 +484,7 @@ export class NetworkOptimizationIntegration {
 
       localStorage.setItem(this.config.integration.storageKey, JSON.stringify(this.config));
     } catch (error) {
-      logger.warn('Failed to save configuration', { metadata: { error } });
+      logger.warn({ error }, 'Failed to save configuration');
     }
   }
 
@@ -516,7 +516,7 @@ export class NetworkOptimizationIntegration {
           this.events.onMetricsUpdate?.(metrics);
         }
       } catch (error) {
-        logger.warn('Configuration sync failed', { metadata: { error } });
+        logger.warn({ error }, 'Configuration sync failed');
       }
     }, this.config.integration.syncInterval);
   }

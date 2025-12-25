@@ -403,7 +403,7 @@ export class LazyLoadingHelpers {
     // Объем памяти
     if ('deviceMemory' in navigator) {
       const memory = (navigator as NavigatorWithPerformance).deviceMemory;
-      score += Math.min(memory * 10, 25);
+      score += Math.min((memory ?? 4) * 10, 25);
     }
 
     // Тип соединения

@@ -214,7 +214,7 @@ export class MobilePerformanceOptimizer {
 
       logger.info('Mobile Performance Optimizer initialized successfully');
     } catch (error) {
-      logger.error('Failed to initialize Mobile Performance Optimizer', { metadata: { error } });
+      logger.error({ error }, 'Failed to initialize Mobile Performance Optimizer');
     }
   }
 
@@ -307,9 +307,9 @@ export class MobilePerformanceOptimizer {
     const connection = (navigator as NavigatorWithConnection).connection;
     if (connection) {
       return {
-        effectiveType: connection.effectiveType,
-        downlink: connection.downlink,
-        rtt: connection.rtt,
+        effectiveType: connection.effectiveType || 'unknown',
+        downlink: connection.downlink ?? 0,
+        rtt: connection.rtt ?? 0,
       };
     }
     return {};
@@ -405,7 +405,7 @@ export class MobilePerformanceOptimizer {
     };
 
     if (networkType) {
-      deviceInfo.networkType = networkType;
+      deviceInfo.networkType = networkType as MobileDeviceInfo['networkType'];
     }
 
     if (memoryInfo) {
@@ -496,9 +496,9 @@ export class MobilePerformanceOptimizer {
           supportsPassive = true;
           return true;
         },
-      }) as PassiveEventOptions;
-      window.addEventListener('testPassive', noop, opts);
-      window.removeEventListener('testPassive', noop, opts);
+      }) as EventListenerOptions;
+      window.addEventListener('testPassive', noop as EventListener, opts);
+      window.removeEventListener('testPassive', noop as EventListener, opts);
     } catch {
       // Ignore
     }
@@ -807,7 +807,7 @@ export class MobilePerformanceOptimizer {
     const grouped = new Map<string, typeof requests>();
 
     requests.forEach((req) => {
-      const key = `${req.options.method || 'GET'}_${req.url}`;
+      const key = `${req.options?.method || 'GET'}_${req.url}`;
       const existing = grouped.get(key);
       if (existing) {
         existing.push(req);
@@ -826,7 +826,7 @@ export class MobilePerformanceOptimizer {
             const response = await originalFetch(req.url, req.options);
             req.resolve(response);
           } catch (error) {
-            req.reject(error);
+            req.reject(error as Error);
           }
         }
       } else {
@@ -847,7 +847,7 @@ export class MobilePerformanceOptimizer {
           } catch (error) {
             requestGroup.forEach((req) => {
               if (req) {
-                req.reject(error);
+                req.reject(error as Error);
               }
             });
           }
@@ -914,18 +914,18 @@ export class MobilePerformanceOptimizer {
           try {
             this.performanceObserver.observe({ entryTypes: ['paint'] });
           } catch (e) {
-            logger.warn('Failed to observe paint metrics', { metadata: { error: e } });
+            logger.warn({ error: e }, 'Failed to observe paint metrics');
           }
         }
       } catch (error) {
-        logger.warn('Failed to create performance observer', { metadata: { error } });
+        logger.warn({ error }, 'Failed to create performance observer');
         // Create a basic observer for testing if main observer fails
         try {
           this.performanceObserver = new PerformanceObserver(() => {
             // Basic observer for testing
           });
         } catch (e) {
-          logger.warn('Failed to create basic performance observer', { metadata: { error: e } });
+          logger.warn({ error: e }, 'Failed to create basic performance observer');
         }
       }
     }
@@ -1167,7 +1167,7 @@ class TouchHandler {
     const touch = event.touches?.[0];
     if (touch) {
       // Store touch position for gesture detection if needed
-      logger.debug('Touch started', { metadata: { x: touch.clientX, y: touch.clientY } });
+      logger.debug({ x: touch.clientX, y: touch.clientY }, 'Touch started');
     }
   }
 
@@ -1270,7 +1270,7 @@ class BatteryMonitor {
         this.battery.addEventListener?.('chargingchange', handleBatteryChange);
       }
     } catch (error) {
-      logger.warn('Battery API not available', { metadata: { error } });
+      logger.warn({ error }, 'Battery API not available');
     }
   }
 

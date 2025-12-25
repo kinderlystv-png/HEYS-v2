@@ -102,9 +102,7 @@ export class CacheIntegrationLayer {
 
       this.logger.info('Cache Integration Layer initialized successfully');
     } catch (error) {
-      this.logger.error('Failed to initialize Cache Integration Layer', {
-        metadata: { error },
-      });
+      this.logger.error({ err: error as Error }, 'Failed to initialize Cache Integration Layer');
     }
   }
 
@@ -136,14 +134,14 @@ export class CacheIntegrationLayer {
 
       const result = await this.cacheManager.store(key, value, {
         ...restOptions,
-        strategy: finalStrategy,
+        strategy: finalStrategy as Exclude<typeof finalStrategy, 'auto'>,
       });
 
       this.updatePerformanceMetrics(Date.now() - startTime, result);
 
       return result;
     } catch (error) {
-      this.logger.error('Cache store failed', { metadata: { error } });
+      this.logger.error({ error }, 'Cache store failed');
       this.updatePerformanceMetrics(Date.now() - startTime, false);
       return false;
     }
@@ -169,7 +167,7 @@ export class CacheIntegrationLayer {
 
       return result;
     } catch (error) {
-      this.logger.error('Cache retrieve failed', { metadata: { error } });
+      this.logger.error({ error }, 'Cache retrieve failed');
       this.updatePerformanceMetrics(Date.now() - startTime, false);
       return null;
     }
@@ -317,7 +315,7 @@ export class CacheIntegrationLayer {
       this.performanceMetrics.invalidations++;
       this.performanceMetrics.lastUpdated = new Date();
     } catch (error) {
-      this.logger.error('Cache invalidation failed', { metadata: { error } });
+      this.logger.error({ error }, 'Cache invalidation failed');
     }
   }
 
@@ -415,7 +413,7 @@ export class CacheIntegrationLayer {
         this.performanceMetrics.cacheSize = stats.total.size;
         this.performanceMetrics.lastUpdated = new Date();
       } catch (error) {
-        this.logger.warn('Performance monitoring update failed', { metadata: { error } });
+        this.logger.warn({ error }, 'Performance monitoring update failed');
       }
     }, 30000);
   }

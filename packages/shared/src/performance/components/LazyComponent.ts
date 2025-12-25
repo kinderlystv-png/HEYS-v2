@@ -64,7 +64,7 @@ export class LazyComponent {
       element.classList.remove('lazy-component-loading');
       element.classList.add('lazy-component-loaded');
     } catch (error) {
-      this.logger.error('Failed to load lazy component', { metadata: { error } });
+      this.logger.error({ err: error as Error }, 'Failed to load lazy component');
       this.renderError(element, config.errorPlaceholder);
       element.classList.remove('lazy-component-loading');
       element.classList.add('lazy-component-error');
@@ -100,7 +100,7 @@ export class LazyComponent {
     } else if (component && typeof component === 'object' && 'template' in component) {
       element.innerHTML = String((component as { template: unknown }).template);
     } else {
-      this.logger.warn('Unknown component format', { metadata: { component } });
+      this.logger.warn({ component }, 'Unknown component format');
     }
   }
 
@@ -174,9 +174,7 @@ export class LazyComponent {
       const module = await import(componentPath);
       return module.default || module;
     } catch (error) {
-      this.logger.error(`Failed to import component from ${componentPath}`, {
-        metadata: { error },
-      });
+      this.logger.error({ err: error as Error }, `Failed to import component from ${componentPath}`);
       throw error;
     }
   }

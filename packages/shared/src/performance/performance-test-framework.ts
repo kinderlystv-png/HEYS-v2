@@ -274,7 +274,7 @@ export class PerformanceTestFramework {
       this.logger.info(`Performance test completed: ${result.status}`);
       return result;
     } catch (error) {
-      this.logger.error('Performance test failed', { metadata: { error } });
+      this.logger.error({ error }, 'Performance test failed');
       throw error;
     } finally {
       this.isRunning = false;
@@ -349,7 +349,7 @@ export class PerformanceTestFramework {
 
     // Execute scenario in background
     this.executeScenario(scenario).catch((error) => {
-      this.logger.error('Virtual user scenario failed', { metadata: { error } });
+      this.logger.error({ error }, 'Virtual user scenario failed');
     });
   }
 
@@ -415,7 +415,7 @@ export class PerformanceTestFramework {
         assertions: assertionResults,
       };
     } catch (error) {
-      this.logger.error(`Scenario execution failed: ${scenario.name}`, { metadata: { error } });
+      this.logger.error({ error }, `Scenario execution failed: ${scenario.name}`);
       throw error;
     }
   }

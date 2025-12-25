@@ -182,7 +182,7 @@ export class NetworkPerformanceDashboard {
       // Update statistics
       this.updateStatistics(metrics);
     } catch (error) {
-      this.logger.error('Error updating dashboard', { metadata: { error } });
+      this.logger.error({ error }, 'Error updating dashboard');
     }
   }
 

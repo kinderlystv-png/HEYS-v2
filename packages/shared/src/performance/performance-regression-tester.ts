@@ -655,7 +655,7 @@ export class PerformanceRegressionTester {
    * Get metric value from baseline metrics
    */
   private getMetricValue(metrics: BaselineMetrics, metricName: string): number {
-    const metricValue = (metrics as Record<string, number>)[metricName];
+    const metricValue = (metrics as unknown as Record<string, number>)[metricName];
     return typeof metricValue === 'number' ? metricValue : 0;
   }
 

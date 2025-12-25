@@ -97,9 +97,7 @@ export class CodeSplitter {
         const splitPoints = await this.analyzeFite(file, fileSize);
         analysis.splitPoints.push(...splitPoints);
       } catch (error) {
-        this.logger.warn(`Не удалось проанализировать файл ${file}`, {
-          metadata: { error },
-        });
+        this.logger.warn({ err: error as Error }, `Не удалось проанализировать файл ${file}`);
       }
     }
 

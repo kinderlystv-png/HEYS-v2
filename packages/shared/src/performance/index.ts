@@ -3,11 +3,17 @@
  * Comprehensive performance monitoring and optimization toolkit
  *
  * @author HEYS Team
- * @version 1.4.0
+ * @version 1.5.0
  * @created 2025-01-31
+ *
+ * NOTE: This module uses AppLogger interface for logger-agnostic code.
+ * Pass custom logger via PerformanceConfig.logger for testing/DI.
+ * See ../logging/AppLogger.ts for the unified interface.
+ * See ./logger.ts for module-specific logger utilities.
  */
 
-import { logger as baseLogger } from '@heys/logger';
+import type { AppLogger } from '../logging';
+import { perfLogger } from './logger';
 
 // Core performance profiling
 export { defaultProfiler, measurePerformance, PerformanceProfiler } from './profiler';
@@ -118,7 +124,41 @@ import { MobilePerformanceOptimizer } from './mobile';
 import { OptimizedHTTPClient, type RequestConfig } from './network';
 import { PerformanceProfiler } from './profiler';
 
-type ProfilingSummary = { runtime?: { averageFrameTime?: number } };
+/**
+ * Profiling summary built from actual PerformanceMetric[] data.
+ * Maps to real metrics collected by profiler.ts:
+ * - Navigation: 'DOM Loading', 'DOM Interactive', 'Load Complete'
+ * - Paint: 'First Paint', 'First Contentful Paint'
+ * - Web Vitals: 'Cumulative Layout Shift', 'First Input Delay'
+ * - Tasks: 'Long Task' (accumulated count/duration)
+ * - Memory: 'JS Heap Used', 'JS Heap Total', 'JS Heap Limit'
+ */
+type ProfilingSummary = {
+  navigation?: {
+    domLoadingMs?: number;
+    domInteractiveMs?: number;
+    loadCompleteMs?: number;
+  };
+  paint?: {
+    firstPaintMs?: number;
+    firstContentfulPaintMs?: number;
+  };
+  webVitals?: {
+    cumulativeLayoutShift?: number;
+    firstInputDelayMs?: number;
+  };
+  tasks?: {
+    longTaskCount?: number;
+    longTaskTotalMs?: number;
+    longTaskMaxMs?: number;
+  };
+  memory?: {
+    heapUsedBytes?: number;
+    heapTotalBytes?: number;
+    heapLimitBytes?: number;
+  };
+};
+
 type CacheStrategyStats = { hitRate?: number };
 type CacheStatsSummary = Record<string, CacheStrategyStats>;
 type NetworkStatsSummary = { averageResponseTime: number };
@@ -143,12 +183,63 @@ type PerformanceReport = {
 
 type ProfilerWithCleanup = PerformanceProfiler & { cleanup?: () => void };
 
-const perfLogger = baseLogger.child({ component: 'PerformanceManager' });
+// Import PerformanceMetric type for buildProfilingSummary
+import type { PerformanceMetric } from './profiler';
+
+/**
+ * Build ProfilingSummary from actual metrics array.
+ * Maps profiler metric names to structured summary.
+ * Handles missing metrics gracefully (undefined fields).
+ */
+function buildProfilingSummary(metrics: PerformanceMetric[]): ProfilingSummary {
+  const byName = new Map(metrics.map((m) => [m.name, m]));
+  const get = (name: string): number | undefined => byName.get(name)?.value;
+
+  // Aggregate Long Tasks (they appear multiple times with same name)
+  const longTasks = metrics.filter((m) => m.name === 'Long Task');
+  const longTaskCount = longTasks.length > 0 ? longTasks.length : undefined;
+  const longTaskTotalMs =
+    longTasks.length > 0 ? longTasks.reduce((sum, m) => sum + m.value, 0) : undefined;
+  const longTaskMaxMs =
+    longTasks.length > 0 ? Math.max(...longTasks.map((m) => m.value)) : undefined;
+
+  return {
+    navigation: {
+      domLoadingMs: get('DOM Loading'),
+      domInteractiveMs: get('DOM Interactive'),
+      loadCompleteMs: get('Load Complete'),
+    },
+    paint: {
+      firstPaintMs: get('First Paint'),
+      firstContentfulPaintMs: get('First Contentful Paint'),
+    },
+    webVitals: {
+      cumulativeLayoutShift: get('Cumulative Layout Shift'),
+      firstInputDelayMs: get('First Input Delay'),
+    },
+    tasks: {
+      longTaskCount,
+      longTaskTotalMs,
+      longTaskMaxMs,
+    },
+    memory: {
+      heapUsedBytes: get('JS Heap Used'),
+      heapTotalBytes: get('JS Heap Total'),
+      heapLimitBytes: get('JS Heap Limit'),
+    },
+  };
+}
 
 /**
  * Performance optimization configuration
  */
 export interface PerformanceConfig {
+  /**
+   * Optional logger instance. If not provided, uses default pino logger.
+   * Pass noopLogger from ../logging for silent operation.
+   * Pass createMockLogger() in tests for assertion support.
+   */
+  logger?: AppLogger;
   profiling?: {
     enabled: boolean;
     sampleRate?: number;
@@ -182,9 +273,11 @@ export class PerformanceManager {
   private cacheManager: SmartCacheManager;
   private mobileOptimizer: MobilePerformanceOptimizer;
   private httpClient: OptimizedHTTPClient;
-  private config: Required<PerformanceConfig>;
+  private config: Required<Omit<PerformanceConfig, 'logger'>>;
+  private logger: AppLogger;
 
   constructor(config: PerformanceConfig = {}) {
+    this.logger = config.logger ?? perfLogger;
     this.config = this.mergeConfig(config);
 
     // Initialize components based on configuration
@@ -199,7 +292,7 @@ export class PerformanceManager {
   /**
    * Merge configuration with defaults
    */
-  private mergeConfig(config: PerformanceConfig): Required<PerformanceConfig> {
+  private mergeConfig(config: PerformanceConfig): Required<Omit<PerformanceConfig, 'logger'>> {
     return {
       profiling: {
         enabled: config.profiling?.enabled ?? true,
@@ -233,7 +326,7 @@ export class PerformanceManager {
   private initialize(): void {
     if (this.config.profiling.enabled) {
       // Profiler is already initialized and will collect metrics automatically
-      perfLogger.info('Performance profiling enabled');
+      this.logger.info('Performance profiling enabled');
     }
 
     if (this.config.mobile.enabled && this.config.mobile.autoOptimize) {
@@ -251,10 +344,13 @@ export class PerformanceManager {
       this.httpClient.getStats(),
     ]);
 
-    const recommendations = this.generateRecommendations(profilingData, cacheStats, networkStats);
+    // Build summary from actual metrics (no phantom metrics!)
+    const profilingSummary = buildProfilingSummary(profilingData);
+
+    const recommendations = this.generateRecommendations(profilingSummary, cacheStats, networkStats);
 
     return {
-      profiling: profilingData,
+      profiling: profilingSummary,
       caching: cacheStats,
       network: networkStats,
       mobile: {
@@ -276,19 +372,90 @@ export class PerformanceManager {
   ): Recommendation[] {
     const recommendations: Recommendation[] = [];
 
-    // Analyze profiling data
-    if (profilingData.runtime?.averageFrameTime > 16.67) {
+    // Analyze Long Tasks (>50ms tasks that block main thread)
+    const longTaskCount = profilingData.tasks?.longTaskCount ?? 0;
+    const longTaskTotalMs = profilingData.tasks?.longTaskTotalMs ?? 0;
+    const longTaskMaxMs = profilingData.tasks?.longTaskMaxMs ?? 0;
+    if (longTaskCount > 5 || longTaskTotalMs > 500 || longTaskMaxMs > 150) {
       recommendations.push({
         type: 'performance',
-        severity: 'high',
-        title: 'Frame Rate Issues',
-        description: 'Average frame time exceeds 16.67ms (60fps threshold)',
+        severity: longTaskCount > 10 || longTaskTotalMs > 1000 || longTaskMaxMs > 300 ? 'high' : 'medium',
+        title: 'Long Tasks Detected',
+        description: `${longTaskCount} long tasks totaling ${longTaskTotalMs.toFixed(0)}ms (max: ${longTaskMaxMs.toFixed(0)}ms)`,
         actions: [
-          'Optimize rendering loops',
-          'Reduce DOM manipulations',
-          'Use requestAnimationFrame',
+          'Break up long-running JavaScript',
+          'Use Web Workers for heavy computation',
+          'Defer non-critical work with requestIdleCallback',
         ],
       });
+    }
+
+    // Analyze First Contentful Paint (FCP)
+    const fcp = profilingData.paint?.firstContentfulPaintMs;
+    if (fcp !== undefined && fcp > 2500) {
+      recommendations.push({
+        type: 'performance',
+        severity: fcp > 4000 ? 'high' : 'medium',
+        title: 'Slow First Contentful Paint',
+        description: `FCP is ${fcp.toFixed(0)}ms (should be < 2500ms)`,
+        actions: [
+          'Optimize critical rendering path',
+          'Reduce render-blocking resources',
+          'Use preload for critical assets',
+        ],
+      });
+    }
+
+    // Analyze Cumulative Layout Shift (CLS)
+    const cls = profilingData.webVitals?.cumulativeLayoutShift;
+    if (cls !== undefined && cls > 0.1) {
+      recommendations.push({
+        type: 'performance',
+        severity: cls > 0.25 ? 'high' : 'medium',
+        title: 'Layout Shift Issues',
+        description: `CLS is ${cls.toFixed(3)} (should be < 0.1)`,
+        actions: [
+          'Set explicit dimensions for images/iframes',
+          'Reserve space for dynamic content',
+          'Avoid inserting content above existing content',
+        ],
+      });
+    }
+
+    // Analyze First Input Delay (FID)
+    const fid = profilingData.webVitals?.firstInputDelayMs;
+    if (fid !== undefined && fid > 100) {
+      recommendations.push({
+        type: 'performance',
+        severity: fid > 300 ? 'high' : 'medium',
+        title: 'Slow Input Response',
+        description: `FID is ${fid.toFixed(0)}ms (should be < 100ms)`,
+        actions: [
+          'Reduce main thread work during page load',
+          'Split long tasks into smaller chunks',
+          'Use passive event listeners where possible',
+        ],
+      });
+    }
+
+    // Analyze memory usage (if available)
+    const heapUsed = profilingData.memory?.heapUsedBytes;
+    const heapLimit = profilingData.memory?.heapLimitBytes;
+    if (heapUsed !== undefined && heapLimit !== undefined) {
+      const heapUsagePercent = (heapUsed / heapLimit) * 100;
+      if (heapUsagePercent > 70) {
+        recommendations.push({
+          type: 'performance',
+          severity: heapUsagePercent > 85 ? 'high' : 'medium',
+          title: 'High Memory Usage',
+          description: `Heap usage is ${heapUsagePercent.toFixed(1)}% (${(heapUsed / 1024 / 1024).toFixed(1)}MB)`,
+          actions: [
+            'Check for memory leaks',
+            'Clean up unused references',
+            'Implement object pooling for frequent allocations',
+          ],
+        });
+      }
     }
 
     // Analyze cache performance
@@ -322,7 +489,7 @@ export class PerformanceManager {
    * Run performance analysis
    */
   async analyzePerformance(duration = 30000): Promise<PerformanceReport> {
-    perfLogger.info('Starting performance analysis...');
+    this.logger.info('Starting performance analysis...');
 
     // Wait for analysis duration
     await new Promise((resolve) => setTimeout(resolve, duration));
@@ -330,7 +497,7 @@ export class PerformanceManager {
     // Get results
     const report = await this.getPerformanceReport();
 
-    perfLogger.info('Performance Analysis Complete', { metadata: { report } });
+    this.logger.info('Performance Analysis Complete', { report });
 
     return report;
   }

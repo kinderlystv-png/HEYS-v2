@@ -73,9 +73,7 @@ export class TreeShaker {
           potentialSavings += exp.size;
         });
       } catch (error) {
-        this.logger.warn(`Не удалось проанализировать файл ${file}`, {
-          metadata: { error },
-        });
+        this.logger.warn({ err: error as Error }, `Не удалось проанализировать файл ${file}`);
       }
     }
 

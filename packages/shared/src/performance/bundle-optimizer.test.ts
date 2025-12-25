@@ -3,8 +3,20 @@
  * @description Comprehensive test suite for BundleOptimizer class
  * Testing dynamic imports, code splitting, and build optimization
  */
-
+import baseLogger from '@heys/logger';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Mock @heys/logger before importing bundle-optimizer
+vi.mock('@heys/logger', () => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn(() => mockLogger),
+  };
+  return { default: mockLogger, logger: mockLogger };
+});
 
 import {
   BundleOptimizer,
@@ -310,7 +322,7 @@ describe('Utility Functions', () => {
 
       expect(component).toBe(mockComponent);
       expect(importFunction).toHaveBeenCalled();
-      expect(mockConsole.log).toHaveBeenCalledWith(
+      expect(baseLogger.info).toHaveBeenCalledWith(
         "Lazy component 'TestComponent' loaded successfully",
       );
     });
@@ -322,9 +334,9 @@ describe('Utility Functions', () => {
       const factory = createLazyComponentFactory(importFunction, 'FailingComponent');
 
       await expect(factory()).rejects.toThrow('Import failed');
-      expect(mockConsole.error).toHaveBeenCalledWith(
-        "Failed to load lazy component 'FailingComponent':",
-        error,
+      expect(baseLogger.error).toHaveBeenCalledWith(
+        { err: error },
+        "Failed to load lazy component 'FailingComponent'",
       );
     });
   });

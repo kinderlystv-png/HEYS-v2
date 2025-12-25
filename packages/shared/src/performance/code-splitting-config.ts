@@ -255,10 +255,10 @@ export function createCodeSplittingConfig(
         optimization: {
           ...webpackCodeSplittingConfig.optimization,
           splitChunks: {
-            ...webpackCodeSplittingConfig.optimization.splitChunks,
+            ...(webpackCodeSplittingConfig.optimization.splitChunks as object),
             maxAsyncRequests: presetConfig.maxChunks,
             minSize: presetConfig.minChunkSize,
-            ...customOptions.splitChunks,
+            ...((customOptions.splitChunks as object) || {}),
           },
         },
       };
