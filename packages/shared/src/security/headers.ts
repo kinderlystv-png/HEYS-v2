@@ -40,11 +40,10 @@ export class CSPBuilder {
    * Set directive values
    */
   setDirective(directive: keyof CSPDirectives, values: string[] | boolean): this {
-    if (typeof values === 'boolean') {
-      (this.directives as any)[directive] = values;
-    } else {
-      (this.directives as any)[directive] = [...values];
-    }
+    // Use type assertion since we know the value types are compatible
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.directives as Record<string, string[] | boolean | undefined>)[directive] = 
+      typeof values === 'boolean' ? values : [...values];
     return this;
   }
 
@@ -52,11 +51,11 @@ export class CSPBuilder {
    * Add values to existing directive
    */
   addToDirective(directive: keyof CSPDirectives, values: string[]): this {
-    if (!this.directives[directive] || typeof this.directives[directive] === 'boolean') {
-      (this.directives as any)[directive] = [];
-    }
-    const existing = this.directives[directive] as string[];
-    (this.directives as any)[directive] = [...existing, ...values];
+    const current = this.directives[directive];
+    const existing = Array.isArray(current) ? current : [];
+    // Use type assertion since we know the value types are compatible
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.directives as Record<string, string[] | boolean | undefined>)[directive] = [...existing, ...values];
     return this;
   }
 
@@ -259,7 +258,7 @@ export class SecurityHeadersManager {
   /**
    * Apply headers to Express response
    */
-  applyToResponse(res: any): void {
+  applyToResponse(res: { setHeader: (name: string, value: string) => void }): void {
     const headers = this.generateHeaders();
     Object.entries(headers).forEach(([name, value]) => {
       res.setHeader(name, value);

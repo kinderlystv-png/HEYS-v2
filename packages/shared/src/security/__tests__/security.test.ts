@@ -401,7 +401,7 @@ describe('Security Integration Tests', () => {
     // In actual usage, it would be applied to class methods
     const validator = new SecurityValidator();
 
-    const mockMethod = async (input: any) => {
+    const mockMethod = async (input: unknown) => {
       const validation = await validator.validateSchema(input, ValidationSchemas.user, {
         strictMode: true,
       });

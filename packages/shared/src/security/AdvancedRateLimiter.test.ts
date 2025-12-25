@@ -9,6 +9,7 @@ import {
   AdvancedRateLimiter,
   createRateLimitMiddleware,
   RateLimitPresets,
+  type RateLimitRequest,
 } from './AdvancedRateLimiter';
 
 describe('AdvancedRateLimiter', () => {
@@ -86,7 +87,8 @@ describe('AdvancedRateLimiter', () => {
       const customLimiter = new AdvancedRateLimiter({
         windowSizeMs: 1000,
         maxRequests: 2,
-        keyGenerator: (req: any) => req.userId,
+        keyGenerator: (req: RateLimitRequest) =>
+          typeof req.userId === 'string' ? req.userId : 'unknown',
       });
 
       const req1 = { userId: 'user1' };
@@ -111,7 +113,7 @@ describe('AdvancedRateLimiter', () => {
       const skipLimiter = new AdvancedRateLimiter({
         windowSizeMs: 1000,
         maxRequests: 1,
-        skipIf: (req: any) => req.isAdmin,
+        skipIf: (req: RateLimitRequest) => req.isAdmin === true,
       });
 
       const adminReq = { ip: '192.168.1.1', isAdmin: true };
@@ -227,9 +229,13 @@ describe('AdvancedRateLimiter', () => {
 });
 
 describe('Rate Limit Middleware', () => {
-  let mockReq: any;
-  let mockRes: any;
-  let mockNext: any;
+  let mockReq: RateLimitRequest;
+  let mockRes: {
+    set: (headers: Record<string, string>) => void;
+    status: (code: number) => typeof mockRes;
+    json: (body: Record<string, unknown>) => typeof mockRes;
+  };
+  let mockNext: () => void;
 
   beforeEach(() => {
     mockReq = { ip: '192.168.1.1' };
@@ -331,7 +337,7 @@ describe('Performance Tests', () => {
     });
 
     const startTime = Date.now();
-    const promises = [];
+    const promises: Array<Promise<{ allowed: boolean; info: unknown }>> = [];
 
     // Simulate 100 concurrent requests
     for (let i = 0; i < 100; i++) {
@@ -354,7 +360,7 @@ describe('Performance Tests', () => {
     });
 
     const mockReq = { ip: '192.168.1.1' };
-    const promises = [];
+    const promises: Array<Promise<{ allowed: boolean; info: unknown }>> = [];
 
     // Make 10 concurrent requests (should only allow 5)
     for (let i = 0; i < 10; i++) {
@@ -362,7 +368,7 @@ describe('Performance Tests', () => {
     }
 
     const results = await Promise.all(promises);
-    const allowedCount = results.filter((r: any) => r.allowed).length;
+    const allowedCount = results.filter((result) => result.allowed).length;
 
     // Should allow exactly 5 requests
     expect(allowedCount).toBe(5);

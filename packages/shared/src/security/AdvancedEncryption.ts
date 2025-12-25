@@ -16,6 +16,17 @@
 
 import { getGlobalLogger } from '../monitoring/structured-logger';
 
+type JsonWebKeyData = Record<string, unknown>;
+type KeyUsageValue =
+  | 'encrypt'
+  | 'decrypt'
+  | 'sign'
+  | 'verify'
+  | 'deriveKey'
+  | 'deriveBits'
+  | 'wrapKey'
+  | 'unwrapKey';
+
 /**
  * Encryption configuration options
  */
@@ -359,15 +370,15 @@ export class AdvancedEncryptionService {
   /**
    * Export key to JWK format
    */
-  async exportKey(key: CryptoKey): Promise<JsonWebKey> {
-    return crypto.subtle.exportKey('jwk', key);
+  async exportKey(key: CryptoKey): Promise<JsonWebKeyData> {
+    return (await crypto.subtle.exportKey('jwk', key)) as JsonWebKeyData;
   }
 
   /**
    * Import key from JWK format
    */
-  async importKey(keyData: JsonWebKey, algorithm: string): Promise<CryptoKey> {
-    const keyUsage: KeyUsage[] =
+  async importKey(keyData: JsonWebKeyData, algorithm: string): Promise<CryptoKey> {
+    const keyUsage: KeyUsageValue[] =
       algorithm === 'RSA-OAEP' ? ['encrypt', 'decrypt'] : ['encrypt', 'decrypt'];
 
     const algorithmConfig =

@@ -178,7 +178,7 @@ describe('AdvancedEncryptionService', () => {
 
       const encryptedData = await encryptionService.encryptWithPublicKey(
         testData,
-        mockPublicKey as any,
+        mockPublicKey as unknown as CryptoKey,
       );
 
       expect(typeof encryptedData).toBe('string');
@@ -199,7 +199,7 @@ describe('AdvancedEncryptionService', () => {
 
       const decryptedData = await encryptionService.decryptWithPrivateKey(
         encryptedData,
-        mockPrivateKey as any,
+        mockPrivateKey as unknown as CryptoKey,
       );
 
       expect(decryptedData).toBe(originalData);
@@ -310,7 +310,7 @@ describe('AdvancedEncryptionService', () => {
       mockCrypto.subtle.exportKey.mockResolvedValue(mockJWK);
       mockCrypto.subtle.importKey.mockResolvedValue(mockKey);
 
-      const exportedKey = await encryptionService.exportKey(mockKey as any);
+      const exportedKey = await encryptionService.exportKey(mockKey as unknown as CryptoKey);
       expect(exportedKey).toBe(mockJWK);
 
       const importedKey = await encryptionService.importKey(mockJWK, 'AES-GCM');

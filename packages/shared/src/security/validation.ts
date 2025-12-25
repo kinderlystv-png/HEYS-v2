@@ -44,7 +44,7 @@ export const ValidationSchemas = {
   // File upload validation
   file: z.object({
     name: z.string().min(1).max(255),
-    type: z.string().regex(/^[a-zA-Z0-9/.\-]+$/),
+    type: z.string().regex(/^[a-zA-Z0-9/.-]+$/),
     size: z
       .number()
       .min(1)
@@ -314,7 +314,7 @@ export class SecurityValidator {
       // Validate against Zod schema
       const parseResult = schema.safeParse(processedData);
       if (!parseResult.success) {
-        parseResult.error.errors.forEach((error: any) => {
+        parseResult.error.errors.forEach((error) => {
           result.errors.push({
             field: error.path.join('.'),
             rule: 'schema',
@@ -515,11 +515,11 @@ export class SecurityValidator {
  * Security boundary decorator
  */
 export function SecurityBoundary(rules: string[] = []) {
-  return function (_target: any, _propertyName: string, descriptor: PropertyDescriptor) {
-    const method = descriptor.value;
+  return function (_target: unknown, _propertyName: string, descriptor: PropertyDescriptor) {
+    const method = descriptor.value as (...args: unknown[]) => Promise<unknown>;
     const validator = new SecurityValidator();
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       // Validate all arguments
       for (let i = 0; i < args.length; i++) {
         const validation = await validator.validateSchema(args[i], z.unknown(), {

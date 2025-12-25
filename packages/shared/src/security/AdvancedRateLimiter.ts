@@ -15,15 +15,29 @@
 
 import { EventEmitter } from 'events';
 
+import { getGlobalLogger } from '../monitoring/structured-logger';
+
 /**
  * Rate limit configuration for different endpoints
  */
+export type RateLimitRequest = Record<string, unknown> & {
+  ip?: string;
+  connection?: { remoteAddress?: string };
+};
+
+type RedisClient = {
+  zremrangebyscore: (key: string, min: number, max: number) => Promise<number>;
+  zrange: (key: string, start: number, stop: number) => Promise<string[]>;
+  zadd: (key: string, score: number, member: number) => Promise<number>;
+  expire: (key: string, seconds: number) => Promise<number>;
+};
+
 export interface RateLimitConfig {
   windowSizeMs: number; // Time window in milliseconds
   maxRequests: number; // Maximum requests per window
-  keyGenerator?: (req: any) => string; // Custom key generation
-  skipIf?: (req: any) => boolean; // Skip rate limiting condition
-  onLimitReached?: (req: any, info: RateLimitInfo) => void;
+  keyGenerator?: (req: RateLimitRequest) => string; // Custom key generation
+  skipIf?: (req: RateLimitRequest) => boolean; // Skip rate limiting condition
+  onLimitReached?: (req: RateLimitRequest, info: RateLimitInfo) => void;
 }
 
 /**
@@ -42,11 +56,11 @@ export interface RateLimitInfo {
  */
 export class AdvancedRateLimiter extends EventEmitter {
   private readonly config: Required<RateLimitConfig>;
-  private readonly redisClient: any; // Redis client instance
+  private readonly redisClient?: RedisClient; // Redis client instance
   private readonly requestLog: Map<string, number[]> = new Map();
   private readonly blacklist: Set<string> = new Set();
 
-  constructor(config: RateLimitConfig, redisClient?: any) {
+  constructor(config: RateLimitConfig, redisClient?: RedisClient) {
     super();
 
     this.config = {
@@ -66,14 +80,14 @@ export class AdvancedRateLimiter extends EventEmitter {
   /**
    * Default key generator using IP address
    */
-  private defaultKeyGenerator(req: any): string {
+  private defaultKeyGenerator(req: RateLimitRequest): string {
     return req.ip || req.connection?.remoteAddress || 'unknown';
   }
 
   /**
    * Check if request should be rate limited
    */
-  async checkRateLimit(req: any): Promise<{ allowed: boolean; info: RateLimitInfo }> {
+  async checkRateLimit(req: RateLimitRequest): Promise<{ allowed: boolean; info: RateLimitInfo }> {
     // Skip if condition is met
     if (this.config.skipIf(req)) {
       return {
@@ -165,10 +179,10 @@ export class AdvancedRateLimiter extends EventEmitter {
     const redisKey = `rate_limit:${key}`;
 
     // Remove expired entries
-    await this.redisClient.zremrangebyscore(redisKey, 0, windowStart);
+    await this.redisClient!.zremrangebyscore(redisKey, 0, windowStart);
 
     // Get current entries
-    const requests = await this.redisClient.zrange(redisKey, 0, -1);
+    const requests = await this.redisClient!.zrange(redisKey, 0, -1);
     return requests.map(Number);
   }
 
@@ -184,10 +198,10 @@ export class AdvancedRateLimiter extends EventEmitter {
     const now = Date.now();
 
     // Add new request with score = timestamp
-    await this.redisClient.zadd(redisKey, now, now);
+    await this.redisClient!.zadd(redisKey, now, now);
 
     // Set expiration
-    await this.redisClient.expire(redisKey, Math.ceil(this.config.windowSizeMs / 1000));
+    await this.redisClient!.expire(redisKey, Math.ceil(this.config.windowSizeMs / 1000));
   }
 
   /**
@@ -241,7 +255,7 @@ export class AdvancedRateLimiter extends EventEmitter {
       activeKeys: this.requestLog.size,
       blacklistedKeys: this.blacklist.size,
       totalRequests,
-      memoryUsage: process.memoryUsage().heapUsed,
+      memoryUsage: typeof process !== 'undefined' ? process.memoryUsage().heapUsed : 0,
     };
   }
 
@@ -288,10 +302,18 @@ export class AdvancedRateLimiter extends EventEmitter {
 /**
  * Rate limiting middleware factory for Express
  */
-export function createRateLimitMiddleware(config: RateLimitConfig, redisClient?: any) {
+type RateLimitResponse = {
+  set: (field: Record<string, string> | string, value?: string) => void;
+  status: (code: number) => { json: (body: Record<string, unknown>) => void };
+};
+
+type RateLimitNext = (error?: unknown) => void;
+
+export function createRateLimitMiddleware(config: RateLimitConfig, redisClient?: RedisClient) {
+  const logger = getGlobalLogger().child({ component: 'RateLimitMiddleware' });
   const limiter = new AdvancedRateLimiter(config, redisClient);
 
-  return async (req: any, res: any, next: any) => {
+  return async (req: RateLimitRequest, res: RateLimitResponse, next: RateLimitNext) => {
     try {
       const { allowed, info } = await limiter.checkRateLimit(req);
 
@@ -315,7 +337,8 @@ export function createRateLimitMiddleware(config: RateLimitConfig, redisClient?:
 
       next();
     } catch (error) {
-      console.error('Rate limiting error:', error);
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      logger.error('Rate limiting error', { metadata: { error: normalizedError } });
       next(); // Fail open - allow request if rate limiter fails
     }
   };

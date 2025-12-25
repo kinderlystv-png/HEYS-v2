@@ -3,7 +3,9 @@ import { getGlobalLogger } from '../monitoring/structured-logger';
 
 import { ThreatDetectionService } from './threat-detection-bridge';
 
-type Listener = (...args: any[]) => void;
+const emitterLogger = getGlobalLogger().child({ component: 'LightweightEventEmitter' });
+
+type Listener = (...args: unknown[]) => void;
 
 class LightweightEventEmitter {
   private listeners = new Map<string, Set<Listener>>();
@@ -12,7 +14,10 @@ class LightweightEventEmitter {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
-    this.listeners.get(event)!.add(listener);
+    const handlers = this.listeners.get(event);
+    if (handlers) {
+      handlers.add(listener);
+    }
     return this;
   }
 
@@ -35,7 +40,7 @@ class LightweightEventEmitter {
     return this.on(event, wrapper);
   }
 
-  emit(event: string, ...args: any[]): boolean {
+  emit(event: string, ...args: unknown[]): boolean {
     const handlers = this.listeners.get(event);
     if (!handlers || handlers.size === 0) {
       return false;
@@ -44,7 +49,10 @@ class LightweightEventEmitter {
       try {
         handler(...args);
       } catch (error) {
-        console.error(`Error in listener for ${event}`, error);
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
+        emitterLogger.error(`Error in listener for ${event}`, {
+          metadata: { error: normalizedError },
+        });
       }
     });
     return true;
