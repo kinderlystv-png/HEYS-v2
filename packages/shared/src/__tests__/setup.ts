@@ -5,16 +5,28 @@
 
 import { afterEach, beforeEach, vi } from 'vitest';
 
+type MockIDBReadyState = 'pending' | 'done';
+type MockIDBOpenDBRequest = {
+  result: IDBDatabase | null;
+  error: DOMException | null;
+  readyState: MockIDBReadyState;
+  onsuccess: ((this: IDBRequest, ev: Event) => unknown) | null;
+  onerror: ((this: IDBRequest, ev: Event) => unknown) | null;
+  onupgradeneeded: ((this: IDBRequest, ev: IDBVersionChangeEvent) => unknown) | null;
+  addEventListener: ReturnType<typeof vi.fn>;
+  removeEventListener: ReturnType<typeof vi.fn>;
+};
+
 // Mock IndexedDB
 const mockIndexedDB = {
   open: vi.fn().mockImplementation((name: string, version?: number) => {
-    const request = {
-      result: null as any,
+    const request: MockIDBOpenDBRequest = {
+      result: null,
       error: null,
       readyState: 'pending',
-      onsuccess: null as any,
-      onerror: null as any,
-      onupgradeneeded: null as any,
+      onsuccess: null,
+      onerror: null,
+      onupgradeneeded: null,
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     };
@@ -54,7 +66,9 @@ const mockIndexedDB = {
       request.result = db;
       request.readyState = 'done';
       if (request.onsuccess) {
-        request.onsuccess({ target: request } as any);
+        const event = new Event('success');
+        Object.defineProperty(event, 'target', { value: request });
+        request.onsuccess.call(request as unknown as IDBRequest, event);
       }
     }, 0);
 
@@ -170,13 +184,28 @@ const mockPerformance = {
   clearMeasures: vi.fn(),
 };
 
+const globalEnv = globalThis as unknown as {
+  indexedDB?: IDBFactory;
+  URL?: typeof URL;
+  Worker?: typeof Worker;
+  PerformanceObserver?: typeof PerformanceObserver;
+  navigator?: Navigator;
+  fetch?: typeof fetch;
+  performance?: Performance;
+  alert?: (message?: string) => void;
+  document?: Document;
+  window?: Window & typeof globalThis;
+  localStorage?: Storage;
+  sessionStorage?: Storage;
+};
+
 // Apply mocks to global scope
 beforeEach(() => {
   // Browser APIs
-  (global as any).indexedDB = mockIndexedDB;
+  globalEnv.indexedDB = mockIndexedDB as unknown as IDBFactory;
   // Make sure URL has createObjectURL
-  if (!(global as any).URL) {
-    (global as any).URL = class MockURL {
+  if (!globalEnv.URL) {
+    globalEnv.URL = class MockURL {
       constructor(url: string, _base?: string) {
         this.href = url;
         this.protocol = 'http:';
@@ -187,16 +216,16 @@ beforeEach(() => {
       protocol: string;
       host: string;
       pathname: string;
-    };
+    } as unknown as typeof URL;
   }
-  (global as any).URL.createObjectURL = mockURL.createObjectURL;
-  (global as any).URL.revokeObjectURL = mockURL.revokeObjectURL;
-  (global as any).Worker = mockWorker;
-  (global as any).PerformanceObserver = mockPerformanceObserver;
+  globalEnv.URL.createObjectURL = mockURL.createObjectURL;
+  globalEnv.URL.revokeObjectURL = mockURL.revokeObjectURL;
+  globalEnv.Worker = mockWorker as unknown as typeof Worker;
+  globalEnv.PerformanceObserver = mockPerformanceObserver as unknown as typeof PerformanceObserver;
 
   // Use Object.defineProperty for readonly properties
   try {
-    Object.defineProperty(global, 'localStorage', {
+    Object.defineProperty(globalThis, 'localStorage', {
       value: mockLocalStorage,
       writable: true,
       configurable: true,
@@ -206,7 +235,7 @@ beforeEach(() => {
   }
 
   try {
-    Object.defineProperty(global, 'sessionStorage', {
+    Object.defineProperty(globalThis, 'sessionStorage', {
       value: mockSessionStorage,
       writable: true,
       configurable: true,
@@ -215,30 +244,31 @@ beforeEach(() => {
     // Already exists, try to override
   }
 
-  (global as any).navigator = mockNavigator;
-  (global as any).fetch = mockFetch;
-  (global as any).performance = mockPerformance;
+  globalEnv.navigator = mockNavigator as Navigator;
+  globalEnv.fetch = mockFetch as unknown as typeof fetch;
+  globalEnv.performance = mockPerformance as unknown as Performance;
 
   // Mock alert for security tests
-  (global as any).alert = vi.fn();
+  globalEnv.alert = vi.fn();
 
   // Mock document if needed
-  if (!(global as any).document) {
-    (global as any).document = {
+  if (!globalEnv.document) {
+    globalEnv.document = {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
       createElement: vi.fn().mockReturnValue({
         addEventListener: vi.fn(),
         removeEventListener: vi.fn(),
       }),
-    };
+    } as unknown as Document;
   }
 
   // Mock window object if needed for browser APIs
-  if (!(global as any).window) {
-    (global as any).window = global;
+  if (!globalEnv.window) {
+    globalEnv.window = globalThis as unknown as Window & typeof globalThis;
   }
-  (global as any).window.PerformanceObserver = mockPerformanceObserver;
+  globalEnv.window.PerformanceObserver =
+    mockPerformanceObserver as unknown as typeof PerformanceObserver;
 
   // Reset all mocks
   vi.clearAllMocks();

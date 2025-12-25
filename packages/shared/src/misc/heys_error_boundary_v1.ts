@@ -232,7 +232,10 @@ if (runtimeWindow) {
           // Use custom fallback if provided
           if (this.props.fallback) {
             const FallbackComponent = this.props.fallback;
-            return React.createElement(FallbackComponent, { error: error! });
+            if (!error) {
+              return React.createElement('div', null, 'Unknown error');
+            }
+            return React.createElement(FallbackComponent, { error });
           }
 
           // Default error UI
@@ -424,6 +427,7 @@ if (runtimeWindow) {
         try {
           return JSON.parse(localStorage.getItem('heys_recent_errors') || '[]');
         } catch (e) {
+          void e;
           return [];
         }
       },
@@ -432,7 +436,9 @@ if (runtimeWindow) {
         try {
           localStorage.removeItem('heys_recent_errors');
         } catch (e) {
-          console.warn('Could not clear error storage:', e);
+          logger.warn('Could not clear error storage', {
+            metadata: { storageError: serializeError(e as Error) },
+          });
         }
       },
 

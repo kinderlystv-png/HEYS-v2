@@ -2,12 +2,14 @@
 
 import React from 'react';
 
+import { getGlobalLogger } from '../monitoring/structured-logger';
+
 import type { HEYSGlobal } from './types/heys';
 
 // VirtualList component types
 interface VirtualListItem {
   id?: string | number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface VirtualListProps {
@@ -29,6 +31,7 @@ declare global {
 
 // Module implementation
 (function (global: Window & typeof globalThis): void {
+  const logger = getGlobalLogger().child({ component: 'HEYS Virtual List v1' });
   const HEYS = (global.HEYS = global.HEYS || ({} as HEYSGlobal));
   const React = global.React;
 
@@ -264,7 +267,7 @@ declare global {
   ) => {
     return React.forwardRef<HTMLDivElement, VirtualListProps>((props, ref) => {
       const { items, renderItem, height, ...restProps } = props;
-      const [itemHeights, setItemHeights] = React.useState<number[]>([]);
+      const [itemHeights] = React.useState<number[]>([]);
       const [scroll, setScroll] = React.useState(0);
 
       // Calculate positions for dynamic heights
@@ -368,9 +371,9 @@ declare global {
 
   // Assign to HEYS global
   HEYS.VirtualList = VirtualList;
-  (HEYS as any).EnhancedVirtualList = EnhancedVirtualList;
-  (HEYS as any).useVirtualListMetrics = useVirtualListMetrics;
-  (HEYS as any).createDynamicVirtualList = createDynamicVirtualList;
+  (HEYS as unknown as Record<string, unknown>).EnhancedVirtualList = EnhancedVirtualList;
+  (HEYS as unknown as Record<string, unknown>).useVirtualListMetrics = useVirtualListMetrics;
+  (HEYS as unknown as Record<string, unknown>).createDynamicVirtualList = createDynamicVirtualList;
 
-  console.log('📋 HEYS Virtual List v1 (TypeScript) загружен');
+  logger.info('HEYS Virtual List loaded');
 })(window);

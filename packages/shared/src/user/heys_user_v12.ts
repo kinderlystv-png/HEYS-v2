@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-import type { HEYSGlobal, PulseZone, UserProfile, UserTabProps } from './types/heys';
+import type { HEYSGlobal, PulseZone, UserProfile } from './types/heys';
 
 // Declare global types
 declare global {
@@ -16,10 +16,10 @@ declare global {
 (function (global: Window & typeof globalThis): void {
   const HEYS = (global.HEYS = global.HEYS || ({} as HEYSGlobal));
   const React = global.React;
-  const { lsGet, lsSet, toNum, round1 } = HEYS.utils || {
-    lsGet: (k: string, d: any) => d,
-    lsSet: () => {},
-    toNum: (x: any) => Number(x) || 0,
+  const { lsGet, lsSet, toNum } = HEYS.utils || {
+    lsGet: (_k: string, d: unknown) => d,
+    lsSet: (_k: string, _v: unknown) => {},
+    toNum: (x: unknown) => Number(x) || 0,
     round1: (v: number) => Math.round(v * 10) / 10,
   };
 
@@ -63,7 +63,6 @@ declare global {
 
       const reloadData = () => {
         if (cancelled) return;
-        console.log('[Profile] Reloading data after client change...');
 
         const newProfile = lsGet('heys_profile', {
           firstName: '',
@@ -75,11 +74,9 @@ declare global {
           sleepHours: 8,
           insulinWaveHours: 3,
         });
-        console.log('[Profile] Loaded profile:', newProfile);
         setProfile(newProfile);
 
         const newZones = lsGet('heys_hr_zones', defaultZones);
-        console.log('[Profile] Loaded zones:', newZones);
         setZones(newZones);
       };
 
@@ -105,12 +102,12 @@ declare global {
     }, [zones]);
 
     // Обновление профиля
-    const updateProfile = (field: keyof UserProfile, value: any) => {
+    const updateProfile = (field: keyof UserProfile, value: unknown) => {
       setProfile((prev) => ({ ...prev, [field]: value }));
     };
 
     // Обновление зоны
-    const updateZone = (index: number, field: keyof PulseZone, value: any) => {
+    const updateZone = (index: number, field: keyof PulseZone, value: unknown) => {
       setZones((prev) => {
         const newZones = [...prev];
         newZones[index] = { ...newZones[index], [field]: value };
@@ -218,7 +215,7 @@ declare global {
   }
 
   // UserTab с дополнительной логикой (если есть)
-  function UserTab(props: UserTabProps): React.ReactElement {
+  function UserTab(): React.ReactElement {
     return React.createElement(UserTabBase);
   }
 

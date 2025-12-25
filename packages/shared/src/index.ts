@@ -1,5 +1,6 @@
 // Export all shared utilities, types, and components
 export * from './database/DatabaseService';
+export * from './logging';
 export * from './monitoring';
 export * from './security';
 export * from './security/SecurityAnalyticsService';

@@ -6,12 +6,7 @@ import type {
   DayRecord,
   DayTabProps,
   HEYSGlobal,
-  Meal,
-  MealItem,
-  NutritionTotals,
   Product,
-  ProductIndex,
-  Training,
   UserProfile,
 } from './types/heys';
 
@@ -24,36 +19,7 @@ declare global {
 }
 
 // Type definitions specific to day component - удаляем LocalDayTabProps
-
-interface MealComponentProps {
-  meal: Meal;
-  mealIndex: number;
-  products: Product[];
-  productIndex: ProductIndex;
-  onUpdateMeal: (mealIndex: number, meal: Meal) => void;
-  onDeleteMeal: (mealIndex: number) => void;
-}
-
-interface MealItemComponentProps {
-  item: MealItem;
-  itemIndex: number;
-  mealIndex: number;
-  product: Product | null;
-  onUpdateItem: (mealIndex: number, itemIndex: number, item: MealItem) => void;
-  onDeleteItem: (mealIndex: number, itemIndex: number) => void;
-}
-
-interface MealAddProductProps {
-  mealIndex: number;
-  products: Product[];
-  productIndex: ProductIndex;
-  onAddProduct: (mealIndex: number, productName: string, grams: number) => void;
-}
-
-interface TrainingComponentProps {
-  trainings: Training[];
-  onUpdateTraining: (trainings: Training[]) => void;
-}
+type SafeEventListener = (event: Event) => void;
 
 // Module implementation
 (function (global: Window & typeof globalThis): void {
@@ -70,25 +36,11 @@ interface TrainingComponentProps {
     return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
   }
 
-  function fmtDate(d: Date): string {
-    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
-  }
-
-  function parseISO(s: string): Date {
-    const [y, m, d] = String(s || '')
-      .split('-')
-      .map((x) => parseInt(x, 10));
-    if (!y || !m || !d) return new Date();
-    const dt = new Date(y, m - 1, d);
-    dt.setHours(12);
-    return dt;
-  }
-
   function uid(p?: string): string {
     return (p || 'id') + Math.random().toString(36).slice(2, 8);
   }
 
-  function lsGet(k: string, d: any): any {
+  function lsGet(k: string, d: unknown): unknown {
     try {
       if (HEYS.store && typeof HEYS.store.get === 'function') {
         const result = HEYS.store.get(k, d);
@@ -107,7 +59,7 @@ interface TrainingComponentProps {
     }
   }
 
-  function lsSet(k: string, v: any): void {
+  function lsSet(k: string, v: unknown): void {
     try {
       if (HEYS.store && typeof HEYS.store.set === 'function') {
         HEYS.store.set(k, v);
@@ -122,22 +74,19 @@ interface TrainingComponentProps {
         if (window.HEYS && window.HEYS.analytics) {
           window.HEYS.analytics.trackDataOperation('storage-op');
         }
-      } catch (e) {}
+      } catch (e) {
+        void e;
+      }
       // Потом отправляем в облако (асинхронно)
       try {
         window.HEYS.saveClientKey(k, v);
-      } catch (e) {}
-    } catch (e) {}
+      } catch (e) {
+        void e;
+      }
+    } catch (e) {
+      void e;
+    }
   }
-
-  function clamp(n: number, a: number, b: number): number {
-    n = +n || 0;
-    if (n < a) return a;
-    if (n > b) return b;
-    return n;
-  }
-
-  const r1 = (v: number): number => Math.round((+v || 0) * 10) / 10;
 
   // Используем общие модели вместо локальных дубликатов
   function ensureDay(d: Partial<DayRecord> | null, prof?: UserProfile): DayRecord {
@@ -176,37 +125,9 @@ interface TrainingComponentProps {
     } as DayRecord;
   }
 
-  function buildProductIndex(ps: readonly Product[]): ProductIndex {
-    const products = Array.from(ps);
-    return HEYS.models?.buildProductIndex
-      ? HEYS.models.buildProductIndex(products)
-      : {
-          byId: new Map(),
-          byName: new Map(),
-        };
-  }
-
-  function mealTotals(meal: Meal, idx: ProductIndex): NutritionTotals {
-    return HEYS.models?.mealTotals
-      ? HEYS.models.mealTotals(meal, idx)
-      : {
-          kcal: 0,
-          carbs: 0,
-          simple: 0,
-          complex: 0,
-          prot: 0,
-          protein: 0,
-          fat: 0,
-          bad: 0,
-          good: 0,
-          trans: 0,
-          fiber: 0,
-        };
-  }
-
   // Main DayTab component
   function DayTab(props: DayTabProps): React.ReactElement {
-    const { useState, useMemo, useEffect } = React;
+    const { useState, useEffect } = React;
     const { products: initialProducts = [] } = props;
     const date = todayISO(); // используем сегодняшнюю дату как дефолт
 
@@ -251,8 +172,6 @@ interface TrainingComponentProps {
       }
     });
 
-    const pIndex = useMemo(() => buildProductIndex(products), [products]);
-
     // Подписка на события обновления продуктов
     useEffect(() => {
       const handleProductsUpdate = (event: CustomEvent<{ products: Product[] }>) => {
@@ -261,15 +180,18 @@ interface TrainingComponentProps {
         }
       };
 
-      window.addEventListener('heysProductsUpdated', handleProductsUpdate as EventListener);
+      window.addEventListener('heysProductsUpdated', handleProductsUpdate as SafeEventListener);
       return () =>
-        window.removeEventListener('heysProductsUpdated', handleProductsUpdate as EventListener);
+        window.removeEventListener(
+          'heysProductsUpdated',
+          handleProductsUpdate as SafeEventListener,
+        );
     }, []);
 
     // День данных
     const dayKey = `heys_dayv2_${date}`;
     const [day, setDay] = useState<DayRecord>(() => {
-      const stored = lsGet(dayKey, null);
+      const stored = lsGet(dayKey, null) as Partial<DayRecord> | null;
       return ensureDay(stored);
     });
 
@@ -286,7 +208,7 @@ interface TrainingComponentProps {
 
       const reloadData = () => {
         if (cancelled) return;
-        const newDay = lsGet(dayKey, null);
+        const newDay = lsGet(dayKey, null) as Partial<DayRecord> | null;
         setDay(ensureDay(newDay));
       };
 

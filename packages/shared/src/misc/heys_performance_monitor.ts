@@ -59,6 +59,8 @@
 
 // heys_performance_monitor.ts — расширенная аналитика и мониторинг производительности (TypeScript version)
 
+import { getGlobalLogger } from '../monitoring/structured-logger';
+
 import type { HEYSGlobal } from './types/heys';
 
 // Performance monitoring types
@@ -148,7 +150,7 @@ interface NetworkError {
 
 interface ValidationError {
   field: string;
-  value: any;
+  value: unknown;
   rule: string;
   timestamp: number;
 }
@@ -174,12 +176,13 @@ declare global {
   interface Window {
     HEYS: HEYSGlobal;
     performance: Performance;
-    PerformanceObserver?: any;
+    PerformanceObserver?: typeof PerformanceObserver;
   }
 }
 
 // Module implementation
 (function (global: Window & typeof globalThis): void {
+  const logger = getGlobalLogger().child({ component: 'HEYS Performance Monitor' });
   const HEYS = (global.HEYS = global.HEYS || ({} as HEYSGlobal));
 
   // Центральная система метрик
@@ -264,7 +267,7 @@ declare global {
 
       try {
         // Web Vitals observation
-        const observer = new window.PerformanceObserver((list: any) => {
+        const observer = new window.PerformanceObserver((list: PerformanceObserverEntryList) => {
           for (const entry of list.getEntries()) {
             switch (entry.entryType) {
               case 'paint':
@@ -275,14 +278,18 @@ declare global {
               case 'largest-contentful-paint':
                 this.metrics.vitals.lcp = entry.startTime;
                 break;
-              case 'layout-shift':
-                if (!entry.hadRecentInput) {
-                  this.metrics.vitals.cls += entry.value;
+              case 'layout-shift': {
+                const layoutEntry = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number };
+                if (!layoutEntry.hadRecentInput) {
+                  this.metrics.vitals.cls += layoutEntry.value || 0;
                 }
                 break;
-              case 'first-input':
-                this.metrics.vitals.fid = entry.processingStart - entry.startTime;
+              }
+              case 'first-input': {
+                const inputEntry = entry as PerformanceEntry & { processingStart?: number };
+                this.metrics.vitals.fid = (inputEntry.processingStart || entry.startTime) - entry.startTime;
                 break;
+              }
             }
           }
         });
@@ -291,7 +298,9 @@ declare global {
           entryTypes: ['paint', 'largest-contentful-paint', 'layout-shift', 'first-input'],
         });
       } catch (e) {
-        console.warn('PerformanceObserver setup failed:', e);
+        logger.warn('PerformanceObserver setup failed', {
+          metadata: { error: e instanceof Error ? e.message : String(e) },
+        });
       }
     }
 
@@ -385,8 +394,10 @@ declare global {
       });
 
       // Network errors (intercept fetch)
-      const originalFetch = window.fetch;
-      window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const originalFetch = window.fetch.bind(window);
+      type FetchInput = Parameters<typeof fetch>[0];
+      type FetchInit = Parameters<typeof fetch>[1];
+      window.fetch = async (input: FetchInput, init?: FetchInit): Promise<Response> => {
         const start = performance.now();
         try {
           const response = await originalFetch(input, init);
@@ -412,8 +423,9 @@ declare global {
 
           return response;
         } catch (error) {
+          const requestUrl = typeof input === 'string' ? input : input.toString();
           this.metrics.errors.networkErrors.push({
-            url: typeof input === 'string' ? input : input.toString(),
+            url: requestUrl,
             status: 0,
             message: error instanceof Error ? error.message : String(error),
             timestamp: Date.now(),
@@ -426,7 +438,8 @@ declare global {
     private setupMemoryMonitoring(): void {
       if ('memory' in performance) {
         setInterval(() => {
-          const memory = (performance as any).memory;
+          const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } })
+            .memory;
           if (memory) {
             this.metrics.performance.memoryUsage.push(memory.usedJSHeapSize / 1024 / 1024); // MB
 
@@ -518,7 +531,7 @@ declare global {
       }
     }
 
-    getStats(): Record<string, any> {
+    getStats(): Record<string, unknown> {
       return {
         session: {
           duration: Date.now() - this.sessionStart,
@@ -533,9 +546,9 @@ declare global {
     logSlow(name: string, threshold: number = 100): void {
       const timing = this.timings.get(name);
       if (timing && timing.avg > threshold) {
-        console.warn(
-          `⚠️ Slow operation detected: ${name} avg ${timing.avg.toFixed(2)}ms (threshold: ${threshold}ms)`,
-        );
+        logger.warn('Slow operation detected', {
+          metadata: { name, avgMs: timing.avg, thresholdMs: threshold },
+        });
       }
     }
 
@@ -559,38 +572,49 @@ declare global {
         }
         return total;
       } catch (e) {
+        logger.warn('Failed to read localStorage size', {
+          metadata: { error: e instanceof Error ? e.message : String(e) },
+        });
         return 0;
       }
     }
 
     report(): void {
-      console.group('📊 HEYS Performance Report');
-      console.log('Session duration:', (Date.now() - this.sessionStart) / 1000, 'seconds');
-      console.log('Storage size:', this.getStorageSize(), 'chars');
-      console.log('Errors:', this.metrics.performance.errorCount);
-      console.log('User activity:', this.metrics.userActivity);
-      console.log('Top slow operations:');
+      logger.info('Performance report', {
+        metadata: {
+          sessionSeconds: (Date.now() - this.sessionStart) / 1000,
+          storageChars: this.getStorageSize(),
+          errorCount: this.metrics.performance.errorCount,
+          userActivity: this.metrics.userActivity,
+          topSlowOperations: Array.from(this.timings.values())
+            .sort((a, b) => b.avg - a.avg)
+            .slice(0, 5)
+            .map((op) => ({
+              name: op.name,
+              avgMs: Number(op.avg.toFixed(2)),
+              count: op.count,
+            })),
+        },
+      });
 
       const slowOps = Array.from(this.timings.values())
         .sort((a, b) => b.avg - a.avg)
         .slice(0, 5);
-
       slowOps.forEach((op) => {
-        console.log(`  ${op.name}: ${op.avg.toFixed(2)}ms avg (${op.count} calls)`);
+        logger.info('Slow operation summary', {
+          metadata: { name: op.name, avgMs: Number(op.avg.toFixed(2)), count: op.count },
+        });
       });
-
-      console.groupEnd();
     }
 
-    showStats(): Record<string, any> {
+    showStats(): Record<string, unknown> {
       const stats = this.getStats();
-      console.table(stats.timings);
-      console.table(stats.counters);
+      logger.info('Performance stats', { metadata: stats });
       return stats;
     }
 
     // HEYSAnalytics interface implementation
-    trackDataOperation(type: string, _details?: any): void {
+    trackDataOperation(type: string, _details?: unknown): void {
       this.increment(`dataOp.${type}`);
 
       switch (type) {
@@ -621,7 +645,7 @@ declare global {
       }
     }
 
-    trackUserInteraction(action: string, _details?: any): void {
+    trackUserInteraction(action: string, _details?: unknown): void {
       this.increment(`userAction.${action}`);
     }
 
@@ -630,7 +654,7 @@ declare global {
       this.increment(success ? `api.${endpoint}.success` : `api.${endpoint}.error`);
     }
 
-    trackError(error: string, _details?: any): void {
+    trackError(error: string, _details?: unknown): void {
       this.increment(`error.${error}`);
       this.metrics.errors.consoleErrors.push({
         level: 'error',
@@ -639,7 +663,7 @@ declare global {
       });
     }
 
-    getMetrics(): Record<string, any> {
+    getMetrics(): Record<string, unknown> {
       return {
         ...this.metrics,
         session: {
@@ -657,5 +681,5 @@ declare global {
   HEYS.performance = analytics;
   HEYS.analytics = analytics;
 
-  console.log('⚡ HEYS Performance Monitor (TypeScript) загружен');
+  logger.info('HEYS Performance Monitor loaded');
 })(window);

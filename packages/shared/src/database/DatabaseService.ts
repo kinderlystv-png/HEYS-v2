@@ -23,7 +23,7 @@ export interface SecurityEvent {
   device_fingerprint?: string;
   privilege_level?: 'user' | 'admin' | 'system';
   failed_attempts?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -37,11 +37,11 @@ export interface SecurityIncident {
   user_id?: string;
   client_id?: string;
   event_ids?: string[];
-  ioc_matches?: Record<string, any>;
+  ioc_matches?: Record<string, unknown>;
   ml_confidence?: number;
-  response_actions?: Record<string, any>;
-  timeline?: Record<string, any>;
-  impact_assessment?: Record<string, any>;
+  response_actions?: Record<string, unknown>;
+  timeline?: Record<string, unknown>;
+  impact_assessment?: Record<string, unknown>;
   assigned_to?: string;
   escalated_to?: string;
   resolved_at?: string;
@@ -56,7 +56,7 @@ export interface AnalyticsMetric {
   metric_name: string;
   metric_value: number;
   metric_unit?: string;
-  dimensions?: Record<string, any>;
+  dimensions?: Record<string, unknown>;
   aggregation_period: 'minute' | 'hour' | 'day' | 'week' | 'month';
   period_start: string;
   period_end: string;
@@ -74,7 +74,7 @@ export interface ThreatIntelligence {
   last_seen?: string;
   source?: string;
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -85,9 +85,9 @@ export interface GuestSession {
   session_token: string;
   ip_address?: string;
   user_agent?: string;
-  geo_location?: Record<string, any>;
+  geo_location?: Record<string, unknown>;
   device_fingerprint?: string;
-  activity_log?: Record<string, any>;
+  activity_log?: Record<string, unknown>;
   security_score?: number;
   is_suspicious?: boolean;
   expires_at: string;
