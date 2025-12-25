@@ -44,6 +44,7 @@
     "legacy:test": "jest",
     "lint": "turbo run lint",
     "lint:fix": "pnpm -r run lint:fix",
+    "lint:log": "bash scripts/lint-log.sh",
     "monitoring:check": "node scripts/monitoring.js check",
     "monitoring:metrics": "node scripts/monitoring.js metrics",
     "monitoring:start": "node scripts/monitoring.js start",
