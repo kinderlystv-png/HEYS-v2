@@ -162,13 +162,13 @@ export class EncryptedProfileService {
    */
   async encryptProfileData(profileData: {
     phone?: string;
-    address?: any;
+    address?: DecryptedUserData['address'];
     first_name?: string;
     last_name?: string;
     security_questions?: Record<string, string>;
-    [key: string]: any;
-  }): Promise<Record<string, any>> {
-    const encryptedData = { ...profileData };
+    [key: string]: unknown;
+  }): Promise<Record<string, unknown>> {
+    const encryptedData: Record<string, unknown> = { ...profileData };
 
     try {
       // Шифруем чувствительные поля
@@ -262,12 +262,12 @@ export class EncryptedProfileService {
    */
   async updateEncryptedProfile(
     profileId: string,
-    updates: Partial<DecryptedUserData & Record<string, any>>,
-  ): Promise<Record<string, any>> {
+    updates: Partial<DecryptedUserData & Record<string, unknown>>,
+  ): Promise<Record<string, unknown>> {
     // Разделяем обновления на шифруемые и обычные
     const sensitiveFields = ['phone', 'address', 'first_name', 'last_name', 'security_questions'];
-    const encryptedUpdates: Record<string, any> = {};
-    const normalUpdates: Record<string, any> = {};
+    const encryptedUpdates: Record<string, unknown> = {};
+    const normalUpdates: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(updates)) {
       if (sensitiveFields.includes(key)) {
@@ -318,10 +318,10 @@ export class EncryptedPreferencesService {
    * Зашифровать значение настройки
    */
   async encryptPreferenceValue(
-    value: any,
+    value: unknown,
     shouldEncrypt: boolean = false,
   ): Promise<{
-    value: any;
+    value: unknown;
     is_encrypted: boolean;
   }> {
     if (!shouldEncrypt) {
@@ -352,7 +352,10 @@ export class EncryptedPreferencesService {
   /**
    * Расшифровать значение настройки
    */
-  async decryptPreferenceValue(encryptedValue: any, isEncrypted: boolean = false): Promise<any> {
+  async decryptPreferenceValue(
+    encryptedValue: unknown,
+    isEncrypted: boolean = false,
+  ): Promise<unknown> {
     if (!isEncrypted || !encryptedValue) {
       return encryptedValue;
     }

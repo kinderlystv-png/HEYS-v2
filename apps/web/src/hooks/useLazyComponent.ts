@@ -1,7 +1,8 @@
 // filepath: apps/web/src/hooks/useLazyComponent.ts
 // Lazy Component Hook - Performance Sprint Day 3
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ComponentType } from 'react';
 
 import { log } from '../lib/browser-logger';
 import { createLazyComponent, ImportOptions } from '../utils/dynamicImport';
@@ -31,7 +32,7 @@ interface LazyComponentOptions extends ImportOptions {
 /**
  * Hook для управления lazy loading компонентов
  */
-export function useLazyComponent<T extends React.ComponentType<unknown>>(
+export function useLazyComponent<T extends ComponentType<unknown>>(
   importFunction: () => Promise<{ default: T }>,
   options: LazyComponentOptions = {},
 ) {
@@ -52,14 +53,17 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
   // Создаем lazy компонент
   const LazyComponent = useRef(createLazyComponent(importFunction, importOptions)).current;
 
-  const logContextBase = {
-    delay: importOptions.delay,
-    retries: importOptions.retries,
-    timeout: importOptions.timeout,
-    autoLoad,
-    preloadOnHover,
-    verbose,
-  };
+  const logContextBase = useMemo(
+    () => ({
+      delay: importOptions.delay,
+      retries: importOptions.retries,
+      timeout: importOptions.timeout,
+      autoLoad,
+      preloadOnHover,
+      verbose,
+    }),
+    [importOptions.delay, importOptions.retries, importOptions.timeout, autoLoad, preloadOnHover, verbose],
+  );
 
   // Функция загрузки компонента
   const loadComponent = useCallback(async (): Promise<T | null> => {
@@ -149,7 +153,7 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
 
       return null;
     }
-  }, [state, importFunction, verbose]);
+  }, [state, importFunction, verbose, logContextBase]);
 
   // Preload функция
   const preloadComponent = useCallback(async (): Promise<void> => {
@@ -177,7 +181,7 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
         });
       }
     }
-  }, [state.isLoaded, importFunction, verbose]);
+  }, [state.isLoaded, importFunction, verbose, logContextBase]);
 
   // Auto load при монтировании
   useEffect(() => {
@@ -238,14 +242,18 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
  * Hook для управления группой lazy компонентов
  */
 export function useLazyComponents<
-  T extends Record<string, React.ComponentType<Record<string, unknown>>>,
+  T extends Record<string, ComponentType<Record<string, unknown>>>,
 >(
   components: Record<keyof T, () => Promise<{ default: T[keyof T] }>>,
   options: LazyComponentOptions = {},
 ) {
-  const componentHooks = Object.entries(components).reduce(
+  const entries = Object.entries(components) as Array<
+    [string, () => Promise<{ default: T[keyof T] }>]
+  >;
+  const componentHooks = entries.reduce(
     (acc, [name, importFn]) => {
-      acc[name] = useLazyComponent(importFn as any, options);
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      acc[name] = useLazyComponent(importFn, options);
       return acc;
     },
     {} as Record<string, ReturnType<typeof useLazyComponent>>,
@@ -304,7 +312,7 @@ export function useLazyComponents<
 /**
  * Hook для lazy loading с условиями
  */
-export function useConditionalLazyComponent<T extends React.ComponentType<Record<string, unknown>>>(
+export function useConditionalLazyComponent<T extends ComponentType<Record<string, unknown>>>(
   importFunction: () => Promise<{ default: T }>,
   condition: boolean,
   options: LazyComponentOptions = {},
@@ -331,14 +339,33 @@ export function useConditionalLazyComponent<T extends React.ComponentType<Record
 /**
  * Hook для batch loading компонентов
  */
-export function useBatchLazyLoading<T extends React.ComponentType<Record<string, unknown>>>(
+export function useBatchLazyLoading<T extends ComponentType<Record<string, unknown>>>(
   importFunctions: Array<() => Promise<{ default: T }>>,
   batchSize: number = 3,
   options: LazyComponentOptions = {},
 ) {
   const [currentBatch, setCurrentBatch] = useState(0);
-  const componentHooks = importFunctions.map((importFn: unknown) =>
-    useLazyComponent(importFn, { ...options, autoLoad: false }),
+  const componentHooks = importFunctions.map((importFn: unknown) => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    return useLazyComponent(importFn, { ...options, autoLoad: false });
+  });
+  const logContextBase = useMemo(
+    () => ({
+      autoLoad: options.autoLoad,
+      preloadOnHover: options.preloadOnHover,
+      verbose: options.verbose,
+      delay: options.delay,
+      retries: options.retries,
+      timeout: options.timeout,
+    }),
+    [
+      options.autoLoad,
+      options.preloadOnHover,
+      options.verbose,
+      options.delay,
+      options.retries,
+      options.timeout,
+    ],
   );
 
   // Загрузка батча
@@ -361,7 +388,7 @@ export function useBatchLazyLoading<T extends React.ComponentType<Record<string,
         });
       }
     },
-    [componentHooks, batchSize],
+    [componentHooks, batchSize, logContextBase],
   );
 
   // Загрузка следующего батча

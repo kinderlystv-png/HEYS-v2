@@ -31,9 +31,9 @@ export class AuditService {
     action: 'create' | 'read' | 'update' | 'delete' | 'login' | 'logout',
     resourceType: string,
     resourceId?: string,
-    metadata: Record<string, any> = {},
-    oldValues?: Record<string, any>,
-    newValues?: Record<string, any>,
+    metadata: Record<string, unknown> = {},
+    oldValues?: Record<string, unknown>,
+    newValues?: Record<string, unknown>,
   ): Promise<DatabaseResponse<AuditLog>> {
     try {
       const logEntry: Omit<AuditLog, 'id' | 'created_at'> = {
@@ -75,7 +75,7 @@ export class AuditService {
     action: 'create' | 'read' | 'update' | 'delete' | 'login' | 'logout',
     resourceType: string,
     errorMessage: string,
-    metadata: Record<string, any> = {},
+    metadata: Record<string, unknown> = {},
     responseTimeMs?: number,
   ): Promise<DatabaseResponse<AuditLog>> {
     try {
@@ -267,7 +267,10 @@ export class AuditService {
         dayStats[dateStr] = 0;
       }
 
-      logs?.forEach((log: any) => {
+      const typedLogs = (logs ?? []) as Array<
+        Pick<AuditLog, 'success' | 'action' | 'resource_type' | 'created_at'>
+      >;
+      typedLogs.forEach((log) => {
         // Статистика успешности
         if (log.success) {
           stats.successful_actions++;
@@ -283,7 +286,7 @@ export class AuditService {
 
         // Статистика по дням
         const logDate = new Date(log.created_at).toISOString().split('T')[0];
-        if (logDate && dayStats.hasOwnProperty(logDate)) {
+        if (logDate && Object.prototype.hasOwnProperty.call(dayStats, logDate)) {
           const currentCount = dayStats[logDate];
           if (currentCount !== undefined) {
             dayStats[logDate] = currentCount + 1;
@@ -348,7 +351,7 @@ export class AuditService {
    */
   async logLogin(
     sessionId?: string,
-    deviceInfo?: Record<string, any>,
+    deviceInfo?: Record<string, unknown>,
   ): Promise<DatabaseResponse<AuditLog>> {
     return this.logAction('login', 'user_session', sessionId, {
       ...deviceInfo,
@@ -371,8 +374,8 @@ export class AuditService {
    */
   async logProfileUpdate(
     profileId: string,
-    oldValues: Record<string, any>,
-    newValues: Record<string, any>,
+    oldValues: Record<string, unknown>,
+    newValues: Record<string, unknown>,
   ): Promise<DatabaseResponse<AuditLog>> {
     return this.logAction(
       'update',
@@ -393,7 +396,7 @@ export class AuditService {
   async logSecurityEvent(
     eventType: string,
     severity: 'low' | 'medium' | 'high' | 'critical',
-    details: Record<string, any>,
+    details: Record<string, unknown>,
   ): Promise<DatabaseResponse<AuditLog>> {
     return this.logAction('create', 'security_event', undefined, {
       event_type: eventType,

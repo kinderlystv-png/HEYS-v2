@@ -1,5 +1,6 @@
 // import { RouteComponents } from '../utils/lazy-loader';
 import { Suspense } from 'react';
+import type { ReactNode } from 'react';
 // import { PageSkeleton } from '../components/LoadingStates';
 
 /**
@@ -82,8 +83,8 @@ export const ThreatDetails = RouteComponents.createLazyRoute(
  * Route wrapper с loading states и error boundaries
  */
 interface LazyRouteWrapperProps {
-  children: React.ReactNode;
-  fallback?: React.ReactNode;
+  children: ReactNode;
+  fallback?: ReactNode;
   skeletonType?: 'dashboard' | 'list' | 'detail' | 'form' | 'analytics';
 }
 

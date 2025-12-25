@@ -442,6 +442,7 @@
       hint: config.hint || '',
       icon: config.icon || '📋',
       component: config.component,
+      shouldShow: config.shouldShow || null,
       getInitialData: config.getInitialData || (() => ({})),
       validate: config.validate || (() => true),
       save: config.save || (() => {}),
@@ -479,6 +480,8 @@
     const touchStartX = useRef(0);
     const touchStartY = useRef(0);
 
+    const contextKey = useMemo(() => JSON.stringify(context), [context]);
+
     // Получаем конфигурации шагов
     const stepConfigs = useMemo(() => {
       return steps.map(stepId => {
@@ -490,8 +493,21 @@
       }).filter(Boolean);
     }, [steps]);
 
-    const totalSteps = stepConfigs.length;
-    const currentConfig = stepConfigs[currentStepIndex];
+    const visibleStepConfigs = useMemo(() => {
+      return stepConfigs.filter(config => {
+        if (!config) return false;
+        if (typeof config.shouldShow !== 'function') return true;
+        try {
+          return config.shouldShow(context);
+        } catch (e) {
+          console.warn('[StepModal] shouldShow error:', config.id, e);
+          return true;
+        }
+      });
+    }, [stepConfigs, contextKey]);
+
+    const totalSteps = visibleStepConfigs.length;
+    const currentConfig = visibleStepConfigs[currentStepIndex];
 
     // Мемоизированные данные
     const greeting = useMemo(() => getTimeBasedGreeting(), []);
@@ -499,7 +515,6 @@
     const currentStreak = useMemo(() => getCurrentStreak(), []);
 
     // Инициализация данных шагов (при изменении context)
-    const contextKey = useMemo(() => JSON.stringify(context), [context]);
     const lastContextKeyRef = useRef(null);
     
     useEffect(() => {
@@ -508,14 +523,14 @@
       lastContextKeyRef.current = contextKey;
       
       const initialData = {};
-      stepConfigs.forEach(config => {
+      visibleStepConfigs.forEach(config => {
         if (config.getInitialData) {
           // Передаём context и уже собранные данные других шагов
           initialData[config.id] = config.getInitialData(context, initialData);
         }
       });
       setStepData(initialData);
-    }, [contextKey, stepConfigs]);
+    }, [contextKey, visibleStepConfigs]);
 
     // Обновление данных шага
     const updateStepData = useCallback((stepId, data) => {
@@ -566,7 +581,7 @@
         goToStep(currentStepIndex + 1, 'left');
       } else {
         // Сохраняем все данные
-        stepConfigs.forEach(config => {
+        visibleStepConfigs.forEach(config => {
           if (config.save) {
             // Передаём: данные этого шага, context, и все данные всех шагов
             config.save(stepData[config.id], context, stepData);
@@ -576,7 +591,7 @@
         // XP за чек-ин
         if (HEYS.gamification) {
           try {
-            stepConfigs.forEach(config => {
+            visibleStepConfigs.forEach(config => {
               if (config.xpAction) {
                 HEYS.gamification.addXP(config.xpAction);
               }
@@ -588,7 +603,7 @@
 
         // Уведомляем об обновлении (только если это НЕ MealStep — он обрабатывает сам)
         // MealStep сам управляет обновлением дня через onComplete
-        if (!stepConfigs.some(c => c.id === 'mealName' || c.id === 'mealTime')) {
+        if (!visibleStepConfigs.some(c => c.id === 'mealName' || c.id === 'mealTime')) {
           window.dispatchEvent(new CustomEvent('heys:day-updated', { 
             detail: { date: getTodayKey(), source: 'step-modal' } 
           }));
@@ -596,18 +611,18 @@
         
         onComplete && onComplete(stepData);
       }
-    }, [currentStepIndex, totalSteps, currentConfig, stepData, stepConfigs, goToStep, onComplete]);
+    }, [currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete]);
 
     const handlePrev = useCallback(() => {
       if (currentStepIndex > 0) {
         // Пропускаем скрытые шаги при навигации назад
         let prevIndex = currentStepIndex - 1;
-        while (prevIndex > 0 && stepConfigs[prevIndex]?.hidden) {
+        while (prevIndex > 0 && visibleStepConfigs[prevIndex]?.hidden) {
           prevIndex--;
         }
         goToStep(prevIndex, 'right');
       }
-    }, [currentStepIndex, goToStep, stepConfigs]);
+    }, [currentStepIndex, goToStep, visibleStepConfigs]);
 
     // Swipe handlers — учитываем allowSwipe из конфига шага
     const stepAllowSwipe = currentConfig?.allowSwipe !== false && allowSwipe;
@@ -791,7 +806,7 @@
           // Progress dots (кружочки) — кликабельные для навигации
           // Скрытые шаги (hidden: true) не отображаются в progress
           showProgress && totalSteps > 1 && React.createElement('div', { className: 'mc-progress-dots' },
-            stepConfigs.map((config, i) => 
+            visibleStepConfigs.map((config, i) => 
               // Пропускаем скрытые шаги
               config.hidden ? null : React.createElement('button', { 
                 key: i,

@@ -1,5 +1,7 @@
 // filepath: apps/web/src/middleware/security.ts
 
+import type { NextFunction, Request, Response } from 'express';
+
 /**
  * Security Headers Middleware для HEYS
  * Базовая защита от XSS, CSRF и других атак
@@ -82,7 +84,7 @@ export class SecurityMiddleware {
    * Создать middleware для Express/Next.js
    */
   createMiddleware() {
-    return (req: any, res: any, next: any) => {
+    return (_req: Request, res: Response, next: NextFunction) => {
       this.applySecurityHeaders(res);
       next();
     };
@@ -91,7 +93,7 @@ export class SecurityMiddleware {
   /**
    * Применить security headers к response
    */
-  private applySecurityHeaders(res: any): void {
+  private applySecurityHeaders(res: Response): void {
     // Content Security Policy
     if (this.config.contentSecurityPolicy?.enabled) {
       const csp = this.buildCSP(this.config.contentSecurityPolicy.directives || {});
@@ -239,7 +241,7 @@ export class CORSMiddleware {
    * Создать CORS middleware
    */
   createMiddleware() {
-    return (req: any, res: any, next: any) => {
+    return (req: Request, res: Response, next: NextFunction) => {
       const origin = req.headers.origin;
 
       // Проверка origin
@@ -304,7 +306,7 @@ export function createSecurityStack(securityConfig?: SecurityConfig, corsConfig?
   const securityMiddleware = createSecurityMiddleware(securityConfig);
   const corsMiddleware = createCORSMiddleware(corsConfig);
 
-  return (req: any, res: any, next: any) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     corsMiddleware(req, res, () => {
       securityMiddleware(req, res, next);
     });

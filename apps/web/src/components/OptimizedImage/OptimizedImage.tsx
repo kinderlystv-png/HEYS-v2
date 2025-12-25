@@ -207,7 +207,20 @@ export function OptimizedImage({
     return () => {
       isCancelled = true;
     };
-  }, [shouldLoad, src, width, height, optimization, priority, lazy, fallback, onLoad, onError]);
+  }, [
+    shouldLoad,
+    src,
+    width,
+    height,
+    optimization,
+    priority,
+    lazy,
+    fallback,
+    onLoad,
+    onError,
+    sendImageLoadMetrics,
+    sendErrorMetrics,
+  ]);
 
   // Устанавливаем приоритет для critical images
   useEffect(() => {

@@ -5,6 +5,7 @@
  * Защита от инъекций и валидация входных данных
  */
 
+import type { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 
 /**
@@ -134,7 +135,7 @@ export const HeysValidationSchemas = {
 /**
  * Результат валидации
  */
-export interface ValidationResult<T = any> {
+export interface ValidationResult<T = unknown> {
   success: boolean;
   data?: T;
   errors?: Record<string, string[]> | undefined;
@@ -146,7 +147,7 @@ export interface ValidationResult<T = any> {
 export interface SecurityCheckResult {
   safe: boolean;
   threats: string[];
-  details?: Record<string, any> | undefined;
+  details?: Record<string, string> | undefined;
 }
 
 /**
@@ -193,7 +194,7 @@ export class InputValidator {
     data: Record<string, unknown>,
     schemas: Record<string, z.ZodSchema>,
   ): ValidationResult {
-    const results: Record<string, any> = {};
+    const results: Record<string, unknown> = {};
     const errors: Record<string, string[]> = {};
     let hasErrors = false;
 
@@ -218,8 +219,8 @@ export class InputValidator {
   /**
    * Санитизация объекта (удаление подозрительных ключей)
    */
-  sanitizeObject(obj: Record<string, any>): Record<string, any> {
-    const sanitized: Record<string, any> = {};
+  sanitizeObject(obj: Record<string, unknown>): Record<string, unknown> {
+    const sanitized: Record<string, unknown> = {};
     const dangerousKeys = [
       '__proto__',
       'prototype',
@@ -283,7 +284,7 @@ export class InputValidator {
   /**
    * Глубокая санитизация объекта
    */
-  deepSanitize(obj: any, visited = new WeakSet()): any {
+  deepSanitize(obj: unknown, visited = new WeakSet()): unknown {
     if (obj === null || obj === undefined) return obj;
 
     // Защита от циклических ссылок
@@ -301,8 +302,8 @@ export class InputValidator {
 
     if (typeof obj === 'object') {
       visited.add(obj);
-      const sanitized = this.sanitizeObject(obj);
-      const result: Record<string, any> = {};
+      const sanitized = this.sanitizeObject(obj as Record<string, unknown>);
+      const result: Record<string, unknown> = {};
 
       for (const [key, value] of Object.entries(sanitized)) {
         result[key] = this.deepSanitize(value, visited);
@@ -362,11 +363,11 @@ export class InputValidator {
   /**
    * Комплексная проверка безопасности
    */
-  checkSecurity(data: any): SecurityCheckResult {
+  checkSecurity(data: unknown): SecurityCheckResult {
     const threats: string[] = [];
-    const details: Record<string, any> = {};
+    const details: Record<string, string> = {};
 
-    const checkValue = (value: any, path: string) => {
+    const checkValue = (value: unknown, path: string) => {
       if (typeof value === 'string') {
         if (this.detectSQLInjection(value)) {
           threats.push('sql_injection');
@@ -414,16 +415,20 @@ export function createValidationMiddleware(
   field: string,
   schema: z.ZodSchema,
 ) {
-  return (req: any, res: any, next: any) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     const validator = new InputValidator();
-    const data = req[source]?.[field];
+    const data = (req as unknown as Record<string, unknown>)[source] as Record<string, unknown> | undefined;
+    const value = data?.[field];
 
-    const result = validator.validate(data, schema);
+    const result = validator.validate(value, schema);
 
     if (result.success) {
       // Заменяем значение на валидированное
-      if (req[source]) {
-        req[source][field] = result.data;
+      if ((req as unknown as Record<string, unknown>)[source]) {
+        (req as unknown as Record<string, unknown>)[source] = {
+          ...(data || {}),
+          [field]: result.data,
+        };
       }
       next();
     } else {
@@ -444,13 +449,13 @@ export function validateAndSanitize(config: {
   query?: Record<string, z.ZodSchema>;
   params?: Record<string, z.ZodSchema>;
 }) {
-  return (req: any, res: any, next: any) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     const validator = new InputValidator();
-    const errors: Record<string, any> = {};
+    const errors: Record<string, unknown> = {};
 
     // Валидация body
     if (config.body && req.body) {
-      const result = validator.validateMultiple(req.body, config.body);
+      const result = validator.validateMultiple(req.body as Record<string, unknown>, config.body);
       if (!result.success) {
         errors.body = result.errors;
       } else {
@@ -460,21 +465,26 @@ export function validateAndSanitize(config: {
 
     // Валидация query
     if (config.query && req.query) {
-      const result = validator.validateMultiple(req.query, config.query);
+      const result = validator.validateMultiple(req.query as Record<string, unknown>, config.query);
       if (!result.success) {
         errors.query = result.errors;
       } else {
-        req.query = validator.deepSanitize(result.data);
+        // Используем Object.assign для сохранения типа
+        Object.assign(req.query, validator.deepSanitize(result.data));
       }
     }
 
     // Валидация params
     if (config.params && req.params) {
-      const result = validator.validateMultiple(req.params, config.params);
+      const result = validator.validateMultiple(
+        req.params as Record<string, unknown>,
+        config.params,
+      );
       if (!result.success) {
         errors.params = result.errors;
       } else {
-        req.params = validator.deepSanitize(result.data);
+        // Используем Object.assign для сохранения типа
+        Object.assign(req.params, validator.deepSanitize(result.data) as Record<string, string>);
       }
     }
 
@@ -493,7 +503,7 @@ export function validateAndSanitize(config: {
  * Middleware для валидации HEYS-специфичных данных
  */
 export function validateHeysData(schemaType: keyof typeof HeysValidationSchemas) {
-  return (req: any, res: any, next: any) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     const validator = new InputValidator();
     const schema = HeysValidationSchemas[schemaType] as z.ZodSchema;
 
@@ -520,7 +530,7 @@ export function validateRequest(options: {
   requireAuth?: boolean;
   sanitize?: boolean;
 }) {
-  return (req: any, res: any, next: any) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     const validator = new InputValidator();
 
     // Проверка размера запроса
@@ -551,6 +561,7 @@ export function validateRequest(options: {
     }
 
     next();
+    return;
   };
 }
 

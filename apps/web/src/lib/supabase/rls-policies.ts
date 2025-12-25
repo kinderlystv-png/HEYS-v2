@@ -57,7 +57,7 @@ export interface UserProfile {
   suspension_until?: string | null;
 
   // Метаданные
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -67,7 +67,7 @@ export interface UserPreference {
   user_id: string;
   category: string;
   key: string;
-  value: any;
+  value: unknown;
   description?: string;
   is_encrypted: boolean;
   is_sensitive: boolean;
@@ -118,9 +118,9 @@ export interface AuditLog {
   resource_id?: string | null;
 
   // Изменения
-  old_values?: Record<string, any> | null;
-  new_values?: Record<string, any> | null;
-  metadata: Record<string, any>;
+  old_values?: Record<string, unknown> | null;
+  new_values?: Record<string, unknown> | null;
+  metadata: Record<string, unknown>;
 
   // Контекст
   ip_address?: string | null;
@@ -261,7 +261,7 @@ export class RLSError extends Error {
   constructor(
     message: string,
     public code: string,
-    public details?: Record<string, any>,
+    public details?: Record<string, unknown>,
   ) {
     super(message);
     this.name = 'RLSError';

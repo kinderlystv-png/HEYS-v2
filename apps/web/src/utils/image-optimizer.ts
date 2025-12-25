@@ -30,6 +30,8 @@ interface ImageMetadata {
   timestamp: number;
 }
 
+type ResolvedImageFormat = 'webp' | 'avif' | 'jpg' | 'png';
+
 class ImageOptimizer {
   private cache = new Map<string, ImageMetadata>();
   private loadingPromises = new Map<string, Promise<ImageMetadata>>();
@@ -60,15 +62,20 @@ class ImageOptimizer {
 
     // Проверяем кэш
     if (this.cache.has(cacheKey)) {
-      const cached = this.cache.get(cacheKey)!;
-      // Обновляем timestamp для LRU
-      cached.timestamp = Date.now();
-      return cached;
+      const cached = this.cache.get(cacheKey);
+      if (cached) {
+        // Обновляем timestamp для LRU
+        cached.timestamp = Date.now();
+        return cached;
+      }
     }
 
     // Если уже загружается, возвращаем существующий Promise
     if (this.loadingPromises.has(cacheKey)) {
-      return this.loadingPromises.get(cacheKey)!;
+      const inFlight = this.loadingPromises.get(cacheKey);
+      if (inFlight) {
+        return inFlight;
+      }
     }
 
     // Запускаем оптимизацию
@@ -116,7 +123,7 @@ class ImageOptimizer {
       // Создаем optimized URL
       const optimizedSrc = this.buildOptimizedUrl(src, {
         ...options,
-        format: targetFormat as any,
+        format: targetFormat,
       });
 
       // Получаем метаданные изображения
@@ -158,8 +165,10 @@ class ImageOptimizer {
   /**
    * Определяет оптимальный формат изображения
    */
-  private selectOptimalFormat(requestedFormat: string): string {
-    if (requestedFormat !== 'auto') {
+  private selectOptimalFormat(
+    requestedFormat: ImageOptimizationOptions['format'],
+  ): ResolvedImageFormat {
+    if (requestedFormat && requestedFormat !== 'auto') {
       return this.supportedFormats.has(requestedFormat) ? requestedFormat : 'jpg';
     }
 
@@ -178,7 +187,9 @@ class ImageOptimizer {
    */
   private buildOptimizedUrl(
     src: string,
-    options: Required<Omit<ImageOptimizationOptions, 'placeholder' | 'lazy'>>,
+    options: Required<Omit<ImageOptimizationOptions, 'placeholder' | 'lazy' | 'format'>> & {
+      format: ResolvedImageFormat;
+    },
   ): string {
     // Если это уже оптимизированный URL, возвращаем как есть
     if (src.includes('_optimized') || src.includes('w_') || src.includes('f_')) {
@@ -327,8 +338,8 @@ class ImageOptimizer {
     // Очистка при превышении лимита памяти
     if ('memory' in performance) {
       setInterval(() => {
-        // @ts-ignore - экспериментальное API
-        const memInfo = (performance as any).memory;
+        const memInfo = (performance as Performance & { memory?: { usedJSHeapSize: number } })
+          .memory;
         if (memInfo && memInfo.usedJSHeapSize > 50 * 1024 * 1024) {
           // 50MB
           this.cleanupCache(true);

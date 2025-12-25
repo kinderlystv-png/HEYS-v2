@@ -5,14 +5,14 @@
  * Handles dynamic imports with intelligent preloading and caching
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { log } from '../lib/browser-logger';
 
 interface ImportCache {
   [key: string]: {
-    promise: Promise<any>;
-    result?: any;
+    promise: Promise<unknown>;
+    result?: unknown;
     timestamp: number;
     error?: Error;
   };
@@ -28,7 +28,7 @@ const MAX_CACHE_SIZE = 50; // Максимум 50 модулей в кэше
 /**
  * Динамический импорт с кэшированием
  */
-export async function dynamicImport<T = any>(
+export async function dynamicImport<T = unknown>(
   importPath: string,
   options: {
     timeout?: number;
@@ -45,13 +45,13 @@ export async function dynamicImport<T = any>(
     // Проверяем актуальность кэша
     if (Date.now() - cached.timestamp < CACHE_DURATION) {
       if (cached.result) {
-        return cached.result;
+        return cached.result as T;
       }
       if (cached.error) {
         throw cached.error;
       }
       // Если импорт в процессе, возвращаем существующий promise
-      return cached.promise;
+      return cached.promise as Promise<T>;
     } else {
       // Кэш устарел, удаляем
       delete importCache[importPath];
@@ -161,7 +161,7 @@ export class ModulePreloader {
   private preloadQueue: Array<{
     path: string;
     priority: number;
-    options?: any;
+    options?: Record<string, unknown>;
   }> = [];
 
   private isProcessing = false;
@@ -169,7 +169,7 @@ export class ModulePreloader {
   /**
    * Добавить модуль в очередь preload
    */
-  add(path: string, priority: number = 1, options?: any): void {
+  add(path: string, priority: number = 1, options?: Record<string, unknown>): void {
     // Проверяем, что модуль не загружен и не в очереди
     if (importCache[path]?.result) return;
 
@@ -184,7 +184,7 @@ export class ModulePreloader {
       return;
     }
 
-    this.preloadQueue.push({ path, priority, options });
+    this.preloadQueue.push({ path, priority, options: options || {} });
     this.sortQueue();
 
     // Запускаем обработку очереди
@@ -194,7 +194,9 @@ export class ModulePreloader {
   /**
    * Preload модулей по массиву путей
    */
-  addMultiple(paths: Array<{ path: string; priority?: number; options?: any }>): void {
+  addMultiple(
+    paths: Array<{ path: string; priority?: number; options?: Record<string, unknown> }>,
+  ): void {
     paths.forEach(({ path, priority = 1, options }) => {
       this.add(path, priority, options);
     });
@@ -216,7 +218,10 @@ export class ModulePreloader {
     this.isProcessing = true;
 
     while (this.preloadQueue.length > 0) {
-      const item = this.preloadQueue.shift()!;
+      const item = this.preloadQueue.shift();
+      if (!item) {
+        continue;
+      }
 
       try {
         await dynamicImport(item.path, {
@@ -284,7 +289,7 @@ export class ModuleGroup {
   /**
    * Загрузить всю группу
    */
-  async loadAll(): Promise<any[]> {
+  async loadAll(): Promise<Array<PromiseSettledResult<unknown>>> {
     const promises = this.modules.map(async (path) => {
       try {
         const result = await dynamicImport(path);
@@ -345,7 +350,7 @@ export const FeatureImports = {
 /**
  * Hook для использования в React компонентах
  */
-export function useDynamicImport<T = any>(
+export function useDynamicImport<T = unknown>(
   importPath: string,
   options?: {
     immediate?: boolean;
@@ -353,7 +358,13 @@ export function useDynamicImport<T = any>(
     retries?: number;
   },
 ) {
-  const { immediate = false } = options || {};
+  const mergedOptions = useMemo(() => {
+    const result: { timeout?: number; retries?: number; cacheable?: boolean } = {};
+    if (options?.timeout !== undefined) result.timeout = options.timeout;
+    if (options?.retries !== undefined) result.retries = options.retries;
+    return result;
+  }, [options?.timeout, options?.retries]);
+  const immediate = options?.immediate ?? false;
 
   const [state, setState] = useState<{
     data: T | null;
@@ -369,14 +380,14 @@ export function useDynamicImport<T = any>(
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const result = await dynamicImport<T>(importPath, options);
+      const result = await dynamicImport<T>(importPath, mergedOptions);
       setState({ data: result, loading: false, error: null });
       return result;
     } catch (error) {
       setState({ data: null, loading: false, error: error as Error });
       throw error;
     }
-  }, [importPath]);
+  }, [importPath, mergedOptions]);
 
   useEffect(() => {
     if (immediate) {

@@ -21,8 +21,8 @@ interface LazyLoadOptions {
 }
 
 interface LazyComponentInfo {
-  component: LazyExoticComponent<any>;
-  preload: () => Promise<any>;
+  component: LazyExoticComponent<ComponentType<unknown>>;
+  preload: () => Promise<unknown>;
   isLoaded: boolean;
   isLoading: boolean;
 }
@@ -33,7 +33,7 @@ const lazyComponentRegistry = new Map<string, LazyComponentInfo>();
 /**
  * Создаёт lazy компонент с расширенными возможностями
  */
-export function createLazyComponent<T extends ComponentType<any>>(
+export function createLazyComponent<T extends ComponentType<Record<string, unknown>>>(
   importFn: () => Promise<{ default: T }>,
   componentName: string,
   options: LazyLoadOptions = {},
@@ -99,13 +99,14 @@ export function createLazyComponent<T extends ComponentType<any>>(
   };
 
   // Создаём lazy компонент
-  const LazyComponent = lazy(() => {
-    return preload();
-  });
+  const LazyComponent = lazy(async () => {
+    const result = await preload();
+    return result as { default: T };
+  }) as LazyExoticComponent<T>;
 
   // Регистрируем компонент
   lazyComponentRegistry.set(componentName, {
-    component: LazyComponent,
+    component: LazyComponent as LazyExoticComponent<ComponentType<unknown>>,
     preload,
     isLoaded: false,
     isLoading: false,
@@ -126,7 +127,7 @@ export function createLazyComponent<T extends ComponentType<any>>(
 /**
  * Preload компонента по имени
  */
-export function preloadComponent(componentName: string): Promise<any> | null {
+export function preloadComponent(componentName: string): Promise<unknown> | null {
   const info = lazyComponentRegistry.get(componentName);
   if (info && !info.isLoaded) {
     return info.preload();
@@ -172,7 +173,7 @@ export function getComponentStatus(componentName: string) {
  * Получение всех зарегистрированных компонентов
  */
 export function getAllComponentsStatus() {
-  const status: Record<string, any> = {};
+  const status: Record<string, { isLoaded: boolean; isLoading: boolean }> = {};
   lazyComponentRegistry.forEach((info, name) => {
     status[name] = {
       isLoaded: info.isLoaded,
@@ -185,16 +186,16 @@ export function getAllComponentsStatus() {
 /**
  * Создание HOC для lazy loading с intersection observer
  */
-export function withLazyLoad<P extends object>(
+export function withLazyLoad<P extends Record<string, unknown>>(
   componentName: string,
   options: LazyLoadOptions & { rootMargin?: string } = {},
 ) {
   return function LazyLoadHOC(WrappedComponent: ComponentType<P>) {
-    return createLazyComponent(
-      () => Promise.resolve({ default: WrappedComponent }),
+    return createLazyComponent<ComponentType<P> & ComponentType<Record<string, unknown>>>(
+      () => Promise.resolve({ default: WrappedComponent as ComponentType<P> & ComponentType<Record<string, unknown>> }),
       componentName,
       options,
-    );
+    ) as LazyExoticComponent<ComponentType<P>>;
   };
 }
 
@@ -203,7 +204,7 @@ export function withLazyLoad<P extends object>(
  */
 export const RouteComponents = {
   // Создание lazy route компонента
-  createLazyRoute: <T extends ComponentType<any>>(
+  createLazyRoute: <T extends ComponentType<Record<string, unknown>>>(
     importFn: () => Promise<{ default: T }>,
     routeName: string,
   ) => {

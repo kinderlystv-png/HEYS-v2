@@ -6,6 +6,7 @@
  */
 
 import express from 'express';
+import type { NextFunction, Request, Response } from 'express';
 
 import { validateAndSanitize, validateHeysData, ValidationSchemas } from '../utils/validator';
 
@@ -27,7 +28,7 @@ app.post(
   validateHeysData('user'), // Валидация данных пользователя
   async (req, res) => {
     // req.body уже валидирован и санитизирован
-    const { email, password, firstName, lastName } = req.body;
+    void req.body;
 
     try {
       // Создание пользователя в Supabase
@@ -49,7 +50,7 @@ app.post(
     },
   }),
   async (req, res) => {
-    const { email, password } = req.body;
+    void req.body;
 
     try {
       // Аутентификация через Supabase
@@ -88,8 +89,8 @@ app.put(
   requireAuth(),
   validateHeysData('userUpdate'), // Валидация данных обновления
   async (req, res) => {
-    const userId = req.user.id;
-    const updates = req.body;
+    void req.user.id;
+    void req.body;
 
     try {
       // const updatedProfile = await updateUserProfile(userId, updates);
@@ -103,7 +104,8 @@ app.put(
 // Создание сессии медитации
 app.post('/api/sessions', requireAuth(), validateHeysData('session'), async (req, res) => {
   const userId = req.user.id;
-  const sessionData = { ...req.body, userId };
+  void req.body;
+  void userId;
 
   try {
     // const session = await createSession(sessionData);
@@ -125,8 +127,8 @@ app.get(
     },
   }),
   async (req, res) => {
-    const userId = req.user.id;
-    const { limit = 10, offset = 0, type } = req.query;
+    void req.user.id;
+    void req.query;
 
     try {
       // const sessions = await getUserSessions(userId, { limit, offset, type });
@@ -140,7 +142,8 @@ app.get(
 // Создание дневной записи
 app.post('/api/diary/entries', requireAuth(), validateHeysData('dayEntry'), async (req, res) => {
   const userId = req.user.id;
-  const entryData = { ...req.body, userId };
+  void req.body;
+  void userId;
 
   try {
     // const entry = await createDayEntry(entryData);
@@ -165,7 +168,7 @@ app.get(
     },
   }),
   async (req, res) => {
-    const { limit = 50, search } = req.query;
+    void req.query;
 
     try {
       // const users = await getAllUsers({ limit, search });
@@ -186,7 +189,7 @@ app.delete(
     },
   }),
   async (req, res) => {
-    const { id } = req.params;
+    void req.params;
 
     try {
       // await deleteUser(id);
@@ -227,7 +230,7 @@ app.get(
  */
 
 // Middleware для обработки ошибок валидации
-app.use((error: any, req: any, res: any, next: any) => {
+app.use((error: Error & { name?: string; details?: unknown }, _req: Request, res: Response, _next: NextFunction) => {
   if (error.name === 'ValidationError') {
     return res.status(400).json({
       error: 'Validation failed',

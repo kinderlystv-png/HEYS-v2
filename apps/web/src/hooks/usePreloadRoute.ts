@@ -1,7 +1,7 @@
 // filepath: apps/web/src/hooks/usePreloadRoute.ts
 // Route Preloading Hook - Performance Sprint Day 3
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { log } from '../lib/browser-logger';
 import { preloadComponent } from '../utils/dynamicImport';
@@ -26,6 +26,9 @@ interface PreloadState {
   preloadedAt: number | null;
 }
 
+type IdleCallback = (deadline: { didTimeout: boolean; timeRemaining: () => number }) => void;
+type RequestIdleCallback = (callback: IdleCallback, options?: { timeout: number }) => number;
+
 /**
  * Hook для preloading маршрутов и компонентов
  */
@@ -41,13 +44,16 @@ export function usePreloadRoute(
     priority = 'medium',
   } = options;
 
-  const logContextBase = {
-    delay,
-    onHover,
-    onIdle,
-    onVisible,
-    priority,
-  };
+  const logContextBase = useMemo(
+    () => ({
+      delay,
+      onHover,
+      onIdle,
+      onVisible,
+      priority,
+    }),
+    [delay, onHover, onIdle, onVisible, priority],
+  );
 
   const preloadRef = useRef<{
     promise: Promise<void> | null;
@@ -112,7 +118,7 @@ export function usePreloadRoute(
         }
       }
     },
-    [importFunction, delay, priority],
+    [importFunction, delay, logContextBase],
   );
 
   // Preload при idle состоянии
@@ -121,13 +127,11 @@ export function usePreloadRoute(
 
     const handleIdle = () => {
       // Используем requestIdleCallback если доступен
-      if ('requestIdleCallback' in window) {
-        (window as any).requestIdleCallback(
-          () => {
-            preload();
-          },
-          { timeout: 5000 },
-        );
+      const idleCallback = (
+        window as Window & { requestIdleCallback?: RequestIdleCallback }
+      ).requestIdleCallback;
+      if (idleCallback) {
+        idleCallback(() => preload(), { timeout: 5000 });
       } else {
         // Fallback для браузеров без requestIdleCallback
         setTimeout(() => {
@@ -203,6 +207,7 @@ export function usePreloadRoutes(
   }>,
 ) {
   const preloaders = routes.map((route: unknown) =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     usePreloadRoute(route.importFunction, route.options),
   );
 

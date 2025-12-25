@@ -1,3 +1,5 @@
+import type { NextFunction, Request, Response } from 'express';
+
 import { log } from '../lib/browser-logger';
 
 // filepath: apps/web/src/middleware/auth.ts
@@ -14,6 +16,8 @@ interface AuthenticatedUser {
   role?: string | undefined;
   aud: string;
 }
+
+type RequestWithUser = Request & { user?: AuthenticatedUser };
 
 /**
  * Конфигурация JWT middleware
@@ -88,15 +92,17 @@ export class JWTAuthMiddleware {
    */
   private extractToken(request: Request): string | null {
     // Проверяем Authorization header
-    const authHeader = request.headers.get('authorization');
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      return authHeader.substring(7);
+    const authHeader = request.headers['authorization'];
+    const authValue = Array.isArray(authHeader) ? authHeader[0] : authHeader;
+    if (authValue && authValue.startsWith('Bearer ')) {
+      return authValue.substring(7);
     }
 
     // Проверяем cookie (fallback для браузерных запросов)
-    const cookieHeader = request.headers.get('cookie');
-    if (cookieHeader) {
-      const match = cookieHeader.match(/supabase-auth-token=([^;]+)/);
+    const cookieHeader = request.headers['cookie'];
+    const cookieValue = Array.isArray(cookieHeader) ? cookieHeader[0] : cookieHeader;
+    if (cookieValue) {
+      const match = cookieValue.match(/supabase-auth-token=([^;]+)/);
       if (match && match[1]) {
         return match[1];
       }
@@ -208,14 +214,15 @@ export class JWTAuthMiddleware {
    * Middleware function для Express/API routes
    */
   createExpressMiddleware() {
-    return async (req: any, res: any, next: any) => {
+    return async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
       const authResult = await this.authenticate(req, req.path);
 
       if (!authResult.success) {
-        return res.status(authResult.statusCode || 401).json({
+        res.status(authResult.statusCode || 401).json({
           error: authResult.error,
           message: 'Authentication failed',
         });
+        return;
       }
 
       // Добавляем информацию о пользователе в request
@@ -244,16 +251,23 @@ export function createAuthMiddleware(config?: AuthMiddlewareConfig) {
 /**
  * Хелпер для извлечения пользователя из запроса в API routes
  */
-export function getUserFromRequest(request: any): AuthenticatedUser | null {
+export function getUserFromRequest(request: RequestWithUser): AuthenticatedUser | null {
+  const req = request;
   // Если пользователь уже добавлен middleware
-  if (request.user) {
-    return request.user;
+  if (req.user) {
+    return req.user;
   }
 
-  // Fallback - извлекаем из headers
-  const userId = request.headers?.['x-user-id'] || request.headers?.get?.('x-user-id');
-  const userEmail = request.headers?.['x-user-email'] || request.headers?.get?.('x-user-email');
-  const userRole = request.headers?.['x-user-role'] || request.headers?.get?.('x-user-role');
+  // Fallback - извлекаем из headers (Express style)
+  const getUserHeader = (name: string): string | undefined => {
+    const value = req.headers?.[name];
+    if (Array.isArray(value)) return value[0];
+    return value;
+  };
+
+  const userId = getUserHeader('x-user-id');
+  const userEmail = getUserHeader('x-user-email');
+  const userRole = getUserHeader('x-user-role');
 
   if (!userId || !userEmail) {
     return null;

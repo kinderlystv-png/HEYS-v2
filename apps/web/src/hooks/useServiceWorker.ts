@@ -123,6 +123,21 @@ export function useServiceWorker(): ServiceWorkerState & ServiceWorkerActions {
     [state.isRegistered],
   );
 
+  // Обновление статуса кэша (перемещено выше clearImageCache)
+  const refreshCacheStatus = useCallback(async () => {
+    if (!state.isRegistered) {
+      return;
+    }
+
+    try {
+      const cacheStatus = await serviceWorkerManager.getCacheStatus();
+      setState((prev) => ({ ...prev, cacheStatus }));
+      log.debug('useServiceWorker: Cache status updated', { cacheStatus });
+    } catch (error) {
+      log.error('useServiceWorker: Failed to get cache status', { error });
+    }
+  }, [state.isRegistered]);
+
   // Очистка кэша изображений
   const clearImageCache = useCallback(async () => {
     if (!state.isRegistered) {
@@ -148,7 +163,7 @@ export function useServiceWorker(): ServiceWorkerState & ServiceWorkerActions {
         error: error instanceof Error ? error.message : 'Cache clear failed',
       }));
     }
-  }, [state.isRegistered]);
+  }, [state.isRegistered, refreshCacheStatus]);
 
   // Отправка метрик производительности
   const sendMetrics = useCallback(
@@ -167,21 +182,6 @@ export function useServiceWorker(): ServiceWorkerState & ServiceWorkerActions {
     },
     [state.isRegistered],
   );
-
-  // Обновление статуса кэша
-  const refreshCacheStatus = useCallback(async () => {
-    if (!state.isRegistered) {
-      return;
-    }
-
-    try {
-      const cacheStatus = await serviceWorkerManager.getCacheStatus();
-      setState((prev) => ({ ...prev, cacheStatus }));
-      log.debug('useServiceWorker: Cache status updated', { cacheStatus });
-    } catch (error) {
-      log.error('useServiceWorker: Failed to get cache status', { error });
-    }
-  }, [state.isRegistered]);
 
   // Слушаем изменения online/offline статуса
   useEffect(() => {

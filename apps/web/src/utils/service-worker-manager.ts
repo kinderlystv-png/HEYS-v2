@@ -4,6 +4,8 @@
 
 import { log } from '../lib/browser-logger';
 
+type TransferableItem = ArrayBuffer | MessagePort | ImageBitmap;
+
 interface ServiceWorkerManager {
   register(): Promise<ServiceWorkerRegistration | null>;
   unregister(): Promise<boolean>;
@@ -220,7 +222,7 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
   /**
    * Отправка сообщения в Service Worker
    */
-  private sendMessage(message: Record<string, unknown>, transfer?: Transferable[]): void {
+  private sendMessage(message: Record<string, unknown>, transfer?: TransferableItem[]): void {
     if (!navigator.serviceWorker.controller) {
       throw new Error('No service worker controller available');
     }
@@ -236,10 +238,11 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
    * Настройка слушателя обновлений Service Worker
    */
   private setupUpdateListener(): void {
-    if (!this.registration) return;
+    const registration = this.registration;
+    if (!registration) return;
 
-    this.registration.addEventListener('updatefound', () => {
-      const newWorker = this.registration!.installing;
+    registration.addEventListener('updatefound', () => {
+      const newWorker = registration.installing;
 
       if (newWorker) {
         log.info('SW Manager: New Service Worker installing');

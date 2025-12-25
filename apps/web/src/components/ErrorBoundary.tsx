@@ -42,8 +42,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Логируем в Sentry если доступен
-    if (window.Sentry) {
-      window.Sentry.captureException(error, {
+    const sentry = (window as unknown as Record<string, unknown>).Sentry as
+      | { captureException: (error: Error, context?: unknown) => void }
+      | undefined;
+    if (sentry?.captureException) {
+      sentry.captureException(error, {
         contexts: {
           react: {
             componentStack: errorInfo.componentStack,
@@ -53,8 +56,11 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 
     // Логируем в HEYS analytics если доступен
-    if (window.HEYS?.analytics) {
-      window.HEYS.analytics.trackError('react_error_boundary', error.message, {
+    const heysAnalytics = ((window as unknown as Record<string, unknown>).HEYS as Record<string, unknown> | undefined)?.analytics as
+      | { trackError: (type: string, message: string, meta?: Record<string, unknown>) => void }
+      | undefined;
+    if (heysAnalytics?.trackError) {
+      heysAnalytics.trackError('react_error_boundary', error.message, {
         stack: error.stack,
         componentStack: errorInfo.componentStack,
       });
@@ -230,14 +236,5 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 
     return this.props.children;
-  }
-}
-
-// Type augmentation for window.Sentry only
-declare global {
-  interface Window {
-    Sentry?: {
-      captureException: (error: Error, context?: unknown) => void;
-    };
   }
 }

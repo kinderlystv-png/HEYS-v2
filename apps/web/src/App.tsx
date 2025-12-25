@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { ComponentType } from 'react';
 
 import './App.css';
 import { log, logError } from './lib/browser-logger';
@@ -6,16 +7,26 @@ import { log, logError } from './lib/browser-logger';
 // Типы для HEYS глобального объекта
 declare global {
   interface Window {
-    HEYS: any;
-    React: any;
+    HEYS?: {
+      DayTab?: unknown;
+      UserTab?: unknown;
+      [key: string]: unknown;
+    };
+    React?: typeof import('react');
   }
 }
+
+type LegacyTabProps = {
+  products?: Array<Record<string, unknown>>;
+  date?: string;
+  onDateChange?: (newDate: string) => void;
+};
 
 export function App() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [activeTab, setActiveTab] = useState<'day' | 'user' | 'reports'>('day');
-  const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
-  const [products, setProducts] = useState<any[]>([]);
+  const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().split('T')[0] || '');
+  const [products, setProducts] = useState<Array<Record<string, unknown>>>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,7 +48,7 @@ export function App() {
           log.debug('Products loaded from localStorage', { count: parsedProducts.length });
         } else {
           // Создаём пустой массив продуктов
-          const initialProducts: any[] = [];
+          const initialProducts: Array<Record<string, unknown>> = [];
           localStorage.setItem('products', JSON.stringify(initialProducts));
           setProducts(initialProducts);
           log.info('Created empty products array');
@@ -57,9 +68,10 @@ export function App() {
 
   const renderDayTab = () => {
     // Используем legacy DayTab если доступен
-    if (window.HEYS?.DayTab && window.React) {
-      const DayTab = window.HEYS.DayTab;
-      return window.React.createElement(DayTab, {
+    const ReactGlobal = window.React;
+    if (window.HEYS?.DayTab && ReactGlobal) {
+      const DayTab = window.HEYS.DayTab as ComponentType<LegacyTabProps>;
+      return ReactGlobal.createElement(DayTab, {
         products: products,
         date: currentDate,
         onDateChange: (newDate: string) => setCurrentDate(newDate),
@@ -117,9 +129,10 @@ export function App() {
 
   const renderUserTab = () => {
     // Используем legacy UserTab если доступен
-    if (window.HEYS?.UserTab && window.React) {
-      const UserTab = window.HEYS.UserTab;
-      return window.React.createElement(UserTab, {});
+    const ReactGlobal = window.React;
+    if (window.HEYS?.UserTab && ReactGlobal) {
+      const UserTab = window.HEYS.UserTab as ComponentType<Record<string, unknown>>;
+      return ReactGlobal.createElement(UserTab, {});
     }
 
     // Fallback UI
