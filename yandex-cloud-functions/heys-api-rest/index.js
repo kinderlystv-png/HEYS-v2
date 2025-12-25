@@ -11,20 +11,39 @@ const path = require('path');
 const CA_CERT_PATH = path.join(__dirname, 'certs', 'root.crt');
 const CA_CERT = fs.existsSync(CA_CERT_PATH) ? fs.readFileSync(CA_CERT_PATH, 'utf8') : null;
 
-// Конфигурация PostgreSQL
-const PG_CONFIG = {
-  host: process.env.PG_HOST || 'rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net',
-  port: parseInt(process.env.PG_PORT || '6432'),
-  database: process.env.PG_DATABASE || 'heys_production',
-  user: process.env.PG_USER || 'heys_admin',
-  password: process.env.PG_PASSWORD,
-  ssl: CA_CERT ? {
-    rejectUnauthorized: true,
-    ca: CA_CERT
-  } : {
-    rejectUnauthorized: false
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 P3: requireEnv — fail fast if env not set (no admin fallbacks!)
+// ═══════════════════════════════════════════════════════════════════════════
+function requireEnv(name) {
+  const v = process.env[name];
+  if (!v) {
+    throw new Error(`[FATAL] ${name} is missing`);
   }
-};
+  return v;
+}
+
+// PG config loaded lazily inside handler (after OPTIONS check)
+// This allows CORS preflight to work even if DB env is misconfigured
+let PG_CONFIG = null;
+
+function getPgConfig() {
+  if (!PG_CONFIG) {
+    PG_CONFIG = {
+      host: requireEnv('PG_HOST'),
+      port: Number(requireEnv('PG_PORT')),
+      database: requireEnv('PG_DATABASE'),
+      user: requireEnv('PG_USER'),
+      password: requireEnv('PG_PASSWORD'),
+      ssl: CA_CERT ? {
+        rejectUnauthorized: true,
+        ca: CA_CERT
+      } : {
+        rejectUnauthorized: false
+      }
+    };
+  }
+  return PG_CONFIG;
+}
 
 const ALLOWED_ORIGINS = [
   'https://heyslab.ru',
@@ -36,30 +55,39 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5173',
 ];
 
-// Разрешённые таблицы для REST операций
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 P3: Read-only tables whitelist (no PII, no KV — writes via RPC only)
+// ═══════════════════════════════════════════════════════════════════════════
 const ALLOWED_TABLES = [
-  'clients',
-  'client_kv_store',
-  'kv_store',
   'shared_products',
-  'shared_products_public', // VIEW для публичного доступа
-  'shared_products_pending', // Заявки на модерацию продуктов
-  'shared_products_blocklist', // Blocklist куратора
-  'consents'
+  'shared_products_blocklist', // Blocklist куратора (read-only)
+  // ❌ shared_products_public — REMOVED: VIEW uses auth.uid() which doesn't exist in YC
+  // ❌ clients — removed (PII: phone_normalized)
+  // ❌ client_kv_store — removed (writes via RPC by_session only)
+  // ❌ kv_store — removed (writes via RPC only)
+  // ❌ shared_products_pending — removed (writes via RPC only)
+  // ❌ consents — removed (sensitive, use RPC by_session)
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔐 P1 SECURITY: Column whitelist per table (prevents SQL injection via select)
 // ═══════════════════════════════════════════════════════════════════════════
+// 🔐 P3: Column whitelist (matches reduced ALLOWED_TABLES + real DB schema)
+// ⚠️  ВАЖНО: shared_products_public VIEW uses auth.uid() — NOT AVAILABLE in YC!
 const ALLOWED_COLUMNS = {
-  clients: ['id', 'name', 'phone_normalized', 'curator_id', 'is_active', 'created_at', 'updated_at'],
-  client_kv_store: ['client_id', 'key', 'value', 'updated_at'],
-  kv_store: ['key', 'value', 'updated_at'],
-  shared_products: ['id', 'name', 'category', 'kcal100', 'protein100', 'fat100', 'carbs100', 'simple100', 'complex100', 'fiber100', 'gi', 'created_at', 'updated_at', 'curator_id'],
-  shared_products_public: ['id', 'name', 'category', 'kcal100', 'protein100', 'fat100', 'carbs100', 'simple100', 'complex100', 'fiber100', 'gi'],
-  shared_products_pending: ['id', 'name', 'category', 'data', 'status', 'created_at', 'client_id'],
-  shared_products_blocklist: ['id', 'product_id', 'curator_id', 'reason', 'created_at'],
-  consents: ['id', 'client_id', 'consent_type', 'consent_version', 'granted_at', 'ip_address']
+  // shared_products (table) — публичные колонки (без created_by_* для "public view" логики)
+  // Для "public API" клиенты запрашивают select=id,name,... БЕЗ авторства
+  shared_products: [
+    'id', 'name', 'name_norm', 'fingerprint',
+    'simple100', 'complex100', 'protein100', 'badFat100', 'goodFat100', 'trans100', 'fiber100',
+    'gi', 'harm', 'category', 'portions', 'description',
+    'created_at', 'updated_at'
+    // ❌ created_by_user_id, created_by_client_id — REMOVED: авторство скрыто от публичного API
+  ],
+  // shared_products_blocklist (table) — composite PK (curator_id, product_id)
+  shared_products_blocklist: ['curator_id', 'product_id', 'created_at'],
+  // ❌ shared_products_public — REMOVED: VIEW uses auth.uid() which doesn't exist in YC
+  // ❌ clients, client_kv_store, kv_store, shared_products_pending, consents — removed
 };
 
 /**
@@ -115,8 +143,9 @@ function sanitizeSelectColumns(selectParam, tableName) {
 
 function getCorsHeaders(origin) {
   const headers = {
-    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Prefer, apikey, x-supabase-api-version, x-client-info',
+    // 🔐 P3: Read-only — only GET/OPTIONS allowed
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Prefer, apikey',
     'Access-Control-Allow-Credentials': 'true',
     'Content-Type': 'application/json',
     'Vary': 'Origin'  // 🔐 Важно для кэширования
@@ -171,14 +200,11 @@ module.exports.handler = async function (event, context) {
     httpMethod: event.httpMethod
   }));
 
-  // Получаем имя таблицы из разных источников:
+  // Получаем имя таблицы из path (единственный поддерживаемый способ)
   // 1. pathParameters.table (Yandex API Gateway path param {table})
   // 2. path /rest/TABLE_NAME или /rest/v1/TABLE_NAME (парсинг пути)
-  // 3. queryStringParameters.table (legacy)
-  // 4. params.table (legacy)
-  let tableName = event.pathParameters?.table 
-    || event.params?.table
-    || event.queryStringParameters?.table;
+  // ❌ queryStringParameters.table, params.table — REMOVED (legacy, security risk)
+  let tableName = event.pathParameters?.table;
   
   // Если не нашли в параметрах, парсим из path
   // Поддерживаем оба формата: /rest/table и /rest/v1/table (Supabase SDK)
@@ -197,21 +223,31 @@ module.exports.handler = async function (event, context) {
     };
   }
 
-  // Проверяем что таблица разрешена
+  // 🔐 Проверяем что таблица разрешена
+  // Возвращаем 404 (не 403) — security through obscurity, не раскрываем структуру БД
   if (!ALLOWED_TABLES.includes(tableName)) {
     return {
-      statusCode: 403,
+      statusCode: 404,
       headers: corsHeaders,
-      body: JSON.stringify({ error: `Table "${tableName}" not allowed` })
+      body: JSON.stringify({ error: 'Not found' })
     };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 🔐 P1.1: EARLY VALIDATION — все проверки входа ДО подключения к БД
+  // 🔐 P1.1 + P3: EARLY VALIDATION — все проверки входа ДО подключения к БД
   // Fail fast: не тратим ресурсы на connect если input невалидный
   // ═══════════════════════════════════════════════════════════════════════════
   
   const method = event.httpMethod;
+  
+  // 🔐 P3: Read-only mode — reject writes BEFORE connecting to DB
+  if (method !== 'GET') {
+    return {
+      statusCode: 405,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Method not allowed. REST API is read-only. Use RPC for writes.' })
+    };
+  }
   
   // Для GET: валидируем select columns ДО подключения к БД
   let selectColumns = null;
@@ -229,8 +265,9 @@ module.exports.handler = async function (event, context) {
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Только теперь подключаемся к БД (все валидации пройдены)
+  // PG config loaded lazily — fails here if env not set (not at module load)
   // ═══════════════════════════════════════════════════════════════════════════
-  const client = new Client(PG_CONFIG);
+  const client = new Client(getPgConfig());
 
   try {
     await client.connect();
@@ -383,194 +420,15 @@ module.exports.handler = async function (event, context) {
         };
       }
 
-      case 'POST': {
-        // INSERT или UPSERT
-        const body = typeof event.body === 'string' ? JSON.parse(event.body || '{}') : (event.body || {});
-        const params = { ...event.queryStringParameters };
-        const isUpsert = params.upsert === 'true';
-        const onConflict = params.on_conflict;
-        const selectColumns = params.select || '*';
-        
-        // Поддержка массива записей (batch insert)
-        const records = Array.isArray(body) ? body : [body];
-        
-        // Защита от пустого body
-        if (records.length === 0 || (records.length === 1 && Object.keys(records[0]).length === 0)) {
-          return {
-            statusCode: 400,
-            headers: corsHeaders,
-            body: JSON.stringify({ error: 'POST requires at least one record with fields' })
-          };
-        }
-        
-        // Получаем ключи из первой записи
-        const keys = Object.keys(records[0]);
-        
-        // Формируем ON CONFLICT колонки (может быть "user_id,k" → ["user_id", "k"])
-        const conflictCols = onConflict ? onConflict.split(',').map(c => c.trim()) : [];
-        const conflictClause = conflictCols.map(c => `"${c}"`).join(', ');
-        
-        // Колонки для UPDATE (все кроме conflict колонок)
-        const updateCols = keys
-          .filter(k => !conflictCols.includes(k))
-          .map(k => `"${k}" = EXCLUDED."${k}"`)
-          .join(', ');
-        
-        let allRows = [];
-        
-        // DEBUG: Логируем параметры upsert
-        console.log('[REST Debug] POST params:', { table: tableName, isUpsert, onConflict, conflictCols, keys, updateCols: updateCols.substring(0, 100) });
-        
-        // Обрабатываем каждую запись
-        for (const record of records) {
-          const values = keys.map(key => {
-            const val = record[key];
-            // Для jsonb колонок ВСЕГДА сериализуем в JSON
-            // Строка "abc" станет '"abc"' — валидный JSON
-            // Объект {a:1} станет '{"a":1}' — валидный JSON
-            // null останется null — PostgreSQL примет
-            if (key === 'v') {
-              // v может быть null — оставляем null
-              if (val === null || val === undefined) {
-                return null;
-              }
-              // Всё остальное сериализуем
-              return JSON.stringify(val);
-            }
-            return val;
-          });
-          
-          const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
-          
-          let query;
-          if (isUpsert && onConflict && updateCols) {
-            query = `INSERT INTO "${tableName}" (${keys.map(k => `"${k}"`).join(', ')}) 
-                     VALUES (${placeholders}) 
-                     ON CONFLICT (${conflictClause}) DO UPDATE SET ${updateCols}
-                     RETURNING ${selectColumns}`;
-            console.log('[REST Debug] Upsert query:', query.replace(/\s+/g, ' ').substring(0, 300));
-          } else if (isUpsert && onConflict) {
-            // Если все колонки — конфликтные, то DO NOTHING
-            query = `INSERT INTO "${tableName}" (${keys.map(k => `"${k}"`).join(', ')}) 
-                     VALUES (${placeholders}) 
-                     ON CONFLICT (${conflictClause}) DO NOTHING
-                     RETURNING ${selectColumns}`;
-          } else {
-            query = `INSERT INTO "${tableName}" (${keys.map(k => `"${k}"`).join(', ')}) 
-                     VALUES (${placeholders}) 
-                     RETURNING ${selectColumns}`;
-          }
-          
-          const result = await client.query(query, values);
-          allRows.push(...result.rows);
-        }
-        
-        return {
-          statusCode: 201,
-          headers: corsHeaders,
-          body: JSON.stringify(allRows)
-        };
-      }
-
-      case 'PATCH': {
-        // UPDATE
-        const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-        const params = { ...event.queryStringParameters };
-        delete params.table;
-        
-        const setKeys = Object.keys(body);
-        // Для jsonb колонок (например, 'v' в client_kv_store) нужно сериализовать в JSON
-        const setValues = Object.values(body).map((val, idx) => {
-          const key = setKeys[idx];
-          // Если значение объект/массив И колонка 'v' (jsonb) — сериализуем
-          if (key === 'v' && typeof val === 'object' && val !== null) {
-            return JSON.stringify(val);
-          }
-          return val;
-        });
-        const setClause = setKeys.map((k, i) => `"${k}" = $${i + 1}`).join(', ');
-        
-        const conditions = [];
-        const whereValues = [];
-        let i = setKeys.length + 1;
-        
-        for (const [key, value] of Object.entries(params)) {
-          if (['select', 'order'].includes(key)) continue;
-          
-          // PostgREST style: field=eq.value
-          if (typeof value === 'string' && value.startsWith('eq.')) {
-            const actualValue = value.replace('eq.', '');
-            conditions.push(`"${key}" = $${i++}`);
-            whereValues.push(actualValue);
-          } else {
-            // Простое равенство без оператора
-            conditions.push(`"${key}" = $${i++}`);
-            whereValues.push(value);
-          }
-        }
-        
-        const query = `UPDATE ${tableName} SET ${setClause} WHERE ${conditions.join(' AND ')} RETURNING *`;
-        result = await client.query(query, [...setValues, ...whereValues]);
-        
-        return {
-          statusCode: 200,
-          headers: corsHeaders,
-          body: JSON.stringify(result.rows)
-        };
-      }
-
-      case 'DELETE': {
-        const params = { ...event.queryStringParameters };
-        delete params.table;
-        
-        const conditions = [];
-        const values = [];
-        let i = 1;
-        
-        for (const [key, value] of Object.entries(params)) {
-          if (['select', 'order', 'limit', 'offset', 'upsert', 'on_conflict'].includes(key)) continue;
-          
-          // PostgREST style: field=eq.value
-          if (typeof value === 'string' && value.startsWith('eq.')) {
-            const actualValue = value.replace('eq.', '');
-            conditions.push(`"${key}" = $${i++}`);
-            values.push(actualValue);
-          } else if (typeof value === 'string' && value.startsWith('in.')) {
-            // IN operator: in.(val1,val2,val3)
-            const inValues = value.replace('in.', '').replace(/^\(|\)$/g, '').split(',');
-            const placeholders = inValues.map(() => `$${i++}`).join(', ');
-            conditions.push(`"${key}" IN (${placeholders})`);
-            values.push(...inValues);
-          } else {
-            // Простое равенство без оператора
-            conditions.push(`"${key}" = $${i++}`);
-            values.push(value);
-          }
-        }
-        
-        if (conditions.length === 0) {
-          return {
-            statusCode: 400,
-            headers: corsHeaders,
-            body: JSON.stringify({ error: 'DELETE requires at least one filter' })
-          };
-        }
-        
-        const query = `DELETE FROM "${tableName}" WHERE ${conditions.join(' AND ')} RETURNING *`;
-        result = await client.query(query, values);
-        
-        return {
-          statusCode: 200,
-          headers: corsHeaders,
-          body: JSON.stringify(result.rows)
-        };
-      }
-
+      // 🔐 P3: POST/PATCH/DELETE removed — REST is read-only
+      // All writes go through RPC (session-based, subscription-checked)
+      
       default:
+        // This should never be reached (early 405 above), but defensive
         return {
           statusCode: 405,
           headers: corsHeaders,
-          body: JSON.stringify({ error: 'Method not allowed' })
+          body: JSON.stringify({ error: 'Method not allowed. REST API is read-only.' })
         };
     }
 

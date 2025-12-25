@@ -1,9 +1,9 @@
 # 🔐 HEYS Security Runbook
 
-> **Версия**: 1.3.0  
+> **Версия**: 1.4.0  
 > **Дата**: 2025-12-26  
-> **Статус**: ✅ P0 Cloud Functions + P1 SQL Injection Hardening + P0.5 Edge
-> Cases (Stale Env Fix)
+> **Статус**: ✅ P0-P3 Complete: requireEnv + CORS + read-only REST + heys_rest
+> user
 
 Этот документ — **единый источник истины** для проверки безопасности при каждом
 деплое.
@@ -491,6 +491,8 @@ WHERE created_at < NOW() - INTERVAL '30 days';
 
 ### При каждом деплое CF
 
+#### heys-api-rpc
+
 1. **Проверить allowlist в `index.js`:**
 
    ```bash
@@ -507,31 +509,74 @@ WHERE created_at < NOW() - INTERVAL '30 days';
 
 3. **Прогнать smoke tests A-J**
 
+#### heys-api-rest (P3 hardening)
+
+1. **Проверить ALLOWED_TABLES (только 2 таблицы):**
+
+   ```bash
+   grep -A5 "ALLOWED_TABLES" yandex-cloud-functions/heys-api-rest/index.js
+   # ✅ Ожидаемо: ['shared_products', 'shared_products_blocklist']
+   # ❌ НЕ должно быть: clients, consents, kv_store, shared_products_public
+   # ⚠️  shared_products_public VIEW uses auth.uid() — doesn't work in YC!
+   ```
+
+2. **Проверить что PG_USER=heys_rest:**
+
+   ⚠️ **Только через Yandex Cloud Console!**
+   1. Открыть: Cloud Functions → `heys-api-rest` → Переменные окружения
+   2. Убедиться: `PG_USER` = `heys_rest`
+
+3. **Smoke tests для REST:**
+
+   ```bash
+   # GET на разрешённую таблицу → 200
+   curl -s "https://api.heyslab.ru/rest/shared_products?limit=1&select=id,name"
+
+   # GET на запрещённую таблицу → 404 (security through obscurity)
+   curl -s "https://api.heyslab.ru/rest/clients?limit=1"
+   # ✅ Ожидаемо: {"error":"Not found"}
+
+   # GET на shared_products_public VIEW → 404 (убран: auth.uid() не работает в YC)
+   curl -s "https://api.heyslab.ru/rest/shared_products_public?limit=1"
+   # ✅ Ожидаемо: {"error":"Not found"}
+
+   # POST на любую таблицу → 405
+   curl -s -X POST "https://api.heyslab.ru/rest/shared_products" \
+     -H "Content-Type: application/json" -d '{}'
+   # ✅ Ожидаемо: {"error":"Method POST not allowed. REST is read-only."}
+   ```
+
 ---
 
 ## 📝 Changelog
 
-| Дата       | Изменение                                                                                                                    |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| 2025-12-25 | **P1.1 Early Validation**: SELECT sanitize перенесён ДО client.connect() — детерминированный 400 даже при DB issues          |
-| 2025-12-26 | **P0.5 Final**: select=_ теперь раскрывается в whitelist колонки (не SQL _), 403 с CORS headers для диагностики              |
-| 2025-12-26 | **P0.5 Edge Cases**: JWT check перенесён внутрь handler (после OPTIONS), REST CORS deny вместо fallback, empty select= → 400 |
-| 2025-12-25 | **Trial Queue**: Test J — capacity counts offers (fix `get_public_trial_capacity`)                                           |
-| 2025-12-26 | **P0-1**: JWT_SECRET fallback удалён — throw Error если отсутствует/<32                                                      |
-| 2025-12-26 | **P0-2**: CORS `*` заменён на whitelist + Vary: Origin + 403 на evil                                                         |
-| 2025-12-26 | **P0-3**: Debug logs в heys-api-rpc гейтятся через LOG_LEVEL env                                                             |
-| 2025-12-26 | **P1**: SELECT column validation в heys-api-rest (whitelist + regex)                                                         |
-| 2025-12-26 | Добавлены smoke tests F-I для новых P0 фиксов                                                                                |
-| 2025-12-25 | Создан runbook после P1+P2 hardening                                                                                         |
-| 2025-12-25 | Добавлены schema invariants (ip vs ip_address)                                                                               |
-| 2025-12-25 | Rate-limit: детерминированный lock в increment_pin_attempt                                                                   |
-| 2025-12-25 | Phone enumeration fix: unified "invalid_credentials"                                                                         |
-| 2025-12-25 | Final REVOKE: public_exec=false для ВСЕХ 14 чувствительных функций                                                           |
-| 2025-12-25 | Унификация формата curl: `?fn=...` + body с p\_ префиксами                                                                   |
-| 2025-12-25 | Уточнена формулировка rate-limit функций (внутренние, не в CF allowlist)                                                     |
-| 2025-12-25 | Добавлена секция "Запрещённые действия" (пароли и секреты)                                                                   |
-| 2025-12-25 | Убрана опасная команда `jq .environment` — только через Cloud Console                                                        |
-| 2025-12-25 | Унификация body на `p_*` префиксы во всех smoke-тестах                                                                       |
+| Дата       | Изменение                                                                                                                                         |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2025-12-26 | **P3**: `requireEnv()` в heys-api-rest — удалён fallback `heys_admin`, fail fast если env не задан                                                |
+| 2025-12-26 | **P3**: REST read-only — только GET/OPTIONS, POST/PATCH/DELETE → 405                                                                              |
+| 2025-12-26 | **P3**: ALLOWED_TABLES сокращён: `shared_products`, `shared_products_blocklist` (убран VIEW shared_products_public — auth.uid() не работает в YC) |
+| 2025-12-26 | **P3**: Legacy routing `?table=` убран — только path-based `/rest/{table}` для упрощения мониторинга                                              |
+| 2025-12-26 | **P3**: `created_by_user_id`, `created_by_client_id` убраны из whitelist shared_products (не для public API)                                      |
+| 2025-12-26 | **P3**: Миграция `database/2025-12-26_p3_grants_heys_rest.sql` — read-only user heys_rest                                                         |
+| 2025-12-25 | **P1.1 Early Validation**: SELECT sanitize перенесён ДО client.connect() — детерминированный 400 даже при DB issues                               |
+| 2025-12-26 | **P0.5 Final**: select=_ теперь раскрывается в whitelist колонки (не SQL _), 403 с CORS headers для диагностики                                   |
+| 2025-12-26 | **P0.5 Edge Cases**: JWT check перенесён внутрь handler (после OPTIONS), REST CORS deny вместо fallback, empty select= → 400                      |
+| 2025-12-25 | **Trial Queue**: Test J — capacity counts offers (fix `get_public_trial_capacity`)                                                                |
+| 2025-12-26 | **P0-1**: JWT_SECRET fallback удалён — throw Error если отсутствует/<32                                                                           |
+| 2025-12-26 | **P0-2**: CORS `*` заменён на whitelist + Vary: Origin + 403 на evil                                                                              |
+| 2025-12-26 | **P0-3**: Debug logs в heys-api-rpc гейтятся через LOG_LEVEL env                                                                                  |
+| 2025-12-26 | **P1**: SELECT column validation в heys-api-rest (whitelist + regex)                                                                              |
+| 2025-12-26 | Добавлены smoke tests F-I для новых P0 фиксов                                                                                                     |
+| 2025-12-25 | Создан runbook после P1+P2 hardening                                                                                                              |
+| 2025-12-25 | Добавлены schema invariants (ip vs ip_address)                                                                                                    |
+| 2025-12-25 | Rate-limit: детерминированный lock в increment_pin_attempt                                                                                        |
+| 2025-12-25 | Phone enumeration fix: unified "invalid_credentials"                                                                                              |
+| 2025-12-25 | Final REVOKE: public_exec=false для ВСЕХ 14 чувствительных функций                                                                                |
+| 2025-12-25 | Унификация формата curl: `?fn=...` + body с p\_ префиксами                                                                                        |
+| 2025-12-25 | Уточнена формулировка rate-limit функций (внутренние, не в CF allowlist)                                                                          |
+| 2025-12-25 | Добавлена секция "Запрещённые действия" (пароли и секреты)                                                                                        |
+| 2025-12-25 | Убрана опасная команда `jq .environment` — только через Cloud Console                                                                             |
+| 2025-12-25 | Унификация body на `p_*` префиксы во всех smoke-тестах                                                                                            |
 
 ---
 
