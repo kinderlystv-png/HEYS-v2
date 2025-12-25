@@ -7,14 +7,23 @@ const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
-// Логирование для дебага
-console.log('[RPC Init] Starting...');
-console.log('[RPC Init] PG_HOST:', process.env.PG_HOST);
-console.log('[RPC Init] PG_PORT:', process.env.PG_PORT);
-console.log('[RPC Init] PG_DATABASE:', process.env.PG_DATABASE);
-console.log('[RPC Init] PG_USER:', process.env.PG_USER);
-console.log('[RPC Init] PG_PASSWORD:', process.env.PG_PASSWORD ? '***SET***' : '***MISSING***');
-console.log('[RPC Init] PG_SSL:', process.env.PG_SSL);
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 P0 SECURITY: Conditional logging (never log env in production)
+// ═══════════════════════════════════════════════════════════════════════════
+const LOG_LEVEL = process.env.LOG_LEVEL || 'info';  // debug | info | warn | error
+const IS_DEBUG = LOG_LEVEL === 'debug';
+
+function debugLog(...args) {
+  if (IS_DEBUG) console.log(...args);
+}
+
+function infoLog(...args) {
+  if (IS_DEBUG || LOG_LEVEL === 'info') console.log(...args);
+}
+
+// 🔐 В production логируем только факт старта, без деталей конфигурации
+infoLog('[RPC Init] Starting... LOG_LEVEL=' + LOG_LEVEL);
+debugLog('[RPC Init] Debug mode enabled (never enable in production!)');
 
 // Загрузка CA сертификата Yandex Cloud
 const CA_CERT_PATH = path.join(__dirname, 'certs', 'root.crt');
@@ -22,9 +31,10 @@ let CA_CERT = null;
 try {
   if (fs.existsSync(CA_CERT_PATH)) {
     CA_CERT = fs.readFileSync(CA_CERT_PATH, 'utf8');
-    console.log('[RPC Init] CA cert loaded, length:', CA_CERT.length);
+    debugLog('[RPC Init] CA cert loaded');
   } else {
-    console.log('[RPC Init] CA cert NOT FOUND at:', CA_CERT_PATH);
+    // 🔐 Это ошибка конфигурации, логируем всегда
+    console.error('[RPC Init] CA cert NOT FOUND at:', CA_CERT_PATH);
   }
 } catch (e) {
   console.error('[RPC Init] CA cert error:', e.message);
@@ -48,7 +58,7 @@ const PG_CONFIG = {
   query_timeout: 10000
 };
 
-console.log('[RPC Init] PG_CONFIG ssl:', CA_CERT ? 'verify-full with cert' : 'no verify');
+debugLog('[RPC Init] PG_CONFIG ssl:', CA_CERT ? 'verify-full with cert' : 'no verify');
 
 /**
  * 🔐 Извлечение реального IP клиента из заголовков
@@ -203,10 +213,11 @@ function getCorsHeaders(origin) {
 }
 
 module.exports.handler = async function (event, context) {
-  console.log('[RPC Handler] Request received');
-  console.log('[RPC Handler] Method:', event.httpMethod);
-  console.log('[RPC Handler] Path:', event.path);
-  console.log('[RPC Handler] Query:', JSON.stringify(event.queryStringParameters));
+  // 🔐 P0: Conditional logging — no request details in production
+  debugLog('[RPC Handler] Request received');
+  debugLog('[RPC Handler] Method:', event.httpMethod);
+  debugLog('[RPC Handler] Path:', event.path);
+  // 🔐 Никогда не логируем query params / body целиком — могут содержать токены
   
   const origin = event.headers?.origin || event.headers?.Origin || '';
   const corsHeaders = getCorsHeaders(origin);
@@ -274,13 +285,13 @@ module.exports.handler = async function (event, context) {
   // 🔐 P1: Извлекаем IP клиента для rate-limit
   // Yandex Cloud Functions: X-Forwarded-For содержит реальный IP
   const clientIp = extractClientIp(event.headers);
-  console.log('[RPC Handler] Client IP:', clientIp);
+  debugLog('[RPC Handler] Client IP:', clientIp ? '***extracted***' : 'null');
 
   // 🔐 P2: Для verify_client_pin_v3 добавляем IP и User-Agent автоматически
   if (fnName === 'verify_client_pin_v3') {
     params.p_ip = clientIp || null;
     params.p_user_agent = event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
-    console.log('[RPC Handler] Added p_ip and p_user_agent to verify_client_pin_v3');
+    debugLog('[RPC Handler] Added p_ip and p_user_agent to verify_client_pin_v3');
   }
 
   // Подключаемся к PostgreSQL
