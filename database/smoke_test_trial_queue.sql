@@ -42,13 +42,25 @@
 BEGIN;
 
 -- � Make psql variables available inside DO blocks via current_setting()
-SELECT set_config('token_a', :'token_a', true);
-SELECT set_config('token_b', :'token_b', true);
--- 🔍 SANITY CHECK 1: Verify tokens are accessible via current_setting()
+SELECT set_config('smoke.token_a', :'token_a', true);
+SELECT set_config('smoke.token_b', :'token_b', true);
+-- 🔍 SANITY CHECK 1: Verify tokens are accessible via current_setting() (без вывода токенов)
 \echo ''
 \echo 'Sanity check: tokens accessible via current_setting()...'
-SELECT current_setting('token_a', true) AS token_a_present,
-       current_setting('token_b', true) AS token_b_present;
+SELECT
+  (current_setting('smoke.token_a', true) IS NOT NULL AND length(current_setting('smoke.token_a', true)) > 10) AS token_a_ok,
+  (current_setting('smoke.token_b', true) IS NOT NULL AND length(current_setting('smoke.token_b', true)) > 10) AS token_b_ok;
+
+DO $$
+BEGIN
+  IF current_setting('smoke.token_a', true) IS NULL OR length(current_setting('smoke.token_a', true)) <= 10 THEN
+    RAISE EXCEPTION 'FAIL: token_a not available via current_setting()';
+  END IF;
+  IF current_setting('smoke.token_b', true) IS NULL OR length(current_setting('smoke.token_b', true)) <= 10 THEN
+    RAISE EXCEPTION 'FAIL: token_b not available via current_setting()';
+  END IF;
+  RAISE NOTICE '✅ Both tokens accessible via current_setting()';
+END $$;
 
 -- 🔍 SANITY CHECK 2: Verify subscriptions table has required columns
 \echo 'Sanity check: subscriptions columns exist...'
@@ -92,8 +104,8 @@ DECLARE
   v_status_a jsonb;
   v_status_b jsonb;
 BEGIN
-  v_status_a := public.get_trial_queue_status(current_setting('token_a'));
-  v_status_b := public.get_trial_queue_status(current_setting('token_b'));
+  v_status_a := public.get_trial_queue_status(current_setting('smoke.token_a'));
+  v_status_b := public.get_trial_queue_status(current_setting('smoke.token_b'));
   
   IF (v_status_a->>'success')::boolean IS NOT TRUE THEN
     RAISE EXCEPTION 'FAIL: Token A invalid: %', v_status_a;
@@ -117,7 +129,7 @@ DECLARE
   v_slots_with_trial int;
   v_slots_restored int;
 BEGIN
-  v_client_a := public.require_client_id(current_setting('token_a'));
+  v_client_a := public.require_client_id(current_setting('smoke.token_a'));
   
   -- 1) Сохраняем состояние A (чтобы потом вернуть)
   -- Сначала лимит 1 временно для теста
@@ -183,7 +195,7 @@ BEGIN
         v_slots_restored, v_slots_before;
     END IF;
     RAISE NOTICE '✅ Source of truth = subscriptions (NON-STRICT restore check passed)';
-  END IF
+  END IF;
 END $$;
 
 -- =============================================================================
@@ -232,8 +244,8 @@ DECLARE
   v_client_a uuid;
   v_client_b uuid;
 BEGIN
-  v_client_a := public.require_client_id(current_setting('token_a'));
-  v_client_b := public.require_client_id(current_setting('token_b'));
+  v_client_a := public.require_client_id(current_setting('smoke.token_a'));
+  v_client_b := public.require_client_id(current_setting('smoke.token_b'));
 
   -- Сбрасываем триалы в subscriptions
   UPDATE public.subscriptions
@@ -277,7 +289,7 @@ DO $$
 DECLARE
   v_status jsonb;
 BEGIN
-  v_status := public.get_trial_queue_status(current_setting('token_a'));
+  v_status := public.get_trial_queue_status(current_setting('smoke.token_a'));
   IF (v_status->>'status') IS DISTINCT FROM 'offer' THEN
     RAISE EXCEPTION 'FAIL: Expected A status=offer, got=%', v_status;
   END IF;
@@ -295,7 +307,7 @@ DO $$
 DECLARE
   v_status jsonb;
 BEGIN
-  v_status := public.get_trial_queue_status(current_setting('token_b'));
+  v_status := public.get_trial_queue_status(current_setting('smoke.token_b'));
   IF (v_status->>'status') IS DISTINCT FROM 'queued' THEN
     RAISE EXCEPTION 'FAIL: Expected B status=queued, got=%', v_status;
   END IF;
@@ -334,7 +346,7 @@ DECLARE
   v_client_a uuid;
   v_trial_ends timestamptz;
 BEGIN
-  v_status := public.get_trial_queue_status(current_setting('token_a'));
+  v_status := public.get_trial_queue_status(current_setting('smoke.token_a'));
   
   -- Статус должен быть не offer/queued (скорее всего none или claimed)
   IF (v_status->>'status') IN ('offer', 'queued') THEN
@@ -342,7 +354,7 @@ BEGIN
   END IF;
   
   -- Проверяем subscriptions
-  v_client_a := public.require_client_id(current_setting('token_a'));
+  v_client_a := public.require_client_id(current_setting('smoke.token_a'));
   SELECT trial_ends_at INTO v_trial_ends FROM public.subscriptions WHERE client_id = v_client_a;
   
   IF v_trial_ends IS NULL OR v_trial_ends < NOW() THEN
@@ -376,7 +388,7 @@ DO $$
 DECLARE
   v_client_a uuid;
 BEGIN
-  v_client_a := public.require_client_id(current_setting('token_a'));
+  v_client_a := public.require_client_id(current_setting('smoke.token_a'));
   
   UPDATE public.subscriptions
   SET trial_ends_at = NOW() - INTERVAL '1 second',
@@ -417,7 +429,7 @@ DO $$
 DECLARE
   v_status jsonb;
 BEGIN
-  v_status := public.get_trial_queue_status(current_setting('token_b'));
+  v_status := public.get_trial_queue_status(current_setting('smoke.token_b'));
   IF (v_status->>'status') IS DISTINCT FROM 'offer' THEN
     RAISE EXCEPTION 'FAIL: Expected B status=offer after assign, got=%', v_status;
   END IF;
@@ -440,7 +452,7 @@ DECLARE
   v_client_b uuid;
   v_trial_ends timestamptz;
 BEGIN
-  v_client_b := public.require_client_id(current_setting('token_b'));
+  v_client_b := public.require_client_id(current_setting('smoke.token_b'));
   SELECT trial_ends_at INTO v_trial_ends FROM public.subscriptions WHERE client_id = v_client_b;
   
   IF v_trial_ends IS NULL OR v_trial_ends < NOW() THEN
@@ -465,7 +477,7 @@ DO $$
 DECLARE
   v_client_b uuid;
 BEGIN
-  v_client_b := public.require_client_id(current_setting('token_b'));
+  v_client_b := public.require_client_id(current_setting('smoke.token_b'));
   UPDATE public.subscriptions
   SET trial_started_at = NULL, trial_ends_at = NULL, updated_at = NOW()
   WHERE client_id = v_client_b;
@@ -482,7 +494,7 @@ DECLARE
   v_status_2 jsonb;
   v_expires_2 timestamptz;
 BEGIN
-  v_status_1 := public.get_trial_queue_status(current_setting('token_b'));
+  v_status_1 := public.get_trial_queue_status(current_setting('smoke.token_b'));
   v_expires_1 := (v_status_1->>'offer_expires_at')::timestamptz;
   
   IF (v_status_1->>'status') != 'offer' THEN
@@ -495,9 +507,9 @@ BEGIN
   PERFORM pg_sleep(2);
   
   -- Повторный запрос
-  PERFORM public.request_trial(current_setting('token_b'), 'smoke_dod_repeat');
+  PERFORM public.request_trial(current_setting('smoke.token_b'), 'smoke_dod_repeat');
   
-  v_status_2 := public.get_trial_queue_status(current_setting('token_b'));
+  v_status_2 := public.get_trial_queue_status(current_setting('smoke.token_b'));
   v_expires_2 := (v_status_2->>'offer_expires_at')::timestamptz;
   
   RAISE NOTICE 'offer_expires_at after repeat: %', v_expires_2;
@@ -524,8 +536,8 @@ DECLARE
   v_client_a uuid;
   v_client_b uuid;
 BEGIN
-  v_client_a := public.require_client_id(current_setting('token_a'));
-  v_client_b := public.require_client_id(current_setting('token_b'));
+  v_client_a := public.require_client_id(current_setting('smoke.token_a'));
+  v_client_b := public.require_client_id(current_setting('smoke.token_b'));
   
   -- A = активный trial
   UPDATE public.subscriptions
@@ -567,7 +579,7 @@ DO $$
 DECLARE
   v_status jsonb;
 BEGIN
-  v_status := public.get_trial_queue_status(current_setting('token_b'));
+  v_status := public.get_trial_queue_status(current_setting('smoke.token_b'));
   IF (v_status->>'status') IS DISTINCT FROM 'queued' THEN
     RAISE EXCEPTION 'FAIL: Expected B status=queued before purchase, got=%', v_status;
   END IF;
@@ -579,7 +591,7 @@ DO $$
 DECLARE
   v_client_b uuid;
 BEGIN
-  v_client_b := public.require_client_id(current_setting('token_b'));
+  v_client_b := public.require_client_id(current_setting('smoke.token_b'));
   
   -- Покупка: устанавливаем active_until → триггер должен снять из очереди
   UPDATE public.subscriptions
@@ -596,7 +608,7 @@ DECLARE
   v_queue_status text;
   v_client_b uuid;
 BEGIN
-  v_client_b := public.require_client_id(current_setting('token_b'));
+  v_client_b := public.require_client_id(current_setting('smoke.token_b'));
   
   SELECT status INTO v_queue_status
   FROM public.trial_queue 
@@ -644,11 +656,18 @@ END $$;
     v_client_a uuid;
     v_client_b uuid;
   BEGIN
-    v_client_a := public.require_client_id(current_setting('token_a'));
-    v_client_b := public.require_client_id(current_setting('token_b'));
+    v_client_a := public.require_client_id(current_setting('smoke.token_a'));
+    v_client_b := public.require_client_id(current_setting('smoke.token_b'));
 
     -- Очищаем trial_queue
     DELETE FROM public.trial_queue WHERE client_id IN (v_client_a, v_client_b);
+    
+    -- (Опционально) чистим события последних 10 минут, чтобы events не раздувались
+    IF to_regclass('public.trial_queue_events') IS NOT NULL THEN
+      DELETE FROM public.trial_queue_events
+      WHERE client_id IN (v_client_a, v_client_b)
+        AND created_at > NOW() - INTERVAL '10 minutes';
+    END IF;
     
     -- Сбрасываем subscriptions
     UPDATE public.subscriptions
@@ -681,8 +700,8 @@ END $$;
     v_queue_count int;
     v_trial_count int;
   BEGIN
-    v_client_a := public.require_client_id(current_setting('token_a'));
-    v_client_b := public.require_client_id(current_setting('token_b'));
+    v_client_a := public.require_client_id(current_setting('smoke.token_a'));
+    v_client_b := public.require_client_id(current_setting('smoke.token_b'));
     
     -- Проверяем trial_queue: не должно быть active записей
     SELECT COUNT(*) INTO v_queue_count
