@@ -3,7 +3,17 @@
   "version": "1.0.0",
   "description": "Centralized logging system for HEYS",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "main": "./dist/index.js",
+  "module": "./src/index.ts",
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "pnpm run build:js && pnpm run build:types",
