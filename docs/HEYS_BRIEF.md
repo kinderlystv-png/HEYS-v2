@@ -110,50 +110,64 @@ v2, на старте можно решать вручную протоколо�
 ### Auth
 
 - Клиент: телефон + PIN (PIN хранится хэшем bcrypt)
-- **Session-based auth (v2):** `verify_client_pin_v2` → `session_token` (UUID)
+- **Session-based auth (v3):** `verify_client_pin_v3` → `session_token` (UUID)
   - Токен хранится в localStorage: `heys_session_token`
   - Все RPC-вызовы передают `session_token` вместо `client_id`
   - Сервер извлекает `client_id` из сессии
   - Сессии истекают: 30 дней или по ручному revoke
+- **Rate-limit:** 5 неверных PIN → блокировка 15 мин
 - Куратор: email + пароль (`heys-api-auth` + JWT)
 - Desktop Gate: по умолчанию выключен для клиентов
+
+🔐 **Безопасность API:** [SECURITY_RUNBOOK.md](./SECURITY_RUNBOOK.md)
 
 ### Подписки
 
 **Состояния:** `none → trial → active → read_only → canceled`
 
 **Таблицы PostgreSQL (Yandex Cloud):**
+
 - `client_sessions` — сессии клиентов (session_token, client_id, expires_at)
 - `subscriptions` — подписки (status, trial_started_at, active_until)
 
 **RPC-функции:**
-- `verify_client_pin_v2(phone, pin)` → { session_token, client_id, subscription }
-- `get_subscription_status_by_session(session_token)` → { status, days_remaining, ... }
+
+- `verify_client_pin_v3(phone, pin, ip, user_agent)` → { session_token,
+  client_id, subscription }
+- `get_subscription_status_by_session(session_token)` → { status,
+  days_remaining, ... }
 - `start_trial_by_session(session_token)` → void (триал 7 дней)
 - `revoke_session(session_token)` → void (logout)
 
 **UI-модули:**
+
 - `HEYS.Subscription` — управление подписками (getStatus, startTrial)
 - `HEYS.Paywall` — paywall и gating (showPaywall, ReadOnlyBanner, checkAccess)
 
 **Gating:**
+
 - Read-only mode: история доступна, добавление данных заблокировано
 - Banner в DayTab + блокировка add product / add meal
 
 ### Очередь на триал (Trial Queue)
 
-**Проблема:** Куратор может вести 3–5 клиентов на триале. При наплыве 20 человек — качество падает.
+**Проблема:** Куратор может вести 3–5 клиентов на триале. При наплыве 20 человек
+— качество падает.
 
 **Решение:** Умная очередь на бесплатный триал + покупка всегда без очереди.
 
 **Таблицы PostgreSQL:**
-- `trial_queue` — очередь (client_id UNIQUE, status, queued_at, offer_expires_at)
+
+- `trial_queue` — очередь (client_id UNIQUE, status, queued_at,
+  offer_expires_at)
 - `curator_trial_limits` — лимиты (max_active_trials, is_accepting_trials)
 - `trial_queue_events` — аналитика (event_type, meta)
 
-**Состояния очереди:** `queued → offer → assigned | expired | canceled | canceled_by_purchase`
+**Состояния очереди:**
+`queued → offer → assigned | expired | canceled | canceled_by_purchase`
 
 **RPC-функции (реализованы):**
+
 - `get_public_trial_capacity()` — публичный виджет (available_slots, queue_size)
 - `request_trial(session_token, source)` → offer или позиция в очереди
 - `get_trial_queue_status(session_token)` → статус/позиция/таймер
@@ -162,6 +176,7 @@ v2, на старте можно решать вручную протоколо�
 - `assign_trials_from_queue()` → выдача offers (cron каждые 5–10 мин)
 
 **Ключевые правила:**
+
 - Очередь **только на бесплатное** — покупка любого тарифа всегда сразу
 - Offer window: **2 часа** на подтверждение
 - Позиция вычисляется по `(priority DESC, queued_at ASC)` — нельзя перепрыгнуть
@@ -169,6 +184,7 @@ v2, на старте можно решать вручную протоколо�
 - Покупка автоматически снимает из очереди (`canceled_by_purchase`)
 
 **Антиабьюз:**
+
 - 1 триал на телефон
 - Cooldown 30 дней после отмены/истечения
 - Повторный `request_trial` НЕ сбрасывает позицию
@@ -178,17 +194,20 @@ v2, на старте можно решать вручную протоколо�
 ### Тестирование Trial Queue
 
 **Предусловия:**
+
 1. PostgreSQL миграция применена (`database/2025-12-25_trial_queue.sql`)
 2. CF `heys-api-rpc` задеплоена с новыми функциями в `ALLOWED_FUNCTIONS`
 3. `curator_trial_limits` настроена (max_active_trials = 3)
 
 **Тест 1: Публичный виджет**
+
 ```bash
 curl -s "https://api.heyslab.ru/rpc?fn=get_public_trial_capacity" -X POST -H "Content-Type: application/json" -d "{}"
 # Ожидается: { available_slots, total_slots, queue_size, is_accepting, offer_window_minutes, trial_days }
 ```
 
 **Тест 2: Запрос триала (есть слоты)**
+
 ```bash
 curl -s "https://api.heyslab.ru/rpc?fn=request_trial" -X POST -H "Content-Type: application/json" \
   -d '{"session_token":"<TOKEN>", "source":"test"}'
@@ -196,12 +215,14 @@ curl -s "https://api.heyslab.ru/rpc?fn=request_trial" -X POST -H "Content-Type: 
 ```
 
 **Тест 3: Запрос триала (нет слотов)**
+
 ```bash
 # После заполнения лимита:
 # Ожидается: { status: "queued", position: N, queue_size: M }
 ```
 
 **Тест 4: Claim offer**
+
 ```bash
 curl -s "https://api.heyslab.ru/rpc?fn=claim_trial_offer" -X POST -H "Content-Type: application/json" \
   -d '{"session_token":"<TOKEN>"}'
@@ -209,6 +230,7 @@ curl -s "https://api.heyslab.ru/rpc?fn=claim_trial_offer" -X POST -H "Content-Ty
 ```
 
 **Тест 5: Проверка позиции**
+
 ```bash
 curl -s "https://api.heyslab.ru/rpc?fn=get_trial_queue_status" -X POST -H "Content-Type: application/json" \
   -d '{"session_token":"<TOKEN>"}'
@@ -216,12 +238,14 @@ curl -s "https://api.heyslab.ru/rpc?fn=get_trial_queue_status" -X POST -H "Conte
 ```
 
 **Тест 6: Отмена и повторный запрос**
+
 ```bash
 # cancel_trial_queue → request_trial
 # Ожидается: новая запись с новым queued_at (если прошёл cooldown)
 ```
 
 **E2E сценарий (в браузере):**
+
 1. Авторизоваться как новый клиент (без триала)
 2. Проверить виджет мест на лендинге
 3. Нажать "Начать триал" → получить offer или позицию
@@ -268,6 +292,7 @@ curl -s "https://api.heyslab.ru/rpc?fn=get_trial_queue_status" -X POST -H "Conte
 ## Приложения (куда смотреть за деталями)
 
 - **Полная документация:** `HEYS_BRIEF_FULL.md`
+- **🔐 Безопасность API:** `SECURITY_RUNBOOK.md` — чеклист при деплое
 - **Юридика:** `docs/legal/`
 - **Операционные протоколы куратора:** `docs/operations/CURATOR_PROTOCOLS.md`
 - **Cloud Functions:** `yandex-cloud-functions/heys-api-*`

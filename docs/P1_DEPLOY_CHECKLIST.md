@@ -1,7 +1,32 @@
 # P1 Security Hardening — Deploy Checklist
 
 > **Дата**: 2025-12-25  
-> **Статус**: 🟡 Готово к деплою
+> **Статус**: ✅ Завершён (P1 + P2)
+
+📚 **[SECURITY_RUNBOOK.md](./SECURITY_RUNBOOK.md)** — полный runbook для
+проверок безопасности при каждом деплое
+
+---
+
+## ⚠️ DB Schema Invariants
+
+**Зафиксированные имена колонок (не менять без миграции!):**
+
+| Таблица              | Колонка            | Примечание                      |
+| -------------------- | ------------------ | ------------------------------- |
+| `pin_login_attempts` | `ip`               | ⚠️ НЕ `ip_address`!             |
+| `pin_login_attempts` | `attempts`         | ⚠️ НЕ `attempt_count`!          |
+| `clients`            | `name`             | ⚠️ НЕ `first_name`/`last_name`! |
+| `clients`            | `phone_normalized` | Только цифры                    |
+
+**Зафиксированные сигнатуры функций:**
+
+| Функция                       | Сигнатура                                               |
+| ----------------------------- | ------------------------------------------------------- |
+| `verify_client_pin_v3`        | `(text, text, text, text)` — phone, pin, ip, user_agent |
+| `check_pin_rate_limit`        | `(text, inet)` — phone, ip                              |
+| `increment_pin_attempt`       | `(text, inet)` — phone, ip                              |
+| `upsert_client_kv_by_session` | `(text, text, jsonb)` — session_token, key, value       |
 
 ---
 
@@ -16,6 +41,7 @@ psql "host=rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net port=6432 dbname=heys_produ
 ```
 
 **Проверка после:**
+
 ```sql
 -- Таблицы созданы?
 SELECT to_regclass('public.security_events'),
@@ -29,6 +55,7 @@ ORDER BY 1;
 ```
 
 ✅ Ожидаемо:
+
 - `security_events` — регистр найден
 - `pin_login_attempts` — регистр найден
 - 3 функции с правильными сигнатурами
@@ -42,6 +69,7 @@ ORDER BY 1;
 ```
 
 **Проверка после:**
+
 ```sql
 SELECT proname, pg_get_function_identity_arguments(oid)
 FROM pg_proc
@@ -50,6 +78,7 @@ ORDER BY 1;
 ```
 
 ✅ Ожидаемо:
+
 - `create_pending_product_by_session(text, text, jsonb)` — сигнатура TEXT
 - `get_client_data_by_session(text)` — сигнатура TEXT
 
@@ -62,6 +91,7 @@ ORDER BY 1;
 ```
 
 **Проверка после:**
+
 ```sql
 -- Какие функции доступны heys_rpc?
 SELECT p.proname, pg_get_function_identity_arguments(p.oid)
@@ -73,30 +103,37 @@ ORDER BY 1;
 ```
 
 ✅ Ожидаемо (только эти):
+
+- `batch_upsert_client_kv_by_session`
+- `check_pin_rate_limit` (внутренняя для verify_client_pin_v3)
 - `client_pin_auth`
-- `create_client_with_pin`
 - `create_pending_product_by_session` ← session-версия!
 - `get_client_data_by_session` ← session-версия!
 - `get_client_salt`
 - `get_subscription_status_by_session`
+- `increment_pin_attempt` (внутренняя для verify_client_pin_v3)
+- `reset_pin_attempts` (внутренняя для verify_client_pin_v3)
 - `revoke_session`
 - `start_trial_by_session`
 - `upsert_client_kv_by_session`
-- `verify_client_pin_v2`
 - `verify_client_pin_v3`
 
 ❌ НЕ должно быть:
+
 - `log_security_event` — внутренняя
 - `require_client_id` — внутренняя
 - `check_subscription_status` — UUID без проверки владельца
 - `get_client_data` — UUID без проверки владельца
 - `create_pending_product` — UUID без проверки владельца
+- `create_client_with_pin` — Curator-only, не публичная
+- `verify_client_pin`, `verify_client_pin_v2` — Legacy, убраны из CF allowlist
 
 ---
 
 ### 4️⃣ Установить пароль `heys_rpc`
 
 **В Yandex Cloud Console:**
+
 1. Yandex Cloud → Managed PostgreSQL → `heys_production`
 2. Users → `heys_rpc` → Change password
 3. Сгенерировать сложный пароль (32+ символа)
@@ -107,12 +144,14 @@ ORDER BY 1;
 ### 5️⃣ Обновить Cloud Function
 
 **Обновить env vars в `heys-api-rpc`:**
+
 ```
 PG_USER=heys_rpc
 PG_PASSWORD=<новый_пароль>
 ```
 
 **Деплой CF:**
+
 ```bash
 cd yandex-cloud-functions/heys-api-rpc
 yc serverless function version create \
@@ -139,23 +178,25 @@ yc serverless function version create \
 ### A) Rate-limit работает
 
 ```bash
-# 6 неверных PIN подряд (один IP)
-curl -X POST https://api.heyslab.ru/rpc \
+# 6 неверных PIN подряд (один IP) — канонический формат API
+curl -s -X POST "https://api.heyslab.ru/rpc?fn=verify_client_pin_v3" \
   -H "Content-Type: application/json" \
-  -d '{"fn":"verify_client_pin_v3","args":{"phone":"79001234567","pin":"0000"}}'
+  -d '{"phone":"79001234567","pin":"0000"}'
 # Повторить 6 раз...
 ```
 
 **Ожидаемо на 6-й попытке:**
+
 ```json
-{"error": "pin_rate_limited"}
+{ "error": "pin_rate_limited" }
 ```
 
 **Проверить в БД:**
+
 ```sql
 SELECT * FROM public.pin_login_attempts ORDER BY last_attempt_at DESC LIMIT 5;
 
-SELECT event_type, count(*) 
+SELECT event_type, count(*)
 FROM public.security_events
 WHERE created_at > now() - interval '10 minutes'
 GROUP BY 1 ORDER BY 2 DESC;
@@ -164,43 +205,46 @@ GROUP BY 1 ORDER BY 2 DESC;
 ### B) Session-функции работают
 
 ```bash
-# Fake token → invalid_session
-curl -X POST https://api.heyslab.ru/rpc \
+# Fake token → invalid_session (канонический формат API)
+curl -s -X POST "https://api.heyslab.ru/rpc?fn=create_pending_product_by_session" \
   -H "Content-Type: application/json" \
-  -d '{"fn":"create_pending_product_by_session","args":{"session_token":"fake","name":"Test","product_data":{}}}'
+  -d '{"p_session_token":"fake","p_name":"Test","p_product_data":{}}'
 ```
 
 **Ожидаемо:**
+
 ```json
-{"error": "invalid_session"}
+{ "error": "invalid_session" }
 ```
 
 ### C) Старые функции недоступны
 
 ```bash
-# UUID-версия → Function not allowed
-curl -X POST https://api.heyslab.ru/rpc \
+# UUID-версия → Function not allowed (канонический формат API)
+curl -s -X POST "https://api.heyslab.ru/rpc?fn=create_pending_product" \
   -H "Content-Type: application/json" \
-  -d '{"fn":"create_pending_product","args":{"client_id":"...","name":"Test","product_data":{}}}'
+  -d '{"p_client_id":"00000000-0000-0000-0000-000000000000","p_name":"Test","p_product_data":{}}'
 ```
 
 **Ожидаемо:**
+
 ```json
-{"error": "Function not allowed: create_pending_product"}
+{ "error": "Function not allowed: create_pending_product" }
 ```
 
 ### D) KV с подпиской
 
 ```bash
-# Без подписки → subscription_required
-curl -X POST https://api.heyslab.ru/rpc \
+# Без подписки → subscription_required (канонический формат API)
+curl -s -X POST "https://api.heyslab.ru/rpc?fn=upsert_client_kv_by_session" \
   -H "Content-Type: application/json" \
-  -d '{"fn":"upsert_client_kv_by_session","args":{"session_token":"...","key":"test","value":"{}"}}'
+  -d '{"p_session_token":"...","p_key":"test","p_value":{}}'
 ```
 
 **Ожидаемо для `none` или `read_only`:**
+
 ```json
-{"error": "subscription_required"}
+{ "error": "subscription_required" }
 ```
 
 ---
@@ -241,12 +285,14 @@ curl -X POST https://api.heyslab.ru/rpc \
 ## 🚨 Откат (если что-то пошло не так)
 
 ### Откат CF на heys_admin
+
 ```bash
 # Быстрый откат — вернуть PG_USER=heys_admin в env vars
 # Это временное решение, НЕ финальное!
 ```
 
 ### Откат миграций (если нужно)
+
 ```sql
 -- Вернуть старые функции (НЕ рекомендуется, теряем security!)
 -- Лучше фиксить проблему forward
@@ -268,7 +314,7 @@ GROUP BY 1 ORDER BY 2 DESC;
 -- Rate-limit срабатывания
 SELECT count(*) as blocked_attempts
 FROM public.pin_login_attempts
-WHERE attempt_count >= 5;
+WHERE attempts >= 5;
 
 -- Размер таблицы
 SELECT pg_size_pretty(pg_total_relation_size('public.security_events'));
