@@ -206,12 +206,35 @@ module.exports.handler = async function (event, context) {
     };
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🔐 P1.1: EARLY VALIDATION — все проверки входа ДО подключения к БД
+  // Fail fast: не тратим ресурсы на connect если input невалидный
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  const method = event.httpMethod;
+  
+  // Для GET: валидируем select columns ДО подключения к БД
+  let selectColumns = null;
+  if (method === 'GET') {
+    const rawSelect = event.queryStringParameters?.select || '*';
+    selectColumns = sanitizeSelectColumns(rawSelect, tableName);
+    if (selectColumns === null) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Invalid select columns — contains forbidden characters or unknown columns' })
+      };
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Только теперь подключаемся к БД (все валидации пройдены)
+  // ═══════════════════════════════════════════════════════════════════════════
   const client = new Client(PG_CONFIG);
 
   try {
     await client.connect();
 
-    const method = event.httpMethod;
     let result;
 
     switch (method) {
@@ -219,20 +242,9 @@ module.exports.handler = async function (event, context) {
         // Простой SELECT с фильтрами из query params
         const params = { ...event.queryStringParameters };
         delete params.table;
+        delete params.select; // Уже обработано выше
         
-        // 🔐 P1: Валидация и санитизация колонок для SELECT
-        const rawSelect = params.select || '*';
-        delete params.select;
-        
-        const selectColumns = sanitizeSelectColumns(rawSelect, tableName);
-        if (selectColumns === null) {
-          return {
-            statusCode: 400,
-            headers: corsHeaders,
-            body: JSON.stringify({ error: 'Invalid select columns — contains forbidden characters or unknown columns' })
-          };
-        }
-        
+        // selectColumns уже валидированы и санитизированы выше (early validation)
         let query = `SELECT ${selectColumns} FROM "${tableName}"`;
         const conditions = [];
         const values = [];

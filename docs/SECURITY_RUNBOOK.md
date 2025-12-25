@@ -337,19 +337,22 @@ curl -s -X OPTIONS "https://api.heyslab.ru/auth/login" \
 
 ```bash
 # Попытка SQL injection через select параметр
-curl -s "https://api.heyslab.ru/rest/clients?select=id;DROP%20TABLE%20clients;--" \
-  -H "Authorization: Bearer <JWT>"
+curl -s "https://api.heyslab.ru/rest/clients?select=id%3BDROP%20TABLE%20clients"
 ```
 
-**✅ Ожидаемо:** `400 Bad Request` с "Invalid select columns"
+**✅ Ожидаемо:** `400 Bad Request` с
+`{"error":"Invalid select columns — contains forbidden characters or unknown columns"}`
+
+> **P1.1 Early Validation:** Эта проверка выполняется **ДО** `client.connect()`,
+> поэтому даже при проблемах с БД (неверный пароль) вы получите
+> детерминированный 400.
 
 ```bash
-# Валидный select
-curl -s "https://api.heyslab.ru/rest/clients?select=id,name,phone_normalized" \
-  -H "Authorization: Bearer <JWT>"
+# Валидный select (DB error ожидаем только после валидации)
+curl -s "https://api.heyslab.ru/rest/clients?select=id,name"
 ```
 
-**✅ Ожидаемо:** `200 OK` с данными
+**✅ Ожидаемо:** `200 OK` с данными (или DB error если проблемы с credentials)
 
 ### Test J: Trial Queue — capacity counts offers
 
@@ -510,6 +513,7 @@ WHERE created_at < NOW() - INTERVAL '30 days';
 
 | Дата       | Изменение                                                                                                                    |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 2025-12-25 | **P1.1 Early Validation**: SELECT sanitize перенесён ДО client.connect() — детерминированный 400 даже при DB issues          |
 | 2025-12-26 | **P0.5 Final**: select=_ теперь раскрывается в whitelist колонки (не SQL _), 403 с CORS headers для диагностики              |
 | 2025-12-26 | **P0.5 Edge Cases**: JWT check перенесён внутрь handler (после OPTIONS), REST CORS deny вместо fallback, empty select= → 400 |
 | 2025-12-25 | **Trial Queue**: Test J — capacity counts offers (fix `get_public_trial_capacity`)                                           |
