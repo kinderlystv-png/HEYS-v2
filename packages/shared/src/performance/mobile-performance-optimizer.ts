@@ -8,6 +8,54 @@
  * @created 2025-01-31
  */
 
+import { logger as baseLogger } from '@heys/logger';
+
+type PerformanceMemory = {
+  totalJSHeapSize: number;
+  usedJSHeapSize: number;
+  jsHeapSizeLimit: number;
+};
+
+type PerformanceWithMemory = Performance & { memory?: PerformanceMemory };
+
+type FetchInput = Parameters<typeof fetch>[0];
+type FetchInit = Parameters<typeof fetch>[1];
+type PassiveEventOptions = { passive?: boolean };
+
+type NavigatorConnection = {
+  effectiveType?: string;
+  downlink?: number;
+  rtt?: number;
+  addEventListener?: (event: 'change', handler: () => void) => void;
+};
+
+type BatteryManagerLike = {
+  level: number;
+  charging: boolean;
+  addEventListener?: (event: 'levelchange' | 'chargingchange', handler: () => void) => void;
+};
+
+type NavigatorWithConnection = Navigator & {
+  connection?: NavigatorConnection;
+  mozConnection?: NavigatorConnection;
+  webkitConnection?: NavigatorConnection;
+  deviceMemory?: number;
+  getBattery?: () => Promise<BatteryManagerLike>;
+};
+
+type WindowWithScheduler = Window & { scheduler?: { postTask?: (callback: () => void) => void } };
+type WindowWithGC = Window & { gc?: () => void };
+type LayoutShiftEntry = PerformanceEntry & { value: number; hadRecentInput?: boolean };
+type FirstInputEntry = PerformanceEntry & { processingStart: number };
+type RequestQueueItem = {
+  url: string;
+  options: FetchInit;
+  resolve: (response: Response) => void;
+  reject: (error: Error) => void;
+};
+
+const logger = baseLogger.child({ component: 'MobilePerformanceOptimizer' });
+
 export interface MobileDeviceInfo {
   deviceType: 'phone' | 'tablet' | 'desktop';
   screenSize: { width: number; height: number; dpr: number };
@@ -94,7 +142,7 @@ export class MobilePerformanceOptimizer {
   private config: MobileOptimizationConfig;
   private deviceInfo: MobileDeviceInfo;
   private performanceBudget: PerformanceBudget;
-  private touchHandlers: Map<string, Function>;
+  private touchHandlers: Map<string, (event: TouchEvent) => void>;
   private networkMonitor: NetworkMonitor;
   private batteryMonitor: BatteryMonitor;
   private memoryMonitor: MemoryMonitor;
@@ -164,9 +212,9 @@ export class MobilePerformanceOptimizer {
       this.startPerformanceMonitoring();
       this.isInitialized = true;
 
-      console.log('Mobile Performance Optimizer initialized successfully');
+      logger.info('Mobile Performance Optimizer initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize Mobile Performance Optimizer:', error);
+      logger.error('Failed to initialize Mobile Performance Optimizer', { metadata: { error } });
     }
   }
 
@@ -245,7 +293,7 @@ export class MobilePerformanceOptimizer {
   }
 
   getMemoryUsage(): { used: number; total: number } {
-    const memory = (performance as any).memory;
+    const memory = (performance as PerformanceWithMemory).memory;
     if (memory) {
       return {
         used: memory.usedJSHeapSize,
@@ -255,8 +303,8 @@ export class MobilePerformanceOptimizer {
     return { used: 0, total: 0 };
   }
 
-  getNetworkMetrics(): Record<string, any> {
-    const connection = (navigator as any).connection;
+  getNetworkMetrics(): Record<string, number | string> {
+    const connection = (navigator as NavigatorWithConnection).connection;
     if (connection) {
       return {
         effectiveType: connection.effectiveType,
@@ -314,17 +362,15 @@ export class MobilePerformanceOptimizer {
    */
   private detectDeviceCapabilities(): MobileDeviceInfo {
     const screen = window.screen;
-    const navigator = window.navigator;
+    const nav = window.navigator as NavigatorWithConnection;
 
     // Detect device type based on screen size and touch capability
     const deviceType = this.getDeviceType();
 
     // Get network information
     const connection =
-      typeof navigator !== 'undefined'
-        ? (navigator as any).connection ||
-          (navigator as any).mozConnection ||
-          (navigator as any).webkitConnection
+      typeof nav !== 'undefined'
+        ? nav.connection || nav.mozConnection || nav.webkitConnection
         : null;
     const networkType = connection?.effectiveType || 'unknown';
 
@@ -333,11 +379,11 @@ export class MobilePerformanceOptimizer {
 
     // Get memory information if available
     const memoryInfo: MobileDeviceInfo['memoryInfo'] =
-      typeof performance !== 'undefined' && (performance as any).memory
+      typeof performance !== 'undefined' && (performance as PerformanceWithMemory).memory
         ? {
-            totalJSHeapSize: Number((performance as any).memory.totalJSHeapSize) || 0,
-            usedJSHeapSize: Number((performance as any).memory.usedJSHeapSize) || 0,
-            jsHeapSizeLimit: Number((performance as any).memory.jsHeapSizeLimit) || 0,
+            totalJSHeapSize: Number((performance as PerformanceWithMemory).memory?.totalJSHeapSize) || 0,
+            usedJSHeapSize: Number((performance as PerformanceWithMemory).memory?.usedJSHeapSize) || 0,
+            jsHeapSizeLimit: Number((performance as PerformanceWithMemory).memory?.jsHeapSizeLimit) || 0,
           }
         : undefined;
 
@@ -351,7 +397,7 @@ export class MobilePerformanceOptimizer {
       isLowEndDevice,
       supportedFeatures: {
         webgl: this.supportsWebGL(),
-        serviceWorker: typeof navigator !== 'undefined' && 'serviceWorker' in navigator,
+        serviceWorker: typeof nav !== 'undefined' && 'serviceWorker' in nav,
         webAssembly: typeof WebAssembly !== 'undefined',
         intersectionObserver: typeof window !== 'undefined' && 'IntersectionObserver' in window,
         passiveEventListeners: this.supportsPassiveEventListeners(),
@@ -408,12 +454,13 @@ export class MobilePerformanceOptimizer {
    * Detect if device is low-end based on various indicators
    */
   private isLowEndDevice(): boolean {
+    const memory = (performance as PerformanceWithMemory).memory;
+    const connection = (navigator as NavigatorWithConnection).connection;
     const indicators = [
       // Low memory
-      (performance as any).memory?.jsHeapSizeLimit < 1000000000, // < 1GB
+      memory?.jsHeapSizeLimit !== undefined && memory.jsHeapSizeLimit < 1000000000, // < 1GB
       // Slow network
-      (navigator as any).connection?.effectiveType === 'slow-2g' ||
-        (navigator as any).connection?.effectiveType === '2g',
+      connection?.effectiveType === 'slow-2g' || connection?.effectiveType === '2g',
       // Low-end device hints
       navigator.hardwareConcurrency <= 2,
       // Old browser (rough estimation)
@@ -441,14 +488,17 @@ export class MobilePerformanceOptimizer {
   private supportsPassiveEventListeners(): boolean {
     let supportsPassive = false;
     try {
+      const noop = () => {
+        // no-op
+      };
       const opts = Object.defineProperty({}, 'passive', {
         get: () => {
           supportsPassive = true;
           return true;
         },
-      });
-      window.addEventListener('testPassive', null as any, opts);
-      window.removeEventListener('testPassive', null as any, opts);
+      }) as PassiveEventOptions;
+      window.addEventListener('testPassive', noop, opts);
+      window.removeEventListener('testPassive', noop, opts);
     } catch {
       // Ignore
     }
@@ -516,7 +566,7 @@ export class MobilePerformanceOptimizer {
     document.addEventListener('touchmove', this.handleTouchMove, eventOptions);
     document.addEventListener('touchend', this.handleTouchEnd, eventOptions);
 
-    console.log('Touch optimization initialized');
+    logger.info('Touch optimization initialized');
   }
 
   /**
@@ -535,7 +585,7 @@ export class MobilePerformanceOptimizer {
       this.setupRequestCoalescing();
     }
 
-    console.log('Network optimization initialized');
+    logger.info('Network optimization initialized');
   }
 
   /**
@@ -552,7 +602,7 @@ export class MobilePerformanceOptimizer {
       }
     });
 
-    console.log('Battery optimization initialized');
+    logger.info('Battery optimization initialized');
   }
 
   /**
@@ -574,7 +624,7 @@ export class MobilePerformanceOptimizer {
       this.setupGCHinting();
     }
 
-    console.log('Memory optimization initialized');
+    logger.info('Memory optimization initialized');
   }
 
   /**
@@ -583,7 +633,7 @@ export class MobilePerformanceOptimizer {
   private async initializeAdaptiveLoading(): Promise<void> {
     await this.adaptiveLoader.initialize();
 
-    console.log('Adaptive loading initialized');
+    logger.info('Adaptive loading initialized');
   }
 
   /**
@@ -602,7 +652,7 @@ export class MobilePerformanceOptimizer {
       this.throttleNonCriticalWork();
     }
 
-    console.log('Power saving mode enabled');
+    logger.info('Power saving mode enabled');
   }
 
   /**
@@ -613,7 +663,7 @@ export class MobilePerformanceOptimizer {
     this.resumeBackgroundTasks();
     this.unthrottleNonCriticalWork();
 
-    console.log('Power saving mode disabled');
+    logger.info('Power saving mode disabled');
   }
 
   /**
@@ -622,7 +672,8 @@ export class MobilePerformanceOptimizer {
   private handleCriticalMemoryPressure(): void {
     // Force garbage collection if available
     if ('gc' in window) {
-      (window as any).gc();
+      const gc = (window as WindowWithGC).gc;
+      gc?.();
     }
 
     // Clear caches
@@ -633,7 +684,7 @@ export class MobilePerformanceOptimizer {
       this.unmountNonVisibleComponents();
     }
 
-    console.warn('Critical memory pressure detected - emergency cleanup performed');
+    logger.warn('Critical memory pressure detected - emergency cleanup performed');
   }
 
   /**
@@ -648,7 +699,7 @@ export class MobilePerformanceOptimizer {
     // Reduce cache sizes
     this.reduceCacheSizes();
 
-    console.log('Moderate memory pressure - performing cleanup');
+    logger.info('Moderate memory pressure - performing cleanup');
   }
 
   /**
@@ -715,17 +766,12 @@ export class MobilePerformanceOptimizer {
    * Setup request coalescing to batch network requests
    */
   private setupRequestCoalescing(): void {
-    const requestQueue: Array<{
-      url: string;
-      options: RequestInit;
-      resolve: Function;
-      reject: Function;
-    }> = [];
+    const requestQueue: RequestQueueItem[] = [];
     let batchTimer: number | null = null;
 
     const originalFetch = window.fetch;
 
-    window.fetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    window.fetch = (input: FetchInput | URL, init?: FetchInit): Promise<Response> => {
       const url = typeof input === 'string' ? input : input.toString();
 
       // Only coalesce GET requests to API endpoints
@@ -754,7 +800,7 @@ export class MobilePerformanceOptimizer {
    * Process batched requests
    */
   private async processBatchedRequests(
-    requests: Array<{ url: string; options: RequestInit; resolve: Function; reject: Function }>,
+    requests: RequestQueueItem[],
     originalFetch: typeof fetch,
   ): Promise<void> {
     // Group similar requests
@@ -762,10 +808,12 @@ export class MobilePerformanceOptimizer {
 
     requests.forEach((req) => {
       const key = `${req.options.method || 'GET'}_${req.url}`;
-      if (!grouped.has(key)) {
-        grouped.set(key, []);
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.push(req);
+      } else {
+        grouped.set(key, [req]);
       }
-      grouped.get(key)!.push(req);
     });
 
     // Execute requests
@@ -842,13 +890,15 @@ export class MobilePerformanceOptimizer {
             }
             // Cumulative Layout Shift
             else if (entry.entryType === 'layout-shift') {
-              if (!(entry as any).hadRecentInput) {
-                this.checkPerformanceBudget('cumulativeLayoutShift', (entry as any).value);
+              const layoutEntry = entry as LayoutShiftEntry;
+              if (!layoutEntry.hadRecentInput) {
+                this.checkPerformanceBudget('cumulativeLayoutShift', layoutEntry.value);
               }
             }
             // First Input Delay
             else if (entry.entryType === 'first-input') {
-              const fid = (entry as any).processingStart - entry.startTime;
+              const firstInputEntry = entry as FirstInputEntry;
+              const fid = firstInputEntry.processingStart - entry.startTime;
               this.checkPerformanceBudget('firstInputDelay', fid);
             }
           });
@@ -864,18 +914,18 @@ export class MobilePerformanceOptimizer {
           try {
             this.performanceObserver.observe({ entryTypes: ['paint'] });
           } catch (e) {
-            console.warn('Failed to observe paint metrics:', e);
+            logger.warn('Failed to observe paint metrics', { metadata: { error: e } });
           }
         }
       } catch (error) {
-        console.warn('Failed to create performance observer:', error);
+        logger.warn('Failed to create performance observer', { metadata: { error } });
         // Create a basic observer for testing if main observer fails
         try {
           this.performanceObserver = new PerformanceObserver(() => {
             // Basic observer for testing
           });
         } catch (e) {
-          console.warn('Failed to create basic performance observer:', e);
+          logger.warn('Failed to create basic performance observer', { metadata: { error: e } });
         }
       }
     }
@@ -898,7 +948,7 @@ export class MobilePerformanceOptimizer {
         lastTime = currentTime;
 
         if (fps < 30) {
-          console.warn(`Low frame rate detected: ${fps} FPS`);
+          logger.warn(`Low frame rate detected: ${fps} FPS`);
           this.handleLowFrameRate();
         }
       }
@@ -913,9 +963,10 @@ export class MobilePerformanceOptimizer {
    * Monitor memory usage
    */
   private monitorMemoryUsage(): void {
-    if ((performance as any).memory) {
+    if ((performance as PerformanceWithMemory).memory) {
       setInterval(() => {
-        const memInfo = (performance as any).memory;
+        const memInfo = (performance as PerformanceWithMemory).memory;
+        if (!memInfo) return;
         const usageRatio = memInfo.usedJSHeapSize / memInfo.jsHeapSizeLimit;
 
         if (usageRatio > 0.9) {
@@ -932,7 +983,7 @@ export class MobilePerformanceOptimizer {
     const budget = this.performanceBudget[metric];
 
     if (value > budget) {
-      console.warn(`Performance budget exceeded for ${metric}: ${value}ms > ${budget}ms`);
+      logger.warn(`Performance budget exceeded for ${metric}: ${value}ms > ${budget}ms`);
       this.handlePerformanceBudgetViolation(metric, value);
     }
   }
@@ -974,7 +1025,8 @@ export class MobilePerformanceOptimizer {
    */
   private reduceMainThreadWork(): void {
     // Use scheduler API if available
-    if ('scheduler' in window && 'postTask' in (window as any).scheduler) {
+    const scheduler = (window as WindowWithScheduler).scheduler;
+    if (scheduler?.postTask) {
       // Defer non-critical work
       this.deferNonCriticalWork();
     }
@@ -1115,7 +1167,7 @@ class TouchHandler {
     const touch = event.touches?.[0];
     if (touch) {
       // Store touch position for gesture detection if needed
-      console.debug('Touch started at:', touch.clientX, touch.clientY);
+      logger.debug('Touch started', { metadata: { x: touch.clientX, y: touch.clientY } });
     }
   }
 
@@ -1158,15 +1210,13 @@ class NetworkMonitor {
   private currentNetworkType: string = 'unknown';
 
   async start(): Promise<void> {
-    const connection =
-      (navigator as any).connection ||
-      (navigator as any).mozConnection ||
-      (navigator as any).webkitConnection;
+    const nav = navigator as NavigatorWithConnection;
+    const connection = nav.connection || nav.mozConnection || nav.webkitConnection;
 
     if (connection) {
       this.currentNetworkType = connection.effectiveType || 'unknown';
 
-      connection.addEventListener('change', () => {
+      connection.addEventListener?.('change', () => {
         const newNetworkType = connection.effectiveType || 'unknown';
         if (newNetworkType !== this.currentNetworkType) {
           this.currentNetworkType = newNetworkType;
@@ -1200,25 +1250,27 @@ class BatteryMonitor {
   private batteryChangeHandlers: Array<
     (batteryInfo: { level: number; charging: boolean }) => void
   > = [];
-  private battery: any = null;
+  private battery: BatteryManagerLike | null = null;
 
   async start(): Promise<void> {
     try {
-      if ('getBattery' in navigator) {
-        this.battery = await (navigator as any).getBattery();
+      const nav = navigator as NavigatorWithConnection;
+      if (nav.getBattery) {
+        this.battery = await nav.getBattery();
 
         const handleBatteryChange = () => {
+          if (!this.battery) return;
           this.notifyBatteryChange({
             level: this.battery.level,
             charging: this.battery.charging,
           });
         };
 
-        this.battery.addEventListener('levelchange', handleBatteryChange);
-        this.battery.addEventListener('chargingchange', handleBatteryChange);
+        this.battery.addEventListener?.('levelchange', handleBatteryChange);
+        this.battery.addEventListener?.('chargingchange', handleBatteryChange);
       }
     } catch (error) {
-      console.warn('Battery API not available:', error);
+      logger.warn('Battery API not available', { metadata: { error } });
     }
   }
 
@@ -1243,7 +1295,7 @@ class MemoryMonitor {
   private monitoringInterval: number | null = null;
 
   async start(): Promise<void> {
-    if ((performance as any).memory) {
+    if ((performance as PerformanceWithMemory).memory) {
       this.monitoringInterval = window.setInterval(() => {
         this.checkMemoryPressure();
       }, 10000); // Check every 10 seconds
@@ -1255,9 +1307,10 @@ class MemoryMonitor {
   }
 
   private checkMemoryPressure(): void {
-    if (!(performance as any).memory) return;
+    if (!(performance as PerformanceWithMemory).memory) return;
 
-    const memInfo = (performance as any).memory;
+    const memInfo = (performance as PerformanceWithMemory).memory;
+    if (!memInfo) return;
     const usageRatio = memInfo.usedJSHeapSize / memInfo.jsHeapSizeLimit;
 
     let pressure: 'low' | 'moderate' | 'critical';

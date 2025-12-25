@@ -1,14 +1,16 @@
 // filepath: packages/shared/src/performance/components/LazyComponent.ts
 
+import { logger as baseLogger } from '@heys/logger';
+
 import { balancedLazyConfig } from '../lazy-loading-config';
 import { LazyLoader } from '../LazyLoader';
 
 interface LazyComponentConfig {
   selector: string;
-  componentLoader: () => Promise<any>;
+  componentLoader: () => Promise<unknown>;
   placeholder?: string;
   errorPlaceholder?: string;
-  config?: any; // LazyLoadingConfig
+  config?: unknown; // LazyLoadingConfig
 }
 
 /**
@@ -18,6 +20,7 @@ export class LazyComponent {
   private lazyLoader: LazyLoader;
   private components: Map<Element, LazyComponentConfig>;
   private loadedComponents: Set<Element>;
+  private readonly logger = baseLogger.child({ component: 'LazyComponent' });
 
   constructor(config = balancedLazyConfig) {
     this.lazyLoader = new LazyLoader(config);
@@ -61,7 +64,7 @@ export class LazyComponent {
       element.classList.remove('lazy-component-loading');
       element.classList.add('lazy-component-loaded');
     } catch (error) {
-      console.error('Failed to load lazy component:', error);
+      this.logger.error('Failed to load lazy component', { metadata: { error } });
       this.renderError(element, config.errorPlaceholder);
       element.classList.remove('lazy-component-loading');
       element.classList.add('lazy-component-error');
@@ -83,16 +86,21 @@ export class LazyComponent {
   /**
    * Рендеринг компонента
    */
-  private renderComponent(element: Element, component: any): void {
+  private renderComponent(element: Element, component: unknown): void {
     // Простая реализация рендеринга
     if (typeof component === 'string') {
       element.innerHTML = component;
-    } else if (component.render && typeof component.render === 'function') {
-      element.innerHTML = component.render();
-    } else if (component.template) {
-      element.innerHTML = component.template;
+    } else if (
+      component &&
+      typeof component === 'object' &&
+      'render' in component &&
+      typeof (component as { render: () => string }).render === 'function'
+    ) {
+      element.innerHTML = (component as { render: () => string }).render();
+    } else if (component && typeof component === 'object' && 'template' in component) {
+      element.innerHTML = String((component as { template: unknown }).template);
     } else {
-      console.warn('Unknown component format:', component);
+      this.logger.warn('Unknown component format', { metadata: { component } });
     }
   }
 
@@ -161,12 +169,14 @@ export class LazyComponent {
   /**
    * Динамический импорт компонента
    */
-  private async dynamicImport(componentPath: string): Promise<any> {
+  private async dynamicImport(componentPath: string): Promise<unknown> {
     try {
       const module = await import(componentPath);
       return module.default || module;
     } catch (error) {
-      console.error(`Failed to import component from ${componentPath}:`, error);
+      this.logger.error(`Failed to import component from ${componentPath}`, {
+        metadata: { error },
+      });
       throw error;
     }
   }

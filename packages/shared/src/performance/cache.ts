@@ -7,6 +7,10 @@
  * @created 2025-01-31
  */
 
+import { logger as baseLogger } from '@heys/logger';
+
+const cacheLogger = baseLogger.child({ component: 'Cache' });
+
 /**
  * Cache configuration options
  */
@@ -22,7 +26,7 @@ export interface CacheConfig {
 /**
  * Cache entry metadata
  */
-export interface CacheEntry<T = any> {
+export interface CacheEntry<T = unknown> {
   key: string;
   value: T;
   timestamp: number;
@@ -132,7 +136,7 @@ export class MemoryCacheStrategy implements CacheStrategy {
   }
 
   async set<T>(key: string, value: T, options: Partial<CacheConfig> = {}): Promise<void> {
-    const config = { ...this.config, ...options };
+    const config: Required<CacheConfig> = { ...this.config, ...options };
     let processedValue = value;
     let compressed = false;
     let encrypted = false;
@@ -248,28 +252,28 @@ export class MemoryCacheStrategy implements CacheStrategy {
     }
   }
 
-  private calculateSize(value: any): number {
+  private calculateSize(value: unknown): number {
     return JSON.stringify(value).length * 2; // Rough estimate
   }
 
-  private async compress(value: any): Promise<any> {
+  private async compress(value: unknown): Promise<unknown> {
     // Simplified compression simulation
     // In real implementation, use CompressionStream API or pako
     return JSON.stringify(value);
   }
 
-  private async decompress(value: any): Promise<any> {
+  private async decompress(value: unknown): Promise<unknown> {
     // Simplified decompression simulation
     return typeof value === 'string' ? JSON.parse(value) : value;
   }
 
-  private async encrypt(value: any): Promise<any> {
+  private async encrypt(value: unknown): Promise<unknown> {
     // Simplified encryption simulation
     // In real implementation, use Web Crypto API
     return btoa(JSON.stringify(value));
   }
 
-  private async decrypt(value: any): Promise<any> {
+  private async decrypt(value: unknown): Promise<unknown> {
     // Simplified decryption simulation
     return JSON.parse(atob(value));
   }
@@ -337,7 +341,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
       return entry.value;
     } catch (error) {
       this.stats.misses++;
-      console.warn('LocalStorage get error:', error);
+      cacheLogger.warn('LocalStorage get error', { metadata: { error } });
       return null;
     }
   }
@@ -350,7 +354,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
         key: this.getKey(key),
         value,
         timestamp: Date.now(),
-        ttl: config.ttl!,
+        ttl: config.ttl,
         size: (() => {
           try {
             return new Blob([JSON.stringify(value)]).size;
@@ -367,7 +371,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
 
       // Check storage quota
       const totalSize = await this.getTotalSize();
-      if (totalSize + entry.size > config.maxSize!) {
+      if (totalSize + entry.size > config.maxSize) {
         await this.evictLRU();
       }
 
@@ -381,7 +385,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
             key: this.getKey(key),
             value,
             timestamp: Date.now(),
-            ttl: config.ttl!,
+            ttl: config.ttl,
             size: (() => {
               try {
                 return new Blob([JSON.stringify(value)]).size;
@@ -397,10 +401,12 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
           };
           localStorage.setItem(this.getKey(key), JSON.stringify(entry));
         } catch (retryError) {
-          console.warn('LocalStorage set failed after eviction:', retryError);
+          cacheLogger.warn('LocalStorage set failed after eviction', {
+            metadata: { error: retryError },
+          });
         }
       } else {
-        console.warn('LocalStorage set error:', error);
+        cacheLogger.warn('LocalStorage set error', { metadata: { error } });
       }
     }
   }
@@ -412,7 +418,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
       localStorage.removeItem(fullKey);
       return exists;
     } catch (error) {
-      console.warn('LocalStorage delete error:', error);
+      cacheLogger.warn('LocalStorage delete error', { metadata: { error } });
       return false;
     }
   }
@@ -428,7 +434,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
       }
       keysToRemove.forEach((key) => localStorage.removeItem(key));
     } catch (error) {
-      console.warn('LocalStorage clear error:', error);
+      cacheLogger.warn('LocalStorage clear error', { metadata: { error } });
     }
   }
 
@@ -436,7 +442,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
     try {
       return localStorage.getItem(this.getKey(key)) !== null;
     } catch (error) {
-      console.warn('LocalStorage has error:', error);
+      cacheLogger.warn('LocalStorage has error', { metadata: { error } });
       return false;
     }
   }
@@ -452,7 +458,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
       }
       return count;
     } catch (error) {
-      console.warn('LocalStorage size error:', error);
+      cacheLogger.warn('LocalStorage size error', { metadata: { error } });
       return 0;
     }
   }
@@ -468,7 +474,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
       }
       return keys;
     } catch (error) {
-      console.warn('LocalStorage keys error:', error);
+      cacheLogger.warn('LocalStorage keys error', { metadata: { error } });
       return [];
     }
   }
@@ -549,7 +555,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
         }
       }
     } catch (error) {
-      console.warn('LocalStorage LRU eviction error:', error);
+      cacheLogger.warn('LocalStorage LRU eviction error', { metadata: { error } });
     }
   }
 
@@ -845,16 +851,16 @@ export class IndexedDBCacheStrategy implements CacheStrategy {
     });
   }
 
-  private calculateSize(value: any): number {
+  private calculateSize(value: unknown): number {
     return JSON.stringify(value).length * 2;
   }
 
   private async prepareValue(
-    value: any,
+    value: unknown,
     compress: boolean,
     encrypt: boolean,
   ): Promise<{
-    value: any;
+    value: unknown;
     compressed: boolean;
     encrypted: boolean;
   }> {
@@ -875,7 +881,11 @@ export class IndexedDBCacheStrategy implements CacheStrategy {
     return { value: processedValue, compressed, encrypted };
   }
 
-  private async processValue(value: any, compressed: boolean, encrypted: boolean): Promise<any> {
+  private async processValue(
+    value: unknown,
+    compressed: boolean,
+    encrypted: boolean,
+  ): Promise<unknown> {
     let processedValue = value;
 
     if (compressed) {
@@ -908,7 +918,7 @@ export class SmartCacheStrategy implements CacheStrategy {
       try {
         this.localStorage = new LocalStorageCacheStrategy(config);
       } catch (error) {
-        console.warn('localStorage not available:', error);
+        cacheLogger.warn('localStorage not available', { metadata: { error } });
       }
     }
 
@@ -917,12 +927,12 @@ export class SmartCacheStrategy implements CacheStrategy {
       try {
         this.indexedDB = new IndexedDBCacheStrategy(config);
       } catch (error) {
-        console.warn('IndexedDB not available:', error);
+        cacheLogger.warn('IndexedDB not available', { metadata: { error } });
       }
     }
   }
 
-  private selectStrategy(_key: string, value?: any): CacheStrategy {
+  private selectStrategy(_key: string, value?: unknown): CacheStrategy {
     // For large values (>1MB), prefer IndexedDB
     if (value && this.indexedDB) {
       const size = new Blob([JSON.stringify(value)]).size;
@@ -942,16 +952,18 @@ export class SmartCacheStrategy implements CacheStrategy {
 
   async get<T>(key: string): Promise<T | null> {
     // Try strategies in order of preference
-    const strategies = [this.indexedDB, this.localStorage, this.memory].filter(Boolean);
+    const strategies = [this.indexedDB, this.localStorage, this.memory].filter(
+      Boolean,
+    ) as CacheStrategy[];
 
     for (const strategy of strategies) {
       try {
-        const result = await strategy!.get<T>(key);
+        const result = await strategy.get<T>(key);
         if (result !== null) {
           return result;
         }
       } catch (error) {
-        console.warn(`Strategy ${strategy!.name} failed for get:`, error);
+        cacheLogger.warn(`Strategy ${strategy.name} failed for get`, { metadata: { error } });
       }
     }
 
@@ -964,21 +976,25 @@ export class SmartCacheStrategy implements CacheStrategy {
     try {
       await strategy.set(key, value, options);
     } catch (error) {
-      console.warn(`Primary strategy ${strategy.name} failed, falling back to memory:`, error);
+      cacheLogger.warn(`Primary strategy ${strategy.name} failed, falling back to memory`, {
+        metadata: { error },
+      });
       await this.memory.set(key, value, options);
     }
   }
 
   async delete(key: string): Promise<boolean> {
-    const strategies = [this.indexedDB, this.localStorage, this.memory].filter(Boolean);
+    const strategies = [this.indexedDB, this.localStorage, this.memory].filter(
+      Boolean,
+    ) as CacheStrategy[];
     let deleted = false;
 
     for (const strategy of strategies) {
       try {
-        const result = await strategy!.delete(key);
+        const result = await strategy.delete(key);
         deleted = deleted || result;
       } catch (error) {
-        console.warn(`Strategy ${strategy!.name} failed for delete:`, error);
+        cacheLogger.warn(`Strategy ${strategy.name} failed for delete`, { metadata: { error } });
       }
     }
 
@@ -986,30 +1002,36 @@ export class SmartCacheStrategy implements CacheStrategy {
   }
 
   async clear(): Promise<void> {
-    const strategies = [this.indexedDB, this.localStorage, this.memory].filter(Boolean);
+    const strategies = [this.indexedDB, this.localStorage, this.memory].filter(
+      Boolean,
+    ) as CacheStrategy[];
 
     await Promise.all(
       strategies.map(async (strategy) => {
         try {
-          await strategy!.clear();
+          await strategy.clear();
         } catch (error) {
-          console.warn(`Strategy ${strategy!.name} failed for clear:`, error);
+          cacheLogger.warn(`Strategy ${strategy.name} failed for clear`, {
+            metadata: { error },
+          });
         }
       }),
     );
   }
 
   async has(key: string): Promise<boolean> {
-    const strategies = [this.indexedDB, this.localStorage, this.memory].filter(Boolean);
+    const strategies = [this.indexedDB, this.localStorage, this.memory].filter(
+      Boolean,
+    ) as CacheStrategy[];
 
     for (const strategy of strategies) {
       try {
-        const hasKey = await strategy!.has(key);
+        const hasKey = await strategy.has(key);
         if (hasKey) {
           return true;
         }
       } catch (error) {
-        console.warn(`Strategy ${strategy!.name} failed for has:`, error);
+        cacheLogger.warn(`Strategy ${strategy.name} failed for has`, { metadata: { error } });
       }
     }
 
@@ -1023,14 +1045,16 @@ export class SmartCacheStrategy implements CacheStrategy {
 
   async keys(): Promise<string[]> {
     const allKeys = new Set<string>();
-    const strategies = [this.indexedDB, this.localStorage, this.memory].filter(Boolean);
+    const strategies = [this.indexedDB, this.localStorage, this.memory].filter(
+      Boolean,
+    ) as CacheStrategy[];
 
     for (const strategy of strategies) {
       try {
-        const keys = await strategy!.keys();
+        const keys = await strategy.keys();
         keys.forEach((key) => allKeys.add(key));
       } catch (error) {
-        console.warn(`Strategy ${strategy!.name} failed for keys:`, error);
+        cacheLogger.warn(`Strategy ${strategy.name} failed for keys`, { metadata: { error } });
       }
     }
 
@@ -1039,13 +1063,17 @@ export class SmartCacheStrategy implements CacheStrategy {
 
   async getStats(): Promise<CacheStats> {
     // Aggregate stats from all strategies
-    const strategies = [this.indexedDB, this.localStorage, this.memory].filter(Boolean);
+    const strategies = [this.indexedDB, this.localStorage, this.memory].filter(
+      Boolean,
+    ) as CacheStrategy[];
     const allStats = await Promise.all(
       strategies.map(async (strategy) => {
         try {
-          return await strategy!.getStats();
+          return await strategy.getStats();
         } catch (error) {
-          console.warn(`Strategy ${strategy!.name} failed for getStats:`, error);
+          cacheLogger.warn(`Strategy ${strategy.name} failed for getStats`, {
+            metadata: { error },
+          });
           return null;
         }
       }),
@@ -1139,7 +1167,11 @@ export class SmartCacheManager {
     const promises = Array.from(this.strategies.values()).map((strategy) =>
       strategy
         .clear()
-        .catch((error) => console.warn(`Failed to clear strategy ${strategy.name}:`, error)),
+        .catch((error) =>
+          cacheLogger.warn(`Failed to clear strategy ${strategy.name}`, {
+            metadata: { error },
+          }),
+        ),
     );
     await Promise.all(promises);
   }
@@ -1159,7 +1191,9 @@ export class SmartCacheManager {
       try {
         stats[name] = await strategy.getStats();
       } catch (error) {
-        console.warn(`Failed to get stats for strategy ${name}:`, error);
+        cacheLogger.warn(`Failed to get stats for strategy ${name}`, {
+          metadata: { error },
+        });
       }
     }
 
@@ -1189,7 +1223,7 @@ export class SmartCacheManager {
    * Cache warming - preload important data
    */
   async warmCache(
-    warmupData: Array<{ key: string; value: any; options?: Partial<CacheConfig> }>,
+    warmupData: Array<{ key: string; value: unknown; options?: Partial<CacheConfig> }>,
   ): Promise<void> {
     const promises = warmupData.map(({ key, value, options }) =>
       this.smartSet(key, value, options),
@@ -1203,11 +1237,15 @@ export class SmartCacheManager {
  * Cache decorator for methods
  */
 export function cached(options: Partial<CacheConfig> & { strategy?: string } = {}) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value;
+  return function (
+    target: { constructor: { name: string } },
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+  ) {
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
     const cacheManager = new SmartCacheManager();
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       const cacheKey = `${target.constructor.name}.${propertyKey}:${JSON.stringify(args)}`;
 
       // Try to get from cache

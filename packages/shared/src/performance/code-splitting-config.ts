@@ -27,7 +27,7 @@ export const viteCodeSplittingConfig = {
           'features-admin': ['./src/admin/', './src/management/'],
         },
         // Настройка именования файлов
-        chunkFileNames: (chunkInfo: any) => {
+        chunkFileNames: (chunkInfo: { facadeModuleId?: string | null }) => {
           const facadeModuleId = chunkInfo.facadeModuleId
             ? chunkInfo.facadeModuleId.split('/').pop()?.replace('.tsx', '').replace('.ts', '')
             : 'chunk';
@@ -234,7 +234,7 @@ export const codeSplittingPresets = {
 export function createCodeSplittingConfig(
   bundler: 'vite' | 'webpack' | 'rollup',
   preset: keyof typeof codeSplittingPresets = 'balanced',
-  customOptions: any = {},
+  customOptions: Record<string, unknown> = {},
 ) {
   const presetConfig = codeSplittingPresets[preset];
 

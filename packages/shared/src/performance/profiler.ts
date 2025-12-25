@@ -7,6 +7,14 @@
  * @created 2025-01-31
  */
 
+import { getGlobalLogger } from '../monitoring/structured-logger';
+
+type PerformanceMemory = {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+};
+
 /**
  * Performance metric types
  */
@@ -128,6 +136,7 @@ export class PerformanceProfiler {
   private metrics: PerformanceMetric[] = [];
   private observers: PerformanceObserver[] = [];
   private budget: PerformanceBudget;
+  private readonly logger = getGlobalLogger().child({ component: 'PerformanceProfiler' });
 
   constructor(budget?: Partial<PerformanceBudget>) {
     this.budget = {
@@ -251,7 +260,7 @@ export class PerformanceProfiler {
       observer.observe({ entryTypes: ['paint'] });
       this.observers.push(observer);
     } catch (e) {
-      console.warn('Paint timing not supported');
+      this.logger.warn('Paint timing not supported');
     }
   }
 
@@ -263,9 +272,14 @@ export class PerformanceProfiler {
       let totalShift = 0;
 
       list.getEntries().forEach((entry) => {
-        const layoutShiftEntry = entry as any;
-        if (!layoutShiftEntry.hadRecentInput) {
-          totalShift += layoutShiftEntry.value;
+        if ('hadRecentInput' in entry && 'value' in entry) {
+          const layoutShiftEntry = entry as PerformanceEntry & {
+            hadRecentInput: boolean;
+            value: number;
+          };
+          if (!layoutShiftEntry.hadRecentInput) {
+            totalShift += layoutShiftEntry.value;
+          }
         }
       });
 
@@ -286,7 +300,7 @@ export class PerformanceProfiler {
       observer.observe({ entryTypes: ['layout-shift'] });
       this.observers.push(observer);
     } catch (e) {
-      console.warn('Layout shift observation not supported');
+      this.logger.warn('Layout shift observation not supported');
     }
   }
 
@@ -296,16 +310,18 @@ export class PerformanceProfiler {
   private observeFirstInputDelay(): void {
     const observer = new PerformanceObserver((list) => {
       list.getEntries().forEach((entry) => {
-        const fidEntry = entry as any;
-        this.addMetric({
-          name: 'First Input Delay',
-          value: fidEntry.processingStart - fidEntry.startTime,
-          unit: 'ms',
-          timestamp: Date.now(),
-          category: 'scripting',
-          target: 50,
-          threshold: this.budget.maxFirstInputDelay,
-        });
+        if ('processingStart' in entry) {
+          const fidEntry = entry as PerformanceEntry & { processingStart: number };
+          this.addMetric({
+            name: 'First Input Delay',
+            value: fidEntry.processingStart - fidEntry.startTime,
+            unit: 'ms',
+            timestamp: Date.now(),
+            category: 'scripting',
+            target: 50,
+            threshold: this.budget.maxFirstInputDelay,
+          });
+        }
       });
     });
 
@@ -313,7 +329,7 @@ export class PerformanceProfiler {
       observer.observe({ entryTypes: ['first-input'] });
       this.observers.push(observer);
     } catch (e) {
-      console.warn('First input delay observation not supported');
+      this.logger.warn('First input delay observation not supported');
     }
   }
 
@@ -339,7 +355,7 @@ export class PerformanceProfiler {
       observer.observe({ entryTypes: ['longtask'] });
       this.observers.push(observer);
     } catch (e) {
-      console.warn('Long task observation not supported');
+      this.logger.warn('Long task observation not supported');
     }
   }
 
@@ -380,7 +396,7 @@ export class PerformanceProfiler {
       observer.observe({ entryTypes: ['resource'] });
       this.observers.push(observer);
     } catch (e) {
-      console.warn('Resource timing observation not supported');
+      this.logger.warn('Resource timing observation not supported');
     }
   }
 
@@ -392,9 +408,14 @@ export class PerformanceProfiler {
 
     // Check against thresholds
     if (metric.threshold && metric.value > metric.threshold) {
-      console.warn(
-        `Performance threshold exceeded: ${metric.name} = ${metric.value}${metric.unit} (threshold: ${metric.threshold}${metric.unit})`,
-      );
+      this.logger.warn('Performance threshold exceeded', {
+        metadata: {
+          name: metric.name,
+          value: metric.value,
+          unit: metric.unit,
+          threshold: metric.threshold,
+        },
+      });
     }
   }
 
@@ -404,8 +425,11 @@ export class PerformanceProfiler {
   getMemoryUsage(): PerformanceMetric[] {
     const memMetrics: PerformanceMetric[] = [];
 
-    if (typeof window !== 'undefined' && (window.performance as any)?.memory) {
-      const memory = (window.performance as any).memory;
+    if (typeof window !== 'undefined') {
+      const memory = (window.performance as Performance & { memory?: PerformanceMemory }).memory;
+      if (!memory) {
+        return memMetrics;
+      }
 
       memMetrics.push({
         name: 'JS Heap Used',
@@ -586,7 +610,7 @@ export class PerformanceProfiler {
   /**
    * Start continuous monitoring
    */
-  startMonitoring(interval: number = 5000): NodeJS.Timeout {
+  startMonitoring(interval: number = 5000): ReturnType<typeof setInterval> {
     return setInterval(() => {
       const memoryMetrics = this.getMemoryUsage();
       memoryMetrics.forEach((metric) => this.addMetric(metric));
@@ -618,11 +642,15 @@ export const defaultProfiler = new PerformanceProfiler();
  * Performance decorator for methods
  */
 export function measurePerformance(name?: string) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value;
+  return function (
+    target: { constructor: { name: string } },
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+  ) {
+    const originalMethod = descriptor.value as (...args: unknown[]) => unknown;
     const methodName = name || `${target.constructor.name}.${propertyKey}`;
 
-    descriptor.value = function (...args: any[]) {
+    descriptor.value = function (...args: unknown[]) {
       return defaultProfiler.measureFunction(methodName, () => {
         return originalMethod.apply(this, args);
       });
@@ -636,11 +664,15 @@ export function measurePerformance(name?: string) {
  * Async performance decorator
  */
 export function measureAsyncPerformance(name?: string) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value;
+  return function (
+    target: { constructor: { name: string } },
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+  ) {
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
     const methodName = name || `${target.constructor.name}.${propertyKey}`;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       return await defaultProfiler.measureAsyncFunction(methodName, async () => {
         return await originalMethod.apply(this, args);
       });

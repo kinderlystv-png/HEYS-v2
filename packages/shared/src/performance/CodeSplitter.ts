@@ -3,6 +3,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { logger as baseLogger } from '@heys/logger';
+
 /**
  * Интерфейс для описания точки разделения кода
  */
@@ -50,6 +52,7 @@ export interface CodeSplitterConfig {
 export class CodeSplitter {
   private config: CodeSplitterConfig;
   private fileCache: Map<string, string> = new Map();
+  private readonly logger = baseLogger.child({ component: 'CodeSplitter' });
 
   constructor(config: Partial<CodeSplitterConfig> = {}) {
     this.config = {
@@ -69,7 +72,7 @@ export class CodeSplitter {
    * Анализирует проект и находит оптимальные точки разделения кода
    */
   async analyzeProject(): Promise<CodeSplittingAnalysis> {
-    console.log('🔍 Начинаем анализ возможностей разделения кода...');
+    this.logger.info('Начинаем анализ возможностей разделения кода');
 
     const allFiles = this.findAllFiles(this.config.projectRoot);
     const analysis: CodeSplittingAnalysis = {
@@ -94,7 +97,9 @@ export class CodeSplitter {
         const splitPoints = await this.analyzeFite(file, fileSize);
         analysis.splitPoints.push(...splitPoints);
       } catch (error) {
-        console.warn(`⚠️ Не удалось проанализировать файл ${file}:`, error);
+        this.logger.warn(`Не удалось проанализировать файл ${file}`, {
+          metadata: { error },
+        });
       }
     }
 
@@ -102,7 +107,7 @@ export class CodeSplitter {
     analysis.recommendations = this.generateRecommendations(analysis.splitPoints);
     analysis.potentialSavings = this.calculatePotentialSavings(analysis);
 
-    console.log(`✅ Анализ завершен: найдено ${analysis.splitPoints.length} точек разделения`);
+    this.logger.info(`Анализ завершен: найдено ${analysis.splitPoints.length} точек разделения`);
     return analysis;
   }
 
@@ -330,7 +335,9 @@ export class CodeSplitter {
   /**
    * Рассчитывает потенциальную экономию
    */
-  private calculatePotentialSavings(analysis: CodeSplittingAnalysis): any {
+  private calculatePotentialSavings(
+    analysis: CodeSplittingAnalysis,
+  ): CodeSplittingAnalysis['potentialSavings'] {
     const totalSize = analysis.totalSize;
     const splitPointsSize = analysis.splitPoints.reduce(
       (sum, point) => sum + point.estimatedSize,
@@ -431,7 +438,10 @@ export class CodeSplitter {
    */
   private getFileContent(filePath: string): string {
     if (this.fileCache.has(filePath)) {
-      return this.fileCache.get(filePath)!;
+      const cached = this.fileCache.get(filePath);
+      if (cached) {
+        return cached;
+      }
     }
 
     try {

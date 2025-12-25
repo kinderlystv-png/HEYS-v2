@@ -8,6 +8,26 @@
  * @created 2025-01-31
  */
 
+import { logger as baseLogger } from '@heys/logger';
+
+type FetchInput = Parameters<typeof fetch>[0];
+type FetchInit = Parameters<typeof fetch>[1];
+
+type CacheMiddlewareRequest = {
+  url: string;
+  method: string;
+  headers: Record<string, string>;
+};
+
+type CacheMiddlewareResponse = {
+  status: (code: number) => void;
+  set: (header: string, value: string) => void;
+  end: () => void;
+  send: (body: unknown) => unknown;
+};
+
+type CacheMiddlewareNext = () => void;
+
 export interface HTTPCacheConfig {
   defaultTTL: number;
   maxAge: number;
@@ -66,6 +86,7 @@ export class HTTPCacheStrategy {
   private etagCache: Map<string, string>;
   private lastModifiedCache: Map<string, string>;
   private responseTimeCache: Map<string, number>;
+  private readonly logger = baseLogger.child({ component: 'HTTPCacheStrategy' });
 
   constructor(
     config: HTTPCacheConfig,
@@ -239,7 +260,7 @@ export class HTTPCacheStrategy {
   createCacheAwareFetch() {
     const originalFetch = globalThis.fetch;
 
-    return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    return async (input: FetchInput, init?: FetchInit): Promise<Response> => {
       const request = new Request(input, init);
       const url = request.url;
 
@@ -271,7 +292,7 @@ export class HTTPCacheStrategy {
         // For relative URLs, use as-is
       } catch (error) {
         // If URL parsing fails, use the original URL
-        console.warn('URL parsing failed:', error);
+        this.logger.warn('URL parsing failed', { metadata: { error } });
       }
 
       const cachedETag = this.etagCache.get(normalizedUrl);
@@ -295,7 +316,7 @@ export class HTTPCacheStrategy {
 
       // If 304 Not Modified, we can use cached version
       if (response.status === 304) {
-        console.log(`Cache hit (304): ${url}`);
+        this.logger.info(`Cache hit (304): ${url}`);
         // Return a synthetic response indicating cache hit
         return new Response(null, {
           status: 304,
@@ -336,10 +357,10 @@ export class HTTPCacheStrategy {
         });
 
         if (response.ok) {
-          console.log(`Preloaded: ${url}`);
+          this.logger.info(`Preloaded: ${url}`);
         }
       } catch (error) {
-        console.warn(`Failed to preload ${url}:`, error);
+        this.logger.warn(`Failed to preload ${url}`, { metadata: { error } });
       }
     });
 
@@ -394,7 +415,7 @@ export class HTTPCacheStrategy {
 
       return response.ok;
     } catch (error) {
-      console.error('CDN cache purge failed:', error);
+      this.logger.error('CDN cache purge failed', { metadata: { error } });
       return false;
     }
   }
@@ -437,9 +458,10 @@ export class HTTPCacheStrategy {
    * Create a middleware for Express.js or similar frameworks
    */
   createCacheMiddleware() {
-    const cacheStrategy = this;
+    const checkConditionalRequest = this.checkConditionalRequest.bind(this);
+    const generateCacheHeaders = this.generateCacheHeaders.bind(this);
 
-    return (req: any, res: any, next: any) => {
+    return (req: CacheMiddlewareRequest, res: CacheMiddlewareResponse, next: CacheMiddlewareNext) => {
       const url = req.url;
       const method = req.method;
 
@@ -449,7 +471,7 @@ export class HTTPCacheStrategy {
       }
 
       // Check conditional request headers
-      const conditionalResult = cacheStrategy.checkConditionalRequest(url, req.headers);
+      const conditionalResult = checkConditionalRequest(url, req.headers);
 
       if (conditionalResult.isNotModified) {
         res.status(304);
@@ -464,9 +486,9 @@ export class HTTPCacheStrategy {
 
       // Override res.send to add cache headers
       const originalSend = res.send;
-      res.send = function (body: any) {
+      res.send = function (body: unknown) {
         const content = typeof body === 'string' ? body : JSON.stringify(body);
-        const cacheHeaders = cacheStrategy.generateCacheHeaders(url, content);
+        const cacheHeaders = generateCacheHeaders(url, content);
 
         Object.entries(cacheHeaders).forEach(([key, value]) => {
           if (value) {

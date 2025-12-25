@@ -429,7 +429,9 @@ describe('SmartCacheManager', () => {
 
     expect(stats).toBeDefined();
     expect(stats.memory).toBeDefined();
-    expect(stats.memory!.totalEntries).toBeGreaterThanOrEqual(1);
+    if (stats.memory) {
+      expect(stats.memory.totalEntries).toBeGreaterThanOrEqual(1);
+    }
   });
 });
 

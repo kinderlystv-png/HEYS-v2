@@ -13,6 +13,13 @@
  * - Test scenario management
  */
 
+import { logger as baseLogger } from '@heys/logger';
+
+type PerformanceMemory = {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+};
 export interface PerformanceTestConfig {
   name: string;
   description: string;
@@ -54,7 +61,7 @@ export interface PerformanceTestScenario {
   weight: number; // Percentage of total load
   steps: PerformanceTestStep[];
   thinkTime: number; // Delay between steps
-  dataSet: any[]; // Test data
+  dataSet: unknown[]; // Test data
   assertions: PerformanceAssertion[];
 }
 
@@ -66,7 +73,7 @@ export interface PerformanceTestStep {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
     url?: string;
     headers?: Record<string, string>;
-    body?: any;
+    body?: unknown;
     timeout?: number;
     retries?: number;
   };
@@ -213,6 +220,7 @@ export class PerformanceTestFramework {
   private activeUsers: number = 0;
   private startTime: number = 0;
   private metrics: TestMetrics = this.createEmptyMetrics();
+  private readonly logger = baseLogger.child({ component: 'PerformanceTestFramework' });
 
   constructor(config: PerformanceTestConfig) {
     this.config = config;
@@ -241,7 +249,7 @@ export class PerformanceTestFramework {
     this.startTime = Date.now();
 
     try {
-      console.log(`Starting performance test: ${this.config.name}`);
+      this.logger.info(`Starting performance test: ${this.config.name}`);
 
       // Initialize metrics collection
       this.initializeMetricsCollection();
@@ -263,10 +271,10 @@ export class PerformanceTestFramework {
       // Send notifications
       await this.sendNotifications(result);
 
-      console.log(`Performance test completed: ${result.status}`);
+      this.logger.info(`Performance test completed: ${result.status}`);
       return result;
     } catch (error) {
-      console.error('Performance test failed:', error);
+      this.logger.error('Performance test failed', { metadata: { error } });
       throw error;
     } finally {
       this.isRunning = false;
@@ -281,15 +289,15 @@ export class PerformanceTestFramework {
     const { concurrency } = this.config;
 
     // Phase 1: Ramp-up
-    console.log('Phase 1: Ramp-up');
+    this.logger.info('Phase 1: Ramp-up');
     await this.executeRampUp(concurrency.users, concurrency.rampUpTime);
 
     // Phase 2: Sustain
-    console.log('Phase 2: Sustain load');
+    this.logger.info('Phase 2: Sustain load');
     await this.executeSustainLoad(concurrency.sustainTime);
 
     // Phase 3: Ramp-down
-    console.log('Phase 3: Ramp-down');
+    this.logger.info('Phase 3: Ramp-down');
     await this.executeRampDown(concurrency.rampDownTime);
   }
 
@@ -341,7 +349,7 @@ export class PerformanceTestFramework {
 
     // Execute scenario in background
     this.executeScenario(scenario).catch((error) => {
-      console.error('Virtual user scenario failed:', error);
+      this.logger.error('Virtual user scenario failed', { metadata: { error } });
     });
   }
 
@@ -407,7 +415,7 @@ export class PerformanceTestFramework {
         assertions: assertionResults,
       };
     } catch (error) {
-      console.error(`Scenario execution failed: ${scenario.name}`, error);
+      this.logger.error(`Scenario execution failed: ${scenario.name}`, { metadata: { error } });
       throw error;
     }
   }
@@ -478,7 +486,7 @@ export class PerformanceTestFramework {
     const { config, validation } = step;
     const url = this.resolveUrl(config.url || '');
 
-    const requestOptions: RequestInit = {
+    const requestOptions: Parameters<typeof fetch>[1] = {
       method: config.method || 'GET',
       headers: {
         ...this.config.environment.headers,
@@ -540,7 +548,7 @@ export class PerformanceTestFramework {
    */
   private async executeActionStep(step: PerformanceTestStep): Promise<void> {
     // Implementation for custom actions
-    console.log(`Executing action step: ${step.name}`);
+    this.logger.info(`Executing action step: ${step.name}`);
   }
 
   /**
@@ -556,7 +564,7 @@ export class PerformanceTestFramework {
    */
   private async executeAssertionStep(step: PerformanceTestStep): Promise<void> {
     // Implementation for inline assertions
-    console.log(`Executing assertion step: ${step.name}`);
+    this.logger.info(`Executing assertion step: ${step.name}`);
   }
 
   /**
@@ -564,7 +572,7 @@ export class PerformanceTestFramework {
    */
   private async executeCustomStep(step: PerformanceTestStep): Promise<void> {
     // Implementation for custom step types
-    console.log(`Executing custom step: ${step.name}`);
+    this.logger.info(`Executing custom step: ${step.name}`);
   }
 
   /**
@@ -707,8 +715,8 @@ export class PerformanceTestFramework {
     });
 
     // Collect system metrics if available
-    if (typeof performance !== 'undefined' && (performance as any).memory) {
-      const memory = (performance as any).memory;
+    const memory = (performance as Performance & { memory?: PerformanceMemory }).memory;
+    if (memory) {
       this.metrics.memoryUsage.push({
         timestamp,
         value: memory.usedJSHeapSize,
@@ -761,11 +769,12 @@ export class PerformanceTestFramework {
 
     // Determine test status
     const status = this.determineTestStatus(budgetResults);
+    const executionId = this.currentExecution ?? `exec-${Date.now()}`;
 
     return {
       testId: this.config.name,
       testName: this.config.name,
-      executionId: this.currentExecution!,
+      executionId,
       startTime: this.startTime,
       endTime,
       duration,
@@ -870,7 +879,7 @@ export class PerformanceTestFramework {
    * Generate reports
    */
   private async generateReports(result: PerformanceTestResult): Promise<void> {
-    console.log('Generating performance test reports...');
+    this.logger.info('Generating performance test reports...');
 
     switch (this.config.reporting.format) {
       case 'html':
@@ -892,7 +901,7 @@ export class PerformanceTestFramework {
    * Generate HTML report
    */
   private async generateHtmlReport(_result: PerformanceTestResult): Promise<void> {
-    console.log('Generating HTML report...');
+    this.logger.info('Generating HTML report...');
     // Implementation for HTML report generation
   }
 
@@ -900,7 +909,7 @@ export class PerformanceTestFramework {
    * Generate JSON report
    */
   private async generateJsonReport(_result: PerformanceTestResult): Promise<void> {
-    console.log('Generating JSON report...');
+    this.logger.info('Generating JSON report...');
     // Implementation for JSON report generation
   }
 
@@ -908,7 +917,7 @@ export class PerformanceTestFramework {
    * Generate CSV report
    */
   private async generateCsvReport(_result: PerformanceTestResult): Promise<void> {
-    console.log('Generating CSV report...');
+    this.logger.info('Generating CSV report...');
     // Implementation for CSV report generation
   }
 
@@ -916,7 +925,7 @@ export class PerformanceTestFramework {
    * Generate XML report
    */
   private async generateXmlReport(_result: PerformanceTestResult): Promise<void> {
-    console.log('Generating XML report...');
+    this.logger.info('Generating XML report...');
     // Implementation for XML report generation
   }
 
@@ -924,7 +933,7 @@ export class PerformanceTestFramework {
    * Send notifications
    */
   private async sendNotifications(result: PerformanceTestResult): Promise<void> {
-    console.log('Sending notifications...');
+    this.logger.info('Sending notifications...');
 
     if (this.config.integrations.slack) {
       await this.sendSlackNotification(result);
@@ -943,7 +952,7 @@ export class PerformanceTestFramework {
    * Send Slack notification
    */
   private async sendSlackNotification(_result: PerformanceTestResult): Promise<void> {
-    console.log('Sending Slack notification...');
+    this.logger.info('Sending Slack notification...');
     // Implementation for Slack notification
   }
 
@@ -951,7 +960,7 @@ export class PerformanceTestFramework {
    * Send email notification
    */
   private async sendEmailNotification(_result: PerformanceTestResult): Promise<void> {
-    console.log('Sending email notification...');
+    this.logger.info('Sending email notification...');
     // Implementation for email notification
   }
 
@@ -959,7 +968,7 @@ export class PerformanceTestFramework {
    * Send webhook notification
    */
   private async sendWebhookNotification(_result: PerformanceTestResult): Promise<void> {
-    console.log('Sending webhook notification...');
+    this.logger.info('Sending webhook notification...');
     // Implementation for webhook notification
   }
 
@@ -1022,7 +1031,7 @@ export class PerformanceTestFramework {
     }
 
     this.isRunning = false;
-    console.log('Performance test cancelled');
+    this.logger.info('Performance test cancelled');
   }
 
   destroy(): void {

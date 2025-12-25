@@ -16,6 +16,36 @@ import {
   TreeshakingInfo,
 } from './profiler';
 
+type WebpackReason = {
+  moduleName?: string;
+};
+
+type WebpackModule = {
+  name?: string;
+  identifier?: string;
+  size?: number;
+  reasons?: WebpackReason[];
+  chunks?: string[];
+};
+
+type WebpackChunkModule = {
+  name?: string;
+  identifier?: string;
+};
+
+type WebpackChunk = {
+  name?: string;
+  id?: string | number;
+  size?: number;
+  modules?: WebpackChunkModule[];
+  entry?: boolean;
+};
+
+type WebpackStats = {
+  modules?: WebpackModule[];
+  chunks?: WebpackChunk[];
+};
+
 /**
  * Bundle optimization recommendations
  */
@@ -42,7 +72,7 @@ export class BundleAnalyzer {
   /**
    * Analyze bundle from webpack stats
    */
-  analyzeBundleFromStats(stats: any): BundleAnalysis {
+  analyzeBundleFromStats(stats: WebpackStats): BundleAnalysis {
     const modules = this.extractModules(stats);
     const chunks = this.extractChunks(stats);
     const dependencies = this.extractDependencies(stats);
@@ -65,17 +95,17 @@ export class BundleAnalyzer {
   /**
    * Extract module information
    */
-  private extractModules(stats: any): ModuleInfo[] {
+  private extractModules(stats: WebpackStats): ModuleInfo[] {
     const modules: ModuleInfo[] = [];
 
     if (stats.modules) {
-      stats.modules.forEach((module: any) => {
+      stats.modules.forEach((module: WebpackModule) => {
         modules.push({
           name: this.cleanModuleName(module.name || module.identifier),
           size: module.size || 0,
           gzippedSize: this.estimateModuleGzippedSize(module.size || 0),
           path: module.name || module.identifier || '',
-          reasons: module.reasons?.map((r: any) => r.moduleName) || [],
+          reasons: module.reasons?.map((reason) => reason.moduleName) || [],
           chunks: module.chunks || [],
         });
       });
@@ -87,15 +117,15 @@ export class BundleAnalyzer {
   /**
    * Extract chunk information
    */
-  private extractChunks(stats: any): ChunkInfo[] {
+  private extractChunks(stats: WebpackStats): ChunkInfo[] {
     const chunks: ChunkInfo[] = [];
 
     if (stats.chunks) {
-      stats.chunks.forEach((chunk: any) => {
+      stats.chunks.forEach((chunk: WebpackChunk) => {
         chunks.push({
           name: chunk.name || `chunk-${chunk.id}`,
           size: chunk.size || 0,
-          modules: chunk.modules?.map((m: any) => m.name || m.identifier) || [],
+          modules: chunk.modules?.map((module) => module.name || module.identifier) || [],
           entry: chunk.entry || false,
           async: !chunk.entry,
         });
@@ -108,13 +138,13 @@ export class BundleAnalyzer {
   /**
    * Extract dependency information
    */
-  private extractDependencies(stats: any): DependencyInfo[] {
+  private extractDependencies(stats: WebpackStats): DependencyInfo[] {
     const dependencies: DependencyInfo[] = [];
     const packageSizes = new Map<string, number>();
 
     // Extract from modules
     if (stats.modules) {
-      stats.modules.forEach((module: any) => {
+      stats.modules.forEach((module: WebpackModule) => {
         const packageName = this.extractPackageName(module.name || module.identifier);
         if (packageName && packageName.startsWith('node_modules')) {
           const cleanName = packageName.replace(/.*node_modules\/(@[^/]+\/[^/]+|[^/]+).*/, '$1');
@@ -151,7 +181,10 @@ export class BundleAnalyzer {
       if (!moduleMap.has(baseName)) {
         moduleMap.set(baseName, []);
       }
-      moduleMap.get(baseName)!.push(module);
+      const moduleGroup = moduleMap.get(baseName);
+      if (moduleGroup) {
+        moduleGroup.push(module);
+      }
     });
 
     // Find duplicates
@@ -172,14 +205,14 @@ export class BundleAnalyzer {
   /**
    * Analyze tree shaking effectiveness
    */
-  private analyzeTreeshaking(stats: any): TreeshakingInfo {
+  private analyzeTreeshaking(stats: WebpackStats): TreeshakingInfo {
     const eliminatedModules: string[] = [];
     let eliminatedSize = 0;
 
     // This is a simplified analysis
     // In real implementation, you'd compare with and without tree shaking
     if (stats.modules) {
-      stats.modules.forEach((module: any) => {
+      stats.modules.forEach((module: WebpackModule) => {
         if (module.providedExports && module.usedExports) {
           const providedCount = Array.isArray(module.providedExports)
             ? module.providedExports.length

@@ -7,6 +7,20 @@
  * @created 2025-01-31
  */
 
+import { constants as zlibConstants } from 'zlib';
+
+import { logger as baseLogger } from '@heys/logger';
+
+type IntersectionObserverOptions = {
+  root?: Element | null;
+  rootMargin?: string;
+  threshold?: number | number[];
+};
+
+type ViteChunkInfo = {
+  facadeModuleId?: string;
+};
+
 /**
  * Bundle chunk information
  */
@@ -72,7 +86,7 @@ export type LoadingStrategy = 'immediate' | 'lazy' | 'preload' | 'prefetch' | 'i
 /**
  * Dynamic import result
  */
-export interface DynamicImportResult<T = any> {
+export interface DynamicImportResult<T = unknown> {
   module: T;
   loadTime: number;
   cached: boolean;
@@ -83,10 +97,11 @@ export interface DynamicImportResult<T = any> {
  * Bundle optimizer class
  */
 export class BundleOptimizer {
-  private loadedModules = new Map<string, any>();
-  private loadingPromises = new Map<string, Promise<any>>();
+  private loadedModules = new Map<string, unknown>();
+  private loadingPromises = new Map<string, Promise<unknown>>();
   private config: BundleOptimizationConfig;
   private observers: IntersectionObserver[] = [];
+  private readonly logger = baseLogger.child({ component: 'BundleOptimizer' });
 
   constructor(config?: Partial<BundleOptimizationConfig>) {
     this.config = this.mergeConfig(config);
@@ -149,11 +164,11 @@ export class BundleOptimizer {
         });
         observer.observe({ entryTypes: ['navigation'] });
       } catch (error) {
-        console.warn('Performance monitoring setup failed:', error);
+        this.logger.warn('Performance monitoring setup failed', { metadata: { error } });
       }
     } else {
       // Graceful degradation for environments without PerformanceObserver
-      console.log('PerformanceObserver not available, skipping performance monitoring setup');
+      this.logger.info('PerformanceObserver not available, skipping performance monitoring setup');
     }
   }
 
@@ -178,13 +193,13 @@ export class BundleOptimizer {
       }
     });
 
-    console.log('Bundle load performance:', metrics);
+    this.logger.info('Bundle load performance', { metadata: metrics });
   }
 
   /**
    * Dynamic import with caching and performance tracking
    */
-  async dynamicImport<T = any>(
+  async dynamicImport<T = unknown>(
     moduleFactory: () => Promise<T>,
     moduleName: string,
     strategy: LoadingStrategy = 'lazy',
@@ -202,7 +217,15 @@ export class BundleOptimizer {
 
     // Check if module is currently loading
     if (this.loadingPromises.has(moduleName)) {
-      const module = await this.loadingPromises.get(moduleName);
+      const pending = this.loadingPromises.get(moduleName);
+      if (!pending) {
+        return {
+          module: undefined as unknown as T,
+          loadTime: performance.now() - startTime,
+          cached: false,
+        };
+      }
+      const module = (await pending) as T;
       return {
         module,
         loadTime: performance.now() - startTime,
@@ -226,7 +249,9 @@ export class BundleOptimizer {
       this.loadingPromises.delete(moduleName);
 
       // Log performance metrics
-      console.log(`Module '${moduleName}' loaded in ${actualLoadTime.toFixed(2)}ms`);
+      this.logger.info(`Module '${moduleName}' loaded`, {
+        metadata: { loadTimeMs: Number(actualLoadTime.toFixed(2)) },
+      });
 
       return {
         module,
@@ -235,10 +260,10 @@ export class BundleOptimizer {
       };
     } catch (error) {
       this.loadingPromises.delete(moduleName);
-      console.error(`Failed to load module '${moduleName}':`, error);
+      this.logger.error(`Failed to load module '${moduleName}'`, { metadata: { error } });
 
       return {
-        module: null as T,
+        module: null as unknown as T,
         loadTime: Math.max(performance.now() - startTime, 0.1),
         cached: false,
         error: error as Error,
@@ -289,10 +314,10 @@ export class BundleOptimizer {
   /**
    * Create lazy-loaded component
    */
-  createLazyComponent<T = any>(
+  createLazyComponent<T = unknown>(
     importFunction: () => Promise<{ default: T }>,
     componentName: string,
-    fallback?: () => any,
+    fallback?: () => T,
   ): () => Promise<T> {
     return async () => {
       try {
@@ -310,7 +335,9 @@ export class BundleOptimizer {
         // Return the default export
         return result.module.default;
       } catch (error) {
-        console.error(`Failed to load component '${componentName}':`, error);
+        this.logger.error(`Failed to load component '${componentName}'`, {
+          metadata: { error },
+        });
 
         // If fallback is provided, return it instead of throwing
         if (fallback) {
@@ -330,7 +357,7 @@ export class BundleOptimizer {
   async preloadCriticalResources(
     resources: Array<{
       name: string;
-      factory: () => Promise<any>;
+      factory: () => Promise<unknown>;
       priority: number;
     }>,
   ): Promise<void> {
@@ -370,7 +397,9 @@ export class BundleOptimizer {
 
               observer.unobserve(entry.target);
             } catch (error) {
-              console.error(`Failed to load module '${moduleName}' for element:`, error);
+              this.logger.error(`Failed to load module '${moduleName}' for element`, {
+                metadata: { error },
+              });
             }
           }
         });
@@ -388,7 +417,7 @@ export class BundleOptimizer {
   /**
    * Generate webpack optimization configuration
    */
-  generateWebpackConfig(): any {
+  generateWebpackConfig(): Record<string, unknown> {
     const { codeSplitting, optimization, treeShaking, minification, compression } = this.config;
 
     return {
@@ -529,7 +558,7 @@ export class BundleOptimizer {
             minRatio: 0.8,
             compressionOptions: {
               params: {
-                [require('zlib').constants.BROTLI_PARAM_QUALITY]: compression.level,
+                [zlibConstants.BROTLI_PARAM_QUALITY]: compression.level,
               },
             },
           },
@@ -551,7 +580,7 @@ export class BundleOptimizer {
   /**
    * Generate Vite optimization configuration
    */
-  generateViteConfig(): any {
+  generateViteConfig(): Record<string, unknown> {
     const { codeSplitting, optimization, treeShaking } = this.config;
 
     return {
@@ -574,7 +603,7 @@ export class BundleOptimizer {
               : undefined,
 
             // Chunk file naming
-            chunkFileNames: (chunkInfo: any) => {
+            chunkFileNames: (chunkInfo: ViteChunkInfo) => {
               const facadeModuleId = chunkInfo.facadeModuleId;
               if (facadeModuleId) {
                 const name = facadeModuleId
@@ -726,16 +755,18 @@ export class BundleOptimizer {
  * React lazy component wrapper with error handling
  */
 export function createLazyComponentFactory(
-  importFunction: () => Promise<{ default: any }>,
+  importFunction: () => Promise<{ default: unknown }>,
   componentName: string,
-): () => Promise<any> {
+): () => Promise<unknown> {
   return async () => {
     try {
       const module = await importFunction();
-      console.log(`Lazy component '${componentName}' loaded successfully`);
+      baseLogger.info(`Lazy component '${componentName}' loaded successfully`);
       return module.default;
     } catch (error) {
-      console.error(`Failed to load lazy component '${componentName}':`, error);
+      baseLogger.error(`Failed to load lazy component '${componentName}'`, {
+        metadata: { error },
+      });
       throw error;
     }
   };
@@ -746,7 +777,7 @@ export function createLazyComponentFactory(
  */
 export function createIntersectionLoader(
   callback: (isIntersecting: boolean) => void,
-  options?: IntersectionObserverInit,
+  options?: IntersectionObserverOptions,
 ): IntersectionObserver {
   return new IntersectionObserver(
     (entries) => {
@@ -766,20 +797,24 @@ export function createIntersectionLoader(
  * Bundle size decorator for development
  */
 export function trackBundleSize(
-  targetObj: any,
+  targetObj: { constructor?: { name?: string } },
   propertyKey: string,
   descriptor: PropertyDescriptor,
 ) {
-  const originalMethod = descriptor.value;
+  const originalMethod = descriptor.value as (...args: unknown[]) => unknown;
 
-  descriptor.value = function (...args: any[]) {
+  descriptor.value = function (...args: unknown[]) {
     const startTime = performance.now();
     const result = originalMethod.apply(this, args);
     const endTime = performance.now();
 
-    console.log(
-      `Method ${propertyKey} on ${targetObj.constructor?.name || 'object'} execution time: ${endTime - startTime}ms`,
-    );
+    baseLogger.info('Method execution time', {
+      metadata: {
+        method: propertyKey,
+        target: targetObj.constructor?.name || 'object',
+        durationMs: endTime - startTime,
+      },
+    });
 
     return result;
   };

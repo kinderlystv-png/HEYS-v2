@@ -7,6 +7,21 @@
  * @created 2025-01-31
  */
 
+import { logger as baseLogger } from '@heys/logger';
+
+type FetchInit = Parameters<typeof fetch>[1];
+
+type NetworkConnection = {
+  type?: string;
+  effectiveType?: string;
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+  addEventListener?: (event: string, handler: () => void) => void;
+};
+
+const networkLogger = baseLogger.child({ component: 'NetworkOptimizer' });
+
 /**
  * Request priority levels
  */
@@ -19,7 +34,7 @@ export interface RequestConfig {
   url: string;
   method?: string;
   headers?: Record<string, string>;
-  body?: any;
+  body?: unknown;
   priority?: RequestPriority;
   timeout?: number;
   retries?: number;
@@ -121,7 +136,10 @@ class RequestQueue {
     for (const priority of priorities) {
       const queue = this.queues.get(priority);
       if (queue && queue.length > 0) {
-        return queue.shift()!;
+        const next = queue.shift();
+        if (next) {
+          return next;
+        }
       }
     }
 
@@ -130,7 +148,9 @@ class RequestQueue {
 
   private async executeRequest(request: NetworkRequest): Promise<void> {
     // This would be implemented by the NetworkOptimizer
-    console.log(`Executing request ${request.id} with priority ${request.config.priority}`);
+    networkLogger.info(`Executing request ${request.id}`, {
+      metadata: { priority: request.config.priority },
+    });
   }
 
   setMaxConcurrent(max: number): void {
@@ -155,7 +175,7 @@ export class NetworkOptimizer {
   private connectionInfo: ConnectionInfo;
   private requestIdCounter = 0;
   private preloadedResources = new Set<string>();
-  private requestCache = new Map<string, any>();
+  private requestCache = new Map<string, unknown>();
 
   constructor() {
     this.requestQueue = new RequestQueue();
@@ -179,7 +199,7 @@ export class NetworkOptimizer {
     };
 
     if ('connection' in navigator) {
-      const connection = (navigator as any).connection;
+      const connection = (navigator as { connection?: NetworkConnection }).connection;
       info.type = connection.type || 'unknown';
       info.effectiveType = connection.effectiveType || 'unknown';
       info.downlink = connection.downlink || 10;
@@ -207,8 +227,8 @@ export class NetworkOptimizer {
     });
 
     // Monitor connection changes
-    if ('connection' in navigator && (navigator as any).connection) {
-      const connection = (navigator as any).connection;
+    if ('connection' in navigator && (navigator as { connection?: NetworkConnection }).connection) {
+      const connection = (navigator as { connection?: NetworkConnection }).connection;
       if (typeof connection.addEventListener === 'function') {
         connection.addEventListener('change', () => {
           this.connectionInfo = this.detectConnectionInfo();
@@ -223,7 +243,7 @@ export class NetworkOptimizer {
    */
   private onConnectionChange(): void {
     this.optimizeForConnection();
-    console.log('Network connection changed:', this.connectionInfo);
+    networkLogger.info('Network connection changed', { metadata: this.connectionInfo });
   }
 
   /**
@@ -248,7 +268,7 @@ export class NetworkOptimizer {
   /**
    * Make an optimized network request
    */
-  async request<T = any>(config: RequestConfig): Promise<T> {
+  async request<T = unknown>(config: RequestConfig): Promise<T> {
     const requestId = this.generateRequestId();
     const request: NetworkRequest = {
       id: requestId,
@@ -301,13 +321,13 @@ export class NetworkOptimizer {
   /**
    * Execute the actual network request
    */
-  private async executeRequest(request: NetworkRequest): Promise<any> {
+  private async executeRequest(request: NetworkRequest): Promise<unknown> {
     const { config } = request;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), config.timeout || 30000);
 
     try {
-      const fetchOptions: RequestInit = {
+      const fetchOptions: FetchInit = {
         method: config.method || 'GET',
         headers: {
           Accept: 'application/json',
@@ -391,7 +411,7 @@ export class NetworkOptimizer {
           });
           this.preloadedResources.add(url);
         } catch (error) {
-          console.warn(`Failed to preload resource: ${url}`, error);
+          networkLogger.warn(`Failed to preload resource: ${url}`, { metadata: { error } });
         }
       });
 
@@ -421,7 +441,7 @@ export class NetworkOptimizer {
   /**
    * Implement request batching
    */
-  async batchRequests<T = any>(configs: RequestConfig[]): Promise<T[]> {
+  async batchRequests<T = unknown>(configs: RequestConfig[]): Promise<T[]> {
     // Check if we can batch these requests
     const batchableConfigs = configs.filter(
       (config) => config.method === 'GET' || config.method === undefined,
@@ -441,7 +461,9 @@ export class NetworkOptimizer {
 
         return batchResponse.responses || [];
       } catch (error) {
-        console.warn('Batch request failed, falling back to individual requests');
+        networkLogger.warn('Batch request failed, falling back to individual requests', {
+          metadata: { error },
+        });
       }
     }
 
@@ -582,9 +604,9 @@ export class OfflineSupport {
   private async registerServiceWorker(): Promise<void> {
     try {
       const registration = await navigator.serviceWorker.register('/sw.js');
-      console.log('Service Worker registered:', registration);
+      networkLogger.info('Service Worker registered', { metadata: { registration } });
     } catch (error) {
-      console.error('Service Worker registration failed:', error);
+      networkLogger.error('Service Worker registration failed', { metadata: { error } });
     }
   }
 
@@ -609,7 +631,7 @@ export class OfflineSupport {
       try {
         await this.networkOptimizer.request(config);
       } catch (error) {
-        console.error('Failed to process offline request:', error);
+        networkLogger.error('Failed to process offline request', { metadata: { error } });
         // Re-queue failed requests
         this.offlineQueue.push(config);
       }
@@ -625,7 +647,7 @@ export class OfflineSupport {
     try {
       localStorage.setItem('heys-offline-queue', JSON.stringify(this.offlineQueue));
     } catch (error) {
-      console.error('Failed to save offline queue:', error);
+      networkLogger.error('Failed to save offline queue', { metadata: { error } });
     }
   }
 
@@ -639,7 +661,7 @@ export class OfflineSupport {
         this.offlineQueue = JSON.parse(saved);
       }
     } catch (error) {
-      console.error('Failed to load offline queue:', error);
+      networkLogger.error('Failed to load offline queue', { metadata: { error } });
     }
   }
 }
@@ -659,7 +681,7 @@ export class OptimizedHTTPClient {
   /**
    * GET request
    */
-  async get<T = any>(url: string, options: Partial<RequestConfig> = {}): Promise<T> {
+  async get<T = unknown>(url: string, options: Partial<RequestConfig> = {}): Promise<T> {
     return this.networkOptimizer.request<T>({
       ...options,
       url,
@@ -670,7 +692,11 @@ export class OptimizedHTTPClient {
   /**
    * POST request
    */
-  async post<T = any>(url: string, data?: any, options: Partial<RequestConfig> = {}): Promise<T> {
+  async post<T = unknown>(
+    url: string,
+    data?: unknown,
+    options: Partial<RequestConfig> = {},
+  ): Promise<T> {
     return this.networkOptimizer.request<T>({
       ...options,
       url,
@@ -682,7 +708,11 @@ export class OptimizedHTTPClient {
   /**
    * PUT request
    */
-  async put<T = any>(url: string, data?: any, options: Partial<RequestConfig> = {}): Promise<T> {
+  async put<T = unknown>(
+    url: string,
+    data?: unknown,
+    options: Partial<RequestConfig> = {},
+  ): Promise<T> {
     return this.networkOptimizer.request<T>({
       ...options,
       url,
@@ -694,7 +724,7 @@ export class OptimizedHTTPClient {
   /**
    * DELETE request
    */
-  async delete<T = any>(url: string, options: Partial<RequestConfig> = {}): Promise<T> {
+  async delete<T = unknown>(url: string, options: Partial<RequestConfig> = {}): Promise<T> {
     return this.networkOptimizer.request<T>({
       ...options,
       url,

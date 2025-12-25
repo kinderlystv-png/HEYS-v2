@@ -8,6 +8,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { logger as baseLogger } from '@heys/logger';
+
 export interface UnusedExport {
   file: string;
   exportName: string;
@@ -36,6 +38,7 @@ export interface TreeShakingConfig {
 export class TreeShaker {
   private config: TreeShakingConfig;
   private analysis: TreeShakingAnalysis | null = null;
+  private readonly logger = baseLogger.child({ component: 'TreeShaker' });
 
   constructor(config: Partial<TreeShakingConfig> = {}) {
     this.config = {
@@ -52,13 +55,13 @@ export class TreeShaker {
    * Анализирует проект на предмет tree shaking возможностей
    */
   async analyzeProject(rootPath: string): Promise<TreeShakingAnalysis> {
-    console.log('🌲 Начинаем анализ tree shaking...');
+    this.logger.info('Начинаем анализ tree shaking');
 
     const files = await this.findSourceFiles(rootPath);
     const unusedExports: UnusedExport[] = [];
     let potentialSavings = 0;
 
-    console.log(`📁 Найдено ${files.length} файлов для анализа`);
+    this.logger.info(`Найдено ${files.length} файлов для анализа`);
 
     for (const file of files) {
       try {
@@ -70,7 +73,9 @@ export class TreeShaker {
           potentialSavings += exp.size;
         });
       } catch (error) {
-        console.warn(`⚠️ Не удалось проанализировать файл ${file}:`, error);
+        this.logger.warn(`Не удалось проанализировать файл ${file}`, {
+          metadata: { error },
+        });
       }
     }
 
@@ -86,7 +91,7 @@ export class TreeShaker {
       bundlerOptimizations,
     };
 
-    console.log(`✅ Анализ завершен: найдено ${unusedExports.length} неиспользуемых экспортов`);
+    this.logger.info(`Анализ завершен: найдено ${unusedExports.length} неиспользуемых экспортов`);
     return this.analysis;
   }
 
@@ -310,8 +315,9 @@ export class TreeShaker {
     // Группируем по файлам
     const byFile = unusedExports.reduce(
       (acc, exp) => {
-        if (!acc[exp.file]) acc[exp.file] = [];
-        acc[exp.file]!.push(exp);
+        const fileExports = acc[exp.file] ?? [];
+        fileExports.push(exp);
+        acc[exp.file] = fileExports;
         return acc;
       },
       {} as Record<string, UnusedExport[]>,
@@ -342,8 +348,7 @@ export class TreeShaker {
     // Рекомендации по типам
     const typeGroups = unusedExports.reduce(
       (acc, exp) => {
-        if (!acc[exp.type]) acc[exp.type] = 0;
-        acc[exp.type]!++;
+        acc[exp.type] = (acc[exp.type] ?? 0) + 1;
         return acc;
       },
       {} as Record<string, number>,

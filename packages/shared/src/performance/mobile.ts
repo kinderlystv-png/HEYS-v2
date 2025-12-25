@@ -7,6 +7,28 @@
  * @created 2025-01-31
  */
 
+import { logger as baseLogger } from '@heys/logger';
+
+type NavigatorConnection = {
+  effectiveType?: string;
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+};
+
+type BatteryManagerLike = { level: number };
+
+type NavigatorWithConnection = Navigator & {
+  connection?: NavigatorConnection;
+  deviceMemory?: number;
+  getBattery?: () => Promise<BatteryManagerLike>;
+};
+
+type LayoutShiftEntry = PerformanceEntry & { value: number };
+type FirstInputEntry = PerformanceEntry & { processingStart: number };
+
+const logger = baseLogger.child({ component: 'MobilePerformanceOptimizer' });
+
 /**
  * Device capabilities and constraints
  */
@@ -91,7 +113,7 @@ export class MobilePerformanceOptimizer {
    */
   private getDeviceMemory(): number {
     if ('deviceMemory' in navigator) {
-      return (navigator as any).deviceMemory;
+      return (navigator as NavigatorWithConnection).deviceMemory ?? 0;
     }
 
     // Fallback estimation based on user agent and hardware concurrency
@@ -122,7 +144,7 @@ export class MobilePerformanceOptimizer {
    */
   private getNetworkType(): DeviceCapabilities['network'] {
     if ('connection' in navigator) {
-      const connection = (navigator as any).connection;
+      const connection = (navigator as NavigatorWithConnection).connection;
       if (connection.effectiveType) {
         return connection.effectiveType as DeviceCapabilities['network'];
       }
@@ -138,9 +160,10 @@ export class MobilePerformanceOptimizer {
   private getBatteryLevel(): number {
     // Battery API is deprecated, but we can use it if available
     if ('getBattery' in navigator) {
-      (navigator as any).getBattery().then((battery: any) => {
-        return battery.level;
-      });
+      const nav = navigator as NavigatorWithConnection;
+      if (nav.getBattery) {
+        void nav.getBattery().then((battery) => battery.level);
+      }
     }
 
     // Default to 50% battery
@@ -186,7 +209,7 @@ export class MobilePerformanceOptimizer {
     };
 
     if ('connection' in navigator) {
-      const connection = (navigator as any).connection;
+      const connection = (navigator as NavigatorWithConnection).connection;
       condition.type = connection.effectiveType || 'unknown';
       condition.effectiveType = connection.effectiveType || 'unknown';
       condition.downlink = connection.downlink || 10;
@@ -266,33 +289,33 @@ export class MobilePerformanceOptimizer {
       longTaskObserver.observe({ entryTypes: ['longtask'] });
       this.observers.set('longtask', longTaskObserver);
     } catch (e) {
-      console.warn('Long task monitoring not supported');
+      logger.warn('Long task monitoring not supported', { metadata: { error: e } });
     }
 
     // Monitor Layout Shifts
     try {
       const clsObserver = new PerformanceObserver((list) => {
         list.getEntries().forEach((entry) => {
-          this.handleLayoutShift(entry as any);
+          this.handleLayoutShift(entry as LayoutShiftEntry);
         });
       });
       clsObserver.observe({ entryTypes: ['layout-shift'] });
       this.observers.set('layout-shift', clsObserver);
     } catch (e) {
-      console.warn('Layout shift monitoring not supported');
+      logger.warn('Layout shift monitoring not supported', { metadata: { error: e } });
     }
 
     // Monitor First Input Delay
     try {
       const fidObserver = new PerformanceObserver((list) => {
         list.getEntries().forEach((entry) => {
-          this.handleFirstInputDelay(entry as any);
+          this.handleFirstInputDelay(entry as FirstInputEntry);
         });
       });
       fidObserver.observe({ entryTypes: ['first-input'] });
       this.observers.set('first-input', fidObserver);
     } catch (e) {
-      console.warn('First input delay monitoring not supported');
+      logger.warn('First input delay monitoring not supported', { metadata: { error: e } });
     }
   }
 
@@ -300,7 +323,7 @@ export class MobilePerformanceOptimizer {
    * Handle long task detection
    */
   private handleLongTask(entry: PerformanceEntry): void {
-    console.warn(`Long task detected: ${entry.duration}ms`);
+    logger.warn(`Long task detected: ${entry.duration}ms`);
 
     // If we detect frequent long tasks, adjust settings
     if (entry.duration > 100) {
@@ -312,18 +335,20 @@ export class MobilePerformanceOptimizer {
   /**
    * Handle layout shift detection
    */
-  private handleLayoutShift(entry: any): void {
+  private handleLayoutShift(entry: LayoutShiftEntry): void {
     if (entry.value > 0.1) {
-      console.warn(`Significant layout shift detected: ${entry.value}`);
+      logger.warn(`Significant layout shift detected: ${entry.value}`);
     }
   }
 
   /**
    * Handle first input delay
    */
-  private handleFirstInputDelay(entry: any): void {
+  private handleFirstInputDelay(entry: FirstInputEntry): void {
     if (entry.processingStart - entry.startTime > 100) {
-      console.warn(`High input delay detected: ${entry.processingStart - entry.startTime}ms`);
+      logger.warn(
+        `High input delay detected: ${entry.processingStart - entry.startTime}ms`,
+      );
       this.performanceSettings.renderStrategy = 'throttled';
     }
   }
@@ -400,7 +425,7 @@ export class MobilePerformanceOptimizer {
    */
   private async loadCriticalFeatures(): Promise<void> {
     // Load only essential functionality
-    console.log('Loading critical features for minimal bundle');
+    logger.info('Loading critical features for minimal bundle');
   }
 
   /**
@@ -408,7 +433,7 @@ export class MobilePerformanceOptimizer {
    */
   private async loadCoreFeatures(): Promise<void> {
     // Load core functionality
-    console.log('Loading core features for lite bundle');
+    logger.info('Loading core features for lite bundle');
   }
 
   /**
@@ -416,7 +441,7 @@ export class MobilePerformanceOptimizer {
    */
   private async loadFullFeatures(): Promise<void> {
     // Load all functionality
-    console.log('Loading full feature set');
+    logger.info('Loading full feature set');
   }
 
   /**
@@ -439,7 +464,7 @@ export class MobilePerformanceOptimizer {
    * Load non-critical features
    */
   private loadNonCriticalFeatures(): void {
-    console.log('Loading non-critical features');
+    logger.info('Loading non-critical features');
   }
 
   /**
@@ -470,7 +495,7 @@ export class MobilePerformanceOptimizer {
    */
   private enableBatchedRendering(): void {
     // Implement render batching
-    console.log('Enabling batched rendering');
+    logger.info('Enabling batched rendering');
   }
 
   /**
@@ -478,7 +503,7 @@ export class MobilePerformanceOptimizer {
    */
   private enableThrottledRendering(): void {
     // Implement render throttling
-    console.log('Enabling throttled rendering');
+    logger.info('Enabling throttled rendering');
   }
 
   /**
@@ -499,7 +524,7 @@ export class MobilePerformanceOptimizer {
    */
   private setMaxConcurrentRequests(max: number): void {
     // This would integrate with your HTTP client
-    console.log(`Setting max concurrent requests to ${max}`);
+    logger.info(`Setting max concurrent requests to ${max}`);
   }
 
   /**
@@ -507,7 +532,7 @@ export class MobilePerformanceOptimizer {
    */
   private enableCompression(): void {
     // Enable gzip/brotli compression
-    console.log('Enabling compression');
+    logger.info('Enabling compression');
   }
 
   /**
@@ -527,14 +552,14 @@ export class MobilePerformanceOptimizer {
    * Enable minimal caching
    */
   private enableMinimalCaching(): void {
-    console.log('Enabling minimal caching strategy');
+    logger.info('Enabling minimal caching strategy');
   }
 
   /**
    * Enable aggressive caching
    */
   private enableAggressiveCaching(): void {
-    console.log('Enabling aggressive caching strategy');
+    logger.info('Enabling aggressive caching strategy');
   }
 
   /**
@@ -572,7 +597,7 @@ export class MobilePerformanceOptimizer {
   private optimizeAnimationPerformance(): void {
     // Prefer transform and opacity changes
     // Use will-change property sparingly
-    console.log('Optimizing animation performance');
+    logger.info('Optimizing animation performance');
   }
 
   /**

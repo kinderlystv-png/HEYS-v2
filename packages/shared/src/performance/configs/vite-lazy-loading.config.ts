@@ -1,6 +1,14 @@
 // filepath: packages/shared/src/performance/configs/vite-lazy-loading.config.ts
 
+import { logger as baseLogger } from '@heys/logger';
 import { defineConfig, splitVendorChunkPlugin, UserConfig } from 'vite';
+
+type BundleChunkInfo = { type: 'chunk'; code: string };
+type BundleAssetInfo = { type: 'asset' };
+type BundleEntry = BundleChunkInfo | BundleAssetInfo;
+type Bundle = Record<string, BundleEntry>;
+
+const logger = baseLogger.child({ component: 'ViteLazyLoadingConfig' });
 
 /**
  * Конфигурация Vite для оптимизации ленивой загрузки
@@ -41,7 +49,7 @@ export function createLazyLoadingViteConfig(
   const {
     enableAggressiveSplitting = true,
     minChunkSize = 20000, // 20KB
-    maxChunkSize = 500000, // 500KB
+    maxChunkSize: _maxChunkSize = 500000, // 500KB
     vendorStrategy = 'framework',
     enablePreload = true,
     enableBundleAnalysis = false,
@@ -53,6 +61,7 @@ export function createLazyLoadingViteConfig(
       target: 'es2015',
       minify: 'terser',
       sourcemap: true,
+      chunkSizeWarningLimit: Math.ceil(_maxChunkSize / 1024),
 
       // Настройки code splitting
       rollupOptions: {
@@ -92,7 +101,7 @@ export function createLazyLoadingViteConfig(
         },
 
         // Внешние зависимости (если нужно)
-        external: (id) => {
+        external: (_id) => {
           // Можно вынести тяжелые библиотеки во внешние зависимости
           return false;
         },
@@ -171,7 +180,7 @@ export function createLazyLoadingViteConfig(
 /**
  * Создание стратегии manual chunks
  */
-function createManualChunks(strategy: 'single' | 'multiple' | 'framework', minChunkSize: number) {
+function createManualChunks(strategy: 'single' | 'multiple' | 'framework', _minChunkSize: number) {
   return (id: string) => {
     // Vendor библиотеки
     if (id.includes('node_modules')) {
@@ -197,7 +206,7 @@ function createManualChunks(strategy: 'single' | 'multiple' | 'framework', minCh
           }
           return 'vendor-misc';
 
-        case 'multiple':
+        case 'multiple': {
           // Отдельный чанк для каждой крупной библиотеки
           const largeLibraries = ['react', 'vue', 'angular', 'lodash', 'moment', 'three', 'chart'];
           const foundLarge = largeLibraries.find((lib) => packageName.includes(lib));
@@ -205,6 +214,7 @@ function createManualChunks(strategy: 'single' | 'multiple' | 'framework', minCh
             return `vendor-${foundLarge}`;
           }
           return `vendor-${packageName}`;
+        }
       }
     }
 
@@ -240,11 +250,11 @@ function createManualChunks(strategy: 'single' | 'multiple' | 'framework', minCh
  * Извлечение имени пакета из пути
  */
 function extractPackageName(id: string): string {
-  const match = id.match(/node_modules\/([^\/]+)/);
+  const match = id.match(/node_modules\/([^/]+)/);
   if (match) {
     // Обработка scoped packages (@scope/package)
     if (match[1].startsWith('@')) {
-      const nextMatch = id.match(/node_modules\/@[^\/]+\/([^\/]+)/);
+      const nextMatch = id.match(/node_modules\/@[^/]+\/([^/]+)/);
       return nextMatch ? `${match[1]}-${nextMatch[1]}` : match[1];
     }
     return match[1];
@@ -256,7 +266,7 @@ function extractPackageName(id: string): string {
  * Извлечение имени роута из пути
  */
 function extractRouteName(id: string): string {
-  const match = id.match(/\/(?:pages|routes|views)\/([^\/]+)/);
+  const match = id.match(/\/(?:pages|routes|views)\/([^/]+)/);
   return match ? match[1].replace(/\.(vue|tsx?|jsx?)$/, '') : 'unknown';
 }
 
@@ -264,7 +274,7 @@ function extractRouteName(id: string): string {
  * Извлечение имени компонента из пути
  */
 function extractComponentName(id: string): string {
-  const match = id.match(/\/components\/([^\/]+)/);
+  const match = id.match(/\/components\/([^/]+)/);
   return match ? match[1] : 'unknown';
 }
 
@@ -272,7 +282,7 @@ function extractComponentName(id: string): string {
  * Извлечение директории компонентов
  */
 function extractComponentDirectory(id: string): string | null {
-  const match = id.match(/\/components\/([^\/]+)\//);
+  const match = id.match(/\/components\/([^/]+)\//);
   return match ? match[1] : null;
 }
 
@@ -286,12 +296,12 @@ function createLazyLoadingPlugin(options: {
   return {
     name: 'lazy-loading-optimizer',
 
-    generateBundle(outputOptions: any, bundle: any) {
+    generateBundle(_outputOptions: unknown, bundle: Bundle) {
       if (options.enableBundleAnalysis) {
         // Анализ размеров чанков
         const chunkSizes: Array<{ name: string; size: number }> = [];
 
-        Object.entries(bundle).forEach(([fileName, chunk]: [string, any]) => {
+        Object.entries(bundle).forEach(([fileName, chunk]) => {
           if (chunk.type === 'chunk') {
             const size = Buffer.byteLength(chunk.code, 'utf8');
             chunkSizes.push({ name: fileName, size });
@@ -301,21 +311,21 @@ function createLazyLoadingPlugin(options: {
         // Сортируем по размеру
         chunkSizes.sort((a, b) => b.size - a.size);
 
-        console.log('\n📊 Анализ размеров чанков:');
+        logger.info('📊 Анализ размеров чанков:');
         chunkSizes.slice(0, 10).forEach((chunk, index) => {
           const sizeKB = (chunk.size / 1024).toFixed(1);
-          console.log(`   ${index + 1}. ${chunk.name}: ${sizeKB} KB`);
+          logger.info(`   ${index + 1}. ${chunk.name}: ${sizeKB} KB`);
         });
 
         // Предупреждения о больших чанках
         const largeChunks = chunkSizes.filter((chunk) => chunk.size > 500000); // 500KB
         if (largeChunks.length > 0) {
-          console.log('\n⚠️  Предупреждение: обнаружены большие чанки:');
+          logger.warn('⚠️  Предупреждение: обнаружены большие чанки:');
           largeChunks.forEach((chunk) => {
             const sizeKB = (chunk.size / 1024).toFixed(1);
-            console.log(`   • ${chunk.name}: ${sizeKB} KB`);
+            logger.warn(`   • ${chunk.name}: ${sizeKB} KB`);
           });
-          console.log('   Рассмотрите дополнительное разделение этих чанков.\n');
+          logger.warn('   Рассмотрите дополнительное разделение этих чанков.');
         }
       }
     },

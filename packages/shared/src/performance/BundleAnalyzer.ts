@@ -5,6 +5,8 @@
  * Отслеживает метрики загрузки, размер файлов и оптимизации
  */
 
+import { logger as baseLogger } from '@heys/logger';
+
 export interface BundleMetrics {
   totalSize: number;
   gzippedSize: number;
@@ -28,6 +30,7 @@ export class BundleAnalyzer {
   private static instance: BundleAnalyzer;
   private baselineHistory: BaselineMetrics[] = [];
   private currentMetrics: BundleMetrics | null = null;
+  private readonly logger = baseLogger.child({ component: 'BundleAnalyzer' });
 
   static getInstance(): BundleAnalyzer {
     if (!this.instance) {
@@ -62,7 +65,7 @@ export class BundleAnalyzer {
       gzippedSize: this.calculateGzippedSize(resources),
       loadTime: performance.now() - startTime,
       firstContentfulPaint: this.getFirstContentfulPaint(),
-      largestContentfulPaint: this.getLargestContentfulPaint(),
+      largestContentfulPaint: await this.getLargestContentfulPaint(),
       timeToInteractive: this.getTimeToInteractive(navigationEntry),
       chunkSizes,
       unusedCode: await this.analyzeUnusedCode(),
@@ -91,10 +94,12 @@ export class BundleAnalyzer {
     this.baselineHistory.push(baseline);
     this.saveToStorage(baseline);
 
-    console.log(`📊 Baseline сохранен для версии ${version}:`, {
-      totalSize: this.formatBytes(baseline.metrics.totalSize),
-      lighthouseScore: baseline.lighthouseScore,
-      grade: baseline.performanceGrade,
+    this.logger.info(`Baseline сохранен для версии ${version}`, {
+      metadata: {
+        totalSize: this.formatBytes(baseline.metrics.totalSize),
+        lighthouseScore: baseline.lighthouseScore,
+        grade: baseline.performanceGrade,
+      },
     });
   }
 
@@ -191,7 +196,7 @@ FCP: ${changes.firstContentfulPaint.change < 0 ? '✅' : '❌'} ${changes.firstC
   /**
    * Получает Largest Contentful Paint метрику
    */
-  private getLargestContentfulPaint(): number {
+  private async getLargestContentfulPaint(): Promise<number> {
     return new Promise<number>((resolve) => {
       if ('PerformanceObserver' in window) {
         const observer = new PerformanceObserver((list) => {
@@ -210,7 +215,7 @@ FCP: ${changes.firstContentfulPaint.change < 0 ? '✅' : '❌'} ${changes.firstC
       } else {
         resolve(0);
       }
-    }) as any; // Типизируем как число для совместимости
+    });
   }
 
   /**
@@ -268,7 +273,9 @@ FCP: ${changes.firstContentfulPaint.change < 0 ? '✅' : '❌'} ${changes.firstC
 
       localStorage.setItem('heys-performance-baselines', JSON.stringify(baselines));
     } catch (error) {
-      console.warn('Не удалось сохранить baseline в localStorage:', error);
+      this.logger.warn('Не удалось сохранить baseline в localStorage', {
+        metadata: { error },
+      });
     }
   }
 
@@ -282,7 +289,9 @@ FCP: ${changes.firstContentfulPaint.change < 0 ? '✅' : '❌'} ${changes.firstC
         this.baselineHistory = JSON.parse(stored);
       }
     } catch (error) {
-      console.warn('Не удалось загрузить baselines из localStorage:', error);
+      this.logger.warn('Не удалось загрузить baselines из localStorage', {
+        metadata: { error },
+      });
     }
   }
 

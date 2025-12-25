@@ -17,7 +17,7 @@ interface LazyImageProps {
   loading?: 'lazy' | 'eager';
   onLoad?: () => void;
   onError?: () => void;
-  config?: any; // LazyLoadingConfig
+  config?: unknown; // LazyLoadingConfig
 }
 
 /**

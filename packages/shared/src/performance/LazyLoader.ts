@@ -2,6 +2,12 @@
 
 import { performance } from 'perf_hooks';
 
+import { logger } from '@heys/logger';
+
+type PerformanceMemory = {
+  usedJSHeapSize: number;
+};
+
 /**
  * Интерфейс для конфигурации ленивой загрузки
  */
@@ -92,6 +98,8 @@ export class LazyLoader {
   private loadPromises = new Map<Element, Promise<void>>();
   private currentLoads = 0;
   private preloadedItems = new Set<string>();
+  private static readonly baseLogger = logger.child({ component: 'LazyLoader' });
+  private readonly logger = LazyLoader.baseLogger;
 
   constructor(config: LazyLoadingConfig = {}) {
     this.config = {
@@ -125,7 +133,7 @@ export class LazyLoader {
    */
   private initializeObserver(): void {
     if (!('IntersectionObserver' in window)) {
-      console.warn('⚠️ IntersectionObserver не поддерживается, используется fallback');
+      this.logger.warn('IntersectionObserver не поддерживается, используется fallback');
       return;
     }
 
@@ -158,7 +166,7 @@ export class LazyLoader {
   observe(element: Element, options: Partial<LazyLoadableElement> = {}): void {
     // Проверка на null или undefined
     if (!element) {
-      console.warn('LazyLoader: Cannot observe null or undefined element');
+      this.logger.warn('LazyLoader: Cannot observe null or undefined element');
       return;
     }
 
@@ -247,7 +255,9 @@ export class LazyLoader {
       lazyElement.loading = false;
       this.metrics.failedItems++;
 
-      console.warn(`⚠️ Ошибка ленивой загрузки:`, error);
+      this.logger.warn('Ошибка ленивой загрузки', {
+        metadata: { error },
+      });
     } finally {
       this.loadingElements.delete(element);
       this.loadPromises.delete(element);
@@ -294,7 +304,11 @@ export class LazyLoader {
       default:
         // Универсальная загрузка атрибута src
         if (src) {
-          (element as any).src = src;
+          if (element instanceof HTMLImageElement || element instanceof HTMLIFrameElement) {
+            element.src = src;
+          } else if (element instanceof HTMLScriptElement) {
+            element.src = src;
+          }
         }
     }
   }
@@ -519,12 +533,13 @@ export class LazyLoader {
    * Извлечение источника из элемента
    */
   private extractSource(element: Element): string | undefined {
+    const dataset = element instanceof HTMLElement ? element.dataset : undefined;
     return (
       element.getAttribute('data-src') ||
       element.getAttribute('data-lazy-src') ||
       element.getAttribute('data-original') ||
-      (element as any).dataset?.src ||
-      (element as any).dataset?.lazySrc
+      dataset?.src ||
+      dataset?.lazySrc
     );
   }
 
@@ -561,21 +576,24 @@ export class LazyLoader {
     this.metrics.performanceScore = Math.round(successRate * 70 + avgTimeScore * 30);
 
     // Обновление использования памяти (приблизительно)
-    if ((performance as any).memory) {
-      this.metrics.memoryUsage = (performance as any).memory.usedJSHeapSize;
+    const memory = (performance as Performance & { memory?: PerformanceMemory }).memory;
+    if (memory) {
+      this.metrics.memoryUsage = memory.usedJSHeapSize;
     }
   }
 
   /**
    * Дебаунс функция
    */
-  private debounce<T extends (...args: any[]) => any>(
+  private debounce<T extends (...args: unknown[]) => void>(
     func: T,
     delay: number,
   ): (...args: Parameters<T>) => void {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     return (...args: Parameters<T>) => {
-      clearTimeout(timeoutId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       timeoutId = setTimeout(() => func.apply(this, args), delay);
     };
   }

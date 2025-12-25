@@ -2,6 +2,12 @@
 
 import { LazyLoadingConfig, LazyLoadingStrategy } from './LazyLoader';
 
+type NavigatorConnection = { effectiveType?: string };
+type NavigatorWithPerformance = Navigator & {
+  connection?: NavigatorConnection;
+  deviceMemory?: number;
+};
+
 /**
  * Предустановленные конфигурации для различных сценариев ленивой загрузки
  */
@@ -244,7 +250,7 @@ export class LazyConfigDetector {
    */
   private static getConnectionSpeed(): 'slow' | 'medium' | 'fast' {
     if ('connection' in navigator) {
-      const connection = (navigator as any).connection;
+      const connection = (navigator as NavigatorWithPerformance).connection;
       const effectiveType = connection?.effectiveType;
 
       switch (effectiveType) {
@@ -396,13 +402,13 @@ export class LazyLoadingHelpers {
 
     // Объем памяти
     if ('deviceMemory' in navigator) {
-      const memory = (navigator as any).deviceMemory;
+      const memory = (navigator as NavigatorWithPerformance).deviceMemory;
       score += Math.min(memory * 10, 25);
     }
 
     // Тип соединения
     if ('connection' in navigator) {
-      const connection = (navigator as any).connection;
+      const connection = (navigator as NavigatorWithPerformance).connection;
       if (connection?.effectiveType === '4g') {
         score += 15;
       } else if (connection?.effectiveType === '3g') {

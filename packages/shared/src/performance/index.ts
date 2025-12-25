@@ -7,6 +7,8 @@
  * @created 2025-01-31
  */
 
+import { logger as baseLogger } from '@heys/logger';
+
 // Core performance profiling
 export { defaultProfiler, measurePerformance, PerformanceProfiler } from './profiler';
 
@@ -116,6 +118,33 @@ import { MobilePerformanceOptimizer } from './mobile';
 import { OptimizedHTTPClient, type RequestConfig } from './network';
 import { PerformanceProfiler } from './profiler';
 
+type ProfilingSummary = { runtime?: { averageFrameTime?: number } };
+type CacheStrategyStats = { hitRate?: number };
+type CacheStatsSummary = Record<string, CacheStrategyStats>;
+type NetworkStatsSummary = { averageResponseTime: number };
+type Recommendation = {
+  type: 'performance' | 'caching' | 'network';
+  severity: 'high' | 'medium' | 'low';
+  title: string;
+  description: string;
+  actions: string[];
+};
+type PerformanceReport = {
+  profiling: ProfilingSummary;
+  caching: CacheStatsSummary;
+  network: NetworkStatsSummary;
+  mobile: {
+    capabilities: unknown;
+    settings: unknown;
+    networkCondition: unknown;
+  };
+  recommendations: Recommendation[];
+};
+
+type ProfilerWithCleanup = PerformanceProfiler & { cleanup?: () => void };
+
+const perfLogger = baseLogger.child({ component: 'PerformanceManager' });
+
 /**
  * Performance optimization configuration
  */
@@ -204,7 +233,7 @@ export class PerformanceManager {
   private initialize(): void {
     if (this.config.profiling.enabled) {
       // Profiler is already initialized and will collect metrics automatically
-      console.log('Performance profiling enabled');
+      perfLogger.info('Performance profiling enabled');
     }
 
     if (this.config.mobile.enabled && this.config.mobile.autoOptimize) {
@@ -215,13 +244,7 @@ export class PerformanceManager {
   /**
    * Get comprehensive performance report
    */
-  async getPerformanceReport(): Promise<{
-    profiling: any;
-    caching: any;
-    network: any;
-    mobile: any;
-    recommendations: any[];
-  }> {
+  async getPerformanceReport(): Promise<PerformanceReport> {
     const [profilingData, cacheStats, networkStats] = await Promise.all([
       this.profiler.getMetrics(),
       this.cacheManager.getAllStats(),
@@ -246,8 +269,12 @@ export class PerformanceManager {
   /**
    * Generate performance recommendations
    */
-  private generateRecommendations(profilingData: any, cacheStats: any, networkStats: any): any[] {
-    const recommendations: any[] = [];
+  private generateRecommendations(
+    profilingData: ProfilingSummary,
+    cacheStats: CacheStatsSummary,
+    networkStats: NetworkStatsSummary,
+  ): Recommendation[] {
+    const recommendations: Recommendation[] = [];
 
     // Analyze profiling data
     if (profilingData.runtime?.averageFrameTime > 16.67) {
@@ -265,8 +292,8 @@ export class PerformanceManager {
     }
 
     // Analyze cache performance
-    Object.entries(cacheStats).forEach(([strategy, stats]: [string, any]) => {
-      if (stats.hitRate < 0.5) {
+    Object.entries(cacheStats).forEach(([strategy, stats]) => {
+      if (typeof stats.hitRate === 'number' && stats.hitRate < 0.5) {
         recommendations.push({
           type: 'caching',
           severity: 'medium',
@@ -294,14 +321,8 @@ export class PerformanceManager {
   /**
    * Run performance analysis
    */
-  async analyzePerformance(duration = 30000): Promise<{
-    profiling: any;
-    caching: any;
-    network: any;
-    mobile: any;
-    recommendations: any[];
-  }> {
-    console.log('Starting performance analysis...');
+  async analyzePerformance(duration = 30000): Promise<PerformanceReport> {
+    perfLogger.info('Starting performance analysis...');
 
     // Wait for analysis duration
     await new Promise((resolve) => setTimeout(resolve, duration));
@@ -309,7 +330,7 @@ export class PerformanceManager {
     // Get results
     const report = await this.getPerformanceReport();
 
-    console.log('Performance Analysis Complete:', report);
+    perfLogger.info('Performance Analysis Complete', { metadata: { report } });
 
     return report;
   }
@@ -327,7 +348,7 @@ export class PerformanceManager {
   /**
    * Make optimized HTTP request
    */
-  async request<T = any>(config: RequestConfig): Promise<T> {
+  async request<T = unknown>(config: RequestConfig): Promise<T> {
     return this.httpClient.get<T>(config.url, config);
   }
 
@@ -376,8 +397,9 @@ export class PerformanceManager {
    */
   destroy(): void {
     // Clean up profiler if it has cleanup methods
-    if (typeof (this.profiler as any).cleanup === 'function') {
-      (this.profiler as any).cleanup();
+    const profiler = this.profiler as ProfilerWithCleanup;
+    if (typeof profiler.cleanup === 'function') {
+      profiler.cleanup();
     }
     this.mobileOptimizer.destroy();
     this.cacheManager.clear();
@@ -400,6 +422,6 @@ export function initializePerformanceOptimization(config?: PerformanceConfig): P
     manager.getMobileOptimizer().applyOptimizations();
   }
 
-  console.log('HEYS Performance Optimization initialized');
+  perfLogger.info('HEYS Performance Optimization initialized');
   return manager;
 }

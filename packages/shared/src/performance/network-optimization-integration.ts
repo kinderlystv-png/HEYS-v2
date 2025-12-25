@@ -10,8 +10,37 @@
  * - Error handling and recovery
  */
 
-import { NetworkOptimizationConfig, NetworkOptimizer } from './network-optimizer';
+import { logger as baseLogger } from '@heys/logger';
+
+import {
+  NetworkOptimizationConfig,
+  NetworkOptimizer,
+  type NetworkConnection,
+  type NetworkMetrics,
+  type NetworkQualityProfile,
+  type PrefetchRequest,
+} from './network-optimizer';
 import { DashboardConfig, NetworkPerformanceDashboard } from './network-performance-dashboard';
+
+type CurrentMetrics = {
+  network: NetworkMetrics;
+  connection: NetworkConnection | null;
+  quality: NetworkQualityProfile;
+};
+
+type OptimizationStatistics = {
+  isInitialized: boolean;
+  isRunning: boolean;
+  metrics: CurrentMetrics | null;
+  configuration: {
+    prefetchingEnabled: boolean;
+    cachingEnabled: boolean;
+    monitoringEnabled: boolean;
+    dashboardEnabled: boolean;
+  };
+};
+
+const logger = baseLogger.child({ component: 'NetworkOptimizationIntegration' });
 
 export interface NetworkIntegrationConfig {
   optimizer: NetworkOptimizationConfig;
@@ -34,7 +63,7 @@ export interface NetworkIntegrationEvents {
   onOptimizationStop?: () => void;
   onConfigChange?: (config: NetworkIntegrationConfig) => void;
   onError?: (error: Error) => void;
-  onMetricsUpdate?: (metrics: any) => void;
+  onMetricsUpdate?: (metrics: CurrentMetrics) => void;
 }
 
 /**
@@ -179,9 +208,9 @@ export class NetworkOptimizationIntegration {
         await this.start();
       }
 
-      console.log('Network Optimization Integration initialized successfully');
+      logger.info('Network Optimization Integration initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize Network Optimization Integration:', error);
+      logger.error('Failed to initialize Network Optimization Integration', { metadata: { error } });
       this.events.onError?.(error as Error);
       throw error;
     }
@@ -204,10 +233,10 @@ export class NetworkOptimizationIntegration {
       }
 
       this.events.onOptimizationStart?.();
-      console.log('Network optimization started');
+      logger.info('Network optimization started');
     } catch (error) {
       this.isRunning = false;
-      console.error('Failed to start network optimization:', error);
+      logger.error('Failed to start network optimization', { metadata: { error } });
       this.events.onError?.(error as Error);
       throw error;
     }
@@ -236,9 +265,9 @@ export class NetworkOptimizationIntegration {
       }
 
       this.events.onOptimizationStop?.();
-      console.log('Network optimization stopped');
+      logger.info('Network optimization stopped');
     } catch (error) {
-      console.error('Failed to stop network optimization:', error);
+      logger.error('Failed to stop network optimization', { metadata: { error } });
       this.events.onError?.(error as Error);
     }
   }
@@ -252,7 +281,7 @@ export class NetworkOptimizationIntegration {
     }
 
     await this.dashboard.initialize(containerId);
-    console.log('Network dashboard initialized in container:', containerId);
+    logger.info('Network dashboard initialized in container', { metadata: { containerId } });
   }
 
   /**
@@ -271,9 +300,9 @@ export class NetworkOptimizationIntegration {
       await this.saveConfiguration();
 
       this.events.onConfigChange?.(this.config);
-      console.log('Network optimization configuration updated');
+      logger.info('Network optimization configuration updated');
     } catch (error) {
-      console.error('Failed to update configuration:', error);
+      logger.error('Failed to update configuration', { metadata: { error } });
       this.events.onError?.(error as Error);
       throw error;
     }
@@ -303,7 +332,7 @@ export class NetworkOptimizationIntegration {
   /**
    * Get current metrics
    */
-  getCurrentMetrics(): any {
+  getCurrentMetrics(): CurrentMetrics | null {
     if (!this.optimizer) {
       return null;
     }
@@ -329,7 +358,7 @@ export class NetworkOptimizationIntegration {
   /**
    * Schedule prefetch for a resource
    */
-  async prefetchResource(url: string, options?: any): Promise<void> {
+  async prefetchResource(url: string, options?: Partial<PrefetchRequest>): Promise<void> {
     if (!this.optimizer) {
       throw new Error('Network optimizer not initialized');
     }
@@ -346,7 +375,7 @@ export class NetworkOptimizationIntegration {
     }
 
     this.optimizer.adaptToNetworkConditions();
-    console.log('Adapted to current network conditions');
+    logger.info('Adapted to current network conditions');
   }
 
   /**
@@ -357,12 +386,14 @@ export class NetworkOptimizationIntegration {
       // Reset dashboard
       if (this.dashboard) {
         this.dashboard.destroy();
-        this.dashboard = new NetworkPerformanceDashboard(this.optimizer!, this.config.dashboard);
+        if (this.optimizer) {
+          this.dashboard = new NetworkPerformanceDashboard(this.optimizer, this.config.dashboard);
+        }
       }
 
-      console.log('Network optimization state reset');
+      logger.info('Network optimization state reset');
     } catch (error) {
-      console.error('Failed to reset optimization state:', error);
+      logger.error('Failed to reset optimization state', { metadata: { error } });
       this.events.onError?.(error as Error);
     }
   }
@@ -370,7 +401,7 @@ export class NetworkOptimizationIntegration {
   /**
    * Get optimization statistics
    */
-  getStatistics(): any {
+  getStatistics(): OptimizationStatistics {
     const metrics = this.getCurrentMetrics();
 
     return {
@@ -406,9 +437,9 @@ export class NetworkOptimizationIntegration {
       }
 
       this.isInitialized = false;
-      console.log('Network Optimization Integration destroyed');
+      logger.info('Network Optimization Integration destroyed');
     } catch (error) {
-      console.error('Failed to destroy integration:', error);
+      logger.error('Failed to destroy integration', { metadata: { error } });
       this.events.onError?.(error as Error);
     }
   }
@@ -441,7 +472,7 @@ export class NetworkOptimizationIntegration {
         this.config = this.mergeConfig(savedConfig);
       }
     } catch (error) {
-      console.warn('Failed to load saved configuration:', error);
+      logger.warn('Failed to load saved configuration', { metadata: { error } });
     }
   }
 
@@ -453,7 +484,7 @@ export class NetworkOptimizationIntegration {
 
       localStorage.setItem(this.config.integration.storageKey, JSON.stringify(this.config));
     } catch (error) {
-      console.warn('Failed to save configuration:', error);
+      logger.warn('Failed to save configuration', { metadata: { error } });
     }
   }
 
@@ -461,14 +492,14 @@ export class NetworkOptimizationIntegration {
     // Setup global error handling for network optimization
     window.addEventListener('error', (event) => {
       if (event.error && this.config.integration.errorRecovery.fallbackMode) {
-        console.warn('Network optimization error detected, entering fallback mode');
+        logger.warn('Network optimization error detected, entering fallback mode');
         this.events.onError?.(event.error);
       }
     });
 
     window.addEventListener('unhandledrejection', (event) => {
       if (this.config.integration.errorRecovery.fallbackMode) {
-        console.warn('Unhandled promise rejection in network optimization');
+        logger.warn('Unhandled promise rejection in network optimization');
         this.events.onError?.(new Error(event.reason));
       }
     });
@@ -485,7 +516,7 @@ export class NetworkOptimizationIntegration {
           this.events.onMetricsUpdate?.(metrics);
         }
       } catch (error) {
-        console.warn('Configuration sync failed:', error);
+        logger.warn('Configuration sync failed', { metadata: { error } });
       }
     }, this.config.integration.syncInterval);
   }
@@ -504,7 +535,7 @@ export function createNetworkOptimization(
   events?: NetworkIntegrationEvents,
 ): NetworkOptimizationIntegration {
   if (globalNetworkIntegration) {
-    console.warn('Network optimization already exists, destroying previous instance');
+    logger.warn('Network optimization already exists, destroying previous instance');
     globalNetworkIntegration.destroy();
   }
 

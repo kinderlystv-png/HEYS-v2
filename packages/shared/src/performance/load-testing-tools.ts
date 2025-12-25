@@ -13,6 +13,15 @@
  * - Resource utilization tracking
  */
 
+import { logger as baseLogger } from '@heys/logger';
+
+type FetchInit = Parameters<typeof fetch>[1];
+type PerformanceMemory = {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+};
+
 export interface LoadTestConfiguration {
   name: string;
   description: string;
@@ -21,7 +30,7 @@ export interface LoadTestConfiguration {
     url: string;
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
     headers: Record<string, string>;
-    body?: any;
+    body?: unknown;
     timeout: number;
   };
   loadProfile: LoadProfile;
@@ -91,7 +100,7 @@ export interface WidgetConfig {
   type: 'chart' | 'gauge' | 'table' | 'text';
   title: string;
   metric: string;
-  config: any;
+  config: Record<string, unknown>;
 }
 
 export interface ReportingConfig {
@@ -186,7 +195,7 @@ export interface LoadTestError {
   timestamp: number;
   type: string;
   message: string;
-  details: any;
+  details: Record<string, unknown>;
   request_info?: {
     url: string;
     method: string;
@@ -252,7 +261,8 @@ export class LoadTestingEngine {
   private systemMetrics: SystemMetrics = this.createEmptySystemMetrics();
   private errors: LoadTestError[] = [];
   private results: LoadTestResult | null = null;
-  private monitoringInterval: NodeJS.Timeout | null = null;
+  private monitoringInterval: ReturnType<typeof setInterval> | null = null;
+  private readonly logger = baseLogger.child({ component: 'LoadTestingEngine' });
 
   constructor(config: LoadTestConfiguration) {
     this.config = config;
@@ -266,7 +276,7 @@ export class LoadTestingEngine {
       throw new Error('Load test is already running');
     }
 
-    console.log(`Starting ${this.config.type} test: ${this.config.name}`);
+    this.logger.info(`Starting ${this.config.type} test: ${this.config.name}`);
 
     this.isRunning = true;
     this.startTime = Date.now();
@@ -286,9 +296,9 @@ export class LoadTestingEngine {
       // Generate final results
       this.results = await this.generateResults();
 
-      console.log(`Load test completed: ${this.results.status}`);
+      this.logger.info(`Load test completed: ${this.results.status}`);
     } catch (error) {
-      console.error('Load test failed:', error);
+      this.logger.error('Load test failed', { metadata: { error } });
       this.recordError('test_execution', (error as Error).message, { error });
       throw error;
     } finally {
@@ -335,7 +345,7 @@ export class LoadTestingEngine {
     userConfig: VirtualUserConfig,
     duration: number,
   ): Promise<void> {
-    console.log(`Executing constant load: ${userConfig.target} users for ${duration}s`);
+    this.logger.info(`Executing constant load: ${userConfig.target} users for ${duration}s`);
 
     // Ramp up to target users
     await this.rampUpUsers(userConfig.target, userConfig.ramp_duration);
@@ -351,7 +361,7 @@ export class LoadTestingEngine {
    * Execute ramp-up load pattern
    */
   private async executeRampUpLoad(userConfig: VirtualUserConfig, duration: number): Promise<void> {
-    console.log(
+    this.logger.info(
       `Executing ramp-up load: ${userConfig.initial} to ${userConfig.target} users over ${duration}s`,
     );
 
@@ -373,7 +383,7 @@ export class LoadTestingEngine {
    * Execute step load pattern
    */
   private async executeStepLoad(userConfig: VirtualUserConfig, duration: number): Promise<void> {
-    console.log(`Executing step load: increasing by steps over ${duration}s`);
+    this.logger.info(`Executing step load: increasing by steps over ${duration}s`);
 
     const steps = 5;
     const stepDuration = duration / steps;
@@ -392,7 +402,7 @@ export class LoadTestingEngine {
    * Execute spike load pattern
    */
   private async executeSpikeLoad(userConfig: VirtualUserConfig, duration: number): Promise<void> {
-    console.log(`Executing spike load: spike to ${userConfig.target} users`);
+    this.logger.info(`Executing spike load: spike to ${userConfig.target} users`);
 
     const steadyDuration = duration * 0.3;
     const spikeDuration = duration * 0.4;
@@ -418,7 +428,7 @@ export class LoadTestingEngine {
     userConfig: VirtualUserConfig,
     duration: number,
   ): Promise<void> {
-    console.log(`Executing sine-wave load over ${duration}s`);
+    this.logger.info(`Executing sine-wave load over ${duration}s`);
 
     const interval = 5; // 5 second intervals
     const steps = duration / interval;
@@ -438,7 +448,7 @@ export class LoadTestingEngine {
    * Execute random load pattern
    */
   private async executeRandomLoad(userConfig: VirtualUserConfig, duration: number): Promise<void> {
-    console.log(`Executing random load over ${duration}s`);
+    this.logger.info(`Executing random load over ${duration}s`);
 
     const interval = 10; // 10 second intervals
     const steps = duration / interval;
@@ -492,7 +502,7 @@ export class LoadTestingEngine {
    * Sustain load for specified duration
    */
   private async sustainLoad(duration: number): Promise<void> {
-    console.log(`Sustaining load with ${this.virtualUsers.size} users for ${duration}s`);
+    this.logger.info(`Sustaining load with ${this.virtualUsers.size} users for ${duration}s`);
     await this.wait(duration * 1000);
   }
 
@@ -518,7 +528,7 @@ export class LoadTestingEngine {
       }
     }
 
-    console.log(`Adjusted user count to ${this.virtualUsers.size} users`);
+    this.logger.info(`Adjusted user count to ${this.virtualUsers.size} users`);
   }
 
   /**
@@ -583,7 +593,7 @@ export class LoadTestingEngine {
   /**
    * Record error
    */
-  recordError(type: string, message: string, details: any): void {
+  recordError(type: string, message: string, details: Record<string, unknown>): void {
     this.errors.push({
       timestamp: Date.now(),
       type,
@@ -596,7 +606,7 @@ export class LoadTestingEngine {
    * Start monitoring
    */
   private startMonitoring(): void {
-    console.log('Starting performance monitoring...');
+    this.logger.info('Starting performance monitoring...');
 
     this.monitoringInterval = setInterval(() => {
       this.collectSystemMetrics();
@@ -621,8 +631,8 @@ export class LoadTestingEngine {
     const timestamp = Date.now();
 
     // Collect metrics if available
-    if (typeof performance !== 'undefined' && (performance as any).memory) {
-      const memory = (performance as any).memory;
+    const memory = (performance as Performance & { memory?: PerformanceMemory }).memory;
+    if (memory) {
       this.systemMetrics.memory_usage.push({
         timestamp,
         value: memory.usedJSHeapSize,
@@ -642,7 +652,7 @@ export class LoadTestingEngine {
       const passed = this.evaluateThreshold(currentValue, threshold.operator, threshold.value);
 
       if (!passed && threshold.severity === 'critical') {
-        console.warn(`Critical threshold exceeded: ${threshold.metric} = ${currentValue}`);
+        this.logger.warn(`Critical threshold exceeded: ${threshold.metric} = ${currentValue}`);
         // Could stop test or trigger alerts here
       }
     }
@@ -895,7 +905,7 @@ export class LoadTestingEngine {
   async stopTest(): Promise<void> {
     if (!this.isRunning) return;
 
-    console.log('Stopping load test...');
+    this.logger.info('Stopping load test...');
     this.isRunning = false;
   }
 
@@ -934,7 +944,7 @@ class VirtualUser {
   private config: LoadTestConfiguration;
   private engine: LoadTestingEngine;
   private isActive: boolean = false;
-  private executionInterval: NodeJS.Timeout | null = null;
+  private executionInterval: ReturnType<typeof setTimeout> | null = null;
 
   constructor(id: string, config: LoadTestConfiguration, engine: LoadTestingEngine) {
     this.id = id;
@@ -980,7 +990,7 @@ class VirtualUser {
     switch (distribution) {
       case 'uniform':
         return min + Math.random() * (max - min);
-      case 'normal':
+      case 'normal': {
         // Simple normal distribution approximation
         const u1 = Math.random();
         const u2 = Math.random();
@@ -988,9 +998,11 @@ class VirtualUser {
         const mean = (min + max) / 2;
         const stdDev = (max - min) / 6;
         return Math.max(min, Math.min(max, mean + normal * stdDev));
-      case 'exponential':
+      }
+      case 'exponential': {
         const lambda = 1 / ((min + max) / 2);
         return -Math.log(Math.random()) / lambda;
+      }
       default:
         return min + Math.random() * (max - min);
     }
@@ -1004,7 +1016,7 @@ class VirtualUser {
 
     try {
       const { target } = this.config;
-      const requestInit: RequestInit = {
+      const requestInit: FetchInit = {
         method: target.method,
         headers: target.headers,
         signal: AbortSignal.timeout(target.timeout),

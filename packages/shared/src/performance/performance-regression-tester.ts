@@ -13,6 +13,8 @@
  * - Performance alerts and notifications
  */
 
+import { logger as baseLogger } from '@heys/logger';
+
 export interface PerformanceBaseline {
   id: string;
   name: string;
@@ -230,6 +232,7 @@ export interface TrendAnalysis {
  * Performance Regression Testing Engine
  */
 export class PerformanceRegressionTester {
+  private readonly logger = baseLogger.child({ component: 'PerformanceRegressionTester' });
   private baselines: Map<string, PerformanceBaseline> = new Map();
   private regressionResults: Map<string, RegressionResult> = new Map();
   private performanceBudgets: PerformanceBudget[] = [];
@@ -328,7 +331,7 @@ export class PerformanceRegressionTester {
 
     this.baselines.set(baseline.id, baseline);
 
-    console.log(`Created performance baseline: ${name} v${version} (${environment})`);
+    this.logger.info(`Created performance baseline: ${name} v${version} (${environment})`);
     return baseline;
   }
 
@@ -380,7 +383,7 @@ export class PerformanceRegressionTester {
 
     this.regressionResults.set(result.id, result);
 
-    console.log(`Regression analysis completed: ${status}`);
+    this.logger.info(`Regression analysis completed: ${status}`);
     return result;
   }
 
@@ -652,7 +655,8 @@ export class PerformanceRegressionTester {
    * Get metric value from baseline metrics
    */
   private getMetricValue(metrics: BaselineMetrics, metricName: string): number {
-    return (metrics as any)[metricName] || 0;
+    const metricValue = (metrics as Record<string, number>)[metricName];
+    return typeof metricValue === 'number' ? metricValue : 0;
   }
 
   /**
@@ -861,7 +865,7 @@ export class PerformanceRegressionTester {
    */
   configureCicd(config: CicdConfiguration): void {
     this.cicdConfig = config;
-    console.log(`CI/CD integration configured for ${config.pipeline.provider}`);
+    this.logger.info(`CI/CD integration configured for ${config.pipeline.provider}`);
   }
 
   /**
@@ -883,7 +887,7 @@ export class PerformanceRegressionTester {
       throw new Error('CI/CD integration is not configured');
     }
 
-    console.log('Executing CI/CD performance gate...');
+    this.logger.info('Executing CI/CD performance gate...');
 
     // Evaluate performance budgets
     const budgetResults = await this.evaluateBudgets(currentMetrics);
@@ -986,7 +990,7 @@ ${regressionResult.improvements.map((i) => `- ${i.metric}: ${i.changePercent.toF
 
     if (!shouldNotify) return;
 
-    console.log('Sending CI/CD notifications...');
+    this.logger.info('Sending CI/CD notifications...');
 
     for (const channel of notifications.channels) {
       switch (channel) {
@@ -1010,7 +1014,7 @@ ${regressionResult.improvements.map((i) => `- ${i.metric}: ${i.changePercent.toF
    * Send email notification
    */
   private async sendEmailNotification(_summary: string, _passed: boolean): Promise<void> {
-    console.log('Sending email notification...');
+    this.logger.info('Sending email notification...');
     // Implementation would depend on email service
   }
 
@@ -1018,7 +1022,7 @@ ${regressionResult.improvements.map((i) => `- ${i.metric}: ${i.changePercent.toF
    * Send Slack notification
    */
   private async sendSlackNotification(_summary: string, _passed: boolean): Promise<void> {
-    console.log('Sending Slack notification...');
+    this.logger.info('Sending Slack notification...');
     // Implementation would depend on Slack webhook configuration
   }
 
@@ -1026,7 +1030,7 @@ ${regressionResult.improvements.map((i) => `- ${i.metric}: ${i.changePercent.toF
    * Send Teams notification
    */
   private async sendTeamsNotification(_summary: string, _passed: boolean): Promise<void> {
-    console.log('Sending Teams notification...');
+    this.logger.info('Sending Teams notification...');
     // Implementation would depend on Teams webhook configuration
   }
 
@@ -1034,7 +1038,7 @@ ${regressionResult.improvements.map((i) => `- ${i.metric}: ${i.changePercent.toF
    * Send webhook notification
    */
   private async sendWebhookNotification(_summary: string, _passed: boolean): Promise<void> {
-    console.log('Sending webhook notification...');
+    this.logger.info('Sending webhook notification...');
     // Implementation would depend on webhook configuration
   }
 

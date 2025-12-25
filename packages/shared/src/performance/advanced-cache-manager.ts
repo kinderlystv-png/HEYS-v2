@@ -8,6 +8,8 @@
  * @created 2025-01-31
  */
 
+import { logger as baseLogger } from '@heys/logger';
+
 export interface CacheConfig {
   enabled: boolean;
   strategies: {
@@ -87,7 +89,7 @@ export interface CompressionConfig {
   threshold: number;
 }
 
-export interface CacheEntry<T = any> {
+export interface CacheEntry<T = unknown> {
   key: string;
   value: T;
   timestamp: number;
@@ -137,6 +139,7 @@ export class AdvancedCacheManager {
   };
   private serviceWorkerRegistration: ServiceWorkerRegistration | null = null;
   private compressionWorker: Worker | null = null;
+  private readonly logger = baseLogger.child({ component: 'AdvancedCacheManager' });
 
   constructor(config: CacheConfig) {
     this.config = config;
@@ -167,9 +170,9 @@ export class AdvancedCacheManager {
       // Start cleanup intervals
       this.startCleanupIntervals();
 
-      console.log('AdvancedCacheManager initialized successfully');
+      this.logger.info('AdvancedCacheManager initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize AdvancedCacheManager:', error);
+      this.logger.error('Failed to initialize AdvancedCacheManager', { metadata: { error } });
     }
   }
 
@@ -178,7 +181,7 @@ export class AdvancedCacheManager {
    */
   private async initializeServiceWorker(): Promise<void> {
     if (!('serviceWorker' in navigator)) {
-      console.warn('Service Worker not supported');
+      this.logger.warn('Service Worker not supported');
       return;
     }
 
@@ -188,7 +191,7 @@ export class AdvancedCacheManager {
         { scope: this.config.strategies.serviceWorker.scope },
       );
 
-      console.log('Service Worker registered successfully');
+      this.logger.info('Service Worker registered successfully');
 
       // Listen for messages from Service Worker
       navigator.serviceWorker.addEventListener('message', (event) => {
@@ -200,7 +203,7 @@ export class AdvancedCacheManager {
         this.serviceWorkerRegistration?.update();
       }, this.config.strategies.serviceWorker.updateInterval);
     } catch (error) {
-      console.error('Service Worker registration failed:', error);
+      this.logger.error('Service Worker registration failed', { metadata: { error } });
     }
   }
 
@@ -234,7 +237,7 @@ export class AdvancedCacheManager {
       const blob = new Blob([workerCode], { type: 'application/javascript' });
       this.compressionWorker = new Worker(URL.createObjectURL(blob));
     } catch (error) {
-      console.warn('Compression worker initialization failed:', error);
+      this.logger.warn('Compression worker initialization failed', { metadata: { error } });
     }
   }
 
@@ -312,7 +315,7 @@ export class AdvancedCacheManager {
       this.updatePerformanceMetrics(Date.now() - startTime, true);
       return true;
     } catch (error) {
-      console.error('Cache store failed:', error);
+      this.logger.error('Cache store failed', { metadata: { error } });
       this.updatePerformanceMetrics(Date.now() - startTime, false);
       return false;
     }
@@ -377,7 +380,7 @@ export class AdvancedCacheManager {
 
       return result;
     } catch (error) {
-      console.error('Cache retrieve failed:', error);
+      this.logger.error('Cache retrieve failed', { metadata: { error } });
       this.performanceMetrics.misses++;
       this.updatePerformanceMetrics(Date.now() - startTime, false);
       return null;
@@ -419,7 +422,7 @@ export class AdvancedCacheManager {
 
       localStorage.setItem(storageKey, serializedEntry);
     } catch (error) {
-      console.warn('localStorage store failed:', error);
+      this.logger.warn('localStorage store failed', { metadata: { error } });
     }
   }
 
@@ -433,7 +436,7 @@ export class AdvancedCacheManager {
       const storageKey = `heys_session_cache_${key}`;
       sessionStorage.setItem(storageKey, JSON.stringify(entry));
     } catch (error) {
-      console.warn('sessionStorage store failed:', error);
+      this.logger.warn('sessionStorage store failed', { metadata: { error } });
     }
   }
 
@@ -454,7 +457,7 @@ export class AdvancedCacheManager {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      console.warn('IndexedDB store failed:', error);
+      this.logger.warn('IndexedDB store failed', { metadata: { error } });
     }
   }
 
@@ -528,7 +531,7 @@ export class AdvancedCacheManager {
         store.delete(key);
       }
     } catch (error) {
-      console.warn('Cache invalidation partially failed:', error);
+      this.logger.warn('Cache invalidation partially failed', { metadata: { error } });
     }
 
     // Cascade invalidation for dependent entries
@@ -783,13 +786,17 @@ export class AdvancedCacheManager {
     if (event.data?.type) {
       switch (event.data.type) {
         case 'CACHE_STATS':
-          console.log('Service Worker Cache Stats:', event.data.stats);
+          this.logger.info('Service Worker Cache Stats', {
+            metadata: { stats: event.data.stats },
+          });
           break;
         case 'CACHE_CLEARED':
-          console.log('Service Worker cache cleared');
+          this.logger.info('Service Worker cache cleared');
           break;
         case 'SYNC_COMPLETE':
-          console.log(`Background sync completed: ${event.data.processed} requests`);
+          this.logger.info('Background sync completed', {
+            metadata: { processed: event.data.processed },
+          });
           break;
       }
     }
@@ -870,7 +877,7 @@ export class AdvancedCacheManager {
       }
       keysToRemove.forEach((key) => localStorage.removeItem(key));
     } catch (error) {
-      console.warn('localStorage clear failed:', error);
+      this.logger.warn('localStorage clear failed', { metadata: { error } });
     }
 
     // Clear sessionStorage
@@ -889,14 +896,14 @@ export class AdvancedCacheManager {
         store.clear();
       }
     } catch (error) {
-      console.warn('IndexedDB clear failed:', error);
+      this.logger.warn('IndexedDB clear failed', { metadata: { error } });
     }
 
     // Clear Service Worker cache
     if (this.serviceWorkerRegistration) {
       const messageChannel = new MessageChannel();
       messageChannel.port1.onmessage = (event) => {
-        console.log('Service Worker cache cleared:', event.data);
+        this.logger.info('Service Worker cache cleared', { metadata: { data: event.data } });
       };
 
       navigator.serviceWorker.controller?.postMessage({ type: 'CLEAR_CACHE' }, [

@@ -7,8 +7,18 @@
  * @created 2025-01-31
  */
 
-import { AdvancedCacheManager, CacheConfig, defaultCacheConfig } from './advanced-cache-manager';
+import { logger as baseLogger } from '@heys/logger';
+
+import {
+  AdvancedCacheManager,
+  CacheConfig,
+  type CacheStats,
+  defaultCacheConfig,
+} from './advanced-cache-manager';
 import { HTTPCacheConfig, HTTPCacheStrategy, defaultHTTPCacheConfig } from './http-cache-strategy';
+
+type FetchInput = Parameters<typeof fetch>[0];
+type FetchInit = Parameters<typeof fetch>[1];
 
 export interface CacheIntegrationConfig {
   cache: CacheConfig;
@@ -43,6 +53,7 @@ export class CacheIntegrationLayer {
   private config: CacheIntegrationConfig;
   private performanceMetrics: CachePerformanceMetrics;
   private invalidationRules: Map<string, CacheInvalidationRule>;
+  private readonly logger = baseLogger.child({ component: 'CacheIntegrationLayer' });
 
   constructor(config?: Partial<CacheIntegrationConfig>) {
     this.config = {
@@ -89,9 +100,11 @@ export class CacheIntegrationLayer {
       // Setup performance monitoring
       this.startPerformanceMonitoring();
 
-      console.log('Cache Integration Layer initialized successfully');
+      this.logger.info('Cache Integration Layer initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize Cache Integration Layer:', error);
+      this.logger.error('Failed to initialize Cache Integration Layer', {
+        metadata: { error },
+      });
     }
   }
 
@@ -123,14 +136,14 @@ export class CacheIntegrationLayer {
 
       const result = await this.cacheManager.store(key, value, {
         ...restOptions,
-        strategy: finalStrategy as any,
+        strategy: finalStrategy,
       });
 
       this.updatePerformanceMetrics(Date.now() - startTime, result);
 
       return result;
     } catch (error) {
-      console.error('Cache store failed:', error);
+      this.logger.error('Cache store failed', { metadata: { error } });
       this.updatePerformanceMetrics(Date.now() - startTime, false);
       return false;
     }
@@ -156,7 +169,7 @@ export class CacheIntegrationLayer {
 
       return result;
     } catch (error) {
-      console.error('Cache retrieve failed:', error);
+      this.logger.error('Cache retrieve failed', { metadata: { error } });
       this.updatePerformanceMetrics(Date.now() - startTime, false);
       return null;
     }
@@ -168,7 +181,7 @@ export class CacheIntegrationLayer {
   private selectOptimalStrategy<T>(
     key: string,
     value: T,
-    _options: any,
+    _options: Record<string, unknown>,
   ): 'memory' | 'localStorage' | 'sessionStorage' | 'indexedDB' {
     const serialized = JSON.stringify(value);
     const size = serialized.length;
@@ -199,7 +212,7 @@ export class CacheIntegrationLayer {
     const httpCacheAwareFetch = this.httpCache.createCacheAwareFetch();
     const cacheManager = this.cacheManager;
 
-    return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    return async (input: FetchInput, init?: FetchInit): Promise<Response> => {
       const request = new Request(input, init);
       const cacheKey = this.generateCacheKey(request);
 
@@ -290,7 +303,7 @@ export class CacheIntegrationLayer {
       const rule = this.invalidationRules.get(pattern);
 
       if (rule) {
-        console.log(`Applying invalidation rule for pattern: ${pattern}`);
+        this.logger.info(`Applying invalidation rule for pattern: ${pattern}`);
 
         if (rule.triggers.includes('dependency') && cascade) {
           // Find and invalidate dependent entries
@@ -304,7 +317,7 @@ export class CacheIntegrationLayer {
       this.performanceMetrics.invalidations++;
       this.performanceMetrics.lastUpdated = new Date();
     } catch (error) {
-      console.error('Cache invalidation failed:', error);
+      this.logger.error('Cache invalidation failed', { metadata: { error } });
     }
   }
 
@@ -314,7 +327,7 @@ export class CacheIntegrationLayer {
   private async cascadeInvalidation(pattern: string): Promise<void> {
     // Implementation would depend on dependency tracking
     // For now, we'll just log the operation
-    console.log(`Cascading invalidation for pattern: ${pattern}`);
+    this.logger.info(`Cascading invalidation for pattern: ${pattern}`);
   }
 
   /**
@@ -323,9 +336,13 @@ export class CacheIntegrationLayer {
   async getStats(): Promise<
     CachePerformanceMetrics & {
       breakdown: {
-        memory: any;
-        http: any;
-        advanced: any;
+        memory: Awaited<ReturnType<AdvancedCacheManager['getStats']>>;
+        http: ReturnType<HTTPCacheStrategy['getCacheStats']>;
+        advanced: {
+          totalCacheSize: number;
+          cacheTypes: string[];
+          hitRateByType: CacheStats['byType'];
+        };
       };
     }
   > {
@@ -398,7 +415,7 @@ export class CacheIntegrationLayer {
         this.performanceMetrics.cacheSize = stats.total.size;
         this.performanceMetrics.lastUpdated = new Date();
       } catch (error) {
-        console.warn('Performance monitoring update failed:', error);
+        this.logger.warn('Performance monitoring update failed', { metadata: { error } });
       }
     }, 30000);
   }

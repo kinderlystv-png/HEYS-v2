@@ -9,6 +9,8 @@
 
 import { performance } from 'perf_hooks';
 
+import { logger as baseLogger } from '@heys/logger';
+
 /**
  * Конфигурация для Lighthouse оптимизации
  */
@@ -108,7 +110,7 @@ export interface LighthouseResults {
     scoreDisplayMode: string;
     numericValue: number;
     displayValue: string;
-    details?: any;
+    details?: Record<string, unknown>;
   }>;
 
   /**
@@ -120,7 +122,7 @@ export interface LighthouseResults {
     description: string;
     scoreDisplayMode: string;
     displayValue: string;
-    details?: any;
+    details?: Record<string, unknown>;
   }>;
 
   /**
@@ -190,6 +192,7 @@ export interface OptimizationProgress {
  */
 export class LighthouseOptimizer {
   private config: LighthouseConfig;
+  private readonly logger = baseLogger.child({ component: 'LighthouseOptimizer' });
   private baseline?: LighthouseResults;
   private currentResults?: LighthouseResults;
   private optimizationHistory: LighthouseResults[] = [];
@@ -290,7 +293,7 @@ export class LighthouseOptimizer {
   async runLighthouseAudit(url: string): Promise<LighthouseResults> {
     this.validateUrl(url);
 
-    console.log(`🔍 Запуск Lighthouse аудита для ${url}...`);
+    this.logger.info(`Запуск Lighthouse аудита для ${url}...`);
 
     try {
       // Симуляция запуска Lighthouse
@@ -354,10 +357,10 @@ export class LighthouseOptimizer {
         },
       };
 
-      console.log(`✅ Аудит завершен. Скор: ${mockResults.overallScore}`);
+      this.logger.info(`Аудит завершен. Скор: ${mockResults.overallScore}`);
       return mockResults;
     } catch (error) {
-      console.error('❌ Ошибка запуска Lighthouse:', error);
+      this.logger.error('Ошибка запуска Lighthouse', { metadata: { error } });
       throw new Error(
         `Ошибка Lighthouse аудита: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
       );

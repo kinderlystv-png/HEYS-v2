@@ -12,6 +12,24 @@
  * - Real-time network performance metrics
  */
 
+import { logger as baseLogger } from '@heys/logger';
+
+type FetchInit = Parameters<typeof fetch>[1];
+type PrefetchFetchInit = FetchInit & { priority?: 'low' | 'auto' | 'high' };
+
+type NavigatorConnection = {
+  effectiveType?: string;
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+  type?: string;
+  addEventListener?: (event: 'change', handler: () => void) => void;
+};
+
+type NavigatorWithConnection = Navigator & { connection?: NavigatorConnection };
+
+const logger = baseLogger.child({ component: 'NetworkOptimizer' });
+
 export interface NetworkConnection {
   effectiveType: '2g' | '3g' | '4g' | '5g' | 'wifi' | 'unknown';
   downlink: number; // Mbps
@@ -88,7 +106,7 @@ export interface PrefetchRequest {
   probability: number;
   conditions: PrefetchCondition[];
   timeout: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface PrefetchCondition {
@@ -197,9 +215,9 @@ export class NetworkOptimizer {
       }
 
       this.isInitialized = true;
-      console.log('Network Optimizer initialized successfully');
+      logger.info('Network Optimizer initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize Network Optimizer:', error);
+      logger.error('Failed to initialize Network Optimizer', { metadata: { error } });
     }
   }
 
@@ -402,22 +420,22 @@ export class NetworkOptimizer {
 
   private setupHTTP2Push(): void {
     // Implementation for HTTP/2 Server Push optimization
-    console.log('HTTP/2 Push optimization enabled');
+    logger.info('HTTP/2 Push optimization enabled');
   }
 
   private setupHTTP3Support(): void {
     // Implementation for HTTP/3 support
-    console.log('HTTP/3 support enabled');
+    logger.info('HTTP/3 support enabled');
   }
 
   private setupConnectionPooling(): void {
     // Implementation for connection pooling
-    console.log('Connection pooling enabled');
+    logger.info('Connection pooling enabled');
   }
 
   private setupKeepAlive(): void {
     // Implementation for keep-alive optimization
-    console.log('Keep-alive optimization enabled');
+    logger.info('Keep-alive optimization enabled');
   }
 
   updateConfig(newConfig: Partial<NetworkOptimizationConfig>): void {
@@ -451,16 +469,17 @@ class ConnectionMonitor {
 
   private initializeConnectionAPI(): void {
     if (typeof navigator !== 'undefined' && 'connection' in navigator) {
-      const conn = (navigator as any).connection;
+      const conn = (navigator as NavigatorWithConnection).connection;
+      if (!conn) return;
       this.updateConnection(conn);
 
-      conn.addEventListener('change', () => {
+      conn.addEventListener?.('change', () => {
         this.updateConnection(conn);
       });
     }
   }
 
-  private updateConnection(conn: any): void {
+  private updateConnection(conn: NavigatorConnection): void {
     this.connection = {
       effectiveType: conn.effectiveType || 'unknown',
       downlink: conn.downlink || 0,
@@ -473,9 +492,9 @@ class ConnectionMonitor {
   }
 
   private notifyObservers(): void {
-    if (this.connection) {
-      this.observers.forEach((observer) => observer(this.connection!));
-    }
+    const connection = this.connection;
+    if (!connection) return;
+    this.observers.forEach((observer) => observer(connection));
   }
 
   getConnectionInfo(): NetworkConnection | null {
@@ -604,14 +623,14 @@ class PrefetchManager {
       const response = await fetch(request.url, {
         priority: 'low',
         signal: AbortSignal.timeout(request.timeout),
-      } as any);
+      } as PrefetchFetchInit);
 
       if (response.ok) {
         // Store in cache or mark as prefetched
-        console.log(`Prefetched: ${request.url}`);
+        logger.info(`Prefetched: ${request.url}`);
       }
     } catch (error) {
-      console.warn(`Prefetch failed for ${request.url}:`, error);
+      logger.warn(`Prefetch failed for ${request.url}`, { metadata: { error } });
     } finally {
       this.activeRequests.delete(request.url);
     }
@@ -642,7 +661,7 @@ class PrefetchManager {
 
   startMonitoring(): void {
     // Start monitoring for prefetch opportunities
-    console.log('Prefetch monitoring started');
+    logger.info('Prefetch monitoring started');
   }
 
   destroy(): void {
@@ -661,7 +680,7 @@ class PredictionEngine {
   async initialize(): Promise<void> {
     // Initialize ML model for prediction
     this.isInitialized = true;
-    console.log('Prediction engine initialized');
+    logger.info('Prediction engine initialized');
   }
 
   predict(): boolean {
@@ -688,12 +707,12 @@ class NetworkCacheManager {
 
   async initialize(): Promise<void> {
     // Initialize cache storage
-    console.log('Network cache manager initialized');
+    logger.info('Network cache manager initialized');
   }
 
   enableCompression(): void {
     this.compressionEnabled = true;
-    console.log('Network cache compression enabled');
+    logger.info('Network cache compression enabled');
   }
 
   async get(request: Request): Promise<Response | null> {
@@ -856,7 +875,7 @@ class NetworkErrorHandler {
 
   enableCircuitBreaker(): void {
     this.circuitBreakerEnabled = true;
-    console.log('Network error circuit breaker enabled');
+    logger.info('Network error circuit breaker enabled');
   }
 
   setBackoffStrategy(strategy: 'linear' | 'exponential' | 'adaptive'): void {
@@ -868,7 +887,7 @@ class NetworkErrorHandler {
   }
 
   async executeWithRetry(request: Request): Promise<Response> {
-    let lastError: Error;
+    let lastError: Error | null = null;
 
     for (let attempt = 0; attempt <= this.config.maxRetries; attempt++) {
       try {
@@ -888,7 +907,10 @@ class NetworkErrorHandler {
       }
     }
 
-    throw lastError!;
+    if (lastError) {
+      throw lastError;
+    }
+    throw new Error('Network request failed without error details');
   }
 
   private calculateBackoff(attempt: number): number {
@@ -933,12 +955,12 @@ class QualityAdapter {
 
   initializeProfiles(): void {
     // Initialize quality profiles
-    console.log('Quality profiles initialized');
+    logger.info('Quality profiles initialized');
   }
 
   enableAdaptiveStreaming(): void {
     this.adaptiveStreamingEnabled = true;
-    console.log('Adaptive streaming enabled for quality adaptation');
+    logger.info('Adaptive streaming enabled for quality adaptation');
   }
 
   getCurrentProfile(): NetworkQualityProfile {
@@ -1067,7 +1089,7 @@ class NetworkMetricsCollector {
     this.realTimeReporting = true;
   }
 
-  setAlertThresholds(thresholds: any): void {
+  setAlertThresholds(thresholds: NetworkOptimizationConfig['monitoring']['alertThresholds']): void {
     this.config.alertThresholds = thresholds;
   }
 
@@ -1118,7 +1140,7 @@ class NetworkMetricsCollector {
 
   private reportMetrics(): void {
     // Report metrics to monitoring system
-    console.log('Network metrics:', this.metrics);
+    logger.info('Network metrics', { metadata: { metrics: this.metrics } });
   }
 
   destroy(): void {

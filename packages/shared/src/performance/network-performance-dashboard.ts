@@ -11,6 +11,8 @@
  * - Interactive performance controls
  */
 
+import { logger as baseLogger } from '@heys/logger';
+
 import {
   NetworkConnection,
   NetworkMetrics,
@@ -88,6 +90,7 @@ export class NetworkPerformanceDashboard {
   private stats: NetworkStats;
   private isRunning: boolean = false;
   private intervalId: number | null = null;
+  private readonly logger = baseLogger.child({ component: 'NetworkPerformanceDashboard' });
 
   constructor(networkOptimizer: NetworkOptimizer, config: DashboardConfig) {
     this.networkOptimizer = networkOptimizer;
@@ -126,7 +129,7 @@ export class NetworkPerformanceDashboard {
       this.initializeControls();
     }
 
-    console.log('Network Performance Dashboard initialized');
+    this.logger.info('Network Performance Dashboard initialized');
   }
 
   /**
@@ -140,7 +143,7 @@ export class NetworkPerformanceDashboard {
       this.updateDashboard();
     }, this.config.refreshInterval);
 
-    console.log('Network Performance Dashboard started');
+    this.logger.info('Network Performance Dashboard started');
   }
 
   /**
@@ -155,7 +158,7 @@ export class NetworkPerformanceDashboard {
       this.intervalId = null;
     }
 
-    console.log('Network Performance Dashboard stopped');
+    this.logger.info('Network Performance Dashboard stopped');
   }
 
   /**
@@ -179,7 +182,7 @@ export class NetworkPerformanceDashboard {
       // Update statistics
       this.updateStatistics(metrics);
     } catch (error) {
-      console.error('Error updating dashboard:', error);
+      this.logger.error('Error updating dashboard', { metadata: { error } });
     }
   }
 
@@ -781,7 +784,7 @@ export class NetworkPerformanceDashboard {
    */
   private showNotification(alert: PerformanceAlert): void {
     // Implementation for showing notifications
-    console.log(`Alert: ${alert.message}`);
+    this.logger.info(`Alert: ${alert.message}`);
   }
 
   /**
@@ -836,7 +839,7 @@ export class NetworkPerformanceDashboard {
    */
   private initializeNotifications(): void {
     // Setup notification system
-    console.log('Notifications initialized');
+    this.logger.info('Notifications initialized');
   }
 
   /**
@@ -844,7 +847,7 @@ export class NetworkPerformanceDashboard {
    */
   private initializeControls(): void {
     // Setup interactive controls
-    console.log('Dashboard controls initialized');
+    this.logger.info('Dashboard controls initialized');
   }
 
   /**
@@ -866,7 +869,7 @@ export class NetworkPerformanceDashboard {
     this.charts.forEach((chart) => chart.clear());
     this.updateAlertsDisplay();
 
-    console.log('Dashboard reset');
+    this.logger.info('Dashboard reset');
   }
 
   /**
@@ -936,10 +939,11 @@ class Chart {
   private render(): void {
     if (!this.ctx || !this.canvas) return;
 
+    const ctx = this.ctx;
     const { width, height } = this.canvas;
 
     // Clear canvas
-    this.ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, width, height);
 
     if (this.data.length < 2) return;
 
@@ -950,39 +954,39 @@ class Chart {
     const range = maxValue - minValue || 1;
 
     // Draw grid
-    this.ctx.strokeStyle = '#e9ecef';
-    this.ctx.lineWidth = 1;
+    ctx.strokeStyle = '#e9ecef';
+    ctx.lineWidth = 1;
 
     for (let i = 0; i <= 5; i++) {
       const y = (height / 5) * i;
-      this.ctx.beginPath();
-      this.ctx.moveTo(0, y);
-      this.ctx.lineTo(width, y);
-      this.ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
     }
 
     // Draw line
-    this.ctx.strokeStyle = this.config.color;
-    this.ctx.lineWidth = 2;
-    this.ctx.beginPath();
+    ctx.strokeStyle = this.config.color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
 
     this.data.forEach((point, index) => {
       const x = (width / (this.data.length - 1)) * index;
       const y = height - ((point.value - minValue) / range) * height;
 
       if (index === 0) {
-        this.ctx!.moveTo(x, y);
+        ctx.moveTo(x, y);
       } else {
-        this.ctx!.lineTo(x, y);
+        ctx.lineTo(x, y);
       }
     });
 
-    this.ctx.stroke();
+    ctx.stroke();
 
     // Draw title
-    this.ctx.fillStyle = '#343a40';
-    this.ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    this.ctx.fillText(this.config.label, 10, 20);
+    ctx.fillStyle = '#343a40';
+    ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(this.config.label, 10, 20);
   }
 
   clear(): void {
