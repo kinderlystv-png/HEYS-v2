@@ -7,7 +7,7 @@
  * @created 2025-01-31
  */
 
-import { logger as baseLogger } from '@heys/logger';
+import { perfLogger } from './logger';
 
 type FetchInit = Parameters<typeof fetch>[1];
 
@@ -20,7 +20,7 @@ type NetworkConnection = {
   addEventListener?: (event: string, handler: () => void) => void;
 };
 
-const networkLogger = baseLogger.child({ component: 'NetworkOptimizer' });
+const networkLogger = perfLogger;
 
 /**
  * Request priority levels
@@ -148,9 +148,7 @@ class RequestQueue {
 
   private async executeRequest(request: NetworkRequest): Promise<void> {
     // This would be implemented by the NetworkOptimizer
-    networkLogger.info(`Executing request ${request.id}`, {
-      metadata: { priority: request.config.priority },
-    });
+    networkLogger.info({ priority: request.config.priority }, `Executing request ${request.id}`);
   }
 
   setMaxConcurrent(max: number): void {
@@ -200,12 +198,14 @@ export class NetworkOptimizer {
 
     if ('connection' in navigator) {
       const connection = (navigator as { connection?: NetworkConnection }).connection;
-      info.type = connection.type || 'unknown';
-      info.effectiveType = connection.effectiveType || 'unknown';
-      info.downlink = connection.downlink || 10;
-      info.rtt = connection.rtt || 100;
-      info.saveData = connection.saveData || false;
-      info.estimatedBandwidth = connection.downlink || 10;
+      if (connection) {
+        info.type = connection.type || 'unknown';
+        info.effectiveType = connection.effectiveType || 'unknown';
+        info.downlink = connection.downlink || 10;
+        info.rtt = connection.rtt || 100;
+        info.saveData = connection.saveData || false;
+        info.estimatedBandwidth = connection.downlink || 10;
+      }
     }
 
     return info;
@@ -229,7 +229,7 @@ export class NetworkOptimizer {
     // Monitor connection changes
     if ('connection' in navigator && (navigator as { connection?: NetworkConnection }).connection) {
       const connection = (navigator as { connection?: NetworkConnection }).connection;
-      if (typeof connection.addEventListener === 'function') {
+      if (connection && typeof connection.addEventListener === 'function') {
         connection.addEventListener('change', () => {
           this.connectionInfo = this.detectConnectionInfo();
           this.onConnectionChange();
@@ -243,7 +243,7 @@ export class NetworkOptimizer {
    */
   private onConnectionChange(): void {
     this.optimizeForConnection();
-    networkLogger.info('Network connection changed', { metadata: this.connectionInfo });
+    networkLogger.info({ connectionInfo: this.connectionInfo }, 'Network connection changed');
   }
 
   /**
@@ -286,7 +286,7 @@ export class NetworkOptimizer {
         request.endTime = performance.now();
         request.duration = request.endTime - request.startTime;
         this.requestHistory.push(request);
-        return cached;
+        return cached as T;
       }
     }
 
@@ -303,7 +303,7 @@ export class NetworkOptimizer {
         this.requestCache.set(cacheKey, response);
       }
 
-      return response;
+      return response as T;
     } catch (error) {
       // Handle retries
       if (request.retryCount < (config.retries || 3)) {
@@ -411,7 +411,7 @@ export class NetworkOptimizer {
           });
           this.preloadedResources.add(url);
         } catch (error) {
-          networkLogger.warn(`Failed to preload resource: ${url}`, { metadata: { error } });
+          networkLogger.warn({ error }, `Failed to preload resource: ${url}`);
         }
       });
 
@@ -452,7 +452,7 @@ export class NetworkOptimizer {
       const batchUrl = this.createBatchUrl(batchableConfigs);
 
       try {
-        const batchResponse = await this.request({
+        const batchResponse = await this.request<{ responses?: T[] }>({
           url: batchUrl,
           method: 'POST',
           body: { requests: batchableConfigs },
@@ -461,9 +461,7 @@ export class NetworkOptimizer {
 
         return batchResponse.responses || [];
       } catch (error) {
-        networkLogger.warn('Batch request failed, falling back to individual requests', {
-          metadata: { error },
-        });
+        networkLogger.warn({ err: error as Error }, 'Batch request failed, falling back to individual requests');
       }
     }
 
@@ -604,9 +602,9 @@ export class OfflineSupport {
   private async registerServiceWorker(): Promise<void> {
     try {
       const registration = await navigator.serviceWorker.register('/sw.js');
-      networkLogger.info('Service Worker registered', { metadata: { registration } });
+      networkLogger.info({ registration }, 'Service Worker registered');
     } catch (error) {
-      networkLogger.error('Service Worker registration failed', { metadata: { error } });
+      networkLogger.error({ error }, 'Service Worker registration failed');
     }
   }
 
@@ -631,7 +629,7 @@ export class OfflineSupport {
       try {
         await this.networkOptimizer.request(config);
       } catch (error) {
-        networkLogger.error('Failed to process offline request', { metadata: { error } });
+        networkLogger.error({ error }, 'Failed to process offline request');
         // Re-queue failed requests
         this.offlineQueue.push(config);
       }
@@ -647,7 +645,7 @@ export class OfflineSupport {
     try {
       localStorage.setItem('heys-offline-queue', JSON.stringify(this.offlineQueue));
     } catch (error) {
-      networkLogger.error('Failed to save offline queue', { metadata: { error } });
+      networkLogger.error({ error }, 'Failed to save offline queue');
     }
   }
 
@@ -661,7 +659,7 @@ export class OfflineSupport {
         this.offlineQueue = JSON.parse(saved);
       }
     } catch (error) {
-      networkLogger.error('Failed to load offline queue', { metadata: { error } });
+      networkLogger.error({ error }, 'Failed to load offline queue');
     }
   }
 }

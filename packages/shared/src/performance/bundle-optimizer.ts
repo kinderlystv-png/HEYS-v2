@@ -9,7 +9,7 @@
 
 import { constants as zlibConstants } from 'zlib';
 
-import { logger as baseLogger } from '@heys/logger';
+import { perfLogger } from './logger';
 
 type IntersectionObserverOptions = {
   root?: Element | null;
@@ -101,7 +101,7 @@ export class BundleOptimizer {
   private loadingPromises = new Map<string, Promise<unknown>>();
   private config: BundleOptimizationConfig;
   private observers: IntersectionObserver[] = [];
-  private readonly logger = baseLogger.child({ component: 'BundleOptimizer' });
+  private readonly logger = perfLogger;
 
   constructor(config?: Partial<BundleOptimizationConfig>) {
     this.config = this.mergeConfig(config);
@@ -164,7 +164,7 @@ export class BundleOptimizer {
         });
         observer.observe({ entryTypes: ['navigation'] });
       } catch (error) {
-        this.logger.warn('Performance monitoring setup failed', { metadata: { error } });
+        this.logger.warn({ error }, 'Performance monitoring setup failed');
       }
     } else {
       // Graceful degradation for environments without PerformanceObserver
@@ -193,7 +193,7 @@ export class BundleOptimizer {
       }
     });
 
-    this.logger.info('Bundle load performance', { metadata: metrics });
+    this.logger.info(metrics, 'Bundle load performance');
   }
 
   /**
@@ -209,7 +209,7 @@ export class BundleOptimizer {
     // Check if module is already loaded
     if (this.loadedModules.has(moduleName)) {
       return {
-        module: this.loadedModules.get(moduleName),
+        module: this.loadedModules.get(moduleName) as T,
         loadTime: 0,
         cached: true,
       };
@@ -249,9 +249,7 @@ export class BundleOptimizer {
       this.loadingPromises.delete(moduleName);
 
       // Log performance metrics
-      this.logger.info(`Module '${moduleName}' loaded`, {
-        metadata: { loadTimeMs: Number(actualLoadTime.toFixed(2)) },
-      });
+      this.logger.info({ loadTimeMs: Number(actualLoadTime.toFixed(2)) }, `Module '${moduleName}' loaded`);
 
       return {
         module,
@@ -260,7 +258,7 @@ export class BundleOptimizer {
       };
     } catch (error) {
       this.loadingPromises.delete(moduleName);
-      this.logger.error(`Failed to load module '${moduleName}'`, { metadata: { error } });
+      this.logger.error({ error }, `Failed to load module '${moduleName}'`);
 
       return {
         module: null as unknown as T,
@@ -335,9 +333,7 @@ export class BundleOptimizer {
         // Return the default export
         return result.module.default;
       } catch (error) {
-        this.logger.error(`Failed to load component '${componentName}'`, {
-          metadata: { error },
-        });
+        this.logger.error({ err: error as Error }, `Failed to load component '${componentName}'`);
 
         // If fallback is provided, return it instead of throwing
         if (fallback) {
@@ -397,9 +393,7 @@ export class BundleOptimizer {
 
               observer.unobserve(entry.target);
             } catch (error) {
-              this.logger.error(`Failed to load module '${moduleName}' for element`, {
-                metadata: { error },
-              });
+              this.logger.error({ err: error as Error }, `Failed to load module '${moduleName}' for element`);
             }
           }
         });
@@ -761,12 +755,10 @@ export function createLazyComponentFactory(
   return async () => {
     try {
       const module = await importFunction();
-      baseLogger.info(`Lazy component '${componentName}' loaded successfully`);
+      perfLogger.info(`Lazy component '${componentName}' loaded successfully`);
       return module.default;
     } catch (error) {
-      baseLogger.error(`Failed to load lazy component '${componentName}'`, {
-        metadata: { error },
-      });
+      perfLogger.error({ err: error as Error }, `Failed to load lazy component '${componentName}'`);
       throw error;
     }
   };
@@ -808,13 +800,11 @@ export function trackBundleSize(
     const result = originalMethod.apply(this, args);
     const endTime = performance.now();
 
-    baseLogger.info('Method execution time', {
-      metadata: {
-        method: propertyKey,
-        target: targetObj.constructor?.name || 'object',
-        durationMs: endTime - startTime,
-      },
-    });
+    perfLogger.info({
+      method: propertyKey,
+      target: targetObj.constructor?.name || 'object',
+      durationMs: endTime - startTime,
+    }, 'Method execution time');
 
     return result;
   };

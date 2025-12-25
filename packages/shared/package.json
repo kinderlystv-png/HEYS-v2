@@ -23,6 +23,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@heys/logger": "workspace:*",
     "@supabase/supabase-js": "^2.56.1",
     "dompurify": "^3.2.6",
     "zod": "^3.25.76"

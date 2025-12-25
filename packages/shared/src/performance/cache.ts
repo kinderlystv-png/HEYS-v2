@@ -7,9 +7,9 @@
  * @created 2025-01-31
  */
 
-import { logger as baseLogger } from '@heys/logger';
+import { perfLogger } from './logger';
 
-const cacheLogger = baseLogger.child({ component: 'Cache' });
+const cacheLogger = perfLogger;
 
 /**
  * Cache configuration options
@@ -132,12 +132,12 @@ export class MemoryCacheStrategy implements CacheStrategy {
       value = await this.decrypt(value);
     }
 
-    return value;
+    return value as T;
   }
 
   async set<T>(key: string, value: T, options: Partial<CacheConfig> = {}): Promise<void> {
     const config: Required<CacheConfig> = { ...this.config, ...options };
-    let processedValue = value;
+    let processedValue: T | unknown = value;
     let compressed = false;
     let encrypted = false;
 
@@ -156,7 +156,7 @@ export class MemoryCacheStrategy implements CacheStrategy {
     const size = this.calculateSize(processedValue);
     const entry: CacheEntry<T> = {
       key,
-      value: processedValue,
+      value: processedValue as T,
       timestamp: Date.now(),
       ttl: config.ttl,
       size,
@@ -275,7 +275,7 @@ export class MemoryCacheStrategy implements CacheStrategy {
 
   private async decrypt(value: unknown): Promise<unknown> {
     // Simplified decryption simulation
-    return JSON.parse(atob(value));
+    return JSON.parse(atob(value as string));
   }
 }
 
@@ -341,7 +341,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
       return entry.value;
     } catch (error) {
       this.stats.misses++;
-      cacheLogger.warn('LocalStorage get error', { metadata: { error } });
+      cacheLogger.warn({ error }, 'LocalStorage get error');
       return null;
     }
   }
@@ -401,12 +401,10 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
           };
           localStorage.setItem(this.getKey(key), JSON.stringify(entry));
         } catch (retryError) {
-          cacheLogger.warn('LocalStorage set failed after eviction', {
-            metadata: { error: retryError },
-          });
+          cacheLogger.warn({ err: retryError as Error }, 'LocalStorage set failed after eviction');
         }
       } else {
-        cacheLogger.warn('LocalStorage set error', { metadata: { error } });
+        cacheLogger.warn({ error }, 'LocalStorage set error');
       }
     }
   }
@@ -418,7 +416,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
       localStorage.removeItem(fullKey);
       return exists;
     } catch (error) {
-      cacheLogger.warn('LocalStorage delete error', { metadata: { error } });
+      cacheLogger.warn({ error }, 'LocalStorage delete error');
       return false;
     }
   }
@@ -434,7 +432,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
       }
       keysToRemove.forEach((key) => localStorage.removeItem(key));
     } catch (error) {
-      cacheLogger.warn('LocalStorage clear error', { metadata: { error } });
+      cacheLogger.warn({ error }, 'LocalStorage clear error');
     }
   }
 
@@ -442,7 +440,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
     try {
       return localStorage.getItem(this.getKey(key)) !== null;
     } catch (error) {
-      cacheLogger.warn('LocalStorage has error', { metadata: { error } });
+      cacheLogger.warn({ error }, 'LocalStorage has error');
       return false;
     }
   }
@@ -458,7 +456,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
       }
       return count;
     } catch (error) {
-      cacheLogger.warn('LocalStorage size error', { metadata: { error } });
+      cacheLogger.warn({ error }, 'LocalStorage size error');
       return 0;
     }
   }
@@ -474,7 +472,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
       }
       return keys;
     } catch (error) {
-      cacheLogger.warn('LocalStorage keys error', { metadata: { error } });
+      cacheLogger.warn({ error }, 'LocalStorage keys error');
       return [];
     }
   }
@@ -555,7 +553,7 @@ export class LocalStorageCacheStrategy implements CacheStrategy {
         }
       }
     } catch (error) {
-      cacheLogger.warn('LocalStorage LRU eviction error', { metadata: { error } });
+      cacheLogger.warn({ error }, 'LocalStorage LRU eviction error');
     }
   }
 
@@ -674,7 +672,7 @@ export class IndexedDBCacheStrategy implements CacheStrategy {
 
         // Process value (decompress/decrypt)
         this.processValue(entry.value, entry.compressed, entry.encrypted)
-          .then(resolve)
+          .then((value) => resolve(value as T))
           .catch(reject);
       };
     });
@@ -686,7 +684,7 @@ export class IndexedDBCacheStrategy implements CacheStrategy {
 
     const entry: CacheEntry<T> = {
       key,
-      value: processedValue.value,
+      value: processedValue.value as T,
       timestamp: Date.now(),
       ttl: config.ttl,
       size: this.calculateSize(processedValue.value),
@@ -894,7 +892,7 @@ export class IndexedDBCacheStrategy implements CacheStrategy {
     }
 
     if (encrypted) {
-      processedValue = JSON.parse(atob(processedValue));
+      processedValue = JSON.parse(atob(processedValue as string));
     }
 
     return processedValue;
@@ -918,7 +916,7 @@ export class SmartCacheStrategy implements CacheStrategy {
       try {
         this.localStorage = new LocalStorageCacheStrategy(config);
       } catch (error) {
-        cacheLogger.warn('localStorage not available', { metadata: { error } });
+        cacheLogger.warn({ error }, 'localStorage not available');
       }
     }
 
@@ -927,7 +925,7 @@ export class SmartCacheStrategy implements CacheStrategy {
       try {
         this.indexedDB = new IndexedDBCacheStrategy(config);
       } catch (error) {
-        cacheLogger.warn('IndexedDB not available', { metadata: { error } });
+        cacheLogger.warn({ error }, 'IndexedDB not available');
       }
     }
   }
@@ -963,7 +961,7 @@ export class SmartCacheStrategy implements CacheStrategy {
           return result;
         }
       } catch (error) {
-        cacheLogger.warn(`Strategy ${strategy.name} failed for get`, { metadata: { error } });
+        cacheLogger.warn({ error }, `Strategy ${strategy.name} failed for get`);
       }
     }
 
@@ -976,9 +974,7 @@ export class SmartCacheStrategy implements CacheStrategy {
     try {
       await strategy.set(key, value, options);
     } catch (error) {
-      cacheLogger.warn(`Primary strategy ${strategy.name} failed, falling back to memory`, {
-        metadata: { error },
-      });
+      cacheLogger.warn({ err: error as Error }, `Primary strategy ${strategy.name} failed, falling back to memory`);
       await this.memory.set(key, value, options);
     }
   }
@@ -994,7 +990,7 @@ export class SmartCacheStrategy implements CacheStrategy {
         const result = await strategy.delete(key);
         deleted = deleted || result;
       } catch (error) {
-        cacheLogger.warn(`Strategy ${strategy.name} failed for delete`, { metadata: { error } });
+        cacheLogger.warn({ error }, `Strategy ${strategy.name} failed for delete`);
       }
     }
 
@@ -1011,9 +1007,7 @@ export class SmartCacheStrategy implements CacheStrategy {
         try {
           await strategy.clear();
         } catch (error) {
-          cacheLogger.warn(`Strategy ${strategy.name} failed for clear`, {
-            metadata: { error },
-          });
+          cacheLogger.warn({ err: error as Error }, `Strategy ${strategy.name} failed for clear`);
         }
       }),
     );
@@ -1031,7 +1025,7 @@ export class SmartCacheStrategy implements CacheStrategy {
           return true;
         }
       } catch (error) {
-        cacheLogger.warn(`Strategy ${strategy.name} failed for has`, { metadata: { error } });
+        cacheLogger.warn({ error }, `Strategy ${strategy.name} failed for has`);
       }
     }
 
@@ -1054,7 +1048,7 @@ export class SmartCacheStrategy implements CacheStrategy {
         const keys = await strategy.keys();
         keys.forEach((key) => allKeys.add(key));
       } catch (error) {
-        cacheLogger.warn(`Strategy ${strategy.name} failed for keys`, { metadata: { error } });
+        cacheLogger.warn({ error }, `Strategy ${strategy.name} failed for keys`);
       }
     }
 
@@ -1071,9 +1065,7 @@ export class SmartCacheStrategy implements CacheStrategy {
         try {
           return await strategy.getStats();
         } catch (error) {
-          cacheLogger.warn(`Strategy ${strategy.name} failed for getStats`, {
-            metadata: { error },
-          });
+          cacheLogger.warn({ err: error as Error }, `Strategy ${strategy.name} failed for getStats`);
           return null;
         }
       }),
@@ -1168,9 +1160,7 @@ export class SmartCacheManager {
       strategy
         .clear()
         .catch((error) =>
-          cacheLogger.warn(`Failed to clear strategy ${strategy.name}`, {
-            metadata: { error },
-          }),
+          cacheLogger.warn({ err: error as Error }, `Failed to clear strategy ${strategy.name}`),
         ),
     );
     await Promise.all(promises);
@@ -1191,9 +1181,7 @@ export class SmartCacheManager {
       try {
         stats[name] = await strategy.getStats();
       } catch (error) {
-        cacheLogger.warn(`Failed to get stats for strategy ${name}`, {
-          metadata: { error },
-        });
+        cacheLogger.warn({ err: error as Error }, `Failed to get stats for strategy ${name}`);
       }
     }
 

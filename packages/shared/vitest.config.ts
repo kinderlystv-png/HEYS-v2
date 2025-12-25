@@ -1,4 +1,5 @@
 import path from 'node:path';
+
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -17,11 +18,21 @@ export default defineConfig({
         'vitest.config.ts',
       ],
     },
+    // Inline workspace dependencies для vitest
+    server: {
+      deps: {
+        inline: [/@heys\/.*/],
+      },
+    },
+  },
+  optimizeDeps: {
+    exclude: ['@heys/logger'],
   },
   resolve: {
+    conditions: ['development', 'import'],
     alias: {
-      '@heys': path.resolve(__dirname, '../..'),
-      // Workspace package aliases для корректного импорта
+      // Direct alias to source - takes priority over node_modules
+      '@heys/logger': path.resolve(__dirname, '../logger/src/index.ts'),
       '@heys/shared': path.resolve(__dirname, './src'),
       '@heys/core': path.resolve(__dirname, '../core/src'),
       '@heys/storage': path.resolve(__dirname, '../storage/src'),
