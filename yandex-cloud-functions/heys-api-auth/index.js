@@ -14,18 +14,46 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-// JWT секрет (в production использовать Yandex Lockbox)
-const JWT_SECRET = process.env.JWT_SECRET || 'heys-jwt-secret-2024-change-in-production';
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 P0 SECURITY: JWT Secret — читаем ВНУТРИ handler каждый раз!
+// Это защищает от stale env при деплое без перезапуска инстансов
+// ═══════════════════════════════════════════════════════════════════════════
 const JWT_EXPIRES_IN = 24 * 60 * 60; // 24 часа в секундах
 
-// CORS заголовки
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-client-info',
-  'Access-Control-Max-Age': '86400',
-  'Content-Type': 'application/json'
-};
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 P0 SECURITY: CORS Whitelist (no wildcards!)
+// ═══════════════════════════════════════════════════════════════════════════
+const ALLOWED_ORIGINS = new Set([
+  'https://heyslab.ru',
+  'https://www.heyslab.ru',
+  'https://app.heyslab.ru',
+  'https://heys-static.website.yandexcloud.net',
+  'https://heys-v2-web.vercel.app',
+  'http://localhost:3001',
+  'http://localhost:5173',
+]);
+
+/**
+ * Возвращает CORS headers с проверкой origin.
+ * Если origin не в whitelist — не ставим Access-Control-Allow-Origin.
+ */
+function getCorsHeaders(origin) {
+  const headers = {
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-client-info',
+    'Access-Control-Max-Age': '86400',
+    'Content-Type': 'application/json',
+    'Vary': 'Origin'  // 🔐 Важно для корректного кэширования
+  };
+  
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+  // Если origin не разрешён — не добавляем Access-Control-Allow-Origin
+  // Браузер заблокирует cross-origin запрос
+  
+  return headers;
+}
 
 // Подключение к PostgreSQL
 function createPgClient() {
@@ -68,7 +96,7 @@ function base64UrlDecode(str) {
   return Buffer.from(str, 'base64').toString();
 }
 
-function createJwt(payload) {
+function createJwt(payload, jwtSecret) {
   const header = { alg: 'HS256', typ: 'JWT' };
   const now = Math.floor(Date.now() / 1000);
   
@@ -81,7 +109,7 @@ function createJwt(payload) {
   const headerB64 = base64UrlEncode(JSON.stringify(header));
   const payloadB64 = base64UrlEncode(JSON.stringify(fullPayload));
   const signature = crypto
-    .createHmac('sha256', JWT_SECRET)
+    .createHmac('sha256', jwtSecret)
     .update(`${headerB64}.${payloadB64}`)
     .digest('base64')
     .replace(/\+/g, '-')
@@ -91,13 +119,13 @@ function createJwt(payload) {
   return `${headerB64}.${payloadB64}.${signature}`;
 }
 
-function verifyJwt(token) {
+function verifyJwt(token, jwtSecret) {
   try {
     const [headerB64, payloadB64, signature] = token.split('.');
     
     // Проверяем подпись
     const expectedSig = crypto
-      .createHmac('sha256', JWT_SECRET)
+      .createHmac('sha256', jwtSecret)
       .update(`${headerB64}.${payloadB64}`)
       .digest('base64')
       .replace(/\+/g, '-')
@@ -191,7 +219,7 @@ async function handleLogin(body) {
       sub: curator.id,
       email: curator.email,
       role: 'curator'
-    });
+    }, JWT_SECRET);
     
     // Формируем ответ в формате совместимом с Supabase
     return {
@@ -239,7 +267,7 @@ async function handleVerify(body, authHeader) {
     };
   }
   
-  const result = verifyJwt(token);
+  const result = verifyJwt(token, JWT_SECRET);
   
   if (!result.valid) {
     return {
@@ -315,7 +343,7 @@ async function handleRegister(body) {
       sub: curator.id,
       email: curator.email,
       role: 'curator'
-    });
+    }, JWT_SECRET);
     
     return {
       statusCode: 201,
@@ -347,16 +375,47 @@ async function handleRegister(body) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 module.exports.handler = async function(event, context) {
-  // Preflight CORS
+  // 🔐 Извлекаем origin и строим CORS headers
+  const origin = event.headers?.origin || event.headers?.Origin || null;
+  const corsHeaders = getCorsHeaders(origin);
+  
+  // Preflight CORS — работает ВСЕГДА, даже без JWT_SECRET
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+    return { statusCode: 204, headers: corsHeaders, body: '' };
+  }
+  
+  // 🔐 P0: JWT_SECRET читаем ВНУТРИ handler каждый раз (защита от stale env)
+  const JWT_SECRET = process.env.JWT_SECRET;
+  if (!JWT_SECRET || JWT_SECRET.length < 32) {
+    console.error('[FATAL] JWT_SECRET is missing or too short (min 32 chars)');
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Server configuration error' })
+    };
+  }
+  
+  // 🔐 Explicit 403 для браузерных запросов с неразрешённым origin
+  // Server-to-server (origin === null) пропускаем
+  if (origin && !corsHeaders['Access-Control-Allow-Origin']) {
+    return {
+      statusCode: 403,
+      headers: {
+        'Content-Type': 'application/json',
+        'Vary': 'Origin',
+        // 🔐 Минимальные CORS headers для диагностики (браузер покажет 403 вместо "CORS error")
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      },
+      body: JSON.stringify({ error: 'cors_denied' })
+    };
   }
   
   // Только POST
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
-      headers: CORS_HEADERS,
+      headers: corsHeaders,
       body: JSON.stringify({ error: 'Method not allowed' })
     };
   }
@@ -373,7 +432,7 @@ module.exports.handler = async function(event, context) {
   } catch (e) {
     return {
       statusCode: 400,
-      headers: CORS_HEADERS,
+      headers: corsHeaders,
       body: JSON.stringify({ error: 'Invalid JSON body' })
     };
   }
@@ -401,6 +460,6 @@ module.exports.handler = async function(event, context) {
   
   return {
     ...result,
-    headers: { ...CORS_HEADERS, ...result.headers }
+    headers: { ...corsHeaders, ...result.headers }
   };
 };

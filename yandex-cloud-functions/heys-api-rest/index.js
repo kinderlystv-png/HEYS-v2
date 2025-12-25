@@ -48,19 +48,93 @@ const ALLOWED_TABLES = [
   'consents'
 ];
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 P1 SECURITY: Column whitelist per table (prevents SQL injection via select)
+// ═══════════════════════════════════════════════════════════════════════════
+const ALLOWED_COLUMNS = {
+  clients: ['id', 'name', 'phone_normalized', 'curator_id', 'is_active', 'created_at', 'updated_at'],
+  client_kv_store: ['client_id', 'key', 'value', 'updated_at'],
+  kv_store: ['key', 'value', 'updated_at'],
+  shared_products: ['id', 'name', 'category', 'kcal100', 'protein100', 'fat100', 'carbs100', 'simple100', 'complex100', 'fiber100', 'gi', 'created_at', 'updated_at', 'curator_id'],
+  shared_products_public: ['id', 'name', 'category', 'kcal100', 'protein100', 'fat100', 'carbs100', 'simple100', 'complex100', 'fiber100', 'gi'],
+  shared_products_pending: ['id', 'name', 'category', 'data', 'status', 'created_at', 'client_id'],
+  shared_products_blocklist: ['id', 'product_id', 'curator_id', 'reason', 'created_at'],
+  consents: ['id', 'client_id', 'consent_type', 'consent_version', 'granted_at', 'ip_address']
+};
+
+/**
+ * 🔐 Валидация и санитизация списка колонок для SELECT
+ * @param {string} selectParam - строка из query param (например "id,name,value")
+ * @param {string} tableName - имя таблицы
+ * @returns {string|null} - безопасный SQL список колонок или null если невалидно
+ */
+function sanitizeSelectColumns(selectParam, tableName) {
+  const allowedForTable = ALLOWED_COLUMNS[tableName];
+  
+  // 🔐 Таблица должна быть в whitelist колонок (не разрешаем * для unknown таблиц)
+  if (!allowedForTable) {
+    console.error(`[REST] No column whitelist for table: "${tableName}"`);
+    return null;
+  }
+  
+  // '*' → возвращаем все разрешённые колонки (а не SQL *)
+  if (!selectParam || selectParam === '*') {
+    return allowedForTable.map(c => `"${c}"`).join(', ');
+  }
+  
+  // Парсим список колонок
+  const requestedColumns = selectParam.split(',').map(c => c.trim()).filter(c => c.length > 0);
+  
+  // 🔐 Пустой список после фильтрации — ошибка (select= без колонок)
+  if (requestedColumns.length === 0) {
+    console.error(`[REST] Empty column list after parsing: "${selectParam}"`);
+    return null;
+  }
+  
+  // Валидируем каждую колонку
+  const validColumns = [];
+  for (const col of requestedColumns) {
+    // Базовая regex проверка: только буквы, цифры, underscore
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(col)) {
+      console.error(`[REST] Invalid column name rejected: "${col}"`);
+      return null; // Подозрительный символ — отклоняем весь запрос
+    }
+    
+    // Проверяем whitelist
+    if (!allowedForTable.includes(col)) {
+      console.error(`[REST] Column not in whitelist: "${col}" for table "${tableName}"`);
+      return null; // Колонка не в whitelist — отклоняем
+    }
+    
+    validColumns.push(`"${col}"`);
+  }
+  
+  // Все колонки провалидированы
+  return validColumns.join(', ');
+}
+
 function getCorsHeaders(origin) {
-  const isAllowed = ALLOWED_ORIGINS.some(allowed => origin?.startsWith(allowed));
-  return {
-    'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0],
+  const headers = {
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, Prefer, apikey, x-supabase-api-version, x-client-info',
     'Access-Control-Allow-Credentials': 'true',
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Vary': 'Origin'  // 🔐 Важно для кэширования
   };
+  
+  // 🔐 Только разрешённые origin получают ACAO
+  const isAllowed = origin && ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
+  if (isAllowed) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+  // Без Origin (серверный запрос) — не блокируем
+  // С неразрешённым Origin — браузер заблокирует
+  
+  return headers;
 }
 
 module.exports.handler = async function (event, context) {
-  const origin = event.headers?.origin || event.headers?.Origin || '';
+  const origin = event.headers?.origin || event.headers?.Origin || null;
   const corsHeaders = getCorsHeaders(origin);
 
   // CORS preflight
@@ -69,6 +143,22 @@ module.exports.handler = async function (event, context) {
       statusCode: 204,
       headers: corsHeaders,
       body: ''
+    };
+  }
+  
+  // 🔐 P0: Explicit 403 for disallowed browser origins
+  // Server-to-server (origin === null) is allowed
+  if (origin && !ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed))) {
+    return {
+      statusCode: 403,
+      headers: {
+        'Content-Type': 'application/json',
+        'Vary': 'Origin',
+        // 🔐 Минимальные CORS headers для диагностики (браузер покажет 403 вместо "CORS error")
+        'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      },
+      body: JSON.stringify({ error: 'cors_denied' })
     };
   }
 
@@ -130,11 +220,20 @@ module.exports.handler = async function (event, context) {
         const params = { ...event.queryStringParameters };
         delete params.table;
         
-        // Поддержка select конкретных колонок
-        const selectColumns = params.select || '*';
+        // 🔐 P1: Валидация и санитизация колонок для SELECT
+        const rawSelect = params.select || '*';
         delete params.select;
         
-        let query = `SELECT ${selectColumns} FROM ${tableName}`;
+        const selectColumns = sanitizeSelectColumns(rawSelect, tableName);
+        if (selectColumns === null) {
+          return {
+            statusCode: 400,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: 'Invalid select columns — contains forbidden characters or unknown columns' })
+          };
+        }
+        
+        let query = `SELECT ${selectColumns} FROM "${tableName}"`;
         const conditions = [];
         const values = [];
         let i = 1;
@@ -333,19 +432,19 @@ module.exports.handler = async function (event, context) {
           
           let query;
           if (isUpsert && onConflict && updateCols) {
-            query = `INSERT INTO ${tableName} (${keys.map(k => `"${k}"`).join(', ')}) 
+            query = `INSERT INTO "${tableName}" (${keys.map(k => `"${k}"`).join(', ')}) 
                      VALUES (${placeholders}) 
                      ON CONFLICT (${conflictClause}) DO UPDATE SET ${updateCols}
                      RETURNING ${selectColumns}`;
             console.log('[REST Debug] Upsert query:', query.replace(/\s+/g, ' ').substring(0, 300));
           } else if (isUpsert && onConflict) {
             // Если все колонки — конфликтные, то DO NOTHING
-            query = `INSERT INTO ${tableName} (${keys.map(k => `"${k}"`).join(', ')}) 
+            query = `INSERT INTO "${tableName}" (${keys.map(k => `"${k}"`).join(', ')}) 
                      VALUES (${placeholders}) 
                      ON CONFLICT (${conflictClause}) DO NOTHING
                      RETURNING ${selectColumns}`;
           } else {
-            query = `INSERT INTO ${tableName} (${keys.map(k => `"${k}"`).join(', ')}) 
+            query = `INSERT INTO "${tableName}" (${keys.map(k => `"${k}"`).join(', ')}) 
                      VALUES (${placeholders}) 
                      RETURNING ${selectColumns}`;
           }
@@ -445,7 +544,7 @@ module.exports.handler = async function (event, context) {
           };
         }
         
-        const query = `DELETE FROM ${tableName} WHERE ${conditions.join(' AND ')} RETURNING *`;
+        const query = `DELETE FROM "${tableName}" WHERE ${conditions.join(' AND ')} RETURNING *`;
         result = await client.query(query, values);
         
         return {
