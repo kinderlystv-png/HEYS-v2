@@ -203,8 +203,10 @@ module.exports.handler = async function (event, context) {
   // Получаем имя таблицы из path (единственный поддерживаемый способ)
   // 1. pathParameters.table (Yandex API Gateway path param {table})
   // 2. path /rest/TABLE_NAME или /rest/v1/TABLE_NAME (парсинг пути)
-  // ❌ queryStringParameters.table, params.table — REMOVED (legacy, security risk)
-  let tableName = event.pathParameters?.table;
+  // ❌ queryStringParameters.table — REMOVED (legacy, security risk)
+  // ✅ params.table — YC API Gateway format (path parameters)
+  // ✅ pathParameters.table — AWS/Supabase format (fallback)
+  let tableName = event.params?.table || event.pathParameters?.table;
   
   // Если не нашли в параметрах, парсим из path
   // Поддерживаем оба формата: /rest/table и /rest/v1/table (Supabase SDK)
