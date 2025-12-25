@@ -177,3 +177,6 @@ archive/reports-*/
 # Test results
 test-results/
 coverage/
+
+# Temp build artifacts
+tsup.config.bundled_*.mjs
