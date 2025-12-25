@@ -8,17 +8,20 @@
 
 // Temporary compatibility classes for security integration
 export class HeysUser {
-  async createUser(userData: any): Promise<any> {
+  async createUser(userData: Record<string, unknown>): Promise<Record<string, unknown>> {
     // Legacy user creation logic
     return { id: this.generateId(), ...userData };
   }
 
-  async updateUser(userId: string, updateData: any): Promise<any> {
+  async updateUser(
+    userId: string,
+    updateData: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
     // Legacy user update logic
     return { id: userId, ...updateData };
   }
 
-  async searchUsers(_query: string): Promise<any[]> {
+  async searchUsers(_query: string): Promise<Array<Record<string, unknown>>> {
     // Legacy user search logic
     return [];
   }
@@ -29,17 +32,20 @@ export class HeysUser {
 }
 
 export class HeysDay {
-  async createDay(dayData: any): Promise<any> {
+  async createDay(dayData: Record<string, unknown>): Promise<Record<string, unknown>> {
     // Legacy day creation logic
     return { id: this.generateId(), ...dayData };
   }
 
-  async updateDay(dayId: string, updateData: any): Promise<any> {
+  async updateDay(
+    dayId: string,
+    updateData: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
     // Legacy day update logic
     return { id: dayId, ...updateData };
   }
 
-  async getDayContent(dayId: string): Promise<any> {
+  async getDayContent(dayId: string): Promise<Record<string, unknown>> {
     // Legacy day content retrieval
     return { id: dayId, content: 'sample content' };
   }
@@ -50,7 +56,7 @@ export class HeysDay {
 }
 
 export class HeysSession {
-  async createSession(sessionData: any): Promise<any> {
+  async createSession(sessionData: Record<string, unknown>): Promise<Record<string, unknown>> {
     // Legacy session creation logic
     return {
       id: this.generateId(),

@@ -5,8 +5,14 @@
 
 import { vi } from 'vitest';
 
-// Mock WebSocket for testing environment
-global.WebSocket = vi.fn(() => ({
+type WebSocketConstructor = typeof WebSocket & {
+  CONNECTING: number;
+  OPEN: number;
+  CLOSING: number;
+  CLOSED: number;
+};
+
+const mockWebSocket = vi.fn(() => ({
   CONNECTING: 0,
   OPEN: 1,
   CLOSING: 2,
@@ -16,21 +22,27 @@ global.WebSocket = vi.fn(() => ({
   send: vi.fn(),
   addEventListener: vi.fn(),
   removeEventListener: vi.fn(),
-})) as any;
+})) as unknown as WebSocketConstructor;
+
+// Mock WebSocket for testing environment
+globalThis.WebSocket = mockWebSocket;
 
 // Also set WebSocket static properties
-(global.WebSocket as any).CONNECTING = 0;
-(global.WebSocket as any).OPEN = 1;
-(global.WebSocket as any).CLOSING = 2;
-(global.WebSocket as any).CLOSED = 3;
+Object.assign(mockWebSocket, {
+  CONNECTING: 0,
+  OPEN: 1,
+  CLOSING: 2,
+  CLOSED: 3,
+});
 
 // Mock crypto for UUID generation
-Object.defineProperty(global, 'crypto', {
+Object.defineProperty(globalThis, 'crypto', {
   value: {
     randomUUID: () => 'test-uuid-' + Math.random().toString(36).substr(2, 9),
-    getRandomValues: (arr: any) => {
-      for (let i = 0; i < arr.length; i++) {
-        arr[i] = Math.floor(Math.random() * 256);
+    getRandomValues: <T extends ArrayBufferView>(arr: T): T => {
+      const view = arr as unknown as Uint8Array;
+      for (let i = 0; i < view.length; i++) {
+        view[i] = Math.floor(Math.random() * 256);
       }
       return arr;
     },
@@ -38,7 +50,7 @@ Object.defineProperty(global, 'crypto', {
 });
 
 // Mock performance API
-Object.defineProperty(global, 'performance', {
+Object.defineProperty(globalThis, 'performance', {
   value: {
     now: () => Date.now(),
     mark: vi.fn(),

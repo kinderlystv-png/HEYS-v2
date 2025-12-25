@@ -10,7 +10,7 @@ export interface HeysConfig {
 }
 
 export interface HeysState {
-  user: any | null;
+  user: unknown | null;
   loading: boolean;
   error: string | null;
 }

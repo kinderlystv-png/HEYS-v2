@@ -138,7 +138,10 @@ describe('AnalyticsService', () => {
       const queue = analyticsService.getEventQueue();
       expect(queue).toHaveLength(1);
 
-      const firstEvent = queue[0]!;
+      const firstEvent = queue[0];
+      if (!firstEvent) {
+        throw new Error('Expected event to be queued');
+      }
       expect(firstEvent.name).toBe('test_event');
       expect(firstEvent.properties).toEqual({ key: 'value' });
       expect(firstEvent.timestamp).toBeTypeOf('number');
@@ -185,7 +188,11 @@ describe('AnalyticsService', () => {
       await analyticsService.track('test_event');
 
       const queue = analyticsService.getEventQueue();
-      expect(queue[0]!.userId).toBe('user123');
+      const firstEvent = queue[0];
+      if (!firstEvent) {
+        throw new Error('Expected event to be queued');
+      }
+      expect(firstEvent.userId).toBe('user123');
     });
   });
 

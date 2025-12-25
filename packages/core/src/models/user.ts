@@ -39,10 +39,13 @@ export type UserDraft = z.infer<typeof UserDraftSchema>;
 // User utilities
 export const createUser = (draft: UserDraft): User => {
   const now = new Date();
+  if (!draft.email || !draft.name) {
+    throw new Error('User draft must include email and name');
+  }
   return {
     id: crypto.randomUUID(),
-    email: draft.email!,
-    name: draft.name!,
+    email: draft.email,
+    name: draft.name,
     profile: draft.profile,
     preferences: draft.preferences || {
       units: 'metric',

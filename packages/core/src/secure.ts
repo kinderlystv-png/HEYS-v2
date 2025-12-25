@@ -44,7 +44,7 @@ export class SecureUserManager extends HeysUser {
       throw new SecurityError('User validation failed', validation.errors);
     }
 
-    return (await super.createUser(validation.sanitized || userData)) as UserCreationResult;
+    return (await super.createUser((validation.sanitized || userData) as Record<string, unknown>)) as UserCreationResult;
   }
 
   /**
@@ -72,7 +72,7 @@ export class SecureUserManager extends HeysUser {
       throw new SecurityError('Update data validation failed', dataValidation.errors);
     }
 
-    return (await super.updateUser(userId, dataValidation.sanitized || updateData)) as UserUpdateResult;
+    return (await super.updateUser(userId, (dataValidation.sanitized || updateData) as Record<string, unknown>)) as UserUpdateResult;
   }
 
   /**
@@ -115,7 +115,7 @@ export class SecureDayManager extends HeysDay {
       throw new SecurityError('Day data validation failed', validation.errors);
     }
 
-    return (await super.createDay(validation.sanitized || dayData)) as DayCreationResult;
+    return (await super.createDay((validation.sanitized || dayData) as Record<string, unknown>)) as DayCreationResult;
   }
 
   /**
@@ -132,7 +132,7 @@ export class SecureDayManager extends HeysDay {
       throw new SecurityError('Day update validation failed', validation.errors);
     }
 
-    return (await super.updateDay(dayId, validation.sanitized || updateData)) as DayUpdateResult;
+    return (await super.updateDay(dayId, (validation.sanitized || updateData) as Record<string, unknown>)) as DayUpdateResult;
   }
 
   /**
@@ -147,7 +147,7 @@ export class SecureDayManager extends HeysDay {
         sanitize: true,
       });
 
-      return validation.sanitized || content;
+      return (validation.sanitized || content) as DayContentResult;
     }
 
     return content;
@@ -181,7 +181,7 @@ export class SecureSessionManager extends HeysSession {
       throw new SecurityError('Session validation failed', validation.errors);
     }
 
-    return (await super.createSession(validation.sanitized || sessionData)) as SessionCreationResult;
+    return (await super.createSession((validation.sanitized || sessionData) as Record<string, unknown>)) as SessionCreationResult;
   }
 
   /**
