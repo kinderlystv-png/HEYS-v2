@@ -112,30 +112,15 @@ export default function Hero() {
           </div>
 
           <nav className="hidden md:flex items-center gap-12">
-            <a
-              href="#what-is-heys"
-              className="text-[#374151] hover:text-[#111827] transition-colors text-[14px] tracking-wide"
-            >
-              heys — это
-            </a>
-            <a
-              href="#pricing"
-              className="text-[#374151] hover:text-[#111827] transition-colors text-[14px] tracking-wide"
-            >
-              тарифы
-            </a>
-            <a
-              href="#trial"
-              className="text-[#374151] hover:text-[#111827] transition-colors text-[14px] tracking-wide"
-            >
-              {content.nav.trial}
-            </a>
-            <a
-              href="#contact"
-              className="text-[#374151] hover:text-[#111827] transition-colors text-[14px] tracking-wide"
-            >
-              связаться
-            </a>
+            {content.nav.links.map((link) => (
+              <a
+                key={link.id}
+                href={link.href}
+                className="text-[#374151] hover:text-[#111827] transition-colors text-[14px] tracking-wide"
+              >
+                {link.label}
+              </a>
+            ))}
           </nav>
         </div>
       </header>
