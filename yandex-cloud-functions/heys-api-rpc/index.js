@@ -303,13 +303,28 @@ module.exports.handler = async function (event, context) {
     // Формируем вызов RPC функции
     const paramKeys = Object.keys(params);
     
-    // 🔐 P2: Для verify_client_pin_v3 нужны явные типы (pg передаёт unknown)
+    // 🔐 P2: Для некоторых функций нужны явные типы (pg передаёт unknown)
     const TYPE_HINTS = {
       'verify_client_pin_v3': {
         'p_phone': '::text',
         'p_pin': '::text',
         'p_ip': '::text',
         'p_user_agent': '::text'
+      },
+      // 🔐 P2: batch KV функции требуют ::jsonb для массива items
+      'batch_upsert_client_kv_by_session': {
+        'p_session_token': '::text',
+        'p_items': '::jsonb'
+      },
+      'upsert_client_kv_by_session': {
+        'p_session_token': '::text',
+        'p_key': '::text',
+        'p_value': '::jsonb'
+      },
+      'create_pending_product_by_session': {
+        'p_session_token': '::text',
+        'p_product_name': '::text',
+        'p_product_data': '::jsonb'
       }
     };
     
