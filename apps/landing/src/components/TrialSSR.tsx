@@ -99,10 +99,6 @@ export default function TrialSSR({ content, variant: _variant }: TrialSSRProps) 
                   </a>
                 </p>
               </div>
-
-              <p className="text-center text-gray-500 text-sm mt-4 italic">
-                Форма работает с JavaScript. Если видите это — вы смотрите SSR версию.
-              </p>
             </div>
           </div>
         </div>

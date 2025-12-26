@@ -24,8 +24,8 @@ export default function VersionSwitcherSSR({ currentVariant }: VersionSwitcherSS
     <div className="fixed bottom-4 right-4 z-50">
       <div className="bg-black/80 backdrop-blur-sm rounded-2xl p-3 shadow-lg">
         <div className="text-white/60 text-xs mb-2 text-center">
-          SSR Variants
-          <span className="block text-white/40 text-[10px] mt-0.5">🕐 {BUILD_TIME}</span>
+          Варианты
+          <span className="block text-white/40 text-[10px] mt-0.5">v{BUILD_TIME}</span>
         </div>
         <div className="flex gap-2">
           {VARIANTS.map((v) => {
@@ -52,7 +52,7 @@ export default function VersionSwitcherSSR({ currentVariant }: VersionSwitcherSS
             href="/"
             className="block text-center text-white/50 text-xs hover:text-white/80 transition-colors"
           >
-            ← На главную (CSR)
+            ← На главную
           </a>
         </div>
       </div>
