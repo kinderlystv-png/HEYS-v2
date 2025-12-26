@@ -9,7 +9,9 @@
 
 import { performance } from 'perf_hooks';
 
-import { logger as baseLogger } from '@heys/logger';
+import { perfLogger } from './logger';
+
+const baseLogger = perfLogger;
 
 /**
  * Конфигурация для Lighthouse оптимизации

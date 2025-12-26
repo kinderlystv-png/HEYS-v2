@@ -1,6 +1,8 @@
 // filepath: packages/shared/src/performance/components/LazyComponent.ts
 
-import { logger as baseLogger } from '@heys/logger';
+import { perfLogger } from '../logger';
+
+const baseLogger = perfLogger;
 
 import { balancedLazyConfig } from '../lazy-loading-config';
 import { LazyLoader } from '../LazyLoader';

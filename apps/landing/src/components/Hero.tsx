@@ -103,7 +103,8 @@ export default function Hero() {
               width={96}
               height={64}
               priority
-              className="h-auto w-[96px]"
+              className="w-[96px]"
+              style={{ height: 'auto' }}
             />
           </div>
 
@@ -122,11 +123,9 @@ export default function Hero() {
             </a>
             <a
               href="#trial"
-              className="text-[#374151] hover:text-[#111827] transition-colors text-[14px] tracking-wide text-center leading-[1.05]"
+              className="text-[#374151] hover:text-[#111827] transition-colors text-[14px] tracking-wide"
             >
-              недельная
-              <br />
-              подписка
+              бесплатный триал
             </a>
             <a
               href="#contact"

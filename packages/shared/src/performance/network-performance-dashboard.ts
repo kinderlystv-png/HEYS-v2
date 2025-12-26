@@ -11,7 +11,9 @@
  * - Interactive performance controls
  */
 
-import { logger as baseLogger } from '@heys/logger';
+import { perfLogger } from './logger';
+
+const baseLogger = perfLogger;
 
 import {
   NetworkConnection,

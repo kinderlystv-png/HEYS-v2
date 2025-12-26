@@ -25,6 +25,14 @@
 import pinoLogger from '@heys/logger';
 
 import type { AppLogger, LogMeta, LogMethod } from '../logging';
+
+/**
+ * AppLogger with guaranteed child method.
+ * Use this type for perfLogger since pino always has child support.
+ */
+export interface PerfAppLogger extends AppLogger {
+  child(context: LogMeta): PerfAppLogger;
+}
 import { createPinoAdapter, normalizeLogArgs } from '../logging';
 
 /**
@@ -57,10 +65,11 @@ export function createPerfLogger(logger: AppLogger): AppLogger {
 /**
  * Default performance logger using pino.
  * Can be overridden via PerformanceConfig.logger in PerformanceManager.
+ * Typed as PerfAppLogger since pino always supports child().
  */
-export const perfLogger: AppLogger = createPerfLogger(
+export const perfLogger: PerfAppLogger = createPerfLogger(
   createPinoAdapter(pinoLogger.child({ module: 'performance' })),
-);
+) as PerfAppLogger;
 
 /**
  * Noop logger for silent operation.

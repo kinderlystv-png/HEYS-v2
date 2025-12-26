@@ -7,7 +7,9 @@
  * @created 2025-01-31
  */
 
-import { logger as baseLogger } from '@heys/logger';
+import { perfLogger } from './logger';
+
+const baseLogger = perfLogger;
 
 type NavigatorConnection = {
   effectiveType?: string;

@@ -5,7 +5,9 @@
  * Отслеживает метрики загрузки, размер файлов и оптимизации
  */
 
-import { logger as baseLogger } from '@heys/logger';
+import { perfLogger } from './logger';
+
+const baseLogger = perfLogger;
 
 export interface BundleMetrics {
   totalSize: number;

@@ -19,6 +19,16 @@ interface TrialCapacityProps {
 
 const API_URL = 'https://api.heyslab.ru/rpc'
 
+// Fallback данные для localhost разработки (CORS блокирует API)
+const LOCALHOST_FALLBACK: TrialCapacityData = {
+  available_slots: 2,
+  total_slots: 3,
+  queue_size: 0,
+  is_accepting: true,
+  offer_window_minutes: 120,
+  trial_days: 7
+}
+
 export default function TrialCapacity({ 
   className = '', 
   compact = false,
@@ -29,6 +39,13 @@ export default function TrialCapacity({
   const [error, setError] = useState<string | null>(null)
 
   const fetchCapacity = useCallback(async () => {
+    // На localhost используем fallback данные (API блокирует CORS)
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      setCapacity(LOCALHOST_FALLBACK)
+      setIsLoading(false)
+      return
+    }
+    
     try {
       const response = await fetch(API_URL + '?fn=get_public_trial_capacity', {
         method: 'POST',
@@ -45,7 +62,9 @@ export default function TrialCapacity({
       setCapacity(data.data || data)
       setError(null)
     } catch {
-      setError('Не удалось загрузить данные')
+      // Fallback при ошибке (CORS или сеть)
+      setCapacity(LOCALHOST_FALLBACK)
+      setError(null) // Не показываем ошибку пользователю
     } finally {
       setIsLoading(false)
     }

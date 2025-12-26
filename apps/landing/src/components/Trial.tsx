@@ -12,14 +12,14 @@ export default function Trial() {
               {/* Capacity Widget + Badge */}
               <div className="flex flex-col sm:flex-row items-center gap-3 mb-8">
                 <div className="inline-block bg-white/20 backdrop-blur text-white text-sm font-medium px-4 py-2 rounded-full">
-                  🎁 Бесплатный триал
+                  🎁 Бесплатная неделя
                 </div>
                 <TrialCapacity compact className="bg-white/10 border-white/20" />
               </div>
               
               {/* Heading */}
               <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
-                Попробуйте не быть одни
+                Не уверены? Попробуйте бесплатно
               </h2>
               
               <p className="text-xl text-blue-100 mb-8">
@@ -52,6 +52,16 @@ export default function Trial() {
                 ✓ Триал начинается с первого внесённого приёма пищи<br/>
                 ✓ Отменить можно в любой момент
               </p>
+              
+              {/* Purchase link */}
+              <div className="mt-8 pt-6 border-t border-white/20">
+                <p className="text-white/70 text-sm">
+                  Уже решили?{' '}
+                  <a href="#contact" className="text-white font-medium hover:underline">
+                    Оформить подписку сразу →
+                  </a>
+                </p>
+              </div>
             </div>
             
             {/* Правая часть - форма */}

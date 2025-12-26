@@ -4,6 +4,7 @@ import Hero from '@/components/Hero'
 import HowItWorks from '@/components/HowItWorks'
 import Pricing from '@/components/Pricing'
 import Problem from '@/components/Problem'
+import PurchaseSection from '@/components/PurchaseSection'
 import Solution from '@/components/Solution'
 import Trial from '@/components/Trial'
 
@@ -18,7 +19,10 @@ export default function Home() {
       <Solution />
       <HowItWorks />
       <Pricing />
+      {/* Бесплатный триал — для тех, кто хочет попробовать без оплаты */}
       <Trial />
+      {/* Форма покупки — для тех, кто готов оплатить сразу */}
+      <PurchaseSection />
       <FAQ />
       <Footer />
     </main>

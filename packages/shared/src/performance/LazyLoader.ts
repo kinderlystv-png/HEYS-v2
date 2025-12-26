@@ -2,7 +2,9 @@
 
 import { performance } from 'perf_hooks';
 
-import { logger } from '@heys/logger';
+import { perfLogger } from './logger';
+
+const logger = perfLogger;
 
 type PerformanceMemory = {
   usedJSHeapSize: number;

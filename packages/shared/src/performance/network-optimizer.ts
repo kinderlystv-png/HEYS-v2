@@ -12,7 +12,9 @@
  * - Real-time network performance metrics
  */
 
-import { logger as baseLogger } from '@heys/logger';
+import { perfLogger } from './logger';
+
+const baseLogger = perfLogger;
 
 type FetchInit = Parameters<typeof fetch>[1];
 type PrefetchFetchInit = FetchInit & { priority?: 'low' | 'auto' | 'high' };

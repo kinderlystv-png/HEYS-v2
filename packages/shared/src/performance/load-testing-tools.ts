@@ -13,7 +13,9 @@
  * - Resource utilization tracking
  */
 
-import { logger as baseLogger } from '@heys/logger';
+import { perfLogger } from './logger';
+
+const baseLogger = perfLogger;
 
 type FetchInit = Parameters<typeof fetch>[1];
 type PerformanceMemory = {

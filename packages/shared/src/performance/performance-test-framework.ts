@@ -13,7 +13,9 @@
  * - Test scenario management
  */
 
-import { logger as baseLogger } from '@heys/logger';
+import { perfLogger } from './logger';
+
+const baseLogger = perfLogger;
 
 type PerformanceMemory = {
   usedJSHeapSize: number;

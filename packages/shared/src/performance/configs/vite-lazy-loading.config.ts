@@ -1,6 +1,8 @@
 // filepath: packages/shared/src/performance/configs/vite-lazy-loading.config.ts
 
-import { logger as baseLogger } from '@heys/logger';
+import { perfLogger } from '../logger';
+
+const baseLogger = perfLogger;
 import { defineConfig, splitVendorChunkPlugin, UserConfig } from 'vite';
 
 type BundleChunkInfo = { type: 'chunk'; code: string };

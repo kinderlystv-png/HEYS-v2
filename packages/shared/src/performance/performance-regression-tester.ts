@@ -13,7 +13,9 @@
  * - Performance alerts and notifications
  */
 
-import { logger as baseLogger } from '@heys/logger';
+import { perfLogger } from './logger';
+
+const baseLogger = perfLogger;
 
 export interface PerformanceBaseline {
   id: string;

@@ -1,6 +1,7 @@
 export default function Pricing() {
   const plans = [
     {
+      id: 'base',
       name: 'Base',
       price: '1 990',
       period: '₽/мес',
@@ -14,6 +15,7 @@ export default function Pricing() {
       featured: false,
     },
     {
+      id: 'pro',
       name: 'Pro',
       price: '12 990',
       period: '₽/мес',
@@ -32,6 +34,7 @@ export default function Pricing() {
       badge: 'Популярный'
     },
     {
+      id: 'pro-plus',
       name: 'Pro+',
       price: '19 990',
       period: '₽/мес',
@@ -103,7 +106,7 @@ export default function Pricing() {
                 </ul>
                 
                 <a 
-                  href="#trial"
+                  href={`#purchase-${plan.id}`}
                   className={`block w-full py-3 rounded-xl font-semibold transition-colors text-center ${
                     plan.featured 
                       ? 'bg-blue-600 text-white hover:bg-blue-700' 
@@ -124,6 +127,19 @@ export default function Pricing() {
               SLA и время реакции действуют в рабочие часы тарифа. Вне рабочего времени — в следующий рабочий период.
             </span>
           </p>
+          
+          {/* Trial CTA */}
+          <div className="mt-10 text-center">
+            <p className="text-gray-600 mb-2">
+              Хотите сначала попробовать?
+            </p>
+            <a 
+              href="#trial" 
+              className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
+            >
+              7 дней Pro бесплатно — без привязки карты →
+            </a>
+          </div>
         </div>
       </div>
     </section>

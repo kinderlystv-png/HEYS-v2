@@ -3,7 +3,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { logger as baseLogger } from '@heys/logger';
+import { perfLogger } from './logger';
+
+const baseLogger = perfLogger;
 
 /**
  * Интерфейс для описания точки разделения кода

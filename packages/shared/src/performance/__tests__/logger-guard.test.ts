@@ -20,56 +20,15 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * Files allowed to import @heys/logger directly.
- * These are pending migration to use ./logger entry point.
+ * Only the entry point (logger.ts) should import @heys/logger.
+ * All other files must use perfLogger from ./logger.
  *
- * When migrating, file must change from pino format:
- *   logger.error({ error }, 'message')
- * to AppLogger format:
- *   logger.error('message', { error })
- *
- * Migration order (by impact):
- * 1. bundle-optimizer.ts - complex, many call sites
- * 2. cache.ts - critical path, many error handlers
- * 3. network.ts - network layer, error handling
- * 4. index.ts - main entry, several loggers
- * ... etc
+ * Migration completed: 2025-12-27
+ * - All 18 production files now use perfLogger from ./logger
+ * - Test files (bundle-optimizer.test.ts) can keep direct imports
  */
 const ALLOWED_DIRECT_IMPORTS = new Set([
   'logger.ts', // The entry point itself - always allowed
-  // === Main performance files ===
-  // ✅ bundle-optimizer.ts - MIGRATED (2025-12-26)
-  // ✅ cache.ts - MIGRATED (2025-12-26)
-  // ✅ network.ts - MIGRATED (2025-12-26)
-  'index.ts', // TODO: migrate to AppLogger format
-  'PerformanceProfiler.ts', // TODO: migrate to AppLogger format
-  'mobile-performance-optimizer.ts', // TODO: migrate to AppLogger format
-  'AdvancedCacheManager.ts', // TODO: migrate to AppLogger format
-  'BundleAnalyzer.ts', // TODO: migrate to AppLogger format
-  'CodeSplitter.ts', // TODO: migrate to AppLogger format
-  'TreeShaker.ts', // TODO: migrate to AppLogger format
-  'PerformanceMonitoringService.ts', // TODO: migrate to AppLogger format
-  'DependencyAnalyzer.ts', // TODO: migrate to AppLogger format
-  'adaptive-loading.ts', // TODO: migrate to AppLogger format
-  'ModuleFederationManager.ts', // TODO: migrate to AppLogger format
-  'PerformanceOptimizer.ts', // TODO: migrate to AppLogger format
-  'VirtualScrollManager.ts', // TODO: migrate to AppLogger format
-  'worker-thread-pool.ts', // TODO: migrate to AppLogger format
-  'resource-hints.ts', // TODO: migrate to AppLogger format
-  // === Additional files found by guard ===
-  'LazyLoader.ts', // TODO: migrate to AppLogger format
-  'LighthouseOptimizer.ts', // TODO: migrate to AppLogger format
-  'advanced-cache-manager.ts', // TODO: migrate to AppLogger format
-  'cache-integration-layer.ts', // TODO: migrate to AppLogger format
-  'LazyComponent.ts', // TODO: migrate to AppLogger format
-  'vite-lazy-loading.config.ts', // TODO: migrate to AppLogger format
-  'http-cache-strategy.ts', // TODO: migrate to AppLogger format
-  'load-testing-tools.ts', // TODO: migrate to AppLogger format
-  'mobile.ts', // TODO: migrate to AppLogger format
-  'network-optimization-integration.ts', // TODO: migrate to AppLogger format
-  'network-optimizer.ts', // TODO: migrate to AppLogger format
-  'network-performance-dashboard.ts', // TODO: migrate to AppLogger format
-  'performance-regression-tester.ts', // TODO: migrate to AppLogger format
-  'performance-test-framework.ts', // TODO: migrate to AppLogger format
 ]);
 
 describe('Performance module logger guard', () => {
