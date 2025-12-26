@@ -609,7 +609,14 @@
       return HEYS.Auth.getSessionToken();
     }
     // Fallback: напрямую из localStorage (global, без clientId namespace)
-    return localStorage.getItem('heys_session_token');
+    // 🔧 FIX: U.lsSet сохраняет через JSON.stringify, поэтому нужен JSON.parse
+    const raw = localStorage.getItem('heys_session_token');
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return raw; // Если не JSON — вернуть как есть
+    }
   }
   
   /**

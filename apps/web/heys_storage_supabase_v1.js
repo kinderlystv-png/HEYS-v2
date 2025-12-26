@@ -5725,7 +5725,10 @@
   cloud.createPendingProduct = async function(clientId, product) {
     try {
       // 🔐 P1: Используем session_token вместо client_id
-      const sessionToken = U.lsGetGlobal?.('heys_session_token') || localStorage.getItem('heys_session_token');
+      // 🔧 FIX: Используем HEYS.Auth.getSessionToken() или U.lsGet (который делает JSON.parse)
+      const sessionToken = (typeof HEYS !== 'undefined' && HEYS.Auth?.getSessionToken?.()) 
+        || U.lsGet?.('heys_session_token', null)
+        || (() => { try { return JSON.parse(localStorage.getItem('heys_session_token')); } catch { return null; } })();
       if (!sessionToken) {
         return { data: null, error: 'No session token', status: 'error' };
       }

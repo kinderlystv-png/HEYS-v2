@@ -189,66 +189,46 @@
     }
 
     try {
-      // 1. Получаем соль
-      const saltRes = await api.rpc('get_client_salt', {
+      // v3: одношаговая авторизация (сервер сам хеширует PIN)
+      const vRes = await api.rpc('verify_client_pin_v3', {
         p_phone: phoneNorm,
-      });
-      
-      if (saltRes.error) {
-        registerFail('login', phoneNorm);
-        return {
-          ok: false,
-          error: 'server_error',
-          message: saltRes.error.message,
-          _debug: {
-            stage: 'get_salt',
-            rpc: 'get_client_salt',
-            code: saltRes.error.code,
-          },
-        };
-      }
-
-      const saltRow = Array.isArray(saltRes.data) ? saltRes.data[0] : saltRes.data;
-      const salt = saltRow && saltRow.salt;
-      if (!salt) {
-        registerFail('login', phoneNorm);
-        return {
-          ok: false,
-          error: 'invalid_credentials',
-          _debug: {
-            stage: 'get_salt',
-            rpc: 'get_client_salt',
-            dataType: Array.isArray(saltRes.data) ? 'array' : typeof saltRes.data,
-            hasSalt: false,
-          },
-        };
-      }
-
-      // 2. Хешируем PIN
-      const pinHash = await hashPin(pin, salt);
-
-      // 3. Верифицируем через v2 (возвращает session_token!)
-      const vRes = await api.rpc('verify_client_pin_v2', {
-        p_phone: phoneNorm,
-        p_pin_hash: pinHash,
+        p_pin: pin,
       });
 
       if (vRes.error) {
         registerFail('login', phoneNorm);
         return {
           ok: false,
-          error: 'invalid_credentials',
+          error: vRes.error.message === 'rate_limited' ? 'rate_limited' : 'invalid_credentials',
           _debug: {
             stage: 'verify_pin',
-            rpc: 'verify_client_pin_v2',
+            rpc: 'verify_client_pin_v3',
             code: vRes.error.code,
+            message: vRes.error.message,
           },
         };
       }
 
-      const vRow = Array.isArray(vRes.data) ? vRes.data[0] : vRes.data;
-      const clientId = vRow && vRow.client_id;
-      const sessionToken = vRow && vRow.session_token;
+      // YandexAPI возвращает { verify_client_pin_v3: { success, client_id, ... } }
+      const rawData = vRes.data;
+      const vRow = rawData?.verify_client_pin_v3 || (Array.isArray(rawData) ? rawData[0] : rawData);
+      
+      // v3 возвращает { success, client_id, session_token, error }
+      if (!vRow?.success) {
+        registerFail('login', phoneNorm);
+        return {
+          ok: false,
+          error: vRow?.error === 'rate_limited' ? 'rate_limited' : 'invalid_credentials',
+          _debug: {
+            stage: 'verify_pin',
+            rpc: 'verify_client_pin_v3',
+            serverError: vRow?.error,
+          },
+        };
+      }
+
+      const clientId = vRow.client_id;
+      const sessionToken = vRow.session_token;
       
       if (!clientId || !sessionToken) {
         registerFail('login', phoneNorm);
@@ -257,8 +237,7 @@
           error: 'invalid_credentials',
           _debug: {
             stage: 'verify_pin',
-            rpc: 'verify_client_pin_v2',
-            dataType: Array.isArray(vRes.data) ? 'array' : typeof vRes.data,
+            rpc: 'verify_client_pin_v3',
             hasClientId: !!clientId,
             hasSessionToken: !!sessionToken,
           },
