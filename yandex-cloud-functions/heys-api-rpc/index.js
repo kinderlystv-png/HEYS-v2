@@ -342,13 +342,25 @@ module.exports.handler = async function (event, context) {
     if (paramKeys.length > 0) {
       // Вызов функции с именованными параметрами
       query = `SELECT * FROM ${fnName}(${paramNames})`;
-      values = paramKeys.map(k => params[k]);
+      // 🔐 P2: Для ::jsonb параметров нужен JSON.stringify (pg driver передаёт object as-is)
+      values = paramKeys.map(k => {
+        const hint = hints[k] || '';
+        const val = params[k];
+        // Если это jsonb и значение — объект/массив, сериализуем в строку
+        if (hint === '::jsonb' && val !== null && typeof val === 'object') {
+          return JSON.stringify(val);
+        }
+        return val;
+      });
     } else {
       query = `SELECT * FROM ${fnName}()`;
       values = [];
     }
 
     const result = await client.query(query, values);
+    
+    // 🔐 P2 FIX: Закрываем соединение ДО return (serverless best practice)
+    await client.end();
 
     return {
       statusCode: 200,
@@ -359,6 +371,9 @@ module.exports.handler = async function (event, context) {
   } catch (error) {
     console.error('[RPC Error]', fnName, error.message);
     
+    // Пытаемся закрыть соединение даже при ошибке
+    try { await client.end(); } catch (e) { /* ignore */ }
+    
     return {
       statusCode: 500,
       headers: corsHeaders,
@@ -368,8 +383,5 @@ module.exports.handler = async function (event, context) {
         code: error.code
       })
     };
-
-  } finally {
-    await client.end();
   }
 };

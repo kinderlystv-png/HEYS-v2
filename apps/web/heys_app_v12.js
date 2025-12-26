@@ -6478,10 +6478,10 @@ const HEYS = window.HEYS = window.HEYS || {};
                                 } catch (_) {}
                                 setClientId(res.clientId);
                                 
-                                // 🔄 Диспатчим событие для показа утреннего чек-ина (как после облачной синхронизации)
-                                setTimeout(() => {
-                                  window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: res.clientId } }));
-                                }, 100);
+                                // ✅ НЕ диспатчим heysSyncCompleted здесь!
+                                // Событие отправляется внутри cloud.switchClient() → syncClientViaRPC()
+                                // ПОСЛЕ реальной загрузки данных из облака.
+                                // Преждевременный dispatch вызывает кратковременный показ модалки регистрации.
                               } catch (_) {}
                             }
                             return res;
@@ -7103,11 +7103,12 @@ const HEYS = window.HEYS = window.HEYS || {};
                   setStatus('online');
                   
                   // Синхронизируем с сервером
+                  // Событие heysSyncCompleted отправляется ВНУТРИ syncClientViaRPC после загрузки данных
                   cloud.syncClient(pinAuthClient)
                     .then(() => {
                       console.log('[App] ✅ PIN-сессия восстановлена');
-                      // Отправляем событие для обновления UI
-                      window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: pinAuthClient } }));
+                      // НЕ отправляем heysSyncCompleted здесь — оно уже отправлено внутри syncClient
+                      // после фактической записи данных в localStorage
                     })
                     .catch((err) => {
                       console.error('[App] ❌ Ошибка восстановления PIN-сессии:', err);

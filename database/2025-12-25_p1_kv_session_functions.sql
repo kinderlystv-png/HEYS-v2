@@ -35,11 +35,11 @@ BEGIN
     );
   END IF;
   
-  -- 3. Upsert в client_kv_store
-  INSERT INTO client_kv_store (client_id, key, value, updated_at)
+  -- 3. Upsert в client_kv_store (колонки k, v)
+  INSERT INTO client_kv_store (client_id, k, v, updated_at)
   VALUES (v_client_id, p_key, p_value, NOW())
-  ON CONFLICT (client_id, key) DO UPDATE SET
-    value = EXCLUDED.value,
+  ON CONFLICT (client_id, k) DO UPDATE SET
+    v = EXCLUDED.v,
     updated_at = NOW();
   
   RETURN jsonb_build_object(
@@ -97,10 +97,10 @@ BEGIN
     v_value := v_item->'v';
     
     IF v_key IS NOT NULL THEN
-      INSERT INTO client_kv_store (client_id, key, value, updated_at)
+      INSERT INTO client_kv_store (client_id, k, v, updated_at)
       VALUES (v_client_id, v_key, v_value, NOW())
-      ON CONFLICT (client_id, key) DO UPDATE SET
-        value = EXCLUDED.value,
+      ON CONFLICT (client_id, k) DO UPDATE SET
+        v = EXCLUDED.v,
         updated_at = NOW();
       
       v_saved := v_saved + 1;
@@ -145,9 +145,9 @@ BEGIN
   v_client_id := public.require_client_id(p_session_token);
   
   -- 2. Получить значение (чтение разрешено даже в read_only)
-  SELECT value INTO v_value
+  SELECT v INTO v_value
   FROM client_kv_store
-  WHERE client_id = v_client_id AND key = p_key;
+  WHERE client_id = v_client_id AND k = p_key;
   
   IF v_value IS NULL THEN
     RETURN jsonb_build_object(
@@ -204,9 +204,9 @@ BEGIN
     );
   END IF;
   
-  -- 3. Удалить
+  -- 3. Удалить (колонка k, не key)
   DELETE FROM client_kv_store
-  WHERE client_id = v_client_id AND key = p_key;
+  WHERE client_id = v_client_id AND k = p_key;
   
   GET DIAGNOSTICS v_deleted = ROW_COUNT;
   

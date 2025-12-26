@@ -701,13 +701,36 @@
   
   /**
    * Получить ВСЕ KV данные клиента для синхронизации
-   * @param {string} clientId - ID клиента (IGNORED)
+   * @param {string} clientId - ID клиента
    * @returns {Promise<{data: Array<{k: string, v: any}>, error?: string}>}
    */
   async function getAllKV(clientId) {
-    // TODO: Создать get_all_client_kv_by_session
-    warn('getAllKV not supported in session mode');
-    return { data: [], error: null };
+    if (!clientId) {
+      return { data: [], error: 'No clientId provided' };
+    }
+    
+    try {
+      log(`getAllKV: Loading all data for client ${clientId.slice(0,8)}...`);
+      
+      // Используем REST API напрямую (как bootstrapClientSync)
+      // ⚠️ rest(table, options) — новая сигнатура!
+      const { data, error } = await rest('client_kv_store', {
+        method: 'GET',
+        filters: { 'eq.client_id': clientId },
+        select: 'k,v,updated_at'
+      });
+      
+      if (error) {
+        err('getAllKV REST error:', error.message || error);
+        return { data: [], error: error.message || error };
+      }
+      
+      log(`getAllKV: Loaded ${data?.length || 0} keys`);
+      return { data: data || [], error: null };
+    } catch (e) {
+      err('getAllKV failed:', e.message);
+      return { data: [], error: e.message };
+    }
   }
   
   /**

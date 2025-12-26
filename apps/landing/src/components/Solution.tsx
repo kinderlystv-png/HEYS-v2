@@ -39,7 +39,7 @@ export default function Solution() {
                     Ведёт дневник
                   </span>
                   <span className="bg-blue-100 text-blue-700 text-sm font-medium px-4 py-1.5 rounded-full">
-                    Отвечает ≤30 мин
+                    Ответ ≤60 мин
                   </span>
                   <span className="bg-purple-100 text-purple-700 text-sm font-medium px-4 py-1.5 rounded-full">
                     Рядом при срыве

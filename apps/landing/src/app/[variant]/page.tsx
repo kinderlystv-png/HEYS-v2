@@ -6,7 +6,7 @@ import { notFound } from 'next/navigation'
 
 import HeroSSR from '@/components/HeroSSR'
 import VariantLandingSectionsSSR from '@/components/VariantLandingSectionsSSR'
-import VersionSwitcherSSR from '@/components/VersionSwitcherSSR'
+import VersionSwitcherWrapper from '@/components/VersionSwitcherWrapper'
 import { LandingVariant, VARIANTS } from '@/config/landing-variants'
 
 // Статическая генерация для /a, /b, /c, /d
@@ -65,9 +65,9 @@ export default function VariantPage({
       
       {/* SSR секции — контент в HTML */}
       <VariantLandingSectionsSSR content={content} variant={variantKey} />
-      
-      {/* Навигация между вариантами */}
-      <VersionSwitcherSSR currentVariant={variantKey} />
+
+      {/* Навигация между вариантами (только с ?debug=1) */}
+      <VersionSwitcherWrapper currentVariant={variantKey} />
     </main>
   )
 }

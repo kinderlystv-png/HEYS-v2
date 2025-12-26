@@ -367,7 +367,7 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
     name: 'Direct',
     description: 'Жёстко по сути',
     hero: {
-      headline: 'Трекер + куратор. Чтобы вы реально дошли до режима.',
+      headline: 'HEYS — трекер + куратор. Чтобы вы реально дошли до режима.',
       subheadline: 'Вы отмечаете максимально просто: фото еды / короткие сообщения / отметки привычек.\nДальше куратор ведёт, сверяет прогресс раз в неделю и даёт понятные шаги.',
       ctaPrimary: 'Выбрать тариф',
       ctaSecondary: 'Записаться на неделю старта (0 ₽) →',
@@ -488,6 +488,12 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
           proPlus: 'Полный режим 7/7',
         },
         {
+          label: 'SLA ответа',
+          base: '—',
+          pro: '≤60 минут',
+          proPlus: '≤60 минут (приоритет)',
+        },
+        {
           label: 'Анти‑срыв',
           base: 'Поддержка на чек‑ине',
           pro: 'Приоритет',
@@ -597,7 +603,7 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
     name: 'Honest',
     description: 'Честный тон без обещаний',
     hero: {
-      headline: 'Без магии. Только системность и сопровождение.',
+      headline: 'HEYS — без магии. Только системность и сопровождение.',
       subheadline: 'HEYS — это метод: трекер фиксирует контекст, куратор помогает держать фокус.\nВы не остаётесь один на один с цифрами — есть процесс и регулярный чек-ин.',
       ctaPrimary: 'Выбрать тариф',
       ctaSecondary: 'Записаться на неделю старта (0 ₽) →',

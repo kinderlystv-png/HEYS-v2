@@ -55,8 +55,6 @@ export default function HeroSSR({ content, variant }: HeroSSRProps) {
           <div className="max-w-[860px]">
             {/* Main headline — SSR, контент в HTML */}
             <h1 className="text-[36px] md:text-[46px] font-light text-[#374151] mb-8 leading-[1.15]">
-              <span className="text-[#1d4ed8] font-semibold">HEYS</span>
-              {' — '}
               <span className="text-[#111827] font-semibold">{content.hero.headline}</span>
             </h1>
           

@@ -25,7 +25,8 @@ export default function VersionSwitcherSSR({ currentVariant }: VersionSwitcherSS
       <div className="bg-black/80 backdrop-blur-sm rounded-2xl p-3 shadow-lg">
         <div className="text-white/60 text-xs mb-2 text-center">
           Варианты
-          <span className="block text-white/40 text-[10px] mt-0.5">v{BUILD_TIME}</span>
+          {/* suppressHydrationWarning — время может отличаться server vs client */}
+          <span suppressHydrationWarning className="block text-white/40 text-[10px] mt-0.5">v{BUILD_TIME}</span>
         </div>
         <div className="flex gap-2">
           {VARIANTS.map((v) => {

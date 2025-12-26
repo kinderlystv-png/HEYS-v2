@@ -2343,7 +2343,7 @@
         k: 'heys_products',
         v: valid,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id,client_id,k' });
+      }, { onConflict: 'client_id,k' });
     
     if (error) {
       console.error('❌ Ошибка сохранения:', error);
@@ -2396,7 +2396,7 @@
         k: `heys_dayv2_${date}`,
         v: dayData,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id,client_id,k' });
+      }, { onConflict: 'client_id,k' });
     
     if (error) {
       console.error('❌ Ошибка сохранения:', error);
@@ -4350,8 +4350,8 @@
         // Добавляем user_id если его нет (таблица требует NOT NULL)
         const itemWithUser = item.user_id ? item : { ...item, user_id: user.id };
         
-        // Primary key = (user_id, client_id, k), используем его для onConflict
-        return cloud.upsert('client_kv_store', itemWithUser, 'user_id,client_id,k')
+        // Primary key = (client_id, k) — изменено 2025-12-26 (убрали user_id)
+        return cloud.upsert('client_kv_store', itemWithUser, 'client_id,k')
           .then(() => ({ success: true, item: itemWithUser }))
           .catch(err => {
             console.error('[DEBUG] Upsert error:', err?.message || err, 'for key:', itemWithUser?.k);
@@ -4743,7 +4743,7 @@
             }
             
             const { error } = await YandexAPI.from(tableName)
-                .upsert(obj, { onConflict: conflictKey || 'user_id,client_id,k' });
+                .upsert(obj, { onConflict: conflictKey || 'client_id,k' });
             
             if (error) {
                 throw error;
