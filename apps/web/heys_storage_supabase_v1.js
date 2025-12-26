@@ -1622,6 +1622,13 @@
    */
   function tryParse(v){ 
     try{
+      // 🔧 FIX 2025-12-26: Используем decompress для обработки сжатых данных
+      // Без этого сжатые строки "¤Z¤[{..." сохранялись в cloud как есть, ломая sync
+      const Store = global.HEYS?.store;
+      if (Store && typeof Store.decompress === 'function') {
+        return Store.decompress(v);
+      }
+      // Fallback если store ещё не загружен
       return JSON.parse(v);
     }catch(e){ 
       return v; 
@@ -2693,7 +2700,18 @@
       return { cleaned: 0, kept: 0, error: 'Not authenticated' };
     }
     
-    const products = row.v;
+    // 🔧 FIX 2025-12-26: Декомпрессируем row.v если это сжатая строка
+    let products = row.v;
+    const Store = global.HEYS?.store;
+    if (typeof products === 'string' && products.startsWith('¤Z¤')) {
+      try {
+        if (Store && typeof Store.decompress === 'function') {
+          products = Store.decompress(products);
+        }
+      } catch (e) {
+        logCritical(`⚠️ [DECOMPRESS] Failed in cleanupProductRecord: ${e.message}`);
+      }
+    }
     
     // Пустой массив или не массив — удаляем запись
     if (!Array.isArray(products) || products.length === 0) {
@@ -2838,8 +2856,19 @@
             }
           }
           
+          // 🔧 FIX 2025-12-26: Декомпрессия данных из cloud
+          // Если данные были ошибочно сохранены в сжатом виде — декомпрессируем
+          let valueToStore = row.v;
+          if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) {
+            const Store = global.HEYS?.store;
+            if (Store && typeof Store.decompress === 'function') {
+              valueToStore = Store.decompress(row.v);
+              log(`🔧 [BOOTSTRAP] Decompressed ${key} from cloud`);
+            }
+          }
+          
           // Глобальный ключ или ключ текущего клиента — загружаем
-          ls.setItem(key, JSON.stringify(row.v));
+          ls.setItem(key, JSON.stringify(valueToStore));
           loadedCount++;
         } catch(e){}
       });
@@ -2915,7 +2944,19 @@
           // Ключи в client_kv_store уже нормализованы (heys_profile, heys_dayv2_2025-12-12)
           // Нужно добавить clientId для локального хранения
           const localKey = `heys_${clientId}_${row.k.replace(/^heys_/, '')}`;
-          ls.setItem(localKey, JSON.stringify(row.v));
+          
+          // 🔧 FIX 2025-12-26: Декомпрессия данных из cloud
+          // Если данные были ошибочно сохранены в сжатом виде — декомпрессируем
+          let valueToStore = row.v;
+          if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) {
+            const Store = global.HEYS?.store;
+            if (Store && typeof Store.decompress === 'function') {
+              valueToStore = Store.decompress(row.v);
+              log(`🔧 [YANDEX SYNC] Decompressed ${row.k} from cloud`);
+            }
+          }
+          
+          ls.setItem(localKey, JSON.stringify(valueToStore));
           syncedKeys.push(row.k); // Сохраняем оригинальный ключ для инвалидации
           loadedCount++;
         } catch(e) {
@@ -3303,6 +3344,19 @@
       deduped.forEach(({ scopedKey, row }) => {
         try {
           let key = scopedKey;
+          
+          // 🔧 FIX 2025-12-26: Декомпрессируем row.v если это сжатая строка
+          // Данные в БД могут быть сохранены как сжатые строки "¤Z¤[{..." — нужно декодировать
+          const Store = global.HEYS?.store;
+          if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) {
+            try {
+              if (Store && typeof Store.decompress === 'function') {
+                row.v = Store.decompress(row.v);
+              }
+            } catch (decompErr) {
+              logCritical(`⚠️ [DECOMPRESS] Failed for ${key}: ${decompErr.message}`);
+            }
+          }
           
           // Конфликт: сравнить версии и объединить если нужно
           let local = null;
@@ -4088,7 +4142,17 @@
             }
           }
 
-          ls.setItem(targetKey, JSON.stringify(row.v));
+          // 🔧 FIX 2025-12-26: Декомпрессия данных из cloud
+          let valueToStore = row.v;
+          if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) {
+            const Store = global.HEYS?.store;
+            if (Store && typeof Store.decompress === 'function') {
+              valueToStore = Store.decompress(row.v);
+              log(`🔧 [fetchDays] Decompressed ${targetKey} from cloud`);
+            }
+          }
+          
+          ls.setItem(targetKey, JSON.stringify(valueToStore));
           
           // 🔧 FIX: Инвалидируем memory кэш Store чтобы следующий lsGet прочитал новые данные
           // Без этого Store.get возвращает старый кэш, игнорируя прямую запись в localStorage
@@ -4144,6 +4208,16 @@
     }
   };
   cloud.isRpcOnlyMode = function() { return _rpcOnlyMode; };
+  
+  /**
+   * 🔐 Определяет, это PIN-авторизация клиента (НЕ куратор)
+   * - PIN auth: _pinAuthClientId установлен, user === null
+   * - Куратор: user !== null (есть cloudUser после signIn)
+   * Используется для UI — показывать ли список клиентов в dropdown
+   */
+  cloud.isPinAuthClient = function() {
+    return _pinAuthClientId != null && user === null;
+  };
 
   // Дебаунсинг для клиентских данных
   let clientUpsertQueue = loadPendingQueue(PENDING_CLIENT_QUEUE_KEY);
@@ -4627,27 +4701,26 @@
         
         // 🔐 PIN-авторизация: клиент уже проверен через verify_client_pin
         const isPinAuth = _pinAuthClientId && _pinAuthClientId === clientId;
-        
-        try {
-            // Строим фильтры динамически
-            const filters = { 'eq.id': clientId };
-            
-            // Для обычной авторизации проверяем curator_id
-            // Для PIN — только существование клиента (RLS на таблице clients запретит доступ чужим)
-            if (user && !isPinAuth) {
-              filters['eq.curator_id'] = user.id;
-            }
-            
-            const { data, error } = await YandexAPI.rest('clients', { 
-              select: 'id', 
-              filters, 
-              limit: 1 
-            });
-            if (error) return false;
-            return (data && data.length > 0);
-        } catch(e){
-          return false;
+        if (isPinAuth) {
+            return true;
         }
+        
+        // 🔐 Curator-авторизация: куратор уже аутентифицирован с JWT
+        // clients таблица убрана из REST API — проверяем через кэш или доверяем JWT
+        if (user) {
+            // Если есть кэшированный список клиентов — проверяем в нём
+            const cachedClients = window.HEYS?.curatorClients;
+            if (cachedClients && Array.isArray(cachedClients)) {
+                const found = cachedClients.some(c => c.id === clientId);
+                if (found) return true;
+            }
+            // Куратор авторизован — доверяем что clientId валиден
+            // Backend сам проверит права доступа при upsert
+            return true;
+        }
+        
+        // Нет авторизации
+        return false;
     };
 
     // Функция для отправки данных в client_kv_store
@@ -5436,7 +5509,9 @@
     const { limit = 500, excludeBlocklist = true } = options;
     
     try {
-      const { data, error } = await YandexAPI.from('shared_products_public')
+      // 🔄 v3.21.0: Используем shared_products (таблица) вместо shared_products_public (VIEW)
+      // VIEW был удалён из API — использовал auth.uid() который не работает в Yandex Cloud
+      const { data, error } = await YandexAPI.from('shared_products')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(limit);
@@ -5467,7 +5542,7 @@
   };
 
   /**
-   * Поиск продуктов в общей базе (через VIEW shared_products_public)
+   * Поиск продуктов в общей базе (через таблицу shared_products)
    * @param {string} query - Поисковый запрос
    * @param {Object} options - { limit, excludeBlocklist }
    * @returns {Promise<{data: Array, error: any}>}
@@ -5490,7 +5565,8 @@
         filters['ilike.name_norm'] = `%${normQuery}%`;
       }
       
-      const { data, error } = await YandexAPI.rest('shared_products_public', {
+      // 🔄 v3.21.0: Используем shared_products вместо shared_products_public (VIEW удалён)
+      const { data, error } = await YandexAPI.rest('shared_products', {
         select: '*',
         filters,
         order: 'created_at.desc',

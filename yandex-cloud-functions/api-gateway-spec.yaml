@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: HEYS API
-  version: 1.0.1
+  version: 1.0.3
   description: HEYS Nutrition Tracker API (Yandex Cloud Functions)
 
 servers:
@@ -14,6 +14,7 @@ servers:
 # heys-api-sms:    d4ejimndqnd8q72r9g00
 # heys-api-leads:  d4eml8vh341v41642cdu
 # heys-api-health: d4e0rqplbonspm84pk3n
+# heys-api-auth:   d4ef3c4o67vdg7o4c4d3
 
 paths:
   # ═══════════════════════════════════════════════════════════════
@@ -165,9 +166,100 @@ paths:
         function_id: d4e0rqplbonspm84pk3n
 
   # ═══════════════════════════════════════════════════════════════
+  # Auth — Аутентификация кураторов
+  # ═══════════════════════════════════════════════════════════════
+  /auth/login:
+    post:
+      summary: Curator login (email + password)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+    options:
+      summary: CORS preflight for auth login
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+
+  /auth/verify:
+    post:
+      summary: Verify JWT token
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+    options:
+      summary: CORS preflight for auth verify
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+
+  /auth/register:
+    post:
+      summary: Register new curator (admin only)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+    options:
+      summary: CORS preflight for auth register
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+
+  /auth/clients:
+    get:
+      summary: Get curator's clients list (requires JWT)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+    post:
+      summary: Create new client (requires JWT)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+    options:
+      summary: CORS preflight for auth clients
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+
+  /auth/clients/{clientId}:
+    patch:
+      summary: Update client (requires JWT)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+    delete:
+      summary: Delete client (requires JWT)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+    options:
+      summary: CORS preflight for auth clients by ID
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+
+  # ═══════════════════════════════════════════════════════════════
   # Supabase-compatible routes (для localhost совместимости)
   # ═══════════════════════════════════════════════════════════════
-  
+
   # REST v1 — Supabase SDK format /rest/v1/table_name
   /rest/v1/{table}:
     get:
@@ -226,15 +318,27 @@ paths:
         type: cloud_functions
         function_id: d4ea4j7eh05rtkjubipt
 
-  # Auth v1 — stub для Supabase SDK auth проверок
+  # Auth v1 — NEW: теперь редирект на реальную auth функцию
+  /auth/v1/token:
+    post:
+      summary: Supabase-compatible token endpoint (redirect to login)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+    options:
+      summary: CORS preflight for auth token
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+
   /auth/v1/user:
     get:
-      summary: Supabase-compatible auth user check (stub)
+      summary: Supabase-compatible auth user check
       x-yc-apigateway-integration:
         type: cloud_functions
-        function_id: d4e0rqplbonspm84pk3n
+        function_id: d4ef3c4o67vdg7o4c4d3
     options:
-      summary: CORS preflight for auth
+      summary: CORS preflight for auth user
       x-yc-apigateway-integration:
         type: cloud_functions
-        function_id: d4e0rqplbonspm84pk3n
+        function_id: d4ef3c4o67vdg7o4c4d3

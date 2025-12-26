@@ -6898,7 +6898,7 @@ const HEYS = window.HEYS = window.HEYS || {};
               : null;
 
             // 🖥️ Desktop Gate — заглушка для клиентов на широких экранах
-            // Определяем куратор ли это (есть Supabase session и НЕ RPC-only режим)
+            // Определяем куратор ли это (есть user object после curator login)
             const [isDesktop, setIsDesktop] = React.useState(() => window.innerWidth > 768);
             const [isCurator, setIsCurator] = React.useState(false);
             
@@ -6910,11 +6910,13 @@ const HEYS = window.HEYS = window.HEYS || {};
             }, []);
             
             // Проверяем куратор ли (аналогично логике в heys_core_v12.js)
+            // ✅ FIX v47: Проверяем наличие cloudUser (curator login создаёт user),
+            // а не _rpcOnlyMode (который true для ВСЕХ после миграции на Yandex API)
             React.useEffect(() => {
               const checkCurator = () => {
                 const cloudUserLocal = window.HEYS?.cloud?.getUser?.();
-                const rpcOnly = window.HEYS?.cloud?._rpcOnlyMode === true;
-                setIsCurator(cloudUserLocal != null && !rpcOnly);
+                // Куратор = есть user object (PIN-вход не создаёт user, только _pinAuthClientId)
+                setIsCurator(cloudUserLocal != null);
               };
               checkCurator();
               const interval = setInterval(checkCurator, 1000);
@@ -7203,7 +7205,8 @@ const HEYS = window.HEYS = window.HEYS || {};
             };
 
             // === Кэшированные переменные для производительности ===
-            const isRpcMode = HEYS.cloud?.isRpcOnlyMode?.() || false;
+            // isPinAuthClient: true = вход по PIN (клиент), false = куратор
+            const isRpcMode = HEYS.cloud?.isPinAuthClient?.() || false;
             const cachedProfile = (() => {
               const U = window.HEYS && window.HEYS.utils;
               return U && U.lsGet ? U.lsGet('heys_profile', {}) : {};

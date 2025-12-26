@@ -103,6 +103,22 @@
     throw lastError;
   }
   
+  /**
+   * Получить JWT токен куратора из localStorage
+   * @returns {string|null}
+   */
+  function getCuratorToken() {
+    try {
+      const stored = localStorage.getItem('heys_supabase_auth_token');
+      if (!stored) return null;
+      const parsed = JSON.parse(stored);
+      return parsed?.access_token || null;
+    } catch (e) {
+      err('getCuratorToken failed:', e.message);
+      return null;
+    }
+  }
+  
   // ═══════════════════════════════════════════════════════════════════
   // 📡 API МЕТОДЫ
   // ═══════════════════════════════════════════════════════════════════
@@ -774,13 +790,26 @@
     try {
       log(`getClients: curatorId=${curatorId}`);
       
-      const result = await rest('clients', {
-        filters: { 'eq.curator_id': curatorId },
-        select: 'id,name,updated_at'
+      // 🔐 Используем /auth/clients вместо REST API (clients убран из REST по security)
+      // Требует JWT токен куратора
+      const token = getCuratorToken();
+      if (!token) {
+        return { data: null, error: { message: 'Curator not authenticated' } };
+      }
+      
+      const url = `${CONFIG.API_URL}/auth/clients`;
+      const response = await fetchWithRetry(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       });
       
-      if (result.error) {
-        return { data: null, error: result.error };
+      const result = await response.json();
+      
+      if (!response.ok) {
+        return { data: null, error: { message: result.error || 'Failed to get clients', code: response.status } };
       }
       
       // Сортируем по updated_at (ascending)
@@ -789,6 +818,14 @@
         const dateB = new Date(b.updated_at || 0);
         return dateA - dateB;
       });
+      
+      log(`getClients: SUCCESS, ${clients.length} clients`);
+      
+      // 🔐 Кэшируем для cloud.ensureClient (clients убран из REST API)
+      if (typeof window !== 'undefined') {
+        window.HEYS = window.HEYS || {};
+        window.HEYS.curatorClients = clients;
+      }
       
       return { data: clients, error: null };
     } catch (e) {
@@ -799,33 +836,42 @@
   
   /**
    * Создать нового клиента (без phone/PIN)
+   * 🔐 Использует /auth/clients вместо REST API (clients убран из REST по security)
    * @param {string} name - Имя клиента
-   * @param {string} curatorId - ID куратора
+   * @param {string} curatorId - ID куратора (не используется - берём из JWT)
    * @returns {Promise<{data: {id, name}, error: any}>}
    */
   async function createClient(name, curatorId) {
-    if (!curatorId) {
-      return { data: null, error: { message: 'curatorId required' } };
-    }
-    
     try {
-      log(`createClient: name=${name}, curatorId=${curatorId}`);
+      log(`createClient: name=${name}`);
       
-      const result = await rest('clients', {
-        method: 'POST',
-        data: { 
-          name: name || `Клиент ${Date.now()}`,
-          curator_id: curatorId
-        }
-      });
-      
-      if (result.error) {
-        return { data: null, error: result.error };
+      const token = getCuratorToken();
+      if (!token) {
+        return { data: null, error: { message: 'Curator not authenticated' } };
       }
       
-      // REST POST возвращает массив
-      const client = Array.isArray(result.data) ? result.data[0] : result.data;
-      return { data: client, error: null };
+      const url = `${CONFIG.API_URL}/auth/clients`;
+      const response = await fetchWithRetry(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: name || `Клиент ${Date.now()}` })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        return { data: null, error: { message: result.error || 'Failed to create client', code: response.status } };
+      }
+      
+      // Обновляем кэш клиентов
+      if (result.data && window.HEYS?.curatorClients) {
+        window.HEYS.curatorClients.push(result.data);
+      }
+      
+      return { data: result.data, error: null };
     } catch (e) {
       err('createClient failed:', e.message);
       return { data: null, error: { message: e.message } };
@@ -834,6 +880,7 @@
   
   /**
    * Обновить клиента
+   * 🔐 Использует /auth/clients вместо REST API (clients убран из REST по security)
    * @param {string} clientId - ID клиента
    * @param {object} data - Данные для обновления { name, ... }
    * @returns {Promise<{data: any, error: any}>}
@@ -846,13 +893,34 @@
     try {
       log(`updateClient: id=${clientId}`, data);
       
-      const result = await rest('clients', {
+      const token = getCuratorToken();
+      if (!token) {
+        return { data: null, error: { message: 'Curator not authenticated' } };
+      }
+      
+      const url = `${CONFIG.API_URL}/auth/clients/${clientId}`;
+      const response = await fetchWithRetry(url, {
         method: 'PATCH',
-        filters: { 'eq.id': clientId },
-        data
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
       });
       
-      return result;
+      const result = await response.json();
+      
+      if (!response.ok) {
+        return { data: null, error: { message: result.error || 'Failed to update client', code: response.status } };
+      }
+      
+      // Обновляем кэш клиентов
+      if (result.data && window.HEYS?.curatorClients) {
+        const idx = window.HEYS.curatorClients.findIndex(c => c.id === clientId);
+        if (idx >= 0) window.HEYS.curatorClients[idx] = result.data;
+      }
+      
+      return { data: result.data, error: null };
     } catch (e) {
       err('updateClient failed:', e.message);
       return { data: null, error: { message: e.message } };
@@ -861,6 +929,7 @@
   
   /**
    * Удалить клиента
+   * 🔐 Использует /auth/clients вместо REST API (clients убран из REST по security)
    * @param {string} clientId - ID клиента
    * @returns {Promise<{data: any, error: any}>}
    */
@@ -872,12 +941,32 @@
     try {
       log(`deleteClient: id=${clientId}`);
       
-      const result = await rest('clients', {
+      const token = getCuratorToken();
+      if (!token) {
+        return { data: null, error: { message: 'Curator not authenticated' } };
+      }
+      
+      const url = `${CONFIG.API_URL}/auth/clients/${clientId}`;
+      const response = await fetchWithRetry(url, {
         method: 'DELETE',
-        filters: { 'eq.id': clientId }
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       });
       
-      return result;
+      const result = await response.json();
+      
+      if (!response.ok) {
+        return { data: null, error: { message: result.error || 'Failed to delete client', code: response.status } };
+      }
+      
+      // Удаляем из кэша клиентов
+      if (window.HEYS?.curatorClients) {
+        window.HEYS.curatorClients = window.HEYS.curatorClients.filter(c => c.id !== clientId);
+      }
+      
+      return { data: { success: true }, error: null };
     } catch (e) {
       err('deleteClient failed:', e.message);
       return { data: null, error: { message: e.message } };

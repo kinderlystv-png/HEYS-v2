@@ -438,12 +438,14 @@
       
       // Проверяем curator-режим (есть Supabase session)
       // Используем state для реактивности при изменении auth
+      // ✅ FIX v47: Проверяем наличие cloudUser (curator login создаёт user),
+      // а не _rpcOnlyMode (который true для ВСЕХ после миграции на Yandex API)
       const [isCurator, setIsCurator] = React.useState(false);
       React.useEffect(() => {
         const checkCurator = () => {
           const cloudUser = window.HEYS?.cloud?.getUser?.();
-          const rpcOnly = window.HEYS?.cloud?._rpcOnlyMode === true;
-          const result = cloudUser != null && !rpcOnly;
+          // Куратор = есть user object (PIN-вход не создаёт user, только _pinAuthClientId)
+          const result = cloudUser != null;
           setIsCurator(result);
         };
         checkCurator();

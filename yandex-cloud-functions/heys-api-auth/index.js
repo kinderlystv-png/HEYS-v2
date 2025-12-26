@@ -39,7 +39,7 @@ const ALLOWED_ORIGINS = new Set([
  */
 function getCorsHeaders(origin) {
   const headers = {
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-client-info',
     'Access-Control-Max-Age': '86400',
     'Content-Type': 'application/json',
@@ -290,6 +290,189 @@ async function handleVerify(body, authHeader, jwtSecret) {
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 GET CLIENTS — Curator-only endpoint (JWT required)
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function handleGetClients(curatorId) {
+  const client = createPgClient();
+  
+  try {
+    await client.connect();
+    
+    // Получаем клиентов куратора (только базовые поля без PII)
+    const result = await client.query(
+      `SELECT id, name, updated_at 
+       FROM clients 
+       WHERE curator_id = $1 
+       ORDER BY updated_at ASC`,
+      [curatorId]
+    );
+    
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ data: result.rows })
+    };
+    
+  } catch (e) {
+    console.error('GetClients error:', e);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Internal server error', details: e.message })
+    };
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 CREATE CLIENT — Curator-only endpoint (JWT required)
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function handleCreateClient(curatorId, body) {
+  const { name } = body;
+  
+  if (!name) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Name required' })
+    };
+  }
+  
+  const client = createPgClient();
+  
+  try {
+    await client.connect();
+    
+    const result = await client.query(
+      `INSERT INTO clients (name, curator_id)
+       VALUES ($1, $2)
+       RETURNING id, name, updated_at`,
+      [name, curatorId]
+    );
+    
+    return {
+      statusCode: 201,
+      body: JSON.stringify({ data: result.rows[0] })
+    };
+    
+  } catch (e) {
+    console.error('CreateClient error:', e);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Internal server error', details: e.message })
+    };
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 UPDATE CLIENT — Curator-only endpoint (JWT required)
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function handleUpdateClient(curatorId, clientId, body) {
+  if (!clientId) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Client ID required' })
+    };
+  }
+  
+  const { name } = body;
+  
+  if (!name) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Name required' })
+    };
+  }
+  
+  const client = createPgClient();
+  
+  try {
+    await client.connect();
+    
+    // Проверяем что клиент принадлежит куратору
+    const result = await client.query(
+      `UPDATE clients 
+       SET name = $1, updated_at = NOW()
+       WHERE id = $2 AND curator_id = $3
+       RETURNING id, name, updated_at`,
+      [name, clientId, curatorId]
+    );
+    
+    if (result.rows.length === 0) {
+      return {
+        statusCode: 404,
+        body: JSON.stringify({ error: 'Client not found or access denied' })
+      };
+    }
+    
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ data: result.rows[0] })
+    };
+    
+  } catch (e) {
+    console.error('UpdateClient error:', e);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Internal server error', details: e.message })
+    };
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 DELETE CLIENT — Curator-only endpoint (JWT required)
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function handleDeleteClient(curatorId, clientId) {
+  if (!clientId) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Client ID required' })
+    };
+  }
+  
+  const client = createPgClient();
+  
+  try {
+    await client.connect();
+    
+    // Удаляем клиента только если принадлежит куратору
+    const result = await client.query(
+      `DELETE FROM clients 
+       WHERE id = $1 AND curator_id = $2
+       RETURNING id`,
+      [clientId, curatorId]
+    );
+    
+    if (result.rows.length === 0) {
+      return {
+        statusCode: 404,
+        body: JSON.stringify({ error: 'Client not found or access denied' })
+      };
+    }
+    
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ success: true })
+    };
+    
+  } catch (e) {
+    console.error('DeleteClient error:', e);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Internal server error', details: e.message })
+    };
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
 async function handleRegister(body, jwtSecret) {
   const { email, password, name } = body;
   
@@ -411,8 +594,9 @@ module.exports.handler = async function(event, context) {
     };
   }
   
-  // Только POST
-  if (event.httpMethod !== 'POST') {
+  // Только POST, GET, PATCH, DELETE
+  const allowedMethods = ['POST', 'GET', 'PATCH', 'DELETE'];
+  if (!allowedMethods.includes(event.httpMethod)) {
     return {
       statusCode: 405,
       headers: corsHeaders,
@@ -420,9 +604,17 @@ module.exports.handler = async function(event, context) {
     };
   }
   
-  // Парсим путь: /auth/login, /auth/verify, /auth/register
+  // Парсим путь: /auth/login, /auth/verify, /auth/register, /auth/clients, /auth/clients/:id
   const path = event.path || event.url || '';
-  const action = path.split('/').pop(); // login, verify, register
+  const pathParts = path.split('/').filter(Boolean); // ['auth', 'clients'] или ['auth', 'clients', '{clientId}']
+  const action = pathParts[1]; // login, verify, register, clients
+  
+  // Client ID из path parameters (Yandex API Gateway использует event.params)
+  // Fallback на pathParts[2] если это реальный UUID, а не литерал {clientId}
+  const pathResourceId = pathParts[2];
+  const isLiteralPlaceholder = pathResourceId?.startsWith('{') && pathResourceId?.endsWith('}');
+  const resourceId = event.params?.clientId || event.pathParameters?.clientId || 
+                     (isLiteralPlaceholder ? null : pathResourceId) || null;
   
   let body = {};
   try {
@@ -450,6 +642,48 @@ module.exports.handler = async function(event, context) {
       break;
     case 'register':
       result = await handleRegister(body, JWT_SECRET);
+      break;
+    case 'clients':
+      // 🔐 Требует JWT авторизации
+      if (!authHeader) {
+        result = {
+          statusCode: 401,
+          body: JSON.stringify({ error: 'Authorization required' })
+        };
+      } else {
+        const jwtResult = verifyJwt(authHeader.replace(/^Bearer\s+/i, ''), JWT_SECRET);
+        if (!jwtResult.valid) {
+          result = {
+            statusCode: 401,
+            body: JSON.stringify({ error: jwtResult.error })
+          };
+        } else if (jwtResult.payload.role !== 'curator') {
+          result = {
+            statusCode: 403,
+            body: JSON.stringify({ error: 'Curator role required' })
+          };
+        } else {
+          const curatorId = jwtResult.payload.sub;
+          
+          // Роутинг по HTTP методу
+          switch (event.httpMethod) {
+            case 'GET':
+              result = await handleGetClients(curatorId);
+              break;
+            case 'POST':
+              result = await handleCreateClient(curatorId, body);
+              break;
+            case 'PATCH':
+              result = await handleUpdateClient(curatorId, resourceId || body.id, body);
+              break;
+            case 'DELETE':
+              result = await handleDeleteClient(curatorId, resourceId || body.id);
+              break;
+            default:
+              result = { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed for clients' }) };
+          }
+        }
+      }
       break;
     default:
       result = {

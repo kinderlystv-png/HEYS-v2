@@ -56,16 +56,16 @@ const ALLOWED_ORIGINS = [
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 🔐 P3: Read-only tables whitelist (no PII, no KV — writes via RPC only)
+// 🔐 P3: Tables whitelist
 // ═══════════════════════════════════════════════════════════════════════════
 const ALLOWED_TABLES = [
   'shared_products',
   'shared_products_blocklist', // Blocklist куратора (read-only)
+  'shared_products_pending',   // Pending products для куратора (read-only)
+  'client_kv_store',           // KV store для данных клиентов (куратор sync)
   // ❌ shared_products_public — REMOVED: VIEW uses auth.uid() which doesn't exist in YC
-  // ❌ clients — removed (PII: phone_normalized)
-  // ❌ client_kv_store — removed (writes via RPC by_session only)
+  // ❌ clients — removed (PII: phone_normalized, managed via /auth/clients)
   // ❌ kv_store — removed (writes via RPC only)
-  // ❌ shared_products_pending — removed (writes via RPC only)
   // ❌ consents — removed (sensitive, use RPC by_session)
 ];
 
@@ -77,17 +77,26 @@ const ALLOWED_TABLES = [
 const ALLOWED_COLUMNS = {
   // shared_products (table) — публичные колонки (без created_by_* для "public view" логики)
   // Для "public API" клиенты запрашивают select=id,name,... БЕЗ авторства
+  // ⚠️  Колонки в lowercase! (badfat100, goodfat100 — NOT camelCase)
   shared_products: [
     'id', 'name', 'name_norm', 'fingerprint',
-    'simple100', 'complex100', 'protein100', 'badFat100', 'goodFat100', 'trans100', 'fiber100',
+    'simple100', 'complex100', 'protein100', 'badfat100', 'goodfat100', 'trans100', 'fiber100',
     'gi', 'harm', 'category', 'portions', 'description',
     'created_at', 'updated_at'
     // ❌ created_by_user_id, created_by_client_id — REMOVED: авторство скрыто от публичного API
   ],
   // shared_products_blocklist (table) — composite PK (curator_id, product_id)
   shared_products_blocklist: ['curator_id', 'product_id', 'created_at'],
+  // shared_products_pending (table) — pending products for curator review (read-only via REST)
+  // ⚠️  Все поля продукта внутри product_data JSONB! Не раскрываем на уровне SQL.
+  shared_products_pending: [
+    'id', 'curator_id', 'client_id', 'product_data', 'name_norm', 'fingerprint',
+    'status', 'reject_reason', 'created_at', 'moderated_at', 'moderated_by'
+  ],
+  // client_kv_store (table) — KV storage для данных клиентов (куратор sync)
+  client_kv_store: ['user_id', 'client_id', 'k', 'v', 'updated_at'],
   // ❌ shared_products_public — REMOVED: VIEW uses auth.uid() which doesn't exist in YC
-  // ❌ clients, client_kv_store, kv_store, shared_products_pending, consents — removed
+  // ❌ clients, kv_store, shared_products_pending, consents — removed
 };
 
 /**
@@ -242,12 +251,25 @@ module.exports.handler = async function (event, context) {
   
   const method = event.httpMethod;
   
-  // 🔐 P3: Read-only mode — reject writes BEFORE connecting to DB
-  if (method !== 'GET') {
+  // 🔐 P3.1: client_kv_store разрешаем GET/POST (для куратора sync)
+  // Остальные таблицы — read-only (только GET)
+  const WRITE_ALLOWED_TABLES = ['client_kv_store'];
+  const isWriteAllowed = WRITE_ALLOWED_TABLES.includes(tableName);
+  
+  if (method !== 'GET' && !isWriteAllowed) {
     return {
       statusCode: 405,
       headers: corsHeaders,
       body: JSON.stringify({ error: 'Method not allowed. REST API is read-only. Use RPC for writes.' })
+    };
+  }
+  
+  // Разрешённые методы для writable tables
+  if (method !== 'GET' && method !== 'POST' && method !== 'PATCH' && method !== 'DELETE') {
+    return {
+      statusCode: 405,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: `Method ${method} not allowed.` })
     };
   }
   
@@ -422,15 +444,137 @@ module.exports.handler = async function (event, context) {
         };
       }
 
-      // 🔐 P3: POST/PATCH/DELETE removed — REST is read-only
-      // All writes go through RPC (session-based, subscription-checked)
-      
+      // 🔐 P3.1: POST — INSERT/UPSERT для client_kv_store
+      case 'POST': {
+        if (!isWriteAllowed) {
+          return {
+            statusCode: 405,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: 'POST not allowed for this table.' })
+          };
+        }
+        
+        const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+        const params = event.queryStringParameters || {};
+        
+        // Поддержка upsert через on_conflict
+        const onConflict = params.on_conflict;
+        const isUpsert = params.upsert === 'true' && onConflict;
+        
+        // Колонки из body
+        const columns = Object.keys(body);
+        
+        // 🔐 FIX v2: JSON колонки ВСЕГДА нужно сериализовать в JSON строку
+        // PostgreSQL json тип требует валидный JSON литерал:
+        // - строка "light" → '"light"' (с кавычками)
+        // - объект {a:1} → '{"a":1}'
+        // - число 123 → '123'
+        // - null → 'null'
+        const JSON_COLUMNS = ['v']; // client_kv_store.v is json type
+        const values = columns.map(col => {
+          const val = body[col];
+          // Для JSON колонок ВСЕГДА сериализуем (даже если это строка/число)
+          if (JSON_COLUMNS.includes(col) && val !== undefined) {
+            return JSON.stringify(val);
+          }
+          return val;
+        });
+        
+        const placeholders = columns.map((_, idx) => `$${idx + 1}`).join(', ');
+        const quotedColumns = columns.map(c => `"${c}"`).join(', ');
+        
+        let query;
+        if (isUpsert) {
+          // UPSERT: INSERT ... ON CONFLICT DO UPDATE
+          const conflictCols = onConflict.split(',').map(c => `"${c.trim()}"`).join(', ');
+          const updateSet = columns
+            .filter(c => !onConflict.split(',').map(x => x.trim()).includes(c))
+            .map(c => `"${c}" = EXCLUDED."${c}"`)
+            .join(', ');
+          
+          query = `INSERT INTO "${tableName}" (${quotedColumns}) VALUES (${placeholders}) ON CONFLICT (${conflictCols}) DO UPDATE SET ${updateSet}`;
+          
+          // Добавляем updated_at если есть в таблице
+          if (columns.includes('updated_at') === false) {
+            query = query.replace('DO UPDATE SET ', 'DO UPDATE SET "updated_at" = NOW(), ');
+          }
+        } else {
+          // Обычный INSERT
+          query = `INSERT INTO "${tableName}" (${quotedColumns}) VALUES (${placeholders})`;
+        }
+        
+        // RETURNING если нужен select
+        const selectCols = params.select;
+        if (selectCols) {
+          const sanitized = sanitizeSelectColumns(selectCols, tableName);
+          if (sanitized) {
+            query += ` RETURNING ${sanitized}`;
+          }
+        }
+        
+        console.log('[REST POST]', { table: tableName, isUpsert, onConflict, columns });
+        result = await client.query(query, values);
+        
+        return {
+          statusCode: isUpsert ? 200 : 201,
+          headers: corsHeaders,
+          body: JSON.stringify(result.rows)
+        };
+      }
+
+      // 🔐 P3.1: DELETE — только для client_kv_store
+      case 'DELETE': {
+        if (!isWriteAllowed) {
+          return {
+            statusCode: 405,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: 'DELETE not allowed for this table.' })
+          };
+        }
+        
+        const params = { ...event.queryStringParameters };
+        delete params.table;
+        
+        // Строим WHERE из фильтров
+        const conditions = [];
+        const values = [];
+        let i = 1;
+        
+        for (const [key, value] of Object.entries(params)) {
+          if (key.startsWith('eq.')) {
+            const col = key.replace('eq.', '');
+            conditions.push(`"${col}" = $${i++}`);
+            values.push(value);
+          } else if (typeof value === 'string' && value.startsWith('eq.')) {
+            conditions.push(`"${key}" = $${i++}`);
+            values.push(value.replace('eq.', ''));
+          }
+        }
+        
+        if (conditions.length === 0) {
+          return {
+            statusCode: 400,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: 'DELETE requires at least one filter' })
+          };
+        }
+        
+        const query = `DELETE FROM "${tableName}" WHERE ${conditions.join(' AND ')}`;
+        console.log('[REST DELETE]', { table: tableName, conditions: conditions.length });
+        result = await client.query(query, values);
+        
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({ deleted: result.rowCount })
+        };
+      }
+
       default:
-        // This should never be reached (early 405 above), but defensive
         return {
           statusCode: 405,
           headers: corsHeaders,
-          body: JSON.stringify({ error: 'Method not allowed. REST API is read-only.' })
+          body: JSON.stringify({ error: 'Method not allowed.' })
         };
     }
 

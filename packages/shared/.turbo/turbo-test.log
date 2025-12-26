@@ -1,136 +1,248 @@
 
-> @heys/shared@14.0.0 test C:\! HEYS 2\packages\shared
-> vitest run
+> @heys/shared@14.0.0 test /Users/poplavskijanton/HEYS-v2/packages/shared
+> vitest
 
 
-[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/! HEYS 2/packages/shared[39m
+ RUN  v3.2.4 /Users/poplavskijanton/HEYS-v2/packages/shared
 
-[90mstderr[2m | src/performance/LazyLoader.simple.test.ts[2m > [22m[2mLazyLoader - Основные функции[2m > [22m[2mСовместимость браузеров[2m > [22m[2mдолжен работать когда IntersectionObserver недоступен
-[22m[39m⚠️ IntersectionObserver не поддерживается, используется fallback
+[2025-12-26 00:38:30.576] [32mINFO[39m: [36m[heys-system] Service Worker registered successfully[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "AdvancedCacheManager"
+    [35m@timestamp[39m: "2025-12-25T21:38:30.577Z"
+    [35m@version[39m: "1"
+[2025-12-26 00:38:30.577] [33mWARN[39m: [36m[heys-system] Compression worker initialization failed[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "AdvancedCacheManager"
+    [35m@timestamp[39m: "2025-12-25T21:38:30.577Z"
+    [35m@version[39m: "1"
+    error: {}
+[2025-12-26 00:38:30.577] [32mINFO[39m: [36m[heys-system] AdvancedCacheManager initialized successfully[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "AdvancedCacheManager"
+    [35m@timestamp[39m: "2025-12-25T21:38:30.577Z"
+    [35m@version[39m: "1"
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Initialization > should initialize successfully with valid config
+[INFO] Shutting down monitoring service [90mundefined[39m
 
- [31m❯[39m src/performance/LazyLoader.simple.test.ts [2m([22m[2m19 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[32m 49[2mms[22m[39m
-[31m   [31m×[31m LazyLoader - Основные функции[2m > [22mИнициализация и базовая функциональность[2m > [22mдолжен создавать экземпляр LazyLoader[39m[32m 12[2mms[22m[39m
-[31m     → expected "spy" to be called at least once[39m
-   [32m✓[39m LazyLoader - Основные функции[2m > [22mИнициализация и базовая функциональность[2m > [22mдолжен наблюдать за элементами[32m 3[2mms[22m[39m
-[31m   [31m×[31m LazyLoader - Основные функции[2m > [22mИнициализация и базовая функциональность[2m > [22mдолжен получать метрики[39m[32m 9[2mms[22m[39m
-[31m     → expected { totalItems: +0, …(7) } to deeply equal { totalElements: Any<Number>, …(2) }[39m
-   [32m✓[39m LazyLoader - Основные функции[2m > [22mИнициализация и базовая функциональность[2m > [22mдолжен корректно очищать ресурсы[32m 1[2mms[22m[39m
-   [32m✓[39m LazyLoader - Основные функции[2m > [22mОбработка различных типов элементов[2m > [22mдолжен обрабатывать изображения[32m 1[2mms[22m[39m
-   [32m✓[39m LazyLoader - Основные функции[2m > [22mОбработка различных типов элементов[2m > [22mдолжен обрабатывать видео[32m 1[2mms[22m[39m
-   [32m✓[39m LazyLoader - Основные функции[2m > [22mОбработка различных типов элементов[2m > [22mдолжен обрабатывать скрипты[32m 1[2mms[22m[39m
-   [32m✓[39m LazyLoader - Основные функции[2m > [22mКонфигурация[2m > [22mдолжен работать с различными конфигурациями[32m 2[2mms[22m[39m
-   [32m✓[39m LazyLoader - Основные функции[2m > [22mКонфигурация[2m > [22mдолжен обрабатывать отсутствующие опциональные свойства[32m 1[2mms[22m[39m
-[31m   [31m×[31m LazyLoader - Основные функции[2m > [22mМетрики и мониторинг[2m > [22mдолжен собирать метрики производительности[39m[32m 4[2mms[22m[39m
-[31m     → expected 'undefined' to be 'number' // Object.is equality[39m
-   [32m✓[39m LazyLoader - Основные функции[2m > [22mМетрики и мониторинг[2m > [22mдолжен возвращать валидные метрики памяти[32m 0[2mms[22m[39m
-   [32m✓[39m LazyLoader - Основные функции[2m > [22mEdge cases и обработка ошибок[2m > [22mдолжен обрабатывать элементы без атрибутов lazy loading[32m 2[2mms[22m[39m
-   [32m✓[39m LazyLoader - Основные функции[2m > [22mEdge cases и обработка ошибок[2m > [22mдолжен обрабатывать пустые URL[32m 1[2mms[22m[39m
-[31m   [31m×[31m LazyLoader - Основные функции[2m > [22mEdge cases и обработка ошибок[2m > [22mдолжен обрабатывать null элементы[39m[32m 2[2mms[22m[39m
-[31m     → expected [Function] to not throw an error but 'TypeError: Cannot read properties of …' was thrown[39m
-   [32m✓[39m LazyLoader - Основные функции[2m > [22mEdge cases и обработка ошибок[2m > [22mдолжен корректно обрабатывать уничтожение несколько раз[32m 1[2mms[22m[39m
-   [32m✓[39m LazyLoader - Основные функции[2m > [22mПроизводительность[2m > [22mдолжен работать с большим количеством элементов[32m 3[2mms[22m[39m
-   [32m✓[39m LazyLoader - Основные функции[2m > [22mПроизводительность[2m > [22mдолжен корректно обрабатывать быстрые последовательные вызовы[32m 1[2mms[22m[39m
-   [32m✓[39m LazyLoader - Основные функции[2m > [22mСовместимость браузеров[2m > [22mдолжен работать когда IntersectionObserver недоступен[32m 3[2mms[22m[39m
-   [32m✓[39m LazyLoader - Основные функции[2m > [22mСовместимость браузеров[2m > [22mдолжен работать с ограниченным Performance API[32m 0[2mms[22m[39m
-[90mstdout[2m | src/performance/__tests__/TreeShaker.test.ts[2m > [22m[2mTreeShaker[2m > [22m[2mПоиск файлов[2m > [22m[2mдолжен находить исходные файлы
-[22m[39m🌲 Начинаем анализ tree shaking...
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Error Capturing > should capture errors with context
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstdout[2m | src/performance/__tests__/TreeShaker.test.ts[2m > [22m[2mTreeShaker[2m > [22m[2mПоиск файлов[2m > [22m[2mдолжен находить исходные файлы
-[22m[39m📁 Найдено 4 файлов для анализа
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Error Capturing > should handle errors without context
+[INFO] Shutting down monitoring service [90mundefined[39m
 
- [31m❯[39m src/performance/__tests__/BundleAnalyzer.test.ts [2m([22m[2m16 tests[22m[2m | [22m[31m6 failed[39m[2m)[22m[32m 50[2mms[22m[39m
-   [32m✓[39m BundleAnalyzer[2m > [22mmeasureCurrentMetrics[2m > [22mдолжен корректно измерять метрики производительности[32m 5[2mms[22m[39m
-   [32m✓[39m BundleAnalyzer[2m > [22mmeasureCurrentMetrics[2m > [22mдолжен правильно рассчитывать gzip размер[32m 2[2mms[22m[39m
-[31m   [31m×[31m BundleAnalyzer[2m > [22mmeasureCurrentMetrics[2m > [22mдолжен обрабатывать отсутствие данных производительности[39m[32m 8[2mms[22m[39m
-[31m     → Cannot read properties of undefined (reading 'domContentLoadedEventEnd')[39m
-   [32m✓[39m BundleAnalyzer[2m > [22msaveBaseline[2m > [22mдолжен сохранять baseline метрики[32m 6[2mms[22m[39m
-[31m   [31m×[31m BundleAnalyzer[2m > [22msaveBaseline[2m > [22mдолжен выбрасывать ошибку, если нет текущих метрик[39m[32m 6[2mms[22m[39m
-[31m     → expected [Function] to throw an error[39m
-   [32m✓[39m BundleAnalyzer[2m > [22msaveBaseline[2m > [22mдолжен правильно определять оценку производительности[32m 1[2mms[22m[39m
-   [32m✓[39m BundleAnalyzer[2m > [22mcompareWithBaseline[2m > [22mдолжен сравнивать с последним baseline[32m 1[2mms[22m[39m
-[31m   [31m×[31m BundleAnalyzer[2m > [22mcompareWithBaseline[2m > [22mдолжен возвращать null, если нет baseline[39m[32m 3[2mms[22m[39m
-[31m     → expected { improvement: true, …(2) } to be null[39m
-   [32m✓[39m BundleAnalyzer[2m > [22mgenerateReport[2m > [22mдолжен генерировать полный отчет[32m 1[2mms[22m[39m
-[31m   [31m×[31m BundleAnalyzer[2m > [22mgenerateReport[2m > [22mдолжен генерировать рекомендации для больших bundle[39m[32m 2[2mms[22m[39m
-[31m     → expected [ …(3) ] to include StringContaining{…}[39m
-   [32m✓[39m BundleAnalyzer[2m > [22mloadFromStorage[2m > [22mдолжен загружать данные из localStorage[32m 1[2mms[22m[39m
-   [32m✓[39m BundleAnalyzer[2m > [22mloadFromStorage[2m > [22mдолжен обрабатывать ошибки при загрузке[32m 1[2mms[22m[39m
-   [32m✓[39m BundleAnalyzer[2m > [22mSingleton pattern[2m > [22mдолжен возвращать один и тот же instance[32m 1[2mms[22m[39m
-   [32m✓[39m BundleAnalyzer[2m > [22mSingleton pattern[2m > [22mbundleAnalyzer должен быть тем же instance[32m 1[2mms[22m[39m
-[31m   [31m×[31m BundleAnalyzer Integration[2m > [22mдолжен работать полный цикл: измерение -> сохранение -> сравнение[39m[32m 5[2mms[22m[39m
-[31m     → expected false to be true // Object.is equality[39m
-[31m   [31m×[31m BundleAnalyzer Integration[2m > [22mдолжен ограничивать количество baseline в localStorage[39m[32m 2[2mms[22m[39m
-[31m     → Cannot read properties of undefined (reading '1')[39m
-[90mstderr[2m | src/performance/__tests__/TreeShaker.test.ts[2m > [22m[2mTreeShaker[2m > [22m[2mПоиск файлов[2m > [22m[2mдолжен находить исходные файлы
-[22m[39m⚠️ Не удалось проанализировать файл /test/project/src/**/*.ts/file1.ts: TypeError: Cannot read properties of undefined (reading 'split')
-    at TreeShaker.extractExports [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\TreeShaker.ts:168:27[90m)[39m
-    at TreeShaker.analyzeFile [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\TreeShaker.ts:149:26[90m)[39m
-    at TreeShaker.analyzeProject [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\TreeShaker.ts:65:35[90m)[39m
-[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
-    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\__tests__\TreeShaker.test.ts:73:7
-    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:752:20
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Error Capturing > should update error metrics
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstderr[2m | src/performance/__tests__/TreeShaker.test.ts[2m > [22m[2mTreeShaker[2m > [22m[2mПоиск файлов[2m > [22m[2mдолжен находить исходные файлы
-[22m[39m⚠️ Не удалось проанализировать файл /test/project/src/**/*.ts/file2.tsx: TypeError: Cannot read properties of undefined (reading 'split')
-    at TreeShaker.extractExports [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\TreeShaker.ts:168:27[90m)[39m
-    at TreeShaker.analyzeFile [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\TreeShaker.ts:149:26[90m)[39m
-    at TreeShaker.analyzeProject [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\TreeShaker.ts:65:35[90m)[39m
-[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
-    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\__tests__\TreeShaker.test.ts:73:7
-    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:752:20
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Performance Monitoring > should measure performance of sync functions
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstderr[2m | src/performance/__tests__/TreeShaker.test.ts[2m > [22m[2mTreeShaker[2m > [22m[2mПоиск файлов[2m > [22m[2mдолжен находить исходные файлы
-[22m[39m⚠️ Не удалось проанализировать файл /test/project/src/**/*.ts/file3.js: TypeError: Cannot read properties of undefined (reading 'split')
-    at TreeShaker.extractExports [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\TreeShaker.ts:168:27[90m)[39m
-    at TreeShaker.analyzeFile [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\TreeShaker.ts:149:26[90m)[39m
-    at TreeShaker.analyzeProject [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\TreeShaker.ts:65:35[90m)[39m
-[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
-    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\__tests__\TreeShaker.test.ts:73:7
-    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:752:20
+ ✓ src/performance/LazyLoader.basic.test.ts (10 tests) 143ms
+[2025-12-26 00:38:30.861] [32mINFO[39m: [36m[heys-system] Запуск Lighthouse аудита для https://example.com...[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "LighthouseOptimizer"
+    [35m@timestamp[39m: "2025-12-25T21:38:30.862Z"
+    [35m@version[39m: "1"
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Performance Monitoring > should measure performance of async functions
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstdout[2m | src/performance/__tests__/TreeShaker.test.ts[2m > [22m[2mTreeShaker[2m > [22m[2mПоиск файлов[2m > [22m[2mдолжен находить исходные файлы
-[90mstderr[2m | src/performance/__tests__/TreeShaker.test.ts[2m > [22m[2mTreeShaker[2m > [22m[2mПоиск файлов[2m > [22m[2mдолжен находить исходные файлы
-[22m[39m✅ Анализ завершен: найдено 0 неиспользуемых экспортов
-[22m[39m⚠️ Не удалось проанализировать файл /test/project/src/**/*.ts/file4.test.ts: TypeError: Cannot read properties of undefined (reading 'split')
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Performance Monitoring > should handle performance measurement errors
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-    at TreeShaker.extractExports [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\TreeShaker.ts:168:27[90m)[39m
-    at TreeShaker.analyzeFile [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\TreeShaker.ts:149:26[90m)[39m
-    at TreeShaker.analyzeProject [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\TreeShaker.ts:65:35[90m)[39m
-[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
-    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\__tests__\TreeShaker.test.ts:73:7
-    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:752:20
+ ✓ src/performance/CodeSplitter.simple.test.ts (13 tests) 970ms
+[2025-12-26 00:38:31.166] [32mINFO[39m: [36m[heys-system] Performance profiling enabled[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "PerformanceManager"
+    [35m@timestamp[39m: "2025-12-25T21:38:31.166Z"
+    [35m@version[39m: "1"
+[2025-12-26 00:38:31.167] [32mINFO[39m: [36m[heys-system] Setting max concurrent requests to 6[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2025-12-25T21:38:31.167Z"
+    [35m@version[39m: "1"
+[2025-12-26 00:38:31.167] [32mINFO[39m: [36m[heys-system] Enabling compression[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2025-12-25T21:38:31.167Z"
+    [35m@version[39m: "1"
+[2025-12-26 00:38:31.167] [32mINFO[39m: [36m[heys-system] Optimizing animation performance[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2025-12-25T21:38:31.167Z"
+    [35m@version[39m: "1"
+[2025-12-26 00:38:31.192] [32mINFO[39m: [36m[heys-system] Enabling batched rendering[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2025-12-25T21:38:31.192Z"
+    [35m@version[39m: "1"
+[2025-12-26 00:38:31.192] [32mINFO[39m: [36m[heys-system] Setting max concurrent requests to 2[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2025-12-25T21:38:31.192Z"
+    [35m@version[39m: "1"
+[2025-12-26 00:38:31.192] [32mINFO[39m: [36m[heys-system] Enabling compression[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2025-12-25T21:38:31.192Z"
+    [35m@version[39m: "1"
+[2025-12-26 00:38:31.192] [32mINFO[39m: [36m[heys-system] Enabling minimal caching strategy[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2025-12-25T21:38:31.192Z"
+    [35m@version[39m: "1"
+[2025-12-26 00:38:31.193] [32mINFO[39m: [36m[heys-system] Enabling batched rendering[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2025-12-25T21:38:31.193Z"
+    [35m@version[39m: "1"
+[2025-12-26 00:38:31.193] [32mINFO[39m: [36m[heys-system] Setting max concurrent requests to 2[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2025-12-25T21:38:31.193Z"
+    [35m@version[39m: "1"
+[2025-12-26 00:38:31.193] [32mINFO[39m: [36m[heys-system] Enabling compression[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2025-12-25T21:38:31.193Z"
+    [35m@version[39m: "1"
+[2025-12-26 00:38:31.193] [32mINFO[39m: [36m[heys-system] Enabling minimal caching strategy[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "MobilePerformanceOptimizer"
+    [35m@timestamp[39m: "2025-12-25T21:38:31.193Z"
+    [35m@version[39m: "1"
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Performance Monitoring > should detect slow operations
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstdout[2m | src/performance/__tests__/TreeShaker.test.ts[2m > [22m[2mTreeShaker[2m > [22m[2mПоиск файлов[2m > [22m[2mдолжен исключать тестовые файлы
-[22m[39m🌲 Начинаем анализ tree shaking...
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Logging > should log user actions
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstdout[2m | src/performance/__tests__/TreeShaker.test.ts[2m > [22m[2mTreeShaker[2m > [22m[2mПоиск файлов[2m > [22m[2mдолжен исключать тестовые файлы
-[22m[39m📁 Найдено 2 файлов для анализа
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Logging > should log API requests
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstdout[2m | src/performance/__tests__/TreeShaker.test.ts[2m > [22m[2mTreeShaker[2m > [22m[2mПоиск файлов[2m > [22m[2mдолжен исключать тестовые файлы
-[22m[39m✅ Анализ завершен: найдено 2 неиспользуемых экспортов
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Logging > should log security events
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstdout[2m | src/performance/CodeSplitter.test.ts[2m > [22m[2mCodeSplitter[2m > [22m[2mАнализ файлов[2m > [22m[2mдолжен найти все релевантные файлы
-[22m[39m🔍 Начинаем анализ возможностей разделения кода...
-✅ Анализ завершен: найдено 0 точек разделения
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Health Check > should return health status
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstdout[2m | src/performance/CodeSplitter.test.ts[2m > [22m[2mCodeSplitter[2m > [22m[2mАнализ файлов[2m > [22m[2mдолжен определить файлы маршрутов
-[22m[39m🔍 Начинаем анализ возможностей разделения кода...
-✅ Анализ завершен: найдено 0 точек разделения
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Metrics > should return current metrics
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstdout[2m | src/performance/CodeSplitter.test.ts[2m > [22m[2mCodeSplitter[2m > [22m[2mАнализ файлов[2m > [22m[2mдолжен определить большие компоненты
-[22m[39m🔍 Начинаем анализ возможностей разделения кода...
-✅ Анализ завершен: найдено 0 точек разделения
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Metrics > should update health metrics on access
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstdout[2m | src/performance/__tests__/TreeShaker.test.ts[2m > [22m[2mTreeShaker[2m > [22m[2mАнализ экспортов[2m > [22m[2mдолжен находить export const
-[22m[39m🌲 Начинаем анализ tree shaking...
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > User Context > should set user context
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstdout[2m | src/performance/__tests__/TreeShaker.test.ts[2m > [22m[2mTreeShaker[2m > [22m[2mАнализ экспортов[2m > [22m[2mдолжен находить export const
-[22m[39m📁 Найдено 1 файлов для анализа
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > User Context > should set additional context
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstdout[2m | src/performance/CodeSplitter.test.ts[2m > [22m[2mCodeSplitter[2m > [22m[2mАнализ файлов[2m > [22m[2mдолжен определить тяжелые импорты
-[22m[39m🔍 Начинаем анализ возможностей разделения кода...
-✅ Анализ завершен: найдено 0 точек разделения
+stdout | src/monitoring/__tests__/monitoring-service.test.ts > MonitoringService > Flush and Shutdown > should flush monitoring data
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstdout[2m | src/performance/__tests__/TreeShaker.test.ts[2m > [22m[2mTreeShaker[2m > [22m[2mАнализ экспортов[2m > [22m[2mдолжен находить export const
-[22m[39m✅ Анализ завершен: найдено 2 неиспользуемых экспортов
+ ✓ src/monitoring/__tests__/monitoring-service.test.ts (24 tests) 980ms
+   ✓ MonitoringService > Performance Monitoring > should detect slow operations  605ms
+stderr | src/performance/advanced-cache-strategies.test.ts > AdvancedCacheManager > Memory Cache Operations > should store and retrieve data from memory cache
+Cache cleanup error: Error: Cleanup timeout
+    at Timeout._onTimeout [90m(/Users/poplavskijanton/HEYS-v2/packages/shared/[39msrc/performance/advanced-cache-strategies.test.ts:243:62[90m)[39m
+[90m    at listOnTimeout (node:internal/timers:608:17)[39m
+[90m    at processTimers (node:internal/timers:543:7)[39m
 
+ ✓ src/performance/advanced-cache-strategies.test.ts (34 tests) 2064ms
+   ✓ AdvancedCacheManager > Memory Cache Operations > should store and retrieve data from memory cache  2013ms
+{"level":"error","time":"2025-12-25T21:38:33.008Z","pid":5382,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Rate limiting error","timestamp":"2025-12-25T21:38:33.008Z","component":"RateLimitMiddleware","metadata":{"error":{}}}
+ ✓ src/security/AdvancedRateLimiter.test.ts (16 tests) 2227ms
+   ✓ AdvancedRateLimiter > Basic Rate Limiting > should reset after window expires  1101ms
+   ✓ AdvancedRateLimiter > Cleanup > should clean up old entries  1102ms
+ ✓ src/performance/performance.test.ts (27 tests) 2049ms
+   ✓ NetworkOptimizer > should handle request retries  2002ms
+[2025-12-26 00:38:33.864] [32mINFO[39m: [36m[heys-system] Аудит завершен. Скор: 53[39m
+    [35mservice[39m: "heys-system"
+    [35menvironment[39m: "test"
+    [35mversion[39m: "14.0.0"
+    [35mcomponent[39m: "LighthouseOptimizer"
+    [35m@timestamp[39m: "2025-12-25T21:38:33.864Z"
+    [35m@version[39m: "1"
+ ✓ src/performance/LighthouseOptimizer.test.ts (17 tests) 4036ms
+   ✓ LighthouseOptimizer > Выполнение оптимизации > должен выполнять план оптимизации  3517ms
+   ✓ LighthouseOptimizer > Выполнение оптимизации > должен отслеживать прогресс оптимизации  506ms
+ ✓ src/performance/LazyLoader.test.ts (10 tests) 226ms
+ ✓ src/performance/LazyLoader.simple.test.ts (19 tests) 174ms
+ ✓ src/security/AdvancedEncryption.test.ts (25 tests) 65ms
+ ✓ src/__tests__/monitoring.test.ts (8 tests) 161ms
+{"level":"warn","time":"2025-12-25T21:38:36.702Z","pid":5507,"hostname":"localhost","environment":"development","name":"heys-app","msg":"CRITICAL AUDIT EVENT","timestamp":"2025-12-25T21:38:36.701Z","component":"AdvancedAuditLogger","metadata":{"id":"audit_1766698716701_dnmz0se21","timestamp":"2025-12-25T21:38:36.701Z","correlationId":"corr_1766698716701_0hq0g91z8","eventType":"security_event","action":"brute_force_attempt","severity":"critical","source":"security_system","metadata":{"attemptCount":5},"success":true,"complianceFlags":["security_incident"],"gdprRelevant":false,"userId":"user123","duration":0.02873700000009194}}
+{"level":"warn","time":"2025-12-25T21:38:36.714Z","pid":5507,"hostname":"localhost","environment":"development","name":"heys-app","msg":"CRITICAL AUDIT EVENT","timestamp":"2025-12-25T21:38:36.714Z","component":"AdvancedAuditLogger","metadata":{"id":"audit_1766698716714_peljelxrs","timestamp":"2025-12-25T21:38:36.714Z","correlationId":"corr_1766698716714_izgra7dnc","eventType":"security_event","action":"security1","severity":"critical","source":"system","metadata":{},"success":true,"complianceFlags":[],"gdprRelevant":false,"duration":0.003438999999616499}}
+{"level":"warn","time":"2025-12-25T21:38:36.715Z","pid":5507,"hostname":"localhost","environment":"development","name":"heys-app","msg":"CRITICAL AUDIT EVENT","timestamp":"2025-12-25T21:38:36.715Z","component":"AdvancedAuditLogger","metadata":{"id":"audit_1766698716715_u7ytahor6","timestamp":"2025-12-25T21:38:36.715Z","correlationId":"corr_1766698716715_zb0vmjc42","eventType":"security_event","action":"security1","severity":"critical","source":"system","metadata":{},"success":true,"complianceFlags":[],"gdprRelevant":false,"duration":0.00994700000001103}}
+{"level":"warn","time":"2025-12-25T21:38:36.831Z","pid":5507,"hostname":"localhost","environment":"development","name":"heys-app","msg":"CRITICAL AUDIT EVENT","timestamp":"2025-12-25T21:38:36.831Z","component":"AdvancedAuditLogger","metadata":{"id":"audit_1766698716831_67hxmenyv","timestamp":"2025-12-25T21:38:36.831Z","correlationId":"corr_1766698716831_ioqjstuai","eventType":"security_event","action":"critical_breach","severity":"critical","source":"security_system","metadata":{},"success":true,"complianceFlags":["security_incident"],"gdprRelevant":false,"duration":0.014396000000033382}}
+ ✓ src/performance/BundleAnalyzer.simple.test.ts (11 tests) 182ms
+{"level":"error","time":"2025-12-25T21:38:36.870Z","pid":5507,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Audit Logger Error","timestamp":"2025-12-25T21:38:36.870Z","component":"AdvancedAuditLogger","metadata":{"error":{}}}
+ ✓ src/monitoring/AdvancedAuditLogger.test.ts (36 tests) 332ms
+ ✓ src/performance/mobile-performance-optimizer.test.ts (29 tests) 154ms
+ ✓ src/__tests__/utils.test.ts (12 tests) 195ms
+ ✓ src/performance/bundle-optimizer.test.ts (28 tests) 303ms
+ ✓ src/security/__tests__/security.test.ts (34 tests) 397ms
+   ✓ CORSManager > should allow all origins when configured  330ms
+{"level":"info","time":"2025-12-25T21:38:42.048Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2025-12-25T21:38:41.935Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.082Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2025-12-25T21:38:42.082Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.083Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2025-12-25T21:38:42.083Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.085Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2025-12-25T21:38:42.085Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.086Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2025-12-25T21:38:42.086Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.088Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2025-12-25T21:38:42.088Z","component":"PenetrationTestFramework"}
+ ✓ src/performance/TreeShaker.simple.test.ts (12 tests) 9ms
+{"level":"info","time":"2025-12-25T21:38:42.171Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2025-12-25T21:38:42.171Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.173Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running XSS Scanner...","timestamp":"2025-12-25T21:38:42.173Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.064Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2025-12-25T21:38:42.064Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.065Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2025-12-25T21:38:42.065Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.079Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2025-12-25T21:38:42.079Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.083Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2025-12-25T21:38:42.083Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.085Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2025-12-25T21:38:42.085Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.086Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2025-12-25T21:38:42.086Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.086Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2025-12-25T21:38:42.086Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.086Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2025-12-25T21:38:42.086Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.087Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2025-12-25T21:38:42.087Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.088Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2025-12-25T21:38:42.088Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.088Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2025-12-25T21:38:42.088Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.088Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2025-12-25T21:38:42.088Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.172Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2025-12-25T21:38:42.172Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.172Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2025-12-25T21:38:42.172Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.172Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2025-12-25T21:38:42.172Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.172Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Custom XSS Scanner...","timestamp":"2025-12-25T21:38:42.172Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.173Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running SQL Injection Scanner...","timestamp":"2025-12-25T21:38:42.173Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.173Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Input Validation Scanner...","timestamp":"2025-12-25T21:38:42.173Z","component":"PenetrationTestFramework"}
+{"level":"info","time":"2025-12-25T21:38:42.174Z","pid":5538,"hostname":"localhost","environment":"development","name":"heys-app","msg":"Running Authentication Bypass Scanner...","timestamp":"2025-12-25T21:38:42.174Z","component":"PenetrationTestFramework"}
+ ✓ src/security/__tests__/pentest.test.ts (18 tests) 558ms
+   ✓ InputValidationScanner > should test input validation edge cases  308ms
+ ✓ src/performance/TreeShaker.test.ts (12 tests) 8ms
+ ✓ src/performance/BundleAnalyzer.test.ts (11 tests) 14ms
+ ELIFECYCLE  Test failed. See above for more details.
