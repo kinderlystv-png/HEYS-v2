@@ -56,7 +56,7 @@ export default function TrialSSR({ content, variant: _variant }: TrialSSRProps) 
 
             {/* Правая часть - simplified form placeholder */}
             <div className="bg-white rounded-3xl p-8 shadow-2xl">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">{trial.formTitle}</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">Заявка на участие</h3>
 
               {/* Статическая форма для SSR */}
               <div className="space-y-4">
@@ -85,7 +85,7 @@ export default function TrialSSR({ content, variant: _variant }: TrialSSRProps) 
                   className="w-full py-4 bg-blue-600 text-white font-semibold rounded-xl"
                   disabled
                 >
-                  {trial.formCta}
+                  {trial.ctaAvailable}
                 </button>
 
                 <p className="text-xs text-gray-500 text-center mt-4">

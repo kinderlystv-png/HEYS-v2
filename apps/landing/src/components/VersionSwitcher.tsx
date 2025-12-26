@@ -5,6 +5,16 @@ import { useState } from 'react'
 import { LandingVariant, VARIANTS } from '@/config/landing-variants'
 import { useVariant } from '@/context/VariantContext'
 
+// Время сборки (фиксируется при старте сервера / компиляции)
+const BUILD_TIME = new Date().toLocaleString('ru-RU', {
+  day: '2-digit',
+  month: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  timeZone: 'Europe/Moscow'
+})
+
 export default function VersionSwitcher() {
   const { variant, setVariant } = useVariant()
   const [isOpen, setIsOpen] = useState(false)
@@ -95,6 +105,7 @@ export default function VersionSwitcher() {
           </p>
           <div className="mt-2 pt-2 border-t border-zinc-700 text-zinc-500">
             URL: <code className="text-emerald-400">?v={variant}</code>
+            <div className="mt-1 text-[10px] opacity-50">Build: {BUILD_TIME}</div>
           </div>
         </div>
       )}

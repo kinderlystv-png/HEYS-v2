@@ -68,11 +68,7 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
         <div className="max-w-5xl mx-auto">
           {/* Section header */}
           <div className="text-center mb-16">
-            {pricing.eyebrow ? (
-              <p className="text-sm font-medium tracking-wide text-blue-700 mb-3">{pricing.eyebrow}</p>
-            ) : null}
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{pricing.title}</h2>
-            {pricing.subtitle ? <p className="text-xl text-gray-600">{pricing.subtitle}</p> : null}
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{pricing.intro}</h2>
           </div>
 
           {/* Pricing cards */}
