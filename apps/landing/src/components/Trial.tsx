@@ -1,7 +1,14 @@
+'use client'
+
 import TrialCapacity from './TrialCapacity'
 import TrialForm from './TrialForm'
 
+import { useVariant } from '@/context/VariantContext'
+
 export default function Trial() {
+  const { content } = useVariant()
+  const trial = content.trial
+
   return (
     <section className="py-20 bg-gradient-to-br from-blue-600 to-blue-700" id="trial">
       <div className="container mx-auto px-6">
@@ -12,53 +19,41 @@ export default function Trial() {
               {/* Capacity Widget + Badge */}
               <div className="flex flex-col sm:flex-row items-center gap-3 mb-8">
                 <div className="inline-block bg-white/20 backdrop-blur text-white text-sm font-medium px-4 py-2 rounded-full">
-                  🎁 Бесплатная неделя
+                  {trial.badge}
                 </div>
                 <TrialCapacity compact className="bg-white/10 border-white/20" />
               </div>
               
               {/* Heading */}
               <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
-                Не уверены? Попробуйте бесплатно
+                {trial.title}
               </h2>
               
               <p className="text-xl text-blue-100 mb-8">
-                7 дней Pro бесплатно — с куратором, который ведёт дневник за вас. 
-                Без привязки карты, без обязательств.
+                {trial.subtitle}
               </p>
               
               {/* What you get */}
               <div className="space-y-4 mb-8">
-                <div className="flex items-center gap-3 text-white">
-                  <span className="text-2xl">📱</span>
-                  <span>Полный доступ к приложению</span>
-                </div>
-                <div className="flex items-center gap-3 text-white">
-                  <span className="text-2xl">👤</span>
-                  <span>Личный куратор ведёт дневник</span>
-                </div>
-                <div className="flex items-center gap-3 text-white">
-                  <span className="text-2xl">💬</span>
-                  <span>Ежедневная поддержка в чате</span>
-                </div>
-                <div className="flex items-center gap-3 text-white">
-                  <span className="text-2xl">📊</span>
-                  <span>Еженедельный разбор с видеосозвоном</span>
-                </div>
+                {trial.bullets.map((bullet, i) => (
+                  <div key={i} className="flex items-center gap-3 text-white">
+                    <span className="text-2xl">{bullet.icon}</span>
+                    <span>{bullet.text}</span>
+                  </div>
+                ))}
               </div>
               
               {/* Trust */}
-              <p className="text-blue-200 text-sm">
-                ✓ Триал начинается с первого внесённого приёма пищи<br/>
-                ✓ Отменить можно в любой момент
+              <p className="text-blue-200 text-sm whitespace-pre-line">
+                {trial.limitation}
               </p>
               
               {/* Purchase link */}
               <div className="mt-8 pt-6 border-t border-white/20">
                 <p className="text-white/70 text-sm">
-                  Уже решили?{' '}
+                  {trial.purchaseLinkText}{' '}
                   <a href="#contact" className="text-white font-medium hover:underline">
-                    Оформить подписку сразу →
+                    {trial.purchaseLinkCta}
                   </a>
                 </p>
               </div>

@@ -1,9 +1,12 @@
- 'use client'
+'use client'
 
 import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { useVariant } from '@/context/VariantContext'
+
 export default function Hero() {
+  const { content } = useVariant()
   const heroRef = useRef<HTMLElement | null>(null)
 
   // initial: стандартное состояние (пульс мягкий)
@@ -125,7 +128,7 @@ export default function Hero() {
               href="#trial"
               className="text-[#374151] hover:text-[#111827] transition-colors text-[14px] tracking-wide"
             >
-              бесплатный триал
+              {content.nav.trial}
             </a>
             <a
               href="#contact"
@@ -139,28 +142,47 @@ export default function Hero() {
 
       {/* Hero Content */}
       <div className="relative w-full">
-        <div className="mx-auto w-full max-w-[1000px] px-10 xl:px-12 pt-20 md:pt-32 pb-16">
+        <div className="mx-auto w-full max-w-[1000px] px-10 xl:px-12 pt-16 md:pt-24 pb-16">
           <div className="max-w-[860px]">
-          {/* Main headline */}
-            <h1 className="hero-anim-rise [--hero-delay:0.45s] text-[40px] md:text-[50px] font-light text-[#374151] mb-16 leading-[1.12]">
-              Мы не предлагаем инноваций.
-              <br />
-              <span className="whitespace-nowrap">
-                <span className="text-[#1d4ed8] font-semibold">HEYS</span>{' '}
-                <span className="text-[#111827] font-semibold">просто делает всё за Вас!</span>
-              </span>
+            {/* Main headline — dynamic from variant */}
+            <h1 className="hero-anim-rise [--hero-delay:0.45s] text-[36px] md:text-[46px] font-light text-[#374151] mb-8 leading-[1.15]">
+              <span className="text-[#1d4ed8] font-semibold">HEYS</span>
+              {' — '}
+              <span className="text-[#111827] font-semibold">{content.hero.headline}</span>
             </h1>
           
-          {/* Subheadline */}
-            <p className="hero-anim-rise [--hero-delay:0.65s] text-[18px] md:text-[20px] text-[#374151] mb-16 max-w-[860px] leading-[1.45]">
-              Система <span className="font-semibold text-[#111827]">HEYS</span> — это комплексный метод достижения вашего идеального тела.
-              <br />
-              Мы исключаем все слабые места в классических подходах к похудению.
+            {/* Subheadline — dynamic, with line breaks */}
+            <p className="hero-anim-rise [--hero-delay:0.65s] text-[17px] md:text-[19px] text-[#374151] mb-10 max-w-[780px] leading-[1.55]">
+              {content.hero.subheadline.split('\n').map((line, i) => (
+                <span key={i}>
+                  {line}
+                  {i < content.hero.subheadline.split('\n').length - 1 && <br />}
+                </span>
+              ))}
             </p>
-          
-          {/* HEYS is... */}
-            <p className="hero-anim-rise [--hero-delay:0.8s] text-[18px] md:text-[20px] text-[#374151]">
-              <span className="font-semibold text-[#111827]">HEYS</span> <span className="text-[#111827]">—</span> это Ваши ...
+
+            {/* Two CTA buttons */}
+            <div className="hero-anim-rise [--hero-delay:0.8s] flex flex-col sm:flex-row gap-4 mb-6">
+              {/* Primary CTA — Выбрать тариф */}
+              <a
+                href="#pricing"
+                className="inline-flex items-center justify-center px-8 py-4 bg-[#1d4ed8] text-white font-medium rounded-xl hover:bg-[#1e40af] transition-colors text-[16px] shadow-lg shadow-blue-500/20"
+              >
+                {content.hero.ctaPrimary}
+              </a>
+
+              {/* Secondary CTA — Неделя старта */}
+              <a
+                href="#trial"
+                className="inline-flex items-center justify-center px-8 py-4 bg-white/80 text-[#111827] font-medium rounded-xl border border-[#111827]/20 hover:bg-white hover:border-[#111827]/30 transition-colors text-[16px] backdrop-blur-sm"
+              >
+                {content.hero.ctaSecondary}
+              </a>
+            </div>
+
+            {/* Microtext */}
+            <p className="hero-anim-rise [--hero-delay:0.9s] text-[13px] text-[#6b7280] max-w-[600px] leading-[1.5]">
+              {content.hero.microtext}
             </p>
           </div>
         </div>
@@ -173,7 +195,7 @@ export default function Hero() {
           aria-label="Прокрутить вниз"
           className={cueButtonClassName}
           onClick={() => {
-            // Чтобы стрелка не спорила со smooth-scroll (и не “доезжала” поверх следующей секции)
+            // Чтобы стрелка не спорила со smooth-scroll (и не "доезжала" поверх следующей секции)
             // прячем её сразу при клике.
             setCueMode('hidden')
           }}
