@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, vi } from 'vitest';
 
+// Уменьшаем шум логов в тестах.
+// В проекте используется pino-логгер, который по умолчанию пишет INFO в stdout,
+// что может перегружать вывод и провоцировать нестабильность Vitest (RPC timeouts).
+if (typeof process !== 'undefined') {
+  process.env.LOG_LEVEL ||= 'error';
+}
+
 // Setup browser environment mocks
 beforeEach(() => {
   // Enhanced security mocking for XSS protection
@@ -41,13 +48,9 @@ beforeEach(() => {
     Object.defineProperty(element, 'innerHTML', {
       get: () => element._innerHTML || '',
       set: (value: string) => {
-        // Security check - log but don't execute dangerous content
-        if (value.includes('<script>') || value.includes('javascript:')) {
-          console.warn(
-            'Security: Blocked potentially dangerous innerHTML assignment:',
-            value.substring(0, 50),
-          );
-        }
+          // Security check — не исполняем опасный контент.
+          // Логи тут намеренно отключены: lint запрещает console.*, а лишний вывод
+          // может ухудшать стабильность тест-раннера.
         element._innerHTML = value;
       },
     });
@@ -62,12 +65,12 @@ beforeEach(() => {
 
   // Enhanced URL mocking
   if (!(global.URL as any).createObjectURL) {
-    (global.URL as any).createObjectURL = vi.fn((blob: any) => `blob:${Math.random()}`);
+    (global.URL as any).createObjectURL = vi.fn((_blob: unknown) => `blob:${Math.random()}`);
     (global.URL as any).revokeObjectURL = vi.fn();
   }
 
   // Mock Worker API for compression tests
-  (global as any).Worker = vi.fn().mockImplementation((scriptURL: string) => {
+  (global as any).Worker = vi.fn().mockImplementation((_scriptURL: string) => {
     const worker = {
       postMessage: vi.fn(),
       terminate: vi.fn(),
@@ -90,7 +93,7 @@ beforeEach(() => {
   });
 
   // Enhanced PerformanceObserver mock
-  (global as any).PerformanceObserver = vi.fn().mockImplementation((callback: any) => {
+  (global as any).PerformanceObserver = vi.fn().mockImplementation((_callback: unknown) => {
     return {
       observe: vi.fn(),
       disconnect: vi.fn(),
@@ -113,7 +116,7 @@ beforeEach(() => {
 
   // Enhanced IndexedDB mocking
   (global as any).indexedDB = {
-    open: vi.fn().mockImplementation((name: string, version?: number) => {
+    open: vi.fn().mockImplementation((_name: string, _version?: number) => {
       const request = {
         readyState: 'pending',
         result: null as any,
@@ -173,7 +176,7 @@ beforeEach(() => {
   };
 
   // Mock fetch for network tests
-  (global as any).fetch = vi.fn().mockImplementation((url: string, options?: any) => {
+  (global as any).fetch = vi.fn().mockImplementation((url: string, _options?: unknown) => {
     return Promise.resolve({
       ok: true,
       status: 200,

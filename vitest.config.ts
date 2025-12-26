@@ -2,6 +2,12 @@ import path from 'node:path';
 
 import { defineConfig } from 'vitest/config';
 
+const enableVerboseReporter =
+  process.env.VITEST_VERBOSE === '1' || process.env.VITEST_VERBOSE === 'true';
+
+const enableTestReports =
+  process.env.VITEST_REPORT === '1' || process.env.VITEST_REPORT === 'true';
+
 export default defineConfig({
   resolve: {
     alias: {
@@ -61,11 +67,32 @@ export default defineConfig({
         },
       },
     },
-    // Reporter configuration for better output
-    reporters: ['verbose', 'html', 'json'],
-    outputFile: {
-      html: './test-results/index.html',
-      json: './test-results/results.json',
+    // Pool configuration for stability.
+    // NOTE: In large suites we occasionally see vitest RPC timeouts:
+    //   "Error: [vitest-worker]: Timeout calling \"onTaskUpdate\""
+    // Reducing worker/process fan-out and heavy reporting makes runs deterministic.
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
     },
+
+    // Reporter configuration for better output.
+    // - verbose: opt-in (can generate a lot of task updates)
+    // - html/json reports: opt-in (can be slow and memory-heavy in big suites)
+    reporters: (() => {
+      const base = enableVerboseReporter ? 'verbose' : 'default';
+      if (enableTestReports) return [base, 'html', 'json'];
+      return [base];
+    })(),
+    ...(enableTestReports
+      ? {
+          outputFile: {
+            html: './test-results/index.html',
+            json: './test-results/results.json',
+          },
+        }
+      : {}),
   },
 });
