@@ -9,18 +9,20 @@ export default function VersionSwitcher() {
   const { variant, setVariant } = useVariant()
   const [isOpen, setIsOpen] = useState(false)
 
-  const variants: LandingVariant[] = ['A', 'B', 'C']
+  const variants: LandingVariant[] = ['A', 'B', 'C', 'D']
 
   const variantColors: Record<LandingVariant, string> = {
     A: 'bg-emerald-500 hover:bg-emerald-600',
     B: 'bg-blue-500 hover:bg-blue-600',
     C: 'bg-amber-500 hover:bg-amber-600',
+    D: 'bg-purple-500 hover:bg-purple-600',
   }
 
   const variantBorders: Record<LandingVariant, string> = {
     A: 'border-emerald-500',
     B: 'border-blue-500',
     C: 'border-amber-500',
+    D: 'border-purple-500',
   }
 
   return (
