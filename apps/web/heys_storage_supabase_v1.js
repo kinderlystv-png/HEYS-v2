@@ -2909,6 +2909,17 @@
     try {
       logCritical(`🇷🇺 [YANDEX SYNC] Загрузка данных клиента ${clientId.slice(0,8)}...`);
       
+      // 🔴 CRITICAL FIX: Сначала отправляем локальные изменения в облако!
+      // Без этого syncClientViaRPC удалит несохранённые данные при очистке localStorage
+      const pendingCount = cloud.getPendingCount?.() || 0;
+      if (pendingCount > 0 || _uploadInProgress) {
+        logCritical(`🔄 [YANDEX SYNC] Flushing ${pendingCount} pending items (uploadInProgress: ${_uploadInProgress}) BEFORE download`);
+        await cloud.flushPendingQueue?.(10000); // 10 секунд таймаут
+        // Дополнительная задержка для гарантии записи в облако
+        await new Promise(r => setTimeout(r, 200));
+        logCritical(`✅ [YANDEX SYNC] Flush completed`);
+      }
+      
       // Уведомляем UI о начале синхронизации
       if (typeof window !== 'undefined' && window.dispatchEvent) {
         window.dispatchEvent(new CustomEvent('heysSyncStarting', { detail: { clientId } }));

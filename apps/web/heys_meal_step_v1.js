@@ -645,8 +645,12 @@
       if (isBulkMode) return true;
       if (!insulinWave || !insulinWave.calculate) return true;
       if (!mealsForWave || mealsForWave.length === 0) return true;
+      // Инсулиновая волна релевантна только для СЕГОДНЯШНЕГО дня
+      // Если добавляем приём в другой день — пропускаем предупреждение
+      const todayKey = HEYS.models?.todayISO?.() || new Date().toISOString().slice(0, 10);
+      if (context?.dateKey && context.dateKey !== todayKey) return true;
       return false;
-    }, [isEditMode, isBulkMode, insulinWave, mealsForWave]);
+    }, [isEditMode, isBulkMode, insulinWave, mealsForWave, context?.dateKey]);
 
     const trackInsulinEvent = useCallback((action, wave) => {
       if (!analytics || !analytics.trackDataOperation) return;

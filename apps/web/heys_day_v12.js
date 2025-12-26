@@ -6629,21 +6629,26 @@
             const newUpdatedAt = Date.now();
             lastLoadedUpdatedAtRef.current = newUpdatedAt; // Защита от перезаписи cloud sync
             blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000; // Блокируем cloud sync на 3 сек
+            
+            // 🔒 КРИТИЧНО: Сохраняем СРАЗУ в localStorage СИНХРОННО!
+            // flush() не работает т.к. использует day из closure который ещё не обновился React
+            // Поэтому сохраняем напрямую с НОВЫМИ данными
             setDay(prevDay => {
               const newMeals = sortMealsByTime([...(prevDay.meals || []), newMeal]);
-              console.log('[HEYS] 🍽 Creating meal | id:', newMealId, '| new meals count:', newMeals.length, '| updatedAt:', newUpdatedAt, '| blockUntil:', blockCloudUpdatesUntilRef.current);
-              return { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
-            });
-            
-            // 🔒 КРИТИЧНО: Принудительный flush СРАЗУ после setDay
-            // Это гарантирует что данные записаны в localStorage ДО cloud sync
-            // Без этого sync может прочитать старые данные и затереть новый meal
-            setTimeout(() => {
-              if (typeof flush === 'function') {
-                flush();
-                console.log('[HEYS] 🍽 Forced flush after meal creation');
+              const newDayData = { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
+              
+              // ✅ СИНХРОННОЕ сохранение в localStorage внутри setDay (имеем доступ к актуальным данным)
+              const key = 'heys_dayv2_' + date;
+              try {
+                lsSet(key, newDayData);
+                console.log('[HEYS] 🍽 SYNC saved new meal to localStorage | meals:', newMeals.length, '| updatedAt:', newUpdatedAt);
+              } catch (e) {
+                console.error('[HEYS] 🍽 Failed to save meal:', e);
               }
-            }, 10); // Минимальная задержка чтобы React state успел обновиться
+              
+              console.log('[HEYS] 🍽 Creating meal | id:', newMealId, '| new meals count:', newMeals.length, '| updatedAt:', newUpdatedAt, '| blockUntil:', blockCloudUpdatesUntilRef.current);
+              return newDayData;
+            });
             
             if (window.HEYS && window.HEYS.analytics) {
               window.HEYS.analytics.trackDataOperation('meal-created');
@@ -6714,16 +6719,19 @@
                               ? { ...m, items: [...(m.items || []), newItem] }
                               : m
                           );
-                          return { ...prevDay, meals: updatedMeals, updatedAt: newUpdatedAt };
-                        });
-                        
-                        // 🔒 КРИТИЧНО: Принудительный flush СРАЗУ после добавления продукта
-                        setTimeout(() => {
-                          if (typeof flush === 'function') {
-                            flush();
-                            console.log('[HEYS] 🍽 Forced flush after product added');
+                          const newDayData = { ...prevDay, meals: updatedMeals, updatedAt: newUpdatedAt };
+                          
+                          // ✅ СИНХРОННОЕ сохранение в localStorage внутри setDay
+                          const key = 'heys_dayv2_' + date;
+                          try {
+                            lsSet(key, newDayData);
+                            console.log('[HEYS] 🍽 SYNC saved product to localStorage | items:', updatedMeals[targetMealIndex]?.items?.length);
+                          } catch (e) {
+                            console.error('[HEYS] 🍽 Failed to save product:', e);
                           }
-                        }, 10);
+                          
+                          return newDayData;
+                        });
                         
                         try { navigator.vibrate?.(10); } catch(e) {}
                         window.dispatchEvent(new CustomEvent('heysProductAdded', { detail: { product, grams } }));
