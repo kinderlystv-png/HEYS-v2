@@ -18,15 +18,15 @@ export const EXPERIMENTS: ABExperiment[] = [
   {
     id: 'cta_button',
     variants: ['control', 'variant_a', 'variant_b'],
-    // control: "Начать бесплатно →"
-    // variant_a: "Попробовать 7 дней бесплатно"
-    // variant_b: "Получить куратора бесплатно"
+    // control: "Неделя старта (0 ₽) →"
+    // variant_a: "Записаться на неделю старта"
+    // variant_b: "Выбрать тариф"
   },
   {
     id: 'hero_heading',
     variants: ['control', 'variant_a'],
     // control: "Похудеть получится, если кто-то рядом"
-    // variant_a: "Персональный куратор питания — 7 дней бесплатно"
+    // variant_a: "Персональный куратор питания — неделя старта 0 ₽"
   }
 ]
 
@@ -122,15 +122,15 @@ export function getVariantsString(): string {
 
 // CTA варианты для кнопки
 export const CTA_VARIANTS: Record<string, string> = {
-  control: 'Начать бесплатно →',
-  variant_a: 'Попробовать 7 дней бесплатно',
-  variant_b: 'Получить куратора бесплатно'
+  control: 'Неделя старта (0 ₽) →',
+  variant_a: 'Записаться на неделю старта',
+  variant_b: 'Выбрать тариф'
 }
 
 // Hero заголовки
 export const HERO_VARIANTS: Record<string, string> = {
   control: 'Похудеть получится, если кто-то рядом',
-  variant_a: 'Персональный куратор питания — 7 дней бесплатно'
+  variant_a: 'Персональный куратор питания — неделя старта 0 ₽'
 }
 
 // Получить текст CTA по варианту

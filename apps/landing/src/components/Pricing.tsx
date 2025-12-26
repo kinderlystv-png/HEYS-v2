@@ -137,7 +137,7 @@ export default function Pricing() {
               href="#trial" 
               className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
             >
-              7 дней Pro бесплатно — без привязки карты →
+              Неделя старта (0 ₽) — без карты, по записи →
             </a>
           </div>
         </div>

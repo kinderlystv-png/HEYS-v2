@@ -164,7 +164,7 @@ export default function TrialForm() {
   return (
     <form onSubmit={handleSubmit} className="bg-white/10 backdrop-blur rounded-2xl p-6 md:p-8">
       <h3 className="text-xl font-semibold text-white mb-6 text-center">
-        Начните бесплатный триал
+        Неделя старта (0 ₽, по записи)
       </h3>
       
       {/* Имя */}
@@ -281,7 +281,7 @@ export default function TrialForm() {
             Отправляем...
           </span>
         ) : (
-          'Начать бесплатно →'
+          'Записаться →'
         )}
       </button>
       

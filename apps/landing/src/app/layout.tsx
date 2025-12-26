@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     default: 'HEYS — Персональное сопровождение питания с куратором',
     template: '%s | HEYS',
   },
-  description: 'Не сила воли — а человек рядом. HEYS — экосистема с живым куратором, который ведёт дневник за вас и поддерживает при срывах. 7 дней Pro бесплатно.',
+  description: 'Не сила воли — а человек рядом. HEYS — экосистема с живым куратором, который ведёт дневник за вас и поддерживает при срывах. Неделя старта (0 ₽, по записи).',
   keywords: [
     'питание',
     'похудение', 
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   // Open Graph для соцсетей (VK, Facebook, Telegram)
   openGraph: {
     title: 'HEYS — Не сила воли, а человек рядом',
-    description: 'Экосистема с живым куратором. Дневник ведём мы. 7 дней Pro бесплатно.',
+    description: 'Экосистема с живым куратором. Дневник ведём мы. Неделя старта 0 ₽.',
     type: 'website',
     locale: 'ru_RU',
     url: baseUrl,
@@ -69,7 +69,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'HEYS — Не сила воли, а человек рядом',
-    description: 'Экосистема с живым куратором. 7 дней Pro бесплатно.',
+    description: 'Экосистема с живым куратором. Неделя старта 0 ₽.',
     images: ['/og-image.png'],
   },
   

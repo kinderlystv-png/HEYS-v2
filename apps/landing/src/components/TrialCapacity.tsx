@@ -193,7 +193,7 @@ export default function TrialCapacity({
       
       {/* Info */}
       <p className="text-xs text-gray-400 text-center mt-2">
-        {capacity.trial_days} дней бесплатно • Offer {capacity.offer_window_minutes / 60}ч
+        {capacity.trial_days} дней (0 ₽) • Offer {capacity.offer_window_minutes / 60}ч
       </p>
     </div>
   )

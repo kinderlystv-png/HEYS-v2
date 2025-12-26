@@ -306,7 +306,7 @@ export default function PurchaseSection() {
               href="#trial" 
               className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
             >
-              Попробуйте 7 дней бесплатно →
+              Неделя старта (0 ₽, по записи) →
             </a>
           </div>
         </div>
