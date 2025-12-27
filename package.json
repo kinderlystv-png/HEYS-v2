@@ -28,6 +28,7 @@
     "deps:update": "pnpm update -r",
     "dev": "cross-env PORT=3001 turbo run dev --concurrency=15",
     "dev:api": "node -r dotenv/config packages/core/src/server.js dotenv_config_path=.env.development.local",
+    "dev:landing": "cross-env PORT=3003 pnpm --filter='@heys/landing' run dev",
     "dev:web": "cross-env PORT=3001 pnpm --filter='@heys/web' run dev",
     "docker:build": "docker build -t heys:latest .",
     "docker:build:dev": "docker build --target development -t heys:dev .",

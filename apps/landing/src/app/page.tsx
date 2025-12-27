@@ -1,19 +1,8 @@
-'use client'
+// Корень редиректит на вариант A (SSR версия)
+// Все лендинги теперь только SSR: /a, /b, /c, /d
 
-import Hero from '@/components/Hero'
-import VariantLandingSections from '@/components/VariantLandingSections'
-import VersionSwitcher from '@/components/VersionSwitcher'
-import { VariantProvider } from '@/context/VariantContext'
+import { redirect } from 'next/navigation'
 
 export default function Home() {
-  return (
-    <VariantProvider>
-      <main>
-        <Hero />
-        <VariantLandingSections />
-      </main>
-      {/* FAB для переключения версий A/B/C */}
-      <VersionSwitcher />
-    </VariantProvider>
-  )
+  redirect('/a')
 }
