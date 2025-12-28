@@ -4,7 +4,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import { LandingVariant, VariantContent } from '@/config/landing-variants'
 
@@ -25,6 +25,14 @@ const BUILD_TIME = new Date().toLocaleString('ru-RU', {
 
 export default function HeroSSR({ content }: HeroSSRProps) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Trigger animations after mount
+  useEffect(() => {
+    // Small delay for smoother animation start
+    const timer = setTimeout(() => setMounted(true), 100)
+    return () => clearTimeout(timer)
+  }, [])
 
   return (
     <section className="relative h-screen overflow-hidden">
@@ -124,8 +132,10 @@ export default function HeroSSR({ content }: HeroSSRProps) {
       <div className="relative w-full min-h-[calc(100vh-72px)] md:min-h-0 flex flex-col md:block">
         <div className="relative mx-auto w-full max-w-[1024px] px-6 pt-0 md:pt-4 pb-4 md:pb-0 flex flex-col md:block flex-1">
           
-          {/* Mobile: Phone - adaptive size */}
-          <div className="flex lg:hidden justify-center flex-1 items-center py-2">
+          {/* Mobile: Phone - adaptive size with animation */}
+          <div className={`flex lg:hidden justify-center flex-1 items-center py-2 transition-all duration-700 ease-out ${
+            mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`} style={{ transitionDelay: '0ms' }}>
             <div className="relative w-full max-w-[200px] sm:max-w-[240px]">
               <Image
                 src="/phone3.jpg"
@@ -139,22 +149,28 @@ export default function HeroSSR({ content }: HeroSSRProps) {
             </div>
           </div>
 
-          {/* H1 — Main headline */}
-          <h1 className="text-[26px] sm:text-[28px] md:text-[36px] lg:text-[40px] font-light text-[#374151] mb-3 md:mb-8 leading-[1.15] text-center lg:text-left">
+          {/* H1 — Main headline with animation */}
+          <h1 className={`text-[26px] sm:text-[28px] md:text-[36px] lg:text-[40px] font-light text-[#374151] mb-3 md:mb-8 leading-[1.15] text-center lg:text-left transition-all duration-700 ease-out ${
+            mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`} style={{ transitionDelay: '150ms' }}>
             <span className="text-[#111827] font-semibold">
               HEYS — для тех, кто хочет<br className="hidden sm:inline" /> управлять своей жизнью.
             </span>
           </h1>
 
-          {/* H2 — Subheadline (visible on first screen for mobile too) */}
-          <h2 className="lg:hidden text-[13px] sm:text-[14px] text-[#374151] font-normal mb-6 leading-[1.5] text-center">
+          {/* H2 — Subheadline with animation (visible on first screen for mobile too) */}
+          <h2 className={`lg:hidden text-[13px] sm:text-[14px] text-[#374151] font-normal mb-6 leading-[1.5] text-center transition-all duration-700 ease-out ${
+            mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`} style={{ transitionDelay: '300ms' }}>
             Вы управляете решениями. Мы держим процесс.<br />
             Не за счёт силы воли, а за счёт системы:<br />
             <span className="text-[#111827] font-semibold">контекст → решения → поддержка → контроль.</span>
           </h2>
 
-          {/* Scroll cue — добавлен отступ сверху */}
-          <div className="pointer-events-none z-10 mt-auto pt-4 mb-6 flex w-full justify-center md:absolute md:bottom-8 md:left-1/2 md:mb-0 md:pt-0 md:w-auto md:-translate-x-1/2">
+          {/* Scroll cue with animation */}
+          <div className={`pointer-events-none z-10 mt-auto pt-4 mb-6 flex w-full justify-center md:absolute md:bottom-8 md:left-1/2 md:mb-0 md:pt-0 md:w-auto md:-translate-x-1/2 transition-all duration-700 ease-out ${
+            mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`} style={{ transitionDelay: '450ms' }}>
             <a
               href="#what-is-heys"
               aria-label="Прокрутить вниз"
