@@ -23,7 +23,7 @@ const BUILD_TIME = new Date().toLocaleString('ru-RU', {
   timeZone: 'Europe/Moscow'
 })
 
-export default function HeroSSR({ content, _variant }: HeroSSRProps) {
+export default function HeroSSR({ content }: HeroSSRProps) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
