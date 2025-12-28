@@ -1,7 +1,10 @@
 // HeroSSR.tsx — Server Component версия Hero
 // Контент рендерится на сервере и виден в HTML без JavaScript
 
+'use client'
+
 import Image from 'next/image'
+import { useState } from 'react'
 
 import { LandingVariant, VariantContent } from '@/config/landing-variants'
 
@@ -21,6 +24,8 @@ const BUILD_TIME = new Date().toLocaleString('ru-RU', {
 })
 
 export default function HeroSSR({ content, _variant }: HeroSSRProps) {
+  const [menuOpen, setMenuOpen] = useState(false)
+
   return (
     <section className="relative h-screen overflow-hidden">
       {/* Background */}
@@ -28,7 +33,7 @@ export default function HeroSSR({ content, _variant }: HeroSSRProps) {
 
       {/* Header */}
       <header className="relative w-full">
-        <div className="mx-auto w-full max-w-[1024px] px-6 py-6 flex items-center justify-between">
+        <div className="mx-auto w-full max-w-[1024px] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center">
             <Image
               src="/logo.png"
@@ -41,6 +46,7 @@ export default function HeroSSR({ content, _variant }: HeroSSRProps) {
             />
           </div>
 
+          {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
             {content.nav.links.map((link) => (
               <a
@@ -52,26 +58,139 @@ export default function HeroSSR({ content, _variant }: HeroSSRProps) {
               </a>
             ))}
           </nav>
+
+          {/* Mobile menu button — минималистичный premium стиль */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="md:hidden relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#f3f4f6] transition-colors focus:outline-none focus:ring-2 focus:ring-[#111827]/10"
+            aria-label={menuOpen ? 'Закрыть меню' : 'Открыть меню'}
+            aria-expanded={menuOpen}
+          >
+            <div className="relative w-5 h-4 flex flex-col justify-between">
+              <span 
+                className={`block h-[1.5px] w-full bg-[#374151] rounded-full transition-all duration-300 origin-center ${
+                  menuOpen ? 'rotate-45 translate-y-[7px]' : ''
+                }`} 
+              />
+              <span 
+                className={`block h-[1.5px] w-full bg-[#374151] rounded-full transition-all duration-200 ${
+                  menuOpen ? 'opacity-0 scale-x-0' : ''
+                }`} 
+              />
+              <span 
+                className={`block h-[1.5px] w-full bg-[#374151] rounded-full transition-all duration-300 origin-center ${
+                  menuOpen ? '-rotate-45 -translate-y-[7px]' : ''
+                }`} 
+              />
+            </div>
+          </button>
+        </div>
+
+        {/* Mobile menu overlay */}
+        <div 
+          className={`md:hidden fixed inset-0 top-[72px] bg-white/95 backdrop-blur-xl z-50 transition-all duration-300 ${
+            menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
+        >
+          <nav className="flex flex-col items-center justify-center h-full gap-8 pb-20">
+            {content.nav.links.map((link, index) => (
+              <a
+                key={link.id}
+                href={link.href}
+                onClick={() => setMenuOpen(false)}
+                className={`text-[#374151] hover:text-[#111827] transition-all text-[18px] tracking-wide font-light transform ${
+                  menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+                }`}
+                style={{ transitionDelay: menuOpen ? `${index * 50 + 100}ms` : '0ms' }}
+              >
+                {link.label}
+              </a>
+            ))}
+            <a
+              href="#trial"
+              onClick={() => setMenuOpen(false)}
+              className={`mt-4 inline-flex items-center justify-center px-8 py-3 bg-[#111827] text-white/95 font-normal rounded-full transition-all text-[15px] tracking-wide transform ${
+                menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+              }`}
+              style={{ transitionDelay: menuOpen ? `${content.nav.links.length * 50 + 150}ms` : '0ms' }}
+            >
+              Начать бесплатно
+            </a>
+          </nav>
         </div>
       </header>
 
-      {/* Hero Content — Two Column Layout */}
-      <div className="relative w-full">
-        <div className="mx-auto w-full max-w-[1024px] px-6 pt-6 md:pt-8 pb-24">
+      {/* Hero Content — First Screen: Logo + Phone + H1 + H2 */}
+      <div className="relative w-full min-h-[calc(100vh-72px)] md:min-h-0 flex flex-col md:block">
+        <div className="relative mx-auto w-full max-w-[1024px] px-6 pt-0 md:pt-4 pb-4 md:pb-0 flex flex-col md:block flex-1">
           
-          {/* H1 — Main headline (outside grid, full width) */}
-          <h1 className="text-[28px] md:text-[36px] lg:text-[40px] font-light text-[#374151] mb-8 leading-[1.15]">
+          {/* Mobile: Phone - adaptive size */}
+          <div className="flex lg:hidden justify-center flex-1 items-center py-2">
+            <div className="relative w-full max-w-[200px] sm:max-w-[240px]">
+              <Image
+                src="/phone3.jpg"
+                alt="HEYS App Interface"
+                width={240}
+                height={480}
+                priority
+                className="w-full h-auto object-contain drop-shadow-xl"
+                style={{ maxHeight: 'calc(100vh - 400px)' }}
+              />
+            </div>
+          </div>
+
+          {/* H1 — Main headline */}
+          <h1 className="text-[26px] sm:text-[28px] md:text-[36px] lg:text-[40px] font-light text-[#374151] mb-3 md:mb-8 leading-[1.15] text-center lg:text-left">
             <span className="text-[#111827] font-semibold">
-              HEYS — для тех, кто хочет управлять<br />своей жизнью.
+              HEYS — для тех, кто хочет<br className="hidden sm:inline" /> управлять своей жизнью.
             </span>
           </h1>
 
+          {/* H2 — Subheadline (visible on first screen for mobile too) */}
+          <h2 className="lg:hidden text-[13px] sm:text-[14px] text-[#374151] font-normal mb-6 leading-[1.5] text-center">
+            Вы управляете решениями. Мы держим процесс.<br />
+            Не за счёт силы воли, а за счёт системы:<br />
+            <span className="text-[#111827] font-semibold">контекст → решения → поддержка → контроль.</span>
+          </h2>
+
+          {/* Scroll cue — добавлен отступ сверху */}
+          <div className="pointer-events-none z-10 mt-auto pt-4 mb-6 flex w-full justify-center md:absolute md:bottom-8 md:left-1/2 md:mb-0 md:pt-0 md:w-auto md:-translate-x-1/2">
+            <a
+              href="#what-is-heys"
+              aria-label="Прокрутить вниз"
+              className="pointer-events-auto inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#111827]/15 bg-white/80 text-[#111827] shadow-sm backdrop-blur-sm transition-all hover:translate-y-[2px] hover:border-[#111827]/25 hover:bg-white hover:shadow-md active:scale-95"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <path
+                  d="M12 5v12m0 0 6-6m-6 6-6-6"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </a>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Hero Content — Second part (scrollable on mobile) */}
+      <div className="relative w-full bg-white">
+        <div className="mx-auto w-full max-w-[1024px] px-6 pb-16 md:pb-24">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-0 items-start">
             
             {/* Left Column — Text Content */}
-            <div>
+            <div className="text-center lg:text-left">
               {/* H2 — Subheadline (с переносом строки если есть \n) */}
-              <h2 className="text-[15px] md:text-[17px] text-[#374151] font-normal mb-6 leading-[1.5]">
+              <h2 className="text-[14px] md:text-[17px] text-[#374151] font-normal mb-5 md:mb-6 leading-[1.5]">
                 Вы управляете решениями. Мы держим процесс.<br />
                 Не за счёт силы воли, а за счёт системы:<br />
                 <span className="text-[#111827] font-semibold">контекст → решения → поддержка → контроль.</span>
@@ -140,32 +259,6 @@ export default function HeroSSR({ content, _variant }: HeroSSRProps) {
 
           </div>
         </div>
-      </div>
-
-      {/* Scroll cue */}
-      <div className="pointer-events-none absolute bottom-8 left-1/2 -translate-x-1/2">
-        <a
-          href="#what-is-heys"
-          aria-label="Прокрутить вниз"
-          className="pointer-events-auto inline-flex h-14 w-14 items-center justify-center rounded-full border border-[#111827]/20 bg-white/60 text-[#111827] shadow-sm backdrop-blur transition-all hover:translate-y-[1px] hover:border-[#111827]/30 hover:bg-white/70"
-        >
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-          >
-            <path
-              d="M12 5v12m0 0 6-6m-6 6-6-6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </a>
       </div>
     </section>
   )
