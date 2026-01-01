@@ -1381,6 +1381,10 @@
     // Обновление граммов
     const setGrams = useCallback((newGrams) => {
       const val = Math.max(1, Math.min(2000, Number(newGrams) || 100));
+      // Debug: log only if value doesn't change as expected
+      if (data?.grams && data.grams !== val && Math.abs(data.grams - val) > 1) {
+        console.warn('[GramsStep] ⚠️ Unexpected grams change:', { from: data.grams, to: val, input: newGrams });
+      }
       onChange({ ...data, grams: val });
     }, [data, onChange]);
     
@@ -1527,7 +1531,10 @@
             } 
             // Режим добавления — вызываем onAdd
             else if (context?.onAdd) {
-              // 🔍 DEBUG: Проверяем что отправляем в onAdd
+              // Sanity check: warn if grams values are inconsistent
+              if (grams !== data?.grams && data?.grams && data.grams !== 100) {
+                console.warn('[GramsStep] ⚠️ grams mismatch on submit:', { final: grams, dataGrams: data.grams });
+              }
               const hasNutrients = !!(product?.kcal100 || product?.protein100 || product?.carbs100);
               // console.log('[GramsStep] onAdd called:', product?.name, 'grams:', grams, {...});
               if (!hasNutrients) {

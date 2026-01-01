@@ -172,7 +172,9 @@ const ALLOWED_FUNCTIONS = [
   
   // === PRODUCTS (read-only или с модерацией) ===
   'get_shared_products',
-  'create_pending_product_by_session', // 🔐 P1: session-версия (IDOR fix)
+  'create_pending_product_by_session', // 🔐 P1: session-версия для PIN-клиентов (на модерацию)
+  'publish_shared_product_by_session', // 🔐 P3: прямая публикация для кураторов (REST→RPC, session)
+  'publish_shared_product_by_curator', // 🔐 P3: прямая публикация для кураторов (REST→RPC, JWT)
   
   // === CONSENTS ===
   'log_consents',                     // Логирование согласий с ПЭП
@@ -324,6 +326,15 @@ module.exports.handler = async function (event, context) {
       'create_pending_product_by_session': {
         'p_session_token': '::text',
         'p_product_name': '::text',
+        'p_product_data': '::jsonb'
+      },
+      // 🔐 P3: Публикация продуктов кураторами
+      'publish_shared_product_by_session': {
+        'p_session_token': '::text',
+        'p_product_data': '::jsonb'
+      },
+      'publish_shared_product_by_curator': {
+        'p_curator_id': '::uuid',
         'p_product_data': '::jsonb'
       }
     };

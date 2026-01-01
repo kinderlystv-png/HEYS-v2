@@ -40,7 +40,9 @@ export default function HeroSSR({ content }: HeroSSRProps) {
       <div className="absolute inset-0 bg-white" aria-hidden="true" />
 
       {/* Header */}
-      <header className="relative w-full">
+      <header className={`relative w-full transition-all duration-700 ease-out ${
+        mounted ? 'opacity-100' : 'opacity-0'
+      }`}>
         <div className="mx-auto w-full max-w-[1024px] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center">
             <Image
@@ -130,12 +132,12 @@ export default function HeroSSR({ content }: HeroSSRProps) {
 
       {/* Hero Content — First Screen: Logo + Phone + H1 + H2 */}
       <div className="relative w-full min-h-[calc(100vh-72px)] md:min-h-0 flex flex-col md:block">
-        <div className="relative mx-auto w-full max-w-[1024px] px-6 pt-0 md:pt-4 pb-4 md:pb-0 flex flex-col md:block flex-1">
+        <div className="relative mx-auto w-full max-w-[1024px] px-6 pt-16 md:pt-20 pb-32 md:pb-0 flex flex-col md:block flex-1">
           
           {/* Mobile: Phone - adaptive size with animation */}
           <div className={`flex lg:hidden justify-center flex-1 items-center py-2 transition-all duration-700 ease-out ${
-            mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`} style={{ transitionDelay: '0ms' }}>
+            mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+          }`} style={{ transitionDelay: '200ms' }}>
             <div className="relative w-full max-w-[200px] sm:max-w-[240px]">
               <Image
                 src="/phone3.jpg"
@@ -151,51 +153,78 @@ export default function HeroSSR({ content }: HeroSSRProps) {
 
           {/* H1 — Main headline with animation */}
           <h1 className={`text-[26px] sm:text-[28px] md:text-[36px] lg:text-[40px] font-light text-[#374151] mb-3 md:mb-8 leading-[1.15] text-center lg:text-left transition-all duration-700 ease-out ${
-            mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`} style={{ transitionDelay: '150ms' }}>
+            mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+          }`} style={{ transitionDelay: '500ms' }}>
             <span className="text-[#111827] font-semibold">
-              HEYS — для тех, кто хочет<br className="hidden sm:inline" /> управлять своей жизнью.
+              HEYS — для тех, кто хочет управлять<br className="hidden sm:inline" /> своей жизнью.
             </span>
           </h1>
 
           {/* H2 — Subheadline with animation (visible on first screen for mobile too) */}
           <h2 className={`lg:hidden text-[13px] sm:text-[14px] text-[#374151] font-normal mb-6 leading-[1.5] text-center transition-all duration-700 ease-out ${
-            mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`} style={{ transitionDelay: '300ms' }}>
-            Вы управляете решениями. Мы держим процесс.<br />
-            Не за счёт силы воли, а за счёт системы:<br />
+            mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+          }`} style={{ transitionDelay: '1000ms' }}>
+            Вы управляете решениями. Мы держим процесс.<br /> За счет системы, а не силы воли:<br />
             <span className="text-[#111827] font-semibold">контекст → решения → поддержка → контроль.</span>
           </h2>
 
-          {/* Scroll cue with animation */}
-          <div className={`pointer-events-none z-10 mt-auto pt-4 mb-6 flex w-full justify-center md:absolute md:bottom-8 md:left-1/2 md:mb-0 md:pt-0 md:w-auto md:-translate-x-1/2 transition-all duration-700 ease-out ${
-            mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`} style={{ transitionDelay: '450ms' }}>
-            <a
-              href="#what-is-heys"
-              aria-label="Прокрутить вниз"
-              className="pointer-events-auto inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#111827]/15 bg-white/80 text-[#111827] shadow-sm backdrop-blur-sm transition-all hover:translate-y-[2px] hover:border-[#111827]/25 hover:bg-white hover:shadow-md active:scale-95"
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-              >
-                <path
-                  d="M12 5v12m0 0 6-6m-6 6-6-6"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </a>
-          </div>
-
         </div>
+      </div>
+
+      {/* Scroll cue — fixed at bottom of viewport (Mobile: 3000ms delay) */}
+      <div className={`lg:hidden pointer-events-none fixed bottom-8 left-1/2 -translate-x-1/2 z-20 transition-all duration-700 ease-out ${
+        mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+      }`} style={{ transitionDelay: '3000ms' }}>
+        <a
+          href="#what-is-heys"
+          aria-label="Прокрутить вниз"
+          className="pointer-events-auto inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#111827]/15 bg-white/80 text-[#111827] shadow-sm backdrop-blur-sm transition-all hover:translate-y-[2px] hover:border-[#111827]/25 hover:bg-white hover:shadow-md active:scale-95"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 5v12m0 0 6-6m-6 6-6-6"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </a>
+      </div>
+
+      {/* Scroll cue — fixed at bottom of viewport (Desktop: 5000ms delay) */}
+      <div className={`hidden lg:block pointer-events-none fixed bottom-8 left-1/2 -translate-x-1/2 z-20 transition-all duration-700 ease-out ${
+        mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+      }`} style={{ transitionDelay: '5000ms' }}>
+        <a
+          href="#what-is-heys"
+          aria-label="Прокрутить вниз"
+          className="pointer-events-auto inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#111827]/15 bg-white/80 text-[#111827] shadow-sm backdrop-blur-sm transition-all hover:translate-y-[2px] hover:border-[#111827]/25 hover:bg-white hover:shadow-md active:scale-95"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 5v12m0 0 6-6m-6 6-6-6"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </a>
       </div>
 
       {/* Hero Content — Second part (scrollable on mobile) */}
@@ -206,15 +235,18 @@ export default function HeroSSR({ content }: HeroSSRProps) {
             {/* Left Column — Text Content */}
             <div className="text-center lg:text-left">
               {/* H2 — Subheadline (с переносом строки если есть \n) */}
-              <h2 className="text-[14px] md:text-[17px] text-[#374151] font-normal mb-5 md:mb-6 leading-[1.5]">
-                Вы управляете решениями. Мы держим процесс.<br />
-                Не за счёт силы воли, а за счёт системы:<br />
+              <h2 className={`text-[14px] md:text-[17px] text-[#374151] font-normal mb-5 md:mb-6 leading-[1.5] hidden lg:block transition-all duration-700 ease-out ${
+                mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              }`} style={{ transitionDelay: '1000ms' }}>
+                Вы управляете решениями. Мы держим процесс. За счет системы, а не силы воли:<br />
                 <span className="text-[#111827] font-semibold">контекст → решения → поддержка → контроль.</span>
               </h2>
 
               {/* H3 — Features (если есть) */}
               {content.hero.features && content.hero.features.length > 0 && (
-                <div className="space-y-3 mb-12">
+                <div className={`space-y-3 mb-16 md:mb-20 transition-all duration-700 ease-out ${
+                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                }`} style={{ transitionDelay: '1000ms' }}>
                   {content.hero.features.map((feature, i) => (
                     <p key={i} className="text-[14px] md:text-[15px] text-[#4b5563] font-normal leading-[1.6]" dangerouslySetInnerHTML={{ __html: feature }} />
                   ))}
@@ -222,7 +254,9 @@ export default function HeroSSR({ content }: HeroSSRProps) {
               )}
 
               {/* Two CTA buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-3">
+              <div className={`flex flex-col sm:flex-row gap-4 mb-3 transition-all duration-700 ease-out ${
+                mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              }`} style={{ transitionDelay: '4000ms' }}>
                 <a
                   href="#pricing"
                   className="inline-flex items-center justify-center px-6 py-2.5 bg-[#4b5563] text-white/90 font-normal rounded-full hover:bg-[#374151] transition-all text-[14px] tracking-wide"
@@ -240,13 +274,17 @@ export default function HeroSSR({ content }: HeroSSRProps) {
 
               {/* Friction reduction note */}
               {content.hero.frictionNote && (
-                <p className="text-[13px] text-[#4b5563] mb-5 leading-[1.5]">
+                <p className={`text-[13px] text-[#4b5563] mb-5 leading-[1.5] transition-all duration-700 ease-out ${
+                  mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                }`} style={{ transitionDelay: '4000ms' }}>
                   {content.hero.frictionNote}
                 </p>
               )}
 
               {/* Microtext */}
-              <div className="space-y-1">
+              <div className={`space-y-1 transition-all duration-700 ease-out ${
+                mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              }`} style={{ transitionDelay: '4000ms' }}>
                 <p className="text-[12px] text-[#6b7280] leading-[1.5]">
                   {content.hero.microtext}
                 </p>
@@ -260,7 +298,9 @@ export default function HeroSSR({ content }: HeroSSRProps) {
             </div>
 
             {/* Right Column — iPhone Screenshot */}
-            <div className="hidden lg:flex justify-center items-center">
+            <div className={`hidden lg:flex justify-center items-center transition-all duration-700 ease-out ${
+              mounted ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12'
+            }`} style={{ transitionDelay: '2500ms' }}>
               <div className="relative w-full max-w-[180px]">
                 <Image
                   src="/phone3.jpg"

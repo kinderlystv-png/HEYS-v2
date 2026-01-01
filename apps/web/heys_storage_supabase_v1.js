@@ -5630,37 +5630,26 @@
       const name_norm = HEYS.models.normalizeProductName(product.name);
       console.log('[SHARED] Fingerprint:', fingerprint, 'Name norm:', name_norm);
       
-      // Проверяем: продукт уже существует?
-      console.log('[SHARED] 🔍 Checking if exists...');
-      const { data: existing, error: checkError } = await YandexAPI.from('shared_products')
-        .select('id')
-        .eq('fingerprint', fingerprint)
-        .maybeSingle();
+      // 🔐 P3: Для куратора используем user.id напрямую (JWT auth)
+      // Куратор НЕ имеет session_token — он авторизован через JWT
+      const curatorId = user?.id;
       
-      console.log('[SHARED] Check result:', { existing, checkError });
-      
-      if (existing) {
-        console.log('[SHARED] ⚠️ Product already exists:', existing.id);
-        return { 
-          data: existing, 
-          error: null, 
-          status: 'exists',
-          message: 'Продукт уже существует в общей базе'
-        };
+      if (!curatorId) {
+        console.error('[SHARED] ❌ No curator ID (user.id)');
+        return { data: null, error: 'Not authenticated as curator', status: 'error' };
       }
       
-      // Публикуем новый продукт
-      // ВАЖНО: PostgreSQL lowercase-ит колонки, поэтому badfat100/goodfat100
-      const insertData = {
-        created_by_user_id: user.id,
+      console.log('[SHARED] 👤 Using curator ID:', curatorId);
+      
+      // 🔐 P3: Используем RPC вместо REST (REST теперь read-only)
+      const productData = {
         name: product.name,
-        name_norm,
         fingerprint,
         simple100: product.simple100 || 0,
         complex100: product.complex100 || 0,
         protein100: product.protein100 || 0,
-        badfat100: product.badFat100 || 0,
-        goodfat100: product.goodFat100 || 0,
+        badFat100: product.badFat100 || 0,
+        goodFat100: product.goodFat100 || 0,
         trans100: product.trans100 || 0,
         fiber100: product.fiber100 || 0,
         gi: product.gi,
@@ -5670,14 +5659,14 @@
         description: product.description || null
       };
       
-      console.log('[SHARED] 📝 Inserting:', insertData);
+      console.log('[SHARED] 📝 Publishing via RPC:', productData.name);
       
-      const { data, error } = await YandexAPI.from('shared_products')
-        .insert(insertData)
-        .select()
-        .single();
+      const { data, error } = await YandexAPI.rpc('publish_shared_product_by_curator', {
+        p_curator_id: curatorId,
+        p_product_data: productData
+      });
       
-      console.log('[SHARED] Insert result:', { data, error });
+      console.log('[SHARED] RPC result:', { data, error });
       
       if (error) {
         console.error('[SHARED] ❌ Publish error:', error);
@@ -5685,9 +5674,21 @@
         return { data: null, error, status: 'error' };
       }
       
-      console.log('[SHARED] ✅ Published successfully:', product.name);
-      log('[SHARED PRODUCTS] Published:', product.name);
-      return { data, error: null, status: 'published' };
+      // Обрабатываем результат RPC
+      if (data?.success === false) {
+        console.error('[SHARED] ❌ RPC returned error:', data.error);
+        return { data: null, error: data.error, status: 'error', message: data.message };
+      }
+      
+      const status = data?.status || 'published';
+      console.log('[SHARED] ✅ Result:', status, product.name);
+      log('[SHARED PRODUCTS] Result:', status, product.name);
+      return { 
+        data: { id: data?.id }, 
+        error: null, 
+        status,
+        message: data?.message
+      };
     } catch (e) {
       console.error('[SHARED] ❌ Unexpected error:', e);
       err('[SHARED PRODUCTS] Unexpected error:', e);
@@ -5736,9 +5737,9 @@
   cloud.createPendingProduct = async function(clientId, product) {
     try {
       // 🔐 P1: Используем session_token вместо client_id
-      // 🔧 FIX: Используем HEYS.Auth.getSessionToken() или U.lsGet (который делает JSON.parse)
+      // 🔧 FIX: Используем HEYS.Auth.getSessionToken() или HEYS.utils.lsGet (который делает JSON.parse)
       const sessionToken = (typeof HEYS !== 'undefined' && HEYS.Auth?.getSessionToken?.()) 
-        || U.lsGet?.('heys_session_token', null)
+        || HEYS.utils?.lsGet?.('heys_session_token', null)
         || (() => { try { return JSON.parse(localStorage.getItem('heys_session_token')); } catch { return null; } })();
       if (!sessionToken) {
         return { data: null, error: 'No session token', status: 'error' };
