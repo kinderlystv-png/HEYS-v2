@@ -319,6 +319,7 @@
             const result = HEYS.SmartSearchWithTypos.search(lc, latestProducts, {
               enablePhonetic: true,
               enableSynonyms: true,
+              enableTranslit: true, // 🆕 рафа → rafa → Raffaello
               maxSuggestions: 30
             });
             if (result?.results?.length) results = result.results;
