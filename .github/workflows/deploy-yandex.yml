@@ -85,13 +85,21 @@ jobs:
         env:
           VITE_API_URL: https://api.heyslab.ru
 
-      - name: Generate build version
+      - name: Read build version from generated file
         run: |
-          VERSION=$(date +%Y.%m.%d.%H%M).${{ github.run_number }}
-          echo "BUILD_VERSION=$VERSION" >> $GITHUB_ENV
-          echo "Build version: $VERSION"
-          # Записываем версию в файл для PWA
-          echo "{\"version\":\"$VERSION\",\"buildTime\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"commit\":\"${{ github.sha }}\"}" > apps/web/dist/version.json
+          # version.json создаётся в prebuild скриптом update-version.cjs
+          # НЕ перезаписываем его — просто читаем для логов и summary
+          if [ -f apps/web/dist/version.json ]; then
+            VERSION=$(cat apps/web/dist/version.json | jq -r '.version')
+            echo "BUILD_VERSION=$VERSION" >> $GITHUB_ENV
+            echo "✅ Build version from prebuild: $VERSION"
+            cat apps/web/dist/version.json
+          else
+            echo "⚠️ version.json not found, using fallback"
+            VERSION=$(date +%Y.%m.%d.%H%M).${{ github.run_number }}
+            echo "BUILD_VERSION=$VERSION" >> $GITHUB_ENV
+            echo "{\"version\":\"$VERSION\",\"buildTime\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"commit\":\"${{ github.sha }}\"}" > apps/web/dist/version.json
+          fi
 
       - name: Configure AWS CLI for Yandex Cloud
         # AWS CLI уже предустановлен на ubuntu-latest!
