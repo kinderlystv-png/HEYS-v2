@@ -9577,7 +9577,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           // 🔧 CRITICAL FIX: Используем БАЗОВУЮ норму (без долга) для расчёта нового долга!
           // d.target = savedDisplayOptimum (уже включает предыдущий долг) — НЕПРАВИЛЬНО для расчёта
           // d.baseTarget = пересчитанная норма TDEE * (1 + deficit%) — ПРАВИЛЬНО
-          const target = d.baseTarget || d.target || optimum;
+          let target = d.baseTarget || d.target || optimum;
+          
+          // 🔄 REFEED FIX: Если день был refeed, используем норму +35%
+          // Refeed — часть стратегии, не "срыв". Перебор считаем от refeed-нормы, а не от дефицитной.
+          if (d.isRefeedDay) {
+            const REFEED_BOOST = 0.35;
+            target = Math.round(target * (1 + REFEED_BOOST));
+          }
+          
           const rawDelta = d.kcal - target;  // > 0 переел, < 0 недоел
           
           let delta = rawDelta;
