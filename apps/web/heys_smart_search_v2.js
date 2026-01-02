@@ -1559,7 +1559,7 @@
 
   /**
    * Вычисление релевантности результата
-   * 🆕 v2.8.0: Улучшенное ранжирование для substring matches
+   * 🆕 v2.8.1: Улучшенное ранжирование — полное слово > startsWith для другого слова
    */
   function calculateRelevance(item, query, matchType = 'exact') {
     const itemName = normalizeText(item.name || '');
@@ -1569,16 +1569,31 @@
     // Базовые баллы по типу совпадения
     switch (matchType) {
       case 'exact':
-        if (itemName === normalizedQuery) relevance = 100;
-        else if (itemName.startsWith(normalizedQuery)) relevance = 90; // 🆕 Повышено: супер... → Суперсемечковый
-        else if (itemName.includes(' ' + normalizedQuery)) relevance = 85; // слово целиком
-        else if (itemName.includes(normalizedQuery + ' ')) relevance = 85; // слово в начале названия части
-        else {
-          // 🆕 v2.8.0: Проверяем, является ли query началом какого-либо слова
-          const words = itemName.split(/\s+/);
-          const startsWord = words.some(w => w.startsWith(normalizedQuery));
+        // Разбиваем название на слова для анализа
+        const words = itemName.split(/\s+/);
+        const isExactWord = words.includes(normalizedQuery); // "сыр" как полное слово
+        const firstWordMatch = words[0] === normalizedQuery; // "сыр" = первое слово
+        const startsWithQuery = itemName.startsWith(normalizedQuery); // "сырники" начинается с "сыр"
+        const startsWithQueryIsOwnWord = startsWithQuery && words[0] === normalizedQuery; // первое слово = запрос
+        
+        if (itemName === normalizedQuery) {
+          relevance = 100; // Точное совпадение названия
+        } else if (firstWordMatch) {
+          relevance = 95; // 🆕 Запрос = первое слово: "сыр твёрдый" для "сыр"
+        } else if (isExactWord) {
+          relevance = 92; // 🆕 Запрос = полное слово в названии: "сыр плавленый обезжиренный"
+        } else if (startsWithQuery) {
+          // startsWith но НЕ полное слово — "сырники" для "сыр"
+          relevance = 82; // 🆕 Понижено с 90 до 82
+        } else if (itemName.includes(' ' + normalizedQuery)) {
+          relevance = 85; // слово целиком после пробела
+        } else if (itemName.includes(normalizedQuery + ' ')) {
+          relevance = 85; // слово в начале названия части  
+        } else {
+          // Проверяем, является ли query началом какого-либо слова (не первого)
+          const startsWord = words.slice(1).some(w => w.startsWith(normalizedQuery));
           if (startsWord) {
-            relevance = 80; // 🆕 черк → Черкизово (начало слова)
+            relevance = 78; // черк → Черкизово (начало слова, не первого)
           } else {
             relevance = 60; // Просто contains внутри слова
           }
@@ -1613,11 +1628,10 @@
         break;
     }
     
-    // 🆕 v2.8.0: Бонусы уменьшены — не должны переворачивать порядок по типу совпадения
-    // Было: usageCount до +15, favorite +10 = до +25 — могло превысить разницу exact vs phonetic
-    // Стало: usageCount до +8, favorite +5 = до +13 — в пределах одного типа совпадения
+    // 🆕 v2.8.1: Бонусы — избранные получают существенный приоритет
+    // Цель: избранный "Сыр твёрдый" (95+15=110) выше чем "Сырники" (82)
+    if (item.isFavorite) relevance += 15; // 🆕 Избранные в ТОП (было +5, теперь +15)
     if (item.usageCount) relevance += Math.min(item.usageCount, 8); // часто используемые (max +8)
-    if (item.isFavorite) relevance += 5; // избранные (было +10, теперь +5)
     
     // Бонус за короткое название (точнее совпадение)
     const lengthRatio = normalizedQuery.length / itemName.length;
