@@ -12222,17 +12222,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             try { rawDay = rawValue ? JSON.parse(rawValue) : null; } catch(e) {}
             console.log('[PullRefresh] 🔍 RAW localStorage | meals:', rawDay?.meals?.length, '| updatedAt:', rawDay?.updatedAt);
             
+            // ✅ НЕ вызываем setDay здесь — handleDayUpdated уже обработал обновление из syncClient
+            // Этот дублирующий setDay вызывал мерцание экрана (double render)
             const freshDay = lsGet(dayKey, null);
-            
-            if (freshDay && freshDay.date) {
-              console.log('[PullRefresh] 🔄 Reloading day from localStorage | meals:', freshDay.meals?.length, '| updatedAt:', freshDay.updatedAt ? new Date(freshDay.updatedAt).toISOString() : 'none');
-              const migratedTrainings = normalizeTrainings(freshDay.trainings);
-              const cleanedTrainings = cleanEmptyTrainings(migratedTrainings);
-              const migratedDay = { ...freshDay, trainings: cleanedTrainings };
-              setDay(ensureDay(migratedDay, getProfile()));
-            } else {
-              console.log('[PullRefresh] ⚠️ No day data found for', date);
-            }
+            console.log('[PullRefresh] ✅ Sync complete | localStorage has meals:', freshDay?.meals?.length, '| updatedAt:', freshDay?.updatedAt ? new Date(freshDay.updatedAt).toISOString() : 'none');
+            // Day state уже обновлён через событие heys:day-updated → handleDayUpdated
           } else {
             console.log('[PullRefresh] ⚠️ Sync not available | clientId:', clientId, '| cloud:', !!cloud);
           }
