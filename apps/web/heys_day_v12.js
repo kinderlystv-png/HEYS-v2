@@ -5306,6 +5306,15 @@
     const pullStartY = React.useRef(0);
     const isPulling = React.useRef(false);
     const lastHapticRef = React.useRef(0);
+    // 🔧 FIX: Use refs to avoid stale closures in event handlers
+    const isRefreshingRef = React.useRef(false);
+    const refreshStatusRef = React.useRef('idle');
+    const pullProgressRef = React.useRef(0);
+    
+    // Keep refs in sync with state
+    React.useEffect(() => { isRefreshingRef.current = isRefreshing; }, [isRefreshing]);
+    React.useEffect(() => { refreshStatusRef.current = refreshStatus; }, [refreshStatus]);
+    React.useEffect(() => { pullProgressRef.current = pullProgress; }, [pullProgress]);
     
     // === Current time for Insulin Wave Indicator (updates every minute) ===
     const [currentMinute, setCurrentMinute] = useState(() => Math.floor(Date.now() / 60000));
@@ -12251,14 +12260,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // Короткий показ ошибки
         await new Promise(r => setTimeout(r, 800));
       } finally {
-        setIsRefreshing(false);
-        setRefreshStatus('idle');
-        setPullProgress(0);
+        // 🔧 FIX: Batch setState calls to prevent multiple re-renders
+        // React 18 auto-batches in event handlers but NOT in async/await
+        // Using queueMicrotask ensures all updates happen in single render
+        queueMicrotask(() => {
+          setIsRefreshing(false);
+          setRefreshStatus('idle');
+          setPullProgress(0);
+        });
       }
     };
     
     React.useEffect(() => {
-      // Используем window, так как scroll на уровне страницы, не на контейнере
+      // 🔧 FIX: Event handlers use refs to avoid stale closures
+      // This allows us to use [] deps and NOT re-register listeners on every state change
       const onTouchStart = (e) => {
         // Начинаем pull только если скролл вверху страницы
         if (window.scrollY <= 0) {
@@ -12269,7 +12284,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       };
       
       const onTouchMove = (e) => {
-        if (!isPulling.current || isRefreshing) return;
+        // Use refs for current values (avoids stale closure)
+        if (!isPulling.current || isRefreshingRef.current) return;
         
         const y = e.touches[0].clientY;
         const diff = y - pullStartY.current;
@@ -12281,10 +12297,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           setPullProgress(progress);
           
           // Haptic при достижении threshold
-          if (progress >= PULL_THRESHOLD && refreshStatus !== 'ready') {
+          if (progress >= PULL_THRESHOLD && refreshStatusRef.current !== 'ready') {
             setRefreshStatus('ready');
             triggerHaptic(12);
-          } else if (progress < PULL_THRESHOLD && refreshStatus === 'ready') {
+          } else if (progress < PULL_THRESHOLD && refreshStatusRef.current === 'ready') {
             setRefreshStatus('pulling');
           }
           
@@ -12297,7 +12313,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const onTouchEnd = () => {
         if (!isPulling.current) return;
         
-        if (pullProgress >= PULL_THRESHOLD) {
+        // Use ref for current pullProgress value
+        if (pullProgressRef.current >= PULL_THRESHOLD) {
           handleRefresh();
         } else {
           // Elastic bounce back
@@ -12316,7 +12333,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         document.removeEventListener('touchmove', onTouchMove);
         document.removeEventListener('touchend', onTouchEnd);
       };
-    }, [pullProgress, isRefreshing, refreshStatus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // 🔧 Empty deps — handlers use refs, no re-registration needed
     
     // === Анимация прогресса калорий при загрузке и при переключении на вкладку ===
     const animationRef = React.useRef(null);
