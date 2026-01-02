@@ -10,7 +10,7 @@ env:
   PNPM_VERSION: "8"
   # Yandex Cloud Object Storage
   YC_BUCKET_PWA: heys-app # PWA приложение → app.heyslab.ru
-  YC_BUCKET_LANDING: heyslab.ru # Лендинг → heyslab.ru (бакет должен называться как домен!)
+  YC_BUCKET_LANDING: heys-static # Лендинг → heyslab.ru (CDN origin: heys-static.website.yandexcloud.net)
   YC_ENDPOINT: https://storage.yandexcloud.net
 
 jobs:
