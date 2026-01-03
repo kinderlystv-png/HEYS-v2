@@ -1,5 +1,6 @@
 // heys_yandex_api_v1.js — Yandex Cloud API adapter (152-ФЗ compliant)
 // Замена Supabase на собственный API в Yandex Cloud
+// v58: Enhanced token detection with namespaced fallback + better diagnostics
 
 ;(function (global) {
   'use strict';
@@ -619,9 +620,10 @@
   /**
    * Получить session_token для KV операций
    * @returns {string|null}
+   * 🔧 v58 FIX: Улучшенная диагностика и fallback на heys_pin_auth_client
    */
   function getSessionTokenForKV() {
-    // 🔧 v55 FIX: HEYS.auth (lowercase!), не HEYS.Auth
+    // 1) Пробуем через HEYS.auth (должен уже мигрировать если нужно)
     if (typeof HEYS !== 'undefined' && HEYS.auth && typeof HEYS.auth.getSessionToken === 'function') {
       const token = HEYS.auth.getSessionToken();
       if (token) {
@@ -629,20 +631,42 @@
         return token;
       }
     }
-    // Fallback: напрямую из localStorage (global, без clientId namespace)
-    // 🔧 FIX: U.lsSet сохраняет через JSON.stringify, поэтому нужен JSON.parse
+    
+    // 2) Fallback: напрямую из localStorage
     const raw = localStorage.getItem('heys_session_token');
     if (raw) {
       log('getSessionTokenForKV: got token from localStorage');
-    } else {
-      log('getSessionTokenForKV: NO TOKEN FOUND!');
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return raw; // Если не JSON — вернуть как есть
+      }
     }
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return raw; // Если не JSON — вернуть как есть
+    
+    // 3) 🔧 v58: Ещё один fallback — ищем под namespaced ключом
+    const pinClient = localStorage.getItem('heys_pin_auth_client');
+    const currentClient = localStorage.getItem('heys_client_current');
+    const clientId = (pinClient || currentClient || '').replace(/"/g, '');
+    
+    if (clientId) {
+      const namespacedKey = `heys_${clientId}_session_token`;
+      const namespacedRaw = localStorage.getItem(namespacedKey);
+      if (namespacedRaw) {
+        console.warn('[YandexAPI] 🔄 getSessionTokenForKV: migrating token from', namespacedKey);
+        // Мигрируем в глобальный ключ
+        localStorage.setItem('heys_session_token', namespacedRaw);
+        localStorage.removeItem(namespacedKey);
+        try {
+          return JSON.parse(namespacedRaw);
+        } catch {
+          return namespacedRaw;
+        }
+      }
     }
+    
+    // 4) Нет session_token — это НОРМАЛЬНО для куратора (у него JWT, не PIN)
+    // Не логируем как warning, это ожидаемый fallback на REST path
+    return null;
   }
   
   /**
@@ -786,11 +810,12 @@
       }));
       
       // REST POST с upsert
+      // ⚠️ v59 FIX: PK таблицы client_kv_store = (client_id, k), НЕ (user_id, client_id, k)!
       const result = await rest('client_kv_store', {
         method: 'POST',
         data: restData,
         upsert: true,
-        onConflict: 'user_id,client_id,k'
+        onConflict: 'client_id,k'
       });
       
       if (result.error) {

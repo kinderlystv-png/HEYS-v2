@@ -7044,10 +7044,18 @@ const HEYS = window.HEYS = window.HEYS || {};
                     // Раньше здесь был буфер 5 минут который вызывал ложные логауты
                     if (expiresAtMs < now) {
                       console.log('[AUTH] Token expired at', new Date(expiresAtMs).toISOString());
-                      // Очищаем только РЕАЛЬНО истёкший токен
+                      // Очищаем только РЕАЛЬНО истёкший Supabase токен
                       try { localStorage.removeItem('heys_supabase_auth_token'); } catch (_) {}
-              // 🔧 v53 FIX: Очистка session_token для PIN auth
-              try { localStorage.removeItem('heys_session_token'); } catch (_) {}
+                      // 🔧 v58 FIX: НЕ удаляем session_token если есть PIN auth сессия!
+                      // session_token нужен для PIN auth клиентов (не используют Supabase)
+                      // Удалять только если НЕТ PIN-сессии (куратор)
+                      const hasPinAuth = localStorage.getItem('heys_pin_auth_client');
+                      if (!hasPinAuth) {
+                        console.log('[AUTH] No PIN auth, clearing session_token');
+                        try { localStorage.removeItem('heys_session_token'); } catch (_) {}
+                      } else {
+                        console.log('[AUTH] PIN auth present, keeping session_token');
+                      }
                       return null;
                     }
                     // Если токен скоро истекает — это ОК, ensureValidToken() обновит его

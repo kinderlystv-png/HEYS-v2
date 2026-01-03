@@ -1,4 +1,5 @@
 // heys_storage_supabase_v1.js — Supabase bridge, auth, cloud sync, localStorage mirroring
+// v58: Fix infinite retry on auth error — don't retry when session token is missing
 
 ;(function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
@@ -4328,12 +4329,17 @@
         // Сохраняем каждый клиент отдельно
         let totalSaved = 0;
         let anyError = null;
+        let isAuthError = false; // 🔧 v58 FIX: отслеживаем auth ошибки
         for (const [clientId, items] of Object.entries(byClientId)) {
           const result = await cloud.saveClientViaRPC(clientId, items);
           if (result.success) {
             totalSaved += result.saved || items.length;
           } else {
             anyError = result.error;
+            // 🔧 v58 FIX: Проверяем auth ошибку — НЕ retry в этом случае!
+            if (anyError === 'No auth token available' || anyError === 'No session token') {
+              isAuthError = true;
+            }
             // Вернуть в очередь
             items.forEach(item => clientUpsertQueue.push({ ...item, client_id: clientId }));
           }
@@ -4343,7 +4349,16 @@
           incrementRetry();
           savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
           notifyPendingChange();
-          scheduleClientPush();
+          
+          // 🔧 v58 FIX: При auth ошибке НЕ планируем retry — бесполезно без токена!
+          // Данные останутся в очереди и отправятся когда появится токен (после логина)
+          if (isAuthError) {
+            console.warn('⚠️ [UPLOAD] Auth error, NOT retrying — waiting for login');
+          } else if (retryAttempt < MAX_RETRY_ATTEMPTS) {
+            scheduleClientPush();
+          } else {
+            console.warn('⚠️ [UPLOAD] Max retries reached, data saved locally');
+          }
         } else {
           resetRetry();
           logCritical(`☁️ [YANDEX] Сохранено в облако: ${totalSaved} записей`);
