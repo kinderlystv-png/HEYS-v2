@@ -6436,6 +6436,8 @@
             if (window.HEYS?.analytics) {
               window.HEYS.analytics.trackDataOperation('meal-time-updated');
             }
+            // Success toast
+            HEYS.Toast?.success('Приём сохранён');
           }
         });
       } else {
@@ -6480,6 +6482,8 @@
             if (window.HEYS?.analytics) {
               window.HEYS.analytics.trackDataOperation('meal-mood-updated');
             }
+            // Success toast
+            HEYS.Toast?.success('Оценки сохранены');
           }
         });
       } else {
@@ -6662,6 +6666,8 @@
             if (window.HEYS && window.HEYS.analytics) {
               window.HEYS.analytics.trackDataOperation('meal-created');
             }
+            // Success toast
+            HEYS.Toast?.success('Приём создан');
             
             // Сразу открываем модалку добавления продукта
             // Используем setTimeout чтобы state успел обновиться
@@ -6788,6 +6794,8 @@
         if (window.HEYS && window.HEYS.analytics) {
           window.HEYS.analytics.trackDataOperation('meal-created');
         }
+        // Success toast
+        HEYS.Toast?.success('Приём создан');
       }
     }, [date, expandOnlyMeal, isHydrated, isMobile, openTimePickerForNewMeal, products, setDay]);
     
@@ -19367,20 +19375,63 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         }
       },
         React.createElement('div', { className: 'pull-spinner' },
-          // Иконка в зависимости от состояния
+          // SVG spinner ring — профессиональная анимация вместо эмодзи
           refreshStatus === 'success'
-            ? React.createElement('span', { className: 'pull-spinner-icon success' }, '✓')
+            // Checkmark SVG для успеха
+            ? React.createElement('svg', { 
+                className: 'pull-spinner-ring ready',
+                viewBox: '0 0 28 28',
+                style: { stroke: 'var(--success)' }
+              },
+                React.createElement('path', {
+                  d: 'M7 14l5 5 9-9',
+                  strokeWidth: 3,
+                  fill: 'none',
+                  strokeLinecap: 'round',
+                  strokeLinejoin: 'round'
+                })
+              )
             : refreshStatus === 'error'
-              ? React.createElement('span', { className: 'pull-spinner-icon' }, '✗')
+              // X SVG для ошибки
+              ? React.createElement('svg', { 
+                  className: 'pull-spinner-ring',
+                  viewBox: '0 0 28 28',
+                  style: { stroke: 'var(--err, #ef4444)' }
+                },
+                  React.createElement('path', {
+                    d: 'M8 8l12 12M20 8l-12 12',
+                    strokeWidth: 3,
+                    fill: 'none',
+                    strokeLinecap: 'round'
+                  })
+                )
               : refreshStatus === 'syncing'
-                ? React.createElement('span', { className: 'pull-spinner-icon spinning' }, '↻')
-                : React.createElement('span', { 
-                    className: 'pull-spinner-icon' + (refreshStatus === 'ready' ? ' ready' : ''),
-                    style: { 
-                      transform: `rotate(${Math.min(pullProgress / PULL_THRESHOLD, 1) * 180}deg)`,
+                // Вращающийся ring для синхронизации
+                ? React.createElement('svg', { 
+                    className: 'pull-spinner-ring spinning',
+                    viewBox: '0 0 28 28'
+                  },
+                    React.createElement('circle', {
+                      cx: 14, cy: 14, r: 10,
+                      strokeDasharray: '45 20',
+                      strokeDashoffset: 0
+                    })
+                  )
+                // Ring с прогрессом заполнения при pulling/ready
+                : React.createElement('svg', { 
+                    className: 'pull-spinner-ring' + (refreshStatus === 'ready' ? ' ready' : ''),
+                    viewBox: '0 0 28 28',
+                    style: {
+                      transform: `rotate(${-90 + Math.min(pullProgress / PULL_THRESHOLD, 1) * 180}deg)`,
                       transition: 'transform 0.1s ease-out'
                     }
-                  }, refreshStatus === 'ready' ? '↓' : '↻')
+                  },
+                    React.createElement('circle', {
+                      cx: 14, cy: 14, r: 10,
+                      strokeDasharray: 63, // 2 * PI * 10 ≈ 63
+                      strokeDashoffset: 63 - (Math.min(pullProgress / PULL_THRESHOLD, 1) * 63)
+                    })
+                  )
         ),
         React.createElement('span', { 
           className: 'pull-text' 

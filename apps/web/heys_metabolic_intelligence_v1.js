@@ -1412,11 +1412,11 @@
       } : null,
       // Radar данные (доступны с 7 дней)
       radarData: {
-        stability: Math.round(50 + Math.random() * 30), // TODO: реальный расчёт
+        stability: calculateMealTimingStability(history).score,
         recovery: Math.round(carbTolerance.score * 0.8 + 20),
-        insulinSensitivity: Math.round(70 + Math.random() * 20),
+        insulinSensitivity: Math.round(70 + Math.random() * 20), // TODO: реальный расчёт
         consistency: Math.round(50 + daysAvailable * 1.5),
-        chronotype: Math.round(50 + Math.random() * 30)
+        chronotype: analyzeCircadianPattern(history).chronotypeScore
       },
       tolerances: {
         carbs: carbTolerance,
@@ -1470,10 +1470,8 @@
       result.circadianStrength = analyzeCircadianPattern(history);
       
       // Обновляем radar с реальными данными
-      result.radarData.chronotype = result.circadianStrength.score;
-      result.radarData.stability = Math.round(
-        (carbTolerance.score + fatTolerance.score + proteinResponse.score) / 3
-      );
+      result.radarData.chronotype = result.circadianStrength.chronotypeScore;
+      // stability уже рассчитан через calculateMealTimingStability при создании radarData
       
       // Полные рекомендации
       result.recommendations = generatePhenotypeRecommendations(
@@ -1593,6 +1591,97 @@
     };
   }
   
+  /**
+   * Расчёт стабильности режима питания
+   * Анализирует консистентность времени первого приёма пищи
+   * @param {Array} history - История дней
+   * @returns {{score: number, label: string, details: string}}
+   */
+  function calculateMealTimingStability(history) {
+    try {
+      // Собираем время первого приёма каждого дня
+      const firstMealTimes = [];
+      
+      for (const day of history) {
+        if (!day.meals || !Array.isArray(day.meals) || day.meals.length === 0) continue;
+        
+        // Находим первый приём пищи (самое раннее время)
+        let earliestMinutes = Infinity;
+        for (const meal of day.meals) {
+          if (!meal.time) continue;
+          const [hours, mins] = meal.time.split(':').map(Number);
+          if (isNaN(hours) || isNaN(mins)) continue;
+          const totalMins = hours * 60 + mins;
+          if (totalMins < earliestMinutes) {
+            earliestMinutes = totalMins;
+          }
+        }
+        
+        if (earliestMinutes !== Infinity) {
+          firstMealTimes.push(earliestMinutes);
+        }
+      }
+      
+      // Нужно минимум 3 дня для расчёта вариативности
+      if (firstMealTimes.length < 3) {
+        return {
+          score: 50,
+          label: 'Недостаточно данных',
+          details: `Дней с данными: ${firstMealTimes.length}/3`
+        };
+      }
+      
+      // Рассчитываем среднее время первого приёма
+      const avgTime = firstMealTimes.reduce((a, b) => a + b, 0) / firstMealTimes.length;
+      
+      // Рассчитываем стандартное отклонение (в минутах)
+      const variance = firstMealTimes.reduce((sum, t) => sum + Math.pow(t - avgTime, 2), 0) / firstMealTimes.length;
+      const stdDev = Math.sqrt(variance);
+      
+      // Преобразуем в score (0-100)
+      // stdDev < 15 мин = очень стабильно (score ~95)
+      // stdDev 15-30 мин = стабильно (score ~80)
+      // stdDev 30-60 мин = умеренно (score ~60)
+      // stdDev 60-90 мин = нестабильно (score ~40)
+      // stdDev > 90 мин = очень нестабильно (score ~20)
+      let score;
+      if (stdDev < 15) {
+        score = 90 + (15 - stdDev) * 0.67; // 90-100
+      } else if (stdDev < 30) {
+        score = 75 + (30 - stdDev) * 1; // 75-90
+      } else if (stdDev < 60) {
+        score = 50 + (60 - stdDev) * 0.83; // 50-75
+      } else if (stdDev < 90) {
+        score = 30 + (90 - stdDev) * 0.67; // 30-50
+      } else {
+        score = Math.max(10, 30 - (stdDev - 90) * 0.2); // 10-30
+      }
+      
+      score = Math.round(Math.max(0, Math.min(100, score)));
+      
+      // Форматируем среднее время для отображения
+      const avgHours = Math.floor(avgTime / 60);
+      const avgMins = Math.round(avgTime % 60);
+      const avgTimeStr = `${avgHours.toString().padStart(2, '0')}:${avgMins.toString().padStart(2, '0')}`;
+      
+      return {
+        score,
+        label: score >= 80 ? 'Стабильный' : score >= 60 ? 'Умеренный' : score >= 40 ? 'Вариативный' : 'Хаотичный',
+        details: `Первый приём ~${avgTimeStr}, σ=${Math.round(stdDev)} мин`,
+        avgFirstMealTime: avgTimeStr,
+        stdDevMinutes: Math.round(stdDev),
+        daysAnalyzed: firstMealTimes.length
+      };
+    } catch (e) {
+      console.warn('[MetabolicIntelligence] calculateMealTimingStability error:', e);
+      return {
+        score: 50,
+        label: 'Ошибка расчёта',
+        details: e.message
+      };
+    }
+  }
+
   /**
    * Анализ циркадного паттерна
    */

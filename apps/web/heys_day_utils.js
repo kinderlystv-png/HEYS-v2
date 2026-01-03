@@ -250,7 +250,7 @@
     window.addEventListener('keydown', markInteracted, { once: true, passive: true });
   }
   
-  function haptic(type = 'light') {
+  function hapticFn(type = 'light') {
     if (!navigator.vibrate || !userHasInteracted) return;
     try {
       switch(type) {
@@ -260,13 +260,28 @@
         case 'success': navigator.vibrate([10, 50, 20]); break;
         case 'warning': navigator.vibrate([30, 30, 30]); break;
         case 'error': navigator.vibrate([50, 30, 50, 30, 50]); break;
+        case 'tick': navigator.vibrate(5); break;
         default: navigator.vibrate(10);
       }
     } catch(e) { /* ignore vibrate errors */ }
   }
   
-  // Экспортируем для использования в других модулях (legacy)
-  HEYS.haptic = haptic;
+  // Двойной API: функция + объект с методами для удобства
+  // HEYS.haptic('medium') ИЛИ HEYS.haptic.medium()
+  const hapticObj = Object.assign(
+    (type) => hapticFn(type),
+    {
+      light: () => hapticFn('light'),
+      medium: () => hapticFn('medium'),
+      heavy: () => hapticFn('heavy'),
+      success: () => hapticFn('success'),
+      warning: () => hapticFn('warning'),
+      error: () => hapticFn('error'),
+      tick: () => hapticFn('tick')
+    }
+  );
+  
+  HEYS.haptic = hapticObj;
 
   // === Date/Time Utilities ===
   function pad2(n){ return String(n).padStart(2,'0'); }
@@ -1521,7 +1536,7 @@
   // POPULAR_CACHE — приватный, не экспортируется (инкапсуляция)
   HEYS.dayUtils = {
     // Haptic
-    haptic,
+    haptic: hapticFn,
     // Date/Time
     pad2,
     todayISO,

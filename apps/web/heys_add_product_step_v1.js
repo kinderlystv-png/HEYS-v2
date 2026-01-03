@@ -252,12 +252,12 @@
             // Преобразуем данные для совместимости с UI
             const normalized = result.data.map(p => {
               // Нормализация полей (snake_case → camelCase fallback)
-              const protein100 = p.protein100 ?? 0;
-              const simple100 = p.simple100 ?? 0;
-              const complex100 = p.complex100 ?? 0;
-              const badFat100 = p.badfat100 ?? p.badFat100 ?? 0;
-              const goodFat100 = p.goodfat100 ?? p.goodFat100 ?? 0;
-              const trans100 = p.trans100 ?? 0;
+              const protein100 = Number(p.protein100 ?? 0) || 0;
+              const simple100 = Number(p.simple100 ?? 0) || 0;
+              const complex100 = Number(p.complex100 ?? 0) || 0;
+              const badFat100 = Number(p.badfat100 ?? p.badFat100 ?? 0) || 0;
+              const goodFat100 = Number(p.goodfat100 ?? p.goodFat100 ?? 0) || 0;
+              const trans100 = Number(p.trans100 ?? 0) || 0;
               
               // kcal100 — вычисляемое поле (не хранится в shared_products)
               // Формула: protein*4 + carbs*4 + fat*9
@@ -273,10 +273,10 @@
                 badFat100,
                 goodFat100,
                 trans100,
-                fiber100: p.fiber100 ?? 0,
-                gi: p.gi ?? 0,
-                harm: p.harm ?? 0,
-                harmScore: p.harmscore ?? p.harmScore ?? p.harm ?? 0,
+                fiber100: Number(p.fiber100 ?? 0) || 0,
+                gi: Number(p.gi ?? 0) || 0,
+                harm: Number(p.harm ?? 0) || 0,
+                harmScore: Number(p.harmscore ?? p.harmScore ?? p.harm ?? 0) || 0,
                 // Вычисленные поля
                 kcal100,
                 carbs100,
@@ -362,30 +362,110 @@
     // 🌐 Объединённые результаты: личные + общая база (без дубликатов)
     const combinedResults = useMemo(() => {
       if (!lc) return [];
-      
-      const seen = new Set();
-      const combined = [];
-      
-      // Сначала личные (они в приоритете)
-      searchResults.forEach(p => {
-        const name = normalizeSearch(p.name || '');
-        if (!seen.has(name)) {
-          seen.add(name);
-          combined.push({ ...p, _source: 'personal' });
+
+      // Фильтруем shared тоже по категории (иначе переключатель категории кажется «сломанный»)
+      const sharedFiltered = selectedCategory !== 'all'
+        ? sharedResults.filter(p => matchCategory(p, selectedCategory))
+        : sharedResults;
+
+      // Собираем кандидатов и пересчитываем скор по «реальному» совпадению,
+      // чтобы семантические/косвенные личные совпадения не утаптывали точные shared-матчи.
+      const candidates = [];
+
+      // Простая функция нечеткого сравнения (Jaro-Winkler like для коротких строк)
+      const isFuzzyMatch = (word, query) => {
+        if (!word || !query) return false;
+        if (word.includes(query)) return true;
+        
+        // Допускаем 1 ошибку/опечатку для слов длиннее 4 букв
+        if (query.length > 3 && Math.abs(word.length - query.length) <= 2) {
+          let errors = 0;
+          let i = 0, j = 0;
+          while (i < word.length && j < query.length) {
+            if (word[i] !== query[j]) {
+              errors++;
+              if (errors > 1) return false;
+              // Пробуем пропустить символ в одном из слов (вставка/удаление)
+              if (word.length > query.length) i++;
+              else if (query.length > word.length) j++;
+              else { i++; j++; } // Замена
+            } else {
+              i++; j++;
+            }
+          }
+          return true;
+        }
+        return false;
+      };
+
+      const pushCandidate = (p, source) => {
+        if (!p) return;
+        // Используем имя как есть, если нормализация вернула пустоту (защита от агрессивной очистки)
+        let nameNorm = normalizeSearch(p.name || '');
+        if (!nameNorm && p.name) nameNorm = p.name.toLowerCase().trim();
+        
+        if (!nameNorm) return;
+
+        const baseRel = Number.isFinite(p.relevance) ? p.relevance : 0;
+        const hasSubstring = nameNorm.includes(lc);
+        const startsWith = nameNorm.startsWith(lc);
+        
+        // Разбиваем имя на слова для более умного анализа
+        const nameWords = nameNorm.split(/[\s,().]+/); // Разделители: пробел, запятая, скобки, точка
+        const exactWord = nameWords.some(w => w === lc);
+        // Проверяем fuzzy совпадение для каждого слова запроса
+        const fuzzyMatch = nameWords.some(w => isFuzzyMatch(w, lc));
+        // Проверяем совпадение начала слова (3+ буквы) — спасает "савая" -> "савоярди" (совпадает "сав")
+        const prefix3Match = lc.length >= 3 && nameWords.some(w => w.startsWith(lc.slice(0, 3)));
+
+        // Базовый скор: используем relevance если есть + поправки
+        let score = baseRel;
+        
+        if (hasSubstring) score += 40;
+        else if (fuzzyMatch) score += 30; // Почти как точное, если похоже
+        else if (prefix3Match) score += 20; // Начало совпадает — это уже неплохо
+        
+        if (startsWith) score += 15;
+        if (exactWord) score += 10;
+
+        // Если вообще нет подстрочного совпадения, fuzzy и даже префикса — сильно штрафуем
+        if (!hasSubstring && !fuzzyMatch && !prefix3Match) score -= 35;
+
+        // Лёгкий приоритет личным (при прочих равных)
+        if (source === 'personal') score += 3;
+        // Shared тоже важны, если они хорошо совпадают
+        if (source === 'shared') score += 1;
+
+        candidates.push({ ...p, _source: source, _score: score, _nameNorm: nameNorm });
+      };
+
+      searchResults.forEach(p => pushCandidate(p, 'personal'));
+      sharedFiltered.forEach(p => pushCandidate(p, 'shared'));
+
+      // Дедуп по нормализованному имени — оставляем лучший скор
+      const bestByName = new Map();
+      candidates.forEach(p => {
+        const key = p._nameNorm;
+        const prev = bestByName.get(key);
+        if (!prev || (p._score ?? 0) > (prev._score ?? 0)) {
+          bestByName.set(key, p);
         }
       });
-      
-      // Затем из общей базы (помечаем)
-      sharedResults.forEach(p => {
-        const name = normalizeSearch(p.name || '');
-        if (!seen.has(name)) {
-          seen.add(name);
-          combined.push({ ...p, _source: 'shared' });
-        }
+
+      const combined = Array.from(bestByName.values());
+
+      combined.sort((a, b) => {
+        const sa = a._score ?? 0;
+        const sb = b._score ?? 0;
+        if (sa !== sb) return sb - sa;
+        // tie-break: personal выше shared
+        if (a._source !== b._source) return a._source === 'personal' ? -1 : 1;
+        // затем короче название выше
+        return String(a.name || '').length - String(b.name || '').length;
       });
-      
+
       return combined.slice(0, 25);
-    }, [searchResults, sharedResults, lc, normalizeSearch]);
+    }, [searchResults, sharedResults, lc, normalizeSearch, selectedCategory]);
     
     // "Возможно вы искали" — альтернативные запросы при пустых результатах
     const didYouMean = useMemo(() => {

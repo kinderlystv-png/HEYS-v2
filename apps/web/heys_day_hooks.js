@@ -198,7 +198,9 @@
       // Иначе после sync данные изменятся, а ref будет содержать старую версию
       if(disabled) return;
       if(!day || !day.date) return;
-      const key = getKey(day);
+      // ✅ FIX: getKey ожидает dateStr, а не объект day
+      // Иначе получаем ключ вида "heys_dayv2_[object Object]" и ломаем init снапов.
+      const key = getKey(day.date);
       const current = readExisting(key);
       if(current){
         prevStoredSnapRef.current = JSON.stringify(current);

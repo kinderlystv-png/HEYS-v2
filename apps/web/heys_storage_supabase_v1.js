@@ -5594,10 +5594,26 @@
     console.log('[SHARED SEARCH] Called with query:', query, 'user:', !!user);
     
     const { limit = 50, excludeBlocklist = true, fingerprint = null } = options;
-    const normQuery = query.toLowerCase().trim();
+    const normQuery = (HEYS?.models?.normalizeProductName
+      ? HEYS.models.normalizeProductName(query)
+      : (query || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
     console.log('[SHARED SEARCH] Normalized query:', normQuery);
     
     try {
+      // Внутренний helper: выполнить запрос по name_norm через ilike
+      const fetchByName = async (nameQ) => {
+        const q = (nameQ || '').toString().trim();
+        if (!q) return [];
+        const { data, error } = await YandexAPI.rest('shared_products', {
+          select: '*',
+          filters: { 'ilike.name_norm': `%${q}%` },
+          order: 'created_at.desc',
+          limit
+        });
+        if (error) throw error;
+        return data || [];
+      };
+
       // Строим фильтры для YandexAPI.rest()
       const filters = {};
       
@@ -5609,17 +5625,49 @@
       }
       
       // 🔄 v3.21.0: Используем shared_products вместо shared_products_public (VIEW удалён)
-      const { data, error } = await YandexAPI.rest('shared_products', {
+      let data;
+      let error;
+      ({ data, error } = await YandexAPI.rest('shared_products', {
         select: '*',
         filters,
         order: 'created_at.desc',
         limit
-      });
+      }));
       console.log('[SHARED SEARCH] Query result:', data?.length, 'error:', error);
       
       if (error) {
         err('[SHARED PRODUCTS] Search error:', error);
         return { data: null, error };
+      }
+
+      // 🆕 Fallback для базовых опечаток (пример: "сава" → "савоярди")
+      // Если точный ILIKE по подстроке дал мало результатов, пробуем более широкий префикс.
+      // Это дешёвый server-side хак, чтобы покрывать 1-символьные расхождения в конце.
+      if (!fingerprint && normQuery && Array.isArray(data)) {
+        const baseCount = data.length;
+        // Триггерим fallback только когда результатов действительно мало
+        if (baseCount < 3 && normQuery.length >= 4) {
+          const prefix3 = normQuery.slice(0, 3);
+          if (prefix3 && prefix3.length === 3 && prefix3 !== normQuery) {
+            try {
+              const fallbackData = await fetchByName(prefix3);
+              if (fallbackData && fallbackData.length) {
+                const byId = new Map();
+                (data || []).forEach(p => {
+                  const key = p?.id || p?.fingerprint || p?.name;
+                  if (key) byId.set(key, p);
+                });
+                fallbackData.forEach(p => {
+                  const key = p?.id || p?.fingerprint || p?.name;
+                  if (key && !byId.has(key)) byId.set(key, p);
+                });
+                data = Array.from(byId.values()).slice(0, limit);
+              }
+            } catch (e) {
+              // Fallback errors should not break primary search
+            }
+          }
+        }
       }
       
       // Фильтрация blocklist на клиенте (если нужно)
