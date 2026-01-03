@@ -444,7 +444,7 @@ module.exports.handler = async function (event, context) {
         };
       }
 
-      // 🔐 P3.1: POST — INSERT/UPSERT для client_kv_store
+      // 🔐 P3.1: POST — INSERT/UPSERT для client_kv_store (supports batch: array of objects)
       case 'POST': {
         if (!isWriteAllowed) {
           return {
@@ -461,26 +461,43 @@ module.exports.handler = async function (event, context) {
         const onConflict = params.on_conflict;
         const isUpsert = params.upsert === 'true' && onConflict;
         
-        // Колонки из body
-        const columns = Object.keys(body);
+        // 🔐 v57: Поддержка batch insert — массив объектов
+        const rows = Array.isArray(body) ? body : [body];
+        
+        if (rows.length === 0) {
+          return {
+            statusCode: 400,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: 'Empty body' })
+          };
+        }
+        
+        // Колонки берём из первого объекта (все объекты должны иметь те же колонки)
+        const columns = Object.keys(rows[0]);
         
         // 🔐 FIX v2: JSON колонки ВСЕГДА нужно сериализовать в JSON строку
-        // PostgreSQL json тип требует валидный JSON литерал:
-        // - строка "light" → '"light"' (с кавычками)
-        // - объект {a:1} → '{"a":1}'
-        // - число 123 → '123'
-        // - null → 'null'
         const JSON_COLUMNS = ['v']; // client_kv_store.v is json type
-        const values = columns.map(col => {
-          const val = body[col];
-          // Для JSON колонок ВСЕГДА сериализуем (даже если это строка/число)
-          if (JSON_COLUMNS.includes(col) && val !== undefined) {
-            return JSON.stringify(val);
-          }
-          return val;
-        });
         
-        const placeholders = columns.map((_, idx) => `$${idx + 1}`).join(', ');
+        // Формируем VALUES для batch insert
+        const allValues = [];
+        const allPlaceholders = [];
+        let paramIdx = 1;
+        
+        for (const row of rows) {
+          const rowPlaceholders = [];
+          for (const col of columns) {
+            const val = row[col];
+            // Для JSON колонок ВСЕГДА сериализуем
+            if (JSON_COLUMNS.includes(col) && val !== undefined) {
+              allValues.push(JSON.stringify(val));
+            } else {
+              allValues.push(val);
+            }
+            rowPlaceholders.push(`$${paramIdx++}`);
+          }
+          allPlaceholders.push(`(${rowPlaceholders.join(', ')})`);
+        }
+        
         const quotedColumns = columns.map(c => `"${c}"`).join(', ');
         
         let query;
@@ -492,15 +509,15 @@ module.exports.handler = async function (event, context) {
             .map(c => `"${c}" = EXCLUDED."${c}"`)
             .join(', ');
           
-          query = `INSERT INTO "${tableName}" (${quotedColumns}) VALUES (${placeholders}) ON CONFLICT (${conflictCols}) DO UPDATE SET ${updateSet}`;
+          query = `INSERT INTO "${tableName}" (${quotedColumns}) VALUES ${allPlaceholders.join(', ')} ON CONFLICT (${conflictCols}) DO UPDATE SET ${updateSet}`;
           
-          // Добавляем updated_at если есть в таблице
-          if (columns.includes('updated_at') === false) {
+          // Добавляем updated_at если колонка не в body
+          if (!columns.includes('updated_at')) {
             query = query.replace('DO UPDATE SET ', 'DO UPDATE SET "updated_at" = NOW(), ');
           }
         } else {
           // Обычный INSERT
-          query = `INSERT INTO "${tableName}" (${quotedColumns}) VALUES (${placeholders})`;
+          query = `INSERT INTO "${tableName}" (${quotedColumns}) VALUES ${allPlaceholders.join(', ')}`;
         }
         
         // RETURNING если нужен select
@@ -512,8 +529,8 @@ module.exports.handler = async function (event, context) {
           }
         }
         
-        console.log('[REST POST]', { table: tableName, isUpsert, onConflict, columns });
-        result = await client.query(query, values);
+        console.log('[REST POST]', { table: tableName, isUpsert, onConflict, columns, rowCount: rows.length });
+        result = await client.query(query, allValues);
         
         return {
           statusCode: isUpsert ? 200 : 201,

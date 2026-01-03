@@ -2,3 +2,8 @@
 > @heys/ui@14.0.0 type-check /Users/poplavskijanton/HEYS-v2/packages/ui
 > tsc --noEmit
 
+../shared/src/logging/AppLogger.ts(61,5): error TS2375: Type '{ msg: string; meta: LogMeta | undefined; }' is not assignable to type '{ msg: string; meta?: LogMeta; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'meta' are incompatible.
+    Type 'LogMeta | undefined' is not assignable to type 'LogMeta'.
+      Type 'undefined' is not assignable to type 'LogMeta'.
+ ELIFECYCLE  Command failed with exit code 2.

@@ -119,6 +119,23 @@
     }
   }
   
+  /**
+   * 🔐 v56: Получить user_id куратора из auth token
+   * Используется для REST upsert операций
+   * @returns {string|null}
+   */
+  function getCuratorUserId() {
+    try {
+      const stored = localStorage.getItem('heys_supabase_auth_token');
+      if (!stored) return null;
+      const parsed = JSON.parse(stored);
+      return parsed?.user?.id || null;
+    } catch (e) {
+      err('getCuratorUserId failed:', e.message);
+      return null;
+    }
+  }
+  
   // ═══════════════════════════════════════════════════════════════════
   // 📡 API МЕТОДЫ
   // ═══════════════════════════════════════════════════════════════════
@@ -604,13 +621,22 @@
    * @returns {string|null}
    */
   function getSessionTokenForKV() {
-    // Пробуем через HEYS.Auth, затем напрямую из localStorage
-    if (typeof HEYS !== 'undefined' && HEYS.Auth && typeof HEYS.Auth.getSessionToken === 'function') {
-      return HEYS.Auth.getSessionToken();
+    // 🔧 v55 FIX: HEYS.auth (lowercase!), не HEYS.Auth
+    if (typeof HEYS !== 'undefined' && HEYS.auth && typeof HEYS.auth.getSessionToken === 'function') {
+      const token = HEYS.auth.getSessionToken();
+      if (token) {
+        log('getSessionTokenForKV: got token from HEYS.auth:', token.slice(0, 8) + '...');
+        return token;
+      }
     }
     // Fallback: напрямую из localStorage (global, без clientId namespace)
     // 🔧 FIX: U.lsSet сохраняет через JSON.stringify, поэтому нужен JSON.parse
     const raw = localStorage.getItem('heys_session_token');
+    if (raw) {
+      log('getSessionTokenForKV: got token from localStorage');
+    } else {
+      log('getSessionTokenForKV: NO TOKEN FOUND!');
+    }
     if (!raw) return null;
     try {
       return JSON.parse(raw);
@@ -734,8 +760,55 @@
   }
   
   /**
-   * Пакетное сохранение KV данных (RPC) — 🔐 session-safe!
-   * @param {string} clientId - ID клиента (IGNORED для безопасности!)
+   * 🔐 v56: Пакетное сохранение KV через REST API (для куратора)
+   * Используется когда нет session_token (куратор работает через JWT)
+   * @param {string} curatorUserId - ID куратора (user_id в таблице)
+   * @param {string} clientId - ID клиента  
+   * @param {Array<{k: string, v: any, updated_at?: string}>} items - Массив данных
+   * @returns {Promise<{success: boolean, saved: number, error?: string}>}
+   */
+  async function batchSaveKVviaREST(curatorUserId, clientId, items) {
+    log(`[v56] batchSaveKVviaREST: curator=${curatorUserId?.slice(0,8)}, client=${clientId?.slice(0,8)}, items=${items.length}`);
+    
+    if (!curatorUserId || !clientId || !items?.length) {
+      return { success: false, saved: 0, error: 'Missing required params for REST save' };
+    }
+    
+    try {
+      // Формируем данные для REST upsert
+      // Primary Key: (user_id, client_id, k)
+      const restData = items.map(item => ({
+        user_id: curatorUserId,
+        client_id: clientId,
+        k: item.k,
+        v: item.v,
+        updated_at: item.updated_at || new Date().toISOString()
+      }));
+      
+      // REST POST с upsert
+      const result = await rest('client_kv_store', {
+        method: 'POST',
+        data: restData,
+        upsert: true,
+        onConflict: 'user_id,client_id,k'
+      });
+      
+      if (result.error) {
+        err('[v56] REST upsert error:', result.error);
+        return { success: false, saved: 0, error: result.error.message || result.error };
+      }
+      
+      log(`[v56] REST upsert success: ${items.length} items`);
+      return { success: true, saved: items.length };
+    } catch (e) {
+      err('[v56] batchSaveKVviaREST failed:', e.message);
+      return { success: false, saved: 0, error: e.message };
+    }
+  }
+  
+  /**
+   * Пакетное сохранение KV данных — 🔐 dual-path: RPC для PIN клиентов, REST для куратора
+   * @param {string} clientId - ID клиента
    * @param {Array<{k: string, v: any}>} items - Массив данных
    * @returns {Promise<{success: boolean, saved: number, error?: string}>}
    */
@@ -745,28 +818,36 @@
     }
     
     try {
+      // 🔐 Path 1: Попытка через session token (PIN auth клиент)
       const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) {
-        return { success: false, saved: 0, error: 'No session token' };
+      if (sessionToken) {
+        const result = await rpc('batch_upsert_client_kv_by_session', {
+          p_session_token: sessionToken,
+          p_items: items
+        });
+        
+        if (result.error) {
+          return { success: false, saved: 0, error: result.error.message || result.error };
+        }
+        
+        const data = result.data;
+        return { 
+          success: data?.success !== false, 
+          saved: data?.saved || 0,
+          error: data?.error
+        };
       }
       
-      // 🔐 P1: Используем session-версию
-      const result = await rpc('batch_upsert_client_kv_by_session', {
-        p_session_token: sessionToken,
-        p_items: items
-      });
-      
-      if (result.error) {
-        return { success: false, saved: 0, error: result.error.message || result.error };
+      // 🔐 v56 Path 2: Fallback на REST для куратора
+      const curatorUserId = getCuratorUserId();
+      if (curatorUserId) {
+        log(`[v56] No session token, trying REST path (curator=${curatorUserId?.slice(0,8)})`);
+        return await batchSaveKVviaREST(curatorUserId, clientId, items);
       }
       
-      // RPC возвращает {success: true/false, saved: number, error?: string}
-      const data = result.data;
-      return { 
-        success: data?.success !== false, 
-        saved: data?.saved || 0,
-        error: data?.error
-      };
+      // Нет ни session token, ни curator token
+      err('[v56] batchSaveKV: No auth token available (neither session nor curator)');
+      return { success: false, saved: 0, error: 'No auth token available' };
     } catch (e) {
       err('batchSaveKV failed:', e.message);
       return { success: false, saved: 0, error: e.message };
@@ -774,29 +855,75 @@
   }
   
   /**
-   * Удалить данные из client_kv_store (RPC) — 🔐 session-safe!
-   * @param {string} clientId - ID клиента (IGNORED для безопасности!)
+   * 🔐 v56: Удалить KV через REST API (для куратора)
+   * @param {string} userId - ID куратора
+   * @param {string} clientId - ID клиента
+   * @param {string} key - Ключ для удаления
+   * @returns {Promise<{success: boolean, deleted?: number, error?: string}>}
+   */
+  async function deleteKVviaREST(userId, clientId, key) {
+    try {
+      const curatorToken = getCuratorToken();
+      if (!curatorToken) {
+        return { success: false, error: 'No curator token' };
+      }
+      
+      const url = `${API_BASE}/rest/client_kv_store?user_id=eq.${userId}&client_id=eq.${clientId}&k=eq.${encodeURIComponent(key)}`;
+      
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${curatorToken}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `REST DELETE failed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      log(`[v56] deleteKVviaREST success: deleted ${data.deleted || 0} rows`);
+      return { success: true, deleted: data.deleted || 0 };
+    } catch (e) {
+      err('deleteKVviaREST failed:', e.message);
+      return { success: false, error: e.message };
+    }
+  }
+  
+  /**
+   * Удалить данные из client_kv_store — 🔐 v56: dual-path (RPC + REST fallback)
+   * @param {string} clientId - ID клиента
    * @param {string} key - Ключ
    * @returns {Promise<{success: boolean, error?: string}>}
    */
   async function deleteKV(clientId, key) {
     try {
+      // 🔐 Путь 1: RPC с session token (для PIN auth клиентов)
       const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) {
-        return { success: false, error: 'No session token' };
+      if (sessionToken) {
+        const result = await rpc('delete_client_kv_by_session', {
+          p_session_token: sessionToken,
+          p_key: key
+        });
+        
+        if (result.error) {
+          return { success: false, error: result.error.message || result.error };
+        }
+        
+        return { success: result.data?.success !== false };
       }
       
-      // 🔐 P1: Используем session-версию
-      const result = await rpc('delete_client_kv_by_session', {
-        p_session_token: sessionToken,
-        p_key: key
-      });
-      
-      if (result.error) {
-        return { success: false, error: result.error.message || result.error };
+      // 🔐 Путь 2 (v56): REST DELETE для куратора
+      const curatorUserId = getCuratorUserId();
+      if (curatorUserId && clientId) {
+        log(`[v56] No session token, trying REST DELETE (curator=${curatorUserId?.slice(0,8)})`);
+        return await deleteKVviaREST(curatorUserId, clientId, key);
       }
       
-      return { success: result.data?.success !== false };
+      // Ни session token, ни curator — ошибка
+      return { success: false, error: 'No auth token available' };
     } catch (e) {
       err('deleteKV failed:', e.message);
       return { success: false, error: e.message };
@@ -804,7 +931,7 @@
   }
   
   // ═══════════════════════════════════════════════════════════════════
-  // � CLIENTS МЕТОДЫ
+  // 👥 CLIENTS МЕТОДЫ
   // ═══════════════════════════════════════════════════════════════════
   
   /**

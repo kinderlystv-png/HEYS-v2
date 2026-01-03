@@ -16,7 +16,7 @@
 const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2025.12.26.0132.5566d7b'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2026.01.02.2125.e776e10'; // v54: fix RPC mode upload (remove && !user condition)
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
@@ -5078,6 +5078,8 @@ const HEYS = window.HEYS = window.HEYS || {};
               try { localStorage.removeItem('heys_pin_auth_client'); } catch (_) {}
               try { localStorage.removeItem('heys_client_phone'); } catch (_) {}
               try { localStorage.removeItem('heys_supabase_auth_token'); } catch (_) {}
+              // 🔧 v53 FIX: Очистка session_token для PIN auth
+              try { localStorage.removeItem('heys_session_token'); } catch (_) {}
               setCloudUser(null);
               setClientId('');
               setClients([]);
@@ -7044,6 +7046,8 @@ const HEYS = window.HEYS = window.HEYS || {};
                       console.log('[AUTH] Token expired at', new Date(expiresAtMs).toISOString());
                       // Очищаем только РЕАЛЬНО истёкший токен
                       try { localStorage.removeItem('heys_supabase_auth_token'); } catch (_) {}
+              // 🔧 v53 FIX: Очистка session_token для PIN auth
+              try { localStorage.removeItem('heys_session_token'); } catch (_) {}
                       return null;
                     }
                     // Если токен скоро истекает — это ОК, ensureValidToken() обновит его
@@ -7060,8 +7064,13 @@ const HEYS = window.HEYS = window.HEYS || {};
               const storedUser = readStoredAuthUser();
               const savedEmail = storedUser?.email || localStorage.getItem('heys_remember_email') || localStorage.getItem('heys_saved_email');
               
-              if (storedUser && cloud) {
-                // Есть сохранённая сессия куратора — восстанавливаем.
+              // 🔐 FIX v52: PIN auth имеет ПРИОРИТЕТ над куратором!
+              // Если есть PIN-сессия — НЕ восстанавливаем куратора (предотвращает ререндер)
+              const pinAuthClient = localStorage.getItem('heys_pin_auth_client');
+              const hasPinSession = !!pinAuthClient;
+              
+              if (storedUser && cloud && !hasPinSession) {
+                // Есть сохранённая сессия куратора (и нет PIN-сессии) — восстанавливаем.
                 // Важно: ставим cloudUser ДО любых восстановлений clientId, чтобы не запускался consent-flow как для клиента.
                 if (savedEmail) setEmail(savedEmail);
                 setCloudUser(storedUser);
@@ -7085,46 +7094,41 @@ const HEYS = window.HEYS = window.HEYS || {};
                   .finally(() => {
                     setIsInitializing(false);
                   });
-              } else {
-                // Нет сохранённой сессии куратора — проверяем PIN auth
-                const pinAuthClient = localStorage.getItem('heys_pin_auth_client');
+              } else if (hasPinSession && cloud) {
+                // 🔐 PIN auth — приоритет над куратором (клиент вошёл по телефону+PIN)
+                console.log('[App] 🔐 Восстановление PIN-сессии:', pinAuthClient.substring(0, 8) + '...');
                 
-                if (pinAuthClient && cloud) {
-                  // 🔐 PIN auth: восстанавливаем сессию клиента
-                  console.log('[App] 🔐 Восстановление PIN-сессии:', pinAuthClient.substring(0, 8) + '...');
-                  
-                  // Восстанавливаем RPC-режим
-                  if (cloud.setPinAuthClient) {
-                    cloud.setPinAuthClient(pinAuthClient);
-                  }
-                  
-                  // Загружаем локальные данные
-                  initLocalData();
-                  setStatus('online');
-                  
-                  // Синхронизируем с сервером
-                  // Событие heysSyncCompleted отправляется ВНУТРИ syncClientViaRPC после загрузки данных
-                  cloud.syncClient(pinAuthClient)
-                    .then(() => {
-                      console.log('[App] ✅ PIN-сессия восстановлена');
-                      // НЕ отправляем heysSyncCompleted здесь — оно уже отправлено внутри syncClient
-                      // после фактической записи данных в localStorage
-                    })
-                    .catch((err) => {
-                      console.error('[App] ❌ Ошибка восстановления PIN-сессии:', err);
-                      // При ошибке показываем экран логина
-                      localStorage.removeItem('heys_pin_auth_client');
-                      setClientId(null);
-                    })
-                    .finally(() => {
-                      setIsInitializing(false);
-                    });
-                } else {
-                  // Нет сохранённой сессии — показываем экран логина
-                  initLocalData();
-                  setStatus('offline');
-                  setIsInitializing(false);
+                // Восстанавливаем RPC-режим
+                if (cloud.setPinAuthClient) {
+                  cloud.setPinAuthClient(pinAuthClient);
                 }
+                
+                // Загружаем локальные данные
+                initLocalData();
+                setStatus('online');
+                
+                // Синхронизируем с сервером
+                // Событие heysSyncCompleted отправляется ВНУТРИ syncClientViaRPC после загрузки данных
+                cloud.syncClient(pinAuthClient)
+                  .then(() => {
+                    console.log('[App] ✅ PIN-сессия восстановлена');
+                    // НЕ отправляем heysSyncCompleted здесь — оно уже отправлено внутри syncClient
+                    // после фактической записи данных в localStorage
+                  })
+                  .catch((err) => {
+                    console.error('[App] ❌ Ошибка восстановления PIN-сессии:', err);
+                    // При ошибке показываем экран логина
+                    localStorage.removeItem('heys_pin_auth_client');
+                    setClientId(null);
+                  })
+                  .finally(() => {
+                    setIsInitializing(false);
+                  });
+              } else {
+                // Нет сохранённой сессии — показываем экран логина
+                initLocalData();
+                setStatus('offline');
+                setIsInitializing(false);
               }
             }, []);
 

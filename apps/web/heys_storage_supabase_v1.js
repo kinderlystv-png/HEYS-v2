@@ -1016,7 +1016,10 @@
   
   /** Получить количество ожидающих изменений (включая in-flight) */
   cloud.getPendingCount = function() {
-    return clientUpsertQueue.length + upsertQueue.length + (_uploadInProgress ? _uploadInFlightCount : 0);
+    // 🔄 v=51: В PIN-auth режиме игнорируем upsertQueue — она для curator mode
+    const isClientOnlyMode = _rpcOnlyMode && _pinAuthClientId;
+    const userQueueLen = isClientOnlyMode ? 0 : upsertQueue.length;
+    return clientUpsertQueue.length + userQueueLen + (_uploadInProgress ? _uploadInFlightCount : 0);
   };
   
   /** Проверить есть ли данные в процессе отправки */
@@ -1051,12 +1054,17 @@
    * @returns {Promise<boolean>} - true если очередь очищена, false если timeout
    */
   cloud.flushPendingQueue = async function(timeoutMs = 5000) {
-    const queueLen = clientUpsertQueue.length + upsertQueue.length;
+    // 🔄 v=51: В PIN-auth режиме игнорируем upsertQueue — она для curator mode
+    // upsertQueue работает только с Supabase user, в PIN mode нет user
+    const isClientOnlyMode = _rpcOnlyMode && _pinAuthClientId;
+    const clientQueueLen = clientUpsertQueue.length;
+    const userQueueLen = isClientOnlyMode ? 0 : upsertQueue.length; // Игнорируем в PIN mode
+    const queueLen = clientQueueLen + userQueueLen;
     const inFlight = _uploadInProgress ? _uploadInFlightCount : 0;
     const total = queueLen + inFlight;
     
     // 🔄 v=34: ВСЕГДА логируем flush — это критическая операция!
-    console.log(`🔄 [FLUSH] Check: queue=${queueLen}, inFlight=${inFlight}, uploading=${_uploadInProgress}`);
+    console.log(`🔄 [FLUSH] Check: clientQueue=${clientQueueLen}, userQueue=${upsertQueue.length}${isClientOnlyMode ? ' (ignored in PIN mode)' : ''}, inFlight=${inFlight}`);
     
     // Если очередь пуста И ничего не в полёте — готово
     if (queueLen === 0 && !_uploadInProgress) {
@@ -1080,14 +1088,16 @@
     }
     
     // Проверяем снова после immediate upload
-    const stillInQueue = clientUpsertQueue.length + upsertQueue.length;
+    const stillClientQueue = clientUpsertQueue.length;
+    const stillUserQueue = isClientOnlyMode ? 0 : upsertQueue.length;
+    const stillInQueue = stillClientQueue + stillUserQueue;
     if (stillInQueue === 0 && !_uploadInProgress) {
       console.log('✅ [FLUSH] All uploaded after immediate push');
       return true;
     }
     
     // Если всё ещё что-то осталось — ждём событие queue-drained с таймаутом
-    console.log(`🔄 [FLUSH] ${stillInQueue} items still pending, waiting for queue-drained event...`);
+    console.log(`🔄 [FLUSH] ${stillInQueue} items still pending (client=${stillClientQueue}, user=${stillUserQueue}), waiting for queue-drained event...`);
     
     return new Promise((resolve) => {
       const startTime = Date.now();
@@ -2004,8 +2014,9 @@
           _rpcSyncInProgress = true; // 🔐 Блокируем bootstrapClientSync
           logCritical('🔐 PIN auth восстановлен для клиента:', pinAuthClient.substring(0, 8) + '...');
           
-          // 🔄 Запускаем Yandex sync сразу при восстановлении
-          cloud.syncClientViaRPC(pinAuthClient).then(result => {
+          // 🔄 v53 FIX: Используем cloud.syncClient() вместо прямого syncClientViaRPC
+          // Это позволяет deduplication работать если App useEffect тоже вызовет syncClient
+          cloud.syncClient(pinAuthClient).then(result => {
             _rpcSyncInProgress = false;
             if (result.success) {
               logCritical('✅ [YANDEX RESTORE] Sync завершён:', result.loaded, 'ключей');
@@ -4253,12 +4264,14 @@
     _uploadInProgress = true;
     _uploadInFlightCount = batch.length;
     
-    // 🔐 v=36 FIX: После миграции на Yandex API client=null, проверяем только _rpcOnlyMode
-    // Нужен либо RPC режим (Yandex API), либо старый client+user (legacy)
-    const canSync = _rpcOnlyMode || (client && user);
-    // Debug: console.log('🔐 [SYNC] canSync check:', { _rpcOnlyMode, hasClient: !!client, hasUser: !!user, canSync });
+    // 🔐 v=54 FIX: После миграции на Yandex API — ВСЕГДА используем RPC режим!
+    // _rpcOnlyMode = true устанавливается для ВСЕХ (и клиент PIN, и куратор)
+    // Supabase SDK удалён — нет смысла проверять client/user для legacy branch
+    const canSync = _rpcOnlyMode; // Simplified: только RPC режим работает
+    console.log('🔐 [UPLOAD] canSync check:', { _rpcOnlyMode, hasUser: !!user, batchLen: batch.length, canSync });
     if (!canSync) {
       // Вернуть в очередь
+      console.warn('⚠️ [UPLOAD] canSync=false, returning batch to queue');
       clientUpsertQueue.push(...batch);
       _uploadInProgress = false;
       _uploadInFlightCount = 0;
@@ -4297,9 +4310,11 @@
     
     try {
       // ═══════════════════════════════════════════════════════════════
-      // 🔐 RPC MODE: сохраняем через RPC без Supabase сессии
+      // 🔐 v=54 FIX: ВСЕГДА используем RPC режим (Yandex API)
+      // После миграции на Yandex API — Supabase SDK удалён
+      // Условие "&& !user" убрано т.к. куратор тоже имеет user но нужен RPC
       // ═══════════════════════════════════════════════════════════════
-      if (_rpcOnlyMode && !user) {
+      if (_rpcOnlyMode) {
         // Группируем по client_id
         const byClientId = {};
         uniqueBatch.forEach(item => {
@@ -4307,6 +4322,8 @@
           if (!byClientId[cid]) byClientId[cid] = [];
           byClientId[cid].push({ k: item.k, v: item.v, updated_at: item.updated_at });
         });
+        
+        console.log('🔐 [UPLOAD] RPC mode: grouped by clientId:', Object.keys(byClientId).map(c => c.slice(0,8)));
         
         // Сохраняем каждый клиент отдельно
         let totalSaved = 0;

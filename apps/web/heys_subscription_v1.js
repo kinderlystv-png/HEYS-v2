@@ -60,10 +60,14 @@
   function clearCache() {
     _cachedStatus = null;
     _cachedAt = 0;
+    _inflightPromise = null; // сбрасываем in-flight при очистке кэша
     try {
       localStorage.removeItem(CACHE_KEY);
     } catch (_) {}
   }
+
+  // === In-flight deduplication (thundering herd prevention) ===
+  let _inflightPromise = null;
 
   // === API вызовы ===
   
@@ -76,7 +80,14 @@
     // Проверяем кэш
     if (!forceRefresh) {
       const cached = getCachedStatus();
-      if (cached) return cached;
+      if (cached) {
+        return cached;
+      }
+    }
+
+    // === DEDUPE: если уже есть запрос в полёте — ждём его результат ===
+    if (_inflightPromise && !forceRefresh) {
+      return _inflightPromise;
     }
 
     // Нет session_token — возвращаем 'none'
@@ -91,28 +102,38 @@
       return getCachedStatus() || STATUS.NONE;
     }
 
-    try {
-      const res = await api.rpc('get_subscription_status_by_session', {
-        p_session_token: sessionToken,
-      });
+    // Создаём promise и сохраняем его для дедупликации
+    _inflightPromise = (async () => {
+      try {
+        console.log('[Subscription] 🔄 RPC call: get_subscription_status_by_session');
+        const res = await api.rpc('get_subscription_status_by_session', {
+          p_session_token: sessionToken,
+        });
 
-      if (res.error) {
-        // Если сессия невалидна — возможно logout
-        if (res.error.message?.includes('invalid_session')) {
-          console.warn('[Subscription] Сессия невалидна');
-          clearCache();
-          return STATUS.NONE;
+        if (res.error) {
+          // Если сессия невалидна — возможно logout
+          if (res.error.message?.includes('invalid_session')) {
+            console.warn('[Subscription] Сессия невалидна');
+            clearCache();
+            return STATUS.NONE;
+          }
+          throw new Error(res.error.message);
         }
-        throw new Error(res.error.message);
-      }
 
-      const status = res.data || STATUS.NONE;
-      setCachedStatus(status);
-      return status;
-    } catch (e) {
-      console.error('[Subscription] getStatus error:', e);
-      return getCachedStatus() || STATUS.NONE;
-    }
+        const status = res.data || STATUS.NONE;
+        setCachedStatus(status);
+        console.log('[Subscription] ✅ Status fetched and cached:', status?.status || status);
+        return status;
+      } catch (e) {
+        console.error('[Subscription] getStatus error:', e);
+        return getCachedStatus() || STATUS.NONE;
+      } finally {
+        // Очищаем in-flight promise после завершения
+        _inflightPromise = null;
+      }
+    })();
+
+    return _inflightPromise;
   }
 
   /**

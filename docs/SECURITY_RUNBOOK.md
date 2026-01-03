@@ -1,9 +1,8 @@
 # 🔐 HEYS Security Runbook
 
-> **Версия**: 1.5.0  
-> **Дата**: 2025-12-26  
-> **Статус**: ✅ P0-P3 Complete: requireEnv + CORS + read-only REST + heys_rest
-> user
+> **Версия**: 1.6.0  
+> **Дата**: 2025-01-02  
+> **Статус**: ✅ P0-P3 Complete + client_kv_store PK fix
 
 Этот документ — **единый источник истины** для проверки безопасности при каждом
 деплое.
@@ -65,6 +64,22 @@ CREATE TABLE public.client_sessions (
   revoked_at TIMESTAMPTZ               -- NULL = active
 );
 -- ⚠️ session_token НЕ хранится! Только hash. Для поиска: require_client_id(token)
+```
+
+### Таблица `client_kv_store`
+
+```sql
+CREATE TABLE public.client_kv_store (
+  user_id UUID NOT NULL,               -- Curator (owner)
+  client_id UUID NOT NULL,             -- Client
+  k TEXT NOT NULL,                     -- Key (e.g. 'heys_dayv2_2025-01-02')
+  v JSONB NOT NULL DEFAULT '{}',       -- Value
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (client_id, k)           -- ⚠️ НЕ (user_id, client_id, k)!
+);
+-- 🔑 PK = (client_id, k) — клиент принадлежит одному куратору
+-- ⚠️ Исправлено 2025-01-02: database/fixes/2025-01-02_fix_client_kv_store_pk_v2.sql
+-- ON CONFLICT в коде: 'client_id,k' (НЕ 'user_id,client_id,k')
 ```
 
 ---
@@ -457,9 +472,9 @@ curl -s "https://api.heyslab.ru/rpc?fn=get_public_trial_capacity" -X POST \
 
 ### Проблема: YC CLI всегда выводит environment
 
-**⚠️ КРИТИЧНО:** Команда `yc serverless function version create` **ВСЕГДА** выводит
-все переменные окружения в ответе, включая `PG_PASSWORD`. Это происходит даже
-если пароль передаётся через переменную shell:
+**⚠️ КРИТИЧНО:** Команда `yc serverless function version create` **ВСЕГДА**
+выводит все переменные окружения в ответе, включая `PG_PASSWORD`. Это происходит
+даже если пароль передаётся через переменную shell:
 
 ```bash
 # ❌ ОПАСНО — пароль всё равно появится в stdout!
@@ -641,7 +656,9 @@ WHERE created_at < NOW() - INTERVAL '30 days';
 
 | Дата       | Изменение                                                                                                                                         |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2025-12-26 | **v1.5.0**: Добавлена секция "Безопасная работа с секретами YC" — YC CLI всегда выводит env, процедура ротации, Lockbox                          |
+| 2025-01-02 | **v1.6.0**: Добавлена таблица `client_kv_store` в DB Schema Invariants — PK = `(client_id, k)`, НЕ `(user_id, client_id, k)`                      |
+| 2025-01-02 | **FIX**: `database/fixes/2025-01-02_fix_client_kv_store_pk_v2.sql` — исправлен PRIMARY KEY, устранены 500 ошибки при sync                         |
+| 2025-12-26 | **v1.5.0**: Добавлена секция "Безопасная работа с секретами YC" — YC CLI всегда выводит env, процедура ротации, Lockbox                           |
 | 2025-12-26 | **P3**: `requireEnv()` в heys-api-rest — удалён fallback `heys_admin`, fail fast если env не задан                                                |
 | 2025-12-26 | **P3**: REST read-only — только GET/OPTIONS, POST/PATCH/DELETE → 405                                                                              |
 | 2025-12-26 | **P3**: ALLOWED_TABLES сокращён: `shared_products`, `shared_products_blocklist` (убран VIEW shared_products_public — auth.uid() не работает в YC) |

@@ -2220,7 +2220,8 @@
         try { const raw = localStorage.getItem('heys_client_current'); if (raw) cid = JSON.parse(raw); } catch(e){ cid=''; }
       }
       // 2) служебные ключи НЕ префиксуем (глобальные)
-      if (/^heys_(clients|client_current)$/i.test(k)) return k;
+      // 🔧 v55 FIX: heys_session_token тоже глобальный (нужен ДО определения clientId)
+      if (/^heys_(clients|client_current|session_token)$/i.test(k)) return k;
       // 3) если клиента нет — работаем как есть
       if (!cid) return k;
       // 4) все остальные наши ключи префиксуем

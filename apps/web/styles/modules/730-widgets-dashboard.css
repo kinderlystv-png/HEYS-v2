@@ -125,7 +125,7 @@
   max-width: 100% !important;
   padding-left: 0 !important;
   padding-right: 0 !important;
-  background-color: var(--bg-primary, #f8f9fa);
+  background-color: var(--bg-primary, #ffffff);
   /* Разрешаем скролл на wrap */
   overflow-y: auto !important;
   overflow-x: hidden !important;
@@ -149,7 +149,7 @@
   /* Убираем padding родителя — widgets-tab сам управляет отступами */
   padding: 0 !important;
   /* Фон на родителе для устранения белых полос */
-  background-color: var(--bg-primary, #f8f9fa);
+  background-color: var(--bg-primary, #ffffff);
 }
 
 [data-theme="dark"] .tab-content-swipeable:has(.widgets-tab) {
@@ -171,7 +171,7 @@
   width: 100%;
   overflow-x: hidden;
   /* Фон с бесшовным переходом */
-  background-color: var(--bg-primary, #f8f9fa);
+  background-color: var(--bg-primary, #ffffff);
   background-image:
     /* Декоративные радиальные градиенты */
     radial-gradient(1200px 800px at 20% 25%, rgba(10, 132, 255, 0.08), transparent 55%),
@@ -195,7 +195,7 @@
   padding: var(--widget-spacing-md);
   position: sticky;
   top: 0;
-  background: var(--bg-primary, #f8f9fa);
+  background: var(--bg-primary, #ffffff);
   z-index: 10;
 }
 

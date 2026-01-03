@@ -6,19 +6,19 @@
 > @heys/web@13.0.1 prebuild /Users/poplavskijanton/HEYS-v2/apps/web
 > node scripts/update-version.cjs && node -e "const fs=require('fs');const f=process.cwd()+'/public/sw.js';let c=fs.readFileSync(f,'utf8');c=c.replace(/heys-[\w.-]+/,'heys-'+Date.now());fs.writeFileSync(f,c);console.log('SW version:',Date.now())"
 
-✅ APP_VERSION updated to: 2025.12.26.0132.5566d7b
-✅ version.json created: 2025.12.26.0132.5566d7b
-✅ SW CACHE_VERSION updated to: heys-1766701926617
-✅ index.html script src updated: heys_app_v12.js?v=2025.12.26.0132.5566d7b
-SW version: 1766701926684
+✅ APP_VERSION updated to: 2026.01.02.1121.3ec9c85
+✅ version.json created: 2026.01.02.1121.3ec9c85
+✅ SW CACHE_VERSION updated to: heys-1767342110707
+✅ index.html script src updated: heys_app_v12.js?v=2026.01.02.1121.3ec9c85
+SW version: [33m1767342110872[39m
 polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
-vite v4.5.14 building for production...
+[36mvite v4.5.14 [32mbuilding for production...[36m[39m
 <script src="heys_dev_utils.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_simple_analytics.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_smart_search_v2.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_core_v12.js"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_yandex_api_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_storage_supabase_v1.js?v=38"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_yandex_api_v1.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_storage_supabase_v1.js?v=50"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_models_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_storage_layer_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_wheel_picker.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
@@ -37,7 +37,7 @@ vite v4.5.14 building for production...
 <script src="heys_meal_optimizer_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_sounds_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_expandable_card_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_insulin_wave_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_insulin_wave_v1.js?v=21"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_cycle_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_refeed_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_yesterday_verify_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
@@ -59,7 +59,7 @@ vite v4.5.14 building for production...
 <script src="heys_training_step_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_morning_checkin_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_confirm_modal_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_day_v12.js?v=47"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_v12.js?v=48"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_user_v12.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_reports_v12.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_data_overview_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
@@ -73,23 +73,20 @@ vite v4.5.14 building for production...
 <script src="heys_trial_queue_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_paywall_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_login_screen_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_app_v12.js?v=2025.12.26.0132.5566d7b"> in "/index.html" can't be bundled without type="module" attribute
-transforming...
-✓ 4 modules transformed.
-warnings when minifying css:
+<script src="heys_app_v12.js?v=2026.01.02.1121.3ec9c85"> in "/index.html" can't be bundled without type="module" attribute
+[2K[1Gtransforming (1) [2mindex.html[22m[2K[1Gtransforming (2) [2mstyles/critical.css[22m[2K[1G[32m✓[39m 4 modules transformed.
+[33mwarnings when minifying css:
 ▲ [WARNING] Unexpected "21" [css-syntax-error]
 
     <stdin>:27429:0:
       27429 │ 21>222222/* ===================================================...
             ╵ ~~
 
-
-rendering chunks...
-computing gzip size...
-dist/assets/heys_simple_analytics-b3f08726.js   10.31 kB
-dist/index.html                                 16.00 kB │ gzip:   4.49 kB
-dist/assets/heys_models_v1-80d14ab0.js          35.21 kB
-dist/assets/heys_core_v12-f9543155.js          117.81 kB
-dist/assets/index-090f2ae4.css                 751.97 kB │ gzip: 122.05 kB
-[vite-plugin-static-copy] Copied 3 items.
-✓ built in 1.09s
+[39m
+[2K[1Grendering chunks (1)...[2K[1G[2K[1Gcomputing gzip size (0)...[2K[1Gcomputing gzip size (1)...[2K[1Gcomputing gzip size (2)...[2K[1G[2mdist/[22m[2massets/[22m[32mheys_simple_analytics-b3f08726.js  [39m[1m[2m 10.31 kB[22m[1m[22m
+[2mdist/[22m[32mindex.html                                [39m[1m[2m 16.00 kB[22m[1m[22m[2m │ gzip:   4.49 kB[22m
+[2mdist/[22m[2massets/[22m[32mheys_models_v1-80d14ab0.js         [39m[1m[2m 35.21 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mheys_core_v12-f12ddfa4.js          [39m[1m[2m118.14 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[35mindex-090f2ae4.css                 [39m[1m[2m751.97 kB[22m[1m[22m[2m │ gzip: 122.05 kB[22m
+[36m[vite-plugin-static-copy][39m [32mCopied 3 items.[39m
+[32m✓ built in 1.28s[39m

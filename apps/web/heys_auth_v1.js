@@ -328,9 +328,42 @@
   
   /**
    * Получить текущий session_token
+   * 🔧 v55 FIX: миграция из старого namespaced ключа в глобальный
    */
   function getSessionToken() {
-    return U.lsGet('heys_session_token', null);
+    // 1) Пробуем глобальный ключ (новый формат после v55)
+    let token = U.lsGet('heys_session_token', null);
+    if (token) return token;
+    
+    // 2) Миграция: ищем токен под старым namespaced ключом
+    //    Формат был: heys_{clientId}_session_token
+    try {
+      const clientId = localStorage.getItem('heys_pin_auth_client') || 
+                       localStorage.getItem('heys_client_current');
+      if (clientId) {
+        const cid = clientId.replace(/"/g, ''); // убираем кавычки если JSON.stringify
+        const oldKey = `heys_${cid}_session_token`;
+        const oldToken = localStorage.getItem(oldKey);
+        if (oldToken) {
+          // Мигрируем в новый глобальный ключ
+          console.log('[HEYS Auth] 🔄 Migrating session_token from', oldKey, 'to heys_session_token');
+          try {
+            const parsed = JSON.parse(oldToken);
+            localStorage.setItem('heys_session_token', oldToken);
+            localStorage.removeItem(oldKey); // удаляем старый
+            return parsed;
+          } catch (e) {
+            localStorage.setItem('heys_session_token', oldToken);
+            localStorage.removeItem(oldKey);
+            return oldToken;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[HEYS Auth] Migration error:', e);
+    }
+    
+    return null;
   }
 
   /**

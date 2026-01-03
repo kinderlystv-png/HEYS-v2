@@ -67,7 +67,8 @@
 │  │ Tables:                                                     │ │
 │  │ • clients (id, name, curator_id, timestamps)               │ │
 │  │ • kv_store (id, user_id, k, v, timestamps)                 │ │
-│  │ • client_kv_store (id, user_id, client_id, k, v, ...)      │ │
+│  │ • client_kv_store (user_id, client_id, k, v, ...)          │ │
+│  │   ↳ PRIMARY KEY (client_id, k) — клиент = 1 куратор        │ │
 │  │ • user_profiles (nutrition, training, preferences)         │ │
 │  │ • food_database (nutritional information)                  │ │
 │  │ • training_plans (workout routines, exercises)             │ │
