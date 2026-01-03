@@ -5,6 +5,12 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
 import HeroSSR from '@/components/HeroSSR'
+import {
+  ContextSection,
+  DecisionsSection,
+  SupportSection,
+  ControlSection,
+} from '@/components/sections'
 import VariantLandingSectionsSSR from '@/components/VariantLandingSectionsSSR'
 import VersionSwitcherWrapper from '@/components/VersionSwitcherWrapper'
 import { LandingVariant, VARIANTS } from '@/config/landing-variants'
@@ -62,6 +68,18 @@ export default function VariantPage({
     <main>
       {/* SSR Hero — контент в HTML */}
       <HeroSSR content={content} variant={variantKey} />
+      
+      {/* Секция Контекст — карта реальности */}
+      <ContextSection />
+      
+      {/* Секция Решения — следующий шаг */}
+      <DecisionsSection />
+      
+      {/* Секция Поддержка — система выдерживает жизнь */}
+      <SupportSection />
+      
+      {/* Секция Контроль — ощущение управления */}
+      <ControlSection />
       
       {/* SSR секции — контент в HTML */}
       <VariantLandingSectionsSSR content={content} variant={variantKey} />

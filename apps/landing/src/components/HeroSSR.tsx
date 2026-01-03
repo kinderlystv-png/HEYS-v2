@@ -26,12 +26,22 @@ const BUILD_TIME = new Date().toLocaleString('ru-RU', {
 export default function HeroSSR({ content }: HeroSSRProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
 
   // Trigger animations after mount
   useEffect(() => {
     // Small delay for smoother animation start
     const timer = setTimeout(() => setMounted(true), 100)
     return () => clearTimeout(timer)
+  }, [])
+
+  // Hide scroll cue when user scrolls
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50)
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   return (
@@ -173,8 +183,8 @@ export default function HeroSSR({ content }: HeroSSRProps) {
 
       {/* Scroll cue — fixed at bottom of viewport (Mobile: 3000ms delay) */}
       <div className={`lg:hidden pointer-events-none fixed bottom-8 left-1/2 -translate-x-1/2 z-20 transition-all duration-700 ease-out ${
-        mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-      }`} style={{ transitionDelay: '3000ms' }}>
+        mounted && !scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+      }`} style={{ transitionDelay: scrolled ? '0ms' : '3000ms' }}>
         <a
           href="#what-is-heys"
           aria-label="Прокрутить вниз"
@@ -201,8 +211,8 @@ export default function HeroSSR({ content }: HeroSSRProps) {
 
       {/* Scroll cue — fixed at bottom of viewport (Desktop: 5000ms delay) */}
       <div className={`hidden lg:block pointer-events-none fixed bottom-8 left-1/2 -translate-x-1/2 z-20 transition-all duration-700 ease-out ${
-        mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-      }`} style={{ transitionDelay: '5000ms' }}>
+        mounted && !scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+      }`} style={{ transitionDelay: scrolled ? '0ms' : '5000ms' }}>
         <a
           href="#what-is-heys"
           aria-label="Прокрутить вниз"

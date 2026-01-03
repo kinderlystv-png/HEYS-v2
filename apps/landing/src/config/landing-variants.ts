@@ -199,13 +199,9 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
     page: {
       // A: премиальная подача — эмоции/делегирование/сервис. Меньше “таблиц”, больше ощущений.
       order: [
-        'socialProof',
-        'delegate',
-        'interaction',
         'formats',
         'pricing',
         'trial',
-        'purchase',
         'faq',
         'footer',
       ],
@@ -394,14 +390,9 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
     page: {
       // B: максимальная ясность. Сначала процесс, потом “что внутри”, потом скрины и матрица.
       order: [
-        'interaction',
-        'layers',
-        'screens',
-        'matrix',
+        'formats',
         'pricing',
         'trial',
-        'cases',
-        'purchase',
         'faq',
         'footer',
       ],
@@ -631,14 +622,9 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
     page: {
       // C: рамки, метод, регламент, безопасность — чтобы повышать доверие у скептиков.
       order: [
-        'doDont',
-        'method',
-        'sla',
-        'screens',
+        'formats',
         'pricing',
         'trial',
-        'security',
-        'purchase',
         'faq',
         'footer',
       ],
@@ -810,12 +796,9 @@ export const VARIANTS: Record<LandingVariant, VariantContent> = {
     },
     page: {
       order: [
-        'problem',
-        'solution',
-        'howItWorks',
+        'formats',
         'pricing',
         'trial',
-        'purchase',
         'faq',
         'footer',
       ] as LandingSectionId[],
