@@ -157,7 +157,11 @@ self.addEventListener('activate', (event) => {
 
 // === MESSAGE: Обработка сообщений от клиента ===
 self.addEventListener('message', (event) => {
-  if (event.data === 'skipWaiting') {
+  // Поддерживаем оба формата: строку 'skipWaiting' и объект { type: 'SKIP_WAITING' }
+  const isSkipWaiting = event.data === 'skipWaiting' || 
+                         (event.data && event.data.type === 'SKIP_WAITING');
+  
+  if (isSkipWaiting) {
     console.log('[SW] skipWaiting requested');
     self.skipWaiting();
   }

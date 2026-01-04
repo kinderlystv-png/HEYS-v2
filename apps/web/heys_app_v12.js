@@ -678,6 +678,71 @@ const HEYS = window.HEYS = window.HEYS || {};
           });
         }
         
+        // === Централизованная функция skipWaiting с debounce и проверками ===
+        let _skipWaitingInProgress = false;
+        const SKIP_WAITING_DEBOUNCE_MS = 500;
+        
+        async function triggerSkipWaiting(options = {}) {
+          const { fallbackMs = 5000, showModal = false, source = 'unknown' } = options;
+          
+          // Debounce: предотвращаем множественные вызовы
+          if (_skipWaitingInProgress) {
+            console.log('[SW] ⏳ skipWaiting already in progress, skipping duplicate from:', source);
+            return false;
+          }
+          
+          _skipWaitingInProgress = true;
+          console.log('[SW] 🔄 triggerSkipWaiting called from:', source);
+          
+          try {
+            // 1. Проверяем наличие SW controller
+            if (!navigator.serviceWorker?.controller) {
+              console.warn('[SW] ⚠️ No active SW controller — skipping skipWaiting');
+              return false;
+            }
+            
+            // 2. Проверяем есть ли waiting SW (новая версия готова)
+            const registration = await navigator.serviceWorker.getRegistration();
+            if (registration?.waiting) {
+              console.log('[SW] ✅ Found waiting SW — sending skipWaiting');
+              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            } else {
+              // Fallback: отправляем на controller (для старого формата)
+              console.log('[SW] ⚠️ No waiting SW found — sending to controller (legacy)');
+              navigator.serviceWorker.controller.postMessage('skipWaiting');
+            }
+            
+            // 3. Устанавливаем флаги для корректного reload
+            sessionStorage.setItem('heys_pending_update', 'true');
+            sessionStorage.setItem('heys_force_sync_after_update', 'true');
+            
+            // 4. Показываем модал если нужно
+            if (showModal && typeof showUpdateModal === 'function') {
+              showUpdateModal('reloading');
+            }
+            
+            // 5. Fallback таймер (если controllerchange не сработает)
+            setTimeout(() => {
+              if (sessionStorage.getItem('heys_pending_update') === 'true') {
+                console.log('[SW] ⚡ Fallback reload after', fallbackMs, 'ms');
+                const url = new URL(window.location.href);
+                url.searchParams.set('_v', Date.now().toString());
+                window.location.href = url.toString();
+              }
+            }, fallbackMs);
+            
+            return true;
+          } catch (err) {
+            console.error('[SW] ❌ triggerSkipWaiting error:', err);
+            return false;
+          } finally {
+            // Сброс debounce через заданное время
+            setTimeout(() => {
+              _skipWaitingInProgress = false;
+            }, SKIP_WAITING_DEBOUNCE_MS);
+          }
+        }
+        
         // === Принудительное обновление ===
         function forceUpdateAndReload(showModal = true) {
           
@@ -685,38 +750,12 @@ const HEYS = window.HEYS = window.HEYS || {};
             showUpdateModal('reloading');
           }
           
-          // Устанавливаем флаг что это явное обновление (не случайная перезагрузка)
-          sessionStorage.setItem('heys_pending_update', 'true');
-          
-          // 🔄 Флаг для форсированной синхронизации данных после перезагрузки
-          // При обновлении PWA нужно заново загрузить данные из облака (не из кэша)
-          sessionStorage.setItem('heys_force_sync_after_update', 'true');
-          
-          // Запоминаем старую версию, чтобы после перезагрузки runVersionGuard увидел рассинхрон
-          // и выполнил auto-logout + баннер об обновлении
-          localStorage.setItem(VERSION_KEY, APP_VERSION);
-          
-          // Отправляем skipWaiting — новый SW должен активироваться
-          // После активации глобальный controllerchange listener (выше) сделает reload
-          if (navigator.serviceWorker?.controller) {
-            navigator.serviceWorker.controller.postMessage('skipWaiting');
-          }
-          
-          // ✅ НЕ делаем reload здесь сразу!
-          // Глобальный controllerchange listener сделает reload когда новый SW реально активируется.
-          
-          // Fallback: если controllerchange не сработал за 5 секунд
-          setTimeout(() => {
-            // Проверяем, не сделал ли уже controllerchange reload
-            if (sessionStorage.getItem('heys_pending_update') === 'true') {
-              console.warn('[HEYS] controllerchange timeout, forcing reload with cache-bust');
-              sessionStorage.removeItem('heys_pending_update');
-              // Hard reload с cache-bust параметром
-              const url = new URL(window.location.href);
-              url.searchParams.set('_v', Date.now().toString());
-              window.location.href = url.toString();
-            }
-          }, 5000);
+          // Используем централизованную функцию с debounce и проверками
+          triggerSkipWaiting({
+            fallbackMs: 5000,
+            showModal: false, // модал уже показан выше
+            source: 'forceUpdateAndReload'
+          });
         }
         
         // === Persistent Storage API ===
@@ -2096,6 +2135,8 @@ const HEYS = window.HEYS = window.HEYS || {};
               return false;
             }
           } catch (e) {
+            // Логируем ошибку для диагностики, но не прерываем работу
+            console.warn('[PWA] checkServerVersion failed:', e.message || e);
             return false;
           }
         }
@@ -2126,72 +2167,59 @@ const HEYS = window.HEYS = window.HEYS || {};
           
           if (isRealVersionChange && hadPendingUpdate) {
             
-            // НЕ выходим из системы — это плохой UX!
-            // Пользователь не должен терять сессию при обновлении.
+            // 🔐 v54: После обновления — принудительный logout с переходом на форму входа
+            // Пользователь должен повторно войти в аккаунт для безопасности
+            console.log('[PWA] 🔐 Version updated, forcing logout...');
             
-            // 🔄 Форсированная синхронизация данных после обновления
-            // Обновляем кэш данных из облака, чтобы пользователь видел актуальные данные
-            const needForceSync = sessionStorage.getItem('heys_force_sync_after_update') === 'true';
+            // Очищаем флаг force sync — он уже не нужен после logout
             sessionStorage.removeItem('heys_force_sync_after_update');
             
-            if (needForceSync) {
-              const clientId = localStorage.getItem('heys_client_current')?.replace(/^"|"$/g, '');
-              if (clientId && HEYS.cloud?.syncClient) {
-                // Немного задержки чтобы cloud модуль успел инициализироваться
-                setTimeout(() => {
-                  HEYS.cloud.syncClient(clientId, { force: true })
-                    .then(() => {
-                      // Обновляем UI после синхронизации
-                      if (HEYS.products?.reload) HEYS.products.reload();
-                      if (HEYS.Day?.reloadFromStorage) HEYS.Day.reloadFromStorage();
-                    })
-                    .catch(err => console.warn('[HEYS] ⚠️ Sync after update failed:', err));
-                }, 1000);
-              }
+            // 1. Отзываем сессию на сервере и очищаем базовые токены
+            if (HEYS.auth?.logout) {
+              HEYS.auth.logout().catch(err => {
+                console.warn('[PWA] logout error:', err);
+              });
             }
             
-            // Показать баннер об успешном обновлении
+            // 2. Полная очистка всех данных авторизации (как в cloudSignOut)
+            const authKeys = [
+              'heys_session_token',
+              'heys_client_current',
+              'heys_pin_auth_client',
+              'heys_client_phone',
+              'heys_supabase_auth_token',
+              'heys_last_client_id',
+            ];
+            authKeys.forEach(key => {
+              try { localStorage.removeItem(key); } catch (_) {}
+            });
+            
+            // 3. Ставим флаг для показа toast после reload (toast покажется когда DOM готов)
+            sessionStorage.setItem('heys_show_update_toast', 'true');
+            sessionStorage.setItem('heys_updated_version', APP_VERSION);
+            
+            // 4. Перезагружаем страницу — покажется LoginScreen (т.к. clientId и cloudUser будут null)
+            console.log('[PWA] 🔄 Reloading to show LoginScreen...');
+            window.location.reload();
+            return; // Прерываем выполнение — страница перезагрузится
+          }
+          
+          // 🔔 Показываем toast после обновления (если был logout + reload)
+          const showUpdateToast = sessionStorage.getItem('heys_show_update_toast') === 'true';
+          if (showUpdateToast) {
+            sessionStorage.removeItem('heys_show_update_toast');
+            const updatedVersion = sessionStorage.getItem('heys_updated_version') || APP_VERSION;
+            sessionStorage.removeItem('heys_updated_version');
+            
+            // Немного задержки чтобы toast-контейнер успел инициализироваться
             setTimeout(() => {
-              const banner = document.createElement('div');
-              banner.id = 'heys-update-banner';
-              banner.innerHTML = `
-                <div style="
-                  position: fixed; top: 0; left: 0; right: 0;
-                  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                  color: white; padding: 12px 16px;
-                  display: flex; align-items: center; justify-content: space-between;
-                  z-index: 99999; font-family: system-ui, sans-serif;
-                  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                  animation: slideDown 0.3s ease-out;
-                ">
-                  <style>
-                    @keyframes slideDown {
-                      from { transform: translateY(-100%); }
-                      to { transform: translateY(0); }
-                    }
-                  </style>
-                  <div>
-                    <strong>✨ HEYS обновлён!</strong>
-                    <span style="font-size: 12px; opacity: 0.9; margin-left: 8px;">v${APP_VERSION}</span>
-                  </div>
-                  <button onclick="this.parentElement.style.transform='translateY(-100%)'; setTimeout(() => document.getElementById('heys-update-banner').remove(), 300)" 
-                    style="background: rgba(255,255,255,0.2); border: none; color: white; 
-                    padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;">
-                    ✕
-                  </button>
-                </div>
-              `;
-              document.body.prepend(banner);
-              
-              // Автоскрытие через 5 секунд
-              setTimeout(() => {
-                const b = document.getElementById('heys-update-banner');
-                if (b) {
-                  b.querySelector('div').style.transform = 'translateY(-100%)';
-                  b.querySelector('div').style.transition = 'transform 0.3s';
-                  setTimeout(() => b.remove(), 300);
-                }
-              }, 5000);
+              if (HEYS.Toast?.info) {
+                HEYS.Toast.info(`Приложение обновлено до v${updatedVersion}. Пожалуйста, войдите снова.`, {
+                  duration: 6000, // Показываем дольше — важное сообщение
+                });
+              } else if (HEYS.toast) {
+                HEYS.toast(`Приложение обновлено до v${updatedVersion}. Пожалуйста, войдите снова.`, 'info', 6000);
+              }
             }, 500);
           }
           
@@ -2323,14 +2351,20 @@ const HEYS = window.HEYS = window.HEYS || {};
                 await registration.update();
               }
               
-              // 5. skipWaiting для немедленной активации нового SW
-              navigator.serviceWorker.controller.postMessage('skipWaiting');
+              // 5. skipWaiting для немедленной активации нового SW (через централизованную функцию)
+              triggerSkipWaiting({
+                fallbackMs: 5000,
+                showModal: false,
+                source: 'HEYS.forceCheckAndUpdate'
+              });
+            } else {
+              // Нет SW — просто устанавливаем флаги для reload
+              sessionStorage.setItem('heys_pending_update', 'true');
+              sessionStorage.setItem('heys_force_sync_after_update', 'true');
             }
             
-            // 6. Устанавливаем флаги для корректного reload
-            sessionStorage.setItem('heys_pending_update', 'true');
-            sessionStorage.setItem('heys_force_sync_after_update', 'true');
-            localStorage.setItem(VERSION_KEY, APP_VERSION);
+            // ⚠️ VERSION_KEY теперь сохраняется в triggerSkipWaiting ТОЛЬКО после успешного reload
+            // Это предотвращает ситуацию когда версия помечена как обновлённая, но reload не произошёл
             
             return { hasUpdate: true, version: data.version };
             
@@ -5445,12 +5479,12 @@ const HEYS = window.HEYS = window.HEYS || {};
             }, []);
             
             const handleUpdate = () => {
-              // Принудительно активируем новый SW
-              if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage('skipWaiting');
-              }
-              // Перезагрузка через 300ms для завершения активации
-              setTimeout(() => window.location.reload(), 300);
+              // Используем централизованную функцию с debounce и проверками
+              triggerSkipWaiting({
+                fallbackMs: 5000, // Унифицированный таймаут
+                showModal: false,
+                source: 'UpdateToast.handleUpdate'
+              });
             };
             
             const dismissUpdateToast = () => {

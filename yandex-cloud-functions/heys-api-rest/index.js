@@ -61,7 +61,7 @@ const ALLOWED_ORIGINS = [
 const ALLOWED_TABLES = [
   'shared_products',
   'shared_products_blocklist', // Blocklist куратора (read-only)
-  'shared_products_pending',   // Pending products для куратора (read-only)
+  'shared_products_pending',   // Pending products для модерации куратором (PATCH/DELETE)
   'client_kv_store',           // KV store для данных клиентов (куратор sync)
   // ❌ shared_products_public — REMOVED: VIEW uses auth.uid() which doesn't exist in YC
   // ❌ clients — removed (PII: phone_normalized, managed via /auth/clients)
@@ -251,9 +251,12 @@ module.exports.handler = async function (event, context) {
   
   const method = event.httpMethod;
   
-  // 🔐 P3.1: client_kv_store разрешаем GET/POST (для куратора sync)
+  // 🔐 P3.1: Разрешённые таблицы для записи (POST/PATCH/DELETE)
   // Остальные таблицы — read-only (только GET)
-  const WRITE_ALLOWED_TABLES = ['client_kv_store'];
+  const WRITE_ALLOWED_TABLES = [
+    'client_kv_store',           // Куратор sync
+    'shared_products_pending'    // Модерация продуктов куратором
+  ];
   const isWriteAllowed = WRITE_ALLOWED_TABLES.includes(tableName);
   
   if (method !== 'GET' && !isWriteAllowed) {

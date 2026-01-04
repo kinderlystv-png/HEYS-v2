@@ -564,16 +564,10 @@
             detail: { clients: updatedClients, source: 'profile-settings' } 
           }));
           
-          // Обновляем в Yandex Cloud
-          if (window.HEYS && window.HEYS.YandexAPI) {
-            window.HEYS.YandexAPI.rest('clients', {
-              method: 'PATCH',
-              'eq.id': currentClientId,
-              body: { name: profile.firstName }
-            }).then(({ error }) => {
-              if (error) console.warn('[Profile] Cloud sync failed:', error.message);
-            });
-          }
+          // ⚠️ Cloud sync имени отключён:
+          // - REST API read-only (PATCH блокируется CORS)
+          // - clients.name устанавливается куратором при создании клиента
+          // - Локальные изменения сохраняются в localStorage
         } catch (e) {
           console.warn('[Profile] Failed to sync client name:', e);
         }

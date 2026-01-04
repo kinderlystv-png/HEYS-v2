@@ -184,6 +184,11 @@
 			"label": "Deploy SMS function without from",
 			"type": "shell",
 			"command": "cd /Users/poplavskijanton/HEYS-v2/yandex-cloud-functions/heys-api-sms && yc serverless function version create --function-name heys-api-sms --runtime nodejs18 --entrypoint index.handler --memory 128m --execution-timeout 10s --source-path . --environment \"SMS_API_KEY=78608003-ED53-BC7C-0C47-788283EBCC3F\""
+		},
+		{
+			"label": "API Test",
+			"type": "shell",
+			"command": "echo '🧪 HEYS API Test' && echo '1. Health:' && curl -s https://api.heyslab.ru/health && echo '' && echo '2. REST shared_products:' && curl -s 'https://api.heyslab.ru/rest/shared_products?limit=1' -H 'Origin: https://app.heyslab.ru' | head -c 200 && echo '' && echo '3. RPC get_shared_products:' && curl -s -X POST 'https://api.heyslab.ru/rpc?fn=get_shared_products' -H 'Content-Type: application/json' -H 'Origin: https://app.heyslab.ru' -d '{}' | head -c 200"
 		}
 	]
 }

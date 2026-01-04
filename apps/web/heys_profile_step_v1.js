@@ -982,17 +982,9 @@
             detail: { clients: updatedClients, source: 'profile-wizard' } 
           }));
           
-          // Обновляем в Yandex Cloud если есть API
-          if (HEYS.YandexAPI) {
-            HEYS.YandexAPI.rest('clients', {
-              method: 'PATCH',
-              'eq.id': currentClientId,
-              body: { name: updatedProfile.firstName }
-            }).then(({ error }) => {
-              if (error) console.warn('[ProfileSteps] Cloud sync failed:', error.message);
-              else console.log('[ProfileSteps] Client name synced to cloud');
-            });
-          }
+          // ⚠️ Cloud sync отключен: REST API read-only (см. SECURITY_RUNBOOK.md P3)
+          // Имя клиента синхронизируется только локально через heys_clients
+          // Для cloud sync потребуется отдельный RPC с session token (v2)
         } catch (e) {
           console.warn('[ProfileSteps] Failed to sync client name:', e);
         }
