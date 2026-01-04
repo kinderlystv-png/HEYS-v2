@@ -4618,6 +4618,8 @@
         // 🔐 PIN-авторизация: работаем без user
         const isPinAuth = _pinAuthClientId && _pinAuthClientId === client_id;
         if (!user && !isPinAuth) {
+            // 🔍 DEBUG: Логируем когда сохранение блокируется
+            log(`🚫 [SAVE BLOCKED] No auth for key '${k}': user=${!!user}, _pinAuthClientId=${_pinAuthClientId}, client_id=${client_id}, isPinAuth=${isPinAuth}`);
             return;
         }
 
@@ -5233,6 +5235,9 @@
         }
       } catch (_) {}
       
+      // 🔍 DEBUG: Логируем какой путь выбран
+      log(`🔍 [switchClient] user=${!!user}, hasCuratorSession=${hasCuratorSession}, → ${(user || hasCuratorSession) ? 'CURATOR path' : 'PIN path'}`);
+      
       // Если есть Supabase user (куратор) — используем обычную синхронизацию
       // Если нет (вход по PIN) — используем RPC и включаем RPC-режим для сохранений
       // 🔐 v=37 FIX: После миграции на Yandex API ВСЕГДА используем RPC режим!
@@ -5251,12 +5256,14 @@
         _rpcOnlyMode = true;
         // Debug: console.log('🔐 [SWITCH] RPC mode ENABLED for curator (Yandex API)');
         _pinAuthClientId = null; // Очищаем PIN auth
+        log('🔐 [SWITCH] CURATOR path: _pinAuthClientId = null');
         try { global.localStorage.removeItem('heys_pin_auth_client'); } catch(_) {}
         await cloud.bootstrapClientSync(newClientId);
       } else {
         logCritical('🔐 [SWITCH] Нет Supabase сессии — используем RPC sync');
         _rpcOnlyMode = true; // Клиент по PIN — RPC режим для сохранений
         _pinAuthClientId = newClientId; // 🔐 Сохраняем client_id для проверки в saveClientKey
+        log(`🔐 [SWITCH] PIN path: _pinAuthClientId = "${newClientId}"`);
         // 🔐 Сохраняем флаг PIN auth в localStorage для восстановления после перезагрузки
         try { global.localStorage.setItem('heys_pin_auth_client', newClientId); } catch(_) {}
         const rpcResult = await cloud.syncClientViaRPC(newClientId);

@@ -165,6 +165,14 @@
   }
 
   async function loginClient({ phone, pin }) {
+    // 🔧 FIX: Очищаем curator токен ПЕРЕД PIN-авторизацией
+    // Если остался старый heys_supabase_auth_token от куратора,
+    // switchClient ошибочно определит hasCuratorSession=true и очистит _pinAuthClientId
+    // Это ломало синхронизацию для PIN-клиентов (данные не загружались в облако)
+    try {
+      localStorage.removeItem('heys_supabase_auth_token');
+    } catch (_) {}
+    
     const phoneNorm = normalizePhone(phone);
 
     if (!isValidPhone(phoneNorm)) {

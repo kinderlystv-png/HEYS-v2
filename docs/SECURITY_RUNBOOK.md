@@ -14,7 +14,7 @@
 | `pin_login_attempts` | `(phone, ip)`    | Колонка `ip` типа INET, НЕ `ip_address`                |
 | `clients`            | `id` UUID        | `phone_normalized`, `pin_hash`, `name` (не first/last) |
 | `client_sessions`    | `id` UUID        | `token_hash` BYTEA — сам токен НЕ хранится             |
-| `client_kv_store`    | `(client_id, k)` | ⚠️ НЕ `(user_id, client_id, k)` — fix 2025-01-02       |
+| `client_kv_store`    | `(client_id, k)` | ⚠️ `user_id` NULLABLE (fix 2025-01-04 для PIN auth)    |
 
 ---
 

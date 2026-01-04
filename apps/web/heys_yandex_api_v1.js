@@ -845,13 +845,18 @@
     try {
       // 🔐 Path 1: Попытка через session token (PIN auth клиент)
       const sessionToken = getSessionTokenForKV();
+      console.log('[🔍 DEBUG batchSaveKV] clientId:', clientId?.slice(0,8), 'items:', items.length, 'sessionToken:', sessionToken ? sessionToken.slice(0,8) + '...' : 'NULL');
       if (sessionToken) {
+        console.log('[🔍 DEBUG batchSaveKV] → Using RPC path (PIN auth)');
         const result = await rpc('batch_upsert_client_kv_by_session', {
           p_session_token: sessionToken,
           p_items: items
         });
         
+        console.log('[🔍 DEBUG batchSaveKV] RPC result:', JSON.stringify(result).slice(0, 200));
+        
         if (result.error) {
+          console.error('[🔍 DEBUG batchSaveKV] RPC ERROR:', result.error);
           return { success: false, saved: 0, error: result.error.message || result.error };
         }
         
