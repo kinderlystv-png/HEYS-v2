@@ -2199,7 +2199,11 @@ const HEYS = window.HEYS = window.HEYS || {};
             sessionStorage.setItem('heys_show_update_toast', 'true');
             sessionStorage.setItem('heys_updated_version', APP_VERSION);
             
-            // 4. Перезагружаем страницу — покажется LoginScreen (т.к. clientId и cloudUser будут null)
+            // 4. ⚠️ КРИТИЧНО: Обновляем версию в localStorage ПЕРЕД reload
+            // Иначе после reload версия будет старая → опять logout → бесконечный цикл!
+            localStorage.setItem('heys_version', APP_VERSION);
+            
+            // 5. Перезагружаем страницу — покажется LoginScreen (т.к. clientId и cloudUser будут null)
             console.log('[PWA] 🔄 Reloading to show LoginScreen...');
             window.location.reload();
             return; // Прерываем выполнение — страница перезагрузится
