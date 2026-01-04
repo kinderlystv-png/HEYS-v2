@@ -2150,7 +2150,6 @@ const HEYS = window.HEYS = window.HEYS || {};
           }
           
           const storedVersion = localStorage.getItem(VERSION_KEY);
-          const hadPendingUpdate = sessionStorage.getItem('heys_pending_update') === 'true';
           const attempt = JSON.parse(localStorage.getItem(UPDATE_ATTEMPT_KEY) || '{}');
           
           // Убираем флаги
@@ -2165,11 +2164,13 @@ const HEYS = window.HEYS = window.HEYS || {};
             localStorage.removeItem(UPDATE_ATTEMPT_KEY);
           }
           
-          if (isRealVersionChange && hadPendingUpdate) {
+          // 🔐 v55: После ЛЮБОГО обновления версии — принудительный logout
+          // Убрано условие hadPendingUpdate — logout нужен всегда при смене версии
+          if (isRealVersionChange) {
             
-            // 🔐 v54: После обновления — принудительный logout с переходом на форму входа
+            // 🔐 После обновления — принудительный logout с переходом на форму входа
             // Пользователь должен повторно войти в аккаунт для безопасности
-            console.log('[PWA] 🔐 Version updated, forcing logout...');
+            console.log('[PWA] 🔐 Version updated (' + storedVersion + ' → ' + APP_VERSION + '), forcing logout...');
             
             // Очищаем флаг force sync — он уже не нужен после logout
             sessionStorage.removeItem('heys_force_sync_after_update');
