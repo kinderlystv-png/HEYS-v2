@@ -12178,7 +12178,18 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           if (clientId && cloud && typeof cloud.syncClient === 'function') {
             console.log('[PullRefresh] 🚀 Starting force sync for client:', clientId.substring(0, 8));
             
-            // 🔐 Универсальный sync — автоматически выбирает RPC для PIN auth
+            // � ВАЖНО: Сначала отправляем pending изменения в cloud, потом скачиваем
+            // Иначе race condition: cloud вернёт старые данные и перезапишет свежие локальные
+            if (cloud.flushPendingQueue) {
+              const pendingCount = (cloud._clientUpsertQueue?.length || 0);
+              if (pendingCount > 0) {
+                console.log(`[PullRefresh] 🔄 Flushing ${pendingCount} pending items before sync...`);
+                await cloud.flushPendingQueue(5000);
+                console.log('[PullRefresh] ✅ Pending items flushed');
+              }
+            }
+            
+            // �🔐 Универсальный sync — автоматически выбирает RPC для PIN auth
             const syncResult = await cloud.syncClient(clientId, { force: true });
             
             // 🚨 Проверяем нужна ли авторизация (токен истёк/отсутствует)
