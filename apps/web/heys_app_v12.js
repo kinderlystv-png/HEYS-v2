@@ -2196,23 +2196,18 @@ const HEYS = window.HEYS = window.HEYS || {};
             // 🆕 v56: КРИТИЧНО! Сохраняем несинхронизированные данные ПЕРЕД logout
             // Это предотвращает потерю данных, введённых пользователем
             // Используем flushPendingQueue() — ждёт пока вся очередь отправлена в cloud
+            // ВАЖНО: runVersionGuard не async, поэтому flush асинхронный но logout ждём через then
             if (HEYS.cloud?.flushPendingQueue) {
-              try {
-                console.log('[PWA] 💾 Flushing pending data before logout...');
-                // 🔐 BLOCKING: Ждём завершения синхронизации (макс 5 сек)
-                // Без await logout произойдёт ДО отправки данных в cloud!
-                await HEYS.cloud.flushPendingQueue(5000)
-                  .then(flushed => {
-                    if (flushed) {
-                      console.log('[PWA] ✅ All data flushed to cloud before logout');
-                    } else {
-                      console.warn('[PWA] ⚠️ Flush timeout - some data may not be synced');
-                    }
-                  })
-                  .catch(err => console.warn('[PWA] ⚠️ Pre-logout flush failed:', err.message));
-              } catch (syncErr) {
-                console.warn('[PWA] ⚠️ Pre-logout sync error:', syncErr);
-              }
+              console.log('[PWA] 💾 Flushing pending data before logout...');
+              HEYS.cloud.flushPendingQueue(5000)
+                .then(flushed => {
+                  if (flushed) {
+                    console.log('[PWA] ✅ All data flushed to cloud before logout');
+                  } else {
+                    console.warn('[PWA] ⚠️ Flush timeout - some data may not be synced');
+                  }
+                })
+                .catch(err => console.warn('[PWA] ⚠️ Pre-logout flush failed:', err.message));
             }
             
             // 1. Отзываем сессию на сервере и очищаем базовые токены
