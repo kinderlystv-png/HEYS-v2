@@ -2149,8 +2149,26 @@ const HEYS = window.HEYS = window.HEYS || {};
             window.history.replaceState({}, '', url.toString());
           }
           
+          // 🚨 ЗАЩИТА от бесконечного цикла: если только что сделали logout после обновления — не делать опять!
+          const justHandledUpdate = sessionStorage.getItem('heys_version_logout_done');
+          if (justHandledUpdate) {
+            console.log('[PWA] ⏭️ Skipping version guard — just handled update, avoiding infinite loop');
+            sessionStorage.removeItem('heys_version_logout_done');
+            // Обновляем версию под текущий код чтобы не срабатывало при следующем reload
+            localStorage.setItem(VERSION_KEY, APP_VERSION);
+            return;
+          }
+          
           const storedVersion = localStorage.getItem(VERSION_KEY);
           const attempt = JSON.parse(localStorage.getItem(UPDATE_ATTEMPT_KEY) || '{}');
+          
+          // 🔍 DEBUG: Логируем состояние версий для диагностики
+          console.log('[PWA] 🔍 runVersionGuard:', {
+            storedVersion,
+            APP_VERSION,
+            equal: storedVersion === APP_VERSION,
+            storedExists: !!storedVersion
+          });
           
           // Убираем флаги
           sessionStorage.removeItem('heys_pending_update');
@@ -2201,9 +2219,13 @@ const HEYS = window.HEYS = window.HEYS || {};
             
             // 4. ⚠️ КРИТИЧНО: Обновляем версию в localStorage ПЕРЕД reload
             // Иначе после reload версия будет старая → опять logout → бесконечный цикл!
-            localStorage.setItem('heys_version', APP_VERSION);
+            localStorage.setItem(VERSION_KEY, APP_VERSION);
             
-            // 5. Перезагружаем страницу — покажется LoginScreen (т.к. clientId и cloudUser будут null)
+            // 5. ⚠️ ЗАЩИТА ОТ БЕСКОНЕЧНОГО ЦИКЛА: Ставим флаг ПЕРЕД reload
+            // Если SW отдаст закэшированный старый JS — флаг прервёт повторный logout
+            sessionStorage.setItem('heys_version_logout_done', 'true');
+            
+            // 6. Перезагружаем страницу — покажется LoginScreen (т.к. clientId и cloudUser будут null)
             console.log('[PWA] 🔄 Reloading to show LoginScreen...');
             window.location.reload();
             return; // Прерываем выполнение — страница перезагрузится
