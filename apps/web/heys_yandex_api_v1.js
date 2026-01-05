@@ -823,8 +823,11 @@
         return { success: false, saved: 0, error: result.error.message || result.error };
       }
       
-      log(`[v56] REST upsert success: ${items.length} items`);
-      return { success: true, saved: items.length };
+      // v60: REST теперь возвращает { success, rowCount, inserted } для upsert
+      const responseData = result.data;
+      const actualSaved = responseData?.rowCount || responseData?.inserted || items.length;
+      log(`[v56] REST upsert success: ${actualSaved} items saved (requested: ${items.length})`);
+      return { success: true, saved: actualSaved };
     } catch (e) {
       err('[v56] batchSaveKVviaREST failed:', e.message);
       return { success: false, saved: 0, error: e.message };

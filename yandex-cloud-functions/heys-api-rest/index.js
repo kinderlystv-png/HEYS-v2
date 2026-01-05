@@ -535,10 +535,18 @@ module.exports.handler = async function (event, context) {
         console.log('[REST POST]', { table: tableName, isUpsert, onConflict, columns, rowCount: rows.length });
         result = await client.query(query, allValues);
         
+        // v58: Для upsert важно вернуть rowCount для подтверждения записи
+        // result.rows пустой без RETURNING, но rowCount показывает кол-во затронутых строк
+        const responseBody = selectCols ? result.rows : {
+          success: true,
+          rowCount: result.rowCount,
+          inserted: rows.length
+        };
+        
         return {
           statusCode: isUpsert ? 200 : 201,
           headers: corsHeaders,
-          body: JSON.stringify(result.rows)
+          body: JSON.stringify(responseBody)
         };
       }
 
