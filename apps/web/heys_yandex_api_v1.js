@@ -228,11 +228,12 @@
       const response = await fetchWithRetry(url, fetchOptions);
       const result = await response.json();
       
-      // DEBUG: показываем что вернул API
-      log(`REST RESPONSE: ${table}`, { status: response.status, rowCount: Array.isArray(result) ? result.length : 'not array', error: result?.error });
+      // v60: REST POST возвращает {success, rowCount, inserted} вместо массива
+      const displayCount = Array.isArray(result) ? result.length : (result?.rowCount || result?.inserted || 'obj');
+      log(`REST RESPONSE: ${table}`, { status: response.status, rowCount: displayCount, success: result?.success, error: result?.error });
       
       if (!response.ok) {
-        return { data: null, error: { message: result.error || 'REST error', code: response.status } };
+        return { data: null, error: { message: result.error || result.message || 'REST error', code: response.status } };
       }
       
       return { data: result, error: null };
