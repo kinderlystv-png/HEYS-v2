@@ -4689,11 +4689,18 @@ const HEYS = window.HEYS = window.HEYS || {};
               
               const handleSyncError = (e) => {
                 const code = e.detail?.error;
+                const isPersistent = e.detail?.persistent || false;
+
                 if (code === 'auth_required') {
                   setCloudStatus('offline');
                   setRetryCountdown(0);
                   try { HEYS.Toast?.warning('Требуется повторный вход для синхронизации') || alert('Требуется повторный вход для синхронизации'); } catch (_) {}
                   return;
+                }
+                
+                // 🔥 Если ошибка критическая (persistent), показываем тост
+                if (isPersistent) {
+                   try { HEYS.Toast?.error(`Ошибка синхронизации: ${code}`) || console.error(`Sync error: ${code}`); } catch (_) {}
                 }
                 
                 const retryIn = e.detail?.retryIn || 5;

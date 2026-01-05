@@ -1249,9 +1249,18 @@
   /** Событие: ошибка синхронизации */
   function notifySyncError(error, retryIn) {
     try {
-      addSyncLogEntry('sync_error', { error: error?.message || String(error) });
+      const errorMsg = error?.message || String(error);
+      console.error('🔥 [SYNC ERROR] Critical sync failure:', errorMsg);
+      
+      addSyncLogEntry('sync_error', { error: errorMsg });
+      
+      // Отправляем событие с флагом persistent, чтобы UI знал, что это важно
       global.dispatchEvent(new CustomEvent('heys:sync-error', { 
-        detail: { error: error?.message || String(error), retryIn } 
+        detail: { 
+          error: errorMsg, 
+          retryIn,
+          persistent: true // 🆕 Флаг для UI: не скрывать ошибку само
+        } 
       }));
     } catch (e) {}
   }
@@ -1306,7 +1315,15 @@
         localStorage.removeItem('heys_supabase_auth_token');
       } catch (e) {}
       addSyncLogEntry('sync_error', { error: 'auth_required' });
-      global.dispatchEvent(new CustomEvent('heys:sync-error', { detail: { error: 'auth_required' } }));
+      
+      // 🔥 INSTANT FEEDBACK: Критическая ошибка авторизации
+      global.dispatchEvent(new CustomEvent('heys:sync-error', { 
+        detail: { 
+          error: 'auth_required',
+          persistent: true 
+        } 
+      }));
+      
       logCritical('❌ Требуется повторный вход (auth/RLS error)');
     } catch (e) {}
   }
@@ -4620,6 +4637,16 @@
         if (!user && !isPinAuth) {
             // 🔍 DEBUG: Логируем когда сохранение блокируется
             log(`🚫 [SAVE BLOCKED] No auth for key '${k}': user=${!!user}, _pinAuthClientId=${_pinAuthClientId}, client_id=${client_id}, isPinAuth=${isPinAuth}`);
+            
+            // 🔥 INSTANT FEEDBACK: Если нет авторизации, это критическая ошибка сохранения
+            if (global.dispatchEvent) {
+                global.dispatchEvent(new CustomEvent('heys:sync-error', { 
+                    detail: { 
+                        error: 'auth_required', 
+                        persistent: true 
+                    } 
+                }));
+            }
             return;
         }
 
@@ -4736,6 +4763,12 @@
 
         // Добавляем в очередь вместо немедленной отправки
         clientUpsertQueue.push(upsertObj);
+        
+        // 🔥 INSTANT FEEDBACK: Мгновенно уведомляем UI о том, что есть несохраненные данные
+        // Не ждем таймера scheduleClientPush, пользователь должен видеть "Syncing..." сразу
+        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+        notifyPendingChange();
+        
         scheduleClientPush();
     };
 

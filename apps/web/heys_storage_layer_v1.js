@@ -197,7 +197,18 @@
           global.HEYS.saveClientKey(cid, sk, v);
         }
       }
-    }catch(e){ console.error('[Store.set] Error:', e); }
+    }catch(e){ 
+      console.error('[Store.set] Error:', e); 
+      // 🔥 INSTANT FEEDBACK: Если ошибка при сохранении в облако, уведомляем UI
+      if (global.dispatchEvent) {
+        global.dispatchEvent(new CustomEvent('heys:sync-error', { 
+          detail: { 
+            error: `Storage error: ${e.message}`, 
+            persistent: true 
+          } 
+        }));
+      }
+    }
   };
 
   Store.watch = function(k, fn){ const sk=scoped(k); if(!watchers.has(sk)) watchers.set(sk,new Set()); watchers.get(sk).add(fn); return ()=>{ const set=watchers.get(sk); if(set){ set.delete(fn); if(!set.size) watchers.delete(sk); } }; };
