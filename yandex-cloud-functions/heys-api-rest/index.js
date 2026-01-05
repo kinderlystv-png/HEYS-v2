@@ -460,6 +460,10 @@ module.exports.handler = async function (event, context) {
         const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
         const params = event.queryStringParameters || {};
         
+        // [DEBUG] Log request summary (не полный body чтобы не захламлять логи)
+        const rowsPreview = Array.isArray(body) ? body.length : 1;
+        console.log('[REST POST REQUEST]', { table: tableName, rows: rowsPreview, params: Object.keys(params) });
+        
         // Поддержка upsert через on_conflict
         const onConflict = params.on_conflict;
         const isUpsert = params.upsert === 'true' && onConflict;
@@ -542,6 +546,9 @@ module.exports.handler = async function (event, context) {
           rowCount: result.rowCount,
           inserted: rows.length
         };
+        
+        // [DEBUG] Log DB result
+        console.log('[REST POST RESULT]', { dbRowCount: result.rowCount, responseRowCount: responseBody.rowCount || 'array' });
         
         return {
           statusCode: isUpsert ? 200 : 201,
