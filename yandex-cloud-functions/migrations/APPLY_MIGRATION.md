@@ -2,13 +2,16 @@
 
 ## ⚠️ ВАЖНО: Пароль базы данных изменён
 
-Локальный `.env.yandex` содержит **устаревший пароль**. Актуальный пароль — только в:
+Локальный `.env.yandex` содержит **устаревший пароль**. Актуальный пароль —
+только в:
+
 1. Консоли Yandex Cloud (Managed PostgreSQL → Users → heys_admin)
 2. Environment variables задеплоенных Cloud Functions
 
 ## Проблема
 
-После миграции с Supabase на Yandex Cloud PostgreSQL **6 функций отсутствуют** в базе данных:
+После миграции с Supabase на Yandex Cloud PostgreSQL **6 функций отсутствуют** в
+базе данных:
 
 1. `client_pin_auth` — комбинированная авторизация
 2. `create_client_with_pin` — создание клиента с PIN
@@ -52,7 +55,7 @@ psql "host=rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net \
 После применения миграции выполните:
 
 ```sql
-SELECT proname FROM pg_proc 
+SELECT proname FROM pg_proc
 WHERE proname IN (
   'client_pin_auth',
   'create_client_with_pin',
@@ -86,6 +89,6 @@ curl -X POST "https://api.heyslab.ru/rpc?fn=get_client_data" \
 
 ## Заметки
 
-- Пароль `HeysAdmin2025!` из `.env.yandex` **может быть устаревшим**
-- Актуальный пароль хранится в Yandex Cloud Console
-- Cloud Functions имеют правильный пароль в environment variables
+- Актуальный пароль `heys007670` синхронизирован в `.env.yandex` и Cloud
+  Functions
+- Резервная копия пароля в Yandex Cloud Console (Managed PostgreSQL → Users)
