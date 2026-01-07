@@ -12562,6 +12562,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const addDays = (dateStr, days) => {
         if (!dateStr) return '';
         const d = new Date(dateStr);
+        // Защита от Invalid Date (для новых пользователей без данных)
+        if (isNaN(d.getTime())) return '';
         d.setDate(d.getDate() + days);
         return d.toISOString().slice(0, 10);
       };
@@ -12780,21 +12782,25 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             : lastChartDate;
           
           const tomorrowDate = addDays(baseDate, 1);
-          const tomorrowDayNum = tomorrowDate ? new Date(tomorrowDate).getDate() : '';
-          const tomorrowDayIndex = isTodayIncomplete ? 2 : 1; // Если сегодня прогноз — завтра это 2-й день
-          const tomorrowKcal = calculateForecastKcal(tomorrowDayIndex, prevKcal);
+          
+          // Защита: если нет валидной даты (новый пользователь без данных) — пропускаем прогноз
+          if (tomorrowDate) {
+            const tomorrowDayNum = new Date(tomorrowDate).getDate();
+            const tomorrowDayIndex = isTodayIncomplete ? 2 : 1; // Если сегодня прогноз — завтра это 2-й день
+            const tomorrowKcal = calculateForecastKcal(tomorrowDayIndex, prevKcal);
             
-          forecastPoints.push({
-            kcal: Math.max(0, tomorrowKcal),
-            target: forecastTarget,
-            isForecast: true,
-            isTodayForecast: false,
-            isFutureDay: true,
-            date: tomorrowDate,
-            dayNum: tomorrowDayNum,
-            dayOfWeek: tomorrowDate ? new Date(tomorrowDate).getDay() : 0,
-            isWeekend: isWeekend(tomorrowDate) || isHoliday(tomorrowDate)
-          });
+            forecastPoints.push({
+              kcal: Math.max(0, tomorrowKcal),
+              target: forecastTarget,
+              isForecast: true,
+              isTodayForecast: false,
+              isFutureDay: true,
+              date: tomorrowDate,
+              dayNum: tomorrowDayNum,
+              dayOfWeek: new Date(tomorrowDate).getDay(),
+              isWeekend: isWeekend(tomorrowDate) || isHoliday(tomorrowDate)
+            });
+          }
         }
       }
       
