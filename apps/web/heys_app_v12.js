@@ -16,7 +16,7 @@
 const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2026.01.02.2125.e776e10'; // v54: fix RPC mode upload (remove && !user condition)
+        const APP_VERSION = '2026.01.07.2240.bcfe960'; // v55: fix onboarding tour timing — defer if profile incomplete, trigger after checkin-complete
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
@@ -2271,6 +2271,41 @@ const HEYS = window.HEYS = window.HEYS || {};
           
           // Регистрируем SW (только на production)
           registerServiceWorker();
+
+          // 🎓 ONBOARDING TOUR — функция проверки и запуска
+          // Отдельная функция чтобы можно было вызвать и при загрузке, и после checkin-complete
+          const tryStartOnboardingTour = () => {
+            const hasSeenTour = HEYS.store && HEYS.store.get 
+              ? HEYS.store.get('heys_tour_completed', false)
+              : localStorage.getItem('heys_tour_completed') === 'true';
+              
+            const isCurator = HEYS.cloud?.role === 'curator';
+            const isAuthorized = localStorage.getItem('heys_client_current') || localStorage.getItem('heys_supabase_auth_token');
+            
+            // 🆕 Проверяем, не показывается ли сейчас MorningCheckin с регистрационными шагами
+            const profile = HEYS.store?.get?.('heys_profile', {}) || {};
+            const profileIncomplete = HEYS.ProfileSteps?.isProfileIncomplete?.(profile);
+            
+            // Запускаем только если: авторизован, не куратор, еще не видел, профиль заполнен
+            if (isAuthorized && !isCurator && !hasSeenTour && !profileIncomplete && window.HEYS.OnboardingTour) {
+              console.log('[Onboarding] ✅ Triggering tour (profile complete)');
+              window.HEYS.OnboardingTour.start();
+              return true;
+            } else if (profileIncomplete) {
+              console.log('[Onboarding] ⏳ Deferred — profile incomplete, will trigger after registration');
+            }
+            return false;
+          };
+          
+          // Первая попытка через 2 сек после загрузки
+          setTimeout(tryStartOnboardingTour, 2000);
+          
+          // 🆕 Слушатель: после завершения checkin (регистрации) — пробуем показать тур
+          window.addEventListener('heys:checkin-complete', () => {
+            console.log('[Onboarding] 📩 Received checkin-complete event');
+            // Небольшая задержка чтобы UI обновился после checkin
+            setTimeout(tryStartOnboardingTour, 500);
+          }, { once: true }); // once: true — слушаем только первый раз
           
           // === ПРОВЕРКА ОБНОВЛЕНИЙ (только на production) ===
           if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
@@ -3199,6 +3234,18 @@ const HEYS = window.HEYS = window.HEYS || {};
 
             // Слушаем обновления XP
             useEffect(() => {
+              // === ONBOARDING TOUR TRIGGER ===
+              // Проверяем: если новый пользователь (уровень 1, <50 XP) и тур не пройден
+              if (HEYS.OnboardingTour && HEYS.game) {
+                 const stats = HEYS.game.getStats();
+                 if (stats && stats.level === 1 && stats.totalXP < 50) {
+                   // Небольшая задержка чтобы всё прогрузилось
+                   setTimeout(() => {
+                     HEYS.OnboardingTour.start();
+                   }, 2000);
+                 }
+              }
+
               const handleUpdate = (e) => {
                 if (HEYS.game) {
                   const newStats = HEYS.game.getStats();
@@ -3241,7 +3288,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                   });
                 }
               };
-
+              
               const handleNotification = (e) => {
                 setNotification(e.detail);
                 setTimeout(() => setNotification(null), e.detail.type === 'level_up' ? 4000 : 3000);
@@ -7874,6 +7921,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                         'div',
                         {
                           className: 'tab tab-switch ' + (tab === 'insights' ? 'active' : '') + (widgetsEditMode && defaultTab === 'insights' ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
+                          id: 'tour-insights-tab',
                           onClick: () => {
                             if (widgetsEditMode) setDefaultTab('insights');
                             setTab('insights');
