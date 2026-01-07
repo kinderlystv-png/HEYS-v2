@@ -1,7 +1,7 @@
 // heys_ui_onboarding_v1.js — Модуль интерактивного тура для новых пользователей
 // Показывает spotlight на ключевых элементах и объясняет их функцию
 // Использует z-index 9000-9500 (выше контента, ниже системных модалок)
-// v1.3: Fixed pulse animation to preserve 9999px shadow, hide PWA banner during tour
+// v1.4: Tour only triggers for PIN-authenticated clients, NOT for curators
 
 (function(global) {
   const HEYS = global.HEYS = global.HEYS || {};

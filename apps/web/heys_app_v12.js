@@ -3235,8 +3235,10 @@ const HEYS = window.HEYS = window.HEYS || {};
             // Слушаем обновления XP
             useEffect(() => {
               // === ONBOARDING TOUR TRIGGER ===
+              // 🔐 v1.4: Тур ТОЛЬКО для PIN-авторизованных клиентов, НЕ для кураторов
               // Проверяем: если новый пользователь (уровень 1, <50 XP) и тур не пройден
-              if (HEYS.OnboardingTour && HEYS.game) {
+              const isCurator = HEYS.cloud?.role === 'curator';
+              if (HEYS.OnboardingTour && HEYS.game && !isCurator) {
                  const stats = HEYS.game.getStats();
                  if (stats && stats.level === 1 && stats.totalXP < 50) {
                    // Небольшая задержка чтобы всё прогрузилось
