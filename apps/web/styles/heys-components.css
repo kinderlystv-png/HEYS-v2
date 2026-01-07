@@ -2,18 +2,22 @@
 .tour-overlay {
   position: fixed !important;
   inset: 0 !important;
-  background: rgba(0, 0, 0, 0.7) !important;
+  /* ВАЖНО: overlay прозрачный! Затемнение через box-shadow у highlight */
+  background: transparent !important;
   z-index: 9000 !important;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  backdrop-filter: blur(2px);
+  pointer-events: auto; /* Блокирует клики по контенту */
 }
 
 .tour-highlight {
   position: fixed !important;
   z-index: 9001 !important;
   border-radius: 12px;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75), 0 0 0 2px rgba(255, 255, 255, 0.5);
+  /* SPOTLIGHT: box-shadow создаёт затемнение ВОКРУГ элемента */
+  background: transparent;
+  box-shadow: 
+    0 0 0 9999px rgba(0, 0, 0, 0.75),  /* Затемнение вокруг */
+    inset 0 0 0 2px rgba(255, 255, 255, 0.5),  /* Белая рамка */
+    0 0 20px 4px rgba(16, 185, 129, 0.4);  /* Зелёное свечение */
   pointer-events: none;
   transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
 }

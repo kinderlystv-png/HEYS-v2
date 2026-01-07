@@ -1,7 +1,7 @@
 // heys_ui_onboarding_v1.js — Модуль интерактивного тура для новых пользователей
 // Показывает spotlight на ключевых элементах и объясняет их функцию
 // Использует z-index 9000-9500 (выше контента, ниже системных модалок)
-// v1.1: Welcome modal, tour_step analytics, haptic feedback, visibilitychange, pulse animation
+// v1.2: Fixed spotlight — overlay теперь прозрачный, затемнение через box-shadow highlight
 
 (function(global) {
   const HEYS = global.HEYS = global.HEYS || {};
@@ -247,18 +247,14 @@
     el.style.position = 'fixed';
     el.style.inset = '0';
     el.style.zIndex = '9000';
-    el.style.background = 'rgba(0, 0, 0, 0.7)'; // Fallback
-    el.style.opacity = '0';
-    el.style.transition = 'opacity 0.3s ease';
+    // ВАЖНО: overlay прозрачный! Затемнение создаётся через box-shadow у highlight
+    // Это позволяет highlight "вырезать дырку" в затемнении
+    el.style.background = 'transparent';
+    el.style.opacity = '1';
     
-    // Клик по оверлею блокируется, но можно сделать пропуск?
-    // Лучше блокировать взаимодействие с контентом кроме highlight
+    // Overlay только блокирует клики по контенту под ним
     
     document.body.appendChild(el);
-    
-    // Force reflow
-    el.getBoundingClientRect();
-    el.style.opacity = '1';
     
     state.overlayEl = el;
     return el;
