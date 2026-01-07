@@ -1,7 +1,7 @@
 // heys_ui_onboarding_v1.js — Модуль интерактивного тура для новых пользователей
 // Показывает spotlight на ключевых элементах и объясняет их функцию
 // Использует z-index 9000-9500 (выше контента, ниже системных модалок)
-// v1.2: Fixed spotlight — overlay теперь прозрачный, затемнение через box-shadow highlight
+// v1.3: Fixed pulse animation to preserve 9999px shadow, hide PWA banner during tour
 
 (function(global) {
   const HEYS = global.HEYS = global.HEYS || {};
@@ -420,6 +420,9 @@
       // Подписываемся на visibility change
       document.addEventListener('visibilitychange', handleVisibilityChange);
       
+      // Добавляем класс для скрытия PWA баннера
+      document.body.classList.add('tour-active');
+      
       createOverlay();
       this.renderStep();
       triggerHaptic();
@@ -507,6 +510,9 @@
       
       // Отписываемся от visibility change
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      
+      // Убираем класс для скрытия PWA баннера
+      document.body.classList.remove('tour-active');
       
       // Cleanup DOM
       if (state.overlayEl) state.overlayEl.remove();
