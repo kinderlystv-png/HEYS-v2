@@ -1443,6 +1443,27 @@
                 : 'Приложение работает только на телефоне'
             )
           ),
+          // Перезапуск обучения (Onboarding Tour)
+          React.createElement('div', {className:'profile-field-group'},
+            React.createElement('div', {className:'profile-field-group__header'},
+              React.createElement('span', {className:'profile-field-group__icon'}, '🎓'),
+              React.createElement('span', {className:'profile-field-group__title'}, 'Обучение')
+            ),
+            React.createElement('div', {style:{marginTop:8}},
+              React.createElement('button', {
+                className: 'btn btn--secondary btn--full',
+                style: { justifyContent: 'center' },
+                onClick: () => {
+                  if (window.HEYS.OnboardingTour) {
+                    window.HEYS.OnboardingTour.start();
+                  } else {
+                    window.alert('Модуль обучения не загружен');
+                  }
+                }
+              }, 'Запустить обучение заново')
+            )
+          ),
+
           // Статистика советов
           React.createElement(HEYS_AdviceStatsCard, null),
           // Настройки советов

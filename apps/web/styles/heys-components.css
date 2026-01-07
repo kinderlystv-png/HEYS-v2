@@ -1,0 +1,341 @@
+/* === ONBOARDING TOUR STYLES === */
+.tour-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, 0.7) !important;
+  z-index: 9000 !important;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  backdrop-filter: blur(2px);
+}
+
+.tour-highlight {
+  position: fixed !important;
+  z-index: 9001 !important;
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75), 0 0 0 2px rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+  transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.tour-tooltip {
+  position: fixed !important;
+  z-index: 9002 !important;
+  max-width: 320px;
+  width: 90%;
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.tour-tooltip-enter {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tour-tooltip-content {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.3);
+  position: relative;
+  z-index: 2;
+}
+
+.tour-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: #111827;
+}
+
+.tour-text {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #4b5563;
+  margin: 0 0 20px 0;
+}
+
+.tour-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tour-indicators {
+  display: flex;
+  gap: 6px;
+}
+
+.tour-dot {
+  width: 8px;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 50%;
+  transition: background 0.3s;
+}
+
+.tour-dot.active {
+  background: #3b82f6;
+  transform: scale(1.2);
+}
+
+.tour-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.tour-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.tour-btn-skip {
+  color: #9ca3af;
+}
+.tour-btn-skip:hover {
+  color: #6b7280;
+  background: #f3f4f6;
+}
+
+.tour-btn-next {
+  background: #3b82f6;
+  color: white;
+}
+.tour-btn-next:hover {
+  background: #2563eb;
+}
+
+.tour-btn-finish {
+  background: #10b981; /* Green for finish */
+}
+.tour-btn-finish:hover {
+  background: #059669;
+}
+
+/* Arrows */
+.tour-arrow {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  transform: rotate(45deg);
+  z-index: 1;
+}
+
+.tour-arrow-top {
+  top: -8px; /* Arrow points UP, so it sits on top of tooltip */
+  left: calc(50% - 10px);
+  /* Should be at the bottom if position is top? */
+  /* Logic: arrow-top means tooltip is BELOW element, arrow points UP to element. */
+}
+
+/* Fix CSS arrow logic based on JS positioning */
+/* JS: position='bottom' -> tooltip BELOW element -> arrow points UP (at top of tooltip) */
+/* JS: position='top' -> tooltip ABOVE element -> arrow points DOWN (at bottom of tooltip) */
+
+/* If JS step.arrow = 'top' (tooltip is below target) */
+.tour-arrow-top {
+  top: 6px; /* Inside the content? No, needs to be outside */
+  /* Let's use pseudo-elements on .tour-tooltip-content instead? */
+  /* Or just fix positioning relative to .tour-tooltip */
+  top: 14px; /* Adjust based on content padding? No. */
+}
+
+/* Cleaner arrow implementation */
+.tour-tooltip-content::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: white;
+  transform: rotate(45deg);
+  z-index: -1;
+}
+
+/* .tour-arrow-top class on container means arrow should be at TOP */
+.tour-arrow-top .tour-tooltip-content::before {
+  top: -6px;
+  left: calc(50% - 8px);
+}
+
+/* .tour-arrow-bottom class on container means arrow should be at BOTTOM */
+.tour-arrow-bottom .tour-tooltip-content::before {
+  bottom: -6px;
+  left: calc(50% - 8px);
+}
+
+/* === WELCOME MODAL === */
+
+/* Корневой контейнер модала */
+.tour-welcome-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+}
+
+/* Состояния анимации */
+.tour-welcome-modal .tour-welcome-backdrop,
+.tour-welcome-modal .tour-welcome-content {
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.tour-welcome-modal.tour-welcome-enter .tour-welcome-backdrop,
+.tour-welcome-modal.tour-welcome-enter .tour-welcome-content {
+  opacity: 1;
+}
+
+.tour-welcome-modal.tour-welcome-exit .tour-welcome-backdrop,
+.tour-welcome-modal.tour-welcome-exit .tour-welcome-content {
+  opacity: 0;
+}
+
+.tour-welcome-modal.tour-welcome-exit .tour-welcome-content {
+  transform: translateY(-40%) translateX(-50%) scale(0.95);
+}
+
+.tour-welcome-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+}
+
+.tour-welcome-content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translateY(-50%) translateX(-50%) scale(0.95);
+  z-index: 10001;
+  background: white;
+  border-radius: 20px;
+  padding: 32px 24px;
+  max-width: 320px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.3);
+}
+
+.tour-welcome-modal.tour-welcome-enter .tour-welcome-content {
+  transform: translateY(-50%) translateX(-50%) scale(1);
+}
+
+.tour-welcome-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 12px;
+}
+
+.tour-welcome-text {
+  font-size: 15px;
+  color: #6b7280;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.tour-welcome-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Стили для кнопок (поддержка обоих вариантов классов) */
+.tour-welcome-btn,
+.tour-btn {
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.tour-welcome-btn-start,
+.tour-btn-start {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 4px 14px -4px rgba(16, 185, 129, 0.5);
+}
+
+.tour-welcome-btn-start:active,
+.tour-btn-start:active {
+  transform: scale(0.98);
+}
+
+.tour-welcome-btn-later,
+.tour-btn-later {
+  background: transparent;
+  color: #6b7280;
+}
+
+/* Стили для иконки (поддержка обоих вариантов классов) */
+.tour-welcome-emoji,
+.tour-welcome-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+/* === PULSE ANIMATION для подсвеченного элемента === */
+@keyframes tour-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4),
+                0 0 0 4px rgba(255, 255, 255, 1);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(16, 185, 129, 0),
+                0 0 0 4px rgba(255, 255, 255, 1);
+  }
+}
+
+.tour-highlight {
+  animation: tour-pulse 2s ease-in-out infinite !important;
+}
+
+@keyframes tour-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes tour-slide-up {
+  from { 
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .body--dark .tour-tooltip-content {
+    background: #1f2937;
+    box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+  }
+  .body--dark .tour-title { color: #f3f4f6; }
+  .body--dark .tour-text { color: #d1d5db; }
+  .body--dark .tour-dot { background: #374151; }
+  .body--dark .tour-tooltip-content::before { background: #1f2937; }
+  .body--dark .tour-btn-skip:hover { background: #374151; }
+  
+  /* Welcome modal dark mode */
+  .body--dark .tour-welcome-content {
+    background: #1f2937;
+  }
+  .body--dark .tour-welcome-title { color: #f3f4f6; }
+  .body--dark .tour-welcome-text { color: #9ca3af; }
+  .body--dark .tour-welcome-btn-later { color: #9ca3af; }
+}

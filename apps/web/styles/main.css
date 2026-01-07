@@ -35,3 +35,6 @@
 @import url("./modules/725-metabolic-intelligence.css");
 @import url("./modules/730-widgets-dashboard.css");
 @import url("./modules/800-meal-optimizer.css");
+
+/* Component-specific styles (BEM) */
+@import url("./heys-components.css");

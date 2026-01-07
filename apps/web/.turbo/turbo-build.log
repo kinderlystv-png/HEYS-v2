@@ -6,13 +6,13 @@
 > @heys/web@13.0.1 prebuild /Users/poplavskijanton/HEYS-v2/apps/web
 > node scripts/update-version.cjs && node -e "const fs=require('fs');const f=process.cwd()+'/public/sw.js';let c=fs.readFileSync(f,'utf8');c=c.replace(/heys-[\w.-]+/,'heys-'+Date.now());fs.writeFileSync(f,c);console.log('SW version:',Date.now())"
 
-✅ APP_VERSION updated to: 2026.01.02.1121.3ec9c85
-✅ version.json created: 2026.01.02.1121.3ec9c85
-✅ SW CACHE_VERSION updated to: heys-1767342110707
-✅ index.html script src updated: heys_app_v12.js?v=2026.01.02.1121.3ec9c85
-SW version: [33m1767342110872[39m
+✅ APP_VERSION updated to: 2026.01.07.1722.25fbde3
+✅ version.json created: 2026.01.07.1722.25fbde3
+✅ SW CACHE_VERSION updated to: heys-1767795769177
+✅ index.html script src updated: heys_app_v12.js?v=2026.01.07.1722.25fbde3
+SW version: 1767795769250
 polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
-[36mvite v4.5.14 [32mbuilding for production...[36m[39m
+vite v4.5.14 building for production...
 <script src="heys_dev_utils.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_simple_analytics.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_smart_search_v2.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
@@ -73,20 +73,24 @@ polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 <script src="heys_trial_queue_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_paywall_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_login_screen_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_app_v12.js?v=2026.01.02.1121.3ec9c85"> in "/index.html" can't be bundled without type="module" attribute
-[2K[1Gtransforming (1) [2mindex.html[22m[2K[1Gtransforming (2) [2mstyles/critical.css[22m[2K[1G[32m✓[39m 4 modules transformed.
-[33mwarnings when minifying css:
+<script src="heys_ui_onboarding_v1.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_v12.js?v=2026.01.07.1722.25fbde3"> in "/index.html" can't be bundled without type="module" attribute
+transforming...
+✓ 4 modules transformed.
+warnings when minifying css:
 ▲ [WARNING] Unexpected "21" [css-syntax-error]
 
-    <stdin>:27429:0:
-      27429 │ 21>222222/* ===================================================...
+    <stdin>:27438:0:
+      27438 │ 21>222222/* ===================================================...
             ╵ ~~
 
-[39m
-[2K[1Grendering chunks (1)...[2K[1G[2K[1Gcomputing gzip size (0)...[2K[1Gcomputing gzip size (1)...[2K[1Gcomputing gzip size (2)...[2K[1G[2mdist/[22m[2massets/[22m[32mheys_simple_analytics-b3f08726.js  [39m[1m[2m 10.31 kB[22m[1m[22m
-[2mdist/[22m[32mindex.html                                [39m[1m[2m 16.00 kB[22m[1m[22m[2m │ gzip:   4.49 kB[22m
-[2mdist/[22m[2massets/[22m[32mheys_models_v1-80d14ab0.js         [39m[1m[2m 35.21 kB[22m[1m[22m
-[2mdist/[22m[2massets/[22m[32mheys_core_v12-f12ddfa4.js          [39m[1m[2m118.14 kB[22m[1m[22m
-[2mdist/[22m[2massets/[22m[35mindex-090f2ae4.css                 [39m[1m[2m751.97 kB[22m[1m[22m[2m │ gzip: 122.05 kB[22m
-[36m[vite-plugin-static-copy][39m [32mCopied 3 items.[39m
-[32m✓ built in 1.28s[39m
+
+rendering chunks...
+computing gzip size...
+dist/assets/heys_simple_analytics-b3f08726.js   10.31 kB
+dist/index.html                                 16.06 kB │ gzip:   4.50 kB
+dist/assets/heys_models_v1-80d14ab0.js          35.21 kB
+dist/assets/heys_core_v12-e2a7bb0e.js          118.28 kB
+dist/assets/index-852ce985.css                 752.14 kB │ gzip: 122.10 kB
+[vite-plugin-static-copy] Copied 3 items.
+✓ built in 1.33s

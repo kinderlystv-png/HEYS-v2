@@ -6,6 +6,7 @@
 const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔐 P0 SECURITY: Conditional logging (never log env in production)
@@ -121,6 +122,50 @@ function isValidIp(ip) {
   return false;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 JWT Verification (для curator-only функций)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function base64UrlDecode(str) {
+  // Сначала заменяем URL-safe символы на стандартные
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
+  // Затем добавляем padding
+  while (str.length % 4) str += '=';
+  return Buffer.from(str, 'base64').toString();
+}
+
+function verifyJwt(token, jwtSecret) {
+  try {
+    const [headerB64, payloadB64, signature] = token.split('.');
+    
+    // Проверяем подпись
+    const expectedSig = crypto
+      .createHmac('sha256', jwtSecret)
+      .update(`${headerB64}.${payloadB64}`)
+      .digest('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+    
+    if (signature !== expectedSig) {
+      return { valid: false, error: 'Invalid signature' };
+    }
+    
+    // Декодируем payload
+    const payload = JSON.parse(base64UrlDecode(payloadB64));
+    
+    // Проверяем срок действия
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now) {
+      return { valid: false, error: 'Token expired' };
+    }
+    
+    return { valid: true, payload };
+  } catch (e) {
+    return { valid: false, error: e.message };
+  }
+}
+
 const ALLOWED_ORIGINS = [
   'https://heyslab.ru',
   'https://www.heyslab.ru',
@@ -192,6 +237,15 @@ const ALLOWED_FUNCTIONS = [
   // 'check_subscription_status(UUID)'  — утечка статуса по чужому client_id
 ];
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 CURATOR_ONLY_FUNCTIONS — требуют JWT токен куратора!
+// ═══════════════════════════════════════════════════════════════════════════
+const CURATOR_ONLY_FUNCTIONS = [
+  'create_client_with_pin',           // Создание клиента (только куратор!)
+  'reset_client_pin',                 // Сброс PIN клиента
+  'get_curator_clients',              // Список клиентов куратора
+];
+
 // Маппинг параметров (если нужно)
 // Сейчас не используем, т.к. функции ожидают те же имена что и фронтенд
 const PARAM_MAPPING = {
@@ -254,12 +308,53 @@ module.exports.handler = async function (event, context) {
   }
 
   // Проверяем что функция разрешена
-  if (!ALLOWED_FUNCTIONS.includes(fnName)) {
+  const isPublicFunction = ALLOWED_FUNCTIONS.includes(fnName);
+  const isCuratorFunction = CURATOR_ONLY_FUNCTIONS.includes(fnName);
+  
+  if (!isPublicFunction && !isCuratorFunction) {
     return {
       statusCode: 403,
       headers: corsHeaders,
       body: JSON.stringify({ error: `Function "${fnName}" not allowed` })
     };
+  }
+
+  // 🔐 Для curator-only функций требуется JWT
+  let curatorId = null;
+  if (isCuratorFunction) {
+    const authHeader = event.headers?.['authorization'] || event.headers?.['Authorization'];
+    
+    if (!authHeader?.startsWith('Bearer ')) {
+      return {
+        statusCode: 401,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Authorization required for curator functions' })
+      };
+    }
+    
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      console.error('[RPC] JWT_SECRET not configured');
+      return {
+        statusCode: 500,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Server configuration error' })
+      };
+    }
+    
+    const jwtResult = verifyJwt(authHeader.slice(7), JWT_SECRET);
+    
+    if (!jwtResult.valid) {
+      debugLog('[RPC] JWT verification failed:', jwtResult.error);
+      return {
+        statusCode: 403,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Invalid or expired token' })
+      };
+    }
+    
+    curatorId = jwtResult.payload.sub;
+    debugLog('[RPC] Curator authenticated:', curatorId);
   }
 
   // Парсим тело запроса
@@ -283,6 +378,12 @@ module.exports.handler = async function (event, context) {
     mappedParams[mappedKey] = value;
   }
   params = mappedParams;
+
+  // 🔐 Для curator-only функций добавляем curator_id из JWT
+  if (isCuratorFunction && curatorId) {
+    params.p_curator_id = curatorId;
+    debugLog('[RPC Handler] Added p_curator_id for curator function');
+  }
 
   // 🔐 P1: Извлекаем IP клиента для rate-limit
   // Yandex Cloud Functions: X-Forwarded-For содержит реальный IP

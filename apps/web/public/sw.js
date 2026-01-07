@@ -4,7 +4,7 @@
 // Версия обновляется автоматически при билде
 // NOTE: Service Worker runs in isolated context - no access to @heys/logger
 
-const CACHE_VERSION = 'heys-1767378355219';
+const CACHE_VERSION = 'heys-1767795769250';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 

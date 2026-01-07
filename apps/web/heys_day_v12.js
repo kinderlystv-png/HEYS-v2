@@ -15249,6 +15249,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       )
     );
     
+    // 🎓 TOUR DEMO OVERRIDE
+    const isTourActive = HEYS.OnboardingTour && HEYS.OnboardingTour.isActive();
+    const tourHero = isTourActive && HEYS.OnboardingTour.getDemoData('hero');
+    
+    const displayTdee = tourHero ? tourHero.tdee : tdee;
+    const displayHeroOptimum = tourHero ? tourHero.optimum : displayOptimum;
+    const displayHeroEaten = tourHero ? tourHero.eaten : eatenKcal;
+    const displayHeroRemaining = tourHero ? tourHero.remaining : displayRemainingKcal;
+    
     // === БЛОК СТАТИСТИКА ===
     const statsBlock = React.createElement('div', { className: 'compact-stats compact-card' },
       React.createElement('div', { className: 'compact-card-header stats-header-with-badge' },
@@ -15259,7 +15268,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         }, displayRatioStatus.emoji + ' ' + displayRatioStatus.text)
       ),
       // 4 карточки метрик внутри статистики
-      React.createElement('div', { className: 'metrics-cards' },
+      React.createElement('div', { className: 'metrics-cards', id: 'tour-hero-stats' },
         // Затраты (TDEE) — кликабельная для расшифровки
         React.createElement('div', { 
           className: 'metrics-card',
@@ -15293,7 +15302,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           }
         },
           React.createElement('div', { className: 'metrics-icon' }, '⚡'),
-          React.createElement('div', { className: 'metrics-value', style: { color: '#64748b' } }, tdee),
+          React.createElement('div', { className: 'metrics-value', style: { color: '#64748b' } }, displayTdee),
           React.createElement('div', { className: 'metrics-label' }, 'Затраты')
         ),
         // Цель — кликабельная для показа формулы
@@ -15315,7 +15324,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 deficitPct: dayTargetDef,
                 baseOptimum: optimum,
                 dailyBoost: caloricDebt?.dailyBoost || 0,
-                displayOptimum,
+                displayOptimum: displayHeroOptimum,
                 isRefeedDay: day.isRefeedDay,
                 refeedBoost: caloricDebt?.refeedBoost || 0
               }
@@ -15325,9 +15334,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           title: 'Нажми чтобы узнать как считается цель'
         },
           React.createElement('div', { className: 'metrics-icon' }, '🎯'),
-          React.createElement('div', { className: 'metrics-value', style: { color: day.isRefeedDay ? '#f97316' : (displayOptimum > optimum ? '#10b981' : '#0369a1') } }, displayOptimum),
+          React.createElement('div', { className: 'metrics-value', style: { color: day.isRefeedDay ? '#f97316' : (displayHeroOptimum > optimum ? '#10b981' : '#0369a1') } }, displayHeroOptimum),
           React.createElement('div', { className: 'metrics-label' }, 
-            'Цель (' + dayTargetDef + '%)' + (!day.isRefeedDay && displayOptimum > optimum ? ' 💰' : '')
+            'Цель (' + dayTargetDef + '%)' + (!day.isRefeedDay && displayHeroOptimum > optimum ? ' 💰' : '')
           ),
           // 🍕 Refeed hint (как в "Осталось")
           day.isRefeedDay && React.createElement('div', { 
@@ -15347,9 +15356,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               x: rect.left + rect.width / 2,
               y: rect.top,
               data: {
-                eaten: eatenKcal,
-                goal: displayOptimum,
-                remaining: displayRemainingKcal,
+                eaten: displayHeroEaten,
+                goal: displayHeroOptimum,
+                remaining: displayHeroRemaining,
                 ratio: currentRatio,
                 deficitPct: dayTargetDef
               }
@@ -15358,15 +15367,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           }
         },
           React.createElement('div', { className: 'metrics-icon' }, '🍽️'),
-          React.createElement('div', { className: 'metrics-value', style: { color: eatenCol.text } }, r0(eatenKcal)),
+          React.createElement('div', { className: 'metrics-value', style: { color: eatenCol.text } }, r0(displayHeroEaten)),
           React.createElement('div', { className: 'metrics-label' }, 'Съедено')
         ),
         // Осталось / Перебор (с учётом displayRemainingKcal)
         (() => {
           // Inline цвет для displayRemainingKcal
-          const displayRemainCol = displayRemainingKcal > 100 
+          const displayRemainCol = displayHeroRemaining > 100 
             ? { bg: '#22c55e20', text: '#22c55e', border: '#22c55e60' }
-            : displayRemainingKcal >= 0 
+            : displayHeroRemaining >= 0 
               ? { bg: '#eab30820', text: '#eab308', border: '#eab30860' }
               : { bg: '#ef444420', text: '#ef4444', border: '#ef444460' };
           
@@ -15375,7 +15384,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           const refeedMeta = isRefeedDay && HEYS.Refeed?.getDayMeta ? HEYS.Refeed.getDayMeta(day, currentRatio) : null;
           
           return React.createElement('div', { 
-            className: 'metrics-card' + (shakeOver && displayRemainingKcal < 0 ? ' shake-excess' : '') + (isRefeedDay ? ' metrics-card--refeed' : ''),
+            className: 'metrics-card' + (shakeOver && displayHeroRemaining < 0 ? ' shake-excess' : '') + (isRefeedDay ? ' metrics-card--refeed' : ''),
             style: { background: displayRemainCol.bg, borderColor: displayRemainCol.border },
             title: refeedMeta?.tooltip || ''
           },
@@ -15431,7 +15440,39 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // Tooltip с подробностями
         const tooltipText = 'Среднее выполнение нормы: ' + avgRatioPct + '% (' + zone.name + ')';
         
-        return React.createElement('div', { className: 'kcal-sparkline-container' },
+        // TOUR DEMO DATA
+        // Если тур активен и данных нет (или это демо состояние), подменяем sparklineData
+        const isTourActive = HEYS.OnboardingTour && HEYS.OnboardingTour.isActive();
+        if (isTourActive) {
+          const demo = HEYS.OnboardingTour.getDemoData('sparkline');
+          if (demo) {
+            // Превращаем массив чисел в объекты { date, kcal, target }
+            // Используем последние 7 дней от сегодня
+            const today = new Date();
+            // Подменяем sparklineData локально для рендера
+            // sparklineData это const, поэтому создадим effectiveData
+            // Внимание: выше sparklineData используется для avgRatio, тут мы просто подменим для рендера графика
+          }
+        }
+
+        const renderData = isTourActive && HEYS.OnboardingTour.getDemoData('sparkline') 
+          ? HEYS.OnboardingTour.getDemoData('sparkline').map((pt, i) => {
+              const d = new Date();
+              d.setDate(d.getDate() - (6 - i));
+              // Формат 'dd.mm'
+              const dateStr = d.getDate().toString().padStart(2,'0') + '.' + (d.getMonth()+1).toString().padStart(2,'0');
+              const dayOfWeek = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][d.getDay()];
+              return {
+                date: dayOfWeek, // Для оси X
+                fullDate: dateStr,
+                kcal: pt.kcal,
+                target: pt.target,
+                isRefeed: false
+              };
+            })
+          : sparklineData;
+
+        return React.createElement('div', { className: 'kcal-sparkline-container', id: 'tour-calorie-graph' },
           React.createElement('div', { className: 'kcal-sparkline-header' },
             React.createElement('span', { className: 'kcal-sparkline-title' }, '📊 Калории'),
             // Period Pills
@@ -15453,7 +15494,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           style: { transition: 'opacity 0.15s ease' }
         },
           // 🔧 FIX: Используем displayOptimum (с учётом долга) для линии цели
-          renderSparkline(sparklineData, displayOptimum)
+          renderSparkline(renderData, displayOptimum)
         )
       );
       })(),
@@ -19486,7 +19527,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       // === FAB группа: приём пищи + вода (на обеих вкладках) ===
       isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary') && React.createElement('div', {
-        className: 'fab-group'
+        className: 'fab-group',
+        id: 'tour-fab-buttons'
       },
         // FAB для добавления приёма пищи (🍽️)
         React.createElement('button', {
@@ -20440,6 +20482,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           // Сама карточка с мягким shake при приближении липолиза
           React.createElement('div', { 
             className: 'insulin-wave-indicator insulin-' + insulinWaveData.status + (shouldShake ? ' shake-subtle' : '') + (insulinExpanded ? ' expanded' : ''),
+            id: 'tour-insulin-wave',
             style: { 
               margin: '8px 0', 
               cursor: 'pointer',
