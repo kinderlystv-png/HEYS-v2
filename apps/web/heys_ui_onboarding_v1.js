@@ -1,7 +1,7 @@
 // heys_ui_onboarding_v1.js — Модуль интерактивного тура для новых пользователей
 // Показывает spotlight на ключевых элементах и объясняет их функцию
 // Использует z-index 9000-9500 (выше контента, ниже системных модалок)
-// v1.5: Curator check moved BEFORE function call — no logs for curators
+// v1.6: Sync curator check via localStorage — HEYS.cloud.role may not be set yet
 
 (function(global) {
   const HEYS = global.HEYS = global.HEYS || {};

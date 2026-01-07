@@ -2297,18 +2297,24 @@ const HEYS = window.HEYS = window.HEYS || {};
             return false;
           };
           
-          // 🎓 v1.5: Tour ONLY for PIN-authenticated clients, NOT for curators
-          // Проверка куратора ДО вызова функции — не нужно логировать ничего для кураторов
-          const shouldAttemptTour = () => HEYS.cloud?.role !== 'curator';
+          // 🎓 v1.6: Tour ONLY for PIN-authenticated clients, NOT for curators
+          // Синхронная проверка через localStorage — HEYS.cloud.role может ещё не быть установлен
+          const isCuratorSession = () => {
+            // Куратор имеет JWT токен в localStorage (heys_curator_session или heys_supabase_auth_token)
+            const curatorSession = localStorage.getItem('heys_curator_session');
+            const supabaseToken = localStorage.getItem('heys_supabase_auth_token');
+            // Также проверяем HEYS.cloud.role если уже установлен
+            return !!(curatorSession || supabaseToken || HEYS.cloud?.role === 'curator');
+          };
           
           // Первая попытка через 2 сек после загрузки (только для клиентов)
           setTimeout(() => {
-            if (shouldAttemptTour()) tryStartOnboardingTour();
+            if (!isCuratorSession()) tryStartOnboardingTour();
           }, 2000);
           
           // 🆕 Слушатель: после завершения checkin (регистрации) — пробуем показать тур
           window.addEventListener('heys:checkin-complete', () => {
-            if (!shouldAttemptTour()) return; // Пропускаем для кураторов
+            if (isCuratorSession()) return; // Пропускаем для кураторов
             console.log('[Onboarding] 📩 Received checkin-complete event');
             // Небольшая задержка чтобы UI обновился после checkin
             setTimeout(tryStartOnboardingTour, 500);
