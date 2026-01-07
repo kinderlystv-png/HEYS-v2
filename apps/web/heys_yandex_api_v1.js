@@ -141,6 +141,13 @@
   // 📡 API МЕТОДЫ
   // ═══════════════════════════════════════════════════════════════════
   
+  // 🔐 Функции, требующие JWT токен куратора
+  const CURATOR_ONLY_FUNCTIONS = [
+    'create_client_with_pin',
+    'reset_client_pin', 
+    'get_curator_clients',
+  ];
+
   /**
    * RPC вызов (PostgreSQL функция)
    * @param {string} fnName - Имя функции (get_client_salt, verify_client_pin, etc.)
@@ -153,11 +160,24 @@
     try {
       log(`RPC: ${fnName}`, params);
       
+      // 🔐 Для curator-only функций добавляем JWT токен
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (CURATOR_ONLY_FUNCTIONS.includes(fnName)) {
+        const curatorToken = getCuratorToken();
+        if (!curatorToken) {
+          err(`RPC ${fnName} requires curator token, but none found`);
+          return { data: null, error: { message: 'Требуется авторизация куратора', code: 'UNAUTHORIZED' } };
+        }
+        headers['Authorization'] = `Bearer ${curatorToken}`;
+        log(`RPC: ${fnName} — adding curator JWT`);
+      }
+      
       const response = await fetchWithRetry(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify(params)
       });
       
