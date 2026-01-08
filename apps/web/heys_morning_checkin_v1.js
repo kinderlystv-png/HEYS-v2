@@ -94,6 +94,12 @@
   function shouldShowMorningCheckin() {
     const U = HEYS.utils || {};
     
+    // 🆕 v1.9.1: Если чек-ин уже был показан/пропущен в этой сессии — НЕ показываем
+    if (sessionStorage.getItem('heys_morning_checkin_done') === 'true') {
+      // console.log('[MorningCheckin] Skip — already done/skipped this session');
+      return false;
+    }
+    
     // Если клиент не выбран — НЕ показываем чек-ин (чтобы не показывать до авторизации)
     const currentClientId = U.getCurrentClientId ? U.getCurrentClientId() : '';
     if (!currentClientId) {

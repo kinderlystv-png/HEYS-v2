@@ -16,7 +16,7 @@
 const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2026.01.07.2240.bcfe960'; // v55: fix onboarding tour timing — defer if profile incomplete, trigger after checkin-complete
+        const APP_VERSION = '2026.01.08.1630.tourfix17'; // v1.17: tooltip vertical boundary fix + scroll to top after InsightsTour
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
@@ -2278,27 +2278,35 @@ const HEYS = window.HEYS = window.HEYS || {};
             const hasSeenTour = HEYS.store && HEYS.store.get 
               ? HEYS.store.get('heys_tour_completed', false)
               : localStorage.getItem('heys_tour_completed') === 'true';
-              
-            const isCurator = HEYS.cloud?.role === 'curator';
-            const isAuthorized = localStorage.getItem('heys_client_current') || localStorage.getItem('heys_supabase_auth_token');
+            
+            // 🆕 v1.7: Используем централизованную проверку авторизации
+            const isClient = isClientAuthorized();
             
             // 🆕 Проверяем, не показывается ли сейчас MorningCheckin с регистрационными шагами
             const profile = HEYS.store?.get?.('heys_profile', {}) || {};
             const profileIncomplete = HEYS.ProfileSteps?.isProfileIncomplete?.(profile);
             
-            // Запускаем только если: авторизован, не куратор, еще не видел, профиль заполнен
-            if (isAuthorized && !isCurator && !hasSeenTour && !profileIncomplete && window.HEYS.OnboardingTour) {
-              console.log('[Onboarding] ✅ Triggering tour (profile complete)');
+            // 🆕 v1.14: Проверяем что согласия уже приняты (флаг устанавливается в React после проверки)
+            // HEYS._consentsChecked = проверка завершена, HEYS._consentsValid = согласия приняты
+            const consentsNotReady = isClient && (!HEYS._consentsChecked || !HEYS._consentsValid);
+            
+            // Запускаем только если: авторизован как клиент, еще не видел тур, профиль заполнен, согласия приняты
+            if (isClient && !hasSeenTour && !profileIncomplete && !consentsNotReady && window.HEYS.OnboardingTour) {
+              console.log('[Onboarding] ✅ Triggering tour (client authorized, profile complete, consents accepted)');
               window.HEYS.OnboardingTour.start();
               return true;
+            } else if (!isClient) {
+              console.log('[Onboarding] ⏸️ Skipped — not a PIN-authenticated client');
             } else if (profileIncomplete) {
               console.log('[Onboarding] ⏳ Deferred — profile incomplete, will trigger after registration');
+            } else if (consentsNotReady) {
+              console.log('[Onboarding] ⏳ Deferred — waiting for consents (checked:', HEYS._consentsChecked, ', valid:', HEYS._consentsValid, ')');
             }
             return false;
           };
           
-          // 🎓 v1.6: Tour ONLY for PIN-authenticated clients, NOT for curators
-          // Синхронная проверка через localStorage — HEYS.cloud.role может ещё не быть установлен
+          // 🎓 v1.7: Tour ONLY for PIN-authenticated clients, NOT for curators
+          // Централизованные проверки авторизации (выносим в HEYS для переиспользования)
           const isCuratorSession = () => {
             // Куратор имеет JWT токен в localStorage (heys_curator_session или heys_supabase_auth_token)
             const curatorSession = localStorage.getItem('heys_curator_session');
@@ -2306,6 +2314,46 @@ const HEYS = window.HEYS = window.HEYS || {};
             // Также проверяем HEYS.cloud.role если уже установлен
             return !!(curatorSession || supabaseToken || HEYS.cloud?.role === 'curator');
           };
+          
+          // 🆕 v1.7: Проверка что пользователь авторизован как КЛИЕНТ (не куратор, не гость)
+          const isClientAuthorized = () => {
+            // 🔧 v1.11: Проверяем ОБА ключа — heys_client_current И heys_pin_auth_client
+            let clientId = null;
+            
+            // 1. Сначала пробуем heys_pin_auth_client (для PIN auth)
+            const pinAuthClient = localStorage.getItem('heys_pin_auth_client');
+            if (pinAuthClient && pinAuthClient.length > 10) {
+              clientId = pinAuthClient;
+              console.log('[Onboarding] 🔍 PIN auth clientId:', clientId);
+            }
+            
+            // 2. Потом heys_client_current (для curator-managed clients)
+            if (!clientId) {
+              try {
+                const raw = localStorage.getItem('heys_client_current');
+                console.log('[Onboarding] 🔍 raw localStorage:', raw);
+                if (raw) clientId = JSON.parse(raw);
+                console.log('[Onboarding] 🔍 parsed clientId:', clientId);
+              } catch(e) {
+                // fallback — если вдруг сохранено без JSON
+                clientId = localStorage.getItem('heys_client_current');
+                console.log('[Onboarding] 🔍 fallback clientId:', clientId);
+              }
+            }
+            
+            const isCurator = isCuratorSession();
+            const result = clientId && clientId.length > 10 && !isCurator;
+            console.log('[Onboarding] 🔍 isClientAuthorized check:', {clientId, length: clientId?.length, isCurator, result});
+            // clientId должен быть непустой строкой (UUID)
+            return result;
+            return result;
+          };
+          
+          // Экспортируем для использования в других компонентах
+          window.HEYS._tour = window.HEYS._tour || {};
+          window.HEYS._tour.isCuratorSession = isCuratorSession;
+          window.HEYS._tour.isClientAuthorized = isClientAuthorized;
+          window.HEYS._tour.tryStart = tryStartOnboardingTour; // 🆕 v1.9: экспорт для вызова после пропуска чекина
           
           // Первая попытка через 2 сек после загрузки (только для клиентов)
           setTimeout(() => {
@@ -2318,7 +2366,7 @@ const HEYS = window.HEYS = window.HEYS || {};
             console.log('[Onboarding] 📩 Received checkin-complete event');
             // Небольшая задержка чтобы UI обновился после checkin
             setTimeout(tryStartOnboardingTour, 500);
-          }, { once: true }); // once: true — слушаем только первый раз
+          }); // 🆕 v1.9: убрали once:true — можем слушать многократно
           
           // === ПРОВЕРКА ОБНОВЛЕНИЙ (только на production) ===
           if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
@@ -3248,12 +3296,14 @@ const HEYS = window.HEYS = window.HEYS || {};
             // Слушаем обновления XP
             useEffect(() => {
               // === ONBOARDING TOUR TRIGGER ===
-              // 🔐 v1.4: Тур ТОЛЬКО для PIN-авторизованных клиентов, НЕ для кураторов
-              // Проверяем: если новый пользователь (уровень 1, <50 XP) и тур не пройден
-              const isCurator = HEYS.cloud?.role === 'curator';
-              if (HEYS.OnboardingTour && HEYS.game && !isCurator) {
+              // 🔐 v1.7: Тур ТОЛЬКО для PIN-авторизованных клиентов, НЕ для кураторов/гостей
+              // Проверяем: если авторизован как клиент, новый (уровень 1, <50 XP) и тур не пройден
+              const isClient = window.HEYS._tour?.isClientAuthorized?.();
+              if (HEYS.OnboardingTour && HEYS.game && isClient) {
                  const stats = HEYS.game.getStats();
-                 if (stats && stats.level === 1 && stats.totalXP < 50) {
+                 // 🆕 v1.14: Проверяем согласия перед запуском тура
+                 const consentsReady = HEYS._consentsChecked && HEYS._consentsValid;
+                 if (stats && stats.level === 1 && stats.totalXP < 50 && consentsReady) {
                    // Небольшая задержка чтобы всё прогрузилось
                    setTimeout(() => {
                      HEYS.OnboardingTour.start();
@@ -5081,6 +5131,10 @@ const HEYS = window.HEYS = window.HEYS || {};
                     setClients(result.data);
                     setClientId(created.clientId);
                     U.lsSet('heys_client_current', created.clientId);
+                    // 🆕 Сохраняем имя для pre-fill в профиле (без namespace — напрямую в localStorage)
+                    try {
+                      localStorage.setItem('heys_pending_client_name', JSON.stringify(clientName));
+                    } catch (_) {}
                     try {
                       HEYS.Toast?.success('Клиент создан! Телефон: ' + created.phone + ', PIN: ' + created.pin) || alert('✅ Клиент создан\n\nТелефон: ' + created.phone + '\nPIN: ' + created.pin);
                     } catch (_) {}
@@ -5266,6 +5320,16 @@ const HEYS = window.HEYS = window.HEYS || {};
             const [defaultTab, setDefaultTabState] = useState('stats');
             const [tab, setTab] = useState('stats');
             const [initialTabLoaded, setInitialTabLoaded] = useState(false);
+
+            // Expose setTab to global scope for onboarding tour
+            useEffect(() => {
+              if (!window.HEYS) window.HEYS = {};
+              if (!window.HEYS.ui) window.HEYS.ui = {};
+              window.HEYS.ui.switchTab = (newTab) => {
+                console.log(`[App] 🔄 Switching tab to: ${newTab}`);
+                setTab(newTab);
+              };
+            }, [setTab]);
             
             // Читаем defaultTab из профиля ПОСЛЕ загрузки HEYS.utils
             useEffect(() => {
@@ -5433,12 +5497,18 @@ const HEYS = window.HEYS = window.HEYS || {};
               if (!clientId) {
                 setNeedsConsent(false);
                 setCheckingConsent(false);
+                // 🆕 v1.14: Сбрасываем глобальные флаги при выходе
+                HEYS._consentsChecked = false;
+                HEYS._consentsValid = false;
                 return;
               }
               // Кураторы (cloudUser) не требуют согласий
               if (cloudUser) {
                 setNeedsConsent(false);
                 setCheckingConsent(false);
+                // 🆕 v1.14: Для кураторов согласия не нужны — помечаем как валидные
+                HEYS._consentsChecked = true;
+                HEYS._consentsValid = true;
                 return;
               }
               // Проверяем согласия клиента
@@ -5447,14 +5517,22 @@ const HEYS = window.HEYS = window.HEYS || {};
                 HEYS.Consents.api.checkRequired(clientId).then(result => {
                   setNeedsConsent(!result.valid);
                   setCheckingConsent(false);
+                  // 🆕 v1.14: Устанавливаем глобальные флаги для tryStartOnboardingTour
+                  HEYS._consentsChecked = true;
+                  HEYS._consentsValid = result.valid;
                   if (!result.valid) {
                     console.log('[CONSENTS] Client needs to accept consents:', result.missing);
+                  } else {
+                    console.log('[CONSENTS] ✅ All consents are valid');
                   }
                 }).catch(err => {
                   console.error('[CONSENTS] Error checking consents:', err);
                   setCheckingConsent(false);
                   // При ошибке НЕ блокируем вход — лучше пустить и исправить позже
                   setNeedsConsent(false);
+                  // 🆕 v1.14: При ошибке считаем согласия валидными (fallback)
+                  HEYS._consentsChecked = true;
+                  HEYS._consentsValid = true;
                 });
               }
             }, [clientId, cloudUser]);
@@ -6486,7 +6564,13 @@ const HEYS = window.HEYS = window.HEYS || {};
                   
                   if (HEYS.shouldShowMorningCheckin) {
                     const shouldShow = HEYS.shouldShowMorningCheckin();
-                    // console.log('[App] 🌅 MorningCheckin check | shouldShow:', shouldShow);
+                    
+                    // 🛑 Если активен флаг подавления (Onboarding Tour), не показываем чек-ин
+                    if (window.HEYS?.ui?.suppressMorningCheckin) {
+                      console.log('[App] 🛑 Morning Check-in suppressed by Onboarding Tour');
+                      return;
+                    }
+
                     // 🔒 Не обновляем если значение то же (предотвращает ре-рендер)
                     setShowMorningCheckin(prev => prev === shouldShow ? prev : shouldShow);
                   }
@@ -6817,6 +6901,12 @@ const HEYS = window.HEYS = window.HEYS || {};
                                         { style: { fontWeight: 600, fontSize: 15, color: 'var(--text)' } },
                                         c.name
                                       ),
+                                      // Телефон (если есть)
+                                      c.phone_normalized && React.createElement(
+                                        'div',
+                                        { style: { fontSize: 13, color: 'var(--muted)', marginTop: 2 } },
+                                        '📱 ' + c.phone_normalized
+                                      ),
                                       React.createElement(
                                         'div', 
                                         { style: { fontSize: 12, color: 'var(--muted)', marginTop: 3, display: 'flex', gap: 8, flexWrap: 'wrap' } },
@@ -7099,6 +7189,13 @@ const HEYS = window.HEYS = window.HEYS || {};
                   onComplete: () => {
                     console.log('[CONSENTS] ✅ Согласия приняты');
                     setNeedsConsent(false);
+                    // � v1.14c: Обновляем глобальный флаг для tryStartOnboardingTour
+                    HEYS._consentsValid = true;
+                    // �🎓 v1.10: После принятия согласий — запускаем тур!
+                    setTimeout(() => {
+                      console.log('[CONSENTS] 🎓 Triggering onboarding tour after consents');
+                      window.HEYS?._tour?.tryStart?.();
+                    }, 500);
                   },
                   onCancel: () => {
                     // Отмена = выход (нельзя использовать приложение без согласий)
@@ -7885,6 +7982,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                     'div',
                     {
                       className: 'tab ' + (tab === 'widgets' ? 'active' : '') + (widgetsEditMode ? ' tab--home-candidate' : '') + (widgetsEditMode && defaultTab === 'widgets' ? ' default-tab-indicator' : ''),
+                      id: 'tour-widgets-tab',
                       onClick: () => {
                         if (widgetsEditMode) {
                           setDefaultTab('widgets');
@@ -7909,6 +8007,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                         'div',
                         {
                           className: 'tab tab-switch ' + (tab === 'stats' ? 'active' : '') + (widgetsEditMode && defaultTab === 'stats' ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
+                          id: 'tour-stats-tab',
                           onClick: () => {
                             if (widgetsEditMode) setDefaultTab('stats');
                             setTab('stats');
@@ -7923,6 +8022,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                         'div',
                         {
                           className: 'tab tab-switch ' + (tab === 'diary' ? 'active' : '') + (widgetsEditMode && defaultTab === 'diary' ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
+                          id: 'tour-diary-tab',
                           onClick: () => {
                             if (widgetsEditMode) setDefaultTab('diary');
                             setTab('diary');

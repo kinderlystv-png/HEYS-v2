@@ -300,9 +300,9 @@ async function handleGetClients(curatorId) {
   try {
     await client.connect();
     
-    // Получаем клиентов куратора (только базовые поля без PII)
+    // Получаем клиентов куратора (включая телефон для отображения куратору)
     const result = await client.query(
-      `SELECT id, name, updated_at 
+      `SELECT id, name, phone_normalized, updated_at 
        FROM clients 
        WHERE curator_id = $1 
        ORDER BY updated_at ASC`,

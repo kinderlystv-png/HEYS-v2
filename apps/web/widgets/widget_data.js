@@ -448,8 +448,8 @@
     
     _getOptimum() {
       // 🔬 TDEE v1.1.0: Использование консолидированного модуля
-      const day = this._getDay();
-      const prof = this._getProfile();
+      const day = this._getDay() || {};
+      const prof = this._getProfile() || {};
       
       // Если есть модуль TDEE — используем его
       if (HEYS.TDEE?.calculate) {
@@ -531,8 +531,7 @@
           } else if (HEYS.Metabolic?.calculateCrashRisk) {
             crashData = HEYS.Metabolic.calculateCrashRisk(today, profile, history);
           }
-        } catch (calcError) {
-          console.warn('[getCrashRiskData] calculateCrashRisk error:', calcError);
+        } catch (_calcError) {
           crashData = null;
         }
         
@@ -583,8 +582,7 @@
           // Sparkline: история риска за 7 дней
           riskHistory: this._calculateRiskHistory(history, profile)
         };
-      } catch (e) {
-        console.error('[getCrashRiskData] Error:', e);
+      } catch (_e) {
         return {
           risk: 0,
           level: 'low',
@@ -605,7 +603,7 @@
      * @param {Object} profile - профиль пользователя
      * @returns {Array} [{ date, risk, level }]
      */
-    _calculateRiskHistory(history, profile) {
+    _calculateRiskHistory(history, _profile) {
       const result = [];
       
       try {
@@ -647,9 +645,7 @@
             level
           });
         }
-      } catch (e) {
-        // В случае ошибки возвращаем пустой массив
-        console.warn('[getCrashRiskData] Error calculating risk history:', e);
+      } catch (_e) {
         return [];
       }
       

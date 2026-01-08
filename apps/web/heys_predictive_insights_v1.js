@@ -264,7 +264,9 @@
     
     return {
       total: all.length,
-      avgImpactScore: Math.round(all.reduce((s, m) => s + m.impactScore, 0) / all.length * 100) / 100,
+      avgImpactScore: all.length > 0 
+        ? Math.round(all.reduce((s, m) => s + m.impactScore, 0) / all.length * 100) / 100 
+        : 0,
       byPriority,
       byCategory,
       byActionability
@@ -1323,6 +1325,28 @@
     const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0);
     
     const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    return isNaN(slope) ? 0 : slope;
+  }
+
+  /**
+   * Рассчитать линейный тренд по точкам (x, y)
+   * Используется для точного прогноза по датам
+   * @param {Array<{x: number, y: number}>} points
+   * @returns {number} наклон (slope)
+   */
+  function calculateLinearRegression(points) {
+    if (points.length < 2) return 0;
+    
+    const n = points.length;
+    const sumX = points.reduce((a, p) => a + p.x, 0);
+    const sumY = points.reduce((a, p) => a + p.y, 0);
+    const sumXY = points.reduce((a, p) => a + p.x * p.y, 0);
+    const sumX2 = points.reduce((a, p) => a + p.x * p.x, 0);
+    
+    const denominator = (n * sumX2 - sumX * sumX);
+    if (denominator === 0) return 0;
+
+    const slope = (n * sumXY - sumX * sumY) / denominator;
     return isNaN(slope) ? 0 : slope;
   }
 
@@ -2803,9 +2827,19 @@
       };
     }
     
+    // Вспомогательная функция для подготовки точек (x = дни от начала)
+    const getPoints = (data) => {
+      if (data.length < 2) return [];
+      const startTime = new Date(data[0].date).getTime();
+      return data.map(d => ({
+        x: (new Date(d.date).getTime() - startTime) / (86400000), // дни
+        y: d.weight
+      }));
+    };
+
     // Raw тренд
-    const rawWeights = weightData.map(d => d.weight);
-    const rawTrend = calculateTrend(rawWeights);
+    const rawPoints = getPoints(weightData);
+    const rawTrend = calculateLinearRegression(rawPoints);
     
     // Clean тренд (исключаем дни с задержкой воды из-за цикла)
     const cleanData = weightData.filter(d => {
@@ -2814,10 +2848,14 @@
       return d.cycleDay > 7 || d.cycleDay === null;
     });
     
-    const cleanWeights = cleanData.map(d => d.weight);
-    const cleanTrend = cleanWeights.length >= 3 ? calculateTrend(cleanWeights) : rawTrend;
+    const cleanPoints = getPoints(cleanData); // Пересчитываем X от первой 'чистой' даты или глобально?
+    // Лучше считать X относительно ОДНОЙ точки отсчета, если мы хотим сравнивать
+    // Но slope инвариантен к сдвигу X.
+    // Однако, если cleanData начинается позже, x[0] будет 0. Это нормально для slope.
     
-    const currentWeight = rawWeights[rawWeights.length - 1];
+    const cleanTrend = cleanPoints.length >= 3 ? calculateLinearRegression(cleanPoints) : rawTrend;
+    
+    const currentWeight = weightData[weightData.length - 1].weight; // Берем последний вес из отсортированного массива
     const goalWeight = profile?.weightGoal;
     
     // Прогноз на неделю
@@ -6843,19 +6881,64 @@
    * Empty State — нет данных
    */
   function EmptyState({ daysAnalyzed, minRequired }) {
-    const progress = Math.round((daysAnalyzed / minRequired) * 100);
+    const progress = Math.min(100, Math.round((daysAnalyzed / minRequired) * 100));
+    const daysLeft = Math.max(0, minRequired - daysAnalyzed);
+    
+    // Мотивирующие сообщения в зависимости от прогресса
+    const getMessage = () => {
+      if (daysAnalyzed === 0) return 'Начните вести дневник — и аналитика заработает!';
+      if (progress < 50) return 'Отличное начало! Продолжайте вести дневник';
+      if (progress < 100) return 'Почти готово! Осталось совсем немного';
+      return 'Данные собраны! Анализируем...';
+    };
     
     return h('div', { className: 'insights-empty' },
-      h('div', { className: 'insights-empty__icon' }, '📊'),
-      h('div', { className: 'insights-empty__title' }, 'Собираем данные...'),
-      h('div', { className: 'insights-empty__desc' },
-        `Нужно минимум ${minRequired} дня с данными для анализа. Сейчас: ${daysAnalyzed}`
-      ),
+      // Анимированная иконка
+      h('div', { className: 'insights-empty__icon' }, '🔮'),
+      
+      // Заголовок
+      h('div', { className: 'insights-empty__title' }, 'Собираем данные для аналитики'),
+      
+      // Подзаголовок с мотивацией
+      h('div', { className: 'insights-empty__subtitle' }, getMessage()),
+      
+      // Прогресс-бар
       h('div', { className: 'insights-empty__progress' },
-        h('div', { className: 'insights-empty__bar' },
-          h('div', { className: 'insights-empty__fill', style: { width: `${progress}%` } })
+        h('div', { 
+          className: 'insights-empty__progress-fill',
+          style: { width: `${progress}%` }
+        })
+      ),
+      
+      // Статистика
+      h('div', { className: 'insights-empty__stats' },
+        h('div', { style: { textAlign: 'center' } },
+          h('div', { className: 'insights-empty__stat-value insights-empty__stat-value--primary' }, daysAnalyzed),
+          h('div', { className: 'insights-empty__stat-label' }, 'дней есть')
         ),
-        h('div', { className: 'insights-empty__label' }, `${progress}% готово`)
+        h('div', { style: { textAlign: 'center' } },
+          h('div', { className: 'insights-empty__stat-value insights-empty__stat-value--secondary' }, daysLeft),
+          h('div', { className: 'insights-empty__stat-label' }, 'осталось')
+        )
+      ),
+      
+      // Что будет доступно
+      h('div', { className: 'insights-empty__features' },
+        h('div', { className: 'insights-empty__features-title' }, '✨ Скоро будет доступно:'),
+        h('div', { className: 'insights-empty__feature-list' },
+          h('div', { className: 'insights-empty__feature-item' },
+            h('span', null, '📊'), 'Статус здоровья 0-100'
+          ),
+          h('div', { className: 'insights-empty__feature-item' },
+            h('span', null, '🧬'), 'Метаболический фенотип'
+          ),
+          h('div', { className: 'insights-empty__feature-item' },
+            h('span', null, '💡'), 'Персональные рекомендации'
+          ),
+          h('div', { className: 'insights-empty__feature-item' },
+            h('span', null, '📈'), 'Прогнозы и паттерны'
+          )
+        )
       )
     );
   }
@@ -7152,21 +7235,164 @@
 
   // === INSIGHTS TAB — Полноэкранная вкладка ===
   // Секции отсортированы по приоритету: CRITICAL → HIGH → MEDIUM → LOW
+  // 🎭 Демо-данные для показа тура новым пользователям
+  const DEMO_INSIGHTS = {
+    available: true,
+    isDemo: true,
+    daysAnalyzed: 7,
+    daysWithData: 7,
+    confidence: 85,
+    isFullAnalysis: false,
+    patterns: [
+      {
+        id: 'demo_meal_timing',
+        type: 'timing',
+        name: 'Оптимальное время приёмов',
+        priority: 'HIGH',
+        confidence: 0.82,
+        impact: 0.7,
+        desc: 'Ваши завтраки в 8-9 утра идеально синхронизированы с циркадными ритмами',
+        recommendation: 'Продолжайте завтракать в это время — метаболизм работает оптимально',
+        trend: 'stable',
+        science: { pmid: '9331550', category: 'TIMING' }
+      },
+      {
+        id: 'demo_protein',
+        type: 'nutrition',
+        name: 'Распределение белка',
+        priority: 'MEDIUM',
+        confidence: 0.75,
+        impact: 0.6,
+        desc: 'Белок распределён равномерно: ~30г на приём',
+        recommendation: 'Отличный баланс! Это оптимально для синтеза мышечного белка',
+        trend: 'improving',
+        science: { pmid: '23360586', category: 'NUTRITION' }
+      }
+    ],
+    healthScore: {
+      total: 78,
+      trend: 'improving',
+      categories: {
+        nutrition: { score: 82, trend: 'stable' },
+        timing: { score: 75, trend: 'improving' },
+        recovery: { score: 72, trend: 'stable' },
+        activity: { score: 80, trend: 'improving' }
+      }
+    },
+    whatIf: [
+      {
+        id: 'demo_whatif_1',
+        title: '+30 мин ходьбы',
+        impact: '+5% к сжиганию',
+        desc: 'Добавьте прогулку после обеда',
+        priority: 'MEDIUM'
+      }
+    ],
+    weightPrediction: {
+      available: true,
+      currentTrend: -0.3,
+      weeklyRate: -0.3,
+      projectedDays: 60,
+      confidence: 0.7
+    },
+    weeklyWrap: {
+      highlights: ['Стабильный режим питания', 'Хороший баланс БЖУ'],
+      improvements: ['Добавьте больше клетчатки'],
+      avgScore: 78
+    }
+  };
+
+  // 🎭 Демо-статус для тура
+  const DEMO_STATUS = {
+    score: 78,
+    level: {
+      id: 'good',
+      label: 'Хорошо',
+      emoji: '✓',
+      color: '#22c55e'
+    },
+    factorScores: {
+      kcal: 85,
+      protein: 80,
+      timing: 70,
+      steps: 75,
+      training: 60,
+      household: 50,
+      sleep: 85,
+      stress: 70,
+      water: 90
+    },
+    categoryScores: {
+      nutrition: { score: 78, label: 'Питание', icon: '🍽️', color: '#22c55e' },
+      activity: { score: 62, label: 'Активность', icon: '🏃', color: '#eab308' },
+      recovery: { score: 77, label: 'Восстановление', icon: '😴', color: '#22c55e' },
+      hydration: { score: 90, label: 'Гидратация', icon: '💧', color: '#22c55e' }
+    },
+    topIssues: [
+      { factor: { icon: '🏋️', label: 'Тренировки' }, score: 60 },
+      { factor: { icon: '⏰', label: 'Тайминг' }, score: 70 }
+    ],
+    topActions: [
+      'Добавьте тренировку',
+      'Оптимизируйте время приёмов'
+    ]
+  };
+
   function InsightsTab({ lsGet, profile, pIndex, optimum, selectedDate, dayData, dayTot, normAbs, waterGoal }) {
     const [activeTab, setActiveTab] = useState('today');
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [priorityFilter, setPriorityFilter] = useState(null); // null = показать всё
     
+    // 🎯 State для отслеживания прохождения тура (нужен для перерисовки после завершения)
+    // 🔧 v1.13 FIX: Проверяем ОБА источника — scoped (HEYS.store) И unscoped (localStorage)
+    const [insightsTourCompleted, setInsightsTourCompleted] = useState(() => {
+      try {
+        // 1. Сначала проверяем scoped хранилище (для существующих пользователей)
+        const scopedValue = HEYS.store?.get?.('heys_insights_tour_completed');
+        if (scopedValue === true || scopedValue === 'true') return true;
+        // 2. Затем fallback на unscoped localStorage
+        return localStorage.getItem('heys_insights_tour_completed') === 'true';
+      } catch { return true; }
+    });
+    
+    // Слушаем изменения localStorage для переключения из демо-режима
+    useEffect(() => {
+      const handleStorageChange = () => {
+        try {
+          // 🔧 v1.13: Проверяем оба источника
+          const scopedValue = HEYS.store?.get?.('heys_insights_tour_completed');
+          const unscopedValue = localStorage.getItem('heys_insights_tour_completed') === 'true';
+          const completed = scopedValue === true || scopedValue === 'true' || unscopedValue;
+          if (completed !== insightsTourCompleted) {
+            console.log('[InsightsTab] Tour status changed:', completed, '(scoped:', scopedValue, ', unscoped:', unscopedValue, ')');
+            setInsightsTourCompleted(completed);
+          }
+        } catch { /* игнорируем */ }
+      };
+      
+      // Слушаем storage event (work inside same tab thanks to dispatch in InsightsTour)
+      window.addEventListener('storage', handleStorageChange);
+      
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+      };
+    }, [insightsTourCompleted]);
+    
     // Анализ данных
-    const insights = useMemo(() => {
+    const realInsights = useMemo(() => {
       return HEYS.PredictiveInsights.analyze({
         lsGet: lsGet || (window.HEYS?.utils?.lsGet),
         daysBack: activeTab === 'today' ? 7 : 30
       });
     }, [lsGet, activeTab, selectedDate]);
     
-    // 🆕 Расчёт статуса 0-100
+    // 🎭 Используем демо-данные если тур не пройден И реальных данных нет
+    const showDemoMode = !insightsTourCompleted && !realInsights.available;
+    const insights = showDemoMode ? DEMO_INSIGHTS : realInsights;
+    
+    // 🆕 Расчёт статуса 0-100 (или демо)
     const status = useMemo(() => {
+      if (showDemoMode) return DEMO_STATUS;
       if (!HEYS.Status?.calculateStatus) return null;
       return HEYS.Status.calculateStatus({
         dayData: dayData || {},
@@ -7175,13 +7401,24 @@
         normAbs: normAbs || {},
         waterGoal: waterGoal || 2000
       });
-    }, [dayData, profile, dayTot, normAbs, waterGoal]);
+    }, [dayData, profile, dayTot, normAbs, waterGoal, showDemoMode]);
     
     // Получить все метрики для фильтров
     const allMetrics = useMemo(() => getAllMetricsByPriority(), []);
     
-    // EmptyState если мало данных
-    if (!insights.available) {
+    // 🎯 Автозапуск мини-тура при первом посещении Insights
+    useEffect(() => {
+      // Даём время на рендер секций перед запуском тура
+      const timer = setTimeout(() => {
+        if (HEYS.InsightsTour?.shouldShow?.() && HEYS.InsightsTour.start) {
+          HEYS.InsightsTour.start();
+        }
+      }, 800);
+      return () => clearTimeout(timer);
+    }, []); // Только при первом монтировании
+    
+    // EmptyState если мало данных И тур уже пройден
+    if (!insights.available && insightsTourCompleted) {
       return h('div', { className: 'insights-tab' },
         h('div', { className: 'insights-tab__hero' },
           h('div', { className: 'insights-tab__header' },
@@ -7190,8 +7427,8 @@
         ),
         h('div', { className: 'insights-tab__content' },
           h(EmptyState, { 
-            daysAnalyzed: insights.daysAnalyzed || insights.daysWithData || 0,
-            minRequired: insights.minDaysRequired || 3
+            daysAnalyzed: realInsights.daysAnalyzed || realInsights.daysWithData || 0,
+            minRequired: realInsights.minDaysRequired || 3
           })
         )
       );
@@ -7227,6 +7464,31 @@
           }, '📊 Неделя')
         ),
         
+        // 🎯 Demo Mode Banner — показываем только в демо режиме
+        showDemoMode && h('div', { 
+          className: 'insights-tab__demo-banner',
+          style: {
+            background: 'linear-gradient(135deg, rgba(138, 43, 226, 0.15), rgba(75, 0, 130, 0.1))',
+            border: '1px solid rgba(138, 43, 226, 0.3)',
+            borderRadius: '12px',
+            padding: '12px 16px',
+            marginBottom: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '13px',
+            color: 'var(--color-text-secondary)'
+          }
+        },
+          h('span', { style: { fontSize: '20px' } }, '✨'),
+          h('div', null,
+            h('div', { style: { fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '2px' } }, 
+              'Демо-режим аналитики'
+            ),
+            h('div', null, 'Это пример данных. После 3 дней использования появится ваша реальная статистика')
+          )
+        ),
+        
         // Priority Filter (compact)
         h('div', { className: 'insights-tab__filters' },
           h('button', {
@@ -7254,7 +7516,10 @@
         // ═══════════════════════════════════════════════════════════
         
         // L0: Status 0-100 Card (CRITICAL — показывается всегда)
-        shouldShowSection('CRITICAL') && h('div', { className: 'insights-tab__section insights-tab__section--critical' },
+        shouldShowSection('CRITICAL') && h('div', { 
+          className: 'insights-tab__section insights-tab__section--critical',
+          id: 'tour-insights-status' // 🎯 Mini-tour target
+        },
           h('div', { className: 'insights-tab__section-badge' },
             h(PriorityBadge, { priority: 'CRITICAL', showLabel: true })
           ),
@@ -7286,7 +7551,10 @@
         ),
         
         // Metabolic Status + Risk (CRITICAL) — собственный заголовок внутри
-        shouldShowSection('CRITICAL') && h('div', { className: 'insights-tab__section insights-tab__section--critical insights-tab__section--no-header' },
+        shouldShowSection('CRITICAL') && h('div', { 
+          className: 'insights-tab__section insights-tab__section--critical insights-tab__section--no-header',
+          id: 'tour-insights-metabolic' // 🎯 Mini-tour target
+        },
           h(MetabolicQuickStatus, {
             lsGet,
             profile,
@@ -7305,7 +7573,10 @@
         // ═══════════════════════════════════════════════════════════
         
         // Predictive Dashboard (HIGH) — собственный заголовок внутри
-        shouldShowSection('HIGH') && h('div', { className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header' },
+        shouldShowSection('HIGH') && h('div', { 
+          className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
+          id: 'tour-insights-prediction' // 🎯 Mini-tour target
+        },
           h(PredictiveDashboard, {
             lsGet,
             profile,
@@ -7314,12 +7585,38 @@
         ),
         
         // Phenotype Card (HIGH) — отдельная expandable карточка
-        shouldShowSection('HIGH') && HEYS.Phenotype?.PhenotypeExpandableCard && h('div', { className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header' },
-          h(HEYS.Phenotype.PhenotypeExpandableCard, { profile })
+        // В демо-режиме показываем placeholder если компонент ещё не загружен
+        shouldShowSection('HIGH') && h('div', { 
+          className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
+          id: 'tour-insights-phenotype' // 🎯 Mini-tour target
+        },
+          HEYS.Phenotype?.PhenotypeExpandableCard
+            ? h(HEYS.Phenotype.PhenotypeExpandableCard, { profile })
+            : showDemoMode && h('div', { 
+                className: 'insights-card',
+                style: { 
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(109, 40, 217, 0.05))',
+                  border: '1px solid rgba(139, 92, 246, 0.2)',
+                  borderRadius: '16px',
+                  padding: '16px',
+                  minHeight: '120px'
+                }
+              },
+                h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' } },
+                  h('span', { style: { fontSize: '20px' } }, '🧬'),
+                  h('span', { style: { fontWeight: '600', color: 'var(--color-text-primary)' } }, 'Метаболический фенотип')
+                ),
+                h('div', { style: { fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: '1.5' } },
+                  'После анализа ваших данных за 7+ дней система определит ваш метаболический тип и даст персональные рекомендации.'
+                )
+              )
         ),
         
         // Advanced Analytics (HIGH) — собственный заголовок внутри
-        shouldShowSection('HIGH') && h('div', { className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header' },
+        shouldShowSection('HIGH') && h('div', { 
+          className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
+          id: 'tour-insights-analytics' // 🎯 Mini-tour target
+        },
           h(AdvancedAnalyticsCard, {
             lsGet,
             profile,
@@ -7329,7 +7626,10 @@
         ),
         
         // Metabolism Section (HIGH) — собственный заголовок внутри
-        shouldShowSection('HIGH') && h('div', { className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header' },
+        shouldShowSection('HIGH') && h('div', { 
+          className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
+          id: 'tour-insights-metabolism' // 🎯 Mini-tour target
+        },
           h(MetabolismSection, {
             lsGet,
             profile,
@@ -7339,7 +7639,10 @@
         ),
         
         // Meal Timing (HIGH) — собственный заголовок внутри
-        shouldShowSection('HIGH') && h('div', { className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header' },
+        shouldShowSection('HIGH') && h('div', { 
+          className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
+          id: 'tour-insights-timing' // 🎯 Mini-tour target
+        },
           h(MealTimingCard, {
             lsGet,
             profile,

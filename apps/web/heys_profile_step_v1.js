@@ -158,12 +158,17 @@
 
   // Расчёт времени до цели
   function calcTimeToGoal(currentWeight, goalWeight, deficitPct) {
-    const diff = Math.abs(goalWeight - currentWeight);
-    if (diff < 0.5) return '✨ Уже на цели!';
+    // Защита от undefined/NaN значений
+    const cw = Number(currentWeight) || 70;
+    const gw = Number(goalWeight) || cw;
+    const dp = Number(deficitPct) || 0;
+    
+    const diff = Math.abs(gw - cw);
+    if (diff < 0.5 || !isFinite(diff)) return '✨ Уже на цели!';
     
     // Безопасная скорость: 0.5-1 кг/нед в зависимости от дефицита
     let weeklyRate;
-    const absPct = Math.abs(deficitPct);
+    const absPct = Math.abs(dp);
     if (absPct >= 15) weeklyRate = 0.8;
     else if (absPct >= 10) weeklyRate = 0.6;
     else weeklyRate = 0.4;
@@ -171,6 +176,7 @@
     const weeks = Math.ceil(diff / weeklyRate);
     const months = Math.floor(weeks / 4);
     
+    if (!isFinite(weeks) || weeks <= 0) return '✨ Уже на цели!';
     if (months >= 12) return `~${Math.floor(months/12)} год${months >= 24 ? 'а' : ''}`;
     if (months > 0) return `~${months} мес`;
     return `~${weeks} нед`;
@@ -424,8 +430,17 @@
         }
       }
       
+      // 💡 Для новых клиентов — используем имя введённое куратором при создании
+      // Читаем напрямую из localStorage (без scope), т.к. auth пишет туда без namespace
+      let pendingName = '';
+      try {
+        const raw = localStorage.getItem('heys_pending_client_name');
+        pendingName = raw ? JSON.parse(raw) : '';
+      } catch (e) {}
+      const firstName = profile.firstName || pendingName || '';
+      
       return {
-        firstName: profile.firstName || '',
+        firstName,
         gender: profile.gender || 'Мужской',
         birthDay,
         birthMonth,
@@ -457,6 +472,11 @@
       // Вычисляем возраст
       profile.age = calcAgeFromBirthDate(birthDate);
       lsSet('heys_profile', profile);
+      
+      // 💡 Очищаем pending name от куратора после сохранения профиля
+      if (lsGet('heys_pending_client_name', '')) {
+        localStorage.removeItem('heys_pending_client_name');
+      }
     }
   });
 
@@ -1051,6 +1071,14 @@
       updatedProfile.age
     );
     lsSet('heys_norms', { ...norms, updatedAt: Date.now() });
+    
+    // ⚠️ v1.15 FIX: Инвалидируем кэш HEYS.store.memory
+    // т.к. lsSet пишет в localStorage напрямую, но tryStartOnboardingTour читает из HEYS.store (который кэширует)
+    if (HEYS.store && typeof HEYS.store.invalidate === 'function') {
+      HEYS.store.invalidate('heys_profile');
+      HEYS.store.invalidate('heys_norms');
+      console.log('[saveProfileFromStepData] 🔄 Cache invalidated for heys_profile & heys_norms');
+    }
 
     // НЕ записываем вес в данные дня при пропуске!
     // Чек-ин должен спросить вес при следующем запуске
@@ -1120,8 +1148,10 @@
     // Имя из профиля (уже сохранено на предыдущем шаге)
     const firstName = profile.firstName || stepData['profile-personal']?.firstName || '';
     
-    // Расчёт прогноза
-    const weightDiff = (profile.weightGoal || 70) - (profile.weight || 70);
+    // Расчёт прогноза с защитой от NaN
+    const weight = Number(profile.weight) || 70;
+    const weightGoal = Number(profile.weightGoal) || weight;
+    const weightDiff = weightGoal - weight;
     const diffSign = weightDiff > 0 ? '+' : '';
     const weeks = calcTimeToGoal(profile.weight, profile.weightGoal, profile.deficitPctTarget);
     
@@ -1270,12 +1300,30 @@
           saveProfileFromStepData(stepData);
           console.log('[WelcomeStep] Profile saved (skipped checkin)');
           
+          // 🆕 v1.9.1: Помечаем что чек-ин пропущен — чтобы не показывать повторно
+          sessionStorage.setItem('heys_morning_checkin_done', 'true');
+          console.log('[WelcomeStep] ✅ Set heys_morning_checkin_done = true (skip flag)');
+          
           // Закрываем модалку через onClose из контекста
           if (onClose) {
             onClose();
           } else if (window.HEYS?.StepModal?.hide) {
             window.HEYS.StepModal.hide();
           }
+          
+          // 🆕 v1.9: Запускаем онбординг тур после пропуска чекина
+          // Небольшая задержка чтобы модалка закрылась
+          setTimeout(() => {
+            console.log('[WelcomeStep] 🎓 Triggering onboarding tour after skip checkin');
+            if (window.HEYS?._tour?.tryStart) {
+              window.HEYS._tour.tryStart();
+            } else {
+              // Fallback через событие
+              window.dispatchEvent(new CustomEvent('heys:checkin-complete', {
+                detail: { type: 'skipped', source: 'welcome-step' }
+              }));
+            }
+          }, 300);
         }
       }, 'Пока пропустить и ознакомиться с приложением')
     );
@@ -1314,7 +1362,9 @@
     const norms = lsGet('heys_norms', {});
     
     const firstName = profile.firstName || '';
-    const weightDiff = profile.weightGoal - profile.weight;
+    const weight = Number(profile.weight) || 70;
+    const weightGoal = Number(profile.weightGoal) || weight;
+    const weightDiff = weightGoal - weight;
     const diffSign = weightDiff > 0 ? '+' : '';
     const weeks = calcTimeToGoal(profile.weight, profile.weightGoal, profile.deficitPctTarget);
     

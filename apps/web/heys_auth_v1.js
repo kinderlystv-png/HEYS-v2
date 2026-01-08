@@ -237,6 +237,7 @@
 
       const clientId = vRow.client_id;
       const sessionToken = vRow.session_token;
+      const clientName = vRow.name || vRow.client_name || ''; // Имя введённое куратором при создании
       
       if (!clientId || !sessionToken) {
         registerFail('login', phoneNorm);
@@ -254,8 +255,15 @@
 
       // 🔐 Сохраняем session_token для безопасных RPC вызовов
       U.lsSet('heys_session_token', sessionToken);
+      
+      // 💡 Сохраняем имя клиента для предзаполнения профиля
+      // ⚠️ v1.15 FIX: Используем localStorage.setItem напрямую (без namespace),
+      // т.к. heys_profile_step_v1.js читает через localStorage.getItem('heys_pending_client_name')
+      if (clientName) {
+        localStorage.setItem('heys_pending_client_name', JSON.stringify(clientName));
+      }
 
-      return { ok: true, clientId, sessionToken };
+      return { ok: true, clientId, sessionToken, clientName };
     } catch (e) {
       registerFail('login', phoneNorm);
       return {

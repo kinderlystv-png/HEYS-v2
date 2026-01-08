@@ -190,8 +190,9 @@
         if(cid) {
           // Передаём scoped key в облако (с clientId), чтобы ключ совпадал при загрузке
           // sk уже содержит heys_<clientId>_<key>
-          // Не отправлять в облако если v не объект (например, строка совпадает с ключом)
-          if (typeof v !== 'object' || v === null) {
+          // Сохраняем любые значения: объекты, массивы, boolean, числа, строки
+          // (не сохраняем только undefined и функции)
+          if (v === undefined || typeof v === 'function') {
             return;
           }
           global.HEYS.saveClientKey(cid, sk, v);

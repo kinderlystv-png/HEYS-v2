@@ -607,26 +607,34 @@
   
   // 🌅 Циркадные множители — метаболизм меняется в течение дня
   // Утром еда усваивается лучше (×0.9), ночью хуже (×1.2)
+  // v53: смягчены ночные штрафы (т.к. calcKcalScore уже штрафует за ночь)
   const CIRCADIAN_MEAL_BONUS = {
     morning:   { from: 6, to: 10, bonus: 3, desc: '🌅 Утро — лучшее время' },
     midday:    { from: 10, to: 14, bonus: 2, desc: '🌞 Обеденное время' },
     afternoon: { from: 14, to: 18, bonus: 0, desc: 'Дневное время' },
     evening:   { from: 18, to: 21, bonus: 0, desc: 'Вечер' },
-    lateEvening: { from: 21, to: 23, bonus: -2, desc: '⏰ Поздний вечер' },
-    night:     { from: 23, to: 6, bonus: -5, desc: '🌙 Ночь' }
+    lateEvening: { from: 21, to: 23, bonus: -1, desc: '⏰ Поздний вечер' },  // v53: было -2
+    night:     { from: 23, to: 6, bonus: -3, desc: '🌙 Ночь' }  // v53: было -5, смягчено т.к. calcKcalScore уже штрафует
   };
   
   // 🥤 Жидкая пища — быстрый всплеск инсулина (Flood-Obbagy 2009)
   // Пик на 35% выше, но волна короче. Для качества еды — это минус.
+  // v53: убраны полезные кисломолочные (кефир, ряженка, айран, тан) — у них белок + низкий GI
   const LIQUID_FOOD_PATTERNS = [
     /сок\b/i, /\bсока\b/i, /\bсоки\b/i,
     /смузи/i, /коктейль/i, /shake/i,
-    /кефир/i, /ряженка/i, /айран/i, /тан\b/i,
+    // v53: кефир, ряженка, айран, тан убраны — это полезные продукты!
     /йогурт.*питьевой/i, /питьевой.*йогурт/i,
     /бульон/i, /суп.*пюре/i, /крем.*суп/i,
     /кола/i, /пепси/i, /фанта/i, /спрайт/i, /лимонад/i, /газировка/i,
     /энергетик/i, /energy/i,
     /протеин.*коктейль/i, /protein.*shake/i
+  ];
+  // v53: Добавлен список ИСКЛЮЧЕНИЙ — полезные жидкие продукты (белок, низкий GI)
+  const HEALTHY_LIQUID_PATTERNS = [
+    /кефир/i, /ряженка/i, /айран/i, /тан\b/i,
+    /молоко/i, /простокваша/i, /варенец/i,
+    /протеин/i, /protein/i  // Протеиновые коктейли — полезны!
   ];
   const LIQUID_FOOD_PENALTY = 5; // -5 баллов за преобладание жидких калорий
   
@@ -640,14 +648,26 @@
     veryHigh: { max: Infinity, bonus: -4, desc: 'Очень высокий ответ' }
   };
   
-  // Хелпер: проверка является ли продукт жидким
+  // Хелпер: проверка является ли продукт жидким (со штрафом)
+  // v53: добавлена проверка HEALTHY_LIQUID_PATTERNS — полезные жидкие продукты НЕ штрафуются
   function isLiquidFood(productName, category) {
     if (!productName) return false;
     const name = String(productName);
     const cat = String(category || '');
     
+    // v53: Сначала проверяем исключения — полезные жидкие продукты
+    for (const pattern of HEALTHY_LIQUID_PATTERNS) {
+      if (pattern.test(name)) return false;  // Это полезный продукт, не штрафуем!
+    }
+    
     // Проверяем категорию
     if (['Напитки', 'Соки', 'Молочные напитки'].includes(cat)) {
+      // v53: Для категории "Молочные напитки" проверяем исключения ещё раз
+      if (cat === 'Молочные напитки') {
+        for (const pattern of HEALTHY_LIQUID_PATTERNS) {
+          if (pattern.test(name)) return false;
+        }
+      }
       return true;
     }
     
@@ -1105,34 +1125,68 @@
     }
   }
 
-  function calcKcalScore(kcal, mealType, optimum, timeStr) {
+  /**
+   * calcKcalScore v2.0 — оценка калорийности приёма с учётом тренировочного контекста
+   * 
+   * @param {number} kcal - калории приёма
+   * @param {string} mealType - тип приёма (не влияет на оценку)
+   * @param {number} optimum - дневная норма (для контекста)
+   * @param {string} timeStr - время приёма (HH:MM)
+   * @param {Object} activityContext - контекст тренировки (опционально)
+   * 
+   * 🔬 Научное обоснование:
+   * - Ivy & Kuo 1998: После тренировки повышенная утилизация нутриентов
+   * - Burke 2017: Анаболическое окно расширяет допустимые калории на 50-100%
+   * - Atherton & Smith 2012: Muscle protein synthesis требует субстрат
+   */
+  function calcKcalScore(kcal, mealType, optimum, timeStr, activityContext = null) {
     // === ОЦЕНКА НЕ ЗАВИСИТ ОТ ТИПА ПРИЁМА! ===
-    // Только абсолютные значения и время
+    // Только абсолютные значения, время и тренировочный контекст
     let points = 30;
     let ok = true;
     const issues = [];
     
+    // === Training Context Analysis ===
+    // Определяем контекст тренировки для корректировки лимитов
+    const hasTrainingContext = activityContext && 
+      (activityContext.type === 'peri' || activityContext.type === 'post' || activityContext.type === 'pre');
+    
+    // 🔬 После тренировки допускаем большие приёмы:
+    // - peri (во время): +60% к лимиту (мышцы активно потребляют)
+    // - post (после): +40% к лимиту (анаболическое окно)  
+    // - pre (до): +20% к лимиту (энергия для тренировки)
+    const kcalBoost = hasTrainingContext
+      ? (activityContext.type === 'peri' ? 1.6 : 
+         activityContext.type === 'post' ? 1.4 : 1.2)
+      : 1.0;
+    
+    const adjustedLimit = 800 * kcalBoost;
+    const adjustedOvereatLimit = 1000 * kcalBoost;
+    
     // === 1. Проверка абсолютных лимитов ===
-    // Любой приём > 800 ккал — это много
-    if (kcal > 800) {
-      const excess = (kcal - 800) / 200; // Каждые 200 ккал сверх = -5
+    // С учётом тренировочного контекста лимиты расширяются
+    if (kcal > adjustedLimit) {
+      const excess = (kcal - adjustedLimit) / 200; // Каждые 200 ккал сверх = -5
       const penalty = Math.min(15, Math.round(excess * 5));
       points -= penalty;
       ok = false;
-      issues.push('много ккал');
+      issues.push(hasTrainingContext ? 'много для восстановления' : 'много ккал');
     }
-    // Приём > 1000 ккал — переедание
-    if (kcal > 1000) {
+    // Переедание — даже с учётом тренировки
+    if (kcal > adjustedOvereatLimit) {
       points -= 10; // Дополнительный штраф
       issues.push('переедание');
     }
     
     // === 2. Штраф за ночные приёмы ===
+    // 🔬 Ночные штрафы отменяются после тренировки (nightPenaltyOverride)
+    const nightPenaltyOverride = activityContext?.nightPenaltyOverride === true;
+    
     const parsed = parseTime(timeStr || '');
-    if (parsed) {
+    if (parsed && !nightPenaltyOverride) {
       const hour = parsed.hh;
       
-      // 23:00-05:00 — ночное время (сдвинули с 22:00)
+      // 23:00-05:00 — ночное время
       if (hour >= 23 || hour < 5) {
         // Ночью приём > 300 ккал — небольшой штраф
         if (kcal > 300) {
@@ -1156,30 +1210,80 @@
       }
     }
     
-    return { points: Math.max(0, points), ok, issues };
+    // === 3. Бонус за правильный тайминг после тренировки ===
+    // 🔬 Правильный размер приёма в анаболическом окне = бонус
+    if (hasTrainingContext && kcal >= 300 && kcal <= adjustedLimit) {
+      points += 2; // Бонус за хороший приём после тренировки
+    }
+    
+    return { 
+      points: Math.max(0, Math.min(32, points)), // Max 32 с бонусом
+      ok, 
+      issues,
+      trainingContextApplied: hasTrainingContext 
+    };
   }
 
-  function calcMacroScore(prot, carbs, fat, kcal, mealType, timeStr) {
+  /**
+   * calcMacroScore v2.0 — оценка макросов с учётом тренировочного контекста
+   * 
+   * @param {number} prot - белок в граммах
+   * @param {number} carbs - углеводы в граммах
+   * @param {number} fat - жиры в граммах
+   * @param {number} kcal - калории приёма
+   * @param {string} mealType - тип приёма (не влияет на оценку)
+   * @param {string} timeStr - время приёма (HH:MM)
+   * @param {Object} activityContext - контекст тренировки (опционально)
+   * 
+   * 🔬 Научное обоснование:
+   * - Phillips 2011 (PMID: 21289204): Оптимум белка после тренировки 25-40г
+   * - Morton 2018: Muscle protein synthesis продолжается 24-48ч после тренировки
+   * - Aragon 2013: Повышенные требования к белку в день тренировки
+   */
+  function calcMacroScore(prot, carbs, fat, kcal, mealType, timeStr, activityContext = null) {
     // === ОЦЕНКА НЕ ЗАВИСИТ ОТ ТИПА ПРИЁМА! ===
     const ideal = IDEAL_MACROS_UNIFIED;
     let points = 20; // Базовые баллы (из 25)
     let proteinOk = true;
     const issues = [];
     
-    // Минимум белка зависит от калорийности приёма, НЕ от типа!
-    const minProt = kcal > 200 ? ideal.minProtNormal : ideal.minProtLight;
+    // === Training Context Analysis ===
+    const hasTrainingContext = activityContext && 
+      (activityContext.type === 'peri' || activityContext.type === 'post' || activityContext.type === 'pre');
+    
+    // 🔬 После тренировки повышенные требования к белку:
+    // - post/peri: нужно минимум 25г белка для оптимального MPS
+    // - pre: стандартные требования
+    // - Также снимаем штраф за "много белка" — после тренировки это хорошо
+    const trainingMinProt = (activityContext?.type === 'post' || activityContext?.type === 'peri') 
+      ? 25 : ideal.minProtNormal;
+    
+    // v53: Снижен порог штрафа за белок с 300 до 150 ккал
+    // Это важно: нельзя есть 250 ккал чистого сахара без штрафа
+    const minProt = kcal > 200 
+      ? (hasTrainingContext ? trainingMinProt : ideal.minProtNormal) 
+      : ideal.minProtLight;
+      
     if (prot >= minProt) {
       points += 5; // ✅ Бонус за достаточный белок
-    } else if (kcal > 300) {
-      // Штраф за недостаток белка только если приём существенный (>300 ккал)
-      points -= 5; // Смягчённый штраф (было -10)
+      // 🔬 Дополнительный бонус за белок в анаболическом окне
+      if (hasTrainingContext && prot >= 25) {
+        points += 2; // Бонус за правильный белок после тренировки
+      }
+    } else if (kcal > 150) {  // v53: было 300, теперь 150
+      // Штраф за недостаток белка для приёмов >150 ккал
+      // Исключение: очень маленькие приёмы (кофе с молоком) не штрафуются
+      const proteinPenalty = hasTrainingContext ? 7 : 5; // Более строгий штраф после тренировки
+      points -= proteinPenalty;
       proteinOk = false;
-      issues.push('мало белка');
+      issues.push(hasTrainingContext ? 'мало белка для восстановления' : 'мало белка');
     }
     
-    // Слишком много белка (>50г за приём) — неоптимально для усвоения
-    if (prot > 50) {
-      points -= 3;
+    // v53: Смягчён штраф за много белка — зависит от контекста
+    // 🔬 После тренировки до 80г белка за приём — это нормально
+    const maxProtThreshold = hasTrainingContext ? 80 : 60;
+    if (prot > maxProtThreshold) {
+      points -= 2;
       issues.push('много белка');
     }
     
@@ -1191,39 +1295,189 @@
       points -= Math.min(10, Math.round(deviation * 15)); // max -10
       
       // Штраф за много углеводов вечером/ночью
+      // 🔬 Снимается после интенсивной тренировки — нужно восполнить гликоген
+      const nightCarbsAllowed = activityContext?.type === 'post' && activityContext?.trainingRef?.intensity === 'high';
       const parsed = parseTime(timeStr || '');
-      if (parsed && parsed.hh >= 20 && carbPct > 0.50) {
+      if (parsed && parsed.hh >= 20 && carbPct > 0.50 && !nightCarbsAllowed) {
         points -= 5;
         issues.push('углеводы вечером');
       }
     }
     
-    return { points: Math.max(0, Math.min(25, points)), proteinOk, issues };
+    return { 
+      points: Math.max(0, Math.min(27, points)), // Max 27 с бонусами
+      proteinOk, 
+      issues,
+      trainingContextApplied: hasTrainingContext
+    };
   }
 
-  function calcCarbQuality(simple, complex) {
+  /**
+   * 🧬 Адаптивный расчёт качества углеводов v2.0
+   * 
+   * Научное обоснование:
+   * - Brand-Miller 2003: GL (не просто GI!) определяет инсулиновый ответ
+   * - Östman 2001: Лактоза имеет GI ~46, не равна рафинированному сахару
+   * - Jenkins 1981: При низком общем количестве углеводов их качество менее критично
+   * - Holt 1997: Контекст приёма (белок, жиры) замедляет усвоение углеводов
+   * 
+   * @param {number} simple - Простые углеводы (г)
+   * @param {number} complex - Сложные углеводы (г)
+   * @param {Object} context - Контекст приёма для адаптивной оценки
+   * @param {number} context.avgGI - Средний ГИ приёма (взвешенный по углеводам)
+   * @param {number} context.mealGL - Гликемическая нагрузка приёма
+   * @param {number} context.protein - Белок в приёме (г)
+   * @param {number} context.fat - Жиры в приёме (г)
+   * @param {number} context.fiber - Клетчатка в приёме (г)
+   * @param {boolean} context.hasDairy - Есть ли молочные продукты
+   * @returns {Object} { points, simpleRatio, ok, adjustments }
+   */
+  function calcCarbQuality(simple, complex, context = {}) {
     const total = simple + complex;
     const simpleRatio = safeRatio(simple, total, 0.5);
     
+    // Распаковываем контекст с безопасными дефолтами
+    const { 
+      avgGI = 50, 
+      mealGL = 10, 
+      protein = 0, 
+      fat = 0, 
+      fiber = 0,
+      hasDairy = false 
+    } = context;
+    
     let points = 15;
     let ok = true;
+    const adjustments = []; // Для дебага и UI
     
+    // === БАЗОВАЯ ОЦЕНКА по simpleRatio ===
+    // Это старая логика — будем корректировать её контекстом
+    let basePoints = 15;
     if (simpleRatio <= 0.30) {
-      points = 15;
+      basePoints = 15;
     } else if (simpleRatio <= 0.50) {
-      points = 10;
-      ok = simpleRatio <= 0.35;
+      basePoints = 10;
     } else if (simpleRatio <= 0.70) {
-      points = 5;
-      ok = false;
+      basePoints = 5;
     } else {
-      points = 0;
-      ok = false;
+      basePoints = 0;
     }
     
-    return { points, simpleRatio, ok };
+    points = basePoints;
+    
+    // === АДАПТИВНЫЕ МОДИФИКАТОРЫ ===
+    
+    // 🔬 Модификатор 1: Малое количество углеводов
+    // При total < 30г влияние качества снижается (научн: Jenkins 1981)
+    // Пример: 14г углеводов из творога — не критично даже если "100% простые"
+    if (total < 10) {
+      // < 10г углеводов — качество практически не важно
+      const boost = Math.round((15 - basePoints) * 0.9); // Восстанавливаем 90% потерянных баллов
+      if (boost > 0) {
+        points += boost;
+        adjustments.push({ factor: 'lowCarbs', boost, reason: `Углеводов мало (${total.toFixed(0)}г)` });
+      }
+    } else if (total < 20) {
+      // 10-20г — качество умеренно важно
+      const boost = Math.round((15 - basePoints) * 0.6);
+      if (boost > 0) {
+        points += boost;
+        adjustments.push({ factor: 'moderateLowCarbs', boost, reason: `Углеводов немного (${total.toFixed(0)}г)` });
+      }
+    } else if (total < 30) {
+      // 20-30г — небольшая компенсация
+      const boost = Math.round((15 - basePoints) * 0.3);
+      if (boost > 0) {
+        points += boost;
+        adjustments.push({ factor: 'mediumCarbs', boost, reason: `Углеводов умеренно (${total.toFixed(0)}г)` });
+      }
+    }
+    
+    // 🔬 Модификатор 2: Низкий ГИ компенсирует "простые"
+    // Лактоза GI~46, фруктоза GI~23 — это не сахар GI~65!
+    // При avgGI < 55 частично восстанавливаем баллы за "простые"
+    if (avgGI < 55 && simpleRatio > 0.30) {
+      // Чем ниже ГИ, тем больше компенсация
+      const giCompensation = avgGI < 40 ? 0.5 : avgGI < 50 ? 0.35 : 0.2;
+      const lostPoints = 15 - basePoints;
+      const boost = Math.round(lostPoints * giCompensation);
+      if (boost > 0) {
+        points += boost;
+        adjustments.push({ factor: 'lowGI', boost, reason: `Низкий ГИ (${avgGI.toFixed(0)}) компенсирует` });
+      }
+    }
+    
+    // 🔬 Модификатор 3: Низкая GL = низкий инсулиновый ответ
+    // GL < 10 = отлично, даже если углеводы "простые" (Brand-Miller 2003)
+    if (mealGL < 10 && simpleRatio > 0.30) {
+      const boost = Math.round((15 - basePoints) * 0.4);
+      if (boost > 0 && !adjustments.find(a => a.factor === 'lowGI')) { // Не дублируем с lowGI
+        points += boost;
+        adjustments.push({ factor: 'lowGL', boost, reason: `Низкая GL (${mealGL.toFixed(1)})` });
+      }
+    }
+    
+    // 🔬 Модификатор 4: Молочные продукты (лактоза ≠ сахар)
+    // Östman 2001: Молочные имеют высокий II, но низкий GI
+    // Лактоза — это дисахарид с GI~46, а не рафинированный сахар
+    if (hasDairy && simpleRatio > 0.50) {
+      const boost = 3; // Фиксированная компенсация за молочные
+      points += boost;
+      adjustments.push({ factor: 'dairy', boost, reason: 'Молочные углеводы (лактоза)' });
+    }
+    
+    // 🔬 Модификатор 5: Белковый контекст замедляет усвоение
+    // Holt 1997: Белок увеличивает время усвоения углеводов
+    // При protein >= 20г качество углеводов менее критично
+    if (protein >= 25 && simpleRatio > 0.30) {
+      const boost = 2;
+      points += boost;
+      adjustments.push({ factor: 'highProtein', boost, reason: `Высокий белок (${protein.toFixed(0)}г) замедляет усвоение` });
+    } else if (protein >= 15 && simpleRatio > 0.50) {
+      const boost = 1;
+      points += boost;
+      adjustments.push({ factor: 'moderateProtein', boost, reason: `Белок (${protein.toFixed(0)}г) смягчает эффект` });
+    }
+    
+    // 🔬 Модификатор 6: Клетчатка замедляет усвоение
+    // Jenkins 1981: Fiber снижает гликемический ответ
+    if (fiber >= 5 && simpleRatio > 0.30) {
+      const boost = 2;
+      points += boost;
+      adjustments.push({ factor: 'highFiber', boost, reason: `Клетчатка (${fiber.toFixed(0)}г) замедляет усвоение` });
+    } else if (fiber >= 2 && simpleRatio > 0.50) {
+      const boost = 1;
+      points += boost;
+      adjustments.push({ factor: 'moderateFiber', boost, reason: 'Клетчатка смягчает эффект' });
+    }
+    
+    // 🔬 Модификатор 7: Жиры замедляют усвоение
+    // Liddle 1986: Жиры замедляют опорожнение желудка → ниже гликемический ответ
+    if (fat >= 10 && simpleRatio > 0.40 && avgGI < 60) {
+      const boost = 1;
+      points += boost;
+      adjustments.push({ factor: 'fatSlowdown', boost, reason: 'Жиры замедляют усвоение углеводов' });
+    }
+    
+    // === НОРМАЛИЗАЦИЯ ===
+    points = Math.max(0, Math.min(15, points)); // Ограничиваем 0-15
+    
+    // OK если:
+    // - simpleRatio <= 35% ИЛИ
+    // - много компенсирующих факторов (получили >= 10 баллов при изначально низкой оценке)
+    ok = simpleRatio <= 0.35 || points >= 10;
+    
+    return { 
+      points, 
+      simpleRatio, 
+      ok,
+      basePoints, // Исходные баллы до адаптации
+      adjustments, // Какие факторы сработали
+      contextUsed: Object.keys(context).length > 0 // Был ли передан контекст
+    };
   }
 
+  // v53: Добавлен контекст — при малом количестве жиров не применяем жёсткие штрафы
   function calcFatQuality(bad, good, trans) {
     const total = bad + good + trans;
     const goodRatio = safeRatio(good, total, 0.5);
@@ -1232,23 +1486,32 @@
     let points = 15;
     let ok = true;
     
+    // v53: Контекстная оценка — если жиров мало (<5г), ratio может быть обманчивым
+    // Пример: 2г плохих + 0г хороших = badRatio 100%, но это всего 2г!
+    const isLowFat = total < 5;
+    
     if (goodRatio >= 0.60) {
       points = 15;
     } else if (goodRatio >= 0.40) {
       points = 10;
     } else {
-      points = 5;
-      ok = false;
+      // v53: При низком количестве жиров — мягче штрафуем
+      points = isLowFat ? 10 : 5;
+      ok = isLowFat ? true : false;
     }
     
     // Штраф за много плохих жиров (> 50%)
-    if (badRatio > 0.50) {
+    // v53: Только если жиров достаточно для значимой оценки
+    if (badRatio > 0.50 && !isLowFat) {
       points -= 5;
       ok = false;
     }
     
-    // Штраф за транс-жиры (> 0.5г)
-    if (trans > 0.5) {
+    // v53: Штраф за транс-жиры — ПРОПОРЦИОНАЛЬНО размеру приёма
+    // Было: абсолютный порог 0.5г (несправедливо для больших порций)
+    // Стало: > 2% от общих жиров ИЛИ > 1г абсолютно
+    const transRatio = total > 0 ? trans / total : 0;
+    if (trans > 1 || (transRatio > 0.02 && trans > 0.3)) {
       points -= 5;
       ok = false;
     }
@@ -1256,25 +1519,59 @@
     return { points: Math.max(0, points), goodRatio, badRatio, ok };
   }
 
+  /**
+   * 🔬 Оценка ГИ и вредности приёма v2.0
+   * 
+   * Научное обоснование:
+   * - Brand-Miller 2003: GI определяет скорость роста глюкозы
+   * - harm — индекс вредности (транс-жиры, сахар, обработка)
+   * 
+   * v54: Нелинейная шкала для harm — экспоненциальный рост штрафа
+   * Логика: harm 5-10 — умеренно вредно, harm 10-30 — очень вредно,
+   * harm 30+ — критически вредно (фастфуд, чипсы)
+   * 
+   * @param {number} avgGI - Средневзвешенный GI приёма
+   * @param {number} avgHarm - Средневзвешенный индекс вреда (0-100)
+   * @returns {Object} { points, ok, harmPenalty }
+   */
   function calcGiHarmScore(avgGI, avgHarm) {
     let points = 15;
     let ok = true;
+    let harmPenalty = 0;
     
+    // === GI оценка (линейная шкала) ===
     if (avgGI <= 55) {
-      points = 15;
+      points = 15; // Low GI — отлично
     } else if (avgGI <= 70) {
-      points = 10;
+      points = 10; // Medium GI — нормально
     } else {
-      points = 5;
+      points = 5;  // High GI — плохо
       ok = false;
     }
     
+    // === НЕЛИНЕЙНАЯ оценка вредности v2.0 ===
+    // Идея: небольшая вредность (5-10) — это нормально, 
+    // но высокая (20+) должна сильно штрафоваться
     if (avgHarm > 5) {
-      points -= Math.min(5, Math.round(avgHarm / 5));
-      ok = avgHarm <= 10;
+      if (avgHarm <= 10) {
+        // Умеренная вредность: линейный штраф (до -2)
+        harmPenalty = Math.round((avgHarm - 5) / 2.5); // 5→0, 7.5→1, 10→2
+      } else if (avgHarm <= 20) {
+        // Заметная вредность: ускоренный штраф (до -5)
+        harmPenalty = 2 + Math.round((avgHarm - 10) / 3.3); // 10→2, 15→3.5, 20→5
+      } else if (avgHarm <= 40) {
+        // Высокая вредность: экспоненциальный рост (до -10)
+        harmPenalty = 5 + Math.round((avgHarm - 20) / 4); // 20→5, 30→7.5, 40→10
+      } else {
+        // Критическая вредность: максимальный штраф
+        harmPenalty = 10 + Math.min(5, Math.round((avgHarm - 40) / 10)); // 40+→10-15
+      }
+      
+      points -= Math.min(15, harmPenalty); // Ограничиваем до -15 (обнуляет points)
+      ok = avgHarm <= 15; // v54: ужесточено с 10 до 15 для ok
     }
     
-    return { points: Math.max(0, points), ok };
+    return { points: Math.max(0, points), ok, harmPenalty };
   }
 
   function getMealQualityScore(meal, mealType, optimum, pIndex, activityContext) {
@@ -1288,10 +1585,25 @@
     
     // GI взвешиваем по УГЛЕВОДАМ (не по граммам!) — для мяса/рыбы будет нейтральный 50
     let gramSum = 0, carbSum = 0, giSum = 0, harmSum = 0;
+    let hasDairy = false; // 🔬 Детекция молочных для адаптивного расчёта
+    
     (meal.items || []).forEach(it => {
       const p = getProductFromItem(it, pIndex) || {};
       const g = +it.grams || 0;
       if (!g) return;
+      
+      // 🔬 Детекция молочных продуктов по имени/категории
+      const name = (p.name || '').toLowerCase();
+      const category = (p.category || '').toLowerCase();
+      if (
+        category.includes('молоч') || category.includes('dairy') ||
+        name.includes('молок') || name.includes('творог') || name.includes('кефир') ||
+        name.includes('йогурт') || name.includes('сметан') || name.includes('сливк') ||
+        name.includes('сыр') || name.includes('ряженк') || name.includes('простокваш') ||
+        name.includes('milk') || name.includes('cheese') || name.includes('yogurt')
+      ) {
+        hasDairy = true;
+      }
       
       // Вычисляем углеводы для взвешивания GI
       const simple100 = +p.simple100 || 0;
@@ -1319,7 +1631,8 @@
     let score = 0;
     const badges = [];
     
-    const kcalScore = calcKcalScore(kcal, mealType, opt, meal.time);
+    // v54: передаём activityContext для учёта тренировки
+    const kcalScore = calcKcalScore(kcal, mealType, opt, meal.time, activityContext);
     score += kcalScore.points;
     if (!kcalScore.ok) badges.push({ type: 'К', ok: false });
     // Бейдж за ночное/позднее время
@@ -1329,13 +1642,36 @@
       badges.push({ type: '⏰', ok: false, label: 'Вечер' });
     }
     
-    const macroScore = calcMacroScore(prot, carbs, fat, kcal, mealType, meal.time);
+    // v54: передаём activityContext для учёта тренировки
+    const macroScore = calcMacroScore(prot, carbs, fat, kcal, mealType, meal.time, activityContext);
     score += macroScore.points;
     if (!macroScore.proteinOk) badges.push({ type: 'Б', ok: false });
     if (macroScore.issues?.includes('углеводы вечером')) badges.push({ type: 'У⬇', ok: false, label: 'Угл вечером' });
     
-    const carbScore = calcCarbQuality(simple, complex);
+    // 🔬 Расчёт GL перед вызовом carbScore (нужно для контекста)
+    const mealGL = calculateMealGL(avgGI, totals.carbs || 0);
+    
+    // 🔬 Адаптивный расчёт качества углеводов с полным контекстом
+    const carbScore = calcCarbQuality(simple, complex, {
+      avgGI,
+      mealGL,
+      protein: prot,
+      fat,
+      fiber: totals.fiber || 0,
+      hasDairy
+    });
     score += carbScore.points;
+    
+    // 🐛 DEBUG: Временное логирование для отладки качества углеводов
+    if (window.HEYS_DEBUG_CARB_SCORE) {
+      console.log('🔬 calcCarbQuality DEBUG:', {
+        mealName: meal.name || 'Приём',
+        simple, complex, total: simple + complex,
+        simpleRatio: (simple / (simple + complex) * 100).toFixed(0) + '%',
+        context: { avgGI: avgGI.toFixed(0), mealGL: mealGL.toFixed(1), protein: prot.toFixed(0), fat: fat.toFixed(0), fiber: (totals.fiber || 0).toFixed(0), hasDairy },
+        result: carbScore
+      });
+    }
     
     const fatScore = calcFatQuality(bad, good, trans);
     score += fatScore.points;
@@ -1358,7 +1694,7 @@
     
     // 🔬 GL-based качество (Brand-Miller 2003)
     // GL = GI × углеводы / 100 — лучший предиктор инсулинового ответа
-    const mealGL = calculateMealGL(avgGI, totals.carbs || 0);
+    // mealGL уже рассчитан выше для carbScore
     const glBonus = getGLQualityBonus(mealGL);
     if (glBonus.bonus !== 0) {
       bonusPoints += glBonus.bonus;
@@ -1551,7 +1887,9 @@
       circadianBonus: circadian.bonus,
       liquidRatio: Math.round(liquidRatio * 100),
       // Activity context
-      activityContext: activityContext || undefined
+      activityContext: activityContext || undefined,
+      // === ДОБАВЛЕНО: carbScore для popup ===
+      carbScore
     };
   }
 
@@ -22847,23 +23185,36 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         };
         
         const calcCarbDisplay = () => {
+          // === ИСПОЛЬЗУЕМ АДАПТИВНЫЙ calcCarbQuality() ИЗ quality.carbScore ===
+          // НЕ дублируем логику — берём готовые баллы с учётом молочки, ГИ, GL и т.д.
           const total = totals.simple + totals.complex;
           const simpleRatio = total > 0 ? totals.simple / total : 0.5;
-          let points = 15;
           const issues = [];
-          if (simpleRatio <= 0.30) {
-            points = 15;
-            issues.push('простые ≤30%: ' + points);
-          } else if (simpleRatio <= 0.50) {
-            points = 10;
-            issues.push('простые 30-50%: ' + points);
-          } else if (simpleRatio <= 0.70) {
-            points = 5;
-            issues.push('простые 50-70%: ' + points);
+          
+          // Используем готовые баллы из основного расчёта
+          const carbScore = quality.carbScore;
+          let points = carbScore?.points ?? 0;
+          
+          // Формируем понятное объяснение на основе adjustments
+          if (carbScore?.adjustments && carbScore.adjustments.length > 0) {
+            carbScore.adjustments.forEach(adj => {
+              if (adj.points !== 0) {
+                issues.push(adj.reason + ': ' + (adj.points > 0 ? '+' : '') + adj.points);
+              }
+            });
           } else {
-            points = 0;
-            issues.push('простые >70%: 0');
+            // Fallback для старых данных без adjustments
+            if (simpleRatio <= 0.30) {
+              issues.push('простые ≤30%: ' + points);
+            } else if (points >= 12) {
+              issues.push('адаптивная оценка: ' + points + ' (молочка/низкий ГИ)');
+            } else if (points >= 8) {
+              issues.push('умеренный бонус: ' + points);
+            } else {
+              issues.push('базовый расчёт: ' + points);
+            }
           }
+          
           return { points, max: 15, issues, simpleRatio: Math.round(simpleRatio * 100) };
         };
         

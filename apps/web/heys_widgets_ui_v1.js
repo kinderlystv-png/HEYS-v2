@@ -89,7 +89,7 @@
   }
   
   // === Widget Card Component ===
-  function WidgetCard({ widget, isEditMode, onRemove, onSettings }) {
+  function WidgetCard({ widget, isEditMode, onRemove, onSettings, index = 0 }) {
     const registry = HEYS.Widgets.registry;
     const widgetType = registry?.getType(widget.type);
     const category = registry?.getCategory(widgetType?.category);
@@ -785,6 +785,7 @@
 
       // Edit mode: компактный бейдж размера (не перекрывает контент)
       isEditMode && React.createElement('div', {
+        id: index === 0 ? 'tour-widgets-size' : undefined,
         className: `widget__size-badge ${isResizing ? 'widget__size-badge--active' : ''}`,
         title: `Размер: ${previewLabel} (${previewCols}×${previewRows})${resizePreview?.overflowRight ? ' — может не поместиться справа' : ''}`,
         onPointerDown: (e) => e.stopPropagation(),
@@ -798,6 +799,7 @@
       
       // Edit Mode: Delete button
       isEditMode && React.createElement('button', {
+        id: index === 0 ? 'tour-widgets-delete' : undefined,
         className: 'widget__delete-btn',
         onPointerDown: (e) => e.stopPropagation(),
         onPointerUp: (e) => e.stopPropagation(),
@@ -808,6 +810,7 @@
       
       // Edit Mode: Settings button (optional)
       isEditMode && widgetType?.settings && React.createElement('button', {
+        id: index === 0 ? 'tour-widgets-settings' : undefined,
         className: 'widget__settings-btn',
         onPointerDown: (e) => e.stopPropagation(),
         onPointerUp: (e) => e.stopPropagation(),
@@ -3212,12 +3215,28 @@
       setIsEditMode(HEYS.Widgets.state?.isEditMode?.() || false);
       updateHistoryInfo();
       setIsLayoutHydrated(true);
+      
+      // 🔧 v1.19: Проверяем WidgetsTour при монтировании компонента
+      // (layout:loaded может уже произойти до завершения основного тура)
+      const tourTimer = setTimeout(() => {
+        if (HEYS.WidgetsTour?.shouldShow?.() && HEYS.WidgetsTour.start) {
+          console.log('[WidgetsTab] Checking WidgetsTour on mount...');
+          HEYS.WidgetsTour.start();
+        }
+      }, 600);
 
       // Subscribe to layout loaded (первичная загрузка)
       const unsubLoaded = HEYS.Widgets.on('layout:loaded', ({ layout }) => {
         setWidgets([...(layout || [])]);
         updateHistoryInfo();
         setIsLayoutHydrated(true);
+        
+        // Auto-start WidgetsTour if applicable (after layout is ready)
+        setTimeout(() => {
+          if (HEYS.WidgetsTour?.shouldShow?.() && HEYS.WidgetsTour.start) {
+            HEYS.WidgetsTour.start();
+          }
+        }, 500);
       });
       
       // Subscribe to layout changes
@@ -3240,6 +3259,7 @@
       const unsubHistory = HEYS.Widgets.on('history:changed', updateHistoryInfo);
       
       return () => {
+        clearTimeout(tourTimer);
         unsubLoaded?.();
         unsubLayout?.();
         unsubEditEnter?.();
@@ -3435,11 +3455,12 @@
         className: `widgets-grid ${isEditMode ? 'widgets-grid--editing' : ''}`,
         ref: gridRef
       },
-        widgets.map(widget =>
+        widgets.map((widget, idx) =>
           React.createElement(WidgetCard, {
             key: widget.id,
             widget,
             isEditMode,
+            index: idx,
             onRemove: handleRemove,
             onSettings: setSettingsWidget
           })
@@ -3464,6 +3485,7 @@
         // Кнопки добавить/отменить/вернуть - показываем только в edit mode
         isEditMode && React.createElement('div', { className: 'widgets-edit-controls__actions' },
           React.createElement('button', {
+            id: 'tour-widgets-add',
             className: 'widgets-header__btn widgets-header__btn--add',
             onClick: () => setCatalogOpen(true)
           }, '+ Добавить'),
@@ -3482,6 +3504,7 @@
         ),
         // FAB кнопка редактирования - всегда видна (только на desktop)
         !isMobile && React.createElement('button', {
+          id: 'tour-widgets-edit',
           className: `widgets-edit-controls__fab ${isEditMode ? 'active' : ''}`,
           onClick: toggleEdit
         }, isEditMode ? '✓ Готово' : '✏️ Изменить')

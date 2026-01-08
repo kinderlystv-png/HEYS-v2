@@ -71,12 +71,16 @@
    * @returns {Object} { bmr, actTotal, trainingsKcal, stepsKcal, householdKcal, ndteBoost, tdee, optimum }
    */
   const calculateTDEE = (day, profile, options = {}) => {
-    const lsGet = options.lsGet || U.lsGet || ((k, d) => {
-      try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+    // 🛡️ Null-защита: day и profile могут быть null при инициализации
+    const d = day || {};
+    const prof = profile || {};
+    
+    const lsGet = options.lsGet || U.lsGet || ((k, def) => {
+      try { return JSON.parse(localStorage.getItem(k)) || def; } catch { return def; }
     });
     
     // Вес: из дня или из профиля
-    const weight = +day.weightMorning || +profile.weight || 70;
+    const weight = +d.weightMorning || +prof.weight || 70;
     
     // MET зоны
     const hrZones = options.hrZones || lsGet('heys_hr_zones', []);
@@ -84,21 +88,21 @@
     const mets = [2.5, 6, 8, 10].map((def, i) => zoneMets[i] || def);
     
     // BMR
-    const bmr = calcBMR(weight, profile);
+    const bmr = calcBMR(weight, prof);
     
     // Тренировки
-    const trainings = (day.trainings && Array.isArray(day.trainings)) ? day.trainings : [];
+    const trainings = (d.trainings && Array.isArray(d.trainings)) ? d.trainings : [];
     const train1k = trainingKcal(trainings[0], weight, mets);
     const train2k = trainingKcal(trainings[1], weight, mets);
     const train3k = trainingKcal(trainings[2], weight, mets);
     const trainingsKcal = train1k + train2k + train3k;
     
     // Шаги
-    const stepsK = stepsKcal(day.steps || 0, weight, profile.gender);
+    const stepsK = stepsKcal(d.steps || 0, weight, prof.gender);
     
     // Бытовая активность
-    const householdActivities = day.householdActivities || 
-      (day.householdMin > 0 ? [{ minutes: day.householdMin }] : []);
+    const householdActivities = d.householdActivities || 
+      (d.householdMin > 0 ? [{ minutes: d.householdMin }] : []);
     const totalHouseholdMin = householdActivities.reduce((sum, h) => sum + (+h.minutes || 0), 0);
     const householdKcal = r0(totalHouseholdMin * kcalPerMin(2.5, weight));
     
@@ -110,19 +114,19 @@
     if (options.dayMacros) {
       // Если макросы переданы явно
       tefData = HEYS.TEF?.calculateFromMacros?.(options.dayMacros) || tefData;
-    } else if (day.meals && Array.isArray(day.meals) && options.pIndex) {
+    } else if (d.meals && Array.isArray(d.meals) && options.pIndex) {
       // Расчёт из приёмов пищи через модуль
       const getProduct = (item) => options.pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
-      tefData = HEYS.TEF?.calculateFromMeals?.(day.meals, options.pIndex, (item) => getProduct(item)) || tefData;
+      tefData = HEYS.TEF?.calculateFromMeals?.(d.meals, options.pIndex, (item) => getProduct(item)) || tefData;
     }
     const tefKcal = tefData.total || 0;
 
     // NDTE (Next-Day Training Effect) — буст от вчерашней тренировки
     let ndteBoost = 0;
-    if (options.includeNDTE !== false && HEYS.InsulinWave?.calculateNDTE && HEYS.InsulinWave?.getPreviousDayTrainings && day.date) {
-      const prevTrainings = HEYS.InsulinWave.getPreviousDayTrainings(day.date, lsGet);
+    if (options.includeNDTE !== false && HEYS.InsulinWave?.calculateNDTE && HEYS.InsulinWave?.getPreviousDayTrainings && d.date) {
+      const prevTrainings = HEYS.InsulinWave.getPreviousDayTrainings(d.date, lsGet);
       if (prevTrainings.totalKcal >= 200) {
-        const heightM = (+profile.height || 170) / 100;
+        const heightM = (+prof.height || 170) / 100;
         const bmi = weight && heightM ? r0(weight / (heightM * heightM) * 10) / 10 : 22;
         const ndteData = HEYS.InsulinWave.calculateNDTE({
           trainingKcal: prevTrainings.totalKcal,
@@ -141,13 +145,13 @@
     const tdee = r0(baseExpenditure + tefKcal);
     
     // Целевой дефицит
-    const profileTargetDef = +profile.deficitPctTarget || 0;
-    const dayTargetDef = (day.deficitPct !== '' && day.deficitPct != null) 
-      ? +day.deficitPct 
+    const profileTargetDef = +prof.deficitPctTarget || 0;
+    const dayTargetDef = (d.deficitPct !== '' && d.deficitPct != null) 
+      ? +d.deficitPct 
       : profileTargetDef;
     
     // Коррекция на менструальный цикл
-    const cycleKcalMultiplier = HEYS.Cycle?.getKcalMultiplier?.(day.cycleDay) || 1;
+    const cycleKcalMultiplier = HEYS.Cycle?.getKcalMultiplier?.(d.cycleDay) || 1;
     // Optimum рассчитывается от baseExpenditure (без TEF)
     const baseOptimum = r0(baseExpenditure * (1 + dayTargetDef / 100));
     const optimum = r0(baseOptimum * cycleKcalMultiplier);

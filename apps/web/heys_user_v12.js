@@ -1455,7 +1455,7 @@
                 style: { justifyContent: 'center' },
                 onClick: () => {
                   if (window.HEYS.OnboardingTour) {
-                    window.HEYS.OnboardingTour.start();
+                    window.HEYS.OnboardingTour.start({ force: true });
                   } else {
                     window.alert('Модуль обучения не загружен');
                   }

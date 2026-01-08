@@ -347,7 +347,7 @@
   function StatusCard({ status, onDetailClick }) {
     if (!status) return null;
     
-    const { score, level, topIssues, topActions, categoryScores } = status;
+    const { score, level, topIssues = [], topActions = [], categoryScores = {} } = status;
     
     return h('div', { className: 'status-card' },
       // Главный показатель

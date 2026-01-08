@@ -26,6 +26,7 @@
     'heys_grams_history',     // История введённых граммов (для автокомплита)
     
     // Советы (advice)
+    'heys_advice_settings',   // Настройки (автопоказ, звук)
     'heys_advice_read_today',
     'heys_advice_hidden_today',
     'heys_first_meal_tip',
@@ -34,9 +35,16 @@
     'heys_morning_skipper_check',
     'heys_last_visit',
     
+    // Onboarding & Tours (FIX: Added missing keys)
+    'heys_tour_completed',
+    'heys_insights_tour_completed',
+    'heys_tour_interrupted_step',
+    'heys_onboarding_complete',
+    
     // Gamification
     'heys_game',              // XP, уровни, достижения
-    'heys_best_streak'        // Лучший streak
+    'heys_best_streak',       // Лучший streak
+    'heys_weekly_wrap_view_count' // Счетчик просмотров итогов недели
   ];
   
   /** Префиксы ключей, требующих client-specific storage */

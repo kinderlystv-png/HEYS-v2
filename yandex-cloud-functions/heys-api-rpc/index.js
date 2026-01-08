@@ -342,14 +342,16 @@ module.exports.handler = async function (event, context) {
       };
     }
     
-    const jwtResult = verifyJwt(authHeader.slice(7), JWT_SECRET);
+    const token = authHeader.slice(7);
+    console.log('[RPC] JWT token received, length:', token.length, 'first 20 chars:', token.substring(0, 20));
+    const jwtResult = verifyJwt(token, JWT_SECRET);
     
     if (!jwtResult.valid) {
-      debugLog('[RPC] JWT verification failed:', jwtResult.error);
+      console.log('[RPC] JWT verification FAILED:', jwtResult.error);
       return {
         statusCode: 403,
         headers: corsHeaders,
-        body: JSON.stringify({ error: 'Invalid or expired token' })
+        body: JSON.stringify({ error: 'Invalid or expired token', details: jwtResult.error })
       };
     }
     
