@@ -2275,6 +2275,11 @@
         setFn('heys_supabase_auth_token', tokenJson);
         logCritical('[AUTH] ✅ Сессия сохранена (Yandex Auth), expires_at:', new Date(data.expires_at * 1000).toISOString());
         
+        // 🆕 v2.1: Сохраняем curator session для TrialQueue админки
+        // heys_trial_queue_v1.js проверяет этот ключ для admin API calls
+        setFn('heys_curator_session', data.access_token);
+        logCritical('[AUTH] ✅ Curator session сохранена для adminAPI');
+        
         // Верификация
         const check = global.localStorage.getItem('heys_supabase_auth_token');
         if (!check) {
@@ -2320,6 +2325,8 @@
     // 🔄 Очистка auth токена — предотвращает 400 Bad Request при следующем запуске
     try {
       localStorage.removeItem('heys_supabase_auth_token');
+      // 🆕 v2.1: Очистка curator session для TrialQueue админки
+      localStorage.removeItem('heys_curator_session');
     } catch (e) {}
     // 🔄 Сброс флагов sync — при следующем входе нужна новая синхронизация
     initialSyncCompleted = false;
