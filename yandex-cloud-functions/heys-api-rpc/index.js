@@ -452,7 +452,11 @@ module.exports.handler = async function (event, context) {
       },
       // === TRIAL QUEUE ADMIN ===
       'admin_get_trial_queue_list': {
-        'p_curator_session_token': '::text'
+        'p_curator_session_token': '::text',
+        'p_status_filter': '::text',
+        'p_search': '::text',
+        'p_limit': '::int',
+        'p_offset': '::int'
       },
       'admin_add_to_queue': {
         'p_client_id': '::uuid',
@@ -468,6 +472,20 @@ module.exports.handler = async function (event, context) {
       'admin_send_offer': {
         'p_client_id': '::uuid',
         'p_offer_window_minutes': '::int',
+        'p_curator_session_token': '::text'
+      },
+      // 🆕 Manual trial activation (Phase 3)
+      'admin_activate_trial': {
+        'p_client_id': '::uuid',
+        'p_trial_days': '::int',
+        'p_curator_session_token': '::text'
+      },
+      'admin_reject_request': {
+        'p_client_id': '::uuid',
+        'p_rejection_reason': '::text',
+        'p_curator_session_token': '::text'
+      },
+      'admin_get_queue_stats': {
         'p_curator_session_token': '::text'
       },
       'admin_update_queue_settings': {
