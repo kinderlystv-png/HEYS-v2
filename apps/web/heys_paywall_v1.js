@@ -56,6 +56,8 @@
       padding: 24px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
       animation: paywallSlideUp 0.3s ease-out;
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
     }
     
     @keyframes paywallSlideUp {

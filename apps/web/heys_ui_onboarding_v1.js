@@ -300,7 +300,7 @@
         }
       }
       
-      /* Tour Tooltip Fade-in */
+      /* Tour Tooltip Fade-in — применяется ТОЛЬКО через .tour-tooltip-enter */
       @keyframes tourTooltipIn {
         from {
           opacity: 0;
@@ -312,7 +312,8 @@
         }
       }
       
-      .tour-tooltip {
+      /* Анимация только при добавлении класса .tour-tooltip-enter */
+      .tour-tooltip-enter {
         animation: tourTooltipIn 0.25s ease-out;
       }
       
@@ -384,6 +385,8 @@
 
   function createTooltip(step, rect) {
     let el = state.tooltipEl;
+    const isNewStep = state._lastAnimatedStep !== state.currentStepIndex;
+    
     if (!el) {
       el = document.createElement('div');
       el.className = 'tour-tooltip';
@@ -391,6 +394,13 @@
       el.style.zIndex = '9002';
       document.body.appendChild(el);
       state.tooltipEl = el;
+    }
+    
+    // Контент (обновляем только при смене шага, иначе только позиционируем)
+    if (!isNewStep && el.innerHTML) {
+      // Только обновление позиции, контент уже есть
+      updateTooltipPosition(el, step, rect);
+      return;
     }
     
     // Контент
@@ -434,6 +444,21 @@
     el.style.left = '';
     el.style.right = '';
     
+    // Позиционирование и анимация
+    updateTooltipPosition(el, step, rect, true);
+    
+    // Отмечаем шаг как анимированный
+    state._lastAnimatedStep = state.currentStepIndex;
+  }
+  
+  /**
+   * Обновить позицию тултипа (без перерисовки контента)
+   * @param {HTMLElement} el - элемент тултипа
+   * @param {Object} step - текущий шаг
+   * @param {DOMRect} rect - rect целевого элемента
+   * @param {boolean} animate - запускать ли анимацию появления
+   */
+  function updateTooltipPosition(el, step, rect, animate = false) {
     // Ждем рендера чтобы получить размеры
     requestAnimationFrame(() => {
       const ttW = el.offsetWidth;
@@ -455,27 +480,43 @@
       
       // Горизонтальные границы
       if (left < margin) left = margin;
-      if (left + ttW > window.innerWidth - margin) left = window.innerWidth - ttW - margin;
+      if (left + ttW > window.innerWidth - margin) {
+        left = window.innerWidth - ttW - margin;
+        // 🔧 v1.20 FIX: Если всё равно не влезает (на узких экранах), принудительно ограничиваем ширину
+        if (left < margin) {
+          left = margin;
+          // Тут можно было бы менять ширину элемента, но он фиксированный в CSS.
+          // Поэтому просто центрируем, пусть лучше влезает контент
+        }
+      }
       
       // 🔧 v1.17 FIX: Вертикальные границы (не давать тултипу уезжать за экран)
+      // Добавлена логика для FAB кнопок (они внизу, тултип должен быть НАД ними)
+      if (step.position === 'top' && top + ttH > rect.top) { // Если тултип перекрывает элемент (на узких экранах)
+         top = rect.top - ttH - gap; 
+      }
+
       if (top < margin) {
         // Если уехал вверх — сдвигаем вниз от элемента
         top = rect.bottom + gap;
       }
+      // Если уехал вниз за экран ИЛИ перекрыл нижний край (для safety)
       if (top + ttH > window.innerHeight - margin) {
         // Если уехал вниз — сдвигаем вверх от элемента
         top = rect.top - ttH - gap;
-        // Если всё равно не влезает — прижимаем к верху
+        // Если всё равно не влезает — прижимаем к верху (грубый фоллбек)
         if (top < margin) top = margin;
       }
       
       el.style.top = top + 'px';
       el.style.left = left + 'px';
       
-      // Анимация появления
-      el.classList.remove('tour-tooltip-enter');
-      void el.offsetWidth; // reflow
-      el.classList.add('tour-tooltip-enter');
+      // 🔧 v1.21 FIX: Анимация появления только при смене шага (не при updatePosition)
+      if (animate) {
+        el.classList.remove('tour-tooltip-enter');
+        void el.offsetWidth; // reflow
+        el.classList.add('tour-tooltip-enter');
+      }
     });
   }
 
@@ -563,6 +604,9 @@
       state.isActive = true;
       state.onComplete = options.onComplete;
       state.stepStartTime = Date.now(); // Для time_on_step
+      
+      // 🆕 Уведомляем виджеты о переходе в демо-режим (чтобы показать демо-данные)
+      HEYS.Widgets?.emit?.('data:updated', {});
       
       // Восстановление прерванного шага если есть
       const interruptedStep = getInterruptedStep();
@@ -699,6 +743,9 @@
       state.stepStartTime = null;
       state.userName = null;
       state.wasHidden = false;
+      
+      // 🆕 Уведомляем виджеты о выходе из демо-режима (чтобы вернуть реальные данные)
+      HEYS.Widgets?.emit?.('data:updated', {});
       
       // Save state
       if (HEYS.store && HEYS.store.set) {
@@ -1100,18 +1147,10 @@
         HEYS.game.celebrate();
       }
       
-      // 🔧 v1.18: После InsightsTour проверяем, нужен ли WidgetsTour
-      setTimeout(() => {
-        if (shouldShowWidgetsTour()) {
-          console.log('[InsightsTour] Checking WidgetsTour eligibility...');
-          // Даём время UI обновиться после прокрутки вверх
-          setTimeout(() => {
-            if (WidgetsTour.start()) {
-              console.log('[InsightsTour] → WidgetsTour started automatically');
-            }
-          }, 800);
-        }
-      }, 300);
+      // 🔧 v1.19: WidgetsTour запускается при переходе на вкладку виджетов
+      // (аналогично InsightsTour при переходе на insights)
+      // Автозапуск убран — тур теперь стартует в WidgetsTab useEffect
+      console.log('[InsightsTour] Completed! WidgetsTour will start when user navigates to widgets tab');
     },
     
     /**
@@ -1170,16 +1209,84 @@
   const WIDGETS_STORAGE_KEY = 'heys_widgets_tour_completed';
 
   /**
-   * Шаги мини-тура для виджетов
+   * Шаги демо-обзора виджетов (ДО режима редактирования)
+   * Показывают реальные виджеты на странице с объяснениями и демо-данными
    */
-  const WIDGETS_TOUR_STEPS = [
+  const WIDGETS_DEMO_STEPS = [
+    {
+      id: 'demo_intro',
+      targetSelector: '.widgets-grid',
+      title: '📊 Ваша панель виджетов',
+      getText: () => 'Это ваша персональная панель. Здесь вы видите ключевые показатели дня.',
+      demoData: '🎯 Каждый виджет — отдельный показатель вашего прогресса',
+      position: 'bottom',
+      arrow: 'top',
+      isDemo: true
+    },
+    {
+      id: 'demo_calories',
+      targetSelector: '[data-widget-type="calories"]',
+      title: '🔥 Калории',
+      getText: () => 'Показывает вашу цель на день и сколько осталось.',
+      demoData: '📊 Например: 750 из 2000 ккал — осталось 1250 ккал',
+      position: 'bottom',
+      arrow: 'top',
+      isDemo: true
+    },
+    {
+      id: 'demo_water',
+      targetSelector: '[data-widget-type="water"]',
+      title: '💧 Водный баланс',
+      getText: () => 'Отслеживает выпитую воду за день.',
+      demoData: '💧 Например: 1.2 л из 2.5 л — ещё 5 стаканов',
+      position: 'bottom',
+      arrow: 'top',
+      isDemo: true
+    },
+    {
+      id: 'demo_weight',
+      targetSelector: '[data-widget-type="weight"]',
+      title: '⚖️ Вес и тренд',
+      getText: () => 'Текущий вес, BMI и динамика за неделю.',
+      demoData: '⚖️ Например: 72.3 кг, BMI 23.5, ↓0.5 кг за неделю',
+      position: 'bottom',
+      arrow: 'top',
+      isDemo: true
+    },
+    {
+      id: 'demo_heatmap',
+      targetSelector: '[data-widget-type="heatmap"]',
+      title: '📅 Тепловая карта',
+      getText: () => 'Цветовая история: 🟢 норма, 🟡 небольшое отклонение, 🔴 срыв.',
+      demoData: '📅 Видите паттерны: по выходным чаще жёлтые дни?',
+      position: 'top',
+      arrow: 'bottom',
+      isDemo: true
+    },
+    {
+      id: 'demo_crashRisk',
+      targetSelector: '[data-widget-type="crashRisk"]',
+      title: '⚠️ Риск срыва',
+      getText: () => 'ИИ предупреждает о риске переедания заранее.',
+      demoData: '🤖 Например: Риск 65% — мало сна + стресс',
+      position: 'bottom',
+      arrow: 'top',
+      isDemo: true
+    }
+  ];
+
+  /**
+   * Шаги мини-тура для редактирования виджетов (ПОСЛЕ демо-обзора)
+   */
+  const WIDGETS_EDIT_STEPS = [
     {
       id: 'widgets_edit',
       targetId: 'tour-widgets-edit',
       title: '✏️ Режим редактирования',
       getText: () => 'Нажмите эту кнопку, чтобы перейти в режим редактирования виджетов',
       position: 'top',
-      arrow: 'bottom'
+      arrow: 'bottom',
+      requiresEditMode: true
     },
     {
       id: 'widgets_add',
@@ -1187,7 +1294,8 @@
       title: '➕ Добавление виджетов',
       getText: () => 'Откройте каталог и выберите нужные виджеты для вашей панели',
       position: 'top',
-      arrow: 'bottom'
+      arrow: 'bottom',
+      requiresEditMode: true
     },
     {
       id: 'widgets_size',
@@ -1195,7 +1303,8 @@
       title: '📐 Изменение размера',
       getText: () => 'Потяните за угол виджета или нажмите на бейдж размера. Больше размер — больше информации!',
       position: 'bottom',
-      arrow: 'top'
+      arrow: 'top',
+      requiresEditMode: true
     },
     {
       id: 'widgets_settings',
@@ -1203,7 +1312,8 @@
       title: '⚙️ Настройки виджета',
       getText: () => 'Настройте отображение данных внутри виджета под себя',
       position: 'bottom',
-      arrow: 'top'
+      arrow: 'top',
+      requiresEditMode: true
     },
     {
       id: 'widgets_delete',
@@ -1211,9 +1321,15 @@
       title: '🗑️ Удаление виджетов',
       getText: () => 'Уберите ненужные виджеты — всегда можно добавить обратно из каталога',
       position: 'bottom',
-      arrow: 'top'
+      arrow: 'top',
+      requiresEditMode: true
     }
   ];
+
+  /**
+   * Все шаги тура виджетов (демо + редактирование)
+   */
+  const WIDGETS_TOUR_STEPS = [...WIDGETS_DEMO_STEPS, ...WIDGETS_EDIT_STEPS];
 
   /**
    * Стейт мини-тура виджетов
@@ -1223,7 +1339,8 @@
     currentStepIndex: 0,
     overlayEl: null,
     tooltipEl: null,
-    highlightEl: null
+    highlightEl: null,
+    wasEditModeActive: false // Сохраняем исходное состояние edit mode
   };
 
   /**
@@ -1251,9 +1368,27 @@
     const step = WIDGETS_TOUR_STEPS[stepIndex];
     if (!step) return;
     
-    const targetEl = document.getElementById(step.targetId);
+    // Если это edit step и мы еще не в edit mode - входим
+    if (step.requiresEditMode && !HEYS.Widgets?.isEditMode?.()) {
+      console.log('[WidgetsTour] Entering edit mode for edit steps');
+      if (HEYS.Widgets?.enterEditMode) {
+        HEYS.Widgets.enterEditMode();
+        // Даем DOM обновиться после входа в edit mode
+        setTimeout(() => renderWidgetsStep(stepIndex), 150);
+        return;
+      }
+    }
+    
+    // Находим элемент: по selector (для demo) или по id (для edit)
+    let targetEl;
+    if (step.targetSelector) {
+      targetEl = document.querySelector(step.targetSelector);
+    } else if (step.targetId) {
+      targetEl = document.getElementById(step.targetId);
+    }
+    
     if (!targetEl) {
-      console.warn(`[WidgetsTour] Target not found: ${step.targetId}`);
+      console.warn(`[WidgetsTour] Target not found: ${step.targetSelector || step.targetId}`);
       // Пропускаем шаг если элемент не найден
       if (stepIndex < WIDGETS_TOUR_STEPS.length - 1) {
         widgetsState.currentStepIndex++;
@@ -1264,41 +1399,50 @@
       return;
     }
     
-    // Scroll to element
-    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    
-    // Обновляем overlay
+    // Обновляем overlay (создаём сразу)
     if (!widgetsState.overlayEl) {
       widgetsState.overlayEl = document.createElement('div');
       widgetsState.overlayEl.className = 'tour-overlay tour-overlay--mini';
       document.body.appendChild(widgetsState.overlayEl);
     }
     
-    // Highlight
+    // Highlight (создаём сразу)
     if (!widgetsState.highlightEl) {
       widgetsState.highlightEl = document.createElement('div');
       widgetsState.highlightEl.className = 'tour-highlight';
       document.body.appendChild(widgetsState.highlightEl);
     }
     
-    const rect = targetEl.getBoundingClientRect();
-    const padding = 8;
-    widgetsState.highlightEl.style.cssText = `
-      position: fixed;
-      top: ${rect.top - padding}px;
-      left: ${rect.left - padding}px;
-      width: ${rect.width + padding * 2}px;
-      height: ${rect.height + padding * 2}px;
-      border-radius: 8px;
-      z-index: 9001;
-      box-shadow: 0 0 0 9999px rgba(0,0,0,0.65);
-      pointer-events: none;
-    `;
+    // Функция обновления позиции хайлайта и тултипа
+    const updateHighlightPosition = () => {
+      const rect = targetEl.getBoundingClientRect();
+      const padding = 8;
+      widgetsState.highlightEl.style.cssText = `
+        position: fixed;
+        top: ${rect.top - padding}px;
+        left: ${rect.left - padding}px;
+        width: ${rect.width + padding * 2}px;
+        height: ${rect.height + padding * 2}px;
+        border-radius: 8px;
+        z-index: 9001;
+        box-shadow: 0 0 0 9999px rgba(0,0,0,0.65);
+        pointer-events: none;
+      `;
+      
+      // Tooltip
+      if (widgetsState.tooltipEl) widgetsState.tooltipEl.remove();
+      widgetsState.tooltipEl = createWidgetsTooltip(step, stepIndex, rect);
+      document.body.appendChild(widgetsState.tooltipEl);
+    };
     
-    // Tooltip
-    if (widgetsState.tooltipEl) widgetsState.tooltipEl.remove();
-    widgetsState.tooltipEl = createWidgetsTooltip(step, stepIndex, rect);
-    document.body.appendChild(widgetsState.tooltipEl);
+    // Scroll to element и обновляем позицию после завершения скролла
+    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // Позиционируем сразу для быстрого появления
+    updateHighlightPosition();
+    
+    // И обновляем после завершения smooth scroll (300-500ms)
+    setTimeout(updateHighlightPosition, 350);
   }
 
   /**
@@ -1306,23 +1450,55 @@
    */
   function createWidgetsTooltip(step, stepIndex, targetRect) {
     const tooltip = document.createElement('div');
-    tooltip.className = 'tour-tooltip tour-tooltip--mini';
+    // Сразу добавляем tour-tooltip-enter для видимости (без анимации появления)
+    tooltip.className = 'tour-tooltip tour-tooltip--mini tour-tooltip-enter';
     
-    const progress = `${stepIndex + 1}/${WIDGETS_TOUR_STEPS.length}`;
+    // Определяем фазу тура (demo или edit)
+    const isDemo = step.isDemo === true;
+    const demoStepsCount = WIDGETS_DEMO_STEPS.length;
+    const editStepsCount = WIDGETS_EDIT_STEPS.length;
+    
+    // Прогресс внутри фазы
+    let phaseLabel, phaseProgress;
+    if (isDemo) {
+      phaseLabel = '👀 Обзор виджетов';
+      phaseProgress = `${stepIndex + 1}/${demoStepsCount}`;
+    } else {
+      const editStepIndex = stepIndex - demoStepsCount;
+      phaseLabel = '⚙️ Настройка';
+      phaseProgress = `${editStepIndex + 1}/${editStepsCount}`;
+    }
+    
+    const totalProgress = `${stepIndex + 1}/${WIDGETS_TOUR_STEPS.length}`;
     const isLast = stepIndex === WIDGETS_TOUR_STEPS.length - 1;
     
+    // Цвет фона в зависимости от фазы
+    const bgGradient = isDemo 
+      ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' // фиолетовый для demo
+      : 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'; // бирюзовый для edit
+    const shadowColor = isDemo ? 'rgba(139, 92, 246, 0.3)' : 'rgba(6, 182, 212, 0.3)';
+    const btnColor = isDemo ? '#7c3aed' : '#0891b2';
+    
+    // Демо-данные (если есть)
+    const demoDataHtml = step.demoData 
+      ? `<div style="margin-top: 8px; padding: 8px 10px; background: rgba(255,255,255,0.15); border-radius: 8px; font-size: 12px; line-height: 1.4;">
+          ${step.demoData}
+        </div>` 
+      : '';
+    
     tooltip.innerHTML = `
-      <div style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; padding: 12px 16px; border-radius: 12px; box-shadow: 0 8px 32px rgba(6, 182, 212, 0.3); min-width: 220px; max-width: 280px;">
+      <div style="background: ${bgGradient}; color: white; padding: 12px 16px; border-radius: 12px; box-shadow: 0 8px 32px ${shadowColor}; min-width: 220px; max-width: 280px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-          <span style="font-size: 11px; opacity: 0.85;">📊 Виджеты ${progress}</span>
+          <span style="font-size: 11px; opacity: 0.85;">${phaseLabel} ${phaseProgress}</span>
         </div>
         <div style="font-weight: 600; font-size: 14px; margin-bottom: 6px;">${step.title}</div>
-        <div style="font-size: 13px; opacity: 0.95; line-height: 1.4;">${step.getText()}</div>
-        <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <div style="font-size: 13px; opacity: 0.95; line-height: 1.4; max-height: 80px; overflow-y: auto;">${step.getText()}</div>
+        ${demoDataHtml}
+        <div style="display: flex; gap: 8px; margin-top: 12px; flex-shrink: 0;">
           <button class="widgets-tour-skip" style="flex: 1; padding: 8px 12px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: white; border-radius: 8px; cursor: pointer; font-size: 12px;">Пропустить</button>
-          <button class="widgets-tour-next" style="flex: 1; padding: 8px 12px; border: none; background: white; color: #0891b2; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600;">${isLast ? 'Готово!' : 'Далее →'}</button>
+          <button class="widgets-tour-next" style="flex: 1; padding: 8px 12px; border: none; background: white; color: ${btnColor}; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600;">${isLast ? 'Готово!' : 'Далее →'}</button>
         </div>
-        <div style="margin-top: 8px; background: rgba(255,255,255,0.2); border-radius: 4px; height: 3px; overflow: hidden;">
+        <div style="margin-top: 8px; background: rgba(255,255,255,0.2); border-radius: 4px; height: 3px; overflow: hidden; flex-shrink: 0;">
           <div style="background: white; height: 100%; width: ${((stepIndex + 1) / WIDGETS_TOUR_STEPS.length) * 100}%; transition: width 0.3s;"></div>
         </div>
       </div>
@@ -1330,11 +1506,13 @@
     
     // Position
     const tooltipWidth = 280;
+    const tooltipHeight = 220; // Приблизительная высота тултипа
     const gap = 12;
     let top, left;
     
+    // Сначала пробуем разместить согласно step.position
     if (step.position === 'top') {
-      top = targetRect.top - gap - 180;
+      top = targetRect.top - gap - tooltipHeight;
       left = targetRect.left + targetRect.width / 2 - tooltipWidth / 2;
     } else {
       top = targetRect.bottom + gap;
@@ -1343,6 +1521,12 @@
     
     // Constrain to viewport
     left = Math.max(16, Math.min(left, window.innerWidth - tooltipWidth - 16));
+    
+    // Проверяем нижнюю границу — если выходит за viewport, переносим наверх
+    if (top + tooltipHeight > window.innerHeight - 16) {
+      top = targetRect.top - gap - tooltipHeight;
+    }
+    // Проверяем верхнюю границу
     top = Math.max(16, top);
     
     tooltip.style.cssText = `
@@ -1372,16 +1556,49 @@
         return false;
       }
       
-      console.log('[WidgetsTour] Starting');
+      console.log('[WidgetsTour] Starting widgets tour (demo + edit)');
       widgetsState.isActive = true;
       widgetsState.currentStepIndex = 0;
+      
+      // 🔧 v1.19 FIX: Сначала переключаем на вкладку widgets, чтобы виджеты отрендерились
+      const currentTab = window.HEYS?.App?.getTab?.();
+      if (currentTab !== 'widgets') {
+        console.log('[WidgetsTour] Switching to widgets tab first (current: ' + currentTab + ')');
+        if (window.HEYS?.App?.setTab) {
+          window.HEYS.App.setTab('widgets');
+          // Ждём пока виджеты отрендерятся (300ms для React re-render)
+          setTimeout(() => {
+            this._startInternal();
+          }, 400);
+          return true;
+        }
+      }
+      
+      // Если уже на вкладке widgets - стартуем сразу
+      this._startInternal();
+      return true;
+    },
+    
+    /**
+     * Внутренний старт после переключения вкладки
+     */
+    _startInternal() {
+      console.log('[WidgetsTour] _startInternal - initializing tour');
+      
+      // Сохраняем исходное состояние edit mode (восстановим при выходе)
+      widgetsState.wasEditModeActive = HEYS.Widgets?.isEditMode?.() || false;
+      
+      // НЕ входим в edit mode сразу - сначала показываем demo шаги
+      // Edit mode включится автоматически когда дойдём до шагов с requiresEditMode: true
       
       // Блокируем скролл
       document.body.style.overflow = 'hidden';
       document.body.classList.add('tour-active');
       
-      renderWidgetsStep(0);
-      return true;
+      // Небольшая задержка для обновления DOM после переключения вкладки
+      setTimeout(() => {
+        renderWidgetsStep(0);
+      }, 150);
     },
     
     /**
@@ -1444,10 +1661,17 @@
       document.body.style.overflow = '';
       document.body.classList.remove('tour-active');
       
+      // Восстанавливаем исходное состояние edit mode
+      if (!widgetsState.wasEditModeActive && HEYS.Widgets?.isEditMode?.()) {
+        console.log('[WidgetsTour] Restoring edit mode to inactive');
+        HEYS.Widgets.exitEditMode?.();
+      }
+      
       widgetsState.overlayEl = null;
       widgetsState.highlightEl = null;
       widgetsState.tooltipEl = null;
       widgetsState.isActive = false;
+      widgetsState.wasEditModeActive = false;
     },
     
     /**

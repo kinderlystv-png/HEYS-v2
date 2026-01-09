@@ -330,7 +330,7 @@
 
   // ========== XP MULTIPLIER ==========
   function getXPMultiplier() {
-    const streak = HEYS.Day && HEYS.Day.getStreak ? HEYS.Day.getStreak() : 0;
+    const streak = HEYS.Day && typeof HEYS.Day.getStreak === 'function' ? HEYS.Day.getStreak() : 0;
     if (streak >= 14) return 3;  // 3x при streak 14+
     if (streak >= 7) return 2.5; // 2.5x при streak 7+
     if (streak >= 3) return 2;   // 2x при streak 3+
@@ -363,7 +363,7 @@
   // ========== PERSONAL BEST ==========
   function isNewStreakRecord() {
     const data = loadData();
-    const currentStreak = HEYS.Day && HEYS.Day.getStreak ? HEYS.Day.getStreak() : 0;
+    const currentStreak = HEYS.Day && typeof HEYS.Day.getStreak === 'function' ? HEYS.Day.getStreak() : 0;
     return currentStreak > 0 && currentStreak > data.stats.bestStreak;
   }
 
@@ -1312,7 +1312,7 @@
     const newAchievements = [];
 
     // ========== STREAK ACHIEVEMENTS ==========
-    const streak = HEYS.Day && HEYS.Day.getStreak ? HEYS.Day.getStreak() : 0;
+    const streak = HEYS.Day && typeof HEYS.Day.getStreak === 'function' ? HEYS.Day.getStreak() : 0;
     
     const streakMilestones = [
       { days: 3, id: 'streak_3' },
@@ -1947,7 +1947,7 @@
     if (reason === 'perfect_day') data.stats.perfectDays++;
 
     // Best streak
-    const streak = HEYS.Day && HEYS.Day.getStreak ? HEYS.Day.getStreak() : 0;
+    const streak = HEYS.Day && typeof HEYS.Day.getStreak === 'function' ? HEYS.Day.getStreak() : 0;
     if (streak > data.stats.bestStreak) {
       data.stats.bestStreak = streak;
     }

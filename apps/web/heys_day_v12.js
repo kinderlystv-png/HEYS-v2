@@ -2152,7 +2152,7 @@
       'aria-label': 'Добавить продукт'
     },
       React.createElement('span', { className: 'aps-open-icon' }, '🔍'),
-      React.createElement('span', { className: 'aps-open-text' }, 'Добавить')
+      React.createElement('span', { className: 'aps-open-text' }, 'Добавить еще продукт')
     );
   }, (prev, next) => {
     if (prev.mi !== next.mi) return false;
@@ -5966,10 +5966,10 @@
     // === Deficit Picker (теперь использует StepModal) ===
     const [showDeficitPicker, setShowDeficitPicker] = useState(false); // для совместимости с uiState
     
-    // Дефицит из профиля или дефолт 0
-    const profileDeficit = prof.deficitPctTarget ?? 0;
+    // Дефицит из профиля или дефолт 0 (Number() для корректного сравнения)
+    const profileDeficit = Number(prof.deficitPctTarget) || 0;
     // day.deficitPct может быть '', null, undefined — проверяем все случаи
-    const currentDeficit = (day.deficitPct !== '' && day.deficitPct != null) ? day.deficitPct : profileDeficit;
+    const currentDeficit = (day.deficitPct !== '' && day.deficitPct != null) ? Number(day.deficitPct) : profileDeficit;
     
     function openDeficitPicker() {
       // Используем StepModal вместо старого пикера
@@ -6969,7 +6969,7 @@
           pIndex,
           getProductFromItem,
           trainings: day.trainings || [],
-          deficitPct: day.deficitPct ?? prof?.deficitPctTarget ?? 0,
+          deficitPct: Number(day.deficitPct ?? prof?.deficitPctTarget ?? 0),
           prof,
           dayData: day,
           onComplete: (newMeal) => {
@@ -7569,7 +7569,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             return {
               ...prevDay,
               weightMorning: newWeight,
-              deficitPct: shouldSetDeficit ? (prof.deficitPctTarget || 0) : prevDay.deficitPct
+              deficitPct: shouldSetDeficit ? (Number(prof.deficitPctTarget) || 0) : prevDay.deficitPct
             };
           });
         }})),
@@ -9844,7 +9844,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // === GOAL-AWARE THRESHOLDS ===
       // Пороги зависят от цели пользователя
       const getGoalThresholds = () => {
-        const deficitPct = day.deficitPct ?? prof?.deficitPctTarget ?? 0;
+        // Number() для корректного сравнения строк из localStorage с числами
+        const deficitPct = Number(day.deficitPct ?? prof?.deficitPctTarget ?? 0) || 0;
         if (deficitPct <= -10) {
           // Похудение — перебор критичнее
           return { debtThreshold: 80, excessThreshold: 150, mode: 'loss' };
@@ -20858,6 +20859,64 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             // Прогресс-бар
             renderProgressBar(),
             
+            // 🆕 v4.1.4: Мини-легенда компонентов + научный popup
+            insulinWaveData.wavePhases && React.createElement('div', {
+              style: {
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '12px',
+                marginTop: '8px',
+                marginBottom: '4px',
+                fontSize: '10px',
+                opacity: 0.9,
+                paddingLeft: '4px'
+              }
+            },
+              React.createElement('span', { style: { color: '#f97316' } }, '⚡ Быстрые'),
+              React.createElement('span', { style: { color: '#22c55e' } }, '🌿 Основной'),
+              React.createElement('span', { style: { color: '#8b5cf6' } }, '🫀 Печёночный'),
+              // "?" сноска с научным обоснованием — button вместо span для accessibility
+              React.createElement('button', {
+                type: 'button',
+                style: {
+                  marginLeft: '4px',
+                  width: '16px',
+                  height: '16px',
+                  minWidth: '16px',
+                  padding: 0,
+                  border: 'none',
+                  borderRadius: '50%',
+                  background: 'rgba(107, 114, 128, 0.4)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '10px',
+                  color: '#9ca3af',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  position: 'relative',
+                  zIndex: 10
+                },
+                onClick: (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  openExclusivePopup('debt-science', {
+                    title: '🧬 3-компонентная модель инсулиновой волны',
+                    content: [
+                      { label: '⚡ Быстрые (Fast Peak)', value: 'Простые углеводы → быстрый пик глюкозы (15-25 мин). GI>70: сахар, белый хлеб, мёд.' },
+                      { label: '🌿 Основной (Main Peak)', value: 'Главный инсулиновый ответ на смешанный приём (45-60 мин). Зависит от общей GL.' },
+                      { label: '🫀 Печёночный (Hepatic Tail)', value: 'Жиры, белок, клетчатка замедляют всасывание (90-120 мин). Печень процессит нутриенты.' }
+                    ],
+                    links: [
+                      { text: 'Brand-Miller 2003', url: 'https://pubmed.ncbi.nlm.nih.gov/12828192/' },
+                      { text: 'Holt 1997', url: 'https://pubmed.ncbi.nlm.nih.gov/9356547/' }
+                    ]
+                  });
+                }
+              }, '?')
+            ),
+            
             // Подсказка
             insulinWaveData.subtext && React.createElement('div', { className: 'insulin-wave-suggestion' }, insulinWaveData.subtext),
             
@@ -21038,7 +21097,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           fontSize: '17px',
           fontWeight: '700',
           color: '#fff',
-          background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+          background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
           border: 'none',
           borderRadius: '16px',
           cursor: 'pointer',
@@ -21046,7 +21105,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           alignItems: 'center',
           justifyContent: 'center',
           gap: '10px',
-          boxShadow: '0 4px 14px rgba(34, 197, 94, 0.35)',
+          boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)',
           transition: 'all 0.2s ease',
           WebkitTapHighlightColor: 'transparent'
         }
@@ -21062,7 +21121,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         React.createElement('div', { className: 'empty-state-text' }, 'Добавьте первый приём, чтобы начать отслеживание'),
         React.createElement('button', { 
           className: 'btn btn-primary empty-state-btn',
-          onClick: addMeal
+          onClick: addMeal,
+          style: {
+            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+            boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)'
+          }
         }, '+ Добавить приём')
       ),
       (!isMobile || mobileSubTab === 'diary') && mealsUI,

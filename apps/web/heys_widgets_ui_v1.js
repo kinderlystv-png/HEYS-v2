@@ -3219,11 +3219,16 @@
       // 🔧 v1.19: Проверяем WidgetsTour при монтировании компонента
       // (layout:loaded может уже произойти до завершения основного тура)
       const tourTimer = setTimeout(() => {
+        console.log('[WidgetsTab] Checking WidgetsTour eligibility...', {
+          hasTour: !!HEYS.WidgetsTour,
+          shouldShow: HEYS.WidgetsTour?.shouldShow?.(),
+          hasStart: !!HEYS.WidgetsTour?.start
+        });
         if (HEYS.WidgetsTour?.shouldShow?.() && HEYS.WidgetsTour.start) {
-          console.log('[WidgetsTab] Checking WidgetsTour on mount...');
+          console.log('[WidgetsTab] Starting WidgetsTour!');
           HEYS.WidgetsTour.start();
         }
-      }, 600);
+      }, 800);
 
       // Subscribe to layout loaded (первичная загрузка)
       const unsubLoaded = HEYS.Widgets.on('layout:loaded', ({ layout }) => {
@@ -3515,6 +3520,7 @@
         // Edit FAB — снизу слева
         React.createElement('div', { className: 'widgets-fab-left' },
           React.createElement('button', {
+            id: 'tour-widgets-edit', // ID для onboarding тура
             className: `widgets-edit-fab ${isEditMode ? 'active' : ''}`,
             onClick: toggleEdit,
             'aria-label': isEditMode ? 'Готово' : 'Изменить'

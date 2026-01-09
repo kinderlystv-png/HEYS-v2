@@ -3241,7 +3241,7 @@ const HEYS = window.HEYS = window.HEYS || {};
               };
             });
             const [streak, setStreak] = useState(() => {
-              return HEYS.Day && HEYS.Day.getStreak ? HEYS.Day.getStreak() : 0;
+              return HEYS.Day && typeof HEYS.Day.getStreak === 'function' ? HEYS.Day.getStreak() : 0;
             });
             const [streakJustGrew, setStreakJustGrew] = useState(false);
             const prevStreakRef = useRef(streak);
@@ -3267,7 +3267,7 @@ const HEYS = window.HEYS = window.HEYS || {};
             // Проверяем daily bonus и streak при монтировании + слушаем инициализацию Day
             useEffect(() => {
               const updateStreak = () => {
-                if (HEYS.Day && HEYS.Day.getStreak) {
+                if (HEYS.Day && typeof HEYS.Day.getStreak === 'function') {
                   setStreak(HEYS.Day.getStreak());
                 }
               };
@@ -3340,7 +3340,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                   });
                 }
                 // Обновляем streak
-                if (HEYS.Day && HEYS.Day.getStreak) {
+                if (HEYS.Day && typeof HEYS.Day.getStreak === 'function') {
                   setStreak(prevStreak => {
                     const newStreak = HEYS.Day.getStreak();
                     // Pulse анимация при росте streak
@@ -3420,7 +3420,7 @@ const HEYS = window.HEYS = window.HEYS || {};
             // Периодическое обновление streak (каждые 30 сек)
             useEffect(() => {
               const interval = setInterval(() => {
-                if (HEYS.Day && HEYS.Day.getStreak) {
+                if (HEYS.Day && typeof HEYS.Day.getStreak === 'function') {
                   setStreak(HEYS.Day.getStreak());
                 }
               }, 30000);
@@ -4986,6 +4986,7 @@ const HEYS = window.HEYS = window.HEYS || {};
             const [cloudUser, setCloudUser] = useState(null);
             const [isInitializing, setIsInitializing] = useState(true);
             const [products, setProducts] = useState([]);
+            const [curatorTab, setCuratorTab] = useState('clients'); // 🆕 Tab: 'clients' | 'queue'
             const [needsConsent, setNeedsConsent] = useState(false); // 📋 Требуются ли согласия
             const [checkingConsent, setCheckingConsent] = useState(false); // 📋 Проверка согласий
             const [backupMeta, setBackupMeta] = useState(() => {
@@ -5013,6 +5014,7 @@ const HEYS = window.HEYS = window.HEYS || {};
               products, setProducts,
               backupMeta, setBackupMeta,
               backupBusy, setBackupBusy,
+              curatorTab, setCuratorTab, // 🆕
             };
           }
 
@@ -5448,6 +5450,7 @@ const HEYS = window.HEYS = window.HEYS || {};
               backupBusy, setBackupBusy,
               needsConsent, setNeedsConsent,
               checkingConsent, setCheckingConsent,
+              curatorTab, setCuratorTab, // 🆕
             } = useClientState(cloud, U);
             const [loginError, setLoginError] = useState('');
             const {
@@ -6792,8 +6795,62 @@ const HEYS = window.HEYS = window.HEYS || {};
                                 } 
                               },
                               '❌ Не удалось загрузить клиентов из облака'
+                            ),
+                            // 🆕 Табы: Клиенты / Очередь триалов
+                            React.createElement(
+                              'div',
+                              { 
+                                style: { 
+                                  display: 'flex', 
+                                  gap: 8, 
+                                  marginTop: 16,
+                                  padding: 4,
+                                  background: 'var(--surface)',
+                                  borderRadius: 12
+                                } 
+                              },
+                              React.createElement(
+                                'button',
+                                {
+                                  onClick: () => setCuratorTab('clients'),
+                                  style: {
+                                    flex: 1,
+                                    padding: '10px 16px',
+                                    border: 'none',
+                                    borderRadius: 8,
+                                    fontSize: 14,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    background: curatorTab === 'clients' ? 'var(--accent)' : 'transparent',
+                                    color: curatorTab === 'clients' ? '#fff' : 'var(--text)'
+                                  }
+                                },
+                                '👥 Клиенты'
+                              ),
+                              React.createElement(
+                                'button',
+                                {
+                                  onClick: () => setCuratorTab('queue'),
+                                  style: {
+                                    flex: 1,
+                                    padding: '10px 16px',
+                                    border: 'none',
+                                    borderRadius: 8,
+                                    fontSize: 14,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    background: curatorTab === 'queue' ? 'var(--accent)' : 'transparent',
+                                    color: curatorTab === 'queue' ? '#fff' : 'var(--text)'
+                                  }
+                                },
+                                '📋 Очередь'
+                              )
                             )
                           ),
+                          // === TAB: CLIENTS ===
+                          curatorTab === 'clients' && React.createElement(React.Fragment, null,
                           // Поиск клиентов (если > 3)
                           clients.length > 3 && React.createElement('div', { 
                             style: { position: 'relative', marginBottom: 16 } 
@@ -7112,8 +7169,13 @@ const HEYS = window.HEYS = window.HEYS || {};
                               { style: { fontSize: 12, color: 'var(--muted)', lineHeight: 1.4 } },
                               'Клиент входит по телефону + PIN. Сохраните и передайте эти данные клиенту.'
                             )
-                          ),
-                          // Выход
+                          )
+                        ), // ← Закрываем clients tab React.Fragment
+
+                          // === TAB: QUEUE (Очередь на триал) ===
+                          curatorTab === 'queue' && React.createElement(HEYS.TrialQueue.TrialQueueAdmin),
+
+                          // Кнопка выхода (всегда видна внизу модала)
                           React.createElement(
                             'button',
                             { 
@@ -7131,8 +7193,8 @@ const HEYS = window.HEYS = window.HEYS || {};
                             },
                             '← Выйти из аккаунта'
                           )
-                        ), // ← Закрываем React.Fragment
-                  ) // ← Закрываем modal
+                  ) // ← Закрываем внешний React.Fragment
+                  ) // ← Закрываем modal div
                 )) // ← Закрываем modal-backdrop и тернарный isInitializing
               : null;
 
@@ -7189,12 +7251,35 @@ const HEYS = window.HEYS = window.HEYS || {};
                   onComplete: () => {
                     console.log('[CONSENTS] ✅ Согласия приняты');
                     setNeedsConsent(false);
-                    // � v1.14c: Обновляем глобальный флаг для tryStartOnboardingTour
+                    // 🔄 v1.14c: Обновляем глобальный флаг для tryStartOnboardingTour
                     HEYS._consentsValid = true;
-                    // �🎓 v1.10: После принятия согласий — запускаем тур!
+                    // 🎓 v1.10: После принятия согласий — проверяем профиль и запускаем нужный флоу
                     setTimeout(() => {
-                      console.log('[CONSENTS] 🎓 Triggering onboarding tour after consents');
-                      window.HEYS?._tour?.tryStart?.();
+                      const U = HEYS.utils || {};
+                      const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+                      const isProfileIncomplete = HEYS.ProfileSteps?.isProfileIncomplete?.(profile);
+                      const hasMorningCheckin = typeof HEYS.MorningCheckin === 'function';
+                      
+                      console.log('[CONSENTS] 🎓 После согласий:', { 
+                        isProfileIncomplete, 
+                        hasName: !!(profile.firstName || profile.name),
+                        profileCompleted: profile.profileCompleted,
+                        hasMorningCheckin
+                      });
+                      
+                      // Если профиль неполный — показываем утренний чек-ин для регистрации
+                      if (isProfileIncomplete) {
+                        if (hasMorningCheckin) {
+                          console.log('[CONSENTS] 📋 Показываем утренний чек-ин для регистрации профиля');
+                          setShowMorningCheckin(true);
+                        } else {
+                          console.warn('[CONSENTS] ⚠️ Профиль неполный, но MorningCheckin не загружен');
+                        }
+                      } else {
+                        // Если профиль заполнен — запускаем onboarding tour
+                        console.log('[CONSENTS] 🎓 Triggering onboarding tour after consents');
+                        window.HEYS?._tour?.tryStart?.();
+                      }
                     }, 500);
                   },
                   onCancel: () => {
@@ -7472,8 +7557,21 @@ const HEYS = window.HEYS = window.HEYS || {};
             // Имя клиента: в RPC режиме из профиля, иначе из списка clients
             const currentClientName = (() => {
               if (isRpcMode) {
-                const fullName = [cachedProfile.firstName, cachedProfile.lastName].filter(Boolean).join(' ');
-                return fullName || 'Мой профиль';
+                // Поддерживаем оба формата: name (от куратора) и firstName+lastName (от регистрации)
+                const fullName = cachedProfile.name || 
+                  [cachedProfile.firstName, cachedProfile.lastName].filter(Boolean).join(' ');
+                if (fullName) return fullName;
+                
+                // 💡 Для новых клиентов до заполнения профиля — используем имя от куратора
+                try {
+                  const pendingRaw = localStorage.getItem('heys_pending_client_name');
+                  if (pendingRaw) {
+                    const pendingName = JSON.parse(pendingRaw);
+                    if (pendingName) return pendingName;
+                  }
+                } catch (e) {}
+                
+                return 'Мой профиль';
               }
               return Array.isArray(clients) 
                 ? (clients.find((c) => c.id === clientId)?.name || 'Выберите клиента')

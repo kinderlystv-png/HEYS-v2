@@ -2617,8 +2617,8 @@
    * @param {Object} profile - профиль с deficitPctTarget
    */
   function calculateHealthScore(patterns, profile) {
-    // Определяем цель
-    const deficitPct = profile?.deficitPctTarget || 0;
+    // Определяем цель (Number() для корректного сравнения строк из localStorage)
+    const deficitPct = Number(profile?.deficitPctTarget) || 0;
     let goalMode = 'maintenance';
     if (deficitPct <= -10) goalMode = 'deficit';
     else if (deficitPct >= 10) goalMode = 'bulk';

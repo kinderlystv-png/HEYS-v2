@@ -43,11 +43,16 @@
   const CELL_GAP_PX = 12; // fallback
   
   const DEFAULT_LAYOUT = [
-    // 4-колоночная сетка (2x2 = 2×2)
+    // 4-колоночная сетка — красивый набор для новых пользователей
+    // Ряд 0: Калории + Вода (базовые)
     { type: 'calories', size: '2x2', position: { col: 0, row: 0 } },
     { type: 'water', size: '2x2', position: { col: 2, row: 0 } },
-    { type: 'streak', size: '2x2', position: { col: 0, row: 2 } },
-    { type: 'sleep', size: '2x2', position: { col: 2, row: 2 } }
+    // Ряд 2: Вес (полная ширина) — BMI + график тренда
+    { type: 'weight', size: '4x2', position: { col: 0, row: 2 } },
+    // Ряд 4: Риск срыва (полная ширина) — факторы + рекомендация
+    { type: 'crashRisk', size: '4x2', position: { col: 0, row: 4 } },
+    // Ряд 6: Тепловая карта (полная ширина) — компактная неделя
+    { type: 'heatmap', size: '4x1', position: { col: 0, row: 6 } }
   ];
   
   // === State Manager with Undo/Redo ===

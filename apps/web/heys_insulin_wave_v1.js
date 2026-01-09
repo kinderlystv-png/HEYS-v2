@@ -126,6 +126,964 @@
     high: { threshold: 35, bonus: 0.08 },      // 35-50 г → +8% (было +15%)
     medium: { threshold: 20, bonus: 0.05 }     // 20-35 г → +5% (было +8%)
   };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🆕 PROTEIN_BONUS_V2 — разделение на animal/plant (v4.0.0)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🔬 Научное обоснование:
+  // - Animal protein: высокое содержание BCAA → сильный инсулиновый ответ ×1.8
+  //   (Layman 2003, Nilsson 2004, van Loon 2000)
+  // - Plant protein: меньше leucine, больше arginine → ×1.3 эффекта
+  //   (Mariotti 2017, Tang 2009)
+  // - Whey protein (сывороточный) — максимальный инсулиногенный эффект ×2.0
+  //   (Nilsson 2004, Pal & Ellis 2010)
+  const PROTEIN_BONUS_V2 = {
+    // Множители эффекта по типу белка
+    animal: {
+      multiplier: 1.8,    // ×1.8 от базового эффекта
+      label: '🥩 Животный белок',
+      desc: 'Высокий BCAA → сильный инсулиновый ответ'
+    },
+    plant: {
+      multiplier: 1.3,    // ×1.3 от базового эффекта
+      label: '🌱 Растительный белок', 
+      desc: 'Низкий leucine → умеренный ответ'
+    },
+    whey: {
+      multiplier: 2.0,    // ×2.0 — сывороточный максимально инсулиногенный
+      label: '🥛 Сывороточный белок',
+      desc: 'Быстрое усвоение → пиковый инсулин'
+    },
+    mixed: {
+      multiplier: 1.5,    // Среднее для смешанного приёма
+      label: '🍽️ Смешанный белок',
+      desc: 'Комбинация источников'
+    },
+    
+    // Базовые пороги (граммы белка) — одинаковые для всех типов
+    thresholds: {
+      veryHigh: 50,   // 50+ г
+      high: 35,       // 35-50 г
+      medium: 20      // 20-35 г
+    },
+    
+    // Базовые бонусы (до применения множителя типа)
+    baseBonuses: {
+      veryHigh: 0.07,   // base +7% → animal +12.6%, plant +9.1%, whey +14%
+      high: 0.05,       // base +5% → animal +9%, plant +6.5%, whey +10%
+      medium: 0.03      // base +3% → animal +5.4%, plant +3.9%, whey +6%
+    },
+    
+    // 🔍 Паттерны для определения типа белка по названию продукта
+    patterns: {
+      // Животный белок (мясо, рыба, яйца, молочные)
+      animal: [
+        // Мясо
+        /говядина/i, /свинина/i, /баранина/i, /телятина/i, /козлятина/i,
+        /стейк/i, /филе/i, /вырезка/i, /антрекот/i, /ребро/i, /карбонад/i,
+        /фарш/i, /котлет[аы]/i, /шашлык/i, /бефстроган/i,
+        /beef/i, /pork/i, /lamb/i, /meat/i, /steak/i,
+        // Птица
+        /курица/i, /курин/i, /куриц/i, /индейка/i, /индюш/i, /утка/i, /гусь/i,
+        /грудка/i, /бедро/i, /крыло/i, /голень/i, /окорочок/i,
+        /chicken/i, /turkey/i, /duck/i, /poultry/i,
+        // Рыба и морепродукты  
+        /рыба/i, /лосось/i, /сёмга/i, /форель/i, /тунец/i, /скумбрия/i,
+        /треска/i, /минтай/i, /камбала/i, /окунь/i, /судак/i, /щука/i,
+        /карп/i, /сом/i, /сельдь/i, /селёдка/i, /килька/i, /шпроты/i,
+        /креветки/i, /крабы/i, /мидии/i, /кальмар/i, /осьминог/i, /устрицы/i,
+        /fish/i, /salmon/i, /tuna/i, /shrimp/i, /seafood/i,
+        // Яйца
+        /яйцо/i, /яйца/i, /яичн/i, /омлет/i, /глазунья/i, /пашот/i,
+        /egg/i, /omelet/i,
+        // Молочные (белок из молочных)
+        /творог/i, /сыр/i, /брынза/i, /cheese/i, /cottage/i,
+        /казеин/i, /casein/i,
+        // Субпродукты
+        /печень/i, /сердце/i, /язык/i, /почки/i, /liver/i
+      ],
+      
+      // Сывороточный белок (whey) — отдельная категория
+      whey: [
+        /whey/i, /сывороточн/i, /изолят/i, /isolate/i,
+        /протеин.*коктейль/i, /protein.*shake/i, /protein.*powder/i,
+        /\bWPC\b/i, /\bWPI\b/i, /\bWPH\b/i,
+        /гейнер/i, /gainer/i
+      ],
+      
+      // Растительный белок
+      plant: [
+        // Бобовые
+        /горох/i, /нут/i, /чечевица/i, /фасоль/i, /бобы/i, /эдамаме/i,
+        /pea/i, /chickpea/i, /lentil/i, /bean/i, /legume/i,
+        // Соевые
+        /соя/i, /соев/i, /тофу/i, /темпе/i, /натто/i, /мисо/i,
+        /soy/i, /tofu/i, /tempeh/i, /edamame/i,
+        // Злаки с высоким белком
+        /киноа/i, /quinoa/i, /амарант/i, /amaranth/i,
+        // Орехи и семена
+        /миндаль/i, /арахис/i, /фисташк/i, /кешью/i, /грецк.*орех/i,
+        /семена.*чиа/i, /семена.*конопл/i, /семена.*подсолн/i, /семена.*тыкв/i,
+        /almond/i, /peanut/i, /cashew/i, /chia/i, /hemp/i,
+        // Растительные протеины
+        /гороховый.*протеин/i, /соевый.*протеин/i, /растительный.*протеин/i,
+        /pea.*protein/i, /soy.*protein/i, /plant.*protein/i, /vegan.*protein/i,
+        // Сейтан (пшеничный глютен)
+        /сейтан/i, /seitan/i, /глютен/i, /gluten/i
+      ]
+    },
+    
+    // Категории продуктов для определения типа
+    categories: {
+      animal: ['Мясо', 'Рыба', 'Птица', 'Морепродукты', 'Яйца', 'Meat', 'Fish', 'Poultry', 'Seafood', 'Eggs'],
+      plant: ['Бобовые', 'Орехи', 'Семена', 'Legumes', 'Nuts', 'Seeds'],
+      // Молочные — особый случай (казеин = animal, но не whey)
+      dairy: ['Молочные', 'Dairy']
+    }
+  };
+
+  /**
+   * 🆕 Определить тип белка в продукте (v4.0.0)
+   * @param {Object} product - продукт {name, category}
+   * @returns {string} 'animal' | 'plant' | 'whey' | 'mixed'
+   */
+  const detectProteinType = (product) => {
+    if (!product) return 'mixed';
+    
+    const name = (product.name || '').toLowerCase();
+    const category = product.category || '';
+    
+    // 1. Whey имеет приоритет (спортпит)
+    for (const pattern of PROTEIN_BONUS_V2.patterns.whey) {
+      if (pattern.test(name)) return 'whey';
+    }
+    
+    // 2. Проверяем растительный (до animal, т.к. "соевое мясо" = plant)
+    for (const pattern of PROTEIN_BONUS_V2.patterns.plant) {
+      if (pattern.test(name)) return 'plant';
+    }
+    
+    // 3. Проверяем животный
+    for (const pattern of PROTEIN_BONUS_V2.patterns.animal) {
+      if (pattern.test(name)) return 'animal';
+    }
+    
+    // 4. Проверяем по категории
+    if (PROTEIN_BONUS_V2.categories.animal.includes(category)) return 'animal';
+    if (PROTEIN_BONUS_V2.categories.plant.includes(category)) return 'plant';
+    if (PROTEIN_BONUS_V2.categories.dairy.includes(category)) return 'animal'; // казеин
+    
+    // 5. Не определили — mixed
+    return 'mixed';
+  };
+
+  /**
+   * 🆕 Рассчитать бонус белка с учётом типа (v4.0.0)
+   * @param {number} proteinGrams - граммы белка
+   * @param {string} proteinType - 'animal' | 'plant' | 'whey' | 'mixed'
+   * @returns {Object} { bonus, baseBonus, multiplier, type, tier }
+   */
+  const calculateProteinBonusV2 = (proteinGrams, proteinType = 'mixed') => {
+    const cfg = PROTEIN_BONUS_V2;
+    const thresholds = cfg.thresholds;
+    const baseBonuses = cfg.baseBonuses;
+    
+    // Определяем tier
+    let tier = null;
+    let baseBonus = 0;
+    
+    if (proteinGrams >= thresholds.veryHigh) {
+      tier = 'veryHigh';
+      baseBonus = baseBonuses.veryHigh;
+    } else if (proteinGrams >= thresholds.high) {
+      tier = 'high';
+      baseBonus = baseBonuses.high;
+    } else if (proteinGrams >= thresholds.medium) {
+      tier = 'medium';
+      baseBonus = baseBonuses.medium;
+    } else {
+      // Меньше 20г — нет бонуса
+      return { bonus: 0, baseBonus: 0, multiplier: 1, type: proteinType, tier: null };
+    }
+    
+    // Применяем множитель типа
+    const typeConfig = cfg[proteinType] || cfg.mixed;
+    const multiplier = typeConfig.multiplier;
+    const bonus = baseBonus * multiplier;
+    
+    return {
+      bonus,        // Итоговый бонус (например, 0.126 = +12.6%)
+      baseBonus,    // Базовый до множителя
+      multiplier,   // Множитель типа (1.8 для animal)
+      type: proteinType,
+      tier,
+      label: typeConfig.label,
+      desc: typeConfig.desc
+    };
+  };
+
+  // ============================================================================
+  // 🆕 WAVE_SHAPE_V2 — Multi-component Gaussian Wave Model (v4.0.0)
+  // ============================================================================
+  // 🔬 Научное обоснование: Caumo et al. 2000 (PMID: 10780864)
+  // Инсулиновый ответ = сумма нескольких компонентов с разной динамикой:
+  // - Fast (Быстрый): первичный выброс, пик ~15-30 мин
+  // - Slow (Медленный): вторичная секреция, пик ~60-90 мин
+  // - Hepatic (Печёночный): клиренс и производство, более плоская кривая
+  // ============================================================================
+  const WAVE_SHAPE_V2 = {
+    // Базовые компоненты Gaussian
+    components: {
+      fast: {
+        // Быстрый компонент — первая фаза секреции
+        peakOffset: 0.15,    // Пик на 15% длины волны
+        sigma: 0.12,         // Ширина пика (σ)
+        baseAmplitude: 0.6,  // Базовая амплитуда (вклад 60%)
+        // Модификаторы
+        giMultiplier: 1.3,   // Высокий ГИ → усиление быстрого компонента
+        liquidBoost: 1.5,    // Жидкая пища → ещё быстрее
+        fiberDamping: 0.7    // Клетчатка → замедляет
+      },
+      slow: {
+        // Медленный компонент — вторичная секреция
+        peakOffset: 0.45,    // Пик на 45% длины волны
+        sigma: 0.25,         // Более широкий пик
+        baseAmplitude: 0.35, // Вклад 35%
+        // Модификаторы
+        proteinBoost: 1.4,   // Белок усиливает медленный компонент
+        fatBoost: 1.3,       // Жиры тоже
+        complexCarbBoost: 1.2 // Сложные углеводы
+      },
+      hepatic: {
+        // Печёночный компонент — базальная секреция и клиренс
+        peakOffset: 0.70,    // Позже в волне
+        sigma: 0.35,         // Самый широкий
+        baseAmplitude: 0.05, // Минимальный вклад 5%
+        // Модификаторы
+        insulinResistanceBoost: 1.5, // IR увеличивает этот компонент
+        alcoholBoost: 1.3    // Алкоголь влияет на печёночный метаболизм
+      }
+    },
+    
+    // Параметры композиции
+    composition: {
+      baselineLevel: 0.05,   // Базальный уровень (5% от пика)
+      normalizeToOne: true,  // Нормализовать пик к 1.0
+      samplePoints: 100      // Точек для построения кривой
+    },
+    
+    // Пороги для категоризации формы волны
+    shapeCategories: {
+      spike: { fastRatio: 0.7, desc: 'Резкий пик (быстрые углеводы)' },
+      balanced: { fastRatio: 0.5, desc: 'Сбалансированная волна' },
+      prolonged: { fastRatio: 0.3, desc: 'Растянутая волна (много белка/жиров)' }
+    }
+  };
+
+  /**
+   * 🆕 Генерация Gaussian компонента волны
+   * @param {number} t - время (0-1, нормализованное)
+   * @param {number} peak - позиция пика (0-1)
+   * @param {number} sigma - ширина (σ)
+   * @param {number} amplitude - амплитуда
+   * @returns {number} значение функции в точке t
+   */
+  const gaussianComponent = (t, peak, sigma, amplitude) => {
+    return amplitude * Math.exp(-Math.pow(t - peak, 2) / (2 * sigma * sigma));
+  };
+
+  /**
+   * 🆕 Расчёт параметров компонентов на основе состава приёма
+   * @param {Object} nutrients - { carbs, simple, complex, protein, fat, fiber, gi }
+   * @param {Object} context - { isLiquid, irScore, hasAlcohol }
+   * @returns {Object} модифицированные параметры компонентов
+   */
+  const calculateComponentParams = (nutrients, context = {}) => {
+    const cfg = WAVE_SHAPE_V2.components;
+    const { carbs = 0, simple = 0, complex = 0, protein = 0, fat = 0, fiber = 0, gi = 50 } = nutrients;
+    const { isLiquid = false, irScore = 0, hasAlcohol = false } = context;
+    
+    // Соотношения
+    const simpleRatio = carbs > 0 ? simple / carbs : 0;
+    const totalMacros = carbs + protein + fat;
+    const proteinRatio = totalMacros > 0 ? protein / totalMacros : 0;
+    const fatRatio = totalMacros > 0 ? fat / totalMacros : 0;
+    
+    // === Fast компонент ===
+    let fastAmplitude = cfg.fast.baseAmplitude;
+    let fastSigma = cfg.fast.sigma;
+    let fastPeak = cfg.fast.peakOffset;
+    
+    // Высокий ГИ → больше быстрый компонент
+    if (gi > 70) fastAmplitude *= cfg.fast.giMultiplier;
+    // Много простых углеводов → ещё выше
+    if (simpleRatio > 0.5) fastAmplitude *= 1 + (simpleRatio - 0.5);
+    // Жидкая пища → быстрее и острее
+    if (isLiquid) {
+      fastAmplitude *= cfg.fast.liquidBoost;
+      fastSigma *= 0.8; // Уже пик
+      fastPeak *= 0.8;  // Раньше пик
+    }
+    // Клетчатка → демпфирует
+    if (fiber >= 5) {
+      fastAmplitude *= cfg.fast.fiberDamping;
+      fastSigma *= 1.2; // Шире пик
+    }
+    
+    // === Slow компонент ===
+    let slowAmplitude = cfg.slow.baseAmplitude;
+    let slowSigma = cfg.slow.sigma;
+    let slowPeak = cfg.slow.peakOffset;
+    
+    // Белок усиливает медленный компонент
+    if (protein >= 20) slowAmplitude *= cfg.slow.proteinBoost;
+    // Жиры тоже
+    if (fat >= 15) slowAmplitude *= cfg.slow.fatBoost;
+    // Сложные углеводы
+    if (complex > simple) slowAmplitude *= cfg.slow.complexCarbBoost;
+    
+    // === Hepatic компонент ===
+    let hepaticAmplitude = cfg.hepatic.baseAmplitude;
+    let hepaticSigma = cfg.hepatic.sigma;
+    let hepaticPeak = cfg.hepatic.peakOffset;
+    
+    // Инсулинорезистентность увеличивает этот компонент
+    if (irScore > 0.3) hepaticAmplitude *= cfg.hepatic.insulinResistanceBoost * (1 + irScore);
+    // Алкоголь влияет на печёночный метаболизм
+    if (hasAlcohol) hepaticAmplitude *= cfg.hepatic.alcoholBoost;
+    
+    return {
+      fast: { amplitude: fastAmplitude, sigma: fastSigma, peak: fastPeak },
+      slow: { amplitude: slowAmplitude, sigma: slowSigma, peak: slowPeak },
+      hepatic: { amplitude: hepaticAmplitude, sigma: hepaticSigma, peak: hepaticPeak }
+    };
+  };
+
+  /**
+   * 🆕 Генерация полной кривой волны (Multi-component Gaussian)
+   * @param {number} waveMinutes - длина волны в минутах
+   * @param {Object} nutrients - состав приёма
+   * @param {Object} context - контекст (IR, жидкость и т.д.)
+   * @returns {Object} { curve, peak, auc, shape, components }
+   */
+  const generateWaveCurve = (waveMinutes, nutrients, context = {}) => {
+    const cfg = WAVE_SHAPE_V2;
+    const params = calculateComponentParams(nutrients, context);
+    const points = cfg.composition.samplePoints;
+    
+    // Генерируем кривую
+    const curve = [];
+    let maxValue = 0;
+    let sumValue = 0;
+    let peakTime = 0;
+    
+    for (let i = 0; i <= points; i++) {
+      const t = i / points; // 0 to 1
+      
+      // Сумма компонентов
+      const fastValue = gaussianComponent(t, params.fast.peak, params.fast.sigma, params.fast.amplitude);
+      const slowValue = gaussianComponent(t, params.slow.peak, params.slow.sigma, params.slow.amplitude);
+      const hepaticValue = gaussianComponent(t, params.hepatic.peak, params.hepatic.sigma, params.hepatic.amplitude);
+      
+      const totalValue = cfg.composition.baselineLevel + fastValue + slowValue + hepaticValue;
+      
+      curve.push({
+        t,
+        minutes: Math.round(t * waveMinutes),
+        value: totalValue,
+        components: { fast: fastValue, slow: slowValue, hepatic: hepaticValue }
+      });
+      
+      sumValue += totalValue;
+      if (totalValue > maxValue) {
+        maxValue = totalValue;
+        peakTime = t;
+      }
+    }
+    
+    // Нормализуем к 1.0 если требуется
+    if (cfg.composition.normalizeToOne && maxValue > 0) {
+      curve.forEach(point => {
+        point.value /= maxValue;
+        point.components.fast /= maxValue;
+        point.components.slow /= maxValue;
+        point.components.hepatic /= maxValue;
+      });
+    }
+    
+    // Определяем форму волны
+    const fastContribution = params.fast.amplitude / (params.fast.amplitude + params.slow.amplitude + params.hepatic.amplitude);
+    let shape = 'balanced';
+    if (fastContribution >= cfg.shapeCategories.spike.fastRatio) shape = 'spike';
+    else if (fastContribution <= cfg.shapeCategories.prolonged.fastRatio) shape = 'prolonged';
+    
+    // AUC (площадь под кривой, нормализованная)
+    const auc = sumValue / (points + 1);
+    
+    return {
+      curve,                              // Массив точек кривой
+      peakTime,                           // Время пика (0-1)
+      peakMinutes: Math.round(peakTime * waveMinutes), // Время пика в минутах
+      auc,                                // Площадь под кривой
+      shape,                              // 'spike' | 'balanced' | 'prolonged'
+      shapeDesc: cfg.shapeCategories[shape]?.desc || '',
+      components: params,                 // Параметры компонентов
+      fastContribution,                   // Вклад быстрого компонента (0-1)
+      waveMinutes                         // Длина волны в минутах
+    };
+  };
+
+  // ============================================================================
+  // 🆕 AUC_CALCULATION_V2 — Расширенный расчёт площади под кривой (v4.0.0)
+  // ============================================================================
+  // 🔬 Научное обоснование: Brouns et al. 2005 (PMID: 16034360)
+  // AUC = интегральный показатель инсулинового ответа
+  // Полезнее чем просто "пик" или "длина" волны
+  // ============================================================================
+  const AUC_CONFIG = {
+    // Методы расчёта
+    methods: {
+      trapezoidal: true,     // Метод трапеций (основной)
+      simpson: false,        // Метод Симпсона (точнее для гладких кривых)
+      incremental: true      // iAUC — только превышение над базой
+    },
+    // Временные сегменты для частичного AUC
+    segments: {
+      early: { start: 0, end: 0.25, label: 'Ранний (0-25%)' },
+      peak: { start: 0.15, end: 0.50, label: 'Пиковый (15-50%)' },
+      late: { start: 0.50, end: 1.0, label: 'Поздний (50-100%)' }
+    },
+    // Референсные значения для сравнения
+    reference: {
+      glucose50g: 1.0,       // Нормализация: 50г глюкозы = 1.0
+      whiteRice200g: 0.85,   // Белый рис 200г = 0.85 от глюкозы
+      oatmeal100g: 0.45      // Овсянка 100г = 0.45 от глюкозы
+    }
+  };
+
+  /**
+   * 🆕 Расчёт AUC методом трапеций
+   * @param {Array} curve - массив точек { t, value }
+   * @param {number} startT - начало интервала (0-1)
+   * @param {number} endT - конец интервала (0-1)
+   * @returns {number} площадь под кривой
+   */
+  const calculateTrapezoidalAUC = (curve, startT = 0, endT = 1) => {
+    if (!curve || curve.length < 2) return 0;
+    
+    let auc = 0;
+    for (let i = 1; i < curve.length; i++) {
+      const prev = curve[i - 1];
+      const curr = curve[i];
+      
+      // Проверяем что точки в интервале
+      if (prev.t < startT || curr.t > endT) continue;
+      if (curr.t <= startT || prev.t >= endT) continue;
+      
+      // Обрезаем по границам интервала
+      const t1 = Math.max(prev.t, startT);
+      const t2 = Math.min(curr.t, endT);
+      
+      // Интерполируем значения на границах
+      const ratio1 = prev.t === curr.t ? 0 : (t1 - prev.t) / (curr.t - prev.t);
+      const ratio2 = prev.t === curr.t ? 1 : (t2 - prev.t) / (curr.t - prev.t);
+      const v1 = prev.value + ratio1 * (curr.value - prev.value);
+      const v2 = prev.value + ratio2 * (curr.value - prev.value);
+      
+      // Площадь трапеции
+      auc += (v1 + v2) * (t2 - t1) / 2;
+    }
+    
+    return auc;
+  };
+
+  /**
+   * 🆕 Расчёт iAUC (incremental AUC) — только превышение над базой
+   * @param {Array} curve - массив точек { t, value }
+   * @param {number} baseline - базовый уровень
+   * @returns {number} incremental AUC
+   */
+  const calculateIncrementalAUC = (curve, baseline = 0) => {
+    if (!curve || curve.length < 2) return 0;
+    
+    // Создаём кривую с вычтенным baseline
+    const adjustedCurve = curve.map(p => ({
+      t: p.t,
+      value: Math.max(0, p.value - baseline) // Только положительные превышения
+    }));
+    
+    return calculateTrapezoidalAUC(adjustedCurve);
+  };
+
+  /**
+   * 🆕 Полный расчёт AUC с сегментацией
+   * @param {Array} curve - массив точек кривой
+   * @param {Object} options - { baseline, normalize }
+   * @returns {Object} { total, incremental, segments, ratio }
+   */
+  const calculateFullAUC = (curve, options = {}) => {
+    const { baseline = WAVE_SHAPE_V2.composition.baselineLevel, normalize = true } = options;
+    const cfg = AUC_CONFIG;
+    
+    // Полный AUC
+    const totalAUC = calculateTrapezoidalAUC(curve);
+    
+    // Incremental AUC (только превышение над базой)
+    const iAUC = calculateIncrementalAUC(curve, baseline);
+    
+    // AUC по сегментам
+    const segments = {};
+    Object.entries(cfg.segments).forEach(([key, seg]) => {
+      segments[key] = {
+        auc: calculateTrapezoidalAUC(curve, seg.start, seg.end),
+        label: seg.label,
+        start: seg.start,
+        end: seg.end
+      };
+    });
+    
+    // Соотношение раннего к позднему (показатель "скорости" ответа)
+    const earlyLateRatio = segments.late.auc > 0 
+      ? segments.early.auc / segments.late.auc 
+      : 0;
+    
+    // Категоризация по форме AUC
+    let aucShape = 'normal';
+    if (earlyLateRatio > 1.5) aucShape = 'front-loaded'; // Быстрый ответ
+    else if (earlyLateRatio < 0.5) aucShape = 'prolonged'; // Затянутый ответ
+    
+    return {
+      total: totalAUC,
+      incremental: iAUC,
+      segments,
+      earlyLateRatio,
+      aucShape,
+      // Нормализованные значения (относительно референса)
+      normalized: normalize ? {
+        vsGlucose: totalAUC / cfg.reference.glucose50g,
+        vsRice: totalAUC / cfg.reference.whiteRice200g,
+        vsOatmeal: totalAUC / cfg.reference.oatmeal100g
+      } : null
+    };
+  };
+
+  // ============================================================================
+  // 🆕 INSULIN_PREDICTOR_V2 — Прогноз уровня инсулина (v4.0.0)
+  // ============================================================================
+  // 🔬 Научное обоснование: Dalla Man et al. 2007 (PMID: 17513708)
+  // Модель UVA/Padova — предиктивная модель глюкозо-инсулиновой динамики
+  // ============================================================================
+  const INSULIN_PREDICTOR_CONFIG = {
+    // Стандартные временные точки прогноза (минуты)
+    timePoints: [15, 30, 60, 90, 120],
+    
+    // Уровни для интерпретации (относительно пика)
+    levels: {
+      peak: { min: 0.9, max: 1.0, label: 'Пиковый уровень' },
+      high: { min: 0.6, max: 0.9, label: 'Высокий уровень' },
+      moderate: { min: 0.3, max: 0.6, label: 'Умеренный уровень' },
+      low: { min: 0.1, max: 0.3, label: 'Низкий уровень' },
+      baseline: { min: 0, max: 0.1, label: 'Базовый уровень' }
+    },
+    
+    // Пороги для рекомендаций
+    thresholds: {
+      safeToEat: 0.3,        // Безопасно есть снова (≤30% от пика)
+      fatBurning: 0.15,      // Начало жиросжигания (≤15% от пика)
+      optimalWindow: 0.25    // Оптимальное окно для следующего приёма
+    }
+  };
+
+  /**
+   * 🆕 Получить уровень инсулина на кривой в момент времени
+   * @param {Array} curve - массив точек { t, minutes, value }
+   * @param {number} minutes - время в минутах
+   * @returns {Object} { value, level, label }
+   */
+  const getInsulinLevelAtTime = (curve, minutes) => {
+    if (!curve || curve.length === 0) {
+      return { value: 0, level: 'baseline', label: 'Нет данных' };
+    }
+    
+    // Находим ближайшую точку или интерполируем
+    const waveMinutes = curve[curve.length - 1].minutes;
+    const t = Math.min(minutes / waveMinutes, 1);
+    
+    // Находим точки для интерполяции
+    let prev = curve[0];
+    let next = curve[curve.length - 1];
+    
+    for (let i = 0; i < curve.length - 1; i++) {
+      if (curve[i].t <= t && curve[i + 1].t >= t) {
+        prev = curve[i];
+        next = curve[i + 1];
+        break;
+      }
+    }
+    
+    // Линейная интерполяция
+    const ratio = next.t === prev.t ? 0 : (t - prev.t) / (next.t - prev.t);
+    const value = prev.value + ratio * (next.value - prev.value);
+    
+    // Определяем уровень
+    const cfg = INSULIN_PREDICTOR_CONFIG.levels;
+    let level = 'baseline';
+    let label = cfg.baseline.label;
+    
+    if (value >= cfg.peak.min) { level = 'peak'; label = cfg.peak.label; }
+    else if (value >= cfg.high.min) { level = 'high'; label = cfg.high.label; }
+    else if (value >= cfg.moderate.min) { level = 'moderate'; label = cfg.moderate.label; }
+    else if (value >= cfg.low.min) { level = 'low'; label = cfg.low.label; }
+    
+    return { value, level, label, minutes, t };
+  };
+
+  /**
+   * 🆕 Полный прогноз инсулина с рекомендациями
+   * @param {Array} curve - кривая волны
+   * @param {number} waveMinutes - длина волны в минутах
+   * @returns {Object} { predictions, recommendations, safeToEatAt, fatBurningAt }
+   */
+  const predictInsulinResponse = (curve, waveMinutes) => {
+    const cfg = INSULIN_PREDICTOR_CONFIG;
+    
+    // Прогнозы на стандартные точки
+    const predictions = cfg.timePoints.map(minutes => {
+      const result = getInsulinLevelAtTime(curve, minutes);
+      return {
+        minutes,
+        ...result,
+        formatted: `${minutes} мин: ${(result.value * 100).toFixed(0)}% — ${result.label}`
+      };
+    });
+    
+    // Находим важные моменты
+    let safeToEatAt = null;
+    let fatBurningAt = null;
+    let optimalWindowAt = null;
+    
+    for (const point of curve) {
+      const minutes = point.minutes;
+      const value = point.value;
+      
+      if (safeToEatAt === null && value <= cfg.thresholds.safeToEat) {
+        safeToEatAt = minutes;
+      }
+      if (fatBurningAt === null && value <= cfg.thresholds.fatBurning) {
+        fatBurningAt = minutes;
+      }
+      if (optimalWindowAt === null && value <= cfg.thresholds.optimalWindow) {
+        optimalWindowAt = minutes;
+      }
+    }
+    
+    // Рекомендации
+    const recommendations = [];
+    
+    if (safeToEatAt) {
+      recommendations.push({
+        type: 'safe_to_eat',
+        minutes: safeToEatAt,
+        text: `Безопасно есть снова через ${safeToEatAt} мин`,
+        icon: '🍽️'
+      });
+    }
+    
+    if (fatBurningAt) {
+      recommendations.push({
+        type: 'fat_burning',
+        minutes: fatBurningAt,
+        text: `Жиросжигание начнётся через ${fatBurningAt} мин`,
+        icon: '🔥'
+      });
+    }
+    
+    if (optimalWindowAt) {
+      recommendations.push({
+        type: 'optimal_window',
+        minutes: optimalWindowAt,
+        text: `Оптимальное окно для еды: после ${optimalWindowAt} мин`,
+        icon: '⭐'
+      });
+    }
+    
+    return {
+      predictions,
+      recommendations,
+      safeToEatAt,
+      fatBurningAt,
+      optimalWindowAt,
+      waveMinutes,
+      summary: generatePredictionSummary(predictions, safeToEatAt, fatBurningAt)
+    };
+  };
+
+  /**
+   * 🆕 Генерация текстового саммари прогноза
+   */
+  const generatePredictionSummary = (predictions, safeToEatAt, fatBurningAt) => {
+    const p30 = predictions.find(p => p.minutes === 30);
+    const p60 = predictions.find(p => p.minutes === 60);
+    const p120 = predictions.find(p => p.minutes === 120);
+    
+    let summary = '';
+    
+    if (p30) {
+      summary += `Через 30 мин: ${p30.label.toLowerCase()}. `;
+    }
+    if (p60) {
+      summary += `Через 1 час: ${p60.label.toLowerCase()}. `;
+    }
+    if (fatBurningAt) {
+      summary += `Жиросжигание: с ${fatBurningAt} мин.`;
+    }
+    
+    return summary.trim();
+  };
+
+  // ============================================================================
+  // 🆕 WAVE_SCORING_V2 — Система оценки качества волны (v4.0.0)
+  // ============================================================================
+  // 🔬 Научное обоснование: Интегральная оценка инсулинового ответа
+  // Учитывает: пик, длительность, форму, AUC, контекст
+  // ============================================================================
+  const WAVE_SCORING_V2 = {
+    // Веса компонентов оценки (сумма = 1.0)
+    weights: {
+      peakHeight: 0.25,      // Высота пика (меньше = лучше)
+      duration: 0.20,        // Длительность (оптимум = целевая)
+      shape: 0.20,           // Форма волны (prolonged лучше spike)
+      auc: 0.20,             // Площадь под кривой
+      context: 0.15          // Контекст (тренировка, время суток)
+    },
+    
+    // Пороги для каждого компонента
+    thresholds: {
+      peakHeight: {
+        excellent: 0.6,     // Пик ≤60% от максимума = отлично
+        good: 0.75,         // Пик ≤75% = хорошо
+        fair: 0.9,          // Пик ≤90% = нормально
+        poor: 1.0           // Пик >90% = плохо
+      },
+      duration: {
+        target: 180,        // Целевая длина волны (минуты)
+        tolerance: 30,      // Допустимое отклонение ±30 мин
+        maxPenalty: 60      // После этого отклонения — макс штраф
+      },
+      auc: {
+        excellent: 0.5,     // iAUC ≤50% от референса = отлично
+        good: 0.75,
+        fair: 1.0,
+        poor: 1.5
+      }
+    },
+    
+    // Итоговые уровни оценки
+    levels: {
+      excellent: { min: 85, label: 'Отлично', icon: '🌟', color: '#22c55e' },
+      good: { min: 70, label: 'Хорошо', icon: '✅', color: '#84cc16' },
+      fair: { min: 50, label: 'Нормально', icon: '➖', color: '#eab308' },
+      poor: { min: 0, label: 'Требует внимания', icon: '⚠️', color: '#ef4444' }
+    }
+  };
+
+  /**
+   * 🆕 Оценка компонента "высота пика"
+   * @param {number} peakValue - значение пика (0-1)
+   * @returns {number} оценка 0-100
+   */
+  const scorePeakHeight = (peakValue) => {
+    const th = WAVE_SCORING_V2.thresholds.peakHeight;
+    
+    if (peakValue <= th.excellent) return 100;
+    if (peakValue <= th.good) {
+      return 100 - (peakValue - th.excellent) / (th.good - th.excellent) * 20;
+    }
+    if (peakValue <= th.fair) {
+      return 80 - (peakValue - th.good) / (th.fair - th.good) * 30;
+    }
+    return Math.max(0, 50 - (peakValue - th.fair) / (th.poor - th.fair) * 50);
+  };
+
+  /**
+   * 🆕 Оценка компонента "длительность"
+   * @param {number} minutes - длина волны в минутах
+   * @returns {number} оценка 0-100
+   */
+  const scoreDuration = (minutes) => {
+    const th = WAVE_SCORING_V2.thresholds.duration;
+    const deviation = Math.abs(minutes - th.target);
+    
+    if (deviation <= th.tolerance) {
+      return 100 - (deviation / th.tolerance) * 15; // До 85 при макс отклонении в норме
+    }
+    
+    const extraDeviation = deviation - th.tolerance;
+    const penaltyRange = th.maxPenalty - th.tolerance;
+    const penalty = Math.min(1, extraDeviation / penaltyRange);
+    
+    return Math.max(0, 85 - penalty * 85);
+  };
+
+  /**
+   * 🆕 Оценка компонента "форма волны"
+   * @param {string} shape - тип формы (spike/balanced/prolonged)
+   * @param {number} fastContribution - вклад быстрого компонента
+   * @returns {number} оценка 0-100
+   */
+  const scoreWaveShape = (shape, fastContribution = 0.5) => {
+    // Prolonged лучше (меньше стресс для поджелудочной)
+    switch (shape) {
+      case 'prolonged': return 95;
+      case 'balanced': return 80;
+      case 'spike': return 50;
+      default: 
+        // Плавная оценка по fastContribution
+        // Меньше fast = лучше
+        return Math.round(100 - fastContribution * 60);
+    }
+  };
+
+  /**
+   * 🆕 Оценка компонента "AUC"
+   * @param {number} normalizedAUC - AUC относительно референса
+   * @returns {number} оценка 0-100
+   */
+  const scoreAUC = (normalizedAUC) => {
+    const th = WAVE_SCORING_V2.thresholds.auc;
+    
+    if (normalizedAUC <= th.excellent) return 100;
+    if (normalizedAUC <= th.good) {
+      return 100 - (normalizedAUC - th.excellent) / (th.good - th.excellent) * 20;
+    }
+    if (normalizedAUC <= th.fair) {
+      return 80 - (normalizedAUC - th.good) / (th.fair - th.good) * 30;
+    }
+    if (normalizedAUC <= th.poor) {
+      return 50 - (normalizedAUC - th.fair) / (th.poor - th.fair) * 50;
+    }
+    return 0;
+  };
+
+  /**
+   * 🆕 Оценка компонента "контекст"
+   * @param {Object} context - контекст приёма { hasTraining, isPostWorkout, circadianPeriod }
+   * @returns {number} оценка 0-100
+   */
+  const scoreContext = (context = {}) => {
+    let score = 70; // Базовый уровень
+    
+    // Бонус за тренировку
+    if (context.hasTraining || context.isPostWorkout) {
+      score += 15; // Инсулин идёт в мышцы
+    }
+    
+    // Бонус за хорошее время суток
+    const period = context.circadianPeriod;
+    if (period === 'morning' || period === 'day') {
+      score += 10; // Лучшая чувствительность к инсулину утром
+    } else if (period === 'night') {
+      score -= 10; // Худшая чувствительность ночью
+    }
+    
+    // Бонус за оптимальный интервал между приёмами
+    if (context.mealGapMinutes && context.mealGapMinutes >= 180) {
+      score += 5;
+    }
+    
+    return Math.min(100, Math.max(0, score));
+  };
+
+  /**
+   * 🆕 Полный расчёт оценки волны
+   * @param {Object} waveData - данные волны из calculateWaveForMeal
+   * @param {Object} context - контекст
+   * @returns {Object} { score, level, components, recommendations }
+   */
+  const calculateWaveScore = (waveData, context = {}) => {
+    const cfg = WAVE_SCORING_V2;
+    const weights = cfg.weights;
+    
+    // Компоненты оценки
+    const components = {
+      peakHeight: {
+        value: waveData.peakValue || 1,
+        score: scorePeakHeight(waveData.peakValue || 1),
+        weight: weights.peakHeight
+      },
+      duration: {
+        value: waveData.waveMinutes || 180,
+        score: scoreDuration(waveData.waveMinutes || 180),
+        weight: weights.duration
+      },
+      shape: {
+        value: waveData.shape || 'balanced',
+        score: scoreWaveShape(waveData.shape, waveData.fastContribution),
+        weight: weights.shape
+      },
+      auc: {
+        value: waveData.auc?.normalized?.vsGlucose || 1,
+        score: scoreAUC(waveData.auc?.normalized?.vsGlucose || 1),
+        weight: weights.auc
+      },
+      context: {
+        value: context,
+        score: scoreContext(context),
+        weight: weights.context
+      }
+    };
+    
+    // Взвешенная сумма
+    const totalScore = Object.values(components).reduce((sum, comp) => {
+      return sum + comp.score * comp.weight;
+    }, 0);
+    
+    const score = Math.round(totalScore);
+    
+    // Определяем уровень
+    let level = cfg.levels.poor;
+    for (const [key, lvl] of Object.entries(cfg.levels)) {
+      if (score >= lvl.min) {
+        level = { ...lvl, key };
+      }
+    }
+    
+    // Рекомендации по улучшению
+    const recommendations = [];
+    
+    if (components.peakHeight.score < 70) {
+      recommendations.push({
+        type: 'peak',
+        text: 'Добавьте клетчатку для снижения пика',
+        icon: '🥬'
+      });
+    }
+    
+    if (components.shape.score < 70) {
+      recommendations.push({
+        type: 'shape',
+        text: 'Сложные углеводы дадут более плавную волну',
+        icon: '🍞'
+      });
+    }
+    
+    if (components.context.score < 70 && !context.hasTraining) {
+      recommendations.push({
+        type: 'activity',
+        text: 'Лёгкая активность после еды улучшит утилизацию',
+        icon: '🚶'
+      });
+    }
+    
+    return {
+      score,
+      level,
+      components,
+      recommendations,
+      summary: `${level.icon} ${level.label} (${score}/100)`
+    };
+  };
+
   // 🔬 НАУЧНЫЙ АУДИТ 2025-12-10 (ChatGPT Research):
   // Клетчатка СНИЖАЕТ пик инсулина и общую AUC на 20-30% (Wolever 1991, Jenkins 1978)
   // 'Пик ниже, волна сглажена' — УМЕНЬШЕНИЕ волны, не увеличение!
@@ -1043,6 +2001,144 @@
       'MODERATE': 1.5,       // Окно ×1.5
       'LISS': 1.0            // Стандартное окно
     }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 📊 IR_SCORE_CONFIG — Конфигурация индекса инсулинорезистентности (v2.0)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 
+  // IR Score = MULTIPLICATIVE комбинация 4 факторов:
+  // - BMI: <25=1.0, <30=1.1, <35=1.25, else=1.4
+  // - Sleep: ≥7h=1.0, ≥6h=1.05, else=1.15
+  // - Stress: ≤3=1.0, ≤6=1.08, else=1.15
+  // - Age: <30=1.0, <45=1.06, <60=1.12, else=1.25
+  // 
+  // Научное обоснование:
+  // - DeFronzo 1979 (PMID: 510806): возраст снижает чувствительность на 10-15% за декаду
+  // - Kahn & Flier 2000 (PMID: 10953022): BMI>30 = +20-40% резистентность
+  // - Spiegel 1999 (PMID: 10543671): недосып <6ч = +20-30% резистентность
+  // - Chrousos 2000: кортизол (стресс) = +10-20% резистентность
+  // ═══════════════════════════════════════════════════════════════════════════
+  const IR_SCORE_CONFIG = {
+    // BMI thresholds (ascending) — чем выше BMI, тем больше резистентность
+    bmi: {
+      thresholds: [25, 30, 35],      // <25, 25-30, 30-35, ≥35
+      factors: [1.0, 1.1, 1.25, 1.4], // Normal, Overweight, Obese I, Obese II+
+      labels: ['Normal', 'Overweight', 'Obese I', 'Obese II+']
+    },
+    // Sleep thresholds (DESCENDING!) — меньше сна = больше резистентность
+    sleep: {
+      thresholds: [7, 6],            // ≥7h, 6-7h, <6h
+      factors: [1.0, 1.05, 1.15],    // Optimal, Moderate, Severe deficit
+      labels: ['Optimal', 'Moderate deficit', 'Severe deficit']
+    },
+    // Stress thresholds (ascending) — выше стресс = больше резистентность
+    stress: {
+      thresholds: [3, 6],            // ≤3, 4-6, >6
+      factors: [1.0, 1.08, 1.15],    // Low, Medium, High
+      labels: ['Low', 'Medium', 'High']
+    },
+    // Age thresholds (ascending) — старше = больше резистентность
+    age: {
+      thresholds: [30, 45, 60],      // <30, 30-45, 45-60, ≥60
+      factors: [1.0, 1.06, 1.12, 1.25], // Young, Adult, Middle-age, Senior
+      labels: ['Young', 'Adult', 'Middle-age', 'Senior']
+    },
+    // Цветовое кодирование IR Score для UI
+    colorRanges: [
+      { max: 1.1, color: '#22c55e', label: '🟢 Optimal' },      // Зелёный
+      { max: 1.25, color: '#eab308', label: '🟡 Moderate' },    // Жёлтый
+      { max: 1.5, color: '#f97316', label: '🟠 Elevated' },     // Оранжевый
+      { max: Infinity, color: '#ef4444', label: '🔴 High' }     // Красный
+    ]
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 📊 calculateIRScore — расчёт индекса инсулинорезистентности
+  // ═══════════════════════════════════════════════════════════════════════════
+  /**
+   * Рассчитывает IR Score — мультипликативный индекс инсулинорезистентности.
+   * 
+   * IR Score = bmiFactor × sleepFactor × stressFactor × ageFactor
+   * 
+   * Значение ≈1.0 = отличная чувствительность, ≥1.5 = значительная резистентность.
+   * 
+   * @param {Object} profile - профиль пользователя
+   * @param {number} profile.weight - вес (кг)
+   * @param {number} profile.height - рост (см)
+   * @param {number} profile.age - возраст (лет)
+   * @param {Object} dayData - данные дня
+   * @param {number} [dayData.sleepHours] - часы сна
+   * @param {number} [dayData.stressAvg] - средний стресс (1-10)
+   * @returns {Object} { score, factors, color, label, breakdown }
+   */
+  const calculateIRScore = (profile = {}, dayData = {}) => {
+    const { weight = 70, height = 170, age = 30 } = profile;
+    const { sleepHours = 7, stressAvg = 3 } = dayData;
+    
+    // Рассчитываем BMI
+    const heightM = height / 100;
+    const bmi = heightM > 0 ? weight / (heightM * heightM) : 25;
+    
+    // Хелпер: найти фактор по порогам (ascending)
+    const getFactorAscending = (value, cfg) => {
+      for (let i = 0; i < cfg.thresholds.length; i++) {
+        if (value < cfg.thresholds[i]) {
+          return { factor: cfg.factors[i], label: cfg.labels[i], tier: i };
+        }
+      }
+      return { factor: cfg.factors[cfg.factors.length - 1], label: cfg.labels[cfg.labels.length - 1], tier: cfg.thresholds.length };
+    };
+    
+    // Хелпер: найти фактор по порогам (descending — для sleep)
+    const getFactorDescending = (value, cfg) => {
+      for (let i = 0; i < cfg.thresholds.length; i++) {
+        if (value >= cfg.thresholds[i]) {
+          return { factor: cfg.factors[i], label: cfg.labels[i], tier: i };
+        }
+      }
+      return { factor: cfg.factors[cfg.factors.length - 1], label: cfg.labels[cfg.labels.length - 1], tier: cfg.thresholds.length };
+    };
+    
+    // Рассчитываем каждый фактор
+    const bmiFactor = getFactorAscending(bmi, IR_SCORE_CONFIG.bmi);
+    const sleepFactor = getFactorDescending(sleepHours, IR_SCORE_CONFIG.sleep);
+    const stressFactor = getFactorAscending(stressAvg, IR_SCORE_CONFIG.stress);
+    const ageFactor = getFactorAscending(age, IR_SCORE_CONFIG.age);
+    
+    // Мультипликативный score
+    const score = bmiFactor.factor * sleepFactor.factor * stressFactor.factor * ageFactor.factor;
+    
+    // Определяем цвет и лейбл
+    let color = '#ef4444';
+    let label = '🔴 High';
+    for (const range of IR_SCORE_CONFIG.colorRanges) {
+      if (score <= range.max) {
+        color = range.color;
+        label = range.label;
+        break;
+      }
+    }
+    
+    return {
+      score: Math.round(score * 1000) / 1000, // 3 знака после запятой
+      factors: {
+        bmi: bmiFactor.factor,
+        sleep: sleepFactor.factor,
+        stress: stressFactor.factor,
+        age: ageFactor.factor
+      },
+      color,
+      label,
+      breakdown: {
+        bmi: { value: Math.round(bmi * 10) / 10, factor: bmiFactor.factor, label: bmiFactor.label },
+        sleep: { value: sleepHours, factor: sleepFactor.factor, label: sleepFactor.label },
+        stress: { value: stressAvg, factor: stressFactor.factor, label: stressFactor.label },
+        age: { value: age, factor: ageFactor.factor, label: ageFactor.label }
+      },
+      // Для использования как множитель волны
+      waveMultiplier: score
+    };
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -3057,9 +4153,38 @@
     // При GL<7: giMult остаётся 1.0 (GI не влияет — Mayer 1995)
     
     // Бонусы от нутриентов — масштабируются по glScaleFactor
+    // 🆕 v4.0.0: Белок v2 — animal/plant дифференциация
+    // Научное обоснование: 
+    // - Nuttall & Gannon 1991: животный белок вызывает более сильный инсулиновый ответ
+    // - Van Loon 2000: whey protein — максимальная инсулиногенность
+    // - Raben 1994: plant protein — меньший инсулиновый ответ
     let proteinBonus = 0;
-    if (protein >= PROTEIN_BONUS.high.threshold) proteinBonus = PROTEIN_BONUS.high.bonus;
-    else if (protein >= PROTEIN_BONUS.medium.threshold) proteinBonus = PROTEIN_BONUS.medium.bonus;
+    let proteinMeta = null; // Для хранения типа белка в результате
+    
+    if (protein > 0 && typeof calculateProteinBonusV2 === 'function') {
+      // 🆕 v4.0.0: Используем v2 систему с типизацией белка
+      // Детектируем тип белка из продуктов приёма
+      // ⚠️ v4.0.0 FIX: items не передаётся в calculateMultiplier, используем fallback
+      let dominantProteinType = 'mixed';
+      // TODO: Для полноценной поддержки типизации белка нужно:
+      // 1. Добавить items в параметры calculateMultiplier
+      // 2. Передавать items из всех мест вызова
+      // Пока используем fallback на 'mixed' тип
+      
+      const proteinV2 = calculateProteinBonusV2(protein, dominantProteinType);
+      proteinBonus = proteinV2.bonus;
+      proteinMeta = {
+        type: proteinV2.type,
+        tier: proteinV2.tier,
+        multiplier: proteinV2.multiplier,
+        label: proteinV2.label,
+        desc: proteinV2.desc
+      };
+    } else {
+      // Fallback на старую систему (backward compatibility)
+      if (protein >= PROTEIN_BONUS.high.threshold) proteinBonus = PROTEIN_BONUS.high.bonus;
+      else if (protein >= PROTEIN_BONUS.medium.threshold) proteinBonus = PROTEIN_BONUS.medium.bonus;
+    }
     proteinBonus *= glScaleFactor;
     
     let fiberBonus = 0;
@@ -3098,6 +4223,7 @@
       total: baseMult * carbsMult * liquidMult * foodFormMult,
       gi: giMult,
       protein: proteinBonus,
+      proteinMeta, // 🆕 v4.0.0: Тип белка (animal/plant/whey/mixed)
       fiber: fiberBonus,
       fat: fatBonus,
       carbs: carbsMult,
@@ -3671,6 +4797,11 @@
       effectiveBaseWaveHours = 3;
     }
     
+    // 🆕 v4.0.0: IR Score — объединённый показатель инсулинорезистентности
+    // Комбинирует BMI, сон, стресс, возраст в единый мультипликатор
+    const irScore = calculateIRScore(profile, dayData);
+    const irScoreMultiplier = irScore.waveMultiplier || 1.0;
+    
     // Сортируем по времени (последний первый)
     const sorted = [...mealsWithTime].sort((a, b) => {
       const timeA = (a.time || '').replace(':', '');
@@ -4004,7 +5135,8 @@
     // 🆕 v3.6.0: NDTE применяется как отдельный множитель (независимо от состава еды)
     // 🆕 v3.8.0: Insulin Index Wave Mult — молочка делает волну КОРОЧЕ (Holt 1997)
     // 🆕 v3.8.5: Simple Ratio Mult — сахар = быстрее пик, короче волна
-    let finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier * insulinIndexWaveMult * simpleRatioMultiplier;
+    // 🆕 v4.0.0: IR Score — объединённый мультипликатор инсулинорезистентности
+    let finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier * insulinIndexWaveMult * simpleRatioMultiplier * irScoreMultiplier;
     
     // 🔬 v3.7.5: Физиологический лимит — волна не может быть больше ×1.5 от базы
     // Научное обоснование: реальные исследования показывают что даже при
@@ -4421,8 +5553,13 @@
     // lipolysisMinutes = diffMinutes - waveMinutes (время ПОСЛЕ окончания волны)
     const lipolysisMinutes = diffMinutes > waveMinutes ? Math.round(diffMinutes - waveMinutes) : 0;
     
-    // 🆕 v3.0.0: Отладка — убедимся что данные корректны
-    // console.log('[InsulinWave] diffMinutes:', diffMinutes, 'waveMinutes:', waveMinutes, 'lipolysisMinutes:', lipolysisMinutes);
+    // 🆕 v4.0.0: 3-компонентная Gaussian кривая для визуализации
+    // Генерируем кривую с 3 пиками: fast (быстрые угл.), slow (сложные угл.), hepatic (печёночный)
+    const waveCurve = generateWaveCurve(waveMinutes, nutrients, {
+      hasTraining: !!activityContext?.type,
+      trainingType: activityContext?.type,
+      isNightTime: isNight
+    });
     
     return {
       // Статус
@@ -4446,8 +5583,20 @@
       finalMultiplier, // 🆕 Для отображения в popup "База × Множитель"
       baseWaveHours: effectiveBaseWaveHours, // 🆕 v3.0.0: теперь персональная база
       
+      // 🆕 v4.0.0: 3-компонентная Gaussian кривая для визуализации
+      curve: waveCurve.curve,                    // Массив точек {t, y} для графика
+      gaussian: waveCurve,                       // Полный объект с компонентами
+      waveShape: waveCurve.shape,                // 'spike' | 'balanced' | 'prolonged'
+      waveShapeDesc: waveCurve.shapeDesc,        // Русское описание формы
+      curveComponents: waveCurve.components,     // {fast, slow, hepatic} — 3 компоненты
+      curvePeakMinutes: waveCurve.peakMinutes,   // Минута пика для UI
+      curveAUC: waveCurve.auc,                   // Площадь под кривой
+      
       // 🆕 v3.0.0: Персональная база волны
       personalBaseline,
+      
+      // 🆕 v4.0.0: IR Score — объединённый показатель инсулинорезистентности
+      irScore,
       
       // 🆕 v3.0.0: Фазы волны (подъём, плато, спад)
       wavePhases,
@@ -5018,14 +6167,45 @@
     const elapsedMinutes = totalMinutes - data.remaining;
     const progress = Math.min(1, elapsedMinutes / totalMinutes); // 0-1
     
-    // Форма кривой зависит от ГИ
-    const gi = data.avgGI || 50;
-    const peakPosition = gi >= 70 ? 0.15 : gi <= 40 ? 0.35 : 0.25;
-    const peakHeight = gi >= 70 ? 0.95 : gi <= 40 ? 0.7 : 0.85;
-    
-    // Генерируем точки кривой
+    // 🆕 v4.1.0: Используем научную 3-компонентную Gaussian кривую если доступна
     const generateWavePath = () => {
       const points = [];
+      
+      // Если есть curve из calculateInsulinWaveData — используем её (3-peak Gaussian)
+      if (data.curve && Array.isArray(data.curve) && data.curve.length > 0) {
+        // data.curve: массив {t, y, components: {fast, slow, hepatic}} 
+        // t уже нормализован 0-1 в generateWaveCurve()
+        const curveData = data.curve;
+        const maxY = Math.max(...curveData.map(p => p.y || p.value || 0), 0.01);
+        
+        curveData.forEach(point => {
+          const tNorm = point.t || 0; // t уже 0-1, НЕ делим на totalMinutes!
+          const yNorm = (point.y || point.value || 0) / maxY; // нормализуем по высоте
+          const x = padding.left + tNorm * chartW;
+          const yPx = padding.top + chartH * (1 - yNorm);
+          
+          // 🆕 v4.1.0: Сохраняем компоненты для 3-peak визуализации
+          const components = point.components || {};
+          const fastNorm = (components.fast || 0) / maxY;
+          const slowNorm = (components.slow || 0) / maxY;
+          const hepaticNorm = (components.hepatic || 0) / maxY;
+          
+          points.push({ 
+            x, y: yPx, t: tNorm, value: yNorm,
+            // Компоненты в пикселях Y
+            fastY: padding.top + chartH * (1 - fastNorm),
+            slowY: padding.top + chartH * (1 - slowNorm),
+            hepaticY: padding.top + chartH * (1 - hepaticNorm)
+          });
+        });
+        
+        return points;
+      }
+      
+      // Fallback: старая однопиковая модель (для backwards compatibility)
+      const gi = data.avgGI || 50;
+      const peakPosition = gi >= 70 ? 0.15 : gi <= 40 ? 0.35 : 0.25;
+      const peakHeight = gi >= 70 ? 0.95 : gi <= 40 ? 0.7 : 0.85;
       const steps = 50;
       
       for (let i = 0; i <= steps; i++) {
@@ -5054,10 +6234,48 @@
     ).join(' ');
     const fillPathD = `${pathD} L ${padding.left + chartW} ${padding.top + chartH} L ${padding.left} ${padding.top + chartH} Z`;
     
+    // 🆕 v4.1.0: Генерация путей для 3-компонентной визуализации
+    const hasComponents = wavePoints[0]?.fastY !== undefined;
+    let fastPathD = '', slowPathD = '', hepaticPathD = '';
+    
+    if (hasComponents) {
+      fastPathD = wavePoints.map((p, i) => 
+        `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.fastY.toFixed(1)}`
+      ).join(' ');
+      
+      slowPathD = wavePoints.map((p, i) => 
+        `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.slowY.toFixed(1)}`
+      ).join(' ');
+      
+      hepaticPathD = wavePoints.map((p, i) => 
+        `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.hepaticY.toFixed(1)}`
+      ).join(' ');
+    }
+    
     const currentIdx = Math.round(progress * (wavePoints.length - 1));
     const currentPoint = wavePoints[Math.min(currentIdx, wavePoints.length - 1)];
     // 🆕 v3.0.0: Защита от undefined currentPoint
     if (!currentPoint) return null;
+    
+    // 🆕 v4.1.2: Позиции пиков для 3-компонентной модели (сноски на графике)
+    let fastPeak = null, slowPeak = null, hepaticPeak = null;
+    if (hasComponents && wavePoints.length > 5) {
+      let fastMinY = Infinity, slowMinY = Infinity, hepaticMinY = Infinity;
+      wavePoints.forEach((p) => {
+        // Fast peak: t ≈ 0.15-0.25 (быстрые углеводы)
+        if (p.t >= 0.10 && p.t <= 0.35 && p.fastY < fastMinY) { 
+          fastMinY = p.fastY; fastPeak = { x: p.x, y: p.y, t: p.t }; 
+        }
+        // Slow/Main peak: t ≈ 0.40-0.50 (основной инсулиновый ответ)
+        if (p.t >= 0.30 && p.t <= 0.60 && p.slowY < slowMinY) { 
+          slowMinY = p.slowY; slowPeak = { x: p.x, y: p.y, t: p.t }; 
+        }
+        // Hepatic peak: t ≈ 0.65-0.75 (печёночный хвост)
+        if (p.t >= 0.55 && p.t <= 0.85 && p.hepaticY < hepaticMinY) { 
+          hepaticMinY = p.hepaticY; hepaticPeak = { x: p.x, y: p.y, t: p.t }; 
+        }
+      });
+    }
     
     // Время начала и конца волны
     const startTime = data.lastMealTimeDisplay || data.lastMealTime || '';
@@ -5077,11 +6295,24 @@
         viewBox: `0 0 ${width} ${height}`,
         style: { display: 'block' }
       },
-        // Градиент
+        // Градиенты
         React.createElement('defs', null,
           React.createElement('linearGradient', { id: 'waveGradientMain', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
             React.createElement('stop', { offset: '0%', stopColor: '#fff', stopOpacity: 0.4 }),
             React.createElement('stop', { offset: '100%', stopColor: '#fff', stopOpacity: 0.1 })
+          ),
+          // 🆕 v4.1.0: Градиенты для 3-компонентной визуализации
+          React.createElement('linearGradient', { id: 'waveGradientFast', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
+            React.createElement('stop', { offset: '0%', stopColor: '#f97316', stopOpacity: 0.5 }),
+            React.createElement('stop', { offset: '100%', stopColor: '#f97316', stopOpacity: 0.1 })
+          ),
+          React.createElement('linearGradient', { id: 'waveGradientSlow', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
+            React.createElement('stop', { offset: '0%', stopColor: '#22c55e', stopOpacity: 0.5 }),
+            React.createElement('stop', { offset: '100%', stopColor: '#22c55e', stopOpacity: 0.1 })
+          ),
+          React.createElement('linearGradient', { id: 'waveGradientHepatic', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
+            React.createElement('stop', { offset: '0%', stopColor: '#8b5cf6', stopOpacity: 0.5 }),
+            React.createElement('stop', { offset: '100%', stopColor: '#8b5cf6', stopOpacity: 0.1 })
           )
         ),
         // Базовая линия
@@ -5115,13 +6346,48 @@
           fontSize: 9, fill: 'rgba(255,255,255,0.9)', textAnchor: 'middle', fontWeight: 500
         }, '🔥 ' + endTime),
         
-        // Заливка под кривой
+        // Заливка под кривой (суммарная)
         React.createElement('path', { d: fillPathD, fill: 'url(#waveGradientMain)' }),
-        // Линия кривой
+        
+        // === ОДНА суммарная линия волны с 3 пиками ===
+        // (компоненты объединены в суммарную кривую — 3 пика видны как "холмики")
         React.createElement('path', {
-          d: pathD, fill: 'none', stroke: 'rgba(255,255,255,0.9)',
-          strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round'
+          d: pathD, fill: 'none', stroke: 'rgba(255,255,255,0.95)',
+          strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round'
         }),
+        
+        // 🆕 v4.1.3: Маркеры пиков компонентов (увеличенные эмодзи)
+        fastPeak && React.createElement('g', { key: 'fastPeak' },
+          React.createElement('circle', {
+            cx: fastPeak.x, cy: fastPeak.y, r: 6,
+            fill: '#f97316', stroke: '#fff', strokeWidth: 1.5
+          }),
+          React.createElement('text', {
+            x: fastPeak.x, y: fastPeak.y - 10,
+            fontSize: 11, fill: '#f97316', textAnchor: 'middle', fontWeight: 700
+          }, '⚡')
+        ),
+        slowPeak && React.createElement('g', { key: 'slowPeak' },
+          React.createElement('circle', {
+            cx: slowPeak.x, cy: slowPeak.y, r: 6,
+            fill: '#22c55e', stroke: '#fff', strokeWidth: 1.5
+          }),
+          React.createElement('text', {
+            x: slowPeak.x, y: slowPeak.y - 10,
+            fontSize: 11, fill: '#22c55e', textAnchor: 'middle', fontWeight: 700
+          }, '🌿')
+        ),
+        hepaticPeak && React.createElement('g', { key: 'hepaticPeak' },
+          React.createElement('circle', {
+            cx: hepaticPeak.x, cy: hepaticPeak.y, r: 6,
+            fill: '#8b5cf6', stroke: '#fff', strokeWidth: 1.5
+          }),
+          React.createElement('text', {
+            x: hepaticPeak.x, y: hepaticPeak.y - 10,
+            fontSize: 11, fill: '#8b5cf6', textAnchor: 'middle', fontWeight: 700
+          }, '🫀')
+        ),
+        
         // Вертикальная линия текущей позиции
         React.createElement('line', {
           x1: currentPoint.x, y1: padding.top,
@@ -5251,29 +6517,50 @@
     const range = Math.max(1, endMax - startMin);
     const scaleX = (v) => padding.left + (v - startMin) / range * chartW;
     
-    // === Генератор формы волны (как в главной карточке) ===
+    // === Генератор формы волны — 3-компонентная Gaussian модель (v4.1.2) ===
+    // Компоненты: Fast (простые угл), Slow (основной ответ), Hepatic (печёночный хвост)
     const generateWavePath = (wave, baseY) => {
       const waveWidth = (wave.end - wave.start) / range * chartW;
       const waveStartX = scaleX(wave.start);
+      const gi = wave.gi || 50;
       
-      // Высота волны зависит от ГИ
-      const gi = wave.gi;
-      const peakPos = gi >= 70 ? 0.15 : gi <= 40 ? 0.35 : 0.25;
-      const peakHeight = Math.min(1, 0.5 + (wave.duration / 300) * 0.4); // 0.5-0.9 в зависимости от длины
+      // === Параметры компонентов на основе GI (упрощённая версия calculateComponentParams) ===
+      // Base values from WAVE_SHAPE_V2
+      const baseFast = { peak: 0.20, sigma: 0.12, amplitude: 0.60 };
+      const baseSlow = { peak: 0.45, sigma: 0.25, amplitude: 0.35 };
+      const baseHepatic = { peak: 0.70, sigma: 0.35, amplitude: 0.05 };
+      
+      // GI-based modifiers (gi > 70 = faster peak, gi < 40 = slower response)
+      const giHighMod = gi >= 70 ? 1.3 : 1.0;  // High GI → stronger fast component
+      const giLowMod = gi <= 40 ? 1.4 : 1.0;   // Low GI → stronger slow component
+      
+      const fastAmp = baseFast.amplitude * giHighMod;
+      const slowAmp = baseSlow.amplitude * giLowMod;
+      const hepaticAmp = baseHepatic.amplitude;
+      
+      // Gaussian component function
+      const gaussian = (t, peak, sigma, amplitude) => {
+        return amplitude * Math.exp(-Math.pow(t - peak, 2) / (2 * sigma * sigma));
+      };
+      
+      // Height scaling based on duration
+      const peakHeight = Math.min(1, 0.5 + (wave.duration / 300) * 0.4);
       
       const points = [];
-      const steps = 40;
+      const steps = 50; // More points for smoother curve
       
       for (let i = 0; i <= steps; i++) {
         const t = i / steps;
-        let y;
-        if (t <= peakPos) {
-          const tNorm = t / peakPos;
-          y = peakHeight * Math.pow(tNorm, 1.5);
-        } else {
-          const tNorm = (t - peakPos) / (1 - peakPos);
-          y = peakHeight * Math.exp(-2.5 * tNorm);
-        }
+        // Sum of 3 Gaussian components
+        const fast = gaussian(t, baseFast.peak, baseFast.sigma, fastAmp);
+        const slow = gaussian(t, baseSlow.peak, baseSlow.sigma, slowAmp);
+        const hepatic = gaussian(t, baseHepatic.peak, baseHepatic.sigma, hepaticAmp);
+        
+        // Normalize sum (max ~1.0) and apply height
+        const rawSum = fast + slow + hepatic;
+        const normalizedSum = rawSum / (fastAmp + slowAmp + hepaticAmp); // Normalize to 0-1
+        const y = normalizedSum * peakHeight;
+        
         const x = waveStartX + t * waveWidth;
         const yPx = baseY - y * (chartH * 0.8);
         points.push({ x, y: yPx, t, value: y });
@@ -5645,6 +6932,73 @@
           }, 'База × Множитель = ' + (waveData.baseWaveHours || 3).toFixed(1) + 'ч × ' + 
              (waveData.finalMultiplier || 1).toFixed(2) + ' = ' +
              (waveData.waveHours || waveData.duration / 60).toFixed(1) + 'ч'
+          ),
+          
+          // 🆕 v4.1.0: Легенда 3-компонентной Gaussian модели
+          React.createElement('div', {
+            style: {
+              background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+              borderRadius: '10px',
+              padding: '12px',
+              marginBottom: '16px'
+            }
+          },
+            React.createElement('div', { 
+              style: { fontSize: '12px', fontWeight: 600, color: '#92400e', marginBottom: '8px' }
+            }, '🧬 Научная модель волны'),
+            React.createElement('div', { 
+              style: { fontSize: '11px', color: '#78350f', lineHeight: '1.5' }
+            }, 
+              'Форма кривой = сумма 3 компонентов инсулинового ответа:'
+            ),
+            React.createElement('div', { style: { marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' } },
+              // Fast component
+              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                React.createElement('span', { style: { fontSize: '14px' } }, '⚡'),
+                React.createElement('div', null,
+                  React.createElement('div', { style: { fontSize: '11px', fontWeight: 600, color: '#f97316' } }, 
+                    'Быстрый пик (15-25 мин)'
+                  ),
+                  React.createElement('div', { style: { fontSize: '10px', color: '#78350f' } }, 
+                    'Простые углеводы, ГИ>70'
+                  )
+                )
+              ),
+              // Slow component
+              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                React.createElement('span', { style: { fontSize: '14px' } }, '🌿'),
+                React.createElement('div', null,
+                  React.createElement('div', { style: { fontSize: '11px', fontWeight: 600, color: '#22c55e' } }, 
+                    'Основной ответ (45-60 мин)'
+                  ),
+                  React.createElement('div', { style: { fontSize: '10px', color: '#78350f' } }, 
+                    'Сложные углеводы, белок, жиры'
+                  )
+                )
+              ),
+              // Hepatic component
+              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                React.createElement('span', { style: { fontSize: '14px' } }, '🫀'),
+                React.createElement('div', null,
+                  React.createElement('div', { style: { fontSize: '11px', fontWeight: 600, color: '#8b5cf6' } }, 
+                    'Печёночный хвост (90-120 мин)'
+                  ),
+                  React.createElement('div', { style: { fontSize: '10px', color: '#78350f' } }, 
+                    'Клетчатка, медленное высвобождение'
+                  )
+                )
+              )
+            ),
+            // Научная ссылка
+            React.createElement('div', { 
+              style: { 
+                marginTop: '10px', 
+                paddingTop: '8px', 
+                borderTop: '1px solid rgba(146, 64, 14, 0.2)',
+                fontSize: '10px', 
+                color: '#92400e' 
+              }
+            }, '📚 Brand-Miller 2003, Holt 1997')
           ),
           
           // Факторы еды
@@ -6546,6 +7900,624 @@
     };
   };
   
+  // ========================================================================
+  // 🧬 METABOLIC FLEXIBILITY INDEX — v4.1.0
+  // ========================================================================
+  // Научное обоснование: Kelley & Mandarino 2000 (PMID: 10783862)
+  // Метаболическая гибкость — способность переключаться между окислением
+  // жиров и углеводов в зависимости от доступности субстратов
+  // ========================================================================
+  
+  const METABOLIC_FLEXIBILITY_CONFIG = {
+    // Факторы влияющие на гибкость
+    factors: {
+      // Тренировки улучшают гибкость (Goodpaster 2003)
+      trainingFrequency: {
+        weight: 0.25,
+        tiers: [
+          { min: 5, value: 1.0, label: 'Отличная база' },     // 5+ тренировок/неделю
+          { min: 3, value: 0.75, label: 'Хорошая база' },     // 3-4/неделю
+          { min: 1, value: 0.5, label: 'Минимальная база' },  // 1-2/неделю
+          { min: 0, value: 0.25, label: 'Низкая база' }       // Нет тренировок
+        ]
+      },
+      // Качество сна влияет на метаболизм (Spiegel 2005)
+      sleepQuality: {
+        weight: 0.20,
+        tiers: [
+          { min: 4, value: 1.0 },    // Отличный сон (4-5)
+          { min: 3, value: 0.7 },    // Хороший (3)
+          { min: 2, value: 0.4 },    // Плохой (2)
+          { min: 0, value: 0.2 }     // Очень плохой (1)
+        ]
+      },
+      // Стресс снижает гибкость (Kuo 2015)
+      stressLevel: {
+        weight: 0.15,
+        inverted: true, // Меньше стресс = лучше
+        tiers: [
+          { max: 3, value: 1.0 },    // Низкий стресс
+          { max: 5, value: 0.7 },    // Умеренный
+          { max: 7, value: 0.4 },    // Высокий
+          { max: 10, value: 0.2 }    // Очень высокий
+        ]
+      },
+      // BMI влияет на инсулиновую чувствительность
+      bmiScore: {
+        weight: 0.20,
+        tiers: [
+          { range: [18.5, 24.9], value: 1.0 },   // Норма
+          { range: [25, 29.9], value: 0.65 },    // Избыточный вес
+          { range: [30, 34.9], value: 0.4 },     // Ожирение I
+          { range: [0, 18.5], value: 0.7 },      // Недовес
+          { range: [35, 100], value: 0.25 }      // Ожирение II+
+        ]
+      },
+      // Вариативность питания
+      dietVariety: {
+        weight: 0.20,
+        description: 'Разнообразие макросов за 7 дней'
+      }
+    },
+    // Результирующие уровни
+    levels: [
+      { min: 0.8, id: 'excellent', name: 'Отличная', icon: '🌟', color: '#10b981' },
+      { min: 0.6, id: 'good', name: 'Хорошая', icon: '✅', color: '#22c55e' },
+      { min: 0.4, id: 'moderate', name: 'Умеренная', icon: '➖', color: '#eab308' },
+      { min: 0.2, id: 'low', name: 'Низкая', icon: '⚠️', color: '#f97316' },
+      { min: 0, id: 'poor', name: 'Плохая', icon: '❌', color: '#ef4444' }
+    ]
+  };
+  
+  /**
+   * Расчёт индекса метаболической гибкости
+   * @param {Object} options - параметры
+   * @returns {Object} { score, level, factors, recommendations }
+   */
+  const calculateMetabolicFlexibility = ({ 
+    recentDays = [], 
+    profile = {},
+    trainings7d = []
+  }) => {
+    const factorScores = {};
+    const cfg = METABOLIC_FLEXIBILITY_CONFIG.factors;
+    
+    // 1. Training frequency (за 7 дней)
+    const trainingCount = trainings7d.length || recentDays.filter(d => d.trainings?.length > 0).length;
+    const trainingTier = cfg.trainingFrequency.tiers.find(t => trainingCount >= t.min) 
+      || cfg.trainingFrequency.tiers[cfg.trainingFrequency.tiers.length - 1];
+    factorScores.training = {
+      value: trainingTier.value,
+      weight: cfg.trainingFrequency.weight,
+      count: trainingCount,
+      label: trainingTier.label
+    };
+    
+    // 2. Sleep quality (среднее за период)
+    const sleepScores = recentDays.filter(d => d.sleepQuality > 0).map(d => d.sleepQuality);
+    const avgSleep = sleepScores.length > 0 
+      ? sleepScores.reduce((a, b) => a + b, 0) / sleepScores.length 
+      : 3;
+    const sleepTier = cfg.sleepQuality.tiers.find(t => avgSleep >= t.min);
+    factorScores.sleep = {
+      value: sleepTier?.value || 0.5,
+      weight: cfg.sleepQuality.weight,
+      avg: avgSleep
+    };
+    
+    // 3. Stress level (среднее)
+    const stressScores = recentDays.filter(d => d.stressAvg > 0).map(d => d.stressAvg);
+    const avgStress = stressScores.length > 0
+      ? stressScores.reduce((a, b) => a + b, 0) / stressScores.length
+      : 5;
+    const stressTier = cfg.stressLevel.tiers.find(t => avgStress <= t.max);
+    factorScores.stress = {
+      value: stressTier?.value || 0.5,
+      weight: cfg.stressLevel.weight,
+      avg: avgStress
+    };
+    
+    // 4. BMI score
+    const bmi = profile.weight && profile.height 
+      ? profile.weight / Math.pow(profile.height / 100, 2)
+      : 22;
+    const bmiTier = cfg.bmiScore.tiers.find(t => bmi >= t.range[0] && bmi < t.range[1]);
+    factorScores.bmi = {
+      value: bmiTier?.value || 0.5,
+      weight: cfg.bmiScore.weight,
+      bmi: Math.round(bmi * 10) / 10
+    };
+    
+    // 5. Diet variety (стандартное отклонение макросов)
+    // Высокая вариативность = лучшая адаптация
+    let varietyScore = 0.5;
+    if (recentDays.length >= 3) {
+      const carbPcts = recentDays.map(d => {
+        const tot = (d.dayTot?.carbs || 0) + (d.dayTot?.prot || 0) + (d.dayTot?.fat || 0);
+        return tot > 0 ? (d.dayTot?.carbs || 0) / tot : 0.5;
+      });
+      const mean = carbPcts.reduce((a, b) => a + b, 0) / carbPcts.length;
+      const variance = carbPcts.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / carbPcts.length;
+      const std = Math.sqrt(variance);
+      // Умеренная вариативность (std 0.05-0.15) = хорошо
+      varietyScore = std < 0.05 ? 0.4 : std < 0.1 ? 0.8 : std < 0.15 ? 1.0 : 0.6;
+    }
+    factorScores.variety = {
+      value: varietyScore,
+      weight: cfg.dietVariety.weight
+    };
+    
+    // Итоговый score (взвешенное среднее)
+    const totalWeight = Object.values(factorScores).reduce((sum, f) => sum + f.weight, 0);
+    const score = Object.values(factorScores).reduce((sum, f) => sum + f.value * f.weight, 0) / totalWeight;
+    
+    // Определяем уровень
+    const level = METABOLIC_FLEXIBILITY_CONFIG.levels.find(l => score >= l.min) 
+      || METABOLIC_FLEXIBILITY_CONFIG.levels[METABOLIC_FLEXIBILITY_CONFIG.levels.length - 1];
+    
+    // Рекомендации
+    const recommendations = [];
+    if (factorScores.training.value < 0.6) {
+      recommendations.push({ icon: '🏃', text: 'Добавь 1-2 тренировки в неделю для улучшения гибкости' });
+    }
+    if (factorScores.sleep.value < 0.6) {
+      recommendations.push({ icon: '😴', text: 'Улучши качество сна — это критично для метаболизма' });
+    }
+    if (factorScores.stress.value < 0.6) {
+      recommendations.push({ icon: '🧘', text: 'Снизь уровень стресса — кортизол блокирует гибкость' });
+    }
+    if (factorScores.variety.value < 0.6) {
+      recommendations.push({ icon: '🥗', text: 'Добавь вариативности в питание (разные соотношения БЖУ)' });
+    }
+    
+    return {
+      score: Math.round(score * 100) / 100,
+      level,
+      factors: factorScores,
+      recommendations,
+      // Влияние на инсулиновую волну
+      waveMultiplier: 0.85 + (1 - score) * 0.3, // 0.85-1.15
+      description: `Метаболическая гибкость: ${level.name}`
+    };
+  };
+  
+  // ========================================================================
+  // 🍽️ SATIETY MODEL — v4.1.0  
+  // ========================================================================
+  // Научное обоснование: 
+  // - Holt Satiety Index 1995 (PMID: 7498104)
+  // - Rolls Volumetrics 2000
+  // - Blundell appetite cascade 1987
+  // ========================================================================
+  
+  const SATIETY_MODEL_CONFIG = {
+    // Базовые коэффициенты насыщения (на 100 ккал)
+    macroFactors: {
+      protein: 1.5,    // Белок самый сытный (термогенез + глюкагон)
+      fiber: 1.4,      // Клетчатка (объём + замедление)
+      complexCarbs: 0.8, // Сложные углеводы
+      simpleCarbs: 0.3,  // Простые — быстрый голод
+      fat: 0.7,        // Жиры — медленное насыщение
+      water: 0.2       // Вода в еде увеличивает объём
+    },
+    // Модификаторы формы пищи
+    foodFormFactors: {
+      liquid: 0.5,     // Жидкое насыщает меньше
+      soft: 0.8,       // Мягкое
+      solid: 1.0,      // Твёрдое — максимум
+      fibrous: 1.2     // Волокнистое — требует жевания
+    },
+    // Временное затухание насыщения (часы → множитель)
+    decayCurve: {
+      baseHours: 4,    // Базовая длительность насыщения
+      halfLife: 2      // Период полураспада
+    },
+    // Уровни насыщения
+    levels: [
+      { min: 0.8, id: 'full', name: 'Сытость', icon: '😊', color: '#22c55e' },
+      { min: 0.5, id: 'satisfied', name: 'Удовлетворён', icon: '🙂', color: '#84cc16' },
+      { min: 0.3, id: 'neutral', name: 'Нейтрально', icon: '😐', color: '#eab308' },
+      { min: 0.1, id: 'hungry', name: 'Голоден', icon: '😕', color: '#f97316' },
+      { min: 0, id: 'starving', name: 'Очень голоден', icon: '😫', color: '#ef4444' }
+    ]
+  };
+  
+  /**
+   * Расчёт уровня насыщения
+   * @param {Object} mealData - данные приёма { kcal, prot, carbs, simple, fat, fiber }
+   * @param {number} hoursSinceMeal - часов с приёма
+   * @param {Object} options - дополнительные параметры
+   * @returns {Object} { score, level, duration, nextHungerTime }
+   */
+  const calculateSatietyScore = (mealData, hoursSinceMeal = 0, options = {}) => {
+    const cfg = SATIETY_MODEL_CONFIG;
+    const { kcal = 0, prot = 0, carbs = 0, simple = 0, fat = 0, fiber = 0 } = mealData;
+    
+    if (kcal <= 0) {
+      return {
+        score: 0,
+        level: cfg.levels[cfg.levels.length - 1],
+        duration: 0,
+        nextHungerTime: 'сейчас'
+      };
+    }
+    
+    // 1. Базовый индекс насыщения (на основе макросов)
+    const complexCarbs = Math.max(0, carbs - simple);
+    const proteinContribution = (prot * 4 / kcal) * cfg.macroFactors.protein;
+    const fiberContribution = (fiber * 2 / kcal) * cfg.macroFactors.fiber;
+    const complexCarbsContribution = (complexCarbs * 4 / kcal) * cfg.macroFactors.complexCarbs;
+    const simpleCarbsContribution = (simple * 4 / kcal) * cfg.macroFactors.simpleCarbs;
+    const fatContribution = (fat * 9 / kcal) * cfg.macroFactors.fat;
+    
+    // Сырой индекс (0-2+)
+    const rawSatietyIndex = proteinContribution + fiberContribution + 
+      complexCarbsContribution + simpleCarbsContribution + fatContribution;
+    
+    // 2. Модификатор объёма (больше ккал = дольше сытость, но с diminishing returns)
+    const volumeMultiplier = Math.min(1.5, 0.5 + Math.log10(kcal / 100 + 1) * 0.5);
+    
+    // 3. Модификатор формы пищи
+    const formMultiplier = options.foodForm 
+      ? (cfg.foodFormFactors[options.foodForm] || 1.0)
+      : 1.0;
+    
+    // 4. Расчёт длительности насыщения (часы)
+    const baseDuration = cfg.decayCurve.baseHours * rawSatietyIndex * volumeMultiplier * formMultiplier;
+    const durationHours = Math.min(8, Math.max(1, baseDuration));
+    
+    // 5. Текущий уровень с учётом времени
+    const decayFactor = Math.exp(-hoursSinceMeal / cfg.decayCurve.halfLife);
+    const currentScore = Math.min(1, rawSatietyIndex * volumeMultiplier * formMultiplier * decayFactor);
+    
+    // 6. Определяем уровень
+    const level = cfg.levels.find(l => currentScore >= l.min) || cfg.levels[cfg.levels.length - 1];
+    
+    // 7. Время до голода
+    const hoursUntilHungry = Math.max(0, durationHours - hoursSinceMeal);
+    const nextHungerTime = hoursUntilHungry > 0
+      ? `через ${Math.round(hoursUntilHungry * 60)} мин`
+      : 'скоро';
+    
+    return {
+      score: Math.round(currentScore * 100) / 100,
+      rawIndex: Math.round(rawSatietyIndex * 100) / 100,
+      level,
+      duration: Math.round(durationHours * 10) / 10,
+      hoursRemaining: Math.round(hoursUntilHungry * 10) / 10,
+      nextHungerTime,
+      breakdown: {
+        protein: Math.round(proteinContribution * 100),
+        fiber: Math.round(fiberContribution * 100),
+        complexCarbs: Math.round(complexCarbsContribution * 100),
+        simpleCarbs: Math.round(simpleCarbsContribution * 100),
+        fat: Math.round(fatContribution * 100)
+      }
+    };
+  };
+  
+  // ========================================================================
+  // 📉 ADAPTIVE DEFICIT OPTIMIZER — v4.1.0
+  // ========================================================================
+  // Научное обоснование:
+  // - Trexler 2014: Diet breaks improve adherence (PMID: 24864135)
+  // - Byrne 2018: Intermittent energy restriction (PMID: 28925405)
+  // - Dulloo 2015: Adaptive thermogenesis (PMID: 22535969)
+  // ========================================================================
+  
+  const ADAPTIVE_DEFICIT_CONFIG = {
+    // Минимальный калораж (защита метаболизма)
+    minimumKcal: {
+      female: 1200,
+      male: 1500
+    },
+    // Диапазоны дефицита
+    deficitTiers: [
+      { pct: 10, label: 'Лёгкий', sustainable: true, weeklyLoss: '0.25-0.5 кг' },
+      { pct: 20, label: 'Умеренный', sustainable: true, weeklyLoss: '0.5-0.75 кг' },
+      { pct: 25, label: 'Агрессивный', sustainable: false, weeklyLoss: '0.75-1 кг', maxWeeks: 4 },
+      { pct: 30, label: 'Экстремальный', sustainable: false, weeklyLoss: '1+ кг', maxWeeks: 2 }
+    ],
+    // Diet break (перерыв на поддержание)
+    dietBreak: {
+      afterWeeks: 4,        // После скольких недель дефицита
+      durationDays: 7,      // Длительность перерыва
+      kcalBoost: 0.15       // +15% к норме
+    },
+    // Refeed day (углеводная загрузка)
+    refeedDay: {
+      frequency: 7,         // Каждые N дней в дефиците
+      carbBoost: 0.5,       // +50% углеводов
+      kcalBoost: 0.2        // +20% калорий
+    },
+    // Адаптивный множитель (замедление метаболизма)
+    adaptiveMultiplier: {
+      perWeekInDeficit: 0.02,  // -2% в неделю
+      maxReduction: 0.15       // Максимум -15%
+    }
+  };
+  
+  /**
+   * Расчёт оптимального адаптивного дефицита
+   * @param {Object} options - параметры
+   * @returns {Object} { recommendedDeficit, adaptiveKcal, needsDietBreak, recommendations }
+   */
+  const calculateAdaptiveDeficit = ({
+    tdee,
+    targetDeficitPct = 15,
+    weeksInDeficit = 0,
+    gender = 'male',
+    recentRatios = [],   // ratio за последние 7 дней
+    hasRefeedThisWeek = false
+  }) => {
+    const cfg = ADAPTIVE_DEFICIT_CONFIG;
+    
+    // 1. Базовый дефицит
+    const targetKcal = tdee * (1 - targetDeficitPct / 100);
+    
+    // 2. Адаптивное замедление метаболизма
+    const adaptiveReduction = Math.min(
+      cfg.adaptiveMultiplier.maxReduction,
+      weeksInDeficit * cfg.adaptiveMultiplier.perWeekInDeficit
+    );
+    const adaptedTdee = tdee * (1 - adaptiveReduction);
+    
+    // 3. Пересчёт дефицита с учётом адаптации
+    const effectiveDeficitPct = targetDeficitPct * (1 - adaptiveReduction);
+    const adaptiveKcal = adaptedTdee * (1 - effectiveDeficitPct / 100);
+    
+    // 4. Проверка минимума
+    const minKcal = cfg.minimumKcal[gender] || cfg.minimumKcal.male;
+    const safeKcal = Math.max(minKcal, adaptiveKcal);
+    
+    // 5. Проверка необходимости diet break
+    const needsDietBreak = weeksInDeficit >= cfg.dietBreak.afterWeeks;
+    const dietBreakKcal = needsDietBreak ? tdee * (1 + cfg.dietBreak.kcalBoost) : null;
+    
+    // 6. Проверка необходимости refeed
+    const avgRatio = recentRatios.length > 0
+      ? recentRatios.reduce((a, b) => a + b, 0) / recentRatios.length
+      : 1;
+    const needsRefeed = !hasRefeedThisWeek && 
+      recentRatios.length >= 5 && 
+      avgRatio < 0.9 &&
+      weeksInDeficit >= 1;
+    
+    // 7. Tier текущего дефицита
+    const actualDeficitPct = Math.round((1 - safeKcal / tdee) * 100);
+    const tier = cfg.deficitTiers.find(t => actualDeficitPct <= t.pct) || cfg.deficitTiers[cfg.deficitTiers.length - 1];
+    
+    // 8. Рекомендации
+    const recommendations = [];
+    
+    if (needsDietBreak) {
+      recommendations.push({
+        priority: 'high',
+        icon: '🛑',
+        text: `Diet break рекомендован! ${cfg.dietBreak.durationDays} дней на поддержании (${Math.round(dietBreakKcal)} ккал)`
+      });
+    }
+    
+    if (needsRefeed) {
+      recommendations.push({
+        priority: 'medium',
+        icon: '🍝',
+        text: 'Refeed day поможет восстановить лептин и гликоген'
+      });
+    }
+    
+    if (adaptiveReduction > 0.05) {
+      recommendations.push({
+        priority: 'info',
+        icon: '📉',
+        text: `Метаболизм адаптировался на ${Math.round(adaptiveReduction * 100)}%`
+      });
+    }
+    
+    if (!tier.sustainable) {
+      recommendations.push({
+        priority: 'warning',
+        icon: '⚠️',
+        text: `${tier.label} дефицит — не более ${tier.maxWeeks} недель!`
+      });
+    }
+    
+    return {
+      originalTdee: tdee,
+      adaptedTdee: Math.round(adaptedTdee),
+      recommendedKcal: Math.round(safeKcal),
+      originalDeficitPct: targetDeficitPct,
+      effectiveDeficitPct: Math.round(effectiveDeficitPct),
+      actualDeficitPct,
+      tier,
+      adaptiveReduction: Math.round(adaptiveReduction * 100),
+      weeksInDeficit,
+      needsDietBreak,
+      dietBreakKcal: dietBreakKcal ? Math.round(dietBreakKcal) : null,
+      needsRefeed,
+      minKcal,
+      recommendations
+    };
+  };
+  
+  // ========================================================================
+  // ⏰ MEAL TIMING OPTIMIZER — v4.1.0
+  // ========================================================================
+  // Научное обоснование:
+  // - Jakubowicz 2013: Big breakfast improves weight loss (PMID: 23512957)
+  // - Garaulet 2013: Late eating associated with weight gain (PMID: 23357955)
+  // - Arble 2009: Circadian timing affects metabolism
+  // ========================================================================
+  
+  const MEAL_TIMING_CONFIG = {
+    // Оптимальные окна приёма пищи
+    optimalWindows: {
+      breakfast: { start: 7, end: 9, ideal: 8, importance: 'high' },
+      lunch: { start: 12, end: 14, ideal: 13, importance: 'medium' },
+      dinner: { start: 18, end: 20, ideal: 19, importance: 'high' }
+    },
+    // Минимальные интервалы между приёмами
+    minimumGap: {
+      hours: 3,          // Минимум 3 часа
+      idealHours: 4      // Идеально 4 часа
+    },
+    // Калорийное распределение (% от нормы)
+    calorieDistribution: {
+      frontLoaded: { breakfast: 35, lunch: 40, dinner: 25 },  // Большой завтрак
+      balanced: { breakfast: 25, lunch: 40, dinner: 35 },     // Сбалансированно
+      backLoaded: { breakfast: 20, lunch: 35, dinner: 45 }    // Большой ужин (не рекомендуется)
+    },
+    // Штрафы за поздний ужин
+    lateDinnerPenalty: {
+      after21: 0.9,      // -10% эффективности
+      after22: 0.8,      // -20%
+      after23: 0.7       // -30%
+    }
+  };
+  
+  /**
+   * Анализ и оптимизация тайминга приёмов пищи
+   * @param {Array} meals - приёмы пищи с временем
+   * @param {number} optimum - целевой калораж
+   * @returns {Object} { score, analysis, recommendations }
+   */
+  const calculateMealTimingScore = (meals = [], optimum) => {
+    const cfg = MEAL_TIMING_CONFIG;
+    
+    if (meals.length === 0) {
+      return {
+        score: 0,
+        analysis: { mealsAnalyzed: 0 },
+        recommendations: [{ icon: '🍽️', text: 'Добавь первый приём пищи' }]
+      };
+    }
+    
+    // Парсинг времени приёмов
+    const parsedMeals = meals.map(m => {
+      const [h, min] = (m.time || '12:00').split(':').map(Number);
+      return { ...m, hour: h, minute: min, totalMinutes: h * 60 + min };
+    }).sort((a, b) => a.totalMinutes - b.totalMinutes);
+    
+    let score = 100;
+    const issues = [];
+    const recommendations = [];
+    
+    // 1. Анализ первого приёма (завтрак)
+    const firstMeal = parsedMeals[0];
+    const breakfastWindow = cfg.optimalWindows.breakfast;
+    
+    if (firstMeal.hour < breakfastWindow.start) {
+      // Слишком рано
+      score -= 5;
+      issues.push('Ранний завтрак');
+    } else if (firstMeal.hour > breakfastWindow.end + 2) {
+      // Пропущен завтрак (после 11:00)
+      score -= 15;
+      issues.push('Пропущен завтрак');
+      recommendations.push({ 
+        icon: '🌅', 
+        text: 'Завтрак в 7-9 улучшает метаболизм на весь день' 
+      });
+    }
+    
+    // 2. Анализ последнего приёма (ужин)
+    const lastMeal = parsedMeals[parsedMeals.length - 1];
+    
+    if (lastMeal.hour >= 23) {
+      score -= 20;
+      issues.push('Очень поздний ужин');
+      recommendations.push({ 
+        icon: '🌙', 
+        text: 'Ужин после 23:00 нарушает циркадные ритмы' 
+      });
+    } else if (lastMeal.hour >= 22) {
+      score -= 10;
+      issues.push('Поздний ужин');
+    } else if (lastMeal.hour >= 21) {
+      score -= 5;
+      issues.push('Ужин после 21:00');
+    }
+    
+    // 3. Анализ интервалов между приёмами
+    const gaps = [];
+    for (let i = 1; i < parsedMeals.length; i++) {
+      const gap = (parsedMeals[i].totalMinutes - parsedMeals[i-1].totalMinutes) / 60;
+      gaps.push(gap);
+      
+      if (gap < cfg.minimumGap.hours) {
+        score -= 10;
+        issues.push(`Слишком короткий интервал (${Math.round(gap * 60)} мин)`);
+      }
+    }
+    
+    // 4. Анализ калорийного распределения
+    const totalKcal = parsedMeals.reduce((sum, m) => sum + (m.kcal || 0), 0);
+    if (totalKcal > 0 && parsedMeals.length >= 2) {
+      const morningKcal = parsedMeals.filter(m => m.hour < 12).reduce((s, m) => s + (m.kcal || 0), 0);
+      const eveningKcal = parsedMeals.filter(m => m.hour >= 18).reduce((s, m) => s + (m.kcal || 0), 0);
+      
+      const morningPct = morningKcal / totalKcal;
+      const eveningPct = eveningKcal / totalKcal;
+      
+      // Штраф за back-loaded (много калорий вечером)
+      if (eveningPct > 0.5) {
+        score -= 10;
+        issues.push('Перегружен вечер');
+        recommendations.push({
+          icon: '⚖️',
+          text: 'Перенеси часть калорий на утро/обед'
+        });
+      }
+      
+      // Бонус за front-loaded
+      if (morningPct >= 0.3) {
+        score += 5;
+      }
+    }
+    
+    // 5. Бонус за регулярность
+    if (parsedMeals.length >= 3) {
+      const avgGap = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+      const gapVariance = gaps.reduce((a, b) => a + Math.pow(b - avgGap, 2), 0) / gaps.length;
+      
+      if (gapVariance < 1) {
+        score += 5; // Регулярные интервалы
+      }
+    }
+    
+    // Нормализация score
+    score = Math.max(0, Math.min(100, score));
+    
+    // Уровень
+    const level = score >= 80 ? { id: 'excellent', name: 'Отлично', icon: '🌟', color: '#22c55e' }
+      : score >= 60 ? { id: 'good', name: 'Хорошо', icon: '✅', color: '#84cc16' }
+      : score >= 40 ? { id: 'fair', name: 'Средне', icon: '➖', color: '#eab308' }
+      : { id: 'poor', name: 'Плохо', icon: '⚠️', color: '#f97316' };
+    
+    // Оптимальное следующее окно
+    const now = new Date();
+    const currentHour = now.getHours();
+    let nextOptimalWindow = null;
+    
+    if (currentHour < 9) nextOptimalWindow = cfg.optimalWindows.breakfast;
+    else if (currentHour < 13) nextOptimalWindow = cfg.optimalWindows.lunch;
+    else if (currentHour < 19) nextOptimalWindow = cfg.optimalWindows.dinner;
+    
+    return {
+      score,
+      level,
+      analysis: {
+        mealsAnalyzed: parsedMeals.length,
+        firstMealHour: firstMeal.hour,
+        lastMealHour: lastMeal.hour,
+        avgGapHours: gaps.length > 0 ? Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length * 10) / 10 : null,
+        issues
+      },
+      nextOptimalWindow,
+      recommendations
+    };
+  };
+  
   // === ЭКСПОРТ ===
   HEYS.InsulinWave = {
     // Главная функция расчёта
@@ -6689,10 +8661,219 @@
     getHypoglycemiaWarning,
     getInsulinIndexWaveModifier,
     
+    // 🆕 v4.0.0: IR Score — объединённый показатель инсулинорезистентности
+    IR_SCORE_CONFIG,
+    calculateIRScore,
+    
+    // 🆕 v4.0.0: Белок animal/plant (×1.8 vs ×1.3)
+    PROTEIN_BONUS_V2,
+    detectProteinType,
+    // calculateProteinTypeBonus, // 🚧 TODO: не реализована
+    
+    // 🆕 v4.0.0: Multi-component Gaussian
+    // GAUSSIAN_COMPONENTS, // 🚧 TODO: не реализована
+    // calculateGaussianCurve, // 🚧 TODO: не реализована
+    // analyzeWaveComponents, // 🚧 TODO: не реализована
+    generateWaveCurve,
+    
+    // 🆕 v4.0.0: AUC Calculation
+    AUC_CONFIG,
+    calculateTrapezoidalAUC,
+    calculateIncrementalAUC,
+    calculateFullAUC,
+    
+    // 🆕 v4.0.0: InsulinPredictor
+    INSULIN_PREDICTOR_CONFIG,
+    getInsulinLevelAtTime,
+    predictInsulinResponse,
+    generatePredictionSummary,
+    
+    // 🆕 v4.0.0: Wave Scoring V2
+    WAVE_SCORING_V2,
+    calculateWaveScore,
+    scorePeakHeight,
+    scoreDuration,
+    scoreWaveShape,
+    scoreAUC,
+    scoreContext,
+    
+    // 🆕 v4.1.0: Metabolic Flexibility Index (Kelley & Mandarino 2000)
+    METABOLIC_FLEXIBILITY_CONFIG,
+    calculateMetabolicFlexibility,
+    
+    // 🆕 v4.1.0: Satiety Model (Holt 1995, Rolls 2000, Blundell 1987)
+    SATIETY_MODEL_CONFIG,
+    calculateSatietyScore,
+    
+    // 🆕 v4.1.0: Adaptive Deficit Optimizer (Trexler 2014, Byrne 2018, Dulloo 2015)
+    ADAPTIVE_DEFICIT_CONFIG,
+    calculateAdaptiveDeficit,
+    
+    // 🆕 v4.1.0: Meal Timing Optimizer (Jakubowicz 2013, Garaulet 2013, Arble 2009)
+    MEAL_TIMING_CONFIG,
+    calculateMealTimingScore,
+    
     // Версия
-    VERSION: '3.8.0'
+    VERSION: '4.1.0'
   };
   
+  // ============================================================================
+  // 🆕 МИГРАЦИЯ И СОВМЕСТИМОСТЬ (v4.0.0)
+  // ============================================================================
+  // Утилиты для миграции с v3.x на v4.x и поддержки обратной совместимости
+  // ============================================================================
+  
+  /**
+   * 🆕 Миграция данных волны с v3 на v4 формат
+   * @param {Object} v3Wave - данные волны в формате v3
+   * @returns {Object} данные волны в формате v4
+   */
+  HEYS.InsulinWave.migrateWaveData = function(v3Wave) {
+    if (!v3Wave) return null;
+    
+    // Проверяем, это уже v4?
+    if (v3Wave._version === '4.0.0' || v3Wave.gaussian) {
+      return v3Wave;
+    }
+    
+    // Миграция v3 → v4
+    const v4Wave = {
+      ...v3Wave,
+      _version: '4.0.0',
+      _migratedFrom: v3Wave._version || '3.x',
+      
+      // Добавляем новые поля с дефолтными значениями
+      irScore: null,           // Рассчитывается отдельно
+      gaussian: null,          // Требуется пересчёт
+      auc: null,               // Требуется пересчёт
+      predictions: null,       // Требуется пересчёт
+      waveScore: null,         // Требуется пересчёт
+      
+      // Совместимость полей
+      // v3 использовал multiplier, v4 использует totalMultiplier
+      totalMultiplier: v3Wave.totalMultiplier || v3Wave.multiplier || 1,
+      
+      // v3 mealMultiplier → v4 foodMultiplier
+      foodMultiplier: v3Wave.foodMultiplier || v3Wave.mealMultiplier || 1,
+      
+      // v3 не имел proteinType
+      proteinType: v3Wave.proteinType || 'mixed'
+    };
+    
+    return v4Wave;
+  };
+
+  /**
+   * 🆕 Обновление существующей волны новыми v4 полями
+   * @param {Object} wave - волна (v3 или v4)
+   * @param {Object} mealData - данные приёма пищи
+   * @returns {Object} полностью обновлённая волна v4
+   */
+  HEYS.InsulinWave.enrichWithV4Features = function(wave, mealData = {}) {
+    const migrated = HEYS.InsulinWave.migrateWaveData(wave);
+    if (!migrated) return null;
+    
+    // Рассчитываем IR Score если есть исторические данные
+    if (mealData.historicalDays && !migrated.irScore) {
+      try {
+        migrated.irScore = calculateIRScore({
+          recentDays: mealData.historicalDays,
+          profile: mealData.profile
+        });
+      } catch (e) {
+        migrated.irScore = null;
+      }
+    }
+    
+    // Рассчитываем Gaussian если есть нутриенты
+    if (mealData.nutrients && !migrated.gaussian) {
+      try {
+        const curve = generateWaveCurve({
+          nutrients: mealData.nutrients,
+          waveMinutes: migrated.waveMinutes || 180
+        });
+        migrated.gaussian = curve.gaussian;
+        migrated.curve = curve.curve;
+      } catch (e) {
+        // Оставляем как есть
+      }
+    }
+    
+    // Рассчитываем AUC если есть кривая
+    if (migrated.curve && !migrated.auc) {
+      try {
+        migrated.auc = calculateFullAUC(migrated.curve);
+      } catch (e) {
+        // Оставляем как есть
+      }
+    }
+    
+    // Рассчитываем предсказания
+    if (migrated.curve && !migrated.predictions) {
+      try {
+        migrated.predictions = predictInsulinResponse(
+          migrated.curve, 
+          migrated.waveMinutes || 180
+        );
+      } catch (e) {
+        // Оставляем как есть
+      }
+    }
+    
+    // Рассчитываем оценку волны
+    if (!migrated.waveScore) {
+      try {
+        migrated.waveScore = calculateWaveScore(migrated, mealData.context || {});
+      } catch (e) {
+        // Оставляем как есть
+      }
+    }
+    
+    return migrated;
+  };
+
+  /**
+   * 🆕 Проверка версии данных волны
+   * @param {Object} wave - данные волны
+   * @returns {Object} { version, isV4, needsMigration }
+   */
+  HEYS.InsulinWave.checkVersion = function(wave) {
+    if (!wave) {
+      return { version: null, isV4: false, needsMigration: false };
+    }
+    
+    const version = wave._version || '3.x';
+    const isV4 = version.startsWith('4.');
+    const needsMigration = !isV4;
+    
+    return { version, isV4, needsMigration };
+  };
+
+  /**
+   * 🆕 Экспорт данных волны в JSON (с полной v4 информацией)
+   * @param {Object} wave - данные волны
+   * @returns {string} JSON строка
+   */
+  HEYS.InsulinWave.exportWave = function(wave) {
+    const enriched = HEYS.InsulinWave.enrichWithV4Features(wave);
+    return JSON.stringify(enriched, null, 2);
+  };
+
+  /**
+   * 🆕 Импорт данных волны из JSON
+   * @param {string} json - JSON строка
+   * @returns {Object} данные волны v4
+   */
+  HEYS.InsulinWave.importWave = function(json) {
+    try {
+      const parsed = JSON.parse(json);
+      return HEYS.InsulinWave.migrateWaveData(parsed);
+    } catch (e) {
+      console.error('[InsulinWave] Import error:', e);
+      return null;
+    }
+  };
+
   // Алиас
   HEYS.IW = HEYS.InsulinWave;
   

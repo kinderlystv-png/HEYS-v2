@@ -81,23 +81,28 @@
 
   // Расчёт норм БЖУ по цели, полу и возрасту
   function calcNormsFromGoal(deficitPct, gender = 'Мужской', age = 30) {
+    // 🔧 v2.0.2: Принудительное приведение к числу (иногда приходит строка)
+    const deficitPctNum = Number(deficitPct) || 0;
+    const ageNum = Number(age) || 30;
     const isFemale = gender === 'Женский';
+    
+    console.log('[calcNormsFromGoal] Input:', { deficitPct, deficitPctNum, gender, age: ageNum });
     
     let proteinPct, carbsPct, fatPct;
     
-    if (deficitPct <= -15) {
+    if (deficitPctNum <= -15) {
       if (isFemale) {
         proteinPct = 30; carbsPct = 35; fatPct = 35;
       } else {
         proteinPct = 35; carbsPct = 40; fatPct = 25;
       }
-    } else if (deficitPct <= -5) {
+    } else if (deficitPctNum <= -5) {
       if (isFemale) {
         proteinPct = 28; carbsPct = 40; fatPct = 32;
       } else {
         proteinPct = 30; carbsPct = 45; fatPct = 25;
       }
-    } else if (deficitPct <= 5) {
+    } else if (deficitPctNum <= 5) {
       if (isFemale) {
         proteinPct = 25; carbsPct = 45; fatPct = 30;
       } else {
@@ -112,10 +117,10 @@
     }
     
     // Корректировка по возрасту
-    if (age >= 60) {
+    if (ageNum >= 60) {
       proteinPct += 5;
       carbsPct -= 5;
-    } else if (age >= 40) {
+    } else if (ageNum >= 40) {
       proteinPct += 3;
       carbsPct -= 3;
     }
@@ -416,6 +421,10 @@
     icon: '👤',
     component: ProfilePersonalComponent,
     getInitialData: () => {
+      // 🛡️ Устанавливаем флаг "регистрация в процессе" при старте
+      // Это защищает от "зависания" при перезагрузке страницы
+      localStorage.setItem('heys_registration_in_progress', 'true');
+      
       const profile = lsGet('heys_profile', {});
       const currentYear = new Date().getFullYear();
       
@@ -957,6 +966,9 @@
 
       lsSet('heys_profile', updatedProfile);
       
+      // 🛡️ Очищаем флаг "регистрация в процессе" — регистрация успешно завершена
+      localStorage.removeItem('heys_registration_in_progress');
+      
       // Диспатчим событие для обновления UI профиля (настройки)
       window.dispatchEvent(new CustomEvent('heys:profile-updated', { 
         detail: { profile: updatedProfile, source: 'wizard' } 
@@ -1138,26 +1150,54 @@
   }
   
   function WelcomeStepComponent({ stepData, context }) {
-    const profile = lsGet('heys_profile', {});
-    const norms = lsGet('heys_norms', {});
+    // 🔧 v2.0.0: Читаем данные из stepData напрямую, т.к. localStorage ещё не сохранён
+    const step1 = stepData['profile-personal'] || {};
+    const step2 = stepData['profile-body'] || {};
+    const step3 = stepData['profile-goals'] || {};
+    const step4 = stepData['profile-metabolism'] || {};
     
     // Функции из контекста
     const onNext = context?.onNext;
     const onClose = context?.onClose;
     
-    // Имя из профиля (уже сохранено на предыдущем шаге)
-    const firstName = profile.firstName || stepData['profile-personal']?.firstName || '';
+    // Имя из stepData
+    const firstName = step1.firstName || '';
     
-    // Расчёт прогноза с защитой от NaN
-    const weight = Number(profile.weight) || 70;
-    const weightGoal = Number(profile.weightGoal) || weight;
+    // Данные тела из stepData
+    const weight = Number(step2.weight) || 70;
+    const height = Number(step2.height) || 170;
+    const weightGoal = Number(step2.weightGoal) || weight;
     const weightDiff = weightGoal - weight;
     const diffSign = weightDiff > 0 ? '+' : '';
-    const weeks = calcTimeToGoal(profile.weight, profile.weightGoal, profile.deficitPctTarget);
     
-    // Проценты БЖУ
-    const protPct = norms.proteinPct || 25;
-    const carbsPct = norms.carbsPct || 50;
+    // Данные цели из stepData
+    const deficitPctTarget = Number(step3.deficitPctTarget) || 0;
+    const gender = step1.gender || 'Мужской';
+    
+    // Рассчитываем возраст из даты рождения
+    // 🔧 v2.0.1: Собираем birthDate из отдельных полей (birthYear, birthMonth, birthDay)
+    // т.к. в stepData они хранятся отдельно, а birthDate собирается только при save()
+    let age = 30; // default
+    if (step1.birthYear && step1.birthMonth && step1.birthDay) {
+      const birthDate = `${step1.birthYear}-${String(step1.birthMonth).padStart(2, '0')}-${String(step1.birthDay).padStart(2, '0')}`;
+      const today = new Date();
+      const birth = new Date(birthDate);
+      age = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+      }
+    }
+    
+    // Рассчитываем нормы БЖУ напрямую (не из localStorage!)
+    const calculatedNorms = calcNormsFromGoal(deficitPctTarget, gender, age);
+    
+    // Расчёт прогноза
+    const weeks = calcTimeToGoal(weight, weightGoal, deficitPctTarget);
+    
+    // Проценты БЖУ из рассчитанных норм
+    const protPct = calculatedNorms.proteinPct || 25;
+    const carbsPct = calculatedNorms.carbsPct || 50;
     const fatPct = 100 - protPct - carbsPct;
     
     return React.createElement('div', { 
@@ -1217,7 +1257,7 @@
           React.createElement('span', { style: { color: '#374151' } }, '🎯 Цель:'),
           React.createElement('span', { 
             style: { fontWeight: '500', color: '#059669' }
-          }, `${profile.weightGoal || 70} кг (${diffSign}${Math.abs(weightDiff).toFixed(1)} кг)`)
+          }, `${weightGoal} кг (${diffSign}${Math.abs(weightDiff).toFixed(1)} кг)`)
         ),
         
         // БЖУ
@@ -1299,6 +1339,10 @@
           // Сохраняем данные профиля из stepData (регистрация уже пройдена)
           saveProfileFromStepData(stepData);
           console.log('[WelcomeStep] Profile saved (skipped checkin)');
+          
+          // 🛡️ Очищаем флаг "регистрация в процессе" — регистрация завершена
+          localStorage.removeItem('heys_registration_in_progress');
+          console.log('[WelcomeStep] ✅ Cleared heys_registration_in_progress flag');
           
           // 🆕 v1.9.1: Помечаем что чек-ин пропущен — чтобы не показывать повторно
           sessionStorage.setItem('heys_morning_checkin_done', 'true');
@@ -1439,6 +1483,13 @@
 
   // Проверка: нужно ли показывать profile-шаги
   function isProfileIncomplete(profile) {
+    // 🛡️ Если регистрация была прервана (перезагрузка страницы) — продолжить регистрацию
+    const registrationInProgress = localStorage.getItem('heys_registration_in_progress') === 'true';
+    if (registrationInProgress) {
+      console.log('[ProfileSteps] isProfileIncomplete: registrationInProgress flag found → returning true');
+      return true;
+    }
+    
     // Если есть флаг profileCompleted — используем его (надёжный способ)
     if (profile.profileCompleted === true) return false;
     

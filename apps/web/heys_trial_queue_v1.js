@@ -1009,8 +1009,15 @@
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
       }
       
+      const curatorSession = localStorage.getItem('heys_curator_session');
+      if (!curatorSession) {
+        return { success: false, error: 'no_auth', message: 'Нет сессии куратора' };
+      }
+      
       try {
-        const res = await api.rpc('admin_get_trial_queue_list', {});
+        const res = await api.rpc('admin_get_trial_queue_list', {
+          p_curator_session_token: curatorSession
+        });
         
         if (res.error) {
           return { success: false, error: res.error.code, message: res.error.message };
@@ -1035,11 +1042,17 @@
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
       }
       
+      const curatorSession = localStorage.getItem('heys_curator_session');
+      if (!curatorSession) {
+        return { success: false, error: 'no_auth', message: 'Нет сессии куратора' };
+      }
+      
       try {
         const res = await api.rpc('admin_add_to_queue', {
           p_client_id: clientId,
           p_source: source,
-          p_priority: priority
+          p_priority: priority,
+          p_curator_session_token: curatorSession
         });
         
         if (res.error) {
@@ -1101,9 +1114,15 @@
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
       }
       
+      const curatorSession = localStorage.getItem('heys_curator_session');
+      if (!curatorSession) {
+        return { success: false, error: 'no_auth', message: 'Нет сессии куратора' };
+      }
+      
       try {
         const res = await api.rpc('admin_activate_trial', {
-          p_client_id: clientId
+          p_client_id: clientId,
+          p_curator_session_token: curatorSession
         });
         
         if (res.error) {
@@ -1129,10 +1148,16 @@
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
       }
       
+      const curatorSession = localStorage.getItem('heys_curator_session');
+      if (!curatorSession) {
+        return { success: false, error: 'no_auth', message: 'Нет сессии куратора' };
+      }
+      
       try {
         const res = await api.rpc('admin_reject_request', {
           p_client_id: clientId,
-          p_reason: reason
+          p_reason: reason,
+          p_curator_session_token: curatorSession
         });
         
         if (res.error) {

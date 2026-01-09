@@ -1,11 +1,15 @@
 /**
  * widget_data.js
  * Data Access Layer для виджетов
- * Version: 1.0.0
+ * Version: 1.1.0
  * Created: 2025-12-15
+ * Updated: 2025-01-05
  * 
  * Централизованный доступ к данным для всех виджетов.
  * Обёртка над существующими HEYS модулями (Day, User, InsulinWave, Cycle).
+ * 
+ * v1.1.0: Добавлен Demo Mode для WidgetsTour — показывает реалистичные
+ *         демо-данные во время тура, возвращается к реальным после.
  */
 (function(global) {
   'use strict';
@@ -13,11 +17,116 @@
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.Widgets = HEYS.Widgets || {};
   
+  // === DEMO DATA для WidgetsTour ===
+  // Реалистичные данные для демонстрации возможностей виджетов
+  const DEMO_WIDGET_DATA = {
+    calories: {
+      eaten: 1650,
+      target: 2100,
+      remaining: 450,
+      pct: 79
+    },
+    water: {
+      drunk: 1400,
+      target: 2000,
+      pct: 70
+    },
+    sleep: {
+      hours: 7.5,
+      target: 8,
+      quality: 4
+    },
+    streak: {
+      current: 5,
+      max: 12
+    },
+    weight: {
+      current: 72.5,
+      goal: 70,
+      trend: -0.08,
+      weekChange: -0.56,
+      monthChange: -2.4,
+      daysToGoal: 31,
+      weeksToGoal: 4,
+      progressPct: 62,
+      bmi: 24.2,
+      bmiCategory: { name: 'Норма', color: '#22c55e' },
+      sparkline: [
+        { date: '2025-01-01', weight: 74.2 },
+        { date: '2025-01-02', weight: 74.0 },
+        { date: '2025-01-03', weight: 73.8 },
+        { date: '2025-01-04', weight: 73.5 },
+        { date: '2025-01-05', weight: 72.5 }
+      ],
+      dataPoints: 5,
+      excludedDays: 0,
+      hasCleanTrend: false
+    },
+    steps: {
+      steps: 7850,
+      goal: 10000,
+      pct: 79
+    },
+    macros: {
+      protein: 95,
+      fat: 52,
+      carbs: 185,
+      proteinTarget: 120,
+      fatTarget: 70,
+      carbsTarget: 260
+    },
+    insulin: {
+      status: 'almost',
+      remaining: 25,
+      phase: 'decline',
+      endTime: '14:30'
+    },
+    heatmap: {
+      days: [
+        { date: '2025-01-01', status: 'green', hasTraining: true, highStress: false },
+        { date: '2025-01-02', status: 'green', hasTraining: false, highStress: false },
+        { date: '2025-01-03', status: 'yellow', hasTraining: false, highStress: true },
+        { date: '2025-01-04', status: 'green', hasTraining: true, highStress: false },
+        { date: '2025-01-05', status: 'green', hasTraining: false, highStress: false },
+        { date: '2025-01-06', status: 'yellow', hasTraining: false, highStress: false },
+        { date: '2025-01-07', status: 'empty', hasTraining: false, highStress: false }
+      ]
+    },
+    cycle: {
+      day: 12,
+      phase: { id: 'follicular', name: 'Фолликулярная', icon: '🌱' }
+    },
+    status: {
+      score: 78,
+      topIssues: ['Осталось 450 ккал', 'Добавь воды'],
+      factors: {
+        nutrition: 0.82,
+        activity: 0.75,
+        recovery: 0.80,
+        hydration: 0.70
+      }
+    },
+    crashRisk: {
+      level: 'low',
+      score: 25,
+      factors: ['Хороший сон', 'Низкий стресс'],
+      recommendation: 'Продолжай в том же духе!'
+    }
+  };
+  
   // === Data Access Layer ===
   const data = {
     _cache: new Map(),
     _lastUpdate: 0,
     _updateInterval: 1000, // 1 second cache
+    
+    /**
+     * Проверка: активен ли демо-режим (WidgetsTour запущен)
+     * @returns {boolean}
+     */
+    _isDemoMode() {
+      return HEYS.WidgetsTour?.isActive?.() === true;
+    },
     
     /**
      * Получить данные для конкретного виджета
@@ -60,6 +169,20 @@
      * @returns {Object} { status, dayData, profile, dayTot, normAbs, waterGoal }
      */
     getStatusData() {
+      // 🎭 Demo mode: возвращаем демо-данные во время тура
+      if (this._isDemoMode()) {
+        return {
+          status: { score: DEMO_WIDGET_DATA.status.score, level: 'good' },
+          dayData: {},
+          profile: {},
+          dayTot: { kcal: DEMO_WIDGET_DATA.calories.eaten },
+          normAbs: {},
+          waterGoal: DEMO_WIDGET_DATA.water.target,
+          topIssues: DEMO_WIDGET_DATA.status.topIssues,
+          factors: DEMO_WIDGET_DATA.status.factors
+        };
+      }
+      
       const dayData = this._getDay() || {};
       const profile = this._getProfile() || {};
       const dayTot = this._getDayTotals() || {};
@@ -90,6 +213,11 @@
      * @returns {Object} { eaten, target, remaining, pct }
      */
     getCaloriesData() {
+      // 🎭 Demo mode
+      if (this._isDemoMode()) {
+        return { ...DEMO_WIDGET_DATA.calories };
+      }
+      
       const dayTot = this._getDayTotals();
       const optimum = this._getOptimum();
       
@@ -106,6 +234,11 @@
      * @returns {Object} { drunk, target, pct }
      */
     getWaterData() {
+      // 🎭 Demo mode
+      if (this._isDemoMode()) {
+        return { ...DEMO_WIDGET_DATA.water };
+      }
+      
       const day = this._getDay();
       const waterGoal = this._getWaterGoal();
       
@@ -121,6 +254,11 @@
      * @returns {Object} { hours, target, quality }
      */
     getSleepData() {
+      // 🎭 Demo mode
+      if (this._isDemoMode()) {
+        return { ...DEMO_WIDGET_DATA.sleep };
+      }
+      
       const day = this._getDay();
       const prof = this._getProfile();
       
@@ -136,6 +274,11 @@
      * @returns {Object} { current, max }
      */
     getStreakData() {
+      // 🎭 Demo mode
+      if (this._isDemoMode()) {
+        return { ...DEMO_WIDGET_DATA.streak };
+      }
+      
       // Получаем streak из HEYS.Day если доступен
       const currentStreak = HEYS.Day?.getCurrentStreak?.() || 0;
       const maxStreak = HEYS.Day?.getMaxStreak?.() || currentStreak;
@@ -151,6 +294,11 @@
      * @returns {Object} { current, goal, trend, weekChange, monthChange, daysToGoal, bmi, sparkline, ... }
      */
     getWeightData() {
+      // 🎭 Demo mode
+      if (this._isDemoMode()) {
+        return { ...DEMO_WIDGET_DATA.weight };
+      }
+      
       const day = this._getDay();
       const prof = this._getProfile();
       
@@ -220,6 +368,11 @@
      * @returns {Object} { steps, goal, pct }
      */
     getStepsData() {
+      // 🎭 Demo mode
+      if (this._isDemoMode()) {
+        return { ...DEMO_WIDGET_DATA.steps };
+      }
+      
       const day = this._getDay();
       const prof = this._getProfile();
       const goal = prof?.stepsGoal || 10000;
@@ -236,6 +389,11 @@
      * @returns {Object}
      */
     getMacrosData() {
+      // 🎭 Demo mode
+      if (this._isDemoMode()) {
+        return { ...DEMO_WIDGET_DATA.macros };
+      }
+      
       const dayTot = this._getDayTotals();
       const normAbs = this._getNormAbs();
       
@@ -254,6 +412,11 @@
      * @returns {Object}
      */
     getInsulinData() {
+      // 🎭 Demo mode
+      if (this._isDemoMode()) {
+        return { ...DEMO_WIDGET_DATA.insulin };
+      }
+      
       // Получаем данные инсулиновой волны если модуль доступен
       const waveData = HEYS.InsulinWave?.getWaveData?.() || {};
       
@@ -272,6 +435,11 @@
      * v3.22.0: добавлено hasTraining, highStress в каждый день
      */
     getHeatmapData(period = 'week') {
+      // 🎭 Demo mode
+      if (this._isDemoMode()) {
+        return { ...DEMO_WIDGET_DATA.heatmap };
+      }
+      
       const days = [];
       const count = period === 'week' ? 7 : 30;
       const today = new Date();
@@ -311,6 +479,11 @@
      * @returns {Object}
      */
     getCycleData() {
+      // 🎭 Demo mode
+      if (this._isDemoMode()) {
+        return { ...DEMO_WIDGET_DATA.cycle };
+      }
+      
       const day = this._getDay();
       const cycleDay = day?.cycleDay;
       
@@ -509,6 +682,11 @@
      * @returns {Object} { risk, level, factors, recommendation, color }
      */
     getCrashRiskData() {
+      // 🎭 Demo mode
+      if (this._isDemoMode()) {
+        return { ...DEMO_WIDGET_DATA.crashRisk };
+      }
+      
       try {
         const profile = this._getProfile() || {};
         const today = this._formatDate(new Date());

@@ -2539,7 +2539,8 @@
     const goal = ctxGoal || (() => {
       const dayDeficit = day?.deficitPct;
       const profileDeficit = prof?.deficitPctTarget;
-      const effectiveDeficit = dayDeficit ?? profileDeficit ?? 0;
+      // Number() для корректного сравнения строк из localStorage с числами
+      const effectiveDeficit = Number(dayDeficit ?? profileDeficit ?? 0) || 0;
       return getGoalMode(effectiveDeficit);
     })();
     
