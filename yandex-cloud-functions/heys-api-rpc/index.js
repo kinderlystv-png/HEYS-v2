@@ -199,6 +199,16 @@ const ALLOWED_FUNCTIONS = [
   'claim_trial_offer',                  // Подтверждение offer → старт триала
   'cancel_trial_queue',                 // Отмена запроса на триал
   'assign_trials_from_queue',           // Воркер: раздача offers (cron)
+  
+  // === TRIAL QUEUE ADMIN (для куратора) ===
+  'admin_get_trial_queue_list',         // Список очереди с данными клиентов
+  'admin_add_to_queue',                 // Добавить клиента в очередь
+  'admin_remove_from_queue',            // Удалить из очереди
+  'admin_send_offer',                   // @deprecated — use admin_activate_trial
+  'admin_activate_trial',               // 🆕 Активировать триал (ручная верификация)
+  'admin_reject_request',               // 🆕 Отклонить заявку с причиной
+  'admin_get_queue_stats',              // Статистика очереди
+  'admin_update_queue_settings',        // Изменить настройки (is_accepting и т.д.)
   // ❌ check_subscription_status(UUID) — убрано, принимает UUID без проверки владельца
   
   // === KV STORAGE (🔐 P1: session-версии — IDOR fix!) ===
@@ -439,6 +449,33 @@ module.exports.handler = async function (event, context) {
       'publish_shared_product_by_curator': {
         'p_curator_id': '::uuid',
         'p_product_data': '::jsonb'
+      },
+      // === TRIAL QUEUE ADMIN ===
+      'admin_get_trial_queue_list': {
+        'p_curator_session_token': '::text'
+      },
+      'admin_add_to_queue': {
+        'p_client_id': '::uuid',
+        'p_source': '::text',
+        'p_priority': '::int',
+        'p_curator_session_token': '::text'
+      },
+      'admin_remove_from_queue': {
+        'p_client_id': '::uuid',
+        'p_reason': '::text',
+        'p_curator_session_token': '::text'
+      },
+      'admin_send_offer': {
+        'p_client_id': '::uuid',
+        'p_offer_window_minutes': '::int',
+        'p_curator_session_token': '::text'
+      },
+      'admin_update_queue_settings': {
+        'p_is_accepting': '::boolean',
+        'p_max_active': '::int',
+        'p_offer_window_minutes': '::int',
+        'p_trial_days': '::int',
+        'p_curator_session_token': '::text'
       }
     };
     
