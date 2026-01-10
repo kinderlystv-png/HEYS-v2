@@ -16261,7 +16261,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   (activityCompensation > 0 ? Math.round(activityCompensation) + ' ккал через активность' : 'основной акцент — активность')
                 )
               ),
-              // "?" кнопка с научным обоснованием — открывает popup
+              // "?" кнопка с научным обоснованием — открывает popup НА ВКЛАДКЕ ДНЕВНИК
               React.createElement('span', {
                 style: { 
                   fontSize: '11px', 
@@ -16274,7 +16274,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 title: 'Научное обоснование',
                 onClick: (e) => {
                   e.stopPropagation();
-                  setDebtSciencePopup({
+                  const popupData = {
                     title: '🔬 Почему мягкая коррекция?',
                     content: [
                       { 
@@ -16294,7 +16294,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                       { text: 'Herman & Polivy 1984', url: 'https://pubmed.ncbi.nlm.nih.gov/6727817/' },
                       { text: 'Tomiyama 2018', url: 'https://pubmed.ncbi.nlm.nih.gov/29866473/' }
                     ]
-                  });
+                  };
+                  // Сначала переключаемся на вкладку Дневник, потом показываем popup
+                  if (mobileSubTab === 'stats' && window.HEYS?.App?.setTab) {
+                    window.HEYS.App.setTab('diary');
+                    setTimeout(() => setDebtSciencePopup(popupData), 200);
+                  } else {
+                    setDebtSciencePopup(popupData);
+                  }
                 }
               }, '?')
             ),
@@ -20894,7 +20901,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 },
                 onClick: (e) => {
                   e.stopPropagation();
-                  openExclusivePopup('debt-science', {
+                  const popupData = {
                     title: '🧬 3-компонентная модель инсулиновой волны',
                     content: [
                       { label: '⚡ Быстрые (Fast Peak)', value: 'Простые углеводы → быстрый пик глюкозы (15-25 мин). GI>70: сахар, белый хлеб, мёд.' },
@@ -20905,7 +20912,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                       { text: 'Brand-Miller 2003', url: 'https://pubmed.ncbi.nlm.nih.gov/12828192/' },
                       { text: 'Holt 1997', url: 'https://pubmed.ncbi.nlm.nih.gov/9356547/' }
                     ]
-                  });
+                  };
+                  // Если на вкладке Отчёты — сначала переключаемся на Дневник
+                  if (mobileSubTab === 'stats' && window.HEYS?.App?.setTab) {
+                    window.HEYS.App.setTab('diary');
+                    setTimeout(() => openExclusivePopup('debt-science', popupData), 200);
+                  } else {
+                    openExclusivePopup('debt-science', popupData);
+                  }
                 }
               }, '?')
             ),

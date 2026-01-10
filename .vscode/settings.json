@@ -1,4 +1,16 @@
 {
+    // === Agent Mode (VS Code 1.108+) ===
+    "chat.useAgentSkills": true,
+    "chat.viewSessions.orientation": "sideBySide",
+    
+    // === Copilot Settings ===
+    "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+    "github.copilot.chat.reviewSelection.enabled": true,
+    "github.copilot.chat.temporalContext.enabled": true,
+    "github.copilot.chat.commitMessageGeneration.instructions": [
+        { "text": "Формат: type: краткое описание на английском. Types: feat, fix, refactor, docs, chore" }
+    ],
+    
     "workbench.colorCustomizations": {
         "activityBar.activeBackground": "#ab307e",
         "activityBar.background": "#ab307e",

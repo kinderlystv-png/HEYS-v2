@@ -1,3 +1,39 @@
+/* === POPUP BACKDROP (GLOBAL) === */
+.popup-backdrop-invisible {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2.5px);
+  -webkit-backdrop-filter: blur(2.5px);
+  z-index: 9600;
+  opacity: 0;
+  animation: popupBackdropFade 0.2s ease forwards;
+}
+
+.popup-backdrop-invisible > * {
+  max-height: 100%;
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  .popup-backdrop-invisible {
+    padding: 12px;
+  }
+}
+
+@keyframes popupBackdropFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* === ONBOARDING TOUR STYLES === */
 .tour-overlay {
   position: fixed !important;
