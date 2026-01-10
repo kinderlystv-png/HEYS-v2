@@ -106,14 +106,29 @@
   
   /**
    * Получить JWT токен куратора из localStorage
+   * 🔧 v57 FIX: Читаем heys_curator_session (куратор JWT), а НЕ heys_supabase_auth_token (Supabase auth)
    * @returns {string|null}
    */
   function getCuratorToken() {
     try {
-      const stored = localStorage.getItem('heys_supabase_auth_token');
-      if (!stored) return null;
-      const parsed = JSON.parse(stored);
-      return parsed?.access_token || null;
+      // 1. Сначала проверяем curator JWT (правильный ключ)
+      const curatorSession = localStorage.getItem('heys_curator_session');
+      if (curatorSession) {
+        log('getCuratorToken: using heys_curator_session');
+        return curatorSession;
+      }
+      
+      // 2. Fallback: legacy supabase auth (для обратной совместимости)
+      const supabaseAuth = localStorage.getItem('heys_supabase_auth_token');
+      if (supabaseAuth) {
+        const parsed = JSON.parse(supabaseAuth);
+        if (parsed?.access_token) {
+          log('getCuratorToken: fallback to heys_supabase_auth_token');
+          return parsed.access_token;
+        }
+      }
+      
+      return null;
     } catch (e) {
       err('getCuratorToken failed:', e.message);
       return null;

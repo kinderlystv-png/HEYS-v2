@@ -139,9 +139,12 @@
         throw new Error(res.error.message || 'Unknown error');
       }
       
-      const data = res.data || res;
-      setCachedCapacity(data);
-      return data;
+      // API wraps response: {data: {get_public_trial_capacity: {...}}}
+      const fnData = res.data?.get_public_trial_capacity || res.data || res;
+      console.log('[TrialQueue] 📦 getCapacity raw:', JSON.stringify(res.data));
+      console.log('[TrialQueue] ✅ getCapacity extracted:', JSON.stringify(fnData));
+      setCachedCapacity(fnData);
+      return fnData;
     } catch (e) {
       console.error('[TrialQueue] getCapacity error:', e);
       return getCachedCapacity() || {
@@ -185,7 +188,10 @@
         };
       }
       
-      const data = res.data || res;
+      // v2.1: API wraps response in {request_trial: {...}}
+      const data = res.data?.request_trial || res.data || res;
+      console.log('[TrialQueue] 📦 requestTrial raw:', JSON.stringify(res.data));
+      console.log('[TrialQueue] ✅ requestTrial extracted:', JSON.stringify(data));
       setCachedStatus(data);
       
       // Инвалидируем capacity cache
@@ -232,7 +238,10 @@
         throw new Error(res.error.message);
       }
       
-      const data = res.data || res;
+      // v2.1: API wraps response in {get_trial_queue_status: {...}}
+      const data = res.data?.get_trial_queue_status || res.data || res;
+      console.log('[TrialQueue] 📦 getQueueStatus raw:', JSON.stringify(res.data));
+      console.log('[TrialQueue] ✅ getQueueStatus extracted:', JSON.stringify(data));
       setCachedStatus(data);
       return data;
     } catch (e) {
@@ -285,7 +294,11 @@
       // Очищаем кэши
       clearCache();
       
-      return res.data || res;
+      // v2.1: API wraps response in {cancel_trial_queue: {...}}
+      const data = res.data?.cancel_trial_queue || res.data || res;
+      console.log('[TrialQueue] 📦 cancelQueue raw:', JSON.stringify(res.data));
+      console.log('[TrialQueue] ✅ cancelQueue extracted:', JSON.stringify(data));
+      return data;
     } catch (e) {
       console.error('[TrialQueue] cancelQueue error:', e);
       return { success: false, error: 'cancel_failed', message: e.message };
@@ -409,9 +422,15 @@
   
   /**
    * Получить UI-метаданные для capacity виджета
+   * v2.1: Адаптирован под упрощённый API (is_accepting + queue_length)
    */
   function getCapacityMeta(capacity) {
-    const { available_slots, total_slots, queue_size, is_accepting } = capacity;
+    // API v2 возвращает: { is_accepting, queue_length }
+    // Для обратной совместимости поддерживаем оба формата
+    const is_accepting = capacity.is_accepting;
+    const queue_length = capacity.queue_length ?? capacity.queue_size ?? 0;
+    const available_slots = capacity.available_slots; // может быть undefined в v2
+    const total_slots = capacity.total_slots; // может быть undefined в v2
     
     if (!is_accepting) {
       return {
@@ -425,12 +444,17 @@
       };
     }
     
-    if (available_slots > 0) {
+    // v2: Если is_accepting=true — места есть (упрощённая логика)
+    // v1: Проверяем available_slots если есть
+    if (is_accepting && (available_slots === undefined || available_slots > 0)) {
+      const label = available_slots !== undefined 
+        ? `Свободно ${available_slots} из ${total_slots}`
+        : 'Приём открыт';
       return {
         status: 'available',
         color: '#22c55e',
         emoji: '🟢',
-        label: `Свободно ${available_slots} из ${total_slots}`,
+        label: label,
         sublabel: 'Место доступно прямо сейчас!',
         actionLabel: 'Начать триал',
         showQueue: false,
@@ -442,10 +466,10 @@
       color: '#ef4444',
       emoji: '🔴',
       label: 'Мест нет',
-      sublabel: queue_size > 0 ? `В очереди: ${queue_size}` : 'Очередь пуста',
+      sublabel: queue_length > 0 ? `В очереди: ${queue_length}` : 'Очередь пуста',
       actionLabel: 'Встать в очередь',
       showQueue: true,
-      queueSize: queue_size,
+      queueSize: queue_length,
     };
   }
   
@@ -1023,7 +1047,12 @@
           return { success: false, error: res.error.code, message: res.error.message };
         }
         
-        return { success: true, data: res.data || res, total_count: (res.data || res)?.length || 0 };
+        // API возвращает обёрткой {admin_get_trial_queue_list: {items, total, ...}}
+        const fnData = res.data?.admin_get_trial_queue_list || res.data || res;
+        const items = Array.isArray(fnData) ? fnData : (fnData.items || []);
+        const total = fnData.total ?? items.length;
+        
+        return { success: true, data: items, total_count: total };
       } catch (e) {
         console.error('[TrialQueue.admin] getQueueList error:', e);
         return { success: false, error: 'request_failed', message: e.message };
@@ -1059,7 +1088,8 @@
           return { success: false, error: res.error.code, message: res.error.message };
         }
         
-        return res.data || res;
+        const fnData = res.data?.admin_add_to_queue || res.data || res;
+        return fnData;
       } catch (e) {
         console.error('[TrialQueue.admin] addToQueue error:', e);
         return { success: false, error: 'request_failed', message: e.message };
@@ -1087,7 +1117,8 @@
           return { success: false, error: res.error.code, message: res.error.message };
         }
         
-        return res.data || res;
+        const fnData = res.data?.admin_remove_from_queue || res.data || res;
+        return fnData;
       } catch (e) {
         console.error('[TrialQueue.admin] removeFromQueue error:', e);
         return { success: false, error: 'request_failed', message: e.message };
@@ -1129,7 +1160,8 @@
           return { success: false, error: res.error.code, message: res.error.message };
         }
         
-        return res.data || res;
+        const fnData = res.data?.admin_activate_trial || res.data || res;
+        return fnData;
       } catch (e) {
         console.error('[TrialQueue.admin] activateTrial error:', e);
         return { success: false, error: 'request_failed', message: e.message };
@@ -1164,7 +1196,8 @@
           return { success: false, error: res.error.code, message: res.error.message };
         }
         
-        return res.data || res;
+        const fnData = res.data?.admin_reject_request || res.data || res;
+        return fnData;
       } catch (e) {
         console.error('[TrialQueue.admin] rejectApplication error:', e);
         return { success: false, error: 'request_failed', message: e.message };
@@ -1187,7 +1220,9 @@
           return { success: false, error: res.error.code, message: res.error.message };
         }
         
-        return { success: true, ...(res.data || res) };
+        // API оборачивает ответ в ключ с именем функции: { admin_get_queue_stats: {...} }
+        const fnData = res.data?.admin_get_queue_stats || res.data || res;
+        return { success: true, ...fnData };
       } catch (e) {
         console.error('[TrialQueue.admin] getStats error:', e);
         return { success: false, error: 'request_failed', message: e.message };
@@ -1256,7 +1291,9 @@
         ]);
         
         if (queueRes.success) {
-          setQueue(queueRes.data || []);
+          // Защита: data должен быть массивом
+          const queueData = Array.isArray(queueRes.data) ? queueRes.data : [];
+          setQueue(queueData);
         } else {
           setError(queueRes.message || 'Ошибка загрузки очереди');
         }

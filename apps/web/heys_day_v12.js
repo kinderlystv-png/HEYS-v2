@@ -20876,30 +20876,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               React.createElement('span', { style: { color: '#f97316' } }, '⚡ Быстрые'),
               React.createElement('span', { style: { color: '#22c55e' } }, '🌿 Основной'),
               React.createElement('span', { style: { color: '#8b5cf6' } }, '🫀 Печёночный'),
-              // "?" сноска с научным обоснованием — button вместо span для accessibility
-              React.createElement('button', {
-                type: 'button',
+              // "?" сноска с научным обоснованием
+              React.createElement('span', {
                 style: {
                   marginLeft: '4px',
-                  width: '16px',
-                  height: '16px',
-                  minWidth: '16px',
-                  padding: 0,
-                  border: 'none',
+                  width: '14px',
+                  height: '14px',
                   borderRadius: '50%',
-                  background: 'rgba(107, 114, 128, 0.4)',
+                  background: 'rgba(107, 114, 128, 0.3)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '10px',
-                  color: '#9ca3af',
+                  fontSize: '9px',
+                  color: '#6b7280',
                   cursor: 'pointer',
-                  fontWeight: 600,
-                  position: 'relative',
-                  zIndex: 10
+                  fontWeight: 600
                 },
                 onClick: (e) => {
-                  e.preventDefault();
                   e.stopPropagation();
                   openExclusivePopup('debt-science', {
                     title: '🧬 3-компонентная модель инсулиновой волны',
