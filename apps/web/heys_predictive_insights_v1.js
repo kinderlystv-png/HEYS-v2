@@ -1,162 +1,58 @@
 // heys_predictive_insights_v1.js — Predictive Insights Module v2.2.0
 // Анализ данных за 7-30 дней, корреляции, паттерны, прогнозы
 // v2.2.0: What-If Simulator — интерактивный симулятор еды
+// v2.2.1: Refactored - constants extracted to insights/pi_constants.js
 // Зависимости: HEYS.InsulinWave, HEYS.Cycle, HEYS.ratioZones, HEYS.models, U.lsGet
+//              HEYS.insights.constants (pi_constants.js)
 (function(global) {
   'use strict';
   
   const HEYS = global.HEYS = global.HEYS || {};
   const U = HEYS.utils || {};
   
-  // === КОНСТАНТЫ ===
-  const CONFIG = {
+  // === КОНСТАНТЫ (из pi_constants.js) ===
+  // Используем извлечённые константы, fallback на локальные если модуль не загружен
+  const piConst = HEYS.insights?.constants || {};
+  
+  const CONFIG = piConst.CONFIG || {
     DEFAULT_DAYS: 14,
     MIN_DAYS_FOR_INSIGHTS: 3,
     MIN_DAYS_FOR_FULL_ANALYSIS: 7,
     MIN_CORRELATION_DISPLAY: 0.35,
     CACHE_TTL_MS: 5 * 60 * 1000,
-    VERSION: '2.2.0' // v2.2.0: What-If Simulator
+    VERSION: '2.2.0'
   };
 
   // === СИСТЕМА ПРИОРИТЕТОВ И КРИТЕРИЕВ ===
-  // Определяет важность каждой метрики для пользователя
+  // Используем извлечённые константы из pi_constants.js
   
-  const PRIORITY_LEVELS = {
-    CRITICAL: { 
-      level: 1, 
-      name: 'Критический', 
-      emoji: '🔴',
-      color: '#ef4444',
-      description: 'Требует немедленного внимания. Напрямую влияет на здоровье и результат.'
-    },
-    HIGH: { 
-      level: 2, 
-      name: 'Высокий', 
-      emoji: '🟠',
-      color: '#f97316',
-      description: 'Важно для достижения целей. Влияет на ежедневные решения.'
-    },
-    MEDIUM: { 
-      level: 3, 
-      name: 'Средний', 
-      emoji: '🟡',
-      color: '#eab308',
-      description: 'Полезный контекст. Помогает понять паттерны.'
-    },
-    LOW: { 
-      level: 4, 
-      name: 'Низкий', 
-      emoji: '🟢',
-      color: '#22c55e',
-      description: 'Дополнительная информация. Интересно, но не критично.'
-    },
-    INFO: { 
-      level: 5, 
-      name: 'Справочный', 
-      emoji: '🔵',
-      color: '#3b82f6',
-      description: 'Образовательная информация. Для понимания научной базы.'
-    }
+  const PRIORITY_LEVELS = piConst.PRIORITY_LEVELS || {
+    CRITICAL: { level: 1, name: 'Критический', emoji: '🔴', color: '#ef4444', description: 'Требует немедленного внимания.' },
+    HIGH: { level: 2, name: 'Высокий', emoji: '🟠', color: '#f97316', description: 'Важно для достижения целей.' },
+    MEDIUM: { level: 3, name: 'Средний', emoji: '🟡', color: '#eab308', description: 'Полезный контекст.' },
+    LOW: { level: 4, name: 'Низкий', emoji: '🟢', color: '#22c55e', description: 'Дополнительная информация.' },
+    INFO: { level: 5, name: 'Справочный', emoji: '🔵', color: '#3b82f6', description: 'Образовательная информация.' }
   };
 
-  const CATEGORIES = {
-    METABOLISM: {
-      id: 'metabolism',
-      name: 'Метаболизм',
-      emoji: '🔥',
-      color: '#f97316',
-      description: 'Как организм использует энергию'
-    },
-    NUTRITION: {
-      id: 'nutrition',
-      name: 'Питание',
-      emoji: '🍽️',
-      color: '#22c55e',
-      description: 'Качество и состав питания'
-    },
-    TIMING: {
-      id: 'timing',
-      name: 'Тайминг',
-      emoji: '⏰',
-      color: '#8b5cf6',
-      description: 'Когда есть и действовать'
-    },
-    RECOVERY: {
-      id: 'recovery',
-      name: 'Восстановление',
-      emoji: '😴',
-      color: '#6366f1',
-      description: 'Сон, стресс, отдых'
-    },
-    RISK: {
-      id: 'risk',
-      name: 'Риски',
-      emoji: '⚠️',
-      color: '#ef4444',
-      description: 'Предупреждение проблем'
-    },
-    PREDICTION: {
-      id: 'prediction',
-      name: 'Прогнозы',
-      emoji: '🔮',
-      color: '#a855f7',
-      description: 'Что будет дальше'
-    },
-    PATTERNS: {
-      id: 'patterns',
-      name: 'Паттерны',
-      emoji: '🧬',
-      color: '#ec4899',
-      description: 'Индивидуальные особенности'
-    },
-    COMPOSITE: {
-      id: 'composite',
-      name: 'Композитные',
-      emoji: '📊',
-      color: '#14b8a6',
-      description: 'Сводные показатели'
-    },
-    STATISTICS: {
-      id: 'statistics',
-      name: 'Статистика',
-      emoji: '📈',
-      color: '#64748b',
-      description: 'Научные расчёты'
-    }
+  const CATEGORIES = piConst.CATEGORIES || {
+    METABOLISM: { id: 'metabolism', name: 'Метаболизм', emoji: '🔥', color: '#f97316', description: 'Как организм использует энергию' },
+    NUTRITION: { id: 'nutrition', name: 'Питание', emoji: '🍽️', color: '#22c55e', description: 'Качество и состав питания' },
+    TIMING: { id: 'timing', name: 'Тайминг', emoji: '⏰', color: '#8b5cf6', description: 'Когда есть и действовать' },
+    RECOVERY: { id: 'recovery', name: 'Восстановление', emoji: '😴', color: '#6366f1', description: 'Сон, стресс, отдых' },
+    RISK: { id: 'risk', name: 'Риски', emoji: '⚠️', color: '#ef4444', description: 'Предупреждение проблем' },
+    PREDICTION: { id: 'prediction', name: 'Прогнозы', emoji: '🔮', color: '#a855f7', description: 'Что будет дальше' },
+    PATTERNS: { id: 'patterns', name: 'Паттерны', emoji: '🧬', color: '#ec4899', description: 'Индивидуальные особенности' },
+    COMPOSITE: { id: 'composite', name: 'Композитные', emoji: '📊', color: '#14b8a6', description: 'Сводные показатели' },
+    STATISTICS: { id: 'statistics', name: 'Статистика', emoji: '📈', color: '#64748b', description: 'Научные расчёты' }
   };
 
-  // Критерии для определения actionability (возможность действовать)
-  const ACTIONABILITY = {
-    IMMEDIATE: {
-      level: 1,
-      name: 'Немедленно',
-      emoji: '⚡',
-      description: 'Можно исправить прямо сейчас'
-    },
-    TODAY: {
-      level: 2,
-      name: 'Сегодня',
-      emoji: '📅',
-      description: 'Влияет на сегодняшние решения'
-    },
-    WEEKLY: {
-      level: 3,
-      name: 'Неделя',
-      emoji: '📆',
-      description: 'Требует времени для изменений'
-    },
-    LONG_TERM: {
-      level: 4,
-      name: 'Долгосрочно',
-      emoji: '🎯',
-      description: 'Стратегическое планирование'
-    },
-    INFORMATIONAL: {
-      level: 5,
-      name: 'Информационно',
-      emoji: 'ℹ️',
-      description: 'Только для понимания'
-    }
+  // Критерии для определения actionability (используем из pi_constants.js)
+  const ACTIONABILITY = piConst.ACTIONABILITY || {
+    IMMEDIATE: { level: 1, name: 'Немедленно', emoji: '⚡', description: 'Можно исправить прямо сейчас' },
+    TODAY: { level: 2, name: 'Сегодня', emoji: '📅', description: 'Влияет на сегодняшние решения' },
+    WEEKLY: { level: 3, name: 'Неделя', emoji: '📆', description: 'Требует времени для изменений' },
+    LONG_TERM: { level: 4, name: 'Долгосрочно', emoji: '🎯', description: 'Стратегическое планирование' },
+    INFORMATIONAL: { level: 5, name: 'Информационно', emoji: 'ℹ️', description: 'Только для понимания' }
   };
 
   // === API для работы с приоритетами ===
@@ -273,141 +169,42 @@
     };
   }
 
-  // === КОНФИГУРАЦИЯ СЕКЦИЙ UI (сортировка по важности) ===
-  // Определяет порядок отображения секций в InsightsTab
-  // По умолчанию: CRITICAL → HIGH → MEDIUM → LOW
-  
-  const SECTIONS_CONFIG = {
-    // L0: Критические — всегда показываются первыми
-    STATUS_SCORE: {
-      id: 'status_score',
-      component: 'StatusScoreCard',
-      priority: 'CRITICAL',
-      order: 1,
-      alwaysShow: true,
-      title: 'Метаболический статус',
-      icon: '🎯'
-    },
-    CRASH_RISK: {
-      id: 'crash_risk',
-      component: 'MetabolicQuickStatus',
-      priority: 'CRITICAL',
-      order: 2,
-      alwaysShow: true,
-      title: 'Риск срыва',
-      icon: '⚠️'
-    },
-    PRIORITY_ACTIONS: {
-      id: 'priority_actions',
-      component: 'PriorityActions',
-      priority: 'CRITICAL',
-      order: 3,
-      alwaysShow: true,
-      title: 'Действия сейчас',
-      icon: '⚡'
-    },
-    
-    // L1: Высокий приоритет — важно для достижения целей
-    PREDICTIVE_DASHBOARD: {
-      id: 'predictive_dashboard',
-      component: 'PredictiveDashboard',
-      priority: 'HIGH',
-      order: 10,
-      title: 'Прогнозы на сегодня',
-      icon: '🔮'
-    },
-    ADVANCED_ANALYTICS: {
-      id: 'advanced_analytics',
-      component: 'AdvancedAnalyticsCard',
-      priority: 'HIGH',
-      order: 11,
-      title: 'Продвинутая аналитика',
-      icon: '📊'
-    },
-    METABOLISM: {
-      id: 'metabolism',
-      component: 'MetabolismSection',
-      priority: 'HIGH',
-      order: 12,
-      title: 'Метаболизм',
-      icon: '🔥'
-    },
-    MEAL_TIMING: {
-      id: 'meal_timing',
-      component: 'MealTimingCard',
-      priority: 'HIGH',
-      order: 13,
-      title: 'Тайминг приёмов',
-      icon: '⏰'
-    },
-    
-    // L2: Средний приоритет — полезный контекст
-    WHAT_IF: {
-      id: 'what_if',
-      component: 'WhatIfSection',
-      priority: 'MEDIUM',
-      order: 20,
-      title: 'Что если...',
-      icon: '🎯'
-    },
-    PATTERNS: {
-      id: 'patterns',
-      component: 'PatternsList',
-      priority: 'MEDIUM',
-      order: 21,
-      title: 'Паттерны',
-      icon: '🔍'
-    },
-    WEIGHT_PREDICTION: {
-      id: 'weight_prediction',
-      component: 'WeightPrediction',
-      priority: 'MEDIUM',
-      order: 22,
-      title: 'Прогноз веса',
-      icon: '⚖️'
-    },
-    
-    // L3: Низкий приоритет — дополнительно
-    WEEKLY_WRAP: {
-      id: 'weekly_wrap',
-      component: 'WeeklyWrap',
-      priority: 'LOW',
-      order: 30,
-      title: 'Итоги недели',
-      icon: '📋'
-    },
-    DATA_COMPLETENESS: {
-      id: 'data_completeness',
-      component: 'DataCompletenessCard',
-      priority: 'LOW',
-      order: 31,
-      title: 'Полнота данных',
-      icon: '📊'
-    }
+  // === КОНФИГУРАЦИЯ СЕКЦИЙ UI (из pi_constants.js) ===
+  // Используем извлечённые константы, fallback на локальные если модуль не загружен
+  const SECTIONS_CONFIG = piConst.SECTIONS_CONFIG || (() => {
+    // Fallback секции если pi_constants.js не загружен
+    console.warn('[PI] pi_constants.js not loaded, using fallback SECTIONS_CONFIG');
+    return {
+      STATUS_SCORE: { id: 'status_score', component: 'StatusScoreCard', priority: 'CRITICAL', order: 1, alwaysShow: true, title: 'Метаболический статус', icon: '🎯' },
+      CRASH_RISK: { id: 'crash_risk', component: 'MetabolicQuickStatus', priority: 'CRITICAL', order: 2, alwaysShow: true, title: 'Риск срыва', icon: '⚠️' },
+      PRIORITY_ACTIONS: { id: 'priority_actions', component: 'PriorityActions', priority: 'CRITICAL', order: 3, alwaysShow: true, title: 'Действия сейчас', icon: '⚡' },
+      PREDICTIVE_DASHBOARD: { id: 'predictive_dashboard', component: 'PredictiveDashboard', priority: 'HIGH', order: 10, title: 'Прогнозы на сегодня', icon: '🔮' },
+      ADVANCED_ANALYTICS: { id: 'advanced_analytics', component: 'AdvancedAnalyticsCard', priority: 'HIGH', order: 11, title: 'Продвинутая аналитика', icon: '📊' },
+      METABOLISM: { id: 'metabolism', component: 'MetabolismSection', priority: 'HIGH', order: 12, title: 'Метаболизм', icon: '🔥' },
+      MEAL_TIMING: { id: 'meal_timing', component: 'MealTimingCard', priority: 'HIGH', order: 13, title: 'Тайминг приёмов', icon: '⏰' },
+      WHAT_IF: { id: 'what_if', component: 'WhatIfSection', priority: 'MEDIUM', order: 20, title: 'Что если...', icon: '🎯' },
+      PATTERNS: { id: 'patterns', component: 'PatternsList', priority: 'MEDIUM', order: 21, title: 'Паттерны', icon: '🔍' },
+      WEIGHT_PREDICTION: { id: 'weight_prediction', component: 'WeightPrediction', priority: 'MEDIUM', order: 22, title: 'Прогноз веса', icon: '⚖️' },
+      WEEKLY_WRAP: { id: 'weekly_wrap', component: 'WeeklyWrap', priority: 'LOW', order: 30, title: 'Итоги недели', icon: '📋' },
+      DATA_COMPLETENESS: { id: 'data_completeness', component: 'DataCompletenessCard', priority: 'LOW', order: 31, title: 'Полнота данных', icon: '📊' }
+    };
+  })();
+
+  /**
+   * Получить секции отсортированные по приоритету (используем из pi_constants если есть)
+   */
+  const getSortedSections = piConst.getSortedSections || function(filterPriority = null) {
+    let sections = Object.values(SECTIONS_CONFIG);
+    if (filterPriority) sections = sections.filter(s => s.priority === filterPriority);
+    return sections.sort((a, b) => a.order - b.order);
   };
 
   /**
-   * Получить секции отсортированные по приоритету
-   * @param {string} filterPriority - фильтр по приоритету (опционально)
-   * @returns {Array} секции отсортированные по order
+   * Получить приоритет секции (используем из pi_constants если есть)
    */
-  function getSortedSections(filterPriority = null) {
-    let sections = Object.values(SECTIONS_CONFIG);
-    
-    if (filterPriority) {
-      sections = sections.filter(s => s.priority === filterPriority);
-    }
-    
-    return sections.sort((a, b) => a.order - b.order);
-  }
-
-  /**
-   * Получить приоритет секции
-   */
-  function getSectionPriority(sectionId) {
+  const getSectionPriority = piConst.getSectionPriority || function(sectionId) {
     const section = Object.values(SECTIONS_CONFIG).find(s => s.id === sectionId);
     if (!section) return null;
-    
     const priorityLevel = PRIORITY_LEVELS[section.priority];
     return {
       ...section,
