@@ -636,62 +636,6 @@
     calculateAllostaticLoad: piAnalyticsAPI.calculateAllostaticLoad,
     detectEarlyWarningSignals: piAnalyticsAPI.detectEarlyWarningSignals,
     
-  // === HELPER FUNCTIONS ===
-  
-  // Статистические функции делегируем в pi_stats.js
-  const calculateR2 = piStats.calculateR2 || function(actual, predicted) {
-    if (actual.length !== predicted.length || actual.length < 2) return 0;
-    const meanActual = average(actual);
-    const ssRes = actual.reduce((sum, a, i) => sum + Math.pow(a - predicted[i], 2), 0);
-    const ssTot = actual.reduce((sum, a) => sum + Math.pow(a - meanActual, 2), 0);
-    return ssTot > 0 ? 1 - (ssRes / ssTot) : 0;
-  };
-  
-  const variance = piStats.variance || function(arr) {
-    if (arr.length < 2) return 0;
-    const mean = average(arr);
-    return average(arr.map(x => Math.pow(x - mean, 2)));
-  };
-  
-  const autocorrelation = piStats.autocorrelation || function(arr, lag = 1) {
-    if (arr.length <= lag) return 0;
-    const mean = average(arr);
-    const n = arr.length;
-    let numerator = 0;
-    let denominator = 0;
-    for (let i = 0; i < n - lag; i++) {
-      numerator += (arr[i] - mean) * (arr[i + lag] - mean);
-    }
-    for (let i = 0; i < n; i++) {
-      denominator += Math.pow(arr[i] - mean, 2);
-    }
-    return denominator > 0 ? numerator / denominator : 0;
-  };
-  
-  const skewness = piStats.skewness || function(arr) {
-    if (arr.length < 3) return 0;
-    const mean = average(arr);
-    const std = stdDev(arr);
-    if (std === 0) return 0;
-    const n = arr.length;
-    const m3 = arr.reduce((sum, x) => sum + Math.pow((x - mean) / std, 3), 0) / n;
-    return m3;
-  };
-  
-  const linearTrend = piStats.linearTrend || function(arr) {
-    if (arr.length < 2) return 0;
-    const n = arr.length;
-    const xMean = (n - 1) / 2;
-    const yMean = average(arr);
-    let numerator = 0;
-    let denominator = 0;
-    for (let i = 0; i < n; i++) {
-      numerator += (i - xMean) * (arr[i] - yMean);
-      denominator += Math.pow(i - xMean, 2);
-    }
-    return denominator > 0 ? numerator / denominator : 0;
-  };
-
   // === REACT COMPONENTS ===
   const { createElement: h, useState, useEffect, useMemo } = window.React || {};
   const ReactDOM = window.ReactDOM || {};
