@@ -32,45 +32,8 @@
     GUT_HEALTH: 'gut_health'
   };
   
-  // Импорт статистических функций с fallback
-  const average = piStats.average || function(arr) {
-    if (!arr || arr.length === 0) return 0;
-    return arr.reduce((a, b) => a + b, 0) / arr.length;
-  };
-  
-  const stdDev = piStats.stdDev || function(arr) {
-    if (!arr || arr.length < 2) return 0;
-    const avg = average(arr);
-    const squareDiffs = arr.map(v => Math.pow(v - avg, 2));
-    return Math.sqrt(average(squareDiffs));
-  };
-  
-  const pearsonCorrelation = piStats.pearsonCorrelation || function(x, y) {
-    if (x.length !== y.length || x.length < 3) return 0;
-    const n = x.length;
-    const sumX = x.reduce((a, b) => a + b, 0);
-    const sumY = y.reduce((a, b) => a + b, 0);
-    const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0);
-    const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0);
-    const sumY2 = y.reduce((acc, yi) => acc + yi * yi, 0);
-    const numerator = n * sumXY - sumX * sumY;
-    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
-    if (denominator === 0) return 0;
-    return numerator / denominator;
-  };
-  
-  const calculateTrend = piStats.calculateTrend || function(values) {
-    if (values.length < 2) return 0;
-    const n = values.length;
-    const x = values.map((_, i) => i);
-    const y = values;
-    const sumX = x.reduce((a, b) => a + b, 0);
-    const sumY = y.reduce((a, b) => a + b, 0);
-    const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0);
-    const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0);
-    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-    return isNaN(slope) ? 0 : slope;
-  };
+  // Импорт статистических функций из pi_stats.js (централизовано)
+  const { average, stdDev, pearsonCorrelation } = piStats;
 
   // === АНАЛИЗ ПАТТЕРНОВ ===
 

@@ -33,24 +33,8 @@
     GUT_HEALTH: 'gut_health'
   };
   
-  // Импорт статистических функций с fallback
-  const average = piStats.average || function(arr) {
-    if (!arr || arr.length === 0) return 0;
-    return arr.reduce((a, b) => a + b, 0) / arr.length;
-  };
-  
-  const calculateLinearRegression = piStats.calculateLinearRegression || function(points) {
-    if (points.length < 2) return 0;
-    const n = points.length;
-    const sumX = points.reduce((a, p) => a + p.x, 0);
-    const sumY = points.reduce((a, p) => a + p.y, 0);
-    const sumXY = points.reduce((a, p) => a + p.x * p.y, 0);
-    const sumX2 = points.reduce((a, p) => a + p.x * p.x, 0);
-    const denominator = (n * sumX2 - sumX * sumX);
-    if (denominator === 0) return 0;
-    const slope = (n * sumXY - sumX * sumY) / denominator;
-    return isNaN(slope) ? 0 : slope;
-  };
+  // Импорт статистических функций из pi_stats.js (централизовано)
+  const { average, calculateLinearRegression } = piStats;
 
   // === HEALTH SCORE (Goal-Aware v2.0) ===
 

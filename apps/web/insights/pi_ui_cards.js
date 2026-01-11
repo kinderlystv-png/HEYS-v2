@@ -24,11 +24,8 @@
   const CATEGORIES = piConst.CATEGORIES || {};
   const ACTIONABILITY = piConst.ACTIONABILITY || {};
   
-  // Helper functions
-  const average = piStats.average || function(arr) {
-    if (!arr || arr.length === 0) return 0;
-    return arr.reduce((a, b) => a + b, 0) / arr.length;
-  };
+  // Импорт статистических функций из pi_stats.js (централизовано)
+  const { average } = piStats;
 
       
       // === Активность ===
