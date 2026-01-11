@@ -38,6 +38,9 @@
   
   // === ANALYTICS API METHODS ===
   const analyticsAPI = {
+    /**
+     * Analyze Metabolism - глубокий анализ метаболических процессов
+     * @param {Object} options - параметры анализа
      * @returns {Object} метаболические данные
      */
     analyzeMetabolism: function(options = {}) {
@@ -1701,8 +1704,6 @@
         pmid: '6128309' // Borbély 1982
       };
     }
-  };
-
   };
   
   // === ЭКСПОРТ ===
