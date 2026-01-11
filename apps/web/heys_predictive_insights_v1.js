@@ -12,7 +12,7 @@
   
   // === КОНСТАНТЫ (из pi_constants.js) ===
   // Используем извлечённые константы, fallback на локальные если модуль не загружен
-  const piConst = HEYS.insights?.constants || {};
+  const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
   
   const CONFIG = piConst.CONFIG || {
     DEFAULT_DAYS: 14,
