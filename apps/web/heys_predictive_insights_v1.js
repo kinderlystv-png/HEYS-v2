@@ -1,9 +1,10 @@
-// heys_predictive_insights_v1.js — Predictive Insights Module v2.2.0
+// heys_predictive_insights_v1.js — Predictive Insights Module v3.0.0
 // Анализ данных за 7-30 дней, корреляции, паттерны, прогнозы
 // v2.2.0: What-If Simulator — интерактивный симулятор еды
 // v2.2.1: Refactored - constants extracted to insights/pi_constants.js
+// v3.0.0: Refactored - extracted Layer B modules (stats, science, patterns, advanced)
 // Зависимости: HEYS.InsulinWave, HEYS.Cycle, HEYS.ratioZones, HEYS.models, U.lsGet
-//              HEYS.insights.constants (pi_constants.js)
+//              HEYS.InsightsPI.* (pi_constants.js, pi_math.js, pi_stats.js)
 (function(global) {
   'use strict';
   
@@ -14,13 +15,21 @@
   // Используем извлечённые константы, fallback на локальные если модуль не загружен
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
   
+  // === СТАТИСТИЧЕСКИЕ ФУНКЦИИ (из pi_stats.js) ===
+  // Используем извлечённые функции, fallback если модуль не загружен
+  const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
+  
+  // === НАУЧНАЯ БД (из pi_science_info.js) ===
+  // Используем извлечённую базу данных, fallback если модуль не загружен
+  const SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {};
+  
   const CONFIG = piConst.CONFIG || {
     DEFAULT_DAYS: 14,
     MIN_DAYS_FOR_INSIGHTS: 3,
     MIN_DAYS_FOR_FULL_ANALYSIS: 7,
     MIN_CORRELATION_DISPLAY: 0.35,
     CACHE_TTL_MS: 5 * 60 * 1000,
-    VERSION: '2.2.0'
+    VERSION: '3.0.0'
   };
 
   // === СИСТЕМА ПРИОРИТЕТОВ И КРИТЕРИЕВ ===
@@ -215,754 +224,6 @@
     };
   }
 
-  // === НАУЧНЫЕ СПРАВКИ ДЛЯ UI ===
-  // Ключи в UPPERCASE для совместимости с infoKey в компонентах
-  // Теперь с priority, category и actionability
-  const SCIENCE_INFO = {
-    // TEF — Высокий приоритет, напрямую влияет на расчёт TDEE
-    TEF: {
-      name: 'Термический эффект пищи (TEF)',
-      formula: 'TEF = (Белок × 4 × 0.25) + (Углеводы × 4 × 0.075) + (Жиры × 9 × 0.015)',
-      source: 'Westerterp, 2004; Tappy, 1996',
-      pmid: '15507147',
-      interpretation: '8-12% от калоража — норма. >12% — отлично (много белка). <8% — мало белка в рационе.',
-      priority: 'HIGH',
-      category: 'METABOLISM',
-      actionability: 'TODAY',
-      impactScore: 0.75,
-      whyImportant: 'Определяет сколько калорий уходит на переваривание. Больше белка = выше TEF = легче дефицит.'
-    },
-    // EPOC — Средний приоритет, бонус от тренировок
-    EPOC: {
-      name: 'Дожиг после тренировки (EPOC)',
-      formula: 'EPOC = Калории_тренировки × (0.06 + intensity × 0.09)\nIntensity = % времени в зонах 3-4',
-      source: 'LaForgia et al., 2006',
-      pmid: '16825252',
-      interpretation: '+6-15% к затратам тренировки. При HIIT эффект сильнее и дольше (до 24ч).',
-      priority: 'MEDIUM',
-      category: 'METABOLISM',
-      actionability: 'TODAY',
-      impactScore: 0.45,
-      whyImportant: 'Показывает бонусное сжигание калорий после тренировки. HIIT даёт больший эффект.'
-    },
-    // Гормоны — Критический, влияет на голод и срывы
-    HORMONES: {
-      name: 'Гормональный баланс (Грелин/Лептин)',
-      formula: 'sleepDebt = sleepNorm - actualSleep\nЕсли sleepDebt ≥ 2ч:\n  ghrelinIncrease = 15 + (sleepDebt - 2) × 6.5\n  leptinDecrease = 10 + (sleepDebt - 2) × 4',
-      source: 'Spiegel et al., 2004',
-      pmid: '15531540',
-      interpretation: 'Недосып 2ч+ → голод повышен на 15-28%. Это физиология, не сила воли!',
-      priority: 'CRITICAL',
-      category: 'RECOVERY',
-      actionability: 'TODAY',
-      impactScore: 0.90,
-      whyImportant: '⚡ Недосып = гормональный голод. Самый частый триггер срывов! Высыпайся первым делом.'
-    },
-    // Adaptive Thermogenesis — Высокий, замедление метаболизма
-    ADAPTIVE: {
-      name: 'Адаптивный термогенез',
-      formula: 'За 7 дней считаем дни с eaten < BMR × 0.70:\n  2-3 дня: метаболизм -4%\n  3-5 дней: метаболизм -8%\n  5+ дней: метаболизм -12%',
-      source: 'Rosenbaum & Leibel, 2010',
-      pmid: '20107198',
-      interpretation: 'При жёстком дефиците метаболизм замедляется на 10-15%. Refeed day помогает!',
-      priority: 'HIGH',
-      category: 'METABOLISM',
-      actionability: 'WEEKLY',
-      impactScore: 0.80,
-      whyImportant: 'Слишком жёсткий дефицит = адаптация организма. Refeed каждые 5-7 дней спасает метаболизм.'
-    },
-    // Circadian — Высокий, влияет на усвоение
-    CIRCADIAN: {
-      name: 'Циркадный Score',
-      formula: 'Веса по времени:\n  Утро (6-12): ×1.1\n  День (12-18): ×1.0\n  Вечер (18-22): ×0.9\n  Ночь (22-6): ×0.7\nScore = Σ(kcal × timeWeight) / totalKcal × 100',
-      source: 'Garaulet et al., 2013; Jakubowicz et al., 2013',
-      pmid: '23512957',
-      interpretation: '>85 — отлично (калории в первой половине дня). <70 — много вечерней еды.',
-      priority: 'HIGH',
-      category: 'TIMING',
-      actionability: 'TODAY',
-      impactScore: 0.70,
-      whyImportant: 'Еда в первой половине дня усваивается лучше. Вечерние калории чаще идут в жир.'
-    },
-    // Nutrient Timing — Средний
-    NUTRIENT_TIMING: {
-      name: 'Тайминг нутриентов',
-      formula: 'Бонусы:\n  Белок утром (до 12:00): +10\n  Углеводы после тренировки (±2ч): +15\n  Жиры вечером: нейтрально\nScore = базовый 50 + сумма бонусов',
-      source: 'Areta et al., 2013; Aragon & Schoenfeld, 2013',
-      pmid: '24477298',
-      interpretation: '>80 — оптимальный тайминг. <60 — есть что улучшить.',
-      priority: 'MEDIUM',
-      category: 'TIMING',
-      actionability: 'TODAY',
-      impactScore: 0.55,
-      whyImportant: 'Правильный тайминг макросов улучшает восстановление и синтез мышц.'
-    },
-    // Insulin Sensitivity — Высокий, влияет на жиросжигание
-    INSULIN_SENSITIVITY: {
-      name: 'Прокси инсулиновой чувствительности',
-      formula: 'Факторы:\n  Средний GI <55: +20\n  Клетчатка >14г/1000ккал: +20\n  Вечерние углеводы <30%: +15\n  Тренировки: +15\n  Сон ≥7ч: +10\nScore = сумма факторов',
-      source: 'Brand-Miller, 2003; Wolever, 1994',
-      pmid: '12936919',
-      interpretation: '>75 — хорошая чувствительность. <50 — риск инсулинорезистентности.',
-      priority: 'HIGH',
-      category: 'METABOLISM',
-      actionability: 'WEEKLY',
-      impactScore: 0.85,
-      whyImportant: 'Высокая чувствительность к инсулину = легче сжигать жир и набирать мышцы.'
-    },
-    // Gut Health — Средний, долгосрочный эффект
-    GUT_HEALTH: {
-      name: 'Здоровье кишечника',
-      formula: 'Факторы:\n  Клетчатка >25г: +30\n  Разнообразие >15 продуктов: +25\n  Ферментированные продукты: +15\n  Без ультрапереработанных: +15',
-      source: 'Sonnenburg & Sonnenburg, 2014; Makki et al., 2018',
-      pmid: '24336217',
-      interpretation: '>75 — здоровый микробиом. <50 — добавь клетчатку и разнообразие.',
-      priority: 'MEDIUM',
-      category: 'NUTRITION',
-      actionability: 'LONG_TERM',
-      impactScore: 0.50,
-      whyImportant: 'Здоровый кишечник = лучшее усвоение, иммунитет, настроение.'
-    },
-    // Status Score — Критический, главная метрика
-    STATUS_SCORE: {
-      name: 'Метаболический статус 0-100',
-      formula: 'Оценка текущего метаболического состояния:\n  • База: 100 очков\n  • Питание: ±30 (соблюдение норм БЖУ, качество)\n  • Тайминг: ±25 (интервалы между едой, волны)\n  • Активность: ±25 (тренировки, шаги)\n  • Восстановление: ±20 (сон, стресс)',
-      source: 'Композитный показатель по методологии ACR + научные паттерны метаболизма',
-      pmid: '29754952',
-      interpretation: '80-100 — оптимум, жиросжигание работает. 60-79 — норма, есть резервы. <60 — метаболизм замедлен, обрати внимание на причины.',
-      priority: 'CRITICAL',
-      category: 'COMPOSITE',
-      actionability: 'IMMEDIATE',
-      impactScore: 1.0,
-      whyImportant: '⭐ ГЛАВНАЯ МЕТРИКА! Показывает общее состояние метаболизма прямо сейчас.'
-    },
-    // Crash Risk Quick — Критический, предупреждение срывов
-    CRASH_RISK_QUICK: {
-      name: 'Риск срыва (светофор)',
-      formula: 'Факторы риска:\n  • Недосып (<6ч): +25%\n  • Голодание (>5ч): +20%\n  • Низкий белок (<60г): +15%\n  • Стресс (>4): +15%\n  • Низкий калораж (<70% нормы): +25%',
-      source: 'Поведенческие исследования срывов (behavioral relapse prevention)',
-      pmid: '19179058',
-      interpretation: 'Зелёный — низкий риск, всё в порядке. Жёлтый — умеренный, обрати внимание. Красный — высокий риск, прими меры!',
-      priority: 'CRITICAL',
-      category: 'RISK',
-      actionability: 'IMMEDIATE',
-      impactScore: 0.95,
-      whyImportant: '🚨 Предупреждает о срыве ДО того как он случится. Красный = действуй сейчас!'
-    },
-    // Health Score — Высокий, сводная оценка
-    HEALTH_SCORE: {
-      name: 'Health Score (общая оценка)',
-      formula: 'Категории (веса зависят от цели):\n  Питание: 40% (качество еды, белок, клетчатка)\n  Тайминг: 25% (интервалы, волны, поздняя еда)\n  Активность: 20% (тренировки, шаги)\n  Восстановление: 15% (сон, стресс)',
-      source: 'Композитный показатель из 12+ научных паттернов',
-      interpretation: '>80 — отлично! 60-80 — хорошо. <60 — есть над чем работать.',
-      priority: 'HIGH',
-      category: 'COMPOSITE',
-      actionability: 'TODAY',
-      impactScore: 0.85,
-      whyImportant: 'Единая оценка всех аспектов здоровья. Цель — 80+ баллов.'
-    },
-    // Correlation — Низкий, статистика
-    CORRELATION: {
-      name: 'Корреляция Пирсона',
-      formula: 'r = Σ(x-x̄)(y-ȳ) / √(Σ(x-x̄)² × Σ(y-ȳ)²)\nДиапазон: от -1 до +1',
-      source: 'Статистика',
-      interpretation: '|r| > 0.7 — сильная связь. 0.4-0.7 — умеренная. <0.4 — слабая.',
-      priority: 'INFO',
-      category: 'STATISTICS',
-      actionability: 'INFORMATIONAL',
-      impactScore: 0.20,
-      whyImportant: 'Показывает связь между двумя показателями. Чем ближе к ±1 — тем сильнее связь.'
-    },
-    // Weight Prediction — Высокий, прогноз
-    WEIGHT_PREDICTION: {
-      name: 'Прогноз веса',
-      formula: 'Линейная регрессия:\n  slope = Σ((day - avgDay)(weight - avgWeight)) / Σ(day - avgDay)²\n  forecast = currentWeight + slope × daysAhead',
-      source: 'Статистический анализ временных рядов',
-      interpretation: 'Точность зависит от количества данных. ≥7 дней — уверенный прогноз.',
-      priority: 'HIGH',
-      category: 'PREDICTION',
-      actionability: 'WEEKLY',
-      impactScore: 0.75,
-      whyImportant: 'Показывает куда движется вес. Помогает понять, работает ли текущая стратегия.'
-    },
-    // Patterns — Высокий, персонализация
-    PATTERNS: {
-      name: 'Паттерны поведения',
-      formula: 'Анализ закономерностей в данных:\n  • Корреляции между показателями (сон→голод, стресс→еда)\n  • Повторяющиеся паттерны (тайминг еды, перехлёст волн)\n  • Тренды (качество приёмов, белок, клетчатка)',
-      source: 'Поведенческий анализ питания (behavioral nutrition patterns)',
-      pmid: '21593509',
-      interpretation: 'Паттерны помогают понять индивидуальные особенности метаболизма и найти точки роста.',
-      priority: 'HIGH',
-      category: 'PATTERNS',
-      actionability: 'WEEKLY',
-      impactScore: 0.80,
-      whyImportant: 'Твои уникальные паттерны. Понимание себя = персональная стратегия.'
-    },
-    
-    // === МЕТАБОЛИЧЕСКИЙ ФЕНОТИП ===
-    PHENOTYPE: {
-      name: 'Метаболический фенотип',
-      formula: 'Анализ 30+ дней данных:\n  • Толерантность к углеводам (GI response, энергия)\n  • Толерантность к жирам (насыщение, стабильность)\n  • Эффективность белка (восстановление, сытость)\n  • Хронотип (утро/вечер по активности)\n  • Стресс-ответ (еда при стрессе)',
-      source: 'Zeevi et al., 2015 (персонализированное питание); Ordovas, 2016',
-      pmid: '26590418',
-      interpretation: 'Фенотип определяет индивидуальный ответ на еду. Спринтер — быстрый метаболизм, частое питание. Марафонец — стабильная энергия, редкие плотные приёмы.',
-      priority: 'HIGH',
-      category: 'PERSONALIZATION',
-      actionability: 'LONG_TERM',
-      impactScore: 0.85,
-      whyImportant: '🧬 Твой уникальный метаболический тип! Питание по фенотипу эффективнее универсальных диет на 20-40%.'
-    },
-    PHENOTYPE_TRAITS: {
-      name: 'Радар метаболических черт',
-      formula: 'Черты рассчитываются по истории:\n  • Стабильность: σ(energyLevel) за день\n  • Восстановление: время до нормы после нагрузки\n  • Инсулин: GI-response + wave patterns\n  • Постоянство: adherence to timing\n  • Хронотип: распределение активности утро/вечер',
-      source: 'Корреляционный анализ данных пользователя',
-      interpretation: 'Каждая черта 0-100%. Высокие значения = сильная сторона. Низкие = зона роста.',
-      priority: 'MEDIUM',
-      category: 'PERSONALIZATION',
-      actionability: 'WEEKLY',
-      impactScore: 0.60,
-      whyImportant: 'Понимание своих метаболических черт помогает выбрать правильную стратегию питания.'
-    },
-    PHENOTYPE_THRESHOLDS: {
-      name: 'Персональные пороги',
-      formula: 'На основе фенотипа рассчитываются:\n  • Оптимальный диапазон ккал (±5-10% от TDEE)\n  • Длина инсулиновой волны (2.5-4.5ч)\n  • Оптимальный перерыв между едой (3-6ч)\n  • Макросы по толерантности',
-      source: 'Персонализация на основе 14+ дней данных',
-      interpretation: 'Пороги адаптируются по мере накопления данных. Больше дней = точнее пороги.',
-      priority: 'HIGH',
-      category: 'PERSONALIZATION',
-      actionability: 'WEEKLY',
-      impactScore: 0.75,
-      whyImportant: 'Персональные пороги точнее универсальных норм. Учитывают твою индивидуальность.'
-    },
-
-    // === КАТЕГОРИИ HEALTH SCORE — Средний приоритет (детализация) ===
-    CATEGORY_NUTRITION: {
-      name: 'Питание (40%)',
-      formula: 'Компоненты (веса для дефицита):\n  Калории: 30% (попадание в 85-110% нормы)\n  Белок: 25% (≥0.8г на кг массы тела)\n  Клетчатка: 15% (≥14г/1000 ккал)\n  Качество жиров: 15% (полезные ≥60%)\n  ГИ: 15% (средний GI <55)',
-      interpretation: '>80 — отличное питание. 60-80 — хорошо. <60 — нужны улучшения.',
-      priority: 'MEDIUM',
-      category: 'NUTRITION',
-      actionability: 'TODAY',
-      impactScore: 0.65,
-      whyImportant: 'Самая весомая категория. Качество еды важнее количества.'
-    },
-    CATEGORY_TIMING: {
-      name: 'Тайминг (25%)',
-      formula: 'Компоненты:\n  Интервалы: 30% (3-5ч между приёмами)\n  Инсулиновые волны: 30% (не перекрываются)\n  Поздняя еда: 25% (после 21:00 <300 ккал)\n  Циркадный ритм: 15% (>60% калорий до 15:00)',
-      interpretation: '>80 — оптимальный тайминг. <60 — много вечерней еды или частые перекусы.',
-      priority: 'MEDIUM',
-      category: 'TIMING',
-      actionability: 'TODAY',
-      impactScore: 0.60,
-      whyImportant: 'Когда ты ешь влияет на усвоение. Утро > вечер.'
-    },
-    CATEGORY_ACTIVITY: {
-      name: 'Активность (20%)',
-      formula: 'Компоненты:\n  Тренировки: 50% (3-5 в неделю)\n  Шаги: 30% (8000-10000 в день)\n  NEAT: 20% (бытовая активность)',
-      interpretation: '>80 — активный образ жизни. <60 — добавь движения.',
-      priority: 'MEDIUM',
-      category: 'METABOLISM',
-      actionability: 'TODAY',
-      impactScore: 0.55,
-      whyImportant: 'Движение = расход. Даже без тренировок шаги сжигают 200-400 ккал.'
-    },
-    CATEGORY_RECOVERY: {
-      name: 'Восстановление (15%)',
-      formula: 'Компоненты:\n  Сон: 50% (7-9 часов)\n  Качество сна: 25% (≥4 из 5)\n  Стресс: 25% (≤4 из 10)',
-      interpretation: '>80 — отличное восстановление. <60 — недосып или высокий стресс.',
-      priority: 'HIGH',
-      category: 'RECOVERY',
-      actionability: 'TODAY',
-      impactScore: 0.70,
-      whyImportant: 'Недосып и стресс — главные враги похудения. Высыпайся!'
-    },
-    
-    // === WHAT-IF СЦЕНАРИИ — Средний ===
-    WHATIF: {
-      name: 'Что если... (What-If анализ)',
-      formula: 'Сценарии моделируют изменения:\n  1. Берём текущие показатели\n  2. Применяем изменение (+белок, +шаги, и т.д.)\n  3. Пересчитываем Health Score\n  4. Показываем дельту: было → стало',
-      interpretation: 'Показывает потенциальный рост Score при изменении одного фактора.',
-      priority: 'MEDIUM',
-      category: 'PREDICTION',
-      actionability: 'TODAY',
-      impactScore: 0.50,
-      whyImportant: 'Показывает что даст наибольший эффект прямо сейчас.'
-    },
-    
-    // === WHAT-IF SIMULATOR — Высокий ===
-    WHATIF_SIMULATOR: {
-      name: '🧪 Симулятор еды',
-      formula: 'Алгоритм симуляции:\n  1. GL (гликемическая нагрузка) = GI × углеводы / 100\n  2. Волна = база × GI-модификатор × GL-модификатор × (белок/жир/клетчатка коррекции)\n  3. Сытость = 2ч + белок×0.03 + клетчатка×0.05 − (GI−50)×0.01\n  4. Риск = текущий + (GI>70?+8) + (перебор>1.3?+15) − (белок>25?−10)',
-      interpretation: 'Показывает КАК именно еда повлияет на инсулиновую волну, сытость и риск срыва.',
-      priority: 'HIGH',
-      category: 'PREDICTION',
-      actionability: 'IMMEDIATE',
-      impactScore: 0.75,
-      whyImportant: 'Принимай осознанные решения о еде ДО того как съел!'
-    },
-    
-    // === WEEKLY WRAP — Средний ===
-    WEEKLY_WRAP: {
-      name: 'Итоги недели',
-      formula: 'Анализируемые метрики:\n  • Лучший/худший день по calories ratio\n  • Средний Health Score за неделю\n  • Streak (дни подряд в норме)\n  • Hidden Wins (достижения, которые легко пропустить)',
-      interpretation: 'Еженедельная рефлексия помогает видеть прогресс и корректировать курс.',
-      priority: 'MEDIUM',
-      category: 'COMPOSITE',
-      actionability: 'WEEKLY',
-      impactScore: 0.55,
-      whyImportant: 'Рефлексия = прогресс. Смотри на неделю, а не на один день.'
-    },
-    
-    // === METABOLIC STATUS CARD — Высокий/Критический ===
-    STATUS_INFLUENCES: {
-      name: 'Влияющие факторы',
-      formula: 'Факторы снижения статуса:\n  • Калории (перебор/недобор)\n  • Недосып (< нормы)\n  • Высокий стресс\n  • Низкий белок\n  • Мало клетчатки\n  • Плохой тайминг\n\nКаждый показывает на сколько % снижает статус.',
-      interpretation: 'Устраните главные факторы — статус вырастет.',
-      priority: 'HIGH',
-      category: 'COMPOSITE',
-      actionability: 'IMMEDIATE',
-      impactScore: 0.85,
-      whyImportant: 'Показывает ЧТО именно тянет статус вниз. Исправь главное!'
-    },
-    PRIORITY_ACTIONS: {
-      name: 'Приоритетные действия',
-      formula: 'Генерируются на основе:\n  1. Текущих пробелов (что ниже нормы)\n  2. Времени суток (что ещё можно сделать)\n  3. Истории успешных дней\n  4. Персональных паттернов\n\nМаксимум 3 действия — фокус на главном.',
-      source: 'Behavior Change Theory',
-      interpretation: 'Выполни хотя бы 1 действие для улучшения дня.',
-      priority: 'CRITICAL',
-      category: 'RISK',
-      actionability: 'IMMEDIATE',
-      impactScore: 0.95,
-      whyImportant: '⚡ Конкретные действия ПРЯМО СЕЙЧАС. Сделай хотя бы одно!'
-    },
-    STATUS_RISK_FACTORS: {
-      name: 'Факторы риска (в статусе)',
-      formula: 'Показывают что увеличивает риск срыва:\n  • Каждый фактор = +X к риску\n  • Сумма определяет общий уровень риска\n  • 🟢 Низкий (<30%), 🟡 Средний (30-60%), 🔴 Высокий (>60%)',
-      interpretation: 'Минимизируй факторы с наибольшим влиянием.',
-      priority: 'CRITICAL',
-      category: 'RISK',
-      actionability: 'IMMEDIATE',
-      impactScore: 0.90,
-      whyImportant: '🚨 Что увеличивает риск срыва. Красные факторы требуют внимания!'
-    },
-    
-    // === ADVANCED ANALYTICS v2.5 — Справочный ===
-    ADVANCED_ANALYTICS: {
-      name: 'Продвинутая аналитика',
-      formula: '5 модулей глубокого анализа:\n\n📊 Confidence Score:\n  volume × 0.30 + completeness × 0.25 + consistency × 0.25 + recency × 0.20\n\n🔗 Корреляционная матрица:\n  Pearson r для 12 пар метрик (сон↔калории, стресс↔сладкое, и др.)\n\n🧬 Метаболические паттерны:\n  • Чувствительность к углеводам (вес после простых)\n  • Метаболическая гибкость (жиры vs углеводы)\n  • Хронотип питания (утро vs вечер)\n\n⚠️ Predictive Risk (EMA):\n  накопленный стресс + недосып + инсулин волатильность + время\n\n⚡ Energy Forecast:\n  Циркадный профиль × модификаторы (сон, еда, стресс, тренировка)',
-      source: 'Композитный анализ: Brand-Miller 2003, Van Cauter 1997, Spiegel 2004',
-      pmid: '12828192',
-      interpretation: 'Confidence >70% — выводы надёжны. Сильные корреляции (|r|>0.4) — твои персональные триггеры. Паттерны — база для персонализации.',
-      priority: 'MEDIUM',
-      category: 'PATTERNS',
-      actionability: 'WEEKLY',
-      impactScore: 0.60,
-      whyImportant: 'Глубокий анализ для понимания себя. Нужно минимум 7-14 дней данных.'
-    },
-    CONFIDENCE_SCORE: {
-      name: 'Score достоверности данных',
-      formula: 'Confidence = Volume×0.30 + Completeness×0.25 + Consistency×0.25 + Recency×0.20\n\nVolume: 0-7 дней → 0-50%, 7-14 → 50-80%, 14+ → 80-100%\nCompleteness: (meals + weight + sleep + steps + water) / 5\nConsistency: 100 - StdDev(dailyCompleteness)\nRecency: Активность за последние 3 дня',
-      interpretation: '>85% Excellent — надёжные выводы. 70-85% Good. 50-70% Moderate. <50% Low — мало данных.',
-      priority: 'LOW',
-      category: 'STATISTICS',
-      actionability: 'INFORMATIONAL',
-      impactScore: 0.30,
-      whyImportant: 'Показывает насколько можно доверять выводам. Больше данных = точнее анализ.'
-    },
-    // Correlation Matrix — Средний, персонализация
-    CORRELATION_MATRIX: {
-      name: 'Матрица корреляций',
-      formula: 'Pearson correlation r = Σ[(xi-x̄)(yi-ȳ)] / √[Σ(xi-x̄)² × Σ(yi-ȳ)²]\n\nАнализируемые пары:\n  • Сон ↔ Калории, Настроение, Сладкое\n  • Шаги ↔ Настроение, Вес\n  • Стресс ↔ Сладкое, Калории\n  • Белок/Клетчатка ↔ Настроение\n  • Вода ↔ Настроение\n  • Тренировки ↔ Сон, Настроение',
-      source: 'Statistical correlation analysis (Pearson 1895)',
-      interpretation: '|r| > 0.7 — сильная связь. 0.4-0.7 — умеренная. <0.4 — слабая. Направление: + = прямая, − = обратная.',
-      priority: 'MEDIUM',
-      category: 'PATTERNS',
-      actionability: 'WEEKLY',
-      impactScore: 0.55,
-      whyImportant: 'Твои персональные связи. Понимание триггеров = контроль над ними.'
-    },
-    // Metabolic Patterns — Высокий, персонализация
-    METABOLIC_PATTERNS: {
-      name: 'Метаболические паттерны',
-      formula: '4 типа паттернов:\n\n1. Carb Sensitivity:\n  Δвес после >50г простых углеводов vs <30г\n  High (>0.5кг) / Moderate / Low\n\n2. Fat Adaptation:\n  Энергия при fat/carb ratio >0.5 vs <0.3\n  Adapted / Neutral / Carb-dependent\n\n3. Chronotype:\n  Качество дня при раннем (<9:00) vs позднем (>11:00) завтраке\n  Early bird / Night owl / Neutral\n\n4. Stress Eating:\n  Корреляция стресс ↔ калории\n  High / Moderate / Restriction / None',
-      source: 'Behavioral nutrition patterns (Taheri 2004, Van Cauter 1997)',
-      pmid: '15602591',
-      interpretation: 'Паттерны помогают понять индивидуальный метаболизм и адаптировать стратегию питания.',
-      priority: 'HIGH',
-      category: 'PATTERNS',
-      actionability: 'LONG_TERM',
-      impactScore: 0.75,
-      whyImportant: 'Уникальный метаболический профиль. Знание себя = персональная стратегия.'
-    },
-    // Predictive Risk — Критический
-    PREDICTIVE_RISK: {
-      name: 'Предиктивный риск срыва',
-      formula: 'Risk Score = Σ(факторы × веса):\n  • Накопленный стресс EMA (α=0.3): 25%\n  • Долг сна за 7 дней: 25%\n  • Инсулиновая волатильность: 20%\n  • Временные паттерны (выходные, вечер): 20%\n  • Сегодняшний недобор: 10%\n\nEMA = α × current + (1-α) × previous',
-      source: 'Behavioral relapse prevention (Marlatt 1985), Sleep debt (Spiegel 1999)',
-      pmid: '19179058',
-      interpretation: '>70% High — будь особенно внимательным. 40-70% Moderate — следи за триггерами. <40% Low — всё под контролем.',
-      priority: 'CRITICAL',
-      category: 'RISK',
-      actionability: 'IMMEDIATE',
-      impactScore: 0.92,
-      whyImportant: '🚨 Предсказывает срыв ДО того как он случится. Красный = действуй!'
-    },
-    // Energy Forecast — Высокий
-    ENERGY_FORECAST: {
-      name: 'Прогноз энергии',
-      formula: 'EnergyHour = BaseCircadian × TotalMod\n\nBaseCircadian (Van Cauter 1997):\n  00-05: 10-25%\n  06-11: 40-90%\n  12-17: 70-90%\n  18-23: 25-65%\n\nTotalMod = sleepMod × kcalMod × stressMod × trainingMod\n  Sleep: ≥7h=1.1, <5h=0.7\n  Kcal: ≥80%=1.1, <30%=0.75\n  Stress: ≤3=1.1, >7=0.8\n  Training: yes=1.15, no=1.0',
-      source: 'Circadian rhythm research (Van Cauter 1997, Scheer 2009)',
-      pmid: '9331550',
-      interpretation: 'Peak — оптимальное время для важных дел и тренировок. Dip — запланируй отдых или рутину.',
-      priority: 'HIGH',
-      category: 'PREDICTION',
-      actionability: 'TODAY',
-      impactScore: 0.70,
-      whyImportant: 'Планируй день по энергии. Важные дела — на пике!'
-    },
-    
-    // === SCIENTIFIC ANALYTICS v3.0 — Научные метрики ===
-    BAYESIAN_CONFIDENCE: {
-      name: 'Байесовская уверенность + MAPE',
-      formula: 'MAPE = (1/n) × Σ|actual - predicted| / actual × 100%\n\nBayesian update:\n  posterior ∝ prior × likelihood\n  prior = 0.5 (базовая уверенность)\n  likelihood = mapeLikelihood × nLikelihood × consistencyLikelihood\n\nCross-validation:\n  R² = 1 - SSres/SStot\n  RMSE = √(Σ(actual-pred)²/n)\n  MAE = Σ|actual-pred|/n',
-      source: 'Gelman et al. "Bayesian Data Analysis" (2013); Hyndman & Koehler 2006',
-      pmid: '13524500',
-      interpretation: '>80% confidence — высокая точность предсказаний. <50% — нужно больше данных.',
-      priority: 'LOW',
-      category: 'STATISTICS',
-      actionability: 'INFORMATIONAL',
-      impactScore: 0.25,
-      whyImportant: 'Насколько точны прогнозы. Высокая уверенность = можно доверять.'
-    },
-    // Time-Lagged — Средний, причинность
-    TIME_LAGGED_CORRELATIONS: {
-      name: 'Time-Lagged корреляции (причинность)',
-      formula: 'Granger-like causality:\n  Лаги 0-3 дня для каждой пары\n  r(lag) = corr(X[t-lag], Y[t])\n  \nПричинность подтверждена если:\n  |r(lag>0)| > |r(lag=0)| + 0.1\n\nПары: сон→калории, стресс→сладкое, калории→вес',
-      source: 'Granger 1969 — Investigating Causal Relations',
-      pmid: '7608935',
-      interpretation: 'Подтверждённая причинность означает, что X действительно влияет на Y с задержкой.',
-      priority: 'MEDIUM',
-      category: 'PATTERNS',
-      actionability: 'WEEKLY',
-      impactScore: 0.50,
-      whyImportant: 'Что РЕАЛЬНО влияет на что. Не просто связь, а причина!'
-    },
-    // GVI — Высокий, влияет на инсулин
-    GLYCEMIC_VARIABILITY: {
-      name: 'Гликемическая волатильность (GVI + CONGA)',
-      formula: 'GVI (CV%) = (SD / Mean) × 100\n  SD = стандартное отклонение GL приёмов\n  Mean = средняя GL приёмов\n\nCONGA = среднее |GL[i] - GL[i-1]|\n  (Continuous Overall Net Glycemic Action)\n\nПороги (Monnier 2006):\n  <25% — низкая (хорошо)\n  25-36% — умеренная\n  36-50% — повышенная\n  >50% — высокая (риск)',
-      source: 'Monnier et al. 2006 — Glycemic variability and diabetes',
-      pmid: '16936182',
-      interpretation: 'Высокая волатильность = скачки сахара = инсулинорезистентность. Цель: CV% <36%.',
-      priority: 'HIGH',
-      category: 'METABOLISM',
-      actionability: 'WEEKLY',
-      impactScore: 0.80,
-      whyImportant: 'Скачки сахара = инсулинорезистентность. Стабильность = здоровье.'
-    },
-    // Allostatic Load — Высокий, общий стресс
-    ALLOSTATIC_LOAD: {
-      name: 'Аллостатическая нагрузка',
-      formula: 'AL Score = Σ(component × weight)\n\nКомпоненты (веса):\n  1. Кортизол proxy (стресс): 20%\n  2. Недосып (sleep debt): 20%\n  3. Метаболический стресс: 15%\n  4. Воспаление (harm proxy): 15%\n  5. Гиподинамия: 15%\n  6. Эмоц. нестабильность: 15%\n\nКаждый компонент 0-100, итог нормализован.',
-      source: 'McEwen 1998 — Protective and Damaging Effects of Stress Mediators',
-      pmid: '9428090',
-      interpretation: '<30 — низкая нагрузка. 30-50 — умеренная. 50-70 — повышенная. >70 — высокая (burnout риск).',
-      priority: 'HIGH',
-      category: 'RECOVERY',
-      actionability: 'WEEKLY',
-      impactScore: 0.75,
-      whyImportant: 'Накопленный стресс организма. Высокая нагрузка = риск выгорания.'
-    },
-    // EWS — Критический, раннее предупреждение
-    EARLY_WARNING_SIGNALS: {
-      name: 'Ранние предупреждающие сигналы (EWS)',
-      formula: 'Теория критических переходов:\n  1. Rising variance: var(recent) / var(previous) > 1.5\n  2. Autocorrelation: lag-1 autocorr > 0.5 (система "застревает")\n  3. Skewness: >0.5 = перекос к перееданию\n  4. Trend: slope отклонений >0.05\n\nEWS Score = Σ(signal × weight)\n  variance: 35%, autocorr: 35%, skewness: 20%, trend: 10%',
-      source: 'Scheffer et al. 2009 — Early Warning Signals for Critical Transitions (Nature)',
-      pmid: '19727193',
-      interpretation: 'EWS >70 — система на грани срыва, действуй превентивно!',
-      priority: 'CRITICAL',
-      category: 'RISK',
-      actionability: 'IMMEDIATE',
-      impactScore: 0.88,
-      whyImportant: '⚡ Раннее предупреждение! Система замечает проблемы ДО срыва.'
-    },
-    // 2-Process — Средний, бодрость
-    TWO_PROCESS_MODEL: {
-      name: '2-Process Model (Бодрость)',
-      formula: 'Borbély 1982:\n  Alertness = Process C - Process S\n\nProcess S (гомеостатическое давление сна):\n  S(t) = S0 × e^(t/τ_w)\n  τ_w = 18.2ч, S0 = 0.2-0.4 (зависит от долга сна)\n\nProcess C (циркадный ритм):\n  C(t) = 0.5 + 0.5 × cos(2π × (t - 16) / 24)\n  Пик в 15-16ч, минимум в 4ч\n\nUltradian: 90-мин циклы внимания',
-      source: 'Borbély 1982 — A two process model of sleep regulation',
-      pmid: '6128309',
-      interpretation: 'Alertness показывает реальный уровень бодрости с учётом времени бодрствования и циркадности.',
-      priority: 'MEDIUM',
-      category: 'RECOVERY',
-      actionability: 'TODAY',
-      impactScore: 0.45,
-      whyImportant: 'Понимание циклов бодрости помогает планировать день эффективнее.'
-    },
-    
-    // === CONFIDENCE (уверенность) — Низкий ===
-    CONFIDENCE: {
-      name: 'Уверенность в анализе',
-      formula: 'confidence = (daysWithData / targetDays) × dataQuality\n\ndataQuality зависит от:\n  • Полнота данных (вес, сон, еда, тренировки)\n  • Регулярность заполнения\n  • Отсутствие пропусков',
-      interpretation: '>80% — надёжные выводы. 50-80% — тренды видны. <50% — нужно больше данных.',
-      priority: 'LOW',
-      category: 'STATISTICS',
-      actionability: 'INFORMATIONAL',
-      impactScore: 0.25,
-      whyImportant: 'Чем больше данных — тем точнее анализ. Заполняй каждый день!'
-    },
-    
-    // === RISK PANEL — Критический ===
-    CRASH_RISK: {
-      name: 'Риск срыва',
-      formula: 'Анализ 15+ факторов:\n  • Недосып (<6ч): +15-25 баллов\n  • Стресс (>6): +10-20 баллов\n  • Калорийный долг (>500 ккал): +15 баллов\n  • Пропуск завтрака: +10 баллов\n  • Вечернее время (>20:00): +5-15 баллов\n  • История срывов (паттерны): +10-20 баллов\n  • Низкий белок (<80%): +10 баллов\n  • Мало клетчатки (<50%): +8 баллов\n\nИтого: 0-100%',
-      source: 'Spaeth et al., 2013; Nedeltcheva et al., 2010',
-      pmid: '23479616',
-      interpretation: '<30% — низкий риск. 30-60% — средний (требует внимания). >60% — высокий риск срыва.',
-      priority: 'CRITICAL',
-      category: 'RISK',
-      actionability: 'IMMEDIATE',
-      impactScore: 0.95,
-      whyImportant: '🚨 Главный индикатор! Показывает вероятность срыва в ближайшие часы.'
-    },
-    // Risk Factors — Высокий
-    RISK_FACTORS: {
-      name: 'Факторы риска',
-      formula: 'Каждый фактор имеет вес:\n  • Критические (+15-25): недосып, сильный стресс, большой долг\n  • Важные (+8-14): паттерны срывов, низкий белок\n  • Умеренные (+3-7): вечернее время, мало клетчатки\n\nПоказываем топ-5 факторов с наибольшим весом.',
-      source: 'Machine Learning на исторических данных пользователя',
-      interpretation: 'Фокусируйтесь на факторах с весом >10 — они критичны.',
-      priority: 'HIGH',
-      category: 'RISK',
-      actionability: 'TODAY',
-      impactScore: 0.80,
-      whyImportant: 'Конкретные причины риска. Знаешь враг — побеждаешь!'
-    },
-    // Prevention Strategy — Высокий
-    PREVENTION_STRATEGY: {
-      name: 'Профилактика срыва',
-      formula: 'Стратегии генерируются на основе:\n  1. Главного триггера (причины риска)\n  2. Истории успешных дней\n  3. Персональных паттернов\n  4. Времени суток и контекста\n\nКаждая стратегия содержит конкретное действие и причину.',
-      source: 'Behavior Change Theory (Prochaska, 1992)',
-      interpretation: 'Выполните хотя бы 1 из 3 рекомендаций для снижения риска.',
-      priority: 'HIGH',
-      category: 'RISK',
-      actionability: 'IMMEDIATE',
-      impactScore: 0.85,
-      whyImportant: 'Конкретные действия для снижения риска. Следуй — победишь!'
-    },
-    
-    // Next Meal — Высокий, ближайшее действие
-    NEXT_MEAL: {
-      name: 'Следующий приём пищи',
-      formula: 'Рекомендация основана на:\n  • Текущем состоянии инсулиновой волны\n  • Времени до липолиза\n  • Калорийном балансе дня\n  • Истории паттернов еды\n\nПоказывает когда и что лучше съесть.',
-      source: 'Brand-Miller & Foster-Powell, 2003',
-      pmid: '12828192',
-      interpretation: 'Следуй рекомендации для оптимального усвоения.',
-      priority: 'HIGH',
-      category: 'TIMING',
-      actionability: 'IMMEDIATE',
-      impactScore: 0.75,
-      whyImportant: 'Что съесть СЕЙЧАС. Практическая рекомендация на ближайшие часы.'
-    },
-    
-    // === FORECAST PANEL — Средний приоритет ===
-    ENERGY_WINDOWS: {
-      name: 'Окна энергии',
-      formula: 'Определяются на основе:\n  • Циркадного ритма (пик 10:00-12:00, 16:00-18:00)\n  • Состояния инсулиновой волны\n  • Времени последнего приёма пищи\n  • Уровня активности\n\n⭐ Оптимальное — когда все факторы совпадают.',
-      source: 'Van Cauter et al., 1997; Scheer et al., 2009',
-      pmid: '19164701',
-      interpretation: 'Приём пищи в "оптимальные" окна улучшает усвоение на 15-25%.',
-      priority: 'MEDIUM',
-      category: 'TIMING',
-      actionability: 'TODAY',
-      impactScore: 0.60,
-      whyImportant: 'Когда лучше есть. Оптимизация тайминга даёт до +25% усвоения.'
-    },
-    // Training Window — Средний
-    TRAINING_WINDOW: {
-      name: 'Окно для тренировки',
-      formula: 'Факторы выбора времени:\n  • Состояние гликогена (натощак или после еды)\n  • Инсулиновая волна (идеально в липолизе)\n  • Циркадный ритм силы (пик 16:00-19:00)\n  • Последний приём пищи (2-3ч назад)',
-      source: 'Chtourou & Souissi, 2012',
-      pmid: '22531613',
-      interpretation: 'Силовые — вечером (16-19ч), кардио — утром натощак.',
-      priority: 'MEDIUM',
-      category: 'TIMING',
-      actionability: 'TODAY',
-      impactScore: 0.55,
-      whyImportant: 'Когда тренировка будет эффективнее. Время влияет на результат!'
-    },
-    // Insulin Wave Status — Средний
-    INSULIN_WAVE_STATUS: {
-      name: 'Статус инсулиновой волны',
-      formula: 'Состояния:\n  🔥 Липолиз — инсулин низкий, идёт жиросжигание\n  ⏳ Волна — инсулин повышен, накопление энергии\n  ⚡ Почти — волна скоро закончится\n\nДлина волны зависит от 33+ факторов (GI, GL, белок, жиры, время суток и др.)',
-      source: 'Wolever & Jenkins, 1994; Brand-Miller, 2003',
-      pmid: '8198048',
-      interpretation: 'Для жиросжигания старайтесь увеличить время в "липолизе".',
-      priority: 'MEDIUM',
-      category: 'METABOLISM',
-      actionability: 'TODAY',
-      impactScore: 0.65,
-      whyImportant: 'Текущее состояние жиросжигания. Показывает идёт ли липолиз.'
-    },
-    // What-If Scenarios — Средний
-    WHATIF_SCENARIOS: {
-      name: 'Сценарии "Что если"',
-      formula: 'Моделирование:\n  📊 Вероятный — текущий тренд без изменений\n  🌟 Оптимистичный — при выполнении рекомендаций\n\nКаждый сценарий рассчитывается на основе:\n  • Текущих показателей дня\n  • Исторических паттернов\n  • Времени до конца дня',
-      interpretation: 'Сравни сценарии — разница показывает потенциал улучшения.',
-      priority: 'MEDIUM',
-      category: 'PREDICTION',
-      actionability: 'TODAY',
-      impactScore: 0.50,
-      whyImportant: 'Что будет если... Мотивация через визуализацию потенциала.'
-    },
-    
-    // === PHENOTYPE PANEL — Долгосрочный ===
-    PHENOTYPE: {
-      name: 'Метаболический фенотип',
-      formula: 'Определение на основе 30+ дней данных:\n  • Анализ паттернов энергии (утро/вечер)\n  • Скорость инсулинового ответа\n  • Восстановление после нагрузок\n  • Стабильность веса и настроения\n\nТипы: 🏃Спринтер, 🏃‍♂️Марафонец, 🏋️Силовик, ⚖️Сбалансированный, 🦉Сова, 🐦Жаворонок',
-      source: 'Хронобиология (Roenneberg, 2012); Метаболическая типология',
-      pmid: '22738673',
-      interpretation: 'Фенотип помогает подобрать оптимальные тайминги еды и тренировок.',
-      priority: 'MEDIUM',
-      category: 'PATTERNS',
-      actionability: 'LONG_TERM',
-      impactScore: 0.55,
-      whyImportant: 'Твой метаболический тип. Понимание себя = персональная стратегия.'
-    },
-    // Phenotype Confidence — Низкий
-    PHENOTYPE_CONFIDENCE: {
-      name: 'Уверенность в фенотипе',
-      formula: 'confidence = √(daysWithData/30) × dataConsistency\n\nРастёт при:\n  • Больше данных (30+ дней = 100%)\n  • Стабильность паттернов (меньше шума)\n  • Полнота записей (еда + сон + активность)',
-      interpretation: '>70% — фенотип определён надёжно. <50% — нужно больше данных.',
-      priority: 'LOW',
-      category: 'STATISTICS',
-      actionability: 'INFORMATIONAL',
-      impactScore: 0.25,
-      whyImportant: 'Насколько точно определён твой тип.'
-    },
-    // Phenotype Radar — Средний
-    PHENOTYPE_RADAR: {
-      name: 'Профиль метаболизма (Radar)',
-      formula: 'Оси радара:\n  • Стабильность — постоянство калорий день ото дня\n  • Восстановление — качество сна и стресс\n  • Инсулин. чувств. — реакция на углеводы\n  • Постоянство — streak, регулярность\n  • Хронотип — утренний или вечерний тип\n\nКаждая ось: 0-100',
-      source: 'Композитный анализ на основе данных пользователя',
-      interpretation: 'Чем больше площадь — тем лучше общий профиль.',
-      priority: 'MEDIUM',
-      category: 'PATTERNS',
-      actionability: 'LONG_TERM',
-      impactScore: 0.45,
-      whyImportant: 'Визуализация сильных и слабых сторон метаболизма.'
-    },
-    // Personal Thresholds — Высокий
-    PERSONAL_THRESHOLDS: {
-      name: 'Персональные пороги',
-      formula: 'Рассчитываются индивидуально:\n  • Оптимальные ккал — на основе истории успешных дней\n  • Инсулиновая волна — средняя по вашим данным\n  • Перерыв между едой — ваш оптимум\n  • Порог риска — когда вы обычно срываетесь',
-      source: 'Персонализация на основе машинного обучения',
-      interpretation: 'Эти пороги адаптированы под ВАС, а не средние значения.',
-      priority: 'HIGH',
-      category: 'PATTERNS',
-      actionability: 'LONG_TERM',
-      impactScore: 0.70,
-      whyImportant: 'Персональные значения вместо средних. Твои уникальные пороги!'
-    },
-    
-    // === TRAITS — характеристики метаболизма ===
-    TRAIT_STABILITY: {
-      name: 'Стабильность',
-      formula: 'stability = 100 - (σ_calories / avg_calories × 100)\n\nГде σ — стандартное отклонение калорий за 7 дней.\nВысокая стабильность = мало колебаний день ото дня.',
-      source: 'Статистический анализ вариабельности',
-      interpretation: '>80 — очень стабильный режим. <50 — большие колебания.',
-      priority: 'MEDIUM',
-      category: 'PATTERNS',
-      actionability: 'WEEKLY',
-      impactScore: 0.50,
-      whyImportant: 'Постоянство = предсказуемость результата.'
-    },
-    // Trait Recovery — Высокий
-    TRAIT_RECOVERY: {
-      name: 'Восстановление',
-      formula: 'recovery = (sleepScore × 0.5) + (stressScore × 0.3) + (restDays × 0.2)\n\nГде:\n  sleepScore = (часы/норма) × качество\n  stressScore = 100 - (стресс × 10)\n  restDays = дни без тренировок / неделю',
-      source: 'Meeusen et al., 2013 — восстановление спортсменов',
-      pmid: '23252566',
-      interpretation: '>75 — отличное восстановление. <50 — риск перетренированности.',
-      priority: 'HIGH',
-      category: 'RECOVERY',
-      actionability: 'WEEKLY',
-      impactScore: 0.70,
-      whyImportant: 'Способность организма восстанавливаться. Влияет на прогресс!'
-    },
-    // Trait Insulin Sensitivity — Высокий
-    TRAIT_INSULIN_SENSITIVITY: {
-      name: 'Инсулиновая чувствительность (Trait)',
-      formula: 'Косвенные маркеры:\n  • Средний GI рациона (ниже = лучше)\n  • Клетчатка г/1000ккал (больше = лучше)\n  • Распределение углеводов (утро vs вечер)\n  • Регулярность тренировок',
-      source: 'DeFronzo, 2004; Weickert & Pfeiffer, 2008',
-      pmid: '15161807',
-      interpretation: '>80 — отличная чувствительность. <50 — риск резистентности.',
-      priority: 'HIGH',
-      category: 'METABOLISM',
-      actionability: 'LONG_TERM',
-      impactScore: 0.75,
-      whyImportant: 'Главный маркер метаболического здоровья. Влияет на всё!'
-    },
-    // Trait Consistency — Средний
-    TRAIT_CONSISTENCY: {
-      name: 'Постоянство',
-      formula: 'consistency = (daysInStreak / totalDays) × (avgCompleteness)\n\nГде:\n  daysInStreak — дни подряд в норме\n  avgCompleteness — полнота заполнения данных',
-      interpretation: '>80 — высокое постоянство. <50 — нужна регулярность.',
-      priority: 'MEDIUM',
-      category: 'PATTERNS',
-      actionability: 'WEEKLY',
-      impactScore: 0.55,
-      whyImportant: 'Дисциплина = результат. Постоянство важнее идеальности.'
-    },
-    TRAIT_CHRONOTYPE: {
-      name: 'Хронотип',
-      formula: 'Определяется по:\n  • Времени первого приёма пищи\n  • Времени засыпания/пробуждения\n  • Распределению калорий (утро/вечер)\n  • Времени тренировок\n\n<40 = 🐦Жаворонок, >60 = 🦉Сова, 40-60 = нейтральный',
-      source: 'Roenneberg et al., 2003 — Munich Chronotype Questionnaire',
-      pmid: '14715839',
-      interpretation: 'Подстраивай тайминги под свой хронотип для лучших результатов.',
-      priority: 'MEDIUM',
-      category: 'PATTERNS',
-      actionability: 'LONG_TERM',
-      impactScore: 0.50,
-      whyImportant: 'Понимание своего типа (сова/жаворонок) для оптимизации режима.'
-    },
-    
-    // === PHENOTYPE SECTIONS — Средний приоритет ===
-    PHENOTYPE_STRENGTHS: {
-      name: 'Сильные стороны',
-      formula: 'Определяются автоматически на основе:\n  • Трейтов с показателем >75%\n  • Стабильных паттернов в данных\n  • Сравнения с "идеальным" профилем\n\nПоказывают что у вас хорошо получается.',
-      interpretation: 'Опирайтесь на сильные стороны при планировании питания.',
-      priority: 'MEDIUM',
-      category: 'PATTERNS',
-      actionability: 'LONG_TERM',
-      impactScore: 0.45,
-      whyImportant: 'Знание сильных сторон помогает строить стратегию на них.'
-    },
-    // Phenotype Weaknesses — Высокий
-    PHENOTYPE_WEAKNESSES: {
-      name: 'Зоны роста',
-      formula: 'Определяются на основе:\n  • Трейтов с показателем <50%\n  • Повторяющихся проблем в истории\n  • Отклонений от оптимума\n\nПоказывают где нужна работа.',
-      interpretation: 'Фокусируйтесь на 1-2 зонах роста за раз — не на всех сразу.',
-      priority: 'HIGH',
-      category: 'PATTERNS',
-      actionability: 'WEEKLY',
-      impactScore: 0.70,
-      whyImportant: 'Зоны роста = точки приложения усилий для максимального эффекта.'
-    },
-    // Phenotype Recommendations — Высокий
-    PHENOTYPE_RECOMMENDATIONS: {
-      name: 'Рекомендации',
-      formula: 'Генерируются персонально:\n  1. Анализ вашего фенотипа\n  2. Учёт сильных сторон и зон роста\n  3. Адаптация под время суток\n  4. Учёт исторических данных\n\nМаксимум 3 рекомендации — фокус на главном.',
-      source: 'Behavior Change Theory + Персонализация',
-      interpretation: 'Начните с первой рекомендации — она самая важная.',
-      priority: 'HIGH',
-      category: 'PATTERNS',
-      actionability: 'TODAY',
-      impactScore: 0.80,
-      whyImportant: 'Конкретные персональные действия. Начни с первой!'
-    }
-  };
-
-  // === ПАТТЕРНЫ (12 штук) ===
   const PATTERNS = {
     // Еда + волны (приоритет)
     MEAL_TIMING: 'meal_timing',
@@ -1001,6 +262,59 @@
   };
 
   // === УТИЛИТЫ ===
+  
+  // Статистические функции делегируем в pi_stats.js
+  const average = piStats.average || function(arr) {
+    if (!arr || arr.length === 0) return 0;
+    return arr.reduce((a, b) => a + b, 0) / arr.length;
+  };
+  
+  const stdDev = piStats.stdDev || function(arr) {
+    if (!arr || arr.length < 2) return 0;
+    const avg = average(arr);
+    const squareDiffs = arr.map(v => Math.pow(v - avg, 2));
+    return Math.sqrt(average(squareDiffs));
+  };
+  
+  const pearsonCorrelation = piStats.pearsonCorrelation || function(x, y) {
+    if (x.length !== y.length || x.length < 3) return 0;
+    const n = x.length;
+    const sumX = x.reduce((a, b) => a + b, 0);
+    const sumY = y.reduce((a, b) => a + b, 0);
+    const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0);
+    const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0);
+    const sumY2 = y.reduce((acc, yi) => acc + yi * yi, 0);
+    const numerator = n * sumXY - sumX * sumY;
+    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+    if (denominator === 0) return 0;
+    return numerator / denominator;
+  };
+  
+  const calculateTrend = piStats.calculateTrend || function(values) {
+    if (values.length < 2) return 0;
+    const n = values.length;
+    const x = values.map((_, i) => i);
+    const y = values;
+    const sumX = x.reduce((a, b) => a + b, 0);
+    const sumY = y.reduce((a, b) => a + b, 0);
+    const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0);
+    const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0);
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    return isNaN(slope) ? 0 : slope;
+  };
+  
+  const calculateLinearRegression = piStats.calculateLinearRegression || function(points) {
+    if (points.length < 2) return 0;
+    const n = points.length;
+    const sumX = points.reduce((a, p) => a + p.x, 0);
+    const sumY = points.reduce((a, p) => a + p.y, 0);
+    const sumXY = points.reduce((a, p) => a + p.x * p.y, 0);
+    const sumX2 = points.reduce((a, p) => a + p.x * p.x, 0);
+    const denominator = (n * sumX2 - sumX * sumX);
+    if (denominator === 0) return 0;
+    const slope = (n * sumXY - sumX * sumY) / denominator;
+    return isNaN(slope) ? 0 : slope;
+  };
   
   /**
    * Рассчитать калории из MealItem через pIndex
@@ -1079,90 +393,6 @@
     }
     
     return days;
-  }
-
-  /**
-   * Рассчитать корреляцию Пирсона
-   * @param {Array} x - первый массив
-   * @param {Array} y - второй массив
-   * @returns {number} корреляция [-1, 1]
-   */
-  function pearsonCorrelation(x, y) {
-    if (x.length !== y.length || x.length < 3) return 0;
-    
-    const n = x.length;
-    const sumX = x.reduce((a, b) => a + b, 0);
-    const sumY = y.reduce((a, b) => a + b, 0);
-    const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0);
-    const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0);
-    const sumY2 = y.reduce((acc, yi) => acc + yi * yi, 0);
-    
-    const numerator = n * sumXY - sumX * sumY;
-    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
-    
-    if (denominator === 0) return 0;
-    return numerator / denominator;
-  }
-
-  /**
-   * Рассчитать линейный тренд (slope)
-   * @param {Array} values - массив значений
-   * @returns {number} наклон (положительный = рост)
-   */
-  function calculateTrend(values) {
-    if (values.length < 2) return 0;
-    
-    const n = values.length;
-    const x = values.map((_, i) => i);
-    const y = values;
-    
-    const sumX = x.reduce((a, b) => a + b, 0);
-    const sumY = y.reduce((a, b) => a + b, 0);
-    const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0);
-    const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0);
-    
-    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-    return isNaN(slope) ? 0 : slope;
-  }
-
-  /**
-   * Рассчитать линейный тренд по точкам (x, y)
-   * Используется для точного прогноза по датам
-   * @param {Array<{x: number, y: number}>} points
-   * @returns {number} наклон (slope)
-   */
-  function calculateLinearRegression(points) {
-    if (points.length < 2) return 0;
-    
-    const n = points.length;
-    const sumX = points.reduce((a, p) => a + p.x, 0);
-    const sumY = points.reduce((a, p) => a + p.y, 0);
-    const sumXY = points.reduce((a, p) => a + p.x * p.y, 0);
-    const sumX2 = points.reduce((a, p) => a + p.x * p.x, 0);
-    
-    const denominator = (n * sumX2 - sumX * sumX);
-    if (denominator === 0) return 0;
-
-    const slope = (n * sumXY - sumX * sumY) / denominator;
-    return isNaN(slope) ? 0 : slope;
-  }
-
-  /**
-   * Рассчитать среднее
-   */
-  function average(arr) {
-    if (!arr || arr.length === 0) return 0;
-    return arr.reduce((a, b) => a + b, 0) / arr.length;
-  }
-
-  /**
-   * Рассчитать стандартное отклонение
-   */
-  function stdDev(arr) {
-    if (!arr || arr.length < 2) return 0;
-    const avg = average(arr);
-    const squareDiffs = arr.map(v => Math.pow(v - avg, 2));
-    return Math.sqrt(average(squareDiffs));
   }
 
   // === АНАЛИЗ ПАТТЕРНОВ ===
@@ -4659,87 +3889,59 @@
 
   // === HELPER FUNCTIONS ===
   
-  /**
-   * R² (coefficient of determination)
-   */
-  function calculateR2(actual, predicted) {
+  // Статистические функции делегируем в pi_stats.js
+  const calculateR2 = piStats.calculateR2 || function(actual, predicted) {
     if (actual.length !== predicted.length || actual.length < 2) return 0;
-    
     const meanActual = average(actual);
     const ssRes = actual.reduce((sum, a, i) => sum + Math.pow(a - predicted[i], 2), 0);
     const ssTot = actual.reduce((sum, a) => sum + Math.pow(a - meanActual, 2), 0);
-    
     return ssTot > 0 ? 1 - (ssRes / ssTot) : 0;
-  }
+  };
   
-  /**
-   * Variance (дисперсия)
-   */
-  function variance(arr) {
+  const variance = piStats.variance || function(arr) {
     if (arr.length < 2) return 0;
     const mean = average(arr);
     return average(arr.map(x => Math.pow(x - mean, 2)));
-  }
+  };
   
-  /**
-   * Autocorrelation (lag-k)
-   */
-  function autocorrelation(arr, lag = 1) {
+  const autocorrelation = piStats.autocorrelation || function(arr, lag = 1) {
     if (arr.length <= lag) return 0;
-    
     const mean = average(arr);
     const n = arr.length;
-    
     let numerator = 0;
     let denominator = 0;
-    
     for (let i = 0; i < n - lag; i++) {
       numerator += (arr[i] - mean) * (arr[i + lag] - mean);
     }
-    
     for (let i = 0; i < n; i++) {
       denominator += Math.pow(arr[i] - mean, 2);
     }
-    
     return denominator > 0 ? numerator / denominator : 0;
-  }
+  };
   
-  /**
-   * Skewness (асимметрия)
-   */
-  function skewness(arr) {
+  const skewness = piStats.skewness || function(arr) {
     if (arr.length < 3) return 0;
-    
     const mean = average(arr);
     const std = stdDev(arr);
     if (std === 0) return 0;
-    
     const n = arr.length;
     const m3 = arr.reduce((sum, x) => sum + Math.pow((x - mean) / std, 3), 0) / n;
-    
     return m3;
-  }
+  };
   
-  /**
-   * Linear Trend (slope)
-   */
-  function linearTrend(arr) {
+  const linearTrend = piStats.linearTrend || function(arr) {
     if (arr.length < 2) return 0;
-    
     const n = arr.length;
     const xMean = (n - 1) / 2;
     const yMean = average(arr);
-    
     let numerator = 0;
     let denominator = 0;
-    
     for (let i = 0; i < n; i++) {
       numerator += (i - xMean) * (arr[i] - yMean);
       denominator += Math.pow(i - xMean, 2);
     }
-    
     return denominator > 0 ? numerator / denominator : 0;
-  }
+  };
 
   // === REACT COMPONENTS ===
   const { createElement: h, useState, useEffect, useMemo } = window.React || {};
