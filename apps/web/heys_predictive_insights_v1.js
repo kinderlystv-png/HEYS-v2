@@ -540,6 +540,58 @@
       // === Сон и корреляции ===
       analyzeSleepWeight(days),
       analyzeSleepHunger(days, profile, pIndex),         // v2.0: добавлен pIndex
+      
+      // === Активность ===
+      analyzeTrainingKcal(days, pIndex),                 // v2.0: добавлен pIndex
+      analyzeStepsWeight(days),
+      
+      // === Стресс ===
+      analyzeStressEating(days, pIndex),                 // v2.0: добавлен pIndex
+      
+      // === Научные анализаторы (v2.1) ===
+      analyzeCircadianTiming(days, pIndex),              // Циркадные ритмы
+      analyzeNutrientTiming(days, pIndex, profile),      // Тайминг нутриентов
+      analyzeInsulinSensitivity(days, pIndex, profile),  // Чувствительность к инсулину
+      analyzeGutHealth(days, pIndex)                     // Здоровье ЖКТ
+    ].filter(p => p && p.hasPattern);
+    
+    // Рассчитываем Health Score
+    const healthScore = calculateHealthScore(days, profile, pIndex, optimum);
+    
+    // What-If Scenarios
+    const whatIfScenarios = generateWhatIfScenarios(days, profile, pIndex);
+    
+    // Weight Prediction
+    const weightPrediction = predictWeight(days, profile);
+    
+    // Weekly Wrap
+    const weeklyWrap = generateWeeklyWrap(days, profile, pIndex, patterns);
+    
+    // Сохраняем в кэш
+    const result = {
+      available: true,
+      daysAnalyzed: daysBack,
+      daysWithData: days.length,
+      confidence: Math.round(Math.min(100, (days.length / CONFIG.MIN_DAYS_FOR_FULL_ANALYSIS) * 100)),
+      patterns,
+      healthScore,
+      whatIf: whatIfScenarios,
+      weightPrediction,
+      weeklyWrap,
+      generatedAt: now
+    };
+    
+    _cache = {
+      data: result,
+      clientId,
+      timestamp: now
+    };
+    
+    return result;
+  }
+  
+  // === HealthRingsGrid Component ===
+  function HealthRingsGrid({ healthScore, compact, onCategoryClick, lsGet }) {
     if (!healthScore || !healthScore.breakdown) return null;
     
     // 🆕 v3.22.0: Вычисляем emotionalRisk для Recovery overlay

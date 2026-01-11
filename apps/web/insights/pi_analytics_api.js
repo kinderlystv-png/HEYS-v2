@@ -1703,6 +1703,133 @@
         model: 'Borbély 2-Process Model (1982)',
         pmid: '6128309' // Borbély 1982
       };
+    },
+    
+    /**
+     * Calculate Emotional Risk - полная логика риска срыва
+     * Основана на Epel et al., 2001: стресс + голод = высокий риск переедания
+     * @param {Object} day - dayData объект
+     * @param {Object} profile - профиль пользователя
+     * @param {Function} lsGet - функция для получения localStorage
+     * @returns {Object} { level, stressLevel, factors, bingeRisk, recommendation, pmid, hasRisk }
+     */
+    calculateEmotionalRisk: function(day, profile, lsGet) {
+      const getter = lsGet || U.lsGet || ((k, d) => {
+        try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+      });
+      
+      const CFG_STRESS_HIGH_THRESHOLD = 6;
+      const avgStress = day?.stressAvg || 0;
+      const isHighStress = avgStress >= CFG_STRESS_HIGH_THRESHOLD;
+      
+      // Инициализация результата
+      let emotionalRisk = {
+        level: 'low', // low | medium | high | critical
+        stressLevel: avgStress,
+        factors: [],
+        bingeRisk: 0, // 0-100%
+        recommendation: null,
+        pmid: '11070333', // Epel 2001
+        hasRisk: false
+      };
+      
+      // === ФАКТОР 1: Высокий стресс ===
+      if (isHighStress) {
+        emotionalRisk.factors.push('Высокий стресс');
+      }
+      
+      // === ФАКТОР 2: Калорийный долг за последние 3 дня ===
+      // Получаем данные за 3 дня для расчёта накопленного недобора
+      const today = new Date();
+      let totalDebt = 0;
+      let hasDebt = false;
+      
+      for (let i = 0; i < 3; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(checkDate.getDate() - i);
+        const dateStr = checkDate.toISOString().split('T')[0];
+        const dayData = getter(`heys_dayv2_${dateStr}`, {});
+        
+        // Расчёт дефицита за день
+        const dayTdee = dayData.tdee || profile?.tdee || 2000;
+        const dayKcal = (dayData.totKcal || 0);
+        const dayDebt = Math.max(0, dayTdee - dayKcal);
+        totalDebt += dayDebt;
+      }
+      
+      const rawDebt = totalDebt;
+      hasDebt = rawDebt > 400; // Порог значимого долга
+      
+      if (hasDebt && rawDebt > 400) {
+        emotionalRisk.factors.push('Накопленный недобор');
+      }
+      
+      // === ФАКТОР 3: Паттерн стрессового переедания ===
+      // Проверяем историю переедания в стрессовые дни
+      let stressEatingDetected = false;
+      const last7days = [];
+      for (let i = 0; i < 7; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(checkDate.getDate() - i);
+        const dateStr = checkDate.toISOString().split('T')[0];
+        const dayData = getter(`heys_dayv2_${dateStr}`, {});
+        if (dayData.stressAvg) {
+          last7days.push({
+            stress: dayData.stressAvg || 0,
+            kcal: dayData.totKcal || 0,
+            tdee: dayData.tdee || profile?.tdee || 2000
+          });
+        }
+      }
+      
+      // Корреляция стресс-переедание
+      if (last7days.length >= 5) {
+        const stressValues = last7days.map(d => d.stress);
+        const overeatingValues = last7days.map(d => Math.max(0, d.kcal - d.tdee));
+        if (average && pearsonCorrelation) {
+          const corr = pearsonCorrelation(stressValues, overeatingValues);
+          if (corr > 0.5) {
+            stressEatingDetected = true;
+          }
+        }
+      }
+      
+      if (stressEatingDetected) {
+        emotionalRisk.factors.push('Паттерн стрессового переедания');
+      }
+      
+      // === ФАКТОР 4: Вечер/ночь (пик уязвимости) ===
+      const hour = new Date().getHours();
+      const isVulnerableTime = hour >= 19 || hour < 6; // 19:00-06:00
+      
+      if (isVulnerableTime) {
+        emotionalRisk.factors.push('Вечер/ночь (пик уязвимости)');
+      }
+      
+      // === ЗАЩИТНЫЙ ФАКТОР: Тренировка (снижает риск) ===
+      const hasTrainingToday = (day?.trainings || []).length > 0;
+      const trainingProtection = hasTrainingToday ? -15 : 0; // Тренировка снижает риск на 15%
+      
+      // === РАСЧЁТ РИСКА ===
+      // Каждый фактор = 25%, cap = 100% (не 90%)
+      emotionalRisk.bingeRisk = Math.min(100, emotionalRisk.factors.length * 25 + trainingProtection);
+      emotionalRisk.bingeRisk = Math.max(0, emotionalRisk.bingeRisk); // Не может быть отрицательным
+      
+      // === ОПРЕДЕЛЕНИЕ УРОВНЯ И РЕКОМЕНДАЦИЙ ===
+      if (emotionalRisk.bingeRisk >= 75) {
+        emotionalRisk.level = 'critical';
+        emotionalRisk.recommendation = '🚨 Высокий риск срыва! Съешь что-то прямо сейчас — это предотвратит переедание позже';
+      } else if (emotionalRisk.bingeRisk >= 50) {
+        emotionalRisk.level = 'high';
+        emotionalRisk.recommendation = '⚠️ Будь внимательней — стресс + голод провоцируют переедание';
+      } else if (emotionalRisk.bingeRisk >= 25) {
+        emotionalRisk.level = 'medium';
+        emotionalRisk.recommendation = 'Следи за собой — один из факторов риска присутствует';
+      }
+      
+      emotionalRisk.hasRisk = emotionalRisk.bingeRisk >= 25;
+      
+      return emotionalRisk;
     }
   };
   
