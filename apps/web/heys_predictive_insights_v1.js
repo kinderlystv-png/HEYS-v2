@@ -719,27 +719,6 @@
     );
   }
 
-  /**
-   * Pattern Card — карточка одного паттерна (v2.0: с InfoButton)
-   */
-    if (!scenario) return null;
-    
-    const diff = scenario.projectedScore - scenario.currentScore;
-    const arrowClass = diff > 0 ? 'up' : diff < 0 ? 'down' : 'stable';
-    const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
-    
-    return h('div', { className: `insights-scenario insights-scenario--${scenario.id}` },
-      h('div', { className: 'insights-scenario__icon' }, scenario.icon),
-      h('div', { className: 'insights-scenario__content' },
-        h('div', { className: 'insights-scenario__name' }, scenario.name),
-        h('div', { className: 'insights-scenario__desc' }, scenario.description)
-      ),
-      h('div', { className: `insights-scenario__arrow insights-scenario__arrow--${arrowClass}` },
-        scenario.currentScore, ' ', arrow, ' ', scenario.projectedScore
-      )
-    );
-  }
-
   // ============================================================
   // 🧪 WHAT-IF SIMULATOR v1.0.0
   // Интерактивный симулятор: "Что если я съем X?"
@@ -979,48 +958,9 @@
     };
   }
   
-  /**
-   * WhatIfSimulator — главный компонент симулятора
-   * @param {Object} props - { context, onClose }
-   */
-
-  // === INFO BUTTON — Кнопка ? с объяснением формулы ===
+  // === DEBUG HELPERS ===
   
-  /**
-   * InfoButton — маленькая кнопка (?) рядом с метрикой
-   * @param {string} infoKey — ключ из SCIENCE_INFO
-   * @param {Object} debugData — дополнительные данные для отладки (опционально)
-   * @param {string} size — 'small' для маленькой кнопки (в кольцах)
-   */
-    if (prevScore === null || prevScore === undefined) return null;
-    
-    const diff = currentScore - prevScore;
-    if (diff === 0) return null;
-    
-    const isUp = diff > 0;
-    const absDiff = Math.abs(diff);
-    
-    return h('div', { 
-      className: `status-trend-badge status-trend-badge--${isUp ? 'up' : 'down'}`
-    },
-      h('span', { className: 'status-trend-badge__arrow' }, isUp ? '↑' : '↓'),
-      h('span', { className: 'status-trend-badge__value' }, absDiff),
-      h('span', { className: 'status-trend-badge__label' }, 'vs вчера')
-    );
-  }
-  
-  /**
-   * PillarBreakdownBars — breakdown по столпам (nutrition/timing/activity/recovery)
-   */
-        return null;
-      }
-      
-      const result = HEYS.Metabolic.getStatus();
-      console.log('💪 Metabolic Status:', result);
-      return result;
-    };
-    
-    window.debugWeeklyWrap = () => {
+  window.debugWeeklyWrap = () => {
       if (!HEYS.Metabolic?.generateWeeklyWrap) {
         console.error('❌ HEYS.Metabolic.generateWeeklyWrap not loaded');
         return null;
@@ -1056,6 +996,5 @@
       
       return { variant, weights, stats };
     };
-  }
   
 })(typeof window !== 'undefined' ? window : global);
