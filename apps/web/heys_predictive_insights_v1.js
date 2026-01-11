@@ -40,6 +40,8 @@
   // Используем извлечённые React компоненты, fallback если модули не загружены
   const piUIRings = HEYS.InsightsPI?.uiRings || window.piUIRings || {};
   const piUICards = HEYS.InsightsPI?.uiCards || window.piUICards || {};
+  const piUIWhatIf = HEYS.InsightsPI?.uiWhatIf || window.piUIWhatIf || {};
+  const piUIDashboard = HEYS.InsightsPI?.uiDashboard || window.piUIDashboard || {};
   
   const CONFIG = piConst.CONFIG || {
     DEFAULT_DAYS: 14,
