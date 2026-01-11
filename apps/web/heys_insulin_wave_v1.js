@@ -8519,7 +8519,10 @@
   };
   
   // === ЭКСПОРТ ===
-  HEYS.InsulinWave = {
+  // 🔄 REFACTOR v4.2.0: Protect __internals from being overwritten
+  // Save __internals before Object.assign (created by shim module)
+  HEYS.InsulinWave = HEYS.InsulinWave || {};
+  Object.assign(HEYS.InsulinWave, {
     // Главная функция расчёта
     calculate: calculateInsulinWaveData,
     
@@ -8715,7 +8718,7 @@
     
     // Версия
     VERSION: '4.1.0'
-  };
+  });
   
   // ============================================================================
   // 🆕 МИГРАЦИЯ И СОВМЕСТИМОСТЬ (v4.0.0)
