@@ -36,6 +36,10 @@
   // Используем извлечённые методы глубокого анализа, fallback если модуль не загружен
   const piAnalyticsAPI = HEYS.InsightsPI?.analyticsAPI || window.piAnalyticsAPI || {};
   
+  // === ВЫЧИСЛИТЕЛЬНЫЕ УТИЛИТЫ (из pi_calculations.js) ===
+  // Используем извлечённые функции расчётов, fallback если модуль не загружен
+  const piCalculations = HEYS.InsightsPI?.calculations || window.piCalculations || {};
+  
   // === UI КОМПОНЕНТЫ (из pi_ui_*.js) ===
   // Используем извлечённые React компоненты, fallback если модули не загружены
   const piUIRings = HEYS.InsightsPI?.uiRings || window.piUIRings || {};
@@ -336,10 +340,8 @@
     return isNaN(slope) ? 0 : slope;
   };
   
-  /**
-   * Рассчитать калории из MealItem через pIndex
-   */
-  function calculateItemKcal(item, pIndex) {
+  // === ВЫЧИСЛИТЕЛЬНЫЕ ФУНКЦИИ (делегируем в pi_calculations.js) ===
+  const calculateItemKcal = piCalculations.calculateItemKcal || function(item, pIndex) {
     if (!item || !item.grams) return 0;
     const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
     if (!prod) return 0;
@@ -347,12 +349,9 @@
     const c = (prod.simple100 || 0) + (prod.complex100 || 0);
     const f = (prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0);
     return (p * 4 + c * 4 + f * 9) * item.grams / 100;
-  }
+  };
   
-  /**
-   * Рассчитать калории за день
-   */
-  function calculateDayKcal(day, pIndex) {
+  const calculateDayKcal = piCalculations.calculateDayKcal || function(day, pIndex) {
     let total = 0;
     if (!day.meals) return 0;
     for (const meal of day.meals) {
@@ -362,58 +361,31 @@
       }
     }
     return total;
-  }
+  };
   
-  /**
-   * Рассчитать BMR (Mifflin-St Jeor)
-   * 🔬 TDEE v1.1.0: делегируем в HEYS.TDEE.calcBMR() если доступен
-   */
-  function calculateBMR(profile) {
-    // Если есть модуль TDEE — используем его
-    if (HEYS.TDEE?.calcBMR) {
-      return HEYS.TDEE.calcBMR(profile);
-    }
-    
-    // Fallback: inline расчёт
+  const calculateBMR = piCalculations.calculateBMR || function(profile) {
+    if (HEYS.TDEE?.calcBMR) return HEYS.TDEE.calcBMR(profile);
     const weight = profile?.weight || 70;
     const height = profile?.height || 170;
     const age = profile?.age || 30;
     const isMale = profile?.gender !== 'Женский';
-    
-    if (isMale) {
-      return 10 * weight + 6.25 * height - 5 * age + 5;
-    } else {
-      return 10 * weight + 6.25 * height - 5 * age - 161;
-    }
-  }
+    return isMale ? (10 * weight + 6.25 * height - 5 * age + 5) : (10 * weight + 6.25 * height - 5 * age - 161);
+  };
 
-  /**
-   * Получить данные дней из localStorage
-   * @param {number} daysBack - сколько дней назад
-   * @param {Function} lsGet - функция U.lsGet
-   * @returns {Array} массив дней [{date, ...dayData}]
-   */
-  function getDaysData(daysBack, lsGet) {
+  const getDaysData = piCalculations.getDaysData || function(daysBack, lsGet) {
     const days = [];
     const today = new Date();
-    
     for (let i = 0; i < daysBack; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
       const dayData = lsGet(`heys_dayv2_${dateStr}`, null);
-      
       if (dayData && dayData.meals && dayData.meals.length > 0) {
-        days.push({
-          date: dateStr,
-          daysAgo: i,
-          ...dayData
-        });
+        days.push({ date: dateStr, daysAgo: i, ...dayData });
       }
     }
-    
     return days;
-  }
+  };
 
   // === АНАЛИЗ ПАТТЕРНОВ ===
   // Делегируем в pi_patterns.js
