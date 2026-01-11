@@ -12,116 +12,14 @@
   const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
   const SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {};
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
+  const piCalc = HEYS.InsightsPI?.calculations || window.piCalculations || {};
   
-  // Импорт утилит
-  const average = piStats.average || function(arr) {
-    if (!arr || arr.length === 0) return 0;
-    return arr.reduce((a, b) => a + b, 0) / arr.length;
-  };
+  // Импорт статистических функций из pi_stats.js (централизовано)
+  const { average, stdDev, pearsonCorrelation, variance, autocorrelation, skewness } = piStats;
+  const linearTrend = piStats.linearTrend || piStats.calculateTrend;
   
-  const stdDev = piStats.stdDev || function(arr) {
-    if (!arr || arr.length < 2) return 0;
-    const avg = average(arr);
-    const squareDiffs = arr.map(v => Math.pow(v - avg, 2));
-    return Math.sqrt(average(squareDiffs));
-  };
-  
-  const pearsonCorrelation = piStats.pearsonCorrelation || function(x, y) {
-    if (x.length !== y.length || x.length < 3) return 0;
-    const n = x.length;
-    const sumX = x.reduce((a, b) => a + b, 0);
-    const sumY = y.reduce((a, b) => a + b, 0);
-    const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0);
-    const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0);
-    const sumY2 = y.reduce((acc, yi) => acc + yi * yi, 0);
-    const numerator = n * sumXY - sumX * sumY;
-    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
-    if (denominator === 0) return 0;
-    return numerator / denominator;
-  };
-  
-  const variance = piStats.variance || function(arr) {
-    if (arr.length < 2) return 0;
-    const mean = average(arr);
-    return average(arr.map(x => Math.pow(x - mean, 2)));
-  };
-  
-  const autocorrelation = piStats.autocorrelation || function(arr, lag = 1) {
-    if (arr.length <= lag) return 0;
-    const mean = average(arr);
-    const n = arr.length;
-    let numerator = 0;
-    let denominator = 0;
-    for (let i = 0; i < n - lag; i++) {
-      numerator += (arr[i] - mean) * (arr[i + lag] - mean);
-    }
-    for (let i = 0; i < n; i++) {
-      denominator += Math.pow(arr[i] - mean, 2);
-    }
-    return denominator > 0 ? numerator / denominator : 0;
-  };
-  
-  const skewness = piStats.skewness || function(arr) {
-    if (arr.length < 3) return 0;
-    const mean = average(arr);
-    const std = stdDev(arr);
-    if (std === 0) return 0;
-    const n = arr.length;
-    const m3 = arr.reduce((sum, x) => sum + Math.pow((x - mean) / std, 3), 0) / n;
-    return m3;
-  };
-  
-  const linearTrend = piStats.linearTrend || function(arr) {
-    if (arr.length < 2) return 0;
-    const n = arr.length;
-    const xMean = (n - 1) / 2;
-    const yMean = average(arr);
-    let numerator = 0;
-    let denominator = 0;
-    for (let i = 0; i < n; i++) {
-      numerator += (i - xMean) * (arr[i] - yMean);
-      denominator += Math.pow(i - xMean, 2);
-    }
-    return denominator > 0 ? numerator / denominator : 0;
-  };
-  
-  // Helper functions needed by analytics
-  function getDaysData(daysBack, lsGet) {
-    const days = [];
-    const today = new Date();
-    for (let i = 0; i < daysBack; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
-      const dayData = lsGet(`heys_dayv2_${dateStr}`, null);
-      if (dayData && dayData.meals && dayData.meals.length > 0) {
-        days.push({ date: dateStr, daysAgo: i, ...dayData });
-      }
-    }
-    return days;
-  }
-  
-  function calculateItemKcal(item, pIndex) {
-    if (!item || !item.grams) return 0;
-    const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
-    if (!prod) return 0;
-    const p = prod.protein100 || 0;
-    const c = (prod.simple100 || 0) + (prod.complex100 || 0);
-    const f = (prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0);
-    return (p * 4 + c * 4 + f * 9) * item.grams / 100;
-  }
-  
-  function calculateDayKcal(day, pIndex) {
-    let total = 0;
-    if (!day.meals) return 0;
-    for (const meal of day.meals) {
-      if (!meal.items) continue;
-      for (const item of meal.items) {
-        total += calculateItemKcal(item, pIndex);
-      }
-    }
-    return total;
-  }
+  // Импорт calculation helpers из pi_calculations.js (централизовано)
+  const { getDaysData, calculateItemKcal, calculateDayKcal } = piCalc;
   
   function calculateBMR(profile) {
     if (HEYS.TDEE?.calcBMR) {
