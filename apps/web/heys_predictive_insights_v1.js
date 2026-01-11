@@ -1,9 +1,10 @@
-// heys_predictive_insights_v1.js — Predictive Insights Module v2.2.0
+// heys_predictive_insights_v1.js — Predictive Insights Module v3.0.0
 // Анализ данных за 7-30 дней, корреляции, паттерны, прогнозы
 // v2.2.0: What-If Simulator — интерактивный симулятор еды
 // v2.2.1: Refactored - constants extracted to insights/pi_constants.js
+// v3.0.0: Refactored - extracted Layer B modules (stats, science, patterns, advanced)
 // Зависимости: HEYS.InsulinWave, HEYS.Cycle, HEYS.ratioZones, HEYS.models, U.lsGet
-//              HEYS.insights.constants (pi_constants.js)
+//              HEYS.InsightsPI.* (pi_constants.js, pi_math.js, pi_stats.js)
 (function(global) {
   'use strict';
   
@@ -14,13 +15,17 @@
   // Используем извлечённые константы, fallback на локальные если модуль не загружен
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
   
+  // === СТАТИСТИЧЕСКИЕ ФУНКЦИИ (из pi_stats.js) ===
+  // Используем извлечённые функции, fallback если модуль не загружен
+  const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
+  
   const CONFIG = piConst.CONFIG || {
     DEFAULT_DAYS: 14,
     MIN_DAYS_FOR_INSIGHTS: 3,
     MIN_DAYS_FOR_FULL_ANALYSIS: 7,
     MIN_CORRELATION_DISPLAY: 0.35,
     CACHE_TTL_MS: 5 * 60 * 1000,
-    VERSION: '2.2.0'
+    VERSION: '3.0.0'
   };
 
   // === СИСТЕМА ПРИОРИТЕТОВ И КРИТЕРИЕВ ===
@@ -1002,6 +1007,59 @@
 
   // === УТИЛИТЫ ===
   
+  // Статистические функции делегируем в pi_stats.js
+  const average = piStats.average || function(arr) {
+    if (!arr || arr.length === 0) return 0;
+    return arr.reduce((a, b) => a + b, 0) / arr.length;
+  };
+  
+  const stdDev = piStats.stdDev || function(arr) {
+    if (!arr || arr.length < 2) return 0;
+    const avg = average(arr);
+    const squareDiffs = arr.map(v => Math.pow(v - avg, 2));
+    return Math.sqrt(average(squareDiffs));
+  };
+  
+  const pearsonCorrelation = piStats.pearsonCorrelation || function(x, y) {
+    if (x.length !== y.length || x.length < 3) return 0;
+    const n = x.length;
+    const sumX = x.reduce((a, b) => a + b, 0);
+    const sumY = y.reduce((a, b) => a + b, 0);
+    const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0);
+    const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0);
+    const sumY2 = y.reduce((acc, yi) => acc + yi * yi, 0);
+    const numerator = n * sumXY - sumX * sumY;
+    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+    if (denominator === 0) return 0;
+    return numerator / denominator;
+  };
+  
+  const calculateTrend = piStats.calculateTrend || function(values) {
+    if (values.length < 2) return 0;
+    const n = values.length;
+    const x = values.map((_, i) => i);
+    const y = values;
+    const sumX = x.reduce((a, b) => a + b, 0);
+    const sumY = y.reduce((a, b) => a + b, 0);
+    const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0);
+    const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0);
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    return isNaN(slope) ? 0 : slope;
+  };
+  
+  const calculateLinearRegression = piStats.calculateLinearRegression || function(points) {
+    if (points.length < 2) return 0;
+    const n = points.length;
+    const sumX = points.reduce((a, p) => a + p.x, 0);
+    const sumY = points.reduce((a, p) => a + p.y, 0);
+    const sumXY = points.reduce((a, p) => a + p.x * p.y, 0);
+    const sumX2 = points.reduce((a, p) => a + p.x * p.x, 0);
+    const denominator = (n * sumX2 - sumX * sumX);
+    if (denominator === 0) return 0;
+    const slope = (n * sumXY - sumX * sumY) / denominator;
+    return isNaN(slope) ? 0 : slope;
+  };
+  
   /**
    * Рассчитать калории из MealItem через pIndex
    */
@@ -1079,90 +1137,6 @@
     }
     
     return days;
-  }
-
-  /**
-   * Рассчитать корреляцию Пирсона
-   * @param {Array} x - первый массив
-   * @param {Array} y - второй массив
-   * @returns {number} корреляция [-1, 1]
-   */
-  function pearsonCorrelation(x, y) {
-    if (x.length !== y.length || x.length < 3) return 0;
-    
-    const n = x.length;
-    const sumX = x.reduce((a, b) => a + b, 0);
-    const sumY = y.reduce((a, b) => a + b, 0);
-    const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0);
-    const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0);
-    const sumY2 = y.reduce((acc, yi) => acc + yi * yi, 0);
-    
-    const numerator = n * sumXY - sumX * sumY;
-    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
-    
-    if (denominator === 0) return 0;
-    return numerator / denominator;
-  }
-
-  /**
-   * Рассчитать линейный тренд (slope)
-   * @param {Array} values - массив значений
-   * @returns {number} наклон (положительный = рост)
-   */
-  function calculateTrend(values) {
-    if (values.length < 2) return 0;
-    
-    const n = values.length;
-    const x = values.map((_, i) => i);
-    const y = values;
-    
-    const sumX = x.reduce((a, b) => a + b, 0);
-    const sumY = y.reduce((a, b) => a + b, 0);
-    const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0);
-    const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0);
-    
-    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-    return isNaN(slope) ? 0 : slope;
-  }
-
-  /**
-   * Рассчитать линейный тренд по точкам (x, y)
-   * Используется для точного прогноза по датам
-   * @param {Array<{x: number, y: number}>} points
-   * @returns {number} наклон (slope)
-   */
-  function calculateLinearRegression(points) {
-    if (points.length < 2) return 0;
-    
-    const n = points.length;
-    const sumX = points.reduce((a, p) => a + p.x, 0);
-    const sumY = points.reduce((a, p) => a + p.y, 0);
-    const sumXY = points.reduce((a, p) => a + p.x * p.y, 0);
-    const sumX2 = points.reduce((a, p) => a + p.x * p.x, 0);
-    
-    const denominator = (n * sumX2 - sumX * sumX);
-    if (denominator === 0) return 0;
-
-    const slope = (n * sumXY - sumX * sumY) / denominator;
-    return isNaN(slope) ? 0 : slope;
-  }
-
-  /**
-   * Рассчитать среднее
-   */
-  function average(arr) {
-    if (!arr || arr.length === 0) return 0;
-    return arr.reduce((a, b) => a + b, 0) / arr.length;
-  }
-
-  /**
-   * Рассчитать стандартное отклонение
-   */
-  function stdDev(arr) {
-    if (!arr || arr.length < 2) return 0;
-    const avg = average(arr);
-    const squareDiffs = arr.map(v => Math.pow(v - avg, 2));
-    return Math.sqrt(average(squareDiffs));
   }
 
   // === АНАЛИЗ ПАТТЕРНОВ ===
@@ -4659,87 +4633,59 @@
 
   // === HELPER FUNCTIONS ===
   
-  /**
-   * R² (coefficient of determination)
-   */
-  function calculateR2(actual, predicted) {
+  // Статистические функции делегируем в pi_stats.js
+  const calculateR2 = piStats.calculateR2 || function(actual, predicted) {
     if (actual.length !== predicted.length || actual.length < 2) return 0;
-    
     const meanActual = average(actual);
     const ssRes = actual.reduce((sum, a, i) => sum + Math.pow(a - predicted[i], 2), 0);
     const ssTot = actual.reduce((sum, a) => sum + Math.pow(a - meanActual, 2), 0);
-    
     return ssTot > 0 ? 1 - (ssRes / ssTot) : 0;
-  }
+  };
   
-  /**
-   * Variance (дисперсия)
-   */
-  function variance(arr) {
+  const variance = piStats.variance || function(arr) {
     if (arr.length < 2) return 0;
     const mean = average(arr);
     return average(arr.map(x => Math.pow(x - mean, 2)));
-  }
+  };
   
-  /**
-   * Autocorrelation (lag-k)
-   */
-  function autocorrelation(arr, lag = 1) {
+  const autocorrelation = piStats.autocorrelation || function(arr, lag = 1) {
     if (arr.length <= lag) return 0;
-    
     const mean = average(arr);
     const n = arr.length;
-    
     let numerator = 0;
     let denominator = 0;
-    
     for (let i = 0; i < n - lag; i++) {
       numerator += (arr[i] - mean) * (arr[i + lag] - mean);
     }
-    
     for (let i = 0; i < n; i++) {
       denominator += Math.pow(arr[i] - mean, 2);
     }
-    
     return denominator > 0 ? numerator / denominator : 0;
-  }
+  };
   
-  /**
-   * Skewness (асимметрия)
-   */
-  function skewness(arr) {
+  const skewness = piStats.skewness || function(arr) {
     if (arr.length < 3) return 0;
-    
     const mean = average(arr);
     const std = stdDev(arr);
     if (std === 0) return 0;
-    
     const n = arr.length;
     const m3 = arr.reduce((sum, x) => sum + Math.pow((x - mean) / std, 3), 0) / n;
-    
     return m3;
-  }
+  };
   
-  /**
-   * Linear Trend (slope)
-   */
-  function linearTrend(arr) {
+  const linearTrend = piStats.linearTrend || function(arr) {
     if (arr.length < 2) return 0;
-    
     const n = arr.length;
     const xMean = (n - 1) / 2;
     const yMean = average(arr);
-    
     let numerator = 0;
     let denominator = 0;
-    
     for (let i = 0; i < n; i++) {
       numerator += (i - xMean) * (arr[i] - yMean);
       denominator += Math.pow(i - xMean, 2);
     }
-    
     return denominator > 0 ? numerator / denominator : 0;
-  }
+  };
 
   // === REACT COMPONENTS ===
   const { createElement: h, useState, useEffect, useMemo } = window.React || {};
