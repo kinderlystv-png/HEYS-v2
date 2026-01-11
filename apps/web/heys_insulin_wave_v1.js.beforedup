@@ -202,8 +202,6 @@
   const getBMICategory = I?.getBMICategory;
   const isValidTraining = I?.isValidTraining;
   const TRAINING_CONTEXT = I?.TRAINING_CONTEXT;
-  const calculateActivityContext = I?.calculateActivityContext;
-  const calculateIRScore = I?.calculateIRScore;
   const IR_SCORE_CONFIG = I?.IR_SCORE_CONFIG;
   const SUPPLEMENTS_BONUS = I?.SUPPLEMENTS_BONUS;
   const getSupplementsBonus = I?.getSupplementsBonus;
@@ -816,24 +814,108 @@
    * @param {Object} prod - продукт
    * @returns {boolean}
    */
+  const isLiquidFood = (prod) => {
+    if (!prod) return false;
+    const name = (prod.name || '').toLowerCase();
+    const category = (prod.category || '').toLowerCase();
+    
+    // Проверяем категории
+    for (const cat of LIQUID_FOOD.categories) {
+      if (category.includes(cat.toLowerCase())) return true;
+    }
+    
+    // Проверяем паттерны в названии
+    for (const pattern of LIQUID_FOOD.patterns) {
+      if (pattern.test(name)) return true;
+    }
+    
+    return false;
+  };
   
   /**
    * Получить инсулиногенный бонус продукта (молочка, белок)
    * @param {Object} prod - продукт
    * @returns {{ type: string|null, bonus: number }}
    */
+  const getInsulinogenicBonus = (prod) => {
+    if (!prod) return { type: null, bonus: 0 };
+    const name = (prod.name || '').toLowerCase();
+    const category = (prod.category || '').toLowerCase();
+    
+    // Проверяем жидкие молочные (максимальный инсулиновый ответ)
+    const liquidDairy = INSULINOGENIC_BONUS.liquidDairy;
+    for (const cat of liquidDairy.categories) {
+      if (category.includes(cat.toLowerCase())) return { type: 'liquidDairy', bonus: liquidDairy.bonus };
+    }
+    for (const pattern of liquidDairy.patterns) {
+      if (pattern.test(name)) return { type: 'liquidDairy', bonus: liquidDairy.bonus };
+    }
+    
+    // Проверяем мягкие молочные (средний ответ)
+    const softDairy = INSULINOGENIC_BONUS.softDairy;
+    for (const pattern of softDairy.patterns) {
+      if (pattern.test(name)) return { type: 'softDairy', bonus: softDairy.bonus };
+    }
+    
+    // Проверяем твёрдые молочные (минимальный ответ)
+    const hardDairy = INSULINOGENIC_BONUS.hardDairy;
+    for (const pattern of hardDairy.patterns) {
+      if (pattern.test(name)) return { type: 'hardDairy', bonus: hardDairy.bonus };
+    }
+    
+    // Проверяем белковые
+    const protein = INSULINOGENIC_BONUS.protein;
+    for (const cat of protein.categories) {
+      if (category.includes(cat.toLowerCase())) return { type: 'protein', bonus: protein.bonus };
+    }
+    for (const pattern of protein.patterns) {
+      if (pattern.test(name)) return { type: 'protein', bonus: protein.bonus };
+    }
+    
+    return { type: null, bonus: 0 };
+  };
 
   /**
    * 🌶️ Проверить, содержит ли приём острую пищу
    * @param {Object} prod - продукт
    * @returns {boolean}
    */
+  const isSpicyFood = (prod) => {
+    if (!prod) return false;
+    const name = (prod.name || '').toLowerCase();
+    
+    for (const pattern of SPICY_FOOD.patterns) {
+      if (pattern.test(name)) return true;
+    }
+    return false;
+  };
 
   /**
    * 🍎 Определить физическую форму пищи (v3.2.0)
    * @param {Object} prod - продукт
    * @returns {'liquid'|'processed'|'whole'|null}
    */
+  const getFoodForm = (prod) => {
+    if (!prod) return null;
+    const name = (prod.name || '').toLowerCase();
+    
+    // Жидкое — приоритет
+    for (const pattern of FOOD_FORM_BONUS.liquidPatterns) {
+      if (pattern.test(name)) return 'liquid';
+    }
+    
+    // Обработанное
+    for (const pattern of FOOD_FORM_BONUS.processedPatterns) {
+      if (pattern.test(name)) return 'processed';
+    }
+    
+    // Цельное
+    for (const pattern of FOOD_FORM_BONUS.wholePatterns) {
+      if (pattern.test(name)) return 'whole';
+    }
+    
+    return null;
+  };
 
   /**
    * 🥔 Проверить наличие resistant starch (охлаждённые крахмалы) (v3.2.0)
@@ -841,36 +923,109 @@
    * @param {Object} prod - продукт
    * @returns {boolean}
    */
+  const hasResistantStarch = (prod) => {
+    if (!prod) return false;
+    const name = (prod.name || '').toLowerCase();
+    
+    for (const pattern of RESISTANT_STARCH_BONUS.patterns) {
+      if (pattern.test(name)) return true;
+    }
+    return false;
+  };
 
   /**
    * 🍷 Получить алкогольный бонус продукта
    * @param {Object} prod - продукт
    * @returns {{ type: string|null, bonus: number }}
    */
+  const getAlcoholBonus = (prod) => {
+    if (!prod) return { type: null, bonus: 0 };
+    const nameNorm = normalizeTextForTokenMatch(prod.name || '');
+    const tokens = tokenizeText(nameNorm);
+
+    // Комбо: коктейль + алкоголь
+    if (tokensHasAll(tokens, ALCOHOL_MATCH.comboAll) && tokensHasPrefix(tokens, ALCOHOL_MATCH.strongPrefix)) {
+      return { type: 'general', bonus: ALCOHOL_BONUS.low.bonus };
+    }
+
+    // Крепкие (приоритет выше)
+    if (tokensHasExact(tokens, ALCOHOL_MATCH.strongExact)) {
+      return { type: 'strong', bonus: ALCOHOL_BONUS.high.bonus };
+    }
+
+    // Средние
+    if (tokensHasExact(tokens, ALCOHOL_MATCH.mediumExact)) {
+      return { type: 'medium', bonus: ALCOHOL_BONUS.medium.bonus };
+    }
+
+    // Слабые
+    if (tokensHasExact(tokens, ALCOHOL_MATCH.weakExact) || tokensHasPrefix(tokens, ALCOHOL_MATCH.weakPrefix)) {
+      return { type: 'weak', bonus: ALCOHOL_BONUS.low.bonus };
+    }
+
+    // Общий случай: любое упоминание алкоголя (без ложных совпадений по подстроке)
+    if (
+      tokensHasPrefix(tokens, ALCOHOL_MATCH.strongPrefix) ||
+      tokensHasPrefix(tokens, ALCOHOL_MATCH.mediumPrefix) ||
+      tokensHasPrefix(tokens, ALCOHOL_MATCH.weakPrefix)
+    ) {
+      return { type: 'general', bonus: ALCOHOL_BONUS.low.bonus };
+    }
+
+    return { type: null, bonus: 0 };
+  };
 
   /**
    * ☕ Проверить, содержит ли продукт кофеин
    * @param {Object} prod - продукт
    * @returns {boolean}
    */
+  const hasCaffeine = (prod) => {
+    if (!prod) return false;
+    const name = (prod.name || '').toLowerCase();
+    
+    for (const pattern of CAFFEINE_BONUS.patterns) {
+      if (pattern.test(name)) return true;
+    }
+    return false;
+  };
 
   /**
    * 😰 Рассчитать бонус от стресса
    * @param {number} stressLevel - уровень стресса (1-5)
    * @returns {number} бонус к волне
    */
+  const calculateStressBonus = (stressLevel) => {
+    if (!stressLevel || stressLevel <= 0) return 0;
+    if (stressLevel >= STRESS_BONUS.high.threshold) return STRESS_BONUS.high.bonus;
+    if (stressLevel >= STRESS_BONUS.medium.threshold) return STRESS_BONUS.medium.bonus;
+    return 0;
+  };
 
   /**
    * 😴 Рассчитать бонус от недосыпа
    * @param {number} sleepHours - часов сна
    * @returns {number} бонус к волне
    */
+  const calculateSleepBonus = (sleepHours) => {
+    if (sleepHours === null || sleepHours === undefined || sleepHours < 0) return 0;
+    if (sleepHours < SLEEP_BONUS.severe.maxHours) return SLEEP_BONUS.severe.bonus;
+    if (sleepHours < SLEEP_BONUS.moderate.maxHours) return SLEEP_BONUS.moderate.bonus;
+    if (sleepHours < SLEEP_BONUS.mild.maxHours) return SLEEP_BONUS.mild.bonus;
+    return 0;
+  };
 
   /**
    * 🌟 Рассчитать бонус от качества сна
    * @param {number} sleepQuality - качество сна (1-10)
    * @returns {number} бонус к волне
    */
+  const calculateSleepQualityBonus = (sleepQuality) => {
+    if (sleepQuality === null || sleepQuality === undefined || sleepQuality <= 0) return 0;
+    if (sleepQuality <= SLEEP_QUALITY_BONUS.poor.maxQuality) return SLEEP_QUALITY_BONUS.poor.bonus;
+    if (sleepQuality <= SLEEP_QUALITY_BONUS.mediocre.maxQuality) return SLEEP_QUALITY_BONUS.mediocre.bonus;
+    return 0;
+  };
 
   /**
    * 💧 Рассчитать бонус от гидратации
@@ -878,12 +1033,29 @@
    * @param {number} weight - вес пользователя (кг) для расчёта нормы
    * @returns {number} бонус к волне
    */
+  const calculateHydrationBonus = (waterMl, weight = 70) => {
+    if (waterMl === null || waterMl === undefined || waterMl < 0) return 0;
+    const norm = weight * 35; // 35 мл/кг
+    const pct = (waterMl / norm) * 100;
+    
+    if (pct < 30) return HYDRATION_BONUS.severe.bonus;
+    if (pct < 50) return HYDRATION_BONUS.moderate.bonus;
+    if (pct < 70) return HYDRATION_BONUS.mild.bonus;
+    return 0;
+  };
 
   /**
    * 👴 Рассчитать бонус от возраста
    * @param {number} age - возраст в годах
    * @returns {number} бонус к волне
    */
+  const calculateAgeBonus = (age) => {
+    if (!age || age <= 0) return 0;
+    if (age >= AGE_BONUS.elderly.minAge) return AGE_BONUS.elderly.bonus;
+    if (age >= AGE_BONUS.middle.minAge) return AGE_BONUS.middle.bonus;
+    if (age >= AGE_BONUS.adult.minAge) return AGE_BONUS.adult.bonus;
+    return 0;
+  };
 
   /**
    * 🏋️ Рассчитать бонус от BMI
@@ -891,24 +1063,54 @@
    * @param {number} height - рост (см)
    * @returns {number} бонус к волне
    */
+  const calculateBMIBonus = (weight, height) => {
+    if (!weight || !height || weight <= 0 || height <= 0) return 0;
+    const heightM = height / 100;
+    const bmi = weight / (heightM * heightM);
+    
+    if (bmi >= BMI_BONUS.obese.minBMI) return BMI_BONUS.obese.bonus;
+    if (bmi >= BMI_BONUS.overweight.minBMI) return BMI_BONUS.overweight.bonus;
+    return 0;
+  };
 
   /**
    * 🚺🚹 Получить бонус от пола
    * @param {string} gender - пол ('Мужской', 'Женский', 'Другое')
    * @returns {number} бонус к волне
    */
+  const getGenderBonus = (gender) => {
+    if (!gender) return 0;
+    const g = gender.toLowerCase();
+    if (g === 'мужской' || g === 'male') return GENDER_BONUS.male;
+    if (g === 'женский' || g === 'female') return GENDER_BONUS.female;
+    return GENDER_BONUS.other;
+  };
 
   /**
    * 🍟 Рассчитать бонус от транс-жиров
    * @param {number} transFat - транс-жиры в граммах
    * @returns {number} бонус к волне
    */
+  const calculateTransFatBonus = (transFat) => {
+    if (transFat === null || transFat === undefined || transFat < 0) return 0;
+    if (transFat >= TRANS_FAT_BONUS.high.threshold) return TRANS_FAT_BONUS.high.bonus;
+    if (transFat >= TRANS_FAT_BONUS.medium.threshold) return TRANS_FAT_BONUS.medium.bonus;
+    if (transFat >= TRANS_FAT_BONUS.low.threshold) return TRANS_FAT_BONUS.low.bonus;
+    return 0;
+  };
 
   /**
    * 🍽️ Рассчитать бонус от голодания
    * @param {number} fastingHours - часов без еды до текущего приёма
    * @returns {number} бонус к волне
    */
+  const calculateFastingBonus = (fastingHours) => {
+    if (!fastingHours || fastingHours <= 0) return 0;
+    if (fastingHours >= FASTING_BONUS.long.threshold) return FASTING_BONUS.long.bonus;
+    if (fastingHours >= FASTING_BONUS.medium.threshold) return FASTING_BONUS.medium.bonus;
+    if (fastingHours >= FASTING_BONUS.short.threshold) return FASTING_BONUS.short.bonus;
+    return 0;
+  };
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 🌟 NEXT-DAY TRAINING EFFECT (NDTE) — Функции расчёта
@@ -920,6 +1122,59 @@
    * @param {Function} lsGet - функция чтения из localStorage
    * @returns {Object} { trainings: [], totalKcal, hoursSince, date }
    */
+  const getPreviousDayTrainings = (todayDate, lsGet) => {
+    if (!todayDate || !lsGet) return { trainings: [], totalKcal: 0, hoursSince: Infinity, date: null };
+    
+    const yesterday = new Date(todayDate);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yDateStr = yesterday.toISOString().split('T')[0];
+    
+    const dayData = lsGet(`heys_dayv2_${yDateStr}`, {});
+    // 🆕 v3.7.3: Фильтруем пустые тренировки
+    const trainings = (dayData.trainings || []).filter(isValidTraining);
+    
+    if (trainings.length === 0) {
+      return { trainings: [], totalKcal: 0, hoursSince: Infinity, date: yDateStr };
+    }
+    
+    // Рассчитываем общие ккал тренировок
+    const weight = HEYS.user?.getProfile?.()?.weight || 70;
+    const hrZones = lsGet('heys_hr_zones', []);
+    const mets = [2.5, 6, 8, 10].map((def, i) => +hrZones[i]?.MET || def);
+    
+    const kcalPerMin = (met, w) => (met * 3.5 * w / 200);
+    
+    let totalKcal = 0;
+    let lastTrainingEndHour = 0;
+    
+    trainings.forEach(t => {
+      const zones = t.z || [0, 0, 0, 0];
+      const kcal = zones.reduce((sum, min, i) => sum + (min || 0) * kcalPerMin(mets[i], weight), 0);
+      totalKcal += kcal;
+      
+      // Найти время окончания последней тренировки
+      if (t.time) {
+        const [h, m] = t.time.split(':').map(Number);
+        const duration = zones.reduce((a, b) => a + (b || 0), 0);
+        const endHour = h + (m + duration) / 60;
+        lastTrainingEndHour = Math.max(lastTrainingEndHour, endHour);
+      }
+    });
+    
+    // Рассчитываем сколько часов прошло с последней тренировки
+    const now = new Date();
+    const currentHour = now.getHours() + now.getMinutes() / 60;
+    // Вчерашняя тренировка: текущий час + (24 - час окончания тренировки)
+    const hoursSince = currentHour + (24 - lastTrainingEndHour);
+    
+    return {
+      trainings,
+      totalKcal: Math.round(totalKcal),
+      hoursSince: Math.round(hoursSince * 10) / 10,
+      date: yDateStr,
+      dominantType: getDominantTrainingType(trainings)
+    };
+  };
 
   /**
    * 🏋️ Определить доминирующий тип тренировки
@@ -943,12 +1198,30 @@
    * @param {number} bmi - индекс массы тела
    * @returns {number} множитель (0.8-1.8)
    */
+  const calculateNDTEBMIMultiplier = (bmi) => {
+    if (!bmi || bmi <= 0) return 1.0;
+    
+    for (const [, tier] of Object.entries(NDTE.bmiMultiplier)) {
+      if (bmi >= tier.minBMI) return tier.multiplier;
+    }
+    return 1.0;
+  };
 
   /**
    * ⏰ Рассчитать временное затухание NDTE
    * @param {number} hoursSince - часов с момента тренировки
    * @returns {number} множитель затухания (0-1)
    */
+  const calculateNDTEDecay = (hoursSince) => {
+    if (!hoursSince || hoursSince <= 0) return 1.0;
+    if (hoursSince >= NDTE.maxWindowHours) return 0;
+    
+    // Используем ступенчатое затухание
+    for (const tier of NDTE.decay.tiers) {
+      if (hoursSince <= tier.maxHours) return tier.multiplier;
+    }
+    return 0;
+  };
 
   /**
    * 🔥 Рассчитать полный эффект NDTE (Next-Day Training Effect)
@@ -961,6 +1234,82 @@
    * @param {number} [params.trainingsCount=1] - количество тренировок
    * @returns {Object} эффект NDTE
    */
+  const calculateNDTE = (params) => {
+    const { trainingKcal = 0, hoursSince = Infinity, bmi = 22, trainingType = 'cardio', trainingsCount = 1 } = params;
+    
+    // Нет эффекта если тренировка была слишком давно или слишком лёгкая
+    if (hoursSince >= NDTE.maxWindowHours || trainingKcal < 200) {
+      return {
+        active: false,
+        tdeeBoost: 0,
+        waveReduction: 0,
+        peakReduction: 0,
+        label: null,
+        badge: null
+      };
+    }
+    
+    // Найти подходящий tier по ккал
+    let baseTier = null;
+    for (const tier of NDTE.kcalTiers) {
+      if (trainingKcal >= tier.minKcal) {
+        baseTier = tier;
+        break;
+      }
+    }
+    
+    // Если ккал меньше минимального порога — линейная интерполяция
+    if (!baseTier) {
+      const ratio = trainingKcal / 300; // Нормализуем к минимальному порогу
+      const minTier = NDTE.kcalTiers[NDTE.kcalTiers.length - 1];
+      baseTier = {
+        tdeeBoost: minTier.tdeeBoost * ratio,
+        waveReduction: minTier.waveReduction * ratio,
+        peakReduction: minTier.peakReduction * ratio,
+        label: '⚡ Лёгкая активность'
+      };
+    }
+    
+    // Применяем модификаторы
+    const bmiMult = calculateNDTEBMIMultiplier(bmi);
+    const decayMult = calculateNDTEDecay(hoursSince);
+    const typeMult = NDTE.typeMultiplier[trainingType] || { tdee: 1.0, wave: 1.0 };
+    
+    // Кумулятивный эффект от нескольких тренировок
+    let cumulativeMult = 1.0;
+    if (NDTE.cumulative.enabled && trainingsCount > 1) {
+      // Diminishing returns: каждая следующая даёт меньше
+      cumulativeMult = Math.min(NDTE.cumulative.maxMultiplier, 1 + (trainingsCount - 1) * 0.2);
+    }
+    
+    // Финальные значения
+    const tdeeBoost = baseTier.tdeeBoost * bmiMult * decayMult * typeMult.tdee * cumulativeMult;
+    const waveReduction = baseTier.waveReduction * bmiMult * decayMult * typeMult.wave * cumulativeMult;
+    const peakReduction = baseTier.peakReduction * bmiMult * decayMult * cumulativeMult;
+    
+    // Ограничиваем максимальные значения
+    const cappedTdeeBoost = Math.min(0.20, tdeeBoost);        // Максимум +20% к TDEE
+    const cappedWaveReduction = Math.min(0.45, waveReduction); // Максимум -45% к волне
+    const cappedPeakReduction = Math.min(0.50, peakReduction); // Максимум -50% к пику
+    
+    return {
+      active: true,
+      tdeeBoost: Math.round(cappedTdeeBoost * 1000) / 1000,
+      waveReduction: Math.round(cappedWaveReduction * 1000) / 1000,
+      peakReduction: Math.round(cappedPeakReduction * 1000) / 1000,
+      label: baseTier.label,
+      badge: NDTE.badge,
+      badgeColor: NDTE.badgeColor,
+      
+      // Детали для UI
+      trainingKcal,
+      hoursSince: Math.round(hoursSince),
+      bmiMultiplier: bmiMult,
+      decayMultiplier: decayMult,
+      typeMultiplier: typeMult,
+      trainingsCount
+    };
+  };
 
   /**
    * 📊 Рассчитать BMI из веса и роста
@@ -968,12 +1317,23 @@
    * @param {number} height - рост в см
    * @returns {number} BMI
    */
+  const calculateBMI = (weight, height) => {
+    if (!weight || !height || weight <= 0 || height <= 0) return 22; // Дефолт
+    const heightM = height / 100;
+    return Math.round((weight / (heightM * heightM)) * 10) / 10;
+  };
 
   /**
    * 🏷️ Получить категорию BMI
    * @param {number} bmi
    * @returns {Object} { category, color, desc }
    */
+  const getBMICategory = (bmi) => {
+    if (bmi < 18.5) return { category: 'underweight', color: '#eab308', desc: 'Недовес' };
+    if (bmi < 25) return { category: 'normal', color: '#22c55e', desc: 'Норма' };
+    if (bmi < 30) return { category: 'overweight', color: '#f97316', desc: 'Избыток' };
+    return { category: 'obese', color: '#ef4444', desc: 'Ожирение' };
+  };
 
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -1648,6 +2008,47 @@
    * @param {Function} getProductFromItem - функция получения продукта
    * @returns {Object} { temperature: 'hot'|'cold'|'room', bonus, peakBoost, desc }
    */
+  const detectFoodTemperature = (items = [], getProductFromItem) => {
+    if (!items || items.length === 0) {
+      return { temperature: 'room', ...FOOD_TEMPERATURE_BONUS.room };
+    }
+    
+    let hotCount = 0;
+    let coldCount = 0;
+    
+    for (const item of items) {
+      const prod = getProductFromItem ? getProductFromItem(item) : item;
+      const name = (prod?.name || item?.name || '').toLowerCase();
+      
+      // Проверяем паттерны горячей еды
+      if (FOOD_TEMPERATURE_BONUS.hot.patterns.some(p => p.test(name))) {
+        hotCount++;
+      }
+      
+      // Проверяем паттерны холодной еды
+      if (FOOD_TEMPERATURE_BONUS.cold.patterns.some(p => p.test(name))) {
+        coldCount++;
+      }
+    }
+    
+    // Если есть и горячее и холодное — считаем комнатной температурой
+    if (hotCount > 0 && coldCount > 0) {
+      return { temperature: 'room', ...FOOD_TEMPERATURE_BONUS.room };
+    }
+    
+    // Преимущественно горячее
+    if (hotCount > 0) {
+      return { temperature: 'hot', ...FOOD_TEMPERATURE_BONUS.hot };
+    }
+    
+    // Преимущественно холодное
+    if (coldCount > 0) {
+      return { temperature: 'cold', ...FOOD_TEMPERATURE_BONUS.cold };
+    }
+    
+    // По умолчанию — комнатная температура
+    return { temperature: 'room', ...FOOD_TEMPERATURE_BONUS.room };
+  };
 
   /**
    * 🍽️ v3.8.0: Рассчитать бонус от большой порции
@@ -1655,12 +2056,79 @@
    * @param {number} mealKcal - калории приёма
    * @returns {Object} { bonus, peakReduction, desc }
    */
+  const calculateLargePortionBonus = (mealKcal = 0) => {
+    if (!mealKcal || mealKcal <= 0) {
+      return { bonus: 0, peakReduction: 1.0, desc: null };
+    }
+    
+    // Находим подходящий порог (от большего к меньшему)
+    for (const tier of LARGE_PORTION_BONUS.thresholds) {
+      if (mealKcal >= tier.minKcal) {
+        return {
+          bonus: Math.min(tier.bonus, LARGE_PORTION_BONUS.maxBonus),
+          peakReduction: tier.peakReduction,
+          desc: tier.desc
+        };
+      }
+    }
+    
+    // Маленькая порция — без модификации
+    return { bonus: 0, peakReduction: 1.0, desc: null };
+  };
 
   /**
    * ⚡ v3.8.0: Проверить риск реактивной гипогликемии и вернуть UI данные
    * @param {Object} params - { gi, protein, fat, isFasted }
    * @returns {Object} { hasRisk, score, riskWindow, ui, details }
    */
+  const getHypoglycemiaWarning = (params = {}) => {
+    const { gi = 0, protein = 0, fat = 0, isFasted = false } = params;
+    
+    const rf = REACTIVE_HYPOGLYCEMIA.riskFactors;
+    let score = 0;
+    const details = [];
+    
+    // Высокий GI
+    if (gi > rf.highGI.threshold) {
+      score += rf.highGI.weight;
+      details.push({ factor: 'highGI', value: gi, threshold: rf.highGI.threshold });
+    }
+    
+    // Низкий белок
+    if (protein < rf.lowProtein.threshold) {
+      score += rf.lowProtein.weight;
+      details.push({ factor: 'lowProtein', value: protein, threshold: rf.lowProtein.threshold });
+    }
+    
+    // Низкие жиры
+    if (fat < rf.lowFat.threshold) {
+      score += rf.lowFat.weight;
+      details.push({ factor: 'lowFat', value: fat, threshold: rf.lowFat.threshold });
+    }
+    
+    // Натощак
+    if (isFasted) {
+      score += rf.fasted.weight;
+      details.push({ factor: 'fasted', value: true });
+    }
+    
+    const hasRisk = score >= REACTIVE_HYPOGLYCEMIA.warningThreshold;
+    
+    return {
+      hasRisk,
+      score,
+      riskWindow: REACTIVE_HYPOGLYCEMIA.riskWindow,
+      details,
+      ui: hasRisk ? {
+        emoji: REACTIVE_HYPOGLYCEMIA.ui.warningEmoji,
+        color: REACTIVE_HYPOGLYCEMIA.ui.warningColor,
+        title: REACTIVE_HYPOGLYCEMIA.ui.warningTitle,
+        desc: REACTIVE_HYPOGLYCEMIA.ui.warningDesc,
+        advice: REACTIVE_HYPOGLYCEMIA.ui.advice,
+        symptoms: REACTIVE_HYPOGLYCEMIA.ui.symptoms
+      } : null
+    };
+  };
 
   /**
    * 🥛 v3.8.0: Применить Insulin Index к длине волны (не только к GL)
@@ -1668,6 +2136,19 @@
    * @param {string} insulinogenicType - тип инсулиногенности
    * @returns {Object} { waveMultiplier, peakMultiplier, glBoost, desc }
    */
+  const getInsulinIndexWaveModifier = (insulinogenicType) => {
+    if (!insulinogenicType || !INSULIN_INDEX_FACTORS[insulinogenicType]) {
+      return { waveMultiplier: 1.0, peakMultiplier: 1.0, glBoost: 1.0, desc: null };
+    }
+    
+    const factor = INSULIN_INDEX_FACTORS[insulinogenicType];
+    return {
+      waveMultiplier: factor.waveMultiplier,
+      peakMultiplier: factor.peakMultiplier,
+      glBoost: factor.glBoost,
+      desc: factor.desc
+    };
+  };
 
   /**
    * Рассчитать все дневные факторы для конкретного приёма
