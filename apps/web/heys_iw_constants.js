@@ -176,24 +176,24 @@
     const category = product.category || '';
     
     // 1. Whey имеет приоритет (спортпит)
-    for (const pattern of PROTEIN_BONUS_V2.patterns.whey) {
+    for (const pattern of I.PROTEIN_BONUS_V2.patterns.whey) {
       if (pattern.test(name)) return 'whey';
     }
     
     // 2. Проверяем растительный (до animal, т.к. "соевое мясо" = plant)
-    for (const pattern of PROTEIN_BONUS_V2.patterns.plant) {
+    for (const pattern of I.PROTEIN_BONUS_V2.patterns.plant) {
       if (pattern.test(name)) return 'plant';
     }
     
     // 3. Проверяем животный
-    for (const pattern of PROTEIN_BONUS_V2.patterns.animal) {
+    for (const pattern of I.PROTEIN_BONUS_V2.patterns.animal) {
       if (pattern.test(name)) return 'animal';
     }
     
     // 4. Проверяем по категории
-    if (PROTEIN_BONUS_V2.categories.animal.includes(category)) return 'animal';
-    if (PROTEIN_BONUS_V2.categories.plant.includes(category)) return 'plant';
-    if (PROTEIN_BONUS_V2.categories.dairy.includes(category)) return 'animal'; // казеин
+    if (I.PROTEIN_BONUS_V2.categories.animal.includes(category)) return 'animal';
+    if (I.PROTEIN_BONUS_V2.categories.plant.includes(category)) return 'plant';
+    if (I.PROTEIN_BONUS_V2.categories.dairy.includes(category)) return 'animal'; // казеин
     
     // 5. Не определили — mixed
     return 'mixed';
@@ -321,7 +321,7 @@
    * @returns {Object} модифицированные параметры компонентов
    */
   I.calculateComponentParams = (nutrients, context = {}) => {
-    const cfg = WAVE_SHAPE_V2.components;
+    const cfg = I.WAVE_SHAPE_V2.components;
     const { carbs = 0, simple = 0, complex = 0, protein = 0, fat = 0, fiber = 0, gi = 50 } = nutrients;
     const { isLiquid = false, irScore = 0, hasAlcohol = false } = context;
     
@@ -389,8 +389,8 @@
    * @returns {Object} { curve, peak, auc, shape, components }
    */
   I.generateWaveCurve = (waveMinutes, nutrients, context = {}) => {
-    const cfg = WAVE_SHAPE_V2;
-    const params = calculateComponentParams(nutrients, context);
+    const cfg = I.WAVE_SHAPE_V2;
+    const params = I.calculateComponentParams(nutrients, context);
     const points = cfg.composition.samplePoints;
     
     // Генерируем кривую
@@ -403,9 +403,9 @@
       const t = i / points; // 0 to 1
       
       // Сумма компонентов
-      const fastValue = gaussianComponent(t, params.fast.peak, params.fast.sigma, params.fast.amplitude);
-      const slowValue = gaussianComponent(t, params.slow.peak, params.slow.sigma, params.slow.amplitude);
-      const hepaticValue = gaussianComponent(t, params.hepatic.peak, params.hepatic.sigma, params.hepatic.amplitude);
+      const fastValue = I.gaussianComponent(t, params.fast.peak, params.fast.sigma, params.fast.amplitude);
+      const slowValue = I.gaussianComponent(t, params.slow.peak, params.slow.sigma, params.slow.amplitude);
+      const hepaticValue = I.gaussianComponent(t, params.hepatic.peak, params.hepatic.sigma, params.hepatic.amplitude);
       
       const totalValue = cfg.composition.baselineLevel + fastValue + slowValue + hepaticValue;
       
@@ -534,7 +534,7 @@
       value: Math.max(0, p.value - baseline) // Только положительные превышения
     }));
     
-    return calculateTrapezoidalAUC(adjustedCurve);
+    return I.calculateTrapezoidalAUC(adjustedCurve);
   };
 
   /**
@@ -544,20 +544,20 @@
    * @returns {Object} { total, incremental, segments, ratio }
    */
   I.calculateFullAUC = (curve, options = {}) => {
-    const { baseline = WAVE_SHAPE_V2.composition.baselineLevel, normalize = true } = options;
-    const cfg = AUC_CONFIG;
+    const { baseline = I.WAVE_SHAPE_V2.composition.baselineLevel, normalize = true } = options;
+    const cfg = I.AUC_CONFIG;
     
     // Полный AUC
-    const totalAUC = calculateTrapezoidalAUC(curve);
+    const totalAUC = I.calculateTrapezoidalAUC(curve);
     
     // Incremental AUC (только превышение над базой)
-    const iAUC = calculateIncrementalAUC(curve, baseline);
+    const iAUC = I.calculateIncrementalAUC(curve, baseline);
     
     // AUC по сегментам
     const segments = {};
     Object.entries(cfg.segments).forEach(([key, seg]) => {
       segments[key] = {
-        auc: calculateTrapezoidalAUC(curve, seg.start, seg.end),
+        auc: I.calculateTrapezoidalAUC(curve, seg.start, seg.end),
         label: seg.label,
         start: seg.start,
         end: seg.end
@@ -671,7 +671,7 @@
     
     // Прогнозы на стандартные точки
     const predictions = cfg.timePoints.map(minutes => {
-      const result = getInsulinLevelAtTime(curve, minutes);
+      const result = I.getInsulinLevelAtTime(curve, minutes);
       return {
         minutes,
         ...result,
@@ -736,7 +736,7 @@
       fatBurningAt,
       optimalWindowAt,
       waveMinutes,
-      summary: generatePredictionSummary(predictions, safeToEatAt, fatBurningAt)
+      summary: I.generatePredictionSummary(predictions, safeToEatAt, fatBurningAt)
     };
   };
 
@@ -815,7 +815,7 @@
    * @returns {number} оценка 0-100
    */
   I.scorePeakHeight = (peakValue) => {
-    const th = WAVE_SCORING_V2.thresholds.peakHeight;
+    const th = I.WAVE_SCORING_V2.thresholds.peakHeight;
     
     if (peakValue <= th.excellent) return 100;
     if (peakValue <= th.good) {
@@ -833,7 +833,7 @@
    * @returns {number} оценка 0-100
    */
   I.scoreDuration = (minutes) => {
-    const th = WAVE_SCORING_V2.thresholds.duration;
+    const th = I.WAVE_SCORING_V2.thresholds.duration;
     const deviation = Math.abs(minutes - th.target);
     
     if (deviation <= th.tolerance) {
@@ -872,7 +872,7 @@
    * @returns {number} оценка 0-100
    */
   I.scoreAUC = (normalizedAUC) => {
-    const th = WAVE_SCORING_V2.thresholds.auc;
+    const th = I.WAVE_SCORING_V2.thresholds.auc;
     
     if (normalizedAUC <= th.excellent) return 100;
     if (normalizedAUC <= th.good) {
@@ -923,34 +923,34 @@
    * @returns {Object} { score, level, components, recommendations }
    */
   I.calculateWaveScore = (waveData, context = {}) => {
-    const cfg = WAVE_SCORING_V2;
+    const cfg = I.WAVE_SCORING_V2;
     const weights = cfg.weights;
     
     // Компоненты оценки
     const components = {
       peakHeight: {
         value: waveData.peakValue || 1,
-        score: scorePeakHeight(waveData.peakValue || 1),
+        score: I.scorePeakHeight(waveData.peakValue || 1),
         weight: weights.peakHeight
       },
       duration: {
         value: waveData.waveMinutes || 180,
-        score: scoreDuration(waveData.waveMinutes || 180),
+        score: I.scoreDuration(waveData.waveMinutes || 180),
         weight: weights.duration
       },
       shape: {
         value: waveData.shape || 'balanced',
-        score: scoreWaveShape(waveData.shape, waveData.fastContribution),
+        score: I.scoreWaveShape(waveData.shape, waveData.fastContribution),
         weight: weights.shape
       },
       auc: {
         value: waveData.auc?.normalized?.vsGlucose || 1,
-        score: scoreAUC(waveData.auc?.normalized?.vsGlucose || 1),
+        score: I.scoreAUC(waveData.auc?.normalized?.vsGlucose || 1),
         weight: weights.auc
       },
       context: {
         value: context,
-        score: scoreContext(context),
+        score: I.scoreContext(context),
         weight: weights.context
       }
     };
@@ -2129,6 +2129,10 @@
       return 'LISS';
     });
     
+    // Export to I for use in other functions
+    I.getTrainingInterval = getTrainingInterval;
+    I.getTrainingIntensityType = getTrainingIntensityType;
+    
     // Собираем все найденные контексты
     const foundContexts = [];
     
@@ -2136,8 +2140,8 @@
     for (const training of trainings) {
       if (!training || !training.time) continue;
       
-      const interval = getTrainingInterval(training);
-      const intensity = getTrainingIntensityType(training);
+      const interval = I.getTrainingInterval(training);
+      const intensity = I.getTrainingIntensityType(training);
       const intensityMult = I.TRAINING_CONTEXT.intensityMultiplier[intensity] || 1.0;
       const { startMin, endMin, durationMin } = interval;
       
@@ -2174,8 +2178,8 @@
         
         // 🆕 v3.7.7: РЕАЛЬНЫЕ ККАЛ через MET-формулу (не грубая оценка!)
         // Старая формула: durationMin * intensityMult * 5 * (weight / 70) — давала ~300 для 60 мин
-        // Новая: через utils.calculateTrainingKcal(training, weight) — реальные ~700 для интенсивной кардио
-        const trainingKcal = utils.calculateTrainingKcal(training, weight);
+        // Новая: через I.utils.calculateTrainingKcal(training, weight) — реальные ~700 для интенсивной кардио
+        const trainingKcal = I.utils.calculateTrainingKcal(training, weight);
         
         // Прогрессивное окно: base + kcal/60
         const windowMin = Math.min(cfg.baseGap + trainingKcal / cfg.kcalScaling, cfg.maxGap * intensityMult);
@@ -2399,7 +2403,7 @@
       // Проверяем есть ли тренировка за последние N часов
       const recentTraining = trainings.find(t => {
         if (!t || !t.time) return false;
-        const interval = getTrainingInterval(t);
+        const interval = I.getTrainingInterval(t);
         if (!interval || interval.endMin == null) return false;
         const hoursAgo = (mealTimeMin - interval.endMin) / 60;
         return hoursAgo >= 0 && hoursAgo <= cfg_night.maxHoursAfterTraining;
@@ -2437,16 +2441,16 @@
     const level = Math.round(5 + 75 * Math.exp(-progress / 25));
     
     // Определяем зону по порогам
-    if (level <= LIPOLYSIS_THRESHOLDS.full.insulinUIml) {
-      return { level, zone: 'full', lipolysisPct: 100, desc: LIPOLYSIS_THRESHOLDS.full.desc, color: '#22c55e' };
+    if (level <= I.LIPOLYSIS_THRESHOLDS.full.insulinUIml) {
+      return { level, zone: 'full', lipolysisPct: 100, desc: I.LIPOLYSIS_THRESHOLDS.full.desc, color: '#22c55e' };
     }
-    if (level <= LIPOLYSIS_THRESHOLDS.partial.insulinUIml) {
-      return { level, zone: 'partial', lipolysisPct: 50, desc: LIPOLYSIS_THRESHOLDS.partial.desc, color: '#eab308' };
+    if (level <= I.LIPOLYSIS_THRESHOLDS.partial.insulinUIml) {
+      return { level, zone: 'partial', lipolysisPct: 50, desc: I.LIPOLYSIS_THRESHOLDS.partial.desc, color: '#eab308' };
     }
-    if (level <= LIPOLYSIS_THRESHOLDS.suppressed.insulinUIml) {
-      return { level, zone: 'suppressed', lipolysisPct: 10, desc: LIPOLYSIS_THRESHOLDS.suppressed.desc, color: '#f97316' };
+    if (level <= I.LIPOLYSIS_THRESHOLDS.suppressed.insulinUIml) {
+      return { level, zone: 'suppressed', lipolysisPct: 10, desc: I.LIPOLYSIS_THRESHOLDS.suppressed.desc, color: '#f97316' };
     }
-    return { level, zone: 'blocked', lipolysisPct: 0, desc: LIPOLYSIS_THRESHOLDS.blocked.desc, color: '#ef4444' };
+    return { level, zone: 'blocked', lipolysisPct: 0, desc: I.LIPOLYSIS_THRESHOLDS.blocked.desc, color: '#ef4444' };
   };
 
   /**
@@ -2459,7 +2463,7 @@
    */
   I.calculateHypoglycemiaRisk = (meal, pIndex, getProductFromItem) => {
     let riskScore = 0;
-    const { riskFactors, riskWindow, warningThreshold } = REACTIVE_HYPOGLYCEMIA;
+    const { riskFactors, riskWindow, warningThreshold } = I.REACTIVE_HYPOGLYCEMIA;
     
     // Вычисляем средний GI и макросы
     let totalGrams = 0, weightedGI = 0, totalProtein = 0, totalFat = 0;
@@ -2545,7 +2549,7 @@
    * @returns {{ phase: string, label: string, color: string, icon: string, progress: number, bonus: number }}
    */
   I.getAutophagyPhase = (fastingHours) => {
-    const { phases, sensitivityBonus } = AUTOPHAGY_TIMER;
+    const { phases, sensitivityBonus } = I.AUTOPHAGY_TIMER;
     
     for (const [key, phase] of Object.entries(phases)) {
       if (fastingHours >= phase.minHours && fastingHours < phase.maxHours) {
@@ -2581,7 +2585,7 @@
     
     const { coldExposure } = day;
     const exposureType = coldExposure.type || 'coldShower';
-    const config = COLD_EXPOSURE_BONUS[exposureType] || COLD_EXPOSURE_BONUS.coldShower;
+    const config = I.COLD_EXPOSURE_BONUS[exposureType] || I.COLD_EXPOSURE_BONUS.coldShower;
     
     // Проверяем время — эффект длится ~5 часов
     if (coldExposure.time) {
@@ -2591,7 +2595,7 @@
       exposureTime.setHours(h, m, 0, 0);
       
       const hoursSince = (now - exposureTime) / (1000 * 60 * 60);
-      if (hoursSince > COLD_EXPOSURE_BONUS.effectDurationHours) {
+      if (hoursSince > I.COLD_EXPOSURE_BONUS.effectDurationHours) {
         return { hasCold: false, type: exposureType, bonus: 0, desc: 'Эффект закончился' };
       }
     }
@@ -2618,7 +2622,7 @@
     const activeSupplements = [];
     
     for (const supp of meal.supplements) {
-      const config = SUPPLEMENTS_BONUS[supp];
+      const config = I.SUPPLEMENTS_BONUS[supp];
       if (config) {
         totalBonus += config.bonus;
         activeSupplements.push(supp);
@@ -2867,9 +2871,9 @@
   I.calculateAgeBonus = (age = 0) => {
     if (!age || age <= 0) return 0;
     if (age >= 70) return I.AGE_BONUS.senior.bonus;
-    if (age >= 60) return I.AGE_BONUS.late_middle.bonus;
+    if (age >= 60) return I.AGE_BONUS.elderly.bonus;
     if (age >= 45) return I.AGE_BONUS.middle.bonus;
-    if (age >= 30) return I.AGE_BONUS.young_adult.bonus;
+    if (age >= 30) return I.AGE_BONUS.adult.bonus;
     return 0;
   };
 
@@ -2885,10 +2889,10 @@
     if (typeof gender !== 'string') return 0;
     const g = gender.toLowerCase();
     if (g === 'мужской' || g === 'male' || g === 'м' || g === 'm') {
-      return I.GENDER_BONUS.male.bonus;
+      return I.GENDER_BONUS.male;
     }
     if (g === 'женский' || g === 'female' || g === 'ж' || g === 'f') {
-      return I.GENDER_BONUS.female.bonus;
+      return I.GENDER_BONUS.female;
     }
     return 0;
   };

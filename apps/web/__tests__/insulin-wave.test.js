@@ -27,12 +27,18 @@ global.HEYS = {
 // Mock window object for modules
 global.window = global;
 
-// Load constants module first (creates window.HEYS_IW namespace)
+// Load modules in correct order: shim -> constants -> main
+// 1. Shim creates HEYS.InsulinWave.__internals namespace
+const shimPath = path.resolve(__dirname, '../heys_iw_shim.js');
+const shimContent = fs.readFileSync(shimPath, 'utf8');
+eval(shimContent);
+
+// 2. Constants populates __internals with all constants
 const constantsPath = path.resolve(__dirname, '../heys_iw_constants.js');
 const constantsContent = fs.readFileSync(constantsPath, 'utf8');
 eval(constantsContent);
 
-// Load the main module (imports from window.HEYS_IW)
+// 3. Main module uses constants from __internals
 const mainPath = path.resolve(__dirname, '../heys_insulin_wave_v1.js');
 const mainContent = fs.readFileSync(mainPath, 'utf8');
 eval(mainContent);
