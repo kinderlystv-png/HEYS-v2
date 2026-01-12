@@ -12,10 +12,11 @@
     return;
   }
 
-  const { h, Component } = window;
+  const { h, Component, useState } = window;
   const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
   const piScience = HEYS.InsightsPI?.science || window.SCIENCE_INFO || {};
 
+  /**
    * CollapsibleSection — сворачиваемая секция (v2.1: с InfoButton)
    */
   function CollapsibleSection({ title, icon, badge, children, defaultOpen = false, compact = false, infoKey }) {
@@ -1572,8 +1573,6 @@
       )
     );
   }
-
-  /**
 
   // === EXPORT ===
   HEYS.InsightsPI = HEYS.InsightsPI || {};

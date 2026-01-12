@@ -12,9 +12,10 @@
     return;
   }
 
-  const { h, Component } = window;
+  const { h, Component, useState, useEffect, useMemo } = window;
   const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
   const piAdvanced = HEYS.InsightsPI?.advanced || {};
+  const piUICards = HEYS.InsightsPI?.uiCards || {};
 
   function WeightPrediction({ prediction }) {
     if (!prediction || !prediction.available) return null;
@@ -2464,6 +2465,406 @@
       prediction.primaryTrigger && h('div', { className: 'risk-panel__trigger' },
         h('div', { className: 'risk-panel__trigger-label' }, 'Главный триггер:'),
         h('div', { className: 'risk-panel__trigger-value' }, prediction.primaryTrigger.label)
+      ),
+      
+      // Prevention Strategies
+      prediction.preventionStrategy && prediction.preventionStrategy.length > 0 && h('div', { className: 'risk-panel__prevention' },
+        h('div', { className: 'risk-panel__prevention-header' },
+          h('span', { className: 'risk-panel__prevention-title' }, '🛡️ Профилактика'),
+          h(InfoButton, { infoKey: 'PREVENTION_STRATEGY', size: 'small' })
+        ),
+        prediction.preventionStrategy.slice(0, 3).map((strategy, idx) =>
+          h('div', { key: idx, className: 'risk-panel__strategy' },
+            h('span', { className: 'risk-panel__strategy-num' }, idx + 1),
+            h('div', { className: 'risk-panel__strategy-content' },
+              h('div', { className: 'risk-panel__strategy-action' }, strategy.action),
+              h('div', { className: 'risk-panel__strategy-reason' }, strategy.reason)
+            )
+          )
+        )
+      ),
+      
+      // Risk Factors
+      prediction.factors && prediction.factors.length > 0 && h('div', { className: 'risk-panel__factors' },
+        h('div', { className: 'risk-panel__factors-header' },
+          h('span', { className: 'risk-panel__factors-title' }, '📋 Факторы риска'),
+          h(InfoButton, { infoKey: 'RISK_FACTORS', size: 'small' })
+        ),
+        prediction.factors.slice(0, 5).map((factor, idx) =>
+          h('div', { key: idx, className: 'risk-panel__factor' },
+            h('span', { className: 'risk-panel__factor-label' }, factor.label),
+            h('span', { className: 'risk-panel__factor-weight' }, `+${factor.weight || factor.impact}`)
+          )
+        )
+      ),
+      
+      // Full feedback widget for past days
+      isPast && prediction.risk >= 30 && h(FeedbackWidget, { 
+        predictionType: 'crash_risk',
+        predictionId
+      })
+    );
+  }
+  
+  /**
+   * RiskMeter — визуальный спидометр риска 0-100%
+   */
+  function RiskMeter({ risk, riskLevel }) {
+    // 🔧 FIX: защита от NaN
+    const safeRisk = typeof risk === 'number' && !isNaN(risk) ? Math.min(100, Math.max(0, risk)) : 0;
+    const size = 160;
+    const strokeWidth = 12;
+    const radius = (size - strokeWidth) / 2;
+    // Полукруг (180 градусов)
+    const halfCircumference = Math.PI * radius;
+    const progress = (safeRisk / 100) * halfCircumference;
+    const offset = halfCircumference - progress;
+    
+    const colors = {
+      low: '#22c55e',
+      medium: '#eab308',
+      high: '#ef4444'
+    };
+    
+    return h('div', { className: 'risk-meter', style: { width: size, height: size / 2 + 30 } },
+      h('svg', {
+        viewBox: `0 0 ${size} ${size / 2 + 20}`,
+        className: 'risk-meter__svg'
+      },
+        // Background arc
+        h('path', {
+          d: `M ${strokeWidth / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${size / 2}`,
+          fill: 'none',
+          stroke: 'var(--border-color, #e2e8f0)',
+          strokeWidth: strokeWidth,
+          strokeLinecap: 'round'
+        }),
+        // Progress arc
+        h('path', {
+          d: `M ${strokeWidth / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${size / 2}`,
+          fill: 'none',
+          stroke: colors[riskLevel] || colors.medium,
+          strokeWidth: strokeWidth,
+          strokeLinecap: 'round',
+          strokeDasharray: halfCircumference,
+          strokeDashoffset: offset,
+          style: { transition: 'stroke-dashoffset 0.6s ease' }
+        }),
+        // Value text
+        h('text', {
+          x: size / 2,
+          y: size / 2 - 5,
+          textAnchor: 'middle',
+          className: 'risk-meter__value',
+          style: { 
+            fontSize: 36,
+            fontWeight: 700,
+            fill: colors[riskLevel] || 'var(--text-primary)'
+          }
+        }, `${safeRisk}%`),
+        // Label
+        h('text', {
+          x: size / 2,
+          y: size / 2 + 20,
+          textAnchor: 'middle',
+          className: 'risk-meter__label',
+          style: { fontSize: 12, fill: 'var(--text-secondary, #64748b)' }
+        }, 'Риск срыва')
+      )
+    );
+  }
+  
+  /**
+   * ForecastPanel — содержимое таба Forecast
+   * Интегрирован с InsulinWave для показа окон еды
+   */
+  function ForecastPanel({ forecast, isPast }) {
+    // 🆕 Получаем данные инсулиновой волны для более точного прогноза
+    const [insulinWaveData, setInsulinWaveData] = useState(null);
+    
+    useEffect(() => {
+      if (window.HEYS?.InsulinWave?.calculate) {
+        try {
+          // Получаем текущее состояние волны
+          const waveData = window.HEYS.InsulinWave.getLatestWaveData?.() || null;
+          setInsulinWaveData(waveData);
+        } catch (e) {
+          // Игнорируем ошибки
+        }
+      }
+    }, []);
+    
+    // Форматирование времени окончания волны
+    const getWaveEndInfo = () => {
+      if (!insulinWaveData) return null;
+      
+      const { status, remaining, endTime, currentPhase } = insulinWaveData;
+      
+      if (status === 'lipolysis') {
+        return { 
+          status: 'burning', 
+          label: '🔥 Липолиз активен',
+          desc: 'Сейчас идёт активное жиросжигание',
+          color: '#22c55e'
+        };
+      }
+      
+      if (status === 'active' && remaining > 0) {
+        return {
+          status: 'wave',
+          label: `⏳ ${remaining} мин до окончания волны`,
+          desc: `Окончание в ${endTime}${currentPhase ? ` • Фаза: ${currentPhase}` : ''}`,
+          color: '#f59e0b'
+        };
+      }
+      
+      if (status === 'almost') {
+        return {
+          status: 'almost',
+          label: `⚡ ${remaining} мин до липолиза`,
+          desc: 'Скоро начнётся жиросжигание',
+          color: '#3b82f6'
+        };
+      }
+      
+      return null;
+    };
+    
+    const waveEndInfo = getWaveEndInfo();
+    
+    return h('div', { className: 'forecast-panel' },
+      isPast && h('div', { className: 'forecast-panel__note' },
+        '📊 Анализ прошлого дня'
+      ),
+      
+      // 🆕 Insulin Wave Status
+      waveEndInfo && h('div', { 
+        className: 'forecast-panel__wave-status',
+        style: { borderColor: waveEndInfo.color }
+      },
+        h('div', { className: 'forecast-panel__wave-header' },
+          h('div', { className: 'forecast-panel__wave-label', style: { color: waveEndInfo.color } }, 
+            waveEndInfo.label
+          ),
+          h(InfoButton, { infoKey: 'INSULIN_WAVE_STATUS', size: 'small' })
+        ),
+        h('div', { className: 'forecast-panel__wave-desc' }, waveEndInfo.desc)
+      ),
+      
+      // Energy Windows
+      forecast.energyWindows && forecast.energyWindows.length > 0 && h('div', { className: 'forecast-panel__section' },
+        h('div', { className: 'forecast-panel__section-header' },
+          h('span', { className: 'forecast-panel__section-title' }, '⚡ Окна энергии'),
+          h(InfoButton, { infoKey: 'ENERGY_WINDOWS', size: 'small' })
+        ),
+        h('div', { className: 'forecast-panel__windows' },
+          forecast.energyWindows.map((window, idx) =>
+            h('div', { 
+              key: idx, 
+              className: `forecast-panel__window ${window.optimal ? 'forecast-panel__window--optimal' : ''}`
+            },
+              h('div', { className: 'forecast-panel__window-period' }, window.period),
+              h('div', { className: 'forecast-panel__window-label' }, window.label),
+              window.optimal && h('span', { className: 'forecast-panel__window-badge' }, '⭐ Оптимально'),
+              h('div', { className: 'forecast-panel__window-rec' }, window.recommendation)
+            )
+          )
+        )
+      ),
+      
+      // Training Window
+      forecast.trainingWindow && h('div', { className: 'forecast-panel__section' },
+        h('div', { className: 'forecast-panel__section-header' },
+          h('span', { className: 'forecast-panel__section-title' }, '🏋️ Лучшее время для тренировки'),
+          h(InfoButton, { infoKey: 'TRAINING_WINDOW', size: 'small' })
+        ),
+        h('div', { className: 'forecast-panel__training' },
+          h('div', { className: 'forecast-panel__training-time' }, forecast.trainingWindow.time),
+          h('div', { className: 'forecast-panel__training-reason' }, forecast.trainingWindow.reason)
+        )
+      ),
+      
+      // 🆕 Next Meal Recommendation based on insulin wave
+      insulinWaveData && insulinWaveData.status !== 'lipolysis' && h('div', { className: 'forecast-panel__section' },
+        h('div', { className: 'forecast-panel__section-header' },
+          h('span', { className: 'forecast-panel__section-title' }, '🍽️ Следующий приём пищи'),
+          h(InfoButton, { infoKey: 'NEXT_MEAL', size: 'small' })
+        ),
+        h('div', { className: 'forecast-panel__next-meal' },
+          h('div', { className: 'forecast-panel__next-meal-time' },
+            insulinWaveData.remaining < 30 
+              ? '⚡ Скоро можно есть!'
+              : `Рекомендуется после ${insulinWaveData.endTime}`
+          ),
+          h('div', { className: 'forecast-panel__next-meal-tip' },
+            insulinWaveData.remaining < 60
+              ? 'Подготовь лёгкий перекус с белком'
+              : 'Дождись окончания волны для лучшего усвоения'
+          )
+        )
+      ),
+      
+      // What-if scenarios (placeholder)
+      h('div', { className: 'forecast-panel__scenarios' },
+        h('div', { className: 'forecast-panel__scenarios-header' },
+          h('span', { className: 'forecast-panel__scenarios-title' }, '🎯 Сценарии'),
+          h(InfoButton, { infoKey: 'WHATIF_SCENARIOS', size: 'small' })
+        ),
+        h('div', { className: 'forecast-panel__scenario forecast-panel__scenario--likely' },
+          h('span', { className: 'forecast-panel__scenario-emoji' }, '📊'),
+          h('span', { className: 'forecast-panel__scenario-label' }, 'Вероятный'),
+          h('span', { className: 'forecast-panel__scenario-desc' }, forecast.likelyOutcome || 'Стабильный день')
+        ),
+        h('div', { className: 'forecast-panel__scenario forecast-panel__scenario--optimistic' },
+          h('span', { className: 'forecast-panel__scenario-emoji' }, '🌟'),
+          h('span', { className: 'forecast-panel__scenario-label' }, 'Оптимистичный'),
+          h('span', { className: 'forecast-panel__scenario-desc' }, forecast.optimisticOutcome || 'При соблюдении плана')
+        )
+      )
+    );
+  }
+  
+  // PhenotypePanel и PhenotypeRadar перенесены в heys_phenotype_v1.js
+  // Теперь используем HEYS.Phenotype.PhenotypeWidget
+  
+  /**
+   * FeedbackWidget — виджет для сбора обратной связи по прогнозам
+   * Интегрируется с HEYS.Metabolic.submitFeedback
+   */
+  function FeedbackWidget({ predictionType, predictionId, onSubmit }) {
+    const [submitted, setSubmitted] = useState(false);
+    const [showDetails, setShowDetails] = useState(false);
+    const [detailText, setDetailText] = useState('');
+    
+    // Статистика точности
+    const stats = useMemo(() => {
+      if (HEYS.Metabolic?.getFeedbackStats) {
+        return HEYS.Metabolic.getFeedbackStats();
+      }
+      return { total: 0, accuracy: 0 };
+    }, []);
+    
+    const handleFeedback = (correct) => {
+      if (HEYS.Metabolic?.submitFeedback) {
+        const details = detailText ? { comment: detailText } : {};
+        HEYS.Metabolic.submitFeedback(predictionId, correct, {
+          ...details,
+          type: predictionType
+        });
+      }
+      setSubmitted(true);
+      if (onSubmit) onSubmit(correct);
+    };
+    
+    if (submitted) {
+      return h('div', { className: 'feedback-widget feedback-widget--submitted' },
+        h('span', { className: 'feedback-widget__thanks' }, '✅ Спасибо за отзыв!'),
+        stats.total > 5 && h('span', { className: 'feedback-widget__accuracy' },
+          `Точность прогнозов: ${stats.accuracy}%`
+        )
+      );
+    }
+    
+    return h('div', { className: 'feedback-widget' },
+      h('div', { className: 'feedback-widget__question' },
+        '🎯 Прогноз оказался точным?'
+      ),
+      
+      h('div', { className: 'feedback-widget__buttons' },
+        h('button', {
+          className: 'feedback-widget__btn feedback-widget__btn--yes',
+          onClick: () => handleFeedback(true)
+        }, '👍 Да'),
+        h('button', {
+          className: 'feedback-widget__btn feedback-widget__btn--no',
+          onClick: () => setShowDetails(true)
+        }, '👎 Нет'),
+        h('button', {
+          className: 'feedback-widget__btn feedback-widget__btn--skip',
+          onClick: () => setSubmitted(true)
+        }, 'Пропустить')
+      ),
+      
+      showDetails && h('div', { className: 'feedback-widget__details' },
+        h('textarea', {
+          className: 'feedback-widget__textarea',
+          placeholder: 'Что пошло не так? (опционально)',
+          value: detailText,
+          onChange: (e) => setDetailText(e.target.value),
+          rows: 2
+        }),
+        h('button', {
+          className: 'feedback-widget__submit',
+          onClick: () => handleFeedback(false)
+        }, 'Отправить')
+      ),
+      
+      stats.total > 0 && h('div', { className: 'feedback-widget__stats' },
+        `📊 Отзывов: ${stats.total} • Точность: ${stats.accuracy}%`
+      )
+    );
+  }
+  
+  /**
+   * FeedbackPrompt — inline prompt для конкретного прогноза
+   * Меньше чем FeedbackWidget, встраивается в карточки
+   */
+  function FeedbackPrompt({ predictionId, type, compact = false }) {
+    const [voted, setVoted] = useState(false);
+    
+    const handleVote = (correct) => {
+      if (HEYS.Metabolic?.submitFeedback) {
+        HEYS.Metabolic.submitFeedback(predictionId, correct, { type });
+      }
+      setVoted(true);
+    };
+    
+    if (voted) {
+      return h('span', { className: 'feedback-prompt feedback-prompt--voted' }, '✓');
+    }
+    
+    return h('div', { className: `feedback-prompt ${compact ? 'feedback-prompt--compact' : ''}` },
+      h('button', {
+        className: 'feedback-prompt__btn feedback-prompt__btn--up',
+        onClick: () => handleVote(true),
+        title: 'Прогноз точный'
+      }, '👍'),
+      h('button', {
+        className: 'feedback-prompt__btn feedback-prompt__btn--down',
+        onClick: () => handleVote(false),
+        title: 'Прогноз неточный'
+      }, '👎')
+    );
+  }
+  
+  /**
+   * AccuracyBadge — бейдж с точностью системы
+   */
+  function AccuracyBadge() {
+    const stats = useMemo(() => {
+      if (HEYS.Metabolic?.getFeedbackStats) {
+        return HEYS.Metabolic.getFeedbackStats();
+      }
+      return { total: 0, accuracy: 0 };
+    }, []);
+    
+    if (stats.total < 5) return null;
+    
+    const color = stats.accuracy >= 80 ? '#22c55e' : stats.accuracy >= 60 ? '#eab308' : '#ef4444';
+    
+    return h('div', { 
+      className: 'accuracy-badge',
+      style: { borderColor: color },
+      title: `На основе ${stats.total} отзывов`
+    },
+      h('span', { className: 'accuracy-badge__icon' }, '🎯'),
+      h('span', { className: 'accuracy-badge__value', style: { color } }, `${stats.accuracy}%`),
+      h('span', { className: 'accuracy-badge__label' }, 'точность')
+    );
+  }
+  
+  // Legacy PredictiveDashboard wrapper for backward compatibility
+  function PredictiveDashboardLegacy({ lsGet, profile, selectedDate }) {
 
   // === EXPORT ===
   HEYS.InsightsPI = HEYS.InsightsPI || {};
@@ -2476,6 +2877,7 @@
     RiskMeter,
     ForecastPanel,
     FeedbackPrompt,
+    FeedbackWidget,
     AccuracyBadge,
     PredictiveDashboardLegacy,
     DataCompletenessCard,
