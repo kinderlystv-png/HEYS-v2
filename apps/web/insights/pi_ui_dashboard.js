@@ -111,7 +111,6 @@
   /**
    * PriorityFilterBar — фильтры по приоритету
    */
-  function PriorityFilterBar({ selectedPriority, onPriorityChange, metrics }) {
     // Подсчёт метрик в каждом приоритете
     const priorityCounts = useMemo(() => {
       const counts = {};

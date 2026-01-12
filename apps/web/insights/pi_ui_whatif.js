@@ -404,6 +404,13 @@
    * Weight Prediction Card (v2.0: с InfoButton)
    */
   function WeightPrediction({ prediction }) {
+    if (!prediction) return null;
+    return h('div', { className: 'insights-whatif__weight-prediction' },
+      h('h3', null, 'Прогноз веса'),
+      h('div', { className: 'weight-prediction-value' }, prediction)
+    );
+  }
+
 
   // === ЭКСПОРТ ===
   HEYS.InsightsPI.uiWhatIf = {
