@@ -286,7 +286,6 @@
    * Показывает мини-симулятор с популярными preset-ами
    */
   function WhatIfCard({ context }) {
-  function WhatIfCard({ context }) {
     const [isExpanded, setIsExpanded] = React.useState(false);
     const [quickResult, setQuickResult] = React.useState(null);
     const [selectedQuick, setSelectedQuick] = React.useState(null);
@@ -358,7 +357,6 @@
    * What-If Scenario Card
    */
   function ScenarioCard({ scenario }) {
-  function ScenarioCard({ scenario }) {
     if (!scenario) return null;
     
     const diff = scenario.projectedScore - scenario.currentScore;
@@ -380,7 +378,6 @@
   /**
    * What-If Section (v2.0: с InfoButton)
    */
-  function WhatIfSection({ scenarios }) {
   function WhatIfSection({ scenarios }) {
     if (!scenarios || scenarios.length === 0) return null;
     
