@@ -2863,8 +2863,11 @@
     );
   }
   
-  // Legacy PredictiveDashboard wrapper for backward compatibility
+  // Legacy PredictiveDashboard wrapper for backward compatibility (stub for now)
   function PredictiveDashboardLegacy({ lsGet, profile, selectedDate }) {
+    // Legacy stub - main dashboard logic in main file
+    return null;
+  }
 
   // === EXPORT ===
   HEYS.InsightsPI = HEYS.InsightsPI || {};
