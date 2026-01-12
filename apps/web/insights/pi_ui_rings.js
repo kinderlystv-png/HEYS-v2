@@ -427,6 +427,19 @@
       );
     }
     
+    // Полная версия (не compact)
+    return h('div', { className: `risk-traffic-light risk-traffic-light--${currentLevel}` },
+      h('div', { className: 'risk-traffic-light__header' },
+        h('div', { className: 'risk-traffic-light__indicator', style: { backgroundColor: currentLight.color } },
+          currentLight.emoji
+        ),
+        h('span', { className: 'risk-traffic-light__label' }, currentLight.label)
+      ),
+      riskValue !== undefined && h('div', { className: 'risk-traffic-light__value' }, `${riskValue}%`),
+      description && h('div', { className: 'risk-traffic-light__description' }, description)
+    );
+  }
+
 
   // === ЭКСПОРТ ===
   HEYS.InsightsPI.uiRings = {

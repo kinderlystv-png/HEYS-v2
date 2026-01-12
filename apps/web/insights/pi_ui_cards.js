@@ -26,31 +26,6 @@
   
   // Импорт статистических функций из pi_stats.js (централизовано)
   const { average } = piStats;
-
-      
-      // === Активность ===
-      analyzeTrainingKcal(days, pIndex),                 // v2.0: добавлен pIndex
-      analyzeStepsWeight(days),
-      analyzeStressEating(days, pIndex),                 // v2.0: добавлен pIndex
-      
-      // === NEW v2.0: Научные анализаторы ===
-      analyzeCircadianTiming(days, pIndex),              // Циркадные ритмы
-      analyzeNutrientTiming(days, pIndex, profile),      // Тайминг нутриентов
-      analyzeInsulinSensitivity(days, pIndex, profile),  // Чувствительность к инсулину
-      analyzeGutHealth(days, pIndex)                     // Здоровье ЖКТ
-    ];
-    
-    // Считаем Health Score — v2.0: goal-aware
-    const healthScore = calculateHealthScore(patterns, profile);
-    
-    // Генерируем What-If
-    const whatIf = generateWhatIfScenarios(patterns, healthScore, days, profile);
-    
-    // Прогноз веса
-    const weightPrediction = predictWeight(days, profile);
-    
-    // Weekly Wrap
-    const weeklyWrap = generateWeeklyWrap(days, patterns, healthScore, weightPrediction);
     
     const result = {
       available: true,
