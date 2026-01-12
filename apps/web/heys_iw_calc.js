@@ -4,16 +4,6 @@
 // ОПИСАНИЕ:
 // Модуль основных расчётов инсулиновой волны: нутриенты, множители, workout бонусы.
 // Выделен из heys_insulin_wave_v1.js для улучшения модульности.
-//
-// ФУНКЦИИ:
-// - calculateMealNutrients() — расчёт всех нутриентов приёма
-// - calculateMultiplier() — расчёт множителя волны (GI, белок, клетчатка и т.д.)
-// - calculateWorkoutBonus() — бонус от тренировок
-// - calculatePostprandialExerciseBonus() — бонус от тренировки после еды
-// - calculateNEATBonus() — бонус от бытовой активности
-// - calculateStepsBonus() — бонус от шагов
-// - calculateCircadianMultiplier() — циркадный ритм
-// - calculateCarbsMultiplier() — множитель от количества углеводов
 
 (function(global) {
   'use strict';
@@ -22,34 +12,9 @@
   
   // === ИМПОРТ КОНСТАНТ ===
   const I = HEYS.InsulinWave?.__internals;
-  const GI_CATEGORIES = I?.GI_CATEGORIES;
-  const PROTEIN_BONUS = I?.PROTEIN_BONUS;
-  const calculateProteinBonusV2 = I?.calculateProteinBonusV2;
-  const FIBER_BONUS = I?.FIBER_BONUS;
-  const FAT_BONUS = I?.FAT_BONUS;
-  const LIQUID_FOOD = I?.LIQUID_FOOD;
-  const isLiquidFood = I?.isLiquidFood;
-  const INSULINOGENIC_BONUS = I?.INSULINOGENIC_BONUS;
-  const getInsulinogenicBonus = I?.getInsulinogenicBonus;
-  const GL_CONTINUOUS = I?.GL_CONTINUOUS;
-  const FOOD_FORM_BONUS = I?.FOOD_FORM_BONUS;
-  const getFoodForm = I?.getFoodForm;
-  const WORKOUT_BONUS = I?.WORKOUT_BONUS;
-  const POSTPRANDIAL_EXERCISE = I?.POSTPRANDIAL_EXERCISE;
-  const NEAT_BONUS = I?.NEAT_BONUS;
-  const STEPS_BONUS = I?.STEPS_BONUS;
-  const CIRCADIAN_CONFIG = I?.CIRCADIAN_CONFIG;
-  const CIRCADIAN_MULTIPLIERS = I?.CIRCADIAN_MULTIPLIERS;
-  const isValidTraining = I?.isValidTraining;
-  const TRAINING_CONTEXT = I?.TRAINING_CONTEXT;
-  
-  // === ИМПОРТ УТИЛИТ ===
   const utils = HEYS.InsulinWave?.utils;
-  
-  // === ИМПОРТ V3.0 ФУНКЦИЙ ===
   const V30 = HEYS.InsulinWave?.V30;
   const calculateContinuousGLMultiplier = V30?.calculateContinuousGLMultiplier;
-  const calculateInsulinIndex = V30?.calculateInsulinIndex;
   
   const calculateMealNutrients = (meal, pIndex, getProductFromItem) => {
     let totalGrams = 0;
@@ -653,6 +618,25 @@
    * phase = (hour - peakHour) / 24 * 2π
    * multiplier = center - amplitude * cos(phase)
 
+  
+  /**
+   * 🌅 v3.8.0: Плавный циркадный множитель (синусоидальная кривая)
+   * Заменяет ступенчатые 5 диапазонов на smooth continuous curve
+   * 
+   * Научное обоснование: Van Cauter 1997
+   * - Пик инсулиновой чувствительности: 7-9 утра (multiplier ~0.85)
+   * - Минимум чувствительности: 22-02 ночи (multiplier ~1.20)
+   * - Переход плавный, привязан к 24-часовому ритму кортизола
+   * 
+   * Формула: косинусная волна с периодом 24 часа
+   * center = (min + max) / 2 = 1.025
+   * amplitude = (max - min) / 2 = 0.175
+   * phase = (hour - peakHour) / 24 * 2π
+   * multiplier = center - amplitude * cos(phase)
+   * 
+   * @param {number} hour - текущий час (0-23.99)
+   * @returns {Object} { multiplier, period, desc, isSmooth }
+   */
   const calculateCircadianMultiplier = (hour) => {
     const { peakHour, minMultiplier, maxMultiplier, descriptions } = CIRCADIAN_CONFIG;
     
@@ -701,6 +685,7 @@
       isSmooth: true  // Флаг для отличия от legacy
     };
   };
+
   
   // === ЭКСПОРТ ===
   HEYS.InsulinWave = HEYS.InsulinWave || {};
