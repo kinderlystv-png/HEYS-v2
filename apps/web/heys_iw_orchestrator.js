@@ -16,6 +16,10 @@
   
   const HEYS = global.HEYS = global.HEYS || {};
   
+  // === MODULE VERSION ===
+  const MODULE_VERSION = '1.0.0';
+  const MODULE_NAME = 'InsulinWave.Orchestrator';
+  
   // === ИМПОРТ ИЗ ДРУГИХ МОДУЛЕЙ ===
   const I = HEYS.InsulinWave?.__internals;
   const utils = HEYS.InsulinWave?.utils;
@@ -235,7 +239,10 @@
     prepareWaveData,
     calculateWaveForMeal,
     buildWaveHistory,
-    determineWaveStatus
+    determineWaveStatus,
+    // Метаданные модуля
+    __version: MODULE_VERSION,
+    __name: MODULE_NAME
   };
   
 })(typeof window !== 'undefined' ? window : global);

@@ -10,6 +10,10 @@
   
   const HEYS = global.HEYS = global.HEYS || {};
   
+  // === MODULE VERSION ===
+  const MODULE_VERSION = '1.0.0';
+  const MODULE_NAME = 'InsulinWave.Calc';
+  
   // === ИМПОРТ КОНСТАНТ ===
   const I = HEYS.InsulinWave?.__internals;
   const utils = HEYS.InsulinWave?.utils;
@@ -697,7 +701,10 @@
     calculatePostprandialExerciseBonus,
     calculateNEATBonus,
     calculateStepsBonus,
-    calculateCircadianMultiplier
+    calculateCircadianMultiplier,
+    // Метаданные модуля
+    __version: MODULE_VERSION,
+    __name: MODULE_NAME
   };
   
 })(typeof window !== 'undefined' ? window : global);

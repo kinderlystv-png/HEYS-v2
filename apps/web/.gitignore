@@ -1,0 +1,9 @@
+
+# InsulinWave module backups
+heys_insulin_wave_v1.js.backup*
+heys_iw_*.backup
+
+# Temporary analysis files
+/tmp/refactoring_analysis.txt
+/tmp/improvement_analysis.txt
+/tmp/v41_extract.txt

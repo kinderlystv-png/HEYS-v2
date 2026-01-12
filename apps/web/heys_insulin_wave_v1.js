@@ -1,5 +1,5 @@
 // heys_insulin_wave_v1.js — Модуль инсулиновой волны (Orchestrator)
-// Версия: 4.2.1 | Дата: 2026-01-12
+// Версия: 4.2.2 | Дата: 2026-01-12
 //
 // РЕФАКТОРИНГ v4.2.1:
 // Улучшенная структура с вспомогательным модулем:
@@ -1260,7 +1260,7 @@
   Object.assign(HEYS.InsulinWave, {
     calculate: calculateInsulinWaveData,
     useInsulinWave,
-    VERSION: '4.2.1'
+    VERSION: '4.2.2'
   });
   
   // === ДЕЛЕГИРОВАНИЕ К МОДУЛЯМ ===
