@@ -24,13 +24,18 @@ global.HEYS = {
   }
 };
 
-// Load the legacy file
-const filePath = path.resolve(__dirname, '../heys_insulin_wave_v1.js');
-const fileContent = fs.readFileSync(filePath, 'utf8');
+// Mock window object for modules
+global.window = global;
 
-// Execute the file in the global scope
-// This will attach HEYS.InsulinWave to global.HEYS
-eval(fileContent);
+// Load constants module first (creates window.HEYS_IW namespace)
+const constantsPath = path.resolve(__dirname, '../heys_iw_constants.js');
+const constantsContent = fs.readFileSync(constantsPath, 'utf8');
+eval(constantsContent);
+
+// Load the main module (imports from window.HEYS_IW)
+const mainPath = path.resolve(__dirname, '../heys_insulin_wave_v1.js');
+const mainContent = fs.readFileSync(mainPath, 'utf8');
+eval(mainContent);
 
 describe('Insulin Wave Module (Critical)', () => {
   const IW = global.HEYS.InsulinWave;

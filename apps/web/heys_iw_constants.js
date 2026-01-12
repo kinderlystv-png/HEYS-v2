@@ -206,7 +206,7 @@
    * @returns {Object} { bonus, baseBonus, multiplier, type, tier }
    */
   I.calculateProteinBonusV2 = (proteinGrams, proteinType = 'mixed') => {
-    const cfg = PROTEIN_BONUS_V2;
+    const cfg = I.PROTEIN_BONUS_V2;
     const thresholds = cfg.thresholds;
     const baseBonuses = cfg.baseBonuses;
     
@@ -648,7 +648,7 @@
     const value = prev.value + ratio * (next.value - prev.value);
     
     // Определяем уровень
-    const cfg = INSULIN_PREDICTOR_CONFIG.levels;
+    const cfg = I.INSULIN_PREDICTOR_CONFIG.levels;
     let level = 'baseline';
     let label = cfg.baseline.label;
     
@@ -667,7 +667,7 @@
    * @returns {Object} { predictions, recommendations, safeToEatAt, fatBurningAt }
    */
   I.predictInsulinResponse = (curve, waveMinutes) => {
-    const cfg = INSULIN_PREDICTOR_CONFIG;
+    const cfg = I.INSULIN_PREDICTOR_CONFIG;
     
     // Прогнозы на стандартные точки
     const predictions = cfg.timePoints.map(minutes => {
@@ -2023,10 +2023,10 @@
     };
     
     // Рассчитываем каждый фактор
-    const bmiFactor = getFactorAscending(bmi, IR_SCORE_CONFIG.bmi);
-    const sleepFactor = getFactorDescending(sleepHours, IR_SCORE_CONFIG.sleep);
-    const stressFactor = getFactorAscending(stressAvg, IR_SCORE_CONFIG.stress);
-    const ageFactor = getFactorAscending(age, IR_SCORE_CONFIG.age);
+    const bmiFactor = getFactorAscending(bmi, I.IR_SCORE_CONFIG.bmi);
+    const sleepFactor = getFactorDescending(sleepHours, I.IR_SCORE_CONFIG.sleep);
+    const stressFactor = getFactorAscending(stressAvg, I.IR_SCORE_CONFIG.stress);
+    const ageFactor = getFactorAscending(age, I.IR_SCORE_CONFIG.age);
     
     // Мультипликативный score
     const score = bmiFactor.factor * sleepFactor.factor * stressFactor.factor * ageFactor.factor;
@@ -2034,7 +2034,7 @@
     // Определяем цвет и лейбл
     let color = '#ef4444';
     let label = '🔴 High';
-    for (const range of IR_SCORE_CONFIG.colorRanges) {
+    for (const range of I.IR_SCORE_CONFIG.colorRanges) {
       if (score <= range.max) {
         color = range.color;
         label = range.label;
@@ -2138,12 +2138,12 @@
       
       const interval = getTrainingInterval(training);
       const intensity = getTrainingIntensityType(training);
-      const intensityMult = TRAINING_CONTEXT.intensityMultiplier[intensity] || 1.0;
+      const intensityMult = I.TRAINING_CONTEXT.intensityMultiplier[intensity] || 1.0;
       const { startMin, endMin, durationMin } = interval;
       
       // --- PERI-WORKOUT: еда ВО ВРЕМЯ тренировки ---
       if (mealTimeMin >= startMin && mealTimeMin <= endMin) {
-        const cfg = TRAINING_CONTEXT.periWorkout;
+        const cfg = I.TRAINING_CONTEXT.periWorkout;
         const progressPct = durationMin > 0 ? (mealTimeMin - startMin) / durationMin : 0.5;
         
         // 🆕 v3.5.0: Intensity-scaled PERI bonus
@@ -2156,7 +2156,7 @@
         
         foundContexts.push({
           type: 'peri',
-          priority: TRAINING_CONTEXT.priority.peri,
+          priority: I.TRAINING_CONTEXT.priority.peri,
           waveBonus: cappedWaveBonus,
           harmMultiplier: intensityHarmMult,
           badge: cfg.badge,
@@ -2170,7 +2170,7 @@
       // --- POST-WORKOUT: еда ПОСЛЕ тренировки ---
       if (mealTimeMin > endMin) {
         const gapMin = mealTimeMin - endMin;
-        const cfg = TRAINING_CONTEXT.postWorkout;
+        const cfg = I.TRAINING_CONTEXT.postWorkout;
         
         // 🆕 v3.7.7: РЕАЛЬНЫЕ ККАЛ через MET-формулу (не грубая оценка!)
         // Старая формула: durationMin * intensityMult * 5 * (weight / 70) — давала ~300 для 60 мин
@@ -2235,7 +2235,7 @@
           
           foundContexts.push({
             type: 'post',
-            priority: TRAINING_CONTEXT.priority.post,
+            priority: I.TRAINING_CONTEXT.priority.post,
             waveBonus: combinedWaveBonus,
             harmMultiplier: combinedHarmMultiplier,
             badge: tier.label || tier.badge,
@@ -2261,11 +2261,11 @@
       if (mealTimeMin < startMin) {
         const gapMin = startMin - mealTimeMin;
         
-        for (const tier of TRAINING_CONTEXT.preWorkout) {
+        for (const tier of I.TRAINING_CONTEXT.preWorkout) {
           if (gapMin <= tier.maxGap) {
             foundContexts.push({
               type: 'pre',
-              priority: TRAINING_CONTEXT.priority.pre,
+              priority: I.TRAINING_CONTEXT.priority.pre,
               waveBonus: tier.waveBonus,
               harmMultiplier: tier.harmMultiplier || 1.0, // 🆕 v3.5.4: pre тоже снижает вред
               badge: tier.label,
@@ -2281,7 +2281,7 @@
     
     // === STEPS: Прогрессивные пороги шагов ===
     // 🆕 v3.5.5: Работает весь день, не только вечером. Вечером бонус усиливается.
-    const cfg_steps = TRAINING_CONTEXT.stepsBonus;
+    const cfg_steps = I.TRAINING_CONTEXT.stepsBonus;
     for (const tier of cfg_steps.tiers) {
       if (steps >= tier.threshold) {
         // Вечерний бонус: после 18:00 шаги уже накопились → усиливаем эффект
@@ -2291,7 +2291,7 @@
         
         foundContexts.push({
           type: 'steps',
-          priority: TRAINING_CONTEXT.priority.steps,
+          priority: I.TRAINING_CONTEXT.priority.steps,
           waveBonus: effectiveWaveBonus,
           harmMultiplier: tier.harmMultiplier,
           badge: tier.badge,
@@ -2305,14 +2305,14 @@
 
     // === HOUSEHOLD: Бытовая активность ===
     // 🆕 v3.5.5: NEAT как отдельный Activity Context с бейджем и harmMultiplier
-    const cfg_household = TRAINING_CONTEXT.householdBonus;
+    const cfg_household = I.TRAINING_CONTEXT.householdBonus;
     // householdMin уже получен из params в деструктуризации выше
     if (cfg_household && householdMin > 0) {
       for (const tier of cfg_household.tiers) {
         if (householdMin >= tier.threshold) {
           foundContexts.push({
             type: 'household',
-            priority: TRAINING_CONTEXT.priority.household || 15, // Между steps и morning
+            priority: I.TRAINING_CONTEXT.priority.household || 15, // Между steps и morning
             waveBonus: tier.waveBonus,
             harmMultiplier: tier.harmMultiplier,
             badge: tier.badge,
@@ -2326,7 +2326,7 @@
     }
     
     // === MORNING: утренняя тренировка (до 12:00) ===
-    const cfg_morning = TRAINING_CONTEXT.morningTraining;
+    const cfg_morning = I.TRAINING_CONTEXT.morningTraining;
     const hasMorningTraining = trainings.some(t => {
       const [h] = (t.time || '12:00').split(':').map(Number);
       return h < cfg_morning.beforeHour;
@@ -2334,7 +2334,7 @@
     if (hasMorningTraining) {
       foundContexts.push({
         type: 'morning',
-        priority: TRAINING_CONTEXT.priority.morning,
+        priority: I.TRAINING_CONTEXT.priority.morning,
         waveBonus: cfg_morning.dayWaveBonus,
         harmMultiplier: 1.0,
         badge: '🌅 Утренний',
@@ -2345,11 +2345,11 @@
     }
     
     // === DOUBLE: 2+ тренировки за день ===
-    const cfg_double = TRAINING_CONTEXT.doubleTraining;
+    const cfg_double = I.TRAINING_CONTEXT.doubleTraining;
     if (trainings.length >= cfg_double.minTrainings) {
       foundContexts.push({
         type: 'double',
-        priority: TRAINING_CONTEXT.priority.double,
+        priority: I.TRAINING_CONTEXT.priority.double,
         waveBonus: cfg_double.dayWaveBonus,
         harmMultiplier: 1.0,
         badge: '💪 Двойная',
@@ -2361,16 +2361,16 @@
     
     // === STRENGTH+PROTEIN: силовая + белок ≥30г ===
     const prot = mealNutrients.prot || 0;
-    if (prot >= TRAINING_CONTEXT.strengthProtein.minProtein) {
+    if (prot >= I.TRAINING_CONTEXT.strengthProtein.minProtein) {
       const hasStrength = trainings.some(t => t.type === 'strength');
       if (hasStrength) {
         // Проверяем POST контекст для силовой
         const strengthPost = foundContexts.find(c => c.type === 'post' && c.trainingRef?.type === 'strength');
         if (strengthPost) {
           // Улучшаем существующий post контекст
-          strengthPost.harmMultiplier = Math.min(strengthPost.harmMultiplier, TRAINING_CONTEXT.strengthProtein.harmMultiplier);
+          strengthPost.harmMultiplier = Math.min(strengthPost.harmMultiplier, I.TRAINING_CONTEXT.strengthProtein.harmMultiplier);
           strengthPost.badge = '💪🥛 Восстановление';
-          strengthPost.desc += ` | +${Math.round(prot)}г белка → harm ×${TRAINING_CONTEXT.strengthProtein.harmMultiplier}`;
+          strengthPost.desc += ` | +${Math.round(prot)}г белка → harm ×${I.TRAINING_CONTEXT.strengthProtein.harmMultiplier}`;
           strengthPost.details.protein = prot;
         }
       }
@@ -2386,15 +2386,15 @@
         const target = cardioPeri || cardioPost;
         if (target) {
           // Уменьшаем штраф за простые углеводы
-          target.simpleMultiplier = TRAINING_CONTEXT.cardioSimple.glMultiplier;
-          target.desc += ` | Простые углеводы → GL ×${TRAINING_CONTEXT.cardioSimple.glMultiplier}`;
+          target.simpleMultiplier = I.TRAINING_CONTEXT.cardioSimple.glMultiplier;
+          target.desc += ` | Простые углеводы → GL ×${I.TRAINING_CONTEXT.cardioSimple.glMultiplier}`;
           target.details.simple = simple;
         }
       }
     }
     
     // === NIGHT OVERRIDE: ночная еда после тренировки ===
-    const cfg_night = TRAINING_CONTEXT.nightOverride;
+    const cfg_night = I.TRAINING_CONTEXT.nightOverride;
     if (cfg_night.enabled && mealTimeMin >= 22 * 60) {
       // Проверяем есть ли тренировка за последние N часов
       const recentTraining = trainings.find(t => {
@@ -2734,21 +2734,25 @@
   // === ДЕТЕКТОРЫ ПИЩИ ===
   
   I.isLiquidFood = (name = '') => {
+    if (typeof name !== 'string') return false;
     const n = name.toLowerCase();
     return /молоко|кефир|йогурт|ряженка|смузи|сок|коктейль|бульон|суп-пюре|протеин|shake|milk/i.test(n);
   };
 
   I.isSpicyFood = (name = '') => {
+    if (typeof name !== 'string') return false;
     const n = name.toLowerCase();
     return /перец|чили|острый|карри|табаско|халапеньо|wasabi|васаби|sriracha|сальса|горчиц|хрен|pepper|spicy/i.test(n);
   };
 
   I.hasResistantStarch = (name = '') => {
+    if (typeof name !== 'string') return false;
     const n = name.toLowerCase();
     return /охлажд|холодн.*карто|холодн.*рис|салат.*карто|банан.*зелён|cold.*potato|cold.*rice/i.test(n);
   };
 
   I.hasCaffeine = (name = '') => {
+    if (typeof name !== 'string') return false;
     const n = name.toLowerCase();
     return /кофе|эспрессо|капучино|латте|американо|чай|матча|энергет|coffee|espresso|tea|energy/i.test(n);
   };
@@ -2756,6 +2760,7 @@
   // === БОНУСЫ И МНОЖИТЕЛИ ===
 
   I.getInsulinogenicBonus = (name = '') => {
+    if (typeof name !== 'string') return { bonus: 0, type: null };
     const n = name.toLowerCase();
     
     // Жидкие молочные: +15% (Holt 1997 II молока ≈ 98)
@@ -2779,7 +2784,7 @@
   };
 
   I.getFoodForm = (items = [], getProductFromItem) => {
-    if (!items || items.length === 0) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
       return { form: 'solid', multiplier: 1.0, desc: null };
     }
     
@@ -2809,6 +2814,7 @@
   };
 
   I.getAlcoholBonus = (name = '') => {
+    if (typeof name !== 'string') return { bonus: 0, type: null };
     const n = name.toLowerCase();
     
     if (/водка|виски|коньяк|ром|джин|текила|самогон|спирт|whisky|vodka|rum|gin/i.test(n)) {
@@ -2876,6 +2882,7 @@
   };
 
   I.getGenderBonus = (gender = '') => {
+    if (typeof gender !== 'string') return 0;
     const g = gender.toLowerCase();
     if (g === 'мужской' || g === 'male' || g === 'м' || g === 'm') {
       return I.GENDER_BONUS.male.bonus;
