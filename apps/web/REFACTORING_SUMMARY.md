@@ -44,6 +44,12 @@ Successfully refactored `heys_insulin_wave_v1.js` from 5804 lines to 1389 lines 
    - `calculateSatietyScore()` - satiety model (Holt 1995)
    - `calculateAdaptiveDeficit()` - adaptive deficit optimizer
 
+7. **heys_iw_orchestrator.js** (241 lines) - 🆕 v4.2.1 Orchestration Helpers
+   - `prepareWaveData()` - data preparation and sorting
+   - `calculateWaveForMeal()` - wave calculation for single meal
+   - `buildWaveHistory()` - daily wave history construction
+   - `determineWaveStatus()` - wave status determination
+
 ### UI Modules
 7. **heys_iw_ui.js** (1617 lines)
    - `MealWaveExpandSection` - expanded meal wave view
@@ -115,18 +121,28 @@ All modules maintain scientific comments and citations:
 - Kelley & Mandarino 2000 (metabolic flexibility)
 - Trexler 2014, Byrne 2018 (adaptive deficit)
 
-## Refactoring Complete ✅
-The main `heys_insulin_wave_v1.js` file has been refactored:
+## Refactoring Complete ✅ (v4.2.1)
+The main `heys_insulin_wave_v1.js` file has been fully refactored and improved:
 - **Before**: 5804 lines (monolithic)
-- **After**: 1389 lines (orchestrator + main logic)
-- **Reduction**: 4415 lines removed (76%)
+- **After**: 1386 lines (orchestrator with JSDoc + helpers)
+- **Reduction**: 4418 lines removed (76%)
 - **Functionality**: Fully preserved, backward compatible
-- **Structure**: Imports from modules, re-exports for API compatibility
+- **Structure**: Imports from 8 modules, documented with JSDoc, simplified exports
 
-The file now contains only:
-1. Import statements from all modules (~60 lines)
-2. `calculateInsulinWaveData()` - main orchestration function (~1100 lines)
-3. `useInsulinWave()` - React hook (~50 lines)
-4. Export section delegating to modules (~180 lines)
+**New in v4.2.1**:
+1. **JSDoc Documentation** - Added comprehensive JSDoc comments to main functions
+2. **Orchestrator Helper Module** (heys_iw_orchestrator.js) - 241 lines of extracted helper functions:
+   - `prepareWaveData()` - data preparation
+   - `calculateWaveForMeal()` - single meal calculation
+   - `buildWaveHistory()` - history construction
+   - `determineWaveStatus()` - status determination
+3. **Simplified Exports** - More compact export section using Object.assign()
+4. **Better Organization** - Clear module boundaries and responsibilities
 
-Current state is production-ready with HMR support.
+The file now contains:
+1. Import statements from all modules (~70 lines)
+2. `calculateInsulinWaveData()` - main orchestration function with JSDoc (~1100 lines)
+3. `useInsulinWave()` - React hook with JSDoc (~70 lines)
+4. Export section with efficient delegation (~150 lines)
+
+Current state is production-ready with improved maintainability and documentation.

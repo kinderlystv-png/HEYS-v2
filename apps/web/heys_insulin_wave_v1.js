@@ -1,8 +1,13 @@
 // heys_insulin_wave_v1.js — Модуль инсулиновой волны (Orchestrator)
-// Версия: 4.2.0 | Дата: 2026-01-12
+// Версия: 4.2.1 | Дата: 2026-01-12
 //
-// РЕФАКТОРИНГ v4.2.0:
-// Код разбит на 7 специализированных модулей:
+// РЕФАКТОРИНГ v4.2.1:
+// Улучшенная структура с вспомогательным модулем:
+// - heys_iw_orchestrator.js (241 строка) - вспомогательные функции
+// - Добавлена JSDoc документация
+// - Упрощённая секция экспорта
+//
+// Код разбит на 8 специализированных модулей:
 // - heys_iw_constants.js (3144 строк) - константы и конфигурации
 // - heys_iw_calc.js (703 строки) - расчётные функции
 // - heys_iw_v30.js (387 строк) - v3.0 фичи (Continuous GL, Personal Baseline)
@@ -61,6 +66,19 @@
   const Graph = HEYS.InsulinWave?.Graph;
   const NDTE_UI = HEYS.InsulinWave?.NDTE;
   
+  /**
+   * Расчёт данных инсулиновой волны
+   * 
+   * @param {Object} params - параметры расчёта
+   * @param {Array} params.meals - массив приёмов пищи
+   * @param {Object} params.pIndex - индекс продуктов
+   * @param {Function} params.getProductFromItem - функция получения продукта из айтема
+   * @param {number} [params.baseWaveHours=3] - базовая длина волны в часах
+   * @param {Array} [params.trainings=[]] - массив тренировок дня
+   * @param {Object} [params.dayData={}] - данные дня (профиль, активность, сон и т.д.)
+   * @param {Date} [params.now=new Date()] - текущее время для расчётов
+   * @returns {Object|null} данные инсулиновой волны или null если нет данных
+   */
   const calculateInsulinWaveData = ({ 
     meals, 
     pIndex, 
@@ -1166,6 +1184,19 @@
     };
   };
 
+  
+  /**
+   * React Hook для использования инсулиновой волны в компонентах
+   * 
+   * @param {Object} params - параметры hook
+   * @param {Array} params.meals - массив приёмов пищи
+   * @param {Object} params.pIndex - индекс продуктов
+   * @param {Function} params.getProductFromItem - функция получения продукта
+   * @param {number} [params.baseWaveHours=3] - базовая длина волны
+   * @param {Array} [params.trainings=[]] - массив тренировок
+   * @param {Object} [params.dayData={}] - данные дня
+   * @returns {Object} данные волны с хуком обновления
+   */
   const useInsulinWave = ({ meals, pIndex, getProductFromItem, baseWaveHours = 3, trainings = [], dayData = {} }) => {
     const [expanded, setExpanded] = React.useState(false);
     const [isShaking, setIsShaking] = React.useState(false);
@@ -1219,171 +1250,137 @@
     };
   };
 
+  
   // === ЭКСПОРТ ===
-  // 🔄 REFACTOR v4.2.0: Главный файл теперь оркестратор
-  // Большинство функций делегируются в специализированные модули
+  // 🔄 REFACTOR v4.2.1: Упрощённый экспорт через Object.assign
   
   HEYS.InsulinWave = HEYS.InsulinWave || {};
+  
+  // Главные функции (определены в этом файле)
   Object.assign(HEYS.InsulinWave, {
-    // Главная функция расчёта (определена в этом файле)
     calculate: calculateInsulinWaveData,
-    
-    // Hook (определён в этом файле)
     useInsulinWave,
-    
-    // === ВСЁ ОСТАЛЬНОЕ ДЕЛЕГИРУЕТСЯ В МОДУЛИ ===
-    
-    // UI компоненты (из heys_iw_ui.js)
-    renderProgressBar: UI?.renderProgressBar,
-    renderWaveHistory: UI?.renderWaveHistory,
-    renderExpandedSection: UI?.renderExpandedSection,
-    MealWaveExpandSection: UI?.MealWaveExpandSection,
-    renderActivityContextBadge: UI?.renderActivityContextBadge,
-    
-    // Graph (из heys_iw_graph.js)
-    renderWaveChart: Graph?.renderWaveChart,
-    
-    // NDTE UI (из heys_iw_ndte.js)
-    renderNDTEBadge: NDTE_UI?.renderNDTEBadge,
-    
-    // Утилиты (из heys_iw_utils.js)
+    VERSION: '4.2.1'
+  });
+  
+  // === ДЕЛЕГИРОВАНИЕ К МОДУЛЯМ ===
+  
+  // UI компоненты
+  if (UI) Object.assign(HEYS.InsulinWave, {
+    renderProgressBar: UI.renderProgressBar,
+    renderWaveHistory: UI.renderWaveHistory,
+    renderExpandedSection: UI.renderExpandedSection,
+    MealWaveExpandSection: UI.MealWaveExpandSection,
+    renderActivityContextBadge: UI.renderActivityContextBadge
+  });
+  
+  if (Graph) HEYS.InsulinWave.renderWaveChart = Graph.renderWaveChart;
+  if (NDTE_UI) HEYS.InsulinWave.renderNDTEBadge = NDTE_UI.renderNDTEBadge;
+  
+  // Расчёты
+  if (Calc) Object.assign(HEYS.InsulinWave, {
     utils,
-    
-    // Расчёты (из heys_iw_calc.js)
-    calculateMealNutrients,
-    calculateMultiplier,
-    calculateWorkoutBonus,
-    calculateCircadianMultiplier,
-    calculatePostprandialExerciseBonus,
-    calculateNEATBonus,
-    calculateStepsBonus,
-    
-    // v3.0 фичи (из heys_iw_v30.js)
-    calculateContinuousGLMultiplier,
-    calculatePersonalBaselineWave,
-    calculateMealStackingBonus,
-    calculateWavePhases,
-    calculateInsulinIndex,
-    getWaveCalculationDebug: V30?.getWaveCalculationDebug,
-    
-    // v4.1 фичи (из heys_iw_v41.js)
-    calculateMetabolicFlexibility: V41?.calculateMetabolicFlexibility,
-    calculateSatietyScore: V41?.calculateSatietyScore,
-    calculateAdaptiveDeficit: V41?.calculateAdaptiveDeficit,
-    METABOLIC_FLEXIBILITY_CONFIG: V41?.METABOLIC_FLEXIBILITY_CONFIG,
-    SATIETY_MODEL_CONFIG: V41?.SATIETY_MODEL_CONFIG,
-    ADAPTIVE_DEFICIT_CONFIG: V41?.ADAPTIVE_DEFICIT_CONFIG,
-    
-    // Lipolysis (из heys_iw_lipolysis.js)
-    getLipolysisRecord: Lipolysis?.getLipolysisRecord,
-    updateLipolysisRecord: Lipolysis?.updateLipolysisRecord,
-    saveDayLipolysis: Lipolysis?.saveDayLipolysis,
-    calculateLipolysisStreak: Lipolysis?.calculateLipolysisStreak,
-    calculateLipolysisKcal: Lipolysis?.calculateLipolysisKcal,
-    
-    // Константы (из heys_iw_constants.js через __internals)
-    GI_CATEGORIES,
-    STATUS_CONFIG,
-    PROTEIN_BONUS: I?.PROTEIN_BONUS,
-    FIBER_BONUS: I?.FIBER_BONUS,
-    FAT_BONUS: I?.FAT_BONUS,
-    LIQUID_FOOD: I?.LIQUID_FOOD,
-    INSULINOGENIC_BONUS: I?.INSULINOGENIC_BONUS,
-    GL_CATEGORIES: I?.GL_CATEGORIES,
-    GL_CONTINUOUS: I?.GL_CONTINUOUS,
-    PERSONAL_BASELINE: I?.PERSONAL_BASELINE,
-    MEAL_STACKING: I?.MEAL_STACKING,
-    WAVE_PHASES: I?.WAVE_PHASES,
-    INSULIN_INDEX_FACTORS: I?.INSULIN_INDEX_FACTORS,
-    WORKOUT_BONUS: I?.WORKOUT_BONUS,
-    POSTPRANDIAL_EXERCISE: I?.POSTPRANDIAL_EXERCISE,
-    NEAT_BONUS: I?.NEAT_BONUS,
-    STEPS_BONUS: I?.STEPS_BONUS,
-    CIRCADIAN_MULTIPLIERS: I?.CIRCADIAN_MULTIPLIERS,
-    CIRCADIAN_CONFIG: I?.CIRCADIAN_CONFIG,
-    FASTING_BONUS: I?.FASTING_BONUS,
-    SPICY_FOOD: I?.SPICY_FOOD,
-    ALCOHOL_BONUS: I?.ALCOHOL_BONUS,
-    CAFFEINE_BONUS: I?.CAFFEINE_BONUS,
-    STRESS_BONUS: I?.STRESS_BONUS,
-    SLEEP_BONUS: I?.SLEEP_BONUS,
-    SLEEP_QUALITY_BONUS: I?.SLEEP_QUALITY_BONUS,
-    HYDRATION_BONUS: I?.HYDRATION_BONUS,
-    AGE_BONUS: I?.AGE_BONUS,
-    BMI_BONUS: I?.BMI_BONUS,
-    GENDER_BONUS: I?.GENDER_BONUS,
-    TRANS_FAT_BONUS: I?.TRANS_FAT_BONUS,
-    FOOD_FORM_BONUS: I?.FOOD_FORM_BONUS,
-    RESISTANT_STARCH_BONUS: I?.RESISTANT_STARCH_BONUS,
-    LIPOLYSIS_THRESHOLDS: I?.LIPOLYSIS_THRESHOLDS,
-    REACTIVE_HYPOGLYCEMIA: I?.REACTIVE_HYPOGLYCEMIA,
-    FOOD_TEMPERATURE_BONUS: I?.FOOD_TEMPERATURE_BONUS,
-    LARGE_PORTION_BONUS: I?.LARGE_PORTION_BONUS,
-    MIN_LIPOLYSIS_FOR_STREAK: I?.MIN_LIPOLYSIS_FOR_STREAK,
-    TRAINING_CONTEXT: I?.TRAINING_CONTEXT,
-    NDTE: I?.NDTE,
-    IR_SCORE_CONFIG: I?.IR_SCORE_CONFIG,
-    PROTEIN_BONUS_V2: I?.PROTEIN_BONUS_V2,
-    AUC_CONFIG: I?.AUC_CONFIG,
-    INSULIN_PREDICTOR_CONFIG: I?.INSULIN_PREDICTOR_CONFIG,
-    WAVE_SCORING_V2: I?.WAVE_SCORING_V2,
-    SUPPLEMENTS_BONUS: I?.SUPPLEMENTS_BONUS,
-    COLD_EXPOSURE_BONUS: I?.COLD_EXPOSURE_BONUS,
-    AUTOPHAGY_TIMER: I?.AUTOPHAGY_TIMER,
-    
-    // Функции из констант
-    isLiquidFood: I?.isLiquidFood,
-    getInsulinogenicBonus: I?.getInsulinogenicBonus,
-    isSpicyFood: I?.isSpicyFood,
-    getAlcoholBonus: I?.getAlcoholBonus,
-    hasCaffeine: I?.hasCaffeine,
-    calculateStressBonus: I?.calculateStressBonus,
-    calculateSleepBonus: I?.calculateSleepBonus,
-    calculateFastingBonus: I?.calculateFastingBonus,
-    calculateSleepQualityBonus: I?.calculateSleepQualityBonus,
-    calculateHydrationBonus: I?.calculateHydrationBonus,
-    calculateAgeBonus: I?.calculateAgeBonus,
-    calculateBMIBonus: I?.calculateBMIBonus,
-    getGenderBonus: I?.getGenderBonus,
-    calculateTransFatBonus: I?.calculateTransFatBonus,
-    getFoodForm: I?.getFoodForm,
-    hasResistantStarch: I?.hasResistantStarch,
-    estimateInsulinLevel: I?.estimateInsulinLevel,
-    calculateHypoglycemiaRisk: I?.calculateHypoglycemiaRisk,
-    getHypoglycemiaWarning: I?.getHypoglycemiaWarning,
-    detectFoodTemperature: I?.detectFoodTemperature,
-    calculateLargePortionBonus: I?.calculateLargePortionBonus,
-    getInsulinIndexWaveModifier: I?.getInsulinIndexWaveModifier,
-    calculateActivityContext: I?.calculateActivityContext,
-    calculateIRScore: I?.calculateIRScore,
-    detectProteinType: I?.detectProteinType,
-    calculateProteinBonusV2: I?.calculateProteinBonusV2,
-    calculateBMI: I?.calculateBMI,
-    getBMICategory: I?.getBMICategory,
-    isValidTraining: I?.isValidTraining,
-    calculateNDTE: I?.calculateNDTE,
-    calculateNDTEBMIMultiplier: I?.calculateNDTEBMIMultiplier,
-    calculateNDTEDecay: I?.calculateNDTEDecay,
-    getPreviousDayTrainings: I?.getPreviousDayTrainings,
-    getSupplementsBonus: I?.getSupplementsBonus,
-    getColdExposureBonus: I?.getColdExposureBonus,
-    getAutophagyPhase: I?.getAutophagyPhase,
-    generateWaveCurve: I?.generateWaveCurve,
-    calculateTrapezoidalAUC: I?.calculateTrapezoidalAUC,
-    calculateIncrementalAUC: I?.calculateIncrementalAUC,
-    calculateFullAUC: I?.calculateFullAUC,
-    getInsulinLevelAtTime: I?.getInsulinLevelAtTime,
-    predictInsulinResponse: I?.predictInsulinResponse,
-    generatePredictionSummary: I?.generatePredictionSummary,
-    calculateWaveScore: I?.calculateWaveScore,
-    scorePeakHeight: I?.scorePeakHeight,
-    scoreDuration: I?.scoreDuration,
-    scoreWaveShape: I?.scoreWaveShape,
-    scoreAUC: I?.scoreAUC,
-    scoreContext: I?.scoreContext,
-    
-    // Версия
-    VERSION: '4.2.0'
+    calculateMealNutrients: Calc.calculateMealNutrients,
+    calculateMultiplier: Calc.calculateMultiplier,
+    calculateWorkoutBonus: Calc.calculateWorkoutBonus,
+    calculateCircadianMultiplier: Calc.calculateCircadianMultiplier,
+    calculatePostprandialExerciseBonus: Calc.calculatePostprandialExerciseBonus,
+    calculateNEATBonus: Calc.calculateNEATBonus,
+    calculateStepsBonus: Calc.calculateStepsBonus
+  });
+  
+  // v3.0 фичи
+  if (V30) Object.assign(HEYS.InsulinWave, {
+    calculateContinuousGLMultiplier: V30.calculateContinuousGLMultiplier,
+    calculatePersonalBaselineWave: V30.calculatePersonalBaselineWave,
+    calculateMealStackingBonus: V30.calculateMealStackingBonus,
+    calculateWavePhases: V30.calculateWavePhases,
+    calculateInsulinIndex: V30.calculateInsulinIndex,
+    getWaveCalculationDebug: V30.getWaveCalculationDebug
+  });
+  
+  // v4.1 фичи
+  if (V41) Object.assign(HEYS.InsulinWave, {
+    calculateMetabolicFlexibility: V41.calculateMetabolicFlexibility,
+    calculateSatietyScore: V41.calculateSatietyScore,
+    calculateAdaptiveDeficit: V41.calculateAdaptiveDeficit,
+    METABOLIC_FLEXIBILITY_CONFIG: V41.METABOLIC_FLEXIBILITY_CONFIG,
+    SATIETY_MODEL_CONFIG: V41.SATIETY_MODEL_CONFIG,
+    ADAPTIVE_DEFICIT_CONFIG: V41.ADAPTIVE_DEFICIT_CONFIG
+  });
+  
+  // Lipolysis
+  if (Lipolysis) Object.assign(HEYS.InsulinWave, {
+    getLipolysisRecord: Lipolysis.getLipolysisRecord,
+    updateLipolysisRecord: Lipolysis.updateLipolysisRecord,
+    saveDayLipolysis: Lipolysis.saveDayLipolysis,
+    calculateLipolysisStreak: Lipolysis.calculateLipolysisStreak,
+    calculateLipolysisKcal: Lipolysis.calculateLipolysisKcal
+  });
+  
+  // Константы и функции из __internals (массовое делегирование)
+  if (I) Object.assign(HEYS.InsulinWave, {
+    // Константы
+    GI_CATEGORIES, STATUS_CONFIG,
+    PROTEIN_BONUS: I.PROTEIN_BONUS, FIBER_BONUS: I.FIBER_BONUS,
+    FAT_BONUS: I.FAT_BONUS, LIQUID_FOOD: I.LIQUID_FOOD,
+    INSULINOGENIC_BONUS: I.INSULINOGENIC_BONUS,
+    GL_CATEGORIES: I.GL_CATEGORIES, GL_CONTINUOUS: I.GL_CONTINUOUS,
+    PERSONAL_BASELINE: I.PERSONAL_BASELINE, MEAL_STACKING: I.MEAL_STACKING,
+    WAVE_PHASES: I.WAVE_PHASES, INSULIN_INDEX_FACTORS: I.INSULIN_INDEX_FACTORS,
+    WORKOUT_BONUS: I.WORKOUT_BONUS, POSTPRANDIAL_EXERCISE: I.POSTPRANDIAL_EXERCISE,
+    NEAT_BONUS: I.NEAT_BONUS, STEPS_BONUS: I.STEPS_BONUS,
+    CIRCADIAN_MULTIPLIERS: I.CIRCADIAN_MULTIPLIERS, CIRCADIAN_CONFIG: I.CIRCADIAN_CONFIG,
+    FASTING_BONUS: I.FASTING_BONUS, SPICY_FOOD: I.SPICY_FOOD,
+    ALCOHOL_BONUS: I.ALCOHOL_BONUS, CAFFEINE_BONUS: I.CAFFEINE_BONUS,
+    STRESS_BONUS: I.STRESS_BONUS, SLEEP_BONUS: I.SLEEP_BONUS,
+    SLEEP_QUALITY_BONUS: I.SLEEP_QUALITY_BONUS, HYDRATION_BONUS: I.HYDRATION_BONUS,
+    AGE_BONUS: I.AGE_BONUS, BMI_BONUS: I.BMI_BONUS, GENDER_BONUS: I.GENDER_BONUS,
+    TRANS_FAT_BONUS: I.TRANS_FAT_BONUS, FOOD_FORM_BONUS: I.FOOD_FORM_BONUS,
+    RESISTANT_STARCH_BONUS: I.RESISTANT_STARCH_BONUS,
+    LIPOLYSIS_THRESHOLDS: I.LIPOLYSIS_THRESHOLDS,
+    REACTIVE_HYPOGLYCEMIA: I.REACTIVE_HYPOGLYCEMIA,
+    FOOD_TEMPERATURE_BONUS: I.FOOD_TEMPERATURE_BONUS,
+    LARGE_PORTION_BONUS: I.LARGE_PORTION_BONUS,
+    MIN_LIPOLYSIS_FOR_STREAK: I.MIN_LIPOLYSIS_FOR_STREAK,
+    TRAINING_CONTEXT: I.TRAINING_CONTEXT, NDTE: I.NDTE,
+    IR_SCORE_CONFIG: I.IR_SCORE_CONFIG, PROTEIN_BONUS_V2: I.PROTEIN_BONUS_V2,
+    AUC_CONFIG: I.AUC_CONFIG, INSULIN_PREDICTOR_CONFIG: I.INSULIN_PREDICTOR_CONFIG,
+    WAVE_SCORING_V2: I.WAVE_SCORING_V2, SUPPLEMENTS_BONUS: I.SUPPLEMENTS_BONUS,
+    COLD_EXPOSURE_BONUS: I.COLD_EXPOSURE_BONUS, AUTOPHAGY_TIMER: I.AUTOPHAGY_TIMER,
+    // Функции (компактная форма)
+    isLiquidFood: I.isLiquidFood, getInsulinogenicBonus: I.getInsulinogenicBonus,
+    isSpicyFood: I.isSpicyFood, getAlcoholBonus: I.getAlcoholBonus,
+    hasCaffeine: I.hasCaffeine, calculateStressBonus: I.calculateStressBonus,
+    calculateSleepBonus: I.calculateSleepBonus, calculateFastingBonus: I.calculateFastingBonus,
+    calculateSleepQualityBonus: I.calculateSleepQualityBonus,
+    calculateHydrationBonus: I.calculateHydrationBonus,
+    calculateAgeBonus: I.calculateAgeBonus, calculateBMIBonus: I.calculateBMIBonus,
+    getGenderBonus: I.getGenderBonus, calculateTransFatBonus: I.calculateTransFatBonus,
+    getFoodForm: I.getFoodForm, hasResistantStarch: I.hasResistantStarch,
+    estimateInsulinLevel: I.estimateInsulinLevel,
+    calculateHypoglycemiaRisk: I.calculateHypoglycemiaRisk,
+    getHypoglycemiaWarning: I.getHypoglycemiaWarning,
+    detectFoodTemperature: I.detectFoodTemperature,
+    calculateLargePortionBonus: I.calculateLargePortionBonus,
+    getInsulinIndexWaveModifier: I.getInsulinIndexWaveModifier,
+    calculateActivityContext: I.calculateActivityContext, calculateIRScore: I.calculateIRScore,
+    detectProteinType: I.detectProteinType, calculateProteinBonusV2: I.calculateProteinBonusV2,
+    calculateBMI: I.calculateBMI, getBMICategory: I.getBMICategory,
+    isValidTraining: I.isValidTraining, calculateNDTE: I.calculateNDTE,
+    calculateNDTEBMIMultiplier: I.calculateNDTEBMIMultiplier,
+    calculateNDTEDecay: I.calculateNDTEDecay,
+    getPreviousDayTrainings: I.getPreviousDayTrainings,
+    getSupplementsBonus: I.getSupplementsBonus, getColdExposureBonus: I.getColdExposureBonus,
+    getAutophagyPhase: I.getAutophagyPhase, generateWaveCurve: I.generateWaveCurve,
+    calculateTrapezoidalAUC: I.calculateTrapezoidalAUC,
+    calculateIncrementalAUC: I.calculateIncrementalAUC, calculateFullAUC: I.calculateFullAUC,
+    getInsulinLevelAtTime: I.getInsulinLevelAtTime,
+    predictInsulinResponse: I.predictInsulinResponse,
+    generatePredictionSummary: I.generatePredictionSummary,
+    calculateWaveScore: I.calculateWaveScore, scorePeakHeight: I.scorePeakHeight,
+    scoreDuration: I.scoreDuration, scoreWaveShape: I.scoreWaveShape,
+    scoreAUC: I.scoreAUC, scoreContext: I.scoreContext
   });
   
 })(typeof window !== 'undefined' ? window : global);
