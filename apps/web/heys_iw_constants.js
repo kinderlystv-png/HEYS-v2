@@ -2107,7 +2107,7 @@
     const { mealTimeMin, trainings: rawTrainings = [], steps = 0, householdMin = 0, weight = 70, allMeals = [], mealNutrients = {}, mealKcal = 0 } = params;
     
     // 🆕 v3.7.3: Фильтруем пустые/дефолтные тренировки
-    const trainings = rawTrainings.filter(isValidTraining);
+    const trainings = rawTrainings.filter(I.isValidTraining);
     
     if (!mealTimeMin && mealTimeMin !== 0) return null;
     
