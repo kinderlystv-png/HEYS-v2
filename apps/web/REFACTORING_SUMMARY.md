@@ -1,7 +1,9 @@
 # InsulinWave Refactoring Summary
 
 ## Overview
-Successfully extracted `heys_insulin_wave_v1.js` (5804 lines) into 7 focused modules totaling 4954 lines.
+Successfully refactored `heys_insulin_wave_v1.js` from 5804 lines to 1389 lines (76% reduction) by extracting code into 7 focused modules totaling 4954 lines.
+
+**Main File Refactored**: The orchestrator now imports from modules instead of duplicating code.
 
 ## Module Structure
 
@@ -113,9 +115,18 @@ All modules maintain scientific comments and citations:
 - Kelley & Mandarino 2000 (metabolic flexibility)
 - Trexler 2014, Byrne 2018 (adaptive deficit)
 
-## Next Steps (Optional)
-The main `heys_insulin_wave_v1.js` file (5804 lines) can be:
-1. **Left as-is**: Works in parallel with modules (backward compatible)
-2. **Refactored**: Remove duplicate code, keep only orchestration (~600 lines)
+## Refactoring Complete ✅
+The main `heys_insulin_wave_v1.js` file has been refactored:
+- **Before**: 5804 lines (monolithic)
+- **After**: 1389 lines (orchestrator + main logic)
+- **Reduction**: 4415 lines removed (76%)
+- **Functionality**: Fully preserved, backward compatible
+- **Structure**: Imports from modules, re-exports for API compatibility
 
-Current state is fully functional with HMR support.
+The file now contains only:
+1. Import statements from all modules (~60 lines)
+2. `calculateInsulinWaveData()` - main orchestration function (~1100 lines)
+3. `useInsulinWave()` - React hook (~50 lines)
+4. Export section delegating to modules (~180 lines)
+
+Current state is production-ready with HMR support.
