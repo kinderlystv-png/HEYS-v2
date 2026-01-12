@@ -2642,8 +2642,491 @@
   I.MIN_LIPOLYSIS_FOR_STREAK = 4 * 60; // 4 часа минимум для streak
   I.KCAL_PER_MIN_BASE = 1.0; // ~1 ккал/мин базовый расход в покое
   
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🔧 PR-24 FIX: Добавлены отсутствующие функции (27 шт)
+  // ═══════════════════════════════════════════════════════════════════════════
+
   // === УТИЛИТЫ ===
   
+  I.utils = {
+    // Время в минуты с полуночи (поддерживает 24:xx, 25:xx формат)
+    timeToMinutes: (timeStr) => {
+      if (!timeStr) return 0;
+      const [h, m] = timeStr.split(':').map(Number);
+      return (h || 0) * 60 + (m || 0);
+    },
+    
+    // 🆕 v3.7.7: Расчёт ккал тренировки через MET-значения зон пульса
+    calculateTrainingKcal: (training, weight = 70) => {
+      if (!training || !training.z) return 0;
+      const zones = training.z || [0, 0, 0, 0];
+      const totalMinutes = zones.reduce((a, b) => a + (+b || 0), 0);
+      if (totalMinutes === 0) return 0;
+      
+      let mets = [2.5, 6, 8, 10];
+      try {
+        const hrZones = (typeof lsGet === 'function') ? lsGet('heys_hr_zones', []) : [];
+        if (hrZones.length >= 4) {
+          mets = [2.5, 6, 8, 10].map((def, i) => +hrZones[i]?.MET || def);
+        }
+      } catch (e) { /* fallback to defaults */ }
+      
+      const kcalPerMin = (met, w) => (met * 3.5 * w / 200);
+      const kcal = zones.reduce((sum, min, i) => sum + (+min || 0) * kcalPerMin(mets[i], weight), 0);
+      return Math.round(kcal);
+    },
+    
+    // Минуты в HH:MM (нормализует 24+ часов)
+    minutesToTime: (minutes) => {
+      const h = Math.floor(minutes / 60) % 24;
+      const m = minutes % 60;
+      return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    },
+    
+    normalizeTimeForDisplay: (timeStr) => {
+      if (!timeStr) return '';
+      const [h, m] = timeStr.split(':').map(Number);
+      if (isNaN(h)) return timeStr;
+      const normalH = h % 24;
+      return String(normalH).padStart(2, '0') + ':' + String(m || 0).padStart(2, '0');
+    },
+    
+    formatDuration: (minutes) => {
+      if (minutes <= 0) return '0 мин';
+      const h = Math.floor(minutes / 60);
+      const m = Math.round(minutes % 60);
+      if (h === 0) return `${m} мин`;
+      if (m === 0) return `${h}ч`;
+      return `${h}ч ${m}м`;
+    },
+    
+    getGICategory: (gi) => {
+      if (gi <= 35) return I.GI_CATEGORIES.low;
+      if (gi <= 55) return I.GI_CATEGORIES.medium;
+      if (gi <= 70) return I.GI_CATEGORIES.high;
+      return I.GI_CATEGORIES.veryHigh;
+    },
+    
+    isNightTime: (hour) => hour >= 22 || hour < 6,
+    
+    getDateKey: (date = new Date()) => date.toISOString().slice(0, 10),
+    
+    getNextMealSuggestion: (hour) => {
+      if (hour >= 22 || hour < 6) return null;
+      if (hour < 10) return { type: 'breakfast', icon: '🍳', name: 'Завтрак' };
+      if (hour < 12) return { type: 'snack', icon: '🍎', name: 'Перекус' };
+      if (hour < 14) return { type: 'lunch', icon: '🍲', name: 'Обед' };
+      if (hour < 17) return { type: 'snack', icon: '🥜', name: 'Перекус' };
+      if (hour < 20) return { type: 'dinner', icon: '🍽️', name: 'Ужин' };
+      return { type: 'light', icon: '🥛', name: 'Лёгкий перекус' };
+    },
+    
+    normalizeToHeysDay: (timeMin) => {
+      const HEYS_DAY_START = 3 * 60;
+      const totalMinutes = timeMin % (24 * 60);
+      if (totalMinutes >= HEYS_DAY_START) {
+        return totalMinutes - HEYS_DAY_START;
+      }
+      return totalMinutes + (24 * 60 - HEYS_DAY_START);
+    }
+  };
+
+  // === ДЕТЕКТОРЫ ПИЩИ ===
+  
+  I.isLiquidFood = (name = '') => {
+    const n = name.toLowerCase();
+    return /молоко|кефир|йогурт|ряженка|смузи|сок|коктейль|бульон|суп-пюре|протеин|shake|milk/i.test(n);
+  };
+
+  I.isSpicyFood = (name = '') => {
+    const n = name.toLowerCase();
+    return /перец|чили|острый|карри|табаско|халапеньо|wasabi|васаби|sriracha|сальса|горчиц|хрен|pepper|spicy/i.test(n);
+  };
+
+  I.hasResistantStarch = (name = '') => {
+    const n = name.toLowerCase();
+    return /охлажд|холодн.*карто|холодн.*рис|салат.*карто|банан.*зелён|cold.*potato|cold.*rice/i.test(n);
+  };
+
+  I.hasCaffeine = (name = '') => {
+    const n = name.toLowerCase();
+    return /кофе|эспрессо|капучино|латте|американо|чай|матча|энергет|coffee|espresso|tea|energy/i.test(n);
+  };
+
+  // === БОНУСЫ И МНОЖИТЕЛИ ===
+
+  I.getInsulinogenicBonus = (name = '') => {
+    const n = name.toLowerCase();
+    
+    // Жидкие молочные: +15% (Holt 1997 II молока ≈ 98)
+    if (/молоко|кефир|ряженка|простокваш|айран|milk/i.test(n)) {
+      return { bonus: 0.15, type: 'liquid_dairy' };
+    }
+    // Мягкие молочные: +10%
+    if (/творог|йогурт|сметан|cottage|yogurt/i.test(n)) {
+      return { bonus: 0.10, type: 'soft_dairy' };
+    }
+    // Твёрдые молочные: +5%
+    if (/сыр|cheese/i.test(n)) {
+      return { bonus: 0.05, type: 'hard_dairy' };
+    }
+    // Чистый белок: +8%
+    if (/протеин|whey|isolate|казеин|casein/i.test(n)) {
+      return { bonus: 0.08, type: 'pure_protein' };
+    }
+    
+    return { bonus: 0, type: null };
+  };
+
+  I.getFoodForm = (items = [], getProductFromItem) => {
+    if (!items || items.length === 0) {
+      return { form: 'solid', multiplier: 1.0, desc: null };
+    }
+    
+    let liquidGrams = 0;
+    let totalGrams = 0;
+    
+    for (const item of items) {
+      const prod = getProductFromItem ? getProductFromItem(item) : item;
+      const name = prod?.name || item?.name || '';
+      const grams = item.grams || 100;
+      totalGrams += grams;
+      
+      if (I.isLiquidFood(name)) {
+        liquidGrams += grams;
+      }
+    }
+    
+    const liquidRatio = totalGrams > 0 ? liquidGrams / totalGrams : 0;
+    
+    if (liquidRatio > 0.7) {
+      return { form: 'liquid', multiplier: I.FOOD_FORM_BONUS.liquid.multiplier, desc: '💧 Жидкая пища' };
+    }
+    if (liquidRatio > 0.3) {
+      return { form: 'mixed', multiplier: I.FOOD_FORM_BONUS.mixed.multiplier, desc: '🥣 Смешанная' };
+    }
+    return { form: 'solid', multiplier: 1.0, desc: null };
+  };
+
+  I.getAlcoholBonus = (name = '') => {
+    const n = name.toLowerCase();
+    
+    if (/водка|виски|коньяк|ром|джин|текила|самогон|спирт|whisky|vodka|rum|gin/i.test(n)) {
+      return { bonus: I.ALCOHOL_BONUS.strong.bonus, type: 'strong' };
+    }
+    if (/вино|шампанск|просекко|wine|champagne/i.test(n)) {
+      return { bonus: I.ALCOHOL_BONUS.medium.bonus, type: 'medium' };
+    }
+    if (/пиво|сидр|beer|cider/i.test(n)) {
+      return { bonus: I.ALCOHOL_BONUS.light.bonus, type: 'light' };
+    }
+    
+    return { bonus: 0, type: null };
+  };
+
+  // === ФАКТОРЫ ДНЯ ===
+
+  I.calculateStressBonus = (stressLevel = 0) => {
+    if (!stressLevel || stressLevel <= 0) return 0;
+    if (stressLevel >= 7) return I.STRESS_BONUS.high.bonus;
+    if (stressLevel >= 5) return I.STRESS_BONUS.medium.bonus;
+    return 0;
+  };
+
+  I.calculateSleepBonus = (sleepHours) => {
+    if (!sleepHours || sleepHours <= 0) return 0;
+    if (sleepHours < 4) return I.SLEEP_BONUS.severe.bonus;
+    if (sleepHours < 5) return I.SLEEP_BONUS.moderate.bonus;
+    if (sleepHours < 6) return I.SLEEP_BONUS.mild.bonus;
+    return 0;
+  };
+
+  I.calculateSleepQualityBonus = (quality = 0) => {
+    if (!quality || quality <= 0) return 0;
+    if (quality <= 2) return I.SLEEP_QUALITY_BONUS.poor.bonus;
+    if (quality <= 4) return I.SLEEP_QUALITY_BONUS.fair.bonus;
+    return 0;
+  };
+
+  I.calculateHydrationBonus = (waterMl = 0, weight = 70) => {
+    const goal = weight * 30;
+    const pct = goal > 0 ? (waterMl / goal) : 1;
+    
+    if (pct < 0.3) return I.HYDRATION_BONUS.severe.bonus;
+    if (pct < 0.5) return I.HYDRATION_BONUS.moderate.bonus;
+    if (pct < 0.7) return I.HYDRATION_BONUS.mild.bonus;
+    return 0;
+  };
+
+  I.calculateAgeBonus = (age = 0) => {
+    if (!age || age <= 0) return 0;
+    if (age >= 70) return I.AGE_BONUS.senior.bonus;
+    if (age >= 60) return I.AGE_BONUS.late_middle.bonus;
+    if (age >= 45) return I.AGE_BONUS.middle.bonus;
+    if (age >= 30) return I.AGE_BONUS.young_adult.bonus;
+    return 0;
+  };
+
+  I.calculateBMIBonus = (weight = 0, height = 0) => {
+    if (!weight || !height || weight <= 0 || height <= 0) return 0;
+    const bmi = I.calculateBMI(weight, height);
+    if (bmi >= 30) return I.BMI_BONUS.obese.bonus;
+    if (bmi >= 25) return I.BMI_BONUS.overweight.bonus;
+    return 0;
+  };
+
+  I.getGenderBonus = (gender = '') => {
+    const g = gender.toLowerCase();
+    if (g === 'мужской' || g === 'male' || g === 'м' || g === 'm') {
+      return I.GENDER_BONUS.male.bonus;
+    }
+    if (g === 'женский' || g === 'female' || g === 'ж' || g === 'f') {
+      return I.GENDER_BONUS.female.bonus;
+    }
+    return 0;
+  };
+
+  I.calculateTransFatBonus = (transGrams = 0) => {
+    if (!transGrams || transGrams <= 0) return 0;
+    if (transGrams >= 2) return I.TRANS_FAT_BONUS.high.bonus;
+    if (transGrams >= 1) return I.TRANS_FAT_BONUS.moderate.bonus;
+    if (transGrams >= 0.5) return I.TRANS_FAT_BONUS.low.bonus;
+    return 0;
+  };
+
+  I.calculateFastingBonus = (hoursSinceMeal = 0) => {
+    if (!hoursSinceMeal || hoursSinceMeal <= 0) return 0;
+    if (hoursSinceMeal >= 16) return I.FASTING_BONUS.extended.bonus;
+    if (hoursSinceMeal >= 12) return I.FASTING_BONUS.moderate.bonus;
+    if (hoursSinceMeal >= 8) return I.FASTING_BONUS.short.bonus;
+    return 0;
+  };
+
+  // === ТРЕНИРОВКИ ===
+
+  I.getPreviousDayTrainings = (todayDate, lsGet) => {
+    if (!lsGet) return { trainings: [], totalKcal: 0, hoursSince: Infinity, dominantType: null };
+    
+    const yesterday = new Date(todayDate);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yKey = yesterday.toISOString().slice(0, 10);
+    
+    const dayData = lsGet(`heys_dayv2_${yKey}`, null);
+    if (!dayData || !dayData.trainings || dayData.trainings.length === 0) {
+      return { trainings: [], totalKcal: 0, hoursSince: Infinity, dominantType: null };
+    }
+    
+    const trainings = dayData.trainings;
+    let totalKcal = 0;
+    let lastTrainingTime = null;
+    
+    for (const t of trainings) {
+      totalKcal += I.utils.calculateTrainingKcal(t, 70);
+      if (t.time) lastTrainingTime = t.time;
+    }
+    
+    let hoursSince = 24;
+    if (lastTrainingTime) {
+      const [h, m] = lastTrainingTime.split(':').map(Number);
+      const trainingMinutes = (h || 0) * 60 + (m || 0);
+      const now = new Date();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      hoursSince = (24 * 60 - trainingMinutes + nowMinutes) / 60;
+    }
+    
+    const dominantType = trainings.length > 0 ? (trainings[0].type || 'cardio') : null;
+    
+    return { trainings, totalKcal, hoursSince, dominantType };
+  };
+
+  // === NDTE (Next-Day Training Effect) ===
+
+  I.calculateNDTEBMIMultiplier = (bmi) => {
+    if (!bmi || bmi <= 0) return 1.0;
+    for (const [, tier] of Object.entries(I.NDTE.bmiMultiplier)) {
+      if (bmi >= tier.minBMI) return tier.multiplier;
+    }
+    return 1.0;
+  };
+
+  I.calculateNDTEDecay = (hoursSince) => {
+    if (!hoursSince || hoursSince <= 0) return 1.0;
+    if (hoursSince >= I.NDTE.maxWindowHours) return 0;
+    for (const tier of I.NDTE.decay.tiers) {
+      if (hoursSince <= tier.maxHours) return tier.multiplier;
+    }
+    return 0;
+  };
+
+  I.calculateNDTE = (params) => {
+    const { trainingKcal = 0, hoursSince = Infinity, bmi = 22, trainingType = 'cardio', trainingsCount = 1 } = params;
+    
+    if (hoursSince >= I.NDTE.maxWindowHours || trainingKcal < 200) {
+      return { active: false, tdeeBoost: 0, waveReduction: 0, peakReduction: 0, label: null, badge: null };
+    }
+    
+    let baseTier = null;
+    for (const tier of I.NDTE.kcalTiers) {
+      if (trainingKcal >= tier.minKcal) {
+        baseTier = tier;
+        break;
+      }
+    }
+    
+    if (!baseTier) {
+      const ratio = trainingKcal / 300;
+      const minTier = I.NDTE.kcalTiers[I.NDTE.kcalTiers.length - 1];
+      baseTier = {
+        tdeeBoost: minTier.tdeeBoost * ratio,
+        waveReduction: minTier.waveReduction * ratio,
+        peakReduction: minTier.peakReduction * ratio,
+        label: '⚡ Лёгкая активность'
+      };
+    }
+    
+    const bmiMult = I.calculateNDTEBMIMultiplier(bmi);
+    const decayMult = I.calculateNDTEDecay(hoursSince);
+    const typeMult = I.NDTE.typeMultiplier[trainingType] || { tdee: 1.0, wave: 1.0 };
+    
+    let cumulativeMult = 1.0;
+    if (I.NDTE.cumulative.enabled && trainingsCount > 1) {
+      cumulativeMult = Math.min(I.NDTE.cumulative.maxMultiplier, 1 + (trainingsCount - 1) * 0.2);
+    }
+    
+    const tdeeBoost = baseTier.tdeeBoost * bmiMult * decayMult * typeMult.tdee * cumulativeMult;
+    const waveReduction = baseTier.waveReduction * bmiMult * decayMult * typeMult.wave * cumulativeMult;
+    const peakReduction = baseTier.peakReduction * bmiMult * decayMult * cumulativeMult;
+    
+    return {
+      active: true,
+      tdeeBoost: Math.min(0.20, Math.round(tdeeBoost * 1000) / 1000),
+      waveReduction: Math.min(0.45, Math.round(waveReduction * 1000) / 1000),
+      peakReduction: Math.min(0.50, Math.round(peakReduction * 1000) / 1000),
+      label: baseTier.label,
+      badge: I.NDTE.badge,
+      badgeColor: I.NDTE.badgeColor,
+      trainingKcal,
+      hoursSince: Math.round(hoursSince),
+      bmiMultiplier: bmiMult,
+      decayMultiplier: decayMult,
+      typeMultiplier: typeMult,
+      trainingsCount
+    };
+  };
+
+  // === BMI ===
+
+  I.calculateBMI = (weight, height) => {
+    if (!weight || !height || weight <= 0 || height <= 0) return 22;
+    const heightM = height / 100;
+    return Math.round((weight / (heightM * heightM)) * 10) / 10;
+  };
+
+  I.getBMICategory = (bmi) => {
+    if (bmi < 18.5) return { category: 'underweight', color: '#eab308', desc: 'Недовес' };
+    if (bmi < 25) return { category: 'normal', color: '#22c55e', desc: 'Норма' };
+    if (bmi < 30) return { category: 'overweight', color: '#f97316', desc: 'Избыток' };
+    return { category: 'obese', color: '#ef4444', desc: 'Ожирение' };
+  };
+
+  // === ТЕМПЕРАТУРА И ПОРЦИИ ===
+
+  I.detectFoodTemperature = (items = [], getProductFromItem) => {
+    if (!items || items.length === 0) {
+      return { temperature: 'room', ...I.FOOD_TEMPERATURE_BONUS.room };
+    }
+    
+    let hotCount = 0;
+    let coldCount = 0;
+    
+    for (const item of items) {
+      const prod = getProductFromItem ? getProductFromItem(item) : item;
+      const name = (prod?.name || item?.name || '').toLowerCase();
+      
+      if (I.FOOD_TEMPERATURE_BONUS.hot.patterns.some(p => p.test(name))) hotCount++;
+      if (I.FOOD_TEMPERATURE_BONUS.cold.patterns.some(p => p.test(name))) coldCount++;
+    }
+    
+    if (hotCount > 0 && coldCount > 0) return { temperature: 'room', ...I.FOOD_TEMPERATURE_BONUS.room };
+    if (hotCount > 0) return { temperature: 'hot', ...I.FOOD_TEMPERATURE_BONUS.hot };
+    if (coldCount > 0) return { temperature: 'cold', ...I.FOOD_TEMPERATURE_BONUS.cold };
+    return { temperature: 'room', ...I.FOOD_TEMPERATURE_BONUS.room };
+  };
+
+  I.calculateLargePortionBonus = (mealKcal = 0) => {
+    if (!mealKcal || mealKcal <= 0) {
+      return { bonus: 0, peakReduction: 1.0, desc: null };
+    }
+    
+    for (const tier of I.LARGE_PORTION_BONUS.thresholds) {
+      if (mealKcal >= tier.minKcal) {
+        return {
+          bonus: Math.min(tier.bonus, I.LARGE_PORTION_BONUS.maxBonus),
+          peakReduction: tier.peakReduction,
+          desc: tier.desc
+        };
+      }
+    }
+    return { bonus: 0, peakReduction: 1.0, desc: null };
+  };
+
+  // === ГИПОГЛИКЕМИЯ И INSULIN INDEX ===
+
+  I.getHypoglycemiaWarning = (params = {}) => {
+    const { gi = 0, protein = 0, fat = 0, isFasted = false } = params;
+    const rf = I.REACTIVE_HYPOGLYCEMIA.riskFactors;
+    let score = 0;
+    const details = [];
+    
+    if (gi > rf.highGI.threshold) {
+      score += rf.highGI.weight;
+      details.push({ factor: 'highGI', value: gi, threshold: rf.highGI.threshold });
+    }
+    if (protein < rf.lowProtein.threshold) {
+      score += rf.lowProtein.weight;
+      details.push({ factor: 'lowProtein', value: protein, threshold: rf.lowProtein.threshold });
+    }
+    if (fat < rf.lowFat.threshold) {
+      score += rf.lowFat.weight;
+      details.push({ factor: 'lowFat', value: fat, threshold: rf.lowFat.threshold });
+    }
+    if (isFasted) {
+      score += rf.fasted.weight;
+      details.push({ factor: 'fasted', value: true });
+    }
+    
+    const hasRisk = score >= I.REACTIVE_HYPOGLYCEMIA.warningThreshold;
+    
+    return {
+      hasRisk,
+      score,
+      riskWindow: I.REACTIVE_HYPOGLYCEMIA.riskWindow,
+      details,
+      ui: hasRisk ? {
+        emoji: I.REACTIVE_HYPOGLYCEMIA.ui.warningEmoji,
+        color: I.REACTIVE_HYPOGLYCEMIA.ui.warningColor,
+        title: I.REACTIVE_HYPOGLYCEMIA.ui.warningTitle,
+        desc: I.REACTIVE_HYPOGLYCEMIA.ui.warningDesc,
+        advice: I.REACTIVE_HYPOGLYCEMIA.ui.advice,
+        symptoms: I.REACTIVE_HYPOGLYCEMIA.ui.symptoms
+      } : null
+    };
+  };
+
+  I.getInsulinIndexWaveModifier = (insulinogenicType) => {
+    if (!insulinogenicType || !I.INSULIN_INDEX_FACTORS[insulinogenicType]) {
+      return { waveMultiplier: 1.0, peakMultiplier: 1.0, glBoost: 1.0, desc: null };
+    }
+    
+    const factor = I.INSULIN_INDEX_FACTORS[insulinogenicType];
+    return {
+      waveMultiplier: factor.waveMultiplier,
+      peakMultiplier: factor.peakMultiplier,
+      glBoost: factor.glBoost,
+      desc: factor.desc
+    };
+  };
+
   // Mark constants as loaded
   I._loaded.constants = true;
   
