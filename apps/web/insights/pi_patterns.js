@@ -11,11 +11,25 @@
   const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
   const SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {};
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
+  const piCalculations = HEYS.InsightsPI?.calculations || window.piCalculations || {};
   
   // Импорт конфигурации
   const CONFIG = piConst.CONFIG || {
     MIN_DAYS_FOR_FULL_ANALYSIS: 7,
     MIN_CORRELATION_DISPLAY: 0.35
+  };
+  
+  // Импорт функций из pi_calculations.js
+  const calculateDayKcal = piCalculations.calculateDayKcal || function(day, pIndex) {
+    if (!day?.meals?.length) return 0;
+    let total = 0;
+    for (const meal of day.meals) {
+      for (const item of (meal.items || [])) {
+        const prod = pIndex?.byId?.get?.(item.product_id);
+        if (prod) total += (prod.kcal100 || 0) * (item.grams || 0) / 100;
+      }
+    }
+    return total;
   };
   
   // Импорт констант
