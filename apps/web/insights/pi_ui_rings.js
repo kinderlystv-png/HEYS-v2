@@ -428,7 +428,7 @@
    * RiskTrafficLight — светофор риска срыва
    * Low = зелёный, Medium = жёлтый, High = красный
    */
-  function RiskTrafficLight({ riskLevel, riskValue, factors, compact = false }) {
+  function RiskTrafficLight({ riskLevel, riskValue, factors, compact = false, description }) {
     const lights = [
       { level: 'low', color: '#22c55e', label: 'Низкий', emoji: '✅' },
       { level: 'medium', color: '#eab308', label: 'Средний', emoji: '⚠️' },

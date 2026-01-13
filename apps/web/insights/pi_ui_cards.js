@@ -47,6 +47,18 @@
            };
   };
 
+  // HealthRing is defined in pi_ui_rings.js - use lazy getter for load order
+  const getHealthRing = () => {
+    return HEYS.InsightsPI?.uiRings?.HealthRing ||
+           function HealthRingFallback({ score, label, color }) {
+             return h('div', { style: { color } }, label, ': ', score);
+           };
+  };
+  // Create proxy to use HealthRing naturally in render
+  const HealthRing = new Proxy({}, {
+    apply: (_, thisArg, args) => h(getHealthRing(), args[0])
+  });
+
   /**
    * CollapsibleSection — сворачиваемая секция (v2.1: с InfoButton)
    */
@@ -1557,28 +1569,6 @@
             onClose: () => setIsExpanded(false)
           })
         )
-      )
-    );
-  }
-
-  /**
-   * What-If Scenario Card
-   */
-  function ScenarioCard({ scenario }) {
-    if (!scenario) return null;
-    
-    const diff = scenario.projectedScore - scenario.currentScore;
-    const arrowClass = diff > 0 ? 'up' : diff < 0 ? 'down' : 'stable';
-    const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
-    
-    return h('div', { className: `insights-scenario insights-scenario--${scenario.id}` },
-      h('div', { className: 'insights-scenario__icon' }, scenario.icon),
-      h('div', { className: 'insights-scenario__content' },
-        h('div', { className: 'insights-scenario__name' }, scenario.name),
-        h('div', { className: 'insights-scenario__desc' }, scenario.description)
-      ),
-      h('div', { className: `insights-scenario__arrow insights-scenario__arrow--${arrowClass}` },
-        scenario.currentScore, ' ', arrow, ' ', scenario.projectedScore
       )
     );
   }

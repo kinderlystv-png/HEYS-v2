@@ -105,6 +105,16 @@
     if (stats.skewness) return stats.skewness(arr);
     return 0;
   }
+  function calculateR2(actual, predicted) {
+    const stats = getStats();
+    if (stats.calculateR2) return stats.calculateR2(actual, predicted);
+    // Fallback R² implementation
+    if (!actual || !predicted || actual.length !== predicted.length || actual.length === 0) return 0;
+    const meanActual = average(actual);
+    const ssTot = actual.reduce((sum, a) => sum + Math.pow(a - meanActual, 2), 0);
+    const ssRes = actual.reduce((sum, a, i) => sum + Math.pow(a - predicted[i], 2), 0);
+    return ssTot === 0 ? 0 : 1 - ssRes / ssTot;
+  }
   function linearTrend(arr) {
     const stats = getStats();
     if (stats.linearTrend) return stats.linearTrend(arr);

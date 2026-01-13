@@ -59,6 +59,7 @@
   const PRIORITY_LEVELS = piConstants.PRIORITY_LEVELS || {};
   const CATEGORIES = piConstants.CATEGORIES || {};
   const SCIENCE_INFO = piConstants.SCIENCE_INFO || {};
+  const ACTIONABILITY = piConstants.ACTIONABILITY || {};
   const getAllMetricsByPriority = piConstants.getAllMetricsByPriority || function() {
     console.warn('[pi_ui_dashboard] getAllMetricsByPriority not available, returning empty array');
     return [];
@@ -362,7 +363,7 @@
     const [selectedCategory, setSelectedCategory] = useState(null);
     
     const insights = useMemo(() => {
-      return analyze({
+      return HEYS.PredictiveInsights.analyze({
         daysBack: activeTab === 'today' ? 7 : 14,
         lsGet,
         profile,
