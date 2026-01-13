@@ -133,6 +133,10 @@
     }
   };
   
+  // === EXPORT TO PUBLIC API ===
+  const IW_NS = global.HEYS.InsulinWave;
+  IW_NS.utils = I._utils;
+  
   // Mark utils as loaded
   I._loaded.utils = true;
   
