@@ -509,6 +509,90 @@
           }
         }
 
+        // === Проверка версии с сервера (обход кэша) ===
+        async function checkServerVersion(silent = true) {
+          try {
+            // Загружаем version.json который генерируется при каждом билде
+            const cacheBust = Date.now();
+            const response = await fetch(`/version.json?_cb=${cacheBust}`, {
+              cache: 'no-store',
+              headers: { 'Cache-Control': 'no-cache' }
+            });
+            
+            if (!response.ok) return false;
+            
+            const data = await response.json();
+            
+            // Сравниваем версии семантически (серверная должна быть НОВЕЕ)
+            if (data.version && isNewerVersion(data.version, APP_VERSION)) {
+              
+              // === Защита от бесконечного цикла обновлений ===
+              const attempt = JSON.parse(localStorage.getItem(UPDATE_ATTEMPT_KEY) || '{}');
+              const now = Date.now();
+              
+              // Cooldown — не пытаться чаще чем раз в минуту
+              if (attempt.timestamp && (now - attempt.timestamp) < UPDATE_COOLDOWN_MS) {
+                return false;
+              }
+              
+              // Счётчик попыток для этой версии
+              if (attempt.targetVersion === data.version) {
+                attempt.count = (attempt.count || 0) + 1;
+              } else {
+                attempt.targetVersion = data.version;
+                attempt.count = 1;
+              }
+              attempt.timestamp = now;
+              localStorage.setItem(UPDATE_ATTEMPT_KEY, JSON.stringify(attempt));
+              
+              // Если много попыток — показать ручной промпт
+              if (attempt.count > MAX_UPDATE_ATTEMPTS) {
+                console.warn('[HEYS] Update stuck after', attempt.count, 'attempts');
+                showManualRefreshPrompt(data.version);
+                return true;
+              }
+              
+              // Предотвращаем дублирование обновления (надёжный флаг в localStorage)
+              if (isUpdateLocked()) {
+                return true;
+              }
+              setUpdateLock();
+              
+              // Показываем красивый UI обновления с полным flow этапов
+              showUpdateModal('found');
+              
+              // 🎬 Полная анимация всех этапов: found → downloading → installing → reloading
+              setTimeout(() => updateModalStage('downloading'), 1200);
+              setTimeout(() => updateModalStage('installing'), 2400);
+              setTimeout(() => {
+                updateModalStage('reloading');
+                forceUpdateAndReload(false);
+              }, 3600);
+              
+              // 🔒 Fallback: если через 12 секунд reload не произошёл — убираем модалку
+              setTimeout(() => {
+                const modal = document.getElementById('heys-update-modal');
+                if (modal) {
+                  console.warn('[HEYS] Update modal timeout, hiding...');
+                  hideUpdateModal();
+                  clearUpdateLock();
+                }
+              }, 12000);
+              
+              return true;
+            } else if (data.version && data.version !== APP_VERSION) {
+              // Серверная версия отличается, но НЕ новее — пропускаем
+              return false;
+            } else {
+              return false;
+            }
+          } catch (e) {
+            // Логируем ошибку для диагностики, но не прерываем работу
+            console.warn('[PWA] checkServerVersion failed:', e.message || e);
+            return false;
+          }
+        }
+
   // ============================================================================
   // MODULE EXPORTS
   // ============================================================================
@@ -534,6 +618,7 @@
     
     // Smart checks
     smartVersionCheck: smartVersionCheck,
+    checkServerVersion: checkServerVersion,
     
     // Update modal
     showUpdateModal: showUpdateModal,
@@ -558,6 +643,7 @@
   window.updateModalStage = updateModalStage;
   window.getNetworkQuality = getNetworkQuality;
   window.showManualRefreshPrompt = showManualRefreshPrompt;
+  window.checkServerVersion = checkServerVersion;
   
   // Performance tracking end
   HEYS.modulePerf?.endLoad('pwa_module', true);

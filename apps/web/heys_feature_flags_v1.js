@@ -34,7 +34,7 @@
     'dev_performance_tracking': false,  // Трекинг производительности модулей
     
     // === Rollback флаг ===
-    'use_legacy_monolith': true,        // true = старый код, false = новые модули
+    'use_legacy_monolith': false,       // true = старый код, false = новые модули
   };
   
   /**

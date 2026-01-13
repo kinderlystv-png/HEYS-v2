@@ -1652,6 +1652,10 @@
   // Performance tracking end
   HEYS.modulePerf?.endLoad('platform_apis', true);
   
+  // 🚀 Auto-register Service Worker on module load
+  // This was previously called from runVersionGuard() in heys_app_v12.js
+  registerServiceWorker();
+  
   if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
     console.log('[PlatformAPIs] ✅ Module loaded successfully');
   }
