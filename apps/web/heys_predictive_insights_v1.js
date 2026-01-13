@@ -564,8 +564,8 @@
     // Weight Prediction
     const weightPrediction = predictWeight(days, profile);
     
-    // Weekly Wrap
-    const weeklyWrap = generateWeeklyWrap(days, profile, pIndex, patterns);
+    // Weekly Wrap - сигнатура: (days, patterns, healthScore, weightPrediction)
+    const weeklyWrap = generateWeeklyWrap(days, patterns, healthScore, weightPrediction);
     
     // Сохраняем в кэш
     const result = {
