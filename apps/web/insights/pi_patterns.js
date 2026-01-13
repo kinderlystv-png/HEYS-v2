@@ -12,6 +12,12 @@
   const SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {};
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
   
+  // Импорт конфигурации
+  const CONFIG = piConst.CONFIG || {
+    MIN_DAYS_FOR_FULL_ANALYSIS: 7,
+    MIN_CORRELATION_DISPLAY: 0.35
+  };
+  
   // Импорт констант
   const PATTERNS = piConst.PATTERNS || {
     MEAL_TIMING: 'meal_timing',
