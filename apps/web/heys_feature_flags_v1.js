@@ -27,7 +27,7 @@
     'modular_auth': false,              // Новый модуль Auth Integration
     'modular_navigation': false,        // Новый модуль Navigation
     'modular_sync': false,              // Новый модуль Sync State Machine
-    'modular_bootstrap': false,         // Новый модуль Bootstrap
+    'modular_bootstrap': false,         // Новый модуль Bootstrap (инициализация)
     
     // === Режим разработки ===
     'dev_module_logging': false,        // Детальное логирование загрузки модулей
@@ -171,21 +171,21 @@
       if (phase >= 2) {
         currentFlags.modular_pwa = true;
       }
-      // Фаза 3: Auth
+      // Фаза 3: Bootstrap (инициализация)
       if (phase >= 3) {
+        currentFlags.modular_bootstrap = true;
+      }
+      // Фаза 4: Auth
+      if (phase >= 4) {
         currentFlags.modular_auth = true;
       }
-      // Фаза 4: Navigation
-      if (phase >= 4) {
+      // Фаза 5: Navigation
+      if (phase >= 5) {
         currentFlags.modular_navigation = true;
       }
-      // Фаза 5: Sync
-      if (phase >= 5) {
-        currentFlags.modular_sync = true;
-      }
-      // Фаза 6: Bootstrap + отключение legacy
+      // Фаза 6: Sync + отключение legacy
       if (phase >= 6) {
-        currentFlags.modular_bootstrap = true;
+        currentFlags.modular_sync = true;
         currentFlags.use_legacy_monolith = false;
       }
       
