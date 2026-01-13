@@ -4,9 +4,13 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
+import vitePluginVersionHash from './scripts/vite-plugin-version-hash.js';
+
 export default defineConfig({
   plugins: [
     react(),
+    // Auto-versioning: заменяет ?v=N на ?v=CONTENTHASH для cache busting
+    vitePluginVersionHash({ verbose: true }),
     // Bundle analyzer отключен из-за конфликта версий rollup
     // Используем отдельный скрипт для анализа
     // Копирование CSS модулей в dist для production
