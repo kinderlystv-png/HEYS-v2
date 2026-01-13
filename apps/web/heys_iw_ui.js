@@ -902,8 +902,8 @@
   
   /**
    * Рендер прогресс-бара волны
-
-  // === Компонент таймера с секундами ===
+   * Компонент таймера с секундами
+   */
   const ProgressBarComponent = ({ data }) => {
     const isLipolysis = data.status === 'lipolysis';
     const lipolysisMinutes = data.lipolysisMinutes || 0;

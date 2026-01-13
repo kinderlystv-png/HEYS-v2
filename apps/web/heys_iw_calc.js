@@ -20,6 +20,35 @@
   const V30 = HEYS.InsulinWave?.V30;
   const calculateContinuousGLMultiplier = V30?.calculateContinuousGLMultiplier;
   
+  // Константы из __internals
+  const GL_CATEGORIES = I?.GL_CATEGORIES;
+  const FAT_BONUS = I?.FAT_BONUS;
+  const PROTEIN_BONUS = I?.PROTEIN_BONUS;
+  const FIBER_BONUS = I?.FIBER_BONUS;
+  const WORKOUT_BONUS = I?.WORKOUT_BONUS;
+  const NEAT_BONUS = I?.NEAT_BONUS;
+  const STEPS_BONUS = I?.STEPS_BONUS;
+  const CIRCADIAN_CONFIG = I?.CIRCADIAN_CONFIG;
+  
+  // Функции из __internals
+  const isSpicyFood = I?.isSpicyFood;
+  const calculateProteinBonusV2 = I?.calculateProteinBonusV2;
+  const isValidTraining = I?.isValidTraining;
+  const isLiquidFood = I?.isLiquidFood;
+  const getInsulinogenicBonus = I?.getInsulinogenicBonus;
+  const getAlcoholBonus = I?.getAlcoholBonus;
+  const getGenderBonus = I?.getGenderBonus;
+  const calculateStressBonus = I?.calculateStressBonus;
+  const calculateSleepBonus = I?.calculateSleepBonus;
+  const calculateSleepQualityBonus = I?.calculateSleepQualityBonus;
+  const calculateHydrationBonus = I?.calculateHydrationBonus;
+  const calculateAgeBonus = I?.calculateAgeBonus;
+  const calculateBMIBonus = I?.calculateBMIBonus;
+  const hasCaffeine = I?.hasCaffeine;
+  
+  // Константы для Insulin Index
+  const INSULIN_INDEX_FACTORS = I?.INSULIN_INDEX_FACTORS;
+  
   const calculateMealNutrients = (meal, pIndex, getProductFromItem) => {
     let totalGrams = 0;
     let weightedGI = 0;  // 🔬 v3.0.1: Теперь взвешиваем по углеводам, не по граммам!
@@ -691,6 +720,117 @@
   };
 
   
+  // === СОСТАВНЫЕ ФУНКЦИИ ДЛЯ ПРИЁМОВ ПИЩИ ===
+  
+  /**
+   * Рассчитать факторы дня для конкретного приёма
+   * @param {Object} dayData - данные дня
+   * @param {number} mealHour - час приёма (0-23)
+   * @returns {Object} { totalBonus, circadianMultiplier, details }
+   */
+  const calculateDayFactorsForMeal = (dayData = {}, mealHour = 12) => {
+    const I = HEYS.InsulinWave?.__internals;
+    const calculateSleepBonus = I?.calculateSleepBonus || (() => 0);
+    const calculateSleepQualityBonus = I?.calculateSleepQualityBonus || (() => 0);
+    const calculateHydrationBonus = I?.calculateHydrationBonus || (() => 0);
+    const calculateAgeBonus = I?.calculateAgeBonus || (() => 0);
+    const calculateBMIBonus = I?.calculateBMIBonus || (() => 0);
+    const getGenderBonus = I?.getGenderBonus || (() => 0);
+    const calculateStressBonus = I?.calculateStressBonus || (() => 0);
+    
+    // 🌅 Circadian ритм
+    const circadian = calculateCircadianMultiplier(mealHour);
+    
+    // 😴 Недосып
+    const sleepHours = dayData.sleepHours;
+    const sleepBonus = calculateSleepBonus(sleepHours);
+    
+    // 🌟 Качество сна
+    const sleepQuality = dayData.sleepQuality || 0;
+    const sleepQualityBonus = calculateSleepQualityBonus(sleepQuality);
+    
+    // 💧 Гидратация
+    const waterMl = dayData.waterMl || 0;
+    const userWeight = dayData.profile?.weight || 70;
+    const hydrationBonus = calculateHydrationBonus(waterMl, userWeight);
+    
+    // 👴 Возраст
+    const age = dayData.profile?.age || 0;
+    const ageBonus = calculateAgeBonus(age);
+    
+    // 🏋️ BMI
+    const weight = dayData.profile?.weight || 0;
+    const height = dayData.profile?.height || 0;
+    const bmiBonus = calculateBMIBonus(weight, height);
+    
+    // 🚺🚹 Пол
+    const gender = dayData.profile?.gender || '';
+    const genderBonus = getGenderBonus(gender);
+    
+    // 😰 Стресс
+    const stressLevel = dayData.stressAvg || 0;
+    const stressBonus = calculateStressBonus(stressLevel);
+    
+    // 🌸 Менструальный цикл
+    const cycleDay = dayData.cycleDay || null;
+    const cycleMultiplier = HEYS.Cycle?.getInsulinWaveMultiplier?.(cycleDay) || 1;
+    const cycleBonusValue = cycleMultiplier > 1 ? (cycleMultiplier - 1) : 0;
+    
+    // Суммируем бонусы
+    // ⚠️ v3.0.0: age, bmi, gender ИСКЛЮЧЕНЫ — они уже в effectiveBaseWaveHours (Personal Baseline)
+    const personalBonuses = sleepBonus + sleepQualityBonus + hydrationBonus + stressBonus + cycleBonusValue;
+    
+    return {
+      totalBonus: personalBonuses,
+      circadianMultiplier: circadian.multiplier,
+      details: {
+        circadian,
+        sleepBonus,
+        sleepQualityBonus,
+        hydrationBonus,
+        ageBonus,
+        bmiBonus,
+        genderBonus,
+        stressBonus,
+        cycleBonusValue
+      }
+    };
+  };
+
+  /**
+   * Рассчитать факторы активности для конкретного приёма
+   * @param {Array} trainings - тренировки дня
+   * @param {number} mealMinutes - минуты приёма (от 00:00)
+   * @param {number} householdMin - бытовая активность
+   * @param {number} steps - шаги
+   * @returns {Object} { totalBonus, details }
+   */
+  const calculateActivityFactorsForMeal = (trainings = [], mealMinutes = 0, householdMin = 0, steps = 0) => {
+    // 🏃 Workout (общий за день)
+    const workoutBonus = calculateWorkoutBonus(trainings);
+    
+    // 🏃‍♂️ Постпрандиальная тренировка
+    const postprandialBonus = calculatePostprandialExerciseBonus(trainings, mealMinutes);
+    
+    // 🏡 NEAT
+    const neatBonus = calculateNEATBonus(householdMin);
+    
+    // 👟 Шаги
+    const stepsBonus = calculateStepsBonus(steps);
+    
+    const totalBonus = workoutBonus.bonus + postprandialBonus.bonus + neatBonus.bonus + stepsBonus.bonus;
+    
+    return {
+      totalBonus,
+      details: {
+        workoutBonus,
+        postprandialBonus,
+        neatBonus,
+        stepsBonus
+      }
+    };
+  };
+  
   // === ЭКСПОРТ ===
   HEYS.InsulinWave = HEYS.InsulinWave || {};
   HEYS.InsulinWave.Calc = {
@@ -702,6 +842,8 @@
     calculateNEATBonus,
     calculateStepsBonus,
     calculateCircadianMultiplier,
+    calculateDayFactorsForMeal,
+    calculateActivityFactorsForMeal,
     // Метаданные модуля
     __version: MODULE_VERSION,
     __name: MODULE_NAME

@@ -2822,13 +2822,13 @@
     const n = name.toLowerCase();
     
     if (/водка|виски|коньяк|ром|джин|текила|самогон|спирт|whisky|vodka|rum|gin/i.test(n)) {
-      return { bonus: I.ALCOHOL_BONUS.strong.bonus, type: 'strong' };
+      return { bonus: I.ALCOHOL_BONUS.high.bonus, type: 'high' };
     }
     if (/вино|шампанск|просекко|wine|champagne/i.test(n)) {
       return { bonus: I.ALCOHOL_BONUS.medium.bonus, type: 'medium' };
     }
     if (/пиво|сидр|beer|cider/i.test(n)) {
-      return { bonus: I.ALCOHOL_BONUS.light.bonus, type: 'light' };
+      return { bonus: I.ALCOHOL_BONUS.low.bonus, type: 'low' };
     }
     
     return { bonus: 0, type: null };
@@ -2854,7 +2854,7 @@
   I.calculateSleepQualityBonus = (quality = 0) => {
     if (!quality || quality <= 0) return 0;
     if (quality <= 2) return I.SLEEP_QUALITY_BONUS.poor.bonus;
-    if (quality <= 4) return I.SLEEP_QUALITY_BONUS.fair.bonus;
+    if (quality <= 4) return I.SLEEP_QUALITY_BONUS.mediocre.bonus;
     return 0;
   };
 
@@ -2900,15 +2900,15 @@
   I.calculateTransFatBonus = (transGrams = 0) => {
     if (!transGrams || transGrams <= 0) return 0;
     if (transGrams >= 2) return I.TRANS_FAT_BONUS.high.bonus;
-    if (transGrams >= 1) return I.TRANS_FAT_BONUS.moderate.bonus;
+    if (transGrams >= 1) return I.TRANS_FAT_BONUS.medium.bonus;
     if (transGrams >= 0.5) return I.TRANS_FAT_BONUS.low.bonus;
     return 0;
   };
 
   I.calculateFastingBonus = (hoursSinceMeal = 0) => {
     if (!hoursSinceMeal || hoursSinceMeal <= 0) return 0;
-    if (hoursSinceMeal >= 16) return I.FASTING_BONUS.extended.bonus;
-    if (hoursSinceMeal >= 12) return I.FASTING_BONUS.moderate.bonus;
+    if (hoursSinceMeal >= 16) return I.FASTING_BONUS.long.bonus;
+    if (hoursSinceMeal >= 12) return I.FASTING_BONUS.medium.bonus;
     if (hoursSinceMeal >= 8) return I.FASTING_BONUS.short.bonus;
     return 0;
   };

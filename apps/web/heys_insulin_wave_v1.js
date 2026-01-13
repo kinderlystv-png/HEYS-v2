@@ -32,6 +32,41 @@
   const I = HEYS.InsulinWave?.__internals;
   const GI_CATEGORIES = I?.GI_CATEGORIES;
   const STATUS_CONFIG = I?.STATUS_CONFIG;
+  const calculateActivityContext = I?.calculateActivityContext;
+  
+  // Функции расчёта бонусов (из heys_iw_constants.js → __internals)
+  const calculateFastingBonus = I?.calculateFastingBonus;
+  const calculateStressBonus = I?.calculateStressBonus;
+  const calculateSleepBonus = I?.calculateSleepBonus;
+  const calculateSleepQualityBonus = I?.calculateSleepQualityBonus;
+  const calculateHydrationBonus = I?.calculateHydrationBonus;
+  const calculateAgeBonus = I?.calculateAgeBonus;
+  const calculateBMIBonus = I?.calculateBMIBonus;
+  const getGenderBonus = I?.getGenderBonus;
+  const calculateTransFatBonus = I?.calculateTransFatBonus;
+  const calculateLargePortionBonus = I?.calculateLargePortionBonus;
+  const calculateIRScore = I?.calculateIRScore;
+  const calculateNDTE = I?.calculateNDTE;
+  const getPreviousDayTrainings = I?.getPreviousDayTrainings;
+  const detectFoodTemperature = I?.detectFoodTemperature;
+  const getHypoglycemiaWarning = I?.getHypoglycemiaWarning;
+  const getInsulinIndexWaveModifier = I?.getInsulinIndexWaveModifier;
+  
+  // Helper-функции (из heys_iw_constants.js → __internals)
+  const getFoodForm = I?.getFoodForm;
+  const hasResistantStarch = I?.hasResistantStarch;
+  const getAlcoholBonus = I?.getAlcoholBonus;
+  const getInsulinogenicBonus = I?.getInsulinogenicBonus;
+  const getAutophagyPhase = I?.getAutophagyPhase;
+  const getSupplementsBonus = I?.getSupplementsBonus;
+  const getColdExposureBonus = I?.getColdExposureBonus;
+  
+  // Константы-объекты (из heys_iw_constants.js → __internals)
+  const SPICY_FOOD = I?.SPICY_FOOD;
+  const CAFFEINE_BONUS = I?.CAFFEINE_BONUS;
+  const PERSONAL_BASELINE = I?.PERSONAL_BASELINE;
+  const GAP_HISTORY_KEY = I?.GAP_HISTORY_KEY;
+  const GAP_HISTORY_DAYS = I?.GAP_HISTORY_DAYS;
   
   // Утилиты (из heys_iw_utils.js)
   const utils = HEYS.InsulinWave?.utils;
@@ -45,6 +80,8 @@
   const calculateNEATBonus = Calc?.calculateNEATBonus;
   const calculateStepsBonus = Calc?.calculateStepsBonus;
   const calculateCircadianMultiplier = Calc?.calculateCircadianMultiplier;
+  const calculateDayFactorsForMeal = Calc?.calculateDayFactorsForMeal;
+  const calculateActivityFactorsForMeal = Calc?.calculateActivityFactorsForMeal;
   
   // v3.0 фичи (из heys_iw_v30.js)
   const V30 = HEYS.InsulinWave?.V30;
@@ -60,6 +97,12 @@
   // Lipolysis (из heys_iw_lipolysis.js)
   const Lipolysis = HEYS.InsulinWave?.Lipolysis;
   const updateLipolysisRecord = Lipolysis?.updateLipolysisRecord;
+  const getLipolysisRecord = Lipolysis?.getLipolysisRecord;
+  const calculateLipolysisStreak = Lipolysis?.calculateLipolysisStreak;
+  const calculateLipolysisKcal = Lipolysis?.calculateLipolysisKcal;
+  
+  // Graph (generateWaveCurve)
+  const generateWaveCurve = I?.generateWaveCurve;
   
   // UI компоненты (из heys_iw_ui.js, heys_iw_graph.js, heys_iw_ndte.js)
   const UI = HEYS.InsulinWave?.UI;
@@ -110,8 +153,8 @@
     
     // 🆕 v4.0.0: IR Score — объединённый показатель инсулинорезистентности
     // Комбинирует BMI, сон, стресс, возраст в единый мультипликатор
-    const irScore = calculateIRScore(profile, dayData);
-    const irScoreMultiplier = irScore.waveMultiplier || 1.0;
+    const irScore = I?.calculateIRScore(profile, dayData);
+    const irScoreMultiplier = irScore?.waveMultiplier || 1.0;
     
     // Сортируем по времени (последний первый)
     const sorted = [...mealsWithTime].sort((a, b) => {
