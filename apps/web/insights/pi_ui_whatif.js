@@ -1,6 +1,7 @@
-// pi_ui_whatif.js — What-If Simulator UI Components v3.0.0
+// pi_ui_whatif.js — What-If Simulator UI Components v3.0.1
 // Extracted from heys_predictive_insights_v1.js (Phase 9a)
 // What-If симулятор - интерактивный прогноз влияния питания на здоровье
+// v3.0.1: Lazy getters for InfoButton (script order fix)
 (function(global) {
   'use strict';
   
@@ -12,20 +13,49 @@
   
   // Зависимости
   const piAdvanced = HEYS.InsightsPI?.advanced || window.piAdvanced || {};
+  const piUICards = HEYS.InsightsPI?.uiCards || window.piUICards || {};
+  
+  // Импорт из pi_ui_cards.js (lazy-загрузка из namespace)
+  const getWhatIfDeps = () => {
+    const cards = HEYS.InsightsPI?.uiCards || piUICards || {};
+    return {
+      WHATIF_PRESETS: cards.WHATIF_PRESETS || [],
+      WHATIF_CATEGORIES: cards.WHATIF_CATEGORIES || {},
+      simulateFood: cards.simulateFood || function() { return { verdict: 'neutral', wave: { hours: 3, endTime: '--:--', gl: 0, multiplier: 1 }, risk: { before: 0, after: 0, delta: 0 }, calories: { add: 0, ratio: 0 }, satiety: { hours: 2, desc: '' }, advice: [] }; }
+    };
+  };
+  
+  // Lazy getter для InfoButton (загружается позже в pi_ui_dashboard.js)
+  function getInfoButton() {
+    return HEYS.InsightsPI?.uiDashboard?.InfoButton ||
+           HEYS.PredictiveInsights?.components?.InfoButton ||
+           HEYS.day?.InfoButton || 
+           HEYS.InfoButton || 
+           window.InfoButton || 
+           // Fallback: простая кнопка если InfoButton не загружен
+           function InfoButtonFallback({ infoKey, size }) {
+             return h('span', { 
+               className: 'info-button-placeholder',
+               title: infoKey,
+               style: { cursor: 'help', opacity: 0.5 }
+             }, '?');
+           };
+  }
   
   // Import generateWhatIfScenarios
   const generateWhatIfScenarios = piAdvanced.generateWhatIfScenarios || function() { return []; };
 
   function WhatIfSimulator({ context, onClose, expanded = false }) {
-    const [selectedPreset, setSelectedPreset] = React.useState(null);
-    const [customFood, setCustomFood] = React.useState(null);
-    const [simulation, setSimulation] = React.useState(null);
-    const [activeCategory, setActiveCategory] = React.useState('fast');
-    const [isCustomMode, setIsCustomMode] = React.useState(false);
-    const [customValues, setCustomValues] = React.useState({ kcal: 300, prot: 15, carbs: 30, fat: 10, gi: 50, name: '' });
+    const { WHATIF_PRESETS, WHATIF_CATEGORIES, simulateFood } = getWhatIfDeps();
+    const [selectedPreset, setSelectedPreset] = useState(null);
+    const [customFood, setCustomFood] = useState(null);
+    const [simulation, setSimulation] = useState(null);
+    const [activeCategory, setActiveCategory] = useState('fast');
+    const [isCustomMode, setIsCustomMode] = useState(false);
+    const [customValues, setCustomValues] = useState({ kcal: 300, prot: 15, carbs: 30, fat: 10, gi: 50, name: '' });
     
     // Симуляция при выборе preset
-    React.useEffect(() => {
+    useEffect(() => {
       if (selectedPreset && context) {
         const result = simulateFood(selectedPreset, context);
         setSimulation(result);
@@ -33,7 +63,7 @@
     }, [selectedPreset, context]);
     
     // Симуляция кастомной еды
-    React.useEffect(() => {
+    useEffect(() => {
       if (isCustomMode && customValues.kcal > 0 && context) {
         const food = {
           ...customValues,
@@ -286,9 +316,10 @@
    * Показывает мини-симулятор с популярными preset-ами
    */
   function WhatIfCard({ context }) {
-    const [isExpanded, setIsExpanded] = React.useState(false);
-    const [quickResult, setQuickResult] = React.useState(null);
-    const [selectedQuick, setSelectedQuick] = React.useState(null);
+    const { WHATIF_PRESETS, simulateFood } = getWhatIfDeps();
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [quickResult, setQuickResult] = useState(null);
+    const [selectedQuick, setSelectedQuick] = useState(null);
     
     // Быстрые preset-ы для карточки
     const quickPresets = WHATIF_PRESETS.slice(0, 4);
@@ -307,7 +338,7 @@
           h('span', null, '🧪'),
           ' Что если съесть?'
         ),
-        h(InfoButton, { infoKey: 'WHATIF_SIMULATOR' }),
+        h(getInfoButton(), { infoKey: 'WHATIF_SIMULATOR' }),
         h('button', {
           className: 'whatif-card__expand',
           onClick: () => setIsExpanded(true)
@@ -384,7 +415,7 @@
     return h('div', { className: 'insights-whatif' },
       h('div', { className: 'insights-whatif__header' },
         h('span', { className: 'insights-whatif__title' }, '🎯 Сценарии'),
-        h(InfoButton, {
+        h(getInfoButton(), {
           infoKey: 'WHATIF',
           debugData: { scenariosCount: scenarios.length }
         })

@@ -11,6 +11,46 @@
   const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
   const SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {};
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
+  const piCalculations = HEYS.InsightsPI?.calculations || window.piCalculations || {};
+  
+  // Импорт конфигурации
+  const CONFIG = piConst.CONFIG || {
+    MIN_DAYS_FOR_FULL_ANALYSIS: 7,
+    MIN_CORRELATION_DISPLAY: 0.35
+  };
+  
+  // Импорт функций из pi_calculations.js
+  const calculateItemKcal = piCalculations.calculateItemKcal || function(item, pIndex) {
+    const prod = pIndex?.byId?.get?.(item?.product_id);
+    if (!prod) return 0;
+    return (prod.kcal100 || 0) * (item.grams || 0) / 100;
+  };
+  
+  const calculateDayKcal = piCalculations.calculateDayKcal || function(day, pIndex) {
+    if (!day?.meals?.length) return 0;
+    let total = 0;
+    for (const meal of day.meals) {
+      for (const item of (meal.items || [])) {
+        total += calculateItemKcal(item, pIndex);
+      }
+    }
+    return total;
+  };
+  
+  // Импорт статистических функций из pi_stats.js
+  const calculateTrend = piStats.calculateTrend || function(values) {
+    if (!values || values.length < 2) return 0;
+    const n = values.length;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    for (let i = 0; i < n; i++) {
+      sumX += i;
+      sumY += values[i];
+      sumXY += i * values[i];
+      sumX2 += i * i;
+    }
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    return isNaN(slope) ? 0 : slope;
+  };
   
   // Импорт констант
   const PATTERNS = piConst.PATTERNS || {
