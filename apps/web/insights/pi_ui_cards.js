@@ -1,7 +1,7 @@
 /**
- * HEYS Predictive Insights — UI Card Components Module v3.0.1
+ * HEYS Predictive Insights — UI Card Components Module v3.0.2
  * Extracted UI card components for clean architecture
- * v3.0.1: Fixed React guard - retry mechanism instead of early return
+ * v3.0.2: Fixed analytics API access via getAnalyticsFn safe accessor
  */
 
 (function(global) {
@@ -24,6 +24,29 @@
   const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
   const piScience = HEYS.InsightsPI?.science || window.SCIENCE_INFO || {};
 
+  // Safe accessor for analytics functions (may be in InsightsPI.analyticsAPI or PredictiveInsights)
+  const getAnalyticsFn = (fnName) => {
+    return HEYS.InsightsPI?.analyticsAPI?.[fnName] || 
+           HEYS.InsightsPI?.[fnName] ||
+           HEYS.PredictiveInsights?.[fnName] ||
+           (() => ({ hasData: false, error: `${fnName} not loaded` }));
+  };
+
+  // InfoButton is defined in pi_ui_dashboard.js which loads AFTER this module
+  // Use lazy getter to defer resolution until runtime
+  const getInfoButton = () => {
+    return HEYS.InsightsPI?.uiDashboard?.InfoButton || 
+           HEYS.PredictiveInsights?.components?.InfoButton ||
+           // Fallback: simple button that does nothing if InfoButton not loaded
+           function InfoButtonFallback({ infoKey, size }) {
+             return h('span', { 
+               className: 'info-button-placeholder',
+               title: infoKey,
+               style: { cursor: 'help', opacity: 0.5 }
+             }, 'ℹ️');
+           };
+  };
+
   /**
    * CollapsibleSection — сворачиваемая секция (v2.1: с InfoButton)
    */
@@ -38,7 +61,7 @@
         h('div', { className: 'insights-collapsible__title' },
           icon && h('span', { className: 'insights-collapsible__icon' }, icon),
           h('span', { className: 'insights-collapsible__text' }, title),
-          infoKey && h(InfoButton, { infoKey, size: 'small' })
+          infoKey && h(getInfoButton(), { infoKey, size: 'small' })
         ),
         badge && h('span', { className: 'insights-collapsible__badge' }, badge),
         h('span', { className: 'insights-collapsible__chevron' }, '›')
@@ -64,18 +87,18 @@
       };
       
       return {
-        confidence: HEYS.PredictiveInsights.calculateConfidenceScore(opts),
-        correlations: HEYS.PredictiveInsights.calculateCorrelationMatrix(opts),
-        patterns: HEYS.PredictiveInsights.detectMetabolicPatterns(opts),
-        risk: HEYS.PredictiveInsights.calculatePredictiveRisk(opts),
-        energy: HEYS.PredictiveInsights.forecastEnergy(opts),
+        confidence: getAnalyticsFn('calculateConfidenceScore')(opts),
+        correlations: getAnalyticsFn('calculateCorrelationMatrix')(opts),
+        patterns: getAnalyticsFn('detectMetabolicPatterns')(opts),
+        risk: getAnalyticsFn('calculatePredictiveRisk')(opts),
+        energy: getAnalyticsFn('forecastEnergy')(opts),
         // === SCIENTIFIC v3.0 ===
-        bayesian: HEYS.PredictiveInsights.calculateBayesianConfidence?.(opts) || { hasData: false },
-        timeLag: HEYS.PredictiveInsights.calculateTimeLaggedCorrelations?.(opts) || { hasData: false },
-        gvi: HEYS.PredictiveInsights.calculateGlycemicVariability?.(opts) || { hasData: false },
-        allostatic: HEYS.PredictiveInsights.calculateAllostaticLoad?.(opts) || { hasData: false },
-        ews: HEYS.PredictiveInsights.detectEarlyWarningSignals?.(opts) || { hasData: false },
-        twoProcess: HEYS.PredictiveInsights.calculate2ProcessModel?.(opts) || { hasData: false }
+        bayesian: getAnalyticsFn('calculateBayesianConfidence')(opts),
+        timeLag: getAnalyticsFn('calculateTimeLaggedCorrelations')(opts),
+        gvi: getAnalyticsFn('calculateGlycemicVariability')(opts),
+        allostatic: getAnalyticsFn('calculateAllostaticLoad')(opts),
+        ews: getAnalyticsFn('detectEarlyWarningSignals')(opts),
+        twoProcess: getAnalyticsFn('calculate2ProcessModel')(opts)
       };
     }, [lsGet, profile, pIndex, selectedDate]);
     
@@ -617,7 +640,7 @@
    */
   function MetabolismSection({ lsGet, profile, pIndex, selectedDate }) {
     const metabolism = useMemo(() => {
-      return HEYS.PredictiveInsights.analyzeMetabolism({
+      return getAnalyticsFn('analyzeMetabolism')({
         lsGet: lsGet || window.HEYS?.utils?.lsGet,
         profile: profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
         pIndex: pIndex || window.HEYS?.products?.buildIndex?.(),

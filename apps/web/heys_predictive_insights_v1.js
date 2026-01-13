@@ -1068,7 +1068,28 @@
   HEYS.PredictiveInsights.WHATIF_PRESETS = WHATIF_PRESETS;
   HEYS.PredictiveInsights.WHATIF_CATEGORIES = WHATIF_CATEGORIES;
   
-  console.log('[PI] ✅ HEYS.PredictiveInsights functions exported (analyze, patterns, advanced, stats)');
+  // Analytics API функции (из pi_analytics_api.js) - ленивые геттеры для load order
+  const analyticsApiFunctions = [
+    'calculateConfidenceScore', 'analyzeMetabolism', 'calculateCorrelationMatrix',
+    'detectMetabolicPatterns', 'calculatePredictiveRisk', 'forecastEnergy',
+    'calculateBayesianConfidence', 'calculateTimeLaggedCorrelations',
+    'calculateGlycemicVariability', 'calculateAllostaticLoad',
+    'detectEarlyWarningSignals', 'calculate2ProcessModel', 'analyticsAPI'
+  ];
+  
+  analyticsApiFunctions.forEach(fnName => {
+    Object.defineProperty(HEYS.PredictiveInsights, fnName, {
+      get: function() {
+        return HEYS.InsightsPI?.analyticsAPI?.[fnName] || 
+               HEYS.InsightsPI?.[fnName] || 
+               (typeof window !== 'undefined' && window[fnName]);
+      },
+      configurable: true,
+      enumerable: true
+    });
+  });
+  
+  console.log('[PI] ✅ HEYS.PredictiveInsights functions exported (analyze, patterns, advanced, stats, analyticsAPI)');
   
   // Ленивый геттер для components - собирает все UI модули в момент обращения
   Object.defineProperty(HEYS.PredictiveInsights, 'components', {
