@@ -1,18 +1,26 @@
 /**
- * HEYS Predictive Insights — UI Card Components Module v3.0
+ * HEYS Predictive Insights — UI Card Components Module v3.0.1
  * Extracted UI card components for clean architecture
+ * v3.0.1: Fixed React guard - retry mechanism instead of early return
  */
 
-(function() {
+(function(global) {
   'use strict';
+  
+  const HEYS = global.HEYS = global.HEYS || {};
+  HEYS.InsightsPI = HEYS.InsightsPI || {};
 
-  // Wait for dependencies
-  if (typeof window.h === 'undefined') {
-    console.warn('[pi_ui_cards] Preact h() not loaded yet');
-    return;
-  }
+  // React imports with retry mechanism for CDN loading
+  function initModule() {
+    const React = window.React;
+    if (!React || !React.createElement) {
+      // React not ready yet - retry in 50ms (CDN may still be loading)
+      setTimeout(initModule, 50);
+      return;
+    }
+    
+    const { createElement: h, useState, useEffect, useMemo, Component } = React;
 
-  const { h, Component, useState } = window;
   const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
   const piScience = HEYS.InsightsPI?.science || window.SCIENCE_INFO || {};
 
@@ -1582,23 +1590,16 @@
     MetabolismCard,
     MetabolismSection,
     PatternCard,
-    PatternsList,
-    WeeklyWrap,
-    EmptyState,
-    InsightsCard,
-    PriorityBadge,
-    CategoryBadge,
-    ActionabilityBadge,
-    SectionHeader,
-    InfoButton,
-    MetricWithInfo,
-    ConfidenceBadge,
-    MetabolicStatusCard,
-    ReasonCard,
-    ActionCard
+    PatternsList
   };
 
   // Backward compatibility fallback
   window.piUICards = HEYS.InsightsPI.uiCards;
+  
+  console.log('[PI UI Cards] v3.0.1 loaded —', Object.keys(HEYS.InsightsPI.uiCards).length, 'card components');
+  }
+  
+  // Start initialization (will retry until React is available)
+  initModule();
 
-})();
+})(window);

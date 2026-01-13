@@ -326,7 +326,9 @@
   }
   
   /**
-   * RiskPanel — содержимое таба Risk (legacy, для одиночного отображения)
+   * MetabolicStateRing — кольцо метаболического состояния
+   * Отображает текущую фазу метаболизма (anabolic/transitional/catabolic)
+   */
   function MetabolicStateRing({ phase, size = 120, strokeWidth = 10, showLabel = true }) {
     if (!phase || !phase.phase) {
       return h('div', { className: 'metabolic-ring metabolic-ring--empty' },

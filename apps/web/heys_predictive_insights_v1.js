@@ -997,4 +997,110 @@
       return { variant, weights, stats };
     };
   
+  // === EXPORT HEYS.PredictiveInsights ===
+  // Собираем все публичные функции и компоненты из модулей InsightsPI.* для обратной совместимости
+  // ВАЖНО: Используем геттеры для ленивой загрузки (UI модули могут загружаться с задержкой из-за React CDN)
+  
+  HEYS.PredictiveInsights = HEYS.PredictiveInsights || {};
+  
+  // === Экспорт основных функций ===
+  // analyze() — главная точка входа для анализа данных
+  HEYS.PredictiveInsights.analyze = analyze;
+  
+  // clearCache() — очистка кэша анализа
+  HEYS.PredictiveInsights.clearCache = function() {
+    _cache = {};
+    console.log('[PI] Cache cleared');
+  };
+  
+  // getDaysData() — получение данных дней
+  HEYS.PredictiveInsights.getDaysData = getDaysData;
+  
+  // Паттерн-анализаторы (делегируем в HEYS.InsightsPI.patterns если есть)
+  HEYS.PredictiveInsights.analyzeMealTiming = analyzeMealTiming;
+  HEYS.PredictiveInsights.analyzeWaveOverlap = analyzeWaveOverlap;
+  HEYS.PredictiveInsights.analyzeLateEating = analyzeLateEating;
+  HEYS.PredictiveInsights.analyzeMealQualityTrend = analyzeMealQualityTrend;
+  HEYS.PredictiveInsights.analyzeSleepWeight = analyzeSleepWeight;
+  HEYS.PredictiveInsights.analyzeSleepHunger = analyzeSleepHunger;
+  HEYS.PredictiveInsights.analyzeTrainingKcal = analyzeTrainingKcal;
+  HEYS.PredictiveInsights.analyzeStepsWeight = analyzeStepsWeight;
+  HEYS.PredictiveInsights.analyzeProteinSatiety = analyzeProteinSatiety;
+  HEYS.PredictiveInsights.analyzeFiberRegularity = analyzeFiberRegularity;
+  HEYS.PredictiveInsights.analyzeStressEating = analyzeStressEating;
+  HEYS.PredictiveInsights.analyzeMoodFood = analyzeMoodFood;
+  HEYS.PredictiveInsights.analyzeCircadianTiming = analyzeCircadianTiming;
+  HEYS.PredictiveInsights.analyzeNutrientTiming = analyzeNutrientTiming;
+  HEYS.PredictiveInsights.analyzeInsulinSensitivity = analyzeInsulinSensitivity;
+  HEYS.PredictiveInsights.analyzeGutHealth = analyzeGutHealth;
+  
+  // Продвинутые функции
+  HEYS.PredictiveInsights.calculateHealthScore = calculateHealthScore;
+  HEYS.PredictiveInsights.generateWhatIfScenarios = generateWhatIfScenarios;
+  HEYS.PredictiveInsights.predictWeight = predictWeight;
+  HEYS.PredictiveInsights.generateWeeklyWrap = generateWeeklyWrap;
+  
+  // Статистические утилиты
+  HEYS.PredictiveInsights.pearsonCorrelation = pearsonCorrelation;
+  HEYS.PredictiveInsights.calculateTrend = calculateTrend;
+  HEYS.PredictiveInsights.average = average;
+  HEYS.PredictiveInsights.stdDev = stdDev;
+  
+  // Константы и конфигурация
+  HEYS.PredictiveInsights.VERSION = CONFIG.VERSION;
+  HEYS.PredictiveInsights.CONFIG = CONFIG;
+  HEYS.PredictiveInsights.PATTERNS = PATTERNS;
+  HEYS.PredictiveInsights.PRIORITY_LEVELS = PRIORITY_LEVELS;
+  HEYS.PredictiveInsights.CATEGORIES = CATEGORIES;
+  HEYS.PredictiveInsights.ACTIONABILITY = ACTIONABILITY;
+  HEYS.PredictiveInsights.SCIENCE_INFO = SCIENCE_INFO;
+  
+  // Хелперы для SCIENCE_INFO
+  HEYS.PredictiveInsights.getMetricPriority = getMetricPriority;
+  HEYS.PredictiveInsights.getAllMetricsByPriority = getAllMetricsByPriority;
+  HEYS.PredictiveInsights.getMetricsByCategory = getMetricsByCategory;
+  HEYS.PredictiveInsights.getMetricsByActionability = getMetricsByActionability;
+  HEYS.PredictiveInsights.getCriticalMetrics = getCriticalMetrics;
+  HEYS.PredictiveInsights.getPriorityStats = getPriorityStats;
+  
+  // What-If функции
+  HEYS.PredictiveInsights.simulateFood = simulateFood;
+  HEYS.PredictiveInsights.WHATIF_PRESETS = WHATIF_PRESETS;
+  HEYS.PredictiveInsights.WHATIF_CATEGORIES = WHATIF_CATEGORIES;
+  
+  console.log('[PI] ✅ HEYS.PredictiveInsights functions exported (analyze, patterns, advanced, stats)');
+  
+  // Ленивый геттер для components - собирает все UI модули в момент обращения
+  Object.defineProperty(HEYS.PredictiveInsights, 'components', {
+    get: function() {
+      const uiDashboard = HEYS.InsightsPI?.uiDashboard || {};
+      const uiCards = HEYS.InsightsPI?.uiCards || {};
+      const uiRings = HEYS.InsightsPI?.uiRings || {};
+      const uiWhatIf = HEYS.InsightsPI?.uiWhatIf || {};
+      
+      return {
+        // Dashboard components (from pi_ui_dashboard.js)
+        ...uiDashboard,
+        // Cards components (from pi_ui_cards.js)  
+        ...uiCards,
+        // Rings components (from pi_ui_rings.js)
+        ...uiRings,
+        // What-If components (from pi_ui_whatif.js)
+        ...uiWhatIf,
+        // Direct exports for legacy compatibility
+        InsightsTab: uiDashboard?.InsightsTab,
+        PredictiveDashboard: uiDashboard?.PredictiveDashboard,
+        WeeklyWrap: uiCards?.WeeklyWrap || uiDashboard?.WeeklyWrap,
+        WeeklyWrapCard: uiCards?.WeeklyWrapCard || uiDashboard?.WeeklyWrapCard,
+        simulateFood,
+        WHATIF_PRESETS,
+        WHATIF_CATEGORIES
+      };
+    },
+    configurable: true,
+    enumerable: true
+  });
+  
+  console.log('[PI] ✅ HEYS.PredictiveInsights.components getter configured (lazy loading)');
+  
 })(typeof window !== 'undefined' ? window : global);

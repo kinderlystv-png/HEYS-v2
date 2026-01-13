@@ -1,18 +1,26 @@
 /**
- * HEYS Predictive Insights — UI Dashboard Components Module v3.0
+ * HEYS Predictive Insights — UI Dashboard Components Module v3.0.1
  * Extracted UI dashboard components for clean architecture
+ * v3.0.1: Fixed React guard - retry mechanism instead of early return
  */
 
-(function() {
+(function(global) {
   'use strict';
+  
+  const HEYS = global.HEYS = global.HEYS || {};
+  HEYS.InsightsPI = HEYS.InsightsPI || {};
 
-  // Wait for dependencies
-  if (typeof window.h === 'undefined') {
-    console.warn('[pi_ui_dashboard] Preact h() not loaded yet');
-    return;
-  }
+  // React imports with retry mechanism for CDN loading
+  function initModule() {
+    const React = window.React;
+    if (!React || !React.createElement) {
+      // React not ready yet - retry in 50ms (CDN may still be loading)
+      setTimeout(initModule, 50);
+      return;
+    }
+    
+    const { createElement: h, useState, useEffect, useMemo, Component, useCallback, useRef } = React;
 
-  const { h, Component, useState, useEffect, useMemo } = window;
   const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
   const piAdvanced = HEYS.InsightsPI?.advanced || {};
   const piUICards = HEYS.InsightsPI?.uiCards || {};
@@ -1077,7 +1085,7 @@
           h(WeeklyWrap, { wrap: insights.weeklyWrap })
         ),
         
-        // Data Completeness (LOW)
+        // Data Completeness (LOW) - TODO: DataCompletenessCard not implemented in refactoring
         shouldShowSection('LOW') && h('div', { className: 'insights-tab__section insights-tab__section--low' },
           h(SectionHeader, {
             title: 'Полнота данных',
@@ -1085,10 +1093,10 @@
             priority: 'LOW',
             infoKey: 'CONFIDENCE'
           }),
-          h(DataCompletenessCard, {
-            lsGet,
-            selectedDate
-          })
+          h('div', { 
+            className: 'pi-card pi-card--low',
+            style: { padding: '16px', textAlign: 'center', color: '#6b7280' }
+          }, '📊 DataCompletenessCard — в разработке')
         ),
         
         // ═══════════════════════════════════════════════════════════
@@ -2425,6 +2433,7 @@
   
   /**
    * RiskPanel — содержимое таба Risk (legacy, для одиночного отображения)
+   */
   function RiskPanel({ prediction, riskColors, isPast, isFuture }) {
     const riskLevel = prediction.riskLevel || (prediction.risk < 30 ? 'low' : prediction.risk < 60 ? 'medium' : 'high');
     
@@ -2869,25 +2878,316 @@
     return null;
   }
 
+  /**
+   * DataCompletenessCard — показывает прогресс сбора данных
+   * и какие фичи разблокируются с накоплением истории
+   */
+  function DataCompletenessCard({ lsGet, profile, daysRequired = 30 }) {
+    const completeness = useMemo(() => {
+      if (!HEYS.Metabolic?.getDaysHistory) return null;
+      
+      const history = HEYS.Metabolic.getDaysHistory(daysRequired);
+      const daysWithData = history.length;
+      const percentage = Math.round((daysWithData / daysRequired) * 100);
+      const daysRemaining = Math.max(0, daysRequired - daysWithData);
+      
+      // Проверяем полноту последнего дня (сегодня)
+      const today = new Date().toISOString().split('T')[0];
+      const inventory = HEYS.Metabolic.inventoryData ? HEYS.Metabolic.inventoryData(today) : null;
+      const todayCompleteness = inventory ? HEYS.Metabolic.calculateDataCompleteness(inventory) : 0;
+      
+      // 🆕 v3.22.0: Extended Analytics features с научными обоснованиями
+      const features = [
+        { name: 'Базовый статус', required: 1, emoji: '📊', unlocked: daysWithData >= 1 },
+        { name: 'Риск срыва', required: 3, emoji: '⚠️', unlocked: daysWithData >= 3 },
+        { name: 'Паттерны', required: 7, emoji: '🔍', unlocked: daysWithData >= 7 },
+        { 
+          name: '🧠 Эмоц. риск', 
+          required: 7, 
+          emoji: '🧠', 
+          unlocked: daysWithData >= 7,
+          pmid: '11070333',
+          science: 'Epel 2001 — стресс-переедание'
+        },
+        { 
+          name: '🥩 Белковый долг', 
+          required: 7, 
+          emoji: '🥩', 
+          unlocked: daysWithData >= 7,
+          pmid: '20095013',
+          science: 'Mettler 2010 — белок при дефиците'
+        },
+        { name: 'Персональные пороги', required: 14, emoji: '🎯', unlocked: daysWithData >= 14 },
+        { 
+          name: '🔬 Циркадный контекст', 
+          required: 14, 
+          emoji: '🌅', 
+          unlocked: daysWithData >= 14,
+          pmid: '9331550',
+          science: 'Van Cauter 1997 — циркадные ритмы'
+        },
+        { name: 'Метаболический фенотип', required: 30, emoji: '🧬', unlocked: daysWithData >= 30 }
+      ];
+      
+      const nextFeature = features.find(f => !f.unlocked);
+      
+      // 🆕 Считаем сколько extended analytics разблокировано
+      const extendedFeatures = features.filter(f => f.pmid);
+      const extendedUnlocked = extendedFeatures.filter(f => f.unlocked).length;
+      const extendedTotal = extendedFeatures.length;
+      
+      return {
+        daysWithData,
+        daysRequired,
+        percentage,
+        daysRemaining,
+        todayCompleteness,
+        features,
+        nextFeature,
+        extendedUnlocked,
+        extendedTotal
+      };
+    }, [lsGet, daysRequired]);
+    
+    if (!completeness) {
+      return null;
+    }
+    
+    return h('div', { className: 'data-completeness-card' },
+      h('div', { className: 'data-completeness-card__header' },
+        h('span', { className: 'data-completeness-card__icon' }, '📊'),
+        h('span', { className: 'data-completeness-card__title' }, 'Данные'),
+        h('span', { className: 'data-completeness-card__count' },
+          `${completeness.daysWithData}/${completeness.daysRequired} дней`
+        )
+      ),
+      
+      // Прогресс-бар
+      h('div', { className: 'data-completeness-card__progress' },
+        h('div', { className: 'data-completeness-card__progress-bar' },
+          h('div', { 
+            className: 'data-completeness-card__progress-fill',
+            style: { width: `${completeness.percentage}%` }
+          })
+        ),
+        h('span', { className: 'data-completeness-card__progress-text' }, `${completeness.percentage}%`)
+      ),
+      
+      // Сегодняшняя полнота
+      h('div', { className: 'data-completeness-card__today' },
+        h('span', { className: 'data-completeness-card__today-label' }, 'Сегодня: '),
+        h('span', { 
+          className: 'data-completeness-card__today-value',
+          style: { color: completeness.todayCompleteness >= 80 ? '#22c55e' : completeness.todayCompleteness >= 50 ? '#eab308' : '#ef4444' }
+        }, `${completeness.todayCompleteness}% заполнено`)
+      ),
+      
+      // 🆕 v3.22.0: Extended Analytics Status
+      h('div', { className: 'data-completeness-card__extended' },
+        h('span', { className: 'data-completeness-card__extended-label' }, '🧠 Extended Analytics: '),
+        h('span', { 
+          className: 'data-completeness-card__extended-value',
+          style: { color: completeness.extendedUnlocked === completeness.extendedTotal ? '#22c55e' : '#6366f1' }
+        }, `${completeness.extendedUnlocked}/${completeness.extendedTotal}`),
+        completeness.extendedUnlocked === completeness.extendedTotal && h('span', { className: 'data-completeness-card__extended-badge' }, '✓')
+      ),
+      
+      // Следующая разблокировка
+      completeness.nextFeature && h('div', { className: 'data-completeness-card__next' },
+        h('span', { className: 'data-completeness-card__next-emoji' }, completeness.nextFeature.emoji),
+        h('span', { className: 'data-completeness-card__next-text' },
+          `${completeness.nextFeature.name} через ${completeness.nextFeature.required - completeness.daysWithData} дн.`
+        ),
+        completeness.nextFeature.pmid && h('a', {
+          href: `https://pubmed.ncbi.nlm.nih.gov/${completeness.nextFeature.pmid}/`,
+          target: '_blank',
+          className: 'data-completeness-card__next-pmid',
+          title: completeness.nextFeature.science
+        }, '🔬')
+      ),
+      
+      // Разблокированные фичи (иконки) — 🆕 с tooltip для extended
+      h('div', { className: 'data-completeness-card__features' },
+        completeness.features.map((feature, idx) =>
+          h('div', { 
+            key: idx,
+            className: `data-completeness-card__feature ${feature.unlocked ? 'data-completeness-card__feature--unlocked' : ''} ${feature.pmid ? 'data-completeness-card__feature--science' : ''}`,
+            title: `${feature.name} (${feature.required} дней)${feature.science ? '\n' + feature.science : ''}`
+          }, feature.emoji)
+        )
+      )
+    );
+  }
+
+  /**
+   * MealTimingCard v2 — WOW дизайн с timeline и иконками
+   */
+  function MealTimingCard({ lsGet, profile, selectedDate }) {
+    const timing = useMemo(() => {
+      if (!HEYS.Metabolic?.calculatePerformanceForecast) return null;
+      
+      const history = HEYS.Metabolic.getDaysHistory ? HEYS.Metabolic.getDaysHistory(7) : [];
+      
+      return HEYS.Metabolic.calculatePerformanceForecast(
+        selectedDate || new Date().toISOString().split('T')[0],
+        profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
+        history
+      );
+    }, [lsGet, profile, selectedDate]);
+    
+    if (!timing || !timing.optimalMeals) {
+      return null;
+    }
+    
+    // Конфиг иконок и цветов для типов приёмов
+    const mealConfig = {
+      'Завтрак': { icon: '🌅', gradient: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)', lightBg: '#fef3c7' },
+      'Обед': { icon: '☀️', gradient: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)', lightBg: '#d1fae5' },
+      'Ужин': { icon: '🌙', gradient: 'linear-gradient(135deg, #818cf8 0%, #6366f1 100%)', lightBg: '#e0e7ff' },
+      'Перекус': { icon: '🍎', gradient: 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)', lightBg: '#fce7f3' }
+    };
+    
+    const getMealConfig = (name) => {
+      for (const [key, config] of Object.entries(mealConfig)) {
+        if (name.toLowerCase().includes(key.toLowerCase())) return config;
+      }
+      return { icon: '🍽️', gradient: 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)', lightBg: '#f1f5f9' };
+    };
+    
+    // Вычисляем текущее время для индикатора "сейчас"
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    return h('div', { className: 'meal-timing-v2' },
+      // Header с градиентом
+      h('div', { className: 'meal-timing-v2__header' },
+        h('div', { className: 'meal-timing-v2__header-icon' }, '⏰'),
+        h('div', { className: 'meal-timing-v2__header-content' },
+          h('h3', { className: 'meal-timing-v2__title' }, 'Твой идеальный день'),
+          h('p', { className: 'meal-timing-v2__subtitle' }, 'Персональное расписание на основе твоего ритма')
+        )
+      ),
+      
+      // Timeline с приёмами
+      h('div', { className: 'meal-timing-v2__timeline' },
+        timing.optimalMeals.filter(m => m.priority !== 'low').map((meal, idx, arr) => {
+          const config = getMealConfig(meal.name);
+          const [startHour] = meal.time.split('-')[0].split(':').map(Number);
+          const isNow = currentHour >= startHour && currentHour < startHour + 2;
+          const isPast = currentHour > startHour + 2;
+          
+          return h('div', { 
+            key: idx, 
+            className: `meal-timing-v2__item ${isNow ? 'meal-timing-v2__item--active' : ''} ${isPast ? 'meal-timing-v2__item--past' : ''}`
+          },
+            // Timeline connector
+            idx < arr.length - 1 && h('div', { className: 'meal-timing-v2__connector' }),
+            
+            // Time badge
+            h('div', { className: 'meal-timing-v2__time-badge', style: { background: config.gradient } },
+              h('span', { className: 'meal-timing-v2__time' }, meal.time.split('-')[0])
+            ),
+            
+            // Card content
+            h('div', { className: 'meal-timing-v2__card', style: { '--accent-bg': config.lightBg } },
+              h('div', { className: 'meal-timing-v2__card-header' },
+                h('span', { className: 'meal-timing-v2__card-icon' }, config.icon),
+                h('div', { className: 'meal-timing-v2__card-title' },
+                  h('span', { className: 'meal-timing-v2__card-name' }, meal.name),
+                  isNow && h('span', { className: 'meal-timing-v2__now-badge' }, '● СЕЙЧАС')
+                )
+              ),
+              h('div', { className: 'meal-timing-v2__card-body' },
+                h('p', { className: 'meal-timing-v2__card-focus' }, meal.focus),
+                h('div', { className: 'meal-timing-v2__card-meta' },
+                  h('span', { className: 'meal-timing-v2__card-pct' }, 
+                    h('span', { className: 'meal-timing-v2__pct-value' }, `${meal.caloriesPct}%`),
+                    ' дневных ккал'
+                  ),
+                  meal.priority === 'high' && h('span', { className: 'meal-timing-v2__priority-badge' }, '⭐ Важно')
+                )
+              )
+            )
+          );
+        })
+      ),
+      
+      // Тренировочное окно (если есть)
+      timing.trainingWindow && h('div', { className: 'meal-timing-v2__training' },
+        h('div', { className: 'meal-timing-v2__training-icon' }, '💪'),
+        h('div', { className: 'meal-timing-v2__training-content' },
+          h('div', { className: 'meal-timing-v2__training-title' }, 'Пик силы и выносливости'),
+          h('div', { className: 'meal-timing-v2__training-time' }, timing.trainingWindow.time),
+          h('div', { className: 'meal-timing-v2__training-reason' }, timing.trainingWindow.reason)
+        )
+      ),
+      
+      // Sleep impact chip
+      h('div', { className: `meal-timing-v2__sleep meal-timing-v2__sleep--${timing.sleepImpact}` },
+        h('span', { className: 'meal-timing-v2__sleep-icon' }, 
+          timing.sleepImpact === 'positive' ? '😴' : '⚠️'
+        ),
+        h('span', { className: 'meal-timing-v2__sleep-text' },
+          timing.sleepImpact === 'positive' 
+            ? 'Сон в норме — энергия стабильна весь день'
+            : 'Недосып — рекомендуем лёгкий день'
+        ),
+        timing.sleepImpact === 'positive' && h('span', { className: 'meal-timing-v2__sleep-check' }, '✓')
+      )
+    );
+  }
+
   // === EXPORT ===
   HEYS.InsightsPI = HEYS.InsightsPI || {};
   HEYS.InsightsPI.uiDashboard = {
+    // Main entry points
+    InsightsTab,
+    PredictiveDashboard,
+    // Weekly/Weight
+    WeeklyWrap,
     WeightPrediction,
+    // Filters & Bars
     PriorityFilterBar,
     PillarBreakdownBars,
+    // Risk components
     DualRiskPanel,
     RiskPanel,
     RiskMeter,
+    // Forecast & Feedback
     ForecastPanel,
     FeedbackPrompt,
     FeedbackWidget,
     AccuracyBadge,
+    // Legacy
     PredictiveDashboardLegacy,
+    EmptyState,
+    // Cards
+    MealTimingCard,
     DataCompletenessCard,
-    MealTimingCard
+    InsightsCard,
+    // Badges
+    PriorityBadge,
+    CategoryBadge,
+    ActionabilityBadge,
+    ConfidenceBadge,
+    // UI helpers
+    SectionHeader,
+    InfoButton,
+    MetricWithInfo,
+    // Metabolic cards
+    MetabolicStatusCard,
+    ReasonCard,
+    ActionCard
   };
 
   // Backward compatibility fallback
   window.piUIDashboard = HEYS.InsightsPI.uiDashboard;
+  
+  console.log('[PI UI Dashboard] v3.0.1 loaded —', Object.keys(HEYS.InsightsPI.uiDashboard).length, 'dashboard components');
+  }
+  
+  // Start initialization (will retry until React is available)
+  initModule();
 
-})();
+})(window);
