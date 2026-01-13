@@ -7295,6 +7295,9 @@ const HEYS = window.HEYS = window.HEYS || {};
               : null;
 
             useEffect(() => {
+              // 🔧 cloud reference for initialization
+              const cloud = window.HEYS && window.HEYS.cloud;
+              
               // Минимальная инициализация — только загрузка из localStorage
               // opts.skipClientRestore: не восстанавливать выбранного клиента из heys_client_current
               // opts.skipPinAuthRestore: не восстанавливать PIN-auth клиента
