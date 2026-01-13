@@ -230,7 +230,7 @@
         bayesian.hasData && h('div', { className: 'adv-analytics__science-section' },
           h('div', { className: 'adv-analytics__science-header' },
             h('span', null, '📊 Байесовская уверенность'),
-            h(InfoButton, { infoKey: 'BAYESIAN_CONFIDENCE' })
+            h(getInfoButton(), { infoKey: 'BAYESIAN_CONFIDENCE' })
           ),
           h('div', { className: `adv-analytics__science-card adv-analytics__science-card--${bayesian.qualityGrade}` },
             h('div', { className: 'adv-analytics__science-main' },
@@ -248,7 +248,7 @@
         gvi.hasData && h('div', { className: 'adv-analytics__science-section' },
           h('div', { className: 'adv-analytics__science-header' },
             h('span', null, '📈 Гликемическая волатильность'),
-            h(InfoButton, { infoKey: 'GLYCEMIC_VARIABILITY' })
+            h(getInfoButton(), { infoKey: 'GLYCEMIC_VARIABILITY' })
           ),
           h('div', { className: `adv-analytics__science-card adv-analytics__science-card--${gvi.riskCategory}` },
             h('div', { className: 'adv-analytics__science-main' },
@@ -269,7 +269,7 @@
         allostatic.hasData && h('div', { className: 'adv-analytics__science-section' },
           h('div', { className: 'adv-analytics__science-header' },
             h('span', null, '🧠 Аллостатическая нагрузка'),
-            h(InfoButton, { infoKey: 'ALLOSTATIC_LOAD' })
+            h(getInfoButton(), { infoKey: 'ALLOSTATIC_LOAD' })
           ),
           h('div', { className: `adv-analytics__science-card adv-analytics__science-card--${allostatic.riskLevel}` },
             h('div', { className: 'adv-analytics__science-main' },
@@ -299,7 +299,7 @@
         ews.hasData && h('div', { className: 'adv-analytics__science-section' },
           h('div', { className: 'adv-analytics__science-header' },
             h('span', null, '⚠️ Ранние сигналы срыва'),
-            h(InfoButton, { infoKey: 'EARLY_WARNING_SIGNALS' })
+            h(getInfoButton(), { infoKey: 'EARLY_WARNING_SIGNALS' })
           ),
           h('div', { className: `adv-analytics__science-card adv-analytics__science-card--${ews.criticalTransitionRisk}` },
             h('div', { className: 'adv-analytics__science-main' },
@@ -327,7 +327,7 @@
         twoProcess.hasData && h('div', { className: 'adv-analytics__science-section' },
           h('div', { className: 'adv-analytics__science-header' },
             h('span', null, '💤 Модель бодрости (Borbély)'),
-            h(InfoButton, { infoKey: 'TWO_PROCESS_MODEL' })
+            h(getInfoButton(), { infoKey: 'TWO_PROCESS_MODEL' })
           ),
           h('div', { className: `adv-analytics__science-card adv-analytics__science-card--${twoProcess.alertnessLevel}` },
             h('div', { className: 'adv-analytics__science-main' },
@@ -359,7 +359,7 @@
         timeLag.hasData && h('div', { className: 'adv-analytics__science-section' },
           h('div', { className: 'adv-analytics__science-header' },
             h('span', null, '⏳ Причинность (Time-Lag)'),
-            h(InfoButton, { infoKey: 'TIME_LAGGED_CORRELATIONS' })
+            h(getInfoButton(), { infoKey: 'TIME_LAGGED_CORRELATIONS' })
           ),
           h('div', { className: 'adv-analytics__science-card' },
             timeLag.strongest && h('div', { className: 'adv-analytics__science-main' },
@@ -560,7 +560,7 @@
         h('div', { className: 'adv-analytics-card__title' },
           h('span', null, '🔬'),
           h('span', null, 'Научная аналитика v3'),
-          h(InfoButton, { infoKey: 'ADVANCED_ANALYTICS' })
+          h(getInfoButton(), { infoKey: 'ADVANCED_ANALYTICS' })
         ),
         // Confidence Badge (mini)
         h('div', { className: `adv-analytics-card__confidence-mini adv-analytics-card__confidence-mini--${bayesian.hasData ? bayesian.qualityGrade : confidence.level}` },
@@ -613,7 +613,7 @@
           h('div', { className: 'insights-metabolism-card__title' },
             title,
             // v2.0: InfoButton рядом с заголовком
-            infoKey && h(InfoButton, { infoKey, debugData })
+            infoKey && h(getInfoButton(), { infoKey, debugData })
           ),
           h('div', { className: 'insights-metabolism-card__value' },
             h('span', { style: { color, fontWeight: 700 } }, value),
@@ -670,7 +670,7 @@
         h('div', { className: 'metabolism-section__title' },
           h('span', { className: 'metabolism-section__icon' }, '🔥'),
           h('span', null, 'Метаболизм'),
-          h(InfoButton, { infoKey: 'TEF' })
+          h(getInfoButton(), { infoKey: 'TEF' })
         ),
         h('div', { className: 'metabolism-section__badge' }, summaryParts.join(' • '))
       ),
@@ -843,7 +843,7 @@
             h('div', { className: 'insights-ring-card__info' },
               h('div', { className: 'insights-ring-card__header' },
                 h('div', { className: 'insights-ring-card__label' }, cat.label),
-                h(InfoButton, { infoKey: cat.infoKey, size: 'small' })
+                h(getInfoButton(), { infoKey: cat.infoKey, size: 'small' })
               ),
               h('div', { className: 'insights-ring-card__title' }, 
                 hasEmotionalWarning 
@@ -927,7 +927,7 @@
         h('div', { className: 'insights-pattern__title' },
           patternLabels[pattern.pattern] || pattern.pattern,
           // v2.0: InfoButton для новых паттернов с формулами
-          (infoKey || pattern.formula) && h(InfoButton, {
+          (infoKey || pattern.formula) && h(getInfoButton(), {
             infoKey: infoKey,
             debugData: pattern.debug || {
               formula: pattern.formula,
@@ -1515,7 +1515,7 @@
           h('span', null, '🧪'),
           ' Что если съесть?'
         ),
-        h(InfoButton, { infoKey: 'WHATIF_SIMULATOR' }),
+        h(getInfoButton(), { infoKey: 'WHATIF_SIMULATOR' }),
         h('button', {
           className: 'whatif-card__expand',
           onClick: () => setIsExpanded(true)
@@ -1592,7 +1592,7 @@
     return h('div', { className: 'insights-whatif' },
       h('div', { className: 'insights-whatif__header' },
         h('span', { className: 'insights-whatif__title' }, '🎯 Сценарии'),
-        h(InfoButton, {
+        h(getInfoButton(), {
           infoKey: 'WHATIF',
           debugData: { scenariosCount: scenarios.length }
         })

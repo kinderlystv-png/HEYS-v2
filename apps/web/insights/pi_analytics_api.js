@@ -1,25 +1,116 @@
-// pi_analytics_api.js — Advanced Analytics API v3.0.0
+// pi_analytics_api.js — Advanced Analytics API v3.0.1
 // Extracted from heys_predictive_insights_v1.js (Phase 5)
 // Продвинутая аналитика: 11 методов глубокого анализа данных
+// v3.0.1: Lazy getters для зависимостей (fix load order issues)
 (function(global) {
   'use strict';
   
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.InsightsPI = HEYS.InsightsPI || {};
   
-  // Зависимости
+  // Зависимости (статические — инициализируются сразу)
   const U = HEYS.utils || {};
-  const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
-  const SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {};
-  const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
-  const piCalc = HEYS.InsightsPI?.calculations || window.piCalculations || {};
   
-  // Импорт статистических функций из pi_stats.js (централизовано)
-  const { average, stdDev, pearsonCorrelation, variance, autocorrelation, skewness } = piStats;
-  const linearTrend = piStats.linearTrend || piStats.calculateTrend;
+  // === LAZY GETTERS для зависимостей (fix load order) ===
+  // Эти модули могут загрузиться ПОСЛЕ pi_analytics_api.js
+  function getStats() {
+    return HEYS.InsightsPI?.stats || window.piStats || {};
+  }
+  function getScienceInfo() {
+    return HEYS.InsightsPI?.science || window.piScience || {};
+  }
+  function getConst() {
+    return HEYS.InsightsPI?.constants || window.piConst || {};
+  }
+  function getCalc() {
+    return HEYS.InsightsPI?.calculations || window.piCalculations || {};
+  }
   
-  // Импорт calculation helpers из pi_calculations.js (централизовано)
-  const { getDaysData, calculateItemKcal, calculateDayKcal } = piCalc;
+  // === Calculation helpers (lazy) ===
+  function getDaysData(daysBack, lsGet) {
+    const calc = getCalc();
+    if (calc.getDaysData) return calc.getDaysData(daysBack, lsGet);
+    // Fallback: inline implementation
+    const days = [];
+    const today = new Date();
+    for (let i = 0; i < daysBack; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = `heys_dayv2_${d.toISOString().slice(0, 10)}`;
+      const data = lsGet ? lsGet(key, {}) : {};
+      if (data && Object.keys(data).length > 0) {
+        days.push(data);
+      }
+    }
+    return days;
+  }
+  
+  function calculateItemKcal(item, pIndex) {
+    const calc = getCalc();
+    if (calc.calculateItemKcal) return calc.calculateItemKcal(item, pIndex);
+    // Fallback
+    const prod = pIndex?.byId?.get?.(item.product_id);
+    if (!prod) return 0;
+    const grams = item.grams || 100;
+    return ((prod.kcal100 || 0) * grams) / 100;
+  }
+  
+  function calculateDayKcal(day, pIndex) {
+    const calc = getCalc();
+    if (calc.calculateDayKcal) return calc.calculateDayKcal(day, pIndex);
+    // Fallback
+    let total = 0;
+    (day.meals || []).forEach(m => {
+      (m.items || []).forEach(item => {
+        total += calculateItemKcal(item, pIndex);
+      });
+    });
+    return total;
+  }
+  
+  // === Stats helpers (lazy access) ===
+  function average(arr) {
+    const stats = getStats();
+    if (stats.average) return stats.average(arr);
+    if (!arr || arr.length === 0) return 0;
+    return arr.reduce((a, b) => a + b, 0) / arr.length;
+  }
+  function stdDev(arr) {
+    const stats = getStats();
+    if (stats.stdDev) return stats.stdDev(arr);
+    if (!arr || arr.length < 2) return 0;
+    const mean = average(arr);
+    const sq = arr.map(x => Math.pow(x - mean, 2));
+    return Math.sqrt(sq.reduce((a, b) => a + b, 0) / arr.length);
+  }
+  function pearsonCorrelation(x, y) {
+    const stats = getStats();
+    if (stats.pearsonCorrelation) return stats.pearsonCorrelation(x, y);
+    return 0;
+  }
+  function variance(arr) {
+    const stats = getStats();
+    if (stats.variance) return stats.variance(arr);
+    if (!arr || arr.length < 2) return 0;
+    const mean = average(arr);
+    return arr.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / arr.length;
+  }
+  function autocorrelation(arr, lag) {
+    const stats = getStats();
+    if (stats.autocorrelation) return stats.autocorrelation(arr, lag);
+    return 0;
+  }
+  function skewness(arr) {
+    const stats = getStats();
+    if (stats.skewness) return stats.skewness(arr);
+    return 0;
+  }
+  function linearTrend(arr) {
+    const stats = getStats();
+    if (stats.linearTrend) return stats.linearTrend(arr);
+    if (stats.calculateTrend) return stats.calculateTrend(arr);
+    return { slope: 0, intercept: 0 };
+  }
   
   function calculateBMR(profile) {
     if (HEYS.TDEE?.calcBMR) {

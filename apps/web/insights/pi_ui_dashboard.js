@@ -27,6 +27,16 @@
   const piUIRings = HEYS.InsightsPI?.uiRings || {};
   const piConstants = HEYS.InsightsPI?.constants || {};
   
+  // Lazy getter для InfoButton с полной fallback цепочкой (fix load order)
+  function getInfoButton() {
+    return HEYS.InsightsPI?.uiDashboard?.InfoButton ||
+           HEYS.PredictiveInsights?.components?.InfoButton ||
+           HEYS.day?.InfoButton || 
+           HEYS.InfoButton || 
+           window.InfoButton || 
+           (() => h('span', { className: 'info-btn-placeholder' }, '?'));
+  }
+  
   // Получаем UI компоненты из piUICards
   const {
     AdvancedAnalyticsCard,
@@ -65,7 +75,7 @@
     return h('div', { className: 'insights-weight' },
       h('div', { className: 'insights-weight__header' },
         h('span', null, '⚖️ Прогноз веса'),
-        h(InfoButton, {
+        h(getInfoButton(), {
           infoKey: 'WEIGHT_PREDICTION',
           debugData: {
             currentWeight: prediction.currentWeight,
@@ -180,7 +190,7 @@
     return h('div', { className: 'insights-wrap' },
       h('div', { className: 'insights-wrap__header' },
         h('span', { className: 'insights-wrap__title' }, '📋 Итоги'),
-        h(InfoButton, {
+        h(getInfoButton(), {
           infoKey: 'WEEKLY_WRAP',
           debugData: {
             daysWithData: wrap.daysWithData,
@@ -629,7 +639,7 @@
       ),
       h('div', { className: 'section-header__right' },
         badge && h('span', { className: 'section-header__badge' }, badge),
-        infoKey && h(InfoButton, { infoKey })
+        infoKey && h(getInfoButton(), { infoKey })
       )
     );
   }
@@ -1138,7 +1148,7 @@
           h('span', { className: 'insights-tab__confidence-text' },
             `Уверенность: ${insights.confidence || 50}% (${insights.daysWithData || 0} дней данных)`
           ),
-          h(InfoButton, {
+          h(getInfoButton(), {
             infoKey: 'CONFIDENCE',
             debugData: {
               confidence: insights.confidence,
@@ -1274,7 +1284,7 @@
     return h('div', { className: `metric-with-info ${className || ''}` },
       h('div', { className: 'metric-with-info__row' },
         h('span', { className: 'metric-with-info__label' }, label),
-        h(InfoButton, { infoKey, debugData })
+        h(getInfoButton(), { infoKey, debugData })
       ),
       h('div', { className: 'metric-with-info__value', style: color ? { color } : null },
         value,
@@ -1620,7 +1630,7 @@
           h('div', { className: 'metabolic-quick-status__title' },
             h('span', { className: 'metabolic-quick-status__title-icon' }, '⚠️'),
             h('span', null, 'Статус и риски'),
-            h(InfoButton, { infoKey: 'CRASH_RISK' })
+            h(getInfoButton(), { infoKey: 'CRASH_RISK' })
           )
         ),
         h('div', { className: 'metabolic-quick-status__cards' },
@@ -1651,7 +1661,7 @@
         h('div', { className: 'metabolic-quick-status__title' },
           h('span', { className: 'metabolic-quick-status__title-icon' }, '⚠️'),
           h('span', null, 'Статус и риски'),
-          h(InfoButton, { infoKey: 'CRASH_RISK' })
+          h(getInfoButton(), { infoKey: 'CRASH_RISK' })
         )
       ),
       // Cards container
@@ -1662,7 +1672,7 @@
             h('div', { className: 'metabolic-quick-status__score', style: { color: getScoreColor(status.score) } },
               status.score
             ),
-            h(InfoButton, { infoKey: 'STATUS_SCORE', size: 'small' })
+            h(getInfoButton(), { infoKey: 'STATUS_SCORE', size: 'small' })
           ),
           h('div', { className: 'metabolic-quick-status__score-label' }, 'Метаболизм'),
           phase && h('div', { className: 'metabolic-quick-status__phase' },
@@ -1686,7 +1696,7 @@
             h('div', { className: 'metabolic-quick-status__light metabolic-quick-status__light--red', 
               style: { opacity: risk.level === 'high' ? 1 : 0.2 } })
           ),
-          h(InfoButton, { infoKey: 'CRASH_RISK_QUICK', size: 'small' })
+          h(getInfoButton(), { infoKey: 'CRASH_RISK_QUICK', size: 'small' })
         ),
         h('div', { className: 'metabolic-quick-status__risk-label' },
           h('span', null, risk.emoji),
@@ -1868,7 +1878,7 @@
         status.reasons && status.reasons.length > 0 && h('div', { className: 'metabolic-status-card__section' },
           h('div', { className: 'metabolic-status-card__section-header' },
             h('span', { className: 'metabolic-status-card__section-title' }, '📉 Что влияет на статус'),
-            h(InfoButton, { infoKey: 'STATUS_INFLUENCES', size: 'small' })
+            h(getInfoButton(), { infoKey: 'STATUS_INFLUENCES', size: 'small' })
           ),
           h('div', { className: 'metabolic-status-card__reasons' },
             status.reasons.map((reason, idx) =>
@@ -1881,7 +1891,7 @@
         status.nextSteps && status.nextSteps.length > 0 && h('div', { className: 'metabolic-status-card__section' },
           h('div', { className: 'metabolic-status-card__section-header' },
             h('span', { className: 'metabolic-status-card__section-title' }, '🎯 Приоритетные действия'),
-            h(InfoButton, { infoKey: 'PRIORITY_ACTIONS', size: 'small' })
+            h(getInfoButton(), { infoKey: 'PRIORITY_ACTIONS', size: 'small' })
           ),
           h('div', { className: 'metabolic-status-card__steps' },
             status.nextSteps.slice(0, 3).map((step, idx) =>
@@ -1896,7 +1906,7 @@
             h('span', { className: 'metabolic-status-card__section-title' }, 
               `${riskEmojis[status.riskLevel]} Факторы риска`
             ),
-            h(InfoButton, { infoKey: 'STATUS_RISK_FACTORS', size: 'small' })
+            h(getInfoButton(), { infoKey: 'STATUS_RISK_FACTORS', size: 'small' })
           ),
           h('div', { className: 'metabolic-status-card__risk-factors' },
             status.riskFactors.map((factor, idx) =>
@@ -2097,7 +2107,7 @@
         h('div', { className: 'predictive-dashboard__title' },
           h('span', { className: 'predictive-dashboard__title-icon' }, '🔮'),
           h('span', null, 'Прогнозы на сегодня'),
-          h(InfoButton, { infoKey: 'PREDICTIVE_RISK' })
+          h(getInfoButton(), { infoKey: 'PREDICTIVE_RISK' })
         )
       ),
       
@@ -2353,7 +2363,7 @@
         h('div', { className: 'risk-panel__prevention' },
           h('div', { className: 'risk-panel__prevention-header' },
             h('span', { className: 'risk-panel__prevention-title' }, '🛡️ Профилактика'),
-            h(InfoButton, { infoKey: 'PREVENTION_STRATEGY', size: 'small' })
+            h(getInfoButton(), { infoKey: 'PREVENTION_STRATEGY', size: 'small' })
           ),
           activePredictionData.preventionStrategy.slice(0, 3).map((strategy, idx) =>
             h('div', { key: idx, className: 'risk-panel__strategy' },
@@ -2371,7 +2381,7 @@
         h('div', { className: 'risk-panel__factors' },
           h('div', { className: 'risk-panel__factors-header' },
             h('span', { className: 'risk-panel__factors-title' }, '📋 Факторы риска'),
-            h(InfoButton, { infoKey: 'RISK_FACTORS', size: 'small' })
+            h(getInfoButton(), { infoKey: 'RISK_FACTORS', size: 'small' })
           ),
           activePredictionData.factors.slice(0, 6).map((factor, idx) =>
             h('div', { 
@@ -2476,7 +2486,7 @@
           h(RiskMeter, { risk: prediction.risk, riskLevel })
         ),
         h('div', { className: 'risk-panel__meter-info' },
-          h(InfoButton, { 
+          h(getInfoButton(), { 
             infoKey: 'CRASH_RISK', 
             size: 'small',
             debugData: { 
@@ -2509,7 +2519,7 @@
       prediction.preventionStrategy && prediction.preventionStrategy.length > 0 && h('div', { className: 'risk-panel__prevention' },
         h('div', { className: 'risk-panel__prevention-header' },
           h('span', { className: 'risk-panel__prevention-title' }, '🛡️ Профилактика'),
-          h(InfoButton, { infoKey: 'PREVENTION_STRATEGY', size: 'small' })
+          h(getInfoButton(), { infoKey: 'PREVENTION_STRATEGY', size: 'small' })
         ),
         prediction.preventionStrategy.slice(0, 3).map((strategy, idx) =>
           h('div', { key: idx, className: 'risk-panel__strategy' },
@@ -2526,7 +2536,7 @@
       prediction.factors && prediction.factors.length > 0 && h('div', { className: 'risk-panel__factors' },
         h('div', { className: 'risk-panel__factors-header' },
           h('span', { className: 'risk-panel__factors-title' }, '📋 Факторы риска'),
-          h(InfoButton, { infoKey: 'RISK_FACTORS', size: 'small' })
+          h(getInfoButton(), { infoKey: 'RISK_FACTORS', size: 'small' })
         ),
         prediction.factors.slice(0, 5).map((factor, idx) =>
           h('div', { key: idx, className: 'risk-panel__factor' },
@@ -2684,7 +2694,7 @@
           h('div', { className: 'forecast-panel__wave-label', style: { color: waveEndInfo.color } }, 
             waveEndInfo.label
           ),
-          h(InfoButton, { infoKey: 'INSULIN_WAVE_STATUS', size: 'small' })
+          h(getInfoButton(), { infoKey: 'INSULIN_WAVE_STATUS', size: 'small' })
         ),
         h('div', { className: 'forecast-panel__wave-desc' }, waveEndInfo.desc)
       ),
@@ -2693,7 +2703,7 @@
       forecast.energyWindows && forecast.energyWindows.length > 0 && h('div', { className: 'forecast-panel__section' },
         h('div', { className: 'forecast-panel__section-header' },
           h('span', { className: 'forecast-panel__section-title' }, '⚡ Окна энергии'),
-          h(InfoButton, { infoKey: 'ENERGY_WINDOWS', size: 'small' })
+          h(getInfoButton(), { infoKey: 'ENERGY_WINDOWS', size: 'small' })
         ),
         h('div', { className: 'forecast-panel__windows' },
           forecast.energyWindows.map((window, idx) =>
@@ -2714,7 +2724,7 @@
       forecast.trainingWindow && h('div', { className: 'forecast-panel__section' },
         h('div', { className: 'forecast-panel__section-header' },
           h('span', { className: 'forecast-panel__section-title' }, '🏋️ Лучшее время для тренировки'),
-          h(InfoButton, { infoKey: 'TRAINING_WINDOW', size: 'small' })
+          h(getInfoButton(), { infoKey: 'TRAINING_WINDOW', size: 'small' })
         ),
         h('div', { className: 'forecast-panel__training' },
           h('div', { className: 'forecast-panel__training-time' }, forecast.trainingWindow.time),
@@ -2726,7 +2736,7 @@
       insulinWaveData && insulinWaveData.status !== 'lipolysis' && h('div', { className: 'forecast-panel__section' },
         h('div', { className: 'forecast-panel__section-header' },
           h('span', { className: 'forecast-panel__section-title' }, '🍽️ Следующий приём пищи'),
-          h(InfoButton, { infoKey: 'NEXT_MEAL', size: 'small' })
+          h(getInfoButton(), { infoKey: 'NEXT_MEAL', size: 'small' })
         ),
         h('div', { className: 'forecast-panel__next-meal' },
           h('div', { className: 'forecast-panel__next-meal-time' },
@@ -2746,7 +2756,7 @@
       h('div', { className: 'forecast-panel__scenarios' },
         h('div', { className: 'forecast-panel__scenarios-header' },
           h('span', { className: 'forecast-panel__scenarios-title' }, '🎯 Сценарии'),
-          h(InfoButton, { infoKey: 'WHATIF_SCENARIOS', size: 'small' })
+          h(getInfoButton(), { infoKey: 'WHATIF_SCENARIOS', size: 'small' })
         ),
         h('div', { className: 'forecast-panel__scenario forecast-panel__scenario--likely' },
           h('span', { className: 'forecast-panel__scenario-emoji' }, '📊'),

@@ -51,6 +51,16 @@
   const piUIWhatIf = HEYS.InsightsPI?.uiWhatIf || window.piUIWhatIf || {};
   const piUIDashboard = HEYS.InsightsPI?.uiDashboard || window.piUIDashboard || {};
   
+  // === LAZY GETTER для InfoButton с полной fallback цепочкой (fix load order) ===
+  function getInfoButton() {
+    return HEYS.InsightsPI?.uiDashboard?.InfoButton ||
+           HEYS.PredictiveInsights?.components?.InfoButton ||
+           HEYS.day?.InfoButton || 
+           HEYS.InfoButton || 
+           window.InfoButton || 
+           function FallbackInfoButton() { return null; };
+  }
+  
   const CONFIG = piConst.CONFIG || {
     DEFAULT_DAYS: 14,
     MIN_DAYS_FOR_INSIGHTS: 3,
@@ -680,7 +690,7 @@
             h('div', { className: 'insights-ring-card__info' },
               h('div', { className: 'insights-ring-card__header' },
                 h('div', { className: 'insights-ring-card__label' }, cat.label),
-                h(InfoButton, { infoKey: cat.infoKey, size: 'small' })
+                h(getInfoButton(), { infoKey: cat.infoKey, size: 'small' })
               ),
               h('div', { className: 'insights-ring-card__title' }, 
                 hasEmotionalWarning 

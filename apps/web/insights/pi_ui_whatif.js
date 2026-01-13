@@ -1,6 +1,7 @@
-// pi_ui_whatif.js — What-If Simulator UI Components v3.0.0
+// pi_ui_whatif.js — What-If Simulator UI Components v3.0.1
 // Extracted from heys_predictive_insights_v1.js (Phase 9a)
 // What-If симулятор - интерактивный прогноз влияния питания на здоровье
+// v3.0.1: Lazy getters for InfoButton (script order fix)
 (function(global) {
   'use strict';
   
@@ -12,6 +13,23 @@
   
   // Зависимости
   const piAdvanced = HEYS.InsightsPI?.advanced || window.piAdvanced || {};
+  
+  // Lazy getter для InfoButton (загружается позже в pi_ui_dashboard.js)
+  function getInfoButton() {
+    return HEYS.InsightsPI?.uiDashboard?.InfoButton ||
+           HEYS.PredictiveInsights?.components?.InfoButton ||
+           HEYS.day?.InfoButton || 
+           HEYS.InfoButton || 
+           window.InfoButton || 
+           // Fallback: простая кнопка если InfoButton не загружен
+           function InfoButtonFallback({ infoKey, size }) {
+             return h('span', { 
+               className: 'info-button-placeholder',
+               title: infoKey,
+               style: { cursor: 'help', opacity: 0.5 }
+             }, '?');
+           };
+  }
   
   // Import generateWhatIfScenarios
   const generateWhatIfScenarios = piAdvanced.generateWhatIfScenarios || function() { return []; };
@@ -307,7 +325,7 @@
           h('span', null, '🧪'),
           ' Что если съесть?'
         ),
-        h(InfoButton, { infoKey: 'WHATIF_SIMULATOR' }),
+        h(getInfoButton(), { infoKey: 'WHATIF_SIMULATOR' }),
         h('button', {
           className: 'whatif-card__expand',
           onClick: () => setIsExpanded(true)
@@ -384,7 +402,7 @@
     return h('div', { className: 'insights-whatif' },
       h('div', { className: 'insights-whatif__header' },
         h('span', { className: 'insights-whatif__title' }, '🎯 Сценарии'),
-        h(InfoButton, {
+        h(getInfoButton(), {
           infoKey: 'WHATIF',
           debugData: { scenariosCount: scenarios.length }
         })

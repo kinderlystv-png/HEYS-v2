@@ -1,6 +1,7 @@
-// pi_ui_rings.js — Ring UI Components v3.0.0
+// pi_ui_rings.js — Ring UI Components v3.0.1
 // Extracted from heys_predictive_insights_v1.js (Phase 7)
 // Кольцевые компоненты для визуализации прогресса и состояния
+// v3.0.1: Lazy getter для InfoButton (fix load order issues)
 (function(global) {
   'use strict';
   
@@ -12,6 +13,24 @@
   
   // Зависимости
   const SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {};
+  
+  // === LAZY GETTER для InfoButton (fix load order) ===
+  // InfoButton определён в pi_ui_dashboard.js который загружается ПОСЛЕ этого модуля
+  const getInfoButton = () => {
+    return HEYS.InsightsPI?.uiDashboard?.InfoButton ||
+           HEYS.PredictiveInsights?.components?.InfoButton ||
+           HEYS.day?.InfoButton || 
+           HEYS.InfoButton || 
+           window.InfoButton || 
+           // Fallback: простая кнопка если InfoButton не загружен
+           function InfoButtonFallback({ infoKey, size }) {
+             return h('span', { 
+               className: 'info-button-placeholder',
+               title: infoKey,
+               style: { cursor: 'help', opacity: 0.5 }
+             }, 'ℹ️');
+           };
+  };
   
   /**
    * HealthRing — кольцо здоровья для категории
@@ -72,7 +91,7 @@
         h('span', { className: 'insights-ring__score' }, score || '—'),
         h('span', { className: 'insights-ring__label' },
           label,
-          infoKey && h(InfoButton, { infoKey, debugData, size: 'small' })
+          infoKey && h(getInfoButton(), { infoKey, debugData, size: 'small' })
         ),
         // 🆕 v3.22.0: Emotional risk badge в кольце
         hasEmotionalRisk && h('div', { className: 'insights-ring__emotional' },
@@ -144,7 +163,7 @@
           h('span', { className: 'insights-total__score' }, score || '—'),
           h('span', { className: 'insights-total__label' },
             label,
-            h(InfoButton, { infoKey: 'HEALTH_SCORE', debugData })
+            h(getInfoButton(), { infoKey: 'HEALTH_SCORE', debugData })
           )
         )
       )
