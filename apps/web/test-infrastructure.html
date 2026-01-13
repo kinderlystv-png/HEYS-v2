@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HEYS Refactoring Infrastructure Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e0e0e0;
+    }
+    .test-section {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+      border-left: 4px solid #10b981;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #10b981;
+    }
+    .success {
+      color: #10b981;
+      font-weight: bold;
+    }
+    .info {
+      color: #60a5fa;
+    }
+    pre {
+      background: #0f1729;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+    button {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #059669;
+    }
+    .log {
+      background: #0f1729;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 HEYS Refactoring Infrastructure Test</h1>
+  
+  <div class="test-section">
+    <h2>📦 Module Loading</h2>
+    <div id="loading-status">Loading modules...</div>
+  </div>
+  
+  <div class="test-section">
+    <h2>🎛️ Feature Flags Test</h2>
+    <div id="feature-flags-test"></div>
+    <button onclick="testFeatureFlags()">Run Test</button>
+  </div>
+  
+  <div class="test-section">
+    <h2>⚡ Performance Tracker Test</h2>
+    <div id="perf-test"></div>
+    <button onclick="testPerformanceTracker()">Run Test</button>
+  </div>
+  
+  <div class="test-section">
+    <h2>📚 Module Loader Test</h2>
+    <div id="loader-test"></div>
+    <button onclick="testModuleLoader()">Run Test</button>
+  </div>
+  
+  <div class="test-section">
+    <h2>📊 Full Report</h2>
+    <button onclick="showFullReport()">Show Full Report</button>
+    <pre id="full-report"></pre>
+  </div>
+
+  <!-- Load infrastructure modules -->
+  <script defer src="heys_dev_utils.js"></script>
+  <script defer src="heys_feature_flags_v1.js?v=1"></script>
+  <script defer src="heys_module_perf_v1.js?v=1"></script>
+  <script defer src="heys_module_loader_v1.js?v=1"></script>
+  
+  <script>
+    // Wait for modules to load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const status = document.getElementById('loading-status');
+        
+        if (window.HEYS && window.HEYS.featureFlags && window.HEYS.modulePerf && window.HEYS.moduleLoader) {
+          status.innerHTML = '<span class="success">✅ All modules loaded successfully!</span>';
+          
+          // Show available APIs
+          status.innerHTML += `
+            <div class="log">
+              <div>Available APIs:</div>
+              <div>- HEYS.featureFlags ✓</div>
+              <div>- HEYS.modulePerf ✓</div>
+              <div>- HEYS.moduleLoader ✓</div>
+            </div>
+          `;
+        } else {
+          status.innerHTML = '<span style="color: #ef4444;">❌ Error: Some modules failed to load</span>';
+        }
+      }, 500);
+    });
+    
+    function testFeatureFlags() {
+      const output = document.getElementById('feature-flags-test');
+      let html = '<div class="log">';
+      
+      // Test 1: Check default flags
+      html += '<div>📝 Default Flags:</div>';
+      const flags = HEYS.featureFlags.getAll();
+      html += `<div>- use_legacy_monolith: ${flags.use_legacy_monolith}</div>`;
+      html += `<div>- modular_platform_apis: ${flags.modular_platform_apis}</div>`;
+      
+      // Test 2: Enable a flag
+      html += '<div><br>📝 Enabling modular_platform_apis...</div>';
+      HEYS.featureFlags.enable('modular_platform_apis');
+      html += `<div class="success">✅ Enabled: ${HEYS.featureFlags.isEnabled('modular_platform_apis')}</div>`;
+      
+      // Test 3: Phased rollout
+      html += '<div><br>📝 Testing Phase 2 rollout...</div>';
+      HEYS.featureFlags.enablePhase(2);
+      html += `<div>- modular_platform_apis: ${HEYS.featureFlags.isEnabled('modular_platform_apis')}</div>`;
+      html += `<div>- modular_pwa: ${HEYS.featureFlags.isEnabled('modular_pwa')}</div>`;
+      
+      // Test 4: Rollback
+      html += '<div><br>📝 Testing rollback...</div>';
+      HEYS.featureFlags.rollbackToLegacy();
+      html += `<div>- modular_platform_apis: ${HEYS.featureFlags.isEnabled('modular_platform_apis')}</div>`;
+      html += `<div class="success">✅ Rollback successful</div>`;
+      
+      html += '</div>';
+      output.innerHTML = html;
+    }
+    
+    function testPerformanceTracker() {
+      const output = document.getElementById('perf-test');
+      let html = '<div class="log">';
+      
+      html += '<div>📝 Simulating module loads...</div>';
+      
+      // Simulate fast module
+      HEYS.modulePerf.startLoad('test_module_fast');
+      setTimeout(() => {
+        HEYS.modulePerf.endLoad('test_module_fast', true);
+        html += '<div class="success">✅ Fast module: ~50ms</div>';
+        
+        // Simulate slow module
+        HEYS.modulePerf.startLoad('test_module_slow');
+        setTimeout(() => {
+          HEYS.modulePerf.endLoad('test_module_slow', true);
+          html += '<div style="color: #fbbf24;">⚠️ Slow module: ~600ms</div>';
+          
+          // Get report
+          const report = HEYS.modulePerf.getReport();
+          html += `<div><br>📊 Report:</div>`;
+          html += `<div>- Total modules tracked: ${report.totalModules}</div>`;
+          
+          Object.keys(report.stats).forEach(name => {
+            const stats = report.stats[name];
+            html += `<div>- ${name}: avg ${stats.avgDuration}ms</div>`;
+          });
+          
+          html += '</div>';
+          output.innerHTML = html;
+        }, 600);
+      }, 50);
+      
+      html += '</div>';
+      output.innerHTML = html;
+    }
+    
+    function testModuleLoader() {
+      const output = document.getElementById('loader-test');
+      let html = '<div class="log">';
+      
+      html += '<div>📝 Testing Module Loader API...</div>';
+      html += `<div class="success">✅ HEYS.moduleLoader available</div>`;
+      html += `<div>- load(): ${typeof HEYS.moduleLoader.load}</div>`;
+      html += `<div>- loadAll(): ${typeof HEYS.moduleLoader.loadAll}</div>`;
+      html += `<div>- isLoaded(): ${typeof HEYS.moduleLoader.isLoaded}</div>`;
+      html += `<div>- getReport(): ${typeof HEYS.moduleLoader.getReport}</div>`;
+      
+      html += '<div><br>📝 Module loader ready for Phase 2!</div>';
+      html += '</div>';
+      output.innerHTML = html;
+    }
+    
+    function showFullReport() {
+      const output = document.getElementById('full-report');
+      
+      const report = {
+        timestamp: new Date().toISOString(),
+        featureFlags: HEYS.featureFlags.getAll(),
+        performanceStats: HEYS.modulePerf.getReport(),
+        moduleLoaderStatus: HEYS.moduleLoader.getReport()
+      };
+      
+      output.textContent = JSON.stringify(report, null, 2);
+    }
+  </script>
+</body>
+</html>

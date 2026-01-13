@@ -1,27 +1,26 @@
 ---
-description: HEYS v2 — AI Development Guide v4.1.0 (Compact)
+description: HEYS v2 — AI Development Guide v4.0.0 (Compact)
 applyTo: '**/*'
 ---
 
 # HEYS v2 — AI Guide (Compact)
 
-> 🇷🇺 Ответы · EN Code · v4.1.0
+> 🇷🇺 Ответы · EN Code · v4.0.0
 
 ## 📚 Справочники (детали вынесены)
 
-| Тема                                       | Файл                                                                  |
-| ------------------------------------------ | --------------------------------------------------------------------- |
-| Архитектура, файловая структура            | [docs/dev/ARCHITECTURE.md](../docs/dev/ARCHITECTURE.md)               |
-| Стиль кода, naming, запреты                | [docs/dev/CODE_STYLE.md](../docs/dev/CODE_STYLE.md)                   |
-| CSS/Tailwind/BEM правила                   | [docs/dev/CSS_GUIDE.md](../docs/dev/CSS_GUIDE.md)                     |
-| Storage паттерны (localStorage, cloud)     | [docs/dev/STORAGE_PATTERNS.md](../docs/dev/STORAGE_PATTERNS.md)       |
-| Частые ошибки и решения                    | [docs/dev/COMMON_ERRORS.md](../docs/dev/COMMON_ERRORS.md)             |
-| API Reference (YandexAPI, RPC)             | [docs/dev/API_REFERENCE.md](../docs/dev/API_REFERENCE.md)             |
-| Промпты и аудит                            | [docs/dev/PROMPTS_AND_AUDIT.md](../docs/dev/PROMPTS_AND_AUDIT.md)     |
-| **Архитектура модулей (лимиты, паттерны)** | [docs/dev/MODULE_ARCHITECTURE.md](../docs/dev/MODULE_ARCHITECTURE.md) |
-| Модель данных (dayTot, normAbs и др.)      | [docs/DATA_MODEL_REFERENCE.md](../docs/DATA_MODEL_REFERENCE.md)       |
-| Бизнес + продукт + чеклисты                | [docs/HEYS_BRIEF.md](../docs/HEYS_BRIEF.md)                           |
-| Безопасность при деплое                    | [docs/SECURITY_RUNBOOK.md](../docs/SECURITY_RUNBOOK.md)               |
+| Тема                                   | Файл                                                              |
+| -------------------------------------- | ----------------------------------------------------------------- |
+| Архитектура, файловая структура        | [docs/dev/ARCHITECTURE.md](../docs/dev/ARCHITECTURE.md)           |
+| Стиль кода, naming, запреты            | [docs/dev/CODE_STYLE.md](../docs/dev/CODE_STYLE.md)               |
+| CSS/Tailwind/BEM правила               | [docs/dev/CSS_GUIDE.md](../docs/dev/CSS_GUIDE.md)                 |
+| Storage паттерны (localStorage, cloud) | [docs/dev/STORAGE_PATTERNS.md](../docs/dev/STORAGE_PATTERNS.md)   |
+| Частые ошибки и решения                | [docs/dev/COMMON_ERRORS.md](../docs/dev/COMMON_ERRORS.md)         |
+| API Reference (YandexAPI, RPC)         | [docs/dev/API_REFERENCE.md](../docs/dev/API_REFERENCE.md)         |
+| Промпты и аудит                        | [docs/dev/PROMPTS_AND_AUDIT.md](../docs/dev/PROMPTS_AND_AUDIT.md) |
+| Модель данных (dayTot, normAbs и др.)  | [docs/DATA_MODEL_REFERENCE.md](../docs/DATA_MODEL_REFERENCE.md)   |
+| Бизнес + продукт + чеклисты            | [docs/HEYS_BRIEF.md](../docs/HEYS_BRIEF.md)                       |
+| Безопасность при деплое                | [docs/SECURITY_RUNBOOK.md](../docs/SECURITY_RUNBOOK.md)           |
 
 ---
 
@@ -34,23 +33,21 @@ applyTo: '**/*'
 4. **Tailwind first** — inline styles запрещены, CSS только в
    `styles/heys-components.css`
 5. **`pnpm build`** — только перед коммитом, HMR достаточно для проверки
-6. **Модуль ≤2000 LOC** — если больше, разбивай на sub-modules (см.
-   [MODULE_ARCHITECTURE.md](../docs/dev/MODULE_ARCHITECTURE.md))
+6. **💡 После каждой задачи** — добавляй секцию "Замечено в контексте" (Quick
+   Wins / Стратегические / Баги) — см.
+   [PROMPTS_AND_AUDIT.md](../docs/dev/PROMPTS_AND_AUDIT.md#-проактивные-улучшения-обязательная-секция)
 
 ---
 
 ## 🚫 Запрещено → ✅ Правильно
 
-| 🚫 Запрещено                  | ✅ Правильно                      |
-| ----------------------------- | --------------------------------- |
-| `console.log` напрямую        | `HEYS.analytics.trackError()`     |
-| `localStorage.setItem`        | `U.lsSet('heys_key', val)`        |
-| `select('*')` в Supabase      | `select('id, name, ...')`         |
-| Inline styles в JSX           | Tailwind классы                   |
-| `cloud.client.rpc()`          | `HEYS.YandexAPI.rpc()`            |
-| `warnMissing()` fallbacks     | Явный `if (!HEYS.X) throw` в init |
-| Модуль >2000 LOC              | Разбить на sub-modules            |
-| `HEYS.*` прямые вызовы >50 шт | Dependency Injection              |
+| 🚫 Запрещено             | ✅ Правильно                  |
+| ------------------------ | ----------------------------- |
+| `console.log` напрямую   | `HEYS.analytics.trackError()` |
+| `localStorage.setItem`   | `U.lsSet('heys_key', val)`    |
+| `select('*')` в Supabase | `select('id, name, ...')`     |
+| Inline styles в JSX      | Tailwind классы               |
+| `cloud.client.rpc()`     | `HEYS.YandexAPI.rpc()`        |
 
 ---
 

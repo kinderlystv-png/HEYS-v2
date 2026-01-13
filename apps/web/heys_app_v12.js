@@ -3982,6 +3982,7 @@ const HEYS = window.HEYS = window.HEYS || {};
             
             React.useEffect(() => {
               let cancelled = false;
+              let recoveryScheduled = false; // 🔒 Флаг: recovery уже запланировано (debounce)
               
               // 🛡️ Хелпер: безопасное обновление продуктов (не уменьшаем количество)
               const safeSetProducts = (newProducts) => {
@@ -3999,11 +4000,42 @@ const HEYS = window.HEYS = window.HEYS || {};
                 });
               };
               
+              // 🔄 Хелпер: запуск orphan recovery (с debounce через флаг)
+              const runOrphanRecovery = (options = {}) => {
+                if (recoveryScheduled || cancelled) return;
+                if (!window.HEYS.orphanProducts?.autoRecoverOnLoad) return;
+                
+                recoveryScheduled = true;
+                const isFirstLoad = !syncedClientsCache.has(clientId);
+                
+                window.HEYS.orphanProducts.autoRecoverOnLoad({ 
+                  verbose: isFirstLoad, // Verbose только для первого входа
+                  ...options 
+                }).then(result => {
+                  if (result.recovered > 0 && !cancelled) {
+                    // Обновляем React state если что-то восстановили
+                    const updatedProducts = window.HEYS.utils.lsGet('heys_products', []);
+                    safeSetProducts(Array.isArray(updatedProducts) ? updatedProducts : []);
+                    
+                    // 🔔 Toast уведомление для пользователя
+                    if (window.HEYS.Toast?.success) {
+                      const msg = result.recovered === 1 
+                        ? '🔄 Восстановлен 1 продукт из истории' 
+                        : `🔄 Восстановлено ${result.recovered} продуктов из истории`;
+                      window.HEYS.Toast.success(msg);
+                    }
+                  }
+                }).catch(() => {});
+              };
+              
               // Если sync для этого клиента уже был — сразу загружаем продукты
               if (syncedClientsCache.has(clientId)) {
                 const loadedProducts = window.HEYS.utils.lsGet('heys_products', []);
                 safeSetProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
                 setLoading(false);
+                
+                // 🔄 Автоматическое восстановление orphan-продуктов (в фоне)
+                runOrphanRecovery();
                 return;
               }
               
@@ -4024,6 +4056,9 @@ const HEYS = window.HEYS = window.HEYS || {};
                         : [];
                       safeSetProducts(loadedProducts);
                       setLoading(false);
+                      
+                      // 🔄 Автоматическое восстановление orphan-продуктов (в фоне)
+                      runOrphanRecovery();
                     }
                   })
                   .catch((err) => {
@@ -4032,6 +4067,9 @@ const HEYS = window.HEYS = window.HEYS || {};
                       const loadedProducts = window.HEYS.utils.lsGet('heys_products', []);
                       safeSetProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
                       setLoading(false);
+                      
+                      // 🔄 Автоматическое восстановление orphan-продуктов (в фоне)
+                      runOrphanRecovery({ tryShared: false });
                     }
                   });
               } else {
@@ -4039,6 +4077,9 @@ const HEYS = window.HEYS = window.HEYS || {};
                 const loadedProducts = window.HEYS.utils.lsGet('heys_products', []);
                 safeSetProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
                 setLoading(false);
+                
+                // 🔄 Автоматическое восстановление orphan-продуктов (в фоне, без shared)
+                runOrphanRecovery({ tryShared: false });
               }
               return () => {
                 cancelled = true;
