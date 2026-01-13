@@ -237,6 +237,217 @@
       
       console.log('ℹ️ Нечего восстанавливать — нет данных в штампах');
       return { success: false, count: 0, products: [] };
+    },
+
+    /**
+     * 🔄 autoRecoverOnLoad — Автоматическая проверка и восстановление orphan-продуктов при загрузке
+     * Вызывается после загрузки продуктов (sync или localStorage)
+     * 
+     * Логика:
+     * 1. Сканирует все дни (heys_dayv2_*)
+     * 2. Для каждого продукта в приёмах пищи проверяет наличие в локальной базе
+     * 3. Если не найден — пытается восстановить:
+     *    a) Из штампа (kcal100, protein100, etc. в meal item) — приоритет
+     *    b) Из shared_products через HEYS.YandexAPI.rpc — fallback
+     * 4. Добавляет восстановленные продукты в локальную базу
+     * 
+     * @param {Object} options - Опции
+     * @param {boolean} options.verbose - Подробный лог (default: false)
+     * @param {boolean} options.tryShared - Пытаться восстановить из shared_products (default: true)
+     * @returns {Promise<{recovered: number, fromStamp: number, fromShared: number, missing: string[]}>}
+     */
+    async autoRecoverOnLoad(options = {}) {
+      const { verbose = false, tryShared = true } = options;
+      const U = HEYS.utils || {};
+      const lsGet = U.lsGet || ((k, d) => {
+        try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+      });
+
+      const startTime = Date.now();
+      if (verbose) console.log('[HEYS] 🔍 autoRecoverOnLoad: начинаю проверку продуктов...');
+
+      // 1. Собираем текущие продукты в Map по id и по name (lowercase)
+      const products = lsGet('heys_products', []);
+      const productsById = new Map();
+      const productsByName = new Map();
+      products.forEach(p => {
+        if (p && p.id) productsById.set(String(p.id), p);
+        if (p && p.name) productsByName.set(String(p.name).trim().toLowerCase(), p);
+      });
+
+      if (verbose) console.log(`[HEYS] Локальная база: ${products.length} продуктов`);
+
+      // 2. Собираем все уникальные продукты из всех дней
+      const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
+      const missingProducts = new Map(); // product_id or name => { item, dateStr, hasStamp }
+
+      for (const key of keys) {
+        try {
+          const day = JSON.parse(localStorage.getItem(key));
+          if (!day || !day.meals) continue;
+          const dateStr = key.split('_dayv2_').pop();
+
+          for (const meal of day.meals) {
+            for (const item of (meal.items || [])) {
+              const productId = item.product_id ? String(item.product_id) : null;
+              const itemName = String(item.name || '').trim();
+              const itemNameLower = itemName.toLowerCase();
+
+              // Проверяем есть ли в базе
+              const foundById = productId && productsById.has(productId);
+              const foundByName = itemNameLower && productsByName.has(itemNameLower);
+
+              if (!foundById && !foundByName && itemName) {
+                const key = productId || itemNameLower;
+                if (!missingProducts.has(key)) {
+                  missingProducts.set(key, {
+                    productId,
+                    name: itemName,
+                    hasStamp: item.kcal100 != null,
+                    stampData: item.kcal100 != null ? {
+                      kcal100: item.kcal100,
+                      protein100: item.protein100 || 0,
+                      fat100: item.fat100 || 0,
+                      carbs100: item.carbs100 || 0,
+                      simple100: item.simple100 || 0,
+                      complex100: item.complex100 || 0,
+                      badFat100: item.badFat100 || 0,
+                      goodFat100: item.goodFat100 || 0,
+                      trans100: item.trans100 || 0,
+                      fiber100: item.fiber100 || 0,
+                      gi: item.gi,
+                      harm: item.harm
+                    } : null,
+                    firstSeenDate: dateStr
+                  });
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // Пропускаем битые записи
+        }
+      }
+
+      if (missingProducts.size === 0) {
+        if (verbose) console.log(`[HEYS] ✅ Все продукты найдены в базе (${Date.now() - startTime}ms)`);
+        return { recovered: 0, fromStamp: 0, fromShared: 0, missing: [] };
+      }
+
+      console.log(`[HEYS] ⚠️ Найдено ${missingProducts.size} продуктов, отсутствующих в базе`);
+
+      // 3. Пытаемся восстановить
+      const recovered = [];
+      let fromStamp = 0;
+      let fromShared = 0;
+      const stillMissing = [];
+
+      // 3a. Восстановление из штампов
+      for (const [key, data] of missingProducts) {
+        if (data.hasStamp && data.stampData) {
+          const restoredProduct = {
+            id: data.productId || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
+            name: data.name,
+            ...data.stampData,
+            gi: data.stampData.gi ?? 50,
+            harm: data.stampData.harm ?? 0,
+            _recoveredFrom: 'stamp',
+            _recoveredAt: Date.now()
+          };
+          recovered.push(restoredProduct);
+          productsById.set(String(restoredProduct.id), restoredProduct);
+          productsByName.set(data.name.toLowerCase(), restoredProduct);
+          fromStamp++;
+          console.log(`[HEYS] 📦 Восстановлен из штампа: "${data.name}"`);
+        } else {
+          stillMissing.push(data);
+        }
+      }
+
+      // 3b. Пытаемся найти в shared_products (если есть YandexAPI)
+      if (tryShared && stillMissing.length > 0 && HEYS.YandexAPI?.rpc) {
+        try {
+          if (verbose) console.log(`[HEYS] 🌐 Пытаюсь найти ${stillMissing.length} продуктов в shared_products...`);
+          
+          const { data: sharedProducts, error } = await HEYS.YandexAPI.rpc('get_shared_products', {});
+          
+          if (!error && Array.isArray(sharedProducts)) {
+            // Создаём индекс shared продуктов по id и name
+            const sharedById = new Map();
+            const sharedByName = new Map();
+            sharedProducts.forEach(p => {
+              if (p && p.id) sharedById.set(String(p.id), p);
+              if (p && p.name) sharedByName.set(String(p.name).trim().toLowerCase(), p);
+            });
+
+            for (const data of stillMissing) {
+              // Ищем сначала по id, потом по имени
+              let found = null;
+              if (data.productId) found = sharedById.get(data.productId);
+              if (!found && data.name) found = sharedByName.get(data.name.toLowerCase());
+
+              if (found) {
+                // Клонируем из shared
+                const cloned = HEYS.products?.addFromShared?.(found);
+                if (cloned) {
+                  cloned._recoveredFrom = 'shared';
+                  cloned._recoveredAt = Date.now();
+                  recovered.push(cloned);
+                  fromShared++;
+                  console.log(`[HEYS] 🌐 Восстановлен из shared: "${data.name}"`);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[HEYS] Не удалось загрузить shared_products:', e?.message || e);
+        }
+      }
+
+      // 4. Сохраняем восстановленные продукты (если были восстановлены из штампов)
+      if (fromStamp > 0) {
+        const newProducts = [...products, ...recovered.filter(p => p._recoveredFrom === 'stamp')];
+        
+        if (HEYS.products?.setAll) {
+          HEYS.products.setAll(newProducts);
+        } else {
+          const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
+          lsSet('heys_products', newProducts);
+        }
+
+        // Обновляем индекс
+        if (HEYS.products?.buildSearchIndex) {
+          HEYS.products.buildSearchIndex();
+        }
+      }
+
+      // 5. Очищаем orphan-трекинг для восстановленных
+      recovered.forEach(p => this.remove(p.name));
+
+      // Собираем имена тех, кого так и не нашли
+      const finalMissing = [];
+      for (const data of stillMissing) {
+        const wasRecovered = recovered.some(p => 
+          p.name.toLowerCase() === data.name.toLowerCase() ||
+          (data.productId && String(p.id) === data.productId)
+        );
+        if (!wasRecovered) {
+          finalMissing.push(data.name);
+          console.warn(`[HEYS] ❌ Не удалось восстановить: "${data.name}" (нет данных в штампе и shared)`);
+        }
+      }
+
+      const elapsed = Date.now() - startTime;
+      console.log(`[HEYS] ✅ autoRecoverOnLoad завершён за ${elapsed}ms: восстановлено ${recovered.length} (из штампа: ${fromStamp}, из shared: ${fromShared}), не найдено: ${finalMissing.length}`);
+
+      // Диспатчим событие для UI
+      if (recovered.length > 0 && typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heys:orphans-recovered', { 
+          detail: { recovered: recovered.length, fromStamp, fromShared, missing: finalMissing } 
+        }));
+      }
+
+      return { recovered: recovered.length, fromStamp, fromShared, missing: finalMissing };
     }
   };
 
