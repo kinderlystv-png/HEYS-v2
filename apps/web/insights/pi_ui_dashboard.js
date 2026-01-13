@@ -24,6 +24,35 @@
   const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
   const piAdvanced = HEYS.InsightsPI?.advanced || {};
   const piUICards = HEYS.InsightsPI?.uiCards || {};
+  const piUIRings = HEYS.InsightsPI?.uiRings || {};
+  const piConstants = HEYS.InsightsPI?.constants || {};
+  
+  // Получаем UI компоненты из piUICards
+  const {
+    AdvancedAnalyticsCard,
+    HealthRingsGrid,
+    CollapsibleSection,
+    MetabolismCard,
+    MetabolismSection,
+    PatternCard,
+    PatternsList,
+    ScenarioCard,
+    WhatIfSimulator,
+    WhatIfCard,
+    WhatIfSection
+  } = piUICards;
+  
+  // Получаем Ring компоненты из piUIRings
+  const { TotalHealthRing } = piUIRings;
+  
+  // Получаем константы из piConstants
+  const PRIORITY_LEVELS = piConstants.PRIORITY_LEVELS || {};
+  const CATEGORIES = piConstants.CATEGORIES || {};
+  const SCIENCE_INFO = piConstants.SCIENCE_INFO || {};
+  const getAllMetricsByPriority = piConstants.getAllMetricsByPriority || function() {
+    console.warn('[pi_ui_dashboard] getAllMetricsByPriority not available, returning empty array');
+    return [];
+  };
 
   function WeightPrediction({ prediction }) {
     if (!prediction || !prediction.available) return null;

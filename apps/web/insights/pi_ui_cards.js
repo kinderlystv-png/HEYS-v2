@@ -1589,14 +1589,19 @@
     AdvancedAnalyticsCard,
     MetabolismCard,
     MetabolismSection,
+    HealthRingsGrid,
     PatternCard,
-    PatternsList
+    PatternsList,
+    ScenarioCard,
+    WhatIfSimulator,
+    WhatIfCard,
+    WhatIfSection
   };
 
   // Backward compatibility fallback
   window.piUICards = HEYS.InsightsPI.uiCards;
   
-  console.log('[PI UI Cards] v3.0.1 loaded —', Object.keys(HEYS.InsightsPI.uiCards).length, 'card components');
+  console.log('[PI UI Cards] v3.0.2 loaded —', Object.keys(HEYS.InsightsPI.uiCards).length, 'card components');
   }
   
   // Start initialization (will retry until React is available)
