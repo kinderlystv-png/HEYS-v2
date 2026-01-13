@@ -1,6 +1,7 @@
 /**
  * @type {import('eslint').Linter.Config}
  */
+
 module.exports = {
   root: true,
   env: {
@@ -197,6 +198,21 @@ module.exports = {
         'no-restricted-syntax': 'off',
       },
     },
+    // 🏗️ Module Architecture - проверка лимитов для legacy JS файлов
+    // Pre-commit hook проверяет все файлы, ESLint правило работает в IDE
+    // ПРИМЕЧАНИЕ: ESLint плагин требует установки пакета, поэтому используем pre-commit hook
+    // {
+    //   files: ['apps/web/heys_*.js'],
+    //   plugins: ['@heys'],
+    //   rules: {
+    //     '@heys/module-architecture': ['warn', { ... }],
+    //   },
+    // },
+    // 
+    // ✅ Вместо ESLint плагина используем:
+    //    1. Pre-commit hook: scripts/check-module-architecture.sh
+    //    2. Ручной запуск: ./scripts/check-module-architecture.sh --all
+    //    3. Документация: docs/dev/MODULE_ARCHITECTURE.md
   ],
   ignorePatterns: [
     'dist/',
@@ -207,7 +223,7 @@ module.exports = {
     '.next/',
     '.turbo/',
     'storybook-static/',
-    // Legacy files
+    // Legacy files - проверяются pre-commit хуком
     'heys_*.js',
     'temp/',
     'TESTS/',
