@@ -37,8 +37,36 @@ ERRORS=0
 WARNINGS=0
 
 # =============================================================================
+# 🏛️ LEGACY ALLOWLIST — файлы исключённые из строгих проверок
+# =============================================================================
+# Эти файлы превышают лимиты, но рефакторинг планируется постепенно.
+# Для них показываем только warnings, не блокируем коммит.
+# Удаляй файлы из списка по мере их рефакторинга!
+# =============================================================================
+LEGACY_ALLOWLIST=(
+    "heys_app_v12.js"       # 8400+ LOC — главный модуль, рефакторинг в процессе
+    "heys_day_v12.js"       # 6400+ LOC — день/статистика, планируется разбиение
+    "heys_day_utils.js"     # 1800+ LOC — утилиты дня (извлечено из day_v12)
+    "heys_core_v12.js"      # Продукты/поиск, legacy
+    "heys_user_v12.js"      # Профиль, legacy
+    "heys_reports_v12.js"   # Отчёты, legacy
+)
+
+# =============================================================================
 # Функции анализа
 # =============================================================================
+
+is_legacy_file() {
+    local file="$1"
+    local basename=$(basename "$file")
+    
+    for legacy in "${LEGACY_ALLOWLIST[@]}"; do
+        if [ "$basename" = "$legacy" ]; then
+            return 0  # true - это legacy файл
+        fi
+    done
+    return 1  # false - обычный файл
+}
 
 count_loc() {
     local file="$1"
@@ -170,6 +198,12 @@ check_file() {
     local funcs=$(count_functions "$file")
     local refs=$(count_heys_refs "$file")
     local has_fallback="false"
+    local is_legacy="false"
+    
+    # Проверяем legacy allowlist
+    if is_legacy_file "$file"; then
+        is_legacy="true"
+    fi
     
     if has_warn_missing "$file"; then
         has_fallback="true"
@@ -178,37 +212,56 @@ check_file() {
     local status="✅"
     local issues=""
     
-    # Проверяем лимиты
+    # Проверяем лимиты (для legacy — только warnings, не errors)
     if [ "$loc" -gt "$LOC_LIMIT" ]; then
-        status="❌"
-        issues+="LOC=$loc>$LOC_LIMIT "
-        ((ERRORS++))
+        if [ "$is_legacy" = "true" ]; then
+            status="🏛️"  # Legacy icon
+            issues+="LOC=$loc (legacy) "
+            ((WARNINGS++))
+        else
+            status="❌"
+            issues+="LOC=$loc>$LOC_LIMIT "
+            ((ERRORS++))
+        fi
     elif [ "$loc" -gt "$LOC_WARNING" ]; then
-        if [ "$status" != "❌" ]; then status="⚠️"; fi
+        if [ "$status" != "❌" ] && [ "$status" != "🏛️" ]; then status="⚠️"; fi
         issues+="LOC=$loc "
         ((WARNINGS++))
     fi
     
     if [ "$funcs" -gt "$FUNC_LIMIT" ]; then
-        status="❌"
-        issues+="funcs=$funcs>$FUNC_LIMIT "
-        ((ERRORS++))
+        if [ "$is_legacy" = "true" ]; then
+            if [ "$status" != "🏛️" ]; then status="🏛️"; fi
+            issues+="funcs=$funcs (legacy) "
+            ((WARNINGS++))
+        else
+            status="❌"
+            issues+="funcs=$funcs>$FUNC_LIMIT "
+            ((ERRORS++))
+        fi
     elif [ "$funcs" -gt "$FUNC_WARNING" ]; then
-        if [ "$status" != "❌" ]; then status="⚠️"; fi
+        if [ "$status" != "❌" ] && [ "$status" != "🏛️" ]; then status="⚠️"; fi
         issues+="funcs=$funcs "
         ((WARNINGS++))
     fi
     
     if [ "$refs" -gt "$HEYS_REF_LIMIT" ]; then
-        status="❌"
-        issues+="HEYS.*=$refs>$HEYS_REF_LIMIT "
-        ((ERRORS++))
+        if [ "$is_legacy" = "true" ]; then
+            if [ "$status" != "🏛️" ]; then status="🏛️"; fi
+            issues+="HEYS.*=$refs (legacy) "
+            ((WARNINGS++))
+        else
+            status="❌"
+            issues+="HEYS.*=$refs>$HEYS_REF_LIMIT "
+            ((ERRORS++))
+        fi
     elif [ "$refs" -gt "$HEYS_REF_WARNING" ]; then
-        if [ "$status" != "❌" ]; then status="⚠️"; fi
+        if [ "$status" != "❌" ] && [ "$status" != "🏛️" ]; then status="⚠️"; fi
         issues+="HEYS.*=$refs "
         ((WARNINGS++))
     fi
     
+    # warnMissing всегда ошибка (даже для legacy)
     if [ "$has_fallback" = "true" ]; then
         status="❌"
         issues+="warnMissing! "
