@@ -151,6 +151,14 @@ jobs:
               --cache-control "public, max-age=0, must-revalidate"
           fi
 
+          # === STEP 2.6: Insights folder (modular Predictive Insights) ===
+          if [ -d "apps/web/dist/insights" ]; then
+            echo "🧠 Uploading insights folder (15 pi_*.js modules)..."
+            aws s3 sync apps/web/dist/insights/ s3://${{ env.YC_BUCKET_PWA }}/insights/ \
+              --endpoint-url=${{ env.YC_ENDPOINT }} \
+              --cache-control "public, max-age=0, must-revalidate"
+          fi
+
           # === STEP 3: Entry Points (NO CACHE AT ALL) ===
           # index.html, sw.js, version.json - must always be fresh
           echo "📄 Updating entry points (no-store)..."

@@ -1,7 +1,6 @@
-// pi_ui_rings.js — Ring UI Components v3.0.1
+// pi_ui_rings.js — Ring UI Components v3.0.0
 // Extracted from heys_predictive_insights_v1.js (Phase 7)
 // Кольцевые компоненты для визуализации прогресса и состояния
-// v3.0.1: Lazy getter для InfoButton (fix load order issues)
 (function(global) {
   'use strict';
   
@@ -13,24 +12,6 @@
   
   // Зависимости
   const SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {};
-  
-  // === LAZY GETTER для InfoButton (fix load order) ===
-  // InfoButton определён в pi_ui_dashboard.js который загружается ПОСЛЕ этого модуля
-  const getInfoButton = () => {
-    return HEYS.InsightsPI?.uiDashboard?.InfoButton ||
-           HEYS.PredictiveInsights?.components?.InfoButton ||
-           HEYS.day?.InfoButton || 
-           HEYS.InfoButton || 
-           window.InfoButton || 
-           // Fallback: простая кнопка если InfoButton не загружен
-           function InfoButtonFallback({ infoKey, size }) {
-             return h('span', { 
-               className: 'info-button-placeholder',
-               title: infoKey,
-               style: { cursor: 'help', opacity: 0.5 }
-             }, 'ℹ️');
-           };
-  };
   
   /**
    * HealthRing — кольцо здоровья для категории
@@ -91,7 +72,7 @@
         h('span', { className: 'insights-ring__score' }, score || '—'),
         h('span', { className: 'insights-ring__label' },
           label,
-          infoKey && h(getInfoButton(), { infoKey, debugData, size: 'small' })
+          infoKey && h(InfoButton, { infoKey, debugData, size: 'small' })
         ),
         // 🆕 v3.22.0: Emotional risk badge в кольце
         hasEmotionalRisk && h('div', { className: 'insights-ring__emotional' },
@@ -163,7 +144,7 @@
           h('span', { className: 'insights-total__score' }, score || '—'),
           h('span', { className: 'insights-total__label' },
             label,
-            h(getInfoButton(), { infoKey: 'HEALTH_SCORE', debugData })
+            h(InfoButton, { infoKey: 'HEALTH_SCORE', debugData })
           )
         )
       )
@@ -345,9 +326,7 @@
   }
   
   /**
-   * MetabolicStateRing — кольцо метаболического состояния
-   * Отображает текущую фазу метаболизма (anabolic/transitional/catabolic)
-   */
+   * RiskPanel — содержимое таба Risk (legacy, для одиночного отображения)
   function MetabolicStateRing({ phase, size = 120, strokeWidth = 10, showLabel = true }) {
     if (!phase || !phase.phase) {
       return h('div', { className: 'metabolic-ring metabolic-ring--empty' },
@@ -428,7 +407,7 @@
    * RiskTrafficLight — светофор риска срыва
    * Low = зелёный, Medium = жёлтый, High = красный
    */
-  function RiskTrafficLight({ riskLevel, riskValue, factors, compact = false, description }) {
+  function RiskTrafficLight({ riskLevel, riskValue, factors, compact = false }) {
     const lights = [
       { level: 'low', color: '#22c55e', label: 'Низкий', emoji: '✅' },
       { level: 'medium', color: '#eab308', label: 'Средний', emoji: '⚠️' },

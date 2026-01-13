@@ -1,63 +1,20 @@
 /**
- * HEYS Predictive Insights — UI Card Components Module v3.0.2
+ * HEYS Predictive Insights — UI Card Components Module v3.0
  * Extracted UI card components for clean architecture
- * v3.0.2: Fixed analytics API access via getAnalyticsFn safe accessor
  */
 
-(function(global) {
+(function() {
   'use strict';
-  
-  const HEYS = global.HEYS = global.HEYS || {};
-  HEYS.InsightsPI = HEYS.InsightsPI || {};
 
-  // React imports with retry mechanism for CDN loading
-  function initModule() {
-    const React = window.React;
-    if (!React || !React.createElement) {
-      // React not ready yet - retry in 50ms (CDN may still be loading)
-      setTimeout(initModule, 50);
-      return;
-    }
-    
-    const { createElement: h, useState, useEffect, useMemo, Component } = React;
+  // Wait for dependencies
+  if (typeof window.h === 'undefined') {
+    console.warn('[pi_ui_cards] Preact h() not loaded yet');
+    return;
+  }
 
+  const { h, Component, useState } = window;
   const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
   const piScience = HEYS.InsightsPI?.science || window.SCIENCE_INFO || {};
-
-  // Safe accessor for analytics functions (may be in InsightsPI.analyticsAPI or PredictiveInsights)
-  const getAnalyticsFn = (fnName) => {
-    return HEYS.InsightsPI?.analyticsAPI?.[fnName] || 
-           HEYS.InsightsPI?.[fnName] ||
-           HEYS.PredictiveInsights?.[fnName] ||
-           (() => ({ hasData: false, error: `${fnName} not loaded` }));
-  };
-
-  // InfoButton is defined in pi_ui_dashboard.js which loads AFTER this module
-  // Use lazy getter to defer resolution until runtime
-  const getInfoButton = () => {
-    return HEYS.InsightsPI?.uiDashboard?.InfoButton || 
-           HEYS.PredictiveInsights?.components?.InfoButton ||
-           // Fallback: simple button that does nothing if InfoButton not loaded
-           function InfoButtonFallback({ infoKey, size }) {
-             return h('span', { 
-               className: 'info-button-placeholder',
-               title: infoKey,
-               style: { cursor: 'help', opacity: 0.5 }
-             }, 'ℹ️');
-           };
-  };
-
-  // HealthRing is defined in pi_ui_rings.js - use lazy getter for load order
-  const getHealthRing = () => {
-    return HEYS.InsightsPI?.uiRings?.HealthRing ||
-           function HealthRingFallback({ score, label, color }) {
-             return h('div', { style: { color } }, label, ': ', score);
-           };
-  };
-  // Create proxy to use HealthRing naturally in render
-  const HealthRing = new Proxy({}, {
-    apply: (_, thisArg, args) => h(getHealthRing(), args[0])
-  });
 
   /**
    * CollapsibleSection — сворачиваемая секция (v2.1: с InfoButton)
@@ -73,7 +30,7 @@
         h('div', { className: 'insights-collapsible__title' },
           icon && h('span', { className: 'insights-collapsible__icon' }, icon),
           h('span', { className: 'insights-collapsible__text' }, title),
-          infoKey && h(getInfoButton(), { infoKey, size: 'small' })
+          infoKey && h(InfoButton, { infoKey, size: 'small' })
         ),
         badge && h('span', { className: 'insights-collapsible__badge' }, badge),
         h('span', { className: 'insights-collapsible__chevron' }, '›')
@@ -99,18 +56,18 @@
       };
       
       return {
-        confidence: getAnalyticsFn('calculateConfidenceScore')(opts),
-        correlations: getAnalyticsFn('calculateCorrelationMatrix')(opts),
-        patterns: getAnalyticsFn('detectMetabolicPatterns')(opts),
-        risk: getAnalyticsFn('calculatePredictiveRisk')(opts),
-        energy: getAnalyticsFn('forecastEnergy')(opts),
+        confidence: HEYS.PredictiveInsights.calculateConfidenceScore(opts),
+        correlations: HEYS.PredictiveInsights.calculateCorrelationMatrix(opts),
+        patterns: HEYS.PredictiveInsights.detectMetabolicPatterns(opts),
+        risk: HEYS.PredictiveInsights.calculatePredictiveRisk(opts),
+        energy: HEYS.PredictiveInsights.forecastEnergy(opts),
         // === SCIENTIFIC v3.0 ===
-        bayesian: getAnalyticsFn('calculateBayesianConfidence')(opts),
-        timeLag: getAnalyticsFn('calculateTimeLaggedCorrelations')(opts),
-        gvi: getAnalyticsFn('calculateGlycemicVariability')(opts),
-        allostatic: getAnalyticsFn('calculateAllostaticLoad')(opts),
-        ews: getAnalyticsFn('detectEarlyWarningSignals')(opts),
-        twoProcess: getAnalyticsFn('calculate2ProcessModel')(opts)
+        bayesian: HEYS.PredictiveInsights.calculateBayesianConfidence?.(opts) || { hasData: false },
+        timeLag: HEYS.PredictiveInsights.calculateTimeLaggedCorrelations?.(opts) || { hasData: false },
+        gvi: HEYS.PredictiveInsights.calculateGlycemicVariability?.(opts) || { hasData: false },
+        allostatic: HEYS.PredictiveInsights.calculateAllostaticLoad?.(opts) || { hasData: false },
+        ews: HEYS.PredictiveInsights.detectEarlyWarningSignals?.(opts) || { hasData: false },
+        twoProcess: HEYS.PredictiveInsights.calculate2ProcessModel?.(opts) || { hasData: false }
       };
     }, [lsGet, profile, pIndex, selectedDate]);
     
@@ -242,7 +199,7 @@
         bayesian.hasData && h('div', { className: 'adv-analytics__science-section' },
           h('div', { className: 'adv-analytics__science-header' },
             h('span', null, '📊 Байесовская уверенность'),
-            h(getInfoButton(), { infoKey: 'BAYESIAN_CONFIDENCE' })
+            h(InfoButton, { infoKey: 'BAYESIAN_CONFIDENCE' })
           ),
           h('div', { className: `adv-analytics__science-card adv-analytics__science-card--${bayesian.qualityGrade}` },
             h('div', { className: 'adv-analytics__science-main' },
@@ -260,7 +217,7 @@
         gvi.hasData && h('div', { className: 'adv-analytics__science-section' },
           h('div', { className: 'adv-analytics__science-header' },
             h('span', null, '📈 Гликемическая волатильность'),
-            h(getInfoButton(), { infoKey: 'GLYCEMIC_VARIABILITY' })
+            h(InfoButton, { infoKey: 'GLYCEMIC_VARIABILITY' })
           ),
           h('div', { className: `adv-analytics__science-card adv-analytics__science-card--${gvi.riskCategory}` },
             h('div', { className: 'adv-analytics__science-main' },
@@ -281,7 +238,7 @@
         allostatic.hasData && h('div', { className: 'adv-analytics__science-section' },
           h('div', { className: 'adv-analytics__science-header' },
             h('span', null, '🧠 Аллостатическая нагрузка'),
-            h(getInfoButton(), { infoKey: 'ALLOSTATIC_LOAD' })
+            h(InfoButton, { infoKey: 'ALLOSTATIC_LOAD' })
           ),
           h('div', { className: `adv-analytics__science-card adv-analytics__science-card--${allostatic.riskLevel}` },
             h('div', { className: 'adv-analytics__science-main' },
@@ -311,7 +268,7 @@
         ews.hasData && h('div', { className: 'adv-analytics__science-section' },
           h('div', { className: 'adv-analytics__science-header' },
             h('span', null, '⚠️ Ранние сигналы срыва'),
-            h(getInfoButton(), { infoKey: 'EARLY_WARNING_SIGNALS' })
+            h(InfoButton, { infoKey: 'EARLY_WARNING_SIGNALS' })
           ),
           h('div', { className: `adv-analytics__science-card adv-analytics__science-card--${ews.criticalTransitionRisk}` },
             h('div', { className: 'adv-analytics__science-main' },
@@ -339,7 +296,7 @@
         twoProcess.hasData && h('div', { className: 'adv-analytics__science-section' },
           h('div', { className: 'adv-analytics__science-header' },
             h('span', null, '💤 Модель бодрости (Borbély)'),
-            h(getInfoButton(), { infoKey: 'TWO_PROCESS_MODEL' })
+            h(InfoButton, { infoKey: 'TWO_PROCESS_MODEL' })
           ),
           h('div', { className: `adv-analytics__science-card adv-analytics__science-card--${twoProcess.alertnessLevel}` },
             h('div', { className: 'adv-analytics__science-main' },
@@ -371,7 +328,7 @@
         timeLag.hasData && h('div', { className: 'adv-analytics__science-section' },
           h('div', { className: 'adv-analytics__science-header' },
             h('span', null, '⏳ Причинность (Time-Lag)'),
-            h(getInfoButton(), { infoKey: 'TIME_LAGGED_CORRELATIONS' })
+            h(InfoButton, { infoKey: 'TIME_LAGGED_CORRELATIONS' })
           ),
           h('div', { className: 'adv-analytics__science-card' },
             timeLag.strongest && h('div', { className: 'adv-analytics__science-main' },
@@ -572,7 +529,7 @@
         h('div', { className: 'adv-analytics-card__title' },
           h('span', null, '🔬'),
           h('span', null, 'Научная аналитика v3'),
-          h(getInfoButton(), { infoKey: 'ADVANCED_ANALYTICS' })
+          h(InfoButton, { infoKey: 'ADVANCED_ANALYTICS' })
         ),
         // Confidence Badge (mini)
         h('div', { className: `adv-analytics-card__confidence-mini adv-analytics-card__confidence-mini--${bayesian.hasData ? bayesian.qualityGrade : confidence.level}` },
@@ -625,7 +582,7 @@
           h('div', { className: 'insights-metabolism-card__title' },
             title,
             // v2.0: InfoButton рядом с заголовком
-            infoKey && h(getInfoButton(), { infoKey, debugData })
+            infoKey && h(InfoButton, { infoKey, debugData })
           ),
           h('div', { className: 'insights-metabolism-card__value' },
             h('span', { style: { color, fontWeight: 700 } }, value),
@@ -652,7 +609,7 @@
    */
   function MetabolismSection({ lsGet, profile, pIndex, selectedDate }) {
     const metabolism = useMemo(() => {
-      return getAnalyticsFn('analyzeMetabolism')({
+      return HEYS.PredictiveInsights.analyzeMetabolism({
         lsGet: lsGet || window.HEYS?.utils?.lsGet,
         profile: profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
         pIndex: pIndex || window.HEYS?.products?.buildIndex?.(),
@@ -682,7 +639,7 @@
         h('div', { className: 'metabolism-section__title' },
           h('span', { className: 'metabolism-section__icon' }, '🔥'),
           h('span', null, 'Метаболизм'),
-          h(getInfoButton(), { infoKey: 'TEF' })
+          h(InfoButton, { infoKey: 'TEF' })
         ),
         h('div', { className: 'metabolism-section__badge' }, summaryParts.join(' • '))
       ),
@@ -855,7 +812,7 @@
             h('div', { className: 'insights-ring-card__info' },
               h('div', { className: 'insights-ring-card__header' },
                 h('div', { className: 'insights-ring-card__label' }, cat.label),
-                h(getInfoButton(), { infoKey: cat.infoKey, size: 'small' })
+                h(InfoButton, { infoKey: cat.infoKey, size: 'small' })
               ),
               h('div', { className: 'insights-ring-card__title' }, 
                 hasEmotionalWarning 
@@ -939,7 +896,7 @@
         h('div', { className: 'insights-pattern__title' },
           patternLabels[pattern.pattern] || pattern.pattern,
           // v2.0: InfoButton для новых паттернов с формулами
-          (infoKey || pattern.formula) && h(getInfoButton(), {
+          (infoKey || pattern.formula) && h(InfoButton, {
             infoKey: infoKey,
             debugData: pattern.debug || {
               formula: pattern.formula,
@@ -1527,7 +1484,7 @@
           h('span', null, '🧪'),
           ' Что если съесть?'
         ),
-        h(getInfoButton(), { infoKey: 'WHATIF_SIMULATOR' }),
+        h(InfoButton, { infoKey: 'WHATIF_SIMULATOR' }),
         h('button', {
           className: 'whatif-card__expand',
           onClick: () => setIsExpanded(true)
@@ -1574,6 +1531,28 @@
   }
 
   /**
+   * What-If Scenario Card
+   */
+  function ScenarioCard({ scenario }) {
+    if (!scenario) return null;
+    
+    const diff = scenario.projectedScore - scenario.currentScore;
+    const arrowClass = diff > 0 ? 'up' : diff < 0 ? 'down' : 'stable';
+    const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
+    
+    return h('div', { className: `insights-scenario insights-scenario--${scenario.id}` },
+      h('div', { className: 'insights-scenario__icon' }, scenario.icon),
+      h('div', { className: 'insights-scenario__content' },
+        h('div', { className: 'insights-scenario__name' }, scenario.name),
+        h('div', { className: 'insights-scenario__desc' }, scenario.description)
+      ),
+      h('div', { className: `insights-scenario__arrow insights-scenario__arrow--${arrowClass}` },
+        scenario.currentScore, ' ', arrow, ' ', scenario.projectedScore
+      )
+    );
+  }
+
+  /**
    * What-If Section (v2.0: с InfoButton)
    */
   function WhatIfSection({ scenarios }) {
@@ -1582,7 +1561,7 @@
     return h('div', { className: 'insights-whatif' },
       h('div', { className: 'insights-whatif__header' },
         h('span', { className: 'insights-whatif__title' }, '🎯 Сценарии'),
-        h(getInfoButton(), {
+        h(InfoButton, {
           infoKey: 'WHATIF',
           debugData: { scenariosCount: scenarios.length }
         })
@@ -1602,22 +1581,24 @@
     AdvancedAnalyticsCard,
     MetabolismCard,
     MetabolismSection,
-    HealthRingsGrid,
     PatternCard,
     PatternsList,
-    ScenarioCard,
-    WhatIfSimulator,
-    WhatIfCard,
-    WhatIfSection
+    WeeklyWrap,
+    EmptyState,
+    InsightsCard,
+    PriorityBadge,
+    CategoryBadge,
+    ActionabilityBadge,
+    SectionHeader,
+    InfoButton,
+    MetricWithInfo,
+    ConfidenceBadge,
+    MetabolicStatusCard,
+    ReasonCard,
+    ActionCard
   };
 
   // Backward compatibility fallback
   window.piUICards = HEYS.InsightsPI.uiCards;
-  
-  console.log('[PI UI Cards] v3.0.2 loaded —', Object.keys(HEYS.InsightsPI.uiCards).length, 'card components');
-  }
-  
-  // Start initialization (will retry until React is available)
-  initModule();
 
-})(window);
+})();

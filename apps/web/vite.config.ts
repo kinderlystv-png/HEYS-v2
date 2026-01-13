@@ -25,6 +25,11 @@ export default defineConfig({
         {
           src: 'widgets',
           dest: '.'
+        },
+        // Modular Predictive Insights (15 pi_*.js files)
+        {
+          src: 'insights',
+          dest: '.'
         }
       ]
     })
