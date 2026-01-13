@@ -1,6 +1,7 @@
-// pi_ui_rings.js — Ring UI Components v3.0.0
+// pi_ui_rings.js — Ring UI Components v3.0.1
 // Extracted from heys_predictive_insights_v1.js (Phase 7)
 // Кольцевые компоненты для визуализации прогресса и состояния
+// v3.0.1: Lazy getter для InfoButton (fix load order issues)
 (function(global) {
   'use strict';
   
@@ -8,10 +9,28 @@
   HEYS.InsightsPI = HEYS.InsightsPI || {};
   
   // React imports
-  const { createElement: h, useState, useEffect, useMemo } = window.React || {};
+  const { createElement: h, useState, useEffect } = window.React || {};
   
-  // Зависимости
-  const SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {};
+  // Зависимости (reserved for future use)
+  const _SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {}; // eslint-disable-line no-unused-vars
+  
+  // === LAZY GETTER для InfoButton (fix load order) ===
+  // InfoButton определён в pi_ui_dashboard.js который загружается ПОСЛЕ этого модуля
+  const getInfoButton = () => {
+    return HEYS.InsightsPI?.uiDashboard?.InfoButton ||
+           HEYS.PredictiveInsights?.components?.InfoButton ||
+           HEYS.day?.InfoButton || 
+           HEYS.InfoButton || 
+           window.InfoButton || 
+           // Fallback: простая кнопка если InfoButton не загружен
+           function InfoButtonFallback({ infoKey, size: _size }) { // eslint-disable-line no-unused-vars
+             return h('span', { 
+               className: 'info-button-placeholder',
+               title: infoKey,
+               style: { cursor: 'help', opacity: 0.5 }
+             }, 'ℹ️');
+           };
+  };
   
   /**
    * HealthRing — кольцо здоровья для категории
@@ -72,7 +91,7 @@
         h('span', { className: 'insights-ring__score' }, score || '—'),
         h('span', { className: 'insights-ring__label' },
           label,
-          infoKey && h(InfoButton, { infoKey, debugData, size: 'small' })
+          infoKey && h(getInfoButton(), { infoKey, debugData, size: 'small' })
         ),
         // 🆕 v3.22.0: Emotional risk badge в кольце
         hasEmotionalRisk && h('div', { className: 'insights-ring__emotional' },
@@ -144,7 +163,7 @@
           h('span', { className: 'insights-total__score' }, score || '—'),
           h('span', { className: 'insights-total__label' },
             label,
-            h(InfoButton, { infoKey: 'HEALTH_SCORE', debugData })
+            h(getInfoButton(), { infoKey: 'HEALTH_SCORE', debugData })
           )
         )
       )
@@ -407,7 +426,7 @@
    * RiskTrafficLight — светофор риска срыва
    * Low = зелёный, Medium = жёлтый, High = красный
    */
-  function RiskTrafficLight({ riskLevel, riskValue, factors, compact = false }) {
+  function RiskTrafficLight({ riskLevel, riskValue, _factors, description, compact = false }) {
     const lights = [
       { level: 'low', color: '#22c55e', label: 'Низкий', emoji: '✅' },
       { level: 'medium', color: '#eab308', label: 'Средний', emoji: '⚠️' },
@@ -447,14 +466,13 @@
     TotalHealthRing,
     StatusProgressRing,
     MiniRiskMeter,
-    MetabolicStateRing
+    MetabolicStateRing,
+    RiskTrafficLight
   };
   
   // Fallback для прямого доступа
   global.piUIRings = HEYS.InsightsPI.uiRings;
   
-  if (typeof console !== 'undefined' && console.log) {
-    console.log('[PI UI Rings] v3.0.0 loaded — 5 ring components');
-  }
+  // v3.0.1: 6 ring components (added RiskTrafficLight)
   
 })(typeof window !== 'undefined' ? window : global);

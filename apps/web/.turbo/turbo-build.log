@@ -6,14 +6,20 @@
 > @heys/web@13.0.1 prebuild /Users/poplavskijanton/HEYS-v2/apps/web
 > node scripts/update-version.cjs && node -e "const fs=require('fs');const f=process.cwd()+'/public/sw.js';let c=fs.readFileSync(f,'utf8');c=c.replace(/heys-[\w.-]+/,'heys-'+Date.now());fs.writeFileSync(f,c);console.log('SW version:',Date.now())"
 
-✅ APP_VERSION updated to: 2026.01.07.1722.25fbde3
-✅ version.json created: 2026.01.07.1722.25fbde3
-✅ SW CACHE_VERSION updated to: heys-1767795769177
-✅ index.html script src updated: heys_app_v12.js?v=2026.01.07.1722.25fbde3
-SW version: 1767795769250
+⚠️ APP_VERSION not found in file
+✅ version.json created: 2026.01.14.0134.719b435
+✅ SW CACHE_VERSION updated to: heys-1768343675343
+✅ index.html script src updated: heys_app_v12.js?v=2026.01.14.0134.719b435
+SW version: 1768343675417
 polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 vite v4.5.14 building for production...
 <script src="heys_dev_utils.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_feature_flags_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_module_perf_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_module_loader_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_bootstrap_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_platform_apis_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_pwa_module_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_simple_analytics.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_smart_search_v2.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_core_v12.js"> in "/index.html" can't be bundled without type="module" attribute
@@ -27,17 +33,29 @@ vite v4.5.14 building for production...
 <script src="heys_toast_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_ratio_zones_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_tef_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_tdee_v1.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_tdee_v1.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_sparkline_utils_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_gamification_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_day_utils.js?v=45"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_utils.js?v=55"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_day_hooks.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_day_pickers.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_advice_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_meal_optimizer_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_sounds_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_expandable_card_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_insulin_wave_v1.js?v=21"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_iw_shim.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_iw_constants.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_iw_utils.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_iw_lipolysis.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_iw_v30.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_iw_v41.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_iw_calc.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_iw_orchestrator.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_iw_graph.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_iw_ndte.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_iw_ui.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_insulin_wave_v1.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_iw_version_info.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_cycle_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_refeed_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_yesterday_verify_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
@@ -45,7 +63,20 @@ vite v4.5.14 building for production...
 <script src="heys_consents_v1.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_subscriptions_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_status_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_predictive_insights_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_constants.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_math.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_stats.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_science_info.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_patterns.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_advanced.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_analytics_api.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_calculations.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_ui_rings.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_ui_cards.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_ui_whatif.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_ui_dashboard.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_data.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_predictive_insights_v1.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_phenotype_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_metabolic_intelligence_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_supplements_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
@@ -59,22 +90,22 @@ vite v4.5.14 building for production...
 <script src="heys_training_step_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_morning_checkin_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_confirm_modal_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_day_v12.js?v=48"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_v12.js?v=54"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_user_v12.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_reports_v12.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_data_overview_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_widgets_events_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_widgets_registry_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_widgets_core_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
-<script src="widgets/widget_data.js?v=3"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_widgets_ui_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
+<script src="widgets/widget_data.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_widgets_ui_v1.js?v=3"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_auth_v1.js?v=3"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_subscription_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_trial_queue_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_paywall_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_login_screen_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_ui_onboarding_v1.js"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_app_v12.js?v=2026.01.07.1722.25fbde3"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_v12.js?v=2026.01.14.0134.719b435"> in "/index.html" can't be bundled without type="module" attribute
 transforming...
 ✓ 4 modules transformed.
 warnings when minifying css:
@@ -88,9 +119,9 @@ warnings when minifying css:
 rendering chunks...
 computing gzip size...
 dist/assets/heys_simple_analytics-b3f08726.js   10.31 kB
-dist/index.html                                 16.06 kB │ gzip:   4.50 kB
+dist/index.html                                 18.85 kB │ gzip:   4.87 kB
 dist/assets/heys_models_v1-80d14ab0.js          35.21 kB
 dist/assets/heys_core_v12-e2a7bb0e.js          118.28 kB
-dist/assets/index-852ce985.css                 752.14 kB │ gzip: 122.10 kB
-[vite-plugin-static-copy] Copied 3 items.
-✓ built in 1.33s
+dist/assets/index-255d6d7e.css                 759.43 kB │ gzip: 123.39 kB
+[vite-plugin-static-copy] Copied 4 items.
+✓ built in 1.47s
