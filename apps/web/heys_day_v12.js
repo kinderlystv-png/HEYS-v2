@@ -912,7 +912,7 @@
 
   // Диагностический лог для отладки расхождений между Днём и Отчётностью
   if (window._HEYS_DEBUG_TDEE) {
-    console.group('HEYS_TDEE_DEBUG [DAY] Расчёт для', day.date);
+    // console.group('HEYS_TDEE_DEBUG [DAY] Расчёт для', day.date);
 // console.log('HEYS_TDEE_DEBUG [DAY] Входные данные:');
 // console.log('HEYS_TDEE_DEBUG [DAY]   weightMorning:', day.weightMorning, '| профиль weight:', prof.weight, '| итог weight:', weight);
 // console.log('HEYS_TDEE_DEBUG [DAY]   steps:', day.steps, '| householdMin:', day.householdMin);
@@ -928,7 +928,7 @@
 // console.log('HEYS_TDEE_DEBUG [DAY]   eatenKcal (съедено):', r0(eatenKcal));
 // console.log('HEYS_TDEE_DEBUG [DAY]   optimum (нужно съесть):', optimum);
 // console.log('HEYS_TDEE_DEBUG [DAY]   factDefPct:', factDefPct + '%');
-    console.groupEnd();
+    // console.groupEnd();
   }
 
     function updateTraining(i, zi, mins) {
