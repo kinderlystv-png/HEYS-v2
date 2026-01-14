@@ -1664,7 +1664,7 @@
     
     // 🐛 DEBUG: Временное логирование для отладки качества углеводов
     if (window.HEYS_DEBUG_CARB_SCORE) {
-// console.log('🔬 calcCarbQuality DEBUG:', {
+      console.log('🔬 calcCarbQuality DEBUG:', {
         mealName: meal.name || 'Приём',
         simple, complex, total: simple + complex,
         simpleRatio: (simple / (simple + complex) * 100).toFixed(0) + '%',
