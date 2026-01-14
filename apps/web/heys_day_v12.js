@@ -1664,7 +1664,7 @@
     
     // 🐛 DEBUG: Временное логирование для отладки качества углеводов
     if (window.HEYS_DEBUG_CARB_SCORE) {
-      console.log('🔬 calcCarbQuality DEBUG:', {
+// console.log('🔬 calcCarbQuality DEBUG:', {
         mealName: meal.name || 'Приём',
         simple, complex, total: simple + complex,
         simpleRatio: (simple / (simple + complex) * 100).toFixed(0) + '%',
@@ -1919,17 +1919,17 @@
             // 🌐 Если продукт из общей базы — автоматически клонируем в личную
             let finalProduct = product;
             if (product?._fromShared || product?._source === 'shared') {
-              console.log('[DayTab] 🌐 Shared product detected, auto-cloning to local:', product.name);
+// console.log('[DayTab] 🌐 Shared product detected, auto-cloning to local:', product.name);
               const cloned = window.HEYS?.products?.addFromShared?.(product);
               if (cloned) {
                 finalProduct = cloned;
-                console.log('[DayTab] ✅ Cloned product id:', cloned.id);
+// console.log('[DayTab] ✅ Cloned product id:', cloned.id);
               }
             }
             
             // 🔍 DEBUG: Подробный лог при добавлении продукта в meal
             const hasNutrients = !!(finalProduct?.kcal100 || finalProduct?.protein100 || finalProduct?.carbs100);
-            console.log('[DayTab] onAdd received:', finalProduct?.name, 'grams:', grams, {
+// console.log('[DayTab] onAdd received:', finalProduct?.name, 'grams:', grams, {
               id: finalProduct?.id,
               hasNutrients,
               kcal100: finalProduct?.kcal100,
@@ -1973,7 +1973,7 @@
             
             // 🔍 DEBUG: Проверка финального newItem
             const itemHasNutrients = !!(newItem.kcal100 || newItem.protein100 || newItem.carbs100);
-            console.log('[DayTab] newItem created:', newItem.name, {
+// console.log('[DayTab] newItem created:', newItem.name, {
               itemHasNutrients,
               kcal100: newItem.kcal100,
               protein100: newItem.protein100,
@@ -1993,7 +1993,7 @@
             const newUpdatedAt = Date.now();
             if (HEYS.Day?.setBlockCloudUpdates) {
               HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
-              console.log('[MealAddProduct] 🔒 Blocking cloud updates until:', newUpdatedAt + 3000);
+// console.log('[MealAddProduct] 🔒 Blocking cloud updates until:', newUpdatedAt + 3000);
             }
             // 🔒 ВАЖНО: Обновляем lastLoadedUpdatedAt чтобы handleDayUpdated не перезаписал
             if (HEYS.Day?.setLastLoadedUpdatedAt) {
@@ -2017,7 +2017,7 @@
               setTimeout(() => {
                 if (HEYS.Day?.requestFlush) {
                   HEYS.Day.requestFlush();
-                  console.log('[DayTab] 💾 Forced flush after product add');
+// console.log('[DayTab] 💾 Forced flush after product add');
                 }
               }, 50);
             });
@@ -4393,12 +4393,12 @@
             // Не откатываем если в storage меньше meals чем в текущем state
             const storageMealsCount = (v.meals || []).length;
             
-            console.log('[HEYS] 📅 handleDayUpdated | source:', source, '| storage meals:', storageMealsCount, '| storageUpdatedAt:', storageUpdatedAt, '| currentUpdatedAt:', currentUpdatedAt, '| forceReload:', forceReload);
+// console.log('[HEYS] 📅 handleDayUpdated | source:', source, '| storage meals:', storageMealsCount, '| storageUpdatedAt:', storageUpdatedAt, '| currentUpdatedAt:', currentUpdatedAt, '| forceReload:', forceReload);
             
             // Пропускаем проверку timestamp если forceReload
             // ВАЖНО: используем < вместо <= чтобы обрабатывать первую загрузку (когда оба = 0)
             if (!forceReload && storageUpdatedAt < currentUpdatedAt) {
-              console.log('[HEYS] 📅 Ignoring outdated day update | storage:', storageUpdatedAt, '| current:', currentUpdatedAt, '| meals in storage:', storageMealsCount);
+// console.log('[HEYS] 📅 Ignoring outdated day update | storage:', storageUpdatedAt, '| current:', currentUpdatedAt, '| meals in storage:', storageMealsCount);
               return; // Не перезаписываем более новые данные старыми
             }
             
@@ -4426,7 +4426,7 @@
                 const prevSupplementsTaken = JSON.stringify(prevDay.supplementsTaken || []);
                 const newSupplementsTaken = JSON.stringify(newDay.supplementsTaken || []);
                 
-                console.log('[HEYS] 📅 isSameContent CHECK | prevSupplements:', prevSupplementsPlanned, '| newSupplements:', newSupplementsPlanned);
+// console.log('[HEYS] 📅 isSameContent CHECK | prevSupplements:', prevSupplementsPlanned, '| newSupplements:', newSupplementsPlanned);
                 
                 const isSameContent = 
                   prevMealsJson === newMealsJson &&
@@ -4442,7 +4442,7 @@
                   prevSupplementsPlanned === newSupplementsPlanned &&
                   prevSupplementsTaken === newSupplementsTaken;
                 
-                console.log('[HEYS] 📅 isSameContent RESULT:', isSameContent, '| forceReload:', forceReload);
+// console.log('[HEYS] 📅 isSameContent RESULT:', isSameContent, '| forceReload:', forceReload);
                 
                 if (isSameContent) {
                   // DEBUG (отключено): console.log('[HEYS] 📅 handleDayUpdated SKIPPED — same content');
@@ -4503,21 +4503,21 @@
   // Диагностический лог для отладки расхождений между Днём и Отчётностью
   if (window._HEYS_DEBUG_TDEE) {
     console.group('HEYS_TDEE_DEBUG [DAY] Расчёт для', day.date);
-    console.log('HEYS_TDEE_DEBUG [DAY] Входные данные:');
-    console.log('HEYS_TDEE_DEBUG [DAY]   weightMorning:', day.weightMorning, '| профиль weight:', prof.weight, '| итог weight:', weight);
-    console.log('HEYS_TDEE_DEBUG [DAY]   steps:', day.steps, '| householdMin:', day.householdMin);
-    console.log('HEYS_TDEE_DEBUG [DAY]   trainings:', JSON.stringify(TR));
-    console.log('HEYS_TDEE_DEBUG [DAY]   HR zones (MET):', JSON.stringify(z));
-    console.log('HEYS_TDEE_DEBUG [DAY] Промежуточные расчёты:');
-    console.log('HEYS_TDEE_DEBUG [DAY]   BMR:', bmr);
-    console.log('HEYS_TDEE_DEBUG [DAY]   train1k:', train1k, '| train2k:', train2k);
-    console.log('HEYS_TDEE_DEBUG [DAY]   stepsK:', stepsK, '| householdK:', householdK);
-    console.log('HEYS_TDEE_DEBUG [DAY]   actTotal:', actTotal);
-    console.log('HEYS_TDEE_DEBUG [DAY] Итоговые значения:');
-    console.log('HEYS_TDEE_DEBUG [DAY]   tdee (Общие затраты):', tdee);
-    console.log('HEYS_TDEE_DEBUG [DAY]   eatenKcal (съедено):', r0(eatenKcal));
-    console.log('HEYS_TDEE_DEBUG [DAY]   optimum (нужно съесть):', optimum);
-    console.log('HEYS_TDEE_DEBUG [DAY]   factDefPct:', factDefPct + '%');
+// console.log('HEYS_TDEE_DEBUG [DAY] Входные данные:');
+// console.log('HEYS_TDEE_DEBUG [DAY]   weightMorning:', day.weightMorning, '| профиль weight:', prof.weight, '| итог weight:', weight);
+// console.log('HEYS_TDEE_DEBUG [DAY]   steps:', day.steps, '| householdMin:', day.householdMin);
+// console.log('HEYS_TDEE_DEBUG [DAY]   trainings:', JSON.stringify(TR));
+// console.log('HEYS_TDEE_DEBUG [DAY]   HR zones (MET):', JSON.stringify(z));
+// console.log('HEYS_TDEE_DEBUG [DAY] Промежуточные расчёты:');
+// console.log('HEYS_TDEE_DEBUG [DAY]   BMR:', bmr);
+// console.log('HEYS_TDEE_DEBUG [DAY]   train1k:', train1k, '| train2k:', train2k);
+// console.log('HEYS_TDEE_DEBUG [DAY]   stepsK:', stepsK, '| householdK:', householdK);
+// console.log('HEYS_TDEE_DEBUG [DAY]   actTotal:', actTotal);
+// console.log('HEYS_TDEE_DEBUG [DAY] Итоговые значения:');
+// console.log('HEYS_TDEE_DEBUG [DAY]   tdee (Общие затраты):', tdee);
+// console.log('HEYS_TDEE_DEBUG [DAY]   eatenKcal (съедено):', r0(eatenKcal));
+// console.log('HEYS_TDEE_DEBUG [DAY]   optimum (нужно съесть):', optimum);
+// console.log('HEYS_TDEE_DEBUG [DAY]   factDefPct:', factDefPct + '%');
     console.groupEnd();
   }
 
@@ -6952,11 +6952,11 @@
 
     // addMeal теперь открывает новую модульную модалку
     const addMeal = React.useCallback(async () => { 
-      console.log('[HEYS] 🍽 addMeal() called | date:', date, '| isHydrated:', isHydrated);
+// console.log('[HEYS] 🍽 addMeal() called | date:', date, '| isHydrated:', isHydrated);
       
       // 🔒 Read-only gating: проверяем подписку через новый модуль
       if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
-        console.log('[HEYS] 🚫 addMeal blocked — read-only mode');
+// console.log('[HEYS] 🚫 addMeal blocked — read-only mode');
         HEYS.Paywall.showBlockedToast('Добавление приёма пищи недоступно');
         return;
       }
@@ -6973,7 +6973,7 @@
           prof,
           dayData: day,
           onComplete: (newMeal) => {
-            console.log('[HEYS] 🍽 MealStep complete | meal:', newMeal.id, '| time:', newMeal.time);
+// console.log('[HEYS] 🍽 MealStep complete | meal:', newMeal.id, '| time:', newMeal.time);
             
             // Обновляем state и сохраняем ID нового приёма
             const newMealId = newMeal.id;
@@ -6992,12 +6992,12 @@
               const key = 'heys_dayv2_' + date;
               try {
                 lsSet(key, newDayData);
-                console.log('[HEYS] 🍽 SYNC saved new meal to localStorage | meals:', newMeals.length, '| updatedAt:', newUpdatedAt);
+// console.log('[HEYS] 🍽 SYNC saved new meal to localStorage | meals:', newMeals.length, '| updatedAt:', newUpdatedAt);
               } catch (e) {
                 console.error('[HEYS] 🍽 Failed to save meal:', e);
               }
               
-              console.log('[HEYS] 🍽 Creating meal | id:', newMealId, '| new meals count:', newMeals.length, '| updatedAt:', newUpdatedAt, '| blockUntil:', blockCloudUpdatesUntilRef.current);
+// console.log('[HEYS] 🍽 Creating meal | id:', newMealId, '| new meals count:', newMeals.length, '| updatedAt:', newUpdatedAt, '| blockUntil:', blockCloudUpdatesUntilRef.current);
               return newDayData;
             });
             
@@ -7014,7 +7014,7 @@
               setDay(currentDay => {
                 const meals = currentDay.meals || [];
                 const mealIndex = meals.findIndex(m => m.id === newMealId);
-                console.log('[HEYS] 🍽 Found meal index:', mealIndex, '| meals:', meals.length);
+// console.log('[HEYS] 🍽 Found meal index:', mealIndex, '| meals:', meals.length);
                 
                 if (mealIndex >= 0) {
                   expandOnlyMeal(mealIndex);
@@ -7055,7 +7055,7 @@
                           })
                         };
                         
-                        console.log('[HEYS] 🍽 addMeal → onAdd:', product?.name, 'grams:', grams, {
+// console.log('[HEYS] 🍽 addMeal → onAdd:', product?.name, 'grams:', grams, {
                           hasNutrients: !!(newItem.kcal100 || newItem.protein100),
                           kcal100: newItem.kcal100,
                           mealIndex: targetMealIndex
@@ -7078,7 +7078,7 @@
                           const key = 'heys_dayv2_' + date;
                           try {
                             lsSet(key, newDayData);
-                            console.log('[HEYS] 🍽 SYNC saved product to localStorage | items:', updatedMeals[targetMealIndex]?.items?.length);
+// console.log('[HEYS] 🍽 SYNC saved product to localStorage | items:', updatedMeals[targetMealIndex]?.items?.length);
                           } catch (e) {
                             console.error('[HEYS] 🍽 Failed to save product:', e);
                           }
@@ -7125,7 +7125,7 @@
           const baseMeals = prevDay.meals || [];
           const newMeals = [...baseMeals, {id:newMealId,name:'Приём',time:'',mood:'',wellbeing:'',stress:'',items:[]}];
           newMealIndex = newMeals.length - 1;
-          console.log('[HEYS] 🍽 addMeal() creating meal | id:', newMealId, '| new meals count:', newMeals.length);
+// console.log('[HEYS] 🍽 addMeal() creating meal | id:', newMealId, '| new meals count:', newMeals.length);
           return { ...prevDay, meals: newMeals, updatedAt: Date.now() };
         }); 
         expandOnlyMeal(newMealIndex);
@@ -8176,7 +8176,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Автоматически проставляем все 7 дней
       if (validDay && HEYS.Cycle?.setCycleDaysAuto && lsGet && lsSet) {
         const result = HEYS.Cycle.setCycleDaysAuto(date, validDay, lsGet, lsSet);
-        console.log('[Cycle] Auto-filled', result.updated, 'days:', result.dates.join(', '));
+// console.log('[Cycle] Auto-filled', result.updated, 'days:', result.dates.join(', '));
       }
     }, [setDay, date, lsGet, lsSet]);
     
@@ -8188,7 +8188,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Очищаем все связанные дни
       if (HEYS.Cycle?.clearCycleDays && lsGet && lsSet) {
         const result = HEYS.Cycle.clearCycleDays(date, lsGet, lsSet);
-        console.log('[Cycle] Cleared', result.cleared, 'days');
+// console.log('[Cycle] Cleared', result.cleared, 'days');
       }
     }, [setDay, date, lsGet, lsSet]);
     
@@ -12488,11 +12488,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       try {
         // 🆕 1. ПРИНУДИТЕЛЬНАЯ проверка версии PWA (очистка кэшей + reload если есть обновление)
         if (window.HEYS?.forceCheckAndUpdate) {
-          console.log('[PullRefresh] 🔍 Checking for PWA updates...');
+// console.log('[PullRefresh] 🔍 Checking for PWA updates...');
           const updateResult = await window.HEYS.forceCheckAndUpdate();
           
           if (updateResult.hasUpdate) {
-            console.log('[PullRefresh] 🆕 PWA update found! Reloading...');
+// console.log('[PullRefresh] 🆕 PWA update found! Reloading...');
             setRefreshStatus('updating');
             triggerHaptic(30);
             
@@ -12515,16 +12515,16 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // 2. Реальная синхронизация с Supabase (с force=true для bypass throttling)
         const syncPromise = (async () => {
           if (clientId && cloud && typeof cloud.syncClient === 'function') {
-            console.log('[PullRefresh] 🚀 Starting force sync for client:', clientId.substring(0, 8));
+// console.log('[PullRefresh] 🚀 Starting force sync for client:', clientId.substring(0, 8));
             
             // � ВАЖНО: Сначала отправляем pending изменения в cloud, потом скачиваем
             // Иначе race condition: cloud вернёт старые данные и перезапишет свежие локальные
             if (cloud.flushPendingQueue) {
               const pendingCount = (cloud._clientUpsertQueue?.length || 0);
               if (pendingCount > 0) {
-                console.log(`[PullRefresh] 🔄 Flushing ${pendingCount} pending items before sync...`);
+// console.log(`[PullRefresh] 🔄 Flushing ${pendingCount} pending items before sync...`);
                 await cloud.flushPendingQueue(5000);
-                console.log('[PullRefresh] ✅ Pending items flushed');
+// console.log('[PullRefresh] ✅ Pending items flushed');
               }
             }
             
@@ -12533,13 +12533,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             
             // 🚨 Проверяем нужна ли авторизация (токен истёк/отсутствует)
             if (syncResult?.authRequired) {
-              console.log('[PullRefresh] 🔐 Auth required — triggering logout');
+// console.log('[PullRefresh] 🔐 Auth required — triggering logout');
               
               // 🚨 CRITICAL: Устанавливаем глобальный флаг ПЕРЕД очисткой данных
               // Это предотвращает краш хуков при попытке React перерендерить компонент
               window.HEYS = window.HEYS || {};
               window.HEYS._isLoggingOut = true;
-              console.log('[PullRefresh] 🚫 Set _isLoggingOut flag');
+// console.log('[PullRefresh] 🚫 Set _isLoggingOut flag');
               
               // Сбрасываем ВСЁ состояние авторизации для показа экрана логина
               try {
@@ -12565,7 +12565,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   window.HEYS.store.flushMemory();
                 }
                 
-                console.log('[PullRefresh] 🗑️ All auth keys cleared');
+// console.log('[PullRefresh] 🗑️ All auth keys cleared');
               } catch (e) {
                 console.warn('[PullRefresh] Error clearing auth keys:', e);
               }
@@ -12579,7 +12579,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             // 🔄 ГАРАНТИЯ: Явно инвалидируем кэш перед чтением (на случай если sync не вызвал)
             if (window.HEYS?.store?.flushMemory) {
               window.HEYS.store.flushMemory();
-              console.log('[PullRefresh] 🧹 Memory cache flushed before reading');
+// console.log('[PullRefresh] 🧹 Memory cache flushed before reading');
             }
             
             // 🔄 ЯВНАЯ перезагрузка данных после sync (не полагаемся только на событие)
@@ -12589,21 +12589,21 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             const actualClientId = window.HEYS?.currentClientId || 
               (localStorage.getItem('heys_client_current') ? JSON.parse(localStorage.getItem('heys_client_current')) : 'none');
             const actualKey = actualClientId !== 'none' ? `heys_${actualClientId}_dayv2_${date}` : dayKey;
-            console.log('[PullRefresh] 🔍 Reading with clientId:', actualClientId?.substring?.(0, 8) || actualClientId, '| actualKey:', actualKey);
+// console.log('[PullRefresh] 🔍 Reading with clientId:', actualClientId?.substring?.(0, 8) || actualClientId, '| actualKey:', actualKey);
             
             // 🔍 DEBUG: Читаем напрямую из localStorage для сравнения
             const rawValue = localStorage.getItem(actualKey);
             let rawDay = null;
             try { rawDay = rawValue ? JSON.parse(rawValue) : null; } catch(e) {}
-            console.log('[PullRefresh] 🔍 RAW localStorage | meals:', rawDay?.meals?.length, '| updatedAt:', rawDay?.updatedAt);
+// console.log('[PullRefresh] 🔍 RAW localStorage | meals:', rawDay?.meals?.length, '| updatedAt:', rawDay?.updatedAt);
             
             // ✅ НЕ вызываем setDay здесь — handleDayUpdated уже обработал обновление из syncClient
             // Этот дублирующий setDay вызывал мерцание экрана (double render)
             const freshDay = lsGet(dayKey, null);
-            console.log('[PullRefresh] ✅ Sync complete | localStorage has meals:', freshDay?.meals?.length, '| updatedAt:', freshDay?.updatedAt ? new Date(freshDay.updatedAt).toISOString() : 'none');
+// console.log('[PullRefresh] ✅ Sync complete | localStorage has meals:', freshDay?.meals?.length, '| updatedAt:', freshDay?.updatedAt ? new Date(freshDay.updatedAt).toISOString() : 'none');
             // Day state уже обновлён через событие heys:day-updated → handleDayUpdated
           } else {
-            console.log('[PullRefresh] ⚠️ Sync not available | clientId:', clientId, '| cloud:', !!cloud);
+// console.log('[PullRefresh] ⚠️ Sync not available | clientId:', clientId, '| cloud:', !!cloud);
           }
         })();
         
@@ -20286,7 +20286,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               if (!quality) return;
               e.stopPropagation();
               const rect = e.currentTarget.getBoundingClientRect();
-              console.log('[HEYS] openQualityModal:', { meal: meal.name, quality, rect });
+// console.log('[HEYS] openQualityModal:', { meal: meal.name, quality, rect });
               // Скры
                   const U = window.HEYS?.utils || {};
                   U.lsSet ? U.lsSet('heys_meal_hint_shown', '1') : localStorage.setItem('heys_meal_hint_shown', '1');

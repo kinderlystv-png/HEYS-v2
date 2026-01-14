@@ -977,7 +977,7 @@
       }
       
       const result = HEYS.Metabolic.generateWeeklyWrap();
-      console.log('📊 Weekly Wrap:', result);
+// console.log('📊 Weekly Wrap:', result);
       return result;
     };
     
@@ -992,15 +992,15 @@
       const weights = HEYS.Metabolic.getABWeights();
       
       console.group('📊 A/B Test Results');
-      console.log('🎯 Current Variant:', variant.id, '-', variant.name);
-      console.log('⚖️ Weights:', weights);
-      console.log('📈 Stats:', stats);
+// console.log('🎯 Current Variant:', variant.id, '-', variant.name);
+// console.log('⚖️ Weights:', weights);
+// console.log('📈 Stats:', stats);
       
       if (Object.keys(stats.variantStats).length > 0) {
         console.table(stats.variantStats);
-        console.log('🏆 Best Variant (by F1):', stats.bestVariant);
+// console.log('🏆 Best Variant (by F1):', stats.bestVariant);
       } else {
-        console.log('⏳ Not enough data yet');
+// console.log('⏳ Not enough data yet');
       }
       console.groupEnd();
       
@@ -1020,7 +1020,7 @@
   // clearCache() — очистка кэша анализа
   HEYS.PredictiveInsights.clearCache = function() {
     _cache = {};
-    console.log('[PI] Cache cleared');
+// console.log('[PI] Cache cleared');
   };
   
   // getDaysData() — получение данных дней
@@ -1099,7 +1099,7 @@
     });
   });
   
-  console.log('[PI] ✅ HEYS.PredictiveInsights functions exported (analyze, patterns, advanced, stats, analyticsAPI)');
+// console.log('[PI] ✅ HEYS.PredictiveInsights functions exported (analyze, patterns, advanced, stats, analyticsAPI)');
   
   // Ленивый геттер для components - собирает все UI модули в момент обращения
   Object.defineProperty(HEYS.PredictiveInsights, 'components', {
@@ -1132,6 +1132,6 @@
     enumerable: true
   });
   
-  console.log('[PI] ✅ HEYS.PredictiveInsights.components getter configured (lazy loading)');
+// console.log('[PI] ✅ HEYS.PredictiveInsights.components getter configured (lazy loading)');
   
 })(typeof window !== 'undefined' ? window : global);
