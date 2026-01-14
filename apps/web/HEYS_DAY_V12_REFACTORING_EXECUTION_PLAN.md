@@ -1,0 +1,352 @@
+# 🎯 HEYS_DAY_V12.JS — План Выполнения Рефакторинга
+
+**Основан на:** HEYS_DAY_V12_REFACTORING_AUDIT.md  
+**Дата:** 2026-01-14  
+**Тип:** Поэтапный план действий
+
+---
+
+## 🎬 Краткое Резюме
+
+**Текущее состояние:**
+- 23,658 строк в main file 🔴
+- 2,614 строк уже извлечено (11%) ✅
+- 75 console.log требуют cleanup 🟡
+
+**Цель:**
+- Извлечь ~20,000 строк (85%)
+- Оставить 3,000-5,000 строк в main file
+- Cleanup console.log до ≤10
+- 10-11 модульных файлов вместо 1 гиганта
+
+**Подход:** Поэтапное извлечение, от простого к сложному
+
+---
+
+## ✅ Чеклист Выполнения
+
+### 📦 Фаза 1: Подготовка ✅ ВЫПОЛНЕНО
+- [x] heys_day_utils.js (1,818 строк)
+- [x] heys_day_hooks.js (392 строки)
+- [x] heys_day_pickers.js (404 строки)
+- [x] Детальный аудит проведён
+
+---
+
+### 📦 Фаза 2: Простые Компоненты (1,043 строки, 5-8 часов)
+
+#### 2.1 Popup Components (259 строк, 1-2 часа) — НАЧАТЬ ОТСЮДА
+- [ ] Создать `heys_day_popups.js`
+- [ ] Извлечь `PopupWithBackdrop` (строки 3910-3928)
+- [ ] Извлечь `createSwipeHandlers` (строки 3930-3945)
+- [ ] Извлечь `PopupCloseButton` (строки 3947-4168)
+- [ ] Экспорт: `HEYS.dayPopups = { PopupWithBackdrop, createSwipeHandlers, PopupCloseButton }`
+- [ ] Тест: открыть/закрыть popups, swipe жесты
+- [ ] Удалить из heys_day_v12.js
+- [ ] Commit: "Extract popup components to heys_day_popups.js"
+
+**Детали:**
+```javascript
+// Структура экспорта в heys_day_popups.js
+HEYS.dayPopups = {
+  PopupWithBackdrop,      // Universal popup wrapper
+  createSwipeHandlers,     // Swipe-to-dismiss utility
+  PopupCloseButton        // Standard close button
+};
+
+// В heys_day_v12.js заменить на:
+const { PopupWithBackdrop, createSwipeHandlers, PopupCloseButton } = HEYS.dayPopups || {};
+```
+
+---
+
+#### 2.2 AdviceCard Component (206 строк, 2-3 часа)
+- [ ] Создать `heys_day_advice_card.js`
+- [ ] Извлечь `AdviceCard` component (строки 3680-3885)
+- [ ] Импортировать `HEYS.dayPopups` для swipe
+- [ ] Экспорт: `HEYS.dayComponents = { AdviceCard }`
+- [ ] Тест: swipe, undo, rating, schedule, expand
+- [ ] Удалить из heys_day_v12.js
+- [ ] Commit: "Extract AdviceCard to heys_day_advice_card.js"
+
+**Зависимости:**
+- dayPopups (createSwipeHandlers)
+- dayUtils (haptic)
+
+---
+
+#### 2.3 MealAddProduct Component (442 строки, 2-3 часа)
+- [ ] Создать `heys_day_add_product.js`
+- [ ] Извлечь `ProductRow` (строки 2203-2271)
+- [ ] Извлечь `MealAddProduct` (строки 1898-2202)
+- [ ] Экспорт: добавить в `HEYS.dayComponents`
+- [ ] Тест: search, add, gram input, validation
+- [ ] Удалить из heys_day_v12.js
+- [ ] Commit: "Extract MealAddProduct to heys_day_add_product.js"
+
+**Зависимости:**
+- dayUtils (uid, r0, buildProductIndex, getProductFromItem)
+
+---
+
+#### 2.4 MealOptimizerSection (178 строк, 1-2 часа)
+- [ ] Решить: извлечь или оставить в main?
+- [ ] Если извлекать → создать `heys_day_optimizer.js`
+- [ ] Извлечь `MealOptimizerSection` (строки 2272-2449)
+- [ ] Экспорт: добавить в `HEYS.dayComponents`
+- [ ] Тест: optimizer UI, target macros
+- [ ] Commit: "Extract MealOptimizerSection (optional)"
+
+**Рекомендация:** Оставить в main (слишком специфичен для DayTab)
+
+---
+
+### 📦 Фаза 3: Photo Gallery (458 строк, 2-3 часа)
+
+#### 3.1 Gallery Components
+- [ ] Создать `heys_day_gallery.js`
+- [ ] Извлечь константы (PHOTO_LIMIT_PER_MEAL)
+- [ ] Извлечь `LazyPhotoThumb` component (строки 133-340)
+- [ ] Извлечь fullscreen viewer logic (строки 341-583)
+- [ ] Экспорт: `HEYS.dayGallery = { LazyPhotoThumb, PHOTO_LIMIT_PER_MEAL, ... }`
+- [ ] Тест: lazy load, fullscreen, swipe, zoom, delete
+- [ ] Удалить из heys_day_v12.js
+- [ ] Commit: "Extract photo gallery to heys_day_gallery.js"
+
+**Зависимости:**
+- dayUtils (haptic, fmtDate)
+- dayPopups (PopupCloseButton)
+
+---
+
+### 📦 Фаза 4: Meal Scoring Logic (1,314 строк, 5-8 часов) ⚠️ HIGH RISK
+
+#### 4.1 Подготовка (1-2 часа)
+- [ ] Создать test cases для всех scoring функций
+- [ ] Документировать current behavior
+- [ ] Snapshot current results для регрессионного тестирования
+
+#### 4.2 Извлечение (3-4 часа)
+- [ ] Создать `heys_day_meal_scoring.js`
+- [ ] Извлечь все константы:
+  - `MEAL_KCAL_LIMITS` (строки 590-596)
+  - `IDEAL_MACROS_UNIFIED` (строки 598-604)
+  - `CIRCADIAN_MEAL_BONUS` (строки 610-617)
+  - `LIQUID_FOOD_PATTERNS` (строки 622-634)
+  - `HEALTHY_LIQUID_PATTERNS` (строки 636-640)
+  - `GL_QUALITY_THRESHOLDS` (строки 645-651)
+- [ ] Извлечь цветовые функции (строки 742-1085):
+  - `getNutrientColor()`
+  - `getMacroColor()`
+  - `getKcalColor()`
+- [ ] Извлечь scoring функции (строки 1086-1897):
+  - `calcKcalScore()`
+  - `calcMacroScore()`
+  - `calcNutrientScore()`
+  - `scoreMeal()` — main function
+- [ ] Экспорт: `HEYS.mealScoring = { scoreMeal, constants, colors }`
+- [ ] Тест: regression tests, edge cases
+
+#### 4.3 Валидация (2-3 часа)
+- [ ] Сравнить scoring results с baseline
+- [ ] Визуально проверить colors в UI
+- [ ] Тест edge cases: 0 ккал, negative, null, huge portions
+- [ ] Удалить из heys_day_v12.js только после 100% проверки
+- [ ] Commit: "Extract meal scoring logic to heys_day_meal_scoring.js"
+
+**ВНИМАНИЕ:** Критическая бизнес-логика! Тщательное тестирование обязательно!
+
+---
+
+### 📦 Фаза 5: MealCard Component (1,230 строк, 4-6 часов)
+
+#### 5.1 Подготовка (1 час)
+- [ ] Список всех props MealCard
+- [ ] Список всех callbacks и state
+- [ ] Mock data для тестирования
+
+#### 5.2 Извлечение (2-3 часа)
+- [ ] Создать `heys_day_meal_card.js`
+- [ ] Извлечь `MealCard` component (строки 2450-3679)
+- [ ] Импортировать зависимости:
+  - dayGallery (LazyPhotoThumb)
+  - mealScoring (scoreMeal, colors)
+  - dayPopups (PopupCloseButton)
+  - dayUtils (formatDateDisplay, r0, r1, etc.)
+- [ ] Экспорт: добавить в `HEYS.dayComponents.MealCard`
+- [ ] Обновить импорт в DayTab
+
+#### 5.3 Тестирование (1-2 часа)
+- [ ] Отображение meals
+- [ ] Inline editing (time, type, notes)
+- [ ] Swipe actions (delete, copy)
+- [ ] Photo gallery integration
+- [ ] Quality badges и scoring
+- [ ] Макросы и калории
+- [ ] Удалить из heys_day_v12.js
+- [ ] Commit: "Extract MealCard to heys_day_meal_card.js"
+
+---
+
+### 📦 Фаза 6: Console.log Cleanup (75 → ≤10, 2-3 часа)
+
+#### 6.1 Аудит (30 мин)
+- [ ] Найти все 75 console.log
+- [ ] Классифицировать:
+  - Debug (temporary) → удалить
+  - Error tracking → `HEYS.analytics.trackError()`
+  - Analytics events → `HEYS.analytics.track()`
+  - Critical (keep) → документировать причину
+
+#### 6.2 Замена (1-2 часа)
+- [ ] Удалить debug logs
+- [ ] Заменить error logs на analytics
+- [ ] Заменить event logs на analytics
+- [ ] Commit: "Cleanup console.log, replace with analytics"
+
+#### 6.3 Верификация (30 мин)
+- [ ] Проверить что критичные логи работают
+- [ ] Проверить analytics dashboard
+- [ ] Документировать оставшиеся console.log
+
+---
+
+### 📦 Фаза 7: Финальная Оптимизация (3-4 часа)
+
+#### 7.1 Code Review (1 час)
+- [ ] Проанализировать оставшийся код в heys_day_v12.js
+- [ ] Найти дублирование
+- [ ] Найти неиспользуемые функции
+- [ ] Найти неоптимальные паттерны
+
+#### 7.2 Оптимизация (2-3 часа)
+- [ ] Удалить dead code
+- [ ] Объединить похожие функции
+- [ ] Оптимизировать useMemo/useCallback
+- [ ] Упростить условную логику
+- [ ] Добавить JSDoc комментарии
+- [ ] Commit: "Optimize main DayTab component"
+
+---
+
+### 📦 Фаза 8: Документация и Тестирование (2-3 часа)
+
+#### 8.1 Документация (1-2 часа)
+- [ ] Создать `HEYS_DAY_V12_REFACTORING_SUMMARY.md`
+- [ ] Документировать все новые модули
+- [ ] Обновить `ARCHITECTURE.md`
+- [ ] Создать migration guide (если нужен)
+
+#### 8.2 Final Testing (1-2 часа)
+- [ ] Smoke test всех функций DayTab
+- [ ] Regression testing
+- [ ] Performance test (load time)
+- [ ] Memory leak test
+- [ ] Mobile test (touch, swipe)
+- [ ] Commit: "Final testing and documentation complete"
+
+---
+
+## 📋 Проверка После Каждой Фазы
+
+После завершения каждой фазы обязательно:
+
+1. **Build:** `pnpm build` (только перед коммитом)
+2. **Dev test:** HMR проверка в браузере
+3. **Функционал:** Тестировать извлечённый функционал
+4. **Регрессия:** Проверить что ничего не сломалось
+5. **Commit:** Сделать commit с описательным сообщением
+6. **Report:** `report_progress` с обновлённым чеклистом
+
+---
+
+## 🎯 Success Metrics
+
+Отслеживать после каждой фазы:
+
+| Метрика | До | Цель | Текущее |
+|---------|-----|------|---------|
+| Строк в main | 23,658 | ≤5,000 | ___ |
+| Console.log | 75 | ≤10 | ___ |
+| Модулей | 3 | 10-11 | 3 |
+| Извлечено | 11% | 85% | 11% |
+
+---
+
+## ⚠️ Важные Напоминания
+
+1. **HMR работает** — НЕ перезапускать сервер без причины
+2. **НЕ откатывать файлы** без явного согласия
+3. **Tailwind first** — inline styles запрещены
+4. **После каждой задачи** — секция "💡 Замечено в контексте"
+5. **Тестировать в браузере** — не полагаться только на build
+6. **Commit часто** — после каждой фазы/подфазы
+
+---
+
+## 🚀 Порядок Выполнения (Рекомендуемый)
+
+### День 1: Quick Wins
+- Фаза 2.1: Popups (1-2 часа) ✅ START HERE
+- Фаза 2.2: AdviceCard (2-3 часа)
+- Фаза 2.3: MealAddProduct (2-3 часа)
+- Фаза 3: Photo Gallery (2-3 часа)
+- **Итого:** ~8-11 часов, извлечено ~1,160 строк
+
+### День 2: High Risk Items
+- Фаза 4: Meal Scoring (5-8 часов) ⚠️
+- Фаза 6: Console cleanup (2-3 часа, параллельно)
+- **Итого:** ~7-11 часов, извлечено ~1,314 строк
+
+### День 3: MealCard & Finalization
+- Фаза 5: MealCard (4-6 часов)
+- Фаза 7: Optimization (3-4 часа)
+- Фаза 8: Documentation (2-3 часа)
+- **Итого:** ~9-13 часов, извлечено ~1,230 строк
+
+**Общее время:** 24-35 часов (~3-5 рабочих дней)
+
+---
+
+## 📝 Шаблон Commit Message
+
+```
+<type>: <short description>
+
+<detailed description if needed>
+
+Phase: X.Y
+Extracted: N lines
+Remaining: M lines in main file
+Files created: filename.js
+```
+
+**Примеры:**
+```
+refactor: Extract popup components to heys_day_popups.js
+
+Phase: 2.1
+Extracted: 259 lines
+Remaining: 23,399 lines in main file
+Files created: heys_day_popups.js
+```
+
+---
+
+## 🎉 Готово к Выполнению!
+
+**Следующий шаг:** Начать с Фазы 2.1 — Popup Components (самый простой)
+
+**Команда для старта:**
+```bash
+cd /home/runner/work/HEYS-v2/HEYS-v2/apps/web
+# Создать heys_day_popups.js
+# Извлечь PopupWithBackdrop, createSwipeHandlers, PopupCloseButton
+# Тестировать в браузере
+```
+
+---
+
+*План создан: 2026-01-14*  
+*Автор: GitHub Copilot Agent*  
+*Статус: Ready to execute*
