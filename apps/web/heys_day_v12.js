@@ -16,6 +16,9 @@
   // Fallbacks with error logging (not full duplicates)
   const haptic = U.haptic || (() => { warnMissing('haptic'); });
   
+  // === Import popup components from dayPopups module ===
+  const { PopupWithBackdrop, createSwipeHandlers, PopupCloseButton } = HEYS.dayPopups || {};
+  
   // 🔔 Звук успеха при достижении нормы (Web Audio API)
   const playSuccessSound = (() => {
     let audioCtx = null;
@@ -3906,57 +3909,6 @@
       style: { background: 'var(--bg-primary, #fff)' }
     }, 'Загрузка...');
   }
-  
-  // === POPUP WITH BACKDROP — переиспользуемый компонент ===
-  // Универсальная обёртка для попапов с backdrop'ом для закрытия по клику вне попапа
-  const PopupWithBackdrop = React.useCallback(({ children, onClose, backdropStyle = {}, zIndex = 9998 }) => {
-    return React.createElement('div', {
-      className: 'popup-backdrop-invisible',
-      style: {
-        position: 'fixed',
-        inset: 0,
-        zIndex: zIndex,
-        pointerEvents: 'all',
-        ...backdropStyle
-      },
-      onClick: (e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }
-    }, children);
-  }, []);
-  
-  // === SWIPE TO DISMISS — функция для swipe-жестов на попапах ===
-  // Возвращает { onTouchStart, onTouchEnd } для передачи в props попапа
-  // НЕ хук! Можно вызывать условно внутри попапов
-  const createSwipeHandlers = (onClose, threshold = 50) => {
-    let startY = 0;
-    return {
-      onTouchStart: (e) => { startY = e.touches[0].clientY; },
-      onTouchEnd: (e) => {
-        const deltaY = e.changedTouches[0].clientY - startY;
-        if (deltaY > threshold) {
-          onClose();
-          if (typeof haptic === 'function') haptic('light');
-        }
-      }
-    };
-  };
-  
-  // === POPUP CLOSE BUTTON — универсальная кнопка закрытия ===
-  // className: опционально для кастомных стилей (sparkline-popup-close, metric-popup-close, etc.)
-  const PopupCloseButton = ({ onClose, className = 'popup-close-btn', style = {} }) => {
-    return React.createElement('button', {
-      className,
-      'aria-label': 'Закрыть',
-      onClick: (e) => {
-        e.stopPropagation();
-        onClose();
-      },
-      style
-    }, '✕');
-  };
   
   // Дата приходит из шапки App (DatePicker в header)
   const { selectedDate, setSelectedDate } = props;
