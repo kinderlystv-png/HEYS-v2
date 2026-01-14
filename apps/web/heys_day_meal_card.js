@@ -11,6 +11,8 @@
   const getProductFromItem = U.getProductFromItem || (() => null);
   const formatMealTime = U.formatMealTime || ((time) => time);
   const MEAL_TYPES = U.MEAL_TYPES || {};
+  const per100 = U.per100 || ((p) => ({kcal100:0,carbs100:0,prot100:0,fat100:0,simple100:0,complex100:0,bad100:0,good100:0,trans100:0,fiber100:0}));
+  const scale = U.scale || ((v,g) => Math.round(((+v||0)*(+g||0)/100)*10)/10);
   
   // Import models
   const M = HEYS.models || {};
@@ -19,7 +21,15 @@
   const { LazyPhotoThumb } = HEYS.dayGallery || {};
   
   // Import from meal scoring
-  const { getMealQualityScore } = HEYS.mealScoring || {};
+  const { getMealQualityScore, getNutrientColor, getNutrientTooltip } = HEYS.mealScoring || {};
+  
+  // Helper function for formatting values (extracted from v12)
+  function fmtVal(key, v){
+    const num = +v || 0;
+    if (!num) return '-';
+    if (key === 'harm') return Math.round(num * 10) / 10;
+    return Math.round(num);
+  }
   
   // Import popup components
   const { PopupCloseButton } = HEYS.dayPopups || {};

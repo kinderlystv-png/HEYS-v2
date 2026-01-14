@@ -8,6 +8,12 @@
 
 ;(function(global){
   const HEYS = global.HEYS = global.HEYS || {};
+  const M = HEYS.models || {};
+  const U = HEYS.dayUtils || {};
+  
+  // Import utility functions from dayUtils
+  const getProductFromItem = U.getProductFromItem || (() => null);
+  const parseTime = U.parseTime || ((t) => { if(!t||typeof t!=='string'||!t.includes(':')) return null; const [hh,mm]=t.split(':').map(x=>parseInt(x,10)); if(isNaN(hh)||isNaN(mm)) return null; return {hh:Math.max(0,Math.min(23,hh)),mm:Math.max(0,Math.min(59,mm))}; });
   
   const MEAL_KCAL_LIMITS = {
     light:  { max: 200 },   // Лёгкий приём

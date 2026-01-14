@@ -11,6 +11,8 @@
   const uid = U.uid || (() => 'id_' + Date.now());
   const buildProductIndex = U.buildProductIndex || (() => ({}));
   const getProductFromItem = U.getProductFromItem || (() => null);
+  const per100 = U.per100 || ((p) => ({kcal100:0,carbs100:0,prot100:0,fat100:0,simple100:0,complex100:0,bad100:0,good100:0,trans100:0,fiber100:0}));
+  const scale = U.scale || ((v,g) => Math.round(((+v||0)*(+g||0)/100)*10)/10);
   
   // === MealAddProduct Component (extracted for stable identity) ===
   const MealAddProduct = React.memo(function MealAddProduct({

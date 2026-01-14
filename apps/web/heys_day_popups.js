@@ -12,7 +12,7 @@
   
   // === POPUP WITH BACKDROP — переиспользуемый компонент ===
   // Универсальная обёртка для попапов с backdrop'ом для закрытия по клику вне попапа
-  const PopupWithBackdrop = React.useCallback(({ children, onClose, backdropStyle = {}, zIndex = 9998 }) => {
+  const PopupWithBackdrop = ({ children, onClose, backdropStyle = {}, zIndex = 9998 }) => {
     return React.createElement('div', {
       className: 'popup-backdrop-invisible',
       style: {
@@ -28,7 +28,7 @@
         }
       }
     }, children);
-  }, []);
+  };
   
   // === SWIPE TO DISMISS — функция для swipe-жестов на попапах ===
   // Возвращает { onTouchStart, onTouchEnd } для передачи в props попапа

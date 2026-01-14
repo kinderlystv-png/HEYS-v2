@@ -5194,6 +5194,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         uiState.showDeficitPicker, uiState.showZonePicker]);
 
     const factKeys = ['kcal','carbs','simple','complex','prot','fat','bad','good','trans','fiber','gi','harm'];
+  // Format value helper (harm with 1 decimal, rest as integers)
+  function fmtVal(key, v){
+    const num=+v||0;
+    if(!num) return '-';
+    if(key==='harm') return Math.round(num*10)/10;
+    return Math.round(num);
+  }
   function devVal(k){ const n=+normAbs[k]||0; const f=+dayTot[k]||0; if(!n) return '-'; const d=((f-n)/n)*100; return (d>0?'+':'')+Math.round(d)+'%'; }
   function devCell(k){ const n=+normAbs[k]||0; if(!n) return React.createElement('td',{key:'ds-dv'+k},'-'); const f=+dayTot[k]||0; const d=((f-n)/n)*100; const diff=Math.round(d); const color= diff>0?'#dc2626':(diff<0?'#059669':'#111827'); const fw=diff!==0?600:400; return React.createElement('td',{key:'ds-dv'+k,style:{color,fontWeight:fw}},(diff>0?'+':'')+diff+'%'); }
     function factCell(k){
