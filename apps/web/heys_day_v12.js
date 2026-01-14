@@ -523,24 +523,9 @@
   const isSyncingRef = React.useRef(false);
 
   // Миграция тренировок: quality/feelAfter → mood/wellbeing/stress
-  const normalizeTrainings = (trainings = []) => trainings.map((t = {}) => {
-    if (t.quality !== undefined || t.feelAfter !== undefined) {
-      const { quality, feelAfter, ...rest } = t;
-      return {
-        ...rest,
-        mood: rest.mood ?? quality ?? 5,
-        wellbeing: rest.wellbeing ?? feelAfter ?? 5,
-        stress: rest.stress ?? 5
-      };
-    }
-    return t;
-  });
-
-  // Очистка пустых тренировок (все зоны = 0)
-  const cleanEmptyTrainings = (trainings) => {
-    if (!Array.isArray(trainings)) return [];
-    return trainings.filter(t => t && t.z && t.z.some(z => z > 0));
-  };
+  // === Phase 11 Integration: Use extracted normalization functions ===
+  const normalizeTrainings = HEYS.dayCalculations?.normalizeTrainings || ((trainings = []) => trainings);
+  const cleanEmptyTrainings = HEYS.dayCalculations?.cleanEmptyTrainings || ((trainings) => trainings || []);
   
   const [dayRaw,setDayRaw]=useState(()=>{ 
     const key = 'heys_dayv2_'+date;
@@ -945,50 +930,8 @@
     }
 
     // Функция для вычисления средних оценок из утреннего чек-ина, приёмов пищи И тренировок
-    function calculateDayAverages(meals, trainings, dayData) {
-      // Утренние оценки из чек-ина (если есть — это стартовая точка дня)
-      const morningMood = dayData?.moodMorning && !isNaN(+dayData.moodMorning) ? [+dayData.moodMorning] : [];
-      const morningWellbeing = dayData?.wellbeingMorning && !isNaN(+dayData.wellbeingMorning) ? [+dayData.wellbeingMorning] : [];
-      const morningStress = dayData?.stressMorning && !isNaN(+dayData.stressMorning) ? [+dayData.stressMorning] : [];
-      
-      // Собираем все оценки из приёмов пищи
-      const mealMoods = (meals || []).filter(m => m.mood && !isNaN(+m.mood)).map(m => +m.mood);
-      const mealWellbeing = (meals || []).filter(m => m.wellbeing && !isNaN(+m.wellbeing)).map(m => +m.wellbeing);
-      const mealStress = (meals || []).filter(m => m.stress && !isNaN(+m.stress)).map(m => +m.stress);
-      
-      // Собираем оценки из тренировок (mood, wellbeing, stress - теперь такие же как в meals)
-      // Фильтруем только РЕАЛЬНЫЕ тренировки — с временем или минутами в зонах (не пустые заглушки)
-      const realTrainings = (trainings || []).filter(t => {
-        const hasTime = t.time && t.time.trim() !== '';
-        const hasMinutes = t.z && Array.isArray(t.z) && t.z.some(m => m > 0);
-        return hasTime || hasMinutes;
-      });
-      const trainingMoods = realTrainings.filter(t => t.mood && !isNaN(+t.mood)).map(t => +t.mood);
-      const trainingWellbeing = realTrainings.filter(t => t.wellbeing && !isNaN(+t.wellbeing)).map(t => +t.wellbeing);
-      const trainingStress = realTrainings.filter(t => t.stress && !isNaN(+t.stress)).map(t => +t.stress);
-      
-      // Объединяем все оценки: утро + приёмы пищи + тренировки
-      const allMoods = [...morningMood, ...mealMoods, ...trainingMoods];
-      const allWellbeing = [...morningWellbeing, ...mealWellbeing, ...trainingWellbeing];
-      const allStress = [...morningStress, ...mealStress, ...trainingStress];
-      
-      const moodAvg = allMoods.length ? r1(allMoods.reduce((sum, val) => sum + val, 0) / allMoods.length) : '';
-      const wellbeingAvg = allWellbeing.length ? r1(allWellbeing.reduce((sum, val) => sum + val, 0) / allWellbeing.length) : '';
-      const stressAvg = allStress.length ? r1(allStress.reduce((sum, val) => sum + val, 0) / allStress.length) : '';
-      
-      // Автоматический расчёт dayScore на основе трёх оценок
-      // Формула: (mood + wellbeing + (10 - stress)) / 3, округлено до целого
-      let dayScore = '';
-      if (moodAvg !== '' || wellbeingAvg !== '' || stressAvg !== '') {
-        const m = moodAvg !== '' ? +moodAvg : 5;
-        const w = wellbeingAvg !== '' ? +wellbeingAvg : 5;
-        const s = stressAvg !== '' ? +stressAvg : 5;
-        // stress инвертируем: низкий стресс = хорошо
-        dayScore = Math.round((m + w + (10 - s)) / 3);
-      }
-      
-      return { moodAvg, wellbeingAvg, stressAvg, dayScore };
-    }
+    // === Phase 11 Integration: Use extracted calculateDayAverages ===
+    const calculateDayAverages = HEYS.dayCalculations?.calculateDayAverages || ((meals, trainings, dayData) => ({ moodAvg: '', wellbeingAvg: '', stressAvg: '', dayScore: '' }));
 
     // Автоматическое обновление средних оценок и dayScore при изменении приёмов пищи, тренировок или утренних оценок
     useEffect(() => {
@@ -4791,145 +4734,43 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       });
     }, [safeMeals]);
 
-    const mealsUI = sortedMealsForDisplay.map((sortedMeal, displayIndex) => {
-      const mi = (day.meals || []).findIndex(m => m.id === sortedMeal.id);
-      if (mi === -1) {
-        console.warn('[HEYS] MealCard: meal not found in day.meals', sortedMeal.id);
-        return null;
-      }
-      // Берём актуальный meal из day.meals, а не из sorted (который может быть stale)
-      const meal = day.meals[mi];
-      const isExpanded = isMealExpanded(mi, (day.meals || []).length, day.meals, displayIndex);
-      // Номер приёма (1-based, хронологический: первый по времени = 1)
-      const mealNumber = sortedMealsForDisplay.length - displayIndex;
-      const isFirst = displayIndex === 0;
-      
-      // Key включает mealType чтобы форсировать перерендер при смене типа
-      const isCurrentMeal = isFirst && !isMealStale(meal);
-      
-      return React.createElement('div', {
-        key: meal.id + '_' + (meal.mealType || 'auto'),
-        className: 'meal-with-number',
-        style: {
-          marginTop: isFirst ? '0' : '24px'
-        }
-      },
-        // Номер приёма над карточкой + "ТЕКУЩИЙ" для активного
-        React.createElement('div', {
-          className: 'meal-number-header',
-          style: {
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: '6px',
-            gap: '4px'
-          }
-        },
-          React.createElement('div', {
-            className: 'meal-number-badge' + (isCurrentMeal ? ' meal-number-badge--current' : ''),
-            style: {
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              background: isCurrentMeal 
-                ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' 
-                : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '16px',
-              fontWeight: '700',
-              boxShadow: isCurrentMeal 
-                ? '0 2px 8px rgba(34,197,94,0.35)' 
-                : '0 2px 8px rgba(59,130,246,0.35)'
-            }
-          }, mealNumber),
-          // Надпись "ТЕКУЩИЙ ПРИЁМ" для активного приёма
-          isCurrentMeal && React.createElement('span', {
-            className: 'meal-current-label',
-            style: {
-              fontSize: '14px',
-              fontWeight: '800',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-              color: '#22c55e',
-              marginTop: '4px'
-            }
-          }, 'ТЕКУЩИЙ ПРИЁМ')
-        ),
-        // Карточка приёма
-        React.createElement(MealCard, {
-          meal,
-          mealIndex: mi,
-          displayIndex,
-          products,
-          pIndex,
-          date,
-          setDay,
-          isMobile,
-          isExpanded,
-          onToggleExpand: toggleMealExpand,
-          onChangeMealType: changeMealType,
-          onChangeTime: updateMealTime,
-          onChangeMood: changeMealMood,
-          onChangeWellbeing: changeMealWellbeing,
-          onChangeStress: changeMealStress,
-          onRemoveMeal: removeMeal,
-          openEditGramsModal,
-          openTimeEditor,
-          openMoodEditor,
-          setGrams,
-          removeItem,
-          isMealStale,
-          allMeals: day.meals,
-          isNewItem,
-          optimum,
-          setMealQualityPopup,
-          addProductToMeal,
-          dayData: day,
-          profile: prof,
-          insulinWaveData
-        })
-      );
-    });
+    // === Phase 13A Integration: Use extracted meals list renderer ===
+    const mealsUI = HEYS.dayMealsList?.renderMealsList?.({
+      sortedMealsForDisplay,
+      day,
+      products,
+      pIndex,
+      date,
+      setDay,
+      isMobile,
+      isMealExpanded,
+      isMealStale,
+      toggleMealExpand,
+      changeMealType,
+      updateMealTime,
+      changeMealMood,
+      changeMealWellbeing,
+      changeMealStress,
+      removeMeal,
+      openEditGramsModal,
+      openTimeEditor,
+      openMoodEditor,
+      setGrams,
+      removeItem,
+      isNewItem,
+      optimum,
+      setMealQualityPopup,
+      addProductToMeal,
+      prof,
+      insulinWaveData
+    }) || [];
 
     // Суточные итоги по всем приёмам (используем totals из compareBlock логики)
-    function dayTotals(){
-      const t={kcal:0,carbs:0,simple:0,complex:0,prot:0,fat:0,bad:0,good:0,trans:0,fiber:0};
-      (day.meals||[]).forEach(m=>{ const mt=M.mealTotals? M.mealTotals(m,pIndex): {}; Object.keys(t).forEach(k=>{ t[k]+=mt[k]||0; }); });
-      Object.keys(t).forEach(k=>t[k]=r0(t[k]));
-      return t;
-    }
-    const dayTot = dayTotals();
-    // Weighted averages для ГИ и вредности по граммам
-  (function(){ let gSum=0, giSum=0, harmSum=0; (day.meals||[]).forEach(m=> (m.items||[]).forEach(it=>{ const p=getProductFromItem(it,pIndex); if(!p)return; const g=+it.grams||0; if(!g)return; const gi=p.gi??p.gi100??p.GI??p.giIndex; const harm=p.harm??p.harmScore??p.harm100??p.harmPct; gSum+=g; if(gi!=null) giSum+=gi*g; if(harm!=null) harmSum+=harm*g; })); dayTot.gi=gSum?giSum/gSum:0; dayTot.harm=gSum?harmSum/gSum:0; })();
+    // === Phase 11 Integration: Use extracted calculation module ===
+    const dayTot = HEYS.dayCalculations?.calculateDayTotals(day, pIndex) || {kcal:0,carbs:0,simple:0,complex:0,prot:0,fat:0,bad:0,good:0,trans:0,fiber:0,gi:0,harm:0};
     // Нормативы суточные рассчитываем из процентов heys_norms и целевой калорийности (optimum)
     const normPerc = (HEYS.utils&&HEYS.utils.lsGet?HEYS.utils.lsGet('heys_norms',{}):{}) || {};
-    function computeDailyNorms(){
-      const K = +optimum || 0; // целевая ккал (нужно съесть)
-      const carbPct = +normPerc.carbsPct||0;
-      const protPct = +normPerc.proteinPct||0;
-      const fatPct = Math.max(0,100 - carbPct - protPct);
-      const carbs = K? (K * carbPct/100)/4 : 0;
-      const prot  = K? (K * protPct/100)/4 : 0;
-      const fat   = K? (K * fatPct/100)/9 : 0; // 9 ккал/г
-      const simplePct = +normPerc.simpleCarbPct||0;
-      const simple = carbs * simplePct/100;
-      const complex = Math.max(0, carbs - simple);
-      const badPct = +normPerc.badFatPct||0;
-      const transPct = +normPerc.superbadFatPct||0; // супер вредные => trans
-      const bad = fat * badPct/100;
-      const trans = fat * transPct/100;
-      const good = Math.max(0, fat - bad - trans);
-      const fiberPct = +normPerc.fiberPct||0; // трактуем как г клетчатки на 1000 ккал
-      const fiber = K? (K/1000) * fiberPct : 0;
-      const gi = +normPerc.giPct||0; // целевой средний ГИ
-      const harm = +normPerc.harmPct||0; // целевая вредность
-      return {kcal:K, carbs, simple, complex, prot, fat, bad, good, trans, fiber, gi, harm};
-    }
-    const normAbs = computeDailyNorms();
+    const normAbs = HEYS.dayCalculations?.computeDailyNorms(optimum, normPerc) || {kcal:0, carbs:0, simple:0, complex:0, prot:0, fat:0, bad:0, good:0, trans:0, fiber:0, gi:0, harm:0};
     
     // === Advice Module Integration (после dayTot и normAbs) ===
     // 🔧 FIX: Используем state для отслеживания готовности модуля advice
@@ -11920,96 +11761,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       return HEYS.orphanProducts?.count?.() || 0;
     }, [orphanVersion, day.meals]); // Пересчитываем при изменении orphanVersion или meals
     
-    const orphanAlert = orphanCount > 0 && React.createElement('div', {
-      className: 'orphan-alert compact-card',
-      style: {
-        background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-        border: '1px solid #f59e0b',
-        borderRadius: '12px',
-        padding: '12px 16px',
-        marginBottom: '12px',
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: '12px'
-      }
-    },
-      React.createElement('span', { style: { fontSize: '20px' } }, '⚠️'),
-      React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-        React.createElement('div', { 
-          style: { 
-            fontWeight: 600, 
-            color: '#92400e', 
-            marginBottom: '4px',
-            fontSize: '14px'
-          } 
-        }, `${orphanCount} продукт${orphanCount === 1 ? '' : orphanCount < 5 ? 'а' : 'ов'} не найден${orphanCount === 1 ? '' : 'о'} в базе`),
-        React.createElement('div', { 
-          style: { 
-            color: '#a16207', 
-            fontSize: '12px',
-            lineHeight: '1.4'
-          } 
-        }, 'Калории считаются по сохранённым данным. Нажми чтобы увидеть список.'),
-        // Список orphan-продуктов
-        React.createElement('details', { 
-          style: { marginTop: '8px' }
-        },
-          React.createElement('summary', { 
-            style: { 
-              cursor: 'pointer', 
-              color: '#92400e',
-              fontSize: '12px',
-              fontWeight: 500
-            } 
-          }, 'Показать продукты'),
-          React.createElement('ul', { 
-            style: { 
-              margin: '8px 0 0 0', 
-              padding: '0 0 0 20px',
-              fontSize: '12px',
-              color: '#78350f'
-            } 
-          },
-            (HEYS.orphanProducts?.getAll?.() || []).map((o, i) => 
-              React.createElement('li', { key: o.name || i, style: { marginBottom: '4px' } },
-                React.createElement('strong', null, o.name),
-                ` — ${o.hasInlineData ? '✓ можно восстановить' : '⚠️ нет данных'}`,
-                // Показываем даты использования
-                o.usedInDays && o.usedInDays.length > 0 && React.createElement('div', {
-                  style: { fontSize: '11px', color: '#92400e', marginTop: '2px' }
-                }, `📅 ${o.usedInDays.slice(0, 5).join(', ')}${o.usedInDays.length > 5 ? ` и ещё ${o.usedInDays.length - 5}...` : ''}`)
-              )
-            )
-          ),
-          // Кнопка восстановления
-          React.createElement('button', {
-            style: {
-              marginTop: '10px',
-              padding: '8px 16px',
-              background: '#f59e0b',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              fontWeight: 600,
-              fontSize: '13px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            },
-            onClick: async () => {
-              const result = await HEYS.orphanProducts?.restore?.();
-              if (result?.success) {
-                HEYS.Toast?.success(`Восстановлено ${result.count} продуктов! Обновите страницу для применения.`) || alert(`✅ Восстановлено ${result.count} продуктов!\nОбновите страницу для применения.`);
-                window.location.reload();
-              } else {
-                HEYS.Toast?.warning('Не удалось восстановить — нет данных в штампах.') || alert('⚠️ Не удалось восстановить — нет данных в штампах.');
-              }
-            }
-          }, '🔧 Восстановить в базу')
-        )
-      )
-    );
+    // === Phase 13A Integration: Use extracted orphan alert renderer ===
+    const orphanAlert = HEYS.dayOrphanAlert?.renderOrphanAlert?.({ orphanCount }) || false;
     
     // 🎓 TOUR DEMO OVERRIDE
     const isTourActive = HEYS.OnboardingTour && HEYS.OnboardingTour.isActive();
