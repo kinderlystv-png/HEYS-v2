@@ -1929,14 +1929,14 @@
             
             // 🔍 DEBUG: Подробный лог при добавлении продукта в meal
             const hasNutrients = !!(finalProduct?.kcal100 || finalProduct?.protein100 || finalProduct?.carbs100);
-// console.log('[DayTab] onAdd received:', finalProduct?.name, 'grams:', grams, {
+/* console.log('[DayTab] onAdd received:', finalProduct?.name, 'grams:', grams, {
               id: finalProduct?.id,
               hasNutrients,
               kcal100: finalProduct?.kcal100,
               protein100: finalProduct?.protein100,
               mealIndex,
               wasShared: product?._fromShared || product?._source === 'shared'
-            });
+            }); */
             if (!hasNutrients) {
               console.error('🚨 [DayTab] CRITICAL: Received product with NO nutrients!', finalProduct);
             }
@@ -1973,13 +1973,13 @@
             
             // 🔍 DEBUG: Проверка финального newItem
             const itemHasNutrients = !!(newItem.kcal100 || newItem.protein100 || newItem.carbs100);
-// console.log('[DayTab] newItem created:', newItem.name, {
+/* console.log('[DayTab] newItem created:', newItem.name, {
               itemHasNutrients,
               kcal100: newItem.kcal100,
               protein100: newItem.protein100,
               productKcal100: finalProduct.kcal100,
               spreadCondition: finalProduct.kcal100 !== undefined
-            });
+            }); */
             if (!itemHasNutrients) {
               console.error('🚨 [DayTab] CRITICAL: newItem has NO nutrients! Will be saved without data.', {
                 newItem,
@@ -7055,11 +7055,11 @@
                           })
                         };
                         
-// console.log('[HEYS] 🍽 addMeal → onAdd:', product?.name, 'grams:', grams, {
+/* console.log('[HEYS] 🍽 addMeal → onAdd:', product?.name, 'grams:', grams, {
                           hasNutrients: !!(newItem.kcal100 || newItem.protein100),
                           kcal100: newItem.kcal100,
                           mealIndex: targetMealIndex
-                        });
+                        }); */
                         
                         // 🔒 Защита от перезаписи cloud sync
                         const newUpdatedAt = Date.now();
