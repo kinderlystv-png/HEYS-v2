@@ -13,16 +13,6 @@
     console.error('[heys_day_v12] CRITICAL: HEYS.dayUtils not loaded before heys_day_v12.js');
   }
   
-  // Helper for graceful degradation warnings (used for fallback utilities below)
-  // Shows warning only once per missing function, not on every call
-  const warnedMissing = new Set();
-  const warnMissing = (name) => {
-    if (!warnedMissing.has(name)) {
-      warnedMissing.add(name);
-      console.warn(`[heys_day_v12] dayUtils.${name} not available, using fallback`);
-    }
-  };
-  
   // Haptic feedback (optional - graceful degradation if not available)
   const haptic = U.haptic || (() => {});
   
@@ -114,12 +104,13 @@
     };
   })();
   
-  const pad2 = U.pad2 || ((n) => { warnMissing('pad2'); return String(n).padStart(2,'0'); });
-  const todayISO = U.todayISO || (() => { warnMissing('todayISO'); return new Date().toISOString().slice(0,10); });
-  const fmtDate = U.fmtDate || ((d) => { warnMissing('fmtDate'); return d.toISOString().slice(0,10); });
-  const parseISO = U.parseISO || ((s) => { warnMissing('parseISO'); return new Date(); });
-  const uid = U.uid || ((p) => { warnMissing('uid'); return (p||'id')+Math.random().toString(36).slice(2,8); });
-  const formatDateDisplay = U.formatDateDisplay || (() => { warnMissing('formatDateDisplay'); return { label: 'День', sub: '' }; });
+  // Utility functions from dayUtils (required)
+  const pad2 = U.pad2;
+  const todayISO = U.todayISO;
+  const fmtDate = U.fmtDate;
+  const parseISO = U.parseISO;
+  const uid = U.uid;
+  const formatDateDisplay = U.formatDateDisplay;
   // ВАЖНО: lsGet/lsSet должны вызывать HEYS.utils.lsGet/lsSet динамически, 
   // т.к. при загрузке файла U.__clientScoped может быть ещё не инициализирован
   // ИСПРАВЛЕНО: используем HEYS.utils напрямую, а не локальный U (который = dayUtils)
@@ -128,7 +119,7 @@
     if (utils.lsGet) { 
       return utils.lsGet(k, d); 
     } else { 
-      warnMissing('lsGet'); 
+      console.error('[heys_day_v12] HEYS.utils.lsGet not available');
       try { const v=JSON.parse(localStorage.getItem(k)); return v==null?d:v; } catch(e) { return d; } 
     } 
   };
@@ -137,32 +128,33 @@
     if (utils.lsSet) { 
       utils.lsSet(k, v); 
     } else { 
-      warnMissing('lsSet'); 
+      console.error('[heys_day_v12] HEYS.utils.lsSet not available');
       try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} 
     } 
   };
-  const clamp = U.clamp || ((n,a,b) => { warnMissing('clamp'); n=+n||0; if(n<a)return a; if(n>b)return b; return n; });
-  const r0 = U.r0 || ((v) => { warnMissing('r0'); return Math.round(+v||0); });
-  const r1 = U.r1 || ((v) => { warnMissing('r1'); return Math.round((+v||0)*10)/10; });
-  const scale = U.scale || ((v,g) => { warnMissing('scale'); return Math.round(((+v||0)*(+g||0)/100)*10)/10; });
-  const ensureDay = U.ensureDay || ((d,prof) => { warnMissing('ensureDay'); return d||{}; });
-  const buildProductIndex = U.buildProductIndex || (() => { warnMissing('buildProductIndex'); return {byId:new Map(),byName:new Map()}; });
-  const getProductFromItem = U.getProductFromItem || (() => { warnMissing('getProductFromItem'); return null; });
-  const per100 = U.per100 || (() => { warnMissing('per100'); return {kcal100:0,carbs100:0,prot100:0,fat100:0,simple100:0,complex100:0,bad100:0,good100:0,trans100:0,fiber100:0}; });
-  const loadMealsForDate = U.loadMealsForDate || (() => { warnMissing('loadMealsForDate'); return []; });
-  const productsSignature = U.productsSignature || (() => { warnMissing('productsSignature'); return ''; });
-  const computePopularProducts = U.computePopularProducts || (() => { warnMissing('computePopularProducts'); return []; });
-  const getProfile = U.getProfile || (() => { warnMissing('getProfile'); return {sex:'male',height:175,age:30,sleepHours:8,weight:70,deficitPctTarget:0,stepsGoal:7000}; });
-  const calcBMR = U.calcBMR || ((w,prof) => { warnMissing('calcBMR'); return Math.round(10*(+w||0)+6.25*(prof.height||175)-5*(prof.age||30)+(prof.sex==='female'?-161:5)); });
-  const kcalPerMin = U.kcalPerMin || ((met,w) => { warnMissing('kcalPerMin'); return Math.round((((+met||0)*(+w||0)*0.0175)-1)*10)/10; });
-  const stepsKcal = U.stepsKcal || ((steps,w,sex,len) => { warnMissing('stepsKcal'); const coef=(sex==='female'?0.5:0.57); const km=(+steps||0)*(len||0.7)/1000; return Math.round(coef*(+w||0)*km*10)/10; });
-  const parseTime = U.parseTime || ((t) => { warnMissing('parseTime'); if(!t||typeof t!=='string'||!t.includes(':')) return null; const [hh,mm]=t.split(':').map(x=>parseInt(x,10)); if(isNaN(hh)||isNaN(mm)) return null; return {hh:Math.max(0,Math.min(23,hh)),mm:Math.max(0,Math.min(59,mm))}; });
-  const sleepHours = U.sleepHours || ((a,b) => { warnMissing('sleepHours'); const pt=(t)=>{ if(!t||!t.includes(':'))return null; const [h,m]=t.split(':').map(x=>+x); return isNaN(h)||isNaN(m)?null:{hh:h,mm:m}; }; const s=pt(a),e=pt(b); if(!s||!e)return 0; let d=(e.hh+e.mm/60)-(s.hh+s.mm/60); if(d<0)d+=24; return Math.round(d*10)/10; });
+  // Math utilities from dayUtils (required)
+  const clamp = U.clamp;
+  const r0 = U.r0;
+  const r1 = U.r1;
+  const scale = U.scale;
+  // Data model utilities from dayUtils (required)
+  const ensureDay = U.ensureDay;
+  const buildProductIndex = U.buildProductIndex;
+  const getProductFromItem = U.getProductFromItem;
+  const per100 = U.per100;
+  const loadMealsForDate = U.loadMealsForDate;
+  const productsSignature = U.productsSignature;
+  const computePopularProducts = U.computePopularProducts;
+  // Profile and calculation utilities from dayUtils (required)
+  const getProfile = U.getProfile;
+  const calcBMR = U.calcBMR;
+  const kcalPerMin = U.kcalPerMin;
+  const stepsKcal = U.stepsKcal;
+  // Time parsing utilities from dayUtils (required)
+  const parseTime = U.parseTime;
+  const sleepHours = U.sleepHours;
   // Meal type classification
-  const getMealType = U.getMealType || ((mi, meal, allMeals, pIndex) => { 
-    warnMissing('getMealType'); 
-    return { type: 'snack', name: 'Приём ' + (mi+1), icon: '🍽️' }; 
-  });
+  const getMealType = U.getMealType;
   
   // === Import hooks from dayHooks module ===
   const H = HEYS.dayHooks || {};
