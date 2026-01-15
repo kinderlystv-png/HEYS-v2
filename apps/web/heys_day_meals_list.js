@@ -7,10 +7,12 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
   
-  // Dependencies with fallbacks
+  // Dependencies - explicit check for required components
   const U = HEYS.dayUtils || {};
-  const warnMissing = (name) => console.warn(`[heys_day_meals_list] Missing dependency: ${name}`);
   const MealCard = HEYS.dayComponents?.MealCard;
+  if (!MealCard) {
+    console.error('[heys_day_meals_list] MealCard component not found. Ensure heys_day_components.js is loaded first.');
+  }
   
   /**
    * Render meals list with number badges and current meal indicator
@@ -53,7 +55,7 @@
     }
     
     if (!MealCard) {
-      warnMissing('MealCard component');
+      console.error('[heys_day_meals_list] MealCard component not loaded');
       return [];
     }
     

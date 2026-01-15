@@ -7,11 +7,11 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
   
-  // Dependencies with fallbacks
-  const U = HEYS.dayUtils || {};
-  const warnMissing = (name) => console.warn(`[heys_day_day_handlers] Missing dependency: ${name}`);
-  const haptic = U.haptic || (() => { warnMissing('haptic'); });
-  const lsGet = U.lsGet || (() => { warnMissing('lsGet'); return null; });
+  // Dependencies - explicit check instead of silent fallbacks
+  if (!HEYS.dayUtils) {
+    throw new Error('[heys_day_day_handlers] HEYS.dayUtils is required. Ensure heys_day_utils.js is loaded first.');
+  }
+  const { haptic, lsGet } = HEYS.dayUtils;
   
   /**
    * Create day-level handlers

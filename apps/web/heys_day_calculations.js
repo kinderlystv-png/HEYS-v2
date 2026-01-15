@@ -7,10 +7,9 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
   
-  // Dependencies with fallbacks
+  // Dependencies - use HEYS.dayUtils if available (optional for this module)
   const U = HEYS.dayUtils || {};
   const M = HEYS.models || {};
-  const warnMissing = (name) => console.warn(`[heys_day_calculations] Missing dependency: ${name}`);
   const r0 = (n) => Math.round(n) || 0;
   const r1 = (n) => Math.round(n * 10) / 10;
   

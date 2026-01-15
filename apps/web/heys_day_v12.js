@@ -8,13 +8,23 @@
   // === Import utilities from dayUtils module ===
   const U = HEYS.dayUtils || {};
   
-  // Minimal fallback helper: log error and return safe default
-  const warnMissing = (name) => { 
-    console.error('[HEYS] dayUtils.' + name + ' not loaded'); 
+  // Explicit check for required dayUtils functions (warn once at load time)
+  if (!HEYS.dayUtils) {
+    console.error('[heys_day_v12] CRITICAL: HEYS.dayUtils not loaded before heys_day_v12.js');
+  }
+  
+  // Helper for graceful degradation warnings (used for fallback utilities below)
+  // Shows warning only once per missing function, not on every call
+  const warnedMissing = new Set();
+  const warnMissing = (name) => {
+    if (!warnedMissing.has(name)) {
+      warnedMissing.add(name);
+      console.warn(`[heys_day_v12] dayUtils.${name} not available, using fallback`);
+    }
   };
   
-  // Fallbacks with error logging (not full duplicates)
-  const haptic = U.haptic || (() => { warnMissing('haptic'); });
+  // Haptic feedback (optional - graceful degradation if not available)
+  const haptic = U.haptic || (() => {});
   
   // === Import popup components from dayPopups module ===
   const { PopupWithBackdrop, createSwipeHandlers, PopupCloseButton } = HEYS.dayPopups || {};

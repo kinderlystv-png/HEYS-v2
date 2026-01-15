@@ -7,13 +7,11 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
   
-  // Dependencies with fallbacks
-  const U = HEYS.dayUtils || {};
-  const warnMissing = (name) => console.warn(`[heys_day_meal_handlers] Missing dependency: ${name}`);
-  const haptic = U.haptic || (() => { warnMissing('haptic'); });
-  const lsSet = U.lsSet || (() => { warnMissing('lsSet'); });
-  const lsGet = U.lsGet || (() => { warnMissing('lsGet'); return null; });
-  const uid = U.uid || (() => { warnMissing('uid'); return 'id_' + Date.now(); });
+  // Dependencies - explicit check instead of silent fallbacks
+  if (!HEYS.dayUtils) {
+    throw new Error('[heys_day_meal_handlers] HEYS.dayUtils is required. Ensure heys_day_utils.js is loaded first.');
+  }
+  const { haptic, lsSet, lsGet, uid } = HEYS.dayUtils;
   
   /**
    * Sort meals by time (latest first)
