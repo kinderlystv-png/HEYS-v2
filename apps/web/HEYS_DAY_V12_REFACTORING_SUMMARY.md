@@ -104,7 +104,7 @@ Console.log:       ≤10 (сокращение на 87-93%)
 ---
 
 ### 📦 Фаза 4: Meal Scoring ⚠️ (1,314 строк, 5-8 часов)
-- [ ] Извлечь в `heys_day_meal_scoring.js`
+- [ ] Извлечь в `day/_meal_quality.js`
 - [ ] Константы: MEAL_KCAL_LIMITS, IDEAL_MACROS, etc.
 - [ ] Функции: scoreMeal(), calcKcalScore(), calcMacroScore()
 - [ ] Цветовые функции: getNutrientColor(), getMacroColor()
@@ -195,7 +195,7 @@ apps/web/
 │
 ├── heys_day_gallery.js          (~458 строк) 🆕 Фаза 3
 │
-├── heys_day_meal_scoring.js    (~1,314 строк) 🆕 Фаза 4
+├── day/_meal_quality.js        (~1,314 строк) 🆕 Фаза 4
 │
 ├── heys_day_meal_card.js        (~1,230 строк) 🆕 Фаза 5
 │

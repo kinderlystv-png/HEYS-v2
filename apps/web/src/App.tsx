@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import type { ComponentType } from 'react';
+import { useEffect, useState } from 'react';
 
 import './App.css';
 import { log, logError } from './lib/browser-logger';
@@ -24,7 +24,7 @@ type LegacyTabProps = {
 
 export function App() {
   const [isInitialized, setIsInitialized] = useState(false);
-  const [activeTab, setActiveTab] = useState<'day' | 'user' | 'reports'>('day');
+  const [activeTab, setActiveTab] = useState<'day' | 'user'>('day');
   const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().split('T')[0] || '');
   const [products, setProducts] = useState<Array<Record<string, unknown>>>([]);
   const [error, setError] = useState<string | null>(null);
@@ -196,26 +196,6 @@ export function App() {
     );
   };
 
-  const renderReportsTab = () => {
-    return (
-      <div className="reports-tab">
-        <h2>📈 Отчёты и статистика</h2>
-
-        <div className="reports-section">
-          <h3>📊 Недельная статистика</h3>
-          <p className="info-text">Здесь будут отображаться графики и аналитика</p>
-        </div>
-
-        <div className="charts-section">
-          <h3>📉 Графики</h3>
-          <div className="charts-placeholder">
-            <p>Графики калорий, БЖУ, веса и других показателей</p>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   if (error) {
     return (
       <div className="app">
@@ -259,18 +239,11 @@ export function App() {
         >
           👤 Профиль
         </button>
-        <button
-          className={`nav-btn ${activeTab === 'reports' ? 'active' : ''}`}
-          onClick={() => setActiveTab('reports')}
-        >
-          📈 Отчёты
-        </button>
       </nav>
 
       <main className="app-main">
         {activeTab === 'day' && renderDayTab()}
         {activeTab === 'user' && renderUserTab()}
-        {activeTab === 'reports' && renderReportsTab()}
       </main>
 
       <footer className="app-footer">

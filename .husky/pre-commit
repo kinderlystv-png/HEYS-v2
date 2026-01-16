@@ -6,5 +6,4 @@ echo "🏗️  Checking module architecture..."
 bash scripts/check-module-architecture.sh || exit 1
 
 # Стандартные проверки
-npx lint-staged
 pnpm exec lint-staged

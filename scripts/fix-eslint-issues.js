@@ -7,7 +7,6 @@ const path = require('path');
 // Файлы для исправления
 const files = [
   'apps/web/src/components/lazy/LazyAnalytics.tsx',
-  'apps/web/src/components/lazy/LazyReports.tsx',
   'apps/web/src/components/lazy/LazySettings.tsx',
   'apps/web/src/hooks/useLazyComponent.ts',
   'apps/web/src/hooks/usePreloadRoute.ts',

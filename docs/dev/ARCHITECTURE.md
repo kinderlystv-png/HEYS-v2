@@ -33,11 +33,14 @@ HEYS-v2/
 │   ├── shared/           # Shared utilities
 │   └── ...               # analytics, search, ui, logger
 ├── database/             # SQL migrations (PostgreSQL)
-└── archive/              # Deprecated code (DO NOT USE)
 ```
 
 **Key principle:** Legacy v12 код в `apps/web/` — это production runtime.
 API через Yandex Cloud Functions (`api.heyslab.ru`).
+
+**Арх‑контроль:** правила модульности и Quality Gate см. в
+`docs/dev/MODULE_ARCHITECTURE.md`, `docs/dev/QUALITY_GATE.md`,
+`docs/dev/AUTOLIMITS.md` и `docs/dev/CODE_STYLE.md`.
 
 ---
 

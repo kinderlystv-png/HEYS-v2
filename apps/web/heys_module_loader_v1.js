@@ -11,11 +11,11 @@
  * Научная основа: Progressive Enhancement (Aaron Gustafson 2008)
  */
 
-(function() {
+(function () {
   'use strict';
 
   const HEYS = window.HEYS = window.HEYS || {};
-  
+
   // Статус модулей
   const MODULE_STATUS = {
     PENDING: 'pending',
@@ -24,10 +24,19 @@
     ERROR: 'error',
     SKIPPED: 'skipped'
   };
-  
+
   // Реестр загруженных модулей
   const loadedModules = new Map();
-  
+
+  // Реестр манифестов зависимостей
+  const manifests = new Map();
+
+  const trackModuleError = (err, context) => {
+    if (HEYS.analytics?.trackError) {
+      HEYS.analytics.trackError(err, context);
+    }
+  };
+
   /**
    * Module Loader API
    */
@@ -46,7 +55,7 @@
         timeout = 10000,      // Таймаут загрузки (мс)
         flagName = null       // Feature flag для проверки
       } = options;
-      
+
       // Проверяем feature flag если указан
       if (flagName && !HEYS.featureFlags?.isEnabled(flagName)) {
         loadedModules.set(moduleName, {
@@ -54,40 +63,40 @@
           status: MODULE_STATUS.SKIPPED,
           reason: `Feature flag '${flagName}' is disabled`
         });
-        
+
         if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
           console.log(`[ModuleLoader] ⏭️ Skipped: ${moduleName} (flag disabled)`);
         }
-        
+
         return false;
       }
-      
+
       // Модуль уже загружен?
-      if (loadedModules.has(moduleName) && 
-          loadedModules.get(moduleName).status === MODULE_STATUS.LOADED) {
+      if (loadedModules.has(moduleName) &&
+        loadedModules.get(moduleName).status === MODULE_STATUS.LOADED) {
         if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
           console.log(`[ModuleLoader] ♻️ Already loaded: ${moduleName}`);
         }
         return true;
       }
-      
+
       // Начинаем загрузку
       loadedModules.set(moduleName, {
         name: moduleName,
         status: MODULE_STATUS.LOADING,
         startTime: Date.now()
       });
-      
+
       // Трекинг производительности
       HEYS.modulePerf?.startLoad(moduleName);
-      
+
       // Попытки загрузки с retry
       let lastError = null;
       for (let attempt = 1; attempt <= retry; attempt++) {
         try {
           // Загружаем скрипт
           await loadScript(modulePath, timeout);
-          
+
           // Успешно загружен
           loadedModules.set(moduleName, {
             name: moduleName,
@@ -97,30 +106,30 @@
             duration: Date.now() - loadedModules.get(moduleName).startTime,
             path: modulePath
           });
-          
+
           HEYS.modulePerf?.endLoad(moduleName, true);
-          
+
           if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
             console.log(`[ModuleLoader] ✅ Loaded: ${moduleName}`);
           }
-          
+
           return true;
-          
+
         } catch (error) {
           lastError = error;
-          
+
           if (attempt < retry) {
             // Ждём перед повторной попыткой (exponential backoff)
             const delay = Math.pow(2, attempt) * 100;
             await new Promise(resolve => setTimeout(resolve, delay));
-            
+
             if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
               console.log(`[ModuleLoader] 🔄 Retry ${attempt}/${retry}: ${moduleName}`);
             }
           }
         }
       }
-      
+
       // Все попытки неудачны
       loadedModules.set(moduleName, {
         name: moduleName,
@@ -128,11 +137,11 @@
         error: lastError?.message || 'Unknown error',
         path: modulePath
       });
-      
+
       HEYS.modulePerf?.endLoad(moduleName, false, lastError);
-      
+
       const errorMsg = `Failed to load ${moduleName}: ${lastError?.message}`;
-      
+
       if (required) {
         // Обязательный модуль — бросаем ошибку
         console.error(`[ModuleLoader] ❌ ${errorMsg}`);
@@ -143,7 +152,7 @@
         return false;
       }
     },
-    
+
     /**
      * Загрузить несколько модулей параллельно
      * @param {Array} modules - Массив модулей [{name, path, options}]
@@ -153,30 +162,30 @@
       const results = await Promise.allSettled(
         modules.map(m => this.load(m.name, m.path, m.options || {}))
       );
-      
+
       const summary = {
         total: modules.length,
         loaded: 0,
         failed: 0,
         skipped: 0
       };
-      
+
       results.forEach((result, index) => {
         const module = modules[index];
         const status = loadedModules.get(module.name)?.status;
-        
+
         if (status === MODULE_STATUS.LOADED) summary.loaded++;
         else if (status === MODULE_STATUS.ERROR) summary.failed++;
         else if (status === MODULE_STATUS.SKIPPED) summary.skipped++;
       });
-      
+
       if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
         console.log('[ModuleLoader] Batch load complete:', summary);
       }
-      
+
       return summary;
     },
-    
+
     /**
      * Получить статус модуля
      * @param {string} moduleName - Имя модуля
@@ -185,7 +194,7 @@
     getStatus(moduleName) {
       return loadedModules.get(moduleName) || null;
     },
-    
+
     /**
      * Получить все загруженные модули
      * @returns {Array} Массив с модулями
@@ -193,7 +202,7 @@
     getAllModules() {
       return Array.from(loadedModules.values());
     },
-    
+
     /**
      * Проверить, загружен ли модуль
      * @param {string} moduleName - Имя модуля
@@ -203,13 +212,13 @@
       const status = loadedModules.get(moduleName)?.status;
       return status === MODULE_STATUS.LOADED;
     },
-    
+
     /**
      * Получить отчёт о загрузке
      */
     getReport() {
       const modules = this.getAllModules();
-      
+
       return {
         total: modules.length,
         loaded: modules.filter(m => m.status === MODULE_STATUS.LOADED).length,
@@ -218,13 +227,13 @@
         modules
       };
     },
-    
+
     /**
      * Вывести отчёт в консоль
      */
     printReport() {
       const report = this.getReport();
-      
+
       console.group('[ModuleLoader] Load Report');
       console.log('Total:', report.total);
       console.log('Loaded:', report.loaded);
@@ -234,8 +243,125 @@
       console.table(report.modules);
       console.groupEnd();
     }
+    ,
+    /**
+     * Зарегистрировать манифест зависимостей
+     * @param {string} name
+     * @param {Array<{id:string,test:Function,required?:boolean}>} entries
+     */
+    setManifest(name, entries = []) {
+      if (!name || !Array.isArray(entries)) return false;
+      manifests.set(name, {
+        name,
+        entries: entries.filter((e) => e && typeof e.test === 'function' && e.id)
+      });
+      return true;
+    },
+
+    /**
+     * Получить манифест
+     * @param {string} name
+     */
+    getManifest(name) {
+      return manifests.get(name) || null;
+    },
+
+    /**
+     * Проверить манифест зависимостей
+     * @param {string} name
+     * @param {Object} options
+     * @returns {{ok:boolean, missing:string[]}}
+     */
+    checkManifest(name, options = {}) {
+      const manifest = manifests.get(name);
+      if (!manifest) {
+        const missing = [`manifest:${name}`];
+        if (!options.silent) {
+          trackModuleError(new Error('Missing manifest'), {
+            source: 'heys_module_loader_v1.js',
+            type: 'missing_manifest',
+            missing
+          });
+        }
+        return { ok: false, missing };
+      }
+
+      const missing = [];
+      manifest.entries.forEach((entry) => {
+        if (entry.required === false) return;
+        let ok = false;
+        try {
+          ok = !!entry.test();
+        } catch (e) {
+          ok = false;
+        }
+        if (!ok) missing.push(entry.id);
+      });
+
+      if (missing.length > 0 && !options.silent) {
+        trackModuleError(new Error('Missing manifest dependencies'), {
+          source: 'heys_module_loader_v1.js',
+          type: 'missing_manifest_deps',
+          manifest: manifest.name,
+          missing
+        });
+        return { ok: false, missing };
+      }
+
+      return { ok: true, missing: [] };
+    },
+
+    /**
+     * Проверка критичных day-модулей
+     * @returns {{ok:boolean, missing:string[]}}
+     */
+    checkDayDeps() {
+      if (this.checkManifest) {
+        return this.checkManifest('day');
+      }
+      const missing = [];
+
+      if (!HEYS.dayUtils) missing.push('HEYS.dayUtils');
+      if (!HEYS.dayHooks) missing.push('HEYS.dayHooks');
+      if (!HEYS.dayPopups) missing.push('HEYS.dayPopups');
+      if (!HEYS.dayGallery) missing.push('HEYS.dayGallery');
+      if (!HEYS.mealScoring) missing.push('HEYS.mealScoring');
+
+      if (!HEYS.dayComponents?.MealAddProduct) missing.push('HEYS.dayComponents.MealAddProduct');
+      if (!HEYS.dayComponents?.ProductRow) missing.push('HEYS.dayComponents.ProductRow');
+      if (!HEYS.dayComponents?.MealCard) missing.push('HEYS.dayComponents.MealCard');
+      if (!HEYS.dayComponents?.AdviceCard) missing.push('HEYS.dayComponents.AdviceCard');
+
+      if (!HEYS.dayMealsDisplay) missing.push('HEYS.dayMealsDisplay');
+      if (!HEYS.dayMealsList) missing.push('HEYS.dayMealsList');
+
+      if (missing.length > 0) {
+        trackModuleError(new Error('Missing day module dependencies'), {
+          source: 'heys_module_loader_v1.js',
+          type: 'missing_day_deps',
+          missing
+        });
+        return { ok: false, missing };
+      }
+
+      return { ok: true, missing: [] };
+    }
   };
-  
+
+  HEYS.moduleLoader.setManifest('day', [
+    { id: 'HEYS.dayUtils', test: () => !!HEYS.dayUtils },
+    { id: 'HEYS.dayHooks', test: () => !!HEYS.dayHooks },
+    { id: 'HEYS.dayPopups', test: () => !!HEYS.dayPopups },
+    { id: 'HEYS.dayGallery', test: () => !!HEYS.dayGallery },
+    { id: 'HEYS.mealScoring', test: () => !!HEYS.mealScoring },
+    { id: 'HEYS.dayComponents.MealAddProduct', test: () => !!HEYS.dayComponents?.MealAddProduct },
+    { id: 'HEYS.dayComponents.ProductRow', test: () => !!HEYS.dayComponents?.ProductRow },
+    { id: 'HEYS.dayComponents.MealCard', test: () => !!HEYS.dayComponents?.MealCard },
+    { id: 'HEYS.dayComponents.AdviceCard', test: () => !!HEYS.dayComponents?.AdviceCard },
+    { id: 'HEYS.dayMealsDisplay', test: () => !!HEYS.dayMealsDisplay },
+    { id: 'HEYS.dayMealsList', test: () => !!HEYS.dayMealsList }
+  ]);
+
   /**
    * Загрузить скрипт с таймаутом
    * @param {string} src - Путь к скрипту
@@ -247,28 +373,28 @@
       const script = document.createElement('script');
       script.src = src;
       script.defer = true;
-      
+
       // Таймаут
       const timeoutId = setTimeout(() => {
         script.remove();
         reject(new Error(`Timeout loading ${src}`));
       }, timeout);
-      
+
       script.onload = () => {
         clearTimeout(timeoutId);
         resolve();
       };
-      
+
       script.onerror = () => {
         clearTimeout(timeoutId);
         script.remove();
         reject(new Error(`Failed to load ${src}`));
       };
-      
+
       document.head.appendChild(script);
     });
   }
-  
+
   // Логирование инициализации
   if (window.DEV?.isDev?.()) {
     console.log('[ModuleLoader] Initialized');

@@ -10,10 +10,52 @@
  * @type {import('eslint').Rule.RuleModule}
  */
 
-const LIMITS = {
+const fs = require('fs');
+const path = require('path');
+
+const DEFAULT_LIMITS = {
   LOC: { error: 2000, warn: 1500 },
   FUNCTIONS: { error: 80, warn: 60 },
   HEYS_REFS: { error: 50, warn: 40 },
+};
+
+const DEFAULT_CONFIG_PATH = path.resolve(process.cwd(), 'config', 'module-limits.json');
+let limitsConfig = null;
+
+const loadLimitsConfig = (configPath) => {
+  try {
+    const raw = fs.readFileSync(configPath, 'utf8');
+    limitsConfig = JSON.parse(raw);
+  } catch {
+    limitsConfig = null;
+  }
+};
+
+loadLimitsConfig(DEFAULT_CONFIG_PATH);
+
+const getConfigLimits = (filename) => {
+  const defaults = limitsConfig?.defaults || {};
+  const locDefaults = defaults.loc || {};
+  const funcDefaults = defaults.functions || {};
+  const refsDefaults = defaults.heysRefs || {};
+  const basename = path.basename(filename);
+  const fileEntry = limitsConfig?.files?.[basename] || {};
+  const fileLimits = fileEntry.limits || {};
+
+  return {
+    loc: {
+      error: fileLimits.loc?.error ?? locDefaults.error ?? DEFAULT_LIMITS.LOC.error,
+      warn: fileLimits.loc?.warn ?? locDefaults.warn ?? DEFAULT_LIMITS.LOC.warn,
+    },
+    functions: {
+      error: fileLimits.functions?.error ?? funcDefaults.error ?? DEFAULT_LIMITS.FUNCTIONS.error,
+      warn: fileLimits.functions?.warn ?? funcDefaults.warn ?? DEFAULT_LIMITS.FUNCTIONS.warn,
+    },
+    heysRefs: {
+      error: fileLimits.heysRefs?.error ?? refsDefaults.error ?? DEFAULT_LIMITS.HEYS_REFS.error,
+      warn: fileLimits.heysRefs?.warn ?? refsDefaults.warn ?? DEFAULT_LIMITS.HEYS_REFS.warn,
+    },
+  };
 };
 
 // =============================================================================
@@ -115,12 +157,13 @@ module.exports = {
       {
         type: 'object',
         properties: {
-          locLimit: { type: 'number', default: LIMITS.LOC.error },
-          locWarning: { type: 'number', default: LIMITS.LOC.warn },
-          functionsLimit: { type: 'number', default: LIMITS.FUNCTIONS.error },
-          functionsWarning: { type: 'number', default: LIMITS.FUNCTIONS.warn },
-          heysRefsLimit: { type: 'number', default: LIMITS.HEYS_REFS.error },
-          heysRefsWarning: { type: 'number', default: LIMITS.HEYS_REFS.warn },
+          locLimit: { type: 'number', default: DEFAULT_LIMITS.LOC.error },
+          locWarning: { type: 'number', default: DEFAULT_LIMITS.LOC.warn },
+          functionsLimit: { type: 'number', default: DEFAULT_LIMITS.FUNCTIONS.error },
+          functionsWarning: { type: 'number', default: DEFAULT_LIMITS.FUNCTIONS.warn },
+          heysRefsLimit: { type: 'number', default: DEFAULT_LIMITS.HEYS_REFS.error },
+          heysRefsWarning: { type: 'number', default: DEFAULT_LIMITS.HEYS_REFS.warn },
+          limitsConfigPath: { type: 'string' },
         },
         additionalProperties: false,
       },
@@ -129,20 +172,42 @@ module.exports = {
 
   create(context) {
     const options = context.options[0] || {};
-    const limits = {
-      loc: { error: options.locLimit || LIMITS.LOC.error, warn: options.locWarning || LIMITS.LOC.warn },
-      functions: { error: options.functionsLimit || LIMITS.FUNCTIONS.error, warn: options.functionsWarning || LIMITS.FUNCTIONS.warn },
-      heysRefs: { error: options.heysRefsLimit || LIMITS.HEYS_REFS.error, warn: options.heysRefsWarning || LIMITS.HEYS_REFS.warn },
-    };
-
     const filename = context.getFilename();
+    const configPath = options.limitsConfigPath
+      ? path.resolve(process.cwd(), options.limitsConfigPath)
+      : DEFAULT_CONFIG_PATH;
+
+    if (configPath !== DEFAULT_CONFIG_PATH) {
+      loadLimitsConfig(configPath);
+    }
+
+    const configLimits = getConfigLimits(filename);
+    const limits = {
+      loc: {
+        error: options.locLimit ?? configLimits.loc.error,
+        warn: options.locWarning ?? configLimits.loc.warn,
+      },
+      functions: {
+        error: options.functionsLimit ?? configLimits.functions.error,
+        warn: options.functionsWarning ?? configLimits.functions.warn,
+      },
+      heysRefs: {
+        error: options.heysRefsLimit ?? configLimits.heysRefs.error,
+        warn: options.heysRefsWarning ?? configLimits.heysRefs.warn,
+      },
+    };
     
     // Пропускаем файлы не из apps/web или не heys_*.js
-    if (!filename.includes('apps/web') && !filename.includes('heys_')) {
+    if (!filename.includes('apps/web')) {
       return {};
     }
     
     // Пропускаем тесты и архив
+    const baseName = path.basename(filename);
+    if (!baseName.startsWith('heys_') || !baseName.endsWith('.js')) {
+      return {};
+    }
+
     if (filename.includes('.test.') || filename.includes('.spec.') || filename.includes('archive')) {
       return {};
     }

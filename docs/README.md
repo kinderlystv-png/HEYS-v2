@@ -13,8 +13,19 @@
   and tech stack
 - [Development Methodology](HEYS_Development_Methodology.md) ⭐⭐⭐⭐⭐ -
   Development principles and practices
+- [Quality Gate](dev/QUALITY_GATE.md) ⭐⭐⭐⭐⭐ - Early error detection and
+  blocking on commit
+- [Autolimits for Legacy](dev/AUTOLIMITS.md) ⭐⭐⭐⭐ - Legacy growth control
 - [Quick Start Checklist](Quick%20Start%20Checklist.md) ⭐⭐⭐⭐ - Getting
   started guide
+
+### 🧱 Architecture & Quality
+
+- **[Module Architecture](dev/MODULE_ARCHITECTURE.md)** — правила модульности
+- **[Code Style](dev/CODE_STYLE.md)** — стандарты кода и стилей
+- **[Architecture Overview](ARCHITECTURE.md)** — общая архитектура проекта
+- **[Quality Gate](dev/QUALITY_GATE.md)** — единый стандарт качества
+- **[Autolimits](dev/AUTOLIMITS.md)** — регламент автолимитов legacy
 
 ### 🔗 NAVIGATION
 

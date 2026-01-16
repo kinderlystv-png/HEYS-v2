@@ -45,7 +45,7 @@ rg -o "#[0-9a-fA-F]{3,6}" apps/web/styles/modules | sort | uniq -c | sort -nr | 
 - [ ] Классы в JS (проверить usages): `.macro-toast-*`, `.grams-input`, `.fab-*`, `.sparkline-*`, `.mpc-*`, `.water-ring`, `.confetti-*`
 - [ ] SW кэш: проверить `apps/web/heys_service_worker_v1.js` — путь к main.css
 - [ ] Safe-area/notch: сверить актуальные правила с `docs/tasks/archive/2025-11-24-mobile-ux-phase-2.md`
-- [ ] Проверить ссылки на main.css в `docs/tasks`, `archive/docs`, `TESTS/*.html` — не ломать артефактные демо
+- [ ] Проверить ссылки на main.css в `docs/tasks`, `docs/archive`, `TESTS/*.html` — не ломать артефактные демо
 
 ---
 

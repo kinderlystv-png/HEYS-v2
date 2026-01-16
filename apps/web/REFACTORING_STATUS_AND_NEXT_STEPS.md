@@ -13,7 +13,7 @@
 2. `heys_day_advice_card.js` — 219 lines (AdviceCard component)
 3. `heys_day_add_product.js` — 394 lines (MealAddProduct + ProductRow)
 4. `heys_day_gallery.js` — 479 lines (photo gallery system)
-5. `heys_day_meal_scoring.js` — 1,338 lines (⚠️ business-critical scoring logic)
+5. `day/_meal_quality.js` — 1,338 lines (⚠️ business-critical scoring logic)
 6. `heys_day_meal_card.js` — 1,295 lines (MealCard component)
 
 ### Supporting Files

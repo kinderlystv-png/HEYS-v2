@@ -6,6 +6,7 @@
 
 | Файл                       | Содержание                                |
 | -------------------------- | ----------------------------------------- |
+| [ONBOARDING.md](./ONBOARDING.md)         | Быстрый старт для dev (macOS/Linux/Windows) |
 | [CODE_STYLE.md](./CODE_STYLE.md)           | Запрещено/Правильно, commit style         |
 | [ARCHITECTURE.md](./ARCHITECTURE.md)       | Структура проекта, Yandex Cloud           |
 | [CSS_GUIDE.md](./CSS_GUIDE.md)             | Tailwind, BEM, NO-TOUCH zones             |
@@ -39,7 +40,7 @@
 | Категория         | Файлы                                                              |
 | ----------------- | ------------------------------------------------------------------ |
 | **Core**          | `heys_app_v12.js`, `heys_core_v12.js`, `heys_day_v12.js`           |
-| **Auth**          | `heys_auth_v1.js`, `heys_storage_supabase_v1.js`                   |
+| **Auth**          | `heys_auth_v1.js`, `heys_storage_layer_v1.js` (YandexAPI storage)  |
 | **Subscriptions** | `heys_subscriptions_v1.js`, `heys_morning_checkin_v1.js`           |
 | **Analytics**     | `heys_advice_v1.js`, `heys_insulin_wave_v1.js`, `heys_cycle_v1.js` |
 | **Legal**         | `heys_consents_v1.js`, `heys_sms_v1.js`, `docs/legal/`             |

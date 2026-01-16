@@ -1,0 +1,429 @@
+// heys_day_effects.js — DayTab side effects (sync, events)
+// Phase 12 of HEYS Day v12 refactoring
+(function (global) {
+    'use strict';
+
+    const HEYS = global.HEYS = global.HEYS || {};
+    const React = global.React;
+
+    if (!React) {
+        throw new Error('[heys_day_effects] React is required. Ensure React is loaded before heys_day_effects.js');
+    }
+
+    function useDaySyncEffects(deps) {
+        const {
+            date,
+            setIsHydrated,
+            setDay,
+            getProfile,
+            ensureDay,
+            loadMealsForDate,
+            lsGet,
+            lsSet,
+            normalizeTrainings,
+            cleanEmptyTrainings,
+            prevDateRef,
+            lastLoadedUpdatedAtRef,
+            blockCloudUpdatesUntilRef,
+            isSyncingRef
+        } = deps || {};
+
+        // Подгружать данные дня из облака при смене даты
+        React.useEffect(() => {
+            let cancelled = false;
+
+            // 🔴 КРИТИЧНО: Сохранить текущие данные ПЕРЕД сменой даты!
+            // Иначе несохранённые изменения потеряются при переходе на другую дату
+            const dateActuallyChanged = prevDateRef.current !== date;
+            if (dateActuallyChanged && HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
+                console.info(`[HEYS] 📅 Смена даты: ${prevDateRef.current} → ${date}, сохраняем предыдущий день...`);
+                // Flush данные предыдущего дня синхронно
+                HEYS.Day.requestFlush();
+            }
+            prevDateRef.current = date;
+
+            setIsHydrated(false); // Сброс: данные ещё не загружены для новой даты
+            const clientId = global.HEYS && global.HEYS.currentClientId;
+            const cloud = global.HEYS && global.HEYS.cloud;
+
+            // Сбрасываем ref при смене даты
+            lastLoadedUpdatedAtRef.current = 0;
+
+            const doLocal = () => {
+                if (cancelled) return;
+                const profNow = getProfile();
+                const key = 'heys_dayv2_' + date;
+                const v = lsGet(key, null);
+                if (v && v.date) {
+                    // ЗАЩИТА: не перезаписываем более свежие данные
+                    // handleDayUpdated может уже загрузить sync данные
+                    if (v.updatedAt && lastLoadedUpdatedAtRef.current > 0 && v.updatedAt < lastLoadedUpdatedAtRef.current) {
+                        return;
+                    }
+                    lastLoadedUpdatedAtRef.current = v.updatedAt || Date.now();
+
+                    // Мигрируем оценки тренировок и очищаем пустые (только в памяти, НЕ сохраняем)
+                    // Миграция сохранится автоматически при следующем реальном изменении данных
+                    const normalizedTrainings = normalizeTrainings(v.trainings);
+                    const cleanedTrainings = cleanEmptyTrainings(normalizedTrainings);
+                    const cleanedDay = {
+                        ...v,
+                        trainings: cleanedTrainings
+                    };
+                    // 🔒 НЕ сохраняем миграцию сразу — это вызывает DAY SAVE и мерцание UI
+                    // Данные сохранятся при следующем изменении (добавление еды, воды и т.д.)
+                    const newDay = ensureDay(cleanedDay, profNow);
+                    // 🔒 Оптимизация: не вызываем setDay если данные идентичны (предотвращает мерцание)
+                    setDay(prevDay => {
+                        // Сравниваем по КОНТЕНТУ, а не по метаданным (updatedAt может отличаться между локальной и облачной версией)
+                        if (prevDay && prevDay.date === newDay.date) {
+                            const prevMealsJson = JSON.stringify(prevDay.meals || []);
+                            const newMealsJson = JSON.stringify(newDay.meals || []);
+                            const prevTrainingsJson = JSON.stringify(prevDay.trainings || []);
+                            const newTrainingsJson = JSON.stringify(newDay.trainings || []);
+                            const isSameContent =
+                                prevMealsJson === newMealsJson &&
+                                prevTrainingsJson === newTrainingsJson &&
+                                prevDay.waterMl === newDay.waterMl &&
+                                prevDay.steps === newDay.steps &&
+                                prevDay.weightMorning === newDay.weightMorning &&
+                                prevDay.sleepStart === newDay.sleepStart &&
+                                prevDay.sleepEnd === newDay.sleepEnd;
+                            if (isSameContent) {
+                                // Данные не изменились — оставляем предыдущий объект (без ре-рендера)
+                                return prevDay;
+                            }
+                        }
+                        return newDay;
+                    });
+                } else {
+                    // create a clean default day for the selected date (don't inherit previous trainings)
+                    const defaultDay = ensureDay({
+                        date: date,
+                        meals: (loadMealsForDate(date) || []),
+                        trainings: [],
+                        // Явно устанавливаем пустые значения для полей сна и оценки
+                        sleepStart: '',
+                        sleepEnd: '',
+                        sleepQuality: '',
+                        sleepNote: '',
+                        dayScore: '',
+                        moodAvg: '',
+                        wellbeingAvg: '',
+                        stressAvg: '',
+                        dayComment: ''
+                    }, profNow);
+                    setDay(defaultDay);
+                }
+
+                // ВАЖНО: данные загружены, теперь можно сохранять
+                // Продукты приходят через props.products, не нужно обновлять локально
+                setIsHydrated(true);
+            };
+
+            if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
+                if (typeof cloud.shouldSyncClient === 'function' ? cloud.shouldSyncClient(clientId, 4000) : true) {
+                    // 🔒 Блокируем события heys:day-updated во время синхронизации
+                    // Это предотвращает множественные setDay() и мерцание UI
+                    isSyncingRef.current = true;
+                    cloud.bootstrapClientSync(clientId)
+                        .then(() => {
+                            // После sync localStorage уже обновлён событиями heys:day-updated
+                            // Просто загружаем финальные данные (без задержки!)
+                            isSyncingRef.current = false;
+                            doLocal();
+                        })
+                        .catch((err) => {
+                            // Нет сети или ошибка — загружаем из локального кэша
+                            isSyncingRef.current = false;
+                            console.warn('[HEYS] Sync failed, using local cache:', err?.message || err);
+                            doLocal();
+                        });
+                } else {
+                    doLocal();
+                }
+            } else {
+                doLocal();
+            }
+
+            return () => {
+                cancelled = true;
+                isSyncingRef.current = false; // Сброс при смене даты или размонтировании
+            };
+        }, [date]);
+
+        // Слушаем событие обновления данных дня (от Morning Check-in или внешних изменений)
+        // НЕ слушаем heysSyncCompleted — это вызывает бесконечный цикл при каждом сохранении
+        // 🔧 v3.19.1: Защита от дублирующихся событий fetchDays
+        const lastProcessedEventRef = React.useRef({ date: null, source: null, timestamp: 0 });
+
+        React.useEffect(() => {
+            const handleDayUpdated = (e) => {
+                const updatedDate = e.detail?.date;
+                const source = e.detail?.source || 'unknown';
+                const forceReload = e.detail?.forceReload || false;
+
+                // 🔧 v3.19.1: Дедупликация событий — игнорируем одинаковые события в течение 100мс
+                const now = Date.now();
+                const last = lastProcessedEventRef.current;
+                if (source === 'fetchDays' &&
+                    last.date === updatedDate &&
+                    last.source === source &&
+                    now - last.timestamp < 100) {
+                    return; // Пропускаем дубликат
+                }
+                lastProcessedEventRef.current = { date: updatedDate, source, timestamp: now };
+
+                // 🔒 Игнорируем события во время начальной синхронизации
+                // doLocal() в конце синхронизации загрузит все финальные данные
+                if (isSyncingRef.current && (source === 'cloud' || source === 'merge')) {
+                    return;
+                }
+
+                // Блокируем ВСЕ внешние обновления на 3 секунды после локального изменения
+                // Но НЕ блокируем forceReload (от шагов модалки)
+                if (!forceReload && Date.now() < blockCloudUpdatesUntilRef.current) {
+                    return;
+                }
+
+                // Если date не указан или совпадает с текущим — перезагружаем
+                if (!updatedDate || updatedDate === date) {
+                    const profNow = getProfile();
+                    const key = 'heys_dayv2_' + date;
+                    const v = lsGet(key, null);
+                    if (v && v.date) {
+                        // Проверяем: данные из storage новее текущих?
+                        const storageUpdatedAt = v.updatedAt || 0;
+                        const currentUpdatedAt = lastLoadedUpdatedAtRef.current || 0;
+
+                        // Двойная защита: по timestamp И по количеству meals
+                        // Не откатываем если в storage меньше meals чем в текущем state
+                        const storageMealsCount = (v.meals || []).length;
+
+                        // Пропускаем проверку timestamp если forceReload
+                        // ВАЖНО: используем < вместо <= чтобы обрабатывать первую загрузку (когда оба = 0)
+                        if (!forceReload && storageUpdatedAt < currentUpdatedAt) {
+                            return; // Не перезаписываем более новые данные старыми
+                        }
+
+                        // Обновляем ref чтобы doLocal() не перезаписал более старыми данными
+                        lastLoadedUpdatedAtRef.current = storageUpdatedAt;
+                        const migratedTrainings = normalizeTrainings(v.trainings);
+                        const cleanedTrainings = cleanEmptyTrainings(migratedTrainings);
+                        const migratedDay = { ...v, trainings: cleanedTrainings };
+                        // Сохраняем миграцию ТОЛЬКО если данные изменились
+                        const trainingsChanged = JSON.stringify(v.trainings) !== JSON.stringify(cleanedTrainings);
+                        if (trainingsChanged) {
+                            lsSet(key, migratedDay);
+                        }
+                        const newDay = ensureDay(migratedDay, profNow);
+
+                        // 🔒 Оптимизация: не вызываем setDay если контент идентичен (предотвращает мерцание)
+                        setDay(prevDay => {
+                            if (prevDay && prevDay.date === newDay.date) {
+                                const prevMealsJson = JSON.stringify(prevDay.meals || []);
+                                const newMealsJson = JSON.stringify(newDay.meals || []);
+                                const prevTrainingsJson = JSON.stringify(prevDay.trainings || []);
+                                const newTrainingsJson = JSON.stringify(newDay.trainings || []);
+                                const prevSupplementsPlanned = JSON.stringify(prevDay.supplementsPlanned || []);
+                                const newSupplementsPlanned = JSON.stringify(newDay.supplementsPlanned || []);
+                                const prevSupplementsTaken = JSON.stringify(prevDay.supplementsTaken || []);
+                                const newSupplementsTaken = JSON.stringify(newDay.supplementsTaken || []);
+
+                                const isSameContent =
+                                    prevMealsJson === newMealsJson &&
+                                    prevTrainingsJson === newTrainingsJson &&
+                                    prevDay.waterMl === newDay.waterMl &&
+                                    prevDay.steps === newDay.steps &&
+                                    prevDay.weightMorning === newDay.weightMorning &&
+                                    // Утренние оценки из чек-ина
+                                    prevDay.moodMorning === newDay.moodMorning &&
+                                    prevDay.wellbeingMorning === newDay.wellbeingMorning &&
+                                    prevDay.stressMorning === newDay.stressMorning &&
+                                    // Витамины/добавки
+                                    prevSupplementsPlanned === newSupplementsPlanned &&
+                                    prevSupplementsTaken === newSupplementsTaken;
+
+                                if (isSameContent) {
+                                    // DEBUG (отключено): console.log('[HEYS] 📅 handleDayUpdated SKIPPED — same content');
+                                    return prevDay;
+                                }
+                            }
+                            return newDay;
+                        });
+                    }
+                }
+            };
+
+            // Слушаем явное событие обновления дня (от StepModal, Morning Check-in)
+            global.addEventListener('heys:day-updated', handleDayUpdated);
+
+            return () => {
+                global.removeEventListener('heys:day-updated', handleDayUpdated);
+            };
+        }, [date]);
+    }
+
+    function useDayBootEffects() {
+        // Twemoji: reparse emoji after render
+        React.useEffect(() => {
+            if (global.scheduleTwemojiParse) global.scheduleTwemojiParse();
+        });
+
+        // Трекинг просмотра дня (только один раз)
+        React.useEffect(() => {
+            if (global.HEYS && global.HEYS.analytics) {
+                global.HEYS.analytics.trackDataOperation('day-viewed');
+            }
+        }, []);
+    }
+
+    function useDayCurrentMinuteEffect(deps) {
+        const { setCurrentMinute } = deps || {};
+        React.useEffect(() => {
+            const intervalId = setInterval(() => {
+                setCurrentMinute(Math.floor(Date.now() / 60000));
+            }, 60000); // Обновляем каждую минуту
+            return () => clearInterval(intervalId);
+        }, []);
+    }
+
+    function useDayThemeEffect(deps) {
+        const { theme, resolvedTheme } = deps || {};
+        React.useEffect(() => {
+            document.documentElement.setAttribute('data-theme', resolvedTheme);
+            try {
+                const U = global.HEYS?.utils || {};
+                U.lsSet ? U.lsSet('heys_theme', theme) : localStorage.setItem('heys_theme', theme);
+            } catch (e) {
+                // QuotaExceeded — игнорируем, тема применится через data-theme
+            }
+
+            if (theme !== 'auto') return;
+
+            const mq = window.matchMedia('(prefers-color-scheme: dark)');
+            const handler = () => {
+                document.documentElement.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
+            };
+            mq.addEventListener('change', handler);
+            return () => mq.removeEventListener('change', handler);
+        }, [theme, resolvedTheme]);
+    }
+
+    function useDayExportsEffects(deps) {
+        const {
+            currentStreak,
+            addMeal,
+            addWater,
+            addProductToMeal,
+            day,
+            pIndex,
+            getMealType,
+            getMealQualityScore,
+            safeMeals
+        } = deps || {};
+
+        // Экспорт getStreak для использования в gamification модуле
+        React.useEffect(() => {
+            HEYS.Day = HEYS.Day || {};
+            HEYS.Day.getStreak = () => currentStreak;
+
+            // Dispatch событие чтобы GamificationBar мог обновить streak
+            window.dispatchEvent(new CustomEvent('heysDayStreakUpdated', {
+                detail: { streak: currentStreak }
+            }));
+
+            // Confetti при streak 7, 14, 30, 100
+            if ([7, 14, 30, 100].includes(currentStreak) && HEYS.game && HEYS.game.celebrate) {
+                HEYS.game.celebrate();
+            }
+
+            return () => {
+                if (HEYS.Day && HEYS.Day.getStreak) {
+                    delete HEYS.Day.getStreak;
+                }
+            };
+        }, [currentStreak]);
+
+        // Экспорт addMeal для PWA shortcuts и внешних вызовов
+        React.useEffect(() => {
+            HEYS.Day = HEYS.Day || {};
+            HEYS.Day.addMeal = addMeal;
+            return () => {
+                if (HEYS.Day && HEYS.Day.addMeal === addMeal) {
+                    delete HEYS.Day.addMeal;
+                }
+            };
+        }, [addMeal]);
+
+        // Экспорт addWater для внешних вызовов (например, FAB на вкладке Виджеты)
+        React.useEffect(() => {
+            HEYS.Day = HEYS.Day || {};
+            HEYS.Day.addWater = addWater;
+            return () => {
+                if (HEYS.Day && HEYS.Day.addWater === addWater) {
+                    delete HEYS.Day.addWater;
+                }
+            };
+        }, [addWater]);
+
+        // Экспорт addProductToMeal как публичный API
+        // Позволяет добавлять продукт в приём извне: HEYS.Day.addProductToMeal(mealIndex, product, grams?)
+        React.useEffect(() => {
+            HEYS.Day = HEYS.Day || {};
+            HEYS.Day.addProductToMeal = (mi, product, grams) => {
+                // Валидация
+                if (typeof mi !== 'number' || mi < 0) {
+                    console.warn('[HEYS.Day.addProductToMeal] Invalid meal index:', mi);
+                    return false;
+                }
+                if (!product || !product.name) {
+                    console.warn('[HEYS.Day.addProductToMeal] Invalid product:', product);
+                    return false;
+                }
+                // Добавляем продукт
+                const productWithGrams = grams ? { ...product, grams } : product;
+                addProductToMeal(mi, productWithGrams);
+                return true;
+            };
+            return () => {
+                if (HEYS.Day) delete HEYS.Day.addProductToMeal;
+            };
+        }, [addProductToMeal]);
+
+        // Экспорт getMealQualityScore и getMealType как публичный API для advice модуля
+        // getMealTypeByMeal — wrapper с текущим контекстом (meals и pIndex)
+        React.useEffect(() => {
+            HEYS.getMealQualityScore = getMealQualityScore;
+            // Wrapper: принимает meal объект, находит его индекс и вызывает с полным контекстом
+            HEYS.getMealType = (meal) => {
+                if (!meal) return { type: 'snack', name: 'Перекус', icon: '🍎' };
+                const allMeals = day.meals || [];
+                // Если передали только time (string), находим meal по времени
+                if (typeof meal === 'string') {
+                    const foundMeal = allMeals.find(m => m.time === meal);
+                    if (!foundMeal) return { type: 'snack', name: 'Перекус', icon: '🍎' };
+                    const idx = allMeals.indexOf(foundMeal);
+                    return getMealType(idx, foundMeal, allMeals, pIndex);
+                }
+                // Если передали meal объект
+                const idx = allMeals.findIndex(m => m.id === meal.id || m.time === meal.time);
+                if (idx === -1) return { type: 'snack', name: 'Перекус', icon: '🍎' };
+                return getMealType(idx, meal, allMeals, pIndex);
+            };
+            return () => {
+                delete HEYS.getMealQualityScore;
+                delete HEYS.getMealType;
+            };
+        }, [safeMeals, pIndex]);
+    }
+
+    HEYS.dayEffects = {
+        useDaySyncEffects,
+        useDayBootEffects,
+        useDayCurrentMinuteEffect,
+        useDayThemeEffect,
+        useDayExportsEffects
+    };
+
+})(window);

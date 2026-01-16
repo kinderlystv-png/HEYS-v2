@@ -46,10 +46,9 @@ heys_simple_analytics.js        217 строк     8KB
    - Удалены ссылки на `heys_analytics_ui.js`
    - Добавлена ссылка на `heys_simple_analytics.js`
 
-3. ✅ **Архивированы старые файлы**
-   - `archive/performance-monitoring-v1/heys_performance_monitor.js`
-   - `archive/performance-monitoring-v1/heys_analytics_ui.js`
-   - `archive/performance-monitoring-v1/README.md` (инструкция)
+3. ✅ **Архив удалён (2026-01-16)**
+   - Старые файлы удалены вместе с корневым `archive/`
+   - Для восстановления используйте git историю
 
 4. ✅ **Проверена совместимость**
    - `heys_core_v12.js` использует только поддерживаемые методы
@@ -252,9 +251,12 @@ heysStats()
 ### Если что-то пойдет не так:
 
 ```bash
-# Восстановить старые файлы
-cp archive/performance-monitoring-v1/heys_performance_monitor.js apps/web/
-cp archive/performance-monitoring-v1/heys_analytics_ui.js apps/web/
+# Восстановить старые файлы из git истории (archive удалён)
+git log -- apps/web/heys_performance_monitor.js
+git log -- apps/web/heys_analytics_ui.js
+
+git checkout <commit_hash> -- apps/web/heys_performance_monitor.js
+git checkout <commit_hash> -- apps/web/heys_analytics_ui.js
 
 # Откатить index.html через git
 git checkout HEAD -- apps/web/index.html

@@ -7,7 +7,6 @@ const fs = require('fs');
 
 function fixFinalEslintIssues() {
   const files = [
-    'apps/web/src/components/lazy/LazyReports.tsx',
     'apps/web/src/components/lazy/LazySettings.tsx',
   ];
 

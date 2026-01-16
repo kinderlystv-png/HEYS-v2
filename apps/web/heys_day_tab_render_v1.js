@@ -1,0 +1,260 @@
+// heys_day_tab_render_v1.js — DayTab render assembly (skeleton/read-only/diary/shell)
+
+; (function (global) {
+    const HEYS = global.HEYS = global.HEYS || {};
+
+    HEYS.dayTabRender = HEYS.dayTabRender || {};
+
+    HEYS.dayTabRender.renderDayTabLayout = function renderDayTabLayout(ctx) {
+        const React = ctx.React || global.React;
+        const heysRef = ctx.HEYS || HEYS;
+
+        // === SKELETON LOADER ===
+        const skeletonLoader = React.createElement('div', { className: 'skeleton-page' },
+            // Skeleton для СТАТИСТИКА
+            React.createElement('div', { className: 'skeleton-card skeleton-stats' },
+                React.createElement('div', { className: 'skeleton-header' }),
+                React.createElement('div', { className: 'skeleton-metrics' },
+                    React.createElement('div', { className: 'skeleton-metric' }),
+                    React.createElement('div', { className: 'skeleton-metric' }),
+                    React.createElement('div', { className: 'skeleton-metric' }),
+                    React.createElement('div', { className: 'skeleton-metric' })
+                ),
+                React.createElement('div', { className: 'skeleton-sparkline' }),
+                React.createElement('div', { className: 'skeleton-progress' }),
+                React.createElement('div', { className: 'skeleton-macros' },
+                    React.createElement('div', { className: 'skeleton-ring' }),
+                    React.createElement('div', { className: 'skeleton-ring' }),
+                    React.createElement('div', { className: 'skeleton-ring' })
+                )
+            ),
+            // Skeleton для АКТИВНОСТЬ
+            React.createElement('div', { className: 'skeleton-card skeleton-activity' },
+                React.createElement('div', { className: 'skeleton-header' }),
+                React.createElement('div', { className: 'skeleton-slider' }),
+                React.createElement('div', { className: 'skeleton-row' },
+                    React.createElement('div', { className: 'skeleton-block' }),
+                    React.createElement('div', { className: 'skeleton-block' })
+                )
+            ),
+            // Skeleton для приёмов пищи
+            React.createElement('div', { className: 'skeleton-card skeleton-meal' },
+                React.createElement('div', { className: 'skeleton-meal-header' }),
+                React.createElement('div', { className: 'skeleton-search' }),
+                React.createElement('div', { className: 'skeleton-item' }),
+                React.createElement('div', { className: 'skeleton-item' })
+            )
+        );
+
+        // УБРАНО: Скелетон вызывал мерцание при каждой загрузке
+        // Теперь данные показываются мгновенно из localStorage (useState инициализирован из кэша)
+        // isHydrated оставлен только для блокировки autosave до завершения sync
+        // if (!isHydrated) {
+        //   return React.createElement('div', { className: 'page page-day' }, skeletonLoader);
+        // }
+
+        // === READ-ONLY BANNER: показываем если триал истёк ===
+        const subscriptionStatus = heysRef.Subscription?.getStatus?.() || {};
+        const isReadOnly = subscriptionStatus.status === 'read_only';
+
+        // === Diary Section (extracted) ===
+        const diarySection = heysRef.dayDiarySection?.renderDiarySection?.({
+            React,
+            isMobile: ctx.isMobile,
+            mobileSubTab: ctx.mobileSubTab,
+            goalProgressBar: ctx.goalProgressBar,
+            mealsChart: ctx.mealsChart,
+            insulinWaveData: ctx.insulinWaveData,
+            insulinExpanded: ctx.insulinExpanded,
+            setInsulinExpanded: ctx.setInsulinExpanded,
+            openExclusivePopup: ctx.openExclusivePopup,
+            addMeal: ctx.addMeal,
+            day: ctx.day,
+            mealsUI: ctx.mealsUI,
+            daySummary: ctx.daySummary,
+            HEYS: heysRef
+        }) || null;
+
+        if (!heysRef.dayPageShell?.renderDayPage) {
+            throw new Error('[heys_day_tab_render_v1] HEYS.dayPageShell not loaded before renderDayTabLayout');
+        }
+
+        const adviceState = ctx.adviceState || {};
+
+        return heysRef.dayPageShell.renderDayPage({
+            isReadOnly,
+            pullProgress: ctx.pullProgress,
+            isRefreshing: ctx.isRefreshing,
+            refreshStatus: ctx.refreshStatus,
+            pullThreshold: ctx.pullThreshold,
+            isMobile: ctx.isMobile,
+            mobileSubTab: ctx.mobileSubTab,
+            orphanAlert: ctx.orphanAlert,
+            statsBlock: ctx.statsBlock,
+            waterCard: ctx.waterCard,
+            compactActivity: ctx.compactActivity,
+            sideBlock: ctx.sideBlock,
+            cycleCard: ctx.cycleCard,
+            date: ctx.date,
+            day: ctx.day,
+            caloricDebt: ctx.caloricDebt,
+            eatenKcal: ctx.eatenKcal,
+            optimum: ctx.optimum,
+            addMeal: ctx.addMeal,
+            addWater: ctx.addWater,
+            diarySection,
+            adviceTrigger: adviceState.adviceTrigger,
+            adviceRelevant: adviceState.adviceRelevant,
+            toastVisible: adviceState.toastVisible,
+            dismissToast: adviceState.dismissToast,
+            getSortedGroupedAdvices: adviceState.getSortedGroupedAdvices,
+            dismissedAdvices: adviceState.dismissedAdvices,
+            hiddenUntilTomorrow: adviceState.hiddenUntilTomorrow,
+            lastDismissedAdvice: adviceState.lastDismissedAdvice,
+            adviceSwipeState: adviceState.adviceSwipeState,
+            expandedAdviceId: adviceState.expandedAdviceId,
+            handleAdviceToggleExpand: adviceState.handleAdviceToggleExpand,
+            rateAdvice: adviceState.rateAdvice,
+            handleAdviceSwipeStart: adviceState.handleAdviceSwipeStart,
+            handleAdviceSwipeMove: adviceState.handleAdviceSwipeMove,
+            handleAdviceSwipeEnd: adviceState.handleAdviceSwipeEnd,
+            handleAdviceLongPressStart: adviceState.handleAdviceLongPressStart,
+            handleAdviceLongPressEnd: adviceState.handleAdviceLongPressEnd,
+            registerAdviceCardRef: adviceState.registerAdviceCardRef,
+            handleAdviceListTouchStart: adviceState.handleAdviceListTouchStart,
+            handleAdviceListTouchMove: adviceState.handleAdviceListTouchMove,
+            handleAdviceListTouchEnd: adviceState.handleAdviceListTouchEnd,
+            handleDismissAll: adviceState.handleDismissAll,
+            dismissAllAnimation: adviceState.dismissAllAnimation,
+            toastsEnabled: adviceState.toastsEnabled,
+            toggleToastsEnabled: adviceState.toggleToastsEnabled,
+            adviceSoundEnabled: adviceState.adviceSoundEnabled,
+            toggleAdviceSoundEnabled: adviceState.toggleAdviceSoundEnabled,
+            scheduleAdvice: adviceState.scheduleAdvice,
+            undoLastDismiss: adviceState.undoLastDismiss,
+            clearLastDismissed: adviceState.clearLastDismissed,
+            ADVICE_CATEGORY_NAMES: adviceState.ADVICE_CATEGORY_NAMES,
+            AdviceCard: ctx.AdviceCard,
+            displayedAdvice: adviceState.displayedAdvice,
+            adviceExpanded: adviceState.adviceExpanded,
+            toastSwiped: adviceState.toastSwiped,
+            toastSwipeX: adviceState.toastSwipeX,
+            toastDetailsOpen: adviceState.toastDetailsOpen,
+            toastAppearedAtRef: adviceState.toastAppearedAtRef,
+            toastScheduledConfirm: adviceState.toastScheduledConfirm,
+            haptic: ctx.haptic,
+            setToastDetailsOpen: adviceState.setToastDetailsOpen,
+            setAdviceExpanded: adviceState.setAdviceExpanded,
+            setAdviceTrigger: adviceState.setAdviceTrigger,
+            handleToastTouchStart: adviceState.handleToastTouchStart,
+            handleToastTouchMove: adviceState.handleToastTouchMove,
+            handleToastTouchEnd: adviceState.handleToastTouchEnd,
+            handleToastUndo: adviceState.handleToastUndo,
+            handleToastSchedule: adviceState.handleToastSchedule,
+            showTimePicker: ctx.showTimePicker,
+            cancelTimePicker: ctx.cancelTimePicker,
+            bottomSheetRef: ctx.bottomSheetRef,
+            handleSheetTouchStart: ctx.handleSheetTouchStart,
+            handleSheetTouchMove: ctx.handleSheetTouchMove,
+            handleSheetTouchEnd: ctx.handleSheetTouchEnd,
+            pickerStep: ctx.pickerStep,
+            animDirection: ctx.animDirection,
+            editMode: ctx.editMode,
+            confirmTimeEdit: ctx.confirmTimeEdit,
+            goToMoodStep: ctx.goToMoodStep,
+            hoursValues: ctx.hoursValues,
+            pendingMealTime: ctx.pendingMealTime,
+            setPendingMealTime: ctx.setPendingMealTime,
+            minutesValues: ctx.minutesValues,
+            isNightHourSelected: ctx.isNightHourSelected,
+            currentDateLabel: ctx.currentDateLabel,
+            pendingMealType: ctx.pendingMealType,
+            setPendingMealType: ctx.setPendingMealType,
+            WheelColumn: ctx.WheelColumn,
+            goBackToTimeStep: ctx.goBackToTimeStep,
+            confirmMoodEdit: ctx.confirmMoodEdit,
+            confirmMealCreation: ctx.confirmMealCreation,
+            pendingMealMood: ctx.pendingMealMood,
+            setPendingMealMood: ctx.setPendingMealMood,
+            showConfetti: ctx.showConfetti,
+            setShowConfetti: ctx.setShowConfetti,
+            emojiAnimating: ctx.emojiAnimating,
+            setEmojiAnimating: ctx.setEmojiAnimating,
+            prof: ctx.prof,
+            pIndex: ctx.pIndex,
+            lsGet: ctx.lsGet,
+            fmtDate: ctx.fmtDate,
+            getProductFromItem: ctx.getProductFromItem,
+            getMealType: ctx.getMealType,
+            getMealQualityScore: ctx.getMealQualityScore,
+            editGramsTarget: ctx.editGramsTarget,
+            editGramsValue: ctx.editGramsValue,
+            editPortions: ctx.editPortions,
+            editLastPortionGrams: ctx.editLastPortionGrams,
+            editGramsInputRef: ctx.editGramsInputRef,
+            setEditGramsValue: ctx.setEditGramsValue,
+            confirmEditGramsModal: ctx.confirmEditGramsModal,
+            cancelEditGramsModal: ctx.cancelEditGramsModal,
+            handleEditGramsDrag: ctx.handleEditGramsDrag,
+            zoneFormulaPopup: ctx.zoneFormulaPopup,
+            closeZoneFormula: ctx.closeZoneFormula,
+            householdFormulaPopup: ctx.householdFormulaPopup,
+            closeHouseholdFormula: ctx.closeHouseholdFormula,
+            showZonePicker: ctx.showZonePicker,
+            cancelZonePicker: ctx.cancelZonePicker,
+            confirmZonePicker: ctx.confirmZonePicker,
+            zonePickerTarget: ctx.zonePickerTarget,
+            zoneMinutesValues: ctx.zoneMinutesValues,
+            pendingZoneMinutes: ctx.pendingZoneMinutes,
+            setPendingZoneMinutes: ctx.setPendingZoneMinutes,
+            showTrainingPicker: ctx.showTrainingPicker,
+            cancelTrainingPicker: ctx.cancelTrainingPicker,
+            confirmTrainingPicker: ctx.confirmTrainingPicker,
+            trainingPickerStep: ctx.trainingPickerStep,
+            pendingTrainingZones: ctx.pendingTrainingZones,
+            setPendingTrainingZones: ctx.setPendingTrainingZones,
+            pendingTrainingTime: ctx.pendingTrainingTime,
+            setPendingTrainingTime: ctx.setPendingTrainingTime,
+            pendingTrainingType: ctx.pendingTrainingType,
+            setPendingTrainingType: ctx.setPendingTrainingType,
+            trainingTypes: ctx.trainingTypes,
+            kcalMin: ctx.kcalMin,
+            TR: ctx.TR,
+            mets: ctx.mets,
+            zoneNames: ctx.zoneNames,
+            weight: ctx.weight,
+            kcalPerMin: ctx.kcalPerMin,
+            r0: ctx.r0,
+            householdActivities: ctx.householdActivities,
+            openTrainingPicker: ctx.openTrainingPicker,
+            openHouseholdPicker: ctx.openHouseholdPicker,
+            pendingTrainingQuality: ctx.pendingTrainingQuality,
+            setPendingTrainingQuality: ctx.setPendingTrainingQuality,
+            pendingTrainingFeelAfter: ctx.pendingTrainingFeelAfter,
+            setPendingTrainingFeelAfter: ctx.setPendingTrainingFeelAfter,
+            pendingTrainingComment: ctx.pendingTrainingComment,
+            setPendingTrainingComment: ctx.setPendingTrainingComment,
+            showSleepQualityPicker: ctx.showSleepQualityPicker,
+            cancelSleepQualityPicker: ctx.cancelSleepQualityPicker,
+            confirmSleepQualityPicker: ctx.confirmSleepQualityPicker,
+            pendingSleepQuality: ctx.pendingSleepQuality,
+            setPendingSleepQuality: ctx.setPendingSleepQuality,
+            pendingSleepNote: ctx.pendingSleepNote,
+            setPendingSleepNote: ctx.setPendingSleepNote,
+            sleepQualityValues: ctx.sleepQualityValues,
+            showDayScorePicker: ctx.showDayScorePicker,
+            cancelDayScorePicker: ctx.cancelDayScorePicker,
+            confirmDayScorePicker: ctx.confirmDayScorePicker,
+            pendingDayScore: ctx.pendingDayScore,
+            setPendingDayScore: ctx.setPendingDayScore,
+            pendingDayComment: ctx.pendingDayComment,
+            setPendingDayComment: ctx.setPendingDayComment,
+            calculateDayAverages: ctx.calculateDayAverages,
+            mealQualityPopup: ctx.mealQualityPopup,
+            setMealQualityPopup: ctx.setMealQualityPopup,
+            getSmartPopupPosition: ctx.getSmartPopupPosition,
+            createSwipeHandlers: ctx.createSwipeHandlers,
+            M: ctx.M
+        });
+    };
+})(window);

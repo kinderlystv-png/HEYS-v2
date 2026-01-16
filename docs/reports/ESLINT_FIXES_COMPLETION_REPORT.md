@@ -25,8 +25,6 @@
 
 - ✅ `apps/web/src/utils/dynamicImport.ts` - полностью исправлен
 - ✅ `apps/web/src/components/lazy/LazyAnalytics.tsx` - основные проблемы решены
-- ⚠️ `apps/web/src/components/lazy/LazyReports.tsx` - minor issues remain (mock
-  components)
 - ⚠️ `apps/web/src/components/lazy/LazySettings.tsx` - minor issues remain (mock
   components)
 
@@ -88,7 +86,7 @@ dist/assets/index-ba0dbd15.css                    14.79 kB │ gzip: 3.75 kB
 
 **Mock Components (Non-Critical):**
 
-- LazyReports.tsx и LazySettings.tsx содержат minor issues
+- LazySettings.tsx содержит minor issues
 - Это mock компоненты для демонстрации
 - Не влияют на production functionality
 - Могут быть исправлены позже при реальной реализации

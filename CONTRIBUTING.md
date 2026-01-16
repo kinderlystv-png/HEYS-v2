@@ -69,7 +69,6 @@ HEYS-v2/
 │   ├── storage/      # Data persistence
 │   ├── ui/           # Shared UI components
 │   └── shared/       # Utilities and types
-└── archive/          # Legacy code (v12 and earlier)
 ```
 
 ## 🎯 Development Guidelines

@@ -24,7 +24,7 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
-# Лимиты
+# Лимиты (дефолтные)
 LOC_LIMIT=2000
 LOC_WARNING=1500
 FUNC_LIMIT=80
@@ -32,56 +32,80 @@ FUNC_WARNING=60
 HEYS_REF_LIMIT=50
 HEYS_REF_WARNING=40
 
+# Конфиг автолимитов
+LIMITS_CONFIG="config/module-limits.json"
+LIMITS_MAP_FILE=""
+
 # Счётчики
 ERRORS=0
 WARNINGS=0
 
 # =============================================================================
-# 🏛️ LEGACY ALLOWLIST — файлы исключённые из строгих проверок
+# 🧩 Автолимиты для legacy-модулей
 # =============================================================================
-# Эти файлы превышают лимиты, но рефакторинг планируется постепенно.
-# Для них показываем только warnings, не блокируем коммит.
-# Удаляй файлы из списка по мере их рефакторинга!
+# Если существует config/module-limits.json, подхватываем:
+#  - дефолтные лимиты
+#  - индивидуальные лимиты на файл (basename)
 # =============================================================================
-LEGACY_ALLOWLIST=(
-    "heys_app_v12.js"       # 8400+ LOC — главный модуль, рефакторинг в процессе
-    "heys_day_v12.js"       # 6400+ LOC — день/статистика, планируется разбиение
-    "heys_day_utils.js"     # 1800+ LOC — утилиты дня (извлечено из day_v12)
-    "heys_core_v12.js"      # Продукты/поиск, legacy
-    "heys_user_v12.js"      # Профиль, legacy
-    "heys_reports_v12.js"   # Отчёты, legacy
-)
+
+if [ -f "$LIMITS_CONFIG" ]; then
+        eval "$(node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('$LIMITS_CONFIG','utf8')); const def=data.defaults||{}; const loc=def.loc||{}; const funcs=def.functions||{}; const refs=def.heysRefs||{}; const out=[
+            'LOC_LIMIT='+(loc.error ?? 2000),
+            'LOC_WARNING='+(loc.warn ?? 1500),
+            'FUNC_LIMIT='+(funcs.error ?? 80),
+            'FUNC_WARNING='+(funcs.warn ?? 60),
+            'HEYS_REF_LIMIT='+(refs.error ?? 50),
+            'HEYS_REF_WARNING='+(refs.warn ?? 40)
+        ]; console.log(out.join('\\n'));")"
+
+        LIMITS_MAP_FILE=$(mktemp)
+        node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('$LIMITS_CONFIG','utf8')); const def=data.defaults||{}; const loc=def.loc||{}; const funcs=def.functions||{}; const refs=def.heysRefs||{}; const files=data.files||{}; for (const [name, payload] of Object.entries(files)) { const limits=payload.limits||{}; const locL=limits.loc||{}; const funcL=limits.functions||{}; const refL=limits.heysRefs||{}; const line=[
+            name,
+            (locL.warn ?? loc.warn ?? 1500),
+            (locL.error ?? loc.error ?? 2000),
+            (funcL.warn ?? funcs.warn ?? 60),
+            (funcL.error ?? funcs.error ?? 80),
+            (refL.warn ?? refs.warn ?? 40),
+            (refL.error ?? refs.error ?? 50)
+        ].join('|'); console.log(line); }" > "$LIMITS_MAP_FILE"
+fi
+
+cleanup_limits_map() {
+        if [ -n "$LIMITS_MAP_FILE" ] && [ -f "$LIMITS_MAP_FILE" ]; then
+                rm -f "$LIMITS_MAP_FILE"
+        fi
+}
+
+trap cleanup_limits_map EXIT
 
 # =============================================================================
 # Функции анализа
 # =============================================================================
 
-is_legacy_file() {
+get_limits_for_file() {
     local file="$1"
     local basename=$(basename "$file")
-    
-    for legacy in "${LEGACY_ALLOWLIST[@]}"; do
-        if [ "$basename" = "$legacy" ]; then
-            return 0  # true - это legacy файл
+    local loc_warning="$LOC_WARNING"
+    local loc_limit="$LOC_LIMIT"
+    local func_warning="$FUNC_WARNING"
+    local func_limit="$FUNC_LIMIT"
+    local refs_warning="$HEYS_REF_WARNING"
+    local refs_limit="$HEYS_REF_LIMIT"
+
+    if [ -n "$LIMITS_MAP_FILE" ] && [ -f "$LIMITS_MAP_FILE" ]; then
+        local line
+        line=$(grep -m 1 "^${basename}|" "$LIMITS_MAP_FILE" || true)
+        if [ -n "$line" ]; then
+            IFS='|' read -r _ loc_warning loc_limit func_warning func_limit refs_warning refs_limit <<< "$line"
         fi
-    done
-    return 1  # false - обычный файл
+    fi
+
+    echo "${loc_warning}|${loc_limit}|${func_warning}|${func_limit}|${refs_warning}|${refs_limit}"
 }
 
-count_loc() {
+get_metrics() {
     local file="$1"
-    wc -l < "$file" | tr -d ' '
-}
-
-count_functions() {
-    local file="$1"
-    # Считаем: function declarations, arrow functions, method definitions
-    grep -cE '(function\s+\w+|function\s*\(|=>\s*\{|\w+\s*\([^)]*\)\s*\{)' "$file" 2>/dev/null || echo 0
-}
-
-count_heys_refs() {
-    local file="$1"
-    grep -oE 'HEYS\.[a-zA-Z_]+' "$file" 2>/dev/null | wc -l | tr -d ' '
+    node scripts/arch-metrics.js --file "$file" --metric all 2>/dev/null || echo "0|0|0"
 }
 
 has_warn_missing() {
@@ -194,16 +218,13 @@ check_file() {
         return 0
     fi
     
-    local loc=$(count_loc "$file")
-    local funcs=$(count_functions "$file")
-    local refs=$(count_heys_refs "$file")
+    local metrics
+    metrics=$(get_metrics "$file")
+    IFS='|' read -r loc funcs refs <<< "$metrics"
     local has_fallback="false"
-    local is_legacy="false"
-    
-    # Проверяем legacy allowlist
-    if is_legacy_file "$file"; then
-        is_legacy="true"
-    fi
+    local limits
+    limits=$(get_limits_for_file "$file")
+    IFS='|' read -r loc_warning loc_limit func_warning func_limit refs_warning refs_limit <<< "$limits"
     
     if has_warn_missing "$file"; then
         has_fallback="true"
@@ -212,51 +233,33 @@ check_file() {
     local status="✅"
     local issues=""
     
-    # Проверяем лимиты (для legacy — только warnings, не errors)
-    if [ "$loc" -gt "$LOC_LIMIT" ]; then
-        if [ "$is_legacy" = "true" ]; then
-            status="🏛️"  # Legacy icon
-            issues+="LOC=$loc (legacy) "
-            ((WARNINGS++))
-        else
-            status="❌"
-            issues+="LOC=$loc>$LOC_LIMIT "
-            ((ERRORS++))
-        fi
-    elif [ "$loc" -gt "$LOC_WARNING" ]; then
-        if [ "$status" != "❌" ] && [ "$status" != "🏛️" ]; then status="⚠️"; fi
+    # Проверяем лимиты
+    if [ "$loc" -gt "$loc_limit" ]; then
+        status="❌"
+        issues+="LOC=$loc>$loc_limit "
+        ((ERRORS++))
+    elif [ "$loc" -gt "$loc_warning" ]; then
+        if [ "$status" != "❌" ]; then status="⚠️"; fi
         issues+="LOC=$loc "
         ((WARNINGS++))
     fi
     
-    if [ "$funcs" -gt "$FUNC_LIMIT" ]; then
-        if [ "$is_legacy" = "true" ]; then
-            if [ "$status" != "🏛️" ]; then status="🏛️"; fi
-            issues+="funcs=$funcs (legacy) "
-            ((WARNINGS++))
-        else
-            status="❌"
-            issues+="funcs=$funcs>$FUNC_LIMIT "
-            ((ERRORS++))
-        fi
-    elif [ "$funcs" -gt "$FUNC_WARNING" ]; then
-        if [ "$status" != "❌" ] && [ "$status" != "🏛️" ]; then status="⚠️"; fi
+    if [ "$funcs" -gt "$func_limit" ]; then
+        status="❌"
+        issues+="funcs=$funcs>$func_limit "
+        ((ERRORS++))
+    elif [ "$funcs" -gt "$func_warning" ]; then
+        if [ "$status" != "❌" ]; then status="⚠️"; fi
         issues+="funcs=$funcs "
         ((WARNINGS++))
     fi
     
-    if [ "$refs" -gt "$HEYS_REF_LIMIT" ]; then
-        if [ "$is_legacy" = "true" ]; then
-            if [ "$status" != "🏛️" ]; then status="🏛️"; fi
-            issues+="HEYS.*=$refs (legacy) "
-            ((WARNINGS++))
-        else
-            status="❌"
-            issues+="HEYS.*=$refs>$HEYS_REF_LIMIT "
-            ((ERRORS++))
-        fi
-    elif [ "$refs" -gt "$HEYS_REF_WARNING" ]; then
-        if [ "$status" != "❌" ] && [ "$status" != "🏛️" ]; then status="⚠️"; fi
+    if [ "$refs" -gt "$refs_limit" ]; then
+        status="❌"
+        issues+="HEYS.*=$refs>$refs_limit "
+        ((ERRORS++))
+    elif [ "$refs" -gt "$refs_warning" ]; then
+        if [ "$status" != "❌" ]; then status="⚠️"; fi
         issues+="HEYS.*=$refs "
         ((WARNINGS++))
     fi
@@ -299,7 +302,7 @@ check_file() {
 main() {
     echo ""
     echo -e "${BOLD}🏗️  HEYS Module Architecture Check${NC}"
-    echo -e "   Лимиты: LOC≤$LOC_LIMIT | funcs≤$FUNC_LIMIT | HEYS.*≤$HEYS_REF_LIMIT"
+    echo -e "   Лимиты: LOC≤$LOC_LIMIT (warn:$LOC_WARNING) | funcs≤$FUNC_LIMIT (warn:$FUNC_WARNING) | HEYS.*≤$HEYS_REF_LIMIT (warn:$HEYS_REF_WARNING)"
     echo ""
     
     local files=()

@@ -9,7 +9,6 @@ coverage/
 storybook-static/
 
 # Legacy files
-heys_*.js
 temp/
 TESTS/
 старые МЕТОДОЛОГИИ И ИНСТРУКЦИИ ДЛЯ ИИ/
@@ -19,7 +18,6 @@ emt-v3-stable-clean/
 
 # Temporary ignore for problematic files
 docs/automation/
-archive/legacy-v12/
 TOOLS/
 # Yandex Cloud Functions — standalone Node.js runtime
 yandex-cloud-functions/**/*.js

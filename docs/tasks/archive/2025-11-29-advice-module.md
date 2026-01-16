@@ -8,7 +8,7 @@
 
 ## ✅ ВЫПОЛНЕННОЕ ПРЕДУСЛОВИЕ
 
-Первый промпт [2025-11-28-smart-toast-recommendations.md](./archive/2025-11-28-smart-toast-recommendations.md) **ВЫПОЛНЕН**:
+Первый промпт [2025-11-28-smart-toast-recommendations.md](./2025-11-28-smart-toast-recommendations.md) **ВЫПОЛНЕН**:
 - ✅ Баг `dayTot.protein` → `dayTot.prot` исправлен
 - ✅ 20+ умных рекомендаций в `macroTip` useMemo
 - ✅ CSS для `.macro-toast-fiber`, `.macro-toast-tip`, `.macro-toast-achievement` добавлен

@@ -36,11 +36,13 @@
 
 ### 3. Архивирование отчетов
 
-Перемещены в `archive/reports-20250902/`:
+Перемещены на тот момент в `archive/reports-20250902/` (исторически):
 
-- 12 файлов PHASE\_\*.md
-- 3 файла STATUS_DASHBOARD\*.md
+- 12 файлов PHASE_*.md
+- 3 файла STATUS_DASHBOARD*.md
 - COMPREHENSIVE_STATUS_REPORT.md
+
+Корневой `archive/` удалён 2026-01-16 — восстановление возможно через git history.
 
 ### 4. Оптимизация зависимостей
 

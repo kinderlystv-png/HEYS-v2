@@ -10,57 +10,57 @@
 // Зависимости: HEYS.InsulinWave, HEYS.Cycle, HEYS.ratioZones, HEYS.models, U.lsGet
 //              HEYS.InsightsPI.* (pi_constants, pi_math, pi_stats, pi_science_info, pi_patterns, 
 //                                 pi_advanced, pi_analytics_api, pi_calculations, pi_ui_*)
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
   const U = HEYS.utils || {};
-  
+
   // === КОНСТАНТЫ (из pi_constants.js) ===
   // Используем извлечённые константы, fallback на локальные если модуль не загружен
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
-  
+
   // === СТАТИСТИЧЕСКИЕ ФУНКЦИИ (из pi_stats.js) ===
   // Используем извлечённые функции, fallback если модуль не загружен
   const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
-  
+
   // === НАУЧНАЯ БД (из pi_science_info.js) ===
   // Используем извлечённую базу данных, fallback если модуль не загружен
   const SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {};
-  
+
   // === АНАЛИЗ ПАТТЕРНОВ (из pi_patterns.js) ===
   // Используем извлечённые функции анализа, fallback если модуль не загружен
   const piPatterns = HEYS.InsightsPI?.patterns || window.piPatterns || {};
-  
+
   // === ПРОДВИНУТАЯ АНАЛИТИКА (из pi_advanced.js) ===
   // Используем извлечённые функции, fallback если модуль не загружен
   const piAdvanced = HEYS.InsightsPI?.advanced || window.piAdvanced || {};
-  
+
   // === АНАЛИТИКА API (из pi_analytics_api.js) ===
   // Используем извлечённые методы глубокого анализа, fallback если модуль не загружен
   const piAnalyticsAPI = HEYS.InsightsPI?.analyticsAPI || window.piAnalyticsAPI || {};
-  
+
   // === ВЫЧИСЛИТЕЛЬНЫЕ УТИЛИТЫ (из pi_calculations.js) ===
   // Используем извлечённые функции расчётов, fallback если модуль не загружен
   const piCalculations = HEYS.InsightsPI?.calculations || window.piCalculations || {};
-  
+
   // === UI КОМПОНЕНТЫ (из pi_ui_*.js) ===
   // Используем извлечённые React компоненты, fallback если модули не загружены
   const piUIRings = HEYS.InsightsPI?.uiRings || window.piUIRings || {};
   const piUICards = HEYS.InsightsPI?.uiCards || window.piUICards || {};
   const piUIWhatIf = HEYS.InsightsPI?.uiWhatIf || window.piUIWhatIf || {};
   const piUIDashboard = HEYS.InsightsPI?.uiDashboard || window.piUIDashboard || {};
-  
+
   // === LAZY GETTER для InfoButton с полной fallback цепочкой (fix load order) ===
   function getInfoButton() {
     return HEYS.InsightsPI?.uiDashboard?.InfoButton ||
-           HEYS.PredictiveInsights?.components?.InfoButton ||
-           HEYS.day?.InfoButton || 
-           HEYS.InfoButton || 
-           window.InfoButton || 
-           function FallbackInfoButton() { return null; };
+      HEYS.PredictiveInsights?.components?.InfoButton ||
+      HEYS.day?.InfoButton ||
+      HEYS.InfoButton ||
+      window.InfoButton ||
+      function FallbackInfoButton() { return null; };
   }
-  
+
   const CONFIG = piConst.CONFIG || {
     DEFAULT_DAYS: 14,
     MIN_DAYS_FOR_INSIGHTS: 3,
@@ -72,7 +72,7 @@
 
   // === СИСТЕМА ПРИОРИТЕТОВ И КРИТЕРИЕВ ===
   // Используем извлечённые константы из pi_constants.js
-  
+
   const PRIORITY_LEVELS = piConst.PRIORITY_LEVELS || {
     CRITICAL: { level: 1, name: 'Критический', emoji: '🔴', color: '#ef4444', description: 'Требует немедленного внимания.' },
     HIGH: { level: 2, name: 'Высокий', emoji: '🟠', color: '#f97316', description: 'Важно для достижения целей.' },
@@ -103,7 +103,7 @@
   };
 
   // === API для работы с приоритетами ===
-  
+
   /**
    * Получить полную информацию о приоритете метрики
    * @param {string} key - ключ из SCIENCE_INFO
@@ -112,11 +112,11 @@
   function getMetricPriority(key) {
     const info = SCIENCE_INFO[key];
     if (!info) return null;
-    
+
     const priorityLevel = PRIORITY_LEVELS[info.priority] || PRIORITY_LEVELS.INFO;
     const category = CATEGORIES[info.category] || CATEGORIES.STATISTICS;
     const actionability = ACTIONABILITY[info.actionability] || ACTIONABILITY.INFORMATIONAL;
-    
+
     return {
       key,
       name: info.name,
@@ -139,7 +139,7 @@
       pmid: info.pmid
     };
   }
-  
+
   /**
    * Получить все метрики отсортированные по приоритету и impact score
    * @returns {Array} массив метрик с полной информацией
@@ -150,7 +150,7 @@
       const priority = getMetricPriority(key);
       if (priority) metrics.push(priority);
     }
-    
+
     // Сортировка: по priorityLevel (1=CRITICAL сначала), затем по impactScore (выше = важнее)
     return metrics.sort((a, b) => {
       if (a.priorityLevel !== b.priorityLevel) {
@@ -159,7 +159,7 @@
       return b.impactScore - a.impactScore;
     });
   }
-  
+
   /**
    * Получить метрики по категории
    * @param {string} category - ключ категории (METABOLISM, NUTRITION, etc)
@@ -168,7 +168,7 @@
   function getMetricsByCategory(category) {
     return getAllMetricsByPriority().filter(m => m.category === category);
   }
-  
+
   /**
    * Получить метрики по actionability
    * @param {string} actionability - IMMEDIATE, TODAY, WEEKLY, etc
@@ -177,38 +177,38 @@
   function getMetricsByActionability(actionability) {
     return getAllMetricsByPriority().filter(m => m.actionability === actionability);
   }
-  
+
   /**
    * Получить только CRITICAL и HIGH priority метрики
    * @returns {Array} массив важных метрик
    */
   function getCriticalMetrics() {
-    return getAllMetricsByPriority().filter(m => 
+    return getAllMetricsByPriority().filter(m =>
       m.priority === 'CRITICAL' || m.priority === 'HIGH'
     );
   }
-  
+
   /**
    * Получить статистику приоритетов
    * @returns {Object} { total, byPriority, byCategory, byActionability }
    */
   function getPriorityStats() {
     const all = getAllMetricsByPriority();
-    
+
     const byPriority = {};
     const byCategory = {};
     const byActionability = {};
-    
+
     for (const m of all) {
       byPriority[m.priority] = (byPriority[m.priority] || 0) + 1;
       byCategory[m.category] = (byCategory[m.category] || 0) + 1;
       byActionability[m.actionability] = (byActionability[m.actionability] || 0) + 1;
     }
-    
+
     return {
       total: all.length,
-      avgImpactScore: all.length > 0 
-        ? Math.round(all.reduce((s, m) => s + m.impactScore, 0) / all.length * 100) / 100 
+      avgImpactScore: all.length > 0
+        ? Math.round(all.reduce((s, m) => s + m.impactScore, 0) / all.length * 100) / 100
         : 0,
       byPriority,
       byCategory,
@@ -240,7 +240,7 @@
   /**
    * Получить секции отсортированные по приоритету (используем из pi_constants если есть)
    */
-  const getSortedSections = piConst.getSortedSections || function(filterPriority = null) {
+  const getSortedSections = piConst.getSortedSections || function (filterPriority = null) {
     let sections = Object.values(SECTIONS_CONFIG);
     if (filterPriority) sections = sections.filter(s => s.priority === filterPriority);
     return sections.sort((a, b) => a.order - b.order);
@@ -249,7 +249,7 @@
   /**
    * Получить приоритет секции (используем из pi_constants если есть)
    */
-  const getSectionPriority = piConst.getSectionPriority || function(sectionId) {
+  const getSectionPriority = piConst.getSectionPriority || function (sectionId) {
     const section = Object.values(SECTIONS_CONFIG).find(s => s.id === sectionId);
     if (!section) return null;
     const priorityLevel = PRIORITY_LEVELS[section.priority];
@@ -268,23 +268,23 @@
     WAVE_OVERLAP: 'wave_overlap',
     LATE_EATING: 'late_eating',
     MEAL_QUALITY_TREND: 'meal_quality',
-    
+
     // Сон + вес
     SLEEP_WEIGHT: 'sleep_weight',
     SLEEP_HUNGER: 'sleep_hunger',
-    
+
     // Активность
     TRAINING_KCAL: 'training_kcal',
     STEPS_WEIGHT: 'steps_weight',
-    
+
     // Макросы
     PROTEIN_SATIETY: 'protein_satiety',
     FIBER_REGULARITY: 'fiber_regularity',
-    
+
     // Эмоции
     STRESS_EATING: 'stress_eating',
     MOOD_FOOD: 'mood_food',
-    
+
     // NEW v2.0
     CIRCADIAN: 'circadian',
     NUTRIENT_TIMING: 'nutrient_timing',
@@ -300,21 +300,21 @@
   };
 
   // === УТИЛИТЫ ===
-  
+
   // Статистические функции делегируем в pi_stats.js
-  const average = piStats.average || function(arr) {
+  const average = piStats.average || function (arr) {
     if (!arr || arr.length === 0) return 0;
     return arr.reduce((a, b) => a + b, 0) / arr.length;
   };
-  
-  const stdDev = piStats.stdDev || function(arr) {
+
+  const stdDev = piStats.stdDev || function (arr) {
     if (!arr || arr.length < 2) return 0;
     const avg = average(arr);
     const squareDiffs = arr.map(v => Math.pow(v - avg, 2));
     return Math.sqrt(average(squareDiffs));
   };
-  
-  const pearsonCorrelation = piStats.pearsonCorrelation || function(x, y) {
+
+  const pearsonCorrelation = piStats.pearsonCorrelation || function (x, y) {
     if (x.length !== y.length || x.length < 3) return 0;
     const n = x.length;
     const sumX = x.reduce((a, b) => a + b, 0);
@@ -327,8 +327,8 @@
     if (denominator === 0) return 0;
     return numerator / denominator;
   };
-  
-  const calculateTrend = piStats.calculateTrend || function(values) {
+
+  const calculateTrend = piStats.calculateTrend || function (values) {
     if (values.length < 2) return 0;
     const n = values.length;
     const x = values.map((_, i) => i);
@@ -340,8 +340,8 @@
     const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
     return isNaN(slope) ? 0 : slope;
   };
-  
-  const calculateLinearRegression = piStats.calculateLinearRegression || function(points) {
+
+  const calculateLinearRegression = piStats.calculateLinearRegression || function (points) {
     if (points.length < 2) return 0;
     const n = points.length;
     const sumX = points.reduce((a, p) => a + p.x, 0);
@@ -353,9 +353,9 @@
     const slope = (n * sumXY - sumX * sumY) / denominator;
     return isNaN(slope) ? 0 : slope;
   };
-  
+
   // === ВЫЧИСЛИТЕЛЬНЫЕ ФУНКЦИИ (делегируем в pi_calculations.js) ===
-  const calculateItemKcal = piCalculations.calculateItemKcal || function(item, pIndex) {
+  const calculateItemKcal = piCalculations.calculateItemKcal || function (item, pIndex) {
     if (!item || !item.grams) return 0;
     const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
     if (!prod) return 0;
@@ -364,8 +364,8 @@
     const f = (prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0);
     return (p * 4 + c * 4 + f * 9) * item.grams / 100;
   };
-  
-  const calculateDayKcal = piCalculations.calculateDayKcal || function(day, pIndex) {
+
+  const calculateDayKcal = piCalculations.calculateDayKcal || function (day, pIndex) {
     let total = 0;
     if (!day.meals) return 0;
     for (const meal of day.meals) {
@@ -376,8 +376,8 @@
     }
     return total;
   };
-  
-  const calculateBMR = piCalculations.calculateBMR || function(profile) {
+
+  const calculateBMR = piCalculations.calculateBMR || function (profile) {
     if (HEYS.TDEE?.calcBMR) return HEYS.TDEE.calcBMR(profile);
     const weight = profile?.weight || 70;
     const height = profile?.height || 170;
@@ -386,7 +386,7 @@
     return isMale ? (10 * weight + 6.25 * height - 5 * age + 5) : (10 * weight + 6.25 * height - 5 * age - 161);
   };
 
-  const getDaysData = piCalculations.getDaysData || function(daysBack, lsGet) {
+  const getDaysData = piCalculations.getDaysData || function (daysBack, lsGet) {
     const days = [];
     const today = new Date();
     for (let i = 0; i < daysBack; i++) {
@@ -403,82 +403,82 @@
 
   // === UI КОМПОНЕНТЫ - Fallback references (делегируем в pi_ui_*.js модули) ===
   // Ring Components
-  const HealthRing = piUIRings.HealthRing || function() { return h('div', {}, 'HealthRing not loaded'); };
-  const TotalHealthRing = piUIRings.TotalHealthRing || function() { return h('div', {}, 'TotalHealthRing not loaded'); };
-  const StatusProgressRing = piUIRings.StatusProgressRing || function() { return h('div', {}, 'StatusProgressRing not loaded'); };
-  const MiniRiskMeter = piUIRings.MiniRiskMeter || function() { return h('div', {}, 'MiniRiskMeter not loaded'); };
-  const MetabolicStateRing = piUIRings.MetabolicStateRing || function() { return h('div', {}, 'MetabolicStateRing not loaded'); };
-  
+  const HealthRing = piUIRings.HealthRing || function () { return h('div', {}, 'HealthRing not loaded'); };
+  const TotalHealthRing = piUIRings.TotalHealthRing || function () { return h('div', {}, 'TotalHealthRing not loaded'); };
+  const StatusProgressRing = piUIRings.StatusProgressRing || function () { return h('div', {}, 'StatusProgressRing not loaded'); };
+  const MiniRiskMeter = piUIRings.MiniRiskMeter || function () { return h('div', {}, 'MiniRiskMeter not loaded'); };
+  const MetabolicStateRing = piUIRings.MetabolicStateRing || function () { return h('div', {}, 'MetabolicStateRing not loaded'); };
+
   // Card Components
-  const CollapsibleSection = piUICards.CollapsibleSection || function() { return h('div', {}, 'CollapsibleSection not loaded'); };
-  const AdvancedAnalyticsCard = piUICards.AdvancedAnalyticsCard || function() { return h('div', {}, 'AdvancedAnalyticsCard not loaded'); };
-  const MetabolismCard = piUICards.MetabolismCard || function() { return h('div', {}, 'MetabolismCard not loaded'); };
-  const MetabolismSection = piUICards.MetabolismSection || function() { return h('div', {}, 'MetabolismSection not loaded'); };
-  const PatternCard = piUICards.PatternCard || function() { return h('div', {}, 'PatternCard not loaded'); };
-  const PatternsList = piUICards.PatternsList || function() { return h('div', {}, 'PatternsList not loaded'); };
-  const WeeklyWrap = piUICards.WeeklyWrap || function() { return h('div', {}, 'WeeklyWrap not loaded'); };
-  const EmptyState = piUICards.EmptyState || function() { return h('div', {}, 'EmptyState not loaded'); };
-  const InsightsCard = piUICards.InsightsCard || function() { return h('div', {}, 'InsightsCard not loaded'); };
-  const InfoButton = piUICards.InfoButton || function() { return h('button', {}, 'ℹ️'); };
-  const MetricWithInfo = piUICards.MetricWithInfo || function() { return h('div', {}, 'Metric'); };
-  const MetabolicStatusCard = piUICards.MetabolicStatusCard || function() { return h('div', {}, 'Status'); };
-  const ReasonCard = piUICards.ReasonCard || function() { return h('div', {}, 'Reason'); };
-  const ActionCard = piUICards.ActionCard || function() { return h('div', {}, 'Action'); };
-  
+  const CollapsibleSection = piUICards.CollapsibleSection || function () { return h('div', {}, 'CollapsibleSection not loaded'); };
+  const AdvancedAnalyticsCard = piUICards.AdvancedAnalyticsCard || function () { return h('div', {}, 'AdvancedAnalyticsCard not loaded'); };
+  const MetabolismCard = piUICards.MetabolismCard || function () { return h('div', {}, 'MetabolismCard not loaded'); };
+  const MetabolismSection = piUICards.MetabolismSection || function () { return h('div', {}, 'MetabolismSection not loaded'); };
+  const PatternCard = piUICards.PatternCard || function () { return h('div', {}, 'PatternCard not loaded'); };
+  const PatternsList = piUICards.PatternsList || function () { return h('div', {}, 'PatternsList not loaded'); };
+  const WeeklyWrap = piUICards.WeeklyWrap || function () { return h('div', {}, 'WeeklyWrap not loaded'); };
+  const EmptyState = piUICards.EmptyState || function () { return h('div', {}, 'EmptyState not loaded'); };
+  const InsightsCard = piUICards.InsightsCard || function () { return h('div', {}, 'InsightsCard not loaded'); };
+  const InfoButton = piUICards.InfoButton || function () { return h('button', {}, 'ℹ️'); };
+  const MetricWithInfo = piUICards.MetricWithInfo || function () { return h('div', {}, 'Metric'); };
+  const MetabolicStatusCard = piUICards.MetabolicStatusCard || function () { return h('div', {}, 'Status'); };
+  const ReasonCard = piUICards.ReasonCard || function () { return h('div', {}, 'Reason'); };
+  const ActionCard = piUICards.ActionCard || function () { return h('div', {}, 'Action'); };
+
   // What-If Components
-  const WhatIfSimulator = piUIWhatIf.WhatIfSimulator || function() { return h('div', {}, 'WhatIfSimulator not loaded'); };
-  const WhatIfCard = piUIWhatIf.WhatIfCard || function() { return h('div', {}, 'WhatIfCard not loaded'); };
-  const ScenarioCard = piUIWhatIf.ScenarioCard || function() { return h('div', {}, 'ScenarioCard not loaded'); };
-  const WhatIfSection = piUIWhatIf.WhatIfSection || function() { return h('div', {}, 'WhatIfSection not loaded'); };
-  
+  const WhatIfSimulator = piUIWhatIf.WhatIfSimulator || function () { return h('div', {}, 'WhatIfSimulator not loaded'); };
+  const WhatIfCard = piUIWhatIf.WhatIfCard || function () { return h('div', {}, 'WhatIfCard not loaded'); };
+  const ScenarioCard = piUIWhatIf.ScenarioCard || function () { return h('div', {}, 'ScenarioCard not loaded'); };
+  const WhatIfSection = piUIWhatIf.WhatIfSection || function () { return h('div', {}, 'WhatIfSection not loaded'); };
+
   // Dashboard Components
-  const WeightPrediction = piUIDashboard.WeightPrediction || function() { return h('div', {}, 'WeightPrediction not loaded'); };
-  const PriorityFilterBar = piUIDashboard.PriorityFilterBar || function() { return h('div', {}, 'PriorityFilterBar not loaded'); };
-  const PillarBreakdownBars = piUIDashboard.PillarBreakdownBars || function() { return h('div', {}, 'PillarBreakdownBars not loaded'); };
-  const DualRiskPanel = piUIDashboard.DualRiskPanel || function() { return h('div', {}, 'DualRiskPanel not loaded'); };
-  const RiskPanel = piUIDashboard.RiskPanel || function() { return h('div', {}, 'RiskPanel not loaded'); };
-  const RiskMeter = piUIDashboard.RiskMeter || function() { return h('div', {}, 'RiskMeter not loaded'); };
-  const ForecastPanel = piUIDashboard.ForecastPanel || function() { return h('div', {}, 'ForecastPanel not loaded'); };
-  const FeedbackPrompt = piUIDashboard.FeedbackPrompt || function() { return h('div', {}, 'FeedbackPrompt not loaded'); };
-  const AccuracyBadge = piUIDashboard.AccuracyBadge || function() { return h('span', {}, 'Accuracy'); };
-  const PredictiveDashboardLegacy = piUIDashboard.PredictiveDashboardLegacy || function() { return h('div', {}, 'Dashboard not loaded'); };
-  const DataCompletenessCard = piUIDashboard.DataCompletenessCard || function() { return h('div', {}, 'DataCompletenessCard not loaded'); };
-  const MealTimingCard = piUIDashboard.MealTimingCard || function() { return h('div', {}, 'MealTimingCard not loaded'); };
+  const WeightPrediction = piUIDashboard.WeightPrediction || function () { return h('div', {}, 'WeightPrediction not loaded'); };
+  const PriorityFilterBar = piUIDashboard.PriorityFilterBar || function () { return h('div', {}, 'PriorityFilterBar not loaded'); };
+  const PillarBreakdownBars = piUIDashboard.PillarBreakdownBars || function () { return h('div', {}, 'PillarBreakdownBars not loaded'); };
+  const DualRiskPanel = piUIDashboard.DualRiskPanel || function () { return h('div', {}, 'DualRiskPanel not loaded'); };
+  const RiskPanel = piUIDashboard.RiskPanel || function () { return h('div', {}, 'RiskPanel not loaded'); };
+  const RiskMeter = piUIDashboard.RiskMeter || function () { return h('div', {}, 'RiskMeter not loaded'); };
+  const ForecastPanel = piUIDashboard.ForecastPanel || function () { return h('div', {}, 'ForecastPanel not loaded'); };
+  const FeedbackPrompt = piUIDashboard.FeedbackPrompt || function () { return h('div', {}, 'FeedbackPrompt not loaded'); };
+  const AccuracyBadge = piUIDashboard.AccuracyBadge || function () { return h('span', {}, 'Accuracy'); };
+  const PredictiveDashboardLegacy = piUIDashboard.PredictiveDashboardLegacy || function () { return h('div', {}, 'Dashboard not loaded'); };
+  const DataCompletenessCard = piUIDashboard.DataCompletenessCard || function () { return h('div', {}, 'DataCompletenessCard not loaded'); };
+  const MealTimingCard = piUIDashboard.MealTimingCard || function () { return h('div', {}, 'MealTimingCard not loaded'); };
 
   // === АНАЛИЗ ПАТТЕРНОВ ===
   // Делегируем в pi_patterns.js
-  const analyzeMealTiming = piPatterns.analyzeMealTiming || function() { return { pattern: 'meal_timing', available: false }; };
-  const analyzeWaveOverlap = piPatterns.analyzeWaveOverlap || function() { return { pattern: 'wave_overlap', available: false }; };
-  const analyzeLateEating = piPatterns.analyzeLateEating || function() { return { pattern: 'late_eating', available: false }; };
-  const analyzeMealQualityTrend = piPatterns.analyzeMealQualityTrend || function() { return { pattern: 'meal_quality', available: false }; };
-  const analyzeSleepWeight = piPatterns.analyzeSleepWeight || function() { return { pattern: 'sleep_weight', available: false }; };
-  const analyzeSleepHunger = piPatterns.analyzeSleepHunger || function() { return { pattern: 'sleep_hunger', available: false }; };
-  const analyzeTrainingKcal = piPatterns.analyzeTrainingKcal || function() { return { pattern: 'training_kcal', available: false }; };
-  const analyzeStepsWeight = piPatterns.analyzeStepsWeight || function() { return { pattern: 'steps_weight', available: false }; };
-  const analyzeProteinSatiety = piPatterns.analyzeProteinSatiety || function() { return { pattern: 'protein_satiety', available: false }; };
-  const analyzeFiberRegularity = piPatterns.analyzeFiberRegularity || function() { return { pattern: 'fiber_regularity', available: false }; };
-  const analyzeStressEating = piPatterns.analyzeStressEating || function() { return { pattern: 'stress_eating', available: false }; };
-  const analyzeMoodFood = piPatterns.analyzeMoodFood || function() { return { pattern: 'mood_food', available: false }; };
-  const analyzeCircadianTiming = piPatterns.analyzeCircadianTiming || function() { return { pattern: 'circadian', available: false }; };
-  const analyzeNutrientTiming = piPatterns.analyzeNutrientTiming || function() { return { pattern: 'nutrient_timing', available: false }; };
-  const analyzeInsulinSensitivity = piPatterns.analyzeInsulinSensitivity || function() { return { pattern: 'insulin_sensitivity', available: false }; };
-  const analyzeGutHealth = piPatterns.analyzeGutHealth || function() { return { pattern: 'gut_health', available: false }; };
+  const analyzeMealTiming = piPatterns.analyzeMealTiming || function () { return { pattern: 'meal_timing', available: false }; };
+  const analyzeWaveOverlap = piPatterns.analyzeWaveOverlap || function () { return { pattern: 'wave_overlap', available: false }; };
+  const analyzeLateEating = piPatterns.analyzeLateEating || function () { return { pattern: 'late_eating', available: false }; };
+  const analyzeMealQualityTrend = piPatterns.analyzeMealQualityTrend || function () { return { pattern: 'meal_quality', available: false }; };
+  const analyzeSleepWeight = piPatterns.analyzeSleepWeight || function () { return { pattern: 'sleep_weight', available: false }; };
+  const analyzeSleepHunger = piPatterns.analyzeSleepHunger || function () { return { pattern: 'sleep_hunger', available: false }; };
+  const analyzeTrainingKcal = piPatterns.analyzeTrainingKcal || function () { return { pattern: 'training_kcal', available: false }; };
+  const analyzeStepsWeight = piPatterns.analyzeStepsWeight || function () { return { pattern: 'steps_weight', available: false }; };
+  const analyzeProteinSatiety = piPatterns.analyzeProteinSatiety || function () { return { pattern: 'protein_satiety', available: false }; };
+  const analyzeFiberRegularity = piPatterns.analyzeFiberRegularity || function () { return { pattern: 'fiber_regularity', available: false }; };
+  const analyzeStressEating = piPatterns.analyzeStressEating || function () { return { pattern: 'stress_eating', available: false }; };
+  const analyzeMoodFood = piPatterns.analyzeMoodFood || function () { return { pattern: 'mood_food', available: false }; };
+  const analyzeCircadianTiming = piPatterns.analyzeCircadianTiming || function () { return { pattern: 'circadian', available: false }; };
+  const analyzeNutrientTiming = piPatterns.analyzeNutrientTiming || function () { return { pattern: 'nutrient_timing', available: false }; };
+  const analyzeInsulinSensitivity = piPatterns.analyzeInsulinSensitivity || function () { return { pattern: 'insulin_sensitivity', available: false }; };
+  const analyzeGutHealth = piPatterns.analyzeGutHealth || function () { return { pattern: 'gut_health', available: false }; };
 
   // === ПРОДВИНУТАЯ АНАЛИТИКА ===
   // Делегируем в pi_advanced.js
-  const calculateHealthScore = piAdvanced.calculateHealthScore || function(patterns, profile) {
+  const calculateHealthScore = piAdvanced.calculateHealthScore || function (patterns, profile) {
     return { total: 0, categories: {}, available: false };
   };
-  
-  const generateWhatIfScenarios = piAdvanced.generateWhatIfScenarios || function(patterns, healthScore, days, profile) {
+
+  const generateWhatIfScenarios = piAdvanced.generateWhatIfScenarios || function (patterns, healthScore, days, profile) {
     return [];
   };
-  
-  const predictWeight = piAdvanced.predictWeight || function(days, profile) {
+
+  const predictWeight = piAdvanced.predictWeight || function (days, profile) {
     return { available: false };
   };
-  
-  const generateWeeklyWrap = piAdvanced.generateWeeklyWrap || function(days, patterns, healthScore, weightPrediction) {
+
+  const generateWeeklyWrap = piAdvanced.generateWeeklyWrap || function (days, patterns, healthScore, weightPrediction) {
     return null;
   };
 
@@ -504,20 +504,20 @@
       pIndex = null,
       optimum = 2000
     } = options;
-    
+
     // Проверяем кэш
     const clientId = lsGet('heys_client_current', 'default');
     const now = Date.now();
-    
-    if (_cache.data && 
-        _cache.clientId === clientId && 
-        (now - _cache.timestamp) < CONFIG.CACHE_TTL_MS) {
+
+    if (_cache.data &&
+      _cache.clientId === clientId &&
+      (now - _cache.timestamp) < CONFIG.CACHE_TTL_MS) {
       return _cache.data;
     }
-    
+
     // Получаем данные
     const days = getDaysData(daysBack, lsGet);
-    
+
     if (days.length < CONFIG.MIN_DAYS_FOR_INSIGHTS) {
       return {
         available: false,
@@ -533,50 +533,50 @@
         weeklyWrap: null
       };
     }
-    
+
     // Анализируем паттерны — v2.0: добавлены pIndex и новые анализаторы
     const patterns = [
       // === Тайминг и волны ===
       analyzeMealTiming(days, profile),
       analyzeWaveOverlap(days, profile),
       analyzeLateEating(days),
-      
+
       // === Качество питания ===
       analyzeMealQualityTrend(days, pIndex, optimum),
       analyzeProteinSatiety(days, profile, pIndex),     // v2.0: добавлен pIndex
       analyzeFiberRegularity(days, pIndex),              // v2.0: добавлен pIndex
       analyzeMoodFood(days, pIndex, optimum),
-      
+
       // === Сон и корреляции ===
       analyzeSleepWeight(days),
       analyzeSleepHunger(days, profile, pIndex),         // v2.0: добавлен pIndex
-      
+
       // === Активность ===
       analyzeTrainingKcal(days, pIndex),                 // v2.0: добавлен pIndex
       analyzeStepsWeight(days),
-      
+
       // === Стресс ===
       analyzeStressEating(days, pIndex),                 // v2.0: добавлен pIndex
-      
+
       // === Научные анализаторы (v2.1) ===
       analyzeCircadianTiming(days, pIndex),              // Циркадные ритмы
       analyzeNutrientTiming(days, pIndex, profile),      // Тайминг нутриентов
       analyzeInsulinSensitivity(days, pIndex, profile),  // Чувствительность к инсулину
       analyzeGutHealth(days, pIndex)                     // Здоровье ЖКТ
     ].filter(p => p && p.hasPattern);
-    
+
     // Рассчитываем Health Score
     const healthScore = calculateHealthScore(days, profile, pIndex, optimum);
-    
+
     // What-If Scenarios
     const whatIfScenarios = generateWhatIfScenarios(days, profile, pIndex);
-    
+
     // Weight Prediction
     const weightPrediction = predictWeight(days, profile);
-    
+
     // Weekly Wrap - сигнатура: (days, patterns, healthScore, weightPrediction)
     const weeklyWrap = generateWeeklyWrap(days, patterns, healthScore, weightPrediction);
-    
+
     // Сохраняем в кэш
     const result = {
       available: true,
@@ -590,20 +590,20 @@
       weeklyWrap,
       generatedAt: now
     };
-    
+
     _cache = {
       data: result,
       clientId,
       timestamp: now
     };
-    
+
     return result;
   }
-  
+
   // === HealthRingsGrid Component ===
   function HealthRingsGrid({ healthScore, compact, onCategoryClick, lsGet }) {
     if (!healthScore || !healthScore.breakdown) return null;
-    
+
     // 🆕 v3.22.0: Вычисляем emotionalRisk для Recovery overlay
     const emotionalRiskData = useMemo(() => {
       const U = window.HEYS?.utils;
@@ -613,20 +613,20 @@
       const profile = getter('heys_profile', {});
       const todayDate = new Date().toISOString().split('T')[0];
       const day = getter(`heys_dayv2_${todayDate}`, {});
-      
+
       const stressAvg = day.stressAvg || 0;
       const factors = [];
       let bingeRisk = 0;
-      
+
       if (stressAvg >= 6) { factors.push('Стресс'); bingeRisk += 35; }
       else if (stressAvg >= 4) { factors.push('Стресс'); bingeRisk += 15; }
-      
+
       const hour = new Date().getHours();
       if (hour >= 20) bingeRisk += 20;
-      
+
       const sleepDeficit = (profile.sleepHours || 8) - (day.sleepHours || 0);
       if (sleepDeficit > 2) { factors.push('Недосып'); bingeRisk += 15; }
-      
+
       return {
         hasRisk: bingeRisk >= 30,
         bingeRisk: Math.min(90, bingeRisk),
@@ -634,14 +634,14 @@
         level: bingeRisk >= 60 ? 'high' : bingeRisk >= 40 ? 'medium' : 'low'
       };
     }, [lsGet]);
-    
+
     const categories = [
       { key: 'nutrition', label: 'Питание', color: '#22c55e', infoKey: 'CATEGORY_NUTRITION' },
       { key: 'timing', label: 'Тайминг', color: '#3b82f6', infoKey: 'CATEGORY_TIMING' },
       { key: 'activity', label: 'Активность', color: '#f59e0b', infoKey: 'CATEGORY_ACTIVITY' },
       { key: 'recovery', label: 'Восстановление', color: '#8b5cf6', infoKey: 'CATEGORY_RECOVERY' }
     ];
-    
+
     // Compact mode: карточки с мини-кольцами
     if (compact) {
       return h('div', { className: 'insights-rings-grid' },
@@ -650,11 +650,11 @@
           const radius = 18;
           const circumference = 2 * Math.PI * radius;
           const offset = circumference - (score / 100) * circumference;
-          
+
           // 🆕 emotionalRisk overlay для Recovery
           const hasEmotionalWarning = cat.key === 'recovery' && emotionalRiskData.hasRisk;
-          
-          return h('div', { 
+
+          return h('div', {
             key: cat.key,
             className: `insights-ring-card insights-ring-card--${cat.key} ${hasEmotionalWarning ? 'insights-ring-card--emotional-warning' : ''}`,
             onClick: () => onCategoryClick && onCategoryClick(cat.key)
@@ -681,7 +681,7 @@
               ),
               h('span', { className: 'insights-ring-card__value' }, Math.round(score)),
               // 🆕 Emotional warning badge
-              hasEmotionalWarning && h('span', { 
+              hasEmotionalWarning && h('span', {
                 className: 'insights-ring-card__emotional-badge',
                 title: `Эмоц. риск: ${emotionalRiskData.bingeRisk}%\n${emotionalRiskData.factors.join(', ')}`
               }, '🧠')
@@ -692,8 +692,8 @@
                 h('div', { className: 'insights-ring-card__label' }, cat.label),
                 h(getInfoButton(), { infoKey: cat.infoKey, size: 'small' })
               ),
-              h('div', { className: 'insights-ring-card__title' }, 
-                hasEmotionalWarning 
+              h('div', { className: 'insights-ring-card__title' },
+                hasEmotionalWarning
                   ? `🧠 ${emotionalRiskData.bingeRisk}%`
                   : score >= 80 ? 'Отлично' : score >= 60 ? 'Хорошо' : score >= 40 ? 'Норма' : 'Улучшить'
               ),
@@ -710,7 +710,7 @@
         })
       );
     }
-    
+
     // Full mode: стандартные кольца
     return h('div', { className: 'insights-rings' },
       categories.map(cat =>
@@ -733,7 +733,7 @@
   // 🧪 WHAT-IF SIMULATOR v1.0.0
   // Интерактивный симулятор: "Что если я съем X?"
   // ============================================================
-  
+
   /**
    * Preset-продукты для быстрого выбора
    * Реальные нутриенты из базы или типичные значения
@@ -745,20 +745,20 @@
     { id: 'cookie', name: 'Печенье', emoji: '🍪', kcal: 200, prot: 2, carbs: 30, fat: 8, gi: 75, category: 'fast' },
     { id: 'icecream', name: 'Мороженое', emoji: '🍨', kcal: 250, prot: 3, carbs: 30, fat: 12, gi: 62, category: 'fast' },
     { id: 'soda', name: 'Газировка 330мл', emoji: '🥤', kcal: 140, prot: 0, carbs: 35, fat: 0, gi: 90, category: 'fast' },
-    
+
     // Здоровые опции (низкий GI, высокий белок/клетчатка)
     { id: 'salad', name: 'Салат', emoji: '🥗', kcal: 200, prot: 5, carbs: 15, fat: 12, gi: 25, fiber: 5, category: 'healthy' },
     { id: 'chicken', name: 'Куриная грудка', emoji: '🍗', kcal: 250, prot: 35, carbs: 0, fat: 10, gi: 0, category: 'healthy' },
     { id: 'eggs', name: 'Яйца (2 шт)', emoji: '🥚', kcal: 180, prot: 14, carbs: 1, fat: 12, gi: 0, category: 'healthy' },
     { id: 'cottage', name: 'Творог', emoji: '🧀', kcal: 180, prot: 25, carbs: 5, fat: 5, gi: 30, category: 'healthy' },
     { id: 'nuts', name: 'Орехи 50г', emoji: '🥜', kcal: 300, prot: 10, carbs: 10, fat: 28, gi: 15, fiber: 4, category: 'healthy' },
-    
+
     // Комплексные приёмы
     { id: 'breakfast', name: 'Овсянка + банан', emoji: '🥣', kcal: 350, prot: 10, carbs: 55, fat: 8, gi: 55, fiber: 6, category: 'meal' },
     { id: 'lunch', name: 'Рис + курица + салат', emoji: '🍱', kcal: 500, prot: 35, carbs: 50, fat: 15, gi: 50, fiber: 5, category: 'meal' },
     { id: 'dinner', name: 'Рыба + овощи', emoji: '🐟', kcal: 400, prot: 30, carbs: 20, fat: 18, gi: 35, fiber: 8, category: 'meal' }
   ];
-  
+
   /**
    * Категории preset-ов
    */
@@ -767,7 +767,7 @@
     healthy: { name: 'Полезные опции', emoji: '💚', color: '#22c55e' },
     meal: { name: 'Полные приёмы', emoji: '🍽️', color: '#3b82f6' }
   };
-  
+
   /**
    * Рассчитать эффект от еды (симуляция)
    * @param {Object} food - продукт { kcal, prot, carbs, fat, gi, fiber }
@@ -776,35 +776,35 @@
    */
   function simulateFood(food, context) {
     const { currentWave, currentRisk, dayTot, optimum, profile, trainings } = context;
-    
+
     // 1. Расчёт новой инсулиновой волны
     const gl = ((food.gi || 50) * (food.carbs || 0)) / 100;
     const baseWaveHours = profile?.insulinWaveHours || 3;
-    
+
     // Модификаторы волны (из InsulinWave module)
     let waveMultiplier = 1.0;
-    
+
     // GI модификатор
     if (food.gi >= 70) waveMultiplier *= 1.2;
     else if (food.gi >= 55) waveMultiplier *= 1.1;
     else if (food.gi <= 35) waveMultiplier *= 0.85;
-    
+
     // GL модификатор (плавная кривая)
     const glMult = 0.15 + (Math.min(gl, 40) / 40) ** 0.6 * 1.15;
     waveMultiplier *= Math.min(1.3, Math.max(0.2, glMult));
-    
+
     // Белок удлиняет (инсулиногенный эффект)
     if (food.prot >= 30) waveMultiplier *= 1.10;
     else if (food.prot >= 20) waveMultiplier *= 1.05;
-    
+
     // Клетчатка сокращает
     if (food.fiber >= 8) waveMultiplier *= 0.85;
     else if (food.fiber >= 5) waveMultiplier *= 0.92;
-    
+
     // Жиры удлиняют
     if (food.fat >= 20) waveMultiplier *= 1.10;
     else if (food.fat >= 10) waveMultiplier *= 1.05;
-    
+
     // Activity Context (если есть тренировка)
     let activityBonus = 0;
     if (trainings && trainings.length > 0) {
@@ -819,15 +819,15 @@
       }
     }
     waveMultiplier *= (1 + activityBonus);
-    
+
     const newWaveMinutes = Math.round(baseWaveHours * 60 * waveMultiplier);
     const newWaveEndTime = new Date(Date.now() + newWaveMinutes * 60 * 1000);
     const newWaveEndStr = newWaveEndTime.toTimeString().slice(0, 5);
-    
+
     // 2. Сравнение с текущей волной
     let waveImpact = 'neutral';
     let waveCompare = null;
-    
+
     if (currentWave && currentWave.status !== 'lipolysis') {
       // Сейчас волна активна — добавление еды продлит её
       waveImpact = 'extends';
@@ -844,14 +844,14 @@
         newWaveMinutes
       };
     }
-    
+
     // 3. Расчёт влияния на риск срыва
     const newDayKcal = (dayTot?.kcal || 0) + food.kcal;
     const newRatio = optimum ? newDayKcal / optimum : 1;
-    
+
     let riskDelta = 0;
     let riskReason = null;
-    
+
     // Риск растёт если:
     if (food.gi >= 70) {
       riskDelta += 8; // Высокий GI → быстрый голод позже
@@ -863,7 +863,7 @@
       riskDelta += 15; // Сильный перебор → стресс и "да гори оно всё"
       riskReason = 'Сильный перебор калорий → психологический срыв';
     }
-    
+
     // Риск снижается если:
     if (food.prot >= 25 && food.gi <= 40) {
       riskDelta -= 10; // Белок + низкий GI = долгая сытость
@@ -872,12 +872,12 @@
     if (food.fiber >= 5) {
       riskDelta -= 5; // Клетчатка = сытость
     }
-    
+
     const newRisk = Math.min(100, Math.max(0, (currentRisk || 0) + riskDelta));
-    
+
     // 4. Советы на основе симуляции
     const advice = [];
-    
+
     // Совет про тайминг
     if (currentWave && currentWave.status !== 'lipolysis' && currentWave.remaining >= 60) {
       advice.push({
@@ -887,7 +887,7 @@
         priority: 1
       });
     }
-    
+
     // Совет про замену
     if (food.gi >= 65 && food.category === 'fast') {
       const healthyAlt = WHATIF_PRESETS.find(p => p.category === 'healthy' && Math.abs(p.kcal - food.kcal) < 100);
@@ -901,7 +901,7 @@
         });
       }
     }
-    
+
     // Совет про белок
     if (food.prot < 15 && food.kcal >= 300) {
       advice.push({
@@ -911,7 +911,7 @@
         priority: 3
       });
     }
-    
+
     // Совет про калории
     if (newRatio >= 1.3) {
       advice.push({
@@ -928,14 +928,14 @@
         priority: 4
       });
     }
-    
+
     // 5. Сатиация (насколько долго будет сыто)
     let satietyHours = 2; // базовая
     satietyHours += food.prot * 0.03; // +0.03ч на грамм белка
     satietyHours += (food.fiber || 0) * 0.05; // +0.05ч на грамм клетчатки
     satietyHours -= (food.gi - 50) * 0.01; // -0.01ч за каждый пункт GI выше 50
     satietyHours = Math.max(1, Math.min(6, satietyHours));
-    
+
     return {
       food,
       wave: {
@@ -967,65 +967,67 @@
       verdict: newRatio <= 1.1 && riskDelta <= 0 ? 'good' : newRatio <= 1.2 && riskDelta <= 10 ? 'neutral' : 'bad'
     };
   }
-  
+
   // === DEBUG HELPERS ===
-  
+
   window.debugWeeklyWrap = () => {
-      if (!HEYS.Metabolic?.generateWeeklyWrap) {
-        console.error('❌ HEYS.Metabolic.generateWeeklyWrap not loaded');
-        return null;
-      }
-      
-      const result = HEYS.Metabolic.generateWeeklyWrap();
-// console.log('📊 Weekly Wrap:', result);
-      return result;
-    };
-    
-    window.debugABTest = () => {
-      if (!HEYS.Metabolic?.getABStats) {
-        console.error('❌ HEYS.Metabolic.getABStats not loaded');
-        return null;
-      }
-      
-      const stats = HEYS.Metabolic.getABStats();
-      const variant = HEYS.Metabolic.getABVariant();
-      const weights = HEYS.Metabolic.getABWeights();
-      
-      console.group('📊 A/B Test Results');
-// console.log('🎯 Current Variant:', variant.id, '-', variant.name);
-// console.log('⚖️ Weights:', weights);
-// console.log('📈 Stats:', stats);
-      
-      if (Object.keys(stats.variantStats).length > 0) {
-        console.table(stats.variantStats);
-// console.log('🏆 Best Variant (by F1):', stats.bestVariant);
-      } else {
-// console.log('⏳ Not enough data yet');
-      }
-      console.groupEnd();
-      
-      return { variant, weights, stats };
-    };
-  
+    if (!HEYS.PredictiveInsights?.analyze) {
+      console.error('❌ HEYS.PredictiveInsights.analyze not loaded');
+      return null;
+    }
+
+    const lsGet = U.lsGet || ((k, d) => {
+      try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+    });
+    const analysis = HEYS.PredictiveInsights.analyze({ daysBack: 14, lsGet });
+    return analysis?.weeklyWrap || null;
+  };
+
+  window.debugABTest = () => {
+    if (!HEYS.Metabolic?.getABStats) {
+      console.error('❌ HEYS.Metabolic.getABStats not loaded');
+      return null;
+    }
+
+    const stats = HEYS.Metabolic.getABStats();
+    const variant = HEYS.Metabolic.getABVariant();
+    const weights = HEYS.Metabolic.getABWeights();
+
+    console.group('📊 A/B Test Results');
+    // console.log('🎯 Current Variant:', variant.id, '-', variant.name);
+    // console.log('⚖️ Weights:', weights);
+    // console.log('📈 Stats:', stats);
+
+    if (Object.keys(stats.variantStats).length > 0) {
+      console.table(stats.variantStats);
+      // console.log('🏆 Best Variant (by F1):', stats.bestVariant);
+    } else {
+      // console.log('⏳ Not enough data yet');
+    }
+    console.groupEnd();
+
+    return { variant, weights, stats };
+  };
+
   // === EXPORT HEYS.PredictiveInsights ===
   // Собираем все публичные функции и компоненты из модулей InsightsPI.* для обратной совместимости
   // ВАЖНО: Используем геттеры для ленивой загрузки (UI модули могут загружаться с задержкой из-за React CDN)
-  
+
   HEYS.PredictiveInsights = HEYS.PredictiveInsights || {};
-  
+
   // === Экспорт основных функций ===
   // analyze() — главная точка входа для анализа данных
   HEYS.PredictiveInsights.analyze = analyze;
-  
+
   // clearCache() — очистка кэша анализа
-  HEYS.PredictiveInsights.clearCache = function() {
+  HEYS.PredictiveInsights.clearCache = function () {
     _cache = {};
-// console.log('[PI] Cache cleared');
+    // console.log('[PI] Cache cleared');
   };
-  
+
   // getDaysData() — получение данных дней
   HEYS.PredictiveInsights.getDaysData = getDaysData;
-  
+
   // Паттерн-анализаторы (делегируем в HEYS.InsightsPI.patterns если есть)
   HEYS.PredictiveInsights.analyzeMealTiming = analyzeMealTiming;
   HEYS.PredictiveInsights.analyzeWaveOverlap = analyzeWaveOverlap;
@@ -1043,19 +1045,19 @@
   HEYS.PredictiveInsights.analyzeNutrientTiming = analyzeNutrientTiming;
   HEYS.PredictiveInsights.analyzeInsulinSensitivity = analyzeInsulinSensitivity;
   HEYS.PredictiveInsights.analyzeGutHealth = analyzeGutHealth;
-  
+
   // Продвинутые функции
   HEYS.PredictiveInsights.calculateHealthScore = calculateHealthScore;
   HEYS.PredictiveInsights.generateWhatIfScenarios = generateWhatIfScenarios;
   HEYS.PredictiveInsights.predictWeight = predictWeight;
   HEYS.PredictiveInsights.generateWeeklyWrap = generateWeeklyWrap;
-  
+
   // Статистические утилиты
   HEYS.PredictiveInsights.pearsonCorrelation = pearsonCorrelation;
   HEYS.PredictiveInsights.calculateTrend = calculateTrend;
   HEYS.PredictiveInsights.average = average;
   HEYS.PredictiveInsights.stdDev = stdDev;
-  
+
   // Константы и конфигурация
   HEYS.PredictiveInsights.VERSION = CONFIG.VERSION;
   HEYS.PredictiveInsights.CONFIG = CONFIG;
@@ -1064,7 +1066,7 @@
   HEYS.PredictiveInsights.CATEGORIES = CATEGORIES;
   HEYS.PredictiveInsights.ACTIONABILITY = ACTIONABILITY;
   HEYS.PredictiveInsights.SCIENCE_INFO = SCIENCE_INFO;
-  
+
   // Хелперы для SCIENCE_INFO
   HEYS.PredictiveInsights.getMetricPriority = getMetricPriority;
   HEYS.PredictiveInsights.getAllMetricsByPriority = getAllMetricsByPriority;
@@ -1072,12 +1074,12 @@
   HEYS.PredictiveInsights.getMetricsByActionability = getMetricsByActionability;
   HEYS.PredictiveInsights.getCriticalMetrics = getCriticalMetrics;
   HEYS.PredictiveInsights.getPriorityStats = getPriorityStats;
-  
+
   // What-If функции
   HEYS.PredictiveInsights.simulateFood = simulateFood;
   HEYS.PredictiveInsights.WHATIF_PRESETS = WHATIF_PRESETS;
   HEYS.PredictiveInsights.WHATIF_CATEGORIES = WHATIF_CATEGORIES;
-  
+
   // Analytics API функции (из pi_analytics_api.js) - ленивые геттеры для load order
   const analyticsApiFunctions = [
     'calculateConfidenceScore', 'analyzeMetabolism', 'calculateCorrelationMatrix',
@@ -1086,29 +1088,29 @@
     'calculateGlycemicVariability', 'calculateAllostaticLoad',
     'detectEarlyWarningSignals', 'calculate2ProcessModel', 'analyticsAPI'
   ];
-  
+
   analyticsApiFunctions.forEach(fnName => {
     Object.defineProperty(HEYS.PredictiveInsights, fnName, {
-      get: function() {
-        return HEYS.InsightsPI?.analyticsAPI?.[fnName] || 
-               HEYS.InsightsPI?.[fnName] || 
-               (typeof window !== 'undefined' && window[fnName]);
+      get: function () {
+        return HEYS.InsightsPI?.analyticsAPI?.[fnName] ||
+          HEYS.InsightsPI?.[fnName] ||
+          (typeof window !== 'undefined' && window[fnName]);
       },
       configurable: true,
       enumerable: true
     });
   });
-  
-// console.log('[PI] ✅ HEYS.PredictiveInsights functions exported (analyze, patterns, advanced, stats, analyticsAPI)');
-  
+
+  // console.log('[PI] ✅ HEYS.PredictiveInsights functions exported (analyze, patterns, advanced, stats, analyticsAPI)');
+
   // Ленивый геттер для components - собирает все UI модули в момент обращения
   Object.defineProperty(HEYS.PredictiveInsights, 'components', {
-    get: function() {
+    get: function () {
       const uiDashboard = HEYS.InsightsPI?.uiDashboard || {};
       const uiCards = HEYS.InsightsPI?.uiCards || {};
       const uiRings = HEYS.InsightsPI?.uiRings || {};
       const uiWhatIf = HEYS.InsightsPI?.uiWhatIf || {};
-      
+
       return {
         // Dashboard components (from pi_ui_dashboard.js)
         ...uiDashboard,
@@ -1131,7 +1133,7 @@
     configurable: true,
     enumerable: true
   });
-  
-// console.log('[PI] ✅ HEYS.PredictiveInsights.components getter configured (lazy loading)');
-  
+
+  // console.log('[PI] ✅ HEYS.PredictiveInsights.components getter configured (lazy loading)');
+
 })(typeof window !== 'undefined' ? window : global);

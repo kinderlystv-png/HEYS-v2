@@ -530,7 +530,7 @@ sessionStorage.getItem('heys_last_meal_advice')
 
 1. Закоммитить: `git commit -m "feat(advice): add 26 new advice types → 103 total"`
 2. Обновить DATA_MODEL_REFERENCE.md до v1.6.0
-3. Перенести промпт в `archive/`
+3. Перенести промпт в `docs/tasks/archive/`
 4. Обновить todo.md — отметить Phase 2 как ✅
 
 ---

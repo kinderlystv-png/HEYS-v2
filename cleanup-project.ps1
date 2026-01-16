@@ -38,7 +38,7 @@ if (Test-Path ".nyc_output") { Remove-Item ".nyc_output" -Recurse -Force }
 
 # Создание архива старых отчетов
 Write-Host "📦 Архивируем старые отчеты..." -ForegroundColor Yellow
-$archiveDir = "archive/reports-$(Get-Date -Format 'yyyyMMdd')"
+$archiveDir = "docs/archive/reports-$(Get-Date -Format 'yyyyMMdd')"
 New-Item -ItemType Directory -Path $archiveDir -Force | Out-Null
 
 $reportFiles = Get-ChildItem -Name "PHASE_*.md", "STATUS_DASHBOARD*.md", "COMPREHENSIVE_STATUS*.md" -ErrorAction SilentlyContinue

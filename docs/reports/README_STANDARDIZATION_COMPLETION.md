@@ -30,7 +30,7 @@ across the entire HEYS project documentation structure.
 | **[plans/](plans/README.md)**           | 11 files       | Active roadmaps, strategic planning         |
 | **[reports/](reports/README.md)**       | 9 files        | Progress tracking, system analysis          |
 | **[ui/](ui/README.md)**                 | 1 file         | Dashboard components, interfaces            |
-| **[archive/](archive/README.md)**       | Legacy docs    | Historical preservation, migration tracking |
+| **[archive/](../archive/README.md)**    | Legacy docs    | Historical preservation, migration tracking |
 
 ## 🏗️ Standardized Structure
 

@@ -18,7 +18,7 @@ module.exports = {
       jsx: true,
     },
   },
-  plugins: ['@typescript-eslint', 'import'],
+  plugins: ['@typescript-eslint', 'import', '@heys'],
   rules: {
     // TypeScript rules
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
@@ -142,13 +142,30 @@ module.exports = {
         'no-restricted-syntax': 'off',
       },
     },
+    // 🏗️ Module Architecture - IDE подсветка для legacy JS файлов
+    {
+      files: ['apps/web/**/heys_*.js'],
+      rules: {
+        '@heys/module-architecture': ['error', { limitsConfigPath: 'config/module-limits.json' }],
+        'no-console': 'off',
+        'no-debugger': 'off',
+        'no-var': 'off',
+        'no-restricted-globals': 'off',
+        'no-restricted-syntax': 'off',
+        '@typescript-eslint/no-unused-vars': 'off',
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/no-non-null-assertion': 'off',
+        'no-undef': 'off',
+        'prefer-const': 'off',
+        'import/order': 'off',
+      },
+    },
     // Legacy files - более мягкие правила для старого кода
     {
       files: [
         '**/legacy/**/*.{ts,tsx}',
         '**/*_v12.{ts,tsx}',
         '**/*_v1.{ts,tsx}',
-        'archive/**/*.{ts,tsx}',
         'TOOLS/**/*.js',
         'packages/ui/**/*.{ts,tsx}', // временно для security компонента
         'packages/shared/**/*.{ts,tsx}', // много legacy кода
@@ -198,21 +215,11 @@ module.exports = {
         'no-restricted-syntax': 'off',
       },
     },
-    // 🏗️ Module Architecture - проверка лимитов для legacy JS файлов
-    // Pre-commit hook проверяет все файлы, ESLint правило работает в IDE
-    // ПРИМЕЧАНИЕ: ESLint плагин требует установки пакета, поэтому используем pre-commit hook
-    // {
-    //   files: ['apps/web/heys_*.js'],
-    //   plugins: ['@heys'],
-    //   rules: {
-    //     '@heys/module-architecture': ['warn', { ... }],
-    //   },
-    // },
-    // 
-    // ✅ Вместо ESLint плагина используем:
-    //    1. Pre-commit hook: scripts/check-module-architecture.sh
-    //    2. Ручной запуск: ./scripts/check-module-architecture.sh --all
-    //    3. Документация: docs/dev/MODULE_ARCHITECTURE.md
+    // ✅ Архитектурный контроль:
+    //    1. ESLint rule для IDE (см. override выше)
+    //    2. Pre-commit hook: scripts/check-module-architecture.sh
+    //    3. Ручной запуск: ./scripts/check-module-architecture.sh --all
+    //    4. Документация: docs/dev/MODULE_ARCHITECTURE.md
   ],
   ignorePatterns: [
     'dist/',
@@ -223,13 +230,11 @@ module.exports = {
     '.next/',
     '.turbo/',
     'storybook-static/',
-    // Legacy files - проверяются pre-commit хуком
-    'heys_*.js',
+    // Legacy files - проверяются архитектурным ESLint rule + pre-commit
     'temp/',
     'TESTS/',
     'старые МЕТОДОЛОГИИ И ИНСТРУКЦИИ ДЛЯ ИИ/',
     // Временно игнорируем проблемные файлы для коммита
     'docs/automation/',
-    'archive/legacy-v12/',
   ],
 };

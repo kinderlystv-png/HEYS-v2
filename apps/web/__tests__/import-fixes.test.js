@@ -54,20 +54,6 @@ describe.skip('Import Fixes Integration Tests', () => {
     });
   });
 
-  describe('React Component Fixes', () => {
-    test('should have ReportsTab component available', () => {
-      // Проверяем что компонент ReportsTab экспортирован правильно
-      expect(window.HEYS).toBeDefined();
-      expect(window.HEYS.ReportsTab).toBeDefined();
-      expect(typeof window.HEYS.ReportsTab).toBe('function');
-    });
-
-    test('should not have incorrect ReportTab export', () => {
-      // Проверяем что неправильный экспорт не существует
-      expect(window.HEYS.ReportTab).toBeUndefined();
-    });
-  });
-
   describe('Port Configuration', () => {
     test('should use correct ports for development', () => {
       // Проверяем переменные окружения

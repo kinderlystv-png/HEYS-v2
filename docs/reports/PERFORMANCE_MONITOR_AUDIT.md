@@ -304,8 +304,8 @@ class SimpleAnalytics {
 1. ✅ Создать `apps/web/heys_simple_analytics.js` (~100 строк)
 2. ✅ Удалить `heys_performance_monitor.js` (829 строк)
 3. ✅ Удалить `heys_analytics_ui.js` (487 строк)
-4. ✅ Переместить `packages/shared/src/performance/*` в `archive/`
-5. ✅ Переместить `packages/shared/src/monitoring/*` в `archive/`
+4. ✅ Удалить `packages/shared/src/performance/*` (archive удалён)
+5. ✅ Удалить `packages/shared/src/monitoring/*` (archive удалён)
 6. ✅ Удалить пустые пакеты или оставить stubs
 7. ✅ Убрать `@sentry/browser` из dependencies (пока не нужен)
 
@@ -365,11 +365,13 @@ class SimpleAnalytics {
 ### Фаза 3: Архивирование (10 минут)
 
 ```bash
-mkdir -p archive/performance-monitoring-v1
-mv apps/web/heys_performance_monitor.js archive/performance-monitoring-v1/
-mv apps/web/heys_analytics_ui.js archive/performance-monitoring-v1/
-mv packages/shared/src/performance archive/performance-monitoring-v1/
-mv packages/shared/src/monitoring archive/performance-monitoring-v1/
+# ⚠️ Корневой archive/ удалён 2026-01-16.
+# Если нужен откат — используйте git историю.
+git log -- apps/web/heys_performance_monitor.js
+git log -- apps/web/heys_analytics_ui.js
+
+git checkout <commit_hash> -- apps/web/heys_performance_monitor.js
+git checkout <commit_hash> -- apps/web/heys_analytics_ui.js
 ```
 
 ### Фаза 4: Очистка package.json (5 минут)

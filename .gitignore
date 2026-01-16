@@ -25,6 +25,7 @@ jspm_packages/
 
 # TypeScript cache
 *.tsbuildinfo
+**/tsconfig.tsbuildinfo
 
 # Optional npm cache directory
 .npm
@@ -123,6 +124,7 @@ Thumbs.db
 
 # Logs
 logs
+logs/**
 *.log
 
 # Build artifacts
@@ -169,7 +171,7 @@ metrics.json
 *-report-*.json
 
 # Archive and old reports
-archive/reports-*/
+docs/archive/reports-*/
 
 # Turbo cache
 .turbo/daemon/

@@ -137,32 +137,6 @@ export const AnalyticsSkeleton: React.FC = () => (
   </div>
 );
 
-export const ReportsSkeleton: React.FC = () => (
-  <div style={{ padding: '20px' }}>
-    {/* Filter bar skeleton */}
-    <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-      <ComponentSkeleton variant="rectangular" width="200px" height="40px" />
-      <ComponentSkeleton variant="rectangular" width="150px" height="40px" />
-      <ComponentSkeleton variant="rectangular" width="100px" height="40px" />
-    </div>
-
-    {/* Report list skeleton */}
-    {Array.from({ length: 5 }, (_, index) => (
-      <div
-        key={index}
-        style={{
-          marginBottom: '16px',
-          padding: '16px',
-          border: '1px solid #e0e0e0',
-          borderRadius: '8px',
-        }}
-      >
-        <ComponentSkeleton variant="text" lines={2} />
-      </div>
-    ))}
-  </div>
-);
-
 export const SettingsSkeleton: React.FC = () => (
   <div style={{ padding: '20px' }}>
     {/* Settings sections */}

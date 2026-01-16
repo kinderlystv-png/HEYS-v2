@@ -110,7 +110,7 @@ Pre-existing bugs fixed:    0 (none found)
 2. `heys_day_advice_card.js` - 219 lines
 3. `heys_day_add_product.js` - 394 lines
 4. `heys_day_gallery.js` - 479 lines
-5. `heys_day_meal_scoring.js` - 1,338 lines
+5. `day/_meal_quality.js` - 1,338 lines
 6. `heys_day_meal_card.js` - 1,295 lines
 7. `__tests__/meal_scoring_regression_baseline.js` - Test cases
 

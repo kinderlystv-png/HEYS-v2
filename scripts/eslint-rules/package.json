@@ -1,0 +1,7 @@
+{
+  "name": "@heys/eslint-plugin",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "index.cjs"
+}

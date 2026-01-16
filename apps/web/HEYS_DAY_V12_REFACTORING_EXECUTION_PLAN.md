@@ -173,7 +173,7 @@ const { PopupWithBackdrop, createSwipeHandlers, PopupCloseButton } = HEYS.dayPop
 - [ ] Snapshot current results для регрессионного тестирования
 
 #### 4.2 Извлечение (3-4 часа)
-- [ ] Создать `heys_day_meal_scoring.js`
+- [ ] Создать `day/_meal_quality.js`
 - [ ] Извлечь все константы:
   - `MEAL_KCAL_LIMITS` (строки 590-596)
   - `IDEAL_MACROS_UNIFIED` (строки 598-604)
@@ -198,7 +198,7 @@ const { PopupWithBackdrop, createSwipeHandlers, PopupCloseButton } = HEYS.dayPop
 - [ ] Визуально проверить colors в UI
 - [ ] Тест edge cases: 0 ккал, negative, null, huge portions
 - [ ] Удалить из heys_day_v12.js только после 100% проверки
-- [ ] Commit: "Extract meal scoring logic to heys_day_meal_scoring.js"
+- [ ] Commit: "Extract meal quality scoring to day/_meal_quality.js"
 
 **ВНИМАНИЕ:** Критическая бизнес-логика! Тщательное тестирование обязательно!
 

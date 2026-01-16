@@ -1,0 +1,106 @@
+(function (HEYS) {
+    'use strict';
+
+    const renderDiarySection = (params) => {
+        const {
+            React,
+            isMobile,
+            mobileSubTab,
+            goalProgressBar,
+            mealsChart,
+            insulinWaveData,
+            insulinExpanded,
+            setInsulinExpanded,
+            openExclusivePopup,
+            addMeal,
+            day,
+            mealsUI,
+            daySummary,
+            HEYS: rootHEYs
+        } = params || {};
+
+        if (!React) return null;
+
+        const app = rootHEYs || HEYS;
+        const showDiary = !isMobile || mobileSubTab === 'diary';
+
+        const insulinIndicator = app.dayInsulinWaveUI?.renderInsulinWaveIndicator?.({
+            React,
+            insulinWaveData,
+            insulinExpanded,
+            setInsulinExpanded,
+            mobileSubTab,
+            isMobile,
+            openExclusivePopup,
+            HEYS: app
+        }) || null;
+
+        if (!showDiary) return insulinIndicator;
+
+        return React.createElement(React.Fragment, null,
+            goalProgressBar,
+            mealsChart,
+            insulinIndicator,
+            React.createElement('h2', {
+                id: 'diary-heading',
+                style: {
+                    fontSize: '24px',
+                    fontWeight: '800',
+                    color: '#1e293b',
+                    margin: '28px 0 20px 0',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    textAlign: 'center',
+                    scrollMarginTop: '150px'
+                }
+            }, 'ДНЕВНИК ПИТАНИЯ'),
+            React.createElement('button', {
+                className: 'add-meal-btn-full',
+                onClick: addMeal,
+                style: {
+                    width: '100%',
+                    padding: '18px 24px',
+                    marginBottom: '20px',
+                    fontSize: '17px',
+                    fontWeight: '700',
+                    color: '#fff',
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                    border: 'none',
+                    borderRadius: '16px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)',
+                    transition: 'all 0.2s ease',
+                    WebkitTapHighlightColor: 'transparent'
+                }
+            },
+                React.createElement('span', { style: { fontSize: '22px' } }, '➕'),
+                'Добавить приём пищи'
+            ),
+            (!day?.meals || day.meals.length === 0) && React.createElement('div', { className: 'empty-state' },
+                React.createElement('div', { className: 'empty-state-icon' }, '🍽️'),
+                React.createElement('div', { className: 'empty-state-title' }, 'Пока нет приёмов пищи'),
+                React.createElement('div', { className: 'empty-state-text' }, 'Добавьте первый приём, чтобы начать отслеживание'),
+                React.createElement('button', {
+                    className: 'btn btn-primary empty-state-btn',
+                    onClick: addMeal,
+                    style: {
+                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                        boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)'
+                    }
+                }, '+ Добавить приём')
+            ),
+            mealsUI,
+            daySummary,
+            React.createElement('div', { className: 'row desktop-only', style: { justifyContent: 'flex-start', marginTop: '8px' } },
+                React.createElement('button', { className: 'btn', onClick: addMeal }, '+ Приём')
+            )
+        );
+    };
+
+    HEYS.dayDiarySection = HEYS.dayDiarySection || {};
+    HEYS.dayDiarySection.renderDiarySection = renderDiarySection;
+})(window.HEYS = window.HEYS || {});

@@ -4,7 +4,7 @@
 // Версия обновляется автоматически при билде
 // NOTE: Service Worker runs in isolated context - no access to @heys/logger
 
-const CACHE_VERSION = 'heys-1768345799608';
+const CACHE_VERSION = 'heys-1768544000000';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
@@ -33,6 +33,33 @@ const PRECACHE_URLS = [
   '/heys_day_utils.js',
   '/heys_day_hooks.js',
   '/heys_day_pickers.js',
+  '/heys_day_trainings_v1.js',
+  '/heys_day_training_popups_v1.js',
+  '/heys_day_sleep_score_popups_v1.js',
+  '/heys_day_edit_grams_modal_v1.js',
+  '/heys_day_time_mood_picker_v1.js',
+  '/day/_meal_quality.js',
+  '/heys_day_sparklines_v1.js',
+  '/heys_day_sparkline_data_v1.js',
+  '/heys_day_caloric_balance_v1.js',
+  '/heys_day_insights_data_v1.js',
+  '/heys_day_insulin_wave_data_v1.js',
+  '/heys_day_goal_progress_v1.js',
+  '/heys_day_daily_summary_v1.js',
+  '/heys_day_pull_refresh_v1.js',
+  '/heys_day_offline_sync_v1.js',
+  '/heys_day_insulin_wave_ui_v1.js',
+  '/heys_day_advice_list_ui_v1.js',
+  '/heys_day_advice_toast_ui_v1.js',
+  '/heys_day_advice_state_v1.js',
+  '/heys_day_measurements_v1.js',
+  '/heys_day_popups_state_v1.js',
+  '/heys_day_meals_chart_ui_v1.js',
+  '/heys_day_main_block_v1.js',
+  '/heys_day_side_block_v1.js',
+  '/heys_day_cycle_card_v1.js',
+  '/heys_day_weight_trends_v1.js',
+  '/heys_advice_rules_v1.js',
   '/heys_advice_v1.js',
   '/heys_user_v12.js',
   '/heys_reports_v12.js',
@@ -65,7 +92,7 @@ const CDN_URLS = [
 // === INSTALL: Предзагрузка App Shell ===
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing...', CACHE_VERSION);
-  
+
   // Не блокируем установку долгим precache — иначе чёрный экран при первом запуске
   // Сначала активируемся, потом кэшируем в фоне
   event.waitUntil(
@@ -76,7 +103,7 @@ self.addEventListener('install', (event) => {
         .then((cache) => {
           console.log('[SW] Background precaching App Shell');
           return Promise.all(
-            PRECACHE_URLS.map(url => 
+            PRECACHE_URLS.map(url =>
               cache.add(url).catch(err => {
                 console.warn('[SW] Failed to cache:', url, err.message);
               })
@@ -91,7 +118,7 @@ self.addEventListener('install', (event) => {
 // === ACTIVATE: Очистка старых кэшей + захват контроля ===
 self.addEventListener('activate', (event) => {
   console.log('[SW] 🚀 Activating...', CACHE_VERSION);
-  
+
   event.waitUntil(
     Promise.all([
       // 1️⃣ Включаем Navigation Preload для ускорения загрузки
@@ -105,7 +132,7 @@ self.addEventListener('activate', (event) => {
           }
         }
       })(),
-      
+
       // 2️⃣ Очистка старых кэшей
       caches.keys()
         .then((cacheNames) => {
@@ -119,53 +146,53 @@ self.addEventListener('activate', (event) => {
           );
         }),
     ])
-    .then(() => {
-      // clients.claim() — немедленно берём контроль над всеми открытыми страницами
-      // Без этого новый SW не контролирует страницу до следующего refresh
-      console.log('[SW] 📡 Claiming all clients...');
-      return self.clients.claim();
-    })
-    .then(() => {
-      // Очистка юридических документов (.md) из ВСЕХ кэшей
-      // Чтобы пользователь видел актуальную версию после обновления
-      console.log('[SW] Purging cached .md files (legal docs)...');
-      return caches.keys().then(names => {
-        return Promise.all(names.map(cacheName => {
-          return caches.open(cacheName).then(cache => {
-            return cache.keys().then(requests => {
-              return Promise.all(
-                requests
-                  .filter(req => req.url.endsWith('.md') || req.url.includes('/docs/'))
-                  .map(req => {
-                    console.log('[SW] Purging cached doc:', req.url);
-                    return cache.delete(req);
-                  })
-              );
+      .then(() => {
+        // clients.claim() — немедленно берём контроль над всеми открытыми страницами
+        // Без этого новый SW не контролирует страницу до следующего refresh
+        console.log('[SW] 📡 Claiming all clients...');
+        return self.clients.claim();
+      })
+      .then(() => {
+        // Очистка юридических документов (.md) из ВСЕХ кэшей
+        // Чтобы пользователь видел актуальную версию после обновления
+        console.log('[SW] Purging cached .md files (legal docs)...');
+        return caches.keys().then(names => {
+          return Promise.all(names.map(cacheName => {
+            return caches.open(cacheName).then(cache => {
+              return cache.keys().then(requests => {
+                return Promise.all(
+                  requests
+                    .filter(req => req.url.endsWith('.md') || req.url.includes('/docs/'))
+                    .map(req => {
+                      console.log('[SW] Purging cached doc:', req.url);
+                      return cache.delete(req);
+                    })
+                );
+              });
             });
-          });
-        }));
-      });
-    })
-    .then(() => {
-      // Принудительно берём контроль над всеми клиентами
-      // Это критично для обновления PWA!
-      console.log('[SW] Claiming clients...');
-      return self.clients.claim();
-    })
+          }));
+        });
+      })
+      .then(() => {
+        // Принудительно берём контроль над всеми клиентами
+        // Это критично для обновления PWA!
+        console.log('[SW] Claiming clients...');
+        return self.clients.claim();
+      })
   );
 });
 
 // === MESSAGE: Обработка сообщений от клиента ===
 self.addEventListener('message', (event) => {
   // Поддерживаем оба формата: строку 'skipWaiting' и объект { type: 'SKIP_WAITING' }
-  const isSkipWaiting = event.data === 'skipWaiting' || 
-                         (event.data && event.data.type === 'SKIP_WAITING');
-  
+  const isSkipWaiting = event.data === 'skipWaiting' ||
+    (event.data && event.data.type === 'SKIP_WAITING');
+
   if (isSkipWaiting) {
     console.log('[SW] skipWaiting requested');
     self.skipWaiting();
   }
-  
+
   // 🔄 Очистка ВСЕХ кэшей (для принудительного обновления)
   if (event.data === 'clearAllCaches') {
     console.log('[SW] 🗑️ Clearing ALL caches...');
@@ -194,38 +221,38 @@ self.addEventListener('message', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-  
+
   // === 📤 Share Target API — обработка POST от других приложений ===
   if (request.method === 'POST' && url.searchParams.has('share-target')) {
     console.log('[SW] 📤 Share Target POST received');
     event.respondWith(handleShareTarget(request));
     return;
   }
-  
+
   // Пропускаем не-GET запросы
   if (request.method !== 'GET') return;
-  
+
   // Пропускаем chrome-extension и другие нестандартные протоколы
   if (!url.protocol.startsWith('http')) return;
-  
+
   // === version.json — ВСЕГДА с сервера (для проверки обновлений) ===
   if (url.pathname === '/version.json') {
     event.respondWith(fetch(request));
     return;
   }
-  
+
   // === API запросы (Supabase) — Network First ===
   if (url.hostname.includes('supabase') || url.pathname.startsWith('/api/')) {
     event.respondWith(networkFirst(request));
     return;
   }
-  
+
   // === CDN ресурсы — Cache First (долгий срок жизни) ===
   if (CDN_URLS.some(cdn => request.url.startsWith(cdn.split('?')[0]))) {
     event.respondWith(cacheFirst(request, STATIC_CACHE));
     return;
   }
-  
+
   // === Локальные статические файлы ===
   if (url.origin === self.location.origin) {
     // HTML — Network First (чтобы обновления были видны)
@@ -233,7 +260,7 @@ self.addEventListener('fetch', (event) => {
       event.respondWith(networkFirst(request));
       return;
     }
-    
+
     // JS — Network First с no-store (чтобы не отдавать старый бандл)
     if (url.pathname.endsWith('.js')) {
       if (url.pathname.startsWith('/heys_') || url.pathname === '/heys_app_v12.js') {
@@ -241,18 +268,18 @@ self.addEventListener('fetch', (event) => {
         return;
       }
     }
-    
+
     // Markdown документы (юридика) — ВСЕГДА с сервера
     if (url.pathname.endsWith('.md')) {
       event.respondWith(fetch(request));
       return;
     }
-    
+
     // Остальное (CSS/Images) — Stale While Revalidate
     event.respondWith(staleWhileRevalidate(request));
     return;
   }
-  
+
   // === Остальное — Network First ===
   event.respondWith(networkFirst(request));
 });
@@ -263,7 +290,7 @@ async function cacheFirst(request, cacheName = STATIC_CACHE) {
   if (cached) {
     return cached;
   }
-  
+
   try {
     const response = await fetch(request);
     if (response.ok) {
@@ -291,13 +318,13 @@ async function networkFirst(request) {
     if (cached) {
       return cached;
     }
-    
+
     // Для HTML — возвращаем закэшированную главную страницу (SPA fallback)
     if (request.headers.get('accept')?.includes('text/html')) {
       const fallback = await caches.match('/index.html');
       if (fallback) return fallback;
     }
-    
+
     return new Response('Offline', { status: 503 });
   }
 }
@@ -324,7 +351,7 @@ async function networkFirstNoStore(request) {
 function isValidMimeType(request, response) {
   const url = new URL(request.url);
   const contentType = response.headers.get('content-type') || '';
-  
+
   // CSS файлы должны иметь text/css
   if (url.pathname.endsWith('.css')) {
     return contentType.includes('text/css');
@@ -341,7 +368,7 @@ function isValidMimeType(request, response) {
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(STATIC_CACHE);
   const cached = await cache.match(request, { ignoreSearch: true });
-  
+
   // Фоновое обновление
   const fetchPromise = fetch(request)
     .then((response) => {
@@ -351,24 +378,24 @@ async function staleWhileRevalidate(request) {
       return response;
     })
     .catch(() => null);
-  
+
   // Проверяем MIME type в кеше — если неправильный, ждём сеть
   if (cached && isValidMimeType(request, cached)) {
     return cached;
   }
-  
+
   // Кеш пустой или испорченный — ждём сеть
   const response = await fetchPromise;
   if (response) {
     return response;
   }
-  
+
   // Последний шанс — вернуть даже испорченный кеш (лучше чем ничего)
   if (cached) {
     console.warn('[SW] Returning cached response with mismatched MIME type:', request.url);
     return cached;
   }
-  
+
   return new Response('Offline', { status: 503 });
 }
 
@@ -398,10 +425,10 @@ async function checkForUpdates() {
     const response = await fetch('/version.json?_=' + Date.now(), { cache: 'no-store' });
     const data = await response.json();
     const serverVersion = data.version;
-    
+
     // Сравниваем с текущей версией кэша
     const currentVersion = CACHE_VERSION.replace('heys-', '');
-    
+
     if (serverVersion !== currentVersion) {
       console.log('[SW] 🆕 Update available in background!', serverVersion);
       // Уведомляем все открытые страницы
@@ -418,14 +445,14 @@ async function checkForUpdates() {
 async function processSyncQueue() {
   // Получаем очередь из IndexedDB (через postMessage к клиенту)
   const clients = await self.clients.matchAll();
-  
+
   for (const client of clients) {
     client.postMessage({ type: 'SYNC_START' });
   }
-  
+
   // Даём клиенту время на синхронизацию
   await new Promise(resolve => setTimeout(resolve, 1000));
-  
+
   for (const client of clients) {
     client.postMessage({ type: 'SYNC_COMPLETE' });
   }
@@ -437,11 +464,11 @@ self.addEventListener('message', (event) => {
     console.log('[SW] 🔄 skipWaiting requested');
     self.skipWaiting();
   }
-  
+
   if (event.data === 'getVersion') {
     event.ports[0]?.postMessage({ version: CACHE_VERSION });
   }
-  
+
   // === ОЧИСТКА ВСЕХ КЭШЕЙ (для принудительного обновления) ===
   if (event.data === 'clearAllCaches') {
     console.log('[SW] 🗑️ clearAllCaches requested — purging ALL caches...');
@@ -467,19 +494,19 @@ self.addEventListener('message', (event) => {
       })
     );
   }
-  
+
   // Регистрация Background Sync
   if (event.data === 'registerSync') {
     self.registration.sync?.register(SYNC_TAG)
       .then(() => console.log('[SW] Background sync registered'))
       .catch(err => console.warn('[SW] Background sync not supported:', err));
   }
-  
+
   // Запрос на немедленную синхронизацию (для тестирования)
   if (event.data === 'forceSync') {
     processSyncQueue();
   }
-  
+
   if (event.data && event.data.type === 'GET_CACHE_STATUS') {
     const port = event.ports && event.ports[0];
     const payload = {
@@ -497,27 +524,27 @@ self.addEventListener('message', (event) => {
 // Обрабатывает POST запросы когда пользователь делится фото из галереи/камеры
 async function handleShareTarget(request) {
   console.log('[SW] 📤 Processing Share Target...');
-  
+
   try {
     const formData = await request.formData();
     const images = formData.getAll('images');
     const title = formData.get('title') || '';
     const text = formData.get('text') || '';
     const url = formData.get('url') || '';
-    
+
     console.log('[SW] Share received:', {
       imagesCount: images.length,
       title,
       text: text.substring(0, 50),
       url
     });
-    
+
     // Сохраняем изображения в IndexedDB для последующего использования
     if (images.length > 0 && 'indexedDB' in self) {
       const db = await openShareDB();
       const tx = db.transaction('shared-images', 'readwrite');
       const store = tx.objectStore('shared-images');
-      
+
       for (const image of images) {
         if (image instanceof File) {
           const arrayBuffer = await image.arrayBuffer();
@@ -533,14 +560,14 @@ async function handleShareTarget(request) {
           });
         }
       }
-      
+
       await tx.done;
       console.log('[SW] 📤 Saved', images.length, 'images to IndexedDB');
     }
-    
+
     // Редирект на главную страницу с параметром для обработки шаринга
     return Response.redirect('/?share-received=true', 303);
-    
+
   } catch (error) {
     console.error('[SW] ❌ Share Target error:', error);
     // В случае ошибки всё равно редиректим на главную
@@ -552,10 +579,10 @@ async function handleShareTarget(request) {
 function openShareDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('heys-share-db', 1);
-    
+
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
-    
+
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
       if (!db.objectStoreNames.contains('shared-images')) {

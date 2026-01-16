@@ -1,0 +1,5 @@
+{
+    "deprecated": true,
+    "movedTo": "apps/web/config/insulin-wave-config.json",
+    "note": "Use the apps/web/config version; this stub exists to prevent legacy tooling crashes."
+}

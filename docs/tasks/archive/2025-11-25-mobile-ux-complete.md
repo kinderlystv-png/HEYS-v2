@@ -96,8 +96,8 @@ font-size: 16px !important; /* Было 14px */
 
 Этот промпт можно переместить в `docs/tasks/archive/` — задача завершена.
 
-Архивированные файлы:
+Архивированные файлы (корневой `archive/` удалён — использовать git history):
 
-- `archive/docs/MOBILE_AUDIT_RESULTS.md`
-- `archive/docs/MOBILE_UX_IMPROVEMENT_PLAN.md`
+- `MOBILE_AUDIT_RESULTS.md`
+- `MOBILE_UX_IMPROVEMENT_PLAN.md`
 - `docs/tasks/archive/2025-11-24-mobile-ux-phase-2.md`

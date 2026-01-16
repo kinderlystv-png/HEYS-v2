@@ -1,41 +1,38 @@
-// heys_day_meal_handlers.js — Meal CRUD handlers and product management
-// Phase 10.1 of HEYS Day v12 refactoring
-// Extracted from heys_day_v12.js lines 3364-3700
-(function(global) {
-  'use strict';
-  
+// heys_day_meal_handlers.js — legacy shim (moved to day/_meals.js)
+; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
-  const React = global.React;
-  
-  // Dependencies - explicit check instead of silent fallbacks
-  if (!HEYS.dayUtils) {
-    throw new Error('[heys_day_meal_handlers] HEYS.dayUtils is required. Ensure heys_day_utils.js is loaded first.');
+  if (HEYS.analytics?.trackError) {
+    HEYS.analytics.trackError(new Error('[HEYS Day Meals] Meal handlers moved to day/_meals.js'), {
+      source: 'heys_day_meal_handlers.js',
+      type: 'legacy_shim',
+    });
   }
-  const { haptic, lsSet, lsGet, uid } = HEYS.dayUtils;
-  
-  /**
-   * Sort meals by time (latest first)
-   * @param {Array} meals - Array of meal objects
-   * @returns {Array} Sorted meals
-   */
+  return;
+  /*
+    
+    /**
+     * Sort meals by time (latest first)
+     * @param {Array} meals - Array of meal objects
+     * @returns {Array} Sorted meals
+     */
   function sortMealsByTime(meals) {
     if (!meals || meals.length <= 1) return meals;
-    
+
     return [...meals].sort((a, b) => {
-      const timeA = U.timeToMinutes ? U.timeToMinutes(a.time) : null;
-      const timeB = U.timeToMinutes ? U.timeToMinutes(b.time) : null;
-      
+      const timeA = timeToMinutes ? timeToMinutes(a.time) : null;
+      const timeB = timeToMinutes ? timeToMinutes(b.time) : null;
+
       // Если оба без времени — сохраняем порядок
       if (timeA === null && timeB === null) return 0;
       // Без времени — в конец
       if (timeA === null) return 1;
       if (timeB === null) return -1;
-      
+
       // Обратный порядок: последние наверху
       return timeB - timeA;
     });
   }
-  
+
   /**
    * Create meal handlers
    * @param {Object} deps - Dependencies
@@ -74,7 +71,7 @@
       newItemIds,
       setNewItemIds
     } = deps;
-    
+
     /**
      * Add new meal
      */
@@ -84,7 +81,7 @@
         HEYS.Paywall.showBlockedToast('Добавление приёма пищи недоступно');
         return;
       }
-      
+
       if (isMobile && HEYS.MealStep) {
         // Новая модульная модалка с шагами
         HEYS.MealStep.showAddMeal({
@@ -102,14 +99,14 @@
             const newUpdatedAt = Date.now();
             lastLoadedUpdatedAtRef.current = newUpdatedAt; // Защита от перезаписи cloud sync
             blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000; // Блокируем cloud sync на 3 сек
-            
+
             // 🔒 КРИТИЧНО: Сохраняем СРАЗУ в localStorage СИНХРОННО!
             // flush() не работает т.к. использует day из closure который ещё не обновился React
             // Поэтому сохраняем напрямую с НОВЫМИ данными
             setDay(prevDay => {
               const newMeals = sortMealsByTime([...(prevDay.meals || []), newMeal]);
               const newDayData = { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
-              
+
               // ✅ СИНХРОННОЕ сохранение в localStorage внутри setDay (имеем доступ к актуальным данным)
               const key = 'heys_dayv2_' + date;
               try {
@@ -117,16 +114,16 @@
               } catch (e) {
                 console.error('[HEYS] 🍽 Failed to save meal:', e);
               }
-              
+
               return newDayData;
             });
-            
+
             if (window.HEYS && window.HEYS.analytics) {
               window.HEYS.analytics.trackDataOperation('meal-created');
             }
             // Success toast
             HEYS.Toast?.success('Приём создан');
-            
+
             // Сразу открываем модалку добавления продукта
             // Используем setTimeout чтобы state успел обновиться
             setTimeout(() => {
@@ -134,10 +131,10 @@
               setDay(currentDay => {
                 const meals = currentDay.meals || [];
                 const mealIndex = meals.findIndex(m => m.id === newMealId);
-                
+
                 if (mealIndex >= 0) {
                   expandOnlyMeal(mealIndex);
-                  
+
                   // Открываем модалку добавления продукта
                   if (window.HEYS?.AddProductStep?.show) {
                     window.HEYS.AddProductStep.show({
@@ -148,9 +145,9 @@
                         const productId = product.id ?? product.product_id ?? product.name;
                         // TEF-aware kcal100: пересчитываем по формуле 3*protein + 4*carbs + 9*fat
                         const computeTEFKcal100 = (p) => {
-                          const carbs = (+p.carbs100) || ((+p.simple100||0) + (+p.complex100||0));
-                          const fat = (+p.fat100) || ((+p.badFat100||0) + (+p.goodFat100||0) + (+p.trans100||0));
-                          return Math.round((3*(+p.protein100||0) + 4*carbs + 9*fat) * 10) / 10;
+                          const carbs = (+p.carbs100) || ((+p.simple100 || 0) + (+p.complex100 || 0));
+                          const fat = (+p.fat100) || ((+p.badFat100 || 0) + (+p.goodFat100 || 0) + (+p.trans100 || 0));
+                          return Math.round((3 * (+p.protein100 || 0) + 4 * carbs + 9 * fat) * 10) / 10;
                         };
                         const newItem = {
                           id: uid('it_'),
@@ -173,12 +170,12 @@
                             harmScore: product.harmScore
                           })
                         };
-                        
+
                         // 🔒 Защита от перезаписи cloud sync
                         const newUpdatedAt = Date.now();
                         lastLoadedUpdatedAtRef.current = newUpdatedAt;
                         blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
-                        
+
                         setDay((prevDay = {}) => {
                           const updatedMeals = (prevDay.meals || []).map((m, i) =>
                             i === targetMealIndex
@@ -186,7 +183,7 @@
                               : m
                           );
                           const newDayData = { ...prevDay, meals: updatedMeals, updatedAt: newUpdatedAt };
-                          
+
                           // ✅ СИНХРОННОЕ сохранение в localStorage внутри setDay
                           const key = 'heys_dayv2_' + date;
                           try {
@@ -194,21 +191,21 @@
                           } catch (e) {
                             console.error('[HEYS] 🍽 Failed to save product:', e);
                           }
-                          
+
                           return newDayData;
                         });
-                        
-                        try { navigator.vibrate?.(10); } catch(e) {}
+
+                        try { navigator.vibrate?.(10); } catch (e) { }
                         window.dispatchEvent(new CustomEvent('heysProductAdded', { detail: { product, grams } }));
                         try {
-                          U.lsSet(`heys_last_grams_${productId}`, grams);
+                          lsSet(`heys_last_grams_${productId}`, grams);
                           // Сохраняем в grams_history
-                          const history = U.lsGet('heys_grams_history', {});
+                          const history = lsGet('heys_grams_history', {});
                           if (!history[productId]) history[productId] = [];
                           history[productId].push(grams);
                           if (history[productId].length > 20) history[productId].shift();
-                          U.lsSet('heys_grams_history', history);
-                        } catch(e) {}
+                          lsSet('heys_grams_history', history);
+                        } catch (e) { }
                         // Прокручиваем к дневнику после добавления продукта
                         if (scrollToDiaryHeading) scrollToDiaryHeading();
                       },
@@ -220,7 +217,7 @@
                     });
                   }
                 }
-                
+
                 return currentDay; // Не меняем state, просто читаем
               });
             }, 50);
@@ -235,10 +232,10 @@
         let newMealIndex = 0;
         setDay(prevDay => {
           const baseMeals = prevDay.meals || [];
-          const newMeals = [...baseMeals, {id:newMealId,name:'Приём',time:'',mood:'',wellbeing:'',stress:'',items:[]}];
+          const newMeals = [...baseMeals, { id: newMealId, name: 'Приём', time: '', mood: '', wellbeing: '', stress: '', items: [] }];
           newMealIndex = newMeals.length - 1;
           return { ...prevDay, meals: newMeals, updatedAt: Date.now() };
-        }); 
+        });
         expandOnlyMeal(newMealIndex);
         if (window.HEYS && window.HEYS.analytics) {
           window.HEYS.analytics.trackDataOperation('meal-created');
@@ -247,13 +244,13 @@
         HEYS.Toast?.success('Приём создан');
       }
     }, [date, expandOnlyMeal, isMobile, openTimePickerForNewMeal, products, setDay, day, prof, pIndex, getProductFromItem, scrollToDiaryHeading, lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef]);
-    
+
     /**
      * Update meal time with auto-sort
      */
     const updateMealTime = React.useCallback((mealIndex, newTime) => {
       setDay(prevDay => {
-        const updatedMeals = (prevDay.meals || []).map((m, i) => 
+        const updatedMeals = (prevDay.meals || []).map((m, i) =>
           i === mealIndex ? { ...m, time: newTime } : m
         );
         // Сортируем после обновления
@@ -261,42 +258,42 @@
         return { ...prevDay, meals: sortedMeals, updatedAt: Date.now() };
       });
     }, [setDay]);
-    
+
     /**
      * Remove meal with confirmation
      */
-    const removeMeal = React.useCallback(async (i) => { 
+    const removeMeal = React.useCallback(async (i) => {
       const confirmed = await HEYS.ConfirmModal?.confirmDelete({
         icon: '🗑️',
         title: 'Удалить приём пищи?',
         text: 'Все продукты в этом приёме будут удалены. Это действие нельзя отменить.'
       });
-      
+
       if (!confirmed) return;
-      
+
       haptic('medium');
       setDay(prevDay => {
         const meals = (prevDay.meals || []).filter((_, idx) => idx !== i);
         return { ...prevDay, meals, updatedAt: Date.now() };
       });
     }, [haptic, setDay]);
-    
+
     /**
      * Add product to meal
      */
-    const addProductToMeal = React.useCallback((mi, p) => { 
+    const addProductToMeal = React.useCallback((mi, p) => {
       // 🔒 Read-only gating
       if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
         HEYS.Paywall.showBlockedToast('Добавление продуктов недоступно');
         return;
       }
-      
+
       haptic('light'); // Вибрация при добавлении
       // Сохраняем ключевые нутриенты inline чтобы не зависеть от базы продуктов
       const item = {
-        id: uid('it_'), 
-        product_id: p.id ?? p.product_id, 
-        name: p.name, 
+        id: uid('it_'),
+        product_id: p.id ?? p.product_id,
+        name: p.name,
         grams: p.grams || 100, // Поддержка кастомного веса из MealOptimizer
         // Inline данные — гарантируют корректный расчёт даже если продукт удалён из базы
         kcal100: p.kcal100,
@@ -310,12 +307,12 @@
         fiber100: p.fiber100,
         gi: p.gi ?? p.gi100,
         harm: p.harm ?? p.harm100
-      }; 
+      };
       setDay(prevDay => {
-        const meals=(prevDay.meals||[]).map((m,i)=> i===mi? {...m, items:[...(m.items||[]), item]}:m); 
-        return {...prevDay, meals, updatedAt: Date.now()}; 
-      }); 
-      
+        const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
+        return { ...prevDay, meals, updatedAt: Date.now() };
+      });
+
       // Track new item for animation
       if (setNewItemIds) {
         setNewItemIds(prev => new Set([...prev, item.id]));
@@ -328,30 +325,30 @@
           });
         }, 500);
       }
-      
+
       // Dispatch event для advice системы
       window.dispatchEvent(new CustomEvent('heysProductAdded'));
     }, [haptic, setDay, setNewItemIds, date]);
-    
+
     /**
      * Set product grams
      */
-    const setGrams = React.useCallback((mi, itId, g) => { 
-      const grams = +g || 0; 
+    const setGrams = React.useCallback((mi, itId, g) => {
+      const grams = +g || 0;
       setDay(prevDay => {
-        const meals = (prevDay.meals || []).map((m,i)=> i===mi? {...m, items:(m.items||[]).map(it=> it.id===itId?{...it, grams:grams}:it)}:m); 
-        return {...prevDay, meals, updatedAt: Date.now()}; 
-      }); 
+        const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: (m.items || []).map(it => it.id === itId ? { ...it, grams: grams } : it) } : m);
+        return { ...prevDay, meals, updatedAt: Date.now() };
+      });
     }, [setDay]);
-    
+
     /**
      * Remove item from meal
      */
-    const removeItem = React.useCallback((mi, itId) => { 
-      haptic('medium'); 
+    const removeItem = React.useCallback((mi, itId) => {
+      haptic('medium');
       setDay(prevDay => {
-        const meals=(prevDay.meals||[]).map((m,i)=> i===mi? {...m, items:(m.items||[]).filter(it=>it.id!==itId)}:m); 
-        return {...prevDay, meals, updatedAt: Date.now()}; 
+        const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: (m.items || []).filter(it => it.id !== itId) } : m);
+        return { ...prevDay, meals, updatedAt: Date.now() };
       });
       // 🔄 Пересчитываем orphan-продукты после удаления item
       // (возможно этот item был единственным использованием orphan продукта)
@@ -361,7 +358,7 @@
         }
       }, 100);
     }, [haptic, setDay]);
-    
+
     /**
      * Update meal field
      */
@@ -371,22 +368,22 @@
         return { ...prevDay, meals, updatedAt: Date.now() };
       });
     }, [setDay]);
-    
+
     /**
      * Change meal mood
      */
     const changeMealMood = React.useCallback((mealIndex, value) => updateMealField(mealIndex, 'mood', value), [updateMealField]);
-    
+
     /**
      * Change meal wellbeing
      */
     const changeMealWellbeing = React.useCallback((mealIndex, value) => updateMealField(mealIndex, 'wellbeing', value), [updateMealField]);
-    
+
     /**
      * Change meal stress
      */
     const changeMealStress = React.useCallback((mealIndex, value) => updateMealField(mealIndex, 'stress', value), [updateMealField]);
-    
+
     /**
      * Change meal type
      */
@@ -394,13 +391,13 @@
       const newUpdatedAt = Date.now();
       if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = newUpdatedAt;
       if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
-      
+
       setDay(prevDay => {
         const meals = (prevDay.meals || []).map((m, i) => {
           if (i !== mealIndex) return m;
           // Обновляем mealType и name
-          const newName = newType && U.MEAL_TYPES && U.MEAL_TYPES[newType] 
-            ? U.MEAL_TYPES[newType].name 
+          const newName = newType && MEAL_TYPES && MEAL_TYPES[newType]
+            ? MEAL_TYPES[newType].name
             : m.name;
           return { ...m, mealType: newType, name: newName };
         });
@@ -408,12 +405,12 @@
       });
       haptic('light');
     }, [setDay, lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef]);
-    
+
     /**
      * Check if item is new (for animation)
      */
     const isNewItem = React.useCallback((itemId) => newItemIds && newItemIds.has(itemId), [newItemIds]);
-    
+
     return {
       addMeal,
       updateMealTime,
@@ -431,11 +428,12 @@
       sortMealsByTime
     };
   }
-  
+
   // Export module
   HEYS.dayMealHandlers = {
     createMealHandlers,
     sortMealsByTime
   };
   
+*/
 })(window);

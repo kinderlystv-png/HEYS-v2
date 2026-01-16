@@ -1,24 +1,20 @@
-// heys_day_meals_list.js — Meals list rendering component
-// Phase 13A of HEYS Day v12 refactoring
-// Extracted from heys_day_v12.js lines 4,794-4,896
-(function(global) {
-  'use strict';
-  
+// heys_day_meals_list.js — legacy shim (moved to day/_meals.js)
+; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
-  const React = global.React;
-  
-  // Dependencies - explicit check for required components
-  const U = HEYS.dayUtils || {};
-  const MealCard = HEYS.dayComponents?.MealCard;
-  if (!MealCard) {
-    console.error('[heys_day_meals_list] MealCard component not found. Ensure heys_day_components.js is loaded first.');
+  if (HEYS.analytics?.trackError) {
+    HEYS.analytics.trackError(new Error('[HEYS Day Meals] Meals list moved to day/_meals.js'), {
+      source: 'heys_day_meals_list.js',
+      type: 'legacy_shim',
+    });
   }
-  
-  /**
-   * Render meals list with number badges and current meal indicator
-   * @param {Object} params - Rendering parameters
-   * @returns {Array} Array of React elements
-   */
+  return;
+  /*
+    
+    /**
+     * Render meals list with number badges and current meal indicator
+     * @param {Object} params - Rendering parameters
+     * @returns {Array} Array of React elements
+     */
   function renderMealsList(params) {
     const {
       sortedMealsForDisplay,
@@ -49,33 +45,33 @@
       prof,
       insulinWaveData
     } = params;
-    
+
     if (!sortedMealsForDisplay || !Array.isArray(sortedMealsForDisplay)) {
       return [];
     }
-    
+
     if (!MealCard) {
       console.error('[heys_day_meals_list] MealCard component not loaded');
       return [];
     }
-    
+
     return sortedMealsForDisplay.map((sortedMeal, displayIndex) => {
       const mi = (day.meals || []).findIndex(m => m.id === sortedMeal.id);
       if (mi === -1) {
         console.warn('[HEYS] MealCard: meal not found in day.meals', sortedMeal.id);
         return null;
       }
-      
+
       // Берём актуальный meal из day.meals, а не из sorted (который может быть stale)
       const meal = day.meals[mi];
       const isExpanded = isMealExpanded(mi, (day.meals || []).length, day.meals, displayIndex);
       // Номер приёма (1-based, хронологический: первый по времени = 1)
       const mealNumber = sortedMealsForDisplay.length - displayIndex;
       const isFirst = displayIndex === 0;
-      
+
       // Key включает mealType чтобы форсировать перерендер при смене типа
       const isCurrentMeal = isFirst && !isMealStale(meal);
-      
+
       return React.createElement('div', {
         key: meal.id + '_' + (meal.mealType || 'auto'),
         className: 'meal-with-number',
@@ -101,8 +97,8 @@
               width: '32px',
               height: '32px',
               borderRadius: '50%',
-              background: isCurrentMeal 
-                ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' 
+              background: isCurrentMeal
+                ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
                 : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
               color: '#fff',
               display: 'flex',
@@ -110,8 +106,8 @@
               justifyContent: 'center',
               fontSize: '16px',
               fontWeight: '700',
-              boxShadow: isCurrentMeal 
-                ? '0 2px 8px rgba(34,197,94,0.35)' 
+              boxShadow: isCurrentMeal
+                ? '0 2px 8px rgba(34,197,94,0.35)'
                 : '0 2px 8px rgba(59,130,246,0.35)'
             }
           }, mealNumber),
@@ -164,7 +160,7 @@
       );
     });
   }
-  
+
   /**
    * Render empty state when no meals
    * @param {Object} params - Parameters
@@ -172,7 +168,7 @@
    */
   function renderEmptyMealsState(params) {
     const { addMeal, isMobile } = params;
-    
+
     return React.createElement('div', {
       className: 'empty-meals-state',
       style: {
@@ -200,11 +196,12 @@
       }, '➕ Добавить приём')
     );
   }
-  
+
   // Export module
   HEYS.dayMealsList = {
     renderMealsList,
     renderEmptyMealsState
   };
   
+*/
 })(window);

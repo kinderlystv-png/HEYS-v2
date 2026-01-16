@@ -286,7 +286,7 @@ HEYS.DayTab = function DayTab(props) {
 | AdviceCard | 219 | `heys_day_advice_card.js` |
 | Add Product | 394 | `heys_day_add_product.js` |
 | Gallery | 479 | `heys_day_gallery.js` |
-| Meal Scoring | 1,338 | `heys_day_meal_scoring.js` |
+| Meal Scoring | 1,338 | `day/_meal_quality.js` |
 | MealCard | 1,295 | `heys_day_meal_card.js` |
 | **Итого (Phases 2-8)** | **3,796** | **6 файлов** |
 

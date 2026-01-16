@@ -1,27 +1,6 @@
-# 🚀 HEYS v2 - Modern Productiv## 🎯 Quick Start
+# 🚀 HEYS v2
 
-````bash
-# Clone repository
-git clone https://github.com/kinderlystv-png/HEYS-v2.git
-cd HEYS-v2
-
-# Install dependencies (using pnpm workspaces)
-pnpm install
-
-# Start development environment (Port 3001)
-pnpm dev
-
-# Or start specific applications
-pnpm dev:web      # Web application on port 3001
-pnpm dev:mobile   # Mobile app
-pnpm dev:desktop  # Desktop app
-
-# Access the application
-# Frontend: http://localhost:3001
-# API: http://localhost:4001
-
-# Run testsnterprise-Grade Monorepo** - TypeScript/React ecosystem for nutrition
-> tracking, training management, and productivity enhancement
+**Enterprise‑grade monorepo** — TypeScript/React ecosystem for nutrition tracking, training management, and productivity enhancement.
 
 [![Version](https://img.shields.io/badge/version-14.0.0-blue.svg)](./CHANGELOG.md)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](./.nvmrc)
@@ -38,18 +17,7 @@ pnpm dev:desktop  # Desktop app
 [![Contributors](https://img.shields.io/badge/contributors-welcome-orange.svg)](./CONTRIBUTING.md)
 [![Code of Conduct](https://img.shields.io/badge/code_of_conduct-enforced-red.svg)](./CODE_OF_CONDUCT.md)
 
-## ✨ Features
-
-🥗 **Nutrition Tracking** - Smart calorie and macro management
-�️ **Training Plans** - Customizable workout routines
-📊 **Analytics** - Performance insights and progress tracking
-🎮 **Gamification** - Achievement system and progress rewards
-🔍 **Smart Search** - AI-powered content discovery
-📱 **Multi-Platform** - Web, mobile, and desktop applications
-🔐 **Security** - Enterprise-grade data protection
-☁️ **Cloud Sync** - Real-time synchronization across devices
-
-## �🎯 Quick Start
+## 🎯 Quick Start
 
 ```bash
 # Clone repository
@@ -59,13 +27,17 @@ cd HEYS-v2
 # Install dependencies (using pnpm workspaces)
 pnpm install
 
-# Start development environment
+# Start development environment (Port 3001)
 pnpm dev
 
 # Or start specific applications
-pnpm dev:web      # Web application
+pnpm dev:web      # Web application on port 3001
 pnpm dev:mobile   # Mobile app
 pnpm dev:desktop  # Desktop app
+
+# Web + IW config watcher (dev)
+pnpm --dir apps/web run dev:full
+pnpm dev:web:full
 
 # Run tests
 pnpm test         # All tests
@@ -75,7 +47,22 @@ pnpm test:unit    # Unit tests only
 # Build for production
 pnpm build        # Build all packages
 pnpm build:web    # Build web app only
-````
+
+# IW config sync (optional in dev)
+pnpm --dir apps/web run dev:iw-config
+# Version is auto-hashed from config content; do not edit inline block manually
+```
+
+## ✨ Features
+
+- **🥗 Nutrition Tracking** — Smart calorie and macro management
+- **🏋️ Training Plans** — Customizable workout routines
+- **📊 Analytics** — Performance insights and progress tracking
+- **🎮 Gamification** — Achievement system and progress rewards
+- **🔍 Smart Search** — AI‑powered content discovery
+- **📱 Multi‑Platform** — Web, mobile, and desktop applications
+- **🔐 Security** — Enterprise‑grade data protection
+- **☁️ Cloud Sync** — Real‑time synchronization across devices
 
 ## 🏗️ Architecture
 
@@ -100,16 +87,6 @@ tools/
 └── devtools/      # 🔧 Development tools
 ```
 
-## 🚀 Features
-
-- **📊 Nutrition Tracking** - Comprehensive food diary with macro calculations
-- **🏋️ Training Management** - Workout planning and progress tracking
-- **🔍 Smart Search** - Typo-tolerant search with phonetic matching
-- **🎮 Gamification** - Achievement system and progress rewards
-- **📈 Analytics** - Detailed insights and reporting
-- **💾 Multi-Storage** - IndexedDB, Supabase, and cloud sync
-- **🌐 PWA Ready** - Offline support and native app experience
-
 ## 🛠️ Development
 
 ### Prerequisites
@@ -132,6 +109,10 @@ pnpm install
 pnpm setup:dev
 ```
 
+### Onboarding
+
+- **[Developer Onboarding](docs/dev/ONBOARDING.md)** — короткий старт и ссылки на ключевые доки
+
 ## 🔄 Migration from v12
 
 The project has been migrated from legacy v12 structure to modern monorepo:
@@ -139,6 +120,7 @@ The project has been migrated from legacy v12 structure to modern monorepo:
 - **Legacy files** preserved in root for compatibility
 - **New structure** in `packages/` and `apps/`
 - **Migration scripts** available in `tools/scripts/`
+- **Legacy ReportsTab** снят из UI; архив сохранён в `archive/legacy-v12/`, weekly‑отчёт теперь в Insights (`apps/web/heys_weekly_reports_v2.js`)
 
 ## 📚 Документация
 
@@ -157,6 +139,12 @@ The project has been migrated from legacy v12 structure to modern monorepo:
 
 - 🏗️ **[Architecture Guide](docs/ARCHITECTURE.md)** - System architecture
   overview
+- ✅ **[Quality Gate](docs/dev/QUALITY_GATE.md)** - Early error detection and
+  blocking on commit
+- 🧭 **[Autolimits for Legacy](docs/dev/AUTOLIMITS.md)** - Legacy module growth
+  control (blocking on commit)
+- 🧩 **[Module Architecture](docs/dev/MODULE_ARCHITECTURE.md)** - Modular
+  structure rules and limits
 - 🚀 **[API Documentation](docs/API_DOCUMENTATION.md)** - Comprehensive API
   reference
 - 🛡️ **[Security Guide](SECURITY.md)** - Security implementation details
@@ -171,14 +159,11 @@ The project has been migrated from legacy v12 structure to modern monorepo:
 - 🚀 **[Deployment Guide](docs/guides/DEPLOYMENT.md)** - Production deployment
 - 🔍 **[Debugging Guide](docs/guides/DEBUGGING.md)** - Troubleshooting tips
 
-## 🎯 Основные возможности
+## 🧩 Legacy v12 (архив)
 
-- 📊 **Отслеживание данных** - вес, питание, сон, активность
-- 🔍 **Умный поиск** с исправлением опечаток и синонимами
-- 📈 **Аналитика и отчеты** с интерактивными графиками
-- 🏥 **Диагностические центры** для мониторинга системы
-- 💾 **Современное хранение** - IndexedDB, Service Workers
-- ⚡ **Высокая производительность** с Web Workers
+Архивная структура и заметки перенесены в отдельный файл:
+
+- 📄 **[Legacy README](docs/legacy/README_v12.md)**
 
 ## 🔧 Диагностические инструменты
 
@@ -196,49 +181,6 @@ The project has been migrated from legacy v12 structure to modern monorepo:
 - `TESTS/advanced-features-demo.html` - демо продвинутых возможностей
 - `TESTS/module-test.html` - тестирование модулей
 - `TESTS/comparison-demo.html` - сравнение версий
-
-## 📁 Структура проекта
-
-```
-HEYS/
-├── 📄 Основные файлы системы
-│   ├── heys_core_v12.js - ядро системы
-│   ├── heys_day_v12.js - управление дневными данными
-│   ├── heys_user_v12.js - система пользователей
-│   └── heys_reports_v12.js - отчеты и аналитика
-├── 🧠 Умные возможности
-│   ├── heys_smart_search_with_typos_v1.js - умный поиск
-│   ├── heys_analytics_ui.js - интерфейс аналитики
-│   └── heys_performance_monitor.js - мониторинг производительности
-├── 💾 Современные технологии
-│   ├── heys_storage_indexeddb_v1.js - IndexedDB хранилище
-│   ├── heys_worker_manager_v1.js - менеджер Web Workers
-│   └── heys_integration_layer_v1.js - слой интеграции
-├── 🎨 Интерфейс
-│   ├── index.html - главная страница
-│   └── styles/ - стили CSS
-└── 🧪 Тестирование
-    └── TESTS/ - диагностические инструменты
-```
-
-## 🚀 Быстрый старт
-
-1. **Откройте главную страницу:**
-
-   ```
-   index.html
-   ```
-
-2. **Запустите диагностику:**
-
-   ```
-   TESTS/super-diagnostic-center.html
-   ```
-
-3. **Проверьте функциональность:**
-   - Добавьте продукты
-   - Воспользуйтесь поиском
-   - Просмотрите отчеты
 
 ## 🛠️ Инструменты разработчика
 

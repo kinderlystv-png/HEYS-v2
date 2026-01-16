@@ -5,7 +5,6 @@ const fs = require('fs');
 const path = require('path');
 
 const files = [
-  'apps/web/src/components/lazy/LazyReports.tsx',
   'apps/web/src/components/lazy/LazySettings.tsx',
 ];
 

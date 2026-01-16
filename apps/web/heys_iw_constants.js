@@ -3,32 +3,34 @@
 //
 // PURPOSE: All configuration constants and their helper functions
 
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const IW = global.HEYS?.InsulinWave;
   const I = IW?.__internals;
-  
+
   if (!I) {
     console.error('[IW constants] Shim required');
     return;
   }
-  
+
   if (!I._loaded.shim) {
     console.error('[IW constants] Shim must be loaded first');
     return;
   }
-  
+
+  const C = I._configSource;
+
   // === CONSTANTS AND HELPER FUNCTIONS ===
-  
-  I.GI_CATEGORIES = {
+
+  I.GI_CATEGORIES = C?.GI_CATEGORIES || {
     low: { min: 0, max: 35, multiplier: 0.85, color: '#22c55e', text: 'Низкий ГИ', desc: 'короткая волна' },
     medium: { min: 36, max: 55, multiplier: 1.0, color: '#eab308', text: 'Средний ГИ', desc: 'нормальная' },
     high: { min: 56, max: 70, multiplier: 1.1, color: '#f97316', text: 'Высокий ГИ', desc: 'длиннее' },
     veryHigh: { min: 71, max: 999, multiplier: 1.2, color: '#ef4444', text: 'Очень высокий', desc: 'долгая волна' }
   };
-  
-  I.STATUS_CONFIG = {
+
+  I.STATUS_CONFIG = C?.STATUS_CONFIG || {
     // Липолиз — жиросжигание активно! Каждая минута без еды = сжигание жира
     lipolysis: { emoji: '🔥', color: '#22c55e', label: 'Липолиз!' },
     // Почти закончилась волна — скоро липолиз
@@ -38,12 +40,12 @@
     // Волна активна — инсулин высокий, жир запасается
     active: { emoji: '📈', color: '#3b82f6', label: null }
   };
-  
+
   // 🔬 НАУЧНЫЙ АУДИТ 2025-12-10 (ChatGPT Research):
   // Белок вызывает инсулиновый ответ (Nuttall et al. 1984, Floyd 1966)
   // Но ОСНОВНАЯ причина длины волны — углеводы. Белок — вторичный фактор.
   // 🔬 v3.7.5: Калибровка — снижены бонусы (реальный эффект ~5-10%, не 15-25%)
-  I.PROTEIN_BONUS = {
+  I.PROTEIN_BONUS = C?.PROTEIN_BONUS || {
     veryHigh: { threshold: 50, bonus: 0.12 },  // 50+ г белка → +12% к волне (было +25%)
     high: { threshold: 35, bonus: 0.08 },      // 35-50 г → +8% (было +15%)
     medium: { threshold: 20, bonus: 0.05 }     // 20-35 г → +5% (было +8%)
@@ -59,7 +61,7 @@
   //   (Mariotti 2017, Tang 2009)
   // - Whey protein (сывороточный) — максимальный инсулиногенный эффект ×2.0
   //   (Nilsson 2004, Pal & Ellis 2010)
-  I.PROTEIN_BONUS_V2 = {
+  I.PROTEIN_BONUS_V2 = C?.PROTEIN_BONUS_V2 || {
     // Множители эффекта по типу белка
     animal: {
       multiplier: 1.8,    // ×1.8 от базового эффекта
@@ -68,7 +70,7 @@
     },
     plant: {
       multiplier: 1.3,    // ×1.3 от базового эффекта
-      label: '🌱 Растительный белок', 
+      label: '🌱 Растительный белок',
       desc: 'Низкий leucine → умеренный ответ'
     },
     whey: {
@@ -81,21 +83,21 @@
       label: '🍽️ Смешанный белок',
       desc: 'Комбинация источников'
     },
-    
+
     // Базовые пороги (граммы белка) — одинаковые для всех типов
     thresholds: {
       veryHigh: 50,   // 50+ г
       high: 35,       // 35-50 г
       medium: 20      // 20-35 г
     },
-    
+
     // Базовые бонусы (до применения множителя типа)
     baseBonuses: {
       veryHigh: 0.07,   // base +7% → animal +12.6%, plant +9.1%, whey +14%
       high: 0.05,       // base +5% → animal +9%, plant +6.5%, whey +10%
       medium: 0.03      // base +3% → animal +5.4%, plant +3.9%, whey +6%
     },
-    
+
     // 🔍 Паттерны для определения типа белка по названию продукта
     patterns: {
       // Животный белок (мясо, рыба, яйца, молочные)
@@ -124,7 +126,7 @@
         // Субпродукты
         /печень/i, /сердце/i, /язык/i, /почки/i, /liver/i
       ],
-      
+
       // Сывороточный белок (whey) — отдельная категория
       whey: [
         /whey/i, /сывороточн/i, /изолят/i, /isolate/i,
@@ -132,7 +134,7 @@
         /\bWPC\b/i, /\bWPI\b/i, /\bWPH\b/i,
         /гейнер/i, /gainer/i
       ],
-      
+
       // Растительный белок
       plant: [
         // Бобовые
@@ -154,7 +156,7 @@
         /сейтан/i, /seitan/i, /глютен/i, /gluten/i
       ]
     },
-    
+
     // Категории продуктов для определения типа
     categories: {
       animal: ['Мясо', 'Рыба', 'Птица', 'Морепродукты', 'Яйца', 'Meat', 'Fish', 'Poultry', 'Seafood', 'Eggs'],
@@ -171,30 +173,30 @@
    */
   I.detectProteinType = (product) => {
     if (!product) return 'mixed';
-    
+
     const name = (product.name || '').toLowerCase();
     const category = product.category || '';
-    
+
     // 1. Whey имеет приоритет (спортпит)
     for (const pattern of I.PROTEIN_BONUS_V2.patterns.whey) {
       if (pattern.test(name)) return 'whey';
     }
-    
+
     // 2. Проверяем растительный (до animal, т.к. "соевое мясо" = plant)
     for (const pattern of I.PROTEIN_BONUS_V2.patterns.plant) {
       if (pattern.test(name)) return 'plant';
     }
-    
+
     // 3. Проверяем животный
     for (const pattern of I.PROTEIN_BONUS_V2.patterns.animal) {
       if (pattern.test(name)) return 'animal';
     }
-    
+
     // 4. Проверяем по категории
     if (I.PROTEIN_BONUS_V2.categories.animal.includes(category)) return 'animal';
     if (I.PROTEIN_BONUS_V2.categories.plant.includes(category)) return 'plant';
     if (I.PROTEIN_BONUS_V2.categories.dairy.includes(category)) return 'animal'; // казеин
-    
+
     // 5. Не определили — mixed
     return 'mixed';
   };
@@ -209,11 +211,11 @@
     const cfg = I.PROTEIN_BONUS_V2;
     const thresholds = cfg.thresholds;
     const baseBonuses = cfg.baseBonuses;
-    
+
     // Определяем tier
     let tier = null;
     let baseBonus = 0;
-    
+
     if (proteinGrams >= thresholds.veryHigh) {
       tier = 'veryHigh';
       baseBonus = baseBonuses.veryHigh;
@@ -227,12 +229,12 @@
       // Меньше 20г — нет бонуса
       return { bonus: 0, baseBonus: 0, multiplier: 1, type: proteinType, tier: null };
     }
-    
+
     // Применяем множитель типа
     const typeConfig = cfg[proteinType] || cfg.mixed;
     const multiplier = typeConfig.multiplier;
     const bonus = baseBonus * multiplier;
-    
+
     return {
       bonus,        // Итоговый бонус (например, 0.126 = +12.6%)
       baseBonus,    // Базовый до множителя
@@ -253,7 +255,7 @@
   // - Slow (Медленный): вторичная секреция, пик ~60-90 мин
   // - Hepatic (Печёночный): клиренс и производство, более плоская кривая
   // ============================================================================
-  I.WAVE_SHAPE_V2 = {
+  I.WAVE_SHAPE_V2 = C?.WAVE_SHAPE_V2 || {
     // Базовые компоненты Gaussian
     components: {
       fast: {
@@ -286,14 +288,14 @@
         alcoholBoost: 1.3    // Алкоголь влияет на печёночный метаболизм
       }
     },
-    
+
     // Параметры композиции
     composition: {
       baselineLevel: 0.05,   // Базальный уровень (5% от пика)
       normalizeToOne: true,  // Нормализовать пик к 1.0
       samplePoints: 100      // Точек для построения кривой
     },
-    
+
     // Пороги для категоризации формы волны
     shapeCategories: {
       spike: { fastRatio: 0.7, desc: 'Резкий пик (быстрые углеводы)' },
@@ -324,18 +326,18 @@
     const cfg = I.WAVE_SHAPE_V2.components;
     const { carbs = 0, simple = 0, complex = 0, protein = 0, fat = 0, fiber = 0, gi = 50 } = nutrients;
     const { isLiquid = false, irScore = 0, hasAlcohol = false } = context;
-    
+
     // Соотношения
     const simpleRatio = carbs > 0 ? simple / carbs : 0;
     const totalMacros = carbs + protein + fat;
     const proteinRatio = totalMacros > 0 ? protein / totalMacros : 0;
     const fatRatio = totalMacros > 0 ? fat / totalMacros : 0;
-    
+
     // === Fast компонент ===
     let fastAmplitude = cfg.fast.baseAmplitude;
     let fastSigma = cfg.fast.sigma;
     let fastPeak = cfg.fast.peakOffset;
-    
+
     // Высокий ГИ → больше быстрый компонент
     if (gi > 70) fastAmplitude *= cfg.fast.giMultiplier;
     // Много простых углеводов → ещё выше
@@ -351,29 +353,29 @@
       fastAmplitude *= cfg.fast.fiberDamping;
       fastSigma *= 1.2; // Шире пик
     }
-    
+
     // === Slow компонент ===
     let slowAmplitude = cfg.slow.baseAmplitude;
     let slowSigma = cfg.slow.sigma;
     let slowPeak = cfg.slow.peakOffset;
-    
+
     // Белок усиливает медленный компонент
     if (protein >= 20) slowAmplitude *= cfg.slow.proteinBoost;
     // Жиры тоже
     if (fat >= 15) slowAmplitude *= cfg.slow.fatBoost;
     // Сложные углеводы
     if (complex > simple) slowAmplitude *= cfg.slow.complexCarbBoost;
-    
+
     // === Hepatic компонент ===
     let hepaticAmplitude = cfg.hepatic.baseAmplitude;
     let hepaticSigma = cfg.hepatic.sigma;
     let hepaticPeak = cfg.hepatic.peakOffset;
-    
+
     // Инсулинорезистентность увеличивает этот компонент
     if (irScore > 0.3) hepaticAmplitude *= cfg.hepatic.insulinResistanceBoost * (1 + irScore);
     // Алкоголь влияет на печёночный метаболизм
     if (hasAlcohol) hepaticAmplitude *= cfg.hepatic.alcoholBoost;
-    
+
     return {
       fast: { amplitude: fastAmplitude, sigma: fastSigma, peak: fastPeak },
       slow: { amplitude: slowAmplitude, sigma: slowSigma, peak: slowPeak },
@@ -392,37 +394,37 @@
     const cfg = I.WAVE_SHAPE_V2;
     const params = I.calculateComponentParams(nutrients, context);
     const points = cfg.composition.samplePoints;
-    
+
     // Генерируем кривую
     const curve = [];
     let maxValue = 0;
     let sumValue = 0;
     let peakTime = 0;
-    
+
     for (let i = 0; i <= points; i++) {
       const t = i / points; // 0 to 1
-      
+
       // Сумма компонентов
       const fastValue = I.gaussianComponent(t, params.fast.peak, params.fast.sigma, params.fast.amplitude);
       const slowValue = I.gaussianComponent(t, params.slow.peak, params.slow.sigma, params.slow.amplitude);
       const hepaticValue = I.gaussianComponent(t, params.hepatic.peak, params.hepatic.sigma, params.hepatic.amplitude);
-      
+
       const totalValue = cfg.composition.baselineLevel + fastValue + slowValue + hepaticValue;
-      
+
       curve.push({
         t,
         minutes: Math.round(t * waveMinutes),
         value: totalValue,
         components: { fast: fastValue, slow: slowValue, hepatic: hepaticValue }
       });
-      
+
       sumValue += totalValue;
       if (totalValue > maxValue) {
         maxValue = totalValue;
         peakTime = t;
       }
     }
-    
+
     // Нормализуем к 1.0 если требуется
     if (cfg.composition.normalizeToOne && maxValue > 0) {
       curve.forEach(point => {
@@ -432,16 +434,16 @@
         point.components.hepatic /= maxValue;
       });
     }
-    
+
     // Определяем форму волны
     const fastContribution = params.fast.amplitude / (params.fast.amplitude + params.slow.amplitude + params.hepatic.amplitude);
     let shape = 'balanced';
     if (fastContribution >= cfg.shapeCategories.spike.fastRatio) shape = 'spike';
     else if (fastContribution <= cfg.shapeCategories.prolonged.fastRatio) shape = 'prolonged';
-    
+
     // AUC (площадь под кривой, нормализованная)
     const auc = sumValue / (points + 1);
-    
+
     return {
       curve,                              // Массив точек кривой
       peakTime,                           // Время пика (0-1)
@@ -462,7 +464,7 @@
   // AUC = интегральный показатель инсулинового ответа
   // Полезнее чем просто "пик" или "длина" волны
   // ============================================================================
-  I.AUC_CONFIG = {
+  I.AUC_CONFIG = C?.AUC_CONFIG || {
     // Методы расчёта
     methods: {
       trapezoidal: true,     // Метод трапеций (основной)
@@ -492,30 +494,30 @@
    */
   I.calculateTrapezoidalAUC = (curve, startT = 0, endT = 1) => {
     if (!curve || curve.length < 2) return 0;
-    
+
     let auc = 0;
     for (let i = 1; i < curve.length; i++) {
       const prev = curve[i - 1];
       const curr = curve[i];
-      
+
       // Проверяем что точки в интервале
       if (prev.t < startT || curr.t > endT) continue;
       if (curr.t <= startT || prev.t >= endT) continue;
-      
+
       // Обрезаем по границам интервала
       const t1 = Math.max(prev.t, startT);
       const t2 = Math.min(curr.t, endT);
-      
+
       // Интерполируем значения на границах
       const ratio1 = prev.t === curr.t ? 0 : (t1 - prev.t) / (curr.t - prev.t);
       const ratio2 = prev.t === curr.t ? 1 : (t2 - prev.t) / (curr.t - prev.t);
       const v1 = prev.value + ratio1 * (curr.value - prev.value);
       const v2 = prev.value + ratio2 * (curr.value - prev.value);
-      
+
       // Площадь трапеции
       auc += (v1 + v2) * (t2 - t1) / 2;
     }
-    
+
     return auc;
   };
 
@@ -527,13 +529,13 @@
    */
   I.calculateIncrementalAUC = (curve, baseline = 0) => {
     if (!curve || curve.length < 2) return 0;
-    
+
     // Создаём кривую с вычтенным baseline
     const adjustedCurve = curve.map(p => ({
       t: p.t,
       value: Math.max(0, p.value - baseline) // Только положительные превышения
     }));
-    
+
     return I.calculateTrapezoidalAUC(adjustedCurve);
   };
 
@@ -546,13 +548,13 @@
   I.calculateFullAUC = (curve, options = {}) => {
     const { baseline = I.WAVE_SHAPE_V2.composition.baselineLevel, normalize = true } = options;
     const cfg = I.AUC_CONFIG;
-    
+
     // Полный AUC
     const totalAUC = I.calculateTrapezoidalAUC(curve);
-    
+
     // Incremental AUC (только превышение над базой)
     const iAUC = I.calculateIncrementalAUC(curve, baseline);
-    
+
     // AUC по сегментам
     const segments = {};
     Object.entries(cfg.segments).forEach(([key, seg]) => {
@@ -563,17 +565,17 @@
         end: seg.end
       };
     });
-    
+
     // Соотношение раннего к позднему (показатель "скорости" ответа)
-    const earlyLateRatio = segments.late.auc > 0 
-      ? segments.early.auc / segments.late.auc 
+    const earlyLateRatio = segments.late.auc > 0
+      ? segments.early.auc / segments.late.auc
       : 0;
-    
+
     // Категоризация по форме AUC
     let aucShape = 'normal';
     if (earlyLateRatio > 1.5) aucShape = 'front-loaded'; // Быстрый ответ
     else if (earlyLateRatio < 0.5) aucShape = 'prolonged'; // Затянутый ответ
-    
+
     return {
       total: totalAUC,
       incremental: iAUC,
@@ -595,10 +597,10 @@
   // 🔬 Научное обоснование: Dalla Man et al. 2007 (PMID: 17513708)
   // Модель UVA/Padova — предиктивная модель глюкозо-инсулиновой динамики
   // ============================================================================
-  I.INSULIN_PREDICTOR_CONFIG = {
+  I.INSULIN_PREDICTOR_CONFIG = C?.INSULIN_PREDICTOR_CONFIG || {
     // Стандартные временные точки прогноза (минуты)
     timePoints: [15, 30, 60, 90, 120],
-    
+
     // Уровни для интерпретации (относительно пика)
     levels: {
       peak: { min: 0.9, max: 1.0, label: 'Пиковый уровень' },
@@ -607,7 +609,7 @@
       low: { min: 0.1, max: 0.3, label: 'Низкий уровень' },
       baseline: { min: 0, max: 0.1, label: 'Базовый уровень' }
     },
-    
+
     // Пороги для рекомендаций
     thresholds: {
       safeToEat: 0.3,        // Безопасно есть снова (≤30% от пика)
@@ -626,15 +628,15 @@
     if (!curve || curve.length === 0) {
       return { value: 0, level: 'baseline', label: 'Нет данных' };
     }
-    
+
     // Находим ближайшую точку или интерполируем
     const waveMinutes = curve[curve.length - 1].minutes;
     const t = Math.min(minutes / waveMinutes, 1);
-    
+
     // Находим точки для интерполяции
     let prev = curve[0];
     let next = curve[curve.length - 1];
-    
+
     for (let i = 0; i < curve.length - 1; i++) {
       if (curve[i].t <= t && curve[i + 1].t >= t) {
         prev = curve[i];
@@ -642,21 +644,21 @@
         break;
       }
     }
-    
+
     // Линейная интерполяция
     const ratio = next.t === prev.t ? 0 : (t - prev.t) / (next.t - prev.t);
     const value = prev.value + ratio * (next.value - prev.value);
-    
+
     // Определяем уровень
     const cfg = I.INSULIN_PREDICTOR_CONFIG.levels;
     let level = 'baseline';
     let label = cfg.baseline.label;
-    
+
     if (value >= cfg.peak.min) { level = 'peak'; label = cfg.peak.label; }
     else if (value >= cfg.high.min) { level = 'high'; label = cfg.high.label; }
     else if (value >= cfg.moderate.min) { level = 'moderate'; label = cfg.moderate.label; }
     else if (value >= cfg.low.min) { level = 'low'; label = cfg.low.label; }
-    
+
     return { value, level, label, minutes, t };
   };
 
@@ -668,7 +670,7 @@
    */
   I.predictInsulinResponse = (curve, waveMinutes) => {
     const cfg = I.INSULIN_PREDICTOR_CONFIG;
-    
+
     // Прогнозы на стандартные точки
     const predictions = cfg.timePoints.map(minutes => {
       const result = I.getInsulinLevelAtTime(curve, minutes);
@@ -678,16 +680,16 @@
         formatted: `${minutes} мин: ${(result.value * 100).toFixed(0)}% — ${result.label}`
       };
     });
-    
+
     // Находим важные моменты
     let safeToEatAt = null;
     let fatBurningAt = null;
     let optimalWindowAt = null;
-    
+
     for (const point of curve) {
       const minutes = point.minutes;
       const value = point.value;
-      
+
       if (safeToEatAt === null && value <= cfg.thresholds.safeToEat) {
         safeToEatAt = minutes;
       }
@@ -698,10 +700,10 @@
         optimalWindowAt = minutes;
       }
     }
-    
+
     // Рекомендации
     const recommendations = [];
-    
+
     if (safeToEatAt) {
       recommendations.push({
         type: 'safe_to_eat',
@@ -710,7 +712,7 @@
         icon: '🍽️'
       });
     }
-    
+
     if (fatBurningAt) {
       recommendations.push({
         type: 'fat_burning',
@@ -719,7 +721,7 @@
         icon: '🔥'
       });
     }
-    
+
     if (optimalWindowAt) {
       recommendations.push({
         type: 'optimal_window',
@@ -728,7 +730,7 @@
         icon: '⭐'
       });
     }
-    
+
     return {
       predictions,
       recommendations,
@@ -747,9 +749,9 @@
     const p30 = predictions.find(p => p.minutes === 30);
     const p60 = predictions.find(p => p.minutes === 60);
     const p120 = predictions.find(p => p.minutes === 120);
-    
+
     let summary = '';
-    
+
     if (p30) {
       summary += `Через 30 мин: ${p30.label.toLowerCase()}. `;
     }
@@ -759,7 +761,7 @@
     if (fatBurningAt) {
       summary += `Жиросжигание: с ${fatBurningAt} мин.`;
     }
-    
+
     return summary.trim();
   };
 
@@ -769,7 +771,7 @@
   // 🔬 Научное обоснование: Интегральная оценка инсулинового ответа
   // Учитывает: пик, длительность, форму, AUC, контекст
   // ============================================================================
-  I.WAVE_SCORING_V2 = {
+  I.WAVE_SCORING_V2 = C?.WAVE_SCORING_V2 || {
     // Веса компонентов оценки (сумма = 1.0)
     weights: {
       peakHeight: 0.25,      // Высота пика (меньше = лучше)
@@ -778,7 +780,7 @@
       auc: 0.20,             // Площадь под кривой
       context: 0.15          // Контекст (тренировка, время суток)
     },
-    
+
     // Пороги для каждого компонента
     thresholds: {
       peakHeight: {
@@ -799,7 +801,7 @@
         poor: 1.5
       }
     },
-    
+
     // Итоговые уровни оценки
     levels: {
       excellent: { min: 85, label: 'Отлично', icon: '🌟', color: '#22c55e' },
@@ -816,7 +818,7 @@
    */
   I.scorePeakHeight = (peakValue) => {
     const th = I.WAVE_SCORING_V2.thresholds.peakHeight;
-    
+
     if (peakValue <= th.excellent) return 100;
     if (peakValue <= th.good) {
       return 100 - (peakValue - th.excellent) / (th.good - th.excellent) * 20;
@@ -835,15 +837,15 @@
   I.scoreDuration = (minutes) => {
     const th = I.WAVE_SCORING_V2.thresholds.duration;
     const deviation = Math.abs(minutes - th.target);
-    
+
     if (deviation <= th.tolerance) {
       return 100 - (deviation / th.tolerance) * 15; // До 85 при макс отклонении в норме
     }
-    
+
     const extraDeviation = deviation - th.tolerance;
     const penaltyRange = th.maxPenalty - th.tolerance;
     const penalty = Math.min(1, extraDeviation / penaltyRange);
-    
+
     return Math.max(0, 85 - penalty * 85);
   };
 
@@ -859,7 +861,7 @@
       case 'prolonged': return 95;
       case 'balanced': return 80;
       case 'spike': return 50;
-      default: 
+      default:
         // Плавная оценка по fastContribution
         // Меньше fast = лучше
         return Math.round(100 - fastContribution * 60);
@@ -873,7 +875,7 @@
    */
   I.scoreAUC = (normalizedAUC) => {
     const th = I.WAVE_SCORING_V2.thresholds.auc;
-    
+
     if (normalizedAUC <= th.excellent) return 100;
     if (normalizedAUC <= th.good) {
       return 100 - (normalizedAUC - th.excellent) / (th.good - th.excellent) * 20;
@@ -894,12 +896,12 @@
    */
   I.scoreContext = (context = {}) => {
     let score = 70; // Базовый уровень
-    
+
     // Бонус за тренировку
     if (context.hasTraining || context.isPostWorkout) {
       score += 15; // Инсулин идёт в мышцы
     }
-    
+
     // Бонус за хорошее время суток
     const period = context.circadianPeriod;
     if (period === 'morning' || period === 'day') {
@@ -907,12 +909,12 @@
     } else if (period === 'night') {
       score -= 10; // Худшая чувствительность ночью
     }
-    
+
     // Бонус за оптимальный интервал между приёмами
     if (context.mealGapMinutes && context.mealGapMinutes >= 180) {
       score += 5;
     }
-    
+
     return Math.min(100, Math.max(0, score));
   };
 
@@ -925,7 +927,7 @@
   I.calculateWaveScore = (waveData, context = {}) => {
     const cfg = I.WAVE_SCORING_V2;
     const weights = cfg.weights;
-    
+
     // Компоненты оценки
     const components = {
       peakHeight: {
@@ -954,14 +956,14 @@
         weight: weights.context
       }
     };
-    
+
     // Взвешенная сумма
     const totalScore = Object.values(components).reduce((sum, comp) => {
       return sum + comp.score * comp.weight;
     }, 0);
-    
+
     const score = Math.round(totalScore);
-    
+
     // Определяем уровень
     let level = cfg.levels.poor;
     for (const [key, lvl] of Object.entries(cfg.levels)) {
@@ -969,10 +971,10 @@
         level = { ...lvl, key };
       }
     }
-    
+
     // Рекомендации по улучшению
     const recommendations = [];
-    
+
     if (components.peakHeight.score < 70) {
       recommendations.push({
         type: 'peak',
@@ -980,7 +982,7 @@
         icon: '🥬'
       });
     }
-    
+
     if (components.shape.score < 70) {
       recommendations.push({
         type: 'shape',
@@ -988,7 +990,7 @@
         icon: '🍞'
       });
     }
-    
+
     if (components.context.score < 70 && !context.hasTraining) {
       recommendations.push({
         type: 'activity',
@@ -996,7 +998,7 @@
         icon: '🚶'
       });
     }
-    
+
     return {
       score,
       level,
@@ -1010,29 +1012,29 @@
   // Клетчатка СНИЖАЕТ пик инсулина и общую AUC на 20-30% (Wolever 1991, Jenkins 1978)
   // 'Пик ниже, волна сглажена' — УМЕНЬШЕНИЕ волны, не увеличение!
   // Механизм: замедляет усвоение углеводов, снижает гликемический ответ
-  I.FIBER_BONUS = {
+  I.FIBER_BONUS = C?.FIBER_BONUS || {
     veryHigh: { threshold: 15, bonus: -0.20 }, // 15+ г клетчатки → -20% волна
     high: { threshold: 10, bonus: -0.15 },     // 10-15 г → -15%
     medium: { threshold: 5, bonus: -0.08 }     // 5-10 г → -8%
   };
-  
+
   // 🧈 FAT SLOWDOWN — жиры замедляют опорожнение желудка (gastric emptying)
   // Исследования: Liddle et al., 1991 — пищеварение замедляется
   // НО: эффект на ИНСУЛИН меньше чем на пищеварение!
   // 🔬 v3.7.5: Калибровка — снижены бонусы (реальный эффект ~10-15%, не 25%)
   // Жиры СГЛАЖИВАЮТ пик, но не так сильно удлиняют волну
-  I.FAT_BONUS = {
+  I.FAT_BONUS = C?.FAT_BONUS || {
     high: { threshold: 25, bonus: 0.15 },    // 25+ г жира → +15% к длине волны (было +25%)
     medium: { threshold: 15, bonus: 0.10 },  // 15+ г жира → +10% к длине волны (было +15%)
     low: { threshold: 8, bonus: 0.05 }       // 8+ г жира → +5% (было +8%)
   };
-  
+
   // 🥤 LIQUID FOOD — жидкая пища усваивается БЫСТРЕЕ
   // 🔬 НАУЧНЫЙ АУДИТ 2025-12-10 (ChatGPT Research):
   // 'Жидкие калории (сок, смузи) дают более быстрый и ВЫСОКИЙ пик (+30-50%)'
   // Но общая длительность волны КОРОЧЕ (нет механического переваривания)
   // Peak higher but duration shorter = компромисс
-  I.LIQUID_FOOD = {
+  I.LIQUID_FOOD = C?.LIQUID_FOOD || {
     waveMultiplier: 0.75,   // Волна на 25% короче (было 18%)
     peakMultiplier: 1.35,   // 🆕 Пик на 35% выше (новый параметр)
     // Паттерны для определения жидкой пищи по названию
@@ -1050,11 +1052,11 @@
     // Категории которые считаются жидкими
     categories: ['Напитки', 'Соки', 'Молочные напитки']
   };
-  
+
   // 🥛 INSULINOGENIC CATEGORIES — некоторые продукты вызывают сильный инсулиновый ответ
   // даже при низком ГИ (молоко ГИ=30, но инсулиновый индекс=90!)
   // Holt et al. (1997) — "An insulin index of foods"
-  I.INSULINOGENIC_BONUS = {
+  I.INSULINOGENIC_BONUS = C?.INSULINOGENIC_BONUS || {
     // Жидкие молочные — максимальный инсулиновый ответ (сывороточный белок)
     liquidDairy: {
       bonus: 0.15,  // +15% к длине волны
@@ -1080,7 +1082,7 @@
       categories: ['Мясо', 'Рыба', 'Птица', 'Морепродукты', 'Meat', 'Fish']
     }
   };
-  
+
   // 📊 GLYCEMIC LOAD SCALING — GL точнее предсказывает инсулиновый ответ чем просто GI
   // GL = GI × углеводы / 100 (Brand-Miller et al., 2003)
   // Пример: арбуз GI=72 высокий, но 100г арбуза = 6г углеводов → GL=4.3 (низкая!)
@@ -1094,7 +1096,7 @@
   // 
   // КЛЮЧЕВАЯ КОРРЕКЦИЯ: Множители снижены для GL < 10
   // Пример: 35г блина (GL=7) → волна ~1.5ч, НЕ 2.3ч
-  I.GL_CATEGORIES = {
+  I.GL_CATEGORIES = C?.GL_CATEGORIES || {
     micro: { max: 2, multiplier: 0.25, desc: 'микро-инсулин' },             // GL<2 = ~25% волны (45 мин), кофе+молоко
     veryLow: { max: 5, multiplier: 0.40, desc: 'минимальный инсулин' },     // ~40% волны (72 мин), почти кето-еда
     low: { max: 10, multiplier: 0.55, desc: 'слабый инсулиновый ответ' },   // ~55% волны (99 мин ≈ 1.5ч)
@@ -1102,15 +1104,15 @@
     high: { max: 30, multiplier: 1.15, desc: 'сильный инсулиновый ответ' }, // +15% волны
     veryHigh: { max: Infinity, multiplier: 1.25, desc: 'максимальный инсулин' } // +25%
   };
-  
+
   // ═══════════════════════════════════════════════════════════════════════════
   // 🆕 НОВЫЕ КОНЦЕПЦИИ v3.0.0
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   // 📈 НЕПРЕРЫВНАЯ ФОРМУЛА GL — плавная кривая вместо ступенчатых категорий
   // Научное обоснование: Brand-Miller 2003 — GL лучший предиктор инсулинового ответа
   // Формула: степенная функция с плавным переходом
-  I.GL_CONTINUOUS = {
+  I.GL_CONTINUOUS = C?.GL_CONTINUOUS || {
     minGL: 0,           // Минимальная GL
     maxGL: 40,          // После этого значения — максимальный эффект
     minMultiplier: 0.15, // Множитель при GL=0 (15% волны ≈ 27 мин)
@@ -1128,7 +1130,7 @@
   // - Kahn & Flier 2000: BMI влияет на инсулинорезистентность
   // - Nuutila 1995: женщины имеют лучшую чувствительность к инсулину
   // 🆕 v3.0.1: Уменьшены коэффициенты — при низкой GL эффект всё равно скалируется
-  I.PERSONAL_BASELINE = {
+  I.PERSONAL_BASELINE = C?.PERSONAL_BASELINE || {
     defaultWaveHours: 3.0,  // Стандартный базовый период
     minWaveHours: 1.5,      // Минимум (очень чувствительные к инсулину)
     maxWaveHours: 4.5,      // 🆕 Уменьшено с 5.0 (слишком долгие волны нереалистичны)
@@ -1156,7 +1158,7 @@
   // 
   // Старая логика (НЕПРАВИЛЬНАЯ): перехлёст удлинял волну (+40%)
   // Новая логика (ПРАВИЛЬНАЯ): перехлёст укорачивает волну (-10...-15%)
-  I.MEAL_STACKING = {
+  I.MEAL_STACKING = C?.MEAL_STACKING || {
     enabled: true,
     // 🆕 v3.7.4: ОТРИЦАТЕЛЬНЫЙ бонус — волна КОРОЧЕ при перехлёсте
     // Научное обоснование: инсулин уже секретирован → меньше нужно для второго приёма
@@ -1171,7 +1173,7 @@
   // 2. Plateau (плато): 30-90 мин — максимальный уровень
   // 3. Decline (спад): 60-120 мин — постепенное снижение
   // 4. Lipolysis (липолиз): после спада — жиросжигание активно
-  I.WAVE_PHASES = {
+  I.WAVE_PHASES = C?.WAVE_PHASES || {
     rise: {
       baseMinutes: 20,        // Базовое время подъёма
       fiberBonus: 3,          // +3 мин за каждые 5г клетчатки
@@ -1211,33 +1213,33 @@
   // - peakMultiplier: увеличивает ПИКОВЫЙ инсулин (для визуализации)
   // - waveMultiplier: уменьшает ДЛИНУ волны (быстрее спад)
   // - glBoost: умеренное увеличение effectiveGL (для корректного расчёта)
-  I.INSULIN_INDEX_FACTORS = {
+  I.INSULIN_INDEX_FACTORS = C?.INSULIN_INDEX_FACTORS || {
     // Множители для разных типов продуктов
-    liquidDairy: { 
+    liquidDairy: {
       glBoost: 1.5,          // GL ×1.5 (не ×3.0 — слишком агрессивно)
       peakMultiplier: 1.35,  // Пик инсулина +35%
       waveMultiplier: 0.85,  // Волна -15% (быстрее спад)
       desc: 'Молоко, кефир — быстрый пик, короткая волна'
     },
-    softDairy: { 
+    softDairy: {
       glBoost: 1.3,          // GL ×1.3
       peakMultiplier: 1.25,  // Пик +25%
       waveMultiplier: 0.90,  // Волна -10%
       desc: 'Йогурт, творог'
     },
-    hardDairy: { 
+    hardDairy: {
       glBoost: 1.1,          // GL ×1.1
       peakMultiplier: 1.10,  // Пик +10%
       waveMultiplier: 0.95,  // Волна -5%
       desc: 'Сыр — медленнее усваивается'
     },
-    pureProtein: { 
+    pureProtein: {
       glBoost: 1.2,          // GL ×1.2 (белок даёт инсулин без углеводов)
       peakMultiplier: 1.15,  // Пик +15%
       waveMultiplier: 0.92,  // Волна -8%
       desc: 'Мясо, рыба — умеренный II'
     },
-    highFiber: { 
+    highFiber: {
       glBoost: 0.8,          // GL ×0.8 (снижает GL!)
       peakMultiplier: 0.85,  // Пик -15%
       waveMultiplier: 1.10,  // Волна +10% (дольше усваивается)
@@ -1248,9 +1250,9 @@
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   // 🏃 WORKOUT ACCELERATION — тренировка ускоряет метаболизм
-  I.WORKOUT_BONUS = {
+  I.WORKOUT_BONUS = C?.WORKOUT_BONUS || {
     // Минуты тренировки → бонус к скорости волны (уменьшение длительности)
     high: { threshold: 45, bonus: -0.15 },   // 45+ мин → волна на 15% короче
     medium: { threshold: 20, bonus: -0.08 }, // 20+ мин → волна на 8% короче
@@ -1264,7 +1266,7 @@
   // 
   // 🆕 v3.5.1: УСИЛЕНЫ БОНУСЫ — интенсивная тренировка сразу после еды
   // практически ОСТАНАВЛИВАЕТ волну (GLUT4 работает без инсулина)
-  I.POSTPRANDIAL_EXERCISE = {
+  I.POSTPRANDIAL_EXERCISE = C?.POSTPRANDIAL_EXERCISE || {
     // Окно эффекта: 0-2 часа после еды = максимальный эффект
     maxWindow: 120,  // 2 часа (в минутах)
     // 🆕 v3.5.1: УСИЛЕННЫЕ бонусы по интенсивности (ПОСЛЕ еды)
@@ -1293,26 +1295,26 @@
   // 🏡 NEAT (Non-Exercise Activity Thermogenesis) — бытовая активность
   // Научное обоснование: Hamilton et al. 2007, Levine et al. 2002
   // Постоянная низкоинтенсивная активность улучшает чувствительность к инсулину
-  I.NEAT_BONUS = {
+  I.NEAT_BONUS = C?.NEAT_BONUS || {
     high: { threshold: 60, bonus: -0.10 },    // 60+ мин → волна на 10% короче
     medium: { threshold: 30, bonus: -0.05 },  // 30+ мин → волна на 5% короче
     low: { threshold: 15, bonus: -0.02 }      // 15+ мин → минимальный эффект
   };
 
   // 🚶 STEPS — шаги тоже влияют на метаболизм глюкозы
-  I.STEPS_BONUS = {
+  I.STEPS_BONUS = C?.STEPS_BONUS || {
     high: { threshold: 8000, bonus: -0.08 },   // 8000+ шагов → -8%
     medium: { threshold: 5000, bonus: -0.04 }, // 5000+ шагов → -4%
     low: { threshold: 2000, bonus: -0.02 }     // 2000+ шагов → -2%
   };
-  
+
   // 🌅 CIRCADIAN RHYTHM — метаболизм меняется в течение дня
   // 🔬 v3.8.0: ПЛАВНАЯ синусоидальная кривая вместо ступеней (Van Cauter 1997)
   // Научное обоснование:
   // - Пик инсулиновой чувствительности: 7-9 утра (×0.85)
   // - Минимум: 22-02 ночи (×1.20)
   // - Переход плавный, привязан к 24-часовому ритму кортизола
-  I.CIRCADIAN_CONFIG = {
+  I.CIRCADIAN_CONFIG = C?.CIRCADIAN_CONFIG || {
     // Ключевые точки суточного ритма (для плавной интерполяции)
     peakHour: 8,           // Час максимальной чувствительности (08:00)
     nadirHour: 24,         // Час минимальной чувствительности (00:00)
@@ -1329,21 +1331,21 @@
       night: { from: 0, to: 5, desc: 'Ночной режим 🌑' }
     }
   };
-  
+
   // Legacy константа для обратной совместимости
-  I.CIRCADIAN_MULTIPLIERS = {
+  I.CIRCADIAN_MULTIPLIERS = C?.CIRCADIAN_MULTIPLIERS || {
     morning: { from: 6, to: 10, multiplier: 0.9, desc: 'Утренний метаболизм 🌅' },
     midday: { from: 10, to: 14, multiplier: 0.95, desc: 'Обеденный пик 🌞' },
     afternoon: { from: 14, to: 18, multiplier: 1.0, desc: 'Дневной баланс ☀️' },
     evening: { from: 18, to: 22, multiplier: 1.1, desc: 'Вечерний спад 🌆' },
     night: { from: 22, to: 6, multiplier: 1.2, desc: 'Ночной режим 🌙' }
   };
-  
+
   // 🍽️ FASTING — голодание ПОВЫШАЕТ чувствительность к инсулину (Sutton et al., 2018)
   // После 12+ часов без еды организм более чувствителен к инсулину
   // Инсулин работает эффективнее → быстрее очищает глюкозу → волна КОРОЧЕ
   // НО: при очень долгом голодании (24ч+) может быть противоположный эффект
-  I.FASTING_BONUS = {
+  I.FASTING_BONUS = C?.FASTING_BONUS || {
     // Часы голодания → бонус к длине волны (отрицательный = короче)
     long: { threshold: 16, bonus: -0.15 },   // 16+ часов = −15% волна (быстрее усвоение)
     medium: { threshold: 12, bonus: -0.10 }, // 12+ часов = −10%
@@ -1353,7 +1355,7 @@
   // 🌶️ SPICY FOOD — острая пища ускоряет метаболизм через термогенез
   // Капсаицин увеличивает расход энергии, но эффект умеренный (Ludy & Mattes, 2011)
   // Реальный эффект ~3-5%, не 8%
-  I.SPICY_FOOD = {
+  I.SPICY_FOOD = C?.SPICY_FOOD || {
     multiplier: 0.96,  // На 4% быстрее
     patterns: [
       /перец.*чили/i, /чили/i, /халапеньо/i, /jalapeno/i,
@@ -1368,7 +1370,7 @@
 
   // 🍷 ALCOHOL — алкоголь замедляет метаболизм и блокирует липолиз
   // Печень переключается на переработку алкоголя, инсулин дольше в крови
-  I.ALCOHOL_BONUS = {
+  I.ALCOHOL_BONUS = C?.ALCOHOL_BONUS || {
     high: { bonus: 0.25 },    // Крепкие напитки, много
     medium: { bonus: 0.18 },  // Вино, пиво
     low: { bonus: 0.10 },     // Слабоалкогольные
@@ -1390,7 +1392,7 @@
   // ⚠️ Важно: RegExp без границ слова даёт ложные совпадения.
   // Пример: "свино-говядина" содержит подстроку "вино".
   // Поэтому для алкоголя используем токены (слова) + exact/prefix матчи.
-  I.ALCOHOL_MATCH = {
+  I.ALCOHOL_MATCH = C?.ALCOHOL_MATCH || {
     strongExact: ['водка', 'виски', 'whisky', 'whiskey', 'коньяк', 'cognac', 'текила', 'tequila', 'джин', 'gin', 'ром', 'rum'],
     mediumExact: ['вино', 'wine', 'шампанское', 'champagne', 'просекко', 'мартини', 'martini', 'вермут', 'vermouth'],
     weakExact: ['пиво', 'beer', 'сидр', 'cider', 'эль', 'ale', 'лагер', 'lager', 'ликер', 'liqueur'],
@@ -1432,9 +1434,14 @@
     return words.every((w) => tokens.some((t) => t.startsWith(w)));
   }
 
+  function testPatterns(patterns, text) {
+    if (!Array.isArray(patterns)) return false;
+    return patterns.some((p) => p && typeof p.test === 'function' && p.test(text));
+  }
+
   // ☕ CAFFEINE — кофеин имеет краткосрочный эффект на инсулин
   // Исследования неоднозначны: острый эффект ~5-10%, но долгосрочно нейтрален (Lane, 2011)
-  I.CAFFEINE_BONUS = {
+  I.CAFFEINE_BONUS = C?.CAFFEINE_BONUS || {
     bonus: 0.06,  // +6% к волне (краткосрочный эффект)
     patterns: [
       /кофе/i, /coffee/i, /эспрессо/i, /espresso/i,
@@ -1451,7 +1458,7 @@
   // 😰 STRESS — кортизол повышает инсулин и инсулинорезистентность
   // Высокий стресс = дольше инсулиновая волна
   // ⚠️ Шкала стресса в HEYS: 1-10 (не 1-5!)
-  I.STRESS_BONUS = {
+  I.STRESS_BONUS = C?.STRESS_BONUS || {
     high: { threshold: 7, bonus: 0.15 },    // Стресс 7-10 → +15%
     medium: { threshold: 5, bonus: 0.08 },  // Стресс 5-6 → +8%
     low: { threshold: 3, bonus: 0.00 }      // Стресс 1-4 → нет эффекта
@@ -1459,7 +1466,7 @@
 
   // 😴 SLEEP DEPRIVATION — недосып повышает инсулинорезистентность
   // Даже одна ночь плохого сна увеличивает инсулинорезистентность на 20-30%
-  I.SLEEP_BONUS = {
+  I.SLEEP_BONUS = C?.SLEEP_BONUS || {
     severe: { maxHours: 4, bonus: 0.20 },   // <4ч сна → +20%
     moderate: { maxHours: 5, bonus: 0.15 }, // 4-5ч → +15%
     mild: { maxHours: 6, bonus: 0.08 },     // 5-6ч → +8%
@@ -1472,7 +1479,7 @@
   // 🔬 v3.7.4: Скорректировано — +23% это для КЛИНИЧЕСКИ плохого сна в лаборатории
   // Для обычного бытового плохого сна эффект ~8%
   // ⚠️ Шкала качества в HEYS: 1-10
-  I.SLEEP_QUALITY_BONUS = {
+  I.SLEEP_QUALITY_BONUS = C?.SLEEP_QUALITY_BONUS || {
     poor: { maxQuality: 4, bonus: 0.08 },      // Качество 1-4 → +8% (было +12%)
     mediocre: { maxQuality: 6, bonus: 0.04 },  // Качество 5-6 → +4% (было +6%)
     good: { maxQuality: 10, bonus: 0.00 }      // Качество 7-10 → нет эффекта
@@ -1482,7 +1489,7 @@
   // Carroll et al. (2016): дегидратация повышает кортизол и глюкозу
   // 🔬 v3.7.4: Скорректировано — эффект дегидратации на инсулин ~5-8%, не 12%
   // Норма: ~35 мл/кг веса в день (для 70кг = 2450мл)
-  I.HYDRATION_BONUS = {
+  I.HYDRATION_BONUS = C?.HYDRATION_BONUS || {
     // Процент от нормы → бонус
     severe: { maxPct: 30, bonus: 0.08 },    // <30% нормы → +8% (было +12%)
     moderate: { maxPct: 50, bonus: 0.05 },  // 30-50% → +5% (было +8%)
@@ -1495,7 +1502,7 @@
   // 'У 70-летних AUC инсулина может быть в ~1.5 раза больше (+50%)'
   // DeFronzo (1979): каждые 10 лет = -7-8% чувствительности
   // Chen (1985): у пожилых пик инсулина выше, клиренс медленнее
-  I.AGE_BONUS = {
+  I.AGE_BONUS = C?.AGE_BONUS || {
     senior: { minAge: 70, bonus: 0.40 },    // 70+ лет → +40% (почти ×1.5)
     elderly: { minAge: 60, bonus: 0.25 },   // 60-69 → +25%
     middle: { minAge: 45, bonus: 0.12 },    // 45-59 → +12%
@@ -1505,7 +1512,7 @@
 
   // 🏋️ BMI — избыточный вес снижает инсулиновую чувствительность
   // Kahn & Flier (2000): каждые +5 единиц BMI = -30% чувствительности
-  I.BMI_BONUS = {
+  I.BMI_BONUS = C?.BMI_BONUS || {
     obese: { minBMI: 30, bonus: 0.20 },     // Ожирение (BMI 30+) → +20%
     overweight: { minBMI: 25, bonus: 0.10 }, // Избыточный вес (25-30) → +10%
     normal: { minBMI: 0, bonus: 0.00 }      // Норма (<25) → нет эффекта
@@ -1513,7 +1520,7 @@
 
   // 🚺🚹 GENDER — женщины имеют лучшую инсулиновую чувствительность
   // Nuutila et al. (1995): женщины ~15% чувствительнее мужчин
-  I.GENDER_BONUS = {
+  I.GENDER_BONUS = C?.GENDER_BONUS || {
     male: 0.05,    // Мужчины → +5% к волне
     female: -0.05, // Женщины → -5% к волне
     other: 0.00    // Другое → нет эффекта
@@ -1521,7 +1528,7 @@
 
   // 🍟 TRANS FATS — транс-жиры ухудшают инсулиновую чувствительность
   // Salmerón et al. (2001): транс-жиры = +39% риска диабета
-  I.TRANS_FAT_BONUS = {
+  I.TRANS_FAT_BONUS = C?.TRANS_FAT_BONUS || {
     high: { threshold: 2, bonus: 0.15 },    // 2+ г транс-жиров → +15%
     medium: { threshold: 1, bonus: 0.08 },  // 1-2 г → +8%
     low: { threshold: 0.5, bonus: 0.04 },   // 0.5-1 г → +4%
@@ -1537,7 +1544,7 @@
   // 'Углеводы последними дали ↓ глюкозы на 30-37% через 30-60 мин и ↓ инсулина на ~20-40%'
   // Shukla et al. 2015, Alpana et al. 2017: vegetables → protein → carbs = optimal
   // Механизм: клетчатка и белок замедляют опорожнение желудка перед углеводами
-  I.MEAL_ORDER_BONUS = {
+  I.MEAL_ORDER_BONUS = C?.MEAL_ORDER_BONUS || {
     carbsLast: -0.25,       // Углеводы в конце → -25% волна
     carbsFirst: 0.10,       // Углеводы сначала → +10% волна  
     mixed: 0.00             // Смешанно → нет эффекта
@@ -1549,10 +1556,11 @@
   // 'Жидкие калории = +30-50% пик инсулина, цельные продукты = более плавный ответ'
   // 'Обработанные продукты (refined) = быстрее усвоение'
   // Flood-Obbagy & Rolls 2009: apple vs apple sauce vs apple juice
-  I.FOOD_FORM_BONUS = {
+  I.FOOD_FORM_BONUS = C?.FOOD_FORM_BONUS || {
     liquid: { multiplier: 1.30, desc: 'Жидкое → +30% пик' },
     processed: { multiplier: 1.15, desc: 'Обработанное → +15%' },
     whole: { multiplier: 0.85, desc: 'Цельное → -15%' },
+    mixed: { multiplier: 1.0, desc: 'Смешанное → без изменения' },
     // Паттерны для определения формы
     liquidPatterns: [/сок\b/i, /смузи/i, /коктейль/i, /напиток/i],
     processedPatterns: [/хлопья/i, /мюсли.*готов/i, /быстр.*каша/i, /пюре.*пакет/i],
@@ -1564,7 +1572,7 @@
   // 'Охлаждённый рис/картофель: -15-20% гликемический ответ'
   // Robertson et al. 2005: resistant starch improves insulin sensitivity
   // Механизм: ретроградация крахмала при охлаждении → RS3
-  I.RESISTANT_STARCH_BONUS = {
+  I.RESISTANT_STARCH_BONUS = C?.RESISTANT_STARCH_BONUS || {
     cooled: -0.15,  // Охлаждённые крахмалы → -15% волна
     patterns: [
       /холодн.*рис/i, /рис.*холодн/i,
@@ -1580,14 +1588,14 @@
   // Механизм: тёплая пища быстрее покидает желудок → быстрее инсулиновый ответ
   // НО: быстрее пик = быстрее спад? Не обязательно — зависит от состава
   // Консервативная модель: горячее +8% волна (более резкий, но такой же по длине)
-  I.FOOD_TEMPERATURE_BONUS = {
-    hot: { 
+  I.FOOD_TEMPERATURE_BONUS = C?.FOOD_TEMPERATURE_BONUS || {
+    hot: {
       bonus: 0.08,        // +8% к волне (быстрее пик, но чуть дольше возврат)
       peakBoost: 1.15,    // Пик +15% (более резкий)
       patterns: [/суп/i, /борщ/i, /горяч/i, /каша/i, /пюре(?!.*пакет)/i, /рагу/i, /жарк/i, /варен/i, /тушен/i, /запечен/i, /печен/i, /жарен/i, /гриль/i],
       desc: '🔥 Горячее → быстрее пик'
     },
-    cold: { 
+    cold: {
       bonus: -0.05,       // -5% к волне (медленнее усвоение)
       peakBoost: 0.90,    // Пик -10% (более плавный)
       patterns: [/холодн/i, /мороженое/i, /ice.*cream/i, /смузи/i, /салат/i, /окрошка/i, /гаспачо/i, /охлажд/i],
@@ -1603,7 +1611,7 @@
   // "Gastric distension activates vagal inhibition of emptying"
   // Механизм: большая порция → желудок растянут → медленнее опорожнение
   // Результат: дольше волна, но ниже пик (растянутый ответ)
-  I.LARGE_PORTION_BONUS = {
+  I.LARGE_PORTION_BONUS = C?.LARGE_PORTION_BONUS || {
     thresholds: [
       { minKcal: 1200, bonus: 0.25, peakReduction: 0.80, desc: '>1200 ккал → +25% волна, -20% пик' },
       { minKcal: 1000, bonus: 0.18, peakReduction: 0.85, desc: '>1000 ккал → +18% волна' },
@@ -1620,7 +1628,7 @@
   // 'При ~50-100 µЕд/мл = практически полное подавление'
   // Campbell et al. 1992, Jensen et al. 1989
   // Используется для визуализации в UI
-  I.LIPOLYSIS_THRESHOLDS = {
+  I.LIPOLYSIS_THRESHOLDS = C?.LIPOLYSIS_THRESHOLDS || {
     full: { insulinUIml: 5, lipolysisPct: 100, desc: 'Полный липолиз' },        // <5 µЕд/мл
     partial: { insulinUIml: 15, lipolysisPct: 50, desc: '~50% липолиза' },      // 15 µЕд/мл
     suppressed: { insulinUIml: 50, lipolysisPct: 10, desc: 'Липолиз подавлен' }, // 50 µЕд/мл
@@ -1634,7 +1642,7 @@
   // Brun et al. 1995: reactive hypoglycemia patterns
   // 
   // 🆕 v3.8.0: Добавлен UI для предупреждения и проактивные советы
-  I.REACTIVE_HYPOGLYCEMIA = {
+  I.REACTIVE_HYPOGLYCEMIA = C?.REACTIVE_HYPOGLYCEMIA || {
     riskWindow: { start: 120, end: 240 },  // 2-4 часа после еды (в минутах)
     riskFactors: {
       highGI: { threshold: 70, weight: 0.4 },     // GI > 70
@@ -1676,36 +1684,36 @@
   // 3. Пик инсулина: -10% до -40% амплитуда
   // ═══════════════════════════════════════════════════════════════════════════
 
-  I.NDTE = {
+  I.NDTE = C?.NDTE || {
     // Максимальное окно эффекта (часы)
     maxWindowHours: 48,
-    
+
     // Пороги энергозатрат и соответствующие бонусы
     // Научное обоснование: Magkos 2008 — порог ~900 ккал для значимого эффекта
     kcalTiers: [
-      { 
-        minKcal: 900, 
+      {
+        minKcal: 900,
         tdeeBoost: 0.10,      // +10% к REE (Jamurtas 2004)
         waveReduction: 0.25,  // -25% волна (Mikines 1988: 23% меньше инсулина)
         peakReduction: 0.30,  // -30% пик инсулина
         label: '🔥 Мощная тренировка'
       },
-      { 
-        minKcal: 500, 
+      {
+        minKcal: 500,
         tdeeBoost: 0.07,      // +7% к REE
         waveReduction: 0.15,  // -15% волна
         peakReduction: 0.20,  // -20% пик
         label: '💪 Хорошая нагрузка'
       },
-      { 
-        minKcal: 300, 
+      {
+        minKcal: 300,
         tdeeBoost: 0.04,      // +4% к REE
         waveReduction: 0.08,  // -8% волна
         peakReduction: 0.10,  // -10% пик
         label: '⚡ Лёгкая активность'
       }
     ],
-    
+
     // BMI модификатор — люди с избыточным весом получают БОЛЬШЕ пользы
     // Научное обоснование: у инсулинорезистентных эффект 50-80% (vs 20-50% у здоровых)
     bmiMultiplier: {
@@ -1714,7 +1722,7 @@
       normal: { minBMI: 18.5, multiplier: 1.0 },   // BMI нормальный → ×1.0
       underweight: { minBMI: 0, multiplier: 0.8 }  // Недовес → ×0.8 (меньше запасов)
     },
-    
+
     // Временное затухание (decay) эффекта
     // Mikines 1988: эффект сохраняется 48ч, но постепенно ослабевает
     decay: {
@@ -1727,7 +1735,7 @@
         { maxHours: 48, multiplier: 0.25 }   // 36-48ч: 25%
       ]
     },
-    
+
     // Учёт типа тренировки
     // Jamurtas 2004: силовая даёт более долгий EPOC, кардио — больший эффект в первые часы
     typeMultiplier: {
@@ -1735,14 +1743,14 @@
       cardio: { tdee: 1.0, wave: 1.1 },    // Кардио: стандарт TDEE, +10% к волне
       hobby: { tdee: 0.8, wave: 0.8 }      // Хобби: ослабленные эффекты
     },
-    
+
     // Кумулятивный эффект нескольких тренировок
     // Если вчера было 2+ тренировки, эффекты складываются (с diminishing returns)
     cumulative: {
       enabled: true,
       maxMultiplier: 1.5  // Максимум ×1.5 от базового эффекта
     },
-    
+
     // UI конфигурация
     badge: '🔥 Эффект тренировки',
     badgeColor: '#10b981'  // Зелёный (позитивный эффект)
@@ -1767,7 +1775,7 @@
   // Научная база: Ivy & Kuo 1998, Colberg 2010, Erickson 2017
   // ═══════════════════════════════════════════════════════════════════════════
 
-  I.TRAINING_CONTEXT = {
+  I.TRAINING_CONTEXT = C?.TRAINING_CONTEXT || {
     // === 1. PERI-WORKOUT: Еда ВО ВРЕМЯ тренировки ===
     // Мышцы активно потребляют глюкозу через GLUT4 (non-insulin-dependent)
     // Инсулиновая волна минимальна — глюкоза сразу используется как топливо
@@ -1792,7 +1800,7 @@
       baseGap: 120,              // Базовое окно 2ч
       kcalScaling: 60,           // +60 мин за каждые 500 ккал (до 360)
       maxGap: 360,               // Максимум 6ч для очень тяжёлых тренировок
-      
+
       // Бонусы по времени после тренировки
       tiers: [
         { maxMin: 30, waveBonus: -0.40, label: '🔥 Анаболическое окно' },  // 0-30 мин
@@ -1801,10 +1809,10 @@
         { maxMin: 240, waveBonus: -0.15, label: '📉 Позднее окно' },        // 2-4ч
         { maxMin: 360, waveBonus: -0.08, label: '💨 Остаточный эффект' }    // 4-6ч
       ],
-      
+
       // КРИТИЧНО: Ночной штраф отменяется после тренировки!
       nightPenaltyOverride: true,
-      
+
       // Множители по типу тренировки для WAVE BONUS (укорочение волны)
       // Научное: кардио эффективнее активирует GLUT4, силовая даёт анаболический ответ
       typeMultipliers: {
@@ -1812,7 +1820,7 @@
         'strength': 1.0,        // Силовая — стандарт
         'hobby': 0.8            // Хобби — 80%
       },
-      
+
       badge: '🔄 Recovery',
       desc: 'Гликогеновое окно — еда идёт в восстановление'
     },
@@ -1832,8 +1840,8 @@
       tiers: [
         { threshold: 12000, waveBonus: -0.12, harmMultiplier: 0.92, badge: '🚶 12k шагов' },
         { threshold: 10000, waveBonus: -0.10, harmMultiplier: 0.95, badge: '🚶 Активный' },
-        { threshold: 7500,  waveBonus: -0.06, harmMultiplier: 0.97, badge: '🚶 7.5k шагов' },
-        { threshold: 5000,  waveBonus: -0.04, harmMultiplier: 0.98, badge: '🚶 5k шагов' }
+        { threshold: 7500, waveBonus: -0.06, harmMultiplier: 0.97, badge: '🚶 7.5k шагов' },
+        { threshold: 5000, waveBonus: -0.04, harmMultiplier: 0.98, badge: '🚶 5k шагов' }
       ],
       // Для вечерних приёмов (18:00+) бонус усиливается (шаги уже накопились)
       eveningBoost: { afterHour: 18, multiplier: 1.3 }
@@ -1941,7 +1949,7 @@
   // - Spiegel 1999 (PMID: 10543671): недосып <6ч = +20-30% резистентность
   // - Chrousos 2000: кортизол (стресс) = +10-20% резистентность
   // ═══════════════════════════════════════════════════════════════════════════
-  I.IR_SCORE_CONFIG = {
+  I.IR_SCORE_CONFIG = C?.IR_SCORE_CONFIG || {
     // BMI thresholds (ascending) — чем выше BMI, тем больше резистентность
     bmi: {
       thresholds: [25, 30, 35],      // <25, 25-30, 30-35, ≥35
@@ -1997,11 +2005,11 @@
   I.calculateIRScore = (profile = {}, dayData = {}) => {
     const { weight = 70, height = 170, age = 30 } = profile;
     const { sleepHours = 7, stressAvg = 3 } = dayData;
-    
+
     // Рассчитываем BMI
     const heightM = height / 100;
     const bmi = heightM > 0 ? weight / (heightM * heightM) : 25;
-    
+
     // Хелпер: найти фактор по порогам (ascending)
     const getFactorAscending = (value, cfg) => {
       for (let i = 0; i < cfg.thresholds.length; i++) {
@@ -2011,7 +2019,7 @@
       }
       return { factor: cfg.factors[cfg.factors.length - 1], label: cfg.labels[cfg.labels.length - 1], tier: cfg.thresholds.length };
     };
-    
+
     // Хелпер: найти фактор по порогам (descending — для sleep)
     const getFactorDescending = (value, cfg) => {
       for (let i = 0; i < cfg.thresholds.length; i++) {
@@ -2021,16 +2029,16 @@
       }
       return { factor: cfg.factors[cfg.factors.length - 1], label: cfg.labels[cfg.labels.length - 1], tier: cfg.thresholds.length };
     };
-    
+
     // Рассчитываем каждый фактор
     const bmiFactor = getFactorAscending(bmi, I.IR_SCORE_CONFIG.bmi);
     const sleepFactor = getFactorDescending(sleepHours, I.IR_SCORE_CONFIG.sleep);
     const stressFactor = getFactorAscending(stressAvg, I.IR_SCORE_CONFIG.stress);
     const ageFactor = getFactorAscending(age, I.IR_SCORE_CONFIG.age);
-    
+
     // Мультипликативный score
     const score = bmiFactor.factor * sleepFactor.factor * stressFactor.factor * ageFactor.factor;
-    
+
     // Определяем цвет и лейбл
     let color = '#ef4444';
     let label = '🔴 High';
@@ -2041,7 +2049,7 @@
         break;
       }
     }
-    
+
     return {
       score: Math.round(score * 1000) / 1000, // 3 знака после запятой
       factors: {
@@ -2089,7 +2097,7 @@
    * @param {number} [params.mealKcal] - калории приёма
    * @returns {Object|null} - контекст активности или null
    */
-  
+
   /**
    * Проверяет, является ли тренировка "реальной" (не пустой/дефолтной)
    * Тренировка валидна если: есть время ИЛИ хотя бы одна зона пульса > 0
@@ -2102,15 +2110,15 @@
     const zones = t.z || [];
     return zones.some(z => +z > 0);
   };
-  
+
   I.calculateActivityContext = (params) => {
     const { mealTimeMin, trainings: rawTrainings = [], steps = 0, householdMin = 0, weight = 70, allMeals = [], mealNutrients = {}, mealKcal = 0 } = params;
-    
+
     // 🆕 v3.7.3: Фильтруем пустые/дефолтные тренировки
     const trainings = rawTrainings.filter(I.isValidTraining);
-    
+
     if (!mealTimeMin && mealTimeMin !== 0) return null;
-    
+
     // Используем helpers из HEYS.models если доступны
     const M = (typeof HEYS !== 'undefined' && HEYS.models) ? HEYS.models : {};
     const getTrainingInterval = M.getTrainingInterval || ((t) => {
@@ -2128,36 +2136,36 @@
       if (highZones / total >= 0.2) return 'MODERATE';
       return 'LISS';
     });
-    
+
     // Export to I for use in other functions
     I.getTrainingInterval = getTrainingInterval;
     I.getTrainingIntensityType = getTrainingIntensityType;
-    
+
     // Собираем все найденные контексты
     const foundContexts = [];
-    
+
     // === Проверяем каждую тренировку ===
     for (const training of trainings) {
       if (!training || !training.time) continue;
-      
+
       const interval = I.getTrainingInterval(training);
       const intensity = I.getTrainingIntensityType(training);
       const intensityMult = I.TRAINING_CONTEXT.intensityMultiplier[intensity] || 1.0;
       const { startMin, endMin, durationMin } = interval;
-      
+
       // --- PERI-WORKOUT: еда ВО ВРЕМЯ тренировки ---
       if (mealTimeMin >= startMin && mealTimeMin <= endMin) {
         const cfg = I.TRAINING_CONTEXT.periWorkout;
         const progressPct = durationMin > 0 ? (mealTimeMin - startMin) / durationMin : 0.5;
-        
+
         // 🆕 v3.5.0: Intensity-scaled PERI bonus
         // Чем интенсивнее тренировка, тем больше GLUT4 активирован
         const intensityWaveBonus = cfg.maxBonus * intensityMult; // -0.70 × 1.5 = -1.05 → cap -0.95
         const cappedWaveBonus = Math.max(-0.95, intensityWaveBonus);
-        
+
         // harmMultiplier тоже улучшается с интенсивностью
         const intensityHarmMult = Math.max(0.2, cfg.harmMultiplier / intensityMult);
-        
+
         foundContexts.push({
           type: 'peri',
           priority: I.TRAINING_CONTEXT.priority.peri,
@@ -2170,20 +2178,20 @@
         });
         continue; // peri — наивысший приоритет, не проверяем другие для этой тренировки
       }
-      
+
       // --- POST-WORKOUT: еда ПОСЛЕ тренировки ---
       if (mealTimeMin > endMin) {
         const gapMin = mealTimeMin - endMin;
         const cfg = I.TRAINING_CONTEXT.postWorkout;
-        
+
         // 🆕 v3.7.7: РЕАЛЬНЫЕ ККАЛ через MET-формулу (не грубая оценка!)
         // Старая формула: durationMin * intensityMult * 5 * (weight / 70) — давала ~300 для 60 мин
         // Новая: через I.utils.calculateTrainingKcal(training, weight) — реальные ~700 для интенсивной кардио
         const trainingKcal = I.utils.calculateTrainingKcal(training, weight);
-        
+
         // Прогрессивное окно: base + kcal/60
         const windowMin = Math.min(cfg.baseGap + trainingKcal / cfg.kcalScaling, cfg.maxGap * intensityMult);
-        
+
         if (gapMin <= windowMin) {
           // Находим tier
           let tier = cfg.tiers[cfg.tiers.length - 1];
@@ -2195,7 +2203,7 @@
               break;
             }
           }
-          
+
           // 🆕 v3.7.6: KCAL-BASED WAVE REDUCTION (MULTIPLICATIVE MODEL)
           // 
           // Научное обоснование: Ivy & Kuo 1998, Colberg 2010, Burke 2017
@@ -2222,21 +2230,21 @@
           } else if (trainingKcal >= 200) {
             kcalMultiplier = 1.15; // Лёгкая тренировка — усиление ×1.15
           }
-          
+
           // 🆕 v3.7.6: Учёт типа тренировки для wave bonus
           // Научное обоснование: кардио эффективнее активирует GLUT4 для утилизации глюкозы
           // Jamurtas 2004: кардио даёт бОльший острый эффект на инсулиновую чувствительность
           const typeBonus = cfg.typeMultipliers?.[training.type] || 1.0;
           // cardio=1.0, strength=1.1 (сильнее), hobby=0.8 (слабее)
-          
+
           // Финальный waveBonus = tier × kcalMultiplier × typeBonus (не ниже -0.60)
           // Научное ограничение: даже после марафона волна не может быть короче 40% от нормы
           const combinedWaveBonus = Math.max(-0.60, tier.waveBonus * kcalMultiplier * typeBonus);
-          
+
           // harmMultiplier тоже зависит от ккал (больше потратил = меньше "вред")
           const kcalHarmReduction = Math.min(0.5, trainingKcal / 2000); // max 50% reduction at 1000 ккал
           const combinedHarmMultiplier = Math.max(0.3, (tier.harmMultiplier || 0.7) - kcalHarmReduction);
-          
+
           foundContexts.push({
             type: 'post',
             priority: I.TRAINING_CONTEXT.priority.post,
@@ -2246,10 +2254,10 @@
             desc: `${tier.label} ${gapMin} мин после ${Math.round(trainingKcal)} ккал ${training.type || 'тренировки'}`,
             nightPenaltyOverride: cfg.nightPenaltyOverride,
             trainingRef: { time: training.time, type: training.type, intensity },
-            details: { 
-              gapMin, 
-              windowMin, 
-              tier: tier.label, 
+            details: {
+              gapMin,
+              windowMin,
+              tier: tier.label,
               trainingKcal: Math.round(trainingKcal),
               tierBonus: tier.waveBonus,
               kcalMultiplier,  // 🆕 v3.7.6: мультипликатор по ккал
@@ -2260,11 +2268,11 @@
           });
         }
       }
-      
+
       // --- PRE-WORKOUT: еда ДО тренировки ---
       if (mealTimeMin < startMin) {
         const gapMin = startMin - mealTimeMin;
-        
+
         for (const tier of I.TRAINING_CONTEXT.preWorkout) {
           if (gapMin <= tier.maxGap) {
             foundContexts.push({
@@ -2282,7 +2290,7 @@
         }
       }
     }
-    
+
     // === STEPS: Прогрессивные пороги шагов ===
     // 🆕 v3.5.5: Работает весь день, не только вечером. Вечером бонус усиливается.
     const cfg_steps = I.TRAINING_CONTEXT.stepsBonus;
@@ -2292,14 +2300,14 @@
         const isEvening = mealTimeMin >= cfg_steps.eveningBoost.afterHour * 60;
         const eveningMult = isEvening ? cfg_steps.eveningBoost.multiplier : 1.0;
         const effectiveWaveBonus = tier.waveBonus * eveningMult;
-        
+
         foundContexts.push({
           type: 'steps',
           priority: I.TRAINING_CONTEXT.priority.steps,
           waveBonus: effectiveWaveBonus,
           harmMultiplier: tier.harmMultiplier,
           badge: tier.badge,
-          desc: `${tier.badge} (${Math.round(steps/1000)}k)${isEvening ? ' 🌆 вечер' : ''}`,
+          desc: `${tier.badge} (${Math.round(steps / 1000)}k)${isEvening ? ' 🌆 вечер' : ''}`,
           trainingRef: null,
           details: { steps, tier: tier.threshold, isEvening, eveningMult }
         });
@@ -2328,7 +2336,7 @@
         }
       }
     }
-    
+
     // === MORNING: утренняя тренировка (до 12:00) ===
     const cfg_morning = I.TRAINING_CONTEXT.morningTraining;
     const hasMorningTraining = trainings.some(t => {
@@ -2347,7 +2355,7 @@
         details: {}
       });
     }
-    
+
     // === DOUBLE: 2+ тренировки за день ===
     const cfg_double = I.TRAINING_CONTEXT.doubleTraining;
     if (trainings.length >= cfg_double.minTrainings) {
@@ -2362,7 +2370,7 @@
         details: { count: trainings.length }
       });
     }
-    
+
     // === STRENGTH+PROTEIN: силовая + белок ≥30г ===
     const prot = mealNutrients.prot || 0;
     if (prot >= I.TRAINING_CONTEXT.strengthProtein.minProtein) {
@@ -2379,7 +2387,7 @@
         }
       }
     }
-    
+
     // === CARDIO+SIMPLE: кардио + простые углеводы ===
     const simple = mealNutrients.simple || 0;
     if (simple > 0) {
@@ -2396,7 +2404,7 @@
         }
       }
     }
-    
+
     // === NIGHT OVERRIDE: ночная еда после тренировки ===
     const cfg_night = I.TRAINING_CONTEXT.nightOverride;
     if (cfg_night.enabled && mealTimeMin >= 22 * 60) {
@@ -2416,16 +2424,16 @@
         }
       }
     }
-    
+
     // === Выбираем лучший контекст по приоритету ===
     if (foundContexts.length === 0) return null;
-    
+
     foundContexts.sort((a, b) => b.priority - a.priority);
     const best = foundContexts[0];
-    
+
     // Добавляем все найденные контексты для отладки
     best.allContexts = foundContexts.map(c => ({ type: c.type, priority: c.priority }));
-    
+
     return best;
   };
 
@@ -2439,7 +2447,7 @@
     // Базовая модель: экспоненциальное снижение от пика (~80) до базового (~5)
     // Формула: level = 5 + 75 × e^(-progress/25)
     const level = Math.round(5 + 75 * Math.exp(-progress / 25));
-    
+
     // Определяем зону по порогам
     if (level <= I.LIPOLYSIS_THRESHOLDS.full.insulinUIml) {
       return { level, zone: 'full', lipolysisPct: 100, desc: I.LIPOLYSIS_THRESHOLDS.full.desc, color: '#22c55e' };
@@ -2464,7 +2472,7 @@
   I.calculateHypoglycemiaRisk = (meal, pIndex, getProductFromItem) => {
     let riskScore = 0;
     const { riskFactors, riskWindow, warningThreshold } = I.REACTIVE_HYPOGLYCEMIA;
-    
+
     // Вычисляем средний GI и макросы
     let totalGrams = 0, weightedGI = 0, totalProtein = 0, totalFat = 0;
     for (const item of (meal.items || [])) {
@@ -2476,12 +2484,12 @@
       totalFat += ((prod?.fat100 || 0) + (prod?.badFat100 || 0) + (prod?.goodFat100 || 0)) * g / 100;
     }
     const avgGI = totalGrams > 0 ? weightedGI / totalGrams : 50;
-    
+
     // Факторы риска
     if (avgGI >= riskFactors.highGI.threshold) riskScore += riskFactors.highGI.weight;
     if (totalProtein < riskFactors.lowProtein.threshold) riskScore += riskFactors.lowProtein.weight;
     if (totalFat < riskFactors.lowFat.threshold) riskScore += riskFactors.lowFat.weight;
-    
+
     return {
       score: riskScore,
       hasRisk: riskScore >= warningThreshold,
@@ -2499,7 +2507,7 @@
   // Vinegar: Liljeberg & Björck 1998, Johnston et al. 2004 — -20-35% гликемия
   // Cinnamon: Khan et al. 2003 — -10-15% инсулин у диабетиков
   // Berberine: Yin et al. 2008 — сравним с метформином, ингибирует DPP-4
-  I.SUPPLEMENTS_BONUS = {
+  I.SUPPLEMENTS_BONUS = C?.SUPPLEMENTS_BONUS || {
     vinegar: { bonus: -0.20, desc: 'Уксус → -20% волна' },     // Яблочный/винный уксус
     cinnamon: { bonus: -0.10, desc: 'Корица → -10% волна' },   // 1-6г корицы
     berberine: { bonus: -0.15, desc: 'Берберин → -15% волна' } // 500-1500мг берберина
@@ -2510,7 +2518,7 @@
   // Van Marken Lichtenbelt 2009: холод +43% чувствительность к инсулину
   // Hanssen 2015: 10 дней холода (15°C) улучшает GLUT4
   // Механизм: активация BAT → повышенный клиренс глюкозы
-  I.COLD_EXPOSURE_BONUS = {
+  I.COLD_EXPOSURE_BONUS = C?.COLD_EXPOSURE_BONUS || {
     coldShower: { bonus: -0.05, minutes: 3, desc: '🧊 Холодный душ → -5%' },
     coldBath: { bonus: -0.10, minutes: 10, desc: '🧊 Ледяная ванна → -10%' },
     coldSwim: { bonus: -0.12, minutes: 5, desc: '🧊 Моржевание → -12%' },
@@ -2523,7 +2531,7 @@
   // Alirezaei et al. 2010: аутофагия в мозге мышей через 24-48ч
   // У людей: Jamshed et al. 2019 — маркеры через 16-18ч
   // mTOR отключается → AMPK активируется → ULK1 → аутофагия
-  I.AUTOPHAGY_TIMER = {
+  I.AUTOPHAGY_TIMER = C?.AUTOPHAGY_TIMER || {
     // Фазы аутофагии
     phases: {
       none: { minHours: 0, maxHours: 12, label: 'Пищеварение', color: '#94a3b8', icon: '🍽️' },
@@ -2550,15 +2558,15 @@
    */
   I.getAutophagyPhase = (fastingHours) => {
     const { phases, sensitivityBonus } = I.AUTOPHAGY_TIMER;
-    
+
     for (const [key, phase] of Object.entries(phases)) {
       if (fastingHours >= phase.minHours && fastingHours < phase.maxHours) {
         // Прогресс внутри фазы (0-100%)
         const phaseLength = phase.maxHours - phase.minHours;
-        const progress = phaseLength < Infinity 
+        const progress = phaseLength < Infinity
           ? Math.min(100, ((fastingHours - phase.minHours) / phaseLength) * 100)
           : Math.min(100, (fastingHours - phase.minHours) / 24 * 100); // Для extended
-        
+
         return {
           phase: key,
           label: phase.label,
@@ -2571,7 +2579,7 @@
         };
       }
     }
-    
+
     return { phase: 'none', label: 'Пищеварение', color: '#94a3b8', icon: '🍽️', progress: 0, bonus: 0 };
   };
 
@@ -2582,24 +2590,24 @@
    */
   I.getColdExposureBonus = (day) => {
     if (!day?.coldExposure) return { hasCold: false, type: null, bonus: 0, desc: null };
-    
+
     const { coldExposure } = day;
     const exposureType = coldExposure.type || 'coldShower';
     const config = I.COLD_EXPOSURE_BONUS[exposureType] || I.COLD_EXPOSURE_BONUS.coldShower;
-    
+
     // Проверяем время — эффект длится ~5 часов
     if (coldExposure.time) {
       const now = new Date();
       const [h, m] = coldExposure.time.split(':').map(Number);
       const exposureTime = new Date(now);
       exposureTime.setHours(h, m, 0, 0);
-      
+
       const hoursSince = (now - exposureTime) / (1000 * 60 * 60);
       if (hoursSince > I.COLD_EXPOSURE_BONUS.effectDurationHours) {
         return { hasCold: false, type: exposureType, bonus: 0, desc: 'Эффект закончился' };
       }
     }
-    
+
     return {
       hasCold: true,
       type: exposureType,
@@ -2617,10 +2625,10 @@
     if (!meal?.supplements || !Array.isArray(meal.supplements)) {
       return { hasSupplements: false, bonus: 0, supplements: [] };
     }
-    
+
     let totalBonus = 0;
     const activeSupplements = [];
-    
+
     for (const supp of meal.supplements) {
       const config = I.SUPPLEMENTS_BONUS[supp];
       if (config) {
@@ -2628,7 +2636,7 @@
         activeSupplements.push(supp);
       }
     }
-    
+
     return {
       hasSupplements: activeSupplements.length > 0,
       bonus: totalBonus,
@@ -2636,22 +2644,22 @@
     };
   };
 
-  I.GAP_HISTORY_KEY = 'heys_meal_gaps_history';
-  I.GAP_HISTORY_DAYS = 14;
-  
+  I.GAP_HISTORY_KEY = C?.GAP_HISTORY_KEY || 'heys_meal_gaps_history';
+  I.GAP_HISTORY_DAYS = C?.GAP_HISTORY_DAYS || 14;
+
   // 🏆 LIPOLYSIS RECORDS & STREAKS
-  I.LIPOLYSIS_RECORD_KEY = 'heys_lipolysis_record';
-  I.LIPOLYSIS_STREAK_KEY = 'heys_lipolysis_streak';
-  I.LIPOLYSIS_HISTORY_KEY = 'heys_lipolysis_history';
-  I.MIN_LIPOLYSIS_FOR_STREAK = 4 * 60; // 4 часа минимум для streak
-  I.KCAL_PER_MIN_BASE = 1.0; // ~1 ккал/мин базовый расход в покое
-  
+  I.LIPOLYSIS_RECORD_KEY = C?.LIPOLYSIS_RECORD_KEY || 'heys_lipolysis_record';
+  I.LIPOLYSIS_STREAK_KEY = C?.LIPOLYSIS_STREAK_KEY || 'heys_lipolysis_streak';
+  I.LIPOLYSIS_HISTORY_KEY = C?.LIPOLYSIS_HISTORY_KEY || 'heys_lipolysis_history';
+  I.MIN_LIPOLYSIS_FOR_STREAK = C?.MIN_LIPOLYSIS_FOR_STREAK || 4 * 60; // 4 часа минимум для streak
+  I.KCAL_PER_MIN_BASE = C?.KCAL_PER_MIN_BASE || 1.0; // ~1 ккал/мин базовый расход в покое
+
   // ═══════════════════════════════════════════════════════════════════════════
   // 🔧 PR-24 FIX: Добавлены отсутствующие функции (27 шт)
   // ═══════════════════════════════════════════════════════════════════════════
 
   // === УТИЛИТЫ ===
-  
+
   I.utils = {
     // Время в минуты с полуночи (поддерживает 24:xx, 25:xx формат)
     timeToMinutes: (timeStr) => {
@@ -2659,14 +2667,14 @@
       const [h, m] = timeStr.split(':').map(Number);
       return (h || 0) * 60 + (m || 0);
     },
-    
+
     // 🆕 v3.7.7: Расчёт ккал тренировки через MET-значения зон пульса
     calculateTrainingKcal: (training, weight = 70) => {
       if (!training || !training.z) return 0;
       const zones = training.z || [0, 0, 0, 0];
       const totalMinutes = zones.reduce((a, b) => a + (+b || 0), 0);
       if (totalMinutes === 0) return 0;
-      
+
       let mets = [2.5, 6, 8, 10];
       try {
         const hrZones = (typeof lsGet === 'function') ? lsGet('heys_hr_zones', []) : [];
@@ -2674,19 +2682,19 @@
           mets = [2.5, 6, 8, 10].map((def, i) => +hrZones[i]?.MET || def);
         }
       } catch (e) { /* fallback to defaults */ }
-      
+
       const kcalPerMin = (met, w) => (met * 3.5 * w / 200);
       const kcal = zones.reduce((sum, min, i) => sum + (+min || 0) * kcalPerMin(mets[i], weight), 0);
       return Math.round(kcal);
     },
-    
+
     // Минуты в HH:MM (нормализует 24+ часов)
     minutesToTime: (minutes) => {
       const h = Math.floor(minutes / 60) % 24;
       const m = minutes % 60;
       return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
     },
-    
+
     normalizeTimeForDisplay: (timeStr) => {
       if (!timeStr) return '';
       const [h, m] = timeStr.split(':').map(Number);
@@ -2694,7 +2702,7 @@
       const normalH = h % 24;
       return String(normalH).padStart(2, '0') + ':' + String(m || 0).padStart(2, '0');
     },
-    
+
     formatDuration: (minutes) => {
       if (minutes <= 0) return '0 мин';
       const h = Math.floor(minutes / 60);
@@ -2703,18 +2711,18 @@
       if (m === 0) return `${h}ч`;
       return `${h}ч ${m}м`;
     },
-    
+
     getGICategory: (gi) => {
       if (gi <= 35) return I.GI_CATEGORIES.low;
       if (gi <= 55) return I.GI_CATEGORIES.medium;
       if (gi <= 70) return I.GI_CATEGORIES.high;
       return I.GI_CATEGORIES.veryHigh;
     },
-    
+
     isNightTime: (hour) => hour >= 22 || hour < 6,
-    
+
     getDateKey: (date = new Date()) => date.toISOString().slice(0, 10),
-    
+
     getNextMealSuggestion: (hour) => {
       if (hour >= 22 || hour < 6) return null;
       if (hour < 10) return { type: 'breakfast', icon: '🍳', name: 'Завтрак' };
@@ -2724,7 +2732,7 @@
       if (hour < 20) return { type: 'dinner', icon: '🍽️', name: 'Ужин' };
       return { type: 'light', icon: '🥛', name: 'Лёгкий перекус' };
     },
-    
+
     normalizeToHeysDay: (timeMin) => {
       const HEYS_DAY_START = 3 * 60;
       const totalMinutes = timeMin % (24 * 60);
@@ -2736,28 +2744,32 @@
   };
 
   // === ДЕТЕКТОРЫ ПИЩИ ===
-  
+
   I.isLiquidFood = (name = '') => {
     if (typeof name !== 'string') return false;
     const n = name.toLowerCase();
+    if (testPatterns(I.LIQUID_FOOD?.patterns, n)) return true;
     return /молоко|кефир|йогурт|ряженка|смузи|сок|коктейль|бульон|суп-пюре|протеин|shake|milk/i.test(n);
   };
 
   I.isSpicyFood = (name = '') => {
     if (typeof name !== 'string') return false;
     const n = name.toLowerCase();
+    if (testPatterns(I.SPICY_FOOD?.patterns, n)) return true;
     return /перец|чили|острый|карри|табаско|халапеньо|wasabi|васаби|sriracha|сальса|горчиц|хрен|pepper|spicy/i.test(n);
   };
 
   I.hasResistantStarch = (name = '') => {
     if (typeof name !== 'string') return false;
     const n = name.toLowerCase();
+    if (testPatterns(I.RESISTANT_STARCH_BONUS?.patterns, n)) return true;
     return /охлажд|холодн.*карто|холодн.*рис|салат.*карто|банан.*зелён|cold.*potato|cold.*rice/i.test(n);
   };
 
   I.hasCaffeine = (name = '') => {
     if (typeof name !== 'string') return false;
     const n = name.toLowerCase();
+    if (testPatterns(I.CAFFEINE_BONUS?.patterns, n)) return true;
     return /кофе|эспрессо|капучино|латте|американо|чай|матча|энергет|coffee|espresso|tea|energy/i.test(n);
   };
 
@@ -2766,7 +2778,31 @@
   I.getInsulinogenicBonus = (name = '') => {
     if (typeof name !== 'string') return { bonus: 0, type: null };
     const n = name.toLowerCase();
-    
+
+    const cfg = I.INSULINOGENIC_BONUS;
+    const hasPatterns = !!(
+      cfg?.liquidDairy?.patterns?.length ||
+      cfg?.softDairy?.patterns?.length ||
+      cfg?.hardDairy?.patterns?.length ||
+      cfg?.protein?.patterns?.length
+    );
+
+    if (hasPatterns) {
+      if (testPatterns(cfg.liquidDairy?.patterns, n)) {
+        return { bonus: cfg.liquidDairy.bonus, type: 'liquid_dairy' };
+      }
+      if (testPatterns(cfg.softDairy?.patterns, n)) {
+        return { bonus: cfg.softDairy.bonus, type: 'soft_dairy' };
+      }
+      if (testPatterns(cfg.hardDairy?.patterns, n)) {
+        return { bonus: cfg.hardDairy.bonus, type: 'hard_dairy' };
+      }
+      if (testPatterns(cfg.protein?.patterns, n)) {
+        return { bonus: cfg.protein.bonus, type: 'pure_protein' };
+      }
+      return { bonus: 0, type: null };
+    }
+
     // Жидкие молочные: +15% (Holt 1997 II молока ≈ 98)
     if (/молоко|кефир|ряженка|простокваш|айран|milk/i.test(n)) {
       return { bonus: 0.15, type: 'liquid_dairy' };
@@ -2783,7 +2819,7 @@
     if (/протеин|whey|isolate|казеин|casein/i.test(n)) {
       return { bonus: 0.08, type: 'pure_protein' };
     }
-    
+
     return { bonus: 0, type: null };
   };
 
@@ -2791,23 +2827,23 @@
     if (!items || !Array.isArray(items) || items.length === 0) {
       return { form: 'solid', multiplier: 1.0, desc: null };
     }
-    
+
     let liquidGrams = 0;
     let totalGrams = 0;
-    
+
     for (const item of items) {
       const prod = getProductFromItem ? getProductFromItem(item) : item;
       const name = prod?.name || item?.name || '';
       const grams = item.grams || 100;
       totalGrams += grams;
-      
+
       if (I.isLiquidFood(name)) {
         liquidGrams += grams;
       }
     }
-    
+
     const liquidRatio = totalGrams > 0 ? liquidGrams / totalGrams : 0;
-    
+
     if (liquidRatio > 0.7) {
       return { form: 'liquid', multiplier: I.FOOD_FORM_BONUS.liquid.multiplier, desc: '💧 Жидкая пища' };
     }
@@ -2820,7 +2856,32 @@
   I.getAlcoholBonus = (name = '') => {
     if (typeof name !== 'string') return { bonus: 0, type: null };
     const n = name.toLowerCase();
-    
+
+    if (I.ALCOHOL_MATCH) {
+      const normalized = normalizeTextForTokenMatch(name);
+      const tokens = tokenizeText(normalized);
+
+      if (tokensHasExact(tokens, I.ALCOHOL_MATCH.strongExact) || tokensHasPrefix(tokens, I.ALCOHOL_MATCH.strongPrefix)) {
+        return { bonus: I.ALCOHOL_BONUS.high.bonus, type: 'high' };
+      }
+      if (tokensHasExact(tokens, I.ALCOHOL_MATCH.mediumExact) || tokensHasPrefix(tokens, I.ALCOHOL_MATCH.mediumPrefix)) {
+        return { bonus: I.ALCOHOL_BONUS.medium.bonus, type: 'medium' };
+      }
+      if (tokensHasExact(tokens, I.ALCOHOL_MATCH.weakExact) || tokensHasPrefix(tokens, I.ALCOHOL_MATCH.weakPrefix)) {
+        return { bonus: I.ALCOHOL_BONUS.low.bonus, type: 'low' };
+      }
+    }
+
+    if (testPatterns(I.ALCOHOL_BONUS?.strong, n)) {
+      return { bonus: I.ALCOHOL_BONUS.high.bonus, type: 'high' };
+    }
+    if (testPatterns(I.ALCOHOL_BONUS?.medium, n)) {
+      return { bonus: I.ALCOHOL_BONUS.medium.bonus, type: 'medium' };
+    }
+    if (testPatterns(I.ALCOHOL_BONUS?.weak, n)) {
+      return { bonus: I.ALCOHOL_BONUS.low.bonus, type: 'low' };
+    }
+
     if (/водка|виски|коньяк|ром|джин|текила|самогон|спирт|whisky|vodka|rum|gin/i.test(n)) {
       return { bonus: I.ALCOHOL_BONUS.high.bonus, type: 'high' };
     }
@@ -2830,7 +2891,7 @@
     if (/пиво|сидр|beer|cider/i.test(n)) {
       return { bonus: I.ALCOHOL_BONUS.low.bonus, type: 'low' };
     }
-    
+
     return { bonus: 0, type: null };
   };
 
@@ -2861,7 +2922,7 @@
   I.calculateHydrationBonus = (waterMl = 0, weight = 70) => {
     const goal = weight * 30;
     const pct = goal > 0 ? (waterMl / goal) : 1;
-    
+
     if (pct < 0.3) return I.HYDRATION_BONUS.severe.bonus;
     if (pct < 0.5) return I.HYDRATION_BONUS.moderate.bonus;
     if (pct < 0.7) return I.HYDRATION_BONUS.mild.bonus;
@@ -2917,25 +2978,25 @@
 
   I.getPreviousDayTrainings = (todayDate, lsGet) => {
     if (!lsGet) return { trainings: [], totalKcal: 0, hoursSince: Infinity, dominantType: null };
-    
+
     const yesterday = new Date(todayDate);
     yesterday.setDate(yesterday.getDate() - 1);
     const yKey = yesterday.toISOString().slice(0, 10);
-    
+
     const dayData = lsGet(`heys_dayv2_${yKey}`, null);
     if (!dayData || !dayData.trainings || dayData.trainings.length === 0) {
       return { trainings: [], totalKcal: 0, hoursSince: Infinity, dominantType: null };
     }
-    
+
     const trainings = dayData.trainings;
     let totalKcal = 0;
     let lastTrainingTime = null;
-    
+
     for (const t of trainings) {
       totalKcal += I.utils.calculateTrainingKcal(t, 70);
       if (t.time) lastTrainingTime = t.time;
     }
-    
+
     let hoursSince = 24;
     if (lastTrainingTime) {
       const [h, m] = lastTrainingTime.split(':').map(Number);
@@ -2944,9 +3005,9 @@
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
       hoursSince = (24 * 60 - trainingMinutes + nowMinutes) / 60;
     }
-    
+
     const dominantType = trainings.length > 0 ? (trainings[0].type || 'cardio') : null;
-    
+
     return { trainings, totalKcal, hoursSince, dominantType };
   };
 
@@ -2971,11 +3032,11 @@
 
   I.calculateNDTE = (params) => {
     const { trainingKcal = 0, hoursSince = Infinity, bmi = 22, trainingType = 'cardio', trainingsCount = 1 } = params;
-    
+
     if (hoursSince >= I.NDTE.maxWindowHours || trainingKcal < 200) {
       return { active: false, tdeeBoost: 0, waveReduction: 0, peakReduction: 0, label: null, badge: null };
     }
-    
+
     let baseTier = null;
     for (const tier of I.NDTE.kcalTiers) {
       if (trainingKcal >= tier.minKcal) {
@@ -2983,7 +3044,7 @@
         break;
       }
     }
-    
+
     if (!baseTier) {
       const ratio = trainingKcal / 300;
       const minTier = I.NDTE.kcalTiers[I.NDTE.kcalTiers.length - 1];
@@ -2994,20 +3055,20 @@
         label: '⚡ Лёгкая активность'
       };
     }
-    
+
     const bmiMult = I.calculateNDTEBMIMultiplier(bmi);
     const decayMult = I.calculateNDTEDecay(hoursSince);
     const typeMult = I.NDTE.typeMultiplier[trainingType] || { tdee: 1.0, wave: 1.0 };
-    
+
     let cumulativeMult = 1.0;
     if (I.NDTE.cumulative.enabled && trainingsCount > 1) {
       cumulativeMult = Math.min(I.NDTE.cumulative.maxMultiplier, 1 + (trainingsCount - 1) * 0.2);
     }
-    
+
     const tdeeBoost = baseTier.tdeeBoost * bmiMult * decayMult * typeMult.tdee * cumulativeMult;
     const waveReduction = baseTier.waveReduction * bmiMult * decayMult * typeMult.wave * cumulativeMult;
     const peakReduction = baseTier.peakReduction * bmiMult * decayMult * cumulativeMult;
-    
+
     return {
       active: true,
       tdeeBoost: Math.min(0.20, Math.round(tdeeBoost * 1000) / 1000),
@@ -3046,18 +3107,18 @@
     if (!items || items.length === 0) {
       return { temperature: 'room', ...I.FOOD_TEMPERATURE_BONUS.room };
     }
-    
+
     let hotCount = 0;
     let coldCount = 0;
-    
+
     for (const item of items) {
       const prod = getProductFromItem ? getProductFromItem(item) : item;
       const name = (prod?.name || item?.name || '').toLowerCase();
-      
+
       if (I.FOOD_TEMPERATURE_BONUS.hot.patterns.some(p => p.test(name))) hotCount++;
       if (I.FOOD_TEMPERATURE_BONUS.cold.patterns.some(p => p.test(name))) coldCount++;
     }
-    
+
     if (hotCount > 0 && coldCount > 0) return { temperature: 'room', ...I.FOOD_TEMPERATURE_BONUS.room };
     if (hotCount > 0) return { temperature: 'hot', ...I.FOOD_TEMPERATURE_BONUS.hot };
     if (coldCount > 0) return { temperature: 'cold', ...I.FOOD_TEMPERATURE_BONUS.cold };
@@ -3068,7 +3129,7 @@
     if (!mealKcal || mealKcal <= 0) {
       return { bonus: 0, peakReduction: 1.0, desc: null };
     }
-    
+
     for (const tier of I.LARGE_PORTION_BONUS.thresholds) {
       if (mealKcal >= tier.minKcal) {
         return {
@@ -3088,7 +3149,7 @@
     const rf = I.REACTIVE_HYPOGLYCEMIA.riskFactors;
     let score = 0;
     const details = [];
-    
+
     if (gi > rf.highGI.threshold) {
       score += rf.highGI.weight;
       details.push({ factor: 'highGI', value: gi, threshold: rf.highGI.threshold });
@@ -3105,9 +3166,9 @@
       score += rf.fasted.weight;
       details.push({ factor: 'fasted', value: true });
     }
-    
+
     const hasRisk = score >= I.REACTIVE_HYPOGLYCEMIA.warningThreshold;
-    
+
     return {
       hasRisk,
       score,
@@ -3128,7 +3189,7 @@
     if (!insulinogenicType || !I.INSULIN_INDEX_FACTORS[insulinogenicType]) {
       return { waveMultiplier: 1.0, peakMultiplier: 1.0, glBoost: 1.0, desc: null };
     }
-    
+
     const factor = I.INSULIN_INDEX_FACTORS[insulinogenicType];
     return {
       waveMultiplier: factor.waveMultiplier,
@@ -3140,5 +3201,5 @@
 
   // Mark constants as loaded
   I._loaded.constants = true;
-  
+
 })(typeof window !== 'undefined' ? window : global);

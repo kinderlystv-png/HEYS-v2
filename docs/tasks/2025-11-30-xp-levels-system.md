@@ -746,7 +746,7 @@ const LEVEL_THRESHOLDS = [
 | `heys_day_v12.js` | `currentStreak` — расчёт streak | ~2545-2580 |
 | `heys_ratio_zones_v1.js` | `isSuccess()` — определение успешного дня | ~120-125 |
 | `heys_storage_layer_v1.js` | `Store.set/get` — паттерн хранения | ~1-100 |
-| `archive/legacy-v12/gaming/heys_gaming_system_v1.js` | Legacy XP система (референс) | вся |
+| `git history (legacy v12: heys_gaming_system_v1.js)` | Legacy XP система (референс) | вся |
 
 ---
 
@@ -812,7 +812,7 @@ if (HEYS.utils && HEYS.utils.haptic) {
 
 ### Референс из legacy gaming
 
-Файл `archive/legacy-v12/gaming/heys_gaming_system_v1.js` содержит:
+Файл из legacy v12 доступен через git history: `heys_gaming_system_v1.js` содержит:
 - `GAME_CONFIG.XP_MULTIPLIER = 1.2` — множитель опыта
 - `ExperienceSystem.calculateLevel(totalXP)` — расчёт уровня
 - `addExperience(amount, reason)` — добавление опыта
