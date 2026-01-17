@@ -245,6 +245,61 @@ const adjustedHarm = harm * activityContext.harmMultiplier;
 
 ---
 
+## 🔧 Field Normalization (v4.3.0)
+
+### Harm Field Mapping
+
+> **Canonical field**: `harm` (используется в UI и meal items)  
+> **DB field**: `harmScore` (используется в PostgreSQL shared_products)  
+> **Deprecated**: `harmscore` (lowercase), `harm100` (legacy)
+
+| Source | Field Name | Status | Notes |
+|--------|-----------|--------|-------|
+| UI/Items | `harm` | ✅ Canonical | Primary field для отображения и расчётов |
+| PostgreSQL | `harmScore` | ✅ DB alias | Используется в shared_products таблице |
+| PostgreSQL | `harmscore` | ⚠️ Deprecated | Lowercase alias — мигрировать на harmScore |
+| Legacy | `harm100` | ⚠️ Deprecated | Старый формат — мигрировать на harm |
+| Legacy | `harmPct` | ❌ Removed | Более не поддерживается |
+
+### Centralized Normalization API
+
+```javascript
+// Файл: heys_models_v1.js
+
+// Получить нормализованное значение harm из любого источника
+const harmVal = HEYS.models.normalizeHarm(product);
+// Returns: number | undefined
+
+// Нормализовать объект — добавить оба поля harm и harmScore
+const normalized = HEYS.models.normalizeHarmFields(product);
+// Returns: { ...product, harm: val, harmScore: val }
+```
+
+### Data Flow
+
+```
+PostgreSQL (harmScore) 
+     ↓
+ YandexAPI Response
+     ↓
+ normalizeSharedProduct() 
+     ↓
+ harm + harmScore (оба поля)
+     ↓
+ UI Components (читают harm)
+     ↓
+ MealItem (сохраняет harm)
+```
+
+### Migration Notes
+
+1. **Новый код**: Всегда используй `harm` как primary field
+2. **Чтение**: Используй `HEYS.models.normalizeHarm(obj)` вместо fallback-цепочек
+3. **Запись**: Сохраняй только `harm` (не дублируй в harmScore)
+4. **DB sync**: `heys_cloud_shared_v1.js` автоматически нормализует при загрузке
+
+---
+
 ## Данные дня (DayRecord)
 
 **localStorage ключ**: `heys_dayv2_{YYYY-MM-DD}` (с clientId namespace)

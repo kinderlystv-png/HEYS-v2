@@ -26,16 +26,22 @@
       return Number.isFinite(n) ? n : null;
     };
 
+    /**
+     * Normalize shared product to have both harm and harmScore fields
+     * Uses centralized HEYS.models.normalizeHarm() if available
+     */
     const normalizeSharedProduct = (p) => {
       if (!p || typeof p !== 'object') return p;
       const next = { ...p };
-      if (next.harmScore == null) {
-        if (next.harmscore != null) next.harmScore = next.harmscore;
-        else if (next.harm != null) next.harmScore = next.harm;
+
+      // Use centralized normalization if available
+      const harmVal = HEYS.models?.normalizeHarm?.(p) ?? toNum(p.harm ?? p.harmScore ?? p.harmscore);
+
+      if (harmVal != null) {
+        next.harm = harmVal;      // Canonical field
+        next.harmScore = harmVal; // DB compatibility
       }
-      if (next.harm == null && next.harmScore != null) next.harm = next.harmScore;
-      if (next.harm != null) next.harm = toNum(next.harm);
-      if (next.harmScore != null) next.harmScore = toNum(next.harmScore);
+
       if (next.gi != null) next.gi = toNum(next.gi);
       return next;
     };

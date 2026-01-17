@@ -330,7 +330,7 @@
       source: source || 'meal-table',
       name: name || null,
       productId: item?.product_id ?? item?.productId ?? item?.id ?? null,
-      hasItemHarm: item?.harm != null || item?.harmScore != null || item?.harmscore != null || item?.harm100 != null || item?.harmPct != null,
+      hasItemHarm: HEYS.models?.normalizeHarm?.(item) != null,
     });
   }
 
@@ -358,7 +358,8 @@
       fiber: scale(per.fiber100, grams)
     };
     const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex ?? item.gi;
-    const harmVal = p.harm ?? p.harmScore ?? p.harmscore ?? p.harm100 ?? p.harmPct ?? item.harm ?? item.harmScore;
+    // Use centralized harm normalization with fallback to item
+    const harmVal = HEYS.models?.normalizeHarm?.(p) ?? HEYS.models?.normalizeHarm?.(item);
     if (harmVal == null) {
       logMissingHarm(p.name, item, 'meal-table');
     }

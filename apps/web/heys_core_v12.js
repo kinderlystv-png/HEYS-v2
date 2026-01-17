@@ -1145,6 +1145,8 @@
           return true;
         }).map(p => {
           // Гарантируем наличие всех полей
+          // Use centralized harm normalization
+          const harmVal = HEYS.models?.normalizeHarm?.(p) ?? toNum(p.harmScore || p.harm || p.harm100);
           const product = {
             id: p.id || uuid(),
             name: p.name,
@@ -1156,7 +1158,7 @@
             trans100: toNum(p.trans100),
             fiber100: toNum(p.fiber100),
             gi: toNum(p.gi || p.gi100 || p.GI || p.giIndex),
-            harmScore: toNum(p.harmScore || p.harm || p.harm100 || p.harmPct),
+            harm: harmVal,  // Canonical field
             createdAt: p.createdAt || Date.now()
           };
           // Вычисляем производные поля
@@ -1278,6 +1280,8 @@
       }
 
       // Создаём клон
+      // Use centralized harm normalization
+      const harmVal = HEYS.models?.normalizeHarm?.(sharedProduct);
       const clone = {
         id: uuid(),
         name: sharedProduct.name,
@@ -1289,7 +1293,7 @@
         trans100: toNum(sharedProduct.trans100),
         fiber100: toNum(sharedProduct.fiber100),
         gi: toNum(sharedProduct.gi),
-        harmScore: toNum(sharedProduct.harm ?? sharedProduct.harmScore ?? sharedProduct.harmscore),
+        harm: harmVal,  // Canonical field
         category: sharedProduct.category || '',
         portions: sharedProduct.portions || null,
         shared_origin_id: sharedProduct.id, // Связь с shared продуктом
@@ -1356,6 +1360,8 @@
       }
 
       // Создаём новый клон с shared_origin_id
+      // Use centralized harm normalization
+      const harmVal = HEYS.models?.normalizeHarm?.(sharedProduct);
       const clone = {
         id: uuid(),
         name: sharedProduct.name,
@@ -1367,7 +1373,7 @@
         trans100: sharedProduct.trans100 || 0,
         fiber100: sharedProduct.fiber100 || 0,
         gi: sharedProduct.gi || 0,
-        harmScore: toNum(sharedProduct.harm ?? sharedProduct.harmScore ?? sharedProduct.harmscore),
+        harm: harmVal,  // Canonical field
         category: sharedProduct.category || '',
         portions: sharedProduct.portions || null,
         shared_origin_id: sharedProduct.id, // Связь с shared
@@ -2116,10 +2122,9 @@
         if (!existing) return existing;
         let changed = false;
         const next = { ...existing };
-        const sharedHarmRaw = sharedProduct.harm ?? sharedProduct.harmScore ?? sharedProduct.harmscore;
-        const sharedHarm = sharedHarmRaw == null ? null : toNum(sharedHarmRaw);
-        if ((next.harmScore == null && next.harm == null) && sharedHarm != null) {
-          next.harmScore = sharedHarm;
+        // Use centralized harm normalization
+        const sharedHarm = HEYS.models?.normalizeHarm?.(sharedProduct);
+        if ((next.harm == null) && sharedHarm != null) {
           next.harm = sharedHarm;
           changed = true;
         }
@@ -2151,6 +2156,8 @@
       }
 
       // Создаём клон
+      // Use centralized harm normalization
+      const harmVal = HEYS.models?.normalizeHarm?.(sharedProduct);
       const clone = {
         id: uuid(),
         name: sharedProduct.name,
@@ -2162,7 +2169,7 @@
         trans100: toNum(sharedProduct.trans100),
         fiber100: toNum(sharedProduct.fiber100),
         gi: toNum(sharedProduct.gi),
-        harmScore: toNum(sharedProduct.harm ?? sharedProduct.harmScore ?? sharedProduct.harmscore),
+        harm: harmVal,  // Canonical field
         category: sharedProduct.category || '',
         portions: sharedProduct.portions || null,
         shared_origin_id: sharedProduct.id, // Связь с shared продуктом

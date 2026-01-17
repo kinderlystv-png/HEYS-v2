@@ -56,7 +56,7 @@
             source: source || 'meal-card',
             name: name || null,
             productId: item?.product_id ?? item?.productId ?? item?.id ?? null,
-            hasItemHarm: item?.harm != null || item?.harmScore != null || item?.harmscore != null || item?.harm100 != null || item?.harmPct != null,
+            hasItemHarm: HEYS.models?.normalizeHarm?.(item) != null,
         });
     }
 
@@ -159,7 +159,8 @@
                 const g = +it.grams || 0;
                 if (!g) return;
                 const gi = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
-                const harm = p.harm ?? p.harmScore ?? p.harmscore ?? p.harm100 ?? p.harmPct;
+                // Use centralized harm normalization with fallback to item
+                const harm = HEYS.models?.normalizeHarm?.(p) ?? HEYS.models?.normalizeHarm?.(it);
                 gSum += g;
                 if (gi != null) giSum += gi * g;
                 if (harm != null) harmSum += harm * g;
@@ -505,7 +506,8 @@
                     const G = +it.grams || 0;
                     const per = per100(p);
                     const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex ?? it.gi;
-                    const harmVal = p.harm ?? p.harmScore ?? p.harmscore ?? p.harm100 ?? p.harmPct ?? it.harm ?? it.harmScore;
+                    // Use centralized harm normalization with fallback to item
+                    const harmVal = HEYS.models?.normalizeHarm?.(p) ?? HEYS.models?.normalizeHarm?.(it);
 
                     if (harmVal == null) {
                         logMissingHarm(p.name, it, 'mobile-card');
@@ -2319,6 +2321,10 @@
             }
 
             haptic('light');
+
+            // Use centralized harm normalization
+            const harmVal = HEYS.models?.normalizeHarm?.(p);
+
             const item = {
                 id: uid('it_'),
                 product_id: p.id ?? p.product_id,
@@ -2334,7 +2340,7 @@
                 trans100: p.trans100,
                 fiber100: p.fiber100,
                 gi: p.gi ?? p.gi100,
-                harm: p.harm ?? p.harmScore ?? p.harmscore ?? p.harm100,
+                harm: harmVal,  // Normalized harm (0-10)
             };
             setDay((prevDay) => {
                 const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);

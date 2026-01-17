@@ -303,10 +303,10 @@
       });
 
       haptic('light'); // Вибрация при добавлении
-      
+
       // Use centralized harm normalization
       const harmVal = HEYS.models?.normalizeHarm?.(p);
-      
+
       // Сохраняем ключевые нутриенты inline чтобы не зависеть от базы продуктов
       const item = {
         id: uid('it_'),

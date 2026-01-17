@@ -40,10 +40,10 @@
    */
   function normalizeHarm(obj) {
     if (!obj) return undefined;
-    
+
     // Priority: harm > harmScore > harmscore > harm100
     const val = obj.harm ?? obj.harmScore ?? obj.harmscore ?? obj.harm100;
-    
+
     // Deprecation warnings in dev mode
     if (typeof window !== 'undefined' && window.location?.hostname === 'localhost') {
       if (obj.harmscore !== undefined && obj.harm === undefined && obj.harmScore === undefined) {
@@ -53,7 +53,7 @@
         console.warn('[HEYS] ⚠️ Deprecated field "harm100" used. Migrate to "harm" or "harmScore":', obj.name || obj.id);
       }
     }
-    
+
     return val !== undefined ? Number(val) : undefined;
   }
 
@@ -64,10 +64,10 @@
    */
   function normalizeHarmFields(obj) {
     if (!obj) return obj;
-    
+
     const harmVal = normalizeHarm(obj);
     if (harmVal === undefined) return obj;
-    
+
     return {
       ...obj,
       harm: harmVal,
@@ -447,11 +447,14 @@
 
   function normalizeProductFields(p) {
     if (!p || typeof p !== 'object') return p;
-    if (p.harmScore == null) {
-      if (p.harmscore != null) p.harmScore = p.harmscore;
-      else if (p.harm != null) p.harmScore = p.harm;
+
+    // Use centralized harm normalization
+    const harmVal = normalizeHarm(p);
+    if (harmVal != null) {
+      p.harm = harmVal;      // Canonical field
     }
-    if (p.harm == null && p.harmScore != null) p.harm = p.harmScore;
+
+    // Case normalization for DB fields
     if (p.badFat100 == null && p.badfat100 != null) p.badFat100 = p.badfat100;
     if (p.goodFat100 == null && p.goodfat100 != null) p.goodFat100 = p.goodfat100;
     return p;
@@ -461,10 +464,13 @@
     if (!it) return null;
     const applyItemFallback = (product) => {
       if (!product || !it) return product;
-      if (product.harm == null && it.harm != null) product.harm = it.harm;
-      if (product.harmScore == null && (it.harmScore != null || it.harmscore != null)) {
-        product.harmScore = it.harmScore ?? it.harmscore;
+
+      // Use centralized harm normalization for item fallback
+      if (product.harm == null) {
+        const itemHarm = normalizeHarm(it);
+        if (itemHarm != null) product.harm = itemHarm;
       }
+
       if (product.gi == null) {
         const itemGi = it.gi ?? it.gi100 ?? it.GI ?? it.giIndex;
         if (itemGi != null) product.gi = itemGi;
@@ -489,7 +495,8 @@
     // FALLBACK: если продукт не найден в индексе, но в item есть нутриенты/ГИ/вред — возвращаем сам item как продукт
     // v3.8.2: Расширен для snapshot данных (simple100, complex100, carbs100)
     const hasMacroSnapshot = it.kcal100 !== undefined || it.protein100 !== undefined || it.simple100 !== undefined || it.complex100 !== undefined || it.carbs100 !== undefined;
-    const hasGiOrHarm = it.gi !== undefined || it.gi100 !== undefined || it.GI !== undefined || it.giIndex !== undefined || it.harm !== undefined || it.harmScore !== undefined || it.harmscore !== undefined || it.harm100 !== undefined || it.harmPct !== undefined;
+    // Use centralized harm normalization for check
+    const hasGiOrHarm = it.gi !== undefined || it.gi100 !== undefined || it.GI !== undefined || it.giIndex !== undefined || normalizeHarm(it) != null;
     if (hasMacroSnapshot || hasGiOrHarm) {
       return normalizeProductFields(it);
     }
