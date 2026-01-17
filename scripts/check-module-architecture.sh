@@ -45,7 +45,7 @@ WARNINGS=0
 # =============================================================================
 # Если существует config/module-limits.json, подхватываем:
 #  - дефолтные лимиты
-#  - индивидуальные лимиты на файл (basename)
+#  - индивидуальные лимиты на файл (relative path)
 # =============================================================================
 
 if [ -f "$LIMITS_CONFIG" ]; then
@@ -84,7 +84,8 @@ trap cleanup_limits_map EXIT
 
 get_limits_for_file() {
     local file="$1"
-    local basename=$(basename "$file")
+    local relpath
+    relpath=$(node -e "const path=require('path'); const p=path.relative(process.cwd(), '$file').split(path.sep).join('/'); process.stdout.write(p);")
     local loc_warning="$LOC_WARNING"
     local loc_limit="$LOC_LIMIT"
     local func_warning="$FUNC_WARNING"
@@ -94,7 +95,7 @@ get_limits_for_file() {
 
     if [ -n "$LIMITS_MAP_FILE" ] && [ -f "$LIMITS_MAP_FILE" ]; then
         local line
-        line=$(grep -m 1 "^${basename}|" "$LIMITS_MAP_FILE" || true)
+        line=$(grep -m 1 "^${relpath}|" "$LIMITS_MAP_FILE" || true)
         if [ -n "$line" ]; then
             IFS='|' read -r _ loc_warning loc_limit func_warning func_limit refs_warning refs_limit <<< "$line"
         fi

@@ -11,7 +11,7 @@ const DEFAULT_LIMITS = {
 
 const BUFFER_PCT = 0.1;
 const CONFIG_PATH = path.join(process.cwd(), 'config', 'module-limits.json');
-const PATTERNS = ['apps/web/**/heys_*.js'];
+const PATTERNS = ['apps/web/**/heys_*.js', '!apps/web/**/dist/**'];
 
 const buildLimits = (count) => {
   const warn = count;
@@ -37,8 +37,8 @@ const main = async () => {
 
   for (const file of files) {
     const metrics = await readMetrics(file);
-    const basename = path.basename(file);
-    entries[basename] = buildFileEntry(metrics);
+    const relativePath = path.relative(process.cwd(), file).split(path.sep).join('/');
+    entries[relativePath] = buildFileEntry(metrics);
   }
 
   const payload = {

@@ -39,7 +39,14 @@ const getConfigLimits = (filename) => {
   const funcDefaults = defaults.functions || {};
   const refsDefaults = defaults.heysRefs || {};
   const basename = path.basename(filename);
-  const fileEntry = limitsConfig?.files?.[basename] || {};
+  const relativePath = path
+    .relative(process.cwd(), filename)
+    .split(path.sep)
+    .join('/');
+  const fileEntry =
+    limitsConfig?.files?.[relativePath] ||
+    limitsConfig?.files?.[basename] ||
+    {};
   const fileLimits = fileEntry.limits || {};
 
   return {

@@ -8,7 +8,8 @@
   "workspaces": [
     "packages/*",
     "apps/*",
-    "tools/*"
+    "tools/*",
+    "scripts/eslint-rules"
   ],
   "scripts": {
     "DISABLED_dev:tg-mini": "pnpm --filter='@heys/tg-mini' run dev",
@@ -111,7 +112,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.6",
-    "@heys/eslint-plugin": "file:./scripts/eslint-rules",
+    "@heys/eslint-plugin": "workspace:*",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@playwright/test": "^1.56.1",
