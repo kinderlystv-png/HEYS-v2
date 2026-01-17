@@ -14,7 +14,7 @@
     lsSet: (k, v) => {
       try {
         localStorage.setItem(k, JSON.stringify(v));
-      } catch (_) {}
+      } catch (_) { }
     },
   };
 
@@ -171,8 +171,8 @@
     // Это ломало синхронизацию для PIN-клиентов (данные не загружались в облако)
     try {
       localStorage.removeItem('heys_supabase_auth_token');
-    } catch (_) {}
-    
+    } catch (_) { }
+
     const phoneNorm = normalizePhone(phone);
 
     if (!isValidPhone(phoneNorm)) {
@@ -220,7 +220,7 @@
       // YandexAPI возвращает { verify_client_pin_v3: { success, client_id, ... } }
       const rawData = vRes.data;
       const vRow = rawData?.verify_client_pin_v3 || (Array.isArray(rawData) ? rawData[0] : rawData);
-      
+
       // v3 возвращает { success, client_id, session_token, error }
       if (!vRow?.success) {
         registerFail('login', phoneNorm);
@@ -238,7 +238,7 @@
       const clientId = vRow.client_id;
       const sessionToken = vRow.session_token;
       const clientName = vRow.name || vRow.client_name || ''; // Имя введённое куратором при создании
-      
+
       if (!clientId || !sessionToken) {
         registerFail('login', phoneNorm);
         return {
@@ -254,14 +254,17 @@
       }
 
       // 🔐 Сохраняем session_token для безопасных RPC вызовов
-      U.lsSet('heys_session_token', sessionToken);
-      
+      setSessionToken(sessionToken);
+
       // 💡 Сохраняем имя клиента для предзаполнения профиля
       // ⚠️ v1.15 FIX: Используем localStorage.setItem напрямую (без namespace),
       // т.к. heys_profile_step_v1.js читает через localStorage.getItem('heys_pending_client_name')
       if (clientName) {
         localStorage.setItem('heys_pending_client_name', JSON.stringify(clientName));
       }
+
+      // 📡 Notify components about auth state change (for curator status refresh)
+      window.dispatchEvent(new Event('heys:auth-changed'));
 
       return { ok: true, clientId, sessionToken, clientName };
     } catch (e) {
@@ -306,6 +309,10 @@
 
     const row = Array.isArray(res.data) ? res.data[0] : res.data;
     const clientId = row && (row.client_id || row.id);
+
+    // 🔔 Уведомляем компоненты о создании клиента (для RationTab и др.)
+    window.dispatchEvent(new Event('heys:auth-changed'));
+
     return {
       ok: true,
       client: res.data,
@@ -341,7 +348,7 @@
   }
 
   // === Session Token Management ===
-  
+
   /**
    * Получить текущий session_token
    * 🔧 v55 FIX: миграция из старого namespaced ключа в глобальный
@@ -350,12 +357,12 @@
     // 1) Пробуем глобальный ключ (новый формат после v55)
     let token = U.lsGet('heys_session_token', null);
     if (token) return token;
-    
+
     // 2) Миграция: ищем токен под старым namespaced ключом
     //    Формат был: heys_{clientId}_session_token
     try {
-      const clientId = localStorage.getItem('heys_pin_auth_client') || 
-                       localStorage.getItem('heys_client_current');
+      const clientId = localStorage.getItem('heys_pin_auth_client') ||
+        localStorage.getItem('heys_client_current');
       if (clientId) {
         const cid = clientId.replace(/"/g, ''); // убираем кавычки если JSON.stringify
         const oldKey = `heys_${cid}_session_token`;
@@ -378,8 +385,29 @@
     } catch (e) {
       console.warn('[HEYS Auth] Migration error:', e);
     }
-    
+
     return null;
+  }
+
+  /**
+   * Установить session token (для внутреннего использования)
+   * @param {string} token - Session token
+   */
+  function setSessionToken(token) {
+    if (!token) {
+      console.warn('[HEYS Auth] setSessionToken: empty token, ignoring');
+      return;
+    }
+    U.lsSet('heys_session_token', token);
+  }
+
+  /**
+   * Очистить session token локально (без revoke на сервере)
+   */
+  function clearSessionToken() {
+    try {
+      localStorage.removeItem('heys_session_token');
+    } catch (_) { }
   }
 
   /**
@@ -394,7 +422,7 @@
    */
   async function logout() {
     const token = getSessionToken();
-    
+
     if (token) {
       const api = HEYS.YandexAPI;
       if (api) {
@@ -410,7 +438,10 @@
     try {
       localStorage.removeItem('heys_session_token');
       localStorage.removeItem('heys_client_current');
-    } catch (_) {}
+    } catch (_) { }
+
+    // 📡 Notify components about auth state change
+    window.dispatchEvent(new Event('heys:auth-changed'));
 
     return { ok: true };
   }
@@ -427,6 +458,8 @@
     resetClientPin,
     // 🔐 Session management
     getSessionToken,
+    setSessionToken,
+    clearSessionToken,
     hasSession,
     logout,
   };

@@ -1,0 +1,131 @@
+// heys_app_onboarding_v1.js — Onboarding tour helpers
+(function () {
+    const HEYS = window.HEYS = window.HEYS || {};
+
+    const trackOnboardingEvent = (event, data) => {
+        if (HEYS.analytics?.trackEvent) {
+            HEYS.analytics.trackEvent(event, data);
+        }
+    };
+
+    const trackOnboardingError = (error, context) => {
+        if (HEYS.analytics?.trackError) {
+            HEYS.analytics.trackError(error, context);
+        }
+    };
+
+    // 🎓 ONBOARDING TOUR — функция проверки и запуска
+    // Отдельная функция чтобы можно было вызвать и при загрузке, и после checkin-complete
+    const tryStartOnboardingTour = () => {
+        const hasSeenTour = HEYS.store && HEYS.store.get
+            ? HEYS.store.get('heys_tour_completed', false)
+            : localStorage.getItem('heys_tour_completed') === 'true';
+
+        // 🆕 v1.7: Используем централизованную проверку авторизации
+        const isClient = isClientAuthorized();
+
+        // 🆕 Проверяем, не показывается ли сейчас MorningCheckin с регистрационными шагами
+        const profile = HEYS.store?.get?.('heys_profile', {}) || {};
+        const profileIncomplete = HEYS.ProfileSteps?.isProfileIncomplete?.(profile);
+
+        // 🆕 v1.14: Проверяем что согласия уже приняты (флаг устанавливается в React после проверки)
+        // HEYS._consentsChecked = проверка завершена, HEYS._consentsValid = согласия приняты
+        const consentsNotReady = isClient && (!HEYS._consentsChecked || !HEYS._consentsValid);
+
+        // Запускаем только если: авторизован как клиент, еще не видел тур, профиль заполнен, согласия приняты
+        if (isClient && !hasSeenTour && !profileIncomplete && !consentsNotReady && window.HEYS.OnboardingTour) {
+            trackOnboardingEvent('onboarding_tour_triggered', {
+                reason: 'eligible',
+                consentsChecked: HEYS._consentsChecked,
+                consentsValid: HEYS._consentsValid,
+            });
+            window.HEYS.OnboardingTour.start();
+            return true;
+        } else if (!isClient) {
+            trackOnboardingEvent('onboarding_tour_skipped', { reason: 'not_client' });
+        } else if (profileIncomplete) {
+            trackOnboardingEvent('onboarding_tour_deferred', { reason: 'profile_incomplete' });
+        } else if (consentsNotReady) {
+            trackOnboardingEvent('onboarding_tour_deferred', {
+                reason: 'consents_not_ready',
+                consentsChecked: HEYS._consentsChecked,
+                consentsValid: HEYS._consentsValid,
+            });
+        }
+        return false;
+    };
+
+    // 🎓 v1.7: Tour ONLY for PIN-authenticated clients, NOT for curators
+    // Централизованные проверки авторизации (выносим в HEYS для переиспользования)
+    const isCuratorSession = () => {
+        // Куратор имеет JWT токен в localStorage (heys_curator_session или heys_supabase_auth_token)
+        const curatorSession = localStorage.getItem('heys_curator_session');
+        const supabaseToken = localStorage.getItem('heys_supabase_auth_token');
+        // Также проверяем HEYS.cloud.role если уже установлен
+        return !!(curatorSession || supabaseToken || HEYS.cloud?.role === 'curator');
+    };
+
+    // 🆕 v1.7: Проверка что пользователь авторизован как КЛИЕНТ (не куратор, не гость)
+    const isClientAuthorized = () => {
+        // 🔧 v1.11: Проверяем ОБА ключа — heys_client_current И heys_pin_auth_client
+        let clientId = null;
+
+        // 1. Сначала пробуем heys_pin_auth_client (для PIN auth)
+        const pinAuthClient = localStorage.getItem('heys_pin_auth_client');
+        if (pinAuthClient && pinAuthClient.length > 10) {
+            clientId = pinAuthClient;
+            trackOnboardingEvent('onboarding_auth_pin_client', { clientId });
+        }
+
+        // 2. Потом heys_client_current (для curator-managed clients)
+        if (!clientId) {
+            try {
+                const raw = localStorage.getItem('heys_client_current');
+                trackOnboardingEvent('onboarding_auth_client_current_raw', { raw });
+                if (raw) clientId = JSON.parse(raw);
+                trackOnboardingEvent('onboarding_auth_client_current_parsed', { clientId });
+            } catch (e) {
+                // fallback — если вдруг сохранено без JSON
+                clientId = localStorage.getItem('heys_client_current');
+                trackOnboardingEvent('onboarding_auth_client_current_fallback', { clientId });
+                trackOnboardingError(e, { scope: 'onboarding_auth_client_current_parse' });
+            }
+        }
+
+        const isCurator = isCuratorSession();
+        const result = clientId && clientId.length > 10 && !isCurator;
+        trackOnboardingEvent('onboarding_auth_check', {
+            clientId,
+            length: clientId?.length,
+            isCurator,
+            result,
+        });
+        // clientId должен быть непустой строкой (UUID)
+        return result;
+    };
+
+    // Экспортируем для использования в других компонентах
+    window.HEYS._tour = window.HEYS._tour || {};
+    window.HEYS._tour.isCuratorSession = isCuratorSession;
+    window.HEYS._tour.isClientAuthorized = isClientAuthorized;
+    window.HEYS._tour.tryStart = tryStartOnboardingTour; // 🆕 v1.9: экспорт для вызова после пропуска чекина
+
+    // Первая попытка через 2 сек после загрузки (только для клиентов)
+    setTimeout(() => {
+        if (!isCuratorSession()) tryStartOnboardingTour();
+    }, 2000);
+
+    // 🆕 Слушатель: после завершения checkin (регистрации) — пробуем показать тур
+    window.addEventListener('heys:checkin-complete', () => {
+        if (isCuratorSession()) return; // Пропускаем для кураторов
+        trackOnboardingEvent('onboarding_checkin_complete', {});
+        // Небольшая задержка чтобы UI обновился после checkin
+        setTimeout(tryStartOnboardingTour, 500);
+    }); // 🆕 v1.9: убрали once:true — можем слушать многократно
+
+    HEYS.AppOnboarding = {
+        tryStartOnboardingTour,
+        isCuratorSession,
+        isClientAuthorized,
+    };
+})();

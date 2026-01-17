@@ -198,22 +198,9 @@
     return [];
   }
 
-  // ---------- Энергозатраты (как во «Дне») ----------
-  function kcalPerMinForMET(met, w) { return Math.round(((+met || 0) * (+w || 0) * 0.0175) * 10) / 10; }
-  function kcalHousehold(minutes, w) { return Math.round(((+minutes || 0) * kcalPerMinForMET(2.5, w)) * 10) / 10; }
-  // Точная копия stepsKcal из heys_day_v12.js
-  function kcalForSteps_V2(steps, w, sex, len) { const coef = (sex === 'female' ? 0.5 : 0.57); const km = (+steps || 0) * (len || 0.7) / 1000; return Math.round(coef * (+w || 0) * km * 10) / 10; }
-  function kcalForSteps(steps, heightCm, w, gender) {
-    const st = Math.max(0, toNum(steps)); const h = Math.max(0, toNum(heightCm));
-    const stepMeters = (h * 0.415) / 100; const distKm = st * stepMeters / 1000;
-    const coef = (String(gender || '').toLowerCase().startsWith('ж')) ? 0.5 : 0.57;
-    return distKm * toNum(w) * coef;
-  }
-  function calcBMR(gender, w, h, a) {
-    return (String(gender || '').toLowerCase().startsWith('ж'))
-      ? (10 * toNum(w) + 6.25 * toNum(h) - 5 * toNum(a) - 161)
-      : (10 * toNum(w) + 6.25 * toNum(h) - 5 * toNum(a) + 5);
-  }
+  // ---------- Энергозатраты → HEYS.TDEE.calculate() ----------
+  // Используем единый модуль HEYS.TDEE (heys_tdee_v1.js) для расчётов BMR, TDEE, шагов и бытовой активности
+  // Dead code (calcBMR, kcalForSteps, kcalHousehold) удалён 2025-01-12 — см. collectDayInternal()
 
   // ---------- Сбор по дню (внутренняя функция) ----------
   function collectDayInternal(dateStr, prodIndex, profile, zones) {

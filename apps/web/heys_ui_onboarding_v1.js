@@ -6,6 +6,18 @@
 
 (function(global) {
   const HEYS = global.HEYS = global.HEYS || {};
+
+  const trackTourEvent = (event, data) => {
+    if (HEYS.analytics?.trackEvent) {
+      HEYS.analytics.trackEvent(event, data);
+    }
+  };
+
+  const trackTourError = (error, context) => {
+    if (HEYS.analytics?.trackError) {
+      HEYS.analytics.trackError(error, context);
+    }
+  };
   
   // === CONFIGURATION ===
   
@@ -148,9 +160,9 @@
       // Сохраняем текущий шаг для восстановления при прерывании
       try {
         localStorage.setItem(INTERRUPTED_STEP_KEY, String(state.currentStepIndex));
-        console.log('[Onboarding] Page hidden, saved step:', state.currentStepIndex);
+        trackTourEvent('onboarding_visibility_hidden', { step: state.currentStepIndex });
       } catch (e) {
-        console.warn('[Onboarding] Could not save interrupted step:', e);
+        trackTourError(e, { scope: 'onboarding_save_interrupted_step' });
       }
     } else if (!document.hidden && state.wasHidden && state.isActive) {
       const hiddenDuration = Date.now() - hiddenTimestamp;
@@ -158,11 +170,11 @@
       
       // Игнорируем очень короткие "скрытия" — это артефакты переключения табов/рендера
       if (hiddenDuration < MIN_HIDDEN_DURATION) {
-        console.log('[Onboarding] Page visible (ignored short hide:', hiddenDuration, 'ms)');
+        trackTourEvent('onboarding_visibility_short_hide', { hiddenDurationMs: hiddenDuration });
         return;
       }
       
-      console.log('[Onboarding] Page visible after', hiddenDuration, 'ms, restoring tour state');
+      trackTourEvent('onboarding_visibility_restore', { hiddenDurationMs: hiddenDuration });
       // Восстановить позицию highlight если нужно
       OnboardingTour.renderStep();
     }
@@ -181,7 +193,7 @@
         }
       }
     } catch (e) {
-      console.warn('[Onboarding] Could not read interrupted step:', e);
+      trackTourError(e, { scope: 'onboarding_read_interrupted_step' });
     }
     return null;
   }
@@ -271,7 +283,7 @@
         if (profile.name) return profile.name.split(' ')[0];
       }
     } catch (e) {
-      console.warn('[Onboarding] Could not get user name:', e);
+      trackTourError(e, { scope: 'onboarding_get_user_name' });
     }
     return null;
   }
@@ -545,7 +557,7 @@
       if (!options.skipWelcome && !options.force) {
         const result = await showWelcomeModal();
         if (result === 'later') {
-          console.log('[Onboarding] User chose to defer tour');
+          trackTourEvent('onboarding_tour_deferred', { reason: 'user_later' });
           if (HEYS.analytics) {
             HEYS.analytics.trackEvent('tour_deferred');
           }
@@ -553,7 +565,7 @@
         }
       }
       
-      console.log('[Onboarding] Starting tour...', state.userName ? `for ${state.userName}` : '');
+      trackTourEvent('onboarding_tour_starting', { hasUserName: !!state.userName });
 
       // FORCE SWITCH TO MAIN TAB before starting
       // This ensures elements like hero-stats are in the DOM
@@ -567,7 +579,7 @@
       // Temporarily suppress Morning Check-in using a global flag
       if (HEYS.ui) {
         HEYS.ui.suppressMorningCheckin = true; 
-        console.log('[Onboarding] 🛑 Suppressing Morning Check-in');
+        trackTourEvent('onboarding_checkin_suppressed', {});
       }
 
       // Wait for the target element of the first (or current) step to appear
@@ -575,17 +587,17 @@
       const targetId = TOUR_STEPS[initialStepIndex]?.targetId;
 
       if (targetId) {
-        console.log(`[Onboarding] Waiting for element: #${targetId}`);
+        trackTourEvent('onboarding_wait_for_element', { targetId });
         const waitForElement = (id, timeout = 2500) => {
           return new Promise(resolve => {
             const startTime = Date.now();
             const check = () => {
               const el = document.getElementById(id);
               if (el && el.offsetParent !== null) { // exists and visible (not display:none)
-                console.log(`[Onboarding] Element #${id} found in ${Date.now() - startTime}ms`);
+                trackTourEvent('onboarding_element_found', { targetId: id, ms: Date.now() - startTime });
                 resolve(el);
               } else if (Date.now() - startTime > timeout) {
-                console.warn(`[Onboarding] Search timeout for #${id}`);
+                trackTourEvent('onboarding_element_timeout', { targetId: id, ms: Date.now() - startTime });
                 resolve(null);
               } else {
                 requestAnimationFrame(check);
@@ -595,7 +607,7 @@
           });
         };
         await waitForElement(targetId);
-        console.log(`[Onboarding] Continuing after waitForElement`);
+        trackTourEvent('onboarding_wait_for_element_done', { targetId });
       } else {
          // Fallback just in case
          await new Promise(r => setTimeout(r, 500));
@@ -612,7 +624,7 @@
       const interruptedStep = getInterruptedStep();
       if (interruptedStep !== null && !options.force) {
         state.currentStepIndex = interruptedStep;
-        console.log('[Onboarding] Resuming from interrupted step:', interruptedStep);
+        trackTourEvent('onboarding_resume_interrupted_step', { step: interruptedStep });
       } else {
         state.currentStepIndex = 0;
       }
@@ -644,10 +656,10 @@
       const step = TOUR_STEPS[state.currentStepIndex];
       const targetEl = document.getElementById(step.targetId);
       
-      console.log('[Onboarding] renderStep:', step.targetId, targetEl ? '✓ found' : '✗ not found');
+      trackTourEvent('onboarding_render_step', { targetId: step.targetId, found: !!targetEl });
       
       if (!targetEl) {
-        console.warn(`[Onboarding] Target not found: ${step.targetId}, skipping step`);
+        trackTourEvent('onboarding_target_missing', { targetId: step.targetId });
         this.next();
         return;
       }
@@ -656,7 +668,7 @@
       const updatePosition = () => {
         if (!state.isActive) return;
         const rect = targetEl.getBoundingClientRect();
-        console.log('[Onboarding] updatePosition:', step.targetId, 'rect:', Math.round(rect.top), Math.round(rect.left));
+        trackTourEvent('onboarding_update_position', { targetId: step.targetId });
         createHighlight(rect);
         // Передаём персонализированный текст
         const stepWithText = {
@@ -717,7 +729,7 @@
     finish() {
       if (!state.isActive) return;
       
-      console.log('[Onboarding] Tour finished');
+      trackTourEvent('onboarding_tour_finished', {});
       
       // Отписываемся от visibility change
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -728,7 +740,7 @@
       // Снимаем флаг подавления Morning Check-in
       if (HEYS.ui) {
         HEYS.ui.suppressMorningCheckin = false;
-        console.log('[Onboarding] ✅ Re-enabling Morning Check-in checks');
+        trackTourEvent('onboarding_checkin_restored', {});
       }
       
       // Cleanup DOM
@@ -806,7 +818,7 @@
       } else {
         localStorage.removeItem(STORAGE_KEY);
       }
-      console.log('[Onboarding] Tour state reset');
+      trackTourEvent('onboarding_tour_reset', {});
     }
   };
 
@@ -912,7 +924,7 @@
     
     const target = document.getElementById(step.targetId);
     if (!target) {
-      console.warn('[InsightsTour] Target not found:', step.targetId);
+      trackTourEvent('insights_tour_target_missing', { targetId: step.targetId });
       // Пропускаем шаг если элемент не найден
       if (insightsState.currentStepIndex < INSIGHTS_TOUR_STEPS.length - 1) {
         insightsState.currentStepIndex++;
@@ -1046,11 +1058,11 @@
     start() {
       if (insightsState.isActive) return;
       if (!shouldShowInsightsTour()) {
-        console.log('[InsightsTour] Skipped — not needed');
+        trackTourEvent('insights_tour_skipped', { reason: 'not_needed' });
         return;
       }
       
-      console.log('[InsightsTour] Starting insights mini-tour');
+      trackTourEvent('insights_tour_starting', {});
       insightsState.isActive = true;
       insightsState.currentStepIndex = 0;
       
@@ -1089,7 +1101,7 @@
      * Пропустить тур
      */
     skip() {
-      console.log('[InsightsTour] Skipped by user');
+      trackTourEvent('insights_tour_skipped', { reason: 'user' });
       InsightsTour.cleanup();
       
       // 🔧 v1.12 FIX: Сохраняем в ОБА места
@@ -1113,7 +1125,7 @@
      * Завершить тур
      */
     finish() {
-      console.log('[InsightsTour] Completed!');
+      trackTourEvent('insights_tour_completed', {});
       InsightsTour.cleanup();
       
       // 🔧 v1.12 FIX: Сохраняем в ОБА места:
@@ -1125,12 +1137,12 @@
       // ВСЕГДА также сохраняем в unscoped localStorage для React-компонента
       localStorage.setItem(INSIGHTS_STORAGE_KEY, 'true');
       
-      console.log('[InsightsTour] Saved completion to localStorage:', INSIGHTS_STORAGE_KEY);
+      trackTourEvent('insights_tour_saved', { key: INSIGHTS_STORAGE_KEY });
       
       // 🔧 v1.17 FIX: Прокрутка страницы вверх чтобы была видна заглушка "3 дня"
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        console.log('[InsightsTour] Scrolled to top');
+        trackTourEvent('insights_tour_scrolled_top', {});
       }, 100);
       
       // Dispatch событие для обновления React компонента
@@ -1150,7 +1162,7 @@
       // 🔧 v1.19: WidgetsTour запускается при переходе на вкладку виджетов
       // (аналогично InsightsTour при переходе на insights)
       // Автозапуск убран — тур теперь стартует в WidgetsTab useEffect
-      console.log('[InsightsTour] Completed! WidgetsTour will start when user navigates to widgets tab');
+      trackTourEvent('insights_tour_next_widgets_hint', {});
     },
     
     /**
@@ -1189,7 +1201,7 @@
       } else {
         localStorage.removeItem(INSIGHTS_STORAGE_KEY);
       }
-      console.log('[InsightsTour] Reset');
+      trackTourEvent('insights_tour_reset', {});
     },
     
     /**
@@ -1370,7 +1382,7 @@
     
     // Если это edit step и мы еще не в edit mode - входим
     if (step.requiresEditMode && !HEYS.Widgets?.isEditMode?.()) {
-      console.log('[WidgetsTour] Entering edit mode for edit steps');
+      trackTourEvent('widgets_tour_enter_edit_mode', {});
       if (HEYS.Widgets?.enterEditMode) {
         HEYS.Widgets.enterEditMode();
         // Даем DOM обновиться после входа в edit mode
@@ -1388,7 +1400,7 @@
     }
     
     if (!targetEl) {
-      console.warn(`[WidgetsTour] Target not found: ${step.targetSelector || step.targetId}`);
+      trackTourEvent('widgets_tour_target_missing', { targetId: step.targetSelector || step.targetId });
       // Пропускаем шаг если элемент не найден
       if (stepIndex < WIDGETS_TOUR_STEPS.length - 1) {
         widgetsState.currentStepIndex++;
@@ -1552,18 +1564,18 @@
      */
     start() {
       if (!shouldShowWidgetsTour()) {
-        console.log('[WidgetsTour] Skipping - not ready');
+        trackTourEvent('widgets_tour_skipped', { reason: 'not_ready' });
         return false;
       }
       
-      console.log('[WidgetsTour] Starting widgets tour (demo + edit)');
+      trackTourEvent('widgets_tour_starting', {});
       widgetsState.isActive = true;
       widgetsState.currentStepIndex = 0;
       
       // 🔧 v1.19 FIX: Сначала переключаем на вкладку widgets, чтобы виджеты отрендерились
       const currentTab = window.HEYS?.App?.getTab?.();
       if (currentTab !== 'widgets') {
-        console.log('[WidgetsTour] Switching to widgets tab first (current: ' + currentTab + ')');
+        trackTourEvent('widgets_tour_switch_tab', { currentTab });
         if (window.HEYS?.App?.setTab) {
           window.HEYS.App.setTab('widgets');
           // Ждём пока виджеты отрендерятся (300ms для React re-render)
@@ -1583,7 +1595,7 @@
      * Внутренний старт после переключения вкладки
      */
     _startInternal() {
-      console.log('[WidgetsTour] _startInternal - initializing tour');
+      trackTourEvent('widgets_tour_start_internal', {});
       
       // Сохраняем исходное состояние edit mode (восстановим при выходе)
       widgetsState.wasEditModeActive = HEYS.Widgets?.isEditMode?.() || false;
@@ -1619,7 +1631,7 @@
      * Пропустить тур
      */
     skip() {
-      console.log('[WidgetsTour] Skipped');
+      trackTourEvent('widgets_tour_skipped', { reason: 'user' });
       
       // Сохраняем флаг
       if (HEYS.store?.set) {
@@ -1634,7 +1646,7 @@
      * Завершить тур
      */
     finish() {
-      console.log('[WidgetsTour] Completed');
+      trackTourEvent('widgets_tour_completed', {});
       
       // Сохраняем флаг
       if (HEYS.store?.set) {
@@ -1663,7 +1675,7 @@
       
       // Восстанавливаем исходное состояние edit mode
       if (!widgetsState.wasEditModeActive && HEYS.Widgets?.isEditMode?.()) {
-        console.log('[WidgetsTour] Restoring edit mode to inactive');
+        trackTourEvent('widgets_tour_restore_edit_mode', {});
         HEYS.Widgets.exitEditMode?.();
       }
       
@@ -1691,7 +1703,7 @@
       // ALWAYS remove localStorage key (in case it was set directly)
       localStorage.removeItem(WIDGETS_STORAGE_KEY);
       
-      console.log('[WidgetsTour] Reset');
+      trackTourEvent('widgets_tour_reset', {});
     },
     
     /**

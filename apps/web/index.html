@@ -2,83 +2,83 @@
 <html lang="ru">
 
 <head>
-  <meta charset="UTF-8" />
-  <!-- 🔍 PWA Debug: Boot timing logger (saved to localStorage for mobile diagnosis) -->
-  <script>
-    (function () {
-      window.__heysBootLog = [];
-      window.__heysBootStart = Date.now();
-      window.__heysLog = function (msg) {
-        var entry = { t: Date.now() - window.__heysBootStart, m: msg };
-        window.__heysBootLog.push(entry);
-        try {
-          localStorage.setItem('heys_boot_log', JSON.stringify(window.__heysBootLog.slice(-50)));
-        } catch (e) { }
-        console.log('[BOOT +' + entry.t + 'ms]', msg);
-      };
-      window.__heysLog('HTML parsing started');
+    <meta charset="UTF-8" />
+    <!-- 🔍 PWA Debug: Boot timing logger (saved to localStorage for mobile diagnosis) -->
+    <script>
+        (function () {
+            window.__heysBootLog = [];
+            window.__heysBootStart = Date.now();
+            window.__heysLog = function (msg) {
+                var entry = { t: Date.now() - window.__heysBootStart, m: msg };
+                window.__heysBootLog.push(entry);
+                try {
+                    localStorage.setItem('heys_boot_log', JSON.stringify(window.__heysBootLog.slice(-50)));
+                } catch (e) { }
+                console.log('[BOOT +' + entry.t + 'ms]', msg);
+            };
+            window.__heysLog('HTML parsing started');
 
-      // Check if PWA standalone mode
-      var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-      window.__heysLog('PWA standalone: ' + isStandalone);
-    })();
-  </script>
-  <!-- Prevent FOUC: Apply theme before CSS loads -->
-  <script>
-    (function () {
-      var t = localStorage.getItem('heys_theme');
-      var isDark = t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      if (isDark) document.documentElement.setAttribute('data-theme', 'dark');
-      window.__heysLog && window.__heysLog('Theme applied: ' + (isDark ? 'dark' : 'light'));
-    })();
-  </script>
-  <meta name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>HEYS Nutrition Tracker - Production</title>
+            // Check if PWA standalone mode
+            var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            window.__heysLog('PWA standalone: ' + isStandalone);
+        })();
+    </script>
+    <!-- Prevent FOUC: Apply theme before CSS loads -->
+    <script>
+        (function () {
+            var t = localStorage.getItem('heys_theme');
+            var isDark = t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            if (isDark) document.documentElement.setAttribute('data-theme', 'dark');
+            window.__heysLog && window.__heysLog('Theme applied: ' + (isDark ? 'dark' : 'light'));
+        })();
+    </script>
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>HEYS Nutrition Tracker - Production</title>
 
-  <!-- Tailwind CSS (production-friendly через Vite/PostCSS) -->
-  <link rel="stylesheet" href="/src/tailwind.css" />
+    <!-- Tailwind CSS (production-friendly через Vite/PostCSS) -->
+    <link rel="stylesheet" href="/src/tailwind.css" />
 
-  <!-- Critical CSS for instant rendering -->
-  <link rel="stylesheet" href="styles/critical.css" />
+    <!-- Critical CSS for instant rendering -->
+    <link rel="stylesheet" href="styles/critical.css" />
 
-  <!-- HTTP/2 + Resource hints for optimal performance -->
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+    <!-- HTTP/2 + Resource hints for optimal performance -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
 
-  <!-- HTTP/2 Server Push hints -->
-  <link rel="preload" href="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" as="script"
-    crossorigin="anonymous" />
-  <link rel="preload" href="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" as="script"
-    crossorigin="anonymous" />
+    <!-- HTTP/2 Server Push hints -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" as="script"
+        crossorigin="anonymous" />
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" as="script"
+        crossorigin="anonymous" />
 
-  <!-- Resource hints for better caching (prefetch, not preload to avoid warnings) -->
-  <link rel="prefetch" href="heys_core_v12.js" />
-  <link rel="prefetch" href="heys_simple_analytics.js" />
-  <!-- heys_storage_supabase_v1.js — prefetch удалён, файл локальный, SDK удалён -->
-  <link rel="prefetch" href="heys_models_v1.js" />
+    <!-- Resource hints for better caching (prefetch, not preload to avoid warnings) -->
+    <link rel="prefetch" href="heys_core_v12.js" />
+    <link rel="prefetch" href="heys_simple_analytics.js" />
+    <!-- heys_storage_supabase_v1.js — prefetch удалён, файл локальный, SDK удалён -->
+    <link rel="prefetch" href="heys_models_v1.js" />
 
-  <!-- Load non-critical CSS asynchronously -->
-  <link rel="preload" href="styles/main.css?v=21" as="style" onload="this.onload=null;this.rel='stylesheet'" />
-  <noscript>
-    <link rel="stylesheet" href="styles/main.css?v=21" />
-  </noscript>
+    <!-- Load non-critical CSS asynchronously -->
+    <link rel="preload" href="styles/main.css?v=21" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript>
+        <link rel="stylesheet" href="styles/main.css?v=21" />
+    </noscript>
 
-  <!-- PWA Manifest and Meta Tags -->
-  <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#2563eb" />
+    <!-- PWA Manifest and Meta Tags -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#2563eb" />
 
-  <!-- PWA Support (iOS + Android) -->
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="HEYS" />
-  <link rel="apple-touch-icon" href="/icon-192.png" />
-  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+    <!-- PWA Support (iOS + Android) -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="HEYS" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
 
-  <!-- IW config: autogenerated by scripts/sync-iw-inline-config.cjs (do not edit manually) -->
-  <!-- inline-блок автогенерируется скриптом, не редактировать вручную -->
-  <script id="heys-iw-config" type="application/json">
+    <!-- IW config: autogenerated by scripts/sync-iw-inline-config.cjs (do not edit manually) -->
+    <!-- inline-блок автогенерируется скриптом, не редактировать вручную -->
+    <script id="heys-iw-config" type="application/json">
     {
         "version": "hash:af203be2cce1",
         "GI_CATEGORIES": {
@@ -1491,379 +1491,391 @@
 </head>
 
 <body class="emoji-system">
-  <!-- 🔍 vConsole для отладки на телефоне (включается через ?debug=1 или localStorage heys_debug=1) -->
-  <script>
-    (function () {
-      window.__heysLog && window.__heysLog('Body parsing started');
-      var debug = new URLSearchParams(window.location.search).get('debug') === '1' || localStorage.getItem('heys_debug') === '1';
-      if (debug) {
-        var s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js';
-        s.onload = function () {
-          new window.VConsole({ theme: 'dark' });
-          window.__heysLog && window.__heysLog('vConsole loaded');
-        };
-        document.head.appendChild(s);
-      }
-    })();
-  </script>
-  <div id="root"></div>
+    <!-- 🔍 vConsole для отладки на телефоне (включается через ?debug=1 или localStorage heys_debug=1) -->
+    <script>
+        (function () {
+            window.__heysLog && window.__heysLog('Body parsing started');
+            var debug = new URLSearchParams(window.location.search).get('debug') === '1' || localStorage.getItem('heys_debug') === '1';
+            if (debug) {
+                var s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js';
+                s.onload = function () {
+                    new window.VConsole({ theme: 'dark' });
+                    window.__heysLog && window.__heysLog('vConsole loaded');
+                };
+                document.head.appendChild(s);
+            }
+        })();
+    </script>
+    <div id="root"></div>
 
-  <!-- Emoji style initialization - runs BEFORE twemoji loads -->
-  <script>
-    (function () {
-      // Detect platform - Twemoji only needed on Windows/Linux
-      var ua = navigator.userAgent || '';
-      var isWindows = /Windows/i.test(ua);
-      var isLinux = /Linux/i.test(ua) && !/Android/i.test(ua);
-      var needsTwemoji = isWindows || isLinux;
+    <!-- Emoji style initialization - runs BEFORE twemoji loads -->
+    <script>
+        (function () {
+            // Detect platform - Twemoji only needed on Windows/Linux
+            var ua = navigator.userAgent || '';
+            var isWindows = /Windows/i.test(ua);
+            var isLinux = /Linux/i.test(ua) && !/Android/i.test(ua);
+            var needsTwemoji = isWindows || isLinux;
 
-      window.heysPlatformNeedsTwemoji = needsTwemoji;
+            window.heysPlatformNeedsTwemoji = needsTwemoji;
 
-      // Get stored preference or auto-detect
-      var stored = localStorage.getItem('heys_emoji_style');
-      if (stored) {
-        stored = stored.replace(/"/g, '');
-      }
+            // Get stored preference or auto-detect
+            var stored = localStorage.getItem('heys_emoji_style');
+            if (stored) {
+                stored = stored.replace(/"/g, '');
+            }
 
-      // Auto mode: use twemoji on Windows/Linux, system on Mac/iOS/Android
-      if (!stored || stored === 'auto' || stored === 'android' || stored === 'apple' || stored === 'null') {
-        stored = needsTwemoji ? 'twemoji' : 'system';
-        localStorage.setItem('heys_emoji_style', stored);
-      }
+            // Auto mode: use twemoji on Windows/Linux, system on Mac/iOS/Android
+            if (!stored || stored === 'auto' || stored === 'android' || stored === 'apple' || stored === 'null') {
+                stored = needsTwemoji ? 'twemoji' : 'system';
+                localStorage.setItem('heys_emoji_style', stored);
+            }
 
-      // Apply class
-      document.body.classList.remove('emoji-system', 'emoji-twemoji');
-      document.body.classList.add('emoji-' + stored);
+            // Apply class
+            document.body.classList.remove('emoji-system', 'emoji-twemoji');
+            document.body.classList.add('emoji-' + stored);
 
-      // Global state
-      window.twemojiReady = false;
-      window.heysEmojiStyle = stored;
-      window.applyTwemoji = function () { };
-      window.scheduleTwemojiParse = function () { };
-    })();
-  </script>
+            // Global state
+            window.twemojiReady = false;
+            window.heysEmojiStyle = stored;
+            window.applyTwemoji = function () { };
+            window.scheduleTwemojiParse = function () { };
+        })();
+    </script>
 
-  <!-- Twemoji library - load only if needed (async to avoid parser-blocking) -->
-  <script>
-    if (window.heysPlatformNeedsTwemoji || window.heysEmojiStyle === 'twemoji') {
-      (function () {
-        var s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js';
-        s.async = false; // сохраняем порядок выполнения
-        s.onload = function () { window.twemojiLoaded = true; };
-        document.head.appendChild(s);
-      })();
-    }
-  </script>
+    <!-- Twemoji library - load only if needed (async to avoid parser-blocking) -->
+    <script>
+        if (window.heysPlatformNeedsTwemoji || window.heysEmojiStyle === 'twemoji') {
+            (function () {
+                var s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js';
+                s.async = false; // сохраняем порядок выполнения
+                s.onload = function () { window.twemojiLoaded = true; };
+                document.head.appendChild(s);
+            })();
+        }
+    </script>
 
-  <!-- Twemoji initialization - runs AFTER twemoji loads (only if loaded) -->
-  <script>
-    (function () {
-      // Setup function to initialize Twemoji
-      function initTwemoji() {
-        if (!window.twemoji) return;
+    <!-- Twemoji initialization - runs AFTER twemoji loads (only if loaded) -->
+    <script>
+        (function () {
+            // Setup function to initialize Twemoji
+            function initTwemoji() {
+                if (!window.twemoji) return;
 
-        window.twemojiReady = true;
+                window.twemojiReady = true;
 
-        // Apply Twemoji parsing
-        window.applyTwemoji = function (el) {
-          if (window.heysEmojiStyle !== 'twemoji') return;
-          if (!window.twemoji) return;
-          // Не парсить эмодзи когда нет сети — иначе бесконечные ошибки загрузки SVG
-          if (!navigator.onLine) return;
+                // Apply Twemoji parsing
+                window.applyTwemoji = function (el) {
+                    if (window.heysEmojiStyle !== 'twemoji') return;
+                    if (!window.twemoji) return;
+                    // Не парсить эмодзи когда нет сети — иначе бесконечные ошибки загрузки SVG
+                    if (!navigator.onLine) return;
 
-          // Ensure class is set
-          if (!document.body.classList.contains('emoji-twemoji')) {
-            document.body.classList.add('emoji-twemoji');
-          }
+                    // Ensure class is set
+                    if (!document.body.classList.contains('emoji-twemoji')) {
+                        document.body.classList.add('emoji-twemoji');
+                    }
 
-          var target = el || document.body;
-          twemoji.parse(target, {
-            folder: 'svg',
-            ext: '.svg',
-            base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/'
-          });
-        };
+                    var target = el || document.body;
+                    twemoji.parse(target, {
+                        folder: 'svg',
+                        ext: '.svg',
+                        base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/'
+                    });
+                };
 
-        // Debounced parse
-        var parseTimeout = null;
-        window.scheduleTwemojiParse = function () {
-          // Не ставить таймер если нет сети
-          if (!navigator.onLine) return;
-          if (parseTimeout) clearTimeout(parseTimeout);
-          parseTimeout = setTimeout(window.applyTwemoji, 30);
-        };
+                // Debounced parse
+                var parseTimeout = null;
+                window.scheduleTwemojiParse = function () {
+                    // Не ставить таймер если нет сети
+                    if (!navigator.onLine) return;
+                    if (parseTimeout) clearTimeout(parseTimeout);
+                    parseTimeout = setTimeout(window.applyTwemoji, 30);
+                };
 
-        // Parse immediately
-        window.applyTwemoji();
+                // Parse immediately
+                window.applyTwemoji();
 
-        // MutationObserver for dynamic content
-        var observer = new MutationObserver(function () {
-          window.scheduleTwemojiParse();
-        });
+                // MutationObserver for dynamic content
+                var observer = new MutationObserver(function () {
+                    window.scheduleTwemojiParse();
+                });
 
-        // Wait for root to exist
-        var startObserver = function () {
-          var root = document.getElementById('root');
-          if (root) {
-            observer.observe(root, { childList: true, subtree: true });
-          } else {
-            setTimeout(startObserver, 10);
-          }
-        };
-        startObserver();
+                // Wait for root to exist
+                var startObserver = function () {
+                    var root = document.getElementById('root');
+                    if (root) {
+                        observer.observe(root, { childList: true, subtree: true });
+                    } else {
+                        setTimeout(startObserver, 10);
+                    }
+                };
+                startObserver();
 
-        // Reparse when back online
-        window.addEventListener('online', function () {
-          window.applyTwemoji();
-        });
+                // Reparse when back online
+                window.addEventListener('online', function () {
+                    window.applyTwemoji();
+                });
 
-        // Aggressive reparsing during page load
-        setTimeout(window.applyTwemoji, 100);
-        setTimeout(window.applyTwemoji, 300);
-        setTimeout(window.applyTwemoji, 600);
-        setTimeout(window.applyTwemoji, 1000);
-        setTimeout(window.applyTwemoji, 2000);
-        setTimeout(window.applyTwemoji, 4000);
-      }
+                // Aggressive reparsing during page load
+                setTimeout(window.applyTwemoji, 100);
+                setTimeout(window.applyTwemoji, 300);
+                setTimeout(window.applyTwemoji, 600);
+                setTimeout(window.applyTwemoji, 1000);
+                setTimeout(window.applyTwemoji, 2000);
+                setTimeout(window.applyTwemoji, 4000);
+            }
 
-      // If Twemoji already loaded, init now. Otherwise wait for it.
-      if (window.twemoji) {
-        initTwemoji();
-      } else if (window.heysPlatformNeedsTwemoji || window.heysEmojiStyle === 'twemoji') {
-        // Wait for async script to load
-        var checkInterval = setInterval(function () {
-          if (window.twemoji) {
-            clearInterval(checkInterval);
-            initTwemoji();
-          }
-        }, 20);
-        // Timeout after 5s
-        setTimeout(function () { clearInterval(checkInterval); }, 5000);
-      }
-      // Else: not needed, stubs already set
-    })();
-  </script>
+            // If Twemoji already loaded, init now. Otherwise wait for it.
+            if (window.twemoji) {
+                initTwemoji();
+            } else if (window.heysPlatformNeedsTwemoji || window.heysEmojiStyle === 'twemoji') {
+                // Wait for async script to load
+                var checkInterval = setInterval(function () {
+                    if (window.twemoji) {
+                        clearInterval(checkInterval);
+                        initTwemoji();
+                    }
+                }, 20);
+                // Timeout after 5s
+                setTimeout(function () { clearInterval(checkInterval); }, 5000);
+            }
+            // Else: not needed, stubs already set
+        })();
+    </script>
 
-  <!-- libs with defer and priority for optimal loading -->
-  <!-- React CDN (jsDelivr - more reliable in RU) -->
-  <script defer src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" fetchpriority="high"
-    crossorigin="anonymous"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" fetchpriority="high"
-    crossorigin="anonymous"></script>
-  <!-- Supabase CDN — УДАЛЁН 2025-12-24 (152-ФЗ compliance)
+    <!-- libs with defer and priority for optimal loading -->
+    <!-- React CDN (jsDelivr - more reliable in RU) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" fetchpriority="high"
+        crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" fetchpriority="high"
+        crossorigin="anonymous"></script>
+    <!-- Supabase CDN — УДАЛЁН 2025-12-24 (152-ФЗ compliance)
          Причина: SDK делал запросы к серверам Supabase (Германия), 
          нарушая ст.18 ч.5 152-ФЗ о локализации ПДн.
          Замена: YandexAPI (heys_yandex_api_v1.js) → api.heyslab.ru
     -->
 
-  <!-- app modules with defer and optimized priority -->
-  <script defer src="heys_dev_utils.js" fetchpriority="high"></script>
-  <!-- Refactoring Infrastructure (v1.0) -->
-  <script defer src="heys_feature_flags_v1.js?v=1" fetchpriority="high"></script>
-  <script defer src="heys_module_perf_v1.js?v=1" fetchpriority="high"></script>
-  <script defer src="heys_module_loader_v1.js?v=1" fetchpriority="high"></script>
-  <!-- Modular App Components (Phase 2) -->
-  <script defer src="heys_bootstrap_v1.js?v=1" fetchpriority="high"></script>
-  <script defer src="heys_platform_apis_v1.js?v=1" fetchpriority="high"></script>
-  <script defer src="heys_pwa_module_v1.js?v=1" fetchpriority="high"></script>
-  <script defer src="heys_simple_analytics.js" fetchpriority="high"></script>
-  <!-- Smart search with typo correction, synonyms, phonetic (ё→е) -->
-  <script defer src="heys_smart_search_v2.js?v=1" fetchpriority="high"></script>
-  <script defer src="heys_core_v12.js" fetchpriority="high"></script>
-  <!-- Yandex Cloud API adapter (152-ФЗ compliant) - должен быть ДО supabase для auth -->
-  <script defer src="heys_yandex_api_v1.js?v=5" fetchpriority="high"></script>
-  <script defer src="heys_storage_supabase_v1.js?v=50" fetchpriority="low"></script>
-  <script defer src="heys_models_v1.js?v=20" fetchpriority="low"></script>
-  <script defer src="heys_storage_layer_v1.js?v=20" fetchpriority="low"></script>
-  <script defer src="heys_wheel_picker.js?v=20" fetchpriority="low"></script>
-  <script defer src="heys_swipeable.js?v=20" fetchpriority="low"></script>
-  <script defer src="heys_pull_refresh.js?v=20" fetchpriority="low"></script>
-  <!-- Toast Notification System (universal replacement for browser alerts) -->
-  <script defer src="heys_toast_v1.js?v=1" fetchpriority="low"></script>
-  <!-- Centralized ratio zones logic -->
-  <script defer src="heys_ratio_zones_v1.js?v=20" fetchpriority="low"></script>
-  <!-- TEF (Thermic Effect of Food) calculation module -->
-  <script defer src="heys_tef_v1.js?v=1" fetchpriority="low"></script>
-  <!-- TDEE calculation module -->
-  <script defer src="heys_tdee_v1.js?v=6" fetchpriority="low"></script>
-  <!-- Sparkline utilities (curves, regression, caching) -->
-  <script defer src="heys_sparkline_utils_v1.js?v=20" fetchpriority="low"></script>
-  <!-- Shared mini-sparklines -->
-  <script defer src="heys_sparklines_shared_v1.js?v=1" fetchpriority="low"></script>
-  <!-- Gamification system (XP, levels, achievements) -->
-  <script defer src="heys_gamification_v1.js?v=20" fetchpriority="low"></script>
-  <!-- Day module split (Phase 2-5) -->
-  <script defer src="heys_day_utils.js?v=55" fetchpriority="low"></script>
-  <script defer src="heys_day_hooks.js?v=20" fetchpriority="low"></script>
-  <script defer src="heys_day_pickers.js?v=20" fetchpriority="low"></script>
-  <script defer src="heys_day_popups.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_gallery.js?v=1" fetchpriority="low"></script>
-  <script defer src="day/_advice.js?v=1" fetchpriority="low"></script>
-  <script defer src="day/_meal_quality.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_add_product.js?v=1" fetchpriority="low"></script>
-  <script defer src="day/_meals.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_meal_optimizer_section.js?v=1" fetchpriority="low"></script>
-  <!-- Day module handlers (Phase 10) -->
-  <script defer src="heys_day_training_handlers.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_day_handlers.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_handlers_bundle_v1.js?v=1" fetchpriority="low"></script>
-  <!-- End Day module handlers -->
-  <!-- Day helper functions (Phase 11) -->
-  <script defer src="heys_day_calculations.js?v=1" fetchpriority="low"></script>
-  <!-- Day effects (Phase 12) -->
-  <script defer src="heys_day_effects.js?v=1" fetchpriority="low"></script>
-  <!-- End Day helper functions -->
-  <!-- Day render components (Phase 13A) -->
-  <script defer src="heys_day_diary_section.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_orphan_alert.js?v=1" fetchpriority="low"></script>
-  <!-- End Day render components -->
-  <!-- Day Stats/Water/Activity modules (PR #29 extractions) -->
-  <script defer src="heys_day_stats_vm_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_stats_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_water_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_activity_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_trainings_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_training_popups_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_sleep_score_popups_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_edit_grams_modal_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_time_mood_picker_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_sparklines_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_sparkline_data_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_caloric_balance_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_insights_data_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_insulin_wave_data_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_goal_progress_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_daily_summary_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_pull_refresh_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_offline_sync_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_insulin_wave_ui_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_measurements_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_popups_state_v1.js?v=1" fetchpriority="low"></script>
+    <!-- app modules with defer and optimized priority -->
+    <script defer src="heys_dev_utils.js" fetchpriority="high"></script>
+    <!-- Refactoring Infrastructure (v1.0) -->
+    <script defer src="heys_feature_flags_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_module_perf_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_module_loader_v1.js?v=1" fetchpriority="high"></script>
+    <!-- Modular App Components (Phase 2) -->
+    <script defer src="heys_bootstrap_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_platform_apis_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_pwa_module_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_simple_analytics.js" fetchpriority="high"></script>
+    <!-- Smart search with typo correction, synonyms, phonetic (ё→е) -->
+    <script defer src="heys_smart_search_v2.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_core_v12.js" fetchpriority="high"></script>
+    <!-- Yandex Cloud API adapter (152-ФЗ compliant) - должен быть ДО supabase для auth -->
+    <script defer src="heys_yandex_api_v1.js?v=5" fetchpriority="high"></script>
+    <script defer src="heys_storage_photos_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_storage_supabase_v1.js?v=50" fetchpriority="low"></script>
+    <script defer src="heys_models_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_storage_layer_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_wheel_picker.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_swipeable.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_pull_refresh.js?v=20" fetchpriority="low"></script>
+    <!-- Toast Notification System (universal replacement for browser alerts) -->
+    <script defer src="heys_toast_v1.js?v=1" fetchpriority="low"></script>
+    <!-- Centralized ratio zones logic -->
+    <script defer src="heys_ratio_zones_v1.js?v=20" fetchpriority="low"></script>
+    <!-- TEF (Thermic Effect of Food) calculation module -->
+    <script defer src="heys_tef_v1.js?v=1" fetchpriority="low"></script>
+    <!-- TDEE calculation module -->
+    <script defer src="heys_tdee_v1.js?v=6" fetchpriority="low"></script>
+    <!-- Sparkline utilities (curves, regression, caching) -->
+    <script defer src="heys_sparkline_utils_v1.js?v=20" fetchpriority="low"></script>
+    <!-- Shared mini-sparklines -->
+    <script defer src="heys_sparklines_shared_v1.js?v=1" fetchpriority="low"></script>
+    <!-- Gamification system (XP, levels, achievements) -->
+    <script defer src="heys_gamification_v1.js?v=20" fetchpriority="low"></script>
+    <!-- Day module split (Phase 2-5) -->
+    <script defer src="heys_day_core_bundle_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_pickers.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_day_popups.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_gallery.js?v=1" fetchpriority="low"></script>
+    <script defer src="day/_advice.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_meals_bundle_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="day/_meals.js?v=1" fetchpriority="low"></script>
+    <!-- Day module handlers (Phase 10) -->
 
-  <script defer src="heys_day_main_block_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_side_block_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_cycle_card_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_weight_trends_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_picker_modals.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_animations.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_hero_metrics.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_water_state.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_daily_table.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_steps_ui.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_sparkline_state.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_edit_grams_state.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_caloric_display_state.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_page_shell.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_engagement_effects.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_calendar_metrics.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_calendar_block_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_mood_sparkline_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_stats_block_v1.js?v=1" fetchpriority="low"></script>
+    <!-- End Day module handlers -->
+    <!-- Day helper functions (Phase 11) -->
+    <!-- Day effects (Phase 12) -->
+    <!-- End Day helper functions -->
+    <!-- Day render components (Phase 13A) -->
+    <!-- End Day render components -->
+    <!-- Day Stats/Water/Activity modules (PR #29 extractions) -->
+    <script defer src="heys_day_stats_bundle_loader_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_edit_grams_modal_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_time_mood_picker_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_sparklines_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_sparkline_data_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_caloric_balance_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_insights_data_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_insulin_wave_data_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_goal_progress_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_daily_summary_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_pull_refresh_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_offline_sync_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_insulin_wave_ui_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_measurements_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_popups_state_v1.js?v=1" fetchpriority="low"></script>
 
-  <script defer src="heys_day_orphan_state_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_nutrition_state_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_runtime_ui_state_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_water_card_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_activity_card_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_energy_context_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_bottom_sheet_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_hero_display_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_rating_averages_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_advice_integration_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_products_context_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_tab_render_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_day_cycle_state.js" fetchpriority="low"></script>
-  <!-- End PR #29 extractions -->
-  <script defer src="heys_advice_rules_v1.js?v=1" fetchpriority="low"></script>
-  <!-- Advice engine (modular) -->
-  <script defer src="advice/_core.js?v=1" fetchpriority="low"></script>
-  <script defer src="advice/_nutrition.js?v=1" fetchpriority="low"></script>
-  <script defer src="advice/_timing.js?v=1" fetchpriority="low"></script>
-  <script defer src="advice/_training.js?v=1" fetchpriority="low"></script>
-  <script defer src="advice/_emotional.js?v=1" fetchpriority="low"></script>
-  <script defer src="advice/_hydration.js?v=1" fetchpriority="low"></script>
-  <script defer src="advice/_other.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_meal_optimizer_v1.js?v=20" fetchpriority="low"></script>
-  <script defer src="heys_sounds_v1.js?v=20" fetchpriority="low"></script>
-  <!-- Modular components -->
-  <script defer src="heys_expandable_card_v1.js?v=20" fetchpriority="low"></script>
-  <!-- Insulin Wave Modules (v4.2.2 refactored) -->
-  <script defer src="heys_iw_shim.js?v=25" fetchpriority="low"></script>
-  <script defer src="heys_iw_patterns.js?v=25" fetchpriority="low"></script>
-  <script defer src="heys_iw_config_loader.js?v=25" fetchpriority="low"></script>
-  <script defer src="heys_iw_constants.js?v=25" fetchpriority="low"></script>
-  <script defer src="heys_iw_utils.js?v=25" fetchpriority="low"></script>
-  <script defer src="heys_iw_lipolysis.js?v=25" fetchpriority="low"></script>
-  <script defer src="heys_iw_v30.js?v=25" fetchpriority="low"></script>
-  <script defer src="heys_iw_v41.js?v=25" fetchpriority="low"></script>
-  <script defer src="heys_iw_calc.js?v=25" fetchpriority="low"></script>
-  <script defer src="heys_iw_orchestrator.js?v=25" fetchpriority="low"></script>
-  <script defer src="heys_iw_graph.js?v=25" fetchpriority="low"></script>
-  <script defer src="heys_iw_ndte.js?v=25" fetchpriority="low"></script>
-  <script defer src="heys_iw_ui.js?v=25" fetchpriority="low"></script>
-  <script defer src="heys_insulin_wave_v1.js?v=25" fetchpriority="low"></script>
-  <script defer src="heys_iw_version_info.js?v=25" fetchpriority="low"></script>
-  <script defer src="heys_cycle_v1.js?v=20" fetchpriority="low"></script>
-  <script defer src="heys_refeed_v1.js?v=20" fetchpriority="low"></script>
-  <script defer src="heys_yesterday_verify_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_sms_v1.js?v=2" fetchpriority="low"></script>
-  <script defer src="heys_consents_v1.js?v=5" fetchpriority="low"></script>
-  <script defer src="heys_subscriptions_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_status_v1.js?v=1" fetchpriority="low"></script>
-  <!-- Predictive Insights (split modules) v6 -->
-  <script defer src="insights/pi_constants.js?v=6" fetchpriority="low"></script>
-  <script defer src="insights/pi_math.js?v=6" fetchpriority="low"></script>
-  <script defer src="insights/pi_stats.js?v=6" fetchpriority="low"></script>
-  <script defer src="insights/pi_science_info.js?v=6" fetchpriority="low"></script>
-  <script defer src="insights/pi_patterns.js?v=6" fetchpriority="low"></script>
-  <script defer src="insights/pi_advanced.js?v=6" fetchpriority="low"></script>
-  <script defer src="insights/pi_analytics_api.js?v=6" fetchpriority="low"></script>
-  <script defer src="insights/pi_calculations.js?v=6" fetchpriority="low"></script>
-  <script defer src="insights/pi_ui_rings.js?v=6" fetchpriority="low"></script>
-  <script defer src="insights/pi_ui_cards.js?v=6" fetchpriority="low"></script>
-  <script defer src="insights/pi_ui_whatif.js?v=6" fetchpriority="low"></script>
-  <script defer src="insights/pi_ui_dashboard.js?v=6" fetchpriority="low"></script>
-  <script defer src="insights/pi_data.js?v=6" fetchpriority="low"></script>
-  <!-- Bridge: creates HEYS.PredictiveInsights.components getter from InsightsPI submodules -->
-  <script defer src="heys_predictive_insights_v1.js?v=6" fetchpriority="low"></script>
-  <script defer src="heys_phenotype_v1.js?v=2" fetchpriority="low"></script>
-  <script defer src="heys_metabolic_intelligence_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_supplements_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_supplements_science_v1.js?v=1" fetchpriority="low"></script>
-  <!-- Modal Management System -->
-  <script defer src="heys_modal_manager_v1.js?v=1" fetchpriority="low"></script>
-  <!-- StepModal system (modular step-based modals) -->
-  <script defer src="heys_step_modal_v1.js?v=20" fetchpriority="low"></script>
-  <script defer src="heys_steps_v1.js?v=21" fetchpriority="low"></script>
-  <script defer src="heys_profile_step_v1.js?v=20" fetchpriority="low"></script>
-  <script defer src="heys_meal_step_v1.js?v=20" fetchpriority="low"></script>
-  <script defer src="heys_add_product_step_v1.js?v=20" fetchpriority="low"></script>
-  <script defer src="heys_training_step_v1.js?v=20" fetchpriority="low"></script>
-  <script defer src="heys_morning_checkin_v1.js?v=20" fetchpriority="low"></script>
-  <script defer src="heys_confirm_modal_v1.js?v=20" fetchpriority="low"></script>
-  <!-- End Day module split -->
-  <script defer src="heys_day_v12.js?v=54" fetchpriority="low"></script>
-  <script defer src="heys_user_v12.js?v=20" fetchpriority="low"></script>
-  <script defer src="heys_weekly_reports_v2.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_data_overview_v1.js?v=20" fetchpriority="low"></script>
-  <!-- Widgets Dashboard system -->
-  <script defer src="heys_widgets_events_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_widgets_registry_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="heys_widgets_core_v1.js?v=1" fetchpriority="low"></script>
-  <script defer src="widgets/widget_data.js?v=5" fetchpriority="low"></script>
-  <script defer src="heys_widgets_ui_v1.js?v=3" fetchpriority="low"></script>
-  <!-- Auth + Login (client phone+PIN, curator email+password) -->
-  <script defer src="heys_auth_v1.js?v=3" fetchpriority="high"></script>
-  <script defer src="heys_subscription_v1.js?v=1" fetchpriority="high"></script>
-  <script defer src="heys_trial_queue_v1.js?v=1" fetchpriority="high"></script>
-  <script defer src="heys_paywall_v1.js?v=2" fetchpriority="high"></script>
-  <script defer src="heys_login_screen_v1.js?v=2" fetchpriority="high"></script>
-  <script src="heys_ui_onboarding_v1.js"></script>
-  <script defer src="heys_app_v12.js?v=2026.01.14.0209.fd6cbba" fetchpriority="high"></script>
+    <script defer src="heys_day_main_block_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_side_block_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_cycle_card_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_weight_trends_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_picker_modals.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_animations.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_hero_metrics.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_water_state.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_daily_table.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_steps_ui.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_sparkline_state.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_edit_grams_state.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_caloric_display_state.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_page_shell.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_engagement_effects.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_calendar_metrics.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_calendar_block_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_mood_sparkline_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_stats_block_v1.js?v=1" fetchpriority="low"></script>
 
-  <!-- Service Worker регистрируется в heys_app_v12.js → registerServiceWorker() -->
+    <script defer src="heys_day_orphan_state_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_nutrition_state_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_runtime_ui_state_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_water_card_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_activity_card_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_energy_context_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_bottom_sheet_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_hero_display_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_rating_averages_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_advice_integration_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_products_context_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_tab_render_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_cycle_state.js" fetchpriority="low"></script>
+    <!-- End PR #29 extractions -->
+    <script defer src="heys_advice_rules_v1.js?v=1" fetchpriority="low"></script>
+    <!-- Advice engine (modular) -->
+    <script defer src="advice/_core.js?v=1" fetchpriority="low"></script>
+    <script defer src="advice/_nutrition.js?v=1" fetchpriority="low"></script>
+    <script defer src="advice/_timing.js?v=1" fetchpriority="low"></script>
+    <script defer src="advice/_training.js?v=1" fetchpriority="low"></script>
+    <script defer src="advice/_emotional.js?v=1" fetchpriority="low"></script>
+    <script defer src="advice/_hydration.js?v=1" fetchpriority="low"></script>
+    <script defer src="advice/_other.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_meal_optimizer_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_sounds_v1.js?v=20" fetchpriority="low"></script>
+    <!-- Modular components -->
+    <script defer src="heys_expandable_card_v1.js?v=20" fetchpriority="low"></script>
+    <!-- Insulin Wave Modules (v4.2.2 refactored) -->
+    <script defer src="heys_iw_shim.js?v=25" fetchpriority="low"></script>
+    <script defer src="heys_iw_patterns.js?v=25" fetchpriority="low"></script>
+    <script defer src="heys_iw_config_loader.js?v=25" fetchpriority="low"></script>
+    <script defer src="heys_iw_constants.js?v=25" fetchpriority="low"></script>
+    <script defer src="heys_iw_utils.js?v=25" fetchpriority="low"></script>
+    <script defer src="heys_iw_lipolysis.js?v=25" fetchpriority="low"></script>
+    <script defer src="heys_iw_v30.js?v=25" fetchpriority="low"></script>
+    <script defer src="heys_iw_v41.js?v=25" fetchpriority="low"></script>
+    <script defer src="heys_iw_calc.js?v=25" fetchpriority="low"></script>
+    <script defer src="heys_iw_orchestrator.js?v=25" fetchpriority="low"></script>
+    <script defer src="heys_iw_graph.js?v=25" fetchpriority="low"></script>
+    <script defer src="heys_iw_ndte.js?v=25" fetchpriority="low"></script>
+    <script defer src="heys_iw_ui.js?v=25" fetchpriority="low"></script>
+    <script defer src="heys_insulin_wave_v1.js?v=25" fetchpriority="low"></script>
+    <script defer src="heys_iw_version_info.js?v=25" fetchpriority="low"></script>
+    <script defer src="heys_cycle_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_refeed_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_yesterday_verify_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_sms_v1.js?v=2" fetchpriority="low"></script>
+    <script defer src="heys_consents_v1.js?v=5" fetchpriority="low"></script>
+    <script defer src="heys_subscriptions_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_status_v1.js?v=1" fetchpriority="low"></script>
+    <!-- Predictive Insights (split modules) v6 -->
+    <script defer src="insights/pi_constants.js?v=6" fetchpriority="low"></script>
+    <script defer src="insights/pi_math.js?v=6" fetchpriority="low"></script>
+    <script defer src="insights/pi_stats.js?v=6" fetchpriority="low"></script>
+    <script defer src="insights/pi_science_info.js?v=6" fetchpriority="low"></script>
+    <script defer src="insights/pi_patterns.js?v=6" fetchpriority="low"></script>
+    <script defer src="insights/pi_advanced.js?v=6" fetchpriority="low"></script>
+    <script defer src="insights/pi_analytics_api.js?v=6" fetchpriority="low"></script>
+    <script defer src="insights/pi_calculations.js?v=6" fetchpriority="low"></script>
+    <script defer src="insights/pi_ui_rings.js?v=6" fetchpriority="low"></script>
+    <script defer src="insights/pi_ui_cards.js?v=6" fetchpriority="low"></script>
+    <script defer src="insights/pi_ui_whatif.js?v=6" fetchpriority="low"></script>
+    <script defer src="insights/pi_ui_dashboard.js?v=6" fetchpriority="low"></script>
+    <script defer src="insights/pi_data.js?v=6" fetchpriority="low"></script>
+    <!-- Bridge: creates HEYS.PredictiveInsights.components getter from InsightsPI submodules -->
+    <script defer src="heys_predictive_insights_v1.js?v=6" fetchpriority="low"></script>
+    <script defer src="heys_phenotype_v1.js?v=2" fetchpriority="low"></script>
+    <script defer src="heys_metabolic_intelligence_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_supplements_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_supplements_science_v1.js?v=1" fetchpriority="low"></script>
+    <!-- Modal Management System -->
+    <script defer src="heys_modal_manager_v1.js?v=1" fetchpriority="low"></script>
+    <!-- StepModal system (modular step-based modals) -->
+    <script defer src="heys_step_modal_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_steps_v1.js?v=21" fetchpriority="low"></script>
+    <script defer src="heys_profile_step_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_meal_step_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_add_product_step_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_training_step_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_morning_checkin_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_confirm_modal_v1.js?v=20" fetchpriority="low"></script>
+    <!-- End Day module split -->
+    <script defer src="heys_day_v12.js?v=54" fetchpriority="low"></script>
+    <script defer src="heys_user_v12.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_weekly_reports_v2.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_data_overview_v1.js?v=20" fetchpriority="low"></script>
+    <!-- Widgets Dashboard system -->
+    <script defer src="heys_widgets_events_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_widgets_registry_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_widgets_core_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="widgets/widget_data.js?v=5" fetchpriority="low"></script>
+    <script defer src="heys_widgets_ui_v1.js?v=3" fetchpriority="low"></script>
+    <!-- Auth + Login (client phone+PIN, curator email+password) -->
+    <script defer src="heys_auth_v1.js?v=3" fetchpriority="high"></script>
+    <script defer src="heys_subscription_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_trial_queue_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_paywall_v1.js?v=2" fetchpriority="high"></script>
+    <script defer src="heys_login_screen_v1.js?v=2" fetchpriority="high"></script>
+    <script src="heys_ui_onboarding_v1.js"></script>
+    <script defer src="heys_app_hooks_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_tabs_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_gamification_bar_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_gates_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_shell_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_overlays_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_gate_flow_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_backup_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_shortcuts_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_onboarding_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_auth_init_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_client_helpers_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_desktop_gate_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_morning_checkin_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_swipe_nav_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_runtime_effects_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_sync_effects_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_tab_state_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_client_management_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_backup_actions_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_backup_export_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_update_checks_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_update_notifications_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_dependency_loader_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_auth_ui_state_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_ui_state_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_v12.js?v=2026.01.14.0209.fd6cbba" fetchpriority="high"></script>
+
+    <!-- Service Worker регистрируется в heys_app_v12.js → registerServiceWorker() -->
 </body>
 
 </html>

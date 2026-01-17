@@ -1,0 +1,878 @@
+// heys_app_hooks_v1.js — App hooks extracted from heys_app_v12.js
+
+(function () {
+    const HEYS = window.HEYS = window.HEYS || {};
+
+    function useThemePreference() {
+        const React = window.React;
+        const { useState, useEffect, useMemo, useCallback } = React;
+        const [theme, setTheme] = useState(() => {
+            try {
+                const U = window.HEYS?.utils || {};
+                const saved = U.lsGet ? U.lsGet('heys_theme', 'light') : localStorage.getItem('heys_theme');
+                return ['light', 'dark', 'auto'].includes(saved) ? saved : 'light';
+            } catch {
+                return 'light';
+            }
+        });
+
+        const resolvedTheme = useMemo(() => {
+            if (theme === 'auto') {
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            return theme;
+        }, [theme]);
+
+        useEffect(() => {
+            document.documentElement.setAttribute('data-theme', resolvedTheme);
+            try {
+                const U = window.HEYS?.utils || {};
+                U.lsSet ? U.lsSet('heys_theme', theme) : localStorage.setItem('heys_theme', theme);
+            } catch { }
+
+            if (theme !== 'auto') return;
+
+            const mq = window.matchMedia('(prefers-color-scheme: dark)');
+            const handler = () => {
+                document.documentElement.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
+            };
+            mq.addEventListener('change', handler);
+            return () => mq.removeEventListener('change', handler);
+        }, [theme, resolvedTheme]);
+
+        const cycleTheme = useCallback(() => {
+            setTheme(prev => prev === 'light' ? 'dark' : prev === 'dark' ? 'auto' : 'light');
+        }, []);
+
+        return { theme, resolvedTheme, cycleTheme };
+    }
+
+    function usePwaPrompts() {
+        const React = window.React;
+        const { useState, useEffect, useMemo, useCallback } = React;
+        const [pwaInstallPrompt, setPwaInstallPrompt] = useState(null);
+        const [showPwaBanner, setShowPwaBanner] = useState(false);
+        const [showIosPwaBanner, setShowIosPwaBanner] = useState(false);
+
+        // Определяем iOS Safari
+        const isIosSafari = useMemo(() => {
+            const ua = navigator.userAgent || '';
+            const isIos = /iPhone|iPad|iPod/.test(ua);
+            const isWebkit = /WebKit/.test(ua);
+            const isChrome = /CriOS/.test(ua);
+            const isFirefox = /FxiOS/.test(ua);
+            // iOS Safari = iOS + WebKit + не Chrome + не Firefox
+            return isIos && isWebkit && !isChrome && !isFirefox;
+        }, []);
+
+        // Слушаем beforeinstallprompt событие (Android/Desktop)
+        useEffect(() => {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                window.navigator.standalone === true;
+            if (isStandalone) return;
+
+            const dismissed = localStorage.getItem('heys_pwa_banner_dismissed');
+            if (dismissed) {
+                const dismissedTime = parseInt(dismissed, 10);
+                if (Date.now() - dismissedTime < 7 * 24 * 60 * 60 * 1000) return;
+            }
+
+            if (isIosSafari) {
+                setTimeout(() => setShowIosPwaBanner(true), 3000);
+                return;
+            }
+
+            const handler = (e) => {
+                e.preventDefault();
+                setPwaInstallPrompt(e);
+                setTimeout(() => setShowPwaBanner(true), 3000);
+            };
+
+            window.addEventListener('beforeinstallprompt', handler);
+            return () => window.removeEventListener('beforeinstallprompt', handler);
+        }, [isIosSafari]);
+
+        const handlePwaInstall = useCallback(async () => {
+            if (!pwaInstallPrompt) return;
+            pwaInstallPrompt.prompt();
+            const { outcome } = await pwaInstallPrompt.userChoice;
+            if (outcome === 'accepted') {
+                setShowPwaBanner(false);
+                localStorage.setItem('heys_pwa_installed', 'true');
+            }
+            setPwaInstallPrompt(null);
+        }, [pwaInstallPrompt]);
+
+        const dismissPwaBanner = useCallback(() => {
+            setShowPwaBanner(false);
+            localStorage.setItem('heys_pwa_banner_dismissed', Date.now().toString());
+        }, []);
+
+        const dismissIosPwaBanner = useCallback(() => {
+            setShowIosPwaBanner(false);
+            localStorage.setItem('heys_pwa_banner_dismissed', Date.now().toString());
+        }, []);
+
+        return { showPwaBanner, showIosPwaBanner, handlePwaInstall, dismissPwaBanner, dismissIosPwaBanner };
+    }
+
+    // === 📱 Screen Wake Lock API — предотвращение выключения экрана ===
+    // Используется когда пользователь активно работает (таймер инсулиновой волны, готовка)
+    function useWakeLock() {
+        const React = window.React;
+        const wakeLockRef = React.useRef(null);
+        const [isWakeLockActive, setIsWakeLockActive] = React.useState(false);
+
+        // Проверка поддержки
+        const isSupported = React.useMemo(() => {
+            return 'wakeLock' in navigator;
+        }, []);
+
+        // Запрос Wake Lock
+        const requestWakeLock = React.useCallback(async () => {
+            if (!isSupported) {
+                console.warn('[WakeLock] Not supported in this browser');
+                return false;
+            }
+
+            try {
+                wakeLockRef.current = await navigator.wakeLock.request('screen');
+                setIsWakeLockActive(true);
+                console.log('[WakeLock] 🔆 Screen wake lock acquired');
+
+                // Слушаем release (например, при сворачивании приложения)
+                wakeLockRef.current.addEventListener('release', () => {
+                    console.log('[WakeLock] Wake lock released');
+                    setIsWakeLockActive(false);
+                });
+
+                // Haptic feedback
+                if (navigator.vibrate) navigator.vibrate(10);
+
+                return true;
+            } catch (err) {
+                console.warn('[WakeLock] Failed to acquire:', err.message);
+                setIsWakeLockActive(false);
+                return false;
+            }
+        }, [isSupported]);
+
+        // Освобождение Wake Lock
+        const releaseWakeLock = React.useCallback(async () => {
+            if (wakeLockRef.current) {
+                try {
+                    await wakeLockRef.current.release();
+                    wakeLockRef.current = null;
+                    setIsWakeLockActive(false);
+                    console.log('[WakeLock] 🔅 Screen wake lock released manually');
+                } catch (err) {
+                    console.warn('[WakeLock] Failed to release:', err.message);
+                }
+            }
+        }, []);
+
+        // Автоматическое перезапрашивание при возвращении на вкладку
+        React.useEffect(() => {
+            if (!isSupported || !isWakeLockActive) return;
+
+            const handleVisibilityChange = async () => {
+                if (document.visibilityState === 'visible' && !wakeLockRef.current) {
+                    // Перезапрашиваем wake lock после возвращения на вкладку
+                    await requestWakeLock();
+                }
+            };
+
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            return () => {
+                document.removeEventListener('visibilitychange', handleVisibilityChange);
+            };
+        }, [isSupported, isWakeLockActive, requestWakeLock]);
+
+        // Cleanup при unmount
+        React.useEffect(() => {
+            return () => {
+                if (wakeLockRef.current) {
+                    wakeLockRef.current.release().catch(() => { });
+                }
+            };
+        }, []);
+
+        return {
+            isSupported,
+            isWakeLockActive,
+            requestWakeLock,
+            releaseWakeLock
+        };
+    }
+
+    function useCloudSyncStatus() {
+        const React = window.React;
+        const { useState, useRef, useCallback, useEffect } = React;
+        const [cloudStatus, setCloudStatus] = useState(() => navigator.onLine ? 'idle' : 'offline');
+        const [pendingCount, setPendingCount] = useState(0);
+        const [pendingDetails, setPendingDetails] = useState({ days: 0, products: 0, profile: 0, other: 0 });
+        const [showOfflineBanner, setShowOfflineBanner] = useState(false);
+        const [showOnlineBanner, setShowOnlineBanner] = useState(false);
+        const [syncProgress, setSyncProgress] = useState({ synced: 0, total: 0 });
+        const [retryCountdown, setRetryCountdown] = useState(0);
+        // 🆕 Время офлайн для улучшенного UX
+        const [offlineDuration, setOfflineDuration] = useState(0);
+        const offlineStartRef = useRef(null);
+        const offlineDurationIntervalRef = useRef(null);
+
+        const cloudSyncTimeoutRef = useRef(null);
+        const pendingChangesRef = useRef(false);
+        const syncingStartRef = useRef(null);
+        const syncedTimeoutRef = useRef(null);
+        const syncingDelayTimeoutRef = useRef(null);
+        const initialCheckDoneRef = useRef(false);
+        const retryIntervalRef = useRef(null);
+        // 🔒 Cooldown после первого sync — не показываем "syncing" сразу после загрузки
+        const initialSyncCompletedAtRef = useRef(0);
+        const INITIAL_SYNC_COOLDOWN_MS = 3000; // 3 секунды после первого sync не показываем syncing
+
+        const MIN_SYNCING_DURATION = 1500;
+        const SYNCING_DELAY = 400;
+
+        const showSyncedWithMinDuration = useCallback(() => {
+            if (syncedTimeoutRef.current) return;
+
+            const elapsed = syncingStartRef.current ? Date.now() - syncingStartRef.current : 0;
+            const remaining = Math.max(0, MIN_SYNCING_DURATION - elapsed);
+
+            syncedTimeoutRef.current = setTimeout(() => {
+                syncedTimeoutRef.current = null;
+                syncingStartRef.current = null;
+                setCloudStatus('synced');
+                // Звук синхронизации убран — теперь звуки только в геймификации
+                setSyncProgress({ synced: 0, total: 0 });
+                if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+                cloudSyncTimeoutRef.current = setTimeout(() => {
+                    setCloudStatus('idle');
+                }, 2000);
+            }, remaining);
+        }, []);
+
+        useEffect(() => {
+            const handleSyncComplete = () => {
+                // ⚡️ Первый heysSyncCompleted после инициализации не должен триггерить UI
+                // если не было фактических локальных изменений/отложенных синков — иначе мерцание
+                const hadPendingWork =
+                    syncingStartRef.current ||
+                    pendingChangesRef.current ||
+                    (syncProgress.total > 0) ||
+                    (pendingCount > 0);
+                if (!hadPendingWork) {
+                    // 🔒 Запоминаем время первого sync для cooldown
+                    if (!initialSyncCompletedAtRef.current) {
+                        initialSyncCompletedAtRef.current = Date.now();
+                    }
+                    return;
+                }
+
+                if (syncingDelayTimeoutRef.current) {
+                    clearTimeout(syncingDelayTimeoutRef.current);
+                    syncingDelayTimeoutRef.current = null;
+                }
+                if (cloudSyncTimeoutRef.current) {
+                    clearTimeout(cloudSyncTimeoutRef.current);
+                    cloudSyncTimeoutRef.current = null;
+                }
+                pendingChangesRef.current = false;
+                if (navigator.onLine) {
+                    showSyncedWithMinDuration();
+                }
+            };
+
+            const handleDataSaved = () => {
+                pendingChangesRef.current = true;
+
+                if (!navigator.onLine) {
+                    setCloudStatus('offline');
+                    return;
+                }
+
+                if (syncedTimeoutRef.current) {
+                    return;
+                }
+
+                // 🔒 Cooldown: не показываем "syncing" сразу после первого sync
+                // Это предотвращает мерцание когда merged данные сохраняются обратно в облако
+                const timeSinceInitialSync = initialSyncCompletedAtRef.current
+                    ? Date.now() - initialSyncCompletedAtRef.current
+                    : Infinity;
+                if (timeSinceInitialSync < INITIAL_SYNC_COOLDOWN_MS) {
+                    // Тихо сохраняем без UI-индикации
+                    return;
+                }
+
+                if (cloudSyncTimeoutRef.current) {
+                    clearTimeout(cloudSyncTimeoutRef.current);
+                    cloudSyncTimeoutRef.current = null;
+                }
+
+                if (!syncingStartRef.current) {
+                    syncingStartRef.current = Date.now();
+
+                    if (!syncingDelayTimeoutRef.current) {
+                        syncingDelayTimeoutRef.current = setTimeout(() => {
+                            syncingDelayTimeoutRef.current = null;
+                            if (syncingStartRef.current && !syncedTimeoutRef.current) {
+                                setCloudStatus('syncing');
+                            }
+                        }, SYNCING_DELAY);
+                    }
+                }
+
+                if (!cloudSyncTimeoutRef.current) {
+                    cloudSyncTimeoutRef.current = setTimeout(() => {
+                        pendingChangesRef.current = false;
+                        showSyncedWithMinDuration();
+                    }, 5000);
+                }
+            };
+
+            const handlePendingChange = (e) => {
+                const count = e.detail?.count || 0;
+                const details = e.detail?.details || { days: 0, products: 0, profile: 0, other: 0 };
+                setPendingCount(count);
+                setPendingDetails(details);
+
+                if (syncProgress.total > 0 && count < syncProgress.total) {
+                    setSyncProgress(prev => ({ ...prev, synced: prev.total - count }));
+                }
+
+                if (count > 0 && !navigator.onLine) {
+                    setCloudStatus('offline');
+                }
+            };
+
+            const handleSyncProgress = (e) => {
+                const { synced, total } = e.detail || {};
+                if (typeof synced === 'number' && typeof total === 'number') {
+                    setSyncProgress({ synced, total });
+                }
+            };
+
+            const handleSyncError = (e) => {
+                const code = e.detail?.error;
+                const isPersistent = e.detail?.persistent || false;
+
+                if (code === 'auth_required') {
+                    setCloudStatus('offline');
+                    setRetryCountdown(0);
+                    try { HEYS.Toast?.warning('Требуется повторный вход для синхронизации') || alert('Требуется повторный вход для синхронизации'); } catch (_) { }
+                    return;
+                }
+
+                // 🔥 Если ошибка критическая (persistent), показываем тост
+                if (isPersistent) {
+                    try { HEYS.Toast?.error(`Ошибка синхронизации: ${code}`) || console.error(`Sync error: ${code}`); } catch (_) { }
+                }
+
+                const retryIn = e.detail?.retryIn || 5;
+                setCloudStatus('error');
+                setRetryCountdown(retryIn);
+
+                if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
+                retryIntervalRef.current = setInterval(() => {
+                    setRetryCountdown(prev => {
+                        if (prev <= 1) {
+                            clearInterval(retryIntervalRef.current);
+                            retryIntervalRef.current = null;
+                            if (navigator.onLine && window.HEYS?.cloud?.retrySync) {
+                                window.HEYS.cloud.retrySync();
+                                setCloudStatus('syncing');
+                            }
+                            return 0;
+                        }
+                        return prev - 1;
+                    });
+                }, 1000);
+            };
+
+            const handleNetworkRestored = (e) => {
+                const count = e.detail?.pendingCount || 0;
+                if (count > 0) {
+                    if (!syncingStartRef.current) {
+                        syncingStartRef.current = Date.now();
+                    }
+                    setCloudStatus('syncing');
+                }
+            };
+
+            const handleOnline = () => {
+                // 🆕 Остановить таймер офлайн
+                if (offlineDurationIntervalRef.current) {
+                    clearInterval(offlineDurationIntervalRef.current);
+                    offlineDurationIntervalRef.current = null;
+                }
+                const wasOfflineFor = offlineStartRef.current ? Math.floor((Date.now() - offlineStartRef.current) / 1000) : 0;
+                offlineStartRef.current = null;
+                setOfflineDuration(0);
+
+                setShowOfflineBanner(false);
+                setShowOnlineBanner(true);
+
+                // 🆕 Haptic feedback при восстановлении связи
+                if ('vibrate' in navigator) {
+                    navigator.vibrate([50, 30, 50]); // Два коротких вибро — "всё ок"
+                }
+
+                setTimeout(() => setShowOnlineBanner(false), 2000);
+
+                if (pendingChangesRef.current || pendingCount > 0) {
+                    if (!syncingStartRef.current) {
+                        syncingStartRef.current = Date.now();
+                    }
+                    setCloudStatus('syncing');
+                    if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+                    cloudSyncTimeoutRef.current = setTimeout(() => {
+                        pendingChangesRef.current = false;
+                        showSyncedWithMinDuration();
+                    }, 2000);
+                } else {
+                    setCloudStatus('idle');
+                }
+
+                // 🆕 Логируем время офлайн для аналитики
+                if (wasOfflineFor > 5 && window.HEYS?.analytics?.trackDataOperation) {
+                    window.HEYS.analytics.trackDataOperation('offline_session', 1, wasOfflineFor * 1000);
+                }
+            };
+
+            const handleOffline = () => {
+                // 🆕 Запустить таймер офлайн
+                offlineStartRef.current = Date.now();
+                setOfflineDuration(0);
+
+                // Обновлять время каждую секунду
+                if (offlineDurationIntervalRef.current) {
+                    clearInterval(offlineDurationIntervalRef.current);
+                }
+                offlineDurationIntervalRef.current = setInterval(() => {
+                    if (offlineStartRef.current) {
+                        setOfflineDuration(Math.floor((Date.now() - offlineStartRef.current) / 1000));
+                    }
+                }, 1000);
+
+                setShowOfflineBanner(true);
+                setCloudStatus('offline');
+
+                // 🆕 Haptic feedback при потере связи
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(100); // Одна длинная вибрация — внимание
+                }
+
+                // Не скрываем баннер автоматически — он исчезнет когда связь вернётся
+            };
+
+            window.addEventListener('heysSyncCompleted', handleSyncComplete);
+            window.addEventListener('heys:data-uploaded', handleSyncComplete);
+            window.addEventListener('heys:data-saved', handleDataSaved);
+            window.addEventListener('heys:pending-change', handlePendingChange);
+            window.addEventListener('heys:network-restored', handleNetworkRestored);
+            window.addEventListener('heys:sync-progress', handleSyncProgress);
+            window.addEventListener('heys:sync-error', handleSyncError);
+            window.addEventListener('online', handleOnline);
+            window.addEventListener('offline', handleOffline);
+
+            if (!initialCheckDoneRef.current) {
+                initialCheckDoneRef.current = true;
+                if (!navigator.onLine) {
+                    setCloudStatus('offline');
+                    setShowOfflineBanner(true);
+                    setTimeout(() => setShowOfflineBanner(false), 3000);
+                } else {
+                    setCloudStatus('idle');
+                }
+            }
+
+            if (window.HEYS?.cloud?.getPendingCount) {
+                setPendingCount(window.HEYS.cloud.getPendingCount());
+            }
+            if (window.HEYS?.cloud?.getPendingDetails) {
+                setPendingDetails(window.HEYS.cloud.getPendingDetails());
+            }
+
+            return () => {
+                window.removeEventListener('heysSyncCompleted', handleSyncComplete);
+                window.removeEventListener('heys:data-uploaded', handleSyncComplete);
+                window.removeEventListener('heys:data-saved', handleDataSaved);
+                window.removeEventListener('heys:pending-change', handlePendingChange);
+                window.removeEventListener('heys:network-restored', handleNetworkRestored);
+                window.removeEventListener('heys:sync-progress', handleSyncProgress);
+                window.removeEventListener('heys:sync-error', handleSyncError);
+                window.removeEventListener('online', handleOnline);
+                window.removeEventListener('offline', handleOffline);
+                if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+                if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
+                // 🆕 Очистка таймера офлайн
+                if (offlineDurationIntervalRef.current) clearInterval(offlineDurationIntervalRef.current);
+            };
+        }, [pendingCount, showSyncedWithMinDuration, syncProgress.total]);
+
+        const handleRetrySync = useCallback(() => {
+            if (window.HEYS?.cloud?.retrySync) {
+                window.HEYS.cloud.retrySync();
+                syncingStartRef.current = Date.now();
+                setCloudStatus('syncing');
+            }
+        }, []);
+
+        return {
+            cloudStatus,
+            pendingCount,
+            pendingDetails,
+            showOfflineBanner,
+            showOnlineBanner,
+            syncProgress,
+            retryCountdown,
+            handleRetrySync,
+            offlineDuration, // 🆕 Время офлайн в секундах
+        };
+    }
+
+    function useClientState(cloud, U) {
+        const React = window.React;
+        const { useState } = React;
+        const [status, setStatus] = useState(
+            typeof cloud.getStatus === 'function' ? cloud.getStatus() : 'offline',
+        );
+        const [syncVer, setSyncVer] = useState(0);
+        const [calendarVer, setCalendarVer] = useState(0); // 🗓️ Отдельный state для инвалидации календаря
+        const [clients, setClients] = useState([]);
+        const [clientsSource, setClientsSource] = useState(''); // 'cloud' | 'cache' | 'loading'
+        const [clientId, setClientId] = useState('');
+        const [newName, setNewName] = useState('');
+        const [cloudUser, setCloudUser] = useState(null);
+        const [isInitializing, setIsInitializing] = useState(true);
+        const [products, setProducts] = useState([]);
+        const [curatorTab, setCuratorTab] = useState('clients'); // 🆕 Tab: 'clients' | 'queue'
+        const [needsConsent, setNeedsConsent] = useState(false); // 📋 Требуются ли согласия
+        const [checkingConsent, setCheckingConsent] = useState(false); // 📋 Проверка согласий
+        const [backupMeta, setBackupMeta] = useState(() => {
+            if (U && typeof U.lsGet === 'function') {
+                try {
+                    return U.lsGet('heys_backup_meta', null);
+                } catch (_) { }
+            }
+            return null;
+        });
+        const [backupBusy, setBackupBusy] = useState(false);
+
+        return {
+            status, setStatus,
+            syncVer, setSyncVer,
+            calendarVer, setCalendarVer,
+            clients, setClients,
+            clientsSource, setClientsSource,
+            clientId, setClientId,
+            needsConsent, setNeedsConsent,
+            checkingConsent, setCheckingConsent,
+            newName, setNewName,
+            cloudUser, setCloudUser,
+            isInitializing, setIsInitializing,
+            products, setProducts,
+            backupMeta, setBackupMeta,
+            backupBusy, setBackupBusy,
+            curatorTab, setCuratorTab, // 🆕
+        };
+    }
+
+    function useCloudClients(cloud, U, {
+        clients, setClients,
+        clientsSource, setClientsSource,
+        clientId, setClientId,
+        cloudUser, setCloudUser,
+        setProducts,
+        setStatus,
+        setSyncVer,
+        setLoginError,
+    }) {
+        const React = window.React;
+        const { useRef, useCallback } = React;
+        const ONE_CURATOR_MODE = false;
+        const signInCooldownUntilRef = useRef(0);
+        const fetchingClientsRef = useRef(false); // 🔧 FIX: Защита от дублирования запросов
+
+        // Fallback если cloud.fetchWithRetry не доступен
+        const defaultFetchWithRetry = async (fn, opts) => {
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Timeout')), opts.timeoutMs || 8000)
+            );
+            try {
+                return await Promise.race([fn(), timeoutPromise]);
+            } catch (e) {
+                return { data: null, error: { message: e.message } };
+            }
+        };
+
+        const fetchClientsFromCloud = useCallback(async (curatorId) => {
+            if (!curatorId) {
+                return { data: [], source: 'error' };
+            }
+
+            // 🔧 FIX: Пропускаем если уже загружаем
+            if (fetchingClientsRef.current) {
+                return { data: [], source: 'skip' };
+            }
+            fetchingClientsRef.current = true;
+
+            setClientsSource('loading');
+
+            try {
+                // 🔄 Используем YandexAPI вместо Supabase
+                const result = await HEYS.YandexAPI.getClients(curatorId);
+
+                fetchingClientsRef.current = false;
+
+                if (result.error) {
+                    // 🏠 При ошибке — используем localStorage кэш
+                    console.warn('[HEYS] ⚠️ fetchClients error, using localStorage cache');
+                    const cached = localStorage.getItem('heys_clients');
+                    if (cached) {
+                        const data = JSON.parse(cached);
+                        setClientsSource('local');
+                        return { data, source: 'local' };
+                    }
+                    setClientsSource('error');
+                    return { data: [], source: 'error' };
+                }
+
+                const data = result.data;
+                // Сохраняем в localStorage для кэширования
+                if (data && data.length > 0) {
+                    localStorage.setItem('heys_clients', JSON.stringify(data));
+                }
+                setClientsSource('cloud');
+                return { data: data || [], source: 'cloud' };
+            } catch (e) {
+                fetchingClientsRef.current = false;
+                console.error('[HEYS] ❌ fetchClientsFromCloud failed:', e.message);
+                // 🏠 При exception — тоже используем localStorage
+                const cached = localStorage.getItem('heys_clients');
+                if (cached) {
+                    try {
+                        const data = JSON.parse(cached);
+                        setClientsSource('local');
+                        return { data, source: 'local' };
+                    } catch { }
+                }
+                setClientsSource('error');
+                return { data: [], source: 'error' };
+            }
+        }, [cloud]);
+
+        const addClientToCloud = useCallback(async (arg) => {
+            const payload = typeof arg === 'string' ? { name: arg } : (arg || {});
+            const clientName = (payload.name || '').trim() || `Клиент ${clients.length + 1}`;
+            const clientPhone = (payload.phone || '').trim();
+            const clientPin = (payload.pin || '').trim();
+
+            if (!cloudUser || !cloudUser.id) {
+                const newClient = {
+                    id: `local-user-${Date.now()}`,
+                    name: clientName,
+                };
+                const updatedClients = [...clients, newClient];
+                setClients(updatedClients);
+                U.lsSet('heys_clients', updatedClients);
+                setClientId(newClient.id);
+                U.lsSet('heys_client_current', newClient.id);
+                return;
+            }
+
+            const userId = cloudUser.id;
+
+            // 🧩 Если доступны RPC для phone+PIN — создаём клиента через них (кураторский флоу)
+            // (Телефон/PIN опциональны: если не заполнены — fallback на старый insert)
+            try {
+                const auth = window.HEYS && window.HEYS.auth;
+                const createWithPin = auth && auth.createClientWithPin;
+                if (createWithPin && clientPhone && clientPin) {
+                    const created = await createWithPin({ name: clientName, phone: clientPhone, pin: clientPin });
+                    if (created && created.ok && created.clientId) {
+                        const result = await fetchClientsFromCloud(userId);
+                        setClients(result.data);
+                        setClientId(created.clientId);
+                        U.lsSet('heys_client_current', created.clientId);
+                        // 🆕 Сохраняем имя для pre-fill в профиле (без namespace — напрямую в localStorage)
+                        try {
+                            localStorage.setItem('heys_pending_client_name', JSON.stringify(clientName));
+                        } catch (_) { }
+                        try {
+                            HEYS.Toast?.success('Клиент создан! Телефон: ' + created.phone + ', PIN: ' + created.pin) || alert('✅ Клиент создан\n\nТелефон: ' + created.phone + '\nPIN: ' + created.pin);
+                        } catch (_) { }
+                        return;
+                    }
+                    if (created && created.error) {
+                        HEYS.Toast?.error('Ошибка создания клиента: ' + created.error) || alert('Ошибка создания клиента: ' + created.error);
+                        return;
+                    }
+                }
+            } catch (e) {
+                // Падаем в fallback insert ниже
+            }
+
+            // 🔄 Используем YandexAPI вместо Supabase
+            try {
+                const data = await HEYS.YandexAPI.createClient(clientName, userId);
+                if (!data || !data.id) {
+                    console.error('Ошибка создания клиента');
+                    HEYS.Toast?.error('Ошибка создания клиента') || alert('Ошибка создания клиента');
+                    return;
+                }
+                const result = await fetchClientsFromCloud(userId);
+                setClients(result.data);
+                setClientId(data.id);
+                U.lsSet('heys_client_current', data.id);
+            } catch (error) {
+                console.error('Ошибка создания клиента:', error);
+                HEYS.Toast?.error('Ошибка создания клиента: ' + error.message) || alert('Ошибка создания клиента: ' + error.message);
+            }
+        }, [clients, cloudUser, fetchClientsFromCloud, setClientId, setClients, U]);
+
+        const renameClient = useCallback(async (id, name) => {
+            if (!cloudUser || !cloudUser.id) {
+                const updatedClients = clients.map((c) => (c.id === id ? { ...c, name } : c));
+                setClients(updatedClients);
+                U.lsSet('heys_clients', updatedClients);
+                return;
+            }
+
+            const userId = cloudUser.id;
+            // 🔄 Используем YandexAPI вместо Supabase
+            await HEYS.YandexAPI.updateClient(id, { name });
+            const result = await fetchClientsFromCloud(userId);
+            setClients(result.data);
+        }, [clients, cloudUser, fetchClientsFromCloud, setClients, U]);
+
+        const removeClient = useCallback(async (id) => {
+            if (!cloudUser || !cloudUser.id) {
+                const updatedClients = clients.filter((c) => c.id !== id);
+                setClients(updatedClients);
+                U.lsSet('heys_clients', updatedClients);
+                if (clientId === id) {
+                    setClientId('');
+                    U.lsSet('heys_client_current', '');
+                }
+                return;
+            }
+
+            const userId = cloudUser.id;
+            // 🔄 Используем YandexAPI вместо Supabase
+            await HEYS.YandexAPI.deleteClient(id);
+            const result = await fetchClientsFromCloud(userId);
+            setClients(result.data);
+            if (clientId === id) {
+                setClientId('');
+                U.lsSet('heys_client_current', '');
+            }
+        }, [clientId, clients, cloudUser, fetchClientsFromCloud, setClientId, setClients, U]);
+
+        const cloudSignIn = useCallback(async (email, password, opts = {}) => {
+            if (!email || !password) {
+                setLoginError('Введите email и пароль');
+                setStatus('offline');
+                return { error: 'missing_credentials' };
+            }
+
+            const now = Date.now();
+            if (now < signInCooldownUntilRef.current) {
+                setLoginError('Слишком много попыток. Подождите 30 сек и попробуйте снова.');
+                setStatus('offline');
+                return { error: 'cooldown' };
+            }
+
+            const rememberMe = opts.rememberMe === true;
+            if (!cloud || typeof cloud.signIn !== 'function') {
+                HEYS.Toast?.warning('Облачный модуль не загружен') || alert('Облачный модуль не загружен');
+                return;
+            }
+
+            try {
+                setStatus('signin');
+                setLoginError(null);
+
+                if (rememberMe) {
+                    localStorage.setItem('heys_remember_me', 'true');
+                    localStorage.setItem('heys_remember_email', email || '');
+                } else {
+                    localStorage.removeItem('heys_remember_me');
+                    localStorage.removeItem('heys_remember_email');
+                }
+
+                const res = await cloud.signIn(email, password);
+                if (!res || res.error) {
+                    const message = res?.error?.message || 'Ошибка подключения к серверу';
+                    setLoginError(message);
+
+                    // Примитивный backoff для 429
+                    if (/Too Many Requests/i.test(message)) {
+                        signInCooldownUntilRef.current = Date.now() + 30_000;
+                    }
+                    setStatus('offline');
+                    return { error: message };
+                }
+
+                setCloudUser(res.user);
+                setStatus(typeof cloud.getStatus === 'function' ? cloud.getStatus() : 'online');
+                const loadedResult = await fetchClientsFromCloud(res.user.id);
+                setClients(loadedResult.data);
+
+                // Не автовыбираем клиента — куратор должен выбрать сам через модалку
+                // clientId остаётся null → показывается модалка выбора клиента
+
+                const loadedProducts = Array.isArray(U.lsGet('heys_products', []))
+                    ? U.lsGet('heys_products', [])
+                    : [];
+                setProducts(loadedProducts);
+                setSyncVer((v) => v + 1);
+            } catch (e) {
+                setStatus('offline');
+                setLoginError(e && e.message ? e.message : 'Ошибка подключения');
+            }
+        }, [cloud, fetchClientsFromCloud, setClientId, setClients, setCloudUser, setProducts, setStatus, setSyncVer, U]);
+
+        const cloudSignOut = useCallback(async () => {
+            try {
+                if (cloud && typeof cloud.signOut === 'function') await cloud.signOut();
+            } catch (_) { }
+            // Важно: при выходе из аккаунта куратора сбрасываем “client mode”,
+            // иначе на следующем запуске может открыться ConsentGate по старому clientId.
+            try { localStorage.removeItem('heys_client_current'); } catch (_) { }
+            try { localStorage.removeItem('heys_pin_auth_client'); } catch (_) { }
+            try { localStorage.removeItem('heys_client_phone'); } catch (_) { }
+            try { localStorage.removeItem('heys_supabase_auth_token'); } catch (_) { }
+            // 🔧 v53 FIX: Очистка session_token для PIN auth
+            try { localStorage.removeItem('heys_session_token'); } catch (_) { }
+            setCloudUser(null);
+            setClientId('');
+            setClients([]);
+            setProducts([]);
+            setStatus('offline');
+            setSyncVer((v) => v + 1);
+            try { localStorage.removeItem('heys_last_client_id'); } catch (_) { }
+        }, [cloud, setClientId, setClients, setCloudUser, setProducts, setStatus, setSyncVer]);
+
+        return {
+            ONE_CURATOR_MODE,
+            fetchClientsFromCloud,
+            addClientToCloud,
+            renameClient,
+            removeClient,
+            cloudSignIn,
+            cloudSignOut,
+        };
+    }
+
+    HEYS.AppHooks = {
+        useThemePreference,
+        usePwaPrompts,
+        useWakeLock,
+        useCloudSyncStatus,
+        useClientState,
+        useCloudClients,
+    };
+})();

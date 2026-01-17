@@ -1,12 +1,17 @@
 openapi: 3.0.0
 info:
   title: HEYS API
-  version: 1.1.0
-  description: HEYS Nutrition Tracker API (Yandex Cloud Functions) - with ЮKassa Payments
+  version: 1.2.0
+  description: |
+    HEYS Nutrition Tracker API (Yandex Cloud Functions)
+    - Full API spec with all v1 endpoints + ЮKassa Payments preparation
+    - /auth/clients endpoints merged from v1
+    - Payments endpoints use health function as STUB until ЮKassa credentials received
+    - Replace d4e0rqplbonspm84pk3n with real payments function ID when deployed
 
 servers:
-- url: https://d5d7939njvjp27ofsok0.3zvepvee.apigw.yandexcloud.net
-- url: https://api.heyslab.ru
+  - url: https://d5d7939njvjp27ofsok0.3zvepvee.apigw.yandexcloud.net
+  - url: https://api.heyslab.ru
 paths:
   # ═══════════════════════════════════════════════════════════════
   # RPC — PostgreSQL функции
@@ -195,61 +200,117 @@ paths:
         type: cloud_functions
         function_id: d4ef3c4o67vdg7o4c4d3
 
+  /auth/clients:
+    get:
+      summary: Get curator's clients list (requires JWT)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+    post:
+      summary: Create new client (requires JWT)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+    options:
+      summary: CORS preflight for auth clients
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+
+  /auth/clients/{clientId}:
+    patch:
+      summary: Update client (requires JWT)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+    delete:
+      summary: Delete client (requires JWT)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+    options:
+      summary: CORS preflight for auth clients by ID
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+
   # ═══════════════════════════════════════════════════════════════
-  # Payments — ЮKassa интеграция (NEW!)
+  # Payments — ЮKassa интеграция
+  # ═══════════════════════════════════════════════════════════════
+  # ⚠️ STUB: Using health function (d4e0rqplbonspm84pk3n) as placeholder
+  # TODO: Replace with real heys-api-payments function ID after deployment
+  # Deployment blocked: awaiting ЮKassa shopId + secretKey
   # ═══════════════════════════════════════════════════════════════
   /payments:
     get:
       summary: Payments healthcheck
       x-yc-apigateway-integration:
         type: cloud_functions
-        function_id: ${PAYMENTS_FUNCTION_ID}
+        function_id: d4e0rqplbonspm84pk3n
     options:
       summary: CORS preflight for payments
       x-yc-apigateway-integration:
         type: cloud_functions
-        function_id: ${PAYMENTS_FUNCTION_ID}
+        function_id: d4e0rqplbonspm84pk3n
 
   /payments/create:
     post:
       summary: Create ЮKassa payment
       x-yc-apigateway-integration:
         type: cloud_functions
-        function_id: ${PAYMENTS_FUNCTION_ID}
+        function_id: d4e0rqplbonspm84pk3n
     options:
       summary: CORS preflight for payments create
       x-yc-apigateway-integration:
         type: cloud_functions
-        function_id: ${PAYMENTS_FUNCTION_ID}
+        function_id: d4e0rqplbonspm84pk3n
 
   /payments/webhook:
     post:
       summary: ЮKassa webhook handler (payment notifications)
       x-yc-apigateway-integration:
         type: cloud_functions
-        function_id: ${PAYMENTS_FUNCTION_ID}
+        function_id: d4e0rqplbonspm84pk3n
     options:
       summary: CORS preflight for payments webhook
       x-yc-apigateway-integration:
         type: cloud_functions
-        function_id: ${PAYMENTS_FUNCTION_ID}
+        function_id: d4e0rqplbonspm84pk3n
 
   /payments/status:
     get:
       summary: Check payment status
       x-yc-apigateway-integration:
         type: cloud_functions
-        function_id: ${PAYMENTS_FUNCTION_ID}
+        function_id: d4e0rqplbonspm84pk3n
     options:
       summary: CORS preflight for payments status
       x-yc-apigateway-integration:
         type: cloud_functions
-        function_id: ${PAYMENTS_FUNCTION_ID}
+        function_id: d4e0rqplbonspm84pk3n
 
   # ═══════════════════════════════════════════════════════════════
   # Supabase-compatible routes (для совместимости)
   # ═══════════════════════════════════════════════════════════════
-  
+
   # REST v1 — Supabase SDK format /rest/v1/table_name
   /rest/v1/{table}:
     get:

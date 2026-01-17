@@ -1119,17 +1119,50 @@ stats = {
 
 ## localStorage ключи
 
-| Ключ                  | Описание             | Namespace     |
-| --------------------- | -------------------- | ------------- |
-| `heys_dayv2_{date}`   | Данные дня           | ✅ clientId   |
-| `heys_products`       | База продуктов       | ✅ clientId   |
-| `heys_profile`        | Профиль пользователя | ✅ clientId   |
-| `heys_norms`          | Нормы питания        | ✅ clientId   |
-| `heys_hr_zones`       | Пульсовые зоны       | ✅ clientId   |
-| `heys_client_current` | Текущий клиент       | ❌ глобальный |
+### Основные ключи данных
 
-**Правило**: Используй `U.lsSet()` / `U.lsGet()` вместо прямого `localStorage` —
-они автоматически добавляют clientId prefix.
+| Ключ                  | Описание             | Namespace     | Файл                       |
+| --------------------- | -------------------- | ------------- | -------------------------- |
+| `heys_dayv2_{date}`   | Данные дня           | ✅ clientId   | `heys_day_v12.js`          |
+| `heys_products`       | База продуктов       | ✅ clientId   | `heys_core_v12.js`         |
+| `heys_profile`        | Профиль пользователя | ✅ clientId   | `heys_user_v12.js`         |
+| `heys_norms`          | Нормы питания        | ✅ clientId   | `heys_user_v12.js`         |
+| `heys_hr_zones`       | Пульсовые зоны       | ✅ clientId   | `heys_user_v12.js`         |
+| `heys_client_current` | Текущий клиент       | ❌ глобальный | `heys_app_v12.js`          |
+
+### Авторизация и сессия
+
+| Ключ                  | Описание                    | Namespace     | Файл                        |
+| --------------------- | --------------------------- | ------------- | --------------------------- |
+| `heys_pin_auth_client`| ID клиента при PIN-входе    | ❌ глобальный | `heys_auth_v1.js`           |
+| `heys_session_token`  | Токен сессии (JWT-like)     | ❌ глобальный | `heys_yandex_api_v1.js`     |
+
+### Подписки и триал
+
+| Ключ                       | Описание              | Namespace     | Файл                    |
+| -------------------------- | --------------------- | ------------- | ----------------------- |
+| `heys_trial_queue_status`  | Статус очереди триала | ✅ clientId   | `heys_trial_queue_v1.js`|
+| `heys_trial_capacity`      | Кэш ёмкости триала    | ✅ clientId   | `heys_trial_queue_v1.js`|
+
+### UI и онбординг
+
+| Ключ                          | Описание               | Namespace     | Файл                        |
+| ----------------------------- | ---------------------- | ------------- | --------------------------- |
+| `heys_widgets_tour_completed` | Статус тура по виджетам| ✅ clientId   | `heys_ui_onboarding_v1.js`  |
+| `heys_consents_{clientId}`    | Согласия пользователя  | ✅ clientId   | `heys_consents_v1.js`       |
+
+### Кэширование (sessionStorage)
+
+| Ключ                       | Описание                      | Namespace     | Файл                        |
+| -------------------------- | ----------------------------- | ------------- | --------------------------- |
+| `heys_session_cache_{key}` | Кэш сессии (shared products)  | ❌ глобальный | `advanced-cache-manager.ts` |
+| `heys_shared_products_cache`| Кэш общих продуктов (offline)| ❌ глобальный | Fallback при офлайн         |
+
+**Правила работы с localStorage:**
+
+1. **Используй `U.lsSet()` / `U.lsGet()`** вместо прямого `localStorage` — они автоматически добавляют clientId prefix
+2. **Глобальные ключи** (❌) — только для auth/session, НЕ для данных пользователя
+3. **sessionStorage** — только для временного кэша, НЕ персистентные данные
 
 ---
 
