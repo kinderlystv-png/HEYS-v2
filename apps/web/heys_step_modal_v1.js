@@ -1,6 +1,6 @@
 // heys_step_modal_v1.js — Модульная система модалок с шагами
 // Позволяет комбинировать шаги: вес, сон, шаги, вода и др.
-(function(global) {
+(function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const { useState, useMemo, useEffect, useCallback, useRef, useContext, createContext } = React;
 
@@ -8,10 +8,10 @@
   const StepModalContext = createContext({});
 
   // === Общие утилиты (переиспользуемые в steps/meal_step) ===
-  
+
   // Обёртка для localStorage с поддержкой clientId namespace
   const U = () => HEYS.utils || {};
-  
+
   function lsGet(key, def) {
     const utils = U();
     if (utils.lsGet) return utils.lsGet(key, def);
@@ -20,7 +20,7 @@
       return v ? JSON.parse(v) : def;
     } catch { return def; }
   }
-  
+
   function lsSet(key, val) {
     const utils = U();
     if (utils.lsSet) {
@@ -70,8 +70,9 @@
 
   function getCurrentStreak() {
     try {
-      if (HEYS.Day && typeof HEYS.Day.getStreak === 'function') {
-        return HEYS.Day.getStreak();
+      const utils = HEYS.utils || {};
+      if (typeof utils.safeGetStreak === 'function') {
+        return utils.safeGetStreak();
       }
       const U = HEYS.utils || {};
       let streak = 0;
@@ -98,41 +99,41 @@
     const containerRef = useRef(null);
     const textRef = useRef(null);
     const [fontSize, setFontSize] = useState(maxFontSize);
-    
+
     useEffect(() => {
       const container = containerRef.current;
       const textEl = textRef.current;
       if (!container || !textEl) return;
-      
+
       // Начинаем с максимального размера
       let currentSize = maxFontSize;
       textEl.style.fontSize = `${currentSize}px`;
-      
+
       // Уменьшаем пока текст не влезет в контейнер
       const containerWidth = container.offsetWidth;
       while (textEl.offsetWidth > containerWidth && currentSize > minFontSize) {
         currentSize -= 0.5;
         textEl.style.fontSize = `${currentSize}px`;
       }
-      
+
       setFontSize(currentSize);
     }, [text, maxFontSize, minFontSize]);
-    
+
     return React.createElement('div', {
       ref: containerRef,
       className: className + '-container',
-      style: { 
-        width: '100%', 
+      style: {
+        width: '100%',
         overflow: 'hidden',
         display: 'flex',
         justifyContent: 'center'
       }
-    }, 
+    },
       React.createElement('span', {
         ref: textRef,
         className,
-        style: { 
-          ...style, 
+        style: {
+          ...style,
           fontSize: `${fontSize}px`,
           whiteSpace: 'nowrap'
         }
@@ -149,10 +150,10 @@
     const displaySuffix = currentSuffix !== null ? currentSuffix : suffix;
     // formatValue — функция форматирования (например, для ведущего нуля)
     const fmt = formatValue || ((v) => v);
-    
+
     // Компактный режим (3 значения вместо 5)
     const showFar = !compact && !height;
-    
+
     // Циклический индекс
     const wrapIndex = (i) => ((i % len) + len) % len;
 
@@ -173,7 +174,7 @@
 
     // Touch drag
     const touchState = useRef({ active: false, startY: 0, startIndex: 0 });
-    
+
     const handleTouchStart = useCallback((e) => {
       touchState.current = {
         active: true,
@@ -228,7 +229,7 @@
     const prevIndex = wrap ? wrapIndex(currentIndex - 1) : Math.max(0, currentIndex - 1);
     const nextIndex = wrap ? wrapIndex(currentIndex + 1) : Math.min(len - 1, currentIndex + 1);
     const next2Index = wrap ? wrapIndex(currentIndex + 2) : Math.min(len - 1, currentIndex + 2);
-    
+
     // Показывать ли соседние значения (для не-циклического режима скрываем края)
     const showPrev2 = (wrap || currentIndex > 1) && showFar;
     const showPrev = wrap || currentIndex > 0;
@@ -326,32 +327,32 @@
     // Ref для отслеживания предыдущих минут — НЕ синхронизируем при каждом рендере!
     // Обновляется ТОЛЬКО в handleMinutesChange после использования
     const prevMinutesRef = useRef(minutes);
-    
+
     // Обработчик изменения часов с haptic
     const handleHoursChange = React.useCallback((newHours) => {
       triggerHaptic(5);
       onHoursChange(newHours);
     }, [onHoursChange, triggerHaptic]);
-    
+
     // Обработчик изменения минут с учётом overflow на час
     const handleMinutesChange = React.useCallback((newMinutes) => {
       const prevMin = prevMinutesRef.current;
-      
+
       // Если linkedScroll включён и wrap=true — проверяем переход через границу
       if (linkedScroll && wrap) {
         const maxMinute = minutesValues[minutesValues.length - 1]; // 55
         const minMinute = minutesValues[0]; // 0
-        
+
         // 55 → 0: прокрутка вперёд через границу → час +1
         if (prevMin === maxMinute && newMinutes === minMinute) {
           const currentHourIndex = hoursValues.indexOf(hours);
           const newHourIndex = (currentHourIndex + 1) % hoursValues.length;
           const newHour = hoursValues[newHourIndex];
-          
+
           // Обновляем ref ПЕРЕД вызовом callback
           prevMinutesRef.current = newMinutes;
           triggerHaptic(10); // Усиленный haptic при переходе часа
-          
+
           // Если есть onTimeChange — вызываем его (один вызов = нет batching проблемы)
           if (onTimeChange) {
             onTimeChange(newHour, newMinutes);
@@ -367,11 +368,11 @@
           const currentHourIndex = hoursValues.indexOf(hours);
           const newHourIndex = (currentHourIndex - 1 + hoursValues.length) % hoursValues.length;
           const newHour = hoursValues[newHourIndex];
-          
+
           // Обновляем ref ПЕРЕД вызовом callback
           prevMinutesRef.current = newMinutes;
           triggerHaptic(10); // Усиленный haptic при переходе часа
-          
+
           // Если есть onTimeChange — вызываем его (один вызов = нет batching проблемы)
           if (onTimeChange) {
             onTimeChange(newHour, newMinutes);
@@ -383,17 +384,17 @@
           return;
         }
       }
-      
+
       // Обычное изменение минут (без overflow)
       prevMinutesRef.current = newMinutes;
       triggerHaptic(5);
       onMinutesChange(newMinutes);
     }, [onMinutesChange, onHoursChange, onTimeChange, hoursValues, minutesValues, linkedScroll, wrap, hours, triggerHaptic]);
-    
+
     return React.createElement('div', { className: `mc-time-picker ${className}`.trim() },
       // Дисплей времени сверху
       display && React.createElement('div', { className: 'mc-time-display' },
-        React.createElement('span', { className: 'mc-time-display-value' }, 
+        React.createElement('span', { className: 'mc-time-display-value' },
           `${pad2(hours)}:${pad2(minutes)}`
         )
       ),
@@ -445,7 +446,7 @@
       shouldShow: config.shouldShow || null,
       getInitialData: config.getInitialData || (() => ({})),
       validate: config.validate || (() => true),
-      save: config.save || (() => {}),
+      save: config.save || (() => { }),
       canSkip: config.canSkip || false,
       nextLabel: config.nextLabel || null,  // Кастомный текст кнопки "Далее"/"Готово"
       hideHeaderNext: config.hideHeaderNext || false,  // Скрыть кнопку в хедере
@@ -453,9 +454,9 @@
   }
 
   // === StepModal — главный контейнер ===
-  function StepModal({ 
-    steps = [], 
-    onComplete, 
+  function StepModal({
+    steps = [],
+    onComplete,
     onClose,
     initialStep = 0,
     showProgress = true,
@@ -516,12 +517,12 @@
 
     // Инициализация данных шагов (при изменении context)
     const lastContextKeyRef = useRef(null);
-    
+
     useEffect(() => {
       // Пропускаем если context не изменился
       if (lastContextKeyRef.current === contextKey) return;
       lastContextKeyRef.current = contextKey;
-      
+
       const initialData = {};
       visibleStepConfigs.forEach(config => {
         if (config.getInitialData) {
@@ -543,10 +544,10 @@
     // Навигация
     const goToStep = useCallback((newIndex, direction) => {
       if (animating || newIndex < 0 || newIndex >= totalSteps) return;
-      
+
       setSlideDirection(direction);
       setAnimating(true);
-      
+
       setTimeout(() => {
         setCurrentStepIndex(newIndex);
         setSlideDirection(null);
@@ -562,7 +563,7 @@
       // Валидация текущего шага
       if (currentConfig.validate && !currentConfig.validate(stepData[currentConfig.id], stepData)) {
         // Получаем сообщение об ошибке если есть
-        const errorMsg = currentConfig.getValidationMessage 
+        const errorMsg = currentConfig.getValidationMessage
           ? currentConfig.getValidationMessage(stepData[currentConfig.id], stepData)
           : null;
         setValidationMessage(errorMsg);
@@ -587,7 +588,7 @@
             config.save(stepData[config.id], context, stepData);
           }
         });
-        
+
         // XP за чек-ин
         if (HEYS.gamification) {
           try {
@@ -604,11 +605,11 @@
         // Уведомляем об обновлении (только если это НЕ MealStep — он обрабатывает сам)
         // MealStep сам управляет обновлением дня через onComplete
         if (!visibleStepConfigs.some(c => c.id === 'mealName' || c.id === 'mealTime')) {
-          window.dispatchEvent(new CustomEvent('heys:day-updated', { 
-            detail: { date: getTodayKey(), source: 'step-modal' } 
+          window.dispatchEvent(new CustomEvent('heys:day-updated', {
+            detail: { date: getTodayKey(), source: 'step-modal' }
           }));
         }
-        
+
         onComplete && onComplete(stepData);
       }
     }, [currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete]);
@@ -626,19 +627,19 @@
 
     // Swipe handlers — учитываем allowSwipe из конфига шага
     const stepAllowSwipe = currentConfig?.allowSwipe !== false && allowSwipe;
-    
+
     const handleTouchStart = useCallback((e) => {
       if (!stepAllowSwipe) return;
-      
+
       // Не перехватываем touch на слайдерах — проверяем сам элемент и родителей
       const isRangeInput = e.target.tagName === 'INPUT' && e.target.type === 'range';
       const hasRangeParent = e.target.closest && e.target.closest('input[type="range"]');
       const isOnSlider = e.target.closest && e.target.closest('.mc-quality-slider, .mood-rating-card input[type="range"]');
-      
+
       if (isRangeInput || hasRangeParent || isOnSlider) {
         return;
       }
-      
+
       touchStartX.current = e.touches[0].clientX;
       touchStartY.current = e.touches[0].clientY;
     }, [stepAllowSwipe, currentConfig]);
@@ -648,7 +649,7 @@
     useEffect(() => {
       const container = containerRef.current;
       if (!container) return;
-      
+
       const handleTouchMove = (e) => {
         // Разрешаем touch на range inputs (слайдерах) — проверяем ВСЕ возможные варианты
         const isRangeInput = e.target.tagName === 'INPUT' && e.target.type === 'range';
@@ -656,48 +657,48 @@
         const closestRange = e.target.closest ? e.target.closest('input[type="range"]') : null;
         const closestSliderClass = e.target.closest ? e.target.closest('.mc-quality-slider') : null;
         const closestMoodCard = e.target.closest ? e.target.closest('.mood-rating-card') : null;
-        
+
         // Разрешаем touch на wheel picker (для выбора времени)
         const closestWheelPicker = e.target.closest ? e.target.closest('.mc-wheel-picker') : null;
-        
+
         // Если это слайдер или внутри mood-rating-card или wheel-picker — НЕ блокируем
         if (isRangeInput || hasRangeClass || closestRange || closestSliderClass || closestMoodCard || closestWheelPicker) {
           return;
         }
-        
+
         // Находим ближайший scrollable элемент
         let target = e.target;
         while (target && target !== container) {
           const style = window.getComputedStyle(target);
           const overflowY = style.overflowY;
           const isScrollable = overflowY === 'auto' || overflowY === 'scroll';
-          
+
           if (isScrollable && target.scrollHeight > target.clientHeight) {
             // Это scrollable контейнер — разрешаем scroll
             return;
           }
           target = target.parentElement;
         }
-        
+
         // Не внутри scrollable — блокируем scroll на backdrop
         console.log('[TouchMove NATIVE] BLOCKED — вызываем preventDefault');
         e.preventDefault();
       };
-      
+
       container.addEventListener('touchmove', handleTouchMove, { passive: false });
       return () => container.removeEventListener('touchmove', handleTouchMove);
     }, []);
 
     const handleTouchEnd = useCallback((e) => {
       if (!stepAllowSwipe) return;
-      
+
       // Не перехватываем свайп на слайдерах — проверяем сам элемент и родителей
       const isRangeInput = e.target.tagName === 'INPUT' && e.target.type === 'range';
       const isOnSlider = e.target.closest && e.target.closest('.mc-quality-slider, .mood-rating-card input[type="range"]');
       if (isRangeInput || isOnSlider) {
         return;
       }
-      
+
       const deltaX = e.changedTouches[0].clientX - touchStartX.current;
       const deltaY = e.changedTouches[0].clientY - touchStartY.current;
 
@@ -728,10 +729,10 @@
       return null;
     }
 
-    const slideClass = slideDirection === 'left' ? 'mc-slide-left' : 
-                       slideDirection === 'right' ? 'mc-slide-right' : 
-                       slideInDirection === 'from-right' ? 'mc-slide-in-right' :
-                       slideInDirection === 'from-left' ? 'mc-slide-in-left' : '';
+    const slideClass = slideDirection === 'left' ? 'mc-slide-left' :
+      slideDirection === 'right' ? 'mc-slide-right' :
+        slideInDirection === 'from-right' ? 'mc-slide-in-right' :
+          slideInDirection === 'from-left' ? 'mc-slide-in-left' : '';
 
     const StepComponent = currentConfig.component;
 
@@ -743,7 +744,7 @@
     }, [onClose]);
 
     return React.createElement(StepModalContext.Provider, { value: contextValue },
-      React.createElement('div', { 
+      React.createElement('div', {
         className: 'mc-backdrop',
         ref: containerRef,
         onClick: handleBackdropClick,
@@ -755,60 +756,60 @@
           React.createElement('div', { className: 'mc-header mc-header--nav' },
             // Левая часть: Назад или Закрыть
             React.createElement('div', { className: 'mc-header-left' },
-              currentStepIndex > 0 
+              currentStepIndex > 0
                 ? React.createElement('button', {
-                    className: 'mc-header-btn mc-header-btn--back',
-                    onClick: handlePrev
-                  }, '← Назад')
+                  className: 'mc-header-btn mc-header-btn--back',
+                  onClick: handlePrev
+                }, '← Назад')
                 : onClose && React.createElement('button', {
-                    className: 'mc-header-btn mc-header-btn--close',
-                    onClick: handleClose,
-                    'aria-label': 'Закрыть'
-                  }, '×')
+                  className: 'mc-header-btn mc-header-btn--close',
+                  onClick: handleClose,
+                  'aria-label': 'Закрыть'
+                }, '×')
             ),
-            
+
             // Центр: Title или счётчик продуктов
             React.createElement('div', { className: 'mc-header-center' },
-              context.headerExtra 
+              context.headerExtra
                 ? context.headerExtra
                 : (currentConfig.title || currentConfig.hint) && React.createElement('div', { className: 'mc-header-titles' },
-                    currentConfig.title && React.createElement(AutoFitText, { 
-                      className: 'mc-header-title',
-                      text: `${currentConfig.icon || ''} ${currentConfig.title}`.trim(),
-                      maxFontSize: 16,
-                      minFontSize: 11
-                    }),
-                    currentConfig.hint && React.createElement(AutoFitText, { 
-                      className: 'mc-header-hint',
-                      text: currentConfig.hint,
-                      maxFontSize: 12,
-                      minFontSize: 9
-                    })
-                  )
+                  currentConfig.title && React.createElement(AutoFitText, {
+                    className: 'mc-header-title',
+                    text: `${currentConfig.icon || ''} ${currentConfig.title}`.trim(),
+                    maxFontSize: 16,
+                    minFontSize: 11
+                  }),
+                  currentConfig.hint && React.createElement(AutoFitText, {
+                    className: 'mc-header-hint',
+                    text: currentConfig.hint,
+                    maxFontSize: 12,
+                    minFontSize: 9
+                  })
+                )
             ),
-            
+
             // Правая часть: headerRight ИЛИ кнопка Готово/Далее
             // headerRight — кастомный контент справа (например счётчик продуктов)
             // finishLabel — кастомный текст для последнего шага (например "Добавить")
             // currentConfig.nextLabel — кастомный текст для конкретного шага
             React.createElement('div', { className: 'mc-header-right' },
-              context.headerRight 
+              context.headerRight
                 ? React.createElement('span', { className: 'mc-header-right-text' }, context.headerRight)
                 : (!(hidePrimaryOnFirst && currentStepIndex === 0) && !currentConfig.hideHeaderNext && React.createElement('button', {
-                    className: 'mc-header-btn mc-header-btn--primary',
-                    onClick: handleNext
-                  }, currentStepIndex === totalSteps - 1 
-                    ? (currentConfig.nextLabel || finishLabel) 
-                    : (currentConfig.nextLabel || 'Далее')))
+                  className: 'mc-header-btn mc-header-btn--primary',
+                  onClick: handleNext
+                }, currentStepIndex === totalSteps - 1
+                  ? (currentConfig.nextLabel || finishLabel)
+                  : (currentConfig.nextLabel || 'Далее')))
             )
           ),
 
           // Progress dots (кружочки) — кликабельные для навигации
           // Скрытые шаги (hidden: true) не отображаются в progress
           showProgress && totalSteps > 1 && React.createElement('div', { className: 'mc-progress-dots' },
-            visibleStepConfigs.map((config, i) => 
+            visibleStepConfigs.map((config, i) =>
               // Пропускаем скрытые шаги
-              config.hidden ? null : React.createElement('button', { 
+              config.hidden ? null : React.createElement('button', {
                 key: i,
                 className: 'mc-progress-dot' + (i === currentStepIndex ? ' active' : '') + (i < currentStepIndex ? ' completed' : ''),
                 onClick: () => {
@@ -822,8 +823,8 @@
           ),
 
           // Step content
-          React.createElement('div', { 
-            className: `mc-step-content ${slideClass}${validationError ? ' mc-validation-error' : ''}` 
+          React.createElement('div', {
+            className: `mc-step-content ${slideClass}${validationError ? ' mc-validation-error' : ''}`
           },
             StepComponent && React.createElement(StepComponent, {
               data: stepData[currentConfig.id] || {},
@@ -877,7 +878,7 @@
 
     // Сохраняем текущую позицию скролла
     savedScrollY = window.scrollY;
-    
+
     // 🔒 Блокируем прокрутку body при открытии модалки (без position:fixed чтобы не прыгал фон)
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
@@ -907,13 +908,13 @@
     // 🔓 Восстанавливаем прокрутку body при закрытии
     document.body.style.overflow = '';
     document.documentElement.style.overflow = '';
-    
+
     // Дерегистрируем из ModalManager (если не вызвано из менеджера)
     if (modalCleanup && !options.skipManagerNotify) {
       modalCleanup();
       modalCleanup = null;
     }
-    
+
     // Если указано scrollToDiary — моментально прокручиваем к заголовку дневника
     if (options.scrollToDiary) {
       requestAnimationFrame(() => {
@@ -924,7 +925,7 @@
       });
     }
     // Иначе скролл остаётся на месте (не нужно восстанавливать, т.к. мы не меняли position)
-    
+
     if (modalRoot) {
       ReactDOM.unmountComponentAtNode(modalRoot);
     }

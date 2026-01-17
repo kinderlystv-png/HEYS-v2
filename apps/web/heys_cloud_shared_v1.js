@@ -20,6 +20,26 @@
   HEYS.CloudShared.init = function () {
     const { log, err } = getLogger();
 
+    const toNum = (v) => {
+      if (v == null || v === '') return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    const normalizeSharedProduct = (p) => {
+      if (!p || typeof p !== 'object') return p;
+      const next = { ...p };
+      if (next.harmScore == null) {
+        if (next.harmscore != null) next.harmScore = next.harmscore;
+        else if (next.harm != null) next.harmScore = next.harm;
+      }
+      if (next.harm == null && next.harmScore != null) next.harm = next.harmScore;
+      if (next.harm != null) next.harm = toNum(next.harm);
+      if (next.harmScore != null) next.harmScore = toNum(next.harmScore);
+      if (next.gi != null) next.gi = toNum(next.gi);
+      return next;
+    };
+
     let _sharedProductsCache = [];
     let _sharedProductsCacheTime = 0;
     const SHARED_PRODUCTS_CACHE_TTL = 5 * 60 * 1000;
@@ -42,7 +62,7 @@
           return { data: null, error };
         }
 
-        let filtered = data || [];
+        let filtered = (data || []).map(normalizeSharedProduct);
         const user = getUser();
         if (excludeBlocklist && user) {
           const blocklist = await cloud.getBlocklist();
@@ -132,7 +152,7 @@
           }
         }
 
-        let filtered = data || [];
+        let filtered = (data || []).map(normalizeSharedProduct);
         const user = getUser();
         if (excludeBlocklist && user) {
           const blocklist = await cloud.getBlocklist();

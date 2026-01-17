@@ -73,13 +73,13 @@ debugLog('[RPC Init] PG_CONFIG ssl:', CA_CERT ? 'verify-full with cert' : 'no ve
  */
 function extractClientIp(headers) {
   if (!headers) return null;
-  
+
   // Нормализуем ключи (могут быть разные регистры)
   const h = {};
   for (const [k, v] of Object.entries(headers)) {
     h[k.toLowerCase()] = v;
   }
-  
+
   // 1. X-Forwarded-For (основной)
   if (h['x-forwarded-for']) {
     // 🔐 P1: Ограничиваем длину строки (защита от DoS)
@@ -90,19 +90,19 @@ function extractClientIp(headers) {
       return firstIp;
     }
   }
-  
+
   // 2. X-Real-IP (Nginx)
   const realIp = h['x-real-ip'] ? String(h['x-real-ip']).slice(0, 45) : null;
   if (realIp && isValidIp(realIp)) {
     return realIp;
   }
-  
+
   // 3. CF-Connecting-IP (Cloudflare)
   const cfIp = h['cf-connecting-ip'] ? String(h['cf-connecting-ip']).slice(0, 45) : null;
   if (cfIp && isValidIp(cfIp)) {
     return cfIp;
   }
-  
+
   return null;
 }
 
@@ -137,7 +137,7 @@ function base64UrlDecode(str) {
 function verifyJwt(token, jwtSecret) {
   try {
     const [headerB64, payloadB64, signature] = token.split('.');
-    
+
     // Проверяем подпись
     const expectedSig = crypto
       .createHmac('sha256', jwtSecret)
@@ -146,20 +146,20 @@ function verifyJwt(token, jwtSecret) {
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=/g, '');
-    
+
     if (signature !== expectedSig) {
       return { valid: false, error: 'Invalid signature' };
     }
-    
+
     // Декодируем payload
     const payload = JSON.parse(base64UrlDecode(payloadB64));
-    
+
     // Проверяем срок действия
     const now = Math.floor(Date.now() / 1000);
     if (payload.exp && payload.exp < now) {
       return { valid: false, error: 'Token expired' };
     }
-    
+
     return { valid: true, payload };
   } catch (e) {
     return { valid: false, error: e.message };
@@ -187,11 +187,11 @@ const ALLOWED_FUNCTIONS = [
   // 🔐 P2: Removed verify_client_pin_v2 (returned plaintext PIN!)
   'verify_client_pin_v3',             // 🔐 P1: С rate-limit по IP!
   'revoke_session',                   // Logout (отзыв сессии)
-  
+
   // === SUBSCRIPTION (клиентская) ===
   'get_subscription_status_by_session', // Статус подписки по session_token
   'start_trial_by_session',             // Старт триала (идемпотентно)
-  
+
   // === TRIAL QUEUE (очередь на триал) ===
   'get_public_trial_capacity',          // Публичный виджет мест (без auth!)
   'request_trial',                      // Запрос триала: offer или очередь
@@ -199,7 +199,7 @@ const ALLOWED_FUNCTIONS = [
   'claim_trial_offer',                  // Подтверждение offer → старт триала
   'cancel_trial_queue',                 // Отмена запроса на триал
   'assign_trials_from_queue',           // Воркер: раздача offers (cron)
-  
+
   // === TRIAL QUEUE ADMIN (для куратора) ===
   'admin_get_trial_queue_list',         // Список очереди с данными клиентов
   'admin_add_to_queue',                 // Добавить клиента в очередь
@@ -210,33 +210,34 @@ const ALLOWED_FUNCTIONS = [
   'admin_get_queue_stats',              // Статистика очереди
   'admin_update_queue_settings',        // Изменить настройки (is_accepting и т.д.)
   // ❌ check_subscription_status(UUID) — убрано, принимает UUID без проверки владельца
-  
+
   // === KV STORAGE (🔐 P1: session-версии — IDOR fix!) ===
   'get_client_data_by_session',           // 🔐 P1: session-версия (IDOR fix)
   'get_client_kv_by_session',             // 🔐 P1: чтение KV (session-safe)
   'upsert_client_kv_by_session',          // 🔐 P1: запись KV (session-safe)
   'batch_upsert_client_kv_by_session',    // 🔐 P1: пакетная запись (session-safe)
   'delete_client_kv_by_session',          // 🔐 P1: удаление KV (session-safe)
-  
+
   // ❌ УБРАНО (IDOR — принимают UUID от клиента!):
   // 'save_client_kv'             — IDOR: клиент может передать чужой UUID
   // 'get_client_kv'              — IDOR: клиент может читать чужие данные
   // 'delete_client_kv'           — IDOR: клиент может удалять чужие данные
   // 'upsert_client_kv'           — IDOR: клиент может писать в чужие данные
   // 'batch_upsert_client_kv'     — IDOR: клиент может пакетно писать в чужие данные
-  
+
   // === PRODUCTS (read-only или с модерацией) ===
   'get_shared_products',
   'create_pending_product_by_session', // 🔐 P1: session-версия для PIN-клиентов (на модерацию)
   'publish_shared_product_by_session', // 🔐 P3: прямая публикация для кураторов (REST→RPC, session)
   'publish_shared_product_by_curator', // 🔐 P3: прямая публикация для кураторов (REST→RPC, JWT)
-  
+  'sync_shared_products_by_session',   // 🔐 Копирование всех shared_products в базу клиента
+
   // === CONSENTS ===
   'log_consents',                     // Логирование согласий с ПЭП
   'check_required_consents',          // Проверка обязательных согласий
   'revoke_consent',                   // Отзыв согласия
   'get_client_consents',              // Получение всех согласий клиента
-  
+
   // ❌ УБРАНО (SECURITY RISK — были доступны публично!):
   // 'reset_client_pin'                 — только через куратора/админ-API
   // 'get_curator_clients'              — только через админ-API
@@ -284,7 +285,7 @@ module.exports.handler = async function (event, context) {
   debugLog('[RPC Handler] Method:', event.httpMethod);
   debugLog('[RPC Handler] Path:', event.path);
   // 🔐 Никогда не логируем query params / body целиком — могут содержать токены
-  
+
   const origin = event.headers?.origin || event.headers?.Origin || '';
   const corsHeaders = getCorsHeaders(origin);
 
@@ -308,7 +309,7 @@ module.exports.handler = async function (event, context) {
 
   // Получаем имя функции из URL
   const fnName = event.queryStringParameters?.fn || event.params?.fn;
-  
+
   if (!fnName) {
     return {
       statusCode: 400,
@@ -320,7 +321,7 @@ module.exports.handler = async function (event, context) {
   // Проверяем что функция разрешена
   const isPublicFunction = ALLOWED_FUNCTIONS.includes(fnName);
   const isCuratorFunction = CURATOR_ONLY_FUNCTIONS.includes(fnName);
-  
+
   if (!isPublicFunction && !isCuratorFunction) {
     return {
       statusCode: 403,
@@ -333,7 +334,7 @@ module.exports.handler = async function (event, context) {
   let curatorId = null;
   if (isCuratorFunction) {
     const authHeader = event.headers?.['authorization'] || event.headers?.['Authorization'];
-    
+
     if (!authHeader?.startsWith('Bearer ')) {
       return {
         statusCode: 401,
@@ -341,7 +342,7 @@ module.exports.handler = async function (event, context) {
         body: JSON.stringify({ error: 'Authorization required for curator functions' })
       };
     }
-    
+
     const JWT_SECRET = process.env.JWT_SECRET;
     if (!JWT_SECRET) {
       console.error('[RPC] JWT_SECRET not configured');
@@ -351,11 +352,11 @@ module.exports.handler = async function (event, context) {
         body: JSON.stringify({ error: 'Server configuration error' })
       };
     }
-    
+
     const token = authHeader.slice(7);
     console.log('[RPC] JWT token received, length:', token.length, 'first 20 chars:', token.substring(0, 20));
     const jwtResult = verifyJwt(token, JWT_SECRET);
-    
+
     if (!jwtResult.valid) {
       console.log('[RPC] JWT verification FAILED:', jwtResult.error);
       return {
@@ -364,7 +365,7 @@ module.exports.handler = async function (event, context) {
         body: JSON.stringify({ error: 'Invalid or expired token', details: jwtResult.error })
       };
     }
-    
+
     curatorId = jwtResult.payload.sub;
     debugLog('[RPC] Curator authenticated:', curatorId);
   }
@@ -417,7 +418,7 @@ module.exports.handler = async function (event, context) {
 
     // Формируем вызов RPC функции
     const paramKeys = Object.keys(params);
-    
+
     // 🔐 P2: Для некоторых функций нужны явные типы (pg передаёт unknown)
     const TYPE_HINTS = {
       'verify_client_pin_v3': {
@@ -496,18 +497,18 @@ module.exports.handler = async function (event, context) {
         'p_curator_session_token': '::text'
       }
     };
-    
+
     const hints = TYPE_HINTS[fnName] || {};
-    
+
     // PostgreSQL 14+ named parameters: p_phone => $1::text
     const paramNames = paramKeys.map((k, i) => {
       const hint = hints[k] || '';
       return `${k} => $${i + 1}${hint}`;
     }).join(', ');
-    
+
     let query;
     let values;
-    
+
     if (paramKeys.length > 0) {
       // Вызов функции с именованными параметрами
       query = `SELECT * FROM ${fnName}(${paramNames})`;
@@ -527,7 +528,7 @@ module.exports.handler = async function (event, context) {
     }
 
     const result = await client.query(query, values);
-    
+
     // 🔐 P2 FIX: Закрываем соединение ДО return (serverless best practice)
     await client.end();
 
@@ -539,14 +540,14 @@ module.exports.handler = async function (event, context) {
 
   } catch (error) {
     console.error('[RPC Error]', fnName, error.message);
-    
+
     // Пытаемся закрыть соединение даже при ошибке
     try { await client.end(); } catch (e) { /* ignore */ }
-    
+
     return {
       statusCode: 500,
       headers: corsHeaders,
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         error: 'Database error',
         message: error.message,
         code: error.code

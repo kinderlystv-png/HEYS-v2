@@ -33,6 +33,7 @@
                     clientId: clientId,
                     appVersion: window.APP_VERSION || 'unknown',
                     products: [],
+                    sharedProducts: [],
                     profile: null,
                     norms: null,
                     hrZones: null,
@@ -51,18 +52,11 @@
                     }
                 }
 
-                // Fallback на localStorage если state пустой
+                // Fallback на HEYS.store.get (корректно декомпрессирует данные)
                 if (!backup.products || backup.products.length === 0) {
-                    const productsKey = `heys_${clientId}_products`;
-                    const productsRaw = localStorage.getItem(productsKey);
-                    console.log('[BACKUP] Products key:', productsKey, '→', productsRaw ? 'found' : 'NOT FOUND');
-                    if (productsRaw) {
-                        try {
-                            backup.products = JSON.parse(productsRaw);
-                            console.log('[BACKUP] Products from localStorage:', backup.products.length);
-                        } catch (e) {
-                            console.warn('[BACKUP] ⚠️ Products JSON parse error:', e.message);
-                        }
+                    if (HEYS.store && typeof HEYS.store.get === 'function') {
+                        backup.products = HEYS.store.get('heys_products', []);
+                        console.log('[BACKUP] Products from HEYS.store.get:', backup.products.length);
                     }
                 }
 
@@ -121,35 +115,72 @@
                     }
                 }
 
-                // Вода
-                const waterKey = `heys_${clientId}_water_history`;
-                const waterRaw = localStorage.getItem(waterKey);
-                console.log('[BACKUP] Water key:', waterKey, '→', waterRaw ? 'found' : 'NOT FOUND');
-                if (waterRaw) {
-                    try { backup.water = JSON.parse(waterRaw); } catch (e) { }
+                // Вода (используем HEYS.store.get для декомпрессии)
+                if (HEYS.store && typeof HEYS.store.get === 'function') {
+                    backup.water = HEYS.store.get('heys_water_history', null);
+                    console.log('[BACKUP] Water from HEYS.store.get:', backup.water ? 'found' : 'NOT FOUND');
                 }
 
-                // Советы
-                const advicesKey = `heys_${clientId}_scheduled_advices`;
-                const advicesRaw = localStorage.getItem(advicesKey);
-                if (advicesRaw) {
-                    try { backup.scheduledAdvices = JSON.parse(advicesRaw); } catch (e) { }
+                // Советы (используем HEYS.store.get для декомпрессии)
+                if (HEYS.store && typeof HEYS.store.get === 'function') {
+                    backup.scheduledAdvices = HEYS.store.get('heys_scheduled_advices', []);
                 }
 
-                // Дни (за последние 90 дней)
+                // Shared products — хранятся в памяти (кэш из PostgreSQL), не в localStorage!
+                backup.sharedProducts = HEYS.cloud?.getCachedSharedProducts?.() || [];
+                console.log('[BACKUP] Shared products (from cache):', backup.sharedProducts?.length || 0);
+
+                // Fallback: если кэш ещё не прогрузился — забираем напрямую из API
+                if ((!backup.sharedProducts || backup.sharedProducts.length === 0) && HEYS.YandexAPI?.rest) {
+                    HEYS.Toast?.info('Загружаем общие продукты…');
+                    try {
+                        const { data, error } = await HEYS.YandexAPI.rest('shared_products');
+                        if (error) {
+                            console.log('[BACKUP] Shared products API error:', error);
+                            HEYS.Toast?.warning('Не удалось загрузить общие продукты. Попробуй экспорт ещё раз.');
+                        } else if (Array.isArray(data) && data.length > 0) {
+                            backup.sharedProducts = data;
+                            console.log('[BACKUP] Shared products (from API):', data.length);
+                            HEYS.Toast?.success?.('Общие продукты загружены. Экспортируем…');
+                        } else {
+                            HEYS.Toast?.warning('Общие продукты ещё не готовы. Повтори экспорт через пару секунд.');
+                        }
+                    } catch (e) {
+                        console.log('[BACKUP] Shared products API failed:', e?.message || e);
+                        HEYS.Toast?.warning('Не удалось загрузить общие продукты. Попробуй экспорт ещё раз.');
+                    }
+                }
+
+                // Дни (за последние 90 дней) - используем HEYS.store.get для декомпрессии
                 const today = new Date();
+                console.log('[BACKUP] Starting days collection for 90 days from:', today.toISOString().slice(0, 10));
+                console.log('[BACKUP] HEYS.store available:', !!HEYS.store, 'HEYS.store.get:', typeof HEYS.store?.get);
+                console.log('[BACKUP] currentClientId:', HEYS.currentClientId);
+
+                // Debug: показать какие ключи есть в localStorage с dayv2
+                const dayv2Keys = Object.keys(localStorage).filter(k => k.includes('dayv2_'));
+                console.log('[BACKUP] Found dayv2 keys in localStorage:', dayv2Keys.slice(0, 10));
+
+                let daysFound = 0;
+                let daysChecked = 0;
                 for (let i = 0; i < 90; i++) {
                     const d = new Date(today);
                     d.setDate(d.getDate() - i);
                     const dateStr = d.toISOString().slice(0, 10);
-                    const dayKey = `heys_${clientId}_dayv2_${dateStr}`;
-                    const dayRaw = localStorage.getItem(dayKey);
-                    if (dayRaw) {
-                        try {
-                            backup.days[dateStr] = JSON.parse(dayRaw);
-                        } catch (e) { }
+                    daysChecked++;
+
+                    if (HEYS.store && typeof HEYS.store.get === 'function') {
+                        const dayData = HEYS.store.get('heys_dayv2_' + dateStr, null);
+                        if (dayData) {
+                            backup.days[dateStr] = dayData;
+                            daysFound++;
+                            if (daysFound <= 3) {
+                                console.log(`[BACKUP] ✅ Found day ${dateStr}:`, typeof dayData, dayData?.meals?.length || 0, 'meals');
+                            }
+                        }
                     }
                 }
+                console.log(`[BACKUP] Days scan complete: checked ${daysChecked}, found ${daysFound}`);
 
                 // Статистика
                 const daysCount = Object.keys(backup.days).length;
@@ -168,8 +199,9 @@
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
-                console.log(`[BACKUP] ✅ Exported: ${productsCount} products, ${daysCount} days`);
-                return { ok: true, products: productsCount, days: daysCount, fileName };
+                const sharedCount = backup.sharedProducts?.length || 0;
+                console.log(`[BACKUP] ✅ Exported: ${productsCount} products, ${sharedCount} shared, ${daysCount} days`);
+                return { ok: true, products: productsCount, sharedProducts: sharedCount, days: daysCount, fileName };
             } catch (err) {
                 console.error('[BACKUP] Export failed:', err);
                 HEYS.Toast?.error('Ошибка экспорта: ' + err.message) || alert('Ошибка экспорта: ' + err.message);

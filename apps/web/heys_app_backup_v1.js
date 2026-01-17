@@ -8,6 +8,7 @@
         'heys_hr_zones',
         'heys_norms',
         'heys_dayv2_date',
+        'heys_shared_products', // 🆕 Бэкап общих продуктов для восстановления
     ];
 
     const downloadBackupFile = (payload, activeClientId, timestamp) => {

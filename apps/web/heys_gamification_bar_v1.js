@@ -3,6 +3,22 @@
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
 
+    /**
+     * Безопасное получение streak с защитой от race condition.
+     * @returns {number} Текущий streak или 0 если недоступен
+     */
+    function safeGetStreak() {
+        try {
+            return typeof HEYS.Day?.getStreak === 'function' ? HEYS.Day.getStreak() : 0;
+        } catch {
+            return 0;
+        }
+    }
+
+    // Экспортируем helper глобально для повторного использования
+    HEYS.utils = HEYS.utils || {};
+    HEYS.utils.safeGetStreak = safeGetStreak;
+
     function GamificationBar() {
         const React = window.React;
         const { useState, useEffect, useRef, useCallback } = React;
@@ -17,9 +33,7 @@
                 totalAchievements: 25
             };
         });
-        const [streak, setStreak] = useState(() => {
-            return HEYS.Day && typeof HEYS.Day.getStreak === 'function' ? HEYS.Day.getStreak() : 0;
-        });
+        const [streak, setStreak] = useState(() => safeGetStreak());
         const [streakJustGrew, setStreakJustGrew] = useState(false);
         const prevStreakRef = useRef(streak);
         const [expanded, setExpanded] = useState(false);
@@ -44,9 +58,8 @@
         // Проверяем daily bonus и streak при монтировании + слушаем инициализацию Day
         useEffect(() => {
             const updateStreak = () => {
-                if (HEYS.Day && typeof HEYS.Day.getStreak === 'function') {
-                    setStreak(HEYS.Day.getStreak());
-                }
+                const newStreak = safeGetStreak();
+                setStreak(prev => prev === newStreak ? prev : newStreak);
             };
 
             const handleStreakEvent = (e) => {
@@ -116,19 +129,17 @@
                         return newStats;
                     });
                 }
-                // Обновляем streak
-                if (HEYS.Day && typeof HEYS.Day.getStreak === 'function') {
-                    setStreak(prevStreak => {
-                        const newStreak = HEYS.Day.getStreak();
-                        // Pulse анимация при росте streak
-                        if (newStreak > prevStreakRef.current) {
-                            setStreakJustGrew(true);
-                            setTimeout(() => setStreakJustGrew(false), 700);
-                        }
-                        prevStreakRef.current = newStreak;
-                        return prevStreak === newStreak ? prevStreak : newStreak;
-                    });
-                }
+                // Обновляем streak (используем safeGetStreak для защиты от race condition)
+                setStreak(prevStreak => {
+                    const newStreak = safeGetStreak();
+                    // Pulse анимация при росте streak
+                    if (newStreak > prevStreakRef.current) {
+                        setStreakJustGrew(true);
+                        setTimeout(() => setStreakJustGrew(false), 700);
+                    }
+                    prevStreakRef.current = newStreak;
+                    return prevStreak === newStreak ? prevStreak : newStreak;
+                });
             };
 
             const handleNotification = (e) => {
@@ -197,9 +208,8 @@
         // Периодическое обновление streak (каждые 30 сек)
         useEffect(() => {
             const interval = setInterval(() => {
-                if (HEYS.Day && typeof HEYS.Day.getStreak === 'function') {
-                    setStreak(HEYS.Day.getStreak());
-                }
+                const newStreak = safeGetStreak();
+                setStreak(prev => prev === newStreak ? prev : newStreak);
             }, 30000);
             return () => clearInterval(interval);
         }, []);

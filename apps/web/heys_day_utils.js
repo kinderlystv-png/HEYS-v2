@@ -1,8 +1,8 @@
 // heys_day_utils.js — Day utilities: date/time, storage, calculations
 
-;(function(global){
+; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
-  
+
   // Создаём namespace для утилит дня
   HEYS.dayUtils = {};
 
@@ -10,12 +10,12 @@
   // Отслеживание продуктов, для которых данные берутся из штампа вместо базы
   const orphanProductsMap = new Map(); // name => { name, usedInDays: Set, firstSeen }
   const orphanLoggedRecently = new Map(); // name => timestamp (throttle логов)
-  
+
   function trackOrphanProduct(item, dateStr) {
     if (!item || !item.name) return;
     const name = String(item.name).trim();
     if (!name) return;
-    
+
     if (!orphanProductsMap.has(name)) {
       orphanProductsMap.set(name, {
         name: name,
@@ -29,7 +29,7 @@
       orphanProductsMap.get(name).usedInDays.add(dateStr);
     }
   }
-  
+
   // API для просмотра orphan-продуктов
   HEYS.orphanProducts = {
     // Получить список всех orphan-продуктов
@@ -40,22 +40,22 @@
         daysCount: o.usedInDays.size
       }));
     },
-    
+
     // Количество orphan-продуктов
     count() {
       return orphanProductsMap.size;
     },
-    
+
     // Есть ли orphan-продукты?
     hasAny() {
       return orphanProductsMap.size > 0;
     },
-    
+
     // Очистить (после синхронизации или исправления)
     clear() {
       orphanProductsMap.clear();
     },
-    
+
     // Удалить конкретный по имени (если продукт добавили обратно в базу)
     remove(productName) {
       const name = String(productName || '').trim();
@@ -65,36 +65,36 @@
         orphanProductsMap.delete(name.toLowerCase());
       }
     },
-    
+
     // Пересчитать orphan-продукты на основе актуальной базы
     // Вызывается после добавления продукта или удаления item из meal
     recalculate() {
       if (!global.HEYS?.products?.getAll) return;
-      
+
       const products = global.HEYS.products.getAll();
       const productNames = new Set(
         products.map(p => String(p.name || '').trim().toLowerCase()).filter(Boolean)
       );
-      
+
       const beforeCount = orphanProductsMap.size;
-      
+
       // Удаляем из orphan те, что теперь есть в базе
       for (const [name] of orphanProductsMap) {
         if (productNames.has(name.toLowerCase())) {
           orphanProductsMap.delete(name);
         }
       }
-      
+
       const afterCount = orphanProductsMap.size;
-      
+
       // Если количество изменилось — диспатчим событие для обновления UI
       if (beforeCount !== afterCount && typeof global.dispatchEvent === 'function') {
-        global.dispatchEvent(new CustomEvent('heys:orphan-updated', { 
-          detail: { count: afterCount, removed: beforeCount - afterCount } 
+        global.dispatchEvent(new CustomEvent('heys:orphan-updated', {
+          detail: { count: afterCount, removed: beforeCount - afterCount }
         }));
       }
     },
-    
+
     // Показать в консоли красивую таблицу
     log() {
       const all = this.getAll();
@@ -109,7 +109,7 @@
         'Есть данные': o.hasInlineData ? '✓' : '✗'
       })));
     },
-    
+
     // Восстановить orphan-продукты в базу из штампов в днях
     async restore() {
       const U = HEYS.utils || {};
@@ -117,7 +117,7 @@
         try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
       });
       const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
-      
+
       // Получаем текущие продукты (ключ = name LOWERCASE для консистентности с getDayData)
       const products = lsGet('heys_products', []);
       const productsMap = new Map();
@@ -129,48 +129,48 @@
           if (p.id) productsById.set(String(p.id), p);
         }
       });
-      
+
       // Собираем orphan-продукты из всех дней
       // Ключи могут быть: heys_dayv2_YYYY-MM-DD (legacy) или heys_<clientId>_dayv2_YYYY-MM-DD
       const restored = [];
       const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
-      
+
       console.log(`[HEYS] Searching for orphan products in ${keys.length} day records...`);
       console.log(`[HEYS] Products in local DB: ${products.length}, productsMap size: ${productsMap.size}`);
-      
+
       // Debug: показать какие orphan продукты мы ищем
       const orphanNames = Array.from(orphanProductsMap.keys());
       if (orphanNames.length > 0) {
         console.log(`[HEYS] Known orphan products: ${orphanNames.join(', ')}`);
       }
-      
+
       let checkedItems = 0;
       let foundWithData = 0;
       let alreadyInBase = 0;
-      
+
       for (const key of keys) {
         try {
           const day = JSON.parse(localStorage.getItem(key));
           if (!day || !day.meals) continue;
-          
+
           for (const meal of day.meals) {
             for (const item of (meal.items || [])) {
               checkedItems++;
               const itemName = String(item.name || '').trim();
               const itemNameLower = itemName.toLowerCase();
               if (!itemName) continue;
-              
+
               const hasData = item.kcal100 != null;
               const inBase = productsMap.has(itemNameLower) || (item.product_id && productsById.has(String(item.product_id)));
-              
+
               if (hasData) foundWithData++;
               if (inBase) alreadyInBase++;
-              
+
               // Debug: показать orphan-продукты с данными
               if (orphanNames.includes(itemName) || orphanNames.some(n => n.toLowerCase() === itemNameLower)) {
                 console.log(`[HEYS] Orphan "${itemName}" in ${key}: hasData=${hasData}, inBase=${inBase}, kcal100=${item.kcal100}`);
               }
-              
+
               // Если продукта нет в базе по имени И есть inline данные
               if (itemName && !inBase && hasData) {
                 const restoredProduct = {
@@ -187,7 +187,7 @@
                   trans100: item.trans100 || 0,
                   fiber100: item.fiber100 || 0,
                   gi: item.gi || 50,
-                  harm: item.harm || 0,
+                  harm: item.harm ?? item.harmScore ?? 0,
                   restoredAt: Date.now(),
                   restoredFrom: 'orphan_stamp'
                 };
@@ -201,13 +201,13 @@
           // Пропускаем битые записи
         }
       }
-      
+
       console.log(`[HEYS] Restore stats: checked=${checkedItems}, withData=${foundWithData}, alreadyInBase=${alreadyInBase}, restored=${restored.length}`);
-      
+
       if (restored.length > 0) {
         // Сохраняем обновлённую базу
         const newProducts = Array.from(productsMap.values());
-        
+
         // Используем HEYS.products.setAll для синхронизации с облаком и React state
         if (HEYS.products?.setAll) {
           HEYS.products.setAll(newProducts);
@@ -215,26 +215,26 @@
           lsSet('heys_products', newProducts);
           console.warn('[HEYS] ⚠️ Products saved via lsSet only (no cloud sync)');
         }
-        
+
         // Очищаем orphan-трекинг
         this.clear();
-        
+
         // Обновляем индекс продуктов если есть
         if (HEYS.products?.buildSearchIndex) {
           HEYS.products.buildSearchIndex();
         }
-        
+
         // Уведомляем UI об обновлении продуктов
         if (typeof window !== 'undefined' && window.dispatchEvent) {
-          window.dispatchEvent(new CustomEvent('heysProductsUpdated', { 
-            detail: { products: newProducts, restored: restored.length } 
+          window.dispatchEvent(new CustomEvent('heysProductsUpdated', {
+            detail: { products: newProducts, restored: restored.length }
           }));
         }
-        
+
         console.log(`✅ Восстановлено ${restored.length} продуктов в базу`);
         return { success: true, count: restored.length, products: restored };
       }
-      
+
       console.log('ℹ️ Нечего восстанавливать — нет данных в штампах');
       return { success: false, count: 0, products: [] };
     },
@@ -316,7 +316,7 @@
                       trans100: item.trans100 || 0,
                       fiber100: item.fiber100 || 0,
                       gi: item.gi,
-                      harm: item.harm
+                      harm: item.harm ?? item.harmScore
                     } : null,
                     firstSeenDate: dateStr
                   });
@@ -368,9 +368,9 @@
       if (tryShared && stillMissing.length > 0 && HEYS.YandexAPI?.rpc) {
         try {
           if (verbose) console.log(`[HEYS] 🌐 Пытаюсь найти ${stillMissing.length} продуктов в shared_products...`);
-          
+
           const { data: sharedProducts, error } = await HEYS.YandexAPI.rpc('get_shared_products', {});
-          
+
           if (!error && Array.isArray(sharedProducts)) {
             // Создаём индекс shared продуктов по id и name
             const sharedById = new Map();
@@ -407,7 +407,7 @@
       // 4. Сохраняем восстановленные продукты (если были восстановлены из штампов)
       if (fromStamp > 0) {
         const newProducts = [...products, ...recovered.filter(p => p._recoveredFrom === 'stamp')];
-        
+
         if (HEYS.products?.setAll) {
           HEYS.products.setAll(newProducts);
         } else {
@@ -427,7 +427,7 @@
       // Собираем имена тех, кого так и не нашли
       const finalMissing = [];
       for (const data of stillMissing) {
-        const wasRecovered = recovered.some(p => 
+        const wasRecovered = recovered.some(p =>
           p.name.toLowerCase() === data.name.toLowerCase() ||
           (data.productId && String(p.id) === data.productId)
         );
@@ -442,8 +442,8 @@
 
       // Диспатчим событие для UI
       if (recovered.length > 0 && typeof window !== 'undefined' && window.dispatchEvent) {
-        window.dispatchEvent(new CustomEvent('heys:orphans-recovered', { 
-          detail: { recovered: recovered.length, fromStamp, fromShared, missing: finalMissing } 
+        window.dispatchEvent(new CustomEvent('heys:orphans-recovered', {
+          detail: { recovered: recovered.length, fromStamp, fromShared, missing: finalMissing }
         }));
       }
 
@@ -460,11 +460,11 @@
     window.addEventListener('touchstart', markInteracted, { once: true, passive: true });
     window.addEventListener('keydown', markInteracted, { once: true, passive: true });
   }
-  
+
   function hapticFn(type = 'light') {
     if (!navigator.vibrate || !userHasInteracted) return;
     try {
-      switch(type) {
+      switch (type) {
         case 'light': navigator.vibrate(10); break;
         case 'medium': navigator.vibrate(20); break;
         case 'heavy': navigator.vibrate(30); break;
@@ -474,9 +474,9 @@
         case 'tick': navigator.vibrate(5); break;
         default: navigator.vibrate(10);
       }
-    } catch(e) { /* ignore vibrate errors */ }
+    } catch (e) { /* ignore vibrate errors */ }
   }
-  
+
   // Двойной API: функция + объект с методами для удобства
   // HEYS.haptic('medium') ИЛИ HEYS.haptic.medium()
   const hapticObj = Object.assign(
@@ -491,29 +491,29 @@
       tick: () => hapticFn('tick')
     }
   );
-  
+
   HEYS.haptic = hapticObj;
 
   // === Date/Time Utilities ===
-  function pad2(n){ return String(n).padStart(2,'0'); }
-  
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
   // Ночной порог: до 03:00 считается "вчера" (день ещё не закончился)
   const NIGHT_HOUR_THRESHOLD = 3; // 00:00 - 02:59 → ещё предыдущий день
-  
+
   // "Эффективная" сегодняшняя дата — до 3:00 возвращает вчера
-  function todayISO(){ 
-    const d = new Date(); 
+  function todayISO() {
+    const d = new Date();
     const hour = d.getHours();
     // До 3:00 — это ещё "вчера" (день не закончился)
     if (hour < NIGHT_HOUR_THRESHOLD) {
       d.setDate(d.getDate() - 1);
     }
-    return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate()); 
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
   }
-  
-  function fmtDate(d){ return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
-  function parseISO(s){ const [y,m,d]=String(s||'').split('-').map(x=>parseInt(x,10)); if(!y||!m||!d) return new Date(); const dt=new Date(y,m-1,d); dt.setHours(12); return dt; }
-  function uid(p){ return (p||'id')+Math.random().toString(36).slice(2,8); }
+
+  function fmtDate(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+  function parseISO(s) { const [y, m, d] = String(s || '').split('-').map(x => parseInt(x, 10)); if (!y || !m || !d) return new Date(); const dt = new Date(y, m - 1, d); dt.setHours(12); return dt; }
+  function uid(p) { return (p || 'id') + Math.random().toString(36).slice(2, 8); }
 
   // Проверка: время относится к "ночным" часам (00:00-02:59)
   function isNightTime(timeStr) {
@@ -543,100 +543,100 @@
 
   // === Storage Utilities ===
   // ВАЖНО: Используем HEYS.utils.lsGet/lsSet которые работают с clientId namespace
-  function lsGet(k,d){
-    try{
+  function lsGet(k, d) {
+    try {
       // Приоритет: HEYS.utils (с namespace) → HEYS.store → localStorage fallback
-      if(HEYS.utils && typeof HEYS.utils.lsGet==='function') {
+      if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
         return HEYS.utils.lsGet(k, d);
       }
-      if(HEYS.store && typeof HEYS.store.get==='function') {
-        return HEYS.store.get(k,d);
+      if (HEYS.store && typeof HEYS.store.get === 'function') {
+        return HEYS.store.get(k, d);
       }
-      const v=JSON.parse(localStorage.getItem(k)); 
-      return v==null?d:v;
-    }catch(e){ return d; }
+      const v = JSON.parse(localStorage.getItem(k));
+      return v == null ? d : v;
+    } catch (e) { return d; }
   }
-  
-  function lsSet(k,v){
-    try{
+
+  function lsSet(k, v) {
+    try {
       // Приоритет: HEYS.utils (с namespace) → HEYS.store → localStorage fallback
-      if(HEYS.utils && typeof HEYS.utils.lsSet==='function') {
+      if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
         return HEYS.utils.lsSet(k, v);
       }
-      if(HEYS.store && typeof HEYS.store.set==='function') {
-        return HEYS.store.set(k,v);
+      if (HEYS.store && typeof HEYS.store.set === 'function') {
+        return HEYS.store.set(k, v);
       }
       localStorage.setItem(k, JSON.stringify(v));
-    }catch(e){}
+    } catch (e) { }
   }
 
   // === Math Utilities ===
-  function clamp(n,a,b){ n=+n||0; if(n<a)return a; if(n>b)return b; return n; }
-  const r1=v=>Math.round((+v||0)*10)/10; // округление до 1 десятой (для веса)
-  const r0=v=>Math.round(+v||0); // округление до целого (для калорий)
-  const scale=(v,g)=>Math.round(((+v||0)*(+g||0)/100)*10)/10;
+  function clamp(n, a, b) { n = +n || 0; if (n < a) return a; if (n > b) return b; return n; }
+  const r1 = v => Math.round((+v || 0) * 10) / 10; // округление до 1 десятой (для веса)
+  const r0 = v => Math.round(+v || 0); // округление до целого (для калорий)
+  const scale = (v, g) => Math.round(((+v || 0) * (+g || 0) / 100) * 10) / 10;
 
   // === Model Helpers (delegates to HEYS.models) ===
-  function ensureDay(d,prof){ 
+  function ensureDay(d, prof) {
     const M = HEYS.models || {};
-    return (M.ensureDay? M.ensureDay(d,prof): (d||{})); 
+    return (M.ensureDay ? M.ensureDay(d, prof) : (d || {}));
   }
-  
-  function buildProductIndex(ps){ 
+
+  function buildProductIndex(ps) {
     const M = HEYS.models || {};
-    return M.buildProductIndex? M.buildProductIndex(ps): {byId:new Map(),byName:new Map()}; 
+    return M.buildProductIndex ? M.buildProductIndex(ps) : { byId: new Map(), byName: new Map() };
   }
-  
-  function getProductFromItem(it,idx){ 
+
+  function getProductFromItem(it, idx) {
     const M = HEYS.models || {};
-    return M.getProductFromItem? M.getProductFromItem(it,idx): null; 
+    return M.getProductFromItem ? M.getProductFromItem(it, idx) : null;
   }
-  
-  function per100(p){
+
+  function per100(p) {
     const M = HEYS.models || {};
-    if(!p) return {kcal100:0,carbs100:0,prot100:0,fat100:0,simple100:0,complex100:0,bad100:0,good100:0,trans100:0,fiber100:0};
-    if(M.computeDerivedProduct){
-      const d=M.computeDerivedProduct(p);
-      return {kcal100:d.kcal100,carbs100:d.carbs100,prot100:+p.protein100||0,fat100:d.fat100,simple100:+p.simple100||0,complex100:+p.complex100||0,bad100:+p.badFat100||0,good100:+p.goodFat100||0,trans100:+p.trans100||0,fiber100:+p.fiber100||0};
+    if (!p) return { kcal100: 0, carbs100: 0, prot100: 0, fat100: 0, simple100: 0, complex100: 0, bad100: 0, good100: 0, trans100: 0, fiber100: 0 };
+    if (M.computeDerivedProduct) {
+      const d = M.computeDerivedProduct(p);
+      return { kcal100: d.kcal100, carbs100: d.carbs100, prot100: +p.protein100 || 0, fat100: d.fat100, simple100: +p.simple100 || 0, complex100: +p.complex100 || 0, bad100: +p.badFat100 || 0, good100: +p.goodFat100 || 0, trans100: +p.trans100 || 0, fiber100: +p.fiber100 || 0 };
     }
-    const s=+p.simple100||0,c=+p.complex100||0,pr=+p.protein100||0,b=+p.badFat100||0,g=+p.goodFat100||0,t=+p.trans100||0,fib=+p.fiber100||0; 
-    const carbs=+p.carbs100||(s+c); 
-    const fat=+p.fat100||(b+g+t); 
-    const kcal=+p.kcal100||(4*(pr+carbs)+8*fat); 
-    return {kcal100:kcal,carbs100:carbs,prot100:pr,fat100:fat,simple100:s,complex100:c,bad100:b,good100:g,trans100:t,fiber100:fib};
+    const s = +p.simple100 || 0, c = +p.complex100 || 0, pr = +p.protein100 || 0, b = +p.badFat100 || 0, g = +p.goodFat100 || 0, t = +p.trans100 || 0, fib = +p.fiber100 || 0;
+    const carbs = +p.carbs100 || (s + c);
+    const fat = +p.fat100 || (b + g + t);
+    const kcal = +p.kcal100 || (4 * (pr + carbs) + 8 * fat);
+    return { kcal100: kcal, carbs100: carbs, prot100: pr, fat100: fat, simple100: s, complex100: c, bad100: b, good100: g, trans100: t, fiber100: fib };
   }
 
   // === Data Loading ===
-  
+
   // Базовая загрузка приёмов из localStorage (без ночной логики)
-  function loadMealsRaw(ds){ 
-    const keys=['heys_dayv2_'+ds,'heys_day_'+ds,'day_'+ds+'_meals','meals_'+ds,'food_'+ds]; 
-    for(const k of keys){ 
-      try{ 
-        const raw=localStorage.getItem(k); 
-        if(!raw)continue; 
-        const v=JSON.parse(raw); 
-        if(v&&Array.isArray(v.meals)) return v.meals; 
-        if(Array.isArray(v)) return v; 
-      }catch(e){} 
-    } 
-    return []; 
+  function loadMealsRaw(ds) {
+    const keys = ['heys_dayv2_' + ds, 'heys_day_' + ds, 'day_' + ds + '_meals', 'meals_' + ds, 'food_' + ds];
+    for (const k of keys) {
+      try {
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        const v = JSON.parse(raw);
+        if (v && Array.isArray(v.meals)) return v.meals;
+        if (Array.isArray(v)) return v;
+      } catch (e) { }
+    }
+    return [];
   }
 
   // Загрузка приёмов для даты с учётом ночной логики:
   // - Берём приёмы текущего дня (кроме ночных 00:00-02:59)
   // - Добавляем ночные приёмы из следующего календарного дня (они принадлежат этому дню)
-  function loadMealsForDate(ds){ 
+  function loadMealsForDate(ds) {
     // 1. Загружаем приёмы текущего календарного дня (фильтруем ночные — они ушли в предыдущий день)
     const currentDayMeals = (loadMealsRaw(ds) || []).filter(m => !isNightTime(m.time));
-    
+
     // 2. Загружаем ночные приёмы из следующего календарного дня
     const nextDayISO = getNextDay(ds);
     const nextDayMeals = (loadMealsRaw(nextDayISO) || []).filter(m => isNightTime(m.time));
-    
+
     // 3. Объединяем и сортируем по времени
     const allMeals = [...currentDayMeals, ...nextDayMeals];
-    
+
     // Сортировка: ночные (00:00-02:59) в конец, остальные по времени
     allMeals.sort((a, b) => {
       const aIsNight = isNightTime(a.time);
@@ -646,13 +646,13 @@
       // Одинаковый тип — сортируем по времени
       return (a.time || '').localeCompare(b.time || '');
     });
-    
+
     return allMeals;
   }
 
   // Lightweight signature for products (ids/names + kcal для инвалидации при синхронизации)
   // FIX: добавлен kcal100 чтобы пересобрать индекс когда продукт обновился с нулей на реальные данные
-  function productsSignature(ps){ 
+  function productsSignature(ps) {
     // Ensure ps is an array
     if (!ps) return '';
     if (!Array.isArray(ps)) {
@@ -665,79 +665,79 @@
       const id = p.id || p.product_id || p.name || '';
       const kcal = p.kcal100 ?? p.kcal ?? 0;
       return `${id}:${kcal}`;
-    }).join('|'); 
+    }).join('|');
   }
 
   // Cached popular products (per month + signature + TTL)
   const POPULAR_CACHE = {}; // key => {ts, list}
-  
-  function computePopularProducts(ps, iso){
+
+  function computePopularProducts(ps, iso) {
     const sig = productsSignature(ps);
-    const monthKey = (iso||todayISO()).slice(0,7); // YYYY-MM
+    const monthKey = (iso || todayISO()).slice(0, 7); // YYYY-MM
     // Добавляем favorites в ключ кэша чтобы обновлять при изменении избранных
-    const favorites = (window.HEYS && window.HEYS.store && window.HEYS.store.getFavorites) 
-      ? window.HEYS.store.getFavorites() 
+    const favorites = (window.HEYS && window.HEYS.store && window.HEYS.store.getFavorites)
+      ? window.HEYS.store.getFavorites()
       : new Set();
     const favSig = Array.from(favorites).sort().join(',');
-    const key = monthKey+'::'+sig+'::'+favSig;
+    const key = monthKey + '::' + sig + '::' + favSig;
     const now = Date.now();
-    const ttl = 1000*60*10; // 10 минут
+    const ttl = 1000 * 60 * 10; // 10 минут
     const cached = POPULAR_CACHE[key];
     if (cached && (now - cached.ts) < ttl) return cached.list;
-    const idx=buildProductIndex(ps), base=iso?new Date(iso):new Date(), cnt=new Map();
-    for(let i=0;i<30;i++){
-      const d=new Date(base); d.setDate(d.getDate()-i);
-      (loadMealsForDate(fmtDate(d))||[]).forEach(m=>{ 
-        ((m&&m.items)||[]).forEach(it=>{ 
-          const p=getProductFromItem(it,idx); 
-          if(!p)return; 
-          const k=String(p.id??p.product_id??p.name); 
-          cnt.set(k,(cnt.get(k)||0)+1); 
-        }); 
+    const idx = buildProductIndex(ps), base = iso ? new Date(iso) : new Date(), cnt = new Map();
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(base); d.setDate(d.getDate() - i);
+      (loadMealsForDate(fmtDate(d)) || []).forEach(m => {
+        ((m && m.items) || []).forEach(it => {
+          const p = getProductFromItem(it, idx);
+          if (!p) return;
+          const k = String(p.id ?? p.product_id ?? p.name);
+          cnt.set(k, (cnt.get(k) || 0) + 1);
+        });
       });
     }
-    const arr=[]; 
-    cnt.forEach((c,k)=>{ 
-      let p=idx.byId.get(String(k))||idx.byName.get(String(k).trim().toLowerCase()); 
-      if(p) arr.push({p,c}); 
+    const arr = [];
+    cnt.forEach((c, k) => {
+      let p = idx.byId.get(String(k)) || idx.byName.get(String(k).trim().toLowerCase());
+      if (p) arr.push({ p, c });
     });
     // Сортировка: избранные первые, затем по частоте
-    arr.sort((a,b)=>{
+    arr.sort((a, b) => {
       const aFav = favorites.has(String(a.p.id ?? a.p.product_id ?? a.p.name));
       const bFav = favorites.has(String(b.p.id ?? b.p.product_id ?? b.p.name));
       if (aFav && !bFav) return -1;
       if (!aFav && bFav) return 1;
       return b.c - a.c;
     });
-    const list = arr.slice(0,20).map(x=>x.p);
+    const list = arr.slice(0, 20).map(x => x.p);
     POPULAR_CACHE[key] = { ts: now, list };
     return list;
   }
 
   // === Profile & Calculations ===
-  function getProfile(){ 
-    const p=lsGet('heys_profile',{})||{}; 
-    const g=(p.gender||p.sex||'Мужской'); 
-    const sex=(String(g).toLowerCase().startsWith('ж')?'female':'male'); 
+  function getProfile() {
+    const p = lsGet('heys_profile', {}) || {};
+    const g = (p.gender || p.sex || 'Мужской');
+    const sex = (String(g).toLowerCase().startsWith('ж') ? 'female' : 'male');
     return {
       sex,
-      height:+p.height||175,
-      age:+p.age||30, 
-      sleepHours:+p.sleepHours||8, 
-      weight:+p.weight||70, 
-      deficitPctTarget:+p.deficitPctTarget||0, 
-      stepsGoal:+p.stepsGoal||7000,
-      weightGoal:+p.weightGoal||0,  // Целевой вес для прогноза
+      height: +p.height || 175,
+      age: +p.age || 30,
+      sleepHours: +p.sleepHours || 8,
+      weight: +p.weight || 70,
+      deficitPctTarget: +p.deficitPctTarget || 0,
+      stepsGoal: +p.stepsGoal || 7000,
+      weightGoal: +p.weightGoal || 0,  // Целевой вес для прогноза
       cycleTrackingEnabled: !!p.cycleTrackingEnabled
-    }; 
+    };
   }
-  
+
   // 🔬 TDEE v1.1.0: Делегируем в единый модуль HEYS.TDEE с fallback для legacy
-  function calcBMR(w,prof){ 
+  function calcBMR(w, prof) {
     // Fallback: Mifflin-St Jeor (всегда должен быть доступен)
     const fallback = () => {
-      const h=+prof.height||175,a=+prof.age||30,sex=(prof.sex||'male');
-      return Math.round(10*(+w||0)+6.25*h-5*a+(sex==='female'?-161:5));
+      const h = +prof.height || 175, a = +prof.age || 30, sex = (prof.sex || 'male');
+      return Math.round(10 * (+w || 0) + 6.25 * h - 5 * a + (sex === 'female' ? -161 : 5));
     };
 
     // Делегируем в единый модуль, но НИКОГДА не даём ошибке “убить” UI.
@@ -753,14 +753,14 @@
         if (typeof HEYS !== 'undefined' && HEYS.analytics && HEYS.analytics.trackError) {
           HEYS.analytics.trackError(e, { where: 'day_utils.calcBMR', hasTDEE: !!HEYS.TDEE });
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     return fallback();
   }
-  
+
   // 🔬 TDEE v1.1.0: Делегируем в единый модуль с fallback
-  function kcalPerMin(met,w){ 
+  function kcalPerMin(met, w) {
     try {
       if (typeof HEYS !== 'undefined' && HEYS.TDEE && HEYS.TDEE.kcalPerMin) {
         const v = HEYS.TDEE.kcalPerMin(met, w);
@@ -772,12 +772,12 @@
         if (typeof HEYS !== 'undefined' && HEYS.analytics && HEYS.analytics.trackError) {
           HEYS.analytics.trackError(e, { where: 'day_utils.kcalPerMin', hasTDEE: !!HEYS.TDEE });
         }
-      } catch (_) {}
+      } catch (_) { }
     }
-    return Math.round((((+met||0)*(+w||0)*0.0175)-1)*10)/10;
+    return Math.round((((+met || 0) * (+w || 0) * 0.0175) - 1) * 10) / 10;
   }
-  
-  function stepsKcal(steps,w,sex,len){ 
+
+  function stepsKcal(steps, w, sex, len) {
     try {
       if (typeof HEYS !== 'undefined' && HEYS.TDEE && HEYS.TDEE.stepsKcal) {
         const v = HEYS.TDEE.stepsKcal(steps, w, sex, len);
@@ -789,41 +789,41 @@
         if (typeof HEYS !== 'undefined' && HEYS.analytics && HEYS.analytics.trackError) {
           HEYS.analytics.trackError(e, { where: 'day_utils.stepsKcal', hasTDEE: !!HEYS.TDEE });
         }
-      } catch (_) {}
+      } catch (_) { }
     }
-    const coef=(sex==='female'?0.5:0.57);
-    const km=(+steps||0)*(len||0.7)/1000;
-    return Math.round(coef*(+w||0)*km*10)/10;
+    const coef = (sex === 'female' ? 0.5 : 0.57);
+    const km = (+steps || 0) * (len || 0.7) / 1000;
+    return Math.round(coef * (+w || 0) * km * 10) / 10;
   }
 
   // === Time/Sleep Utilities ===
-  function parseTime(t){ 
-    if(!t||typeof t!=='string'||!t.includes(':')) return null; 
-    const [hh,mm]=t.split(':').map(x=>parseInt(x,10)); 
-    if(isNaN(hh)||isNaN(mm)) return null; 
+  function parseTime(t) {
+    if (!t || typeof t !== 'string' || !t.includes(':')) return null;
+    const [hh, mm] = t.split(':').map(x => parseInt(x, 10));
+    if (isNaN(hh) || isNaN(mm)) return null;
     // НЕ обрезаем часы до 23 — ночные часы могут быть 24-26
-    return {hh:Math.max(0, hh),mm:clamp(mm,0,59)}; 
+    return { hh: Math.max(0, hh), mm: clamp(mm, 0, 59) };
   }
-  
-  function sleepHours(a,b){ 
-    const s=parseTime(a),e=parseTime(b); 
-    if(!s||!e) return 0; 
-    let sh=s.hh+s.mm/60,eh=e.hh+e.mm/60; 
-    let d=eh-sh; 
-    if(d<0) d+=24; 
-    return r1(d); 
+
+  function sleepHours(a, b) {
+    const s = parseTime(a), e = parseTime(b);
+    if (!s || !e) return 0;
+    let sh = s.hh + s.mm / 60, eh = e.hh + e.mm / 60;
+    let d = eh - sh;
+    if (d < 0) d += 24;
+    return r1(d);
   }
 
   // === Meal Type Classification ===
   // Типы приёмов пищи с иконками и названиями
   const MEAL_TYPES = {
     breakfast: { name: 'Завтрак', icon: '🍳', order: 1 },
-    snack1:    { name: 'Перекус', icon: '🍎', order: 2 },
-    lunch:     { name: 'Обед', icon: '🍲', order: 3 },
-    snack2:    { name: 'Перекус', icon: '🥜', order: 4 },
-    dinner:    { name: 'Ужин', icon: '🍽️', order: 5 },
-    snack3:    { name: 'Перекус', icon: '🧀', order: 6 },
-    night:     { name: 'Ночной приём', icon: '🌙', order: 7 }
+    snack1: { name: 'Перекус', icon: '🍎', order: 2 },
+    lunch: { name: 'Обед', icon: '🍲', order: 3 },
+    snack2: { name: 'Перекус', icon: '🥜', order: 4 },
+    dinner: { name: 'Ужин', icon: '🍽️', order: 5 },
+    snack3: { name: 'Перекус', icon: '🧀', order: 6 },
+    night: { name: 'Ночной приём', icon: '🌙', order: 7 }
   };
 
   // Пороги для определения "основного приёма" vs "перекуса"
@@ -840,15 +840,15 @@
     if (!meal || !meal.items || !meal.items.length) {
       return { totalGrams: 0, productCount: 0, totalKcal: 0 };
     }
-    
+
     let totalGrams = 0;
     let totalKcal = 0;
     const productCount = meal.items.length;
-    
+
     meal.items.forEach(item => {
       const g = +item.grams || 0;
       totalGrams += g;
-      
+
       // Пытаемся получить калории
       const p = pIndex ? getProductFromItem(item, pIndex) : null;
       if (p) {
@@ -856,7 +856,7 @@
         totalKcal += (per.kcal100 || 0) * g / 100;
       }
     });
-    
+
     return { totalGrams, productCount, totalKcal: Math.round(totalKcal) };
   }
 
@@ -865,12 +865,12 @@
    */
   function isMainMeal(mealStats) {
     const { totalGrams, productCount, totalKcal } = mealStats;
-    
+
     // Основной приём если: много продуктов ИЛИ (много граммов И больше 1 продукта)
     if (productCount >= MAIN_MEAL_THRESHOLDS.minProducts) return true;
     if (totalGrams >= MAIN_MEAL_THRESHOLDS.minGrams && productCount >= 2) return true;
     if (totalKcal >= MAIN_MEAL_THRESHOLDS.minKcal) return true;
-    
+
     return false;
   }
 
@@ -881,7 +881,7 @@
   function timeToMinutes(timeStr) {
     const parsed = parseTime(timeStr);
     if (!parsed) return null;
-    
+
     let { hh, mm } = parsed;
     // Ночные часы (00-02) — это "после полуночи" предыдущего дня
     if (hh < NIGHT_HOUR_THRESHOLD) {
@@ -898,7 +898,7 @@
     if (!timeStr) return '';
     const parsed = parseTime(timeStr);
     if (!parsed) return timeStr;
-    
+
     let { hh, mm } = parsed;
     // Нормализуем ночные часы: 24 → 00, 25 → 01, 26 → 02
     if (hh >= 24) {
@@ -956,45 +956,45 @@
     if (!allMeals || !Array.isArray(allMeals) || allMeals.length === 0) {
       return { type: 'snack', ...MEAL_TYPES.snack };
     }
-    
+
     // Первый приём дня всегда Завтрак
     if (mealIndex === 0) {
       return { type: 'breakfast', ...MEAL_TYPES.breakfast };
     }
-    
+
     // Получаем время первого приёма (завтрака)
     const firstMeal = allMeals[0];
     const breakfastMinutes = timeToMinutes(firstMeal?.time);
     const currentMinutes = timeToMinutes(meal?.time);
-    
+
     // Если время не указано, определяем по порядку и размеру
     if (breakfastMinutes === null || currentMinutes === null) {
       return fallbackMealType(mealIndex, meal, pIndex);
     }
-    
+
     // Конец дня = 03:00 следующего дня = 27:00 в нашей системе
     const endOfDayMinutes = 27 * 60; // 03:00 + 24 = 27:00
-    
+
     // Оставшееся время от завтрака до конца дня
     const remainingMinutes = endOfDayMinutes - breakfastMinutes;
-    
+
     // Делим на 6 слотов (7 типов минус завтрак = 6)
     const slotDuration = remainingMinutes / 6;
-    
+
     // Определяем в какой слот попадает текущий приём
     const minutesSinceBreakfast = currentMinutes - breakfastMinutes;
     const slotIndex = Math.floor(minutesSinceBreakfast / slotDuration);
-    
+
     // Типы слотов: 0=перекус1, 1=обед, 2=перекус2, 3=ужин, 4=перекус3, 5=ночной
     const slotTypes = ['snack1', 'lunch', 'snack2', 'dinner', 'snack3', 'night'];
-    
+
     // Получаем статистику приёма
     const mealStats = getMealStats(meal, pIndex);
     const isMain = isMainMeal(mealStats);
-    
+
     // Определяем базовый тип по слоту
     let baseType = slotTypes[clamp(slotIndex, 0, 5)];
-    
+
     // Корректируем: если попали в "перекус" слот, но это большой приём — 
     // проверяем соседние "основные" слоты
     if (baseType.startsWith('snack') && isMain) {
@@ -1006,17 +1006,17 @@
       }
       // Если после ужина большой приём — оставляем как есть (поздний ужин → snack3)
     }
-    
+
     // Обратная корректировка: если попали в "основной" слот, но это маленький приём — 
     // оставляем как основной (обед может быть лёгким)
-    
+
     // Проверяем не дублируется ли уже этот тип (избегаем 2 обеда)
     const usedTypes = new Set();
     for (let i = 0; i < mealIndex; i++) {
       const prevType = getMealTypeSimple(i, allMeals[i], allMeals, pIndex);
       usedTypes.add(prevType);
     }
-    
+
     // Если обед уже был, а мы пытаемся назвать это обедом — делаем перекусом
     if (baseType === 'lunch' && usedTypes.has('lunch')) {
       baseType = 'snack2';
@@ -1024,7 +1024,7 @@
     if (baseType === 'dinner' && usedTypes.has('dinner')) {
       baseType = 'snack3';
     }
-    
+
     return { type: baseType, ...MEAL_TYPES[baseType] };
   }
 
@@ -1033,32 +1033,32 @@
    */
   function getMealTypeSimple(mealIndex, meal, allMeals, pIndex) {
     if (mealIndex === 0) return 'breakfast';
-    
+
     const firstMeal = allMeals[0];
     const breakfastMinutes = timeToMinutes(firstMeal?.time);
     const currentMinutes = timeToMinutes(meal?.time);
-    
+
     if (breakfastMinutes === null || currentMinutes === null) {
       return 'snack1';
     }
-    
+
     const endOfDayMinutes = 27 * 60;
     const remainingMinutes = endOfDayMinutes - breakfastMinutes;
     const slotDuration = remainingMinutes / 6;
     const minutesSinceBreakfast = currentMinutes - breakfastMinutes;
     const slotIndex = Math.floor(minutesSinceBreakfast / slotDuration);
-    
+
     const slotTypes = ['snack1', 'lunch', 'snack2', 'dinner', 'snack3', 'night'];
     let baseType = slotTypes[clamp(slotIndex, 0, 5)];
-    
+
     const mealStats = getMealStats(meal, pIndex);
     const isMain = isMainMeal(mealStats);
-    
+
     if (baseType.startsWith('snack') && isMain) {
       if (slotIndex <= 1) baseType = 'lunch';
       else if (slotIndex >= 2 && slotIndex <= 3) baseType = 'dinner';
     }
-    
+
     return baseType;
   }
 
@@ -1068,7 +1068,7 @@
   function fallbackMealType(mealIndex, meal, pIndex) {
     const mealStats = getMealStats(meal, pIndex);
     const isMain = isMainMeal(mealStats);
-    
+
     // По порядку: 0=завтрак, 1=перекус/обед, 2=перекус/ужин, ...
     const fallbackTypes = [
       'breakfast',
@@ -1077,7 +1077,7 @@
       'snack3',
       'night'
     ];
-    
+
     const type = fallbackTypes[clamp(mealIndex, 0, fallbackTypes.length - 1)];
     return { type, ...MEAL_TYPES[type] };
   }
@@ -1089,14 +1089,14 @@
     const effectiveToday = parseISO(todayISO()); // todayISO учитывает ночной порог
     const effectiveYesterday = new Date(effectiveToday);
     effectiveYesterday.setDate(effectiveYesterday.getDate() - 1);
-    
+
     const isToday = d.toDateString() === effectiveToday.toDateString();
     const isYesterday = d.toDateString() === effectiveYesterday.toDateString();
-    
+
     const dayName = d.toLocaleDateString('ru-RU', { weekday: 'short' });
     const dayNum = d.getDate();
     const month = d.toLocaleDateString('ru-RU', { month: 'short' });
-    
+
     if (isToday) return { label: 'Сегодня', sub: `${dayNum} ${month}` };
     if (isYesterday) return { label: 'Вчера', sub: `${dayNum} ${month}` };
     return { label: `${dayNum} ${month}`, sub: dayName };
@@ -1111,45 +1111,45 @@
    */
   function getMealTypeForPreview(timeStr, existingMeals) {
     const meals = existingMeals || [];
-    
+
     // Если нет приёмов — это будет первый, значит завтрак
     if (meals.length === 0) {
       return 'breakfast';
     }
-    
+
     // Находим первый приём (завтрак)
     const sortedMeals = [...meals].sort((a, b) => {
       const aMin = timeToMinutes(a.time) || 0;
       const bMin = timeToMinutes(b.time) || 0;
       return aMin - bMin;
     });
-    
+
     const breakfastMinutes = timeToMinutes(sortedMeals[0]?.time);
     const currentMinutes = timeToMinutes(timeStr);
-    
+
     if (breakfastMinutes === null || currentMinutes === null) {
       return 'snack1'; // fallback
     }
-    
+
     // Если новый приём раньше первого — он станет завтраком
     if (currentMinutes < breakfastMinutes) {
       return 'breakfast';
     }
-    
+
     // Конец дня = 03:00 следующего дня = 27:00
     const endOfDayMinutes = 27 * 60;
     const remainingMinutes = endOfDayMinutes - breakfastMinutes;
     const slotDuration = remainingMinutes / 6;
-    
+
     const minutesSinceBreakfast = currentMinutes - breakfastMinutes;
     const slotIndex = Math.floor(minutesSinceBreakfast / slotDuration);
-    
+
     const slotTypes = ['snack1', 'lunch', 'snack2', 'dinner', 'snack3', 'night'];
     return slotTypes[clamp(slotIndex, 0, 5)];
   }
 
   // === Calendar Day Indicators ===
-  
+
   /**
    * Получает данные дня: калории и активность для расчёта реального target
    * @param {string} dateStr - Дата в формате YYYY-MM-DD
@@ -1162,20 +1162,20 @@
       // Пробуем несколько источников clientId (через утилиту для корректного JSON.parse)
       const U = window.HEYS && window.HEYS.utils;
       const clientId = U && U.getCurrentClientId ? U.getCurrentClientId() : '';
-      
-      const scopedKey = clientId 
-        ? 'heys_' + clientId + '_dayv2_' + dateStr 
+
+      const scopedKey = clientId
+        ? 'heys_' + clientId + '_dayv2_' + dateStr
         : 'heys_dayv2_' + dateStr;
-      
+
       const raw = localStorage.getItem(scopedKey);
       if (!raw) return null;
-      
+
       let dayData = null;
       if (raw.startsWith('¤Z¤')) {
         let str = raw.substring(3);
-        const patterns = { 
-          '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"', 
-          '¤c¤': '"carbs100"', '¤f¤': '"fat100"' 
+        const patterns = {
+          '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
+          '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
         };
         for (const [code, pattern] of Object.entries(patterns)) {
           str = str.split(code).join(pattern);
@@ -1184,26 +1184,26 @@
       } else {
         dayData = JSON.parse(raw);
       }
-      
+
       if (!dayData) return null;
-      
+
       // Считаем калории и макросы из meals
       let totalKcal = 0, totalProt = 0, totalFat = 0, totalCarbs = 0;
       (dayData.meals || []).forEach(meal => {
         (meal.items || []).forEach(item => {
           const grams = +item.grams || 0;
           if (grams <= 0) return;
-          
+
           // Ищем в productsMap по названию (lowercase), потом fallback на inline данные item
           const itemName = String(item.name || '').trim();
           const itemNameLower = itemName.toLowerCase();
           let product = itemName ? productsMap.get(itemNameLower) : null;
-          
+
           // 🔄 Fallback: если не найден в переданном productsMap, проверяем актуальную базу
           // Это решает проблему когда продукт только что добавлен но props ещё не обновились
           if (!product && itemName && global.HEYS?.products?.getAll) {
             const freshProducts = global.HEYS.products.getAll();
-            const freshProduct = freshProducts.find(p => 
+            const freshProduct = freshProducts.find(p =>
               String(p.name || '').trim().toLowerCase() === itemNameLower
             );
             if (freshProduct) {
@@ -1222,8 +1222,8 @@
               // Проверяем возможные причины
               const similar = freshProducts.filter(p => {
                 const pName = String(p.name || '').trim().toLowerCase();
-                return pName.includes(itemNameLower.slice(0, 10)) || 
-                       itemNameLower.includes(pName.slice(0, 10));
+                return pName.includes(itemNameLower.slice(0, 10)) ||
+                  itemNameLower.includes(pName.slice(0, 10));
               });
               if (similar.length > 0) {
                 // Throttle: не логируем чаще раза в минуту для каждого продукта
@@ -1235,15 +1235,15 @@
               }
             }
           }
-          
+
           const src = product || item; // item может иметь inline kcal100, protein100 и т.д.
-          
+
           // Трекаем orphan-продукты (когда используется штамп вместо базы)
           // НЕ трекаем если база продуктов пуста или синхронизация не завершена
           if (!product && itemName) {
             // Получаем продукты из всех возможных источников
             let freshProducts = global.HEYS?.products?.getAll?.() || [];
-            
+
             // Fallback: читаем напрямую из localStorage если HEYS.products пуст
             if (freshProducts.length === 0) {
               try {
@@ -1258,7 +1258,7 @@
                     clientId ? `heys_${clientId}_products` : null,
                     'heys_products'
                   ].filter(Boolean);
-                  
+
                   for (const key of keys) {
                     const stored = localStorage.getItem(key);
                     if (stored) {
@@ -1272,34 +1272,34 @@
                 }
               } catch (e) { /* ignore */ }
             }
-            
+
             // 🔧 v3.19.0: Получаем также shared products из кэша
             const sharedProducts = global.HEYS?.cloud?.getCachedSharedProducts?.() || [];
-            
+
             const hasProductsLoaded = productsMap.size > 0 || freshProducts.length > 0 || sharedProducts.length > 0;
-            
+
             // Дополнительная проверка: ищем продукт напрямую в свежей базе
-            const foundInFresh = freshProducts.find(p => 
+            const foundInFresh = freshProducts.find(p =>
               String(p.name || '').trim().toLowerCase() === itemNameLower
             );
-            
+
             // 🔧 v3.19.0: Также ищем в shared products
             const foundInShared = sharedProducts.find(p =>
               String(p.name || '').trim().toLowerCase() === itemNameLower
             );
-            
+
             // Трекаем только если база загружена И продукт реально не найден в обеих базах
             if (hasProductsLoaded && !foundInFresh && !foundInShared) {
               trackOrphanProduct(item, dateStr);
             }
           }
-          
+
           if (src.kcal100 != null || src.protein100 != null) {
             const mult = grams / 100;
             const prot = (+src.protein100 || 0) * mult;
             const fat = (+src.fat100 || 0) * mult;
             const carbs = (+src.carbs100 || (+src.simple100 || 0) + (+src.complex100 || 0)) * mult;
-            
+
             // 🔄 v3.9.2: Используем TEF-формулу как в mealTotals (белок 3 ккал/г вместо 4)
             // TEF-aware: protein 3 kcal/g (25% TEF), carbs 4 kcal/g, fat 9 kcal/g
             const kcalTEF = 3 * prot + 4 * carbs + 9 * fat;
@@ -1310,7 +1310,7 @@
           }
         });
       });
-      
+
       // Вычисляем sleepHours из sleepStart/sleepEnd
       let sleepHours = 0;
       if (dayData.sleepStart && dayData.sleepEnd) {
@@ -1321,7 +1321,7 @@
         if (endMin < startMin) endMin += 24 * 60; // через полночь
         sleepHours = (endMin - startMin) / 60;
       }
-      
+
       // Считаем общие минуты тренировок
       let trainingMinutes = 0;
       (dayData.trainings || []).forEach(t => {
@@ -1329,7 +1329,7 @@
           trainingMinutes += t.z.reduce((sum, m) => sum + (+m || 0), 0);
         }
       });
-      
+
       return {
         kcal: Math.round(totalKcal),
         savedEatenKcal: +dayData.savedEatenKcal || 0, // 🆕 Сохранённые калории (приоритет над пересчитанными)
@@ -1383,11 +1383,11 @@
       } else {
         // Fallback: пробуем напрямую из localStorage
         const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
-        const productsKey = clientId 
-          ? 'heys_' + clientId + '_products' 
+        const productsKey = clientId
+          ? 'heys_' + clientId + '_products'
           : 'heys_products';
         const productsRaw = localStorage.getItem(productsKey);
-        
+
         if (productsRaw) {
           if (productsRaw.startsWith('¤Z¤')) {
             let str = productsRaw.substring(3);
@@ -1414,10 +1414,10 @@
       if (!Array.isArray(products)) {
         products = [];
       }
-      products.forEach(p => { 
+      products.forEach(p => {
         if (p && p.name) {
           const name = String(p.name).trim();
-          if (name) productsMap.set(name, p); 
+          if (name) productsMap.set(name, p);
         }
       });
     } catch (e) {
@@ -1429,11 +1429,11 @@
   // ═══════════════════════════════════════════════════════════════════
   // 🚀 LAZY-LOADING DAYS — Оптимизированная загрузка дней
   // ═══════════════════════════════════════════════════════════════════
-  
+
   // Кэш загруженных дней (для предотвращения повторных чтений)
   const DAYS_CACHE = new Map(); // dateStr => { data, timestamp }
   const DAYS_CACHE_TTL = 5 * 60 * 1000; // 5 минут TTL
-  
+
   /**
    * Lazy-загрузка дней — загружает только последние N дней
    * Оптимизирует холодный старт приложения
@@ -1449,12 +1449,12 @@
     const result = new Map();
     const now = Date.now();
     const today = new Date();
-    
+
     for (let i = 0; i < daysBack; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const dateStr = fmtDate(d);
-      
+
       // Проверяем кэш
       if (!forceRefresh && DAYS_CACHE.has(dateStr)) {
         const cached = DAYS_CACHE.get(dateStr);
@@ -1464,20 +1464,20 @@
           continue;
         }
       }
-      
+
       // Загружаем день
       const dayData = lsGet('heys_dayv2_' + dateStr, null);
       if (dayData && typeof dayData === 'object') {
         result.set(dateStr, dayData);
         DAYS_CACHE.set(dateStr, { data: dayData, timestamp: now });
       }
-      
+
       if (onProgress) onProgress(i + 1, daysBack);
     }
-    
+
     return result;
   }
-  
+
   /**
    * Lazy-загрузка одного дня с кэшированием
    * @param {string} dateStr - Дата в формате YYYY-MM-DD
@@ -1486,7 +1486,7 @@
    */
   function loadDay(dateStr, forceRefresh = false) {
     const now = Date.now();
-    
+
     // Проверяем кэш
     if (!forceRefresh && DAYS_CACHE.has(dateStr)) {
       const cached = DAYS_CACHE.get(dateStr);
@@ -1494,17 +1494,17 @@
         return cached.data;
       }
     }
-    
+
     // Загружаем день
     const dayData = lsGet('heys_dayv2_' + dateStr, null);
     if (dayData && typeof dayData === 'object') {
       DAYS_CACHE.set(dateStr, { data: dayData, timestamp: now });
       return dayData;
     }
-    
+
     return null;
   }
-  
+
   /**
    * Инвалидирует кэш дня (вызывать после сохранения)
    * @param {string} dateStr - Дата в формате YYYY-MM-DD
@@ -1512,14 +1512,14 @@
   function invalidateDayCache(dateStr) {
     DAYS_CACHE.delete(dateStr);
   }
-  
+
   /**
    * Очищает весь кэш дней
    */
   function clearDaysCache() {
     DAYS_CACHE.clear();
   }
-  
+
   /**
    * Получить статистику кэша
    * @returns {{size: number, hitRate: number}}
@@ -1527,20 +1527,20 @@
   function getDaysCacheStats() {
     let validCount = 0;
     const now = Date.now();
-    
+
     DAYS_CACHE.forEach((cached) => {
       if (now - cached.timestamp < DAYS_CACHE_TTL) {
         validCount++;
       }
     });
-    
+
     return {
       size: DAYS_CACHE.size,
       validEntries: validCount,
       expiredEntries: DAYS_CACHE.size - validCount
     };
   }
-  
+
   /**
    * Предзагрузка дней для месяца (для календаря)
    * Загружает данные асинхронно чтобы не блокировать UI
@@ -1553,11 +1553,11 @@
     return new Promise((resolve) => {
       const result = new Map();
       const daysInMonth = new Date(year, month + 1, 0).getDate();
-      
+
       // Используем requestIdleCallback для фоновой загрузки
       const loadBatch = (startDay, batchSize = 5) => {
         const endDay = Math.min(startDay + batchSize, daysInMonth + 1);
-        
+
         for (let d = startDay; d < endDay; d++) {
           const dateStr = fmtDate(new Date(year, month, d));
           const dayData = loadDay(dateStr);
@@ -1565,7 +1565,7 @@
             result.set(dateStr, dayData);
           }
         }
-        
+
         if (endDay <= daysInMonth) {
           // Продолжаем загрузку в следующем idle callback
           if (typeof requestIdleCallback !== 'undefined') {
@@ -1578,7 +1578,7 @@
           resolve(result);
         }
       };
-      
+
       // Начинаем загрузку
       loadBatch(1);
     });
@@ -1596,7 +1596,7 @@
    */
   function getActiveDaysForMonth(year, month, profile, products) {
     const daysData = new Map();
-    
+
     try {
       // Получаем базовые данные из профиля
       const profileWeight = +(profile && profile.weight) || 70;
@@ -1604,32 +1604,32 @@
       const sex = (profile && profile.sex) || 'male';
       const baseBmr = calcBMR(profileWeight, profile || {});
       const threshold = Math.round(baseBmr / 3); // 1/3 BMR — минимум для "активного" дня
-      
+
       // Строим Map продуктов из переданного массива (ключ = lowercase name)
       const productsMap = new Map();
       const productsArr = Array.isArray(products) ? products : [];
-      productsArr.forEach(p => { 
+      productsArr.forEach(p => {
         if (p && p.name) {
           const name = String(p.name).trim().toLowerCase();
           if (name) productsMap.set(name, p);
         }
       });
-      
+
       // Проходим по всем дням месяца
       const daysInMonth = new Date(year, month + 1, 0).getDate();
-      
+
       for (let d = 1; d <= daysInMonth; d++) {
         const dateStr = fmtDate(new Date(year, month, d));
         const dayInfo = getDayData(dateStr, productsMap, profile);
-        
+
         // Пропускаем дни без данных. Если есть цикл или хотя бы один приём пищи — показываем даже при низких ккал
         const hasCycleDay = dayInfo && dayInfo.cycleDay != null;
         const hasMeals = !!(dayInfo && Array.isArray(dayInfo.meals) && dayInfo.meals.length > 0);
         if (!dayInfo || (dayInfo.kcal < threshold && !hasCycleDay && !hasMeals)) continue;
-        
+
         // Если день только с cycleDay (без еды) — добавляем минимальную запись
         if (dayInfo.kcal < threshold && hasCycleDay) {
-          daysData.set(dateStr, { 
+          daysData.set(dateStr, {
             kcal: 0, target: 0, ratio: 0,
             hasTraining: false, trainingTypes: [], trainingMinutes: 0,
             moodAvg: null, sleepHours: 0, dayScore: 0,
@@ -1638,35 +1638,35 @@
           });
           continue;
         }
-        
+
         // Используем вес дня если есть, иначе из профиля
         const weight = dayInfo.weightMorning || profileWeight;
         const bmr = calcBMR(weight, profile || {});
-        
+
         // Шаги: формула stepsKcal(steps, weight, sex, 0.7)
         const steps = dayInfo.steps || 0;
         const stepsK = stepsKcal(steps, weight, sex, 0.7);
-        
+
         // Быт: householdMin × kcalPerMin(2.5, weight)
         const householdMin = dayInfo.householdMin || 0;
         const householdK = Math.round(householdMin * kcalPerMin(2.5, weight));
-        
+
         // Тренировки: суммируем ккал из зон z (как на экране дня — только первые 3)
         // Читаем кастомные MET из heys_hr_zones (как на экране дня)
         const hrZones = lsGet('heys_hr_zones', []);
         const customMets = hrZones.map(x => +x.MET || 0);
         const mets = [2.5, 6, 8, 10].map((def, i) => customMets[i] || def);
         const kcalMin = mets.map(m => kcalPerMin(m, weight));
-        
+
         let trainingsK = 0;
         const trainings = (dayInfo.trainings || []).slice(0, 3); // максимум 3 тренировки
-        
+
         // Собираем типы тренировок с реальными минутами
         const trainingTypes = trainings
           .filter(t => t && t.z && Array.isArray(t.z) && t.z.some(z => z > 0))
           .map(t => t.type || 'cardio');
         const hasTraining = trainingTypes.length > 0;
-        
+
         trainings.forEach((t, tIdx) => {
           if (t.z && Array.isArray(t.z)) {
             let tKcal = 0;
@@ -1676,26 +1676,26 @@
             trainingsK += tKcal;
           }
         });
-        
+
         const tdee = bmr + stepsK + householdK + trainingsK;
         // Используем дефицит дня если есть (не пустая строка и не null), иначе из профиля
         const dayDeficit = (dayInfo.deficitPct !== '' && dayInfo.deficitPct != null) ? +dayInfo.deficitPct : deficitPct;
         const calculatedTarget = Math.round(tdee * (1 + dayDeficit / 100));
-        
+
         // 🔧 FIX: Используем сохранённую норму с долгом если есть, иначе расчётную
         // Это позволяет показывать корректную линию нормы в sparkline для прошлых дней
         const target = dayInfo.savedDisplayOptimum > 0 ? dayInfo.savedDisplayOptimum : calculatedTarget;
-        
+
         // 🔧 FIX: Используем сохранённые калории если есть, иначе пересчитанные
         // savedEatenKcal гарантирует точное значение, которое показывалось пользователю в тот день
         const kcal = dayInfo.savedEatenKcal > 0 ? dayInfo.savedEatenKcal : dayInfo.kcal;
-        
+
         // ratio: 1.0 = идеально в цель, <1 недоел, >1 переел
         const ratio = target > 0 ? kcal / target : 0;
-        
+
         // moodAvg для mood-полосы на графике
         const moodAvg = dayInfo.moodAvg ? +dayInfo.moodAvg : null;
-        
+
         // Дополнительные данные для sparkline и персонализированных инсайтов
         const sleepHours = dayInfo.sleepHours || 0;
         const trainingMinutes = dayInfo.trainingMinutes || 0;
@@ -1707,8 +1707,8 @@
         // steps уже объявлен выше для расчёта stepsKcal
         const waterMl = dayInfo.waterMl || 0; // 🆕 Вода для персонализированных инсайтов
         const weightMorning = dayInfo.weightMorning || 0; // 🆕 Вес для персонализированных инсайтов
-        
-        daysData.set(dateStr, { 
+
+        daysData.set(dateStr, {
           kcal, target, ratio, // 🔧 FIX: kcal теперь использует savedEatenKcal если есть
           baseTarget: calculatedTarget, // 🔧 Базовая норма БЕЗ долга — для расчёта caloricDebt
           hasTraining, trainingTypes, trainingMinutes,
@@ -1736,9 +1736,9 @@
             productsLen: Array.isArray(products) ? products.length : null,
           });
         }
-      } catch (_) {}
+      } catch (_) { }
     }
-    
+
     return daysData;
   }
 

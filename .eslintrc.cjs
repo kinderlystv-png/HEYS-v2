@@ -169,7 +169,7 @@ module.exports = {
         'TOOLS/**/*.js',
         'packages/ui/**/*.{ts,tsx}', // временно для security компонента
         'packages/shared/**/*.{ts,tsx}', // много legacy кода
-        'packages/storage/**/*.{ts,tsx}', // имеет legacy файлы
+        'packages/storage/**/*.{ts,tsx}', // storage пакет (адаптеры/совместимость)
         'packages/core/**/*.{ts,tsx}', // имеет legacy файлы
         'packages/search/**/*.{ts,tsx}', // имеет legacy файлы
         'packages/threat-detection/**/*.{ts,tsx}', // новый пакет в разработке

@@ -4,7 +4,7 @@
 // v1.7: Визуальные улучшения — pulse animation + backdrop blur + tooltip fade-in
 // v1.6: Sync curator check via localStorage — HEYS.cloud.role may not be set yet
 
-(function(global) {
+(function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
 
   const trackTourEvent = (event, data) => {
@@ -18,14 +18,14 @@
       HEYS.analytics.trackError(error, context);
     }
   };
-  
+
   // === CONFIGURATION ===
-  
+
   const TOUR_ID = 'onboarding_tour_v1';
   const STORAGE_KEY = 'heys_tour_completed';
   const HAPTIC_ENABLED = true; // navigator.vibrate на переходах
   const HAPTIC_PATTERN = [15]; // Короткая вибрация 15ms
-  
+
   // Шаги тура с персонализацией
   const TOUR_STEPS = [
     {
@@ -33,7 +33,7 @@
       targetId: 'tour-hero-stats',
       title: 'Главные цифры',
       // text генерируется динамически с именем пользователя
-      getText: (name) => name 
+      getText: (name) => name
         ? `${name}, здесь ваш статус на сегодня. "Съедено" и "Осталось" помогут держать баланс.`
         : 'Здесь ваш статус на сегодня. "Съедено" и "Осталось" помогут держать баланс.',
       position: 'bottom',
@@ -106,7 +106,7 @@
 
   // Demo данные для визуализации (если у пользователя пусто)
   const TOUR_DEMO_DATA = {
-    hero: { 
+    hero: {
       tdee: 2150,
       optimum: 2000,
       eaten: 1450,
@@ -125,7 +125,7 @@
   };
 
   // === MODULE STATE ===
-  
+
   let state = {
     isActive: false,
     currentStepIndex: 0,
@@ -140,7 +140,7 @@
   };
 
   // === HAPTIC FEEDBACK ===
-  
+
   function triggerHaptic() {
     if (HAPTIC_ENABLED && navigator.vibrate) {
       navigator.vibrate(HAPTIC_PATTERN);
@@ -148,11 +148,11 @@
   }
 
   // === VISIBILITY CHANGE HANDLER ===
-  
+
   const INTERRUPTED_STEP_KEY = 'heys_tour_interrupted_step';
   let hiddenTimestamp = 0;
   const MIN_HIDDEN_DURATION = 500; // Игнорируем "скрытия" короче 500мс (артефакты переключения табов)
-  
+
   function handleVisibilityChange() {
     if (document.hidden && state.isActive) {
       hiddenTimestamp = Date.now();
@@ -167,19 +167,19 @@
     } else if (!document.hidden && state.wasHidden && state.isActive) {
       const hiddenDuration = Date.now() - hiddenTimestamp;
       state.wasHidden = false;
-      
+
       // Игнорируем очень короткие "скрытия" — это артефакты переключения табов/рендера
       if (hiddenDuration < MIN_HIDDEN_DURATION) {
         trackTourEvent('onboarding_visibility_short_hide', { hiddenDurationMs: hiddenDuration });
         return;
       }
-      
+
       trackTourEvent('onboarding_visibility_restore', { hiddenDurationMs: hiddenDuration });
       // Восстановить позицию highlight если нужно
       OnboardingTour.renderStep();
     }
   }
-  
+
   /**
    * Получить прерванный шаг если есть
    */
@@ -197,7 +197,7 @@
     }
     return null;
   }
-  
+
   /**
    * Очистить прерванный шаг
    */
@@ -210,16 +210,16 @@
   }
 
   // === WELCOME MODAL ===
-  
+
   function showWelcomeModal(options = {}) {
     return new Promise((resolve) => {
       const el = document.createElement('div');
       el.className = 'tour-welcome-modal';
-      
+
       // Получаем имя пользователя
       const userName = getUserName();
       const greeting = userName ? `Привет, ${userName}!` : 'Добро пожаловать в HEYS!';
-      
+
       el.innerHTML = `
         <div class="tour-welcome-backdrop"></div>
         <div class="tour-welcome-content">
@@ -235,20 +235,20 @@
           </div>
         </div>
       `;
-      
+
       document.body.appendChild(el);
       state.welcomeModalEl = el;
-      
+
       // Анимация появления
       requestAnimationFrame(() => {
         el.classList.add('tour-welcome-enter');
       });
-      
+
       // Обработчики
       const startBtn = el.querySelector('.tour-btn-start');
       const laterBtn = el.querySelector('.tour-btn-later');
       const backdrop = el.querySelector('.tour-welcome-backdrop');
-      
+
       const close = (result) => {
         el.classList.remove('tour-welcome-enter');
         el.classList.add('tour-welcome-exit');
@@ -259,13 +259,13 @@
           resolve(result);
         }, 300);
       };
-      
+
       startBtn.onclick = () => close('start');
       laterBtn.onclick = () => close('later');
       backdrop.onclick = () => close('later');
     });
   }
-  
+
   function getUserName() {
     // Пытаемся получить имя из разных источников
     try {
@@ -289,12 +289,12 @@
   }
 
   // === CSS ANIMATIONS (v1.7) ===
-  
+
   let animationsInjected = false;
-  
+
   function injectTourAnimations() {
     if (animationsInjected) return;
-    
+
     const styleEl = document.createElement('style');
     styleEl.id = 'tour-animations';
     styleEl.textContent = `
@@ -342,10 +342,10 @@
 
   function createOverlay() {
     if (state.overlayEl) return state.overlayEl;
-    
+
     // Инжектируем CSS анимацию если еще не добавлена
     injectTourAnimations();
-    
+
     const el = document.createElement('div');
     el.className = 'tour-overlay';
     // Стили будут в CSS, но базовые для надежности
@@ -357,11 +357,11 @@
     el.style.background = 'transparent';
     el.style.opacity = '1';
     // НЕ используем backdrop-filter — он размывает в том числе подсвеченный элемент!
-    
+
     // Overlay только блокирует клики по контенту под ним
-    
+
     document.body.appendChild(el);
-    
+
     state.overlayEl = el;
     return el;
   }
@@ -383,7 +383,7 @@
       document.body.appendChild(el);
       state.highlightEl = el;
     }
-    
+
     // Обновляем позицию
     // Добавляем padding
     const padding = 4;
@@ -391,14 +391,14 @@
     el.style.left = (rect.left - padding) + 'px';
     el.style.width = (rect.width + padding * 2) + 'px';
     el.style.height = (rect.height + padding * 2) + 'px';
-    
+
     return el;
   }
 
   function createTooltip(step, rect) {
     let el = state.tooltipEl;
     const isNewStep = state._lastAnimatedStep !== state.currentStepIndex;
-    
+
     if (!el) {
       el = document.createElement('div');
       el.className = 'tour-tooltip';
@@ -407,29 +407,29 @@
       document.body.appendChild(el);
       state.tooltipEl = el;
     }
-    
+
     // Контент (обновляем только при смене шага, иначе только позиционируем)
     if (!isNewStep && el.innerHTML) {
       // Только обновление позиции, контент уже есть
       updateTooltipPosition(el, step, rect);
       return;
     }
-    
+
     // Контент
     const isFirst = state.currentStepIndex === 0;
     const isLast = state.currentStepIndex === TOUR_STEPS.length - 1;
-    
+
     const nextLabel = isLast ? 'Готово! 🎉' : 'Далее →';
-    
+
     el.innerHTML = `
       <div class="tour-tooltip-content">
         <h3 class="tour-title">${step.title}</h3>
         <p class="tour-text">${step.text}</p>
         <div class="tour-footer">
           <div class="tour-indicators">
-            ${TOUR_STEPS.map((_, i) => 
-              `<span class="tour-dot ${i === state.currentStepIndex ? 'active' : ''}"></span>`
-            ).join('')}
+            ${TOUR_STEPS.map((_, i) =>
+      `<span class="tour-dot ${i === state.currentStepIndex ? 'active' : ''}"></span>`
+    ).join('')}
           </div>
           <div class="tour-buttons">
             ${!isLast ? `<button class="tour-btn tour-btn-skip">Пропустить</button>` : ''}
@@ -439,14 +439,14 @@
         <div class="tour-arrow tour-arrow-${step.arrow}"></div>
       </div>
     `;
-    
+
     // Обработчики
     const nextBtn = el.querySelector('.tour-btn-next');
     const skipBtn = el.querySelector('.tour-btn-skip');
-    
+
     if (nextBtn) nextBtn.onclick = () => OnboardingTour.next();
     if (skipBtn) skipBtn.onclick = () => OnboardingTour.skip();
-    
+
     // Позиционирование
     // Базовая логика position: bottom/top
     const tooltipRect = el.getBoundingClientRect(); // Нужно для центрирования, но пока контент новый
@@ -455,14 +455,14 @@
     el.style.bottom = '';
     el.style.left = '';
     el.style.right = '';
-    
+
     // Позиционирование и анимация
     updateTooltipPosition(el, step, rect, true);
-    
+
     // Отмечаем шаг как анимированный
     state._lastAnimatedStep = state.currentStepIndex;
   }
-  
+
   /**
    * Обновить позицию тултипа (без перерисовки контента)
    * @param {HTMLElement} el - элемент тултипа
@@ -476,9 +476,9 @@
       const ttW = el.offsetWidth;
       const ttH = el.offsetHeight;
       const gap = 12;
-      
+
       let top, left;
-      
+
       if (step.position === 'bottom') {
         top = rect.bottom + gap;
         left = rect.left + (rect.width / 2) - (ttW / 2);
@@ -486,10 +486,10 @@
         top = rect.top - ttH - gap;
         left = rect.left + (rect.width / 2) - (ttW / 2);
       }
-      
+
       // 🔧 v1.17 FIX: Проверка границ экрана — горизонтальные И вертикальные
       const margin = 16;
-      
+
       // Горизонтальные границы
       if (left < margin) left = margin;
       if (left + ttW > window.innerWidth - margin) {
@@ -501,11 +501,11 @@
           // Поэтому просто центрируем, пусть лучше влезает контент
         }
       }
-      
+
       // 🔧 v1.17 FIX: Вертикальные границы (не давать тултипу уезжать за экран)
       // Добавлена логика для FAB кнопок (они внизу, тултип должен быть НАД ними)
       if (step.position === 'top' && top + ttH > rect.top) { // Если тултип перекрывает элемент (на узких экранах)
-         top = rect.top - ttH - gap; 
+        top = rect.top - ttH - gap;
       }
 
       if (top < margin) {
@@ -519,10 +519,10 @@
         // Если всё равно не влезает — прижимаем к верху (грубый фоллбек)
         if (top < margin) top = margin;
       }
-      
+
       el.style.top = top + 'px';
       el.style.left = left + 'px';
-      
+
       // 🔧 v1.21 FIX: Анимация появления только при смене шага (не при updatePosition)
       if (animate) {
         el.classList.remove('tour-tooltip-enter');
@@ -535,24 +535,24 @@
   // === PUBLIC API ===
 
   const OnboardingTour = {
-    
+
     /**
      * Запустить тур (с welcome modal)
      * @param {Object} options - { force: boolean, onComplete: func, skipWelcome: boolean }
      */
     async start(options = {}) {
       if (state.isActive) return;
-      
+
       // Проверка: уже проходил?
-      const isCompleted = HEYS.store && HEYS.store.get ? 
-        HEYS.store.get(STORAGE_KEY, false) : 
+      const isCompleted = HEYS.store && HEYS.store.get ?
+        HEYS.store.get(STORAGE_KEY, false) :
         localStorage.getItem(STORAGE_KEY) === 'true';
-        
+
       if (isCompleted && !options.force) return;
-      
+
       // Получаем имя пользователя для персонализации
       state.userName = getUserName();
-      
+
       // Показать welcome modal если не пропущен
       if (!options.skipWelcome && !options.force) {
         const result = await showWelcomeModal();
@@ -564,7 +564,7 @@
           return;
         }
       }
-      
+
       trackTourEvent('onboarding_tour_starting', { hasUserName: !!state.userName });
 
       // FORCE SWITCH TO MAIN TAB before starting
@@ -575,10 +575,10 @@
         // Ideally we should check if the target element of the current step is visible.
         HEYS.ui.switchTab('stats');
       }
-      
+
       // Temporarily suppress Morning Check-in using a global flag
       if (HEYS.ui) {
-        HEYS.ui.suppressMorningCheckin = true; 
+        HEYS.ui.suppressMorningCheckin = true;
         trackTourEvent('onboarding_checkin_suppressed', {});
       }
 
@@ -609,17 +609,17 @@
         await waitForElement(targetId);
         trackTourEvent('onboarding_wait_for_element_done', { targetId });
       } else {
-         // Fallback just in case
-         await new Promise(r => setTimeout(r, 500));
+        // Fallback just in case
+        await new Promise(r => setTimeout(r, 500));
       }
-      
+
       state.isActive = true;
       state.onComplete = options.onComplete;
       state.stepStartTime = Date.now(); // Для time_on_step
-      
+
       // 🆕 Уведомляем виджеты о переходе в демо-режим (чтобы показать демо-данные)
       HEYS.Widgets?.emit?.('data:updated', {});
-      
+
       // Восстановление прерванного шага если есть
       const interruptedStep = getInterruptedStep();
       if (interruptedStep !== null && !options.force) {
@@ -628,17 +628,17 @@
       } else {
         state.currentStepIndex = 0;
       }
-      
+
       // Подписываемся на visibility change
       document.addEventListener('visibilitychange', handleVisibilityChange);
-      
+
       // Добавляем класс для скрытия PWA баннера
       document.body.classList.add('tour-active');
-      
+
       createOverlay();
       this.renderStep();
       triggerHaptic();
-      
+
       // Analytics
       if (HEYS.analytics) {
         HEYS.analytics.trackEvent('tour_started', {
@@ -646,24 +646,24 @@
         });
       }
     },
-    
+
     /**
      * Показать текущий шаг
      */
     renderStep() {
       if (!state.isActive) return;
-      
+
       const step = TOUR_STEPS[state.currentStepIndex];
       const targetEl = document.getElementById(step.targetId);
-      
+
       trackTourEvent('onboarding_render_step', { targetId: step.targetId, found: !!targetEl });
-      
+
       if (!targetEl) {
         trackTourEvent('onboarding_target_missing', { targetId: step.targetId });
         this.next();
         return;
       }
-      
+
       // Функция отрисовки highlight и тултипа
       const updatePosition = () => {
         if (!state.isActive) return;
@@ -680,7 +680,7 @@
 
       // Мгновенный скролл к элементу (без анимации — чтобы highlight сразу был в нужном месте)
       targetEl.scrollIntoView({ behavior: 'instant', block: 'center' });
-      
+
       // Рисуем после того как браузер применил скролл (1 frame)
       requestAnimationFrame(() => {
         updatePosition();
@@ -688,13 +688,13 @@
         setTimeout(updatePosition, 100);
       });
     },
-    
+
     next() {
       if (!state.isActive) return;
-      
+
       // Трекаем время на шаге
       const timeOnStep = state.stepStartTime ? Date.now() - state.stepStartTime : 0;
-      
+
       if (HEYS.analytics) {
         HEYS.analytics.trackEvent('tour_step', {
           step_index: state.currentStepIndex,
@@ -702,9 +702,9 @@
           time_on_step_ms: timeOnStep
         });
       }
-      
+
       triggerHaptic();
-      
+
       if (state.currentStepIndex < TOUR_STEPS.length - 1) {
         state.currentStepIndex++;
         state.stepStartTime = Date.now(); // Сброс таймера для нового шага
@@ -713,41 +713,41 @@
         this.finish();
       }
     },
-    
+
     skip() {
       const timeOnStep = state.stepStartTime ? Date.now() - state.stepStartTime : 0;
-      
+
       if (HEYS.analytics) {
-        HEYS.analytics.trackEvent('tour_skipped', { 
+        HEYS.analytics.trackEvent('tour_skipped', {
           step: state.currentStepIndex,
           time_on_step_ms: timeOnStep
         });
       }
       this.finish();
     },
-    
+
     finish() {
       if (!state.isActive) return;
-      
+
       trackTourEvent('onboarding_tour_finished', {});
-      
+
       // Отписываемся от visibility change
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      
+
       // Убираем класс для скрытия PWA баннера
       document.body.classList.remove('tour-active');
-      
+
       // Снимаем флаг подавления Morning Check-in
       if (HEYS.ui) {
         HEYS.ui.suppressMorningCheckin = false;
         trackTourEvent('onboarding_checkin_restored', {});
       }
-      
+
       // Cleanup DOM
       if (state.overlayEl) state.overlayEl.remove();
       if (state.highlightEl) state.highlightEl.remove();
       if (state.tooltipEl) state.tooltipEl.remove();
-      
+
       state.overlayEl = null;
       state.highlightEl = null;
       state.tooltipEl = null;
@@ -755,42 +755,42 @@
       state.stepStartTime = null;
       state.userName = null;
       state.wasHidden = false;
-      
+
       // 🆕 Уведомляем виджеты о выходе из демо-режима (чтобы вернуть реальные данные)
       HEYS.Widgets?.emit?.('data:updated', {});
-      
+
       // Save state
       if (HEYS.store && HEYS.store.set) {
         HEYS.store.set(STORAGE_KEY, true);
       } else {
         localStorage.setItem(STORAGE_KEY, 'true');
       }
-      
+
       // Очищаем прерванный шаг т.к. тур завершён
       clearInterruptedStep();
-      
+
       triggerHaptic();
-      
+
       // Analytics
       if (HEYS.analytics) {
         HEYS.analytics.trackEvent('tour_completed', {
           total_steps: TOUR_STEPS.length
         });
       }
-      
+
       // 🎉 Gamification: конфетти через централизованный модуль
       if (HEYS.game?.celebrate) {
         HEYS.game.celebrate();
       }
-      
+
       // 🏆 Gamification: XP награда за прохождение онбординга
       if (HEYS.game?.addXP) {
         HEYS.game.addXP(50, 'onboarding_completed');
       }
-      
+
       if (state.onComplete) state.onComplete();
     },
-    
+
     /**
      * Активен ли тур сейчас?
      * (используется компонентами для рендера demo-данных)
@@ -798,7 +798,7 @@
     isActive() {
       return state.isActive;
     },
-    
+
     /**
      * Получить демо данные для конкретного компонента
      * @param {string} componentId - 'hero' | 'sparkline'
@@ -808,7 +808,7 @@
       if (!state.isActive) return null;
       return TOUR_DEMO_DATA[componentId] || null;
     },
-    
+
     /**
      * Сбросить флаг прохождения (для тестирования)
      */
@@ -825,10 +825,10 @@
   // ═══════════════════════════════════════════════════════════════════════════
   // 🔮 INSIGHTS MINI-TOUR — контекстный мини-тур для вкладки Инсайтов
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const INSIGHTS_TOUR_ID = 'insights_tour_v1';
   const INSIGHTS_STORAGE_KEY = 'heys_insights_tour_completed';
-  
+
   const INSIGHTS_TOUR_STEPS = [
     {
       id: 'insights_status',
@@ -887,7 +887,7 @@
       arrow: 'top'
     }
   ];
-  
+
   let insightsState = {
     isActive: false,
     currentStepIndex: 0,
@@ -895,7 +895,7 @@
     tooltipEl: null,
     highlightEl: null
   };
-  
+
   /**
    * Проверить, нужно ли показывать мини-тур Insights
    */
@@ -903,25 +903,25 @@
     // Не показываем если основной тур ещё не пройден
     const mainTourCompleted = HEYS.store?.get?.(STORAGE_KEY) ?? localStorage.getItem(STORAGE_KEY);
     if (!mainTourCompleted) return false;
-    
+
     // Не показываем если мини-тур уже пройден
     const insightsTourCompleted = HEYS.store?.get?.(INSIGHTS_STORAGE_KEY) ?? localStorage.getItem(INSIGHTS_STORAGE_KEY);
     if (insightsTourCompleted) return false;
-    
+
     // Не показываем кураторам
     const isCurator = localStorage.getItem('heys_cloud_role') === 'curator' || HEYS.cloud?.isCurator?.();
     if (isCurator) return false;
-    
+
     return true;
   }
-  
+
   /**
    * Рендер шага мини-тура Insights
    */
   function renderInsightsStep() {
     const step = INSIGHTS_TOUR_STEPS[insightsState.currentStepIndex];
     if (!step) return;
-    
+
     const target = document.getElementById(step.targetId);
     if (!target) {
       trackTourEvent('insights_tour_target_missing', { targetId: step.targetId });
@@ -934,27 +934,27 @@
       }
       return;
     }
-    
+
     // Scroll to target
     target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    
+
     // Wait for scroll and render
     setTimeout(() => {
       const rect = target.getBoundingClientRect();
-      
+
       // Используем те же функции создания overlay/highlight/tooltip
       if (insightsState.overlayEl) insightsState.overlayEl.remove();
       if (insightsState.highlightEl) insightsState.highlightEl.remove();
       if (insightsState.tooltipEl) insightsState.tooltipEl.remove();
-      
+
       insightsState.overlayEl = createOverlay();
       insightsState.highlightEl = createHighlight(rect);
       insightsState.tooltipEl = createInsightsTooltip(step, rect);
-      
+
       document.body.appendChild(insightsState.overlayEl);
       document.body.appendChild(insightsState.highlightEl);
       document.body.appendChild(insightsState.tooltipEl);
-      
+
       // Fade-in анимация — меняем inline opacity напрямую (т.к. inline перезаписывает CSS класс)
       requestAnimationFrame(() => {
         insightsState.tooltipEl.style.opacity = '1';
@@ -962,7 +962,7 @@
       });
     }, 300);
   }
-  
+
   /**
    * Создаём tooltip для мини-тура (укороченная версия)
    */
@@ -984,11 +984,11 @@
       transform: translateY(8px);
       transition: opacity 0.25s ease, transform 0.25s ease;
     `;
-    
+
     const stepNumber = insightsState.currentStepIndex + 1;
     const totalSteps = INSIGHTS_TOUR_STEPS.length;
     const progress = Math.round((stepNumber / totalSteps) * 100);
-    
+
     el.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
         <span style="font-size: 13px; font-weight: 600; color: #a78bfa;">${step.title}</span>
@@ -1024,15 +1024,15 @@
         ">${stepNumber === totalSteps ? '✨ Готово' : 'Далее →'}</button>
       </div>
     `;
-    
+
     // Events
     el.querySelector('.tour-skip-insights').onclick = () => InsightsTour.skip();
     el.querySelector('.tour-next-insights').onclick = () => InsightsTour.next();
-    
+
     // Position
     const padding = 16;
     let top, left;
-    
+
     if (step.position === 'bottom') {
       top = targetRect.bottom + padding;
       left = targetRect.left + (targetRect.width / 2) - 140;
@@ -1040,17 +1040,17 @@
       top = targetRect.top - 200 - padding;
       left = targetRect.left + (targetRect.width / 2) - 140;
     }
-    
+
     // Clamp to screen
     left = Math.max(16, Math.min(left, window.innerWidth - 296));
     top = Math.max(16, Math.min(top, window.innerHeight - 220));
-    
+
     el.style.top = `${top}px`;
     el.style.left = `${left}px`;
-    
+
     return el;
   }
-  
+
   const InsightsTour = {
     /**
      * Запустить мини-тур Insights
@@ -1061,34 +1061,34 @@
         trackTourEvent('insights_tour_skipped', { reason: 'not_needed' });
         return;
       }
-      
+
       trackTourEvent('insights_tour_starting', {});
       insightsState.isActive = true;
       insightsState.currentStepIndex = 0;
-      
+
       // Блокируем скролл
       document.body.style.overflow = 'hidden';
-      
+
       // 🔧 v1.16 FIX: Добавляем класс для скрытия PWA баннера (как в основном туре)
       document.body.classList.add('tour-active');
-      
+
       triggerHaptic();
       renderInsightsStep();
-      
+
       // Analytics
       if (HEYS.analytics) {
         HEYS.analytics.trackEvent('insights_tour_started');
       }
     },
-    
+
     /**
      * Следующий шаг
      */
     next() {
       if (!insightsState.isActive) return;
-      
+
       triggerHaptic();
-      
+
       if (insightsState.currentStepIndex < INSIGHTS_TOUR_STEPS.length - 1) {
         insightsState.currentStepIndex++;
         renderInsightsStep();
@@ -1096,38 +1096,38 @@
         InsightsTour.finish();
       }
     },
-    
+
     /**
      * Пропустить тур
      */
     skip() {
       trackTourEvent('insights_tour_skipped', { reason: 'user' });
       InsightsTour.cleanup();
-      
+
       // 🔧 v1.12 FIX: Сохраняем в ОБА места
       if (HEYS.store?.set) {
         HEYS.store.set(INSIGHTS_STORAGE_KEY, true);
       }
       // ВСЕГДА также сохраняем в unscoped localStorage
       localStorage.setItem(INSIGHTS_STORAGE_KEY, 'true');
-      
+
       // Dispatch событие для обновления React компонента
       window.dispatchEvent(new Event('storage'));
-      
+
       if (HEYS.analytics) {
         HEYS.analytics.trackEvent('insights_tour_skipped', {
           step: insightsState.currentStepIndex
         });
       }
     },
-    
+
     /**
      * Завершить тур
      */
     finish() {
       trackTourEvent('insights_tour_completed', {});
       InsightsTour.cleanup();
-      
+
       // 🔧 v1.12 FIX: Сохраняем в ОБА места:
       // 1. HEYS.store (scoped с clientId) — для cloud sync
       // 2. localStorage напрямую (unscoped) — для React компонента который читает напрямую
@@ -1136,35 +1136,35 @@
       }
       // ВСЕГДА также сохраняем в unscoped localStorage для React-компонента
       localStorage.setItem(INSIGHTS_STORAGE_KEY, 'true');
-      
+
       trackTourEvent('insights_tour_saved', { key: INSIGHTS_STORAGE_KEY });
-      
+
       // 🔧 v1.17 FIX: Прокрутка страницы вверх чтобы была видна заглушка "3 дня"
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         trackTourEvent('insights_tour_scrolled_top', {});
       }, 100);
-      
+
       // Dispatch событие для обновления React компонента
       window.dispatchEvent(new Event('storage'));
-      
+
       triggerHaptic();
-      
+
       if (HEYS.analytics) {
         HEYS.analytics.trackEvent('insights_tour_completed');
       }
-      
+
       // Небольшой конфетти для завершения
       if (HEYS.game?.celebrate) {
         HEYS.game.celebrate();
       }
-      
+
       // 🔧 v1.19: WidgetsTour запускается при переходе на вкладку виджетов
       // (аналогично InsightsTour при переходе на insights)
       // Автозапуск убран — тур теперь стартует в WidgetsTab useEffect
       trackTourEvent('insights_tour_next_widgets_hint', {});
     },
-    
+
     /**
      * Очистить DOM
      */
@@ -1172,26 +1172,26 @@
       if (insightsState.overlayEl) insightsState.overlayEl.remove();
       if (insightsState.highlightEl) insightsState.highlightEl.remove();
       if (insightsState.tooltipEl) insightsState.tooltipEl.remove();
-      
+
       // Разблокируем скролл
       document.body.style.overflow = '';
-      
+
       // 🔧 v1.16 FIX: Убираем класс скрытия PWA баннера
       document.body.classList.remove('tour-active');
-      
+
       insightsState.overlayEl = null;
       insightsState.highlightEl = null;
       insightsState.tooltipEl = null;
       insightsState.isActive = false;
     },
-    
+
     /**
      * Активен ли мини-тур
      */
     isActive() {
       return insightsState.isActive;
     },
-    
+
     /**
      * Сбросить флаг прохождения
      */
@@ -1203,7 +1203,7 @@
       }
       trackTourEvent('insights_tour_reset', {});
     },
-    
+
     /**
      * Нужно ли показывать тур
      */
@@ -1216,7 +1216,7 @@
   // =========================================================================
   // 4. WIDGETS TOUR (Мини-тур для вкладки виджетов)
   // =========================================================================
-  
+
   const WIDGETS_TOUR_ID = 'widgets_tour_v1';
   const WIDGETS_STORAGE_KEY = 'heys_widgets_tour_completed';
 
@@ -1362,14 +1362,14 @@
     // Главный тур должен быть пройден
     const mainCompleted = HEYS.store?.get?.(STORAGE_KEY, false) || localStorage.getItem(STORAGE_KEY) === 'true';
     if (!mainCompleted) return false;
-    
+
     // Тур виджетов не пройден
     const widgetsCompleted = HEYS.store?.get?.(WIDGETS_STORAGE_KEY, false) || localStorage.getItem(WIDGETS_STORAGE_KEY) === 'true';
     if (widgetsCompleted) return false;
-    
+
     // Для кураторов не показываем
     if (HEYS.user?.isCurator?.()) return false;
-    
+
     return true;
   }
 
@@ -1379,7 +1379,7 @@
   function renderWidgetsStep(stepIndex) {
     const step = WIDGETS_TOUR_STEPS[stepIndex];
     if (!step) return;
-    
+
     // Если это edit step и мы еще не в edit mode - входим
     if (step.requiresEditMode && !HEYS.Widgets?.isEditMode?.()) {
       trackTourEvent('widgets_tour_enter_edit_mode', {});
@@ -1390,7 +1390,7 @@
         return;
       }
     }
-    
+
     // Находим элемент: по selector (для demo) или по id (для edit)
     let targetEl;
     if (step.targetSelector) {
@@ -1398,7 +1398,7 @@
     } else if (step.targetId) {
       targetEl = document.getElementById(step.targetId);
     }
-    
+
     if (!targetEl) {
       trackTourEvent('widgets_tour_target_missing', { targetId: step.targetSelector || step.targetId });
       // Пропускаем шаг если элемент не найден
@@ -1410,21 +1410,21 @@
       }
       return;
     }
-    
+
     // Обновляем overlay (создаём сразу)
     if (!widgetsState.overlayEl) {
       widgetsState.overlayEl = document.createElement('div');
       widgetsState.overlayEl.className = 'tour-overlay tour-overlay--mini';
       document.body.appendChild(widgetsState.overlayEl);
     }
-    
+
     // Highlight (создаём сразу)
     if (!widgetsState.highlightEl) {
       widgetsState.highlightEl = document.createElement('div');
       widgetsState.highlightEl.className = 'tour-highlight';
       document.body.appendChild(widgetsState.highlightEl);
     }
-    
+
     // Функция обновления позиции хайлайта и тултипа
     const updateHighlightPosition = () => {
       const rect = targetEl.getBoundingClientRect();
@@ -1440,19 +1440,19 @@
         box-shadow: 0 0 0 9999px rgba(0,0,0,0.65);
         pointer-events: none;
       `;
-      
+
       // Tooltip
       if (widgetsState.tooltipEl) widgetsState.tooltipEl.remove();
       widgetsState.tooltipEl = createWidgetsTooltip(step, stepIndex, rect);
       document.body.appendChild(widgetsState.tooltipEl);
     };
-    
+
     // Scroll to element и обновляем позицию после завершения скролла
     targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    
+
     // Позиционируем сразу для быстрого появления
     updateHighlightPosition();
-    
+
     // И обновляем после завершения smooth scroll (300-500ms)
     setTimeout(updateHighlightPosition, 350);
   }
@@ -1464,12 +1464,12 @@
     const tooltip = document.createElement('div');
     // Сразу добавляем tour-tooltip-enter для видимости (без анимации появления)
     tooltip.className = 'tour-tooltip tour-tooltip--mini tour-tooltip-enter';
-    
+
     // Определяем фазу тура (demo или edit)
     const isDemo = step.isDemo === true;
     const demoStepsCount = WIDGETS_DEMO_STEPS.length;
     const editStepsCount = WIDGETS_EDIT_STEPS.length;
-    
+
     // Прогресс внутри фазы
     let phaseLabel, phaseProgress;
     if (isDemo) {
@@ -1480,24 +1480,24 @@
       phaseLabel = '⚙️ Настройка';
       phaseProgress = `${editStepIndex + 1}/${editStepsCount}`;
     }
-    
+
     const totalProgress = `${stepIndex + 1}/${WIDGETS_TOUR_STEPS.length}`;
     const isLast = stepIndex === WIDGETS_TOUR_STEPS.length - 1;
-    
+
     // Цвет фона в зависимости от фазы
-    const bgGradient = isDemo 
+    const bgGradient = isDemo
       ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' // фиолетовый для demo
       : 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'; // бирюзовый для edit
     const shadowColor = isDemo ? 'rgba(139, 92, 246, 0.3)' : 'rgba(6, 182, 212, 0.3)';
     const btnColor = isDemo ? '#7c3aed' : '#0891b2';
-    
+
     // Демо-данные (если есть)
-    const demoDataHtml = step.demoData 
+    const demoDataHtml = step.demoData
       ? `<div style="margin-top: 8px; padding: 8px 10px; background: rgba(255,255,255,0.15); border-radius: 8px; font-size: 12px; line-height: 1.4;">
           ${step.demoData}
-        </div>` 
+        </div>`
       : '';
-    
+
     tooltip.innerHTML = `
       <div style="background: ${bgGradient}; color: white; padding: 12px 16px; border-radius: 12px; box-shadow: 0 8px 32px ${shadowColor}; min-width: 220px; max-width: 280px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -1515,13 +1515,13 @@
         </div>
       </div>
     `;
-    
+
     // Position
     const tooltipWidth = 280;
     const tooltipHeight = 220; // Приблизительная высота тултипа
     const gap = 12;
     let top, left;
-    
+
     // Сначала пробуем разместить согласно step.position
     if (step.position === 'top') {
       top = targetRect.top - gap - tooltipHeight;
@@ -1530,28 +1530,28 @@
       top = targetRect.bottom + gap;
       left = targetRect.left + targetRect.width / 2 - tooltipWidth / 2;
     }
-    
+
     // Constrain to viewport
     left = Math.max(16, Math.min(left, window.innerWidth - tooltipWidth - 16));
-    
+
     // Проверяем нижнюю границу — если выходит за viewport, переносим наверх
     if (top + tooltipHeight > window.innerHeight - 16) {
       top = targetRect.top - gap - tooltipHeight;
     }
     // Проверяем верхнюю границу
     top = Math.max(16, top);
-    
+
     tooltip.style.cssText = `
       position: fixed;
       top: ${top}px;
       left: ${left}px;
       z-index: 9002;
     `;
-    
+
     // Event listeners
     tooltip.querySelector('.widgets-tour-skip').onclick = () => WidgetsTour.skip();
     tooltip.querySelector('.widgets-tour-next').onclick = () => WidgetsTour.next();
-    
+
     return tooltip;
   }
 
@@ -1567,11 +1567,11 @@
         trackTourEvent('widgets_tour_skipped', { reason: 'not_ready' });
         return false;
       }
-      
+
       trackTourEvent('widgets_tour_starting', {});
       widgetsState.isActive = true;
       widgetsState.currentStepIndex = 0;
-      
+
       // 🔧 v1.19 FIX: Сначала переключаем на вкладку widgets, чтобы виджеты отрендерились
       const currentTab = window.HEYS?.App?.getTab?.();
       if (currentTab !== 'widgets') {
@@ -1585,40 +1585,40 @@
           return true;
         }
       }
-      
+
       // Если уже на вкладке widgets - стартуем сразу
       this._startInternal();
       return true;
     },
-    
+
     /**
      * Внутренний старт после переключения вкладки
      */
     _startInternal() {
       trackTourEvent('widgets_tour_start_internal', {});
-      
+
       // Сохраняем исходное состояние edit mode (восстановим при выходе)
       widgetsState.wasEditModeActive = HEYS.Widgets?.isEditMode?.() || false;
-      
+
       // НЕ входим в edit mode сразу - сначала показываем demo шаги
       // Edit mode включится автоматически когда дойдём до шагов с requiresEditMode: true
-      
+
       // Блокируем скролл
       document.body.style.overflow = 'hidden';
       document.body.classList.add('tour-active');
-      
+
       // Небольшая задержка для обновления DOM после переключения вкладки
       setTimeout(() => {
         renderWidgetsStep(0);
       }, 150);
     },
-    
+
     /**
      * Следующий шаг
      */
     next() {
       if (!widgetsState.isActive) return;
-      
+
       if (widgetsState.currentStepIndex < WIDGETS_TOUR_STEPS.length - 1) {
         widgetsState.currentStepIndex++;
         renderWidgetsStep(widgetsState.currentStepIndex);
@@ -1626,42 +1626,42 @@
         this.finish();
       }
     },
-    
+
     /**
      * Пропустить тур
      */
     skip() {
       trackTourEvent('widgets_tour_skipped', { reason: 'user' });
-      
+
       // Сохраняем флаг
       if (HEYS.store?.set) {
         HEYS.store.set(WIDGETS_STORAGE_KEY, true);
       }
       localStorage.setItem(WIDGETS_STORAGE_KEY, 'true');
-      
+
       this.cleanup();
     },
-    
+
     /**
      * Завершить тур
      */
     finish() {
       trackTourEvent('widgets_tour_completed', {});
-      
+
       // Сохраняем флаг
       if (HEYS.store?.set) {
         HEYS.store.set(WIDGETS_STORAGE_KEY, true);
       }
       localStorage.setItem(WIDGETS_STORAGE_KEY, 'true');
-      
+
       this.cleanup();
-      
+
       // Празднуем
       if (HEYS.game?.celebrate) {
         HEYS.game.celebrate();
       }
     },
-    
+
     /**
      * Очистить DOM
      */
@@ -1669,30 +1669,30 @@
       if (widgetsState.overlayEl) widgetsState.overlayEl.remove();
       if (widgetsState.highlightEl) widgetsState.highlightEl.remove();
       if (widgetsState.tooltipEl) widgetsState.tooltipEl.remove();
-      
+
       document.body.style.overflow = '';
       document.body.classList.remove('tour-active');
-      
+
       // Восстанавливаем исходное состояние edit mode
       if (!widgetsState.wasEditModeActive && HEYS.Widgets?.isEditMode?.()) {
         trackTourEvent('widgets_tour_restore_edit_mode', {});
         HEYS.Widgets.exitEditMode?.();
       }
-      
+
       widgetsState.overlayEl = null;
       widgetsState.highlightEl = null;
       widgetsState.tooltipEl = null;
       widgetsState.isActive = false;
       widgetsState.wasEditModeActive = false;
     },
-    
+
     /**
      * Активен ли тур
      */
     isActive() {
       return widgetsState.isActive;
     },
-    
+
     /**
      * Сбросить флаг прохождения
      */
@@ -1702,10 +1702,10 @@
       }
       // ALWAYS remove localStorage key (in case it was set directly)
       localStorage.removeItem(WIDGETS_STORAGE_KEY);
-      
+
       trackTourEvent('widgets_tour_reset', {});
     },
-    
+
     /**
      * Нужно ли показывать тур
      */

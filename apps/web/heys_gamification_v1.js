@@ -1,13 +1,13 @@
 // heys_gamification_v1.js — Gamification Core: XP, Уровни, Достижения
 // Единый источник правды для всей геймификации HEYS
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
   const U = HEYS.utils || {};
 
   // ========== КОНФИГУРАЦИЯ ==========
-  
+
   /**
    * Пороги уровней (XP необходимый для достижения уровня)
    * Уровень 1 = 0 XP, Уровень 2 = 100 XP, и т.д.
@@ -44,11 +44,11 @@
    * Титулы уровней с иконками и цветами
    */
   const LEVEL_TITLES = [
-    { min: 1,  max: 4,  title: 'Новичок',  icon: '🌱', color: '#94a3b8' },
-    { min: 5,  max: 9,  title: 'Ученик',   icon: '📚', color: '#3b82f6' },
-    { min: 10, max: 14, title: 'Практик',  icon: '💪', color: '#22c55e' },
-    { min: 15, max: 19, title: 'Эксперт',  icon: '⭐', color: '#eab308' },
-    { min: 20, max: 25, title: 'Мастер',   icon: '👑', color: '#a855f7' }
+    { min: 1, max: 4, title: 'Новичок', icon: '🌱', color: '#94a3b8' },
+    { min: 5, max: 9, title: 'Ученик', icon: '📚', color: '#3b82f6' },
+    { min: 10, max: 14, title: 'Практик', icon: '💪', color: '#22c55e' },
+    { min: 15, max: 19, title: 'Эксперт', icon: '⭐', color: '#eab308' },
+    { min: 20, max: 25, title: 'Мастер', icon: '👑', color: '#a855f7' }
   ];
 
   /**
@@ -149,13 +149,24 @@
 
   // ========== ХЕЛПЕРЫ ==========
 
+  function safeGetStreak() {
+    if (typeof U.safeGetStreak === 'function') {
+      return U.safeGetStreak();
+    }
+    try {
+      return typeof HEYS.Day?.getStreak === 'function' ? HEYS.Day.getStreak() : 0;
+    } catch {
+      return 0;
+    }
+  }
+
   function getToday() {
     return new Date().toISOString().slice(0, 10);
   }
 
   function loadData() {
     if (_data) return _data;
-    
+
     const stored = U.lsGet ? U.lsGet(STORAGE_KEY, null) : null;
     if (stored) {
       _data = validateAndMigrate(stored);
@@ -171,13 +182,13 @@
    */
   function validateAndMigrate(data) {
     const defaults = createDefaultData();
-    
+
     // Проверка базовой структуры
     if (!data || typeof data !== 'object') {
       console.warn('[HEYS.game] Invalid data structure, resetting');
       return defaults;
     }
-    
+
     // Миграция: добавляем недостающие поля
     const migrated = {
       ...defaults,
@@ -195,18 +206,18 @@
       // Версия данных
       version: DATA_VERSION
     };
-    
+
     // Пересчитываем уровень на случай повреждения
     migrated.level = calculateLevel(migrated.totalXP);
-    
+
     // Cleanup старых dailyXP (>30 дней)
     migrated.dailyXP = cleanupOldDailyXP(migrated.dailyXP);
-    
+
     // Логируем миграцию если версия изменилась
     if (data.version !== DATA_VERSION) {
       console.log(`[HEYS.game] Data migrated from v${data.version || 1} to v${DATA_VERSION}`);
     }
-    
+
     return migrated;
   }
 
@@ -215,14 +226,14 @@
    */
   function cleanupOldDailyXP(dailyXP) {
     if (!dailyXP || typeof dailyXP !== 'object') return {};
-    
+
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - MAX_DAILY_XP_DAYS);
     const cutoffStr = cutoffDate.toISOString().slice(0, 10);
-    
+
     const cleaned = {};
     let removedCount = 0;
-    
+
     for (const [date, xp] of Object.entries(dailyXP)) {
       if (date >= cutoffStr) {
         cleaned[date] = xp;
@@ -230,11 +241,11 @@
         removedCount++;
       }
     }
-    
+
     if (removedCount > 0) {
       console.log(`[HEYS.game] Cleaned up ${removedCount} old dailyXP entries`);
     }
-    
+
     return cleaned;
   }
 
@@ -282,7 +293,7 @@
     if (U.lsSet) {
       U.lsSet(STORAGE_KEY, _data);
     } else {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(_data)); } catch (e) {}
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(_data)); } catch (e) { }
     }
   }
 
@@ -330,7 +341,7 @@
 
   // ========== XP MULTIPLIER ==========
   function getXPMultiplier() {
-    const streak = HEYS.Day && typeof HEYS.Day.getStreak === 'function' ? HEYS.Day.getStreak() : 0;
+    const streak = safeGetStreak();
     if (streak >= 14) return 3;  // 3x при streak 14+
     if (streak >= 7) return 2.5; // 2.5x при streak 7+
     if (streak >= 3) return 2;   // 2x при streak 3+
@@ -348,13 +359,13 @@
     const data = loadData();
     const today = getToday();
     if (data.dailyBonusClaimed === today) return false;
-    
+
     data.dailyBonusClaimed = today;
     const bonusXP = 10 * getXPMultiplier();
     data.totalXP += bonusXP;
     data.level = calculateLevel(data.totalXP);
     saveData();
-    
+
     showNotification('daily_bonus', { xp: bonusXP, multiplier: getXPMultiplier() });
     window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: { xpGained: bonusXP, reason: 'daily_bonus' } }));
     return true;
@@ -363,7 +374,7 @@
   // ========== PERSONAL BEST ==========
   function isNewStreakRecord() {
     const data = loadData();
-    const currentStreak = HEYS.Day && typeof HEYS.Day.getStreak === 'function' ? HEYS.Day.getStreak() : 0;
+    const currentStreak = safeGetStreak();
     return currentStreak > 0 && currentStreak > data.stats.bestStreak;
   }
 
@@ -387,7 +398,7 @@
   // ========== DAILY ACTION MULTIPLIER ==========
   // Накопительный множитель за день: чем больше действий — тем больше XP
   // Сбрасывается только на новый день
-  
+
   const DAILY_MULTIPLIER_THRESHOLDS = [
     { actions: 0, multiplier: 1.0, label: '' },
     { actions: 3, multiplier: 1.2, label: '🔥' },      // 3+ действия = 1.2x
@@ -414,16 +425,16 @@
   function getDailyMultiplier() {
     const data = loadData();
     const today = getTodayDate();
-    
+
     // Миграция или новый день
     if (!data.dailyActions || data.dailyActions.date !== today) {
       return { multiplier: 1, actions: 0, label: '', nextThreshold: 3 };
     }
-    
+
     const actions = data.dailyActions.count;
     let current = DAILY_MULTIPLIER_THRESHOLDS[0];
     let next = DAILY_MULTIPLIER_THRESHOLDS[1];
-    
+
     for (let i = DAILY_MULTIPLIER_THRESHOLDS.length - 1; i >= 0; i--) {
       if (actions >= DAILY_MULTIPLIER_THRESHOLDS[i].actions) {
         current = DAILY_MULTIPLIER_THRESHOLDS[i];
@@ -431,7 +442,7 @@
         break;
       }
     }
-    
+
     return {
       multiplier: current.multiplier,
       actions: actions,
@@ -444,27 +455,27 @@
   function incrementDailyActions() {
     const data = loadData();
     const today = getTodayDate();
-    
+
     // Миграция или новый день — сбрасываем
     if (!data.dailyActions || data.dailyActions.date !== today) {
       data.dailyActions = { date: today, count: 0 };
     }
-    
+
     data.dailyActions.count += 1;
     saveData();
-    
+
     const multiplierInfo = getDailyMultiplier();
-    
+
     // Dispatch event для UI
     window.dispatchEvent(new CustomEvent('heysDailyMultiplierUpdate', {
       detail: multiplierInfo
     }));
-    
+
     return multiplierInfo;
   }
 
   // ========== DAILY MISSIONS ==========
-  
+
   const DAILY_MISSION_POOL = [
     // Питание
     { id: 'log_3_meals', name: 'Три приёма пищи', icon: '🍽️', desc: 'Запиши 3 приёма пищи', xp: 25, type: 'meals', target: 3 },
@@ -472,21 +483,21 @@
     { id: 'add_5_products', name: 'Разнообразие', icon: '🥗', desc: 'Добавь 5 разных продуктов', xp: 20, type: 'products', target: 5 },
     { id: 'fiber_50', name: 'Больше клетчатки', icon: '🥦', desc: 'Набери 50% нормы клетчатки', xp: 25, type: 'fiber', target: 50 },
     { id: 'protein_80', name: 'Белковый день', icon: '🥩', desc: 'Набери 80% нормы белка', xp: 30, type: 'protein', target: 80 },
-    
+
     // Вода
     { id: 'water_50', name: 'Полпути', icon: '💧', desc: 'Выпей 50% нормы воды', xp: 15, type: 'water', target: 50 },
     { id: 'water_100', name: 'Норма воды', icon: '🌊', desc: 'Выполни норму воды на 100%', xp: 30, type: 'water', target: 100 },
     { id: 'water_3_times', name: 'Регулярность', icon: '⏱️', desc: 'Запиши воду 3 раза', xp: 20, type: 'water_entries', target: 3 },
-    
+
     // Активность
     { id: 'log_training', name: 'Тренировка дня', icon: '💪', desc: 'Запиши тренировку', xp: 30, type: 'training', target: 1 },
     { id: 'steps_5k', name: '5000 шагов', icon: '👟', desc: 'Пройди 5000 шагов', xp: 25, type: 'steps', target: 5000 },
     { id: 'steps_8k', name: '8000 шагов', icon: '🚶', desc: 'Пройди 8000 шагов', xp: 35, type: 'steps', target: 8000 },
-    
+
     // Здоровье
     { id: 'log_weight', name: 'Взвешивание', icon: '⚖️', desc: 'Запиши утренний вес', xp: 15, type: 'weight', target: 1 },
     { id: 'log_sleep', name: 'Режим сна', icon: '😴', desc: 'Запиши время сна', xp: 15, type: 'sleep', target: 1 },
-    
+
     // Качество
     { id: 'balance_day', name: 'Баланс БЖУ', icon: '⚖️', desc: 'Все макросы в диапазоне 80-120%', xp: 40, type: 'balance', target: 1 },
     { id: 'low_gi_meal', name: 'Низкий ГИ', icon: '🎯', desc: 'Приём пищи с ГИ < 50', xp: 25, type: 'low_gi', target: 1 }
@@ -495,11 +506,11 @@
   function selectDailyMissions(level) {
     // Выбираем 3 случайные миссии из пула
     const shuffled = [...DAILY_MISSION_POOL].sort(() => Math.random() - 0.5);
-    
+
     // Для разнообразия берём миссии разных типов
     const selectedTypes = new Set();
     const missions = [];
-    
+
     for (const mission of shuffled) {
       const baseType = mission.type.split('_')[0]; // water_entries -> water
       if (!selectedTypes.has(baseType) && missions.length < 3) {
@@ -511,7 +522,7 @@
         selectedTypes.add(baseType);
       }
     }
-    
+
     // Если не набрали 3 разных типа, добавляем оставшиеся
     while (missions.length < 3 && shuffled.length > missions.length) {
       const remaining = shuffled.filter(m => !missions.find(selected => selected.id === m.id));
@@ -519,14 +530,14 @@
         missions.push({ ...remaining[0], completed: false, progress: 0 });
       } else break;
     }
-    
+
     return missions;
   }
 
   function getDailyMissions() {
     const data = loadData();
     const today = getToday();
-    
+
     // Инициализация или новый день
     if (!data.dailyMissions || data.dailyMissions.date !== today) {
       data.dailyMissions = {
@@ -536,7 +547,7 @@
       };
       saveData();
     }
-    
+
     return {
       date: data.dailyMissions.date,
       missions: data.dailyMissions.missions,
@@ -549,20 +560,20 @@
   function updateDailyMission(type, value) {
     const data = loadData();
     const today = getToday();
-    
+
     if (!data.dailyMissions || data.dailyMissions.date !== today) {
       getDailyMissions(); // Инициализирует
       return;
     }
-    
+
     let missionCompleted = false;
-    
+
     for (const mission of data.dailyMissions.missions) {
       if (mission.completed) continue;
-      
+
       let matches = false;
       let newProgress = mission.progress || 0;
-      
+
       switch (mission.type) {
         case 'meals':
           if (type === 'product_added') {
@@ -641,10 +652,10 @@
         case 'balance':
           if (type === 'product_added' && HEYS.Day?.getMacroBalance) {
             const balance = HEYS.Day.getMacroBalance();
-            if (balance && 
-                balance.protein >= 0.8 && balance.protein <= 1.2 &&
-                balance.carbs >= 0.8 && balance.carbs <= 1.2 &&
-                balance.fat >= 0.8 && balance.fat <= 1.2) {
+            if (balance &&
+              balance.protein >= 0.8 && balance.protein <= 1.2 &&
+              balance.carbs >= 0.8 && balance.carbs <= 1.2 &&
+              balance.fat >= 0.8 && balance.fat <= 1.2) {
               newProgress = 1;
               matches = true;
             }
@@ -660,19 +671,19 @@
           }
           break;
       }
-      
+
       if (matches) {
         mission.progress = newProgress;
-        
+
         // Проверяем выполнение
         if (newProgress >= mission.target && !mission.completed) {
           mission.completed = true;
           data.dailyMissions.completedCount++;
           missionCompleted = true;
-          
+
           // Начисляем XP за миссию
           _addXPInternal(mission.xp, 'daily_mission');
-          
+
           showNotification('mission_complete', {
             name: mission.name,
             xp: mission.xp
@@ -680,42 +691,42 @@
         }
       }
     }
-    
+
     saveData();
-    
+
     // Проверяем бонус за все 3 миссии
     if (data.dailyMissions.completedCount >= 3 && !data.dailyMissions.bonusClaimed) {
       // Бонус будет доступен для клейма через claimDailyMissionsBonus
     }
-    
+
     // Dispatch event для UI
     window.dispatchEvent(new CustomEvent('heysDailyMissionsUpdate', {
       detail: getDailyMissions()
     }));
-    
+
     return missionCompleted;
   }
 
   function claimDailyMissionsBonus() {
     const data = loadData();
     const today = getToday();
-    
-    if (!data.dailyMissions || 
-        data.dailyMissions.date !== today ||
-        data.dailyMissions.completedCount < 3 ||
-        data.dailyMissions.bonusClaimed) {
+
+    if (!data.dailyMissions ||
+      data.dailyMissions.date !== today ||
+      data.dailyMissions.completedCount < 3 ||
+      data.dailyMissions.bonusClaimed) {
       return false;
     }
-    
+
     data.dailyMissions.bonusClaimed = true;
     saveData();
-    
+
     // Бонус 50 XP за выполнение всех миссий
     _addXPInternal(50, 'daily_missions_bonus');
     celebrate();
-    
+
     showNotification('all_missions_complete', { bonus: 50 });
-    
+
     return true;
   }
 
@@ -728,7 +739,7 @@
   }
 
   // ========== WEEKLY CHALLENGES ==========
-  
+
   const WEEKLY_CHALLENGE_TYPES = [
     {
       type: 'xp',
@@ -783,7 +794,7 @@
       targets: [3, 5, 7],
       reward: 100,
       check: (data, target) => {
-        const streak = HEYS.Day?.getStreak?.() || 0;
+        const streak = safeGetStreak();
         return streak >= target;
       }
     },
@@ -801,16 +812,16 @@
   function selectWeeklyChallenge(level) {
     // Выбираем случайный тип челленджа
     const randomType = WEEKLY_CHALLENGE_TYPES[Math.floor(Math.random() * WEEKLY_CHALLENGE_TYPES.length)];
-    
+
     // Сложность зависит от уровня: низкий уровень — лёгкие таргеты
     let targetIndex = 0;
     if (level >= 10) targetIndex = 1;
     if (level >= 20) targetIndex = 2;
     if (level >= 30) targetIndex = 3;
-    
+
     // Не превышаем доступные таргеты
     targetIndex = Math.min(targetIndex, randomType.targets.length - 1);
-    
+
     return {
       type: randomType.type,
       name: randomType.name,
@@ -831,7 +842,7 @@
   function getWeeklyChallenge() {
     const data = loadData();
     const currentWeek = getWeekStart();
-    
+
     // Миграция: если weeklyChallenge нет или старого формата
     if (!data.weeklyChallenge || !data.weeklyChallenge.type) {
       data.weeklyChallenge = {
@@ -840,7 +851,7 @@
       };
       saveData();
     }
-    
+
     // Новая неделя — новый челлендж
     if (data.weeklyChallenge.weekStart !== currentWeek) {
       data.weeklyChallenge = {
@@ -849,11 +860,11 @@
       };
       saveData();
     }
-    
+
     // Проверяем выполнение
     const challengeType = WEEKLY_CHALLENGE_TYPES.find(t => t.type === data.weeklyChallenge.type);
     const isCompleted = challengeType?.check(data, data.weeklyChallenge.target) || false;
-    
+
     // Для XP типа — earned это XP, для остальных — считаем прогресс
     let current = 0;
     switch (data.weeklyChallenge.type) {
@@ -862,11 +873,11 @@
       case 'water': current = data.weeklyChallenge.waterDays || 0; break;
       case 'training': current = data.weeklyChallenge.trainingsCount || 0; break;
       case 'perfect_days': current = data.weeklyChallenge.perfectDays || 0; break;
-      case 'streak': current = HEYS.Day?.getStreak?.() || 0; break;
+      case 'streak': current = safeGetStreak(); break;
       case 'early_bird': current = data.weeklyChallenge.earlyBirdDays || 0; break;
       default: current = data.weeklyChallenge.earned || 0;
     }
-    
+
     return {
       ...data.weeklyChallenge,
       current,
@@ -878,7 +889,7 @@
   function updateWeeklyProgress(reason, extraData = {}) {
     const data = loadData();
     const currentWeek = getWeekStart();
-    
+
     // Миграция
     if (!data.weeklyChallenge || !data.weeklyChallenge.type) {
       data.weeklyChallenge = {
@@ -886,7 +897,7 @@
         ...selectWeeklyChallenge(data.level)
       };
     }
-    
+
     if (data.weeklyChallenge.weekStart !== currentWeek) {
       data.weeklyChallenge = {
         weekStart: currentWeek,
@@ -895,7 +906,7 @@
     }
 
     const wasCompleted = getWeeklyChallenge().completed;
-    
+
     // Обновляем счётчики в зависимости от действия
     switch (reason) {
       case 'product_added':
@@ -926,15 +937,15 @@
         data.weeklyChallenge.perfectDays = (data.weeklyChallenge.perfectDays || 0) + 1;
         break;
     }
-    
+
     saveData();
-    
+
     // Проверяем завершение
     const challenge = getWeeklyChallenge();
     if (!wasCompleted && challenge.completed) {
-      showNotification('weekly_complete', { 
+      showNotification('weekly_complete', {
         name: challenge.name,
-        reward: challenge.reward 
+        reward: challenge.reward
       });
       // Бонус за выполнение
       data.totalXP += challenge.reward;
@@ -947,7 +958,7 @@
   function addWeeklyXP(xp) {
     const data = loadData();
     const currentWeek = getWeekStart();
-    
+
     // Миграция
     if (!data.weeklyChallenge || !data.weeklyChallenge.type) {
       data.weeklyChallenge = {
@@ -955,7 +966,7 @@
         ...selectWeeklyChallenge(data.level)
       };
     }
-    
+
     if (data.weeklyChallenge.weekStart !== currentWeek) {
       data.weeklyChallenge = {
         weekStart: currentWeek,
@@ -966,15 +977,15 @@
     // Добавляем XP для XP-типа челленджа
     data.weeklyChallenge.earned = (data.weeklyChallenge.earned || 0) + xp;
     saveData();
-    
+
     // Проверка выполнения для XP-типа
     if (data.weeklyChallenge.type === 'xp') {
       const challenge = getWeeklyChallenge();
       if (challenge.completed && !data.weeklyChallenge.rewarded) {
         data.weeklyChallenge.rewarded = true;
-        showNotification('weekly_complete', { 
+        showNotification('weekly_complete', {
           name: challenge.name,
-          reward: challenge.reward 
+          reward: challenge.reward
         });
         data.totalXP += challenge.reward;
         data.level = calculateLevel(data.totalXP);
@@ -986,19 +997,19 @@
 
   // ========== XP SOUND (Web Audio API) ==========
   let audioContext = null;
-  
+
   function playXPSound(isLevelUp = false) {
     try {
       if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
       }
-      
+
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
-      
+
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
-      
+
       if (isLevelUp) {
         // Level up — мелодия из 3 нот (восходящая)
         oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
@@ -1027,13 +1038,13 @@
     const data = loadData();
     const history = [];
     const today = new Date();
-    
+
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().slice(0, 10);
       const dayXP = data.dailyXP[dateStr] || {};
-      
+
       // Сумма XP за день
       let totalDayXP = 0;
       for (const reason of Object.keys(dayXP)) {
@@ -1042,14 +1053,14 @@
           totalDayXP += dayXP[reason] * action.xp;
         }
       }
-      
+
       history.push({
         date: dateStr,
         day: d.toLocaleDateString('ru', { weekday: 'short' }),
         xp: totalDayXP
       });
     }
-    
+
     return history;
   }
 
@@ -1067,8 +1078,8 @@
 
     const float = document.createElement('div');
     float.className = `floating-xp-text ${isCombo ? 'combo' : ''}`;
-    float.innerHTML = isCombo 
-      ? `<span class="combo-text">COMBO!</span> +${xpAmount}` 
+    float.innerHTML = isCombo
+      ? `<span class="combo-text">COMBO!</span> +${xpAmount}`
       : `+${xpAmount}`;
     float.style.cssText = `
       position: fixed;
@@ -1091,8 +1102,8 @@
 
   function flyToBar(sourceEl, xpAmount) {
     // Находим target — gamification bar в header
-    const target = document.querySelector('.hdr-gamification .game-xp') || 
-                   document.querySelector('.hdr-gamification');
+    const target = document.querySelector('.hdr-gamification .game-xp') ||
+      document.querySelector('.hdr-gamification');
     if (!target) return;
 
     // Определяем source position
@@ -1101,11 +1112,11 @@
       sourceRect = sourceEl.getBoundingClientRect();
     } else {
       // Fallback: центр экрана
-      sourceRect = { 
-        left: window.innerWidth / 2, 
-        top: window.innerHeight / 2, 
-        width: 0, 
-        height: 0 
+      sourceRect = {
+        left: window.innerWidth / 2,
+        top: window.innerHeight / 2,
+        width: 0,
+        height: 0
       };
     }
 
@@ -1151,7 +1162,7 @@
 
   function processNotificationQueue() {
     if (_isShowingNotification || _notificationQueue.length === 0) return;
-    
+
     _isShowingNotification = true;
     const { type, data } = _notificationQueue.shift();
 
@@ -1186,12 +1197,12 @@
     const data = loadData();
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    
+
     if (data.streakShieldUsed === currentMonth) return false;
-    
+
     data.streakShieldUsed = currentMonth;
     saveData();
-    
+
     showNotification('streak_shield', { message: 'Streak спасён! 🛡️' });
     return true;
   }
@@ -1211,7 +1222,7 @@
     const data = loadData();
     const today = getToday();
     const todayXP = data.dailyXP[today] || {};
-    
+
     const breakdown = [];
     for (const [reason, count] of Object.entries(todayXP)) {
       const action = XP_ACTIONS[reason];
@@ -1224,7 +1235,7 @@
         });
       }
     }
-    
+
     return {
       items: breakdown,
       total: breakdown.reduce((sum, b) => sum + b.xp, 0)
@@ -1235,14 +1246,14 @@
   function getLevelUpPreview() {
     const data = loadData();
     const currentTitle = getLevelTitle(data.level);
-    
+
     // Найти следующее звание
     const nextTitleInfo = LEVEL_TITLES.find(t => t.min > data.level);
     if (!nextTitleInfo) return null;
-    
+
     const levelsToNextTitle = nextTitleInfo.min - data.level;
     const xpToNextTitle = LEVEL_THRESHOLDS[nextTitleInfo.min - 1] - data.totalXP;
-    
+
     return {
       currentTitle: currentTitle.title,
       nextTitle: nextTitleInfo.title,
@@ -1260,7 +1271,7 @@
   function updateAchievementProgress(achId, current, target, extraData = {}) {
     const data = loadData();
     if (!data.achievementProgress) data.achievementProgress = {};
-    
+
     data.achievementProgress[achId] = {
       current: Math.min(current, target),
       target,
@@ -1268,7 +1279,7 @@
       updatedAt: Date.now()
     };
     saveData();
-    
+
     return current >= target;
   }
 
@@ -1288,14 +1299,14 @@
   function countConsecutiveDays(conditionFn, maxDays = 14) {
     let count = 0;
     const today = new Date();
-    
+
     for (let i = 0; i < maxDays; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().slice(0, 10);
-      
+
       const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${dateStr}`, null) : null;
-      
+
       if (dayData && conditionFn(dayData, dateStr)) {
         count++;
       } else if (i > 0) {
@@ -1303,7 +1314,7 @@
         break;
       }
     }
-    
+
     return count;
   }
 
@@ -1312,8 +1323,8 @@
     const newAchievements = [];
 
     // ========== STREAK ACHIEVEMENTS ==========
-    const streak = HEYS.Day && typeof HEYS.Day.getStreak === 'function' ? HEYS.Day.getStreak() : 0;
-    
+    const streak = safeGetStreak();
+
     const streakMilestones = [
       { days: 3, id: 'streak_3' },
       { days: 7, id: 'streak_7' },
@@ -1321,7 +1332,7 @@
       { days: 30, id: 'streak_30' },
       { days: 100, id: 'streak_100' }
     ];
-    
+
     for (const m of streakMilestones) {
       if (streak >= m.days && !data.unlockedAchievements.includes(m.id)) {
         newAchievements.push(m.id);
@@ -1359,7 +1370,7 @@
     }
 
     // ========== QUALITY ACHIEVEMENTS ==========
-    
+
     // Perfect day (проверяется извне через checkDayCompleted)
     if (reason === 'perfect_day' && !data.unlockedAchievements.includes('perfect_day')) {
       newAchievements.push('perfect_day');
@@ -1373,7 +1384,7 @@
         const dayXP = data.dailyXP[dateStr];
         return dayXP && dayXP.perfect_day > 0;
       }, 14);
-      
+
       updateAchievementProgress('perfect_week', perfectDays, 7);
       if (perfectDays >= 7) {
         newAchievements.push('perfect_week');
@@ -1385,8 +1396,8 @@
       if (HEYS.Day && HEYS.Day.getMacroBalance) {
         const balance = HEYS.Day.getMacroBalance();
         if (balance && balance.protein >= 0.9 && balance.protein <= 1.1 &&
-            balance.carbs >= 0.9 && balance.carbs <= 1.1 &&
-            balance.fat >= 0.9 && balance.fat <= 1.1) {
+          balance.carbs >= 0.9 && balance.carbs <= 1.1 &&
+          balance.fat >= 0.9 && balance.fat <= 1.1) {
           newAchievements.push('balanced_macros');
         }
       }
@@ -1399,7 +1410,7 @@
         // Нужна проверка клетчатки — используем achievementProgress для трекинга
         return data.achievementProgress?.fiber_champion?.dates?.includes(dayData.date);
       }, 14);
-      
+
       // Проверяем сегодняшнюю клетчатку
       if (HEYS.Day && HEYS.Day.getFiberPercent && HEYS.Day.getFiberPercent() >= 100) {
         const today = getToday();
@@ -1410,15 +1421,15 @@
         if (!data.achievementProgress.fiber_champion.dates.includes(today)) {
           data.achievementProgress.fiber_champion.dates.push(today);
           // Оставляем только последние 14 дней
-          data.achievementProgress.fiber_champion.dates = 
+          data.achievementProgress.fiber_champion.dates =
             data.achievementProgress.fiber_champion.dates.slice(-14);
         }
-        
+
         // Проверяем последовательность
         const consecutiveFiber = countConsecutiveFiberDays(data.achievementProgress.fiber_champion.dates);
         data.achievementProgress.fiber_champion.current = consecutiveFiber;
         saveData();
-        
+
         if (consecutiveFiber >= 7) {
           newAchievements.push('fiber_champion');
         }
@@ -1442,7 +1453,7 @@
         const waterGoal = 2000; // TODO: использовать динамическую норму
         return dayData.waterMl >= waterGoal * 0.9;
       }, 14);
-      
+
       updateAchievementProgress('water_master', waterDays, 7);
       if (waterDays >= 7) {
         newAchievements.push('water_master');
@@ -1469,7 +1480,7 @@
       const stepsDays = countConsecutiveDays((dayData) => {
         return dayData.steps && dayData.steps >= 10000;
       }, 14);
-      
+
       updateAchievementProgress('steps_champion', stepsDays, 7);
       if (stepsDays >= 7) {
         newAchievements.push('steps_champion');
@@ -1489,10 +1500,10 @@
           data.earlyBirdDays = data.earlyBirdDays.slice(-14);
           saveData();
         }
-        
+
         const consecutiveEarly = countConsecutiveFromDates(data.earlyBirdDays);
         updateAchievementProgress('early_bird', consecutiveEarly, 7);
-        
+
         if (consecutiveEarly >= 7) {
           newAchievements.push('early_bird');
         }
@@ -1512,7 +1523,7 @@
         }
         return true;
       }, 14);
-      
+
       updateAchievementProgress('night_owl_safe', safeDays, 7);
       if (safeDays >= 7) {
         newAchievements.push('night_owl_safe');
@@ -1550,23 +1561,23 @@
    */
   function countConsecutiveFromDates(dates) {
     if (!dates || dates.length === 0) return 0;
-    
+
     const sortedDates = [...dates].sort().reverse();
     let count = 0;
     const today = new Date();
-    
+
     for (let i = 0; i < 14; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().slice(0, 10);
-      
+
       if (sortedDates.includes(dateStr)) {
         count++;
       } else if (i > 0) {
         break;
       }
     }
-    
+
     return count;
   }
 
@@ -1583,7 +1594,7 @@
     if (!ach || data.unlockedAchievements.includes(achievementId)) return;
 
     data.unlockedAchievements.push(achievementId);
-    
+
     // Начисляем XP за достижение
     data.totalXP += ach.xp;
     data.level = calculateLevel(data.totalXP);
@@ -1599,7 +1610,7 @@
 
     // Звук при получении достижения!
     playXPSound(true); // Level-up мелодия для достижений
-    
+
     // Confetti для rare+ достижений
     if (['rare', 'epic', 'legendary', 'mythic'].includes(ach.rarity)) {
       celebrate();
@@ -1621,7 +1632,7 @@
     addXP(amount, reason, sourceEl) {
       // Debounce
       if (_debounceTimer) clearTimeout(_debounceTimer);
-      
+
       _debounceTimer = setTimeout(() => {
         _addXPInternal(amount, reason, sourceEl);
       }, DEBOUNCE_MS);
@@ -1643,7 +1654,7 @@
       const data = loadData();
       const currentLevelXP = getXPForCurrentLevel(data.level);
       const nextLevelXP = getXPForNextLevel(data.level);
-      
+
       if (nextLevelXP === null) {
         return { current: data.totalXP, required: data.totalXP, percent: 100 };
       }
@@ -1704,7 +1715,7 @@
     getInProgressAchievements() {
       const data = loadData();
       const achievements = [];
-      
+
       for (const [achId, progress] of Object.entries(data.achievementProgress || {})) {
         if (!data.unlockedAchievements.includes(achId) && progress.current > 0) {
           const achDef = ACHIEVEMENTS[achId];
@@ -1720,7 +1731,7 @@
           }
         }
       }
-      
+
       // Сортируем по проценту выполнения (ближайшие к разблокировке первые)
       return achievements.sort((a, b) => b.progress.percent - a.progress.percent);
     },
@@ -1750,7 +1761,7 @@
       if (ratio >= 0.95 && ratio <= 1.05) {
         this.addXP(0, 'perfect_day');
       }
-      
+
       // 📊 Записываем результат для A/B теста (если включён)
       if (dateStr && HEYS.Metabolic?.recordABResult) {
         try {
@@ -1765,36 +1776,36 @@
         }
       }
     },
-    
+
     /**
      * 🧠 Проверка метаболических достижений (новая функция)
      * Вызывается из Metabolic Intelligence модуля
      */
     checkMetabolicAchievements(data) {
       const { score, risk, phenotype, weeklyWrapViewed } = data || {};
-      
+
       // metabolic_stable: оценка ≥70 7 дней подряд
       if (data.stableDaysCount >= 7 && !this.isAchievementUnlocked('metabolic_stable')) {
         _unlockAchievement('metabolic_stable');
       }
-      
+
       // low_risk_master: низкий риск 14 дней
       if (data.lowRiskDaysCount >= 14 && !this.isAchievementUnlocked('low_risk_master')) {
         _unlockAchievement('low_risk_master');
       }
-      
+
       // phenotype_discovered: фенотип определён с confidence ≥70%
       if (phenotype?.confidence >= 70 && !this.isAchievementUnlocked('phenotype_discovered')) {
         _unlockAchievement('phenotype_discovered');
       }
-      
+
       // weekly_wrap_viewed: 4 просмотра отчётов
       const wrapViewCount = U.lsGet?.('heys_weekly_wrap_view_count', 0) || 0;
       if (wrapViewCount >= 4 && !this.isAchievementUnlocked('weekly_wrap_viewed')) {
         _unlockAchievement('weekly_wrap_viewed');
       }
     },
-    
+
     /**
      * 🛡️ Проверка crash_avoided — риск был высокий, но день успешный
      */
@@ -1803,7 +1814,7 @@
         _unlockAchievement('crash_avoided');
       }
     },
-    
+
     /**
      * 📊 Инкремент просмотров Weekly Wrap
      */
@@ -1836,27 +1847,27 @@
     isNewStreakRecord,
     getNextLevelTitle,
     getAllTitles,
-    
+
     // Daily Action Multiplier
     getDailyMultiplier,
     incrementDailyActions,
-    
+
     // Weekly challenge
     getWeeklyChallenge,
     updateWeeklyProgress,
     WEEKLY_CHALLENGE_TYPES,
-    
+
     // Daily Missions
     getDailyMissions,
     updateDailyMission,
     claimDailyMissionsBonus,
     DAILY_MISSION_POOL,
-    
+
     // Achievement Progress (используем функцию напрямую)
     getInProgressAchievements() {
       const data = loadData();
       const achievements = [];
-      
+
       for (const [achId, progress] of Object.entries(data.achievementProgress || {})) {
         if (!data.unlockedAchievements.includes(achId) && progress.current > 0) {
           const achDef = ACHIEVEMENTS[achId];
@@ -1872,27 +1883,27 @@
           }
         }
       }
-      
+
       return achievements.sort((a, b) => b.progress.percent - a.progress.percent);
     },
-    
+
     // Floating XP
     showFloatingXP,
-    
+
     // XP Sound
     playXPSound,
-    
+
     // XP History (7 days)
     getXPHistory,
-    
+
     // Streak Shield
     canUseStreakShield,
     useStreakShield,
     getStreakShieldStatus,
-    
+
     // XP Breakdown
     getXPBreakdown,
-    
+
     // Level-up Preview
     getLevelUpPreview
   };
@@ -1922,16 +1933,16 @@
     // Определяем XP с учётом multiplier
     let xpToAdd = amount > 0 ? amount : (action ? action.xp : 0);
     if (xpToAdd <= 0) return;
-    
+
     // Увеличиваем счётчик дневных действий
     const dailyInfo = incrementDailyActions();
-    
+
     // Применяем multiplier от streak
     const streakMultiplier = getXPMultiplier();
     // Применяем daily multiplier (накопительный за день)
     const totalMultiplier = streakMultiplier * dailyInfo.multiplier;
     xpToAdd = Math.round(xpToAdd * totalMultiplier);
-    
+
     // Floating XP animation (показываем если есть бонус)
     const hasBonus = dailyInfo.multiplier > 1;
     showFloatingXP(sourceEl, xpToAdd, hasBonus);
@@ -1947,25 +1958,25 @@
     if (reason === 'perfect_day') data.stats.perfectDays++;
 
     // Best streak
-    const streak = HEYS.Day && typeof HEYS.Day.getStreak === 'function' ? HEYS.Day.getStreak() : 0;
+    const streak = safeGetStreak();
     if (streak > data.stats.bestStreak) {
       data.stats.bestStreak = streak;
     }
 
     // Weekly challenge tracking
     addWeeklyXP(xpToAdd);
-    
+
     // Update weekly progress for specific actions
     if (['product_added', 'water_added', 'training_added', 'perfect_day'].includes(reason)) {
       updateWeeklyProgress(reason, { waterPercent: HEYS.Day?.getWaterPercent?.() || 0 });
     }
-    
+
     // Update daily missions
     if (reason !== 'daily_mission' && reason !== 'daily_missions_bonus') {
       const missionValue = reason === 'water_added' ? (HEYS.Day?.getWaterPercent?.() || 0) : 0;
       updateDailyMission(reason, missionValue);
     }
-    
+
     saveData();
 
     // Haptic
@@ -1973,7 +1984,7 @@
 
     // Flying animation
     flyToBar(sourceEl, xpToAdd);
-    
+
     // XP Sound
     playXPSound(false);
 
@@ -1991,10 +2002,10 @@
     // Level up notification
     if (data.level > oldLevel) {
       const title = getLevelTitle(data.level);
-      
+
       // Level-up sound!
       playXPSound(true);
-      
+
       showNotification('level_up', {
         newLevel: data.level,
         title: title.title,
@@ -2039,19 +2050,19 @@
   let _initialSyncDone = false; // Флаг первой синхронизации
   let _lastSyncTime = 0; // Время последнего sync (для cooldown)
   const SYNC_COOLDOWN_MS = 5000; // 5 секунд cooldown между реакциями на sync
-  
+
   window.addEventListener('heysSyncCompleted', (e) => {
     const now = Date.now();
-    
+
     // Запоминаем текущие stats ДО сброса кеша
     const oldStats = _data ? game.getStats() : null;
     const oldXP = oldStats?.xp || 0;
     const oldLevel = oldStats?.level || 0;
     const oldStreak = oldStats?.streak || 0;
-    
+
     // Сбрасываем in-memory кеш — при следующем loadData() прочитаем свежие данные из localStorage
     _data = null;
-    
+
     // 🔒 При ПЕРВОЙ синхронизации НЕ диспатчим heysGameUpdate
     // GamificationBar уже инициализирован с данными из localStorage
     // Это предотвращает мерцание UI при загрузке страницы
@@ -2060,25 +2071,25 @@
       _lastSyncTime = now;
       return;
     }
-    
+
     // 🔒 Cooldown: не реагируем на sync если прошло < 5 секунд
     // Это предотвращает цепную реакцию sync → save → sync
     if (now - _lastSyncTime < SYNC_COOLDOWN_MS) {
       return;
     }
     _lastSyncTime = now;
-    
+
     // Получаем новые stats
     const newStats = game.getStats();
-    
+
     // 🔒 Оптимизация: НЕ диспатчим heysGameUpdate если данные не изменились
-    if (oldStats && 
-        newStats.xp === oldXP && 
-        newStats.level === oldLevel && 
-        newStats.streak === oldStreak) {
+    if (oldStats &&
+      newStats.xp === oldXP &&
+      newStats.level === oldLevel &&
+      newStats.streak === oldStreak) {
       return;
     }
-    
+
     // Уведомляем UI об обновлении (GamificationBar перечитает stats)
     window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: newStats }));
   });

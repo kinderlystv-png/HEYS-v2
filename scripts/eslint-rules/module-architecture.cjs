@@ -120,9 +120,9 @@ const RECOMMENDATIONS = {
 function formatRecommendations(type, level = 'error') {
   const rec = RECOMMENDATIONS[type];
   if (!rec) return '';
-  
+
   const lines = [];
-  
+
   if (level === 'error') {
     lines.push('\n\n🎯 QUICK WIN:');
     rec.quickWin.forEach(tip => lines.push(`   • ${tip}`));
@@ -132,9 +132,9 @@ function formatRecommendations(type, level = 'error') {
     lines.push('\n\n⚡ Рекомендации:');
     rec.quickWin.slice(0, 2).forEach(tip => lines.push(`   • ${tip}`));
   }
-  
+
   lines.push('\n📚 Документация: docs/dev/MODULE_ARCHITECTURE.md');
-  
+
   return lines.join('\n');
 }
 
@@ -203,12 +203,12 @@ module.exports = {
         warn: options.heysRefsWarning ?? configLimits.heysRefs.warn,
       },
     };
-    
+
     // Пропускаем файлы не из apps/web или не heys_*.js
     if (!filename.includes('apps/web')) {
       return {};
     }
-    
+
     // Пропускаем тесты и архив
     const baseName = path.basename(filename);
     if (!baseName.startsWith('heys_') || !baseName.endsWith('.js')) {

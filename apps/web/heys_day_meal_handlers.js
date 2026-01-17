@@ -288,7 +288,25 @@
         return;
       }
 
+      // 🔍 DEBUG: Логируем входящий продукт
+      console.log('[ADD_PRODUCT] 📦 Input product:', {
+        name: p.name,
+        id: p.id,
+        harm: p.harm,
+        harmScore: p.harmScore,
+        harmscore: p.harmscore,
+        harm100: p.harm100,
+        gi: p.gi,
+        gi100: p.gi100,
+        kcal100: p.kcal100,
+        allKeys: Object.keys(p)
+      });
+
       haptic('light'); // Вибрация при добавлении
+      
+      // Use centralized harm normalization
+      const harmVal = HEYS.models?.normalizeHarm?.(p);
+      
       // Сохраняем ключевые нутриенты inline чтобы не зависеть от базы продуктов
       const item = {
         id: uid('it_'),
@@ -306,8 +324,9 @@
         trans100: p.trans100,
         fiber100: p.fiber100,
         gi: p.gi ?? p.gi100,
-        harm: p.harm ?? p.harm100
+        harm: harmVal  // Normalized harm (0-10)
       };
+
       setDay(prevDay => {
         const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
         return { ...prevDay, meals, updatedAt: Date.now() };

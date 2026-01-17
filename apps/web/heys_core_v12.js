@@ -1289,7 +1289,7 @@
         trans100: toNum(sharedProduct.trans100),
         fiber100: toNum(sharedProduct.fiber100),
         gi: toNum(sharedProduct.gi),
-        harmScore: toNum(sharedProduct.harm),
+        harmScore: toNum(sharedProduct.harm ?? sharedProduct.harmScore ?? sharedProduct.harmscore),
         category: sharedProduct.category || '',
         portions: sharedProduct.portions || null,
         shared_origin_id: sharedProduct.id, // Связь с shared продуктом
@@ -1367,7 +1367,7 @@
         trans100: sharedProduct.trans100 || 0,
         fiber100: sharedProduct.fiber100 || 0,
         gi: sharedProduct.gi || 0,
-        harmScore: sharedProduct.harm || sharedProduct.harmScore || 0,
+        harmScore: toNum(sharedProduct.harm ?? sharedProduct.harmScore ?? sharedProduct.harmscore),
         category: sharedProduct.category || '',
         portions: sharedProduct.portions || null,
         shared_origin_id: sharedProduct.id, // Связь с shared
@@ -1730,8 +1730,8 @@
                 }),
                 React.createElement('span', { className: 'muted' },
                   allSharedLoading ? '⏳ Загрузка...' : `Найдено: ${sharedQuery.length >= 2
-                      ? allSharedProducts.filter(p => (p.name || '').toLowerCase().includes(sharedQuery.toLowerCase())).length
-                      : allSharedProducts.length
+                    ? allSharedProducts.filter(p => (p.name || '').toLowerCase().includes(sharedQuery.toLowerCase())).length
+                    : allSharedProducts.length
                     } из ${allSharedProducts.length}`
                 )
               ),
@@ -2112,13 +2112,33 @@
       if (!sharedProduct) return null;
 
       const products = HEYS.products.getAll();
+      const mergeMissingFromShared = (existing) => {
+        if (!existing) return existing;
+        let changed = false;
+        const next = { ...existing };
+        const sharedHarmRaw = sharedProduct.harm ?? sharedProduct.harmScore ?? sharedProduct.harmscore;
+        const sharedHarm = sharedHarmRaw == null ? null : toNum(sharedHarmRaw);
+        if ((next.harmScore == null && next.harm == null) && sharedHarm != null) {
+          next.harmScore = sharedHarm;
+          next.harm = sharedHarm;
+          changed = true;
+        }
+        if (!next.shared_origin_id && sharedProduct.id) {
+          next.shared_origin_id = sharedProduct.id;
+          changed = true;
+        }
+        if (!changed) return existing;
+        const newProducts = products.map(p => p.id === existing.id ? { ...p, ...next } : p);
+        HEYS.products.setAll(newProducts);
+        return { ...existing, ...next };
+      };
 
       // Проверяем по shared_origin_id (если уже клонировали)
       if (sharedProduct.id) {
         const existingByOrigin = products.find(p => p.shared_origin_id === sharedProduct.id);
         if (existingByOrigin) {
           console.log('[SHARED→LOCAL] Already cloned:', sharedProduct.name);
-          return existingByOrigin;
+          return mergeMissingFromShared(existingByOrigin);
         }
       }
 
@@ -2127,7 +2147,7 @@
       const existingByName = products.find(p => (p.name || '').toLowerCase().trim() === normName);
       if (existingByName) {
         console.log('[SHARED→LOCAL] Already exists by name:', sharedProduct.name);
-        return existingByName;
+        return mergeMissingFromShared(existingByName);
       }
 
       // Создаём клон
@@ -2142,7 +2162,7 @@
         trans100: toNum(sharedProduct.trans100),
         fiber100: toNum(sharedProduct.fiber100),
         gi: toNum(sharedProduct.gi),
-        harmScore: toNum(sharedProduct.harm ?? sharedProduct.harmScore),
+        harmScore: toNum(sharedProduct.harm ?? sharedProduct.harmScore ?? sharedProduct.harmscore),
         category: sharedProduct.category || '',
         portions: sharedProduct.portions || null,
         shared_origin_id: sharedProduct.id, // Связь с shared продуктом

@@ -467,8 +467,9 @@
             const p = getProductFromItem(it, pIndex) || { name: it.name || '?' };
             const G = +it.grams || 0;
             const per = per100(p);
-            const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
-            const harmVal = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
+            const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex ?? it.gi;
+            // Use centralized harm normalization with fallback to item data
+            const harmVal = HEYS.models?.normalizeHarm?.(p) ?? HEYS.models?.normalizeHarm?.(it);
             
             // Контент карточки
             // Определяем цвет граммов

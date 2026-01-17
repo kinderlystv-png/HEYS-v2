@@ -39,10 +39,25 @@
     const MealOptimizerSection = HEYS.dayMealOptimizerSection?.MealOptimizerSection;
 
     function fmtVal(key, v) {
+        if (v == null || v === '') return '-';
         const num = +v || 0;
-        if (!num) return '-';
         if (key === 'harm') return Math.round(num * 10) / 10;
+        if (!num) return '-';
         return Math.round(num);
+    }
+
+    const harmMissingLogged = new Set();
+    function logMissingHarm(name, item, source) {
+        if (!HEYS.analytics?.trackDataOperation) return;
+        const key = `${source || 'meal-card'}:${(name || 'unknown').toLowerCase()}`;
+        if (harmMissingLogged.has(key)) return;
+        harmMissingLogged.add(key);
+        HEYS.analytics.trackDataOperation('harm_missing_in_meal_card', {
+            source: source || 'meal-card',
+            name: name || null,
+            productId: item?.product_id ?? item?.productId ?? item?.id ?? null,
+            hasItemHarm: item?.harm != null || item?.harmScore != null || item?.harmscore != null || item?.harm100 != null || item?.harmPct != null,
+        });
     }
 
     const MEAL_HEADER_META = [
@@ -144,7 +159,7 @@
                 const g = +it.grams || 0;
                 if (!g) return;
                 const gi = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
-                const harm = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
+                const harm = p.harm ?? p.harmScore ?? p.harmscore ?? p.harm100 ?? p.harmPct;
                 gSum += g;
                 if (gi != null) giSum += gi * g;
                 if (harm != null) harmSum += harm * g;
@@ -489,8 +504,16 @@
                     const p = getProductFromItem(it, pIndex) || { name: it.name || '?' };
                     const G = +it.grams || 0;
                     const per = per100(p);
-                    const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
-                    const harmVal = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
+                    const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex ?? it.gi;
+                    const harmVal = p.harm ?? p.harmScore ?? p.harmscore ?? p.harm100 ?? p.harmPct ?? it.harm ?? it.harmScore;
+
+                    if (harmVal == null) {
+                        logMissingHarm(p.name, it, 'mobile-card');
+                    }
+
+                    if (harmVal == null) {
+                        logMissingHarm(p.name, it, 'mobile-card-compact');
+                    }
 
                     const gramsClass = G > 500 ? 'grams-danger' : G > 300 ? 'grams-warn' : '';
 
@@ -2311,7 +2334,7 @@
                 trans100: p.trans100,
                 fiber100: p.fiber100,
                 gi: p.gi ?? p.gi100,
-                harm: p.harm ?? p.harm100,
+                harm: p.harm ?? p.harmScore ?? p.harmscore ?? p.harm100,
             };
             setDay((prevDay) => {
                 const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);

@@ -1541,16 +1541,9 @@
                             }
                         }
 
-                        // 🔍 DEBUG: Подробный лог при добавлении продукта в meal
+                        // Проверка наличия нутриентов
                         const hasNutrients = !!(finalProduct?.kcal100 || finalProduct?.protein100 || finalProduct?.carbs100);
-                        // console.log('[DayTab] onAdd received:', finalProduct?.name, 'grams:', grams, {
-                        //   id: finalProduct?.id,
-                        //   hasNutrients,
-                        //   kcal100: finalProduct?.kcal100,
-                        //   protein100: finalProduct?.protein100,
-                        //   mealIndex,
-                        //   wasShared: product?._fromShared || product?._source === 'shared'
-                        // });
+
                         if (!hasNutrients) {
                             console.error('🚨 [DayTab] CRITICAL: Received product with NO nutrients!', finalProduct);
                         }
@@ -1563,6 +1556,10 @@
                             const fat = (+p.fat100) || ((+p.badFat100 || 0) + (+p.goodFat100 || 0) + (+p.trans100 || 0));
                             return Math.round((3 * (+p.protein100 || 0) + 4 * carbs + 9 * fat) * 10) / 10;
                         };
+
+                        // Use centralized harm normalization
+                        const harmValue = HEYS.models?.normalizeHarm?.(finalProduct);
+
                         const newItem = {
                             id: uid('it_'),
                             product_id: finalProduct.id ?? finalProduct.product_id,
@@ -1581,19 +1578,12 @@
                                 trans100: finalProduct.trans100,
                                 fiber100: finalProduct.fiber100,
                                 gi: finalProduct.gi,
-                                harmScore: finalProduct.harmScore
+                                harm: harmValue  // Normalized harm (0-10)
                             })
                         };
 
-                        // 🔍 DEBUG: Проверка финального newItem
+                        // Проверка финального newItem
                         const itemHasNutrients = !!(newItem.kcal100 || newItem.protein100 || newItem.carbs100);
-                        // console.log('[DayTab] newItem created:', newItem.name, {
-                        //   itemHasNutrients,
-                        //   kcal100: newItem.kcal100,
-                        //   protein100: newItem.protein100,
-                        //   productKcal100: finalProduct.kcal100,
-                        //   spreadCondition: finalProduct.kcal100 !== undefined
-                        // });
                         if (!itemHasNutrients) {
                             console.error('🚨 [DayTab] CRITICAL: newItem has NO nutrients! Will be saved without data.', {
                                 newItem,
@@ -1837,8 +1827,8 @@
             trans: scale(per.trans100, grams),
             fiber: scale(per.fiber100, grams)
         };
-        const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
-        const harmVal = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
+        const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex ?? item.gi;
+        const harmVal = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct ?? item.harm ?? item.harmScore;
         return React.createElement('tr', { 'data-new': isNew ? 'true' : 'false' },
             React.createElement('td', { 'data-cell': 'name' }, p.name),
             React.createElement('td', { 'data-cell': 'grams' }, React.createElement('input', {
@@ -2560,8 +2550,8 @@
                     const p = getProductFromItem(it, pIndex) || { name: it.name || '?' };
                     const G = +it.grams || 0;
                     const per = per100(p);
-                    const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
-                    const harmVal = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
+                    const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex ?? it.gi;
+                    const harmVal = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct ?? it.harm ?? it.harmScore;
 
                     const gramsClass = G > 500 ? 'grams-danger' : G > 300 ? 'grams-warn' : '';
 

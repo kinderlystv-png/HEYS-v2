@@ -13,42 +13,39 @@
         skipTabSwitchRef,
     }) {
         const { useState, useEffect, useCallback } = React;
-
-        const authModule = HEYS.AppAuthUIState || {};
         const shortcutsModule = HEYS.AppShortcuts || {};
 
-        const fallbackAuth = ({ React: HookReact, cloudSignIn: signIn, cloudSignOut: signOut }) => {
-            const [email, setEmail] = HookReact.useState('');
-            const [pwd, setPwd] = HookReact.useState('');
-            const [rememberMe, setRememberMe] = HookReact.useState(false);
-            const handleSignIn = HookReact.useCallback(() => Promise.resolve(), []);
-            const handleSignOut = signOut || (() => { });
-            const [clientSearch, setClientSearch] = HookReact.useState('');
-            const [showClientDropdown, setShowClientDropdown] = HookReact.useState(false);
-            const [newPhone, setNewPhone] = HookReact.useState('');
-            const [newPin, setNewPin] = HookReact.useState('');
-            return {
-                email,
-                setEmail,
-                pwd,
-                setPwd,
-                rememberMe,
-                setRememberMe,
-                handleSignIn,
-                handleSignOut,
-                clientSearch,
-                setClientSearch,
-                showClientDropdown,
-                setShowClientDropdown,
-                newPhone,
-                setNewPhone,
-                newPin,
-                setNewPin,
-            };
-        };
+        // Login form state (нужно до gate!)
+        const [email, setEmail] = useState('');
+        const [pwd, setPwd] = useState('');
+        const [rememberMe, setRememberMe] = useState(() => {
+            // Восстанавливаем checkbox из localStorage
+            return localStorage.getItem('heys_remember_me') === 'true';
+        });
 
-        const useAuthUIState = authModule.useAuthUIState || fallbackAuth;
-        const authUiState = useAuthUIState({ React, cloudSignIn, cloudSignOut });
+        const handleSignIn = useCallback(() => {
+            return cloudSignIn(email, pwd, { rememberMe });
+        }, [cloudSignIn, email, pwd, rememberMe]);
+
+        const handleSignOut = cloudSignOut;
+
+        const [clientSearch, setClientSearch] = useState(''); // Поиск клиентов
+        const [showClientDropdown, setShowClientDropdown] = useState(false); // Dropdown в шапке
+        const [newPhone, setNewPhone] = useState('');
+        const [newPin, setNewPin] = useState('');
+
+        // Закрытие dropdown по Escape
+        useEffect(() => {
+            const handleEscape = (e) => {
+                if (e.key === 'Escape' && showClientDropdown) {
+                    setShowClientDropdown(false);
+                }
+            };
+            if (showClientDropdown) {
+                document.addEventListener('keydown', handleEscape);
+                return () => document.removeEventListener('keydown', handleEscape);
+            }
+        }, [showClientDropdown]);
 
         useEffect(() => {
             if (!shortcutsModule.handleShortcuts) return;
@@ -59,6 +56,25 @@
             });
         }, [setTab, setNotification, skipTabSwitchRef, shortcutsModule]);
 
-        return authUiState;
+        const uiState = {
+            email,
+            setEmail,
+            pwd,
+            setPwd,
+            rememberMe,
+            setRememberMe,
+            handleSignIn,
+            handleSignOut,
+            clientSearch,
+            setClientSearch,
+            showClientDropdown,
+            setShowClientDropdown,
+            newPhone,
+            setNewPhone,
+            newPin,
+            setNewPin,
+        };
+
+        return uiState;
     };
 })();

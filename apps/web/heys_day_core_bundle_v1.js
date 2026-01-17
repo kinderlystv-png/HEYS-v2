@@ -191,7 +191,7 @@
                                     trans100: item.trans100 || 0,
                                     fiber100: item.fiber100 || 0,
                                     gi: item.gi || 50,
-                                    harm: item.harm || 0,
+                                    harm: item.harm ?? item.harmScore ?? 0,
                                     restoredAt: Date.now(),
                                     restoredFrom: 'orphan_stamp'
                                 };
@@ -209,8 +209,19 @@
             console.log(`[HEYS] Restore stats: checked=${checkedItems}, withData=${foundWithData}, alreadyInBase=${alreadyInBase}, restored=${restored.length}`);
 
             if (restored.length > 0) {
-                // Сохраняем обновлённую базу
+                // 🔒 SAFETY: НИКОГДА не перезаписывать если products пустой — это означает corrupted state
+                if (products.length === 0) {
+                    console.error('[HEYS] ❌ RESTORE BLOCKED: localStorage products пустой! Это признак corruption.');
+                    console.error('[HEYS] Для восстановления запусти: await HEYS.YandexAPI.rest("shared_products").then(r => { HEYS.utils.lsSet("heys_products", r.data || r); location.reload(); })');
+                    return { success: false, count: 0, products: [], error: 'BLOCKED_EMPTY_BASE' };
+                }
+
+                // 🔒 SAFETY: Проверяем что НЕ уменьшаем количество продуктов
                 const newProducts = Array.from(productsMap.values());
+                if (newProducts.length < products.length * 0.5) {
+                    console.error(`[HEYS] ❌ RESTORE BLOCKED: Новое кол-во (${newProducts.length}) меньше 50% от текущего (${products.length})`);
+                    return { success: false, count: 0, products: [], error: 'BLOCKED_DATA_LOSS' };
+                }
 
                 // Используем HEYS.products.setAll для синхронизации с облаком и React state
                 if (HEYS.products?.setAll) {
@@ -320,7 +331,7 @@
                                             trans100: item.trans100 || 0,
                                             fiber100: item.fiber100 || 0,
                                             gi: item.gi,
-                                            harm: item.harm
+                                            harm: item.harm ?? item.harmScore
                                         } : null,
                                         firstSeenDate: dateStr
                                     });
@@ -410,6 +421,17 @@
 
             // 4. Сохраняем восстановленные продукты (если были восстановлены из штампов)
             if (fromStamp > 0) {
+                // 🔒 SAFETY: Проверяем что products НЕ пустой (признак corruption)
+                if (products.length === 0) {
+                    console.error('[HEYS] ❌ autoRecover BLOCKED: localStorage products пустой! Не сохраняем только orphan-ы.');
+                    console.error('[HEYS] Для восстановления запусти: await HEYS.YandexAPI.rest("shared_products").then(r => { HEYS.utils.lsSet("heys_products", r.data || r); location.reload(); })');
+                    // Но диспатчим событие чтобы UI показал ошибку
+                    window.dispatchEvent(new CustomEvent('heys:recovery-blocked', {
+                        detail: { reason: 'EMPTY_BASE', recoveredCount: recovered.length }
+                    }));
+                    return { success: false, recovered: [], fromStamp: 0, fromShared: 0, stillMissing: Object.keys(orphans), error: 'BLOCKED_EMPTY_BASE' };
+                }
+
                 const newProducts = [...products, ...recovered.filter(p => p._recoveredFrom === 'stamp')];
 
                 if (HEYS.products?.setAll) {
