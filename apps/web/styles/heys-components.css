@@ -14,6 +14,73 @@
   animation: popupBackdropFade 0.2s ease forwards;
 }
 
+/* === Ration: products tables scroll + sticky first column === */
+.products-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.products-table {
+  min-width: 100% !important;
+  width: max-content !important;
+  table-layout: auto !important;
+}
+
+.products-table th:first-child,
+.products-table td:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  background: var(--bg-color, #ffffff) !important;
+  z-index: 2;
+  min-width: 90px !important;
+  width: 120px !important;
+  max-width: 160px !important;
+}
+
+.products-table th:first-child {
+  z-index: 3;
+}
+
+.products-table td:first-child {
+  box-shadow: 1px 0 0 var(--border-color, #e5e7eb);
+}
+
+.products-table td:first-child input {
+  min-width: 90px !important;
+  width: 100% !important;
+}
+
+.products-table th:last-child,
+.products-table td:last-child {
+  min-width: 44px !important;
+  width: 56px !important;
+  max-width: 72px !important;
+}
+
+@media (max-width: 768px) {
+  .products-table {
+    width: max-content !important;
+    table-layout: auto !important;
+  }
+
+  .products-table th,
+  .products-table td {
+    overflow: visible !important;
+  }
+
+  .products-table td:last-child {
+    white-space: normal !important;
+    min-height: 20px !important;
+  }
+
+  .products-table td:last-child .btn {
+    padding: 2px 6px !important;
+    font-size: 10px !important;
+    line-height: 12px !important;
+    min-height: 16px !important;
+  }
+}
+
 .popup-backdrop-invisible>* {
   max-height: 100%;
   width: 100%;
@@ -656,4 +723,277 @@ body.tour-active .ios-pwa-banner {
 
 .body--dark .reports-legacy-banner__text {
   color: #fcd34d;
+}
+
+/* === APS Portions Step === */
+.aps-portions-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+}
+
+.aps-portions-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+
+.aps-portions-icon {
+  font-size: 20px;
+}
+
+.aps-portions-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text, #111827);
+}
+
+.aps-portions-subtitle {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted, #6b7280);
+}
+
+.aps-portions-suggest {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+}
+
+.aps-portions-suggest-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.aps-portions-suggest-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.aps-portions-suggest-chip {
+  font-size: 11px;
+  padding: 4px 8px;
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  color: #059669;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.aps-portions-apply-btn {
+  align-self: flex-start;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.aps-portions-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aps-portions-empty {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted, #6b7280);
+  padding: 8px;
+}
+
+.aps-portions-row {
+  display: grid;
+  grid-template-columns: 1fr 90px 28px;
+  gap: 6px;
+  align-items: center;
+}
+
+.aps-portions-input {
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  color: #111827;
+}
+
+.aps-portions-input:focus {
+  outline: none;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+}
+
+.aps-portions-grams {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.aps-portions-input--grams {
+  width: 100%;
+  text-align: right;
+}
+
+.aps-portions-grams-unit {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.aps-portions-remove-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fef2f2;
+  color: #dc2626;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.aps-portions-add-btn {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px dashed #93c5fd;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.aps-portions-error {
+  font-size: 12px;
+  color: #b91c1c;
+  text-align: center;
+}
+
+.aps-portions-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.aps-portions-skip-btn,
+.aps-portions-next-btn {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.aps-portions-skip-btn {
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #6b7280;
+}
+
+.aps-portions-next-btn {
+  border: 1px solid #22c55e;
+  background: #22c55e;
+  color: #fff;
+}
+
+/* === StepModal header right (count + edit) === */
+.mc-header-right-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mc-header-right-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mc-header-right-count {
+  font-size: 12px;
+  color: var(--text-muted, #6b7280);
+  white-space: nowrap;
+}
+
+.mc-header-right-btn {
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: #fff;
+  color: #111827;
+  border-radius: 8px;
+  padding: 4px 6px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mc-header-right-btn:active {
+  transform: scale(0.98);
+}
+
+[data-theme="dark"] .mc-header-right-btn {
+  background: #111827;
+  color: #e5e7eb;
+  border-color: #1f2937;
+}
+
+[data-theme="dark"] .aps-portions-suggest {
+  background: #111827;
+  border-color: #1f2937;
+}
+
+[data-theme="dark"] .aps-portions-suggest-title {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .aps-portions-suggest-chip {
+  background: #064e3b;
+  border-color: #065f46;
+  color: #34d399;
+}
+
+[data-theme="dark"] .aps-portions-apply-btn {
+  background: #1e1b4b;
+  border-color: #312e81;
+  color: #a5b4fc;
+}
+
+[data-theme="dark"] .aps-portions-input {
+  background: #111827;
+  border-color: #1f2937;
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .aps-portions-grams-unit {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .aps-portions-remove-btn {
+  background: #3f1d1d;
+  border-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .aps-portions-add-btn {
+  background: #0f172a;
+  border-color: #1d4ed8;
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .aps-portions-skip-btn {
+  background: #111827;
+  border-color: #1f2937;
+  color: #9ca3af;
 }

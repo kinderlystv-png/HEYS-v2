@@ -56,12 +56,14 @@
  * Решение: устанавливаем font-size: 16px при фокусе, сохраняя визуальный размер.
  */
 @supports (-webkit-touch-callout: none) {
+
   /* iOS only */
   input:focus,
   textarea:focus,
   select:focus {
     font-size: 16px !important;
   }
+
   /* Исключение для крупного ввода телефона */
   input.phone-input-large:focus {
     font-size: clamp(16px, 5.2vw, 28px) !important;
@@ -97,10 +99,12 @@ input.phone-input-large {
     opacity: 1;
     transform: translateY(0);
   }
+
   80% {
     opacity: 1;
     transform: translateY(0);
   }
+
   100% {
     opacity: 0;
     transform: translateY(-2px);
@@ -146,29 +150,29 @@ input[type="password"] {
   --border: var(--color-slate-200);
   --acc: #2563eb;
   --acc-contrast: var(--color-white);
-  
+
   /* Emoji style: 'android' | 'apple' | 'system' */
   --emoji-style: 'android';
-  
+
   /* Stats block (голубой) */
   --stats-bg: #f0f9ff;
   --stats-border: #bae6fd;
-  
+
   /* Activity block (жёлтый) */
   --activity-bg: #fffef5;
   --activity-border: #f5e6a3;
-  
+
   /* Sleep/Day block (суперсветло-розовый) */
   --sleep-bg: #fef7f9;
   --sleep-border: #fce7f3;
-  
+
   /* Progress colors */
   --success: #22c55e;
   --success-dark: #16a34a;
   --warning: #f59e0b;
   --danger: var(--color-red-500);
   --info: #0ea5e9;
-  
+
   /* Macro rings */
   --protein: var(--color-red-500);
   --fat: #f59e0b;
@@ -227,7 +231,8 @@ body {
 }
 
 /* Emoji font override - Android style */
-.emoji, [data-emoji] {
+.emoji,
+[data-emoji] {
   font-family: 'Noto Color Emoji', sans-serif;
 }
 
@@ -254,6 +259,7 @@ body.emoji-system {
   padding: 10px;
   box-sizing: border-box;
 }
+
 .btn {
   min-height: 44px;
   padding: 10px 16px;
@@ -264,41 +270,50 @@ body.emoji-system {
   touch-action: manipulation;
   user-select: none;
 }
+
 .btn.acc {
   background: var(--acc);
   color: var(--acc-contrast);
   border-color: var(--acc);
   font-weight: 600;
 }
+
 .btn.ghost {
   background: transparent;
 }
+
 .btn:active {
   transform: scale(0.98);
   opacity: 0.8;
 }
+
 .tab:active {
   transform: scale(0.98);
 }
+
 input:active,
 textarea:active,
 select:active {
   border-color: var(--acc);
 }
+
 .card.clickable:active {
   transform: scale(0.99);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
+
 .section-title {
   font-weight: 600;
   margin-bottom: 6px;
 }
+
 label {
   display: block;
   font-size: 12px;
   color: var(--muted);
   margin-bottom: 4px;
 }
+
 input,
 textarea,
 select {
@@ -313,31 +328,37 @@ select {
   font-size: 16px;
   touch-action: manipulation;
 }
+
 input:focus,
 textarea:focus,
 select:focus {
   border-color: #cbd5e1;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
+
 textarea {
   min-height: 90px;
   resize: vertical;
 }
+
 .row {
   display: flex;
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
 }
+
 .muted {
   color: var(--muted);
   font-size: 12px;
 }
+
 table {
   width: 100%;
   border-collapse: collapse;
   font-size: 12.5px;
 }
+
 th,
 td {
   padding: 6px 8px;
@@ -346,10 +367,12 @@ td {
   white-space: nowrap;
   border-right: 1px solid rgba(0, 0, 0, 0.06);
 }
+
 th:last-child,
 td:last-child {
   border-right: none;
 }
+
 td input {
   width: 100%;
   min-width: 80px;
@@ -357,10 +380,12 @@ td input {
   font-size: 12.5px;
   text-align: center;
 }
+
 td:first-child input {
   min-width: 220px;
   text-align: left;
 }
+
 .readOnly {
   opacity: 0.9;
   background: #f8fafc;
@@ -374,6 +399,7 @@ td:first-child input {
     table-layout: fixed !important;
     width: 100% !important;
   }
+
   th,
   td {
     padding: 1px 0 !important;
@@ -383,6 +409,7 @@ td:first-child input {
     height: auto !important;
     line-height: 1.1 !important;
   }
+
   /* First column (name) - maximum width, wrap text */
   th:first-child,
   td:first-child {
@@ -393,6 +420,7 @@ td:first-child input {
     word-break: break-word !important;
     padding: 1px 2px !important;
   }
+
   /* Value columns - minimum width, no padding */
   th:not(:first-child):not(:last-child),
   td:not(:first-child):not(:last-child) {
@@ -402,12 +430,14 @@ td:first-child input {
     padding: 1px 0 !important;
     text-align: center !important;
   }
+
   th {
     font-size: 7px !important;
     font-weight: 600 !important;
     background: #ddd !important;
     color: #000 !important;
   }
+
   td input,
   td input[type="text"],
   td input[type="number"] {
@@ -428,6 +458,7 @@ td:first-child input {
     -webkit-appearance: none !important;
     appearance: none !important;
   }
+
   td:first-child input {
     text-align: left !important;
     font-size: 9px !important;
@@ -438,25 +469,29 @@ td:first-child input {
     min-height: 14px !important;
     line-height: 1.2 !important;
   }
-  /* Hide delete column on mobile */
-  td:last-child,
-  th:last-child {
+
+  /* Hide delete column on mobile (meals only) */
+  .meals-table td:last-child,
+  .meals-table th:last-child {
     display: none !important;
   }
+
   /* Remove .readOnly styling on mobile */
   td input.readOnly {
     background: transparent !important;
     opacity: 1 !important;
   }
-  
+
   /* Products table - ultra compact rows */
   .products-table {
     border-spacing: 0 !important;
   }
+
   .products-table tr {
     height: auto !important;
     min-height: 0 !important;
   }
+
   .products-table td,
   .products-table th {
     padding: 0 !important;
@@ -465,9 +500,11 @@ td:first-child input {
     vertical-align: middle !important;
     border: 1px solid #ccc !important;
   }
+
   .products-table td:first-child {
     padding: 0 2px !important;
   }
+
   .products-table td input,
   .products-table td input[type="text"],
   .products-table td input[type="number"] {
@@ -482,6 +519,7 @@ td:first-child input {
     border: none !important;
     box-sizing: border-box !important;
   }
+
   .products-table td:first-child input {
     height: auto !important;
     min-height: 11px !important;
@@ -490,6 +528,7 @@ td:first-child input {
     font-size: 9px !important;
     min-width: 0 !important;
   }
+
   .products-table th {
     font-size: 7px !important;
     padding: 1px 0 !important;
@@ -502,6 +541,7 @@ td:first-child input {
 .tbl td:first-child {
   width: 1%;
 }
+
 .tbl th:nth-child(2),
 .tbl th:nth-child(3),
 .tbl th:nth-child(4),
@@ -522,6 +562,7 @@ td:first-child input {
   padding: 0;
   overflow: hidden;
 }
+
 .card.tone-violet.main-violet .main-stats-grid {
   display: flex;
   flex-direction: column;
@@ -530,6 +571,7 @@ td:first-child input {
   border-top: 1px solid var(--tb-b);
   border-left: 1px solid var(--tb-b);
 }
+
 .card.tone-violet.main-violet .stat {
   display: grid;
   grid-template-columns: 1fr 100px;
@@ -539,14 +581,16 @@ td:first-child input {
   border-bottom: 1px solid var(--tb-b);
   background: rgba(255, 255, 255, 0.35);
 }
-.card.tone-violet.main-violet .stat > label {
+
+.card.tone-violet.main-violet .stat>label {
   padding: 6px 10px;
   margin: 0;
   font-size: 14px;
   color: #374151;
 }
-.card.tone-violet.main-violet .stat > input,
-.card.tone-violet.main-violet .stat > select {
+
+.card.tone-violet.main-violet .stat>input,
+.card.tone-violet.main-violet .stat>select {
   justify-self: center;
   width: 90px;
   height: 26px;
@@ -556,42 +600,53 @@ td:first-child input {
   padding: 3px 6px;
   font-size: 12px;
 }
+
 .card.tone-violet.main-violet .stat::after {
   content: '';
   justify-self: center;
   color: var(--color-gray-500);
   font-size: 12px;
 }
+
 .card.tone-violet.main-violet .stat:nth-of-type(3)::after {
   content: 'вес на утро';
 }
+
 .card.tone-violet.main-violet .stat:nth-of-type(4)::after {
   content: 'шагов';
 }
+
 .card.tone-violet.main-violet .stat:nth-of-type(6)::after {
   content: 'мин';
 }
+
 .card.tone-violet.main-violet .stat:nth-of-type(8)::after {
   content: 'дефицит';
 }
+
 .card.tone-violet.main-violet .pill {
   margin: 4px 0 8px 10px;
 }
+
 .card.tone-violet.main-violet .delta.good {
   color: var(--success-dark);
 }
+
 .card.tone-violet.main-violet .delta.bad {
   color: #dc2626;
 }
+
 .card.tone-violet.main-violet .violet-table {
   border-collapse: collapse;
   table-layout: fixed;
 }
+
 .card.tone-violet.main-violet {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
 }
+
 .card.tone-violet.main-violet .violet-table th,
 .card.tone-violet.main-violet .violet-table td {
   border: 1px solid #ddd6fe;
@@ -599,16 +654,19 @@ td:first-child input {
   height: 26px;
   font-size: 12px;
 }
+
 .card.tone-violet.main-violet .violet-table thead th {
   background: #f0ecff;
   color: #4b5563;
   text-align: center;
   font-size: 12px;
 }
+
 .card.tone-violet.main-violet .violet-table thead th:first-child {
   background: transparent;
   border-top-color: transparent;
 }
+
 .card.tone-violet.main-violet .violet-table td:first-child {
   font-size: 14px;
   font-weight: 600;
@@ -616,10 +674,12 @@ td:first-child input {
   text-align: right;
   padding-right: 20px;
 }
+
 .card.tone-violet.main-violet .violet-table td:nth-child(2),
 .card.tone-violet.main-violet .violet-table td:nth-child(3) {
   text-align: center;
 }
+
 /* 4-й столбец (последний) выравниваем влево с отступом */
 .card.tone-violet.main-violet .violet-table td:last-child {
   text-align: left;
@@ -627,6 +687,7 @@ td:first-child input {
   color: #374151;
   font-size: 13px;
 }
+
 .card.tone-violet.main-violet .violet-table input {
   width: 50px;
   max-width: 50px;
@@ -638,9 +699,11 @@ td:first-child input {
   background: var(--color-white);
   font-size: 11px;
 }
+
 .card.tone-violet.main-violet .violet-table input.readOnly {
   background: var(--color-white);
 }
+
 .card.tone-violet.main-violet .violet-table .delta {
   display: inline-block;
   min-width: 58px;
@@ -651,14 +714,17 @@ td:first-child input {
   background: #eef2ff;
   font-size: 11px;
 }
+
 .card.tone-violet.main-violet .violet-table .delta.good {
   color: #059669;
   background: #e7f8ef;
 }
+
 .card.tone-violet.main-violet .violet-table .delta.bad {
   color: #dc2626;
   background: #fee2e2;
 }
+
 /* Emphasis rows */
 .card.tone-violet.main-violet .violet-table tr.vio-row.total-kcal td:first-child,
 .card.tone-violet.main-violet .violet-table tr.vio-row.need-kcal td:first-child,
@@ -666,6 +732,7 @@ td:first-child input {
   font-size: 14px;
   font-weight: 700;
 }
+
 .card.tone-violet.main-violet .violet-table tr.vio-row.total-kcal input,
 .card.tone-violet.main-violet .violet-table tr.vio-row.need-kcal input,
 .card.tone-violet.main-violet .violet-table tr.vio-row.eaten-kcal input {
@@ -681,6 +748,7 @@ td:first-child input {
   gap: 8px;
   margin-bottom: 8px;
 }
+
 .side-col {
   flex: 1 1 0;
   min-width: 0;
@@ -739,20 +807,45 @@ td:first-child input {
 }
 
 @keyframes badgeFadeIn {
-  from { opacity: 0; transform: translateX(10px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes perfectPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; transform: scale(1.05); }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
 }
 
 /* Sparkline best meal pulse animation */
 @keyframes sparklinePulseAnim {
-  0%, 100% { opacity: 0.6; stroke-width: 2; }
-  50% { opacity: 0.2; stroke-width: 4; }
+
+  0%,
+  100% {
+    opacity: 0.6;
+    stroke-width: 2;
+  }
+
+  50% {
+    opacity: 0.2;
+    stroke-width: 4;
+  }
 }
+
 .sparkline-pulse {
   animation: sparklinePulseAnim 1.5s ease-in-out infinite;
   transform-origin: center;
@@ -898,6 +991,7 @@ td:first-child input {
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1225,9 +1319,11 @@ td:first-child input {
   .hdr-tabs .tab-text {
     display: none;
   }
+
   .hdr-tabs .tab-icon {
     font-size: 22px;
   }
+
   .hdr-tabs .tab {
     padding: 10px 12px;
   }
@@ -1251,6 +1347,7 @@ td:first-child input {
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
 }
+
 /* Добавьте сюда остальные стили календаря по мере необходимости */
 
 /* === 11. restored base layout & navigation === */
@@ -1269,7 +1366,7 @@ td:first-child input {
   flex-direction: column;
   gap: 0;
   box-sizing: border-box;
-  
+
   /* Fixed header — всегда виден при прокрутке */
   position: fixed;
   top: 0;
@@ -1277,7 +1374,7 @@ td:first-child input {
   right: 0;
   z-index: 100;
   background: var(--bg-primary, #f8f9fa);
-  
+
   /* Padding как у карточек */
   padding: 12px 18px 0;
   max-width: 100%;
@@ -1457,7 +1554,8 @@ td:first-child input {
   width: 100%;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  overflow: hidden; /* Предотвращаем выход за границы */
+  overflow: hidden;
+  /* Предотвращаем выход за границы */
 }
 
 /* Legacy row layout — kept for compatibility */
@@ -1511,7 +1609,8 @@ td:first-child input {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 4px;
   overflow: hidden;
-  min-width: 40px; /* Уменьшили для лучшего сжатия */
+  min-width: 40px;
+  /* Уменьшили для лучшего сжатия */
   position: relative;
 }
 
@@ -1527,18 +1626,21 @@ td:first-child input {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.4) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%);
   animation: shimmer 2s infinite;
 }
 
 @keyframes shimmer {
-  0% { left: -100%; }
-  100% { left: 200%; }
+  0% {
+    left: -100%;
+  }
+
+  100% {
+    left: 200%;
+  }
 }
 
 /* Pulse при >90% (приближение к level-up) */
@@ -1547,11 +1649,14 @@ td:first-child input {
 }
 
 @keyframes progressPulse {
-  0%, 100% { 
+
+  0%,
+  100% {
     box-shadow: 0 0 4px rgba(255, 215, 0, 0.4);
     filter: brightness(1);
   }
-  50% { 
+
+  50% {
     box-shadow: 0 0 16px rgba(255, 215, 0, 0.8);
     filter: brightness(1.2);
   }
@@ -1582,9 +1687,17 @@ td:first-child input {
 }
 
 @keyframes xpPop {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.3); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.3);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* Level up rainbow flash */
@@ -1593,14 +1706,16 @@ td:first-child input {
 }
 
 @keyframes rainbowFlash {
-  0% { 
+  0% {
     background: linear-gradient(90deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #9b59b6);
     background-size: 400% 100%;
   }
-  50% { 
+
+  50% {
     background-position: 100% 0;
   }
-  100% { 
+
+  100% {
     background: transparent;
   }
 }
@@ -1696,23 +1811,61 @@ td:first-child input {
 }
 
 @keyframes flicker {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  25% { transform: scale(1.05); opacity: 0.9; }
-  50% { transform: scale(1.1); opacity: 1; }
-  75% { transform: scale(1.03); opacity: 0.95; }
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  25% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+
+  75% {
+    transform: scale(1.03);
+    opacity: 0.95;
+  }
 }
 
 @keyframes goldGlow {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6)); }
-  50% { filter: drop-shadow(0 0 16px rgba(255, 215, 0, 1)); }
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 16px rgba(255, 215, 0, 1));
+  }
 }
 
 @keyframes rainbowGlow {
-  0% { filter: drop-shadow(0 0 10px #ff6b6b); }
-  25% { filter: drop-shadow(0 0 10px #ffd93d); }
-  50% { filter: drop-shadow(0 0 10px #6bcb77); }
-  75% { filter: drop-shadow(0 0 10px #4d96ff); }
-  100% { filter: drop-shadow(0 0 10px #ff6b6b); }
+  0% {
+    filter: drop-shadow(0 0 10px #ff6b6b);
+  }
+
+  25% {
+    filter: drop-shadow(0 0 10px #ffd93d);
+  }
+
+  50% {
+    filter: drop-shadow(0 0 10px #6bcb77);
+  }
+
+  75% {
+    filter: drop-shadow(0 0 10px #4d96ff);
+  }
+
+  100% {
+    filter: drop-shadow(0 0 10px #ff6b6b);
+  }
 }
 
 .game-streak:hover {
@@ -1720,8 +1873,15 @@ td:first-child input {
 }
 
 @keyframes bounce {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.15); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
 }
 
 /* Pulse-анимация при росте streak */
@@ -1730,10 +1890,22 @@ td:first-child input {
 }
 
 @keyframes streakGrow {
-  0% { transform: scale(1); }
-  30% { transform: scale(1.4); filter: brightness(1.3); }
-  60% { transform: scale(0.95); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  30% {
+    transform: scale(1.4);
+    filter: brightness(1.3);
+  }
+
+  60% {
+    transform: scale(0.95);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* === 15. Rank Badge === */
@@ -1743,13 +1915,20 @@ td:first-child input {
   border-radius: 8px;
   font-weight: 600;
   animation: badgeShine 3s ease-in-out infinite;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   align-self: flex-start;
 }
 
 @keyframes badgeShine {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.2); }
+
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.2);
+  }
 }
 
 /* === 16. XP Multiplier Badge === */
@@ -1764,8 +1943,17 @@ td:first-child input {
 }
 
 @keyframes multiplierPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.1); opacity: 0.9; }
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.1);
+    opacity: 0.9;
+  }
 }
 
 /* === 17. Daily Bonus Button === */
@@ -1795,8 +1983,15 @@ td:first-child input {
 }
 
 @keyframes bonusGlow {
-  0%, 100% { box-shadow: 0 0 6px rgba(245, 158, 11, 0.4); }
-  50% { box-shadow: 0 0 12px rgba(245, 158, 11, 0.8); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.8);
+  }
 }
 
 /* === 18. Level Preview Tooltip === */
@@ -1839,7 +2034,7 @@ td:first-child input {
   transition: opacity 0.25s ease, transform 0.25s ease;
   transform: translateY(-6px);
   z-index: 100;
-  box-shadow: 
+  box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.5),
     0 0 0 1px rgba(255, 255, 255, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
@@ -1938,8 +2133,15 @@ td:first-child input {
 }
 
 @keyframes youPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .roadmap-check {
@@ -1963,10 +2165,12 @@ td:first-child input {
     opacity: 1;
     transform: translateX(-50%) translateY(0) scale(1);
   }
+
   50% {
     opacity: 1;
     transform: translateX(-50%) translateY(-30px) scale(1.2);
   }
+
   100% {
     opacity: 0;
     transform: translateX(-50%) translateY(-60px) scale(0.8);
@@ -1993,13 +2197,16 @@ td:first-child input {
     opacity: 1;
     transform: translateX(-50%) translateY(0) scale(1) rotate(0deg);
   }
+
   25% {
     transform: translateX(-50%) translateY(-20px) scale(1.4) rotate(-5deg);
   }
+
   50% {
     opacity: 1;
     transform: translateX(-50%) translateY(-40px) scale(1.2) rotate(5deg);
   }
+
   100% {
     opacity: 0;
     transform: translateX(-50%) translateY(-80px) scale(0.8) rotate(0deg);
@@ -2007,9 +2214,17 @@ td:first-child input {
 }
 
 @keyframes comboPop {
-  0% { transform: scale(0); }
-  50% { transform: scale(1.5); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0);
+  }
+
+  50% {
+    transform: scale(1.5);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* === 20. Daily Action Multiplier === */
@@ -2048,13 +2263,27 @@ td:first-child input {
 }
 
 @keyframes dailyMultPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
 }
 
 @keyframes dailyMultGlow {
-  0%, 100% { box-shadow: 0 0 6px rgba(249, 115, 22, 0.3); }
-  50% { box-shadow: 0 0 12px rgba(249, 115, 22, 0.6); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba(249, 115, 22, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 12px rgba(249, 115, 22, 0.6);
+  }
 }
 
 /* === 21. Weekly Challenge Card (в expanded панели) === */
@@ -2080,8 +2309,13 @@ td:first-child input {
 }
 
 @keyframes weeklyCardShimmer {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .game-weekly-card.completed {
@@ -2162,8 +2396,13 @@ td:first-child input {
 }
 
 @keyframes weeklyProgressShine {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .game-weekly-card.completed .weekly-progress-fill {
@@ -2183,8 +2422,17 @@ td:first-child input {
 }
 
 @keyframes weeklyGlowPulse {
-  0%, 100% { opacity: 0.5; transform: translateY(-50%) scale(1); }
-  50% { opacity: 1; transform: translateY(-50%) scale(1.3); }
+
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: translateY(-50%) scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.3);
+  }
 }
 
 .game-weekly-card.completed .weekly-progress-glow {
@@ -2312,14 +2560,18 @@ td:first-child input {
 }
 
 @keyframes trophyBounce {
-  0%, 100% { 
-    transform: translateY(0) rotate(0deg); 
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
   }
-  25% { 
-    transform: translateY(-3px) rotate(-5deg); 
+
+  25% {
+    transform: translateY(-3px) rotate(-5deg);
   }
-  75% { 
-    transform: translateY(-3px) rotate(5deg); 
+
+  75% {
+    transform: translateY(-3px) rotate(5deg);
   }
 }
 
@@ -2329,14 +2581,16 @@ td:first-child input {
 }
 
 @keyframes trophyAppear {
-  0% { 
+  0% {
     transform: scale(0) rotate(-180deg);
     opacity: 0;
   }
+
   50% {
     transform: scale(1.5) rotate(10deg);
   }
-  100% { 
+
+  100% {
     transform: scale(1) rotate(0deg);
     opacity: 1;
   }
@@ -2348,9 +2602,12 @@ td:first-child input {
 }
 
 @keyframes goalPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 4px rgba(34, 197, 94, 0.4);
   }
+
   50% {
     box-shadow: 0 0 16px rgba(34, 197, 94, 0.8), 0 0 24px rgba(34, 197, 94, 0.4);
   }
@@ -2362,15 +2619,17 @@ td:first-child input {
 }
 
 @keyframes xpCountSpin {
-  0% { 
+  0% {
     transform: scale(1) rotateX(0deg);
     color: inherit;
   }
-  30% { 
+
+  30% {
     transform: scale(1.3) rotateX(180deg);
     color: #fbbf24;
   }
-  100% { 
+
+  100% {
     transform: scale(1) rotateX(360deg);
     color: inherit;
   }
@@ -2397,38 +2656,65 @@ td:first-child input {
 }
 
 @keyframes rareBadgeShine {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.2); }
+
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.2);
+  }
 }
 
 @keyframes epicBadgeGlow {
-  0%, 100% { 
+
+  0%,
+  100% {
     box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
     transform: scale(1);
   }
-  50% { 
+
+  50% {
     box-shadow: 0 0 20px rgba(168, 85, 247, 0.8);
     transform: scale(1.05);
   }
 }
 
 @keyframes legendaryBadgePulse {
-  0%, 100% { 
+
+  0%,
+  100% {
     box-shadow: 0 0 15px rgba(234, 179, 8, 0.4);
     filter: brightness(1);
   }
-  50% { 
+
+  50% {
     box-shadow: 0 0 25px rgba(234, 179, 8, 1);
     filter: brightness(1.3);
   }
 }
 
 @keyframes mythicBadgeRainbow {
-  0% { box-shadow: 0 0 20px #ff6b6b; }
-  25% { box-shadow: 0 0 20px #ffd93d; }
-  50% { box-shadow: 0 0 20px #6bcb77; }
-  75% { box-shadow: 0 0 20px #4d96ff; }
-  100% { box-shadow: 0 0 20px #ff6b6b; }
+  0% {
+    box-shadow: 0 0 20px #ff6b6b;
+  }
+
+  25% {
+    box-shadow: 0 0 20px #ffd93d;
+  }
+
+  50% {
+    box-shadow: 0 0 20px #6bcb77;
+  }
+
+  75% {
+    box-shadow: 0 0 20px #4d96ff;
+  }
+
+  100% {
+    box-shadow: 0 0 20px #ff6b6b;
+  }
 }
 
 /* === 27. Achievement Unlock Animation === */
@@ -2437,10 +2723,23 @@ td:first-child input {
 }
 
 @keyframes achievementUnlock {
-  0% { transform: scale(0) rotate(-180deg); opacity: 0; }
-  50% { transform: scale(1.3) rotate(10deg); }
-  70% { transform: scale(0.9) rotate(-5deg); }
-  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  0% {
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+
+  50% {
+    transform: scale(1.3) rotate(10deg);
+  }
+
+  70% {
+    transform: scale(0.9) rotate(-5deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
 }
 
 .achievement-badge.just-unlocked .badge-icon {
@@ -2448,9 +2747,18 @@ td:first-child input {
 }
 
 @keyframes iconBurst {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.5); filter: brightness(1.5); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.5);
+    filter: brightness(1.5);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 .game-expand-btn {
@@ -2497,13 +2805,14 @@ td:first-child input {
 }
 
 @keyframes gameNotifSlideDown {
-  from { 
-    opacity: 0; 
-    transform: translateY(-8px); 
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
   }
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -2536,19 +2845,23 @@ td:first-child input {
 .game-notification.rarity-common {
   border-left: 4px solid var(--color-slate-400);
 }
+
 .game-notification.rarity-rare {
   border-left: 4px solid var(--color-blue-500);
   box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.3);
 }
+
 .game-notification.rarity-epic {
   border-left: 4px solid #a855f7;
   box-shadow: 0 10px 25px -5px rgba(168, 85, 247, 0.3);
 }
+
 .game-notification.rarity-legendary {
   border-left: 4px solid #eab308;
   box-shadow: 0 10px 25px -5px rgba(234, 179, 8, 0.4);
   animation: gameNotifSlideDown 0.3s ease-out forwards, legendaryNotifGlow 2s ease-in-out infinite;
 }
+
 .game-notification.rarity-mythic {
   border-left: 4px solid var(--color-red-500);
   box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.4);
@@ -2556,13 +2869,27 @@ td:first-child input {
 }
 
 @keyframes legendaryNotifGlow {
-  0%, 100% { box-shadow: 0 10px 25px -5px rgba(234, 179, 8, 0.3); }
-  50% { box-shadow: 0 10px 30px -5px rgba(234, 179, 8, 0.6); }
+
+  0%,
+  100% {
+    box-shadow: 0 10px 25px -5px rgba(234, 179, 8, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 10px 30px -5px rgba(234, 179, 8, 0.6);
+  }
 }
 
 @keyframes mythicNotifPulse {
-  0%, 100% { box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.3); }
-  50% { box-shadow: 0 10px 30px -5px rgba(239, 68, 68, 0.6); }
+
+  0%,
+  100% {
+    box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 10px 30px -5px rgba(239, 68, 68, 0.6);
+  }
 }
 
 .game-notification .notif-icon {
@@ -2571,8 +2898,15 @@ td:first-child input {
 }
 
 @keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.2); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
 }
 
 .game-notification .notif-content {
@@ -2603,7 +2937,7 @@ td:first-child input {
   z-index: 1050;
   max-height: 70vh;
   overflow-y: auto;
-  box-shadow: 
+  box-shadow:
     0 12px 30px -5px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   animation: gamePanelSlideDown 0.3s ease-out forwards;
@@ -2622,12 +2956,13 @@ td:first-child input {
 }
 
 @keyframes gamePanelSlideDown {
-  from { 
-    opacity: 0; 
+  from {
+    opacity: 0;
     transform: translateY(-8px);
   }
-  to { 
-    opacity: 1; 
+
+  to {
+    opacity: 1;
     transform: translateY(0);
   }
 }
@@ -2762,8 +3097,15 @@ td:first-child input {
 }
 
 @keyframes flyToBar {
-  0% { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(0.5); }
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
 }
 
 /* Floating +XP indicator */
@@ -2780,36 +3122,67 @@ td:first-child input {
 }
 
 @keyframes floatUp {
-  0% { opacity: 1; transform: translateX(-50%) translateY(0); }
-  100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
 }
 
 /* z-index hierarchy (Phase 0.5) */
-.theme-fab { z-index: 1000; /* duplicate intentional: base styles above, z-index map here */ }
-.game-panel-backdrop { z-index: 1040; }
-.game-panel-expanded { z-index: 1050; }
-.game-notification { z-index: 1100; }
-.flying-xp { z-index: 1150; }
-.confetti-container { z-index: 1200; }
+.theme-fab {
+  z-index: 1000;
+  /* duplicate intentional: base styles above, z-index map here */
+}
+
+.game-panel-backdrop {
+  z-index: 1040;
+}
+
+.game-panel-expanded {
+  z-index: 1050;
+}
+
+.game-notification {
+  z-index: 1100;
+}
+
+.flying-xp {
+  z-index: 1150;
+}
+
+.confetti-container {
+  z-index: 1200;
+}
 
 /* Mobile: compact gamification bar */
 @media (max-width: 400px) {
   .game-bar {
     gap: 6px;
   }
+
   .game-xp {
-    display: none; /* Скрыть XP счётчик на очень узких экранах */
+    display: none;
+    /* Скрыть XP счётчик на очень узких экранах */
   }
+
   .game-level {
     font-size: 13px;
   }
+
   .game-stats-section {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .game-daily-bonus {
     padding: 2px 3px;
     font-size: 11px;
   }
+
   .game-rank-badge {
     font-size: 8px;
     padding: 1px 4px;
@@ -2944,8 +3317,13 @@ td:first-child input {
 }
 
 @keyframes syncSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .cloud-sync-indicator.synced {
@@ -2956,9 +3334,17 @@ td:first-child input {
 }
 
 @keyframes syncPop {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 .cloud-sync-indicator.offline {
@@ -2984,7 +3370,7 @@ td:first-child input {
   justify-content: center;
   padding: 0 3px;
   line-height: 1;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* Прогресс синхронизации (3/5) рядом со spinner */
@@ -3012,13 +3398,20 @@ td:first-child input {
   justify-content: center;
   padding: 0 3px;
   line-height: 1;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   animation: countdown-pulse 1s infinite;
 }
 
 @keyframes countdown-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 /* Error state */
@@ -3047,7 +3440,7 @@ td:first-child input {
   gap: 8px;
   font-size: 13px;
   font-weight: 500;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   animation: slideDown 0.3s ease;
 }
 
@@ -3071,8 +3464,17 @@ td:first-child input {
 }
 
 @keyframes pulse-icon {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2); opacity: 0.7; }
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
 }
 
 /* 🆕 Время в офлайне */
@@ -3080,14 +3482,21 @@ td:first-child input {
   font-size: 11px;
   opacity: 0.9;
   font-weight: 400;
-  background: rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.15);
   padding: 2px 8px;
   border-radius: 10px;
 }
 
 @keyframes slideDown {
-  from { transform: translateY(-100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .offline-banner-icon {
@@ -3100,8 +3509,8 @@ td:first-child input {
 }
 
 .offline-banner-retry {
-  background: rgba(255,255,255,0.2);
-  border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   color: white;
   padding: 4px 12px;
   border-radius: 6px;
@@ -3112,7 +3521,7 @@ td:first-child input {
 }
 
 .offline-banner-retry:hover {
-  background: rgba(255,255,255,0.3);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .offline-banner-retry:active {
@@ -3135,7 +3544,7 @@ td:first-child input {
   gap: 8px;
   font-size: 13px;
   font-weight: 500;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   animation: slideDown 0.3s ease;
 }
 
@@ -3164,13 +3573,20 @@ td:first-child input {
   gap: 8px;
   font-size: 14px;
   font-weight: 500;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   animation: toastIn 0.3s ease;
 }
 
 @keyframes toastIn {
-  from { transform: translateX(-50%) translateY(20px); opacity: 0; }
-  to { transform: translateX(-50%) translateY(0); opacity: 1; }
+  from {
+    transform: translateX(-50%) translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
 }
 
 .sync-toast.syncing {
@@ -3406,8 +3822,13 @@ body:has(.offline-banner) .wrap {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes datePickerSlide {
@@ -3415,6 +3836,7 @@ body:has(.offline-banner) .wrap {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
@@ -3581,8 +4003,15 @@ body:has(.offline-banner) .wrap {
 }
 
 @keyframes tooltipFade {
-  from { opacity: 0; transform: translateX(-50%) translateY(-90%); }
-  to { opacity: 1; transform: translateX(-50%) translateY(-100%); }
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-90%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-100%);
+  }
 }
 
 /* Кнопка "Вернуться к сегодня" */
@@ -3679,11 +4108,27 @@ body:has(.offline-banner) .wrap {
   gap: 3px;
 }
 
-.legend-item.good { color: #22c55e; }
-.legend-item.warn { color: #eab308; }
-.legend-item.bad { color: var(--color-red-500); }
-.legend-item.cycle { color: #ec4899; font-size: 11px; }
-.legend-item.refeed { color: #f97316; font-size: 11px; }
+.legend-item.good {
+  color: #22c55e;
+}
+
+.legend-item.warn {
+  color: #eab308;
+}
+
+.legend-item.bad {
+  color: var(--color-red-500);
+}
+
+.legend-item.cycle {
+  color: #ec4899;
+  font-size: 11px;
+}
+
+.legend-item.refeed {
+  color: #f97316;
+  font-size: 11px;
+}
 
 /* Сегодняшний день - синий как в навигации */
 .date-picker-day.today {
@@ -3695,8 +4140,15 @@ body:has(.offline-banner) .wrap {
 }
 
 @keyframes todayPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
-  50% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+  }
+
+  50% {
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+  }
 }
 
 /* Mobile responsive */
@@ -3706,49 +4158,50 @@ body:has(.offline-banner) .wrap {
     min-width: 90px;
     gap: 4px;
   }
-  
+
   .date-picker-icon {
     font-size: 14px;
   }
-  
+
   .date-picker-main {
     font-size: 12px;
   }
-  
+
   .date-picker-sub {
     font-size: 9px;
   }
-  
+
   .date-picker-arrow {
     font-size: 10px;
   }
-  
+
   /* Компактная кнопка быстрого перехода */
   .today-quick-btn {
     width: 32px;
     height: 32px;
     font-size: 13px;
   }
-  
+
   /* Компактная кнопка темы */
   .hdr-theme-btn {
     width: 32px;
     height: 32px;
     font-size: 16px;
   }
-  
+
   .date-picker-dropdown {
     min-width: 260px;
     padding: 10px;
     left: 50%;
     transform: translateX(-50%);
   }
-  
+
   @keyframes datePickerSlide {
     from {
       opacity: 0;
       transform: translateX(-50%) translateY(-8px);
     }
+
     to {
       opacity: 1;
       transform: translateX(-50%) translateY(0);
@@ -3761,11 +4214,13 @@ body:has(.offline-banner) .wrap {
   .hdr-actions {
     gap: 4px;
   }
+
   .hdr-btn {
     padding: 5px 8px;
     font-size: 11px;
     min-height: 32px;
   }
+
   .hdr-btn-icon {
     font-size: 12px;
   }
@@ -3775,15 +4230,18 @@ body:has(.offline-banner) .wrap {
   .hdr-actions {
     gap: 3px;
   }
+
   .hdr-btn {
     padding: 4px 6px;
     font-size: 10px;
     min-height: 30px;
     border-radius: 6px;
   }
+
   .hdr-btn-icon {
     font-size: 11px;
   }
+
   .hdr-divider {
     height: 20px;
   }
@@ -3793,15 +4251,18 @@ body:has(.offline-banner) .wrap {
   .hdr-actions {
     gap: 2px;
   }
+
   .hdr-btn {
     padding: 4px 4px;
     font-size: 9px;
     min-height: 28px;
     gap: 2px;
   }
+
   .hdr-btn-icon {
     font-size: 10px;
   }
+
   .hdr-backup-info {
     display: none;
   }
@@ -3854,17 +4315,17 @@ body:has(.offline-banner) .wrap {
     padding: 12px 16px;
     border-radius: 12px 12px 0 0;
   }
-  
+
   .hdr-logo-icon {
     width: 36px;
     height: 36px;
     font-size: 18px;
   }
-  
+
   .hdr-logo-text {
     font-size: 18px;
   }
-  
+
   .hdr-bottom {
     padding: 6px 16px;
     flex-direction: row;
@@ -3872,30 +4333,31 @@ body:has(.offline-banner) .wrap {
     gap: 10px;
     border-radius: 0 0 12px 12px;
   }
-  
+
   .hdr-client {
     justify-content: flex-start;
   }
-  
+
   .hdr-actions {
     justify-content: flex-start;
     gap: 6px;
   }
-  
+
   .hdr-btn {
     padding: 8px 12px;
     font-size: 12px;
   }
-  
+
   .hdr-divider {
     display: none;
   }
-  
+
   .hdr-backup-info {
     width: 100%;
     justify-content: center;
   }
 }
+
 /* ═══════════════════════════════════════════════════════════════
    Bottom Navigation Bar — компактный светлый tab bar
    - Base tab styles live here
@@ -3905,7 +4367,8 @@ body:has(.offline-banner) .wrap {
 .tab-content-swipeable {
   touch-action: pan-y pinch-zoom;
   min-height: calc(100vh - 180px);
-  padding-bottom: 100px; /* Отступ под fixed tabs */
+  padding-bottom: 100px;
+  /* Отступ под fixed tabs */
   position: relative;
   overflow: hidden;
   /* Убрали transform: translateZ(0) — ломает position: fixed для FAB */
@@ -3938,23 +4401,51 @@ body:has(.offline-banner) .wrap {
 }
 
 @keyframes slideOutLeft {
-  0% { transform: translateX(0); opacity: 1; }
-  100% { transform: translateX(-50px); opacity: 0; }
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(-50px);
+    opacity: 0;
+  }
 }
 
 @keyframes slideOutRight {
-  0% { transform: translateX(0); opacity: 1; }
-  100% { transform: translateX(50px); opacity: 0; }
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(50px);
+    opacity: 0;
+  }
 }
 
 @keyframes slideInLeft {
-  0% { transform: translateX(50px); opacity: 0; }
-  100% { transform: translateX(0); opacity: 1; }
+  0% {
+    transform: translateX(50px);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes slideInRight {
-  0% { transform: translateX(-50px); opacity: 0; }
-  100% { transform: translateX(0); opacity: 1; }
+  0% {
+    transform: translateX(-50px);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 /* Edge bounce effect */
@@ -3967,17 +4458,39 @@ body:has(.offline-banner) .wrap {
 }
 
 @keyframes bounceLeft {
-  0% { transform: translateX(0); }
-  30% { transform: translateX(15px); }
-  60% { transform: translateX(-5px); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(0);
+  }
+
+  30% {
+    transform: translateX(15px);
+  }
+
+  60% {
+    transform: translateX(-5px);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
 }
 
 @keyframes bounceRight {
-  0% { transform: translateX(0); }
-  30% { transform: translateX(-15px); }
-  60% { transform: translateX(5px); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(0);
+  }
+
+  30% {
+    transform: translateX(-15px);
+  }
+
+  60% {
+    transform: translateX(5px);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
 }
 
 /* Edge indicator (glowing bar) */
@@ -4004,19 +4517,32 @@ body:has(.offline-banner) .wrap {
 }
 
 @keyframes edgeGlow {
-  0% { opacity: 0; height: 40px; }
-  30% { opacity: 0.8; height: 100px; }
-  100% { opacity: 0; height: 60px; }
+  0% {
+    opacity: 0;
+    height: 40px;
+  }
+
+  30% {
+    opacity: 0.8;
+    height: 100px;
+  }
+
+  100% {
+    opacity: 0;
+    height: 60px;
+  }
 }
 
 /* Reduce motion for accessibility */
 @media (prefers-reduced-motion: reduce) {
+
   .tab-content-swipeable.slide-out-left,
   .tab-content-swipeable.slide-out-right,
   .tab-content-swipeable.edge-bounce-left,
   .tab-content-swipeable.edge-bounce-right {
     animation: none;
   }
+
   .edge-indicator {
     display: none;
   }
@@ -4086,7 +4612,8 @@ body:has(.offline-banner) .wrap {
 }
 
 .tab .tab-text {
-  display: none; /* Скрываем текст в обычных табах — показываем только иконки */
+  display: none;
+  /* Скрываем текст в обычных табах — показываем только иконки */
 }
 
 .tab:hover {
@@ -4135,7 +4662,8 @@ body:has(.offline-banner) .wrap {
   gap: 2px;
   flex: 0 1 auto;
   min-width: 160px;
-  margin: 0 12px; /* Увеличенный gap от соседних элементов */
+  margin: 0 12px;
+  /* Увеличенный gap от соседних элементов */
 }
 
 .tab.tab-switch {
@@ -4166,7 +4694,8 @@ body:has(.offline-banner) .wrap {
 }
 
 .tab.tab-switch .tab-text {
-  display: none; /* Текст под переключателем, не внутри */
+  display: none;
+  /* Текст под переключателем, не внутри */
 }
 
 .tab.tab-switch.active {
@@ -4259,6 +4788,7 @@ body:has(.offline-banner) .wrap {
     opacity: 0;
     transform: translateX(-50%) translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
@@ -4373,17 +4903,19 @@ body:has(.offline-banner) .wrap {
 /* Отступ для контента страницы */
 .page {
   padding:
-    max(0px, env(safe-area-inset-top))
-    0
-    calc(80px + max(8px, env(safe-area-inset-bottom)))
-    0;
+    max(0px, env(safe-area-inset-top)) 0 calc(80px + max(8px, env(safe-area-inset-bottom))) 0;
   /* Плавное появление контента */
   animation: pageFadeIn 0.2s ease-out;
 }
 
 @keyframes pageFadeIn {
-  from { opacity: 0.7; }
-  to { opacity: 1; }
+  from {
+    opacity: 0.7;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* Day header with DatePicker and trainings */
@@ -4410,6 +4942,7 @@ body:has(.offline-banner) .wrap {
 .area-side {
   min-width: 0;
 }
+
 .area-side .side-row:last-child {
   margin-bottom: 0;
 }
@@ -4418,23 +4951,28 @@ body:has(.offline-banner) .wrap {
 .card[class*='tone-'] {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
+
 .tone-blue {
   background: #dbeafe;
   border: 1px solid #93c5fd;
 }
+
 .tone-green {
   background: #ecfdf5;
   border: 1px solid #a7f3d0;
   padding: 8px;
 }
+
 .tone-amber {
   background: #fffbeb;
   border: 1px solid #fde68a;
 }
+
 .tone-violet {
   background: #f5f3ff;
   border: 1px solid #ddd6fe;
 }
+
 .tone-slate {
   background: #fafbfc;
   border: 1px solid #93c5fd;
@@ -4456,9 +4994,11 @@ body:has(.offline-banner) .wrap {
 .delta {
   font-weight: 600;
 }
+
 .delta.good {
   color: #059669;
 }
+
 .delta.bad {
   color: #dc2626;
 }
@@ -4468,12 +5008,15 @@ body:has(.offline-banner) .wrap {
   display: grid;
   gap: 6px 10px;
 }
+
 .grid-2 {
   grid-template-columns: repeat(2, 1fr);
 }
+
 .grid-3 {
   grid-template-columns: repeat(3, 1fr);
 }
+
 .grid-4 {
   grid-template-columns: repeat(4, 1fr);
 }
@@ -4486,12 +5029,14 @@ body:has(.offline-banner) .wrap {
   align-items: start;
   margin-bottom: 10px;
 }
+
 /* inline vertical lists inside cards */
 .field-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
+
 .inline-field {
   display: flex;
   align-items: center;
@@ -4499,27 +5044,33 @@ body:has(.offline-banner) .wrap {
   gap: 6px;
   font-size: 13px;
 }
+
 .inline-field label {
   font-weight: 500;
   min-width: 140px;
 }
+
 .inline-field .sep {
   opacity: 0.5;
 }
+
 .inline-field input,
 .inline-field select {
   flex: 1;
   min-width: 120px;
   max-width: 220px;
 }
+
 @media (max-width: 780px) {
   .inline-field {
     flex-direction: column;
     align-items: stretch;
   }
+
   .inline-field .sep {
     display: none;
   }
+
   .inline-field input,
   .inline-field select {
     max-width: 100%;
@@ -4564,14 +5115,14 @@ body:has(.offline-banner) .wrap {
   background-color: white;
   transition: 0.2s;
   border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-.toggle-switch input:checked + .toggle-slider {
+.toggle-switch input:checked+.toggle-slider {
   background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
 }
 
-.toggle-switch input:checked + .toggle-slider:before {
+.toggle-switch input:checked+.toggle-slider:before {
   transform: translateX(22px);
 }
 
@@ -4616,6 +5167,7 @@ body:has(.offline-banner) .wrap {
     grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   }
 }
+
 @media (max-width: 780px) {
   .user-cards-grid {
     grid-template-columns: 1fr;
@@ -4628,6 +5180,7 @@ body:has(.offline-banner) .wrap {
   margin-bottom: 2px;
   color: #065f46;
 }
+
 .tone-green input,
 .tone-green textarea,
 .tone-green select {
@@ -4636,15 +5189,18 @@ body:has(.offline-banner) .wrap {
   height: auto;
   min-height: 24px;
 }
+
 .tone-green textarea {
   min-height: 50px;
   resize: vertical;
   width: 100%;
   box-sizing: border-box;
 }
-.tone-green .grid > div {
+
+.tone-green .grid>div {
   min-width: 0;
 }
+
 /* narrower inputs for day & sleep evaluation */
 .tone-green .grid input[type='number'],
 .tone-green .grid input[disabled] {
@@ -4655,9 +5211,11 @@ body:has(.offline-banner) .wrap {
   padding: 1px 3px;
   text-align: center;
   border-radius: 5px;
-  border: 1px solid #f9c58d; /* same as training inputs */
+  border: 1px solid #f9c58d;
+  /* same as training inputs */
   background: var(--color-white);
 }
+
 .tone-green .grid input[type='time'] {
   width: 86px;
   min-width: 86px;
@@ -4669,13 +5227,16 @@ body:has(.offline-banner) .wrap {
   font-weight: 600;
   font-size: 12px;
 }
+
 .tbl tr:nth-child(even) td {
   background: #fafafa;
 }
+
 .tbl .tr-sum td {
   background: #f0f9ff;
   font-weight: 600;
 }
+
 .tbl input.readOnly {
   background: #f8fafc;
 }
@@ -4685,26 +5246,31 @@ body:has(.offline-banner) .wrap {
   background: #ececec;
   color: #555;
 }
+
 .meals-table th {
   white-space: normal;
   line-height: 1.1;
   padding: 4px 6px;
 }
+
 .meals-table td {
   padding: 2px 4px;
   line-height: 1;
   height: 20px;
   min-height: 20px;
 }
+
 .meals-table tr {
   height: 20px;
   min-height: 20px;
 }
+
 .daily-summary td,
 .daily-summary tr {
   height: 20px;
   min-height: 20px;
 }
+
 /* Центровка и фиксированная ширина для всех колонок параметров (кроме названия) */
 .meals-table th:not(:first-child),
 .meals-table td:not(:first-child) {
@@ -4713,6 +5279,7 @@ body:has(.offline-banner) .wrap {
   max-width: 40px;
   width: 40px;
 }
+
 .meals-table td input[type='number'] {
   height: 16px;
   min-height: 16px;
@@ -4722,9 +5289,11 @@ body:has(.offline-banner) .wrap {
   min-width: 42px;
   line-height: 14px;
 }
+
 .meals-table tr {
   height: 18px;
 }
+
 .meals-table td {
   height: 18px;
 }
@@ -4735,10 +5304,12 @@ body:has(.offline-banner) .wrap {
     opacity: 0;
     transform: translateX(-20px) scale(0.95);
   }
+
   60% {
     opacity: 1;
     transform: translateX(4px) scale(1.02);
   }
+
   100% {
     opacity: 1;
     transform: translateX(0) scale(1);
@@ -4775,10 +5346,12 @@ body:has(.offline-banner) .wrap {
   font-size: 11px;
   border-radius: 6px;
 }
+
 .daily-summary td,
 .daily-summary tr {
   height: 18px;
 }
+
 .meal-sep {
   margin-top: 14px;
   font-size: 11px;
@@ -4808,7 +5381,8 @@ body:has(.offline-banner) .wrap {
   left: 0;
   top: 0;
   cursor: pointer;
-  font-size: 16px; /* предотвращает zoom на iOS */
+  font-size: 16px;
+  /* предотвращает zoom на iOS */
 }
 
 .meal-type-label {
@@ -4861,24 +5435,59 @@ body:has(.offline-banner) .wrap {
 }
 
 /* Стили для разных типов приёмов пищи */
-.meal-sep.meal-type-breakfast { color: #c2410c; } /* оранжевый — завтрак */
-.meal-sep.meal-type-breakfast .meal-kcal-badge { background: #fff7ed; color: #c2410c; }
+.meal-sep.meal-type-breakfast {
+  color: #c2410c;
+}
 
-.meal-sep.meal-type-lunch { color: #15803d; } /* зелёный — обед */
-.meal-sep.meal-type-lunch .meal-kcal-badge { background: #f0fdf4; color: #15803d; }
+/* оранжевый — завтрак */
+.meal-sep.meal-type-breakfast .meal-kcal-badge {
+  background: #fff7ed;
+  color: #c2410c;
+}
 
-.meal-sep.meal-type-dinner { color: #1d4ed8; } /* синий — ужин */
-.meal-sep.meal-type-dinner .meal-kcal-badge { background: #eff6ff; color: #1d4ed8; }
+.meal-sep.meal-type-lunch {
+  color: #15803d;
+}
+
+/* зелёный — обед */
+.meal-sep.meal-type-lunch .meal-kcal-badge {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.meal-sep.meal-type-dinner {
+  color: #1d4ed8;
+}
+
+/* синий — ужин */
+.meal-sep.meal-type-dinner .meal-kcal-badge {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
 
 .meal-sep.meal-type-snack1,
 .meal-sep.meal-type-snack2,
-.meal-sep.meal-type-snack3 { color: var(--color-gray-500); } /* серый — перекус */
+.meal-sep.meal-type-snack3 {
+  color: var(--color-gray-500);
+}
+
+/* серый — перекус */
 .meal-sep.meal-type-snack1 .meal-kcal-badge,
 .meal-sep.meal-type-snack2 .meal-kcal-badge,
-.meal-sep.meal-type-snack3 .meal-kcal-badge { background: #f3f4f6; color: var(--color-gray-500); }
+.meal-sep.meal-type-snack3 .meal-kcal-badge {
+  background: #f3f4f6;
+  color: var(--color-gray-500);
+}
 
-.meal-sep.meal-type-night { color: #3b82f6; } /* фиолетовый — ночной */
-.meal-sep.meal-type-night .meal-kcal-badge { background: #eef2ff; color: #3b82f6; }
+.meal-sep.meal-type-night {
+  color: #3b82f6;
+}
+
+/* фиолетовый — ночной */
+.meal-sep.meal-type-night .meal-kcal-badge {
+  background: #eef2ff;
+  color: #3b82f6;
+}
 
 /* Подсказка "изменить" рядом с типом приёма */
 .meal-type-hint {
@@ -4918,13 +5527,32 @@ body:has(.offline-banner) .wrap {
   cursor: pointer;
 }
 
-.meal-type-preview-value.meal-type-breakfast { color: #c2410c; background: #fff7ed; }
-.meal-type-preview-value.meal-type-lunch { color: #15803d; background: #f0fdf4; }
-.meal-type-preview-value.meal-type-dinner { color: #1d4ed8; background: #eff6ff; }
+.meal-type-preview-value.meal-type-breakfast {
+  color: #c2410c;
+  background: #fff7ed;
+}
+
+.meal-type-preview-value.meal-type-lunch {
+  color: #15803d;
+  background: #f0fdf4;
+}
+
+.meal-type-preview-value.meal-type-dinner {
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
 .meal-type-preview-value.meal-type-snack1,
 .meal-type-preview-value.meal-type-snack2,
-.meal-type-preview-value.meal-type-snack3 { color: var(--color-gray-500); background: #f3f4f6; }
-.meal-type-preview-value.meal-type-night { color: #3b82f6; background: #eef2ff; }
+.meal-type-preview-value.meal-type-snack3 {
+  color: var(--color-gray-500);
+  background: #f3f4f6;
+}
+
+.meal-type-preview-value.meal-type-night {
+  color: #3b82f6;
+  background: #eef2ff;
+}
 
 .meal-type-preview-icon {
   font-size: 16px;
@@ -4958,7 +5586,8 @@ body:has(.offline-banner) .wrap {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  margin: -6px -12px 8px -12px; /* Растягиваем до краёв карточки */
+  margin: -6px -12px 8px -12px;
+  /* Растягиваем до краёв карточки */
   border-radius: 10px 10px 0 0;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   border-bottom: 1px solid #e2e8f0;
@@ -4978,7 +5607,8 @@ body:has(.offline-banner) .wrap {
   display: inline-flex;
   align-items: center;
   line-height: 1;
-  margin-bottom: 0; /* Сбрасываем margin из 600-steps-and-aps.css */
+  margin-bottom: 0;
+  /* Сбрасываем margin из 600-steps-and-aps.css */
 }
 
 /* Время приёма внутри карточки */
@@ -5018,27 +5648,30 @@ body:has(.offline-banner) .wrap {
   background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
   border-bottom-color: #fed7aa;
 }
-.meal-header-inside.meal-type-breakfast .meal-kcal-badge-inside { 
-  background: #fff7ed; 
-  color: #c2410c; 
+
+.meal-header-inside.meal-type-breakfast .meal-kcal-badge-inside {
+  background: #fff7ed;
+  color: #c2410c;
 }
 
 .meal-header-inside.meal-type-lunch {
   background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
   border-bottom-color: #bbf7d0;
 }
-.meal-header-inside.meal-type-lunch .meal-kcal-badge-inside { 
-  background: #f0fdf4; 
-  color: #15803d; 
+
+.meal-header-inside.meal-type-lunch .meal-kcal-badge-inside {
+  background: #f0fdf4;
+  color: #15803d;
 }
 
 .meal-header-inside.meal-type-dinner {
   background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
   border-bottom-color: #bfdbfe;
 }
-.meal-header-inside.meal-type-dinner .meal-kcal-badge-inside { 
-  background: #eff6ff; 
-  color: #1d4ed8; 
+
+.meal-header-inside.meal-type-dinner .meal-kcal-badge-inside {
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 .meal-header-inside.meal-type-snack1,
@@ -5047,20 +5680,22 @@ body:has(.offline-banner) .wrap {
   background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
   border-bottom-color: #e5e7eb;
 }
+
 .meal-header-inside.meal-type-snack1 .meal-kcal-badge-inside,
 .meal-header-inside.meal-type-snack2 .meal-kcal-badge-inside,
-.meal-header-inside.meal-type-snack3 .meal-kcal-badge-inside { 
-  background: #f3f4f6; 
-  color: #6b7280; 
+.meal-header-inside.meal-type-snack3 .meal-kcal-badge-inside {
+  background: #f3f4f6;
+  color: #6b7280;
 }
 
 .meal-header-inside.meal-type-night {
   background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
   border-bottom-color: #c7d2fe;
 }
-.meal-header-inside.meal-type-night .meal-kcal-badge-inside { 
-  background: #eef2ff; 
-  color: #3b82f6; 
+
+.meal-header-inside.meal-type-night .meal-kcal-badge-inside {
+  background: #eef2ff;
+  color: #3b82f6;
 }
 
 .meal-card {
@@ -5068,6 +5703,7 @@ body:has(.offline-banner) .wrap {
   padding-bottom: 6px;
   overflow: visible;
 }
+
 /* Название продукта: фиксированная ширина с переносами */
 .meals-table td:first-child,
 .meals-table th:first-child {
@@ -5082,13 +5718,16 @@ body:has(.offline-banner) .wrap {
 .daily-summary .tr-sum td {
   background: #e0f2fe;
 }
+
 .daily-summary tbody tr:nth-child(1) td {
   background: #f8fafc;
   font-weight: 600;
 }
+
 .daily-summary tbody tr:nth-child(2) td {
   background: #f5f3ff;
 }
+
 .daily-summary tbody tr.daily-dev-row td {
   background: var(--color-slate-100);
   border-top: 2px solid #cbd5e1;
@@ -5098,6 +5737,7 @@ body:has(.offline-banner) .wrap {
 .suggest-wrap {
   position: relative;
 }
+
 .suggest-list {
   position: absolute;
   top: 100%;
@@ -5114,6 +5754,7 @@ body:has(.offline-banner) .wrap {
     0 8px 24px -4px rgba(0, 0, 0, 0.1),
     0 4px 12px -2px rgba(0, 0, 0, 0.06);
 }
+
 /* Portal версия — рендерится в body, вне ограничений карточки */
 .suggest-list-portal {
   position: fixed !important;
@@ -5128,6 +5769,7 @@ body:has(.offline-banner) .wrap {
     0 8px 24px -4px rgba(0, 0, 0, 0.15),
     0 4px 12px -2px rgba(0, 0, 0, 0.1);
 }
+
 .suggest-item {
   padding: 6px 8px;
   border-radius: 8px;
@@ -5150,11 +5792,13 @@ body:has(.offline-banner) .wrap {
 .suggest-item:hover {
   background: var(--color-slate-100);
 }
+
 .suggest-item.selected {
   background: var(--acc);
   color: var(--acc-contrast);
   font-weight: 500;
 }
+
 .suggest-item.selected small {
   color: rgba(255, 255, 255, 0.8) !important;
 }
@@ -5172,6 +5816,7 @@ body:has(.offline-banner) .wrap {
   padding: 20px;
   z-index: 200;
 }
+
 .modal {
   background: rgba(255, 255, 255, 0.85);
   -webkit-backdrop-filter: blur(20px);
@@ -5268,6 +5913,7 @@ body:has(.offline-banner) .wrap {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -5306,6 +5952,7 @@ body:has(.offline-banner) .wrap {
     transform: translateY(12px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -5316,6 +5963,7 @@ body:has(.offline-banner) .wrap {
 .calendar {
   padding: 10px;
 }
+
 .cal-head {
   display: flex;
   align-items: center;
@@ -5323,6 +5971,7 @@ body:has(.offline-banner) .wrap {
   margin-bottom: 6px;
   font-weight: 600;
 }
+
 .cal-nav {
   border: none;
   background: var(--color-slate-200);
@@ -5335,6 +5984,7 @@ body:has(.offline-banner) .wrap {
   align-items: center;
   justify-content: center;
 }
+
 .cal-nav:hover {
   background: #cbd5e1;
 }
@@ -5356,13 +6006,16 @@ body:has(.offline-banner) .wrap {
   justify-content: center;
   transition: background 0.15s, transform 0.1s, box-shadow 0.15s, border-color 0.15s;
 }
+
 .yesterday-quick-btn:hover {
   background: #f8fafc;
   border-color: #cbd5e1;
 }
+
 .yesterday-quick-btn:active {
   transform: scale(0.95);
 }
+
 .yesterday-quick-btn.active {
   background: var(--color-emerald-500);
   border-color: var(--color-emerald-500);
@@ -5388,13 +6041,16 @@ body:has(.offline-banner) .wrap {
   transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
   box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
 }
+
 .today-quick-btn:hover {
   background: #2563eb;
   box-shadow: 0 3px 8px rgba(59, 130, 246, 0.4);
 }
+
 .today-quick-btn:active {
   transform: scale(0.95);
 }
+
 .today-quick-btn.active {
   background: var(--color-emerald-500);
   box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
@@ -5415,19 +6071,24 @@ body:has(.offline-banner) .wrap {
   margin-left: 8px;
   transition: background 0.15s, transform 0.1s;
 }
+
 .cal-today-btn:hover {
   background: #2563eb;
 }
+
 .cal-today-btn:active {
   transform: scale(0.95);
 }
+
 .cal-title {
   text-transform: capitalize;
   font-size: 14px;
 }
+
 .cal-grid {
   margin-bottom: 4px;
 }
+
 .cal-dow div {
   font-size: 11px;
   font-weight: 600;
@@ -5435,6 +6096,7 @@ body:has(.offline-banner) .wrap {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+
 .cal-cell {
   cursor: pointer;
   padding: 6px 0;
@@ -5444,19 +6106,23 @@ body:has(.offline-banner) .wrap {
   position: relative;
   transition: background 0.15s ease;
 }
+
 .cal-cell.today {
   outline: 2px solid var(--color-slate-400);
   outline-offset: 0;
   font-weight: 600;
 }
+
 .cal-cell.sel {
   background: var(--acc);
   color: var(--acc-contrast);
   font-weight: 600;
 }
+
 .cal-cell.has-data {
   font-weight: 600;
 }
+
 .cal-cell:hover:not(.sel) {
   filter: brightness(0.92);
 }
@@ -5521,13 +6187,20 @@ body:has(.offline-banner) .wrap {
   font-size: 10px;
   line-height: 1;
   z-index: 3;
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
 }
 
 /* Анимация огня */
 @keyframes streak-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 .cal-cell.streak-middle .streak-fire,
@@ -5549,31 +6222,39 @@ body:has(.offline-banner) .wrap {
     grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
     gap: 14px;
   }
+
   .area-side .side-row {
     flex-direction: row;
   }
 }
+
 @media (max-width: 840px) {
   .page {
     padding-left: 0;
     padding-right: 0;
   }
+
   .day-header {
     flex-direction: column;
     gap: 10px;
   }
+
   .day-header .trainings-wrap {
     width: 100%;
   }
+
   .area-cal {
     order: 1;
   }
+
   .area-main {
     order: 2;
   }
+
   .area-side {
     order: 3;
   }
+
   .wrap {
     padding: 12px 14px 80px;
     /* Отступ сверху для fixed шапки на мобильных */
@@ -5585,16 +6266,20 @@ body:has(.offline-banner) .wrap {
 .flex {
   display: flex;
 }
+
 .flex-col {
   display: flex;
   flex-direction: column;
 }
+
 .gap-4 {
   gap: 4px;
 }
+
 .gap-8 {
   gap: 8px;
 }
+
 .text-center {
   text-align: center;
 }
@@ -5604,17 +6289,21 @@ body:has(.offline-banner) .wrap {
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;
 }
+
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
+
 *::-webkit-scrollbar-track {
   background: transparent;
 }
+
 *::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 20px;
 }
+
 *::-webkit-scrollbar-thumb:hover {
   background: var(--color-slate-400);
 }
@@ -5624,6 +6313,7 @@ body:has(.offline-banner) .wrap {
   height: 15px;
   min-height: 15px;
 }
+
 .tr-dev td {
   height: 15px;
   min-height: 15px;
@@ -5635,6 +6325,7 @@ body:has(.offline-banner) .wrap {
   height: 15px;
   min-height: 15px;
 }
+
 .tbl td {
   height: 15px;
   min-height: 15px;
@@ -5643,6 +6334,7 @@ body:has(.offline-banner) .wrap {
 
 /* === 40. MOBILE OPTIMIZATION === */
 @media (max-width: 640px) {
+
   /* === 40.1 СОВРЕМЕННАЯ ШАПКА НА МОБИЛЬНЫХ === */
   .hdr {
     padding: 8px 14px 0;
@@ -5789,7 +6481,7 @@ body:has(.offline-banner) .wrap {
     margin-bottom: 6px;
     border-radius: 6px;
   }
-  
+
   .swipeable-background {
     position: absolute;
     top: 0;
@@ -5802,7 +6494,7 @@ body:has(.offline-banner) .wrap {
     background: var(--color-red-500);
     border-radius: 6px;
   }
-  
+
   .swipeable-delete-btn {
     color: white;
     font-weight: 600;
@@ -5812,13 +6504,13 @@ body:has(.offline-banner) .wrap {
     padding: 8px 16px;
     cursor: pointer;
   }
-  
+
   .swipeable-content {
     position: relative;
     background: var(--color-white);
     will-change: transform;
   }
-  
+
   .swipeable-content.deleting {
     opacity: 0.5;
   }
@@ -5862,7 +6554,7 @@ body:has(.offline-banner) .wrap {
     -webkit-appearance: none;
     -moz-appearance: textfield;
   }
-  
+
   /* Кнопка граммов (мобильные) — открывает wheel picker */
   .mpc-grams-btn {
     min-width: 55px;
@@ -5878,38 +6570,38 @@ body:has(.offline-banner) .wrap {
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
-  
+
   .mpc-grams-btn:active {
     background: #e5e7eb;
   }
-  
+
   /* Цветовые подсказки для больших порций */
   .mpc-grams-btn.grams-warn {
     background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
     border-color: #f59e0b;
     color: #92400e;
   }
-  
+
   .mpc-grams-btn.grams-danger {
     background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
     border-color: var(--color-red-500);
     color: #991b1b;
   }
-  
+
   /* Иконка категории */
   .mpc-category-icon {
     font-size: 14px;
     flex-shrink: 0;
     margin-right: 4px;
   }
-  
+
   /* Бейдж полезности/вредности */
   .mpc-badge {
     font-size: 12px;
     flex-shrink: 0;
     margin-left: 4px;
   }
-  
+
   /* Альтернатива */
   .mpc-alternative {
     margin-top: 6px;
@@ -5920,20 +6612,20 @@ body:has(.offline-banner) .wrap {
     color: #0369a1;
     line-height: 1.3;
   }
-  
+
   .mpc-alternative strong {
     color: #0c4a6e;
   }
-  
+
   /* Grams Picker стили */
   .grams-picker-modal {
     max-width: 240px;
   }
-  
+
   .grams-wheels {
     justify-content: center;
   }
-  
+
   /* Input для ручного ввода граммов */
   .grams-input-row {
     display: flex;
@@ -5942,7 +6634,7 @@ body:has(.offline-banner) .wrap {
     padding: 12px 16px 8px;
     gap: 4px;
   }
-  
+
   .grams-manual-input {
     width: 80px;
     height: 44px;
@@ -5957,12 +6649,12 @@ body:has(.offline-banner) .wrap {
     -webkit-appearance: none;
     -moz-appearance: textfield;
   }
-  
+
   .grams-manual-input:focus {
     border-color: var(--color-blue-500);
     background: var(--color-white);
   }
-  
+
   .grams-input-suffix {
     font-size: 20px;
     font-weight: 500;
@@ -6061,6 +6753,7 @@ body:has(.offline-banner) .wrap {
   .tone-slate .mpc-totals-wrap {
     background: #f8fafc;
   }
+
   .tone-slate .mpc-totals-wrap .mpc-header,
   .tone-slate .mpc-totals-wrap .mpc-totals-values {
     color: var(--color-slate-500);
@@ -6089,24 +6782,24 @@ body:has(.offline-banner) .wrap {
     gap: 8px;
     margin-bottom: 4px;
   }
-  
+
   .mpc-toggle-add-row .mpc-products-toggle {
     flex: 1;
     margin-bottom: 0;
     justify-content: center;
   }
-  
+
   .mpc-toggle-add-row .mpc-products-toggle.expanded {
     margin-bottom: 0;
   }
-  
+
   .mpc-toggle-add-row .aps-open-btn {
     flex: 1;
     padding: 8px 12px;
     font-size: 12px;
     justify-content: center;
   }
-  
+
   /* Когда нет продуктов — кнопка добавить на всю ширину */
   .mpc-toggle-add-row.single .aps-open-btn {
     flex: 1;
@@ -6147,7 +6840,7 @@ body:has(.offline-banner) .wrap {
     transition: transform 0.3s ease;
     transform: rotate(0deg);
   }
-  
+
   .mpc-products-toggle.expanded .toggle-arrow {
     transform: rotate(90deg);
   }
@@ -6195,7 +6888,7 @@ body:has(.offline-banner) .wrap {
   .meal-meta-field .compact-input.tiny {
     width: 32px;
   }
-  
+
   /* Мобильная кнопка редактирования времени */
   .mobile-time-btn {
     background: #f3f4f6;
@@ -6209,11 +6902,11 @@ body:has(.offline-banner) .wrap {
     min-width: 65px;
     text-align: center;
   }
-  
+
   .mobile-time-btn:active {
     background: #e5e7eb;
   }
-  
+
   /* Мобильная кнопка редактирования оценок */
   .mobile-mood-btn {
     display: flex;
@@ -6225,11 +6918,11 @@ body:has(.offline-banner) .wrap {
     padding: 4px 0;
     cursor: pointer;
   }
-  
+
   .mobile-mood-btn:active {
     background: transparent;
   }
-  
+
   /* Компактные цветные badge оценок в приёмах пищи (как в тренировках) */
   .meal-rating-mini {
     display: flex;
@@ -6240,32 +6933,32 @@ body:has(.offline-banner) .wrap {
     font-size: 12px;
     font-weight: 600;
   }
-  
+
   .meal-rating-mini.mood {
     background: #dcfce7;
     color: #16a34a;
     border: 1px solid #bbf7d0;
   }
-  
+
   .meal-rating-mini.wellbeing {
     background: #ede9fe;
     color: #7c3aed;
     border: 1px solid #93c5fd;
   }
-  
+
   .meal-rating-mini.stress {
     background: #dbeafe;
     color: #2563eb;
     border: 1px solid #93c5fd;
   }
-  
+
   /* Пустое состояние оценок */
   .meal-rating-empty {
     font-size: 12px;
     color: #9ca3af;
     font-weight: 500;
   }
-  
+
   /* Отображение метрик на мобильных (без input) */
   .meal-meta-display {
     display: flex;
@@ -6273,7 +6966,7 @@ body:has(.offline-banner) .wrap {
     gap: 3px;
     font-size: 14px;
   }
-  
+
   .meal-meta-display .meta-value {
     font-weight: 500;
     min-width: 18px;
@@ -6482,7 +7175,9 @@ body:has(.offline-banner) .wrap {
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   [data-theme="dark"] .meal-photos {
@@ -6652,6 +7347,7 @@ body:has(.offline-banner) .wrap {
       opacity: 0;
       transform: scale(0.9);
     }
+
     to {
       opacity: 1;
       transform: scale(1);
@@ -6773,8 +7469,13 @@ body:has(.offline-banner) .wrap {
   }
 
   @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+    0% {
+      background-position: -200% 0;
+    }
+
+    100% {
+      background-position: 200% 0;
+    }
   }
 
   [data-theme="dark"] .meal-photo-thumb.skeleton {
@@ -6790,13 +7491,23 @@ body:has(.offline-banner) .wrap {
 
   /* === PHOTO VIEWER — полноэкранный просмотр фото === */
   @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
   }
 
   @keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
   }
 
   .photo-viewer-overlay {
@@ -6894,7 +7605,7 @@ body:has(.offline-banner) .wrap {
     grid-template-columns: 1fr !important;
   }
 
-  .tone-green .grid > div {
+  .tone-green .grid>div {
     min-width: 0 !important;
     max-width: 100% !important;
   }
@@ -6952,7 +7663,7 @@ body:has(.offline-banner) .wrap {
   /* ========================================
      КРИТИЧНО: Принудительное ограничение ВСЕХ элементов
      ======================================== */
-  
+
   /* Все карточки — максимум ширина экрана */
   .card {
     width: 100% !important;
@@ -6971,7 +7682,8 @@ body:has(.offline-banner) .wrap {
   }
 
   /* Все ячейки таблиц — без min-width */
-  td, th {
+  td,
+  th {
     min-width: 0 !important;
     max-width: none !important;
     word-wrap: break-word !important;
@@ -6979,7 +7691,9 @@ body:has(.offline-banner) .wrap {
   }
 
   /* Все input'ы — гибкие */
-  input, select, textarea {
+  input,
+  select,
+  textarea {
     min-width: 0 !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
@@ -6994,8 +7708,12 @@ body:has(.offline-banner) .wrap {
   }
 
   /* Grid-контейнеры — в одну колонку или сжатые */
-  .grid, .grid-2, .grid-3, .grid-4,
-  .train-grid, .main-stats-grid {
+  .grid,
+  .grid-2,
+  .grid-3,
+  .grid-4,
+  .train-grid,
+  .main-stats-grid {
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
@@ -7022,7 +7740,9 @@ body:has(.offline-banner) .wrap {
   }
 
   /* Фиксируем ширину контейнеров страницы */
-  .page, .page-day, .wrap {
+  .page,
+  .page-day,
+  .wrap {
     width: 100% !important;
     max-width: 100vw !important;
     min-width: 0 !important;
@@ -7038,21 +7758,21 @@ body:has(.offline-banner) .wrap {
   /* ===========================================
      ФАЗА 2: КОМПАКТНОСТЬ
      =========================================== */
-  
+
   /* Компактные карточки */
   .card {
     padding: 8px !important;
   }
-  
+
   .day-layout {
     gap: 6px;
   }
-  
+
   .section-title {
     margin-bottom: 4px !important;
     font-size: 13px !important;
   }
-  
+
   /* Компактные поля ввода */
   input,
   select,
@@ -7061,19 +7781,19 @@ body:has(.offline-banner) .wrap {
     padding: 6px 10px !important;
     font-size: 14px !important;
   }
-  
+
   /* Кнопки — чуть компактнее */
   .btn {
     min-height: 40px !important;
     padding: 8px 12px !important;
   }
-  
+
   /* Зоны тренировок — компактнее */
   .train-row {
     gap: 4px !important;
     margin-bottom: 2px !important;
   }
-  
+
   .train-grid input {
     width: 36px !important;
     height: 28px !important;
@@ -7081,23 +7801,23 @@ body:has(.offline-banner) .wrap {
     padding: 2px 4px !important;
     min-height: 28px !important;
   }
-  
+
   .card.tone-amber {
     padding: 6px 8px !important;
   }
-  
+
   .card.tone-amber .section-title {
     font-size: 12px !important;
     margin-bottom: 4px !important;
   }
-  
+
   /* Суточные итоги — компактнее */
   .violet-table td,
   .violet-table th {
     padding: 4px 3px !important;
     font-size: 11px !important;
   }
-  
+
   .violet-table input {
     width: 45px !important;
     height: 24px !important;
@@ -7105,27 +7825,27 @@ body:has(.offline-banner) .wrap {
     padding: 2px 4px !important;
     min-height: 24px !important;
   }
-  
+
   /* Зелёные карточки — меньше gap */
   .card.tone-green {
     padding: 8px !important;
   }
-  
+
   .tone-green .grid {
     gap: 6px !important;
   }
-  
+
   .tone-green label {
     font-size: 11px !important;
     margin-bottom: 2px !important;
   }
-  
+
   .tone-green input,
   .tone-green textarea {
     min-height: 32px !important;
     font-size: 13px !important;
   }
-  
+
   .tone-green textarea {
     min-height: 50px !important;
   }
@@ -7319,8 +8039,15 @@ body:has(.offline-banner) .wrap {
 }
 
 @keyframes pulse-soft {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .measurements-card--needs-update {
@@ -7516,7 +8243,7 @@ body:has(.offline-banner) .wrap {
 }
 
 /* Переопределяем стили вложенных карточек внутри секций */
-.profile-section__fields > .card {
+.profile-section__fields>.card {
   margin: 0;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.7);
@@ -7524,7 +8251,7 @@ body:has(.offline-banner) .wrap {
   box-shadow: none;
 }
 
-.profile-section__fields > .card + .card {
+.profile-section__fields>.card+.card {
   margin-top: 12px;
 }
 
@@ -7551,6 +8278,7 @@ body:has(.offline-banner) .wrap {
     opacity: 0;
     transform: translateY(-8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -7707,11 +8435,11 @@ body:has(.offline-banner) .wrap {
   .profile-section__header {
     padding: 12px 14px;
   }
-  
+
   .profile-section__title {
     font-size: 14px;
   }
-  
+
   .profile-section__content {
     padding: 0 14px 14px;
   }
@@ -7889,21 +8617,21 @@ body:has(.offline-banner) .wrap {
   .profile-field-group table {
     font-size: 12px;
   }
-  
+
   .profile-field-group th,
   .profile-field-group td {
     padding: 8px 8px;
   }
-  
+
   .profile-field-group td input {
     padding: 6px 8px;
     font-size: 12px;
   }
-  
+
   .profile-field-group td:first-child input {
     min-width: 100px;
   }
-  
+
   .profile-field-group td input[type="number"] {
     min-width: 50px;
   }
@@ -8015,7 +8743,7 @@ body:has(.offline-banner) .wrap {
   border-bottom-color: rgba(255, 255, 255, 0.06);
 }
 
-[data-theme="dark"] .profile-section__fields > .card {
+[data-theme="dark"] .profile-section__fields>.card {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.08);
 }
@@ -8069,21 +8797,21 @@ body:has(.offline-banner) .wrap {
   .profile-section table {
     font-size: 12px;
   }
-  
+
   .profile-section th,
   .profile-section td {
     padding: 8px 8px;
   }
-  
+
   .profile-section td input {
     padding: 6px 8px;
     font-size: 12px;
   }
-  
+
   .profile-section td:first-child input {
     min-width: 100px;
   }
-  
+
   .profile-section td input[type="number"] {
     min-width: 50px;
     width: 60px;
@@ -8095,73 +8823,73 @@ body:has(.offline-banner) .wrap {
   .profile-accordion {
     background: transparent;
   }
-  
+
   .profile-section.tone-blue {
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.08) 100%);
     border-color: rgba(59, 130, 246, 0.3);
   }
-  
+
   .profile-section.tone-rose {
     background: linear-gradient(135deg, rgba(244, 63, 94, 0.15) 0%, rgba(244, 63, 94, 0.08) 100%);
     border-color: rgba(244, 63, 94, 0.3);
   }
-  
+
   .profile-section.tone-violet {
     background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0.08) 100%);
     border-color: rgba(139, 92, 246, 0.3);
   }
-  
+
   .profile-section.tone-slate {
     background: linear-gradient(135deg, rgba(100, 116, 139, 0.15) 0%, rgba(100, 116, 139, 0.08) 100%);
     border-color: rgba(100, 116, 139, 0.3);
   }
-  
+
   .profile-section__title,
   .profile-section__subtitle {
     color: var(--gray-200);
   }
-  
+
   .profile-section__badge {
     background: rgba(255, 255, 255, 0.1);
     color: var(--gray-300);
   }
-  
-  .profile-section__fields > .card {
+
+  .profile-section__fields>.card {
     background: rgba(30, 30, 30, 0.6);
     border-color: rgba(255, 255, 255, 0.08);
   }
-  
+
   .profile-field-group {
     background: rgba(30, 30, 30, 0.5);
     border-color: rgba(255, 255, 255, 0.08);
   }
-  
+
   .profile-field-group__title {
     color: var(--gray-300);
   }
-  
+
   .profile-field-group .inline-field {
     border-bottom-color: rgba(255, 255, 255, 0.06);
   }
-  
+
   .profile-metric-pill {
     background: rgba(30, 30, 30, 0.6);
     border-color: rgba(255, 255, 255, 0.1);
   }
-  
+
   .profile-metric-pill__value {
     color: var(--gray-200);
   }
-  
+
   .profile-section table {
     background: rgba(30, 30, 30, 0.5);
   }
-  
+
   .profile-section th {
     background: rgba(255, 255, 255, 0.05);
     color: var(--gray-400);
   }
-  
+
   .profile-section__pill {
     background: rgba(30, 30, 30, 0.5);
     border-color: rgba(255, 255, 255, 0.1);

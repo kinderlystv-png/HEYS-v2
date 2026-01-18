@@ -1,23 +1,24 @@
 // heys_confirm_modal_v1.js — Переиспользуемая модалка подтверждения
 // Единый компонент для всех confirm-диалогов в приложении
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
   const ReactDOM = global.ReactDOM;
-  
+
   if (!React || !ReactDOM) {
     console.error('[ConfirmModal] React/ReactDOM not found');
     return;
   }
-  
+
   // === Состояние модалки ===
   let currentModal = null;
   let setModalState = null;
   let modalRoot = null;
+  let modalRootInstance = null; // React 18 createRoot instance
   let modalCleanup = null; // Cleanup функция для ModalManager
-  
+
   // === Дефолтные настройки ===
   const DEFAULTS = {
     icon: '❓',
@@ -26,10 +27,10 @@
     confirmText: 'Подтвердить',
     cancelText: 'Отмена',
     confirmStyle: 'danger', // 'danger' | 'primary' | 'success'
-    onConfirm: () => {},
-    onCancel: () => {}
+    onConfirm: () => { },
+    onCancel: () => { }
   };
-  
+
   // === Стили для confirmStyle ===
   const CONFIRM_STYLES = {
     danger: {
@@ -51,21 +52,21 @@
       darkActiveBackground: 'rgba(34, 197, 94, 0.2)'
     }
   };
-  
+
   // === Компонент модалки ===
   function ConfirmModalComponent() {
     const [modal, setModal] = React.useState(null);
-    
+
     // Сохраняем setter для внешнего использования
     React.useEffect(() => {
       setModalState = setModal;
       return () => { setModalState = null; };
     }, []);
-    
+
     // Закрытие по Escape
     React.useEffect(() => {
       if (!modal) return;
-      
+
       const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
           handleCancel();
@@ -73,40 +74,40 @@
           handleConfirm();
         }
       };
-      
+
       document.addEventListener('keydown', handleKeyDown);
       return () => document.removeEventListener('keydown', handleKeyDown);
     }, [modal]);
-    
+
     const handleConfirm = React.useCallback(() => {
       if (!modal) return;
-      
+
       // Haptic feedback
       if (HEYS.dayUtils?.haptic) {
         HEYS.dayUtils.haptic('medium');
       }
-      
+
       modal.onConfirm?.();
       setModal(null);
     }, [modal]);
-    
+
     const handleCancel = React.useCallback(() => {
       if (!modal) return;
       modal.onCancel?.();
       setModal(null);
     }, [modal]);
-    
+
     const handleBackdropClick = React.useCallback((e) => {
       if (e.target === e.currentTarget) {
         handleCancel();
       }
     }, [handleCancel]);
-    
+
     if (!modal) return null;
-    
+
     const style = CONFIRM_STYLES[modal.confirmStyle] || CONFIRM_STYLES.danger;
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    
+
     return React.createElement('div', {
       className: 'confirm-modal-backdrop',
       onClick: handleBackdropClick
@@ -117,13 +118,13 @@
       },
         // Иконка
         React.createElement('div', { className: 'confirm-modal-icon' }, modal.icon),
-        
+
         // Заголовок
         React.createElement('div', { className: 'confirm-modal-title' }, modal.title),
-        
+
         // Текст
         modal.text && React.createElement('div', { className: 'confirm-modal-text' }, modal.text),
-        
+
         // Кнопки
         React.createElement('div', { className: 'confirm-modal-buttons' },
           React.createElement('button', {
@@ -132,7 +133,7 @@
           }, modal.cancelText),
           React.createElement('button', {
             className: 'confirm-modal-btn confirm',
-            style: { 
+            style: {
               color: isDark ? style.darkColor : style.color,
               fontWeight: 600
             },
@@ -142,29 +143,31 @@
       )
     );
   }
-  
+
   // === Инициализация root элемента ===
   function ensureRoot() {
     if (modalRoot) return modalRoot;
-    
+
     modalRoot = document.getElementById('confirm-modal-root');
     if (!modalRoot) {
       modalRoot = document.createElement('div');
       modalRoot.id = 'confirm-modal-root';
       document.body.appendChild(modalRoot);
     }
-    
-    // Рендерим компонент
-    ReactDOM.render(
-      React.createElement(ConfirmModalComponent),
-      modalRoot
+
+    // React 18: createRoot API
+    if (!modalRootInstance) {
+      modalRootInstance = ReactDOM.createRoot(modalRoot);
+    }
+    modalRootInstance.render(
+      React.createElement(ConfirmModalComponent)
     );
-    
+
     return modalRoot;
   }
-  
+
   // === Публичное API ===
-  
+
   /**
    * Показать модалку подтверждения
    * @param {Object} options - Настройки модалки
@@ -180,14 +183,14 @@
    */
   function show(options = {}) {
     ensureRoot();
-    
+
     // Регистрируем в ModalManager
     if (HEYS.ModalManager) {
       modalCleanup = HEYS.ModalManager.register('confirm-modal', () => {
         hide(true); // skipManagerNotify = true
       });
     }
-    
+
     return new Promise((resolve) => {
       const modal = {
         ...DEFAULTS,
@@ -201,13 +204,13 @@
           resolve(false);
         }
       };
-      
+
       if (setModalState) {
         setModalState(modal);
       }
     });
   }
-  
+
   /**
    * Скрыть модалку
    */
@@ -217,14 +220,14 @@
       modalCleanup();
       modalCleanup = null;
     }
-    
+
     if (setModalState) {
       setModalState(null);
     }
   }
-  
+
   // === Готовые пресеты ===
-  
+
   /**
    * Подтверждение удаления
    */
@@ -239,7 +242,7 @@
       ...options
     });
   }
-  
+
   /**
    * Подтверждение действия (нейтральное)
    */
@@ -253,7 +256,7 @@
       ...options
     });
   }
-  
+
   /**
    * Подтверждение сохранения
    */
@@ -267,7 +270,7 @@
       ...options
     });
   }
-  
+
   // === Экспорт ===
   HEYS.ConfirmModal = {
     show,
@@ -278,7 +281,7 @@
     // Компонент для встраивания (если нужен)
     Component: ConfirmModalComponent
   };
-  
+
   // Инициализация при загрузке
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', ensureRoot);
@@ -286,5 +289,5 @@
     // Небольшая задержка чтобы React точно загрузился
     setTimeout(ensureRoot, 0);
   }
-  
+
 })(typeof window !== 'undefined' ? window : global);

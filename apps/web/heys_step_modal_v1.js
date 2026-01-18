@@ -725,6 +725,13 @@
       goToStep
     }), [stepData, updateStepData, currentStepIndex, totalSteps, goToStep]);
 
+    // Закрытие по клику на backdrop (вне модалки)
+    const handleBackdropClick = useCallback((e) => {
+      if (e.target.classList.contains('mc-backdrop') && onClose) {
+        onClose();
+      }
+    }, [onClose]);
+
     if (!currentConfig) {
       return null;
     }
@@ -736,12 +743,16 @@
 
     const StepComponent = currentConfig.component;
 
-    // Закрытие по клику на backdrop (вне модалки)
-    const handleBackdropClick = useCallback((e) => {
-      if (e.target.classList.contains('mc-backdrop') && onClose) {
-        onClose();
-      }
-    }, [onClose]);
+    const headerRightContent = typeof context.headerRight === 'function'
+      ? context.headerRight({
+        stepData,
+        currentConfig,
+        currentStepIndex,
+        totalSteps,
+        context,
+        goToStep // Добавляем для навигации на другие шаги
+      })
+      : context.headerRight;
 
     return React.createElement(StepModalContext.Provider, { value: contextValue },
       React.createElement('div', {
@@ -793,8 +804,8 @@
             // finishLabel — кастомный текст для последнего шага (например "Добавить")
             // currentConfig.nextLabel — кастомный текст для конкретного шага
             React.createElement('div', { className: 'mc-header-right' },
-              context.headerRight
-                ? React.createElement('span', { className: 'mc-header-right-text' }, context.headerRight)
+              headerRightContent
+                ? React.createElement('span', { className: 'mc-header-right-text' }, headerRightContent)
                 : (!(hidePrimaryOnFirst && currentStepIndex === 0) && !currentConfig.hideHeaderNext && React.createElement('button', {
                   className: 'mc-header-btn mc-header-btn--primary',
                   onClick: handleNext
@@ -857,6 +868,7 @@
 
   // === API для показа модалки ===
   let modalRoot = null;
+  let modalRootInstance = null; // React 18 createRoot instance
   let currentModalElement = null;
   let savedScrollY = 0; // Сохраняем позицию скролла
   let modalCleanup = null; // Cleanup функция для ModalManager
@@ -901,7 +913,11 @@
       onClose: handleClose
     });
 
-    ReactDOM.render(currentModalElement, modalRoot);
+    // React 18: createRoot API
+    if (!modalRootInstance) {
+      modalRootInstance = ReactDOM.createRoot(modalRoot);
+    }
+    modalRootInstance.render(currentModalElement);
   }
 
   function hideStepModal(options = {}) {
@@ -926,8 +942,15 @@
     }
     // Иначе скролл остаётся на месте (не нужно восстанавливать, т.к. мы не меняли position)
 
-    if (modalRoot) {
-      ReactDOM.unmountComponentAtNode(modalRoot);
+    // React 18: unmount через root instance
+    if (modalRootInstance) {
+      modalRootInstance.unmount();
+      modalRootInstance = null; // Сбрасываем для следующего показа
+    }
+    // Удаляем контейнер из DOM для корректного пересоздания createRoot
+    if (modalRoot && modalRoot.parentNode) {
+      modalRoot.parentNode.removeChild(modalRoot);
+      modalRoot = null;
     }
   }
 

@@ -56,13 +56,18 @@
         } = AppHooks;
 
         function App() {
-            const useTabState = AppTabState.useTabState
-                || (({ React: HookReact }) => ({
-                    tab: HookReact.useState('stats')[0],
-                    setTab: () => { },
-                    defaultTab: 'stats',
-                    setDefaultTab: () => { },
-                }));
+            const getStableHook = (primaryHook, fallbackHook) => {
+                const hookRef = React.useRef(primaryHook || fallbackHook);
+                return hookRef.current;
+            };
+
+            const fallbackUseTabState = ({ React: HookReact }) => ({
+                tab: HookReact.useState('stats')[0],
+                setTab: () => { },
+                defaultTab: 'stats',
+                setDefaultTab: () => { },
+            });
+            const useTabState = getStableHook(AppTabState.useTabState, fallbackUseTabState);
             const tabState = useTabState({ React });
             const { tab, setTab, defaultTab, setDefaultTab } = tabState;
 
@@ -71,34 +76,48 @@
                 HEYS.cycleTheme = cycleTheme;
             }, [cycleTheme]);
 
-            const useTwemojiEffect = AppTwemojiEffect.useTwemojiEffect
-                || (({ React: HookReact }) => HookReact.useEffect(() => { }, []));
+            const fallbackUseTwemojiEffect = ({ React: HookReact }) => HookReact.useEffect(() => { }, []);
+            const useTwemojiEffect = getStableHook(AppTwemojiEffect.useTwemojiEffect, fallbackUseTwemojiEffect);
             useTwemojiEffect({ React, tab });
 
             const U = HEYS.utils || { lsGet: (k, d) => d, lsSet: () => { } };
             const cloud = HEYS.cloud || {};
-            const useAppCoreState = AppCoreState.useAppCoreState
-                || (({ React: HookReact, AppHooks: HookAppHooks, cloud: hookCloud, U: hookU }) => {
-                    const { useClientState: hookUseClientState, useCloudClients: hookUseCloudClients } = HookAppHooks || {};
-                    const [loginError, setLoginError] = HookReact.useState('');
-                    const clientState = hookUseClientState ? hookUseClientState(hookCloud, hookU) : {
-                        status: 'offline', setStatus: () => { },
-                        syncVer: 0, setSyncVer: () => { },
-                        calendarVer: 0, setCalendarVer: () => { },
-                        clients: [], setClients: () => { },
-                        clientsSource: 'local', setClientsSource: () => { },
-                        clientId: null, setClientId: () => { },
-                        newName: '', setNewName: () => { },
-                        cloudUser: null, setCloudUser: () => { },
-                        isInitializing: false, setIsInitializing: () => { },
-                        products: [], setProducts: () => { },
-                        backupMeta: null, setBackupMeta: () => { },
-                        backupBusy: false, setBackupBusy: () => { },
-                        needsConsent: false, setNeedsConsent: () => { },
-                        checkingConsent: false, setCheckingConsent: () => { },
-                        curatorTab: 'clients', setCuratorTab: () => { },
-                    };
-                    const {
+
+            const fallbackUseAppCoreState = ({ React: HookReact, AppHooks: HookAppHooks, cloud: hookCloud, U: hookU }) => {
+                const { useClientState: hookUseClientState, useCloudClients: hookUseCloudClients } = HookAppHooks || {};
+                const [loginError, setLoginError] = HookReact.useState('');
+                const clientState = hookUseClientState ? hookUseClientState(hookCloud, hookU) : {
+                    status: 'offline', setStatus: () => { },
+                    syncVer: 0, setSyncVer: () => { },
+                    calendarVer: 0, setCalendarVer: () => { },
+                    clients: [], setClients: () => { },
+                    clientsSource: 'local', setClientsSource: () => { },
+                    clientId: null, setClientId: () => { },
+                    newName: '', setNewName: () => { },
+                    cloudUser: null, setCloudUser: () => { },
+                    isInitializing: false, setIsInitializing: () => { },
+                    products: [], setProducts: () => { },
+                    backupMeta: null, setBackupMeta: () => { },
+                    backupBusy: false, setBackupBusy: () => { },
+                    needsConsent: false, setNeedsConsent: () => { },
+                    checkingConsent: false, setCheckingConsent: () => { },
+                    curatorTab: 'clients', setCuratorTab: () => { },
+                };
+                const {
+                    clients,
+                    setClients,
+                    clientsSource,
+                    setClientsSource,
+                    clientId,
+                    setClientId,
+                    cloudUser,
+                    setCloudUser,
+                    setProducts,
+                    setStatus,
+                    setSyncVer,
+                } = clientState;
+                const cloudClients = hookUseCloudClients
+                    ? hookUseCloudClients(hookCloud, hookU, {
                         clients,
                         setClients,
                         clientsSource,
@@ -110,33 +129,20 @@
                         setProducts,
                         setStatus,
                         setSyncVer,
-                    } = clientState;
-                    const cloudClients = hookUseCloudClients
-                        ? hookUseCloudClients(hookCloud, hookU, {
-                            clients,
-                            setClients,
-                            clientsSource,
-                            setClientsSource,
-                            clientId,
-                            setClientId,
-                            cloudUser,
-                            setCloudUser,
-                            setProducts,
-                            setStatus,
-                            setSyncVer,
-                            setLoginError,
-                        })
-                        : {
-                            ONE_CURATOR_MODE: false,
-                            fetchClientsFromCloud: async () => [],
-                            addClientToCloud: async () => ({}),
-                            renameClient: async () => ({}),
-                            removeClient: async () => ({}),
-                            cloudSignIn: async () => ({}),
-                            cloudSignOut: async () => ({}),
-                        };
-                    return { clientState, cloudClients, loginError, setLoginError };
-                });
+                        setLoginError,
+                    })
+                    : {
+                        ONE_CURATOR_MODE: false,
+                        fetchClientsFromCloud: async () => [],
+                        addClientToCloud: async () => ({}),
+                        renameClient: async () => ({}),
+                        removeClient: async () => ({}),
+                        cloudSignIn: async () => ({}),
+                        cloudSignOut: async () => ({}),
+                    };
+                return { clientState, cloudClients, loginError, setLoginError };
+            };
+            const useAppCoreState = getStableHook(AppCoreState.useAppCoreState, fallbackUseAppCoreState);
             const coreState = useAppCoreState({ React, AppHooks, cloud, U });
             const { clientState, cloudClients, loginError, setLoginError } = coreState;
             const {
@@ -166,17 +172,17 @@
                 cloudSignOut,
             } = cloudClients;
 
-            const useRuntimeState = AppRuntimeState.useRuntimeState
-                || (({ React: HookReact }) => ({
-                    widgetsEditMode: HookReact.useState(false)[0],
-                    setWidgetsEditMode: () => { },
-                    swipeState: {
-                        slideDirection: null,
-                        edgeBounce: null,
-                        onTouchStart: () => { },
-                        onTouchEnd: () => { },
-                    },
-                }));
+            const fallbackUseRuntimeState = ({ React: HookReact }) => ({
+                widgetsEditMode: HookReact.useState(false)[0],
+                setWidgetsEditMode: () => { },
+                swipeState: {
+                    slideDirection: null,
+                    edgeBounce: null,
+                    onTouchStart: () => { },
+                    onTouchEnd: () => { },
+                },
+            });
+            const useRuntimeState = getStableHook(AppRuntimeState.useRuntimeState, fallbackUseRuntimeState);
             const runtimeState = useRuntimeState({
                 React,
                 AppRuntimeEffects,
@@ -191,62 +197,67 @@
             });
             const { widgetsEditMode } = runtimeState;
             const { slideDirection, edgeBounce, onTouchStart, onTouchEnd } = runtimeState.swipeState;
-            const useDateSelectionState = AppDateState.useDateSelectionState
-                || (({ React: HookReact }) => {
-                    const todayISO = () => {
-                        const d = new Date();
-                        const hour = d.getHours();
-                        if (hour < 3) {
-                            d.setDate(d.getDate() - 1);
-                        }
-                        return d.getFullYear()
-                            + '-' + String(d.getMonth() + 1).padStart(2, '0')
-                            + '-' + String(d.getDate()).padStart(2, '0');
-                    };
-                    const [selectedDate, setSelectedDate] = HookReact.useState(todayISO());
-                    return { todayISO, selectedDate, setSelectedDate };
-                });
+
+            const fallbackUseDateSelectionState = ({ React: HookReact }) => {
+                const todayISO = () => {
+                    const d = new Date();
+                    const hour = d.getHours();
+                    if (hour < 3) {
+                        d.setDate(d.getDate() - 1);
+                    }
+                    return d.getFullYear()
+                        + '-' + String(d.getMonth() + 1).padStart(2, '0')
+                        + '-' + String(d.getDate()).padStart(2, '0');
+                };
+                const [selectedDate, setSelectedDate] = HookReact.useState(todayISO());
+                return { todayISO, selectedDate, setSelectedDate };
+            };
+            const useDateSelectionState = getStableHook(AppDateState.useDateSelectionState, fallbackUseDateSelectionState);
             const dateSelectionState = useDateSelectionState({ React });
             const { todayISO, selectedDate, setSelectedDate } = dateSelectionState;
 
-            const useUpdateNotifications = AppUpdateNotifications.useUpdateNotifications
-                || (({ React: HookReact }) => {
-                    const [showUpdateToast, setShowUpdateToast] = HookReact.useState(false);
-                    const [notification, setNotification] = HookReact.useState(null);
-                    HookReact.useEffect(() => { }, []);
-                    const handleUpdate = HookReact.useCallback(() => { }, []);
-                    const dismissUpdateToast = HookReact.useCallback(() => { }, []);
-                    return { showUpdateToast, notification, setNotification, handleUpdate, dismissUpdateToast };
-                });
-            const useBannerState = AppBannerState.useBannerState
-                || (({ React: HookReact, usePwaPrompts: fallbackPwa, useCloudSyncStatus: fallbackCloud, useUpdateNotifications: fallbackUpdates }) => {
-                    const pwa = fallbackPwa ? fallbackPwa() : {
-                        showPwaBanner: false,
-                        showIosPwaBanner: false,
-                        handlePwaInstall: () => { },
-                        dismissPwaBanner: () => { },
-                        dismissIosPwaBanner: () => { },
-                    };
-                    const cloudSync = fallbackCloud ? fallbackCloud() : {
-                        cloudStatus: 'offline',
-                        pendingCount: 0,
-                        pendingDetails: { days: 0, products: 0, profile: 0, other: 0 },
-                        showOfflineBanner: false,
-                        showOnlineBanner: false,
-                        syncProgress: null,
-                        retryCountdown: 0,
-                        handleRetrySync: () => { },
-                        offlineDuration: 0,
-                    };
-                    const updates = fallbackUpdates ? fallbackUpdates({ React: HookReact }) : {
-                        showUpdateToast: false,
-                        notification: null,
-                        setNotification: () => { },
-                        handleUpdate: () => { },
-                        dismissUpdateToast: () => { },
-                    };
-                    return { ...pwa, ...cloudSync, ...updates };
-                });
+            const fallbackUseUpdateNotifications = ({ React: HookReact }) => {
+                const [showUpdateToast, setShowUpdateToast] = HookReact.useState(false);
+                const [notification, setNotification] = HookReact.useState(null);
+                HookReact.useEffect(() => { }, []);
+                const handleUpdate = HookReact.useCallback(() => { }, []);
+                const dismissUpdateToast = HookReact.useCallback(() => { }, []);
+                return { showUpdateToast, notification, setNotification, handleUpdate, dismissUpdateToast };
+            };
+            const useUpdateNotifications = getStableHook(
+                AppUpdateNotifications.useUpdateNotifications,
+                fallbackUseUpdateNotifications,
+            );
+
+            const fallbackUseBannerState = ({ React: HookReact, usePwaPrompts: fallbackPwa, useCloudSyncStatus: fallbackCloud, useUpdateNotifications: fallbackUpdates }) => {
+                const pwa = fallbackPwa ? fallbackPwa() : {
+                    showPwaBanner: false,
+                    showIosPwaBanner: false,
+                    handlePwaInstall: () => { },
+                    dismissPwaBanner: () => { },
+                    dismissIosPwaBanner: () => { },
+                };
+                const cloudSync = fallbackCloud ? fallbackCloud() : {
+                    cloudStatus: 'offline',
+                    pendingCount: 0,
+                    pendingDetails: { days: 0, products: 0, profile: 0, other: 0 },
+                    showOfflineBanner: false,
+                    showOnlineBanner: false,
+                    syncProgress: null,
+                    retryCountdown: 0,
+                    handleRetrySync: () => { },
+                    offlineDuration: 0,
+                };
+                const updates = fallbackUpdates ? fallbackUpdates({ React: HookReact }) : {
+                    showUpdateToast: false,
+                    notification: null,
+                    setNotification: () => { },
+                    handleUpdate: () => { },
+                    dismissUpdateToast: () => { },
+                };
+                return { ...pwa, ...cloudSync, ...updates };
+            };
+            const useBannerState = getStableHook(AppBannerState.useBannerState, fallbackUseBannerState);
             const bannerState = useBannerState({
                 React,
                 usePwaPrompts,
@@ -275,8 +286,8 @@
                 dismissUpdateToast,
             } = bannerState;
 
-            const useDatePickerActiveDays = AppDateState.useDatePickerActiveDays
-                || (({ React: HookReact }) => HookReact.useMemo(() => new Map(), []));
+            const fallbackUseDatePickerActiveDays = ({ React: HookReact }) => HookReact.useMemo(() => new Map(), []);
+            const useDatePickerActiveDays = getStableHook(AppDateState.useDatePickerActiveDays, fallbackUseDatePickerActiveDays);
             const datePickerActiveDays = useDatePickerActiveDays({
                 React,
                 selectedDate,
@@ -287,18 +298,18 @@
                 U,
             });
 
-            const useBackupState = AppBackupState.useBackupState
-                || (({ React: HookReact }) => ({
-                    backupAllKeys: () => ({ ok: false, reason: 'no-backup-helpers' }),
-                    restoreFromBackup: () => ({ ok: false, reason: 'no-backup-helpers' }),
-                    formatBackupTime: () => '—',
-                    backupActions: {
-                        handleManualBackup: () => { },
-                        handleExportBackup: () => { },
-                        handleRestoreProducts: () => { },
-                        handleRestoreAll: () => { },
-                    },
-                }));
+            const fallbackUseBackupState = ({ React: HookReact }) => ({
+                backupAllKeys: () => ({ ok: false, reason: 'no-backup-helpers' }),
+                restoreFromBackup: () => ({ ok: false, reason: 'no-backup-helpers' }),
+                formatBackupTime: () => '—',
+                backupActions: {
+                    handleManualBackup: () => { },
+                    handleExportBackup: () => { },
+                    handleRestoreProducts: () => { },
+                    handleRestoreAll: () => { },
+                },
+            });
+            const useBackupState = getStableHook(AppBackupState.useBackupState, fallbackUseBackupState);
             const backupState = useBackupState({
                 React,
                 AppBackup,
@@ -318,10 +329,13 @@
                 backupActions,
             } = backupState;
 
-            const useClientStateManager = AppClientStateManager.useClientStateManager
-                || (({ React: HookReact }) => ({
-                    skipTabSwitchRef: HookReact.useRef(false),
-                }));
+            const fallbackUseClientStateManager = ({ React: HookReact }) => ({
+                skipTabSwitchRef: HookReact.useRef(false),
+            });
+            const useClientStateManager = getStableHook(
+                AppClientStateManager.useClientStateManager,
+                fallbackUseClientStateManager,
+            );
             const { skipTabSwitchRef } = useClientStateManager({
                 React,
                 clientId,
@@ -331,8 +345,8 @@
                 setSyncVer,
             });
 
-            const useSyncEffects = AppSyncEffects.useSyncEffects
-                || (({ React: HookReact }) => HookReact.useEffect(() => { }, []));
+            const fallbackUseSyncEffects = ({ React: HookReact }) => HookReact.useEffect(() => { }, []);
+            const useSyncEffects = getStableHook(AppSyncEffects.useSyncEffects, fallbackUseSyncEffects);
             useSyncEffects({
                 React,
                 U,
@@ -344,8 +358,8 @@
                 setBackupMeta,
             });
 
-            const useGlobalBindings = AppGlobalBindings.useGlobalBindings
-                || (({ React: HookReact }) => HookReact.useEffect(() => { }, []));
+            const fallbackUseGlobalBindings = ({ React: HookReact }) => HookReact.useEffect(() => { }, []);
+            const useGlobalBindings = getStableHook(AppGlobalBindings.useGlobalBindings, fallbackUseGlobalBindings);
             useGlobalBindings({
                 React,
                 cloud,
@@ -396,7 +410,7 @@
                     setNewPin: () => { },
                 };
             };
-            const useAppUIState = AppUIState.useAppUIState || fallbackAppUIState;
+            const useAppUIState = getStableHook(AppUIState.useAppUIState, fallbackAppUIState);
             const uiState = useAppUIState({
                 React,
                 cloudSignIn,
@@ -424,9 +438,14 @@
                 setNewPin,
             } = uiState;
 
-            const morningCheckinState = AppMorningCheckin.useMorningCheckinSync
-                ? AppMorningCheckin.useMorningCheckinSync({ React, isInitializing, clientId })
-                : { showMorningCheckin: false, setShowMorningCheckin: () => { } };
+            const fallbackUseMorningCheckinSync = ({ React: HookReact }) => {
+                return { showMorningCheckin: false, setShowMorningCheckin: () => { } };
+            };
+            const useMorningCheckinSync = getStableHook(
+                AppMorningCheckin.useMorningCheckinSync,
+                fallbackUseMorningCheckinSync,
+            );
+            const morningCheckinState = useMorningCheckinSync({ React, isInitializing, clientId });
             const { showMorningCheckin, setShowMorningCheckin } = morningCheckinState;
 
             const getClientInitials = AppClientHelpers.getClientInitials || ((name) => {
@@ -446,15 +465,15 @@
             const getClientStats = AppClientHelpers.getClientStats || (() => ({ lastActiveDate: null, streak: 0 }));
             const formatLastActive = AppClientHelpers.formatLastActive || (() => '');
 
-            const useGateState = AppGateState.useGateState
-                || (({ React: HookReact }) => ({
-                    gate: null,
-                    desktopGate: null,
-                    consentGate: null,
-                    isDesktop: window.innerWidth > 768,
-                    isCurator: false,
-                    desktopAllowed: false,
-                }));
+            const fallbackUseGateState = ({ React: HookReact }) => ({
+                gate: null,
+                desktopGate: null,
+                consentGate: null,
+                isDesktop: window.innerWidth > 768,
+                isCurator: false,
+                desktopAllowed: false,
+            });
+            const useGateState = getStableHook(AppGateState.useGateState, fallbackUseGateState);
             const gateState = useGateState({
                 React,
                 AppGateFlow,
@@ -493,8 +512,8 @@
             });
             const { gate, desktopGate, consentGate } = gateState;
 
-            const useClientInitState = AppClientInit.useClientInitState
-                || (({ React: HookReact }) => HookReact.useEffect(() => { }, []));
+            const fallbackUseClientInitState = ({ React: HookReact }) => HookReact.useEffect(() => { }, []);
+            const useClientInitState = getStableHook(AppClientInit.useClientInitState, fallbackUseClientInitState);
             useClientInitState({
                 React,
                 AppAuthInit,
@@ -519,55 +538,55 @@
             const createTestClients = AppClientManagement.createTestClients
                 || (async () => { });
 
-            const useAppDerivedState = AppDerivedState.useAppDerivedState
-                || (({ React: HookReact, pendingDetails: fallbackPendingDetails, clients: fallbackClients, clientId: fallbackClientId, needsConsent: fallbackNeedsConsent, checkingConsent: fallbackCheckingConsent, showMorningCheckin: fallbackShowMorningCheckin, U: fallbackU, cloud: fallbackCloud }) => {
-                    const pendingText = HookReact.useMemo(() => {
-                        if (!fallbackPendingDetails) return '';
-                        const parts = [];
-                        if (fallbackPendingDetails.days > 0) parts.push(`${fallbackPendingDetails.days} дн.`);
-                        if (fallbackPendingDetails.products > 0) parts.push(`${fallbackPendingDetails.products} прод.`);
-                        if (fallbackPendingDetails.profile > 0) parts.push('профиль');
-                        if (fallbackPendingDetails.other > 0) parts.push(`${fallbackPendingDetails.other} др.`);
-                        return parts.length > 0 ? parts.join(', ') : '';
-                    }, [fallbackPendingDetails]);
+            const fallbackUseAppDerivedState = ({ React: HookReact, pendingDetails: fallbackPendingDetails, clients: fallbackClients, clientId: fallbackClientId, needsConsent: fallbackNeedsConsent, checkingConsent: fallbackCheckingConsent, showMorningCheckin: fallbackShowMorningCheckin, U: fallbackU, cloud: fallbackCloud }) => {
+                const pendingText = HookReact.useMemo(() => {
+                    if (!fallbackPendingDetails) return '';
+                    const parts = [];
+                    if (fallbackPendingDetails.days > 0) parts.push(`${fallbackPendingDetails.days} дн.`);
+                    if (fallbackPendingDetails.products > 0) parts.push(`${fallbackPendingDetails.products} прод.`);
+                    if (fallbackPendingDetails.profile > 0) parts.push('профиль');
+                    if (fallbackPendingDetails.other > 0) parts.push(`${fallbackPendingDetails.other} др.`);
+                    return parts.length > 0 ? parts.join(', ') : '';
+                }, [fallbackPendingDetails]);
 
-                    const cachedProfile = HookReact.useMemo(() => {
-                        const utils = fallbackU || HEYS?.utils;
-                        return utils && utils.lsGet ? utils.lsGet('heys_profile', {}) : {};
-                    }, [fallbackU]);
+                const cachedProfile = HookReact.useMemo(() => {
+                    const utils = fallbackU || HEYS?.utils;
+                    return utils && utils.lsGet ? utils.lsGet('heys_profile', {}) : {};
+                }, [fallbackU]);
 
-                    const isRpcMode = fallbackCloud?.isPinAuthClient?.() || false;
-                    const currentClientName = HookReact.useMemo(() => {
-                        if (isRpcMode) {
-                            const fullName = cachedProfile.name
-                                || [cachedProfile.firstName, cachedProfile.lastName].filter(Boolean).join(' ');
-                            if (fullName) return fullName;
-                            try {
-                                const pendingRaw = localStorage.getItem('heys_pending_client_name');
-                                if (pendingRaw) {
-                                    const pendingName = JSON.parse(pendingRaw);
-                                    if (pendingName) return pendingName;
-                                }
-                            } catch (e) { }
-                            return 'Мой профиль';
-                        }
-                        return Array.isArray(fallbackClients)
-                            ? (fallbackClients.find((c) => c.id === fallbackClientId)?.name || 'Выберите клиента')
-                            : 'Выберите клиента';
-                    }, [isRpcMode, cachedProfile, fallbackClients, fallbackClientId]);
+                const isRpcMode = fallbackCloud?.isPinAuthClient?.() || false;
+                const currentClientName = HookReact.useMemo(() => {
+                    if (isRpcMode) {
+                        const fullName = cachedProfile.name
+                            || [cachedProfile.firstName, cachedProfile.lastName].filter(Boolean).join(' ');
+                        if (fullName) return fullName;
+                        try {
+                            const pendingRaw = localStorage.getItem('heys_pending_client_name');
+                            if (pendingRaw) {
+                                const pendingName = JSON.parse(pendingRaw);
+                                if (pendingName) return pendingName;
+                            }
+                        } catch (e) { }
+                        return 'Мой профиль';
+                    }
+                    return Array.isArray(fallbackClients)
+                        ? (fallbackClients.find((c) => c.id === fallbackClientId)?.name || 'Выберите клиента')
+                        : 'Выберите клиента';
+                }, [isRpcMode, cachedProfile, fallbackClients, fallbackClientId]);
 
-                    const isMorningCheckinBlocking = fallbackShowMorningCheckin === true && HEYS?.MorningCheckin;
-                    const isConsentBlocking = fallbackNeedsConsent || fallbackCheckingConsent;
+                const isMorningCheckinBlocking = fallbackShowMorningCheckin === true && HEYS?.MorningCheckin;
+                const isConsentBlocking = fallbackNeedsConsent || fallbackCheckingConsent;
 
-                    return {
-                        pendingText,
-                        cachedProfile,
-                        isRpcMode,
-                        currentClientName,
-                        isMorningCheckinBlocking,
-                        isConsentBlocking,
-                    };
-                });
+                return {
+                    pendingText,
+                    cachedProfile,
+                    isRpcMode,
+                    currentClientName,
+                    isMorningCheckinBlocking,
+                    isConsentBlocking,
+                };
+            };
+            const useAppDerivedState = getStableHook(AppDerivedState.useAppDerivedState, fallbackUseAppDerivedState);
             const derivedState = useAppDerivedState({
                 React,
                 pendingDetails,

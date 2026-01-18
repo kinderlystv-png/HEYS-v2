@@ -82,6 +82,11 @@ const ALLOWED_COLUMNS = {
     'id', 'name', 'name_norm', 'fingerprint',
     'simple100', 'complex100', 'protein100', 'badfat100', 'goodfat100', 'trans100', 'fiber100',
     'gi', 'harm', 'category', 'portions', 'description',
+    'sodium100', 'omega3_100', 'omega6_100', 'nova_group', 'additives', 'nutrient_density',
+    'is_organic', 'is_whole_grain', 'is_fermented', 'is_raw',
+    'vitamin_a', 'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k',
+    'vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12',
+    'calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'selenium', 'iodine',
     'created_at', 'updated_at'
     // ❌ created_by_user_id, created_by_client_id — REMOVED: авторство скрыто от публичного API
   ],
@@ -107,27 +112,27 @@ const ALLOWED_COLUMNS = {
  */
 function sanitizeSelectColumns(selectParam, tableName) {
   const allowedForTable = ALLOWED_COLUMNS[tableName];
-  
+
   // 🔐 Таблица должна быть в whitelist колонок (не разрешаем * для unknown таблиц)
   if (!allowedForTable) {
     console.error(`[REST] No column whitelist for table: "${tableName}"`);
     return null;
   }
-  
+
   // '*' → возвращаем все разрешённые колонки (а не SQL *)
   if (!selectParam || selectParam === '*') {
     return allowedForTable.map(c => `"${c}"`).join(', ');
   }
-  
+
   // Парсим список колонок
   const requestedColumns = selectParam.split(',').map(c => c.trim()).filter(c => c.length > 0);
-  
+
   // 🔐 Пустой список после фильтрации — ошибка (select= без колонок)
   if (requestedColumns.length === 0) {
     console.error(`[REST] Empty column list after parsing: "${selectParam}"`);
     return null;
   }
-  
+
   // Валидируем каждую колонку
   const validColumns = [];
   for (const col of requestedColumns) {
@@ -136,30 +141,30 @@ function sanitizeSelectColumns(selectParam, tableName) {
       console.error(`[REST] Invalid column name rejected: "${col}"`);
       return null; // Подозрительный символ — отклоняем весь запрос
     }
-    
+
     // Проверяем whitelist
     if (!allowedForTable.includes(col)) {
       console.error(`[REST] Column not in whitelist: "${col}" for table "${tableName}"`);
       return null; // Колонка не в whitelist — отклоняем
     }
-    
+
     validColumns.push(`"${col}"`);
   }
-  
+
   // Все колонки провалидированы
   return validColumns.join(', ');
 }
 
 function getCorsHeaders(origin) {
   const headers = {
-    // 🔐 P3: Read-only — only GET/OPTIONS allowed
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    // 🔐 CORS: All REST methods allowed (GET/POST/PATCH/DELETE)
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, Prefer, apikey',
     'Access-Control-Allow-Credentials': 'true',
     'Content-Type': 'application/json',
     'Vary': 'Origin'  // 🔐 Важно для кэширования
   };
-  
+
   // 🔐 Только разрешённые origin получают ACAO
   const isAllowed = origin && ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
   if (isAllowed) {
@@ -167,7 +172,7 @@ function getCorsHeaders(origin) {
   }
   // Без Origin (серверный запрос) — не блокируем
   // С неразрешённым Origin — браузер заблокирует
-  
+
   return headers;
 }
 
@@ -183,7 +188,7 @@ module.exports.handler = async function (event, context) {
       body: ''
     };
   }
-  
+
   // 🔐 P0: Explicit 403 for disallowed browser origins
   // Server-to-server (origin === null) is allowed
   if (origin && !ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed))) {
@@ -216,7 +221,7 @@ module.exports.handler = async function (event, context) {
   // ✅ params.table — YC API Gateway format (path parameters)
   // ✅ pathParameters.table — AWS/Supabase format (fallback)
   let tableName = event.params?.table || event.pathParameters?.table;
-  
+
   // Если не нашли в параметрах, парсим из path
   // Поддерживаем оба формата: /rest/table и /rest/v1/table (Supabase SDK)
   if (!tableName && event.path) {
@@ -225,7 +230,7 @@ module.exports.handler = async function (event, context) {
       tableName = pathMatch[1];
     }
   }
-  
+
   if (!tableName) {
     return {
       statusCode: 400,
@@ -248,17 +253,18 @@ module.exports.handler = async function (event, context) {
   // 🔐 P1.1 + P3: EARLY VALIDATION — все проверки входа ДО подключения к БД
   // Fail fast: не тратим ресурсы на connect если input невалидный
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const method = event.httpMethod;
-  
+
   // 🔐 P3.1: Разрешённые таблицы для записи (POST/PATCH/DELETE)
   // Остальные таблицы — read-only (только GET)
   const WRITE_ALLOWED_TABLES = [
     'client_kv_store',           // Куратор sync
-    'shared_products_pending'    // Модерация продуктов куратором
+    'shared_products_pending',   // Модерация продуктов куратором
+    'shared_products'            // Админ-удаление/правки shared продуктов
   ];
   const isWriteAllowed = WRITE_ALLOWED_TABLES.includes(tableName);
-  
+
   if (method !== 'GET' && !isWriteAllowed) {
     return {
       statusCode: 405,
@@ -266,7 +272,7 @@ module.exports.handler = async function (event, context) {
       body: JSON.stringify({ error: 'Method not allowed. REST API is read-only. Use RPC for writes.' })
     };
   }
-  
+
   // Разрешённые методы для writable tables
   if (method !== 'GET' && method !== 'POST' && method !== 'PATCH' && method !== 'DELETE') {
     return {
@@ -275,7 +281,7 @@ module.exports.handler = async function (event, context) {
       body: JSON.stringify({ error: `Method ${method} not allowed.` })
     };
   }
-  
+
   // Для GET: валидируем select columns ДО подключения к БД
   let selectColumns = null;
   if (method === 'GET') {
@@ -307,18 +313,18 @@ module.exports.handler = async function (event, context) {
         const params = { ...event.queryStringParameters };
         delete params.table;
         delete params.select; // Уже обработано выше
-        
+
         // selectColumns уже валидированы и санитизированы выше (early validation)
         let query = `SELECT ${selectColumns} FROM "${tableName}"`;
         const conditions = [];
         const values = [];
         let i = 1;
-        
+
         for (const [key, value] of Object.entries(params)) {
           // Поддержка ДВУХ форматов:
           // 1. PostgREST style: field=eq.value (value начинается с оператора)
           // 2. Supabase-like: eq.field=value (key начинается с оператора)
-          
+
           // Формат 2: eq.field=value, gt.field=value, etc.
           if (key.startsWith('eq.')) {
             const fieldName = key.replace('eq.', '');
@@ -421,25 +427,25 @@ module.exports.handler = async function (event, context) {
             values.push(value);
           }
         }
-        
+
         if (conditions.length > 0) {
           query += ` WHERE ${conditions.join(' AND ')}`;
         }
-        
+
         if (params.order) {
           query += ` ORDER BY ${params.order.replace('.desc', ' DESC').replace('.asc', ' ASC')}`;
         }
-        
+
         if (params.limit) {
           query += ` LIMIT ${parseInt(params.limit)}`;
         }
-        
+
         if (params.offset) {
           query += ` OFFSET ${parseInt(params.offset)}`;
         }
-        
+
         result = await client.query(query, values);
-        
+
         return {
           statusCode: 200,
           headers: corsHeaders,
@@ -456,21 +462,21 @@ module.exports.handler = async function (event, context) {
             body: JSON.stringify({ error: 'POST not allowed for this table.' })
           };
         }
-        
+
         const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
         const params = event.queryStringParameters || {};
-        
+
         // [DEBUG] Log request summary (не полный body чтобы не захламлять логи)
         const rowsPreview = Array.isArray(body) ? body.length : 1;
         console.log('[REST POST REQUEST]', { table: tableName, rows: rowsPreview, params: Object.keys(params) });
-        
+
         // Поддержка upsert через on_conflict
         const onConflict = params.on_conflict;
         const isUpsert = params.upsert === 'true' && onConflict;
-        
+
         // 🔐 v57: Поддержка batch insert — массив объектов
         const rows = Array.isArray(body) ? body : [body];
-        
+
         if (rows.length === 0) {
           return {
             statusCode: 400,
@@ -478,18 +484,18 @@ module.exports.handler = async function (event, context) {
             body: JSON.stringify({ error: 'Empty body' })
           };
         }
-        
+
         // Колонки берём из первого объекта (все объекты должны иметь те же колонки)
         const columns = Object.keys(rows[0]);
-        
+
         // 🔐 FIX v2: JSON колонки ВСЕГДА нужно сериализовать в JSON строку
         const JSON_COLUMNS = ['v']; // client_kv_store.v is json type
-        
+
         // Формируем VALUES для batch insert
         const allValues = [];
         const allPlaceholders = [];
         let paramIdx = 1;
-        
+
         for (const row of rows) {
           const rowPlaceholders = [];
           for (const col of columns) {
@@ -504,9 +510,9 @@ module.exports.handler = async function (event, context) {
           }
           allPlaceholders.push(`(${rowPlaceholders.join(', ')})`);
         }
-        
+
         const quotedColumns = columns.map(c => `"${c}"`).join(', ');
-        
+
         let query;
         if (isUpsert) {
           // UPSERT: INSERT ... ON CONFLICT DO UPDATE
@@ -515,9 +521,9 @@ module.exports.handler = async function (event, context) {
             .filter(c => !onConflict.split(',').map(x => x.trim()).includes(c))
             .map(c => `"${c}" = EXCLUDED."${c}"`)
             .join(', ');
-          
+
           query = `INSERT INTO "${tableName}" (${quotedColumns}) VALUES ${allPlaceholders.join(', ')} ON CONFLICT (${conflictCols}) DO UPDATE SET ${updateSet}`;
-          
+
           // Добавляем updated_at если колонка не в body
           if (!columns.includes('updated_at')) {
             query = query.replace('DO UPDATE SET ', 'DO UPDATE SET "updated_at" = NOW(), ');
@@ -526,7 +532,7 @@ module.exports.handler = async function (event, context) {
           // Обычный INSERT
           query = `INSERT INTO "${tableName}" (${quotedColumns}) VALUES ${allPlaceholders.join(', ')}`;
         }
-        
+
         // RETURNING если нужен select
         const selectCols = params.select;
         if (selectCols) {
@@ -535,10 +541,10 @@ module.exports.handler = async function (event, context) {
             query += ` RETURNING ${sanitized}`;
           }
         }
-        
+
         console.log('[REST POST]', { table: tableName, isUpsert, onConflict, columns, rowCount: rows.length });
         result = await client.query(query, allValues);
-        
+
         // v58: Для upsert важно вернуть rowCount для подтверждения записи
         // result.rows пустой без RETURNING, но rowCount показывает кол-во затронутых строк
         const responseBody = selectCols ? result.rows : {
@@ -546,10 +552,10 @@ module.exports.handler = async function (event, context) {
           rowCount: result.rowCount,
           inserted: rows.length
         };
-        
+
         // [DEBUG] Log DB result
         console.log('[REST POST RESULT]', { dbRowCount: result.rowCount, responseRowCount: responseBody.rowCount || 'array' });
-        
+
         return {
           statusCode: isUpsert ? 200 : 201,
           headers: corsHeaders,
@@ -557,7 +563,7 @@ module.exports.handler = async function (event, context) {
         };
       }
 
-      // 🔐 P3.1: DELETE — только для client_kv_store
+      // 🔐 P3.1: DELETE — только для разрешённых writable таблиц
       case 'DELETE': {
         if (!isWriteAllowed) {
           return {
@@ -566,15 +572,15 @@ module.exports.handler = async function (event, context) {
             body: JSON.stringify({ error: 'DELETE not allowed for this table.' })
           };
         }
-        
+
         const params = { ...event.queryStringParameters };
         delete params.table;
-        
+
         // Строим WHERE из фильтров
         const conditions = [];
         const values = [];
         let i = 1;
-        
+
         for (const [key, value] of Object.entries(params)) {
           if (key.startsWith('eq.')) {
             const col = key.replace('eq.', '');
@@ -585,7 +591,7 @@ module.exports.handler = async function (event, context) {
             values.push(value.replace('eq.', ''));
           }
         }
-        
+
         if (conditions.length === 0) {
           return {
             statusCode: 400,
@@ -593,11 +599,11 @@ module.exports.handler = async function (event, context) {
             body: JSON.stringify({ error: 'DELETE requires at least one filter' })
           };
         }
-        
+
         const query = `DELETE FROM "${tableName}" WHERE ${conditions.join(' AND ')}`;
         console.log('[REST DELETE]', { table: tableName, conditions: conditions.length });
         result = await client.query(query, values);
-        
+
         return {
           statusCode: 200,
           headers: corsHeaders,
@@ -615,11 +621,11 @@ module.exports.handler = async function (event, context) {
 
   } catch (error) {
     console.error('[REST Error]', error.message);
-    
+
     return {
       statusCode: 500,
       headers: corsHeaders,
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         error: 'Database error',
         message: error.message,
         code: error.code

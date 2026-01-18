@@ -27,6 +27,166 @@
     }
   };
 
+  const getAutoPortions = (productName) => {
+    if (!productName) return [];
+    return HEYS.models?.getAutoPortions?.(productName) || [];
+  };
+
+  const normalizePortions = (list) => {
+    if (!Array.isArray(list)) return [];
+    return list
+      .map((p) => ({
+        name: String(p?.name || '').trim(),
+        grams: Number(p?.grams || 0)
+      }))
+      .filter((p) => p.name && p.grams > 0);
+  };
+
+  const saveProductPortions = (product, portions) => {
+    if (!product || !Array.isArray(portions)) return;
+    const U = HEYS.utils || {};
+    const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
+    const pid = String(product.id ?? product.product_id ?? product.name);
+    const idx = products.findIndex((p) => String(p.id ?? p.product_id ?? p.name) === pid);
+
+    if (idx === -1) return;
+
+    const updated = {
+      ...products[idx],
+      portions
+    };
+
+    const nextProducts = [...products];
+    nextProducts[idx] = updated;
+
+    if (HEYS.products?.setAll) {
+      HEYS.products.setAll(nextProducts);
+    } else if (HEYS.store?.set) {
+      HEYS.store.set('heys_products', nextProducts);
+    } else if (U.lsSet) {
+      U.lsSet('heys_products', nextProducts);
+    }
+  };
+
+  const isCuratorUser = () => !!HEYS.cloud?.getUser?.();
+
+  const isSharedProduct = (product) => {
+    if (!product) return false;
+    return !!(product._fromShared || product._source === 'shared' || product.is_shared);
+  };
+
+  const canEditProduct = (product) => {
+    if (!product) return false;
+    if (!isSharedProduct(product)) return true;
+    return isCuratorUser() || !!product.is_mine;
+  };
+
+  const notifyPortionsUpdated = (product, portions) => {
+    if (!product) return;
+    window.dispatchEvent(new CustomEvent('heys:product-portions-updated', {
+      detail: {
+        productId: product.id ?? product.product_id ?? product.name,
+        product,
+        portions: Array.isArray(portions) ? portions : []
+      }
+    }));
+  };
+
+  const updateSharedProductPortions = async (productId, portions) => {
+    if (!HEYS?.YandexAPI?.rest) {
+      HEYS.Toast?.warning('API недоступен для обновления') || alert('API недоступен для обновления');
+      return { ok: false };
+    }
+
+    try {
+      const { error } = await HEYS.YandexAPI.rest('shared_products', {
+        method: 'PATCH',
+        data: { portions },
+        filters: { 'eq.id': productId },
+        select: 'id,portions'
+      });
+
+      if (error) {
+        HEYS.Toast?.error('Ошибка обновления: ' + error) || alert('Ошибка обновления: ' + error);
+        return { ok: false };
+      }
+
+      HEYS.Toast?.success('Порции обновлены') || alert('Порции обновлены');
+      return { ok: true };
+    } catch (e) {
+      const msg = e?.message || 'Ошибка обновления';
+      HEYS.Toast?.error(msg) || alert(msg);
+      return { ok: false };
+    }
+  };
+
+  const openProductPortionsEditor = (product) => {
+    console.log('[openProductPortionsEditor] called with product:', product);
+    if (!product) {
+      console.log('[openProductPortionsEditor] no product, returning');
+      return;
+    }
+    if (!HEYS?.StepModal || !HEYS?.AddProductStep?.PortionsStep) {
+      console.log('[openProductPortionsEditor] StepModal or PortionsStep missing');
+      HEYS.Toast?.warning('Модалка порций недоступна') || alert('Модалка порций недоступна');
+      return;
+    }
+
+    if (!canEditProduct(product)) {
+      console.log('[openProductPortionsEditor] canEditProduct returned false');
+      HEYS.Toast?.warning('Нет доступа к редактированию') || alert('Нет доступа к редактированию');
+      return;
+    }
+
+    console.log('[openProductPortionsEditor] calling HEYS.StepModal.show');
+    HEYS.StepModal.show({
+      steps: [
+        {
+          id: 'portions',
+          title: 'Порции',
+          hint: 'Настройте порции',
+          icon: '🥣',
+          component: HEYS.AddProductStep.PortionsStep,
+          validate: () => true,
+          hideHeaderNext: true,
+          getInitialData: () => ({
+            selectedProduct: product,
+            portions: product.portions || []
+          })
+        }
+      ],
+      context: {
+        isEditMode: true,
+        editProduct: product,
+        onFinish: async ({ portions }) => {
+          const normalized = normalizePortions(portions || []);
+          const updatedProduct = {
+            ...product,
+            ...(normalized.length > 0 ? { portions: normalized } : {})
+          };
+
+          if (isSharedProduct(product)) {
+            const result = await updateSharedProductPortions(product.id, normalized);
+            if (result.ok) {
+              notifyPortionsUpdated(updatedProduct, normalized);
+            }
+            return;
+          }
+
+          saveProductPortions(updatedProduct, normalized);
+          notifyPortionsUpdated(updatedProduct, normalized);
+        }
+      },
+      showGreeting: false,
+      showStreak: false,
+      showTip: false,
+      showProgress: false,
+      allowSwipe: false,
+      hidePrimaryOnFirst: true,
+      title: ''
+    });
+  };
+
   // === Умный список продуктов: частота + свежесть ===
   function computeSmartProducts(products, dateKey) {
     if (!products || !products.length) return [];
@@ -507,11 +667,11 @@
         grams: defaultGrams,
         lastGrams: lastGrams // Для отображения подсказки
       });
-      // Автопереход на шаг граммов (index 3: search → grams)
-      // Шаг 2 (harm) — только для НОВЫХ продуктов, при выборе из базы пропускаем
+      // Автопереход на шаг граммов (index 4: search → grams)
+      // Шаги create/portions/harm — только для НОВЫХ продуктов
       // Увеличен таймаут для гарантии обновления state
       if (goToStep) {
-        setTimeout(() => goToStep(3, 'left'), 150);
+        setTimeout(() => goToStep(4, 'left'), 150);
       }
     }, [data, onChange, goToStep]);
 
@@ -947,6 +1107,105 @@
       setTimeout(() => textareaRef.current?.focus(), 100);
     }, []);
 
+    const MISSING_FIELD_LABELS = {
+      kcal100: 'Ккал',
+      carbs100: 'Углеводы',
+      simple100: 'Простые',
+      complex100: 'Сложные',
+      protein100: 'Белок',
+      fat100: 'Жиры',
+      badFat100: 'Вредные жиры',
+      goodFat100: 'Полезные жиры',
+      trans100: 'Транс-жиры',
+      fiber100: 'Клетчатка',
+      gi: 'ГИ',
+      harm: 'Вред'
+    };
+
+    const countExtendedFields = useCallback((product) => {
+      if (!product) return 0;
+      const fields = [
+        'sodium100', 'omega3_100', 'omega6_100', 'nova_group', 'additives', 'nutrient_density',
+        'is_organic', 'is_whole_grain', 'is_fermented', 'is_raw',
+        'vitamin_a', 'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k',
+        'vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12',
+        'calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'selenium', 'iodine'
+      ];
+
+      return fields.reduce((count, field) => {
+        const value = product[field];
+        if (Array.isArray(value)) return value.length > 0 ? count + 1 : count;
+        if (typeof value === 'boolean') return count + 1;
+        return value != null ? count + 1 : count;
+      }, 0);
+    }, []);
+
+    const formatMissingFields = useCallback((fields) => {
+      return fields
+        .map((field) => MISSING_FIELD_LABELS[field] || field)
+        .join(', ');
+    }, []);
+
+    const PREVIEW_FIELDS = useMemo(() => ([
+      { key: 'kcal100', label: 'Ккал (100г)', unit: 'ккал' },
+      { key: 'carbs100', label: 'Углеводы (100г)', unit: 'г' },
+      { key: 'simple100', label: 'Простые (100г)', unit: 'г' },
+      { key: 'complex100', label: 'Сложные (100г)', unit: 'г' },
+      { key: 'protein100', label: 'Белок (100г)', unit: 'г' },
+      { key: 'fat100', label: 'Жиры (100г)', unit: 'г' },
+      { key: 'badFat100', label: 'Вредные жиры (100г)', unit: 'г' },
+      { key: 'goodFat100', label: 'Полезные жиры (100г)', unit: 'г' },
+      { key: 'trans100', label: 'Транс-жиры (100г)', unit: 'г' },
+      { key: 'fiber100', label: 'Клетчатка (100г)', unit: 'г' },
+      { key: 'gi', label: 'ГИ' },
+      { key: 'harm', label: 'Вред' },
+      { key: 'sodium100', label: 'Натрий (100г)', unit: 'мг' },
+      { key: 'omega3_100', label: 'Омега-3 (100г)', unit: 'г' },
+      { key: 'omega6_100', label: 'Омега-6 (100г)', unit: 'г' },
+      { key: 'nova_group', label: 'NOVA группа' },
+      { key: 'additives', label: 'Добавки' },
+      { key: 'nutrient_density', label: 'Нутр. плотность', unit: '%' },
+      { key: 'is_organic', label: 'Органик', type: 'bool' },
+      { key: 'is_whole_grain', label: 'Цельнозерн.', type: 'bool' },
+      { key: 'is_fermented', label: 'Ферментир.', type: 'bool' },
+      { key: 'is_raw', label: 'Сырой', type: 'bool' },
+      { key: 'vitamin_a', label: 'Витамин A', unit: '%' },
+      { key: 'vitamin_c', label: 'Витамин C', unit: '%' },
+      { key: 'vitamin_d', label: 'Витамин D', unit: '%' },
+      { key: 'vitamin_e', label: 'Витамин E', unit: '%' },
+      { key: 'vitamin_k', label: 'Витамин K', unit: '%' },
+      { key: 'vitamin_b1', label: 'Витамин B1', unit: '%' },
+      { key: 'vitamin_b2', label: 'Витамин B2', unit: '%' },
+      { key: 'vitamin_b3', label: 'Витамин B3', unit: '%' },
+      { key: 'vitamin_b6', label: 'Витамин B6', unit: '%' },
+      { key: 'vitamin_b9', label: 'Витамин B9', unit: '%' },
+      { key: 'vitamin_b12', label: 'Витамин B12', unit: '%' },
+      { key: 'calcium', label: 'Кальций', unit: '%' },
+      { key: 'iron', label: 'Железо', unit: '%' },
+      { key: 'magnesium', label: 'Магний', unit: '%' },
+      { key: 'phosphorus', label: 'Фосфор', unit: '%' },
+      { key: 'potassium', label: 'Калий', unit: '%' },
+      { key: 'zinc', label: 'Цинк', unit: '%' },
+      { key: 'selenium', label: 'Селен', unit: '%' },
+      { key: 'iodine', label: 'Йод', unit: '%' }
+    ]), []);
+
+    const formatPreviewValue = useCallback((product, field) => {
+      if (!product) return '—';
+      const value = product[field.key];
+      if (field.type === 'bool') {
+        if (value === true) return 'да';
+        if (value === false) return 'нет';
+        return '—';
+      }
+      if (Array.isArray(value)) {
+        return value.length ? value.join(', ') : '—';
+      }
+      if (value === null || value === undefined || value === '') return '—';
+      const suffix = field.unit ? ` ${field.unit}` : '';
+      return `${value}${suffix}`;
+    }, []);
+
     // Парсинг вставленного текста (копия логики из heys_core_v12.js)
     const parseProductLine = useCallback((text) => {
       if (!text || !text.trim()) return null;
@@ -994,14 +1253,14 @@
       const name = clean.slice(0, firstPos).trim() || 'Без названия';
       const nums = last.map(toNum);
 
-      // Порядок: kcal, carbs, simple, complex, protein, fat, bad, good, trans, fiber, gi, harm
+      // Порядок: kcal, carbs (total), simple, complex, protein, fat (total), bad, good, trans, fiber, gi, harm
       const [kcal, carbs, simple, complex, protein, fat, bad, good, trans, fiber, gi, harm] = nums;
 
-      // Вычисляем производные
-      const carbs100 = simple + complex;
-      const fat100 = bad + good + trans;
+      // Вычисляем производные (приоритет totals из 12 полей)
+      const derivedCarbs = (Number.isFinite(carbs) && carbs > 0) ? carbs : (simple + complex);
+      const derivedFat = (Number.isFinite(fat) && fat > 0) ? fat : (bad + good + trans);
       // TEF-aware formula: protein 3 kcal/g (25% TEF), carbs 4 kcal/g, fat 9 kcal/g (Atwater)
-      const kcal100 = 3 * protein + 4 * carbs100 + 9 * fat100;
+      const kcal100 = 3 * protein + 4 * derivedCarbs + 9 * derivedFat;
 
       return {
         id: Math.random().toString(36).slice(2, 10),
@@ -1015,8 +1274,8 @@
         fiber100: fiber,
         gi: gi,
         harm: harm,  // Canonical harm field
-        carbs100: Math.round(carbs100 * 10) / 10,
-        fat100: Math.round(fat100 * 10) / 10,
+        carbs100: Math.round(derivedCarbs * 10) / 10,
+        fat100: Math.round(derivedFat * 10) / 10,
         kcal100: Math.round(kcal100 * 10) / 10,
         createdAt: Date.now()
       };
@@ -1036,12 +1295,31 @@
 
       // Debounce парсинга чтобы не тормозить при быстром вводе
       const timer = setTimeout(() => {
+        const looksLikeAi = /[:=]/.test(pasteText) && /[а-яa-z]/i.test(pasteText);
+        const aiParsed = HEYS.models?.parseAIProductString
+          ? HEYS.models.parseAIProductString(pasteText, { defaultName: searchQuery || 'Без названия' })
+          : null;
+
+        if (looksLikeAi && aiParsed?.product) {
+          if (aiParsed.missingFields?.length) {
+            setParsedPreview(null);
+            setError('Не хватает полей: ' + formatMissingFields(aiParsed.missingFields));
+            return;
+          }
+          setParsedPreview(aiParsed.product);
+          setError('');
+          onChangeRef.current?.(prev => ({ ...prev, newProduct: aiParsed.product }));
+          return;
+        }
+
         const parsed = parseProductLine(pasteText);
         if (parsed) {
           setParsedPreview(parsed);
           setError('');
-          // Сохраняем в data через ref (избегаем зависимости от onChange)
           onChangeRef.current?.(prev => ({ ...prev, newProduct: parsed }));
+        } else if (looksLikeAi) {
+          setParsedPreview(null);
+          setError('Не удалось распознать AI-строку. Проверьте формат с ключами.');
         } else {
           setParsedPreview(null);
           setError('Не удалось распознать данные. Формат: Название + 12 чисел.');
@@ -1049,7 +1327,7 @@
       }, 150);
 
       return () => clearTimeout(timer);
-    }, [pasteText, parseProductLine]);
+    }, [pasteText, parseProductLine, searchQuery, formatMissingFields]);
 
     // Подготовить продукт и перейти на шаг вредности (БЕЗ СОХРАНЕНИЯ В БАЗУ!)
     // Сохранение происходит ПОСЛЕ подтверждения вредности в HarmSelectStep
@@ -1059,7 +1337,7 @@
       haptic('medium');
 
       console.log('[CreateProductStep] 📝 Подготовлен продукт:', parsedPreview.name);
-      console.log('[CreateProductStep] ⏭️ Переходим на шаг вредности (сохранение будет там)');
+      console.log('[CreateProductStep] ⏭️ Переходим на шаг порций (сохранение будет после вредности)');
 
       // 1. Обновляем данные текущего шага (БЕЗ сохранения в базу!)
       onChange({
@@ -1080,7 +1358,7 @@
         });
       }
 
-      // 5. Переходим на шаг harm (index 2) для проверки/корректировки вредности
+      // 5. Переходим на шаг порций (index 2) перед подтверждением вредности
       // Увеличен таймаут для гарантии обновления state
       if (goToStep) {
         setTimeout(() => goToStep(2, 'left'), 150);
@@ -1105,7 +1383,7 @@
         'Вставьте строку с данными продукта:',
         React.createElement('br'),
         React.createElement('span', { className: 'aps-create-format' },
-          'Название · ккал · У · простые · сложные · Б · Ж · вред · польза · транс · клетч · ГИ · вред'
+          'Название: …\nКкал: …\nУглеводы: …\nПростые: …\nСложные: …\nБелок: …\nЖиры: …\nВредные жиры: …\nПолезные жиры: …\nТранс-жиры: …\nКлетчатка: …\nГИ: …\nВред: …'
         )
       ),
 
@@ -1114,11 +1392,11 @@
         ref: textareaRef,
         className: 'aps-create-textarea',
         placeholder: searchQuery
-          ? `Пример: ${searchQuery}\t120\t22\t2\t20\t4\t2\t0.5\t1.5\t0\t3\t40\t0`
-          : 'Пример: Овсянка на воде\t120\t22\t2\t20\t4\t2\t0.5\t1.5\t0\t3\t40\t0',
+          ? `Название: ${searchQuery}\nКкал: 120\nУглеводы: 22\nПростые: 2\nСложные: 20\nБелок: 4\nЖиры: 2\nВредные жиры: 0.5\nПолезные жиры: 1.5\nТранс-жиры: 0\nКлетчатка: 3\nГИ: 40\nВред: 0`
+          : 'Название: Овсянка на воде\nКкал: 120\nУглеводы: 22\nПростые: 2\nСложные: 20\nБелок: 4\nЖиры: 2\nВредные жиры: 0.5\nПолезные жиры: 1.5\nТранс-жиры: 0\nКлетчатка: 3\nГИ: 40\nВред: 0',
         value: pasteText,
         onChange: (e) => setPasteText(e.target.value),
-        rows: 3
+        rows: 8
       }),
 
       // Ошибка
@@ -1137,38 +1415,10 @@
         ),
         // Детальная таблица всех параметров
         React.createElement('div', { className: 'aps-preview-details' },
-          React.createElement('div', { className: 'aps-preview-row' },
-            React.createElement('span', { className: 'aps-preview-label' }, 'Углеводы простые'),
-            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.simple100 + 'г')
-          ),
-          React.createElement('div', { className: 'aps-preview-row' },
-            React.createElement('span', { className: 'aps-preview-label' }, 'Углеводы сложные'),
-            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.complex100 + 'г')
-          ),
-          React.createElement('div', { className: 'aps-preview-row' },
-            React.createElement('span', { className: 'aps-preview-label' }, 'Жиры вредные'),
-            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.badFat100 + 'г')
-          ),
-          React.createElement('div', { className: 'aps-preview-row' },
-            React.createElement('span', { className: 'aps-preview-label' }, 'Жиры полезные'),
-            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.goodFat100 + 'г')
-          ),
-          React.createElement('div', { className: 'aps-preview-row' },
-            React.createElement('span', { className: 'aps-preview-label' }, 'Транс-жиры'),
-            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.trans100 + 'г')
-          ),
-          React.createElement('div', { className: 'aps-preview-row' },
-            React.createElement('span', { className: 'aps-preview-label' }, 'Клетчатка'),
-            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.fiber100 + 'г')
-          ),
-          React.createElement('div', { className: 'aps-preview-row' },
-            React.createElement('span', { className: 'aps-preview-label' }, 'Гликемический индекс'),
-            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.gi)
-          ),
-          React.createElement('div', { className: 'aps-preview-row' },
-            React.createElement('span', { className: 'aps-preview-label' }, 'Вредность'),
-            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.harm ?? 0)
-          )
+          PREVIEW_FIELDS.map((field) => React.createElement('div', { className: 'aps-preview-row', key: field.key },
+            React.createElement('span', { className: 'aps-preview-label' }, field.label),
+            React.createElement('span', { className: 'aps-preview-value' }, formatPreviewValue(parsedPreview, field))
+          ))
         )
       ),
 
@@ -1216,6 +1466,242 @@
     );
   }
 
+  // === Компонент выбора порций (Шаг portions) ===
+  function PortionsStep({ data, onChange, context, stepData }) {
+    const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
+    const { goToStep, updateStepData } = stepContext;
+
+    // Ищем продукт из всех возможных источников
+    const product = context?.editProduct
+      || stepData?.grams?.selectedProduct  // Продукт с шага граммов
+      || stepData?.search?.selectedProduct // Продукт с шага поиска
+      || stepData?.create?.newProduct
+      || stepData?.create?.selectedProduct
+      || stepData?.portions?.product
+      || data?.selectedProduct;
+
+    const autoPortions = useMemo(() => getAutoPortions(product?.name), [product?.name]);
+
+    const toEditablePortions = useCallback((list) => {
+      const base = Array.isArray(list) ? list : [];
+      return base.map((p) => ({
+        name: String(p?.name || ''),
+        grams: p?.grams ?? ''
+      }));
+    }, []);
+
+    const [portions, setPortions] = useState(() => {
+      if (product?.portions?.length) return toEditablePortions(product.portions);
+      if (autoPortions?.length) return toEditablePortions(autoPortions);
+      return [];
+    });
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+      if (!product) return;
+      if (portions.length > 0) return;
+
+      if (product?.portions?.length) {
+        setPortions(toEditablePortions(product.portions));
+        return;
+      }
+
+      if (autoPortions?.length) {
+        setPortions(toEditablePortions(autoPortions));
+      }
+    }, [product, autoPortions, portions.length, toEditablePortions]);
+
+    const handleAddPortion = useCallback(() => {
+      haptic('light');
+      setPortions((prev) => [...prev, { name: '', grams: '' }]);
+    }, []);
+
+    const handleRemovePortion = useCallback((index) => {
+      haptic('light');
+      setPortions((prev) => prev.filter((_, i) => i !== index));
+    }, []);
+
+    const handleUpdatePortion = useCallback((index, field, value) => {
+      setPortions((prev) => prev.map((p, i) => {
+        if (i !== index) return p;
+        return {
+          ...p,
+          [field]: value
+        };
+      }));
+    }, []);
+
+    const handleApplyAuto = useCallback(() => {
+      if (!autoPortions?.length) return;
+      haptic('light');
+      setPortions(toEditablePortions(autoPortions));
+    }, [autoPortions, toEditablePortions]);
+
+    const handleContinue = useCallback(() => {
+      if (!product) return;
+
+      const normalized = normalizePortions(portions);
+      if (portions.length > 0 && normalized.length === 0) {
+        setError('Заполните название и граммы порции');
+        return;
+      }
+
+      setError('');
+
+      const updatedProduct = {
+        ...product,
+        ...(normalized.length > 0 ? { portions: normalized } : {})
+      };
+
+      onChange({
+        ...data,
+        portions: normalized,
+        selectedProduct: updatedProduct
+      });
+
+      if (updateStepData) {
+        updateStepData('portions', {
+          product: updatedProduct,
+          portions: normalized
+        });
+        updateStepData('create', {
+          ...stepData?.create,
+          newProduct: updatedProduct,
+          selectedProduct: updatedProduct
+        });
+        updateStepData('harm', {
+          product: updatedProduct
+        });
+        updateStepData('grams', {
+          selectedProduct: updatedProduct,
+          grams: stepData?.create?.grams || 100
+        });
+      }
+
+      if (context?.isEditMode && normalized.length > 0) {
+        saveProductPortions(updatedProduct, normalized);
+      }
+
+      if (context?.onFinish) {
+        context.onFinish({ product: updatedProduct, portions: normalized });
+        if (HEYS.StepModal?.hide) {
+          HEYS.StepModal.hide();
+        }
+        return;
+      }
+
+      const nextIndex = context?.isEditMode ? 1 : 3;
+      setTimeout(() => goToStep?.(nextIndex, 'left'), 150);
+    }, [product, portions, onChange, data, updateStepData, stepData, context?.isEditMode, context?.onFinish, goToStep]);
+
+    const handleSkip = useCallback(() => {
+      if (!product) return;
+      haptic('light');
+
+      if (updateStepData) {
+        updateStepData('portions', {
+          product,
+          portions: []
+        });
+        updateStepData('harm', {
+          product
+        });
+      }
+
+      if (context?.onFinish) {
+        context.onFinish({ product, portions: [] });
+        if (HEYS.StepModal?.hide) {
+          HEYS.StepModal.hide();
+        }
+        return;
+      }
+
+      const nextIndex = context?.isEditMode ? 1 : 3;
+      setTimeout(() => goToStep?.(nextIndex, 'left'), 150);
+    }, [product, updateStepData, context?.isEditMode, context?.onFinish, goToStep]);
+
+    if (!product) {
+      return React.createElement('div', { className: 'aps-no-product' },
+        'Сначала создайте продукт'
+      );
+    }
+
+    return React.createElement('div', { className: 'aps-portions-step' },
+      React.createElement('div', { className: 'aps-portions-header' },
+        React.createElement('span', { className: 'aps-portions-icon' }, '🥣'),
+        React.createElement('span', { className: 'aps-portions-title' }, 'Порции')
+      ),
+
+      React.createElement('div', { className: 'aps-portions-subtitle' },
+        'Удобные порции для «' + product.name + '»'
+      ),
+
+      autoPortions?.length > 0 && React.createElement('div', { className: 'aps-portions-suggest' },
+        React.createElement('div', { className: 'aps-portions-suggest-title' }, 'Рекомендованные'),
+        React.createElement('div', { className: 'aps-portions-suggest-list' },
+          autoPortions.map((p, i) =>
+            React.createElement('div', { key: i, className: 'aps-portions-suggest-chip' },
+              p.name + (String(p.name).includes('г') ? '' : ` (${p.grams}г)`)
+            )
+          )
+        ),
+        React.createElement('button', {
+          className: 'aps-portions-apply-btn',
+          onClick: handleApplyAuto
+        }, 'Использовать шаблон')
+      ),
+
+      React.createElement('div', { className: 'aps-portions-editor' },
+        portions.length === 0 && React.createElement('div', { className: 'aps-portions-empty' },
+          'Нет порций — добавьте свои или пропустите'
+        ),
+        portions.map((p, i) =>
+          React.createElement('div', { key: i, className: 'aps-portions-row' },
+            React.createElement('input', {
+              className: 'aps-portions-input aps-portions-input--name',
+              placeholder: 'Например: 1 яблоко',
+              value: p.name,
+              onChange: (e) => handleUpdatePortion(i, 'name', e.target.value)
+            }),
+            React.createElement('div', { className: 'aps-portions-grams' },
+              React.createElement('input', {
+                className: 'aps-portions-input aps-portions-input--grams',
+                type: 'number',
+                inputMode: 'numeric',
+                placeholder: 'г',
+                value: p.grams,
+                onChange: (e) => handleUpdatePortion(i, 'grams', e.target.value)
+              }),
+              React.createElement('span', { className: 'aps-portions-grams-unit' }, 'г')
+            ),
+            React.createElement('button', {
+              className: 'aps-portions-remove-btn',
+              onClick: () => handleRemovePortion(i)
+            }, '×')
+          )
+        )
+      ),
+
+      React.createElement('button', {
+        className: 'aps-portions-add-btn',
+        onClick: handleAddPortion
+      }, '+ Добавить порцию'),
+
+      error && React.createElement('div', { className: 'aps-portions-error' }, '⚠️ ' + error),
+
+      React.createElement('div', { className: 'aps-portions-actions' },
+        React.createElement('button', {
+          className: 'aps-portions-skip-btn',
+          onClick: handleSkip
+        }, 'Пропустить'),
+        React.createElement('button', {
+          className: 'aps-portions-next-btn',
+          onClick: handleContinue
+        }, context?.isEditMode ? 'Далее' : 'Далее к вредности')
+      )
+    );
+  }
+
   // Фон карточки по полезности: 0=зелёный(полезный), 5=голубой(средний), 10=красный(вредный)
   function getHarmBg(h) {
     if (h == null) return null;
@@ -1258,6 +1744,7 @@
 
     // Продукт из предыдущего шага create
     const product = stepData?.create?.newProduct
+      || stepData?.portions?.product
       || stepData?.harm?.product
       || data?.newProduct
       || data?.product
@@ -1420,7 +1907,7 @@
       }
 
       // Переходим на шаг граммов
-      setTimeout(() => goToStep?.(3, 'left'), 150);
+      setTimeout(() => goToStep?.(4, 'left'), 150);
     }, [product, stepData, updateStepData, goToStep, manualHarm]);
 
     // Значения для WheelPicker: 0, 0.5, 1, ... 10
@@ -1455,7 +1942,7 @@
             transition: 'all 0.2s'
           }
         },
-          e('div', { className: 'text-xs text-gray-500 mb-1' }, '✏️ Вручную'),
+          e('div', { className: 'text-xs text-gray-500 mb-1' }, '✏️ AI'),
           e('div', {
             className: 'text-4xl font-bold mb-1',
             style: { color: HEYS.Harm?.getHarmColor?.(manualHarm) || '#6b7280' }
@@ -1481,7 +1968,7 @@
             transition: 'all 0.2s'
           }
         },
-          e('div', { className: 'text-xs text-gray-500 mb-1' }, '🧪 По формуле'),
+          e('div', { className: 'text-xs text-gray-500 mb-1' }, '🧪 Расчёт'),
           e('div', {
             className: 'text-4xl font-bold mb-1',
             style: { color: calculatedBreakdown?.category?.color || '#6b7280' }
@@ -1491,6 +1978,19 @@
             style: { color: calculatedBreakdown?.category?.color || '#6b7280' }
           }, calculatedBreakdown?.category?.emoji || '')
         )
+      ),
+
+      // Сравнение разницы (если есть оба значения и они отличаются)
+      hasManualHarm && calculatedHarm != null && Math.abs(manualHarm - calculatedHarm) >= 0.5 && e('div', {
+        className: 'text-center text-xs py-2 px-3 rounded-lg mb-3',
+        style: {
+          background: Math.abs(manualHarm - calculatedHarm) >= 2 ? '#fef3c7' : '#f3f4f6',
+          color: Math.abs(manualHarm - calculatedHarm) >= 2 ? '#92400e' : '#6b7280'
+        }
+      },
+        Math.abs(manualHarm - calculatedHarm) >= 2
+          ? `⚠️ Разница ${Math.abs(manualHarm - calculatedHarm).toFixed(1)} — AI и расчёт сильно расходятся`
+          : `Δ ${Math.abs(manualHarm - calculatedHarm).toFixed(1)} между AI и расчётом`
       ),
 
       // Кнопка "Своё значение"
@@ -1618,7 +2118,7 @@
     // === ВСЕ ХУКИ ДОЛЖНЫ БЫТЬ ДО ЛЮБОГО RETURN ===
 
     // Авто-порции продукта
-    const portions = useMemo(() => {
+    const defaultPortions = useMemo(() => {
       if (!product) return [{ name: '100г', grams: 100 }];
       if (product.portions && product.portions.length) {
         return product.portions;
@@ -1631,6 +2131,34 @@
         { name: '200г', grams: 200 }
       ];
     }, [product]);
+
+    const [localPortions, setLocalPortions] = useState(defaultPortions);
+
+    useEffect(() => {
+      setLocalPortions(defaultPortions);
+    }, [defaultPortions]);
+
+    useEffect(() => {
+      const handlePortionsUpdated = (event) => {
+        const detail = event?.detail || {};
+        const updatedProduct = detail.product;
+        const updatedId = String(detail.productId ?? updatedProduct?.id ?? updatedProduct?.product_id ?? updatedProduct?.name);
+        const currentId = String(product?.id ?? product?.product_id ?? product?.name);
+        if (!updatedId || updatedId !== currentId) return;
+
+        const nextPortions = Array.isArray(detail.portions)
+          ? detail.portions
+          : (updatedProduct?.portions || []);
+
+        setLocalPortions(nextPortions);
+        if (updatedProduct) {
+          onChange({ ...data, selectedProduct: updatedProduct });
+        }
+      };
+
+      window.addEventListener('heys:product-portions-updated', handlePortionsUpdated);
+      return () => window.removeEventListener('heys:product-portions-updated', handlePortionsUpdated);
+    }, [product, data, onChange]);
 
     // Обновление граммов
     const setGrams = useCallback((newGrams) => {
@@ -1873,10 +2401,10 @@
       ),
 
       // Порции продукта
-      portions?.length > 0 && React.createElement('div', { className: 'aps-portions' },
+      localPortions?.length > 0 && React.createElement('div', { className: 'aps-portions' },
         React.createElement('div', { className: 'aps-portions-title' }, 'Порции:'),
         React.createElement('div', { className: 'aps-portions-list' },
-          portions.map((p, i) =>
+          localPortions.map((p, i) =>
             React.createElement('button', {
               key: i,
               className: 'aps-portion-btn' + (grams === p.grams ? ' active' : ''),
@@ -1959,6 +2487,16 @@
           hideHeaderNext: true // Скрываем "Далее" — есть своя кнопка "Добавить"
         },
         {
+          id: 'portions',
+          title: 'Порции',
+          hint: 'Добавьте удобные порции',
+          icon: '🥣',
+          component: PortionsStep,
+          validate: () => true,
+          hidden: true,
+          hideHeaderNext: true
+        },
+        {
           id: 'harm',
           title: 'Вредность',
           hint: 'Проверьте или измените',
@@ -1985,7 +2523,34 @@
         onNewProduct,
         onAdd, // Передаём callback для добавления в приём пищи
         onAddPhoto, // Callback для добавления фото к приёму
-        headerRight: `🗃️ ${currentProducts.length}`, // Счётчик продуктов справа в header
+        headerRight: ({ stepData, currentConfig, goToStep }) => {
+          const countLabel = `🗃️ ${currentProducts.length}`;
+          if (currentConfig?.id !== 'grams') return countLabel;
+
+          const product = stepData?.grams?.selectedProduct
+            || stepData?.create?.newProduct
+            || stepData?.create?.selectedProduct
+            || stepData?.search?.selectedProduct;
+
+          const canEdit = canEditProduct(product);
+
+          return React.createElement('div', { className: 'mc-header-right-group' },
+            React.createElement('span', { className: 'mc-header-right-count' }, countLabel),
+            canEdit && React.createElement('button', {
+              className: 'mc-header-right-btn',
+              onClick: (e) => {
+                e.stopPropagation();
+                // Переходим на шаг порций (индекс 2) внутри текущей модалки
+                if (goToStep) {
+                  goToStep(2, 'left');
+                } else {
+                  console.warn('[EditBtn] goToStep not available');
+                }
+              },
+              title: 'Редактировать порции'
+            }, '✏️')
+          );
+        }, // Счётчик + кнопка редактирования порций
         // Callback при создании продукта — обновляем список (не используется при 2 шагах, оставляем для совместимости)
         onProductCreated: (product) => {
           currentProducts = [...currentProducts, product];
@@ -2113,6 +2678,7 @@
     showEditGrams: showEditGramsModal,
     ProductSearchStep,
     GramsStep,
+    PortionsStep,
     CreateProductStep,
     HarmSelectStep,
     getCategoryIcon,

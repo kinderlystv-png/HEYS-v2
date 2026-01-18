@@ -29,9 +29,17 @@
     /**
      * Normalize shared product to have both harm and harmScore fields
      * Uses centralized HEYS.models.normalizeHarm() if available
+     * Extended in v4.4.0 to normalize all extended nutrient fields
      */
     const normalizeSharedProduct = (p) => {
       if (!p || typeof p !== 'object') return p;
+
+      // Use extended normalization if available (v4.4.0+)
+      if (HEYS.models?.normalizeExtendedProduct) {
+        return HEYS.models.normalizeExtendedProduct(p);
+      }
+
+      // Fallback to basic normalization
       const next = { ...p };
 
       // Use centralized normalization if available
@@ -216,7 +224,39 @@
           harm: product.harm,
           category: product.category,
           portions: product.portions || null,
-          description: product.description || null
+          description: product.description || null,
+          // Extended fields (v4.4.0)
+          sodium100: product.sodium100 || null,
+          omega3_100: product.omega3_100 || null,
+          omega6_100: product.omega6_100 || null,
+          nova_group: product.nova_group || null,
+          additives: product.additives || null,
+          nutrient_density: product.nutrient_density || null,
+          is_organic: product.is_organic || false,
+          is_whole_grain: product.is_whole_grain || false,
+          is_fermented: product.is_fermented || false,
+          is_raw: product.is_raw || false,
+          // Vitamins
+          vitamin_a: product.vitamin_a || null,
+          vitamin_c: product.vitamin_c || null,
+          vitamin_d: product.vitamin_d || null,
+          vitamin_e: product.vitamin_e || null,
+          vitamin_k: product.vitamin_k || null,
+          vitamin_b1: product.vitamin_b1 || null,
+          vitamin_b2: product.vitamin_b2 || null,
+          vitamin_b3: product.vitamin_b3 || null,
+          vitamin_b6: product.vitamin_b6 || null,
+          vitamin_b9: product.vitamin_b9 || null,
+          vitamin_b12: product.vitamin_b12 || null,
+          // Minerals
+          calcium: product.calcium || null,
+          iron: product.iron || null,
+          magnesium: product.magnesium || null,
+          phosphorus: product.phosphorus || null,
+          potassium: product.potassium || null,
+          zinc: product.zinc || null,
+          selenium: product.selenium || null,
+          iodine: product.iodine || null
         };
 
         console.log('[SHARED] 📝 Publishing via RPC:', productData.name);

@@ -6,21 +6,65 @@
   /** @typedef {Object} Product
    * @property {string|number} id
    * @property {string} name
-   * @property {number} simple100
-   * @property {number} complex100
-   * @property {number} protein100
-   * @property {number} badFat100
-   * @property {number} goodFat100
-   * @property {number} trans100
-   * @property {number} fiber100
-   * @property {number} [carbs100]
-   * @property {number} [fat100]
-   * @property {number} [kcal100]
-   * @property {number} [harm] - Canonical harm field (0-10 scale)
-   * @property {number} [harmScore] - Alias for harm (DB field name)
-   * @property {number} [gi] - Glycemic index
-   * @property {{name: string, grams: number}[]} [portions] - Порции продукта (опционально)
-   * @property {string} [shared_origin_id] - ID продукта в shared_products, если склонирован из общей базы
+   * 
+   * === REQUIRED MACROS (на 100г) ===
+   * @property {number} simple100 - Простые углеводы г
+   * @property {number} complex100 - Сложные углеводы г
+   * @property {number} protein100 - Белок г
+   * @property {number} badFat100 - Насыщенные жиры г
+   * @property {number} goodFat100 - Полезные жиры (MUFA/PUFA) г
+   * @property {number} trans100 - Транс-жиры г
+   * @property {number} fiber100 - Клетчатка г
+   * 
+   * === COMPUTED (вычисляемые) ===
+   * @property {number} [carbs100] - Всего углеводов (simple+complex)
+   * @property {number} [fat100] - Всего жиров (bad+good+trans)
+   * @property {number} [kcal100] - Калории (Atwater)
+   * 
+   * === BASIC OPTIONAL ===
+   * @property {number} [gi] - Гликемический индекс 0-100
+   * @property {number} [harm] - AI оценка вредности 0-10
+   * @property {number} [harmScore] - Alias для harm (DB)
+   * @property {number} [sodium100] - Натрий мг/100г
+   * @property {number} [omega3_100] - Омега-3 г/100г
+   * @property {number} [omega6_100] - Омега-6 г/100г
+   * @property {number} [nova_group] - NOVA классификация 1-4
+   * @property {string[]} [additives] - E-добавки массив
+   * @property {number} [nutrient_density] - Нутриентная плотность 0-100
+   * 
+   * === QUALITY FLAGS ===
+   * @property {boolean} [is_organic] - Органический продукт
+   * @property {boolean} [is_whole_grain] - Цельнозерновой
+   * @property {boolean} [is_fermented] - Ферментированный
+   * @property {boolean} [is_raw] - Сырой/необработанный
+   * 
+   * === VITAMINS (% от DV на 100г) ===
+   * @property {number} [vitamin_a] - Витамин A % DV
+   * @property {number} [vitamin_c] - Витамин C % DV
+   * @property {number} [vitamin_d] - Витамин D % DV
+   * @property {number} [vitamin_e] - Витамин E % DV
+   * @property {number} [vitamin_k] - Витамин K % DV
+   * @property {number} [vitamin_b1] - Витамин B1 % DV
+   * @property {number} [vitamin_b2] - Витамин B2 % DV
+   * @property {number} [vitamin_b3] - Витамин B3 % DV
+   * @property {number} [vitamin_b6] - Витамин B6 % DV
+   * @property {number} [vitamin_b9] - Витамин B9/Folate % DV
+   * @property {number} [vitamin_b12] - Витамин B12 % DV
+   * 
+   * === MINERALS (% от DV на 100г) ===
+   * @property {number} [calcium] - Кальций % DV
+   * @property {number} [iron] - Железо % DV
+   * @property {number} [magnesium] - Магний % DV
+   * @property {number} [phosphorus] - Фосфор % DV
+   * @property {number} [potassium] - Калий % DV
+   * @property {number} [zinc] - Цинк % DV
+   * @property {number} [selenium] - Селен % DV
+   * @property {number} [iodine] - Йод % DV
+   * 
+   * === METADATA ===
+   * @property {{name: string, grams: number}[]} [portions] - Порции продукта
+   * @property {string} [category] - Категория продукта
+   * @property {string} [shared_origin_id] - ID в shared_products
    */
 
   // ====================================================================
@@ -816,6 +860,458 @@
   // Harm field normalization (v4.3.0)
   M.normalizeHarm = normalizeHarm;
   M.normalizeHarmFields = normalizeHarmFields;
+
+  // ====================================================================
+  // 🧪 EXTENDED NUTRIENTS PARSER (v4.4.0)
+  // ====================================================================
+  // Парсер для AI-генерированных строк с расширенными нутриентами
+  // Формат: "NOVA:4|Na:1200|O3:0.5|O6:2|Org:1|WG:0|Fer:0|Raw:0|vA:15|..."
+  // ====================================================================
+
+  /**
+   * Список расширенных полей с их ключами для парсинга
+   */
+  const EXTENDED_NUTRIENT_KEYS = {
+    // Basic
+    'NOVA': 'nova_group',      // 1-4
+    'Na': 'sodium100',         // mg/100g
+    'O3': 'omega3_100',        // g/100g
+    'O6': 'omega6_100',        // g/100g
+    'ND': 'nutrient_density',  // 0-100
+
+    // Quality flags (0/1)
+    'Org': 'is_organic',
+    'WG': 'is_whole_grain',
+    'Fer': 'is_fermented',
+    'Raw': 'is_raw',
+
+    // Vitamins (% DV)
+    'vA': 'vitamin_a',
+    'vC': 'vitamin_c',
+    'vD': 'vitamin_d',
+    'vE': 'vitamin_e',
+    'vK': 'vitamin_k',
+    'vB1': 'vitamin_b1',
+    'vB2': 'vitamin_b2',
+    'vB3': 'vitamin_b3',
+    'vB6': 'vitamin_b6',
+    'vB9': 'vitamin_b9',
+    'vB12': 'vitamin_b12',
+
+    // Minerals (% DV)
+    'Ca': 'calcium',
+    'Fe': 'iron',
+    'Mg': 'magnesium',
+    'P': 'phosphorus',
+    'K': 'potassium',
+    'Zn': 'zinc',
+    'Se': 'selenium',
+    'I': 'iodine'
+  };
+
+  // ====================================================================
+  // 🧠 AI PRODUCT STRING PARSER (Russian keys, full format)
+  // ====================================================================
+
+  function normalizeAIKey(rawKey) {
+    return String(rawKey || '')
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      .replace(/[^a-z0-9а-я]/gi, '');
+  }
+
+  const AI_PRODUCT_FIELD_MAP = (() => {
+    const map = new Map();
+    const add = (field, keys) => {
+      keys.forEach((k) => map.set(normalizeAIKey(k), field));
+    };
+
+    add('name', ['название', 'продукт', 'product', 'name']);
+
+    add('kcal100', ['ккал', 'калории', 'энергия']);
+    add('carbs100', ['углеводы', 'углеводывсего', 'углеводыобщие', 'carbs']);
+    add('simple100', ['простые', 'простыеуглеводы', 'сахара', 'simple']);
+    add('complex100', ['сложные', 'сложныеуглеводы', 'complex']);
+    add('protein100', ['белок', 'протеин', 'protein']);
+    add('fat100', ['жиры', 'жирывсего', 'fat']);
+    add('badFat100', ['вредныежиры', 'насыщенные', 'badfat']);
+    add('goodFat100', ['полезныежиры', 'ненасыщенные', 'goodfat']);
+    add('trans100', ['трансжиры', 'транс-жиры', 'trans']);
+    add('fiber100', ['клетчатка', 'fiber']);
+    add('gi', ['ги', 'гликемическийиндекс', 'гликемический индекс', 'gi']);
+    add('harm', ['вред', 'вредность', 'harm']);
+
+    add('sodium100', ['натрий', 'na', 'соль']);
+    add('omega3_100', ['омега3', 'омега-3', 'omega3', 'о3']);
+    add('omega6_100', ['омега6', 'омега-6', 'omega6', 'о6']);
+    add('nova_group', ['nova', 'нова']);
+    add('additives', ['добавки', 'e-добавки', 'edобавки', 'additives']);
+    add('nutrient_density', ['нутриентнаяплотность', 'плотностьпитательныхвеществ', 'nutrientdensity', 'nd']);
+
+    add('is_organic', ['органик', 'органический', 'organic']);
+    add('is_whole_grain', ['цельнозерновой', 'цельнозерн', 'wholegrain', 'цельныезерна']);
+    add('is_fermented', ['ферментированный', 'ферментирован', 'fermented']);
+    add('is_raw', ['сырой', 'raw']);
+
+    add('vitamin_a', ['витамина', 'витаминa', 'vitamina']);
+    add('vitamin_c', ['витаминc', 'vitaminc']);
+    add('vitamin_d', ['витаминd', 'vitamind']);
+    add('vitamin_e', ['витамине', 'vitamine']);
+    add('vitamin_k', ['витаминk', 'vitamink']);
+    add('vitamin_b1', ['витаминb1', 'vitaminb1']);
+    add('vitamin_b2', ['витаминb2', 'vitaminb2']);
+    add('vitamin_b3', ['витаминb3', 'vitaminb3']);
+    add('vitamin_b6', ['витаминb6', 'vitaminb6']);
+    add('vitamin_b9', ['витаминb9', 'vitaminb9', 'фолат', 'фолиевая']);
+    add('vitamin_b12', ['витаминb12', 'vitaminb12']);
+
+    add('calcium', ['кальций', 'calcium']);
+    add('iron', ['железо', 'iron']);
+    add('magnesium', ['магний', 'magnesium']);
+    add('phosphorus', ['фосфор', 'phosphorus']);
+    add('potassium', ['калий', 'potassium']);
+    add('zinc', ['цинк', 'zinc']);
+    add('selenium', ['селен', 'selenium']);
+    add('iodine', ['йод', 'iodine']);
+
+    return map;
+  })();
+
+  const AI_REQUIRED_FIELDS = [
+    'kcal100',
+    'carbs100',
+    'simple100',
+    'complex100',
+    'protein100',
+    'fat100',
+    'badFat100',
+    'goodFat100',
+    'trans100',
+    'fiber100',
+    'gi',
+    'harm'
+  ];
+
+  function parseAIValueNumber(rawValue) {
+    if (rawValue == null) return undefined;
+    const cleaned = String(rawValue)
+      .replace(/,/g, '.')
+      .replace(/[^0-9+\-.]/g, ' ');
+    const match = cleaned.match(/[-+]?\d+(?:\.\d+)?/);
+    if (!match) return undefined;
+    const n = Number(match[0]);
+    return Number.isFinite(n) ? n : undefined;
+  }
+
+  function parseAIValueBool(rawValue) {
+    if (rawValue == null) return undefined;
+    const v = String(rawValue).toLowerCase().trim();
+    if (['1', 'true', 'да', 'yes', 'y', 'есть', '✓'].includes(v)) return true;
+    if (['0', 'false', 'нет', 'no', 'n', 'none', '—', '-'].includes(v)) return false;
+    return undefined;
+  }
+
+  function parseAIValueList(rawValue) {
+    if (rawValue == null) return undefined;
+    const v = String(rawValue).trim();
+    if (!v || ['нет', 'no', '0', '-', '—'].includes(v.toLowerCase())) return [];
+    const cleaned = v.replace(/[\[\]{}()]/g, '');
+    return cleaned
+      .split(/[,;|]/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((item) => item.toUpperCase());
+  }
+
+  /**
+   * Парсит AI-строку продукта с русскими ключами.
+   * Формат: "Ключ: значение" по строкам (или через |/;), имя обязательно.
+   * @param {string} text
+   * @param {{ defaultName?: string }} [options]
+   * @returns {{ product: Object, missingFields: string[] } | null}
+   */
+  function parseAIProductString(text, options = {}) {
+    if (!text || typeof text !== 'string') return null;
+
+    const raw = text.replace(/\r/g, '\n');
+    const chunks = raw
+      .split(/\n|\||;/)
+      .map((chunk) => chunk.trim())
+      .filter(Boolean);
+
+    if (!chunks.length) return null;
+
+    const result = {};
+    let fallbackName = '';
+
+    chunks.forEach((line) => {
+      const match = line.match(/^([^:=\-–]+)[\s]*[:=\-–]+[\s]*(.+)$/);
+      if (!match) {
+        if (!result.name && !/\d/.test(line)) {
+          fallbackName = line.trim();
+        }
+        return;
+      }
+
+      const rawKey = match[1].trim();
+      const rawValue = match[2].trim();
+      const normalizedKey = normalizeAIKey(rawKey);
+      const field = AI_PRODUCT_FIELD_MAP.get(normalizedKey);
+      if (!field) return;
+
+      if (field === 'name') {
+        result.name = rawValue.trim();
+        return;
+      }
+
+      if (field === 'additives') {
+        const list = parseAIValueList(rawValue);
+        if (list !== undefined) result.additives = list;
+        return;
+      }
+
+      if (['is_organic', 'is_whole_grain', 'is_fermented', 'is_raw'].includes(field)) {
+        const boolVal = parseAIValueBool(rawValue);
+        if (boolVal !== undefined) result[field] = boolVal;
+        return;
+      }
+
+      const numVal = parseAIValueNumber(rawValue);
+      if (numVal === undefined) return;
+
+      if (field === 'nova_group') {
+        const nova = Math.round(numVal);
+        if (nova >= 1 && nova <= 4) result[field] = nova;
+        return;
+      }
+
+      result[field] = numVal;
+    });
+
+    if (!result.name) {
+      result.name = fallbackName || options.defaultName || 'Без названия';
+    }
+
+    const missingFields = AI_REQUIRED_FIELDS.filter((field) => {
+      const value = result[field];
+      return value === undefined || value === null || Number.isNaN(value);
+    });
+
+    if (missingFields.length) {
+      return { product: result, missingFields };
+    }
+
+    const derivedCarbs = (Number.isFinite(result.carbs100) && result.carbs100 > 0)
+      ? result.carbs100
+      : ((result.simple100 || 0) + (result.complex100 || 0));
+    const derivedFat = (Number.isFinite(result.fat100) && result.fat100 > 0)
+      ? result.fat100
+      : ((result.badFat100 || 0) + (result.goodFat100 || 0) + (result.trans100 || 0));
+
+    result.carbs100 = round1(derivedCarbs);
+    result.fat100 = round1(derivedFat);
+    result.kcal100 = round1(3 * (result.protein100 || 0) + 4 * derivedCarbs + 9 * derivedFat);
+    result.createdAt = result.createdAt || Date.now();
+
+    return { product: result, missingFields: [] };
+  }
+
+  /**
+   * Парсит AI-строку расширенных нутриентов
+   * @param {string} extString - Строка формата "NOVA:4|Na:1200|O3:0.5|..."
+   * @returns {Object} - Объект с расширенными полями
+   * @example
+   * parseExtendedNutrients("NOVA:4|Na:1200|vC:15|Fe:30")
+   * // → { nova_group: 4, sodium100: 1200, vitamin_c: 15, iron: 30 }
+   */
+  function parseExtendedNutrients(extString) {
+    if (!extString || typeof extString !== 'string') return {};
+
+    const result = {};
+    const pairs = extString.split('|');
+
+    for (const pair of pairs) {
+      const [key, value] = pair.split(':');
+      if (!key || value === undefined) continue;
+
+      const fieldName = EXTENDED_NUTRIENT_KEYS[key.trim()];
+      if (!fieldName) continue;
+
+      const trimmedValue = value.trim();
+
+      // Boolean fields (0/1)
+      if (['is_organic', 'is_whole_grain', 'is_fermented', 'is_raw'].includes(fieldName)) {
+        result[fieldName] = trimmedValue === '1' || trimmedValue.toLowerCase() === 'true';
+      }
+      // Integer fields
+      else if (fieldName === 'nova_group') {
+        const n = parseInt(trimmedValue, 10);
+        if (n >= 1 && n <= 4) result[fieldName] = n;
+      }
+      // Numeric fields
+      else {
+        const n = parseFloat(trimmedValue);
+        if (Number.isFinite(n) && n >= 0) result[fieldName] = n;
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Сериализует расширенные нутриенты в строку для AI
+   * @param {Object} product - Продукт с расширенными полями
+   * @returns {string} - Строка формата "NOVA:4|Na:1200|..."
+   */
+  function serializeExtendedNutrients(product) {
+    if (!product) return '';
+
+    const parts = [];
+
+    for (const [shortKey, fieldName] of Object.entries(EXTENDED_NUTRIENT_KEYS)) {
+      const value = product[fieldName];
+      if (value === undefined || value === null) continue;
+
+      // Boolean fields → 0/1
+      if (typeof value === 'boolean') {
+        parts.push(`${shortKey}:${value ? '1' : '0'}`);
+      }
+      // Numeric fields → number
+      else if (typeof value === 'number' && Number.isFinite(value)) {
+        // Round to 1 decimal for readability
+        parts.push(`${shortKey}:${round1(value)}`);
+      }
+    }
+
+    return parts.join('|');
+  }
+
+  /**
+   * Генерирует AI промпт для получения расширенных нутриентов
+   * @param {string} productName - Название продукта
+   * @returns {string} - Промпт для AI
+   */
+  function generateExtendedNutrientPrompt(productName) {
+    return `Для продукта "${productName}" дай расширенную информацию в формате:
+NOVA:X|Na:X|O3:X|O6:X|Org:0/1|WG:0/1|Fer:0/1|Raw:0/1|vA:X|vC:X|vD:X|vE:X|vK:X|vB1:X|vB2:X|vB3:X|vB6:X|vB9:X|vB12:X|Ca:X|Fe:X|Mg:X|P:X|K:X|Zn:X|Se:X|I:X
+
+Расшифровка: NOVA (1-4), Na=натрий мг/100г, O3/O6=омега г/100г, витамины и минералы в % от суточной нормы на 100г.
+Пропусти неизвестные значения. Только строка, без объяснений.`;
+  }
+
+  /**
+   * Генерирует AI промпт для полного продукта (русские ключи)
+   * @param {string} productName - Название продукта
+   * @returns {string}
+   */
+  function generateAIProductStringPrompt(productName) {
+    return `Для продукта "${productName}" дай строку с данными в формате (каждое поле с новой строки):
+Название: ${productName}
+Ккал: X
+Углеводы: X
+Простые: X
+Сложные: X
+Белок: X
+Жиры: X
+Вредные жиры: X
+Полезные жиры: X
+Транс-жиры: X
+Клетчатка: X
+ГИ: X
+Вред: X
+Натрий: X
+Омега-3: X
+Омега-6: X
+NOVA: X
+Добавки: E621, E330
+Нутриентная плотность: X
+Органик: 0/1
+Цельнозерновой: 0/1
+Ферментированный: 0/1
+Сырой: 0/1
+Витамин A: X
+Витамин C: X
+Витамин D: X
+Витамин E: X
+Витамин K: X
+Витамин B1: X
+Витамин B2: X
+Витамин B3: X
+Витамин B6: X
+Витамин B9: X
+Витамин B12: X
+Кальций: X
+Железо: X
+Магний: X
+Фосфор: X
+Калий: X
+Цинк: X
+Селен: X
+Йод: X
+
+Если значения нет — пропусти строку. Только строки, без пояснений.`;
+  }
+
+  /**
+   * Нормализует все поля продукта из DB формата в JS формат
+   * @param {Object} dbProduct - Продукт из PostgreSQL (snake_case поля)
+   * @returns {Object} - Нормализованный продукт
+   */
+  function normalizeExtendedProduct(dbProduct) {
+    if (!dbProduct) return dbProduct;
+
+    const result = { ...dbProduct };
+
+    // harm normalization (существующая логика)
+    const harmVal = normalizeHarm(result);
+    if (harmVal !== undefined) {
+      result.harm = harmVal;
+      result.harmScore = harmVal;
+    }
+
+    // gi normalization
+    if (result.gi != null) {
+      result.gi = Number(result.gi);
+    }
+
+    // Extended fields - ensure numbers are numbers
+    const numericFields = [
+      'sodium100', 'omega3_100', 'omega6_100', 'nutrient_density',
+      'vitamin_a', 'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k',
+      'vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12',
+      'calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'selenium', 'iodine'
+    ];
+
+    for (const field of numericFields) {
+      if (result[field] != null) {
+        result[field] = Number(result[field]);
+      }
+    }
+
+    // NOVA group
+    if (result.nova_group != null) {
+      result.nova_group = parseInt(result.nova_group, 10);
+    }
+
+    // Boolean flags
+    const boolFields = ['is_organic', 'is_whole_grain', 'is_fermented', 'is_raw'];
+    for (const field of boolFields) {
+      if (result[field] != null) {
+        result[field] = Boolean(result[field]);
+      }
+    }
+
+    return result;
+  }
+
+  // Export extended nutrients functions
+  M.EXTENDED_NUTRIENT_KEYS = EXTENDED_NUTRIENT_KEYS;
+  M.parseExtendedNutrients = parseExtendedNutrients;
+  M.serializeExtendedNutrients = serializeExtendedNutrients;
+  M.generateExtendedNutrientPrompt = generateExtendedNutrientPrompt;
+  M.generateAIProductStringPrompt = generateAIProductStringPrompt;
+  M.parseAIProductString = parseAIProductString;
+  M.normalizeExtendedProduct = normalizeExtendedProduct;
 
   // Verbose init log removed
 })(window);

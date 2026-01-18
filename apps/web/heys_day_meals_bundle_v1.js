@@ -1559,6 +1559,9 @@
 
                         // Use centralized harm normalization
                         const harmValue = HEYS.models?.normalizeHarm?.(finalProduct);
+                        const additivesList = Array.isArray(finalProduct.additives) ? finalProduct.additives : undefined;
+                        const novaGroup = finalProduct.nova_group ?? finalProduct.novaGroup;
+                        const nutrientDensity = finalProduct.nutrient_density ?? finalProduct.nutrientDensity;
 
                         const newItem = {
                             id: uid('it_'),
@@ -1577,6 +1580,35 @@
                                 goodFat100: finalProduct.goodFat100,
                                 trans100: finalProduct.trans100,
                                 fiber100: finalProduct.fiber100,
+                                sodium100: finalProduct.sodium100,
+                                omega3_100: finalProduct.omega3_100,
+                                omega6_100: finalProduct.omega6_100,
+                                nova_group: novaGroup,
+                                additives: additivesList,
+                                nutrient_density: nutrientDensity,
+                                is_organic: finalProduct.is_organic,
+                                is_whole_grain: finalProduct.is_whole_grain,
+                                is_fermented: finalProduct.is_fermented,
+                                is_raw: finalProduct.is_raw,
+                                vitamin_a: finalProduct.vitamin_a,
+                                vitamin_c: finalProduct.vitamin_c,
+                                vitamin_d: finalProduct.vitamin_d,
+                                vitamin_e: finalProduct.vitamin_e,
+                                vitamin_k: finalProduct.vitamin_k,
+                                vitamin_b1: finalProduct.vitamin_b1,
+                                vitamin_b2: finalProduct.vitamin_b2,
+                                vitamin_b3: finalProduct.vitamin_b3,
+                                vitamin_b6: finalProduct.vitamin_b6,
+                                vitamin_b9: finalProduct.vitamin_b9,
+                                vitamin_b12: finalProduct.vitamin_b12,
+                                calcium: finalProduct.calcium,
+                                iron: finalProduct.iron,
+                                magnesium: finalProduct.magnesium,
+                                phosphorus: finalProduct.phosphorus,
+                                potassium: finalProduct.potassium,
+                                zinc: finalProduct.zinc,
+                                selenium: finalProduct.selenium,
+                                iodine: finalProduct.iodine,
                                 gi: finalProduct.gi,
                                 harm: harmValue  // Normalized harm (0-10)
                             })

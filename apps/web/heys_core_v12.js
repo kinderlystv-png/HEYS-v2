@@ -73,8 +73,10 @@
    * @returns {{carbs100: number, fat100: number, kcal100: number, harm?: number}}
    */
   function computeDerived(p) {
-    const carbs100 = toNum(p.simple100) + toNum(p.complex100);
-    const fat100 = toNum(p.badFat100) + toNum(p.goodFat100) + toNum(p.trans100);
+    const hasCarbs = p && p.carbs100 != null;
+    const hasFat = p && p.fat100 != null;
+    const carbs100 = hasCarbs ? toNum(p.carbs100) : (toNum(p.simple100) + toNum(p.complex100));
+    const fat100 = hasFat ? toNum(p.fat100) : (toNum(p.badFat100) + toNum(p.goodFat100) + toNum(p.trans100));
     // TEF-aware formula: protein 3 kcal/g, carbs 4 kcal/g, fat 9 kcal/g
     // (Учитывает термический эффект пищи для белка — ~25% калорий уходит на переваривание)
     // Стандарт проекта: heys_models_v1.js, heys_day_add_product.js, parse_worker.js
@@ -356,7 +358,7 @@
       DEV.log(`✅ [PARSE_SYNC] Извлечены данные из строки ${i + 1}:`, st.name, st.nums);
 
       const [kcal, carbs, simple, complex, protein, fat, bad, good, trans, fiber, gi, harm] = st.nums;
-      const base = { id: uuid(), name: st.name, simple100: simple, complex100: complex, protein100: protein, badFat100: bad, goodFat100: good, trans100: trans, fiber100: fiber, gi: gi, harm: harm, createdAt: Date.now() };
+      const base = { id: uuid(), name: st.name, carbs100: carbs, fat100: fat, simple100: simple, complex100: complex, protein100: protein, badFat100: bad, goodFat100: good, trans100: trans, fiber100: fiber, gi: gi, harm: harm, createdAt: Date.now() };
 
       try {
         const d = computeDerived(base);
@@ -896,6 +898,112 @@
         window.HEYS.analytics.trackDataOperation('storage-op');
       }
     }
+    function openPortionsEditor(product) {
+      if (!product) return;
+      if (!window.HEYS?.StepModal || !window.HEYS?.AddProductStep?.PortionsStep) {
+        HEYS.Toast?.warning('Модалка порций недоступна') || alert('Модалка порций недоступна');
+        return;
+      }
+
+      window.HEYS.StepModal.show({
+        steps: [
+          {
+            id: 'portions',
+            title: 'Порции',
+            hint: 'Настройте порции',
+            icon: '🥣',
+            component: window.HEYS.AddProductStep.PortionsStep,
+            validate: () => true,
+            hideHeaderNext: true,
+            getInitialData: () => ({
+              selectedProduct: product,
+              portions: product.portions || []
+            })
+          }
+        ],
+        context: {
+          isEditMode: true,
+          editProduct: product,
+          onFinish: ({ portions }) => {
+            updateRow(product.id, { portions: portions || [] });
+          }
+        },
+        showGreeting: false,
+        showStreak: false,
+        showTip: false,
+        showProgress: false,
+        allowSwipe: false,
+        hidePrimaryOnFirst: true,
+        title: ''
+      });
+    }
+    async function updateSharedProductPortions(productId, portions) {
+      if (!window.HEYS?.YandexAPI?.rest) {
+        HEYS.Toast?.warning('API недоступен для обновления') || alert('API недоступен для обновления');
+        return { ok: false };
+      }
+
+      try {
+        const { error } = await window.HEYS.YandexAPI.rest('shared_products', {
+          method: 'PATCH',
+          data: { portions },
+          filters: { 'eq.id': productId },
+          select: 'id,portions'
+        });
+
+        if (error) {
+          HEYS.Toast?.error('Ошибка обновления: ' + error) || alert('Ошибка обновления: ' + error);
+          return { ok: false };
+        }
+
+        setAllSharedProducts(prev => prev.map(p => p.id === productId ? { ...p, portions } : p));
+        HEYS.Toast?.success('Порции обновлены') || alert('Порции обновлены');
+        return { ok: true };
+      } catch (e) {
+        const msg = e?.message || 'Ошибка обновления';
+        HEYS.Toast?.error(msg) || alert(msg);
+        return { ok: false };
+      }
+    }
+    function openSharedPortionsEditor(product) {
+      if (!product) return;
+      if (!window.HEYS?.StepModal || !window.HEYS?.AddProductStep?.PortionsStep) {
+        HEYS.Toast?.warning('Модалка порций недоступна') || alert('Модалка порций недоступна');
+        return;
+      }
+
+      window.HEYS.StepModal.show({
+        steps: [
+          {
+            id: 'portions',
+            title: 'Порции',
+            hint: 'Настройте порции',
+            icon: '🥣',
+            component: window.HEYS.AddProductStep.PortionsStep,
+            validate: () => true,
+            hideHeaderNext: true,
+            getInitialData: () => ({
+              selectedProduct: product,
+              portions: product.portions || []
+            })
+          }
+        ],
+        context: {
+          isEditMode: true,
+          editProduct: product,
+          onFinish: async ({ portions }) => {
+            await updateSharedProductPortions(product.id, portions || []);
+          }
+        },
+        showGreeting: false,
+        showStreak: false,
+        showTip: false,
+        showProgress: false,
+        allowSwipe: false,
+        hidePrimaryOnFirst: true,
+        title: ''
+      });
+    }
     function deleteRow(id) {
       // Устанавливаем флаг намеренного удаления, чтобы useEffect не заблокировал сохранение
       if (window.HEYS) {
@@ -1248,6 +1356,23 @@
 
     // === PHASE 2: Helper функции для UI ===
 
+    const formatTableValue = (value) => {
+      if (value === null || value === undefined || value === '' || (typeof value === 'number' && isNaN(value))) return '—';
+      return value;
+    };
+
+    const formatTableBool = (value) => {
+      if (value === true) return 'да';
+      if (value === false) return 'нет';
+      return '—';
+    };
+
+    const formatTableList = (value) => {
+      if (Array.isArray(value)) return value.length ? value.join(', ') : '—';
+      if (value === null || value === undefined || value === '') return '—';
+      return String(value);
+    };
+
     // Одобрить pending заявку
     async function approvePending(pending) {
       try {
@@ -1313,6 +1438,35 @@
         harm: harmVal,  // Canonical field
         category: sharedProduct.category || '',
         portions: sharedProduct.portions || null,
+        sodium100: toNum(sharedProduct.sodium100),
+        omega3_100: toNum(sharedProduct.omega3_100),
+        omega6_100: toNum(sharedProduct.omega6_100),
+        nova_group: toNum(sharedProduct.nova_group ?? sharedProduct.novaGroup),
+        additives: sharedProduct.additives || null,
+        nutrient_density: toNum(sharedProduct.nutrient_density ?? sharedProduct.nutrientDensity),
+        is_organic: sharedProduct.is_organic ?? sharedProduct.isOrganic ?? null,
+        is_whole_grain: sharedProduct.is_whole_grain ?? sharedProduct.isWholeGrain ?? null,
+        is_fermented: sharedProduct.is_fermented ?? sharedProduct.isFermented ?? null,
+        is_raw: sharedProduct.is_raw ?? sharedProduct.isRaw ?? null,
+        vitamin_a: toNum(sharedProduct.vitamin_a),
+        vitamin_c: toNum(sharedProduct.vitamin_c),
+        vitamin_d: toNum(sharedProduct.vitamin_d),
+        vitamin_e: toNum(sharedProduct.vitamin_e),
+        vitamin_k: toNum(sharedProduct.vitamin_k),
+        vitamin_b1: toNum(sharedProduct.vitamin_b1),
+        vitamin_b2: toNum(sharedProduct.vitamin_b2),
+        vitamin_b3: toNum(sharedProduct.vitamin_b3),
+        vitamin_b6: toNum(sharedProduct.vitamin_b6),
+        vitamin_b9: toNum(sharedProduct.vitamin_b9),
+        vitamin_b12: toNum(sharedProduct.vitamin_b12),
+        calcium: toNum(sharedProduct.calcium),
+        iron: toNum(sharedProduct.iron),
+        magnesium: toNum(sharedProduct.magnesium),
+        phosphorus: toNum(sharedProduct.phosphorus),
+        potassium: toNum(sharedProduct.potassium),
+        zinc: toNum(sharedProduct.zinc),
+        selenium: toNum(sharedProduct.selenium),
+        iodine: toNum(sharedProduct.iodine),
         shared_origin_id: sharedProduct.id, // Связь с shared продуктом
         createdAt: Date.now()
       };
@@ -1393,6 +1547,35 @@
         harm: harmVal,  // Canonical field
         category: sharedProduct.category || '',
         portions: sharedProduct.portions || null,
+        sodium100: toNum(sharedProduct.sodium100),
+        omega3_100: toNum(sharedProduct.omega3_100),
+        omega6_100: toNum(sharedProduct.omega6_100),
+        nova_group: toNum(sharedProduct.nova_group ?? sharedProduct.novaGroup),
+        additives: sharedProduct.additives || null,
+        nutrient_density: toNum(sharedProduct.nutrient_density ?? sharedProduct.nutrientDensity),
+        is_organic: sharedProduct.is_organic ?? sharedProduct.isOrganic ?? null,
+        is_whole_grain: sharedProduct.is_whole_grain ?? sharedProduct.isWholeGrain ?? null,
+        is_fermented: sharedProduct.is_fermented ?? sharedProduct.isFermented ?? null,
+        is_raw: sharedProduct.is_raw ?? sharedProduct.isRaw ?? null,
+        vitamin_a: toNum(sharedProduct.vitamin_a),
+        vitamin_c: toNum(sharedProduct.vitamin_c),
+        vitamin_d: toNum(sharedProduct.vitamin_d),
+        vitamin_e: toNum(sharedProduct.vitamin_e),
+        vitamin_k: toNum(sharedProduct.vitamin_k),
+        vitamin_b1: toNum(sharedProduct.vitamin_b1),
+        vitamin_b2: toNum(sharedProduct.vitamin_b2),
+        vitamin_b3: toNum(sharedProduct.vitamin_b3),
+        vitamin_b6: toNum(sharedProduct.vitamin_b6),
+        vitamin_b9: toNum(sharedProduct.vitamin_b9),
+        vitamin_b12: toNum(sharedProduct.vitamin_b12),
+        calcium: toNum(sharedProduct.calcium),
+        iron: toNum(sharedProduct.iron),
+        magnesium: toNum(sharedProduct.magnesium),
+        phosphorus: toNum(sharedProduct.phosphorus),
+        potassium: toNum(sharedProduct.potassium),
+        zinc: toNum(sharedProduct.zinc),
+        selenium: toNum(sharedProduct.selenium),
+        iodine: toNum(sharedProduct.iodine),
         shared_origin_id: sharedProduct.id, // Связь с shared
         createdAt: Date.now()
       };
@@ -1616,7 +1799,7 @@
                 React.createElement('button', { className: 'btn acc', onClick: () => setShowModal(true) }, '+ Добавить продукт')
               )
             ),
-            React.createElement('div', { style: { overflowX: 'auto' } },
+            React.createElement('div', { className: 'products-table-scroll' },
               React.createElement('table', { className: 'products-table' },
                 React.createElement('thead', null,
                   React.createElement('tr', null,
@@ -1633,6 +1816,36 @@
                     React.createElement('th', { title: 'Клетчатка' }, 'Кл'),
                     React.createElement('th', { title: 'Гликемический индекс' }, 'ГИ'),
                     React.createElement('th', { title: 'Индекс вредности' }, 'Вред'),
+                    React.createElement('th', { title: 'Натрий (мг/100г)' }, 'Na'),
+                    React.createElement('th', { title: 'Омега-3 (г/100г)' }, 'Ω3'),
+                    React.createElement('th', { title: 'Омега-6 (г/100г)' }, 'Ω6'),
+                    React.createElement('th', { title: 'NOVA группа' }, 'NOVA'),
+                    React.createElement('th', { title: 'Добавки (E-коды)' }, 'Add'),
+                    React.createElement('th', { title: 'Нутриентная плотность (0–100)' }, 'ND'),
+                    React.createElement('th', { title: 'Органик' }, 'Org'),
+                    React.createElement('th', { title: 'Цельнозерновой' }, 'ЦЗ'),
+                    React.createElement('th', { title: 'Ферментированный' }, 'Ферм'),
+                    React.createElement('th', { title: 'Сырой' }, 'Raw'),
+                    React.createElement('th', { title: 'Витамин A (% DV)' }, 'A'),
+                    React.createElement('th', { title: 'Витамин C (% DV)' }, 'C'),
+                    React.createElement('th', { title: 'Витамин D (% DV)' }, 'D'),
+                    React.createElement('th', { title: 'Витамин E (% DV)' }, 'E'),
+                    React.createElement('th', { title: 'Витамин K (% DV)' }, 'K'),
+                    React.createElement('th', { title: 'Витамин B1 (% DV)' }, 'B1'),
+                    React.createElement('th', { title: 'Витамин B2 (% DV)' }, 'B2'),
+                    React.createElement('th', { title: 'Витамин B3 (% DV)' }, 'B3'),
+                    React.createElement('th', { title: 'Витамин B6 (% DV)' }, 'B6'),
+                    React.createElement('th', { title: 'Витамин B9 (% DV)' }, 'B9'),
+                    React.createElement('th', { title: 'Витамин B12 (% DV)' }, 'B12'),
+                    React.createElement('th', { title: 'Кальций (% DV)' }, 'Ca'),
+                    React.createElement('th', { title: 'Железо (% DV)' }, 'Fe'),
+                    React.createElement('th', { title: 'Магний (% DV)' }, 'Mg'),
+                    React.createElement('th', { title: 'Фосфор (% DV)' }, 'P'),
+                    React.createElement('th', { title: 'Калий (% DV)' }, 'K'),
+                    React.createElement('th', { title: 'Цинк (% DV)' }, 'Zn'),
+                    React.createElement('th', { title: 'Селен (% DV)' }, 'Se'),
+                    React.createElement('th', { title: 'Йод (% DV)' }, 'I'),
+                    React.createElement('th', { title: 'Порции' }, 'Порц'),
                     React.createElement('th', null, '')
                   )
                 ),
@@ -1652,6 +1865,42 @@
                     React.createElement('td', null, React.createElement('input', { type: 'text', value: p.fiber100, onChange: e => updateRow(p.id, { fiber100: toNum(e.target.value) }) })),
                     React.createElement('td', null, React.createElement('input', { type: 'text', value: p.gi, onChange: e => updateRow(p.id, { gi: toNum(e.target.value) }) })),
                     React.createElement('td', null, React.createElement('input', { type: 'text', value: HEYS.models?.normalizeHarm?.(p) ?? p.harm ?? p.harmScore ?? p.harmscore ?? p.harm100 ?? 0, onChange: e => updateRow(p.id, { harm: toNum(e.target.value) }) })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.sodium100), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.omega3_100), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.omega6_100), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.nova_group), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableList(p.additives), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.nutrient_density), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableBool(p.is_organic), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableBool(p.is_whole_grain), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableBool(p.is_fermented), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableBool(p.is_raw), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_a), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_c), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_d), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_e), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_k), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b1), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b2), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b3), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b6), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b9), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b12), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.calcium), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.iron), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.magnesium), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.phosphorus), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.potassium), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.zinc), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.selenium), readOnly: true })),
+                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.iodine), readOnly: true })),
+                    React.createElement('td', null,
+                      React.createElement('button', {
+                        className: 'btn',
+                        onClick: () => openPortionsEditor(p),
+                        title: 'Редактировать порции'
+                      }, `🥣 ${Array.isArray(p.portions) ? p.portions.length : 0}`)
+                    ),
                     React.createElement('td', null, React.createElement('button', { className: 'btn', onClick: () => deleteRow(p.id) }, 'Удалить'))
                   ))
                 )
@@ -1769,7 +2018,7 @@
                 '⏳ Загрузка продуктов из общей базы...'
               )
             ) : (
-              React.createElement('div', { style: { overflowX: 'auto' } },
+              React.createElement('div', { className: 'products-table-scroll' },
                 React.createElement('table', { className: 'products-table' },
                   React.createElement('thead', null,
                     React.createElement('tr', null,
@@ -1786,6 +2035,36 @@
                       React.createElement('th', { title: 'Клетчатка' }, 'Кл'),
                       React.createElement('th', { title: 'Гликемический индекс' }, 'ГИ'),
                       React.createElement('th', { title: 'Индекс вредности' }, 'Вред'),
+                      React.createElement('th', { title: 'Натрий (мг/100г)' }, 'Na'),
+                      React.createElement('th', { title: 'Омега-3 (г/100г)' }, 'Ω3'),
+                      React.createElement('th', { title: 'Омега-6 (г/100г)' }, 'Ω6'),
+                      React.createElement('th', { title: 'NOVA группа' }, 'NOVA'),
+                      React.createElement('th', { title: 'Добавки (E-коды)' }, 'Add'),
+                      React.createElement('th', { title: 'Нутриентная плотность (0–100)' }, 'ND'),
+                      React.createElement('th', { title: 'Органик' }, 'Org'),
+                      React.createElement('th', { title: 'Цельнозерновой' }, 'ЦЗ'),
+                      React.createElement('th', { title: 'Ферментированный' }, 'Ферм'),
+                      React.createElement('th', { title: 'Сырой' }, 'Raw'),
+                      React.createElement('th', { title: 'Витамин A (% DV)' }, 'A'),
+                      React.createElement('th', { title: 'Витамин C (% DV)' }, 'C'),
+                      React.createElement('th', { title: 'Витамин D (% DV)' }, 'D'),
+                      React.createElement('th', { title: 'Витамин E (% DV)' }, 'E'),
+                      React.createElement('th', { title: 'Витамин K (% DV)' }, 'K'),
+                      React.createElement('th', { title: 'Витамин B1 (% DV)' }, 'B1'),
+                      React.createElement('th', { title: 'Витамин B2 (% DV)' }, 'B2'),
+                      React.createElement('th', { title: 'Витамин B3 (% DV)' }, 'B3'),
+                      React.createElement('th', { title: 'Витамин B6 (% DV)' }, 'B6'),
+                      React.createElement('th', { title: 'Витамин B9 (% DV)' }, 'B9'),
+                      React.createElement('th', { title: 'Витамин B12 (% DV)' }, 'B12'),
+                      React.createElement('th', { title: 'Кальций (% DV)' }, 'Ca'),
+                      React.createElement('th', { title: 'Железо (% DV)' }, 'Fe'),
+                      React.createElement('th', { title: 'Магний (% DV)' }, 'Mg'),
+                      React.createElement('th', { title: 'Фосфор (% DV)' }, 'P'),
+                      React.createElement('th', { title: 'Калий (% DV)' }, 'K'),
+                      React.createElement('th', { title: 'Цинк (% DV)' }, 'Zn'),
+                      React.createElement('th', { title: 'Селен (% DV)' }, 'Se'),
+                      React.createElement('th', { title: 'Йод (% DV)' }, 'I'),
+                      React.createElement('th', { title: 'Порции' }, 'Порц'),
                       React.createElement('th', null, '')
                     )
                   ),
@@ -1797,11 +2076,18 @@
                         : allSharedProducts;
                       // Ограничение для производительности
                       const SHARED_DISPLAY_LIMIT = 100;
+                      // Безопасное получение числового значения
+                      const safeNum = (v) => {
+                        const n = Number(v);
+                        return isNaN(n) ? 0 : n;
+                      };
                       return filteredShared.slice(0, SHARED_DISPLAY_LIMIT).map(p => {
                         // Supabase возвращает snake_case поля
-                        const kcal = Math.round((p.protein100 || 0) * 4 + (p.simple100 || 0) * 4 + (p.complex100 || 0) * 4 + ((p.badfat100 || 0) + (p.goodfat100 || 0) + (p.trans100 || 0)) * 9);
-                        const carbs = (p.simple100 || 0) + (p.complex100 || 0);
-                        const fat = (p.badfat100 || 0) + (p.goodfat100 || 0) + (p.trans100 || 0);
+                        const kcal = Math.round(safeNum(p.protein100) * 4 + safeNum(p.simple100) * 4 + safeNum(p.complex100) * 4 + (safeNum(p.badfat100) + safeNum(p.goodfat100) + safeNum(p.trans100)) * 9);
+                        const carbs = safeNum(p.simple100) + safeNum(p.complex100);
+                        const fat = safeNum(p.badfat100) + safeNum(p.goodfat100) + safeNum(p.trans100);
+                        const harmValue = HEYS.models?.normalizeHarm?.(p) ?? p.harm ?? p.harmScore ?? 0;
+                        const safeHarm = isNaN(harmValue) ? 0 : harmValue;
                         return React.createElement('tr', { key: p.id },
                           React.createElement('td', null,
                             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
@@ -1813,16 +2099,53 @@
                           ),
                           React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: kcal, readOnly: true })),
                           React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: carbs, readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.simple100 || 0, readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.complex100 || 0, readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.protein100 || 0, readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeNum(p.simple100), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeNum(p.complex100), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeNum(p.protein100), readOnly: true })),
                           React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: fat, readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.badfat100 || 0, readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.goodfat100 || 0, readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.trans100 || 0, readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.fiber100 || 0, readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.gi || 0, readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: HEYS.models?.normalizeHarm?.(p) ?? p.harm ?? p.harmScore ?? 0, readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeNum(p.badfat100), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeNum(p.goodfat100), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeNum(p.trans100), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeNum(p.fiber100), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeNum(p.gi), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeHarm, readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.sodium100), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.omega3_100), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.omega6_100), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.nova_group), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableList(p.additives), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.nutrient_density), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableBool(p.is_organic), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableBool(p.is_whole_grain), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableBool(p.is_fermented), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableBool(p.is_raw), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_a), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_c), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_d), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_e), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_k), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b1), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b2), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b3), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b6), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b9), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b12), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.calcium), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.iron), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.magnesium), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.phosphorus), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.potassium), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.zinc), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.selenium), readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.iodine), readOnly: true })),
+                          React.createElement('td', null,
+                            (isCurator || p.is_mine) ? React.createElement('button', {
+                              className: 'btn',
+                              onClick: () => openSharedPortionsEditor(p),
+                              title: 'Редактировать порции'
+                            }, `🥣 ${Array.isArray(p.portions) ? p.portions.length : 0}`)
+                              : React.createElement('span', null, `🥣 ${Array.isArray(p.portions) ? p.portions.length : 0}`)
+                          ),
                           React.createElement('td', null,
                             React.createElement('div', { style: { display: 'flex', gap: '4px' } },
                               // ➕ Добавить в мою базу (для всех)
@@ -2189,6 +2512,35 @@
         harm: harmVal,  // Canonical field
         category: sharedProduct.category || '',
         portions: sharedProduct.portions || null,
+        sodium100: toNum(sharedProduct.sodium100),
+        omega3_100: toNum(sharedProduct.omega3_100),
+        omega6_100: toNum(sharedProduct.omega6_100),
+        nova_group: toNum(sharedProduct.nova_group ?? sharedProduct.novaGroup),
+        additives: sharedProduct.additives || null,
+        nutrient_density: toNum(sharedProduct.nutrient_density ?? sharedProduct.nutrientDensity),
+        is_organic: sharedProduct.is_organic ?? sharedProduct.isOrganic ?? null,
+        is_whole_grain: sharedProduct.is_whole_grain ?? sharedProduct.isWholeGrain ?? null,
+        is_fermented: sharedProduct.is_fermented ?? sharedProduct.isFermented ?? null,
+        is_raw: sharedProduct.is_raw ?? sharedProduct.isRaw ?? null,
+        vitamin_a: toNum(sharedProduct.vitamin_a),
+        vitamin_c: toNum(sharedProduct.vitamin_c),
+        vitamin_d: toNum(sharedProduct.vitamin_d),
+        vitamin_e: toNum(sharedProduct.vitamin_e),
+        vitamin_k: toNum(sharedProduct.vitamin_k),
+        vitamin_b1: toNum(sharedProduct.vitamin_b1),
+        vitamin_b2: toNum(sharedProduct.vitamin_b2),
+        vitamin_b3: toNum(sharedProduct.vitamin_b3),
+        vitamin_b6: toNum(sharedProduct.vitamin_b6),
+        vitamin_b9: toNum(sharedProduct.vitamin_b9),
+        vitamin_b12: toNum(sharedProduct.vitamin_b12),
+        calcium: toNum(sharedProduct.calcium),
+        iron: toNum(sharedProduct.iron),
+        magnesium: toNum(sharedProduct.magnesium),
+        phosphorus: toNum(sharedProduct.phosphorus),
+        potassium: toNum(sharedProduct.potassium),
+        zinc: toNum(sharedProduct.zinc),
+        selenium: toNum(sharedProduct.selenium),
+        iodine: toNum(sharedProduct.iodine),
         shared_origin_id: sharedProduct.id, // Связь с shared продуктом
         createdAt: Date.now()
       };

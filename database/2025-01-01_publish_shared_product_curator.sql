@@ -60,12 +60,13 @@ BEGIN
     );
   END IF;
   
-  -- 4. Вставляем новый продукт
+  -- 4. Вставляем новый продукт (включая 29 extended полей)
   INSERT INTO shared_products (
     created_by_user_id,
     name,
     name_norm,
     fingerprint,
+    -- Базовые нутриенты (12)
     simple100,
     complex100,
     protein100,
@@ -77,12 +78,47 @@ BEGIN
     harm,
     category,
     portions,
-    description
+    description,
+    -- Extended нутриенты (5)
+    sodium100,
+    omega3_100,
+    omega6_100,
+    nova_group,
+    additives,
+    -- Nutrient density (1)
+    nutrient_density,
+    -- Флаги качества (4)
+    is_organic,
+    is_whole_grain,
+    is_fermented,
+    is_raw,
+    -- Витамины (11)
+    vitamin_a,
+    vitamin_c,
+    vitamin_d,
+    vitamin_e,
+    vitamin_k,
+    vitamin_b1,
+    vitamin_b2,
+    vitamin_b3,
+    vitamin_b6,
+    vitamin_b9,
+    vitamin_b12,
+    -- Минералы (8)
+    calcium,
+    iron,
+    magnesium,
+    phosphorus,
+    potassium,
+    zinc,
+    selenium,
+    iodine
   ) VALUES (
     p_curator_id,
     p_product_data->>'name',
     v_name_norm,
     v_fingerprint,
+    -- Базовые нутриенты
     COALESCE((p_product_data->>'simple100')::numeric, 0),
     COALESCE((p_product_data->>'complex100')::numeric, 0),
     COALESCE((p_product_data->>'protein100')::numeric, 0),
@@ -90,11 +126,49 @@ BEGIN
     COALESCE((p_product_data->>'goodFat100')::numeric, 0),
     COALESCE((p_product_data->>'trans100')::numeric, 0),
     COALESCE((p_product_data->>'fiber100')::numeric, 0),
-    (p_product_data->>'gi')::integer,
-    (p_product_data->>'harm')::integer,
+    (p_product_data->>'gi')::numeric,
+    (p_product_data->>'harm')::numeric,
     p_product_data->>'category',
     (p_product_data->'portions')::jsonb,
-    p_product_data->>'description'
+    p_product_data->>'description',
+    -- Extended нутриенты (NULL если не переданы)
+    (p_product_data->>'sodium100')::numeric,
+    (p_product_data->>'omega3_100')::numeric,
+    (p_product_data->>'omega6_100')::numeric,
+    (p_product_data->>'nova_group')::integer,
+    CASE 
+      WHEN p_product_data->'additives' IS NOT NULL 
+      THEN ARRAY(SELECT jsonb_array_elements_text(p_product_data->'additives'))
+      ELSE NULL
+    END,
+    -- Nutrient density
+    (p_product_data->>'nutrient_density')::numeric,
+    -- Флаги качества
+    (p_product_data->>'is_organic')::boolean,
+    (p_product_data->>'is_whole_grain')::boolean,
+    (p_product_data->>'is_fermented')::boolean,
+    (p_product_data->>'is_raw')::boolean,
+    -- Витамины
+    (p_product_data->>'vitamin_a')::numeric,
+    (p_product_data->>'vitamin_c')::numeric,
+    (p_product_data->>'vitamin_d')::numeric,
+    (p_product_data->>'vitamin_e')::numeric,
+    (p_product_data->>'vitamin_k')::numeric,
+    (p_product_data->>'vitamin_b1')::numeric,
+    (p_product_data->>'vitamin_b2')::numeric,
+    (p_product_data->>'vitamin_b3')::numeric,
+    (p_product_data->>'vitamin_b6')::numeric,
+    (p_product_data->>'vitamin_b9')::numeric,
+    (p_product_data->>'vitamin_b12')::numeric,
+    -- Минералы
+    (p_product_data->>'calcium')::numeric,
+    (p_product_data->>'iron')::numeric,
+    (p_product_data->>'magnesium')::numeric,
+    (p_product_data->>'phosphorus')::numeric,
+    (p_product_data->>'potassium')::numeric,
+    (p_product_data->>'zinc')::numeric,
+    (p_product_data->>'selenium')::numeric,
+    (p_product_data->>'iodine')::numeric
   )
   RETURNING id INTO v_new_id;
   
