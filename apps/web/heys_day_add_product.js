@@ -86,7 +86,7 @@
                 trans100: finalProduct.trans100,
                 fiber100: finalProduct.fiber100,
                 gi: finalProduct.gi,
-                harmScore: finalProduct.harmScore
+                harm: HEYS.models?.normalizeHarm?.(finalProduct)  // Canonical harm field
               })
             };
 

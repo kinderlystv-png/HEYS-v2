@@ -37,7 +37,7 @@ describe.skip('Import Fixes Integration Tests', () => {
           trans100: 0.5,
           fiber100: 15,
           gi: 50,
-          harmScore: 2,
+          harm: 2,  // Canonical harm field
         },
       ]);
 

@@ -1,18 +1,19 @@
 
 > @heys/web@13.0.1 build /Users/poplavskijanton/HEYS-v2/apps/web
-> pnpm run prebuild && vite build && cp heys_*.js dist/ && cp styles/*.css dist/styles/ 2>/dev/null || mkdir -p dist/styles && cp styles/*.css dist/styles/
+> pnpm run prebuild && vite build && node scripts/strip-console-logs.js && cp heys_*.js dist/ && cp styles/*.css dist/styles/ 2>/dev/null || mkdir -p dist/styles && cp styles/*.css dist/styles/
 
 
 > @heys/web@13.0.1 prebuild /Users/poplavskijanton/HEYS-v2/apps/web
-> node scripts/update-version.cjs && node -e "const fs=require('fs');const f=process.cwd()+'/public/sw.js';let c=fs.readFileSync(f,'utf8');c=c.replace(/heys-[\w.-]+/,'heys-'+Date.now());fs.writeFileSync(f,c);console.log('SW version:',Date.now())"
+> node ../../scripts/sync-iw-inline-config.cjs && node scripts/update-version.cjs && node -e "const fs=require('fs');const f=process.cwd()+'/public/sw.js';let c=fs.readFileSync(f,'utf8');c=c.replace(/heys-[\w.-]+/,'heys-'+Date.now());fs.writeFileSync(f,c);console.log('SW version:',Date.now())"
 
+IW inline config synced.
 ⚠️ APP_VERSION not found in file
-✅ version.json created: 2026.01.14.0136.719b435
-✅ SW CACHE_VERSION updated to: heys-1768343787097
-✅ index.html script src updated: heys_app_v12.js?v=2026.01.14.0136.719b435
-SW version: [33m1768343787166[39m
+✅ version.json created: 2026.01.18.1136.33ca1b7
+✅ SW CACHE_VERSION updated to: heys-1768725397739
+✅ index.html script src updated: heys_app_v12.js?v=2026.01.18.1136.33ca1b7
+SW version: 1768725397808
 polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
-[36mvite v4.5.14 [32mbuilding for production...[36m[39m
+vite v4.5.14 building for production...
 <script src="heys_dev_utils.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_feature_flags_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_module_perf_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
@@ -24,7 +25,12 @@ polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 <script src="heys_smart_search_v2.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_core_v12.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_yandex_api_v1.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_storage_supabase_v1.js?v=50"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_cloud_merge_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_cloud_storage_utils_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_cloud_shared_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_cloud_queue_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_storage_photos_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_storage_supabase_v1.js?v=51"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_models_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_storage_layer_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_wheel_picker.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
@@ -34,16 +40,84 @@ polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 <script src="heys_ratio_zones_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_tef_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_tdee_v1.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_harm_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_sparkline_utils_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_sparklines_shared_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_gamification_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_day_utils.js?v=55"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_day_hooks.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_core_bundle_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_day_pickers.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_advice_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_popups.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_gallery.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="day/_advice.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_meals_bundle_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="day/_meals.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_storage_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_sound_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_guards_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_init_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_sleep_effects_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_global_exports_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_stats_bundle_loader_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_edit_grams_modal_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_time_mood_picker_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_sparklines_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_sparkline_data_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_caloric_balance_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_insights_data_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_insulin_wave_data_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_goal_progress_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_daily_summary_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_pull_refresh_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_offline_sync_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_insulin_wave_ui_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_measurements_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_popups_state_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_main_block_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_side_block_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_cycle_card_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_weight_trends_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_picker_modals.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_animations.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_hero_metrics.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_water_state.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_daily_table.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_steps_ui.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_sparkline_state.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_edit_grams_state.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_caloric_display_state.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_page_shell.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_engagement_effects.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_calendar_metrics.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_calendar_block_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_mood_sparkline_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_stats_block_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_orphan_state_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_nutrition_state_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_runtime_ui_state_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_water_card_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_activity_card_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_energy_context_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_bottom_sheet_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_hero_display_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_rating_averages_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_advice_integration_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_products_context_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_tab_render_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_cycle_state.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_advice_rules_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="advice/_core.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="advice/_nutrition.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="advice/_timing.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="advice/_training.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="advice/_emotional.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="advice/_hydration.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="advice/_other.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_meal_optimizer_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_sounds_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_expandable_card_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_iw_shim.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_iw_patterns.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_iw_config_loader.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_iw_constants.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_iw_utils.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_iw_lipolysis.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
@@ -63,19 +137,19 @@ polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 <script src="heys_consents_v1.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_subscriptions_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_status_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
-<script src="insights/pi_constants.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
-<script src="insights/pi_math.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
-<script src="insights/pi_stats.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
-<script src="insights/pi_science_info.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
-<script src="insights/pi_patterns.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
-<script src="insights/pi_advanced.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
-<script src="insights/pi_analytics_api.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
-<script src="insights/pi_calculations.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
-<script src="insights/pi_ui_rings.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
-<script src="insights/pi_ui_cards.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
-<script src="insights/pi_ui_whatif.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
-<script src="insights/pi_ui_dashboard.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
-<script src="insights/pi_data.js?v=5"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_constants.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_math.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_stats.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_science_info.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_patterns.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_advanced.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_analytics_api.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_calculations.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_ui_rings.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_ui_cards.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_ui_whatif.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_ui_dashboard.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
+<script src="insights/pi_data.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_predictive_insights_v1.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_phenotype_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_metabolic_intelligence_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
@@ -90,9 +164,13 @@ polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 <script src="heys_training_step_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_morning_checkin_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_confirm_modal_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_tab_impl_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_day_v12.js?v=54"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_user_tab_impl_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_user_v12.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_reports_tab_impl_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_reports_v12.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_weekly_reports_v2.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_data_overview_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_widgets_events_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_widgets_registry_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
@@ -105,20 +183,282 @@ polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 <script src="heys_paywall_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_login_screen_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_ui_onboarding_v1.js"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_app_v12.js?v=2026.01.14.0136.719b435"> in "/index.html" can't be bundled without type="module" attribute
-[2K[1Gtransforming (1) [2mindex.html[22m[2K[1Gtransforming (2) [2mstyles/critical.css[22m[2K[1G[32m✓[39m 4 modules transformed.
-[33mwarnings when minifying css:
+<script src="heys_app_hooks_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_tabs_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_gamification_bar_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_gates_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_shell_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_overlays_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_gate_flow_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_backup_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_shortcuts_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_onboarding_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_auth_init_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_client_helpers_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_desktop_gate_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_morning_checkin_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_swipe_nav_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_runtime_effects_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_sync_effects_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_tab_state_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_client_management_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_backup_actions_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_backup_export_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_update_checks_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_update_notifications_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_cloud_init_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_client_state_manager_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_date_state_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_derived_state_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_shell_props_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_overlays_props_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_gate_state_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_global_bindings_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_backup_state_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_banner_state_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_client_init_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_twemoji_effect_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_runtime_state_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_core_state_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_root_impl_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_root_component_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_root_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_dependency_loader_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_ui_state_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_initialize_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_entry_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_v12.js?v=2026.01.18.1136.33ca1b7"> in "/index.html" can't be bundled without type="module" attribute
+transforming...
+✓ 4 modules transformed.
+warnings when minifying css:
 ▲ [WARNING] Unexpected "21" [css-syntax-error]
 
     <stdin>:27438:0:
       27438 │ 21>222222/* ===================================================...
             ╵ ~~
 
-[39m
-[2K[1Grendering chunks (1)...[2K[1G[2K[1Gcomputing gzip size (0)...[2K[1Gcomputing gzip size (1)...[2K[1Gcomputing gzip size (2)...[2K[1G[2mdist/[22m[2massets/[22m[32mheys_simple_analytics-b3f08726.js  [39m[1m[2m 10.31 kB[22m[1m[22m
-[2mdist/[22m[32mindex.html                                [39m[1m[2m 18.85 kB[22m[1m[22m[2m │ gzip:   4.87 kB[22m
-[2mdist/[22m[2massets/[22m[32mheys_models_v1-80d14ab0.js         [39m[1m[2m 35.21 kB[22m[1m[22m
-[2mdist/[22m[2massets/[22m[32mheys_core_v12-e2a7bb0e.js          [39m[1m[2m118.28 kB[22m[1m[22m
-[2mdist/[22m[2massets/[22m[35mindex-255d6d7e.css                 [39m[1m[2m759.43 kB[22m[1m[22m[2m │ gzip: 123.39 kB[22m
-[36m[vite-plugin-static-copy][39m [32mCopied 4 items.[39m
-[32m✓ built in 1.50s[39m
+
+rendering chunks...
+[version-hash] heys_feature_flags_v1.js → ?v=17afb51e
+[version-hash] heys_module_perf_v1.js → ?v=7434e3ba
+[version-hash] heys_module_loader_v1.js → ?v=eab5e116
+[version-hash] heys_bootstrap_v1.js → ?v=2415a769
+[version-hash] heys_platform_apis_v1.js → ?v=2931ea8d
+[version-hash] heys_pwa_module_v1.js → ?v=0fa3f4c6
+[version-hash] heys_smart_search_v2.js → ?v=3619f75d
+[version-hash] heys_yandex_api_v1.js → ?v=bcba27ab
+[version-hash] heys_cloud_merge_v1.js → ?v=1f540e25
+[version-hash] heys_cloud_storage_utils_v1.js → ?v=efca1dd5
+[version-hash] heys_cloud_shared_v1.js → ?v=d6c09f67
+[version-hash] heys_cloud_queue_v1.js → ?v=66673325
+[version-hash] heys_storage_photos_v1.js → ?v=f4de80ee
+[version-hash] heys_storage_supabase_v1.js → ?v=9f7a042b
+[version-hash] heys_models_v1.js → ?v=f1626b90
+[version-hash] heys_storage_layer_v1.js → ?v=35d48b80
+[version-hash] heys_wheel_picker.js → ?v=dbadca04
+[version-hash] heys_swipeable.js → ?v=deee9559
+[version-hash] heys_pull_refresh.js → ?v=ea63f7b0
+[version-hash] heys_toast_v1.js → ?v=353f4b29
+[version-hash] heys_ratio_zones_v1.js → ?v=5dbd2cd3
+[version-hash] heys_tef_v1.js → ?v=dc855316
+[version-hash] heys_tdee_v1.js → ?v=e6f90131
+[version-hash] heys_harm_v1.js → ?v=19c039fc
+[version-hash] heys_sparkline_utils_v1.js → ?v=fcbc9c8f
+[version-hash] heys_sparklines_shared_v1.js → ?v=e261acfb
+[version-hash] heys_gamification_v1.js → ?v=37b2d630
+[version-hash] heys_day_core_bundle_v1.js → ?v=f22f8a54
+[version-hash] heys_day_pickers.js → ?v=db1f49cb
+[version-hash] heys_day_popups.js → ?v=e4457304
+[version-hash] heys_day_gallery.js → ?v=80d5cf15
+[version-hash] day/_advice.js → ?v=8a9ae5f5
+[version-hash] heys_day_meals_bundle_v1.js → ?v=12e3b140
+[version-hash] day/_meals.js → ?v=f93021b1
+[version-hash] heys_day_storage_v1.js → ?v=1bb44fe8
+[version-hash] heys_day_sound_v1.js → ?v=aa5fe4b5
+[version-hash] heys_day_guards_v1.js → ?v=44b56c08
+[version-hash] heys_day_init_v1.js → ?v=af5cf284
+[version-hash] heys_day_sleep_effects_v1.js → ?v=ddc88c02
+[version-hash] heys_day_global_exports_v1.js → ?v=e94c23e0
+[version-hash] heys_day_stats_bundle_loader_v1.js → ?v=b86c0a1d
+[version-hash] heys_day_edit_grams_modal_v1.js → ?v=ff791227
+[version-hash] heys_day_time_mood_picker_v1.js → ?v=cb25304a
+[version-hash] heys_day_sparklines_v1.js → ?v=9ca606e0
+[version-hash] heys_day_sparkline_data_v1.js → ?v=2246e6cf
+[version-hash] heys_day_caloric_balance_v1.js → ?v=84f6207d
+[version-hash] heys_day_insights_data_v1.js → ?v=56bfe219
+[version-hash] heys_day_insulin_wave_data_v1.js → ?v=2b53c348
+[version-hash] heys_day_goal_progress_v1.js → ?v=d427c075
+[version-hash] heys_day_daily_summary_v1.js → ?v=48daacf3
+[version-hash] heys_day_pull_refresh_v1.js → ?v=03f7de74
+[version-hash] heys_day_offline_sync_v1.js → ?v=80637f0d
+[version-hash] heys_day_insulin_wave_ui_v1.js → ?v=1689fb87
+[version-hash] heys_day_measurements_v1.js → ?v=721d1aad
+[version-hash] heys_day_popups_state_v1.js → ?v=4a1b08ab
+[version-hash] heys_day_main_block_v1.js → ?v=8c41f859
+[version-hash] heys_day_side_block_v1.js → ?v=9f5bf108
+[version-hash] heys_day_cycle_card_v1.js → ?v=6e26acad
+[version-hash] heys_day_weight_trends_v1.js → ?v=47586f54
+[version-hash] heys_day_picker_modals.js → ?v=382eba4c
+[version-hash] heys_day_animations.js → ?v=aba85529
+[version-hash] heys_day_hero_metrics.js → ?v=dc7c891c
+[version-hash] heys_day_water_state.js → ?v=df53883f
+[version-hash] heys_day_daily_table.js → ?v=532ba531
+[version-hash] heys_day_steps_ui.js → ?v=2850a3bc
+[version-hash] heys_day_sparkline_state.js → ?v=1a96e863
+[version-hash] heys_day_edit_grams_state.js → ?v=01d46a48
+[version-hash] heys_day_caloric_display_state.js → ?v=f30b9d9d
+[version-hash] heys_day_page_shell.js → ?v=2d25ae3b
+[version-hash] heys_day_engagement_effects.js → ?v=dbd89743
+[version-hash] heys_day_calendar_metrics.js → ?v=6d597ecd
+[version-hash] heys_day_calendar_block_v1.js → ?v=475b6fad
+[version-hash] heys_day_mood_sparkline_v1.js → ?v=015481e7
+[version-hash] heys_day_stats_block_v1.js → ?v=76bacafa
+[version-hash] heys_day_orphan_state_v1.js → ?v=a5b08252
+[version-hash] heys_day_nutrition_state_v1.js → ?v=574f5859
+[version-hash] heys_day_runtime_ui_state_v1.js → ?v=e5ced5c6
+[version-hash] heys_day_water_card_v1.js → ?v=bba1f219
+[version-hash] heys_day_activity_card_v1.js → ?v=6870ff96
+[version-hash] heys_day_energy_context_v1.js → ?v=c43d15e6
+[version-hash] heys_day_bottom_sheet_v1.js → ?v=08584cc4
+[version-hash] heys_day_hero_display_v1.js → ?v=a83339cc
+[version-hash] heys_day_rating_averages_v1.js → ?v=36cef883
+[version-hash] heys_day_advice_integration_v1.js → ?v=9f80c044
+[version-hash] heys_day_products_context_v1.js → ?v=9a93c3e9
+[version-hash] heys_day_tab_render_v1.js → ?v=bff3bbcd
+[version-hash] heys_advice_rules_v1.js → ?v=4c2ebfa2
+[version-hash] advice/_core.js → ?v=7496ac0c
+[version-hash] advice/_nutrition.js → ?v=8cf72ca5
+[version-hash] advice/_timing.js → ?v=8c4b0dfe
+[version-hash] advice/_training.js → ?v=d6fb5e13
+[version-hash] advice/_emotional.js → ?v=4068b7fa
+[version-hash] advice/_hydration.js → ?v=2468971b
+[version-hash] advice/_other.js → ?v=02d61611
+[version-hash] heys_meal_optimizer_v1.js → ?v=ffe891d5
+[version-hash] heys_sounds_v1.js → ?v=b956dc64
+[version-hash] heys_expandable_card_v1.js → ?v=3722024c
+[version-hash] heys_iw_shim.js → ?v=af2c5227
+[version-hash] heys_iw_patterns.js → ?v=a80927e8
+[version-hash] heys_iw_config_loader.js → ?v=7fa84729
+[version-hash] heys_iw_constants.js → ?v=844f802a
+[version-hash] heys_iw_utils.js → ?v=6db5f06c
+[version-hash] heys_iw_lipolysis.js → ?v=9c152160
+[version-hash] heys_iw_v30.js → ?v=fee497cf
+[version-hash] heys_iw_v41.js → ?v=7b153480
+[version-hash] heys_iw_calc.js → ?v=7b6b4376
+[version-hash] heys_iw_orchestrator.js → ?v=1e03c3bd
+[version-hash] heys_iw_graph.js → ?v=30f61a06
+[version-hash] heys_iw_ndte.js → ?v=ddf1340f
+[version-hash] heys_iw_ui.js → ?v=6acf1e19
+[version-hash] heys_insulin_wave_v1.js → ?v=df6648de
+[version-hash] heys_iw_version_info.js → ?v=0f46d2d6
+[version-hash] heys_cycle_v1.js → ?v=9224bfcc
+[version-hash] heys_refeed_v1.js → ?v=39b51333
+[version-hash] heys_yesterday_verify_v1.js → ?v=1473f2ea
+[version-hash] heys_sms_v1.js → ?v=2a79072f
+[version-hash] heys_consents_v1.js → ?v=c3778c6d
+[version-hash] heys_subscriptions_v1.js → ?v=5ff1e8e5
+[version-hash] heys_status_v1.js → ?v=7ff151e1
+[version-hash] insights/pi_constants.js → ?v=791dd2cf
+[version-hash] insights/pi_math.js → ?v=7e6ae84e
+[version-hash] insights/pi_stats.js → ?v=47d26464
+[version-hash] insights/pi_science_info.js → ?v=16e1a56f
+[version-hash] insights/pi_patterns.js → ?v=cfd89260
+[version-hash] insights/pi_advanced.js → ?v=43d49f01
+[version-hash] insights/pi_analytics_api.js → ?v=1e3a5ad9
+[version-hash] insights/pi_calculations.js → ?v=0bd9e042
+[version-hash] insights/pi_ui_rings.js → ?v=dc1fade5
+[version-hash] insights/pi_ui_cards.js → ?v=0ff424ce
+[version-hash] insights/pi_ui_whatif.js → ?v=d1662e8a
+[version-hash] insights/pi_ui_dashboard.js → ?v=06da56d5
+[version-hash] insights/pi_data.js → ?v=4ee8cccf
+[version-hash] heys_predictive_insights_v1.js → ?v=06fd72a0
+[version-hash] heys_phenotype_v1.js → ?v=ac6583f1
+[version-hash] heys_metabolic_intelligence_v1.js → ?v=f9682424
+[version-hash] heys_supplements_v1.js → ?v=e168aa98
+[version-hash] heys_supplements_science_v1.js → ?v=6c18c8b9
+[version-hash] heys_modal_manager_v1.js → ?v=e1e7ccd0
+[version-hash] heys_step_modal_v1.js → ?v=b999e10c
+[version-hash] heys_steps_v1.js → ?v=7f721fce
+[version-hash] heys_profile_step_v1.js → ?v=0af87b2d
+[version-hash] heys_meal_step_v1.js → ?v=d9e762e6
+[version-hash] heys_add_product_step_v1.js → ?v=d51b0b43
+[version-hash] heys_training_step_v1.js → ?v=a809ffd4
+[version-hash] heys_morning_checkin_v1.js → ?v=4e2f88a1
+[version-hash] heys_confirm_modal_v1.js → ?v=6e64012b
+[version-hash] heys_day_tab_impl_v1.js → ?v=23711967
+[version-hash] heys_day_v12.js → ?v=4d070361
+[version-hash] heys_user_tab_impl_v1.js → ?v=53c07d59
+[version-hash] heys_user_v12.js → ?v=343936c7
+[version-hash] heys_reports_tab_impl_v1.js → ?v=2bb2b65b
+[version-hash] heys_reports_v12.js → ?v=242467e7
+[version-hash] heys_weekly_reports_v2.js → ?v=4c560c66
+[version-hash] heys_data_overview_v1.js → ?v=2bdc03d4
+[version-hash] heys_widgets_events_v1.js → ?v=41b692c1
+[version-hash] heys_widgets_registry_v1.js → ?v=c128fa0d
+[version-hash] heys_widgets_core_v1.js → ?v=c16e78d4
+[version-hash] widgets/widget_data.js → ?v=3af26294
+[version-hash] heys_widgets_ui_v1.js → ?v=79c3daee
+[version-hash] heys_auth_v1.js → ?v=054afbc4
+[version-hash] heys_subscription_v1.js → ?v=f77a519d
+[version-hash] heys_trial_queue_v1.js → ?v=dbd0cc3a
+[version-hash] heys_paywall_v1.js → ?v=e5f05ae8
+[version-hash] heys_login_screen_v1.js → ?v=2251b554
+[version-hash] heys_app_hooks_v1.js → ?v=8f136e45
+[version-hash] heys_app_tabs_v1.js → ?v=c687b896
+[version-hash] heys_gamification_bar_v1.js → ?v=75499596
+[version-hash] heys_app_gates_v1.js → ?v=386f0fd3
+[version-hash] heys_app_shell_v1.js → ?v=4e9de513
+[version-hash] heys_app_overlays_v1.js → ?v=0adb6662
+[version-hash] heys_app_gate_flow_v1.js → ?v=5e8c54b6
+[version-hash] heys_app_backup_v1.js → ?v=ffa0a19d
+[version-hash] heys_app_shortcuts_v1.js → ?v=7dcbefff
+[version-hash] heys_app_onboarding_v1.js → ?v=82cdac5e
+[version-hash] heys_app_auth_init_v1.js → ?v=a1f405f5
+[version-hash] heys_app_client_helpers_v1.js → ?v=3f0d3a73
+[version-hash] heys_app_desktop_gate_v1.js → ?v=dda25b24
+[version-hash] heys_app_morning_checkin_v1.js → ?v=be78c5eb
+[version-hash] heys_app_swipe_nav_v1.js → ?v=1e391470
+[version-hash] heys_app_runtime_effects_v1.js → ?v=0354868d
+[version-hash] heys_app_sync_effects_v1.js → ?v=1a0ed0a5
+[version-hash] heys_app_tab_state_v1.js → ?v=f5f1b945
+[version-hash] heys_app_client_management_v1.js → ?v=824e3035
+[version-hash] heys_app_backup_actions_v1.js → ?v=71faf220
+[version-hash] heys_app_backup_export_v1.js → ?v=318eb6bb
+[version-hash] heys_app_update_checks_v1.js → ?v=38342e00
+[version-hash] heys_app_update_notifications_v1.js → ?v=26363a60
+[version-hash] heys_app_cloud_init_v1.js → ?v=895d1e7e
+[version-hash] heys_app_client_state_manager_v1.js → ?v=fd1456f0
+[version-hash] heys_app_date_state_v1.js → ?v=c1953cf3
+[version-hash] heys_app_derived_state_v1.js → ?v=74df3305
+[version-hash] heys_app_shell_props_v1.js → ?v=23c90dae
+[version-hash] heys_app_overlays_props_v1.js → ?v=3bd12a97
+[version-hash] heys_app_gate_state_v1.js → ?v=6e7ea777
+[version-hash] heys_app_global_bindings_v1.js → ?v=71d59503
+[version-hash] heys_app_backup_state_v1.js → ?v=4a6a64fc
+[version-hash] heys_app_banner_state_v1.js → ?v=65f36529
+[version-hash] heys_app_client_init_v1.js → ?v=6b4da89e
+[version-hash] heys_app_runtime_state_v1.js → ?v=82603d48
+[version-hash] heys_app_core_state_v1.js → ?v=45559298
+[version-hash] heys_app_root_impl_v1.js → ?v=bf5f36d5
+[version-hash] heys_app_root_component_v1.js → ?v=99a51ced
+[version-hash] heys_app_root_v1.js → ?v=bab95e3c
+[version-hash] heys_app_dependency_loader_v1.js → ?v=eccd8e9a
+[version-hash] heys_app_ui_state_v1.js → ?v=87098b35
+[version-hash] heys_app_initialize_v1.js → ?v=128659cb
+[version-hash] heys_app_entry_v1.js → ?v=b9f68392
+[version-hash] Updated 207 file versions
+computing gzip size...
+dist/assets/heys_simple_analytics-b3f08726.js   10.31 kB
+dist/assets/heys_models_v1-5795c0d5.js          39.80 kB
+dist/index.html                                 72.95 kB │ gzip:  15.78 kB
+dist/assets/heys_core_v12-47ecb849.js          119.70 kB
+dist/assets/index-ee1153b4.css                 762.78 kB │ gzip: 123.92 kB
+[vite-plugin-static-copy] Copied 4 items.
+✓ built in 1.29s
+[strip-console] Removed 6 console.log statements:
+  - pi_advanced.js: 1
+  - pi_analytics_api.js: 1
+  - pi_calculations.js: 1
+  - pi_patterns.js: 1
+  - pi_stats.js: 1
+  - pi_ui_whatif.js: 1

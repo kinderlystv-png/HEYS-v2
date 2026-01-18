@@ -1,18 +1,18 @@
 // heys_day_calculations.js — Helper functions for calculations and data processing
 // Phase 11 of HEYS Day v12 refactoring
 // Extracted calculation and utility functions
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
-  
+
   // Dependencies - use HEYS.dayUtils if available (optional for this module)
   const U = HEYS.dayUtils || {};
   const M = HEYS.models || {};
   const r0 = (n) => Math.round(n) || 0;
   const r1 = (n) => Math.round(n * 10) / 10;
-  
+
   /**
    * Calculate day totals from meals
    * @param {Object} day - Day data
@@ -20,7 +20,7 @@
    * @returns {Object} Day totals
    */
   function calculateDayTotals(day, pIndex) {
-    const t = {kcal:0, carbs:0, simple:0, complex:0, prot:0, fat:0, bad:0, good:0, trans:0, fiber:0};
+    const t = { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0 };
     (day.meals || []).forEach(m => {
       const mt = M.mealTotals ? M.mealTotals(m, pIndex) : {};
       Object.keys(t).forEach(k => {
@@ -28,7 +28,7 @@
       });
     });
     Object.keys(t).forEach(k => t[k] = r0(t[k]));
-    
+
     // Weighted averages для ГИ и вредности по граммам
     let gSum = 0, giSum = 0, harmSum = 0;
     (day.meals || []).forEach(m => {
@@ -38,7 +38,11 @@
         const g = +it.grams || 0;
         if (!g) return;
         const gi = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
-        const harm = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
+        // Harm: берём из базы или считаем на лету если нет
+        let harm = p.harm ?? p.harmScore ?? p.harm100;
+        if (harm == null && window.HEYS?.Harm?.calculateHarmScore) {
+          harm = window.HEYS.Harm.calculateHarmScore(p);
+        }
         gSum += g;
         if (gi != null) giSum += gi * g;
         if (harm != null) harmSum += harm * g;
@@ -46,10 +50,10 @@
     });
     t.gi = gSum ? giSum / gSum : 0;
     t.harm = gSum ? harmSum / gSum : 0;
-    
+
     return t;
   }
-  
+
   /**
    * Get product from item (helper function)
    */
@@ -58,7 +62,7 @@
     const productId = item.product_id || item.id;
     return pIndex[productId] || null;
   }
-  
+
   /**
    * Compute daily norms from percentages
    * @param {number} optimum - Target calories
@@ -85,9 +89,9 @@
     const fiber = K ? (K / 1000) * fiberPct : 0;
     const gi = +normPerc.giPct || 0;
     const harm = +normPerc.harmPct || 0;
-    return {kcal: K, carbs, simple, complex, prot, fat, bad, good, trans, fiber, gi, harm};
+    return { kcal: K, carbs, simple, complex, prot, fat, bad, good, trans, fiber, gi, harm };
   }
-  
+
   /**
    * Calculate day averages (mood, wellbeing, stress, dayScore)
    * @param {Array} meals - Meals array
@@ -100,12 +104,12 @@
     const morningMood = dayData?.moodMorning && !isNaN(+dayData.moodMorning) ? [+dayData.moodMorning] : [];
     const morningWellbeing = dayData?.wellbeingMorning && !isNaN(+dayData.wellbeingMorning) ? [+dayData.wellbeingMorning] : [];
     const morningStress = dayData?.stressMorning && !isNaN(+dayData.stressMorning) ? [+dayData.stressMorning] : [];
-    
+
     // Собираем все оценки из приёмов пищи
     const mealMoods = (meals || []).filter(m => m.mood && !isNaN(+m.mood)).map(m => +m.mood);
     const mealWellbeing = (meals || []).filter(m => m.wellbeing && !isNaN(+m.wellbeing)).map(m => +m.wellbeing);
     const mealStress = (meals || []).filter(m => m.stress && !isNaN(+m.stress)).map(m => +m.stress);
-    
+
     // Собираем оценки из тренировок (фильтруем только РЕАЛЬНЫЕ тренировки)
     const realTrainings = (trainings || []).filter(t => {
       const hasTime = t.time && t.time.trim() !== '';
@@ -115,16 +119,16 @@
     const trainingMoods = realTrainings.filter(t => t.mood && !isNaN(+t.mood)).map(t => +t.mood);
     const trainingWellbeing = realTrainings.filter(t => t.wellbeing && !isNaN(+t.wellbeing)).map(t => +t.wellbeing);
     const trainingStress = realTrainings.filter(t => t.stress && !isNaN(+t.stress)).map(t => +t.stress);
-    
+
     // Объединяем все оценки: утро + приёмы пищи + тренировки
     const allMoods = [...morningMood, ...mealMoods, ...trainingMoods];
     const allWellbeing = [...morningWellbeing, ...mealWellbeing, ...trainingWellbeing];
     const allStress = [...morningStress, ...mealStress, ...trainingStress];
-    
+
     const moodAvg = allMoods.length ? r1(allMoods.reduce((sum, val) => sum + val, 0) / allMoods.length) : '';
     const wellbeingAvg = allWellbeing.length ? r1(allWellbeing.reduce((sum, val) => sum + val, 0) / allWellbeing.length) : '';
     const stressAvg = allStress.length ? r1(allStress.reduce((sum, val) => sum + val, 0) / allStress.length) : '';
-    
+
     // Автоматический расчёт dayScore
     // Формула: (mood + wellbeing + (10 - stress)) / 3, округлено до целого
     let dayScore = '';
@@ -135,10 +139,10 @@
       // stress инвертируем: низкий стресс = хорошо
       dayScore = Math.round((m + w + (10 - s)) / 3);
     }
-    
+
     return { moodAvg, wellbeingAvg, stressAvg, dayScore };
   }
-  
+
   /**
    * Normalize trainings data (migrate quality/feelAfter to mood/wellbeing)
    * @param {Array} trainings - Trainings array
@@ -158,7 +162,7 @@
       return t;
     });
   }
-  
+
   /**
    * Clean empty trainings (all zones = 0)
    * @param {Array} trainings - Trainings array
@@ -168,7 +172,7 @@
     if (!Array.isArray(trainings)) return [];
     return trainings.filter(t => t && t.z && t.z.some(z => z > 0));
   }
-  
+
   /**
    * Sort meals by time (latest first)
    * @param {Array} meals - Meals array
@@ -176,22 +180,22 @@
    */
   function sortMealsByTime(meals) {
     if (!meals || meals.length <= 1) return meals;
-    
+
     return [...meals].sort((a, b) => {
       const timeA = U.timeToMinutes ? U.timeToMinutes(a.time) : null;
       const timeB = U.timeToMinutes ? U.timeToMinutes(b.time) : null;
-      
+
       // Если оба без времени — сохраняем порядок
       if (timeA === null && timeB === null) return 0;
       // Без времени — в конец
       if (timeA === null) return 1;
       if (timeB === null) return -1;
-      
+
       // Обратный порядок: последние наверху
       return timeB - timeA;
     });
   }
-  
+
   /**
    * Parse time string to minutes
    * @param {string} timeStr - Time string (HH:MM)
@@ -202,7 +206,7 @@
     const [h, m] = timeStr.split(':').map(Number);
     return (h || 0) * 60 + (m || 0);
   }
-  
+
   /**
    * Format time from minutes
    * @param {number} minutes - Minutes since midnight
@@ -213,7 +217,7 @@
     const m = minutes % 60;
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }
-  
+
   // Export module
   HEYS.dayCalculations = {
     calculateDayTotals,
@@ -226,5 +230,5 @@
     formatMinutesToTime,
     getProductFromItem
   };
-  
+
 })(window);

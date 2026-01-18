@@ -6,7 +6,7 @@
         // === SWIPE NAVIGATION ===
         // Свайп работает только между 4 вкладками переключателя (по кругу)
         // widgets исключаются из свайпа когда editMode активен (drag & drop)
-        const SWIPEABLE_TABS = ['widgets', 'stats', 'diary', 'insights'];
+        const SWIPEABLE_TABS = ['widgets', 'stats', 'diary', 'insights', 'month'];
         const touchRef = React.useRef({ startX: 0, startY: 0, startTime: 0 });
         const MIN_SWIPE_DISTANCE = 60;
         const MAX_SWIPE_TIME = 500; // ms — увеличено для более плавного свайпа

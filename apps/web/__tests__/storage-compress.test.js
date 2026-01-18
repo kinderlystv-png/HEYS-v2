@@ -2,7 +2,7 @@
  * @fileoverview Тесты сжатия/разжатия и безопасного чтения стораджа
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 // Копия логики из heys_storage_layer_v1.js (упрощённо)
 function compress(obj) {
@@ -92,7 +92,7 @@ const product = {
   trans100: 0,
   fiber100: 10,
   gi: 45,
-  harmScore: 2,
+  harm: 2,  // Canonical harm field
 };
 
 let store;

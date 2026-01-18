@@ -70,7 +70,7 @@
   /**
    * Вычисление производных значений продукта (углеводы, жиры, ккал)
    * @param {Object} p - Объект продукта с полями *100 (на 100г)
-   * @returns {{carbs100: number, fat100: number, kcal100: number}}
+   * @returns {{carbs100: number, fat100: number, kcal100: number, harm?: number}}
    */
   function computeDerived(p) {
     const carbs100 = toNum(p.simple100) + toNum(p.complex100);
@@ -79,11 +79,20 @@
     // (Учитывает термический эффект пищи для белка — ~25% калорий уходит на переваривание)
     // Стандарт проекта: heys_models_v1.js, heys_day_add_product.js, parse_worker.js
     const kcal100 = 3 * toNum(p.protein100) + 4 * carbs100 + 9 * fat100;
-    return {
+
+    const derived = {
       carbs100: round1(carbs100),
       fat100: round1(fat100),
       kcal100: round1(kcal100)
     };
+
+    // Auto-calculate harm if not provided (v2.0.0)
+    // HEYS.Harm.calculateHarmScore uses scientific formula based on trans/simple/badFat/sodium vs fiber/protein/goodFat
+    if (p.harm == null && p.harmScore == null && window.HEYS?.Harm?.calculateHarmScore) {
+      derived.harm = window.HEYS.Harm.calculateHarmScore(p);
+    }
+
+    return derived;
   }
   /**
    * Получение данных из localStorage с JSON парсингом
@@ -347,7 +356,7 @@
       DEV.log(`✅ [PARSE_SYNC] Извлечены данные из строки ${i + 1}:`, st.name, st.nums);
 
       const [kcal, carbs, simple, complex, protein, fat, bad, good, trans, fiber, gi, harm] = st.nums;
-      const base = { id: uuid(), name: st.name, simple100: simple, complex100: complex, protein100: protein, badFat100: bad, goodFat100: good, trans100: trans, fiber100: fiber, gi: gi, harmScore: harm, createdAt: Date.now() };
+      const base = { id: uuid(), name: st.name, simple100: simple, complex100: complex, protein100: protein, badFat100: bad, goodFat100: good, trans100: trans, fiber100: fiber, gi: gi, harm: harm, createdAt: Date.now() };
 
       try {
         const d = computeDerived(base);
@@ -414,7 +423,7 @@
     const [query, setQuery] = React.useState('');
     const [paste, setPaste] = React.useState('');
     const [showModal, setShowModal] = React.useState(false);
-    const [draft, setDraft] = React.useState({ name: '', simple100: 0, complex100: 0, protein100: 0, badFat100: 0, goodFat100: 0, trans100: 0, fiber100: 0, gi: 0, harmScore: 0 });
+    const [draft, setDraft] = React.useState({ name: '', simple100: 0, complex100: 0, protein100: 0, badFat100: 0, goodFat100: 0, trans100: 0, fiber100: 0, gi: 0, harm: 0 });
     const derived = computeDerived(draft);
 
     // === PHASE 2: Shared Products UI ===
@@ -782,7 +791,7 @@
       }
     }, [window.HEYS && window.HEYS.currentClientId]);
 
-    function resetDraft() { setDraft({ name: '', simple100: 0, complex100: 0, protein100: 0, badFat100: 0, goodFat100: 0, trans100: 0, fiber100: 0, gi: 0, harmScore: 0 }); }
+    function resetDraft() { setDraft({ name: '', simple100: 0, complex100: 0, protein100: 0, badFat100: 0, goodFat100: 0, trans100: 0, fiber100: 0, gi: 0, harm: 0 }); }
     async function addProduct() {
       const name = (draft.name || '').trim();
       if (!name) {
@@ -795,7 +804,7 @@
         HEYS.Toast?.warning(`Продукт "${name}" уже существует в базе! Используйте другое название.`) || alert(`Продукт "${name}" уже существует в базе!`);
         return;
       }
-      const base = { id: uuid(), name: name, simple100: toNum(draft.simple100), complex100: toNum(draft.complex100), protein100: toNum(draft.protein100), badFat100: toNum(draft.badFat100), goodFat100: toNum(draft.goodFat100), trans100: toNum(draft.trans100), fiber100: toNum(draft.fiber100), gi: toNum(draft.gi), harmScore: toNum(draft.harmScore), createdAt: Date.now() };
+      const base = { id: uuid(), name: name, simple100: toNum(draft.simple100), complex100: toNum(draft.complex100), protein100: toNum(draft.protein100), badFat100: toNum(draft.badFat100), goodFat100: toNum(draft.goodFat100), trans100: toNum(draft.trans100), fiber100: toNum(draft.fiber100), gi: toNum(draft.gi), harm: toNum(draft.harm), createdAt: Date.now() };
       const d = computeDerived(base);
       const newProduct = { ...base, ...d };
 
@@ -1146,7 +1155,7 @@
         }).map(p => {
           // Гарантируем наличие всех полей
           // Use centralized harm normalization
-          const harmVal = HEYS.models?.normalizeHarm?.(p) ?? toNum(p.harmScore || p.harm || p.harm100);
+          const harmVal = HEYS.models?.normalizeHarm?.(p) ?? toNum(p.harm ?? p.harmScore ?? p.harmscore ?? p.harm100);
           const product = {
             id: p.id || uuid(),
             name: p.name,
@@ -1634,7 +1643,7 @@
                     React.createElement('td', null, React.createElement('input', { type: 'text', value: p.trans100, onChange: e => updateRow(p.id, { trans100: toNum(e.target.value) }) })),
                     React.createElement('td', null, React.createElement('input', { type: 'text', value: p.fiber100, onChange: e => updateRow(p.id, { fiber100: toNum(e.target.value) }) })),
                     React.createElement('td', null, React.createElement('input', { type: 'text', value: p.gi, onChange: e => updateRow(p.id, { gi: toNum(e.target.value) }) })),
-                    React.createElement('td', null, React.createElement('input', { type: 'text', value: p.harmScore, onChange: e => updateRow(p.id, { harmScore: toNum(e.target.value) }) })),
+                    React.createElement('td', null, React.createElement('input', { type: 'text', value: HEYS.models?.normalizeHarm?.(p) ?? p.harm ?? p.harmScore ?? p.harmscore ?? p.harm100 ?? 0, onChange: e => updateRow(p.id, { harm: toNum(e.target.value) }) })),
                     React.createElement('td', null, React.createElement('button', { className: 'btn', onClick: () => deleteRow(p.id) }, 'Удалить'))
                   ))
                 )
@@ -1805,7 +1814,7 @@
                           React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.trans100 || 0, readOnly: true })),
                           React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.fiber100 || 0, readOnly: true })),
                           React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.gi || 0, readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.harmscore || 0, readOnly: true })),
+                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: HEYS.models?.normalizeHarm?.(p) ?? p.harm ?? p.harmScore ?? 0, readOnly: true })),
                           React.createElement('td', null,
                             React.createElement('div', { style: { display: 'flex', gap: '4px' } },
                               // ➕ Добавить в мою базу (для всех)
@@ -1862,7 +1871,7 @@
             React.createElement('div', null, React.createElement('label', null, 'Полезные жиры (100г)'), React.createElement('input', { type: 'text', value: draft.goodFat100, onChange: e => setDraft({ ...draft, goodFat100: toNum(e.target.value) }) })),
             React.createElement('div', null, React.createElement('label', null, 'Супервредные жиры (100г)'), React.createElement('input', { type: 'text', value: draft.trans100, onChange: e => setDraft({ ...draft, trans100: toNum(e.target.value) }) })),
             React.createElement('div', null, React.createElement('label', null, 'Клетчатка (100г)'), React.createElement('input', { type: 'text', value: draft.fiber100, onChange: e => setDraft({ ...draft, fiber100: toNum(e.target.value) }) })),
-            React.createElement('div', null, React.createElement('label', null, 'Вредность (0–10)'), React.createElement('input', { type: 'text', value: draft.harmScore, onChange: e => setDraft({ ...draft, harmScore: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Вредность (0–10)'), React.createElement('input', { type: 'text', value: draft.harm, onChange: e => setDraft({ ...draft, harm: toNum(e.target.value) }) })),
             React.createElement('div', null, React.createElement('label', null, 'Углеводы (100г) — авто'), React.createElement('input', { className: 'readOnly', readOnly: true, value: derived.carbs100 })),
             React.createElement('div', null, React.createElement('label', null, 'Жиры (100г) — авто'), React.createElement('input', { className: 'readOnly', readOnly: true, value: derived.fat100 })),
             React.createElement('div', null, React.createElement('label', null, 'Калории (100г) — авто'), React.createElement('input', { className: 'readOnly', readOnly: true, value: derived.kcal100 }))

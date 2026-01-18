@@ -8,7 +8,7 @@
  * 4. Empty array protection — не затираем существующие продукты
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 // === ПРОДУКТЫ ДЛЯ ТЕСТОВ ===
 const createProduct = (name, id = Date.now()) => ({
@@ -22,7 +22,7 @@ const createProduct = (name, id = Date.now()) => ({
   trans100: 0,
   fiber100: 3,
   gi: 45,
-  harmScore: 5
+  harm: 5  // Canonical harm field
 });
 
 // === ТЕСТЫ: BLOCKED PROTECTION ===
@@ -43,42 +43,42 @@ describe('Products BLOCKED Protection', () => {
     it('blocks update when new products count is less than current', () => {
       const current = [createProduct('A', 1), createProduct('B', 2), createProduct('C', 3)];
       const newProducts = [createProduct('A', 1)];
-      
+
       expect(shouldBlockProductsUpdate(current, newProducts)).toBe(true);
     });
 
     it('allows update when new products count is greater', () => {
       const current = [createProduct('A', 1)];
       const newProducts = [createProduct('A', 1), createProduct('B', 2), createProduct('C', 3)];
-      
+
       expect(shouldBlockProductsUpdate(current, newProducts)).toBe(false);
     });
 
     it('allows update when products count is equal', () => {
       const current = [createProduct('A', 1), createProduct('B', 2)];
       const newProducts = [createProduct('C', 3), createProduct('D', 4)];
-      
+
       expect(shouldBlockProductsUpdate(current, newProducts)).toBe(false);
     });
 
     it('does not block when current is empty', () => {
       const current = [];
       const newProducts = [createProduct('A', 1)];
-      
+
       expect(shouldBlockProductsUpdate(current, newProducts)).toBe(false);
     });
 
     it('does not block when current is null', () => {
       const current = null;
       const newProducts = [createProduct('A', 1)];
-      
+
       expect(shouldBlockProductsUpdate(current, newProducts)).toBe(false);
     });
 
     it('does not block when new is null', () => {
       const current = [createProduct('A', 1)];
       const newProducts = null;
-      
+
       expect(shouldBlockProductsUpdate(current, newProducts)).toBe(false);
     });
   });
@@ -100,9 +100,9 @@ describe('Products BLOCKED Protection', () => {
     it('keeps current products when new count is less', () => {
       const current = [createProduct('A', 1), createProduct('B', 2), createProduct('C', 3)];
       const newProducts = [createProduct('X', 10)];
-      
+
       const result = protectedSetProducts(current, newProducts);
-      
+
       expect(result).toBe(current);
       expect(result.length).toBe(3);
     });
@@ -110,9 +110,9 @@ describe('Products BLOCKED Protection', () => {
     it('updates to new products when count is greater', () => {
       const current = [createProduct('A', 1)];
       const newProducts = [createProduct('A', 1), createProduct('B', 2), createProduct('C', 3)];
-      
+
       const result = protectedSetProducts(current, newProducts);
-      
+
       expect(result).toBe(newProducts);
       expect(result.length).toBe(3);
     });
@@ -120,9 +120,9 @@ describe('Products BLOCKED Protection', () => {
     it('returns empty array when new is empty and current is empty', () => {
       const current = [];
       const newProducts = [];
-      
+
       const result = protectedSetProducts(current, newProducts);
-      
+
       expect(result).toEqual([]);
     });
   });
@@ -135,10 +135,10 @@ describe('Empty Array Protection', () => {
    */
   const shouldSaveProducts = (newProducts, existingProducts) => {
     // Не сохраняем пустой массив если есть существующие продукты
-    if ((!newProducts || newProducts.length === 0) && 
-        existingProducts && 
-        Array.isArray(existingProducts) && 
-        existingProducts.length > 0) {
+    if ((!newProducts || newProducts.length === 0) &&
+      existingProducts &&
+      Array.isArray(existingProducts) &&
+      existingProducts.length > 0) {
       return false;
     }
     return true;
@@ -146,27 +146,27 @@ describe('Empty Array Protection', () => {
 
   it('blocks saving empty array when existing products exist', () => {
     const existing = [createProduct('A', 1), createProduct('B', 2)];
-    
+
     expect(shouldSaveProducts([], existing)).toBe(false);
   });
 
   it('blocks saving null when existing products exist', () => {
     const existing = [createProduct('A', 1)];
-    
+
     expect(shouldSaveProducts(null, existing)).toBe(false);
   });
 
   it('allows saving products when existing is empty', () => {
     const existing = [];
     const newProducts = [createProduct('A', 1)];
-    
+
     expect(shouldSaveProducts(newProducts, existing)).toBe(true);
   });
 
   it('allows saving products when existing is null', () => {
     const existing = null;
     const newProducts = [createProduct('A', 1)];
-    
+
     expect(shouldSaveProducts(newProducts, existing)).toBe(true);
   });
 
@@ -190,10 +190,10 @@ describe('Products Deduplicate', () => {
         products: []
       };
     }
-    
+
     const seen = new Map();
     const unique = [];
-    
+
     for (const p of products) {
       const key = (p.name || '').trim().toLowerCase();
       if (!seen.has(key)) {
@@ -201,7 +201,7 @@ describe('Products Deduplicate', () => {
         unique.push(p);
       }
     }
-    
+
     return {
       original: products.length,
       deduplicated: unique.length,
@@ -216,9 +216,9 @@ describe('Products Deduplicate', () => {
       createProduct('Apple', 2),
       createProduct('Banana', 3)
     ];
-    
+
     const result = deduplicateProducts(products);
-    
+
     expect(result.original).toBe(3);
     expect(result.deduplicated).toBe(2);
     expect(result.removed).toBe(1);
@@ -232,9 +232,9 @@ describe('Products Deduplicate', () => {
       createProduct('apple', 3),
       createProduct('Banana', 4)
     ];
-    
+
     const result = deduplicateProducts(products);
-    
+
     expect(result.deduplicated).toBe(2);
     expect(result.removed).toBe(2);
   });
@@ -245,9 +245,9 @@ describe('Products Deduplicate', () => {
       createProduct(' Apple', 2),
       createProduct('  Apple  ', 3)
     ];
-    
+
     const result = deduplicateProducts(products);
-    
+
     expect(result.deduplicated).toBe(1);
     expect(result.removed).toBe(2);
   });
@@ -258,9 +258,9 @@ describe('Products Deduplicate', () => {
       { ...createProduct('Apple', 2), gi: 50 },
       { ...createProduct('Apple', 3), gi: 70 }
     ];
-    
+
     const result = deduplicateProducts(products);
-    
+
     expect(result.products.length).toBe(1);
     expect(result.products[0].gi).toBe(30); // First one kept
     expect(result.products[0].id).toBe('prod_1');
@@ -268,14 +268,14 @@ describe('Products Deduplicate', () => {
 
   it('returns empty for null input', () => {
     const result = deduplicateProducts(null);
-    
+
     expect(result.original).toBe(0);
     expect(result.products).toEqual([]);
   });
 
   it('returns unchanged for empty array', () => {
     const result = deduplicateProducts([]);
-    
+
     expect(result.original).toBe(0);
     expect(result.deduplicated).toBe(0);
     expect(result.removed).toBe(0);
@@ -287,9 +287,9 @@ describe('Products Deduplicate', () => {
       createProduct('', 2),
       createProduct('Apple', 3)
     ];
-    
+
     const result = deduplicateProducts(products);
-    
+
     // Empty names are duplicates of each other
     expect(result.deduplicated).toBe(2);
     expect(result.removed).toBe(1);
@@ -302,9 +302,9 @@ describe('Products Deduplicate', () => {
       createProduct('Cherry', 3),
       createProduct('Date', 4)
     ];
-    
+
     const result = deduplicateProducts(products);
-    
+
     expect(result.removed).toBe(0);
     expect(result.deduplicated).toBe(4);
   });
@@ -324,17 +324,17 @@ describe('Orphan Products Tracking', () => {
   const trackOrphanProduct = (item, dateStr, productsDatabase) => {
     const productId = item.product_id;
     const name = item.name || 'Unknown';
-    
+
     // Проверяем есть ли продукт в базе
-    const existsInDb = productsDatabase.some(p => 
-      p.id === productId || 
+    const existsInDb = productsDatabase.some(p =>
+      p.id === productId ||
       (p.name || '').toLowerCase() === name.toLowerCase()
     );
-    
+
     if (existsInDb) {
       return false; // Не orphan
     }
-    
+
     // Это orphan — добавляем в трекинг
     if (!orphanProductsMap.has(productId)) {
       orphanProductsMap.set(productId, {
@@ -349,16 +349,16 @@ describe('Orphan Products Tracking', () => {
         existing.daysUsed.push(dateStr);
       }
     }
-    
+
     return true; // Is orphan
   };
 
   it('detects orphan product not in database', () => {
     const item = { product_id: 'orphan_1', name: 'Missing Product', grams: 100 };
     const database = [createProduct('Apple', 1), createProduct('Banana', 2)];
-    
+
     const isOrphan = trackOrphanProduct(item, '2025-01-01', database);
-    
+
     expect(isOrphan).toBe(true);
     expect(orphanProductsMap.has('orphan_1')).toBe(true);
   });
@@ -366,9 +366,9 @@ describe('Orphan Products Tracking', () => {
   it('does not track product that exists in database by ID', () => {
     const item = { product_id: 'prod_1', name: 'Apple', grams: 100 };
     const database = [{ ...createProduct('Apple', 1), id: 'prod_1' }];
-    
+
     const isOrphan = trackOrphanProduct(item, '2025-01-01', database);
-    
+
     expect(isOrphan).toBe(false);
     expect(orphanProductsMap.size).toBe(0);
   });
@@ -376,20 +376,20 @@ describe('Orphan Products Tracking', () => {
   it('does not track product that exists in database by name', () => {
     const item = { product_id: 'different_id', name: 'Apple', grams: 100 };
     const database = [createProduct('Apple', 1)];
-    
+
     const isOrphan = trackOrphanProduct(item, '2025-01-01', database);
-    
+
     expect(isOrphan).toBe(false);
   });
 
   it('tracks multiple days for same orphan product', () => {
     const item = { product_id: 'orphan_1', name: 'Missing', grams: 100 };
     const database = [];
-    
+
     trackOrphanProduct(item, '2025-01-01', database);
     trackOrphanProduct(item, '2025-01-02', database);
     trackOrphanProduct(item, '2025-01-03', database);
-    
+
     const orphan = orphanProductsMap.get('orphan_1');
     expect(orphan.daysUsed).toEqual(['2025-01-01', '2025-01-02', '2025-01-03']);
   });
@@ -397,18 +397,18 @@ describe('Orphan Products Tracking', () => {
   it('does not duplicate same day', () => {
     const item = { product_id: 'orphan_1', name: 'Missing', grams: 100 };
     const database = [];
-    
+
     trackOrphanProduct(item, '2025-01-01', database);
     trackOrphanProduct(item, '2025-01-01', database);
     trackOrphanProduct(item, '2025-01-01', database);
-    
+
     const orphan = orphanProductsMap.get('orphan_1');
     expect(orphan.daysUsed).toEqual(['2025-01-01']);
   });
 
   it('preserves stamp data for recovery', () => {
-    const item = { 
-      product_id: 'orphan_1', 
+    const item = {
+      product_id: 'orphan_1',
       name: 'Missing Product',
       grams: 150,
       // Штамп содержит все нутриенты
@@ -418,9 +418,9 @@ describe('Orphan Products Tracking', () => {
       fat: 5
     };
     const database = [];
-    
+
     trackOrphanProduct(item, '2025-01-01', database);
-    
+
     const orphan = orphanProductsMap.get('orphan_1');
     expect(orphan.item.kcal).toBe(200);
     expect(orphan.item.prot).toBe(10);
@@ -431,11 +431,11 @@ describe('Orphan Products Tracking', () => {
    */
   const recoverOrphanProduct = (orphanData) => {
     const item = orphanData.item;
-    
+
     // Конвертируем штамп в формат продукта (на 100г)
     const grams = item.grams || 100;
     const scale = 100 / grams;
-    
+
     return {
       id: item.product_id,
       name: item.name,
@@ -447,7 +447,7 @@ describe('Orphan Products Tracking', () => {
       trans100: 0,
       fiber100: 0,
       gi: 50, // Default GI
-      harmScore: 0,
+      harm: 0,  // Canonical harm field
       recoveredFromStamp: true,
       recoveryDate: new Date().toISOString().split('T')[0]
     };
@@ -465,9 +465,9 @@ describe('Orphan Products Tracking', () => {
         fat: 10
       }
     };
-    
+
     const recovered = recoverOrphanProduct(orphanData);
-    
+
     expect(recovered.id).toBe('orphan_1');
     expect(recovered.name).toBe('Recovered Product');
     expect(recovered.protein100).toBe(10); // 20g / 200g * 100 = 10
@@ -486,9 +486,9 @@ describe('Products Sync Merge', () => {
   const mergeProducts = (localProducts, remoteProducts) => {
     if (!Array.isArray(localProducts)) localProducts = [];
     if (!Array.isArray(remoteProducts)) remoteProducts = [];
-    
+
     const merged = new Map();
-    
+
     // Сначала добавляем remote (они могут быть более свежими)
     for (const p of remoteProducts) {
       const key = (p.name || '').trim().toLowerCase();
@@ -496,7 +496,7 @@ describe('Products Sync Merge', () => {
         merged.set(key, p);
       }
     }
-    
+
     // Потом добавляем local (если ещё нет)
     for (const p of localProducts) {
       const key = (p.name || '').trim().toLowerCase();
@@ -504,25 +504,25 @@ describe('Products Sync Merge', () => {
         merged.set(key, p);
       }
     }
-    
+
     return Array.from(merged.values());
   };
 
   it('combines products from both sources', () => {
     const local = [createProduct('Apple', 1), createProduct('Banana', 2)];
     const remote = [createProduct('Cherry', 3), createProduct('Date', 4)];
-    
+
     const result = mergeProducts(local, remote);
-    
+
     expect(result.length).toBe(4);
   });
 
   it('deduplicates by name (remote wins)', () => {
     const local = [{ ...createProduct('Apple', 1), gi: 30 }];
     const remote = [{ ...createProduct('Apple', 2), gi: 50 }];
-    
+
     const result = mergeProducts(local, remote);
-    
+
     expect(result.length).toBe(1);
     expect(result[0].gi).toBe(50); // Remote version
   });
@@ -530,9 +530,9 @@ describe('Products Sync Merge', () => {
   it('keeps local-only products', () => {
     const local = [createProduct('LocalOnly', 1), createProduct('Shared', 2)];
     const remote = [createProduct('Shared', 3)];
-    
+
     const result = mergeProducts(local, remote);
-    
+
     expect(result.length).toBe(2);
     expect(result.some(p => p.name === 'LocalOnly')).toBe(true);
   });
@@ -540,9 +540,9 @@ describe('Products Sync Merge', () => {
   it('keeps remote-only products', () => {
     const local = [createProduct('Shared', 1)];
     const remote = [createProduct('Shared', 2), createProduct('RemoteOnly', 3)];
-    
+
     const result = mergeProducts(local, remote);
-    
+
     expect(result.length).toBe(2);
     expect(result.some(p => p.name === 'RemoteOnly')).toBe(true);
   });
@@ -550,18 +550,18 @@ describe('Products Sync Merge', () => {
   it('handles empty local', () => {
     const local = [];
     const remote = [createProduct('A', 1), createProduct('B', 2)];
-    
+
     const result = mergeProducts(local, remote);
-    
+
     expect(result.length).toBe(2);
   });
 
   it('handles empty remote', () => {
     const local = [createProduct('A', 1), createProduct('B', 2)];
     const remote = [];
-    
+
     const result = mergeProducts(local, remote);
-    
+
     expect(result.length).toBe(2);
   });
 
@@ -574,9 +574,9 @@ describe('Products Sync Merge', () => {
   it('handles case-insensitive merge', () => {
     const local = [createProduct('apple', 1)];
     const remote = [createProduct('APPLE', 2)];
-    
+
     const result = mergeProducts(local, remote);
-    
+
     expect(result.length).toBe(1);
   });
 });

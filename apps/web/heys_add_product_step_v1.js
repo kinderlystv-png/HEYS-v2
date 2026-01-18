@@ -1,6 +1,6 @@
 // heys_add_product_step_v1.js — Шаг добавления продукта через StepModal
 // Двухшаговый flow: поиск → граммы/порции
-(function(global) {
+(function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const { useState, useMemo, useCallback, useEffect, useRef, useContext } = React;
 
@@ -30,18 +30,18 @@
   // === Умный список продуктов: частота + свежесть ===
   function computeSmartProducts(products, dateKey) {
     if (!products || !products.length) return [];
-    
+
     const usageCount = new Map();   // Частота использования
     const lastUsedDay = new Map();  // Последний день использования (0 = сегодня)
     const today = new Date(dateKey || new Date().toISOString().slice(0, 10));
-    
+
     // Анализируем последние 30 дней
     for (let i = 0; i < 30; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
       const dayData = lsGet(`heys_dayv2_${key}`, null);
-      
+
       if (dayData && dayData.meals) {
         dayData.meals.forEach(meal => {
           if (meal.items) {
@@ -59,7 +59,7 @@
         });
       }
     }
-    
+
     // Комбинированный скор: частота × свежесть
     // Свежесть: 1.0 для сегодня, убывает экспоненциально
     // Формула: score = frequency * recencyWeight
@@ -71,7 +71,7 @@
       const recencyWeight = 1 / (1 + daysAgo * 0.15);
       return freq * recencyWeight;
     };
-    
+
     // Сортируем по комбинированному скору
     const sorted = [...products]
       .filter(p => {
@@ -83,7 +83,7 @@
         const bId = b.id || b.product_id || b.name;
         return getScore(bId) - getScore(aId);
       });
-    
+
     return sorted.slice(0, 20);
   }
 
@@ -113,7 +113,7 @@
   function ProductSearchStep({ data, onChange, context }) {
     const [search, setSearch] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
-    const [favorites, setFavorites] = useState(() => 
+    const [favorites, setFavorites] = useState(() =>
       HEYS.store?.getFavorites?.() || new Set()
     );
     const [selectedPhoto, setSelectedPhoto] = useState(null);
@@ -122,21 +122,21 @@
     const [pendingPhotoData, setPendingPhotoData] = useState(null);  // Данные для подтверждения
     const inputRef = useRef(null);
     const fileInputRef = useRef(null);
-    
+
     // Доступ к навигации StepModal
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
     const { goToStep } = stepContext;
-    
+
     const { dateKey = '' } = context || {};
-    
+
     // 🔧 FIX: Реактивное состояние для продуктов с подпиской на синхронизацию
     // Это решает проблему: при открытии модалки сразу после создания приёма
     // продукты ещё не загружены из облака, но после heysSyncCompleted они появятся
     const [productsVersion, setProductsVersion] = useState(0);
-    
+
     // 🔒 Ref для пропуска первого sync (предотвращает мерцание)
     const initialSyncDoneRef = useRef(false);
-    
+
     // Подписка на обновление продуктов (heysSyncCompleted или watch)
     useEffect(() => {
       const handleSyncComplete = (e) => {
@@ -150,40 +150,40 @@
         // console.log('[AddProductStep] 🔄 heysSyncCompleted → refreshing products');
         setProductsVersion(v => v + 1);
       };
-      
+
       window.addEventListener('heysSyncCompleted', handleSyncComplete);
-      
+
       // Также подписываемся через HEYS.products.watch если доступен
-      let unwatchProducts = () => {};
+      let unwatchProducts = () => { };
       if (HEYS.products?.watch) {
         unwatchProducts = HEYS.products.watch(() => {
           // console.log('[AddProductStep] 🔄 products.watch → refreshing products');
           setProductsVersion(v => v + 1);
         });
       }
-      
+
       return () => {
         window.removeEventListener('heysSyncCompleted', handleSyncComplete);
         unwatchProducts();
       };
     }, []);
-    
+
     // Всегда берём актуальные продукты из глобального стора (если появились новые)
     // productsVersion в зависимостях заставляет пересчитать при синхронизации
     const latestProducts = useMemo(() => {
       const base = Array.isArray(context?.products) ? context.products : [];
-      
+
       // Пробуем получить из HEYS.products.getAll()
       let storeProducts = [];
       if (HEYS.products?.getAll) {
         storeProducts = HEYS.products.getAll() || [];
       }
-      
+
       // Fallback: напрямую из HEYS.store
       if (storeProducts.length === 0 && HEYS.store?.get) {
         storeProducts = HEYS.store.get('heys_products', []) || [];
       }
-      
+
       // Fallback: из localStorage через U()
       if (storeProducts.length === 0) {
         const utils = U();
@@ -191,15 +191,15 @@
           storeProducts = utils.lsGet('heys_products', []) || [];
         }
       }
-      
+
       // Fallback: напрямую из localStorage
       if (storeProducts.length === 0) {
         try {
           const raw = localStorage.getItem('heys_products');
           if (raw) storeProducts = JSON.parse(raw) || [];
-        } catch (e) {}
+        } catch (e) { }
       }
-      
+
       storeProducts = Array.isArray(storeProducts) ? storeProducts : [];
       // Если store длиннее — используем его как основу
       const primary = storeProducts.length >= base.length ? storeProducts : base;
@@ -216,24 +216,24 @@
       };
       primary.forEach(pushUnique);
       secondary.forEach(pushUnique);
-      
+
       return merged;
     }, [context, productsVersion]);
-    
+
     // 🌐 Результаты из общей базы (асинхронный поиск)
     const [sharedResults, setSharedResults] = useState([]);
     const [sharedLoading, setSharedLoading] = useState(false);
-    
+
     // Debug: проверяем что products пришли
     // useEffect(() => {
     //   console.log('[AddProductStep] products count:', latestProducts?.length);
     // }, [latestProducts]);
-    
+
     // Фокус на input при монтировании
     useEffect(() => {
       setTimeout(() => inputRef.current?.focus(), 100);
     }, []);
-    
+
     // 🌐 Асинхронный поиск по общей базе (debounced)
     useEffect(() => {
       const trimmed = search.trim();
@@ -241,7 +241,7 @@
         setSharedResults([]);
         return;
       }
-      
+
       const timeoutId = setTimeout(async () => {
         setSharedLoading(true);
         console.log('[SharedSearch] Searching for:', trimmed);
@@ -258,13 +258,13 @@
               const badFat100 = Number(p.badfat100 ?? p.badFat100 ?? 0) || 0;
               const goodFat100 = Number(p.goodfat100 ?? p.goodFat100 ?? 0) || 0;
               const trans100 = Number(p.trans100 ?? 0) || 0;
-              
+
               // kcal100 — вычисляемое поле (не хранится в shared_products)
               // Формула: protein*4 + carbs*4 + fat*9
               const carbs100 = simple100 + complex100;
               const fat100 = badFat100 + goodFat100 + trans100;
               const kcal100 = Math.round(protein100 * 4 + carbs100 * 4 + fat100 * 9);
-              
+
               return {
                 ...p,
                 protein100,
@@ -275,8 +275,7 @@
                 trans100,
                 fiber100: Number(p.fiber100 ?? 0) || 0,
                 gi: Number(p.gi ?? 0) || 0,
-                harm: Number(p.harm ?? 0) || 0,
-                harmScore: Number(p.harmscore ?? p.harmScore ?? p.harm ?? 0) || 0,
+                harm: (HEYS.models?.normalizeHarm?.(p) ?? Number(p.harm ?? p.harmScore ?? p.harmscore ?? 0)) || 0,  // Canonical harm field
                 // Вычисленные поля
                 kcal100,
                 carbs100,
@@ -294,24 +293,24 @@
           setSharedLoading(false);
         }
       }, 300);
-      
+
       return () => clearTimeout(timeoutId);
     }, [search]);
-    
+
     // Умный список: частота + свежесть (объединяет "часто" и "последние")
-    const smartProducts = useMemo(() => 
-      computeSmartProducts(latestProducts, dateKey), 
+    const smartProducts = useMemo(() =>
+      computeSmartProducts(latestProducts, dateKey),
       [latestProducts, dateKey]
     );
-    
+
     // Поиск с фильтром категории
     // Используем normalizeText из SmartSearch (единый источник)
-    const normalizeSearch = HEYS?.SmartSearchWithTypos?.utils?.normalizeText 
+    const normalizeSearch = HEYS?.SmartSearchWithTypos?.utils?.normalizeText
       || ((text) => String(text || '').toLowerCase().replace(/ё/g, 'е'));
     const lc = normalizeSearch(search.trim());
     const searchResults = useMemo(() => {
       let results = [];
-      
+
       if (lc) {
         // Умный поиск если доступен
         if (HEYS.SmartSearchWithTypos) {
@@ -327,13 +326,13 @@
             console.warn('[AddProductStep] Smart search error:', e);
           }
         }
-        
+
         // Fallback с нормализацией ё→е (только если SmartSearch не дал результатов)
         if (!results.length) {
-          results = latestProducts.filter(p => 
+          results = latestProducts.filter(p =>
             normalizeSearch(p.name).includes(lc)
           );
-          
+
           // Сортировка ТОЛЬКО для fallback — SmartSearch уже отсортирован по relevance!
           results.sort((a, b) => {
             const aName = normalizeSearch(a.name);
@@ -350,15 +349,15 @@
           });
         }
       }
-      
+
       // Фильтр по категории
       if (selectedCategory !== 'all') {
         results = results.filter(p => matchCategory(p, selectedCategory));
       }
-      
+
       return results.slice(0, 20);
     }, [lc, latestProducts, selectedCategory]);
-    
+
     // 🌐 Объединённые результаты: личные + общая база (без дубликатов)
     const combinedResults = useMemo(() => {
       if (!lc) return [];
@@ -376,7 +375,7 @@
       const isFuzzyMatch = (word, query) => {
         if (!word || !query) return false;
         if (word.includes(query)) return true;
-        
+
         // Допускаем 1 ошибку/опечатку для слов длиннее 4 букв
         if (query.length > 3 && Math.abs(word.length - query.length) <= 2) {
           let errors = 0;
@@ -403,13 +402,13 @@
         // Используем имя как есть, если нормализация вернула пустоту (защита от агрессивной очистки)
         let nameNorm = normalizeSearch(p.name || '');
         if (!nameNorm && p.name) nameNorm = p.name.toLowerCase().trim();
-        
+
         if (!nameNorm) return;
 
         const baseRel = Number.isFinite(p.relevance) ? p.relevance : 0;
         const hasSubstring = nameNorm.includes(lc);
         const startsWith = nameNorm.startsWith(lc);
-        
+
         // Разбиваем имя на слова для более умного анализа
         const nameWords = nameNorm.split(/[\s,().]+/); // Разделители: пробел, запятая, скобки, точка
         const exactWord = nameWords.some(w => w === lc);
@@ -420,11 +419,11 @@
 
         // Базовый скор: используем relevance если есть + поправки
         let score = baseRel;
-        
+
         if (hasSubstring) score += 40;
         else if (fuzzyMatch) score += 30; // Почти как точное, если похоже
         else if (prefix3Match) score += 20; // Начало совпадает — это уже неплохо
-        
+
         if (startsWith) score += 15;
         if (exactWord) score += 10;
 
@@ -466,17 +465,17 @@
 
       return combined.slice(0, 25);
     }, [searchResults, sharedResults, lc, normalizeSearch, selectedCategory]);
-    
+
     // "Возможно вы искали" — альтернативные запросы при пустых результатах
     const didYouMean = useMemo(() => {
       if (!lc || combinedResults.length > 0) return [];
-      
+
       if (HEYS?.SmartSearchWithTypos?.getDidYouMean) {
         return HEYS.SmartSearchWithTypos.getDidYouMean(lc, latestProducts, 3);
       }
       return [];
     }, [lc, combinedResults.length, latestProducts]);
-    
+
     // Toggle избранного
     const toggleFavorite = useCallback((e, productId) => {
       e.stopPropagation();
@@ -485,25 +484,25 @@
         setFavorites(HEYS.store.getFavorites());
       }
     }, []);
-    
+
     // Выбор продукта — сразу переход на шаг граммов
     const selectProduct = useCallback((product) => {
       haptic('light');
-      
+
       // Последние использованные граммы для этого продукта
       const productId = product.id ?? product.product_id ?? product.name;
       const lastGrams = lsGet(`heys_last_grams_${productId}`, null);
       const defaultGrams = lastGrams || 100;
-      
+
       // 🔍 DEBUG: Подробный лог выбранного продукта
       const hasNutrients = !!(product.kcal100 || product.protein100 || product.carbs100);
       // console.log('[ProductSearchStep] selectProduct:', product.name, 'grams:', defaultGrams, {...});
       if (!hasNutrients) {
         console.error('🚨 [ProductSearchStep] CRITICAL: Product has NO nutrients!', product);
       }
-      
-      onChange({ 
-        ...data, 
+
+      onChange({
+        ...data,
         selectedProduct: product,
         grams: defaultGrams,
         lastGrams: lastGrams // Для отображения подсказки
@@ -514,7 +513,7 @@
         setTimeout(() => goToStep(2, 'left'), 150);
       }
     }, [data, onChange, goToStep]);
-    
+
     // Кнопка "Новый продукт" — открытие внешней формы создания
     const handleNewProduct = useCallback(() => {
       haptic('medium');
@@ -534,20 +533,20 @@
         }
       }
     }, [context, goToStep, search, data, onChange]);
-    
+
     // Обработчик выбора фото
     const handlePhotoSelect = useCallback((e) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      
+
       haptic('medium');
       setSelectedPhoto(file);
       // console.log('[AddProductStep] Photo selected:', file.name, file.size, 'bytes');
-      
+
       // Сжимаем фото перед сохранением (localStorage лимит ~5МБ)
       const MAX_SIZE = 800; // Максимальный размер по большей стороне
       const QUALITY = 0.7;  // Качество JPEG
-      
+
       const img = new Image();
       img.onload = () => {
         // Расчёт новых размеров
@@ -561,20 +560,20 @@
             height = MAX_SIZE;
           }
         }
-        
+
         // Canvas для сжатия
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
-        
+
         // Конвертируем в JPEG (меньше размер чем PNG)
         const compressedData = canvas.toDataURL('image/jpeg', QUALITY);
         // console.log('[AddProductStep] Photo compressed:', ...);
-        
+
         setPhotoPreview(compressedData);
-        
+
         // Показываем превью для подтверждения
         setPendingPhotoData({
           compressedData,
@@ -583,22 +582,22 @@
         });
         setShowPhotoConfirm(true);
       };
-      
+
       img.onerror = () => {
         console.error('[AddProductStep] Failed to load image');
       };
-      
+
       // Загружаем изображение из файла
       const reader = new FileReader();
       reader.onload = (event) => {
         img.src = event.target.result;
       };
       reader.readAsDataURL(file);
-      
+
       // Сбрасываем input чтобы можно было выбрать то же фото повторно
       e.target.value = '';
     }, []);
-    
+
     // Подтверждение сохранения фото
     const confirmPhoto = useCallback(() => {
       if (!pendingPhotoData || !context?.onAddPhoto) {
@@ -606,7 +605,7 @@
         setShowPhotoConfirm(false);
         return;
       }
-      
+
       haptic('success');
       context.onAddPhoto({
         mealIndex: context.mealIndex,
@@ -615,11 +614,11 @@
         timestamp: Date.now()
       });
       // console.log('[AddProductStep] Photo confirmed and added to meal:', context.mealIndex);
-      
+
       setShowPhotoConfirm(false);
       setPendingPhotoData(null);
     }, [pendingPhotoData, context]);
-    
+
     // Отмена фото
     const cancelPhoto = useCallback(() => {
       haptic('light');
@@ -628,32 +627,32 @@
       setPhotoPreview(null);
       // console.log('[AddProductStep] Photo cancelled');
     }, []);
-    
+
     // Открыть выбор фото
     const handlePhotoClick = useCallback(() => {
       haptic('medium');
       fileInputRef.current?.click();
     }, []);
-    
+
     // Удаление продукта из базы
     const handleDeleteProduct = useCallback((e, product) => {
       e.stopPropagation();
-      
+
       const name = product.name || 'продукт';
       if (!confirm(`Удалить "${name}" из базы?`)) return;
-      
+
       haptic('medium');
-      
+
       const U = HEYS.utils || {};
       const allProducts = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
       const pid = String(product.id ?? product.product_id ?? product.name);
-      
+
       // Фильтруем — убираем этот продукт
       const filtered = allProducts.filter(p => {
         const id = String(p.id ?? p.product_id ?? p.name);
         return id !== pid;
       });
-      
+
       // Сохраняем через HEYS.products или HEYS.store.set (для синхронизации с облаком)
       if (HEYS.products?.setAll) {
         HEYS.products.setAll(filtered);
@@ -663,14 +662,14 @@
         U.lsSet('heys_products', filtered);
         console.warn('[AddProductStep] ⚠️ Продукт удалён только локально (нет HEYS.store)');
       }
-      
+
       // Обновляем context.products
       if (context?.onProductCreated) {
         // Костыль: триггерим обновление
       }
-      
+
       // console.log('[AddProductStep] Продукт удалён:', name);
-      
+
       // Перезапускаем поиск чтобы обновить список
       setSearch(s => s + ' ');
       setTimeout(() => setSearch(s => s.trim()), 10);
@@ -686,15 +685,15 @@
       const fat = Math.round((product.badFat100 || 0) + (product.goodFat100 || 0) + (product.trans100 || 0));
       const harmVal = product.harm ?? product.harmScore ?? product.harm100;
       const harmBg = getHarmBg(harmVal);
-      
+
       // Флаг: продукт из общей базы (не из личной)
       const isFromShared = product._source === 'shared' || product._fromShared;
-      
+
       // Подсветка совпадений в названии
       const highlightedName = lc && HEYS?.SmartSearchWithTypos?.renderHighlightedText
         ? HEYS.SmartSearchWithTypos.renderHighlightedText(product.name, search, React)
         : product.name;
-      
+
       return React.createElement('div', {
         key: pid,
         className: 'aps-product-card',
@@ -702,13 +701,13 @@
         onClick: () => selectProduct(product)
       },
         // Иконка категории
-        product.category && React.createElement('span', { 
-          className: 'aps-product-icon' 
+        product.category && React.createElement('span', {
+          className: 'aps-product-icon'
         }, getCategoryIcon(product.category)),
-        
+
         // Инфо
         React.createElement('div', { className: 'aps-product-info' },
-          React.createElement('div', { className: 'aps-product-name' }, 
+          React.createElement('div', { className: 'aps-product-name' },
             highlightedName,
             // 🌐 Бейдж для продуктов из общей базы
             isFromShared && React.createElement('span', {
@@ -718,12 +717,12 @@
           React.createElement('div', { className: 'aps-product-meta' },
             React.createElement('span', { className: 'aps-meta-kcal' }, kcal + ' ккал'),
             React.createElement('span', { className: 'aps-meta-sep' }, '·'),
-            React.createElement('span', { className: 'aps-meta-macros' }, 
+            React.createElement('span', { className: 'aps-meta-macros' },
               'Б ' + prot + ' | Ж ' + fat + ' | У ' + carbs
             )
           )
         ),
-        
+
         // Кнопка избранного — только для личных
         showFavorite && !isFromShared && React.createElement('button', {
           className: 'aps-fav-btn' + (isFav ? ' active' : ''),
@@ -731,28 +730,28 @@
         }, isFav ? '★' : '☆')
       );
     };
-    
+
     // Что показывать: результаты поиска или умный список
     const showSearch = lc.length > 0;
-    
+
     // Счётчик фото в текущем приёме
     const currentPhotoCount = context?.mealPhotos?.length || 0;
     const photoLimit = 10;
     const canAddPhoto = currentPhotoCount < photoLimit;
-    
+
     return React.createElement('div', { className: 'aps-search-step' },
       // Модалка подтверждения фото
-      showPhotoConfirm && pendingPhotoData && React.createElement('div', { 
+      showPhotoConfirm && pendingPhotoData && React.createElement('div', {
         className: 'photo-confirm-overlay',
         onClick: cancelPhoto
       },
-        React.createElement('div', { 
+        React.createElement('div', {
           className: 'photo-confirm-modal',
           onClick: e => e.stopPropagation()
         },
           React.createElement('div', { className: 'photo-confirm-header' }, 'Сохранить это фото?'),
           React.createElement('div', { className: 'photo-confirm-preview' },
-            React.createElement('img', { 
+            React.createElement('img', {
               src: pendingPhotoData.compressedData,
               alt: 'Превью фото'
             })
@@ -772,7 +771,7 @@
           )
         )
       ),
-      
+
       // Скрытый input для выбора фото
       React.createElement('input', {
         ref: fileInputRef,
@@ -782,7 +781,7 @@
         style: { display: 'none' },
         onChange: handlePhotoSelect
       }),
-      
+
       // === Фиксированная шапка: кнопки + поиск + категории ===
       React.createElement('div', { className: 'aps-fixed-header' },
         // Ряд кнопок: Добавить фото + Новый продукт
@@ -795,9 +794,9 @@
             title: !canAddPhoto ? `Лимит ${photoLimit} фото` : 'Добавить фото'
           },
             React.createElement('span', { className: 'aps-new-icon' }, '📷'),
-            React.createElement('span', null, 
-              currentPhotoCount > 0 
-                ? `Фото ${currentPhotoCount}/${photoLimit}` 
+            React.createElement('span', null,
+              currentPhotoCount > 0
+                ? `Фото ${currentPhotoCount}/${photoLimit}`
                 : 'Добавить фото'
             )
           ),
@@ -810,7 +809,7 @@
             React.createElement('span', null, 'Новый продукт')
           )
         ),
-        
+
         // Поле поиска
         React.createElement('div', { className: 'aps-search-container' },
           React.createElement('span', { className: 'aps-search-icon' }, '🔍'),
@@ -831,14 +830,14 @@
           }, '×')
         )
       ),
-      
+
       // === Скроллируемый список продуктов ===
       React.createElement('div', { className: 'aps-products-scroll' },
         // Результаты поиска
         showSearch && React.createElement('div', { className: 'aps-section' },
-          React.createElement('div', { className: 'aps-section-title' }, 
-            combinedResults.length > 0 
-              ? `Найдено: ${combinedResults.length}${sharedLoading ? ' ⏳' : ''}` 
+          React.createElement('div', { className: 'aps-section-title' },
+            combinedResults.length > 0
+              ? `Найдено: ${combinedResults.length}${sharedLoading ? ' ⏳' : ''}`
               : (sharedLoading ? '⏳ Поиск...' : 'Ничего не найдено')
           ),
           combinedResults?.length > 0 && React.createElement('div', { className: 'aps-products-list' },
@@ -847,9 +846,9 @@
           // Пустой результат с "Возможно вы искали"
           combinedResults.length === 0 && !sharedLoading && React.createElement('div', { className: 'aps-empty' },
             React.createElement('span', null, '😕'),
-            
+
             // "Возможно вы искали" — кликабельные альтернативы
-            didYouMean.length > 0 && React.createElement('div', { 
+            didYouMean.length > 0 && React.createElement('div', {
               className: 'aps-did-you-mean',
               style: {
                 marginTop: '12px',
@@ -859,21 +858,21 @@
                 textAlign: 'left'
               }
             },
-              React.createElement('div', { 
-                style: { 
-                  fontSize: '13px', 
-                  color: 'var(--text-secondary)', 
-                  marginBottom: '8px' 
-                } 
+              React.createElement('div', {
+                style: {
+                  fontSize: '13px',
+                  color: 'var(--text-secondary)',
+                  marginBottom: '8px'
+                }
               }, '💡 Возможно вы искали:'),
-              React.createElement('div', { 
-                style: { 
-                  display: 'flex', 
-                  flexWrap: 'wrap', 
-                  gap: '8px' 
-                } 
+              React.createElement('div', {
+                style: {
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px'
+                }
               },
-                didYouMean.map((item, i) => 
+                didYouMean.map((item, i) =>
                   React.createElement('button', {
                     key: i,
                     onClick: () => setSearch(item.text),
@@ -890,20 +889,20 @@
                     }
                   },
                     React.createElement('span', null, item.text),
-                    item.label && React.createElement('span', { 
-                      style: { 
-                        fontSize: '10px', 
+                    item.label && React.createElement('span', {
+                      style: {
+                        fontSize: '10px',
                         color: 'var(--text-tertiary)',
                         marginLeft: '4px'
-                      } 
+                      }
                     }, item.label)
                   )
                 )
               )
             ),
-            
+
             !didYouMean.length && React.createElement('span', null, 'Попробуйте другой запрос'),
-            
+
             React.createElement('button', {
               className: 'aps-add-new-btn',
               onClick: handleNewProduct,
@@ -911,7 +910,7 @@
             }, '+ Добавить "' + search + '"')
           )
         ),
-        
+
         // Умный список: часто + недавно используемые (объединённый)
         !showSearch && smartProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
           React.createElement('div', { className: 'aps-section-title' }, '⚡ Ваши продукты'),
@@ -931,46 +930,46 @@
     const [error, setError] = useState('');
     const [parsedPreview, setParsedPreview] = useState(null);
     const textareaRef = useRef(null);
-    
+
     // 🌐 Публикация в общую базу (по умолчанию включено)
     const [publishToShared, setPublishToShared] = useState(true);
-    
+
     // Определяем тип пользователя (куратор или клиент по PIN)
     const isCurator = !!(HEYS.cloud?.getUser?.());
-    
+
     // Доступ к навигации StepModal
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
     const { goToStep, closeModal, updateStepData } = stepContext;
-    
+
     // Фокус на textarea при монтировании
     useEffect(() => {
       setTimeout(() => textareaRef.current?.focus(), 100);
     }, []);
-    
+
     // Парсинг вставленного текста (копия логики из heys_core_v12.js)
     const parseProductLine = useCallback((text) => {
       if (!text || !text.trim()) return null;
-      
+
       // Регулярки из heys_core_v12.js
       const INVIS = /[\u00A0\u1680\u180E\u2000-\u200A\u200B-\u200F\u202F\u205F\u3000\uFEFF]/g;
       const NUM_RE = /[-+]?\d+(?:[\.,]\d+)?/g;
-      
+
       // Нормализация строки
       let clean = text.replace(INVIS, ' ');
       clean = clean.replace(/\u060C/g, ',').replace(/\u066B/g, ',').replace(/\u066C/g, ',').replace(/\u201A/g, ',');
       clean = clean.replace(/\u00B7/g, '.').replace(/[–—−]/g, '-').replace(/%/g, '');
       clean = clean.replace(/\t+/g, ' ').replace(/\s+/g, ' ').trim();
-      
+
       // Извлекаем числа
       const tokens = clean.match(NUM_RE) || [];
       if (!tokens.length) return null;
-      
+
       // Берём последние 12 чисел
       let last = tokens.slice(-12);
       if (last.length < 12) {
         last = Array(12 - last.length).fill('0').concat(last);
       }
-      
+
       // Находим позицию первого числа для извлечения названия
       const toNum = (x) => {
         if (x === undefined || x === null) return 0;
@@ -978,7 +977,7 @@
         const n = Number(s);
         return Number.isFinite(n) ? n : 0;
       };
-      
+
       // Поиск позиции первого токена
       let start = 0;
       let firstPos = clean.length;
@@ -990,19 +989,19 @@
         }
         if (idx !== -1) start = idx + tok.length;
       }
-      
+
       const name = clean.slice(0, firstPos).trim() || 'Без названия';
       const nums = last.map(toNum);
-      
+
       // Порядок: kcal, carbs, simple, complex, protein, fat, bad, good, trans, fiber, gi, harm
       const [kcal, carbs, simple, complex, protein, fat, bad, good, trans, fiber, gi, harm] = nums;
-      
+
       // Вычисляем производные
       const carbs100 = simple + complex;
       const fat100 = bad + good + trans;
       // TEF-aware formula: protein 3 kcal/g (25% TEF), carbs 4 kcal/g, fat 9 kcal/g (Atwater)
       const kcal100 = 3 * protein + 4 * carbs100 + 9 * fat100;
-      
+
       return {
         id: Math.random().toString(36).slice(2, 10),
         name,
@@ -1014,18 +1013,18 @@
         trans100: trans,
         fiber100: fiber,
         gi: gi,
-        harmScore: harm,
+        harm: harm,  // Canonical harm field
         carbs100: Math.round(carbs100 * 10) / 10,
         fat100: Math.round(fat100 * 10) / 10,
         kcal100: Math.round(kcal100 * 10) / 10,
         createdAt: Date.now()
       };
     }, []);
-    
+
     // Ref для onChange чтобы не вызывать лишние ререндеры
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
-    
+
     // При изменении текста — пытаемся распарсить (с debounce)
     useEffect(() => {
       if (!pasteText.trim()) {
@@ -1033,7 +1032,7 @@
         setError('');
         return;
       }
-      
+
       // Debounce парсинга чтобы не тормозить при быстром вводе
       const timer = setTimeout(() => {
         const parsed = parseProductLine(pasteText);
@@ -1047,24 +1046,24 @@
           setError('Не удалось распознать данные. Формат: Название + 12 чисел.');
         }
       }, 150);
-      
+
       return () => clearTimeout(timer);
     }, [pasteText, parseProductLine]);
-    
+
     // Добавить продукт в базу и выбрать его
     const handleCreate = useCallback(() => {
       if (!parsedPreview) return;
-      
+
       haptic('medium');
-      
+
       // 1. Получаем текущую базу продуктов
       const U = HEYS.utils || {};
       const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
-      
+
       // 🔍 Проверка на дубликат в личной базе (по fingerprint или названию)
       let existingPersonal = null;
       const newFingerprint = HEYS.models?.computeProductFingerprint?.(parsedPreview);
-      
+
       if (newFingerprint) {
         // Ищем по fingerprint
         existingPersonal = products.find(p => {
@@ -1072,18 +1071,18 @@
           return fp === newFingerprint;
         });
       }
-      
+
       if (!existingPersonal) {
         // Fallback: ищем по нормализованному названию
         const normName = (parsedPreview.name || '').trim().toLowerCase();
-        existingPersonal = products.find(p => 
+        existingPersonal = products.find(p =>
           (p.name || '').trim().toLowerCase() === normName
         );
       }
-      
+
       let savedToPersonal = false;
       let savedMethod = 'none';
-      
+
       if (existingPersonal) {
         // Продукт уже есть в личной базе — не дублируем
         console.log('[CreateProductStep] ⚠️ Продукт уже есть в личной базе:', existingPersonal.name);
@@ -1092,7 +1091,7 @@
       } else {
         // Добавляем в личную базу
         const newProducts = [...products, parsedPreview];
-        
+
         // Сохраняем через HEYS.products (React state + localStorage + cloud sync)
         if (HEYS.products?.setAll) {
           HEYS.products.setAll(newProducts);
@@ -1108,15 +1107,15 @@
           savedToPersonal = true;
           console.warn('[CreateProductStep] ⚠️ Продукт сохранён только локально (нет HEYS.store)');
         }
-        
+
         console.log('[CreateProductStep] ✅ Добавлен в личную базу:', parsedPreview.name, savedMethod);
       }
-      
+
       // 🔍 ВЕРИФИКАЦИЯ: Проверяем что продукт действительно сохранился (только если добавляли)
       if (savedToPersonal) {
         setTimeout(() => {
           const verifyProducts = HEYS.products?.getAll?.() || [];
-          const found = verifyProducts.find(p => 
+          const found = verifyProducts.find(p =>
             p.name?.toLowerCase() === parsedPreview.name?.toLowerCase() ||
             p.id === parsedPreview.id
           );
@@ -1138,7 +1137,7 @@
           }
         }, 500);
       }
-      
+
       // 🔄 Пересчитываем orphan-продукты (новый продукт мог быть orphan)
       if (HEYS.orphanProducts?.recalculate) {
         HEYS.orphanProducts.recalculate();
@@ -1147,7 +1146,7 @@
       if (HEYS.orphanProducts?.remove && parsedPreview.name) {
         HEYS.orphanProducts.remove(parsedPreview.name);
       }
-      
+
       // 🌐 Публикация в общую базу (если включено)
       console.log('[CreateProductStep] 🔍 SHARED PUBLISH DEBUG:', {
         publishToShared,
@@ -1159,40 +1158,40 @@
         hasFingerprint: !!HEYS.models?.computeProductFingerprint,
         productName: parsedPreview?.name
       });
-      
+
       if (publishToShared && HEYS.cloud) {
         (async () => {
           try {
             console.log('[CreateProductStep] 🚀 Начинаем публикацию в shared...');
-            
+
             // Проверяем fingerprint — есть ли уже такой продукт в shared
             if (HEYS.models?.computeProductFingerprint) {
               // ⚠️ ВАЖНО: await! computeProductFingerprint возвращает Promise
               const fingerprint = await HEYS.models.computeProductFingerprint(parsedPreview);
               console.log('[CreateProductStep] 🔑 Fingerprint:', fingerprint);
-              
+
               if (!fingerprint) {
                 console.error('[CreateProductStep] ❌ Fingerprint пустой, невозможно проверить дубликаты');
               }
-              
+
               // Ищем по fingerprint через опции
               const existing = await HEYS.cloud.searchSharedProducts?.('', { fingerprint, limit: 1 });
               console.log('[CreateProductStep] 🔍 Поиск по fingerprint:', existing);
-              
+
               if (existing?.data?.length > 0) {
                 // Продукт уже есть — не дублируем, просто логируем
                 console.log('[CreateProductStep] 🔄 Продукт уже в shared базе:', existing.data[0].name);
                 return;
               }
-              
+
               console.log('[CreateProductStep] ✅ Продукт НЕ найден в shared — можно добавлять!');
             } else {
               console.log('[CreateProductStep] ⚠️ Нет функции computeProductFingerprint, пропускаем проверку');
             }
-            
+
             // Публикуем: куратор напрямую, клиент через pending
             console.log('[CreateProductStep] 👤 isCurator:', isCurator);
-            
+
             if (isCurator && HEYS.cloud.publishToShared) {
               console.log('[CreateProductStep] 📤 Вызываем publishToShared...');
               const result = await HEYS.cloud.publishToShared(parsedPreview);
@@ -1201,7 +1200,7 @@
               console.log('[CreateProductStep] 📤 Вызываем createPendingProduct...');
               // Получаем clientId из localStorage
               let clientId = localStorage.getItem('heys_client_current');
-              try { clientId = JSON.parse(clientId); } catch(e) { /* already string */ }
+              try { clientId = JSON.parse(clientId); } catch (e) { /* already string */ }
               if (!clientId) {
                 console.error('[CreateProductStep] ❌ Нет clientId для pending продукта!');
               } else {
@@ -1219,72 +1218,72 @@
       } else {
         console.log('[CreateProductStep] ⏭️ Пропуск публикации:', { publishToShared, hasCloud: !!HEYS.cloud });
       }
-      
+
       // 2. Вызываем callback если есть (для обновления списка в родителе)
       if (context?.onProductCreated) {
         context.onProductCreated(parsedPreview);
       }
-      
+
       // 3. Обновляем данные текущего шага
-      onChange({ 
-        ...data, 
+      onChange({
+        ...data,
         newProduct: parsedPreview,
         selectedProduct: parsedPreview,
         grams: 100
       });
-      
+
       // 4. ТАКЖЕ обновляем данные шага grams напрямую (чтобы GramsStep сразу видел продукт)
       if (updateStepData) {
-        updateStepData('grams', { 
-          selectedProduct: parsedPreview, 
-          grams: 100 
+        updateStepData('grams', {
+          selectedProduct: parsedPreview,
+          grams: 100
         });
       }
-      
+
       // 5. Переходим на шаг граммов (index 2)
       // Увеличен таймаут для гарантии обновления state
       if (goToStep) {
         setTimeout(() => goToStep(2, 'left'), 150);
       }
     }, [parsedPreview, data, onChange, context, goToStep, updateStepData, publishToShared, isCurator]);
-    
+
     return React.createElement('div', { className: 'aps-create-step' },
       // Заголовок
       React.createElement('div', { className: 'aps-create-header' },
         React.createElement('span', { className: 'aps-create-icon' }, '➕'),
         React.createElement('span', { className: 'aps-create-title' }, 'Создать новый продукт')
       ),
-      
+
       // Подсказка о поисковом запросе
       searchQuery && React.createElement('div', { className: 'aps-create-search-hint' },
         '🔍 Вы искали: ',
         React.createElement('strong', null, searchQuery)
       ),
-      
+
       // Инструкция
       React.createElement('div', { className: 'aps-create-hint' },
         'Вставьте строку с данными продукта:',
         React.createElement('br'),
-        React.createElement('span', { className: 'aps-create-format' }, 
+        React.createElement('span', { className: 'aps-create-format' },
           'Название · ккал · У · простые · сложные · Б · Ж · вред · польза · транс · клетч · ГИ · вред'
         )
       ),
-      
+
       // Textarea для вставки
       React.createElement('textarea', {
         ref: textareaRef,
         className: 'aps-create-textarea',
-        placeholder: searchQuery 
+        placeholder: searchQuery
           ? `Пример: ${searchQuery}\t120\t22\t2\t20\t4\t2\t0.5\t1.5\t0\t3\t40\t0`
           : 'Пример: Овсянка на воде\t120\t22\t2\t20\t4\t2\t0.5\t1.5\t0\t3\t40\t0',
         value: pasteText,
         onChange: (e) => setPasteText(e.target.value),
         rows: 3
       }),
-      
+
       // Ошибка
       error && React.createElement('div', { className: 'aps-create-error' }, '⚠️ ' + error),
-      
+
       // Превью распознанного продукта
       parsedPreview && React.createElement('div', { className: 'aps-create-preview' },
         React.createElement('div', { className: 'aps-preview-title' }, '✅ Распознано:'),
@@ -1332,7 +1331,7 @@
           )
         )
       ),
-      
+
       // 🌐 Checkbox: Опубликовать в общую базу
       parsedPreview && React.createElement('label', {
         style: {
@@ -1354,22 +1353,22 @@
           style: { width: '18px', height: '18px', accentColor: '#22c55e' }
         }),
         React.createElement('span', null, '🌐 Опубликовать в общую базу'),
-        React.createElement('span', { 
+        React.createElement('span', {
           style: { fontSize: '11px', color: 'var(--text-muted, #6b7280)', marginLeft: 'auto' }
         }, isCurator ? 'сразу доступен всем' : 'на модерацию')
       ),
-      
+
       // Кнопка добавить
       React.createElement('button', {
         className: 'aps-create-btn' + (parsedPreview ? ' active' : ''),
         onClick: handleCreate,
         disabled: !parsedPreview
       },
-        parsedPreview 
+        parsedPreview
           ? '✓ Добавить «' + parsedPreview.name.slice(0, 20) + (parsedPreview.name.length > 20 ? '...' : '') + '»'
           : 'Вставьте данные продукта'
       ),
-      
+
       // Подсказка про формат
       React.createElement('div', { className: 'aps-create-tip' },
         '💡 Скопируйте строку из таблицы Google Sheets или Excel. Поддерживаются запятые и точки.'
@@ -1417,33 +1416,33 @@
   function GramsStep({ data, onChange, context, stepData }) {
     // Продукт берём: 1) из context (для edit mode), 2) из своих данных, 3) из create (newProduct или selectedProduct), 4) из search
     // ВАЖНО: stepData?.create проверяется т.к. при создании нового продукта data.selectedProduct может не успеть обновиться
-    const product = context?.editProduct 
-      || data.selectedProduct 
-      || stepData?.create?.newProduct 
-      || stepData?.create?.selectedProduct 
+    const product = context?.editProduct
+      || data.selectedProduct
+      || stepData?.create?.newProduct
+      || stepData?.create?.selectedProduct
       || stepData?.search?.selectedProduct;
     const lastGrams = stepData?.search?.lastGrams || stepData?.create?.lastGrams; // Последние использованные
     const grams = data.grams || context?.editGrams || stepData?.create?.grams || stepData?.search?.grams || 100;
-    
+
     // Режим ввода: grams или kcal
     const [inputMode, setInputMode] = useState('grams');
     const [kcalInput, setKcalInput] = useState('');
     const gramsInputRef = useRef(null);
-    
+
     // ВАЖНО: Значения продукта с fallback для ситуации когда product ещё не загружен
     const kcal100 = product?.kcal100 || 0;
     const protein100 = product?.protein100 || 0;
     const carbs100 = (product?.simple100 || 0) + (product?.complex100 || 0);
     const fat100 = (product?.badFat100 || 0) + (product?.goodFat100 || 0) + (product?.trans100 || 0);
-    
+
     // Расчёт на текущую порцию (safe with fallbacks)
     const currentKcal = Math.round(kcal100 * grams / 100);
     const currentProt = Math.round(protein100 * grams / 100);
     const currentCarbs = Math.round(carbs100 * grams / 100);
     const currentFat = Math.round(fat100 * grams / 100);
-    
+
     // === ВСЕ ХУКИ ДОЛЖНЫ БЫТЬ ДО ЛЮБОГО RETURN ===
-    
+
     // Авто-порции продукта
     const portions = useMemo(() => {
       if (!product) return [{ name: '100г', grams: 100 }];
@@ -1458,7 +1457,7 @@
         { name: '200г', grams: 200 }
       ];
     }, [product]);
-    
+
     // Обновление граммов
     const setGrams = useCallback((newGrams) => {
       const val = Math.max(1, Math.min(2000, Number(newGrams) || 100));
@@ -1468,7 +1467,7 @@
       }
       onChange({ ...data, grams: val });
     }, [data, onChange]);
-    
+
     // Расчёт граммов из ккал
     const setKcalAndCalcGrams = useCallback((kcalStr) => {
       setKcalInput(kcalStr);
@@ -1479,7 +1478,7 @@
         onChange({ ...data, grams: val });
       }
     }, [data, onChange, kcal100]);
-    
+
     // Считаем сумму ккал за день
     const { dateKey, mealIndex } = context || {};
     const dayTotalKcal = useMemo(() => {
@@ -1495,39 +1494,39 @@
       });
       return Math.round(total);
     }, [dateKey, context?.products]);
-    
+
     // Норма ккал из профиля
     const dailyGoal = useMemo(() => {
       const profile = lsGet('heys_profile', {});
       return profile.optimum || profile.tdee || 1800;
     }, []);
-    
+
     // === ТЕПЕРЬ МОЖНО ДЕЛАТЬ EARLY RETURN ===
     if (!product) {
       return React.createElement('div', { className: 'aps-no-product' },
         'Сначала выберите продукт'
       );
     }
-    
+
     // Быстрые кнопки порций
     const quickPortions = [50, 100, 150, 200, 300];
-    
+
     // Фон хедера по вредности
     const harmVal = product.harm ?? product.harmScore ?? product.harm100;
     const harmBg = getHarmBg(harmVal);
-    
+
     return React.createElement('div', { className: 'aps-grams-step' },
       // Название продукта
-      React.createElement('div', { 
+      React.createElement('div', {
         className: 'aps-product-header',
         style: harmBg ? { background: harmBg, borderColor: harmBg } : undefined
       },
-        product.category && React.createElement('span', { className: 'aps-product-icon-lg' }, 
+        product.category && React.createElement('span', { className: 'aps-product-icon-lg' },
           getCategoryIcon(product.category)
         ),
         React.createElement('div', { className: 'aps-product-title' }, product.name)
       ),
-      
+
       // Подсказка про последние граммы
       lastGrams && React.createElement('div', { className: 'aps-last-grams-hint' },
         React.createElement('span', null, 'В прошлый раз: '),
@@ -1536,12 +1535,12 @@
           onClick: () => setGrams(lastGrams)
         }, lastGrams + 'г')
       ),
-      
+
       // === HERO: Большой input (граммы или ккал в зависимости от режима) ===
       React.createElement('div', { className: 'aps-grams-hero' },
         React.createElement('button', {
           className: 'aps-grams-hero-btn',
-          onClick: () => inputMode === 'grams' 
+          onClick: () => inputMode === 'grams'
             ? setGrams(grams - 10)
             : setKcalAndCalcGrams(Math.max(10, (Number(kcalInput) || 0) - 10))
         }, '−'),
@@ -1551,7 +1550,7 @@
             type: 'number',
             className: 'aps-grams-hero-input',
             value: inputMode === 'grams' ? grams : kcalInput,
-            onChange: (e) => inputMode === 'grams' 
+            onChange: (e) => inputMode === 'grams'
               ? setGrams(e.target.value)
               : setKcalAndCalcGrams(e.target.value),
             onFocus: (e) => e.target.select(),
@@ -1568,19 +1567,19 @@
             : setKcalAndCalcGrams((Number(kcalInput) || 0) + 10)
         }, '+')
       ),
-      
+
       // Подпись под инпутом (грамм / ккал)
       React.createElement('div', { className: 'aps-grams-hero-label' },
         inputMode === 'grams' ? 'грамм' : 'ккал'
       ),
-      
+
       // Вторичная информация (калории или граммы)
       React.createElement('div', { className: 'aps-kcal-secondary' },
-        React.createElement('span', { className: 'aps-kcal-secondary-value' }, 
+        React.createElement('span', { className: 'aps-kcal-secondary-value' },
           inputMode === 'grams' ? (currentKcal + ' ккал') : ('= ' + grams + 'г')
         )
       ),
-      
+
       // БЖУ
       React.createElement('div', { className: 'aps-macros' },
         React.createElement('div', { className: 'aps-macro' },
@@ -1596,7 +1595,7 @@
           React.createElement('span', { className: 'aps-macro-value' }, currentCarbs + 'г')
         )
       ),
-      
+
       // === БОЛЬШАЯ КНОПКА ДОБАВИТЬ/ИЗМЕНИТЬ ===
       React.createElement('button', {
         className: 'aps-add-hero-btn',
@@ -1609,7 +1608,7 @@
                 itemId: context.itemId,
                 grams
               });
-            } 
+            }
             // Режим добавления — вызываем onAdd
             else if (context?.onAdd) {
               // Sanity check: warn if grams values are inconsistent
@@ -1626,19 +1625,19 @@
                   dataSelectedProduct: data?.selectedProduct
                 });
               }
-              
+
               context.onAdd({
                 product,
                 grams,
                 mealIndex: context.mealIndex
               });
-              
+
               // 🔔 Dispatch event для advice module
-              window.dispatchEvent(new CustomEvent('heysProductAdded', { 
-                detail: { product, grams } 
+              window.dispatchEvent(new CustomEvent('heysProductAdded', {
+                detail: { product, grams }
               }));
             }
-            
+
             // Закрыть модалку
             if (HEYS.StepModal?.hide) {
               HEYS.StepModal.hide({ scrollToDiary: true });
@@ -1661,7 +1660,7 @@
           cursor: 'pointer'
         }
       }, context?.isEditMode ? '✓ Изменить' : '✓ Добавить'),
-      
+
       // Переключатель режима: граммы / ккал
       React.createElement('div', { className: 'aps-input-mode-toggle' },
         React.createElement('button', {
@@ -1673,7 +1672,7 @@
           onClick: () => setInputMode('kcal')
         }, '🔥 Ккал')
       ),
-      
+
       // Слайдер (только в режиме граммов)
       inputMode === 'grams' && React.createElement('input', {
         type: 'range',
@@ -1687,10 +1686,10 @@
         onTouchEnd: (e) => e.stopPropagation(),
         onTouchMove: (e) => e.stopPropagation()
       }),
-      
+
       // Быстрые кнопки
       React.createElement('div', { className: 'aps-quick-grams' },
-        quickPortions.map(g => 
+        quickPortions.map(g =>
           React.createElement('button', {
             key: g,
             className: 'aps-quick-btn' + (grams === g ? ' active' : ''),
@@ -1698,12 +1697,12 @@
           }, g + 'г')
         )
       ),
-      
+
       // Порции продукта
       portions?.length > 0 && React.createElement('div', { className: 'aps-portions' },
         React.createElement('div', { className: 'aps-portions-title' }, 'Порции:'),
         React.createElement('div', { className: 'aps-portions-list' },
-          portions.map((p, i) => 
+          portions.map((p, i) =>
             React.createElement('button', {
               key: i,
               className: 'aps-portion-btn' + (grams === p.grams ? ' active' : ''),
@@ -1712,15 +1711,15 @@
           )
         )
       ),
-      
+
       // Итог дня: +ккал → всего/норма (%)
       React.createElement('div', { className: 'aps-day-total' },
         React.createElement('span', { className: 'aps-day-plus' }, '+' + currentKcal + ' ккал'),
         React.createElement('span', { className: 'aps-day-arrow' }, ' → '),
-        React.createElement('span', { className: 'aps-day-sum' }, 
+        React.createElement('span', { className: 'aps-day-sum' },
           (dayTotalKcal + currentKcal) + '/' + dailyGoal
         ),
-        React.createElement('span', { className: 'aps-day-pct' }, 
+        React.createElement('span', { className: 'aps-day-pct' },
           ' (' + Math.round((dayTotalKcal + currentKcal) / dailyGoal * 100) + '%)'
         )
       )
@@ -1729,24 +1728,24 @@
 
   // === Главная функция показа модалки ===
   function showAddProductModal(options = {}) {
-    const { 
-      mealIndex = 0, 
+    const {
+      mealIndex = 0,
       products: providedProducts,
       dateKey = new Date().toISOString().slice(0, 10),
       onAdd,
       onAddPhoto, // Callback для добавления фото к приёму
       onNewProduct,
-      onClose 
+      onClose
     } = options;
-    
+
     // Всегда берём актуальные продукты из хранилища (providedProducts может быть устаревшим)
     const U = HEYS.utils || {};
-    
+
     // Берём из первого непустого источника с fallback chain
     const fromHeysProducts = HEYS.products?.getAll?.() || [];
     const fromStore = HEYS.store?.get?.('heys_products', []) || [];
     const fromLsGet = U.lsGet?.('heys_products', []) || [];
-    
+
     let products = [];
     if (fromHeysProducts.length > 0) {
       products = fromHeysProducts;
@@ -1755,15 +1754,15 @@
     } else if (fromLsGet.length > 0) {
       products = fromLsGet;
     }
-    
+
     // Mutable ref для обновления продуктов после создания
     let currentProducts = [...products];
-    
+
     if (!HEYS.StepModal) {
       console.error('[AddProductStep] StepModal not loaded');
       return;
     }
-    
+
     HEYS.StepModal.show({
       steps: [
         {
@@ -1795,10 +1794,10 @@
           hideHeaderNext: true // Скрываем кнопку в хедере — есть большая зелёная кнопка внизу
         }
       ],
-      context: { 
-        products: currentProducts, 
-        dateKey, 
-        mealIndex, 
+      context: {
+        products: currentProducts,
+        dateKey,
+        mealIndex,
         onNewProduct,
         onAdd, // Передаём callback для добавления в приём пищи
         onAddPhoto, // Callback для добавления фото к приёму
@@ -1818,34 +1817,34 @@
       title: '', // Убрали — и так очевидно
       onComplete: (stepData) => {
         // console.log('[AddProductStep] onComplete stepData:', stepData);
-        
+
         // Данные шагов
         const searchData = stepData.search || {};
         const gramsData = stepData.grams || {};
         const createData = stepData.create || {};
-        
+
         // Приоритет: продукт из grams (последний шаг), затем create (новый продукт), затем search
         // ВАЖНО: create проверяется перед search, т.к. при создании нового продукта 
         // stepData.grams может не успеть обновиться из-за React batching
         // newProduct — это поле которое всегда устанавливается при создании
-        const selectedProduct = gramsData.selectedProduct 
-          || createData.newProduct 
-          || createData.selectedProduct 
+        const selectedProduct = gramsData.selectedProduct
+          || createData.newProduct
+          || createData.selectedProduct
           || searchData.selectedProduct;
         const grams = gramsData.grams || createData.grams || searchData.grams || 100;
-        
+
         // console.log('[AddProductStep] selectedProduct:', selectedProduct?.name, 'grams:', grams);
-        
+
         if (selectedProduct && grams) {
           onAdd?.({
             product: selectedProduct,
             grams: grams,
             mealIndex
           });
-          
+
           // 🔔 Dispatch event для advice module
-          window.dispatchEvent(new CustomEvent('heysProductAdded', { 
-            detail: { product: selectedProduct, grams } 
+          window.dispatchEvent(new CustomEvent('heysProductAdded', {
+            detail: { product: selectedProduct, grams }
           }));
         }
       },
@@ -1855,26 +1854,26 @@
 
   // === Функция редактирования граммов (для карточки продукта) ===
   function showEditGramsModal(options = {}) {
-    const { 
+    const {
       product,
       currentGrams = 100,
       mealIndex = 0,
       itemId,
       dateKey = new Date().toISOString().slice(0, 10),
       onSave,
-      onClose 
+      onClose
     } = options;
-    
+
     if (!product) {
       console.error('[EditGramsModal] No product provided');
       return;
     }
-    
+
     if (!HEYS.StepModal) {
       console.error('[EditGramsModal] StepModal not loaded');
       return;
     }
-    
+
     HEYS.StepModal.show({
       steps: [
         {
@@ -1891,9 +1890,9 @@
           })
         }
       ],
-      context: { 
-        products: [], 
-        dateKey, 
+      context: {
+        products: [],
+        dateKey,
         mealIndex,
         itemId,
         isEditMode: true,
@@ -1911,7 +1910,7 @@
       onComplete: (stepData) => {
         const gramsData = stepData.grams || {};
         const grams = gramsData.grams || currentGrams;
-        
+
         if (grams > 0) {
           onSave?.({
             mealIndex,

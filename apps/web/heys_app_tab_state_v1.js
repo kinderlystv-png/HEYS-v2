@@ -6,7 +6,7 @@
         const getDefaultTabFromProfile = () => {
             const U = window.HEYS?.utils;
             const profile = U?.lsGet?.('heys_profile', {}) || {};
-            const validTabs = ['widgets', 'stats', 'diary', 'insights'];
+            const validTabs = ['widgets', 'stats', 'diary', 'insights', 'month'];
             const savedTab = validTabs.includes(profile.defaultTab) ? profile.defaultTab : 'stats';
             return savedTab;
         };
@@ -64,7 +64,7 @@
         }, [initialTabLoaded]);
 
         const setDefaultTab = React.useCallback((newDefaultTab) => {
-            const validTabs = ['widgets', 'stats', 'diary', 'insights'];
+            const validTabs = ['widgets', 'stats', 'diary', 'insights', 'month'];
             if (!validTabs.includes(newDefaultTab)) return;
 
             const U = window.HEYS?.utils;

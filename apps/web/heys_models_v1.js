@@ -430,7 +430,16 @@
     // TEF-aware formula: protein 3 kcal/g (25% TEF), carbs 4 kcal/g, fat 9 kcal/g (Atwater)
     // ALWAYS recalculate - ignore pasted kcal100 for consistency
     const kcal = 3 * (+p.protein100 || 0) + 4 * carbs + 9 * fat;
-    return { carbs100: round1(carbs), fat100: round1(fat), kcal100: round1(kcal) };
+
+    const derived = { carbs100: round1(carbs), fat100: round1(fat), kcal100: round1(kcal) };
+
+    // Auto-calculate harm if not provided (v2.0.0)
+    // HEYS.Harm.calculateHarmScore uses scientific formula based on trans/simple/badFat/sodium vs fiber/protein/goodFat
+    if (p.harm == null && p.harmScore == null && HEYS.Harm?.calculateHarmScore) {
+      derived.harm = HEYS.Harm.calculateHarmScore(p);
+    }
+
+    return derived;
   }
 
   function buildProductIndex(ps) {
@@ -462,6 +471,16 @@
 
   function getProductFromItem(it, idx) {
     if (!it) return null;
+    // Defensive: если idx не передан или undefined — пропускаем поиск в индексе
+    if (!idx) {
+      // Если в item есть snapshot нутриентов — вернём сам item
+      const hasMacroSnapshot = it.kcal100 !== undefined || it.protein100 !== undefined || it.simple100 !== undefined || it.complex100 !== undefined || it.carbs100 !== undefined;
+      const hasGiOrHarm = it.gi !== undefined || it.gi100 !== undefined || it.GI !== undefined || it.giIndex !== undefined || normalizeHarm(it) != null;
+      if (hasMacroSnapshot || hasGiOrHarm) {
+        return normalizeProductFields(it);
+      }
+      return null;
+    }
     const applyItemFallback = (product) => {
       if (!product || !it) return product;
 

@@ -8,13 +8,17 @@
   --insights-ring-size: 80px;
   --insights-ring-stroke: 8px;
   --insights-ring-bg: rgba(255, 255, 255, 0.1);
-  
+
   /* Цвета категорий */
-  --insights-nutrition: #22c55e;    /* Зелёный */
-  --insights-timing: #3b82f6;       /* Синий */
-  --insights-activity: #f59e0b;     /* Оранжевый */
-  --insights-recovery: #8b5cf6;     /* Фиолетовый */
-  
+  --insights-nutrition: #22c55e;
+  /* Зелёный */
+  --insights-timing: #3b82f6;
+  /* Синий */
+  --insights-activity: #f59e0b;
+  /* Оранжевый */
+  --insights-recovery: #8b5cf6;
+  /* Фиолетовый */
+
   /* Градиент для общего скора */
   --insights-score-gradient: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
 }
@@ -123,16 +127,28 @@
 }
 
 /* Цвета по категориям */
-.insights-ring--nutrition .insights-ring__fill { stroke: var(--insights-nutrition); }
-.insights-ring--timing .insights-ring__fill { stroke: var(--insights-timing); }
-.insights-ring--activity .insights-ring__fill { stroke: var(--insights-activity); }
-.insights-ring--recovery .insights-ring__fill { stroke: var(--insights-recovery); }
+.insights-ring--nutrition .insights-ring__fill {
+  stroke: var(--insights-nutrition);
+}
+
+.insights-ring--timing .insights-ring__fill {
+  stroke: var(--insights-timing);
+}
+
+.insights-ring--activity .insights-ring__fill {
+  stroke: var(--insights-activity);
+}
+
+.insights-ring--recovery .insights-ring__fill {
+  stroke: var(--insights-recovery);
+}
 
 .insights-ring__center {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, calc(-50% - 4px)); /* Сдвиг вверх из-за label */
+  transform: translate(-50%, calc(-50% - 4px));
+  /* Сдвиг вверх из-за label */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -200,8 +216,15 @@
 }
 
 @keyframes emotionalPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0); }
-  50% { box-shadow: 0 0 0 8px rgba(248, 113, 113, 0.15); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(248, 113, 113, 0);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px rgba(248, 113, 113, 0.15);
+  }
 }
 
 .insights-ring__emotional {
@@ -256,8 +279,15 @@
 }
 
 @keyframes badgePulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 .insights-ring-card__pmid {
@@ -377,9 +407,17 @@
   flex-shrink: 0;
 }
 
-.insights-pattern__icon--good { background: rgba(34, 197, 94, 0.15); }
-.insights-pattern__icon--warn { background: rgba(245, 158, 11, 0.15); }
-.insights-pattern__icon--bad { background: rgba(239, 68, 68, 0.15); }
+.insights-pattern__icon--good {
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.insights-pattern__icon--warn {
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.insights-pattern__icon--bad {
+  background: rgba(239, 68, 68, 0.15);
+}
 
 .insights-pattern__content {
   flex: 1;
@@ -490,9 +528,17 @@
   font-weight: 600;
 }
 
-.insights-scenario__arrow--up { color: var(--insights-nutrition); }
-.insights-scenario__arrow--down { color: #ef4444; }
-.insights-scenario__arrow--stable { color: var(--text-secondary, #6b7280); }
+.insights-scenario__arrow--up {
+  color: var(--insights-nutrition);
+}
+
+.insights-scenario__arrow--down {
+  color: #ef4444;
+}
+
+.insights-scenario__arrow--stable {
+  color: var(--text-secondary, #6b7280);
+}
 
 /* === WEEKLY WRAP === */
 .insights-wrap {
@@ -811,12 +857,21 @@
 
 /* === ANIMATIONS === */
 @keyframes insights-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
 
 @keyframes insights-ring-fill {
-  from { stroke-dashoffset: 251.2; }
+  from {
+    stroke-dashoffset: 251.2;
+  }
 }
 
 .insights-ring--animating .insights-ring__fill {
@@ -839,11 +894,11 @@
   .insights-rings {
     flex-wrap: wrap;
   }
-  
+
   .insights-ring {
     width: calc(50% - 6px);
   }
-  
+
   :root {
     --insights-ring-size: 70px;
   }
@@ -858,28 +913,25 @@
   padding: 0;
   padding-bottom: 100px;
   min-height: 100vh;
-  background: linear-gradient(180deg, 
-    #f8fafc 0%, 
-    #f1f5f9 50%,
-    #e2e8f0 100%
-  );
+  background: linear-gradient(180deg,
+      #f8fafc 0%,
+      #f1f5f9 50%,
+      #e2e8f0 100%);
 }
 
 .dark .insights-tab {
-  background: linear-gradient(180deg, 
-    #0f172a 0%, 
-    #1e293b 50%,
-    #0f172a 100%
-  );
+  background: linear-gradient(180deg,
+      #0f172a 0%,
+      #1e293b 50%,
+      #0f172a 100%);
 }
 
 /* === HERO HEADER === */
 .insights-tab__hero {
-  background: linear-gradient(135deg, 
-    #10b981 0%, 
-    #0ea5e9 50%,
-    #8b5cf6 100%
-  );
+  background: linear-gradient(135deg,
+      #10b981 0%,
+      #0ea5e9 50%,
+      #8b5cf6 100%);
   padding: 24px 20px 80px;
   position: relative;
   overflow: hidden;
@@ -892,11 +944,9 @@
   right: -30%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(255, 255, 255, 0.15) 0%,
-    transparent 60%
-  );
+  background: radial-gradient(ellipse at center,
+      rgba(255, 255, 255, 0.15) 0%,
+      transparent 60%);
   pointer-events: none;
 }
 
@@ -997,7 +1047,7 @@
   border-radius: 24px;
   padding: 20px;
   margin-bottom: 16px;
-  box-shadow: 
+  box-shadow:
     0 4px 6px rgba(0, 0, 0, 0.04),
     0 12px 40px rgba(16, 185, 129, 0.12);
   position: relative;
@@ -1006,7 +1056,7 @@
 
 .dark .insights-tab__score-card {
   background: linear-gradient(145deg, #1e293b, #0f172a);
-  box-shadow: 
+  box-shadow:
     0 4px 6px rgba(0, 0, 0, 0.3),
     0 12px 40px rgba(16, 185, 129, 0.08);
 }
@@ -1144,20 +1194,31 @@
 }
 
 /* Цветовые акценты для категорий */
-.insights-ring-card--nutrition { border-left: 3px solid #22c55e; }
-.insights-ring-card--timing { border-left: 3px solid #3b82f6; }
-.insights-ring-card--activity { border-left: 3px solid #f59e0b; }
-.insights-ring-card--recovery { border-left: 3px solid #8b5cf6; }
+.insights-ring-card--nutrition {
+  border-left: 3px solid #22c55e;
+}
+
+.insights-ring-card--timing {
+  border-left: 3px solid #3b82f6;
+}
+
+.insights-ring-card--activity {
+  border-left: 3px solid #f59e0b;
+}
+
+.insights-ring-card--recovery {
+  border-left: 3px solid #8b5cf6;
+}
 
 /* === SECTION DIVIDER === */
 .insights-tab__divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.08), transparent);
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.08), transparent);
   margin: 16px 0;
 }
 
 .dark .insights-tab__divider {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
 }
 
 /* === SECTIONS === */
@@ -1181,7 +1242,7 @@
   margin-bottom: 16px;
 }
 
-.insights-tab__metabolic-row > * {
+.insights-tab__metabolic-row>* {
   flex: 1;
 }
 
@@ -1215,8 +1276,15 @@
 
 /* === ANIMATIONS === */
 @keyframes insights-hero-pulse {
-  0%, 100% { opacity: 0.15; }
-  50% { opacity: 0.25; }
+
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+
+  50% {
+    opacity: 0.25;
+  }
 }
 
 .insights-tab__hero::before {
@@ -1248,12 +1316,51 @@
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   width: 100%;
-  max-width: 192px; /* 3 кнопки по ~60px + gap */
+  max-width: 192px;
+  /* 3 кнопки по ~60px + gap */
   gap: 2px;
   margin-top: 4px;
 }
 
 .tab-switch-labels--triple .tab-switch-label {
+  text-align: center;
+  font-size: 9px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* =============================================================================
+   QUAD TAB SWITCH — 4 вкладки
+   ============================================================================= */
+
+.tab-switch-wrapper--quad {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tab-switch-group--quad {
+  display: flex;
+  gap: 2px;
+}
+
+.tab-switch-group--quad .tab.tab-switch {
+  min-width: 60px;
+  padding: 8px 10px;
+}
+
+.tab-switch-labels--quad {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  width: 100%;
+  max-width: 260px;
+  /* 4 кнопки по ~60px + gap */
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.tab-switch-labels--quad .tab-switch-label {
   text-align: center;
   font-size: 9px;
   cursor: pointer;
@@ -1375,9 +1482,9 @@
 .insights-collapsible__content {
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), 
-              padding 0.25s ease,
-              opacity 0.25s ease;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    padding 0.25s ease,
+    opacity 0.25s ease;
   opacity: 0;
 }
 
@@ -1684,8 +1791,13 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* Modal */
@@ -1705,6 +1817,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2545,10 +2658,13 @@
 
 /* Risk Pulse Animation */
 @keyframes pulse-risk {
-  0%, 100% { 
+
+  0%,
+  100% {
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
   }
-  50% { 
+
+  50% {
     box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
   }
 }
@@ -2579,7 +2695,7 @@
   border-radius: 20px;
   padding: 20px;
   margin: 16px 0;
-  box-shadow: 
+  box-shadow:
     0 4px 24px rgba(0, 0, 0, 0.04),
     0 1px 2px rgba(0, 0, 0, 0.02);
 }
@@ -2696,8 +2812,15 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
 }
 
 /* Card */
@@ -2756,8 +2879,15 @@
 }
 
 @keyframes now-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .meal-timing-v2__card-body {
@@ -2889,7 +3019,7 @@
 .dark .meal-timing-v2 {
   background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
   border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 
+  box-shadow:
     0 4px 24px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
@@ -3097,8 +3227,13 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .weekly-wrap-card {
@@ -3115,13 +3250,14 @@
 }
 
 @keyframes slideUp {
-  from { 
-    opacity: 0; 
-    transform: translateY(40px) scale(0.95); 
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
   }
-  to { 
-    opacity: 1; 
-    transform: translateY(0) scale(1); 
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -3446,13 +3582,27 @@
 }
 
 @keyframes trainingPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.15); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
 }
 
 @keyframes stressPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .weekly-wrap-card__bar-container--training .weekly-wrap-card__bar {
@@ -3655,6 +3805,7 @@
 .dark .weekly-wrap-card__tab--active {
   background: #374151;
 }
+
 /* =============================================================================
    STATUS CARD — Статус 0-100 для InsightsTab
    ============================================================================= */
@@ -3959,11 +4110,14 @@
 
 /* Анимация для иконки */
 @keyframes insightsEmptyPulse {
-  0%, 100% { 
+
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
-  50% { 
+
+  50% {
     transform: scale(1.1);
     opacity: 0.8;
   }

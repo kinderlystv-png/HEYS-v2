@@ -2217,7 +2217,7 @@
                                                         trans100: product.trans100,
                                                         fiber100: product.fiber100,
                                                         gi: product.gi,
-                                                        harmScore: product.harmScore,
+                                                        harm: HEYS.models?.normalizeHarm?.(product),  // Canonical harm field
                                                     }),
                                                 };
 

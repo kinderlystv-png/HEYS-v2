@@ -167,7 +167,7 @@
                             trans100: product.trans100,
                             fiber100: product.fiber100,
                             gi: product.gi,
-                            harmScore: product.harmScore
+                            harm: HEYS.models?.normalizeHarm?.(product)  // Canonical harm field
                           })
                         };
 
@@ -287,20 +287,6 @@
         HEYS.Paywall.showBlockedToast('Добавление продуктов недоступно');
         return;
       }
-
-      // 🔍 DEBUG: Логируем входящий продукт
-      console.log('[ADD_PRODUCT] 📦 Input product:', {
-        name: p.name,
-        id: p.id,
-        harm: p.harm,
-        harmScore: p.harmScore,
-        harmscore: p.harmscore,
-        harm100: p.harm100,
-        gi: p.gi,
-        gi100: p.gi100,
-        kcal100: p.kcal100,
-        allKeys: Object.keys(p)
-      });
 
       haptic('light'); // Вибрация при добавлении
 

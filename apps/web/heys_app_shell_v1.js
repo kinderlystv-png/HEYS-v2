@@ -387,7 +387,7 @@
                         }
                     }),
                     // Кнопки "Вчера" + "Сегодня" + DatePicker
-                    (tab === 'stats' || tab === 'diary' || tab === 'insights' || tab === 'widgets') && window.HEYS.DatePicker
+                    (tab === 'stats' || tab === 'diary' || tab === 'insights' || tab === 'month' || tab === 'widgets') && window.HEYS.DatePicker
                         ? React.createElement('div', { className: 'hdr-date-group' },
                             // Кнопка быстрого перехода на вчера
                             React.createElement('button', {
@@ -510,10 +510,10 @@
             // iOS Switch группа для stats/diary — ПО ЦЕНТРУ + подписи
             React.createElement(
                 'div',
-                { className: 'tab-switch-wrapper tab-switch-wrapper--triple' },
+                { className: 'tab-switch-wrapper tab-switch-wrapper--quad' },
                 React.createElement(
                     'div',
-                    { className: 'tab-switch-group tab-switch-group--triple' },
+                    { className: 'tab-switch-group tab-switch-group--quad' },
                     React.createElement(
                         'div',
                         {
@@ -557,14 +557,29 @@
                         React.createElement('span', { className: 'tab-icon' }, '🔮'),
                         React.createElement('span', { className: 'tab-text' }, 'Инсайты'),
                     ),
+                    React.createElement(
+                        'div',
+                        {
+                            className: 'tab tab-switch ' + (tab === 'month' ? 'active' : '') + (widgetsEditMode && defaultTab === 'month' ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
+                            id: 'tour-month-tab',
+                            onClick: () => {
+                                if (widgetsEditMode) setDefaultTab('month');
+                                setTab('month');
+                            },
+                        },
+                        widgetsEditMode && defaultTab === 'month' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
+                        React.createElement('span', { className: 'tab-icon' }, '📅'),
+                        React.createElement('span', { className: 'tab-text' }, 'Месяц'),
+                    ),
                 ),
                 // Подписи под переключателем
                 React.createElement(
                     'div',
-                    { className: 'tab-switch-labels tab-switch-labels--triple' },
+                    { className: 'tab-switch-labels tab-switch-labels--quad' },
                     React.createElement('span', { className: 'tab-switch-label' + (tab === 'stats' ? ' active' : ''), onClick: () => setTab('stats') }, 'Отчёты'),
                     React.createElement('span', { className: 'tab-switch-label' + (tab === 'diary' ? ' active' : ''), onClick: () => setTab('diary') }, 'Дневник'),
                     React.createElement('span', { className: 'tab-switch-label' + (tab === 'insights' ? ' active' : ''), onClick: () => setTab('insights') }, 'Инсайты'),
+                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'month' ? ' active' : ''), onClick: () => setTab('month') }, 'Месяц'),
                 ),
             ),
             // Советы — кнопка между переключателем и настройками
@@ -654,38 +669,37 @@
                             React.createElement('div', { className: 'skeleton-sparkline', style: { height: 160, marginBottom: 16 } }),
                             React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
                         ))
-                    : (tab === 'stats' || tab === 'diary')
-                        ? React.createElement(DayTabWithCloudSync, {
-                            key: 'day' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
-                            products,
-                            clientId,
-                            selectedDate,
-                            setSelectedDate,
-                            subTab: tab,
-                        })
-                        : tab === 'user'
-                            ? React.createElement(UserTabWithCloudSync, {
-                                key: 'user' + syncVer + '_' + String(clientId || ''),
+                    : tab === 'month'
+                        ? (window.HEYS?.ReportsTab
+                            ? React.createElement(window.HEYS.ReportsTab, {
+                                key: 'month' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                                selectedDate,
+                                setSelectedDate,
                                 clientId,
                             })
-                            : tab === 'overview'
-                                ? (window.HEYS && window.HEYS.DataOverviewTab
-                                    ? React.createElement(window.HEYS.DataOverviewTab, {
-                                        key: 'overview' + syncVer + '_' + String(clientId || ''),
-                                        clientId,
-                                        setTab,
-                                        setSelectedDate,
-                                    })
-                                    : React.createElement('div', { style: { padding: 16 } },
-                                        React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
-                                        React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                                    ))
-                                : tab === 'widgets'
-                                    ? (window.HEYS && window.HEYS.Widgets && window.HEYS.Widgets.WidgetsTab
-                                        ? React.createElement(window.HEYS.Widgets.WidgetsTab, {
-                                            key: 'widgets' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                            : React.createElement('div', { style: { padding: 16 } },
+                                React.createElement('div', { className: 'skeleton-sparkline', style: { height: 160, marginBottom: 16 } }),
+                                React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
+                            ))
+                        : (tab === 'stats' || tab === 'diary')
+                            ? React.createElement(DayTabWithCloudSync, {
+                                key: 'day' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                                products,
+                                clientId,
+                                selectedDate,
+                                setSelectedDate,
+                                subTab: tab,
+                            })
+                            : tab === 'user'
+                                ? React.createElement(UserTabWithCloudSync, {
+                                    key: 'user' + syncVer + '_' + String(clientId || ''),
+                                    clientId,
+                                })
+                                : tab === 'overview'
+                                    ? (window.HEYS && window.HEYS.DataOverviewTab
+                                        ? React.createElement(window.HEYS.DataOverviewTab, {
+                                            key: 'overview' + syncVer + '_' + String(clientId || ''),
                                             clientId,
-                                            selectedDate,
                                             setTab,
                                             setSelectedDate,
                                         })
@@ -693,10 +707,23 @@
                                             React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
                                             React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
                                         ))
-                                    : React.createElement('div', { style: { padding: 16 } },
-                                        React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
-                                        React.createElement('div', { className: 'skeleton-block', style: { height: 200 } })
-                                    )
+                                    : tab === 'widgets'
+                                        ? (window.HEYS && window.HEYS.Widgets && window.HEYS.Widgets.WidgetsTab
+                                            ? React.createElement(window.HEYS.Widgets.WidgetsTab, {
+                                                key: 'widgets' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                                                clientId,
+                                                selectedDate,
+                                                setTab,
+                                                setSelectedDate,
+                                            })
+                                            : React.createElement('div', { style: { padding: 16 } },
+                                                React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
+                                                React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
+                                            ))
+                                        : React.createElement('div', { style: { padding: 16 } },
+                                            React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
+                                            React.createElement('div', { className: 'skeleton-block', style: { height: 200 } })
+                                        )
         );
     }
 
