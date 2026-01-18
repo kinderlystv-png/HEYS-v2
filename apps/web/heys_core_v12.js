@@ -573,6 +573,14 @@
       const normalizeSearchText = window.HEYS?.SmartSearchWithTypos?.utils?.normalizeText
         || ((text) => String(text || '').toLowerCase().replace(/ё/g, 'е'));
 
+      const sortByCreatedAtDesc = (list) => {
+        return [...list].sort((a, b) => {
+          const aTs = Number(a?.createdAt || 0);
+          const bTs = Number(b?.createdAt || 0);
+          return bTs - aTs;
+        });
+      };
+
       function performSearch() {
         const q = normalizeSearchText(query.trim());
         if (!q) return products;
@@ -647,7 +655,7 @@
         window.HEYS.analytics.trackSearch(query, result.length, duration);
       }
 
-      return result;
+      return sortByCreatedAtDesc(result);
     }, [products, query, searchIndex]);
 
     // Слушатель события обновления продуктов (для реактивности после sync)

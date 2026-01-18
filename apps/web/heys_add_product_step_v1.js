@@ -507,10 +507,11 @@
         grams: defaultGrams,
         lastGrams: lastGrams // Для отображения подсказки
       });
-      // Автопереход на шаг граммов (index 2: search → grams)
+      // Автопереход на шаг граммов (index 3: search → grams)
+      // Шаг 2 (harm) — только для НОВЫХ продуктов, при выборе из базы пропускаем
       // Увеличен таймаут для гарантии обновления state
       if (goToStep) {
-        setTimeout(() => goToStep(2, 'left'), 150);
+        setTimeout(() => goToStep(3, 'left'), 150);
       }
     }, [data, onChange, goToStep]);
 
@@ -1050,181 +1051,17 @@
       return () => clearTimeout(timer);
     }, [pasteText, parseProductLine]);
 
-    // Добавить продукт в базу и выбрать его
+    // Подготовить продукт и перейти на шаг вредности (БЕЗ СОХРАНЕНИЯ В БАЗУ!)
+    // Сохранение происходит ПОСЛЕ подтверждения вредности в HarmSelectStep
     const handleCreate = useCallback(() => {
       if (!parsedPreview) return;
 
       haptic('medium');
 
-      // 1. Получаем текущую базу продуктов
-      const U = HEYS.utils || {};
-      const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
+      console.log('[CreateProductStep] 📝 Подготовлен продукт:', parsedPreview.name);
+      console.log('[CreateProductStep] ⏭️ Переходим на шаг вредности (сохранение будет там)');
 
-      // 🔍 Проверка на дубликат в личной базе (по fingerprint или названию)
-      let existingPersonal = null;
-      const newFingerprint = HEYS.models?.computeProductFingerprint?.(parsedPreview);
-
-      if (newFingerprint) {
-        // Ищем по fingerprint
-        existingPersonal = products.find(p => {
-          const fp = HEYS.models?.computeProductFingerprint?.(p);
-          return fp === newFingerprint;
-        });
-      }
-
-      if (!existingPersonal) {
-        // Fallback: ищем по нормализованному названию
-        const normName = (parsedPreview.name || '').trim().toLowerCase();
-        existingPersonal = products.find(p =>
-          (p.name || '').trim().toLowerCase() === normName
-        );
-      }
-
-      let savedToPersonal = false;
-      let savedMethod = 'none';
-
-      if (existingPersonal) {
-        // Продукт уже есть в личной базе — не дублируем
-        console.log('[CreateProductStep] ⚠️ Продукт уже есть в личной базе:', existingPersonal.name);
-        // Используем существующий для перехода на граммы
-        parsedPreview.id = existingPersonal.id;
-      } else {
-        // Добавляем в личную базу
-        const newProducts = [...products, parsedPreview];
-
-        // Сохраняем через HEYS.products (React state + localStorage + cloud sync)
-        if (HEYS.products?.setAll) {
-          HEYS.products.setAll(newProducts);
-          savedMethod = 'HEYS.products.setAll';
-          savedToPersonal = true;
-        } else if (HEYS.store?.set) {
-          HEYS.store.set('heys_products', newProducts);
-          savedMethod = 'HEYS.store.set';
-          savedToPersonal = true;
-        } else if (U.lsSet) {
-          U.lsSet('heys_products', newProducts);
-          savedMethod = 'U.lsSet (LOCAL ONLY!)';
-          savedToPersonal = true;
-          console.warn('[CreateProductStep] ⚠️ Продукт сохранён только локально (нет HEYS.store)');
-        }
-
-        console.log('[CreateProductStep] ✅ Добавлен в личную базу:', parsedPreview.name, savedMethod);
-      }
-
-      // 🔍 ВЕРИФИКАЦИЯ: Проверяем что продукт действительно сохранился (только если добавляли)
-      if (savedToPersonal) {
-        setTimeout(() => {
-          const verifyProducts = HEYS.products?.getAll?.() || [];
-          const found = verifyProducts.find(p =>
-            p.name?.toLowerCase() === parsedPreview.name?.toLowerCase() ||
-            p.id === parsedPreview.id
-          );
-          if (found) {
-            // console.log('[CreateProductStep] ✅ VERIFIED: Продукт найден в базе после сохранения');
-          } else {
-            console.error('🚨 [CreateProductStep] CRITICAL: Продукт НЕ найден в базе после сохранения!', {
-              productName: parsedPreview.name,
-              productsCount: verifyProducts.length,
-              savedMethod
-            });
-            // Попытка повторного сохранения
-            const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
-            const newProducts = [...products, parsedPreview];
-            if (HEYS.products?.setAll) {
-              // console.log('[CreateProductStep] 🔄 Retry save...');
-              HEYS.products.setAll(newProducts);
-            }
-          }
-        }, 500);
-      }
-
-      // 🔄 Пересчитываем orphan-продукты (новый продукт мог быть orphan)
-      if (HEYS.orphanProducts?.recalculate) {
-        HEYS.orphanProducts.recalculate();
-      }
-      // Также удаляем конкретно этот продукт из orphan (на случай если recalculate не сработал)
-      if (HEYS.orphanProducts?.remove && parsedPreview.name) {
-        HEYS.orphanProducts.remove(parsedPreview.name);
-      }
-
-      // 🌐 Публикация в общую базу (если включено)
-      console.log('[CreateProductStep] 🔍 SHARED PUBLISH DEBUG:', {
-        publishToShared,
-        hasCloud: !!HEYS.cloud,
-        isCurator,
-        hasPublishToShared: !!HEYS.cloud?.publishToShared,
-        hasCreatePending: !!HEYS.cloud?.createPendingProduct,
-        hasModels: !!HEYS.models,
-        hasFingerprint: !!HEYS.models?.computeProductFingerprint,
-        productName: parsedPreview?.name
-      });
-
-      if (publishToShared && HEYS.cloud) {
-        (async () => {
-          try {
-            console.log('[CreateProductStep] 🚀 Начинаем публикацию в shared...');
-
-            // Проверяем fingerprint — есть ли уже такой продукт в shared
-            if (HEYS.models?.computeProductFingerprint) {
-              // ⚠️ ВАЖНО: await! computeProductFingerprint возвращает Promise
-              const fingerprint = await HEYS.models.computeProductFingerprint(parsedPreview);
-              console.log('[CreateProductStep] 🔑 Fingerprint:', fingerprint);
-
-              if (!fingerprint) {
-                console.error('[CreateProductStep] ❌ Fingerprint пустой, невозможно проверить дубликаты');
-              }
-
-              // Ищем по fingerprint через опции
-              const existing = await HEYS.cloud.searchSharedProducts?.('', { fingerprint, limit: 1 });
-              console.log('[CreateProductStep] 🔍 Поиск по fingerprint:', existing);
-
-              if (existing?.data?.length > 0) {
-                // Продукт уже есть — не дублируем, просто логируем
-                console.log('[CreateProductStep] 🔄 Продукт уже в shared базе:', existing.data[0].name);
-                return;
-              }
-
-              console.log('[CreateProductStep] ✅ Продукт НЕ найден в shared — можно добавлять!');
-            } else {
-              console.log('[CreateProductStep] ⚠️ Нет функции computeProductFingerprint, пропускаем проверку');
-            }
-
-            // Публикуем: куратор напрямую, клиент через pending
-            console.log('[CreateProductStep] 👤 isCurator:', isCurator);
-
-            if (isCurator && HEYS.cloud.publishToShared) {
-              console.log('[CreateProductStep] 📤 Вызываем publishToShared...');
-              const result = await HEYS.cloud.publishToShared(parsedPreview);
-              console.log('[CreateProductStep] ✅ Результат publishToShared:', result);
-            } else if (HEYS.cloud.createPendingProduct) {
-              console.log('[CreateProductStep] 📤 Вызываем createPendingProduct...');
-              // Получаем clientId из localStorage
-              let clientId = localStorage.getItem('heys_client_current');
-              try { clientId = JSON.parse(clientId); } catch (e) { /* already string */ }
-              if (!clientId) {
-                console.error('[CreateProductStep] ❌ Нет clientId для pending продукта!');
-              } else {
-                const result = await HEYS.cloud.createPendingProduct(clientId, parsedPreview);
-                console.log('[CreateProductStep] ✅ Результат createPendingProduct:', result);
-              }
-            } else {
-              console.log('[CreateProductStep] ❌ Нет подходящей функции для публикации!');
-            }
-          } catch (err) {
-            console.error('[CreateProductStep] ❌ Ошибка публикации в shared:', err);
-            console.error('[CreateProductStep] Stack:', err.stack);
-          }
-        })();
-      } else {
-        console.log('[CreateProductStep] ⏭️ Пропуск публикации:', { publishToShared, hasCloud: !!HEYS.cloud });
-      }
-
-      // 2. Вызываем callback если есть (для обновления списка в родителе)
-      if (context?.onProductCreated) {
-        context.onProductCreated(parsedPreview);
-      }
-
-      // 3. Обновляем данные текущего шага
+      // 1. Обновляем данные текущего шага (БЕЗ сохранения в базу!)
       onChange({
         ...data,
         newProduct: parsedPreview,
@@ -1232,15 +1069,18 @@
         grams: 100
       });
 
-      // 4. ТАКЖЕ обновляем данные шага grams напрямую (чтобы GramsStep сразу видел продукт)
+      // 4. ТАКЖЕ обновляем данные шага harm и grams (чтобы сразу видели продукт)
       if (updateStepData) {
+        updateStepData('harm', {
+          product: parsedPreview
+        });
         updateStepData('grams', {
           selectedProduct: parsedPreview,
           grams: 100
         });
       }
 
-      // 5. Переходим на шаг граммов (index 2)
+      // 5. Переходим на шаг harm (index 2) для проверки/корректировки вредности
       // Увеличен таймаут для гарантии обновления state
       if (goToStep) {
         setTimeout(() => goToStep(2, 'left'), 150);
@@ -1327,7 +1167,7 @@
           ),
           React.createElement('div', { className: 'aps-preview-row' },
             React.createElement('span', { className: 'aps-preview-label' }, 'Вредность'),
-            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.harmScore)
+            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.harm ?? 0)
           )
         )
       ),
@@ -1410,6 +1250,340 @@
     if (c.includes('сладк') || c.includes('десерт') || c.includes('конфет') || c.includes('шокол')) return '🍬';
     if (c.includes('соус') || c.includes('специ') || c.includes('припра')) return '🧂';
     return '🍽️';
+  }
+
+  // === Компонент выбора Harm Score (Шаг harm) — минималистичный UI ===
+  function HarmSelectStep({ data, onChange, context, stepData }) {
+    const e = React.createElement;
+
+    // Продукт из предыдущего шага create
+    const product = stepData?.create?.newProduct
+      || stepData?.harm?.product
+      || data?.newProduct
+      || data?.product
+      || data?.selectedProduct;
+
+    // Вычисленный системой harm
+    const calculatedBreakdown = useMemo(() => {
+      if (!product) return null;
+      if (HEYS.Harm?.getHarmBreakdown) {
+        return HEYS.Harm.getHarmBreakdown(product);
+      }
+      return null;
+    }, [product]);
+
+    const calculatedHarm = calculatedBreakdown?.score ?? null;
+
+    // Введённый вручную harm (из paste-данных)
+    const manualHarmRef = useRef(null);
+    if (manualHarmRef.current == null) {
+      manualHarmRef.current = HEYS.models?.normalizeHarm?.(product)
+        ?? Number(product?.harm ?? product?.harmScore ?? product?.harmscore ?? product?.harm100 ?? NaN);
+    }
+    const manualHarm = manualHarmRef.current;
+    const hasManualHarm = Number.isFinite(manualHarm);
+
+    // Текущий выбранный harm
+    const [selectedHarm, setSelectedHarm] = useState(() => {
+      const safeManual = Number.isFinite(manualHarm) ? manualHarm : null;
+      // По умолчанию — вычисленный системой
+      return calculatedHarm ?? safeManual ?? 5;
+    });
+
+    // Режим кастомного ввода
+    const [showCustom, setShowCustom] = useState(false);
+
+    // Показывать ли breakdown
+    const [showBreakdown, setShowBreakdown] = useState(true);
+
+    // WheelPicker для кастомного значения
+    const WheelPicker = HEYS.StepModal?.WheelPicker;
+
+    // Категория для текущего выбора
+    const selectedCategory = useMemo(() => {
+      return HEYS.Harm?.getHarmCategory?.(selectedHarm) || { name: '—', color: '#6b7280', emoji: '❓' };
+    }, [selectedHarm]);
+
+    // Навигация
+    const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
+    const { goToStep, updateStepData } = stepContext;
+
+    // Обновляем данные при изменении выбора
+    useEffect(() => {
+      if (product && selectedHarm != null) {
+        const updatedProduct = {
+          ...product,
+          harm: selectedHarm,
+          harmManual: Number.isFinite(manualHarm) ? manualHarm : product?.harmManual
+        };
+        onChange({ ...data, selectedHarm, product: updatedProduct });
+
+        // Также обновляем в create stepData
+        if (updateStepData && stepData?.create) {
+          updateStepData('create', {
+            ...stepData.create,
+            newProduct: updatedProduct
+          });
+        }
+      }
+    }, [selectedHarm]);
+
+    // Выбрать вариант, СОХРАНИТЬ ПРОДУКТ и перейти дальше
+    const selectAndContinue = useCallback((harm) => {
+      haptic('light');
+      setSelectedHarm(harm);
+
+      // Обновляем продукт с выбранным harm
+      const updatedProduct = product ? {
+        ...product,
+        harm,
+        harmManual: Number.isFinite(manualHarm) ? manualHarm : product?.harmManual
+      } : null;
+
+      if (updatedProduct && updateStepData) {
+        updateStepData('create', {
+          ...stepData?.create,
+          newProduct: updatedProduct,
+          selectedProduct: updatedProduct
+        });
+        updateStepData('grams', {
+          selectedProduct: updatedProduct,
+          grams: stepData?.create?.grams || 100
+        });
+      }
+
+      // 🔐 СОХРАНЕНИЕ ПРОДУКТА В БАЗУ (перенесено из CreateProductStep)
+      if (updatedProduct) {
+        const U = HEYS.utils || {};
+        const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
+
+        // Проверка на дубликат
+        const normName = (updatedProduct.name || '').trim().toLowerCase();
+        const existingPersonal = products.find(p =>
+          (p.name || '').trim().toLowerCase() === normName
+        );
+
+        if (!existingPersonal) {
+          const newProducts = [...products, updatedProduct];
+          if (HEYS.products?.setAll) {
+            HEYS.products.setAll(newProducts);
+            console.log('[HarmSelectStep] ✅ Сохранён в базу с harm:', harm, updatedProduct.name);
+          } else if (HEYS.store?.set) {
+            HEYS.store.set('heys_products', newProducts);
+            console.log('[HarmSelectStep] ✅ Сохранён через store с harm:', harm);
+          }
+        } else {
+          console.log('[HarmSelectStep] ⚠️ Продукт уже есть в базе:', existingPersonal.name);
+          // Используем существующий ID
+          updatedProduct.id = existingPersonal.id;
+        }
+
+        // 🔄 Orphan recovery
+        if (HEYS.orphanProducts?.recalculate) {
+          HEYS.orphanProducts.recalculate();
+        }
+        if (HEYS.orphanProducts?.remove && updatedProduct.name) {
+          HEYS.orphanProducts.remove(updatedProduct.name);
+        }
+
+        // 🌐 Публикация в shared (async, не блокируем переход)
+        const publishToShared = stepData?.create?.publishToShared ?? true;
+        const isCurator = !!HEYS.cloud?.curatorId;
+
+        if (publishToShared && HEYS.cloud) {
+          (async () => {
+            try {
+              if (HEYS.models?.computeProductFingerprint) {
+                const fingerprint = await HEYS.models.computeProductFingerprint(updatedProduct);
+                const existing = await HEYS.cloud.searchSharedProducts?.('', { fingerprint, limit: 1 });
+                if (existing?.data?.length > 0) {
+                  console.log('[HarmSelectStep] 🔄 Продукт уже в shared:', existing.data[0].name);
+                  return;
+                }
+              }
+
+              if (isCurator && HEYS.cloud.publishToShared) {
+                const result = await HEYS.cloud.publishToShared(updatedProduct);
+                console.log('[HarmSelectStep] ✅ Опубликован в shared:', result);
+              } else if (HEYS.cloud.createPendingProduct) {
+                let clientId = localStorage.getItem('heys_client_current');
+                try { clientId = JSON.parse(clientId); } catch (e) { }
+                if (clientId) {
+                  await HEYS.cloud.createPendingProduct(clientId, updatedProduct);
+                }
+              }
+            } catch (err) {
+              console.error('[HarmSelectStep] ❌ Ошибка публикации:', err);
+            }
+          })();
+        }
+      }
+
+      // Переходим на шаг граммов
+      setTimeout(() => goToStep?.(3, 'left'), 150);
+    }, [product, stepData, updateStepData, goToStep, manualHarm]);
+
+    // Значения для WheelPicker: 0, 0.5, 1, ... 10
+    const wheelValues = useMemo(() => Array.from({ length: 21 }, (_, i) => i * 0.5), []);
+
+    if (!product) {
+      return e('div', { className: 'flex items-center justify-center h-40 text-gray-400' },
+        'Сначала создайте продукт'
+      );
+    }
+
+    return e('div', { className: 'harm-select-step' },
+      // Название продукта
+      e('div', { className: 'text-center mb-4' },
+        e('span', { className: 'text-lg font-medium text-gray-900' }, product.name)
+      ),
+
+      // Два варианта: Manual vs Calculated
+      e('div', { className: 'flex gap-3 mb-4' },
+        // Карточка: Введённое вручную (если есть и отличается)
+        hasManualHarm && e('button', {
+          className: `harm-card ${selectedHarm === manualHarm ? 'selected' : ''}`,
+          onClick: () => selectAndContinue(manualHarm),
+          style: {
+            flex: 1,
+            background: selectedHarm === manualHarm ? (HEYS.Harm?.getHarmColor?.(manualHarm) || '#6b7280') + '15' : '#f9fafb',
+            border: selectedHarm === manualHarm ? `2px solid ${HEYS.Harm?.getHarmColor?.(manualHarm) || '#6b7280'}` : '2px solid transparent',
+            borderRadius: '16px',
+            padding: '16px 12px',
+            cursor: 'pointer',
+            textAlign: 'center',
+            transition: 'all 0.2s'
+          }
+        },
+          e('div', { className: 'text-xs text-gray-500 mb-1' }, '✏️ Вручную'),
+          e('div', {
+            className: 'text-4xl font-bold mb-1',
+            style: { color: HEYS.Harm?.getHarmColor?.(manualHarm) || '#6b7280' }
+          }, manualHarm.toFixed(1)),
+          e('div', {
+            className: 'text-xs font-medium',
+            style: { color: HEYS.Harm?.getHarmColor?.(manualHarm) || '#6b7280' }
+          }, HEYS.Harm?.getHarmCategory?.(manualHarm)?.emoji || '')
+        ),
+
+        // Карточка: Рассчитано системой
+        calculatedHarm != null && e('button', {
+          className: `harm-card ${selectedHarm === calculatedHarm ? 'selected' : ''}`,
+          onClick: () => selectAndContinue(calculatedHarm),
+          style: {
+            flex: 1,
+            background: selectedHarm === calculatedHarm ? (calculatedBreakdown?.category?.color || '#6b7280') + '15' : '#f9fafb',
+            border: selectedHarm === calculatedHarm ? `2px solid ${calculatedBreakdown?.category?.color || '#6b7280'}` : '2px solid transparent',
+            borderRadius: '16px',
+            padding: '16px 12px',
+            cursor: 'pointer',
+            textAlign: 'center',
+            transition: 'all 0.2s'
+          }
+        },
+          e('div', { className: 'text-xs text-gray-500 mb-1' }, '🧪 По формуле'),
+          e('div', {
+            className: 'text-4xl font-bold mb-1',
+            style: { color: calculatedBreakdown?.category?.color || '#6b7280' }
+          }, calculatedHarm.toFixed(1)),
+          e('div', {
+            className: 'text-xs font-medium',
+            style: { color: calculatedBreakdown?.category?.color || '#6b7280' }
+          }, calculatedBreakdown?.category?.emoji || '')
+        )
+      ),
+
+      // Кнопка "Своё значение"
+      e('button', {
+        className: 'w-full py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors',
+        onClick: () => { setShowCustom(!showCustom); haptic('light'); }
+      }, showCustom ? '▼ Скрыть выбор' : '⚙️ Указать своё значение'),
+
+      // WheelPicker для кастомного значения
+      showCustom && WheelPicker && e('div', { className: 'mt-3 mb-4' },
+        e('div', { className: 'flex items-center justify-center gap-4' },
+          e('div', { className: 'w-32' },
+            e(WheelPicker, {
+              values: wheelValues,
+              value: selectedHarm,
+              onChange: (v) => setSelectedHarm(v),
+              height: 140,
+              compact: true
+            })
+          ),
+          e('div', { className: 'text-center' },
+            e('div', {
+              className: 'text-3xl font-bold',
+              style: { color: selectedCategory.color }
+            }, selectedHarm.toFixed(1)),
+            e('div', {
+              className: 'text-sm',
+              style: { color: selectedCategory.color }
+            }, selectedCategory.name)
+          )
+        ),
+        e('button', {
+          className: 'w-full mt-3 py-3 rounded-xl font-medium text-white',
+          style: { background: selectedCategory.color },
+          onClick: () => selectAndContinue(selectedHarm)
+        }, '✓ Выбрать ' + selectedHarm.toFixed(1))
+      ),
+
+      // Кнопка "Как посчитано?" — раскрывает breakdown
+      calculatedBreakdown && e('button', {
+        className: 'w-full py-2 mt-2 text-xs text-gray-500 hover:text-gray-700 transition-colors',
+        onClick: () => { setShowBreakdown(!showBreakdown); haptic('light'); }
+      }, showBreakdown ? '▲ Скрыть расшифровку' : '❓ Как посчитано?'),
+
+      // Breakdown расчёта
+      showBreakdown && calculatedBreakdown && e('div', {
+        className: 'mt-3 p-3 bg-gray-50 rounded-xl text-xs space-y-2'
+      },
+        // Формула
+        e('div', { className: 'text-center text-gray-600 mb-2 font-mono' },
+          calculatedBreakdown.formula
+        ),
+        // Версия формулы
+        e('div', { className: 'text-center text-[10px] text-gray-400' },
+          `Формула v${calculatedBreakdown.version || '3.0'}`
+        ),
+
+        // Штрафы
+        calculatedBreakdown.penalties.length > 0 && e('div', null,
+          e('div', { className: 'text-red-600 font-medium mb-1' }, '🔴 Штрафы:'),
+          calculatedBreakdown.penalties.map((p, i) =>
+            e('div', { key: i, className: 'flex justify-between text-gray-600 pl-4' },
+              e('span', null, `${p.icon} ${p.label}`),
+              e('span', { className: 'text-red-500' }, `+${p.contribution.toFixed(2)}`)
+            )
+          )
+        ),
+
+        // Бонусы
+        calculatedBreakdown.bonuses.length > 0 && e('div', { className: 'mt-2' },
+          e('div', { className: 'text-green-600 font-medium mb-1' }, '🟢 Бонусы:'),
+          calculatedBreakdown.bonuses.map((b, i) =>
+            e('div', { key: i, className: 'flex justify-between text-gray-600 pl-4' },
+              e('span', null, `${b.icon} ${b.label}`),
+              e('span', { className: 'text-green-500' }, `−${b.contribution.toFixed(2)}`)
+            )
+          )
+        ),
+
+        // NOVA info
+        e('div', { className: 'mt-2 text-gray-500 text-center' },
+          `NOVA ${calculatedBreakdown.novaGroup}: ${calculatedBreakdown.novaGroup === 4 ? 'Ультрапереработанный' :
+            calculatedBreakdown.novaGroup === 3 ? 'Переработанный' :
+              calculatedBreakdown.novaGroup === 2 ? 'Ингредиент' : 'Необработанный'
+          }`
+        )
+      ),
+
+      // Подсказка
+      e('div', { className: 'text-center text-xs text-gray-400 mt-4' },
+        '0 = суперполезный • 10 = супервредный'
+      )
+    );
   }
 
   // === Компонент выбора граммов (Шаг 2) ===
@@ -1785,6 +1959,16 @@
           hideHeaderNext: true // Скрываем "Далее" — есть своя кнопка "Добавить"
         },
         {
+          id: 'harm',
+          title: 'Вредность',
+          hint: 'Проверьте или измените',
+          icon: '🧪',
+          component: HarmSelectStep,
+          validate: () => true,
+          hidden: true, // Скрытый шаг — показывается только при создании нового продукта
+          hideHeaderNext: true // Есть своя кнопка выбора
+        },
+        {
           id: 'grams',
           title: '',
           hint: '',
@@ -1930,6 +2114,7 @@
     ProductSearchStep,
     GramsStep,
     CreateProductStep,
+    HarmSelectStep,
     getCategoryIcon,
     computeSmartProducts
   };
