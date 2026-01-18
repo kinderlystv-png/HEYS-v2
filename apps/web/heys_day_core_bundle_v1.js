@@ -15,6 +15,64 @@
     const orphanProductsMap = new Map(); // name => { name, usedInDays: Set, firstSeen }
     const orphanLoggedRecently = new Map(); // name => timestamp (throttle логов)
 
+    function copySnapshotFields(item, target) {
+        if (!item || !target) return target;
+
+        const numericFields = [
+            'kcal100', 'protein100', 'carbs100', 'fat100',
+            'simple100', 'complex100', 'badFat100', 'goodFat100', 'trans100',
+            'fiber100', 'sodium100',
+            'omega3_100', 'omega6_100', 'nutrient_density',
+            'vitamin_a', 'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k',
+            'vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12',
+            'calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'selenium', 'iodine'
+        ];
+
+        numericFields.forEach((field) => {
+            if (target[field] == null && item[field] != null) {
+                target[field] = item[field];
+            }
+        });
+
+        const itemNova = item.nova_group ?? item.novaGroup;
+        if (target.nova_group == null && itemNova != null) {
+            target.nova_group = itemNova;
+        }
+        if (target.novaGroup == null && target.nova_group != null) {
+            target.novaGroup = target.nova_group;
+        }
+
+        if (target.additives == null && Array.isArray(item.additives) && item.additives.length) {
+            target.additives = item.additives;
+        }
+
+        const boolFields = ['is_organic', 'is_whole_grain', 'is_fermented', 'is_raw'];
+        boolFields.forEach((field) => {
+            if (target[field] == null && item[field] != null) {
+                target[field] = item[field];
+            }
+        });
+
+        return target;
+    }
+
+    function enrichProductMaybe(product) {
+        if (!product) return product;
+        const normalized = global.HEYS?.models?.normalizeProductFields
+            ? global.HEYS.models.normalizeProductFields(product)
+            : product;
+
+        if (global.HEYS?.Harm?.enrichProduct) {
+            try {
+                return global.HEYS.Harm.enrichProduct(normalized) || normalized;
+            } catch {
+                return normalized;
+            }
+        }
+
+        return normalized;
+    }
+
     function trackOrphanProduct(item, dateStr) {
         if (!item || !item.name) return;
         const name = String(item.name).trim();
@@ -195,8 +253,10 @@
                                     restoredAt: Date.now(),
                                     restoredFrom: 'orphan_stamp'
                                 };
-                                productsMap.set(itemNameLower, restoredProduct);
-                                restored.push(restoredProduct);
+                                copySnapshotFields(item, restoredProduct);
+                                const enriched = enrichProductMaybe(restoredProduct);
+                                productsMap.set(itemNameLower, enriched);
+                                restored.push(enriched);
                                 console.log(`[HEYS] Восстановлен: "${itemName}"`);
                             }
                         }
@@ -315,24 +375,30 @@
                             if (!foundById && !foundByName && itemName) {
                                 const key = productId || itemNameLower;
                                 if (!missingProducts.has(key)) {
+                                    const stampData = item.kcal100 != null ? {
+                                        kcal100: item.kcal100,
+                                        protein100: item.protein100 || 0,
+                                        fat100: item.fat100 || 0,
+                                        carbs100: item.carbs100 || 0,
+                                        simple100: item.simple100 || 0,
+                                        complex100: item.complex100 || 0,
+                                        badFat100: item.badFat100 || 0,
+                                        goodFat100: item.goodFat100 || 0,
+                                        trans100: item.trans100 || 0,
+                                        fiber100: item.fiber100 || 0,
+                                        gi: item.gi,
+                                        harm: item.harm ?? item.harmScore
+                                    } : null;
+
+                                    if (stampData) {
+                                        copySnapshotFields(item, stampData);
+                                    }
+
                                     missingProducts.set(key, {
                                         productId,
                                         name: itemName,
                                         hasStamp: item.kcal100 != null,
-                                        stampData: item.kcal100 != null ? {
-                                            kcal100: item.kcal100,
-                                            protein100: item.protein100 || 0,
-                                            fat100: item.fat100 || 0,
-                                            carbs100: item.carbs100 || 0,
-                                            simple100: item.simple100 || 0,
-                                            complex100: item.complex100 || 0,
-                                            badFat100: item.badFat100 || 0,
-                                            goodFat100: item.goodFat100 || 0,
-                                            trans100: item.trans100 || 0,
-                                            fiber100: item.fiber100 || 0,
-                                            gi: item.gi,
-                                            harm: item.harm ?? item.harmScore
-                                        } : null,
+                                        stampData: stampData,
                                         firstSeenDate: dateStr
                                     });
                                 }
@@ -369,9 +435,10 @@
                         _recoveredFrom: 'stamp',
                         _recoveredAt: Date.now()
                     };
-                    recovered.push(restoredProduct);
-                    productsById.set(String(restoredProduct.id), restoredProduct);
-                    productsByName.set(data.name.toLowerCase(), restoredProduct);
+                    const enriched = enrichProductMaybe(restoredProduct);
+                    recovered.push(enriched);
+                    productsById.set(String(enriched.id), enriched);
+                    productsByName.set(data.name.toLowerCase(), enriched);
                     fromStamp++;
                     console.log(`[HEYS] 📦 Восстановлен из штампа: "${data.name}"`);
                 } else {

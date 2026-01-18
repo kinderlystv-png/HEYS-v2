@@ -9,7 +9,7 @@ DROP FUNCTION IF EXISTS public.get_shared_products(text, integer, integer);
 
 CREATE OR REPLACE FUNCTION public.get_shared_products(
   p_search TEXT DEFAULT NULL,
-  p_limit INTEGER DEFAULT 100,
+  p_limit INTEGER DEFAULT NULL,
   p_offset INTEGER DEFAULT 0
 )
 RETURNS TABLE (

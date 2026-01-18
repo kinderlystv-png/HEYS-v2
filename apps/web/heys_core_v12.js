@@ -440,6 +440,7 @@
     // ВСЕ продукты общей базы (для таблицы)
     const [allSharedProducts, setAllSharedProducts] = React.useState([]);
     const [allSharedLoading, setAllSharedLoading] = React.useState(false);
+    const [sharedExportCount, setSharedExportCount] = React.useState(null);
     // Pending заявки (для куратора)
     const [pendingProducts, setPendingProducts] = React.useState([]);
     const [pendingLoading, setPendingLoading] = React.useState(false);
@@ -523,6 +524,17 @@
       }
     }, []);
 
+    React.useEffect(() => {
+      const cached = window.HEYS?.cloud?.getCachedSharedProducts?.();
+      if (Array.isArray(cached) && cached.length) {
+        setSharedExportCount(cached.length);
+        return;
+      }
+      if (Array.isArray(allSharedProducts) && allSharedProducts.length) {
+        setSharedExportCount(allSharedProducts.length);
+      }
+    }, [allSharedProducts]);
+
     // Загружаем pending при переключении на вкладку "Общая база"
     React.useEffect(() => {
       if (activeSubtab === 'shared' && isCurator) {
@@ -543,6 +555,77 @@
         searchSharedDebounced(sharedQuery || query);
       }
     }, [sharedQuery, query, activeSubtab, searchSource, searchSharedDebounced]);
+
+    // Авто-дополнение sodium100 для локальных продуктов из shared_products
+    const sodiumBackfillRef = React.useRef({ key: '', inFlight: false });
+    React.useEffect(() => {
+      if (!Array.isArray(products) || products.length === 0) return;
+
+      const normalizeName = window.HEYS?.models?.normalizeProductName
+        || ((name) => String(name || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
+
+      const missing = products
+        .filter(p => (p?.sodium100 === undefined || p?.sodium100 === null || p?.sodium100 === ''))
+        .map(p => ({ id: p?.shared_origin_id, name: normalizeName(p?.name) }))
+        .filter(p => p.id || p.name);
+
+      if (missing.length === 0) return;
+
+      const missingKey = missing
+        .map(p => p.id || p.name)
+        .sort()
+        .join('|');
+
+      if (sodiumBackfillRef.current.inFlight || sodiumBackfillRef.current.key === missingKey) return;
+
+      sodiumBackfillRef.current = { key: missingKey, inFlight: true };
+
+      (async () => {
+        try {
+          const cloud = window.HEYS?.cloud;
+          if (!cloud?.getAllSharedProducts) return;
+
+          const result = await cloud.getAllSharedProducts({ limit: 500, excludeBlocklist: false });
+          const shared = Array.isArray(result?.data) ? result.data : [];
+          if (shared.length === 0) return;
+
+          const byId = new Map();
+          const byName = new Map();
+          const nameCounts = new Map();
+
+          shared.forEach(sp => {
+            if (sp?.id) byId.set(sp.id, sp);
+            const nm = normalizeName(sp?.name);
+            if (nm) {
+              nameCounts.set(nm, (nameCounts.get(nm) || 0) + 1);
+              byName.set(nm, sp);
+            }
+          });
+
+          const updated = products.map(p => {
+            if (p?.sodium100 !== undefined && p?.sodium100 !== null && p?.sodium100 !== '') return p;
+
+            let sharedProduct = null;
+            if (p?.shared_origin_id && byId.has(p.shared_origin_id)) {
+              sharedProduct = byId.get(p.shared_origin_id);
+            } else {
+              const nm = normalizeName(p?.name);
+              if (nm && nameCounts.get(nm) === 1) {
+                sharedProduct = byName.get(nm);
+              }
+            }
+
+            if (!sharedProduct || sharedProduct.sodium100 == null) return p;
+            return { ...p, sodium100: sharedProduct.sodium100 };
+          });
+
+          const changed = updated.some((p, i) => p !== products[i]);
+          if (changed) setProducts(updated);
+        } finally {
+          sodiumBackfillRef.current.inFlight = false;
+        }
+      })();
+    }, [products]);
 
     // Оптимизированный поиск с индексацией
     const searchIndex = React.useMemo(() => {
@@ -566,8 +649,8 @@
       return index;
     }, [products]);
 
-    // Лимит отображения продуктов для производительности
-    const DISPLAY_LIMIT = 100;
+    // Без лимита отображения
+    const DISPLAY_LIMIT = Number.MAX_SAFE_INTEGER;
     const [showAll, setShowAll] = React.useState(false);
 
     const filtered = React.useMemo(() => {
@@ -1215,19 +1298,133 @@
       const cleanClientId = clientId.replace(/"/g, '').slice(0, 8);
       const fileName = `heys-products-${cleanClientId}-${new Date().toISOString().slice(0, 10)}.json`;
 
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
+      const downloadJSON = window.HEYS?.ExportUtils?.downloadJSON;
+      if (downloadJSON) {
+        downloadJSON({ data: exportData, fileName });
+      } else {
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
 
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
 
       DEV.log(`✅ [EXPORT] Экспортировано ${products.length} продуктов в ${fileName}`);
       HEYS.Toast?.success(`Экспортировано ${products.length} продуктов!`) || alert(`Экспортировано ${products.length} продуктов!`);
+    }
+
+    async function exportSharedProductsForAI() {
+      try {
+        let sharedProducts = HEYS.cloud?.getCachedSharedProducts?.() || [];
+        if (!sharedProducts || sharedProducts.length === 0) {
+          if (HEYS.YandexAPI?.rest) {
+            HEYS.Toast?.info('Загружаем общую базу…') || alert('Загружаем общую базу…');
+            const { data, error } = await HEYS.YandexAPI.rest('shared_products');
+            if (error) {
+              HEYS.Toast?.warning('Не удалось загрузить общую базу') || alert('Не удалось загрузить общую базу');
+              return;
+            }
+            sharedProducts = Array.isArray(data) ? data : [];
+          }
+        }
+
+        if (!sharedProducts || sharedProducts.length === 0) {
+          HEYS.Toast?.warning('Общая база пуста') || alert('Общая база пуста');
+          return;
+        }
+
+        setSharedExportCount(sharedProducts.length);
+
+        const fieldDescriptions = window.HEYS?.SharedProductsExportFields?.getFieldDescriptions?.() || {};
+
+        const normalizeValue = (obj, camel, snake) => {
+          if (!obj) return null;
+          if (obj[camel] !== undefined) return obj[camel];
+          if (snake && obj[snake] !== undefined) return obj[snake];
+          return null;
+        };
+
+        const normalizedProducts = sharedProducts.map((p) => ({
+          id: p.id ?? null,
+          name: p.name ?? null,
+          simple100: normalizeValue(p, 'simple100'),
+          complex100: normalizeValue(p, 'complex100'),
+          protein100: normalizeValue(p, 'protein100'),
+          badFat100: normalizeValue(p, 'badFat100', 'badfat100'),
+          goodFat100: normalizeValue(p, 'goodFat100', 'goodfat100'),
+          trans100: normalizeValue(p, 'trans100'),
+          fiber100: normalizeValue(p, 'fiber100'),
+          gi: normalizeValue(p, 'gi'),
+          harm: HEYS.models?.normalizeHarm?.(p) ?? p.harm ?? p.harmScore ?? null,
+          category: p.category ?? null,
+          portions: p.portions ?? null,
+          sodium100: normalizeValue(p, 'sodium100'),
+          nova_group: normalizeValue(p, 'nova_group', 'novaGroup'),
+          vitamin_a: normalizeValue(p, 'vitamin_a', 'vitaminA'),
+          vitamin_c: normalizeValue(p, 'vitamin_c', 'vitaminC'),
+          vitamin_d: normalizeValue(p, 'vitamin_d', 'vitaminD'),
+          vitamin_e: normalizeValue(p, 'vitamin_e', 'vitaminE'),
+          vitamin_k: normalizeValue(p, 'vitamin_k', 'vitaminK'),
+          vitamin_b1: normalizeValue(p, 'vitamin_b1', 'vitaminB1'),
+          vitamin_b2: normalizeValue(p, 'vitamin_b2', 'vitaminB2'),
+          vitamin_b3: normalizeValue(p, 'vitamin_b3', 'vitaminB3'),
+          vitamin_b6: normalizeValue(p, 'vitamin_b6', 'vitaminB6'),
+          vitamin_b9: normalizeValue(p, 'vitamin_b9', 'vitaminB9'),
+          vitamin_b12: normalizeValue(p, 'vitamin_b12', 'vitaminB12'),
+          calcium: normalizeValue(p, 'calcium'),
+          iron: normalizeValue(p, 'iron'),
+          magnesium: normalizeValue(p, 'magnesium'),
+          phosphorus: normalizeValue(p, 'phosphorus'),
+          potassium: normalizeValue(p, 'potassium'),
+          zinc: normalizeValue(p, 'zinc'),
+          selenium: normalizeValue(p, 'selenium'),
+          iodine: normalizeValue(p, 'iodine'),
+          is_organic: normalizeValue(p, 'is_organic', 'isOrganic'),
+          is_whole_grain: normalizeValue(p, 'is_whole_grain', 'isWholeGrain'),
+          is_fermented: normalizeValue(p, 'is_fermented', 'isFermented'),
+          is_raw: normalizeValue(p, 'is_raw', 'isRaw'),
+        }));
+
+        const exportData = {
+          _meta: {
+            description: 'Экспорт продуктов из общей базы HEYS для проверки и корректировки ИИ',
+            total_products: normalizedProducts.length,
+            export_date: new Date().toISOString().slice(0, 10),
+            field_descriptions: fieldDescriptions,
+          },
+          products: normalizedProducts,
+        };
+
+        const buildDatedFileName = window.HEYS?.ExportUtils?.buildDatedFileName;
+        const fileName = buildDatedFileName
+          ? buildDatedFileName('heys-shared-products')
+          : `heys-shared-products-${new Date().toISOString().slice(0, 10)}.json`;
+        const downloadJSON = window.HEYS?.ExportUtils?.downloadJSON;
+        if (downloadJSON) {
+          downloadJSON({ data: exportData, fileName });
+        } else {
+          const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+
+        HEYS.Toast?.success(`Экспортировано ${normalizedProducts.length} общих продуктов`) || alert(`Экспортировано ${normalizedProducts.length} общих продуктов`);
+      } catch (err) {
+        HEYS.analytics?.trackError?.(err, { context: 'ration:exportSharedProductsForAI' });
+        HEYS.Toast?.error('Ошибка экспорта общей базы') || alert('Ошибка экспорта общей базы');
+      }
     }
 
     // Функция импорта из JSON файла
@@ -1753,6 +1950,23 @@
                 style: { whiteSpace: 'nowrap' }
               }, '📥 Скачать')
             ),
+            // Экспорт общих продуктов для AI (curator only)
+            isCurator && React.createElement('div', { className: 'ration-backups__row ration-backups__row--divider' },
+              React.createElement('div', { className: 'ration-backups__title' },
+                React.createElement('span', { className: 'ration-backups__icon' }, '🌐'),
+                React.createElement('span', { className: 'ration-backups__label' }, 'Экспорт общей базы'),
+                React.createElement('span', { className: 'muted ration-backups__hint' }, '(AI JSON)'),
+                sharedExportCount != null && React.createElement('span', {
+                  className: 'ration-backups__badge',
+                  title: 'Всего общих продуктов',
+                  'aria-label': 'Всего общих продуктов'
+                }, sharedExportCount)
+              ),
+              React.createElement('button', {
+                className: 'btn ration-backups__btn',
+                onClick: exportSharedProductsForAI
+              }, '📥 Скачать')
+            ),
             // Импорт из файла
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-color, #e5e5e5)' } },
               React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
@@ -2074,14 +2288,12 @@
                       const filteredShared = sharedQuery.length >= 2
                         ? allSharedProducts.filter(p => (p.name || '').toLowerCase().includes(sharedQuery.toLowerCase()))
                         : allSharedProducts;
-                      // Ограничение для производительности
-                      const SHARED_DISPLAY_LIMIT = 100;
                       // Безопасное получение числового значения
                       const safeNum = (v) => {
                         const n = Number(v);
                         return isNaN(n) ? 0 : n;
                       };
-                      return filteredShared.slice(0, SHARED_DISPLAY_LIMIT).map(p => {
+                      return filteredShared.map(p => {
                         // Supabase возвращает snake_case поля
                         const kcal = Math.round(safeNum(p.protein100) * 4 + safeNum(p.simple100) * 4 + safeNum(p.complex100) * 4 + (safeNum(p.badfat100) + safeNum(p.goodfat100) + safeNum(p.trans100)) * 9);
                         const carbs = safeNum(p.simple100) + safeNum(p.complex100);
@@ -2178,11 +2390,7 @@
                 )
               )
             ),
-            // Показать сколько ещё есть
-            !allSharedLoading && allSharedProducts.length > 100 && React.createElement('div', {
-              className: 'muted',
-              style: { marginTop: '8px', textAlign: 'center', fontSize: '12px' }
-            }, `Показано 100 из ${allSharedProducts.length}. Используйте поиск для быстрого нахождения.`)
+            // Без лимита отображения — полный список
           )
         )
       ),

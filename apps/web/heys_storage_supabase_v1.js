@@ -5399,12 +5399,37 @@
     const { limit = 500, excludeBlocklist = true } = options;
 
     try {
-      // 🔄 v3.21.0: Используем shared_products (таблица) вместо shared_products_public (VIEW)
-      // VIEW был удалён из API — использовал auth.uid() который не работает в Yandex Cloud
-      const { data, error } = await YandexAPI.from('shared_products')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(limit);
+      const normalizeSharedProduct = (p) => {
+        if (!p || typeof p !== 'object') return p;
+        if (HEYS.models?.normalizeExtendedProduct) {
+          return HEYS.models.normalizeExtendedProduct(p);
+        }
+        return p;
+      };
+
+      let data = null;
+      let error = null;
+
+      if (YandexAPI?.rpc) {
+        const rpcResult = await YandexAPI.rpc('get_shared_products', {
+          p_search: null,
+          p_limit: limit,
+          p_offset: 0
+        });
+        data = rpcResult?.data;
+        error = rpcResult?.error;
+      }
+
+      if (error || !Array.isArray(data)) {
+        // 🔄 v3.21.0: Используем shared_products (таблица) вместо shared_products_public (VIEW)
+        // VIEW был удалён из API — использовал auth.uid() который не работает в Yandex Cloud
+        const restResult = await YandexAPI.from('shared_products')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(limit);
+        data = restResult?.data;
+        error = restResult?.error;
+      }
 
       if (error) {
         err('[SHARED PRODUCTS] Get all error:', error);
@@ -5412,12 +5437,62 @@
       }
 
       // Фильтрация blocklist на клиенте (если нужно)
-      let filtered = data || [];
+      let filtered = (data || []).map(normalizeSharedProduct);
       if (excludeBlocklist && user) {
         const blocklist = await cloud.getBlocklist();
         const blocklistSet = new Set(blocklist.map(id => id));
         filtered = filtered.filter(p => !blocklistSet.has(p.id));
       }
+
+      const backfillSharedHarm = async (items) => {
+        if (!Array.isArray(items) || !items.length) return items;
+        if (!HEYS?.Harm?.calculateHarmScore) return items;
+
+        const lsGet = global.U?.lsGet || cloud.lsGet;
+        const lsSet = global.U?.lsSet || cloud.lsSet;
+        const cacheKey = 'heys_shared_harm_backfill_v1';
+
+        try {
+          const alreadyDone = lsGet ? lsGet(cacheKey, false) : false;
+          if (alreadyDone) return items;
+
+          const updates = [];
+          const updatedItems = items.map((p) => {
+            if (!p || typeof p !== 'object') return p;
+            const harmVal = Number.isFinite(p.harm) ? p.harm : null;
+            const harmScoreVal = Number.isFinite(p.harmScore) ? p.harmScore : null;
+            if (harmVal != null || harmScoreVal != null) return p;
+
+            const computed = HEYS.Harm.calculateHarmScore(p);
+            if (!Number.isFinite(computed)) return p;
+
+            if (p.id) {
+              updates.push({ id: p.id, harm: computed });
+            }
+
+            return { ...p, harm: computed, harmScore: computed };
+          });
+
+          if (updates.length > 0 && YandexAPI?.from) {
+            const { error: upsertError } = await YandexAPI.from('shared_products')
+              .upsert(updates, { onConflict: 'id' });
+            if (upsertError) {
+              err('[SHARED PRODUCTS] Harm backfill upsert error:', upsertError);
+            } else if (lsSet) {
+              lsSet(cacheKey, true);
+            }
+          } else if (lsSet) {
+            lsSet(cacheKey, true);
+          }
+
+          return updatedItems;
+        } catch (e) {
+          err('[SHARED PRODUCTS] Harm backfill error:', e);
+          return items;
+        }
+      };
+
+      filtered = await backfillSharedHarm(filtered);
 
       // 🔧 v3.19.0: Сохраняем в кэш для orphan check и других утилит
       _sharedProductsCache = filtered;

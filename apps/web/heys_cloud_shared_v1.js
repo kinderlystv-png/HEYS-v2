@@ -51,7 +51,59 @@
       }
 
       if (next.gi != null) next.gi = toNum(next.gi);
+
+      // NOVA group — normalize snake_case → camelCase (fallback)
+      if (next.nova_group != null) {
+        next.nova_group = parseInt(next.nova_group, 10);
+        next.novaGroup = next.nova_group;
+      }
+
       return next;
+    };
+
+    const backfillSharedHarm = async (items) => {
+      if (!Array.isArray(items) || items.length === 0) return items;
+
+      const calcHarm = HEYS?.Harm?.calculateHarmScore;
+      if (typeof calcHarm !== 'function') return items;
+
+      const needs = items.filter(p => p && p.id && (p.harm == null && p.harmScore == null));
+      if (needs.length === 0) return items;
+
+      const withHarm = items.map(p => {
+        if (!p || p.harm != null || p.harmScore != null) return p;
+        const harmValue = calcHarm(p);
+        return { ...p, harm: harmValue, harmScore: harmValue };
+      });
+
+      const canPersist = HEYS?.utils?.lsGet && HEYS?.utils?.lsSet;
+      const backfillKey = 'heys_shared_harm_backfill_v1';
+      const missingKey = needs.map(p => p.id).sort().join('|');
+      const lastKey = canPersist ? HEYS.utils.lsGet(backfillKey, '') : '';
+
+      if (missingKey && missingKey !== lastKey) {
+        try {
+          const updates = needs.map(p => ({ id: p.id, harm: calcHarm(p) }));
+          const { error } = await YandexAPI.rest('shared_products', {
+            method: 'POST',
+            data: updates,
+            upsert: true,
+            onConflict: 'id'
+          });
+
+          if (!error && canPersist) {
+            HEYS.utils.lsSet(backfillKey, missingKey);
+          }
+
+          if (error) {
+            HEYS.analytics?.trackError?.(error, { context: 'shared_harm_backfill' });
+          }
+        } catch (e) {
+          HEYS.analytics?.trackError?.(e, { context: 'shared_harm_backfill' });
+        }
+      }
+
+      return withHarm;
     };
 
     let _sharedProductsCache = [];
@@ -66,10 +118,27 @@
       const { limit = 500, excludeBlocklist = true } = options;
 
       try {
-        const { data, error } = await YandexAPI.from('shared_products')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(limit);
+        let data = null;
+        let error = null;
+
+        if (YandexAPI?.rpc) {
+          const rpcResult = await YandexAPI.rpc('get_shared_products', {
+            p_search: null,
+            p_limit: limit,
+            p_offset: 0
+          });
+          data = rpcResult?.data;
+          error = rpcResult?.error;
+        }
+
+        if (error || !Array.isArray(data)) {
+          const restResult = await YandexAPI.from('shared_products')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(limit);
+          data = restResult?.data;
+          error = restResult?.error;
+        }
 
         if (error) {
           err('[SHARED PRODUCTS] Get all error:', error);
@@ -77,6 +146,7 @@
         }
 
         let filtered = (data || []).map(normalizeSharedProduct);
+        filtered = await backfillSharedHarm(filtered);
         const user = getUser();
         if (excludeBlocklist && user) {
           const blocklist = await cloud.getBlocklist();

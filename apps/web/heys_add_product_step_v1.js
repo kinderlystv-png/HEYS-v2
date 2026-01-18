@@ -27,6 +27,22 @@
     }
   };
 
+  const useEscapeToClose = (closeFn, enabled = true) => {
+    useEffect(() => {
+      if (!enabled) return;
+
+      const handleKeyDown = (event) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        closeFn?.();
+        HEYS.StepModal?.hide?.();
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [closeFn, enabled]);
+  };
+
   const getAutoPortions = (productName) => {
     if (!productName) return [];
     return HEYS.models?.getAutoPortions?.(productName) || [];
@@ -112,6 +128,143 @@
       }
 
       HEYS.Toast?.success('Порции обновлены') || alert('Порции обновлены');
+      return { ok: true };
+    } catch (e) {
+      const msg = e?.message || 'Ошибка обновления';
+      HEYS.Toast?.error(msg) || alert(msg);
+      return { ok: false };
+    }
+  };
+
+  const toNum = (value, fallback = 0) => {
+    if (value == null || value === '') return fallback;
+    const normalized = String(value).trim().replace(',', '.');
+    const n = Number(normalized);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  const toInt = (value, fallback = null) => {
+    if (value == null || value === '') return fallback;
+    const n = Number(String(value).trim().replace(',', '.'));
+    if (!Number.isFinite(n)) return fallback;
+    return Math.round(n);
+  };
+
+  const normalizeAdditives = (value) => {
+    if (!value) return null;
+    if (Array.isArray(value)) return value.length ? value : null;
+    return String(value)
+      .split(/[\n,;]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  };
+
+  const normalizeName = (name) => {
+    if (HEYS.models?.normalizeProductName) return HEYS.models.normalizeProductName(name);
+    return String(name || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .replace(/ё/g, 'е');
+  };
+
+  const notifyProductUpdated = (product) => {
+    if (!product) return;
+    window.dispatchEvent(new CustomEvent('heys:product-updated', {
+      detail: {
+        productId: product.id ?? product.product_id ?? product.name,
+        product
+      }
+    }));
+  };
+
+  const saveLocalProduct = (product) => {
+    if (!product) return;
+    const U = HEYS.utils || {};
+    const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
+    const pid = String(product.id ?? product.product_id ?? product.name);
+    const idx = products.findIndex((p) => String(p.id ?? p.product_id ?? p.name) === pid);
+    if (idx === -1) return;
+
+    const nextProducts = [...products];
+    nextProducts[idx] = { ...products[idx], ...product };
+
+    if (HEYS.products?.setAll) {
+      HEYS.products.setAll(nextProducts);
+    } else if (HEYS.store?.set) {
+      HEYS.store.set('heys_products', nextProducts);
+    } else if (U.lsSet) {
+      U.lsSet('heys_products', nextProducts);
+    }
+  };
+
+  const updateSharedProduct = async (product) => {
+    if (!product || !product.id) return { ok: false };
+    if (!HEYS?.YandexAPI?.rest) {
+      HEYS.Toast?.warning('API недоступен для обновления') || alert('API недоступен для обновления');
+      return { ok: false };
+    }
+
+    const payload = {
+      name: product.name || null,
+      name_norm: normalizeName(product.name),
+      simple100: toNum(product.simple100, 0),
+      complex100: toNum(product.complex100, 0),
+      protein100: toNum(product.protein100, 0),
+      badfat100: toNum(product.badFat100 ?? product.badfat100, 0),
+      goodfat100: toNum(product.goodFat100 ?? product.goodfat100, 0),
+      trans100: toNum(product.trans100, 0),
+      fiber100: toNum(product.fiber100, 0),
+      gi: toNum(product.gi, null),
+      harm: toNum(HEYS.models?.normalizeHarm?.(product) ?? product.harm, null),
+      category: product.category || null,
+      portions: Array.isArray(product.portions) ? product.portions : null,
+      description: product.description || null,
+      sodium100: toNum(product.sodium100, null),
+      omega3_100: toNum(product.omega3_100, null),
+      omega6_100: toNum(product.omega6_100, null),
+      nova_group: toInt(product.nova_group ?? product.novaGroup, null),
+      additives: normalizeAdditives(product.additives),
+      nutrient_density: toNum(product.nutrient_density ?? product.nutrientDensity, null),
+      is_organic: product.is_organic ?? false,
+      is_whole_grain: product.is_whole_grain ?? false,
+      is_fermented: product.is_fermented ?? false,
+      is_raw: product.is_raw ?? false,
+      vitamin_a: toNum(product.vitamin_a, null),
+      vitamin_c: toNum(product.vitamin_c, null),
+      vitamin_d: toNum(product.vitamin_d, null),
+      vitamin_e: toNum(product.vitamin_e, null),
+      vitamin_k: toNum(product.vitamin_k, null),
+      vitamin_b1: toNum(product.vitamin_b1, null),
+      vitamin_b2: toNum(product.vitamin_b2, null),
+      vitamin_b3: toNum(product.vitamin_b3, null),
+      vitamin_b6: toNum(product.vitamin_b6, null),
+      vitamin_b9: toNum(product.vitamin_b9, null),
+      vitamin_b12: toNum(product.vitamin_b12, null),
+      calcium: toNum(product.calcium, null),
+      iron: toNum(product.iron, null),
+      magnesium: toNum(product.magnesium, null),
+      phosphorus: toNum(product.phosphorus, null),
+      potassium: toNum(product.potassium, null),
+      zinc: toNum(product.zinc, null),
+      selenium: toNum(product.selenium, null),
+      iodine: toNum(product.iodine, null)
+    };
+
+    try {
+      const { error } = await HEYS.YandexAPI.rest('shared_products', {
+        method: 'PATCH',
+        data: payload,
+        filters: { 'eq.id': product.id },
+        select: 'id,name'
+      });
+
+      if (error) {
+        HEYS.Toast?.error('Ошибка обновления: ' + error) || alert('Ошибка обновления: ' + error);
+        return { ok: false };
+      }
+
+      HEYS.Toast?.success('Продукт обновлён') || alert('Продукт обновлён');
       return { ok: true };
     } catch (e) {
       const msg = e?.message || 'Ошибка обновления';
@@ -271,6 +424,7 @@
 
   // === Компонент поиска продукта (Шаг 1) ===
   function ProductSearchStep({ data, onChange, context }) {
+    const [searchInput, setSearchInput] = useState('');
     const [search, setSearch] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [favorites, setFavorites] = useState(() =>
@@ -285,7 +439,7 @@
 
     // Доступ к навигации StepModal
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
-    const { goToStep } = stepContext;
+    const { goToStep, closeModal } = stepContext;
 
     const { dateKey = '' } = context || {};
 
@@ -384,6 +538,8 @@
     const [sharedResults, setSharedResults] = useState([]);
     const [sharedLoading, setSharedLoading] = useState(false);
 
+    useEscapeToClose(closeModal, true);
+
     // Debug: проверяем что products пришли
     // useEffect(() => {
     //   console.log('[AddProductStep] products count:', latestProducts?.length);
@@ -393,6 +549,15 @@
     useEffect(() => {
       setTimeout(() => inputRef.current?.focus(), 100);
     }, []);
+
+    // Debounce локального поиска
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        setSearch(searchInput);
+      }, 200);
+
+      return () => clearTimeout(timer);
+    }, [searchInput]);
 
     // 🌐 Асинхронный поиск по общей базе (debounced)
     useEffect(() => {
@@ -979,15 +1144,18 @@
             type: 'text',
             className: 'aps-search-input',
             placeholder: 'Поиск продукта...',
-            value: search,
-            onChange: (e) => setSearch(e.target.value),
+            value: searchInput,
+            onChange: (e) => setSearchInput(e.target.value),
             autoComplete: 'off',
             autoCorrect: 'off',
             spellCheck: false
           }),
           search && React.createElement('button', {
             className: 'aps-search-clear',
-            onClick: () => setSearch('')
+            onClick: () => {
+              setSearchInput('');
+              setSearch('');
+            }
           }, '×')
         )
       ),
@@ -1036,7 +1204,10 @@
                 didYouMean.map((item, i) =>
                   React.createElement('button', {
                     key: i,
-                    onClick: () => setSearch(item.text),
+                    onClick: () => {
+                      setSearchInput(item.text);
+                      setSearch(item.text);
+                    },
                     style: {
                       padding: '6px 12px',
                       border: '1px solid var(--border-color)',
@@ -1083,6 +1254,96 @@
     );
   }
 
+  const CREATE_PRODUCT_AI_PROMPT_FALLBACK = `Сделай одну текстовую строку в формате "Ключ: значение" (каждое поле с новой строки). Никакого JSON/кода. Все значения на 100г.
+
+ОБЯЗАТЕЛЬНО:
+Название: X
+Ккал: X
+Углеводы: X
+Простые: X
+Сложные: X
+Белок: X
+Жиры: X
+Вредные жиры: X
+Полезные жиры: X
+Транс-жиры: X
+Клетчатка: X
+ГИ: X
+Вред: X
+
+ОПЦИОНАЛЬНО (если знаешь — добавь):
+Натрий: X
+Омега-3: X
+Омега-6: X
+NOVA: 1-4
+Добавки: E621, E330 (если нет — "нет")
+Нутриентная плотность: X
+Органик: 0/1
+Цельнозерновой: 0/1
+Ферментированный: 0/1
+Сырой: 0/1
+Витамин A: X
+Витамин C: X
+Витамин D: X
+Витамин E: X
+Витамин K: X
+Витамин B1: X
+Витамин B2: X
+Витамин B3: X
+Витамин B6: X
+Витамин B9: X
+Витамин B12: X
+Кальций: X
+Железо: X
+Магний: X
+Фосфор: X
+Калий: X
+Цинк: X
+Селен: X
+Йод: X`;
+
+  const CREATE_PRODUCT_AI_EXAMPLE = `Название: Перец болгарский свежий
+Ккал: 31
+Углеводы: 6
+Простые: 4
+Сложные: 2
+Белок: 1
+Жиры: 0.3
+Вредные жиры: 0.1
+Полезные жиры: 0.2
+Транс-жиры: 0
+Клетчатка: 2.1
+ГИ: 15
+Вред: 0
+Натрий: 2
+Омега-3: 0
+Омега-6: 0
+NOVA: 1
+Добавки: нет
+Органик: 0
+Цельнозерновой: 0
+Ферментированный: 0
+Сырой: 1
+Витамин A: 17.4
+Витамин C: 141.1
+Витамин D: 0
+Витамин E: 10.5
+Витамин K: 4.1
+Витамин B1: 4.5
+Витамин B2: 6.5
+Витамин B3: 6.1
+Витамин B6: 17.1
+Витамин B9: 11.5
+Витамин B12: 0
+Кальций: 0.7
+Железо: 2.4
+Магний: 3
+Фосфор: 3.7
+Калий: 6
+Цинк: 2.3
+Селен: 0.2
+Йод: 0`;
+
   // === Компонент создания нового продукта (Шаг create) ===
   function CreateProductStep({ data, onChange, context, stepData }) {
     // Берём поисковый запрос для предзаполнения названия
@@ -1102,10 +1363,41 @@
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
     const { goToStep, closeModal, updateStepData } = stepContext;
 
+    useEscapeToClose(closeModal, true);
+
     // Фокус на textarea при монтировании
     useEffect(() => {
       setTimeout(() => textareaRef.current?.focus(), 100);
     }, []);
+
+    const draftKey = 'heys_product_draft';
+
+    useEffect(() => {
+      const utils = U();
+      const draft = HEYS.store?.get?.(draftKey, null) ?? utils.lsGet?.(draftKey, null);
+      if (!draft || pasteText) return;
+      if (draft.pasteText != null) setPasteText(draft.pasteText);
+      if (typeof draft.publishToShared === 'boolean') setPublishToShared(draft.publishToShared);
+    }, []);
+
+    useEffect(() => {
+      const utils = U();
+      const timer = setTimeout(() => {
+        const payload = {
+          pasteText,
+          publishToShared
+        };
+        if (HEYS.store?.set) {
+          HEYS.store.set(draftKey, payload);
+          return;
+        }
+        if (utils.lsSet) {
+          utils.lsSet(draftKey, payload);
+        }
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }, [pasteText, publishToShared]);
 
     const MISSING_FIELD_LABELS = {
       kcal100: 'Ккал',
@@ -1365,6 +1657,43 @@
       }
     }, [parsedPreview, data, onChange, context, goToStep, updateStepData, publishToShared, isCurator]);
 
+    const aiPromptText = useMemo(() => {
+      const name = searchQuery || 'Название';
+      if (HEYS.models?.generateAIProductStringPrompt) {
+        return HEYS.models.generateAIProductStringPrompt(name);
+      }
+      return CREATE_PRODUCT_AI_PROMPT_FALLBACK.replace('Название: X', `Название: ${name}`);
+    }, [searchQuery]);
+
+    const handleCopyPrompt = useCallback(async () => {
+      haptic('light');
+      const text = aiPromptText;
+      try {
+        if (navigator?.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          HEYS.Toast?.success?.('Промпт скопирован');
+          return;
+        }
+      } catch (e) {
+        // fallback below
+      }
+
+      try {
+        const temp = document.createElement('textarea');
+        temp.value = text;
+        temp.setAttribute('readonly', '');
+        temp.style.position = 'absolute';
+        temp.style.left = '-9999px';
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        HEYS.Toast?.success?.('Промпт скопирован');
+      } catch (e) {
+        HEYS.Toast?.warning?.('Не удалось скопировать промпт');
+      }
+    }, [aiPromptText]);
+
     return React.createElement('div', { className: 'aps-create-step' },
       // Заголовок
       React.createElement('div', { className: 'aps-create-header' },
@@ -1387,6 +1716,15 @@
         )
       ),
 
+      React.createElement('div', { className: 'aps-create-prompt-actions' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'aps-create-prompt-btn',
+          onClick: handleCopyPrompt
+        }, '📋 Скопировать промпт для ИИ'),
+        React.createElement('span', { className: 'aps-create-prompt-note' }, 'Под формат новой схемы')
+      ),
+
       // Textarea для вставки
       React.createElement('textarea', {
         ref: textareaRef,
@@ -1398,6 +1736,15 @@
         onChange: (e) => setPasteText(e.target.value),
         rows: 8
       }),
+
+      React.createElement('div', { className: 'aps-create-example-actions' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'aps-create-example-btn',
+          onClick: () => setPasteText(CREATE_PRODUCT_AI_EXAMPLE)
+        }, '🧪 Вставить пример'),
+        React.createElement('span', { className: 'aps-create-example-note' }, 'Формат для поля вставки')
+      ),
 
       // Ошибка
       error && React.createElement('div', { className: 'aps-create-error' }, '⚠️ ' + error),
@@ -1466,10 +1813,718 @@
     );
   }
 
+  // === Шаг 1: Редактор базовых полей продукта ===
+  function ProductEditBasicStep({ data, onChange, context, stepData }) {
+    const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
+    const { goToStep, updateStepData, closeModal } = stepContext;
+
+    useEscapeToClose(closeModal, true);
+
+    const sourceProduct = context?.editProduct
+      || stepData?.edit_extra?.product
+      || stepData?.edit_basic?.product
+      || stepData?.portions?.product
+      || data?.product;
+
+    const initialForm = useMemo(() => {
+      const p = sourceProduct || {};
+      const simple = toNum(p.simple100, 0);
+      const complex = toNum(p.complex100, 0);
+      const bad = toNum(p.badFat100 ?? p.badfat100, 0);
+      const good = toNum(p.goodFat100 ?? p.goodfat100, 0);
+      const trans = toNum(p.trans100, 0);
+      const carbs = toNum(p.carbs100 ?? (simple + complex), 0);
+      const fat = toNum(p.fat100 ?? (bad + good + trans), 0);
+      const protein = toNum(p.protein100, 0);
+      const kcal = toNum(p.kcal100 ?? (protein * 4 + carbs * 4 + fat * 9), 0);
+      const harmVal = HEYS.models?.normalizeHarm?.(p) ?? toNum(p.harm, 0);
+
+      return {
+        name: p.name || '',
+        kcal100: kcal ? String(kcal) : '',
+        carbs100: carbs ? String(carbs) : '',
+        simple100: simple ? String(simple) : '',
+        complex100: complex ? String(complex) : '',
+        protein100: protein ? String(protein) : '',
+        fat100: fat ? String(fat) : '',
+        badFat100: bad ? String(bad) : '',
+        goodFat100: good ? String(good) : '',
+        trans100: trans ? String(trans) : '',
+        fiber100: p.fiber100 ? String(p.fiber100) : '',
+        gi: p.gi != null ? String(p.gi) : '',
+        harm: harmVal != null ? String(harmVal) : ''
+      };
+    }, [sourceProduct]);
+
+    const [form, setForm] = useState(initialForm);
+
+    useEffect(() => {
+      setForm(initialForm);
+    }, [initialForm]);
+
+    const updateField = useCallback((key, value) => {
+      setForm((prev) => ({
+        ...prev,
+        [key]: value
+      }));
+    }, []);
+
+    const isInvalidNumber = useCallback((value) => {
+      if (value == null || value === '') return false;
+      const n = Number(String(value).trim().replace(',', '.'));
+      return !Number.isFinite(n) || n < 0;
+    }, []);
+
+    const computed = useMemo(() => {
+      const simple = toNum(form.simple100, 0);
+      const complex = toNum(form.complex100, 0);
+      const protein = toNum(form.protein100, 0);
+      const bad = toNum(form.badFat100, 0);
+      const good = toNum(form.goodFat100, 0);
+      const trans = toNum(form.trans100, 0);
+      const partsCarbs = simple + complex;
+      const partsFat = bad + good + trans;
+      const carbsTotalInput = toNum(form.carbs100, 0);
+      const fatTotalInput = toNum(form.fat100, 0);
+      const carbsTotal = carbsTotalInput || partsCarbs;
+      const fatTotal = fatTotalInput || partsFat;
+      const kcalCalc = Math.round((protein * 4 + carbsTotal * 4 + fatTotal * 9) * 10) / 10;
+      const kcalInput = toNum(form.kcal100, 0);
+
+      const carbsDiff = carbsTotalInput > 0 ? Math.abs(carbsTotalInput - partsCarbs) : 0;
+      const fatDiff = fatTotalInput > 0 ? Math.abs(fatTotalInput - partsFat) : 0;
+      const kcalDiff = kcalInput > 0 ? Math.abs(kcalInput - kcalCalc) : 0;
+
+      return {
+        carbsTotal: Math.round(carbsTotal * 10) / 10,
+        fatTotal: Math.round(fatTotal * 10) / 10,
+        kcalCalc,
+        partsCarbs: Math.round(partsCarbs * 10) / 10,
+        partsFat: Math.round(partsFat * 10) / 10,
+        carbsDiff,
+        fatDiff,
+        kcalDiff,
+        hasCarbsConflict: carbsDiff > 0.5,
+        hasFatConflict: fatDiff > 0.5,
+        hasKcalConflict: kcalDiff > 20
+      };
+    }, [form]);
+
+    const buildUpdatedProduct = useCallback(() => {
+      const base = sourceProduct || {};
+      const name = String(form.name || base.name || '').trim() || 'Без названия';
+      const simple100 = toNum(form.simple100, 0);
+      const complex100 = toNum(form.complex100, 0);
+      const protein100 = toNum(form.protein100, 0);
+      const badFat100 = toNum(form.badFat100, 0);
+      const goodFat100 = toNum(form.goodFat100, 0);
+      const trans100 = toNum(form.trans100, 0);
+      const fiber100 = toNum(form.fiber100, 0);
+      const gi = toNum(form.gi, null);
+      const harmInput = form.harm === '' ? null : toNum(form.harm, null);
+
+      const carbsTotal = toNum(form.carbs100, 0);
+      const fatTotal = toNum(form.fat100, 0);
+
+      let finalSimple = simple100;
+      let finalComplex = complex100;
+      if (carbsTotal > 0) {
+        if (!finalSimple && !finalComplex) {
+          finalSimple = 0;
+          finalComplex = carbsTotal;
+        } else if (!finalComplex && finalSimple && carbsTotal > finalSimple) {
+          finalComplex = Math.max(0, carbsTotal - finalSimple);
+        }
+      }
+
+      let finalBad = badFat100;
+      let finalGood = goodFat100;
+      let finalTrans = trans100;
+      if (fatTotal > 0) {
+        const partsSum = finalBad + finalGood + finalTrans;
+        if (!partsSum) {
+          finalBad = fatTotal;
+          finalGood = 0;
+          finalTrans = 0;
+        }
+      }
+
+      const carbs100 = Math.round((finalSimple + finalComplex) * 10) / 10;
+      const fat100 = Math.round((finalBad + finalGood + finalTrans) * 10) / 10;
+      const kcalFromMacros = Math.round((protein100 * 4 + carbs100 * 4 + fat100 * 9) * 10) / 10;
+      const kcal100 = form.kcal100 === '' ? kcalFromMacros : toNum(form.kcal100, kcalFromMacros);
+
+      const harm = harmInput != null
+        ? harmInput
+        : (HEYS.models?.normalizeHarm?.(base) ?? base.harm ?? null);
+
+      return {
+        ...base,
+        name,
+        simple100: finalSimple,
+        complex100: finalComplex,
+        protein100,
+        badFat100: finalBad,
+        goodFat100: finalGood,
+        trans100: finalTrans,
+        fiber100,
+        gi,
+        harm,
+        carbs100,
+        fat100,
+        kcal100
+      };
+    }, [form, sourceProduct]);
+
+    const handleNext = useCallback(() => {
+      if (!sourceProduct) return;
+      haptic('light');
+      const updatedProduct = buildUpdatedProduct();
+      onChange({ ...data, product: updatedProduct });
+
+      if (updateStepData) {
+        updateStepData('edit_basic', { product: updatedProduct });
+        updateStepData('edit_extra', { product: updatedProduct });
+        updateStepData('portions', { product: updatedProduct });
+      }
+
+      setTimeout(() => goToStep?.(1, 'left'), 120);
+    }, [sourceProduct, buildUpdatedProduct, onChange, data, updateStepData, goToStep]);
+
+    if (!sourceProduct) {
+      return React.createElement('div', { className: 'pe-empty' }, 'Нет продукта для редактирования');
+    }
+
+    return React.createElement('div', { className: 'pe-step' },
+      React.createElement('div', { className: 'pe-step-header' },
+        React.createElement('span', { className: 'pe-step-icon' }, '✏️'),
+        React.createElement('span', { className: 'pe-step-title' }, 'Название и 12 основных')
+      ),
+
+      React.createElement('div', { className: 'pe-field' },
+        React.createElement('label', { className: 'pe-label' }, 'Название'),
+        React.createElement('input', {
+          className: 'pe-input',
+          type: 'text',
+          value: form.name,
+          onChange: (e) => updateField('name', e.target.value),
+          placeholder: 'Название продукта'
+        })
+      ),
+
+      React.createElement('div', { className: 'pe-grid' },
+        React.createElement('div', { className: 'pe-field' },
+          React.createElement('label', { className: 'pe-label' }, 'Ккал (100г)'),
+          React.createElement('input', {
+            className: 'pe-input' + (isInvalidNumber(form.kcal100) ? ' pe-input--error' : ''),
+            type: 'text',
+            inputMode: 'numeric',
+            value: form.kcal100,
+            onChange: (e) => updateField('kcal100', e.target.value),
+            placeholder: '0'
+          })
+        ),
+        React.createElement('div', { className: 'pe-field' },
+          React.createElement('label', { className: 'pe-label' }, 'Углеводы (100г)'),
+          React.createElement('input', {
+            className: 'pe-input' + (isInvalidNumber(form.carbs100) ? ' pe-input--error' : ''),
+            type: 'text',
+            inputMode: 'numeric',
+            value: form.carbs100,
+            onChange: (e) => updateField('carbs100', e.target.value),
+            placeholder: '0'
+          })
+        ),
+        React.createElement('div', { className: 'pe-field' },
+          React.createElement('label', { className: 'pe-label' }, 'Простые (100г)'),
+          React.createElement('input', {
+            className: 'pe-input' + (isInvalidNumber(form.simple100) ? ' pe-input--error' : ''),
+            type: 'text',
+            inputMode: 'numeric',
+            value: form.simple100,
+            onChange: (e) => updateField('simple100', e.target.value),
+            placeholder: '0'
+          })
+        ),
+        React.createElement('div', { className: 'pe-field' },
+          React.createElement('label', { className: 'pe-label' }, 'Сложные (100г)'),
+          React.createElement('input', {
+            className: 'pe-input' + (isInvalidNumber(form.complex100) ? ' pe-input--error' : ''),
+            type: 'text',
+            inputMode: 'numeric',
+            value: form.complex100,
+            onChange: (e) => updateField('complex100', e.target.value),
+            placeholder: '0'
+          })
+        ),
+        React.createElement('div', { className: 'pe-field' },
+          React.createElement('label', { className: 'pe-label' }, 'Белок (100г)'),
+          React.createElement('input', {
+            className: 'pe-input' + (isInvalidNumber(form.protein100) ? ' pe-input--error' : ''),
+            type: 'text',
+            inputMode: 'numeric',
+            value: form.protein100,
+            onChange: (e) => updateField('protein100', e.target.value),
+            placeholder: '0'
+          })
+        ),
+        React.createElement('div', { className: 'pe-field' },
+          React.createElement('label', { className: 'pe-label' }, 'Жиры (100г)'),
+          React.createElement('input', {
+            className: 'pe-input' + (isInvalidNumber(form.fat100) ? ' pe-input--error' : ''),
+            type: 'text',
+            inputMode: 'numeric',
+            value: form.fat100,
+            onChange: (e) => updateField('fat100', e.target.value),
+            placeholder: '0'
+          })
+        ),
+        React.createElement('div', { className: 'pe-field' },
+          React.createElement('label', { className: 'pe-label' }, 'Вредные жиры (100г)'),
+          React.createElement('input', {
+            className: 'pe-input' + (isInvalidNumber(form.badFat100) ? ' pe-input--error' : ''),
+            type: 'text',
+            inputMode: 'numeric',
+            value: form.badFat100,
+            onChange: (e) => updateField('badFat100', e.target.value),
+            placeholder: '0'
+          })
+        ),
+        React.createElement('div', { className: 'pe-field' },
+          React.createElement('label', { className: 'pe-label' }, 'Полезные жиры (100г)'),
+          React.createElement('input', {
+            className: 'pe-input' + (isInvalidNumber(form.goodFat100) ? ' pe-input--error' : ''),
+            type: 'text',
+            inputMode: 'numeric',
+            value: form.goodFat100,
+            onChange: (e) => updateField('goodFat100', e.target.value),
+            placeholder: '0'
+          })
+        ),
+        React.createElement('div', { className: 'pe-field' },
+          React.createElement('label', { className: 'pe-label' }, 'Транс-жиры (100г)'),
+          React.createElement('input', {
+            className: 'pe-input' + (isInvalidNumber(form.trans100) ? ' pe-input--error' : ''),
+            type: 'text',
+            inputMode: 'numeric',
+            value: form.trans100,
+            onChange: (e) => updateField('trans100', e.target.value),
+            placeholder: '0'
+          })
+        ),
+        React.createElement('div', { className: 'pe-field' },
+          React.createElement('label', { className: 'pe-label' }, 'Клетчатка (100г)'),
+          React.createElement('input', {
+            className: 'pe-input' + (isInvalidNumber(form.fiber100) ? ' pe-input--error' : ''),
+            type: 'text',
+            inputMode: 'numeric',
+            value: form.fiber100,
+            onChange: (e) => updateField('fiber100', e.target.value),
+            placeholder: '0'
+          })
+        ),
+        React.createElement('div', { className: 'pe-field' },
+          React.createElement('label', { className: 'pe-label' }, 'ГИ'),
+          React.createElement('input', {
+            className: 'pe-input' + (isInvalidNumber(form.gi) ? ' pe-input--error' : ''),
+            type: 'text',
+            inputMode: 'numeric',
+            value: form.gi,
+            onChange: (e) => updateField('gi', e.target.value),
+            placeholder: '0'
+          })
+        ),
+        React.createElement('div', { className: 'pe-field' },
+          React.createElement('label', { className: 'pe-label' }, 'Вред'),
+          React.createElement('input', {
+            className: 'pe-input' + (isInvalidNumber(form.harm) ? ' pe-input--error' : ''),
+            type: 'text',
+            inputMode: 'numeric',
+            value: form.harm,
+            onChange: (e) => updateField('harm', e.target.value),
+            placeholder: '0'
+          })
+        )
+      ),
+
+      React.createElement('div', { className: 'pe-preview' },
+        React.createElement('span', { className: 'pe-preview-label' }, 'Авто-расчёт:'),
+        React.createElement('span', { className: 'pe-preview-value' },
+          `У ${computed.carbsTotal} · Ж ${computed.fatTotal} · ${computed.kcalCalc} ккал`
+        )
+      ),
+
+      (computed.hasCarbsConflict || computed.hasFatConflict || computed.hasKcalConflict) && React.createElement('div', {
+        className: 'pe-warning'
+      },
+        React.createElement('div', { className: 'pe-warning__title' }, 'Проверьте несоответствия'),
+        computed.hasCarbsConflict && React.createElement('div', { className: 'pe-warning__text' },
+          `Углеводы: всего ${form.carbs100 || computed.carbsTotal} ≠ простые+сложные ${computed.partsCarbs}`
+        ),
+        computed.hasFatConflict && React.createElement('div', { className: 'pe-warning__text' },
+          `Жиры: всего ${form.fat100 || computed.fatTotal} ≠ вредные+полезные+транс ${computed.partsFat}`
+        ),
+        computed.hasKcalConflict && React.createElement('div', { className: 'pe-warning__text' },
+          `Ккал: введено ${form.kcal100 || computed.kcalCalc} ≠ расчёт ${computed.kcalCalc}`
+        )
+      ),
+
+      React.createElement('button', {
+        className: 'pe-next-btn',
+        onClick: handleNext
+      }, 'Далее')
+    );
+  }
+
+  // === Шаг 2: Редактор расширенных полей ===
+  function ProductEditExtraStep({ data, onChange, context, stepData }) {
+    const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
+    const { goToStep, updateStepData, closeModal } = stepContext;
+
+    useEscapeToClose(closeModal, true);
+
+    const sourceProduct = stepData?.edit_basic?.product
+      || context?.editProduct
+      || stepData?.edit_extra?.product
+      || stepData?.portions?.product
+      || data?.product;
+
+    const initialForm = useMemo(() => {
+      const p = sourceProduct || {};
+      return {
+        category: p.category || '',
+        description: p.description || '',
+        sodium100: p.sodium100 != null ? String(p.sodium100) : '',
+        omega3_100: p.omega3_100 != null ? String(p.omega3_100) : '',
+        omega6_100: p.omega6_100 != null ? String(p.omega6_100) : '',
+        nova_group: p.nova_group ?? p.novaGroup ?? '',
+        nutrient_density: p.nutrient_density ?? p.nutrientDensity ?? '',
+        additives: Array.isArray(p.additives) ? p.additives.join(', ') : (p.additives || ''),
+        is_organic: !!p.is_organic,
+        is_whole_grain: !!p.is_whole_grain,
+        is_fermented: !!p.is_fermented,
+        is_raw: !!p.is_raw,
+        vitamin_a: p.vitamin_a != null ? String(p.vitamin_a) : '',
+        vitamin_c: p.vitamin_c != null ? String(p.vitamin_c) : '',
+        vitamin_d: p.vitamin_d != null ? String(p.vitamin_d) : '',
+        vitamin_e: p.vitamin_e != null ? String(p.vitamin_e) : '',
+        vitamin_k: p.vitamin_k != null ? String(p.vitamin_k) : '',
+        vitamin_b1: p.vitamin_b1 != null ? String(p.vitamin_b1) : '',
+        vitamin_b2: p.vitamin_b2 != null ? String(p.vitamin_b2) : '',
+        vitamin_b3: p.vitamin_b3 != null ? String(p.vitamin_b3) : '',
+        vitamin_b6: p.vitamin_b6 != null ? String(p.vitamin_b6) : '',
+        vitamin_b9: p.vitamin_b9 != null ? String(p.vitamin_b9) : '',
+        vitamin_b12: p.vitamin_b12 != null ? String(p.vitamin_b12) : '',
+        calcium: p.calcium != null ? String(p.calcium) : '',
+        iron: p.iron != null ? String(p.iron) : '',
+        magnesium: p.magnesium != null ? String(p.magnesium) : '',
+        phosphorus: p.phosphorus != null ? String(p.phosphorus) : '',
+        potassium: p.potassium != null ? String(p.potassium) : '',
+        zinc: p.zinc != null ? String(p.zinc) : '',
+        selenium: p.selenium != null ? String(p.selenium) : '',
+        iodine: p.iodine != null ? String(p.iodine) : ''
+      };
+    }, [sourceProduct]);
+
+    const [form, setForm] = useState(initialForm);
+
+    useEffect(() => {
+      setForm(initialForm);
+    }, [initialForm]);
+
+    const updateField = useCallback((key, value) => {
+      setForm((prev) => ({
+        ...prev,
+        [key]: value
+      }));
+    }, []);
+
+    const isInvalidNumber = useCallback((value) => {
+      if (value == null || value === '') return false;
+      const n = Number(String(value).trim().replace(',', '.'));
+      return !Number.isFinite(n) || n < 0;
+    }, []);
+
+    const buildUpdatedProduct = useCallback(() => {
+      const base = sourceProduct || {};
+      return {
+        ...base,
+        category: String(form.category || '').trim() || base.category || '',
+        description: String(form.description || '').trim() || base.description || '',
+        sodium100: form.sodium100 === '' ? null : toNum(form.sodium100, null),
+        omega3_100: form.omega3_100 === '' ? null : toNum(form.omega3_100, null),
+        omega6_100: form.omega6_100 === '' ? null : toNum(form.omega6_100, null),
+        nova_group: form.nova_group === '' ? null : toInt(form.nova_group, null),
+        additives: normalizeAdditives(form.additives),
+        nutrient_density: form.nutrient_density === '' ? null : toNum(form.nutrient_density, null),
+        is_organic: !!form.is_organic,
+        is_whole_grain: !!form.is_whole_grain,
+        is_fermented: !!form.is_fermented,
+        is_raw: !!form.is_raw,
+        vitamin_a: form.vitamin_a === '' ? null : toNum(form.vitamin_a, null),
+        vitamin_c: form.vitamin_c === '' ? null : toNum(form.vitamin_c, null),
+        vitamin_d: form.vitamin_d === '' ? null : toNum(form.vitamin_d, null),
+        vitamin_e: form.vitamin_e === '' ? null : toNum(form.vitamin_e, null),
+        vitamin_k: form.vitamin_k === '' ? null : toNum(form.vitamin_k, null),
+        vitamin_b1: form.vitamin_b1 === '' ? null : toNum(form.vitamin_b1, null),
+        vitamin_b2: form.vitamin_b2 === '' ? null : toNum(form.vitamin_b2, null),
+        vitamin_b3: form.vitamin_b3 === '' ? null : toNum(form.vitamin_b3, null),
+        vitamin_b6: form.vitamin_b6 === '' ? null : toNum(form.vitamin_b6, null),
+        vitamin_b9: form.vitamin_b9 === '' ? null : toNum(form.vitamin_b9, null),
+        vitamin_b12: form.vitamin_b12 === '' ? null : toNum(form.vitamin_b12, null),
+        calcium: form.calcium === '' ? null : toNum(form.calcium, null),
+        iron: form.iron === '' ? null : toNum(form.iron, null),
+        magnesium: form.magnesium === '' ? null : toNum(form.magnesium, null),
+        phosphorus: form.phosphorus === '' ? null : toNum(form.phosphorus, null),
+        potassium: form.potassium === '' ? null : toNum(form.potassium, null),
+        zinc: form.zinc === '' ? null : toNum(form.zinc, null),
+        selenium: form.selenium === '' ? null : toNum(form.selenium, null),
+        iodine: form.iodine === '' ? null : toNum(form.iodine, null)
+      };
+    }, [form, sourceProduct]);
+
+    const handleNext = useCallback(() => {
+      if (!sourceProduct) return;
+      haptic('light');
+      const updatedProduct = buildUpdatedProduct();
+      onChange({ ...data, product: updatedProduct });
+
+      if (updateStepData) {
+        updateStepData('edit_extra', { product: updatedProduct });
+        updateStepData('portions', { product: updatedProduct });
+      }
+
+      setTimeout(() => goToStep?.(2, 'left'), 120);
+    }, [sourceProduct, buildUpdatedProduct, onChange, data, updateStepData, goToStep]);
+
+    if (!sourceProduct) {
+      return React.createElement('div', { className: 'pe-empty' }, 'Нет продукта для редактирования');
+    }
+
+    return React.createElement('div', { className: 'pe-step' },
+      React.createElement('div', { className: 'pe-step-header' },
+        React.createElement('span', { className: 'pe-step-icon' }, '🧬'),
+        React.createElement('span', { className: 'pe-step-title' }, 'Доп. данные')
+      ),
+
+      React.createElement('div', { className: 'pe-section' },
+        React.createElement('div', { className: 'pe-grid' },
+          React.createElement('div', { className: 'pe-field' },
+            React.createElement('label', { className: 'pe-label' }, 'Категория'),
+            React.createElement('input', {
+              className: 'pe-input',
+              type: 'text',
+              list: 'pe-category-list',
+              value: form.category,
+              onChange: (e) => updateField('category', e.target.value),
+              placeholder: 'Категория'
+            }),
+            React.createElement('datalist', { id: 'pe-category-list' },
+              CATEGORIES.filter(c => c.id !== 'all').map((c) =>
+                React.createElement('option', { key: c.id, value: c.name })
+              )
+            )
+          ),
+          React.createElement('div', { className: 'pe-field' },
+            React.createElement('label', { className: 'pe-label' }, 'Описание'),
+            React.createElement('input', {
+              className: 'pe-input',
+              value: form.description,
+              onChange: (e) => updateField('description', e.target.value),
+              placeholder: 'Опционально'
+            })
+          )
+        )
+      ),
+
+      React.createElement('div', { className: 'pe-section' },
+        React.createElement('div', { className: 'pe-section-title' }, 'Качество'),
+        React.createElement('div', { className: 'pe-grid' },
+          React.createElement('div', { className: 'pe-field' },
+            React.createElement('label', { className: 'pe-label' }, 'Натрий, мг'),
+            React.createElement('input', {
+              className: 'pe-input' + (isInvalidNumber(form.sodium100) ? ' pe-input--error' : ''),
+              type: 'text',
+              inputMode: 'numeric',
+              value: form.sodium100,
+              onChange: (e) => updateField('sodium100', e.target.value)
+            })
+          ),
+          React.createElement('div', { className: 'pe-field' },
+            React.createElement('label', { className: 'pe-label' }, 'NOVA'),
+            React.createElement('div', { className: 'pe-segment' },
+              [1, 2, 3, 4].map((val) =>
+                React.createElement('button', {
+                  key: val,
+                  className: 'pe-segment-btn' + (String(form.nova_group) === String(val) ? ' active' : ''),
+                  type: 'button',
+                  onClick: () => updateField('nova_group', String(val))
+                }, String(val))
+              )
+            )
+          ),
+          React.createElement('div', { className: 'pe-field' },
+            React.createElement('label', { className: 'pe-label' }, 'Плотность нутр.'),
+            React.createElement('input', {
+              className: 'pe-input' + (isInvalidNumber(form.nutrient_density) ? ' pe-input--error' : ''),
+              type: 'text',
+              inputMode: 'numeric',
+              value: form.nutrient_density,
+              onChange: (e) => updateField('nutrient_density', e.target.value)
+            })
+          )
+        )
+      ),
+
+      React.createElement('div', { className: 'pe-section' },
+        React.createElement('div', { className: 'pe-section-title' }, 'Омега и добавки'),
+        React.createElement('div', { className: 'pe-grid' },
+          React.createElement('div', { className: 'pe-field' },
+            React.createElement('label', { className: 'pe-label' }, 'Ω-3, г'),
+            React.createElement('input', {
+              className: 'pe-input' + (isInvalidNumber(form.omega3_100) ? ' pe-input--error' : ''),
+              type: 'text',
+              inputMode: 'numeric',
+              value: form.omega3_100,
+              onChange: (e) => updateField('omega3_100', e.target.value)
+            })
+          ),
+          React.createElement('div', { className: 'pe-field' },
+            React.createElement('label', { className: 'pe-label' }, 'Ω-6, г'),
+            React.createElement('input', {
+              className: 'pe-input' + (isInvalidNumber(form.omega6_100) ? ' pe-input--error' : ''),
+              type: 'text',
+              inputMode: 'numeric',
+              value: form.omega6_100,
+              onChange: (e) => updateField('omega6_100', e.target.value)
+            })
+          ),
+          React.createElement('div', { className: 'pe-field', style: { gridColumn: '1 / -1' } },
+            React.createElement('label', { className: 'pe-label' }, 'E-добавки'),
+            React.createElement('input', {
+              className: 'pe-input',
+              type: 'text',
+              value: form.additives,
+              onChange: (e) => updateField('additives', e.target.value),
+              placeholder: 'E330, E621'
+            })
+          )
+        )
+      ),
+
+      React.createElement('div', { className: 'pe-section' },
+        React.createElement('div', { className: 'pe-section-title' }, 'Флаги'),
+        React.createElement('div', { className: 'pe-toggles pe-toggles--4col' },
+          React.createElement('label', { className: 'pe-toggle' },
+            React.createElement('input', {
+              type: 'checkbox',
+              checked: form.is_organic,
+              onChange: (e) => updateField('is_organic', e.target.checked)
+            }),
+            React.createElement('span', null, '🌿')
+          ),
+          React.createElement('label', { className: 'pe-toggle' },
+            React.createElement('input', {
+              type: 'checkbox',
+              checked: form.is_whole_grain,
+              onChange: (e) => updateField('is_whole_grain', e.target.checked)
+            }),
+            React.createElement('span', null, '🌾')
+          ),
+          React.createElement('label', { className: 'pe-toggle' },
+            React.createElement('input', {
+              type: 'checkbox',
+              checked: form.is_fermented,
+              onChange: (e) => updateField('is_fermented', e.target.checked)
+            }),
+            React.createElement('span', null, '🧬')
+          ),
+          React.createElement('label', { className: 'pe-toggle' },
+            React.createElement('input', {
+              type: 'checkbox',
+              checked: form.is_raw,
+              onChange: (e) => updateField('is_raw', e.target.checked)
+            }),
+            React.createElement('span', null, '🥬')
+          )
+        ),
+        React.createElement('div', { className: 'pe-toggles-legend' },
+          '🌿 Органик · 🌾 Цельнозерн. · 🧬 Ферментир. · 🥬 Сырой'
+        )
+      ),
+
+      React.createElement('div', { className: 'pe-section' },
+        React.createElement('div', { className: 'pe-section-title' }, 'Витамины (%)'),
+        React.createElement('div', { className: 'pe-grid pe-grid--vitamins' },
+          [
+            { key: 'vitamin_a', label: 'A' },
+            { key: 'vitamin_c', label: 'C' },
+            { key: 'vitamin_d', label: 'D' },
+            { key: 'vitamin_e', label: 'E' },
+            { key: 'vitamin_k', label: 'K' },
+            { key: 'vitamin_b1', label: 'B1' },
+            { key: 'vitamin_b2', label: 'B2' },
+            { key: 'vitamin_b3', label: 'B3' },
+            { key: 'vitamin_b6', label: 'B6' },
+            { key: 'vitamin_b9', label: 'B9' },
+            { key: 'vitamin_b12', label: 'B12' }
+          ].map((item) =>
+            React.createElement('div', { className: 'pe-field pe-field--inline', key: item.key },
+              React.createElement('label', { className: 'pe-label' }, item.label),
+              React.createElement('input', {
+                className: 'pe-input' + (isInvalidNumber(form[item.key]) ? ' pe-input--error' : ''),
+                type: 'text',
+                inputMode: 'numeric',
+                placeholder: '%',
+                value: form[item.key],
+                onChange: (e) => updateField(item.key, e.target.value)
+              })
+            )
+          )
+        )
+      ),
+
+      React.createElement('div', { className: 'pe-section' },
+        React.createElement('div', { className: 'pe-section-title' }, 'Минералы (%)'),
+        React.createElement('div', { className: 'pe-grid pe-grid--minerals' },
+          [
+            { key: 'calcium', label: 'Ca' },
+            { key: 'iron', label: 'Fe' },
+            { key: 'magnesium', label: 'Mg' },
+            { key: 'phosphorus', label: 'P' },
+            { key: 'potassium', label: 'K' },
+            { key: 'zinc', label: 'Zn' },
+            { key: 'selenium', label: 'Se' },
+            { key: 'iodine', label: 'I' }
+          ].map((item) =>
+            React.createElement('div', { className: 'pe-field pe-field--inline', key: item.key },
+              React.createElement('label', { className: 'pe-label' }, item.label),
+              React.createElement('input', {
+                className: 'pe-input' + (isInvalidNumber(form[item.key]) ? ' pe-input--error' : ''),
+                type: 'text',
+                inputMode: 'numeric',
+                placeholder: '%',
+                value: form[item.key],
+                onChange: (e) => updateField(item.key, e.target.value)
+              })
+            )
+          )
+        )
+      ),
+
+      React.createElement('button', {
+        className: 'pe-next-btn',
+        onClick: handleNext
+      }, 'Далее к порциям')
+    );
+  }
+
   // === Компонент выбора порций (Шаг portions) ===
   function PortionsStep({ data, onChange, context, stepData }) {
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
-    const { goToStep, updateStepData } = stepContext;
+    const { goToStep, updateStepData, closeModal } = stepContext;
+
+    useEscapeToClose(closeModal, true);
 
     // Ищем продукт из всех возможных источников
     const product = context?.editProduct
@@ -1697,7 +2752,7 @@
         React.createElement('button', {
           className: 'aps-portions-next-btn',
           onClick: handleContinue
-        }, context?.isEditMode ? 'Далее' : 'Далее к вредности')
+        }, context?.isProductEditor ? 'Готово' : (context?.isEditMode ? 'Далее' : 'Далее к вредности'))
       )
     );
   }
@@ -2088,6 +3143,10 @@
 
   // === Компонент выбора граммов (Шаг 2) ===
   function GramsStep({ data, onChange, context, stepData }) {
+    const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
+    const { closeModal } = stepContext;
+
+    useEscapeToClose(closeModal, true);
     // Продукт берём: 1) из context (для edit mode), 2) из своих данных, 3) из create (newProduct или selectedProduct), 4) из search
     // ВАЖНО: stepData?.create проверяется т.к. при создании нового продукта data.selectedProduct может не успеть обновиться
     const product = context?.editProduct
@@ -2139,7 +3198,7 @@
     }, [defaultPortions]);
 
     useEffect(() => {
-      const handlePortionsUpdated = (event) => {
+      const handleProductUpdated = (event) => {
         const detail = event?.detail || {};
         const updatedProduct = detail.product;
         const updatedId = String(detail.productId ?? updatedProduct?.id ?? updatedProduct?.product_id ?? updatedProduct?.name);
@@ -2156,8 +3215,12 @@
         }
       };
 
-      window.addEventListener('heys:product-portions-updated', handlePortionsUpdated);
-      return () => window.removeEventListener('heys:product-portions-updated', handlePortionsUpdated);
+      window.addEventListener('heys:product-portions-updated', handleProductUpdated);
+      window.addEventListener('heys:product-updated', handleProductUpdated);
+      return () => {
+        window.removeEventListener('heys:product-portions-updated', handleProductUpdated);
+        window.removeEventListener('heys:product-updated', handleProductUpdated);
+      };
     }, [product, data, onChange]);
 
     // Обновление граммов
@@ -2180,6 +3243,47 @@
         onChange({ ...data, grams: val });
       }
     }, [data, onChange, kcal100]);
+
+    const handleSubmit = useCallback(() => {
+      if (!product || grams <= 0) return;
+      // Режим редактирования — вызываем onSave
+      if (context?.isEditMode && context?.onSave) {
+        context.onSave({
+          mealIndex: context.mealIndex,
+          itemId: context.itemId,
+          grams
+        });
+      }
+      // Режим добавления — вызываем onAdd
+      else if (context?.onAdd) {
+        if (grams !== data?.grams && data?.grams && data.grams !== 100) {
+          console.warn('[GramsStep] ⚠️ grams mismatch on submit:', { final: grams, dataGrams: data.grams });
+        }
+        const hasNutrients = !!(product?.kcal100 || product?.protein100 || product?.carbs100);
+        if (!hasNutrients) {
+          console.error('🚨 [GramsStep] CRITICAL: Sending product with NO nutrients!', {
+            product,
+            stepData,
+            contextEditProduct: context?.editProduct,
+            dataSelectedProduct: data?.selectedProduct
+          });
+        }
+
+        context.onAdd({
+          product,
+          grams,
+          mealIndex: context.mealIndex
+        });
+
+        window.dispatchEvent(new CustomEvent('heysProductAdded', {
+          detail: { product, grams }
+        }));
+      }
+
+      if (HEYS.StepModal?.hide) {
+        HEYS.StepModal.hide({ scrollToDiary: true });
+      }
+    }, [product, grams, context, data, stepData]);
 
     // Считаем сумму ккал за день
     const { dateKey, mealIndex } = context || {};
@@ -2255,6 +3359,12 @@
             onChange: (e) => inputMode === 'grams'
               ? setGrams(e.target.value)
               : setKcalAndCalcGrams(e.target.value),
+            onKeyDown: (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSubmit();
+              }
+            },
             onFocus: (e) => e.target.select(),
             onClick: (e) => e.target.select(),
             inputMode: 'numeric',
@@ -2301,51 +3411,7 @@
       // === БОЛЬШАЯ КНОПКА ДОБАВИТЬ/ИЗМЕНИТЬ ===
       React.createElement('button', {
         className: 'aps-add-hero-btn',
-        onClick: () => {
-          if (product && grams > 0) {
-            // Режим редактирования — вызываем onSave
-            if (context?.isEditMode && context?.onSave) {
-              context.onSave({
-                mealIndex: context.mealIndex,
-                itemId: context.itemId,
-                grams
-              });
-            }
-            // Режим добавления — вызываем onAdd
-            else if (context?.onAdd) {
-              // Sanity check: warn if grams values are inconsistent
-              if (grams !== data?.grams && data?.grams && data.grams !== 100) {
-                console.warn('[GramsStep] ⚠️ grams mismatch on submit:', { final: grams, dataGrams: data.grams });
-              }
-              const hasNutrients = !!(product?.kcal100 || product?.protein100 || product?.carbs100);
-              // console.log('[GramsStep] onAdd called:', product?.name, 'grams:', grams, {...});
-              if (!hasNutrients) {
-                console.error('🚨 [GramsStep] CRITICAL: Sending product with NO nutrients!', {
-                  product,
-                  stepData,
-                  contextEditProduct: context?.editProduct,
-                  dataSelectedProduct: data?.selectedProduct
-                });
-              }
-
-              context.onAdd({
-                product,
-                grams,
-                mealIndex: context.mealIndex
-              });
-
-              // 🔔 Dispatch event для advice module
-              window.dispatchEvent(new CustomEvent('heysProductAdded', {
-                detail: { product, grams }
-              }));
-            }
-
-            // Закрыть модалку
-            if (HEYS.StepModal?.hide) {
-              HEYS.StepModal.hide({ scrollToDiary: true });
-            }
-          }
-        },
+        onClick: handleSubmit,
         style: {
           display: 'block',
           width: '100%',
@@ -2426,6 +3492,104 @@
         )
       )
     );
+  }
+
+  // === Полный редактор продукта (3 шага) ===
+  function showEditProductModal(productOrOptions = {}, maybeOptions = {}) {
+    let product = productOrOptions;
+    let options = maybeOptions;
+
+    if (productOrOptions && typeof productOrOptions === 'object' && productOrOptions.product) {
+      options = productOrOptions;
+      product = productOrOptions.product;
+    }
+
+    const { initialStep = 0, onSave, onClose } = options || {};
+
+    if (!product) {
+      HEYS.Toast?.warning('Продукт не найден') || alert('Продукт не найден');
+      return;
+    }
+
+    if (!HEYS.StepModal?.show) {
+      HEYS.Toast?.warning('Модалка недоступна') || alert('Модалка недоступна');
+      return;
+    }
+
+    if (!canEditProduct(product)) {
+      HEYS.Toast?.warning('Нет доступа к редактированию') || alert('Нет доступа к редактированию');
+      return;
+    }
+
+    HEYS.StepModal.show({
+      steps: [
+        {
+          id: 'edit_basic',
+          title: 'Основные',
+          hint: 'Название и 12 полей',
+          icon: '✏️',
+          component: ProductEditBasicStep,
+          validate: () => true,
+          hideHeaderNext: true,
+          getInitialData: () => ({ product })
+        },
+        {
+          id: 'edit_extra',
+          title: 'Дополнительно',
+          hint: 'Расширенные значения',
+          icon: '🧬',
+          component: ProductEditExtraStep,
+          validate: () => true,
+          hideHeaderNext: true
+        },
+        {
+          id: 'portions',
+          title: 'Порции',
+          hint: 'Настройте порции',
+          icon: '🥣',
+          component: PortionsStep,
+          validate: () => true,
+          hideHeaderNext: true
+        }
+      ],
+      context: {
+        isEditMode: true,
+        isProductEditor: true,
+        editProduct: product,
+        onFinish: async ({ product: updatedProduct, portions }) => {
+          const finalProduct = {
+            ...product,
+            ...(updatedProduct || {})
+          };
+
+          if (Array.isArray(portions)) {
+            finalProduct.portions = portions;
+          }
+
+          if (isSharedProduct(product)) {
+            const result = await updateSharedProduct(finalProduct);
+            if (result.ok) {
+              notifyProductUpdated(finalProduct);
+            }
+          } else {
+            saveLocalProduct(finalProduct);
+            notifyProductUpdated(finalProduct);
+          }
+
+          onSave?.(finalProduct);
+        }
+      },
+      initialStep,
+      showGreeting: false,
+      showStreak: false,
+      showTip: false,
+      showProgress: true,
+      allowSwipe: false,
+      hidePrimaryOnFirst: true,
+      finishLabel: 'Готово',
+      title: '',
+      onClose
+    });
   }
 
   // === Главная функция показа модалки ===
@@ -2540,15 +3704,15 @@
               className: 'mc-header-right-btn',
               onClick: (e) => {
                 e.stopPropagation();
-                // Переходим на шаг порций (индекс 2) внутри текущей модалки
-                if (goToStep) {
-                  goToStep(2, 'left');
-                } else {
-                  console.warn('[EditBtn] goToStep not available');
+                if (HEYS.StepModal?.hide) {
+                  HEYS.StepModal.hide({ scrollToDiary: false });
                 }
+                setTimeout(() => {
+                  showEditProductModal(product);
+                }, 80);
               },
-              title: 'Редактировать порции'
-            }, '✏️')
+              title: 'Редактировать продукт'
+            }, '✏️ Изменить')
           );
         }, // Счётчик + кнопка редактирования порций
         // Callback при создании продукта — обновляем список (не используется при 2 шагах, оставляем для совместимости)
@@ -2676,10 +3840,13 @@
   HEYS.AddProductStep = {
     show: showAddProductModal,
     showEditGrams: showEditGramsModal,
+    showEditProduct: showEditProductModal,
     ProductSearchStep,
     GramsStep,
     PortionsStep,
     CreateProductStep,
+    ProductEditBasicStep,
+    ProductEditExtraStep,
     HarmSelectStep,
     getCategoryIcon,
     computeSmartProducts

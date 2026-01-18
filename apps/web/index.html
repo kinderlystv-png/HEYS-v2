@@ -46,11 +46,32 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
 
-    <!-- HTTP/2 Server Push hints -->
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" as="script"
-        crossorigin="anonymous" />
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" as="script"
-        crossorigin="anonymous" />
+    <!-- React preload: динамически добавляется в зависимости от режима (dev/prod) -->
+    <script>
+        (function () {
+            var isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            var isDebug = location.search.indexOf('debug=1') !== -1
+                || localStorage.getItem('heys_debug') === '1';
+            var useDevBuild = isLocalhost || isDebug;
+
+            if (!useDevBuild) {
+                // Production: preload minified версии
+                var reactPreload = document.createElement('link');
+                reactPreload.rel = 'preload';
+                reactPreload.href = 'https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js';
+                reactPreload.as = 'script';
+                reactPreload.crossOrigin = 'anonymous';
+                document.head.appendChild(reactPreload);
+
+                var reactDomPreload = document.createElement('link');
+                reactDomPreload.rel = 'preload';
+                reactDomPreload.href = 'https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js';
+                reactDomPreload.as = 'script';
+                reactDomPreload.crossOrigin = 'anonymous';
+                document.head.appendChild(reactDomPreload);
+            }
+        })();
+    </script>
 
     <!-- Resource hints for better caching (prefetch, not preload to avoid warnings) -->
     <link rel="prefetch" href="heys_core_v12.js" />
@@ -1661,7 +1682,9 @@
                 ? 'https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js'
                 : 'https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js';
 
-            // Synchronous load to гарантировать React перед deferred-модулями
+            // Синхронная загрузка через document.write — ОБЯЗАТЕЛЬНА!
+            // createElement делает async загрузку, React не успевает до defer-скриптов
+            // Warning в консоли — меньшее зло чем сломанное приложение
             document.write('<script src="' + reactSrc + '" crossorigin="anonymous"><\/script>');
             document.write('<script src="' + reactDomSrc + '" crossorigin="anonymous"><\/script>');
         })();
@@ -1685,6 +1708,8 @@
     <script defer src="heys_simple_analytics.js" fetchpriority="high"></script>
     <!-- Smart search with typo correction, synonyms, phonetic (ё→е) -->
     <script defer src="heys_smart_search_v2.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_shared_products_export_fields_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_export_utils_v1.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_core_v12.js" fetchpriority="high"></script>
     <!-- Yandex Cloud API adapter (152-ФЗ compliant) - должен быть ДО supabase для auth -->
     <script defer src="heys_yandex_api_v1.js?v=5" fetchpriority="high"></script>

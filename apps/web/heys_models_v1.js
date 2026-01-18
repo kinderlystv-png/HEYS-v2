@@ -513,25 +513,67 @@
     return p;
   }
 
-  function getProductFromItem(it, idx) {
+  function getProductFromItem(it, idx, options = {}) {
     if (!it) return null;
-    // Defensive: если idx не передан или undefined — пропускаем поиск в индексе
-    if (!idx) {
-      // Если в item есть snapshot нутриентов — вернём сам item
-      const hasMacroSnapshot = it.kcal100 !== undefined || it.protein100 !== undefined || it.simple100 !== undefined || it.complex100 !== undefined || it.carbs100 !== undefined;
-      const hasGiOrHarm = it.gi !== undefined || it.gi100 !== undefined || it.GI !== undefined || it.giIndex !== undefined || normalizeHarm(it) != null;
-      if (hasMacroSnapshot || hasGiOrHarm) {
-        return normalizeProductFields(it);
+
+    const { mode = 'hybrid', enrichMissing = true } = options || {};
+    const allowIndex = !!idx && mode !== 'snapshot-only';
+    const allowSnapshot = mode !== 'database-only';
+
+    const maybeEnrich = (product) => {
+      if (!product || !enrichMissing || !HEYS.Harm?.enrichProduct) return product;
+      try {
+        return HEYS.Harm.enrichProduct(product) || product;
+      } catch {
+        return product;
       }
-      return null;
-    }
+    };
+
     const applyItemFallback = (product) => {
       if (!product || !it) return product;
+
+      const numericFields = [
+        'kcal100', 'protein100', 'carbs100', 'fat100',
+        'simple100', 'complex100', 'badFat100', 'goodFat100', 'trans100',
+        'fiber100', 'sodium100',
+        'omega3_100', 'omega6_100', 'nutrient_density',
+        'vitamin_a', 'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k',
+        'vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12',
+        'calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'selenium', 'iodine'
+      ];
+
+      numericFields.forEach((field) => {
+        if (product[field] == null && it[field] != null) {
+          product[field] = it[field];
+        }
+      });
+
+      const itemNova = it.nova_group ?? it.novaGroup;
+      if (product.nova_group == null && itemNova != null) {
+        product.nova_group = itemNova;
+      }
+      if (product.novaGroup == null && product.nova_group != null) {
+        product.novaGroup = product.nova_group;
+      }
+
+      if (product.additives == null && Array.isArray(it.additives) && it.additives.length) {
+        product.additives = it.additives;
+      }
+
+      const boolFields = ['is_organic', 'is_whole_grain', 'is_fermented', 'is_raw'];
+      boolFields.forEach((field) => {
+        if (product[field] == null && it[field] != null) {
+          product[field] = it[field];
+        }
+      });
 
       // Use centralized harm normalization for item fallback
       if (product.harm == null) {
         const itemHarm = normalizeHarm(it);
-        if (itemHarm != null) product.harm = itemHarm;
+        if (itemHarm != null) {
+          product.harm = itemHarm;
+          if (product.harmScore == null) product.harmScore = itemHarm;
+        }
       }
 
       if (product.gi == null) {
@@ -540,33 +582,42 @@
       }
       return product;
     };
+
+    const getSnapshot = () => {
+      // Если в item есть snapshot нутриентов — вернём сам item
+      const hasMacroSnapshot = it.kcal100 !== undefined || it.protein100 !== undefined || it.simple100 !== undefined || it.complex100 !== undefined || it.carbs100 !== undefined;
+      const hasGiOrHarm = it.gi !== undefined || it.gi100 !== undefined || it.GI !== undefined || it.giIndex !== undefined || normalizeHarm(it) != null;
+      if (hasMacroSnapshot || hasGiOrHarm) {
+        return maybeEnrich(normalizeProductFields(it));
+      }
+      return null;
+    };
+
+    if (!allowIndex) {
+      return allowSnapshot ? getSnapshot() : null;
+    }
+
     // Сначала ищем по названию (приоритет)
     const nm = normalizeProductName(it.name || it.title || '');
     if (nm && idx.byName) {
       const found = idx.byName.get(nm);
-      if (found) return applyItemFallback(normalizeProductFields(found));
+      if (found) return maybeEnrich(applyItemFallback(normalizeProductFields(found)));
     }
     // Fallback: ищем в индексе по product_id для обратной совместимости
     if (it.product_id != null && idx.byId) {
       const found = idx.byId.get(String(it.product_id).toLowerCase());
-      if (found) return applyItemFallback(normalizeProductFields(found));
+      if (found) return maybeEnrich(applyItemFallback(normalizeProductFields(found)));
     }
     if (it.productId != null && idx.byId) {
       const found = idx.byId.get(String(it.productId).toLowerCase());
-      if (found) return applyItemFallback(normalizeProductFields(found));
+      if (found) return maybeEnrich(applyItemFallback(normalizeProductFields(found)));
     }
-    // FALLBACK: если продукт не найден в индексе, но в item есть нутриенты/ГИ/вред — возвращаем сам item как продукт
-    // v3.8.2: Расширен для snapshot данных (simple100, complex100, carbs100)
-    const hasMacroSnapshot = it.kcal100 !== undefined || it.protein100 !== undefined || it.simple100 !== undefined || it.complex100 !== undefined || it.carbs100 !== undefined;
-    // Use centralized harm normalization for check
-    const hasGiOrHarm = it.gi !== undefined || it.gi100 !== undefined || it.GI !== undefined || it.giIndex !== undefined || normalizeHarm(it) != null;
-    if (hasMacroSnapshot || hasGiOrHarm) {
-      return normalizeProductFields(it);
-    }
+
+    if (allowSnapshot) return getSnapshot();
     return null;
   }
 
-  function per100(p) { const d = computeDerivedProduct(p); return { kcal100: d.kcal100, carbs100: d.carbs100, prot100: +p.protein100 || 0, fat100: d.fat100, simple100: +p.simple100 || 0, complex100: +p.complex100 || 0, bad100: +p.badFat100 || 0, good100: +p.goodFat100 || 0, trans100: +p.trans100 || 0, fiber100: +p.fiber100 || 0 }; }
+  function per100(p) { const d = computeDerivedProduct(p); return { kcal100: d.kcal100, carbs100: d.carbs100, prot100: +p.protein100 || 0, fat100: d.fat100, simple100: +p.simple100 || 0, complex100: +p.complex100 || 0, bad100: +p.badFat100 || 0, good100: +p.goodFat100 || 0, trans100: +p.trans100 || 0, fiber100: +p.fiber100 || 0, sodium100: +p.sodium100 || 0 }; }
 
   function scale(v, g) { return Math.round(((+v || 0) * (+g || 0) / 100) * 10) / 10; }
 
@@ -597,8 +648,8 @@
   function mealTotals(meal, idx) {
     const key = (meal.id || '') + '::' + mealSignature(meal) + '::' + idxSignature(idx);
     if (_mealTotalsCache.has(key)) return _mealTotalsCache.get(key);
-    const T = { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0 };
-    (meal.items || []).forEach(it => { const p = getProductFromItem(it, idx) || {}; const per = per100(p); const G = +it.grams || 0; T.kcal += scale(per.kcal100, G); T.carbs += scale(per.carbs100, G); T.simple += scale(per.simple100, G); T.complex += scale(per.complex100, G); T.prot += scale(per.prot100, G); T.fat += scale(per.fat100, G); T.bad += scale(per.bad100, G); T.good += scale(per.good100, G); T.trans += scale(per.trans100, G); T.fiber += scale(per.fiber100, G); });
+    const T = { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0, sodium: 0 };
+    (meal.items || []).forEach(it => { const p = getProductFromItem(it, idx) || {}; const per = per100(p); const G = +it.grams || 0; T.kcal += scale(per.kcal100, G); T.carbs += scale(per.carbs100, G); T.simple += scale(per.simple100, G); T.complex += scale(per.complex100, G); T.prot += scale(per.prot100, G); T.fat += scale(per.fat100, G); T.bad += scale(per.bad100, G); T.good += scale(per.good100, G); T.trans += scale(per.trans100, G); T.fiber += scale(per.fiber100, G); T.sodium += scale(per.sodium100, G); });
     Object.keys(T).forEach(k => T[k] = round1(T[k]));
     _mealTotalsCache.set(key, T);
     return T;
@@ -1205,7 +1256,9 @@ NOVA:X|Na:X|O3:X|O6:X|Org:0/1|WG:0/1|Fer:0/1|Raw:0/1|vA:X|vC:X|vD:X|vE:X|vK:X|vB
    * @returns {string}
    */
   function generateAIProductStringPrompt(productName) {
-    return `Для продукта "${productName}" дай строку с данными в формате (каждое поле с новой строки):
+    return `Сделай одну текстовую строку в формате "Ключ: значение" (каждое поле с новой строки). Никакого JSON/кода. Все значения на 100г.
+
+ОБЯЗАТЕЛЬНО:
 Название: ${productName}
 Ккал: X
 Углеводы: X
@@ -1219,11 +1272,13 @@ NOVA:X|Na:X|O3:X|O6:X|Org:0/1|WG:0/1|Fer:0/1|Raw:0/1|vA:X|vC:X|vD:X|vE:X|vK:X|vB
 Клетчатка: X
 ГИ: X
 Вред: X
+
+ОПЦИОНАЛЬНО (если знаешь — добавь):
 Натрий: X
 Омега-3: X
 Омега-6: X
-NOVA: X
-Добавки: E621, E330
+NOVA: 1-4
+Добавки: E621, E330 (если нет — "нет")
 Нутриентная плотность: X
 Органик: 0/1
 Цельнозерновой: 0/1
@@ -1247,9 +1302,7 @@ NOVA: X
 Калий: X
 Цинк: X
 Селен: X
-Йод: X
-
-Если значения нет — пропусти строку. Только строки, без пояснений.`;
+Йод: X`;
   }
 
   /**
@@ -1288,9 +1341,10 @@ NOVA: X
       }
     }
 
-    // NOVA group
+    // NOVA group — normalize snake_case → camelCase
     if (result.nova_group != null) {
       result.nova_group = parseInt(result.nova_group, 10);
+      result.novaGroup = result.nova_group; // camelCase alias for heys_harm_v1.js
     }
 
     // Boolean flags

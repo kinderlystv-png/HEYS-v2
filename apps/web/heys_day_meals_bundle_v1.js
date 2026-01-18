@@ -1506,7 +1506,7 @@
     const uid = U.uid || (() => 'id_' + Date.now());
     const buildProductIndex = U.buildProductIndex || (() => ({}));
     const getProductFromItem = U.getProductFromItem || (() => null);
-    const per100 = U.per100 || ((p) => ({ kcal100: 0, carbs100: 0, prot100: 0, fat100: 0, simple100: 0, complex100: 0, bad100: 0, good100: 0, trans100: 0, fiber100: 0 }));
+    const per100 = U.per100 || ((p) => ({ kcal100: 0, carbs100: 0, prot100: 0, fat100: 0, simple100: 0, complex100: 0, bad100: 0, good100: 0, trans100: 0, fiber100: 0, sodium100: 0 }));
     const scale = U.scale || ((v, g) => Math.round(((+v || 0) * (+g || 0) / 100) * 10) / 10);
 
     // === MealAddProduct Component (extracted for stable identity) ===
@@ -1814,6 +1814,7 @@
         { label: 'ПолЖ<br>/100', per100: true },
         { label: 'СупЖ<br>/100', per100: true },
         { label: 'Клет<br>/100', per100: true },
+        { label: 'Na<br>/100', per100: true },
         { label: 'ккал' },
         { label: 'У' },
         { label: 'Прост' },
@@ -1824,6 +1825,7 @@
         { label: 'ПолЖ' },
         { label: 'СупЖ' },
         { label: 'Клет' },
+        { label: 'Na' },
         { label: 'ГИ' },
         { label: 'Вред' },
         { label: '' }
@@ -1857,7 +1859,8 @@
             bad: scale(per.bad100, grams),
             good: scale(per.good100, grams),
             trans: scale(per.trans100, grams),
-            fiber: scale(per.fiber100, grams)
+            fiber: scale(per.fiber100, grams),
+            sodium: scale(per.sodium100, grams)
         };
         const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex ?? item.gi;
         const harmVal = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct ?? item.harm ?? item.harmScore;
@@ -1889,6 +1892,7 @@
             React.createElement('td', { 'data-cell': 'per100' }, fmtVal('good100', per.good100)),
             React.createElement('td', { 'data-cell': 'per100' }, fmtVal('trans100', per.trans100)),
             React.createElement('td', { 'data-cell': 'per100' }, fmtVal('fiber100', per.fiber100)),
+            React.createElement('td', { 'data-cell': 'per100' }, fmtVal('sodium100', per.sodium100)),
             React.createElement('td', { 'data-cell': 'kcal' }, fmtVal('kcal', row.kcal)),
             React.createElement('td', { 'data-cell': 'carbs' }, fmtVal('carbs', row.carbs)),
             React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('simple', row.simple)),
@@ -1899,6 +1903,7 @@
             React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('good', row.good)),
             React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('trans', row.trans)),
             React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('fiber', row.fiber)),
+            React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('sodium', row.sodium)),
             React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('gi', giVal)),
             React.createElement('td', { 'data-cell': 'hidden' }, fmtVal('harm', harmVal)),
             React.createElement('td', { 'data-cell': 'delete' }, React.createElement('button', { className: 'btn secondary', onClick: () => removeItem(mealIndex, item.id) }, '×'))
@@ -2151,6 +2156,7 @@
         { label: 'ПЖ<br>/100', per100: true },
         { label: 'ТрЖ<br>/100', per100: true },
         { label: 'Клетч<br>/100', per100: true },
+        { label: 'Na<br>/100', per100: true },
         { label: 'ГИ' },
         { label: 'Вред' },
         { label: '' },
@@ -2548,7 +2554,7 @@
                     React.createElement('tr', { className: 'tr-sum' },
                         React.createElement('td', { className: 'fw-600' }, ''),
                         React.createElement('td', null, ''),
-                        React.createElement('td', { colSpan: 10 }, React.createElement('div', { className: 'table-divider' })),
+                        React.createElement('td', { colSpan: 12 }, React.createElement('div', { className: 'table-divider' })),
                         React.createElement('td', null, fmtVal('kcal', totals.kcal)),
                         React.createElement('td', null, fmtVal('carbs', totals.carbs)),
                         React.createElement('td', null, fmtVal('simple', totals.simple)),
@@ -2559,6 +2565,7 @@
                         React.createElement('td', null, fmtVal('good', totals.good)),
                         React.createElement('td', null, fmtVal('trans', totals.trans)),
                         React.createElement('td', null, fmtVal('fiber', totals.fiber)),
+                        React.createElement('td', null, fmtVal('sodium', totals.sodium)),
                         React.createElement('td', null, fmtVal('gi', totals.gi)),
                         React.createElement('td', null, fmtVal('harm', totals.harm)),
                         React.createElement('td', null, ''),
