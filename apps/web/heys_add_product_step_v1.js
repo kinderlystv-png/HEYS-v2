@@ -84,7 +84,15 @@
     }
   };
 
-  const isCuratorUser = () => !!HEYS.cloud?.getUser?.();
+  const hasCuratorJwt = () => {
+    try {
+      return !!localStorage.getItem('heys_curator_session');
+    } catch (_) {
+      return false;
+    }
+  };
+
+  const isCuratorUser = () => !!HEYS.cloud?.getUser?.() || hasCuratorJwt();
 
   const isSharedProduct = (product) => {
     if (!product) return false;
@@ -178,7 +186,23 @@
     }));
   };
 
-  const saveLocalProduct = (product) => {
+  // Хелпер для проверки изменений нутриентов (для user_modified флага)
+  const hasNutrientChanges = (oldProduct, newProduct) => {
+    const nutrientKeys = [
+      'simple100', 'complex100', 'protein100',
+      'badFat100', 'goodFat100', 'trans100',
+      'fiber100', 'gi', 'harm'
+    ];
+    return nutrientKeys.some(key => {
+      const oldVal = oldProduct?.[key];
+      const newVal = newProduct?.[key];
+      // Считаем изменённым если оба определены и различаются
+      if (oldVal == null && newVal == null) return false;
+      return oldVal !== newVal;
+    });
+  };
+
+  const saveLocalProduct = (product, isUserEdit = true) => {
     if (!product) return;
     const U = HEYS.utils || {};
     const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
@@ -186,8 +210,17 @@
     const idx = products.findIndex((p) => String(p.id ?? p.product_id ?? p.name) === pid);
     if (idx === -1) return;
 
+    const existing = products[idx];
     const nextProducts = [...products];
-    nextProducts[idx] = { ...products[idx], ...product };
+
+    // Устанавливаем user_modified: true если пользователь изменил нутриенты
+    const shouldMarkModified = isUserEdit && hasNutrientChanges(existing, product);
+    nextProducts[idx] = {
+      ...existing,
+      ...product,
+      // Сохраняем user_modified если уже был true, или ставим если сейчас изменили
+      user_modified: existing.user_modified === true || shouldMarkModified
+    };
 
     if (HEYS.products?.setAll) {
       HEYS.products.setAll(nextProducts);
@@ -1357,7 +1390,7 @@ NOVA: 1
     const [publishToShared, setPublishToShared] = useState(true);
 
     // Определяем тип пользователя (куратор или клиент по PIN)
-    const isCurator = !!(HEYS.cloud?.getUser?.());
+    const isCurator = isCuratorUser();
 
     // Доступ к навигации StepModal
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
@@ -2930,7 +2963,7 @@ NOVA: 1
 
         // 🌐 Публикация в shared (async, не блокируем переход)
         const publishToShared = stepData?.create?.publishToShared ?? true;
-        const isCurator = !!HEYS.cloud?.curatorId;
+        const isCurator = isCuratorUser();
 
         if (publishToShared && HEYS.cloud) {
           (async () => {

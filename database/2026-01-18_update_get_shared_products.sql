@@ -61,7 +61,9 @@ RETURNS TABLE (
   potassium NUMERIC,
   zinc NUMERIC,
   selenium NUMERIC,
-  iodine NUMERIC
+  iodine NUMERIC,
+  -- 🆕 Product Priority tracking
+  updated_at TIMESTAMPTZ
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -118,7 +120,9 @@ BEGIN
     sp.potassium,
     sp.zinc,
     sp.selenium,
-    sp.iodine
+    sp.iodine,
+    -- Product Priority tracking
+    sp.updated_at
   FROM shared_products sp
   WHERE
     (p_search IS NULL OR sp.name_norm ILIKE '%' || LOWER(p_search) || '%')

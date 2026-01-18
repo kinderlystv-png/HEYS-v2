@@ -20,6 +20,7 @@
     transform: translateY(100%);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -43,8 +44,15 @@
 }
 
 @keyframes bounceIcon {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 .pwa-banner-text {
@@ -192,8 +200,17 @@
 }
 
 @keyframes iosPulse {
-  0%, 100% { transform: scale(1); box-shadow: 0 2px 8px rgba(0, 122, 255, 0.4); }
-  50% { transform: scale(1.1); box-shadow: 0 2px 12px rgba(0, 122, 255, 0.6); }
+
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.4);
+  }
+
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 2px 12px rgba(0, 122, 255, 0.6);
+  }
 }
 
 .ios-got-it-btn {
@@ -224,8 +241,15 @@
 }
 
 @keyframes iosArrowBounce {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(4px); }
+
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  50% {
+    transform: translateX(-50%) translateY(4px);
+  }
 }
 
 [data-theme="dark"] .ios-pwa-banner .pwa-banner-content {
@@ -249,6 +273,7 @@
     opacity: 0;
     transform: translateX(-50%) translateY(-100%);
   }
+
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
@@ -362,13 +387,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: calc(16px + var(--safe-area-top)) calc(16px + var(--safe-area-right)) calc(16px + var(--safe-area-bottom)) calc(16px + var(--safe-area-left));
   overflow: hidden;
 }
 
 .mc-modal {
   width: 100%;
   max-width: 360px;
+  max-height: calc(100dvh - 32px - var(--safe-area-top) - var(--safe-area-bottom));
+  display: flex;
+  flex-direction: column;
   background: linear-gradient(135deg, var(--color-white) 0%, #f8fafc 100%);
   border-radius: 24px;
   overflow: hidden;
@@ -631,6 +659,7 @@
     opacity: 0;
     transform: translateX(20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -1078,7 +1107,7 @@
   border-radius: 50%;
   background: #fff;
   border: 3px solid var(--color-emerald-500, #10b981);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -1089,7 +1118,7 @@
   border-radius: 50%;
   background: #fff;
   border: 3px solid var(--color-emerald-500, #10b981);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -1097,7 +1126,7 @@
 .household-slider:active::-webkit-slider-thumb,
 .household-slider:active::-moz-range-thumb {
   transform: scale(1.05);
-  box-shadow: 0 6px 14px rgba(0,0,0,0.2);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
 }
 
 .household-slider-labels {
@@ -1133,7 +1162,7 @@
 
 .household-preset.active {
   color: #fff;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
 
 .household-examples {
@@ -1253,9 +1282,17 @@
 }
 
 @keyframes householdPulse {
-  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
-  70% { box-shadow: 0 0 0 14px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45);
+  }
+
+  70% {
+    box-shadow: 0 0 0 14px rgba(16, 185, 129, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
 }
 
 .household-spark-labels {
@@ -1670,8 +1707,15 @@
 }
 
 @keyframes mc-emoji-bounce {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.2); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
 }
 
 .mc-quality-value {
@@ -1759,7 +1803,8 @@
   padding: 12px 16px;
   border-radius: 12px;
   border: 1px solid;
-  min-height: 56px; /* Фикс для 2 строк текста */
+  min-height: 56px;
+  /* Фикс для 2 строк текста */
   transition: all 0.3s ease;
   animation: mc-advice-appear 0.3s ease-out;
 }
@@ -1769,6 +1814,7 @@
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2177,7 +2223,11 @@
 /* Step content with slide animations */
 .mc-step-content {
   padding: 0 24px 24px;
-  min-height: 420px; /* Под самый высокий шаг (качество сна) */
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Ошибка валидации — shake-анимация */
@@ -2186,9 +2236,26 @@
 }
 
 @keyframes mc-shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-6px); }
-  20%, 40%, 60%, 80% { transform: translateX(6px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-6px);
+  }
+
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(6px);
+  }
 }
 
 /* Выход влево (переход к следующему шагу) */
@@ -2203,25 +2270,27 @@
 
 /* Выход влево — spring-like */
 @keyframes mc-slide-out-left {
-  0% { 
-    opacity: 1; 
-    transform: translateX(0) scale(1); 
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
   }
-  100% { 
-    opacity: 0; 
-    transform: translateX(-40px) scale(0.95); 
+
+  100% {
+    opacity: 0;
+    transform: translateX(-40px) scale(0.95);
   }
 }
 
 /* Выход вправо — spring-like */
 @keyframes mc-slide-out-right {
-  0% { 
-    opacity: 1; 
-    transform: translateX(0) scale(1); 
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
   }
-  100% { 
-    opacity: 0; 
-    transform: translateX(40px) scale(0.95); 
+
+  100% {
+    opacity: 0;
+    transform: translateX(40px) scale(0.95);
   }
 }
 
@@ -2236,24 +2305,26 @@
 }
 
 @keyframes mc-slide-in-from-right {
-  0% { 
-    opacity: 0; 
-    transform: translateX(50px) scale(0.95); 
+  0% {
+    opacity: 0;
+    transform: translateX(50px) scale(0.95);
   }
-  100% { 
-    opacity: 1; 
-    transform: translateX(0) scale(1); 
+
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
   }
 }
 
 @keyframes mc-slide-in-from-left {
-  0% { 
-    opacity: 0; 
-    transform: translateX(-50px) scale(0.95); 
+  0% {
+    opacity: 0;
+    transform: translateX(-50px) scale(0.95);
   }
-  100% { 
-    opacity: 1; 
-    transform: translateX(0) scale(1); 
+
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
   }
 }
 
@@ -2283,6 +2354,7 @@
     opacity: 0;
     transform: translateY(-8px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0);
@@ -2617,7 +2689,8 @@
   font-size: 13px;
   color: var(--color-gray-500);
   font-style: italic;
-  min-height: 36px; /* Фикс для 2 строк текста */
+  min-height: 36px;
+  /* Фикс для 2 строк текста */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2711,6 +2784,7 @@
   color: var(--color-slate-400);
   border-color: rgba(255, 255, 255, 0.05);
 }
+
 /* MODULE 06 — PWA & Offline
  * Scope: install banners, offline/empty states, service prompts.
  */

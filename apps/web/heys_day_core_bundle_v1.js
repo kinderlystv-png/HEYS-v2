@@ -496,7 +496,8 @@
                     window.dispatchEvent(new CustomEvent('heys:recovery-blocked', {
                         detail: { reason: 'EMPTY_BASE', recoveredCount: recovered.length }
                     }));
-                    return { success: false, recovered: [], fromStamp: 0, fromShared: 0, stillMissing: Object.keys(orphans), error: 'BLOCKED_EMPTY_BASE' };
+                    // 🐛 FIX v1.1: Было Object.keys(orphans) — orphans не определена, заменено на missingProducts
+                    return { success: false, recovered: [], fromStamp: 0, fromShared: 0, stillMissing: Array.from(missingProducts.keys()), error: 'BLOCKED_EMPTY_BASE' };
                 }
 
                 const newProducts = [...products, ...recovered.filter(p => p._recoveredFrom === 'stamp')];

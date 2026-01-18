@@ -780,12 +780,28 @@
         }
       };
 
+      // 🔄 FIX v1.1: Слушаем событие heys:orphans-recovered — после восстановления orphan-продуктов
+      // Это источник правды — recovery добавляет продукты в localStorage, UI должен подтянуться
+      const handleOrphansRecovered = () => {
+        const latest = (window.HEYS.store?.get?.('heys_products', null)) ||
+          (window.HEYS.utils?.lsGet?.('heys_products', [])) || [];
+        if (Array.isArray(latest) && latest.length > 0) {
+          if (window.DEV) {
+            window.DEV.log('🔄 [RATION] Orphans recovered, updating state:', latest.length, 'items');
+          }
+          // После recovery всегда обновляем state — это source of truth
+          setProducts(latest);
+        }
+      };
+
       window.addEventListener('heysProductsUpdated', handleProductsUpdated);
       window.addEventListener('heysSyncCompleted', handleProductsUpdated);
+      window.addEventListener('heys:orphans-recovered', handleOrphansRecovered);
 
       return () => {
         window.removeEventListener('heysProductsUpdated', handleProductsUpdated);
         window.removeEventListener('heysSyncCompleted', handleProductsUpdated);
+        window.removeEventListener('heys:orphans-recovered', handleOrphansRecovered);
       };
     }, []);
 
@@ -1665,6 +1681,9 @@
         selenium: toNum(sharedProduct.selenium),
         iodine: toNum(sharedProduct.iodine),
         shared_origin_id: sharedProduct.id, // Связь с shared продуктом
+        shared_updated_at: sharedProduct.updated_at || null, // Время обновления в shared (для приоритета)
+        cloned_at: Date.now(), // Когда клонировали (для сравнения с shared_updated_at)
+        user_modified: false, // Пользователь не редактировал (приоритет shared если обновился)
         createdAt: Date.now()
       };
 
@@ -1774,6 +1793,9 @@
         selenium: toNum(sharedProduct.selenium),
         iodine: toNum(sharedProduct.iodine),
         shared_origin_id: sharedProduct.id, // Связь с shared
+        shared_updated_at: sharedProduct.updated_at || null, // Время обновления в shared
+        cloned_at: Date.now(), // Когда клонировали
+        user_modified: false, // Пользователь не редактировал
         createdAt: Date.now()
       };
       const d = computeDerived(clone);
@@ -2750,6 +2772,9 @@
         selenium: toNum(sharedProduct.selenium),
         iodine: toNum(sharedProduct.iodine),
         shared_origin_id: sharedProduct.id, // Связь с shared продуктом
+        shared_updated_at: sharedProduct.updated_at || null, // Время обновления в shared
+        cloned_at: Date.now(), // Когда клонировали
+        user_modified: false, // Пользователь не редактировал
         createdAt: Date.now()
       };
 

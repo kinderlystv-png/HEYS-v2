@@ -5621,6 +5621,20 @@
     });
 
     if (!user) {
+      try {
+        const token = localStorage.getItem('heys_curator_session');
+        if (token && HEYS?.YandexAPI?.verifyCuratorToken) {
+          const verifyResult = await HEYS.YandexAPI.verifyCuratorToken(token);
+          if (verifyResult?.data?.valid && verifyResult.data.user) {
+            user = verifyResult.data.user;
+          }
+        }
+      } catch (e) {
+        err('[SHARED PRODUCTS] JWT verify failed:', e);
+      }
+    }
+
+    if (!user) {
       console.log('[SHARED] ❌ Not authenticated:', { user: !!user });
       return { data: null, error: 'Not authenticated', status: 'error' };
     }
@@ -5685,6 +5699,22 @@
       const status = data?.status || 'published';
       console.log('[SHARED] ✅ Result:', status, product.name);
       log('[SHARED PRODUCTS] Result:', status, product.name);
+
+      // 🔧 v3.22.0: Инвалидируем кэш shared products после успешной публикации
+      if (status === 'published') {
+        _sharedProductsCacheTime = 0;
+        console.log('[SHARED] 🔄 Cache invalidated after publish');
+
+        // Добавляем продукт в локальный кэш немедленно (чтобы не ждать re-fetch)
+        const newSharedProduct = {
+          ...productData,
+          id: data?.id,
+          created_at: new Date().toISOString()
+        };
+        _sharedProductsCache = [newSharedProduct, ..._sharedProductsCache];
+        console.log('[SHARED] ✅ Added to local cache:', product.name);
+      }
+
       return {
         data: { id: data?.id },
         error: null,

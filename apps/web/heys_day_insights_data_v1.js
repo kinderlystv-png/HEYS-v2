@@ -1,5 +1,5 @@
 // heys_day_insights_data_v1.js — day insights calculations (kcal trend, balance viz, heatmap, meals chart)
-(function(global) {
+(function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.dayInsightsData = HEYS.dayInsightsData || {};
 
@@ -448,7 +448,7 @@
                 // Refeed: используем расширенные зоны (до 1.35 = ok)
                 const refeedZone = rz.getDayZone(ratio, { isRefeedDay: true });
                 status = refeedZone.id === 'refeed_ok' ? 'green' :
-                         refeedZone.id === 'refeed_under' ? 'yellow' : 'red';
+                  refeedZone.id === 'refeed_under' ? 'yellow' : 'red';
               } else {
                 status = rz ? rz.getHeatmapStatus(ratio) : 'empty';
               }
@@ -562,7 +562,7 @@
       const sortedMeals = [...meals].sort((a, b) => parseTimeToMin(b.time) - parseTimeToMin(a.time));
 
       const data = sortedMeals.map((meal, mi) => {
-        const totals = M && M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal: 0, carbs:0, simple:0, complex:0, prot:0, fat:0, bad:0, good:0, trans:0, fiber:0 };
+        const totals = M && M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0 };
         // Используем ручной тип если есть, иначе автоопределение
         const autoTypeInfo = getMealType ? getMealType(mi, meal, sortedMeals, pIndex) : { type: 'snack', name: 'Перекус', icon: '🍎' };
         const manualType = meal.mealType;
@@ -624,24 +624,26 @@
       };
       const yesterdayAvgScore = +(localStorage.getItem(getYesterdayKey()) || 0);
 
-      // Сохраняем сегодняшний avg ТОЛЬКО если изменился (чтобы не спамить sync)
-      if (avgQualityScore > 0) {
-        const todayKey = 'heys_meal_avg_' + new Date().toISOString().slice(0, 10);
-        const currentSaved = +(localStorage.getItem(todayKey) || 0);
-        if (currentSaved !== avgQualityScore) {
-          localStorage.setItem(todayKey, String(avgQualityScore));
-        }
-      }
-
       // Debug snapshot
       try {
         HEYSRef.debug = HEYSRef.debug || {};
         HEYSRef.debug.mealsChartData = { meals: data, totalKcal, maxKcal, targetKcal: optimum || 2000, qualityStreak, avgQualityScore };
         HEYSRef.debug.dayProductIndex = pIndex;
-      } catch (e) {}
+      } catch (e) { }
 
       return { meals: data, totalKcal, maxKcal, targetKcal: optimum || 2000, qualityStreak, avgQualityScore, bestMealIndex, yesterdayAvgScore };
     }, [safeMeals, pIndex, optimum]);
+
+    // Сохраняем сегодняшний avg после рендера (избегаем setState во время render)
+    const mealsChartAvgScore = mealsChartData?.avgQualityScore || 0;
+    React.useEffect(() => {
+      if (mealsChartAvgScore <= 0) return;
+      const todayKey = 'heys_meal_avg_' + new Date().toISOString().slice(0, 10);
+      const currentSaved = +(localStorage.getItem(todayKey) || 0);
+      if (currentSaved !== mealsChartAvgScore) {
+        localStorage.setItem(todayKey, String(mealsChartAvgScore));
+      }
+    }, [mealsChartAvgScore]);
 
     return {
       kcalTrend,

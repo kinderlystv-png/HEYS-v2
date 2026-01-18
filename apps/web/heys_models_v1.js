@@ -119,6 +119,76 @@
     };
   }
 
+  // ====================================================================
+  // 🔄 PRODUCT PRIORITY BY ORIGIN (Variant C+)
+  // ====================================================================
+  // Логика приоритета: local vs shared продукты при конфликте данных
+  // 1. Если пользователь редактировал локальный продукт → local wins
+  // 2. Если shared обновился после клонирования → shared wins
+  // 3. По умолчанию → local wins
+  // ====================================================================
+
+  /**
+   * Определить приоритетный источник данных для продукта
+   * @param {Object} localProduct - Локальный продукт (из личной базы)
+   * @param {Object} sharedProduct - Shared продукт (из общей базы, может быть null)
+   * @returns {'local'|'shared'} - Какой источник использовать
+   */
+  function getProductPrioritySource(localProduct, sharedProduct) {
+    if (!localProduct) return 'shared';
+    if (!sharedProduct) return 'local';
+
+    // 1. Если пользователь вручную редактировал — его данные всегда приоритетнее
+    if (localProduct.user_modified === true) {
+      return 'local';
+    }
+
+    // 2. Если это клон из shared — проверяем обновился ли shared
+    if (localProduct.shared_origin_id) {
+      const sharedUpdatedAt = sharedProduct.updated_at
+        ? new Date(sharedProduct.updated_at).getTime()
+        : 0;
+      const clonedAt = localProduct.cloned_at
+        || localProduct.createdAt
+        || 0;
+
+      // Shared обновился после клонирования → shared wins
+      if (sharedUpdatedAt > clonedAt) {
+        return 'shared';
+      }
+    }
+
+    // 3. По умолчанию — локальный продукт
+    return 'local';
+  }
+
+  /**
+   * Получить данные продукта с учётом приоритета источника
+   * @param {Object} localProduct - Локальный продукт
+   * @param {Object} sharedProduct - Shared продукт (может быть null)
+   * @returns {Object} - Продукт с оптимальными данными
+   */
+  function getProductWithPriority(localProduct, sharedProduct) {
+    const source = getProductPrioritySource(localProduct, sharedProduct);
+
+    if (source === 'local' || !sharedProduct) {
+      return localProduct;
+    }
+
+    // Merge: берём данные из shared, но сохраняем локальные метаданные
+    return {
+      ...sharedProduct,
+      // Сохраняем локальные идентификаторы и метаданные
+      id: localProduct.id,
+      shared_origin_id: localProduct.shared_origin_id,
+      cloned_at: localProduct.cloned_at,
+      createdAt: localProduct.createdAt,
+      user_modified: false,
+      // Маркер для отладки
+      _priority_source: 'shared'
+    };
+  }
+
   /** @typedef {Object} Portion
    * @property {string} name - Название порции ("1 шт", "1 ч.л.")
    * @property {number} grams - Граммы в порции
@@ -516,9 +586,16 @@
   function getProductFromItem(it, idx, options = {}) {
     if (!it) return null;
 
-    const { mode = 'hybrid', enrichMissing = true } = options || {};
+    const { mode = 'hybrid', enrichMissing = true, sharedCache = null } = options || {};
     const allowIndex = !!idx && mode !== 'snapshot-only';
     const allowSnapshot = mode !== 'database-only';
+
+    // Получаем shared products cache (если не передан в options)
+    const getSharedCache = () => {
+      if (sharedCache) return sharedCache;
+      // Fallback: пытаемся получить из глобального кэша
+      return HEYS.CloudShared?.getCachedSharedProducts?.() || [];
+    };
 
     const maybeEnrich = (product) => {
       if (!product || !enrichMissing || !HEYS.Harm?.enrichProduct) return product;
@@ -527,6 +604,27 @@
       } catch {
         return product;
       }
+    };
+
+    // 🆕 Применить логику приоритета источника (local vs shared)
+    const applyProductPriority = (localProduct) => {
+      if (!localProduct || !localProduct.shared_origin_id) {
+        return localProduct;
+      }
+
+      const cache = getSharedCache();
+      if (!cache || cache.length === 0) {
+        return localProduct;
+      }
+
+      // Находим shared-оригинал
+      const sharedProduct = cache.find(s => s.id === localProduct.shared_origin_id);
+      if (!sharedProduct) {
+        return localProduct;
+      }
+
+      // Применяем логику приоритета
+      return getProductWithPriority(localProduct, sharedProduct);
     };
 
     const applyItemFallback = (product) => {
@@ -601,16 +699,26 @@
     const nm = normalizeProductName(it.name || it.title || '');
     if (nm && idx.byName) {
       const found = idx.byName.get(nm);
-      if (found) return maybeEnrich(applyItemFallback(normalizeProductFields(found)));
+      if (found) {
+        // 🆕 Применяем логику приоритета local vs shared
+        const prioritized = applyProductPriority(found);
+        return maybeEnrich(applyItemFallback(normalizeProductFields(prioritized)));
+      }
     }
     // Fallback: ищем в индексе по product_id для обратной совместимости
     if (it.product_id != null && idx.byId) {
       const found = idx.byId.get(String(it.product_id).toLowerCase());
-      if (found) return maybeEnrich(applyItemFallback(normalizeProductFields(found)));
+      if (found) {
+        const prioritized = applyProductPriority(found);
+        return maybeEnrich(applyItemFallback(normalizeProductFields(prioritized)));
+      }
     }
     if (it.productId != null && idx.byId) {
       const found = idx.byId.get(String(it.productId).toLowerCase());
-      if (found) return maybeEnrich(applyItemFallback(normalizeProductFields(found)));
+      if (found) {
+        const prioritized = applyProductPriority(found);
+        return maybeEnrich(applyItemFallback(normalizeProductFields(prioritized)));
+      }
     }
 
     if (allowSnapshot) return getSnapshot();
@@ -912,6 +1020,10 @@
   M.normalizeHarm = normalizeHarm;
   M.normalizeHarmFields = normalizeHarmFields;
 
+  // 🆕 Product Priority by Origin (v4.5.0)
+  M.getProductPrioritySource = getProductPrioritySource;
+  M.getProductWithPriority = getProductWithPriority;
+
   // ====================================================================
   // 🧪 EXTENDED NUTRIENTS PARSER (v4.4.0)
   // ====================================================================
@@ -1096,7 +1208,9 @@
     let fallbackName = '';
 
     chunks.forEach((line) => {
-      const match = line.match(/^([^:=\-–]+)[\s]*[:=\-–]+[\s]*(.+)$/);
+      // Regex: ключ может содержать буквы, цифры, пробелы и дефис, но заканчивается перед ": " или "= "
+      // Используем ленивый квантификатор и lookbehind для корректного разбора "Транс-жиры: 0.0"
+      const match = line.match(/^(.+?)[\s]*[:=][\s]+(.+)$/);
       if (!match) {
         if (!result.name && !/\d/.test(line)) {
           fallbackName = line.trim();
