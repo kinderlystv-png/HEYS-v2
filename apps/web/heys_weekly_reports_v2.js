@@ -39,6 +39,12 @@
         return d.getUTCFullYear() + '-W' + String(week).padStart(2, '0');
     }
 
+    function getLastWeekAnchorDate(now = new Date()) {
+        const lastWeek = new Date(now);
+        lastWeek.setDate(lastWeek.getDate() - 7);
+        return lastWeek.toISOString().split('T')[0];
+    }
+
     function getDayTotals(day, pIndex) {
         if (HEYS.dayCalculations?.calculateDayTotals) {
             return HEYS.dayCalculations.calculateDayTotals(day, pIndex);
@@ -211,48 +217,77 @@
     function WeeklyWrapStep({ data }) {
         const React = global.React;
         if (!React) return null;
-        const { createElement: h } = React;
-        const report = data?.report;
+        const { createElement: h, useMemo, useState } = React;
 
-        if (!report) {
-            return h('div', { className: 'weekly-wrap-step' },
-                h('div', { className: 'weekly-wrap-step__title' }, 'Итоги недели'),
-                h('div', { className: 'weekly-wrap-step__subtitle' }, 'Недостаточно данных')
-            );
-        }
+        const [weekOffset, setWeekOffset] = useState(0);
+        const anchorDate = useMemo(() => {
+            const base = new Date();
+            base.setDate(base.getDate() - 7 + weekOffset * 7);
+            return base.toISOString().split('T')[0];
+        }, [weekOffset]);
+
+        const report = useMemo(() => {
+            const getter = getLsGet();
+            const profile = getter('heys_profile', {});
+            const pIndex = HEYS.products?.buildIndex?.();
+            return buildWeekReport({ dateStr: anchorDate, lsGet: getter, profile, pIndex });
+        }, [anchorDate]);
+
+        const canGoNext = weekOffset < 0;
+        const handlePrevWeek = () => setWeekOffset((prev) => prev - 1);
+        const handleNextWeek = () => setWeekOffset((prev) => (prev < 0 ? prev + 1 : prev));
 
         return h('div', { className: 'weekly-wrap-step' },
             h('div', { className: 'weekly-wrap-step__title' }, '📊 Итоги недели'),
-            h('div', { className: 'weekly-wrap-step__range' }, report.rangeLabel),
-            h('div', { className: 'weekly-wrap-step__stats' },
-                h('div', { className: 'weekly-wrap-step__stat' },
-                    h('div', { className: 'weekly-wrap-step__stat-value' }, report.daysWithData),
-                    h('div', { className: 'weekly-wrap-step__stat-label' }, 'дней с едой')
-                ),
-                h('div', { className: 'weekly-wrap-step__stat' },
-                    h('div', { className: 'weekly-wrap-step__stat-value' }, report.avgKcal),
-                    h('div', { className: 'weekly-wrap-step__stat-label' }, 'ккал/день')
-                ),
-                h('div', { className: 'weekly-wrap-step__stat' },
-                    h('div', { className: 'weekly-wrap-step__stat-value' }, report.avgTarget),
-                    h('div', { className: 'weekly-wrap-step__stat-label' }, 'цель')
+            h('div', { className: 'weekly-wrap-step__nav' },
+                h('button', {
+                    className: 'weekly-wrap-step__nav-btn',
+                    onClick: handlePrevWeek,
+                    title: 'Прошлая неделя'
+                }, '←'),
+                h('div', { className: 'weekly-wrap-step__nav-range' }, report?.rangeLabel || 'Неделя'),
+                h('button', {
+                    className: 'weekly-wrap-step__nav-btn' + (canGoNext ? '' : ' is-disabled'),
+                    onClick: handleNextWeek,
+                    disabled: !canGoNext,
+                    title: 'Следующая неделя'
+                }, '→')
+            ),
+            report && report.daysWithData >= 3
+                ? h('div', { className: 'weekly-wrap-step__content' },
+                    h('div', { className: 'weekly-wrap-step__stats' },
+                        h('div', { className: 'weekly-wrap-step__stat' },
+                            h('div', { className: 'weekly-wrap-step__stat-value' }, report.daysWithData),
+                            h('div', { className: 'weekly-wrap-step__stat-label' }, 'дней с едой')
+                        ),
+                        h('div', { className: 'weekly-wrap-step__stat' },
+                            h('div', { className: 'weekly-wrap-step__stat-value' }, report.avgKcal),
+                            h('div', { className: 'weekly-wrap-step__stat-label' }, 'ккал/день')
+                        ),
+                        h('div', { className: 'weekly-wrap-step__stat' },
+                            h('div', { className: 'weekly-wrap-step__stat-value' }, report.avgTarget),
+                            h('div', { className: 'weekly-wrap-step__stat-label' }, 'цель')
+                        )
+                    ),
+                    h('div', { className: 'weekly-wrap-step__sparkline' },
+                        Sparklines.renderMiniSparkline?.({
+                            React,
+                            values: report.series.values,
+                            targets: report.series.targets,
+                            width: 260,
+                            height: 60,
+                            className: 'weekly-wrap-step__sparkline-svg'
+                        })
+                    ),
+                    h('div', { className: 'weekly-wrap-step__meta' },
+                        h('div', { className: 'weekly-wrap-step__meta-item' }, '👣 ', report.avgSteps, ' шагов'),
+                        h('div', { className: 'weekly-wrap-step__meta-item' }, '😴 ', report.avgSleep, ' ч сна'),
+                        h('div', { className: 'weekly-wrap-step__meta-item' }, '💪 ', report.trainingDays, ' тренировок')
+                    )
                 )
-            ),
-            h('div', { className: 'weekly-wrap-step__sparkline' },
-                Sparklines.renderMiniSparkline?.({
-                    React,
-                    values: report.series.values,
-                    targets: report.series.targets,
-                    width: 260,
-                    height: 60,
-                    className: 'weekly-wrap-step__sparkline-svg'
-                })
-            ),
-            h('div', { className: 'weekly-wrap-step__meta' },
-                h('div', { className: 'weekly-wrap-step__meta-item' }, '👣 ', report.avgSteps, ' шагов'),
-                h('div', { className: 'weekly-wrap-step__meta-item' }, '😴 ', report.avgSleep, ' ч сна'),
-                h('div', { className: 'weekly-wrap-step__meta-item' }, '💪 ', report.trainingDays, ' тренировок')
-            )
+                : h('div', { className: 'weekly-wrap-step__empty' },
+                    h('div', { className: 'weekly-wrap-step__subtitle' }, 'Недостаточно данных')
+                )
         );
     }
 
@@ -269,7 +304,8 @@
                 const lsGet = getLsGet();
                 const profile = lsGet('heys_profile', {});
                 const pIndex = HEYS.products?.buildIndex?.();
-                const report = buildWeekReport({ lsGet, profile, pIndex });
+                const anchorDate = getLastWeekAnchorDate();
+                const report = buildWeekReport({ dateStr: anchorDate, lsGet, profile, pIndex });
                 return { report };
             }
         });
@@ -280,7 +316,7 @@
     function maybeShowWeeklyWrap({ lsGet, profile, pIndex, date } = {}) {
         const getter = lsGet || getLsGet();
         const now = new Date();
-        const anchorDate = date || now.toISOString().split('T')[0];
+        const anchorDate = date || getLastWeekAnchorDate(now);
 
         if (!shouldShowWeeklyWrapPopup({ now, lsGet: getter, dateStr: anchorDate })) {
             return false;
@@ -317,10 +353,44 @@
         return false;
     }
 
+    function openWeeklyWrap({ lsGet, profile, pIndex, date } = {}) {
+        const getter = lsGet || getLsGet();
+        const now = new Date();
+        const anchorDate = date || getLastWeekAnchorDate(now);
+
+        if (!registerWeeklyWrapStep()) {
+            setTimeout(() => registerWeeklyWrapStep(), 200);
+        }
+
+        const report = buildWeekReport({
+            dateStr: anchorDate,
+            lsGet: getter,
+            profile: profile || getter('heys_profile', {}),
+            pIndex: pIndex || HEYS.products?.buildIndex?.()
+        });
+
+        const reportForPopup = report && report.daysWithData >= 3 ? report : null;
+
+        if (HEYS.StepModal?.show) {
+            HEYS.StepModal.show({
+                steps: ['weekly_wrap_v2'],
+                showProgress: false,
+                showGreeting: false,
+                showTip: false,
+                allowSwipe: false,
+                context: { report: reportForPopup }
+            });
+            return true;
+        }
+
+        return false;
+    }
+
     HEYS.weeklyReports = {
         buildWeekReport,
         WeeklyReportCard,
         maybeShowWeeklyWrap,
+        openWeeklyWrap,
         shouldShowWeeklyWrapPopup,
         markWeeklyWrapShown
     };

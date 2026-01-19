@@ -172,7 +172,8 @@
           // 🔧 CRITICAL FIX: Используем БАЗОВУЮ норму (без долга) для расчёта нового долга!
           // d.target = savedDisplayOptimum (уже включает предыдущий долг) — НЕПРАВИЛЬНО для расчёта
           // d.baseTarget = пересчитанная норма TDEE * (1 + deficit%) — ПРАВИЛЬНО
-          let target = d.baseTarget || d.target || optimum;
+          const baseTarget = d.baseTarget || d.target || optimum;
+          let target = baseTarget;
 
           // 🔄 REFEED FIX: Если день был refeed, используем норму +35%
           // Refeed — часть стратегии, не "срыв". Перебор считаем от refeed-нормы, а не от дефицитной.
@@ -227,9 +228,11 @@
             dayName: dayNames[dayOfWeekIdx],
             eaten: Math.round(d.kcal),
             target: Math.round(target),
+            baseTarget: Math.round(baseTarget),
             delta: Math.round(delta),
             hasTraining: d.hasTraining,
-            ratio: ratio
+            ratio: ratio,
+            isRefeedDay: d.isRefeedDay
           });
         });
 

@@ -2,9 +2,9 @@
 // Creates structured data for stats rendering (6 logical groups instead of 50 scattered fields)
 // Part of PR-1: Reduce "shotgun surgery" for stats changes
 
-;(function(global){
+; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
-  
+
   /**
    * Build stats view model from raw data
    * @param {Object} params - Input parameters
@@ -133,7 +133,7 @@
       mealsChartDeps = null,
       tefInfoDeps = null
     } = params;
-    
+
     // Group 1: Energy metrics (TDEE, optimum, eaten, remaining)
     const energy = {
       tdee,
@@ -158,7 +158,7 @@
       tefKcal,
       ndteBoost: ndteData?.tdeeBoost || 0
     };
-    
+
     // Group 2: Macros (protein, carbs, fat, fiber)
     const macros = {
       protein: {
@@ -189,7 +189,7 @@
         norm: normAbs?.fiberMin || 0
       }
     };
-    
+
     // Group 3: Progress tracking (ratio, sparkline, weight)
     const progress = {
       currentRatio: currentRatio || {},
@@ -213,7 +213,7 @@
       weekHeatmapData,
       mealsChartData
     };
-    
+
     // Group 4: Debt & context (caloric debt, NDTE, cycle, training day)
     const debt = {
       caloricDebt: caloricDebt || {},
@@ -224,7 +224,7 @@
       refeedReason: day?.refeedReason || null,
       hrZones: hrZones || []
     };
-    
+
     // Group 5: UI state (expanded, popups, animations)
     const ui = {
       balanceCardExpanded,
@@ -249,7 +249,7 @@
       isMobile,
       mobileSubTab
     };
-    
+
     // Group 6: Computed display values (colors, labels, badges)
     const computed = {
       // Ratio status
@@ -318,7 +318,7 @@
       dayTot,
       normAbs
     };
-    
+
     return {
       energy,
       macros,
@@ -329,7 +329,7 @@
       context
     };
   }
-  
+
   // Helper: Get eaten color based on amount vs goal
   function getEatenColor(eaten, goal) {
     if (!goal) return { bg: '#f8fafc', text: '#64748b', border: '#e2e8f0' };
@@ -342,7 +342,7 @@
       return { bg: '#fee2e220', text: '#ef4444', border: '#ef444460' }; // Excess red
     }
   }
-  
+
   // Helper: Get remaining color
   function getRemainingColor(remaining) {
     if (remaining > 100) {
@@ -456,8 +456,8 @@
           borderRadius: '8px',
           borderLeft: '3px solid ' + (
             emotionalLevel === 'critical' ? '#ef4444'
-            : emotionalLevel === 'high' ? '#f97316'
-            : '#eab308'
+              : emotionalLevel === 'high' ? '#f97316'
+                : '#eab308'
           ),
           animation: emotionalLevel === 'critical' ? 'pulse 2s infinite' : 'none'
         },
@@ -552,7 +552,7 @@
 
     const deficitBadgeClass = 'sparkline-goal-badge' +
       (isSuccess ? '' :
-       (zone?.id === 'low' || zone?.id === 'over') ? ' goal-low' : ' goal-critical');
+        (zone?.id === 'low' || zone?.id === 'over') ? ' goal-low' : ' goal-critical');
 
     const deviation = avgRatioPct - 100;
     const deviationText = deviation >= 0 ? '+' + deviation + '%' : deviation + '%';
@@ -694,8 +694,8 @@
         ? d.name
         : (d.kcal > 0
           ? (d.isRefeedDay ? '🍕 Загрузочный день\n' : '') +
-            d.kcal + ' ккал (' + Math.round(d.ratio * 100) + '%)' +
-            (d.isStreakDay ? '\n✅ Streak +1' : '\n⚠️ Вне нормы')
+          d.kcal + ' ккал (' + Math.round(d.ratio * 100) + '%)' +
+          (d.isStreakDay ? '\n✅ Streak +1' : '\n⚠️ Вне нормы')
           : 'Нет данных');
 
       const className = 'week-heatmap-day ' + d.status +
@@ -1692,6 +1692,25 @@
       balanceLabel: { color: '#475569', fontSize: '13px' },
       balanceValue: { fontSize: '18px', fontWeight: 700, color: stripeColor },
       ratioText: { marginTop: '8px', fontSize: '12px', color: '#94a3b8', textAlign: 'center' },
+      baseRow: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '8px 10px',
+        background: 'rgba(148, 163, 184, 0.08)',
+        borderRadius: '8px',
+        marginTop: '8px'
+      },
+      baseLabel: { fontSize: '12px', color: '#64748b' },
+      baseValue: { fontSize: '13px', fontWeight: 600, color: '#334155' },
+      refeedBadge: {
+        fontSize: '10px',
+        color: '#f97316',
+        background: 'rgba(249, 115, 22, 0.12)',
+        padding: '2px 6px',
+        borderRadius: '10px',
+        marginLeft: '6px'
+      },
       closeBtn: {
         position: 'absolute',
         top: '8px',
@@ -1981,10 +2000,10 @@
     if (width != null) style.width = width + 'px';
     return style;
   }
-  
+
   // Export
   HEYS.dayStatsVm = {
     build: buildStatsVm
   };
-  
+
 })(window);

@@ -148,6 +148,8 @@
           date: d.date,
           eaten: d.eaten,
           target: d.target,
+          baseTarget: d.baseTarget,
+          isRefeedDay: d.isRefeedDay,
           hasTraining: d.hasTraining,
           ratio: d.ratio,
           dayOfWeek: new Date(d.date).getDay() // 0=Вс, 6=Сб
