@@ -30,6 +30,7 @@
     const safeMeals = safeDay.meals || [];
     const safeProducts = products || [];
     const safeU = U || HEYSRef.utils || {};
+    const dayUtils = HEYSRef.dayUtils || {};
 
     // Тренд калорий за последние N дней (среднее превышение/дефицит)
     const kcalTrend = React.useMemo(() => {
@@ -418,6 +419,24 @@
       let weekdayAvg = 0;
       let weekendCount = 0;
       let weekdayCount = 0;
+      const dayOptimumCache = new Map();
+
+      const getDayOptimum = (dateStr, dayInfo) => {
+        if (dayOptimumCache.has(dateStr)) return dayOptimumCache.get(dateStr);
+
+        const dayData = dayInfo?.dayData
+          || (dayUtils.loadDay ? dayUtils.loadDay(dateStr) : (safeU.lsGet ? safeU.lsGet('heys_dayv2_' + dateStr, null) : null));
+        const tdeeInfo = dayUtils.getDayTdee
+          ? dayUtils.getDayTdee(dateStr, prof, { includeNDTE: true, dayData })
+          : null;
+        const target = (dayInfo?.target && dayInfo.target > 0)
+          ? dayInfo.target
+          : (tdeeInfo?.optimum || optimum || 0);
+
+        const result = { target, baseTarget: tdeeInfo?.baseExpenditure || null };
+        dayOptimumCache.set(dateStr, result);
+        return result;
+      };
 
       for (let i = 0; i < 7; i++) {
         const d = new Date(monday);
@@ -442,7 +461,7 @@
 
           if (dayInfo && dayInfo.kcal > 0) {
             kcal = dayInfo.kcal;
-            const target = dayInfo.target || optimum;
+            const { target } = getDayOptimum(dateStr, dayInfo);
             if (kcal > 0 && target > 0) {
               ratio = kcal / target;
               // Используем ratioZones для определения статуса — с учётом refeed
@@ -526,17 +545,19 @@
         if (d.kcal > 0) {
           totalEaten += d.kcal;
           // Загружаем полные данные дня для расчёта TDEE
-          const dayData = safeU.lsGet ? safeU.lsGet('heys_dayv2_' + d.date, null) : null;
-          if (dayData && HEYSRef.TDEE?.calculate) {
-            // Используем централизованный модуль TDEE
-            const tdeeResult = HEYSRef.TDEE.calculate(dayData, prof, { lsGet: safeU.lsGet, includeNDTE: true });
-            totalBurned += tdeeResult.tdee;
-            // Собираем целевой дефицит каждого дня
-            totalTargetDeficit += tdeeResult.deficitPct || 0;
+          const dayData = dayUtils.loadDay
+            ? dayUtils.loadDay(d.date)
+            : (safeU.lsGet ? safeU.lsGet('heys_dayv2_' + d.date, null) : null);
+          const tdeeInfo = dayUtils.getDayTdee
+            ? dayUtils.getDayTdee(d.date, prof, { includeNDTE: true, dayData })
+            : null;
+          if (tdeeInfo && tdeeInfo.tdee > 0) {
+            totalBurned += tdeeInfo.tdee;
+            totalTargetDeficit += tdeeInfo.deficitPct || 0;
             daysWithDeficit++;
           } else {
             // Fallback на норму если модуль не загружен
-            const dayTarget = allActiveDays.get(d.date)?.target || optimum;
+            const dayTarget = getDayOptimum(d.date, allActiveDays.get(d.date)).target || optimum;
             totalBurned += dayTarget;
             totalTargetDeficit += prof?.deficitPctTarget || 0;
             daysWithDeficit++;

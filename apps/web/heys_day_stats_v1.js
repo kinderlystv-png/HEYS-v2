@@ -678,7 +678,26 @@
             React.createElement('span', { className: 'caloric-balance-icon' }, style.icon),
             React.createElement('div', { className: 'caloric-balance-summary' },
               React.createElement('span', { className: 'caloric-balance-label' },
-                'Профицит за ' + dayBreakdown.length + ' дн'
+                'Профицит за ' + dayBreakdown.length + ' дн',
+                React.createElement('span', {
+                  className: 'caloric-balance-info',
+                  style: excessStyles.infoIcon,
+                  'aria-label': 'Баланс считается относительно базовой нормы (TDEE). На графике — цель дня с учётом долга/рефида.',
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    if (HEYS?.Toast?.info) {
+                      HEYS.Toast.info('Профицит считается от базовой нормы (TDEE). График — цель дня с учётом долга/рефида.', {
+                        title: 'ℹ️ Пояснение'
+                      });
+                    } else if (typeof HEYS?.toast === 'function') {
+                      HEYS.toast({
+                        type: 'info',
+                        title: 'ℹ️ Пояснение',
+                        message: 'Профицит считается от базовой нормы (TDEE). График — цель дня с учётом долга/рефида.'
+                      });
+                    }
+                  }
+                }, ' ⓘ')
               ),
               // 🆕 Показываем мягкую коррекцию если есть
               dailyReduction > 0 && React.createElement('span', {
@@ -735,6 +754,14 @@
                   React.createElement('span', { className: 'debt-day-value' }, (d.delta > 0 ? '+' : '') + d.delta)
                 );
               })
+            ),
+
+            React.createElement('div', {
+              className: 'caloric-balance-legend',
+              style: excessStyles.legend
+            },
+              React.createElement('span', { style: excessStyles.legendIcon }, 'ℹ️'),
+              React.createElement('span', { style: excessStyles.legendText }, 'Профицит здесь считается от базовой нормы (TDEE). Линия/план дня — цель с учётом долга или refeed.')
             ),
 
             // 🆕 МЯГКАЯ КОРРЕКЦИЯ — акцент (не наказание!)
@@ -1724,7 +1751,10 @@
                   React.createElement('div', {
                     style: balanceDayStyles.targetBox
                   },
-                    React.createElement('div', { style: balanceDayStyles.boxLabel }, 'Норма'),
+                    React.createElement('div', {
+                      style: balanceDayStyles.boxLabel,
+                      title: 'Цель дня с учётом долга/рефида'
+                    }, 'Норма'),
                     React.createElement('div', { style: balanceDayStyles.targetValue }, v.target)
                   )
                 ),
@@ -1732,7 +1762,10 @@
                 v.baseTarget && v.baseTarget !== v.target && React.createElement('div', {
                   style: balanceDayStyles.baseRow
                 },
-                  React.createElement('span', { style: balanceDayStyles.baseLabel }, 'База'),
+                  React.createElement('span', {
+                    style: balanceDayStyles.baseLabel,
+                    title: 'Базовая цель без долга/рефида'
+                  }, 'База'),
                   React.createElement('div', null,
                     React.createElement('span', { style: balanceDayStyles.baseValue }, v.baseTarget + ' ккал'),
                     v.isRefeedDay && React.createElement('span', { style: balanceDayStyles.refeedBadge }, '🍕 +35%')

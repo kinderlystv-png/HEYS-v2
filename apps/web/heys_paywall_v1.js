@@ -1,16 +1,16 @@
 // heys_paywall_v1.js — Read-only gating + Paywall UI + Trial Queue integration
 // v2.0.0 | 2025-12-25
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
   const ReactDOM = global.ReactDOM;
-  
+
   // ========================================
   // КОНСТАНТЫ
   // ========================================
-  
+
   const PAYWALL_CONFIG = {
     // Цены (в рублях)
     prices: {
@@ -24,11 +24,11 @@
     contactTelegram: '@heyslab_support',
     contactEmail: 'pay@heyslab.ru'
   };
-  
+
   // ========================================
   // СТИЛИ
   // ========================================
-  
+
   const PAYWALL_STYLES = `
     .paywall-overlay {
       position: fixed;
@@ -315,7 +315,7 @@
       white-space: nowrap;
     }
   `;
-  
+
   // Inject styles
   function injectStyles() {
     if (document.getElementById('heys-paywall-styles')) return;
@@ -324,17 +324,17 @@
     style.textContent = PAYWALL_STYLES;
     document.head.appendChild(style);
   }
-  
+
   // ========================================
   // REACT КОМПОНЕНТЫ
   // ========================================
-  
+
   /**
    * Paywall Modal — полноэкранная модалка с тарифами
    */
   function PaywallModal({ onClose, onSelectPlan, reason }) {
     const [selectedPlan, setSelectedPlan] = React.useState('pro');
-    
+
     const plans = [
       {
         id: 'base',
@@ -358,32 +358,32 @@
         popular: false
       }
     ];
-    
+
     const handleCTA = () => {
       // Пока без ЮKassa — открываем Telegram для связи
       const message = encodeURIComponent(`Привет! Хочу оформить подписку ${selectedPlan.toUpperCase()} на HEYS`);
       window.open(`https://t.me/heyslab_support?text=${message}`, '_blank');
       if (onSelectPlan) onSelectPlan(selectedPlan);
     };
-    
+
     return React.createElement('div', { className: 'paywall-overlay', onClick: (e) => e.target === e.currentTarget && onClose?.() },
       React.createElement('div', { className: 'paywall-modal', style: { position: 'relative' } },
         // Close button
         React.createElement('button', { className: 'paywall-close', onClick: onClose }, '✕'),
-        
+
         // Header
         React.createElement('div', { className: 'paywall-header' },
           React.createElement('div', { className: 'paywall-icon' }, '🔒'),
-          React.createElement('h2', { className: 'paywall-title' }, 
+          React.createElement('h2', { className: 'paywall-title' },
             reason === 'trial_ended' ? 'Триал закончился' : 'Нужна подписка'
           ),
           React.createElement('p', { className: 'paywall-subtitle' },
-            reason === 'trial_ended' 
+            reason === 'trial_ended'
               ? 'Твои 7 дней Pro-доступа истекли. Оформи подписку, чтобы продолжить вести дневник.'
               : 'Для добавления данных нужна активная подписка.'
           )
         ),
-        
+
         // Features
         React.createElement('div', { className: 'paywall-features' },
           React.createElement('div', { className: 'paywall-feature' },
@@ -399,10 +399,10 @@
             'Живой куратор для Pro тарифов'
           )
         ),
-        
+
         // Plans
         React.createElement('div', { className: 'paywall-plans' },
-          plans.map(plan => 
+          plans.map(plan =>
             React.createElement('div', {
               key: plan.id,
               className: `paywall-plan ${selectedPlan === plan.id ? 'selected' : ''} ${plan.popular ? 'popular' : ''}`,
@@ -418,32 +418,32 @@
             )
           )
         ),
-        
+
         // CTA
         React.createElement('button', { className: 'paywall-cta', onClick: handleCTA },
           'Оформить подписку'
         ),
-        
+
         // === TRIAL QUEUE SECTION ===
         // Разделитель
-        React.createElement('div', { 
-          style: { 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '12px', 
+        React.createElement('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
             margin: '20px 0 16px',
             color: 'var(--text-tertiary, #9ca3af)',
             fontSize: '13px'
-          } 
+          }
         },
           React.createElement('div', { style: { flex: 1, height: '1px', background: 'var(--border-color, #e5e7eb)' } }),
           'или',
           React.createElement('div', { style: { flex: 1, height: '1px', background: 'var(--border-color, #e5e7eb)' } })
         ),
-        
+
         // Trial Queue виджет (если модуль загружен)
         HEYS.TrialQueue && React.createElement(TrialQueueSection, { onTrialStarted: onClose }),
-        
+
         // Footer
         React.createElement('div', { className: 'paywall-footer' },
           'Возникли вопросы? ',
@@ -452,7 +452,7 @@
       )
     );
   }
-  
+
   /**
    * TrialQueueSection — секция очереди внутри Paywall
    */
@@ -462,10 +462,10 @@
     const [isLoading, setIsLoading] = React.useState(true);
     const [isActioning, setIsActioning] = React.useState(false);
     const [timeRemaining, setTimeRemaining] = React.useState('');
-    
+
     const refresh = React.useCallback(async () => {
       if (!HEYS.TrialQueue) return;
-      
+
       setIsLoading(true);
       try {
         const [cap, status] = await Promise.all([
@@ -478,29 +478,29 @@
         setIsLoading(false);
       }
     }, []);
-    
+
     // Таймер для offer
     React.useEffect(() => {
       if (queueStatus?.status !== 'offer' || !queueStatus?.offer_expires_at) {
         setTimeRemaining('');
         return;
       }
-      
+
       const updateTimer = () => {
         setTimeRemaining(HEYS.TrialQueue.formatTimeRemaining(queueStatus.offer_expires_at));
       };
-      
+
       updateTimer();
       const interval = setInterval(updateTimer, 1000);
       return () => clearInterval(interval);
     }, [queueStatus?.status, queueStatus?.offer_expires_at]);
-    
+
     React.useEffect(() => {
       refresh();
       const interval = setInterval(refresh, 30000);
       return () => clearInterval(interval);
     }, [refresh]);
-    
+
     const handleRequestTrial = async () => {
       setIsActioning(true);
       try {
@@ -514,7 +514,7 @@
         setIsActioning(false);
       }
     };
-    
+
     const handleClaimOffer = async () => {
       setIsActioning(true);
       try {
@@ -532,7 +532,7 @@
         setIsActioning(false);
       }
     };
-    
+
     const handleCancelQueue = async () => {
       if (!confirm('Отменить запрос на триал?')) return;
       setIsActioning(true);
@@ -543,21 +543,21 @@
         setIsActioning(false);
       }
     };
-    
+
     if (isLoading && !capacity) {
-      return React.createElement('div', { 
-        style: { textAlign: 'center', padding: '16px', color: 'var(--text-secondary)' } 
+      return React.createElement('div', {
+        style: { textAlign: 'center', padding: '16px', color: 'var(--text-secondary)' }
       }, '⏳ Проверяем места...');
     }
-    
+
     const status = queueStatus?.status || 'not_in_queue';
     const isOffer = status === 'offer' && !HEYS.TrialQueue.isOfferExpired(queueStatus?.offer_expires_at);
     const isQueued = status === 'queued';
-    
+
     // В очереди или есть offer
     if (isQueued || isOffer) {
       const meta = HEYS.TrialQueue.getQueueStatusMeta(status, queueStatus?.position, queueStatus?.offer_expires_at);
-      
+
       return React.createElement('div', {
         style: {
           background: isOffer ? 'linear-gradient(135deg, #fef3c7, #fde68a)' : 'var(--bg-secondary, #f3f4f6)',
@@ -569,20 +569,20 @@
       },
         React.createElement('div', { style: { fontSize: '24px', marginBottom: '8px' } }, meta.emoji),
         React.createElement('div', { style: { fontWeight: 600, fontSize: '15px', marginBottom: '4px' } }, meta.label),
-        
+
         // Таймер
         isOffer && timeRemaining && React.createElement('div', {
-          style: { 
-            fontSize: '20px', 
-            fontWeight: 700, 
-            color: '#f59e0b', 
+          style: {
+            fontSize: '20px',
+            fontWeight: 700,
+            color: '#f59e0b',
             margin: '12px 0',
             background: 'rgba(255,255,255,0.5)',
             borderRadius: '8px',
             padding: '8px'
           }
         }, '⏰ ', timeRemaining),
-        
+
         // Кнопки
         React.createElement('div', { style: { display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '12px' } },
           isOffer && React.createElement('button', {
@@ -599,7 +599,7 @@
               fontSize: '14px'
             }
           }, isActioning ? '⏳...' : '🎉 Начать триал!'),
-          
+
           isQueued && React.createElement('button', {
             onClick: handleCancelQueue,
             disabled: isActioning,
@@ -616,10 +616,10 @@
         )
       );
     }
-    
+
     // Показываем виджет мест
     const capMeta = capacity ? HEYS.TrialQueue.getCapacityMeta(capacity) : null;
-    
+
     return React.createElement('div', {
       style: {
         background: 'var(--bg-secondary, #f3f4f6)',
@@ -631,26 +631,26 @@
       React.createElement('div', { style: { fontSize: '15px', fontWeight: 600, marginBottom: '8px' } },
         '🎁 Бесплатный триал 7 дней'
       ),
-      
-      capMeta && React.createElement('div', { 
-        style: { 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          gap: '6px', 
+
+      capMeta && React.createElement('div', {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
           fontSize: '13px',
           color: capMeta.color,
           marginBottom: '12px'
-        } 
+        }
       },
         React.createElement('span', null, capMeta.emoji),
         React.createElement('span', null, capMeta.label)
       ),
-      
-      capMeta?.showQueue && React.createElement('div', { 
-        style: { fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' } 
+
+      capMeta?.showQueue && React.createElement('div', {
+        style: { fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }
       }, capMeta.sublabel),
-      
+
       React.createElement('button', {
         onClick: handleRequestTrial,
         disabled: isActioning || !capacity?.is_accepting,
@@ -658,8 +658,8 @@
           padding: '10px 24px',
           borderRadius: '8px',
           border: 'none',
-          background: capacity?.available_slots > 0 
-            ? 'linear-gradient(135deg, #22c55e, #16a34a)' 
+          background: capacity?.available_slots > 0
+            ? 'linear-gradient(135deg, #22c55e, #16a34a)'
             : 'linear-gradient(135deg, #6b7280, #4b5563)',
           color: 'white',
           fontWeight: 600,
@@ -669,14 +669,14 @@
       }, isActioning ? '⏳...' : (capMeta?.actionLabel || 'Запросить триал'))
     );
   }
-  
+
   /**
    * Read-only Banner — компактный баннер для показа в UI
    */
   function ReadOnlyBanner({ onClick, compact = false }) {
     if (compact) {
-      return React.createElement('div', { 
-        className: 'readonly-banner', 
+      return React.createElement('div', {
+        className: 'readonly-banner',
         onClick,
         style: { margin: '8px', padding: '10px 12px' }
       },
@@ -688,74 +688,80 @@
         React.createElement('span', { className: 'readonly-banner-arrow' }, '→')
       );
     }
-    
+
     return React.createElement('div', { className: 'readonly-banner', onClick },
       React.createElement('span', { className: 'readonly-banner-icon' }, '⏰'),
       React.createElement('div', { className: 'readonly-banner-content' },
         React.createElement('div', { className: 'readonly-banner-title' }, 'Триал закончился'),
-        React.createElement('div', { className: 'readonly-banner-text' }, 
+        React.createElement('div', { className: 'readonly-banner-text' },
           'Данные доступны для просмотра. Нажми чтобы оформить подписку.'
         )
       ),
       React.createElement('span', { className: 'readonly-banner-arrow' }, '→')
     );
   }
-  
+
   // ========================================
   // GATING LOGIC
   // ========================================
-  
+
   let _paywallContainer = null;
-  
+  let _paywallRootInstance = null;
+
   /**
    * Показать paywall модалку
    */
   function showPaywall(reason = 'subscription_required') {
     injectStyles();
-    
+
     if (!_paywallContainer) {
       _paywallContainer = document.createElement('div');
       _paywallContainer.id = 'heys-paywall-container';
       document.body.appendChild(_paywallContainer);
     }
-    
+
     const handleClose = () => {
-      if (_paywallContainer) {
-        ReactDOM.unmountComponentAtNode(_paywallContainer);
+      if (_paywallRootInstance) {
+        _paywallRootInstance.unmount();
+        _paywallRootInstance = null;
       }
     };
-    
-    ReactDOM.render(
-      React.createElement(PaywallModal, { 
+
+    if (!_paywallRootInstance) {
+      _paywallRootInstance = ReactDOM.createRoot(_paywallContainer);
+    }
+
+    _paywallRootInstance.render(
+      React.createElement(PaywallModal, {
         onClose: handleClose,
-        reason 
-      }),
-      _paywallContainer
+        reason
+      })
     );
   }
-  
+
   /**
    * Скрыть paywall
    */
   function hidePaywall() {
-    if (_paywallContainer) {
-      ReactDOM.unmountComponentAtNode(_paywallContainer);
+    if (_paywallRootInstance) {
+      _paywallRootInstance.unmount();
+      _paywallRootInstance = null;
     }
   }
-  
+
   let _toastTimeout = null;
-  
+
   /**
    * Показать toast о заблокированном действии
    */
   function showBlockedToast(message = 'Действие недоступно в режиме просмотра') {
     injectStyles();
-    
+
     // Удаляем предыдущий toast
     const existing = document.querySelector('.readonly-toast');
     if (existing) existing.remove();
     if (_toastTimeout) clearTimeout(_toastTimeout);
-    
+
     const toast = document.createElement('div');
     toast.className = 'readonly-toast';
     toast.innerHTML = `
@@ -764,12 +770,12 @@
       <button class="readonly-toast-action" onclick="HEYS.Paywall.show('trial_ended')">Подписка</button>
     `;
     document.body.appendChild(toast);
-    
+
     _toastTimeout = setTimeout(() => {
       toast.remove();
     }, 4000);
   }
-  
+
   /**
    * Проверка: разрешено ли писать данные?
    * @returns {boolean} true если можно писать
@@ -779,33 +785,33 @@
       console.warn('[Paywall] Subscription module not loaded');
       return true; // Fallback: разрешаем если модуль не загружен
     }
-    
+
     try {
       const status = await HEYS.Subscription.getStatus();
       // Можно писать если: trial, active, или нет данных (новый пользователь до регистрации)
       if (!status || !status.status) return true; // Новый пользователь
-      return status.status === HEYS.Subscription.STATUS.TRIAL || 
-             status.status === HEYS.Subscription.STATUS.ACTIVE;
+      return status.status === HEYS.Subscription.STATUS.TRIAL ||
+        status.status === HEYS.Subscription.STATUS.ACTIVE;
     } catch (err) {
       console.error('[Paywall] Error checking status:', err);
       return true; // Fallback: разрешаем при ошибке
     }
   }
-  
+
   /**
    * Синхронная версия canWrite (использует кэш)
    * @returns {boolean}
    */
   function canWriteSync() {
     if (!HEYS.Subscription) return true;
-    
+
     const cached = HEYS.Subscription.getCachedStatus?.();
     if (!cached || !cached.status) return true;
-    
-    return cached.status === HEYS.Subscription.STATUS.TRIAL || 
-           cached.status === HEYS.Subscription.STATUS.ACTIVE;
+
+    return cached.status === HEYS.Subscription.STATUS.TRIAL ||
+      cached.status === HEYS.Subscription.STATUS.ACTIVE;
   }
-  
+
   /**
    * Gate wrapper для write actions
    * Показывает toast и блокирует действие если read-only
@@ -814,7 +820,7 @@
    * @returns {Function} wrapped action
    */
   function gateWrite(action, actionName = 'action') {
-    return async function(...args) {
+    return async function (...args) {
       if (!canWriteSync()) {
         console.log(`[Paywall] Blocked ${actionName}: read-only mode`);
         showBlockedToast(`Добавление данных недоступно`);
@@ -823,7 +829,7 @@
       return action.apply(this, args);
     };
   }
-  
+
   /**
    * React Hook для проверки write access
    * @returns {{ canWrite: boolean, isLoading: boolean, showPaywall: Function }}
@@ -831,72 +837,72 @@
   function useWriteAccess() {
     const [canWriteState, setCanWrite] = React.useState(true);
     const [isLoading, setIsLoading] = React.useState(true);
-    
+
     React.useEffect(() => {
       let mounted = true;
-      
+
       canWrite().then(result => {
         if (mounted) {
           setCanWrite(result);
           setIsLoading(false);
         }
       });
-      
+
       // Subscribe to subscription changes
       const handleChange = () => {
         canWrite().then(result => {
           if (mounted) setCanWrite(result);
         });
       };
-      
+
       window.addEventListener('heys:subscription-changed', handleChange);
       return () => {
         mounted = false;
         window.removeEventListener('heys:subscription-changed', handleChange);
       };
     }, []);
-    
+
     return {
       canWrite: canWriteState,
       isLoading,
       showPaywall: () => showPaywall('trial_ended')
     };
   }
-  
+
   // ========================================
   // ЭКСПОРТ
   // ========================================
-  
+
   HEYS.Paywall = {
     // UI
     show: showPaywall,
     hide: hidePaywall,
     showBlockedToast,
-    
+
     // Components
     PaywallModal,
     ReadOnlyBanner,
-    
+
     // Gating
     canWrite,
     canWriteSync,
     gateWrite,
     useWriteAccess,
-    
+
     // Config
     CONFIG: PAYWALL_CONFIG,
-    
+
     // Utils
     injectStyles
   };
-  
+
   // Inject styles on load
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', injectStyles);
   } else {
     injectStyles();
   }
-  
+
   console.log('[HEYS] Paywall module loaded v2.0.0 (Trial Queue integration)');
-  
+
 })(typeof window !== 'undefined' ? window : global);

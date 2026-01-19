@@ -1884,6 +1884,12 @@
     const styles = {
       headerRecShort: { color: '#94a3b8' },
       balanceVizBar: { fontSize: '16px', lineHeight: 1, cursor: 'pointer' },
+      infoIcon: {
+        fontSize: '11px',
+        color: '#94a3b8',
+        marginLeft: '6px',
+        cursor: 'help'
+      },
       softCorrection: {
         display: 'flex',
         alignItems: 'center',
@@ -1934,6 +1940,17 @@
         textAlign: 'center'
       },
       successText: { fontSize: '15px' },
+      legend: {
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '8px',
+        padding: '8px 10px',
+        marginTop: '8px',
+        background: 'rgba(148, 163, 184, 0.08)',
+        borderRadius: '8px'
+      },
+      legendIcon: { fontSize: '14px', lineHeight: 1.2 },
+      legendText: { fontSize: '11px', color: '#64748b', lineHeight: '1.4' },
       explanation: { marginTop: '10px', fontSize: '12px', color: '#64748b' }
     };
 

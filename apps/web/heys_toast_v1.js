@@ -1,10 +1,10 @@
 // heys_toast_v1.js — Универсальная система toast-уведомлений
 // Заменяет browser alert() на красивые toasts
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
-  
+
   // === КОНФИГУРАЦИЯ ===
   const CONFIG = {
     defaultDuration: 3500,    // ms — стандартное время показа
@@ -12,8 +12,13 @@
     shortDuration: 2000,      // ms — для коротких подтверждений
     maxVisible: 3,            // Максимум одновременно показанных
     animationDuration: 300,   // ms — длительность анимации
+    toastTopOffset: 72,       // px — отступ от верха (до шапки)
+    tooltipToastEnabled: true, // Показывать подсказки (title) как toast на мобилке
+    tooltipCooldown: 1200,     // ms — защита от спама
+    tooltipMaxDepth: 4,        // Макс. глубина поиска title у родителя
+    tooltipTitle: 'ℹ️ Подсказка'
   };
-  
+
   // === ТИПЫ TOASTS ===
   const TOAST_TYPES = {
     success: {
@@ -42,12 +47,12 @@
       shadowColor: 'rgba(139, 92, 246, 0.4)',
     },
   };
-  
+
   // === СОСТОЯНИЕ ===
   let toastQueue = [];
   let visibleToasts = [];
   let containerId = 'heys-toast-container';
-  
+
   // === ИНИЦИАЛИЗАЦИЯ КОНТЕЙНЕРА ===
   function ensureContainer() {
     let container = document.getElementById(containerId);
@@ -56,7 +61,7 @@
       container.id = containerId;
       container.style.cssText = `
         position: fixed;
-        top: 20px;
+        top: calc(${CONFIG.toastTopOffset}px + env(safe-area-inset-top));
         left: 50%;
         transform: translateX(-50%);
         z-index: 10002;
@@ -71,13 +76,13 @@
     }
     return container;
   }
-  
+
   // === СОЗДАНИЕ TOAST ЭЛЕМЕНТА ===
   function createToastElement(options) {
     const { type = 'info', title, message, icon, duration, action } = options;
     const typeConfig = TOAST_TYPES[type] || TOAST_TYPES.info;
     const displayIcon = icon || typeConfig.icon;
-    
+
     const toast = document.createElement('div');
     toast.className = 'heys-toast';
     toast.style.cssText = `
@@ -97,7 +102,7 @@
       transition: all ${CONFIG.animationDuration}ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
       cursor: pointer;
     `;
-    
+
     // Иконка
     const iconEl = document.createElement('span');
     iconEl.style.cssText = `
@@ -107,14 +112,14 @@
     `;
     iconEl.textContent = displayIcon;
     toast.appendChild(iconEl);
-    
+
     // Контент
     const content = document.createElement('div');
     content.style.cssText = `
       flex: 1;
       min-width: 0;
     `;
-    
+
     if (title) {
       const titleEl = document.createElement('div');
       titleEl.style.cssText = `
@@ -127,7 +132,7 @@
       titleEl.textContent = title;
       content.appendChild(titleEl);
     }
-    
+
     if (message) {
       const messageEl = document.createElement('div');
       messageEl.style.cssText = `
@@ -139,9 +144,9 @@
       messageEl.textContent = message;
       content.appendChild(messageEl);
     }
-    
+
     toast.appendChild(content);
-    
+
     // Кнопка действия (опционально)
     if (action) {
       const actionBtn = document.createElement('button');
@@ -171,90 +176,90 @@
       });
       toast.appendChild(actionBtn);
     }
-    
+
     // Закрытие по клику
     toast.addEventListener('click', () => hideToast(toast));
-    
+
     return toast;
   }
-  
+
   // === ПОКАЗ TOAST ===
   function showToast(options) {
     // Нормализация опций
     if (typeof options === 'string') {
       options = { message: options };
     }
-    
+
     const { duration = CONFIG.defaultDuration } = options;
-    
+
     // Если превышен лимит — убираем старые
     while (visibleToasts.length >= CONFIG.maxVisible) {
       const oldest = visibleToasts[0];
       hideToast(oldest);
     }
-    
+
     const container = ensureContainer();
     const toast = createToastElement(options);
-    
+
     container.appendChild(toast);
     visibleToasts.push(toast);
-    
+
     // Анимация появления
     requestAnimationFrame(() => {
       toast.style.opacity = '1';
       toast.style.transform = 'translateY(0) scale(1)';
     });
-    
+
     // Автоскрытие
     if (duration > 0) {
       toast._timeout = setTimeout(() => hideToast(toast), duration);
     }
-    
+
     return toast;
   }
-  
+
   // === СКРЫТИЕ TOAST ===
   function hideToast(toast) {
     if (!toast || toast._hiding) return;
     toast._hiding = true;
-    
+
     if (toast._timeout) {
       clearTimeout(toast._timeout);
     }
-    
+
     toast.style.opacity = '0';
     toast.style.transform = 'translateY(-20px) scale(0.9)';
-    
+
     setTimeout(() => {
       toast.remove();
       visibleToasts = visibleToasts.filter(t => t !== toast);
     }, CONFIG.animationDuration);
   }
-  
+
   // === УДОБНЫЕ МЕТОДЫ ===
   const Toast = {
     show: showToast,
-    
+
     success(message, options = {}) {
       return showToast({ type: 'success', message, ...options });
     },
-    
+
     error(message, options = {}) {
       return showToast({ type: 'error', message, duration: CONFIG.longDuration, ...options });
     },
-    
+
     warning(message, options = {}) {
       return showToast({ type: 'warning', message, ...options });
     },
-    
+
     info(message, options = {}) {
       return showToast({ type: 'info', message, ...options });
     },
-    
+
     tip(message, options = {}) {
       return showToast({ type: 'tip', message, duration: CONFIG.longDuration, ...options });
     },
-    
+
     // Для критических действий — с кнопкой
     confirm(message, actionLabel, onAction) {
       return showToast({
@@ -264,19 +269,65 @@
         action: { label: actionLabel, onClick: onAction }
       });
     },
-    
+
     // Скрыть все
     hideAll() {
       [...visibleToasts].forEach(hideToast);
     }
   };
-  
+
   // === ЭКСПОРТ ===
   HEYS.Toast = Toast;
-  
+
   // Глобальный хелпер для замены alert()
   HEYS.toast = Toast.show;
-  
+
+  // === MOBILE TOOLTIP → TOAST ===
+  let lastTooltipAt = 0;
+  let lastTooltipText = '';
+
+  function isTouchLike() {
+    if (typeof window === 'undefined' || !window.matchMedia) return false;
+    try {
+      return window.matchMedia('(hover: none)').matches || window.matchMedia('(pointer: coarse)').matches;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function findTitleTarget(startEl) {
+    let el = startEl;
+    for (let i = 0; i < CONFIG.tooltipMaxDepth && el; i++) {
+      if (el.getAttribute && el.getAttribute('title')) {
+        if (el.getAttribute('data-toast-disabled') === 'true') return null;
+        if (el.getAttribute('data-tooltip') !== 'ui') return null;
+        return el;
+      }
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  function handleTooltipTap(e) {
+    if (!CONFIG.tooltipToastEnabled || !isTouchLike()) return;
+    const target = findTitleTarget(e.target);
+    if (!target) return;
+    const text = target.getAttribute('title');
+    if (!text) return;
+
+    const now = Date.now();
+    if (now - lastTooltipAt < CONFIG.tooltipCooldown) return;
+    if (lastTooltipText && lastTooltipText === text) return;
+    lastTooltipAt = now;
+    lastTooltipText = text;
+
+    Toast.info(text, { title: CONFIG.tooltipTitle, duration: CONFIG.shortDuration });
+  }
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('click', handleTooltipTap, true);
+  }
+
   // === ИНТЕРЦЕПТОР alert() (опционально, для legacy) ===
   // Можно включить если нужно перехватывать все alert()
   // const originalAlert = window.alert;
@@ -287,7 +338,7 @@
   //     originalAlert(message);
   //   }
   // };
-  
+
   console.log('[HEYS] Toast module loaded');
-  
+
 })(typeof window !== 'undefined' ? window : global);

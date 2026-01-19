@@ -6,6 +6,9 @@
     const U = HEYS.utils || {};
     const Sparklines = HEYS.SparklinesShared || {};
 
+    const WEEKLY_WRAP_MIN_DAYS = 3;
+    const WEEKLY_WRAP_MAX_WEEKS = 26;
+
     function getLsGet() {
         return U.lsGet || ((k, d) => {
             try {
@@ -43,6 +46,26 @@
         const lastWeek = new Date(now);
         lastWeek.setDate(lastWeek.getDate() - 7);
         return lastWeek.toISOString().split('T')[0];
+    }
+
+    function getAvailableWeeklyWraps({ lsGet, profile, pIndex, now, minDays = WEEKLY_WRAP_MIN_DAYS, maxWeeks = WEEKLY_WRAP_MAX_WEEKS } = {}) {
+        const getter = lsGet || getLsGet();
+        const prof = profile || getter('heys_profile', {});
+        const index = pIndex || HEYS.products?.buildIndex?.();
+        const baseDate = now ? new Date(now) : new Date();
+        const available = [];
+
+        for (let i = 0; i < maxWeeks; i += 1) {
+            const anchor = new Date(baseDate);
+            anchor.setDate(anchor.getDate() - 7 - i * 7);
+            const anchorDate = anchor.toISOString().split('T')[0];
+            const report = buildWeekReport({ dateStr: anchorDate, lsGet: getter, profile: prof, pIndex: index });
+            if (report?.daysWithData >= minDays) {
+                available.push({ anchorDate, report });
+            }
+        }
+
+        return available;
     }
 
     function getDayTotals(day, pIndex) {
@@ -127,7 +150,7 @@
         };
     }
 
-    function shouldShowWeeklyWrapPopup({ now = new Date(), lsGet, dateStr, minDays = 3 }) {
+    function shouldShowWeeklyWrapPopup({ now = new Date(), lsGet, dateStr, minDays = WEEKLY_WRAP_MIN_DAYS }) {
         const dayOfWeek = now.getDay();
         const hour = now.getHours();
 
@@ -219,30 +242,29 @@
         if (!React) return null;
         const { createElement: h, useMemo, useState } = React;
 
-        const [weekOffset, setWeekOffset] = useState(0);
-        const anchorDate = useMemo(() => {
-            const base = new Date();
-            base.setDate(base.getDate() - 7 + weekOffset * 7);
-            return base.toISOString().split('T')[0];
-        }, [weekOffset]);
-
-        const report = useMemo(() => {
+        const availableWeeks = useMemo(() => {
             const getter = getLsGet();
             const profile = getter('heys_profile', {});
             const pIndex = HEYS.products?.buildIndex?.();
-            return buildWeekReport({ dateStr: anchorDate, lsGet: getter, profile, pIndex });
-        }, [anchorDate]);
+            return getAvailableWeeklyWraps({ lsGet: getter, profile, pIndex });
+        }, []);
 
-        const canGoNext = weekOffset < 0;
-        const handlePrevWeek = () => setWeekOffset((prev) => prev - 1);
-        const handleNextWeek = () => setWeekOffset((prev) => (prev < 0 ? prev + 1 : prev));
+        const [weekIndex, setWeekIndex] = useState(0);
+        const currentWeek = availableWeeks[weekIndex] || null;
+        const report = currentWeek?.report || null;
+
+        const canGoPrev = weekIndex < availableWeeks.length - 1;
+        const canGoNext = weekIndex > 0;
+        const handlePrevWeek = () => setWeekIndex((prev) => (prev < availableWeeks.length - 1 ? prev + 1 : prev));
+        const handleNextWeek = () => setWeekIndex((prev) => (prev > 0 ? prev - 1 : prev));
 
         return h('div', { className: 'weekly-wrap-step' },
             h('div', { className: 'weekly-wrap-step__title' }, '📊 Итоги недели'),
             h('div', { className: 'weekly-wrap-step__nav' },
                 h('button', {
-                    className: 'weekly-wrap-step__nav-btn',
+                    className: 'weekly-wrap-step__nav-btn' + (canGoPrev ? '' : ' is-disabled'),
                     onClick: handlePrevWeek,
+                    disabled: !canGoPrev,
                     title: 'Прошлая неделя'
                 }, '←'),
                 h('div', { className: 'weekly-wrap-step__nav-range' }, report?.rangeLabel || 'Неделя'),
@@ -253,7 +275,8 @@
                     title: 'Следующая неделя'
                 }, '→')
             ),
-            report && report.daysWithData >= 3
+            h('div', { className: 'weekly-wrap-step__hint' }, 'Всегда показываем завершённые недели'),
+            report && report.daysWithData >= WEEKLY_WRAP_MIN_DAYS
                 ? h('div', { className: 'weekly-wrap-step__content' },
                     h('div', { className: 'weekly-wrap-step__stats' },
                         h('div', { className: 'weekly-wrap-step__stat' },
@@ -286,7 +309,8 @@
                     )
                 )
                 : h('div', { className: 'weekly-wrap-step__empty' },
-                    h('div', { className: 'weekly-wrap-step__subtitle' }, 'Недостаточно данных')
+                    h('div', { className: 'weekly-wrap-step__subtitle' }, 'Собираем данные недели'),
+                    h('div', { className: 'weekly-wrap-step__meta-item' }, 'Добавьте 3 дня с едой — и итоги появятся автоматически')
                 )
         );
     }
@@ -304,8 +328,8 @@
                 const lsGet = getLsGet();
                 const profile = lsGet('heys_profile', {});
                 const pIndex = HEYS.products?.buildIndex?.();
-                const anchorDate = getLastWeekAnchorDate();
-                const report = buildWeekReport({ dateStr: anchorDate, lsGet, profile, pIndex });
+                const availableWeeks = getAvailableWeeklyWraps({ lsGet, profile, pIndex });
+                const report = availableWeeks[0]?.report || null;
                 return { report };
             }
         });
@@ -317,6 +341,7 @@
         const getter = lsGet || getLsGet();
         const now = new Date();
         const anchorDate = date || getLastWeekAnchorDate(now);
+        const baseNow = date ? new Date(date) : now;
 
         if (!shouldShowWeeklyWrapPopup({ now, lsGet: getter, dateStr: anchorDate })) {
             return false;
@@ -326,14 +351,16 @@
             setTimeout(() => registerWeeklyWrapStep(), 200);
         }
 
-        const report = buildWeekReport({
-            dateStr: anchorDate,
+        const availableWeeks = getAvailableWeeklyWraps({
             lsGet: getter,
             profile: profile || getter('heys_profile', {}),
-            pIndex: pIndex || HEYS.products?.buildIndex?.()
+            pIndex: pIndex || HEYS.products?.buildIndex?.(),
+            now: baseNow
         });
 
-        if (!report || report.daysWithData < 3) {
+        const report = availableWeeks[0]?.report || null;
+
+        if (!report) {
             return false;
         }
 
@@ -356,20 +383,20 @@
     function openWeeklyWrap({ lsGet, profile, pIndex, date } = {}) {
         const getter = lsGet || getLsGet();
         const now = new Date();
-        const anchorDate = date || getLastWeekAnchorDate(now);
+        const baseNow = date ? new Date(date) : now;
 
         if (!registerWeeklyWrapStep()) {
             setTimeout(() => registerWeeklyWrapStep(), 200);
         }
 
-        const report = buildWeekReport({
-            dateStr: anchorDate,
+        const availableWeeks = getAvailableWeeklyWraps({
             lsGet: getter,
             profile: profile || getter('heys_profile', {}),
-            pIndex: pIndex || HEYS.products?.buildIndex?.()
+            pIndex: pIndex || HEYS.products?.buildIndex?.(),
+            now: baseNow
         });
 
-        const reportForPopup = report && report.daysWithData >= 3 ? report : null;
+        const reportForPopup = availableWeeks[0]?.report || null;
 
         if (HEYS.StepModal?.show) {
             HEYS.StepModal.show({

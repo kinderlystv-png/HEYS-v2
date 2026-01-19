@@ -702,6 +702,12 @@ body.tour-active .ios-pwa-banner {
   color: #475569;
 }
 
+.weekly-wrap-step__hint {
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+}
+
 .weekly-wrap-step__content {
   display: flex;
   flex-direction: column;

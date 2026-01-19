@@ -1373,6 +1373,92 @@
   }
 
   /**
+   * Рассчитать оптимум для конкретного дня
+   * @param {Object} dayData - данные дня
+   * @param {Object} profile - профиль пользователя
+   * @param {Object} options - { includeNDTE?: boolean }
+   * @returns {{ optimum: number, baseOptimum: number|null, deficitPct: number, tdee: number }}
+   */
+  function getOptimumForDay(dayData, profile, options = {}) {
+    const day = dayData || {};
+    const prof = profile || getProfile() || {};
+    const savedDisplayOptimum = +day.savedDisplayOptimum || 0;
+    const dayDeficit = (day.deficitPct !== '' && day.deficitPct != null) ? +day.deficitPct : (prof.deficitPctTarget || 0);
+
+    if (savedDisplayOptimum > 0) {
+      return {
+        optimum: savedDisplayOptimum,
+        baseOptimum: null,
+        deficitPct: dayDeficit,
+        tdee: 0
+      };
+    }
+
+    if (global.HEYS?.TDEE?.calculate) {
+      const tdeeResult = global.HEYS.TDEE.calculate(day, prof, { lsGet, includeNDTE: options.includeNDTE }) || {};
+      const optimum = tdeeResult.optimum || 0;
+      const baseExpenditure = tdeeResult.baseExpenditure || 0;
+      const deficitPct = (tdeeResult.deficitPct != null) ? tdeeResult.deficitPct : dayDeficit;
+      const baseOptimum = baseExpenditure
+        ? Math.round(baseExpenditure * (1 + deficitPct / 100))
+        : (optimum || 0);
+      return {
+        optimum,
+        baseOptimum,
+        deficitPct,
+        tdee: tdeeResult.tdee || 0
+      };
+    }
+
+    if (!prof.weight || !prof.height || !prof.age) {
+      return {
+        optimum: 2000,
+        baseOptimum: 2000,
+        deficitPct: dayDeficit,
+        tdee: 0
+      };
+    }
+
+    const bmr = calcBMR(prof);
+    const activityMultipliers = {
+      sedentary: 1.2,
+      light: 1.375,
+      moderate: 1.55,
+      active: 1.725,
+      very_active: 1.9
+    };
+    const multiplier = activityMultipliers[prof.activityLevel] || 1.55;
+    const baseExpenditure = Math.round(bmr * multiplier);
+    const optimum = Math.round(baseExpenditure * (1 + dayDeficit / 100));
+
+    return {
+      optimum,
+      baseOptimum: baseExpenditure,
+      deficitPct: dayDeficit,
+      tdee: baseExpenditure
+    };
+  }
+
+  /**
+   * Рассчитать оптимумы для набора дат
+   * @param {string[]} dateStrs
+   * @param {Object} options - { profile?: Object, includeNDTE?: boolean, daysByDate?: Map }
+   * @returns {Map<string, { optimum: number, baseOptimum: number|null, deficitPct: number, tdee: number }>}
+   */
+  function getOptimumForDays(dateStrs, options = {}) {
+    const result = new Map();
+    const prof = options.profile || getProfile() || {};
+    const daysByDate = options.daysByDate || new Map();
+
+    (dateStrs || []).forEach((dateStr) => {
+      const dayData = daysByDate.get(dateStr) || loadDay(dateStr);
+      result.set(dateStr, getOptimumForDay(dayData, prof, options));
+    });
+
+    return result;
+  }
+
+  /**
    * Вычисляет калории за день напрямую из localStorage (legacy wrapper)
    */
   function getDayCalories(dateStr, productsMap) {
@@ -1444,6 +1530,10 @@
   // Кэш загруженных дней (для предотвращения повторных чтений)
   const DAYS_CACHE = new Map(); // dateStr => { data, timestamp }
   const DAYS_CACHE_TTL = 5 * 60 * 1000; // 5 минут TTL
+  const TDEE_CACHE = new Map(); // key => { data, timestamp }
+  const TDEE_CACHE_TTL = 5 * 60 * 1000; // 5 минут TTL
+  let TDEE_CACHE_HITS = 0;
+  let TDEE_CACHE_MISSES = 0;
 
   /**
    * Lazy-загрузка дней — загружает только последние N дней
@@ -1522,6 +1612,11 @@
    */
   function invalidateDayCache(dateStr) {
     DAYS_CACHE.delete(dateStr);
+    if (!dateStr) return;
+    const prefix = dateStr + '|';
+    Array.from(TDEE_CACHE.keys()).forEach((key) => {
+      if (key.startsWith(prefix)) TDEE_CACHE.delete(key);
+    });
   }
 
   /**
@@ -1529,6 +1624,9 @@
    */
   function clearDaysCache() {
     DAYS_CACHE.clear();
+    TDEE_CACHE.clear();
+    TDEE_CACHE_HITS = 0;
+    TDEE_CACHE_MISSES = 0;
   }
 
   /**
@@ -1550,6 +1648,85 @@
       validEntries: validCount,
       expiredEntries: DAYS_CACHE.size - validCount
     };
+  }
+
+  /**
+   * Получить статистику TDEE-кэша
+   * @returns {{size: number, validEntries: number, expiredEntries: number, hits: number, misses: number, hitRate: number}}
+   */
+  function getTdeeCacheStats() {
+    let validCount = 0;
+    const now = Date.now();
+
+    TDEE_CACHE.forEach((cached) => {
+      if (now - cached.timestamp < TDEE_CACHE_TTL) {
+        validCount++;
+      }
+    });
+
+    const total = TDEE_CACHE_HITS + TDEE_CACHE_MISSES;
+    const hitRate = total > 0 ? Math.round((TDEE_CACHE_HITS / total) * 1000) / 10 : 0;
+
+    return {
+      size: TDEE_CACHE.size,
+      validEntries: validCount,
+      expiredEntries: TDEE_CACHE.size - validCount,
+      hits: TDEE_CACHE_HITS,
+      misses: TDEE_CACHE_MISSES,
+      hitRate
+    };
+  }
+
+  /**
+   * Получить TDEE/optimum для дня с кэшированием
+   * @param {string} dateStr
+   * @param {Object} profile
+   * @param {Object} options - { includeNDTE?: boolean, dayData?: Object }
+   * @returns {{ tdee: number, optimum: number, baseExpenditure: number|null, deficitPct: number }}
+   */
+  function getDayTdee(dateStr, profile, options = {}) {
+    if (!dateStr) {
+      return { tdee: 0, optimum: 0, baseExpenditure: null, deficitPct: (profile?.deficitPctTarget || 0) };
+    }
+
+    const includeNDTE = !!options.includeNDTE;
+    const cacheKey = dateStr + '|' + (includeNDTE ? '1' : '0');
+    const now = Date.now();
+
+    if (TDEE_CACHE.has(cacheKey)) {
+      const cached = TDEE_CACHE.get(cacheKey);
+      if (now - cached.timestamp < TDEE_CACHE_TTL) {
+        TDEE_CACHE_HITS += 1;
+        return cached.data;
+      }
+    }
+
+    TDEE_CACHE_MISSES += 1;
+
+    const prof = profile || getProfile() || {};
+    const dayData = options.dayData || loadDay(dateStr);
+
+    let result = null;
+    if (dayData && global.HEYS?.TDEE?.calculate) {
+      const tdeeResult = global.HEYS.TDEE.calculate(dayData, prof, { lsGet, includeNDTE }) || {};
+      result = {
+        tdee: tdeeResult.tdee || 0,
+        optimum: tdeeResult.optimum || 0,
+        baseExpenditure: tdeeResult.baseExpenditure || null,
+        deficitPct: (tdeeResult.deficitPct != null) ? tdeeResult.deficitPct : (prof.deficitPctTarget || 0)
+      };
+    } else {
+      const optInfo = getOptimumForDay(dayData, prof, { includeNDTE });
+      result = {
+        tdee: optInfo.tdee || optInfo.baseOptimum || optInfo.optimum || 0,
+        optimum: optInfo.optimum || 0,
+        baseExpenditure: optInfo.baseOptimum || null,
+        deficitPct: optInfo.deficitPct || (prof.deficitPctTarget || 0)
+      };
+    }
+
+    TDEE_CACHE.set(cacheKey, { data: result, timestamp: now });
+    return result;
   }
 
   /**
@@ -1817,6 +1994,10 @@
     getProductsMap,
     getActiveDaysForMonth,
     getDayData,
+    getOptimumForDay,
+    getOptimumForDays,
+    getDayTdee,
+    getTdeeCacheStats,
     // 🚀 Lazy-loading API
     loadRecentDays,
     loadDay,

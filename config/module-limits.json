@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-01-17T18:30:12.403Z",
+  "generatedAt": "2026-01-19T16:59:23.271Z",
   "bufferPct": 0.1,
   "defaults": {
     "loc": {
@@ -18,22 +18,22 @@
   "files": {
     "apps/web/heys_add_product_step_v1.js": {
       "metrics": {
-        "loc": 1941,
-        "functions": 108,
-        "heysRefs": 77
+        "loc": 3926,
+        "functions": 249,
+        "heysRefs": 134
       },
       "limits": {
         "loc": {
-          "warn": 1941,
-          "error": 2136
+          "warn": 3926,
+          "error": 4319
         },
         "functions": {
-          "warn": 108,
-          "error": 119
+          "warn": 249,
+          "error": 274
         },
         "heysRefs": {
-          "warn": 77,
-          "error": 85
+          "warn": 134,
+          "error": 148
         }
       }
     },
@@ -144,22 +144,22 @@
     },
     "apps/web/heys_app_backup_export_v1.js": {
       "metrics": {
-        "loc": 178,
-        "functions": 7,
-        "heysRefs": 45
+        "loc": 215,
+        "functions": 8,
+        "heysRefs": 57
       },
       "limits": {
         "loc": {
-          "warn": 178,
-          "error": 196
+          "warn": 215,
+          "error": 237
         },
         "functions": {
-          "warn": 7,
-          "error": 8
+          "warn": 8,
+          "error": 9
         },
         "heysRefs": {
-          "warn": 45,
-          "error": 50
+          "warn": 57,
+          "error": 63
         }
       }
     },
@@ -459,22 +459,22 @@
     },
     "apps/web/heys_app_gate_flow_v1.js": {
       "metrics": {
-        "loc": 647,
-        "functions": 30,
-        "heysRefs": 18
+        "loc": 696,
+        "functions": 31,
+        "heysRefs": 23
       },
       "limits": {
         "loc": {
-          "warn": 647,
-          "error": 712
+          "warn": 696,
+          "error": 766
         },
         "functions": {
-          "warn": 30,
-          "error": 33
+          "warn": 31,
+          "error": 35
         },
         "heysRefs": {
-          "warn": 18,
-          "error": 20
+          "warn": 23,
+          "error": 26
         }
       }
     },
@@ -690,18 +690,18 @@
     },
     "apps/web/heys_app_root_impl_v1.js": {
       "metrics": {
-        "loc": 741,
-        "functions": 80,
+        "loc": 760,
+        "functions": 82,
         "heysRefs": 42
       },
       "limits": {
         "loc": {
-          "warn": 741,
-          "error": 816
+          "warn": 760,
+          "error": 837
         },
         "functions": {
-          "warn": 80,
-          "error": 88
+          "warn": 82,
+          "error": 91
         },
         "heysRefs": {
           "warn": 42,
@@ -795,22 +795,22 @@
     },
     "apps/web/heys_app_shell_v1.js": {
       "metrics": {
-        "loc": 725,
-        "functions": 37,
-        "heysRefs": 17
+        "loc": 752,
+        "functions": 39,
+        "heysRefs": 18
       },
       "limits": {
         "loc": {
-          "warn": 725,
-          "error": 798
+          "warn": 752,
+          "error": 828
         },
         "functions": {
-          "warn": 37,
-          "error": 41
+          "warn": 39,
+          "error": 43
         },
         "heysRefs": {
-          "warn": 17,
-          "error": 19
+          "warn": 18,
+          "error": 20
         }
       }
     },
@@ -1110,22 +1110,22 @@
     },
     "apps/web/heys_cloud_shared_v1.js": {
       "metrics": {
-        "loc": 476,
-        "functions": 43,
-        "heysRefs": 10
+        "loc": 612,
+        "functions": 49,
+        "heysRefs": 18
       },
       "limits": {
         "loc": {
-          "warn": 476,
-          "error": 524
+          "warn": 612,
+          "error": 674
         },
         "functions": {
-          "warn": 43,
-          "error": 48
+          "warn": 49,
+          "error": 54
         },
         "heysRefs": {
-          "warn": 10,
-          "error": 11
+          "warn": 18,
+          "error": 20
         }
       }
     },
@@ -1152,14 +1152,14 @@
     },
     "apps/web/heys_confirm_modal_v1.js": {
       "metrics": {
-        "loc": 291,
+        "loc": 294,
         "functions": 31,
         "heysRefs": 5
       },
       "limits": {
         "loc": {
-          "warn": 291,
-          "error": 321
+          "warn": 294,
+          "error": 324
         },
         "functions": {
           "warn": 31,
@@ -1194,22 +1194,22 @@
     },
     "apps/web/heys_core_v12.js": {
       "metrics": {
-        "loc": 2240,
-        "functions": 146,
-        "heysRefs": 183
+        "loc": 2900,
+        "functions": 177,
+        "heysRefs": 216
       },
       "limits": {
         "loc": {
-          "warn": 2240,
-          "error": 2464
+          "warn": 2900,
+          "error": 3191
         },
         "functions": {
-          "warn": 146,
-          "error": 161
+          "warn": 177,
+          "error": 195
         },
         "heysRefs": {
-          "warn": 183,
-          "error": 202
+          "warn": 216,
+          "error": 238
         }
       }
     },
@@ -1299,22 +1299,22 @@
     },
     "apps/web/heys_day_add_product.js": {
       "metrics": {
-        "loc": 397,
-        "functions": 35,
-        "heysRefs": 17
+        "loc": 449,
+        "functions": 37,
+        "heysRefs": 23
       },
       "limits": {
         "loc": {
-          "warn": 397,
-          "error": 437
+          "warn": 449,
+          "error": 494
         },
         "functions": {
-          "warn": 35,
-          "error": 39
+          "warn": 37,
+          "error": 41
         },
         "heysRefs": {
-          "warn": 17,
-          "error": 19
+          "warn": 23,
+          "error": 26
         }
       }
     },
@@ -1488,22 +1488,22 @@
     },
     "apps/web/heys_day_calculations.js": {
       "metrics": {
-        "loc": 231,
+        "loc": 235,
         "functions": 42,
-        "heysRefs": 4
+        "heysRefs": 5
       },
       "limits": {
         "loc": {
-          "warn": 231,
-          "error": 255
+          "warn": 235,
+          "error": 259
         },
         "functions": {
           "warn": 42,
           "error": 47
         },
         "heysRefs": {
-          "warn": 4,
-          "error": 5
+          "warn": 5,
+          "error": 6
         }
       }
     },
@@ -1551,14 +1551,14 @@
     },
     "apps/web/heys_day_caloric_balance_v1.js": {
       "metrics": {
-        "loc": 1880,
+        "loc": 1883,
         "functions": 63,
         "heysRefs": 12
       },
       "limits": {
         "loc": {
-          "warn": 1880,
-          "error": 2068
+          "warn": 1883,
+          "error": 2072
         },
         "functions": {
           "warn": 63,
@@ -1593,22 +1593,22 @@
     },
     "apps/web/heys_day_core_bundle_v1.js": {
       "metrics": {
-        "loc": 3616,
-        "functions": 267,
-        "heysRefs": 171
+        "loc": 3684,
+        "functions": 273,
+        "heysRefs": 173
       },
       "limits": {
         "loc": {
-          "warn": 3616,
-          "error": 3978
+          "warn": 3684,
+          "error": 4053
         },
         "functions": {
-          "warn": 267,
-          "error": 294
+          "warn": 273,
+          "error": 301
         },
         "heysRefs": {
-          "warn": 171,
-          "error": 189
+          "warn": 173,
+          "error": 191
         }
       }
     },
@@ -2034,18 +2034,18 @@
     },
     "apps/web/heys_day_insights_data_v1.js": {
       "metrics": {
-        "loc": 654,
-        "functions": 42,
+        "loc": 679,
+        "functions": 44,
         "heysRefs": 3
       },
       "limits": {
         "loc": {
-          "warn": 654,
-          "error": 720
+          "warn": 679,
+          "error": 747
         },
         "functions": {
-          "warn": 42,
-          "error": 47
+          "warn": 44,
+          "error": 49
         },
         "heysRefs": {
           "warn": 3,
@@ -2139,22 +2139,22 @@
     },
     "apps/web/heys_day_meal_card.js": {
       "metrics": {
-        "loc": 1313,
+        "loc": 1314,
         "functions": 2,
-        "heysRefs": 24
+        "heysRefs": 26
       },
       "limits": {
         "loc": {
-          "warn": 1313,
-          "error": 1445
+          "warn": 1314,
+          "error": 1446
         },
         "functions": {
           "warn": 2,
           "error": 3
         },
         "heysRefs": {
-          "warn": 24,
-          "error": 27
+          "warn": 26,
+          "error": 29
         }
       }
     },
@@ -2181,22 +2181,22 @@
     },
     "apps/web/heys_day_meal_handlers.js": {
       "metrics": {
-        "loc": 440,
+        "loc": 445,
         "functions": 50,
-        "heysRefs": 21
+        "heysRefs": 23
       },
       "limits": {
         "loc": {
-          "warn": 440,
-          "error": 485
+          "warn": 445,
+          "error": 490
         },
         "functions": {
           "warn": 50,
           "error": 56
         },
         "heysRefs": {
-          "warn": 21,
-          "error": 24
+          "warn": 23,
+          "error": 26
         }
       }
     },
@@ -2265,22 +2265,22 @@
     },
     "apps/web/heys_day_meals_bundle_v1.js": {
       "metrics": {
-        "loc": 4533,
+        "loc": 4563,
         "functions": 280,
-        "heysRefs": 72
+        "heysRefs": 73
       },
       "limits": {
         "loc": {
-          "warn": 4533,
-          "error": 4987
+          "warn": 4563,
+          "error": 5020
         },
         "functions": {
           "warn": 280,
           "error": 308
         },
         "heysRefs": {
-          "warn": 72,
-          "error": 80
+          "warn": 73,
+          "error": 81
         }
       }
     },
@@ -2853,35 +2853,35 @@
     },
     "apps/web/heys_day_stats_v1.js": {
       "metrics": {
-        "loc": 2787,
-        "functions": 122,
-        "heysRefs": 3
+        "loc": 2883,
+        "functions": 128,
+        "heysRefs": 9
       },
       "limits": {
         "loc": {
-          "warn": 2787,
-          "error": 3066
+          "warn": 2883,
+          "error": 3172
         },
         "functions": {
-          "warn": 122,
-          "error": 135
+          "warn": 128,
+          "error": 141
         },
         "heysRefs": {
-          "warn": 3,
-          "error": 4
+          "warn": 9,
+          "error": 10
         }
       }
     },
     "apps/web/heys_day_stats_vm_v1.js": {
       "metrics": {
-        "loc": 1991,
+        "loc": 2027,
         "functions": 99,
         "heysRefs": 1
       },
       "limits": {
         "loc": {
-          "warn": 1991,
-          "error": 2191
+          "warn": 2027,
+          "error": 2230
         },
         "functions": {
           "warn": 99,
@@ -3063,22 +3063,22 @@
     },
     "apps/web/heys_day_utils.js": {
       "metrics": {
-        "loc": 1819,
-        "functions": 171,
-        "heysRefs": 81
+        "loc": 2011,
+        "functions": 183,
+        "heysRefs": 84
       },
       "limits": {
         "loc": {
-          "warn": 1819,
-          "error": 2001
+          "warn": 2011,
+          "error": 2213
         },
         "functions": {
-          "warn": 171,
-          "error": 189
+          "warn": 183,
+          "error": 202
         },
         "heysRefs": {
-          "warn": 81,
-          "error": 90
+          "warn": 84,
+          "error": 93
         }
       }
     },
@@ -3229,6 +3229,27 @@
         }
       }
     },
+    "apps/web/heys_export_utils_v1.js": {
+      "metrics": {
+        "loc": 29,
+        "functions": 7,
+        "heysRefs": 4
+      },
+      "limits": {
+        "loc": {
+          "warn": 29,
+          "error": 32
+        },
+        "functions": {
+          "warn": 7,
+          "error": 8
+        },
+        "heysRefs": {
+          "warn": 4,
+          "error": 5
+        }
+      }
+    },
     "apps/web/heys_feature_flags_v1.js": {
       "metrics": {
         "loc": 205,
@@ -3252,43 +3273,64 @@
     },
     "apps/web/heys_gamification_bar_v1.js": {
       "metrics": {
-        "loc": 575,
-        "functions": 53,
-        "heysRefs": 58
+        "loc": 585,
+        "functions": 57,
+        "heysRefs": 51
       },
       "limits": {
         "loc": {
-          "warn": 575,
-          "error": 633
+          "warn": 585,
+          "error": 644
         },
         "functions": {
-          "warn": 53,
-          "error": 59
+          "warn": 57,
+          "error": 63
         },
         "heysRefs": {
-          "warn": 58,
-          "error": 64
+          "warn": 51,
+          "error": 57
         }
       }
     },
     "apps/web/heys_gamification_v1.js": {
       "metrics": {
-        "loc": 2100,
-        "functions": 145,
-        "heysRefs": 43
+        "loc": 2111,
+        "functions": 147,
+        "heysRefs": 31
       },
       "limits": {
         "loc": {
-          "warn": 2100,
-          "error": 2310
+          "warn": 2111,
+          "error": 2323
         },
         "functions": {
-          "warn": 145,
-          "error": 160
+          "warn": 147,
+          "error": 162
         },
         "heysRefs": {
-          "warn": 43,
-          "error": 48
+          "warn": 31,
+          "error": 35
+        }
+      }
+    },
+    "apps/web/heys_harm_v1.js": {
+      "metrics": {
+        "loc": 992,
+        "functions": 18,
+        "heysRefs": 6
+      },
+      "limits": {
+        "loc": {
+          "warn": 992,
+          "error": 1092
+        },
+        "functions": {
+          "warn": 18,
+          "error": 20
+        },
+        "heysRefs": {
+          "warn": 6,
+          "error": 7
         }
       }
     },
@@ -3714,22 +3756,22 @@
     },
     "apps/web/heys_models_v1.js": {
       "metrics": {
-        "loc": 705,
-        "functions": 64,
-        "heysRefs": 2
+        "loc": 1497,
+        "functions": 110,
+        "heysRefs": 8
       },
       "limits": {
         "loc": {
-          "warn": 705,
-          "error": 776
+          "warn": 1497,
+          "error": 1647
         },
         "functions": {
-          "warn": 64,
-          "error": 71
+          "warn": 110,
+          "error": 122
         },
         "heysRefs": {
-          "warn": 2,
-          "error": 3
+          "warn": 8,
+          "error": 9
         }
       }
     },
@@ -3798,14 +3840,14 @@
     },
     "apps/web/heys_paywall_v1.js": {
       "metrics": {
-        "loc": 903,
+        "loc": 909,
         "functions": 48,
         "heysRefs": 23
       },
       "limits": {
         "loc": {
-          "warn": 903,
-          "error": 994
+          "warn": 909,
+          "error": 1000
         },
         "functions": {
           "warn": 48,
@@ -3987,14 +4029,14 @@
     },
     "apps/web/heys_reports_tab_impl_v1.js": {
       "metrics": {
-        "loc": 1159,
+        "loc": 1163,
         "functions": 151,
         "heysRefs": 42
       },
       "limits": {
         "loc": {
-          "warn": 1159,
-          "error": 1275
+          "warn": 1163,
+          "error": 1280
         },
         "functions": {
           "warn": 151,
@@ -4024,6 +4066,27 @@
         "heysRefs": {
           "warn": 4,
           "error": 5
+        }
+      }
+    },
+    "apps/web/heys_shared_products_export_fields_v1.js": {
+      "metrics": {
+        "loc": 51,
+        "functions": 4,
+        "heysRefs": 3
+      },
+      "limits": {
+        "loc": {
+          "warn": 51,
+          "error": 57
+        },
+        "functions": {
+          "warn": 4,
+          "error": 5
+        },
+        "heysRefs": {
+          "warn": 3,
+          "error": 4
         }
       }
     },
@@ -4176,22 +4239,22 @@
     },
     "apps/web/heys_step_modal_v1.js": {
       "metrics": {
-        "loc": 956,
+        "loc": 980,
         "functions": 87,
-        "heysRefs": 14
+        "heysRefs": 12
       },
       "limits": {
         "loc": {
-          "warn": 956,
-          "error": 1052
+          "warn": 980,
+          "error": 1078
         },
         "functions": {
           "warn": 87,
           "error": 96
         },
         "heysRefs": {
-          "warn": 14,
-          "error": 16
+          "warn": 12,
+          "error": 14
         }
       }
     },
@@ -4260,22 +4323,22 @@
     },
     "apps/web/heys_storage_supabase_v1.js": {
       "metrics": {
-        "loc": 5909,
+        "loc": 6014,
         "functions": 284,
-        "heysRefs": 64
+        "heysRefs": 68
       },
       "limits": {
         "loc": {
-          "warn": 5909,
-          "error": 6500
+          "warn": 6014,
+          "error": 6616
         },
         "functions": {
           "warn": 284,
           "error": 313
         },
         "heysRefs": {
-          "warn": 64,
-          "error": 71
+          "warn": 68,
+          "error": 75
         }
       }
     },
@@ -4344,22 +4407,22 @@
     },
     "apps/web/heys_supplements_v1.js": {
       "metrics": {
-        "loc": 3191,
-        "functions": 195,
-        "heysRefs": 32
+        "loc": 3215,
+        "functions": 197,
+        "heysRefs": 33
       },
       "limits": {
         "loc": {
-          "warn": 3191,
-          "error": 3511
+          "warn": 3215,
+          "error": 3537
         },
         "functions": {
-          "warn": 195,
-          "error": 215
+          "warn": 197,
+          "error": 217
         },
         "heysRefs": {
-          "warn": 32,
-          "error": 36
+          "warn": 33,
+          "error": 37
         }
       }
     },
@@ -4428,18 +4491,18 @@
     },
     "apps/web/heys_toast_v1.js": {
       "metrics": {
-        "loc": 294,
-        "functions": 25,
+        "loc": 345,
+        "functions": 31,
         "heysRefs": 4
       },
       "limits": {
         "loc": {
-          "warn": 294,
-          "error": 324
+          "warn": 345,
+          "error": 380
         },
         "functions": {
-          "warn": 25,
-          "error": 28
+          "warn": 31,
+          "error": 35
         },
         "heysRefs": {
           "warn": 4,
@@ -4554,22 +4617,22 @@
     },
     "apps/web/heys_weekly_reports_v2.js": {
       "metrics": {
-        "loc": 328,
-        "functions": 42,
-        "heysRefs": 15
+        "loc": 425,
+        "functions": 51,
+        "heysRefs": 20
       },
       "limits": {
         "loc": {
-          "warn": 328,
-          "error": 361
+          "warn": 425,
+          "error": 468
         },
         "functions": {
-          "warn": 42,
-          "error": 47
+          "warn": 51,
+          "error": 57
         },
         "heysRefs": {
-          "warn": 15,
-          "error": 17
+          "warn": 20,
+          "error": 22
         }
       }
     },
@@ -4680,14 +4743,14 @@
     },
     "apps/web/heys_yandex_api_v1.js": {
       "metrics": {
-        "loc": 1584,
+        "loc": 1589,
         "functions": 109,
         "heysRefs": 12
       },
       "limits": {
         "loc": {
-          "warn": 1584,
-          "error": 1743
+          "warn": 1589,
+          "error": 1748
         },
         "functions": {
           "warn": 109,
@@ -4759,6 +4822,69 @@
         "heysRefs": {
           "warn": 4,
           "error": 5
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/storage/src/legacy/heys_storage_indexeddb_v1.js": {
+      "metrics": {
+        "loc": 444,
+        "functions": 46,
+        "heysRefs": 1
+      },
+      "limits": {
+        "loc": {
+          "warn": 444,
+          "error": 489
+        },
+        "functions": {
+          "warn": 46,
+          "error": 51
+        },
+        "heysRefs": {
+          "warn": 1,
+          "error": 2
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/storage/src/legacy/heys_storage_supabase_v1.js": {
+      "metrics": {
+        "loc": 494,
+        "functions": 53,
+        "heysRefs": 12
+      },
+      "limits": {
+        "loc": {
+          "warn": 494,
+          "error": 544
+        },
+        "functions": {
+          "warn": 53,
+          "error": 59
+        },
+        "heysRefs": {
+          "warn": 12,
+          "error": 14
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/storage/src/legacy/heys_storage_supabase_v1_backup.js": {
+      "metrics": {
+        "loc": 362,
+        "functions": 45,
+        "heysRefs": 16
+      },
+      "limits": {
+        "loc": {
+          "warn": 362,
+          "error": 399
+        },
+        "functions": {
+          "warn": 45,
+          "error": 50
+        },
+        "heysRefs": {
+          "warn": 16,
+          "error": 18
         }
       }
     },
@@ -4951,111 +5077,6 @@
         }
       }
     },
-    "apps/web/node_modules/@heys/storage/src/legacy/heys_storage_indexeddb_v1.js": {
-      "metrics": {
-        "loc": 444,
-        "functions": 46,
-        "heysRefs": 1
-      },
-      "limits": {
-        "loc": {
-          "warn": 444,
-          "error": 489
-        },
-        "functions": {
-          "warn": 46,
-          "error": 51
-        },
-        "heysRefs": {
-          "warn": 1,
-          "error": 2
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/storage/src/legacy/heys_storage_supabase_v1.js": {
-      "metrics": {
-        "loc": 494,
-        "functions": 53,
-        "heysRefs": 12
-      },
-      "limits": {
-        "loc": {
-          "warn": 494,
-          "error": 544
-        },
-        "functions": {
-          "warn": 53,
-          "error": 59
-        },
-        "heysRefs": {
-          "warn": 12,
-          "error": 14
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/storage/src/legacy/heys_storage_supabase_v1_backup.js": {
-      "metrics": {
-        "loc": 362,
-        "functions": 45,
-        "heysRefs": 16
-      },
-      "limits": {
-        "loc": {
-          "warn": 362,
-          "error": 399
-        },
-        "functions": {
-          "warn": 45,
-          "error": 50
-        },
-        "heysRefs": {
-          "warn": 16,
-          "error": 18
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/core/node_modules/@heys/shared/src/integration/heys_integration_layer.js": {
-      "metrics": {
-        "loc": 776,
-        "functions": 37,
-        "heysRefs": 2
-      },
-      "limits": {
-        "loc": {
-          "warn": 776,
-          "error": 854
-        },
-        "functions": {
-          "warn": 37,
-          "error": 41
-        },
-        "heysRefs": {
-          "warn": 2,
-          "error": 3
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/core/node_modules/@heys/shared/src/integration/heys_integration_layer_v1.js": {
-      "metrics": {
-        "loc": 516,
-        "functions": 45,
-        "heysRefs": 22
-      },
-      "limits": {
-        "loc": {
-          "warn": 516,
-          "error": 568
-        },
-        "functions": {
-          "warn": 45,
-          "error": 50
-        },
-        "heysRefs": {
-          "warn": 22,
-          "error": 25
-        }
-      }
-    },
     "apps/web/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_advanced_error_tracker_v1.js": {
       "metrics": {
         "loc": 469,
@@ -5200,6 +5221,48 @@
         "heysRefs": {
           "warn": 3,
           "error": 4
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/core/node_modules/@heys/shared/src/integration/heys_integration_layer.js": {
+      "metrics": {
+        "loc": 776,
+        "functions": 37,
+        "heysRefs": 2
+      },
+      "limits": {
+        "loc": {
+          "warn": 776,
+          "error": 854
+        },
+        "functions": {
+          "warn": 37,
+          "error": 41
+        },
+        "heysRefs": {
+          "warn": 2,
+          "error": 3
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/core/node_modules/@heys/shared/src/integration/heys_integration_layer_v1.js": {
+      "metrics": {
+        "loc": 516,
+        "functions": 45,
+        "heysRefs": 22
+      },
+      "limits": {
+        "loc": {
+          "warn": 516,
+          "error": 568
+        },
+        "functions": {
+          "warn": 45,
+          "error": 50
+        },
+        "heysRefs": {
+          "warn": 22,
+          "error": 25
         }
       }
     },
@@ -5392,384 +5455,6 @@
         }
       }
     },
-    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/integration/heys_integration_layer.js": {
-      "metrics": {
-        "loc": 776,
-        "functions": 37,
-        "heysRefs": 2
-      },
-      "limits": {
-        "loc": {
-          "warn": 776,
-          "error": 854
-        },
-        "functions": {
-          "warn": 37,
-          "error": 41
-        },
-        "heysRefs": {
-          "warn": 2,
-          "error": 3
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/integration/heys_integration_layer_v1.js": {
-      "metrics": {
-        "loc": 516,
-        "functions": 45,
-        "heysRefs": 22
-      },
-      "limits": {
-        "loc": {
-          "warn": 516,
-          "error": 568
-        },
-        "functions": {
-          "warn": 45,
-          "error": 50
-        },
-        "heysRefs": {
-          "warn": 22,
-          "error": 25
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_advanced_error_tracker_v1.js": {
-      "metrics": {
-        "loc": 469,
-        "functions": 46,
-        "heysRefs": 6
-      },
-      "limits": {
-        "loc": {
-          "warn": 469,
-          "error": 516
-        },
-        "functions": {
-          "warn": 46,
-          "error": 51
-        },
-        "heysRefs": {
-          "warn": 6,
-          "error": 7
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_error_boundary_v1.js": {
-      "metrics": {
-        "loc": 38,
-        "functions": 8,
-        "heysRefs": 4
-      },
-      "limits": {
-        "loc": {
-          "warn": 38,
-          "error": 42
-        },
-        "functions": {
-          "warn": 8,
-          "error": 9
-        },
-        "heysRefs": {
-          "warn": 4,
-          "error": 5
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_performance_monitor.js": {
-      "metrics": {
-        "loc": 830,
-        "functions": 75,
-        "heysRefs": 4
-      },
-      "limits": {
-        "loc": {
-          "warn": 830,
-          "error": 914
-        },
-        "functions": {
-          "warn": 75,
-          "error": 83
-        },
-        "heysRefs": {
-          "warn": 4,
-          "error": 5
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_security_validation.js": {
-      "metrics": {
-        "loc": 577,
-        "functions": 19,
-        "heysRefs": 3
-      },
-      "limits": {
-        "loc": {
-          "warn": 577,
-          "error": 635
-        },
-        "functions": {
-          "warn": 19,
-          "error": 21
-        },
-        "heysRefs": {
-          "warn": 3,
-          "error": 4
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_service_worker_v1.js": {
-      "metrics": {
-        "loc": 452,
-        "functions": 8,
-        "heysRefs": 3
-      },
-      "limits": {
-        "loc": {
-          "warn": 452,
-          "error": 498
-        },
-        "functions": {
-          "warn": 8,
-          "error": 9
-        },
-        "heysRefs": {
-          "warn": 3,
-          "error": 4
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_virtual_list_v1.js": {
-      "metrics": {
-        "loc": 25,
-        "functions": 7,
-        "heysRefs": 1
-      },
-      "limits": {
-        "loc": {
-          "warn": 25,
-          "error": 28
-        },
-        "functions": {
-          "warn": 7,
-          "error": 8
-        },
-        "heysRefs": {
-          "warn": 1,
-          "error": 2
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_worker_manager_v1.js": {
-      "metrics": {
-        "loc": 373,
-        "functions": 42,
-        "heysRefs": 3
-      },
-      "limits": {
-        "loc": {
-          "warn": 373,
-          "error": 411
-        },
-        "functions": {
-          "warn": 42,
-          "error": 47
-        },
-        "heysRefs": {
-          "warn": 3,
-          "error": 4
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_advanced_error_tracker_v1.js": {
-      "metrics": {
-        "loc": 469,
-        "functions": 46,
-        "heysRefs": 6
-      },
-      "limits": {
-        "loc": {
-          "warn": 469,
-          "error": 516
-        },
-        "functions": {
-          "warn": 46,
-          "error": 51
-        },
-        "heysRefs": {
-          "warn": 6,
-          "error": 7
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_error_boundary_v1.js": {
-      "metrics": {
-        "loc": 38,
-        "functions": 8,
-        "heysRefs": 4
-      },
-      "limits": {
-        "loc": {
-          "warn": 38,
-          "error": 42
-        },
-        "functions": {
-          "warn": 8,
-          "error": 9
-        },
-        "heysRefs": {
-          "warn": 4,
-          "error": 5
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_performance_monitor.js": {
-      "metrics": {
-        "loc": 830,
-        "functions": 75,
-        "heysRefs": 4
-      },
-      "limits": {
-        "loc": {
-          "warn": 830,
-          "error": 914
-        },
-        "functions": {
-          "warn": 75,
-          "error": 83
-        },
-        "heysRefs": {
-          "warn": 4,
-          "error": 5
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_security_validation.js": {
-      "metrics": {
-        "loc": 577,
-        "functions": 19,
-        "heysRefs": 3
-      },
-      "limits": {
-        "loc": {
-          "warn": 577,
-          "error": 635
-        },
-        "functions": {
-          "warn": 19,
-          "error": 21
-        },
-        "heysRefs": {
-          "warn": 3,
-          "error": 4
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_service_worker_v1.js": {
-      "metrics": {
-        "loc": 452,
-        "functions": 8,
-        "heysRefs": 3
-      },
-      "limits": {
-        "loc": {
-          "warn": 452,
-          "error": 498
-        },
-        "functions": {
-          "warn": 8,
-          "error": 9
-        },
-        "heysRefs": {
-          "warn": 3,
-          "error": 4
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_virtual_list_v1.js": {
-      "metrics": {
-        "loc": 25,
-        "functions": 7,
-        "heysRefs": 1
-      },
-      "limits": {
-        "loc": {
-          "warn": 25,
-          "error": 28
-        },
-        "functions": {
-          "warn": 7,
-          "error": 8
-        },
-        "heysRefs": {
-          "warn": 1,
-          "error": 2
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_worker_manager_v1.js": {
-      "metrics": {
-        "loc": 373,
-        "functions": 42,
-        "heysRefs": 3
-      },
-      "limits": {
-        "loc": {
-          "warn": 373,
-          "error": 411
-        },
-        "functions": {
-          "warn": 42,
-          "error": 47
-        },
-        "heysRefs": {
-          "warn": 3,
-          "error": 4
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/integration/heys_integration_layer.js": {
-      "metrics": {
-        "loc": 776,
-        "functions": 37,
-        "heysRefs": 2
-      },
-      "limits": {
-        "loc": {
-          "warn": 776,
-          "error": 854
-        },
-        "functions": {
-          "warn": 37,
-          "error": 41
-        },
-        "heysRefs": {
-          "warn": 2,
-          "error": 3
-        }
-      }
-    },
-    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/integration/heys_integration_layer_v1.js": {
-      "metrics": {
-        "loc": 516,
-        "functions": 45,
-        "heysRefs": 22
-      },
-      "limits": {
-        "loc": {
-          "warn": 516,
-          "error": 568
-        },
-        "functions": {
-          "warn": 45,
-          "error": 50
-        },
-        "heysRefs": {
-          "warn": 22,
-          "error": 25
-        }
-      }
-    },
     "apps/web/node_modules/@heys/ui/node_modules/@heys/core/node_modules/@heys/shared/src/integration/heys_integration_layer.js": {
       "metrics": {
         "loc": 776,
@@ -5939,6 +5624,384 @@
       }
     },
     "apps/web/node_modules/@heys/ui/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_worker_manager_v1.js": {
+      "metrics": {
+        "loc": 373,
+        "functions": 42,
+        "heysRefs": 3
+      },
+      "limits": {
+        "loc": {
+          "warn": 373,
+          "error": 411
+        },
+        "functions": {
+          "warn": 42,
+          "error": 47
+        },
+        "heysRefs": {
+          "warn": 3,
+          "error": 4
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/integration/heys_integration_layer.js": {
+      "metrics": {
+        "loc": 776,
+        "functions": 37,
+        "heysRefs": 2
+      },
+      "limits": {
+        "loc": {
+          "warn": 776,
+          "error": 854
+        },
+        "functions": {
+          "warn": 37,
+          "error": 41
+        },
+        "heysRefs": {
+          "warn": 2,
+          "error": 3
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/integration/heys_integration_layer_v1.js": {
+      "metrics": {
+        "loc": 516,
+        "functions": 45,
+        "heysRefs": 22
+      },
+      "limits": {
+        "loc": {
+          "warn": 516,
+          "error": 568
+        },
+        "functions": {
+          "warn": 45,
+          "error": 50
+        },
+        "heysRefs": {
+          "warn": 22,
+          "error": 25
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_advanced_error_tracker_v1.js": {
+      "metrics": {
+        "loc": 469,
+        "functions": 46,
+        "heysRefs": 6
+      },
+      "limits": {
+        "loc": {
+          "warn": 469,
+          "error": 516
+        },
+        "functions": {
+          "warn": 46,
+          "error": 51
+        },
+        "heysRefs": {
+          "warn": 6,
+          "error": 7
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_error_boundary_v1.js": {
+      "metrics": {
+        "loc": 38,
+        "functions": 8,
+        "heysRefs": 4
+      },
+      "limits": {
+        "loc": {
+          "warn": 38,
+          "error": 42
+        },
+        "functions": {
+          "warn": 8,
+          "error": 9
+        },
+        "heysRefs": {
+          "warn": 4,
+          "error": 5
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_performance_monitor.js": {
+      "metrics": {
+        "loc": 830,
+        "functions": 75,
+        "heysRefs": 4
+      },
+      "limits": {
+        "loc": {
+          "warn": 830,
+          "error": 914
+        },
+        "functions": {
+          "warn": 75,
+          "error": 83
+        },
+        "heysRefs": {
+          "warn": 4,
+          "error": 5
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_security_validation.js": {
+      "metrics": {
+        "loc": 577,
+        "functions": 19,
+        "heysRefs": 3
+      },
+      "limits": {
+        "loc": {
+          "warn": 577,
+          "error": 635
+        },
+        "functions": {
+          "warn": 19,
+          "error": 21
+        },
+        "heysRefs": {
+          "warn": 3,
+          "error": 4
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_service_worker_v1.js": {
+      "metrics": {
+        "loc": 452,
+        "functions": 8,
+        "heysRefs": 3
+      },
+      "limits": {
+        "loc": {
+          "warn": 452,
+          "error": 498
+        },
+        "functions": {
+          "warn": 8,
+          "error": 9
+        },
+        "heysRefs": {
+          "warn": 3,
+          "error": 4
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_virtual_list_v1.js": {
+      "metrics": {
+        "loc": 25,
+        "functions": 7,
+        "heysRefs": 1
+      },
+      "limits": {
+        "loc": {
+          "warn": 25,
+          "error": 28
+        },
+        "functions": {
+          "warn": 7,
+          "error": 8
+        },
+        "heysRefs": {
+          "warn": 1,
+          "error": 2
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/storage/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_worker_manager_v1.js": {
+      "metrics": {
+        "loc": 373,
+        "functions": 42,
+        "heysRefs": 3
+      },
+      "limits": {
+        "loc": {
+          "warn": 373,
+          "error": 411
+        },
+        "functions": {
+          "warn": 42,
+          "error": 47
+        },
+        "heysRefs": {
+          "warn": 3,
+          "error": 4
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/integration/heys_integration_layer.js": {
+      "metrics": {
+        "loc": 776,
+        "functions": 37,
+        "heysRefs": 2
+      },
+      "limits": {
+        "loc": {
+          "warn": 776,
+          "error": 854
+        },
+        "functions": {
+          "warn": 37,
+          "error": 41
+        },
+        "heysRefs": {
+          "warn": 2,
+          "error": 3
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/integration/heys_integration_layer_v1.js": {
+      "metrics": {
+        "loc": 516,
+        "functions": 45,
+        "heysRefs": 22
+      },
+      "limits": {
+        "loc": {
+          "warn": 516,
+          "error": 568
+        },
+        "functions": {
+          "warn": 45,
+          "error": 50
+        },
+        "heysRefs": {
+          "warn": 22,
+          "error": 25
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_advanced_error_tracker_v1.js": {
+      "metrics": {
+        "loc": 469,
+        "functions": 46,
+        "heysRefs": 6
+      },
+      "limits": {
+        "loc": {
+          "warn": 469,
+          "error": 516
+        },
+        "functions": {
+          "warn": 46,
+          "error": 51
+        },
+        "heysRefs": {
+          "warn": 6,
+          "error": 7
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_error_boundary_v1.js": {
+      "metrics": {
+        "loc": 38,
+        "functions": 8,
+        "heysRefs": 4
+      },
+      "limits": {
+        "loc": {
+          "warn": 38,
+          "error": 42
+        },
+        "functions": {
+          "warn": 8,
+          "error": 9
+        },
+        "heysRefs": {
+          "warn": 4,
+          "error": 5
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_performance_monitor.js": {
+      "metrics": {
+        "loc": 830,
+        "functions": 75,
+        "heysRefs": 4
+      },
+      "limits": {
+        "loc": {
+          "warn": 830,
+          "error": 914
+        },
+        "functions": {
+          "warn": 75,
+          "error": 83
+        },
+        "heysRefs": {
+          "warn": 4,
+          "error": 5
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_security_validation.js": {
+      "metrics": {
+        "loc": 577,
+        "functions": 19,
+        "heysRefs": 3
+      },
+      "limits": {
+        "loc": {
+          "warn": 577,
+          "error": 635
+        },
+        "functions": {
+          "warn": 19,
+          "error": 21
+        },
+        "heysRefs": {
+          "warn": 3,
+          "error": 4
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_service_worker_v1.js": {
+      "metrics": {
+        "loc": 452,
+        "functions": 8,
+        "heysRefs": 3
+      },
+      "limits": {
+        "loc": {
+          "warn": 452,
+          "error": 498
+        },
+        "functions": {
+          "warn": 8,
+          "error": 9
+        },
+        "heysRefs": {
+          "warn": 3,
+          "error": 4
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_virtual_list_v1.js": {
+      "metrics": {
+        "loc": 25,
+        "functions": 7,
+        "heysRefs": 1
+      },
+      "limits": {
+        "loc": {
+          "warn": 25,
+          "error": 28
+        },
+        "functions": {
+          "warn": 7,
+          "error": 8
+        },
+        "heysRefs": {
+          "warn": 1,
+          "error": 2
+        }
+      }
+    },
+    "apps/web/node_modules/@heys/search/node_modules/@heys/core/node_modules/@heys/shared/src/misc/heys_worker_manager_v1.js": {
       "metrics": {
         "loc": 373,
         "functions": 42,

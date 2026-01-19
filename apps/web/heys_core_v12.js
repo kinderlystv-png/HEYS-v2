@@ -780,6 +780,32 @@
         }
       };
 
+      const handleProductPatched = (event) => {
+        const detail = event?.detail || {};
+        const updatedProduct = detail.product || null;
+        const updatedId = String(detail.productId ?? updatedProduct?.id ?? updatedProduct?.product_id ?? updatedProduct?.name ?? '');
+        if (!updatedId) return;
+
+        setProducts((prev) => {
+          if (!Array.isArray(prev) || prev.length === 0) return prev;
+          let changed = false;
+          const next = prev.map((p) => {
+            const pid = String(p?.id ?? p?.product_id ?? p?.name ?? '');
+            if (pid !== updatedId) return p;
+            const patched = {
+              ...p,
+              ...(updatedProduct || {})
+            };
+            if (Array.isArray(detail.portions)) {
+              patched.portions = detail.portions;
+            }
+            changed = true;
+            return patched;
+          });
+          return changed ? next : prev;
+        });
+      };
+
       // 🔄 FIX v1.1: Слушаем событие heys:orphans-recovered — после восстановления orphan-продуктов
       // Это источник правды — recovery добавляет продукты в localStorage, UI должен подтянуться
       const handleOrphansRecovered = () => {
@@ -796,11 +822,15 @@
 
       window.addEventListener('heysProductsUpdated', handleProductsUpdated);
       window.addEventListener('heysSyncCompleted', handleProductsUpdated);
+      window.addEventListener('heys:product-updated', handleProductPatched);
+      window.addEventListener('heys:product-portions-updated', handleProductPatched);
       window.addEventListener('heys:orphans-recovered', handleOrphansRecovered);
 
       return () => {
         window.removeEventListener('heysProductsUpdated', handleProductsUpdated);
         window.removeEventListener('heysSyncCompleted', handleProductsUpdated);
+        window.removeEventListener('heys:product-updated', handleProductPatched);
+        window.removeEventListener('heys:product-portions-updated', handleProductPatched);
         window.removeEventListener('heys:orphans-recovered', handleOrphansRecovered);
       };
     }, []);
