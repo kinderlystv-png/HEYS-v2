@@ -557,15 +557,16 @@
   }
 
   function buildProductIndex(ps) {
-    const byId = new Map(), byName = new Map();
+    const byId = new Map(), byName = new Map(), byFingerprint = new Map(); // 🆕 v4.6.0
     (ps || []).forEach(p => {
       if (!p) return;
       const id = (p.id != null ? p.id : p.product_id);
       if (id != null) byId.set(String(id).toLowerCase(), p);
       const nm = normalizeProductName(p.name || p.title || '');
       if (nm) byName.set(nm, p);
+      if (p.fingerprint) byFingerprint.set(p.fingerprint, p); // 🆕 v4.6.0
     });
-    return { byId, byName };
+    return { byId, byName, byFingerprint };
   }
 
   function normalizeProductFields(p) {
@@ -705,6 +706,16 @@
         return maybeEnrich(applyItemFallback(normalizeProductFields(prioritized)));
       }
     }
+
+    // 🆕 v4.6.0: Поиск по fingerprint (content-based идентификация)
+    if (it.fingerprint && idx.byFingerprint) {
+      const found = idx.byFingerprint.get(it.fingerprint);
+      if (found) {
+        const prioritized = applyProductPriority(found);
+        return maybeEnrich(applyItemFallback(normalizeProductFields(prioritized)));
+      }
+    }
+
     // Fallback: ищем в индексе по product_id для обратной совместимости
     if (it.product_id != null && idx.byId) {
       const found = idx.byId.get(String(it.product_id).toLowerCase());

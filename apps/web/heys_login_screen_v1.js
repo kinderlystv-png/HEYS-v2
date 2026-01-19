@@ -10,7 +10,7 @@
   function formatPhoneBody(digits) {
     const d = (digits || '').slice(0, 10);
     if (!d) return '';
-    
+
     let result = '';
     if (d.length > 0) result += '(' + d.slice(0, 3);
     if (d.length >= 3) result += ') ';
@@ -19,7 +19,7 @@
     if (d.length > 6) result += d.slice(6, 8);
     if (d.length >= 8) result += '-';
     if (d.length > 8) result += d.slice(8, 10);
-    
+
     return result;
   }
 
@@ -85,7 +85,7 @@
       try {
         const t = pinHideTimers.current && pinHideTimers.current[i];
         if (t) clearTimeout(t);
-      } catch (_) {}
+      } catch (_) { }
 
       // Ставим оверлей-цифру (анимация у span), под ней остаётся «точка» (password)
       setPinOverlay((prev) => {
@@ -106,7 +106,7 @@
             return next;
           });
         }, Math.max(300, totalMs + 150));
-      } catch (_) {}
+      } catch (_) { }
     }
 
     function clearHidePinDigit(i) {
@@ -114,7 +114,7 @@
         const t = pinHideTimers.current && pinHideTimers.current[i];
         if (t) clearTimeout(t);
         if (pinHideTimers.current) pinHideTimers.current[i] = null;
-      } catch (_) {}
+      } catch (_) { }
       setPinOverlay((prev) => {
         const next = (prev || []).slice(0, 4);
         while (next.length < 4) next.push({ d: '', k: 0 });
@@ -146,7 +146,7 @@
                 debug: res && res._debug,
               });
             }
-          } catch (_) {}
+          } catch (_) { }
 
           if (code === 'rate_limited') {
             const sec = Math.ceil((res.retryAfterMs || 0) / 1000);
@@ -194,7 +194,7 @@
       React.createElement(
         'div',
         { className: 'w-full max-w-[360px] rounded-2xl bg-white/95 p-7 shadow-2xl ring-1 ring-black/5' },
-        children,
+        ...children,
       );
 
     const Input = (p) =>
@@ -273,7 +273,7 @@
       const phoneDigits = phoneMasked.replace(/\D/g, '').slice(0, 10);
       const isPhoneComplete = phoneDigits.length === 10;
       const isPinComplete = (pinDigits || []).every(Boolean);
-      
+
       // Обработчик ввода телефона
       const handlePhoneInput = (e) => {
         setErr('');
@@ -285,11 +285,11 @@
         // Автофокус на PIN после ввода 10 цифр
         if (newDigits.length === 10) {
           setTimeout(() => {
-            try { pinRefs.current[0] && pinRefs.current[0].focus(); } catch (_) {}
+            try { pinRefs.current[0] && pinRefs.current[0].focus(); } catch (_) { }
           }, 50);
         }
       };
-      
+
       // Обработчик нажатия клавиш для правильного удаления
       const handlePhoneKeyDown = (e) => {
         if (e.key === 'Backspace' && phoneDigits.length > 0) {
@@ -297,7 +297,7 @@
           setPhoneMasked(phoneDigits.slice(0, -1));
         }
       };
-      
+
       return Card(
         // Заголовок
         React.createElement(
@@ -306,7 +306,7 @@
           React.createElement('div', { className: 'text-3xl font-extrabold text-slate-900 tracking-tight' }, '👋 Привет!'),
           React.createElement('div', { className: 'mt-1 text-base text-slate-500' }, 'Вход для клиентов'),
         ),
-        
+
         // Форма
         React.createElement('div', { className: 'space-y-6' },
           // Современный ввод телефона с фиксированным +7
@@ -334,7 +334,7 @@
               }),
             ),
           ),
-          
+
           // PIN ввод — 4 отдельных поля (как в модных приложениях)
           React.createElement('div', { className: 'space-y-3' },
             React.createElement('div', { className: 'text-center text-base font-semibold text-slate-700' }, 'PIN-код'),
@@ -370,7 +370,7 @@
                       if (v) showPinOverlayDigit(i, v, 1200);
                       else clearHidePinDigit(i);
                       if (v && i < 3) {
-                        try { pinRefs.current[i + 1] && pinRefs.current[i + 1].focus(); } catch (_) {}
+                        try { pinRefs.current[i + 1] && pinRefs.current[i + 1].focus(); } catch (_) { }
                       }
                       // Автоматический вход после ввода последней цифры PIN
                       if (v && i === 3) {
@@ -391,7 +391,7 @@
                           arr[i - 1] = '';
                           setPinDigits(arr);
                           clearHidePinDigit(i - 1);
-                          try { pinRefs.current[i - 1] && pinRefs.current[i - 1].focus(); } catch (_) {}
+                          try { pinRefs.current[i - 1] && pinRefs.current[i - 1].focus(); } catch (_) { }
                           return;
                         }
                         if (cur) {
@@ -406,11 +406,11 @@
                       }
                       if (e.key === 'ArrowLeft' && i > 0) {
                         e.preventDefault();
-                        try { pinRefs.current[i - 1] && pinRefs.current[i - 1].focus(); } catch (_) {}
+                        try { pinRefs.current[i - 1] && pinRefs.current[i - 1].focus(); } catch (_) { }
                       }
                       if (e.key === 'ArrowRight' && i < 3) {
                         e.preventDefault();
-                        try { pinRefs.current[i + 1] && pinRefs.current[i + 1].focus(); } catch (_) {}
+                        try { pinRefs.current[i + 1] && pinRefs.current[i + 1].focus(); } catch (_) { }
                       }
                       if (e.key === 'Enter' && canClientLogin) {
                         handleClientLogin();
@@ -431,9 +431,9 @@
                           }
                           setPinDigits(arr);
                           const nextIdx = Math.min(3, digits.length);
-                          try { pinRefs.current[nextIdx] && pinRefs.current[nextIdx].focus(); } catch (_) {}
+                          try { pinRefs.current[nextIdx] && pinRefs.current[nextIdx].focus(); } catch (_) { }
                         }
-                      } catch (_) {}
+                      } catch (_) { }
                     },
                     className:
                       'w-full h-full rounded-2xl border-2 bg-white text-center text-[32px] sm:text-[36px] leading-none font-bold outline-none transition ' +
@@ -445,29 +445,29 @@
                   }),
                   (overlay && overlay.d)
                     ? React.createElement(
-                        'span',
-                        {
-                          key: 'pin_overlay_' + i + '_' + overlay.k,
-                          className:
-                            'pin-digit-overlay absolute inset-0 flex items-center justify-center text-slate-800 text-[32px] sm:text-[36px] font-bold leading-none pointer-events-none',
-                          onAnimationEnd: () => {
-                            // Сбрасываем только если это тот же overlay
-                            setPinOverlay((prev) => {
-                              const next = (prev || []).slice(0, 4);
-                              while (next.length < 4) next.push({ d: '', k: 0 });
-                              if (next[i] && next[i].k === overlay.k) next[i] = { d: '', k: 0 };
-                              return next;
-                            });
-                          },
+                      'span',
+                      {
+                        key: 'pin_overlay_' + i + '_' + overlay.k,
+                        className:
+                          'pin-digit-overlay absolute inset-0 flex items-center justify-center text-slate-800 text-[32px] sm:text-[36px] font-bold leading-none pointer-events-none',
+                        onAnimationEnd: () => {
+                          // Сбрасываем только если это тот же overlay
+                          setPinOverlay((prev) => {
+                            const next = (prev || []).slice(0, 4);
+                            while (next.length < 4) next.push({ d: '', k: 0 });
+                            if (next[i] && next[i].k === overlay.k) next[i] = { d: '', k: 0 };
+                            return next;
+                          });
                         },
-                        overlay.d,
-                      )
+                      },
+                      overlay.d,
+                    )
                     : null,
                 );
               })
             ),
           ),
-          
+
           err && React.createElement('div', { className: 'rounded-xl bg-red-50 px-4 py-3 text-center text-sm text-red-600' }, err),
           clientDiag && React.createElement(
             'div',

@@ -266,13 +266,16 @@
       const startTime = Date.now();
       if (verbose) console.log('[HEYS] 🔍 autoRecoverOnLoad: начинаю проверку продуктов...');
 
-      // 1. Собираем текущие продукты в Map по id и по name (lowercase)
+      // 1. Собираем текущие продукты в Map по id и по name (normalized)
       const products = lsGet('heys_products', []);
       const productsById = new Map();
       const productsByName = new Map();
+      const productsByFingerprint = new Map(); // 🆕 v4.6.0: Индекс по fingerprint
+      const normalizeName = HEYS.models?.normalizeProductName || ((n) => String(n || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
       products.forEach(p => {
         if (p && p.id) productsById.set(String(p.id), p);
-        if (p && p.name) productsByName.set(String(p.name).trim().toLowerCase(), p);
+        if (p && p.name) productsByName.set(normalizeName(p.name), p);
+        if (p && p.fingerprint) productsByFingerprint.set(p.fingerprint, p); // 🆕
       });
 
       if (verbose) console.log(`[HEYS] Локальная база: ${products.length} продуктов`);
@@ -291,18 +294,21 @@
             for (const item of (meal.items || [])) {
               const productId = item.product_id ? String(item.product_id) : null;
               const itemName = String(item.name || '').trim();
-              const itemNameLower = itemName.toLowerCase();
+              const itemNameNorm = normalizeName(itemName); // 🆕 v4.6.0: Используем normalizeProductName
+              const itemFingerprint = item.fingerprint || null; // 🆕 v4.6.0: Fingerprint из штампа
 
-              // Проверяем есть ли в базе
+              // Проверяем есть ли в базе (ID → fingerprint → name)
               const foundById = productId && productsById.has(productId);
-              const foundByName = itemNameLower && productsByName.has(itemNameLower);
+              const foundByFingerprint = itemFingerprint && productsByFingerprint.has(itemFingerprint); // 🆕
+              const foundByName = itemNameNorm && productsByName.has(itemNameNorm);
 
-              if (!foundById && !foundByName && itemName) {
-                const key = productId || itemNameLower;
+              if (!foundById && !foundByFingerprint && !foundByName && itemName) {
+                const key = itemFingerprint || productId || itemNameNorm; // 🆕 Приоритет: fingerprint → id → name
                 if (!missingProducts.has(key)) {
                   missingProducts.set(key, {
                     productId,
                     name: itemName,
+                    fingerprint: itemFingerprint, // 🆕 v4.6.0
                     hasStamp: item.kcal100 != null,
                     stampData: item.kcal100 != null ? {
                       kcal100: item.kcal100,
@@ -348,6 +354,7 @@
           const restoredProduct = {
             id: data.productId || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
             name: data.name,
+            fingerprint: data.fingerprint, // 🆕 v4.6.0: Сохраняем fingerprint
             ...data.stampData,
             gi: data.stampData.gi ?? 50,
             harm: data.stampData.harm ?? 0,
@@ -356,7 +363,8 @@
           };
           recovered.push(restoredProduct);
           productsById.set(String(restoredProduct.id), restoredProduct);
-          productsByName.set(data.name.toLowerCase(), restoredProduct);
+          productsByName.set(normalizeName(data.name), restoredProduct); // 🆕 v4.6.0: normalizeProductName
+          if (data.fingerprint) productsByFingerprint.set(data.fingerprint, restoredProduct); // 🆕
           fromStamp++;
           console.log(`[HEYS] 📦 Восстановлен из штампа: "${data.name}"`);
         } else {
@@ -372,19 +380,22 @@
           const { data: sharedProducts, error } = await HEYS.YandexAPI.rpc('get_shared_products', {});
 
           if (!error && Array.isArray(sharedProducts)) {
-            // Создаём индекс shared продуктов по id и name
+            // 🆕 v4.6.0: Индексация shared по fingerprint, id и name
+            const sharedByFingerprint = new Map();
             const sharedById = new Map();
             const sharedByName = new Map();
             sharedProducts.forEach(p => {
+              if (p && p.fingerprint) sharedByFingerprint.set(p.fingerprint, p);
               if (p && p.id) sharedById.set(String(p.id), p);
-              if (p && p.name) sharedByName.set(String(p.name).trim().toLowerCase(), p);
+              if (p && p.name) sharedByName.set(normalizeName(p.name), p);
             });
 
             for (const data of stillMissing) {
-              // Ищем сначала по id, потом по имени
+              // 🆕 v4.6.0: Поиск: fingerprint → id → name (приоритет)
               let found = null;
-              if (data.productId) found = sharedById.get(data.productId);
-              if (!found && data.name) found = sharedByName.get(data.name.toLowerCase());
+              if (data.fingerprint) found = sharedByFingerprint.get(data.fingerprint);
+              if (!found && data.productId) found = sharedById.get(data.productId);
+              if (!found && data.name) found = sharedByName.get(normalizeName(data.name));
 
               if (found) {
                 // Клонируем из shared
@@ -584,7 +595,7 @@
 
   function buildProductIndex(ps) {
     const M = HEYS.models || {};
-    return M.buildProductIndex ? M.buildProductIndex(ps) : { byId: new Map(), byName: new Map() };
+    return M.buildProductIndex ? M.buildProductIndex(ps) : { byId: new Map(), byName: new Map(), byFingerprint: new Map() }; // 🆕 v4.6.0
   }
 
   function getProductFromItem(it, idx) {

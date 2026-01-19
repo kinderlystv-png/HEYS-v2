@@ -2772,6 +2772,7 @@
         selenium: toNum(sharedProduct.selenium),
         iodine: toNum(sharedProduct.iodine),
         shared_origin_id: sharedProduct.id, // Связь с shared продуктом
+        fingerprint: sharedProduct.fingerprint, // 🆕 v4.6.0: Fingerprint для дедупликации и recovery
         shared_updated_at: sharedProduct.updated_at || null, // Время обновления в shared
         cloned_at: Date.now(), // Когда клонировали
         user_modified: false, // Пользователь не редактировал

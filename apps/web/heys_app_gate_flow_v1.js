@@ -248,6 +248,34 @@
                                                 .map((c, idx) => {
                                                     const stats = getClientStats(c.id);
                                                     const isLast = localStorage.getItem('heys_last_client_id') === c.id;
+                                                    const copyClientId = async (e) => {
+                                                        if (e && e.stopPropagation) e.stopPropagation();
+                                                        try {
+                                                            if (navigator?.clipboard?.writeText) {
+                                                                await navigator.clipboard.writeText(c.id);
+                                                                HEYS.Toast?.success?.('ID скопирован');
+                                                                return;
+                                                            }
+                                                        } catch (err) {
+                                                            HEYS.analytics?.trackError?.(err, { context: 'copy_client_id', clientId: c.id });
+                                                        }
+
+                                                        try {
+                                                            const temp = document.createElement('textarea');
+                                                            temp.value = c.id;
+                                                            temp.setAttribute('readonly', '');
+                                                            temp.style.position = 'absolute';
+                                                            temp.style.left = '-9999px';
+                                                            document.body.appendChild(temp);
+                                                            temp.select();
+                                                            document.execCommand('copy');
+                                                            document.body.removeChild(temp);
+                                                            HEYS.Toast?.success?.('ID скопирован');
+                                                        } catch (err) {
+                                                            HEYS.analytics?.trackError?.(err, { context: 'copy_client_id_fallback', clientId: c.id });
+                                                            HEYS.Toast?.warning?.('Не удалось скопировать ID') || alert('Не удалось скопировать ID');
+                                                        }
+                                                    };
                                                     return React.createElement(
                                                         'div',
                                                         {
@@ -339,6 +367,27 @@
                                                                 style: { display: 'flex', gap: 4 },
                                                                 onClick: (e) => e.stopPropagation() // Не срабатывать на родителе
                                                             },
+                                                            React.createElement(
+                                                                'button',
+                                                                {
+                                                                    className: 'btn-icon',
+                                                                    title: 'Скопировать ID',
+                                                                    onClick: copyClientId,
+                                                                    style: {
+                                                                        width: 32,
+                                                                        height: 32,
+                                                                        borderRadius: 8,
+                                                                        border: 'none',
+                                                                        background: 'var(--border)',
+                                                                        cursor: 'pointer',
+                                                                        fontSize: 14,
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center'
+                                                                    }
+                                                                },
+                                                                '🆔'
+                                                            ),
                                                             React.createElement(
                                                                 'button',
                                                                 {

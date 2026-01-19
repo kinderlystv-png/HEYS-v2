@@ -1567,6 +1567,7 @@
                             id: uid('it_'),
                             product_id: finalProduct.id ?? finalProduct.product_id,
                             name: finalProduct.name,
+                            fingerprint: finalProduct.fingerprint, // 🆕 v4.6.0: Fingerprint для дедупликации и recovery
                             grams: grams || 100,
                             // Для новых продуктов сохраняем нутриенты напрямую (fallback если продукт не в индексе)
                             ...(finalProduct.kcal100 !== undefined && {

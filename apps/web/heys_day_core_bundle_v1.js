@@ -678,7 +678,7 @@
 
     function buildProductIndex(ps) {
         const M = HEYS.models || {};
-        return M.buildProductIndex ? M.buildProductIndex(ps) : { byId: new Map(), byName: new Map() };
+        return M.buildProductIndex ? M.buildProductIndex(ps) : { byId: new Map(), byName: new Map(), byFingerprint: new Map() }; // 🆕 v4.6.0
     }
 
     function getProductFromItem(it, idx) {

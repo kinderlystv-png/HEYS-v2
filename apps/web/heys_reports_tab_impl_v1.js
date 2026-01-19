@@ -117,13 +117,15 @@
     function buildProductIndex(products) {
         const byName = new Map();
         const byId = new Map();
+        const byFingerprint = new Map(); // 🆕 v4.6.0
         (products || []).forEach(p => {
             const nm = String(p.name || p.title || '').trim().toLowerCase();
             if (nm) byName.set(nm, p);
             if (p.id != null) byId.set(String(p.id), p);
             if (p.product_id != null) byId.set(String(p.product_id), p);
+            if (p.fingerprint) byFingerprint.set(p.fingerprint, p); // 🆕 v4.6.0
         });
-        return { byName, byId };
+        return { byName, byId, byFingerprint };
     }
 
     // ---------- Еда за день -> суммы ----------
@@ -137,6 +139,8 @@
                 // Сначала ищем по названию (новый приоритет)
                 const nm = String(it.name || it.title || '').trim().toLowerCase();
                 if (nm) p = prodIndex.byName.get(nm);
+                // 🆕 v4.6.0: Поиск по fingerprint
+                if (!p && it.fingerprint) p = prodIndex.byFingerprint?.get(it.fingerprint);
                 // Fallback на product_id/id для обратной совместимости
                 if (!p && it.product_id != null) p = prodIndex.byId.get(String(it.product_id));
                 if (!p && it.productId != null) p = prodIndex.byId.get(String(it.productId));

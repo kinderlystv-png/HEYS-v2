@@ -1610,6 +1610,19 @@ NOVA: 1
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
 
+    // Асинхронное вычисление fingerprint для локального продукта
+    const ensureProductFingerprint = useCallback(async (product) => {
+      if (!product || product.fingerprint) return product;
+      if (!HEYS.models?.computeProductFingerprint) return product;
+      try {
+        const fingerprint = await HEYS.models.computeProductFingerprint(product);
+        if (!fingerprint) return product;
+        return { ...product, fingerprint };
+      } catch {
+        return product;
+      }
+    }, []);
+
     // При изменении текста — пытаемся распарсить (с debounce)
     useEffect(() => {
       if (!pasteText.trim()) {
@@ -1656,29 +1669,34 @@ NOVA: 1
 
     // Подготовить продукт и перейти на шаг вредности (БЕЗ СОХРАНЕНИЯ В БАЗУ!)
     // Сохранение происходит ПОСЛЕ подтверждения вредности в HarmSelectStep
-    const handleCreate = useCallback(() => {
+    const handleCreate = useCallback(async () => {
       if (!parsedPreview) return;
 
       haptic('medium');
 
-      console.log('[CreateProductStep] 📝 Подготовлен продукт:', parsedPreview.name);
+      const preparedProduct = await ensureProductFingerprint(parsedPreview);
+      if (preparedProduct?.fingerprint && preparedProduct !== parsedPreview) {
+        setParsedPreview(preparedProduct);
+      }
+
+      console.log('[CreateProductStep] 📝 Подготовлен продукт:', preparedProduct?.name || parsedPreview.name);
       console.log('[CreateProductStep] ⏭️ Переходим на шаг порций (сохранение будет после вредности)');
 
       // 1. Обновляем данные текущего шага (БЕЗ сохранения в базу!)
       onChange({
         ...data,
-        newProduct: parsedPreview,
-        selectedProduct: parsedPreview,
+        newProduct: preparedProduct,
+        selectedProduct: preparedProduct,
         grams: 100
       });
 
       // 4. ТАКЖЕ обновляем данные шага harm и grams (чтобы сразу видели продукт)
       if (updateStepData) {
         updateStepData('harm', {
-          product: parsedPreview
+          product: preparedProduct
         });
         updateStepData('grams', {
-          selectedProduct: parsedPreview,
+          selectedProduct: preparedProduct,
           grams: 100
         });
       }
@@ -1688,7 +1706,24 @@ NOVA: 1
       if (goToStep) {
         setTimeout(() => goToStep(2, 'left'), 150);
       }
-    }, [parsedPreview, data, onChange, context, goToStep, updateStepData, publishToShared, isCurator]);
+    }, [parsedPreview, data, onChange, context, goToStep, updateStepData, publishToShared, isCurator, ensureProductFingerprint]);
+
+    // Авто-добавление fingerprint для превью (после парсинга)
+    useEffect(() => {
+      let active = true;
+      if (!parsedPreview || parsedPreview.fingerprint) return undefined;
+
+      (async () => {
+        const updated = await ensureProductFingerprint(parsedPreview);
+        if (!active || !updated?.fingerprint || updated.fingerprint === parsedPreview.fingerprint) return;
+        setParsedPreview(updated);
+        onChangeRef.current?.((prev) => ({ ...prev, newProduct: updated }));
+      })();
+
+      return () => {
+        active = false;
+      };
+    }, [parsedPreview, ensureProductFingerprint]);
 
     const aiPromptText = useMemo(() => {
       const name = searchQuery || 'Название';
