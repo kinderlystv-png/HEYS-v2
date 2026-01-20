@@ -1,6 +1,8 @@
 // heys_app_tab_state_v1.js — tab state helpers
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
+    const DEV = window.DEV || {};
+    const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
 
     const useTabState = ({ React }) => {
         const getDefaultTabFromProfile = () => {
@@ -19,7 +21,7 @@
             if (!window.HEYS) window.HEYS = {};
             if (!window.HEYS.ui) window.HEYS.ui = {};
             window.HEYS.ui.switchTab = (newTab) => {
-                console.log(`[App] 🔄 Switching tab to: ${newTab}`);
+                devLog(`[App] 🔄 Switching tab to: ${newTab}`);
                 setTab(newTab);
             };
         }, [setTab]);
@@ -32,7 +34,7 @@
                 if (!U?.lsGet) return false;
 
                 const savedTab = getDefaultTabFromProfile();
-                console.log(`[App] 🏠 Loading default tab from profile: ${savedTab}`);
+                devLog(`[App] 🏠 Loading default tab from profile: ${savedTab}`);
                 setDefaultTabState(savedTab);
                 setTab(savedTab);
                 setInitialTabLoaded(true);
@@ -73,7 +75,7 @@
             U?.lsSet?.('heys_profile', updatedProfile);
             setDefaultTabState(newDefaultTab);
 
-            console.log(`[App] 🏠 Default tab changed to: ${newDefaultTab}`);
+            devLog(`[App] 🏠 Default tab changed to: ${newDefaultTab}`);
         }, []);
 
         React.useEffect(() => {

@@ -11,14 +11,16 @@
  * Научная основа: Feature Toggles (Martin Fowler 2017)
  */
 
-(function() {
+(function () {
   'use strict';
 
   const HEYS = window.HEYS = window.HEYS || {};
-  
+  const devLog = (...args) => window.DEV?.log?.(...args);
+  const devWarn = (...args) => window.DEV?.warn?.(...args);
+
   // Storage key для флагов
   const FLAGS_KEY = 'heys_feature_flags';
-  
+
   // Значения по умолчанию для всех флагов
   const DEFAULT_FLAGS = {
     // === App Refactoring Flags ===
@@ -28,15 +30,15 @@
     'modular_navigation': false,        // Новый модуль Navigation
     'modular_sync': false,              // Новый модуль Sync State Machine
     'modular_bootstrap': false,         // Новый модуль Bootstrap (инициализация)
-    
+
     // === Режим разработки ===
     'dev_module_logging': false,        // Детальное логирование загрузки модулей
     'dev_performance_tracking': false,  // Трекинг производительности модулей
-    
+
     // === Rollback флаг ===
     'use_legacy_monolith': false,       // true = старый код, false = новые модули
   };
-  
+
   /**
    * Загрузить флаги из localStorage
    * @returns {Object} Объект с флагами
@@ -45,16 +47,16 @@
     try {
       const stored = localStorage.getItem(FLAGS_KEY);
       if (!stored) return { ...DEFAULT_FLAGS };
-      
+
       const parsed = JSON.parse(stored);
       // Мержим с дефолтами на случай новых флагов
       return { ...DEFAULT_FLAGS, ...parsed };
     } catch (e) {
-      console.warn('[FeatureFlags] Failed to load flags:', e);
+      devWarn('[FeatureFlags] Failed to load flags:', e);
       return { ...DEFAULT_FLAGS };
     }
   }
-  
+
   /**
    * Сохранить флаги в localStorage
    * @param {Object} flags - Объект с флагами
@@ -63,13 +65,13 @@
     try {
       localStorage.setItem(FLAGS_KEY, JSON.stringify(flags));
     } catch (e) {
-      console.error('[FeatureFlags] Failed to save flags:', e);
+      devWarn('[FeatureFlags] Failed to save flags:', e);
     }
   }
-  
+
   // Текущее состояние флагов
   let currentFlags = loadFlags();
-  
+
   /**
    * Feature Flags API
    */
@@ -82,35 +84,35 @@
     isEnabled(flagName) {
       return currentFlags[flagName] === true;
     },
-    
+
     /**
      * Включить флаг
      * @param {string} flagName - Имя флага
      */
     enable(flagName) {
       if (!(flagName in DEFAULT_FLAGS)) {
-        console.warn(`[FeatureFlags] Unknown flag: ${flagName}`);
+        devWarn(`[FeatureFlags] Unknown flag: ${flagName}`);
         return;
       }
       currentFlags[flagName] = true;
       saveFlags(currentFlags);
-      console.log(`[FeatureFlags] Enabled: ${flagName}`);
+      devLog(`[FeatureFlags] Enabled: ${flagName}`);
     },
-    
+
     /**
      * Выключить флаг
      * @param {string} flagName - Имя флага
      */
     disable(flagName) {
       if (!(flagName in DEFAULT_FLAGS)) {
-        console.warn(`[FeatureFlags] Unknown flag: ${flagName}`);
+        devWarn(`[FeatureFlags] Unknown flag: ${flagName}`);
         return;
       }
       currentFlags[flagName] = false;
       saveFlags(currentFlags);
-      console.log(`[FeatureFlags] Disabled: ${flagName}`);
+      devLog(`[FeatureFlags] Disabled: ${flagName}`);
     },
-    
+
     /**
      * Получить все флаги (для отладки)
      * @returns {Object} Объект с состоянием всех флагов
@@ -118,16 +120,16 @@
     getAll() {
       return { ...currentFlags };
     },
-    
+
     /**
      * Сбросить все флаги к дефолтам
      */
     reset() {
       currentFlags = { ...DEFAULT_FLAGS };
       saveFlags(currentFlags);
-      console.log('[FeatureFlags] Reset to defaults');
+      devLog('[FeatureFlags] Reset to defaults');
     },
-    
+
     /**
      * Включить все модульные флаги (для тестирования полного перехода)
      */
@@ -140,9 +142,9 @@
       currentFlags.modular_bootstrap = true;
       currentFlags.use_legacy_monolith = false;
       saveFlags(currentFlags);
-      console.log('[FeatureFlags] Enabled all modules');
+      devLog('[FeatureFlags] Enabled all modules');
     },
-    
+
     /**
      * Вернуться к legacy монолиту (откат)
      */
@@ -155,9 +157,9 @@
       currentFlags.modular_bootstrap = false;
       currentFlags.use_legacy_monolith = true;
       saveFlags(currentFlags);
-      console.log('[FeatureFlags] Rolled back to legacy monolith');
+      devLog('[FeatureFlags] Rolled back to legacy monolith');
     },
-    
+
     /**
      * Постепенное включение модулей (фазированный rollout)
      * @param {number} phase - Номер фазы (1-6)
@@ -188,17 +190,17 @@
         currentFlags.modular_sync = true;
         currentFlags.use_legacy_monolith = false;
       }
-      
+
       saveFlags(currentFlags);
-      console.log(`[FeatureFlags] Enabled phase ${phase}`);
+      devLog(`[FeatureFlags] Enabled phase ${phase}`);
     }
   };
-  
+
   // Алиас для краткости
   HEYS.flags = HEYS.featureFlags;
-  
+
   // Логирование инициализации (только в dev режиме)
   if (window.DEV?.isDev?.()) {
-    console.log('[FeatureFlags] Initialized with flags:', currentFlags);
+    devLog('[FeatureFlags] Initialized with flags:', currentFlags);
   }
 })();

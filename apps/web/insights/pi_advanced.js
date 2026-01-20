@@ -1,18 +1,20 @@
 // pi_advanced.js — Advanced Analytics Functions v3.0.0
 // Extracted from heys_predictive_insights_v1.js (Phase 4)
 // Продвинутая аналитика: Health Score, What-If, Weight Prediction, Weekly Wrap
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.InsightsPI = HEYS.InsightsPI || {};
-  
+  const DEV = global.DEV || {};
+  const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
+
   // Зависимости
   const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
   const piPatterns = HEYS.InsightsPI?.patterns || window.piPatterns || {};
   const SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {};
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
-  
+
   // Импорт констант
   const PATTERNS = piConst.PATTERNS || {
     MEAL_TIMING: 'meal_timing',
@@ -32,7 +34,7 @@
     INSULIN_SENSITIVITY: 'insulin_sensitivity',
     GUT_HEALTH: 'gut_health'
   };
-  
+
   // Импорт статистических функций из pi_stats.js (централизовано)
   const { average, calculateLinearRegression } = piStats;
 
@@ -51,7 +53,7 @@
     let goalMode = 'maintenance';
     if (deficitPct <= -10) goalMode = 'deficit';
     else if (deficitPct >= 10) goalMode = 'bulk';
-    
+
     // Goal-aware веса
     const weightsByGoal = {
       deficit: {
@@ -76,9 +78,9 @@
         metabolism: 0.05
       }
     };
-    
+
     const weights = weightsByGoal[goalMode];
-    
+
     const scores = {
       nutrition: [],
       timing: [],
@@ -86,11 +88,11 @@
       recovery: [],
       metabolism: []
     };
-    
+
     // Распределяем паттерны по категориям (включая новые)
     for (const p of patterns) {
       if (!p.available || p.score === undefined) continue;
-      
+
       switch (p.pattern) {
         case PATTERNS.MEAL_QUALITY_TREND:
         case PATTERNS.PROTEIN_SATIETY:
@@ -98,7 +100,7 @@
         case PATTERNS.GUT_HEALTH:
           scores.nutrition.push(p.score);
           break;
-        
+
         case PATTERNS.MEAL_TIMING:
         case PATTERNS.WAVE_OVERLAP:
         case PATTERNS.LATE_EATING:
@@ -106,30 +108,30 @@
         case PATTERNS.NUTRIENT_TIMING:
           scores.timing.push(p.score);
           break;
-        
+
         case PATTERNS.TRAINING_KCAL:
         case PATTERNS.STEPS_WEIGHT:
           scores.activity.push(p.score);
           break;
-        
+
         case PATTERNS.SLEEP_WEIGHT:
         case PATTERNS.SLEEP_HUNGER:
         case PATTERNS.STRESS_EATING:
         case PATTERNS.MOOD_FOOD:
           scores.recovery.push(p.score);
           break;
-        
+
         case PATTERNS.INSULIN_SENSITIVITY:
           scores.metabolism.push(p.score);
           break;
       }
     }
-    
+
     // Считаем средние по категориям
     const categoryScores = {};
     let totalWeight = 0;
     let weightedSum = 0;
-    
+
     for (const [cat, weight] of Object.entries(weights)) {
       if (scores[cat].length > 0) {
         const catScore = average(scores[cat]);
@@ -140,9 +142,9 @@
         categoryScores[cat] = null;
       }
     }
-    
+
     const totalScore = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
-    
+
     return {
       total: totalScore,
       goalMode,
@@ -172,11 +174,11 @@
    */
   function generateWhatIfScenarios(patterns, healthScore, days, profile) {
     const scenarios = [];
-    
+
     // Сценарий 1: Идеальная неделя
     const idealImprovement = {};
     let idealBoost = 0;
-    
+
     for (const p of patterns) {
       if (!p.available || p.score === undefined) continue;
       if (p.score < 80) {
@@ -185,7 +187,7 @@
         idealBoost += improvement * 0.1; // ~10% от улучшения паттерна
       }
     }
-    
+
     scenarios.push({
       id: 'ideal',
       name: 'Идеальная неделя',
@@ -201,11 +203,11 @@
         'Спать 7-8 часов'
       ]
     });
-    
+
     // Сценарий 2: Текущий курс
     const avgTrend = average(patterns.filter(p => p.trend !== undefined).map(p => p.trend));
     const currentProjection = healthScore.total + Math.round(avgTrend * 7);
-    
+
     scenarios.push({
       id: 'current',
       name: 'Текущий курс',
@@ -214,11 +216,11 @@
       currentScore: healthScore.total,
       projectedScore: Math.max(0, Math.min(100, currentProjection)),
       trend: avgTrend > 0 ? 'up' : avgTrend < 0 ? 'down' : 'stable',
-      actions: avgTrend >= 0 
+      actions: avgTrend >= 0
         ? ['Продолжай в том же духе!']
         : ['Обрати внимание на ухудшающиеся показатели']
     });
-    
+
     // Сценарий 3: Срыв
     scenarios.push({
       id: 'crash',
@@ -233,7 +235,7 @@
         'Сон ухудшится'
       ]
     });
-    
+
     return scenarios;
   }
 
@@ -248,14 +250,14 @@
       .filter(d => d.weightMorning)
       .map(d => ({ date: d.date, weight: d.weightMorning, cycleDay: d.cycleDay }))
       .sort((a, b) => a.date.localeCompare(b.date));
-    
+
     if (weightData.length < 3) {
       return {
         available: false,
         insight: 'Недостаточно данных веса для прогноза'
       };
     }
-    
+
     // Вспомогательная функция для подготовки точек (x = дни от начала)
     const getPoints = (data) => {
       if (data.length < 2) return [];
@@ -269,28 +271,28 @@
     // Raw тренд
     const rawPoints = getPoints(weightData);
     const rawTrend = calculateLinearRegression(rawPoints);
-    
+
     // Clean тренд (исключаем дни с задержкой воды из-за цикла)
     const cleanData = weightData.filter(d => {
       if (!d.cycleDay) return true;
       // Исключаем дни 1-7 (задержка воды)
       return d.cycleDay > 7 || d.cycleDay === null;
     });
-    
+
     const cleanPoints = getPoints(cleanData); // Пересчитываем X от первой 'чистой' даты или глобально?
     // Лучше считать X относительно ОДНОЙ точки отсчета, если мы хотим сравнивать
     // Но slope инвариантен к сдвигу X.
     // Однако, если cleanData начинается позже, x[0] будет 0. Это нормально для slope.
-    
+
     const cleanTrend = cleanPoints.length >= 3 ? calculateLinearRegression(cleanPoints) : rawTrend;
-    
+
     const currentWeight = weightData[weightData.length - 1].weight; // Берем последний вес из отсортированного массива
     const goalWeight = profile?.weightGoal;
-    
+
     // Прогноз на неделю
     const weeklyChange = cleanTrend * 7;
     const projectedWeight = currentWeight + weeklyChange;
-    
+
     // Время до цели
     let weeksToGoal = null;
     let reachDate = null;
@@ -303,7 +305,7 @@
         reachDate = reachDateObj.toISOString().split('T')[0];
       }
     }
-    
+
     return {
       available: true,
       currentWeight,
@@ -332,16 +334,16 @@
    */
   function generateWeeklyWrap(days, patterns, healthScore, weightPrediction) {
     const daysWithMeals = days.filter(d => d.meals && d.meals.length > 0);
-    
+
     // Находим лучший и худший дни
     let bestDay = null;
     let worstDay = null;
-    
+
     for (const day of daysWithMeals) {
       // Простая оценка: streak = хорошо
       const ratioZones = HEYS.ratioZones;
       if (!ratioZones) continue;
-      
+
       // Считаем калории
       let dayKcal = 0;
       if (day.meals) {
@@ -353,12 +355,12 @@
           }
         }
       }
-      
+
       // Получаем optimum из profile или дефолт
       const optimum = 2000; // fallback
       const ratio = dayKcal / optimum;
       const isGood = ratioZones.isSuccess(ratio);
-      
+
       if (isGood && (!bestDay || day.dayScore > bestDay.dayScore)) {
         bestDay = { ...day, kcal: dayKcal, ratio };
       }
@@ -366,20 +368,20 @@
         worstDay = { ...day, kcal: dayKcal, ratio };
       }
     }
-    
+
     // Топ инсайты (с confidence >= threshold)
     const topInsights = patterns
       .filter(p => p.available && p.confidence >= CONFIG.MIN_CORRELATION_DISPLAY)
       .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
       .slice(0, 5)
       .map(p => p.insight);
-    
+
     // Скрытые победы
     const hiddenWins = [];
-    
+
     for (const p of patterns) {
       if (!p.available) continue;
-      
+
       if (p.pattern === PATTERNS.WAVE_OVERLAP && !p.hasOverlaps) {
         hiddenWins.push('🎯 Идеальный тайминг приёмов — волны не пересекались');
       }
@@ -396,7 +398,7 @@
         hiddenWins.push('🧘 Стресс не влияет на аппетит — крутой самоконтроль');
       }
     }
-    
+
     return {
       periodDays: days.length,
       daysWithData: daysWithMeals.length,
@@ -430,12 +432,10 @@
     predictWeight,
     generateWeeklyWrap
   };
-  
+
   // Fallback для прямого доступа
   global.piAdvanced = HEYS.InsightsPI.advanced;
-  
-  if (typeof console !== 'undefined' && console.log) {
-    console.log('[PI Advanced] v3.0.0 loaded — 4 advanced analytics functions');
-  }
-  
+
+  devLog('[PI Advanced] v3.0.0 loaded — 4 advanced analytics functions');
+
 })(typeof window !== 'undefined' ? window : global);

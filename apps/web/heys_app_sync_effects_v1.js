@@ -55,7 +55,15 @@
                                     if (Array.isArray(prev) && prev.length === productsBeforeSync.length) return prev;
                                     return productsBeforeSync;
                                 });
-                                window.HEYS.utils.lsSet('heys_products', productsBeforeSync);
+                                if (window.HEYS?.products?.setAll) {
+                                    window.HEYS.products.setAll(productsBeforeSync, {
+                                        source: 'cloud-sync-fallback',
+                                        skipNotify: true,
+                                        skipCloud: true
+                                    });
+                                } else {
+                                    window.HEYS.utils.lsSet('heys_products', productsBeforeSync);
+                                }
                             } else {
                                 setProducts(prev => {
                                     if (Array.isArray(prev) && prev.length === loadedProducts.length) return prev;
@@ -118,14 +126,23 @@
 
         React.useEffect(() => {
             const handleProductsUpdate = (event) => {
-                const { products } = event.detail;
-                setProducts(products);
+                const detail = event?.detail || {};
+                const incoming = detail.products;
+                const latest = Array.isArray(incoming)
+                    ? incoming
+                    : (window.HEYS?.products?.getAll?.() || window.HEYS?.utils?.lsGet?.('heys_products', []) || []);
+
+                setProducts(latest);
                 if (!initialSyncDoneRef.current) return;
                 setSyncVer((v) => v + 1);
             };
 
+            window.addEventListener('heys:products-updated', handleProductsUpdate);
             window.addEventListener('heysProductsUpdated', handleProductsUpdate);
-            return () => window.removeEventListener('heysProductsUpdated', handleProductsUpdate);
+            return () => {
+                window.removeEventListener('heys:products-updated', handleProductsUpdate);
+                window.removeEventListener('heysProductsUpdated', handleProductsUpdate);
+            };
         }, [setProducts, setSyncVer]);
 
         React.useEffect(() => {

@@ -1,6 +1,16 @@
 // heys_app_auth_init_v1.js — App auth/session initialization
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
+    const DEV = window.DEV || {};
+    const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
+    const devWarn = typeof DEV.warn === 'function' ? DEV.warn.bind(DEV) : function () { };
+    const trackError = (error, context) => {
+        if (!HEYS?.analytics?.trackError) return;
+        try {
+            const err = error instanceof Error ? error : new Error(String(error || 'Auth init error'));
+            HEYS.analytics.trackError(err, context);
+        } catch (_) { }
+    };
 
     const runAuthInit = ({
         U,
@@ -97,7 +107,7 @@
                     // ✅ FIX: Только если токен РЕАЛЬНО истёк (не "скоро истечёт")
                     // Раньше здесь был буфер 5 минут который вызывал ложные логауты
                     if (expiresAtMs < now) {
-                        console.log('[AUTH] Token expired at', new Date(expiresAtMs).toISOString());
+                        devLog('[AUTH] Token expired at', new Date(expiresAtMs).toISOString());
                         // Очищаем только РЕАЛЬНО истёкший Supabase токен
                         try { localStorage.removeItem('heys_supabase_auth_token'); } catch (_) { }
                         // 🔧 v58 FIX: НЕ удаляем session_token если есть PIN auth сессия!
@@ -105,16 +115,16 @@
                         // Удалять только если НЕТ PIN-сессии (куратор)
                         const hasPinAuth = localStorage.getItem('heys_pin_auth_client');
                         if (!hasPinAuth) {
-                            console.log('[AUTH] No PIN auth, clearing session_token');
+                            devLog('[AUTH] No PIN auth, clearing session_token');
                             try { localStorage.removeItem('heys_session_token'); } catch (_) { }
                         } else {
-                            console.log('[AUTH] PIN auth present, keeping session_token');
+                            devLog('[AUTH] PIN auth present, keeping session_token');
                         }
                         return null;
                     }
                     // Если токен скоро истекает — это ОК, ensureValidToken() обновит его
                     const minutesLeft = Math.round((expiresAtMs - now) / 60000);
-                    console.log('[AUTH] Token valid, expires in', minutesLeft, 'min');
+                    devLog('[AUTH] Token valid, expires in', minutesLeft, 'min');
                 }
 
                 return parsed?.user || null;
@@ -158,7 +168,7 @@
                 });
         } else if (hasPinSession && cloudRef) {
             // 🔐 PIN auth — приоритет над куратором (клиент вошёл по телефону+PIN)
-            console.log('[App] 🔐 Восстановление PIN-сессии:', pinAuthClient.substring(0, 8) + '...');
+            devLog('[App] 🔐 Восстановление PIN-сессии:', pinAuthClient.substring(0, 8) + '...');
 
             // Восстанавливаем RPC-режим
             if (cloudRef.setPinAuthClient) {
@@ -173,12 +183,13 @@
             // Событие heysSyncCompleted отправляется ВНУТРИ syncClientViaRPC после загрузки данных
             cloudRef.syncClient(pinAuthClient)
                 .then(() => {
-                    console.log('[App] ✅ PIN-сессия восстановлена');
+                    devLog('[App] ✅ PIN-сессия восстановлена');
                     // НЕ отправляем heysSyncCompleted здесь — оно уже отправлено внутри syncClient
                     // после фактической записи данных в localStorage
                 })
                 .catch((err) => {
-                    console.error('[App] ❌ Ошибка восстановления PIN-сессии:', err);
+                    devWarn('[App] ❌ Ошибка восстановления PIN-сессии:', err);
+                    trackError(err, { scope: 'AppAuthInit', action: 'restore_pin_session' });
                     // При ошибке показываем экран логина
                     localStorage.removeItem('heys_pin_auth_client');
                     setClientId(null);

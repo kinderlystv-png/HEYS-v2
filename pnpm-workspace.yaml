@@ -1,18 +1,19 @@
 # HEYS Project Workspace Configuration
 packages:
   # Core packages
-  - 'packages/*'
+  - "packages/*"
 
   # Applications
-  - 'apps/web'
-  - 'apps/landing'
+  - "apps/web"
+  - "apps/landing"
   # - 'apps/*' # Temporarily disabled other apps
 
   # Development tools
-  - 'tools/*'
+  - "tools/*"
+  - "scripts/eslint-rules"
 
   # Documentation and legacy (not part of workspace)
-  - '!docs/**'
-  - '!temp/**'
-  - '!TESTS/**'
-  - '!старые МЕТОДОЛОГИИ И ИНСТРУКЦИИ ДЛЯ ИИ/**'
+  - "!docs/**"
+  - "!temp/**"
+  - "!TESTS/**"
+  - "!старые МЕТОДОЛОГИИ И ИНСТРУКЦИИ ДЛЯ ИИ/**"

@@ -30,6 +30,29 @@
   'use strict';
 
   const HEYS = window.HEYS = window.HEYS || {};
+  const DEV = window.DEV || {};
+  const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
+  const devWarn = typeof DEV.warn === 'function' ? DEV.warn.bind(DEV) : function () { };
+  const devInfo = typeof DEV.info === 'function' ? DEV.info.bind(DEV) : function () { };
+  const devDebug = typeof DEV.debug === 'function' ? DEV.debug.bind(DEV) : function () { };
+  const trackError = (error, context) => {
+    if (!HEYS?.analytics?.trackError) return;
+    try {
+      const err = error instanceof Error ? error : new Error(String(error || 'PlatformAPIs error'));
+      HEYS.analytics.trackError(err, context);
+    } catch (_) { }
+  };
+  const quietConsole = {
+    log: (...args) => devLog(...args),
+    info: (...args) => devInfo(...args),
+    debug: (...args) => devDebug(...args),
+    warn: (...args) => devWarn(...args),
+    error: (...args) => {
+      devWarn(...args);
+      trackError(args[0], { scope: 'HEYS.PlatformAPIs', details: args.slice(1) });
+    }
+  };
+  const console = quietConsole;
 
   // Check feature flag - если используется legacy mode, пропускаем модуль
   if (HEYS.featureFlags?.isEnabled('use_legacy_monolith')) {
@@ -1292,7 +1315,7 @@
         }
       }
 
-      HEYS.products.setAll(merged);
+      HEYS.products.setAll(merged, { source: 'import-user-data' });
     }
 
     if (data.days?.length && HEYS.utils?.lsSet) {

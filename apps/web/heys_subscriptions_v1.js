@@ -4,20 +4,30 @@
 // Управление статусами подписки, триалом, оплатой через ЮKassa
 // Интегрировано с YandexAPI.createPayment / getPaymentStatus
 
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
-  
+  const DEV = global.DEV || {};
+  const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
+  const devWarn = typeof DEV.warn === 'function' ? DEV.warn.bind(DEV) : function () { };
+  const trackError = (error, context) => {
+    if (!HEYS?.analytics?.trackError) return;
+    try {
+      const err = error instanceof Error ? error : new Error(String(error || 'Subscriptions error'));
+      HEYS.analytics.trackError(err, context);
+    } catch (_) { }
+  };
+
   // =====================================================
   // КОНФИГУРАЦИЯ
   // =====================================================
-  
+
   const CONFIG = {
     TRIAL_DAYS: 7,
     PAYMENT_CHECK_INTERVAL: 3000, // Проверка статуса каждые 3 секунды
     PAYMENT_CHECK_MAX_ATTEMPTS: 60, // Максимум 3 минуты ожидания
-    
+
     PLANS: {
       base: {
         id: 'base',
@@ -55,7 +65,7 @@
         ]
       }
     },
-    
+
     STATUSES: {
       trial: { id: 'trial', name: 'Триал', color: '#3b82f6', canEdit: true },
       active: { id: 'active', name: 'Активна', color: '#22c55e', canEdit: true },
@@ -63,21 +73,21 @@
       canceled: { id: 'canceled', name: 'Отменена', color: '#6b7280', canEdit: false }
     }
   };
-  
+
   // =====================================================
   // УТИЛИТЫ
   // =====================================================
-  
+
   function formatPrice(price) {
     return new Intl.NumberFormat('ru-RU').format(price) + ' ₽';
   }
-  
+
   function formatDate(date) {
     if (!date) return '';
     const d = new Date(date);
     return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
   }
-  
+
   function daysUntil(date) {
     if (!date) return 0;
     const now = new Date();
@@ -85,11 +95,11 @@
     const diff = target - now;
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   }
-  
+
   // =====================================================
   // ПРОВЕРКА PENDING ПЛАТЕЖА
   // =====================================================
-  
+
   /**
    * Проверить pending платёж после редиректа с ЮKassa
    * Вызывается при загрузке приложения
@@ -100,57 +110,59 @@
       // Читаем сохранённый pending payment
       const pendingRaw = localStorage.getItem('heys_pending_payment');
       if (!pendingRaw) return { success: false };
-      
+
       const pending = JSON.parse(pendingRaw);
       const { paymentId, clientId, plan, createdAt } = pending;
-      
+
       // Проверяем не старый ли это платёж (>1 час)
       if (Date.now() - createdAt > 60 * 60 * 1000) {
-        console.log('[Subscriptions] Pending payment expired');
+        devLog('[Subscriptions] Pending payment expired');
         localStorage.removeItem('heys_pending_payment');
         return { success: false };
       }
-      
-      console.log('[Subscriptions] Checking pending payment:', paymentId);
-      
+
+      devLog('[Subscriptions] Checking pending payment:', paymentId);
+
       // Запрашиваем статус платежа
       const YandexAPI = window.HEYS?.YandexAPI;
       if (!YandexAPI?.getPaymentStatus) {
-        console.warn('[Subscriptions] YandexAPI.getPaymentStatus недоступен');
+        devWarn('[Subscriptions] YandexAPI.getPaymentStatus недоступен');
         return { success: false };
       }
-      
+
       const { data, error } = await YandexAPI.getPaymentStatus(paymentId, clientId);
-      
+
       if (error) {
-        console.error('[Subscriptions] getPaymentStatus error:', error);
+        devWarn('[Subscriptions] getPaymentStatus error:', error);
+        trackError(error, { scope: 'Subscriptions', action: 'getPaymentStatus' });
         return { success: false, error: error.message };
       }
-      
-      console.log('[Subscriptions] Payment status:', data);
-      
+
+      devLog('[Subscriptions] Payment status:', data);
+
       // Платёж успешен?
       if (data.paid && data.status === 'succeeded') {
         // Очищаем pending и возвращаем успех
         localStorage.removeItem('heys_pending_payment');
         return { success: true, plan, paymentId };
       }
-      
+
       // Платёж отменён или ошибка?
       if (data.status === 'canceled' || data.status === 'failed') {
         localStorage.removeItem('heys_pending_payment');
         return { success: false, status: data.status };
       }
-      
+
       // Платёж ещё в процессе (pending/waiting_for_capture)
       return { success: false, pending: true, status: data.status };
-      
+
     } catch (err) {
-      console.error('[Subscriptions] checkPendingPayment error:', err);
+      devWarn('[Subscriptions] checkPendingPayment error:', err);
+      trackError(err, { scope: 'Subscriptions', action: 'checkPendingPayment' });
       return { success: false, error: err.message };
     }
   }
-  
+
   /**
    * Ожидать завершения платежа (polling)
    * @param {Function} onSuccess - Callback при успехе
@@ -158,46 +170,46 @@
    */
   async function waitForPayment(onSuccess, onError) {
     let attempts = 0;
-    
+
     const check = async () => {
       attempts++;
-      
+
       if (attempts > CONFIG.PAYMENT_CHECK_MAX_ATTEMPTS) {
-        console.log('[Subscriptions] Payment check timeout');
+        devLog('[Subscriptions] Payment check timeout');
         onError?.({ message: 'Таймаут ожидания оплаты' });
         return;
       }
-      
+
       const result = await checkPendingPayment();
-      
+
       if (result.success) {
-        console.log('[Subscriptions] Payment succeeded!', result);
+        devLog('[Subscriptions] Payment succeeded!', result);
         onSuccess?.(result);
         return;
       }
-      
+
       if (result.pending) {
         // Продолжаем ждать
         setTimeout(check, CONFIG.PAYMENT_CHECK_INTERVAL);
         return;
       }
-      
+
       // Платёж не удался или нет pending
       if (result.error || result.status === 'canceled' || result.status === 'failed') {
         onError?.(result);
         return;
       }
-      
+
       // Нет pending payment — ничего не делаем
     };
-    
+
     check();
   }
-  
+
   // =====================================================
   // API МЕТОДЫ
   // =====================================================
-  
+
   /**
    * Получить статус подписки клиента
    */
@@ -209,10 +221,10 @@
         if (result.error) throw new Error(result.error.message || result.error);
         // Распаковываем данные: { data: { check_subscription_status: {...} } }
         const statusData = result.data?.check_subscription_status || result.data || result;
-        console.log('[Subscriptions] getStatus result:', statusData);
+        devLog('[Subscriptions] getStatus result:', statusData);
         return statusData;
       }
-      
+
       // Fallback: читаем из localStorage
       const profile = HEYS.utils?.lsGet?.('heys_profile') || {};
       return {
@@ -224,11 +236,12 @@
         can_edit: true
       };
     } catch (err) {
-      console.error('[Subscriptions] getStatus error:', err);
+      devWarn('[Subscriptions] getStatus error:', err);
+      trackError(err, { scope: 'Subscriptions', action: 'getStatus' });
       return { success: false, error: err.message, can_edit: true };
     }
   }
-  
+
   /**
    * Запустить триал (вызывается при первом приёме пищи)
    */
@@ -238,31 +251,32 @@
       if (HEYS.YandexAPI) {
         const result = await HEYS.YandexAPI.startTrial(clientId);
         if (result.error) throw new Error(result.error);
-        console.log('[Subscriptions] Trial started:', result);
+        devLog('[Subscriptions] Trial started:', result);
         return result;
       }
-      
+
       // Fallback: сохраняем локально
       const now = new Date();
       const trialEnd = new Date(now.getTime() + CONFIG.TRIAL_DAYS * 24 * 60 * 60 * 1000);
-      
+
       const profile = HEYS.utils?.lsGet?.('heys_profile') || {};
       profile.subscription_status = 'trial';
       profile.trial_started_at = now.toISOString();
       profile.trial_ends_at = trialEnd.toISOString();
       HEYS.utils?.lsSet?.('heys_profile', profile);
-      
+
       return {
         success: true,
         trial_started_at: now.toISOString(),
         trial_ends_at: trialEnd.toISOString()
       };
     } catch (err) {
-      console.error('[Subscriptions] startTrial error:', err);
+      devWarn('[Subscriptions] startTrial error:', err);
+      trackError(err, { scope: 'Subscriptions', action: 'startTrial' });
       return { success: false, error: err.message };
     }
   }
-  
+
   /**
    * Активировать подписку (mock-оплата)
    */
@@ -271,37 +285,38 @@
       if (!CONFIG.PLANS[plan]) {
         throw new Error('Invalid plan: ' + plan);
       }
-      
+
       // Используем YandexAPI
       if (HEYS.YandexAPI) {
         const result = await HEYS.YandexAPI.activateSubscription(clientId, plan, months);
         if (result.error) throw new Error(result.error);
-        console.log('[Subscriptions] Subscription activated:', result);
+        devLog('[Subscriptions] Subscription activated:', result);
         return result;
       }
-      
+
       // Fallback: сохраняем локально
       const now = new Date();
       const expiresAt = new Date(now.getTime() + months * 30 * 24 * 60 * 60 * 1000);
-      
+
       const profile = HEYS.utils?.lsGet?.('heys_profile') || {};
       profile.subscription_status = 'active';
       profile.subscription_plan = plan;
       profile.subscription_started_at = now.toISOString();
       profile.subscription_expires_at = expiresAt.toISOString();
       HEYS.utils?.lsSet?.('heys_profile', profile);
-      
+
       return {
         success: true,
         plan: plan,
         expires_at: expiresAt.toISOString()
       };
     } catch (err) {
-      console.error('[Subscriptions] activateSubscription error:', err);
+      devWarn('[Subscriptions] activateSubscription error:', err);
+      trackError(err, { scope: 'Subscriptions', action: 'activateSubscription' });
       return { success: false, error: err.message };
     }
   }
-  
+
   /**
    * Проверить, может ли пользователь редактировать данные
    */
@@ -309,41 +324,41 @@
     const status = await getStatus(clientId);
     return status.can_edit === true;
   }
-  
+
   /**
    * Получить конфигурацию тарифов
    */
   function getPlans() {
     return Object.values(CONFIG.PLANS);
   }
-  
+
   /**
    * Получить информацию о тарифе
    */
   function getPlan(planId) {
     return CONFIG.PLANS[planId] || null;
   }
-  
+
   /**
    * Получить информацию о статусе
    */
   function getStatusInfo(statusId) {
     return CONFIG.STATUSES[statusId] || CONFIG.STATUSES.trial;
   }
-  
+
   // =====================================================
   // REACT КОМПОНЕНТЫ
   // =====================================================
-  
+
   const { createElement: h, useState, useEffect } = window.React || {};
-  
+
   /**
    * Бейдж статуса подписки
    */
   function SubscriptionBadge({ status, plan, daysLeft, onClick }) {
     const statusInfo = getStatusInfo(status);
     const planInfo = plan ? getPlan(plan) : null;
-    
+
     const badgeStyle = {
       display: 'inline-flex',
       alignItems: 'center',
@@ -356,24 +371,24 @@
       color: statusInfo.color,
       cursor: onClick ? 'pointer' : 'default'
     };
-    
+
     let label = statusInfo.name;
     if (status === 'trial' && daysLeft > 0) {
       label = `Триал: ${daysLeft} дн.`;
     } else if (status === 'active' && planInfo) {
       label = planInfo.name;
     }
-    
+
     return h('span', { style: badgeStyle, onClick }, label);
   }
-  
+
   /**
    * Карточка тарифа
    */
   function PlanCard({ plan, isSelected, onSelect }) {
     const planInfo = getPlan(plan);
     if (!planInfo) return null;
-    
+
     const cardStyle = {
       border: isSelected ? '2px solid #22c55e' : '1px solid #e5e7eb',
       borderRadius: '12px',
@@ -383,14 +398,14 @@
       cursor: 'pointer',
       transition: 'all 0.2s'
     };
-    
+
     const headerStyle = {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: '8px'
     };
-    
+
     const nameStyle = {
       fontSize: '18px',
       fontWeight: '600',
@@ -398,44 +413,44 @@
       alignItems: 'center',
       gap: '8px'
     };
-    
+
     const priceStyle = {
       fontSize: '20px',
       fontWeight: '700',
       color: '#22c55e'
     };
-    
+
     const featureStyle = {
       fontSize: '14px',
       color: '#6b7280',
       marginLeft: '16px',
       marginBottom: '4px'
     };
-    
+
     return h('div', { style: cardStyle, onClick: () => onSelect(plan) },
       h('div', { style: headerStyle },
         h('div', { style: nameStyle },
           planInfo.name,
-          planInfo.recommended && h('span', { 
-            style: { 
-              fontSize: '11px', 
-              backgroundColor: '#fef3c7', 
+          planInfo.recommended && h('span', {
+            style: {
+              fontSize: '11px',
+              backgroundColor: '#fef3c7',
               color: '#d97706',
               padding: '2px 8px',
               borderRadius: '10px'
-            } 
+            }
           }, '⭐ Рекомендуем')
         ),
         h('div', { style: priceStyle }, formatPrice(planInfo.price) + '/мес')
       ),
       h('div', null,
-        planInfo.features.map((f, i) => 
+        planInfo.features.map((f, i) =>
           h('div', { key: i, style: featureStyle }, '• ' + f)
         )
       )
     );
   }
-  
+
   /**
    * Экран выбора тарифа
    */
@@ -443,20 +458,20 @@
     const [selectedPlan, setSelectedPlan] = useState('pro');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    
+
     const handlePayment = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         // Используем YandexAPI для создания реального платежа ЮKassa
         const YandexAPI = window.HEYS?.YandexAPI;
-        
+
         if (!YandexAPI?.createPayment) {
           // Fallback на прямую активацию (для тестов без платёжки)
-          console.warn('[Subscriptions] YandexAPI.createPayment недоступен, используем прямую активацию');
+          devWarn('[Subscriptions] YandexAPI.createPayment недоступен, используем прямую активацию');
           const result = await activateSubscription(clientId, selectedPlan, 1);
-          
+
           if (result.success) {
             onSuccess?.(result);
           } else {
@@ -464,16 +479,16 @@
           }
           return;
         }
-        
+
         // Создаём платёж через ЮKassa
         const returnUrl = window.location.origin + '/payment-result?clientId=' + clientId;
         const { data, error: apiError } = await YandexAPI.createPayment(clientId, selectedPlan, returnUrl);
-        
+
         if (apiError || !data) {
           setError(apiError?.message || 'Ошибка создания платежа');
           return;
         }
-        
+
         // Сохраняем paymentId для проверки после редиректа
         try {
           localStorage.setItem('heys_pending_payment', JSON.stringify({
@@ -483,9 +498,10 @@
             createdAt: Date.now()
           }));
         } catch (e) {
-          console.warn('[Subscriptions] Не удалось сохранить pending payment:', e);
+          devWarn('[Subscriptions] Не удалось сохранить pending payment:', e);
+          trackError(e, { scope: 'Subscriptions', action: 'savePendingPayment' });
         }
-        
+
         // Редирект на страницу оплаты ЮKassa
         if (data.confirmationUrl) {
           window.location.href = data.confirmationUrl;
@@ -493,28 +509,29 @@
           // Если confirmationUrl нет, значит платёж уже успешен (редкий кейс)
           onSuccess?.({ plan: selectedPlan });
         }
-        
+
       } catch (err) {
-        console.error('[Subscriptions] handlePayment error:', err);
+        devWarn('[Subscriptions] handlePayment error:', err);
+        trackError(err, { scope: 'Subscriptions', action: 'handlePayment' });
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
-    
+
     const containerStyle = {
       padding: '20px',
       maxWidth: '500px',
       margin: '0 auto'
     };
-    
+
     const titleStyle = {
       fontSize: '24px',
       fontWeight: '700',
       textAlign: 'center',
       marginBottom: '24px'
     };
-    
+
     const buttonStyle = {
       width: '100%',
       padding: '14px',
@@ -527,7 +544,7 @@
       cursor: loading ? 'not-allowed' : 'pointer',
       marginTop: '16px'
     };
-    
+
     const cancelStyle = {
       width: '100%',
       padding: '12px',
@@ -538,14 +555,14 @@
       cursor: 'pointer',
       marginTop: '8px'
     };
-    
+
     const plans = getPlans();
     const selectedInfo = getPlan(selectedPlan);
-    
+
     return h('div', { style: containerStyle },
       h('h1', { style: titleStyle }, '💳 Выберите тариф'),
-      
-      plans.map(p => 
+
+      plans.map(p =>
         h(PlanCard, {
           key: p.id,
           plan: p.id,
@@ -553,67 +570,67 @@
           onSelect: setSelectedPlan
         })
       ),
-      
-      error && h('div', { 
-        style: { 
-          color: '#ef4444', 
-          textAlign: 'center', 
+
+      error && h('div', {
+        style: {
+          color: '#ef4444',
+          textAlign: 'center',
           marginTop: '12px',
           padding: '8px',
           backgroundColor: '#fef2f2',
           borderRadius: '8px'
-        } 
+        }
       }, error),
-      
-      h('button', { 
-        style: buttonStyle, 
+
+      h('button', {
+        style: buttonStyle,
         onClick: handlePayment,
-        disabled: loading 
-      }, 
+        disabled: loading
+      },
         loading ? 'Обработка...' : `Оплатить ${formatPrice(selectedInfo?.price || 0)}`
       ),
-      
+
       onCancel && h('button', { style: cancelStyle, onClick: onCancel }, 'Отмена')
     );
   }
-  
+
   /**
    * Экран успешной оплаты
    */
   function PaymentSuccessScreen({ plan, expiresAt, onContinue }) {
     const planInfo = getPlan(plan);
-    
+
     const containerStyle = {
       padding: '40px 20px',
       textAlign: 'center',
       maxWidth: '400px',
       margin: '0 auto'
     };
-    
+
     const iconStyle = {
       fontSize: '64px',
       marginBottom: '16px'
     };
-    
+
     const titleStyle = {
       fontSize: '24px',
       fontWeight: '700',
       marginBottom: '8px'
     };
-    
+
     const subtitleStyle = {
       fontSize: '16px',
       color: '#6b7280',
       marginBottom: '24px'
     };
-    
+
     const infoStyle = {
       backgroundColor: '#f0fdf4',
       borderRadius: '12px',
       padding: '16px',
       marginBottom: '24px'
     };
-    
+
     const buttonStyle = {
       width: '100%',
       padding: '14px',
@@ -625,25 +642,25 @@
       borderRadius: '12px',
       cursor: 'pointer'
     };
-    
+
     return h('div', { style: containerStyle },
       h('div', { style: iconStyle }, '✅'),
       h('h1', { style: titleStyle }, 'Подписка активирована!'),
       h('p', { style: subtitleStyle }, `Тариф ${planInfo?.name || plan}`),
-      
+
       h('div', { style: infoStyle },
-        h('div', { style: { marginBottom: '8px' } }, 
+        h('div', { style: { marginBottom: '8px' } },
           '📅 Активна до: ', h('strong', null, formatDate(expiresAt))
         ),
-        h('div', null, 
+        h('div', null,
           '💰 Стоимость: ', h('strong', null, formatPrice(planInfo?.price || 0) + '/мес')
         )
       ),
-      
+
       h('button', { style: buttonStyle, onClick: onContinue }, 'Продолжить')
     );
   }
-  
+
   /**
    * Баннер "Подписка не активна" для read_only режима
    */
@@ -655,20 +672,20 @@
       margin: '16px',
       textAlign: 'center'
     };
-    
+
     const titleStyle = {
       fontSize: '16px',
       fontWeight: '600',
       color: '#d97706',
       marginBottom: '8px'
     };
-    
+
     const textStyle = {
       fontSize: '14px',
       color: '#92400e',
       marginBottom: '12px'
     };
-    
+
     const buttonStyle = {
       padding: '10px 20px',
       fontSize: '14px',
@@ -679,16 +696,16 @@
       borderRadius: '8px',
       cursor: 'pointer'
     };
-    
+
     return h('div', { style: bannerStyle },
       h('div', { style: titleStyle }, '⚠️ Подписка не активна'),
-      h('p', { style: textStyle }, 
+      h('p', { style: textStyle },
         'Вы можете просматривать историю, но добавление данных недоступно'
       ),
       h('button', { style: buttonStyle, onClick: onUpgrade }, 'Оформить подписку')
     );
   }
-  
+
   /**
    * Секция подписки для профиля
    */
@@ -696,59 +713,59 @@
     const [status, setStatus] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showPayment, setShowPayment] = useState(false);
-    
+
     useEffect(() => {
       loadStatus();
     }, [clientId]);
-    
+
     const loadStatus = async () => {
       setLoading(true);
       const result = await getStatus(clientId);
       setStatus(result);
       setLoading(false);
     };
-    
+
     const handleSuccess = (result) => {
       setShowPayment(false);
       loadStatus();
     };
-    
+
     if (loading) {
       return h('div', { style: { padding: '16px', textAlign: 'center' } }, 'Загрузка...');
     }
-    
+
     if (showPayment) {
-      return h(PaymentScreen, { 
-        clientId, 
+      return h(PaymentScreen, {
+        clientId,
         onSuccess: handleSuccess,
         onCancel: () => setShowPayment(false)
       });
     }
-    
+
     const sectionStyle = {
       backgroundColor: '#f9fafb',
       borderRadius: '12px',
       padding: '16px',
       margin: '16px 0'
     };
-    
+
     const headerStyle = {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: '12px'
     };
-    
+
     const titleStyle = {
       fontSize: '16px',
       fontWeight: '600'
     };
-    
+
     const infoStyle = {
       fontSize: '14px',
       color: '#6b7280'
     };
-    
+
     const buttonStyle = {
       padding: '8px 16px',
       fontSize: '14px',
@@ -760,38 +777,38 @@
       cursor: 'pointer',
       marginTop: '12px'
     };
-    
+
     const statusInfo = getStatusInfo(status?.status);
     const planInfo = status?.plan ? getPlan(status.plan) : null;
-    
+
     return h('div', { style: sectionStyle },
       h('div', { style: headerStyle },
         h('div', { style: titleStyle }, '📋 Подписка'),
-        h(SubscriptionBadge, { 
-          status: status?.status, 
+        h(SubscriptionBadge, {
+          status: status?.status,
           plan: status?.plan,
           daysLeft: status?.days_left
         })
       ),
-      
+
       status?.is_trial && h('div', { style: infoStyle },
         `Триал до ${formatDate(status.trial_ends_at)}`,
         status.days_left > 0 && ` (осталось ${status.days_left} дн.)`
       ),
-      
+
       status?.status === 'active' && h('div', { style: infoStyle },
         planInfo && `Тариф: ${planInfo.name}`,
         h('br'),
         `Активна до ${formatDate(status.subscription_expires_at)}`
       ),
-      
-      (status?.status === 'trial' || status?.status === 'read_only') && 
-        h('button', { style: buttonStyle, onClick: () => setShowPayment(true) }, 
-          status?.status === 'trial' ? 'Оформить подписку' : 'Продлить подписку'
-        )
+
+      (status?.status === 'trial' || status?.status === 'read_only') &&
+      h('button', { style: buttonStyle, onClick: () => setShowPayment(true) },
+        status?.status === 'trial' ? 'Оформить подписку' : 'Продлить подписку'
+      )
     );
   }
-  
+
   /**
    * Показать уведомление о необходимости оплаты
    * Используется при попытке редактирования в read-only режиме
@@ -806,14 +823,14 @@
       });
       return;
     }
-    
+
     // Fallback: показываем PaywallBanner в корне приложения
     // Используем кастомный event который слушает App
     window.dispatchEvent(new CustomEvent('heys:show-paywall', {
       detail: { source: 'edit-blocked', message: 'Подписка не активна' }
     }));
   }
-  
+
   /**
    * Получить читаемый label статуса для subtitle в профиле
    * Синхронная функция, использует кэшированные данные
@@ -822,20 +839,20 @@
     try {
       const clientId = HEYS.currentClientId || localStorage.getItem('heys_client_current');
       if (!clientId) return 'Тариф и оплата';
-      
+
       const profile = HEYS.utils?.lsGet?.('heys_profile') || {};
       const status = profile.subscription_status || 'trial';
       const plan = profile.subscription_plan;
       const trialEnds = profile.trial_ends_at;
       const subExpires = profile.subscription_expires_at;
-      
+
       const statusInfo = getStatusInfo(status);
-      
+
       if (status === 'trial' && trialEnds) {
         const days = daysUntil(trialEnds);
         return `Триал: ${days} дн. осталось`;
       }
-      
+
       if (status === 'active' && plan) {
         const planInfo = getPlan(plan);
         if (planInfo) {
@@ -843,41 +860,41 @@
           return `${planInfo.name} • ${days} дн.`;
         }
       }
-      
+
       return statusInfo.name;
     } catch (e) {
       return 'Тариф и оплата';
     }
   }
-  
+
   // =====================================================
   // ЭКСПОРТ
   // =====================================================
-  
+
   HEYS.Subscriptions = {
     // Config
     CONFIG,
     getPlans,
     getPlan,
     getStatusInfo,
-    
+
     // Utils
     formatPrice,
     formatDate,
     daysUntil,
     getStatusLabel,
-    
+
     // API
     getStatus,
     startTrial,
     activateSubscription,
     canEdit,
     showPaymentRequired,
-    
+
     // Payment (ЮKassa)
     checkPendingPayment,
     waitForPayment,
-    
+
     // Components
     SubscriptionBadge,
     PlanCard,
@@ -886,27 +903,27 @@
     PaywallBanner,
     SubscriptionSection
   };
-  
+
   // =====================================================
   // РЕГИСТРАЦИЯ ШАГА для StepModal
   // =====================================================
-  
+
   // Отложенная регистрация (StepModal может загрузиться позже)
   function registerPaymentRequiredStep() {
     if (!HEYS.StepModal || !HEYS.StepModal.registerStep) return false;
-    
+
     const h = React.createElement;
-    
+
     HEYS.StepModal.registerStep('payment_required', {
       title: '🔒 Подписка не активна',
       icon: '💳',
       canSkip: false,
       hideBackButton: true,
-      
+
       render: ({ onComplete }) => {
         const [selectedPlan, setSelectedPlan] = React.useState('pro');
         const [showPayment, setShowPayment] = React.useState(false);
-        
+
         if (showPayment) {
           return h(PaymentScreen, {
             plan: selectedPlan,
@@ -914,23 +931,23 @@
             onCancel: () => setShowPayment(false)
           });
         }
-        
+
         const containerStyle = {
           padding: '20px',
           textAlign: 'center'
         };
-        
+
         const messageStyle = {
           fontSize: '16px',
           color: '#6b7280',
           marginBottom: '24px',
           lineHeight: '1.5'
         };
-        
+
         const plansStyle = {
           marginBottom: '24px'
         };
-        
+
         const buttonStyle = {
           width: '100%',
           padding: '14px 24px',
@@ -942,7 +959,7 @@
           fontWeight: '600',
           cursor: 'pointer'
         };
-        
+
         return h('div', { style: containerStyle },
           h('div', { style: messageStyle },
             'Для добавления записей и редактирования данных ',
@@ -958,23 +975,23 @@
           )
         );
       },
-      
+
       validate: () => true, // Всегда можно закрыть
-      
+
       onSave: () => {
         // Ничего не сохраняем, это информационный шаг
       }
     });
-    
+
     return true;
   }
-  
+
   // Пытаемся зарегистрировать сразу
   if (!registerPaymentRequiredStep()) {
     // Если StepModal ещё не загружен — подписываемся на событие
     window.addEventListener('heys:step-modal-ready', registerPaymentRequiredStep, { once: true });
   }
-  
-  console.log('[HEYS] Subscriptions module loaded v1.0.0');
-  
+
+  devLog('[HEYS] Subscriptions module loaded v1.0.0');
+
 })(typeof window !== 'undefined' ? window : global);

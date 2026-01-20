@@ -1,12 +1,14 @@
 // pi_calculations.js — Helper Calculation Utilities v3.0.0
 // Extracted from heys_predictive_insights_v1.js (Phase 10)
 // Вспомогательные функции для расчётов: калории, BMR, получение данных
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.InsightsPI = HEYS.InsightsPI || {};
-  
+  const DEV = HEYS.dev || global.HEYS?.dev || {};
+  const devLog = DEV.log ? DEV.log.bind(DEV) : () => { };
+
   /**
    * Рассчитать калории из MealItem через pIndex
    * @param {Object} item - элемент еды
@@ -22,7 +24,7 @@
     const f = (prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0);
     return (p * 4 + c * 4 + f * 9) * item.grams / 100;
   }
-  
+
   /**
    * Рассчитать калории за день
    * @param {Object} day - данные дня
@@ -40,7 +42,7 @@
     }
     return total;
   }
-  
+
   /**
    * Рассчитать BMR (Mifflin-St Jeor)
    * 🔬 TDEE v1.1.0: делегируем в HEYS.TDEE.calcBMR() если доступен
@@ -52,13 +54,13 @@
     if (HEYS.TDEE?.calcBMR) {
       return HEYS.TDEE.calcBMR(profile);
     }
-    
+
     // Fallback: inline расчёт
     const weight = profile?.weight || 70;
     const height = profile?.height || 170;
     const age = profile?.age || 30;
     const isMale = profile?.gender !== 'Женский';
-    
+
     if (isMale) {
       return 10 * weight + 6.25 * height - 5 * age + 5;
     } else {
@@ -75,13 +77,13 @@
   function getDaysData(daysBack, lsGet) {
     const days = [];
     const today = new Date();
-    
+
     for (let i = 0; i < daysBack; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
       const dayData = lsGet(`heys_dayv2_${dateStr}`, null);
-      
+
       if (dayData && dayData.meals && dayData.meals.length > 0) {
         days.push({
           date: dateStr,
@@ -90,7 +92,7 @@
         });
       }
     }
-    
+
     return days;
   }
 
@@ -101,12 +103,10 @@
     calculateBMR,
     getDaysData
   };
-  
+
   // Fallback для прямого доступа
   global.piCalculations = HEYS.InsightsPI.calculations;
-  
-  if (typeof console !== 'undefined' && console.log) {
-    console.log('[PI Calculations] v3.0.0 loaded — 4 calculation utilities');
-  }
-  
+
+  devLog('[PI Calculations] v3.0.0 loaded — 4 calculation utilities');
+
 })(typeof window !== 'undefined' ? window : global);

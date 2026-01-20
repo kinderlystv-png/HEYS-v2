@@ -6,6 +6,16 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
   const ReactDOM = global.ReactDOM;
+  const DEV = global.DEV || {};
+  const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
+  const devWarn = typeof DEV.warn === 'function' ? DEV.warn.bind(DEV) : function () { };
+  const trackError = (error, context) => {
+    if (!HEYS?.analytics?.trackError) return;
+    try {
+      const err = error instanceof Error ? error : new Error(String(error || 'Paywall error'));
+      HEYS.analytics.trackError(err, context);
+    } catch (_) { }
+  };
 
   // ========================================
   // КОНСТАНТЫ
@@ -782,7 +792,7 @@
    */
   async function canWrite() {
     if (!HEYS.Subscription) {
-      console.warn('[Paywall] Subscription module not loaded');
+      devWarn('[Paywall] Subscription module not loaded');
       return true; // Fallback: разрешаем если модуль не загружен
     }
 
@@ -793,7 +803,8 @@
       return status.status === HEYS.Subscription.STATUS.TRIAL ||
         status.status === HEYS.Subscription.STATUS.ACTIVE;
     } catch (err) {
-      console.error('[Paywall] Error checking status:', err);
+      devWarn('[Paywall] Error checking status:', err);
+      trackError(err, { scope: 'Paywall', action: 'checkStatus' });
       return true; // Fallback: разрешаем при ошибке
     }
   }
@@ -822,7 +833,7 @@
   function gateWrite(action, actionName = 'action') {
     return async function (...args) {
       if (!canWriteSync()) {
-        console.log(`[Paywall] Blocked ${actionName}: read-only mode`);
+        devLog(`[Paywall] Blocked ${actionName}: read-only mode`);
         showBlockedToast(`Добавление данных недоступно`);
         return null;
       }
@@ -903,6 +914,6 @@
     injectStyles();
   }
 
-  console.log('[HEYS] Paywall module loaded v2.0.0 (Trial Queue integration)');
+  devLog('[HEYS] Paywall module loaded v2.0.0 (Trial Queue integration)');
 
 })(typeof window !== 'undefined' ? window : global);

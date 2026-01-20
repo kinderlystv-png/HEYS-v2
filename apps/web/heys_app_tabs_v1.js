@@ -94,6 +94,16 @@
         // Проверяем был ли sync для ЭТОГО клиента
         const alreadySynced = clientId && syncedClientsCache.has(clientId);
         const [loading, setLoading] = React.useState(!alreadySynced);
+        const getLatestProducts = (event) => {
+            const fromEvent = event?.detail?.products;
+            if (Array.isArray(fromEvent)) return fromEvent;
+            const fromService = window.HEYS?.products?.getAll?.();
+            if (Array.isArray(fromService)) return fromService;
+            const fromStore = window.HEYS.store?.get?.('heys_products', []);
+            if (Array.isArray(fromStore)) return fromStore;
+            const fromLs = window.HEYS.utils?.lsGet?.('heys_products', []);
+            return Array.isArray(fromLs) ? fromLs : [];
+        };
 
         // 🔐 Не рендерим Ration пока нет клиента
         if (!clientId) {
@@ -116,8 +126,7 @@
                     }
                 }
 
-                const latest = window.HEYS.utils?.lsGet?.('heys_products', []) ||
-                    window.HEYS.store?.get?.('heys_products', []) || [];
+                const latest = getLatestProducts(e);
                 if (Array.isArray(latest) && latest.length > 0) {
                     // 🛡️ ЗАЩИТА: не уменьшаем количество продуктов в UI
                     // Это предотвращает "мерцание" когда приходят разные ключи из облака
@@ -140,10 +149,12 @@
                 }
             };
 
+            window.addEventListener('heys:products-updated', handleProductsUpdated);
             window.addEventListener('heysProductsUpdated', handleProductsUpdated);
             window.addEventListener('heysSyncCompleted', handleProductsUpdated);
 
             return () => {
+                window.removeEventListener('heys:products-updated', handleProductsUpdated);
                 window.removeEventListener('heysProductsUpdated', handleProductsUpdated);
                 window.removeEventListener('heysSyncCompleted', handleProductsUpdated);
             };
@@ -171,9 +182,21 @@
 
             // 🔄 Хелпер: запуск orphan recovery (с debounce через флаг)
             const runOrphanRecovery = (options = {}) => {
-                if (recoveryScheduled || cancelled) return;
-                if (!window.HEYS.orphanProducts?.autoRecoverOnLoad) return;
+                // 🔧 FIX: Диагностика — логируем причину пропуска recovery
+                if (recoveryScheduled) {
+                    console.log('[HEYS] ⏭️ runOrphanRecovery: пропуск (уже запланировано)');
+                    return;
+                }
+                if (cancelled) {
+                    console.log('[HEYS] ⏭️ runOrphanRecovery: пропуск (cancelled)');
+                    return;
+                }
+                if (!window.HEYS.orphanProducts?.autoRecoverOnLoad) {
+                    console.warn('[HEYS] ⚠️ runOrphanRecovery: autoRecoverOnLoad не найден!');
+                    return;
+                }
 
+                console.log('[HEYS] 🔄 runOrphanRecovery: запуск autoRecoverOnLoad...');
                 recoveryScheduled = true;
                 const isFirstLoad = !syncedClientsCache.has(clientId);
 
@@ -199,7 +222,7 @@
 
             // Если sync для этого клиента уже был — сразу загружаем продукты
             if (syncedClientsCache.has(clientId)) {
-                const loadedProducts = window.HEYS.utils.lsGet('heys_products', []);
+                const loadedProducts = getLatestProducts();
                 safeSetProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
                 setLoading(false);
 
@@ -218,11 +241,7 @@
                     .then(() => {
                         if (!cancelled) {
                             syncedClientsCache.add(clientId);
-                            const loadedProducts = Array.isArray(
-                                window.HEYS.utils.lsGet('heys_products', []),
-                            )
-                                ? window.HEYS.utils.lsGet('heys_products', [])
-                                : [];
+                            const loadedProducts = getLatestProducts();
                             safeSetProducts(loadedProducts);
                             setLoading(false);
 
@@ -233,7 +252,7 @@
                     .catch((err) => {
                         console.warn('[HEYS] Sync failed, using local cache:', err?.message || err);
                         if (!cancelled) {
-                            const loadedProducts = window.HEYS.utils.lsGet('heys_products', []);
+                            const loadedProducts = getLatestProducts();
                             safeSetProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
                             setLoading(false);
 
@@ -243,7 +262,7 @@
                     });
             } else {
                 // Нет cloud — загружаем локально
-                const loadedProducts = window.HEYS.utils.lsGet('heys_products', []);
+                const loadedProducts = getLatestProducts();
                 safeSetProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
                 setLoading(false);
 

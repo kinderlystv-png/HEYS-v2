@@ -15,6 +15,7 @@
 
   HEYS.CloudQueue.init = function () {
     const { log, logCritical } = getLogger();
+    const trackError = (err, context) => HEYS.analytics?.trackError?.(err, context);
 
     const storageUtils = cloud._storageUtils || {};
     const loadPendingQueue = storageUtils.loadPendingQueue || function () { return []; };
@@ -94,9 +95,9 @@
       _uploadInFlightCount = batch.length;
 
       const canSync = getRpcOnlyMode();
-      console.log('🔐 [UPLOAD] canSync check:', { _rpcOnlyMode: getRpcOnlyMode(), hasUser: !!getUser(), batchLen: batch.length, canSync });
+      log('🔐 [UPLOAD] canSync check:', { _rpcOnlyMode: getRpcOnlyMode(), hasUser: !!getUser(), batchLen: batch.length, canSync });
       if (!canSync) {
-        console.warn('⚠️ [UPLOAD] canSync=false, returning batch to queue');
+        log('⚠️ [UPLOAD] canSync=false, returning batch to queue');
         clientUpsertQueue.push(...batch);
         _uploadInProgress = false;
         _uploadInFlightCount = 0;
@@ -138,7 +139,7 @@
             byClientId[cid].push({ k: item.k, v: item.v, updated_at: item.updated_at });
           });
 
-          console.log('🔐 [UPLOAD] RPC mode: grouped by clientId:', Object.keys(byClientId).map(c => c.slice(0, 8)));
+          log('🔐 [UPLOAD] RPC mode: grouped by clientId:', Object.keys(byClientId).map(c => c.slice(0, 8)));
 
           let totalSaved = 0;
           let anyError = null;
@@ -162,11 +163,11 @@
             notifyPendingChange();
 
             if (isAuthErrorFlag) {
-              console.warn('⚠️ [UPLOAD] Auth error, NOT retrying — waiting for login');
+              log('⚠️ [UPLOAD] Auth error, NOT retrying — waiting for login');
             } else if ((getInternal().retryAttempt || 0) < (getInternal().maxRetryAttempts || 5)) {
               scheduleClientPush();
             } else {
-              console.warn('⚠️ [UPLOAD] Max retries reached, data saved locally');
+              log('⚠️ [UPLOAD] Max retries reached, data saved locally');
             }
           } else {
             resetRetry();
@@ -198,7 +199,8 @@
           return cloud.upsert('client_kv_store', itemWithUser, 'client_id,k')
             .then(() => ({ success: true, item: itemWithUser }))
             .catch(err => {
-              console.error('[DEBUG] Upsert error:', err?.message || err, 'for key:', itemWithUser?.k);
+              trackError(err || new Error('Upsert error'), { source: 'heys_cloud_queue_v1.js', key: itemWithUser?.k });
+              log('⚠️ [UPLOAD] Upsert error for key:', itemWithUser?.k);
               return { success: false, item: itemWithUser, error: err };
             });
         });
@@ -255,6 +257,7 @@
         incrementRetry();
         savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
         notifyPendingChange();
+        trackError(e instanceof Error ? e : new Error(String(e)), { source: 'heys_cloud_queue_v1.js', stage: 'doClientUpload' });
         logCritical('❌ Ошибка сохранения в облако:', e.message || e);
 
         if (isAuthError(e)) {
@@ -415,22 +418,23 @@
       const inFlight = _uploadInProgress ? _uploadInFlightCount : 0;
       const total = queueLen + inFlight;
 
-      console.log(`🔄 [FLUSH] Check: clientQueue=${clientQueueLen}, userQueue=${upsertQueue.length}${isClientOnlyMode ? ' (ignored in PIN mode)' : ''}, inFlight=${inFlight}`);
+      log(`🔄 [FLUSH] Check: clientQueue=${clientQueueLen}, userQueue=${upsertQueue.length}${isClientOnlyMode ? ' (ignored in PIN mode)' : ''}, inFlight=${inFlight}`);
 
       if (queueLen === 0 && !_uploadInProgress) {
-        console.log('✅ [FLUSH] Queue already empty and no uploads in progress');
+        log('✅ [FLUSH] Queue already empty and no uploads in progress');
         return true;
       }
 
-      console.log(`🔄 [FLUSH] Need to upload ${total} pending items IMMEDIATELY...`);
+      log(`🔄 [FLUSH] Need to upload ${total} pending items IMMEDIATELY...`);
 
       if (queueLen > 0) {
-        console.log('🔄 [FLUSH] Starting IMMEDIATE upload (no debounce)...');
+        log('🔄 [FLUSH] Starting IMMEDIATE upload (no debounce)...');
         try {
           await doImmediateClientUpload();
-          console.log('✅ [FLUSH] Immediate upload completed');
+          log('✅ [FLUSH] Immediate upload completed');
         } catch (e) {
-          console.error('❌ [FLUSH] Immediate upload failed:', e);
+          trackError(e instanceof Error ? e : new Error(String(e)), { source: 'heys_cloud_queue_v1.js', stage: 'flushPendingQueue' });
+          log('❌ [FLUSH] Immediate upload failed');
         }
       }
 
@@ -438,37 +442,37 @@
       const stillUserQueue = isClientOnlyMode ? 0 : upsertQueue.length;
       const stillInQueue = stillClientQueue + stillUserQueue;
       if (stillInQueue === 0 && !_uploadInProgress) {
-        console.log('✅ [FLUSH] All uploaded after immediate push');
+        log('✅ [FLUSH] All uploaded after immediate push');
         return true;
       }
 
-      console.log(`🔄 [FLUSH] ${stillInQueue} items still pending (client=${stillClientQueue}, user=${stillUserQueue}), waiting for queue-drained event...`);
+      log(`🔄 [FLUSH] ${stillInQueue} items still pending (client=${stillClientQueue}, user=${stillUserQueue}), waiting for queue-drained event...`);
 
       return new Promise((resolve) => {
         const startTime = Date.now();
 
         const timeoutId = setTimeout(() => {
           const stillPending = cloud.getPendingCount();
-          console.log(`⚠️ [FLUSH] Timeout after ${timeoutMs}ms, ${stillPending} items still pending, inFlight=${_uploadInProgress}`);
+          log(`⚠️ [FLUSH] Timeout after ${timeoutMs}ms, ${stillPending} items still pending, inFlight=${_uploadInProgress}`);
           window.removeEventListener('heys:queue-drained', handler);
           resolve(false);
         }, timeoutMs);
 
         const handler = () => {
           if (_uploadInProgress) {
-            console.log('🔄 [FLUSH] queue-drained fired but upload still in progress, waiting...');
+            log('🔄 [FLUSH] queue-drained fired but upload still in progress, waiting...');
             return;
           }
           clearTimeout(timeoutId);
           const elapsed = Date.now() - startTime;
-          console.log(`✅ [FLUSH] Queue drained in ${elapsed}ms`);
+          log(`✅ [FLUSH] Queue drained in ${elapsed}ms`);
           window.removeEventListener('heys:queue-drained', handler);
           resolve(true);
         };
         window.addEventListener('heys:queue-drained', handler);
 
         if (stillInQueue === 0 && _uploadInProgress) {
-          console.log('🔄 [FLUSH] Queue empty but upload in progress, waiting for completion...');
+          log('🔄 [FLUSH] Queue empty but upload in progress, waiting for completion...');
         }
       });
     };

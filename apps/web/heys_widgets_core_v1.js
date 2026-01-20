@@ -23,12 +23,37 @@
  * - saveLayout() НЕ сохраняет до инициализации (предотвращает перезапись storage)
  * - beforeunload/visibilitychange проверяют _initialized перед сохранением
  */
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.Widgets = HEYS.Widgets || {};
-  
+
+  // Локальные лог-хелперы (через HEYS.log/HEYS.err)
+  const log = (...args) => {
+    if (HEYS?.log) {
+      HEYS.log('Widgets Core', ...args);
+      return;
+    }
+    if (global.HEYS?.debug) {
+      console.log('[Widgets Core]', ...args);
+    }
+  };
+  const warn = (...args) => {
+    if (HEYS?.log) {
+      HEYS.log('Widgets Core', '⚠️', ...args);
+      return;
+    }
+    console.warn('[Widgets Core]', ...args);
+  };
+  const err = (...args) => {
+    if (HEYS?.err) {
+      HEYS.err('Widgets Core', ...args);
+      return;
+    }
+    console.error('[Widgets Core]', ...args);
+  };
+
   // === Constants ===
   const STORAGE_KEY = 'heys_widget_layout_v1';
   const STORAGE_META_KEY = 'heys_widget_layout_meta_v1';
@@ -41,7 +66,7 @@
   // Здесь — fallback на случай ранней инициализации до применения стилей.
   const CELL_HEIGHT_PX = 76; // fallback
   const CELL_GAP_PX = 12; // fallback
-  
+
   const DEFAULT_LAYOUT = [
     // 4-колоночная сетка — красивый набор для новых пользователей
     // Ряд 0: Калории + Вода (базовые)
@@ -54,7 +79,7 @@
     // Ряд 6: Тепловая карта (полная ширина) — компактная неделя
     { type: 'heatmap', size: '4x1', position: { col: 0, row: 6 } }
   ];
-  
+
   // === State Manager with Undo/Redo ===
   const state = {
     _widgets: [],
@@ -64,7 +89,7 @@
     _draggedWidget: null,
     _initialized: false,
     _saveTimeout: null,
-    
+
     /**
      * Инициализация state manager
      */
@@ -96,12 +121,12 @@
         // После миграции — сохраняем meta + текущий layout
         this.saveLayoutMeta({ gridVersion: GRID_VERSION, gridCols: GRID_COLS, migratedAt: Date.now() });
         // Сохраняем сразу (без debounce)
-        try { this.saveLayout(normalizedLayoutData); } catch (e) {}
+        try { this.saveLayout(normalizedLayoutData); } catch (e) { }
       }
 
       if (saved && Array.isArray(saved) && saved.length > 0) {
         // 🔍 DEBUG: логируем raw данные из storage (JSON для раскрытия)
-        console.log('[Widgets Core] RAW from storage:', JSON.stringify(saved.map(w => ({
+        log('RAW from storage:', JSON.stringify(saved.map(w => ({
           type: w.type,
           size: w.size,
           pos: w.position
@@ -112,16 +137,16 @@
         // фиксируем meta для чистого старта
         this.saveLayoutMeta({ gridVersion: GRID_VERSION, gridCols: GRID_COLS, migratedAt: Date.now() });
       }
-      
+
       // Очищаем историю при загрузке
       this._history = [];
       this._future = [];
-      
+
       this._initialized = true;
       HEYS.Widgets.emit('layout:loaded', { layout: this._widgets });
-      console.log('[Widgets Core] State initialized with', this._widgets.length, 'widgets');
+      log('State initialized with', this._widgets.length, 'widgets');
       // 🔍 DEBUG: логируем финальное состояние
-      console.log('[Widgets Core] Final widgets:', this._widgets.map(w => ({
+      log('Final widgets:', this._widgets.map(w => ({
         id: w.id?.substring(0, 20),
         type: w.type,
         size: w.size,
@@ -138,29 +163,29 @@
     reinit(forClientId) {
       // Используем переданный clientId, чтобы не зависеть от race condition с HEYS.currentClientId
       const cid = forClientId || window.HEYS?.currentClientId || '';
-      console.log(`[Widgets Core] reinit: clientId="${cid ? cid.slice(0,8) + '...' : 'EMPTY!'}" (explicit: ${!!forClientId})`);
-      
+      log(`reinit: clientId="${cid ? cid.slice(0, 8) + '...' : 'EMPTY!'}" (explicit: ${!!forClientId})`);
+
       // Сбрасываем флаг инициализации
       this._initialized = false;
       this._widgets = [];
       this._history = [];
       this._future = [];
-      
+
       // Очищаем memory cache в HEYS.store для виджетов
       if (HEYS.store?.invalidate) {
         HEYS.store.invalidate(STORAGE_KEY);
         HEYS.store.invalidate(STORAGE_META_KEY);
       }
-      
+
       // Временно устанавливаем clientId если передан явно (чтобы init() использовал правильный)
       const prevClientId = window.HEYS?.currentClientId;
       if (forClientId && window.HEYS) {
         window.HEYS.currentClientId = forClientId;
       }
-      
+
       // Заново инициализируем (теперь с новым clientId)
       this.init();
-      
+
       // Восстанавливаем предыдущий clientId если он отличался (на случай если App ещё не обновил его)
       // Это нужно только если init() зависит от HEYS.currentClientId внутри
       // В текущей реализации HEYS.store.get() использует HEYS.currentClientId для scoping
@@ -254,7 +279,7 @@
         const sizeInfo = HEYS.Widgets.registry.getSize(w.size);
         const wCols = sizeInfo?.cols || w.cols || 1;
         const wRows = sizeInfo?.rows || w.rows || 1;
-        
+
         for (let c = 0; c < wCols; c++) {
           for (let r = 0; r < wRows; r++) {
             occupied.add(`${col + c},${row + r}`);
@@ -278,7 +303,7 @@
         const sizeInfo = HEYS.Widgets.registry.getSize(w.size);
         const wCols = sizeInfo?.cols || w.cols || 1;
         const wRows = sizeInfo?.rows || w.rows || 1;
-        
+
         let placed = false;
         for (let row = 0; row < 200 && !placed; row++) {
           for (let col = 0; col <= GRID_COLS - wCols; col++) {
@@ -301,7 +326,7 @@
 
       return positions;
     },
-    
+
     /**
      * Сохранить текущее состояние в историю (для undo)
      * @private
@@ -310,64 +335,64 @@
       // Глубокое клонирование текущего состояния
       const snapshot = JSON.parse(JSON.stringify(this._widgets));
       this._history.push(snapshot);
-      
+
       // Ограничиваем размер истории
       if (this._history.length > MAX_HISTORY) {
         this._history.shift();
       }
-      
+
       // Очищаем future при новом действии
       this._future = [];
     },
-    
+
     /**
      * Undo — отменить последнее действие
      * @returns {boolean}
      */
     undo() {
       if (this._history.length === 0) {
-        console.log('[Widgets Core] Nothing to undo');
+        log('Nothing to undo');
         return false;
       }
-      
+
       // Сохраняем текущее состояние в future
       this._future.push(JSON.parse(JSON.stringify(this._widgets)));
-      
+
       // Восстанавливаем предыдущее состояние
       this._widgets = this._history.pop();
       this._debouncedSave();
-      
+
       HEYS.Widgets.emit('history:undo', { layout: this._widgets });
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
-      
-      console.log('[Widgets Core] Undo performed, history:', this._history.length, 'future:', this._future.length);
+
+      log('Undo performed, history:', this._history.length, 'future:', this._future.length);
       return true;
     },
-    
+
     /**
      * Redo — повторить отменённое действие
      * @returns {boolean}
      */
     redo() {
       if (this._future.length === 0) {
-        console.log('[Widgets Core] Nothing to redo');
+        log('Nothing to redo');
         return false;
       }
-      
+
       // Сохраняем текущее состояние в history
       this._history.push(JSON.parse(JSON.stringify(this._widgets)));
-      
+
       // Восстанавливаем future состояние
       this._widgets = this._future.pop();
       this._debouncedSave();
-      
+
       HEYS.Widgets.emit('history:redo', { layout: this._widgets });
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
-      
-      console.log('[Widgets Core] Redo performed, history:', this._history.length, 'future:', this._future.length);
+
+      log('Redo performed, history:', this._history.length, 'future:', this._future.length);
       return true;
     },
-    
+
     /**
      * Проверить возможность undo
      * @returns {boolean}
@@ -375,7 +400,7 @@
     canUndo() {
       return this._history.length > 0;
     },
-    
+
     /**
      * Проверить возможность redo
      * @returns {boolean}
@@ -383,7 +408,7 @@
     canRedo() {
       return this._future.length > 0;
     },
-    
+
     /**
      * Получить размер истории
      * @returns {Object}
@@ -396,7 +421,7 @@
         canRedo: this.canRedo()
       };
     },
-    
+
     /**
      * Нормализовать виджет (добавить недостающие поля)
      */
@@ -411,12 +436,12 @@
         : rawSizeId;
 
       const size = registry?.getSize(normalizedSizeId);
-      
+
       // 🔍 DEBUG: если размер изменился при нормализации — логируем
       if (rawSizeId !== normalizedSizeId || !w.size) {
-        console.log(`[Widgets Core] _normalizeWidget ${w.type}: raw=${w.size || 'undefined'} → normalized=${normalizedSizeId} (default=${type?.defaultSize})`);
+        log(`_normalizeWidget ${w.type}: raw=${w.size || 'undefined'} → normalized=${normalizedSizeId} (default=${type?.defaultSize})`);
       }
-      
+
       return {
         id: w.id || `widget_${w.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         type: w.type,
@@ -428,7 +453,7 @@
         createdAt: w.createdAt || Date.now()
       };
     },
-    
+
     /**
      * Создать дефолтный layout
      */
@@ -442,7 +467,7 @@
         return widget || this._normalizeWidget(def);
       }).filter(Boolean);
     },
-    
+
     /**
      * Получить все виджеты
      * @returns {Object[]}
@@ -450,7 +475,7 @@
     getWidgets() {
       return [...this._widgets];
     },
-    
+
     /**
      * Получить виджет по ID
      * @param {string} id
@@ -459,7 +484,7 @@
     getWidget(id) {
       return this._widgets.find(w => w.id === id) || null;
     },
-    
+
     /**
      * Debounced save — сохранение с задержкой
      * @private
@@ -473,7 +498,7 @@
         this._saveTimeout = null;
       }, SAVE_DEBOUNCE_MS);
     },
-    
+
     /**
      * Добавить виджет
      * @param {Object} widget
@@ -483,28 +508,28 @@
       if (!skipHistory) {
         this._pushHistory();
       }
-      
+
       const normalized = this._normalizeWidget(widget);
-      
+
       // Найти свободную позицию если не указана
       if (!widget.position || (widget.position.col === 0 && widget.position.row === 0)) {
         normalized.position = gridEngine.findFreePosition(normalized.cols, normalized.rows);
       }
-      
+
       this._widgets.push(normalized);
       this._debouncedSave();
-      
+
       HEYS.Widgets.emit('widget:added', { widget: normalized });
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
-      
+
       // Вибрация при добавлении
       if (navigator.vibrate) {
         navigator.vibrate(10);
       }
-      
+
       return normalized;
     },
-    
+
     /**
      * Удалить виджет
      * @param {string} id
@@ -513,25 +538,25 @@
     removeWidget(id, skipHistory = false) {
       const index = this._widgets.findIndex(w => w.id === id);
       if (index === -1) return false;
-      
+
       if (!skipHistory) {
         this._pushHistory();
       }
-      
+
       const removed = this._widgets.splice(index, 1)[0];
       this._debouncedSave();
-      
+
       HEYS.Widgets.emit('widget:removed', { widgetId: id, widget: removed });
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
-      
+
       // Вибрация при удалении
       if (navigator.vibrate) {
         navigator.vibrate([10, 50, 10]);
       }
-      
+
       return true;
     },
-    
+
     /**
      * Обновить виджет
      * @param {string} id
@@ -541,11 +566,11 @@
     updateWidget(id, updates, skipHistory = false) {
       const widget = this.getWidget(id);
       if (!widget) return false;
-      
+
       if (!skipHistory) {
         this._pushHistory();
       }
-      
+
       const oldWidget = { ...widget, position: { ...widget.position } };
 
       // 🔒 Нормализуем sizeId в одном месте, чтобы:
@@ -563,7 +588,7 @@
       }
 
       Object.assign(widget, nextUpdates);
-      
+
       // Обновить cols/rows если изменился size
       if (nextUpdates && nextUpdates.size) {
         const size = HEYS.Widgets.registry?.getSize(nextUpdates.size);
@@ -572,14 +597,14 @@
           widget.rows = size.rows;
         }
       }
-      
+
       // Обновить позицию если указана
       if (nextUpdates && nextUpdates.position) {
         widget.position = { ...nextUpdates.position };
       }
-      
+
       this._debouncedSave();
-      
+
       if (nextUpdates && nextUpdates.position) {
         HEYS.Widgets.emit('widget:moved', { widget, from: oldWidget.position, to: updates.position });
         // Вибрация при перемещении
@@ -593,11 +618,11 @@
       if (nextUpdates && nextUpdates.settings) {
         HEYS.Widgets.emit('widget:settings', { widget, settings: updates.settings });
       }
-      
+
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
       return true;
     },
-    
+
     /**
      * Переместить виджет
      * @param {string} id
@@ -671,7 +696,7 @@
       if (changed) {
         this._debouncedSave();
         HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
-        
+
         // 🆕 Финальная проверка: убедимся что нет коллизий
         // (на случай если reflow расчёт был неточным)
         for (const widgetId of Object.keys(positionsById)) {
@@ -681,7 +706,7 @@
 
       return changed;
     },
-    
+
     /**
      * Изменить размер виджета
      * @param {string} id
@@ -702,15 +727,15 @@
      * @param {{col:number,row:number}|null} position
      */
     resizeWidgetAt(id, size, position = null) {
-      console.log(`[Widgets Core] resizeWidgetAt called: id=${id}, size=${size}, position=`, position);
+      log(`resizeWidgetAt called: id=${id}, size=${size}, position=`, position);
       const widget = this.getWidget(id);
       if (!widget) return false;
 
       const registry = HEYS.Widgets.registry;
       const normalizedSize = registry?.normalizeSizeId ? (registry.normalizeSizeId(size) || size) : size;
-      console.log(`[Widgets Core] resizeWidgetAt: widget.type=${widget.type}, oldSize=${widget.size}, newSize=${normalizedSize}`);
+      log(`resizeWidgetAt: widget.type=${widget.type}, oldSize=${widget.size}, newSize=${normalizedSize}`);
       if (!registry.supportsSize(widget.type, normalizedSize)) {
-        console.warn(`[Widgets Core] Widget ${widget.type} does not support size ${normalizedSize}`);
+        warn(`Widget ${widget.type} does not support size ${normalizedSize}`);
         return false;
       }
 
@@ -733,44 +758,44 @@
       // layout:changed эмитится внутри updateWidget
       return true;
     },
-    
+
     /**
      * Сохранить layout в storage (cloud sync)
      */
     saveLayout(layoutOverride = null) {
       // 🔧 FIX: Не сохраняем до инициализации (иначе затрём storage пустым массивом)
       if (!this._initialized && !Array.isArray(layoutOverride)) {
-        console.warn('[Widgets Core] saveLayout skipped: not initialized');
+        warn('saveLayout skipped: not initialized');
         return;
       }
-      
+
       const widgetsData = (Array.isArray(layoutOverride) && layoutOverride.length > 0)
         ? layoutOverride
         : this._widgets.map(w => ({
-            id: w.id,
-            type: w.type,
-            size: w.size,
-            position: w.position,
-            settings: w.settings,
-            createdAt: w.createdAt
-          }));
-      
+          id: w.id,
+          type: w.type,
+          size: w.size,
+          position: w.position,
+          settings: w.settings,
+          createdAt: w.createdAt
+        }));
+
       // 🔧 FIX: Не сохраняем пустой layout (опасность потери данных)
       if (!widgetsData || widgetsData.length === 0) {
-        console.warn('[Widgets Core] saveLayout skipped: empty widgets array');
+        warn('saveLayout skipped: empty widgets array');
         return;
       }
-      
+
       // 🔧 Оборачиваем в объект с updatedAt для cloud sync conflict resolution
       const layoutData = {
         widgets: widgetsData,
         updatedAt: Date.now()
       };
-      
+
       // 🔍 DEBUG: Проверяем clientId при сохранении
       const cid = window.HEYS?.currentClientId || '';
-      console.log(`[Widgets Core] saveLayout: clientId="${cid ? cid.slice(0,8) + '...' : 'EMPTY!'}", widgets=${widgetsData.length}, key=${STORAGE_KEY}`);
-      
+      log(`saveLayout: clientId="${cid ? cid.slice(0, 8) + '...' : 'EMPTY!'}", widgets=${widgetsData.length}, key=${STORAGE_KEY}`);
+
       // Используем HEYS.store для cloud sync
       if (HEYS.store?.set) {
         HEYS.store.set(STORAGE_KEY, layoutData);
@@ -780,13 +805,13 @@
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(layoutData));
         } catch (e) {
-          console.error('[Widgets Core] Failed to save layout:', e);
+          err('Failed to save layout:', e);
         }
       }
-      
+
       HEYS.Widgets.emit('layout:saved', { layout: layoutData });
     },
-    
+
     /**
      * Загрузить layout из storage
      * @returns {Object[]|null}
@@ -794,8 +819,8 @@
     loadLayout() {
       // 🔍 DEBUG: Проверяем clientId при загрузке
       const cid = window.HEYS?.currentClientId || '';
-      console.log(`[Widgets Core] loadLayout: clientId="${cid ? cid.slice(0,8) + '...' : 'EMPTY!'}", key=${STORAGE_KEY}`);
-      
+      log(`loadLayout: clientId="${cid ? cid.slice(0, 8) + '...' : 'EMPTY!'}", key=${STORAGE_KEY}`);
+
       try {
         let stored = null;
         if (HEYS.store?.get) {
@@ -806,30 +831,30 @@
           const raw = localStorage.getItem(STORAGE_KEY);
           stored = raw ? JSON.parse(raw) : null;
         }
-        
+
         // 🔧 МИГРАЦИЯ: поддержка старого формата (массив) и нового (объект с updatedAt)
         if (!stored) return null;
-        
+
         // Новый формат: { widgets: [...], updatedAt: number }
         if (stored.widgets && Array.isArray(stored.widgets)) {
-          console.log('[Widgets Core] loadLayout: new format, updatedAt =', stored.updatedAt);
+          log('loadLayout: new format, updatedAt =', stored.updatedAt);
           return stored.widgets;
         }
-        
+
         // Старый формат: прямой массив виджетов
         if (Array.isArray(stored)) {
-          console.log('[Widgets Core] loadLayout: legacy format (array), no updatedAt');
+          log('loadLayout: legacy format (array), no updatedAt');
           return stored;
         }
-        
-        console.warn('[Widgets Core] loadLayout: unknown format', stored);
+
+        warn('loadLayout: unknown format', stored);
         return null;
       } catch (e) {
-        console.error('[Widgets Core] Failed to load layout:', e);
+        err('Failed to load layout:', e);
         return null;
       }
     },
-    
+
     /**
      * Сбросить к дефолтному layout
      */
@@ -839,7 +864,7 @@
       HEYS.Widgets.emit('layout:reset');
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
     },
-    
+
     /**
      * Применить preset layout
      * @param {string} presetId
@@ -848,52 +873,52 @@
       const presets = HEYS.Widgets.presets?.getAll?.() || {};
       const preset = presets[presetId];
       if (!preset) {
-        console.warn('[Widgets Core] Unknown preset:', presetId);
+        warn('Unknown preset:', presetId);
         return false;
       }
-      
+
       this._widgets = preset.widgets.map(w => this._normalizeWidget(w));
       this.saveLayout();
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
       return true;
     },
-    
+
     // === Edit Mode ===
-    
+
     isEditMode() {
       return this._editMode;
     },
-    
+
     enterEditMode() {
       if (this._editMode) return;
       this._editMode = true;
       document.body.classList.add('widgets-edit-mode');
-      
+
       // Отключаем swipe навигацию
       if (HEYS.App?.disableSwipe) {
         HEYS.App.disableSwipe();
       }
-      
+
       HEYS.Widgets.emit('editmode:enter');
     },
-    
+
     exitEditMode() {
       if (!this._editMode) return;
-      
+
       // 🛡️ CRITICAL: Не выходить из edit mode если resize активен!
       if (HEYS.Widgets.dnd?._resizeActive) return;
-      
+
       this._editMode = false;
       document.body.classList.remove('widgets-edit-mode');
-      
+
       // Включаем swipe навигацию обратно
       if (HEYS.App?.enableSwipe) {
         HEYS.App.enableSwipe();
       }
-      
+
       HEYS.Widgets.emit('editmode:exit');
     },
-    
+
     toggleEditMode() {
       if (this._editMode) {
         this.exitEditMode();
@@ -902,11 +927,11 @@
       }
     }
   };
-  
+
   // === Grid Engine ===
   const gridEngine = {
     COLS: GRID_COLS,
-    
+
     /**
      * Найти свободную позицию для виджета
      * @param {number} cols - Ширина виджета
@@ -916,7 +941,7 @@
     findFreePosition(cols, rows, excludeId = null) {
       const widgets = state.getWidgets();
       const occupiedCells = this.getOccupiedCells(widgets, excludeId);
-      
+
       // Ищем первую свободную позицию сверху вниз, слева направо
       for (let row = 0; row < 100; row++) {
         for (let col = 0; col <= GRID_COLS - cols; col++) {
@@ -925,7 +950,7 @@
           }
         }
       }
-      
+
       // Fallback: добавляем в конец
       const maxRow = Math.max(0, ...widgets.map(w => {
         const sizeInfo = HEYS.Widgets.registry.getSize(w.size);
@@ -944,31 +969,31 @@
     getCollidingWidgets(excludeId, rect) {
       const widgets = state.getWidgets();
       const colliding = [];
-      
+
       const aLeft = rect.col;
       const aTop = rect.row;
       const aRight = rect.col + rect.cols;
       const aBottom = rect.row + rect.rows;
-      
+
       for (const other of widgets) {
         if (!other || other.id === excludeId) continue;
-        
+
         // 🔧 FIX: Получаем размер из registry
         const otherSizeInfo = HEYS.Widgets.registry.getSize(other.size);
         const otherCols = otherSizeInfo?.cols || other.cols || 1;
         const otherRows = otherSizeInfo?.rows || other.rows || 1;
-        
+
         const bLeft = other.position.col;
         const bTop = other.position.row;
         const bRight = other.position.col + otherCols;
         const bBottom = other.position.row + otherRows;
-        
+
         const overlap = aLeft < bRight && aRight > bLeft && aTop < bBottom && aBottom > bTop;
         if (overlap) {
           colliding.push(other);
         }
       }
-      
+
       return colliding;
     },
 
@@ -982,32 +1007,32 @@
     displaceCollidingWidgets(priorityWidgetId, depth = 0) {
       // 🔧 FIX v1.3.1: Защита от бесконечной рекурсии
       if (depth > 10) {
-        console.warn(`[GridEngine] ⚠️ Max recursion depth reached, stopping displacement`);
+        warn('GridEngine ⚠️ Max recursion depth reached, stopping displacement');
         return false;
       }
-      
+
       const priorityWidget = state.getWidget(priorityWidgetId);
       if (!priorityWidget) return false;
-      
+
       // 🔧 FIX: Получаем размер из registry
       const prioritySizeInfo = HEYS.Widgets.registry.getSize(priorityWidget.size);
       const priorityCols = prioritySizeInfo?.cols || priorityWidget.cols || 1;
       const priorityRows = prioritySizeInfo?.rows || priorityWidget.rows || 1;
-      
+
       const rect = {
         col: priorityWidget.position.col,
         row: priorityWidget.position.row,
         cols: priorityCols,
         rows: priorityRows
       };
-      
-      console.log(`[GridEngine] displaceCollidingWidgets called for ${priorityWidgetId}`, rect);
-      
+
+      log(`[GridEngine] displaceCollidingWidgets called for ${priorityWidgetId}`, rect);
+
       const colliding = this.getCollidingWidgets(priorityWidgetId, rect);
-      console.log(`[GridEngine] Found ${colliding.length} colliding widgets:`, colliding.map(w => w.id));
-      
+      log(`[GridEngine] Found ${colliding.length} colliding widgets:`, colliding.map(w => w.id));
+
       if (colliding.length === 0) return false;
-      
+
       // Сортируем по размеру (меньшие первыми — их проще разместить)
       colliding.sort((a, b) => {
         const aSizeInfo = HEYS.Widgets.registry.getSize(a.size);
@@ -1016,33 +1041,33 @@
         const bArea = (bSizeInfo?.cols || b.cols || 1) * (bSizeInfo?.rows || b.rows || 1);
         return aArea - bArea;
       });
-      
+
       let displaced = false;
       const movedWidgets = new Set(); // Отслеживаем перемещённые виджеты
-      
+
       for (const widget of colliding) {
         // 🔧 FIX: Получаем размер из registry для вытесняемого виджета
         const sizeInfo = HEYS.Widgets.registry.getSize(widget.size);
         const wCols = sizeInfo?.cols || widget.cols || 1;
         const wRows = sizeInfo?.rows || widget.rows || 1;
-        
+
         // 🔧 FIX v1.3.1: Исключаем ТОЛЬКО перемещаемый виджет, а НЕ приоритетный!
         // Приоритетный виджет должен оставаться "занятым", чтобы не размещать на нём
         const freePos = this.findFreePositionExcluding(wCols, wRows, [widget.id]);
         if (freePos) {
-          console.log(`[GridEngine] Moving ${widget.id} from (${widget.position.col},${widget.position.row}) to (${freePos.col},${freePos.row})`);
+          log(`[GridEngine] Moving ${widget.id} from (${widget.position.col},${widget.position.row}) to (${freePos.col},${freePos.row})`);
           state.updateWidget(widget.id, { position: freePos }, true);
           displaced = true;
           movedWidgets.add(widget.id);
-          
+
           // 🔧 FIX v1.3.1: После перемещения проверяем, не создали ли мы новую коллизию
           // Рекурсивно вытесняем виджеты, с которыми теперь пересекается перемещённый
           this.displaceCollidingWidgets(widget.id, depth + 1);
         } else {
-          console.warn(`[GridEngine] ⚠️ No free position for ${widget.id} (${wCols}x${wRows}), will overlap!`);
+          warn(`GridEngine ⚠️ No free position for ${widget.id} (${wCols}x${wRows}), will overlap!`);
         }
       }
-      
+
       return displaced;
     },
 
@@ -1056,23 +1081,23 @@
     findFreePositionExcluding(cols, rows, excludeIds = []) {
       const widgets = state.getWidgets();
       const occupiedCells = new Set();
-      
+
       // Собираем занятые ячейки, исключая указанные виджеты
       widgets.forEach(widget => {
         if (excludeIds.includes(widget.id)) return;
-        
+
         // 🔧 FIX: Получаем размер из registry
         const sizeInfo = HEYS.Widgets.registry.getSize(widget.size);
         const wCols = sizeInfo?.cols || widget.cols || 1;
         const wRows = sizeInfo?.rows || widget.rows || 1;
-        
+
         for (let c = 0; c < wCols; c++) {
           for (let r = 0; r < wRows; r++) {
             occupiedCells.add(`${widget.position.col + c},${widget.position.row + r}`);
           }
         }
       });
-      
+
       // Ищем первую свободную позицию сверху вниз, слева направо
       for (let row = 0; row < 100; row++) {
         for (let col = 0; col <= GRID_COLS - cols; col++) {
@@ -1081,7 +1106,7 @@
           }
         }
       }
-      
+
       // Fallback: добавляем в конец
       const maxRow = Math.max(0, ...widgets.map(w => {
         const sizeInfo = HEYS.Widgets.registry.getSize(w.size);
@@ -1090,7 +1115,7 @@
       }));
       return { col: 0, row: maxRow };
     },
-    
+
     /**
      * Получить занятые ячейки
      * @param {Object[]} widgets
@@ -1099,25 +1124,25 @@
      */
     getOccupiedCells(widgets, excludeId = null) {
       const cells = new Set();
-      
+
       widgets.forEach(widget => {
         if (widget.id === excludeId) return;
-        
+
         // 🔧 FIX: Получаем размер из registry — единственный источник правды
         const sizeInfo = HEYS.Widgets.registry.getSize(widget.size);
         const cols = sizeInfo?.cols || widget.cols || 1;
         const rows = sizeInfo?.rows || widget.rows || 1;
-        
+
         for (let c = 0; c < cols; c++) {
           for (let r = 0; r < rows; r++) {
             cells.add(`${widget.position.col + c},${widget.position.row + r}`);
           }
         }
       });
-      
+
       return cells;
     },
-    
+
     /**
      * Проверить, можно ли разместить виджет
      * @param {number} col
@@ -1131,7 +1156,7 @@
       // Проверяем границы грида
       if (col < 0 || col + cols > GRID_COLS) return false;
       if (row < 0) return false;
-      
+
       // Проверяем пересечения
       for (let c = 0; c < cols; c++) {
         for (let r = 0; r < rows; r++) {
@@ -1140,10 +1165,10 @@
           }
         }
       }
-      
+
       return true;
     },
-    
+
     /**
      * Валидировать позицию виджета
      * @param {string} widgetId
@@ -1153,12 +1178,12 @@
     validatePosition(widgetId, position) {
       const widget = state.getWidget(widgetId);
       if (!widget) return false;
-      
+
       // 🔧 FIX: Получаем размер из registry — единственный источник правды
       const sizeInfo = HEYS.Widgets.registry.getSize(widget.size);
       const cols = sizeInfo?.cols || widget.cols || 1;
       const rows = sizeInfo?.rows || widget.rows || 1;
-      
+
       const occupiedCells = this.getOccupiedCells(state.getWidgets(), widgetId);
       return this.canPlace(position.col, position.row, cols, rows, occupiedCells);
     },
@@ -1187,12 +1212,12 @@
       const widgets = state.getWidgets();
       for (const other of widgets) {
         if (!other || other.id === widgetId) continue;
-        
+
         // 🔧 FIX: Получаем размер КАЖДОГО виджета из registry
         const otherSizeInfo = HEYS.Widgets.registry.getSize(other.size);
         const otherCols = otherSizeInfo?.cols || other.cols || 1;
         const otherRows = otherSizeInfo?.rows || other.rows || 1;
-        
+
         const bLeft = other.position.col;
         const bTop = other.position.row;
         const bRight = other.position.col + otherCols;
@@ -1261,7 +1286,7 @@
         const wSizeInfo = HEYS.Widgets.registry.getSize(w.size);
         const wCols = wSizeInfo?.cols || w.cols || 1;
         const wRows = wSizeInfo?.rows || w.rows || 1;
-        
+
         for (let row = 0; row < 120; row++) {
           for (let col = 0; col <= GRID_COLS - wCols; col++) {
             if (this.canPlace(col, row, wCols, wRows, occupied)) {
@@ -1282,13 +1307,13 @@
 
       return positions;
     },
-    
+
     /**
      * Компактизировать layout (убрать пустые строки)
      */
     compact() {
       const widgets = state.getWidgets();
-      
+
       // Сортируем по row, потом по col
       widgets.sort((a, b) => {
         if (a.position.row !== b.position.row) {
@@ -1296,31 +1321,31 @@
         }
         return a.position.col - b.position.col;
       });
-      
+
       // Перемещаем каждый виджет как можно выше
       widgets.forEach(widget => {
         let bestRow = 0;
         const occupiedCells = this.getOccupiedCells(widgets, widget.id);
-        
+
         // 🔧 FIX: Получаем размер из registry
         const sizeInfo = HEYS.Widgets.registry.getSize(widget.size);
         const wCols = sizeInfo?.cols || widget.cols || 1;
         const wRows = sizeInfo?.rows || widget.rows || 1;
-        
+
         while (!this.canPlace(widget.position.col, bestRow, wCols, wRows, occupiedCells)) {
           bestRow++;
           if (bestRow > 100) break; // Safety limit
         }
-        
+
         if (bestRow < widget.position.row) {
           widget.position.row = bestRow;
         }
       });
-      
+
       state.saveLayout();
       HEYS.Widgets.emit('layout:changed', { layout: widgets });
     },
-    
+
     /**
      * Получить высоту грида (количество строк)
      * @returns {number}
@@ -1335,7 +1360,7 @@
         return w.position.row + wRows;
       }));
     },
-    
+
     /**
      * Получить размеры ячейки grid
      * @returns {Object} { cellWidth, cellHeight, gap }
@@ -1359,7 +1384,7 @@
 
       return { cellWidth, cellHeight, gap };
     },
-    
+
     /**
      * Координаты пикселей → grid position
      * @param {number} x - координата X относительно grid
@@ -1368,16 +1393,16 @@
      */
     pixelsToGrid(x, y) {
       const { cellWidth, cellHeight, gap } = this.getCellMetrics();
-      
+
       const col = Math.floor(x / (cellWidth + gap));
       const row = Math.floor(y / (cellHeight + gap));
-      
+
       return {
         col: Math.max(0, Math.min(col, GRID_COLS - 1)),
         row: Math.max(0, row)
       };
     },
-    
+
     /**
      * Grid position → координаты пикселей (верхний левый угол)
      * @param {number} col
@@ -1386,14 +1411,14 @@
      */
     gridToPixels(col, row) {
       const { cellWidth, cellHeight, gap } = this.getCellMetrics();
-      
+
       return {
         x: col * (cellWidth + gap),
         y: row * (cellHeight + gap)
       };
     }
   };
-  
+
   // === Enhanced Drag & Drop Manager with Ghost & Placeholder ===
   const dnd = {
     _dragging: false,
@@ -1408,7 +1433,7 @@
     _lastValidPosition: null,
     _originalElement: null,
     _dropIntent: null,
-    
+
     /**
      * Обработка начала касания/клика (для long press detection)
      * @param {string} widgetId
@@ -1419,7 +1444,7 @@
       if (this._resizeActive) {
         return;
       }
-      
+
       // CRITICAL: Если клик по resize handle — НЕ начинаем DnD
       const t = event?.target;
       if (t && typeof t.closest === 'function') {
@@ -1427,7 +1452,7 @@
           return;
         }
       }
-      
+
       // Фиксируем стартовую позицию для отмены long press при движении
       this._startPos = {
         x: event.clientX || event.touches?.[0]?.clientX || 0,
@@ -1439,22 +1464,22 @@
         this._prepareForDrag(widgetId, event);
         return;
       }
-      
+
       // Иначе — запускаем таймер long press для входа в edit mode
       this._longPressTriggered = false;
       this._longPressTimer = setTimeout(() => {
         this._longPressTriggered = true;
         state.enterEditMode();
-        
+
         // Вибрация при входе в edit mode
         if (navigator.vibrate) {
           navigator.vibrate(50);
         }
-        
+
         HEYS.Widgets.emit('editmode:longpress', { widgetId });
       }, LONG_PRESS_MS);
     },
-    
+
     /**
      * Обработка окончания касания/клика
      * @param {string} widgetId
@@ -1472,13 +1497,13 @@
         clearTimeout(this._longPressTimer);
         this._longPressTimer = null;
       }
-      
+
       // Если drag активен — завершаем
       if (this._dragging) {
         this.end(event);
       }
     },
-    
+
     /**
      * Отмена long press при движении
      */
@@ -1487,7 +1512,7 @@
       if (this._resizeActive) {
         return;
       }
-      
+
       // На iOS/Safari без preventDefault страница может скроллиться и ломать drag
       if (this._dragging && event && event.cancelable) {
         event.preventDefault();
@@ -1514,14 +1539,14 @@
       if (this._longPressTimer && !this._dragging) {
         const dx = Math.abs((event.clientX || event.touches?.[0]?.clientX || 0) - (this._startPos?.x || 0));
         const dy = Math.abs((event.clientY || event.touches?.[0]?.clientY || 0) - (this._startPos?.y || 0));
-        
+
         // Если сдвинулись больше чем на 10px — отменяем long press
         if (dx > 10 || dy > 10) {
           clearTimeout(this._longPressTimer);
           this._longPressTimer = null;
         }
       }
-      
+
       // Если drag активен — двигаем
       // Важно: move() сам стартует drag после порога (5px) — поэтому вызываем
       // его и до фактического старта, когда _draggedWidget уже задан.
@@ -1529,7 +1554,7 @@
         this.move(event);
       }
     },
-    
+
     /**
      * Подготовка к drag (когда уже в edit mode)
      * @private
@@ -1539,10 +1564,10 @@
       if (this._resizeActive) {
         return;
       }
-      
+
       const widget = state.getWidget(widgetId);
       if (!widget) return;
-      
+
       this._draggedWidget = widget;
       this._startPos = {
         x: event.clientX || event.touches?.[0]?.clientX || 0,
@@ -1551,20 +1576,20 @@
       this._currentPos = { ...this._startPos };
       this._startGridPos = { ...widget.position };
       this._lastValidPosition = { ...widget.position };
-      
+
       // Находим оригинальный элемент
       this._originalElement = document.querySelector(`[data-widget-id="${widgetId}"]`);
-      
+
       // Добавляем listeners на document для отслеживания движения и отпускания
       this._boundMove = (e) => this.handlePointerMove(e);
       this._boundUp = (e) => this.handlePointerUp(widgetId, e);
-      
+
       document.addEventListener('pointermove', this._boundMove);
       document.addEventListener('pointerup', this._boundUp);
       document.addEventListener('touchmove', this._boundMove, { passive: false });
       document.addEventListener('touchend', this._boundUp);
     },
-    
+
     /**
      * Удаление document listeners
      * @private
@@ -1581,7 +1606,7 @@
       this._boundMove = null;
       this._boundUp = null;
     },
-    
+
     /**
      * Начать drag (вызывается после небольшого движения)
      * @param {string} widgetId
@@ -1589,19 +1614,19 @@
      */
     start(widgetId, event) {
       if (!state.isEditMode()) return;
-      
+
       // CRITICAL: Если resize активен — НЕ начинаем drag
       if (this._resizeActive) {
         return;
       }
-      
+
       const widget = state.getWidget(widgetId);
       if (!widget) return;
-      
+
       this._dragging = true;
       this._draggedWidget = widget;
       this._dropIntent = null;
-      
+
       if (!this._startPos) {
         this._startPos = {
           x: event.clientX || event.touches?.[0]?.clientX || 0,
@@ -1611,28 +1636,28 @@
       this._currentPos = { ...this._startPos };
       this._startGridPos = { ...widget.position };
       this._lastValidPosition = { ...widget.position };
-      
+
       // Создаём ghost element
       this._createGhost(widget, event);
-      
+
       // Создаём placeholder
       this._createPlaceholder(widget);
-      
+
       // Скрываем оригинальный элемент
       this._originalElement = document.querySelector(`[data-widget-id="${widgetId}"]`);
       if (this._originalElement) {
         this._originalElement.classList.add('widget--dragging');
         this._originalElement.style.opacity = '0.3';
       }
-      
+
       // Вибрация при начале drag
       if (navigator.vibrate) {
         navigator.vibrate(15);
       }
-      
+
       HEYS.Widgets.emit('dnd:start', { widget });
     },
-    
+
     /**
      * Создать ghost element (полупрозрачная копия)
      * @private
@@ -1640,10 +1665,10 @@
     _createGhost(widget, event) {
       // Удаляем старый ghost если есть
       this._removeGhost();
-      
+
       const original = document.querySelector(`[data-widget-id="${widget.id}"]`);
       if (!original) return;
-      
+
       // Клонируем элемент
       const ghost = original.cloneNode(true);
       ghost.classList.add('widget-ghost');
@@ -1659,17 +1684,17 @@
         width: ${original.offsetWidth}px;
         height: ${original.offsetHeight}px;
       `;
-      
+
       // Позиционируем ghost под курсором
       const x = event.clientX || event.touches?.[0]?.clientX || 0;
       const y = event.clientY || event.touches?.[0]?.clientY || 0;
       ghost.style.left = `${x - original.offsetWidth / 2}px`;
       ghost.style.top = `${y - original.offsetHeight / 2}px`;
-      
+
       document.body.appendChild(ghost);
       this._ghostElement = ghost;
     },
-    
+
     /**
      * Создать placeholder (визуальное место для drop)
      * @private
@@ -1677,15 +1702,15 @@
     _createPlaceholder(widget) {
       // Удаляем старый placeholder если есть
       this._removePlaceholder();
-      
+
       const grid = document.querySelector('.widgets-grid');
       if (!grid) return;
-      
+
       const placeholder = document.createElement('div');
       placeholder.className = 'widget-placeholder';
       // Визуал — в CSS (.widget-placeholder). Здесь задаём только grid-геометрию.
       placeholder.style.transition = 'all 0.15s ease-out';
-      
+
       // Сохраняем размер виджета для placeholder (важно сделать ДО updatePlaceholderPosition)
       // 🔧 FIX: нормализуем sizeId (поддержка legacy id и символа "×")
       const reg = HEYS.Widgets.registry;
@@ -1693,9 +1718,9 @@
       const sizeInfo = reg?.getSize?.(normalizedSize) || reg?.getSize?.(widget?.size);
       this._placeholderCols = sizeInfo?.cols || widget?.cols || 1;
       this._placeholderRows = sizeInfo?.rows || widget?.rows || 1;
-      
+
       // 🔍 DEBUG: Проверяем какой размер используется для placeholder
-      console.log('[DnD] _createPlaceholder:', {
+      log('[DnD] _createPlaceholder:', {
         widgetId: widget?.id,
         widgetSize: widget?.size,
         widgetCols: widget?.cols,
@@ -1705,14 +1730,14 @@
         placeholderCols: this._placeholderCols,
         placeholderRows: this._placeholderRows
       });
-      
+
       // Привязываем placeholder и ставим в нужную grid-позицию
       this._placeholderElement = placeholder;
       this._updatePlaceholderPosition(widget.position);
 
       grid.appendChild(placeholder);
     },
-    
+
     /**
      * Обновить позицию placeholder
      * @private
@@ -1732,50 +1757,50 @@
       this._placeholderElement.style.gridColumn = `${c} / span ${cols}`;
       this._placeholderElement.style.gridRow = `${r} / span ${rows}`;
     },
-    
+
     /**
      * Движение drag
      * @param {Object} event
      */
     move(event) {
       if (!this._draggedWidget) return;
-      
+
       // Если drag ещё не начался — проверяем порог движения
       if (!this._dragging) {
         const dx = Math.abs((event.clientX || event.touches?.[0]?.clientX || 0) - this._startPos.x);
         const dy = Math.abs((event.clientY || event.touches?.[0]?.clientY || 0) - this._startPos.y);
-        
+
         // Начинаем drag после 5px движения
         if (dx > 5 || dy > 5) {
           this.start(this._draggedWidget.id, event);
         }
         return;
       }
-      
+
       this._currentPos = {
         x: event.clientX || event.touches?.[0]?.clientX || 0,
         y: event.clientY || event.touches?.[0]?.clientY || 0
       };
-      
+
       // Двигаем ghost
       if (this._ghostElement) {
         const original = this._originalElement;
         const width = original ? original.offsetWidth : 150;
         const height = original ? original.offsetHeight : 140;
-        
+
         this._ghostElement.style.left = `${this._currentPos.x - width / 2}px`;
         this._ghostElement.style.top = `${this._currentPos.y - height / 2}px`;
       }
-      
+
       // Вычисляем новую grid позицию
       const grid = document.querySelector('.widgets-grid');
       if (grid) {
         const rect = grid.getBoundingClientRect();
         const relX = this._currentPos.x - rect.left;
         const relY = this._currentPos.y - rect.top;
-        
+
         const newGridPos = gridEngine.pixelsToGrid(relX, relY);
-        
+
         // 🔧 FIX: Получаем размер из registry (через normalize)
         const reg = HEYS.Widgets.registry;
         const normalizedDraggedSize = reg?.normalizeSizeId
@@ -1784,10 +1809,10 @@
         const draggedSizeInfo = reg?.getSize?.(normalizedDraggedSize) || reg?.getSize?.(this._draggedWidget?.size);
         const draggedCols = draggedSizeInfo?.cols || this._draggedWidget?.cols || 1;
         const draggedRows = draggedSizeInfo?.rows || this._draggedWidget?.rows || 1;
-        
+
         // Ограничиваем позицию с учётом размера виджета
         newGridPos.col = Math.min(newGridPos.col, GRID_COLS - draggedCols);
-        
+
         // Проверяем валидность (пустое место) или swap (занято, но можно поменяться местами)
         const isValid = gridEngine.validatePosition(this._draggedWidget.id, newGridPos);
         let swapWith = null;
@@ -1800,7 +1825,7 @@
             const collidingSizeInfo = reg?.getSize?.(normalizedCollidingSize) || reg?.getSize?.(colliding?.size);
             const collidingCols = collidingSizeInfo?.cols || colliding?.cols || 1;
             const collidingRows = collidingSizeInfo?.rows || colliding?.rows || 1;
-            
+
             if (collidingCols === draggedCols && collidingRows === draggedRows) {
               swapWith = colliding;
             }
@@ -1847,7 +1872,7 @@
           }
         }
       }
-      
+
       HEYS.Widgets.emit('dnd:move', {
         widget: this._draggedWidget,
         x: this._currentPos.x,
@@ -1855,7 +1880,7 @@
         gridPosition: this._lastValidPosition
       });
     },
-    
+
     /**
      * Завершить drag (drop)
      * @param {Object} event
@@ -1865,20 +1890,20 @@
         this._cleanup();
         return;
       }
-      
+
       const hadDrag = this._dragging;
-      
+
       // Восстанавливаем оригинальный элемент
       if (this._originalElement) {
         this._originalElement.classList.remove('widget--dragging');
         this._originalElement.style.opacity = '';
         this._originalElement.style.transform = '';
       }
-      
+
       // Удаляем ghost и placeholder
       this._removeGhost();
       this._removePlaceholder();
-      
+
       // Если drag был активен и есть намерение drop — применяем
       if (hadDrag && this._dropIntent && this._dropIntent.position) {
         const targetPos = this._dropIntent.position;
@@ -1928,10 +1953,10 @@
           HEYS.Widgets.emit('dnd:cancel', { widget: this._draggedWidget });
         }
       }
-      
+
       this._cleanup();
     },
-    
+
     /**
      * Отменить drag
      */
@@ -1942,14 +1967,14 @@
         this._originalElement.style.opacity = '';
         this._originalElement.style.transform = '';
       }
-      
+
       this._removeGhost();
       this._removePlaceholder();
-      
+
       HEYS.Widgets.emit('dnd:cancel', { widget: this._draggedWidget });
       this._cleanup();
     },
-    
+
     /**
      * Проверка: идёт ли drag
      * @returns {boolean}
@@ -1957,7 +1982,7 @@
     isDragging() {
       return this._dragging;
     },
-    
+
     /**
      * Удалить ghost element
      * @private
@@ -1968,7 +1993,7 @@
         this._ghostElement = null;
       }
     },
-    
+
     /**
      * Удалить placeholder
      * @private
@@ -1979,11 +2004,11 @@
         this._placeholderElement = null;
       }
     },
-    
+
     _cleanup() {
       // Убираем document listeners
       this._removeDocumentListeners();
-      
+
       if (this._longPressTimer) {
         clearTimeout(this._longPressTimer);
         this._longPressTimer = null;
@@ -2002,7 +2027,7 @@
       this._placeholderRows = null;
     }
   };
-  
+
   // === Presets ===
   const presets = {
     _presets: {
@@ -2053,20 +2078,20 @@
         ]
       }
     },
-    
+
     getAll() {
       return { ...this._presets };
     },
-    
+
     get(id) {
       return this._presets[id] || null;
     },
-    
+
     apply(id) {
       return state.applyPreset(id);
     }
   };
-  
+
   // === Keyboard Support ===
   function setupKeyboardSupport() {
     document.addEventListener('keydown', (e) => {
@@ -2075,7 +2100,7 @@
         e.preventDefault();
         state.exitEditMode();
       }
-      
+
       // Ctrl/Cmd + Z — undo
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         if (state.canUndo()) {
@@ -2083,7 +2108,7 @@
           state.undo();
         }
       }
-      
+
       // Ctrl/Cmd + Shift + Z или Ctrl/Cmd + Y — redo
       if ((e.ctrlKey || e.metaKey) && (e.key === 'Z' || e.key === 'y')) {
         if (state.canRedo()) {
@@ -2093,21 +2118,21 @@
       }
     });
   }
-  
+
   // Инициализация при загрузке
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', setupKeyboardSupport);
   } else {
     setupKeyboardSupport();
   }
-  
+
   // === 🆕 Save on page unload ===
   // Принудительное сохранение перед закрытием страницы
   // чтобы не потерять данные из debounced save
   window.addEventListener('beforeunload', () => {
     // 🔧 FIX: Не сохраняем если state не инициализирован
     if (!state._initialized) return;
-    
+
     // Отменяем debounced timeout
     if (state._saveTimeout) {
       clearTimeout(state._saveTimeout);
@@ -2117,7 +2142,7 @@
     try {
       state.saveLayout();
     } catch (e) {
-      console.error('[Widgets] Failed to save on unload:', e);
+      err('Failed to save on unload:', e);
     }
   });
 
@@ -2126,7 +2151,7 @@
     if (document.visibilityState === 'hidden') {
       // 🔧 FIX: Не сохраняем если state не инициализирован
       if (!state._initialized) return;
-      
+
       // Отменяем debounced timeout
       if (state._saveTimeout) {
         clearTimeout(state._saveTimeout);
@@ -2136,7 +2161,7 @@
       try {
         state.saveLayout();
       } catch (e) {
-        console.error('[Widgets] Failed to save on visibility hidden:', e);
+        err('Failed to save on visibility hidden:', e);
       }
     }
   });
@@ -2145,12 +2170,12 @@
   // Это предотвращает "мерцание" виджетов после cloud sync
   window.addEventListener('heys:widget-layout-updated', (e) => {
     const { layout: cloudLayout, source } = e.detail || {};
-    
+
     // Если не инициализирован — игнорируем
     if (!state._initialized) {
       return;
     }
-    
+
     // Читаем текущий local layout с updatedAt
     const localRaw = state.loadLayout();
     const localUpdatedAt = (() => {
@@ -2162,21 +2187,21 @@
         return 0;
       } catch { return 0; }
     })();
-    
+
     const cloudUpdatedAt = cloudLayout?.updatedAt || 0;
-    
-    console.log(`[Widgets Core] Cloud sync event: localUpdatedAt=${localUpdatedAt}, cloudUpdatedAt=${cloudUpdatedAt}`);
-    
+
+    log(`Cloud sync event: localUpdatedAt=${localUpdatedAt}, cloudUpdatedAt=${cloudUpdatedAt}`);
+
     // Если локальный layout новее или равен — игнорируем cloud update
     if (localUpdatedAt >= cloudUpdatedAt) {
-      console.log('[Widgets Core] Cloud update skipped: local is newer or same');
+      log('Cloud update skipped: local is newer or same');
       return;
     }
-    
+
     // Облачный layout новее — перезагружаем
-    console.warn('[Widgets Core] Cloud layout is newer, reloading...');
+    warn('Cloud layout is newer, reloading...');
     const widgets = cloudLayout?.widgets || (Array.isArray(cloudLayout) ? cloudLayout : []);
-    
+
     if (widgets.length > 0) {
       state._widgets = widgets.map(w => state._normalizeWidget(w));
       HEYS.Widgets.emit('layout:changed', { layout: state._widgets, source: 'cloud-sync' });
@@ -2188,7 +2213,7 @@
   HEYS.Widgets.grid = gridEngine;
   HEYS.Widgets.dnd = dnd;
   HEYS.Widgets.presets = presets;
-  
+
   // Удобные алиасы
   HEYS.Widgets.getWidgets = () => state.getWidgets();
   HEYS.Widgets.addWidget = (w) => state.addWidget(w);
@@ -2201,7 +2226,7 @@
   HEYS.Widgets.redo = () => state.redo();
   HEYS.Widgets.canUndo = () => state.canUndo();
   HEYS.Widgets.canRedo = () => state.canRedo();
-  
+
   // Verbose init log removed
-  
+
 })(typeof window !== 'undefined' ? window : global);

@@ -9,6 +9,10 @@
 
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.InsightsPI = HEYS.InsightsPI || {};
+  const DEV = HEYS.dev || global.HEYS?.dev || {};
+  const devLog = DEV.log ? DEV.log.bind(DEV) : () => { };
+  const devWarn = DEV.warn ? DEV.warn.bind(DEV) : () => { };
+  const trackError = HEYS.analytics?.trackError ? HEYS.analytics.trackError.bind(HEYS.analytics) : () => { };
 
   // React imports with retry mechanism for CDN loading
   function initModule() {
@@ -61,7 +65,7 @@
     const SCIENCE_INFO = piConstants.SCIENCE_INFO || {};
     const ACTIONABILITY = piConstants.ACTIONABILITY || {};
     const getAllMetricsByPriority = piConstants.getAllMetricsByPriority || function () {
-      console.warn('[pi_ui_dashboard] getAllMetricsByPriority not available, returning empty array');
+      devWarn('[pi_ui_dashboard] getAllMetricsByPriority not available, returning empty array');
       return [];
     };
 
@@ -401,7 +405,8 @@
               }
             });
           } catch (e) {
-            console.warn('[WhatIfSimulator] Failed to calculate wave:', e);
+            devWarn('[WhatIfSimulator] Failed to calculate wave:', e);
+            trackError(e, { scope: 'PI UI Dashboard', action: 'calculate_wave' });
           }
         }
 
@@ -776,7 +781,7 @@
             const unscopedValue = localStorage.getItem('heys_insights_tour_completed') === 'true';
             const completed = scopedValue === true || scopedValue === 'true' || unscopedValue;
             if (completed !== insightsTourCompleted) {
-              console.log('[InsightsTab] Tour status changed:', completed, '(scoped:', scopedValue, ', unscoped:', unscopedValue, ')');
+              devLog('[InsightsTab] Tour status changed:', completed, '(scoped:', scopedValue, ', unscoped:', unscopedValue, ')');
               setInsightsTourCompleted(completed);
             }
           } catch { /* игнорируем */ }
@@ -1561,7 +1566,10 @@
               proteinDebt = { hasDebt: true, severity: 'moderate', avgProteinPct: Math.round(avgPct * 100), pmid: '20095013' };
             }
           }
-        } catch (e) { console.warn('[ExtendedAnalytics] proteinDebt error:', e); }
+        } catch (e) {
+          devWarn('[ExtendedAnalytics] proteinDebt error:', e);
+          trackError(e, { scope: 'PI UI Dashboard', action: 'protein_debt' });
+        }
 
         // Emotional Risk: стресс + недобор + время
         let emotionalRisk = { level: 'low', bingeRisk: 0, factors: [] };
@@ -1595,7 +1603,10 @@
           else if (emotionalRisk.bingeRisk >= 50) emotionalRisk.level = 'high';
           else if (emotionalRisk.bingeRisk >= 25) emotionalRisk.level = 'medium';
           emotionalRisk.pmid = '11070333'; // Epel 2001
-        } catch (e) { console.warn('[ExtendedAnalytics] emotionalRisk error:', e); }
+        } catch (e) {
+          devWarn('[ExtendedAnalytics] emotionalRisk error:', e);
+          trackError(e, { scope: 'PI UI Dashboard', action: 'emotional_risk' });
+        }
 
         // Training Day Context
         let trainingContext = { isTrainingDay: false, type: null, intensity: 'none' };
@@ -3242,7 +3253,7 @@
     // Backward compatibility fallback
     window.piUIDashboard = HEYS.InsightsPI.uiDashboard;
 
-    console.log('[PI UI Dashboard] v3.0.1 loaded —', Object.keys(HEYS.InsightsPI.uiDashboard).length, 'dashboard components');
+    devLog('[PI UI Dashboard] v3.0.1 loaded —', Object.keys(HEYS.InsightsPI.uiDashboard).length, 'dashboard components');
   }
 
   // Start initialization (will retry until React is available)

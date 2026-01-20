@@ -4,6 +4,29 @@
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const cloud = HEYS.cloud = HEYS.cloud || {};
+  const DEV = global.DEV || {};
+  const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
+  const devWarn = typeof DEV.warn === 'function' ? DEV.warn.bind(DEV) : function () { };
+  const devInfo = typeof DEV.info === 'function' ? DEV.info.bind(DEV) : function () { };
+  const devDebug = typeof DEV.debug === 'function' ? DEV.debug.bind(DEV) : function () { };
+  const trackError = (error, context) => {
+    if (!HEYS?.analytics?.trackError) return;
+    try {
+      const err = error instanceof Error ? error : new Error(String(error || 'HEYS.cloud error'));
+      HEYS.analytics.trackError(err, context);
+    } catch (_) { }
+  };
+  const quietConsole = {
+    log: (...args) => devLog(...args),
+    info: (...args) => devInfo(...args),
+    debug: (...args) => devDebug(...args),
+    warn: (...args) => devWarn(...args),
+    error: (...args) => {
+      devWarn(...args);
+      trackError(args[0], { scope: 'HEYS.cloud', details: args.slice(1) });
+    }
+  };
+  const console = quietConsole;
 
   // ═══════════════════════════════════════════════════════════════════
   // 🔧 КОНСТАНТЫ
@@ -1073,26 +1096,26 @@
     const total = queueLen + inFlight;
 
     // 🔄 v=34: ВСЕГДА логируем flush — это критическая операция!
-    console.log(`🔄 [FLUSH] Check: clientQueue=${clientQueueLen}, userQueue=${upsertQueue.length}${isClientOnlyMode ? ' (ignored in PIN mode)' : ''}, inFlight=${inFlight}`);
+    logCritical(`🔄 [FLUSH] Check: clientQueue=${clientQueueLen}, userQueue=${upsertQueue.length}${isClientOnlyMode ? ' (ignored in PIN mode)' : ''}, inFlight=${inFlight}`);
 
     // Если очередь пуста И ничего не в полёте — готово
     if (queueLen === 0 && !_uploadInProgress) {
-      console.log('✅ [FLUSH] Queue already empty and no uploads in progress');
+      logCritical('✅ [FLUSH] Queue already empty and no uploads in progress');
       return true;
     }
 
-    console.log(`🔄 [FLUSH] Need to upload ${total} pending items IMMEDIATELY...`);
+    logCritical(`🔄 [FLUSH] Need to upload ${total} pending items IMMEDIATELY...`);
 
     // 🔄 v=34 FIX: Немедленный upload вместо debounce!
     // Это критическое изменение — раньше scheduleClientPush создавал 500ms задержку
     // и sync успевал скачать старые данные с сервера ДО upload
     if (queueLen > 0) {
-      console.log('🔄 [FLUSH] Starting IMMEDIATE upload (no debounce)...');
+      logCritical('🔄 [FLUSH] Starting IMMEDIATE upload (no debounce)...');
       try {
         await doImmediateClientUpload();
-        console.log('✅ [FLUSH] Immediate upload completed');
+        logCritical('✅ [FLUSH] Immediate upload completed');
       } catch (e) {
-        console.error('❌ [FLUSH] Immediate upload failed:', e);
+        err('❌ [FLUSH] Immediate upload failed:', e);
       }
     }
 
@@ -1101,12 +1124,12 @@
     const stillUserQueue = isClientOnlyMode ? 0 : upsertQueue.length;
     const stillInQueue = stillClientQueue + stillUserQueue;
     if (stillInQueue === 0 && !_uploadInProgress) {
-      console.log('✅ [FLUSH] All uploaded after immediate push');
+      logCritical('✅ [FLUSH] All uploaded after immediate push');
       return true;
     }
 
     // Если всё ещё что-то осталось — ждём событие queue-drained с таймаутом
-    console.log(`🔄 [FLUSH] ${stillInQueue} items still pending (client=${stillClientQueue}, user=${stillUserQueue}), waiting for queue-drained event...`);
+    logCritical(`🔄 [FLUSH] ${stillInQueue} items still pending (client=${stillClientQueue}, user=${stillUserQueue}), waiting for queue-drained event...`);
 
     return new Promise((resolve) => {
       const startTime = Date.now();
@@ -1114,7 +1137,7 @@
       // Таймаут
       const timeoutId = setTimeout(() => {
         const stillPending = cloud.getPendingCount();
-        console.log(`⚠️ [FLUSH] Timeout after ${timeoutMs}ms, ${stillPending} items still pending, inFlight=${_uploadInProgress}`);
+        logCritical(`⚠️ [FLUSH] Timeout after ${timeoutMs}ms, ${stillPending} items still pending, inFlight=${_uploadInProgress}`);
         window.removeEventListener('heys:queue-drained', handler);
         resolve(false);
       }, timeoutMs);
@@ -1123,12 +1146,12 @@
       const handler = () => {
         // Дополнительная проверка что действительно всё отправлено
         if (_uploadInProgress) {
-          console.log('🔄 [FLUSH] queue-drained fired but upload still in progress, waiting...');
+          logCritical('🔄 [FLUSH] queue-drained fired but upload still in progress, waiting...');
           return; // Не снимаем listener, ждём ещё
         }
         clearTimeout(timeoutId);
         const elapsed = Date.now() - startTime;
-        console.log(`✅ [FLUSH] Queue drained in ${elapsed}ms`);
+        logCritical(`✅ [FLUSH] Queue drained in ${elapsed}ms`);
         window.removeEventListener('heys:queue-drained', handler);
         resolve(true);
       };
@@ -1136,7 +1159,7 @@
 
       // Если всё уже в полёте — просто ждём queue-drained
       if (stillInQueue === 0 && _uploadInProgress) {
-        console.log('🔄 [FLUSH] Queue empty but upload in progress, waiting for completion...');
+        logCritical('🔄 [FLUSH] Queue empty but upload in progress, waiting for completion...');
       }
     });
   };
@@ -1379,15 +1402,35 @@
   function log() {
     // Тихий режим по умолчанию
     if (isDebugSync()) {
-      try { console.log.apply(console, ['[HEYS.cloud]'].concat([].slice.call(arguments))); } catch (e) { }
+      try {
+        if (HEYS?.log) {
+          HEYS.log('HEYS.cloud', ...arguments);
+          return;
+        }
+        console.log.apply(console, ['[HEYS.cloud]'].concat([].slice.call(arguments)));
+      } catch (e) { }
     }
   }
-  function err() { try { console.error.apply(console, ['[HEYS.cloud:ERR]'].concat([].slice.call(arguments))); } catch (e) { } }
+  function err() {
+    try {
+      if (HEYS?.err) {
+        HEYS.err('HEYS.cloud:ERR', ...arguments);
+        return;
+      }
+      console.error.apply(console, ['[HEYS.cloud:ERR]'].concat([].slice.call(arguments)));
+    } catch (e) { }
+  }
 
   // Критический лог — тоже тихий по умолчанию (включается через isDebugSync)
   function logCritical() {
     if (isDebugSync()) {
-      try { console.info.apply(console, ['[HEYS]'].concat([].slice.call(arguments))); } catch (e) { }
+      try {
+        if (HEYS?.log) {
+          HEYS.log('HEYS', ...arguments);
+          return;
+        }
+        console.info.apply(console, ['[HEYS]'].concat([].slice.call(arguments)));
+      } catch (e) { }
     }
   }
 
@@ -1806,6 +1849,11 @@
 
         // Во время signIn не зеркалим вообще ничего — это источник гонок и RTR refresh 400
         if (typeof _signInInProgress !== 'undefined' && _signInInProgress) {
+          return;
+        }
+
+        // 🚫 Не зеркалим backup-ключи (во избежание перезаписи базы при sync)
+        if (String(k || '').includes('_backup')) {
           return;
         }
 
@@ -2541,8 +2589,12 @@
       // Защита от повреждённых данных (не-JSON)
       let products;
       try {
-        products = JSON.parse(finalRaw);
+        products = tryParse(finalRaw);
       } catch (parseError) {
+        products = null;
+      }
+
+      if (!Array.isArray(products)) {
         // Данные временно некорректны (возможно race condition при записи)
         // НЕ удаляем — пусть следующий sync перезапишет
         console.warn(`⚠️ [CLEANUP] Temporary parse error for ${key}, skipping (will retry)`);
@@ -3394,6 +3446,8 @@
         // ⏱️ TIMING: Отслеживаем время обработки 
         let keyProcessingStart = performance.now();
         let keysProcessed = 0;
+        let productsUpdated = false;
+        let latestProducts = null;
 
         // 🔄 ФАЗ 2: ОБРАБОТКА дедуплицированных ключей
         deduped.forEach(({ scopedKey, row }) => {
@@ -3679,7 +3733,8 @@
             }
 
             // ЗАЩИТА И MERGE: Умное объединение продуктов (не затираем локальные)
-            if (key.includes('_products')) {
+            if (key.includes('_products') && !key.includes('_products_backup')) {
+              let remoteProducts;
               // 🔇 PERF: Отключено — много логов
               // console.log('📦 [PRODUCTS DEBUG] Processing products key:', key, 'raw row.k:', row.k, 'row.v length:', Array.isArray(row.v) ? row.v.length : 'not array');
 
@@ -3688,7 +3743,7 @@
               try {
                 const rawLocal = ls.getItem(key);
                 if (rawLocal) {
-                  const parsed = JSON.parse(rawLocal);
+                  const parsed = tryParse(rawLocal);
                   // Фильтруем невалидные продукты (без name)
                   currentLocal = Array.isArray(parsed)
                     ? parsed.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0)
@@ -3697,7 +3752,7 @@
               } catch (e) { }
 
               // 🛡️ КРИТИЧНО: Фильтруем невалидные продукты из облака ПЕРЕД любой обработкой
-              let remoteProducts = row.v;
+              remoteProducts = row.v;
               if (Array.isArray(row.v)) {
                 const before = row.v.length;
                 remoteProducts = row.v.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
@@ -3728,10 +3783,16 @@
                   const backupRaw = ls.getItem(backupKey);
                   if (backupRaw) {
                     try {
-                      const backupData = JSON.parse(backupRaw);
+                      const backupData = tryParse(backupRaw);
                       if (Array.isArray(backupData) && backupData.length > 0) {
                         log(`✅ [RECOVERY] Restored ${backupData.length} products from backup`);
-                        ls.setItem(key, JSON.stringify(backupData));
+                        if (global.HEYS?.products?.setAll) {
+                          global.HEYS.products.setAll(backupData, { source: 'cloud-recovery', skipNotify: true, skipCloud: true });
+                          productsUpdated = true;
+                          latestProducts = backupData;
+                        } else {
+                          ls.setItem(key, JSON.stringify(backupData));
+                        }
                         muteMirror = false;
                         setTimeout(() => cloud.saveClientKey(client_id, 'heys_products', backupData), 500);
                         muteMirror = true;
@@ -3777,7 +3838,13 @@
                   clientUpsertQueue.push(localUpsertObj);
                   scheduleClientPush();
                   // Сохраняем дедуплицированные локально
-                  ls.setItem(key, JSON.stringify(localDeduped));
+                  if (global.HEYS?.products?.setAll) {
+                    global.HEYS.products.setAll(localDeduped, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
+                    productsUpdated = true;
+                    latestProducts = localDeduped;
+                  } else {
+                    ls.setItem(key, JSON.stringify(localDeduped));
+                  }
                   return;
                 }
 
@@ -3789,13 +3856,12 @@
                 // Если merge добавил новые продукты — сохраняем и синхронизируем обратно в облако
                 if (merged.length > remoteProducts.length) {
                   logCritical(`📦 [PRODUCTS MERGE] ${currentLocal.length} local + ${remoteProducts.length} remote → ${merged.length} merged`);
-                  ls.setItem(key, JSON.stringify(merged));
-
-                  // Уведомляем приложение об обновлении
-                  if (typeof window !== 'undefined' && window.dispatchEvent) {
-                    setTimeout(() => {
-                      window.dispatchEvent(new CustomEvent('heysProductsUpdated', { detail: { products: merged } }));
-                    }, 100);
+                  if (global.HEYS?.products?.setAll) {
+                    global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
+                    productsUpdated = true;
+                    latestProducts = merged;
+                  } else {
+                    ls.setItem(key, JSON.stringify(merged));
                   }
 
                   // Отправляем merged версию обратно в облако
@@ -3814,12 +3880,24 @@
                 // Если merged.length === remoteProducts.length (нет изменений) — сохраняем merged
                 // Это безопасно т.к. merged уже включает все локальные продукты
                 if (merged.length === remoteProducts.length && merged.length === currentLocal.length) {
-                  ls.setItem(key, JSON.stringify(merged));
+                  if (global.HEYS?.products?.setAll) {
+                    global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
+                    productsUpdated = true;
+                    latestProducts = merged;
+                  } else {
+                    ls.setItem(key, JSON.stringify(merged));
+                  }
                   return; // Данные одинаковые, нет смысла обновлять облако
                 }
 
                 // Fallback: сохраняем merged и синхронизируем
-                ls.setItem(key, JSON.stringify(merged));
+                if (global.HEYS?.products?.setAll) {
+                  global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
+                  productsUpdated = true;
+                  latestProducts = merged;
+                } else {
+                  ls.setItem(key, JSON.stringify(merged));
+                }
                 return;
               }
             }
@@ -3942,7 +4020,7 @@
             // Если дошли сюда — значит merge не произошёл (local пуст)
             // Используем remoteProducts которые уже отфильтрованы
             let valueToSave = row.v;
-            if (key.includes('_products')) {
+            if (key.includes('_products') && !key.includes('_products_backup')) {
               // remoteProducts уже отфильтрован выше — используем его
               // Если он пустой и мы дошли сюда — значит recovery уже запущен выше
               // Но на всякий случай проверим ещё раз
@@ -3956,8 +4034,14 @@
               }
             }
 
-            ls.setItem(key, JSON.stringify(valueToSave));
-            log(`  ✅ Saved to localStorage: ${key}`);
+            if (key.includes('_products') && !key.includes('_products_backup') && global.HEYS?.products?.setAll) {
+              global.HEYS.products.setAll(valueToSave, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
+              productsUpdated = true;
+              latestProducts = valueToSave;
+            } else {
+              ls.setItem(key, JSON.stringify(valueToSave));
+              log(`  ✅ Saved to localStorage: ${key}`);
+            }
 
             // 🔔 Dispatch event for dayv2 updates (для pull-to-refresh и UI refresh)
             if (key.includes('dayv2_')) {
@@ -3979,14 +4063,7 @@
               }
             }
 
-            // Уведомляем приложение об обновлении продуктов
-            if (key.includes('_products') && valueToSave) {
-              if (typeof window !== 'undefined' && window.dispatchEvent) {
-                setTimeout(() => {
-                  window.dispatchEvent(new CustomEvent('heysProductsUpdated', { detail: { products: valueToSave } }));
-                }, 100);
-              }
-            }
+            // Уведомляем приложение об обновлении продуктов — после цикла (батч)
 
             // Уведомляем UI об обновлении данных дня (когда облачные данные новее)
             if (key.includes('dayv2_') && row.v) {
@@ -4006,6 +4083,17 @@
             }
           } catch (e) { }
         });
+
+        if (productsUpdated && Array.isArray(latestProducts)) {
+          if (typeof window !== 'undefined' && window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('heys:products-updated', {
+              detail: { products: latestProducts, count: latestProducts.length, source: 'cloud-sync' }
+            }));
+            window.dispatchEvent(new CustomEvent('heysProductsUpdated', {
+              detail: { products: latestProducts, count: latestProducts.length, source: 'cloud-sync' }
+            }));
+          }
+        }
 
         muteMirror = false;
         cloud._lastClientSync = { clientId: client_id, ts: now };
@@ -4639,18 +4727,31 @@
       return;
     }
 
+    // 🚫 Не сохраняем backup-ключи в cloud
+    if (String(k || '').includes('_backup')) {
+      return;
+    }
+
     // НЕ сохраняем в Supabase, если используется дефолтный client_id (пользователь еще не выбрал клиента)
     if (client_id && client_id.startsWith('00000000-')) {
-      if (window.DEV) {
-        log(`⚠️ [SAVE BLOCKED] Skipping save for key '${k}' - default client_id (user hasn't selected client yet)`);
+      // 🔧 FIX: Всегда логируем блокировку (раньше только в DEV mode)
+      const isProducts = k && (k.includes('products') || k === 'heys_products');
+      if (isProducts) {
+        console.warn(`[HEYS] 🚨 PRODUCTS SYNC BLOCKED: default client_id! client_id=${client_id}`);
       }
+      log(`⚠️ [SAVE BLOCKED] Skipping save for key '${k}' - default client_id (user hasn't selected client yet)`);
       return; // Тихий пропуск сохранения до выбора реального клиента
     }
 
     // 🔐 PIN-авторизация: работаем без user
     const isPinAuth = _pinAuthClientId && _pinAuthClientId === client_id;
     if (!user && !isPinAuth) {
-      // 🔍 DEBUG: Логируем когда сохранение блокируется
+      // � FIX: Явный warning для products — это критический путь синхронизации
+      const isProducts = k && (k.includes('products') || k === 'heys_products');
+      if (isProducts) {
+        console.warn(`[HEYS] 🚨 PRODUCTS SYNC BLOCKED: No auth! user=${!!user}, isPinAuth=${isPinAuth}, _pinAuthClientId=${_pinAuthClientId?.slice(0, 8)}, client_id=${client_id?.slice(0, 8)}`);
+      }
+      // �🔍 DEBUG: Логируем когда сохранение блокируется
       log(`🚫 [SAVE BLOCKED] No auth for key '${k}': user=${!!user}, _pinAuthClientId=${_pinAuthClientId}, client_id=${client_id}, isPinAuth=${isPinAuth}`);
 
       // 🔥 INSTANT FEEDBACK: Если нет авторизации, это критическая ошибка сохранения
@@ -4725,7 +4826,7 @@
     };
 
     // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: НЕ сохраняем пустые массивы продуктов в Supabase
-    if (normalizedKey === 'heys_products' && Array.isArray(value) && value.length === 0) {
+    if (k && (k.includes('products') || k === 'heys_products') && Array.isArray(value) && value.length === 0) {
       log(`🚫 [SAVE BLOCKED] Refused to save empty products array to Supabase (key: ${normalizedKey})`);
       return; // Блокируем затирание реальных данных пустым массивом
     }

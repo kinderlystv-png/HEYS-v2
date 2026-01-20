@@ -15,6 +15,9 @@
   'use strict';
 
   const HEYS = window.HEYS = window.HEYS || {};
+  const devLog = (...args) => window.DEV?.log?.(...args);
+  const devWarn = (...args) => window.DEV?.warn?.(...args);
+  const trackError = (err, context) => HEYS.analytics?.trackError?.(err, context);
 
   // Статус модулей
   const MODULE_STATUS = {
@@ -32,9 +35,7 @@
   const manifests = new Map();
 
   const trackModuleError = (err, context) => {
-    if (HEYS.analytics?.trackError) {
-      HEYS.analytics.trackError(err, context);
-    }
+    trackError(err, context);
   };
 
   /**
@@ -65,7 +66,7 @@
         });
 
         if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
-          console.log(`[ModuleLoader] ⏭️ Skipped: ${moduleName} (flag disabled)`);
+          devLog(`[ModuleLoader] ⏭️ Skipped: ${moduleName} (flag disabled)`);
         }
 
         return false;
@@ -75,7 +76,7 @@
       if (loadedModules.has(moduleName) &&
         loadedModules.get(moduleName).status === MODULE_STATUS.LOADED) {
         if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
-          console.log(`[ModuleLoader] ♻️ Already loaded: ${moduleName}`);
+          devLog(`[ModuleLoader] ♻️ Already loaded: ${moduleName}`);
         }
         return true;
       }
@@ -110,7 +111,7 @@
           HEYS.modulePerf?.endLoad(moduleName, true);
 
           if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
-            console.log(`[ModuleLoader] ✅ Loaded: ${moduleName}`);
+            devLog(`[ModuleLoader] ✅ Loaded: ${moduleName}`);
           }
 
           return true;
@@ -124,7 +125,7 @@
             await new Promise(resolve => setTimeout(resolve, delay));
 
             if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
-              console.log(`[ModuleLoader] 🔄 Retry ${attempt}/${retry}: ${moduleName}`);
+              devLog(`[ModuleLoader] 🔄 Retry ${attempt}/${retry}: ${moduleName}`);
             }
           }
         }
@@ -144,11 +145,12 @@
 
       if (required) {
         // Обязательный модуль — бросаем ошибку
-        console.error(`[ModuleLoader] ❌ ${errorMsg}`);
+        trackError(lastError || new Error(errorMsg), { source: 'heys_module_loader_v1.js', moduleName, required: true });
+        devWarn(`[ModuleLoader] ❌ ${errorMsg}`);
         throw new Error(errorMsg);
       } else {
         // Необязательный модуль — предупреждение
-        console.warn(`[ModuleLoader] ⚠️ ${errorMsg}`);
+        devWarn(`[ModuleLoader] ⚠️ ${errorMsg}`);
         return false;
       }
     },
@@ -180,7 +182,7 @@
       });
 
       if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
-        console.log('[ModuleLoader] Batch load complete:', summary);
+        devLog('[ModuleLoader] Batch load complete:', summary);
       }
 
       return summary;
@@ -234,14 +236,13 @@
     printReport() {
       const report = this.getReport();
 
-      console.group('[ModuleLoader] Load Report');
-      console.log('Total:', report.total);
-      console.log('Loaded:', report.loaded);
-      console.log('Failed:', report.failed);
-      console.log('Skipped:', report.skipped);
-      console.log('');
-      console.table(report.modules);
-      console.groupEnd();
+      devLog('[ModuleLoader] Load Report', {
+        total: report.total,
+        loaded: report.loaded,
+        failed: report.failed,
+        skipped: report.skipped,
+        modules: report.modules
+      });
     }
     ,
     /**
@@ -397,6 +398,6 @@
 
   // Логирование инициализации
   if (window.DEV?.isDev?.()) {
-    console.log('[ModuleLoader] Initialized');
+    devLog('[ModuleLoader] Initialized');
   }
 })();

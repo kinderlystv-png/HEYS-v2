@@ -4,6 +4,8 @@
   'use strict';
 
   const HEYS = global.HEYS = global.HEYS || {};
+  const DEV = global.DEV || {};
+  const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
 
   // === КОНФИГУРАЦИЯ ===
   const CONFIG = {
@@ -339,6 +341,6 @@
   //   }
   // };
 
-  console.log('[HEYS] Toast module loaded');
+  devLog('[HEYS] Toast module loaded');
 
 })(typeof window !== 'undefined' ? window : global);

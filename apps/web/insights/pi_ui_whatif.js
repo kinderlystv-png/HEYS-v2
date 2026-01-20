@@ -2,48 +2,50 @@
 // Extracted from heys_predictive_insights_v1.js (Phase 9a)
 // What-If симулятор - интерактивный прогноз влияния питания на здоровье
 // v3.0.1: Lazy getters for InfoButton (script order fix)
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.InsightsPI = HEYS.InsightsPI || {};
-  
+  const DEV = global.DEV || {};
+  const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
+
   // React imports
   const { createElement: h, useState, useEffect, useMemo } = window.React || {};
-  
+
   // Зависимости
   const piAdvanced = HEYS.InsightsPI?.advanced || window.piAdvanced || {};
   const piUICards = HEYS.InsightsPI?.uiCards || window.piUICards || {};
-  
+
   // Импорт из pi_ui_cards.js (lazy-загрузка из namespace)
   const getWhatIfDeps = () => {
     const cards = HEYS.InsightsPI?.uiCards || piUICards || {};
     return {
       WHATIF_PRESETS: cards.WHATIF_PRESETS || [],
       WHATIF_CATEGORIES: cards.WHATIF_CATEGORIES || {},
-      simulateFood: cards.simulateFood || function() { return { verdict: 'neutral', wave: { hours: 3, endTime: '--:--', gl: 0, multiplier: 1 }, risk: { before: 0, after: 0, delta: 0 }, calories: { add: 0, ratio: 0 }, satiety: { hours: 2, desc: '' }, advice: [] }; }
+      simulateFood: cards.simulateFood || function () { return { verdict: 'neutral', wave: { hours: 3, endTime: '--:--', gl: 0, multiplier: 1 }, risk: { before: 0, after: 0, delta: 0 }, calories: { add: 0, ratio: 0 }, satiety: { hours: 2, desc: '' }, advice: [] }; }
     };
   };
-  
+
   // Lazy getter для InfoButton (загружается позже в pi_ui_dashboard.js)
   function getInfoButton() {
     return HEYS.InsightsPI?.uiDashboard?.InfoButton ||
-           HEYS.PredictiveInsights?.components?.InfoButton ||
-           HEYS.day?.InfoButton || 
-           HEYS.InfoButton || 
-           window.InfoButton || 
-           // Fallback: простая кнопка если InfoButton не загружен
-           function InfoButtonFallback({ infoKey, size }) {
-             return h('span', { 
-               className: 'info-button-placeholder',
-               title: infoKey,
-               style: { cursor: 'help', opacity: 0.5 }
-             }, '?');
-           };
+      HEYS.PredictiveInsights?.components?.InfoButton ||
+      HEYS.day?.InfoButton ||
+      HEYS.InfoButton ||
+      window.InfoButton ||
+      // Fallback: простая кнопка если InfoButton не загружен
+      function InfoButtonFallback({ infoKey, size }) {
+        return h('span', {
+          className: 'info-button-placeholder',
+          title: infoKey,
+          style: { cursor: 'help', opacity: 0.5 }
+        }, '?');
+      };
   }
-  
+
   // Import generateWhatIfScenarios
-  const generateWhatIfScenarios = piAdvanced.generateWhatIfScenarios || function() { return []; };
+  const generateWhatIfScenarios = piAdvanced.generateWhatIfScenarios || function () { return []; };
 
   function WhatIfSimulator({ context, onClose, expanded = false }) {
     const { WHATIF_PRESETS, WHATIF_CATEGORIES, simulateFood } = getWhatIfDeps();
@@ -53,7 +55,7 @@
     const [activeCategory, setActiveCategory] = useState('fast');
     const [isCustomMode, setIsCustomMode] = useState(false);
     const [customValues, setCustomValues] = useState({ kcal: 300, prot: 15, carbs: 30, fat: 10, gi: 50, name: '' });
-    
+
     // Симуляция при выборе preset
     useEffect(() => {
       if (selectedPreset && context) {
@@ -61,7 +63,7 @@
         setSimulation(result);
       }
     }, [selectedPreset, context]);
-    
+
     // Симуляция кастомной еды
     useEffect(() => {
       if (isCustomMode && customValues.kcal > 0 && context) {
@@ -75,12 +77,12 @@
         setSimulation(result);
       }
     }, [customValues, isCustomMode, context]);
-    
+
     const handlePresetClick = (preset) => {
       setSelectedPreset(preset);
       setIsCustomMode(false);
     };
-    
+
     const handleCustomToggle = () => {
       setIsCustomMode(!isCustomMode);
       setSelectedPreset(null);
@@ -88,14 +90,14 @@
         setSimulation(null);
       }
     };
-    
+
     const handleCustomChange = (field, value) => {
       setCustomValues(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
     };
-    
+
     // Фильтрация по категории
     const filteredPresets = WHATIF_PRESETS.filter(p => p.category === activeCategory);
-    
+
     return h('div', { className: `whatif-simulator ${expanded ? 'whatif-simulator--expanded' : ''}` },
       // Header
       h('div', { className: 'whatif-simulator__header' },
@@ -107,7 +109,7 @@
           'Симуляция влияния еды на организм'
         )
       ),
-      
+
       // Категории preset-ов
       h('div', { className: 'whatif-simulator__categories' },
         Object.entries(WHATIF_CATEGORIES).map(([key, cat]) =>
@@ -129,7 +131,7 @@
           h('span', null, 'Своё')
         )
       ),
-      
+
       // Preset-ы или кастомный ввод
       !isCustomMode ? h('div', { className: 'whatif-simulator__presets' },
         filteredPresets.map(preset =>
@@ -204,16 +206,16 @@
           )
         )
       ),
-      
+
       // Результаты симуляции
       simulation && h('div', { className: 'whatif-simulator__results' },
         // Verdict banner
         h('div', { className: `whatif-result__verdict whatif-result__verdict--${simulation.verdict}` },
           simulation.verdict === 'good' ? '✅ Хороший выбор!' :
-          simulation.verdict === 'neutral' ? '😐 Нормально' :
-          '⚠️ Рискованно'
+            simulation.verdict === 'neutral' ? '😐 Нормально' :
+              '⚠️ Рискованно'
         ),
-        
+
         // Metrics grid
         h('div', { className: 'whatif-result__grid' },
           // Инсулиновая волна
@@ -232,7 +234,7 @@
               '⚠️ Прервёт липолиз!'
             )
           ),
-          
+
           // Риск срыва
           h('div', { className: 'whatif-result__card' },
             h('div', { className: 'whatif-result__card-header' },
@@ -249,7 +251,7 @@
               simulation.risk.delta > 0 ? '+' : '', simulation.risk.delta, '%'
             )
           ),
-          
+
           // Калории
           h('div', { className: 'whatif-result__card' },
             h('div', { className: 'whatif-result__card-header' },
@@ -263,7 +265,7 @@
               simulation.calories.ratio, '% от нормы'
             )
           ),
-          
+
           // Сытость
           h('div', { className: 'whatif-result__card' },
             h('div', { className: 'whatif-result__card-header' },
@@ -278,13 +280,13 @@
             )
           )
         ),
-        
+
         // Советы
         simulation.advice.length > 0 && h('div', { className: 'whatif-result__advice' },
           h('div', { className: 'whatif-result__advice-title' }, '💡 Советы'),
           simulation.advice.map((adv, i) =>
-            h('div', { 
-              key: i, 
+            h('div', {
+              key: i,
               className: `whatif-result__advice-item whatif-result__advice-item--${adv.type}`,
               onClick: adv.altPreset ? () => handlePresetClick(adv.altPreset) : undefined
             },
@@ -293,14 +295,14 @@
             )
           )
         ),
-        
+
         // Debug: GL и множитель
         h('div', { className: 'whatif-result__debug' },
           'GL: ', Math.round(simulation.wave.gl * 10) / 10,
           ' | Множитель: ×', Math.round(simulation.wave.multiplier * 100) / 100
         )
       ),
-      
+
       // Footer с кнопкой
       expanded && onClose && h('div', { className: 'whatif-simulator__footer' },
         h('button', {
@@ -310,7 +312,7 @@
       )
     );
   }
-  
+
   /**
    * WhatIfCard — компактная карточка для вставки в Insights
    * Показывает мини-симулятор с популярными preset-ами
@@ -320,10 +322,10 @@
     const [isExpanded, setIsExpanded] = useState(false);
     const [quickResult, setQuickResult] = useState(null);
     const [selectedQuick, setSelectedQuick] = useState(null);
-    
+
     // Быстрые preset-ы для карточки
     const quickPresets = WHATIF_PRESETS.slice(0, 4);
-    
+
     const handleQuickSelect = (preset) => {
       setSelectedQuick(preset);
       if (context) {
@@ -331,7 +333,7 @@
         setQuickResult(result);
       }
     };
-    
+
     return h('div', { className: 'whatif-card' },
       h('div', { className: 'whatif-card__header' },
         h('div', { className: 'whatif-card__title' },
@@ -344,7 +346,7 @@
           onClick: () => setIsExpanded(true)
         }, 'Развернуть →')
       ),
-      
+
       // Quick presets
       h('div', { className: 'whatif-card__quick' },
         quickPresets.map(preset =>
@@ -358,7 +360,7 @@
           )
         )
       ),
-      
+
       // Quick result
       quickResult && h('div', { className: 'whatif-card__result' },
         h('div', { className: `whatif-card__verdict whatif-card__verdict--${quickResult.verdict}` },
@@ -370,7 +372,7 @@
           quickResult.advice[0].icon, ' ', quickResult.advice[0].text
         )
       ),
-      
+
       // Modal
       isExpanded && h('div', { className: 'whatif-modal-overlay', onClick: () => setIsExpanded(false) },
         h('div', { className: 'whatif-modal', onClick: (e) => e.stopPropagation() },
@@ -389,11 +391,11 @@
    */
   function ScenarioCard({ scenario }) {
     if (!scenario) return null;
-    
+
     const diff = scenario.projectedScore - scenario.currentScore;
     const arrowClass = diff > 0 ? 'up' : diff < 0 ? 'down' : 'stable';
     const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
-    
+
     return h('div', { className: `insights-scenario insights-scenario--${scenario.id}` },
       h('div', { className: 'insights-scenario__icon' }, scenario.icon),
       h('div', { className: 'insights-scenario__content' },
@@ -411,7 +413,7 @@
    */
   function WhatIfSection({ scenarios }) {
     if (!scenarios || scenarios.length === 0) return null;
-    
+
     return h('div', { className: 'insights-whatif' },
       h('div', { className: 'insights-whatif__header' },
         h('span', { className: 'insights-whatif__title' }, '🎯 Сценарии'),
@@ -447,12 +449,10 @@
     ScenarioCard,
     WhatIfSection
   };
-  
+
   // Fallback для прямого доступа
   global.piUIWhatIf = HEYS.InsightsPI.uiWhatIf;
-  
-  if (typeof console !== 'undefined' && console.log) {
-    console.log('[PI UI WhatIf] v3.0.0 loaded — 4 What-If components');
-  }
-  
+
+  devLog('[PI UI WhatIf] v3.0.0 loaded — 4 What-If components');
+
 })(typeof window !== 'undefined' ? window : global);
