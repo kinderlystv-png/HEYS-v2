@@ -303,6 +303,7 @@
                                                                 // Сохраняем как последнего выбранного
                                                                 localStorage.setItem('heys_last_client_id', c.id);
                                                                 setClientId(c.id);
+                                                                window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
                                                             }
                                                         },
                                                         // Аватар с цветом по букве

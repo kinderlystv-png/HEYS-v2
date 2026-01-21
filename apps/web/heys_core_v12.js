@@ -431,8 +431,6 @@
     // === PHASE 2: Shared Products UI ===
     // Подвкладки: 'personal' (👤 Продукты клиента) | 'shared' (🌐 Общая база)
     const [activeSubtab, setActiveSubtab] = React.useState('personal');
-    // Источник поиска: 'personal' (👤 Мои) | 'shared' (🌐 Общие) | 'both' (👤+🌐 Оба)
-    const [searchSource, setSearchSource] = React.useState('both');
     // Результаты поиска из shared_products
     const [sharedResults, setSharedResults] = React.useState([]);
     const [sharedLoading, setSharedLoading] = React.useState(false);
@@ -448,6 +446,8 @@
     const [publishToShared, setPublishToShared] = React.useState(true);
     // Модалка мягкого merge при конфликте fingerprint
     const [mergeModal, setMergeModal] = React.useState({ show: false, existing: null, draft: null });
+    // Collapsible секция бэкапов (свёрнута по умолчанию)
+    const [showBackupSection, setShowBackupSection] = React.useState(false);
 
     // Проверяем curator-режим (есть Supabase session)
     // Используем state для реактивности при изменении auth
@@ -549,12 +549,12 @@
       }
     }, [activeSubtab, loadAllSharedProducts]);
 
-    // Поиск в shared при изменении sharedQuery
+    // Поиск в shared при изменении sharedQuery (только для вкладки shared)
     React.useEffect(() => {
-      if (activeSubtab === 'shared' || searchSource !== 'personal') {
+      if (activeSubtab === 'shared') {
         searchSharedDebounced(sharedQuery || query);
       }
-    }, [sharedQuery, query, activeSubtab, searchSource, searchSharedDebounced]);
+    }, [sharedQuery, query, activeSubtab, searchSharedDebounced]);
 
     // Авто-дополнение sodium100 для локальных продуктов из shared_products
     const sodiumBackfillRef = React.useRef({ key: '', inFlight: false });
@@ -839,6 +839,17 @@
     React.useEffect(() => {
       const clientId = window.HEYS && window.HEYS.currentClientId;
       const cloud = window.HEYS && window.HEYS.cloud;
+      const getDeduplicatedProducts = (latestProducts) => {
+        const safeLatest = Array.isArray(latestProducts) ? latestProducts : [];
+        if (window.HEYS?.products?.deduplicate) {
+          const before = safeLatest.length;
+          const stats = window.HEYS.products.deduplicate();
+          const deduped = window.HEYS.products.getAll();
+          if (stats?.removed > 0 && Array.isArray(deduped)) return deduped;
+          if (Array.isArray(deduped) && deduped.length === before) return deduped;
+        }
+        return safeLatest;
+      };
       if (clientId && cloud && typeof cloud.syncClient === 'function') {
         const startTime = performance.now();
         const need = (typeof cloud.shouldSyncClient === 'function') ? cloud.shouldSyncClient(clientId, 4000) : true;
@@ -881,7 +892,7 @@
                 window.HEYS.analytics.trackDataOperation('products-loaded', latest.length);
               }
             }
-            setProducts(Array.isArray(latest) ? latest : []);
+            setProducts(getDeduplicatedProducts(latest));
           }).catch((error) => {
             const duration = performance.now() - startTime;
             if (window.HEYS && window.HEYS.analytics) {
@@ -909,7 +920,7 @@
               window.HEYS.analytics.trackDataOperation('products-loaded', latest.length);
             }
           }
-          setProducts(Array.isArray(latest) ? latest : []);
+          setProducts(getDeduplicatedProducts(latest));
         }
       } else {
         const latest = (window.HEYS.store && window.HEYS.store.get && window.HEYS.store.get('heys_products', null)) || (window.HEYS.utils && window.HEYS.utils.lsGet && window.HEYS.utils.lsGet('heys_products', [])) || [];
@@ -926,7 +937,7 @@
           return;
         }
 
-        setProducts(Array.isArray(latest) ? latest : []);
+        setProducts(getDeduplicatedProducts(latest));
       }
     }, [window.HEYS && window.HEYS.currentClientId]);
 
@@ -1007,6 +1018,72 @@
       resetDraft();
       setShowModal(false);
     }
+
+    /**
+     * 🆕 v4.8.0: Cascade update meal item names after product rename
+     * Updates item.name in all stored days that reference the renamed product
+     * @param {string} productId - ID of the renamed product
+     * @param {string} oldName - Old product name
+     * @param {string} newName - New product name
+     * @returns {number} Number of updated items
+     */
+    function cascadeUpdateMealItemNames(productId, oldName, newName) {
+      if (!productId || !oldName || !newName || oldName === newName) return 0;
+
+      let totalUpdated = 0;
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setDate(startDate.getDate() - 90); // Last 90 days
+
+      // Iterate through last 90 days
+      for (let d = new Date(today); d >= startDate; d.setDate(d.getDate() - 1)) {
+        const dateStr = d.toISOString().slice(0, 10);
+        const dayKey = `heys_dayv2_${dateStr}`;
+
+        try {
+          const dayData = window.HEYS?.store?.get?.(dayKey) || lsGet(dayKey);
+          if (!dayData || !Array.isArray(dayData.meals)) continue;
+
+          let dayModified = false;
+
+          dayData.meals.forEach(meal => {
+            if (!Array.isArray(meal.items)) return;
+
+            meal.items.forEach(item => {
+              // Match by product_id (primary) or by old name (fallback)
+              const matchById = item.product_id != null && String(item.product_id).toLowerCase() === String(productId).toLowerCase();
+              const matchByName = !matchById && item.name && item.name.trim().toLowerCase() === oldName.trim().toLowerCase();
+
+              if (matchById || matchByName) {
+                item.name = newName;
+                dayModified = true;
+                totalUpdated++;
+              }
+            });
+          });
+
+          if (dayModified) {
+            dayData.updatedAt = Date.now();
+            if (window.HEYS?.store?.set) {
+              window.HEYS.store.set(dayKey, dayData);
+            } else {
+              lsSet(dayKey, dayData);
+            }
+          }
+        } catch (err) {
+          console.warn('[CASCADE] Error updating day', dateStr, err);
+        }
+      }
+
+      if (totalUpdated > 0) {
+        window.DEV?.log?.(`[CASCADE] Updated ${totalUpdated} meal items from "${oldName}" to "${newName}"`);
+        // Dispatch event for UI refresh
+        window.dispatchEvent(new CustomEvent('heys:meals-updated', { detail: { reason: 'product-rename', productId, oldName, newName } }));
+      }
+
+      return totalUpdated;
+    }
+
     function updateRow(id, patch) {
       // Проверка уникальности названия при переименовании
       if (patch.name !== undefined) {
@@ -1021,10 +1098,82 @@
           return;
         }
         patch.name = newName;
+
+        // 🆕 v4.8.0: Cascade update meal item names
+        const currentProduct = products.find(p => p.id === id);
+        if (currentProduct && currentProduct.name !== newName) {
+          cascadeUpdateMealItemNames(id, currentProduct.name, newName);
+        }
       }
-      setProducts(products.map(p => { if (p.id !== id) return p; const changed = { ...p, ...patch }; const d = computeDerived(changed); return { ...changed, ...d }; }));
+      // 🆕 v4.8.1: Mark as user_modified to prevent shared product overwrite
+      setProducts(products.map(p => {
+        if (p.id !== id) return p;
+        const changed = { ...p, ...patch, user_modified: true, modified_at: Date.now() };
+        const d = computeDerived(changed);
+        return { ...changed, ...d };
+      }));
       if (window.HEYS && window.HEYS.analytics) {
         window.HEYS.analytics.trackDataOperation('storage-op');
+      }
+    }
+    function openProductNameEditor(product) {
+      if (!product) return;
+      const currentName = (product.name || '').trim();
+
+      if (window.HEYS?.StepModal?.show) {
+        const stepId = 'edit_product_name';
+        window.HEYS.StepModal.show({
+          steps: [
+            {
+              id: stepId,
+              title: 'Название продукта',
+              hint: 'Введите новое название',
+              icon: '✏️',
+              getInitialData: () => ({ name: currentName }),
+              validate: (data) => {
+                const newName = (data?.name || '').trim();
+                if (!newName) return false;
+                const exists = products.find(p => p.id !== product.id && p.name && p.name.trim().toLowerCase() === newName.toLowerCase());
+                return !exists;
+              },
+              getValidationMessage: (data) => {
+                const newName = (data?.name || '').trim();
+                if (!newName) return 'Введите название продукта';
+                const exists = products.find(p => p.id !== product.id && p.name && p.name.trim().toLowerCase() === newName.toLowerCase());
+                if (exists) return `Продукт "${newName}" уже существует`;
+                return null;
+              },
+              component: function EditProductNameStep({ data, onChange }) {
+                return React.createElement('div', { className: 'mc-form' },
+                  React.createElement('label', { className: 'mc-label' }, 'Название'),
+                  React.createElement('input', {
+                    className: 'mc-input',
+                    value: data?.name || '',
+                    onChange: (e) => onChange({ name: e.target.value })
+                  })
+                );
+              }
+            }
+          ],
+          showProgress: false,
+          showGreeting: false,
+          showStreak: false,
+          showTip: false,
+          allowSwipe: false,
+          finishLabel: 'Сохранить',
+          onComplete: (stepData) => {
+            const newName = (stepData?.[stepId]?.name || '').trim();
+            if (newName && newName !== currentName) {
+              updateRow(product.id, { name: newName });
+            }
+          }
+        });
+        return;
+      }
+
+      const fallbackName = prompt('Новое название продукта', currentName);
+      if (fallbackName !== null) {
+        updateRow(product.id, { name: fallbackName });
       }
     }
     function openPortionsEditor(product) {
@@ -1473,6 +1622,181 @@
       }
     }
 
+    // Функция восстановления продуктов из общей базы (для всех клиентов)
+    async function restoreFromSharedBase() {
+      try {
+        // 1. Показать подтверждение
+        const confirmed = await (HEYS.ConfirmModal?.confirm?.({
+          title: '🔄 Восстановление из общей базы',
+          message: 'Добавить в вашу личную базу все продукты из общей базы, которых у вас ещё нет?',
+          confirmText: 'Восстановить',
+          cancelText: 'Отмена'
+        }) ?? Promise.resolve(window.confirm('Восстановить продукты из общей базы? Будут добавлены только отсутствующие.')));
+
+        if (!confirmed) return;
+
+        // 2. Загрузить shared products
+        HEYS.Toast?.info('⏳ Загружаем общую базу…');
+
+        let sharedProducts = [];
+        try {
+          if (HEYS.cloud?.getAllSharedProducts) {
+            const result = await HEYS.cloud.getAllSharedProducts({ limit: 1000 });
+            // getAllSharedProducts может вернуть { data: [...] } или напрямую массив
+            sharedProducts = Array.isArray(result) ? result : (result?.data || result?.products || []);
+          } else if (HEYS.YandexAPI?.rpc) {
+            const result = await HEYS.YandexAPI.rpc('get_shared_products', {
+              p_search: null,
+              p_limit: 1000,
+              p_offset: 0
+            });
+            sharedProducts = Array.isArray(result) ? result : (result?.data || result?.products || []);
+          } else if (HEYS.YandexAPI?.rest) {
+            const { data, error } = await HEYS.YandexAPI.rest('shared_products');
+            if (error) throw new Error(error);
+            sharedProducts = Array.isArray(data) ? data : [];
+          }
+        } catch (loadErr) {
+          console.error('[RESTORE] Ошибка загрузки shared products:', loadErr);
+          HEYS.Toast?.error('Ошибка загрузки общей базы');
+          return;
+        }
+
+        // Гарантируем что sharedProducts — массив
+        if (!Array.isArray(sharedProducts)) {
+          console.warn('[RESTORE] sharedProducts не массив:', typeof sharedProducts, sharedProducts);
+          sharedProducts = [];
+        }
+
+        if (sharedProducts.length === 0) {
+          HEYS.Toast?.warning('Общая база пуста или недоступна');
+          return;
+        }
+
+        // 3. Получить текущие продукты
+        const currentProducts = products || [];
+
+        // 4. Создать индексы для быстрой дедупликации
+        const existingBySharedOriginId = new Set();
+        const existingByNormalizedName = new Set();
+
+        currentProducts.forEach(p => {
+          if (p.shared_origin_id) {
+            existingBySharedOriginId.add(p.shared_origin_id);
+          }
+          if (p.name) {
+            existingByNormalizedName.add(p.name.toLowerCase().trim());
+          }
+        });
+
+        // 5. Найти отсутствующие продукты
+        const missingProducts = sharedProducts.filter(shared => {
+          // Проверка 1: по shared_origin_id (если уже клонировали этот shared продукт)
+          if (existingBySharedOriginId.has(shared.id)) {
+            return false;
+          }
+          // Проверка 2: по нормализованному имени (fallback)
+          const normalizedName = (shared.name || '').toLowerCase().trim();
+          if (existingByNormalizedName.has(normalizedName)) {
+            return false;
+          }
+          return true;
+        });
+
+        if (missingProducts.length === 0) {
+          HEYS.Toast?.success('✅ Все продукты из общей базы уже есть в вашей личной базе!');
+          return;
+        }
+
+        // 6. Клонировать отсутствующие продукты в личную базу
+        const uid = HEYS.utils?.uid || ((prefix = 'p_') => prefix + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
+
+        const newProducts = missingProducts.map(shared => {
+          // Нормализация harm
+          const harm = HEYS.models?.normalizeHarm?.(shared) ?? shared.harm ?? shared.harmScore ?? null;
+
+          return {
+            id: uid('p_'),
+            shared_origin_id: shared.id, // Связь с оригиналом в shared базе
+            name: shared.name,
+            simple100: shared.simple100 ?? 0,
+            complex100: shared.complex100 ?? 0,
+            protein100: shared.protein100 ?? 0,
+            badFat100: shared.badFat100 ?? shared.badfat100 ?? 0,
+            goodFat100: shared.goodFat100 ?? shared.goodfat100 ?? 0,
+            trans100: shared.trans100 ?? 0,
+            fiber100: shared.fiber100 ?? 0,
+            gi: shared.gi ?? 0,
+            harm: harm,
+            harmScore: harm,
+            category: shared.category ?? null,
+            portions: shared.portions ?? null,
+            // Extended nutrients
+            sodium100: shared.sodium100 ?? null,
+            novaGroup: shared.nova_group ?? shared.novaGroup ?? null,
+            // Vitamins
+            vitaminA: shared.vitamin_a ?? shared.vitaminA ?? null,
+            vitaminC: shared.vitamin_c ?? shared.vitaminC ?? null,
+            vitaminD: shared.vitamin_d ?? shared.vitaminD ?? null,
+            vitaminE: shared.vitamin_e ?? shared.vitaminE ?? null,
+            vitaminK: shared.vitamin_k ?? shared.vitaminK ?? null,
+            vitaminB1: shared.vitamin_b1 ?? shared.vitaminB1 ?? null,
+            vitaminB2: shared.vitamin_b2 ?? shared.vitaminB2 ?? null,
+            vitaminB3: shared.vitamin_b3 ?? shared.vitaminB3 ?? null,
+            vitaminB6: shared.vitamin_b6 ?? shared.vitaminB6 ?? null,
+            vitaminB9: shared.vitamin_b9 ?? shared.vitaminB9 ?? null,
+            vitaminB12: shared.vitamin_b12 ?? shared.vitaminB12 ?? null,
+            // Minerals
+            calcium: shared.calcium ?? null,
+            iron: shared.iron ?? null,
+            magnesium: shared.magnesium ?? null,
+            phosphorus: shared.phosphorus ?? null,
+            potassium: shared.potassium ?? null,
+            zinc: shared.zinc ?? null,
+            selenium: shared.selenium ?? null,
+            iodine: shared.iodine ?? null,
+            // Flags
+            isOrganic: shared.is_organic ?? shared.isOrganic ?? false,
+            isWholeGrain: shared.is_whole_grain ?? shared.isWholeGrain ?? false,
+            isFermented: shared.is_fermented ?? shared.isFermented ?? false,
+            isRaw: shared.is_raw ?? shared.isRaw ?? false,
+            // Meta
+            _restoredFromShared: true,
+            _restoredAt: new Date().toISOString()
+          };
+        });
+
+        // 7. Сохранить объединённый массив
+        const mergedProducts = [...currentProducts, ...newProducts];
+
+        if (HEYS.products?.setAll) {
+          HEYS.products.setAll(mergedProducts);
+        } else if (HEYS.store?.set) {
+          HEYS.store.set('heys_products', mergedProducts);
+        } else if (HEYS.utils?.lsSet) {
+          HEYS.utils.lsSet('heys_products', mergedProducts);
+        }
+
+        // 8. Обновить UI
+        setProducts(mergedProducts);
+        if (typeof buildSearchIndex === 'function') {
+          buildSearchIndex(mergedProducts);
+        }
+
+        DEV.log(`[RESTORE] Восстановлено ${newProducts.length} продуктов из общей базы`);
+        HEYS.Toast?.success(`✅ Восстановлено ${newProducts.length} продуктов из общей базы!`);
+
+        if (window.HEYS?.analytics?.trackDataOperation) {
+          window.HEYS.analytics.trackDataOperation('products-restored-from-shared', { count: newProducts.length });
+        }
+
+      } catch (err) {
+        console.error('[RESTORE] Ошибка восстановления:', err);
+        HEYS.analytics?.trackError?.(err, { context: 'ration:restoreFromSharedBase' });
+        HEYS.Toast?.error('Ошибка восстановления: ' + (err.message || err)) || alert('Ошибка восстановления: ' + (err.message || err));
+      }
+    }
+
     // Функция импорта из JSON файла
     async function importFromFile(file) {
       if (!file) return;
@@ -1538,28 +1862,73 @@
           return;
         }
 
-        // Спрашиваем режим импорта
-        const mode = await new Promise(resolve => {
-          const choice = confirm(
-            `Найдено ${validProducts.length} продуктов.\\n\\n` +
-            `OK — Умный импорт (новые добавятся, существующие обновятся)\\n` +
-            `Отмена — Отменить импорт`
-          );
-          resolve(choice ? 'merge' : 'cancel');
-        });
-
-        if (mode === 'cancel') {
-          DEV.log('[IMPORT FILE] Импорт отменён пользователем');
-          return;
-        }
-
-        // Умный импорт (merge)
+        // ─────────────────────────────────────────
+        // ПРЕДВАРИТЕЛЬНЫЙ АНАЛИЗ: что именно будет импортировано
+        // ─────────────────────────────────────────
         const normalize = (name) => (name || '').trim().toLowerCase();
         const existingMap = new Map();
         products.forEach((p, idx) => {
           existingMap.set(normalize(p.name), { product: p, index: idx });
         });
 
+        // Подсчитываем новые и обновляемые
+        let willBeAdded = 0;
+        let willBeUpdated = 0;
+        const newProductNames = [];
+        const updateProductNames = [];
+
+        for (const row of validProducts) {
+          const key = normalize(row.name);
+          if (existingMap.has(key)) {
+            willBeUpdated++;
+            if (updateProductNames.length < 5) updateProductNames.push(row.name);
+          } else {
+            willBeAdded++;
+            if (newProductNames.length < 5) newProductNames.push(row.name);
+          }
+        }
+
+        // Формируем детальное сообщение
+        let previewMessage = `📦 Найдено ${validProducts.length} продуктов в файле\n\n`;
+
+        if (willBeAdded > 0) {
+          previewMessage += `✅ Новых (добавятся): ${willBeAdded}\n`;
+          if (newProductNames.length > 0) {
+            previewMessage += `   • ${newProductNames.join('\n   • ')}`;
+            if (willBeAdded > 5) previewMessage += `\n   ... и ещё ${willBeAdded - 5}`;
+            previewMessage += '\n\n';
+          }
+        }
+
+        if (willBeUpdated > 0) {
+          previewMessage += `🔄 Существующих (обновятся): ${willBeUpdated}\n`;
+          if (updateProductNames.length > 0) {
+            previewMessage += `   • ${updateProductNames.join('\n   • ')}`;
+            if (willBeUpdated > 5) previewMessage += `\n   ... и ещё ${willBeUpdated - 5}`;
+            previewMessage += '\n\n';
+          }
+        }
+
+        previewMessage += `Текущая база: ${products.length} продуктов\n`;
+        previewMessage += `После импорта: ${products.length + willBeAdded} продуктов\n\n`;
+        previewMessage += `Продолжить импорт?`;
+
+        // Спрашиваем подтверждение с детальным preview
+        const confirmed = await (HEYS.ConfirmModal?.confirm?.({
+          title: '📤 Импорт продуктов',
+          message: previewMessage,
+          confirmText: `Импортировать (${willBeAdded} новых${willBeUpdated > 0 ? `, ${willBeUpdated} обновить` : ''})`,
+          cancelText: 'Отмена'
+        }) ?? Promise.resolve(window.confirm(previewMessage)));
+
+        if (!confirmed) {
+          DEV.log('[IMPORT FILE] Импорт отменён пользователем');
+          return;
+        }
+
+        // ─────────────────────────────────────────
+        // ВЫПОЛНЯЕМ ИМПОРТ
+        // ─────────────────────────────────────────
         let updated = 0;
         let added = 0;
         const newProducts = [...products];
@@ -1585,7 +1954,7 @@
         setProducts(newProducts);
 
         DEV.log(`✅ [IMPORT FILE] Завершено: +${added} новых, ↻${updated} обновлено`);
-        HEYS.Toast?.success(`Импорт завершён: +${added} новых, ${updated} обновлено`) || alert(`Импорт завершён!`);
+        HEYS.Toast?.success(`✅ Импорт завершён!\n+${added} новых, ${updated} обновлено`) || alert(`Импорт завершён!`);
 
         if (window.HEYS?.analytics) {
           window.HEYS.analytics.trackDataOperation('products-imported-file', validProducts.length);
@@ -1874,22 +2243,8 @@
       setShowModal(false);
     }
 
-    // Комбинированный поиск (личные + shared)
-    const combinedResults = React.useMemo(() => {
-      if (searchSource === 'personal') {
-        return filtered.map(p => ({ ...p, _source: 'personal' }));
-      }
-      if (searchSource === 'shared') {
-        return sharedResults.map(p => ({ ...p, _source: 'shared' }));
-      }
-      // both — объединяем
-      const personal = filtered.map(p => ({ ...p, _source: 'personal' }));
-      const shared = sharedResults.map(p => ({ ...p, _source: 'shared' }));
-      // Дедупликация: если личный продукт склонирован из shared — показываем только личный
-      const sharedIds = new Set(personal.filter(p => p.shared_origin_id).map(p => p.shared_origin_id));
-      const uniqueShared = shared.filter(p => !sharedIds.has(p.id));
-      return [...personal, ...uniqueShared];
-    }, [filtered, sharedResults, searchSource]);
+    // На вкладке "Личные" показываем только личные продукты (без комбинированного поиска)
+    // Комбинированный поиск перенесён в модалку добавления продукта в приём пищи
 
     return React.createElement('div', { className: 'page page-ration' },
       // === ПОДВКЛАДКИ (Subtabs) ===
@@ -1939,122 +2294,153 @@
         // 👤 ПОДВКЛАДКА: Продукты клиента
         // ============================================
         React.createElement(React.Fragment, null,
-          // Переключатель источника поиска
-          React.createElement('div', { className: 'card', style: { marginBottom: '8px', padding: '8px 12px' } },
-            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' } },
-              React.createElement('span', { style: { fontSize: '12px', color: 'var(--text-muted, #6b7280)' } }, 'Источник:'),
+
+          // === БЭКАП И ВОССТАНОВЛЕНИЕ (collapsible) ===
+          React.createElement('div', {
+            className: 'card',
+            style: { marginBottom: '8px', padding: '0', overflow: 'hidden' }
+          },
+            // Заголовок (кликабельный для раскрытия)
+            React.createElement('div', {
+              onClick: () => setShowBackupSection(!showBackupSection),
+              style: {
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '12px 16px', cursor: 'pointer',
+                background: showBackupSection ? 'var(--bg-secondary, #f9fafb)' : 'transparent',
+                transition: 'background 0.2s'
+              }
+            },
+              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                React.createElement('span', { style: { fontSize: '18px' } }, '💾'),
+                React.createElement('span', { style: { fontWeight: '500', fontSize: '14px' } }, 'Бэкап и восстановление')
+              ),
+              React.createElement('span', {
+                style: { fontSize: '12px', color: 'var(--text-muted)', transition: 'transform 0.2s', transform: showBackupSection ? 'rotate(180deg)' : 'rotate(0deg)' }
+              }, '▼')
+            ),
+            // Контент (показывается при раскрытии)
+            showBackupSection && React.createElement('div', { style: { padding: '0 16px 16px', borderTop: '1px solid var(--border-color, #e5e5e5)' } },
+
+              // ─────────────────────────────────────────
+              // 📥 СКАЧАТЬ БЭКАП
+              // ─────────────────────────────────────────
               React.createElement('div', {
-                style: { display: 'flex', gap: '4px', background: 'var(--bg-secondary, #f3f4f6)', borderRadius: '6px', padding: '2px' }
+                style: { marginTop: '16px', padding: '12px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderRadius: '8px', border: '1px solid #93c5fd' }
               },
-                React.createElement('button', {
-                  className: searchSource === 'personal' ? 'btn acc' : 'btn',
-                  onClick: () => setSearchSource('personal'),
-                  style: { padding: '4px 8px', fontSize: '12px', borderRadius: '4px' }
-                }, '👤 Мои'),
-                React.createElement('button', {
-                  className: searchSource === 'shared' ? 'btn acc' : 'btn',
-                  onClick: () => setSearchSource('shared'),
-                  style: { padding: '4px 8px', fontSize: '12px', borderRadius: '4px' }
-                }, '🌐 Общие'),
-                React.createElement('button', {
-                  className: searchSource === 'both' ? 'btn acc' : 'btn',
-                  onClick: () => setSearchSource('both'),
-                  style: { padding: '4px 8px', fontSize: '12px', borderRadius: '4px' }
-                }, '👤+🌐 Оба')
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' } },
+                  React.createElement('div', null,
+                    React.createElement('div', { style: { fontWeight: '600', fontSize: '14px', color: '#1e40af', marginBottom: '4px' } }, '📥 Скачать полный бэкап'),
+                    React.createElement('div', { style: { fontSize: '12px', color: '#3b82f6' } }, 'Продукты + дневник + профиль + общая база')
+                  ),
+                  React.createElement('button', {
+                    className: 'btn acc',
+                    onClick: async () => {
+                      if (window.HEYS && window.HEYS.exportFullBackup) {
+                        const result = await window.HEYS.exportFullBackup();
+                        if (result && result.ok) {
+                          HEYS.Toast?.success(`✅ Бэкап сохранён!\n📦 Продуктов: ${result.products}\n🌐 Общих: ${result.sharedProducts || 0}\n📅 Дней: ${result.days}`);
+                        }
+                      } else {
+                        HEYS.Toast?.warning('Функция экспорта недоступна');
+                      }
+                    },
+                    style: { whiteSpace: 'nowrap', background: '#3b82f6', borderColor: '#2563eb' }
+                  }, '💾 Скачать')
+                )
               ),
-              sharedLoading && React.createElement('span', { style: { fontSize: '12px', color: 'var(--text-muted)' } }, '⏳ Поиск...')
-            )
-          ),
-          // Кнопки экспорта и импорта бэкапа
-          React.createElement('div', { className: 'card', style: { marginBottom: '8px', padding: '12px 16px' } },
-            // Полный бэкап
-            React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' } },
-              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                React.createElement('span', { style: { fontSize: '20px' } }, '💾'),
-                React.createElement('span', { style: { fontWeight: '500' } }, 'Полный бэкап'),
-                React.createElement('span', { className: 'muted', style: { fontSize: '11px' } }, '(всё)')
-              ),
-              React.createElement('button', {
-                className: 'btn',
-                onClick: async () => {
-                  if (window.HEYS && window.HEYS.exportFullBackup) {
-                    const result = await window.HEYS.exportFullBackup();
-                    if (result && result.ok) {
-                      HEYS.Toast?.success(`Бэкап сохранён! 📦 Продуктов: ${result.products}, 📅 Дней: ${result.days}`) || alert(`✅ Бэкап сохранён!\n📦 Продуктов: ${result.products}\n📅 Дней: ${result.days}`);
-                    }
-                  } else {
-                    HEYS.Toast?.warning('Функция экспорта недоступна') || alert('Функция экспорта недоступна');
-                  }
-                },
-                style: { whiteSpace: 'nowrap' }
-              }, '📥 Скачать всё')
-            ),
-            // Экспорт только продуктов
-            React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-color, #e5e5e5)', marginBottom: '12px' } },
-              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                React.createElement('span', { style: { fontSize: '20px' } }, '🥗'),
-                React.createElement('span', { style: { fontWeight: '500' } }, 'Экспорт продуктов'),
-                React.createElement('span', { className: 'muted', style: { fontSize: '11px' } }, `(${products.length})`)
-              ),
-              React.createElement('button', {
-                className: 'btn',
-                onClick: exportProductsOnly,
-                style: { whiteSpace: 'nowrap' }
-              }, '📥 Скачать')
-            ),
-            // Экспорт общих продуктов для AI (curator only)
-            isCurator && React.createElement('div', { className: 'ration-backups__row ration-backups__row--divider' },
-              React.createElement('div', { className: 'ration-backups__title' },
-                React.createElement('span', { className: 'ration-backups__icon' }, '🌐'),
-                React.createElement('span', { className: 'ration-backups__label' }, 'Экспорт общей базы'),
-                React.createElement('span', { className: 'muted ration-backups__hint' }, '(AI JSON)'),
-                sharedExportCount != null && React.createElement('span', {
-                  className: 'ration-backups__badge',
-                  title: 'Всего общих продуктов',
-                  'aria-label': 'Всего общих продуктов'
-                }, sharedExportCount)
-              ),
-              React.createElement('button', {
-                className: 'btn ration-backups__btn',
-                onClick: exportSharedProductsForAI
-              }, '📥 Скачать')
-            ),
-            // Импорт из файла
-            React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-color, #e5e5e5)' } },
-              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                React.createElement('span', { style: { fontSize: '20px' } }, '📤'),
-                React.createElement('span', { style: { fontWeight: '500' } }, 'Импорт из файла')
-              ),
-              React.createElement('label', {
-                className: 'btn',
-                style: { whiteSpace: 'nowrap', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }
+
+              // ─────────────────────────────────────────
+              // 📤 ВОССТАНОВИТЬ ИЗ ФАЙЛА
+              // ─────────────────────────────────────────
+              React.createElement('div', {
+                style: { marginTop: '12px', padding: '12px', background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', borderRadius: '8px', border: '1px solid #86efac' }
               },
-                '📂 Выбрать JSON',
-                React.createElement('input', {
-                  type: 'file',
-                  accept: '.json,application/json',
-                  style: { display: 'none' },
-                  onChange: (e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      importFromFile(file);
-                      e.target.value = ''; // Сброс для повторного выбора того же файла
-                    }
-                  }
-                })
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' } },
+                  React.createElement('div', null,
+                    React.createElement('div', { style: { fontWeight: '600', fontSize: '14px', color: '#166534', marginBottom: '4px' } }, '📤 Восстановить из файла'),
+                    React.createElement('div', { style: { fontSize: '12px', color: '#15803d' } }, 'Загрузить продукты из бэкапа')
+                  ),
+                  React.createElement('label', {
+                    className: 'btn acc',
+                    style: { whiteSpace: 'nowrap', background: '#22c55e', borderColor: '#16a34a', cursor: 'pointer' }
+                  },
+                    '📂 Выбрать файл',
+                    React.createElement('input', {
+                      type: 'file',
+                      accept: '.json,application/json',
+                      style: { display: 'none' },
+                      onChange: (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          importFromFile(file);
+                          e.target.value = '';
+                        }
+                      }
+                    })
+                  )
+                )
+              ),
+
+              // ─────────────────────────────────────────
+              // 🔄 СИНХРОНИЗАЦИЯ С ОБЩЕЙ БАЗОЙ
+              // ─────────────────────────────────────────
+              React.createElement('div', {
+                style: { marginTop: '12px', padding: '12px', background: 'var(--bg-secondary, #f9fafb)', borderRadius: '8px', border: '1px solid var(--border-color, #e5e5e5)' }
+              },
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' } },
+                  React.createElement('div', null,
+                    React.createElement('div', { style: { fontWeight: '500', fontSize: '13px', color: 'var(--text-primary)', marginBottom: '2px' } }, '🔄 Синхронизация с общей базой'),
+                    React.createElement('div', { style: { fontSize: '11px', color: 'var(--text-muted)' } }, 'Добавить недостающие продукты из серверной базы')
+                  ),
+                  React.createElement('button', {
+                    className: 'btn',
+                    onClick: restoreFromSharedBase,
+                    style: { whiteSpace: 'nowrap' }
+                  }, 'Синхронизировать')
+                )
+              ),
+
+              // ─────────────────────────────────────────
+              // 🔧 Для куратора (если есть)
+              // ─────────────────────────────────────────
+              isCurator && React.createElement('div', {
+                style: { marginTop: '16px', paddingTop: '12px', borderTop: '1px dashed var(--border-color, #e5e5e5)' }
+              },
+                React.createElement('div', { style: { fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' } }, '🔧 Инструменты куратора'),
+
+                // Только продукты клиента
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' } },
+                  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                    React.createElement('span', { style: { fontSize: '14px' } }, '🥗'),
+                    React.createElement('span', { style: { fontSize: '12px', color: 'var(--text-muted)' } }, `Только продукты (${products.length} шт)`)
+                  ),
+                  React.createElement('button', {
+                    className: 'btn',
+                    onClick: exportProductsOnly,
+                    style: { padding: '4px 10px', fontSize: '11px' }
+                  }, 'Скачать')
+                ),
+
+                // Общая база для AI
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' } },
+                  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                    React.createElement('span', { style: { fontSize: '14px' } }, '🌐'),
+                    React.createElement('span', { style: { fontSize: '12px', color: 'var(--text-muted)' } }, 'Общая база для AI'),
+                    sharedExportCount != null && React.createElement('span', {
+                      style: { fontSize: '10px', background: '#dbeafe', color: '#1d4ed8', padding: '1px 5px', borderRadius: '4px', marginLeft: '4px' }
+                    }, sharedExportCount)
+                  ),
+                  React.createElement('button', {
+                    className: 'btn',
+                    onClick: exportSharedProductsForAI,
+                    style: { padding: '4px 10px', fontSize: '11px' }
+                  }, 'Скачать')
+                )
               )
             )
           ),
-          React.createElement('div', { className: 'card tone-amber', style: { marginBottom: '8px' } },
-            React.createElement('div', { className: 'section-title' }, 'Импорт из вставки'),
-            React.createElement('textarea', { placeholder: 'Вставь строки: Название + 12 чисел справа', value: paste, onChange: e => setPaste(e.target.value) }),
-            React.createElement('div', { className: 'row', style: { marginTop: '8px', flexWrap: 'wrap', gap: '8px' } },
-              React.createElement('button', { className: 'btn acc', onClick: importMerge, title: 'Добавляет новые, обновляет существующие по названию' }, '✨ Импорт (умный)'),
-              React.createElement('button', { className: 'btn', onClick: importAppend, title: 'Просто добавляет в конец списка' }, '+ Добавить'),
-              React.createElement('button', { className: 'btn', onClick: importReplace, title: 'Удаляет все старые, загружает только новые' }, '⚠️ Заменить всё')
-            ),
-            React.createElement('span', { className: 'muted', style: { marginTop: '4px', fontSize: '12px' } }, 'Умный импорт: новые добавятся, существующие обновятся по названию')
-          ),
+
+          // === ТАБЛИЦА ПРОДУКТОВ ===
           React.createElement('div', { className: 'card tone-blue' },
             React.createElement('div', { className: 'topbar' },
               React.createElement('div', { className: 'row' },
@@ -2117,8 +2503,19 @@
                 ),
                 React.createElement('tbody', null,
                   // Ограничиваем рендеринг для производительности (29k+ продуктов = тормоза)
-                  (showAll ? filtered : filtered.slice(0, DISPLAY_LIMIT)).map(p => React.createElement('tr', { key: p.id },
-                    React.createElement('td', null, React.createElement('input', { value: p.name, onChange: e => updateRow(p.id, { name: e.target.value }) })),
+                  // 🛡️ v4.8.1: Используем `id_index` как key для предотвращения дубликатов
+                  (showAll ? filtered : filtered.slice(0, DISPLAY_LIMIT)).map((p, idx) => React.createElement('tr', { key: `${p.id}_${idx}` },
+                    React.createElement('td', null,
+                      React.createElement('div', { className: 'product-name-cell' },
+                        React.createElement('button', {
+                          className: 'product-name-edit',
+                          onClick: () => openProductNameEditor(p),
+                          title: 'Переименовать',
+                          'aria-label': 'Переименовать'
+                        }, '✏️'),
+                        React.createElement('span', { className: 'product-name-text' }, p.name)
+                      )
+                    ),
                     React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.kcal100, readOnly: true })),
                     React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.carbs100, readOnly: true })),
                     React.createElement('td', null, React.createElement('input', { type: 'text', value: p.simple100, onChange: e => updateRow(p.id, { simple100: toNum(e.target.value) }) })),
@@ -2345,14 +2742,15 @@
                         const n = Number(v);
                         return isNaN(n) ? 0 : n;
                       };
-                      return filteredShared.map(p => {
+                      return filteredShared.map((p, idx) => {
                         // Supabase возвращает snake_case поля
                         const kcal = Math.round(safeNum(p.protein100) * 4 + safeNum(p.simple100) * 4 + safeNum(p.complex100) * 4 + (safeNum(p.badfat100) + safeNum(p.goodfat100) + safeNum(p.trans100)) * 9);
                         const carbs = safeNum(p.simple100) + safeNum(p.complex100);
                         const fat = safeNum(p.badfat100) + safeNum(p.goodfat100) + safeNum(p.trans100);
                         const harmValue = HEYS.models?.normalizeHarm?.(p) ?? p.harm ?? p.harmScore ?? 0;
                         const safeHarm = isNaN(harmValue) ? 0 : harmValue;
-                        return React.createElement('tr', { key: p.id },
+                        // 🛡️ v4.8.1: Используем `id_index` как key для предотвращения дубликатов
+                        return React.createElement('tr', { key: `${p.id}_${idx}` },
                           React.createElement('td', null,
                             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
                               p.name,

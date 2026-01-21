@@ -50,6 +50,39 @@
   width: 100% !important;
 }
 
+.product-name-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.product-name-edit {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text-muted, #6b7280);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.product-name-edit:active {
+  transform: scale(0.96);
+}
+
+.product-name-text {
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
 /* === Ration: backup actions === */
 .ration-backups__row {
   display: flex;

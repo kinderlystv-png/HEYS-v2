@@ -539,6 +539,12 @@
                 || (async () => { });
 
             const fallbackUseAppDerivedState = ({ React: HookReact, pendingDetails: fallbackPendingDetails, clients: fallbackClients, clientId: fallbackClientId, needsConsent: fallbackNeedsConsent, checkingConsent: fallbackCheckingConsent, showMorningCheckin: fallbackShowMorningCheckin, U: fallbackU, cloud: fallbackCloud }) => {
+                const [clientChangeTick, setClientChangeTick] = HookReact.useState(0);
+                HookReact.useEffect(() => {
+                    const handleClientChange = () => setClientChangeTick((v) => v + 1);
+                    window.addEventListener('heys:client-changed', handleClientChange);
+                    return () => window.removeEventListener('heys:client-changed', handleClientChange);
+                }, []);
                 const pendingText = HookReact.useMemo(() => {
                     if (!fallbackPendingDetails) return '';
                     const parts = [];
@@ -552,7 +558,7 @@
                 const cachedProfile = HookReact.useMemo(() => {
                     const utils = fallbackU || HEYS?.utils;
                     return utils && utils.lsGet ? utils.lsGet('heys_profile', {}) : {};
-                }, [fallbackU]);
+                }, [fallbackU, fallbackClientId, clientChangeTick]);
 
                 const isRpcMode = fallbackCloud?.isPinAuthClient?.() || false;
                 const currentClientName = HookReact.useMemo(() => {
@@ -572,7 +578,7 @@
                     return Array.isArray(fallbackClients)
                         ? (fallbackClients.find((c) => c.id === fallbackClientId)?.name || 'Выберите клиента')
                         : 'Выберите клиента';
-                }, [isRpcMode, cachedProfile, fallbackClients, fallbackClientId]);
+                }, [isRpcMode, cachedProfile, fallbackClients, fallbackClientId, clientChangeTick]);
 
                 const isMorningCheckinBlocking = fallbackShowMorningCheckin === true && HEYS?.MorningCheckin;
                 const isConsentBlocking = fallbackNeedsConsent || fallbackCheckingConsent;

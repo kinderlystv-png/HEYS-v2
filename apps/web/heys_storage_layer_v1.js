@@ -58,7 +58,18 @@
 
   function compress(obj) {
     try {
-      let json = JSON.stringify(obj);
+      // Safe stringify with circular reference detection
+      const seen = new WeakSet();
+      let json = JSON.stringify(obj, (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) {
+            console.warn('[compress] Circular reference detected at key:', key);
+            return undefined; // Skip circular refs
+          }
+          seen.add(value);
+        }
+        return value;
+      });
 
       // 1. Сжатие числовых значений (убираем лишние нули)
       // 10.00 → 10, 5.50 → 5.5
@@ -78,6 +89,7 @@
 
       return json;
     } catch (e) {
+      console.error('[compress] Error:', e?.message || e);
       return JSON.stringify(obj);
     }
   }
@@ -115,8 +127,44 @@
     try {
       const compressed = compress(v);
       localStorage.setItem(k, compressed);
+      return true;
     } catch (e) {
-      console.error('[rawSet] ERROR:', k, e);
+      const errorName = e?.name || 'UnknownError';
+      const errorMsg = e?.message || String(e);
+      console.error('[rawSet] ERROR:', k, errorName, errorMsg);
+
+      // QuotaExceededError — попробуем очистить старые данные
+      if (errorName === 'QuotaExceededError' || errorMsg.includes('quota')) {
+        console.warn('[rawSet] localStorage quota exceeded, attempting cleanup...');
+        try {
+          // Удаляем старые дни (>60 дней)
+          const keysToRemove = [];
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() - 60);
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.includes('_dayv2_')) {
+              const match = key.match(/_dayv2_(\d{4}-\d{2}-\d{2})/);
+              if (match) {
+                const keyDate = new Date(match[1]);
+                if (keyDate < cutoffDate) {
+                  keysToRemove.push(key);
+                }
+              }
+            }
+          }
+          keysToRemove.forEach(key => localStorage.removeItem(key));
+          if (keysToRemove.length > 0) {
+            console.log('[rawSet] Cleaned up', keysToRemove.length, 'old day records');
+            // Retry
+            localStorage.setItem(k, compress(v));
+            return true;
+          }
+        } catch (cleanupErr) {
+          console.error('[rawSet] Cleanup failed:', cleanupErr);
+        }
+      }
+      return false;
     }
   }
 

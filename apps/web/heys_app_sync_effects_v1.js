@@ -35,6 +35,7 @@
                 U.lsSet('heys_client_current', clientId);
                 window.HEYS = window.HEYS || {};
                 window.HEYS.currentClientId = clientId;
+                window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId } }));
                 // 🔇 v4.7.1: Лог клиента отключён
 
                 if (cloud && typeof cloud.syncClient === 'function') {

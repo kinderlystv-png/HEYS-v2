@@ -81,13 +81,20 @@
         if (!orphanProductsMap.has(name)) {
             orphanProductsMap.set(name, {
                 name: name,
+                // v4.8.0: Store product_id for better matching after rename
+                product_id: item.product_id ?? item.productId ?? null,
                 usedInDays: new Set([dateStr]),
                 firstSeen: Date.now(),
                 hasInlineData: item.kcal100 != null
             });
             // 🔇 v4.7.0: Тихий режим — orphan логи отключены (см. HEYS.orphanProducts.list())
         } else {
-            orphanProductsMap.get(name).usedInDays.add(dateStr);
+            const orphanData = orphanProductsMap.get(name);
+            orphanData.usedInDays.add(dateStr);
+            // v4.8.0: Update product_id if not set
+            if (!orphanData.product_id && (item.product_id ?? item.productId)) {
+                orphanData.product_id = item.product_id ?? item.productId;
+            }
         }
     }
 
@@ -129,19 +136,31 @@
 
         // Пересчитать orphan-продукты на основе актуальной базы
         // Вызывается после добавления продукта или удаления item из meal
+        // v4.8.0: Теперь проверяет и по product_id, не только по name
         recalculate() {
             if (!global.HEYS?.products?.getAll) return;
 
             const products = global.HEYS.products.getAll();
+            // Index by name (lowercase)
             const productNames = new Set(
                 products.map(p => String(p.name || '').trim().toLowerCase()).filter(Boolean)
+            );
+            // Index by id
+            const productIds = new Set(
+                products.map(p => String(p.id ?? p.product_id ?? '').toLowerCase()).filter(Boolean)
             );
 
             const beforeCount = orphanProductsMap.size;
 
-            // Удаляем из orphan те, что теперь есть в базе
-            for (const [name] of orphanProductsMap) {
-                if (productNames.has(name.toLowerCase())) {
+            // Удаляем из orphan те, что теперь есть в базе (по name ИЛИ по id)
+            for (const [name, orphanData] of orphanProductsMap) {
+                const nameLower = name.toLowerCase();
+                const hasName = productNames.has(nameLower);
+                // v4.8.0: Также проверяем product_id если он сохранён в orphan data
+                const pid = orphanData.product_id ? String(orphanData.product_id).toLowerCase() : '';
+                const hasId = pid && productIds.has(pid);
+
+                if (hasName || hasId) {
                     orphanProductsMap.delete(name);
                 }
             }

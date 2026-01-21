@@ -262,6 +262,29 @@
                 global.removeEventListener('heys:day-updated', handleDayUpdated);
             };
         }, [date]);
+
+        // 🆕 v4.8.0: Listen for product rename cascade updates
+        // When product is renamed, meal item names are updated in localStorage
+        // This effect reloads current day's data to show updated names
+        React.useEffect(() => {
+            const handleMealsUpdated = (e) => {
+                const { reason, productId, oldName, newName } = e.detail || {};
+                if (reason !== 'product-rename') return;
+
+                // Reload current day data from localStorage
+                const profNow = getProfile();
+                const key = 'heys_dayv2_' + date;
+                const v = lsGet(key, null);
+                if (v && v.date) {
+                    const newDay = ensureDay(v, profNow);
+                    setDay(newDay);
+                    window.DEV?.log?.(`[DAY_EFFECTS] Reloaded day after product rename: "${oldName}" → "${newName}"`);
+                }
+            };
+
+            global.addEventListener('heys:meals-updated', handleMealsUpdated);
+            return () => global.removeEventListener('heys:meals-updated', handleMealsUpdated);
+        }, [date]);
     }
 
     function useDayBootEffects() {

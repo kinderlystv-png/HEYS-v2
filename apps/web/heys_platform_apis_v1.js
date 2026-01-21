@@ -43,6 +43,7 @@
     } catch (_) { }
   };
   const quietConsole = {
+    trace: (...args) => { if (window.console && typeof window.console.trace === 'function') window.console.trace(...args); },
     log: (...args) => devLog(...args),
     info: (...args) => devInfo(...args),
     debug: (...args) => devDebug(...args),

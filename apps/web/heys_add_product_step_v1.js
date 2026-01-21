@@ -229,6 +229,91 @@
     } else if (U.lsSet) {
       U.lsSet('heys_products', nextProducts);
     }
+
+    // v4.8.0: Cascade update to MealItems in all days
+    cascadeMealItemsOnProductUpdate(existing, nextProducts[idx]);
+  };
+
+  /**
+   * v4.8.0: Cascade MealItem updates when product is renamed/edited
+   * Updates item.name and inline nutrients in all days where product_id matches
+   * @param {Object} oldProduct - Product before update (for comparison)
+   * @param {Object} newProduct - Product after update
+   */
+  const cascadeMealItemsOnProductUpdate = (oldProduct, newProduct) => {
+    if (!oldProduct || !newProduct) return;
+    const pid = String(newProduct.id ?? newProduct.product_id ?? '');
+    if (!pid) return;
+
+    // Check if name changed (main reason for cascade)
+    const nameChanged = oldProduct.name !== newProduct.name;
+    const nutrientsChanged = hasNutrientChanges(oldProduct, newProduct);
+    if (!nameChanged && !nutrientsChanged) return;
+
+    const U = HEYS.utils || {};
+    const lsGet = U.lsGet || ((k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; } });
+    const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
+
+    // Find all day keys (with or without clientId prefix)
+    const dayKeys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
+    let updatedDays = 0;
+    let updatedItems = 0;
+
+    for (const key of dayKeys) {
+      try {
+        const day = JSON.parse(localStorage.getItem(key));
+        if (!day || !day.meals) continue;
+
+        let dayChanged = false;
+
+        for (const meal of day.meals) {
+          if (!meal.items) continue;
+          for (const item of meal.items) {
+            // Match by product_id (primary key for cascade)
+            const itemPid = String(item.product_id ?? item.productId ?? '');
+            if (itemPid === pid) {
+              // Update name if changed
+              if (nameChanged) {
+                item.name = newProduct.name;
+              }
+              // Update inline nutrients if changed
+              if (nutrientsChanged) {
+                item.kcal100 = newProduct.kcal100;
+                item.protein100 = newProduct.protein100;
+                item.fat100 = newProduct.fat100;
+                item.simple100 = newProduct.simple100;
+                item.complex100 = newProduct.complex100;
+                item.badFat100 = newProduct.badFat100;
+                item.goodFat100 = newProduct.goodFat100;
+                item.trans100 = newProduct.trans100;
+                item.fiber100 = newProduct.fiber100;
+                item.gi = newProduct.gi ?? newProduct.gi100;
+                item.harm = HEYS.models?.normalizeHarm?.(newProduct) ?? newProduct.harm;
+              }
+              dayChanged = true;
+              updatedItems++;
+            }
+          }
+        }
+
+        if (dayChanged) {
+          day.updatedAt = Date.now();
+          lsSet(key, day);
+          updatedDays++;
+        }
+      } catch (e) {
+        console.warn('[HEYS] cascadeMealItems error for key:', key, e);
+      }
+    }
+
+    if (updatedDays > 0) {
+      console.log(`[HEYS] Cascade update: ${updatedItems} items in ${updatedDays} days`);
+      // Clear caches to reflect changes
+      HEYS.models?.clearMealTotalsCache?.();
+      window.dispatchEvent(new CustomEvent('heys:mealitems-cascaded', {
+        detail: { productId: pid, updatedDays, updatedItems }
+      }));
+    }
   };
 
   const updateSharedProduct = async (product) => {
@@ -3634,14 +3719,27 @@ NOVA: 1
             finalProduct.portions = portions;
           }
 
+          // v4.8.0: Track if name changed for UX feedback
+          const nameChanged = product.name !== finalProduct.name;
+
           if (isSharedProduct(product)) {
             const result = await updateSharedProduct(finalProduct);
             if (result.ok) {
               notifyProductUpdated(finalProduct);
+              // v4.8.0: Show cascade notification for shared products
+              if (nameChanged) {
+                HEYS.Toast?.info?.('Имя обновлено во всех приёмах') ||
+                  console.log('[HEYS] Product renamed, cascaded to meals');
+              }
             }
           } else {
             saveLocalProduct(finalProduct);
             notifyProductUpdated(finalProduct);
+            // v4.8.0: Show cascade notification for local products
+            if (nameChanged) {
+              HEYS.Toast?.info?.('Имя обновлено во всех приёмах') ||
+                console.log('[HEYS] Product renamed, cascaded to meals');
+            }
           }
 
           onSave?.(finalProduct);

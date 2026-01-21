@@ -24,7 +24,8 @@
     error: (...args) => {
       devWarn(...args);
       trackError(args[0], { scope: 'HEYS.cloud', details: args.slice(1) });
-    }
+    },
+    trace: (...args) => { if (window.console && typeof window.console.trace === 'function') window.console.trace(...args); }
   };
   const console = quietConsole;
 
@@ -4906,8 +4907,10 @@
     // 🔍 Диагностика: логируем сохранение данных дня с шагами
     if (k.includes('dayv2_') && value && value.steps > 0) {
       logCritical(`📅 [DAY SAVE] Saving day ${k} with steps: ${value.steps} | updatedAt: ${value.updatedAt}`);
-      // DEBUG: Stack trace для отладки источника save
-      console.trace('[DAY SAVE] Call stack:');
+      // DEBUG: Stack trace для отладки источника save (безопасная версия)
+      if (typeof console.trace === 'function') {
+        console.trace('[DAY SAVE] Call stack:');
+      }
     }
 
     // Логируем если добавляем в очередь до завершения sync

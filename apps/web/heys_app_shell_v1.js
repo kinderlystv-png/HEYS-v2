@@ -84,21 +84,13 @@
                         React.createElement(
                             'div',
                             { className: 'hdr-client-info' },
-                            // Имя и фамилия в 2 строки из профиля (используем кэш)
+                            // Единый источник имени: currentClientName
                             (() => {
-                                const firstName = cachedProfile.firstName || '';
-                                const lastName = cachedProfile.lastName || '';
-                                // Если профиль пустой — fallback на имя клиента
-                                if (!firstName && !lastName) {
-                                    const parts = currentClientName.split(' ');
-                                    return [
-                                        React.createElement('span', { key: 'fn', className: 'hdr-client-firstname' }, parts[0] || ''),
-                                        parts[1] && React.createElement('span', { key: 'ln', className: 'hdr-client-lastname' }, parts.slice(1).join(' '))
-                                    ];
-                                }
+                                const fullName = (currentClientName || '').trim();
+                                const parts = fullName.split(' ').filter(Boolean);
                                 return [
-                                    React.createElement('span', { key: 'fn', className: 'hdr-client-firstname' }, firstName),
-                                    lastName && React.createElement('span', { key: 'ln', className: 'hdr-client-lastname' }, lastName)
+                                    React.createElement('span', { key: 'fn', className: 'hdr-client-firstname' }, parts[0] || ''),
+                                    parts.length > 1 && React.createElement('span', { key: 'ln', className: 'hdr-client-lastname' }, parts.slice(1).join(' '))
                                 ];
                             })()
                         ),
@@ -254,6 +246,7 @@
                                                         }
                                                         localStorage.setItem('heys_last_client_id', c.id);
                                                         setClientId(c.id);
+                                                        window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
                                                     }
                                                     setShowClientDropdown(false);
                                                 }
@@ -310,6 +303,7 @@
                                             localStorage.removeItem('heys_client_current');
                                             window.HEYS.currentClientId = null;
                                             setClientId('');
+                                            window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: null } }));
                                             setShowClientDropdown(false);
                                         }
                                     },

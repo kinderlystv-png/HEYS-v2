@@ -16,6 +16,13 @@
         cloud,
     }) {
         const { useMemo } = React;
+        const [clientChangeTick, setClientChangeTick] = React.useState(0);
+
+        React.useEffect(() => {
+            const handleClientChange = () => setClientChangeTick((v) => v + 1);
+            window.addEventListener('heys:client-changed', handleClientChange);
+            return () => window.removeEventListener('heys:client-changed', handleClientChange);
+        }, []);
 
         const pendingText = useMemo(() => {
             if (!pendingDetails) return '';
@@ -30,7 +37,7 @@
         const cachedProfile = useMemo(() => {
             const utils = U || window.HEYS?.utils;
             return utils && utils.lsGet ? utils.lsGet('heys_profile', {}) : {};
-        }, [U]);
+        }, [U, clientId, clientChangeTick]);
 
         const isRpcMode = cloud?.isPinAuthClient?.() || false;
 
@@ -55,7 +62,7 @@
             return Array.isArray(clients)
                 ? (clients.find((c) => c.id === clientId)?.name || 'Выберите клиента')
                 : 'Выберите клиента';
-        }, [isRpcMode, cachedProfile, clients, clientId]);
+        }, [isRpcMode, cachedProfile, clients, clientId, clientChangeTick]);
 
         // Morning Check-in блокирует основной контент (показывается ДО загрузки)
         const isMorningCheckinBlocking = showMorningCheckin === true && window.HEYS?.MorningCheckin;

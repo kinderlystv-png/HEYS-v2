@@ -696,27 +696,12 @@
       return allowSnapshot ? getSnapshot() : null;
     }
 
-    // Сначала ищем по названию (приоритет)
-    const nm = normalizeProductName(it.name || it.title || '');
-    if (nm && idx.byName) {
-      const found = idx.byName.get(nm);
-      if (found) {
-        // 🆕 Применяем логику приоритета local vs shared
-        const prioritized = applyProductPriority(found);
-        return maybeEnrich(applyItemFallback(normalizeProductFields(prioritized)));
-      }
-    }
+    // v4.8.0: ПРИОРИТЕТ ПОИСКА ИЗМЕНЁН
+    // 1. product_id (главный ключ — устойчив к переименованию)
+    // 2. fingerprint (content-hash)
+    // 3. name (fallback для legacy)
 
-    // 🆕 v4.6.0: Поиск по fingerprint (content-based идентификация)
-    if (it.fingerprint && idx.byFingerprint) {
-      const found = idx.byFingerprint.get(it.fingerprint);
-      if (found) {
-        const prioritized = applyProductPriority(found);
-        return maybeEnrich(applyItemFallback(normalizeProductFields(prioritized)));
-      }
-    }
-
-    // Fallback: ищем в индексе по product_id для обратной совместимости
+    // 1️⃣ Сначала ищем по product_id (первичный ключ)
     if (it.product_id != null && idx.byId) {
       const found = idx.byId.get(String(it.product_id).toLowerCase());
       if (found) {
@@ -726,6 +711,25 @@
     }
     if (it.productId != null && idx.byId) {
       const found = idx.byId.get(String(it.productId).toLowerCase());
+      if (found) {
+        const prioritized = applyProductPriority(found);
+        return maybeEnrich(applyItemFallback(normalizeProductFields(prioritized)));
+      }
+    }
+
+    // 2️⃣ Поиск по fingerprint (content-based идентификация)
+    if (it.fingerprint && idx.byFingerprint) {
+      const found = idx.byFingerprint.get(it.fingerprint);
+      if (found) {
+        const prioritized = applyProductPriority(found);
+        return maybeEnrich(applyItemFallback(normalizeProductFields(prioritized)));
+      }
+    }
+
+    // 3️⃣ Fallback: ищем по названию (legacy, может не найти после переименования)
+    const nm = normalizeProductName(it.name || it.title || '');
+    if (nm && idx.byName) {
+      const found = idx.byName.get(nm);
       if (found) {
         const prioritized = applyProductPriority(found);
         return maybeEnrich(applyItemFallback(normalizeProductFields(prioritized)));
