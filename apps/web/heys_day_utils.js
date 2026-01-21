@@ -135,14 +135,10 @@
       const restored = [];
       const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
 
-      console.log(`[HEYS] Searching for orphan products in ${keys.length} day records...`);
-      console.log(`[HEYS] Products in local DB: ${products.length}, productsMap size: ${productsMap.size}`);
+      // 🔇 v4.7.0: DEBUG логи отключены
 
       // Debug: показать какие orphan продукты мы ищем
       const orphanNames = Array.from(orphanProductsMap.keys());
-      if (orphanNames.length > 0) {
-        console.log(`[HEYS] Known orphan products: ${orphanNames.join(', ')}`);
-      }
 
       let checkedItems = 0;
       let foundWithData = 0;
@@ -166,10 +162,7 @@
               if (hasData) foundWithData++;
               if (inBase) alreadyInBase++;
 
-              // Debug: показать orphan-продукты с данными
-              if (orphanNames.includes(itemName) || orphanNames.some(n => n.toLowerCase() === itemNameLower)) {
-                console.log(`[HEYS] Orphan "${itemName}" in ${key}: hasData=${hasData}, inBase=${inBase}, kcal100=${item.kcal100}`);
-              }
+              // 🔇 v4.7.0: DEBUG логи отключены
 
               // Если продукта нет в базе по имени И есть inline данные
               if (itemName && !inBase && hasData) {
@@ -193,7 +186,7 @@
                 };
                 productsMap.set(itemNameLower, restoredProduct);
                 restored.push(restoredProduct);
-                console.log(`[HEYS] Восстановлен: "${itemName}"`);
+                // 🔇 v4.7.0: Лог отключён
               }
             }
           }
@@ -202,7 +195,7 @@
         }
       }
 
-      console.log(`[HEYS] Restore stats: checked=${checkedItems}, withData=${foundWithData}, alreadyInBase=${alreadyInBase}, restored=${restored.length}`);
+      // 🔇 v4.7.0: DEBUG лог отключён
 
       if (restored.length > 0) {
         // Сохраняем обновлённую базу
@@ -340,7 +333,7 @@
         return { recovered: 0, fromStamp: 0, fromShared: 0, missing: [] };
       }
 
-      console.log(`[HEYS] ⚠️ Найдено ${missingProducts.size} продуктов, отсутствующих в базе`);
+      // 🔇 v4.7.1: Лог отключён
 
       // 3. Пытаемся восстановить
       const recovered = [];
@@ -366,7 +359,7 @@
           productsByName.set(normalizeName(data.name), restoredProduct); // 🆕 v4.6.0: normalizeProductName
           if (data.fingerprint) productsByFingerprint.set(data.fingerprint, restoredProduct); // 🆕
           fromStamp++;
-          console.log(`[HEYS] 📦 Восстановлен из штампа: "${data.name}"`);
+          // 🔇 v4.7.1: Лог отключён
         } else {
           stillMissing.push(data);
         }
@@ -405,7 +398,7 @@
                   cloned._recoveredAt = Date.now();
                   recovered.push(cloned);
                   fromShared++;
-                  console.log(`[HEYS] 🌐 Восстановлен из shared: "${data.name}"`);
+                  // 🔇 v4.7.1: Лог отключён
                 }
               }
             }
@@ -444,12 +437,12 @@
         );
         if (!wasRecovered) {
           finalMissing.push(data.name);
-          console.warn(`[HEYS] ❌ Не удалось восстановить: "${data.name}" (нет данных в штампе и shared)`);
+          // 🔇 v4.7.1: Лог отключён
         }
       }
 
       const elapsed = Date.now() - startTime;
-      console.log(`[HEYS] ✅ autoRecoverOnLoad завершён за ${elapsed}ms: восстановлено ${recovered.length} (из штампа: ${fromStamp}, из shared: ${fromShared}), не найдено: ${finalMissing.length}`);
+      // 🔇 v4.7.1: Итоговый лог отключён
 
       // Диспатчим событие для UI
       if (recovered.length > 0 && typeof window !== 'undefined' && window.dispatchEvent) {

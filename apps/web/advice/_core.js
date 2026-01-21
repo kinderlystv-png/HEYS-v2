@@ -2377,11 +2377,15 @@
     function updatePersonalBestStreak(currentStreak) {
         const best = getPersonalBestStreak();
         if (currentStreak > best) {
-            try {
-                localStorage.setItem('heys_best_streak', String(currentStreak));
-            } catch (e) {
-                // Ignore storage errors
-            }
+            // 🔧 v4.7.1 FIX: Откладываем запись в localStorage чтобы не триггерить
+            // setState во время render фазы React (Cannot update component while rendering)
+            setTimeout(() => {
+                try {
+                    localStorage.setItem('heys_best_streak', String(currentStreak));
+                } catch (e) {
+                    // Ignore storage errors
+                }
+            }, 0);
             return true; // Новый рекорд!
         }
         return false;

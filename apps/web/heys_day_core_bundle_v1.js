@@ -85,8 +85,7 @@
                 firstSeen: Date.now(),
                 hasInlineData: item.kcal100 != null
             });
-            // Первое обнаружение — логируем с датой
-            console.warn(`[HEYS] Orphan product: "${name}" — используются данные из штампа (день: ${dateStr || 'unknown'})`);
+            // 🔇 v4.7.0: Тихий режим — orphan логи отключены (см. HEYS.orphanProducts.list())
         } else {
             orphanProductsMap.get(name).usedInDays.add(dateStr);
         }
@@ -197,14 +196,8 @@
             const restored = [];
             const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
 
-            console.log(`[HEYS] Searching for orphan products in ${keys.length} day records...`);
-            console.log(`[HEYS] Products in local DB: ${products.length}, productsMap size: ${productsMap.size}`);
-
-            // Debug: показать какие orphan продукты мы ищем
+            // 🔇 v4.7.0: Debug логи отключены
             const orphanNames = Array.from(orphanProductsMap.keys());
-            if (orphanNames.length > 0) {
-                console.log(`[HEYS] Known orphan products: ${orphanNames.join(', ')}`);
-            }
 
             let checkedItems = 0;
             let foundWithData = 0;
@@ -228,10 +221,7 @@
                             if (hasData) foundWithData++;
                             if (inBase) alreadyInBase++;
 
-                            // Debug: показать orphan-продукты с данными
-                            if (orphanNames.includes(itemName) || orphanNames.some(n => n.toLowerCase() === itemNameLower)) {
-                                console.log(`[HEYS] Orphan "${itemName}" in ${key}: hasData=${hasData}, inBase=${inBase}, kcal100=${item.kcal100}`);
-                            }
+                            // 🔇 v4.7.0: Debug логи отключены
 
                             // Если продукта нет в базе по имени И есть inline данные
                             if (itemName && !inBase && hasData) {
@@ -257,7 +247,7 @@
                                 const enriched = enrichProductMaybe(restoredProduct);
                                 productsMap.set(itemNameLower, enriched);
                                 restored.push(enriched);
-                                console.log(`[HEYS] Восстановлен: "${itemName}"`);
+                                // 🔇 v4.7.0: Логи восстановления отключены
                             }
                         }
                     }
@@ -266,7 +256,7 @@
                 }
             }
 
-            console.log(`[HEYS] Restore stats: checked=${checkedItems}, withData=${foundWithData}, alreadyInBase=${alreadyInBase}, restored=${restored.length}`);
+            // 🔇 v4.7.0: Stats лог отключён (см. return.stats)
 
             if (restored.length > 0) {
                 // 🔒 SAFETY: НИКОГДА не перезаписывать если products пустой — это означает corrupted state
@@ -283,9 +273,35 @@
                     return { success: false, count: 0, products: [], error: 'BLOCKED_DATA_LOSS' };
                 }
 
+                // 🔍 DEBUG: Лог перед сохранением
+                console.log('[HEYS] 🔍 RESTORE DEBUG:', {
+                    restoredCount: restored.length,
+                    newProductsCount: newProducts.length,
+                    previousCount: products.length,
+                    hasSetAll: !!HEYS.products?.setAll,
+                    hasStore: !!HEYS.store?.set,
+                    restoredSample: restored.slice(0, 3).map(p => ({ id: p.id, name: p.name }))
+                });
+
                 // Используем HEYS.products.setAll для синхронизации с облаком и React state
                 if (HEYS.products?.setAll) {
+                    console.log('[HEYS] 🔍 Calling HEYS.products.setAll with', newProducts.length, 'products');
                     HEYS.products.setAll(newProducts);
+
+                    // 🔍 DEBUG: Проверяем что сохранилось
+                    setTimeout(() => {
+                        const afterSave = HEYS.products.getAll();
+                        const restoredStillThere = restored.every(rp =>
+                            afterSave.some(p => p.id === rp.id || p.name?.toLowerCase() === rp.name?.toLowerCase())
+                        );
+                        console.log('[HEYS] 🔍 POST-SAVE CHECK:', {
+                            savedCount: afterSave.length,
+                            restoredStillPresent: restoredStillThere,
+                            missingRestored: restoredStillThere ? 0 : restored.filter(rp =>
+                                !afterSave.some(p => p.id === rp.id || p.name?.toLowerCase() === rp.name?.toLowerCase())
+                            ).map(p => p.name)
+                        });
+                    }, 500);
                 } else {
                     lsSet('heys_products', newProducts);
                     console.warn('[HEYS] ⚠️ Products saved via lsSet only (no cloud sync)');
@@ -342,7 +358,8 @@
             if (verbose) console.log('[HEYS] 🔍 autoRecoverOnLoad: начинаю проверку продуктов...');
 
             // 1. Собираем текущие продукты в Map по id и по name (lowercase)
-            const products = lsGet('heys_products', []);
+            // 🔧 FIX: Используем HEYS.products.getAll() который читает правильный scoped ключ
+            const products = (HEYS.products?.getAll?.() || lsGet('heys_products', []));
             const productsById = new Map();
             const productsByName = new Map();
             products.forEach(p => {
@@ -411,11 +428,11 @@
             }
 
             if (missingProducts.size === 0) {
-                if (verbose) console.log(`[HEYS] ✅ Все продукты найдены в базе (${Date.now() - startTime}ms)`);
+                // 🔇 v4.7.0: verbose логи отключены
                 return { recovered: 0, fromStamp: 0, fromShared: 0, missing: [] };
             }
 
-            console.log(`[HEYS] ⚠️ Найдено ${missingProducts.size} продуктов, отсутствующих в базе`);
+            // 🔇 v4.7.0: Лог про отсутствующие отключён (см. return.missing));
 
             // 3. Пытаемся восстановить
             const recovered = [];
@@ -440,7 +457,7 @@
                     productsById.set(String(enriched.id), enriched);
                     productsByName.set(data.name.toLowerCase(), enriched);
                     fromStamp++;
-                    console.log(`[HEYS] 📦 Восстановлен из штампа: "${data.name}"`);
+                    // 🔇 v4.7.0: Лог восстановления отключён
                 } else {
                     stillMissing.push(data);
                 }
@@ -449,7 +466,7 @@
             // 3b. Пытаемся найти в shared_products (если есть YandexAPI)
             if (tryShared && stillMissing.length > 0 && HEYS.YandexAPI?.rpc) {
                 try {
-                    if (verbose) console.log(`[HEYS] 🌐 Пытаюсь найти ${stillMissing.length} продуктов в shared_products...`);
+                    // 🔇 v4.7.0: verbose логи отключены
 
                     const { data: sharedProducts, error } = await HEYS.YandexAPI.rpc('get_shared_products', {});
 
@@ -476,13 +493,13 @@
                                     cloned._recoveredAt = Date.now();
                                     recovered.push(cloned);
                                     fromShared++;
-                                    console.log(`[HEYS] 🌐 Восстановлен из shared: "${data.name}"`);
+                                    // 🔇 v4.7.0: Лог отключён
                                 }
                             }
                         }
                     }
                 } catch (e) {
-                    console.warn('[HEYS] Не удалось загрузить shared_products:', e?.message || e);
+                    // 🔇 v4.7.0: Только критические ошибки
                 }
             }
 
@@ -527,12 +544,11 @@
                 );
                 if (!wasRecovered) {
                     finalMissing.push(data.name);
-                    console.warn(`[HEYS] ❌ Не удалось восстановить: "${data.name}" (нет данных в штампе и shared)`);
+                    // 🔇 v4.7.0: Лог отключён (см. return.missing)
                 }
             }
 
-            const elapsed = Date.now() - startTime;
-            console.log(`[HEYS] ✅ autoRecoverOnLoad завершён за ${elapsed}ms: восстановлено ${recovered.length} (из штампа: ${fromStamp}, из shared: ${fromShared}), не найдено: ${finalMissing.length}`);
+            // 🔇 v4.7.0: Итоговый лог отключён (данные в return)
 
             // Диспатчим событие для UI
             if (recovered.length > 0 && typeof window !== 'undefined' && window.dispatchEvent) {
@@ -1311,23 +1327,8 @@
                             if (orphanProductsMap.has(itemNameLower)) {
                                 orphanProductsMap.delete(itemNameLower);
                             }
-                        } else if (freshProducts.length > 0) {
-                            // DEBUG: Продукт не найден, но база загружена
-                            // Проверяем возможные причины
-                            const similar = freshProducts.filter(p => {
-                                const pName = String(p.name || '').trim().toLowerCase();
-                                return pName.includes(itemNameLower.slice(0, 10)) ||
-                                    itemNameLower.includes(pName.slice(0, 10));
-                            });
-                            if (similar.length > 0) {
-                                // Throttle: не логируем чаще раза в минуту для каждого продукта
-                                const lastLogged = orphanLoggedRecently.get(itemName) || 0;
-                                if (Date.now() - lastLogged > 60000) {
-                                    console.warn(`[HEYS] Orphan mismatch: "${itemName}" not found, similar: "${similar[0].name}"`);
-                                    orphanLoggedRecently.set(itemName, Date.now());
-                                }
-                            }
                         }
+                        // 🔇 v4.7.0: Orphan mismatch логи отключены для чистоты консоли
                     }
 
                     const src = product || item; // item может иметь inline kcal100, protein100 и т.д.

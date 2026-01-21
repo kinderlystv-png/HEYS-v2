@@ -47,17 +47,17 @@ export default defineConfig({
     // Advanced Tree Shaking Configuration - Performance Sprint Day 2
     rollupOptions: {
       // External: workspace packages не используются в legacy web app
-      // React загружается через CDN, legacy JS файлы не импортируют packages
+      // React теперь бандлится локально inline в index.html (миграция с CDN 2026-01-21)
       external: [
         '@heys/shared',
-        '@heys/storage', 
+        '@heys/storage',
         '@heys/search',
         '@heys/core',
         '@heys/ui',
         '@heys/logger',
       ],
       output: {
-        // manualChunks отключены — legacy app использует vanilla JS + React CDN
+        // manualChunks отключены — legacy app использует vanilla JS + React globals
         // Packages билдятся отдельно для других apps (tg-mini, mobile)
         // Оптимизируем имена файлов
         entryFileNames: 'assets/[name]-[hash].js',

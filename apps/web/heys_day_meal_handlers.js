@@ -142,7 +142,17 @@
                       products: products,
                       dateKey: date,
                       onAdd: ({ product, grams, mealIndex: targetMealIndex }) => {
-                        const productId = product.id ?? product.product_id ?? product.name;
+                        // 🔧 FIX: Auto-clone shared product to personal base (prevents orphans)
+                        let finalProduct = product;
+                        if (product?._fromShared || product?._source === 'shared' || product?.is_shared) {
+                          const cloned = HEYS.products?.addFromShared?.(product);
+                          if (cloned) {
+                            finalProduct = cloned;
+                            // 🔇 v4.7.0: Лог отключён
+                          }
+                        }
+
+                        const productId = finalProduct.id ?? finalProduct.product_id ?? finalProduct.name;
                         // TEF-aware kcal100: пересчитываем по формуле 3*protein + 4*carbs + 9*fat
                         const computeTEFKcal100 = (p) => {
                           const carbs = (+p.carbs100) || ((+p.simple100 || 0) + (+p.complex100 || 0));
@@ -151,23 +161,23 @@
                         };
                         const newItem = {
                           id: uid('it_'),
-                          product_id: product.id ?? product.product_id,
-                          name: product.name,
+                          product_id: finalProduct.id ?? finalProduct.product_id,
+                          name: finalProduct.name,
                           grams: grams || 100,
                           // ✅ FIX: Spread нутриентов (было пропущено, вызывало пустые items)
-                          ...(product.kcal100 !== undefined && {
-                            kcal100: computeTEFKcal100(product), // TEF-aware пересчёт
-                            protein100: product.protein100,
-                            carbs100: product.carbs100,
-                            fat100: product.fat100,
-                            simple100: product.simple100,
-                            complex100: product.complex100,
-                            badFat100: product.badFat100,
-                            goodFat100: product.goodFat100,
-                            trans100: product.trans100,
-                            fiber100: product.fiber100,
-                            gi: product.gi,
-                            harm: HEYS.models?.normalizeHarm?.(product)  // Canonical harm field
+                          ...(finalProduct.kcal100 !== undefined && {
+                            kcal100: computeTEFKcal100(finalProduct), // TEF-aware пересчёт
+                            protein100: finalProduct.protein100,
+                            carbs100: finalProduct.carbs100,
+                            fat100: finalProduct.fat100,
+                            simple100: finalProduct.simple100,
+                            complex100: finalProduct.complex100,
+                            badFat100: finalProduct.badFat100,
+                            goodFat100: finalProduct.goodFat100,
+                            trans100: finalProduct.trans100,
+                            fiber100: finalProduct.fiber100,
+                            gi: finalProduct.gi,
+                            harm: HEYS.models?.normalizeHarm?.(finalProduct)  // Canonical harm field
                           })
                         };
 
@@ -290,26 +300,36 @@
 
       haptic('light'); // Вибрация при добавлении
 
+      // 🔧 FIX: Auto-clone shared product to personal base (prevents orphans)
+      let finalProduct = p;
+      if (p?._fromShared || p?._source === 'shared' || p?.is_shared) {
+        const cloned = HEYS.products?.addFromShared?.(p);
+        if (cloned) {
+          finalProduct = cloned;
+          // 🔇 v4.7.0: Лог отключён
+        }
+      }
+
       // Use centralized harm normalization
-      const harmVal = HEYS.models?.normalizeHarm?.(p);
+      const harmVal = HEYS.models?.normalizeHarm?.(finalProduct);
 
       // Сохраняем ключевые нутриенты inline чтобы не зависеть от базы продуктов
       const item = {
         id: uid('it_'),
-        product_id: p.id ?? p.product_id,
-        name: p.name,
-        grams: p.grams || 100, // Поддержка кастомного веса из MealOptimizer
+        product_id: finalProduct.id ?? finalProduct.product_id,
+        name: finalProduct.name,
+        grams: finalProduct.grams || 100, // Поддержка кастомного веса из MealOptimizer
         // Inline данные — гарантируют корректный расчёт даже если продукт удалён из базы
-        kcal100: p.kcal100,
-        protein100: p.protein100,
-        fat100: p.fat100,
-        simple100: p.simple100,
-        complex100: p.complex100,
-        badFat100: p.badFat100,
-        goodFat100: p.goodFat100,
-        trans100: p.trans100,
-        fiber100: p.fiber100,
-        gi: p.gi ?? p.gi100,
+        kcal100: finalProduct.kcal100,
+        protein100: finalProduct.protein100,
+        fat100: finalProduct.fat100,
+        simple100: finalProduct.simple100,
+        complex100: finalProduct.complex100,
+        badFat100: finalProduct.badFat100,
+        goodFat100: finalProduct.goodFat100,
+        trans100: finalProduct.trans100,
+        fiber100: finalProduct.fiber100,
+        gi: finalProduct.gi ?? finalProduct.gi100,
         harm: harmVal  // Normalized harm (0-10)
       };
 

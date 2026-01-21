@@ -1,79 +1,95 @@
 /**
- * HEYS Development Utils v1.0
+ * HEYS Development Utils v1.1
  * =============================
  * Утилиты для условного логирования в development/production режимах
  * 
- * Использование:
- *   // Вместо console.log('message', data):
- *   DEV.log('message', data);
- *   
- *   // Вместо console.warn('warning', error):
- *   DEV.warn('warning', error);
+ * 🔇 v4.7.0: По умолчанию логи ОТКЛЮЧЕНЫ даже на localhost
+ *            Для включения: DEV.enable() или ?debug=verbose в URL
  */
 
-(function() {
+(function () {
   'use strict';
 
-  // Определяем режим разработки
-  const isDev = location.hostname === 'localhost' || 
-                location.hostname === '127.0.0.1' || 
-                location.port === '3001' ||
-                location.search.includes('debug=true');
+  // 🔇 v4.7.0: Логи отключены по умолчанию для чистоты консоли
+  // Включить можно через:
+  // 1. URL параметр: ?debug=verbose
+  // 2. В консоли: DEV.enable()
+  // 3. localStorage: localStorage.setItem('heys_debug_verbose', 'true')
+  const forceVerbose = location.search.includes('debug=verbose') ||
+    localStorage.getItem('heys_debug_verbose') === 'true';
+
+  let isVerbose = forceVerbose;
 
   // Экспортируем в window.DEV
   window.DEV = {
     /**
-     * Логирование только в development режиме
+     * Логирование только при включённом verbose режиме
      * @param {...any} args - Аргументы для console.log
      */
-    log: function(...args) {
-      if (isDev) {
+    log: function (...args) {
+      if (isVerbose) {
         console.log(...args);
       }
     },
 
     /**
-     * Предупреждения только в development режиме
+     * Предупреждения только при включённом verbose режиме
      * @param {...any} args - Аргументы для console.warn
      */
-    warn: function(...args) {
-      if (isDev) {
+    warn: function (...args) {
+      if (isVerbose) {
         console.warn(...args);
       }
     },
 
     /**
-     * Информационные сообщения только в development режиме
+     * Информационные сообщения только при включённом verbose режиме
      * @param {...any} args - Аргументы для console.info
      */
-    info: function(...args) {
-      if (isDev) {
+    info: function (...args) {
+      if (isVerbose) {
         console.info(...args);
       }
     },
 
     /**
-     * Debug сообщения только в development режиме
+     * Debug сообщения только при включённом verbose режиме
      * @param {...any} args - Аргументы для console.debug
      */
-    debug: function(...args) {
-      if (isDev) {
+    debug: function (...args) {
+      if (isVerbose) {
         console.debug(...args);
       }
     },
 
     /**
-     * Проверка режима разработки
-     * @returns {boolean} true если development режим
+     * Включить verbose логирование
      */
-    isDev: function() {
-      return isDev;
+    enable: function () {
+      isVerbose = true;
+      localStorage.setItem('heys_debug_verbose', 'true');
+      console.log('🔊 DEV logging ENABLED. Reload to see all logs.');
+    },
+
+    /**
+     * Выключить verbose логирование
+     */
+    disable: function () {
+      isVerbose = false;
+      localStorage.removeItem('heys_debug_verbose');
+      console.log('🔇 DEV logging DISABLED.');
+    },
+
+    /**
+     * Проверка режима verbose
+     * @returns {boolean} true если verbose режим
+     */
+    isVerbose: function () {
+      return isVerbose;
     }
   };
 
   // Алиас для краткости
   window.devLog = window.DEV.log;
   window.devWarn = window.DEV.warn;
-  
-  // Логи инициализации отключены для чистой консоли
 })();

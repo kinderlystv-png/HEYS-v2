@@ -1,5 +1,5 @@
 // heys_storage_layer_v1.js — Centralized storage layer, cache, watchers
-;(function(global){
+; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const Store = HEYS.store = HEYS.store || {};
 
@@ -9,7 +9,7 @@
   // ═══════════════════════════════════════════════════════════════════
   // 🗜️ COMPRESSION v2.0 — Улучшенное сжатие данных (~25-30% экономия)
   // ═══════════════════════════════════════════════════════════════════
-  
+
   // Паттерны для сжатия (упорядочены по частоте использования)
   const COMPRESS_PATTERNS = {
     // Продукты (самые частые)
@@ -50,51 +50,51 @@
     '":null': '¤_¤',
     '"id":': '¤j¤'
   };
-  
+
   // Инвертированные паттерны для декомпрессии
   const DECOMPRESS_PATTERNS = Object.fromEntries(
     Object.entries(COMPRESS_PATTERNS).map(([k, v]) => [v, k])
   );
-  
+
   function compress(obj) {
     try {
       let json = JSON.stringify(obj);
-      
+
       // 1. Сжатие числовых значений (убираем лишние нули)
       // 10.00 → 10, 5.50 → 5.5
       json = json.replace(/:(-?\d+)\.0+(?=[,}\]])/g, ':$1');
       json = json.replace(/:(-?\d+\.\d*?)0+(?=[,}\]])/g, ':$1');
-      
+
       // 2. Применяем паттерны сжатия
       let compressed = json;
       for (const [pattern, code] of Object.entries(COMPRESS_PATTERNS)) {
         compressed = compressed.split(pattern).join(code);
       }
-      
+
       // 3. Если сжатие эффективно (>8%), используем его
       if (compressed.length < json.length * 0.92) {
         return '¤Z¤' + compressed;
       }
-      
+
       return json;
     } catch (e) {
       return JSON.stringify(obj);
     }
   }
-  
+
   function decompress(str) {
     try {
       if (!str || !str.startsWith('¤Z¤')) {
         return JSON.parse(str);
       }
-      
+
       let decompressed = str.substring(3);
-      
+
       // Восстановление паттернов
       for (const [code, pattern] of Object.entries(DECOMPRESS_PATTERNS)) {
         decompressed = decompressed.split(code).join(pattern);
       }
-      
+
       return JSON.parse(decompressed);
     } catch (e) {
       // Fallback для некорректных данных
@@ -102,50 +102,51 @@
     }
   }
 
-  function rawGet(k, d){ 
-    try{ 
-      const v = localStorage.getItem(k); 
-      return v ? decompress(v) : d; 
-    } catch(e) { 
-      return d; 
-    } 
-  }
-  
-  function rawSet(k, v){ 
-    try{ 
-      const compressed = compress(v);
-      localStorage.setItem(k, compressed);
-    } catch(e) {
-      console.error('[rawSet] ERROR:', k, e);
-    } 
+  function rawGet(k, d) {
+    try {
+      const v = localStorage.getItem(k);
+      return v ? decompress(v) : d;
+    } catch (e) {
+      return d;
+    }
   }
 
-  function ns(){ return (global.HEYS && global.HEYS.currentClientId) || ''; }
-  function scoped(k){ 
-    const cid = ns(); 
-    if (!cid) return k; 
+  function rawSet(k, v) {
+    try {
+      const compressed = compress(v);
+      localStorage.setItem(k, compressed);
+    } catch (e) {
+      console.error('[rawSet] ERROR:', k, e);
+    }
+  }
+
+  function ns() { return (global.HEYS && global.HEYS.currentClientId) || ''; }
+  function scoped(k) {
+    const cid = ns();
+    if (!cid) return k;
     if (/^heys_(clients|client_current)$/i.test(k)) return k;
-    
+
     // 🐛 FIX: Если ключ уже содержит clientId — не добавляем повторно!
     if (cid && k.includes(cid)) {
       return k; // Уже scoped
     }
-    
+
     // Ключ `k` может быть 'dayv2_2025-01-01' или 'heys_dayv2_date'.
     // Мы должны добавить client_id после 'heys_'.
     if (k.startsWith('heys_')) {
-        return 'heys_' + cid + '_' + k.substring('heys_'.length);
+      return 'heys_' + cid + '_' + k.substring('heys_'.length);
     }
     // Для ключей, не начинающихся с 'heys_', просто добавляем префикс.
     return `heys_${cid}_${k}`;
   }
 
-  Store.get = function(k, def){ const sk=scoped(k); if(memory.has(sk)) return memory.get(sk); const v=rawGet(sk, def); memory.set(sk,v); return v; };
+  Store.get = function (k, def) { const sk = scoped(k); if (memory.has(sk)) return memory.get(sk); const v = rawGet(sk, def); memory.set(sk, v); return v; };
   // If scoped key not present, try unscoped legacy key and migrate it into scoped namespace
-  Store.get = (function(orig){
-    return function(k, def){
+  Store.get = (function (orig) {
+    return function (k, def) {
       const sk = scoped(k);
-      // 🔧 FIX: Если в memory лежит null/undefined, но передан def — возвращаем def
+
+      // �🔧 FIX: Если в memory лежит null/undefined, но передан def — возвращаем def
       // Это исправляет баг когда lsGet(key, null) кэширует null, а следующий
       // вызов lsGet(key, {}) возвращает null вместо {}
       if (memory.has(sk)) {
@@ -163,15 +164,15 @@
       let v = rawGet(sk, undefined);
       if (v === undefined || v === null) {
         // try legacy unscoped key
-        try{
+        try {
           const legacy = rawGet(k, undefined);
-          if (legacy !== undefined && legacy !== null){
+          if (legacy !== undefined && legacy !== null) {
             // migrate to scoped key for future reads/writes
             memory.set(sk, legacy);
             rawSet(sk, legacy);
             return legacy;
           }
-        }catch(e){}
+        } catch (e) { }
         // return default
         v = def;
       }
@@ -179,15 +180,15 @@
       return v;
     };
   })(Store.get);
-  Store.set = function(k, v){
-    const sk=scoped(k);
-    memory.set(sk,v);
-    rawSet(sk,v);
-    if(watchers.has(sk)) watchers.get(sk).forEach(fn=>{ try{ fn(v); }catch(e){} });
-    try{
-      if(global.HEYS && typeof global.HEYS.saveClientKey==='function'){
-        const cid=ns();
-        if(cid) {
+  Store.set = function (k, v) {
+    const sk = scoped(k);
+    memory.set(sk, v);
+    rawSet(sk, v);
+    if (watchers.has(sk)) watchers.get(sk).forEach(fn => { try { fn(v); } catch (e) { } });
+    try {
+      if (global.HEYS && typeof global.HEYS.saveClientKey === 'function') {
+        const cid = ns();
+        if (cid) {
           // Передаём scoped key в облако (с clientId), чтобы ключ совпадал при загрузке
           // sk уже содержит heys_<clientId>_<key>
           // Сохраняем любые значения: объекты, массивы, boolean, числа, строки
@@ -198,30 +199,30 @@
           global.HEYS.saveClientKey(cid, sk, v);
         }
       }
-    }catch(e){ 
-      console.error('[Store.set] Error:', e); 
+    } catch (e) {
+      console.error('[Store.set] Error:', e);
       // 🔥 INSTANT FEEDBACK: Если ошибка при сохранении в облако, уведомляем UI
       if (global.dispatchEvent) {
-        global.dispatchEvent(new CustomEvent('heys:sync-error', { 
-          detail: { 
-            error: `Storage error: ${e.message}`, 
-            persistent: true 
-          } 
+        global.dispatchEvent(new CustomEvent('heys:sync-error', {
+          detail: {
+            error: `Storage error: ${e.message}`,
+            persistent: true
+          }
         }));
       }
     }
   };
 
-  Store.watch = function(k, fn){ const sk=scoped(k); if(!watchers.has(sk)) watchers.set(sk,new Set()); watchers.get(sk).add(fn); return ()=>{ const set=watchers.get(sk); if(set){ set.delete(fn); if(!set.size) watchers.delete(sk); } }; };
+  Store.watch = function (k, fn) { const sk = scoped(k); if (!watchers.has(sk)) watchers.set(sk, new Set()); watchers.get(sk).add(fn); return () => { const set = watchers.get(sk); if (set) { set.delete(fn); if (!set.size) watchers.delete(sk); } }; };
 
-  Store.flushMemory = function(){ memory.clear(); };
-  
+  Store.flushMemory = function () { memory.clear(); };
+
   /**
    * Инвалидирует кэш для конкретного ключа (при прямой записи в localStorage извне)
    * @param {string} k - ключ для инвалидации
    */
-  Store.invalidate = function(k) { 
-    const sk = scoped(k); 
+  Store.invalidate = function (k) {
+    const sk = scoped(k);
     memory.delete(sk);
     // Также пробуем удалить raw key (если он уже scoped)
     memory.delete(k);
@@ -231,32 +232,32 @@
   // ⭐ ИЗБРАННЫЕ ПРОДУКТЫ
   // ═══════════════════════════════════════════════════════════════════
   const FAVORITES_KEY = 'heys_favorite_products';
-  
+
   /**
    * Получить Set id избранных продуктов
    * @returns {Set<string>}
    */
-  Store.getFavorites = function() {
+  Store.getFavorites = function () {
     const arr = Store.get(FAVORITES_KEY, []);
     return new Set(Array.isArray(arr) ? arr : []);
   };
-  
+
   /**
    * Проверить, является ли продукт избранным
    * @param {string|number} productId
    * @returns {boolean}
    */
-  Store.isFavorite = function(productId) {
+  Store.isFavorite = function (productId) {
     const favorites = Store.getFavorites();
     return favorites.has(String(productId));
   };
-  
+
   /**
    * Переключить избранное для продукта
    * @param {string|number} productId
    * @returns {boolean} новое состояние (true = избранный)
    */
-  Store.toggleFavorite = function(productId) {
+  Store.toggleFavorite = function (productId) {
     const id = String(productId);
     const favorites = Store.getFavorites();
     let newState;
@@ -270,12 +271,12 @@
     Store.set(FAVORITES_KEY, Array.from(favorites));
     return newState;
   };
-  
+
   /**
    * Добавить продукт в избранное
    * @param {string|number} productId
    */
-  Store.addFavorite = function(productId) {
+  Store.addFavorite = function (productId) {
     const id = String(productId);
     const favorites = Store.getFavorites();
     if (!favorites.has(id)) {
@@ -283,12 +284,12 @@
       Store.set(FAVORITES_KEY, Array.from(favorites));
     }
   };
-  
+
   /**
    * Удалить продукт из избранного
    * @param {string|number} productId
    */
-  Store.removeFavorite = function(productId) {
+  Store.removeFavorite = function (productId) {
     const id = String(productId);
     const favorites = Store.getFavorites();
     if (favorites.has(id)) {
@@ -300,21 +301,21 @@
   // ═══════════════════════════════════════════════════════════════════
   // 🔒 PERSISTENT STORAGE API — Защита от очистки браузером
   // ═══════════════════════════════════════════════════════════════════
-  
+
   /**
    * Запрашивает у браузера постоянное хранилище
    * Защищает данные от автоматической очистки при нехватке места
    * @returns {Promise<{persisted: boolean, estimate: {usage: number, quota: number}}>}
    */
-  Store.requestPersistentStorage = async function() {
+  Store.requestPersistentStorage = async function () {
     const result = { persisted: false, estimate: null };
-    
+
     try {
       // Проверяем поддержку API
       if (!navigator.storage || !navigator.storage.persist) {
         return result;
       }
-      
+
       // Проверяем текущий статус
       const alreadyPersisted = await navigator.storage.persisted();
       if (alreadyPersisted) {
@@ -324,7 +325,7 @@
         const granted = await navigator.storage.persist();
         result.persisted = granted;
       }
-      
+
       // Получаем информацию о квоте
       if (navigator.storage.estimate) {
         const estimate = await navigator.storage.estimate();
@@ -334,34 +335,34 @@
           usedPct: Math.round(estimate.usage / estimate.quota * 100)
         };
       }
-      
+
     } catch (e) {
       console.warn('[Storage] Ошибка Persistent Storage:', e);
     }
-    
+
     return result;
   };
-  
+
   /**
    * Проверить статус постоянного хранилища
    * @returns {Promise<boolean>}
    */
-  Store.isPersistent = async function() {
+  Store.isPersistent = async function () {
     try {
       if (navigator.storage && navigator.storage.persisted) {
         return await navigator.storage.persisted();
       }
-    } catch (e) {}
+    } catch (e) { }
     return false;
   };
-  
+
   /**
    * Получить информацию о хранилище
    * @returns {Promise<{usage: number, quota: number, usedPct: number, persisted: boolean}>}
    */
-  Store.getStorageInfo = async function() {
+  Store.getStorageInfo = async function () {
     const info = { usage: 0, quota: 0, usedPct: 0, persisted: false };
-    
+
     try {
       if (navigator.storage) {
         if (navigator.storage.estimate) {
@@ -374,30 +375,30 @@
           info.persisted = await navigator.storage.persisted();
         }
       }
-    } catch (e) {}
-    
+    } catch (e) { }
+
     return info;
   };
-  
+
   // ═══════════════════════════════════════════════════════════════════
   // 📊 COMPRESSION STATS — Статистика сжатия
   // ═══════════════════════════════════════════════════════════════════
-  
+
   /**
    * Анализ эффективности сжатия для конкретного ключа
    * @param {string} key - ключ в localStorage
    * @returns {{raw: number, compressed: number, saved: number, savedPct: number}}
    */
-  Store.analyzeCompression = function(key) {
+  Store.analyzeCompression = function (key) {
     try {
       const sk = scoped(key);
       const stored = localStorage.getItem(sk);
       if (!stored) return null;
-      
+
       const isCompressed = stored.startsWith('¤Z¤');
       const data = decompress(stored);
       const rawJson = JSON.stringify(data);
-      
+
       return {
         key: sk,
         isCompressed,
@@ -410,25 +411,25 @@
       return null;
     }
   };
-  
+
   /**
    * Общая статистика по всему localStorage
    * @returns {{totalRaw: number, totalStored: number, savedPct: number, keys: number}}
    */
-  Store.getCompressionStats = function() {
+  Store.getCompressionStats = function () {
     let totalRaw = 0;
     let totalStored = 0;
     let compressedKeys = 0;
     let totalKeys = 0;
-    
+
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (!key.startsWith('heys_')) continue;
-      
+
       totalKeys++;
       const stored = localStorage.getItem(key);
       totalStored += stored.length * 2; // UTF-16
-      
+
       if (stored.startsWith('¤Z¤')) {
         compressedKeys++;
         try {
@@ -441,7 +442,7 @@
         totalRaw += stored.length * 2;
       }
     }
-    
+
     return {
       totalRaw: Math.round(totalRaw / 1024), // KB
       totalStored: Math.round(totalStored / 1024), // KB
@@ -451,17 +452,17 @@
       compressedKeys
     };
   };
-  
+
   // Автоматический запрос persistent storage при загрузке
   if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', () => {
       // Запрашиваем через 2 сек после загрузки (когда есть взаимодействие)
       setTimeout(() => {
-        Store.requestPersistentStorage().catch(() => {});
+        Store.requestPersistentStorage().catch(() => { });
       }, 2000);
     });
   }
-  
+
   // 🔧 Экспорт decompress для использования в cloud sync (чтобы не сохранять сжатые строки)
   Store.decompress = decompress;
 

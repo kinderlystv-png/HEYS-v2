@@ -35,8 +35,7 @@
                 U.lsSet('heys_client_current', clientId);
                 window.HEYS = window.HEYS || {};
                 window.HEYS.currentClientId = clientId;
-
-                console.info('[HEYS] 👤 Клиент:', clientId.substring(0, 8) + '...');
+                // 🔇 v4.7.1: Лог клиента отключён
 
                 if (cloud && typeof cloud.syncClient === 'function') {
                     const productsBeforeSync = products.length > 0 ? products : window.HEYS.utils.lsGet('heys_products', []);
@@ -50,7 +49,7 @@
                                 : [];
 
                             if (loadedProducts.length === 0 && Array.isArray(productsBeforeSync) && productsBeforeSync.length > 0) {
-                                console.info(`ℹ️ [SYNC] Kept ${productsBeforeSync.length} local products (cloud empty)`);
+                                // 🔇 v4.7.1: Лог отключён
                                 setProducts(prev => {
                                     if (Array.isArray(prev) && prev.length === productsBeforeSync.length) return prev;
                                     return productsBeforeSync;

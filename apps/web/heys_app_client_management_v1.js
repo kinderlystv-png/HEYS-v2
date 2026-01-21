@@ -19,12 +19,12 @@
 
                         const savedClientId = localStorage.getItem('heys_client_current');
                         if (savedClientId && result.data.some(c => c.id === savedClientId)) {
-                            console.log('[HEYS] ✅ Восстановлен clientId из localStorage:', savedClientId.substring(0, 8) + '...');
+                            // 🔇 v4.7.1: Лог отключён
                             setClientId(savedClientId);
                             window.HEYS = window.HEYS || {};
                             window.HEYS.currentClientId = savedClientId;
                         } else if (!clientId && result.data.length === 1) {
-                            console.log('[HEYS] ✅ Автовыбор единственного клиента:', result.data[0].id.substring(0, 8) + '...');
+                            // 🔇 v4.7.1: Лог отключён
                             setClientId(result.data[0].id);
                             window.HEYS = window.HEYS || {};
                             window.HEYS.currentClientId = result.data[0].id;

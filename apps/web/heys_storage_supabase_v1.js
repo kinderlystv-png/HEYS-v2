@@ -1239,12 +1239,15 @@
   function notifyPendingChange() {
     const count = cloud.getPendingCount();
     const details = cloud.getPendingDetails();
-    try {
-      global.dispatchEvent(new CustomEvent('heys:pending-change', {
-        detail: { count, details }
-      }));
-    } catch (e) { }
-    updateSyncProgressTotal();
+    // Defer event dispatch to avoid setState during render
+    queueMicrotask(() => {
+      try {
+        global.dispatchEvent(new CustomEvent('heys:pending-change', {
+          detail: { count, details }
+        }));
+      } catch (e) { }
+      updateSyncProgressTotal();
+    });
   }
 
   /** Событие: прогресс синхронизации */
@@ -2182,7 +2185,7 @@
           }
           // 🔄 RPC режим ВКЛЮЧЁН для куратора (Yandex API)
           _rpcOnlyMode = true;
-          console.log('🔐 [RESTORE] RPC mode ENABLED for curator (Yandex API)');
+          // 🔇 v4.7.1: Лог отключён
 
           // Устанавливаем status = ONLINE и делаем sync если есть clientId
           // ⚠️ НЕ используем Supabase SDK (client.auth.setSession) — он удалён!
@@ -2425,7 +2428,7 @@
     // Фильтруем валидные продукты
     const valid = products.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
 
-    console.log(`📤 Pushing ${valid.length} products to cloud for client ${clientId.substring(0, 8)}...`);
+    // 🔇 v4.7.1: Debug логи отключены
 
     // Сохраняем через YandexAPI
     const { error } = await YandexAPI.from('client_kv_store')
@@ -2442,7 +2445,7 @@
       return { error: error.message };
     }
 
-    console.log(`✅ Успешно сохранено ${valid.length} продуктов в облако!`);
+    // 🔇 v4.7.1: Лог отключён
     return { success: true, count: valid.length, clientId };
   };
 
@@ -2477,8 +2480,7 @@
       return { error: 'Parse error' };
     }
 
-    console.log(`📤 Pushing day ${date} to cloud for client ${clientId.substring(0, 8)}...`);
-    console.log(`   Meals: ${dayData.meals?.length || 0}, Items: ${dayData.meals?.reduce((s, m) => s + (m.items?.length || 0), 0) || 0}`);
+    // 🔇 v4.7.1: Debug логи отключены
 
     // Сохраняем через YandexAPI
     const { error } = await YandexAPI.from('client_kv_store')
@@ -2495,7 +2497,7 @@
       return { error: error.message };
     }
 
-    console.log(`✅ Успешно сохранён день ${date} в облако!`);
+    // 🔇 v4.7.1: Лог отключён
     return { success: true, date, mealsCount: dayData.meals?.length || 0, clientId };
   };
 
@@ -2518,7 +2520,7 @@
       if (result.success) results.push(dateStr);
     }
 
-    console.log(`✅ Синхронизировано ${results.length} дней: ${results.join(', ')}`);
+    // 🔇 v4.7.1: Лог отключён
     return { success: true, days: results };
   };
 
@@ -2577,7 +2579,7 @@
             const parsed = JSON.parse(legacyRaw);
             if (Array.isArray(parsed) && parsed.length > 0) {
               localStorage.setItem(key, legacyRaw);
-              console.log(`[CLEANUP] Migrated heys_products → ${key}`);
+              // 🔇 v4.7.1: Лог миграции отключён
             }
           } catch (_) { }
         }
@@ -3429,6 +3431,11 @@
         // Для каждой группы выбираем самый свежий по updated_at
         const deduped = [];
         keyGroups.forEach((group, scopedKey) => {
+          // 🔍 DEBUG: Логируем products ключи
+          if (scopedKey.includes('_products') && !scopedKey.includes('_backup')) {
+            logCritical(`📦 [DEDUP PRODUCTS] scopedKey: "${scopedKey}" has ${group.length} versions: ${group.map(g => `"${g.originalKey}" (${Array.isArray(g.row.v) ? g.row.v.length : 'not array'})`).join(', ')}`);
+          }
+
           if (group.length === 1) {
             deduped.push({ scopedKey, row: group[0].row });
           } else {
@@ -3454,7 +3461,7 @@
           try {
             let key = scopedKey;
 
-            // 🔧 FIX 2025-12-26: Декомпрессируем row.v если это сжатая строка
+            //  FIX 2025-12-26: Декомпрессируем row.v если это сжатая строка
             // Данные в БД могут быть сохранены как сжатые строки "¤Z¤[{..." — нужно декодировать
             const Store = global.HEYS?.store;
             if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) {
@@ -4031,10 +4038,47 @@
                   log(`⚠️ [PRODUCTS] Skipping save of 0 products (recovery should handle this)`);
                   return;
                 }
+
+                // 🛡️ КРИТИЧНО: Проверяем локальные продукты ПЕРЕД перезаписью
+                // Если локальных БОЛЬШЕ чем remote — это значит:
+                // 1. Пользователь восстановил продукты из штампов
+                // 2. Но они не успели отправиться в облако (network error)
+                // 3. Cloud sync пытается затереть их старыми данными из облака
+                // РЕШЕНИЕ: НЕ перезаписываем, отправляем локальные в облако
+                let currentLocalProducts = null;
+                try {
+                  const rawLocal = ls.getItem(key);
+                  if (rawLocal) {
+                    const parsed = tryParse(rawLocal);
+                    currentLocalProducts = Array.isArray(parsed)
+                      ? parsed.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0)
+                      : null;
+                  }
+                } catch (e) { }
+
+                if (Array.isArray(currentLocalProducts) && currentLocalProducts.length > valueToSave.length) {
+                  logCritical(`🛡️ [PRODUCTS FALLBACK] BLOCKED: local (${currentLocalProducts.length}) > remote (${valueToSave.length}). Keeping local, pushing to cloud.`);
+                  // Отправляем локальные в облако
+                  const pushObj = {
+                    client_id: client_id,
+                    k: normalizeKeyForSupabase(row.k, client_id),
+                    v: currentLocalProducts,
+                    updated_at: new Date().toISOString()
+                  };
+                  clientUpsertQueue.push(pushObj);
+                  scheduleClientPush();
+                  return; // НЕ перезаписываем localStorage
+                }
               }
             }
 
             if (key.includes('_products') && !key.includes('_products_backup') && global.HEYS?.products?.setAll) {
+              // �️ КРИТИЧНО: Если products уже обновлены в этом sync цикле — ПРОПУСКАЕМ
+              // Это защита от случая когда в БД несколько записей с products (разные row.k)
+              // которые все мапятся на один scoped key
+              if (productsUpdated) {
+                return;
+              }
               global.HEYS.products.setAll(valueToSave, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
               productsUpdated = true;
               latestProducts = valueToSave;
@@ -4098,9 +4142,8 @@
         muteMirror = false;
         cloud._lastClientSync = { clientId: client_id, ts: now };
 
-        // ⏱️ TIMING: логируем время обработки
-        const syncDuration = Math.round(performance.now() - syncStartTime);
-        console.log(`⏱️ [SYNC TIMING] Processing ${deduped.length} keys took ${syncDuration}ms`);
+        // ⏱️ TIMING: 🔇 v4.7.1 отключено
+        // const syncDuration = Math.round(performance.now() - syncStartTime);
 
         // 🧹 Очистка дублирующихся ключей после синхронизации
         cleanupDuplicateKeys();
@@ -4259,10 +4302,7 @@
             const remoteHasMeals = remoteMealsCount > 0;
             const localHasMeals = localMealsCount > 0;
 
-            // 🔍 DEBUG: Логируем что видим
-            if (originalKey.includes('2025-12-24')) {
-              console.log(`🔍 [fetchDays] CHECK for ${originalKey} | targetKey: ${targetKey} | remote meals: ${remoteMealsCount} | local meals: ${localMealsCount} | localVal exists: ${!!freshLocalVal}`);
-            }
+            // � v4.7.1: Debug логи отключены
 
             // 🛡️ ЗАЩИТА 1: Не затираем непустые данные пустыми
             if (!remoteHasMeals && localHasMeals) {
@@ -4389,7 +4429,7 @@
     // _rpcOnlyMode = true устанавливается для ВСЕХ (и клиент PIN, и куратор)
     // Supabase SDK удалён — нет смысла проверять client/user для legacy branch
     const canSync = _rpcOnlyMode; // Simplified: только RPC режим работает
-    console.log('🔐 [UPLOAD] canSync check:', { _rpcOnlyMode, hasUser: !!user, batchLen: batch.length, canSync });
+    // 🔇 v4.7.1: Debug лог отключён
     if (!canSync) {
       // Вернуть в очередь
       console.warn('⚠️ [UPLOAD] canSync=false, returning batch to queue');
@@ -4444,7 +4484,7 @@
           byClientId[cid].push({ k: item.k, v: item.v, updated_at: item.updated_at });
         });
 
-        console.log('🔐 [UPLOAD] RPC mode: grouped by clientId:', Object.keys(byClientId).map(c => c.slice(0, 8)));
+        // 🔇 v4.7.1: Debug лог отключён
 
         // Сохраняем каждый клиент отдельно
         let totalSaved = 0;

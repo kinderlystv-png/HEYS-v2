@@ -29,7 +29,7 @@
     lsSet: (k, v) => {
       try {
         localStorage.setItem(k, JSON.stringify(v));
-      } catch (_) {}
+      } catch (_) { }
     },
   };
 
@@ -63,14 +63,14 @@
     _inflightPromise = null; // сбрасываем in-flight при очистке кэша
     try {
       localStorage.removeItem(CACHE_KEY);
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // === In-flight deduplication (thundering herd prevention) ===
   let _inflightPromise = null;
 
   // === API вызовы ===
-  
+
   /**
    * Получить статус подписки с сервера
    * @param {boolean} forceRefresh - игнорировать кэш
@@ -105,7 +105,7 @@
     // Создаём promise и сохраняем его для дедупликации
     _inflightPromise = (async () => {
       try {
-        console.log('[Subscription] 🔄 RPC call: get_subscription_status_by_session');
+        // 🔇 v4.7.0: Логи отключены
         const res = await api.rpc('get_subscription_status_by_session', {
           p_session_token: sessionToken,
         });
@@ -122,7 +122,7 @@
 
         const status = res.data || STATUS.NONE;
         setCachedStatus(status);
-        console.log('[Subscription] ✅ Status fetched and cached:', status?.status || status);
+        // 🔇 v4.7.0: Лог отключён
         return status;
       } catch (e) {
         console.error('[Subscription] getStatus error:', e);
@@ -171,8 +171,8 @@
 
       const status = res.data || STATUS.TRIAL;
       setCachedStatus(status);
-      
-      console.log(`[Subscription] ✅ Триал запущен: ${status}`);
+
+      // 🔇 v4.7.0: Лог отключён
       return status;
     } catch (e) {
       console.error('[Subscription] startTrial error:', e);
@@ -245,7 +245,7 @@
   }
 
   // === React Hook (если React доступен) ===
-  
+
   /**
    * useSubscription() — React hook для статуса подписки
    * @returns {{ status, isLoading, isNone, isTrial, isActive, isReadOnly, canWrite, startTrial, refresh }}
@@ -337,5 +337,5 @@
     useSubscription,
   };
 
-  console.log('[HEYS] 🎫 Subscription module v1.0 loaded');
+  // 🔇 v4.7.0: Лог загрузки отключён
 })(typeof window !== 'undefined' ? window : globalThis);

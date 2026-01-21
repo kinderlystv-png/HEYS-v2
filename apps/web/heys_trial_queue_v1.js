@@ -1,16 +1,16 @@
 // heys_trial_queue_v1.js — Умная очередь на триал + UI виджеты
 // Упрощённая система: заявка → куратор проверяет → активирует триал
 // v2.0.0 | 2025-01-09
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
-  
+
   // ========================================
   // КОНСТАНТЫ
   // ========================================
-  
+
   const QUEUE_STATUS = {
     NOT_IN_QUEUE: 'not_in_queue',  // Не в очереди
     PENDING: 'pending',            // Заявка отправлена, ждёт куратора
@@ -23,16 +23,16 @@
     EXPIRED: 'expired',            // → теперь rejected
     CANCELED_BY_PURCHASE: 'canceled_by_purchase',
   };
-  
+
   const CACHE_KEY = 'heys_trial_queue_status';
   const CAPACITY_CACHE_KEY = 'heys_trial_capacity';
   const CACHE_TTL_MS = 60 * 1000; // 1 минута для очереди
   const CAPACITY_CACHE_TTL_MS = 30 * 1000; // 30 секунд для capacity
-  
+
   // ========================================
   // УТИЛИТЫ
   // ========================================
-  
+
   const U = HEYS.utils || {
     lsGet: (k, d) => {
       try {
@@ -45,16 +45,16 @@
     lsSet: (k, v) => {
       try {
         localStorage.setItem(k, JSON.stringify(v));
-      } catch (_) {}
+      } catch (_) { }
     },
   };
-  
+
   // Кэширование
   let _statusCache = null;
   let _statusCacheAt = 0;
   let _capacityCache = null;
   let _capacityCacheAt = 0;
-  
+
   function getCachedStatus() {
     if (_statusCache && Date.now() - _statusCacheAt < CACHE_TTL_MS) {
       return _statusCache;
@@ -67,13 +67,13 @@
     }
     return null;
   }
-  
+
   function setCachedStatus(data) {
     _statusCache = data;
     _statusCacheAt = Date.now();
     U.lsSet(CACHE_KEY, { data, ts: _statusCacheAt });
   }
-  
+
   function getCachedCapacity() {
     if (_capacityCache && Date.now() - _capacityCacheAt < CAPACITY_CACHE_TTL_MS) {
       return _capacityCache;
@@ -86,13 +86,13 @@
     }
     return null;
   }
-  
+
   function setCachedCapacity(data) {
     _capacityCache = data;
     _capacityCacheAt = Date.now();
     U.lsSet(CAPACITY_CACHE_KEY, { data, ts: _capacityCacheAt });
   }
-  
+
   function clearCache() {
     _statusCache = null;
     _statusCacheAt = 0;
@@ -101,13 +101,13 @@
     try {
       localStorage.removeItem(CACHE_KEY);
       localStorage.removeItem(CAPACITY_CACHE_KEY);
-    } catch (_) {}
+    } catch (_) { }
   }
-  
+
   // ========================================
   // API ФУНКЦИИ
   // ========================================
-  
+
   /**
    * Получить публичную capacity (без auth)
    * @param {boolean} forceRefresh
@@ -118,7 +118,7 @@
       const cached = getCachedCapacity();
       if (cached) return cached;
     }
-    
+
     const api = HEYS.YandexAPI;
     if (!api) {
       console.warn('[TrialQueue] API не готов');
@@ -131,18 +131,17 @@
         trial_days: 7
       };
     }
-    
+
     try {
       const res = await api.rpc('get_public_trial_capacity', {});
-      
+
       if (res.error) {
         throw new Error(res.error.message || 'Unknown error');
       }
-      
+
       // API wraps response: {data: {get_public_trial_capacity: {...}}}
       const fnData = res.data?.get_public_trial_capacity || res.data || res;
-      console.log('[TrialQueue] 📦 getCapacity raw:', JSON.stringify(res.data));
-      console.log('[TrialQueue] ✅ getCapacity extracted:', JSON.stringify(fnData));
+      // 🔇 v4.7.0: DEBUG логи отключены
       setCachedCapacity(fnData);
       return fnData;
     } catch (e) {
@@ -157,7 +156,7 @@
       };
     }
   }
-  
+
   /**
    * Запросить триал (offer или очередь)
    * @param {string} source - источник ('app', 'landing', etc)
@@ -168,43 +167,42 @@
     if (!sessionToken) {
       return { success: false, error: 'no_session', message: 'Необходима авторизация' };
     }
-    
+
     const api = HEYS.YandexAPI;
     if (!api) {
       return { success: false, error: 'api_not_ready', message: 'API не готов' };
     }
-    
+
     try {
       const res = await api.rpc('request_trial', {
         p_session_token: sessionToken,
         p_source: source
       });
-      
+
       if (res.error) {
-        return { 
-          success: false, 
-          error: res.error.code || 'unknown', 
-          message: res.error.message 
+        return {
+          success: false,
+          error: res.error.code || 'unknown',
+          message: res.error.message
         };
       }
-      
+
       // v2.1: API wraps response in {request_trial: {...}}
       const data = res.data?.request_trial || res.data || res;
-      console.log('[TrialQueue] 📦 requestTrial raw:', JSON.stringify(res.data));
-      console.log('[TrialQueue] ✅ requestTrial extracted:', JSON.stringify(data));
+      // 🔇 v4.7.0: DEBUG логи отключены
       setCachedStatus(data);
-      
+
       // Инвалидируем capacity cache
       _capacityCache = null;
       _capacityCacheAt = 0;
-      
+
       return data;
     } catch (e) {
       console.error('[TrialQueue] requestTrial error:', e);
       return { success: false, error: 'request_failed', message: e.message };
     }
   }
-  
+
   /**
    * Получить статус в очереди
    * @param {boolean} forceRefresh
@@ -215,33 +213,32 @@
       const cached = getCachedStatus();
       if (cached) return cached;
     }
-    
+
     const sessionToken = HEYS.auth?.getSessionToken?.();
     if (!sessionToken) {
       return { success: true, status: QUEUE_STATUS.NOT_IN_QUEUE };
     }
-    
+
     const api = HEYS.YandexAPI;
     if (!api) {
       return getCachedStatus() || { success: true, status: QUEUE_STATUS.NOT_IN_QUEUE };
     }
-    
+
     try {
       const res = await api.rpc('get_trial_queue_status', {
         p_session_token: sessionToken
       });
-      
+
       if (res.error) {
         if (res.error.message?.includes('invalid_session')) {
           return { success: true, status: QUEUE_STATUS.NOT_IN_QUEUE };
         }
         throw new Error(res.error.message);
       }
-      
+
       // v2.1: API wraps response in {get_trial_queue_status: {...}}
       const data = res.data?.get_trial_queue_status || res.data || res;
-      console.log('[TrialQueue] 📦 getQueueStatus raw:', JSON.stringify(res.data));
-      console.log('[TrialQueue] ✅ getQueueStatus extracted:', JSON.stringify(data));
+      // 🔇 v4.7.0: DEBUG логи отключены
       setCachedStatus(data);
       return data;
     } catch (e) {
@@ -249,20 +246,20 @@
       return getCachedStatus() || { success: true, status: QUEUE_STATUS.NOT_IN_QUEUE };
     }
   }
-  
+
   /**
    * @deprecated v2.0 — Триал теперь активирует куратор через admin_activate_trial
    * Оставлено для обратной совместимости
    */
   async function claimOffer() {
     console.warn('[TrialQueue] claimOffer() deprecated — триал активирует куратор');
-    return { 
-      success: false, 
-      error: 'deprecated', 
-      message: 'Триал активирует куратор после проверки заявки' 
+    return {
+      success: false,
+      error: 'deprecated',
+      message: 'Триал активирует куратор после проверки заявки'
     };
   }
-  
+
   /**
    * Отменить запрос на триал
    * @returns {Promise<{success, message}>}
@@ -272,65 +269,64 @@
     if (!sessionToken) {
       return { success: false, error: 'no_session', message: 'Необходима авторизация' };
     }
-    
+
     const api = HEYS.YandexAPI;
     if (!api) {
       return { success: false, error: 'api_not_ready', message: 'API не готов' };
     }
-    
+
     try {
       const res = await api.rpc('cancel_trial_queue', {
         p_session_token: sessionToken
       });
-      
+
       if (res.error) {
-        return { 
-          success: false, 
-          error: res.error.code || 'unknown', 
-          message: res.error.message 
+        return {
+          success: false,
+          error: res.error.code || 'unknown',
+          message: res.error.message
         };
       }
-      
+
       // Очищаем кэши
       clearCache();
-      
+
       // v2.1: API wraps response in {cancel_trial_queue: {...}}
       const data = res.data?.cancel_trial_queue || res.data || res;
-      console.log('[TrialQueue] 📦 cancelQueue raw:', JSON.stringify(res.data));
-      console.log('[TrialQueue] ✅ cancelQueue extracted:', JSON.stringify(data));
+      // 🔇 v4.7.0: DEBUG логи отключены
       return data;
     } catch (e) {
       console.error('[TrialQueue] cancelQueue error:', e);
       return { success: false, error: 'cancel_failed', message: e.message };
     }
   }
-  
+
   // ========================================
   // ХЕЛПЕРЫ
   // ========================================
-  
+
   /**
    * Форматирование оставшегося времени
    */
   function formatTimeRemaining(expiresAt) {
     if (!expiresAt) return '';
-    
+
     const expires = new Date(expiresAt);
     const now = new Date();
     const diffMs = expires - now;
-    
+
     if (diffMs <= 0) return 'Время истекло';
-    
+
     const minutes = Math.floor(diffMs / 60000);
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    
+
     if (hours > 0) {
       return `${hours}ч ${mins}м`;
     }
     return `${mins}м`;
   }
-  
+
   /**
    * @deprecated v2.0 — Offer механика убрана
    */
@@ -338,7 +334,7 @@
     if (!expiresAt) return true;
     return new Date(expiresAt) <= new Date();
   }
-  
+
   /**
    * Получить UI-метаданные для статуса очереди
    * v2.0: Упрощённая система без offer
@@ -357,7 +353,7 @@
           showTimer: false,
           description: 'Куратор свяжется с вами для активации триала'
         };
-      
+
       // Новый статус: куратор отклонил
       case QUEUE_STATUS.REJECTED:
       case QUEUE_STATUS.EXPIRED: // Legacy → rejected
@@ -370,7 +366,7 @@
           showTimer: false,
           description: 'Куратор не смог подтвердить заявку'
         };
-      
+
       // Legacy: offer → теперь трактуем как pending
       case QUEUE_STATUS.OFFER:
         return {
@@ -382,7 +378,7 @@
           showTimer: false,
           description: 'Куратор свяжется с вами для активации триала'
         };
-      
+
       case QUEUE_STATUS.ASSIGNED:
         return {
           label: 'Триал активен',
@@ -393,12 +389,12 @@
           showTimer: false,
           description: 'Куратор назначен, триал идёт'
         };
-      
+
       case QUEUE_STATUS.CANCELED:
       case QUEUE_STATUS.CANCELED_BY_PURCHASE:
         return {
-          label: status === QUEUE_STATUS.CANCELED_BY_PURCHASE 
-            ? 'Подписка оформлена' 
+          label: status === QUEUE_STATUS.CANCELED_BY_PURCHASE
+            ? 'Подписка оформлена'
             : 'Запрос отменён',
           shortLabel: status === QUEUE_STATUS.CANCELED_BY_PURCHASE ? 'Оплачено' : 'Отменён',
           color: status === QUEUE_STATUS.CANCELED_BY_PURCHASE ? '#22c55e' : '#6b7280',
@@ -406,7 +402,7 @@
           actionLabel: status === QUEUE_STATUS.CANCELED_BY_PURCHASE ? null : 'Запросить снова',
           showTimer: false,
         };
-      
+
       case QUEUE_STATUS.NOT_IN_QUEUE:
       default:
         return {
@@ -419,7 +415,7 @@
         };
     }
   }
-  
+
   /**
    * Получить UI-метаданные для capacity виджета
    * v2.1: Адаптирован под упрощённый API (is_accepting + queue_length)
@@ -431,7 +427,7 @@
     const queue_length = capacity.queue_length ?? capacity.queue_size ?? 0;
     const available_slots = capacity.available_slots; // может быть undefined в v2
     const total_slots = capacity.total_slots; // может быть undefined в v2
-    
+
     if (!is_accepting) {
       return {
         status: 'paused',
@@ -443,11 +439,11 @@
         showQueue: false,
       };
     }
-    
+
     // v2: Если is_accepting=true — места есть (упрощённая логика)
     // v1: Проверяем available_slots если есть
     if (is_accepting && (available_slots === undefined || available_slots > 0)) {
-      const label = available_slots !== undefined 
+      const label = available_slots !== undefined
         ? `Свободно ${available_slots} из ${total_slots}`
         : 'Приём открыт';
       return {
@@ -460,7 +456,7 @@
         showQueue: false,
       };
     }
-    
+
     return {
       status: 'full',
       color: '#ef4444',
@@ -472,27 +468,27 @@
       queueSize: queue_length,
     };
   }
-  
+
   // ========================================
   // REACT КОМПОНЕНТЫ
   // ========================================
-  
+
   /**
    * TrialCapacityWidget — виджет мест на лендинге/в app
    */
-  function TrialCapacityWidget({ 
-    onRequestTrial, 
+  function TrialCapacityWidget({
+    onRequestTrial,
     onBuyNow,
     className = '',
-    compact = false 
+    compact = false
   }) {
     if (!React) return null;
-    
+
     const { useState, useEffect, useCallback } = React;
-    
+
     const [capacity, setCapacity] = useState(getCachedCapacity());
     const [isLoading, setIsLoading] = useState(!capacity);
-    
+
     const refresh = useCallback(async () => {
       setIsLoading(true);
       try {
@@ -502,29 +498,29 @@
         setIsLoading(false);
       }
     }, []);
-    
+
     useEffect(() => {
       refresh();
       // Обновляем каждые 30 секунд
       const interval = setInterval(refresh, 30000);
       return () => clearInterval(interval);
     }, [refresh]);
-    
+
     if (!capacity && isLoading) {
-      return React.createElement('div', { 
-        className: `trial-capacity-widget loading ${className}` 
+      return React.createElement('div', {
+        className: `trial-capacity-widget loading ${className}`
       }, '⏳ Загрузка...');
     }
-    
+
     const meta = getCapacityMeta(capacity || {});
-    
+
     if (compact) {
       // Компактная версия для мобильных
       return React.createElement('div', {
         className: `trial-capacity-widget compact ${className}`,
-        style: { 
-          display: 'flex', 
-          alignItems: 'center', 
+        style: {
+          display: 'flex',
+          alignItems: 'center',
           gap: '8px',
           padding: '8px 12px',
           background: 'var(--bg-secondary, #f3f4f6)',
@@ -534,12 +530,12 @@
       },
         React.createElement('span', { style: { fontSize: '16px' } }, meta.emoji),
         React.createElement('span', { style: { fontWeight: 500 } }, meta.label),
-        isLoading && React.createElement('span', { 
-          style: { opacity: 0.5, fontSize: '12px' } 
+        isLoading && React.createElement('span', {
+          style: { opacity: 0.5, fontSize: '12px' }
         }, '...')
       );
     }
-    
+
     // Полная версия
     return React.createElement('div', {
       className: `trial-capacity-widget full ${className}`,
@@ -551,37 +547,37 @@
       }
     },
       // Статус
-      React.createElement('div', { 
-        style: { 
-          fontSize: '24px', 
-          marginBottom: '8px' 
-        } 
+      React.createElement('div', {
+        style: {
+          fontSize: '24px',
+          marginBottom: '8px'
+        }
       }, meta.emoji),
-      
-      React.createElement('div', { 
-        style: { 
-          fontWeight: 600, 
+
+      React.createElement('div', {
+        style: {
+          fontWeight: 600,
           fontSize: '16px',
           color: meta.color,
-          marginBottom: '4px' 
-        } 
+          marginBottom: '4px'
+        }
       }, meta.label),
-      
-      React.createElement('div', { 
-        style: { 
-          fontSize: '13px', 
+
+      React.createElement('div', {
+        style: {
+          fontSize: '13px',
           color: 'var(--text-secondary, #6b7280)',
-          marginBottom: '12px' 
-        } 
+          marginBottom: '12px'
+        }
       }, meta.sublabel),
-      
+
       // Кнопки
-      React.createElement('div', { 
-        style: { 
-          display: 'flex', 
-          gap: '8px', 
-          justifyContent: 'center' 
-        } 
+      React.createElement('div', {
+        style: {
+          display: 'flex',
+          gap: '8px',
+          justifyContent: 'center'
+        }
       },
         // Основная CTA
         React.createElement('button', {
@@ -591,8 +587,8 @@
             padding: '10px 20px',
             borderRadius: '8px',
             border: 'none',
-            background: meta.status === 'available' 
-              ? 'linear-gradient(135deg, #22c55e, #16a34a)' 
+            background: meta.status === 'available'
+              ? 'linear-gradient(135deg, #22c55e, #16a34a)'
               : 'linear-gradient(135deg, #3b82f6, #2563eb)',
             color: 'white',
             fontWeight: 600,
@@ -600,7 +596,7 @@
             fontSize: '14px'
           }
         }, meta.actionLabel),
-        
+
         // Альтернатива
         onBuyNow && React.createElement('button', {
           onClick: onBuyNow,
@@ -618,26 +614,26 @@
       )
     );
   }
-  
+
   /**
    * QueueStatusCard — карточка статуса в очереди
    */
-  function QueueStatusCard({ 
-    onClaimOffer, 
-    onCancelQueue, 
+  function QueueStatusCard({
+    onClaimOffer,
+    onCancelQueue,
     onRequestAgain,
     onBuyNow,
-    className = '' 
+    className = ''
   }) {
     if (!React) return null;
-    
+
     const { useState, useEffect, useCallback } = React;
-    
+
     const [queueStatus, setQueueStatus] = useState(getCachedStatus());
     const [isLoading, setIsLoading] = useState(!queueStatus);
     const [isActioning, setIsActioning] = useState(false);
     const [timeRemaining, setTimeRemaining] = useState('');
-    
+
     const refresh = useCallback(async () => {
       setIsLoading(true);
       try {
@@ -647,31 +643,31 @@
         setIsLoading(false);
       }
     }, []);
-    
+
     // Таймер для offer
     useEffect(() => {
       if (queueStatus?.status !== QUEUE_STATUS.OFFER || !queueStatus?.offer_expires_at) {
         setTimeRemaining('');
         return;
       }
-      
+
       const updateTimer = () => {
         setTimeRemaining(formatTimeRemaining(queueStatus.offer_expires_at));
       };
-      
+
       updateTimer();
       const interval = setInterval(updateTimer, 1000);
-      
+
       return () => clearInterval(interval);
     }, [queueStatus?.status, queueStatus?.offer_expires_at]);
-    
+
     useEffect(() => {
       refresh();
       // Обновляем каждую минуту
       const interval = setInterval(refresh, 60000);
       return () => clearInterval(interval);
     }, [refresh]);
-    
+
     const handleClaim = async () => {
       setIsActioning(true);
       try {
@@ -687,10 +683,10 @@
         setIsActioning(false);
       }
     };
-    
+
     const handleCancel = async () => {
       if (!confirm('Отменить запрос на триал?')) return;
-      
+
       setIsActioning(true);
       try {
         const result = await cancelQueue();
@@ -702,7 +698,7 @@
         setIsActioning(false);
       }
     };
-    
+
     const handleRequestAgain = async () => {
       setIsActioning(true);
       try {
@@ -717,55 +713,55 @@
         setIsActioning(false);
       }
     };
-    
+
     if (!queueStatus && isLoading) {
-      return React.createElement('div', { 
-        className: `queue-status-card loading ${className}` 
+      return React.createElement('div', {
+        className: `queue-status-card loading ${className}`
       }, '⏳ Загрузка...');
     }
-    
+
     const status = queueStatus?.status || QUEUE_STATUS.NOT_IN_QUEUE;
     const meta = getQueueStatusMeta(
-      status, 
-      queueStatus?.position, 
+      status,
+      queueStatus?.position,
       queueStatus?.offer_expires_at
     );
-    
+
     // Если не в очереди — не показываем карточку
     if (status === QUEUE_STATUS.NOT_IN_QUEUE) {
       return null;
     }
-    
+
     return React.createElement('div', {
       className: `queue-status-card ${className}`,
       style: {
         background: 'var(--bg-secondary, #f3f4f6)',
         borderRadius: '12px',
         padding: '16px',
-        border: status === QUEUE_STATUS.OFFER 
-          ? `2px solid ${meta.color}` 
+        border: status === QUEUE_STATUS.OFFER
+          ? `2px solid ${meta.color}`
           : '1px solid var(--border-color, #e5e7eb)'
       }
     },
       // Заголовок
-      React.createElement('div', { 
-        style: { 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px', 
-          marginBottom: '12px' 
-        } 
+      React.createElement('div', {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginBottom: '12px'
+        }
       },
         React.createElement('span', { style: { fontSize: '20px' } }, meta.emoji),
-        React.createElement('span', { 
-          style: { 
-            fontWeight: 600, 
+        React.createElement('span', {
+          style: {
+            fontWeight: 600,
             fontSize: '16px',
-            color: meta.color 
-          } 
+            color: meta.color
+          }
         }, meta.label)
       ),
-      
+
       // Таймер (для offer)
       meta.showTimer && timeRemaining && React.createElement('div', {
         style: {
@@ -776,68 +772,68 @@
           marginBottom: '12px'
         }
       },
-        React.createElement('div', { 
-          style: { fontSize: '12px', color: '#92400e', marginBottom: '4px' } 
+        React.createElement('div', {
+          style: { fontSize: '12px', color: '#92400e', marginBottom: '4px' }
         }, 'Осталось времени:'),
-        React.createElement('div', { 
-          style: { fontSize: '24px', fontWeight: 700, color: '#f59e0b' } 
+        React.createElement('div', {
+          style: { fontSize: '24px', fontWeight: 700, color: '#f59e0b' }
         }, timeRemaining)
       ),
-      
+
       // Кнопки действий
-      React.createElement('div', { 
-        style: { display: 'flex', gap: '8px', flexDirection: 'column' } 
+      React.createElement('div', {
+        style: { display: 'flex', gap: '8px', flexDirection: 'column' }
       },
         // Основное действие
-        status === QUEUE_STATUS.OFFER && !isOfferExpired(queueStatus?.offer_expires_at) && 
-          React.createElement('button', {
-            onClick: handleClaim,
-            disabled: isActioning,
-            style: {
-              padding: '12px',
-              borderRadius: '8px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-              color: 'white',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontSize: '15px'
-            }
-          }, isActioning ? '⏳...' : '🎉 Начать триал!'),
-        
+        status === QUEUE_STATUS.OFFER && !isOfferExpired(queueStatus?.offer_expires_at) &&
+        React.createElement('button', {
+          onClick: handleClaim,
+          disabled: isActioning,
+          style: {
+            padding: '12px',
+            borderRadius: '8px',
+            border: 'none',
+            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+            color: 'white',
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontSize: '15px'
+          }
+        }, isActioning ? '⏳...' : '🎉 Начать триал!'),
+
         // Запросить снова (для expired/canceled)
         (status === QUEUE_STATUS.EXPIRED || status === QUEUE_STATUS.CANCELED) &&
-          React.createElement('button', {
-            onClick: handleRequestAgain,
-            disabled: isActioning,
-            style: {
-              padding: '12px',
-              borderRadius: '8px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-              color: 'white',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontSize: '15px'
-            }
-          }, isActioning ? '⏳...' : 'Запросить снова'),
-        
+        React.createElement('button', {
+          onClick: handleRequestAgain,
+          disabled: isActioning,
+          style: {
+            padding: '12px',
+            borderRadius: '8px',
+            border: 'none',
+            background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+            color: 'white',
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontSize: '15px'
+          }
+        }, isActioning ? '⏳...' : 'Запросить снова'),
+
         // Отмена (для queued)
         status === QUEUE_STATUS.QUEUED &&
-          React.createElement('button', {
-            onClick: handleCancel,
-            disabled: isActioning,
-            style: {
-              padding: '10px',
-              borderRadius: '8px',
-              border: '1px solid var(--border-color, #e5e7eb)',
-              background: 'transparent',
-              color: 'var(--text-secondary, #6b7280)',
-              cursor: 'pointer',
-              fontSize: '13px'
-            }
-          }, 'Отменить'),
-        
+        React.createElement('button', {
+          onClick: handleCancel,
+          disabled: isActioning,
+          style: {
+            padding: '10px',
+            borderRadius: '8px',
+            border: '1px solid var(--border-color, #e5e7eb)',
+            background: 'transparent',
+            color: 'var(--text-secondary, #6b7280)',
+            cursor: 'pointer',
+            fontSize: '13px'
+          }
+        }, 'Отменить'),
+
         // Альтернатива — купить
         onBuyNow && React.createElement('button', {
           onClick: onBuyNow,
@@ -856,11 +852,11 @@
       )
     );
   }
-  
+
   // ========================================
   // REACT HOOK
   // ========================================
-  
+
   /**
    * useTrialQueue() — hook для работы с очередью
    */
@@ -874,29 +870,29 @@
         requestTrial: async () => ({ success: false }),
         claimOffer: async () => ({ success: false }),
         cancelQueue: async () => ({ success: false }),
-        refreshCapacity: async () => {},
-        refreshStatus: async () => {},
+        refreshCapacity: async () => { },
+        refreshStatus: async () => { },
       };
     }
-    
+
     const { useState, useCallback, useEffect } = React;
-    
+
     const [capacity, setCapacity] = useState(getCachedCapacity());
     const [queueStatus, setQueueStatus] = useState(getCachedStatus());
     const [isLoading, setIsLoading] = useState(false);
-    
+
     const refreshCapacity = useCallback(async () => {
       const data = await getCapacity(true);
       setCapacity(data);
       return data;
     }, []);
-    
+
     const refreshStatus = useCallback(async () => {
       const data = await getQueueStatus(true);
       setQueueStatus(data);
       return data;
     }, []);
-    
+
     const doRequestTrial = useCallback(async (source = 'app') => {
       setIsLoading(true);
       try {
@@ -910,7 +906,7 @@
         setIsLoading(false);
       }
     }, [refreshCapacity]);
-    
+
     const doClaimOffer = useCallback(async () => {
       setIsLoading(true);
       try {
@@ -924,7 +920,7 @@
         setIsLoading(false);
       }
     }, [refreshStatus, refreshCapacity]);
-    
+
     const doCancelQueue = useCallback(async () => {
       setIsLoading(true);
       try {
@@ -938,46 +934,46 @@
         setIsLoading(false);
       }
     }, [refreshStatus, refreshCapacity]);
-    
+
     // Начальная загрузка
     useEffect(() => {
       refreshCapacity();
       refreshStatus();
     }, [refreshCapacity, refreshStatus]);
-    
+
     return {
       capacity,
       queueStatus,
       isLoading,
-      
+
       // Действия
       requestTrial: doRequestTrial,
       claimOffer: doClaimOffer,
       cancelQueue: doCancelQueue,
-      
+
       // Обновление
       refreshCapacity,
       refreshStatus,
-      
+
       // Хелперы
-      hasOffer: queueStatus?.status === QUEUE_STATUS.OFFER && 
-                !isOfferExpired(queueStatus?.offer_expires_at),
+      hasOffer: queueStatus?.status === QUEUE_STATUS.OFFER &&
+        !isOfferExpired(queueStatus?.offer_expires_at),
       isInQueue: queueStatus?.status === QUEUE_STATUS.QUEUED,
       position: queueStatus?.position,
       offerExpiresAt: queueStatus?.offer_expires_at,
       capacityMeta: capacity ? getCapacityMeta(capacity) : null,
       queueMeta: queueStatus ? getQueueStatusMeta(
-        queueStatus.status, 
-        queueStatus.position, 
+        queueStatus.status,
+        queueStatus.position,
         queueStatus.offer_expires_at
       ) : null,
     };
   }
-  
+
   // ========================================
   // СТИЛИ
   // ========================================
-  
+
   const TRIAL_QUEUE_STYLES = `
     .trial-capacity-widget {
       transition: opacity 0.2s;
@@ -1006,7 +1002,7 @@
       transform: translateY(0);
     }
   `;
-  
+
   // Инжектим стили
   if (typeof document !== 'undefined') {
     const styleId = 'heys-trial-queue-styles';
@@ -1017,11 +1013,11 @@
       document.head.appendChild(style);
     }
   }
-  
+
   // ========================================
   // ADMIN API (только для кураторов)
   // ========================================
-  
+
   const adminAPI = {
     /**
      * Получить полный список очереди
@@ -1032,33 +1028,33 @@
       if (!api) {
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
       }
-      
+
       const curatorSession = localStorage.getItem('heys_curator_session');
       if (!curatorSession) {
         return { success: false, error: 'no_auth', message: 'Нет сессии куратора' };
       }
-      
+
       try {
         const res = await api.rpc('admin_get_trial_queue_list', {
           p_curator_session_token: curatorSession
         });
-        
+
         if (res.error) {
           return { success: false, error: res.error.code, message: res.error.message };
         }
-        
+
         // API возвращает обёрткой {admin_get_trial_queue_list: {items, total, ...}}
         const fnData = res.data?.admin_get_trial_queue_list || res.data || res;
         const items = Array.isArray(fnData) ? fnData : (fnData.items || []);
         const total = fnData.total ?? items.length;
-        
+
         return { success: true, data: items, total_count: total };
       } catch (e) {
         console.error('[TrialQueue.admin] getQueueList error:', e);
         return { success: false, error: 'request_failed', message: e.message };
       }
     },
-    
+
     /**
      * Добавить клиента в очередь
      * @param {string} clientId - UUID клиента
@@ -1070,12 +1066,12 @@
       if (!api) {
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
       }
-      
+
       const curatorSession = localStorage.getItem('heys_curator_session');
       if (!curatorSession) {
         return { success: false, error: 'no_auth', message: 'Нет сессии куратора' };
       }
-      
+
       try {
         const res = await api.rpc('admin_add_to_queue', {
           p_client_id: clientId,
@@ -1083,11 +1079,11 @@
           p_priority: priority,
           p_curator_session_token: curatorSession
         });
-        
+
         if (res.error) {
           return { success: false, error: res.error.code, message: res.error.message };
         }
-        
+
         const fnData = res.data?.admin_add_to_queue || res.data || res;
         return fnData;
       } catch (e) {
@@ -1095,7 +1091,7 @@
         return { success: false, error: 'request_failed', message: e.message };
       }
     },
-    
+
     /**
      * Удалить клиента из очереди
      * @param {string} clientId - UUID клиента
@@ -1106,17 +1102,17 @@
       if (!api) {
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
       }
-      
+
       try {
         const res = await api.rpc('admin_remove_from_queue', {
           p_client_id: clientId,
           p_reason: reason
         });
-        
+
         if (res.error) {
           return { success: false, error: res.error.code, message: res.error.message };
         }
-        
+
         const fnData = res.data?.admin_remove_from_queue || res.data || res;
         return fnData;
       } catch (e) {
@@ -1124,7 +1120,7 @@
         return { success: false, error: 'request_failed', message: e.message };
       }
     },
-    
+
     /**
      * @deprecated v2.0 — автоматические offer'ы убраны, используй activateTrial()
      * Отправить offer клиенту (пропустить очередь)
@@ -1133,7 +1129,7 @@
       console.warn('[TrialQueue.admin] sendOffer() deprecated — use activateTrial()');
       return { success: false, error: 'deprecated', message: 'Используйте activateTrial() вместо sendOffer()' };
     },
-    
+
     /**
      * Активировать триал для клиента (ручное подтверждение куратором)
      * @param {string} clientId - UUID клиента
@@ -1144,22 +1140,22 @@
       if (!api) {
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
       }
-      
+
       const curatorSession = localStorage.getItem('heys_curator_session');
       if (!curatorSession) {
         return { success: false, error: 'no_auth', message: 'Нет сессии куратора' };
       }
-      
+
       try {
         const res = await api.rpc('admin_activate_trial', {
           p_client_id: clientId,
           p_curator_session_token: curatorSession
         });
-        
+
         if (res.error) {
           return { success: false, error: res.error.code, message: res.error.message };
         }
-        
+
         const fnData = res.data?.admin_activate_trial || res.data || res;
         return fnData;
       } catch (e) {
@@ -1167,7 +1163,7 @@
         return { success: false, error: 'request_failed', message: e.message };
       }
     },
-    
+
     /**
      * Отклонить заявку на триал
      * @param {string} clientId - UUID клиента
@@ -1179,23 +1175,23 @@
       if (!api) {
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
       }
-      
+
       const curatorSession = localStorage.getItem('heys_curator_session');
       if (!curatorSession) {
         return { success: false, error: 'no_auth', message: 'Нет сессии куратора' };
       }
-      
+
       try {
         const res = await api.rpc('admin_reject_request', {
           p_client_id: clientId,
           p_reason: reason,
           p_curator_session_token: curatorSession
         });
-        
+
         if (res.error) {
           return { success: false, error: res.error.code, message: res.error.message };
         }
-        
+
         const fnData = res.data?.admin_reject_request || res.data || res;
         return fnData;
       } catch (e) {
@@ -1203,7 +1199,7 @@
         return { success: false, error: 'request_failed', message: e.message };
       }
     },
-    
+
     /**
      * Получить статистику очереди
      */
@@ -1212,14 +1208,14 @@
       if (!api) {
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
       }
-      
+
       try {
         const res = await api.rpc('admin_get_queue_stats', {});
-        
+
         if (res.error) {
           return { success: false, error: res.error.code, message: res.error.message };
         }
-        
+
         // API оборачивает ответ в ключ с именем функции: { admin_get_queue_stats: {...} }
         const fnData = res.data?.admin_get_queue_stats || res.data || res;
         return { success: true, ...fnData };
@@ -1228,7 +1224,7 @@
         return { success: false, error: 'request_failed', message: e.message };
       }
     },
-    
+
     /**
      * Обновить настройки очереди
      * @param {Object} settings - {is_accepting, max_concurrent_trials, offer_window_minutes}
@@ -1238,24 +1234,22 @@
       if (!api) {
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
       }
-      
+
       try {
         const res = await api.rpc('admin_update_queue_settings', {
           p_is_accepting: (settings.is_accepting_trials ?? settings.is_accepting) ?? null,
           p_max_active: (settings.max_active_trials ?? settings.max_concurrent_trials) ?? null,
           p_offer_window_minutes: settings.offer_window_minutes ?? null
         });
-        
-        console.log('[TrialQueue.admin] 📦 API raw response:', JSON.stringify(res));
-        
+
+        // 🔇 v4.7.0: DEBUG логи отключены
+
         if (res.error) {
-          console.log('[TrialQueue.admin] ❌ API error:', res.error);
           return { success: false, error: res.error.code, message: res.error.message };
         }
-        
+
         // API возвращает {data: {admin_update_queue_settings: {success, settings}}, error: null}
         const result = res.data?.admin_update_queue_settings || res.admin_update_queue_settings || res;
-        console.log('[TrialQueue.admin] ✅ Extracted result:', JSON.stringify(result));
         return result;
       } catch (e) {
         console.error('[TrialQueue.admin] updateSettings error:', e);
@@ -1263,11 +1257,11 @@
       }
     }
   };
-  
+
   // ========================================
   // ADMIN UI КОМПОНЕНТ
   // ========================================
-  
+
   /**
    * TrialQueueAdmin — UI для управления очередью
    * @param {Object} props - { onClose }
@@ -1278,18 +1272,18 @@
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState(null);
     const [actionLoading, setActionLoading] = React.useState(null);
-    
+
     // Загрузка данных
     const loadData = React.useCallback(async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         const [queueRes, statsRes] = await Promise.all([
           adminAPI.getQueueList(),
           adminAPI.getStats()
         ]);
-        
+
         if (queueRes.success) {
           // Защита: data должен быть массивом
           const queueData = Array.isArray(queueRes.data) ? queueRes.data : [];
@@ -1297,7 +1291,7 @@
         } else {
           setError(queueRes.message || 'Ошибка загрузки очереди');
         }
-        
+
         if (statsRes.success) {
           setStats(statsRes);
         }
@@ -1307,11 +1301,11 @@
         setLoading(false);
       }
     }, []);
-    
+
     React.useEffect(() => {
       loadData();
     }, [loadData]);
-    
+
     // Группировка по статусам (v2.0: pending/rejected вместо offer/queued)
     const grouped = React.useMemo(() => {
       const result = {
@@ -1334,30 +1328,30 @@
       });
       return result;
     }, [queue]);
-    
+
     // Действия
     const handleRemove = async (clientId, clientName) => {
       if (!confirm(`Удалить "${clientName}" из очереди?`)) return;
-      
+
       setActionLoading(clientId);
       const res = await adminAPI.removeFromQueue(clientId, 'admin_removed');
       setActionLoading(null);
-      
+
       if (res.success) {
         loadData();
       } else {
         alert('Ошибка: ' + (res.message || 'Не удалось удалить'));
       }
     };
-    
+
     // Активировать триал клиенту (v2.0: сразу стартует триал)
     const handleActivateTrial = async (clientId, clientName) => {
       if (!confirm(`Активировать триал для "${clientName}"?\nКлиент сразу получит доступ на 7 дней.`)) return;
-      
+
       setActionLoading(clientId);
       const res = await adminAPI.activateTrial(clientId);
       setActionLoading(null);
-      
+
       if (res.success) {
         loadData();
         alert('✅ Триал активирован! Клиент получил доступ.');
@@ -1365,33 +1359,33 @@
         alert('Ошибка: ' + (res.message || 'Не удалось активировать триал'));
       }
     };
-    
+
     // Отклонить заявку (v2.0)
     const handleReject = async (clientId, clientName) => {
       const reason = prompt(`Отклонить заявку "${clientName}"?\nУкажите причину (опционально):`, '');
       if (reason === null) return; // Отмена
-      
+
       setActionLoading(clientId);
       const res = await adminAPI.rejectApplication(clientId, reason || 'rejected_by_curator');
       setActionLoading(null);
-      
+
       if (res.success) {
         loadData();
       } else {
         alert('Ошибка: ' + (res.message || 'Не удалось отклонить заявку'));
       }
     };
-    
+
     const [toggleLoading, setToggleLoading] = React.useState(false);
-    
+
     const handleToggleAccepting = async () => {
       if (!stats || toggleLoading) return;
-      
+
       setToggleLoading(true);
       const newValue = !stats.limits?.is_accepting_trials;
       const res = await adminAPI.updateSettings({ is_accepting_trials: newValue });
       setToggleLoading(false);
-      
+
       if (res.success) {
         setStats(prev => ({
           ...prev,
@@ -1401,19 +1395,19 @@
         alert('Ошибка: ' + (res.message || 'Не удалось обновить настройки'));
       }
     };
-    
+
     // Форматирование даты
     const formatDate = (dateStr) => {
       if (!dateStr) return '—';
       const d = new Date(dateStr);
-      return d.toLocaleDateString('ru-RU', { 
-        day: 'numeric', 
+      return d.toLocaleDateString('ru-RU', {
+        day: 'numeric',
         month: 'short',
         hour: '2-digit',
         minute: '2-digit'
       });
     };
-    
+
     // Время до истечения offer
     const getOfferTimeLeft = (expiresAt) => {
       if (!expiresAt) return null;
@@ -1426,11 +1420,11 @@
       const hours = Math.floor(mins / 60);
       return `${hours}ч ${mins % 60}м`;
     };
-    
+
     // Свободные слоты
     const freeSlots = stats ? Math.max(0, (stats.limits?.max_active_trials || 3) - (grouped.assigned?.length || 0)) : 0;
     const isAccepting = stats?.limits?.is_accepting_trials ?? false;
-    
+
     // Карточка клиента
     const ClientCard = ({ item, showPosition, showActions, showOfferTimer }) => {
       return React.createElement('div', {
@@ -1461,7 +1455,7 @@
             flexShrink: 0
           }
         }, item.queue_position || '?'),
-        
+
         // Аватар (если без позиции)
         !showPosition && React.createElement('div', {
           style: {
@@ -1477,28 +1471,28 @@
             flexShrink: 0
           }
         }, item.status === 'assigned' ? '✓' : '⏳'),
-        
+
         // Инфо
         React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-          React.createElement('div', { 
-            style: { 
+          React.createElement('div', {
+            style: {
               fontWeight: 600,
               fontSize: '14px',
               color: '#1f2937',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap'
-            } 
+            }
           }, item.client_name || item.name || 'Без имени'),
-          React.createElement('div', { 
-            style: { 
-              fontSize: '12px', 
+          React.createElement('div', {
+            style: {
+              fontSize: '12px',
               color: '#6b7280',
               marginTop: '2px'
-            } 
+            }
           }, item.client_phone || item.phone_normalized || '—')
         ),
-        
+
         // Таймер offer
         showOfferTimer && item.offer_expires_at && React.createElement('div', {
           style: {
@@ -1511,7 +1505,7 @@
             whiteSpace: 'nowrap'
           }
         }, '⏱ ' + getOfferTimeLeft(item.offer_expires_at)),
-        
+
         // Дата начала (для активных)
         item.status === 'assigned' && item.assigned_at && React.createElement('div', {
           style: {
@@ -1519,13 +1513,13 @@
             color: '#6b7280',
             textAlign: 'right'
           }
-        }, 
+        },
           React.createElement('div', null, 'Начало:'),
           React.createElement('div', { style: { fontWeight: 500 } }, formatDate(item.assigned_at))
         ),
-        
+
         // Действия (v2.0: Активировать + Отклонить)
-        showActions && React.createElement('div', { 
+        showActions && React.createElement('div', {
           style: { display: 'flex', gap: '6px', flexShrink: 0 }
         },
           // Кнопка "Активировать триал" (для pending заявок)
@@ -1545,7 +1539,7 @@
               opacity: actionLoading === item.client_id ? 0.7 : 1
             }
           }, actionLoading === item.client_id ? '⏳' : '✅ Активировать'),
-          
+
           // Кнопка "Отклонить" (для pending заявок)
           (item.status === 'pending' || item.status === 'queued' || item.status === 'offer') && React.createElement('button', {
             onClick: () => handleReject(item.client_id, item.client_name || item.name),
@@ -1565,7 +1559,7 @@
         )
       );
     };
-    
+
     // Секция с заголовком
     const Section = ({ title, icon, count, color, children, emptyText }) => {
       return React.createElement('div', {
@@ -1588,12 +1582,12 @@
           }
         },
           React.createElement('span', { style: { fontSize: '18px' } }, icon),
-          React.createElement('span', { 
-            style: { 
-              fontWeight: 600, 
+          React.createElement('span', {
+            style: {
+              fontWeight: 600,
               fontSize: '15px',
               color: '#374151'
-            } 
+            }
           }, title),
           React.createElement('span', {
             style: {
@@ -1620,17 +1614,17 @@
         }, children)
       );
     };
-    
+
     // ========================================
     // РЕНДЕР
     // ========================================
-    return React.createElement('div', { 
-      style: { 
+    return React.createElement('div', {
+      style: {
         padding: '20px',
         maxHeight: '75vh',
         overflowY: 'auto',
         background: '#fff'
-      } 
+      }
     },
       // ========== HEADER: Статус очереди ==========
       React.createElement('div', {
@@ -1640,8 +1634,8 @@
           justifyContent: 'space-between',
           marginBottom: '20px',
           padding: '16px 20px',
-          background: isAccepting 
-            ? 'linear-gradient(135deg, #dcfce7, #bbf7d0)' 
+          background: isAccepting
+            ? 'linear-gradient(135deg, #dcfce7, #bbf7d0)'
             : 'linear-gradient(135deg, #fee2e2, #fecaca)',
           borderRadius: '16px',
           border: isAccepting ? '2px solid #86efac' : '2px solid #fca5a5'
@@ -1665,7 +1659,7 @@
               alignItems: 'center',
               gap: '8px'
             }
-          }, 
+          },
             isAccepting ? '🟢 Открыта' : '🔴 Закрыта',
             toggleLoading && React.createElement('span', {
               style: { fontSize: '14px', opacity: 0.7 }
@@ -1703,7 +1697,7 @@
           })
         )
       ),
-      
+
       // ========== STATS CARDS ==========
       React.createElement('div', {
         style: {
@@ -1722,42 +1716,42 @@
             textAlign: 'center'
           }
         },
-          React.createElement('div', { 
-            style: { fontSize: '28px', fontWeight: 700, color: '#1d4ed8' } 
+          React.createElement('div', {
+            style: { fontSize: '28px', fontWeight: 700, color: '#1d4ed8' }
           }, grouped.assigned.length),
-          React.createElement('div', { 
-            style: { fontSize: '12px', color: '#3b82f6', fontWeight: 500, marginTop: '4px' } 
+          React.createElement('div', {
+            style: { fontSize: '12px', color: '#3b82f6', fontWeight: 500, marginTop: '4px' }
           }, 'АКТИВНЫХ')
         ),
-        
+
         // Свободных слотов
         React.createElement('div', {
           style: {
             padding: '16px',
-            background: freeSlots > 0 
-              ? 'linear-gradient(135deg, #dcfce7, #bbf7d0)' 
+            background: freeSlots > 0
+              ? 'linear-gradient(135deg, #dcfce7, #bbf7d0)'
               : 'linear-gradient(135deg, #fef3c7, #fde68a)',
             borderRadius: '12px',
             textAlign: 'center'
           }
         },
-          React.createElement('div', { 
-            style: { 
-              fontSize: '28px', 
-              fontWeight: 700, 
-              color: freeSlots > 0 ? '#15803d' : '#b45309' 
-            } 
+          React.createElement('div', {
+            style: {
+              fontSize: '28px',
+              fontWeight: 700,
+              color: freeSlots > 0 ? '#15803d' : '#b45309'
+            }
           }, freeSlots),
-          React.createElement('div', { 
-            style: { 
-              fontSize: '12px', 
-              color: freeSlots > 0 ? '#16a34a' : '#d97706', 
-              fontWeight: 500, 
-              marginTop: '4px' 
-            } 
+          React.createElement('div', {
+            style: {
+              fontSize: '12px',
+              color: freeSlots > 0 ? '#16a34a' : '#d97706',
+              fontWeight: 500,
+              marginTop: '4px'
+            }
           }, 'СВОБОДНО')
         ),
-        
+
         // Заявки (pending)
         React.createElement('div', {
           style: {
@@ -1767,14 +1761,14 @@
             textAlign: 'center'
           }
         },
-          React.createElement('div', { 
-            style: { fontSize: '28px', fontWeight: 700, color: '#b45309' } 
+          React.createElement('div', {
+            style: { fontSize: '28px', fontWeight: 700, color: '#b45309' }
           }, grouped.pending.length),
-          React.createElement('div', { 
-            style: { fontSize: '12px', color: '#d97706', fontWeight: 500, marginTop: '4px' } 
+          React.createElement('div', {
+            style: { fontSize: '12px', color: '#d97706', fontWeight: 500, marginTop: '4px' }
           }, 'ЗАЯВКИ')
         ),
-        
+
         // Отклонённые
         React.createElement('div', {
           style: {
@@ -1784,15 +1778,15 @@
             textAlign: 'center'
           }
         },
-          React.createElement('div', { 
-            style: { fontSize: '28px', fontWeight: 700, color: '#dc2626' } 
+          React.createElement('div', {
+            style: { fontSize: '28px', fontWeight: 700, color: '#dc2626' }
           }, grouped.rejected.length),
-          React.createElement('div', { 
-            style: { fontSize: '12px', color: '#ef4444', fontWeight: 500, marginTop: '4px' } 
+          React.createElement('div', {
+            style: { fontSize: '12px', color: '#ef4444', fontWeight: 500, marginTop: '4px' }
           }, 'ОТКЛОНЕНО')
         )
       ),
-      
+
       // ========== REFRESH BUTTON ==========
       React.createElement('div', {
         style: {
@@ -1819,7 +1813,7 @@
           }
         }, loading ? '⏳ Загрузка...' : '🔄 Обновить')
       ),
-      
+
       // ========== ERROR ==========
       error && React.createElement('div', {
         style: {
@@ -1831,7 +1825,7 @@
           fontWeight: 500
         }
       }, '❌ ' + error),
-      
+
       // ========== LOADING ==========
       loading && React.createElement('div', {
         style: {
@@ -1839,13 +1833,13 @@
           textAlign: 'center',
           color: '#6b7280'
         }
-      }, 
-        React.createElement('div', { 
-          style: { fontSize: '32px', marginBottom: '8px' } 
+      },
+        React.createElement('div', {
+          style: { fontSize: '32px', marginBottom: '8px' }
         }, '⏳'),
         'Загрузка данных...'
       ),
-      
+
       // ========== CONTENT ==========
       !loading && React.createElement(React.Fragment, null,
         // Секция: Активные триалы
@@ -1855,7 +1849,7 @@
           count: grouped.assigned.length,
           color: '#3b82f6',
           emptyText: 'Нет активных триалов',
-          children: grouped.assigned.map((item, idx) => 
+          children: grouped.assigned.map((item, idx) =>
             React.createElement(ClientCard, {
               key: item.client_id || item.queue_id || idx,
               item,
@@ -1865,7 +1859,7 @@
             })
           )
         }),
-        
+
         // Секция: Заявки на рассмотрении (v2.0)
         Section({
           title: 'Заявки на рассмотрении',
@@ -1873,7 +1867,7 @@
           count: grouped.pending.length,
           color: '#f59e0b',
           emptyText: 'Нет новых заявок',
-          children: grouped.pending.map((item, idx) => 
+          children: grouped.pending.map((item, idx) =>
             React.createElement(ClientCard, {
               key: item.client_id || item.queue_id || idx,
               item,
@@ -1883,7 +1877,7 @@
             })
           )
         }),
-        
+
         // Секция: Отклонённые
         grouped.rejected.length > 0 && Section({
           title: 'Отклонённые заявки',
@@ -1891,7 +1885,7 @@
           count: grouped.rejected.length,
           color: '#ef4444',
           emptyText: '',
-          children: grouped.rejected.map((item, idx) => 
+          children: grouped.rejected.map((item, idx) =>
             React.createElement(ClientCard, {
               key: item.client_id || item.queue_id || idx,
               item,
@@ -1902,7 +1896,7 @@
           )
         })
       ),
-      
+
       // ========== SETTINGS HINT ==========
       stats && React.createElement('div', {
         style: {
@@ -1920,15 +1914,15 @@
       )
     );
   }
-  
+
   // ========================================
   // ЭКСПОРТ
   // ========================================
-  
+
   HEYS.TrialQueue = {
     // Константы
     STATUS: QUEUE_STATUS,
-    
+
     // API
     getCapacity,
     requestTrial,
@@ -1936,23 +1930,23 @@
     claimOffer,
     cancelQueue,
     clearCache,
-    
+
     // Admin API
     admin: adminAPI,
-    
+
     // Хелперы
     formatTimeRemaining,
     isOfferExpired,
     getQueueStatusMeta,
     getCapacityMeta,
-    
+
     // React
     useTrialQueue,
     TrialCapacityWidget,
     QueueStatusCard,
     TrialQueueAdmin, // Админ-панель
   };
-  
-  console.log('[HEYS] 🎫 TrialQueue module v1.1 loaded (with admin)');
-  
+
+  // 🔇 v4.7.0: Лог загрузки отключён
+
 })(typeof window !== 'undefined' ? window : globalThis);

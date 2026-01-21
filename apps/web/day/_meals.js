@@ -2181,99 +2181,106 @@
                         HEYS.Toast?.success('Приём создан');
 
                         setTimeout(() => {
+                            // Get current meals to find the new meal index
+                            // Use a ref-based approach to avoid calling show() inside setDay
+                            let foundMealIndex = -1;
+
                             setDay((currentDay) => {
                                 const meals = currentDay.meals || [];
-                                const mealIndex = meals.findIndex((m) => m.id === newMealId);
+                                foundMealIndex = meals.findIndex((m) => m.id === newMealId);
 
-                                if (mealIndex >= 0) {
-                                    expandOnlyMeal(mealIndex);
-
-                                    if (window.HEYS?.AddProductStep?.show) {
-                                        window.HEYS.AddProductStep.show({
-                                            mealIndex: mealIndex,
-                                            products: products,
-                                            dateKey: date,
-                                            onAdd: ({ product, grams, mealIndex: targetMealIndex }) => {
-                                                let finalProduct = product;
-                                                if (product?._fromShared || product?._source === 'shared' || product?.is_shared) {
-                                                    const cloned = HEYS.products?.addFromShared?.(product);
-                                                    if (cloned) {
-                                                        finalProduct = cloned;
-                                                    }
-                                                }
-
-                                                const productId = finalProduct.id ?? finalProduct.product_id ?? finalProduct.name;
-                                                const computeTEFKcal100 = (p) => {
-                                                    const carbs = (+p.carbs100) || ((+p.simple100 || 0) + (+p.complex100 || 0));
-                                                    const fat = (+p.fat100) || ((+p.badFat100 || 0) + (+p.goodFat100 || 0) + (+p.trans100 || 0));
-                                                    return Math.round((3 * (+p.protein100 || 0) + 4 * carbs + 9 * fat) * 10) / 10;
-                                                };
-                                                const newItem = {
-                                                    id: uid('it_'),
-                                                    product_id: finalProduct.id ?? finalProduct.product_id,
-                                                    name: finalProduct.name,
-                                                    grams: grams || 100,
-                                                    ...(finalProduct.kcal100 !== undefined && {
-                                                        kcal100: computeTEFKcal100(finalProduct),
-                                                        protein100: finalProduct.protein100,
-                                                        carbs100: finalProduct.carbs100,
-                                                        fat100: finalProduct.fat100,
-                                                        simple100: finalProduct.simple100,
-                                                        complex100: finalProduct.complex100,
-                                                        badFat100: finalProduct.badFat100,
-                                                        goodFat100: finalProduct.goodFat100,
-                                                        trans100: finalProduct.trans100,
-                                                        fiber100: finalProduct.fiber100,
-                                                        gi: finalProduct.gi,
-                                                        harm: HEYS.models?.normalizeHarm?.(finalProduct),  // Canonical harm field
-                                                    }),
-                                                };
-
-                                                const newUpdatedAt = Date.now();
-                                                lastLoadedUpdatedAtRef.current = newUpdatedAt;
-                                                blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
-
-                                                setDay((prevDay = {}) => {
-                                                    const updatedMeals = (prevDay.meals || []).map((m, i) =>
-                                                        i === targetMealIndex
-                                                            ? { ...m, items: [...(m.items || []), newItem] }
-                                                            : m,
-                                                    );
-                                                    const newDayData = { ...prevDay, meals: updatedMeals, updatedAt: newUpdatedAt };
-
-                                                    const key = 'heys_dayv2_' + date;
-                                                    try {
-                                                        lsSet(key, newDayData);
-                                                    } catch (e) {
-                                                        trackError(e, { source: 'day/_meals.js', action: 'save_product' });
-                                                    }
-
-                                                    return newDayData;
-                                                });
-
-                                                try { navigator.vibrate?.(10); } catch (e) { }
-                                                window.dispatchEvent(new CustomEvent('heysProductAdded', { detail: { product: finalProduct, grams } }));
-                                                try {
-                                                    lsSet(`heys_last_grams_${productId}`, grams);
-                                                    const history = lsGet('heys_grams_history', {});
-                                                    if (!history[productId]) history[productId] = [];
-                                                    history[productId].push(grams);
-                                                    if (history[productId].length > 20) history[productId].shift();
-                                                    lsSet('heys_grams_history', history);
-                                                } catch (e) { }
-                                                if (scrollToDiaryHeading) scrollToDiaryHeading();
-                                            },
-                                            onNewProduct: () => {
-                                                if (window.HEYS?.products?.showAddModal) {
-                                                    window.HEYS.products.showAddModal();
-                                                }
-                                            },
-                                        });
-                                    }
+                                if (foundMealIndex >= 0) {
+                                    expandOnlyMeal(foundMealIndex);
                                 }
 
                                 return currentDay;
                             });
+
+                            // Call AddProductStep.show OUTSIDE of setDay to avoid setState during render
+                            setTimeout(() => {
+                                if (foundMealIndex >= 0 && window.HEYS?.AddProductStep?.show) {
+                                    window.HEYS.AddProductStep.show({
+                                        mealIndex: foundMealIndex,
+                                        products: products,
+                                        dateKey: date,
+                                        onAdd: ({ product, grams, mealIndex: targetMealIndex }) => {
+                                            let finalProduct = product;
+                                            if (product?._fromShared || product?._source === 'shared' || product?.is_shared) {
+                                                const cloned = HEYS.products?.addFromShared?.(product);
+                                                if (cloned) {
+                                                    finalProduct = cloned;
+                                                }
+                                            }
+
+                                            const productId = finalProduct.id ?? finalProduct.product_id ?? finalProduct.name;
+                                            const computeTEFKcal100 = (p) => {
+                                                const carbs = (+p.carbs100) || ((+p.simple100 || 0) + (+p.complex100 || 0));
+                                                const fat = (+p.fat100) || ((+p.badFat100 || 0) + (+p.goodFat100 || 0) + (+p.trans100 || 0));
+                                                return Math.round((3 * (+p.protein100 || 0) + 4 * carbs + 9 * fat) * 10) / 10;
+                                            };
+                                            const newItem = {
+                                                id: uid('it_'),
+                                                product_id: finalProduct.id ?? finalProduct.product_id,
+                                                name: finalProduct.name,
+                                                grams: grams || 100,
+                                                ...(finalProduct.kcal100 !== undefined && {
+                                                    kcal100: computeTEFKcal100(finalProduct),
+                                                    protein100: finalProduct.protein100,
+                                                    carbs100: finalProduct.carbs100,
+                                                    fat100: finalProduct.fat100,
+                                                    simple100: finalProduct.simple100,
+                                                    complex100: finalProduct.complex100,
+                                                    badFat100: finalProduct.badFat100,
+                                                    goodFat100: finalProduct.goodFat100,
+                                                    trans100: finalProduct.trans100,
+                                                    fiber100: finalProduct.fiber100,
+                                                    gi: finalProduct.gi,
+                                                    harm: HEYS.models?.normalizeHarm?.(finalProduct),  // Canonical harm field
+                                                }),
+                                            };
+
+                                            const newUpdatedAt = Date.now();
+                                            lastLoadedUpdatedAtRef.current = newUpdatedAt;
+                                            blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
+
+                                            setDay((prevDay = {}) => {
+                                                const updatedMeals = (prevDay.meals || []).map((m, i) =>
+                                                    i === targetMealIndex
+                                                        ? { ...m, items: [...(m.items || []), newItem] }
+                                                        : m,
+                                                );
+                                                const newDayData = { ...prevDay, meals: updatedMeals, updatedAt: newUpdatedAt };
+
+                                                const key = 'heys_dayv2_' + date;
+                                                try {
+                                                    lsSet(key, newDayData);
+                                                } catch (e) {
+                                                    trackError(e, { source: 'day/_meals.js', action: 'save_product' });
+                                                }
+
+                                                return newDayData;
+                                            });
+
+                                            try { navigator.vibrate?.(10); } catch (e) { }
+                                            window.dispatchEvent(new CustomEvent('heysProductAdded', { detail: { product: finalProduct, grams } }));
+                                            try {
+                                                lsSet(`heys_last_grams_${productId}`, grams);
+                                                const history = lsGet('heys_grams_history', {});
+                                                if (!history[productId]) history[productId] = [];
+                                                history[productId].push(grams);
+                                                if (history[productId].length > 20) history[productId].shift();
+                                                lsSet('heys_grams_history', history);
+                                            } catch (e) { }
+                                            if (scrollToDiaryHeading) scrollToDiaryHeading();
+                                        },
+                                        onNewProduct: () => {
+                                            if (window.HEYS?.products?.showAddModal) {
+                                                window.HEYS.products.showAddModal();
+                                            }
+                                        },
+                                    });
+                                }
+                            }, 0);
                         }, 50);
                     },
                 });

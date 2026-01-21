@@ -132,7 +132,7 @@
                     // Это предотвращает "мерцание" когда приходят разные ключи из облака
                     setProducts(prev => {
                         if (Array.isArray(prev) && prev.length > latest.length) {
-                            console.log(`[HEYS] ⚠️ Products update blocked: ${prev.length} > ${latest.length}`);
+                            // 🔇 v4.7.0: Лог отключён
                             return prev;
                         }
                         // 🔒 Оптимизация: не обновляем если количество одинаковое (скорее всего те же данные)
@@ -169,7 +169,7 @@
                 if (!Array.isArray(newProducts)) return;
                 setProducts(prev => {
                     if (Array.isArray(prev) && prev.length > newProducts.length) {
-                        console.log(`[HEYS] ⚠️ RationTab BLOCKED: ${prev.length} > ${newProducts.length}`);
+                        // 🔇 v4.7.0: Лог отключён
                         return prev;
                     }
                     // 🔒 Не ре-рендерим если количество одинаковое
@@ -182,21 +182,17 @@
 
             // 🔄 Хелпер: запуск orphan recovery (с debounce через флаг)
             const runOrphanRecovery = (options = {}) => {
-                // 🔧 FIX: Диагностика — логируем причину пропуска recovery
+                // � v4.7.0: DEBUG логи отключены
                 if (recoveryScheduled) {
-                    console.log('[HEYS] ⏭️ runOrphanRecovery: пропуск (уже запланировано)');
                     return;
                 }
                 if (cancelled) {
-                    console.log('[HEYS] ⏭️ runOrphanRecovery: пропуск (cancelled)');
                     return;
                 }
                 if (!window.HEYS.orphanProducts?.autoRecoverOnLoad) {
-                    console.warn('[HEYS] ⚠️ runOrphanRecovery: autoRecoverOnLoad не найден!');
                     return;
                 }
 
-                console.log('[HEYS] 🔄 runOrphanRecovery: запуск autoRecoverOnLoad...');
                 recoveryScheduled = true;
                 const isFirstLoad = !syncedClientsCache.has(clientId);
 

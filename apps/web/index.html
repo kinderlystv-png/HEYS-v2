@@ -14,7 +14,7 @@
                 try {
                     localStorage.setItem('heys_boot_log', JSON.stringify(window.__heysBootLog.slice(-50)));
                 } catch (e) { }
-                console.log('[BOOT +' + entry.t + 'ms]', msg);
+                // 🔇 v4.7.0: BOOT логи отключены (см. localStorage.heys_boot_log)
             };
             window.__heysLog('HTML parsing started');
 
@@ -43,35 +43,11 @@
     <link rel="stylesheet" href="styles/critical.css" />
 
     <!-- HTTP/2 + Resource hints for optimal performance -->
+    <!-- cdn.jsdelivr.net оставлен для Twemoji (emoji SVG) -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
 
-    <!-- React preload: динамически добавляется в зависимости от режима (dev/prod) -->
-    <script>
-        (function () {
-            var isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-            var isDebug = location.search.indexOf('debug=1') !== -1
-                || localStorage.getItem('heys_debug') === '1';
-            var useDevBuild = isLocalhost || isDebug;
-
-            if (!useDevBuild) {
-                // Production: preload minified версии
-                var reactPreload = document.createElement('link');
-                reactPreload.rel = 'preload';
-                reactPreload.href = 'https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js';
-                reactPreload.as = 'script';
-                reactPreload.crossOrigin = 'anonymous';
-                document.head.appendChild(reactPreload);
-
-                var reactDomPreload = document.createElement('link');
-                reactDomPreload.rel = 'preload';
-                reactDomPreload.href = 'https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js';
-                reactDomPreload.as = 'script';
-                reactDomPreload.crossOrigin = 'anonymous';
-                document.head.appendChild(reactDomPreload);
-            }
-        })();
-    </script>
+    <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
 
     <!-- Resource hints for better caching (prefetch, not preload to avoid warnings) -->
     <link rel="prefetch" href="heys_core_v12.js" />
@@ -1668,25 +1644,22 @@
     </script>
 
     <!-- libs with defer and priority for optimal loading -->
-    <!-- React CDN (jsDelivr - more reliable in RU) -->
-    <script>
-        (function () {
-            var isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-            var isDebug = new URLSearchParams(window.location.search).get('debug') === '1'
-                || localStorage.getItem('heys_debug') === '1';
-            var useDevBuild = isLocalhost || isDebug;
-            var reactSrc = useDevBuild
-                ? 'https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js'
-                : 'https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js';
-            var reactDomSrc = useDevBuild
-                ? 'https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js'
-                : 'https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js';
+    <!-- React (локальный бандл) - 152-ФЗ compliant, без CDN warnings -->
+    <!-- ВАЖНО: Этот скрипт ДОЛЖЕН загрузиться до defer-скриптов -->
+    <!-- Vite обрабатывает импорты: dev → pre-bundled, prod → минифицированный -->
+    <script type="module" src="/src/react-globals.ts"></script>
 
-            // Синхронная загрузка через document.write — ОБЯЗАТЕЛЬНА!
-            // createElement делает async загрузку, React не успевает до defer-скриптов
-            // Warning в консоли — меньшее зло чем сломанное приложение
-            document.write('<script src="' + reactSrc + '" crossorigin="anonymous"><\/script>');
-            document.write('<script src="' + reactDomSrc + '" crossorigin="anonymous"><\/script>');
+    <!-- Fallback: ждём пока React загрузится перед legacy скриптами -->
+    <script>
+        // Polling для window.React (ESM модули асинхронны)
+        // Legacy скрипты используют defer, поэтому есть время на загрузку
+        (function waitForReact() {
+            if (window.React && window.ReactDOM) {
+                console.log('[HEYS] React ready for legacy scripts');
+                return;
+            }
+            // В dev React загружается быстро (~50ms), в prod ещё быстрее
+            setTimeout(waitForReact, 10);
         })();
     </script>
     <!-- Supabase CDN — УДАЛЁН 2025-12-24 (152-ФЗ compliance)

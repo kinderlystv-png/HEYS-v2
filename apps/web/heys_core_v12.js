@@ -858,7 +858,7 @@
 
             // 🧹 Автоматическая дедупликация при подозрительно большом количестве (>1000)
             if (Array.isArray(latest) && latest.length > 1000) {
-              console.warn('[HEYS] ⚠️ Обнаружено много продуктов:', latest.length, '— запускаем дедупликацию');
+              // 🔇 v4.7.1: Лог отключён
               if (window.HEYS.products && window.HEYS.products.deduplicate) {
                 window.HEYS.products.deduplicate();
                 // Перечитываем после дедупликации
@@ -2704,8 +2704,21 @@
 
   // products helper API (thin wrapper over store + local fallback)
   HEYS.products = HEYS.products || {
-    getAll: () => (HEYS.store && HEYS.store.get && HEYS.store.get('heys_products', [])) || (HEYS.utils && HEYS.utils.lsGet && HEYS.utils.lsGet('heys_products', [])) || [],
-    setAll: (arr) => { if (HEYS.store && HEYS.store.set) HEYS.store.set('heys_products', arr); else if (HEYS.utils && HEYS.utils.lsSet) HEYS.utils.lsSet('heys_products', arr); },
+    getAll: () => {
+      const fromStore = (HEYS.store && HEYS.store.get && HEYS.store.get('heys_products', [])) || [];
+      const fromUtils = (HEYS.utils && HEYS.utils.lsGet && HEYS.utils.lsGet('heys_products', [])) || [];
+      const result = fromStore.length > 0 ? fromStore : fromUtils;
+      // 🔍 DEBUG: Логируем откуда берутся продукты (раскомментировать при отладке)
+      // console.log('[HEYS.products.getAll] fromStore:', fromStore.length, 'fromUtils:', fromUtils.length, 'result:', result.length);
+      return result;
+    },
+    setAll: (arr, opts = {}) => {
+      if (HEYS.store && HEYS.store.set) {
+        HEYS.store.set('heys_products', arr);
+      } else if (HEYS.utils && HEYS.utils.lsSet) {
+        HEYS.utils.lsSet('heys_products', arr);
+      }
+    },
     watch: (fn) => { if (HEYS.store && HEYS.store.watch) return HEYS.store.watch('heys_products', fn); return () => { }; },
 
     /**
@@ -2742,7 +2755,7 @@
       if (sharedProduct.id) {
         const existingByOrigin = products.find(p => p.shared_origin_id === sharedProduct.id);
         if (existingByOrigin) {
-          console.log('[SHARED→LOCAL] Already cloned:', sharedProduct.name);
+          // 🔇 v4.7.1: Лог отключён
           return mergeMissingFromShared(existingByOrigin);
         }
       }
@@ -2751,7 +2764,7 @@
       const normName = (sharedProduct.name || '').toLowerCase().trim();
       const existingByName = products.find(p => (p.name || '').toLowerCase().trim() === normName);
       if (existingByName) {
-        console.log('[SHARED→LOCAL] Already exists by name:', sharedProduct.name);
+        // 🔇 v4.7.1: Лог отключён
         return mergeMissingFromShared(existingByName);
       }
 
@@ -2816,7 +2829,7 @@
       const newProducts = [...products, withDerived];
       HEYS.products.setAll(newProducts);
 
-      console.log('[SHARED→LOCAL] ✅ Auto-cloned:', sharedProduct.name, 'new id:', withDerived.id);
+      // 🔇 v4.7.1: Лог отключён
       return withDerived;
     },
 
@@ -2843,9 +2856,7 @@
 
       if (removed > 0) {
         HEYS.products.setAll(unique);
-        console.log(`[HEYS] ✅ Дедупликация: было ${original}, стало ${unique.length}, удалено дублей: ${removed}`);
-      } else {
-        console.log(`[HEYS] ℹ️ Дублей не найдено (${original} продуктов)`);
+        // 🔇 v4.7.0: Лог отключён
       }
 
       return { original, deduplicated: unique.length, removed };
