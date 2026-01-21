@@ -1,6 +1,181 @@
 # HEYS — Активные задачи
 
-> Обновлено: 2026-01-18
+> Обновлено: 2026-01-21
+
+---
+
+## 🚨 Фаза 0: PWA Recovery (блокер белого экрана) — 5 часов
+
+> **Проблема**: После splash "HEYS Nutrition Tracker" — белый экран на телефоне.
+> **Причина**: 5 точек "тихого" empty-div fallback + SW файл отсутствует (404).
+> **Цель**: Автоматическое восстановление без ручной очистки кэша.
+
+### Phase 0.1: Критические исправления (2 часа)
+
+- [ ] **0.1.1** Создать Service Worker `apps/web/sw.js`
+  - **ФАЙЛ ОТСУТСТВУЕТ!** → 404 при регистрации
+  - Минимальный SW с offline fallback
+  - Cache-First для статики, Network-First для API
+  - Boot failure counter в IndexedDB
+  - Если >2 failures за 5 мин → `caches.delete()` + `skipWaiting()`
+
+- [ ] **0.1.2** Recovery UI в `heys_app_root_component_v1.js:11-13`
+  - Заменить `React.createElement('div', null, '')` на визуальную ошибку
+  - Кнопки: "🔄 Перезагрузить" + "🗑️ Сбросить кэш"
+  - Сообщение: "Модуль AppRootImpl недоступен"
+
+- [ ] **0.1.3** Recovery UI в `heys_app_root_v1.js:107-108`
+  - Тот же паттерн empty-div fallback
+  - Аналогичное исправление
+
+- [ ] **0.1.4** Recovery UI в `heys_app_v12.js:7-10`
+  - Если `AppEntry.start` отсутствует → показать ошибку
+  - Сейчас: только `console.warn`, ничего не рендерится
+
+- [ ] **0.1.5** Расширить dependency checks в `heys_app_dependency_loader_v1.js:18-22`
+  - Добавить `HEYS.AppRootImpl` и `HEYS.AppRootImpl.createApp` в `allDepsLoaded()`
+  - Сейчас: проверяет только DayTab, Ration, UserTab
+
+- [ ] **0.1.6** (LOW) Обработка ошибок загрузки критических скриптов
+  - `onerror` handler на `heys_app_v12.js` и `heys_app_entry_v1.js`
+  - Если не загрузился → Recovery UI
+  - Приоритет: низкий (редкий edge case)
+
+### Phase 0.2: Глобальная защита (1.5 часа)
+
+- [ ] **0.2.1** Pre-React error handler в `index.html` (Bootstrap секция)
+  - `window.onerror` + `unhandledrejection` **ПЕРЕД** всеми скриптами
+  - Fallback UI если критическая ошибка при пустом #root
+
+- [ ] **0.2.2** Timeout watchdog (15 сек)
+  - Если `window.__heysAppReady !== true` за 15 сек → Recovery UI
+  - Установить флаг `__heysAppReady = true` после успешного рендера App
+
+- [ ] **0.2.3** SW регистрация: оставить только vanilla JS
+  - Production path: `heys_platform_apis_v1.js:1696` — работает
+  - `service-worker-manager.ts` — НЕ используется в boot flow (только `usePerformanceMetrics`)
+  - Решение: НЕ трогать vanilla JS, он primary
+  - Исправить комментарий в `index.html:1925` (врёт про heys_app_v12)
+
+### Phase 0.3: SW Update & Offline UI (1.5 часа)
+
+- [ ] **0.3.1** Реализовать `showUpdateNotification()` в `service-worker-manager.ts`
+  - Toast/banner: "Доступно обновление. Перезагрузить?"
+  - Сейчас: заглушка с комментарием "just log"
+
+- [ ] **0.3.2** Реализовать `showOfflineNotification()` 
+  - Visual indicator: "📴 Офлайн режим"
+  - Сейчас: заглушка
+
+- [ ] **0.3.3** Централизованный debug-логгер для fallback hooks
+  - `HEYS._debugMissingModule(name)` — логирует только в DEBUG_MODE
+  - Покрыть 30+ fallback hooks в `heys_app_root_impl_v1.js`
+
+### Решения по Further Considerations:
+
+1. ✅ **150+ defer скриптов → dynamic imports**: ОТЛОЖИТЬ на Phase 2
+   - Сейчас фокус на стабильности, не оптимизации
+   - Риск breaking changes высок (~2 дня работы)
+
+2. ✅ **30+ fallback hooks**: Централизованный механизм с DEBUG флагом
+   - Не засоряет консоль в production
+   - Добавить в задачу 0.3.3
+
+---
+
+## 🔧 Фаза 1: Database Resilience — 6 часов
+
+> **Проблема**: Каждый запрос создаёт новое DB соединение → исчерпание лимита.
+> **Цель**: Connection pooling + автоматические бэкапы.
+
+- [ ] **1.1** Создать shared DB pool module
+  - Единый `Pool` с конфигом `{max: 3, idleTimeoutMillis: 10000}`
+  - Экспорт `getPool()` и `withClient(fn)`
+  - **Файл**: `yandex-cloud-functions/shared/db-pool.js`
+
+- [ ] **1.2** Рефакторинг heys-api-rpc на pool
+  - Заменить `new Client()` на `getPool().connect()` + `release()`
+  - **Файл**: `yandex-cloud-functions/heys-api-rpc/index.js`
+
+- [ ] **1.3** Рефакторинг heys-api-rest на pool
+  - **Файл**: `yandex-cloud-functions/heys-api-rest/index.js`
+
+- [ ] **1.4** Рефакторинг heys-api-auth на pool
+  - **Файл**: `yandex-cloud-functions/heys-api-auth/index.js`
+
+- [ ] **1.5** Рефакторинг heys-api-leads на pool
+  - **Файл**: `yandex-cloud-functions/heys-api-leads/index.js`
+
+- [ ] **1.6** Рефакторинг heys-api-payments на pool (5 мест!)
+  - **Файл**: `yandex-cloud-functions/heys-api-payments/index.js`
+
+- [ ] **1.7** Включить автобэкап в Yandex Cloud
+  - Console: Managed PostgreSQL → Backup
+  - `backup-window: 03:00`, `retain: 7 days`
+
+- [ ] **1.8** Создать backup Cloud Function
+  - pg_dump → gzip → S3 bucket `heys-backups`
+  - Cron триггер ежедневно в 03:00
+  - **Папка**: `yandex-cloud-functions/heys-backup/`
+
+---
+
+## 📊 Фаза 2: Мониторинг и Алерты — 3 часа
+
+> **Проблема**: Система "слепа" — нет алертов о падениях и ошибках.
+> **Цель**: Глубокий health check + UptimeRobot + Telegram алерты.
+
+- [ ] **2.1** Расширить health check
+  - Добавить проверку DB connectivity
+  - Response latency, вернуть 503 при degraded
+  - **Файл**: `yandex-cloud-functions/heys-api-health/index.js`
+
+- [ ] **2.2** Security alerting в maintenance
+  - `checkSecurityAlerts()`: >10 событий/час → Telegram alert
+  - **Файл**: `yandex-cloud-functions/heys-maintenance/index.js`
+
+- [ ] **2.3** UptimeRobot для доступности
+  - Monitoring `/health` каждые 5 минут
+  - Alert в Telegram при downtime
+
+---
+
+## 🔐 Фаза 3: Безопасность — 3 часа
+
+> **Цель**: Audit logging для 152-ФЗ + шифрование health_data.
+
+- [ ] **3.1** Создать audit_log таблицу
+  - Триггеры на `clients`, `client_kv_store`
+  - Логирование INSERT/UPDATE/DELETE с user_id, ip, timestamp
+  - **Файл**: `database/2026-01-21_audit_log.sql`
+
+- [ ] **3.2** Документировать rate limiting
+  - Описание `pin_login_attempts` механизма
+  - **Файл**: `docs/SECURITY_RUNBOOK.md`
+
+- [ ] **3.3** Шифрование health_data (Phase 2)
+  - Колонка `v_encrypted BYTEA` в `client_kv_store`
+  - Функции `encrypt_kv()` / `decrypt_kv()` с AES-256
+  - Ключ в Yandex KMS
+
+---
+
+## 📋 Фаза 4: Operations & DR — 4 часа
+
+> **Цель**: Готовность к инцидентам и масштабированию.
+
+- [ ] **4.1** Создать Incident Runbook
+  - Сценарии: DB down, API 5xx, payment fail, security breach
+  - Чеклисты действий и контакты
+  - **Файл**: `docs/operations/INCIDENT_RUNBOOK.md`
+
+- [ ] **4.2** Feature flag для ограничения регистраций
+  - `MAX_ACTIVE_TRIALS` check в `start_trial_by_session`
+  - Если >N активных триалов → "очередь заполнена"
+
+- [ ] **4.3** Backup test procedure
+  - Документировать процесс восстановления
+  - Тестировать еженедельно на staging
 
 ---
 

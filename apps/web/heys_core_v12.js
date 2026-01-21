@@ -556,16 +556,48 @@
       }
     }, [sharedQuery, query, activeSubtab, searchSharedDebounced]);
 
-    // Авто-дополнение sodium100 для локальных продуктов из shared_products
-    const sodiumBackfillRef = React.useRef({ key: '', inFlight: false });
+    // Авто-дополнение extended полей для локальных продуктов из shared_products
+    const sharedFieldsBackfillRef = React.useRef({ key: '', inFlight: false });
     React.useEffect(() => {
       if (!Array.isArray(products) || products.length === 0) return;
 
       const normalizeName = window.HEYS?.models?.normalizeProductName
         || ((name) => String(name || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
+      const isMissing = (v) => v === undefined || v === null || v === '';
+      const listMissing = (v) => !Array.isArray(v) || v.length === 0;
 
       const missing = products
-        .filter(p => (p?.sodium100 === undefined || p?.sodium100 === null || p?.sodium100 === ''))
+        .filter(p => (
+          isMissing(p?.sodium100) ||
+          isMissing(p?.omega3_100) ||
+          isMissing(p?.omega6_100) ||
+          isMissing(p?.nova_group) ||
+          listMissing(p?.additives) ||
+          isMissing(p?.nutrient_density) ||
+          isMissing(p?.is_organic) ||
+          isMissing(p?.is_whole_grain) ||
+          isMissing(p?.is_fermented) ||
+          isMissing(p?.is_raw) ||
+          isMissing(p?.vitamin_a) ||
+          isMissing(p?.vitamin_c) ||
+          isMissing(p?.vitamin_d) ||
+          isMissing(p?.vitamin_e) ||
+          isMissing(p?.vitamin_k) ||
+          isMissing(p?.vitamin_b1) ||
+          isMissing(p?.vitamin_b2) ||
+          isMissing(p?.vitamin_b3) ||
+          isMissing(p?.vitamin_b6) ||
+          isMissing(p?.vitamin_b9) ||
+          isMissing(p?.vitamin_b12) ||
+          isMissing(p?.calcium) ||
+          isMissing(p?.iron) ||
+          isMissing(p?.magnesium) ||
+          isMissing(p?.phosphorus) ||
+          isMissing(p?.potassium) ||
+          isMissing(p?.zinc) ||
+          isMissing(p?.selenium) ||
+          isMissing(p?.iodine)
+        ))
         .map(p => ({ id: p?.shared_origin_id, name: normalizeName(p?.name) }))
         .filter(p => p.id || p.name);
 
@@ -576,16 +608,16 @@
         .sort()
         .join('|');
 
-      if (sodiumBackfillRef.current.inFlight || sodiumBackfillRef.current.key === missingKey) return;
+      if (sharedFieldsBackfillRef.current.inFlight || sharedFieldsBackfillRef.current.key === missingKey) return;
 
-      sodiumBackfillRef.current = { key: missingKey, inFlight: true };
+      sharedFieldsBackfillRef.current = { key: missingKey, inFlight: true };
 
       (async () => {
         try {
           const cloud = window.HEYS?.cloud;
           if (!cloud?.getAllSharedProducts) return;
 
-          const result = await cloud.getAllSharedProducts({ limit: 500, excludeBlocklist: false });
+          const result = await cloud.getAllSharedProducts({ limit: 1000, excludeBlocklist: false });
           const shared = Array.isArray(result?.data) ? result.data : [];
           if (shared.length === 0) return;
 
@@ -602,27 +634,73 @@
             }
           });
 
-          const updated = products.map(p => {
-            if (p?.sodium100 !== undefined && p?.sodium100 !== null && p?.sodium100 !== '') return p;
-
-            let sharedProduct = null;
+          const pickShared = (p) => {
             if (p?.shared_origin_id && byId.has(p.shared_origin_id)) {
-              sharedProduct = byId.get(p.shared_origin_id);
-            } else {
-              const nm = normalizeName(p?.name);
-              if (nm && nameCounts.get(nm) === 1) {
-                sharedProduct = byName.get(nm);
-              }
+              return byId.get(p.shared_origin_id);
             }
+            const nm = normalizeName(p?.name);
+            if (nm && nameCounts.get(nm) === 1) {
+              return byName.get(nm);
+            }
+            return null;
+          };
 
-            if (!sharedProduct || sharedProduct.sodium100 == null) return p;
-            return { ...p, sodium100: sharedProduct.sodium100 };
+          const updated = products.map(p => {
+            const sharedProduct = pickShared(p);
+            if (!sharedProduct) return p;
+
+            const next = { ...p };
+            let changed = false;
+            const setIfMissing = (key, value) => {
+              if (isMissing(next[key]) && !isMissing(value)) {
+                next[key] = value;
+                changed = true;
+              }
+            };
+            const setListIfMissing = (key, value) => {
+              if (listMissing(next[key]) && Array.isArray(value) && value.length > 0) {
+                next[key] = value;
+                changed = true;
+              }
+            };
+
+            setIfMissing('sodium100', sharedProduct.sodium100);
+            setIfMissing('omega3_100', sharedProduct.omega3_100);
+            setIfMissing('omega6_100', sharedProduct.omega6_100);
+            setIfMissing('nova_group', sharedProduct.nova_group ?? sharedProduct.novaGroup);
+            setListIfMissing('additives', sharedProduct.additives);
+            setIfMissing('nutrient_density', sharedProduct.nutrient_density ?? sharedProduct.nutrientDensity);
+            setIfMissing('is_organic', sharedProduct.is_organic ?? sharedProduct.isOrganic);
+            setIfMissing('is_whole_grain', sharedProduct.is_whole_grain ?? sharedProduct.isWholeGrain);
+            setIfMissing('is_fermented', sharedProduct.is_fermented ?? sharedProduct.isFermented);
+            setIfMissing('is_raw', sharedProduct.is_raw ?? sharedProduct.isRaw);
+            setIfMissing('vitamin_a', sharedProduct.vitamin_a ?? sharedProduct.vitaminA);
+            setIfMissing('vitamin_c', sharedProduct.vitamin_c ?? sharedProduct.vitaminC);
+            setIfMissing('vitamin_d', sharedProduct.vitamin_d ?? sharedProduct.vitaminD);
+            setIfMissing('vitamin_e', sharedProduct.vitamin_e ?? sharedProduct.vitaminE);
+            setIfMissing('vitamin_k', sharedProduct.vitamin_k ?? sharedProduct.vitaminK);
+            setIfMissing('vitamin_b1', sharedProduct.vitamin_b1 ?? sharedProduct.vitaminB1);
+            setIfMissing('vitamin_b2', sharedProduct.vitamin_b2 ?? sharedProduct.vitaminB2);
+            setIfMissing('vitamin_b3', sharedProduct.vitamin_b3 ?? sharedProduct.vitaminB3);
+            setIfMissing('vitamin_b6', sharedProduct.vitamin_b6 ?? sharedProduct.vitaminB6);
+            setIfMissing('vitamin_b9', sharedProduct.vitamin_b9 ?? sharedProduct.vitaminB9);
+            setIfMissing('vitamin_b12', sharedProduct.vitamin_b12 ?? sharedProduct.vitaminB12);
+            setIfMissing('calcium', sharedProduct.calcium);
+            setIfMissing('iron', sharedProduct.iron);
+            setIfMissing('magnesium', sharedProduct.magnesium);
+            setIfMissing('phosphorus', sharedProduct.phosphorus);
+            setIfMissing('potassium', sharedProduct.potassium);
+            setIfMissing('zinc', sharedProduct.zinc);
+            setIfMissing('selenium', sharedProduct.selenium);
+            setIfMissing('iodine', sharedProduct.iodine);
+
+            return changed ? next : p;
           });
 
           const changed = updated.some((p, i) => p !== products[i]);
           if (changed) setProducts(updated);
         } finally {
-          sodiumBackfillRef.current.inFlight = false;
+          sharedFieldsBackfillRef.current.inFlight = false;
         }
       })();
     }, [products]);
