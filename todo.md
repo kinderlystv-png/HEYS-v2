@@ -4,82 +4,77 @@
 
 ---
 
-## 🚨 Фаза 0: PWA Recovery (блокер белого экрана) — 5 часов
+## ✅ Фаза 0: PWA Recovery (блокер белого экрана) — ЗАВЕРШЕНО
 
 > **Проблема**: После splash "HEYS Nutrition Tracker" — белый экран на телефоне.
 > **Причина**: 5 точек "тихого" empty-div fallback + SW файл отсутствует (404).
 > **Цель**: Автоматическое восстановление без ручной очистки кэша.
+> **Статус**: ✅ Все задачи выполнены (2026-01-21)
 
-### Phase 0.1: Критические исправления (2 часа)
+### Phase 0.1: Критические исправления ✅
 
-- [ ] **0.1.1** Создать Service Worker `apps/web/sw.js`
-  - **ФАЙЛ ОТСУТСТВУЕТ!** → 404 при регистрации
-  - Минимальный SW с offline fallback
-  - Cache-First для статики, Network-First для API
-  - Boot failure counter в IndexedDB
-  - Если >2 failures за 5 мин → `caches.delete()` + `skipWaiting()`
+ - [x] **0.1.1** Создать Service Worker `apps/web/sw.js`
+  - ✅ Создан полноценный SW с Cache-First/Network-First стратегиями
+  - ✅ Boot failure counter в IndexedDB
+  - ✅ Auto-recovery: >2 failures за 5 мин → caches.delete() + skipWaiting()
 
-- [ ] **0.1.2** Recovery UI в `heys_app_root_component_v1.js:11-13`
-  - Заменить `React.createElement('div', null, '')` на визуальную ошибку
-  - Кнопки: "🔄 Перезагрузить" + "🗑️ Сбросить кэш"
-  - Сообщение: "Модуль AppRootImpl недоступен"
+ - [x] **0.1.2** Recovery UI в `heys_app_root_component_v1.js`
+  - ✅ RecoveryScreen компонент с кнопками "Обновить" и "Сбросить кэш"
 
-- [ ] **0.1.3** Recovery UI в `heys_app_root_v1.js:107-108`
-  - Тот же паттерн empty-div fallback
-  - Аналогичное исправление
+ - [x] **0.1.3** Recovery UI в `heys_app_root_v1.js`
+  - ✅ Fallback с визуальной ошибкой вместо empty-div
 
-- [ ] **0.1.4** Recovery UI в `heys_app_v12.js:7-10`
-  - Если `AppEntry.start` отсутствует → показать ошибку
-  - Сейчас: только `console.warn`, ничего не рендерится
+ - [x] **0.1.4** Recovery UI в `heys_app_v12.js`
+  - ✅ Если AppEntry.start отсутствует → показывает RecoveryScreen
 
-- [ ] **0.1.5** Расширить dependency checks в `heys_app_dependency_loader_v1.js:18-22`
-  - Добавить `HEYS.AppRootImpl` и `HEYS.AppRootImpl.createApp` в `allDepsLoaded()`
-  - Сейчас: проверяет только DayTab, Ration, UserTab
+ - [x] **0.1.5** Расширить dependency checks в `heys_app_dependency_loader_v1.js`
+  - ✅ Добавлены HEYS.AppRootImpl и HEYS.AppRootComponent.createApp
 
-- [ ] **0.1.6** (LOW) Обработка ошибок загрузки критических скриптов
-  - `onerror` handler на `heys_app_v12.js` и `heys_app_entry_v1.js`
-  - Если не загрузился → Recovery UI
-  - Приоритет: низкий (редкий edge case)
+ - [x] **0.1.6** Обработка ошибок загрузки критических скриптов
+  - ✅ `onerror` handler на heys_app_v12.js и heys_app_entry_v1.js → Recovery UI
 
-### Phase 0.2: Глобальная защита (1.5 часа)
+### Phase 0.2: Глобальная защита ✅
 
-- [ ] **0.2.1** Pre-React error handler в `index.html` (Bootstrap секция)
-  - `window.onerror` + `unhandledrejection` **ПЕРЕД** всеми скриптами
-  - Fallback UI если критическая ошибка при пустом #root
+ - [x] **0.2.1** Pre-React error handler в `index.html`
+  - ✅ window.onerror + unhandledrejection ПЕРЕД всеми скриптами
+  - ✅ showRecoveryUI() экспортирован как window.__heysShowRecoveryUI
 
-- [ ] **0.2.2** Timeout watchdog (15 сек)
-  - Если `window.__heysAppReady !== true` за 15 сек → Recovery UI
-  - Установить флаг `__heysAppReady = true` после успешного рендера App
+ - [x] **0.2.2** Timeout watchdog (15 сек)
+  - ✅ setTimeout 15s → если !__heysAppReady → Recovery UI
+  - ✅ Флаг __heysAppReady = true в heys_app_initialize_v1.js
 
-- [ ] **0.2.3** SW регистрация: оставить только vanilla JS
-  - Production path: `heys_platform_apis_v1.js:1696` — работает
-  - `service-worker-manager.ts` — НЕ используется в boot flow (только `usePerformanceMetrics`)
-  - Решение: НЕ трогать vanilla JS, он primary
-  - Исправить комментарий в `index.html:1925` (врёт про heys_app_v12)
+ - [x] **0.2.3** SW регистрация: vanilla JS primary
+  - ✅ Комментарий в index.html исправлен (heys_platform_apis_v1.js)
+  - ✅ service-worker-manager.ts оставлен как secondary (не мешает)
 
-### Phase 0.3: SW Update & Offline UI (1.5 часа)
+### Phase 0.3: SW Update & Offline UI ✅
 
-- [ ] **0.3.1** Реализовать `showUpdateNotification()` в `service-worker-manager.ts`
-  - Toast/banner: "Доступно обновление. Перезагрузить?"
-  - Сейчас: заглушка с комментарием "just log"
+ - [x] **0.3.1** showUpdateNotification() в `heys_platform_apis_v1.js`
+  - ✅ Системный banner: "Доступно обновление" + кнопка "Обновить"
 
-- [ ] **0.3.2** Реализовать `showOfflineNotification()` 
-  - Visual indicator: "📴 Офлайн режим"
-  - Сейчас: заглушка
+ - [x] **0.3.2** showOfflineNotification()
+  - ✅ Banner: "📴 Офлайн режим — данные сохраняются локально"
+  - ✅ Автоскрытие при возвращении online
 
-- [ ] **0.3.3** Централизованный debug-логгер для fallback hooks
-  - `HEYS._debugMissingModule(name)` — логирует только в DEBUG_MODE
-  - Покрыть 30+ fallback hooks в `heys_app_root_impl_v1.js`
+ - [x] **0.3.3** Централизованный debug-логгер для fallback hooks
+  - ✅ HEYS._getModule() + HEYS._debugMissingModule()
+  - ✅ Логирование только при DEBUG_MODE (localStorage.heys_debug='1')
+  - ✅ 30+ fallback hooks покрыты в heys_app_root_impl_v1.js и heys_app_initialize_v1.js
 
-### Решения по Further Considerations:
+### Phase 0.4: Quick Fixes (добавлено) ✅
 
-1. ✅ **150+ defer скриптов → dynamic imports**: ОТЛОЖИТЬ на Phase 2
-   - Сейчас фокус на стабильности, не оптимизации
-   - Риск breaking changes высок (~2 дня работы)
+ - [x] **0.4.1** Синхронизировать manifest path
+  - ✅ sw.js теперь использует /manifest.json (как index.html)
+  - Было: /manifest.webmanifest → 404 в precache
 
-2. ✅ **30+ fallback hooks**: Централизованный механизм с DEBUG флагом
-   - Не засоряет консоль в production
-   - Добавить в задачу 0.3.3
+ - [x] **0.4.2** Исправить тип сообщения SW
+  - ✅ sw.js теперь шлёт CACHES_CLEARED (не CACHE_CLEARED)
+  - Было: несовпадение с listener в heys_platform_apis_v1.js
+
+### CSS стили баннеров ✅
+
+ - [x] Добавлены BEM-стили в `styles/heys-components.css`
+  - .heys-system-banner, .heys-system-banner--update, .heys-system-banner--offline
 
 ---
 

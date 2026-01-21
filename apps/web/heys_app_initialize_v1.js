@@ -4,6 +4,10 @@
     const HEYS = window.HEYS = window.HEYS || {};
     HEYS.AppInitializer = HEYS.AppInitializer || {};
 
+    const getModule = HEYS._getModule || function (name, fallback) {
+        return HEYS[name] || fallback || {};
+    };
+
     HEYS.AppInitializer.initializeApp = function initializeApp() {
         // Логи инициализации отключены для чистой консоли
         const React = window.React,
@@ -19,40 +23,42 @@
         const DesktopGateScreen = window.HEYS.DesktopGateScreen;
         const AppLoader = window.HEYS.AppLoader;
         const GamificationBar = window.HEYS.GamificationBar;
-        const AppShell = window.HEYS.AppShell && window.HEYS.AppShell.AppShell;
-        const AppOverlays = window.HEYS.AppOverlays && window.HEYS.AppOverlays.AppOverlays;
-        const AppGateFlow = window.HEYS.AppGateFlow || {};
-        const AppBackup = window.HEYS.AppBackup || {};
-        const AppShortcuts = window.HEYS.AppShortcuts || {};
-        const AppAuthInit = window.HEYS.AppAuthInit || {};
-        const AppClientHelpers = window.HEYS.AppClientHelpers || {};
-        const AppDesktopGate = window.HEYS.AppDesktopGate || {};
-        const AppMorningCheckin = window.HEYS.AppMorningCheckin || {};
-        const AppSwipeNav = window.HEYS.AppSwipeNav || {};
-        const AppRuntimeEffects = window.HEYS.AppRuntimeEffects || {};
-        const AppSyncEffects = window.HEYS.AppSyncEffects || {};
-        const AppTabState = window.HEYS.AppTabState || {};
-        const AppClientManagement = window.HEYS.AppClientManagement || {};
-        const AppBackupActions = window.HEYS.AppBackupActions || {};
-        const AppUpdateNotifications = window.HEYS.AppUpdateNotifications || {};
-        const AppUIState = window.HEYS.AppUIState || {};
-        const AppCloudInit = window.HEYS.AppCloudInit || {};
-        const AppClientStateManager = window.HEYS.AppClientStateManager || {};
-        const AppDateState = window.HEYS.AppDateState || {};
-        const AppDerivedState = window.HEYS.AppDerivedState || {};
-        const AppShellProps = window.HEYS.AppShellProps || {};
-        const AppOverlaysProps = window.HEYS.AppOverlaysProps || {};
-        const AppGateState = window.HEYS.AppGateState || {};
-        const AppGlobalBindings = window.HEYS.AppGlobalBindings || {};
-        const AppBackupState = window.HEYS.AppBackupState || {};
-        const AppBannerState = window.HEYS.AppBannerState || {};
-        const AppClientInit = window.HEYS.AppClientInit || {};
-        const AppTwemojiEffect = window.HEYS.AppTwemojiEffect || {};
-        const AppRuntimeState = window.HEYS.AppRuntimeState || {};
-        const AppCoreState = window.HEYS.AppCoreState || {};
-        const AppRoot = window.HEYS.AppRoot || {};
+        const AppShellModule = getModule('AppShell');
+        const AppOverlaysModule = getModule('AppOverlays');
+        const AppShell = AppShellModule && AppShellModule.AppShell;
+        const AppOverlays = AppOverlaysModule && AppOverlaysModule.AppOverlays;
+        const AppGateFlow = getModule('AppGateFlow');
+        const AppBackup = getModule('AppBackup');
+        const AppShortcuts = getModule('AppShortcuts');
+        const AppAuthInit = getModule('AppAuthInit');
+        const AppClientHelpers = getModule('AppClientHelpers');
+        const AppDesktopGate = getModule('AppDesktopGate');
+        const AppMorningCheckin = getModule('AppMorningCheckin');
+        const AppSwipeNav = getModule('AppSwipeNav');
+        const AppRuntimeEffects = getModule('AppRuntimeEffects');
+        const AppSyncEffects = getModule('AppSyncEffects');
+        const AppTabState = getModule('AppTabState');
+        const AppClientManagement = getModule('AppClientManagement');
+        const AppBackupActions = getModule('AppBackupActions');
+        const AppUpdateNotifications = getModule('AppUpdateNotifications');
+        const AppUIState = getModule('AppUIState');
+        const AppCloudInit = getModule('AppCloudInit');
+        const AppClientStateManager = getModule('AppClientStateManager');
+        const AppDateState = getModule('AppDateState');
+        const AppDerivedState = getModule('AppDerivedState');
+        const AppShellProps = getModule('AppShellProps');
+        const AppOverlaysProps = getModule('AppOverlaysProps');
+        const AppGateState = getModule('AppGateState');
+        const AppGlobalBindings = getModule('AppGlobalBindings');
+        const AppBackupState = getModule('AppBackupState');
+        const AppBannerState = getModule('AppBannerState');
+        const AppClientInit = getModule('AppClientInit');
+        const AppTwemojiEffect = getModule('AppTwemojiEffect');
+        const AppRuntimeState = getModule('AppRuntimeState');
+        const AppCoreState = getModule('AppCoreState');
+        const AppRoot = getModule('AppRoot');
 
-        const AppHooks = window.HEYS.AppHooks || {};
+        const AppHooks = getModule('AppHooks');
         const {
             useThemePreference,
             usePwaPrompts,
@@ -86,7 +92,7 @@
             });
         }
 
-        const AppTabs = window.HEYS.AppTabs || {};
+        const AppTabs = getModule('AppTabs');
         const {
             DayTabWithCloudSync,
             RationTabWithCloudSync,
@@ -121,6 +127,15 @@
         function renderRoot(AppComponent) {
             const root = ReactDOM.createRoot(document.getElementById('root'));
             root.render(React.createElement(ErrorBoundary, null, React.createElement(AppComponent)));
+
+            // 🆕 Уведомляем SW об успешной загрузке (сбрасывает счётчик boot failures)
+            if (navigator.serviceWorker?.controller) {
+                navigator.serviceWorker.controller.postMessage({ type: 'BOOT_SUCCESS' });
+                window.__heysLog && window.__heysLog('SW notified: BOOT_SUCCESS');
+            }
+
+            // Флаг для watchdog
+            window.__heysAppReady = true;
         }
 
         const createApp = AppRoot.createApp

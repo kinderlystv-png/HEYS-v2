@@ -4,40 +4,46 @@
     const HEYS = window.HEYS = window.HEYS || {};
     HEYS.AppRootImpl = HEYS.AppRootImpl || {};
 
+    const getModule = HEYS._getModule || function (name, fallback) {
+        return HEYS[name] || fallback || {};
+    };
+
     HEYS.AppRootImpl.createApp = function createApp({ React }) {
-        const AppGateFlow = HEYS.AppGateFlow || {};
-        const AppBackup = HEYS.AppBackup || {};
-        const AppShortcuts = HEYS.AppShortcuts || {};
-        const AppAuthInit = HEYS.AppAuthInit || {};
-        const AppClientHelpers = HEYS.AppClientHelpers || {};
-        const AppDesktopGate = HEYS.AppDesktopGate || {};
-        const AppMorningCheckin = HEYS.AppMorningCheckin || {};
-        const AppSwipeNav = HEYS.AppSwipeNav || {};
-        const AppRuntimeEffects = HEYS.AppRuntimeEffects || {};
-        const AppSyncEffects = HEYS.AppSyncEffects || {};
-        const AppTabState = HEYS.AppTabState || {};
-        const AppClientManagement = HEYS.AppClientManagement || {};
-        const AppBackupActions = HEYS.AppBackupActions || {};
-        const AppUpdateNotifications = HEYS.AppUpdateNotifications || {};
-        const AppUIState = HEYS.AppUIState || {};
-        const AppClientStateManager = HEYS.AppClientStateManager || {};
-        const AppDateState = HEYS.AppDateState || {};
-        const AppDerivedState = HEYS.AppDerivedState || {};
-        const AppShellProps = HEYS.AppShellProps || {};
-        const AppOverlaysProps = HEYS.AppOverlaysProps || {};
-        const AppGateState = HEYS.AppGateState || {};
-        const AppGlobalBindings = HEYS.AppGlobalBindings || {};
-        const AppBackupState = HEYS.AppBackupState || {};
-        const AppBannerState = HEYS.AppBannerState || {};
-        const AppClientInit = HEYS.AppClientInit || {};
-        const AppTwemojiEffect = HEYS.AppTwemojiEffect || {};
-        const AppRuntimeState = HEYS.AppRuntimeState || {};
-        const AppCoreState = HEYS.AppCoreState || {};
+        const AppGateFlow = getModule('AppGateFlow');
+        const AppBackup = getModule('AppBackup');
+        const AppShortcuts = getModule('AppShortcuts');
+        const AppAuthInit = getModule('AppAuthInit');
+        const AppClientHelpers = getModule('AppClientHelpers');
+        const AppDesktopGate = getModule('AppDesktopGate');
+        const AppMorningCheckin = getModule('AppMorningCheckin');
+        const AppSwipeNav = getModule('AppSwipeNav');
+        const AppRuntimeEffects = getModule('AppRuntimeEffects');
+        const AppSyncEffects = getModule('AppSyncEffects');
+        const AppTabState = getModule('AppTabState');
+        const AppClientManagement = getModule('AppClientManagement');
+        const AppBackupActions = getModule('AppBackupActions');
+        const AppUpdateNotifications = getModule('AppUpdateNotifications');
+        const AppUIState = getModule('AppUIState');
+        const AppClientStateManager = getModule('AppClientStateManager');
+        const AppDateState = getModule('AppDateState');
+        const AppDerivedState = getModule('AppDerivedState');
+        const AppShellProps = getModule('AppShellProps');
+        const AppOverlaysProps = getModule('AppOverlaysProps');
+        const AppGateState = getModule('AppGateState');
+        const AppGlobalBindings = getModule('AppGlobalBindings');
+        const AppBackupState = getModule('AppBackupState');
+        const AppBannerState = getModule('AppBannerState');
+        const AppClientInit = getModule('AppClientInit');
+        const AppTwemojiEffect = getModule('AppTwemojiEffect');
+        const AppRuntimeState = getModule('AppRuntimeState');
+        const AppCoreState = getModule('AppCoreState');
         const DesktopGateScreen = HEYS.DesktopGateScreen;
         const GamificationBar = HEYS.GamificationBar;
-        const AppShell = HEYS.AppShell && HEYS.AppShell.AppShell;
-        const AppOverlays = HEYS.AppOverlays && HEYS.AppOverlays.AppOverlays;
-        const AppTabs = HEYS.AppTabs || {};
+        const AppShellModule = getModule('AppShell');
+        const AppOverlaysModule = getModule('AppOverlays');
+        const AppShell = AppShellModule && AppShellModule.AppShell;
+        const AppOverlays = AppOverlaysModule && AppOverlaysModule.AppOverlays;
+        const AppTabs = getModule('AppTabs');
         const {
             DayTabWithCloudSync,
             RationTabWithCloudSync,
@@ -45,7 +51,7 @@
             AnalyticsTab,
         } = AppTabs;
 
-        const AppHooks = HEYS.AppHooks || {};
+        const AppHooks = getModule('AppHooks');
         const {
             useThemePreference,
             usePwaPrompts,

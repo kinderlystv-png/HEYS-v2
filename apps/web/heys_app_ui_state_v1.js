@@ -4,6 +4,10 @@
     const HEYS = window.HEYS = window.HEYS || {};
     HEYS.AppUIState = HEYS.AppUIState || {};
 
+    const getModule = HEYS._getModule || function (name, fallback) {
+        return HEYS[name] || fallback || {};
+    };
+
     HEYS.AppUIState.useAppUIState = function ({
         React,
         cloudSignIn,
@@ -13,7 +17,7 @@
         skipTabSwitchRef,
     }) {
         const { useState, useEffect, useCallback } = React;
-        const shortcutsModule = HEYS.AppShortcuts || {};
+        const shortcutsModule = getModule('AppShortcuts');
 
         // Login form state (нужно до gate!)
         const [email, setEmail] = useState('');

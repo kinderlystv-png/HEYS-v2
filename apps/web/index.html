@@ -23,6 +23,91 @@
             window.__heysLog('PWA standalone: ' + isStandalone);
         })();
     </script>
+
+    <!-- 🆕 PWA Recovery: Global pre-React error handler -->
+    <script>
+        (function () {
+            var errorCount = 0;
+            var MAX_ERRORS = 3;
+            var recoveryShown = false;
+
+            function notifySwBootFailure() {
+                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({ type: 'BOOT_FAILURE' });
+                }
+            }
+
+            function showRecoveryUI(errorMsg) {
+                if (recoveryShown) return;
+                recoveryShown = true;
+                notifySwBootFailure();
+                window.__heysLog && window.__heysLog('[CRITICAL] Recovery UI: ' + errorMsg);
+
+                document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;padding:20px;background:#f3f4f6">' +
+                    '<div style="background:white;padding:32px;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.1);max-width:400px;text-align:center">' +
+                    '<div style="font-size:48px;margin-bottom:16px">⚠️</div>' +
+                    '<h2 style="margin:0 0 8px;font-size:20px">Ошибка загрузки</h2>' +
+                    '<p style="margin:0 0 24px;color:#6b7280;font-size:14px">' + (errorMsg || 'Произошла критическая ошибка') + '</p>' +
+                    '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">' +
+                    '<button onclick="location.reload()" style="padding:12px 24px;border-radius:8px;border:none;background:#10b981;color:white;font-weight:500;cursor:pointer">🔄 Обновить</button>' +
+                    '<button onclick="clearCacheAndReload()" style="padding:12px 24px;border-radius:8px;border:1px solid #d1d5db;background:white;color:#374151;font-weight:500;cursor:pointer">🗑️ Сбросить кэш</button>' +
+                    '</div></div></div>';
+            }
+
+            window.__heysShowRecoveryUI = showRecoveryUI;
+
+            window.clearCacheAndReload = async function () {
+                try {
+                    if ('caches' in window) {
+                        var names = await caches.keys();
+                        await Promise.all(names.map(function (n) { return caches.delete(n); }));
+                    }
+                    if ('serviceWorker' in navigator) {
+                        var regs = await navigator.serviceWorker.getRegistrations();
+                        await Promise.all(regs.map(function (r) { return r.unregister(); }));
+                    }
+                    sessionStorage.clear();
+                } catch (e) { console.error(e); }
+                location.reload();
+            };
+
+            // Global error handler
+            window.onerror = function (msg, url, line, col, error) {
+                errorCount++;
+                window.__heysLog && window.__heysLog('[ERROR] ' + msg + ' at ' + url + ':' + line);
+
+                // Критические ошибки требуют немедленного recovery
+                var isCritical = /React|ReactDOM|HEYS|createRoot|createElement/.test(msg + (error ? error.stack : ''));
+
+                if (isCritical || errorCount >= MAX_ERRORS) {
+                    showRecoveryUI(msg);
+                    return true; // Suppress error
+                }
+                return false;
+            };
+
+            // Unhandled promise rejections
+            window.onunhandledrejection = function (event) {
+                errorCount++;
+                var reason = event.reason ? (event.reason.message || String(event.reason)) : 'Unknown error';
+                window.__heysLog && window.__heysLog('[REJECT] ' + reason);
+
+                if (errorCount >= MAX_ERRORS) {
+                    showRecoveryUI(reason);
+                }
+            };
+
+            // Watchdog: если приложение не стартовало за 15 секунд — recovery
+            setTimeout(function () {
+                if (!window.__heysAppReady) {
+                    window.__heysLog && window.__heysLog('[WATCHDOG] App not ready after 15s');
+                    if (window.__heysShowRecoveryUI) {
+                        window.__heysShowRecoveryUI('Приложение не загрузилось за 15 секунд');
+                    }
+                }
+            }, 15000);
+        })();
+    </script>
     <!-- Prevent FOUC: Apply theme before CSS loads -->
     <script>
         (function () {
@@ -1919,10 +2004,12 @@
     <script defer src="heys_app_dependency_loader_v1.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_app_ui_state_v1.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_app_initialize_v1.js?v=1" fetchpriority="high"></script>
-    <script defer src="heys_app_entry_v1.js?v=1" fetchpriority="high"></script>
-    <script defer src="heys_app_v12.js?v=2026.01.18.1136.33ca1b7" fetchpriority="high"></script>
+    <script defer src="heys_app_entry_v1.js?v=1" fetchpriority="high"
+        onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: heys_app_entry_v1.js')"></script>
+    <script defer src="heys_app_v12.js?v=2026.01.18.1136.33ca1b7" fetchpriority="high"
+        onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: heys_app_v12.js')"></script>
 
-    <!-- Service Worker регистрируется в heys_app_v12.js → registerServiceWorker() -->
+    <!-- Service Worker регистрируется в heys_platform_apis_v1.js → registerServiceWorker() -->
 </body>
 
 </html>

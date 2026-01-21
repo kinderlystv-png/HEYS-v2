@@ -11,11 +11,18 @@
         let reactCheckCount = 0;
 
         const defaultIsReactReady = () => Boolean(window.React && window.ReactDOM);
+
+        // 🆕 Расширенная проверка HEYS модулей (включая критические для рендеринга)
         const defaultIsHeysReady = () => Boolean(
             HEYS &&
             HEYS.DayTab &&
             HEYS.Ration &&
-            HEYS.UserTab
+            HEYS.UserTab &&
+            // 🆕 Добавлены критические модули для рендеринга App
+            HEYS.AppRootImpl &&
+            HEYS.AppRootImpl.createApp &&
+            HEYS.AppRootComponent &&
+            HEYS.AppRootComponent.createApp
         );
 
         const checkReactReady = isReactReady || defaultIsReactReady;
@@ -24,6 +31,51 @@
         const retryInit = () => {
             reactCheckCount++;
             setTimeout(initializeApp, INIT_RETRY_DELAY);
+        };
+
+        // 🆕 Recovery UI с кнопками
+        const showRecoveryUI = (reason) => {
+            bootLog('showing recovery UI: ' + reason);
+
+            // Уведомляем SW о boot failure
+            if (navigator.serviceWorker?.controller) {
+                navigator.serviceWorker.controller.postMessage({ type: 'BOOT_FAILURE' });
+            }
+
+            document.getElementById('heys-init-loader')?.remove();
+            document.body.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;padding:20px;background:#f3f4f6">
+                    <div style="background:white;padding:32px;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.1);max-width:400px;text-align:center">
+                        <div style="font-size:48px;margin-bottom:16px">⚠️</div>
+                        <h2 style="margin:0 0 8px;font-size:20px">Ошибка загрузки</h2>
+                        <p style="margin:0 0 24px;color:#6b7280;font-size:14px">${reason}</p>
+                        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+                            <button onclick="location.reload()" style="padding:12px 24px;border-radius:8px;border:none;background:#10b981;color:white;font-weight:500;cursor:pointer">🔄 Обновить</button>
+                            <button id="clear-cache-btn" style="padding:12px 24px;border-radius:8px;border:1px solid #d1d5db;background:white;color:#374151;font-weight:500;cursor:pointer">🗑️ Сбросить кэш</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('clear-cache-btn')?.addEventListener('click', async () => {
+                const btn = document.getElementById('clear-cache-btn');
+                if (btn) {
+                    btn.textContent = '⏳ Очистка...';
+                    btn.disabled = true;
+                }
+                try {
+                    if ('caches' in window) {
+                        const names = await caches.keys();
+                        await Promise.all(names.map(n => caches.delete(n)));
+                    }
+                    if ('serviceWorker' in navigator) {
+                        const regs = await navigator.serviceWorker.getRegistrations();
+                        await Promise.all(regs.map(r => r.unregister()));
+                    }
+                    sessionStorage.clear();
+                } catch (e) { console.error(e); }
+                location.reload();
+            });
         };
 
         const waitForDependencies = (onReady) => {
@@ -50,15 +102,27 @@
             reactCheckCount++;
             bootLog('waiting #' + reactCheckCount + ' React:' + checkReactReady() + ' HEYS:' + checkHeysReady());
 
-            // Защита от зависания — макс 50 попыток (5 секунд)
+            // 🆕 Защита от зависания — макс 50 попыток (5 секунд) + детальная диагностика
             if (reactCheckCount > 50) {
                 console.error('[HEYS] ❌ Timeout waiting for dependencies!');
                 console.error('React ready:', checkReactReady());
                 console.error('HEYS ready:', checkHeysReady());
-                bootLog('TIMEOUT! React:' + checkReactReady() + ' HEYS:' + checkHeysReady());
-                document.getElementById('heys-init-loader')?.remove();
-                // Показываем сообщение об ошибке
-                document.body.innerHTML = '<div style="padding:40px;text-align:center;font-family:system-ui"><h1>⚠️ Ошибка загрузки</h1><p>Не удалось загрузить приложение. Обновите страницу.</p><button onclick="location.reload()" style="margin-top:20px;padding:12px 24px;background:#10b981;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer">Обновить</button></div>';
+
+                // Детальная диагностика отсутствующих модулей
+                const missing = [];
+                if (!HEYS.DayTab) missing.push('DayTab');
+                if (!HEYS.Ration) missing.push('Ration');
+                if (!HEYS.UserTab) missing.push('UserTab');
+                if (!HEYS.AppRootImpl) missing.push('AppRootImpl');
+                if (!HEYS.AppRootComponent) missing.push('AppRootComponent');
+                console.error('Missing modules:', missing.join(', ') || 'none');
+
+                bootLog('TIMEOUT! Missing: ' + (missing.join(', ') || 'unknown'));
+
+                showRecoveryUI(missing.length
+                    ? `Не загружены модули: ${missing.join(', ')}`
+                    : 'Превышено время ожидания загрузки'
+                );
                 return;
             }
 

@@ -41,6 +41,20 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    // 🆕 PWA Recovery: Уведомляем SW о критической ошибке
+    if (navigator.serviceWorker?.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'BOOT_FAILURE',
+        error: { message: error.message, stack: error.stack?.slice(0, 500) }
+      });
+    }
+
+    // Логируем в HEYS boot log
+    const heysLog = (window as unknown as Record<string, unknown>).__heysLog as ((msg: string) => void) | undefined;
+    if (heysLog) {
+      heysLog('[ErrorBoundary] ' + error.message);
+    }
+
     // Логируем в Sentry если доступен
     const sentry = (window as unknown as Record<string, unknown>).Sentry as
       | { captureException: (error: Error, context?: unknown) => void }
@@ -86,6 +100,24 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   handleReload = (): void => {
+    window.location.reload();
+  };
+
+  // 🆕 PWA Recovery: Очистка кэша и перезагрузка
+  handleClearCache = async (): Promise<void> => {
+    try {
+      if ('caches' in window) {
+        const names = await caches.keys();
+        await Promise.all(names.map((n) => caches.delete(n)));
+      }
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+      sessionStorage.clear();
+    } catch (e) {
+      console.error('Cache clear error:', e);
+    }
     window.location.reload();
   };
 
@@ -179,7 +211,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </details>
           )}
 
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={this.handleReload}
               style={{
@@ -187,16 +219,38 @@ export class ErrorBoundary extends Component<Props, State> {
                 fontSize: '16px',
                 fontWeight: 'bold',
                 color: '#fff',
-                background: '#2563eb',
+                background: '#10b981',
                 border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 transition: 'background 0.2s',
               }}
-              onMouseOver={(e) => (e.currentTarget.style.background = '#1d4ed8')}
-              onMouseOut={(e) => (e.currentTarget.style.background = '#2563eb')}
+              onMouseOver={(e) => (e.currentTarget.style.background = '#059669')}
+              onMouseOut={(e) => (e.currentTarget.style.background = '#10b981')}
             >
-              Перезагрузить страницу
+              🔄 Обновить
+            </button>
+            <button
+              onClick={this.handleClearCache}
+              style={{
+                padding: '12px 24px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                color: '#374151',
+                background: '#fff',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = '#f3f4f6';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = '#fff';
+              }}
+            >
+              🗑️ Сбросить кэш
             </button>
             <button
               onClick={this.handleReset}
@@ -204,15 +258,15 @@ export class ErrorBoundary extends Component<Props, State> {
                 padding: '12px 24px',
                 fontSize: '16px',
                 fontWeight: 'bold',
-                color: '#2563eb',
+                color: '#6b7280',
                 background: '#fff',
-                border: '2px solid #2563eb',
+                border: '1px solid #e5e7eb',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.background = '#eff6ff';
+                e.currentTarget.style.background = '#f9fafb';
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.background = '#fff';

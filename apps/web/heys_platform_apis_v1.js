@@ -75,6 +75,81 @@
   // ============================================================================
 
   // === Service Worker Registration (Production only) ===
+  const UPDATE_BANNER_ID = 'heys-sw-update-banner';
+  const OFFLINE_BANNER_ID = 'heys-offline-banner';
+
+  function createSystemBanner({ id, className, text, actions }) {
+    if (!document?.body || document.getElementById(id)) return;
+
+    const banner = document.createElement('div');
+    banner.id = id;
+    banner.className = className;
+
+    const textEl = document.createElement('span');
+    textEl.className = 'heys-system-banner__text';
+    textEl.textContent = text;
+    banner.appendChild(textEl);
+
+    if (Array.isArray(actions) && actions.length > 0) {
+      const actionsEl = document.createElement('div');
+      actionsEl.className = 'heys-system-banner__actions';
+      actions.forEach((action) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = action.className;
+        btn.textContent = action.label;
+        btn.addEventListener('click', action.onClick);
+        actionsEl.appendChild(btn);
+      });
+      banner.appendChild(actionsEl);
+    }
+
+    document.body.appendChild(banner);
+  }
+
+  function showUpdateNotification() {
+    createSystemBanner({
+      id: UPDATE_BANNER_ID,
+      className: 'heys-system-banner heys-system-banner--update',
+      text: 'Доступно обновление приложения',
+      actions: [
+        {
+          label: '🔄 Обновить',
+          className: 'heys-system-banner__btn heys-system-banner__btn--primary',
+          onClick: () => {
+            triggerSkipWaiting({
+              fallbackMs: 5000,
+              showModal: true,
+              source: 'update-banner',
+            });
+          }
+        },
+        {
+          label: '✕',
+          className: 'heys-system-banner__btn heys-system-banner__btn--ghost',
+          onClick: () => {
+            const banner = document.getElementById(UPDATE_BANNER_ID);
+            if (banner) banner.remove();
+          }
+        }
+      ]
+    });
+  }
+
+  function showOfflineNotification() {
+    createSystemBanner({
+      id: OFFLINE_BANNER_ID,
+      className: 'heys-system-banner heys-system-banner--offline',
+      text: '📴 Офлайн режим — данные сохраняются локально',
+      actions: []
+    });
+  }
+
+  function hideOfflineNotification() {
+    const banner = document.getElementById(OFFLINE_BANNER_ID);
+    if (banner) banner.remove();
+  }
+
   function registerServiceWorker() {
     const bootLog = (msg) => window.__heysLog && window.__heysLog('[SW] ' + msg);
 
@@ -138,6 +213,7 @@
           if (event.data?.type === 'UPDATE_AVAILABLE') {
             console.log('[SW] 🆕 Background update detected:', event.data.version);
             showUpdateBadge(event.data.version);
+            showUpdateNotification();
           }
           if (event.data?.type === 'CACHES_CLEARED') {
             console.log('[SW] ✅ Caches cleared — resetting session for fresh data from cloud');
@@ -254,6 +330,13 @@
         window.dispatchEvent(new CustomEvent('heys:sync-complete'));
       }
     });
+
+    // Offline/Online banner
+    window.addEventListener('offline', showOfflineNotification);
+    window.addEventListener('online', hideOfflineNotification);
+    if (navigator.onLine === false) {
+      showOfflineNotification();
+    }
 
     // Слушаем контроллер изменений (когда SW взял контроль)
     // ✅ АВТОМАТИЧЕСКИЙ reload при смене SW для бесшовного обновления PWA

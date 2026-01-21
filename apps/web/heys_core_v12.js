@@ -5,6 +5,49 @@
   const Store = (HEYS.store) || (HEYS.store = {});
 
   // ═══════════════════════════════════════════════════════════════════
+  // 🔍 DEBUG MODE + MODULE FALLBACK LOGGER
+  // ═══════════════════════════════════════════════════════════════════
+
+  const isDebugMode = (() => {
+    try {
+      const params = new URLSearchParams(global.location?.search || '');
+      const debugParam = params.get('debug');
+      const debugLs = global.localStorage?.getItem('heys_debug');
+      return debugParam === '1' || debugParam === 'true' || debugLs === '1' || debugLs === 'true';
+    } catch (e) {
+      return false;
+    }
+  })();
+
+  if (HEYS.DEBUG_MODE == null) {
+    HEYS.DEBUG_MODE = isDebugMode;
+  }
+
+  HEYS._missingModules = HEYS._missingModules || new Set();
+  HEYS._debugMissingModule = function (name) {
+    if (!HEYS.DEBUG_MODE) return;
+    if (HEYS._missingModules.has(name)) return;
+    HEYS._missingModules.add(name);
+    if (HEYS.analytics?.trackError) {
+      try {
+        HEYS.analytics.trackError(new Error('Missing module: ' + name), {
+          scope: 'module-fallback',
+          module: name
+        });
+      } catch (e) { }
+    }
+  };
+
+  HEYS._getModule = function (name, fallback) {
+    const mod = HEYS[name];
+    if (!mod) {
+      HEYS._debugMissingModule?.(name);
+      return fallback || {};
+    }
+    return mod;
+  };
+
+  // ═══════════════════════════════════════════════════════════════════
   // 🛠️ БАЗОВЫЕ УТИЛИТЫ
   // ═══════════════════════════════════════════════════════════════════
 
