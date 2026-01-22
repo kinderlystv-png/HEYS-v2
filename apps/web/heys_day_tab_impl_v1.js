@@ -255,6 +255,36 @@
 
         const { useState, useMemo, useEffect, useRef } = React;
 
+        const [mealsDepsReady, setMealsDepsReady] = useState(() => {
+            return !!(HEYSRef.dayMealExpandState?.useMealExpandState
+                && HEYSRef.dayMealHandlers?.createMealHandlers
+                && HEYSRef.dayMealHandlers?.sortMealsByTime);
+        });
+
+        useEffect(() => {
+            if (mealsDepsReady) return;
+            if (!HEYSRef.waitForDeps) return;
+
+            HEYSRef.waitForDeps([
+                {
+                    name: 'dayMealExpandState',
+                    check: () => !!HEYSRef.dayMealExpandState?.useMealExpandState,
+                },
+                {
+                    name: 'dayMealHandlers',
+                    check: () => !!(HEYSRef.dayMealHandlers?.createMealHandlers && HEYSRef.dayMealHandlers?.sortMealsByTime),
+                },
+            ], () => {
+                setMealsDepsReady(true);
+            }, {
+                timeoutMs: 3000,
+                intervalMs: 20,
+                onTimeout: () => {
+                    logMealExpandMissing('waitForDeps_timeout');
+                },
+            });
+        }, [mealsDepsReady]);
+
         // === EARLY RETURN: защита при logout/auth clearing ===
         // Во время logout очищаются данные → компонент может получить undefined
         // Вместо краша просто показываем loading
@@ -491,6 +521,12 @@
         const moodSparklineData = HEYS.dayMoodSparkline.useMoodSparklineData({ React, day }) || [];
 
         // === Meal Handlers (Phase 10) ===
+        if (!mealsDepsReady) {
+            return React.createElement('div', {
+                className: 'card tone-slate',
+                style: { margin: '12px', padding: '12px' },
+            }, 'Загрузка дневника…');
+        }
         if (!HEYS.dayMealHandlers?.createMealHandlers || !HEYS.dayMealHandlers?.sortMealsByTime) {
             throw new Error('[heys_day_v12] HEYS.dayMealHandlers not loaded before heys_day_v12.js');
         }

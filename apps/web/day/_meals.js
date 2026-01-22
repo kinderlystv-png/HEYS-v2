@@ -2091,6 +2091,7 @@
         };
     }
 
+    console.log('[HEYS] 📦 day/_meals.js exporting dayMealExpandState');
     HEYS.dayMealExpandState = {
         useMealExpandState,
     };
