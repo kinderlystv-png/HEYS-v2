@@ -134,6 +134,98 @@
     }
     const MealOptimizerSection = HEYS.dayMealOptimizerSection.MealOptimizerSection;
 
+    // === Meal expand state fallback (если day/_meals.js не загрузился) ===
+    if (!HEYS.dayMealExpandState?.useMealExpandState) {
+        try {
+            if (HEYS.analytics?.trackError) {
+                HEYS.analytics.trackError(new Error('[heys_day_v12] dayMealExpandState fallback used'), {
+                    source: 'heys_day_tab_impl_v1.js',
+                    type: 'fallback'
+                });
+            }
+        } catch (e) { }
+
+        function useMealExpandState(params) {
+            const { date } = params || {};
+            if (!React) return {};
+
+            const expandedMealsKey = 'heys_expandedMeals_' + date;
+
+            const [manualExpandedStale, setManualExpandedStale] = React.useState({});
+            const [expandedMeals, setExpandedMeals] = React.useState(() => {
+                try {
+                    const cached = sessionStorage.getItem(expandedMealsKey);
+                    return cached ? JSON.parse(cached) : {};
+                } catch (e) {
+                    return {};
+                }
+            });
+
+            React.useEffect(() => {
+                try {
+                    sessionStorage.setItem(expandedMealsKey, JSON.stringify(expandedMeals));
+                } catch (e) { }
+            }, [expandedMeals, expandedMealsKey]);
+
+            const isMealStale = React.useCallback((meal) => {
+                if (!meal || !meal.time) return false;
+                const [hours, minutes] = meal.time.split(':').map(Number);
+                if (isNaN(hours) || isNaN(minutes)) return false;
+                const now = new Date();
+                const mealDate = new Date();
+                mealDate.setHours(hours, minutes, 0, 0);
+                const diffMinutes = (now - mealDate) / (1000 * 60);
+                return diffMinutes > 30;
+            }, []);
+
+            const toggleMealExpand = React.useCallback((mealIndex, meals) => {
+                const meal = meals && meals[mealIndex];
+                const isStale = meal && isMealStale(meal);
+
+                if (isStale) {
+                    setManualExpandedStale((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+                } else {
+                    setExpandedMeals((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+                }
+            }, [isMealStale]);
+
+            const expandOnlyMeal = React.useCallback((mealIndex) => {
+                const newState = {};
+                newState[mealIndex] = true;
+                setExpandedMeals(newState);
+            }, []);
+
+            const isMealExpanded = React.useCallback((mealIndex, totalMeals, meals, displayIndex = null) => {
+                const meal = meals && meals[mealIndex];
+                const isStale = meal && isMealStale(meal);
+
+                if (isStale) {
+                    return manualExpandedStale[mealIndex] === true;
+                }
+
+                if (Object.prototype.hasOwnProperty.call(expandedMeals, mealIndex)) {
+                    return expandedMeals[mealIndex];
+                }
+
+                if (displayIndex !== null) {
+                    return displayIndex === 0;
+                }
+                return mealIndex === totalMeals - 1;
+            }, [expandedMeals, manualExpandedStale, isMealStale]);
+
+            return {
+                isMealStale,
+                toggleMealExpand,
+                expandOnlyMeal,
+                isMealExpanded
+            };
+        }
+
+        HEYS.dayMealExpandState = {
+            useMealExpandState
+        };
+    }
+
     HEYS.DayTab = function DayTab(props) {
 
         // === CRITICAL: Глобальный флаг logout — проверяем ДО любых хуков! ===

@@ -101,6 +101,17 @@ jobs:
             echo "{\"version\":\"$VERSION\",\"buildTime\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"commit\":\"${{ github.sha }}\"}" > apps/web/dist/version.json
           fi
 
+      - name: Read SW cache version
+        run: |
+          if [ -f apps/web/dist/sw.js ]; then
+            CACHE_VERSION=$(node -e "const fs=require('fs');const s=fs.readFileSync('apps/web/dist/sw.js','utf8');const m=s.match(/const CACHE_VERSION = '([^']+)'/);process.stdout.write(m?m[1]:'');")
+            echo "SW_CACHE_VERSION=$CACHE_VERSION" >> $GITHUB_ENV
+            echo "✅ SW cache version: $CACHE_VERSION"
+          else
+            echo "⚠️ sw.js not found in dist"
+            echo "SW_CACHE_VERSION=unknown" >> $GITHUB_ENV
+          fi
+
       - name: Configure AWS CLI for Yandex Cloud
         # AWS CLI уже предустановлен на ubuntu-latest!
         run: |
@@ -369,8 +380,18 @@ jobs:
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Version | ${{ env.BUILD_VERSION }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SW Cache Version | ${{ env.SW_CACHE_VERSION }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Commit | \`${GITHUB_SHA::7}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Branch | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🧾 version.json" >> $GITHUB_STEP_SUMMARY
+          if [ -f apps/web/dist/version.json ]; then
+            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+            cat apps/web/dist/version.json >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "version.json missing in dist" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🌐 Deployed URLs" >> $GITHUB_STEP_SUMMARY
           echo "| Site | URL |" >> $GITHUB_STEP_SUMMARY

@@ -4,11 +4,11 @@
  */
 
 try {
-  if (self && self.location && self.location.pathname !== '/sw.js') {
-    importScripts('/sw.js');
-  }
+    if (self && self.location && self.location.pathname !== '/sw.js') {
+        importScripts('/sw.js');
+    }
 } catch (_) {
-  // noop
+    // noop
 }/**
  * HEYS Service Worker — PWA Recovery Edition
  * 
