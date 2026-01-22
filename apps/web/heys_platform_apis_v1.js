@@ -77,6 +77,336 @@
   // === Service Worker Registration (Production only) ===
   const UPDATE_BANNER_ID = 'heys-sw-update-banner';
   const OFFLINE_BANNER_ID = 'heys-offline-banner';
+  const UPDATE_LOCK_KEY = 'heys_update_in_progress';
+  const UPDATE_LOCK_TIMEOUT = 30000;
+  const UPDATE_ATTEMPT_KEY = 'heys_update_attempt';
+  const MAX_UPDATE_ATTEMPTS = 2;
+  const UPDATE_COOLDOWN_MS = 60000;
+
+  let _updateAvailable = false;
+  let _updateVersion = null;
+
+  function getAppVersion() {
+    return HEYS.version || window.APP_VERSION || 'unknown';
+  }
+
+  // === Семантическое сравнение версий ===
+  // Версия: YYYY.MM.DD.HHMM.hash → сравниваем числовую часть
+  function isNewerVersion(serverVersion, currentVersion) {
+    if (!serverVersion || !currentVersion) return false;
+    if (serverVersion === currentVersion) return false;
+
+    const extractNumeric = (v) => {
+      const parts = v.split('.');
+      if (parts.length < 4) return 0;
+      return parseInt(parts.slice(0, 4).join(''), 10) || 0;
+    };
+
+    const serverNum = extractNumeric(serverVersion);
+    const currentNum = extractNumeric(currentVersion);
+
+    return serverNum > currentNum;
+  }
+
+  function isUpdateLocked() {
+    try {
+      const lockData = localStorage.getItem(UPDATE_LOCK_KEY);
+      if (!lockData) return false;
+      const { timestamp } = JSON.parse(lockData);
+      if (Date.now() - timestamp > UPDATE_LOCK_TIMEOUT) {
+        localStorage.removeItem(UPDATE_LOCK_KEY);
+        return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function setUpdateLock() {
+    localStorage.setItem(UPDATE_LOCK_KEY, JSON.stringify({ timestamp: Date.now() }));
+  }
+
+  function clearUpdateLock() {
+    localStorage.removeItem(UPDATE_LOCK_KEY);
+  }
+
+  function showUpdateBadge(version) {
+    _updateAvailable = true;
+    _updateVersion = version;
+
+    document.getElementById('heys-update-badge')?.remove();
+
+    const badge = document.createElement('div');
+    badge.id = 'heys-update-badge';
+    badge.className = 'heys-update-badge';
+
+    const button = document.createElement('button');
+    button.id = 'heys-update-badge-btn';
+    button.type = 'button';
+    button.className = 'heys-update-badge__btn';
+    button.innerHTML = `
+      <span class="heys-update-badge__emoji">🆕</span>
+      <span class="heys-update-badge__label">Обновить HEYS</span>
+      <span class="heys-update-badge__version">v${version?.split('.').slice(0, 3).join('.') || 'new'}</span>
+    `;
+    button.addEventListener('click', () => installUpdate());
+
+    badge.appendChild(button);
+    document.body.appendChild(badge);
+
+    if (navigator.vibrate) navigator.vibrate(50);
+  }
+
+  function hideUpdateBadge() {
+    _updateAvailable = false;
+    _updateVersion = null;
+
+    const badge = document.getElementById('heys-update-badge');
+    if (badge) {
+      badge.classList.add('heys-update-badge--hide');
+      setTimeout(() => badge.remove(), 300);
+    }
+  }
+
+  function showUpdateModal(stage = 'checking') {
+    document.getElementById('heys-update-modal')?.remove();
+
+    const stages = {
+      checking: { icon: '🔍', title: 'Проверка обновлений', subtitle: 'Подождите...', isSpinner: false },
+      found: { icon: '🆕', title: 'Найдено обновление!', subtitle: 'Загружаем новую версию...', isSpinner: false },
+      downloading: { icon: '📥', title: 'Загрузка', subtitle: 'Это займёт пару секунд...', isSpinner: false },
+      installing: { icon: '⚙️', title: 'Установка', subtitle: 'Почти готово...', isSpinner: false },
+      ready: { icon: '✨', title: 'Готово!', subtitle: 'Приложение обновлено', isSpinner: false },
+      reloading: { icon: 'spinner', title: 'Перезагрузка', subtitle: 'Применяем изменения...', isSpinner: true }
+    };
+
+    const s = stages[stage] || stages.checking;
+
+    const modal = document.createElement('div');
+    modal.id = 'heys-update-modal';
+    modal.className = 'heys-update-modal';
+    modal.innerHTML = `
+      <div class="heys-update-modal__backdrop">
+        <div class="heys-update-modal__card" role="dialog" aria-modal="true" aria-labelledby="heys-update-title" aria-describedby="heys-update-subtitle">
+          <div id="heys-update-icon" class="heys-update-modal__icon ${s.isSpinner ? 'is-spinner' : ''}">
+            ${s.isSpinner ? '<div class="heys-update-modal__spinner"></div>' : s.icon}
+          </div>
+          <h2 id="heys-update-title" class="heys-update-modal__title">${s.title}</h2>
+          <p id="heys-update-subtitle" class="heys-update-modal__subtitle">${s.subtitle}</p>
+          <div class="heys-update-modal__progress">
+            <div id="heys-update-progress" class="heys-update-modal__progress-bar" style="width: ${stage === 'checking' ? '20%' : stage === 'found' ? '40%' : stage === 'downloading' ? '60%' : stage === 'installing' ? '80%' : '100%'};"></div>
+          </div>
+          <p class="heys-update-modal__version">Версия ${getAppVersion()}</p>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    return modal;
+  }
+
+  function updateModalStage(stage) {
+    const stages = {
+      checking: { icon: '🔍', title: 'Проверка обновлений', subtitle: 'Подождите...', progress: 20, isSpinner: false },
+      found: { icon: '🆕', title: 'Найдено обновление!', subtitle: 'Загружаем новую версию...', progress: 40, isSpinner: false },
+      downloading: { icon: '📥', title: 'Загрузка', subtitle: 'Это займёт пару секунд...', progress: 60, isSpinner: false },
+      installing: { icon: '⚙️', title: 'Установка', subtitle: 'Почти готово...', progress: 80, isSpinner: false },
+      ready: { icon: '✨', title: 'Готово!', subtitle: 'Приложение обновлено', progress: 100, isSpinner: false },
+      reloading: { icon: 'spinner', title: 'Перезагрузка', subtitle: 'Применяем изменения...', progress: 100, isSpinner: true }
+    };
+
+    const s = stages[stage];
+    if (!s) return;
+
+    const icon = document.getElementById('heys-update-icon');
+    const title = document.getElementById('heys-update-title');
+    const subtitle = document.getElementById('heys-update-subtitle');
+    const progress = document.getElementById('heys-update-progress');
+
+    if (icon) {
+      if (s.isSpinner) {
+        icon.innerHTML = '<div class="heys-update-modal__spinner"></div>';
+        icon.classList.add('is-spinner');
+      } else {
+        icon.textContent = s.icon;
+        icon.innerHTML = s.icon;
+        icon.classList.remove('is-spinner');
+      }
+    }
+    if (title) title.textContent = s.title;
+    if (subtitle) subtitle.textContent = s.subtitle;
+    if (progress) progress.style.width = s.progress + '%';
+  }
+
+  function hideUpdateModal() {
+    const modal = document.getElementById('heys-update-modal');
+    if (modal) {
+      modal.classList.add('heys-update-modal--hide');
+      setTimeout(() => modal.remove(), 300);
+    }
+  }
+
+  function showManualRefreshPrompt(targetVersion) {
+    document.getElementById('heys-update-modal')?.remove();
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+    const modal = document.createElement('div');
+    modal.id = 'heys-update-modal';
+    modal.className = 'heys-update-prompt';
+    modal.innerHTML = `
+      <div class="heys-update-prompt__backdrop">
+        <div class="heys-update-prompt__card" role="dialog" aria-modal="true" aria-labelledby="heys-update-prompt-title" aria-describedby="heys-update-prompt-text">
+          <div class="heys-update-prompt__spinner"></div>
+          <h2 id="heys-update-prompt-title" class="heys-update-prompt__title">Требуется обновление</h2>
+          <p id="heys-update-prompt-text" class="heys-update-prompt__text">
+            ${isIOS
+        ? 'Закройте приложение и откройте заново для обновления до v' + targetVersion
+        : 'Нажмите кнопку для обновления до v' + targetVersion}
+          </p>
+          ${isIOS ? '' : `
+            <button id="heys-manual-update-btn" class="heys-update-prompt__btn heys-update-prompt__btn--primary">Обновить сейчас</button>
+          `}
+          <button id="heys-update-later-btn" class="heys-update-prompt__btn heys-update-prompt__btn--ghost">Позже</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const updateBtn = document.getElementById('heys-manual-update-btn');
+    if (updateBtn) {
+      updateBtn.addEventListener('click', () => {
+        localStorage.removeItem(UPDATE_ATTEMPT_KEY);
+        const url = new URL(window.location.href);
+        url.searchParams.set('_v', Date.now().toString());
+        window.location.href = url.toString();
+      });
+    }
+
+    const laterBtn = document.getElementById('heys-update-later-btn');
+    if (laterBtn) {
+      laterBtn.addEventListener('click', () => {
+        modal.remove();
+      });
+    }
+  }
+
+  function installUpdate() {
+    hideUpdateBadge();
+    showUpdateModal('found');
+    setTimeout(() => updateModalStage('downloading'), 800);
+    setTimeout(() => updateModalStage('installing'), 1600);
+    setTimeout(() => {
+      updateModalStage('reloading');
+      forceUpdateAndReload(false);
+    }, 2400);
+  }
+
+  function getNetworkQuality() {
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (!connection) return { type: 'unknown', quality: 'good' };
+
+    const effectiveType = connection.effectiveType;
+    const downlink = connection.downlink;
+    const rtt = connection.rtt;
+
+    let quality = 'good';
+    if (effectiveType === 'slow-2g' || effectiveType === '2g' || rtt > 500) {
+      quality = 'poor';
+    } else if (effectiveType === '3g' || rtt > 200 || downlink < 1) {
+      quality = 'moderate';
+    }
+
+    return { type: effectiveType || 'unknown', downlink, rtt, quality, saveData: connection.saveData };
+  }
+
+  async function smartVersionCheck() {
+    const network = getNetworkQuality();
+
+    if (network.quality === 'poor' || network.saveData) {
+      return;
+    }
+
+    try {
+      const hasUpdate = await checkServerVersion(true);
+
+      if (hasUpdate) {
+        showUpdateBadge(_updateVersion);
+      }
+    } catch (e) {
+      return;
+    }
+  }
+
+  async function checkServerVersion(silent = true) {
+    try {
+      const cacheBust = Date.now();
+      const response = await fetch(`/version.json?_cb=${cacheBust}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+
+      if (!response.ok) return false;
+
+      const data = await response.json();
+      const currentVersion = getAppVersion();
+
+      if (data.version && isNewerVersion(data.version, currentVersion)) {
+        _updateVersion = data.version;
+
+        const attempt = JSON.parse(localStorage.getItem(UPDATE_ATTEMPT_KEY) || '{}');
+        const now = Date.now();
+
+        if (attempt.timestamp && (now - attempt.timestamp) < UPDATE_COOLDOWN_MS) {
+          return false;
+        }
+
+        if (attempt.targetVersion === data.version) {
+          attempt.count = (attempt.count || 0) + 1;
+        } else {
+          attempt.targetVersion = data.version;
+          attempt.count = 1;
+        }
+        attempt.timestamp = now;
+        localStorage.setItem(UPDATE_ATTEMPT_KEY, JSON.stringify(attempt));
+
+        if (attempt.count > MAX_UPDATE_ATTEMPTS) {
+          showManualRefreshPrompt(data.version);
+          return true;
+        }
+
+        if (isUpdateLocked()) {
+          return true;
+        }
+        setUpdateLock();
+
+        showUpdateModal('found');
+        setTimeout(() => updateModalStage('downloading'), 1200);
+        setTimeout(() => updateModalStage('installing'), 2400);
+        setTimeout(() => {
+          updateModalStage('reloading');
+          forceUpdateAndReload(false);
+        }, 3600);
+
+        setTimeout(() => {
+          const modal = document.getElementById('heys-update-modal');
+          if (modal) {
+            hideUpdateModal();
+            clearUpdateLock();
+          }
+        }, 12000);
+
+        return true;
+      } else if (data.version && data.version !== currentVersion) {
+        return false;
+      }
+
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
 
   function createSystemBanner({ id, className, text, actions }) {
     if (!document?.body || document.getElementById(id)) return;
@@ -1336,7 +1666,7 @@
   async function exportUserData() {
     const data = {
       exportDate: new Date().toISOString(),
-      appVersion: APP_VERSION,
+      appVersion: getAppVersion(),
       profile: HEYS.utils?.lsGet?.('heys_profile') || {},
       norms: HEYS.utils?.lsGet?.('heys_norms') || {},
       products: HEYS.products?.getAll?.() || [],
@@ -1761,6 +2091,24 @@
     triggerSkipWaiting: triggerSkipWaiting,
     forceUpdateAndReload: forceUpdateAndReload,
 
+    // Update helpers
+    getAppVersion: getAppVersion,
+    isNewerVersion: isNewerVersion,
+    isUpdateLocked: isUpdateLocked,
+    setUpdateLock: setUpdateLock,
+    clearUpdateLock: clearUpdateLock,
+    showUpdateBadge: showUpdateBadge,
+    hideUpdateBadge: hideUpdateBadge,
+    showUpdateModal: showUpdateModal,
+    updateModalStage: updateModalStage,
+    hideUpdateModal: hideUpdateModal,
+    showManualRefreshPrompt: showManualRefreshPrompt,
+    installUpdate: installUpdate,
+    getNetworkQuality: getNetworkQuality,
+    smartVersionCheck: smartVersionCheck,
+    checkServerVersion: checkServerVersion,
+    getUpdateState: () => ({ available: _updateAvailable, version: _updateVersion }),
+
     // Storage
     storage: {
       requestPersistent: requestPersistentStorage,
@@ -1773,6 +2121,18 @@
 
   // Performance tracking end
   HEYS.modulePerf?.endLoad('platform_apis', true);
+
+  // Backward compatibility globals
+  window.isUpdateLocked = window.isUpdateLocked || isUpdateLocked;
+  window.setUpdateLock = window.setUpdateLock || setUpdateLock;
+  window.clearUpdateLock = window.clearUpdateLock || clearUpdateLock;
+  window.showUpdateBadge = window.showUpdateBadge || showUpdateBadge;
+  window.hideUpdateModal = window.hideUpdateModal || hideUpdateModal;
+  window.showUpdateModal = window.showUpdateModal || showUpdateModal;
+  window.updateModalStage = window.updateModalStage || updateModalStage;
+  window.getNetworkQuality = window.getNetworkQuality || getNetworkQuality;
+  window.showManualRefreshPrompt = window.showManualRefreshPrompt || showManualRefreshPrompt;
+  window.checkServerVersion = window.checkServerVersion || checkServerVersion;
 
   // 🚀 Auto-register Service Worker on module load
   // This was previously called from runVersionGuard() in heys_app_v12.js

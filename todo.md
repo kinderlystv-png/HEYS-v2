@@ -76,6 +76,41 @@
  - [x] Добавлены BEM-стили в `styles/heys-components.css`
   - .heys-system-banner, .heys-system-banner--update, .heys-system-banner--offline
 
+### Phase 0.5: Unified SW Update UX — 2-3 часа (опционально)
+
+> **Проблема**: 4 разных UI для уведомлений об обновлениях (badge, banner, modal, toast).
+> **Риск**: Дублирование логики, конфликтующие модалки, ~130 строк inline CSS.
+> **Цель**: Единая система с ненавязчивым UX (badge по умолчанию, modal для ручной проверки).
+
+**Файлы с пересечением:**
+
+**План:**
+
+  - Сейчас в `heys_pwa_module_v1.js:131` и `:271`
+  - Экспортировать как `HEYS.PlatformAPIs.showUpdateBadge/Modal()`
+
+  - ~80 строк inline в `showUpdateBadge()` → `.heys-update-badge`, `.heys-update-badge__btn`
+  - ~60 строк inline в `showUpdateModal()` → `.heys-update-modal`, `.heys-update-modal__stage`
+  - **Файл**: `styles/heys-components.css`
+
+  - `heys_pwa_module_v1.js:checkServerVersion()` дублирует логику из `heys_app_update_checks_v1.js`
+  - Оставить один источник правды в `update_checks`
+
+  - `HEYS.PWA.showUpdateBadge` → `HEYS.PlatformAPIs.showUpdateBadge`
+  - `HEYS.PWA.showUpdateModal` → `HEYS.PlatformAPIs.showUpdateModal`
+  - `window.showUpdateModal` → deprecated alias
+
+  - Оставить только VERSION, isNewerVersion(), aliases
+  - Удалить дублирующиеся функции
+
+**UX решение:**
+- **Auto-detect update** → Badge (ненавязчивый, сверху экрана)
+- **Ручная проверка (HEYS.checkForUpdates)** → Modal с прогрессом
+- **Offline/Online** → Banner (системный, снизу)
+- **React интеграция** → Toast через `useUpdateNotifications` hook
+
+**Breaking Changes:** Нет (aliases сохраняют совместимость)
+
 ---
 
 ## 🔧 Фаза 1: Database Resilience — 6 часов

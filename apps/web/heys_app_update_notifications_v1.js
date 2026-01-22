@@ -24,7 +24,7 @@
         }, []);
 
         const handleUpdate = React.useCallback(() => {
-            HEYS.PlatformAPIs.triggerSkipWaiting({
+            HEYS.PlatformAPIs?.triggerSkipWaiting?.({
                 fallbackMs: 5000,
                 showModal: false,
                 source: 'UpdateToast.handleUpdate'
