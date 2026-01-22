@@ -4,7 +4,7 @@
 // Версия обновляется автоматически при билде
 // NOTE: Service Worker runs in isolated context - no access to @heys/logger
 
-const CACHE_VERSION = 'heys-1769098655796';
+const CACHE_VERSION = 'heys-1769098655796-v2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
@@ -276,10 +276,8 @@ self.addEventListener('fetch', (event) => {
 
     // JS — Network First с no-store (чтобы не отдавать старый бандл)
     if (url.pathname.endsWith('.js')) {
-      if (url.pathname.startsWith('/heys_') || url.pathname === '/heys_app_v12.js') {
-        event.respondWith(networkFirstNoStore(request));
-        return;
-      }
+      event.respondWith(networkFirstNoStore(request));
+      return;
     }
 
     // Markdown документы (юридика) — ВСЕГДА с сервера
