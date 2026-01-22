@@ -68,16 +68,11 @@
                 }
 
                 const data = await response.json();
-                const isNewer = helpers.isNewerVersion || ((serverVersion, currentVersion) => {
-                    if (!serverVersion || !currentVersion) return false;
-                    if (serverVersion === currentVersion) return false;
-                    const extractNumeric = (v) => {
-                        const parts = v.split('.');
-                        if (parts.length < 4) return 0;
-                        return parseInt(parts.slice(0, 4).join(''), 10) || 0;
-                    };
-                    return extractNumeric(serverVersion) > extractNumeric(currentVersion);
-                });
+                const isNewer = helpers.isNewerVersion;
+                if (!isNewer) {
+                    console.log('[PWA Update] isNewerVersion not available');
+                    return { hasUpdate: false };
+                }
 
                 const currentVersion = helpers.version;
 

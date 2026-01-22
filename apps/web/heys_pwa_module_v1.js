@@ -71,26 +71,11 @@
 
   // === Семантическое сравнение версий ===
   // Версия: YYYY.MM.DD.HHMM.hash → сравниваем числовую часть
-  function isNewerVersion(serverVersion, currentVersion) {
-    if (!serverVersion || !currentVersion) return false;
-    if (serverVersion === currentVersion) return false;
-
-    // Извлекаем числовую часть: 2025.12.12.2113 → 202512122113
-    const extractNumeric = (v) => {
-      const parts = v.split('.');
-      if (parts.length < 4) return 0;
-      // YYYY.MM.DD.HHMM → concatenate
-      return parseInt(parts.slice(0, 4).join(''), 10) || 0;
-    };
-
-    const serverNum = extractNumeric(serverVersion);
-    const currentNum = extractNumeric(currentVersion);
-
-    // Серверная версия новее только если её число БОЛЬШЕ
-    return serverNum > currentNum;
-  }
-
   const getUpdateHelpers = () => HEYS.PlatformAPIs || {};
+
+  const isNewerVersion = (serverVersion, currentVersion) => {
+    return HEYS.PlatformAPIs?.isNewerVersion?.(serverVersion, currentVersion) ?? false;
+  };
 
   const isUpdateLocked = () => getUpdateHelpers().isUpdateLocked?.() ?? false;
   const setUpdateLock = () => getUpdateHelpers().setUpdateLock?.();
@@ -148,18 +133,6 @@
     _updateAvailable: () => (HEYS.PlatformAPIs?.getUpdateState?.().available ?? false),
     _updateVersion: () => (HEYS.PlatformAPIs?.getUpdateState?.().version ?? null)
   };
-
-  // Also export to window for backward compatibility
-  window.isUpdateLocked = window.isUpdateLocked || isUpdateLocked;
-  window.setUpdateLock = window.setUpdateLock || setUpdateLock;
-  window.clearUpdateLock = window.clearUpdateLock || clearUpdateLock;
-  window.showUpdateBadge = window.showUpdateBadge || showUpdateBadge;
-  window.hideUpdateModal = window.hideUpdateModal || hideUpdateModal;
-  window.showUpdateModal = window.showUpdateModal || showUpdateModal;
-  window.updateModalStage = window.updateModalStage || updateModalStage;
-  window.getNetworkQuality = window.getNetworkQuality || getNetworkQuality;
-  window.showManualRefreshPrompt = window.showManualRefreshPrompt || showManualRefreshPrompt;
-  window.checkServerVersion = window.checkServerVersion || checkServerVersion;
 
   // Performance tracking end
   HEYS.modulePerf?.endLoad('pwa_module', true);

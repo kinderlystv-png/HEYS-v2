@@ -4,13 +4,17 @@
     'use strict';
 
     const HEYS = global.HEYS = global.HEYS || {};
-    const React = global.React;
 
-    if (!React) {
-        throw new Error('[heys_day_animations] React is required');
+    function getReact() {
+        const React = global.React;
+        if (!React) {
+            throw new Error('[heys_day_animations] React is required');
+        }
+        return React;
     }
 
     function useDayAnimations(deps) {
+        const React = getReact();
         const {
             eatenKcal,
             optimum,

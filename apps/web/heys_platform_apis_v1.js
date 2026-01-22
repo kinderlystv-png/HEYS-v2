@@ -169,6 +169,11 @@
     }
   }
 
+  function getProgressClass(progress) {
+    const value = Number(progress) || 0;
+    return `heys-update-modal__progress-bar--${value}`;
+  }
+
   function showUpdateModal(stage = 'checking') {
     document.getElementById('heys-update-modal')?.remove();
 
@@ -183,27 +188,50 @@
 
     const s = stages[stage] || stages.checking;
 
-    const modal = document.createElement('div');
-    modal.id = 'heys-update-modal';
-    modal.className = 'heys-update-modal';
-    modal.innerHTML = `
-      <div class="heys-update-modal__backdrop">
-        <div class="heys-update-modal__card" role="dialog" aria-modal="true" aria-labelledby="heys-update-title" aria-describedby="heys-update-subtitle">
-          <div id="heys-update-icon" class="heys-update-modal__icon ${s.isSpinner ? 'is-spinner' : ''}">
-            ${s.isSpinner ? '<div class="heys-update-modal__spinner"></div>' : s.icon}
-          </div>
-          <h2 id="heys-update-title" class="heys-update-modal__title">${s.title}</h2>
-          <p id="heys-update-subtitle" class="heys-update-modal__subtitle">${s.subtitle}</p>
-          <div class="heys-update-modal__progress">
-            <div id="heys-update-progress" class="heys-update-modal__progress-bar" style="width: ${stage === 'checking' ? '20%' : stage === 'found' ? '40%' : stage === 'downloading' ? '60%' : stage === 'installing' ? '80%' : '100%'};"></div>
-          </div>
-          <p class="heys-update-modal__version">Версия ${getAppVersion()}</p>
-        </div>
+    const iconHtml = `
+      <div id="heys-update-icon" class="heys-update-modal__icon ${s.isSpinner ? 'is-spinner' : ''}">
+        ${s.isSpinner ? '<div class="heys-update-modal__spinner"></div>' : s.icon}
       </div>
     `;
 
-    document.body.appendChild(modal);
-    return modal;
+    const progressWidth = stage === 'checking'
+      ? '20%'
+      : stage === 'found'
+        ? '40%'
+        : stage === 'downloading'
+          ? '60%'
+          : stage === 'installing'
+            ? '80%'
+            : '100%';
+
+    const progressValue = parseInt(progressWidth, 10) || 0;
+    const progressClass = getProgressClass(progressValue);
+
+    const progressHtml = `
+      <div class="heys-update-modal__progress">
+        <div id="heys-update-progress" class="heys-update-modal__progress-bar ${progressClass}"></div>
+      </div>
+    `;
+
+    const footerHtml = `<p class="heys-update-modal__version">Версия ${getAppVersion()}</p>`;
+
+    return renderUpdateDialog({
+      dialogType: 'modal',
+      id: 'heys-update-modal',
+      rootClass: 'heys-update-modal',
+      backdropClass: 'heys-update-modal__backdrop',
+      cardClass: 'heys-update-modal__card',
+      cardAttrs: 'role="dialog" aria-modal="true" aria-labelledby="heys-update-title" aria-describedby="heys-update-subtitle"',
+      iconHtml,
+      titleId: 'heys-update-title',
+      titleClass: 'heys-update-modal__title',
+      title: s.title,
+      textId: 'heys-update-subtitle',
+      textClass: 'heys-update-modal__subtitle',
+      text: s.subtitle,
+      progressHtml,
+      footerHtml,
+    });
   }
 
   function updateModalStage(stage) {
@@ -236,13 +264,16 @@
     }
     if (title) title.textContent = s.title;
     if (subtitle) subtitle.textContent = s.subtitle;
-    if (progress) progress.style.width = s.progress + '%';
+    if (progress) {
+      progress.className = `heys-update-modal__progress-bar ${getProgressClass(s.progress)}`;
+    }
   }
 
   function hideUpdateModal() {
     const modal = document.getElementById('heys-update-modal');
     if (modal) {
       modal.classList.add('heys-update-modal--hide');
+      releaseUpdateDialogFocus(modal);
       setTimeout(() => modal.remove(), 300);
     }
   }
@@ -252,27 +283,33 @@
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-    const modal = document.createElement('div');
-    modal.id = 'heys-update-modal';
-    modal.className = 'heys-update-prompt';
-    modal.innerHTML = `
-      <div class="heys-update-prompt__backdrop">
-        <div class="heys-update-prompt__card" role="dialog" aria-modal="true" aria-labelledby="heys-update-prompt-title" aria-describedby="heys-update-prompt-text">
-          <div class="heys-update-prompt__spinner"></div>
-          <h2 id="heys-update-prompt-title" class="heys-update-prompt__title">Требуется обновление</h2>
-          <p id="heys-update-prompt-text" class="heys-update-prompt__text">
-            ${isIOS
-        ? 'Закройте приложение и откройте заново для обновления до v' + targetVersion
-        : 'Нажмите кнопку для обновления до v' + targetVersion}
-          </p>
-          ${isIOS ? '' : `
-            <button id="heys-manual-update-btn" class="heys-update-prompt__btn heys-update-prompt__btn--primary">Обновить сейчас</button>
-          `}
-          <button id="heys-update-later-btn" class="heys-update-prompt__btn heys-update-prompt__btn--ghost">Позже</button>
-        </div>
-      </div>
+    const iconHtml = '<div class="heys-update-prompt__spinner"></div>';
+    const text = isIOS
+      ? 'Закройте приложение и откройте заново для обновления до v' + targetVersion
+      : 'Нажмите кнопку для обновления до v' + targetVersion;
+
+    const actionsHtml = `${isIOS ? '' : `
+      <button id="heys-manual-update-btn" class="heys-update-prompt__btn heys-update-prompt__btn--primary">Обновить сейчас</button>
+    `}
+      <button id="heys-update-later-btn" class="heys-update-prompt__btn heys-update-prompt__btn--ghost">Позже</button>
     `;
-    document.body.appendChild(modal);
+
+    const modal = renderUpdateDialog({
+      dialogType: 'prompt',
+      id: 'heys-update-modal',
+      rootClass: 'heys-update-prompt',
+      backdropClass: 'heys-update-prompt__backdrop',
+      cardClass: 'heys-update-prompt__card',
+      cardAttrs: 'role="dialog" aria-modal="true" aria-labelledby="heys-update-prompt-title" aria-describedby="heys-update-prompt-text"',
+      iconHtml,
+      titleId: 'heys-update-prompt-title',
+      titleClass: 'heys-update-prompt__title',
+      title: 'Требуется обновление',
+      textId: 'heys-update-prompt-text',
+      textClass: 'heys-update-prompt__text',
+      text,
+      footerHtml: actionsHtml,
+    });
 
     const updateBtn = document.getElementById('heys-manual-update-btn');
     if (updateBtn) {
@@ -287,9 +324,131 @@
     const laterBtn = document.getElementById('heys-update-later-btn');
     if (laterBtn) {
       laterBtn.addEventListener('click', () => {
-        modal.remove();
+        releaseUpdateDialogFocus(modal);
+        modal?.remove();
       });
     }
+  }
+
+  function renderUpdateDialog({
+    dialogType,
+    id,
+    rootClass,
+    backdropClass,
+    cardClass,
+    cardAttrs,
+    iconHtml = '',
+    titleId,
+    titleClass,
+    title,
+    textId,
+    textClass,
+    text,
+    progressHtml = '',
+    footerHtml = '',
+  }) {
+    const modal = document.createElement('div');
+    modal.id = id;
+    modal.className = rootClass;
+    if (dialogType) {
+      modal.dataset.updateDialog = dialogType;
+    }
+
+    const titleHtml = title
+      ? `<h2 id="${titleId}" class="${titleClass}">${title}</h2>`
+      : '';
+    const textHtml = text
+      ? `<p id="${textId}" class="${textClass}">${text}</p>`
+      : '';
+
+    modal.innerHTML = `
+      <div class="${backdropClass}">
+        <div class="${cardClass}" ${cardAttrs || ''}>
+          ${iconHtml}
+          ${titleHtml}
+          ${textHtml}
+          ${progressHtml}
+          ${footerHtml}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    trapUpdateDialogFocus(modal);
+    return modal;
+  }
+
+  function trapUpdateDialogFocus(modal) {
+    if (!modal) return;
+
+    const focusables = getFocusableElements(modal);
+    const previousActive = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const focusTarget = focusables[0] || modal.querySelector('[role="dialog"]') || modal;
+    if (focusTarget && typeof focusTarget.focus === 'function') {
+      setTimeout(() => {
+        try {
+          focusTarget.focus({ preventScroll: true });
+        } catch (_) {
+          focusTarget.focus();
+        }
+      }, 0);
+    }
+
+    const handleKeydown = (event) => {
+      if (event.key !== 'Tab') return;
+
+      const items = getFocusableElements(modal);
+      if (items.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = items[0];
+      const last = items[items.length - 1];
+      const isShift = event.shiftKey;
+      const active = document.activeElement;
+
+      if (isShift && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!isShift && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    modal.addEventListener('keydown', handleKeydown);
+    modal._heysFocusTrap = { previousActive, handleKeydown };
+  }
+
+  function releaseUpdateDialogFocus(modal) {
+    const trap = modal?._heysFocusTrap;
+    if (!trap) return;
+
+    modal.removeEventListener('keydown', trap.handleKeydown);
+    if (trap.previousActive && typeof trap.previousActive.focus === 'function') {
+      try {
+        trap.previousActive.focus({ preventScroll: true });
+      } catch (_) {
+        trap.previousActive.focus();
+      }
+    }
+    delete modal._heysFocusTrap;
+  }
+
+  function getFocusableElements(container) {
+    if (!container) return [];
+    const selectors = [
+      'a[href]:not([tabindex="-1"])',
+      'button:not([disabled]):not([tabindex="-1"])',
+      'input:not([disabled]):not([type="hidden"]):not([tabindex="-1"])',
+      'select:not([disabled]):not([tabindex="-1"])',
+      'textarea:not([disabled]):not([tabindex="-1"])',
+      '[tabindex]:not([tabindex="-1"])'
+    ];
+    return Array.from(container.querySelectorAll(selectors.join(',')))
+      .filter((el) => el instanceof HTMLElement && !el.hasAttribute('disabled'));
   }
 
   function installUpdate() {

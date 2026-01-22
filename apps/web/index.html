@@ -37,6 +37,18 @@
                 }
             }
 
+            function setRecoveryStatus(text) {
+                var statusEl = document.getElementById('heys-recovery-status');
+                if (statusEl) statusEl.textContent = text || '';
+            }
+
+            function setRecoveryButtonsDisabled(disabled) {
+                var reloadBtn = document.getElementById('heys-recovery-reload');
+                var clearBtn = document.getElementById('heys-recovery-clear');
+                if (reloadBtn) reloadBtn.disabled = !!disabled;
+                if (clearBtn) clearBtn.disabled = !!disabled;
+            }
+
             function showRecoveryUI(errorMsg) {
                 if (recoveryShown) return;
                 recoveryShown = true;
@@ -48,15 +60,30 @@
                     '<div style="font-size:48px;margin-bottom:16px">⚠️</div>' +
                     '<h2 style="margin:0 0 8px;font-size:20px">Ошибка загрузки</h2>' +
                     '<p style="margin:0 0 24px;color:#6b7280;font-size:14px">' + (errorMsg || 'Произошла критическая ошибка') + '</p>' +
+                    '<div id="heys-recovery-status" style="margin:0 0 16px;color:#6b7280;font-size:12px"></div>' +
                     '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">' +
-                    '<button onclick="location.reload()" style="padding:12px 24px;border-radius:8px;border:none;background:#10b981;color:white;font-weight:500;cursor:pointer">🔄 Обновить</button>' +
-                    '<button onclick="clearCacheAndReload()" style="padding:12px 24px;border-radius:8px;border:1px solid #d1d5db;background:white;color:#374151;font-weight:500;cursor:pointer">🗑️ Сбросить кэш</button>' +
+                    '<button id="heys-recovery-reload" onclick="window.__heysReloadApp && window.__heysReloadApp()" style="padding:12px 24px;border-radius:8px;border:none;background:#10b981;color:white;font-weight:500;cursor:pointer">🔄 Обновить</button>' +
+                    '<button id="heys-recovery-clear" onclick="clearCacheAndReload()" style="padding:12px 24px;border-radius:8px;border:1px solid #d1d5db;background:white;color:#374151;font-weight:500;cursor:pointer">🗑️ Сбросить кэш</button>' +
                     '</div></div></div>';
             }
 
             window.__heysShowRecoveryUI = showRecoveryUI;
 
+            window.__heysReloadApp = function () {
+                if (window.__heysRecoveryBusy) return;
+                window.__heysRecoveryBusy = true;
+                setRecoveryStatus('Перезагрузка приложения…');
+                setRecoveryButtonsDisabled(true);
+                setTimeout(function () {
+                    location.reload();
+                }, 250);
+            };
+
             window.clearCacheAndReload = async function () {
+                if (window.__heysRecoveryBusy) return;
+                window.__heysRecoveryBusy = true;
+                setRecoveryStatus('Очистка кэша и перезапуск…');
+                setRecoveryButtonsDisabled(true);
                 try {
                     if ('caches' in window) {
                         var names = await caches.keys();
@@ -67,8 +94,12 @@
                         await Promise.all(regs.map(function (r) { return r.unregister(); }));
                     }
                     sessionStorage.clear();
-                } catch (e) { console.error(e); }
-                location.reload();
+                } catch (e) {
+                    window.__heysLog && window.__heysLog('[RECOVERY] cache clear failed: ' + (e && e.message ? e.message : String(e)));
+                }
+                setTimeout(function () {
+                    location.reload();
+                }, 350);
             };
 
             // Global error handler

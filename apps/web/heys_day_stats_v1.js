@@ -415,6 +415,21 @@
           });
         };
 
+        const showDebtInfo = (e) => {
+          e.stopPropagation();
+          if (HEYS?.Toast?.info) {
+            HEYS.Toast.info('Долг считается от базовой нормы (без бонуса долга и refeed). На графике — цель дня с учётом бонусов.', {
+              title: 'ℹ️ Пояснение'
+            });
+          } else if (typeof HEYS?.toast === 'function') {
+            HEYS.toast({
+              type: 'info',
+              title: 'ℹ️ Пояснение',
+              message: 'Долг считается от базовой нормы (без бонуса долга и refeed). На графике — цель дня с учётом бонусов.'
+            });
+          }
+        };
+
         return React.createElement('div', {
           className: 'debt-card' + (balanceCardExpanded ? ' expanded' : ''),
           onClick: (e) => {
@@ -429,6 +444,11 @@
               React.createElement('span', { className: 'debt-card-label' },
                 'Недобор ' + debt + ' ккал'
               ),
+              React.createElement('span', {
+                className: 'debt-card-info',
+                title: 'Долг считается от базовой нормы (без бонуса долга и refeed).',
+                onClick: showDebtInfo
+              }, ' ⓘ'),
               dailyBoost > 0 && React.createElement('span', { className: 'debt-card-boost' },
                 '+' + dailyBoost + '/день'
               )
@@ -452,10 +472,14 @@
             React.createElement('div', { className: 'debt-days-row' },
               debtDaysMeta.map((d) => {
                 const isPos = d.delta >= 0;
+                const baseInfo = d.baseTarget ? ('база ' + d.baseTarget) : 'база —';
+                const planInfo = d.target && d.baseTarget && d.target !== d.baseTarget
+                  ? (' • план ' + d.target)
+                  : '';
                 return React.createElement('div', {
                   key: d.date,
                   className: 'debt-day-col',
-                  title: d.dayName + ': ' + (d.delta > 0 ? '+' : '') + d.delta + ' ккал'
+                  title: d.dayName + ': ' + (d.delta > 0 ? '+' : '') + d.delta + ' ккал (съедено ' + d.eaten + ' / ' + baseInfo + planInfo + ')'
                 },
                   React.createElement('div', { className: 'debt-day-bar-wrap' },
                     React.createElement('div', {
@@ -467,6 +491,13 @@
                   d.hasTraining && React.createElement('span', { className: 'debt-day-train' }, '🏋️')
                 );
               })
+            ),
+
+            React.createElement('div', { className: 'caloric-balance-legend' },
+              React.createElement('span', { className: 'caloric-balance-legend-icon' }, 'ℹ️'),
+              React.createElement('span', { className: 'caloric-balance-legend-text' },
+                'Недобор считается от базовой нормы. Линия графика — цель дня с учётом бонусов.'
+              )
             ),
 
             // План восстановления — главный блок

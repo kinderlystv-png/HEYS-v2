@@ -1,9 +1,15 @@
 // heys_day_hooks.js — React hooks for Day component
 
-;(function(global){
+; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
-  const React = global.React;
-  
+  function getReact() {
+    const React = global.React;
+    if (!React) {
+      throw new Error('[heys_day_hooks] React is required');
+    }
+    return React;
+  }
+
   // Импортируем утилиты из dayUtils
   const getDayUtils = () => HEYS.dayUtils || {};
 
@@ -18,7 +24,8 @@
     debounceMs = 500,
     now = () => Date.now(),
     disabled = false, // ЗАЩИТА: не сохранять пока данные не загружены
-  }){
+  }) {
+    const React = getReact();
     const utils = getDayUtils();
     // ВАЖНО: Используем динамический вызов чтобы всегда брать актуальный HEYS.utils.lsSet
     // Это нужно для синхронизации с облаком (диспатч события heys:data-saved)
@@ -28,51 +35,51 @@
         actualLsSet(key, val);
       } else {
         // Fallback
-        try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+        try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { }
       }
     }, [lsSet, utils.lsSet]);
     const lsGetFunc = lsGetFn || utils.lsGet;
-    
+
     const timerRef = React.useRef(null);
     const prevStoredSnapRef = React.useRef(null);
     const prevDaySnapRef = React.useRef(null);
-    const sourceIdRef = React.useRef((global.crypto && typeof global.crypto.randomUUID === 'function')? global.crypto.randomUUID(): String(Math.random()));
+    const sourceIdRef = React.useRef((global.crypto && typeof global.crypto.randomUUID === 'function') ? global.crypto.randomUUID() : String(Math.random()));
     const channelRef = React.useRef(null);
     const isUnmountedRef = React.useRef(false);
 
-    React.useEffect(()=>{
+    React.useEffect(() => {
       isUnmountedRef.current = false;
-      if('BroadcastChannel' in global){
+      if ('BroadcastChannel' in global) {
         const channel = new BroadcastChannel('heys_day_updates');
         channelRef.current = channel;
-        return ()=>{
+        return () => {
           isUnmountedRef.current = true;
           channel.close();
           channelRef.current = null;
         };
       }
       channelRef.current = null;
-    },[]);
+    }, []);
 
-    const getKey = React.useCallback((dateStr)=> keyPrefix + dateStr,[keyPrefix]);
+    const getKey = React.useCallback((dateStr) => keyPrefix + dateStr, [keyPrefix]);
 
-    const stripMeta = React.useCallback((payload)=>{
-      if(!payload) return payload;
-      const {updatedAt,_sourceId,...rest} = payload;
+    const stripMeta = React.useCallback((payload) => {
+      if (!payload) return payload;
+      const { updatedAt, _sourceId, ...rest } = payload;
       return rest;
-    },[]);
+    }, []);
 
-    const readExisting = React.useCallback((key)=>{
-      if(!key) return null;
-      try{
-        const stored = lsGetFunc? lsGetFunc(key,null):null;
-        if(stored && typeof stored==='object') return stored;
-      }catch(e){}
-      try{
+    const readExisting = React.useCallback((key) => {
+      if (!key) return null;
+      try {
+        const stored = lsGetFunc ? lsGetFunc(key, null) : null;
+        if (stored && typeof stored === 'object') return stored;
+      } catch (e) { }
+      try {
         const raw = global.localStorage.getItem(key);
-        return raw? JSON.parse(raw):null;
-      }catch(e){ return null; }
-    },[lsGetFunc]);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) { return null; }
+    }, [lsGetFunc]);
 
     // Очистка фото от base64 данных перед сохранением (экономия localStorage)
     const stripPhotoData = React.useCallback((payload) => {
@@ -105,23 +112,23 @@
     }, []);
 
     // Сохранение данных дня под конкретную дату
-    const saveToDate = React.useCallback((dateStr, payload)=>{
-      if(!dateStr || !payload) return;
+    const saveToDate = React.useCallback((dateStr, payload) => {
+      if (!dateStr || !payload) return;
       const key = getKey(dateStr);
       const current = readExisting(key);
-      const incomingUpdatedAt = payload.updatedAt!=null? payload.updatedAt: now();
+      const incomingUpdatedAt = payload.updatedAt != null ? payload.updatedAt : now();
 
-      if(current && current.updatedAt > incomingUpdatedAt) return;
-      if(current && current.updatedAt===incomingUpdatedAt && current._sourceId && current._sourceId > sourceIdRef.current) return;
+      if (current && current.updatedAt > incomingUpdatedAt) return;
+      if (current && current.updatedAt === incomingUpdatedAt && current._sourceId && current._sourceId > sourceIdRef.current) return;
 
       // 🔍 DEBUG: Проверка на продукты без нутриентов в meals
       const emptyItems = [];
       (payload.meals || []).forEach((meal, mi) => {
         (meal.items || []).forEach((item, ii) => {
           if (!item.kcal100 && !item.protein100 && !item.carbs100) {
-            emptyItems.push({ 
-              mealIndex: mi, 
-              itemIndex: ii, 
+            emptyItems.push({
+              mealIndex: mi,
+              itemIndex: ii,
               name: item.name,
               id: item.id,
               product_id: item.product_id,
@@ -135,7 +142,7 @@
         // Попробуем найти продукт в базе для этого item
         emptyItems.forEach(item => {
           const products = HEYS?.products?.getAll?.() || [];
-          const found = products.find(p => 
+          const found = products.find(p =>
             p.name?.toLowerCase() === item.name?.toLowerCase() ||
             String(p.id) === String(item.product_id)
           );
@@ -157,31 +164,31 @@
       const toStore = {
         ...cleanedPayload,
         date: dateStr,
-        schemaVersion: payload.schemaVersion!=null? payload.schemaVersion:3,
+        schemaVersion: payload.schemaVersion != null ? payload.schemaVersion : 3,
         updatedAt: incomingUpdatedAt,
         _sourceId: sourceIdRef.current,
       };
 
-      try{
-        lsSetFn(key,toStore);
-        if(channelRef.current && !isUnmountedRef.current){ 
-          try{
-            channelRef.current.postMessage({type:'day:update',date:dateStr,payload:toStore});
-          }catch(e){}
+      try {
+        lsSetFn(key, toStore);
+        if (channelRef.current && !isUnmountedRef.current) {
+          try {
+            channelRef.current.postMessage({ type: 'day:update', date: dateStr, payload: toStore });
+          } catch (e) { }
         }
-      }catch(error){
+      } catch (error) {
         console.error('[AUTOSAVE] localStorage write failed:', error);
       }
-    },[getKey,lsSetFn,now,readExisting,stripPhotoData]);
+    }, [getKey, lsSetFn, now, readExisting, stripPhotoData]);
 
-    const flush = React.useCallback(()=>{
-      if(disabled || isUnmountedRef.current || !day || !day.date) return;
-      
+    const flush = React.useCallback(() => {
+      if (disabled || isUnmountedRef.current || !day || !day.date) return;
+
       const daySnap = JSON.stringify(stripMeta(day));
-      if(prevDaySnapRef.current === daySnap) return;
-      
-      const updatedAt = day.updatedAt!=null? day.updatedAt: now();
-      
+      if (prevDaySnapRef.current === daySnap) return;
+
+      const updatedAt = day.updatedAt != null ? day.updatedAt : now();
+
       // Просто сохраняем все приёмы под текущую дату
       // Ночная логика теперь в todayISO() — до 3:00 "сегодня" = вчера
       const payload = {
@@ -191,76 +198,77 @@
       saveToDate(day.date, payload);
       prevStoredSnapRef.current = JSON.stringify(payload);
       prevDaySnapRef.current = daySnap;
-    },[day,now,saveToDate,stripMeta,disabled,getKey,readExisting]);
+    }, [day, now, saveToDate, stripMeta, disabled, getKey, readExisting]);
 
-    React.useEffect(()=>{
+    React.useEffect(() => {
       // 🔒 ЗАЩИТА: Не инициализируем prevDaySnapRef до гидратации!
       // Иначе после sync данные изменятся, а ref будет содержать старую версию
-      if(disabled) return;
-      if(!day || !day.date) return;
+      if (disabled) return;
+      if (!day || !day.date) return;
       // ✅ FIX: getKey ожидает dateStr, а не объект day
       // Иначе получаем ключ вида "heys_dayv2_[object Object]" и ломаем init снапов.
       const key = getKey(day.date);
       const current = readExisting(key);
-      if(current){
+      if (current) {
         prevStoredSnapRef.current = JSON.stringify(current);
         prevDaySnapRef.current = JSON.stringify(stripMeta(current));
-      }else{
+      } else {
         prevDaySnapRef.current = JSON.stringify(stripMeta(day));
       }
-    },[day && day.date,getKey,readExisting,stripMeta,disabled]);
+    }, [day && day.date, getKey, readExisting, stripMeta, disabled]);
 
-    React.useEffect(()=>{
-      if(disabled) return; // ЗАЩИТА: не запускать таймер до гидратации
-      if(!day || !day.date) return;
-      
+    React.useEffect(() => {
+      if (disabled) return; // ЗАЩИТА: не запускать таймер до гидратации
+      if (!day || !day.date) return;
+
       // 🔒 ЗАЩИТА: Инициализируем prevDaySnapRef при первом включении
       // Это предотвращает ложный save сразу после isHydrated=true
       const daySnap = JSON.stringify(stripMeta(day));
-      
+
       if (prevDaySnapRef.current === null) {
         // Первый запуск после гидратации — просто запоминаем состояние без save
         prevDaySnapRef.current = daySnap;
         return;
       }
-      
-      if(prevDaySnapRef.current === daySnap) return;
-      
+
+      if (prevDaySnapRef.current === daySnap) return;
+
       // ☁️ Сразу показать что данные изменились (до debounce)
       // Это запустит анимацию синхронизации в облачном индикаторе
       if (typeof global.dispatchEvent === 'function') {
         global.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key: 'day', type: 'data' } }));
       }
-      
+
       global.clearTimeout(timerRef.current);
-      timerRef.current = global.setTimeout(flush,debounceMs);
-      return ()=>{ global.clearTimeout(timerRef.current); };
-    },[day,debounceMs,flush,stripMeta,disabled]);
+      timerRef.current = global.setTimeout(flush, debounceMs);
+      return () => { global.clearTimeout(timerRef.current); };
+    }, [day, debounceMs, flush, stripMeta, disabled]);
 
-    React.useEffect(()=>{
-      return ()=>{
+    React.useEffect(() => {
+      return () => {
         global.clearTimeout(timerRef.current);
-        if(!disabled) flush(); // ЗАЩИТА: не сохранять при unmount если не гидратировано
+        if (!disabled) flush(); // ЗАЩИТА: не сохранять при unmount если не гидратировано
       };
-    },[flush,disabled]);
+    }, [flush, disabled]);
 
-    React.useEffect(()=>{
-      const onVisChange=()=>{
-        if(!disabled && global.document.visibilityState!=='visible') flush();
+    React.useEffect(() => {
+      const onVisChange = () => {
+        if (!disabled && global.document.visibilityState !== 'visible') flush();
       };
-      global.document.addEventListener('visibilitychange',onVisChange);
-      global.addEventListener('pagehide',flush);
-      return ()=>{
-        global.document.removeEventListener('visibilitychange',onVisChange);
-        global.removeEventListener('pagehide',flush);
+      global.document.addEventListener('visibilitychange', onVisChange);
+      global.addEventListener('pagehide', flush);
+      return () => {
+        global.document.removeEventListener('visibilitychange', onVisChange);
+        global.removeEventListener('pagehide', flush);
       };
-    },[flush]);
+    }, [flush]);
 
-    return {flush};
+    return { flush };
   }
 
   // Хук для централизованной детекции мобильных устройств с поддержкой ротации
   function useMobileDetection(breakpoint = 768) {
+    const React = getReact();
     const [isMobile, setIsMobile] = React.useState(() => {
       if (typeof window === 'undefined') return false;
       return window.innerWidth <= breakpoint;
@@ -268,16 +276,16 @@
 
     React.useEffect(() => {
       if (typeof window === 'undefined' || !window.matchMedia) return;
-      
+
       const mediaQuery = window.matchMedia(`(max-width: ${breakpoint}px)`);
-      
+
       const handleChange = (e) => {
         setIsMobile(e.matches);
       };
-      
+
       // Начальное значение
       setIsMobile(mediaQuery.matches);
-      
+
       // Подписка на изменения (поддержка ротации экрана)
       if (mediaQuery.addEventListener) {
         mediaQuery.addEventListener('change', handleChange);
@@ -306,46 +314,47 @@
     daysRange = 7,  // ±7 дней
     enabled = true
   }) {
+    const React = getReact();
     // 🔧 v3.19.2: Используем глобальный кэш вместо локального ref
     const prefetchedRef = React.useRef(globalPrefetchCache.prefetched);
     const utils = getDayUtils();
     const lsGet = utils.lsGet || HEYS.utils?.lsGet;
-    
+
     // Генерация списка дат для prefetch
     const getDatesToPrefetch = React.useCallback((centerDate) => {
       const dates = [];
       const center = new Date(centerDate);
-      
+
       for (let i = -daysRange; i <= daysRange; i++) {
         const d = new Date(center);
         d.setDate(d.getDate() + i);
         dates.push(d.toISOString().slice(0, 10));
       }
-      
+
       return dates;
     }, [daysRange]);
-    
+
     // Prefetch данных через Supabase (если доступно)
     const prefetchFromCloud = React.useCallback(async (dates) => {
       if (!navigator.onLine) return;
       if (!HEYS.cloud?.isAuthenticated?.()) return;
-      
+
       // 🔧 v3.19.2: Cooldown защита от частых вызовов
       const now = Date.now();
       if (now - globalPrefetchCache.lastPrefetchTime < globalPrefetchCache.PREFETCH_COOLDOWN) {
         return; // Слишком частые вызовы — пропускаем
       }
-      
+
       const toFetch = dates.filter(d => !prefetchedRef.current.has(d));
       if (toFetch.length === 0) return;
-      
+
       try {
         // 🔧 v3.19.2: Обновляем время последнего prefetch
         globalPrefetchCache.lastPrefetchTime = now;
-        
+
         // Пометим как "в процессе" чтобы избежать дублирования
         toFetch.forEach(d => prefetchedRef.current.add(d));
-        
+
         // Загружаем данные через cloud sync
         if (HEYS.cloud?.fetchDays) {
           await HEYS.cloud.fetchDays(toFetch);
@@ -355,30 +364,30 @@
         toFetch.forEach(d => prefetchedRef.current.delete(d));
       }
     }, []);
-    
+
     // Prefetch при смене даты или восстановлении соединения
     React.useEffect(() => {
       if (!enabled || !currentDate) return;
-      
+
       const dates = getDatesToPrefetch(currentDate);
       prefetchFromCloud(dates);
-      
+
       // Подписка на восстановление соединения
       const handleOnline = () => {
         prefetchFromCloud(getDatesToPrefetch(currentDate));
       };
-      
+
       window.addEventListener('online', handleOnline);
       return () => window.removeEventListener('online', handleOnline);
     }, [currentDate, enabled, getDatesToPrefetch, prefetchFromCloud]);
-    
+
     // Ручной триггер prefetch
     const triggerPrefetch = React.useCallback(() => {
       if (!currentDate) return;
       prefetchedRef.current.clear();
       prefetchFromCloud(getDatesToPrefetch(currentDate));
     }, [currentDate, getDatesToPrefetch, prefetchFromCloud]);
-    
+
     return { triggerPrefetch };
   }
 

@@ -2,7 +2,7 @@
 // Показывается в утреннем чек-ине если вчера было <50% калорий от нормы
 // Спрашивает: это реальное голодание или незаполненные приёмы пищи?
 //
-// Версия: 1.0.0
+// Версия: 1.1.1
 // 
 (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
@@ -61,15 +61,31 @@
     // Суммируем калории из приёмов пищи
     const meals = dayData.meals || [];
     let totalKcal = 0;
+    let totalProt = 0;
+    let totalCarbs = 0;
+    let totalFat = 0;
+    let totalSimple = 0;
 
     for (const meal of meals) {
       const items = meal.items || [];
       for (const item of items) {
-        // Получаем продукт по ID
+        const grams = item.grams || 0;
+        if (!grams) continue;
+
+        // 🔧 FIX v1.1.0: Тройной fallback — product → item snapshot → 0
+        // Item хранит snapshot данных при добавлении, не зависим от базы продуктов
         const product = getProductById(item.product_id);
-        if (product && item.grams) {
-          totalKcal += (product.kcal100 || 0) * item.grams / 100;
-        }
+        const kcal100 = product?.kcal100 ?? item.kcal100 ?? 0;
+        const prot100 = product?.protein100 ?? item.protein100 ?? 0;
+        const carbs100 = product?.carbs100 ?? item.carbs100 ?? 0;
+        const fat100 = product?.fat100 ?? item.fat100 ?? 0;
+        const simple100 = product?.simple100 ?? item.simple100 ?? 0;
+
+        totalKcal += kcal100 * grams / 100;
+        totalProt += prot100 * grams / 100;
+        totalCarbs += carbs100 * grams / 100;
+        totalFat += fat100 * grams / 100;
+        totalSimple += simple100 * grams / 100;
       }
     }
 
@@ -87,6 +103,12 @@
       ratio,
       meals,
       mealCount: meals.length,
+      macros: {
+        prot: Math.round(totalProt * 10) / 10,
+        carbs: Math.round(totalCarbs * 10) / 10,
+        fat: Math.round(totalFat * 10) / 10,
+        simple: Math.round(totalSimple * 10) / 10
+      },
       isFastingDay: dayData.isFastingDay || false,
       isIncomplete: dayData.isIncomplete || false,
       hasBeenVerified: dayData.isFastingDay !== undefined || dayData.isIncomplete !== undefined
@@ -486,6 +508,6 @@
     INCOMPLETE_ACTIONS
   };
 
-  devLog('[HEYS] YesterdayVerify v1.0.0 loaded');
+  devLog('[HEYS] YesterdayVerify v1.1.1 loaded');
 
 })(typeof window !== 'undefined' ? window : global);

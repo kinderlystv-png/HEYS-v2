@@ -2564,13 +2564,17 @@
     'use strict';
 
     const HEYS = global.HEYS = global.HEYS || {};
-    const React = global.React;
 
-    if (!React) {
-        throw new Error('[heys_day_effects] React is required. Ensure React is loaded before heys_day_effects.js');
+    function getReact() {
+        const React = global.React;
+        if (!React) {
+            throw new Error('[heys_day_effects] React is required. Ensure React is loaded before heys_day_effects.js');
+        }
+        return React;
     }
 
     function useDaySyncEffects(deps) {
+        const React = getReact();
         const {
             date,
             setIsHydrated,
@@ -2825,6 +2829,7 @@
     }
 
     function useDayBootEffects() {
+        const React = getReact();
         // Twemoji: reparse emoji after render
         React.useEffect(() => {
             if (global.scheduleTwemojiParse) global.scheduleTwemojiParse();
@@ -2839,6 +2844,7 @@
     }
 
     function useDayCurrentMinuteEffect(deps) {
+        const React = getReact();
         const { setCurrentMinute } = deps || {};
         React.useEffect(() => {
             const intervalId = setInterval(() => {
@@ -2849,6 +2855,7 @@
     }
 
     function useDayThemeEffect(deps) {
+        const React = getReact();
         const { theme, resolvedTheme } = deps || {};
         React.useEffect(() => {
             document.documentElement.setAttribute('data-theme', resolvedTheme);
@@ -2871,6 +2878,7 @@
     }
 
     function useDayExportsEffects(deps) {
+        const React = getReact();
         const {
             currentStreak,
             addMeal,

@@ -1764,6 +1764,26 @@ body.tour-active .ios-pwa-banner {
   transition: width 0.5s ease-out;
 }
 
+.heys-update-modal__progress-bar--20 {
+  width: 20%;
+}
+
+.heys-update-modal__progress-bar--40 {
+  width: 40%;
+}
+
+.heys-update-modal__progress-bar--60 {
+  width: 60%;
+}
+
+.heys-update-modal__progress-bar--80 {
+  width: 80%;
+}
+
+.heys-update-modal__progress-bar--100 {
+  width: 100%;
+}
+
 .heys-update-modal__version {
   color: rgba(255, 255, 255, 0.4);
   font-size: 11px;
