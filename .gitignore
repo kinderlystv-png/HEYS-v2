@@ -73,6 +73,8 @@ dist
 public
 # But keep legal docs in apps/web/public/docs
 !apps/web/public/docs/
+!apps/web/public/sw.js
+!apps/web/public/version.json
 
 # Vite build output
 dist/

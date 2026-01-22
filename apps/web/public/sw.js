@@ -7,6 +7,7 @@
 const CACHE_VERSION = 'heys-1769098655796';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
+const META_CACHE = 'heys-meta';
 let updateRequiredNotified = false;
 
 // Ресурсы для предварительного кэширования (App Shell)
@@ -441,12 +442,59 @@ async function checkForUpdates() {
     const currentVersion = CACHE_VERSION.replace('heys-', '');
 
     if (serverVersion !== currentVersion) {
-      console.log('[SW] 🆕 Update available in background!', serverVersion);
       await notifyUpdateRequired(serverVersion, 'version_mismatch');
     }
+    await checkIndexHtmlUpdate();
   } catch (e) {
     console.warn('[SW] Background update check failed:', e);
   }
+}
+
+async function checkIndexHtmlUpdate() {
+  try {
+    const currentHash = await fetchIndexHtmlHash();
+    if (!currentHash) return;
+
+    const storedHash = await getStoredIndexHtmlHash();
+    if (storedHash && storedHash !== currentHash) {
+      await notifyUpdateRequired(currentHash, 'index_html_changed');
+    }
+
+    await setStoredIndexHtmlHash(currentHash);
+  } catch (e) {
+    // Без логов — избегаем шума в SW
+  }
+}
+
+async function fetchIndexHtmlHash() {
+  const response = await fetch('/index.html?_cb=' + Date.now(), { cache: 'no-store' });
+  if (!response || !response.ok) return null;
+  const text = await response.text();
+  return hashString(text);
+}
+
+async function getStoredIndexHtmlHash() {
+  const cache = await caches.open(META_CACHE);
+  const response = await cache.match('/__index_hash__');
+  if (!response) return null;
+  return response.text();
+}
+
+async function setStoredIndexHtmlHash(hash) {
+  const cache = await caches.open(META_CACHE);
+  await cache.put(
+    '/__index_hash__',
+    new Response(hash, { headers: { 'content-type': 'text/plain' } })
+  );
+}
+
+function hashString(input) {
+  let hash = 2166136261;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16);
 }
 
 async function notifyUpdateRequired(serverVersion, reason) {
