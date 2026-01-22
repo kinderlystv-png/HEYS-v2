@@ -14,12 +14,15 @@ const CACHE_VERSION = 'heys-v2.0.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
+const log = () => {};
+const warn = () => {};
+
 // Критические ресурсы для precache
 const PRECACHE_URLS = [
     '/',
     '/index.html',
     '/manifest.json',
-    '/src/tailwind.css',
+    '/styles/tailwind.css',
     '/styles/critical.css',
     '/styles/main.css'
 ];
@@ -134,7 +137,7 @@ async function checkAndRecoverIfNeeded() {
 
     // Если >2 падений за 5 минут → полная очистка
     if (failures.count > 2) {
-        console.log('[SW] 🚨 >2 boot failures detected, clearing all caches...');
+        log('[SW] 🚨 >2 boot failures detected, clearing all caches...');
 
         // Удаляем все кэши
         const cacheNames = await caches.keys();
@@ -167,7 +170,7 @@ async function checkAndRecoverIfNeeded() {
 // ============================================================================
 
 self.addEventListener('install', (event) => {
-    console.log('[SW] 📦 Installing...');
+    log('[SW] 📦 Installing...');
 
     event.waitUntil(
         (async () => {
@@ -177,12 +180,12 @@ self.addEventListener('install', (event) => {
             await Promise.allSettled(
                 PRECACHE_URLS.map(url =>
                     cache.add(url).catch(err => {
-                        console.warn(`[SW] Precache failed for ${url}:`, err.message);
+                        warn(`[SW] Precache failed for ${url}:`, err.message);
                     })
                 )
             );
 
-            console.log('[SW] ✅ Installed');
+            log('[SW] ✅ Installed');
 
             // Сразу активируемся (не ждём закрытия вкладок)
             self.skipWaiting();
@@ -195,14 +198,14 @@ self.addEventListener('install', (event) => {
 // ============================================================================
 
 self.addEventListener('activate', (event) => {
-    console.log('[SW] 🚀 Activating...');
+    log('[SW] 🚀 Activating...');
 
     event.waitUntil(
         (async () => {
             // Проверяем нужно ли восстановление
             const recovered = await checkAndRecoverIfNeeded();
             if (recovered) {
-                console.log('[SW] ✅ Recovery completed');
+                log('[SW] ✅ Recovery completed');
                 return;
             }
 
@@ -214,7 +217,7 @@ self.addEventListener('activate', (event) => {
                 cacheNames
                     .filter(name => !validCaches.includes(name))
                     .map(name => {
-                        console.log(`[SW] 🗑️ Deleting old cache: ${name}`);
+                        log(`[SW] 🗑️ Deleting old cache: ${name}`);
                         return caches.delete(name);
                     })
             );
@@ -225,7 +228,7 @@ self.addEventListener('activate', (event) => {
             // Берём контроль над всеми вкладками
             await self.clients.claim();
 
-            console.log('[SW] ✅ Activated');
+            log('[SW] ✅ Activated');
         })()
     );
 });
@@ -297,7 +300,7 @@ async function cacheFirst(request, cacheName) {
         }
         return response;
     } catch (error) {
-        console.warn('[SW] Cache-First fetch failed:', request.url);
+        warn('[SW] Cache-First fetch failed:', request.url);
         throw error;
     }
 }
@@ -314,7 +317,7 @@ async function networkFirst(request, cacheName) {
     } catch (error) {
         const cached = await cache.match(request);
         if (cached) {
-            console.log('[SW] Serving from cache (offline):', request.url);
+            log('[SW] Serving from cache (offline):', request.url);
             return cached;
         }
         throw error;
@@ -384,38 +387,42 @@ async function networkFirstWithOfflineFallback(request) {
 // ============================================================================
 
 self.addEventListener('message', async (event) => {
-    const { type, payload } = event.data || {};
+    const { type } = event.data || {};
 
     switch (type) {
-        case 'SKIP_WAITING':
-            console.log('[SW] Received SKIP_WAITING');
+        case 'SKIP_WAITING': {
+            log('[SW] Received SKIP_WAITING');
             self.skipWaiting();
             break;
+        }
 
-        case 'CLEAR_CACHE':
-            console.log('[SW] Clearing all caches...');
+        case 'CLEAR_CACHE': {
+            log('[SW] Clearing all caches...');
             const cacheNames = await caches.keys();
             await Promise.all(cacheNames.map(name => caches.delete(name)));
             event.source?.postMessage({ type: 'CACHES_CLEARED', success: true });
             break;
+        }
 
-        case 'BOOT_FAILURE':
-            console.log('[SW] Recording boot failure');
+        case 'BOOT_FAILURE': {
+            log('[SW] Recording boot failure');
             const failures = await recordBootFailure();
-            console.log('[SW] Boot failures in last 5min:', failures.count);
+            log('[SW] Boot failures in last 5min:', failures.count);
 
             // Проверяем нужно ли восстановление
             if (failures.count > 2) {
                 await checkAndRecoverIfNeeded();
             }
             break;
+        }
 
-        case 'BOOT_SUCCESS':
-            console.log('[SW] Boot success, clearing failure counter');
+        case 'BOOT_SUCCESS': {
+            log('[SW] Boot success, clearing failure counter');
             await clearBootFailures();
             break;
+        }
 
-        case 'GET_STATUS':
+        case 'GET_STATUS': {
             const status = await getBootFailures();
             event.source?.postMessage({
                 type: 'STATUS',
@@ -424,9 +431,11 @@ self.addEventListener('message', async (event) => {
                 lastFailure: status.lastFailure
             });
             break;
+        }
 
-        default:
-            console.log('[SW] Unknown message type:', type);
+        default: {
+            log('[SW] Unknown message type:', type);
+        }
     }
 });
 
@@ -436,7 +445,7 @@ self.addEventListener('message', async (event) => {
 
 self.addEventListener('sync', (event) => {
     if (event.tag === 'heys-sync') {
-        console.log('[SW] Background sync triggered');
+        log('[SW] Background sync triggered');
         event.waitUntil(
             // Здесь можно добавить синхронизацию офлайн-данных
             Promise.resolve()
@@ -450,7 +459,7 @@ self.addEventListener('sync', (event) => {
 
 self.addEventListener('periodicsync', (event) => {
     if (event.tag === 'heys-periodic-update') {
-        console.log('[SW] Periodic sync: checking for updates');
+        log('[SW] Periodic sync: checking for updates');
         event.waitUntil(
             // Можно проверить версию и уведомить пользователя
             Promise.resolve()
@@ -458,4 +467,4 @@ self.addEventListener('periodicsync', (event) => {
     }
 });
 
-console.log('[SW] 🚀 Service Worker loaded:', CACHE_VERSION);
+log('[SW] 🚀 Service Worker loaded:', CACHE_VERSION);
