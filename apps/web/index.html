@@ -30,6 +30,7 @@
             var errorCount = 0;
             var MAX_ERRORS = 3;
             var recoveryShown = false;
+            window.__heysRecoveryBusy = false;
 
             function notifySwBootFailure() {
                 if (navigator.serviceWorker && navigator.serviceWorker.controller) {
@@ -137,6 +138,46 @@
                     }
                 }
             }, 15000);
+        })();
+    </script>
+    <!-- Global deps loader (used to wait for React safely) -->
+    <script>
+        (function () {
+            window.HEYS = window.HEYS || {};
+            window.HEYS.waitForDeps = function (deps, onReady, options) {
+                var opts = options || {};
+                var timeoutMs = typeof opts.timeoutMs === 'number' ? opts.timeoutMs : 5000;
+                var intervalMs = typeof opts.intervalMs === 'number' ? opts.intervalMs : 20;
+                var startedAt = Date.now();
+
+                function check() {
+                    var missing = (deps || []).filter(function (d) {
+                        try {
+                            return !(d && typeof d.check === 'function' && d.check());
+                        } catch (e) {
+                            return true;
+                        }
+                    });
+
+                    if (missing.length === 0) {
+                        if (typeof onReady === 'function') onReady();
+                        return;
+                    }
+
+                    if (Date.now() - startedAt >= timeoutMs) {
+                        var names = missing.map(function (d) { return d && d.name ? d.name : 'unknown'; }).join(', ');
+                        window.__heysLog && window.__heysLog('[DEPS] Timeout waiting for: ' + names);
+                        if (typeof opts.onTimeout === 'function') {
+                            opts.onTimeout(missing);
+                        }
+                        return;
+                    }
+
+                    setTimeout(check, intervalMs);
+                }
+
+                check();
+            };
         })();
     </script>
     <!-- Prevent FOUC: Apply theme before CSS loads -->
@@ -1760,24 +1801,10 @@
     </script>
 
     <!-- libs with defer and priority for optimal loading -->
-    <!-- React (локальный бандл) - 152-ФЗ compliant, без CDN warnings -->
-    <!-- ВАЖНО: Этот скрипт ДОЛЖЕН загрузиться до defer-скриптов -->
-    <!-- Vite обрабатывает импорты: dev → pre-bundled, prod → минифицированный -->
-    <script type="module" src="/src/react-globals.ts"></script>
-
-    <!-- Fallback: ждём пока React загрузится перед legacy скриптами -->
-    <script>
-        // Polling для window.React (ESM модули асинхронны)
-        // Legacy скрипты используют defer, поэтому есть время на загрузку
-        (function waitForReact() {
-            if (window.React && window.ReactDOM) {
-                console.log('[HEYS] React ready for legacy scripts');
-                return;
-            }
-            // В dev React загружается быстро (~50ms), в prod ещё быстрее
-            setTimeout(waitForReact, 10);
-        })();
-    </script>
+    <!-- React (синхронный локальный бандл) - 152-ФЗ compliant, без CDN -->
+    <!-- ВАЖНО: Загружается СИНХРОННО перед defer-скриптами (blocking script) -->
+    <!-- Собирается: npx esbuild src/react-globals-sync.ts --bundle --format=iife --minify -->
+    <script src="react-bundle.js"></script>
     <!-- Supabase CDN — УДАЛЁН 2025-12-24 (152-ФЗ compliance)
          Причина: SDK делал запросы к серверам Supabase (Германия), 
          нарушая ст.18 ч.5 152-ФЗ о локализации ПДн.

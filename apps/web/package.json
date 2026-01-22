@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "prebuild": "node ../../scripts/sync-iw-inline-config.cjs && node scripts/update-version.cjs && node -e \"const fs=require('fs');const f=process.cwd()+'/public/sw.js';let c=fs.readFileSync(f,'utf8');c=c.replace(/heys-[\\w.-]+/,'heys-'+Date.now());fs.writeFileSync(f,c);console.log('SW version:',Date.now())\"",
-    "build": "pnpm run prebuild && vite build && node scripts/strip-console-logs.js && cp heys_*.js dist/ && cp styles/*.css dist/styles/ 2>/dev/null || mkdir -p dist/styles && cp styles/*.css dist/styles/",
+    "build:react": "npx esbuild src/react-globals-sync.ts --bundle --format=iife --minify --outfile=react-bundle.js --target=es2020",
+    "build": "pnpm run prebuild && pnpm run build:react && vite build && node scripts/strip-console-logs.js && cp heys_*.js dist/ && cp react-bundle.js dist/ && cp styles/*.css dist/styles/ 2>/dev/null || mkdir -p dist/styles && cp styles/*.css dist/styles/",
     "build:analyze": "cross-env ANALYZE=true vite build",
     "build:deps": "pnpm --dir ../.. --filter @heys/shared run build && pnpm --dir ../.. --filter @heys/storage run build && pnpm --dir ../.. --filter @heys/core run build && pnpm --dir ../.. --filter @heys/search run build && pnpm --dir ../.. --filter @heys/ui run build && pnpm --dir ../.. --filter @heys/logger run build",
     "build:vercel": "pnpm run prebuild && vite build && cp heys_*.js dist/ && mkdir -p dist/styles && cp styles/*.css dist/styles/",
