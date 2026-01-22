@@ -14,8 +14,8 @@ const CACHE_VERSION = 'heys-v2.0.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
-const log = () => {};
-const warn = () => {};
+const log = () => { };
+const warn = () => { };
 
 // Критические ресурсы для precache
 const PRECACHE_URLS = [
