@@ -4,6 +4,52 @@
 
     const HEYS = global.HEYS = global.HEYS || {};
 
+    if (!HEYS.dayMealExpandState?.useMealExpandState) {
+        HEYS.dayMealExpandState = {
+            useMealExpandState: function useMealExpandStateFallback() {
+                const React = global.React || {};
+                const { useCallback, useState } = React;
+                if (!useState || !useCallback) {
+                    return {
+                        isMealStale: () => false,
+                        toggleMealExpand: () => { },
+                        expandOnlyMeal: () => { },
+                        isMealExpanded: () => false,
+                    };
+                }
+
+                const [expandedMeals, setExpandedMeals] = useState({});
+
+                const isMealStale = useCallback(() => false, []);
+
+                const toggleMealExpand = useCallback((mealIndex) => {
+                    setExpandedMeals((prev) => ({
+                        ...prev,
+                        [mealIndex]: !prev[mealIndex],
+                    }));
+                }, []);
+
+                const expandOnlyMeal = useCallback((mealIndex) => {
+                    setExpandedMeals({ [mealIndex]: true });
+                }, []);
+
+                const isMealExpanded = useCallback((mealIndex, totalMeals) => {
+                    if (expandedMeals.hasOwnProperty(mealIndex)) {
+                        return expandedMeals[mealIndex];
+                    }
+                    return mealIndex === totalMeals - 1;
+                }, [expandedMeals]);
+
+                return {
+                    isMealStale,
+                    toggleMealExpand,
+                    expandOnlyMeal,
+                    isMealExpanded,
+                };
+            },
+        };
+    }
+
     function renderGuardScreen({ React, message }) {
         return React.createElement('div', {
             className: 'flex items-center justify-center h-screen bg-[var(--bg-primary)]'

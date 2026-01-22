@@ -85,6 +85,16 @@ jobs:
         env:
           VITE_API_URL: https://api.heyslab.ru
 
+      - name: Ensure SW from public
+        run: |
+          if [ -f apps/web/public/sw.js ]; then
+            cp apps/web/public/sw.js apps/web/dist/sw.js
+            echo "✅ Copied public/sw.js to dist/sw.js"
+          else
+            echo "❌ apps/web/public/sw.js not found"
+            exit 1
+          fi
+
       - name: Read build version from generated file
         run: |
           # version.json создаётся в prebuild скриптом update-version.cjs
