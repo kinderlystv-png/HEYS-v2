@@ -4,7 +4,7 @@
 // Версия обновляется автоматически при билде
 // NOTE: Service Worker runs in isolated context - no access to @heys/logger
 
-const CACHE_VERSION = 'heys-1768725397807';
+const CACHE_VERSION = 'heys-1769087035495';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
@@ -25,6 +25,7 @@ const PRECACHE_URLS = [
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
+  '/react-bundle.js',
   // Core JS модули
   '/heys_core_v12.js',
   '/heys_models_v1.js',
@@ -38,7 +39,7 @@ const PRECACHE_URLS = [
   '/heys_day_sleep_score_popups_v1.js',
   '/heys_day_edit_grams_modal_v1.js',
   '/heys_day_time_mood_picker_v1.js',
-  '/day/_meal_quality.js',
+  '/heys_day_bundle_v1.js',
   '/heys_day_sparklines_v1.js',
   '/heys_day_sparkline_data_v1.js',
   '/heys_day_caloric_balance_v1.js',
@@ -60,6 +61,7 @@ const PRECACHE_URLS = [
   '/heys_day_cycle_card_v1.js',
   '/heys_day_weight_trends_v1.js',
   '/heys_advice_rules_v1.js',
+  '/heys_advice_bundle_v1.js',
   '/heys_advice_v1.js',
   '/heys_user_v12.js',
   '/heys_reports_v12.js',
