@@ -21,7 +21,7 @@ try {
  * @created 2026-01-21
  */
 
-const CACHE_VERSION = 'heys-v2.0.0';
+const CACHE_VERSION = 'heys-v2.0.1';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const META_CACHE = 'heys-meta';

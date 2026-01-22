@@ -271,7 +271,26 @@
         const setDate = setSelectedDate;
         // Meal expand/collapse state (extracted)
         if (!HEYS.dayMealExpandState?.useMealExpandState) {
-            throw new Error('[heys_day_v12] HEYS.dayMealExpandState not loaded before heys_day_v12.js');
+            try {
+                if (HEYS.analytics?.trackError) {
+                    HEYS.analytics.trackError(new Error('[heys_day_v12] dayMealExpandState missing; using minimal stub'), {
+                        source: 'heys_day_tab_impl_v1.js',
+                        type: 'fallback'
+                    });
+                }
+            } catch (e) { }
+
+            HEYS.dayMealExpandState = {
+                useMealExpandState: () => ({
+                    isMealStale: () => false,
+                    toggleMealExpand: () => { },
+                    expandOnlyMeal: () => { },
+                    isMealExpanded: (mealIndex, totalMeals, _meals, displayIndex = null) => {
+                        if (displayIndex !== null) return displayIndex === 0;
+                        return mealIndex === totalMeals - 1;
+                    }
+                })
+            };
         }
         const mealExpandState = HEYS.dayMealExpandState.useMealExpandState({ React, date }) || {};
         const {
