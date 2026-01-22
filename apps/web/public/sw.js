@@ -72,7 +72,6 @@ const PRECACHE_URLS = [
   '/heys_cloud_storage_utils_v1.js',
   '/heys_cloud_shared_v1.js',
   '/heys_cloud_queue_v1.js',
-  '/heys_cloud_sync_v1.js',
   '/heys_storage_supabase_v1.js',
   '/heys_wheel_picker.js',
   '/heys_swipeable.js',
