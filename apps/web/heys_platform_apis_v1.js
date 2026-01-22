@@ -501,7 +501,7 @@
   async function checkServerVersion(silent = true) {
     try {
       const cacheBust = Date.now();
-      const response = await fetch(`/version.json?_cb=${cacheBust}`, {
+      const response = await fetch(`/build-meta.json?_cb=${cacheBust}`, {
         cache: 'no-store',
         headers: { 'Cache-Control': 'no-cache' }
       });

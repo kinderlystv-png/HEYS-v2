@@ -163,7 +163,8 @@ yc iam access-key create --service-account-name heys-deploy
 | --------------- | ------------- | --------------------------- |
 | `/*.html`       | 0             | Без кэша для PWA-обновлений |
 | `/sw.js`        | 0             | Service Worker без кэша     |
-| `/version.json` | 0             | Версия приложения           |
+| `/build-meta.json` | 0         | Версия приложения (source)  |
+| `/version.json`    | 0         | Legacy fallback             |
 | `/manifest.*`   | 0             | PWA манифест                |
 | `/assets/*`     | 31536000 (1y) | Статика с хэшами            |
 | `/*`            | 86400 (1d)    | Остальное                   |
@@ -193,7 +194,7 @@ heys.app.    CNAME  <CDN_CNAME>.gcdn.co.
 1. ✅ Установка зависимостей
 2. ✅ Запуск критических тестов
 3. ✅ Сборка приложения
-4. ✅ Генерация version.json
+4. ✅ Генерация build-meta.json (и version.json fallback)
 5. ✅ Загрузка в Object Storage
 6. ✅ Инвалидация CDN кэша (если настроен)
 
@@ -247,7 +248,7 @@ aws s3 sync ./backup-dist/ s3://heys-static/ \
 ### PWA не обновляется
 
 1. Проверьте `sw.js` имеет `Cache-Control: no-cache`
-2. Проверьте `version.json` обновился
+2. Проверьте `build-meta.json` обновился
 3. Очистите кэш CDN: `yc cdn cache purge --resource-id <ID>`
 
 ### 404 на роутах SPA
@@ -274,7 +275,7 @@ aws s3 cp ./file.txt s3://heys-static/ --endpoint-url=https://storage.yandexclou
 yc cdn cache purge --resource-id <RESOURCE_ID> --path "/*"
 
 # Проверить версию деплоя
-curl https://heys.app/version.json
+curl https://heys.app/build-meta.json
 ```
 
 ---

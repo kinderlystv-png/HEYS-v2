@@ -110,8 +110,9 @@ self.addEventListener('install', (event) => {
       caches.open(STATIC_CACHE)
         .then((cache) => {
           console.log('[SW] Background precaching App Shell');
+          const precacheUrls = PRECACHE_URLS.filter((url) => url !== '/version.json' && url !== '/build-meta.json');
           return Promise.all(
-            PRECACHE_URLS.map(url =>
+            precacheUrls.map(url =>
               cache.add(url).catch(err => {
                 console.warn('[SW] Failed to cache:', url, err.message);
               })
@@ -244,8 +245,8 @@ self.addEventListener('fetch', (event) => {
   // Пропускаем chrome-extension и другие нестандартные протоколы
   if (!url.protocol.startsWith('http')) return;
 
-  // === version.json — ВСЕГДА с сервера (для проверки обновлений) ===
-  if (url.pathname === '/version.json') {
+  // === build-meta.json/version.json — ВСЕГДА с сервера (для проверки обновлений) ===
+  if (url.pathname === '/build-meta.json' || url.pathname === '/version.json') {
     event.respondWith(fetch(request, {
       cache: 'no-store',
       headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
@@ -434,20 +435,41 @@ self.addEventListener('periodicsync', (event) => {
 
 async function checkForUpdates() {
   try {
-    const response = await fetch('/version.json?_=' + Date.now(), { cache: 'no-store' });
-    const data = await response.json();
-    const serverVersion = data.version;
+    const data = await fetchBuildMeta();
+    const serverVersion = data?.version;
 
     // Сравниваем с текущей версией кэша
     const currentVersion = CACHE_VERSION.replace('heys-', '');
 
-    if (serverVersion !== currentVersion) {
+    if (serverVersion && serverVersion !== currentVersion) {
       await notifyUpdateRequired(serverVersion, 'version_mismatch');
     }
     await checkIndexHtmlUpdate();
   } catch (e) {
     console.warn('[SW] Background update check failed:', e);
   }
+}
+
+async function fetchBuildMeta() {
+  try {
+    const response = await fetch('/build-meta.json?_=' + Date.now(), { cache: 'no-store' });
+    if (response && response.ok) {
+      return response.json();
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  try {
+    const response = await fetch('/version.json?_=' + Date.now(), { cache: 'no-store' });
+    if (response && response.ok) {
+      return response.json();
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return null;
 }
 
 async function checkIndexHtmlUpdate() {

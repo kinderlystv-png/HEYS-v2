@@ -57,13 +57,13 @@
             try {
                 // 1. Проверяем версию с сервера (без UI)
                 const cacheBust = Date.now();
-                const response = await fetch(`/version.json?_cb=${cacheBust}`, {
+                const response = await fetch(`/build-meta.json?_cb=${cacheBust}`, {
                     cache: 'no-store',
                     headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
                 });
 
                 if (!response.ok) {
-                    console.log('[PWA Update] version.json not available');
+                    console.log('[PWA Update] build-meta.json not available');
                     return { hasUpdate: false };
                 }
 

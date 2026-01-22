@@ -1,4 +1,15 @@
-/**
+/*
+ * Deprecated proxy SW.
+ * Source of truth: apps/web/public/sw.js (served at /sw.js)
+ */
+
+try {
+  if (self && self.location && self.location.pathname !== '/sw.js') {
+    importScripts('/sw.js');
+  }
+} catch (_) {
+  // noop
+}/**
  * HEYS Service Worker — PWA Recovery Edition
  * 
  * Стратегии:
@@ -13,6 +24,8 @@
 const CACHE_VERSION = 'heys-v2.0.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
+const META_CACHE = 'heys-meta';
+const VERSION_URL = '/version.json';
 
 const log = () => { };
 const warn = () => { };
@@ -129,6 +142,85 @@ async function clearBootFailures() {
 }
 
 // ============================================================================
+// VERSION CHECK & CACHE INVALIDATION
+// ============================================================================
+
+async function fetchServerVersion() {
+    try {
+        const response = await fetch(VERSION_URL + '?_=' + Date.now(), {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+        });
+        if (response && response.ok) {
+            const data = await response.json();
+            return data?.version || null;
+        }
+    } catch (e) {
+        // ignore
+    }
+    return null;
+}
+
+async function getStoredServerVersion() {
+    try {
+        const cache = await caches.open(META_CACHE);
+        const response = await cache.match('/__server_version__');
+        if (!response) return null;
+        return response.text();
+    } catch (e) {
+        return null;
+    }
+}
+
+async function setStoredServerVersion(version) {
+    try {
+        if (!version) return;
+        const cache = await caches.open(META_CACHE);
+        await cache.put(
+            '/__server_version__',
+            new Response(version, { headers: { 'content-type': 'text/plain' } })
+        );
+    } catch (e) {
+        // ignore
+    }
+}
+
+async function purgeHeysCaches() {
+    const cacheNames = await caches.keys();
+    await Promise.all(
+        cacheNames
+            .filter((name) => name.startsWith('heys-') && name !== META_CACHE)
+            .map((name) => caches.delete(name))
+    );
+}
+
+async function checkVersionAndInvalidateCaches() {
+    const serverVersion = await fetchServerVersion();
+    if (!serverVersion) return;
+
+    const storedVersion = await getStoredServerVersion();
+
+    if (!storedVersion) {
+        await setStoredServerVersion(serverVersion);
+        return;
+    }
+
+    if (storedVersion !== serverVersion) {
+        await purgeHeysCaches();
+        await setStoredServerVersion(serverVersion);
+
+        const clients = await self.clients.matchAll();
+        clients.forEach((client) => {
+            client.postMessage({
+                type: 'UPDATE_REQUIRED',
+                version: serverVersion,
+                reason: 'version_json_changed'
+            });
+        });
+    }
+}
+
+// ============================================================================
 // AUTO-RECOVERY: очистка кэша при множественных падениях
 // ============================================================================
 
@@ -202,6 +294,8 @@ self.addEventListener('activate', (event) => {
 
     event.waitUntil(
         (async () => {
+            await checkVersionAndInvalidateCaches();
+
             // Проверяем нужно ли восстановление
             const recovered = await checkAndRecoverIfNeeded();
             if (recovered) {
@@ -249,6 +343,15 @@ self.addEventListener('fetch', (event) => {
     if (url.hostname === 'localhost' && url.port !== '3001') return;
     if (url.pathname.startsWith('/sockjs-node')) return;
     if (url.pathname.includes('hot-update')) return;
+
+    // build-meta.json/version.json — ВСЕГДА с сервера
+    if (url.pathname === '/build-meta.json' || url.pathname === '/version.json') {
+        event.respondWith(fetch(request, {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+        }));
+        return;
+    }
 
     // API запросы → Network-First
     if (API_PATTERNS.some(pattern => pattern.test(request.url))) {
@@ -461,8 +564,7 @@ self.addEventListener('periodicsync', (event) => {
     if (event.tag === 'heys-periodic-update') {
         log('[SW] Periodic sync: checking for updates');
         event.waitUntil(
-            // Можно проверить версию и уведомить пользователя
-            Promise.resolve()
+            checkVersionAndInvalidateCaches()
         );
     }
 });
