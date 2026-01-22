@@ -34,6 +34,16 @@ export default defineConfig({
         {
           src: 'insights',
           dest: '.'
+        },
+        // Day module split files
+        {
+          src: 'day',
+          dest: '.'
+        },
+        // Advice engine split files
+        {
+          src: 'advice',
+          dest: '.'
         }
       ]
     })

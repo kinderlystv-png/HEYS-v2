@@ -31,7 +31,7 @@
   // Fallback: warn if modular system missing (without console usage)
   const msg =
     '[HEYS Advice v1] ⚠️ Modular advice system missing. ' +
-    'Ensure advice/_core.js and category modules are loaded in index.html';
+    'Ensure heys_advice_bundle_v1.js (or advice/_*.js) is loaded in index.html';
   if (window.HEYS.analytics?.trackError) {
     window.HEYS.analytics.trackError(new Error(msg), {
       source: 'heys_advice_v1.js',
