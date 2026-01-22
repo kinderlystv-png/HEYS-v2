@@ -704,6 +704,18 @@
             showUpdateBadge(event.data.version);
             showUpdateNotification();
           }
+          if (event.data?.type === 'UPDATE_REQUIRED') {
+            console.log('[SW] 🧭 Version mismatch — forcing update:', event.data.version);
+            if (typeof HEYS.forceCheckAndUpdate === 'function') {
+              HEYS.forceCheckAndUpdate();
+            } else {
+              triggerSkipWaiting({
+                fallbackMs: 5000,
+                showModal: true,
+                source: 'update-required',
+              });
+            }
+          }
           if (event.data?.type === 'CACHES_CLEARED') {
             console.log('[SW] ✅ Caches cleared — resetting session for fresh data from cloud');
 

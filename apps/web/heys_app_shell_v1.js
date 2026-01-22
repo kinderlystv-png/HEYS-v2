@@ -732,7 +732,12 @@
             },
             React.createElement(AppHeader, props),
             React.createElement(AppTabsNav, props),
-            React.createElement(AppTabContent, props)
+            React.createElement(AppTabContent, props),
+            React.createElement(
+                'div',
+                { className: 'text-center text-[11px] text-slate-400 pb-6 pt-2' },
+                'Версия ' + (HEYS.version || window.APP_VERSION || 'dev')
+            )
         );
     }
 

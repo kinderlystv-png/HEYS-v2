@@ -7,6 +7,7 @@
 const CACHE_VERSION = 'heys-1769087035495';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
+let updateRequiredNotified = false;
 
 // Ресурсы для предварительного кэширования (App Shell)
 const PRECACHE_URLS = [
@@ -186,6 +187,7 @@ self.addEventListener('activate', (event) => {
         console.log('[SW] Claiming clients...');
         return self.clients.claim();
       })
+      .then(() => checkForUpdates())
   );
 });
 
@@ -244,7 +246,10 @@ self.addEventListener('fetch', (event) => {
 
   // === version.json — ВСЕГДА с сервера (для проверки обновлений) ===
   if (url.pathname === '/version.json') {
-    event.respondWith(fetch(request));
+    event.respondWith(fetch(request, {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+    }));
     return;
   }
 
@@ -438,14 +443,30 @@ async function checkForUpdates() {
 
     if (serverVersion !== currentVersion) {
       console.log('[SW] 🆕 Update available in background!', serverVersion);
-      // Уведомляем все открытые страницы
-      const clients = await self.clients.matchAll();
-      for (const client of clients) {
-        client.postMessage({ type: 'UPDATE_AVAILABLE', version: serverVersion });
-      }
+      await notifyUpdateRequired(serverVersion, 'version_mismatch');
     }
   } catch (e) {
     console.warn('[SW] Background update check failed:', e);
+  }
+}
+
+async function notifyUpdateRequired(serverVersion, reason) {
+  if (updateRequiredNotified) return;
+  updateRequiredNotified = true;
+
+  try {
+    await self.registration.update();
+  } catch (e) {
+    console.warn('[SW] registration.update failed:', e);
+  }
+
+  const clients = await self.clients.matchAll();
+  for (const client of clients) {
+    client.postMessage({
+      type: 'UPDATE_REQUIRED',
+      version: serverVersion,
+      reason: reason || 'version_mismatch'
+    });
   }
 }
 
