@@ -4,6 +4,7 @@
 ; (function (global) {
     const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;
+    const HEYSRef = HEYS;
 
     // === Import utilities from dayUtils module ===
     const U = HEYS.dayUtils || {};
@@ -134,16 +135,32 @@
     }
     const MealOptimizerSection = HEYS.dayMealOptimizerSection.MealOptimizerSection;
 
-    // === Meal expand state fallback (если day/_meals.js не загрузился) ===
-    if (!HEYS.dayMealExpandState?.useMealExpandState) {
+    function logMealExpandMissing(phase) {
         try {
-            if (HEYS.analytics?.trackError) {
-                HEYS.analytics.trackError(new Error('[heys_day_v12] dayMealExpandState fallback used'), {
-                    source: 'heys_day_tab_impl_v1.js',
-                    type: 'fallback'
-                });
-            }
+            if (!HEYSRef.analytics?.trackError) return;
+            const hasMealsScript = !!(global.document && document.querySelector && document.querySelector('script[src*="day/_meals.js"], script[src*="day%2F_meals.js"]'));
+            HEYSRef.analytics.trackError(new Error('[heys_day_v12] dayMealExpandState missing'), {
+                source: 'heys_day_tab_impl_v1.js',
+                type: 'missing_dependency',
+                phase: phase || 'unknown',
+                hasMealsScript,
+                modules: {
+                    dayMealsList: !!HEYSRef.dayMealsList,
+                    dayMealsDisplay: !!HEYSRef.dayMealsDisplay,
+                    dayMealHandlers: !!HEYSRef.dayMealHandlers,
+                    dayMealOptimizerSection: !!HEYSRef.dayMealOptimizerSection,
+                    dayGuards: !!HEYSRef.dayGuards,
+                    dayStorage: !!HEYSRef.dayStorage,
+                    dayBundle: !!HEYSRef.dayMealsBundle,
+                },
+                version: HEYSRef.version || HEYSRef.buildVersion || null,
+            });
         } catch (e) { }
+    }
+
+    // === Meal expand state fallback (если day/_meals.js не загрузился) ===
+    if (!HEYSRef.dayMealExpandState?.useMealExpandState) {
+        logMealExpandMissing('module_init');
 
         function useMealExpandState(params) {
             const { date } = params || {};
@@ -221,7 +238,7 @@
             };
         }
 
-        HEYS.dayMealExpandState = {
+        HEYSRef.dayMealExpandState = {
             useMealExpandState
         };
     }
@@ -270,17 +287,10 @@
         const date = selectedDate || todayISO();
         const setDate = setSelectedDate;
         // Meal expand/collapse state (extracted)
-        if (!HEYS.dayMealExpandState?.useMealExpandState) {
-            try {
-                if (HEYS.analytics?.trackError) {
-                    HEYS.analytics.trackError(new Error('[heys_day_v12] dayMealExpandState missing; using minimal stub'), {
-                        source: 'heys_day_tab_impl_v1.js',
-                        type: 'fallback'
-                    });
-                }
-            } catch (e) { }
+        if (!HEYSRef.dayMealExpandState?.useMealExpandState) {
+            logMealExpandMissing('runtime_guard');
 
-            HEYS.dayMealExpandState = {
+            HEYSRef.dayMealExpandState = {
                 useMealExpandState: () => ({
                     isMealStale: () => false,
                     toggleMealExpand: () => { },
@@ -292,7 +302,7 @@
                 })
             };
         }
-        const mealExpandState = HEYS.dayMealExpandState.useMealExpandState({ React, date }) || {};
+        const mealExpandState = HEYSRef.dayMealExpandState.useMealExpandState({ React, date }) || {};
         const {
             isMealStale,
             toggleMealExpand,
