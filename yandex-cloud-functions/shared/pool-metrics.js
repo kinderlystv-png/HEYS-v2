@@ -3,19 +3,22 @@
  * 
  * Provides real-time metrics for PostgreSQL connection pool monitoring.
  * Exports pool statistics for monitoring dashboards and alerting.
+ * Supports both shared pool and per-function pool metrics.
  * 
  * Usage:
- *   const { getPoolMetrics, logPoolMetrics } = require('./shared/pool-metrics');
+ *   const { getPoolMetrics, getAllPoolsMetrics, logPoolMetrics } = require('./shared/pool-metrics');
  *   
- *   // Get current metrics
+ *   // Get current metrics for shared pool
  *   const metrics = getPoolMetrics();
- *   console.log(`Active connections: ${metrics.totalCount}`);
+ *   
+ *   // Get metrics for all pools (shared + per-function)
+ *   const allMetrics = getAllPoolsMetrics();
  *   
  *   // Log metrics periodically
  *   setInterval(logPoolMetrics, 60000); // Every minute
  */
 
-const { getPool } = require('./db-pool');
+const { getPool, getAllPools } = require('./db-pool');
 
 /**
  * Получает текущие метрики пула соединений
@@ -52,37 +55,58 @@ function getPoolMetrics() {
 }
 
 /**
- * Логирует метрики пула в structured формате
- * Использовать для периодического мониторинга
+ * Получает метрики для всех активных pools (shared + per-function)
+ * 
+ * @returns {Array} Array of metrics objects, one per pool
  */
-function logPoolMetrics() {
-  const metrics = getPoolMetrics();
-  
-  console.log('[Pool-Metrics]', JSON.stringify({
-    active: metrics.activeCount,
-    idle: metrics.idleCount,
-    waiting: metrics.waitingCount,
-    total: metrics.totalCount,
-    max: metrics.maxConnections,
-    utilization: `${metrics.utilization}%`,
-    timestamp: metrics.timestamp
+function getAllPoolsMetrics() {
+  const allPools = getAllPools();
+  return allPools.map(poolInfo => ({
+    name: poolInfo.name,
+    totalCount: poolInfo.pool.totalCount,
+    activeCount: poolInfo.pool.totalCount - poolInfo.pool.idleCount,
+    idleCount: poolInfo.pool.idleCount,
+    waitingCount: poolInfo.pool.waitingCount,
+    maxConnections: poolInfo.pool.options.max,
+    utilization: poolInfo.pool.options.max > 0 
+      ? Math.round(((poolInfo.pool.totalCount - poolInfo.pool.idleCount) / poolInfo.pool.options.max) * 100) 
+      : 0,
+    timestamp: new Date().toISOString()
   }));
+}
+
+/**
+ * Логирует метрики всех пулов в structured формате
+ */
+function logAllPoolsMetrics() {
+  const allMetrics = getAllPoolsMetrics();
   
-  // Предупреждение если утилизация > 80%
-  if (metrics.utilization > 80) {
-    console.warn('[Pool-Metrics] WARNING: Pool utilization > 80%', {
-      utilization: metrics.utilization,
+  for (const metrics of allMetrics) {
+    console.log(`[Pool-Metrics:${metrics.name}]`, JSON.stringify({
       active: metrics.activeCount,
-      max: metrics.maxConnections
-    });
-  }
-  
-  // Предупреждение если есть ожидающие запросы
-  if (metrics.waitingCount > 0) {
-    console.warn('[Pool-Metrics] WARNING: Requests waiting for connections', {
+      idle: metrics.idleCount,
       waiting: metrics.waitingCount,
-      active: metrics.activeCount
-    });
+      total: metrics.totalCount,
+      max: metrics.maxConnections,
+      utilization: `${metrics.utilization}%`,
+      timestamp: metrics.timestamp
+    }));
+    
+    // Предупреждения для каждого пула
+    if (metrics.utilization > 80) {
+      console.warn(`[Pool-Metrics:${metrics.name}] WARNING: Pool utilization > 80%`, {
+        utilization: metrics.utilization,
+        active: metrics.activeCount,
+        max: metrics.maxConnections
+      });
+    }
+    
+    if (metrics.waitingCount > 0) {
+      console.warn(`[Pool-Metrics:${metrics.name}] WARNING: Requests waiting for connections`, {
+        waiting: metrics.waitingCount,
+        active: metrics.activeCount
+      });
+    }
   }
 }
 
@@ -150,7 +174,9 @@ function withPoolMetrics(handler) {
 
 module.exports = {
   getPoolMetrics,
+  getAllPoolsMetrics,
   logPoolMetrics,
+  logAllPoolsMetrics,
   getPoolHealthCheck,
   withPoolMetrics
 };

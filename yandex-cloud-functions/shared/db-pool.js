@@ -34,6 +34,9 @@ const path = require('path');
 // Singleton pool instance
 let pool = null;
 
+// Per-function pool instances for separate metrics tracking
+const poolsByFunction = new Map();
+
 /**
  * Загрузка CA сертификата Yandex Cloud
  */
@@ -97,9 +100,47 @@ function createPoolConfig() {
  * Возвращает singleton экземпляр Pool
  * Создаёт pool при первом вызове, последующие вызовы возвращают тот же экземпляр
  * 
+ * @param {string} functionName - Опциональное имя функции для per-function метрик
  * @returns {Pool} PostgreSQL connection pool
  */
-function getPool() {
+function getPool(functionName = null) {
+  // Если задано имя функции, используем отдельный pool для метрик
+  if (functionName && process.env.POOL_PER_FUNCTION_METRICS === 'true') {
+    if (!poolsByFunction.has(functionName)) {
+      const config = createPoolConfig();
+      const funcPool = new Pool(config);
+      
+      // Tag pool с именем функции для метрик
+      funcPool._functionName = functionName;
+      
+      const IS_DEBUG = process.env.LOG_LEVEL === 'debug';
+      
+      if (IS_DEBUG) {
+        funcPool.on('connect', (client) => {
+          console.log(`[DB-Pool:${functionName}] New client connected`);
+        });
+        
+        funcPool.on('acquire', (client) => {
+          console.log(`[DB-Pool:${functionName}] Client acquired from pool`);
+        });
+        
+        funcPool.on('remove', (client) => {
+          console.log(`[DB-Pool:${functionName}] Client removed from pool`);
+        });
+      }
+      
+      funcPool.on('error', (err, client) => {
+        console.error(`[DB-Pool:${functionName}] Unexpected error on idle client:`, err.message);
+      });
+      
+      console.log(`[DB-Pool:${functionName}] Pool initialized with max:`, config.max);
+      poolsByFunction.set(functionName, funcPool);
+    }
+    
+    return poolsByFunction.get(functionName);
+  }
+  
+  // Иначе используем общий pool
   if (!pool) {
     const config = createPoolConfig();
     pool = new Pool(config);
@@ -162,10 +203,53 @@ async function closePool() {
     pool = null;
     console.log('[DB-Pool] Pool closed');
   }
+  
+  // Закрываем все per-function pools
+  for (const [funcName, funcPool] of poolsByFunction.entries()) {
+    console.log(`[DB-Pool:${funcName}] Closing pool...`);
+    await funcPool.end();
+  }
+  poolsByFunction.clear();
+}
+
+/**
+ * Возвращает список всех активных pools (для мониторинга)
+ * 
+ * @returns {Array} Массив объектов с информацией о pools
+ */
+function getAllPools() {
+  const pools = [];
+  
+  if (pool) {
+    pools.push({
+      name: 'shared',
+      pool: pool,
+      metrics: {
+        total: pool.totalCount,
+        idle: pool.idleCount,
+        waiting: pool.waitingCount
+      }
+    });
+  }
+  
+  for (const [funcName, funcPool] of poolsByFunction.entries()) {
+    pools.push({
+      name: funcName,
+      pool: funcPool,
+      metrics: {
+        total: funcPool.totalCount,
+        idle: funcPool.idleCount,
+        waiting: funcPool.waitingCount
+      }
+    });
+  }
+  
+  return pools;
 }
 
 module.exports = {
   getPool,
   withClient,
-  closePool
+  closePool,
+  getAllPools
 };

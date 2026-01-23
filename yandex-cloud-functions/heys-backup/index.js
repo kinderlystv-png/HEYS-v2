@@ -200,7 +200,8 @@ async function uploadToS3(filePath, s3Key) {
     Key: s3Key,
     Body: fileStream,
     ContentType: 'application/gzip',
-    StorageClass: 'COLD'  // Холодное хранилище для бэкапов (дешевле)
+    StorageClass: 'COLD',  // Холодное хранилище для бэкапов (дешевле)
+    ServerSideEncryption: 'AES256'  // Шифрование на стороне S3
   };
 
   const command = new PutObjectCommand(uploadParams);
