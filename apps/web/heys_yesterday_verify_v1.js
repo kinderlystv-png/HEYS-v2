@@ -75,6 +75,16 @@
       return Number.isFinite(kcal) ? kcal : 0;
     };
 
+    let productsAvailable = false;
+    try {
+      const storedProducts = lsGet('heys_products', []) || [];
+      productsAvailable = Array.isArray(storedProducts) && storedProducts.length > 0;
+    } catch (e) { }
+    if (!productsAvailable && HEYS.products?.getAll) {
+      const list = HEYS.products.getAll();
+      productsAvailable = Array.isArray(list) && list.length > 0;
+    }
+
     for (const meal of meals) {
       const items = meal.items || [];
       for (const item of items) {
@@ -120,6 +130,7 @@
       ratio,
       meals,
       mealCount: meals.length,
+      productsAvailable,
       macros: {
         prot: Math.round(totalProt * 10) / 10,
         carbs: Math.round(totalCarbs * 10) / 10,
@@ -251,6 +262,25 @@
     React.useEffect(() => {
       const info = getYesterdayData();
       setYesterdayInfo(info);
+
+      if (info && info.kcal === 0 && info.mealCount > 0 && !info.productsAvailable) {
+        let attempts = 0;
+        const maxAttempts = 12;
+        const intervalMs = 250;
+        const timer = setInterval(() => {
+          attempts += 1;
+          const refreshed = getYesterdayData();
+          if (refreshed && (refreshed.productsAvailable || refreshed.kcal > 0)) {
+            setYesterdayInfo(refreshed);
+            clearInterval(timer);
+            return;
+          }
+          if (attempts >= maxAttempts) {
+            clearInterval(timer);
+          }
+        }, intervalMs);
+        return () => clearInterval(timer);
+      }
     }, []);
 
     // Текущий выбор
