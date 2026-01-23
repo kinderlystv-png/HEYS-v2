@@ -12,7 +12,7 @@
  *   PG_HOST, PG_PORT, PG_DATABASE, PG_USER, PG_PASSWORD — PostgreSQL
  */
 
-const { Client } = require('pg');
+const { getPool } = require('../shared/db-pool');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const path = require('path');
@@ -104,12 +104,12 @@ async function createPayment(body, clientId) {
   const planInfo = PLANS[plan];
   const idempotenceKey = uuidv4();
   
-  // 1. Создаём запись платежа в БД (pending)
-  const client = new Client(PG_CONFIG);
+  // 1. Создаём запись платежа в БД (pending) через connection pool
+  const pool = getPool();
+  const client = await pool.connect();
   let paymentId;
   
   try {
-    await client.connect();
     
     const insertResult = await client.query(`
       INSERT INTO payments (client_id, amount, plan, status, payment_provider, metadata)
@@ -124,7 +124,7 @@ async function createPayment(body, clientId) {
     console.error('[PAYMENTS] DB error creating payment:', dbError);
     return errorResponse(500, 'Failed to create payment record', 'DB_ERROR');
   } finally {
-    await client.end();
+    client.release();
   }
   
   // 2. Вызываем ЮKassa API
@@ -164,26 +164,24 @@ async function createPayment(body, clientId) {
     if (!response.ok) {
       console.error('[PAYMENTS] YuKassa API error:', yukassaResult);
       
-      // Обновляем статус платежа на failed
-      const updateClient = new Client(PG_CONFIG);
+      // Обновляем статус платежа на failed через connection pool
+      const updateClient = await pool.connect();
       try {
-        await updateClient.connect();
         await updateClient.query(`
           UPDATE payments SET status = 'failed', 
             metadata = metadata || $2, updated_at = NOW()
           WHERE id = $1
         `, [paymentId, JSON.stringify({ yukassa_error: yukassaResult })]);
       } finally {
-        await updateClient.end();
+        updateClient.release();
       }
       
       return errorResponse(500, 'YuKassa payment creation failed', 'YUKASSA_ERROR');
     }
     
-    // 3. Обновляем запись платежа с external_payment_id
-    const updateClient = new Client(PG_CONFIG);
+    // 3. Обновляем запись платежа с external_payment_id через connection pool
+    const updateClient = await pool.connect();
     try {
-      await updateClient.connect();
       await updateClient.query(`
         UPDATE payments 
         SET external_payment_id = $2, 
@@ -198,7 +196,7 @@ async function createPayment(body, clientId) {
         JSON.stringify({ yukassa_response: yukassaResult })
       ]);
     } finally {
-      await updateClient.end();
+      updateClient.release();
     }
     
     console.log(`[PAYMENTS] YuKassa payment created: ${yukassaResult.id}, status: ${yukassaResult.status}`);
@@ -237,10 +235,10 @@ async function handleWebhook(body) {
   const newStatus = object.status;
   const metadata = object.metadata || {};
   
-  const client = new Client(PG_CONFIG);
+  const pool = getPool();
+  const client = await pool.connect();
   
   try {
-    await client.connect();
     
     // 1. Находим платёж по external_payment_id
     const findResult = await client.query(`
@@ -321,7 +319,7 @@ async function handleWebhook(body) {
     console.error('[WEBHOOK] Processing error:', error);
     return errorResponse(500, 'Webhook processing failed', 'WEBHOOK_ERROR');
   } finally {
-    await client.end();
+    client.release();
   }
 }
 
@@ -334,10 +332,10 @@ async function getPaymentStatus(paymentId, clientId) {
     return errorResponse(400, 'Payment ID required', 'NO_PAYMENT_ID');
   }
   
-  const client = new Client(PG_CONFIG);
+  const pool = getPool();
+  const client = await pool.connect();
   
   try {
-    await client.connect();
     
     const result = await client.query(`
       SELECT id, client_id, amount, plan, status, external_status, 
@@ -367,7 +365,7 @@ async function getPaymentStatus(paymentId, clientId) {
     console.error('[STATUS] Query error:', error);
     return errorResponse(500, 'Failed to get payment status', 'DB_ERROR');
   } finally {
-    await client.end();
+    client.release();
   }
 }
 

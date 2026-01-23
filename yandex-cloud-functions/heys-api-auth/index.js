@@ -9,7 +9,7 @@
  * JWT payload: { sub: curator_id, email, role: 'curator', iat, exp }
  */
 
-const { Client } = require('pg');
+const { getPool } = require('../shared/db-pool');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -55,27 +55,10 @@ function getCorsHeaders(origin) {
   return headers;
 }
 
-// Подключение к PostgreSQL
-function createPgClient() {
-  const sslCertPath = path.join(__dirname, 'certs', 'root.crt');
-  let ssl = false;
-  
-  if (fs.existsSync(sslCertPath)) {
-    ssl = {
-      rejectUnauthorized: true,
-      ca: fs.readFileSync(sslCertPath).toString()
-    };
-  }
-  
-  return new Client({
-    host: process.env.PG_HOST,
-    port: parseInt(process.env.PG_PORT || '6432'),
-    database: process.env.PG_DATABASE,
-    user: process.env.PG_USER,
-    password: process.env.PG_PASSWORD,
-    ssl,
-    connectionTimeoutMillis: 10000
-  });
+// Подключение к PostgreSQL через connection pool
+function getClient() {
+  const pool = getPool();
+  return pool.connect();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -180,10 +163,9 @@ async function handleLogin(body, jwtSecret) {
     };
   }
   
-  const client = createPgClient();
+  const client = await getClient();
   
   try {
-    await client.connect();
     
     // Ищем куратора по email
     const result = await client.query(
@@ -247,7 +229,7 @@ async function handleLogin(body, jwtSecret) {
       body: JSON.stringify({ error: 'Internal server error', details: e.message })
     };
   } finally {
-    await client.end().catch(() => {});
+    client.release();
   }
 }
 
@@ -295,10 +277,9 @@ async function handleVerify(body, authHeader, jwtSecret) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function handleGetClients(curatorId) {
-  const client = createPgClient();
+  const client = await getClient();
   
   try {
-    await client.connect();
     
     // Получаем клиентов куратора (включая телефон для отображения куратору)
     const result = await client.query(
@@ -321,7 +302,7 @@ async function handleGetClients(curatorId) {
       body: JSON.stringify({ error: 'Internal server error', details: e.message })
     };
   } finally {
-    await client.end().catch(() => {});
+    client.release();
   }
 }
 
@@ -339,10 +320,9 @@ async function handleCreateClient(curatorId, body) {
     };
   }
   
-  const client = createPgClient();
+  const client = await getClient();
   
   try {
-    await client.connect();
     
     const result = await client.query(
       `INSERT INTO clients (name, curator_id)
@@ -363,7 +343,7 @@ async function handleCreateClient(curatorId, body) {
       body: JSON.stringify({ error: 'Internal server error', details: e.message })
     };
   } finally {
-    await client.end().catch(() => {});
+    client.release();
   }
 }
 
@@ -388,10 +368,9 @@ async function handleUpdateClient(curatorId, clientId, body) {
     };
   }
   
-  const client = createPgClient();
+  const client = await getClient();
   
   try {
-    await client.connect();
     
     // Проверяем что клиент принадлежит куратору
     const result = await client.query(
@@ -421,7 +400,7 @@ async function handleUpdateClient(curatorId, clientId, body) {
       body: JSON.stringify({ error: 'Internal server error', details: e.message })
     };
   } finally {
-    await client.end().catch(() => {});
+    client.release();
   }
 }
 
@@ -437,10 +416,9 @@ async function handleDeleteClient(curatorId, clientId) {
     };
   }
   
-  const client = createPgClient();
+  const client = await getClient();
   
   try {
-    await client.connect();
     
     // Удаляем клиента только если принадлежит куратору
     const result = await client.query(
@@ -469,7 +447,7 @@ async function handleDeleteClient(curatorId, clientId) {
       body: JSON.stringify({ error: 'Internal server error', details: e.message })
     };
   } finally {
-    await client.end().catch(() => {});
+    client.release();
   }
 }
 
@@ -490,10 +468,9 @@ async function handleRegister(body, jwtSecret) {
     };
   }
   
-  const client = createPgClient();
+  const client = await getClient();
   
   try {
-    await client.connect();
     
     // Проверяем что email не занят
     const existing = await client.query(
@@ -549,7 +526,7 @@ async function handleRegister(body, jwtSecret) {
       body: JSON.stringify({ error: 'Internal server error', details: e.message })
     };
   } finally {
-    await client.end().catch(() => {});
+    client.release();
   }
 }
 
