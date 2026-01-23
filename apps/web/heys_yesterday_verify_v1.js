@@ -66,53 +66,170 @@
     let totalFat = 0;
     let totalSimple = 0;
 
+    const toNumber = (val) => {
+      if (val === null || val === undefined) return 0;
+      if (typeof val === 'string') {
+        const cleaned = val.replace(',', '.').trim();
+        const num = Number(cleaned);
+        return Number.isFinite(num) ? num : 0;
+      }
+      const num = Number(val);
+      return Number.isFinite(num) ? num : 0;
+    };
+
     const computeKcalFromMacros = (obj) => {
       if (!obj) return 0;
-      const prot = +obj.protein100 || +obj.prot100 || 0;
-      const carbs = +obj.carbs100 || ((+obj.simple100 || 0) + (+obj.complex100 || 0));
-      const fat = +obj.fat100 || ((+obj.badFat100 || 0) + (+obj.goodFat100 || 0) + (+obj.trans100 || 0));
-      const kcal = (prot * 4) + (carbs * 4) + (fat * 9);
+      const prot = toNumber(obj.protein100) || toNumber(obj.prot100);
+      const carbs = toNumber(obj.carbs100) || (toNumber(obj.simple100) + toNumber(obj.complex100));
+      const fat = toNumber(obj.fat100) || (toNumber(obj.badFat100) + toNumber(obj.goodFat100) + toNumber(obj.trans100));
+
+      // Если есть только белок (мясо без полных данных), оценить жиры как 30% от белка
+      // Типично для индейки/курицы: 25г белка → ~8г жира
+      const estimatedFat = (prot > 0 && fat === 0 && carbs === 0) ? prot * 0.3 : fat;
+
+      const kcal = (prot * 4) + (carbs * 4) + (estimatedFat * 9);
       return Number.isFinite(kcal) ? kcal : 0;
     };
 
     let productsAvailable = false;
+    let productsList = [];
     try {
       const storedProducts = lsGet('heys_products', []) || [];
-      productsAvailable = Array.isArray(storedProducts) && storedProducts.length > 0;
+      if (Array.isArray(storedProducts) && storedProducts.length > 0) {
+        productsAvailable = true;
+        productsList = storedProducts;
+      }
     } catch (e) { }
     if (!productsAvailable && HEYS.products?.getAll) {
       const list = HEYS.products.getAll();
-      productsAvailable = Array.isArray(list) && list.length > 0;
+      if (Array.isArray(list) && list.length > 0) {
+        productsAvailable = true;
+        productsList = list;
+      }
     }
+
+    const productIndex = (HEYS.models?.buildProductIndex && productsAvailable)
+      ? HEYS.models.buildProductIndex(productsList)
+      : null;
+    const useMealTotals = !!(HEYS.models?.mealTotals && productIndex);
+
+    let itemsCount = 0;
+    const sampleItems = [];
 
     for (const meal of meals) {
       const items = meal.items || [];
-      for (const item of items) {
-        const grams = item.grams || 0;
-        if (!grams) continue;
+      itemsCount += items.length;
 
-        // 🔧 FIX v1.1.0: Тройной fallback — product → item snapshot → 0
-        // Item хранит snapshot данных при добавлении, не зависим от базы продуктов
-        const product = getProductById(item.product_id);
-        const derivedProduct = HEYS.models?.computeDerivedProduct ? HEYS.models.computeDerivedProduct(product || {}) : product;
-        const derivedItem = HEYS.models?.computeDerivedProduct ? HEYS.models.computeDerivedProduct(item || {}) : item;
-        const kcal100 = product?.kcal100
-          ?? derivedProduct?.kcal100
-          ?? item.kcal100
-          ?? derivedItem?.kcal100
-          ?? computeKcalFromMacros(product)
-          ?? computeKcalFromMacros(item)
-          ?? 0;
-        const prot100 = product?.protein100 ?? item.protein100 ?? 0;
-        const carbs100 = product?.carbs100 ?? item.carbs100 ?? 0;
-        const fat100 = product?.fat100 ?? item.fat100 ?? 0;
-        const simple100 = product?.simple100 ?? item.simple100 ?? 0;
+      if (useMealTotals) {
+        const totals = HEYS.models.mealTotals(meal, productIndex) || {};
+        totalKcal += toNumber(totals.kcal);
+        totalProt += toNumber(totals.prot);
+        totalCarbs += toNumber(totals.carbs);
+        totalFat += toNumber(totals.fat);
+        totalSimple += toNumber(totals.simple);
+      } else {
+        for (const item of items) {
+          const grams = toNumber(item.grams);
+          if (!grams) continue;
 
-        totalKcal += kcal100 * grams / 100;
-        totalProt += prot100 * grams / 100;
-        totalCarbs += carbs100 * grams / 100;
-        totalFat += fat100 * grams / 100;
-        totalSimple += simple100 * grams / 100;
+          // 🔧 FIX v1.2.0: Приоритет item snapshot, затем product
+          // Item хранит snapshot данных при добавлении — это основной источник
+          const product = getProductById(item.product_id);
+
+          // Функция для получения первого валидного kcal100 (>0)
+          const getValidKcal = (...sources) => {
+            for (const src of sources) {
+              const val = toNumber(src);
+              if (val > 0) return val;
+            }
+            return 0;
+          };
+
+          // Приоритет: item.kcal100 → product.kcal100 → вычисление из макросов item → вычисление из макросов product
+          const kcal100 = getValidKcal(
+            item.kcal100,
+            product?.kcal100,
+            computeKcalFromMacros(item),
+            computeKcalFromMacros(product)
+          );
+          // Для items без данных — попробовать взять из product в базе
+          const productProt = toNumber(product?.protein100);
+          const productCarbs = toNumber(product?.carbs100);
+          const productFat = toNumber(product?.fat100);
+
+          const prot100 = getValidKcal(item.protein100, productProt);
+          const carbs100 = getValidKcal(item.carbs100, productCarbs);
+          const fat100 = getValidKcal(item.fat100, productFat);
+          const simple100 = getValidKcal(item.simple100, product?.simple100);
+          const lineKcal = (kcal100 * grams) / 100;
+
+          // Флаг неполных данных
+          const isIncompleteItem = kcal100 === 0 || (item.kcal100 === undefined && !product?.kcal100);
+
+          totalKcal += lineKcal;
+          totalProt += prot100 * grams / 100;
+          totalCarbs += carbs100 * grams / 100;
+          totalFat += fat100 * grams / 100;
+          totalSimple += simple100 * grams / 100;
+
+          if (sampleItems.length < 5) {  // Увеличил до 5 для отладки
+            sampleItems.push({
+              id: item.id || null,
+              name: item.name || null,
+              product_id: item.product_id || null,
+              grams,
+              kcal100: item.kcal100 ?? null,
+              kcal100Resolved: kcal100,
+              lineKcal: Number.isFinite(lineKcal) ? Math.round(lineKcal * 10) / 10 : null,
+              protein100: item.protein100 ?? null,
+              carbs100: item.carbs100 ?? null,
+              fat100: item.fat100 ?? null,
+              simple100: item.simple100 ?? null,
+              complex100: item.complex100 ?? null,
+              hasProduct: !!product,
+              productKcal100: product?.kcal100 ?? null,
+              productProtein100: product?.protein100 ?? null,
+              isIncomplete: isIncompleteItem,
+            });
+          }
+        }
+      }
+
+      if (useMealTotals && sampleItems.length < 5) {
+        for (const item of items) {
+          if (sampleItems.length >= 5) break;
+          const grams = toNumber(item.grams);
+          if (!grams) continue;
+
+          const productFromItem = HEYS.models?.getProductFromItem
+            ? HEYS.models.getProductFromItem(item, productIndex)
+            : getProductById(item.product_id);
+          const derived = HEYS.models?.computeDerivedProduct
+            ? HEYS.models.computeDerivedProduct(productFromItem || {})
+            : { kcal100: 0 };
+          const resolvedKcal100 = toNumber(productFromItem?.kcal100) || toNumber(derived.kcal100);
+          const lineKcal = (resolvedKcal100 * grams) / 100;
+          const isIncompleteItem = resolvedKcal100 === 0;
+
+          sampleItems.push({
+            id: item.id || null,
+            name: item.name || null,
+            product_id: item.product_id || null,
+            grams,
+            kcal100: item.kcal100 ?? null,
+            kcal100Resolved: resolvedKcal100,
+            lineKcal: Number.isFinite(lineKcal) ? Math.round(lineKcal * 10) / 10 : null,
+            protein100: item.protein100 ?? null,
+            carbs100: item.carbs100 ?? null,
+            fat100: item.fat100 ?? null,
+            simple100: item.simple100 ?? null,
+            complex100: item.complex100 ?? null,
+            hasProduct: !!productFromItem,
+            productKcal100: productFromItem?.kcal100 ?? null,
+            productProtein100: productFromItem?.protein100 ?? null,
+            isIncomplete: isIncompleteItem,
+          });
+        }
       }
     }
 
@@ -123,13 +240,54 @@
 
     const ratio = target > 0 ? totalKcal / target : 0;
 
+    const roundedKcal = Math.round(totalKcal);
+    if (roundedKcal === 0 && meals.length > 0) {
+      const debugKey = `heys_debug_yesterday_zero_${yesterdayKey}`;
+      let alreadyLogged = false;
+      try {
+        alreadyLogged = sessionStorage.getItem(debugKey) === '1';
+      } catch (e) { }
+      try {
+        if (!alreadyLogged) {
+          const payload = {
+            date: yesterdayKey,
+            mealCount: meals.length,
+            itemsCount,
+            productsAvailable,
+            hasMeals: meals.length > 0,
+            hasItems: itemsCount > 0,
+            sampleItems,
+          };
+          try {
+            localStorage.setItem('heys_debug_yesterday_zero_payload', JSON.stringify(payload));
+          } catch (e) { }
+        }
+        if (!alreadyLogged && HEYS.analytics?.trackDataOperation) {
+          HEYS.analytics.trackDataOperation('yesterday_kcal_zero', 1, {
+            date: yesterdayKey,
+            mealCount: meals.length,
+            itemsCount,
+            productsAvailable,
+            hasMeals: meals.length > 0,
+            hasItems: itemsCount > 0,
+            sampleItems,
+          });
+          try { sessionStorage.setItem(debugKey, '1'); } catch (e) { }
+        }
+      } catch (e) { }
+    }
+
     return {
       date: yesterdayKey,
-      kcal: Math.round(totalKcal),
+      kcal: roundedKcal,
       target: Math.round(target),
       ratio,
       meals,
       mealCount: meals.length,
+      itemsCount,
+      sampleItems,
+      totalKcalRaw: Number.isFinite(totalKcal) ? Math.round(totalKcal * 10) / 10 : null,
+      totalKcalIsFinite: Number.isFinite(totalKcal),
       productsAvailable,
       macros: {
         prot: Math.round(totalProt * 10) / 10,
@@ -262,6 +420,13 @@
     React.useEffect(() => {
       const info = getYesterdayData();
       setYesterdayInfo(info);
+      try {
+        if (info) {
+          localStorage.setItem('heys_debug_yesterday_info', JSON.stringify(info));
+        } else {
+          localStorage.setItem('heys_debug_yesterday_info', JSON.stringify({ empty: true }));
+        }
+      } catch (e) { }
 
       if (info && info.kcal === 0 && info.mealCount > 0 && !info.productsAvailable) {
         let attempts = 0;

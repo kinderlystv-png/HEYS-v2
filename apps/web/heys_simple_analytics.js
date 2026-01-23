@@ -17,25 +17,25 @@
  * - Browser fingerprinting
  */
 
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
-  
+
   // ==================== КОНСТАНТЫ ====================
-  
+
   // Пороги для предупреждений о медленных операциях (в миллисекундах)
   const THRESHOLDS = {
     SLOW_SEARCH: 1000,      // 1 секунда
     SLOW_API: 2000,         // 2 секунды
     CRITICAL_API: 5000      // 5 секунд
   };
-  
+
   // Конвертация единиц измерения
   const CONVERSION = {
     MS_TO_SECONDS: 1000     // миллисекунды → секунды
   };
-  
+
   // Счетчики для статистики
   const stats = {
     searches: { total: 0, slow: 0 },
@@ -45,9 +45,30 @@
     cacheMisses: 0,
     sessionStart: Date.now()
   };
-  
+
+  const DEBUG_EVENTS_KEY = 'heys_debug_events';
+  const DEBUG_EVENTS_LIMIT = 50;
+  const debugEvents = [];
+
+  function recordDebugEvent(type, payload) {
+    try {
+      const entry = {
+        t: Date.now(),
+        type: type || 'unknown',
+        payload: payload || null
+      };
+      debugEvents.push(entry);
+      if (debugEvents.length > DEBUG_EVENTS_LIMIT) {
+        debugEvents.splice(0, debugEvents.length - DEBUG_EVENTS_LIMIT);
+      }
+      try {
+        localStorage.setItem(DEBUG_EVENTS_KEY, JSON.stringify(debugEvents));
+      } catch (e) { }
+    } catch (e) { }
+  }
+
   // ==================== CORE ФУНКЦИИ ====================
-  
+
   /**
    * Трекинг поисковых запросов
    * Логирует медленные поиски для оптимизации
@@ -62,7 +83,7 @@
    */
   function trackSearch(query, resultsCount, duration) {
     stats.searches.total++;
-    
+
     if (duration > THRESHOLDS.SLOW_SEARCH) {
       stats.searches.slow++;
       DEV.warn('[HEYS Analytics] Медленный поиск:', {
@@ -73,7 +94,7 @@
       });
     }
   }
-  
+
   /**
    * Трекинг API вызовов (Supabase, парсинг и т.д.)
    * Помогает выявить проблемы с сетью или backend
@@ -89,7 +110,7 @@
    */
   function trackApiCall(apiName, duration, success = true) {
     stats.apiCalls.total++;
-    
+
     if (!success) {
       stats.apiCalls.failed++;
       console.error('[HEYS Analytics] API ошибка:', {
@@ -98,7 +119,7 @@
       });
       return;
     }
-    
+
     if (duration > THRESHOLDS.CRITICAL_API) {
       stats.apiCalls.slow++;
       console.error('[HEYS Analytics] Критически медленный API:', {
@@ -115,21 +136,22 @@
       });
     }
   }
-  
+
   /**
    * Трекинг операций с данными
    * Помогает оценить эффективность кеширования
    * 
    * @param {string} operationType - Тип операции: 'cache-hit' | 'cache-miss'
-   * @param {number} [count=1] - Количество операций (для batch операций)
+  * @param {number} [count=1] - Количество операций (для batch операций)
+  * @param {Object} [meta] - Доп. данные (только для debug-событий)
    * 
    * @example
    * trackDataOperation('cache-hit'); // Найдено в кеше
    * trackDataOperation('cache-miss'); // Загрузка из источника
    * trackDataOperation('cache-hit', 50); // Batch операция
    */
-  function trackDataOperation(operationType, count = 1) {
-    switch(operationType) {
+  function trackDataOperation(operationType, count = 1, meta) {
+    switch (operationType) {
       case 'cache-hit':
         stats.cacheHits += count;
         break;
@@ -137,11 +159,14 @@
         stats.cacheMisses += count;
         break;
       default:
-        // Другие операции просто игнорируем
+        recordDebugEvent(operationType, {
+          count: typeof count === 'number' ? count : 1,
+          meta: meta || null
+        });
         break;
     }
   }
-  
+
   /**
    * Базовый error tracking
    * Перехватывает необработанные JavaScript ошибки
@@ -161,7 +186,7 @@
       stack: error.stack || 'N/A'
     });
   }
-  
+
   /**
    * Получить текущую статистику сессии
    * Возвращает агрегированные метрики по поиску, API, кешу и ошибкам
@@ -176,10 +201,10 @@
   function getStats() {
     const sessionDuration = Date.now() - stats.sessionStart;
     const cacheTotal = stats.cacheHits + stats.cacheMisses;
-    const cacheHitRate = cacheTotal > 0 
-      ? ((stats.cacheHits / cacheTotal) * 100).toFixed(1) 
+    const cacheHitRate = cacheTotal > 0
+      ? ((stats.cacheHits / cacheTotal) * 100).toFixed(1)
       : 0;
-    
+
     return {
       session: {
         duration: `${(sessionDuration / CONVERSION.MS_TO_SECONDS).toFixed(0)}s`,
@@ -187,7 +212,7 @@
       },
       searches: {
         ...stats.searches,
-        slowRate: stats.searches.total > 0 
+        slowRate: stats.searches.total > 0
           ? `${((stats.searches.slow / stats.searches.total) * 100).toFixed(1)}%`
           : '0%'
       },
@@ -208,7 +233,7 @@
       errors: stats.errors
     };
   }
-  
+
   /**
    * Экспорт метрик для отладки в консоли браузера
    * Вызывается через heysStats() в DevTools
@@ -224,17 +249,17 @@
     DEV.log('[HEYS Analytics] Статистика сессии:', metrics);
     return metrics;
   }
-  
+
   // Глобальный обработчик ошибок
-  global.addEventListener('error', function(event) {
+  global.addEventListener('error', function (event) {
     trackError(event.error || new Error(event.message), 'window.onerror');
   });
-  
+
   // Обработчик promise rejections
-  global.addEventListener('unhandledrejection', function(event) {
+  global.addEventListener('unhandledrejection', function (event) {
     trackError(new Error(event.reason), 'unhandledRejection');
   });
-  
+
   // Экспорт в HEYS namespace
   HEYS.analytics = {
     trackSearch,
@@ -243,13 +268,13 @@
     trackError,
     getStats,
     exportMetrics,
-    
+
     // Aliases для совместимости с legacy кодом
-    trackModuleLoad: () => {}, // no-op
-    trackComponentRender: () => {}, // no-op
-    trackUserInteraction: () => {}, // no-op
-    startTracking: () => {},
-    stopTracking: () => {},
+    trackModuleLoad: () => { }, // no-op
+    trackComponentRender: () => { }, // no-op
+    trackUserInteraction: () => { }, // no-op
+    startTracking: () => { },
+    stopTracking: () => { },
     reset: () => {
       stats.searches = { total: 0, slow: 0 };
       stats.apiCalls = { total: 0, slow: 0, failed: 0 };
@@ -259,30 +284,30 @@
       stats.sessionStart = Date.now();
     },
     getMetrics: getStats,
-    trackEvent: () => {} // no-op alias
+    trackEvent: () => { } // no-op alias
   };
-  
+
   // Alias для совместимости с heys_reports_v12.js
   HEYS.performance = {
     // Методы из analytics
     ...HEYS.analytics,
-    
+
     // Дополнительные методы для reports
     increment: (metric) => {
       // Используем trackDataOperation для совместимости
       trackDataOperation(metric, 1);
     },
-    
+
     measure: (name, fn) => {
       // Простой wrapper без реального измерения времени
       // (для reports время не критично)
       return fn();
     }
   };
-  
+
   // Лог инициализации отключен для чистой консоли
-  
+
   // Debug: экспорт статистики в глобальный scope для отладки
   global.heysStats = getStats;
-  
+
 })(window);

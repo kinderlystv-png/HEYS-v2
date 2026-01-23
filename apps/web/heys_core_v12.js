@@ -1746,25 +1746,45 @@
     // Функция восстановления продуктов из общей базы (для всех клиентов)
     async function restoreFromSharedBase() {
       try {
+        const debugLog = (step, payload) => {
+          const entry = { ts: new Date().toISOString(), step, payload };
+          HEYS._syncDebug = Array.isArray(HEYS._syncDebug) ? HEYS._syncDebug : [];
+          HEYS._syncDebug.push(entry);
+          if (HEYS._syncDebug.length > 200) {
+            HEYS._syncDebug.shift();
+          }
+          if (window.DEV?.log) {
+            if (payload !== undefined) {
+              window.DEV.log(`🔄 [SYNC] ${step}`, payload);
+            } else {
+              window.DEV.log(`🔄 [SYNC] ${step}`);
+            }
+          }
+        };
+
+        debugLog('start');
         // 1. Показать подтверждение
         const confirmed = await (HEYS.ConfirmModal?.confirm?.({
-          title: '🔄 Восстановление из общей базы',
-          message: 'Добавить в вашу личную базу все продукты из общей базы, которых у вас ещё нет?',
-          confirmText: 'Восстановить',
+          title: '🔄 Синхронизация с общей базой',
+          message: 'Добавить недостающие продукты и обновить существующие с пустыми нутриентами?',
+          confirmText: 'Синхронизировать',
           cancelText: 'Отмена'
-        }) ?? Promise.resolve(window.confirm('Восстановить продукты из общей базы? Будут добавлены только отсутствующие.')));
+        }) ?? Promise.resolve(window.confirm('Синхронизировать с общей базой? Добавятся недостающие продукты и обновятся существующие с пустыми полями.')));
 
+        debugLog('confirm', { confirmed });
         if (!confirmed) return;
 
         // 2. Загрузить shared products
         HEYS.Toast?.info('⏳ Загружаем общую базу…');
 
         let sharedProducts = [];
+        let sharedSource = 'unknown';
         try {
           if (HEYS.cloud?.getAllSharedProducts) {
             const result = await HEYS.cloud.getAllSharedProducts({ limit: 1000 });
             // getAllSharedProducts может вернуть { data: [...] } или напрямую массив
             sharedProducts = Array.isArray(result) ? result : (result?.data || result?.products || []);
+            sharedSource = 'cloud.getAllSharedProducts';
           } else if (HEYS.YandexAPI?.rpc) {
             const result = await HEYS.YandexAPI.rpc('get_shared_products', {
               p_search: null,
@@ -1772,13 +1792,15 @@
               p_offset: 0
             });
             sharedProducts = Array.isArray(result) ? result : (result?.data || result?.products || []);
+            sharedSource = 'YandexAPI.rpc(get_shared_products)';
           } else if (HEYS.YandexAPI?.rest) {
             const { data, error } = await HEYS.YandexAPI.rest('shared_products');
             if (error) throw new Error(error);
             sharedProducts = Array.isArray(data) ? data : [];
+            sharedSource = 'YandexAPI.rest(shared_products)';
           }
         } catch (loadErr) {
-          console.error('[RESTORE] Ошибка загрузки shared products:', loadErr);
+          HEYS.analytics?.trackError?.(loadErr, { context: 'ration:restoreFromSharedBase:load' });
           HEYS.Toast?.error('Ошибка загрузки общей базы');
           return;
         }
@@ -1789,6 +1811,8 @@
           sharedProducts = [];
         }
 
+        debugLog('shared-loaded', { source: sharedSource, count: sharedProducts.length });
+
         if (sharedProducts.length === 0) {
           HEYS.Toast?.warning('Общая база пуста или недоступна');
           return;
@@ -1796,49 +1820,252 @@
 
         // 3. Получить текущие продукты
         const currentProducts = products || [];
+        debugLog('local-products', { count: currentProducts.length });
 
-        // 4. Создать индексы для быстрой дедупликации
+        // 4. Создать индексы для быстрой работы
+        const normalizeName = HEYS.models?.normalizeProductName
+          || ((name) => String(name || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
+        const sharedByName = new Map();
+        const sharedById = new Map();
+        sharedProducts.forEach(sp => {
+          if (sp.name) sharedByName.set(normalizeName(sp.name), sp);
+          if (sp.id != null) sharedById.set(String(sp.id), sp);
+        });
+
         const existingBySharedOriginId = new Set();
-        const existingByNormalizedName = new Set();
+        const existingByNormalizedName = new Map(); // name -> product (для обновления)
 
         currentProducts.forEach(p => {
-          if (p.shared_origin_id) {
-            existingBySharedOriginId.add(p.shared_origin_id);
+          if (p.shared_origin_id != null) {
+            existingBySharedOriginId.add(String(p.shared_origin_id));
           }
           if (p.name) {
-            existingByNormalizedName.add(p.name.toLowerCase().trim());
+            existingByNormalizedName.set(normalizeName(p.name), p);
           }
         });
+        debugLog('indexes', {
+          sharedById: sharedById.size,
+          sharedByName: sharedByName.size,
+          existingBySharedOriginId: existingBySharedOriginId.size,
+          existingByNormalizedName: existingByNormalizedName.size
+        });
 
-        // 5. Найти отсутствующие продукты
+        // 5. Функции проверки недостающих нутриентов
+        const isMissing = (v) => v === undefined || v === null || v === '' || (typeof v === 'number' && isNaN(v));
+        const coreFields = ['simple100', 'complex100', 'protein100', 'badFat100', 'goodFat100', 'trans100', 'fiber100', 'gi', 'sodium100'];
+        const getMissingFields = (p) => coreFields.filter((key) => isMissing(p?.[key]));
+        const hasNonZeroMacros = (p) => {
+          if (!p) return false;
+          const vals = [p.simple100, p.complex100, p.protein100, p.badFat100, p.goodFat100, p.trans100];
+          return vals.some((v) => {
+            const n = Number(String(v ?? '').replace(',', '.'));
+            return Number.isFinite(n) && n > 0;
+          });
+        };
+        const needsUpdate = (p) => {
+          if (!p) return false;
+          if (isMissing(p.kcal100) || (p.kcal100 === 0 && hasNonZeroMacros(p))) return true;
+          if (isMissing(p.harm)) return true;
+          return getMissingFields(p).length > 0;
+        };
+
+        // 6. Функция мержа данных из shared в local
+        const mergeFromShared = (local, shared) => {
+          const merged = { ...local };
+          // Проверка "пустого" значения — включает undefined, null, '', NaN, 0
+          const isEmpty = (v) => v === undefined || v === null || v === '' || (typeof v === 'number' && isNaN(v));
+          const toNum = (v) => {
+            if (v === undefined || v === null || v === '') return NaN;
+            const n = Number(String(v).replace(',', '.'));
+            return Number.isFinite(n) ? n : NaN;
+          };
+          // Нормализация имён полей (snake_case в shared vs camelCase в local)
+          const fields = [
+            ['simple100', 'simple100'],
+            ['complex100', 'complex100'],
+            ['protein100', 'protein100'],
+            ['badFat100', 'badfat100'],
+            ['goodFat100', 'goodfat100'],
+            ['trans100', 'trans100'],
+            ['fiber100', 'fiber100'],
+            ['gi', 'gi'],
+            ['sodium100', 'sodium100'],
+          ];
+
+          let changed = false;
+          const debugInfo = {
+            fieldsChecked: [],
+            localEmpty: [],
+            sharedEmpty: [],
+            updated: [],
+            reasons: [],
+            localSnapshot: {},
+            sharedSnapshot: {}
+          };
+          for (const [localKey, sharedKey] of fields) {
+            const sharedVal = shared[localKey] ?? shared[sharedKey];
+            const localVal = local[localKey];
+            debugInfo.fieldsChecked.push(localKey);
+            const localIsEmpty = isEmpty(localVal);
+            const sharedIsEmpty = isEmpty(sharedVal);
+            const localNum = toNum(localVal);
+            const sharedNum = toNum(sharedVal);
+            const shouldFillZero = (localNum === 0 || localVal === 0) && Number.isFinite(sharedNum) && sharedNum > 0;
+            if (localIsEmpty || shouldFillZero) {
+              debugInfo.localSnapshot[localKey] = localVal;
+              debugInfo.sharedSnapshot[localKey] = sharedVal;
+            }
+            if (localIsEmpty) debugInfo.localEmpty.push(localKey);
+            if (sharedIsEmpty) debugInfo.sharedEmpty.push(localKey);
+            // Обновляем если local пустой, а shared заполнен
+            if ((localIsEmpty && !sharedIsEmpty) || shouldFillZero) {
+              merged[localKey] = sharedVal;
+              changed = true;
+              debugInfo.updated.push({ key: localKey, from: localVal, to: sharedVal });
+            } else if (localIsEmpty && sharedIsEmpty) {
+              debugInfo.reasons.push({ key: localKey, reason: 'shared_empty' });
+            }
+          }
+
+          // harm — обновляем если пустой
+          const localHarm = HEYS.models?.normalizeHarm?.(local) ?? local.harm;
+          const sharedHarm = HEYS.models?.normalizeHarm?.(shared) ?? shared.harm;
+          const localHarmNum = toNum(localHarm);
+          const sharedHarmNum = toNum(sharedHarm);
+          const shouldFillHarmZero = localHarmNum === 0 && Number.isFinite(sharedHarmNum) && sharedHarmNum > 0;
+          if ((isEmpty(localHarm) && !isEmpty(sharedHarm)) || shouldFillHarmZero) {
+            merged.harm = sharedHarm;
+            changed = true;
+            debugInfo.updated.push({ key: 'harm', from: localHarm, to: sharedHarm });
+          } else if (isEmpty(localHarm) && isEmpty(sharedHarm)) {
+            debugInfo.reasons.push({ key: 'harm', reason: 'shared_empty' });
+          }
+
+          // shared_origin_id для связи
+          if (!merged.shared_origin_id && shared.id) {
+            merged.shared_origin_id = shared.id;
+            changed = true;
+          }
+
+          // Вычисляемые поля
+          const kcalMissing = isEmpty(merged.kcal100) || (merged.kcal100 === 0 && hasNonZeroMacros(merged));
+          if (kcalMissing) {
+            const derived = computeDerived(merged);
+            if (derived.kcal100 > 0) {
+              merged.kcal100 = derived.kcal100;
+              merged.carbs100 = derived.carbs100;
+              merged.fat100 = derived.fat100;
+              merged._updatedFromShared = new Date().toISOString();
+              debugInfo.reasons.push({ key: 'kcal100', reason: 'recomputed_from_macros' });
+              changed = true;
+            }
+          } else if (changed) {
+            const derived = computeDerived(merged);
+            merged.kcal100 = derived.kcal100;
+            merged.carbs100 = derived.carbs100;
+            merged.fat100 = derived.fat100;
+            merged._updatedFromShared = new Date().toISOString();
+          }
+
+          return { merged, changed, debugInfo };
+        };
+
+        // 7. Обновить существующие продукты с пустыми нутриентами
+        let updatedCount = 0;
+        let matchedById = 0;
+        let matchedByName = 0;
+        let missingCount = 0;
+        let noMatchCount = 0;
+        const noMatchSamples = [];
+        const updatedSamples = [];
+        const notUpdatedSamples = [];
+        const updatedProducts = currentProducts.map(localP => {
+          // Ищем соответствующий продукт в shared
+          let sharedP = null;
+          if (localP.shared_origin_id != null) {
+            sharedP = sharedById.get(String(localP.shared_origin_id));
+            if (sharedP) matchedById++;
+          }
+          if (!sharedP && localP.name) {
+            sharedP = sharedByName.get(normalizeName(localP.name));
+            if (sharedP) matchedByName++;
+          }
+
+          const missingFields = getMissingFields(localP);
+          const shouldUpdate = needsUpdate(localP);
+          if (shouldUpdate) missingCount++;
+
+          if (!sharedP) {
+            if (shouldUpdate && noMatchSamples.length < 5) {
+              noMatchSamples.push({
+                name: localP?.name,
+                shared_origin_id: localP?.shared_origin_id || null,
+                missingFields,
+                kcal100: localP?.kcal100,
+                harm: localP?.harm
+              });
+            }
+            if (shouldUpdate) noMatchCount++;
+            return localP; // Нет в shared — оставляем как есть
+          }
+
+          // Проверяем нужно ли обновлять
+          if (shouldUpdate) {
+            const { merged, changed, debugInfo } = mergeFromShared(localP, sharedP);
+            if (changed) {
+              updatedCount++;
+              if (updatedSamples.length < 5) {
+                updatedSamples.push({
+                  name: localP?.name,
+                  sharedId: sharedP?.id,
+                  missingFields,
+                  debugInfo
+                });
+              }
+              return merged;
+            } else {
+              // Логируем почему не обновилось
+              if (notUpdatedSamples.length < 5) {
+                notUpdatedSamples.push({
+                  name: localP?.name,
+                  sharedId: sharedP?.id,
+                  missingFields,
+                  debugInfo
+                });
+              }
+            }
+          }
+          return localP;
+        });
+
+        debugLog('update-scan', {
+          needsUpdate: missingCount,
+          matchedById,
+          matchedByName,
+          noMatch: noMatchCount,
+          updated: updatedCount,
+          noMatchSamples,
+          updatedSamples,
+          notUpdatedSamples
+        });
+
+        // 8. Найти отсутствующие продукты (как раньше)
         const missingProducts = sharedProducts.filter(shared => {
-          // Проверка 1: по shared_origin_id (если уже клонировали этот shared продукт)
-          if (existingBySharedOriginId.has(shared.id)) {
-            return false;
-          }
-          // Проверка 2: по нормализованному имени (fallback)
-          const normalizedName = (shared.name || '').toLowerCase().trim();
-          if (existingByNormalizedName.has(normalizedName)) {
-            return false;
-          }
+          if (existingBySharedOriginId.has(String(shared.id))) return false;
+          const normalizedName = normalizeName(shared.name);
+          if (existingByNormalizedName.has(normalizedName)) return false;
           return true;
         });
+        debugLog('missing-products', { count: missingProducts.length });
 
-        if (missingProducts.length === 0) {
-          HEYS.Toast?.success('✅ Все продукты из общей базы уже есть в вашей личной базе!');
-          return;
-        }
-
-        // 6. Клонировать отсутствующие продукты в личную базу
+        // 9. Клонировать отсутствующие продукты в личную базу
         const uid = HEYS.utils?.uid || ((prefix = 'p_') => prefix + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
 
         const newProducts = missingProducts.map(shared => {
-          // Нормализация harm
           const harm = HEYS.models?.normalizeHarm?.(shared) ?? shared.harm ?? shared.harmScore ?? null;
-
-          return {
+          const base = {
             id: uid('p_'),
-            shared_origin_id: shared.id, // Связь с оригиналом в shared базе
+            shared_origin_id: shared.id,
             name: shared.name,
             simple100: shared.simple100 ?? 0,
             complex100: shared.complex100 ?? 0,
@@ -1852,10 +2079,8 @@
             harmScore: harm,
             category: shared.category ?? null,
             portions: shared.portions ?? null,
-            // Extended nutrients
             sodium100: shared.sodium100 ?? null,
             novaGroup: shared.nova_group ?? shared.novaGroup ?? null,
-            // Vitamins
             vitaminA: shared.vitamin_a ?? shared.vitaminA ?? null,
             vitaminC: shared.vitamin_c ?? shared.vitaminC ?? null,
             vitaminD: shared.vitamin_d ?? shared.vitaminD ?? null,
@@ -1867,7 +2092,6 @@
             vitaminB6: shared.vitamin_b6 ?? shared.vitaminB6 ?? null,
             vitaminB9: shared.vitamin_b9 ?? shared.vitaminB9 ?? null,
             vitaminB12: shared.vitamin_b12 ?? shared.vitaminB12 ?? null,
-            // Minerals
             calcium: shared.calcium ?? null,
             iron: shared.iron ?? null,
             magnesium: shared.magnesium ?? null,
@@ -1876,19 +2100,21 @@
             zinc: shared.zinc ?? null,
             selenium: shared.selenium ?? null,
             iodine: shared.iodine ?? null,
-            // Flags
             isOrganic: shared.is_organic ?? shared.isOrganic ?? false,
             isWholeGrain: shared.is_whole_grain ?? shared.isWholeGrain ?? false,
             isFermented: shared.is_fermented ?? shared.isFermented ?? false,
             isRaw: shared.is_raw ?? shared.isRaw ?? false,
-            // Meta
             _restoredFromShared: true,
             _restoredAt: new Date().toISOString()
           };
+          // Добавляем вычисляемые поля
+          const derived = computeDerived(base);
+          return { ...base, ...derived };
         });
 
-        // 7. Сохранить объединённый массив
-        const mergedProducts = [...currentProducts, ...newProducts];
+        // 10. Сохранить объединённый массив
+        const mergedProducts = [...updatedProducts, ...newProducts];
+        debugLog('merged', { total: mergedProducts.length, added: newProducts.length, updated: updatedCount });
 
         if (HEYS.products?.setAll) {
           HEYS.products.setAll(mergedProducts);
@@ -1898,21 +2124,33 @@
           HEYS.utils.lsSet('heys_products', mergedProducts);
         }
 
-        // 8. Обновить UI
+        // 11. Обновить UI
         setProducts(mergedProducts);
         if (typeof buildSearchIndex === 'function') {
           buildSearchIndex(mergedProducts);
         }
 
-        DEV.log(`[RESTORE] Восстановлено ${newProducts.length} продуктов из общей базы`);
-        HEYS.Toast?.success(`✅ Восстановлено ${newProducts.length} продуктов из общей базы!`);
+        // 12. Отчёт
+        const addedCount = newProducts.length;
+        let message = '';
+        if (addedCount > 0 && updatedCount > 0) {
+          message = `✅ Добавлено ${addedCount}, обновлено ${updatedCount} продуктов`;
+        } else if (addedCount > 0) {
+          message = `✅ Добавлено ${addedCount} продуктов`;
+        } else if (updatedCount > 0) {
+          message = `✅ Обновлено ${updatedCount} продуктов`;
+        } else {
+          message = '✅ Все продукты уже синхронизированы!';
+        }
+
+        debugLog('done', { message });
+        HEYS.Toast?.success(message);
 
         if (window.HEYS?.analytics?.trackDataOperation) {
-          window.HEYS.analytics.trackDataOperation('products-restored-from-shared', { count: newProducts.length });
+          window.HEYS.analytics.trackDataOperation('products-synced-from-shared', { added: addedCount, updated: updatedCount });
         }
 
       } catch (err) {
-        console.error('[RESTORE] Ошибка восстановления:', err);
         HEYS.analytics?.trackError?.(err, { context: 'ration:restoreFromSharedBase' });
         HEYS.Toast?.error('Ошибка восстановления: ' + (err.message || err)) || alert('Ошибка восстановления: ' + (err.message || err));
       }
@@ -3264,6 +3502,17 @@
           next.shared_origin_id = sharedProduct.id;
           changed = true;
         }
+        // 🔧 FIX: Добавляем вычисляемые поля (kcal100, carbs100, fat100) если их нет
+        // Это исправляет баг когда продукт был добавлен ранее без калорий
+        if (next.kcal100 == null || next.kcal100 === 0) {
+          const derived = computeDerived(next);
+          if (derived.kcal100 > 0) {
+            next.kcal100 = derived.kcal100;
+            next.carbs100 = derived.carbs100;
+            next.fat100 = derived.fat100;
+            changed = true;
+          }
+        }
         if (!changed) return existing;
         const newProducts = products.map(p => p.id === existing.id ? { ...p, ...next } : p);
         HEYS.products.setAll(newProducts);
@@ -3379,6 +3628,31 @@
       }
 
       return { original, deduplicated: unique.length, removed };
+    },
+
+    /**
+     * 🔧 Исправляет продукты с отсутствующим kcal100
+     * Вычисляет kcal100, carbs100, fat100 из базовых полей
+     * @returns {{fixed: number, total: number}} Статистика
+     */
+    fixMissingKcal: () => {
+      const products = HEYS.products.getAll();
+      let fixed = 0;
+      const updated = products.map(p => {
+        if (p.kcal100 == null || p.kcal100 === 0) {
+          const derived = computeDerived(p);
+          if (derived.kcal100 > 0) {
+            fixed++;
+            return { ...p, ...derived };
+          }
+        }
+        return p;
+      });
+      if (fixed > 0) {
+        HEYS.products.setAll(updated);
+        console.log(`[HEYS] 🔧 Исправлено ${fixed} продуктов с пустым kcal100`);
+      }
+      return { fixed, total: products.length };
     }
   };
   HEYS.RationTab = RationTab;

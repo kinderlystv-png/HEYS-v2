@@ -3316,13 +3316,22 @@ NOVA: 1
     const gramsInputRef = useRef(null);
 
     // ВАЖНО: Значения продукта с fallback для ситуации когда product ещё не загружен
-    const kcal100 = product?.kcal100 || 0;
-    const protein100 = product?.protein100 || 0;
-    const carbs100 = (product?.simple100 || 0) + (product?.complex100 || 0);
-    const fat100 = (product?.badFat100 || 0) + (product?.goodFat100 || 0) + (product?.trans100 || 0);
+    const toNum = (v) => {
+      if (v == null || v === '') return 0;
+      if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+      const n = Number(String(v).replace(',', '.'));
+      return Number.isFinite(n) ? n : 0;
+    };
+    const kcal100 = toNum(product?.kcal100);
+    const protein100 = toNum(product?.protein100);
+    const carbs100 = toNum(product?.simple100) + toNum(product?.complex100);
+    const fat100 = toNum(product?.badFat100) + toNum(product?.goodFat100) + toNum(product?.trans100);
+    const derivedKcal100 = kcal100 > 0
+      ? kcal100
+      : Math.round((3 * protein100 + 4 * carbs100 + 9 * fat100) * 10) / 10;
 
     // Расчёт на текущую порцию (safe with fallbacks)
-    const currentKcal = Math.round(kcal100 * grams / 100);
+    const currentKcal = Math.round(derivedKcal100 * grams / 100);
     const currentProt = Math.round(protein100 * grams / 100);
     const currentCarbs = Math.round(carbs100 * grams / 100);
     const currentFat = Math.round(fat100 * grams / 100);
@@ -3422,14 +3431,18 @@ NOVA: 1
           });
         }
 
+        const productForSubmit = (!product?.kcal100 && derivedKcal100 > 0)
+          ? { ...product, kcal100: derivedKcal100 }
+          : product;
+
         context.onAdd({
-          product,
+          product: productForSubmit,
           grams,
           mealIndex: context.mealIndex
         });
 
         window.dispatchEvent(new CustomEvent('heysProductAdded', {
-          detail: { product, grams }
+          detail: { product: productForSubmit, grams }
         }));
       }
 
