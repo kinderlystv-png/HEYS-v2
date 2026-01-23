@@ -74,18 +74,38 @@ async function sendTelegramAlert(message, isError = true) {
   const text = `${emoji} *HEYS Backup*\n\n${message}`;
 
   try {
-    const response = await fetch(`https://api.telegram.org/bot${CONFIG.telegram.botToken}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: CONFIG.telegram.chatId,
-        text: text,
-        parse_mode: 'Markdown'
-      })
+    // Node.js 18+ has built-in fetch
+    // For older Node.js versions, use node-fetch or https module
+    const https = require('https');
+    const url = new URL(`https://api.telegram.org/bot${CONFIG.telegram.botToken}/sendMessage`);
+    const data = JSON.stringify({
+      chat_id: CONFIG.telegram.chatId,
+      text: text,
+      parse_mode: 'Markdown'
     });
 
-    const result = await response.json();
-    console.log('[Telegram] Alert sent:', result.ok);
+    const options = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': data.length
+      }
+    };
+
+    const req = https.request(url, options, (res) => {
+      let result = '';
+      res.on('data', (chunk) => { result += chunk; });
+      res.on('end', () => {
+        console.log('[Telegram] Alert sent:', res.statusCode === 200);
+      });
+    });
+
+    req.on('error', (error) => {
+      console.error('[Telegram Error]', error.message);
+    });
+
+    req.write(data);
+    req.end();
   } catch (error) {
     console.error('[Telegram Error]', error.message);
   }

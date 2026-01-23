@@ -104,19 +104,24 @@ function getPool() {
     const config = createPoolConfig();
     pool = new Pool(config);
     
-    // Event handlers для мониторинга
-    pool.on('connect', (client) => {
-      console.log('[DB-Pool] New client connected');
-    });
+    // Event handlers для мониторинга (только в debug режиме)
+    const IS_DEBUG = process.env.LOG_LEVEL === 'debug';
     
-    pool.on('acquire', (client) => {
-      console.log('[DB-Pool] Client acquired from pool');
-    });
+    if (IS_DEBUG) {
+      pool.on('connect', (client) => {
+        console.log('[DB-Pool] New client connected');
+      });
+      
+      pool.on('acquire', (client) => {
+        console.log('[DB-Pool] Client acquired from pool');
+      });
+      
+      pool.on('remove', (client) => {
+        console.log('[DB-Pool] Client removed from pool');
+      });
+    }
     
-    pool.on('remove', (client) => {
-      console.log('[DB-Pool] Client removed from pool');
-    });
-    
+    // Error handler всегда активен (критичные ошибки)
     pool.on('error', (err, client) => {
       console.error('[DB-Pool] Unexpected error on idle client:', err.message);
     });

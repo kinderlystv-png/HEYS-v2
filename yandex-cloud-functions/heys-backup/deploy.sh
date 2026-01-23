@@ -12,6 +12,10 @@
 #   S3_SECRET_ACCESS_KEY - S3 Secret Access Key
 #   TELEGRAM_BOT_TOKEN - Telegram bot token (optional)
 #   TELEGRAM_CHAT_ID - Telegram chat ID (optional)
+#
+# Security Note:
+#   For production deployments, consider using Yandex Lockbox (secret management service)
+#   instead of environment variables. See: https://cloud.yandex.com/docs/lockbox/
 
 set -e
 
