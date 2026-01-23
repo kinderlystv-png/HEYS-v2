@@ -66,6 +66,15 @@
     let totalFat = 0;
     let totalSimple = 0;
 
+    const computeKcalFromMacros = (obj) => {
+      if (!obj) return 0;
+      const prot = +obj.protein100 || +obj.prot100 || 0;
+      const carbs = +obj.carbs100 || ((+obj.simple100 || 0) + (+obj.complex100 || 0));
+      const fat = +obj.fat100 || ((+obj.badFat100 || 0) + (+obj.goodFat100 || 0) + (+obj.trans100 || 0));
+      const kcal = (prot * 4) + (carbs * 4) + (fat * 9);
+      return Number.isFinite(kcal) ? kcal : 0;
+    };
+
     for (const meal of meals) {
       const items = meal.items || [];
       for (const item of items) {
@@ -75,7 +84,15 @@
         // 🔧 FIX v1.1.0: Тройной fallback — product → item snapshot → 0
         // Item хранит snapshot данных при добавлении, не зависим от базы продуктов
         const product = getProductById(item.product_id);
-        const kcal100 = product?.kcal100 ?? item.kcal100 ?? 0;
+        const derivedProduct = HEYS.models?.computeDerivedProduct ? HEYS.models.computeDerivedProduct(product || {}) : product;
+        const derivedItem = HEYS.models?.computeDerivedProduct ? HEYS.models.computeDerivedProduct(item || {}) : item;
+        const kcal100 = product?.kcal100
+          ?? derivedProduct?.kcal100
+          ?? item.kcal100
+          ?? derivedItem?.kcal100
+          ?? computeKcalFromMacros(product)
+          ?? computeKcalFromMacros(item)
+          ?? 0;
         const prot100 = product?.protein100 ?? item.protein100 ?? 0;
         const carbs100 = product?.carbs100 ?? item.carbs100 ?? 0;
         const fat100 = product?.fat100 ?? item.fat100 ?? 0;
