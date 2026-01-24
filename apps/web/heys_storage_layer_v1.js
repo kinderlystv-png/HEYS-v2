@@ -221,6 +221,27 @@
             return legacy;
           }
         } catch (e) { }
+        // Fallback: if products are stored under another clientId scope
+        if (k === 'heys_products') {
+          try {
+            const keys = Object.keys(localStorage).filter((key) => /^heys_[^_]+_products$/i.test(key));
+            let best = null;
+            let bestLen = 0;
+            for (const key of keys) {
+              const candidate = rawGet(key, undefined);
+              const len = Array.isArray(candidate) ? candidate.length : 0;
+              if (len > bestLen) {
+                bestLen = len;
+                best = candidate;
+              }
+            }
+            if (best && bestLen > 0) {
+              memory.set(sk, best);
+              rawSet(sk, best);
+              return best;
+            }
+          } catch (e) { }
+        }
         // return default
         v = def;
       }
@@ -344,6 +365,78 @@
       favorites.delete(id);
       Store.set(FAVORITES_KEY, Array.from(favorites));
     }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 🙈 СКРЫТЫЕ ПРОДУКТЫ (в списке "Ваши продукты")
+  // ═══════════════════════════════════════════════════════════════════
+  const HIDDEN_PRODUCTS_KEY = 'heys_hidden_products';
+
+  /**
+   * Получить Set id скрытых продуктов
+   * @returns {Set<string>}
+   */
+  Store.getHiddenProducts = function () {
+    const arr = Store.get(HIDDEN_PRODUCTS_KEY, []);
+    return new Set(Array.isArray(arr) ? arr : []);
+  };
+
+  /**
+   * Проверить, скрыт ли продукт
+   * @param {string|number} productId
+   * @returns {boolean}
+   */
+  Store.isHiddenProduct = function (productId) {
+    const hidden = Store.getHiddenProducts();
+    return hidden.has(String(productId));
+  };
+
+  /**
+   * Скрыть продукт из списка "Ваши продукты"
+   * @param {string|number} productId
+   */
+  Store.hideProduct = function (productId) {
+    const id = String(productId);
+    const hidden = Store.getHiddenProducts();
+    if (!hidden.has(id)) {
+      hidden.add(id);
+      Store.set(HIDDEN_PRODUCTS_KEY, Array.from(hidden));
+      Store.removeFavorite?.(id);
+    }
+  };
+
+  /**
+   * Вернуть продукт в список "Ваши продукты"
+   * @param {string|number} productId
+   */
+  Store.unhideProduct = function (productId) {
+    const id = String(productId);
+    const hidden = Store.getHiddenProducts();
+    if (hidden.has(id)) {
+      hidden.delete(id);
+      Store.set(HIDDEN_PRODUCTS_KEY, Array.from(hidden));
+    }
+  };
+
+  /**
+   * Переключить скрытие продукта
+   * @param {string|number} productId
+   * @returns {boolean} новое состояние (true = скрыт)
+   */
+  Store.toggleHiddenProduct = function (productId) {
+    const id = String(productId);
+    const hidden = Store.getHiddenProducts();
+    let newState;
+    if (hidden.has(id)) {
+      hidden.delete(id);
+      newState = false;
+    } else {
+      hidden.add(id);
+      newState = true;
+      Store.removeFavorite?.(id);
+    }
+    Store.set(HIDDEN_PRODUCTS_KEY, Array.from(hidden));
+    return newState;
   };
 
   // ═══════════════════════════════════════════════════════════════════
