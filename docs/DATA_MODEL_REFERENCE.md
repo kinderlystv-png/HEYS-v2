@@ -3112,7 +3112,7 @@ HEYS.Status.getColor(score); // hex цвет
 | `perfect_day`    | 25  | 1        | Идеальный день (ratio 0.9-1.1) |
 | `advice_read`    | 2   | 20       | Прочитан совет                 |
 
-### Достижения (30 штук в 7 категориях)
+### Достижения (32 штуки в 7 категориях)
 
 **Streak (5)**: | ID | Название | Условие | Rarity |
 |----|----------|---------|--------| | `streak_3` | Первый streak | 3 дня подряд
@@ -3145,19 +3145,34 @@ common | | `first_training` | Первая тренировка | Добавле
 Уровень 15 | epic | | `level_20` | Мастер | Уровень 20 | legendary | |
 `level_25` | Гроссмейстер | Max уровень | mythic |
 
-**Habits (4)**: | ID | Название | Условие | Rarity |
+**Habits (2)**: | ID | Название | Условие | Rarity |
 |----|----------|---------|--------| | `early_bird` | Жаворонок | Завтрак до
 9:00 7 дней | rare | | `night_owl_safe` | Безопасная сова | Ужин до 21:00 7 дней
-| rare | | `advice_reader` | Читатель | Прочитано 50 советов | rare | |
+| rare |
+
+**Advice (2)**: | ID | Название | Условие | Rarity |
+|----|----------|---------|--------| | `advice_reader` | Читатель | Прочитано 50 советов | rare | |
 `advice_master` | Знаток | Прочитано 200 советов | epic |
 
 **Metabolic (5)**: | ID | Название | Условие | Rarity |
 |----|----------|---------|--------| | `metabolic_stable` | Стабильный
-метаболизм | Phenotype confidence ≥80% | epic | | `crash_avoided` | Срыв
+метаболизм | Оценка ≥70 7 дней подряд | rare | | `crash_avoided` | Срыв
 предотвращён | Действие по совету анти-срыва | rare | | `low_risk_master` |
 Мастер низкого риска | 7 дней низкий риск | legendary | | `phenotype_discovered`
 | Фенотип открыт | Первый фенотип определён | rare | | `weekly_wrap_viewed` |
-Еженедельник | Просмотрен weekly wrap | common |
+Аналитик | Посмотреть 4 еженедельных отчёта | rare |
+
+### 🎉 Story Cards (истории достижений)
+
+- У каждого достижения есть поле `story` — короткая история/мотивация.
+- В `GamificationBar` по клику на бейдж открывается карточка с историей.
+
+### 🏅 Rank Ceremony (повышение ранга)
+
+- При переходе между рангами (Novice → Ученик → Практик → Эксперт → Мастер)
+  показывается модал с Lottie-анимацией и подсказкой.
+- Анимация: `apps/web/public/assets/lottie/level-up-ceremony.json`.
+- Триггер: `handleRankTransition(oldLevel, newLevel)`.
 
 ### Rarity (редкость)
 
@@ -3171,22 +3186,27 @@ common | | `first_training` | Первая тренировка | Добавле
 
 ### localStorage ключи
 
-| Ключ                | Описание                 |
-| ------------------- | ------------------------ |
-| `heys_xp`           | Текущий XP               |
-| `heys_level`        | Текущий уровень          |
-| `heys_achievements` | Массив полученных ачивок |
-| `heys_xp_history`   | История XP по дням       |
+| Ключ                          | Описание                                       |
+| ----------------------------- | ---------------------------------------------- |
+| `heys_game`                   | Основные данные геймификации (XP, уровни, прогресс) |
+| `heys_sound_settings`         | Настройки звука (enabled/volume)               |
+| `heys_weekly_wrap_view_count` | Счётчик просмотров Weekly Wrap                |
 
 ### API
 
 ```javascript
-HEYS.Gamification.addXP(action, multiplier?);
-HEYS.Gamification.getLevel();
-HEYS.Gamification.getProgress();  // { level, xp, xpToNext, pct }
-HEYS.Gamification.checkAchievements(dayData, historyDays);
-HEYS.Gamification.getAchievements();  // полученные ачивки
-HEYS.Gamification.getAvailableAchievements();  // все ачивки
+HEYS.game.addXP(amount, reason, sourceEl?);
+HEYS.game.getLevel();
+HEYS.game.getProgress();  // { current, required, percent }
+HEYS.game.getStats();     // { totalXP, level, title, progress, unlockedCount, totalAchievements }
+HEYS.game.getAchievements();
+HEYS.game.getAchievementCategories();
+HEYS.game.getAchievementProgress(achId);
+HEYS.game.getInProgressAchievements();
+HEYS.game.getRankBadge(level);
+HEYS.game.getXPHistory();
+HEYS.game.getSoundSettings();
+HEYS.game.setSoundSettings({ enabled, volume });
 ```
 
 ---
