@@ -1237,6 +1237,11 @@
   font-size: 10px;
 }
 
+.aps-product-usage {
+  color: #94a3b8;
+  font-size: 9px;
+}
+
 [data-theme="dark"] .aps-meta-kcal {
   color: #9ca3af;
 }
@@ -1247,6 +1252,10 @@
 
 [data-theme="dark"] .aps-meta-macros {
   color: #6b7280;
+}
+
+[data-theme="dark"] .aps-product-usage {
+  color: #64748b;
 }
 
 /* Контейнер кнопок действий */
@@ -1355,6 +1364,22 @@
   background: var(--stats-bg);
   border: 1px solid var(--stats-border);
   border-radius: 10px;
+  justify-content: space-between;
+}
+
+.aps-product-header__main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.aps-product-header__fav {
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  border-radius: 8px;
 }
 
 .aps-product-icon-lg {
@@ -1365,6 +1390,7 @@
   font-size: 15px;
   font-weight: 600;
   color: var(--text);
+  min-width: 0;
 }
 
 /* === HERO Input граммов (главный элемент) === */

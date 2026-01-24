@@ -1825,3 +1825,47 @@ body.tour-active .ios-pwa-banner {
     transform: scale(1);
   }
 }
+
+/* === APS: hide product button === */
+.aps-hide-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--color-gray-400);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-radius: 8px;
+  opacity: 0.6;
+}
+
+.aps-hide-btn:hover {
+  background: #f3f4f6;
+  color: #6b7280;
+  opacity: 1;
+}
+
+.aps-hide-btn:active {
+  transform: scale(0.92);
+}
+
+.aps-hide-btn--active {
+  background: #dcfce7;
+  color: #16a34a;
+  opacity: 1;
+}
+
+[data-theme="dark"] .aps-hide-btn {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .aps-hide-btn:hover {
+  background: #1f2937;
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .aps-hide-btn--active {
+  background: #064e3b;
+  color: #6ee7b7;
+}
