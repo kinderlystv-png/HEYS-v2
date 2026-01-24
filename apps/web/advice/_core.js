@@ -222,7 +222,12 @@
      */
     function rateAdvice(adviceId, isPositive) {
         try {
-            const ratings = JSON.parse(localStorage.getItem(RATING_KEY) || '{}');
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const stored = HEYS.store?.get
+                ? HEYS.store.get(RATING_KEY, null)
+                : (U.lsGet ? U.lsGet(RATING_KEY, null) : JSON.parse(localStorage.getItem(RATING_KEY) || 'null'));
+            const ratings = stored || {};
             if (!ratings[adviceId]) {
                 ratings[adviceId] = { positive: 0, negative: 0 };
             }
@@ -232,7 +237,13 @@
                 ratings[adviceId].negative++;
             }
             ratings[adviceId].lastRated = Date.now();
-            localStorage.setItem(RATING_KEY, JSON.stringify(ratings));
+            if (HEYS.store?.set) {
+                HEYS.store.set(RATING_KEY, ratings);
+            } else if (U.lsSet) {
+                U.lsSet(RATING_KEY, ratings);
+            } else {
+                localStorage.setItem(RATING_KEY, JSON.stringify(ratings));
+            }
         } catch (e) { }
     }
 
@@ -243,7 +254,12 @@
      */
     function getAdviceRating(adviceId) {
         try {
-            const ratings = JSON.parse(localStorage.getItem(RATING_KEY) || '{}');
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const stored = HEYS.store?.get
+                ? HEYS.store.get(RATING_KEY, null)
+                : (U.lsGet ? U.lsGet(RATING_KEY, null) : JSON.parse(localStorage.getItem(RATING_KEY) || 'null'));
+            const ratings = stored || {};
             const r = ratings[adviceId] || { positive: 0, negative: 0 };
             const total = r.positive + r.negative;
             const score = total > 0 ? (r.positive - r.negative) / total : 0;
@@ -259,9 +275,11 @@
      */
     function getAllRatings() {
         try {
-            const data = localStorage.getItem(RATING_KEY);
-            if (!data) return {};
-            const parsed = JSON.parse(data);
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const parsed = HEYS.store?.get
+                ? (HEYS.store.get(RATING_KEY, null) || {})
+                : (U.lsGet ? (U.lsGet(RATING_KEY, null) || {}) : JSON.parse(localStorage.getItem(RATING_KEY) || 'null') || {});
 
             // Автоочистка: удаляем записи старше 60 дней
             const now = Date.now();
@@ -274,7 +292,13 @@
                 }
             });
             if (needsSave) {
-                localStorage.setItem(RATING_KEY, JSON.stringify(parsed));
+                if (HEYS.store?.set) {
+                    HEYS.store.set(RATING_KEY, parsed);
+                } else if (U.lsSet) {
+                    U.lsSet(RATING_KEY, parsed);
+                } else {
+                    localStorage.setItem(RATING_KEY, JSON.stringify(parsed));
+                }
             }
             return parsed;
         } catch (e) {
@@ -337,7 +361,11 @@
             for (const combo of COMBO_ACHIEVEMENTS) {
                 // Проверяем, не показывали ли уже это комбо
                 const shownKey = 'heys_combo_' + combo.id;
-                const lastShown = localStorage.getItem(shownKey);
+                const HEYS = window.HEYS || {};
+                const U = HEYS.utils || {};
+                const lastShown = HEYS.store?.get
+                    ? HEYS.store.get(shownKey, null)
+                    : (U.lsGet ? U.lsGet(shownKey, null) : localStorage.getItem(shownKey));
                 if (lastShown) {
                     const daysSince = (Date.now() - parseInt(lastShown, 10)) / (1000 * 60 * 60 * 24);
                     if (daysSince < 7) continue; // Не чаще раза в неделю
@@ -403,7 +431,16 @@
      */
     function markComboShown(comboId) {
         try {
-            localStorage.setItem('heys_combo_' + comboId, String(Date.now()));
+            const key = 'heys_combo_' + comboId;
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            if (HEYS.store?.set) {
+                HEYS.store.set(key, String(Date.now()));
+            } else if (U.lsSet) {
+                U.lsSet(key, String(Date.now()));
+            } else {
+                localStorage.setItem(key, String(Date.now()));
+            }
         } catch (e) { }
     }
 
@@ -418,7 +455,12 @@
      */
     function trackProductPattern(productName, hour) {
         try {
-            const patterns = JSON.parse(localStorage.getItem(RECOMMENDATION_PATTERNS_KEY) || '{}');
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const stored = HEYS.store?.get
+                ? HEYS.store.get(RECOMMENDATION_PATTERNS_KEY, null)
+                : (U.lsGet ? U.lsGet(RECOMMENDATION_PATTERNS_KEY, null) : JSON.parse(localStorage.getItem(RECOMMENDATION_PATTERNS_KEY) || 'null'));
+            const patterns = stored || {};
             const key = productName.toLowerCase().slice(0, 20); // Первые 20 символов
 
             if (!patterns[key]) {
@@ -434,7 +476,13 @@
                 patterns[key].hours = patterns[key].hours.slice(-10);
             }
 
-            localStorage.setItem(RECOMMENDATION_PATTERNS_KEY, JSON.stringify(patterns));
+            if (HEYS.store?.set) {
+                HEYS.store.set(RECOMMENDATION_PATTERNS_KEY, patterns);
+            } else if (U.lsSet) {
+                U.lsSet(RECOMMENDATION_PATTERNS_KEY, patterns);
+            } else {
+                localStorage.setItem(RECOMMENDATION_PATTERNS_KEY, JSON.stringify(patterns));
+            }
         } catch (e) { }
     }
 
@@ -445,7 +493,12 @@
      */
     function getSmartRecommendation(currentHour) {
         try {
-            const patterns = JSON.parse(localStorage.getItem(RECOMMENDATION_PATTERNS_KEY) || '{}');
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const stored = HEYS.store?.get
+                ? HEYS.store.get(RECOMMENDATION_PATTERNS_KEY, null)
+                : (U.lsGet ? U.lsGet(RECOMMENDATION_PATTERNS_KEY, null) : JSON.parse(localStorage.getItem(RECOMMENDATION_PATTERNS_KEY) || 'null'));
+            const patterns = stored || {};
 
             let bestMatch = null;
             let bestScore = 0;
@@ -628,8 +681,11 @@
      */
     function getAdviceSettings() {
         try {
-            const U = window.HEYS?.utils || {};
-            const stored = U.lsGet ? U.lsGet(ADVICE_SETTINGS_KEY, null) : JSON.parse(localStorage.getItem(ADVICE_SETTINGS_KEY) || 'null');
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const stored = HEYS.store?.get
+                ? HEYS.store.get(ADVICE_SETTINGS_KEY, null)
+                : (U.lsGet ? U.lsGet(ADVICE_SETTINGS_KEY, null) : JSON.parse(localStorage.getItem(ADVICE_SETTINGS_KEY) || 'null'));
             if (stored) {
                 return { ...DEFAULT_ADVICE_SETTINGS, ...stored };
             }
@@ -646,8 +702,11 @@
         try {
             const current = getAdviceSettings();
             const merged = { ...current, ...settings };
-            const U = window.HEYS?.utils || {};
-            if (U.lsSet) {
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            if (HEYS.store?.set) {
+                HEYS.store.set(ADVICE_SETTINGS_KEY, merged);
+            } else if (U.lsSet) {
                 U.lsSet(ADVICE_SETTINGS_KEY, merged);
             } else {
                 localStorage.setItem(ADVICE_SETTINGS_KEY, JSON.stringify(merged));
@@ -689,8 +748,12 @@
      */
     function getPersonalBests() {
         try {
-            const stored = localStorage.getItem(PERSONAL_BESTS_KEY);
-            return stored ? JSON.parse(stored) : {};
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const stored = HEYS.store?.get
+                ? HEYS.store.get(PERSONAL_BESTS_KEY, null)
+                : (U.lsGet ? U.lsGet(PERSONAL_BESTS_KEY, null) : JSON.parse(localStorage.getItem(PERSONAL_BESTS_KEY) || 'null'));
+            return stored || {};
         } catch (e) {
             return {};
         }
@@ -727,7 +790,15 @@
         if (isNewRecord && value > 0) {
             bests[metric] = { value, date, previous: previousValue };
             try {
-                localStorage.setItem(PERSONAL_BESTS_KEY, JSON.stringify(bests));
+                const HEYS = window.HEYS || {};
+                const U = HEYS.utils || {};
+                if (HEYS.store?.set) {
+                    HEYS.store.set(PERSONAL_BESTS_KEY, bests);
+                } else if (U.lsSet) {
+                    U.lsSet(PERSONAL_BESTS_KEY, bests);
+                } else {
+                    localStorage.setItem(PERSONAL_BESTS_KEY, JSON.stringify(bests));
+                }
             } catch (e) { }
 
             return {
@@ -781,9 +852,19 @@
      */
     function markChainStart(chainId) {
         try {
-            const chains = JSON.parse(localStorage.getItem(CHAIN_STORAGE_KEY) || '{}');
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const chains = HEYS.store?.get
+                ? (HEYS.store.get(CHAIN_STORAGE_KEY, null) || {})
+                : (U.lsGet ? (U.lsGet(CHAIN_STORAGE_KEY, null) || {}) : JSON.parse(localStorage.getItem(CHAIN_STORAGE_KEY) || 'null') || {});
             chains[chainId] = Date.now();
-            localStorage.setItem(CHAIN_STORAGE_KEY, JSON.stringify(chains));
+            if (HEYS.store?.set) {
+                HEYS.store.set(CHAIN_STORAGE_KEY, chains);
+            } else if (U.lsSet) {
+                U.lsSet(CHAIN_STORAGE_KEY, chains);
+            } else {
+                localStorage.setItem(CHAIN_STORAGE_KEY, JSON.stringify(chains));
+            }
         } catch (e) { }
     }
 
@@ -797,7 +878,11 @@
         if (!chainConfig) return null;
 
         try {
-            const chains = JSON.parse(localStorage.getItem(CHAIN_STORAGE_KEY) || '{}');
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const chains = HEYS.store?.get
+                ? (HEYS.store.get(CHAIN_STORAGE_KEY, null) || {})
+                : (U.lsGet ? (U.lsGet(CHAIN_STORAGE_KEY, null) || {}) : JSON.parse(localStorage.getItem(CHAIN_STORAGE_KEY) || 'null') || {});
             const startTime = chains[chainId];
             if (!startTime) return null;
 
@@ -805,7 +890,13 @@
             if (minutesPassed >= chainConfig.delayMinutes) {
                 // Удаляем из chains, чтобы не показать снова
                 delete chains[chainId];
-                localStorage.setItem(CHAIN_STORAGE_KEY, JSON.stringify(chains));
+                if (HEYS.store?.set) {
+                    HEYS.store.set(CHAIN_STORAGE_KEY, chains);
+                } else if (U.lsSet) {
+                    U.lsSet(CHAIN_STORAGE_KEY, chains);
+                } else {
+                    localStorage.setItem(CHAIN_STORAGE_KEY, JSON.stringify(chains));
+                }
 
                 return chainConfig.next;
             }
@@ -855,12 +946,22 @@
      */
     function scheduleAdvice(advice, minutes) {
         try {
-            const scheduled = JSON.parse(localStorage.getItem(SCHEDULED_KEY) || '[]');
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const scheduled = HEYS.store?.get
+                ? (HEYS.store.get(SCHEDULED_KEY, null) || [])
+                : (U.lsGet ? (U.lsGet(SCHEDULED_KEY, null) || []) : JSON.parse(localStorage.getItem(SCHEDULED_KEY) || 'null') || []);
             scheduled.push({
                 advice,
                 showAt: Date.now() + minutes * 60 * 1000
             });
-            localStorage.setItem(SCHEDULED_KEY, JSON.stringify(scheduled));
+            if (HEYS.store?.set) {
+                HEYS.store.set(SCHEDULED_KEY, scheduled);
+            } else if (U.lsSet) {
+                U.lsSet(SCHEDULED_KEY, scheduled);
+            } else {
+                localStorage.setItem(SCHEDULED_KEY, JSON.stringify(scheduled));
+            }
 
             // Уведомление об отложке
             window.dispatchEvent(new CustomEvent('heysAdviceScheduled', {
@@ -875,7 +976,11 @@
      */
     function getScheduledAdvices() {
         try {
-            const scheduled = JSON.parse(localStorage.getItem(SCHEDULED_KEY) || '[]');
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const scheduled = HEYS.store?.get
+                ? (HEYS.store.get(SCHEDULED_KEY, null) || [])
+                : (U.lsGet ? (U.lsGet(SCHEDULED_KEY, null) || []) : JSON.parse(localStorage.getItem(SCHEDULED_KEY) || 'null') || []);
             if (scheduled.length === 0) return []; // Ничего нет — не трогаем storage
 
             const now = Date.now();
@@ -885,7 +990,13 @@
 
             // Обновляем storage ТОЛЬКО если есть готовые советы (чтобы не спамить)
             if (ready.length > 0) {
-                localStorage.setItem(SCHEDULED_KEY, JSON.stringify(remaining));
+                if (HEYS.store?.set) {
+                    HEYS.store.set(SCHEDULED_KEY, remaining);
+                } else if (U.lsSet) {
+                    U.lsSet(SCHEDULED_KEY, remaining);
+                } else {
+                    localStorage.setItem(SCHEDULED_KEY, JSON.stringify(remaining));
+                }
             }
 
             return ready.map(s => ({
@@ -907,7 +1018,11 @@
      */
     function getScheduledCount() {
         try {
-            const scheduled = JSON.parse(localStorage.getItem(SCHEDULED_KEY) || '[]');
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const scheduled = HEYS.store?.get
+                ? (HEYS.store.get(SCHEDULED_KEY, null) || [])
+                : (U.lsGet ? (U.lsGet(SCHEDULED_KEY, null) || []) : JSON.parse(localStorage.getItem(SCHEDULED_KEY) || 'null') || []);
             return scheduled.length;
         } catch (e) {
             return 0;
@@ -1146,8 +1261,20 @@
         try {
             if (visibleMs < QUICK_DISMISS_THRESHOLD_MS) {
                 const key = 'heys_dismiss_' + adviceId;
-                const count = parseInt(localStorage.getItem(key) || '0', 10);
-                localStorage.setItem(key, String(count + 1));
+                const HEYS = window.HEYS || {};
+                const U = HEYS.utils || {};
+                const stored = HEYS.store?.get
+                    ? HEYS.store.get(key, null)
+                    : (U.lsGet ? U.lsGet(key, null) : localStorage.getItem(key));
+                const count = parseInt(stored || '0', 10);
+                const nextValue = String(count + 1);
+                if (HEYS.store?.set) {
+                    HEYS.store.set(key, nextValue);
+                } else if (U.lsSet) {
+                    U.lsSet(key, nextValue);
+                } else {
+                    localStorage.setItem(key, nextValue);
+                }
             }
         } catch (e) { }
     }
@@ -1159,7 +1286,13 @@
      */
     function getDismissPenalty(adviceId) {
         try {
-            const count = parseInt(localStorage.getItem('heys_dismiss_' + adviceId) || '0', 10);
+            const key = 'heys_dismiss_' + adviceId;
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const stored = HEYS.store?.get
+                ? HEYS.store.get(key, null)
+                : (U.lsGet ? U.lsGet(key, null) : localStorage.getItem(key));
+            const count = parseInt(stored || '0', 10);
             if (count >= 3) return 0.3;  // 3+ быстрых закрытий = сильно снижаем
             if (count >= 2) return 0.5;  // 2 = умеренно
             if (count >= 1) return 0.7;  // 1 = слегка
@@ -1201,7 +1334,11 @@
 
         try {
             const key = 'heys_chain_' + prevAdviceId;
-            const shownAt = localStorage.getItem(key);
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const shownAt = HEYS.store?.get
+                ? HEYS.store.get(key, null)
+                : (U.lsGet ? U.lsGet(key, null) : localStorage.getItem(key));
             if (!shownAt) return null;
 
             const elapsed = Date.now() - parseInt(shownAt, 10);
@@ -1220,7 +1357,17 @@
     function markChainStartForAdvice(adviceId) {
         if (ADVICE_CHAINS[adviceId]) {
             try {
-                localStorage.setItem('heys_chain_' + adviceId, String(Date.now()));
+                const key = 'heys_chain_' + adviceId;
+                const HEYS = window.HEYS || {};
+                const U = HEYS.utils || {};
+                const value = String(Date.now());
+                if (HEYS.store?.set) {
+                    HEYS.store.set(key, value);
+                } else if (U.lsSet) {
+                    U.lsSet(key, value);
+                } else {
+                    localStorage.setItem(key, value);
+                }
             } catch (e) { }
         }
     }
@@ -1322,13 +1469,17 @@
     function getEmotionalState(params) {
         const { day, currentStreak, mealCount, kcalPct, totalDaysTracked, goal } = params;
         const hour = new Date().getHours();
+        const HEYS = window.HEYS || {};
+        const U = HEYS.utils || {};
 
         // Если есть goal — используем goal-aware логику
         if (goal) {
             // Вернулся после перерыва
             let lastVisitDaysAgo = 0;
             try {
-                const lastVisit = localStorage.getItem('heys_last_visit');
+                const lastVisit = HEYS.store?.get
+                    ? HEYS.store.get('heys_last_visit', null)
+                    : (U.lsGet ? U.lsGet('heys_last_visit', null) : localStorage.getItem('heys_last_visit'));
                 if (lastVisit) {
                     const last = new Date(lastVisit);
                     const now = new Date();
@@ -1373,7 +1524,9 @@
         // Вычисляем lastVisitDaysAgo из localStorage
         let lastVisitDaysAgo = 0;
         try {
-            const lastVisit = localStorage.getItem('heys_last_visit');
+            const lastVisit = HEYS.store?.get
+                ? HEYS.store.get('heys_last_visit', null)
+                : (U.lsGet ? U.lsGet('heys_last_visit', null) : localStorage.getItem('heys_last_visit'));
             if (lastVisit) {
                 const last = new Date(lastVisit);
                 const now = new Date();
@@ -1718,9 +1871,11 @@
      */
     function getTrackingStats() {
         try {
-            const data = localStorage.getItem(TRACKING_KEY);
-            if (!data) return {};
-            const parsed = JSON.parse(data);
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const parsed = HEYS.store?.get
+                ? (HEYS.store.get(TRACKING_KEY, null) || {})
+                : (U.lsGet ? (U.lsGet(TRACKING_KEY, null) || {}) : JSON.parse(localStorage.getItem(TRACKING_KEY) || 'null') || {});
 
             // Автоочистка: удаляем записи старше 30 дней
             const now = Date.now();
@@ -1733,7 +1888,13 @@
                 }
             });
             if (needsSave) {
-                localStorage.setItem(TRACKING_KEY, JSON.stringify(parsed));
+                if (HEYS.store?.set) {
+                    HEYS.store.set(TRACKING_KEY, parsed);
+                } else if (U.lsSet) {
+                    U.lsSet(TRACKING_KEY, parsed);
+                } else {
+                    localStorage.setItem(TRACKING_KEY, JSON.stringify(parsed));
+                }
             }
             return parsed;
         } catch (e) {
@@ -1747,7 +1908,15 @@
      */
     function saveTrackingStats(stats) {
         try {
-            localStorage.setItem(TRACKING_KEY, JSON.stringify(stats));
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            if (HEYS.store?.set) {
+                HEYS.store.set(TRACKING_KEY, stats);
+            } else if (U.lsSet) {
+                U.lsSet(TRACKING_KEY, stats);
+            } else {
+                localStorage.setItem(TRACKING_KEY, JSON.stringify(stats));
+            }
         } catch (e) {
             // Ignore storage errors
         }
@@ -2296,7 +2465,13 @@
      */
     function isMilestoneShown(id) {
         try {
-            return localStorage.getItem('heys_milestone_' + id) === '1';
+            const key = 'heys_milestone_' + id;
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const stored = HEYS.store?.get
+                ? HEYS.store.get(key, null)
+                : (U.lsGet ? U.lsGet(key, null) : localStorage.getItem(key));
+            return stored === '1' || stored === 1 || stored === true;
         } catch (e) {
             return false;
         }
@@ -2308,7 +2483,16 @@
      */
     function markMilestoneShown(id) {
         try {
-            localStorage.setItem('heys_milestone_' + id, '1');
+            const key = 'heys_milestone_' + id;
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            if (HEYS.store?.set) {
+                HEYS.store.set(key, '1');
+            } else if (U.lsSet) {
+                U.lsSet(key, '1');
+            } else {
+                localStorage.setItem(key, '1');
+            }
         } catch (e) {
             // Ignore storage errors
         }
@@ -2363,7 +2547,13 @@
      */
     function getPersonalBestStreak() {
         try {
-            return parseInt(localStorage.getItem('heys_best_streak') || '0', 10);
+            const key = 'heys_best_streak';
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const stored = HEYS.store?.get
+                ? HEYS.store.get(key, null)
+                : (U.lsGet ? U.lsGet(key, null) : localStorage.getItem(key));
+            return parseInt(stored || '0', 10);
         } catch (e) {
             return 0;
         }
@@ -2381,7 +2571,16 @@
             // setState во время render фазы React (Cannot update component while rendering)
             setTimeout(() => {
                 try {
-                    localStorage.setItem('heys_best_streak', String(currentStreak));
+                    const key = 'heys_best_streak';
+                    const HEYS = window.HEYS || {};
+                    const U = HEYS.utils || {};
+                    if (HEYS.store?.set) {
+                        HEYS.store.set(key, String(currentStreak));
+                    } else if (U.lsSet) {
+                        U.lsSet(key, String(currentStreak));
+                    } else {
+                        localStorage.setItem(key, String(currentStreak));
+                    }
                 } catch (e) {
                     // Ignore storage errors
                 }
