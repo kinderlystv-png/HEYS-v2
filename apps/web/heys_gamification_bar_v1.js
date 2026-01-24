@@ -54,6 +54,7 @@
             return HEYS.game && HEYS.game.getXPHistory ? HEYS.game.getXPHistory() : [];
         });
         const prevLevelRef = useRef(stats.level);
+        const [storyAchId, setStoryAchId] = useState(null);
 
         // Проверяем daily bonus и streak при монтировании + слушаем инициализацию Day
         useEffect(() => {
@@ -218,6 +219,12 @@
 
         const { title, progress } = stats;
         const progressPercent = Math.max(5, progress.percent); // Minimum 5% для визуального feedback
+        const storyAchievement = storyAchId && HEYS.game?.ACHIEVEMENTS
+            ? HEYS.game.ACHIEVEMENTS[storyAchId]
+            : null;
+        const storyUnlocked = storyAchId && HEYS.game?.isAchievementUnlocked
+            ? HEYS.game.isAchievementUnlocked(storyAchId)
+            : false;
 
         // Эффекты по уровню прогресса
         const isShimmering = progress.percent >= 80; // Блик при >80%
@@ -461,36 +468,77 @@
                 React.createElement('div', { className: 'game-panel-expanded' },
                     // Weekly Challenge Section (красивая карточка)
                     React.createElement('div', {
-                        className: `game-weekly-card ${weeklyChallenge.completed ? 'completed' : ''}`
+                        className: `game-weekly-card ${weeklyChallenge.completed ? 'completed' : ''} ${weeklyChallenge.percent >= 80 && !weeklyChallenge.completed ? 'almost-done' : ''}`
                     },
                         React.createElement('div', { className: 'weekly-header' },
-                            React.createElement('span', { className: 'weekly-icon' }, weeklyChallenge.completed ? '🏆' : '🎯'),
+                            React.createElement('span', {
+                                className: `weekly-icon ${weeklyChallenge.completed ? 'pulse-glow' : ''}`
+                            }, weeklyChallenge.completed ? '🏆' : (weeklyChallenge.icon || '🎯')),
                             React.createElement('div', { className: 'weekly-title-group' },
-                                React.createElement('span', { className: 'weekly-title' }, 'Недельный челлендж'),
+                                React.createElement('span', { className: 'weekly-title' },
+                                    weeklyChallenge.title || 'Недельный челлендж'
+                                ),
                                 React.createElement('span', { className: 'weekly-subtitle' },
                                     weeklyChallenge.completed
                                         ? '✨ Выполнено! +100 XP бонус'
-                                        : `Заработай ${weeklyChallenge.target} XP за неделю`
+                                        : weeklyChallenge.description || `${weeklyChallenge.target} за неделю`
                                 )
-                            )
+                            ),
+                            // Days remaining badge
+                            !weeklyChallenge.completed && React.createElement('div', {
+                                className: 'weekly-days-left',
+                                title: 'Дней до конца недели'
+                            }, `${7 - new Date().getDay() || 7}д`)
                         ),
                         React.createElement('div', { className: 'weekly-progress-container' },
                             React.createElement('div', { className: 'weekly-progress-bar' },
                                 React.createElement('div', {
-                                    className: 'weekly-progress-fill',
-                                    style: { width: `${weeklyChallenge.percent}%` }
+                                    className: `weekly-progress-fill ${weeklyChallenge.percent >= 80 ? 'near-complete' : ''}`,
+                                    style: {
+                                        width: `${weeklyChallenge.percent}%`,
+                                        transition: 'width 0.5s ease-out'
+                                    }
                                 }),
-                                React.createElement('div', { className: 'weekly-progress-glow' })
+                                // Milestone markers
+                                React.createElement('div', {
+                                    className: 'weekly-milestone',
+                                    style: { left: '25%' },
+                                    'data-reached': weeklyChallenge.percent >= 25
+                                }),
+                                React.createElement('div', {
+                                    className: 'weekly-milestone',
+                                    style: { left: '50%' },
+                                    'data-reached': weeklyChallenge.percent >= 50
+                                }),
+                                React.createElement('div', {
+                                    className: 'weekly-milestone',
+                                    style: { left: '75%' },
+                                    'data-reached': weeklyChallenge.percent >= 75
+                                }),
+                                weeklyChallenge.completed && React.createElement('div', { className: 'weekly-progress-glow' })
                             ),
                             React.createElement('div', { className: 'weekly-progress-labels' },
-                                React.createElement('span', { className: 'weekly-earned' }, `${weeklyChallenge.earned} XP`),
-                                React.createElement('span', { className: 'weekly-target' }, `${weeklyChallenge.target} XP`)
+                                React.createElement('span', { className: 'weekly-earned' },
+                                    `${weeklyChallenge.current || weeklyChallenge.earned || 0}${weeklyChallenge.unit || ''}`
+                                ),
+                                React.createElement('span', { className: 'weekly-target' },
+                                    `${weeklyChallenge.target}${weeklyChallenge.unit || ''}`
+                                )
                             )
                         ),
-                        React.createElement('div', { className: 'weekly-percent' },
+                        React.createElement('div', {
+                            className: `weekly-percent ${weeklyChallenge.completed ? 'completed' : weeklyChallenge.percent >= 80 ? 'almost' : ''}`
+                        },
                             weeklyChallenge.completed
-                                ? '100%'
-                                : `${weeklyChallenge.percent}%`
+                                ? '🎉 100%'
+                                : weeklyChallenge.percent >= 80
+                                    ? `🔥 ${weeklyChallenge.percent}%`
+                                    : `${weeklyChallenge.percent}%`
+                        ),
+                        // Reward preview
+                        !weeklyChallenge.completed && React.createElement('div', { className: 'weekly-reward-preview' },
+                            React.createElement('span', null, '🎁 Награда: '),
+                            React.createElement('span', { className: 'reward-xp' }, `+${weeklyChallenge.reward || 100} XP`)
                         )
                     ),
 
@@ -561,20 +609,62 @@
                                         const unlocked = HEYS.game.isAchievementUnlocked(achId);
                                         const isJustUnlocked = justUnlockedAch === achId;
                                         const rarityClass = unlocked ? `rarity-${ach.rarity}` : '';
+
+                                        // 🆕 Get progress for locked achievements
+                                        const progress = !unlocked && HEYS.game.getAchievementProgress
+                                            ? HEYS.game.getAchievementProgress(achId)
+                                            : null;
+                                        const progressPct = progress ? Math.min(100, Math.round((progress.current / progress.target) * 100)) : 0;
+                                        const isAlmostThere = progressPct >= 70 && progressPct < 100;
+
                                         return React.createElement('div', {
                                             key: achId,
-                                            className: `achievement-badge ${unlocked ? 'unlocked' : 'locked'} ${rarityClass} ${isJustUnlocked ? 'just-unlocked' : ''}`,
-                                            title: `${ach.name}: ${ach.desc}`,
-                                            style: unlocked ? { borderColor: HEYS.game.RARITY_COLORS[ach.rarity] } : {}
+                                            className: `achievement-badge ${unlocked ? 'unlocked' : 'locked'} ${rarityClass} ${isJustUnlocked ? 'just-unlocked' : ''} ${isAlmostThere ? 'almost-there' : ''}`,
+                                            title: `${ach.name}: ${ach.desc}${progress ? ` (${progress.current}/${progress.target})` : ''}`,
+                                            style: unlocked ? { borderColor: HEYS.game.RARITY_COLORS[ach.rarity] } : {},
+                                            onClick: (e) => {
+                                                e.stopPropagation();
+                                                setStoryAchId(achId);
+                                            }
                                         },
                                             React.createElement('span', { className: 'badge-icon' }, unlocked ? ach.icon : '🔒'),
-                                            React.createElement('span', { className: 'badge-xp' }, `+${ach.xp}`)
+                                            unlocked
+                                                ? React.createElement('span', { className: 'badge-xp' }, `+${ach.xp}`)
+                                                : progress && progressPct > 0 && React.createElement('span', {
+                                                    className: `badge-progress ${isAlmostThere ? 'almost' : ''}`
+                                                }, `${progressPct}%`),
+                                            // 🆕 Progress bar for locked achievements
+                                            !unlocked && progress && progressPct > 0 && React.createElement('div', {
+                                                className: 'badge-progress-bar',
+                                                style: { width: `${progressPct}%` }
+                                            })
                                         );
                                     })
                                 )
                             )
                         )
                     )
+                )
+            ),
+
+            storyAchievement && React.createElement('div', {
+                className: 'achievement-story-modal',
+                onClick: () => setStoryAchId(null)
+            },
+                React.createElement('div', {
+                    className: `achievement-story-card ${storyUnlocked ? 'unlocked' : 'locked'} rarity-${storyAchievement.rarity}`,
+                    onClick: (e) => e.stopPropagation()
+                },
+                    React.createElement('div', { className: 'achievement-story-close', onClick: () => setStoryAchId(null) }, '✕'),
+                    React.createElement('div', { className: 'achievement-story-rarity' }, storyAchievement.rarity),
+                    React.createElement('div', { className: 'achievement-story-icon' }, storyUnlocked ? storyAchievement.icon : '🔒'),
+                    React.createElement('div', { className: 'achievement-story-name' }, storyAchievement.name),
+                    React.createElement('div', { className: 'achievement-story-text' }, storyAchievement.story || storyAchievement.desc),
+                    React.createElement('div', { className: 'achievement-story-xp' }, `+${storyAchievement.xp} XP`),
+                    React.createElement('button', {
+                        className: 'achievement-story-btn',
+                        onClick: () => setStoryAchId(null)
+                    }, 'Понятно')
                 )
             )
         );

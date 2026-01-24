@@ -2476,6 +2476,137 @@ td:first-child input {
   text-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
 }
 
+/* 🆕 Weekly Challenge Improvements */
+.game-weekly-card.almost-done {
+  border-color: rgba(234, 179, 8, 0.4);
+  animation: almostDonePulse 2s ease-in-out infinite;
+}
+
+@keyframes almostDonePulse {
+
+  0%,
+  100% {
+    box-shadow: 0 4px 24px rgba(234, 179, 8, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 4px 32px rgba(234, 179, 8, 0.4);
+  }
+}
+
+.weekly-icon.pulse-glow {
+  animation: iconPulseGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes iconPulseGlow {
+
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 5px rgba(34, 197, 94, 0.5));
+  }
+
+  50% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 15px rgba(34, 197, 94, 0.8));
+  }
+}
+
+.weekly-days-left {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  margin-left: auto;
+}
+
+.weekly-milestone {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.weekly-milestone[data-reached="true"] {
+  background: rgba(34, 197, 94, 0.6);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+}
+
+.weekly-progress-fill.near-complete {
+  background: linear-gradient(90deg, #22c55e 0%, #eab308 100%);
+  animation: nearCompletePulse 1s ease-in-out infinite;
+}
+
+@keyframes nearCompletePulse {
+
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.2);
+  }
+}
+
+.weekly-percent.almost {
+  color: #eab308;
+  animation: percentPulse 1s ease-in-out infinite;
+}
+
+@keyframes percentPulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.weekly-percent.completed {
+  color: #22c55e;
+  font-weight: bold;
+  animation: completedBounce 0.5s ease-out;
+}
+
+@keyframes completedBounce {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.weekly-reward-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.weekly-reward-preview .reward-xp {
+  color: #22c55e;
+  font-weight: 600;
+}
+
 /* === 22. XP History Chart === */
 .xp-history-section {
   margin-top: 12px;
@@ -3088,6 +3219,82 @@ td:first-child input {
   opacity: 0.8;
   color: white;
   margin-top: 2px;
+}
+
+/* 🆕 Achievement progress indicator */
+.achievement-badge .badge-progress {
+  font-size: 8px;
+  opacity: 0.7;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.achievement-badge .badge-progress.almost {
+  color: #eab308;
+  font-weight: bold;
+  animation: pulseAlmost 1.5s ease-in-out infinite;
+}
+
+/* 🆕 Progress bar inside locked badges */
+.achievement-badge .badge-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  border-radius: 0 0 8px 8px;
+  transition: width 0.3s ease;
+}
+
+/* 🆕 Almost-there highlight (>70% progress) */
+.achievement-badge.almost-there {
+  opacity: 0.9;
+  filter: none;
+  border-color: rgba(234, 179, 8, 0.5);
+  animation: almostThereGlow 2s ease-in-out infinite;
+}
+
+@keyframes almostThereGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(234, 179, 8, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 15px rgba(234, 179, 8, 0.6);
+  }
+}
+
+@keyframes pulseAlmost {
+
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 🆕 Missed achievements notification */
+.game-notification.missed-achievements {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.game-notification.missed-achievements .achievement-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.game-notification.missed-achievements .mini-badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
 }
 
 /* Flying XP animation */
@@ -8906,3 +9113,262 @@ body:has(.offline-banner) .wrap {
 /* MODULE 01 — Base & Gamification
  * Scope: base/modern polish, cards, tabs, compact layouts, gamification badges/animations.
  */
+
+/* === RANK CEREMONY === */
+.rank-ceremony {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 8, 12, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: rankCeremonyFadeIn 0.35s ease-out;
+  padding: 16px;
+}
+
+.rank-ceremony__panel {
+  background: #ffffff;
+  border-radius: 22px;
+  max-width: 520px;
+  width: 100%;
+  padding: 36px 32px 28px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  animation: rankCeremonySlideUp 0.45s ease-out;
+}
+
+.rank-ceremony__lottie {
+  width: 220px;
+  height: 220px;
+  margin: 0 auto 12px;
+}
+
+.rank-ceremony__title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.rank-ceremony__subtitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #4f46e5;
+  margin-bottom: 16px;
+}
+
+.rank-ceremony__rankline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 14px;
+}
+
+.rank-ceremony__arrow {
+  color: #9ca3af;
+}
+
+.rank-ceremony__hint {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 18px;
+}
+
+.rank-ceremony__btn {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 22px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.rank-ceremony__btn:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.rank-ceremony--hide {
+  animation: rankCeremonyFadeOut 0.25s ease-in forwards;
+}
+
+@keyframes rankCeremonyFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes rankCeremonyFadeOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes rankCeremonySlideUp {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .rank-ceremony__panel {
+    padding: 28px 20px 22px;
+  }
+
+  .rank-ceremony__lottie {
+    width: 180px;
+    height: 180px;
+  }
+}
+
+/* === ACHIEVEMENT STORY MODAL === */
+.achievement-badge {
+  cursor: pointer;
+}
+
+.achievement-story-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 6, 10, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1800;
+  animation: storyModalFadeIn 0.25s ease-out;
+  padding: 16px;
+}
+
+.achievement-story-card {
+  position: relative;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 28px 24px 22px;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.3);
+  animation: storyModalSlideUp 0.35s ease-out;
+}
+
+.achievement-story-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(17, 24, 39, 0.08);
+  color: #111827;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.achievement-story-rarity {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.achievement-story-icon {
+  font-size: 56px;
+  margin-bottom: 10px;
+}
+
+.achievement-story-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 10px;
+}
+
+.achievement-story-text {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #374151;
+  margin-bottom: 16px;
+}
+
+.achievement-story-xp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.achievement-story-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 18px;
+  background: #111827;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.achievement-story-card.locked .achievement-story-icon {
+  opacity: 0.6;
+}
+
+@keyframes storyModalFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes storyModalSlideUp {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .achievement-story-card {
+    padding: 24px 18px 20px;
+  }
+
+  .achievement-story-icon {
+    font-size: 48px;
+  }
+}

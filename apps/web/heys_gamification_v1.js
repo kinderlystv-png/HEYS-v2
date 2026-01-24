@@ -6,6 +6,40 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const U = HEYS.utils || {};
 
+  const readStoredValue = (key, fallback) => {
+    if (HEYS.store?.get) return HEYS.store.get(key, fallback);
+    if (U.lsGet) return U.lsGet(key, fallback);
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw == null) return fallback;
+      if (raw === 'true') return true;
+      if (raw === 'false') return false;
+      const first = raw[0];
+      if (first === '{' || first === '[') return JSON.parse(raw);
+      return raw;
+    } catch (e) {
+      return fallback;
+    }
+  };
+
+  const setStoredValue = (key, value) => {
+    if (HEYS.store?.set) {
+      HEYS.store.set(key, value);
+      return;
+    }
+    if (U.lsSet) {
+      U.lsSet(key, value);
+      return;
+    }
+    try {
+      if (value && typeof value === 'object') {
+        localStorage.setItem(key, JSON.stringify(value));
+      } else {
+        localStorage.setItem(key, String(value));
+      }
+    } catch (e) { }
+  };
+
   // ========== КОНФИГУРАЦИЯ ==========
 
   /**
@@ -66,61 +100,62 @@
   };
 
   /**
-   * Достижения (25 штук в 5 категориях)
+   * Достижения (32 штуки в 7 категориях)
    */
   const ACHIEVEMENTS = {
     // 🔥 Streak (5)
-    streak_3: { id: 'streak_3', name: 'Три дня подряд', desc: 'Streak ≥ 3 дня', xp: 30, icon: '🔥', category: 'streak', rarity: 'common' },
-    streak_7: { id: 'streak_7', name: 'Неделя успеха', desc: 'Streak ≥ 7 дней', xp: 100, icon: '🏆', category: 'streak', rarity: 'rare' },
-    streak_14: { id: 'streak_14', name: 'Две недели', desc: 'Streak ≥ 14 дней', xp: 200, icon: '⭐', category: 'streak', rarity: 'epic' },
-    streak_30: { id: 'streak_30', name: 'Месяц силы', desc: 'Streak ≥ 30 дней', xp: 500, icon: '👑', category: 'streak', rarity: 'legendary' },
-    streak_100: { id: 'streak_100', name: 'Железная воля', desc: 'Streak ≥ 100 дней', xp: 1000, icon: '💎', category: 'streak', rarity: 'mythic' },
+    streak_3: { id: 'streak_3', name: 'Три дня подряд', desc: 'Streak ≥ 3 дня', story: 'Три дня подряд — первый импульс. Ты уже в ритме.', xp: 30, icon: '🔥', category: 'streak', rarity: 'common' },
+    streak_7: { id: 'streak_7', name: 'Неделя успеха', desc: 'Streak ≥ 7 дней', story: 'Неделя дисциплины — привычка начинает закрепляться.', xp: 100, icon: '🏆', category: 'streak', rarity: 'rare' },
+    streak_14: { id: 'streak_14', name: 'Две недели', desc: 'Streak ≥ 14 дней', story: 'Две недели — это система, а не случайность.', xp: 200, icon: '⭐', category: 'streak', rarity: 'epic' },
+    streak_30: { id: 'streak_30', name: 'Месяц силы', desc: 'Streak ≥ 30 дней', story: 'Месяц силы — ты управляешь процессом.', xp: 500, icon: '👑', category: 'streak', rarity: 'legendary' },
+    streak_100: { id: 'streak_100', name: 'Железная воля', desc: 'Streak ≥ 100 дней', story: 'Сто дней — железная воля и новый образ жизни.', xp: 1000, icon: '💎', category: 'streak', rarity: 'mythic' },
 
     // 🎯 Первые шаги (5)
-    first_meal: { id: 'first_meal', name: 'Первый шаг', desc: 'Добавить первый продукт', xp: 50, icon: '🎯', category: 'onboarding', rarity: 'common' },
-    first_water: { id: 'first_water', name: 'Водный старт', desc: 'Первый раз добавить воду', xp: 20, icon: '💧', category: 'onboarding', rarity: 'common' },
-    first_training: { id: 'first_training', name: 'Активный старт', desc: 'Первая тренировка', xp: 30, icon: '🏃', category: 'onboarding', rarity: 'common' },
-    first_weight: { id: 'first_weight', name: 'Точка отсчёта', desc: 'Первый раз ввести вес', xp: 20, icon: '⚖️', category: 'onboarding', rarity: 'common' },
-    profile_complete: { id: 'profile_complete', name: 'Профиль готов', desc: 'Заполнить профиль на 100%', xp: 50, icon: '📋', category: 'onboarding', rarity: 'common' },
+    first_meal: { id: 'first_meal', name: 'Первый шаг', desc: 'Добавить первый продукт', story: 'Первый продукт — начало пути и первый кирпич привычки.', xp: 50, icon: '🎯', category: 'onboarding', rarity: 'common' },
+    first_water: { id: 'first_water', name: 'Водный старт', desc: 'Первый раз добавить воду', story: 'Первый стакан — маленький шаг к большой энергии.', xp: 20, icon: '💧', category: 'onboarding', rarity: 'common' },
+    first_training: { id: 'first_training', name: 'Активный старт', desc: 'Первая тренировка', story: 'Первая тренировка — тело услышало твой сигнал.', xp: 30, icon: '🏃', category: 'onboarding', rarity: 'common' },
+    first_weight: { id: 'first_weight', name: 'Точка отсчёта', desc: 'Первый раз ввести вес', story: 'Точка отсчёта — теперь прогресс измерим.', xp: 20, icon: '⚖️', category: 'onboarding', rarity: 'common' },
+    profile_complete: { id: 'profile_complete', name: 'Профиль готов', desc: 'Заполнить профиль на 100%', story: 'Профиль заполнен — ты настроил систему под себя.', xp: 50, icon: '📋', category: 'onboarding', rarity: 'common' },
 
     // 💎 Качество дня (4)
-    perfect_day: { id: 'perfect_day', name: 'Идеальный день', desc: 'Калории 95-105% от нормы', xp: 25, icon: '💎', category: 'quality', rarity: 'rare' },
-    perfect_week: { id: 'perfect_week', name: 'Идеальная неделя', desc: '7 идеальных дней', xp: 200, icon: '🌟', category: 'quality', rarity: 'epic' },
-    balanced_macros: { id: 'balanced_macros', name: 'Баланс БЖУ', desc: 'Все макросы 90-110%', xp: 30, icon: '⚖️', category: 'quality', rarity: 'rare' },
-    fiber_champion: { id: 'fiber_champion', name: 'Клетчатка-чемпион', desc: 'Клетчатка ≥100% 7 дней', xp: 100, icon: '🥗', category: 'quality', rarity: 'rare' },
+    perfect_day: { id: 'perfect_day', name: 'Идеальный день', desc: 'Калории 95-105% от нормы', story: 'Идеальный баланс — когда план и реальность совпали.', xp: 25, icon: '💎', category: 'quality', rarity: 'rare' },
+    perfect_week: { id: 'perfect_week', name: 'Идеальная неделя', desc: '7 идеальных дней', story: 'Семь идеальных дней — редкое мастерство.', xp: 200, icon: '🌟', category: 'quality', rarity: 'epic' },
+    balanced_macros: { id: 'balanced_macros', name: 'Баланс БЖУ', desc: 'Все макросы 90-110%', story: 'БЖУ в балансе — питание стало умным.', xp: 30, icon: '⚖️', category: 'quality', rarity: 'rare' },
+    fiber_champion: { id: 'fiber_champion', name: 'Клетчатка-чемпион', desc: 'Клетчатка ≥100% 7 дней', story: 'Клетчатка в норме — микробиом скажет спасибо.', xp: 100, icon: '🥗', category: 'quality', rarity: 'rare' },
 
     // 💧 Вода и активность (4)
-    water_day: { id: 'water_day', name: 'Водный день', desc: '100% нормы воды', xp: 15, icon: '💧', category: 'activity', rarity: 'common' },
-    water_master: { id: 'water_master', name: 'Водный мастер', desc: '100% воды 7 дней подряд', xp: 100, icon: '🌊', category: 'activity', rarity: 'rare' },
-    training_week: { id: 'training_week', name: 'Спортсмен', desc: '5 тренировок за неделю', xp: 150, icon: '💪', category: 'activity', rarity: 'epic' },
-    steps_champion: { id: 'steps_champion', name: 'Шаговой марафон', desc: '10000+ шагов 7 дней', xp: 150, icon: '👟', category: 'activity', rarity: 'epic' },
+    water_day: { id: 'water_day', name: 'Водный день', desc: '100% нормы воды', story: 'Норма воды выполнена — метаболизм работает лучше.', xp: 15, icon: '💧', category: 'activity', rarity: 'common' },
+    water_master: { id: 'water_master', name: 'Водный мастер', desc: '100% воды 7 дней подряд', story: 'Семь дней воды — гидратация стала привычкой.', xp: 100, icon: '🌊', category: 'activity', rarity: 'rare' },
+    training_week: { id: 'training_week', name: 'Спортсмен', desc: '5 тренировок за неделю', story: 'Пять тренировок — ты держишь темп.', xp: 150, icon: '💪', category: 'activity', rarity: 'epic' },
+    steps_champion: { id: 'steps_champion', name: 'Шаговой марафон', desc: '10000+ шагов 7 дней', story: '10k шагов 7 дней — движение стало стилем жизни.', xp: 150, icon: '👟', category: 'activity', rarity: 'epic' },
 
     // ⭐ Уровни (5)
-    level_5: { id: 'level_5', name: 'Ученик', desc: 'Достичь 5 уровня', xp: 50, icon: '📚', category: 'levels', rarity: 'common' },
-    level_10: { id: 'level_10', name: 'Практик', desc: 'Достичь 10 уровня', xp: 100, icon: '💪', category: 'levels', rarity: 'rare' },
-    level_15: { id: 'level_15', name: 'Эксперт', desc: 'Достичь 15 уровня', xp: 150, icon: '⭐', category: 'levels', rarity: 'epic' },
-    level_20: { id: 'level_20', name: 'Мастер', desc: 'Достичь 20 уровня', xp: 200, icon: '👑', category: 'levels', rarity: 'legendary' },
-    level_25: { id: 'level_25', name: 'Гуру', desc: 'Достичь 25 уровня', xp: 300, icon: '🏆', category: 'levels', rarity: 'mythic' },
+    level_5: { id: 'level_5', name: 'Ученик', desc: 'Достичь 5 уровня', story: 'Ты перешёл в ученики — база заложена.', xp: 50, icon: '📚', category: 'levels', rarity: 'common' },
+    level_10: { id: 'level_10', name: 'Практик', desc: 'Достичь 10 уровня', story: 'Практик: знания превращаются в действия.', xp: 100, icon: '💪', category: 'levels', rarity: 'rare' },
+    level_15: { id: 'level_15', name: 'Эксперт', desc: 'Достичь 15 уровня', story: 'Эксперт: ты видишь систему целиком.', xp: 150, icon: '⭐', category: 'levels', rarity: 'epic' },
+    level_20: { id: 'level_20', name: 'Мастер', desc: 'Достичь 20 уровня', story: 'Мастер: стабильность и контроль.', xp: 200, icon: '👑', category: 'levels', rarity: 'legendary' },
+    level_25: { id: 'level_25', name: 'Гуру', desc: 'Достичь 25 уровня', story: 'Гуру: путь пройден, ты вдохновляешь.', xp: 300, icon: '🏆', category: 'levels', rarity: 'mythic' },
 
     // 🌅 Привычки (2)
-    early_bird: { id: 'early_bird', name: 'Ранняя пташка', desc: 'Завтрак до 9:00 7 дней', xp: 100, icon: '🌅', category: 'habits', rarity: 'rare' },
-    night_owl_safe: { id: 'night_owl_safe', name: 'Без ночных перекусов', desc: 'Нет еды после 22:00 7 дней', xp: 100, icon: '🌙', category: 'habits', rarity: 'rare' },
+    early_bird: { id: 'early_bird', name: 'Ранняя пташка', desc: 'Завтрак до 9:00 7 дней', story: 'Завтрак до 9:00 — ты задаёшь правильный тон дню.', xp: 100, icon: '🌅', category: 'habits', rarity: 'rare' },
+    night_owl_safe: { id: 'night_owl_safe', name: 'Без ночных перекусов', desc: 'Нет еды после 22:00 7 дней', story: 'Без еды после 22:00 — сон и гормоны благодарны.', xp: 100, icon: '🌙', category: 'habits', rarity: 'rare' },
 
     // 💡 Советы (2)
-    advice_reader: { id: 'advice_reader', name: 'Внимательный', desc: 'Прочитать 50 советов', xp: 50, icon: '💡', category: 'habits', rarity: 'common' },
-    advice_master: { id: 'advice_master', name: 'Мудрец', desc: 'Прочитать 200 советов', xp: 150, icon: '🧠', category: 'habits', rarity: 'rare' },
+    advice_reader: { id: 'advice_reader', name: 'Внимательный', desc: 'Прочитать 50 советов', story: '50 советов — ты слушаешь и применяешь.', xp: 50, icon: '💡', category: 'habits', rarity: 'common' },
+    advice_master: { id: 'advice_master', name: 'Мудрец', desc: 'Прочитать 200 советов', story: '200 советов — мудрость в действии.', xp: 150, icon: '🧠', category: 'habits', rarity: 'rare' },
 
     // 🧠 Метаболизм (5) — НОВЫЕ для Metabolic Intelligence
-    metabolic_stable: { id: 'metabolic_stable', name: 'Стабильный метаболизм', desc: 'Оценка ≥70 7 дней подряд', xp: 100, icon: '🧠', category: 'metabolic', rarity: 'rare' },
-    crash_avoided: { id: 'crash_avoided', name: 'Срыв предотвращён', desc: 'Предупреждение о риске → успешный день', xp: 50, icon: '🛡️', category: 'metabolic', rarity: 'rare' },
-    low_risk_master: { id: 'low_risk_master', name: 'Мастер контроля', desc: 'Низкий риск срыва 14 дней', xp: 200, icon: '🎯', category: 'metabolic', rarity: 'epic' },
-    phenotype_discovered: { id: 'phenotype_discovered', name: 'Фенотип раскрыт', desc: 'Определён метаболический фенотип', xp: 100, icon: '🧬', category: 'metabolic', rarity: 'epic' },
-    weekly_wrap_viewed: { id: 'weekly_wrap_viewed', name: 'Аналитик', desc: 'Посмотреть 4 еженедельных отчёта', xp: 75, icon: '📊', category: 'metabolic', rarity: 'rare' }
+    metabolic_stable: { id: 'metabolic_stable', name: 'Стабильный метаболизм', desc: 'Оценка ≥70 7 дней подряд', story: 'Стабильный метаболизм — твой режим работает.', xp: 100, icon: '🧠', category: 'metabolic', rarity: 'rare' },
+    crash_avoided: { id: 'crash_avoided', name: 'Срыв предотвращён', desc: 'Предупреждение о риске → успешный день', story: 'Риск был высок, но ты удержал день.', xp: 50, icon: '🛡️', category: 'metabolic', rarity: 'rare' },
+    low_risk_master: { id: 'low_risk_master', name: 'Мастер контроля', desc: 'Низкий риск срыва 14 дней', story: '14 дней низкого риска — зрелая устойчивость.', xp: 200, icon: '🎯', category: 'metabolic', rarity: 'epic' },
+    phenotype_discovered: { id: 'phenotype_discovered', name: 'Фенотип раскрыт', desc: 'Определён метаболический фенотип', story: 'Фенотип определён — ты понимаешь себя.', xp: 100, icon: '🧬', category: 'metabolic', rarity: 'epic' },
+    weekly_wrap_viewed: { id: 'weekly_wrap_viewed', name: 'Аналитик', desc: 'Посмотреть 4 еженедельных отчёта', story: 'Четыре отчёта — ты анализируешь и растёшь.', xp: 75, icon: '📊', category: 'metabolic', rarity: 'rare' }
   };
 
   const ACHIEVEMENT_CATEGORIES = [
     { id: 'streak', name: '🔥 Streak', achievements: ['streak_3', 'streak_7', 'streak_14', 'streak_30', 'streak_100'] },
     { id: 'onboarding', name: '🎯 Первые шаги', achievements: ['first_meal', 'first_water', 'first_training', 'first_weight', 'profile_complete'] },
+    { id: 'advice', name: '💡 Советы', achievements: ['advice_reader', 'advice_master'] },
     { id: 'quality', name: '💎 Качество дня', achievements: ['perfect_day', 'perfect_week', 'balanced_macros', 'fiber_champion'] },
     { id: 'activity', name: '💧 Вода и активность', achievements: ['water_day', 'water_master', 'training_week', 'steps_champion'] },
     { id: 'levels', name: '⭐ Уровни', achievements: ['level_5', 'level_10', 'level_15', 'level_20', 'level_25'] },
@@ -167,7 +202,7 @@
   function loadData() {
     if (_data) return _data;
 
-    const stored = U.lsGet ? U.lsGet(STORAGE_KEY, null) : null;
+    const stored = readStoredValue(STORAGE_KEY, null);
     if (stored) {
       _data = validateAndMigrate(stored);
     } else {
@@ -290,11 +325,7 @@
   function saveData() {
     if (!_data) return;
     _data.updatedAt = Date.now();
-    if (U.lsSet) {
-      U.lsSet(STORAGE_KEY, _data);
-    } else {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(_data)); } catch (e) { }
-    }
+    setStoredValue(STORAGE_KEY, _data);
   }
 
   function calculateLevel(totalXP) {
@@ -362,8 +393,10 @@
 
     data.dailyBonusClaimed = today;
     const bonusXP = 10 * getXPMultiplier();
+    const oldLevel = data.level; // Store the old level before updating
     data.totalXP += bonusXP;
     data.level = calculateLevel(data.totalXP);
+    handleRankTransition(oldLevel, data.level);
     saveData();
 
     showNotification('daily_bonus', { xp: bonusXP, multiplier: getXPMultiplier() });
@@ -738,6 +771,23 @@
     return new Date(now.setDate(diff)).toISOString().slice(0, 10);
   }
 
+  // Получить динамическую норму воды из профиля
+  function getWaterGoalForDay() {
+    try {
+      // Пробуем HEYS.Day.getWaterGoal (если доступен)
+      if (typeof HEYS !== 'undefined' && HEYS.Day?.getWaterGoal) {
+        return HEYS.Day.getWaterGoal();
+      }
+      // Fallback: 30мл на кг веса
+      const profileStr = readStoredValue('heys_profile', null);
+      if (profileStr) {
+        const prof = JSON.parse(profileStr);
+        return Math.round((prof.weight || 70) * 30);
+      }
+    } catch (e) { /* ignore */ }
+    return 2000; // Default
+  }
+
   // ========== WEEKLY CHALLENGES ==========
 
   const WEEKLY_CHALLENGE_TYPES = [
@@ -867,22 +917,55 @@
 
     // Для XP типа — earned это XP, для остальных — считаем прогресс
     let current = 0;
+    let unit = '';
     switch (data.weeklyChallenge.type) {
-      case 'xp': current = data.weeklyChallenge.earned || 0; break;
-      case 'meals': current = data.weeklyChallenge.mealsCount || 0; break;
-      case 'water': current = data.weeklyChallenge.waterDays || 0; break;
-      case 'training': current = data.weeklyChallenge.trainingsCount || 0; break;
-      case 'perfect_days': current = data.weeklyChallenge.perfectDays || 0; break;
-      case 'streak': current = safeGetStreak(); break;
-      case 'early_bird': current = data.weeklyChallenge.earlyBirdDays || 0; break;
-      default: current = data.weeklyChallenge.earned || 0;
+      case 'xp':
+        current = data.weeklyChallenge.earned || 0;
+        unit = ' XP';
+        break;
+      case 'meals':
+        current = data.weeklyChallenge.mealsCount || 0;
+        unit = '';
+        break;
+      case 'water':
+        current = data.weeklyChallenge.waterDays || 0;
+        unit = ' дн';
+        break;
+      case 'training':
+        current = data.weeklyChallenge.trainingsCount || 0;
+        unit = '';
+        break;
+      case 'perfect_days':
+        current = data.weeklyChallenge.perfectDays || 0;
+        unit = ' дн';
+        break;
+      case 'streak':
+        current = safeGetStreak();
+        unit = ' дн';
+        break;
+      case 'early_bird':
+        current = data.weeklyChallenge.earlyBirdDays || 0;
+        unit = ' дн';
+        break;
+      default:
+        current = data.weeklyChallenge.earned || 0;
+        unit = '';
     }
+
+    // Форматируем description с target
+    const description = challengeType?.description?.replace('{target}', data.weeklyChallenge.target) || '';
 
     return {
       ...data.weeklyChallenge,
       current,
       percent: Math.min(100, Math.round((current / data.weeklyChallenge.target) * 100)),
-      completed: isCompleted
+      completed: isCompleted,
+      // Добавляем UI данные
+      title: challengeType?.name || 'Недельный челлендж',
+      description: description,
+      icon: challengeType?.icon || '🎯',
+      unit: unit,
+      reward: challengeType?.reward || 100
     };
   }
 
@@ -948,8 +1031,10 @@
         reward: challenge.reward
       });
       // Бонус за выполнение
+      const oldLevel = data.level;
       data.totalXP += challenge.reward;
       data.level = calculateLevel(data.totalXP);
+      handleRankTransition(oldLevel, data.level);
       saveData();
       celebrate();
     }
@@ -987,8 +1072,10 @@
           name: challenge.name,
           reward: challenge.reward
         });
+        const oldLevel = data.level;
         data.totalXP += challenge.reward;
         data.level = calculateLevel(data.totalXP);
+        handleRankTransition(oldLevel, data.level);
         saveData();
         celebrate();
       }
@@ -998,7 +1085,47 @@
   // ========== XP SOUND (Web Audio API) ==========
   let audioContext = null;
 
+  // 🔊 Sound settings (can be disabled in profile)
+  const SOUND_SETTINGS = {
+    enabled: true, // Default: sounds enabled
+    volume: 0.15,  // Default volume
+  };
+
+  // Load sound settings from localStorage
+  // Синхронизируем с глобальной настройкой soundEnabled из профиля
+  function loadSoundSettings() {
+    try {
+      // Проверяем глобальную настройку профиля (приоритет)
+      const globalSettings = readStoredValue('heys_settings', null);
+      if (globalSettings) {
+        const parsed = typeof globalSettings === 'string' ? JSON.parse(globalSettings) : globalSettings;
+        if (parsed.soundEnabled === false) {
+          SOUND_SETTINGS.enabled = false;
+          return SOUND_SETTINGS;
+        }
+      }
+      // Fallback: локальные настройки геймификации
+      const saved = readStoredValue('heys_sound_settings', null);
+      if (saved) {
+        const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
+        SOUND_SETTINGS.enabled = parsed.enabled !== false;
+        SOUND_SETTINGS.volume = typeof parsed.volume === 'number' ? parsed.volume : 0.15;
+      }
+    } catch (e) { /* ignore */ }
+    return SOUND_SETTINGS;
+  }
+
+  // Save sound settings
+  function saveSoundSettings(settings) {
+    Object.assign(SOUND_SETTINGS, settings);
+    setStoredValue('heys_sound_settings', SOUND_SETTINGS);
+  }
+
   function playXPSound(isLevelUp = false) {
+    // Check if sounds are enabled
+    loadSoundSettings();
+    if (!SOUND_SETTINGS.enabled) return;
+
     try {
       if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -1010,12 +1137,14 @@
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
 
+      const volume = SOUND_SETTINGS.volume;
+
       if (isLevelUp) {
         // Level up — мелодия из 3 нот (восходящая)
         oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
         oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
         oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
-        gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.4);
@@ -1023,7 +1152,7 @@
         // Обычный XP — короткий "пинг"
         oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
         oscillator.type = 'sine';
-        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(volume * 0.7, audioContext.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.15);
@@ -1031,6 +1160,193 @@
     } catch (e) {
       // Ignore audio errors
     }
+  }
+
+  // 🎵 Achievement sound (special fanfare)
+  function playAchievementSound() {
+    loadSoundSettings();
+    if (!SOUND_SETTINGS.enabled) return;
+
+    try {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      const volume = SOUND_SETTINGS.volume;
+
+      // Achievement fanfare — ascending chord
+      const notes = [
+        { freq: 523.25, time: 0 },      // C5
+        { freq: 659.25, time: 0.08 },   // E5
+        { freq: 783.99, time: 0.16 },   // G5
+        { freq: 1046.5, time: 0.24 },   // C6
+      ];
+
+      notes.forEach(({ freq, time }) => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.frequency.value = freq;
+        osc.type = 'triangle';
+        gain.gain.setValueAtTime(volume * 0.8, audioContext.currentTime + time);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + time + 0.3);
+        osc.start(audioContext.currentTime + time);
+        osc.stop(audioContext.currentTime + time + 0.3);
+      });
+    } catch (e) {
+      // Ignore audio errors
+    }
+  }
+
+  // 🏆 Rank ceremony sound (longer, more epic)
+  function playRankCeremonySound() {
+    loadSoundSettings();
+    if (!SOUND_SETTINGS.enabled) return;
+
+    try {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      const volume = SOUND_SETTINGS.volume;
+      const notes = [
+        { freq: 392.0, time: 0.0 },   // G4
+        { freq: 523.25, time: 0.1 },  // C5
+        { freq: 659.25, time: 0.22 }, // E5
+        { freq: 783.99, time: 0.36 }, // G5
+        { freq: 1046.5, time: 0.5 }   // C6
+      ];
+
+      notes.forEach(({ freq, time }) => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(volume * 0.9, audioContext.currentTime + time);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + time + 0.45);
+        osc.start(audioContext.currentTime + time);
+        osc.stop(audioContext.currentTime + time + 0.45);
+      });
+    } catch (e) {
+      // Ignore audio errors
+    }
+  }
+
+  // ========== LOTTIE LOADER ==========
+  let _lottieLoadPromise = null;
+
+  function loadLottie() {
+    if (window.lottie) return Promise.resolve(true);
+    if (_lottieLoadPromise) return _lottieLoadPromise;
+
+    _lottieLoadPromise = new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/lottie-web@5.12.2/build/player/lottie.min.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.head.appendChild(script);
+    });
+
+    return _lottieLoadPromise;
+  }
+
+  // ========== RANK CEREMONY ==========
+  let _activeRankCeremony = null;
+
+  function showRankCeremony(payload) {
+    if (!payload) return;
+
+    const existing = document.querySelector('.rank-ceremony');
+    if (existing) existing.remove();
+
+    const ceremony = document.createElement('div');
+    ceremony.className = 'rank-ceremony';
+    ceremony.setAttribute('role', 'dialog');
+    ceremony.setAttribute('aria-live', 'polite');
+
+    const panel = document.createElement('div');
+    panel.className = 'rank-ceremony__panel';
+
+    const lottieWrap = document.createElement('div');
+    lottieWrap.className = 'rank-ceremony__lottie';
+
+    const title = document.createElement('div');
+    title.className = 'rank-ceremony__title';
+    title.textContent = 'Новый ранг!';
+
+    const subtitle = document.createElement('div');
+    subtitle.className = 'rank-ceremony__subtitle';
+    subtitle.textContent = `${payload.toTitle.icon} ${payload.toTitle.title}`;
+
+    const rankLine = document.createElement('div');
+    rankLine.className = 'rank-ceremony__rankline';
+    rankLine.innerHTML = `
+      <span class="rank-ceremony__rank">${payload.fromTitle.icon} ${payload.fromTitle.title}</span>
+      <span class="rank-ceremony__arrow">→</span>
+      <span class="rank-ceremony__rank">${payload.toTitle.icon} ${payload.toTitle.title}</span>
+    `;
+
+    const hint = document.createElement('div');
+    hint.className = 'rank-ceremony__hint';
+    hint.textContent = 'Продолжай — следующие уровни уже ждут.';
+
+    const button = document.createElement('button');
+    button.className = 'rank-ceremony__btn';
+    button.type = 'button';
+    button.textContent = 'Круто!';
+
+    panel.appendChild(lottieWrap);
+    panel.appendChild(title);
+    panel.appendChild(subtitle);
+    panel.appendChild(rankLine);
+    panel.appendChild(hint);
+    panel.appendChild(button);
+    ceremony.appendChild(panel);
+
+    const removeCeremony = () => {
+      ceremony.classList.add('rank-ceremony--hide');
+      setTimeout(() => ceremony.remove(), 250);
+      _activeRankCeremony = null;
+    };
+
+    button.addEventListener('click', removeCeremony);
+    ceremony.addEventListener('click', (e) => {
+      if (e.target === ceremony) removeCeremony();
+    });
+
+    document.body.appendChild(ceremony);
+
+    _activeRankCeremony = { el: ceremony, remove: removeCeremony };
+
+    loadLottie().then((loaded) => {
+      if (!loaded || !window.lottie || !document.body.contains(ceremony)) return;
+
+      window.lottie.loadAnimation({
+        container: lottieWrap,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: 'assets/lottie/level-up-ceremony.json'
+      });
+    });
+
+    setTimeout(removeCeremony, 6000);
+  }
+
+  function handleRankTransition(oldLevel, newLevel) {
+    if (newLevel <= oldLevel) return;
+
+    const fromTitle = getLevelTitle(oldLevel);
+    const toTitle = getLevelTitle(newLevel);
+
+    if (fromTitle.title === toTitle.title) return;
+
+    playRankCeremonySound();
+    showRankCeremony({ fromTitle, toTitle });
   }
 
   // ========== XP HISTORY (7 days) ==========
@@ -1305,7 +1621,7 @@
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().slice(0, 10);
 
-      const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${dateStr}`, null) : null;
+      const dayData = readStoredValue(`heys_dayv2_${dateStr}`, null);
 
       if (dayData && conditionFn(dayData, dateStr)) {
         count++;
@@ -1322,8 +1638,24 @@
     const data = loadData();
     const newAchievements = [];
 
+    // 🔍 DEBUG LOGGING
+    const DEBUG = readStoredValue('heys_debug_gamification', null) === 'true';
+    if (DEBUG) {
+      console.log('[🎮 Gamification] checkAchievements called:', {
+        reason,
+        level: data.level,
+        totalXP: data.totalXP,
+        unlockedCount: data.unlockedAchievements?.length || 0,
+        unlocked: data.unlockedAchievements
+      });
+    }
+
     // ========== STREAK ACHIEVEMENTS ==========
     const streak = safeGetStreak();
+
+    if (DEBUG) {
+      console.log('[🎮 Gamification] Streak check:', { streak });
+    }
 
     const streakMilestones = [
       { days: 3, id: 'streak_3' },
@@ -1449,8 +1781,8 @@
     if (reason === 'water_added' && !data.unlockedAchievements.includes('water_master')) {
       const waterDays = countConsecutiveDays((dayData) => {
         if (!dayData.waterMl) return false;
-        // Базовая норма ~2000мл, проверяем ≥90%
-        const waterGoal = 2000; // TODO: использовать динамическую норму
+        // Динамическая норма из профиля или fallback 2000мл
+        const waterGoal = getWaterGoalForDay() || 2000;
         return dayData.waterMl >= waterGoal * 0.9;
       }, 14);
 
@@ -1549,6 +1881,9 @@
     }
 
     // Unlock new achievements
+    if (DEBUG && newAchievements.length > 0) {
+      console.log('[🎮 Gamification] New achievements to unlock:', newAchievements);
+    }
     for (const achId of newAchievements) {
       unlockAchievement(achId);
     }
@@ -1596,8 +1931,10 @@
     data.unlockedAchievements.push(achievementId);
 
     // Начисляем XP за достижение
+    const oldLevel = data.level;
     data.totalXP += ach.xp;
     data.level = calculateLevel(data.totalXP);
+    handleRankTransition(oldLevel, data.level);
     saveData();
 
     // Показываем notification (React компонент .game-notification)
@@ -1786,23 +2123,23 @@
 
       // metabolic_stable: оценка ≥70 7 дней подряд
       if (data.stableDaysCount >= 7 && !this.isAchievementUnlocked('metabolic_stable')) {
-        _unlockAchievement('metabolic_stable');
+        unlockAchievement('metabolic_stable');
       }
 
       // low_risk_master: низкий риск 14 дней
       if (data.lowRiskDaysCount >= 14 && !this.isAchievementUnlocked('low_risk_master')) {
-        _unlockAchievement('low_risk_master');
+        unlockAchievement('low_risk_master');
       }
 
       // phenotype_discovered: фенотип определён с confidence ≥70%
       if (phenotype?.confidence >= 70 && !this.isAchievementUnlocked('phenotype_discovered')) {
-        _unlockAchievement('phenotype_discovered');
+        unlockAchievement('phenotype_discovered');
       }
 
       // weekly_wrap_viewed: 4 просмотра отчётов
-      const wrapViewCount = U.lsGet?.('heys_weekly_wrap_view_count', 0) || 0;
+      const wrapViewCount = readStoredValue('heys_weekly_wrap_view_count', 0) || 0;
       if (wrapViewCount >= 4 && !this.isAchievementUnlocked('weekly_wrap_viewed')) {
-        _unlockAchievement('weekly_wrap_viewed');
+        unlockAchievement('weekly_wrap_viewed');
       }
     },
 
@@ -1811,7 +2148,7 @@
      */
     checkCrashAvoided(hadHighRisk, daySuccessful) {
       if (hadHighRisk && daySuccessful && !this.isAchievementUnlocked('crash_avoided')) {
-        _unlockAchievement('crash_avoided');
+        unlockAchievement('crash_avoided');
       }
     },
 
@@ -1819,8 +2156,8 @@
      * 📊 Инкремент просмотров Weekly Wrap
      */
     incrementWeeklyWrapViews() {
-      const count = (U.lsGet?.('heys_weekly_wrap_view_count', 0) || 0) + 1;
-      U.lsSet?.('heys_weekly_wrap_view_count', count);
+      const count = (readStoredValue('heys_weekly_wrap_view_count', 0) || 0) + 1;
+      setStoredValue('heys_weekly_wrap_view_count', count);
       return count;
     },
 
@@ -1831,6 +2168,177 @@
       window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: this.getStats() }));
     },
 
+    /**
+     * 🔄 Ретроактивная проверка пропущенных достижений
+     * Вызывать при загрузке приложения для исправления багов
+     */
+    async recalculateAchievements() {
+      const data = loadData();
+      const migrationKey = 'heys_achievements_v2_migrated';
+
+      // Проверяем, была ли миграция
+      if (readStoredValue(migrationKey, null) === 'true') {
+        return [];
+      }
+
+      console.log('[🎮 Gamification] Recalculating missed achievements...');
+      const missedAchievements = [];
+
+      // Получаем историю
+      const streak = safeGetStreak();
+      const stats = data.stats || {};
+
+      // === STREAK ACHIEVEMENTS ===
+      const streakMilestones = [
+        { days: 3, id: 'streak_3' },
+        { days: 7, id: 'streak_7' },
+        { days: 14, id: 'streak_14' },
+        { days: 30, id: 'streak_30' },
+        { days: 100, id: 'streak_100' }
+      ];
+
+      for (const m of streakMilestones) {
+        if (streak >= m.days && !data.unlockedAchievements.includes(m.id)) {
+          data.unlockedAchievements.push(m.id);
+          data.totalXP += ACHIEVEMENTS[m.id].xp;
+          missedAchievements.push(m.id);
+        }
+      }
+
+      // === LEVEL ACHIEVEMENTS ===
+      const levelMilestones = [5, 10, 15, 20, 25];
+      for (const lvl of levelMilestones) {
+        const achId = `level_${lvl}`;
+        if (data.level >= lvl && !data.unlockedAchievements.includes(achId)) {
+          data.unlockedAchievements.push(achId);
+          data.totalXP += ACHIEVEMENTS[achId].xp;
+          missedAchievements.push(achId);
+        }
+      }
+
+      // === ONBOARDING (check stats) ===
+      if (stats.totalProducts > 0 && !data.unlockedAchievements.includes('first_meal')) {
+        data.unlockedAchievements.push('first_meal');
+        data.totalXP += ACHIEVEMENTS.first_meal.xp;
+        missedAchievements.push('first_meal');
+      }
+
+      // Сохраняем если нашли пропущенные
+      if (missedAchievements.length > 0) {
+        data.level = calculateLevel(data.totalXP);
+        saveData();
+
+        console.log('[🎮 Gamification] Found missed achievements:', missedAchievements);
+
+        // Показываем уведомление
+        this.showMissedAchievementsNotification(missedAchievements);
+      }
+
+      // Помечаем миграцию как выполненную
+      setStoredValue(migrationKey, 'true');
+
+      return missedAchievements;
+    },
+
+    /**
+     * 🎉 Показать уведомление о найденных пропущенных достижениях
+     */
+    showMissedAchievementsNotification(achievementIds) {
+      if (!achievementIds || achievementIds.length === 0) return;
+
+      const achievements = achievementIds.map(id => ACHIEVEMENTS[id]).filter(Boolean);
+      const totalXP = achievements.reduce((sum, a) => sum + a.xp, 0);
+
+      // Используем существующую систему уведомлений
+      showNotification('missed_achievements', {
+        count: achievements.length,
+        achievements,
+        totalXP,
+        title: '🎉 Мы нашли ваши достижения!',
+        message: `Из-за технической ошибки вы не получили ${achievements.length} достижений. Исправлено! +${totalXP} XP`
+      });
+
+      // Confetti для празднования
+      if (achievements.length >= 2) {
+        celebrate();
+      }
+    },
+
+    /**
+     * ☁️ Синхронизация прогресса с облаком
+     */
+    async syncToCloud() {
+      try {
+        if (!HEYS.YandexAPI || !HEYS.cloud?.getSessionToken?.()) {
+          return false;
+        }
+
+        const data = loadData();
+        const cloudData = {
+          totalXP: data.totalXP,
+          level: data.level,
+          unlockedAchievements: data.unlockedAchievements,
+          stats: data.stats,
+          streak: data.streak,
+          lastUpdated: new Date().toISOString()
+        };
+
+        await HEYS.YandexAPI.rpc('upsert_client_kv_by_session', {
+          session_token: HEYS.cloud.getSessionToken(),
+          k: 'heys_gamification',
+          v: JSON.stringify(cloudData)
+        });
+
+        console.log('[🎮 Gamification] Synced to cloud');
+        return true;
+      } catch (e) {
+        console.warn('[🎮 Gamification] Cloud sync failed:', e.message);
+        return false;
+      }
+    },
+
+    /**
+     * ☁️ Загрузка прогресса из облака
+     */
+    async loadFromCloud() {
+      try {
+        if (!HEYS.YandexAPI || !HEYS.cloud?.getSessionToken?.()) {
+          return false;
+        }
+
+        const result = await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
+          session_token: HEYS.cloud.getSessionToken(),
+          k: 'heys_gamification'
+        });
+
+        if (result?.v) {
+          const cloudData = JSON.parse(result.v);
+          const localData = loadData();
+
+          // Мержим данные — берём максимальные значения
+          if (cloudData.totalXP > localData.totalXP) {
+            localData.totalXP = cloudData.totalXP;
+            localData.level = cloudData.level;
+          }
+
+          // Объединяем достижения
+          const allAchievements = new Set([
+            ...localData.unlockedAchievements,
+            ...(cloudData.unlockedAchievements || [])
+          ]);
+          localData.unlockedAchievements = [...allAchievements];
+
+          saveData();
+          console.log('[🎮 Gamification] Loaded from cloud');
+          return true;
+        }
+        return false;
+      } catch (e) {
+        console.warn('[🎮 Gamification] Cloud load failed:', e.message);
+        return false;
+      }
+    },
+
     // Константы для UI
     ACHIEVEMENTS,
     ACHIEVEMENT_CATEGORIES,
@@ -1838,6 +2346,21 @@
     LEVEL_TITLES,
     XP_ACTIONS,
     RANK_BADGES,
+
+    // 🔊 Sound settings API
+    getSoundSettings: loadSoundSettings,
+    setSoundSettings: saveSoundSettings,
+
+    // 📊 Achievement progress API
+    getAchievementProgress(achId) {
+      const data = loadData();
+      return data.achievementProgress?.[achId] || null;
+    },
+
+    getAllAchievementProgress() {
+      const data = loadData();
+      return data.achievementProgress || {};
+    },
 
     // Новые функции
     getRankBadge,
@@ -2001,6 +2524,7 @@
 
     // Level up notification
     if (data.level > oldLevel) {
+      handleRankTransition(oldLevel, data.level);
       const title = getLevelTitle(data.level);
 
       // Level-up sound!
@@ -2098,12 +2622,42 @@
 
   HEYS.game = game;
 
+  // 🔄 Автозапуск: ретроактивная проверка пропущенных достижений
+  // Запускается один раз при загрузке страницы (с задержкой для инициализации)
+  setTimeout(() => {
+    if (HEYS.game && typeof HEYS.game.recalculateAchievements === 'function') {
+      HEYS.game.recalculateAchievements().then(missed => {
+        if (missed && missed.length > 0) {
+          console.log('[🎮 Gamification] Recovered', missed.length, 'missed achievements');
+        }
+      }).catch(e => {
+        // Ignore errors during recalculation
+      });
+
+      // Также загружаем данные из облака если доступно
+      if (HEYS.cloud?.getSessionToken?.()) {
+        HEYS.game.loadFromCloud().catch(() => { });
+      }
+    }
+  }, 3000);
+
   // Debug
   if (typeof window !== 'undefined') {
     window.debugGame = () => {
       console.log('Game State:', loadData());
       console.log('Stats:', game.getStats());
       console.log('Achievements:', game.getAchievements().filter(a => a.unlocked));
+    };
+
+    // 🔧 Debug: enable gamification logging
+    window.enableGameDebug = () => {
+      localStorage.setItem('heys_debug_gamification', 'true');
+      console.log('[🎮 Gamification] Debug mode enabled. Reload page to see logs.');
+    };
+
+    window.disableGameDebug = () => {
+      localStorage.removeItem('heys_debug_gamification');
+      console.log('[🎮 Gamification] Debug mode disabled.');
     };
   }
 
