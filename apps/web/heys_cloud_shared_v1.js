@@ -20,6 +20,39 @@
   HEYS.CloudShared.init = function () {
     const { log, err } = getLogger();
 
+    const readStoredValue = (key, fallback = null) => {
+      let value;
+      if (HEYS.store?.get) {
+        value = HEYS.store.get(key, fallback);
+      } else if (HEYS.utils?.lsGet) {
+        value = HEYS.utils.lsGet(key, fallback);
+      } else {
+        try {
+          value = localStorage.getItem(key);
+        } catch {
+          return fallback;
+        }
+      }
+
+      if (value == null) return fallback;
+
+      if (typeof value === 'string') {
+        if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
+          try {
+            value = HEYS.store.decompress(value.slice(3));
+          } catch {
+          }
+        }
+        try {
+          return JSON.parse(value);
+        } catch {
+          return value;
+        }
+      }
+
+      return value;
+    };
+
     const toNum = (v) => {
       if (v == null || v === '') return null;
       const n = Number(v);
@@ -395,8 +428,7 @@
     cloud.createPendingProduct = async function (clientId, product) {
       try {
         const sessionToken = (typeof HEYS !== 'undefined' && HEYS.Auth?.getSessionToken?.())
-          || HEYS.utils?.lsGet?.('heys_session_token', null)
-          || (() => { try { return JSON.parse(localStorage.getItem('heys_session_token')); } catch { return null; } })();
+          || readStoredValue('heys_session_token', null);
         if (!sessionToken) {
           return { data: null, error: 'No session token', status: 'error' };
         }

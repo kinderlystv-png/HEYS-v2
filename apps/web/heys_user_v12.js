@@ -87,6 +87,78 @@
     }
   };
 
+  const tryParseStoredValue = (raw, fallback) => {
+    if (raw === null || raw === undefined) return fallback;
+    if (typeof raw === 'string') {
+      let str = raw;
+      if (str.startsWith('¤Z¤') && HEYS.store?.decompress) {
+        try { str = HEYS.store.decompress(str); } catch (_) { }
+      }
+      try { return JSON.parse(str); } catch (_) { return str; }
+    }
+    return raw;
+  };
+
+  const readStoredValue = (key, fallback) => {
+    try {
+      if (HEYS.store?.get) {
+        const stored = HEYS.store.get(key, null);
+        if (stored !== null && stored !== undefined) {
+          return tryParseStoredValue(stored, fallback);
+        }
+      }
+      if (typeof lsGet === 'function') {
+        const legacy = lsGet(key, fallback);
+        if (legacy !== null && legacy !== undefined) return legacy;
+      }
+      const raw = localStorage.getItem(key);
+      return tryParseStoredValue(raw, fallback);
+    } catch (_) {
+      return fallback;
+    }
+  };
+
+  const readGlobalValue = (key, fallback) => {
+    try {
+      if (HEYS.store?.get) {
+        const stored = HEYS.store.get(key, null);
+        if (stored !== null && stored !== undefined) {
+          return tryParseStoredValue(stored, fallback);
+        }
+      }
+      const raw = localStorage.getItem(key);
+      return tryParseStoredValue(raw, fallback);
+    } catch (_) {
+      return fallback;
+    }
+  };
+
+  const writeStoredValue = (key, value) => {
+    try {
+      if (HEYS.store?.set) {
+        HEYS.store.set(key, value);
+        return;
+      }
+      if (typeof lsSet === 'function') {
+        lsSet(key, value);
+        return;
+      }
+      const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+      localStorage.setItem(key, serialized);
+    } catch (_) { }
+  };
+
+  const writeGlobalValue = (key, value) => {
+    try {
+      if (HEYS.store?.set) {
+        HEYS.store.set(key, value);
+        return;
+      }
+      const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+      localStorage.setItem(key, serialized);
+    } catch (_) { }
+  };
+
   // Расчёт возраста из даты рождения
   function calcAgeFromBirthDate(birthDate) {
     if (!birthDate) return 0;
@@ -350,7 +422,7 @@
     });
 
     const [profile, setProfile] = React.useState(() => {
-      return lsGet('heys_profile', DEFAULT_PROFILE);
+      return readStoredValue('heys_profile', DEFAULT_PROFILE);
     });
     const [profileSaved, setProfileSaved] = React.useState(false);
 
@@ -363,20 +435,19 @@
     const SECTIONS_KEY = 'heys_profile_sections';
     const [expandedSections, setExpandedSections] = React.useState(() => {
       try {
-        const saved = localStorage.getItem(SECTIONS_KEY);
-        return saved ? JSON.parse(saved) : { basic: true };
+        return readStoredValue(SECTIONS_KEY, { basic: true }) || { basic: true };
       } catch { return { basic: true }; }
     });
     const toggleSection = (id) => {
       setExpandedSections(prev => {
         const next = { ...prev, [id]: !prev[id] };
-        try { localStorage.setItem(SECTIONS_KEY, JSON.stringify(next)); } catch { }
+        writeStoredValue(SECTIONS_KEY, next);
         return next;
       });
     };
 
     const getCurrentClientId = () => {
-      let cid = (window.HEYS && window.HEYS.currentClientId) || localStorage.getItem('heys_client_current') || '';
+      let cid = (window.HEYS && window.HEYS.currentClientId) || readGlobalValue('heys_client_current', '') || '';
       if (cid && typeof cid === 'string' && cid.startsWith('"')) {
         try { cid = JSON.parse(cid); } catch (_) { }
       }
@@ -449,7 +520,7 @@
       ];
     }, []);
 
-    const [zones, setZones] = React.useState(lsGet('heys_hr_zones', defaultZones));
+    const [zones, setZones] = React.useState(readStoredValue('heys_hr_zones', defaultZones));
     const [zonesSaved, setZonesSaved] = React.useState(false);
 
     // Перезагрузка данных при смене клиента (как в данных дня)
@@ -461,7 +532,7 @@
       const reloadData = () => {
         if (cancelled) return;
 
-        const newProfile = lsGet('heys_profile', DEFAULT_PROFILE);
+        const newProfile = readStoredValue('heys_profile', DEFAULT_PROFILE);
         newProfile.revision = newProfile.revision || 0;
         newProfile.updatedAt = newProfile.updatedAt || 0;
 
@@ -482,7 +553,7 @@
           return newProfile;
         });
 
-        const newZones = lsGet('heys_hr_zones', defaultZones);
+        const newZones = readStoredValue('heys_hr_zones', defaultZones);
         newZones.revision = newZones.revision || 0;
         newZones.updatedAt = newZones.updatedAt || 0;
 
@@ -520,7 +591,7 @@
     React.useEffect(() => {
       const handleProfileUpdate = (e) => {
         console.log('[Profile] Received profile-updated event from:', e?.detail?.source);
-        const newProfile = lsGet('heys_profile', DEFAULT_PROFILE);
+        const newProfile = readStoredValue('heys_profile', DEFAULT_PROFILE);
         setProfile(newProfile);
       };
 
@@ -548,22 +619,22 @@
         // 🔍 DEBUG: Логируем сохранение профиля
         const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
         console.log('[Profile Save] clientId:', clientId?.substring(0, 8), '| weight:', profile.weight, '| height:', profile.height, '| age:', profile.age, '| updatedAt:', profile.updatedAt);
-        lsSet('heys_profile', profile);
+        writeStoredValue('heys_profile', profile);
 
         // Синхронизация имени с списком клиентов
-        let currentClientId = localStorage.getItem('heys_client_current');
+        let currentClientId = readGlobalValue('heys_client_current', '');
         // Убираем кавычки если значение было сохранено как JSON string
         if (currentClientId && currentClientId.startsWith('"')) {
           try { currentClientId = JSON.parse(currentClientId); } catch (e) { }
         }
         if (currentClientId && profile.firstName) {
           try {
-            const clientsRaw = localStorage.getItem('heys_clients');
-            const clients = clientsRaw ? JSON.parse(clientsRaw) : [];
-            const updatedClients = clients.map(c =>
+            const clients = readGlobalValue('heys_clients', []);
+            const safeClients = Array.isArray(clients) ? clients : [];
+            const updatedClients = safeClients.map(c =>
               c.id === currentClientId ? { ...c, name: profile.firstName } : c
             );
-            localStorage.setItem('heys_clients', JSON.stringify(updatedClients));
+            writeGlobalValue('heys_clients', updatedClients);
 
             // Событие для обновления UI
             window.dispatchEvent(new CustomEvent('heys:clients-updated', {
@@ -600,7 +671,7 @@
       setZonesPending(true);
       setZonesSaved(false);
       const timer = setTimeout(() => {
-        lsSet('heys_hr_zones', zones);
+        writeStoredValue('heys_hr_zones', zones);
         setZonesPending(false);
         setZonesSaved(true);
         setTimeout(() => setZonesSaved(false), 2000);
@@ -745,7 +816,7 @@
                   const d = new Date(today);
                   d.setDate(d.getDate() - i);
                   const key = 'heys_dayv2_' + d.toISOString().slice(0, 10);
-                  const dayData = lsGet(key, null);
+                  const dayData = readStoredValue(key, null);
                   if (dayData && dayData.weightMorning > 0) {
                     currentWeight = dayData.weightMorning;
                     weightDate = d.toISOString().slice(0, 10);
@@ -790,7 +861,7 @@
                   const d = new Date();
                   d.setDate(d.getDate() - i);
                   const key = 'heys_dayv2_' + d.toISOString().slice(0, 10);
-                  const dayData = lsGet(key, null);
+                  const dayData = readStoredValue(key, null);
                   if (dayData && dayData.weightMorning > 0) {
                     currentWeight = dayData.weightMorning;
                     break;
@@ -832,7 +903,7 @@
                   const d = new Date();
                   d.setDate(d.getDate() - i);
                   const dateKey = d.toISOString().split('T')[0];
-                  const dayData = lsGet(`heys_dayv2_${dateKey}`, null);
+                  const dayData = readStoredValue(`heys_dayv2_${dateKey}`, null);
                   if (dayData) {
                     // Калории от тренировок (упрощённый расчёт без MET)
                     const trainings = dayData.trainings || [];
@@ -1485,6 +1556,9 @@
               )
             ),
 
+            // 🔊 Звуковые эффекты
+            React.createElement(SoundSettingsCard, null),
+
             // Статистика советов
             React.createElement(HEYS_AdviceStatsCard, null),
             // Настройки советов
@@ -1505,6 +1579,114 @@
         ) // end ProfileSection system
 
       ) // end profile-accordion
+    );
+  }
+
+  // === 🔊 Настройки звуков ===
+  function SoundSettingsCard() {
+    const [settings, setSettings] = React.useState(() => {
+      return window.HEYS?.game?.getSoundSettings?.() || { enabled: true, volume: 0.15 };
+    });
+
+    const handleToggle = (e) => {
+      const newSettings = { ...settings, enabled: e.target.checked };
+      setSettings(newSettings);
+      if (window.HEYS?.game?.setSoundSettings) {
+        window.HEYS.game.setSoundSettings(newSettings);
+      }
+    };
+
+    const handleVolumeChange = (e) => {
+      const volume = parseFloat(e.target.value);
+      const newSettings = { ...settings, volume };
+      setSettings(newSettings);
+      if (window.HEYS?.game?.setSoundSettings) {
+        window.HEYS.game.setSoundSettings(newSettings);
+      }
+    };
+
+    // Тест звука
+    const testSound = () => {
+      if (window.HEYS?.game) {
+        // Временно включаем звук для теста
+        const wasEnabled = settings.enabled;
+        if (!wasEnabled) {
+          window.HEYS.game.setSoundSettings({ ...settings, enabled: true });
+        }
+        // Проигрываем тестовый звук через внутренний API
+        if (typeof window.playXPSound === 'function') {
+          window.playXPSound(true);
+        }
+        // Возвращаем настройки
+        if (!wasEnabled) {
+          setTimeout(() => {
+            window.HEYS.game.setSoundSettings({ ...settings, enabled: false });
+          }, 500);
+        }
+      }
+    };
+
+    return React.createElement('div', { className: 'profile-field-group' },
+      React.createElement('div', { className: 'profile-field-group__header' },
+        React.createElement('span', { className: 'profile-field-group__icon' }, '🔊'),
+        React.createElement('span', { className: 'profile-field-group__title' }, 'Звуковые эффекты')
+      ),
+      React.createElement('div', { style: { marginTop: '8px' } },
+        // Toggle включения
+        React.createElement('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '12px'
+          }
+        },
+          React.createElement('span', { style: { color: 'var(--gray-600)' } },
+            'Звуки XP и достижений'
+          ),
+          React.createElement('label', { className: 'toggle-switch' },
+            React.createElement('input', {
+              type: 'checkbox',
+              checked: settings.enabled,
+              onChange: handleToggle
+            }),
+            React.createElement('span', { className: 'toggle-slider' })
+          )
+        ),
+        // Громкость (показываем только если включено)
+        settings.enabled && React.createElement('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '12px'
+          }
+        },
+          React.createElement('span', {
+            style: { color: 'var(--gray-500)', fontSize: '13px', minWidth: '70px' }
+          }, 'Громкость:'),
+          React.createElement('input', {
+            type: 'range',
+            min: '0.05',
+            max: '0.3',
+            step: '0.05',
+            value: settings.volume,
+            onChange: handleVolumeChange,
+            style: { flex: 1, accentColor: 'var(--primary-500)' }
+          }),
+          React.createElement('span', {
+            style: { color: 'var(--gray-600)', fontSize: '13px', minWidth: '40px' }
+          }, `${Math.round(settings.volume * 100)}%`)
+        ),
+        React.createElement('div', {
+          className: 'muted',
+          style: { fontSize: '13px' }
+        },
+          settings.enabled
+            ? '✓ Звуки включены (при получении XP и достижений)'
+            : 'Звуки отключены'
+        )
+      )
     );
   }
 
@@ -1962,7 +2144,7 @@
     const clamp = (v) => Math.max(0, Math.min(100, (U.toNum ? U.toNum(v) : Number(v) || 0)));
     // Используем глобальные lsGet/lsSet из начала модуля
     const [norms, setNorms] = React.useState(() => {
-      const val = lsGet('heys_norms', {
+      const val = readStoredValue('heys_norms', {
         carbsPct: 0, proteinPct: 0, badFatPct: 0, superbadFatPct: 0, simpleCarbPct: 0, giPct: 0, harmPct: 0, fiberPct: 0
       });
       // Служебные поля для сравнения версий с облаком
@@ -1982,7 +2164,7 @@
       setNormsPending(true);
       setNormsSaved(false);
       const timer = setTimeout(() => {
-        lsSet('heys_norms', { ...norms, updatedAt: Date.now() });
+        writeStoredValue('heys_norms', { ...norms, updatedAt: Date.now() });
         setNormsPending(false);
         setNormsSaved(true);
         setTimeout(() => {
@@ -2002,7 +2184,7 @@
       const reloadNorms = () => {
         if (cancelled) return;
 
-        const newNorms = lsGet('heys_norms', {
+        const newNorms = readStoredValue('heys_norms', {
           carbsPct: 0, proteinPct: 0, badFatPct: 0, superbadFatPct: 0, simpleCarbPct: 0, giPct: 0, harmPct: 0, fiberPct: 0
         });
         newNorms.revision = newNorms.revision || 0;

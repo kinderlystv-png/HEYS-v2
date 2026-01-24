@@ -4,6 +4,7 @@
     const DEV = window.DEV || {};
     const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
     const devWarn = typeof DEV.warn === 'function' ? DEV.warn.bind(DEV) : function () { };
+    const U = HEYS.utils || {};
     const trackError = (error, context) => {
         if (!HEYS?.analytics?.trackError) return;
         try {
@@ -30,6 +31,61 @@
 
         const utils = U || { lsGet: () => null };
 
+        const tryParseStoredValue = (raw, fallback) => {
+            if (raw === null || raw === undefined) return fallback;
+            if (typeof raw === 'string') {
+                let str = raw;
+                if (str.startsWith('¤Z¤') && HEYS.store?.decompress) {
+                    try { str = HEYS.store.decompress(str); } catch (_) { }
+                }
+                try { return JSON.parse(str); } catch (_) { return str; }
+            }
+            return raw;
+        };
+
+        const readStoredValue = (key, fallback) => {
+            try {
+                if (HEYS.store?.get) {
+                    const stored = HEYS.store.get(key, null);
+                    if (stored !== null && stored !== undefined) {
+                        return tryParseStoredValue(stored, fallback);
+                    }
+                }
+                if (utils.lsGet) {
+                    const legacy = utils.lsGet(key, fallback);
+                    if (legacy !== null && legacy !== undefined) return legacy;
+                }
+                const raw = localStorage.getItem(key);
+                return tryParseStoredValue(raw, fallback);
+            } catch {
+                return fallback;
+            }
+        };
+
+        const readGlobalValue = (key, fallback) => {
+            try {
+                if (HEYS.store?.get) {
+                    const stored = HEYS.store.get(key, null);
+                    if (stored !== null && stored !== undefined) {
+                        return tryParseStoredValue(stored, fallback);
+                    }
+                }
+                const raw = localStorage.getItem(key);
+                if (raw !== null && raw !== undefined) return tryParseStoredValue(raw, fallback);
+                if (utils.lsGet) return utils.lsGet(key, fallback);
+                return fallback;
+            } catch {
+                return fallback;
+            }
+        };
+
+        const removeGlobalValue = (key) => {
+            try {
+                if (HEYS.store?.set) HEYS.store.set(key, null);
+            } catch (_) { }
+            try { localStorage.removeItem(key); } catch (_) { }
+        };
+
         // Минимальная инициализация — только загрузка из localStorage
         // opts.skipClientRestore: не восстанавливать выбранного клиента из heys_client_current
         // opts.skipPinAuthRestore: не восстанавливать PIN-auth клиента
@@ -37,13 +93,13 @@
             const skipClientRestore = opts.skipClientRestore === true;
             const skipPinAuthRestore = opts.skipPinAuthRestore === true;
             // Загружаем продукты из localStorage
-            const storedProducts = utils.lsGet('heys_products', []);
+            const storedProducts = readStoredValue('heys_products', []);
             if (Array.isArray(storedProducts)) {
                 setProducts(storedProducts);
             }
 
             // Загружаем клиентов из localStorage (без создания тестовых!)
-            const storedClients = utils.lsGet('heys_clients', []);
+            const storedClients = readStoredValue('heys_clients', []);
             if (Array.isArray(storedClients) && storedClients.length > 0) {
                 // Фильтруем тестовых клиентов
                 const realClients = storedClients.filter(c => !c.id?.startsWith('local-user'));
@@ -54,11 +110,11 @@
             }
 
             // Проверяем есть ли сохраненный клиент
-            const currentClient = utils.lsGet('heys_client_current');
-            const storedClientsArray = utils.lsGet('heys_clients', []);
+            const currentClient = readStoredValue('heys_client_current');
+            const storedClientsArray = readStoredValue('heys_clients', []);
 
             // 🔐 PIN auth: проверяем также heys_pin_auth_client (клиент вошедший по PIN)
-            const pinAuthClient = localStorage.getItem('heys_pin_auth_client');
+            const pinAuthClient = readGlobalValue('heys_pin_auth_client', null);
 
             if (!skipClientRestore && currentClient && storedClientsArray.some((c) => c.id === currentClient)) {
                 // Куратор выбрал клиента из списка
@@ -82,7 +138,7 @@
             setIsInitializing(false);
             setStatus('offline');
             // Показываем предупреждение только если нет сохранённых данных
-            if (!utils.lsGet('heys_client_current')) {
+            if (!readStoredValue('heys_client_current')) {
                 setTimeout(() => {
                     HEYS.Toast?.warning('Нет подключения к интернету. Для первого входа нужна сеть.') || alert('Нет подключения к интернету. Для первого входа нужна сеть.');
                 }, 100);
@@ -95,9 +151,9 @@
         // ensureValidToken() может продлить его через серверную проверку
         const readStoredAuthUser = () => {
             try {
-                const stored = localStorage.getItem('heys_supabase_auth_token');
+                const stored = readGlobalValue('heys_supabase_auth_token', null);
                 if (!stored) return null;
-                const parsed = JSON.parse(stored);
+                const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored;
 
                 // 🚨 Проверяем expires_at — но НЕ удаляем токен преждевременно!
                 const expiresAt = parsed?.expires_at;
@@ -109,14 +165,14 @@
                     if (expiresAtMs < now) {
                         devLog('[AUTH] Token expired at', new Date(expiresAtMs).toISOString());
                         // Очищаем только РЕАЛЬНО истёкший Supabase токен
-                        try { localStorage.removeItem('heys_supabase_auth_token'); } catch (_) { }
+                        removeGlobalValue('heys_supabase_auth_token');
                         // 🔧 v58 FIX: НЕ удаляем session_token если есть PIN auth сессия!
                         // session_token нужен для PIN auth клиентов (не используют Supabase)
                         // Удалять только если НЕТ PIN-сессии (куратор)
-                        const hasPinAuth = localStorage.getItem('heys_pin_auth_client');
+                        const hasPinAuth = readGlobalValue('heys_pin_auth_client', null);
                         if (!hasPinAuth) {
                             devLog('[AUTH] No PIN auth, clearing session_token');
-                            try { localStorage.removeItem('heys_session_token'); } catch (_) { }
+                            removeGlobalValue('heys_session_token');
                         } else {
                             devLog('[AUTH] PIN auth present, keeping session_token');
                         }
@@ -134,11 +190,11 @@
         };
 
         const storedUser = readStoredAuthUser();
-        const savedEmail = storedUser?.email || localStorage.getItem('heys_remember_email') || localStorage.getItem('heys_saved_email');
+        const savedEmail = storedUser?.email || readGlobalValue('heys_remember_email', null) || readGlobalValue('heys_saved_email', null);
 
         // 🔐 FIX v52: PIN auth имеет ПРИОРИТЕТ над куратором!
         // Если есть PIN-сессия — НЕ восстанавливаем куратора (предотвращает ререндер)
-        const pinAuthClient = localStorage.getItem('heys_pin_auth_client');
+        const pinAuthClient = readGlobalValue('heys_pin_auth_client', null);
         const hasPinSession = !!pinAuthClient;
 
         if (storedUser && cloudRef && !hasPinSession) {
@@ -191,7 +247,7 @@
                     devWarn('[App] ❌ Ошибка восстановления PIN-сессии:', err);
                     trackError(err, { scope: 'AppAuthInit', action: 'restore_pin_session' });
                     // При ошибке показываем экран логина
-                    localStorage.removeItem('heys_pin_auth_client');
+                    removeGlobalValue('heys_pin_auth_client');
                     setClientId(null);
                 })
                 .finally(() => {

@@ -1,18 +1,18 @@
 // heys_refeed_v1.js — Модуль Refeed Day (загрузочный день)
 // Отдельный модуль для оптимизации проекта
 // v1.0.0 | 2025-12-12
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
-  
+
   // === КОНСТАНТЫ ===
   const REFEED_BOOST_PCT = 0.35; // +35% к норме
   const REFEED_THRESHOLD = 1000; // Порог долга для рекомендации (ккал)
   const REFEED_CONSECUTIVE = 5;  // Дней подряд в дефиците для рекомендации
   const REFEED_OK_RATIO = 1.35;  // Допустимый перебор в refeed день
-  
+
   // Причины refeed дня (для осознанного выбора)
   const REFEED_REASONS = [
     { id: 'deficit', icon: '💰', label: 'Восстановление после дефицита', desc: 'Накопился долг калорий' },
@@ -20,7 +20,7 @@
     { id: 'holiday', icon: '🎉', label: 'Праздник / особый день', desc: 'Запланированное превышение' },
     { id: 'rest', icon: '🧘', label: 'Ментальный отдых от диеты', desc: 'Снятие психологического напряжения' }
   ];
-  
+
   // Зоны выполнения refeed дня
   const REFEED_ZONES = {
     ok: { id: 'refeed_ok', name: 'Загрузочный день выполнен', color: '#22c55e', textColor: '#fff', icon: '✅' },
@@ -30,7 +30,53 @@
   };
 
   // === УТИЛИТЫ ===
-  
+
+  const tryParseStoredValue = (raw, fallback) => {
+    if (raw === null || raw === undefined) return fallback;
+    if (typeof raw === 'string') {
+      let str = raw;
+      if (str.startsWith('¤Z¤') && HEYS.store?.decompress) {
+        try { str = HEYS.store.decompress(str); } catch (_) { }
+      }
+      try { return JSON.parse(str); } catch (_) { return str; }
+    }
+    return raw;
+  };
+
+  const readStoredValue = (key, fallback) => {
+    try {
+      if (HEYS.store?.get) {
+        const stored = HEYS.store.get(key, null);
+        if (stored !== null && stored !== undefined) {
+          return tryParseStoredValue(stored, fallback);
+        }
+      }
+      if (HEYS.utils?.lsGet) {
+        const legacy = HEYS.utils.lsGet(key, fallback);
+        if (legacy !== null && legacy !== undefined) return legacy;
+      }
+      const raw = localStorage.getItem(key);
+      return tryParseStoredValue(raw, fallback);
+    } catch (_) {
+      return fallback;
+    }
+  };
+
+  const writeStoredValue = (key, value) => {
+    try {
+      if (HEYS.store?.set) {
+        HEYS.store.set(key, value);
+        return;
+      }
+      if (HEYS.utils?.lsSet) {
+        HEYS.utils.lsSet(key, value);
+        return;
+      }
+      const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+      localStorage.setItem(key, serialized);
+    } catch (_) { }
+  };
+
   /**
    * Получить зону refeed дня по ratio
    * @param {number} ratio - eaten/optimum
@@ -41,13 +87,13 @@
     // Защита от null/undefined — вернуть under зону (ещё не поел)
     if (!isRefeedDay) return null;
     if (ratio == null || ratio <= 0) return REFEED_ZONES.under;
-    
+
     if (ratio < 0.9) return REFEED_ZONES.under;
     if (ratio >= 0.9 && ratio <= REFEED_OK_RATIO) return REFEED_ZONES.ok;
     if (ratio > REFEED_OK_RATIO && ratio <= 1.5) return REFEED_ZONES.over;
     return REFEED_ZONES.binge;
   }
-  
+
   /**
    * Проверить нужна ли автоматическая рекомендация refeed
    * @param {Object} caloricDebt - данные о долге из heys_day_v12
@@ -57,7 +103,7 @@
     if (!caloricDebt) return false;
     return caloricDebt.needsRefeed === true;
   }
-  
+
   /**
    * Вычислить скорректированную норму для refeed дня
    * @param {number} optimum - базовая норма
@@ -68,7 +114,7 @@
     if (!isRefeedDay) return optimum;
     return Math.round(optimum * (1 + REFEED_BOOST_PCT));
   }
-  
+
   /**
    * Получить причину refeed по ID
    * @param {string} reasonId
@@ -77,7 +123,7 @@
   function getReasonById(reasonId) {
     return REFEED_REASONS.find(r => r.id === reasonId) || null;
   }
-  
+
   /**
    * Проверить должен ли день исключаться из weight trend
    * @param {Object} dayData - данные дня
@@ -86,7 +132,7 @@
   function shouldExcludeFromWeightTrend(dayData) {
     return dayData?.isRefeedDay === true;
   }
-  
+
   /**
    * Проверить нужно ли показывать шаг refeed в чек-ине
    * Показываем всегда после sleepQuality — клиент сам решает
@@ -97,7 +143,7 @@
     // Система подсветит рекомендацию если есть caloric debt
     return true;
   }
-  
+
   /**
    * Проверить сохраняется ли streak в refeed день
    * @param {number} ratio - eaten/optimum
@@ -109,17 +155,13 @@
     // Streak сохраняется при ratio 0.70-1.35 в refeed день
     return ratio >= 0.70 && ratio <= REFEED_OK_RATIO;
   }
-  
+
   /**
    * 🆕 Получить статистику refeed дней за последние N дней
    * @param {number} days - количество дней для анализа (default: 30)
    * @returns {Object} статистика { count, avgExcessPct, lastRefeedDate, reasons }
    */
   function getHistoryStats(days = 30) {
-    const lsGet = HEYS.utils?.lsGet || ((k, d) => {
-      try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; }
-    });
-    
     const stats = {
       count: 0,
       avgExcessPct: 0,
@@ -129,41 +171,41 @@
       totalExcessKcal: 0,
       daysAnalyzed: days
     };
-    
+
     const today = new Date();
     const excessList = [];
-    
+
     for (let i = 0; i < days; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const dateKey = d.toISOString().slice(0, 10);
-      const day = lsGet(`heys_dayv2_${dateKey}`, null);
-      
+      const day = readStoredValue(`heys_dayv2_${dateKey}`, null);
+
       if (day?.isRefeedDay === true) {
         stats.count++;
-        
+
         // Последний refeed
         if (!stats.lastRefeedDate) {
           stats.lastRefeedDate = dateKey;
           stats.lastRefeedDaysAgo = i;
         }
-        
+
         // Причина
         const reason = day.refeedReason || 'manual';
         stats.reasons[reason] = (stats.reasons[reason] || 0) + 1;
-        
+
         // Процент превышения (если есть данные о калориях)
         if (day.meals && Array.isArray(day.meals)) {
           // Сумма калорий
-          const profile = lsGet('heys_profile', {});
+          const profile = readStoredValue('heys_profile', {});
           const optimum = profile.optimum || 2000;
           const refeedOptimum = getRefeedOptimum(optimum, true);
-          
+
           const eatenKcal = day.meals.reduce((sum, meal) => {
             if (!meal.items) return sum;
             return sum + meal.items.reduce((s, item) => s + (item.kcal || 0), 0);
           }, 0);
-          
+
           if (eatenKcal > 0) {
             const excessPct = ((eatenKcal / refeedOptimum) - 1) * 100;
             excessList.push(excessPct);
@@ -172,15 +214,15 @@
         }
       }
     }
-    
+
     // Средний процент превышения
     if (excessList.length > 0) {
       stats.avgExcessPct = Math.round(excessList.reduce((a, b) => a + b, 0) / excessList.length);
     }
-    
+
     return stats;
   }
-  
+
   /**
    * Получить label причины с guardrail fallback
    * @param {string} reasonId - ID причины
@@ -193,7 +235,7 @@
     // Fallback для неизвестных причин (legacy данные)
     return { id: 'other', icon: '❓', label: 'Другое', desc: reasonId };
   }
-  
+
   /**
    * 🆕 Единая точка правды о refeed дне — все UI компоненты берут отсюда
    * @param {Object} dayData - данные дня { isRefeedDay, refeedReason, ... }
@@ -204,11 +246,11 @@
     const isRefeedDay = dayData?.isRefeedDay === true;
     const reasonId = dayData?.refeedReason || null;
     const reason = isRefeedDay ? getReasonLabel(reasonId) : null;
-    
+
     // Зона выполнения (если есть ratio)
     const zone = ratio !== null && isRefeedDay ? getRefeedZone(ratio, true) : null;
     const isStreakDay = ratio !== null && isRefeedDay ? isStreakPreserved(ratio, true) : null;
-    
+
     // Heatmap статус
     let heatmapStatus = null;
     if (ratio !== null && isRefeedDay) {
@@ -216,12 +258,12 @@
       else if (zone?.id === 'refeed_under' || zone?.id === 'refeed_over') heatmapStatus = 'yellow';
       else if (zone?.id === 'refeed_binge') heatmapStatus = 'red';
     }
-    
+
     // Tooltip текст
-    const tooltip = isRefeedDay 
+    const tooltip = isRefeedDay
       ? `🍕 Загрузочный день\n${reason?.icon || ''} ${reason?.label || ''}\n${ratio !== null ? '\nВыполнение: ' + Math.round(ratio * 100) + '%' : ''}\n\n✅ Это НЕ срыв — это часть стратегии\n✅ Норма расширена до 135%${isStreakDay === true ? '\n✅ Streak сохраняется' : (isStreakDay === false ? '\n⚠️ Для streak нужно 70-135%' : '')}`
       : null;
-    
+
     return {
       isRefeedDay,
       reasonId,
@@ -237,29 +279,29 @@
   }
 
   // === REACT КОМПОНЕНТЫ ===
-  
+
   /**
    * Шаг утреннего чек-ина — Refeed Day
    */
   function RefeedDayStepComponent({ data, onChange }) {
     const { useState, useCallback, useMemo, useEffect } = React;
-    
+
     // По умолчанию — обычный день (isRefeedDay = false)
     const [isRefeedDay, setIsRefeedDay] = useState(data?.isRefeedDay ?? false);
     const [refeedReason, setRefeedReason] = useState(data?.refeedReason ?? null);
-    
+
     // Сообщаем родителю начальное значение
     useEffect(() => {
       if (data?.isRefeedDay === undefined || data?.isRefeedDay === null) {
         onChange({ isRefeedDay: false, refeedReason: null });
       }
     }, []);
-    
+
     // Получаем данные о калорийном долге
     const caloricDebt = useMemo(() => {
       return HEYS.caloricDebt || null;
     }, []);
-    
+
     const needsRefeed = shouldRecommendRefeed(caloricDebt);
     const debt = caloricDebt?.debt || 0;
     const refeedBoost = caloricDebt?.refeedBoost || 0;
@@ -272,14 +314,14 @@
         setRefeedReason(null);
       }
       onChange({ isRefeedDay: value, refeedReason: value ? refeedReason : null });
-      try { navigator.vibrate?.(10); } catch(e) {}
+      try { navigator.vibrate?.(10); } catch (e) { }
     }, [onChange, refeedReason]);
-    
+
     // Обработчик выбора причины
     const handleReasonSelect = useCallback((reasonId) => {
       setRefeedReason(reasonId);
       onChange({ isRefeedDay: true, refeedReason: reasonId });
-      try { navigator.vibrate?.(15); } catch(e) {}
+      try { navigator.vibrate?.(15); } catch (e) { }
     }, [onChange]);
 
     return React.createElement('div', { className: 'refeed-step' },
@@ -294,7 +336,7 @@
         React.createElement('div', { className: 'refeed-hint-icon' }, '💡'),
         React.createElement('div', { className: 'refeed-hint-content' },
           React.createElement('div', { className: 'refeed-hint-title' }, 'Система рекомендует загрузку'),
-          React.createElement('div', { className: 'refeed-hint-details' }, 
+          React.createElement('div', { className: 'refeed-hint-details' },
             'Накопился долг: ' + debt + ' ккал. Норма сегодня +' + refeedBoost + ' ккал'
           )
         )
@@ -326,7 +368,7 @@
       isRefeedDay === true && React.createElement('div', { className: 'refeed-reasons' },
         React.createElement('div', { className: 'refeed-reasons-label' }, 'Причина загрузки:'),
         React.createElement('div', { className: 'refeed-reasons-grid' },
-          REFEED_REASONS.map(reason => 
+          REFEED_REASONS.map(reason =>
             React.createElement('button', {
               key: reason.id,
               type: 'button',
@@ -346,7 +388,7 @@
         React.createElement('div', { className: 'refeed-info-icon' }, '🎯'),
         React.createElement('div', { className: 'refeed-info-content' },
           React.createElement('div', { className: 'refeed-info-title' }, 'Сегодня норма'),
-          React.createElement('div', { className: 'refeed-info-value' }, 
+          React.createElement('div', { className: 'refeed-info-value' },
             adjustedOptimum + ' ккал',
             React.createElement('span', { className: 'refeed-info-boost' }, ' (+35%)')
           )
@@ -359,20 +401,20 @@
       )
     );
   }
-  
+
   /**
    * Карточка Refeed Day для отображения в статистике
    * @param {Object} props
    */
   function RefeedCard({ day, optimum, eatenKcal, caloricDebt }) {
     if (day?.isRefeedDay !== true) return null;
-    
+
     const adjustedOptimum = getRefeedOptimum(optimum, true);
     const ratio = eatenKcal / adjustedOptimum;
     const zone = getRefeedZone(ratio, true);
     const reason = getReasonById(day.refeedReason);
     const diff = eatenKcal - adjustedOptimum;
-    
+
     return React.createElement('div', {
       className: 'refeed-card compact-card',
       key: 'refeed-card'
@@ -380,10 +422,10 @@
       React.createElement('div', { className: 'refeed-card__header' },
         React.createElement('span', { className: 'refeed-card__icon' }, '🍕'),
         React.createElement('span', { className: 'refeed-card__title' }, 'Загрузочный день'),
-        React.createElement('span', { 
+        React.createElement('span', {
           className: 'refeed-card__status refeed-card__status--' + zone.id,
           style: { background: zone.color + '20', color: zone.color }
-        }, 
+        },
           zone.icon,
           ' ',
           eatenKcal + '/' + adjustedOptimum,
@@ -391,10 +433,10 @@
         )
       ),
       React.createElement('div', { className: 'refeed-card__info' },
-        reason && React.createElement('span', { className: 'refeed-card__badge' }, 
+        reason && React.createElement('span', { className: 'refeed-card__badge' },
           reason.icon + ' ' + reason.label
         ),
-        caloricDebt?.debt > 0 && React.createElement('span', { className: 'refeed-card__badge refeed-card__badge--debt' }, 
+        caloricDebt?.debt > 0 && React.createElement('span', { className: 'refeed-card__badge refeed-card__badge--debt' },
           '💰 Долг −' + caloricDebt.debt + ' ккал'
         )
       ),
@@ -408,15 +450,15 @@
       renderRefeedStats()
     );
   }
-  
+
   /**
    * Мини-блок статистики refeed за 30 дней
    */
   function renderRefeedStats() {
     const stats = getHistoryStats(30);
     if (!stats || stats.count === 0) return null;
-    
-    return React.createElement('div', { 
+
+    return React.createElement('div', {
       className: 'refeed-card__stats',
       title: 'Статистика загрузочных дней за 30 дней'
     },
@@ -431,22 +473,22 @@
       )
     );
   }
-  
+
   /**
    * Бейдж Refeed Day для goal progress header
    * @param {Object} props
    */
   function RefeedBadge({ isRefeedDay, needsRefeed, caloricDebt, onClick }) {
     if (!isRefeedDay && !needsRefeed) return null;
-    
+
     const isActive = isRefeedDay === true;
     const debt = caloricDebt?.debt || 0;
     const consecutiveDays = caloricDebt?.consecutiveDeficitDays || 0;
-    
-    const tooltip = isActive 
+
+    const tooltip = isActive
       ? '🍕 Загрузочный день — норма +35%\n\nЭто НЕ срыв! Цель: восстановить метаболизм.'
       : '💡 Система рекомендует загрузку\n\nДолг: ' + debt + ' ккал\n' + consecutiveDays + ' дней в дефиците';
-    
+
     return React.createElement('span', {
       className: 'refeed-badge' + (isActive ? ' refeed-badge--active' : ' refeed-badge--recommended'),
       title: tooltip,
@@ -456,13 +498,13 @@
       isActive ? '🍕 REFEED' : '💡 Рекомендуется refeed'
     );
   }
-  
+
   /**
    * Toggle кнопка для карточки калорий
    */
   function RefeedToggle({ isRefeedDay, onToggle, needsRefeed }) {
     const label = isRefeedDay ? 'Загрузка ✓' : (needsRefeed ? '+ Загрузка 💡' : '+ Загрузка');
-    
+
     return React.createElement('button', {
       type: 'button',
       className: 'refeed-toggle' + (isRefeedDay ? ' refeed-toggle--active' : '') + (needsRefeed ? ' refeed-toggle--recommended' : ''),
@@ -475,7 +517,7 @@
   }
 
   // === СОВЕТЫ ===
-  
+
   /**
    * Получить советы для Refeed Day
    * @param {Object} params - параметры из heys_advice_v1
@@ -484,17 +526,17 @@
   function getRefeedAdvices(params) {
     const { day, caloricDebt, hour, dayTot, optimum, displayOptimum } = params;
     const advices = [];
-    
+
     const isRefeedDay = day?.isRefeedDay === true;
     const needsRefeed = caloricDebt?.needsRefeed === true;
     const debt = caloricDebt?.debt || 0;
     const refeedBoost = caloricDebt?.refeedBoost || 0;
     const consecutiveDays = caloricDebt?.consecutiveDeficitDays || 0;
-    
+
     const eatenKcal = dayTot?.kcal || 0;
     const refeedOptimum = isRefeedDay ? getRefeedOptimum(optimum, true) : displayOptimum;
     const eatenPct = eatenKcal / refeedOptimum;
-    
+
     // 1. Рекомендация refeed (утро, если система рекомендует но не отмечено)
     if (needsRefeed && !isRefeedDay && hour >= 7 && hour <= 12) {
       advices.push({
@@ -509,7 +551,7 @@
         ttl: 8000
       });
     }
-    
+
     // 2. Refeed в процессе (день, мотивация съесть норму)
     if (isRefeedDay && eatenPct >= 0.3 && eatenPct < 0.85 && hour >= 12 && hour <= 20) {
       advices.push({
@@ -524,7 +566,7 @@
         ttl: 6000
       });
     }
-    
+
     // 3. Refeed выполнен (вечер, ачивка)
     if (isRefeedDay && eatenPct >= 0.9 && eatenPct <= REFEED_OK_RATIO && hour >= 19) {
       advices.push({
@@ -539,7 +581,7 @@
         ttl: 7000
       });
     }
-    
+
     // 4. Refeed перебор (предупреждение)
     if (isRefeedDay && eatenPct > REFEED_OK_RATIO && eatenPct <= 1.5) {
       advices.push({
@@ -554,7 +596,7 @@
         ttl: 5000
       });
     }
-    
+
     // 5. Refeed не использован (вечер, если рекомендовали но не отметили)
     if (needsRefeed && !isRefeedDay && hour >= 20 && eatenPct < 0.8) {
       advices.push({
@@ -569,12 +611,12 @@
         ttl: 6000
       });
     }
-    
+
     return advices;
   }
 
   // === STEP REGISTRATION ===
-  
+
   /**
    * Регистрация шага в системе чек-инов
    */
@@ -590,57 +632,50 @@
       }
       return;
     }
-    
-    const lsGet = HEYS.utils?.lsGet || ((k, d) => {
-      try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; }
-    });
-    const lsSet = HEYS.utils?.lsSet || ((k, v) => {
-      try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
-    });
-    
+
     HEYS.StepModal.registerStep('refeedDay', {
       title: 'Загрузочный день',
       hint: 'Контролируемое превышение',
       icon: '🔄',
       component: RefeedDayStepComponent,
       canSkip: true,
-      
+
       shouldShow: () => {
         try {
           // Показываем если есть автоматическая рекомендация
           const hasRecommendation = HEYS.caloricDebt?.needsRefeed || false;
           // ИЛИ если пользователь имеет право вручную выбирать
-          const profile = lsGet('heys_profile', {});
+          const profile = readStoredValue('heys_profile', {});
           const allowManual = profile.allowManualRefeed === true;
           return hasRecommendation || allowManual;
         } catch {
           return false;
         }
       },
-      
+
       getInitialData: (ctx) => {
         const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
-        const day = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
-        return { 
+        const day = readStoredValue(`heys_dayv2_${dateKey}`, {}) || {};
+        return {
           isRefeedDay: day.isRefeedDay ?? null,
           refeedReason: day.refeedReason ?? null
         };
       },
-      
+
       save: (data) => {
         const dateKey = new Date().toISOString().slice(0, 10);
-        const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
+        const day = readStoredValue(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
         day.isRefeedDay = data.isRefeedDay;
         day.refeedReason = data.refeedReason || null;
         day.updatedAt = Date.now();
-        lsSet(`heys_dayv2_${dateKey}`, day);
-        
+        writeStoredValue(`heys_dayv2_${dateKey}`, day);
+
         // Уведомляем о изменении
-        window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+        window.dispatchEvent(new CustomEvent('heys:day-updated', {
           detail: { date: dateKey, field: 'isRefeedDay', value: data.isRefeedDay, source: 'refeed-step' }
         }));
       },
-      
+
       xpAction: 'refeed_marked'
     });
   }
@@ -654,16 +689,16 @@
    */
   function renderRefeedToggle(props) {
     const { isRefeedDay, refeedReason, caloricDebt, optimum, onToggle } = props || {};
-    
+
     const needsRefeed = caloricDebt?.needsRefeed === true;
     const hasDebt = caloricDebt?.debt > 500;
-    
+
     // Кнопка показывается ВСЕГДА — пользователь сам решает когда включить refeed
     // Но если нет рекомендации и не включён — показываем компактнее
-    
+
     // Определяем причину для бейджа
     const reason = isRefeedDay && refeedReason ? getReasonById(refeedReason) : null;
-    
+
     // Wrapper для onToggle
     const handleToggle = () => {
       if (isRefeedDay) {
@@ -676,19 +711,19 @@
         onToggle?.(true, defaultReason);
       }
     };
-    
-    const label = isRefeedDay 
-      ? '🍕 Загрузка' 
+
+    const label = isRefeedDay
+      ? '🍕 Загрузка'
       : (needsRefeed ? '💡' : (hasDebt ? '🍕' : '🍕'));
-    
-    const title = isRefeedDay 
+
+    const title = isRefeedDay
       ? `Загрузочный день: ${reason?.label || 'активен'}\nКликни чтобы отменить`
       : `Отметить как загрузочный день (+35% к норме)`;
-    
+
     return React.createElement('button', {
       type: 'button',
-      className: 'refeed-toggle' + 
-        (isRefeedDay ? ' refeed-toggle--active' : '') + 
+      className: 'refeed-toggle' +
+        (isRefeedDay ? ' refeed-toggle--active' : '') +
         (needsRefeed && !isRefeedDay ? ' refeed-toggle--recommended' : '') +
         (!isRefeedDay && !needsRefeed && !hasDebt ? ' refeed-toggle--minimal' : ''),
       onClick: handleToggle,
@@ -704,15 +739,15 @@
    */
   function renderRefeedCard(props) {
     const { isRefeedDay, refeedReason, caloricDebt, eatenKcal, optimum } = props || {};
-    
+
     if (!isRefeedDay) return null;
-    
+
     // Адаптируем props к формату RefeedCard
     const dayData = {
       isRefeedDay: isRefeedDay,
       refeedReason: refeedReason
     };
-    
+
     return React.createElement(RefeedCard, {
       day: dayData,
       optimum: optimum,
@@ -722,7 +757,7 @@
   }
 
   // === ЭКСПОРТ МОДУЛЯ ===
-  
+
   HEYS.Refeed = {
     // Константы
     REFEED_BOOST_PCT,
@@ -731,7 +766,7 @@
     REFEED_OK_RATIO,
     REFEED_REASONS,
     REFEED_ZONES,
-    
+
     // Утилиты
     getRefeedZone,
     shouldRecommendRefeed,
@@ -743,28 +778,28 @@
     shouldExcludeFromWeightTrend,
     shouldShowRefeedStep,
     isStreakPreserved,
-    
+
     // Компоненты
     RefeedDayStepComponent,
     RefeedCard,
     RefeedBadge,
     RefeedToggle,
-    
+
     // Советы
     getRefeedAdvices,
-    
+
     // Инициализация
     registerStep: registerRefeedStep,
-    
+
     // Хелперы для UI
     renderRefeedToggle,  // 🆕 v1.3.1 — toggle для карточки калорий
     renderRefeedCard,    // 🆕 v1.3.3 — карточка refeed для статистики
     renderRefeedStats,
-    
+
     // Версия
     version: '1.3.3'  // v1.3.3 — добавлен renderRefeedCard
   };
-  
+
   // Автоматическая регистрация шага при загрузке
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', registerRefeedStep);

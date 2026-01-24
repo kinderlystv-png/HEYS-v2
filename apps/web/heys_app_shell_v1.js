@@ -4,6 +4,54 @@
     const HEYS = window.HEYS = window.HEYS || {};
     const React = window.React;
     if (!React) return;
+    const U = HEYS.utils || {};
+
+    const tryParseStoredValue = (raw, fallback) => {
+        if (raw === null || raw === undefined) return fallback;
+        if (typeof raw === 'string') {
+            let str = raw;
+            if (str.startsWith('¤Z¤') && HEYS.store?.decompress) {
+                try { str = HEYS.store.decompress(str); } catch (_) { }
+            }
+            try { return JSON.parse(str); } catch (_) { return str; }
+        }
+        return raw;
+    };
+
+    const readGlobalValue = (key, fallback) => {
+        try {
+            if (HEYS.store?.get) {
+                const stored = HEYS.store.get(key, null);
+                if (stored !== null && stored !== undefined) {
+                    return tryParseStoredValue(stored, fallback);
+                }
+            }
+            const raw = localStorage.getItem(key);
+            if (raw !== null && raw !== undefined) return tryParseStoredValue(raw, fallback);
+            if (U.lsGet) return U.lsGet(key, fallback);
+            return fallback;
+        } catch {
+            return fallback;
+        }
+    };
+
+    const writeGlobalValue = (key, value) => {
+        try {
+            if (HEYS.store?.set) {
+                HEYS.store.set(key, value);
+                return;
+            }
+            const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+            localStorage.setItem(key, serialized);
+        } catch { }
+    };
+
+    const removeGlobalValue = (key) => {
+        try {
+            if (HEYS.store?.set) HEYS.store.set(key, null);
+        } catch { }
+        try { localStorage.removeItem(key); } catch { }
+    };
 
     function AppHeader(props) {
         const {
@@ -214,8 +262,8 @@
                                 // Список клиентов (сортировка: последний использованный сверху)
                                 [...clients]
                                     .sort((a, b) => {
-                                        const lastA = localStorage.getItem('heys_last_client_id') === a.id ? 1 : 0;
-                                        const lastB = localStorage.getItem('heys_last_client_id') === b.id ? 1 : 0;
+                                        const lastA = readGlobalValue('heys_last_client_id', '') === a.id ? 1 : 0;
+                                        const lastB = readGlobalValue('heys_last_client_id', '') === b.id ? 1 : 0;
                                         if (lastA !== lastB) return lastB - lastA;
                                         // Затем по активности (streak)
                                         const statsA = getClientStats(a.id);
@@ -244,7 +292,7 @@
                                                         } else {
                                                             U.lsSet('heys_client_current', c.id);
                                                         }
-                                                        localStorage.setItem('heys_last_client_id', c.id);
+                                                        writeGlobalValue('heys_last_client_id', c.id);
                                                         setClientId(c.id);
                                                         window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
                                                     }
@@ -300,7 +348,7 @@
                                             fontSize: 14
                                         },
                                         onClick: () => {
-                                            localStorage.removeItem('heys_client_current');
+                                            removeGlobalValue('heys_client_current');
                                             window.HEYS.currentClientId = null;
                                             setClientId('');
                                             window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: null } }));

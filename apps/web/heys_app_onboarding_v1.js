@@ -14,12 +14,47 @@
         }
     };
 
+    const tryParseStoredValue = (raw, fallback) => {
+        if (raw === null || raw === undefined) return fallback;
+        if (typeof raw === 'string') {
+            let str = raw;
+            if (str.startsWith('¤Z¤') && HEYS.store?.decompress) {
+                try { str = HEYS.store.decompress(str); } catch (_) { }
+            }
+            try { return JSON.parse(str); } catch (_) { return str; }
+        }
+        return raw;
+    };
+
+    const readStoredValue = (key, fallback = null) => {
+        let value;
+        if (HEYS.store?.get) {
+            value = HEYS.store.get(key, null);
+        } else if (HEYS.utils?.lsGet) {
+            value = HEYS.utils.lsGet(key, fallback);
+        } else {
+            try {
+                value = localStorage.getItem(key);
+            } catch (e) {
+                return fallback;
+            }
+        }
+
+        if (value == null) return fallback;
+        return tryParseStoredValue(value, fallback);
+    };
+
+    const getStoredFlag = (key, fallback = false) => {
+        const scoped = readStoredValue(key, null);
+        if (scoped === true || scoped === 'true') return true;
+        if (scoped === false || scoped === 'false') return false;
+        return fallback;
+    };
+
     // 🎓 ONBOARDING TOUR — функция проверки и запуска
     // Отдельная функция чтобы можно было вызвать и при загрузке, и после checkin-complete
     const tryStartOnboardingTour = () => {
-        const hasSeenTour = HEYS.store && HEYS.store.get
-            ? HEYS.store.get('heys_tour_completed', false)
-            : localStorage.getItem('heys_tour_completed') === 'true';
+        const hasSeenTour = getStoredFlag('heys_tour_completed', false);
 
         // 🆕 v1.7: Используем централизованную проверку авторизации
         const isClient = isClientAuthorized();
@@ -59,8 +94,8 @@
     // Централизованные проверки авторизации (выносим в HEYS для переиспользования)
     const isCuratorSession = () => {
         // Куратор имеет JWT токен в localStorage (heys_curator_session или heys_supabase_auth_token)
-        const curatorSession = localStorage.getItem('heys_curator_session');
-        const supabaseToken = localStorage.getItem('heys_supabase_auth_token');
+        const curatorSession = readStoredValue('heys_curator_session', null);
+        const supabaseToken = readStoredValue('heys_supabase_auth_token', null);
         // Также проверяем HEYS.cloud.role если уже установлен
         return !!(curatorSession || supabaseToken || HEYS.cloud?.role === 'curator');
     };
@@ -71,7 +106,7 @@
         let clientId = null;
 
         // 1. Сначала пробуем heys_pin_auth_client (для PIN auth)
-        const pinAuthClient = localStorage.getItem('heys_pin_auth_client');
+        const pinAuthClient = readStoredValue('heys_pin_auth_client', null);
         if (pinAuthClient && pinAuthClient.length > 10) {
             clientId = pinAuthClient;
             trackOnboardingEvent('onboarding_auth_pin_client', { clientId });
@@ -80,13 +115,13 @@
         // 2. Потом heys_client_current (для curator-managed clients)
         if (!clientId) {
             try {
-                const raw = localStorage.getItem('heys_client_current');
+                const raw = readStoredValue('heys_client_current', null);
                 trackOnboardingEvent('onboarding_auth_client_current_raw', { raw });
-                if (raw) clientId = JSON.parse(raw);
+                if (raw) clientId = raw;
                 trackOnboardingEvent('onboarding_auth_client_current_parsed', { clientId });
             } catch (e) {
                 // fallback — если вдруг сохранено без JSON
-                clientId = localStorage.getItem('heys_client_current');
+                clientId = readStoredValue('heys_client_current', null);
                 trackOnboardingEvent('onboarding_auth_client_current_fallback', { clientId });
                 trackOnboardingError(e, { scope: 'onboarding_auth_client_current_parse' });
             }

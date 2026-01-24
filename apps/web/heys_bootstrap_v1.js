@@ -21,11 +21,11 @@
  * @feature-flag modular_bootstrap
  */
 
-(function() {
+(function () {
   'use strict';
 
   const HEYS = window.HEYS = window.HEYS || {};
-  
+
   // Check feature flag - если используется legacy mode, пропускаем модуль
   if (HEYS.featureFlags?.isEnabled('use_legacy_monolith')) {
     if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
@@ -33,10 +33,10 @@
     }
     return;
   }
-  
+
   // Performance tracking start
   HEYS.modulePerf?.startLoad('bootstrap');
-  
+
   if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
     console.log('[Bootstrap] 📦 Loading module...');
   }
@@ -44,16 +44,48 @@
   // ============================================================================
   // CONSTANTS
   // ============================================================================
-  
+
   const INIT_RETRY_DELAY = 100; // ms between dependency checks
   const MAX_INIT_RETRIES = 50; // max 50 retries = 5 seconds
-  
+
   let reactCheckCount = 0;
+
+  // ==========================================================================
+  // STORAGE HELPERS (store-first + ¤Z¤)
+  // ==========================================================================
+
+  const tryParseStoredValue = (raw, fallback) => {
+    if (raw === null || raw === undefined) return fallback;
+    if (typeof raw === 'string') {
+      let str = raw;
+      if (str.startsWith('¤Z¤') && HEYS.store?.decompress) {
+        try { str = HEYS.store.decompress(str); } catch (_) { }
+      }
+      try { return JSON.parse(str); } catch (_) { return str; }
+    }
+    return raw;
+  };
+
+  const readGlobalValue = (key, fallback) => {
+    try {
+      if (HEYS.store?.get) {
+        const stored = HEYS.store.get(key, null);
+        if (stored !== null && stored !== undefined) {
+          return tryParseStoredValue(stored, fallback);
+        }
+      }
+      const raw = localStorage.getItem(key);
+      if (raw !== null && raw !== undefined) return tryParseStoredValue(raw, fallback);
+      return fallback;
+    } catch {
+      return fallback;
+    }
+  };
 
   // ============================================================================
   // DEPENDENCY DETECTION
   // ============================================================================
-  
+
   /**
    * Check if React is loaded and ready
    * @returns {boolean} true if React and ReactDOM are available
@@ -61,7 +93,7 @@
   function isReactReady() {
     return !!(window.React && window.ReactDOM);
   }
-  
+
   /**
    * Check if HEYS core modules are ready
    * @returns {boolean} true if required HEYS modules are loaded
@@ -78,30 +110,30 @@
   // ============================================================================
   // LOADING UI
   // ============================================================================
-  
+
   /**
    * Show minimal loading spinner
    */
   function showInitLoader() {
     if (document.getElementById('heys-init-loader')) return;
-    
+
     const bootLog = (msg) => window.__heysLog && window.__heysLog('[DEPS] ' + msg);
     bootLog('showing loader (waiting for deps)');
-    
+
     const loader = document.createElement('div');
     loader.id = 'heys-init-loader';
     loader.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:99999';
     loader.innerHTML = '<div style="width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
     document.body.appendChild(loader);
   }
-  
+
   /**
    * Hide loading spinner
    */
   function hideInitLoader() {
     document.getElementById('heys-init-loader')?.remove();
   }
-  
+
   /**
    * Show error message when initialization fails
    */
@@ -113,19 +145,19 @@
   // ============================================================================
   // DEPENDENCY WAITING
   // ============================================================================
-  
+
   /**
    * Wait for dependencies with retry logic
    * @param {Function} onReady - Callback to execute when ready
    */
   function waitForDependencies(onReady) {
     const bootLog = (msg) => window.__heysLog && window.__heysLog('[DEPS] ' + msg);
-    
+
     // Show loader after 200ms (2 checks)
     if (reactCheckCount === 2) {
       showInitLoader();
     }
-    
+
     // Check if all dependencies are ready
     if (isReactReady() && isHeysReady()) {
       bootLog('deps ready, init app');
@@ -134,21 +166,21 @@
       onReady();
       return;
     }
-    
+
     reactCheckCount++;
     bootLog('waiting #' + reactCheckCount + ' React:' + isReactReady() + ' HEYS:' + isHeysReady());
-    
+
     // Timeout protection - max 50 attempts (5 seconds)
     if (reactCheckCount > MAX_INIT_RETRIES) {
       console.error('[Bootstrap] ❌ Timeout waiting for dependencies!');
       console.error('[Bootstrap] React ready:', isReactReady());
       console.error('[Bootstrap] HEYS ready:', isHeysReady());
       bootLog('TIMEOUT! React:' + isReactReady() + ' HEYS:' + isHeysReady());
-      
+
       showInitError();
       return;
     }
-    
+
     // Retry after delay
     setTimeout(() => waitForDependencies(onReady), INIT_RETRY_DELAY);
   }
@@ -156,43 +188,38 @@
   // ============================================================================
   // AUTHORIZATION UTILITIES
   // ============================================================================
-  
+
   /**
    * Check if current session is curator (vs client)
    * @returns {boolean} true if curator session
    */
   function isCuratorSession() {
-    const curatorToken = localStorage.getItem('heys_curator_token');
+    const curatorToken = readGlobalValue('heys_curator_token', null);
     return !!(curatorToken && curatorToken.length > 10);
   }
-  
+
   /**
    * Check if user is authorized as CLIENT (not curator, not guest)
    * @returns {boolean} true if client is authorized
    */
   function isClientAuthorized() {
     let clientId = null;
-    
+
     // 1. Try heys_pin_auth_client first (for PIN auth)
-    const pinAuthClient = localStorage.getItem('heys_pin_auth_client');
+    const pinAuthClient = readGlobalValue('heys_pin_auth_client', null);
     if (pinAuthClient && pinAuthClient.length > 10) {
       clientId = pinAuthClient;
     }
-    
+
     // 2. Then try heys_client_current (for curator-managed clients)
     if (!clientId) {
-      try {
-        const raw = localStorage.getItem('heys_client_current');
-        if (raw) clientId = JSON.parse(raw);
-      } catch(e) {
-        // Fallback - if saved without JSON
-        clientId = localStorage.getItem('heys_client_current');
-      }
+      const raw = readGlobalValue('heys_client_current', null);
+      if (raw) clientId = raw;
     }
-    
+
     const isCurator = isCuratorSession();
     const result = clientId && clientId.length > 10 && !isCurator;
-    
+
     if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
       console.log('[Bootstrap] isClientAuthorized:', {
         clientId: clientId ? 'present' : 'missing',
@@ -201,53 +228,53 @@
         result
       });
     }
-    
+
     return result;
   }
 
   // ============================================================================
   // MODULE EXPORTS
   // ============================================================================
-  
+
   // Export Bootstrap API to HEYS namespace
   HEYS.Bootstrap = {
     // Dependency detection
     isReactReady: isReactReady,
     isHeysReady: isHeysReady,
-    
+
     // Initialization
     waitForDependencies: waitForDependencies,
-    
+
     // Authorization
     isCuratorSession: isCuratorSession,
     isClientAuthorized: isClientAuthorized,
-    
+
     // UI
     showInitLoader: showInitLoader,
     hideInitLoader: hideInitLoader,
     showInitError: showInitError,
-    
+
     // Constants
     INIT_RETRY_DELAY: INIT_RETRY_DELAY,
     MAX_INIT_RETRIES: MAX_INIT_RETRIES
   };
-  
+
   // Export to window for backward compatibility
   window.waitForDependencies = waitForDependencies;
   window.isReactReady = isReactReady;
   window.isHeysReady = isHeysReady;
   window.isCuratorSession = isCuratorSession;
   window.isClientAuthorized = isClientAuthorized;
-  
+
   // Also export to legacy _tour namespace if it exists
   if (window.HEYS._tour) {
     window.HEYS._tour.isCuratorSession = isCuratorSession;
     window.HEYS._tour.isClientAuthorized = isClientAuthorized;
   }
-  
+
   // Performance tracking end
   HEYS.modulePerf?.endLoad('bootstrap', true);
-  
+
   if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
     console.log('[Bootstrap] ✅ Module loaded successfully');
   }

@@ -32,11 +32,43 @@
     }) {
         const { useMemo } = React;
         return useMemo(() => {
+            const readStoredValue = (key, fallback) => {
+                try {
+                    let value;
+                    if (window.HEYS?.store?.get) {
+                        value = window.HEYS.store.get(key, fallback);
+                    } else if (U?.lsGet) {
+                        value = U.lsGet(key, fallback);
+                    } else {
+                        value = localStorage.getItem(key);
+                    }
+
+                    if (value == null) return fallback;
+
+                    if (typeof value === 'string') {
+                        if (value.startsWith('¤Z¤') && window.HEYS?.store?.decompress) {
+                            try {
+                                value = window.HEYS.store.decompress(value.slice(3));
+                            } catch (e) { }
+                        }
+                        try {
+                            return JSON.parse(value);
+                        } catch (e) {
+                            return value;
+                        }
+                    }
+
+                    return value;
+                } catch (e) {
+                    return fallback;
+                }
+            };
+
             // Fallback chain для products: props → HEYS.products.getAll() → localStorage
             const effectiveProducts = (products && products.length > 0) ? products
                 : (window.HEYS.products?.getAll?.() || [])
                     .length > 0 ? window.HEYS.products.getAll()
-                    : (U?.lsGet?.('heys_products', []) || []);
+                    : (readStoredValue('heys_products', []) || []);
 
             // Не вычисляем пока идёт инициализация или нет продуктов
             if (isInitializing || effectiveProducts.length === 0) {
@@ -49,7 +81,7 @@
             }
 
             // Получаем profile из localStorage
-            const profile = U && U.lsGet ? U.lsGet('heys_profile', {}) : {};
+            const profile = readStoredValue('heys_profile', {});
 
             // Парсим selectedDate для определения месяца
             const parts = selectedDate.split('-');

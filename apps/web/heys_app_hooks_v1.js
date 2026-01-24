@@ -2,14 +2,95 @@
 
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
+    const U = HEYS.utils || {};
+
+    const tryParseStoredValue = (raw, fallback) => {
+        if (raw === null || raw === undefined) return fallback;
+        if (typeof raw === 'string') {
+            let str = raw;
+            if (str.startsWith('¤Z¤') && HEYS.store?.decompress) {
+                try { str = HEYS.store.decompress(str); } catch (_) { }
+            }
+            try { return JSON.parse(str); } catch (_) { return str; }
+        }
+        return raw;
+    };
+
+    const readStoredValue = (key, fallback) => {
+        try {
+            if (HEYS.store?.get) {
+                const stored = HEYS.store.get(key, null);
+                if (stored !== null && stored !== undefined) {
+                    return tryParseStoredValue(stored, fallback);
+                }
+            }
+            if (U.lsGet) {
+                const legacy = U.lsGet(key, fallback);
+                if (legacy !== null && legacy !== undefined) return legacy;
+            }
+            const raw = localStorage.getItem(key);
+            return tryParseStoredValue(raw, fallback);
+        } catch {
+            return fallback;
+        }
+    };
+
+    const readGlobalValue = (key, fallback) => {
+        try {
+            if (HEYS.store?.get) {
+                const stored = HEYS.store.get(key, null);
+                if (stored !== null && stored !== undefined) {
+                    return tryParseStoredValue(stored, fallback);
+                }
+            }
+            const raw = localStorage.getItem(key);
+            if (raw !== null && raw !== undefined) return tryParseStoredValue(raw, fallback);
+            if (U.lsGet) return U.lsGet(key, fallback);
+            return fallback;
+        } catch {
+            return fallback;
+        }
+    };
+
+    const writeStoredValue = (key, value) => {
+        try {
+            if (HEYS.store?.set) {
+                HEYS.store.set(key, value);
+                return;
+            }
+            if (U.lsSet) {
+                U.lsSet(key, value);
+                return;
+            }
+            const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+            localStorage.setItem(key, serialized);
+        } catch { }
+    };
+
+    const writeGlobalValue = (key, value) => {
+        try {
+            if (HEYS.store?.set) {
+                HEYS.store.set(key, value);
+                return;
+            }
+            const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+            localStorage.setItem(key, serialized);
+        } catch { }
+    };
+
+    const removeGlobalValue = (key) => {
+        try {
+            if (HEYS.store?.set) HEYS.store.set(key, null);
+        } catch { }
+        try { localStorage.removeItem(key); } catch { }
+    };
 
     function useThemePreference() {
         const React = window.React;
         const { useState, useEffect, useMemo, useCallback } = React;
         const [theme, setTheme] = useState(() => {
             try {
-                const U = window.HEYS?.utils || {};
-                const saved = U.lsGet ? U.lsGet('heys_theme', 'light') : localStorage.getItem('heys_theme');
+                const saved = readGlobalValue('heys_theme', 'light');
                 return ['light', 'dark', 'auto'].includes(saved) ? saved : 'light';
             } catch {
                 return 'light';
@@ -26,8 +107,7 @@
         useEffect(() => {
             document.documentElement.setAttribute('data-theme', resolvedTheme);
             try {
-                const U = window.HEYS?.utils || {};
-                U.lsSet ? U.lsSet('heys_theme', theme) : localStorage.setItem('heys_theme', theme);
+                writeGlobalValue('heys_theme', theme);
             } catch { }
 
             if (theme !== 'auto') return;
@@ -71,7 +151,7 @@
                 window.navigator.standalone === true;
             if (isStandalone) return;
 
-            const dismissed = localStorage.getItem('heys_pwa_banner_dismissed');
+            const dismissed = readGlobalValue('heys_pwa_banner_dismissed', null);
             if (dismissed) {
                 const dismissedTime = parseInt(dismissed, 10);
                 if (Date.now() - dismissedTime < 7 * 24 * 60 * 60 * 1000) return;
@@ -98,19 +178,19 @@
             const { outcome } = await pwaInstallPrompt.userChoice;
             if (outcome === 'accepted') {
                 setShowPwaBanner(false);
-                localStorage.setItem('heys_pwa_installed', 'true');
+                writeGlobalValue('heys_pwa_installed', 'true');
             }
             setPwaInstallPrompt(null);
         }, [pwaInstallPrompt]);
 
         const dismissPwaBanner = useCallback(() => {
             setShowPwaBanner(false);
-            localStorage.setItem('heys_pwa_banner_dismissed', Date.now().toString());
+            writeGlobalValue('heys_pwa_banner_dismissed', Date.now().toString());
         }, []);
 
         const dismissIosPwaBanner = useCallback(() => {
             setShowIosPwaBanner(false);
-            localStorage.setItem('heys_pwa_banner_dismissed', Date.now().toString());
+            writeGlobalValue('heys_pwa_banner_dismissed', Date.now().toString());
         }, []);
 
         return { showPwaBanner, showIosPwaBanner, handlePwaInstall, dismissPwaBanner, dismissIosPwaBanner };
@@ -552,12 +632,7 @@
         const [needsConsent, setNeedsConsent] = useState(false); // 📋 Требуются ли согласия
         const [checkingConsent, setCheckingConsent] = useState(false); // 📋 Проверка согласий
         const [backupMeta, setBackupMeta] = useState(() => {
-            if (U && typeof U.lsGet === 'function') {
-                try {
-                    return U.lsGet('heys_backup_meta', null);
-                } catch (_) { }
-            }
-            return null;
+            return readStoredValue('heys_backup_meta', null);
         });
         const [backupBusy, setBackupBusy] = useState(false);
 
@@ -630,9 +705,9 @@
                 if (result.error) {
                     // 🏠 При ошибке — используем localStorage кэш
                     console.warn('[HEYS] ⚠️ fetchClients error, using localStorage cache');
-                    const cached = localStorage.getItem('heys_clients');
+                    const cached = readGlobalValue('heys_clients', null);
                     if (cached) {
-                        const data = JSON.parse(cached);
+                        const data = Array.isArray(cached) ? cached : JSON.parse(cached);
                         setClientsSource('local');
                         return { data, source: 'local' };
                     }
@@ -642,19 +717,17 @@
 
                 const data = result.data;
                 // Сохраняем в localStorage для кэширования
-                if (data && data.length > 0) {
-                    localStorage.setItem('heys_clients', JSON.stringify(data));
-                }
+                if (data && data.length > 0) writeGlobalValue('heys_clients', data);
                 setClientsSource('cloud');
                 return { data: data || [], source: 'cloud' };
             } catch (e) {
                 fetchingClientsRef.current = false;
                 console.error('[HEYS] ❌ fetchClientsFromCloud failed:', e.message);
                 // 🏠 При exception — тоже используем localStorage
-                const cached = localStorage.getItem('heys_clients');
+                const cached = readGlobalValue('heys_clients', null);
                 if (cached) {
                     try {
-                        const data = JSON.parse(cached);
+                        const data = Array.isArray(cached) ? cached : JSON.parse(cached);
                         setClientsSource('local');
                         return { data, source: 'local' };
                     } catch { }
@@ -677,9 +750,9 @@
                 };
                 const updatedClients = [...clients, newClient];
                 setClients(updatedClients);
-                U.lsSet('heys_clients', updatedClients);
+                writeGlobalValue('heys_clients', updatedClients);
                 setClientId(newClient.id);
-                U.lsSet('heys_client_current', newClient.id);
+                writeGlobalValue('heys_client_current', newClient.id);
                 return;
             }
 
@@ -696,10 +769,10 @@
                         const result = await fetchClientsFromCloud(userId);
                         setClients(result.data);
                         setClientId(created.clientId);
-                        U.lsSet('heys_client_current', created.clientId);
+                        writeGlobalValue('heys_client_current', created.clientId);
                         // 🆕 Сохраняем имя для pre-fill в профиле (без namespace — напрямую в localStorage)
                         try {
-                            localStorage.setItem('heys_pending_client_name', JSON.stringify(clientName));
+                            writeGlobalValue('heys_pending_client_name', clientName);
                         } catch (_) { }
                         try {
                             HEYS.Toast?.success('Клиент создан! Телефон: ' + created.phone + ', PIN: ' + created.pin) || alert('✅ Клиент создан\n\nТелефон: ' + created.phone + '\nPIN: ' + created.pin);
@@ -726,7 +799,7 @@
                 const result = await fetchClientsFromCloud(userId);
                 setClients(result.data);
                 setClientId(data.id);
-                U.lsSet('heys_client_current', data.id);
+                writeGlobalValue('heys_client_current', data.id);
             } catch (error) {
                 console.error('Ошибка создания клиента:', error);
                 HEYS.Toast?.error('Ошибка создания клиента: ' + error.message) || alert('Ошибка создания клиента: ' + error.message);
@@ -737,7 +810,7 @@
             if (!cloudUser || !cloudUser.id) {
                 const updatedClients = clients.map((c) => (c.id === id ? { ...c, name } : c));
                 setClients(updatedClients);
-                U.lsSet('heys_clients', updatedClients);
+                writeGlobalValue('heys_clients', updatedClients);
                 return;
             }
 
@@ -752,10 +825,10 @@
             if (!cloudUser || !cloudUser.id) {
                 const updatedClients = clients.filter((c) => c.id !== id);
                 setClients(updatedClients);
-                U.lsSet('heys_clients', updatedClients);
+                writeGlobalValue('heys_clients', updatedClients);
                 if (clientId === id) {
                     setClientId('');
-                    U.lsSet('heys_client_current', '');
+                    writeGlobalValue('heys_client_current', '');
                 }
                 return;
             }
@@ -767,7 +840,7 @@
             setClients(result.data);
             if (clientId === id) {
                 setClientId('');
-                U.lsSet('heys_client_current', '');
+                writeGlobalValue('heys_client_current', '');
             }
         }, [clientId, clients, cloudUser, fetchClientsFromCloud, setClientId, setClients, U]);
 
@@ -796,11 +869,11 @@
                 setLoginError(null);
 
                 if (rememberMe) {
-                    localStorage.setItem('heys_remember_me', 'true');
-                    localStorage.setItem('heys_remember_email', email || '');
+                    writeGlobalValue('heys_remember_me', 'true');
+                    writeGlobalValue('heys_remember_email', email || '');
                 } else {
-                    localStorage.removeItem('heys_remember_me');
-                    localStorage.removeItem('heys_remember_email');
+                    removeGlobalValue('heys_remember_me');
+                    removeGlobalValue('heys_remember_email');
                 }
 
                 const res = await cloud.signIn(email, password);
@@ -824,8 +897,8 @@
                 // Не автовыбираем клиента — куратор должен выбрать сам через модалку
                 // clientId остаётся null → показывается модалка выбора клиента
 
-                const loadedProducts = Array.isArray(U.lsGet('heys_products', []))
-                    ? U.lsGet('heys_products', [])
+                const loadedProducts = Array.isArray(readStoredValue('heys_products', []))
+                    ? readStoredValue('heys_products', [])
                     : [];
                 setProducts(loadedProducts);
                 setSyncVer((v) => v + 1);
@@ -841,19 +914,19 @@
             } catch (_) { }
             // Важно: при выходе из аккаунта куратора сбрасываем “client mode”,
             // иначе на следующем запуске может открыться ConsentGate по старому clientId.
-            try { localStorage.removeItem('heys_client_current'); } catch (_) { }
-            try { localStorage.removeItem('heys_pin_auth_client'); } catch (_) { }
-            try { localStorage.removeItem('heys_client_phone'); } catch (_) { }
-            try { localStorage.removeItem('heys_supabase_auth_token'); } catch (_) { }
+            removeGlobalValue('heys_client_current');
+            removeGlobalValue('heys_pin_auth_client');
+            removeGlobalValue('heys_client_phone');
+            removeGlobalValue('heys_supabase_auth_token');
             // 🔧 v53 FIX: Очистка session_token для PIN auth
-            try { localStorage.removeItem('heys_session_token'); } catch (_) { }
+            removeGlobalValue('heys_session_token');
             setCloudUser(null);
             setClientId('');
             setClients([]);
             setProducts([]);
             setStatus('offline');
             setSyncVer((v) => v + 1);
-            try { localStorage.removeItem('heys_last_client_id'); } catch (_) { }
+            removeGlobalValue('heys_last_client_id');
         }, [cloud, setClientId, setClients, setCloudUser, setProducts, setStatus, setSyncVer]);
 
         return {

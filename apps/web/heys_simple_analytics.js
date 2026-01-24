@@ -50,6 +50,48 @@
   const DEBUG_EVENTS_LIMIT = 50;
   const debugEvents = [];
 
+  const readStoredValue = (key, fallback = null) => {
+    let value;
+    if (HEYS.store?.get) {
+      value = HEYS.store.get(key, fallback);
+    } else if (HEYS.utils?.lsGet) {
+      value = HEYS.utils.lsGet(key, fallback);
+    } else {
+      try {
+        value = localStorage.getItem(key);
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    if (value == null) return fallback;
+
+    if (typeof value === 'string') {
+      if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
+        try {
+          value = HEYS.store.decompress(value.slice(3));
+        } catch (e) { }
+      }
+      try {
+        return JSON.parse(value);
+      } catch (e) {
+        return value;
+      }
+    }
+
+    return value;
+  };
+
+  const writeStoredValue = (key, value) => {
+    if (HEYS.store?.set) {
+      return HEYS.store.set(key, value);
+    }
+    if (HEYS.utils?.lsSet) {
+      return HEYS.utils.lsSet(key, value);
+    }
+    localStorage.setItem(key, JSON.stringify(value));
+  };
+
   function recordDebugEvent(type, payload) {
     try {
       const entry = {
@@ -62,7 +104,7 @@
         debugEvents.splice(0, debugEvents.length - DEBUG_EVENTS_LIMIT);
       }
       try {
-        localStorage.setItem(DEBUG_EVENTS_KEY, JSON.stringify(debugEvents));
+        writeStoredValue(DEBUG_EVENTS_KEY, debugEvents);
       } catch (e) { }
     } catch (e) { }
   }

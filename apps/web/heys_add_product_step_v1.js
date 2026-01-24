@@ -11,13 +11,62 @@
 
   // === Утилиты ===
   const U = () => HEYS.utils || {};
+  const tryParseStoredValue = (raw, fallback) => {
+    if (raw === null || raw === undefined) return fallback;
+    if (typeof raw === 'string') {
+      let str = raw;
+      if (str.startsWith('¤Z¤') && HEYS.store?.decompress) {
+        try { str = HEYS.store.decompress(str); } catch (_) { }
+      }
+      try { return JSON.parse(str); } catch (_) { return str; }
+    }
+    return raw;
+  };
+
+  const readStoredValue = (key, fallback) => {
+    try {
+      if (HEYS.store?.get) {
+        const stored = HEYS.store.get(key, null);
+        if (stored !== null && stored !== undefined) {
+          return tryParseStoredValue(stored, fallback);
+        }
+      }
+      const raw = localStorage.getItem(key);
+      if (raw !== null && raw !== undefined) return tryParseStoredValue(raw, fallback);
+      return fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  const readGlobalValue = (key, fallback) => {
+    try {
+      if (HEYS.store?.get && /^heys_(clients|client_current)$/i.test(key)) {
+        const stored = HEYS.store.get(key, null);
+        if (stored !== null && stored !== undefined) {
+          return tryParseStoredValue(stored, fallback);
+        }
+      }
+      const raw = localStorage.getItem(key);
+      if (raw !== null && raw !== undefined) return tryParseStoredValue(raw, fallback);
+      return fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  const writeRawValue = (key, value) => {
+    try {
+      const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+      localStorage.setItem(key, serialized);
+    } catch { }
+  };
+
   const lsGet = (key, def) => {
     const utils = U();
+    if (HEYS.store?.get) return HEYS.store.get(key, def);
     if (utils.lsGet) return utils.lsGet(key, def);
-    try {
-      const v = localStorage.getItem(key);
-      return v ? JSON.parse(v) : def;
-    } catch { return def; }
+    return readStoredValue(key, def);
   };
 
   // Haptic feedback
@@ -86,7 +135,7 @@
 
   const hasCuratorJwt = () => {
     try {
-      return !!localStorage.getItem('heys_curator_session');
+      return !!readGlobalValue('heys_curator_session', null);
     } catch (_) {
       return false;
     }
@@ -251,9 +300,6 @@
     if (!nameChanged && !nutrientsChanged) return;
 
     const U = HEYS.utils || {};
-    const lsGet = U.lsGet || ((k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; } });
-    const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
-
     // Find all day keys (with or without clientId prefix)
     const dayKeys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
     let updatedDays = 0;
@@ -261,7 +307,7 @@
 
     for (const key of dayKeys) {
       try {
-        const day = JSON.parse(localStorage.getItem(key));
+        const day = readStoredValue(key, null);
         if (!day || !day.meals) continue;
 
         let dayChanged = false;
@@ -298,7 +344,7 @@
 
         if (dayChanged) {
           day.updatedAt = Date.now();
-          lsSet(key, day);
+          writeRawValue(key, day);
           updatedDays++;
         }
       } catch (e) {
@@ -459,60 +505,117 @@
   };
 
   // === Умный список продуктов: частота + свежесть ===
-  function computeSmartProducts(products, dateKey) {
+  function computeSmartProducts(products, dateKey, options = {}) {
     if (!products || !products.length) return [];
 
-    const usageCount = new Map();   // Частота использования
-    const lastUsedDay = new Map();  // Последний день использования (0 = сегодня)
+    const usageStats = options.usageStats instanceof Map
+      ? options.usageStats
+      : new Map(Array.isArray(options.usageStats) ? options.usageStats : []);
+    const lastUsedDay = new Map(); // Последний день использования (daysAgo)
     const today = new Date(dateKey || new Date().toISOString().slice(0, 10));
-
-    // Анализируем последние 30 дней
-    for (let i = 0; i < 30; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, null);
-
-      if (dayData && dayData.meals) {
-        dayData.meals.forEach(meal => {
-          if (meal.items) {
-            meal.items.forEach(item => {
-              const pid = item.product_id || item.productId || item.name;
-              if (pid) {
-                usageCount.set(pid, (usageCount.get(pid) || 0) + 1);
-                // Запоминаем первое (самое свежее) использование
-                if (!lastUsedDay.has(pid)) {
-                  lastUsedDay.set(pid, i);
-                }
-              }
-            });
-          }
-        });
-      }
-    }
+    const now = Date.now();
+    const daysWindow = Math.max(1, Math.min(60, Number(options.daysWindow) || 21));
+    const favoritesSet = options.favorites instanceof Set
+      ? options.favorites
+      : new Set(Array.isArray(options.favorites) ? options.favorites : []);
+    const hiddenSet = options.hidden instanceof Set
+      ? options.hidden
+      : new Set(Array.isArray(options.hidden) ? options.hidden : []);
 
     // Комбинированный скор: частота × свежесть
     // Свежесть: 1.0 для сегодня, убывает экспоненциально
     // Формула: score = frequency * recencyWeight
     // recencyWeight = 1 / (1 + daysAgo * 0.15)
-    const getScore = (pid) => {
-      const freq = usageCount.get(pid) || 0;
+    const resolveUsageStats = (pid, name) => {
+      const rawName = String(name || '').trim();
+      const normName = normalizeName(rawName);
+      const searchNorm = HEYS?.SmartSearchWithTypos?.utils?.normalizeText
+        ? HEYS.SmartSearchWithTypos.utils.normalizeText(rawName)
+        : normName;
+
+      const candidates = [];
+      if (pid && usageStats.has(pid)) candidates.push(usageStats.get(pid));
+      if (normName && usageStats.has(normName)) candidates.push(usageStats.get(normName));
+      if (searchNorm && usageStats.has(searchNorm)) candidates.push(usageStats.get(searchNorm));
+      if (rawName && usageStats.has(rawName)) candidates.push(usageStats.get(rawName));
+
+      const target = searchNorm || normName || rawName;
+      if (target) {
+        usageStats.forEach((stats, key) => {
+          const k = String(key || '').trim();
+          if (!k || k.length < 3) return;
+          if (!target.includes(k) && !k.includes(target)) return;
+          candidates.push(stats);
+        });
+      }
+
+      if (!candidates.length) return null;
+
+      return candidates.reduce((best, curr) => {
+        if (!best) return curr;
+        const bc = Number(best.count) || 0;
+        const cc = Number(curr.count) || 0;
+        if (cc !== bc) return cc > bc ? curr : best;
+        const bl = Number(best.lastUsed) || 0;
+        const cl = Number(curr.lastUsed) || 0;
+        return cl > bl ? curr : best;
+      }, null);
+    };
+
+    const getFreq = (pid, name) => {
+      const stats = resolveUsageStats(pid, name);
+      if (!stats || !stats.lastUsed) return 0;
+      const daysAgo = Math.floor((now - stats.lastUsed) / (1000 * 60 * 60 * 24));
+      if (daysAgo > daysWindow) return 0;
+      lastUsedDay.set(pid, daysAgo);
+      return Number(stats.count) || 0;
+    };
+
+    const getScore = (pid, name) => {
+      const freq = getFreq(pid, name);
       if (freq === 0) return 0;
-      const daysAgo = lastUsedDay.get(pid) ?? 30;
+      const daysAgo = lastUsedDay.get(pid) ?? daysWindow;
       const recencyWeight = 1 / (1 + daysAgo * 0.15);
       return freq * recencyWeight;
+    };
+
+    const getGroupRank = (pid, name) => {
+      const freq = getFreq(pid, name);
+      const isFav = favoritesSet.has(pid);
+      if (isFav && freq > 0) return 0; // избранные + часто используемые
+      if (freq > 0) return 1; // часто используемые
+      if (isFav) return 2; // избранные, но без использования
+      return 3;
     };
 
     // Сортируем по комбинированному скору
     const sorted = [...products]
       .filter(p => {
-        const pid = p.id || p.product_id || p.name;
-        return usageCount.get(pid) > 0; // Только использованные
+        const pid = String(p.id || p.product_id || p.name || '');
+        if (!pid) return false;
+        if (hiddenSet.has(pid)) return false; // Скрытые не показываем
+        const freq = getFreq(pid, p.name);
+        const isFav = favoritesSet.has(pid);
+        return isFav || freq > 0; // Использованные или избранные
       })
       .sort((a, b) => {
-        const aId = a.id || a.product_id || a.name;
-        const bId = b.id || b.product_id || b.name;
-        return getScore(bId) - getScore(aId);
+        const aId = String(a.id || a.product_id || a.name || '');
+        const bId = String(b.id || b.product_id || b.name || '');
+        const aGroup = getGroupRank(aId, a.name);
+        const bGroup = getGroupRank(bId, b.name);
+        if (aGroup !== bGroup) return aGroup - bGroup;
+
+        const aScore = getScore(aId, a.name);
+        const bScore = getScore(bId, b.name);
+        if (aGroup !== 2 && aScore !== bScore) return bScore - aScore;
+
+        if (aGroup !== 2) {
+          const aLast = lastUsedDay.get(aId) ?? 999;
+          const bLast = lastUsedDay.get(bId) ?? 999;
+          if (aLast !== bLast) return aLast - bLast;
+        }
+
+        return String(a.name || '').localeCompare(String(b.name || ''), 'ru');
       });
 
     return sorted.slice(0, 20);
@@ -548,6 +651,9 @@
     const [favorites, setFavorites] = useState(() =>
       HEYS.store?.getFavorites?.() || new Set()
     );
+    const [hiddenProducts, setHiddenProducts] = useState(() =>
+      HEYS.store?.getHiddenProducts?.() || new Set()
+    );
     const [selectedPhoto, setSelectedPhoto] = useState(null);
     const [photoPreview, setPhotoPreview] = useState(null);
     const [showPhotoConfirm, setShowPhotoConfirm] = useState(false); // Модалка подтверждения
@@ -559,28 +665,47 @@
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
     const { goToStep, closeModal } = stepContext;
 
-    const { dateKey = '' } = context || {};
+    const { dateKey = '', day: contextDay } = context || {};
+    const usageWindowDays = 21;
 
     // 🔧 FIX: Реактивное состояние для продуктов с подпиской на синхронизацию
     // Это решает проблему: при открытии модалки сразу после создания приёма
     // продукты ещё не загружены из облака, но после heysSyncCompleted они появятся
     const [productsVersion, setProductsVersion] = useState(0);
+    const [usageStatsVersion, setUsageStatsVersion] = useState(0);
 
     // 🔒 Ref для пропуска первого sync (предотвращает мерцание)
     const initialSyncDoneRef = useRef(false);
 
     // Подписка на обновление продуктов (heysSyncCompleted или watch)
     useEffect(() => {
+      const refreshUsageFromHistory = () => {
+        try {
+          if (HEYS?.SmartSearchWithTypos?.syncUsageStatsFromDays) {
+            HEYS.SmartSearchWithTypos.syncUsageStatsFromDays({
+              daysWindow: usageWindowDays,
+              dateKey: dateKey || new Date().toISOString().slice(0, 10),
+              lsGet: HEYS.store?.get
+            });
+            setUsageStatsVersion(v => v + 1);
+          }
+        } catch (e) {
+          // no-op
+        }
+      };
+
       const handleSyncComplete = (e) => {
         // 🔒 Пропускаем первый heysSyncCompleted — products уже загружены
         if (e?.type === 'heysSyncCompleted') {
           if (!initialSyncDoneRef.current) {
             initialSyncDoneRef.current = true;
+            refreshUsageFromHistory();
             return;
           }
         }
         // console.log('[AddProductStep] 🔄 heysSyncCompleted → refreshing products');
         setProductsVersion(v => v + 1);
+        refreshUsageFromHistory();
       };
 
       window.addEventListener('heysSyncCompleted', handleSyncComplete);
@@ -598,7 +723,7 @@
         window.removeEventListener('heysSyncCompleted', handleSyncComplete);
         unwatchProducts();
       };
-    }, []);
+    }, [dateKey, usageWindowDays]);
 
     // Всегда берём актуальные продукты из глобального стора (если появились новые)
     // productsVersion в зависимостях заставляет пересчитать при синхронизации
@@ -626,10 +751,8 @@
 
       // Fallback: напрямую из localStorage
       if (storeProducts.length === 0) {
-        try {
-          const raw = localStorage.getItem('heys_products');
-          if (raw) storeProducts = JSON.parse(raw) || [];
-        } catch (e) { }
+        const rawProducts = readStoredValue('heys_products', null);
+        if (Array.isArray(rawProducts)) storeProducts = rawProducts;
       }
 
       storeProducts = Array.isArray(storeProducts) ? storeProducts : [];
@@ -667,6 +790,21 @@
     useEffect(() => {
       setTimeout(() => inputRef.current?.focus(), 100);
     }, []);
+
+    useEffect(() => {
+      try {
+        if (HEYS?.SmartSearchWithTypos?.syncUsageStatsFromDays) {
+          HEYS.SmartSearchWithTypos.syncUsageStatsFromDays({
+            daysWindow: usageWindowDays,
+            dateKey: dateKey || new Date().toISOString().slice(0, 10),
+            lsGet: HEYS.store?.get
+          });
+          setUsageStatsVersion(v => v + 1);
+        }
+      } catch (e) {
+        // no-op
+      }
+    }, [dateKey, usageWindowDays]);
 
     // Debounce локального поиска
     useEffect(() => {
@@ -741,9 +879,153 @@
     }, [search]);
 
     // Умный список: частота + свежесть (объединяет "часто" и "последние")
+    const usageStats = useMemo(() =>
+      HEYS?.SmartSearchWithTypos?.getUsageStats?.() || new Map(),
+      [productsVersion, usageStatsVersion]
+    );
+
+    const sessionUsageStats = useMemo(() => {
+      const map = new Map();
+      const dayData = contextDay || null;
+      const meals = dayData?.meals || [];
+      if (!Array.isArray(meals) || meals.length === 0) return map;
+
+      const dateStr = dayData?.date || dateKey || new Date().toISOString().slice(0, 10);
+      const dayTs = Date.parse(dateStr + 'T12:00:00') || Date.now();
+
+      const bump = (key) => {
+        if (!key) return;
+        const curr = map.get(key);
+        if (curr) {
+          curr.count += 1;
+          curr.lastUsed = Math.max(curr.lastUsed || 0, dayTs);
+        } else {
+          map.set(key, { count: 1, lastUsed: dayTs });
+        }
+      };
+
+      meals.forEach((meal) => {
+        (meal?.items || []).forEach((item) => {
+          const pid = String(item?.product_id ?? item?.productId ?? '').trim();
+          const name = String(item?.name || '').trim();
+          if (pid) bump(pid);
+          if (name) {
+            bump(normalizeName(name));
+            bump(name);
+          }
+        });
+      });
+
+      return map;
+    }, [contextDay, dateKey]);
+
+    const effectiveUsageStats = useMemo(() => {
+      const base = usageStats instanceof Map ? usageStats : new Map();
+      const session = sessionUsageStats instanceof Map ? sessionUsageStats : new Map();
+      if (base.size === 0 && session.size === 0) return base;
+
+      const merged = new Map(base);
+      if (session.size === 0) return merged;
+
+      const dateStr = dateKey || new Date().toISOString().slice(0, 10);
+      const dayStart = Date.parse(dateStr + 'T00:00:00') || 0;
+
+      session.forEach((s, key) => {
+        if (!key) return;
+        const curr = merged.get(key);
+        if (!curr) {
+          merged.set(key, { ...s });
+          return;
+        }
+        const currLast = Number(curr.lastUsed || 0) || 0;
+        const sessLast = Number(s.lastUsed || 0) || 0;
+        const currHasToday = currLast >= dayStart;
+        if (!currHasToday) {
+          merged.set(key, {
+            count: (Number(curr.count) || 0) + (Number(s.count) || 0),
+            lastUsed: Math.max(currLast, sessLast)
+          });
+        }
+      });
+
+      return merged;
+    }, [usageStats, sessionUsageStats, dateKey]);
+
+    useEffect(() => {
+      try {
+        HEYS._usageStatsDebug = {
+          ...(HEYS._usageStatsDebug || {}),
+          modal: {
+            size: effectiveUsageStats.size,
+            source: usageStats.size > 0 ? 'stored' : (sessionUsageStats.size > 0 ? 'session' : 'empty'),
+            products: latestProducts.length,
+            dateKey: dateKey || new Date().toISOString().slice(0, 10)
+          }
+        };
+      } catch (e) { }
+
+      if (HEYS?.DEBUG_MODE) {
+        const payload = HEYS._usageStatsDebug?.modal || {
+          size: effectiveUsageStats.size,
+          source: usageStats.size > 0 ? 'stored' : (sessionUsageStats.size > 0 ? 'session' : 'empty'),
+          products: latestProducts.length,
+          dateKey: dateKey || new Date().toISOString().slice(0, 10)
+        };
+        console.log('🔎 [UsageStats] snapshot', payload);
+        if (window.DEV?.log) {
+          window.DEV.log('🔎 [UsageStats] snapshot', payload);
+        }
+      }
+    }, [effectiveUsageStats, usageStats.size, sessionUsageStats.size, latestProducts.length, dateKey]);
+
+    const getUsageCount = useCallback((productId, productName) => {
+      if (!productId && !productName) return 0;
+
+      const nameRaw = String(productName || '').trim();
+      const nameNorm = normalizeName(nameRaw);
+      const nameSearchNorm = HEYS?.SmartSearchWithTypos?.utils?.normalizeText
+        ? HEYS.SmartSearchWithTypos.utils.normalizeText(nameRaw)
+        : nameNorm;
+
+      const directStats = effectiveUsageStats.get(productId)
+        || effectiveUsageStats.get(nameNorm)
+        || effectiveUsageStats.get(nameSearchNorm)
+        || effectiveUsageStats.get(nameRaw);
+
+      const resolveCount = (stats) => {
+        if (!stats || !stats.lastUsed) return 0;
+        const daysAgo = Math.floor((Date.now() - stats.lastUsed) / (1000 * 60 * 60 * 24));
+        if (daysAgo > usageWindowDays) return 0;
+        return Number(stats.count) || 0;
+      };
+
+      const directCount = resolveCount(directStats);
+
+      // Fallback: мягкий поиск по ключам статистики (подстрока)
+      let best = directCount;
+      const target = nameSearchNorm || nameNorm || nameRaw;
+      if (!target || !effectiveUsageStats || effectiveUsageStats.size === 0) return 0;
+
+      effectiveUsageStats.forEach((stats, key) => {
+        if (best >= 9999) return;
+        const k = String(key || '').trim();
+        if (!k || k.length < 3) return;
+        if (!target.includes(k) && !k.includes(target)) return;
+        const c = resolveCount(stats);
+        if (c > best) best = c;
+      });
+
+      return best;
+    }, [effectiveUsageStats, usageWindowDays]);
+
     const smartProducts = useMemo(() =>
-      computeSmartProducts(latestProducts, dateKey),
-      [latestProducts, dateKey]
+      computeSmartProducts(latestProducts, dateKey, {
+        favorites,
+        hidden: hiddenProducts,
+        daysWindow: usageWindowDays,
+        usageStats: effectiveUsageStats
+      }),
+      [latestProducts, dateKey, favorites, hiddenProducts, effectiveUsageStats, usageWindowDays]
     );
 
     // Поиск с фильтром категории
@@ -928,9 +1210,26 @@
       }
     }, []);
 
+    const toggleHidden = useCallback((e, productId) => {
+      e.stopPropagation();
+      if (HEYS.store?.toggleHiddenProduct) {
+        HEYS.store.toggleHiddenProduct(productId);
+        setHiddenProducts(HEYS.store.getHiddenProducts());
+        setFavorites(HEYS.store.getFavorites());
+      }
+    }, []);
+
     // Выбор продукта — сразу переход на шаг граммов
     const selectProduct = useCallback((product) => {
       haptic('light');
+
+      try {
+        if (HEYS.store?.getHiddenProducts) {
+          setHiddenProducts(HEYS.store.getHiddenProducts());
+        }
+      } catch (e) {
+        // no-op
+      }
 
       // Последние использованные граммы для этого продукта
       const productId = product.id ?? product.product_id ?? product.name;
@@ -1101,7 +1400,7 @@
       if (HEYS.products?.setAll) {
         HEYS.products.setAll(filtered);
       } else if (HEYS.store?.set) {
-        HEYS.store.set('products', filtered);
+        HEYS.store.set('heys_products', filtered);
       } else if (U.lsSet) {
         U.lsSet('heys_products', filtered);
         console.warn('[AddProductStep] ⚠️ Продукт удалён только локально (нет HEYS.store)');
@@ -1120,9 +1419,11 @@
     }, [context]);
 
     // Рендер карточки продукта с подсветкой совпадений
-    const renderProductCard = (product, showFavorite = true) => {
+    const renderProductCard = (product, showFavorite = true, showHide = true, showUsageCount = false) => {
       const pid = String(product.id ?? product.product_id ?? product.name);
       const isFav = favorites.has(pid);
+      const isHidden = hiddenProducts.has(pid);
+      const usageCount = showUsageCount ? getUsageCount(pid, product.name) : 0;
       const kcal = Math.round(product.kcal100 || 0);
       const prot = Math.round(product.protein100 || 0);
       const carbs = Math.round((product.simple100 || 0) + (product.complex100 || 0));
@@ -1163,15 +1464,26 @@
             React.createElement('span', { className: 'aps-meta-sep' }, '·'),
             React.createElement('span', { className: 'aps-meta-macros' },
               'Б ' + prot + ' | Ж ' + fat + ' | У ' + carbs
+            ),
+            showUsageCount && React.createElement(React.Fragment, null,
+              React.createElement('span', { className: 'aps-meta-sep' }, '·'),
+              React.createElement('span', { className: 'aps-product-usage' }, `Исп.: ${usageCount}×`)
             )
           )
         ),
 
-        // Кнопка избранного — только для личных
-        showFavorite && !isFromShared && React.createElement('button', {
-          className: 'aps-fav-btn' + (isFav ? ' active' : ''),
-          onClick: (e) => toggleFavorite(e, pid)
-        }, isFav ? '★' : '☆')
+        React.createElement('div', { className: 'aps-product-actions' },
+          showHide && !isFromShared && React.createElement('button', {
+            className: 'aps-hide-btn' + (isHidden ? ' aps-hide-btn--active' : ''),
+            onClick: (e) => toggleHidden(e, pid),
+            title: isHidden ? 'Вернуть в список' : 'Скрыть из списка'
+          }, '✕'),
+          // Кнопка избранного — только для личных
+          showFavorite && !isFromShared && React.createElement('button', {
+            className: 'aps-fav-btn' + (isFav ? ' active' : ''),
+            onClick: (e) => toggleFavorite(e, pid)
+          }, isFav ? '★' : '☆')
+        )
       );
     };
 
@@ -1288,7 +1600,7 @@
               : (sharedLoading ? '⏳ Поиск...' : 'Ничего не найдено')
           ),
           combinedResults?.length > 0 && React.createElement('div', { className: 'aps-products-list' },
-            combinedResults.map(p => renderProductCard(p))
+            combinedResults.map(p => renderProductCard(p, true, false))
           ),
           // Пустой результат с "Возможно вы искали"
           combinedResults.length === 0 && !sharedLoading && React.createElement('div', { className: 'aps-empty' },
@@ -1365,7 +1677,7 @@
         !showSearch && smartProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
           React.createElement('div', { className: 'aps-section-title' }, '⚡ Ваши продукты'),
           React.createElement('div', { className: 'aps-products-list' },
-            smartProducts.map(p => renderProductCard(p))
+            smartProducts.map(p => renderProductCard(p, true, true, true))
           )
         )
       )
@@ -3101,8 +3413,7 @@ NOVA: 1
                 const result = await HEYS.cloud.publishToShared(updatedProduct);
                 console.log('[HarmSelectStep] ✅ Опубликован в shared:', result);
               } else if (HEYS.cloud.createPendingProduct) {
-                let clientId = localStorage.getItem('heys_client_current');
-                try { clientId = JSON.parse(clientId); } catch (e) { }
+                const clientId = readGlobalValue('heys_client_current', null);
                 if (clientId) {
                   await HEYS.cloud.createPendingProduct(clientId, updatedProduct);
                 }
@@ -3315,6 +3626,33 @@ NOVA: 1
     const [kcalInput, setKcalInput] = useState('');
     const gramsInputRef = useRef(null);
 
+    const [favorites, setFavorites] = useState(() =>
+      HEYS.store?.getFavorites?.() || new Set()
+    );
+
+    const productId = useMemo(() => {
+      if (!product) return '';
+      return String(product.id ?? product.product_id ?? product.name ?? '');
+    }, [product]);
+
+    useEffect(() => {
+      if (HEYS.store?.getFavorites) {
+        setFavorites(HEYS.store.getFavorites());
+      }
+    }, [productId]);
+
+    const isFavorite = productId ? favorites.has(productId) : false;
+    const isShared = isSharedProduct(product);
+
+    const toggleFavorite = useCallback((e) => {
+      e.stopPropagation();
+      if (!productId || !HEYS.store?.toggleFavorite) return;
+      HEYS.store.toggleFavorite(productId);
+      if (HEYS.store?.getFavorites) {
+        setFavorites(HEYS.store.getFavorites());
+      }
+    }, [productId]);
+
     // ВАЖНО: Значения продукта с fallback для ситуации когда product ещё не загружен
     const toNum = (v) => {
       if (v == null || v === '') return 0;
@@ -3493,10 +3831,17 @@ NOVA: 1
         className: 'aps-product-header',
         style: harmBg ? { background: harmBg, borderColor: harmBg } : undefined
       },
-        product.category && React.createElement('span', { className: 'aps-product-icon-lg' },
-          getCategoryIcon(product.category)
+        React.createElement('div', { className: 'aps-product-header__main' },
+          product.category && React.createElement('span', { className: 'aps-product-icon-lg' },
+            getCategoryIcon(product.category)
+          ),
+          React.createElement('div', { className: 'aps-product-title' }, product.name)
         ),
-        React.createElement('div', { className: 'aps-product-title' }, product.name)
+        !isShared && React.createElement('button', {
+          className: 'aps-fav-btn aps-product-header__fav' + (isFavorite ? ' active' : ''),
+          onClick: toggleFavorite,
+          title: isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'
+        }, isFavorite ? '★' : '☆')
       ),
 
       // Подсказка про последние граммы
@@ -3776,6 +4121,7 @@ NOVA: 1
     const {
       mealIndex = 0,
       products: providedProducts,
+      day,
       dateKey = new Date().toISOString().slice(0, 10),
       onAdd,
       onAddPhoto, // Callback для добавления фото к приёму
@@ -3861,6 +4207,7 @@ NOVA: 1
       ],
       context: {
         products: currentProducts,
+        day,
         dateKey,
         mealIndex,
         onNewProduct,

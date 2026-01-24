@@ -1,6 +1,6 @@
 // heys_steps_v1.js — Библиотека шагов для StepModal
 // WeightStep, SleepTimeStep, SleepQualityStep, StepsGoalStep
-(function(global) {
+(function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const { useState, useMemo, useCallback, useEffect } = React;
 
@@ -12,23 +12,66 @@
 
   const { WheelPicker, registerStep, utils } = HEYS.StepModal;
   // Используем общие утилиты из StepModal
-  const { lsGet, lsSet, getTodayKey } = utils;
+  const { lsGet: baseLsGet, lsSet: baseLsSet, getTodayKey } = utils;
+
+  const tryParseStoredValue = (raw, fallback) => {
+    if (raw === null || raw === undefined) return fallback;
+    if (typeof raw === 'string') {
+      let str = raw;
+      if (str.startsWith('¤Z¤') && HEYS.store?.decompress) {
+        try { str = HEYS.store.decompress(str); } catch (_) { }
+      }
+      try { return JSON.parse(str); } catch (_) { return str; }
+    }
+    return raw;
+  };
+
+  const lsGet = (key, def) => {
+    try {
+      if (HEYS.store?.get) {
+        const stored = HEYS.store.get(key, null);
+        if (stored !== null && stored !== undefined) {
+          return tryParseStoredValue(stored, def);
+        }
+      }
+      if (baseLsGet) return baseLsGet(key, def);
+      const raw = localStorage.getItem(key);
+      if (raw !== null && raw !== undefined) return tryParseStoredValue(raw, def);
+      return def;
+    } catch {
+      return def;
+    }
+  };
+
+  const lsSet = (key, value) => {
+    try {
+      if (HEYS.store?.set) {
+        HEYS.store.set(key, value);
+        return;
+      }
+      if (baseLsSet) {
+        baseLsSet(key, value);
+        return;
+      }
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch { }
+  };
 
   // ============================================================
   // WEIGHT STEP
   // ============================================================
-  
+
   function getLastKnownWeight() {
     const profile = lsGet('heys_profile', { weight: 70 });
     const today = new Date();
-    
+
     // Сначала проверяем сегодняшний вес (для редактирования из карточки)
     const todayKey = today.toISOString().slice(0, 10);
     const todayData = lsGet(`heys_dayv2_${todayKey}`, {}) || {};
     if (todayData.weightMorning) {
       return { weight: todayData.weightMorning, daysAgo: 0, date: todayKey };
     }
-    
+
     // Если сегодня нет — ищем в прошлых днях (для утреннего чек-ина)
     for (let i = 1; i <= 60; i++) {
       const d = new Date(today);
@@ -169,26 +212,26 @@
       dayData.weightMorning = weight;
       dayData.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, dayData);
-      
+
       // Также обновляем текущий вес в профиле (для расчёта TDEE, BMR и т.д.)
       const profile = lsGet('heys_profile', {});
       if (profile.weight !== weight) {
         profile.weight = weight;
         lsSet('heys_profile', profile);
         console.log('[WeightStep] Profile weight updated:', weight, 'kg');
-        
+
         // Диспатчим событие для обновления UI профиля
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('heys:profile-updated', { 
-            detail: { profile, source: 'weight-step' } 
+          window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+            detail: { profile, source: 'weight-step' }
           }));
         }
       }
-      
+
       // Диспатчим событие для обновления UI дня
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('heys:day-updated', { 
-          detail: { date: dateKey, field: 'weightMorning', value: weight, forceReload: true } 
+        window.dispatchEvent(new CustomEvent('heys:day-updated', {
+          detail: { date: dateKey, field: 'weightMorning', value: weight, forceReload: true }
         }));
       }
     },
@@ -248,7 +291,7 @@
       const startM = newData.sleepStartM ?? sleepStartM;
       const endH = newData.sleepEndH ?? sleepEndH;
       const endM = newData.sleepEndM ?? sleepEndM;
-      
+
       onChange({
         ...newData,
         // Форматированные поля для onComplete callback
@@ -268,7 +311,7 @@
         sleepEndM: data.sleepEndM ?? sleepEndM
       });
     };
-    
+
     const setSleepStartM = (m) => {
       updateData({
         ...data,
@@ -300,7 +343,7 @@
         sleepEndM: data.sleepEndM ?? sleepEndM
       });
     };
-    
+
     const setSleepEndM = (m) => {
       updateData({
         ...data,
@@ -410,7 +453,7 @@
       const sleepStart = `${String(data.sleepStartH).padStart(2, '0')}:${String(data.sleepStartM).padStart(2, '0')}`;
       const sleepEnd = `${String(data.sleepEndH).padStart(2, '0')}:${String(data.sleepEndM).padStart(2, '0')}`;
       const sleepHours = calcSleepHours(data.sleepStartH, data.sleepStartM, data.sleepEndH, data.sleepEndM);
-      
+
       dayData.date = dateKey;
       dayData.sleepStart = sleepStart;
       dayData.sleepEnd = sleepEnd;
@@ -495,23 +538,23 @@
     const adviceIndex = (sleepQuality * 7) % adviceList.length;
     const currentAdvice = adviceList[adviceIndex];
 
-    const commentQuestion = sleepQuality <= 4 
-      ? '😔 Что помешало выспаться?' 
-      : sleepQuality >= 8 
-        ? '✨ Что помогло хорошо выспаться?' 
+    const commentQuestion = sleepQuality <= 4
+      ? '😔 Что помешало выспаться?'
+      : sleepQuality >= 8
+        ? '✨ Что помогло хорошо выспаться?'
         : '💭 Заметка о сне';
-    const commentPlaceholder = sleepQuality <= 4 
-      ? 'Шум, стресс, поздно лёг...' 
-      : sleepQuality >= 8 
-        ? 'Режим, тишина, прохлада...' 
+    const commentPlaceholder = sleepQuality <= 4
+      ? 'Шум, стресс, поздно лёг...'
+      : sleepQuality >= 8
+        ? 'Режим, тишина, прохлада...'
         : 'Любые заметки...';
 
-    return React.createElement('div', { 
+    return React.createElement('div', {
       className: 'mc-quality-step',
       style: { '--quality-color': qualityColor }
     },
       React.createElement('div', { className: 'mc-quality-display' },
-        React.createElement('span', { 
+        React.createElement('span', {
           className: 'mc-quality-emoji',
           style: { filter: `drop-shadow(0 0 8px ${qualityColor})` }
         }, SLEEP_QUALITY_EMOJI[sleepQuality - 1]),
@@ -524,7 +567,7 @@
         max: 10,
         value: sleepQuality,
         onChange: (e) => onChange({ ...data, sleepQuality: Number(e.target.value) }),
-        style: { 
+        style: {
           background: `linear-gradient(to right, ${qualityColor} ${(sleepQuality - 1) * 11.1}%, #e5e7eb ${(sleepQuality - 1) * 11.1}%)`
         }
       }),
@@ -538,24 +581,24 @@
           }, SLEEP_QUALITY_EMOJI[q - 1])
         )
       ),
-      React.createElement('div', { 
+      React.createElement('div', {
         className: 'mc-sleep-advice',
-        style: { 
+        style: {
           backgroundColor: adviceColors.bg,
           borderColor: adviceColors.border
         }
       },
         React.createElement('span', { className: 'mc-sleep-advice-icon' }, currentAdvice.icon),
-        React.createElement('span', { 
+        React.createElement('span', {
           className: 'mc-sleep-advice-text',
           style: { color: adviceColors.text }
         }, currentAdvice.text)
       ),
-      React.createElement('div', { 
+      React.createElement('div', {
         className: 'mc-sleep-comment',
         style: { borderColor: adviceColors.border }
       },
-        React.createElement('label', { 
+        React.createElement('label', {
           className: 'mc-sleep-comment-label',
           style: { color: adviceColors.text }
         }, commentQuestion),
@@ -597,16 +640,16 @@
       const dateKey = (context && context.dateKey) || getTodayKey();
       const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
       dayData.sleepQuality = data.sleepQuality;
-      
+
       if (data.sleepNote && data.sleepNote.trim()) {
         const now = new Date();
         const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
         const noteWithTime = `[${timeStr}] ${data.sleepNote.trim()}`;
-        dayData.sleepNote = dayData.sleepNote 
+        dayData.sleepNote = dayData.sleepNote
           ? dayData.sleepNote + '\n' + noteWithTime
           : noteWithTime;
       }
-      
+
       dayData.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, dayData);
     }
@@ -642,7 +685,7 @@
     const profile = useMemo(() => lsGet('heys_profile', {}), []);
     const weight = stepData?.weight?.weightKg ? (stepData.weight.weightKg + (stepData.weight.weightG || 0) / 10) : profile.weight || 70;
     const stepsStats = useMemo(() => getWeeklyStepsStats(weight), [weight]);
-    
+
     const defaultStepsGoal = useMemo(() => {
       if (stepsStats.daysWithData >= 3) {
         return stepsStats.recommended;
@@ -700,13 +743,13 @@
         ),
         stepsGoal > stepsStats.avg && bonusKcal > 0 && React.createElement('div', { className: 'mc-steps-bonus' },
           React.createElement('span', { className: 'mc-steps-bonus-icon' }, '🔥'),
-          React.createElement('span', { className: 'mc-steps-bonus-text' }, 
+          React.createElement('span', { className: 'mc-steps-bonus-text' },
             `+${(stepsGoal - stepsStats.avg).toLocaleString()} шагов = +${bonusKcal} ккал`
           )
         )
       ),
       React.createElement('div', { className: 'mc-steps-recommendation' },
-        stepsGoal < 7000 
+        stepsGoal < 7000
           ? '❤️ Минимум 7000 шагов для здоровья сердца и сосудов'
           : hasStepsHistory && stepsGoal === stepsStats.recommended
             ? '✨ Рекомендуем: ваше среднее +20%'
@@ -743,8 +786,8 @@
       profile.stepsGoal = data.stepsGoal;
       lsSet('heys_profile', profile);
       // Диспатчим событие обновления профиля для реактивного обновления UI
-      window.dispatchEvent(new CustomEvent('heys:profile-updated', { 
-        detail: { stepsGoal: data.stepsGoal } 
+      window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+        detail: { stepsGoal: data.stepsGoal }
       }));
     }
   });
@@ -771,12 +814,12 @@
    */
   function DeficitStepComponent({ data, onChange }) {
     const { useMemo, useCallback } = React;
-    
+
     const deficit = data.deficit ?? 0;
-    
+
     // Значения для колеса: от -20 до +20
     const deficitValues = useMemo(() => Array.from({ length: 41 }, (_, i) => i - 20), []);
-    
+
     // Получаем цвет и описание в зависимости от значения
     const getDeficitInfo = useCallback((val) => {
       if (val < -10) return { color: '#ef4444', label: 'Агрессивный дефицит', emoji: '🔥🔥' };
@@ -785,17 +828,17 @@
       if (val <= 10) return { color: '#3b82f6', label: 'Умеренный профицит', emoji: '💪' };
       return { color: '#3b82f6', label: 'Агрессивный набор', emoji: '💪💪' };
     }, []);
-    
+
     const info = getDeficitInfo(deficit);
-    
+
     const setDeficit = (v) => {
       onChange({ ...data, deficit: v });
       if (navigator.vibrate) navigator.vibrate(5);
     };
-    
+
     // Форматирование значения для отображения в колесе
     const formatValue = (v) => (v > 0 ? '+' : '') + v + '%';
-    
+
     // Быстрые пресеты
     const presets = [
       { value: -15, label: '-15%', emoji: '🔥' },
@@ -803,7 +846,7 @@
       { value: 0, label: '0%', emoji: '⚖️' },
       { value: 10, label: '+10%', emoji: '💪' },
     ];
-    
+
     return React.createElement('div', { className: 'step-deficit' },
       // Основной дисплей
       React.createElement('div', { className: 'deficit-display' },
@@ -814,7 +857,7 @@
           info.emoji + ' ' + info.label
         )
       ),
-      
+
       // WheelPicker вместо слайдера
       React.createElement('div', { className: 'deficit-wheel-container' },
         React.createElement(WheelPicker, {
@@ -825,17 +868,17 @@
           formatValue: formatValue
         })
       ),
-      
+
       // Подсказка
       React.createElement('div', { className: 'deficit-hint' },
         'Отрицательный = дефицит (похудение)',
         React.createElement('br'),
         'Положительный = профицит (набор)'
       ),
-      
+
       // Быстрые пресеты
       React.createElement('div', { className: 'deficit-presets' },
-        presets.map(p => 
+        presets.map(p =>
           React.createElement('button', {
             key: p.value,
             className: 'deficit-preset' + (deficit === p.value ? ' active' : ''),
@@ -843,7 +886,7 @@
               onChange({ ...data, deficit: p.value });
               if (navigator.vibrate) navigator.vibrate(15);
             },
-            style: deficit === p.value ? { 
+            style: deficit === p.value ? {
               backgroundColor: info.color,
               borderColor: info.color
             } : {}
@@ -869,9 +912,9 @@
       day.deficitPct = data.deficit;
       day.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, day);
-      
+
       // Уведомляем о изменении дня
-      window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'deficitPct', value: data.deficit, source: 'deficit-step', forceReload: true }
       }));
     }
@@ -956,16 +999,16 @@
    */
   function HouseholdMinutesComponent({ data, onChange, context }) {
     const { useCallback, useMemo } = React;
-    
+
     const dateKey = context?.dateKey || new Date().toISOString().slice(0, 10);
     const minutes = data.minutes ?? 0;
     const householdTime = data.householdTime ?? '';
-    
+
     // Получаем вес для расчёта калорий
     const profile = useMemo(() => lsGet('heys_profile', {}), []);
     const weight = profile.weight || 70;
     const kcalBurned = calcHouseholdKcal(minutes, weight);
-    
+
     // Цвет в зависимости от количества минут
     const getColor = useCallback((min) => {
       if (min === 0) return '#94a3b8';
@@ -973,25 +1016,25 @@
       if (min < 60) return '#22c55e';
       return '#10b981';
     }, []);
-    
+
     const color = getColor(minutes);
-    
+
     // Slider
     const sliderMin = 0;
     const sliderMax = 180;
     const sliderPercent = Math.min(100, (minutes / sliderMax) * 100);
-    
+
     // Haptic
     const triggerHaptic = (intensity = 10) => {
       if (navigator.vibrate) navigator.vibrate(intensity);
     };
-    
+
     // Quick preset buttons
     const handlePreset = (value) => {
       triggerHaptic(15);
       onChange({ ...data, minutes: value });
     };
-    
+
     // Статус текст
     const getStatusText = (min) => {
       if (min === 0) return 'Не указано';
@@ -1000,23 +1043,23 @@
       if (min < 120) return 'Отличная активность!';
       return 'Супер активный день! 🔥';
     };
-    
+
     // Парсим время для TimePicker (числа)
     const [currentHour, currentMinute] = useMemo(() => {
       const [h, m] = (householdTime || '12:00').split(':').map(Number);
       return [h || 12, Math.floor((m || 0) / 5) * 5]; // округляем минуты к ближайшим 5
     }, [householdTime]);
-    
+
     // Используем переиспользуемый TimePicker из StepModal
     const TimePicker = HEYS.StepModal.TimePicker;
     const pad2 = HEYS.StepModal.pad2;
-    
+
     // Haptic уже в TimePicker
     const setHour = (h) => {
       const newTime = `${pad2(h)}:${pad2(currentMinute)}`;
       onChange({ ...data, householdTime: newTime });
     };
-    
+
     const setMinute = (m) => {
       const newTime = `${pad2(currentHour)}:${pad2(m)}`;
       onChange({ ...data, householdTime: newTime });
@@ -1027,7 +1070,7 @@
       const newTime = `${pad2(h)}:${pad2(m)}`;
       onChange({ ...data, householdTime: newTime });
     };
-    
+
     return React.createElement('div', { className: 'step-household step-household-minutes' },
       // Основной дисплей
       React.createElement('div', { className: 'household-display' },
@@ -1040,7 +1083,7 @@
         ),
         React.createElement('div', { className: 'household-status' }, getStatusText(minutes))
       ),
-      
+
       // Слайдер
       React.createElement('div', { className: 'household-slider-container' },
         React.createElement('input', {
@@ -1066,16 +1109,16 @@
           React.createElement('span', null, '3ч')
         )
       ),
-      
+
       // Быстрые пресеты
       React.createElement('div', { className: 'household-presets' },
-        HOUSEHOLD_PRESETS.map(p => 
+        HOUSEHOLD_PRESETS.map(p =>
           React.createElement('button', {
             key: p.value,
             type: 'button',
             className: 'household-preset' + (minutes === p.value ? ' active' : ''),
             onClick: () => handlePreset(p.value),
-            style: minutes === p.value ? { 
+            style: minutes === p.value ? {
               backgroundColor: color,
               borderColor: color,
               color: '#fff'
@@ -1083,7 +1126,7 @@
           }, p.icon + ' ' + p.label)
         )
       ),
-      
+
       // Секция времени (компактная)
       React.createElement('div', { className: 'household-time-section' },
         React.createElement('div', { className: 'household-time-header' },
@@ -1120,32 +1163,32 @@
    */
   function HouseholdStatsComponent({ data, onChange, context, stepData }) {
     const { useMemo } = React;
-    
+
     // Берём данные от первого шага (household_minutes) — они актуальные
     const minutesData = stepData?.household_minutes || data || {};
     const minutes = minutesData.minutes ?? 0;
     const householdTime = minutesData.householdTime ?? '';
     const todayKey = new Date().toISOString().slice(0, 10);
-    
+
     // Получаем вес для расчёта калорий
     const profile = useMemo(() => lsGet('heys_profile', {}), []);
     const weight = profile.weight || 70;
     const kcalBurned = calcHouseholdKcal(minutes, weight);
-    
+
     // Статистика за неделю и месяц
     const weeklyStats = useMemo(() => getWeeklyHouseholdStats(), []);
     const monthlyStats = useMemo(() => getHouseholdMonthlyStats(), []);
     const history7 = weeklyStats.history || getHouseholdHistory(7);
-    
+
     // Для спарклайна
     const targetMin = 30;
     const maxSpark = Math.max(...history7.map(h => h.minutes), 90);
     const sparkBars = history7.slice().reverse();
-    
+
     // Бэйджи достижений
     const showStreakBadge = monthlyStats.streak >= 3;
     const showMonthlyBadge = monthlyStats.total30 >= 500;
-    
+
     // Цвет
     const getColor = (min) => {
       if (min === 0) return '#94a3b8';
@@ -1154,7 +1197,7 @@
       return '#10b981';
     };
     const color = getColor(minutes);
-    
+
     return React.createElement('div', { className: 'step-household step-household-stats' },
       // Сводка: что введено
       React.createElement('div', { className: 'household-summary' },
@@ -1164,7 +1207,7 @@
           kcalBurned > 0 && React.createElement('span', { className: 'household-summary-kcal' }, ' • 🔥 ' + kcalBurned + ' ккал')
         )
       ),
-      
+
       // Статистика за неделю
       weeklyStats.daysWithData > 0 && React.createElement('div', { className: 'household-weekly-stats' },
         React.createElement('span', { className: 'household-stats-icon' }, '📊'),
@@ -1209,14 +1252,14 @@
         showStreakBadge && React.createElement('span', { className: 'household-badge success' }, '🏅 ' + monthlyStats.streak + ' дней подряд ≥30 мин'),
         showMonthlyBadge && React.createElement('span', { className: 'household-badge info' }, '📆 ' + monthlyStats.total30 + ' мин за месяц')
       ),
-      
+
       // Примеры активности (для справки)
       React.createElement('div', { className: 'household-examples' },
         React.createElement('div', { className: 'household-examples-title' }, '💡 Примеры бытовой активности:'),
         React.createElement('div', { className: 'household-examples-grid' },
-          HOUSEHOLD_EXAMPLES.slice(0, 6).map((ex, i) => 
-            React.createElement('span', { 
-              key: i, 
+          HOUSEHOLD_EXAMPLES.slice(0, 6).map((ex, i) =>
+            React.createElement('span', {
+              key: i,
               className: 'household-example readonly',
               title: `MET: ${ex.met}`
             }, ex.icon + ' ' + ex.name)
@@ -1242,24 +1285,24 @@
       console.log('[Household getInitialData] day.householdActivities:', day.householdActivities);
       console.log('[Household getInitialData] day.householdMin:', day.householdMin);
       const weekly = getWeeklyHouseholdStats();
-      
+
       // Backward compatible: householdActivities массив или legacy householdMin
-      const activities = day.householdActivities || 
+      const activities = day.householdActivities ||
         (day.householdMin > 0 ? [{ minutes: day.householdMin, time: day.householdTime || '' }] : []);
       console.log('[Household getInitialData] activities:', activities);
-      
+
       // Если редактируем существующую — берём её данные
       if (editIndex !== null && editIndex >= 0 && activities[editIndex]) {
         const activity = activities[editIndex];
         console.log('[Household getInitialData] EDIT MODE - activity:', activity);
-        return { 
-          minutes: activity.minutes || 0, 
-          householdTime: activity.time || '', 
-          dateKey, 
-          editIndex 
+        return {
+          minutes: activity.minutes || 0,
+          householdTime: activity.time || '',
+          dateKey,
+          editIndex
         };
       }
-      
+
       console.log('[Household getInitialData] ADD MODE - using defaults');
       // Добавление новой — дефолтные значения
       return { minutes: weekly.avg || 30, householdTime: '', dateKey, editIndex: null };
@@ -1271,7 +1314,7 @@
       console.log('[Household save] editIndex:', editIndex, 'typeof:', typeof editIndex);
       const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
       console.log('[Household save] day.householdActivities:', day.householdActivities);
-      
+
       // Инициализируем массив если его нет
       if (!day.householdActivities) {
         // Миграция старых данных
@@ -1281,9 +1324,9 @@
           day.householdActivities = [];
         }
       }
-      
+
       const newActivity = { minutes: data.minutes, time: data.householdTime || '' };
-      
+
       if (typeof editIndex === 'number' && editIndex >= 0 && editIndex < day.householdActivities.length) {
         // Редактирование существующей
         day.householdActivities[editIndex] = newActivity;
@@ -1291,23 +1334,23 @@
         // Добавление новой
         day.householdActivities.push(newActivity);
       }
-      
+
       // Обновляем legacy поля для совместимости
       day.householdMin = day.householdActivities.reduce((sum, h) => sum + (+h.minutes || 0), 0);
       day.householdTime = day.householdActivities[0]?.time || '';
       day.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, day);
-      
+
       // Уведомляем о изменении дня
-      window.dispatchEvent(new CustomEvent('heys:day-updated', { 
-        detail: { 
-          date: dateKey, 
-          field: 'householdActivities', 
-          value: day.householdActivities, 
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: {
+          date: dateKey,
+          field: 'householdActivities',
+          value: day.householdActivities,
           householdMin: day.householdMin,
           householdTime: day.householdTime,
-          source: 'household-step', 
-          forceReload: true 
+          source: 'household-step',
+          forceReload: true
         }
       }));
     },
@@ -1355,9 +1398,9 @@
       day.householdTime = data.householdTime || '';
       day.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, day);
-      
+
       // Уведомляем о изменении дня
-      window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'householdMin', value: data.minutes, householdTime: data.householdTime, source: 'household-step' }
       }));
     },
@@ -1388,28 +1431,28 @@
    */
   function CycleStepComponent({ data, onChange, stepData, context }) {
     const { useState, useCallback, useEffect } = React;
-    
+
     // Проверяем пол: из stepData (регистрация) или из профиля
     const genderFromSteps = stepData?.['profile-personal']?.gender;
     const profile = lsGet('heys_profile', {});
     const gender = genderFromSteps || profile.gender;
     const isFemale = gender === 'Женский';
-    
+
     // Также проверяем cycleTrackingEnabled из шагов или профиля
     const trackingFromSteps = stepData?.['profile-personal']?.cycleTrackingEnabled;
     const cycleTrackingEnabled = trackingFromSteps !== undefined ? trackingFromSteps : profile.cycleTrackingEnabled;
-    
+
     // Если не женщина или трекинг выключен — автоматически пропускаем шаг
     const shouldSkip = !isFemale || cycleTrackingEnabled === false;
-    
+
     // cycleDay: null = нет периода, 1-7 = день периода
     const [cycleDay, setCycleDay] = useState(data?.cycleDay || null);
     const [isEnabled, setIsEnabled] = useState(cycleDay !== null);
     const [showDayPicker, setShowDayPicker] = useState(false);
-    
+
     // Получаем текущую дату
     const dateKey = data?._dateKey || new Date().toISOString().slice(0, 10);
-    
+
     // Автопропуск если не нужен этот шаг
     useEffect(() => {
       if (shouldSkip && context?.onNext) {
@@ -1421,7 +1464,7 @@
         return () => clearTimeout(timer);
       }
     }, [shouldSkip, context, onChange]);
-    
+
     // Если должны пропустить — показываем заглушку
     if (shouldSkip) {
       return React.createElement('div', { className: 'mc-cycle-step mc-cycle-skip' },
@@ -1444,7 +1487,7 @@
         setCycleDay(null);
         onChange({ cycleDay: null });
         setShowDayPicker(false);
-        
+
         // Очищаем связанные дни
         if (HEYS.Cycle?.clearCycleDays) {
           HEYS.Cycle.clearCycleDays(dateKey, lsGet, lsSet);
@@ -1457,7 +1500,7 @@
       setCycleDay(day);
       onChange({ cycleDay: day });
       setShowDayPicker(false);
-      
+
       // Автоматически проставляем все 7 дней
       if (HEYS.Cycle?.setCycleDaysAuto) {
         const result = HEYS.Cycle.setCycleDaysAuto(dateKey, day, lsGet, lsSet);
@@ -1479,7 +1522,7 @@
       React.createElement('div', { className: 'mc-cycle-question' },
         'Сегодня особые дни?'
       ),
-      
+
       // Заголовок с toggle
       React.createElement('div', { className: 'mc-cycle-header' },
         React.createElement('div', { className: 'mc-cycle-header-left' },
@@ -1499,10 +1542,10 @@
       isEnabled && cycleDay && !showDayPicker && React.createElement('div', { className: 'mc-cycle-status' },
         React.createElement('div', { className: 'mc-cycle-status-main' },
           React.createElement('span', { className: 'mc-cycle-status-day' }, 'День ' + cycleDay),
-          React.createElement('span', { className: 'mc-cycle-status-info' }, 
-            cycleDay <= 3 ? 'Начало периода' : 
-            cycleDay <= 5 ? 'Середина периода' : 
-            'Конец периода'
+          React.createElement('span', { className: 'mc-cycle-status-info' },
+            cycleDay <= 3 ? 'Начало периода' :
+              cycleDay <= 5 ? 'Середина периода' :
+                'Конец периода'
           )
         ),
         React.createElement('button', {
@@ -1514,13 +1557,13 @@
 
       // Выпадашка выбора дня
       isEnabled && showDayPicker && React.createElement('div', { className: 'mc-cycle-picker' },
-        React.createElement('div', { className: 'mc-cycle-picker-title' }, 
+        React.createElement('div', { className: 'mc-cycle-picker-title' },
           'Какой сегодня день?'
         ),
-        
+
         // Быстрые опции
         React.createElement('div', { className: 'mc-cycle-options' },
-          quickOptions.map(opt => 
+          quickOptions.map(opt =>
             React.createElement('button', {
               key: opt.day,
               type: 'button',
@@ -1538,7 +1581,7 @@
         React.createElement('div', { className: 'mc-cycle-exact' },
           React.createElement('span', { className: 'mc-cycle-exact-label' }, 'Точный день:'),
           React.createElement('div', { className: 'mc-cycle-exact-days' },
-            [1,2,3,4,5,6,7].map(d => 
+            [1, 2, 3, 4, 5, 6, 7].map(d =>
               React.createElement('button', {
                 key: d,
                 type: 'button',
@@ -1552,7 +1595,7 @@
         // Подсказка об автозаполнении
         React.createElement('div', { className: 'mc-cycle-auto-hint' },
           React.createElement('span', { className: 'mc-cycle-hint-icon' }, '✨'),
-          React.createElement('span', { className: 'mc-cycle-hint-text' }, 
+          React.createElement('span', { className: 'mc-cycle-hint-text' },
             'Дни 1-7 проставятся автоматически'
           )
         )
@@ -1577,15 +1620,15 @@
     getInitialData: (ctx) => {
       const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
       const day = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
-      return { 
+      return {
         cycleDay: day.cycleDay || null,
-        _dateKey: dateKey 
+        _dateKey: dateKey
       };
     },
     save: (data) => {
       const dateKey = data._dateKey || new Date().toISOString().slice(0, 10);
       const cycleDay = data.cycleDay;
-      
+
       // Используем автоматическое проставление 7 дней
       if (cycleDay != null && cycleDay >= 1 && cycleDay <= 7) {
         // setCycleDaysAuto проставит дни 1-7 автоматически
@@ -1610,18 +1653,18 @@
           lsSet(`heys_dayv2_${dateKey}`, day);
         }
       }
-      
+
       // Триггер облачной синхронизации
-      window.dispatchEvent(new CustomEvent('heys:data-saved', { 
+      window.dispatchEvent(new CustomEvent('heys:data-saved', {
         detail: { key: `day:${dateKey}`, type: 'cycle' }
       }));
-      
+
       // Уведомляем DayTab о изменении
-      window.dispatchEvent(new CustomEvent('heys:day-updated', { 
-        detail: { 
-          date: dateKey, 
-          field: 'cycleDay', 
-          value: data.cycleDay, 
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: {
+          date: dateKey,
+          field: 'cycleDay',
+          value: data.cycleDay,
           source: 'cycle-step',
           updatedAt: Date.now()
         }
@@ -1647,7 +1690,7 @@
     try { return lsGet(MEASUREMENT_SIDE_KEY, 'right'); } catch { return 'right'; }
   }
   function setMeasurementSide(side) {
-    try { lsSet(MEASUREMENT_SIDE_KEY, side); } catch {}
+    try { lsSet(MEASUREMENT_SIDE_KEY, side); } catch { }
   }
 
   /**
@@ -1722,12 +1765,12 @@
     if (!last.measuredAt) return true; // Нет данных → показываем
     // Если прошлый замер был неполным — продолжаем показывать
     if (last.waist && (!last.hips || !last.thigh || !last.biceps)) return true;
-    
+
     const lastDate = new Date(last.measuredAt);
     const today = new Date();
     const diffMs = today - lastDate;
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    
+
     return diffDays >= 7;
   }
 
@@ -1768,7 +1811,7 @@
     const handleInputChange = (key, textValue) => {
       // Сохраняем текст как есть (для нормального ввода)
       setInputValues(prev => ({ ...prev, [key]: textValue }));
-      
+
       // Парсим число и обновляем данные
       const cleaned = textValue.replace(',', '.');
       if (cleaned === '' || cleaned === '.') {
@@ -1786,7 +1829,7 @@
       e.target.select();
     };
 
-    const lastMeasuredInfo = lastMeasurements.measuredAt 
+    const lastMeasuredInfo = lastMeasurements.measuredAt
       ? `Последний замер: ${lastMeasurements.daysAgo === 0 ? 'сегодня' : lastMeasurements.daysAgo === 1 ? 'вчера' : lastMeasurements.daysAgo + ' дн. назад'}`
       : 'Первый замер';
 
@@ -1806,9 +1849,9 @@
           const showWarning = deltaPct !== null && Math.abs(deltaPct) > 0.15;
           const progressLabel = last.value && numValue ? `${delta > 0 ? '+' : ''}${(Math.round(delta * 10) / 10)} см` : null;
 
-          return React.createElement('div', { 
-            key: field.key, 
-            className: 'mc-measurement-field' 
+          return React.createElement('div', {
+            key: field.key,
+            className: 'mc-measurement-field'
           },
             React.createElement('div', { className: 'mc-measurement-header' },
               React.createElement('span', { className: 'mc-measurement-icon' }, field.icon),
@@ -1827,15 +1870,15 @@
                 onChange: (e) => handleInputChange(field.key, e.target.value)
               }),
               React.createElement('span', { className: 'mc-measurement-unit' }, 'см'),
-              progressLabel && React.createElement('span', { 
+              progressLabel && React.createElement('span', {
                 className: 'mc-measurement-delta' + (delta > 0 ? ' up' : delta < 0 ? ' down' : '')
               }, progressLabel)
             ),
             !last.value && React.createElement('div', { className: 'mc-measurement-no-data' }, 'Первый замер'),
             showWarning && React.createElement('div', { className: 'mc-measurement-warning', role: 'alert' }, '⚠️ Проверьте ввод'),
             // Хинт + индикатор стороны для бедра/бицепса
-            React.createElement('div', { className: 'mc-measurement-hint' }, 
-              field.hasSide 
+            React.createElement('div', { className: 'mc-measurement-hint' },
+              field.hasSide
                 ? `${field.hint} (${side === 'left' ? 'левая' : 'правая'})`
                 : field.hint
             )
@@ -1862,7 +1905,7 @@
 
       React.createElement('div', { className: 'mc-measurements-tip' },
         React.createElement('span', { className: 'mc-measurements-tip-icon' }, '💡'),
-        React.createElement('span', { className: 'mc-measurements-tip-text' }, 
+        React.createElement('span', { className: 'mc-measurements-tip-text' },
           'Мерьте утром, одна сторона, без одежды'
         )
       )
@@ -1879,13 +1922,13 @@
     getInitialData: (context = {}) => {
       // Используем дату из context или сегодня
       const dateKey = context.dateKey || getTodayKey();
-      
+
       // Используем lsGet — он:
       // 1. Работает со scoped-ключами (clientId)
       // 2. Декомпрессирует данные (¤Z¤ prefix)
       // 3. Синхронизирован с облаком через HEYS.store
       const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
-      
+
       const m = dayData?.measurements || {};
       return {
         waist: m.waist ?? null,
@@ -1900,7 +1943,7 @@
       const dateKey = data._dateKey || getTodayKey();
       const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
       const hasData = ['waist', 'hips', 'thigh', 'biceps'].some(k => data[k] !== null && data[k] !== undefined && !Number.isNaN(data[k]));
-      
+
       if (hasData) {
         const newUpdatedAt = Date.now();
         dayData.measurements = {
@@ -1912,21 +1955,21 @@
         };
         dayData.updatedAt = newUpdatedAt;
         lsSet(`heys_dayv2_${dateKey}`, dayData);
-        
+
         // Триггер облачной синхронизации
-        window.dispatchEvent(new CustomEvent('heys:data-saved', { 
+        window.dispatchEvent(new CustomEvent('heys:data-saved', {
           detail: { key: `day:${dateKey}`, type: 'measurements' }
         }));
-        
+
         // Уведомляем DayTab о изменении (с forceReload)
-        window.dispatchEvent(new CustomEvent('heys:day-updated', { 
-          detail: { 
-            date: dateKey, 
-            field: 'measurements', 
-            value: dayData.measurements, 
+        window.dispatchEvent(new CustomEvent('heys:day-updated', {
+          detail: {
+            date: dateKey,
+            field: 'measurements',
+            value: dayData.measurements,
             source: 'measurements-step',
             updatedAt: newUpdatedAt,
-            forceReload: true 
+            forceReload: true
           }
         }));
       }
@@ -1948,9 +1991,9 @@
   ];
 
   // Emoji для оценок холода
-  const COLD_MOOD_EMOJI = ['😢','😢','😕','😕','😐','😐','🙂','🙂','😊','😊','😄'];
-  const COLD_WELLBEING_EMOJI = ['🥶','🥶','😓','😓','😐','😐','🙂','🙂','💪','💪','🔥'];
-  const COLD_STRESS_EMOJI = ['😌','😌','🙂','🙂','😐','😐','😟','😟','😰','😰','😱'];
+  const COLD_MOOD_EMOJI = ['😢', '😢', '😕', '😕', '😐', '😐', '🙂', '🙂', '😊', '😊', '😄'];
+  const COLD_WELLBEING_EMOJI = ['🥶', '🥶', '😓', '😓', '😐', '😐', '🙂', '🙂', '💪', '💪', '🔥'];
+  const COLD_STRESS_EMOJI = ['😌', '😌', '🙂', '🙂', '😐', '😐', '😟', '😟', '😰', '😰', '😱'];
 
   // Пресеты для быстрого выбора
   const COLD_PRESETS_POSITIVE = [
@@ -1990,19 +2033,19 @@
     const color = getColor(value);
     return React.createElement('div', {
       className: 'cold-rating-card',
-      style: { 
+      style: {
         padding: '12px',
         borderRadius: '10px',
-        background: isNegative 
+        background: isNegative
           ? (value <= 3 ? 'rgba(16, 185, 129, 0.08)' : value >= 7 ? 'rgba(239, 68, 68, 0.08)' : 'rgba(59, 130, 246, 0.06)')
           : (value <= 3 ? 'rgba(239, 68, 68, 0.08)' : value >= 7 ? 'rgba(16, 185, 129, 0.08)' : 'rgba(59, 130, 246, 0.06)'),
         marginBottom: '8px'
       }
     },
-      React.createElement('div', { 
-        style: { 
-          display: 'flex', 
-          alignItems: 'center', 
+      React.createElement('div', {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'space-between',
           marginBottom: '8px'
         }
@@ -2014,25 +2057,25 @@
         ),
         // Значение + текст
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
-          React.createElement('span', { 
-            style: { 
-              fontWeight: '700', 
+          React.createElement('span', {
+            style: {
+              fontWeight: '700',
               fontSize: '16px',
               color: color
-            } 
+            }
           }, value),
-          React.createElement('span', { 
-            style: { fontSize: '12px', color: '#64748b' } 
+          React.createElement('span', {
+            style: { fontSize: '12px', color: '#64748b' }
           }, getText(value))
         )
       ),
       // Пресеты
-      React.createElement('div', { 
-        style: { 
-          display: 'flex', 
-          gap: '6px', 
-          marginBottom: '8px' 
-        } 
+      React.createElement('div', {
+        style: {
+          display: 'flex',
+          gap: '6px',
+          marginBottom: '8px'
+        }
       },
         presets.map(p => React.createElement('button', {
           key: p.value,
@@ -2074,10 +2117,10 @@
 
     return React.createElement('div', { className: 'mc-cold-step' },
       // Кнопки выбора типа
-      React.createElement('div', { 
-        style: { 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(2, 1fr)', 
+      React.createElement('div', {
+        style: {
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
           gap: '12px',
           marginBottom: '16px'
         }
@@ -2102,9 +2145,9 @@
       ),
       // Время (если выбрано что-то кроме "нет")
       selectedType !== 'none' && React.createElement('div', {
-        style: { 
-          display: 'flex', 
-          alignItems: 'center', 
+        style: {
+          display: 'flex',
+          alignItems: 'center',
           gap: '12px',
           padding: '12px',
           background: 'rgba(59, 130, 246, 0.05)',
@@ -2160,7 +2203,7 @@
     save: (data) => {
       const dateKey = data._dateKey || getTodayKey();
       const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
-      
+
       if (data.coldType && data.coldType !== 'none') {
         dayData.coldExposure = {
           type: data.coldType,
@@ -2172,14 +2215,14 @@
           delete dayData.coldExposure;
         }
       }
-      
+
       dayData.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, dayData);
-      
-      window.dispatchEvent(new CustomEvent('heys:data-saved', { 
+
+      window.dispatchEvent(new CustomEvent('heys:data-saved', {
         detail: { key: `day:${dateKey}`, type: 'coldExposure' }
       }));
-      window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'coldExposure', source: 'cold-exposure-step' }
       }));
     },
@@ -2235,7 +2278,7 @@
 
   // Haptic feedback
   const hapticLight = () => {
-    try { navigator.vibrate?.(5); } catch {}
+    try { navigator.vibrate?.(5); } catch { }
   };
 
   // Пресеты быстрого выбора (5 вариантов)
@@ -2262,17 +2305,17 @@
     const key = yesterday.toISOString().slice(0, 10);
     // 🔧 FIX: Добавляем || {} на случай если lsGet вернёт null
     const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
-    
+
     // Собираем все оценки настроения за день (из приёмов пищи + утреннее)
     const moodValues = [];
     const wellbeingValues = [];
     const stressValues = [];
-    
+
     // Утреннее настроение
     if (dayData.moodMorning) moodValues.push(dayData.moodMorning);
     if (dayData.wellbeingMorning) wellbeingValues.push(dayData.wellbeingMorning);
     if (dayData.stressMorning) stressValues.push(dayData.stressMorning);
-    
+
     // Из приёмов пищи
     if (dayData.meals && dayData.meals.length > 0) {
       dayData.meals.forEach(meal => {
@@ -2281,9 +2324,9 @@
         if (meal.stress) stressValues.push(meal.stress);
       });
     }
-    
+
     const avg = arr => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 5;
-    
+
     return {
       mood: avg(moodValues),
       wellbeing: avg(wellbeingValues),
@@ -2325,7 +2368,7 @@
     const mood = data.mood ?? 5;
     const wellbeing = data.wellbeing ?? 5;
     const stress = data.stress ?? 5;
-    
+
     // Состояние для анимации pulse
     const [pulsingField, setPulsingField] = useState(null);
     const [poppingEmoji, setPoppingEmoji] = useState(null);
@@ -2333,7 +2376,7 @@
     const updateField = (field, value) => {
       hapticLight();
       onChange({ ...data, [field]: value });
-      
+
       // Запускаем pulse-анимацию
       setPulsingField(field);
       setPoppingEmoji(field);
@@ -2343,9 +2386,9 @@
 
     // Компонент одного рейтинга с пресетами и градиентом
     const RatingCard = ({ field, value, emoji, emojiFn, title, color, colorFn, presets, isNegative, index }) => {
-      return React.createElement('div', { 
+      return React.createElement('div', {
         className: 'mood-rating-card',
-        style: { 
+        style: {
           padding: '10px 12px',
           borderRadius: '12px',
           background: '#fff',
@@ -2354,40 +2397,40 @@
         }
       },
         // Заголовок с эмодзи и значением
-        React.createElement('div', { 
-          style: { 
-            display: 'flex', 
-            alignItems: 'center', 
+        React.createElement('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'space-between',
             marginBottom: '6px'
           }
         },
           React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-            React.createElement('span', { 
+            React.createElement('span', {
               className: poppingEmoji === field ? 'mood-emoji-pop' : '',
-              style: { fontSize: '22px', transition: 'all 0.2s' } 
+              style: { fontSize: '22px', transition: 'all 0.2s' }
             }, emojiFn(value)),
             React.createElement('span', { style: { fontWeight: '600', fontSize: '14px', color: '#1e293b' } }, title)
           ),
-          React.createElement('span', { 
+          React.createElement('span', {
             className: pulsingField === field ? 'mood-value-pulse' : '',
-            style: { 
-              fontWeight: '700', 
+            style: {
+              fontWeight: '700',
               fontSize: '18px',
               color: colorFn(value),
               minWidth: '45px',
               textAlign: 'right'
-            } 
+            }
           }, value + '/10')
         ),
-        
+
         // Пресеты быстрого выбора (5 вариантов)
-        React.createElement('div', { 
-          style: { 
-            display: 'flex', 
-            gap: '4px', 
-            marginBottom: '6px' 
-          } 
+        React.createElement('div', {
+          style: {
+            display: 'flex',
+            gap: '4px',
+            marginBottom: '6px'
+          }
         },
           presets.map(p => {
             const isSelected = value === p.value;
@@ -2408,12 +2451,12 @@
                 alignItems: 'center',
                 minHeight: '36px'
               }
-            }, 
+            },
               React.createElement('span', { style: { fontSize: '20px' } }, p.emoji)
             );
           })
         ),
-        
+
         // Слайдер — простой вариант, работает по tap
         React.createElement('input', {
           type: 'range',
@@ -2433,15 +2476,15 @@
       );
     };
 
-    return React.createElement('div', { 
+    return React.createElement('div', {
       className: 'ts-step morning-mood-step',
       style: { opacity: 1 }
     },
-      
+
       // === Заголовок ===
-      React.createElement('div', { 
-        style: { 
-          textAlign: 'center', 
+      React.createElement('div', {
+        style: {
+          textAlign: 'center',
           marginBottom: '12px',
           padding: '10px',
           background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
@@ -2449,14 +2492,14 @@
         }
       },
         React.createElement('div', { style: { fontSize: '26px', marginBottom: '2px' } }, '🌅'),
-        React.createElement('div', { style: { fontWeight: '700', fontSize: '15px', color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.2)' } }, 
+        React.createElement('div', { style: { fontWeight: '700', fontSize: '15px', color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.2)' } },
           'Как себя чувствуешь?'
         )
       ),
 
       // === Оценки с анимацией ===
       React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
-        
+
         // Настроение
         React.createElement(RatingCard, {
           field: 'mood',
@@ -2519,7 +2562,7 @@
       const dateKey = getTodayKey();
       // 🔧 FIX: Добавляем || {} на случай если lsGet вернёт null (новый клиент)
       const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
-      
+
       // Если уже есть данные за сегодня — берём их
       if (dayData.moodMorning !== undefined) {
         return {
@@ -2529,7 +2572,7 @@
           _dateKey: dateKey
         };
       }
-      
+
       // Иначе берём среднее за вчера
       const yesterdayAvg = getYesterdayMoodAvg();
       return {
@@ -2542,18 +2585,18 @@
     save: (data) => {
       const dateKey = data._dateKey || getTodayKey();
       const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
-      
+
       dayData.moodMorning = data.mood ?? 5;
       dayData.wellbeingMorning = data.wellbeing ?? 5;
       dayData.stressMorning = data.stress ?? 5;
-      
+
       dayData.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, dayData);
-      
-      window.dispatchEvent(new CustomEvent('heys:data-saved', { 
+
+      window.dispatchEvent(new CustomEvent('heys:data-saved', {
         detail: { key: `day:${dateKey}`, type: 'morningMood' }
       }));
-      window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'morningMood', source: 'morning-mood-step', forceReload: true }
       }));
     },
@@ -2564,11 +2607,11 @@
   // MORNING ROUTINE STEP — Завершающий мотивирующий шаг
   // Персонализированное приветствие по настроению
   // ============================================================
-  
+
   function MorningRoutineStepComponent({ data, onChange, context }) {
     const [checkedItems, setCheckedItems] = useState(data.checkedItems || []);
     const [showConfetti, setShowConfetti] = useState(false);
-    
+
     // Получаем утреннее настроение из данных дня
     const dateKey = getTodayKey();
     // 🔧 FIX: Добавляем || {} на случай если lsGet вернёт null
@@ -2576,13 +2619,13 @@
     const morningMood = dayData.moodMorning ?? 5;
     const morningWellbeing = dayData.wellbeingMorning ?? 5;
     const morningStress = dayData.stressMorning ?? 5;
-    
+
     // Персонализированное приветствие на основе настроения
     const getPersonalizedGreeting = () => {
       const avgMood = (morningMood + morningWellbeing + (10 - morningStress)) / 3;
       const hour = new Date().getHours();
       const timeOfDay = hour < 12 ? 'утро' : hour < 17 ? 'день' : 'вечер';
-      
+
       if (avgMood >= 7) {
         const phrases = [
           { emoji: '🚀', text: 'Отличный старт!' },
@@ -2611,9 +2654,9 @@
         return phrases[Math.floor(Math.random() * phrases.length)];
       }
     };
-    
+
     const personalGreeting = useMemo(getPersonalizedGreeting, [morningMood, morningWellbeing, morningStress]);
-    
+
     // Рандомные мотивирующие фразы для кнопки (адаптированы под настроение)
     const getButtonPhrase = () => {
       const avgMood = (morningMood + morningWellbeing + (10 - morningStress)) / 3;
@@ -2628,59 +2671,59 @@
         return phrases[Math.floor(Math.random() * phrases.length)];
       }
     };
-    
+
     const randomPhrase = useMemo(getButtonPhrase, [morningMood, morningWellbeing, morningStress]);
-    
+
     const routineItems = [
-      { 
-        id: 'water', 
-        emoji: '💧', 
-        title: 'Выпей тёплой воды', 
+      {
+        id: 'water',
+        emoji: '💧',
+        title: 'Выпей тёплой воды',
         desc: 'Стакан тёплой воды натощак запускает метаболизм',
         color: '#3b82f6'
       },
-      { 
-        id: 'tracker', 
-        emoji: '⌚', 
-        title: 'Надень трекер', 
+      {
+        id: 'tracker',
+        emoji: '⌚',
+        title: 'Надень трекер',
         desc: 'Часы или браслет — следи за шагами и пульсом',
         color: '#3b82f6'
       },
-      { 
-        id: 'shower', 
-        emoji: '🚿', 
-        title: 'Контрастный душ', 
+      {
+        id: 'shower',
+        emoji: '🚿',
+        title: 'Контрастный душ',
         desc: 'Бодрит и укрепляет иммунитет',
         color: '#06b6d4'
       }
     ];
-    
+
     const toggleItem = (id) => {
       setCheckedItems(prev => {
-        const newItems = prev.includes(id) 
+        const newItems = prev.includes(id)
           ? prev.filter(i => i !== id)
           : [...prev, id];
         onChange({ ...data, checkedItems: newItems });
-        
+
         // Конфетти при выполнении всех 3
         if (newItems.length === 3 && !showConfetti) {
           setShowConfetti(true);
           setTimeout(() => setShowConfetti(false), 2000);
         }
-        
+
         return newItems;
       });
     };
-    
+
     // Функция завершения (вызывает onNext из контекста)
     const handleFinish = () => {
       if (context && context.onNext) {
         context.onNext();
       }
     };
-    
+
     const allChecked = checkedItems.length === 3;
-    
+
     return React.createElement('div', {
       style: {
         display: 'flex',
@@ -2718,16 +2761,16 @@
           }
         }, '3 шага правильной рутины:')
       ),
-      
+
       // 🆕 NDTE Insight — показываем если вчера была тренировка
       (() => {
         const todayKey = getTodayKey();
-        const prevTrainings = HEYS.InsulinWave && HEYS.InsulinWave.getPreviousDayTrainings 
-          ? HEYS.InsulinWave.getPreviousDayTrainings(todayKey, lsGet) 
+        const prevTrainings = HEYS.InsulinWave && HEYS.InsulinWave.getPreviousDayTrainings
+          ? HEYS.InsulinWave.getPreviousDayTrainings(todayKey, lsGet)
           : null;
-        
+
         if (!prevTrainings || prevTrainings.totalKcal < 200) return null;
-        
+
         const prof = lsGet('heys_profile', { weight: 70, height: 170 });
         const bmi = HEYS.InsulinWave.calculateBMI(prof.weight, prof.height);
         const ndteData = HEYS.InsulinWave.calculateNDTE({
@@ -2737,12 +2780,12 @@
           trainingType: prevTrainings.dominantType,
           trainingsCount: prevTrainings.trainings.length
         });
-        
+
         if (!ndteData.active) return null;
-        
+
         const boostPct = Math.round(ndteData.tdeeBoost * 100);
         const wavePct = Math.round(ndteData.waveReduction * 100);
-        
+
         return React.createElement('div', {
           style: {
             background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
@@ -2805,13 +2848,13 @@
               opacity: '0.85',
               fontStyle: 'italic'
             }
-          }, ndteData.tdeeBoost >= 0.07 
+          }, ndteData.tdeeBoost >= 0.07
             ? '💪 Отличная тренировка! Твой метаболизм работает на полную мощность.'
             : '⚡ Хорошая активность! Метаболизм слегка ускорен.'
           )
         );
       })(),
-      
+
       // Список рутин
       React.createElement('div', {
         style: {
@@ -2829,7 +2872,7 @@
               alignItems: 'center',
               gap: '14px',
               padding: '14px 16px',
-              background: checkedItems.includes(item.id) 
+              background: checkedItems.includes(item.id)
                 ? `linear-gradient(135deg, ${item.color}15, ${item.color}08)`
                 : '#f8fafc',
               borderRadius: '14px',
@@ -2860,7 +2903,7 @@
                 flexShrink: 0
               }
             }, checkedItems.includes(item.id) ? '✓' : (index + 1)),
-            
+
             // Эмодзи
             React.createElement('div', {
               style: {
@@ -2868,7 +2911,7 @@
                 flexShrink: 0
               }
             }, item.emoji),
-            
+
             // Текст
             React.createElement('div', {
               style: {
@@ -2895,7 +2938,7 @@
           )
         )
       ),
-      
+
       // Мотивационная кнопка-плашка внизу (вместо кнопки в хедере)
       React.createElement('button', {
         onClick: handleFinish,
@@ -2903,7 +2946,7 @@
           width: '100%',
           textAlign: 'center',
           padding: '18px 24px',
-          background: allChecked 
+          background: allChecked
             ? 'linear-gradient(135deg, #fef3c7, #fde68a)'
             : 'linear-gradient(135deg, #10b981, #059669)',
           borderRadius: '16px',
@@ -2912,7 +2955,7 @@
           cursor: 'pointer',
           transition: 'all 0.2s ease',
           transform: 'scale(1)',
-          boxShadow: allChecked 
+          boxShadow: allChecked
             ? '0 4px 14px rgba(251, 191, 36, 0.4)'
             : '0 4px 14px rgba(16, 185, 129, 0.4)'
         },
@@ -2920,27 +2963,27 @@
         onMouseUp: (e) => e.currentTarget.style.transform = 'scale(1)',
         onMouseLeave: (e) => e.currentTarget.style.transform = 'scale(1)'
       },
-        allChecked && React.createElement('div', { 
-          style: { fontSize: '28px', marginBottom: '6px' } 
+        allChecked && React.createElement('div', {
+          style: { fontSize: '28px', marginBottom: '6px' }
         }, '🏆'),
-        React.createElement('div', { 
-          style: { 
-            fontSize: allChecked ? '14px' : '13px', 
-            fontWeight: '600', 
+        React.createElement('div', {
+          style: {
+            fontSize: allChecked ? '14px' : '13px',
+            fontWeight: '600',
             color: allChecked ? '#92400e' : '#fff',
             marginBottom: allChecked ? '8px' : '0'
-          } 
+          }
         }, allChecked ? 'Ты уже на пути к успеху!' : 'Можно пропустить'),
-        React.createElement('div', { 
-          style: { 
-            fontSize: '18px', 
-            fontWeight: '800', 
+        React.createElement('div', {
+          style: {
+            fontSize: '18px',
+            fontWeight: '800',
             color: allChecked ? '#b45309' : '#fff',
             letterSpacing: '0.5px'
-          } 
+          }
         }, randomPhrase)
       ),
-      
+
       // Подсказка если не все отмечены
       !allChecked && React.createElement('div', {
         style: {
@@ -2950,7 +2993,7 @@
           marginTop: '8px'
         }
       }, '↑ Отметь выполненные пункты или продолжай'),
-      
+
       // CSS анимация
       React.createElement('style', null, `
         @keyframes bounce {
@@ -2969,24 +3012,24 @@
   function SupplementsStepComponent({ data, onChange }) {
     const Supps = HEYS.Supplements;
     if (!Supps) {
-      return React.createElement('div', { 
+      return React.createElement('div', {
         style: { padding: '20px', textAlign: 'center', color: '#64748b' }
       }, '⏳ Загрузка витаминов...');
     }
-    
+
     const byCategory = useMemo(() => Supps.getByCategory(), []);
     const selected = data.selected || [];
-    
+
     const toggle = (id) => {
-      const newSelected = selected.includes(id) 
+      const newSelected = selected.includes(id)
         ? selected.filter(s => s !== id)
         : [...selected, id];
       onChange({ ...data, selected: newSelected });
     };
-    
-    return React.createElement('div', { 
+
+    return React.createElement('div', {
       className: 'mc-supplements-step',
-      style: { 
+      style: {
         display: 'flex',
         flexDirection: 'column',
         maxHeight: '60vh'
@@ -3003,31 +3046,31 @@
         // Категории
         Object.entries(byCategory).map(([catId, supps]) => {
           const cat = Supps.CATEGORIES[catId];
-          return React.createElement('div', { 
+          return React.createElement('div', {
             key: catId,
             style: { marginBottom: '16px' }
           },
             // Заголовок категории
-            React.createElement('div', { 
-              style: { 
-                fontSize: '13px', 
-                fontWeight: '600', 
+            React.createElement('div', {
+              style: {
+                fontSize: '13px',
+                fontWeight: '600',
                 color: '#64748b',
                 marginBottom: '8px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px'
               }
-            }, 
+            },
               React.createElement('span', null, cat.icon),
               React.createElement('span', null, cat.name)
             ),
             // Чипы витаминов
-            React.createElement('div', { 
-              style: { 
-                display: 'flex', 
-                flexWrap: 'wrap', 
-                gap: '8px' 
+            React.createElement('div', {
+              style: {
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px'
               }
             },
               supps.map(supp => {
@@ -3059,8 +3102,8 @@
         })
       ),
       // Счётчик внизу — ВНЕ скролла!
-      React.createElement('div', { 
-        style: { 
+      React.createElement('div', {
+        style: {
           marginTop: '12px',
           padding: '12px',
           background: selected.length > 0 ? '#fff7ed' : '#f8fafc',
@@ -3071,9 +3114,9 @@
           color: selected.length > 0 ? '#ea580c' : '#64748b',
           flexShrink: 0
         }
-      }, 
-        selected.length > 0 
-          ? `💊 Выбрано: ${selected.length}` 
+      },
+        selected.length > 0
+          ? `💊 Выбрано: ${selected.length}`
           : '💊 Выберите витамины на сегодня'
       )
     );
@@ -3093,15 +3136,15 @@
     save: (data, context) => {
       // Используем dateKey из контекста (для редактирования прошлых дней) или сегодня
       const dateKey = context?.dateKey || getTodayKey();
-      
+
       console.log('[Supplements SAVE] 🔵 START | dateKey:', dateKey, '| selected:', data.selected, '| context:', context);
-      
+
       // 1. Сохраняем в профиль (для следующего дня)
       if (HEYS.Supplements && HEYS.Supplements.savePlanned) {
         HEYS.Supplements.savePlanned(data.selected);
         console.log('[Supplements SAVE] ✅ Saved to profile');
       }
-      
+
       // 2. Сохраняем в день как planned
       const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
       const oldPlanned = dayData.supplementsPlanned;
@@ -3109,11 +3152,11 @@
       dayData.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, dayData);
       console.log('[Supplements SAVE] ✅ Saved to day | old:', oldPlanned, '| new:', data.selected, '| updatedAt:', dayData.updatedAt);
-      
+
       // Диспатчим событие для обновления UI дня (с forceReload!)
       if (typeof window !== 'undefined') {
         console.log('[Supplements SAVE] 📤 Dispatching heys:day-updated with forceReload:true');
-        window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+        window.dispatchEvent(new CustomEvent('heys:day-updated', {
           detail: { date: dateKey, field: 'supplementsPlanned', forceReload: true }
         }));
       }

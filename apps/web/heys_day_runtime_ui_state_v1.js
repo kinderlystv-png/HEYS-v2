@@ -30,6 +30,16 @@
 
         const ctx = HEYSRef || HEYS;
         const dayEffects = ctx.dayEffects || {};
+        const readStoredValue = (key, fallback) => {
+            try {
+                if (ctx?.store?.get) return ctx.store.get(key, fallback);
+                if (ctx?.utils?.lsGet) return ctx.utils.lsGet(key, fallback);
+                const raw = localStorage.getItem(key);
+                return raw == null ? fallback : raw;
+            } catch {
+                return fallback;
+            }
+        };
 
         if (!dayEffects?.useDayCurrentMinuteEffect) {
             throw new Error('[heys_day_runtime_ui_state] HEYS.dayEffects.useDayCurrentMinuteEffect not loaded');
@@ -51,8 +61,7 @@
 
         // === Dark Theme (3 modes: light / dark / auto) ===
         const [theme, setTheme] = React.useState(() => {
-            const U = ctx?.utils || {};
-            const saved = U.lsGet ? U.lsGet('heys_theme', 'light') : localStorage.getItem('heys_theme');
+            const saved = readStoredValue('heys_theme', 'light');
             // Валидация: только light/dark/auto, иначе light
             return ['light', 'dark', 'auto'].includes(saved) ? saved : 'light';
         });
@@ -76,8 +85,9 @@
         // === Подсказка "нажми для деталей" ===
         const [mealChartHintShown, setMealChartHintShown] = React.useState(() => {
             try {
-                const U = ctx?.utils || {};
-                return U.lsGet ? U.lsGet('heys_meal_hint_shown', null) === '1' : localStorage.getItem('heys_meal_hint_shown') === '1';
+                const saved = readStoredValue('heys_meal_hint_shown', null);
+                if (saved != null) return saved === '1' || saved === 1 || saved === true;
+                return false;
             } catch { return false; }
         });
 

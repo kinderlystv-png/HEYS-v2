@@ -183,6 +183,39 @@
 
   // === УТИЛИТЫ ===
 
+  function readStoredValue(key, fallback = null) {
+    let value;
+
+    if (HEYS.store?.get) {
+      value = HEYS.store.get(key, fallback);
+    } else if (HEYS.utils?.lsGet) {
+      value = HEYS.utils.lsGet(key, fallback);
+    } else {
+      try {
+        value = localStorage.getItem(key);
+      } catch {
+        return fallback;
+      }
+    }
+
+    if (value == null) return fallback;
+
+    if (typeof value === 'string') {
+      if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
+        try {
+          value = HEYS.store.decompress(value.slice(3));
+        } catch (_) { }
+      }
+      try {
+        return JSON.parse(value);
+      } catch (_) {
+        return value;
+      }
+    }
+
+    return value;
+  }
+
   /**
    * Получить витамины сгруппированные по категориям
    */
@@ -209,8 +242,7 @@
    * Получить кастомные добавки пользователя
    */
   function getCustomSupplements() {
-    const U = HEYS.utils || {};
-    const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+    const profile = getProfileSafe();
     return profile.customSupplements || [];
   }
 
@@ -219,8 +251,7 @@
    * @param {Object} supp - { name, icon, timing }
    */
   function addCustomSupplement(supp) {
-    const U = HEYS.utils || {};
-    const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+    const profile = getProfileSafe();
     const customs = profile.customSupplements || [];
 
     const newSupp = {
@@ -234,7 +265,7 @@
 
     customs.push(newSupp);
     profile.customSupplements = customs;
-    if (U.lsSet) U.lsSet('heys_profile', profile);
+    saveProfileSafe(profile, 'customSupplements');
 
     // Добавляем в рантайм каталог
     SUPPLEMENTS_CATALOG[newSupp.id] = newSupp;
@@ -249,12 +280,11 @@
   function removeCustomSupplement(suppId) {
     if (!suppId.startsWith('custom_')) return false;
 
-    const U = HEYS.utils || {};
-    const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+    const profile = getProfileSafe();
     const customs = profile.customSupplements || [];
 
     profile.customSupplements = customs.filter(s => s.id !== suppId);
-    if (U.lsSet) U.lsSet('heys_profile', profile);
+    saveProfileSafe(profile, 'customSupplements');
 
     // Удаляем из рантайм каталога
     delete SUPPLEMENTS_CATALOG[suppId];
@@ -284,8 +314,7 @@
    * Безопасное получение профиля
    */
   function getProfileSafe() {
-    const U = HEYS.utils || {};
-    return U.lsGet ? U.lsGet('heys_profile', {}) : {};
+    return readStoredValue('heys_profile', {});
   }
 
   /**
@@ -293,9 +322,25 @@
    */
   function saveProfileSafe(profile, field) {
     const U = HEYS.utils || {};
-    if (U.lsSet) U.lsSet('heys_profile', profile);
+    if (HEYS.store && typeof HEYS.store.set === 'function') {
+      HEYS.store.set('heys_profile', profile);
+    } else if (U.lsSet) {
+      U.lsSet('heys_profile', profile);
+    }
     if (field) {
       window.dispatchEvent(new CustomEvent('heys:supplements-updated', { detail: { field } }));
+    }
+  }
+
+  function saveDaySafe(dateKey, dayData) {
+    const U = HEYS.utils || {};
+    const key = `heys_dayv2_${dateKey}`;
+    if (HEYS.store && typeof HEYS.store.set === 'function') {
+      HEYS.store.set(key, dayData);
+      return;
+    }
+    if (U.lsSet) {
+      U.lsSet(key, dayData);
     }
   }
 
@@ -601,7 +646,6 @@
 
   // Weekly diet suggestions (7 дней) — лёгкая эвристика по названиям продуктов.
   function getWeeklyDietSuggestions(daysBack = 7) {
-    const U = HEYS.utils || {};
     const today = new Date();
     const planned = getPlannedSupplements();
 
@@ -620,7 +664,7 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${key}`, {}) : {};
+      const dayData = readStoredValue(`heys_dayv2_${key}`, {});
       const meals = dayData.meals || [];
       if (!meals.length) continue;
       daysWithMeals++;
@@ -673,8 +717,7 @@
    * @param {boolean} taken - принять или снять (default true)
    */
   function markSupplementsTaken(dateKey, suppIds, taken = true) {
-    const U = HEYS.utils || {};
-    const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${dateKey}`, {}) : {};
+    const dayData = readStoredValue(`heys_dayv2_${dateKey}`, {});
 
     if (!dayData.supplementsTaken) dayData.supplementsTaken = [];
     if (!dayData.supplementsTakenAt) dayData.supplementsTakenAt = {};
@@ -707,7 +750,7 @@
       }
     }
 
-    if (U.lsSet) U.lsSet(`heys_dayv2_${dateKey}`, dayData);
+    saveDaySafe(dateKey, dayData);
     window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { dateKey, field: 'supplements' } }));
   }
 
@@ -1009,8 +1052,7 @@
    * Получить запланированные на сегодня (из профиля — запоминается)
    */
   function getPlannedSupplements() {
-    const U = HEYS.utils || {};
-    const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+    const profile = getProfileSafe();
     return profile.plannedSupplements || [];
   }
 
@@ -1018,10 +1060,9 @@
    * Сохранить запланированные (в профиль — запоминается на след. день)
    */
   function savePlannedSupplements(supplements) {
-    const U = HEYS.utils || {};
-    const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+    const profile = getProfileSafe();
     profile.plannedSupplements = supplements;
-    if (U.lsSet) U.lsSet('heys_profile', profile);
+    saveProfileSafe(profile, 'plannedSupplements');
 
     // Событие для синхронизации
     window.dispatchEvent(new CustomEvent('heys:profile-updated', {
@@ -1033,8 +1074,7 @@
    * Получить принятые сегодня
    */
   function getTakenSupplements(dateKey) {
-    const U = HEYS.utils || {};
-    const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${dateKey}`, {}) : {};
+    const dayData = readStoredValue(`heys_dayv2_${dateKey}`, {});
     return dayData.supplementsTaken || [];
   }
 
@@ -1042,8 +1082,7 @@
    * Отметить витамин как принятый
    */
   function markSupplementTaken(dateKey, suppId, taken = true) {
-    const U = HEYS.utils || {};
-    const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${dateKey}`, { date: dateKey }) : { date: dateKey };
+    const dayData = readStoredValue(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
 
     let takenList = dayData.supplementsTaken || [];
     if (taken && !takenList.includes(suppId)) {
@@ -1056,7 +1095,7 @@
     dayData.supplementsTakenAt = new Date().toISOString();
     dayData.updatedAt = Date.now();
 
-    if (U.lsSet) U.lsSet(`heys_dayv2_${dateKey}`, dayData);
+    saveDaySafe(dateKey, dayData);
 
     // Событие для обновления UI
     window.dispatchEvent(new CustomEvent('heys:day-updated', {
@@ -1068,15 +1107,14 @@
    * Отметить все запланированные как принятые
    */
   function markAllSupplementsTaken(dateKey) {
-    const U = HEYS.utils || {};
-    const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${dateKey}`, { date: dateKey }) : { date: dateKey };
+    const dayData = readStoredValue(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
     const planned = dayData.supplementsPlanned || getPlannedSupplements();
 
     dayData.supplementsTaken = [...planned];
     dayData.supplementsTakenAt = new Date().toISOString();
     dayData.updatedAt = Date.now();
 
-    if (U.lsSet) U.lsSet(`heys_dayv2_${dateKey}`, dayData);
+    saveDaySafe(dateKey, dayData);
 
     window.dispatchEvent(new CustomEvent('heys:day-updated', {
       detail: { date: dateKey, field: 'supplementsTaken' }
@@ -1087,7 +1125,6 @@
    * Получить статистику соблюдения курса за N дней
    */
   function getComplianceStats(daysBack = 7) {
-    const U = HEYS.utils || {};
     const today = new Date();
     let totalPlanned = 0;
     let totalTaken = 0;
@@ -1097,7 +1134,7 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${key}`, {}) : {};
+      const dayData = readStoredValue(`heys_dayv2_${key}`, {});
 
       const planned = dayData.supplementsPlanned || [];
       const taken = dayData.supplementsTaken || [];
@@ -1178,8 +1215,7 @@
     const now = new Date();
     const hour = now.getHours();
 
-    const U = HEYS.utils || {};
-    const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${dateKey}`, {}) : {};
+    const dayData = readStoredValue(`heys_dayv2_${dateKey}`, {});
     const planned = dayData.supplementsPlanned || getPlannedSupplements();
     const taken = dayData.supplementsTaken || [];
     const notTaken = planned.filter(id => !taken.includes(id));
@@ -2096,8 +2132,7 @@
     const { dateKey, onForceUpdate } = props || {};
     if (!dateKey) return null;
 
-    const U = HEYS.utils || {};
-    const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${dateKey}`, {}) : {};
+    const dayData = readStoredValue(`heys_dayv2_${dateKey}`, {});
 
     // v3.3: Используем planned из дня ИЛИ из профиля (если чек-ин не был)
     const planned = dayData.supplementsPlanned || getPlannedSupplements();

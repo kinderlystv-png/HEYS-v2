@@ -5,6 +5,55 @@
     const React = window.React;
     if (!React) return;
 
+    const U = HEYS.utils || {};
+
+    const tryParseStoredValue = (raw, fallback) => {
+        if (raw === null || raw === undefined) return fallback;
+        if (typeof raw === 'string') {
+            let str = raw;
+            if (str.startsWith('¤Z¤') && HEYS.store?.decompress) {
+                try { str = HEYS.store.decompress(str); } catch (_) { }
+            }
+            try { return JSON.parse(str); } catch (_) { return str; }
+        }
+        return raw;
+    };
+
+    const readGlobalValue = (key, fallback) => {
+        try {
+            if (HEYS.store?.get) {
+                const stored = HEYS.store.get(key, null);
+                if (stored !== null && stored !== undefined) {
+                    return tryParseStoredValue(stored, fallback);
+                }
+            }
+            const raw = localStorage.getItem(key);
+            if (raw !== null && raw !== undefined) return tryParseStoredValue(raw, fallback);
+            if (U.lsGet) return U.lsGet(key, fallback);
+            return fallback;
+        } catch {
+            return fallback;
+        }
+    };
+
+    const writeGlobalValue = (key, value) => {
+        try {
+            if (HEYS.store?.set) {
+                HEYS.store.set(key, value);
+                return;
+            }
+            const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+            localStorage.setItem(key, serialized);
+        } catch { }
+    };
+
+    const removeGlobalValue = (key) => {
+        try {
+            if (HEYS.store?.set) HEYS.store.set(key, null);
+        } catch { }
+        try { localStorage.removeItem(key); } catch { }
+    };
+
     function buildGate(props) {
         const {
             clientId,
@@ -61,11 +110,11 @@
                                         } else {
                                             U.lsSet('heys_client_current', res.clientId);
                                         }
-                                        try { localStorage.setItem('heys_last_client_id', res.clientId); } catch (_) { }
+                                        writeGlobalValue('heys_last_client_id', res.clientId);
                                         // 📱 Сохраняем телефон для ПЭП (SMS-верификация согласий)
                                         try {
                                             const phoneNorm = HEYS.auth?.normalizePhone?.(phone) || phone;
-                                            localStorage.setItem('heys_client_phone', phoneNorm);
+                                            writeGlobalValue('heys_client_phone', phoneNorm);
                                         } catch (_) { }
                                         setClientId(res.clientId);
                                     } catch (_) { }
@@ -247,7 +296,7 @@
                                                 .filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase()))
                                                 .map((c, idx) => {
                                                     const stats = getClientStats(c.id);
-                                                    const isLast = localStorage.getItem('heys_last_client_id') === c.id;
+                                                    const isLast = readGlobalValue('heys_last_client_id', '') === c.id;
                                                     const copyClientId = async (e) => {
                                                         if (e && e.stopPropagation) e.stopPropagation();
                                                         try {
@@ -301,7 +350,7 @@
                                                                     U.lsSet('heys_client_current', c.id);
                                                                 }
                                                                 // Сохраняем как последнего выбранного
-                                                                localStorage.setItem('heys_last_client_id', c.id);
+                                                                writeGlobalValue('heys_last_client_id', c.id);
                                                                 setClientId(c.id);
                                                                 window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
                                                             }
@@ -614,7 +663,7 @@
             ? React.createElement(DesktopGateScreen, {
                 onLogout: () => {
                     // Выход из PIN auth
-                    localStorage.removeItem('heys_pin_auth_client');
+                    removeGlobalValue('heys_pin_auth_client');
                     window.HEYS?.cloud?._setPinAuthMode?.(false, null);
                     setClientId(null);
                     window.location.reload();
@@ -635,7 +684,7 @@
             setShowMorningCheckin,
         } = props;
 
-        const clientPhone = typeof localStorage !== 'undefined' ? localStorage.getItem('heys_client_phone') : null;
+        const clientPhone = typeof localStorage !== 'undefined' ? readGlobalValue('heys_client_phone', null) : null;
 
         return !gate && !desktopGate && !cloudUser && clientId && needsConsent && !checkingConsent && HEYS.Consents?.ConsentScreen
             ? React.createElement(HEYS.Consents.ConsentScreen, {
@@ -678,8 +727,8 @@
                 onCancel: () => {
                     // Отмена = выход (нельзя использовать приложение без согласий)
                     console.log('[CONSENTS] ❌ Отказ от согласий — выход');
-                    localStorage.removeItem('heys_pin_auth_client');
-                    localStorage.removeItem('heys_client_phone');
+                    removeGlobalValue('heys_pin_auth_client');
+                    removeGlobalValue('heys_client_phone');
                     window.HEYS?.cloud?._setPinAuthMode?.(false, null);
                     setClientId(null);
                     window.location.reload();

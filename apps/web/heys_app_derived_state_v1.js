@@ -4,6 +4,38 @@
     const HEYS = window.HEYS = window.HEYS || {};
     HEYS.AppDerivedState = HEYS.AppDerivedState || {};
 
+    const readStoredValue = (key, fallback = null) => {
+        let value;
+        if (HEYS.store?.get) {
+            value = HEYS.store.get(key, fallback);
+        } else if (HEYS.utils?.lsGet) {
+            value = HEYS.utils.lsGet(key, fallback);
+        } else {
+            try {
+                value = localStorage.getItem(key);
+            } catch (e) {
+                return fallback;
+            }
+        }
+
+        if (value == null) return fallback;
+
+        if (typeof value === 'string') {
+            if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
+                try {
+                    value = HEYS.store.decompress(value.slice(3));
+                } catch (e) { }
+            }
+            try {
+                return JSON.parse(value);
+            } catch (e) {
+                return value;
+            }
+        }
+
+        return value;
+    };
+
     HEYS.AppDerivedState.useAppDerivedState = function ({
         React,
         pendingDetails,
@@ -35,8 +67,7 @@
         }, [pendingDetails]);
 
         const cachedProfile = useMemo(() => {
-            const utils = U || window.HEYS?.utils;
-            return utils && utils.lsGet ? utils.lsGet('heys_profile', {}) : {};
+            return readStoredValue('heys_profile', {});
         }, [U, clientId, clientChangeTick]);
 
         const isRpcMode = cloud?.isPinAuthClient?.() || false;
@@ -50,11 +81,8 @@
 
                 // 💡 Для новых клиентов до заполнения профиля — используем имя от куратора
                 try {
-                    const pendingRaw = localStorage.getItem('heys_pending_client_name');
-                    if (pendingRaw) {
-                        const pendingName = JSON.parse(pendingRaw);
-                        if (pendingName) return pendingName;
-                    }
+                    const pendingName = readStoredValue('heys_pending_client_name', null);
+                    if (pendingName) return pendingName;
                 } catch (e) { }
 
                 return 'Мой профиль';

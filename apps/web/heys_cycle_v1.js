@@ -1,14 +1,54 @@
 // heys_cycle_v1.js — Утилиты для менструального цикла (особого периода)
 // Версия: 1.0.0 | Дата: 2025-12-08
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
+  const U = HEYS.utils || {};
+
+  const tryParseStoredValue = (raw, fallback) => {
+    if (raw === null || raw === undefined) return fallback;
+    if (typeof raw === 'string') {
+      let str = raw;
+      if (str.startsWith('¤Z¤') && HEYS.store?.decompress) {
+        try { str = HEYS.store.decompress(str); } catch (_) { }
+      }
+      try { return JSON.parse(str); } catch (_) { return str; }
+    }
+    return raw;
+  };
+
+  const readStoredValue = (key, fallback) => {
+    try {
+      if (HEYS.store?.get) {
+        const stored = HEYS.store.get(key, null);
+        if (stored !== null && stored !== undefined) {
+          return tryParseStoredValue(stored, fallback);
+        }
+      }
+      const raw = localStorage.getItem(key);
+      if (raw !== null && raw !== undefined) return tryParseStoredValue(raw, fallback);
+      return fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  const writeStoredValue = (key, value) => {
+    try {
+      if (HEYS.store?.set) {
+        HEYS.store.set(key, value);
+        return;
+      }
+      const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+      localStorage.setItem(key, serialized);
+    } catch { }
+  };
 
   // ============================================================
   // КОНСТАНТЫ ФАЗ ЦИКЛА
   // ============================================================
-  
+
   /**
    * Фазы менструального цикла с научно обоснованными коррекциями
    * 
@@ -35,7 +75,7 @@
         rest: true     // Легче с нагрузками
       }
     },
-    
+
     // Дни 6-12: Фолликулярная фаза
     follicular: {
       name: 'Фолликулярная',
@@ -52,7 +92,7 @@
         energy: true    // Энергия на подъёме
       }
     },
-    
+
     // Дни 13-14: Овуляция
     ovulation: {
       name: 'Овуляция',
@@ -68,7 +108,7 @@
         peakPerformance: true // Лучшее время для рекордов
       }
     }
-    
+
     // Примечание: Лютеиновая фаза (дни 15-28) не отслеживается,
     // так как пользователь отмечает только дни "особого периода"
   };
@@ -86,7 +126,7 @@
     if (!cycleDay || typeof cycleDay !== 'number' || cycleDay < 1) {
       return null;
     }
-    
+
     for (const [key, phase] of Object.entries(CYCLE_PHASES)) {
       if (phase.days.includes(cycleDay)) {
         return {
@@ -96,7 +136,7 @@
         };
       }
     }
-    
+
     // День за пределами трекинга (>14)
     return null;
   }
@@ -177,7 +217,7 @@
   function getCycleDescription(cycleDay) {
     const phase = getCyclePhase(cycleDay);
     if (!phase) return null;
-    
+
     if (phase.id === 'menstrual') {
       return `День ${cycleDay}: ${phase.shortName}`;
     }
@@ -213,6 +253,43 @@
     return 'heys_dayv2_' + dateStr;
   }
 
+  function readDayData(dateStr, lsGet) {
+    const baseKey = 'heys_dayv2_' + dateStr;
+    const scopedKey = getDayKey(dateStr);
+
+    if (HEYS.store?.get) {
+      return readStoredValue(scopedKey, null);
+    }
+
+    if (lsGet) {
+      try {
+        const v = lsGet(baseKey, null);
+        if (v !== null && v !== undefined) return v;
+      } catch (e) { }
+    }
+
+    return readStoredValue(scopedKey, null);
+  }
+
+  function writeDayData(dateStr, value, lsSet) {
+    const baseKey = 'heys_dayv2_' + dateStr;
+    const scopedKey = getDayKey(dateStr);
+
+    if (HEYS.store?.set) {
+      writeStoredValue(scopedKey, value);
+      return;
+    }
+
+    if (lsSet) {
+      try {
+        lsSet(baseKey, value);
+        return;
+      } catch (e) { }
+    }
+
+    writeStoredValue(scopedKey, value);
+  }
+
   /**
    * Проставить дни цикла автоматически
    * При указании дня X на дате D:
@@ -236,18 +313,11 @@
     for (let d = 1; d <= 7; d++) {
       const offset = d - dayNumber; // Смещение от startDate
       const targetDate = addDays(startDate, offset);
-      const key = getDayKey(targetDate);
-      
+
       try {
-        // Читаем напрямую из localStorage с правильным ключом
-        let dayData = {};
-        try {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            dayData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
-          }
-        } catch(e) {}
-        
+        // Читаем store-first с правильным ключом
+        let dayData = readDayData(targetDate, lsGet) || {};
+
         // Обновляем cycleDay
         const updated = {
           ...dayData,
@@ -255,11 +325,11 @@
           cycleDay: d,
           updatedAt: Date.now()
         };
-        
-        // Пишем напрямую в localStorage с правильным ключом
-        localStorage.setItem(key, JSON.stringify(updated));
+
+        // Пишем store-first с правильным ключом
+        writeDayData(targetDate, updated, lsSet);
         updatedDates.push(targetDate);
-        
+
         // console.log('[Cycle] Set cycleDay=' + d + ' for ' + targetDate + ' (key: ' + key + ')');
       } catch (e) {
         console.warn('[Cycle] Failed to set day', targetDate, e);
@@ -270,17 +340,17 @@
     if (typeof window !== 'undefined' && window.dispatchEvent) {
       // Отдельное событие для каждой даты — чтобы DatePicker обновился
       updatedDates.forEach(date => {
-        window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+        window.dispatchEvent(new CustomEvent('heys:day-updated', {
           detail: { date, field: 'cycleDay', source: 'cycle-auto' }
         }));
         // Триггер облачной синхронизации
-        window.dispatchEvent(new CustomEvent('heys:data-saved', { 
+        window.dispatchEvent(new CustomEvent('heys:data-saved', {
           detail: { key: `day:${date}`, type: 'cycle' }
         }));
       });
       // Общее событие для batch-операций
-      window.dispatchEvent(new CustomEvent('heys:cycle-updated', { 
-        detail: { dates: updatedDates, startDate, dayNumber } 
+      window.dispatchEvent(new CustomEvent('heys:cycle-updated', {
+        detail: { dates: updatedDates, startDate, dayNumber }
       }));
     }
 
@@ -297,42 +367,27 @@
    * @returns {Object} { cleared: number, dates: string[] }
    */
   function clearCycleDays(anyDateInCycle, lsGet, lsSet) {
-    const key = getDayKey(anyDateInCycle);
-    
     try {
-      // Читаем напрямую из localStorage
-      let dayData = null;
-      try {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          dayData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
-        }
-      } catch(e) {}
-      
+      // Читаем store-first
+      const dayData = readDayData(anyDateInCycle, lsGet);
+
       if (!dayData || !dayData.cycleDay) {
         return { cleared: 0, dates: [] };
       }
-      
+
       const currentDay = dayData.cycleDay;
       const clearedDates = [];
-      
+
       // Вычисляем диапазон и очищаем
       for (let d = 1; d <= 7; d++) {
         const offset = d - currentDay;
         const targetDate = addDays(anyDateInCycle, offset);
-        const targetKey = getDayKey(targetDate);
-        
-        let targetData = null;
-        try {
-          const raw = localStorage.getItem(targetKey);
-          if (raw) {
-            targetData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
-          }
-        } catch(e) {}
-        
+
+        const targetData = readDayData(targetDate, lsGet);
+
         if (targetData && targetData.cycleDay) {
           const updated = { ...targetData, cycleDay: null, updatedAt: Date.now() };
-          localStorage.setItem(targetKey, JSON.stringify(updated));
+          writeDayData(targetDate, updated, lsSet);
           clearedDates.push(targetDate);
           // console.log('[Cycle] Cleared cycleDay for ' + targetDate);
         }
@@ -342,17 +397,17 @@
       if (typeof window !== 'undefined' && window.dispatchEvent) {
         // Отдельное событие для каждой даты — чтобы DatePicker обновился
         clearedDates.forEach(date => {
-          window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+          window.dispatchEvent(new CustomEvent('heys:day-updated', {
             detail: { date, field: 'cycleDay', value: null, source: 'cycle-clear' }
           }));
           // Триггер облачной синхронизации
-          window.dispatchEvent(new CustomEvent('heys:data-saved', { 
+          window.dispatchEvent(new CustomEvent('heys:data-saved', {
             detail: { key: `day:${date}`, type: 'cycle' }
           }));
         });
         // Общее событие для batch-операций
-        window.dispatchEvent(new CustomEvent('heys:cycle-updated', { 
-          detail: { dates: clearedDates, cleared: true } 
+        window.dispatchEvent(new CustomEvent('heys:cycle-updated', {
+          detail: { dates: clearedDates, cleared: true }
         }));
       }
 
@@ -382,10 +437,10 @@
    */
   function getWaterRetentionInfo(cycleDay) {
     if (!cycleDay || typeof cycleDay !== 'number' || cycleDay < 1) {
-      return { 
-        hasRetention: false, 
-        severity: 'none', 
-        kgEstimate: 0, 
+      return {
+        hasRetention: false,
+        severity: 'none',
+        kgEstimate: 0,
         advice: null,
         excludeFromTrend: false
       };
@@ -416,10 +471,10 @@
     }
 
     // Дни 8-14: Фолликулярная/Овуляция — нет задержки
-    return { 
-      hasRetention: false, 
-      severity: 'none', 
-      kgEstimate: 0, 
+    return {
+      hasRetention: false,
+      severity: 'none',
+      kgEstimate: 0,
       advice: null,
       excludeFromTrend: false
     };
@@ -442,19 +497,11 @@
    * @returns {string|null} Дата дня 1 или null
    */
   function findCycleStartDate(dateStr, lsGet) {
-    const key = getDayKey(dateStr);
-    
     try {
-      let dayData = null;
-      try {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          dayData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
-        }
-      } catch(e) {}
-      
+      const dayData = readDayData(dateStr, lsGet);
+
       if (!dayData || !dayData.cycleDay) return null;
-      
+
       const offset = 1 - dayData.cycleDay;
       return addDays(dateStr, offset);
     } catch (e) {
@@ -477,17 +524,16 @@
     const today = new Date();
     const startDate = new Date(today);
     startDate.setMonth(startDate.getMonth() - monthsBack);
-    
+
     let currentCycle = null;
-    
+
     // Проходим по всем дням
     for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
       const dateStr = d.toISOString().slice(0, 10);
-      const key = 'heys_dayv2_' + dateStr;
-      
+
       try {
-        const dayData = lsGet ? lsGet(key, null) : null;
-        
+        const dayData = readDayData(dateStr, lsGet);
+
         if (dayData && dayData.cycleDay) {
           // Нашли день цикла
           if (dayData.cycleDay === 1) {
@@ -518,12 +564,12 @@
         // Игнорируем ошибки чтения
       }
     }
-    
+
     // Добавляем последний цикл
     if (currentCycle) {
       cycles.push(currentCycle);
     }
-    
+
     return cycles;
   }
 
@@ -535,7 +581,7 @@
    */
   function analyzeWaterRetentionHistory(monthsBack = 6, lsGet) {
     const cycles = findAllCycles(monthsBack, lsGet);
-    
+
     if (cycles.length === 0) {
       return {
         hasSufficientData: false,
@@ -545,17 +591,17 @@
     }
 
     const retentionData = [];
-    
+
     for (const cycle of cycles) {
       // Для анализа нужен вес в дни 1-5 и "нормальный" вес после (дни 8-14)
       const retentionDays = cycle.days.filter(d => d.cycleDay >= 1 && d.cycleDay <= 5 && d.weight > 0);
       const normalDays = cycle.days.filter(d => d.cycleDay >= 8 && d.weight > 0);
-      
+
       if (retentionDays.length >= 2 && normalDays.length >= 1) {
         const avgRetentionWeight = retentionDays.reduce((s, d) => s + d.weight, 0) / retentionDays.length;
         const avgNormalWeight = normalDays.reduce((s, d) => s + d.weight, 0) / normalDays.length;
         const retention = avgRetentionWeight - avgNormalWeight;
-        
+
         if (retention > 0) {
           retentionData.push({
             cycleStart: cycle.startDate,
@@ -591,7 +637,7 @@
       const secondHalf = retentionData.slice(Math.floor(retentionData.length / 2));
       const avgFirst = firstHalf.reduce((s, d) => s + d.retentionKg, 0) / firstHalf.length;
       const avgSecond = secondHalf.reduce((s, d) => s + d.retentionKg, 0) / secondHalf.length;
-      
+
       if (avgSecond < avgFirst - 0.3) trend = 'improving';
       else if (avgSecond > avgFirst + 0.3) trend = 'worsening';
     }
@@ -600,31 +646,31 @@
       hasSufficientData: true,
       cyclesAnalyzed: retentionData.length,
       totalCyclesFound: cycles.length,
-      
+
       // Средние значения
       avgRetentionKg: Math.round(avgRetention * 10) / 10,
       maxRetentionKg: Math.round(maxRetention * 10) / 10,
       minRetentionKg: Math.round(minRetention * 10) / 10,
-      
+
       // Последний цикл
       lastCycle: lastCycle ? {
         date: lastCycle.cycleStart,
         retentionKg: Math.round(lastCycle.retentionKg * 10) / 10,
         peakDay: lastCycle.peakDay
       } : null,
-      
+
       // Сравнение с предыдущим
       comparison: prevCycle ? {
         diff: Math.round((lastCycle.retentionKg - prevCycle.retentionKg) * 10) / 10,
         improved: lastCycle.retentionKg < prevCycle.retentionKg
       } : null,
-      
+
       // Тренд
       trend,
       trendText: trend === 'improving' ? 'Задержка воды уменьшается! 🎉' :
-                 trend === 'worsening' ? 'Задержка воды увеличивается' : 
-                 'Стабильно',
-      
+        trend === 'worsening' ? 'Задержка воды увеличивается' :
+          'Стабильно',
+
       // Персональный инсайт
       insight: generateRetentionInsight(avgRetention, lastCycle, prevCycle, trend)
     };
@@ -635,7 +681,7 @@
    */
   function generateRetentionInsight(avgRetention, lastCycle, prevCycle, trend) {
     const insights = [];
-    
+
     // Средняя задержка
     if (avgRetention <= 1.0) {
       insights.push('У тебя небольшая задержка воды (~' + avgRetention.toFixed(1) + ' кг), это отлично!');
@@ -644,7 +690,7 @@
     } else {
       insights.push('Задержка воды выше среднего (~' + avgRetention.toFixed(1) + ' кг). Попробуй снизить соль в эти дни.');
     }
-    
+
     // Сравнение с прошлым циклом
     if (prevCycle && lastCycle) {
       const diff = lastCycle.retentionKg - prevCycle.retentionKg;
@@ -656,12 +702,12 @@
         }
       }
     }
-    
+
     // Тренд
     if (trend === 'improving') {
       insights.push('За последние циклы задержка воды уменьшается — отличная динамика!');
     }
-    
+
     return insights.length > 0 ? insights[0] : 'Вес после цикла всегда возвращается к норме.';
   }
 
@@ -678,38 +724,38 @@
     // Вес нормализуется примерно к дню 8
     const targetDay = 8;
     const daysUntilNormal = Math.max(0, targetDay - currentCycleDay);
-    
+
     if (currentCycleDay >= 8) {
-      return { 
-        daysUntilNormal: 0, 
-        message: 'Вес уже должен быть в норме' 
+      return {
+        daysUntilNormal: 0,
+        message: 'Вес уже должен быть в норме'
       };
     }
-    
+
     if (daysUntilNormal === 0) {
-      return { 
-        daysUntilNormal: 0, 
-        message: 'Вес нормализуется уже завтра!' 
+      return {
+        daysUntilNormal: 0,
+        message: 'Вес нормализуется уже завтра!'
       };
     }
-    
+
     if (daysUntilNormal === 1) {
-      return { 
-        daysUntilNormal: 1, 
-        message: 'Ещё ~1 день до нормализации веса' 
+      return {
+        daysUntilNormal: 1,
+        message: 'Ещё ~1 день до нормализации веса'
       };
     }
-    
-    return { 
-      daysUntilNormal, 
-      message: 'Вес нормализуется примерно через ' + daysUntilNormal + ' дней' 
+
+    return {
+      daysUntilNormal,
+      message: 'Вес нормализуется примерно через ' + daysUntilNormal + ' дней'
     };
   }
 
   // ============================================================
   // DEBUG: Показать дни с cycleDay за последние N дней
   // ============================================================
-  
+
   /**
    * Вывести в консоль все дни с cycleDay за последние N дней
    * Вызов: HEYS.Cycle.debugCycleDays(14)
@@ -718,30 +764,24 @@
   function debugCycleDays(daysBack = 14) {
     const today = new Date();
     const results = [];
-    
+
     console.group('🌸 Cycle Days Debug (последние ' + daysBack + ' дней)');
     console.log('ClientId:', (window.HEYS && window.HEYS.currentClientId) || '(none)');
-    
+
     for (let i = daysBack - 1; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().slice(0, 10);
       const dayNum = d.getDate();
-      
+
       const key = getDayKey(dateStr);
-      
-      let dayData = null;
-      try {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          dayData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
-        }
-      } catch(e) {}
-      
+
+      const dayData = readStoredValue(key, null);
+
       const cycleDay = dayData?.cycleDay || null;
       const weight = dayData?.weightMorning || null;
       const retentionInfo = getWaterRetentionInfo(cycleDay);
-      
+
       results.push({
         date: dateStr,
         dayNum,
@@ -751,7 +791,7 @@
         weight,
         key // для дебага показываем ключ
       });
-      
+
       // Логируем только дни с cycleDay или весом
       if (cycleDay || weight) {
         const icon = retentionInfo.hasRetention ? '🔴' : '⚪';
@@ -760,10 +800,10 @@
         );
       }
     }
-    
+
     console.groupEnd();
     console.table(results.filter(r => r.cycleDay || r.weight));
-    
+
     return results;
   }
 
@@ -774,37 +814,37 @@
   HEYS.Cycle = {
     // Константы
     PHASES: CYCLE_PHASES,
-    
+
     // Основные функции
     getCyclePhase,
     getKcalMultiplier,
     getWaterMultiplier,
     getInsulinWaveMultiplier,
-    
+
     // Проверки
     isInMenstrualPhase,
-    
+
     // Задержка воды и вес
     getWaterRetentionInfo,
     shouldExcludeFromWeightTrend,
-    
+
     // Исторический анализ
     findAllCycles,
     analyzeWaterRetentionHistory,
     getWeightNormalizationForecast,
-    
+
     // UI helpers
     getCycleDisplay,
     getCycleDescription,
     getCycleAdviceFlags,
-    
+
     // Автоматическое проставление
     setCycleDaysAuto,
     clearCycleDays,
     findCycleStartDate,
     addDays,
     getDayKey, // для дебага и внешнего использования
-    
+
     // Debug
     debugCycleDays
   };

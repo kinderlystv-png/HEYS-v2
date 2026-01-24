@@ -17,20 +17,56 @@
   const CACHE_TTL_MS = 5 * 60 * 1000; // 5 минут
 
   // === Утилиты ===
-  const U = HEYS.utils || {
-    lsGet: (k, d) => {
-      try {
-        const v = localStorage.getItem(k);
-        return v == null ? d : JSON.parse(v);
-      } catch (_) {
-        return d;
+  const U = HEYS.utils || {};
+
+  const tryParseStoredValue = (raw, fallback) => {
+    if (raw === null || raw === undefined) return fallback;
+    if (typeof raw === 'string') {
+      let str = raw;
+      if (str.startsWith('¤Z¤') && HEYS.store?.decompress) {
+        try { str = HEYS.store.decompress(str); } catch (_) { }
       }
-    },
-    lsSet: (k, v) => {
-      try {
-        localStorage.setItem(k, JSON.stringify(v));
-      } catch (_) { }
-    },
+      try { return JSON.parse(str); } catch (_) { return str; }
+    }
+    return raw;
+  };
+
+  const readCacheValue = (key, fallback) => {
+    try {
+      if (HEYS.store?.get) {
+        const stored = HEYS.store.get(key, null);
+        if (stored !== null && stored !== undefined) {
+          return tryParseStoredValue(stored, fallback);
+        }
+      }
+      if (U.lsGet) return U.lsGet(key, fallback);
+      const raw = localStorage.getItem(key);
+      if (raw !== null && raw !== undefined) return tryParseStoredValue(raw, fallback);
+      return fallback;
+    } catch (_) {
+      return fallback;
+    }
+  };
+
+  const writeCacheValue = (key, value) => {
+    try {
+      if (HEYS.store?.set) {
+        HEYS.store.set(key, value);
+        return;
+      }
+      if (U.lsSet) {
+        U.lsSet(key, value);
+        return;
+      }
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (_) { }
+  };
+
+  const removeCacheValue = (key) => {
+    try {
+      if (HEYS.store?.set) HEYS.store.set(key, null);
+    } catch (_) { }
+    try { localStorage.removeItem(key); } catch (_) { }
   };
 
   // === Кэширование статуса ===
@@ -42,7 +78,7 @@
       return _cachedStatus;
     }
     // Пробуем localStorage
-    const stored = U.lsGet(CACHE_KEY, null);
+    const stored = readCacheValue(CACHE_KEY, null);
     if (stored && stored.status && stored.ts && Date.now() - stored.ts < CACHE_TTL_MS) {
       _cachedStatus = stored.status;
       _cachedAt = stored.ts;
@@ -54,16 +90,14 @@
   function setCachedStatus(status) {
     _cachedStatus = status;
     _cachedAt = Date.now();
-    U.lsSet(CACHE_KEY, { status, ts: _cachedAt });
+    writeCacheValue(CACHE_KEY, { status, ts: _cachedAt });
   }
 
   function clearCache() {
     _cachedStatus = null;
     _cachedAt = 0;
     _inflightPromise = null; // сбрасываем in-flight при очистке кэша
-    try {
-      localStorage.removeItem(CACHE_KEY);
-    } catch (_) { }
+    removeCacheValue(CACHE_KEY);
   }
 
   // === In-flight deduplication (thundering herd prevention) ===

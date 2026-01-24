@@ -114,6 +114,31 @@
     }
   };
 
+  const parseStoredValue = (raw, fallback) => {
+    if (raw == null) return fallback;
+    if (typeof raw === 'object') return raw;
+    if (typeof raw !== 'string') return raw;
+    try {
+      if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
+        return HEYS.store.decompress(raw);
+      }
+      return JSON.parse(raw);
+    } catch (e) {
+      return fallback;
+    }
+  };
+
+  const readStoredValue = (key, fallback) => {
+    try {
+      if (HEYS.store?.get) return HEYS.store.get(key, fallback);
+      if (HEYS.utils?.lsGet) return HEYS.utils.lsGet(key, fallback);
+      const raw = localStorage.getItem(key);
+      return parseStoredValue(raw, fallback);
+    } catch (e) {
+      return fallback;
+    }
+  };
+
   // === Data Access Layer ===
   const data = {
     _cache: new Map(),
@@ -515,77 +540,34 @@
       // Ключ дня: heys_dayv2_YYYY-MM-DD (namespace добавляется автоматически через store.get)
       const key = `heys_dayv2_${dateStr}`;
       try {
-        let result = null;
         const clientId = HEYS.currentClientId;
 
-        // 1. Используем HEYS.store.get (добавляет clientId namespace)
-        if (HEYS.store?.get) {
-          result = HEYS.store.get(key, null);
-          if (result) return result;
-        }
+        // 1. Store-first (scoped через HEYS.store / HEYS.utils)
+        const stored = readStoredValue(key, null);
+        if (stored) return stored;
 
-        // 2. Пробуем HEYS.utils.lsGet
-        if (HEYS.utils?.lsGet) {
-          result = HEYS.utils.lsGet(key, null);
-          if (result) return result;
-        }
-
-        // 3. Fallback: пробуем scoped key напрямую в localStorage
+        // 2. Fallback: scoped key напрямую в localStorage
         if (clientId) {
           const scopedKey = `heys_${clientId}_dayv2_${dateStr}`;
-          const stored = localStorage.getItem(scopedKey);
-          if (stored) {
-            try {
-              result = JSON.parse(stored);
-              return result;
-            } catch (e) {
-              // Ignore parse errors for scoped key
-            }
-          }
+          const scopedRaw = localStorage.getItem(scopedKey);
+          const scopedParsed = parseStoredValue(scopedRaw, null);
+          if (scopedParsed) return scopedParsed;
         }
 
-        // 4. Последний fallback: unscoped key
-        const stored = localStorage.getItem(key);
-        if (stored) {
-          return JSON.parse(stored);
-        }
-
-        return null;
+        // 3. Последний fallback: unscoped key
+        const raw = localStorage.getItem(key);
+        return parseStoredValue(raw, null);
       } catch (e) {
         return null;
       }
     },
 
     _getProfile() {
-      // Используем HEYS.store.get или HEYS.utils.lsGet (с clientId namespace)
-      if (HEYS.store?.get) {
-        return HEYS.store.get('heys_profile', {});
-      }
-      if (HEYS.utils?.lsGet) {
-        return HEYS.utils.lsGet('heys_profile', {});
-      }
-      try {
-        const stored = localStorage.getItem('heys_profile');
-        return stored ? JSON.parse(stored) : {};
-      } catch (e) {
-        return {};
-      }
+      return readStoredValue('heys_profile', {});
     },
 
     _getNorms() {
-      // Используем HEYS.store.get или HEYS.utils.lsGet (с clientId namespace)
-      if (HEYS.store?.get) {
-        return HEYS.store.get('heys_norms', {});
-      }
-      if (HEYS.utils?.lsGet) {
-        return HEYS.utils.lsGet('heys_norms', {});
-      }
-      try {
-        const stored = localStorage.getItem('heys_norms');
-        return stored ? JSON.parse(stored) : {};
-      } catch (e) {
-        return {};
-      }
+      return readStoredValue('heys_norms', {});
     },
 
     _getDayTotals() {

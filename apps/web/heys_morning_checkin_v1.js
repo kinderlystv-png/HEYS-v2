@@ -5,9 +5,9 @@
 // Этот файл теперь использует HEYS.StepModal + HEYS.Steps
 // Старый API (HEYS.MorningCheckin, HEYS.shouldShowMorningCheckin) сохранён для совместимости
 //
-(function(global) {
+(function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
-  
+
   // === Утилиты ===
   function getTodayKey() {
     // Используем «эффективную» дату: до 03:00 считаем, что день ещё предыдущий
@@ -23,6 +23,39 @@
     }
     const pad2 = (n) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  }
+
+  function readStoredValue(key, fallback = null) {
+    let value;
+
+    if (HEYS.store?.get) {
+      value = HEYS.store.get(key, fallback);
+    } else if (HEYS.utils?.lsGet) {
+      value = HEYS.utils.lsGet(key, fallback);
+    } else {
+      try {
+        value = localStorage.getItem(key);
+      } catch {
+        return fallback;
+      }
+    }
+
+    if (value == null) return fallback;
+
+    if (typeof value === 'string') {
+      if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
+        try {
+          value = HEYS.store.decompress(value.slice(3));
+        } catch (_) { }
+      }
+      try {
+        return JSON.parse(value);
+      } catch (_) {
+        return value;
+      }
+    }
+
+    return value;
   }
 
   function debugDayStorage(todayKey, currentClientId, altKey) {
@@ -82,7 +115,7 @@
     }
     */
   }
-  
+
   /**
    * Проверяем, нужно ли показывать утренний чек-ин
    * ВАЖНО: Эта функция вызывается ПОСЛЕ события heysSyncCompleted,
@@ -93,34 +126,34 @@
    */
   function shouldShowMorningCheckin() {
     const U = HEYS.utils || {};
-    
+
     // 🆕 v1.9.1: Если чек-ин уже был показан/пропущен в этой сессии — НЕ показываем
     if (sessionStorage.getItem('heys_morning_checkin_done') === 'true') {
       // console.log('[MorningCheckin] Skip — already done/skipped this session');
       return false;
     }
-    
+
     // Если клиент не выбран — НЕ показываем чек-ин (чтобы не показывать до авторизации)
     const currentClientId = U.getCurrentClientId ? U.getCurrentClientId() : '';
     if (!currentClientId) {
       // console.log('[MorningCheckin] No clientId, skip check');
       return false;
     }
-    
+
     // 🔒 КРИТИЧНО: Если профиль не заполнен — ВСЕГДА показываем!
     // Регистрационные шаги (profile-personal, profile-body, etc.) обязательны для новых пользователей
-    const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+    const profile = readStoredValue('heys_profile', {});
     if (HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete) {
       if (HEYS.ProfileSteps.isProfileIncomplete(profile)) {
         console.log('[MorningCheckin] 🆕 Profile incomplete — forcing checkin with registration steps');
         return true;
       }
     }
-    
+
     const todayKey = getTodayKey();
-    const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${todayKey}`, {}) : {};
+    const dayData = readStoredValue(`heys_dayv2_${todayKey}`, {});
     const calendarKey = new Date().toISOString().slice(0, 10);
-    const altDayData = calendarKey !== todayKey && U.lsGet ? U.lsGet(`heys_dayv2_${calendarKey}`, {}) : {};
+    const altDayData = calendarKey !== todayKey ? readStoredValue(`heys_dayv2_${calendarKey}`, {}) : {};
 
     const hasWeightPrimary = dayData && dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0;
     const hasWeightAlt = altDayData && altDayData.weightMorning != null && altDayData.weightMorning !== '' && altDayData.weightMorning !== 0;
@@ -140,7 +173,7 @@
   function getCheckinSteps(profile) {
     const steps = [];
     let hasProfileSteps = false;
-    
+
     // 1. Проверяем профиль для новых пользователей
     if (HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete) {
       if (HEYS.ProfileSteps.isProfileIncomplete(profile)) {
@@ -150,24 +183,24 @@
         hasProfileSteps = true;
       }
     }
-    
+
     // 2. Шаг веса — ВСЕГДА спрашиваем в чек-ине
     // Вес в регистрации (целый) → профиль (базовый вес для расчётов)
     // Вес в чек-ине (с десятыми) → день (точное утреннее взвешивание)
     steps.push('weight');
-    
+
     // 2.1. 📊 Верификация данных за вчера
     // Показывается ТОЛЬКО если вчера <50% калорий и хотя бы 1 приём пищи
     // Спрашивает: реальное голодание или незаполненные данные?
     steps.push('yesterdayVerify');
-    
+
     // 3. Остальные шаги чек-ина
     steps.push('sleepTime', 'sleepQuality');
-    
+
     // 3. 🔄 Загрузочный день (Refeed) — СРАЗУ после sleepQuality
     // Показывается всегда — клиент сам решает, система подсветит рекомендацию если есть долг
     steps.push('refeedDay');
-    
+
     // 4. Условные шаги (cycle, measurements)
     // Для cycle: показываем если cycleTrackingEnabled=true ИЛИ если это регистрация (шаг спросит сам)
     // При регистрации профиль ещё пуст, но шаг cycle сам определит пол из StepModal data
@@ -180,22 +213,22 @@
     if (HEYS.Steps && HEYS.Steps.shouldShowMeasurements && HEYS.Steps.shouldShowMeasurements()) {
       steps.push('measurements');
     }
-    
+
     // 5. 🧊 Холодовое воздействие (опциональный шаг)
     steps.push('cold_exposure');
-    
+
     // 6. 💊 Витамины (опциональный шаг, запоминается на след. день)
     steps.push('supplements');
-    
+
     // 7. 😊 Утреннее настроение (обязательный шаг)
     steps.push('morning_mood');
-    
+
     // 8. Завершающий шаг — цель по шагам
     steps.push('stepsGoal');
-    
+
     // 9. 🌟 Мотивирующий финальный шаг
     steps.push('morningRoutine');
-    
+
     return steps;
   }
 
@@ -209,17 +242,16 @@
   function MorningCheckin({ onComplete, onClose }) {
     // Если StepModal доступен — используем его
     if (HEYS.StepModal && HEYS.StepModal.Component) {
-      const U = HEYS.utils || {};
-      const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+      const profile = readStoredValue('heys_profile', {});
       const steps = getCheckinSteps(profile);
-      
+
       // Определяем: это регистрационный чек-ин (есть profile-шаги)?
       const isRegistrationCheckin = steps.includes('profile-personal');
-      
+
       // Обёртка для onComplete: обновляем данные дня
       const wrappedOnComplete = () => {
         // 🎉 Поздравительная модалка теперь показывается как шаг 'welcome' внутри flow
-        
+
         // 🎫 Автостарт триала при первом чек-ине после регистрации
         // Условие: это регистрационный чек-ин (профиль был пуст) И подписка не активна
         if (isRegistrationCheckin && HEYS.Subscription) {
@@ -238,28 +270,28 @@
             console.error('[MorningCheckin] ❌ Failed to start trial:', err);
           });
         }
-        
+
         // 🔔 Устанавливаем флаг для советов по витаминам
         try {
           sessionStorage.setItem('heys_morning_checkin_done', 'true');
           // Очищаем флаг показа совета — чтобы он показался после чек-ина
           sessionStorage.removeItem('heys_morning_supplements_advice_shown');
-        } catch(e) { /* sessionStorage недоступен */ }
-        
+        } catch (e) { /* sessionStorage недоступен */ }
+
         // 🔄 Принудительно обновляем данные дня после завершения чек-ина
         const todayKey = (HEYS.utils && HEYS.utils.getTodayKey) ? HEYS.utils.getTodayKey() : new Date().toISOString().slice(0, 10);
-        window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+        window.dispatchEvent(new CustomEvent('heys:day-updated', {
           detail: { date: todayKey, source: 'morning-checkin-complete', forceReload: true }
         }));
-        
+
         // 💊 Вызываем событие для обновления советов
         window.dispatchEvent(new CustomEvent('heys:checkin-complete', {
           detail: { date: todayKey, type: 'morning' }
         }));
-        
+
         if (onComplete) onComplete();
       };
-      
+
       return React.createElement(HEYS.StepModal.Component, {
         steps: steps,
         onComplete: wrappedOnComplete,
@@ -271,19 +303,19 @@
         allowSwipe: true
       });
     }
-    
+
     // Fallback: простое сообщение если StepModal не загружен
-    return React.createElement('div', { 
-      style: { 
-        padding: '20px', 
+    return React.createElement('div', {
+      style: {
+        padding: '20px',
         textAlign: 'center',
         background: '#fff',
         borderRadius: '12px',
         margin: '20px'
-      } 
+      }
     },
       React.createElement('p', null, 'Загрузка...'),
-      React.createElement('p', { style: { fontSize: '12px', color: '#666' } }, 
+      React.createElement('p', { style: { fontSize: '12px', color: '#666' } },
         'Убедитесь что загружены heys_step_modal_v1.js и heys_steps_v1.js'
       )
     );
@@ -300,58 +332,57 @@
     // Полный утренний чек-ин
     morning: (onComplete) => {
       if (HEYS.StepModal) {
-        const U = HEYS.utils || {};
-        const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+        const profile = readStoredValue('heys_profile', {});
         const steps = getCheckinSteps(profile);
-        
+
         // Определяем: это регистрационный чек-ин (есть profile-шаги)?
         const isRegistrationCheckin = steps.includes('profile-personal');
-        
+
         // Обёртка для onComplete: обновляем данные дня
         const wrappedOnComplete = () => {
           // 🎉 Поздравительная модалка теперь показывается как шаг 'welcome' внутри flow
-          
+
           // 🎫 Автостарт триала уже произошёл в стартовом useEffect (через HEYS.Subscription)
           // Этот блок оставлен для логирования
           if (isRegistrationCheckin) {
             console.log('[showCheckin.morning] ✅ Registration checkin completed');
           }
-          
+
           // 🔔 Устанавливаем флаг для советов по витаминам
           try {
             sessionStorage.setItem('heys_morning_checkin_done', 'true');
             // Очищаем флаг показа совета — чтобы он показался после чек-ина
             sessionStorage.removeItem('heys_morning_supplements_advice_shown');
-          } catch(e) { /* sessionStorage недоступен */ }
-          
+          } catch (e) { /* sessionStorage недоступен */ }
+
           // 🔄 Принудительно обновляем данные дня после завершения чек-ина
           const todayKey = (HEYS.utils && HEYS.utils.getTodayKey) ? HEYS.utils.getTodayKey() : new Date().toISOString().slice(0, 10);
-          window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+          window.dispatchEvent(new CustomEvent('heys:day-updated', {
             detail: { date: todayKey, source: 'morning-checkin-complete', forceReload: true }
           }));
-          
+
           // 💊 Вызываем событие для обновления советов
           window.dispatchEvent(new CustomEvent('heys:checkin-complete', {
             detail: { date: todayKey, type: 'morning' }
           }));
-          
+
           if (onComplete) onComplete();
         };
-        
+
         HEYS.StepModal.show({
           steps,
           onComplete: wrappedOnComplete
         });
       }
     },
-    
+
     // Только вес
     weight: (dateKey, onComplete) => {
       if (HEYS.StepModal) {
         // Если первый аргумент — функция, это onComplete (обратная совместимость)
         const actualDateKey = typeof dateKey === 'function' ? null : dateKey;
         const actualOnComplete = typeof dateKey === 'function' ? dateKey : onComplete;
-        
+
         HEYS.StepModal.show({
           steps: ['weight'],
           title: 'Взвешивание',
@@ -361,7 +392,7 @@
         });
       }
     },
-    
+
     // Только шаги (цель)
     steps: (onComplete) => {
       if (HEYS.StepModal) {
@@ -373,14 +404,14 @@
         });
       }
     },
-    
+
     // Только сон
     sleep: (dateKey, onComplete) => {
       if (HEYS.StepModal) {
         // Если первый аргумент — функция, это onComplete (обратная совместимость)
         const actualDateKey = typeof dateKey === 'function' ? null : dateKey;
         const actualOnComplete = typeof dateKey === 'function' ? dateKey : onComplete;
-        
+
         HEYS.StepModal.show({
           steps: ['sleepTime', 'sleepQuality'],
           title: 'Сон',
@@ -390,14 +421,14 @@
         });
       }
     },
-    
+
     // Только замеры тела
     measurements: (dateKey, onComplete) => {
       if (HEYS.StepModal) {
         // Если первый аргумент — функция, это onComplete (обратная совместимость)
         const actualDateKey = typeof dateKey === 'function' ? null : dateKey;
         const actualOnComplete = typeof dateKey === 'function' ? dateKey : onComplete;
-        
+
         HEYS.StepModal.show({
           steps: ['measurements'],
           title: 'Замеры тела',
@@ -407,7 +438,7 @@
         });
       }
     },
-    
+
     // Только дефицит калорий
     deficit: (dateKey, onComplete) => {
       if (HEYS.StepModal) {
@@ -420,7 +451,7 @@
         });
       }
     },
-    
+
     // Только витамины
     supplements: (dateKey, onComplete) => {
       if (HEYS.StepModal) {
@@ -433,7 +464,7 @@
         });
       }
     },
-    
+
     // Добавить приём пищи (через MealStep)
     meal: (dateKey, onComplete) => {
       if (HEYS.MealStep) {

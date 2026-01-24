@@ -25,6 +25,48 @@
   // Текущие измерения (в памяти)
   const measurements = new Map();
 
+  const readStoredValue = (key, fallback = null) => {
+    let value;
+    if (HEYS.store?.get) {
+      value = HEYS.store.get(key, fallback);
+    } else if (HEYS.utils?.lsGet) {
+      value = HEYS.utils.lsGet(key, fallback);
+    } else {
+      try {
+        value = localStorage.getItem(key);
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    if (value == null) return fallback;
+
+    if (typeof value === 'string') {
+      if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
+        try {
+          value = HEYS.store.decompress(value.slice(3));
+        } catch (e) { }
+      }
+      try {
+        return JSON.parse(value);
+      } catch (e) {
+        return value;
+      }
+    }
+
+    return value;
+  };
+
+  const writeStoredValue = (key, value) => {
+    if (HEYS.store?.set) {
+      return HEYS.store.set(key, value);
+    }
+    if (HEYS.utils?.lsSet) {
+      return HEYS.utils.lsSet(key, value);
+    }
+    localStorage.setItem(key, JSON.stringify(value));
+  };
+
   // История метрик (в localStorage)
   let perfHistory = loadHistory();
 
@@ -34,8 +76,7 @@
    */
   function loadHistory() {
     try {
-      const stored = localStorage.getItem(PERF_KEY);
-      return stored ? JSON.parse(stored) : [];
+      return readStoredValue(PERF_KEY, []);
     } catch (e) {
       devWarn('[ModulePerf] Failed to load history:', e);
       return [];
@@ -49,7 +90,7 @@
     try {
       // Ограничиваем размер истории
       const limited = perfHistory.slice(-PERF_HISTORY_LIMIT);
-      localStorage.setItem(PERF_KEY, JSON.stringify(limited));
+      writeStoredValue(PERF_KEY, limited);
     } catch (e) {
       devWarn('[ModulePerf] Failed to save history:', e);
     }

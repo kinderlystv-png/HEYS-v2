@@ -2,6 +2,28 @@
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
 
+    const tryParseStoredValue = (raw, fallback) => {
+        if (raw === null || raw === undefined) return fallback;
+        if (typeof raw === 'string') {
+            let str = raw;
+            if (str.startsWith('¤Z¤') && HEYS.store?.decompress) {
+                try { str = HEYS.store.decompress(str); } catch (_) { }
+            }
+            try { return JSON.parse(str); } catch (_) { return str; }
+        }
+        return raw;
+    };
+
+    const readRawValue = (key, fallback) => {
+        try {
+            const raw = localStorage.getItem(key);
+            if (raw !== null && raw !== undefined) return tryParseStoredValue(raw, fallback);
+            return fallback;
+        } catch {
+            return fallback;
+        }
+    };
+
     // Цветные аватары по первой букве имени
     const AVATAR_COLORS = [
         'linear-gradient(135deg, #4285f4 0%, #2563eb 100%)', // А, К, Ф — фиолетовый
@@ -51,11 +73,12 @@
                 const d = new Date(today);
                 d.setDate(d.getDate() - i);
                 const key = `heys_dayv2_${d.toISOString().slice(0, 10)}`;
-                const fullKey = `${cId}_${key}`;
-                const data = localStorage.getItem(fullKey);
+                const scopedKey = `heys_${cId}_dayv2_${d.toISOString().slice(0, 10)}`;
+                const legacyKey = `${cId}_${key}`;
+                const data = readRawValue(scopedKey, null) ?? readRawValue(legacyKey, null);
                 if (data) {
                     try {
-                        const parsed = JSON.parse(data);
+                        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
                         if (parsed && parsed.meals && parsed.meals.length > 0) {
                             if (!lastActiveDate) lastActiveDate = d;
                             if (i === streak) streak++;

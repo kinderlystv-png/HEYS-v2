@@ -1,6 +1,6 @@
 // heys_meal_step_v1.js — Шаги добавления приёма пищи через StepModal
 // Двухшаговый flow: время+тип → оценки+комментарий
-(function(global) {
+(function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const { useState, useMemo, useCallback, useEffect, useRef } = React;
 
@@ -11,18 +11,48 @@
 
   // Используем общие утилиты из StepModal
   const { lsGet, lsSet } = HEYS.StepModal?.utils || {};
-  
+
+  const readStoredValue = (key, fallback = null) => {
+    let value;
+    if (HEYS.store?.get) {
+      value = HEYS.store.get(key, fallback);
+    } else if (lsGet) {
+      value = lsGet(key, fallback);
+    } else if (HEYS.utils?.lsGet) {
+      value = HEYS.utils.lsGet(key, fallback);
+    } else {
+      try {
+        value = localStorage.getItem(key);
+      } catch { return fallback; }
+    }
+
+    if (value == null) return fallback;
+
+    if (typeof value === 'string') {
+      if (value.startsWith('¤Z¤') && HEYS.store?.decompress) {
+        try {
+          value = HEYS.store.decompress(value.slice(3));
+        } catch { }
+      }
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    }
+
+    return value;
+  };
+
   // Fallback если StepModal ещё не загружен
-  const safeLsGet = lsGet || ((key, def) => {
-    try {
-      const v = localStorage.getItem(key);
-      return v ? JSON.parse(v) : def;
-    } catch { return def; }
-  });
-  
-  const safeLsSet = lsSet || ((key, val) => {
+  const safeLsGet = (key, def) => readStoredValue(key, def);
+
+  const safeLsSet = (key, val) => {
+    if (HEYS.store?.set) return HEYS.store.set(key, val);
+    if (lsSet) return lsSet(key, val);
+    if (HEYS.utils?.lsSet) return HEYS.utils.lsSet(key, val);
     localStorage.setItem(key, JSON.stringify(val));
-  });
+  };
 
   // Haptic feedback
   const haptic = (intensity = 10) => {
@@ -80,22 +110,22 @@
   }
 
   // === Константы ===
-  
+
   // Типы приёмов пищи
   const MEAL_TYPES = HEYS.dayUtils?.MEAL_TYPES || {
     breakfast: { name: 'Завтрак', icon: '🍳', order: 1 },
-    snack1:    { name: 'Перекус', icon: '🍎', order: 2 },
-    lunch:     { name: 'Обед', icon: '🍲', order: 3 },
-    snack2:    { name: 'Перекус', icon: '🥜', order: 4 },
-    dinner:    { name: 'Ужин', icon: '🍽️', order: 5 },
-    snack3:    { name: 'Перекус', icon: '🧀', order: 6 },
-    night:     { name: 'Ночной приём', icon: '🌙', order: 7 }
+    snack1: { name: 'Перекус', icon: '🍎', order: 2 },
+    lunch: { name: 'Обед', icon: '🍲', order: 3 },
+    snack2: { name: 'Перекус', icon: '🥜', order: 4 },
+    dinner: { name: 'Ужин', icon: '🍽️', order: 5 },
+    snack3: { name: 'Перекус', icon: '🧀', order: 6 },
+    night: { name: 'Ночной приём', icon: '🌙', order: 7 }
   };
 
   // Emoji для оценок
-  const MOOD_EMOJI = ['😢','😢','😕','😕','😐','😐','🙂','🙂','😊','😊','😄'];
-  const WELLBEING_EMOJI = ['🤒','🤒','😓','😓','😐','😐','🙂','🙂','💪','💪','🏆'];
-  const STRESS_EMOJI = ['😌','😌','🙂','🙂','😐','😐','😟','😟','😰','😰','😱'];
+  const MOOD_EMOJI = ['😢', '😢', '😕', '😕', '😐', '😐', '🙂', '🙂', '😊', '😊', '😄'];
+  const WELLBEING_EMOJI = ['🤒', '🤒', '😓', '😓', '😐', '😐', '🙂', '🙂', '💪', '💪', '🏆'];
+  const STRESS_EMOJI = ['😌', '😌', '🙂', '🙂', '😐', '😐', '😟', '😟', '😰', '😰', '😱'];
 
   // Пресеты для быстрого выбора оценок
   const PRESETS_POSITIVE = [
@@ -119,7 +149,7 @@
   function getMoodState(mood, wellbeing, stress) {
     const positiveSignals = (mood >= 7 ? 1 : 0) + (wellbeing >= 7 ? 1 : 0) + (stress > 0 && stress <= 3 ? 1 : 0);
     const negativeSignals = (mood > 0 && mood <= 3 ? 1 : 0) + (wellbeing > 0 && wellbeing <= 3 ? 1 : 0) + (stress >= 7 ? 1 : 0);
-    
+
     if (negativeSignals >= 2) return 'negative';
     if (negativeSignals === 1 && positiveSignals === 0) return 'negative';
     if (positiveSignals >= 2) return 'positive';
@@ -394,9 +424,9 @@
   function ConfettiEffect({ show, count = 20 }) {
     if (!show) return null;
     return React.createElement('div', { className: 'confetti-container' },
-      ...Array(count).fill(0).map((_, i) => 
-        React.createElement('div', { 
-          key: 'confetti-' + i, 
+      ...Array(count).fill(0).map((_, i) =>
+        React.createElement('div', {
+          key: 'confetti-' + i,
           className: 'confetti-piece',
           style: {
             left: (5 + Math.random() * 90) + '%',
@@ -416,7 +446,7 @@
     if (!isNightHour) return null;
     return React.createElement('div', { className: 'meal-night-hint' },
       React.createElement('span', { className: 'meal-night-icon' }, '🌙'),
-      React.createElement('span', { className: 'meal-night-text' }, 
+      React.createElement('span', { className: 'meal-night-text' },
         'Ночной приём — запишется в ', React.createElement('b', null, dateLabel)
       )
     );
@@ -428,21 +458,21 @@
 
   function MoodHistorySection({ todayMoods, currentAvg }) {
     if (todayMoods.length === 0) return null;
-    
+
     return React.createElement('div', { className: 'meal-mood-history' },
       React.createElement('div', { className: 'meal-mood-history-header' },
         React.createElement('span', { className: 'meal-mood-history-label' }, 'Сегодня'),
         React.createElement(MoodSparkline, { data: todayMoods, currentAvg })
       ),
       React.createElement('div', { className: 'meal-mood-history-items' },
-        ...todayMoods.map((m, i) => 
-          React.createElement('div', { 
-            key: i, 
+        ...todayMoods.map((m, i) =>
+          React.createElement('div', {
+            key: i,
             className: 'meal-mood-history-item',
             title: `😊${m.mood} 💪${m.wellbeing} 😰${m.stress}`
           },
             React.createElement('span', { className: 'meal-mood-history-name' }, m.name),
-            React.createElement('span', { 
+            React.createElement('span', {
               className: 'meal-mood-history-avg',
               style: { color: m.avg >= 6 ? '#22c55e' : m.avg >= 4 ? '#eab308' : '#ef4444' }
             }, m.avg.toFixed(1))
@@ -451,7 +481,7 @@
         // Текущий
         React.createElement('div', { className: 'meal-mood-history-item meal-mood-history-current' },
           React.createElement('span', { className: 'meal-mood-history-name' }, 'Сейчас'),
-          React.createElement('span', { 
+          React.createElement('span', {
             className: 'meal-mood-history-avg',
             style: { color: '#3b82f6', fontWeight: 600 }
           }, currentAvg.toFixed(1))
@@ -466,18 +496,18 @@
 
   function CommentSection({ moodState, mood, wellbeing, stress, comment, chips, onAddChip, onChangeComment, commentRef }) {
     const icon = moodState === 'negative' ? '📝' : moodState === 'positive' ? '✨' : '💭';
-    
-    return React.createElement('div', { 
+
+    return React.createElement('div', {
       className: `meal-comment-section meal-comment-${moodState}`
     },
       React.createElement('div', { className: 'meal-comment-header' },
         React.createElement('span', { className: 'meal-comment-icon' }, icon),
         React.createElement('span', { className: 'meal-comment-title' }, getJournalText(moodState, mood, wellbeing, stress))
       ),
-      
+
       // Quick chips
       React.createElement('div', { className: 'meal-comment-chips' },
-        chips.map(chip => 
+        chips.map(chip =>
           React.createElement('button', {
             key: chip,
             className: 'meal-comment-chip',
@@ -485,7 +515,7 @@
           }, chip)
         )
       ),
-      
+
       // Input
       React.createElement('input', {
         ref: commentRef,
@@ -501,7 +531,7 @@
   // ============================================================
   // STEP 1: ВРЕМЯ И ТИП ПРИЁМА
   // ============================================================
-  
+
   // Импортируем из dayUtils (единый источник правды)
   const dayU = HEYS.dayUtils || {};
   const NIGHT_HOUR_THRESHOLD = dayU.NIGHT_HOUR_THRESHOLD || 3;
@@ -517,7 +547,7 @@
     const idx = HOURS_ORDER.indexOf(normalizedHour);
     return idx >= 0 ? idx : 0;
   });
-  
+
   function MealTimeStepComponent({ data, onChange, context }) {
     const { TimePicker } = HEYS.StepModal;
     const insulinWave = HEYS.InsulinWave;
@@ -526,27 +556,27 @@
     const [hasShownWarning, setHasShownWarning] = useState(false);
     const [warningOpen, setWarningOpen] = useState(false);
     const [cachedWave, setCachedWave] = useState(null);
-    
+
     // Индекс колеса для часов (не реальный час!)
     // При редактировании берём из context, иначе текущий час
     const defaultHourIndex = context?.initialHourIndex ?? hourToWheelIndex(new Date().getHours());
     const defaultMinutes = context?.initialMinutes ?? Math.floor(new Date().getMinutes() / 5) * 5;
     const defaultMealType = context?.initialMealType ?? null;
-    
+
     const currentHourIndex = data.hourIndex ?? defaultHourIndex;
     const minutes = data.minutes ?? defaultMinutes;
     const mealType = data.mealType ?? defaultMealType;
-    
+
     // Больше не нужен hourIndexRef — используем onTimeChange для linkedScroll
-    
+
     // Реальный час для отображения и логики
     const realHours = wheelIndexToHour(currentHourIndex);
-    
+
     // Значения для пикера часов (особый порядок: 04-23, 00-03)
     const hoursValues = HOURS_ORDER;
     // Значения для пикера минут (0, 5, 10... 55)
     const minutesValues = useMemo(() => Array.from({ length: 12 }, (_, i) => i * 5), []);
-    
+
     // Получаем существующие приёмы для определения типа
     const existingMeals = useMemo(() => {
       const dateKey = context?.dateKey || new Date().toISOString().slice(0, 10);
@@ -554,7 +584,7 @@
       // Защита от null — день может ещё не существовать (завтра, будущие даты)
       return dayData?.meals || [];
     }, [context?.dateKey]);
-    
+
     // Авто-определение типа приёма по времени
     const autoType = useMemo(() => {
       const timeStr = `${pad2(realHours)}:${pad2(minutes)}`;
@@ -564,19 +594,19 @@
       // Fallback — используем вынесенный хелпер
       return getMealTypeByHour(realHours);
     }, [realHours, minutes, existingMeals]);
-    
+
     const currentType = mealType || autoType;
-    
+
     // Подсказка для ночных часов (00-02)
     const isNightHour = realHours >= 0 && realHours < NIGHT_HOUR_THRESHOLD;
-    
+
     // Форматированная текущая дата
     const dateLabel = useMemo(() => {
       const dateKey = context?.dateKey || new Date().toISOString().slice(0, 10);
       const d = new Date(dateKey);
       return `${d.getDate()} ${d.toLocaleDateString('ru-RU', { month: 'short' })}`;
     }, [context?.dateKey]);
-    
+
     // Обновление часов — сохраняем ИНДЕКС, не реальный час (haptic уже в TimePicker)
     const updateHours = (hourValue) => {
       // hourValue — это число (час) из HOURS_ORDER
@@ -584,7 +614,7 @@
       onChange({ ...data, hourIndex: newIndex >= 0 ? newIndex : 0, minutes: data.minutes ?? minutes });
       // Предупреждение о волне теперь показывается при переходе на следующий шаг, не при касании колеса
     };
-    
+
     const updateMinutes = (newMinutes) => {
       onChange({ ...data, hourIndex: currentHourIndex, minutes: newMinutes });
       // Предупреждение о волне теперь показывается при переходе на следующий шаг, не при касании колеса
@@ -596,7 +626,7 @@
       onChange({ ...data, hourIndex: newIndex >= 0 ? newIndex : 0, minutes: newMinutes });
       // Предупреждение о волне теперь показывается при переходе на следующий шаг, не при касании колеса
     };
-    
+
     const selectType = (type) => {
       haptic(10);
       onChange({ ...data, mealType: type });
@@ -780,9 +810,9 @@
             (insulinWave?.renderProgressBar && cachedWave)
               ? insulinWave.renderProgressBar(cachedWave)
               : React.createElement('div', { style: { fontSize: '14px', color: '#475569' } },
-                  (cachedWave?.endTimeDisplay || cachedWave?.endTime)
-                    ? `Липолиз откроется в ${cachedWave.endTimeDisplay || cachedWave.endTime}`
-                    : 'Волна ещё не завершена — подождите немного')
+                (cachedWave?.endTimeDisplay || cachedWave?.endTime)
+                  ? `Липолиз откроется в ${cachedWave.endTimeDisplay || cachedWave.endTime}`
+                  : 'Волна ещё не завершена — подождите немного')
           ),
           React.createElement('div', { style: { fontSize: '14px', color: '#334155', lineHeight: 1.6 } },
             'Если поесть сейчас, волна продлится и липолиз отложится.'
@@ -827,11 +857,11 @@
       ),
       // Время
       React.createElement('div', { className: 'meal-time-display' },
-        React.createElement('span', { className: 'meal-time-value' }, 
+        React.createElement('span', { className: 'meal-time-value' },
           `${pad2(realHours)}:${pad2(minutes)}`
         )
       ),
-      
+
       // Переиспользуемый TimePicker с linkedScroll
       React.createElement(TimePicker, {
         hours: realHours,
@@ -848,17 +878,17 @@
         display: null,
         className: 'meal-time-pickers'
       }),
-      
+
       // Подсказка для ночных часов
       React.createElement(NightHint, { isNightHour, dateLabel }),
-      
+
       // Выбор типа приёма
-      React.createElement(MealTypeGrid, { 
-        types: MEAL_TYPES, 
-        currentType, 
-        onSelect: selectType 
+      React.createElement(MealTypeGrid, {
+        types: MEAL_TYPES,
+        currentType,
+        onSelect: selectType
       }),
-      
+
       // Кнопка "Далее" — внутри компонента для проверки инсулиновой волны при переходе
       React.createElement('button', {
         className: 'meal-time-next-btn',
@@ -884,31 +914,31 @@
   // ============================================================
   // STEP 2: ОЦЕНКИ + КОММЕНТАРИЙ
   // ============================================================
-  
+
   function MealMoodStepComponent({ data, onChange, stepData, context }) {
     const mood = data.mood ?? 5;
     const wellbeing = data.wellbeing ?? 5;
     const stress = data.stress ?? 5;
     const comment = data.comment ?? '';
-    
+
     // Состояние анимации эмодзи и чисел
     const [emojiAnim, setEmojiAnim] = useState({ mood: '', wellbeing: '', stress: '' });
     const [numAnim, setNumAnim] = useState({ mood: false, wellbeing: false, stress: false });
     const [emojiTap, setEmojiTap] = useState({ mood: false, wellbeing: false, stress: false });
-    
+
     // Confetti state
     const [showConfetti, setShowConfetti] = useState(false);
-    
+
     // Показывать pulse на пресетах (только первые 3 секунды)
     const [showPulse, setShowPulse] = useState(true);
     useEffect(() => {
       const timer = setTimeout(() => setShowPulse(false), 3000);
       return () => clearTimeout(timer);
     }, []);
-    
+
     // Ref для автофокуса на комментарий
     const commentRef = useRef(null);
-    
+
     // История оценок за сегодня
     const todayMoods = useMemo(() => {
       const dateKey = context?.dateKey || new Date().toISOString().slice(0, 10);
@@ -921,7 +951,7 @@
         const stressVal = m.stress || 5;
         // Средняя оценка: mood + wellbeing + (10 - stress) / 3, шкала 0-10
         const avg = (moodVal + wellVal + (10 - stressVal)) / 3;
-        
+
         // Название: из name, или из mealType, или fallback
         let displayName = m.name;
         if (!displayName || displayName === 'Приём') {
@@ -931,7 +961,7 @@
             displayName = 'Приём';
           }
         }
-        
+
         return {
           name: displayName,
           mood: moodVal,
@@ -941,12 +971,12 @@
         };
       });
     }, [context?.dateKey]);
-    
+
     // === Динамический комментарий ===
     // Используем вынесенные хелперы
     const moodState = getMoodState(mood, wellbeing, stress);
     const chips = getQuickChips(moodState, mood, wellbeing, stress);
-    
+
     // Confetti при идеальных оценках
     const triggerConfetti = useCallback(() => {
       if (!showConfetti) {
@@ -955,45 +985,45 @@
         setTimeout(() => setShowConfetti(false), 2000);
       }
     }, [showConfetti]);
-    
+
     // Тап на emoji — увеличение
     const handleEmojiTap = (field) => {
       haptic(5);
-      setEmojiTap(prev => ({...prev, [field]: true}));
-      setTimeout(() => setEmojiTap(prev => ({...prev, [field]: false})), 300);
+      setEmojiTap(prev => ({ ...prev, [field]: true }));
+      setTimeout(() => setEmojiTap(prev => ({ ...prev, [field]: false })), 300);
     };
-    
+
     // Обработчик изменения слайдера
     const handleSliderChange = (field, value) => {
       haptic(value >= 8 || value <= 2 ? 15 : 10);
-      
+
       // Анимация emoji
       const animType = (field === 'stress' && value >= 7) ||
-                       ((field === 'mood' || field === 'wellbeing') && value <= 3) 
-                       ? 'shake' : 'bounce';
-      setEmojiAnim(prev => ({...prev, [field]: animType}));
-      setTimeout(() => setEmojiAnim(prev => ({...prev, [field]: ''})), 400);
-      
+        ((field === 'mood' || field === 'wellbeing') && value <= 3)
+        ? 'shake' : 'bounce';
+      setEmojiAnim(prev => ({ ...prev, [field]: animType }));
+      setTimeout(() => setEmojiAnim(prev => ({ ...prev, [field]: '' })), 400);
+
       // Анимация числа (bounce)
-      setNumAnim(prev => ({...prev, [field]: true}));
-      setTimeout(() => setNumAnim(prev => ({...prev, [field]: false})), 200);
-      
-      const newData = {...data, [field]: value};
+      setNumAnim(prev => ({ ...prev, [field]: true }));
+      setTimeout(() => setNumAnim(prev => ({ ...prev, [field]: false })), 200);
+
+      const newData = { ...data, [field]: value };
       onChange(newData);
-      
+
       // Автофокус на комментарий при негативных оценках
       if ((field === 'mood' && value <= 3) || (field === 'stress' && value >= 8)) {
         setTimeout(() => commentRef.current?.focus(), 300);
       }
-      
+
       // Проверяем идеальные оценки для confetti
-      const isPerfect = (field === 'mood' ? value : mood) >= 8 && 
-                        (field === 'wellbeing' ? value : wellbeing) >= 8 && 
-                        (field === 'stress' ? value : stress) > 0 && 
-                        (field === 'stress' ? value : stress) <= 2;
+      const isPerfect = (field === 'mood' ? value : mood) >= 8 &&
+        (field === 'wellbeing' ? value : wellbeing) >= 8 &&
+        (field === 'stress' ? value : stress) > 0 &&
+        (field === 'stress' ? value : stress) <= 2;
       if (isPerfect) triggerConfetti();
     };
-    
+
     // Добавить chip в комментарий
     const addChip = (chip) => {
       haptic(5);
@@ -1010,19 +1040,19 @@
     return React.createElement('div', { className: 'meal-mood-step' },
       // Мини-график настроения за день — используем вынесенный компонент
       React.createElement(MoodHistorySection, { todayMoods, currentAvg }),
-      
+
       // Общий индикатор состояния
       React.createElement('div', { className: 'meal-overall-status' },
         React.createElement('span', { className: 'meal-overall-emoji' }, overallStatus.emoji),
         React.createElement('span', { className: 'meal-overall-text' }, overallStatus.text)
       ),
-      
+
       // Confetti — используем вынесенный компонент
       React.createElement(ConfettiEffect, { show: showConfetti }),
-      
+
       // Три карточки оценок — используем RatingCard компонент
       React.createElement('div', { className: 'meal-ratings-grid' },
-        
+
         // === Настроение ===
         React.createElement(RatingCard, {
           field: 'mood',
@@ -1041,7 +1071,7 @@
           onEmojiTap: handleEmojiTap,
           isNegative: false
         }),
-        
+
         // === Самочувствие ===
         React.createElement(RatingCard, {
           field: 'wellbeing',
@@ -1060,7 +1090,7 @@
           onEmojiTap: handleEmojiTap,
           isNegative: false
         }),
-        
+
         // === Стресс ===
         React.createElement(RatingCard, {
           field: 'stress',
@@ -1080,7 +1110,7 @@
           isNegative: true
         })
       ),
-      
+
       // Динамический комментарий — используем вынесенный компонент
       React.createElement(CommentSection, {
         moodState,
@@ -1099,10 +1129,10 @@
   // ============================================================
   // РЕГИСТРАЦИЯ ШАГОВ
   // ============================================================
-  
+
   if (HEYS.StepModal) {
     const { registerStep } = HEYS.StepModal;
-    
+
     // Шаг 1: Время и тип
     registerStep('mealTime', {
       title: 'Время приёма',
@@ -1129,7 +1159,7 @@
       validate: () => true,
       hideHeaderNext: true // Кнопка "Далее" внутри компонента для проверки волны при переходе
     });
-    
+
     // Шаг 2: Оценки и комментарий
     registerStep('mealMood', {
       title: 'Самочувствие',
@@ -1147,13 +1177,13 @@
             comment: ctx.initialComment ?? ''
           };
         }
-        
+
         // Берём оценки из предыдущего приёма если есть
         const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
         const dayData = safeLsGet(`heys_dayv2_${dateKey}`, null);
         // Защита от null — день может ещё не существовать (завтра, будущие даты)
         const meals = dayData?.meals || [];
-        
+
         // 1. Если есть приёмы сегодня — берём последний
         if (meals.length > 0) {
           const lastMeal = meals[meals.length - 1];
@@ -1164,19 +1194,19 @@
             comment: ''
           };
         }
-        
+
         // 2. Если первый приём — берём средние за вчера
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayKey = yesterday.toISOString().slice(0, 10);
         const yesterdayData = safeLsGet(`heys_dayv2_${yesterdayKey}`, null);
         const yesterdayMeals = yesterdayData?.meals || [];
-        
+
         if (yesterdayMeals.length > 0) {
           // Вычисляем средние оценки за вчера
           let totalMood = 0, totalWellbeing = 0, totalStress = 0;
           let count = 0;
-          
+
           for (const meal of yesterdayMeals) {
             if (meal.mood || meal.wellbeing || meal.stress) {
               totalMood += meal.mood || 5;
@@ -1185,7 +1215,7 @@
               count++;
             }
           }
-          
+
           if (count > 0) {
             return {
               mood: Math.round(totalMood / count),
@@ -1195,7 +1225,7 @@
             };
           }
         }
-        
+
         // 3. Если нет данных — по умолчанию 5
         return { mood: 5, wellbeing: 5, stress: 5, comment: '' };
       },
@@ -1206,7 +1236,7 @@
   // ============================================================
   // API: СОЗДАНИЕ ПРИЁМА
   // ============================================================
-  
+
   /**
    * Показать модалку добавления приёма пищи
    * @param {Object} options
@@ -1215,7 +1245,7 @@
    */
   function showAddMealModal(options = {}) {
     const dateKey = options.dateKey || new Date().toISOString().slice(0, 10);
-    
+
     HEYS.StepModal.show({
       steps: ['mealTime', 'mealMood'],
       title: 'Новый приём',
@@ -1238,24 +1268,24 @@
         // Создаём приём
         const timeData = stepData.mealTime || {};
         const moodData = stepData.mealMood || {};
-        
+
         // Конвертируем индекс колеса в реальный час
         // Если hourIndex не установлен (пользователь не трогал пикер), 
         // используем текущий час как fallback
         const defaultHourIndex = hourToWheelIndex(new Date().getHours());
         const hourIndex = timeData.hourIndex ?? defaultHourIndex;
         let realHours = wheelIndexToHour(hourIndex);
-        
+
         // Нормализуем часы для хранения (ночные 00-02 → 24-26)
         realHours = normalizeHoursForStorage(realHours, NIGHT_HOUR_THRESHOLD);
         const timeStr = `${pad2(realHours)}:${pad2(timeData.minutes || 0)}`;
-        
+
         // Если тип не выбран явно — определяем автоматически по времени
         const mealType = timeData.mealType || getMealTypeByHour(realHours);
-        
+
         // Название приёма из типа
         const mealName = MEAL_TYPES[mealType]?.name || 'Приём';
-        
+
         const newMeal = {
           id: uid('m_'),
           name: mealName,
@@ -1266,16 +1296,16 @@
           stress: moodData.stress || 5,
           items: []
         };
-        
+
         // Сохраняем комментарий если есть
         if (moodData.comment && moodData.comment.trim()) {
           newMeal.comment = moodData.comment.trim();
         }
-        
+
         // НЕ сохраняем в localStorage напрямую!
         // DayTab сам добавит meal в свой state и сохранит через autosave
         // Это избегает race condition между модалкой и DayTab
-        
+
         // Callback — передаём только newMeal, DayTab сам обновит state
         if (options.onComplete) {
           options.onComplete(newMeal);
@@ -1299,18 +1329,18 @@
       console.error('[MealStep] showEditMeal: meal is required');
       return;
     }
-    
+
     // Парсим текущее время
     const timeParts = (meal.time || '').split(':');
     let hours = parseInt(timeParts[0]) || new Date().getHours();
     const minutes = parseInt(timeParts[1]) || 0;
-    
+
     // Денормализуем часы для отображения (24-26 → 0-2)
     hours = normalizeHoursForDisplay(hours);
-    
+
     // Конвертируем в индекс колеса
     const hourIndex = hourToWheelIndex(hours);
-    
+
     HEYS.StepModal.show({
       steps: ['mealTime'],  // Только 1 шаг — время и тип
       title: '',  // Без заголовка
@@ -1320,7 +1350,7 @@
       showGreeting: false,
       showTip: false,
       finishLabel: 'Сохранить', // Редактирование — "Сохранить"
-      context: { 
+      context: {
         dateKey,
         mealIndex,
         // Начальные значения
@@ -1330,19 +1360,19 @@
       },
       onComplete: (stepData) => {
         const timeData = stepData.mealTime || {};
-        
+
         // Используем initialHourIndex если пользователь не менял
         const finalHourIndex = timeData.hourIndex ?? hourIndex;
         let realHours = wheelIndexToHour(finalHourIndex);
-        
+
         // Нормализуем часы для хранения (00-02 → 24-26)
         realHours = normalizeHoursForStorage(realHours, NIGHT_HOUR_THRESHOLD);
         const timeStr = `${pad2(realHours)}:${pad2(timeData.minutes ?? minutes)}`;
-        
+
         // Тип приёма
         const mealType = timeData.mealType || meal.mealType || null;
         const mealName = mealType ? (MEAL_TYPES[mealType]?.name || meal.name) : meal.name;
-        
+
         // Возвращаем обновлённые данные
         if (onComplete) {
           onComplete({
@@ -1371,7 +1401,7 @@
       console.error('[MealStep] showEditMood: meal is required');
       return;
     }
-    
+
     HEYS.StepModal.show({
       steps: ['mealMood'],  // Только 1 шаг — оценки
       title: '',  // Без заголовка
@@ -1381,7 +1411,7 @@
       showGreeting: false,
       showTip: false,
       finishLabel: 'Сохранить', // Редактирование — "Сохранить"
-      context: { 
+      context: {
         dateKey,
         mealIndex,
         // Начальные значения — берём из текущего приёма
@@ -1392,7 +1422,7 @@
       },
       onComplete: (stepData) => {
         const moodData = stepData.mealMood || {};
-        
+
         // Возвращаем обновлённые данные
         if (onComplete) {
           onComplete({
