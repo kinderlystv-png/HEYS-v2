@@ -357,14 +357,24 @@
         const SECTIONS_KEY = 'heys_profile_sections';
         const [expandedSections, setExpandedSections] = React.useState(() => {
             try {
-                const saved = localStorage.getItem(SECTIONS_KEY);
-                return saved ? JSON.parse(saved) : { basic: true };
+                if (HEYS.store?.get) {
+                    const saved = HEYS.store.get(SECTIONS_KEY, null);
+                    if (saved) return typeof saved === 'string' ? JSON.parse(saved) : saved;
+                }
+                const saved = lsGet ? lsGet(SECTIONS_KEY, null) : null;
+                if (saved) return saved;
+                const raw = localStorage.getItem(SECTIONS_KEY);
+                return raw ? JSON.parse(raw) : { basic: true };
             } catch { return { basic: true }; }
         });
         const toggleSection = (id) => {
             setExpandedSections(prev => {
                 const next = { ...prev, [id]: !prev[id] };
-                try { localStorage.setItem(SECTIONS_KEY, JSON.stringify(next)); } catch { }
+                try {
+                    if (HEYS.store?.set) HEYS.store.set(SECTIONS_KEY, next);
+                    else if (lsSet) lsSet(SECTIONS_KEY, next);
+                    else localStorage.setItem(SECTIONS_KEY, JSON.stringify(next));
+                } catch { }
                 return next;
             });
         };

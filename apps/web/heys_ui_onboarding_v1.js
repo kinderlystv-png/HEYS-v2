@@ -26,6 +26,17 @@
   const HAPTIC_ENABLED = true; // navigator.vibrate на переходах
   const HAPTIC_PATTERN = [15]; // Короткая вибрация 15ms
 
+  const getStoredFlag = (key, fallback = false) => {
+    const scoped = HEYS.store?.get?.(key, null);
+    if (scoped === true || scoped === 'true') return true;
+    if (scoped === false || scoped === 'false') return false;
+    try {
+      return localStorage.getItem(key) === 'true';
+    } catch (e) {
+      return fallback;
+    }
+  };
+
   // Шаги тура с персонализацией
   const TOUR_STEPS = [
     {
@@ -544,9 +555,7 @@
       if (state.isActive) return;
 
       // Проверка: уже проходил?
-      const isCompleted = HEYS.store && HEYS.store.get ?
-        HEYS.store.get(STORAGE_KEY, false) :
-        localStorage.getItem(STORAGE_KEY) === 'true';
+      const isCompleted = getStoredFlag(STORAGE_KEY, false);
 
       if (isCompleted && !options.force) return;
 
@@ -901,11 +910,11 @@
    */
   function shouldShowInsightsTour() {
     // Не показываем если основной тур ещё не пройден
-    const mainTourCompleted = HEYS.store?.get?.(STORAGE_KEY) ?? localStorage.getItem(STORAGE_KEY);
+    const mainTourCompleted = getStoredFlag(STORAGE_KEY, false);
     if (!mainTourCompleted) return false;
 
     // Не показываем если мини-тур уже пройден
-    const insightsTourCompleted = HEYS.store?.get?.(INSIGHTS_STORAGE_KEY) ?? localStorage.getItem(INSIGHTS_STORAGE_KEY);
+    const insightsTourCompleted = getStoredFlag(INSIGHTS_STORAGE_KEY, false);
     if (insightsTourCompleted) return false;
 
     // Не показываем кураторам
@@ -1360,11 +1369,11 @@
    */
   function shouldShowWidgetsTour() {
     // Главный тур должен быть пройден
-    const mainCompleted = HEYS.store?.get?.(STORAGE_KEY, false) || localStorage.getItem(STORAGE_KEY) === 'true';
+    const mainCompleted = getStoredFlag(STORAGE_KEY, false);
     if (!mainCompleted) return false;
 
     // Тур виджетов не пройден
-    const widgetsCompleted = HEYS.store?.get?.(WIDGETS_STORAGE_KEY, false) || localStorage.getItem(WIDGETS_STORAGE_KEY) === 'true';
+    const widgetsCompleted = getStoredFlag(WIDGETS_STORAGE_KEY, false);
     if (widgetsCompleted) return false;
 
     // Для кураторов не показываем

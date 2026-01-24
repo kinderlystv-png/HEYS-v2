@@ -10,22 +10,32 @@
     const WEEKLY_WRAP_MAX_WEEKS = 26;
 
     function getLsGet() {
-        return U.lsGet || ((k, d) => {
+        return (k, d) => {
             try {
+                if (HEYS.store?.get) return HEYS.store.get(k, d);
+                if (U.lsGet) return U.lsGet(k, d);
                 const raw = localStorage.getItem(k);
                 return raw ? JSON.parse(raw) : d;
             } catch (e) {
                 return d;
             }
-        });
+        };
     }
 
     function getLsSet() {
-        return U.lsSet || ((k, v) => {
+        return (k, v) => {
             try {
+                if (HEYS.store?.set) {
+                    HEYS.store.set(k, v);
+                    return;
+                }
+                if (U.lsSet) {
+                    U.lsSet(k, v);
+                    return;
+                }
                 localStorage.setItem(k, JSON.stringify(v));
             } catch (e) { }
-        });
+        };
     }
 
     function getWeekNumber(date) {

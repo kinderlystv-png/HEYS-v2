@@ -4,6 +4,23 @@
     const HEYS = window.HEYS = window.HEYS || {};
     HEYS.AppUIState = HEYS.AppUIState || {};
 
+    const U = HEYS.utils || {};
+
+    const readGlobalValue = (key, fallback) => {
+        try {
+            if (HEYS.store?.get) {
+                const stored = HEYS.store.get(key, null);
+                if (stored !== null && stored !== undefined) return stored;
+            }
+            const raw = localStorage.getItem(key);
+            if (raw !== null && raw !== undefined) return raw;
+            if (U.lsGet) return U.lsGet(key, fallback);
+            return fallback;
+        } catch {
+            return fallback;
+        }
+    };
+
     const getModule = HEYS._getModule || function (name, fallback) {
         return HEYS[name] || fallback || {};
     };
@@ -24,7 +41,7 @@
         const [pwd, setPwd] = useState('');
         const [rememberMe, setRememberMe] = useState(() => {
             // Восстанавливаем checkbox из localStorage
-            return localStorage.getItem('heys_remember_me') === 'true';
+            return readGlobalValue('heys_remember_me', 'false') === 'true';
         });
 
         const handleSignIn = useCallback(() => {

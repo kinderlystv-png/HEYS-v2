@@ -33,20 +33,29 @@
   // УТИЛИТЫ
   // ========================================
 
-  const U = HEYS.utils || {
-    lsGet: (k, d) => {
-      try {
-        const v = localStorage.getItem(k);
-        return v == null ? d : JSON.parse(v);
-      } catch (_) {
-        return d;
+  const storeGet = (k, d) => {
+    try {
+      if (HEYS.store?.get) return HEYS.store.get(k, d);
+      if (HEYS.utils?.lsGet) return HEYS.utils.lsGet(k, d);
+      const v = localStorage.getItem(k);
+      return v == null ? d : JSON.parse(v);
+    } catch (_) {
+      return d;
+    }
+  };
+
+  const storeSet = (k, v) => {
+    try {
+      if (HEYS.store?.set) {
+        HEYS.store.set(k, v);
+        return;
       }
-    },
-    lsSet: (k, v) => {
-      try {
-        localStorage.setItem(k, JSON.stringify(v));
-      } catch (_) { }
-    },
+      if (HEYS.utils?.lsSet) {
+        HEYS.utils.lsSet(k, v);
+        return;
+      }
+      localStorage.setItem(k, JSON.stringify(v));
+    } catch (_) { }
   };
 
   // Кэширование
@@ -59,7 +68,7 @@
     if (_statusCache && Date.now() - _statusCacheAt < CACHE_TTL_MS) {
       return _statusCache;
     }
-    const stored = U.lsGet(CACHE_KEY, null);
+    const stored = storeGet(CACHE_KEY, null);
     if (stored && stored.data && Date.now() - stored.ts < CACHE_TTL_MS) {
       _statusCache = stored.data;
       _statusCacheAt = stored.ts;
@@ -71,14 +80,14 @@
   function setCachedStatus(data) {
     _statusCache = data;
     _statusCacheAt = Date.now();
-    U.lsSet(CACHE_KEY, { data, ts: _statusCacheAt });
+    storeSet(CACHE_KEY, { data, ts: _statusCacheAt });
   }
 
   function getCachedCapacity() {
     if (_capacityCache && Date.now() - _capacityCacheAt < CAPACITY_CACHE_TTL_MS) {
       return _capacityCache;
     }
-    const stored = U.lsGet(CAPACITY_CACHE_KEY, null);
+    const stored = storeGet(CAPACITY_CACHE_KEY, null);
     if (stored && stored.data && Date.now() - stored.ts < CAPACITY_CACHE_TTL_MS) {
       _capacityCache = stored.data;
       _capacityCacheAt = stored.ts;
@@ -90,7 +99,7 @@
   function setCachedCapacity(data) {
     _capacityCache = data;
     _capacityCacheAt = Date.now();
-    U.lsSet(CAPACITY_CACHE_KEY, { data, ts: _capacityCacheAt });
+    storeSet(CAPACITY_CACHE_KEY, { data, ts: _capacityCacheAt });
   }
 
   function clearCache() {
@@ -99,6 +108,8 @@
     _capacityCache = null;
     _capacityCacheAt = 0;
     try {
+      storeSet(CACHE_KEY, null);
+      storeSet(CAPACITY_CACHE_KEY, null);
       localStorage.removeItem(CACHE_KEY);
       localStorage.removeItem(CAPACITY_CACHE_KEY);
     } catch (_) { }

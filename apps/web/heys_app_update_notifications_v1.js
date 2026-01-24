@@ -1,6 +1,22 @@
 // heys_app_update_notifications_v1.js — update toast & notifications
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
+    const U = HEYS.utils || {};
+
+    const writeGlobalValue = (key, value) => {
+        try {
+            if (HEYS.store?.set) {
+                HEYS.store.set(key, value);
+                return;
+            }
+            if (U.lsSet) {
+                U.lsSet(key, value);
+                return;
+            }
+            const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+            localStorage.setItem(key, serialized);
+        } catch { }
+    };
 
     const useUpdateNotifications = ({ React }) => {
         const [showUpdateToast, setShowUpdateToast] = React.useState(false);
@@ -33,7 +49,7 @@
 
         const dismissUpdateToast = React.useCallback(() => {
             setShowUpdateToast(false);
-            localStorage.setItem('heys_update_dismissed', Date.now().toString());
+            writeGlobalValue('heys_update_dismissed', Date.now().toString());
         }, []);
 
         return {

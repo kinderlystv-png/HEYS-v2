@@ -88,6 +88,7 @@
 
     // Кэш синхронизированных клиентов (в рамках сессии) — обычная переменная модуля
     const syncedClientsCache = new Set();
+    const recoveryRunCache = new Set();
 
     function RationTabWithCloudSync(props) {
         const { clientId, setProducts, products } = props;
@@ -163,6 +164,9 @@
         React.useEffect(() => {
             let cancelled = false;
             let recoveryScheduled = false; // 🔒 Флаг: recovery уже запланировано (debounce)
+            let recoveryAttempts = 0;
+            const MAX_RECOVERY_ATTEMPTS = 6;
+            const RECOVERY_RETRY_MS = 600;
 
             // 🛡️ Хелпер: безопасное обновление продуктов (не уменьшаем количество)
             const safeSetProducts = (newProducts) => {
@@ -182,30 +186,48 @@
 
             // 🔄 Хелпер: запуск orphan recovery (с debounce через флаг)
             const runOrphanRecovery = (options = {}) => {
-                // � v4.7.0: DEBUG логи отключены
-                if (recoveryScheduled) {
-                    return;
-                }
-                if (cancelled) {
-                    return;
-                }
-                if (!window.HEYS.orphanProducts?.autoRecoverOnLoad) {
+                if (recoveryScheduled || cancelled) return;
+                if (!window.HEYS.orphanProducts?.autoRecoverOnLoad) return;
+
+                if (clientId && recoveryRunCache.has(clientId)) return;
+
+                const currentProducts = getLatestProducts();
+                const cachedShared = window.HEYS?.cloud?.getCachedSharedProducts?.() || [];
+                const minReady = cachedShared.length > 0 ? 10 : 5;
+
+                if (!Array.isArray(currentProducts) || currentProducts.length < minReady) {
+                    recoveryAttempts += 1;
+                    if (recoveryAttempts === 1) {
+                        console.log('[RECOVERY] ⏳ Отложено: база продуктов ещё не готова', {
+                            products: Array.isArray(currentProducts) ? currentProducts.length : 0,
+                            sharedCache: cachedShared.length,
+                            attempt: recoveryAttempts
+                        });
+                    }
+                    if (recoveryAttempts <= MAX_RECOVERY_ATTEMPTS) {
+                        setTimeout(() => runOrphanRecovery(options), RECOVERY_RETRY_MS);
+                    }
                     return;
                 }
 
+                console.log('[RECOVERY] ✅ База готова для восстановления', {
+                    products: currentProducts.length,
+                    sharedCache: cachedShared.length,
+                    attempt: recoveryAttempts
+                });
+
                 recoveryScheduled = true;
+                if (clientId) recoveryRunCache.add(clientId);
                 const isFirstLoad = !syncedClientsCache.has(clientId);
 
                 window.HEYS.orphanProducts.autoRecoverOnLoad({
-                    verbose: isFirstLoad, // Verbose только для первого входа
+                    verbose: isFirstLoad,
                     ...options
                 }).then(result => {
                     if (result.recovered > 0 && !cancelled) {
-                        // Обновляем React state если что-то восстановили
                         const updatedProducts = window.HEYS.utils.lsGet('heys_products', []);
                         safeSetProducts(Array.isArray(updatedProducts) ? updatedProducts : []);
 
-                        // 🔔 Toast уведомление для пользователя
                         if (window.HEYS.Toast?.success) {
                             const msg = result.recovered === 1
                                 ? '🔄 Восстановлен 1 продукт из истории'

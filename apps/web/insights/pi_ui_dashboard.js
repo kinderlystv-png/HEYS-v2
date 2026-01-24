@@ -762,15 +762,16 @@
 
       // 🎯 State для отслеживания прохождения тура (нужен для перерисовки после завершения)
       // 🔧 v1.13 FIX: Проверяем ОБА источника — scoped (HEYS.store) И unscoped (localStorage)
-      const [insightsTourCompleted, setInsightsTourCompleted] = useState(() => {
+      const readInsightsTourCompleted = () => {
         try {
-          // 1. Сначала проверяем scoped хранилище (для существующих пользователей)
           const scopedValue = HEYS.store?.get?.('heys_insights_tour_completed');
           if (scopedValue === true || scopedValue === 'true') return true;
-          // 2. Затем fallback на unscoped localStorage
+          if (scopedValue === false || scopedValue === 'false') return false;
           return localStorage.getItem('heys_insights_tour_completed') === 'true';
         } catch { return true; }
-      });
+      };
+
+      const [insightsTourCompleted, setInsightsTourCompleted] = useState(() => readInsightsTourCompleted());
 
       // Слушаем изменения localStorage для переключения из демо-режима
       useEffect(() => {
@@ -779,7 +780,9 @@
             // 🔧 v1.13: Проверяем оба источника
             const scopedValue = HEYS.store?.get?.('heys_insights_tour_completed');
             const unscopedValue = localStorage.getItem('heys_insights_tour_completed') === 'true';
-            const completed = scopedValue === true || scopedValue === 'true' || unscopedValue;
+            const completed = scopedValue === true || scopedValue === 'true' || scopedValue === false || scopedValue === 'false'
+              ? scopedValue === true || scopedValue === 'true'
+              : unscopedValue;
             if (completed !== insightsTourCompleted) {
               devLog('[InsightsTab] Tour status changed:', completed, '(scoped:', scopedValue, ', unscoped:', unscopedValue, ')');
               setInsightsTourCompleted(completed);

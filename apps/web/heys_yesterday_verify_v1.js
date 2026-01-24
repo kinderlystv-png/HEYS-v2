@@ -12,15 +12,33 @@
   const devWarn = typeof DEV.warn === 'function' ? DEV.warn.bind(DEV) : function () { };
 
   // === Утилиты ===
-  const lsGet = (k, d) => {
-    if (HEYS.utils?.lsGet) return HEYS.utils.lsGet(k, d);
-    try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; }
+  const storeGet = (k, d) => {
+    try {
+      if (HEYS.store?.get) return HEYS.store.get(k, d);
+      if (HEYS.utils?.lsGet) return HEYS.utils.lsGet(k, d);
+      const v = localStorage.getItem(k);
+      return v ? JSON.parse(v) : d;
+    } catch {
+      return d;
+    }
   };
 
-  const lsSet = (k, v) => {
-    if (HEYS.utils?.lsSet) return HEYS.utils.lsSet(k, v);
-    try { localStorage.setItem(k, JSON.stringify(v)); } catch { }
+  const storeSet = (k, v) => {
+    try {
+      if (HEYS.store?.set) {
+        HEYS.store.set(k, v);
+        return;
+      }
+      if (HEYS.utils?.lsSet) {
+        HEYS.utils.lsSet(k, v);
+        return;
+      }
+      localStorage.setItem(k, JSON.stringify(v));
+    } catch { }
   };
+
+  const lsGet = (k, d) => storeGet(k, d);
+  const lsSet = (k, v) => storeSet(k, v);
 
   /**
    * Получить ключ вчерашнего дня

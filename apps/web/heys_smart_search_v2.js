@@ -27,7 +27,7 @@
 // ✅ 🆕 Numeric-aware поиск: 2.5% / 0% / 250г / 1л — точнее по цифрам
 // ✅ 🆕 Индексация продуктов: быстрее и стабильнее для больших списков
 
-;(function(global) {
+; (function (global) {
   'use strict';
 
   const HEYS = global.HEYS = global.HEYS || {};
@@ -49,7 +49,7 @@
     enableNgram: true,        // 🆕 N-gram поиск по частям слова
     enablePersonalization: true, // 🆕 Персонализация по частоте использования
     debugMode: false,         // Режим отладки
-    
+
     // Адаптивное расстояние опечаток
     getMaxTypoDistance(queryLength) {
       if (queryLength <= 3) return 1;
@@ -64,7 +64,7 @@
   let lastProductsHash = null;  // Хеш для инвалидации индекса
 
   // === СЛОВАРИ ===
-  
+
   // Популярные слова продуктов (для приоритезации)
   const commonWords = new Set([
     'хлеб', 'молоко', 'мясо', 'рыба', 'овощи', 'фрукты', 'крупа', 'макароны',
@@ -90,7 +90,7 @@
     'йогурт': ['йогуртовый', 'йогуртик'],
     'сметана': ['сметанка', 'сметанный'],
     'сливки': ['сливочный', 'сливочки'],
-    
+
     // Мясо
     'курица': ['куриный', 'куриная', 'курятина', 'цыпленок', 'птица', 'кура'],
     'говядина': ['говяжий', 'говяжья', 'телятина', 'теленок'],
@@ -99,14 +99,14 @@
     'баранина': ['бараний', 'баранья', 'ягненок'],
     'мясо': ['мясной', 'мясная', 'мясные'],
     'фарш': ['фаршевый'],
-    
+
     // Рыба
     'рыба': ['рыбный', 'рыбная', 'рыбка'],
     'семга': ['семужка', 'лосось', 'красная рыба'],
     'лосось': ['семга', 'красная рыба'],
     'треска': ['тресковый'],
     'тунец': ['тунцовый'],
-    
+
     // Овощи
     'картофель': ['картошка', 'картофельный', 'картошечка', 'картоха'],
     'помидор': ['томат', 'томатный', 'помидорка', 'помидорчик'],
@@ -120,7 +120,7 @@
     'кабачок': ['кабачковый', 'цуккини'],
     'свекла': ['свекольный', 'буряк'],
     'редис': ['редиска', 'редисочка'],
-    
+
     // Фрукты и ягоды
     'яблоко': ['яблочко', 'яблочный'],
     'банан': ['бананчик', 'банановый'],
@@ -133,7 +133,7 @@
     'черника': ['черничка', 'черничный'],
     'арбуз': ['арбузик', 'арбузный'],
     'дыня': ['дынька', 'дынный'],
-    
+
     // Крупы и гарниры
     'рис': ['рисовый', 'рисовая'],
     'гречка': ['гречневый', 'гречневая', 'греча'],
@@ -145,7 +145,7 @@
     'булгур': ['булгуровый'],
     'кускус': ['кускусовый'],
     'киноа': ['киноа'],
-    
+
     // Хлеб и выпечка
     'хлеб': ['хлебушек', 'хлебный', 'батон', 'буханка', 'булка', 'багет'],
     'булочка': ['булка', 'сдоба', 'плюшка'],
@@ -153,14 +153,14 @@
     'печенье': ['печенька', 'печеньки'],
     'торт': ['тортик', 'торты'],
     'пирог': ['пирожок', 'пирожки'],
-    
+
     // Сладкое
     'сахар': ['сахарный', 'сахарок'],
     'мед': ['медок', 'медовый'],
     'шоколад': ['шоколадка', 'шоколадный'],
     'конфеты': ['конфета', 'конфетка'],
     'варенье': ['джем', 'повидло'],
-    
+
     // Напитки
     'кофе': ['кофеек', 'кофейный', 'эспрессо', 'американо', 'капучино', 'латте'],
     'чай': ['чаек', 'чайный'],
@@ -168,7 +168,7 @@
     'вода': ['водичка', 'минералка'],
     'компот': ['компотик'],
     'морс': ['морсик'],
-    
+
     // Орехи
     'орехи': ['орешки', 'ореховый'],
     'миндаль': ['миндальный'],
@@ -176,7 +176,7 @@
     'грецкий': ['грецкие орехи'],
     'кешью': ['кешьювый'],
     'арахис': ['арахисовый', 'земляной орех'],
-    
+
     // Другое
     'яйцо': ['яйца', 'яичко', 'яичный', 'омлет', 'яичница'],
     'масло': ['маслице', 'масляный'],
@@ -202,7 +202,7 @@
   ];
 
   // === 🆕 ТРАНСЛИТЕРАЦИЯ (ru ↔ en) ===
-  
+
   // Таблица транслитерации: русский → латиница (ГОСТ + популярные варианты)
   const TRANSLIT_RU_TO_EN = {
     'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd',
@@ -213,12 +213,12 @@
     'ш': 'sh', 'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '',
     'э': 'e', 'ю': 'yu', 'я': 'ya'
   };
-  
+
   // Таблица транслитерации: латиница → русский (обратная + альтернативы)
   // Порядок важен! Длинные сочетания первыми
   const TRANSLIT_EN_TO_RU = [
     // Сложные сочетания (порядок важен!)
-    ['sch', 'щ'], ['sh', 'ш'], ['ch', 'ч'], ['zh', 'ж'], 
+    ['sch', 'щ'], ['sh', 'ш'], ['ch', 'ч'], ['zh', 'ж'],
     ['ts', 'ц'], ['yu', 'ю'], ['ya', 'я'], ['yo', 'ё'],
     ['ye', 'е'], ['yi', 'и'], ['ph', 'ф'], ['th', 'т'],
     ['ck', 'к'], ['qu', 'кв'], ['x', 'кс'], ['w', 'в'],
@@ -229,7 +229,7 @@
     ['p', 'п'], ['r', 'р'], ['s', 'с'], ['t', 'т'], ['u', 'у'],
     ['v', 'в'], ['y', 'й'], ['z', 'з']
   ];
-  
+
   // Частые пары транслитерации (точные соответствия для продуктов)
   // Это для 100% точных случаев, где автоматическая транслитерация может ошибиться
   const TRANSLIT_PAIRS = {
@@ -252,7 +252,7 @@
     'фитнес': 'fitness',
     'sport': 'спорт',
     'спорт': 'sport',
-    
+
     // Еда и напитки
     'topping': 'топпинг',
     'топпинг': 'topping',
@@ -300,7 +300,7 @@
     'индейка': 'turkey',
     'steak': 'стейк',
     'стейк': 'steak',
-    
+
     // Добавки
     'omega': 'омега',
     'омега': 'omega',
@@ -317,7 +317,7 @@
     'iron': 'железо',
     'calcium': 'кальций',
     'кальций': 'calcium',
-    
+
     // Диетические термины
     'low': 'лоу',
     'лоу': 'low',
@@ -353,7 +353,7 @@
     'пауэр': 'power',
     'super': 'супер',
     'супер': 'super',
-    
+
     // Бренды и типичные слова
     'pro': 'про',
     'про': 'pro',
@@ -376,7 +376,7 @@
     'fresh': 'фреш',
     'фреш': 'fresh'
   };
-  
+
   // Варианты произношения/написания (для нечёткого поиска)
   // Ключ - нормализованная форма, значения - альтернативные написания
   const SPELLING_VARIANTS = {
@@ -404,7 +404,7 @@
     'арахис': ['арохис', 'peanut', 'arachis', 'арахиз'],
     'миндаль': ['миндал', 'almond', 'mindal', 'минталь']
   };
-  
+
   // === 🆕 QWERTY ↔ ЙЦУКЕН (неправильная раскладка клавиатуры) ===
   const QWERTY_TO_CYRILLIC = {
     'q': 'й', 'w': 'ц', 'e': 'у', 'r': 'к', 't': 'е', 'y': 'н', 'u': 'г',
@@ -413,11 +413,11 @@
     ';': 'ж', "'": 'э', 'z': 'я', 'x': 'ч', 'c': 'с', 'v': 'м', 'b': 'и',
     'n': 'т', 'm': 'ь', ',': 'б', '.': 'ю', '/': '.'
   };
-  
+
   const CYRILLIC_TO_QWERTY = Object.fromEntries(
     Object.entries(QWERTY_TO_CYRILLIC).map(([k, v]) => [v, k])
   );
-  
+
   // === 🆕 СОКРАЩЕНИЯ И АББРЕВИАТУРЫ ===
   const ABBREVIATIONS = {
     // Жирность
@@ -430,21 +430,21 @@
     '2%': ['двухпроцентный'],
     '5%': ['пятипроцентный'],
     '9%': ['девятипроцентный'],
-    
+
     // Питательность
     'ккал': ['калории', 'калорийность', 'энергетическая ценность'],
     'кк': ['калории', 'ккал'],
     'бжу': ['белки жиры углеводы', 'нутриенты', 'макросы'],
     'пп': ['правильное питание', 'здоровое питание', 'полезный'],
     'зож': ['здоровый образ жизни', 'здоровое питание'],
-    
+
     // Размеры
     'мл': ['миллилитров', 'миллилитр'],
     'гр': ['грамм', 'граммов'],
     'кг': ['килограмм', 'килограммов'],
     'л': ['литр', 'литров'],
     'шт': ['штук', 'штука'],
-    
+
     // Типы продуктов
     'об': ['обезжиренный'],
     'нж': ['нежирный', 'маложирный'],
@@ -460,12 +460,12 @@
     'суш': ['сушеный', 'сушёный'],
     'мар': ['маринованный'],
     'сол': ['соленый', 'солёный', 'малосольный'],
-    
+
     // Спортпит
     'изо': ['изолят', 'изолят протеина'],
     'конц': ['концентрат'],
     'гидро': ['гидролизат'],
-    
+
     // Марки/типы
     'б/л': ['без лактозы', 'безлактозный'],
     'б/г': ['без глютена', 'безглютеновый'],
@@ -473,7 +473,7 @@
     'низкокал': ['низкокалорийный', 'диетический'],
     'выскокобел': ['высокобелковый', 'протеиновый']
   };
-  
+
   // === 🆕 ЕДИНИЦЫ ИЗМЕРЕНИЯ (v2.5.0) ===
   const UNIT_CONVERSION = {
     'кг': { base: 'г', factor: 1000 },
@@ -510,7 +510,7 @@
 
   // 🆕 v2.6.0 Правила поиска по нутриентам
   const NUTRIENT_RULES = {
-    'high_protein': { 
+    'high_protein': {
       keywords: ['высокобелковый', 'много белка', 'протеиновый', 'high protein'],
       check: (p) => (p.protein100 || 0) >= 15
     },
@@ -562,14 +562,14 @@
     'svalia': ['свалия', 'svalia'],
     'агуша': ['агуша', 'agusha'],
     'epica': ['эпика', 'epica', 'epika'],
-    
+
     // Спортивное питание
     'optimum nutrition': ['оптимум', 'optimum', 'on'],
     'myprotein': ['майпротеин', 'myprotein', 'my protein'],
     'bsn': ['бсн', 'bsn'],
     'dymatize': ['диматайз', 'dymatize', 'dimatize'],
     'muscletech': ['маслтек', 'muscletech', 'muscle tech'],
-    
+
     // Напитки
     'coca-cola': ['кока-кола', 'кола', 'coca cola', 'cocacola'],
     'pepsi': ['пепси', 'pepsi'],
@@ -577,7 +577,7 @@
     'fanta': ['фанта', 'fanta'],
     'lipton': ['липтон', 'lipton'],
     'nescafe': ['нескафе', 'nescafe', 'нескафэ'],
-    
+
     // Кондитерские
     'nestle': ['нестле', 'nestle', 'nestlé'],
     'milka': ['милка', 'milka'],
@@ -589,7 +589,7 @@
     'kinder': ['киндер', 'kinder'],
     'raffaello': ['раффаэлло', 'raffaello', 'рафаэлло'],
     'ferrero': ['ферреро', 'ferrero', 'ferrero rocher'],
-    
+
     // Крупы/Каши
     'makfa': ['макфа', 'makfa'],
     'мистраль': ['мистраль', 'mistral'],
@@ -627,12 +627,15 @@
     ],
     popularSearches: ['творог', 'курица', 'яйца', 'молоко', 'овсянка', 'гречка', 'рис', 'банан', 'яблоко', 'сыр']
   };
-  
+
   // === 🆕 Персонализация — хранилище частоты использования ===
   let userProductStats = new Map(); // product_id → { count, lastUsed }
   let _statsSaveTimer = null;
   const USER_STATS_KEY = 'heys_product_usage_stats';
-  
+  const USER_STATS_MIGRATED_KEY = 'heys_product_usage_stats_migrated';
+  const USER_STATS_SYNC_KEY = 'heys_product_usage_stats_last_sync';
+  const USER_STATS_MAX_AGE_DAYS = 60;
+
   /**
    * Обновить статистику использования продукта
    */
@@ -644,6 +647,12 @@
     stats.lastUsed = Date.now();
     userProductStats.set(idKey, stats);
 
+    try {
+      if (HEYS.store?.isHiddenProduct?.(idKey)) {
+        HEYS.store.unhideProduct?.(idKey);
+      }
+    } catch (e) { /* ignore */ }
+
     // Не пишем в storage на каждый клик — дебаунс
     if (_statsSaveTimer) clearTimeout(_statsSaveTimer);
     _statsSaveTimer = setTimeout(() => {
@@ -651,7 +660,7 @@
       _statsSaveTimer = null;
     }, 500);
   }
-  
+
   /**
    * Получить персональный буст для продукта (0-20 баллов)
    */
@@ -659,24 +668,26 @@
     if (!CONFIG.enablePersonalization || !productId) return 0;
     const stats = userProductStats.get(String(productId));
     if (!stats) return 0;
-    
+
     // Формула: частота × свежесть
     const frequencyBoost = Math.min(stats.count * 2, 10); // max 10
     const daysSinceUse = (Date.now() - stats.lastUsed) / (1000 * 60 * 60 * 24);
     const recencyBoost = Math.max(0, 10 - daysSinceUse); // max 10, убывает с каждым днём
-    
+
     return Math.round(frequencyBoost + recencyBoost * 0.5);
   }
-  
+
   /**
    * Загрузить статистику использования из localStorage
    */
   function loadUserStats() {
     try {
-      // Prefer HEYS.utils.lsGet (clientId namespace + единый паттерн), fallback на localStorage
-      const storedObj = (HEYS.utils && HEYS.utils.lsGet)
-        ? HEYS.utils.lsGet(USER_STATS_KEY, null)
-        : (localStorage.getItem(USER_STATS_KEY) ? JSON.parse(localStorage.getItem(USER_STATS_KEY)) : null);
+      // Prefer HEYS.store (cloud sync), then HEYS.utils.lsGet, fallback to localStorage
+      const storedObj = (HEYS.store && HEYS.store.get)
+        ? HEYS.store.get(USER_STATS_KEY, null)
+        : (HEYS.utils && HEYS.utils.lsGet)
+          ? HEYS.utils.lsGet(USER_STATS_KEY, null)
+          : (localStorage.getItem(USER_STATS_KEY) ? JSON.parse(localStorage.getItem(USER_STATS_KEY)) : null);
 
       if (storedObj && typeof storedObj === 'object') {
         // Ключи храним строками для совместимости (productId может быть number/string)
@@ -684,23 +695,414 @@
       }
     } catch (e) { /* ignore */ }
   }
-  
+
+  function normalizeClientId(raw) {
+    if (!raw) return '';
+    if (typeof raw === 'string') {
+      const trimmed = raw.trim();
+      if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return '';
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (typeof parsed === 'string') return parsed;
+        if (parsed && typeof parsed === 'object' && typeof parsed.id === 'string') return parsed.id;
+      } catch (e) {
+        return trimmed.replace(/^"|"$/g, '');
+      }
+      return trimmed.replace(/^"|"$/g, '');
+    }
+    if (typeof raw === 'object' && typeof raw.id === 'string') return raw.id;
+    return '';
+  }
+
+  function inferClientIdFromDayKeys() {
+    try {
+      const keys = Object.keys(localStorage);
+      let best = { cid: '', ts: 0 };
+      keys.forEach((key) => {
+        const match = key.match(/^heys_(.+?)_dayv2_(\d{4}-\d{2}-\d{2})$/i);
+        if (!match) return;
+        const cid = match[1];
+        if (!cid || cid === 'dayv2') return;
+        const dateStr = match[2];
+        const ts = Date.parse(dateStr);
+        if (!Number.isFinite(ts)) return;
+        if (ts >= best.ts) best = { cid, ts };
+      });
+      return best.cid || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function getClientIdSafe() {
+    let cid = HEYS?.currentClientId || '';
+    if (!cid) cid = HEYS?.cloud?._pinAuthClientId || '';
+    if (!cid) {
+      cid = normalizeClientId(localStorage.getItem('heys_pin_auth_client'));
+    }
+    if (!cid) {
+      cid = normalizeClientId(localStorage.getItem('heys_client_current'));
+    }
+    if (!cid) {
+      cid = inferClientIdFromDayKeys();
+    }
+    return typeof cid === 'string' ? cid : '';
+  }
+
+  function hasDayHistory(clientId = getClientIdSafe()) {
+    try {
+      const keys = Object.keys(localStorage);
+      const scopedPrefix = clientId ? `heys_${clientId}_dayv2_` : '';
+      return keys.some((key) =>
+        key.startsWith('heys_dayv2_')
+        || (scopedPrefix && key.startsWith(scopedPrefix))
+        || /^heys_(.+?)_dayv2_\d{4}-\d{2}-\d{2}$/i.test(key)
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function pruneOldUsageStats(maxAgeDays = USER_STATS_MAX_AGE_DAYS) {
+    if (!userProductStats || userProductStats.size === 0) return false;
+    const now = Date.now();
+    const maxAgeMs = Math.max(1, Number(maxAgeDays) || USER_STATS_MAX_AGE_DAYS) * 24 * 60 * 60 * 1000;
+    let changed = false;
+
+    userProductStats.forEach((stats, key) => {
+      const lastUsed = Number(stats?.lastUsed || 0) || 0;
+      if (!lastUsed || now - lastUsed > maxAgeMs) {
+        userProductStats.delete(key);
+        changed = true;
+      }
+    });
+
+    if (changed) saveUserStats();
+    return changed;
+  }
+
+  function markUsageStatsMigrated() {
+    try {
+      if (HEYS.store && HEYS.store.set) {
+        HEYS.store.set(USER_STATS_MIGRATED_KEY, true);
+      } else if (HEYS.utils && HEYS.utils.lsSet) {
+        HEYS.utils.lsSet(USER_STATS_MIGRATED_KEY, true);
+      } else {
+        localStorage.setItem(USER_STATS_MIGRATED_KEY, JSON.stringify(true));
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function isUsageStatsMigrated() {
+    try {
+      if (HEYS.store && HEYS.store.get) {
+        return !!HEYS.store.get(USER_STATS_MIGRATED_KEY, false);
+      }
+      if (HEYS.utils && HEYS.utils.lsGet) {
+        return !!HEYS.utils.lsGet(USER_STATS_MIGRATED_KEY, false);
+      }
+      const raw = localStorage.getItem(USER_STATS_MIGRATED_KEY);
+      return raw ? JSON.parse(raw) === true : false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function ensureUsageStatsMigrated() {
+    if (isUsageStatsMigrated()) return true;
+
+    if (userProductStats && userProductStats.size > 0) {
+      markUsageStatsMigrated();
+      return true;
+    }
+
+    if (!hasDayHistory()) {
+      markUsageStatsMigrated();
+      return true;
+    }
+
+    if (typeof syncUsageStatsFromDays === 'function') {
+      syncUsageStatsFromDays({
+        daysWindow: 21,
+        dateKey: new Date().toISOString().slice(0, 10),
+        lsGet: (HEYS.utils && HEYS.utils.lsGet) ? HEYS.utils.lsGet : undefined
+      });
+    }
+
+    markUsageStatsMigrated();
+    return true;
+  }
+
+  function scheduleUsageStatsMigration() {
+    const migrated = ensureUsageStatsMigrated();
+    if (migrated) return;
+
+    if (typeof document !== 'undefined' && document.addEventListener) {
+      document.addEventListener('heysClientReady', () => {
+        ensureUsageStatsMigrated();
+      }, { once: true });
+    }
+
+    setTimeout(() => {
+      ensureUsageStatsMigrated();
+    }, 2000);
+  }
+
   /**
    * Сохранить статистику использования
    */
   function saveUserStats() {
     try {
       const data = Object.fromEntries(userProductStats);
-      if (HEYS.utils && HEYS.utils.lsSet) {
+      if (HEYS.store && HEYS.store.set) {
+        HEYS.store.set(USER_STATS_KEY, data);
+      } else if (HEYS.utils && HEYS.utils.lsSet) {
         HEYS.utils.lsSet(USER_STATS_KEY, data);
       } else {
         localStorage.setItem(USER_STATS_KEY, JSON.stringify(data));
       }
     } catch (e) { /* ignore */ }
   }
-  
+
+  function getUsageStatsLastSync() {
+    try {
+      if (HEYS.store && HEYS.store.get) {
+        return Number(HEYS.store.get(USER_STATS_SYNC_KEY, 0)) || 0;
+      }
+      if (HEYS.utils && HEYS.utils.lsGet) {
+        return Number(HEYS.utils.lsGet(USER_STATS_SYNC_KEY, 0)) || 0;
+      }
+      const raw = localStorage.getItem(USER_STATS_SYNC_KEY);
+      return raw ? Number(JSON.parse(raw)) || 0 : 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  function setUsageStatsLastSync(ts) {
+    try {
+      if (HEYS.store && HEYS.store.set) {
+        HEYS.store.set(USER_STATS_SYNC_KEY, ts);
+      } else if (HEYS.utils && HEYS.utils.lsSet) {
+        HEYS.utils.lsSet(USER_STATS_SYNC_KEY, ts);
+      } else {
+        localStorage.setItem(USER_STATS_SYNC_KEY, JSON.stringify(ts));
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  /**
+   * Получить snapshot статистики использования
+   * @returns {Map<string, {count:number, lastUsed:number}>}
+   */
+  function getUsageStats() {
+    return new Map(userProductStats);
+  }
+
+  /**
+   * Синхронизировать usage stats из истории дней (для миграции)
+   * @param {Object} options
+   * @param {number} options.daysWindow
+   * @param {Function} options.lsGet
+   * @param {string} options.dateKey
+   * @returns {Map<string, {count:number, lastUsed:number}>}
+   */
+  function syncUsageStatsFromDays(options = {}) {
+    const daysWindow = Math.max(1, Math.min(60, Number(options.daysWindow) || 21));
+    const bumpStat = (statsMap, key, ts) => {
+      const k = String(key || '').trim();
+      if (!k) return;
+      const s = statsMap.get(k) || { count: 0, lastUsed: 0 };
+      s.count += 1;
+      if (!s.lastUsed || ts > s.lastUsed) s.lastUsed = ts;
+      statsMap.set(k, s);
+    };
+    const resolveScopedKey = (rawKey) => {
+      const cid = getClientIdSafe();
+      if (!cid) return rawKey;
+      if (/^heys_(clients|client_current)$/i.test(rawKey)) return rawKey;
+      if (rawKey.includes(cid)) return rawKey;
+      if (rawKey.startsWith('heys_')) {
+        return `heys_${cid}_${rawKey.substring('heys_'.length)}`;
+      }
+      return `heys_${cid}_${rawKey}`;
+    };
+    const lsGetFn = options.lsGet
+      || (HEYS.store && HEYS.store.get)
+      || (HEYS.utils && HEYS.utils.lsGet)
+      || ((k, d) => {
+        try {
+          const scopedKey = resolveScopedKey(k);
+          const raw = localStorage.getItem(scopedKey) ?? localStorage.getItem(k);
+          if (!raw) return d;
+          if (HEYS.store?.decompress) return HEYS.store.decompress(raw);
+          return JSON.parse(raw);
+        } catch (_) { return d; }
+      });
+    const readDayRaw = (rawKey) => {
+      try {
+        const scopedKey = resolveScopedKey(rawKey);
+        const raw = localStorage.getItem(scopedKey) ?? localStorage.getItem(rawKey);
+        if (!raw) return null;
+        if (HEYS.store?.decompress) return HEYS.store.decompress(raw);
+        return JSON.parse(raw);
+      } catch (e) {
+        return null;
+      }
+    };
+    const today = new Date(options.dateKey || new Date().toISOString().slice(0, 10));
+    const nextStats = new Map();
+
+    const scanFromDayKeys = () => {
+      try {
+        const keys = Object.keys(localStorage);
+        const cutoff = new Date(today);
+        cutoff.setDate(cutoff.getDate() - (daysWindow - 1));
+        const stats = new Map();
+
+        keys.forEach((key) => {
+          if (!key.includes('_dayv2_')) return;
+          const m = key.match(/_dayv2_(\d{4}-\d{2}-\d{2})/);
+          if (!m) return;
+          const dateStr = m[1];
+          const ts = Date.parse(dateStr);
+          if (!Number.isFinite(ts)) return;
+          if (ts < cutoff.getTime()) return;
+
+          const raw = localStorage.getItem(key);
+          if (!raw) return;
+          let dayData = null;
+          try {
+            if (HEYS.store?.decompress) {
+              dayData = HEYS.store.decompress(raw);
+            } else if (raw.startsWith('¤Z¤')) {
+              dayData = JSON.parse(raw.substring(3));
+            } else {
+              dayData = JSON.parse(raw);
+            }
+          } catch (e) {
+            dayData = null;
+          }
+          if (!dayData?.meals) return;
+
+          dayData.meals.forEach((meal) => {
+            if (!meal?.items) return;
+            meal.items.forEach((item) => {
+              const pid = String(item.product_id || item.productId || '');
+              const rawName = String(item.name || '').trim();
+              const normName = normalizeText(rawName);
+              if (pid) bumpStat(stats, pid, ts);
+              if (rawName) bumpStat(stats, rawName, ts);
+              if (normName) bumpStat(stats, normName, ts);
+            });
+          });
+        });
+
+        return stats;
+      } catch (e) {
+        return new Map();
+      }
+    };
+
+    let scannedDays = 0;
+    let foundMeals = 0;
+    let foundItems = 0;
+    for (let i = 0; i < daysWindow; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      const dayKey = `heys_dayv2_${key}`;
+      if (HEYS.store?.invalidate) {
+        HEYS.store.invalidate(dayKey);
+      }
+      const dayData = lsGetFn(dayKey, null) || readDayRaw(dayKey);
+      const dayTs = d.getTime();
+
+      if (dayData && dayData.meals) {
+        scannedDays++;
+        dayData.meals.forEach(meal => {
+          if (!meal.items) return;
+          foundMeals++;
+          meal.items.forEach(item => {
+            const pid = String(item.product_id || item.productId || '');
+            const rawName = String(item.name || '').trim();
+            const normName = normalizeText(rawName);
+            if (!pid && !rawName && !normName) return;
+            foundItems++;
+            if (pid) bumpStat(nextStats, pid, dayTs);
+            if (rawName) bumpStat(nextStats, rawName, dayTs);
+            if (normName) bumpStat(nextStats, normName, dayTs);
+          });
+        });
+      }
+    }
+
+    let finalStats = nextStats;
+    if (finalStats.size === 0) {
+      finalStats = scanFromDayKeys();
+    }
+
+    if (finalStats.size > 0) {
+      userProductStats = new Map(finalStats);
+      saveUserStats();
+      setUsageStatsLastSync(Date.now());
+    }
+
+    try {
+      HEYS._usageStatsDebug = {
+        ...(HEYS._usageStatsDebug || {}),
+        sync: {
+          daysWindow,
+          scannedDays,
+          foundMeals,
+          foundItems,
+          statsSize: nextStats.size,
+          clientId: getClientIdSafe(),
+          sample: Array.from(nextStats.entries()).slice(0, 5)
+        }
+      };
+    } catch (e) { }
+
+    if (HEYS.DEBUG_MODE) {
+      const payload = HEYS._usageStatsDebug?.sync || {
+        daysWindow,
+        scannedDays,
+        foundMeals,
+        foundItems,
+        statsSize: finalStats.size,
+        clientId: getClientIdSafe()
+      };
+      console.log('🔎 [UsageStats] syncUsageStatsFromDays', payload);
+      if (finalStats.size === 0) {
+        console.log('⚠️ [UsageStats] no stats found from day keys');
+      }
+      if (global.DEV?.log) {
+        global.DEV.log('🔎 [UsageStats] syncUsageStatsFromDays', payload);
+      }
+    }
+
+    return new Map(userProductStats);
+  }
+
+  function ensureUsageStatsFresh(options = {}) {
+    const maxHours = Math.max(1, Number(options.maxHours) || 12);
+    const lastSync = getUsageStatsLastSync();
+    const maxAgeMs = maxHours * 60 * 60 * 1000;
+    const shouldSync = !lastSync || (Date.now() - lastSync) > maxAgeMs;
+    if (!shouldSync) return false;
+
+    syncUsageStatsFromDays({
+      daysWindow: Math.max(1, Math.min(60, Number(options.daysWindow) || 21)),
+      dateKey: options.dateKey,
+      lsGet: options.lsGet
+    });
+    return true;
+  }
+
   // Загружаем статистику при инициализации
   loadUserStats();
+  scheduleUsageStatsMigration();
+  pruneOldUsageStats();
 
   /**
    * Определяет язык текста (ru/en/mixed)
@@ -714,18 +1116,18 @@
     if (hasEn) return 'en';
     return 'unknown';
   }
-  
+
   /**
    * 🆕 Конвертировать раскладку клавиатуры
    * vfkjrj → молоко, молоко → vjkjrj
    */
   function convertKeyboardLayout(text) {
     if (!CONFIG.enableKeyboardFix || !text) return null;
-    
+
     const lang = detectLanguage(text);
     const lower = text.toLowerCase();
     let converted = '';
-    
+
     if (lang === 'en') {
       // QWERTY → ЙЦУКЕН
       for (const char of lower) {
@@ -739,20 +1141,20 @@
     } else {
       return null;
     }
-    
+
     // Проверяем, что конвертация дала другой результат
     return converted !== lower ? converted : null;
   }
-  
+
   /**
    * 🆕 Раскрыть сокращения
    */
   function expandAbbreviations(query) {
     if (!CONFIG.enableAbbreviations || !query) return [];
-    
+
     const normalized = normalizeText(query);
     const expansions = new Set();
-    
+
     // Проверяем каждое сокращение
     for (const [abbr, meanings] of Object.entries(ABBREVIATIONS)) {
       if (normalized.includes(abbr) || normalized === abbr) {
@@ -763,27 +1165,27 @@
         });
       }
     }
-    
+
     return [...expansions];
   }
-  
+
   /**
    * 🆕 Генерировать перестановки слов
    * "творог обезжиренный" → ["обезжиренный творог"]
    */
   function generateWordPermutations(query) {
     if (!CONFIG.enableWordPermutations || !query) return [];
-    
+
     const words = normalizeText(query).split(/\s+/).filter(w => w.length >= 2);
     if (words.length < 2 || words.length > 4) return []; // Только 2-4 слова
-    
+
     const permutations = new Set();
-    
+
     // Для 2 слов — просто переставляем
     if (words.length === 2) {
       permutations.add(`${words[1]} ${words[0]}`);
     }
-    
+
     // Для 3-4 слов — основные перестановки
     if (words.length >= 3) {
       // Последнее слово в начало
@@ -791,17 +1193,17 @@
       // Первое слово в конец
       permutations.add([...words.slice(1), words[0]].join(' '));
     }
-    
+
     return [...permutations];
   }
-  
+
   /**
    * 🆕 Поиск по категории продуктов
    * "молочные" → все молочные продукты
    */
   function findCategoryProducts(query, dataSource) {
     const normalized = normalizeText(query);
-    
+
     // Проверяем, это запрос категории?
     for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
       if (normalized === category || normalized === category.slice(0, -2)) { // молочные/молочн
@@ -816,26 +1218,26 @@
         }));
       }
     }
-    
+
     return [];
   }
-  
+
   /**
    * 🆕 N-gram поиск (поиск по любой части слова)
    */
   function ngramSearch(query, dataSource, minGramSize = 3) {
     if (!CONFIG.enableNgram || !query || query.length < minGramSize) return [];
-    
+
     const normalized = normalizeText(query);
     const results = [];
-    
+
     dataSource.forEach(item => {
       const itemName = normalizeText(item.name || '');
-      
+
       // Генерируем n-граммы из названия продукта
       for (let i = 0; i <= itemName.length - normalized.length; i++) {
         const gram = itemName.substring(i, i + normalized.length);
-        
+
         // Fuzzy сравнение n-граммы с запросом
         const distance = levenshteinDistance(normalized, gram, 1);
         if (distance <= 1) {
@@ -849,10 +1251,10 @@
         }
       }
     });
-    
+
     return results;
   }
-  
+
   /**
    * Транслитерация текста
    * @param {string} text - исходный текст
@@ -862,18 +1264,18 @@
   function transliterate(text, direction = 'auto') {
     if (!text) return '';
     const lower = text.toLowerCase();
-    
+
     // Проверяем точные пары
     if (TRANSLIT_PAIRS[lower]) {
       return TRANSLIT_PAIRS[lower];
     }
-    
+
     // Определяем направление автоматически
     if (direction === 'auto') {
       const lang = detectLanguage(lower);
       direction = lang === 'ru' ? 'ru-to-en' : 'en-to-ru';
     }
-    
+
     if (direction === 'ru-to-en') {
       // Русский → Латиница
       let result = '';
@@ -890,7 +1292,7 @@
       return result;
     }
   }
-  
+
   /**
    * Получить все варианты транслитерации для запроса
    * @param {string} query - поисковый запрос
@@ -898,15 +1300,15 @@
    */
   function getTranslitVariants(query) {
     if (!CONFIG.enableTranslit || !query) return [query];
-    
+
     const normalized = normalizeText(query);
     const variants = new Set([normalized]);
-    
+
     // Точная пара из словаря
     if (TRANSLIT_PAIRS[normalized]) {
       variants.add(normalizeText(TRANSLIT_PAIRS[normalized]));
     }
-    
+
     // Автоматическая транслитерация
     const lang = detectLanguage(normalized);
     if (lang === 'ru') {
@@ -916,7 +1318,7 @@
       // Латиница → русский
       variants.add(transliterate(normalized, 'en-to-ru'));
     }
-    
+
     // Проверяем варианты написания
     for (const [canonical, spellings] of Object.entries(SPELLING_VARIANTS)) {
       if (spellings.some(s => normalizeText(s) === normalized)) {
@@ -928,16 +1330,16 @@
         spellings.forEach(s => variants.add(normalizeText(s)));
       }
     }
-    
+
     return [...variants].filter(v => v && v.length >= 2);
   }
-  
+
   /**
    * Найти каноническую форму слова (если есть)
    */
   function getCanonicalForm(query) {
     const normalized = normalizeText(query);
-    
+
     // Проверяем в SPELLING_VARIANTS
     for (const [canonical, spellings] of Object.entries(SPELLING_VARIANTS)) {
       if (normalizeText(canonical) === normalized) {
@@ -947,7 +1349,7 @@
         return canonical;
       }
     }
-    
+
     // Проверяем в TRANSLIT_PAIRS (берём русский вариант как канонический)
     if (TRANSLIT_PAIRS[normalized]) {
       const pair = TRANSLIT_PAIRS[normalized];
@@ -956,7 +1358,7 @@
         return pair;
       }
     }
-    
+
     return null;
   }
 
@@ -989,17 +1391,17 @@
    */
   function normalizeRussianWord(word) {
     if (!word || word.length < 4) return word;
-    
+
     // Прилагательные: -ая, -яя, -ое, -ее, -ый, -ий, -ые, -ие
     if (/(ая|яя|ое|ее|ый|ий|ые|ие)$/.test(word)) {
       return word.replace(/(ая|яя|ое|ее|ый|ий|ые|ие)$/, '');
     }
-    
+
     // Множественное число: -ы, -и (если не короткое слово)
     if (word.length > 4 && /(ы|и)$/.test(word)) {
       return word.slice(0, -1);
     }
-    
+
     return word;
   }
 
@@ -1011,7 +1413,7 @@
    */
   function parseNumericConstraints(text) {
     if (!text) return [];
-    
+
     // Паттерн: число (с точкой/запятой) + опционально пробел + единица
     // Группы: 1=число, 3=единица
     const regex = /(\d+(?:[.,]\d+)?)\s*([%a-zA-Zа-яА-ЯёЁ]+)?/g;
@@ -1021,15 +1423,15 @@
     while ((match = regex.exec(text)) !== null) {
       const valStr = match[1].replace(',', '.');
       const unitStr = (match[2] || '').toLowerCase();
-      
+
       // Пропускаем просто числа без контекста, если они похожи на год или артикул (4 цифры)
       // Но берем маленькие числа (жирность, вес)
       const value = parseFloat(valStr);
-      
+
       // Нормализация единицы
       let normalizedUnit = null;
       let normalizedValue = value;
-      
+
       if (unitStr) {
         // Пробуем найти в таблице конвертации
         if (UNIT_CONVERSION[unitStr]) {
@@ -1056,7 +1458,7 @@
         original: match[0]
       });
     }
-    
+
     return constraints;
   }
 
@@ -1066,33 +1468,33 @@
    */
   function checkNumericMatch(queryConstraints, productConstraintsOrText) {
     if (!queryConstraints || queryConstraints.length === 0) return 1.0;
-    
+
     // Парсим числа из продукта, если передана строка
-    const productNumbers = Array.isArray(productConstraintsOrText) 
-      ? productConstraintsOrText 
+    const productNumbers = Array.isArray(productConstraintsOrText)
+      ? productConstraintsOrText
       : parseNumericConstraints(productConstraintsOrText);
-      
+
     if (productNumbers.length === 0) return 0.9; // Нет чисел в продукте - нейтрально
-    
+
     let matchScore = 0;
     let matchedCount = 0;
-    
+
     for (const qNum of queryConstraints) {
       // Ищем подходящее число в продукте
       const bestMatch = productNumbers.find(pNum => {
         // 1. Совпадение единиц (или одна из них generic)
-        const unitMatch = (qNum.unit === pNum.unit) || 
-                          (qNum.unit === 'generic' && pNum.unit !== '%') || // generic не матчит %
-                          (pNum.unit === 'generic' && qNum.unit !== '%');
-        
+        const unitMatch = (qNum.unit === pNum.unit) ||
+          (qNum.unit === 'generic' && pNum.unit !== '%') || // generic не матчит %
+          (pNum.unit === 'generic' && qNum.unit !== '%');
+
         if (!unitMatch) return false;
-        
+
         // 2. Совпадение значений (с допуском)
         // Для процентов допуск маленький (0.1), для граммов большой (10%)
         const tolerance = qNum.unit === '%' ? 0.1 : Math.max(0.1, qNum.value * 0.1);
         return Math.abs(qNum.value - pNum.value) <= tolerance;
       });
-      
+
       if (bestMatch) {
         matchedCount++;
         matchScore += 1.0;
@@ -1104,9 +1506,9 @@
         }
       }
     }
-    
+
     if (matchedCount === 0 && queryConstraints.length > 0) return 0.8; // Ничего не нашли
-    
+
     return Math.max(0.5, Math.min(1.5, 1.0 + (matchScore * 0.2)));
   }
 
@@ -1222,7 +1624,7 @@
    */
   function phoneticNormalize(text) {
     if (!CONFIG.enablePhonetic) return normalizeText(text);
-    
+
     let result = normalizeText(text);
     phoneticRules.forEach(rule => {
       result = result.replace(rule.from, rule.to);
@@ -1237,22 +1639,22 @@
   function levenshteinDistance(str1, str2, maxDistance = Infinity) {
     const len1 = str1.length;
     const len2 = str2.length;
-    
+
     // Быстрые проверки
     if (len1 === 0) return len2;
     if (len2 === 0) return len1;
     if (Math.abs(len1 - len2) > maxDistance) return maxDistance + 1;
-    
+
     // Используем одномерный массив для экономии памяти
     const prev = new Array(len2 + 1);
     const curr = new Array(len2 + 1);
-    
+
     for (let j = 0; j <= len2; j++) prev[j] = j;
-    
+
     for (let i = 1; i <= len1; i++) {
       curr[0] = i;
       let minInRow = i;
-      
+
       for (let j = 1; j <= len2; j++) {
         const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
         curr[j] = Math.min(
@@ -1262,14 +1664,14 @@
         );
         minInRow = Math.min(minInRow, curr[j]);
       }
-      
+
       // Ранний выход если минимум в строке превышает maxDistance
       if (minInRow > maxDistance) return maxDistance + 1;
-      
+
       // Копируем текущую строку в prev (swap тут не нужен)
       for (let j = 0; j <= len2; j++) prev[j] = curr[j];
     }
-    
+
     return prev[len2];
   }
 
@@ -1316,15 +1718,15 @@
    */
   function findSynonyms(query) {
     if (!CONFIG.enableSynonyms) return [];
-    
+
     const normalized = normalizeText(query);
     const result = new Set();
-    
+
     // Прямой поиск
     if (synonyms[normalized]) {
       synonyms[normalized].forEach(s => result.add(s));
     }
-    
+
     // Обратный поиск (слово может быть синонимом)
     for (const [key, values] of Object.entries(synonyms)) {
       if (values.some(v => normalizeText(v) === normalized)) {
@@ -1334,7 +1736,7 @@
         });
       }
     }
-    
+
     return [...result];
   }
 
@@ -1343,14 +1745,14 @@
    */
   function findTypoCorrections(query, wordList) {
     if (!CONFIG.enableTypoCorrection) return [];
-    
+
     const normalized = normalizeText(query);
     if (normalized.length < CONFIG.minQueryLength) return [];
-    
+
     const maxDistance = CONFIG.getMaxTypoDistance(normalized.length);
     const corrections = [];
     const seen = new Set();
-    
+
     // Собираем уникальные слова из названий продуктов
     const uniqueWords = new Set();
     wordList.forEach(item => {
@@ -1361,11 +1763,11 @@
         if (w.length >= 3) uniqueWords.add(w);
       });
     });
-    
+
     // Ищем похожие слова
     for (const word of uniqueWords) {
       if (seen.has(word)) continue;
-      
+
       const distance = levenshteinDistance(normalized, word, maxDistance);
       if (distance > 0 && distance <= maxDistance) {
         seen.add(word);
@@ -1377,7 +1779,7 @@
         });
       }
     }
-    
+
     // Сортируем по уверенности
     return corrections.sort((a, b) => b.confidence - a.confidence).slice(0, 5);
   }
@@ -1389,7 +1791,7 @@
   function findBrandVariants(query) {
     const normalized = normalizeText(query);
     const variants = new Set();
-    
+
     for (const [canonical, spellings] of Object.entries(BRAND_DICTIONARY)) {
       // Проверяем точное совпадение с любым вариантом
       if (spellings.some(s => normalizeText(s) === normalized)) {
@@ -1397,7 +1799,7 @@
         variants.add(normalizeText(canonical));
         spellings.forEach(s => variants.add(normalizeText(s)));
       }
-      
+
       // Fuzzy match для опечаток в названии бренда
       for (const spelling of spellings) {
         const normSpelling = normalizeText(spelling);
@@ -1409,7 +1811,7 @@
         }
       }
     }
-    
+
     return [...variants];
   }
 
@@ -1420,11 +1822,11 @@
   function findSemanticMatches(query, dataSource, limit = 10) {
     const normalized = normalizeText(query);
     const matches = [];
-    
+
     // Ищем в семантических кластерах
     for (const [cluster, products] of Object.entries(SEMANTIC_CLUSTERS)) {
       const clusterNorm = normalizeText(cluster);
-      
+
       // Запрос совпадает с названием кластера?
       if (clusterNorm.includes(normalized) || normalized.includes(clusterNorm)) {
         // Ищем продукты из этого кластера в dataSource
@@ -1443,7 +1845,7 @@
           }
         });
       }
-      
+
       // Запрос — один из продуктов кластера?
       if (products.some(p => normalizeText(p) === normalized)) {
         // Находим другие продукты из этого же кластера (похожие)
@@ -1465,7 +1867,7 @@
         });
       }
     }
-    
+
     // Убираем дубликаты и лимитируем
     const seen = new Set();
     return matches.filter(m => {
@@ -1487,7 +1889,7 @@
       popular: [],
       didYouMean: []
     };
-    
+
     // 1. Проверяем раскладку — только если текст на латинице
     const lang = detectLanguage(query);
     if (lang === 'en') {
@@ -1500,7 +1902,7 @@
         });
       }
     }
-    
+
     // 2. Слишком длинный/специфичный запрос
     const words = normalized.split(/\s+/).filter(w => w.length > 1);
     if (words.length >= 3) {
@@ -1510,7 +1912,7 @@
         action: words[0]
       });
     }
-    
+
     // 3. Ищем похожие слова (typo correction)
     if (dataSource && dataSource.length > 0) {
       const typoCorrections = findTypoCorrections(query, dataSource);
@@ -1523,7 +1925,7 @@
         }));
       }
     }
-    
+
     // 4. Транслитерация
     const translitVariants = getTranslitVariants(query);
     translitVariants.forEach(v => {
@@ -1535,7 +1937,7 @@
         });
       }
     });
-    
+
     // 5. Предлагаем категории если ничего не нашли
     const matchingCategories = [];
     for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
@@ -1550,10 +1952,10 @@
         action: matchingCategories[0]
       });
     }
-    
+
     // 6. Популярные запросы
     suggestions.popular = SMART_SUGGESTIONS_CONFIG.popularSearches.slice(0, 5);
-    
+
     return suggestions;
   }
 
@@ -1565,7 +1967,7 @@
     const itemName = normalizeText(item.name || '');
     const normalizedQuery = normalizeText(query);
     let relevance = 0;
-    
+
     // Базовые баллы по типу совпадения
     switch (matchType) {
       case 'exact':
@@ -1575,7 +1977,7 @@
         const firstWordMatch = words[0] === normalizedQuery; // "сыр" = первое слово
         const startsWithQuery = itemName.startsWith(normalizedQuery); // "сырники" начинается с "сыр"
         const startsWithQueryIsOwnWord = startsWithQuery && words[0] === normalizedQuery; // первое слово = запрос
-        
+
         if (itemName === normalizedQuery) {
           relevance = 100; // Точное совпадение названия
         } else if (firstWordMatch) {
@@ -1627,17 +2029,17 @@
         relevance = 35;
         break;
     }
-    
+
     // 🆕 v2.8.1: Бонусы — избранные получают существенный приоритет
     // Цель: избранный "Сыр твёрдый" (95+15=110) выше чем "Сырники" (82)
     if (item.isFavorite) relevance += 15; // 🆕 Избранные в ТОП (было +5, теперь +15)
     if (item.usageCount) relevance += Math.min(item.usageCount, 8); // часто используемые (max +8)
-    
+
     // Бонус за короткое название (точнее совпадение)
     const lengthRatio = normalizedQuery.length / itemName.length;
     if (lengthRatio > 0.7) relevance += 4;      // Очень короткое название
     else if (lengthRatio > 0.5) relevance += 2; // Среднее
-    
+
     return Math.max(0, relevance);
   }
 
@@ -1650,21 +2052,21 @@
       nutrient: [],
       context: []
     };
-    
+
     // Check nutrient rules
     Object.entries(NUTRIENT_RULES).forEach(([key, rule]) => {
       if (rule.keywords.some(kw => normalized.includes(normalizeText(kw)))) {
         activeRules.nutrient.push(rule);
       }
     });
-    
+
     // Check context rules
     Object.entries(CONTEXT_RULES).forEach(([key, rule]) => {
       if (rule.keywords.some(kw => normalized.includes(normalizeText(kw)))) {
         activeRules.context.push(rule);
       }
     });
-    
+
     return activeRules;
   }
 
@@ -1680,21 +2082,21 @@
   function smartSearch(query, dataSource, options = {}) {
     const startTime = performance.now();
     const opts = { ...CONFIG, ...options };
-    
+
     // Валидация
     if (!query || !dataSource || !Array.isArray(dataSource)) {
       return { results: [], suggestions: [], corrections: [], searchTime: 0, query };
     }
-    
+
     const trimmedQuery = query.trim();
     if (trimmedQuery.length < opts.minQueryLength) {
       return { results: [], suggestions: [], corrections: [], searchTime: 0, query: trimmedQuery };
     }
-    
+
     // 🆕 v2.6.0 Detect Intent
     const intent = detectSearchIntent(trimmedQuery);
     const hasIntent = intent.nutrient.length > 0 || intent.context.length > 0;
-    
+
     // Calculate core query (remove intent keywords)
     let coreQuery = normalizeText(trimmedQuery);
     if (hasIntent) {
@@ -1705,10 +2107,10 @@
         });
       });
     }
-    
+
     // If core query is empty (e.g. just "high protein"), we search ALL products but filter by intent
     const isPureIntentSearch = hasIntent && coreQuery.length < 2;
-    
+
     // Проверка кеша
     const cacheKey = `${trimmedQuery}_${dataSource.length}`;
     if (opts.cacheEnabled && searchCache.has(cacheKey)) {
@@ -1717,7 +2119,7 @@
         return { ...cached.result, fromCache: true };
       }
     }
-    
+
     const normalizedQuery = isPureIntentSearch ? '' : coreQuery;
     const phoneticQuery = isPureIntentSearch ? '' : phoneticNormalize(coreQuery);
     const queryConstraints = parseNumericConstraints(trimmedQuery); // 🆕 v2.5.0
@@ -1727,19 +2129,19 @@
 
     // Индексируем продукты один раз
     const indexedProducts = getIndexedProducts(dataSource, opts);
-    
+
     // 🆕 Получаем все варианты транслитерации
     const translitVariants = opts.enableTranslit ? getTranslitVariants(trimmedQuery) : [normalizedQuery];
-    
+
     // 🆕 Конвертируем раскладку клавиатуры (vjkjrj → молоко)
     const keyboardFixedQuery = opts.enableKeyboardFix ? convertKeyboardLayout(trimmedQuery) : null;
     // 🆕 v2.7.0 Массив для visual feedback
-    const keyboardVariants = keyboardFixedQuery && keyboardFixedQuery !== trimmedQuery 
+    const keyboardVariants = keyboardFixedQuery && keyboardFixedQuery !== trimmedQuery
       ? [keyboardFixedQuery] : [];
     if (keyboardFixedQuery) {
       translitVariants.push(keyboardFixedQuery);
     }
-    
+
     // 🆕 Раскрываем сокращения (б/ж → обезжиренный)
     const abbreviationExpansions = opts.enableAbbreviations ? expandAbbreviations(trimmedQuery) : [];
 
@@ -1759,17 +2161,17 @@
         queryTokens = t;
       }
     }
-    
+
     // 🆕 Генерируем перестановки слов
     const wordPermutations = opts.enableWordPermutations ? generateWordPermutations(trimmedQuery) : [];
-    
+
     // === 🆕 v2.6.0 PURE INTENT SEARCH ===
     if (isPureIntentSearch) {
       indexedProducts.forEach(entry => {
         const item = entry.item;
         let matchesIntent = true;
         let intentScore = 0;
-        
+
         // Check nutrient rules
         for (const rule of intent.nutrient) {
           if (rule.check && !rule.check(item)) {
@@ -1778,7 +2180,7 @@
           }
           intentScore += 20;
         }
-        
+
         if (matchesIntent) {
           // Check context rules
           for (const rule of intent.context) {
@@ -1786,25 +2188,25 @@
               matchesIntent = false;
               break;
             }
-            
+
             let isBoosted = false;
             const nameNorm = entry.nameNorm;
-            
+
             // Check boosted products
             if (rule.boostProducts && rule.boostProducts.some(bp => nameNorm.includes(normalizeText(bp)))) {
               isBoosted = true;
             }
-            
+
             // Check boosted categories
             if (!isBoosted && rule.boostCategories) {
-               rule.boostCategories.forEach(cat => {
-                 const catKeywords = CATEGORY_KEYWORDS[cat.toLowerCase()];
-                 if (catKeywords && catKeywords.some(kw => nameNorm.includes(normalizeText(kw)))) {
-                   isBoosted = true;
-                 }
-               });
+              rule.boostCategories.forEach(cat => {
+                const catKeywords = CATEGORY_KEYWORDS[cat.toLowerCase()];
+                if (catKeywords && catKeywords.some(kw => nameNorm.includes(normalizeText(kw)))) {
+                  isBoosted = true;
+                }
+              });
             }
-            
+
             if (isBoosted) {
               intentScore += 30;
             } else if (rule.boostCategories || rule.boostProducts) {
@@ -1813,23 +2215,23 @@
             }
           }
         }
-        
+
         if (matchesIntent) {
-           const key = item.id || item.name;
-           results.set(key, { ...item, relevance: 50 + intentScore, matchType: 'intent' });
+          const key = item.id || item.name;
+          results.set(key, { ...item, relevance: 50 + intentScore, matchType: 'intent' });
         }
       });
-      
+
       const sorted = Array.from(results.values())
         .sort((a, b) => b.relevance - a.relevance)
         .slice(0, opts.maxResults);
-        
-      return { 
-        results: sorted, 
-        suggestions: [], 
-        corrections: [], 
-        searchTime: performance.now() - startTime, 
-        query: trimmedQuery 
+
+      return {
+        results: sorted,
+        suggestions: [],
+        corrections: [],
+        searchTime: performance.now() - startTime,
+        query: trimmedQuery
       };
     }
 
@@ -1840,7 +2242,7 @@
       const key = item.id || item.name;
       results.set(key, { ...item, relevance, matchType: 'category' });
     });
-    
+
     // === 1. ТОЧНЫЙ ПОИСК (+ транслитерация + keyboard fix) ===
     indexedProducts.forEach(entry => {
       const item = entry.item;
@@ -1849,7 +2251,7 @@
       // 🆕 v2.5.0 Numeric-aware фильтрация с единицами
       const numericScore = checkNumericMatch(queryConstraints, entry.numbers);
       if (numericScore < 0.6) return; // Слишком сильное несовпадение
-      
+
       // 🆕 v2.6.0 Intent Check (Mixed Search)
       let intentBoost = 0;
       if (hasIntent) {
@@ -1861,49 +2263,49 @@
           }
         }
         if (!matchesIntent) return; // Skip
-        
+
         for (const rule of intent.context) {
-            if (rule.check && !rule.check(item)) return;
-            
-            let isBoosted = false;
-            if (rule.boostProducts && rule.boostProducts.some(bp => itemName.includes(normalizeText(bp)))) isBoosted = true;
-            if (!isBoosted && rule.boostCategories) {
-               rule.boostCategories.forEach(cat => {
-                 const catKeywords = CATEGORY_KEYWORDS[cat.toLowerCase()];
-                 if (catKeywords && catKeywords.some(kw => itemName.includes(normalizeText(kw)))) isBoosted = true;
-               });
-            }
-            if (isBoosted) intentBoost += 20;
+          if (rule.check && !rule.check(item)) return;
+
+          let isBoosted = false;
+          if (rule.boostProducts && rule.boostProducts.some(bp => itemName.includes(normalizeText(bp)))) isBoosted = true;
+          if (!isBoosted && rule.boostCategories) {
+            rule.boostCategories.forEach(cat => {
+              const catKeywords = CATEGORY_KEYWORDS[cat.toLowerCase()];
+              if (catKeywords && catKeywords.some(kw => itemName.includes(normalizeText(kw)))) isBoosted = true;
+            });
+          }
+          if (isBoosted) intentBoost += 20;
         }
       }
-      
+
       // Проверяем по всем вариантам транслитерации
       for (const variant of translitVariants) {
         if (itemName.includes(variant)) {
-          const matchType = variant === normalizedQuery ? 'exact' : 
-                           variant === keyboardFixedQuery ? 'keyboard' : 'translit';
+          const matchType = variant === normalizedQuery ? 'exact' :
+            variant === keyboardFixedQuery ? 'keyboard' : 'translit';
           let relevance = calculateRelevance(item, trimmedQuery, matchType);
-          
+
           // 🆕 v2.5.0 Numeric adjustment
           relevance *= numericScore;
-          
+
           // 🆕 v2.6.0 Intent Boost
           relevance += intentBoost;
 
           // Token-aware бонус
           const tokenScore = computeTokenMatchScore(queryTokens, itemName, entry.tokens);
           relevance += tokenScore.bonus;
-          
+
           // 🆕 Добавляем персональный буст
           if (opts.enablePersonalization) {
             relevance += getPersonalBoost(item.id);
           }
-          
+
           const key = item.id || item.name;
           if (!results.has(key) || results.get(key).relevance < relevance) {
-            results.set(key, { 
-              ...item, 
-              relevance, 
+            results.set(key, {
+              ...item,
+              relevance,
               matchType,
               matchedVariant: variant !== normalizedQuery ? variant : undefined
             });
@@ -1912,7 +2314,7 @@
         }
       }
     });
-    
+
     // === 1.5. 🆕 ПОИСК ПО РАСКРЫТЫМ СОКРАЩЕНИЯМ ===
     if (abbreviationExpansions.length > 0) {
       abbreviationExpansions.forEach(expanded => {
@@ -1934,9 +2336,9 @@
             }
             const key = item.id || item.name;
             if (!results.has(key) || results.get(key).relevance < relevance) {
-              results.set(key, { 
-                ...item, 
-                relevance, 
+              results.set(key, {
+                ...item,
+                relevance,
                 matchType: 'abbreviation',
                 expandedFrom: trimmedQuery,
                 expandedTo: expanded
@@ -1946,7 +2348,7 @@
         });
       });
     }
-    
+
     // === 1.6. 🆕 ПОИСК ПО ПЕРЕСТАНОВКАМ СЛОВ ===
     if (wordPermutations.length > 0) {
       wordPermutations.forEach(permuted => {
@@ -1968,9 +2370,9 @@
             }
             const key = item.id || item.name;
             if (!results.has(key) || results.get(key).relevance < relevance) {
-              results.set(key, { 
-                ...item, 
-                relevance, 
+              results.set(key, {
+                ...item,
+                relevance,
                 matchType: 'permutation',
                 permutedQuery: permuted
               });
@@ -2008,7 +2410,7 @@
         }
       });
     }
-    
+
     // === 2. ПОИСК ПО СИНОНИМАМ ===
     if (opts.enableSynonyms) {
       const synonymList = findSynonyms(trimmedQuery);
@@ -2029,7 +2431,7 @@
         });
       });
     }
-    
+
     // === 2.5. 🆕 v2.7.0 ПОИСК ПО БРЕНДАМ ===
     // Ищем все варианты написания бренда (Danone = Данон = Дэнон)
     let matchedBrand = null;
@@ -2050,9 +2452,9 @@
               }
               const key = item.id || item.name;
               if (!results.has(key) || results.get(key).relevance < relevance) {
-                results.set(key, { 
-                  ...item, 
-                  relevance, 
+                results.set(key, {
+                  ...item,
+                  relevance,
                   matchType: 'brand',
                   matchedBrand: matchedBrand
                 });
@@ -2062,7 +2464,7 @@
         });
       }
     }
-    
+
     // === 3. ИСПРАВЛЕНИЕ ОПЕЧАТОК (если мало результатов) ===
     if (opts.enableTypoCorrection && results.size < 3) {
       // 🆕 v2.6.0: Check translit variants for typos too (e.g. "mloko" -> "млоко" -> "молоко")
@@ -2073,15 +2475,15 @@
 
       candidates.forEach(candidate => {
         const typoCorrections = findTypoCorrections(candidate, dataSource);
-        
+
         typoCorrections.slice(0, 3).forEach(correction => {
           // Avoid duplicates in corrections list
           if (!corrections.some(c => c.corrected === correction.corrected)) {
-             corrections.push(correction);
+            corrections.push(correction);
           }
 
           const normalizedCorrected = normalizeText(correction.corrected);
-          
+
           indexedProducts.forEach(entry => {
             const item = entry.item;
             const itemName = entry.nameNorm;
@@ -2106,7 +2508,7 @@
         });
       });
     }
-    
+
     // === 4. ФОНЕТИЧЕСКИЙ ПОИСК (если совсем мало) ===
     if (opts.enablePhonetic && results.size < 3 && phoneticQuery !== normalizedQuery) {
       indexedProducts.forEach(entry => {
@@ -2129,7 +2531,7 @@
         }
       });
     }
-    
+
     // === 5. 🆕 N-GRAM ПОИСК (глубокий поиск по частям слов) ===
     if (opts.enableNgram && results.size < 5 && normalizedQuery.length >= 4) {
       const ngramResults = ngramSearch(trimmedQuery, dataSource);
@@ -2144,7 +2546,7 @@
         }
       });
     }
-    
+
     // === 6. 🆕 v2.7.0 СЕМАНТИЧЕСКИЙ ПОИСК (ML-lite кластеры) ===
     // Если мало результатов, ищем по смысловым кластерам
     if (opts.enableSemantic !== false && results.size < 3) {
@@ -2156,27 +2558,27 @@
         }
         const key = item.id || item.name;
         if (!results.has(key)) {
-          results.set(key, { 
-            ...item, 
-            relevance, 
+          results.set(key, {
+            ...item,
+            relevance,
             matchType: 'semantic',
             semanticCluster: item.semanticCluster
           });
         }
       });
     }
-    
+
     // === 7. ГЕНЕРАЦИЯ ПРЕДЛОЖЕНИЙ ===
     if (normalizedQuery.length >= 2) {
       const suggestionSet = new Set();
-      
+
       // Из популярных слов
       commonWords.forEach(word => {
         if (word.startsWith(normalizedQuery) && word !== normalizedQuery) {
           suggestionSet.add(word);
         }
       });
-      
+
       // Из найденных результатов
       Array.from(results.values()).slice(0, 10).forEach(result => {
         const words = normalizeText(result.name).split(/\s+/);
@@ -2186,17 +2588,17 @@
           }
         });
       });
-      
+
       suggestions.push(...Array.from(suggestionSet).slice(0, opts.maxSuggestions));
     }
-    
+
     // === ФИНАЛЬНАЯ СОРТИРОВКА ===
     const finalResults = Array.from(results.values())
       .sort((a, b) => b.relevance - a.relevance)
       .slice(0, opts.maxResults || opts.limit || 50);
-    
+
     const searchTime = performance.now() - startTime;
-    
+
     // === 🆕 v2.7.0 VISUAL FEEDBACK — что было исправлено/распознано ===
     const visualFeedback = {
       // Показываем если была коррекция опечатки
@@ -2204,29 +2606,29 @@
       correctedTo: corrections.length > 0 ? corrections[0].corrected : null,
       // Показываем если был транслит (латиница → кириллица)
       transliteratedFrom: finalResults.some(r => r.matchType === 'translit') ? trimmedQuery : null,
-      transliteratedTo: finalResults.some(r => r.matchType === 'translit') && translitVariants.length > 0 
+      transliteratedTo: finalResults.some(r => r.matchType === 'translit') && translitVariants.length > 0
         ? translitVariants[0] : null,
       // Показываем если была исправлена раскладка
       keyboardFixed: finalResults.some(r => r.matchType === 'keyboard'),
       keyboardFrom: finalResults.some(r => r.matchType === 'keyboard') ? trimmedQuery : null,
-      keyboardTo: finalResults.some(r => r.matchType === 'keyboard') && keyboardVariants.length > 0 
+      keyboardTo: finalResults.some(r => r.matchType === 'keyboard') && keyboardVariants.length > 0
         ? keyboardVariants[0] : null,
       // Показываем найденный бренд
       matchedBrand: matchedBrand,
       // Показываем категорию если искали по ней
-      matchedCategory: finalResults.some(r => r.matchType === 'category') 
+      matchedCategory: finalResults.some(r => r.matchType === 'category')
         ? finalResults.find(r => r.matchType === 'category')?.matchedCategory : null,
       // Semantic cluster
       semanticCluster: finalResults.some(r => r.matchType === 'semantic')
         ? finalResults.find(r => r.matchType === 'semantic')?.semanticCluster : null
     };
-    
+
     // === 🆕 v2.7.0 SMART SUGGESTIONS — если результатов нет ===
     let smartSuggestions = null;
     if (finalResults.length === 0) {
       smartSuggestions = generateSmartSuggestions(trimmedQuery, dataSource);
     }
-    
+
     const result = {
       results: finalResults,
       suggestions,
@@ -2262,18 +2664,18 @@
         phoneticMatches: finalResults.filter(r => r.matchType === 'phonetic').length
       }
     };
-    
+
     // Сохраняем в кеш
     if (opts.cacheEnabled) {
       searchCache.set(cacheKey, { result, timestamp: Date.now() });
-      
+
       // Очистка старых записей
       if (searchCache.size > 200) {
         const oldestKey = searchCache.keys().next().value;
         searchCache.delete(oldestKey);
       }
     }
-    
+
     // Отладка
     if (opts.debugMode) {
       console.group(`🔍 SmartSearch: "${trimmedQuery}"`);
@@ -2284,7 +2686,7 @@
       console.log('📈 Статистика:', result.searchStats);
       console.groupEnd();
     }
-    
+
     return result;
   }
 
@@ -2293,17 +2695,17 @@
    */
   function suggest(partialQuery, dataSource, maxSuggestions = 5) {
     if (!partialQuery || partialQuery.length < 2) return [];
-    
+
     const normalized = normalizeText(partialQuery);
     const suggestions = new Set();
-    
+
     // Из популярных слов
     commonWords.forEach(word => {
       if (word.startsWith(normalized)) {
         suggestions.add(word);
       }
     });
-    
+
     // Из реальных данных
     if (dataSource && Array.isArray(dataSource)) {
       dataSource.forEach(item => {
@@ -2319,7 +2721,7 @@
         });
       });
     }
-    
+
     return Array.from(suggestions).slice(0, maxSuggestions);
   }
 
@@ -2329,11 +2731,11 @@
    */
   function getDidYouMean(query, dataSource, maxSuggestions = 3) {
     if (!query || query.length < 2) return [];
-    
+
     const normalized = normalizeText(query);
     const suggestions = [];
     const seen = new Set();
-    
+
     // 🆕 0. Транслитерация — предложить вариант на другом языке
     if (CONFIG.enableTranslit) {
       const canonical = getCanonicalForm(query);
@@ -2345,7 +2747,7 @@
         });
         seen.add(canonical);
       }
-      
+
       // Также предложить транслитерированный вариант
       const transliterated = transliterate(query);
       if (transliterated !== normalized && !seen.has(transliterated)) {
@@ -2357,13 +2759,13 @@
         seen.add(transliterated);
       }
     }
-    
+
     // 1. Поиск синонимов (если запрос = синоним, предложить основное слово)
     for (const [mainWord, syns] of Object.entries(synonyms)) {
       if (syns.some(s => normalizeText(s) === normalized || s.includes(normalized))) {
         if (!seen.has(mainWord)) {
-          suggestions.push({ 
-            text: mainWord, 
+          suggestions.push({
+            text: mainWord,
             reason: 'synonym',
             label: '≈ синоним'
           });
@@ -2371,23 +2773,23 @@
         }
       }
     }
-    
+
     // 2. Исправление опечаток — ищем похожие слова из dataSource
     if (dataSource && Array.isArray(dataSource)) {
       const maxDist = CONFIG.getMaxTypoDistance(normalized.length);
       const candidates = [];
-      
+
       dataSource.forEach(item => {
         const name = normalizeText(item.name || '');
         const words = name.split(/\s+/);
-        
+
         words.forEach(word => {
           if (word.length < 2 || seen.has(word)) return;
-          
+
           const dist = levenshteinDistance(normalized, word, maxDist + 1);
           if (dist > 0 && dist <= maxDist) {
-            candidates.push({ 
-              text: word, 
+            candidates.push({
+              text: word,
               distance: dist,
               reason: 'typo',
               label: '🔧 исправление'
@@ -2396,20 +2798,20 @@
           }
         });
       });
-      
+
       // Сортируем по расстоянию и берём лучшие
       candidates.sort((a, b) => a.distance - b.distance);
       suggestions.push(...candidates.slice(0, maxSuggestions - suggestions.length));
     }
-    
+
     // 3. Похожие по началу слова (автодополнение)
     if (suggestions.length < maxSuggestions && dataSource) {
       const completions = [];
-      
+
       dataSource.forEach(item => {
         const name = item.name || '';
         const normalizedName = normalizeText(name);
-        
+
         if (normalizedName.startsWith(normalized) && !seen.has(normalizedName)) {
           completions.push({
             text: name,
@@ -2419,10 +2821,10 @@
           seen.add(normalizedName);
         }
       });
-      
+
       suggestions.push(...completions.slice(0, maxSuggestions - suggestions.length));
     }
-    
+
     return suggestions.slice(0, maxSuggestions);
   }
 
@@ -2437,41 +2839,41 @@
     if (!text || !query) {
       return [{ text: text || '', isMatch: false }];
     }
-    
+
     const normalizedText = normalizeText(text);
     const normalizedQuery = normalizeText(query);
     const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length >= 2);
-    
+
     if (queryWords.length === 0) {
       return [{ text, isMatch: false }];
     }
-    
+
     // Находим все позиции совпадений в нормализованном тексте
     const matches = [];
-    
+
     // 🆕 Собираем все варианты для поиска (включая транслитерацию)
     const allVariants = new Set();
     queryWords.forEach(queryWord => {
       allVariants.add(queryWord);
-      
+
       // Добавляем синонимы
       const synonymList = findSynonyms(queryWord);
       synonymList.forEach(syn => allVariants.add(syn));
-      
+
       // 🆕 Добавляем транслитерированные варианты
       if (CONFIG.enableTranslit) {
         const translitVariants = getTranslitVariants(queryWord);
         translitVariants.forEach(v => allVariants.add(v));
       }
     });
-    
+
     // Ищем все варианты в тексте
     allVariants.forEach(variant => {
       let searchIndex = 0;
       while (true) {
         const pos = normalizedText.indexOf(variant, searchIndex);
         if (pos === -1) break;
-        
+
         matches.push({
           start: pos,
           end: pos + variant.length
@@ -2479,33 +2881,33 @@
         searchIndex = pos + 1;
       }
     });
-    
+
     if (matches.length === 0) {
       return [{ text, isMatch: false }];
     }
-    
+
     // Сортируем и объединяем пересекающиеся интервалы
     matches.sort((a, b) => a.start - b.start);
     const merged = [matches[0]];
-    
+
     for (let i = 1; i < matches.length; i++) {
       const last = merged[merged.length - 1];
       const current = matches[i];
-      
+
       if (current.start <= last.end) {
         last.end = Math.max(last.end, current.end);
       } else {
         merged.push(current);
       }
     }
-    
+
     // Создаём массив частей
     // Важно: позиции в normalizedText могут не совпадать с text из-за разной длины символов
     // Поэтому работаем с оригинальным текстом напрямую через lowercase
     const lowerText = text.toLowerCase().replace(/ё/g, 'е');
     const parts = [];
     let lastEnd = 0;
-    
+
     merged.forEach(match => {
       // Добавляем текст до совпадения
       if (match.start > lastEnd) {
@@ -2514,16 +2916,16 @@
           isMatch: false
         });
       }
-      
+
       // Добавляем совпадение (используем оригинальный регистр из text)
       parts.push({
         text: text.substring(match.start, match.end),
         isMatch: true
       });
-      
+
       lastEnd = match.end;
     });
-    
+
     // Добавляем остаток текста
     if (lastEnd < text.length) {
       parts.push({
@@ -2531,7 +2933,7 @@
         isMatch: false
       });
     }
-    
+
     return parts;
   }
 
@@ -2547,9 +2949,9 @@
       console.warn('renderHighlightedText: React не передан');
       return text;
     }
-    
+
     const parts = highlightMatches(text, query);
-    
+
     return parts.map((part, i) => {
       if (part.isMatch) {
         return React.createElement('mark', {
@@ -2598,72 +3000,77 @@
   const SmartSearchWithTypos = {
     // Основной поиск
     search: smartSearch,
-    
+
     // Автодополнение
     suggest,
-    
+
     // "Возможно вы искали" — альтернативные запросы
     getDidYouMean,
-    
+
     // Подсветка совпадений
     highlightMatches,
-    
+
     // Рендер подсвеченного текста (React)
     renderHighlightedText,
-    
+
     // Исправление опечаток
     correctTypos: findTypoCorrections,
-    
+
     // Поиск синонимов
     findSynonyms,
-    
+
     // 🆕 Транслитерация
     transliterate,
-    
+
     // 🆕 Получить все варианты запроса (вкл. транслит)
     getTranslitVariants,
-    
+
     // 🆕 Определить язык текста
     detectLanguage,
-    
+
     // 🆕 Каноническая форма слова
     getCanonicalForm,
-    
+
     // 🆕 Конвертация раскладки клавиатуры
     convertKeyboardLayout,
-    
+
     // 🆕 Раскрытие сокращений  
     expandAbbreviations,
-    
+
     // 🆕 Перестановки слов
     generateWordPermutations,
-    
+
     // 🆕 N-gram поиск
     ngramSearch,
-    
+
     // 🆕 Поиск по категории
     findCategoryProducts,
-    
+
     // 🆕 v2.7.0 Поиск вариантов бренда
     findBrandVariants,
-    
+
     // 🆕 v2.7.0 Семантический поиск (ML-lite)
     findSemanticMatches,
-    
+
     // 🆕 v2.7.0 Умные подсказки при пустом результате
     generateSmartSuggestions,
-    
+
     // 🆕 Персонализация: трекинг использования продукта
     trackProductUsage,
-    
+
+    // 🆕 Доступ к usage stats
+    getUsageStats,
+    syncUsageStatsFromDays,
+    ensureUsageStatsFresh,
+
     // 🆕 Сохранение персональной статистики
     saveUserStats,
-    
+
     // Настройка
     configure(newConfig) {
       Object.assign(CONFIG, newConfig);
     },
-    
+
     // Добавление синонимов
     addSynonyms(word, synonymList) {
       const key = normalizeText(word);
@@ -2675,7 +3082,7 @@
         }
       });
     },
-    
+
     // 🆕 Добавление пар транслитерации
     addTranslitPairs(pairs) {
       Object.entries(pairs).forEach(([key, value]) => {
@@ -2685,7 +3092,7 @@
         TRANSLIT_PAIRS[normalizedValue] = normalizedKey;
       });
     },
-    
+
     // 🆕 Добавление вариантов написания
     addSpellingVariants(canonical, variants) {
       const normalizedCanonical = normalizeText(canonical);
@@ -2699,29 +3106,29 @@
         }
       });
     },
-    
+
     // 🆕 Добавление сокращений
     addAbbreviations(abbr, meanings) {
       const key = normalizeText(abbr);
       ABBREVIATIONS[key] = meanings.map(m => normalizeText(m));
     },
-    
+
     // 🆕 Добавление категории продуктов
     addCategoryKeywords(category, keywords) {
       CATEGORY_KEYWORDS[category] = keywords;
     },
-    
+
     // Добавление популярных слов
     addCommonWords(words) {
       words.forEach(word => commonWords.add(normalizeText(word)));
     },
-    
+
     // Очистка кеша
     clearCache,
-    
+
     // Статистика
     getStats,
-    
+
     // Утилиты (для внешнего использования)
     utils: {
       normalizeText,
@@ -2743,7 +3150,7 @@
       findSemanticMatches,
       generateSmartSuggestions
     },
-    
+
     // 🆕 v2.7.0 Константы для UI
     BRAND_DICTIONARY,
     SEMANTIC_CLUSTERS,
@@ -2753,7 +3160,7 @@
   // Экспорт
   HEYS.SmartSearchWithTypos = SmartSearchWithTypos;
   HEYS.SmartSearch = SmartSearchWithTypos; // alias
-  
+
   // Verbose init log removed
 
 })(typeof window !== 'undefined' ? window : globalThis);
