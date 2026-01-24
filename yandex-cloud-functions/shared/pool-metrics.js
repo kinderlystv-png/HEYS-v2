@@ -76,6 +76,46 @@ function getAllPoolsMetrics() {
 }
 
 /**
+ * Логирует метрики пула в structured формате
+ * Использовать для периодического мониторинга
+ * Поддерживает как shared pool, так и все per-function pools
+ */
+function logPoolMetrics() {
+  // Если включены per-function метрики, логируем все пулы
+  if (process.env.POOL_PER_FUNCTION_METRICS === 'true') {
+    logAllPoolsMetrics();
+  } else {
+    // Иначе логируем только shared pool
+    const metrics = getPoolMetrics();
+    
+    console.log('[Pool-Metrics]', JSON.stringify({
+      active: metrics.activeCount,
+      idle: metrics.idleCount,
+      waiting: metrics.waitingCount,
+      total: metrics.totalCount,
+      max: metrics.maxConnections,
+      utilization: `${metrics.utilization}%`,
+      timestamp: metrics.timestamp
+    }));
+    
+    if (metrics.utilization > 80) {
+      console.warn('[Pool-Metrics] WARNING: Pool utilization > 80%', {
+        utilization: metrics.utilization,
+        active: metrics.activeCount,
+        max: metrics.maxConnections
+      });
+    }
+    
+    if (metrics.waitingCount > 0) {
+      console.warn('[Pool-Metrics] WARNING: Requests waiting for connections', {
+        waiting: metrics.waitingCount,
+        active: metrics.activeCount
+      });
+    }
+  }
+}
+
+/**
  * Логирует метрики всех пулов в structured формате
  */
 function logAllPoolsMetrics() {

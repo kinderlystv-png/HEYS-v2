@@ -58,7 +58,11 @@ function loadCACert() {
     }
   }
   
-  console.warn('[DB-Pool] CA cert not found, SSL verification disabled');
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('[DB-Pool] CA cert not found, SSL verification disabled (development mode)');
+  } else {
+    console.error('[DB-Pool] CA cert not found! SSL verification will be enforced but may fail without proper cert. Please ensure certs/root.crt is available.');
+  }
   return null;
 }
 
@@ -79,9 +83,11 @@ function createPoolConfig() {
     ssl: CA_CERT ? {
       rejectUnauthorized: true,
       ca: CA_CERT
+    } : (process.env.NODE_ENV === 'development' ? {
+      rejectUnauthorized: false  // Only for development
     } : {
-      rejectUnauthorized: false
-    },
+      rejectUnauthorized: true  // Production: fail if no cert (secure by default)
+    }),
     
     // Connection pool settings
     max: 3,                      // Максимум 3 соединения (лимит для serverless)

@@ -266,6 +266,23 @@ module.exports.handler = async function(event, context) {
   const startTime = Date.now();
   console.log('[Backup] Starting backup process...');
 
+  // Проверяем доступность pg_dump
+  try {
+    const { execSync } = require('child_process');
+    execSync('which pg_dump', { stdio: 'pipe' });
+  } catch (e) {
+    const error = 'pg_dump binary not found in PATH. This function requires PostgreSQL client tools to be installed in the runtime environment.';
+    console.error('[Backup Error]', error);
+    await sendTelegramAlert(`Backup failed: ${error}`);
+    return { 
+      statusCode: 500, 
+      body: JSON.stringify({ 
+        error,
+        suggestion: 'Consider using a custom runtime with pg_dump or alternative backup approach (SQL COPY, pg_basebackup, or external backup VM)'
+      }) 
+    };
+  }
+
   // Проверяем конфигурацию
   if (!CONFIG.pg.password) {
     const error = 'PG_PASSWORD not configured';
