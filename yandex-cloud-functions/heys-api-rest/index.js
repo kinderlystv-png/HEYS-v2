@@ -3,7 +3,7 @@
  * REST операции с таблицами PostgreSQL
  */
 
-const { Client } = require('pg');
+const { getPool } = require('../shared/db-pool');
 const fs = require('fs');
 const path = require('path');
 
@@ -297,13 +297,12 @@ module.exports.handler = async function (event, context) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Только теперь подключаемся к БД (все валидации пройдены)
-  // PG config loaded lazily — fails here if env not set (not at module load)
+  // Только теперь подключаемся к БД через connection pool (все валидации пройдены)
   // ═══════════════════════════════════════════════════════════════════════════
-  const client = new Client(getPgConfig());
+  const pool = getPool();
+  const client = await pool.connect();
 
   try {
-    await client.connect();
 
     let result;
 
@@ -633,6 +632,6 @@ module.exports.handler = async function (event, context) {
     };
 
   } finally {
-    await client.end();
+    client.release();
   }
 };

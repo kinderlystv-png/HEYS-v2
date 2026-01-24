@@ -3,7 +3,7 @@
  * PostgreSQL RPC вызовы напрямую к Yandex.Cloud PostgreSQL
  */
 
-const { Client } = require('pg');
+const { getPool } = require('../shared/db-pool');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -410,11 +410,11 @@ module.exports.handler = async function (event, context) {
     debugLog('[RPC Handler] Added p_ip and p_user_agent to verify_client_pin_v3');
   }
 
-  // Подключаемся к PostgreSQL
-  const client = new Client(PG_CONFIG);
+  // Подключаемся к PostgreSQL через connection pool
+  const pool = getPool();
+  const client = await pool.connect();
 
   try {
-    await client.connect();
 
     // Формируем вызов RPC функции
     const paramKeys = Object.keys(params);
@@ -529,8 +529,8 @@ module.exports.handler = async function (event, context) {
 
     const result = await client.query(query, values);
 
-    // 🔐 P2 FIX: Закрываем соединение ДО return (serverless best practice)
-    await client.end();
+    // 🔐 P2 FIX: Освобождаем клиент в pool ДО return (serverless best practice)
+    client.release();
 
     return {
       statusCode: 200,
@@ -541,8 +541,8 @@ module.exports.handler = async function (event, context) {
   } catch (error) {
     console.error('[RPC Error]', fnName, error.message);
 
-    // Пытаемся закрыть соединение даже при ошибке
-    try { await client.end(); } catch (e) { /* ignore */ }
+    // Освобождаем клиент в pool даже при ошибке
+    try { client.release(); } catch (e) { /* ignore */ }
 
     return {
       statusCode: 500,

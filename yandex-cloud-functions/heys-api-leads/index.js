@@ -3,7 +3,7 @@
  * Сохранение лидов с landing page + Telegram уведомления
  */
 
-const { Client } = require('pg');
+const { getPool } = require('../shared/db-pool');
 const fs = require('fs');
 const path = require('path');
 
@@ -146,9 +146,9 @@ module.exports.handler = async function (event, context) {
       };
     }
 
-    // Сохраняем в PostgreSQL
-    const client = new Client(PG_CONFIG);
-    await client.connect();
+    // Сохраняем в PostgreSQL через connection pool
+    const pool = getPool();
+    const client = await pool.connect();
 
     try {
       // Создаём таблицу если нет
@@ -202,7 +202,7 @@ module.exports.handler = async function (event, context) {
       };
 
     } finally {
-      await client.end();
+      client.release();
     }
 
   } catch (error) {
