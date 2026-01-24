@@ -33,6 +33,7 @@
           mealIndex: mi,
           mealPhotos: meal.photos || [], // Текущие фото для счётчика
           products,
+          day,
           dateKey: date,
           onAdd: ({ product, grams, mealIndex }) => {
             // 🌐 Если продукт из общей базы — автоматически клонируем в личную
@@ -181,12 +182,28 @@
             }));
 
             try {
-              U.lsSet(`heys_last_grams_${productId}`, grams);
-              const history = U.lsGet('heys_grams_history', {});
+              if (HEYS.store?.set) {
+                HEYS.store.set(`heys_last_grams_${productId}`, grams);
+              } else if (U.lsSet) {
+                U.lsSet(`heys_last_grams_${productId}`, grams);
+              } else {
+                localStorage.setItem(`heys_last_grams_${productId}`, JSON.stringify(grams));
+              }
+
+              const history = HEYS.store?.get
+                ? HEYS.store.get('heys_grams_history', {})
+                : (U.lsGet ? U.lsGet('heys_grams_history', {}) : {});
               if (!history[productId]) history[productId] = [];
               history[productId].push(grams);
               if (history[productId].length > 20) history[productId].shift();
-              U.lsSet('heys_grams_history', history);
+
+              if (HEYS.store?.set) {
+                HEYS.store.set('heys_grams_history', history);
+              } else if (U.lsSet) {
+                U.lsSet('heys_grams_history', history);
+              } else {
+                localStorage.setItem('heys_grams_history', JSON.stringify(history));
+              }
             } catch (e) { }
           },
           onAddPhoto: async ({ mealIndex, photo, filename, timestamp }) => {

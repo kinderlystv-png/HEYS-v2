@@ -104,9 +104,14 @@
             if (hasPerfect && !firstPerfectShownRef.current) {
                 try {
                     const U = window.HEYS?.utils || {};
-                    const alreadyAchieved = U.lsGet ? U.lsGet('heys_first_perfect_meal', null) === '1' : localStorage.getItem('heys_first_perfect_meal') === '1';
+                    const store = window.HEYS?.store;
+                    const alreadyAchieved = store?.get
+                        ? store.get('heys_first_perfect_meal', null) === '1'
+                        : (U.lsGet ? U.lsGet('heys_first_perfect_meal', null) === '1' : localStorage.getItem('heys_first_perfect_meal') === '1');
                     if (!alreadyAchieved) {
-                        U.lsSet ? U.lsSet('heys_first_perfect_meal', '1') : localStorage.setItem('heys_first_perfect_meal', '1');
+                        if (store?.set) store.set('heys_first_perfect_meal', '1');
+                        else if (U.lsSet) U.lsSet('heys_first_perfect_meal', '1');
+                        else localStorage.setItem('heys_first_perfect_meal', '1');
                         setShowFirstPerfectAchievement(true);
                         setShowConfetti(true);
                         try { HEYS.dayUtils?.haptic?.('success'); } catch (e) { }

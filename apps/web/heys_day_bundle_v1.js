@@ -635,7 +635,9 @@
         const [displayedAdviceList, setDisplayedAdviceList] = useState([]);
         const [toastsEnabled, setToastsEnabled] = useState(() => {
             try {
-                const settings = utils.lsGet ? utils.lsGet('heys_advice_settings', {}) : {};
+                const settings = HEYSRef.store?.get
+                    ? (HEYSRef.store.get('heys_advice_settings', null) || {})
+                    : (utils.lsGet ? utils.lsGet('heys_advice_settings', {}) : {});
                 return settings.toastsEnabled !== false;
             } catch (e) {
                 return true;
@@ -643,7 +645,9 @@
         });
         const [adviceSoundEnabled, setAdviceSoundEnabled] = useState(() => {
             try {
-                const settings = utils.lsGet ? utils.lsGet('heys_advice_settings', {}) : {};
+                const settings = HEYSRef.store?.get
+                    ? (HEYSRef.store.get('heys_advice_settings', null) || {})
+                    : (utils.lsGet ? utils.lsGet('heys_advice_settings', {}) : {});
                 return settings.adviceSoundEnabled !== false;
             } catch (e) {
                 return true;
@@ -653,7 +657,9 @@
         useEffect(() => {
             const handleSyncCompleted = () => {
                 try {
-                    const settings = utils.lsGet ? utils.lsGet('heys_advice_settings', {}) : {};
+                    const settings = HEYSRef.store?.get
+                        ? (HEYSRef.store.get('heys_advice_settings', null) || {})
+                        : (utils.lsGet ? utils.lsGet('heys_advice_settings', {}) : {});
                     setToastsEnabled((prev) => {
                         const cloudVal = settings.toastsEnabled !== false;
                         return prev !== cloudVal ? cloudVal : prev;
@@ -673,7 +679,9 @@
 
         const [dismissedAdvices, setDismissedAdvices] = useState(() => {
             try {
-                const saved = utils.lsGet ? utils.lsGet('heys_advice_read_today', null) : localStorage.getItem('heys_advice_read_today');
+                const saved = HEYSRef.store?.get
+                    ? HEYSRef.store.get('heys_advice_read_today', null)
+                    : (utils.lsGet ? utils.lsGet('heys_advice_read_today', null) : localStorage.getItem('heys_advice_read_today'));
                 if (saved) {
                     const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
                     if (parsed.date === new Date().toISOString().slice(0, 10)) {
@@ -685,7 +693,9 @@
         });
         const [hiddenUntilTomorrow, setHiddenUntilTomorrow] = useState(() => {
             try {
-                const saved = utils.lsGet ? utils.lsGet('heys_advice_hidden_today', null) : localStorage.getItem('heys_advice_hidden_today');
+                const saved = HEYSRef.store?.get
+                    ? HEYSRef.store.get('heys_advice_hidden_today', null)
+                    : (utils.lsGet ? utils.lsGet('heys_advice_hidden_today', null) : localStorage.getItem('heys_advice_hidden_today'));
                 if (saved) {
                     const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
                     if (parsed.date === new Date().toISOString().slice(0, 10)) {
@@ -789,9 +799,15 @@
             setToastsEnabled(prev => {
                 const newVal = !prev;
                 try {
-                    const settings = utils.lsGet ? utils.lsGet('heys_advice_settings', {}) : {};
+                    const settings = HEYSRef.store?.get
+                        ? (HEYSRef.store.get('heys_advice_settings', null) || {})
+                        : (utils.lsGet ? utils.lsGet('heys_advice_settings', {}) : {});
                     settings.toastsEnabled = newVal;
-                    utils.lsSet ? utils.lsSet('heys_advice_settings', settings) : null;
+                    if (HEYSRef.store?.set) {
+                        HEYSRef.store.set('heys_advice_settings', settings);
+                    } else if (utils.lsSet) {
+                        utils.lsSet('heys_advice_settings', settings);
+                    }
                     window.dispatchEvent(new CustomEvent('heysAdviceSettingsChanged', { detail: settings }));
                 } catch (e) { }
                 if (typeof haptic === 'function') haptic('light');
@@ -803,9 +819,15 @@
             setAdviceSoundEnabled(prev => {
                 const newVal = !prev;
                 try {
-                    const settings = utils.lsGet ? utils.lsGet('heys_advice_settings', {}) : {};
+                    const settings = HEYSRef.store?.get
+                        ? (HEYSRef.store.get('heys_advice_settings', null) || {})
+                        : (utils.lsGet ? utils.lsGet('heys_advice_settings', {}) : {});
                     settings.adviceSoundEnabled = newVal;
-                    utils.lsSet ? utils.lsSet('heys_advice_settings', settings) : null;
+                    if (HEYSRef.store?.set) {
+                        HEYSRef.store.set('heys_advice_settings', settings);
+                    } else if (utils.lsSet) {
+                        utils.lsSet('heys_advice_settings', settings);
+                    }
                     window.dispatchEvent(new CustomEvent('heysAdviceSettingsChanged', { detail: settings }));
                 } catch (e) { }
                 if (typeof haptic === 'function') haptic('light');
@@ -923,7 +945,9 @@
         useEffect(() => {
             const checkScheduled = () => {
                 try {
-                    const scheduled = utils.lsGet ? utils.lsGet('heys_scheduled_advices', []) : JSON.parse(localStorage.getItem('heys_scheduled_advices') || '[]');
+                    const scheduled = HEYSRef.store?.get
+                        ? (HEYSRef.store.get('heys_scheduled_advices', null) || [])
+                        : (utils.lsGet ? utils.lsGet('heys_scheduled_advices', []) : JSON.parse(localStorage.getItem('heys_scheduled_advices') || '[]'));
                     const now = Date.now();
                     const ready = scheduled.filter(s => s.showAt <= now);
                     if (ready.length > 0) {
@@ -1025,7 +1049,14 @@
         useEffect(() => {
             const timer = setTimeout(() => {
                 try {
-                    localStorage.setItem('heys_last_visit', new Date().toISOString().slice(0, 10));
+                    const value = new Date().toISOString().slice(0, 10);
+                    if (HEYSRef.store?.set) {
+                        HEYSRef.store.set('heys_last_visit', value);
+                    } else if (utils.lsSet) {
+                        utils.lsSet('heys_last_visit', value);
+                    } else {
+                        localStorage.setItem('heys_last_visit', value);
+                    }
                 } catch (e) { }
             }, 3000);
             return () => clearTimeout(timer);
@@ -1094,7 +1125,13 @@
                             date: new Date().toISOString().slice(0, 10),
                             ids: [...newSet],
                         };
-                        utils.lsSet ? utils.lsSet('heys_advice_read_today', saveData) : localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
+                        if (HEYSRef.store?.set) {
+                            HEYSRef.store.set('heys_advice_read_today', saveData);
+                        } else if (utils.lsSet) {
+                            utils.lsSet('heys_advice_read_today', saveData);
+                        } else {
+                            localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
+                        }
                     } catch (e) { }
                     return newSet;
                 });
@@ -1108,7 +1145,13 @@
                             date: new Date().toISOString().slice(0, 10),
                             ids: [...newSet],
                         };
-                        utils.lsSet ? utils.lsSet('heys_advice_hidden_today', saveData) : localStorage.setItem('heys_advice_hidden_today', JSON.stringify(saveData));
+                        if (HEYSRef.store?.set) {
+                            HEYSRef.store.set('heys_advice_hidden_today', saveData);
+                        } else if (utils.lsSet) {
+                            utils.lsSet('heys_advice_hidden_today', saveData);
+                        } else {
+                            localStorage.setItem('heys_advice_hidden_today', JSON.stringify(saveData));
+                        }
                     } catch (e) { }
                     return newSet;
                 });
@@ -1139,7 +1182,13 @@
                         ids: [...newSet],
                     };
                     try {
-                        utils.lsSet ? utils.lsSet('heys_advice_read_today', saveData) : localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
+                        if (HEYSRef.store?.set) {
+                            HEYSRef.store.set('heys_advice_read_today', saveData);
+                        } else if (utils.lsSet) {
+                            utils.lsSet('heys_advice_read_today', saveData);
+                        } else {
+                            localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
+                        }
                     } catch (e) { }
                     return newSet;
                 });
@@ -1167,7 +1216,13 @@
                             date: new Date().toISOString().slice(0, 10),
                             ids: [...newSet],
                         };
-                        utils.lsSet ? utils.lsSet('heys_advice_hidden_today', saveData) : localStorage.setItem('heys_advice_hidden_today', JSON.stringify(saveData));
+                        if (HEYSRef.store?.set) {
+                            HEYSRef.store.set('heys_advice_hidden_today', saveData);
+                        } else if (utils.lsSet) {
+                            utils.lsSet('heys_advice_hidden_today', saveData);
+                        } else {
+                            localStorage.setItem('heys_advice_hidden_today', JSON.stringify(saveData));
+                        }
                     } catch (e) { }
                     return newSet;
                 });
@@ -1178,7 +1233,13 @@
                             date: new Date().toISOString().slice(0, 10),
                             ids: [...newSet],
                         };
-                        utils.lsSet ? utils.lsSet('heys_advice_read_today', saveData) : localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
+                        if (HEYSRef.store?.set) {
+                            HEYSRef.store.set('heys_advice_read_today', saveData);
+                        } else if (utils.lsSet) {
+                            utils.lsSet('heys_advice_read_today', saveData);
+                        } else {
+                            localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
+                        }
                     } catch (e) { }
                     return newSet;
                 });
@@ -1233,7 +1294,13 @@
                                     date: new Date().toISOString().slice(0, 10),
                                     ids: [...newSet],
                                 };
-                                utils.lsSet ? utils.lsSet('heys_advice_read_today', saveData) : localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
+                                if (HEYSRef.store?.set) {
+                                    HEYSRef.store.set('heys_advice_read_today', saveData);
+                                } else if (utils.lsSet) {
+                                    utils.lsSet('heys_advice_read_today', saveData);
+                                } else {
+                                    localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
+                                }
                             } catch (e) { }
                         }
                         return newSet;
@@ -1257,7 +1324,13 @@
                         ids: [...newSet],
                     };
                     try {
-                        utils.lsSet ? utils.lsSet('heys_advice_read_today', saveData) : localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
+                        if (HEYSRef.store?.set) {
+                            HEYSRef.store.set('heys_advice_read_today', saveData);
+                        } else if (utils.lsSet) {
+                            utils.lsSet('heys_advice_read_today', saveData);
+                        } else {
+                            localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
+                        }
                     } catch (e) { }
                     return newSet;
                 });
@@ -2893,6 +2966,7 @@
                     mealIndex: mi,
                     mealPhotos: meal.photos || [], // Текущие фото для счётчика
                     products,
+                    day,
                     dateKey: date,
                     onAdd: ({ product, grams, mealIndex }) => {
                         // 🌐 Если продукт из общей базы — автоматически клонируем в личную

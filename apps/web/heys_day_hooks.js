@@ -10,6 +10,31 @@
     return React;
   }
 
+  const storeGet = (key, def) => {
+    try {
+      if (HEYS.store?.get) return HEYS.store.get(key, def);
+      if (HEYS.utils?.lsGet) return HEYS.utils.lsGet(key, def);
+      const raw = global.localStorage?.getItem(key);
+      return raw ? JSON.parse(raw) : def;
+    } catch (e) {
+      return def;
+    }
+  };
+
+  const storeSet = (key, value) => {
+    try {
+      if (HEYS.store?.set) {
+        HEYS.store.set(key, value);
+        return;
+      }
+      if (HEYS.utils?.lsSet) {
+        HEYS.utils.lsSet(key, value);
+        return;
+      }
+      global.localStorage?.setItem(key, JSON.stringify(value));
+    } catch (e) { }
+  };
+
   // Импортируем утилиты из dayUtils
   const getDayUtils = () => HEYS.dayUtils || {};
 
@@ -33,10 +58,9 @@
       const actualLsSet = global.HEYS?.utils?.lsSet || lsSet || utils.lsSet;
       if (actualLsSet) {
         actualLsSet(key, val);
-      } else {
-        // Fallback
-        try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { }
+        return;
       }
+      storeSet(key, val);
     }, [lsSet, utils.lsSet]);
     const lsGetFunc = lsGetFn || utils.lsGet;
 
@@ -72,11 +96,14 @@
     const readExisting = React.useCallback((key) => {
       if (!key) return null;
       try {
-        const stored = lsGetFunc ? lsGetFunc(key, null) : null;
+        const stored = lsGetFunc ? lsGetFunc(key, null) : storeGet(key, null);
         if (stored && typeof stored === 'object') return stored;
+        if (typeof stored === 'string') {
+          return JSON.parse(stored);
+        }
       } catch (e) { }
       try {
-        const raw = global.localStorage.getItem(key);
+        const raw = global.localStorage?.getItem(key);
         return raw ? JSON.parse(raw) : null;
       } catch (e) { return null; }
     }, [lsGetFunc]);

@@ -1796,7 +1796,9 @@
                                         if (!mealChartHintShown) {
                                             setMealChartHintShown(true);
                                             try {
-                                                utils.lsSet ? utils.lsSet('heys_meal_hint_shown', '1') : localStorage.setItem('heys_meal_hint_shown', '1');
+                                                if (HEYS.store?.set) HEYS.store.set('heys_meal_hint_shown', '1');
+                                                else if (utils.lsSet) utils.lsSet('heys_meal_hint_shown', '1');
+                                                else localStorage.setItem('heys_meal_hint_shown', '1');
                                             } catch { }
                                         }
                                         if (quality.score >= 95) {
@@ -1860,7 +1862,11 @@
                         const rect = e.currentTarget.getBoundingClientRect();
                         if (!mealChartHintShown) {
                             setMealChartHintShown(true);
-                            try { utils.lsSet ? utils.lsSet('heys_meal_hint_shown', '1') : localStorage.setItem('heys_meal_hint_shown', '1'); } catch { }
+                            try {
+                                if (HEYS.store?.set) HEYS.store.set('heys_meal_hint_shown', '1');
+                                else if (utils.lsSet) utils.lsSet('heys_meal_hint_shown', '1');
+                                else localStorage.setItem('heys_meal_hint_shown', '1');
+                            } catch { }
                         }
                         if (quality.score >= 95) {
                             setShowConfetti(true);
@@ -2204,6 +2210,7 @@
                                     window.HEYS.AddProductStep.show({
                                         mealIndex: foundMealIndex,
                                         products: products,
+                                        day: day,
                                         dateKey: date,
                                         onAdd: ({ product, grams, mealIndex: targetMealIndex }) => {
                                             let finalProduct = product;

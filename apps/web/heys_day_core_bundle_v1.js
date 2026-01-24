@@ -14,6 +14,21 @@
     // Отслеживание продуктов, для которых данные берутся из штампа вместо базы
     const orphanProductsMap = new Map(); // name => { name, usedInDays: Set, firstSeen }
     const orphanLoggedRecently = new Map(); // name => timestamp (throttle логов)
+    const recoveryLogState = { lastTs: 0 };
+    const shouldLogRecovery = (force = false) => {
+        const debugEnabled = !!(HEYS && HEYS.debug && HEYS.debug.recovery);
+        if (debugEnabled || force) return true;
+        const now = Date.now();
+        const minInterval = 5000;
+        if (now - recoveryLogState.lastTs < minInterval) return false;
+        recoveryLogState.lastTs = now;
+        return true;
+    };
+    const logRecovery = (level, ...args) => {
+        if (!shouldLogRecovery()) return;
+        const fn = console[level] || console.log;
+        fn(...args);
+    };
 
     function copySnapshotFields(item, target) {
         if (!item || !target) return target;
@@ -193,10 +208,23 @@
         // Восстановить orphan-продукты в базу из штампов в днях
         async restore() {
             const U = HEYS.utils || {};
-            const lsGet = U.lsGet || ((k, d) => {
-                try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-            });
-            const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
+            const lsGet = HEYS.store?.get
+                ? (k, d) => HEYS.store.get(k, d)
+                : (U.lsGet || ((k, d) => {
+                    try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+                }));
+            const lsSet = HEYS.store?.set
+                ? (k, v) => HEYS.store.set(k, v)
+                : (U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v))));
+            const parseStoredValue = (raw) => {
+                if (!raw) return null;
+                if (typeof raw === 'object') return raw;
+                if (typeof raw !== 'string') return null;
+                if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
+                    return HEYS.store.decompress(raw);
+                }
+                try { return JSON.parse(raw); } catch { return null; }
+            };
 
             // Получаем текущие продукты (ключ = name LOWERCASE для консистентности с getDayData)
             const products = lsGet('heys_products', []);
@@ -224,7 +252,8 @@
 
             for (const key of keys) {
                 try {
-                    const day = JSON.parse(localStorage.getItem(key));
+                    const storedDay = HEYS.store?.get ? HEYS.store.get(key, null) : null;
+                    const day = parseStoredValue(storedDay ?? localStorage.getItem(key));
                     if (!day || !day.meals) continue;
 
                     for (const meal of day.meals) {
@@ -281,7 +310,7 @@
                 // 🔒 SAFETY: НИКОГДА не перезаписывать если products пустой — это означает corrupted state
                 if (products.length === 0) {
                     console.error('[HEYS] ❌ RESTORE BLOCKED: localStorage products пустой! Это признак corruption.');
-                    console.error('[HEYS] Для восстановления запусти: await HEYS.YandexAPI.rest("shared_products").then(r => { HEYS.utils.lsSet("heys_products", r.data || r); location.reload(); })');
+                    console.error('[HEYS] Для восстановления запусти: await HEYS.YandexAPI.rest("shared_products").then(r => { HEYS.store.set("heys_products", r.data || r); location.reload(); })');
                     return { success: false, count: 0, products: [], error: 'BLOCKED_EMPTY_BASE' };
                 }
 
@@ -324,6 +353,12 @@
                 } else {
                     lsSet('heys_products', newProducts);
                     console.warn('[HEYS] ⚠️ Products saved via lsSet only (no cloud sync)');
+                }
+
+                if (HEYS.cloud?.flushPendingQueue) {
+                    try {
+                        await HEYS.cloud.flushPendingQueue(3000);
+                    } catch (e) { }
                 }
 
                 // Очищаем orphan-трекинг
@@ -369,24 +404,38 @@
         async autoRecoverOnLoad(options = {}) {
             const { verbose = false, tryShared = true } = options;
             const U = HEYS.utils || {};
-            const lsGet = U.lsGet || ((k, d) => {
-                try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-            });
+            const lsGet = HEYS.store?.get
+                ? (k, d) => HEYS.store.get(k, d)
+                : (U.lsGet || ((k, d) => {
+                    try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+                }));
+            const parseStoredValue = (raw) => {
+                if (!raw) return null;
+                if (typeof raw === 'object') return raw;
+                if (typeof raw !== 'string') return null;
+                if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
+                    return HEYS.store.decompress(raw);
+                }
+                try { return JSON.parse(raw); } catch { return null; }
+            };
 
             const startTime = Date.now();
-            if (verbose) console.log('[HEYS] 🔍 autoRecoverOnLoad: начинаю проверку продуктов...');
+            logRecovery('log', '[RECOVERY] 🔄 autoRecoverOnLoad START', { verbose, tryShared });
 
             // 1. Собираем текущие продукты в Map по id и по name (lowercase)
             // 🔧 FIX: Используем HEYS.products.getAll() который читает правильный scoped ключ
             const products = (HEYS.products?.getAll?.() || lsGet('heys_products', []));
             const productsById = new Map();
             const productsByName = new Map();
+            const productsByFingerprint = new Map();
+            const normalizeName = HEYS.models?.normalizeProductName || ((n) => String(n || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
             products.forEach(p => {
                 if (p && p.id) productsById.set(String(p.id), p);
-                if (p && p.name) productsByName.set(String(p.name).trim().toLowerCase(), p);
+                if (p && p.name) productsByName.set(normalizeName(p.name), p);
+                if (p && p.fingerprint) productsByFingerprint.set(p.fingerprint, p);
             });
 
-            if (verbose) console.log(`[HEYS] Локальная база: ${products.length} продуктов`);
+            logRecovery('log', `[RECOVERY] 📦 Локальная база: ${products.length} продуктов (byId: ${productsById.size}, byName: ${productsByName.size}, byFP: ${productsByFingerprint.size})`);
 
             // 2. Собираем все уникальные продукты из всех дней
             const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
@@ -394,7 +443,8 @@
 
             for (const key of keys) {
                 try {
-                    const day = JSON.parse(localStorage.getItem(key));
+                    const storedDay = HEYS.store?.get ? HEYS.store.get(key, null) : null;
+                    const day = parseStoredValue(storedDay ?? localStorage.getItem(key));
                     if (!day || !day.meals) continue;
                     const dateStr = key.split('_dayv2_').pop();
 
@@ -402,14 +452,16 @@
                         for (const item of (meal.items || [])) {
                             const productId = item.product_id ? String(item.product_id) : null;
                             const itemName = String(item.name || '').trim();
-                            const itemNameLower = itemName.toLowerCase();
+                            const itemNameNorm = normalizeName(itemName);
+                            const itemFingerprint = item.fingerprint || null;
 
                             // Проверяем есть ли в базе
                             const foundById = productId && productsById.has(productId);
-                            const foundByName = itemNameLower && productsByName.has(itemNameLower);
+                            const foundByFingerprint = itemFingerprint && productsByFingerprint.has(itemFingerprint);
+                            const foundByName = itemNameNorm && productsByName.has(itemNameNorm);
 
-                            if (!foundById && !foundByName && itemName) {
-                                const key = productId || itemNameLower;
+                            if (!foundById && !foundByFingerprint && !foundByName && itemName) {
+                                const key = itemFingerprint || productId || itemNameNorm;
                                 if (!missingProducts.has(key)) {
                                     const stampData = item.kcal100 != null ? {
                                         kcal100: item.kcal100,
@@ -433,6 +485,7 @@
                                     missingProducts.set(key, {
                                         productId,
                                         name: itemName,
+                                        fingerprint: itemFingerprint,
                                         hasStamp: item.kcal100 != null,
                                         stampData: stampData,
                                         firstSeenDate: dateStr
@@ -447,9 +500,11 @@
             }
 
             if (missingProducts.size === 0) {
-                // 🔇 v4.7.0: verbose логи отключены
+                logRecovery('log', `[RECOVERY] ✅ Нет orphan-продуктов (проверено ${keys.length} дней)`);
                 return { recovered: 0, fromStamp: 0, fromShared: 0, missing: [] };
             }
+
+            logRecovery('warn', `[RECOVERY] ⚠️ Найдено ${missingProducts.size} orphan-продуктов в ${keys.length} днях`);
 
             // 🔇 v4.7.0: Лог про отсутствующие отключён (см. return.missing));
 
@@ -465,6 +520,7 @@
                     const restoredProduct = {
                         id: data.productId || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
                         name: data.name,
+                        fingerprint: data.fingerprint,
                         ...data.stampData,
                         gi: data.stampData.gi ?? 50,
                         harm: data.stampData.harm ?? 0,
@@ -474,7 +530,8 @@
                     const enriched = enrichProductMaybe(restoredProduct);
                     recovered.push(enriched);
                     productsById.set(String(enriched.id), enriched);
-                    productsByName.set(data.name.toLowerCase(), enriched);
+                    productsByName.set(normalizeName(data.name), enriched);
+                    if (data.fingerprint) productsByFingerprint.set(data.fingerprint, enriched);
                     fromStamp++;
                     // 🔇 v4.7.0: Лог восстановления отключён
                 } else {
@@ -491,18 +548,21 @@
 
                     if (!error && Array.isArray(sharedProducts)) {
                         // Создаём индекс shared продуктов по id и name
+                        const sharedByFingerprint = new Map();
                         const sharedById = new Map();
                         const sharedByName = new Map();
                         sharedProducts.forEach(p => {
+                            if (p && p.fingerprint) sharedByFingerprint.set(p.fingerprint, p);
                             if (p && p.id) sharedById.set(String(p.id), p);
-                            if (p && p.name) sharedByName.set(String(p.name).trim().toLowerCase(), p);
+                            if (p && p.name) sharedByName.set(normalizeName(p.name), p);
                         });
 
                         for (const data of stillMissing) {
                             // Ищем сначала по id, потом по имени
                             let found = null;
-                            if (data.productId) found = sharedById.get(data.productId);
-                            if (!found && data.name) found = sharedByName.get(data.name.toLowerCase());
+                            if (data.fingerprint) found = sharedByFingerprint.get(data.fingerprint);
+                            if (!found && data.productId) found = sharedById.get(data.productId);
+                            if (!found && data.name) found = sharedByName.get(normalizeName(data.name));
 
                             if (found) {
                                 // Клонируем из shared
@@ -523,11 +583,13 @@
             }
 
             // 4. Сохраняем восстановленные продукты (если были восстановлены из штампов)
+            logRecovery('log', `[RECOVERY] 📊 Результат: fromStamp=${fromStamp}, fromShared=${fromShared}, stillMissing=${stillMissing.length}`);
+
             if (fromStamp > 0) {
                 // 🔒 SAFETY: Проверяем что products НЕ пустой (признак corruption)
                 if (products.length === 0) {
-                    console.error('[HEYS] ❌ autoRecover BLOCKED: localStorage products пустой! Не сохраняем только orphan-ы.');
-                    console.error('[HEYS] Для восстановления запусти: await HEYS.YandexAPI.rest("shared_products").then(r => { HEYS.utils.lsSet("heys_products", r.data || r); location.reload(); })');
+                    console.error('[RECOVERY] ❌ autoRecover BLOCKED: localStorage products пустой! Не сохраняем только orphan-ы.');
+                    console.error('[HEYS] Для восстановления запусти: await HEYS.YandexAPI.rest("shared_products").then(r => { HEYS.store.set("heys_products", r.data || r); location.reload(); })');
                     // Но диспатчим событие чтобы UI показал ошибку
                     window.dispatchEvent(new CustomEvent('heys:recovery-blocked', {
                         detail: { reason: 'EMPTY_BASE', recoveredCount: recovered.length }
@@ -536,13 +598,28 @@
                     return { success: false, recovered: [], fromStamp: 0, fromShared: 0, stillMissing: Array.from(missingProducts.keys()), error: 'BLOCKED_EMPTY_BASE' };
                 }
 
-                const newProducts = [...products, ...recovered.filter(p => p._recoveredFrom === 'stamp')];
+                const stampRecovered = recovered.filter(p => p._recoveredFrom === 'stamp');
+                const newProducts = [...products, ...stampRecovered];
+
+                logRecovery('log', `[RECOVERY] 💾 Сохраняю: было ${products.length}, добавляю ${stampRecovered.length}, итого ${newProducts.length}`);
 
                 if (HEYS.products?.setAll) {
+                    logRecovery('log', '[RECOVERY] 🔄 Вызываю HEYS.products.setAll...');
                     HEYS.products.setAll(newProducts);
+
+                    // Проверяем сохранение
+                    const afterSave = HEYS.products.getAll?.() || [];
+                    logRecovery('log', `[RECOVERY] ✅ После setAll: ${afterSave.length} продуктов в базе`);
                 } else {
-                    const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
-                    lsSet('heys_products', newProducts);
+                    logRecovery('warn', '[RECOVERY] ⚠️ HEYS.products.setAll недоступен, использую lsSet');
+                    const storeSet = HEYS.store?.set;
+                    if (storeSet) {
+                        storeSet('heys_products', newProducts);
+                    } else if (U.lsSet) {
+                        U.lsSet('heys_products', newProducts);
+                    } else {
+                        localStorage.setItem('heys_products', JSON.stringify(newProducts));
+                    }
                 }
 
                 // Обновляем индекс
@@ -558,8 +635,9 @@
             const finalMissing = [];
             for (const data of stillMissing) {
                 const wasRecovered = recovered.some(p =>
-                    p.name.toLowerCase() === data.name.toLowerCase() ||
-                    (data.productId && String(p.id) === data.productId)
+                    (data.fingerprint && p.fingerprint === data.fingerprint) ||
+                    (data.productId && String(p.id) === data.productId) ||
+                    normalizeName(p.name) === normalizeName(data.name)
                 );
                 if (!wasRecovered) {
                     finalMissing.push(data.name);
@@ -568,6 +646,9 @@
             }
 
             // 🔇 v4.7.0: Итоговый лог отключён (данные в return)
+
+            const elapsed = Date.now() - startTime;
+            logRecovery('log', `[RECOVERY] 🏁 autoRecoverOnLoad END: recovered=${recovered.length}, elapsed=${elapsed}ms`);
 
             // Диспатчим событие для UI
             if (recovered.length > 0 && typeof window !== 'undefined' && window.dispatchEvent) {
@@ -671,15 +752,15 @@
     }
 
     // === Storage Utilities ===
-    // ВАЖНО: Используем HEYS.utils.lsGet/lsSet которые работают с clientId namespace
+    // ВАЖНО: Store-first (HEYS.store), затем HEYS.utils, затем localStorage
     function lsGet(k, d) {
         try {
-            // Приоритет: HEYS.utils (с namespace) → HEYS.store → localStorage fallback
-            if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
-                return HEYS.utils.lsGet(k, d);
-            }
+            // Приоритет: HEYS.store → HEYS.utils → localStorage fallback
             if (HEYS.store && typeof HEYS.store.get === 'function') {
                 return HEYS.store.get(k, d);
+            }
+            if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
+                return HEYS.utils.lsGet(k, d);
             }
             const v = JSON.parse(localStorage.getItem(k));
             return v == null ? d : v;
@@ -688,12 +769,12 @@
 
     function lsSet(k, v) {
         try {
-            // Приоритет: HEYS.utils (с namespace) → HEYS.store → localStorage fallback
-            if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
-                return HEYS.utils.lsSet(k, v);
-            }
+            // Приоритет: HEYS.store → HEYS.utils → localStorage fallback
             if (HEYS.store && typeof HEYS.store.set === 'function') {
                 return HEYS.store.set(k, v);
+            }
+            if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
+                return HEYS.utils.lsSet(k, v);
             }
             localStorage.setItem(k, JSON.stringify(v));
         } catch (e) { }
@@ -737,16 +818,28 @@
 
     // === Data Loading ===
 
-    // Базовая загрузка приёмов из localStorage (без ночной логики)
+    // Базовая загрузка приёмов из storage (store-first) (без ночной логики)
     function loadMealsRaw(ds) {
         const keys = ['heys_dayv2_' + ds, 'heys_day_' + ds, 'day_' + ds + '_meals', 'meals_' + ds, 'food_' + ds];
         for (const k of keys) {
             try {
-                const raw = localStorage.getItem(k);
+                const raw = (global.HEYS?.store?.get ? global.HEYS.store.get(k, null) : null)
+                    ?? (global.localStorage ? global.localStorage.getItem(k) : null);
                 if (!raw) continue;
-                const v = JSON.parse(raw);
-                if (v && Array.isArray(v.meals)) return v.meals;
-                if (Array.isArray(v)) return v;
+                if (typeof raw === 'object') {
+                    if (raw && Array.isArray(raw.meals)) return raw.meals;
+                    if (Array.isArray(raw)) return raw;
+                }
+                if (typeof raw === 'string') {
+                    let parsed = null;
+                    if (raw.startsWith('¤Z¤') && global.HEYS?.store?.decompress) {
+                        parsed = global.HEYS.store.decompress(raw);
+                    } else {
+                        parsed = JSON.parse(raw);
+                    }
+                    if (parsed && Array.isArray(parsed.meals)) return parsed.meals;
+                    if (Array.isArray(parsed)) return parsed;
+                }
             } catch (e) { }
         }
         return [];
@@ -1290,28 +1383,36 @@
         try {
             // Пробуем несколько источников clientId (через утилиту для корректного JSON.parse)
             const U = window.HEYS && window.HEYS.utils;
-            const clientId = U && U.getCurrentClientId ? U.getCurrentClientId() : '';
+            const storeGet = window.HEYS?.store?.get;
+            const clientId = (U && U.getCurrentClientId ? U.getCurrentClientId() : '')
+                || (window.HEYS && window.HEYS.currentClientId) || (storeGet ? storeGet('heys_client_current', '') : '')
+                || localStorage.getItem('heys_client_current') || '';
 
             const scopedKey = clientId
                 ? 'heys_' + clientId + '_dayv2_' + dateStr
                 : 'heys_dayv2_' + dateStr;
 
-            const raw = localStorage.getItem(scopedKey);
+            const raw = (global.HEYS?.store?.get ? global.HEYS.store.get(scopedKey, null) : null)
+                ?? (global.localStorage ? global.localStorage.getItem(scopedKey) : null);
             if (!raw) return null;
 
             let dayData = null;
-            if (raw.startsWith('¤Z¤')) {
-                let str = raw.substring(3);
-                const patterns = {
-                    '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
-                    '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
-                };
-                for (const [code, pattern] of Object.entries(patterns)) {
-                    str = str.split(code).join(pattern);
+            if (typeof raw === 'object') {
+                dayData = raw;
+            } else if (typeof raw === 'string') {
+                if (raw.startsWith('¤Z¤')) {
+                    let str = raw.substring(3);
+                    const patterns = {
+                        '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
+                        '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
+                    };
+                    for (const [code, pattern] of Object.entries(patterns)) {
+                        str = str.split(code).join(pattern);
+                    }
+                    dayData = JSON.parse(str);
+                } else {
+                    dayData = JSON.parse(raw);
                 }
-                dayData = JSON.parse(str);
-            } else {
-                dayData = JSON.parse(raw);
             }
 
             if (!dayData) return null;
@@ -1363,20 +1464,25 @@
                             try {
                                 // Пробуем разные варианты ключей
                                 const U = global.HEYS?.utils;
-                                if (U && U.lsGet) {
+                                const storeGet = global.HEYS?.store?.get;
+                                if (storeGet) {
+                                    freshProducts = storeGet('heys_products', []) || [];
+                                } else if (U && U.lsGet) {
                                     freshProducts = U.lsGet('heys_products', []) || [];
                                 } else {
                                     // Fallback без clientId-aware функции
-                                    const clientId = localStorage.getItem('heys_client_current') || '';
+                                    const clientId = U?.getCurrentClientId?.()
+                                        || (storeGet ? storeGet('heys_client_current', '') : '')
+                                        || localStorage.getItem('heys_client_current') || '';
                                     const keys = [
                                         clientId ? `heys_${clientId}_products` : null,
                                         'heys_products'
                                     ].filter(Boolean);
 
                                     for (const key of keys) {
-                                        const stored = localStorage.getItem(key);
+                                        const stored = storeGet ? storeGet(key, null) : localStorage.getItem(key);
                                         if (stored) {
-                                            const parsed = JSON.parse(stored);
+                                            const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored;
                                             if (Array.isArray(parsed) && parsed.length > 0) {
                                                 freshProducts = parsed;
                                                 break;
@@ -1496,27 +1602,36 @@
                 products = window.HEYS.store.get('heys_products', []);
             } else {
                 // Fallback: пробуем напрямую из localStorage
-                const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
+                const U = window.HEYS?.utils;
+                const storeGet = window.HEYS?.store?.get;
+                const clientId = U?.getCurrentClientId?.()
+                    || (window.HEYS && window.HEYS.currentClientId)
+                    || (storeGet ? storeGet('heys_client_current', '') : '')
+                    || localStorage.getItem('heys_client_current') || '';
                 const productsKey = clientId
                     ? 'heys_' + clientId + '_products'
                     : 'heys_products';
-                const productsRaw = localStorage.getItem(productsKey);
+                const productsRaw = storeGet ? storeGet(productsKey, null) : localStorage.getItem(productsKey);
 
                 if (productsRaw) {
-                    if (productsRaw.startsWith('¤Z¤')) {
-                        let str = productsRaw.substring(3);
-                        const patterns = {
-                            '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
-                            '¤c¤': '"carbs100"', '¤f¤': '"fat100"', '¤s¤': '"simple100"',
-                            '¤x¤': '"complex100"', '¤b¤': '"badFat100"', '¤g¤': '"goodFat100"',
-                            '¤t¤': '"trans100"', '¤i¤': '"fiber100"', '¤G¤': '"gi"', '¤h¤': '"harmScore"'
-                        };
-                        for (const [code, pattern] of Object.entries(patterns)) {
-                            str = str.split(code).join(pattern);
+                    if (typeof productsRaw === 'string') {
+                        if (productsRaw.startsWith('¤Z¤')) {
+                            let str = productsRaw.substring(3);
+                            const patterns = {
+                                '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
+                                '¤c¤': '"carbs100"', '¤f¤': '"fat100"', '¤s¤': '"simple100"',
+                                '¤x¤': '"complex100"', '¤b¤': '"badFat100"', '¤g¤': '"goodFat100"',
+                                '¤t¤': '"trans100"', '¤i¤': '"fiber100"', '¤G¤': '"gi"', '¤h¤': '"harmScore"'
+                            };
+                            for (const [code, pattern] of Object.entries(patterns)) {
+                                str = str.split(code).join(pattern);
+                            }
+                            products = JSON.parse(str);
+                        } else {
+                            products = JSON.parse(productsRaw);
                         }
-                        products = JSON.parse(str);
                     } else {
-                        products = JSON.parse(productsRaw);
+                        products = productsRaw;
                     }
                 }
             }
@@ -1957,6 +2072,11 @@
         // ВАЖНО: Используем динамический вызов чтобы всегда брать актуальный HEYS.utils.lsSet
         // Это нужно для синхронизации с облаком (диспатч события heys:data-saved)
         const lsSetFn = React.useCallback((key, val) => {
+            const storeSet = global.HEYS?.store?.set;
+            if (storeSet) {
+                storeSet(key, val);
+                return;
+            }
             const actualLsSet = global.HEYS?.utils?.lsSet || lsSet || utils.lsSet;
             if (actualLsSet) {
                 actualLsSet(key, val);
@@ -2003,8 +2123,12 @@
                 if (stored && typeof stored === 'object') return stored;
             } catch (e) { }
             try {
-                const raw = global.localStorage.getItem(key);
-                return raw ? JSON.parse(raw) : null;
+                const raw = global.HEYS?.store?.get
+                    ? global.HEYS.store.get(key, null)
+                    : (global.localStorage ? global.localStorage.getItem(key) : null);
+                if (!raw) return null;
+                if (typeof raw === 'object') return raw;
+                return JSON.parse(raw);
             } catch (e) { return null; }
         }, [lsGetFunc]);
 
@@ -2607,7 +2731,10 @@
             prevDateRef.current = date;
 
             setIsHydrated(false); // Сброс: данные ещё не загружены для новой даты
-            const clientId = global.HEYS && global.HEYS.currentClientId;
+            const clientId = global.HEYS?.utils?.getCurrentClientId?.()
+                || global.HEYS?.currentClientId
+                || (global.HEYS?.store?.get ? global.HEYS.store.get('heys_client_current', '') : '')
+                || localStorage.getItem('heys_client_current') || '';
             const cloud = global.HEYS && global.HEYS.cloud;
 
             // Сбрасываем ref при смене даты
@@ -2861,7 +2988,13 @@
             document.documentElement.setAttribute('data-theme', resolvedTheme);
             try {
                 const U = global.HEYS?.utils || {};
-                U.lsSet ? U.lsSet('heys_theme', theme) : localStorage.setItem('heys_theme', theme);
+                if (global.HEYS?.store?.set) {
+                    global.HEYS.store.set('heys_theme', theme);
+                } else if (U.lsSet) {
+                    U.lsSet('heys_theme', theme);
+                } else {
+                    localStorage.setItem('heys_theme', theme);
+                }
             } catch (e) {
                 // QuotaExceeded — игнорируем, тема применится через data-theme
             }

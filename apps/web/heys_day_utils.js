@@ -117,6 +117,13 @@
         try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
       });
       const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
+      const parseStoredValue = (raw) => {
+        if (!raw || typeof raw !== 'string') return null;
+        if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
+          return HEYS.store.decompress(raw);
+        }
+        try { return JSON.parse(raw); } catch { return null; }
+      };
 
       // Получаем текущие продукты (ключ = name LOWERCASE для консистентности с getDayData)
       const products = lsGet('heys_products', []);
@@ -146,7 +153,7 @@
 
       for (const key of keys) {
         try {
-          const day = JSON.parse(localStorage.getItem(key));
+          const day = parseStoredValue(localStorage.getItem(key));
           if (!day || !day.meals) continue;
 
           for (const meal of day.meals) {
@@ -209,6 +216,12 @@
           console.warn('[HEYS] ⚠️ Products saved via lsSet only (no cloud sync)');
         }
 
+        if (HEYS.cloud?.flushPendingQueue) {
+          try {
+            await HEYS.cloud.flushPendingQueue(3000);
+          } catch (e) { }
+        }
+
         // Очищаем orphan-трекинг
         this.clear();
 
@@ -255,6 +268,13 @@
       const lsGet = U.lsGet || ((k, d) => {
         try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
       });
+      const parseStoredValue = (raw) => {
+        if (!raw || typeof raw !== 'string') return null;
+        if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
+          return HEYS.store.decompress(raw);
+        }
+        try { return JSON.parse(raw); } catch { return null; }
+      };
 
       const startTime = Date.now();
       if (verbose) console.log('[HEYS] 🔍 autoRecoverOnLoad: начинаю проверку продуктов...');
@@ -279,7 +299,7 @@
 
       for (const key of keys) {
         try {
-          const day = JSON.parse(localStorage.getItem(key));
+          const day = parseStoredValue(localStorage.getItem(key));
           if (!day || !day.meals) continue;
           const dateStr = key.split('_dayv2_').pop();
 
