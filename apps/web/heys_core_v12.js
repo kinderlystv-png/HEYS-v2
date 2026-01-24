@@ -3460,20 +3460,81 @@
   HEYS.core = { validateInput }; // Создаем объект core с валидацией
 
   // products helper API (thin wrapper over store + local fallback)
+  const productsLogState = { lastGetAll: 0, lastSetAll: 0 };
+  const shouldLogProducts = (type) => {
+    const debugEnabled = !!(HEYS && HEYS.debug && HEYS.debug.products);
+    if (debugEnabled) return true;
+    const now = Date.now();
+    const minInterval = 3000;
+    const key = type === 'setAll' ? 'lastSetAll' : 'lastGetAll';
+    if (now - productsLogState[key] < minInterval) return false;
+    productsLogState[key] = now;
+    return true;
+  };
+
   HEYS.products = HEYS.products || {
     getAll: () => {
       const fromStore = (HEYS.store && HEYS.store.get && HEYS.store.get('heys_products', [])) || [];
       const fromUtils = (HEYS.utils && HEYS.utils.lsGet && HEYS.utils.lsGet('heys_products', [])) || [];
-      const result = fromStore.length > 0 ? fromStore : fromUtils;
-      // 🔍 DEBUG: Логируем откуда берутся продукты (раскомментировать при отладке)
-      // console.log('[HEYS.products.getAll] fromStore:', fromStore.length, 'fromUtils:', fromUtils.length, 'result:', result.length);
+      let result = fromStore.length > 0 ? fromStore : fromUtils;
+
+      // Fallback: if result is suspiciously small, try other clientId namespaces
+      if (Array.isArray(result) && result.length <= 1) {
+        try {
+          const parseRaw = (raw) => {
+            if (!raw) return null;
+            if (typeof raw === 'object') return raw;
+            if (typeof raw !== 'string') return null;
+            if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
+              return HEYS.store.decompress(raw);
+            }
+            try { return JSON.parse(raw); } catch { return null; }
+          };
+
+          const keys = Object.keys(localStorage).filter((key) => /^heys_[^_]+_products$/i.test(key));
+          let best = null;
+          let bestLen = 0;
+          for (const key of keys) {
+            const candidate = parseRaw(localStorage.getItem(key));
+            const len = Array.isArray(candidate) ? candidate.length : 0;
+            if (len > bestLen) {
+              bestLen = len;
+              best = candidate;
+            }
+          }
+
+          if (best && bestLen > result.length) {
+            if (HEYS.store?.set) {
+              HEYS.store.set('heys_products', best);
+            } else if (HEYS.utils?.lsSet) {
+              HEYS.utils.lsSet('heys_products', best);
+            }
+            result = best;
+          }
+        } catch (e) { }
+      }
+      // 🔍 DEBUG: Логируем откуда берутся продукты
+      if (shouldLogProducts('getAll')) {
+        console.log('[PRODUCTS.getAll] fromStore:', fromStore.length, 'fromUtils:', fromUtils.length, 'result:', result.length);
+      }
       return result;
     },
     setAll: (arr, opts = {}) => {
+      if (shouldLogProducts('setAll')) {
+        console.log('[PRODUCTS.setAll] Сохраняю', arr?.length || 0, 'продуктов', new Error().stack?.split('\n').slice(1, 4).join(' <- '));
+      }
       if (HEYS.store && HEYS.store.set) {
         HEYS.store.set('heys_products', arr);
+        // Проверка сохранения
+        const check = HEYS.store.get('heys_products', []);
+        if (shouldLogProducts('setAll')) {
+          console.log('[PRODUCTS.setAll] Проверка после store.set:', check?.length || 0);
+        }
       } else if (HEYS.utils && HEYS.utils.lsSet) {
         HEYS.utils.lsSet('heys_products', arr);
+        if (shouldLogProducts('setAll')) {
+          console.log('[PRODUCTS.setAll] Сохранено через utils.lsSet');
+        }
       }
     },
     watch: (fn) => { if (HEYS.store && HEYS.store.watch) return HEYS.store.watch('heys_products', fn); return () => { }; },

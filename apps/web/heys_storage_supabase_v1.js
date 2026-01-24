@@ -723,32 +723,50 @@
   }
 
   /**
-   * Умный merge продуктов при конфликте local vs remote
-   * 
-   * АРХИТЕКТУРА: Name — единственный уникальный ключ продукта!
-   * - UI запрещает создавать продукты с одинаковым именем
-   * - ID (UUID) генерируется, но НЕ используется для идентификации
-   * - При merge дубли по имени схлопываются (выбирается "лучшая" версия)
-   * 
-   * @param {Array} localProducts - локальные продукты
-   * @param {Array} remoteProducts - продукты из облака
-   * @returns {Array} объединённый массив продуктов
+   * Merge products when local and remote conflict.
+   *
+   * Strategy overview:
+   * 1) Deduplicate each side by normalized name (name is the ONLY identity key).
+   * 2) For duplicates, keep the "better" product by data completeness score.
+   * 3) Merge remote + local by name, preferring the better product version.
+   *
+   * Architecture note:
+   * - Name is the canonical identity key (UI prevents duplicates by name).
+   * - Product IDs are not used for identity during merge.
+   *
+  * @param {Array<Object>} localProducts - Products from local storage.
+  * @param {Array<Object>} remoteProducts - Products from cloud storage.
+  * @returns {Array<Object>} Merged products (deduped by name).
+  * @see isBetterProduct
+  * @see normalizeName
    */
   function mergeProductsData(localProducts, remoteProducts) {
     const local = Array.isArray(localProducts) ? localProducts : [];
     const remote = Array.isArray(remoteProducts) ? remoteProducts : [];
 
-    // Функция нормализации имени для сравнения (единый ключ)
+    /**
+     * Normalize product name for identity key comparison.
+     * @param {string} name
+     * @returns {string}
+     */
     const normalizeName = (name) => String(name || '').trim().toLowerCase();
 
-    // Функция проверки валидности продукта
+    /**
+     * Check if product has a valid identity name.
+     * @param {Object} p
+     * @returns {boolean}
+     */
     const isValidProduct = (p) => {
       if (!p) return false;
       const name = normalizeName(p.name);
       return name.length > 0;
     };
 
-    // Функция подсчёта "полноты" продукта (сколько полей заполнено)
+    /**
+     * Calculate data completeness score for product conflict resolution.
+     * @param {Object} p
+     * @returns {number}
+     */
     const getProductScore = (p) => {
       let score = 0;
       if (p.id) score += 1;
@@ -764,7 +782,12 @@
       return score;
     };
 
-    // Функция сравнения двух продуктов: какой "лучше"
+    /**
+     * Compare two products and decide which one is "better" for merge.
+     * @param {Object} p1
+     * @param {Object} p2
+     * @returns {boolean}
+     */
     const isBetterProduct = (p1, p2) => {
       const score1 = getProductScore(p1);
       const score2 = getProductScore(p2);
@@ -782,6 +805,12 @@
     // ЭТАП 1: Дедупликация ВНУТРИ каждого массива (детектим legacy дубли)
     // ═══════════════════════════════════════════════════════════════
 
+    /**
+     * Deduplicate products by normalized name within one source.
+     * @param {Array<Object>} arr
+     * @param {string} source
+     * @returns {Array<Object>}
+     */
     const dedupeArray = (arr, source) => {
       const seen = new Map(); // normalizedName → bestProduct
       const duplicates = [];
@@ -3430,6 +3459,52 @@
         });
 
         // Для каждой группы выбираем самый свежий по updated_at
+        /**
+         * Count valid products by name in a stored value.
+         * @param {Array<Object>|any} value
+         * @returns {number}
+         */
+        const getValidProductsCount = (value) => {
+          if (!Array.isArray(value)) return 0;
+          let count = 0;
+          for (const p of value) {
+            if (p && typeof p.name === 'string' && p.name.trim().length > 0) count++;
+          }
+          return count;
+        };
+
+        /**
+         * Choose the best products row among duplicates by size, then by updated_at.
+         * @param {Array<Object>} group
+         * @param {string} scopedKey
+         * @returns {Object}
+         */
+        const chooseBestProductsRow = (group, scopedKey) => {
+          const scored = group.map(item => ({
+            ...item,
+            productsCount: getValidProductsCount(item?.row?.v)
+          }));
+          const maxCount = Math.max(...scored.map(item => item.productsCount));
+          const hasLarge = maxCount > 1;
+          const hasTiny = scored.some(item => item.productsCount <= 1);
+
+          let candidates = scored;
+          if (hasLarge) {
+            candidates = scored.filter(item => item.productsCount === maxCount);
+          }
+
+          candidates.sort((a, b) => b.updated_at_ts - a.updated_at_ts);
+          const winner = candidates[0];
+
+          if (hasLarge && hasTiny) {
+            const sizes = scored.map(item => `${item.originalKey}(${item.productsCount})`).join(', ');
+            logCritical(`🛡️ [DEDUP PRODUCTS] ${scopedKey}: chose ${winner.originalKey}(${winner.productsCount}) over tiny versions: ${sizes}`);
+          }
+
+          return winner;
+        };
+
+        // Для каждой группы выбираем самый свежий по updated_at
         const deduped = [];
         keyGroups.forEach((group, scopedKey) => {
           // 🔍 DEBUG: Логируем products ключи
@@ -3440,12 +3515,19 @@
           if (group.length === 1) {
             deduped.push({ scopedKey, row: group[0].row });
           } else {
-            // Сортируем по updated_at DESC и берём первый (самый свежий)
-            group.sort((a, b) => b.updated_at_ts - a.updated_at_ts);
-            const winner = group[0];
-            const loser = group[1];
-            logCritical(`🔀 [DEDUP] Key '${scopedKey}' has ${group.length} versions in DB. Using '${winner.originalKey}' (${new Date(winner.updated_at_ts).toISOString()}) over '${loser.originalKey}' (${new Date(loser.updated_at_ts).toISOString()})`);
-            deduped.push({ scopedKey, row: winner.row });
+            if (scopedKey.includes('_products') && !scopedKey.includes('_backup')) {
+              const winner = chooseBestProductsRow(group, scopedKey);
+              const loser = group.find(item => item !== winner) || group[0];
+              logCritical(`🔀 [DEDUP] Key '${scopedKey}' has ${group.length} versions in DB. Using '${winner.originalKey}' (${new Date(winner.updated_at_ts).toISOString()}) over '${loser.originalKey}' (${new Date(loser.updated_at_ts).toISOString()})`);
+              deduped.push({ scopedKey, row: winner.row });
+            } else {
+              // Сортируем по updated_at DESC и берём первый (самый свежий)
+              group.sort((a, b) => b.updated_at_ts - a.updated_at_ts);
+              const winner = group[0];
+              const loser = group[1];
+              logCritical(`🔀 [DEDUP] Key '${scopedKey}' has ${group.length} versions in DB. Using '${winner.originalKey}' (${new Date(winner.updated_at_ts).toISOString()}) over '${loser.originalKey}' (${new Date(loser.updated_at_ts).toISOString()})`);
+              deduped.push({ scopedKey, row: winner.row });
+            }
           }
         });
 
@@ -4080,6 +4162,49 @@
               if (productsUpdated) {
                 return;
               }
+
+              // 🛡️ BACKUP GUARD: если remote слишком мал, а backup больше — используем backup
+              if (Array.isArray(valueToSave) && valueToSave.length <= 1) {
+                const backupSnapshot = global.HEYS?.utils?.lsGet?.('heys_products_backup', null);
+                const backupData = Array.isArray(backupSnapshot?.data)
+                  ? backupSnapshot.data.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0)
+                  : null;
+
+                if (Array.isArray(backupData) && backupData.length > valueToSave.length) {
+                  logCritical(`🛡️ [PRODUCTS BACKUP] BLOCKED: remote (${valueToSave.length}) too small, restoring backup (${backupData.length})`);
+                  global.HEYS.products.setAll(backupData, { source: 'backup-guard', skipNotify: true, skipCloud: true });
+                  productsUpdated = true;
+                  latestProducts = backupData;
+
+                  const pushObj = {
+                    client_id: client_id,
+                    k: normalizeKeyForSupabase(row.k, client_id),
+                    v: backupData,
+                    updated_at: new Date().toISOString()
+                  };
+                  clientUpsertQueue.push(pushObj);
+                  scheduleClientPush();
+                  return;
+                }
+              }
+
+              // 🛡️ ДОП. ЗАЩИТА: не перезаписываем, если in-memory база больше remote
+              if (Array.isArray(valueToSave)) {
+                const inMemoryProducts = global.HEYS?.products?.getAll?.() || [];
+                if (Array.isArray(inMemoryProducts) && inMemoryProducts.length > valueToSave.length) {
+                  logCritical(`🛡️ [PRODUCTS MEMORY] BLOCKED: memory (${inMemoryProducts.length}) > remote (${valueToSave.length}). Keeping memory, pushing to cloud.`);
+                  const pushObj = {
+                    client_id: client_id,
+                    k: normalizeKeyForSupabase(row.k, client_id),
+                    v: inMemoryProducts,
+                    updated_at: new Date().toISOString()
+                  };
+                  clientUpsertQueue.push(pushObj);
+                  scheduleClientPush();
+                  return;
+                }
+              }
+
               global.HEYS.products.setAll(valueToSave, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
               productsUpdated = true;
               latestProducts = valueToSave;
