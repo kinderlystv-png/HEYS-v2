@@ -61,7 +61,10 @@ function loadCACert() {
   if (process.env.NODE_ENV === 'development') {
     console.warn('[DB-Pool] CA cert not found, SSL verification disabled (development mode)');
   } else {
-    console.error('[DB-Pool] CA cert not found! SSL verification will be enforced but may fail without proper cert. Please ensure certs/root.crt is available.');
+    console.error(
+      '[DB-Pool] CA cert not found! SSL verification will be enforced but may fail without proper cert. ' +
+      'Please ensure certs/root.crt is available.'
+    );
   }
   return null;
 }

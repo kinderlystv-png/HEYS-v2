@@ -271,14 +271,18 @@ module.exports.handler = async function(event, context) {
     const { execSync } = require('child_process');
     execSync('which pg_dump', { stdio: 'pipe' });
   } catch (e) {
-    const error = 'pg_dump binary not found in PATH. This function requires PostgreSQL client tools to be installed in the runtime environment.';
+    const error = 
+      'pg_dump binary not found in PATH. ' +
+      'This function requires PostgreSQL client tools to be installed in the runtime environment.';
     console.error('[Backup Error]', error);
     await sendTelegramAlert(`Backup failed: ${error}`);
     return { 
       statusCode: 500, 
       body: JSON.stringify({ 
         error,
-        suggestion: 'Consider using a custom runtime with pg_dump or alternative backup approach (SQL COPY, pg_basebackup, or external backup VM)'
+        suggestion: 
+          'Consider using a custom runtime with pg_dump or alternative backup approach ' +
+          '(SQL COPY, pg_basebackup, or external backup VM)'
       }) 
     };
   }
@@ -323,7 +327,10 @@ module.exports.handler = async function(event, context) {
     if (existsSync(gzipFile)) unlinkSync(gzipFile);
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-    const successMessage = `Backup completed successfully in ${duration}s\n\nFile: \`${s3Key}\`\nBucket: \`${CONFIG.s3.bucket}\``;
+    const successMessage = 
+      `Backup completed successfully in ${duration}s\n\n` +
+      `File: \`${s3Key}\`\n` +
+      `Bucket: \`${CONFIG.s3.bucket}\``;
     
     console.log('[Backup] Success!', successMessage);
     
