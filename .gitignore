@@ -185,3 +185,6 @@ coverage/
 
 # Temp build artifacts
 tsup.config.bundled_*.mjs
+
+# Git worktrees
+.worktrees/
