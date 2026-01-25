@@ -114,10 +114,88 @@ yc serverless function version create ... --environment "PG_PASSWORD=xxx"
 
 ---
 
+## 🔒 Encryption at Rest (health_data)
+
+### Что шифруется
+
+| Паттерн ключа   | Описание                  | Шифрование   |
+| --------------- | ------------------------- | ------------ |
+| `heys_profile`  | ПДн + health              | ✅ AES-256   |
+| `heys_dayv2_*`  | Дневник питания, сон, вес | ✅ AES-256   |
+| `heys_hr_zones` | Пульсовые зоны            | ✅ AES-256   |
+| `heys_products` | База продуктов            | ❌ Plaintext |
+| `heys_norms`    | Нормы питания             | ❌ Plaintext |
+
+### Архитектура
+
+```
+Cloud Function (heys-api-rpc)
+    │
+    ├─ Читает HEYS_ENCRYPTION_KEY из env
+    │
+    ├─ SET heys.encryption_key = '...' (per-connection)
+    │
+    └─ PostgreSQL RPC
+         ├─ encrypt_health_data() — при записи
+         └─ decrypt_health_data() — при чтении
+```
+
+### Ключевые функции SQL
+
+| Функция                      | Назначение                  |
+| ---------------------------- | --------------------------- |
+| `is_health_key(k)`           | Проверка: шифровать ли ключ |
+| `encrypt_health_data(jsonb)` | AES-256 шифрование          |
+| `decrypt_health_data(bytea)` | Расшифровка                 |
+| `read_client_kv_value()`     | Авто-расшифровка            |
+| `write_client_kv_value()`    | Авто-шифрование             |
+
+### Колонки `client_kv_store`
+
+| Колонка       | Тип      | Описание                         |
+| ------------- | -------- | -------------------------------- |
+| `v`           | JSONB    | Plaintext (для не-health ключей) |
+| `v_encrypted` | BYTEA    | Зашифрованные данные             |
+| `key_version` | SMALLINT | NULL=plaintext, 1+=encrypted     |
+
+### Ротация ключей (план)
+
+1. Добавить новый ключ с `key_version = 2`
+2. Backfill: перешифровать данные с v1 → v2
+3. Удалить старый ключ через 180 дней
+
+### Troubleshooting
+
+```sql
+-- Проверить статус шифрования
+SELECT
+  count(*) FILTER (WHERE key_version IS NULL AND is_health_key(k)) AS plaintext_health,
+  count(*) FILTER (WHERE key_version = 1) AS encrypted_v1
+FROM client_kv_store;
+
+-- Тест расшифровки (нужен SET heys.encryption_key)
+SELECT decrypt_health_data(v_encrypted)::text
+FROM client_kv_store
+WHERE k = 'heys_profile' LIMIT 1;
+```
+
+### Если ключ не установлен
+
+RPC функции вернут ошибку:
+
+```
+HEYS_ENCRYPTION_KEY not configured or too short
+```
+
+**Решение:** Проверить env var в Cloud Function.
+
+---
+
 ## 📝 Changelog
 
 | Дата       | Изменение                                                                            |
 | ---------- | ------------------------------------------------------------------------------------ |
+| 2026-01-25 | **v2.1**: Добавлена секция Encryption at Rest (health_data)                          |
 | 2025-01-04 | **v2.0**: Рефакторинг — сокращено с 695 до ~100 строк, smoke tests вынесены в скрипт |
 | 2025-01-02 | **v1.6**: Fix `client_kv_store` PK — `(client_id, k)`                                |
 | 2025-12-26 | **v1.5**: P0-P3 security hardening complete                                          |
