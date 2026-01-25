@@ -1869,3 +1869,28 @@ body.tour-active .ios-pwa-banner {
   background: #064e3b;
   color: #6ee7b7;
 }
+
+/* === vConsole: ultra-subtle FAB (debug only) === */
+#__vconsole .vc-switch {
+  width: 28px !important;
+  height: 28px !important;
+  line-height: 28px !important;
+  border-radius: 999px !important;
+  font-size: 10px !important;
+  letter-spacing: 0.02em !important;
+  opacity: 0.15 !important;
+  background: rgba(15, 23, 42, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: none !important;
+  right: calc(env(safe-area-inset-right, 0px) + 6px) !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 6px) !important;
+}
+
+#__vconsole .vc-switch:hover {
+  opacity: 0.55 !important;
+  transform: scale(1.05);
+}
+
+#__vconsole .vc-switch:active {
+  transform: scale(0.96);
+}
