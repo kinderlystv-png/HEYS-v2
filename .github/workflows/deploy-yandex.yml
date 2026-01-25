@@ -74,16 +74,72 @@ jobs:
       #       "__tests__/products-protection.test.js" \
       #       "__tests__/data-models.test.js"
 
-      # Параллельная сборка PWA и Landing
+      # Параллельная сборка PWA и Landing с проверкой exit codes
       - name: Build apps (parallel)
         run: |
+          set -e  # Exit on first error
+
+          # Запуск билдов в background
           pnpm --filter @heys/web run build &
           PID_PWA=$!
           pnpm --filter @heys/landing run build &
           PID_LANDING=$!
-          wait $PID_PWA $PID_LANDING
+
+          # Ждём и проверяем exit codes КАЖДОГО процесса
+          FAIL=0
+          wait $PID_PWA || { echo "❌ PWA build FAILED!"; FAIL=1; }
+          wait $PID_LANDING || { echo "❌ Landing build FAILED!"; FAIL=1; }
+
+          if [ $FAIL -eq 1 ]; then
+            echo "::error::One or more builds failed!"
+            exit 1
+          fi
+
+          echo "✅ Both builds completed successfully"
         env:
           VITE_API_URL: https://api.heyslab.ru
+
+      # 🛡️ ЗАЩИТА: Валидация что PWA build создал все необходимые файлы
+      - name: Validate PWA build output
+        run: |
+          echo "🔍 Validating PWA build output..."
+
+          # Проверяем что dist существует
+          if [ ! -d "apps/web/dist" ]; then
+            echo "::error::apps/web/dist directory not found!"
+            exit 1
+          fi
+
+          # Считаем heys_*.js файлы (должно быть минимум 50)
+          JS_COUNT=$(ls -1 apps/web/dist/heys_*.js 2>/dev/null | wc -l)
+          echo "📦 Found $JS_COUNT heys_*.js files in dist"
+
+          if [ "$JS_COUNT" -lt 50 ]; then
+            echo "::error::Expected at least 50 heys_*.js files, found only $JS_COUNT!"
+            echo "This usually means the build failed silently."
+            echo "Check that all dependencies are installed (e.g., esbuild)."
+            ls -la apps/web/dist/ | head -20
+            exit 1
+          fi
+
+          # Проверяем критические файлы
+          CRITICAL_FILES=(
+            "apps/web/dist/heys_app_v12.js"
+            "apps/web/dist/heys_core_v12.js"
+            "apps/web/dist/heys_day_v12.js"
+            "apps/web/dist/heys_add_product_step_v1.js"
+            "apps/web/dist/index.html"
+            "apps/web/dist/version.json"
+          )
+
+          for file in "${CRITICAL_FILES[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "::error::Critical file missing: $file"
+              exit 1
+            fi
+          done
+
+          echo "✅ PWA build validation passed ($JS_COUNT JS files)"
 
       - name: Ensure SW from public
         run: |
@@ -156,6 +212,7 @@ jobs:
           # === STEP 2: Mutable JS Files (0 cache, must-revalidate) ===
           # These files change often but keep the same name
           echo "📜 Updating mutable JS files (max-age=0)..."
+          JS_UPLOAD_COUNT=0
           for jsfile in apps/web/dist/heys_*.js; do
             if [ -f "$jsfile" ]; then
               filename=$(basename "$jsfile")
@@ -163,9 +220,18 @@ jobs:
                 --endpoint-url=${{ env.YC_ENDPOINT }} \
                 --cache-control "public, max-age=0, must-revalidate" \
                 --content-type "application/javascript" &
+              JS_UPLOAD_COUNT=$((JS_UPLOAD_COUNT + 1))
             fi
           done
           wait
+
+          # 🛡️ ЗАЩИТА: Проверяем что файлы реально загрузились
+          if [ "$JS_UPLOAD_COUNT" -lt 50 ]; then
+            echo "::error::Only $JS_UPLOAD_COUNT heys_*.js files were uploaded (expected 50+)!"
+            echo "Build likely failed silently. Check build logs."
+            exit 1
+          fi
+          echo "✅ Uploaded $JS_UPLOAD_COUNT heys_*.js files"
 
           # === STEP 2.1: React bundle (critical, no cache) ===
           if [ -f "apps/web/dist/react-bundle.js" ]; then
