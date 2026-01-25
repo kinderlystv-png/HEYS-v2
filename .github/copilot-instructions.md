@@ -54,13 +54,17 @@ applyTo: '**/*'
 
 ## 🚫 Запрещено → ✅ Правильно
 
-| 🚫 Запрещено             | ✅ Правильно                  |
-| ------------------------ | ----------------------------- |
-| `console.log` напрямую   | `HEYS.analytics.trackError()` |
-| `localStorage.setItem`   | `U.lsSet('heys_key', val)`    |
-| `select('*')` в Supabase | `select('id, name, ...')`     |
-| Inline styles в JSX      | Tailwind классы               |
-| `cloud.client.rpc()`     | `HEYS.YandexAPI.rpc()`        |
+| 🚫 Запрещено             | ✅ Правильно               |
+| ------------------------ | -------------------------- |
+| `console.log` напрямую   | Удалить перед коммитом     |
+| `localStorage.setItem`   | `U.lsSet('heys_key', val)` |
+| `select('*')` в Supabase | `select('id, name, ...')`  |
+| Inline styles в JSX      | Tailwind классы            |
+| `cloud.client.rpc()`     | `HEYS.YandexAPI.rpc()`     |
+
+> **Логирование:** `console.log()` — только временно при отладке, удалять перед
+> коммитом! В committed коде оставляем только `console.error()` и
+> `console.warn()` для реальных проблем.
 
 ---
 
