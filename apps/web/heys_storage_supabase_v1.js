@@ -1,5 +1,5 @@
 // heys_storage_supabase_v1.js — Supabase bridge, auth, cloud sync, localStorage mirroring
-// v58: Fix infinite retry on auth error — don't retry when session token is missing
+// v59: Fix cache invalidation on cloud sync — UI now shows synced data when changing dates
 
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
@@ -3971,6 +3971,12 @@
                   clientUpsertQueue.push(localUpsertObj);
                   scheduleClientPush();
                   // Сохраняем дедуплицированные локально
+                  // 🛡️ v4.8.1: Проверяем что не перезаписываем больший набор
+                  const memoryNow = global.HEYS?.products?.getAll?.()?.length || 0;
+                  if (localDeduped.length < memoryNow) {
+                    log(`⚠️ [PRODUCTS] Skip setAll: localDeduped (${localDeduped.length}) < memory (${memoryNow})`);
+                    return;
+                  }
                   if (global.HEYS?.products?.setAll) {
                     global.HEYS.products.setAll(localDeduped, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
                     productsUpdated = true;
@@ -4012,7 +4018,9 @@
 
                 // Если merged.length === remoteProducts.length (нет изменений) — сохраняем merged
                 // Это безопасно т.к. merged уже включает все локальные продукты
-                if (merged.length === remoteProducts.length && merged.length === currentLocal.length) {
+                // 🛡️ v4.8.1: Дополнительная проверка на память — могли добавить продукты после чтения
+                const memoryCount = global.HEYS?.products?.getAll?.()?.length || 0;
+                if (merged.length === remoteProducts.length && merged.length === currentLocal.length && merged.length >= memoryCount) {
                   if (global.HEYS?.products?.setAll) {
                     global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
                     productsUpdated = true;
@@ -4024,6 +4032,14 @@
                 }
 
                 // Fallback: сохраняем merged и синхронизируем
+                // 🛡️ v4.8.1: Проверяем что merged не меньше текущего количества в памяти
+                // Это предотвращает race condition когда новые продукты добавлены между чтением и merge
+                const currentInMemory = global.HEYS?.products?.getAll?.()?.length || 0;
+                if (merged.length < currentInMemory) {
+                  log(`⚠️ [PRODUCTS] Skipping setAll: merged (${merged.length}) < memory (${currentInMemory})`);
+                  return; // Не перезаписываем — setAll всё равно заблокирует
+                }
+
                 if (global.HEYS?.products?.setAll) {
                   global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
                   productsUpdated = true;
@@ -4232,14 +4248,33 @@
               }
 
               // 🛡️ ДОП. ЗАЩИТА: не перезаписываем, если in-memory база больше remote
+              // v60 FIX: Проверяем ОБА источника — memory И localStorage напрямую!
               if (Array.isArray(valueToSave)) {
                 const inMemoryProducts = global.HEYS?.products?.getAll?.() || [];
-                if (Array.isArray(inMemoryProducts) && inMemoryProducts.length > valueToSave.length) {
-                  logCritical(`🛡️ [PRODUCTS MEMORY] BLOCKED: memory (${inMemoryProducts.length}) > remote (${valueToSave.length}). Keeping memory, pushing to cloud.`);
+
+                // Проверяем localStorage напрямую (может быть новее чем memory cache)
+                let localStorageProducts = [];
+                try {
+                  const rawLocal = ls.getItem(key);
+                  if (rawLocal) {
+                    const parsed = tryParse(rawLocal);
+                    if (Array.isArray(parsed)) {
+                      localStorageProducts = parsed.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
+                    }
+                  }
+                } catch (e) { /* ignore */ }
+
+                // Берём МАКСИМУМ из обоих источников
+                const currentMax = Math.max(inMemoryProducts.length, localStorageProducts.length);
+
+                if (currentMax > valueToSave.length) {
+                  logCritical(`🛡️ [PRODUCTS] BLOCKED: local max (${currentMax}) > remote (${valueToSave.length}). Memory: ${inMemoryProducts.length}, localStorage: ${localStorageProducts.length}`);
+                  // Используем тот источник который больше
+                  const bestLocal = inMemoryProducts.length >= localStorageProducts.length ? inMemoryProducts : localStorageProducts;
                   const pushObj = {
                     client_id: client_id,
                     k: normalizeKeyForSupabase(row.k, client_id),
-                    v: inMemoryProducts,
+                    v: bestLocal,
                     updated_at: new Date().toISOString()
                   };
                   clientUpsertQueue.push(pushObj);
@@ -4254,6 +4289,17 @@
             } else {
               ls.setItem(key, JSON.stringify(valueToSave));
               log(`  ✅ Saved to localStorage: ${key}`);
+
+              // 🔧 v59 FIX: Инвалидировать memory cache в Store.get для dayv2
+              // Иначе при смене даты UI получает кэшированное пустое значение
+              if (key.includes('dayv2_')) {
+                if (global.HEYS?.store?.invalidate) {
+                  global.HEYS.store.invalidate(key);
+                  log(`  🗑️ [CACHE] Invalidated memory cache for: ${key}`);
+                } else {
+                  logCritical(`  ⚠️ [CACHE] store.invalidate NOT available for: ${key}`);
+                }
+              }
             }
 
             // 🔔 Dispatch event for dayv2 updates (для pull-to-refresh и UI refresh)
@@ -4379,12 +4425,12 @@
             const { data: cloudDeleted, error: deletedError } = await YandexAPI.from('client_kv_store')
               .select('v')
               .eq('client_id', client_id)
-              .eq('k', deletedListKey)
-              .single();
+              .eq('k', deletedListKey);
 
-            if (!deletedError && cloudDeleted?.v) {
+            const deletedRow = Array.isArray(cloudDeleted) ? cloudDeleted[0] : cloudDeleted;
+            if (!deletedError && deletedRow?.v) {
               // Мержим облачные с локальными
-              const imported = global.HEYS.deletedProducts.importFromSync(cloudDeleted.v);
+              const imported = global.HEYS.deletedProducts.importFromSync(deletedRow.v);
               if (imported > 0) {
                 logCritical(`☁️ [DELETED SYNC] Merged ${imported} deleted products from cloud`);
               }
@@ -4454,14 +4500,16 @@
     const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
     if (!clientId) return [];
 
-    // 🔧 FIX: Ключи в базе хранятся с prefix heys_ (после normalizeKeyForSupabase)
+    // 🔧 FIX: Ключи в базе могут быть как нормализованные, так и scoped (c clientId)
     const dayKeys = dates.map((d) => `heys_dayv2_${d}`);
+    const scopedDayKeys = dates.map((d) => `heys_${clientId}_dayv2_${d}`);
+    const keysToFetch = [...new Set([...dayKeys, ...scopedDayKeys])];
     try {
       // YandexAPI имеет встроенный timeout
       const { data, error } = await YandexAPI.from('client_kv_store')
         .select('k,v,updated_at')
         .eq('client_id', clientId)
-        .in('k', dayKeys);
+        .in('k', keysToFetch);
       if (error) {
         err('fetchDays select', error);
         return [];
@@ -5025,26 +5073,20 @@
         return;
       }
 
-      // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: НЕ сохраняем ПУСТОЙ день в облако до завершения sync
-      // Это предотвращает перезапись реальных данных пустым днём при открытии нового устройства
-      if (waitingForSync) {
-        const hasRealData = value.weightMorning ||
-          value.steps > 0 ||
-          value.waterMl > 0 ||
-          (value.meals && value.meals.length > 0 && value.meals.some(m => m.items?.length > 0)) ||
-          value.sleepStart ||
-          value.sleepEnd ||
-          value.dayScore;
-        if (!hasRealData) {
-          logCritical(`🚫 [SAVE BLOCKED] Empty day before sync - key: ${k}`);
-          return;
-        }
-      } else {
-        // Диагностика: почему waitingForSync = false?
-        const hasRealData = value.weightMorning || value.steps > 0 || value.waterMl > 0;
-        if (!hasRealData) {
-          log(`⚠️ [SAVE ALLOWED] Empty day saved (sync completed) - key: ${k}`);
-        }
+      // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: НЕ сохраняем ПУСТОЙ день в облако НИКОГДА
+      // Это предотвращает перезапись реальных данных пустым днём при выборе даты в календаре
+      // v59 FIX: Блокируем всегда, не только до sync — иначе при выборе старой даты затираем облако
+      const hasRealData = value.weightMorning ||
+        value.steps > 0 ||
+        value.waterMl > 0 ||
+        (value.meals && value.meals.length > 0 && value.meals.some(m => m.items?.length > 0)) ||
+        value.sleepStart ||
+        value.sleepEnd ||
+        value.dayScore ||
+        (value.trainings && value.trainings.length > 0);
+      if (!hasRealData) {
+        log(`🚫 [SAVE BLOCKED] Empty day not saved to cloud - key: ${k}`);
+        return;
       }
     }
 
@@ -5110,14 +5152,11 @@
         k.includes('_profile') ? '👤 PROFILE' : '📝 OTHER';
     const itemsCount = Array.isArray(value) ? value.length : 'N/A';
 
-    // 🔍 Диагностика: логируем сохранение данных дня с шагами
-    if (k.includes('dayv2_') && value && value.steps > 0) {
-      logCritical(`📅 [DAY SAVE] Saving day ${k} with steps: ${value.steps} | updatedAt: ${value.updatedAt}`);
-      // DEBUG: Stack trace для отладки источника save (безопасная версия)
-      if (typeof console.trace === 'function') {
-        console.trace('[DAY SAVE] Call stack:');
-      }
-    }
+    // 🔍 Диагностика: логируем сохранение данных дня с шагами (только значимые)
+    // 🔇 v4.8.2: Отключено — слишком много логов при обычном использовании
+    // if (k.includes('dayv2_') && value && value.steps > 0) {
+    //   logCritical(`📅 [DAY SAVE] Saving day ${k} with steps: ${value.steps} | updatedAt: ${value.updatedAt}`);
+    // }
 
     // Логируем если добавляем в очередь до завершения sync
     if (waitingForSync) {

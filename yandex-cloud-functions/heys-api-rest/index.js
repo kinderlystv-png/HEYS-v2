@@ -3,7 +3,7 @@
  * REST операции с таблицами PostgreSQL
  */
 
-const { getPool } = require('../shared/db-pool');
+const { getPool } = require('./db-pool');
 const fs = require('fs');
 const path = require('path');
 
@@ -469,6 +469,59 @@ module.exports.handler = async function (event, context) {
         const rowsPreview = Array.isArray(body) ? body.length : 1;
         console.log('[REST POST REQUEST]', { table: tableName, rows: rowsPreview, params: Object.keys(params) });
 
+        // 🛡️ DATA LOSS PROTECTION: Для client_kv_store используем защищённые функции!
+        if (tableName === 'client_kv_store') {
+          const rows = Array.isArray(body) ? body : [body];
+
+          if (rows.length === 0) {
+            return {
+              statusCode: 400,
+              headers: corsHeaders,
+              body: JSON.stringify({ error: 'Empty body' })
+            };
+          }
+
+          let processed = 0;
+          let blocked = 0;
+
+          for (const row of rows) {
+            if (!row.client_id || !row.k) {
+              console.warn('[REST POST] Missing client_id or k in row:', row);
+              continue;
+            }
+
+            // Вызываем защищённую функцию вместо прямого INSERT
+            const writeResult = await client.query(
+              'SELECT safe_upsert_client_kv($1, $2, $3::jsonb) as result',
+              [row.client_id, row.k, JSON.stringify(row.v)]
+            );
+
+            const res = writeResult.rows[0]?.result;
+            if (res?.success) {
+              processed++;
+            } else if (res?.error === 'data_loss_protection') {
+              blocked++;
+              console.warn('[REST POST] 🛡️ Data loss protection blocked:', row.k);
+            } else {
+              console.error('[REST POST] Write failed:', res);
+            }
+          }
+
+          console.log('[REST POST client_kv_store]', { processed, blocked, total: rows.length });
+
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({
+              success: true,
+              processed,
+              blocked,
+              message: blocked > 0 ? `${blocked} writes blocked by data loss protection` : undefined
+            })
+          };
+        }
+
+        // Для остальных таблиц — обычная логика
         // Поддержка upsert через on_conflict
         const onConflict = params.on_conflict;
         const isUpsert = params.upsert === 'true' && onConflict;

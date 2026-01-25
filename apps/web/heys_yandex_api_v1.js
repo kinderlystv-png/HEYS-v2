@@ -803,21 +803,51 @@
     try {
       log(`getAllKV: Loading all data for client ${clientId.slice(0, 8)}...`);
 
-      // Используем REST API напрямую (как bootstrapClientSync)
-      // ⚠️ rest(table, options) — новая сигнатура!
-      const { data, error } = await rest('client_kv_store', {
-        method: 'GET',
-        filters: { 'eq.client_id': clientId },
-        select: 'k,v,updated_at'
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) {
+        // 🔐 Fallback для куратора: JWT + /auth/clients/:id/kv
+        const curatorToken = getCuratorToken();
+        if (!curatorToken) {
+          return { data: [], error: 'No session token' };
+        }
+
+        const url = `${CONFIG.API_URL}/auth/clients/${encodeURIComponent(clientId)}/kv`;
+        const response = await fetchWithRetry(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${curatorToken}`
+          }
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          return { data: [], error: result?.error || 'Curator KV fetch failed' };
+        }
+
+        const rows = Array.isArray(result?.data) ? result.data : [];
+        log(`getAllKV: Loaded ${rows.length} keys (curator)`);
+        return { data: rows, error: null };
+      }
+
+      const { data, error } = await rpc('get_client_data_by_session', {
+        p_session_token: sessionToken,
       });
 
       if (error) {
-        err('getAllKV REST error:', error.message || error);
+        err('getAllKV RPC error:', error.message || error);
         return { data: [], error: error.message || error };
       }
 
-      log(`getAllKV: Loaded ${data?.length || 0} keys`);
-      return { data: data || [], error: null };
+      if (data?.error) {
+        return { data: [], error: data.error };
+      }
+
+      const payload = data?.data || {};
+      const entries = Object.entries(payload).map(([k, v]) => ({ k, v }));
+
+      log(`getAllKV: Loaded ${entries.length} keys`);
+      return { data: entries, error: null };
     } catch (e) {
       err('getAllKV failed:', e.message);
       return { data: [], error: e.message };
