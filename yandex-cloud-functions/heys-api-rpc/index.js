@@ -3,7 +3,7 @@
  * PostgreSQL RPC вызовы напрямую к Yandex.Cloud PostgreSQL
  */
 
-const { getPool } = require('../shared/db-pool');
+const { getPool } = require('./shared/db-pool');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -415,6 +415,12 @@ module.exports.handler = async function (event, context) {
   const client = await pool.connect();
 
   try {
+    // 🔐 P2: Устанавливаем ключ шифрования для health_data (если настроен)
+    const encryptionKey = process.env.HEYS_ENCRYPTION_KEY;
+    if (encryptionKey) {
+      // SET не поддерживает параметры, используем format с экранированием
+      await client.query(`SET heys.encryption_key = '${encryptionKey.replace(/'/g, "''")}'`);
+    }
 
     // Формируем вызов RPC функции
     const paramKeys = Object.keys(params);
