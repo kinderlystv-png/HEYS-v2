@@ -619,6 +619,40 @@
         const HEYSRef = heysGlobal || HEYS;
         const utils = U || HEYSRef.utils || {};
 
+        const readStoredValue = useCallback((key, fallback) => {
+            if (HEYSRef.store?.get) return HEYSRef.store.get(key, fallback);
+            if (utils.lsGet) return utils.lsGet(key, fallback);
+            try {
+                const raw = localStorage.getItem(key);
+                if (raw == null) return fallback;
+                if (raw === 'true') return true;
+                if (raw === 'false') return false;
+                const first = raw[0];
+                if (first === '{' || first === '[') return JSON.parse(raw);
+                return raw;
+            } catch (e) {
+                return fallback;
+            }
+        }, [HEYSRef.store, utils.lsGet]);
+
+        const setStoredValue = useCallback((key, value) => {
+            if (HEYSRef.store?.set) {
+                HEYSRef.store.set(key, value);
+                return;
+            }
+            if (utils.lsSet) {
+                utils.lsSet(key, value);
+                return;
+            }
+            try {
+                if (value && typeof value === 'object') {
+                    localStorage.setItem(key, JSON.stringify(value));
+                } else {
+                    localStorage.setItem(key, String(value));
+                }
+            } catch (e) { }
+        }, [HEYSRef.store, utils.lsSet]);
+
         const [toastVisible, setToastVisible] = useState(false);
         const [toastDismissed, setToastDismissed] = useState(false);
         const toastTimeoutRef = useRef(null);
@@ -679,9 +713,7 @@
 
         const [dismissedAdvices, setDismissedAdvices] = useState(() => {
             try {
-                const saved = HEYSRef.store?.get
-                    ? HEYSRef.store.get('heys_advice_read_today', null)
-                    : (utils.lsGet ? utils.lsGet('heys_advice_read_today', null) : localStorage.getItem('heys_advice_read_today'));
+                const saved = readStoredValue('heys_advice_read_today', null);
                 if (saved) {
                     const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
                     if (parsed.date === new Date().toISOString().slice(0, 10)) {
@@ -693,9 +725,7 @@
         });
         const [hiddenUntilTomorrow, setHiddenUntilTomorrow] = useState(() => {
             try {
-                const saved = HEYSRef.store?.get
-                    ? HEYSRef.store.get('heys_advice_hidden_today', null)
-                    : (utils.lsGet ? utils.lsGet('heys_advice_hidden_today', null) : localStorage.getItem('heys_advice_hidden_today'));
+                const saved = readStoredValue('heys_advice_hidden_today', null);
                 if (saved) {
                     const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
                     if (parsed.date === new Date().toISOString().slice(0, 10)) {
@@ -945,9 +975,7 @@
         useEffect(() => {
             const checkScheduled = () => {
                 try {
-                    const scheduled = HEYSRef.store?.get
-                        ? (HEYSRef.store.get('heys_scheduled_advices', null) || [])
-                        : (utils.lsGet ? utils.lsGet('heys_scheduled_advices', []) : JSON.parse(localStorage.getItem('heys_scheduled_advices') || '[]'));
+                    const scheduled = readStoredValue('heys_scheduled_advices', []) || [];
                     const now = Date.now();
                     const ready = scheduled.filter(s => s.showAt <= now);
                     if (ready.length > 0) {
@@ -957,7 +985,7 @@
             };
             const intervalId = setInterval(checkScheduled, 30000);
             return () => clearInterval(intervalId);
-        }, [utils.lsGet]);
+        }, [readStoredValue]);
 
         useEffect(() => {
             const handleCelebrate = () => {
@@ -1050,17 +1078,11 @@
             const timer = setTimeout(() => {
                 try {
                     const value = new Date().toISOString().slice(0, 10);
-                    if (HEYSRef.store?.set) {
-                        HEYSRef.store.set('heys_last_visit', value);
-                    } else if (utils.lsSet) {
-                        utils.lsSet('heys_last_visit', value);
-                    } else {
-                        localStorage.setItem('heys_last_visit', value);
-                    }
+                    setStoredValue('heys_last_visit', value);
                 } catch (e) { }
             }, 3000);
             return () => clearTimeout(timer);
-        }, []);
+        }, [setStoredValue]);
 
         const handleToastTouchStart = (e) => {
             if (toastSwiped) return;
@@ -1125,13 +1147,7 @@
                             date: new Date().toISOString().slice(0, 10),
                             ids: [...newSet],
                         };
-                        if (HEYSRef.store?.set) {
-                            HEYSRef.store.set('heys_advice_read_today', saveData);
-                        } else if (utils.lsSet) {
-                            utils.lsSet('heys_advice_read_today', saveData);
-                        } else {
-                            localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
-                        }
+                        setStoredValue('heys_advice_read_today', saveData);
                     } catch (e) { }
                     return newSet;
                 });
@@ -1145,13 +1161,7 @@
                             date: new Date().toISOString().slice(0, 10),
                             ids: [...newSet],
                         };
-                        if (HEYSRef.store?.set) {
-                            HEYSRef.store.set('heys_advice_hidden_today', saveData);
-                        } else if (utils.lsSet) {
-                            utils.lsSet('heys_advice_hidden_today', saveData);
-                        } else {
-                            localStorage.setItem('heys_advice_hidden_today', JSON.stringify(saveData));
-                        }
+                        setStoredValue('heys_advice_hidden_today', saveData);
                     } catch (e) { }
                     return newSet;
                 });
@@ -1159,7 +1169,7 @@
 
             setLastDismissedAdvice(null);
             haptic('light');
-        }, [haptic, lastDismissedAdvice, utils.lsSet]);
+        }, [haptic, lastDismissedAdvice, setStoredValue]);
 
         const clearLastDismissed = useCallback(() => {
             if (lastDismissedAdvice?.hideTimeout) {
@@ -1182,13 +1192,7 @@
                         ids: [...newSet],
                     };
                     try {
-                        if (HEYSRef.store?.set) {
-                            HEYSRef.store.set('heys_advice_read_today', saveData);
-                        } else if (utils.lsSet) {
-                            utils.lsSet('heys_advice_read_today', saveData);
-                        } else {
-                            localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
-                        }
+                        setStoredValue('heys_advice_read_today', saveData);
                     } catch (e) { }
                     return newSet;
                 });
@@ -1216,13 +1220,7 @@
                             date: new Date().toISOString().slice(0, 10),
                             ids: [...newSet],
                         };
-                        if (HEYSRef.store?.set) {
-                            HEYSRef.store.set('heys_advice_hidden_today', saveData);
-                        } else if (utils.lsSet) {
-                            utils.lsSet('heys_advice_hidden_today', saveData);
-                        } else {
-                            localStorage.setItem('heys_advice_hidden_today', JSON.stringify(saveData));
-                        }
+                        setStoredValue('heys_advice_hidden_today', saveData);
                     } catch (e) { }
                     return newSet;
                 });
@@ -1233,13 +1231,7 @@
                             date: new Date().toISOString().slice(0, 10),
                             ids: [...newSet],
                         };
-                        if (HEYSRef.store?.set) {
-                            HEYSRef.store.set('heys_advice_read_today', saveData);
-                        } else if (utils.lsSet) {
-                            utils.lsSet('heys_advice_read_today', saveData);
-                        } else {
-                            localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
-                        }
+                        setStoredValue('heys_advice_read_today', saveData);
                     } catch (e) { }
                     return newSet;
                 });
@@ -1257,7 +1249,7 @@
 
             setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: 0, direction: null } }));
             delete adviceSwipeStart.current[adviceId];
-        }, [adviceSwipeState, haptic, lastDismissedAdvice, playAdviceSound, playAdviceHideSound, utils.lsSet]);
+        }, [adviceSwipeState, haptic, lastDismissedAdvice, playAdviceSound, playAdviceHideSound, setStoredValue]);
 
         const adviceLongPressTimer = useRef(null);
         const handleAdviceLongPressStart = useCallback((adviceId) => {
@@ -1294,13 +1286,7 @@
                                     date: new Date().toISOString().slice(0, 10),
                                     ids: [...newSet],
                                 };
-                                if (HEYSRef.store?.set) {
-                                    HEYSRef.store.set('heys_advice_read_today', saveData);
-                                } else if (utils.lsSet) {
-                                    utils.lsSet('heys_advice_read_today', saveData);
-                                } else {
-                                    localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
-                                }
+                                setStoredValue('heys_advice_read_today', saveData);
                             } catch (e) { }
                         }
                         return newSet;
@@ -1324,13 +1310,7 @@
                         ids: [...newSet],
                     };
                     try {
-                        if (HEYSRef.store?.set) {
-                            HEYSRef.store.set('heys_advice_read_today', saveData);
-                        } else if (utils.lsSet) {
-                            utils.lsSet('heys_advice_read_today', saveData);
-                        } else {
-                            localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
-                        }
+                        setStoredValue('heys_advice_read_today', saveData);
                     } catch (e) { }
                     return newSet;
                 });

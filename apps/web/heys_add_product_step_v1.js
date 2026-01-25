@@ -1389,6 +1389,12 @@
       const U = HEYS.utils || {};
       const allProducts = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
       const pid = String(product.id ?? product.product_id ?? product.name);
+      const fingerprint = product.fingerprint || null;
+
+      // 🆕 v4.8.0: Добавляем в игнор-лист чтобы autoRecover и cloud sync не восстанавливали
+      if (HEYS.deletedProducts?.add) {
+        HEYS.deletedProducts.add(name, pid, fingerprint);
+      }
 
       // Фильтруем — убираем этот продукт
       const filtered = allProducts.filter(p => {
@@ -3371,6 +3377,11 @@ NOVA: 1
         );
 
         if (!existingPersonal) {
+          // 🆕 v4.8.0: Удаляем из игнор-листа если был там
+          if (HEYS.deletedProducts?.remove) {
+            HEYS.deletedProducts.remove(updatedProduct.name, updatedProduct.id);
+          }
+
           const newProducts = [...products, updatedProduct];
           if (HEYS.products?.setAll) {
             HEYS.products.setAll(newProducts);

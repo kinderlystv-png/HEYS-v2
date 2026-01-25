@@ -6,6 +6,410 @@
   // Создаём namespace для утилит дня
   HEYS.dayUtils = {};
 
+  // === Deleted Products Ignore List v2.0 ===
+  // Персистентный список удалённых продуктов — чтобы autoRecover и cloud sync не восстанавливали их
+  // Ключ localStorage: heys_deleted_products_ignore_list
+  // Формат v2: { entries: { [key]: { name, id?, deletedAt, fingerprint? } }, version: 2 }
+  const DELETED_PRODUCTS_KEY = 'heys_deleted_products_ignore_list';
+  const DELETED_PRODUCTS_VERSION = 2;
+  const DELETED_PRODUCTS_TTL_DAYS = 90; // Автоочистка через 90 дней
+
+  /**
+   * Загружаем игнор-лист из localStorage при инициализации
+   * Поддерживает миграцию с v1 (Set) на v2 (Object с метаданными)
+   */
+  function loadDeletedProductsList() {
+    try {
+      const stored = localStorage.getItem(DELETED_PRODUCTS_KEY);
+      if (!stored) return { entries: {}, version: DELETED_PRODUCTS_VERSION };
+
+      const parsed = JSON.parse(stored);
+
+      // Миграция с v1 (массив строк) на v2 (объект с метаданными)
+      if (Array.isArray(parsed)) {
+        const now = Date.now();
+        const migrated = { entries: {}, version: DELETED_PRODUCTS_VERSION };
+        parsed.forEach(key => {
+          if (key) {
+            migrated.entries[String(key).toLowerCase()] = {
+              name: key,
+              deletedAt: now,
+              _migratedFromV1: true
+            };
+          }
+        });
+        console.log(`[HEYS] 🔄 Мигрировано ${Object.keys(migrated.entries).length} записей игнор-листа v1 → v2`);
+        saveDeletedProductsData(migrated);
+        return migrated;
+      }
+
+      // v2 формат
+      if (parsed.version === DELETED_PRODUCTS_VERSION && parsed.entries) {
+        return parsed;
+      }
+
+      return { entries: {}, version: DELETED_PRODUCTS_VERSION };
+    } catch (e) {
+      console.warn('[HEYS] Ошибка загрузки deleted products list:', e);
+      return { entries: {}, version: DELETED_PRODUCTS_VERSION };
+    }
+  }
+
+  /**
+   * Сохраняем игнор-лист в localStorage
+   */
+  function saveDeletedProductsData(data) {
+    try {
+      localStorage.setItem(DELETED_PRODUCTS_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.warn('[HEYS] Ошибка сохранения deleted products list:', e);
+    }
+  }
+
+  // In-memory кэш игнор-листа
+  let deletedProductsData = loadDeletedProductsList();
+
+  /**
+   * Нормализация ключа для игнор-листа (lowercase, trim, collapse spaces)
+   */
+  function normalizeDeletedKey(name) {
+    return String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  /**
+   * Автоочистка устаревших записей (старше TTL)
+   */
+  function cleanupExpiredEntries() {
+    const now = Date.now();
+    const ttlMs = DELETED_PRODUCTS_TTL_DAYS * 24 * 60 * 60 * 1000;
+    let removed = 0;
+
+    for (const [key, entry] of Object.entries(deletedProductsData.entries)) {
+      if (entry.deletedAt && (now - entry.deletedAt) > ttlMs) {
+        delete deletedProductsData.entries[key];
+        removed++;
+      }
+    }
+
+    if (removed > 0) {
+      saveDeletedProductsData(deletedProductsData);
+      console.log(`[HEYS] 🧹 Очищено ${removed} устаревших записей из игнор-листа (TTL: ${DELETED_PRODUCTS_TTL_DAYS} дней)`);
+    }
+
+    return removed;
+  }
+
+  // Автоочистка при загрузке
+  cleanupExpiredEntries();
+
+  // === API для управления игнор-листом удалённых продуктов ===
+  HEYS.deletedProducts = {
+    /**
+     * Добавить продукт в игнор-лист (при удалении)
+     * @param {string} name - Название продукта
+     * @param {string} [id] - ID продукта (опционально)
+     * @param {string} [fingerprint] - Fingerprint продукта (опционально)
+     */
+    add(name, id, fingerprint) {
+      if (!name) return;
+      const key = normalizeDeletedKey(name);
+      const now = Date.now();
+
+      deletedProductsData.entries[key] = {
+        name: name,
+        id: id || null,
+        fingerprint: fingerprint || null,
+        deletedAt: now
+      };
+
+      // Также добавляем по ID и fingerprint для быстрого поиска
+      if (id) {
+        deletedProductsData.entries[String(id)] = {
+          name: name,
+          id: id,
+          fingerprint: fingerprint || null,
+          deletedAt: now,
+          _isIdKey: true
+        };
+      }
+      if (fingerprint) {
+        deletedProductsData.entries[String(fingerprint)] = {
+          name: name,
+          id: id || null,
+          fingerprint: fingerprint,
+          deletedAt: now,
+          _isFingerprintKey: true
+        };
+      }
+
+      saveDeletedProductsData(deletedProductsData);
+      console.log(`[HEYS] 🚫 Продукт добавлен в игнор-лист: "${name}"${id ? ` (id: ${id.slice(0, 8)}...)` : ''}`);
+
+      // Диспатчим событие для синхронизации с облаком
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heys:deleted-products-changed', {
+          detail: { action: 'add', name, id, fingerprint }
+        }));
+      }
+    },
+
+    /**
+     * Проверить, удалён ли продукт (по имени, ID или fingerprint)
+     * @param {string} nameOrIdOrFingerprint - Название, ID или fingerprint продукта
+     * @returns {boolean}
+     */
+    isDeleted(nameOrIdOrFingerprint) {
+      if (!nameOrIdOrFingerprint) return false;
+      const key = normalizeDeletedKey(nameOrIdOrFingerprint);
+      return !!deletedProductsData.entries[key] || !!deletedProductsData.entries[String(nameOrIdOrFingerprint)];
+    },
+
+    /**
+     * Проверить продукт по всем полям (имя, ID, fingerprint)
+     * @param {Object} product - Объект продукта
+     * @returns {boolean}
+     */
+    isProductDeleted(product) {
+      if (!product) return false;
+      if (product.name && this.isDeleted(product.name)) return true;
+      if (product.id && this.isDeleted(product.id)) return true;
+      if (product.product_id && this.isDeleted(product.product_id)) return true;
+      if (product.fingerprint && this.isDeleted(product.fingerprint)) return true;
+      return false;
+    },
+
+    /**
+     * Удалить продукт из игнор-листа (если пользователь снова добавил продукт с таким же именем)
+     * @param {string} name - Название продукта
+     * @param {string} [id] - ID продукта (опционально)
+     * @param {string} [fingerprint] - Fingerprint продукта (опционально)
+     */
+    remove(name, id, fingerprint) {
+      if (!name) return;
+      const key = normalizeDeletedKey(name);
+      delete deletedProductsData.entries[key];
+      if (id) delete deletedProductsData.entries[String(id)];
+      if (fingerprint) delete deletedProductsData.entries[String(fingerprint)];
+      saveDeletedProductsData(deletedProductsData);
+      console.log(`[HEYS] ✅ Продукт восстановлен из игнор-листа: "${name}"`);
+
+      // Диспатчим событие для обновления UI
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heys:deleted-products-changed', {
+          detail: { action: 'remove', name, id, fingerprint }
+        }));
+      }
+    },
+
+    /**
+     * Получить весь игнор-лист (только уникальные записи по name)
+     * @returns {Array<{name: string, id?: string, fingerprint?: string, deletedAt: number}>}
+     */
+    getAll() {
+      const unique = new Map();
+      for (const [key, entry] of Object.entries(deletedProductsData.entries)) {
+        // Пропускаем вспомогательные ключи (_isIdKey, _isFingerprintKey)
+        if (entry._isIdKey || entry._isFingerprintKey) continue;
+        unique.set(normalizeDeletedKey(entry.name), entry);
+      }
+      return Array.from(unique.values());
+    },
+
+    /**
+     * Получить метаданные записи
+     * @param {string} nameOrId - Название или ID продукта
+     * @returns {Object|null}
+     */
+    getEntry(nameOrId) {
+      if (!nameOrId) return null;
+      const key = normalizeDeletedKey(nameOrId);
+      return deletedProductsData.entries[key] || deletedProductsData.entries[String(nameOrId)] || null;
+    },
+
+    /**
+     * Количество удалённых продуктов в игнор-листе (уникальных)
+     * @returns {number}
+     */
+    count() {
+      return this.getAll().length;
+    },
+
+    /**
+     * Очистить игнор-лист (осторожно!)
+     */
+    clear() {
+      const count = this.count();
+      deletedProductsData = { entries: {}, version: DELETED_PRODUCTS_VERSION };
+      saveDeletedProductsData(deletedProductsData);
+      console.log(`[HEYS] Игнор-лист удалённых продуктов очищен (было ${count})`);
+
+      // Диспатчим событие для обновления UI
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heys:deleted-products-changed', {
+          detail: { action: 'clear', count }
+        }));
+      }
+    },
+
+    /**
+     * Принудительная очистка устаревших записей
+     * @returns {number} Количество удалённых записей
+     */
+    cleanup() {
+      return cleanupExpiredEntries();
+    },
+
+    /**
+     * Показать игнор-лист в консоли
+     */
+    log() {
+      const all = this.getAll();
+      if (all.length === 0) {
+        console.log('✅ Игнор-лист удалённых продуктов пуст');
+        return;
+      }
+      console.log(`🚫 Игнор-лист удалённых продуктов (${all.length}):`);
+      const now = Date.now();
+      all.forEach((entry, i) => {
+        const daysAgo = Math.floor((now - entry.deletedAt) / (24 * 60 * 60 * 1000));
+        const ttlRemaining = DELETED_PRODUCTS_TTL_DAYS - daysAgo;
+        console.log(`  ${i + 1}. "${entry.name}" — удалён ${daysAgo}д назад (TTL: ${ttlRemaining}д)`);
+      });
+    },
+
+    /**
+     * Экспорт данных для cloud sync
+     * @returns {Object}
+     */
+    exportForSync() {
+      return {
+        entries: deletedProductsData.entries,
+        version: DELETED_PRODUCTS_VERSION,
+        exportedAt: Date.now()
+      };
+    },
+
+    /**
+     * Импорт данных из cloud sync (merge с локальными)
+     * @param {Object} cloudData - Данные из облака
+     * @returns {number} Количество импортированных записей
+     */
+    importFromSync(cloudData) {
+      if (!cloudData || !cloudData.entries) return 0;
+
+      let imported = 0;
+      for (const [key, entry] of Object.entries(cloudData.entries)) {
+        // Мержим: если запись новее — заменяем
+        const local = deletedProductsData.entries[key];
+        if (!local || (entry.deletedAt > (local.deletedAt || 0))) {
+          deletedProductsData.entries[key] = entry;
+          imported++;
+        }
+      }
+
+      if (imported > 0) {
+        saveDeletedProductsData(deletedProductsData);
+        console.log(`[HEYS] ☁️ Импортировано ${imported} записей игнор-листа из облака`);
+      }
+
+      return imported;
+    },
+
+    /**
+     * Batch-очистка item'ов из дневника для удалённого продукта
+     * @param {string} name - Название продукта
+     * @param {Object} options - Опции
+     * @returns {Promise<{daysAffected: number, itemsRemoved: number}>}
+     */
+    async purgeFromDiary(name, options = {}) {
+      const { dryRun = false, maxDays = 365 } = options;
+
+      if (!name) return { daysAffected: 0, itemsRemoved: 0 };
+
+      const normalizedName = normalizeDeletedKey(name);
+      const entry = this.getEntry(name);
+      const productId = entry?.id;
+      const fingerprint = entry?.fingerprint;
+
+      const U = HEYS.utils || {};
+      const lsGet = U.lsGet || ((k, d) => {
+        try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+      });
+      const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
+
+      // Собираем все ключи дней
+      const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
+
+      let daysAffected = 0;
+      let itemsRemoved = 0;
+
+      for (const key of keys.slice(0, maxDays)) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) continue;
+
+          let day;
+          if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
+            day = HEYS.store.decompress(raw);
+          } else {
+            day = JSON.parse(raw);
+          }
+
+          if (!day || !Array.isArray(day.meals)) continue;
+
+          let dayModified = false;
+
+          for (const meal of day.meals) {
+            if (!Array.isArray(meal.items)) continue;
+
+            const beforeCount = meal.items.length;
+            meal.items = meal.items.filter(item => {
+              const itemName = normalizeDeletedKey(item.name);
+              const itemId = String(item.product_id || item.productId || '');
+              const itemFingerprint = item.fingerprint || '';
+
+              // Проверяем совпадение по имени, ID или fingerprint
+              if (itemName === normalizedName) return false;
+              if (productId && itemId === String(productId)) return false;
+              if (fingerprint && itemFingerprint === fingerprint) return false;
+
+              return true;
+            });
+
+            if (meal.items.length < beforeCount) {
+              dayModified = true;
+              itemsRemoved += (beforeCount - meal.items.length);
+            }
+          }
+
+          if (dayModified && !dryRun) {
+            // Сохраняем изменённый день
+            if (HEYS.store?.compress) {
+              localStorage.setItem(key, HEYS.store.compress(day));
+            } else {
+              localStorage.setItem(key, JSON.stringify(day));
+            }
+            daysAffected++;
+          } else if (dayModified) {
+            daysAffected++;
+          }
+        } catch (e) {
+          // Пропускаем битые записи
+        }
+      }
+
+      if (itemsRemoved > 0) {
+        console.log(`[HEYS] ${dryRun ? '🔍 [DRY RUN]' : '🗑️'} Удалено ${itemsRemoved} записей "${name}" из ${daysAffected} дней`);
+      }
+
+      return { daysAffected, itemsRemoved };
+    },
+
+    // Константы для внешнего использования
+    TTL_DAYS: DELETED_PRODUCTS_TTL_DAYS,
+    VERSION: DELETED_PRODUCTS_VERSION
+  };
+
   // === Orphan Products Tracking ===
   // Отслеживание продуктов, для которых данные берутся из штампа вместо базы
   const orphanProductsMap = new Map(); // name => { name, usedInDays: Set, firstSeen }
@@ -359,10 +763,19 @@
       const recovered = [];
       let fromStamp = 0;
       let fromShared = 0;
+      let skippedDeleted = 0; // 🆕 v4.8.0: Счётчик пропущенных удалённых
       const stillMissing = [];
 
       // 3a. Восстановление из штампов
       for (const [key, data] of missingProducts) {
+        // 🆕 v4.8.0: Проверяем игнор-лист удалённых продуктов
+        if (HEYS.deletedProducts?.isDeleted(data.name) ||
+          HEYS.deletedProducts?.isDeleted(data.productId)) {
+          skippedDeleted++;
+          if (verbose) console.log(`[HEYS] ⏭️ Пропускаю удалённый продукт: "${data.name}"`);
+          continue;
+        }
+
         if (data.hasStamp && data.stampData) {
           const restoredProduct = {
             id: data.productId || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
@@ -404,6 +817,14 @@
             });
 
             for (const data of stillMissing) {
+              // 🆕 v4.8.0: Проверяем игнор-лист удалённых продуктов
+              if (HEYS.deletedProducts?.isDeleted(data.name) ||
+                HEYS.deletedProducts?.isDeleted(data.productId)) {
+                skippedDeleted++;
+                if (verbose) console.log(`[HEYS] ⏭️ Пропускаю удалённый продукт (shared): "${data.name}"`);
+                continue;
+              }
+
               // 🆕 v4.6.0: Поиск: fingerprint → id → name (приоритет)
               let found = null;
               if (data.fingerprint) found = sharedByFingerprint.get(data.fingerprint);
@@ -462,7 +883,11 @@
       }
 
       const elapsed = Date.now() - startTime;
-      // 🔇 v4.7.1: Итоговый лог отключён
+
+      // 🆕 v4.8.0: Лог пропущенных удалённых
+      if (skippedDeleted > 0 && verbose) {
+        console.log(`[HEYS] 🚫 Пропущено ${skippedDeleted} удалённых продуктов (в игнор-листе)`);
+      }
 
       // Диспатчим событие для UI
       if (recovered.length > 0 && typeof window !== 'undefined' && window.dispatchEvent) {
