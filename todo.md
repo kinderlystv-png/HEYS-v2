@@ -15,53 +15,11 @@
 
 > **Статус**: ✅ Merged в main (PR #30, 2026-01-24)
 
-### Выполнено:
-
-- [x] **1.1** Создать shared DB pool module
-  - ✅ `yandex-cloud-functions/shared/db-pool.js` — Pool с max: 3 connections
-  - ✅ `getPool()`, `withClient(fn)` API
-
-- [x] **1.2-1.6** Рефакторинг всех cloud functions на pool
-  - ✅ heys-api-rpc
-  - ✅ heys-api-rest
-  - ✅ heys-api-auth
-  - ✅ heys-api-leads
-  - ✅ heys-api-payments
-
-- [x] **1.7** Автобэкап в Yandex Cloud
-  - ✅ `heys-backup` function с pg_dump → gzip → S3
-  - ✅ deploy.sh и verify-backup.sh скрипты
-
-- [x] **1.8** Документация
-  - ✅ `POOL_TUNING_GUIDE.md`
-  - ✅ `DISASTER_RECOVERY_RUNBOOK.md`
-  - ✅ `LOCKBOX_MIGRATION_GUIDE.md`
-  - ✅ `BACKUP_CONSOLE_GUIDE.md`
-
----
-
-## 📊 Фаза 2: Мониторинг и Алерты — 3 часа
-
-> **Проблема**: Система "слепа" — нет алертов о падениях и ошибках. **Цель**:
-> Глубокий health check + UptimeRobot + Telegram алерты.
-
-- [x] **2.1** Расширить health check
-  - ✅ `yandex-cloud-functions/shared/health-check.js`
-  - ✅ `yandex-cloud-functions/shared/pool-metrics.js`
-
-- [ ] **2.2** Security alerting в maintenance
-  - `checkSecurityAlerts()`: >10 событий/час → Telegram alert
-  - **Файл**: `yandex-cloud-functions/heys-maintenance/index.js`
-
-- [ ] **2.3** UptimeRobot для доступности
-  - Monitoring `/health` каждые 5 минут
-  - Alert в Telegram при downtime
-
----
-
 ## 🔐 Фаза 3: Безопасность — 3 часа
 
 > **Цель**: Audit logging для 152-ФЗ + шифрование health_data.
+
+- [ ] **PROMPT**: `docs/tasks/2026-01-24-security-audit-log-encryption.md`
 
 - [ ] **3.1** Создать audit_log таблицу
   - Триггеры на `clients`, `client_kv_store`
@@ -72,23 +30,6 @@
   - Колонка `v_encrypted BYTEA` в `client_kv_store`
   - Функции `encrypt_kv()` / `decrypt_kv()` с AES-256
   - Ключ в Yandex KMS / Lockbox
-
----
-
-## 📋 Фаза 4: Operations & DR — 4 часа
-
-> **Цель**: Готовность к инцидентам и масштабированию.
-
-- [x] **4.1** Создать Disaster Recovery Runbook
-  - ✅ `DISASTER_RECOVERY_RUNBOOK.md` (493 строки)
-
-- [ ] **4.2** Feature flag для ограничения регистраций
-  - `MAX_ACTIVE_TRIALS` check в `start_trial_by_session`
-  - Если >N активных триалов → "очередь заполнена"
-
-- [ ] **4.3** Backup test procedure
-  - Документировать процесс восстановления
-  - Тестировать еженедельно на staging
 
 ---
 
@@ -113,6 +54,44 @@
 - [ ] Webhook в ЮKassa
 - [ ] Тестирование в sandbox
 - [ ] Активация подписки при `payment_succeeded`
+
+---
+
+---
+
+## 📊 Фаза 2: Мониторинг и Алерты — 3 часа
+
+> **Проблема**: Система "слепа" — нет алертов о падениях и ошибках. **Цель**:
+> Глубокий health check + UptimeRobot + Telegram алерты.
+
+- [x] **2.1** Расширить health check
+  - ✅ `yandex-cloud-functions/shared/health-check.js`
+  - ✅ `yandex-cloud-functions/shared/pool-metrics.js`
+
+- [ ] **2.2** Security alerting в maintenance
+  - `checkSecurityAlerts()`: >10 событий/час → Telegram alert
+  - **Файл**: `yandex-cloud-functions/heys-maintenance/index.js`
+
+- [ ] **2.3** UptimeRobot для доступности
+  - Monitoring `/health` каждые 5 минут
+  - Alert в Telegram при downtime
+
+---
+
+## 📋 Фаза 4: Operations & DR — 4 часа
+
+> **Цель**: Готовность к инцидентам и масштабированию.
+
+- [x] **4.1** Создать Disaster Recovery Runbook
+  - ✅ `DISASTER_RECOVERY_RUNBOOK.md` (493 строки)
+
+- [ ] **4.2** Feature flag для ограничения регистраций
+  - `MAX_ACTIVE_TRIALS` check в `start_trial_by_session`
+  - Если >N активных триалов → "очередь заполнена"
+
+- [ ] **4.3** Backup test procedure
+  - Документировать процесс восстановления
+  - Тестировать еженедельно на staging
 
 ---
 

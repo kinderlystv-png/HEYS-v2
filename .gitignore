@@ -188,3 +188,6 @@ tsup.config.bundled_*.mjs
 
 # Git worktrees
 .worktrees/
+
+# Cloud Functions local bundle
+yandex-cloud-functions/heys-api-rpc/shared/
