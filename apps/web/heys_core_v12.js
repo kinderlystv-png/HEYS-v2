@@ -156,7 +156,12 @@
         const clientSpecificKeys = ['heys_products', 'heys_profile', 'heys_hr_zones', 'heys_norms', 'heys_game'];
         const isClientSpecific = clientSpecificKeys.some(k => key === k || key.includes('dayv2_'));
         if (isClientSpecific) {
-          return window.HEYS.store.get(key, def);
+          const result = window.HEYS.store.get(key, def);
+          // 🔍 DEBUG v59: Логируем загрузку dayv2
+          if (key.includes('dayv2_') && HEYS.DEBUG_MODE && window.DEV?.log) {
+            window.DEV.log(`[lsGet] key=${key}, clientId=${window.HEYS.currentClientId?.substring(0, 8)}, hasData=${result !== def && result !== null}, meals=${result?.meals?.length || 0}`);
+          }
+          return result;
         }
       }
       // Fallback на прямой localStorage для глобальных ключей
@@ -2117,7 +2122,7 @@
         debugLog('merged', { total: mergedProducts.length, added: newProducts.length, updated: updatedCount });
 
         if (HEYS.products?.setAll) {
-          HEYS.products.setAll(mergedProducts);
+          HEYS.products.setAll(mergedProducts, { source: 'import-pasted' });
         } else if (HEYS.store?.set) {
           HEYS.store.set('heys_products', mergedProducts);
         } else if (HEYS.utils?.lsSet) {
@@ -3462,8 +3467,9 @@
   // products helper API (thin wrapper over store + local fallback)
   const productsLogState = { lastGetAll: 0, lastSetAll: 0 };
   const shouldLogProducts = (type) => {
+    // 🔇 v4.8.2: Отключено по умолчанию — включить через HEYS.debug.products = true
     const debugEnabled = !!(HEYS && HEYS.debug && HEYS.debug.products);
-    if (debugEnabled) return true;
+    if (!debugEnabled) return false; // Полностью отключено если debug не включен
     const now = Date.now();
     const minInterval = 3000;
     const key = type === 'setAll' ? 'lastSetAll' : 'lastGetAll';
@@ -3520,21 +3526,69 @@
       return result;
     },
     setAll: (arr, opts = {}) => {
-      if (shouldLogProducts('setAll')) {
-        console.log('[PRODUCTS.setAll] Сохраняю', arr?.length || 0, 'продуктов', new Error().stack?.split('\n').slice(1, 4).join(' <- '));
+      const newLen = arr?.length || 0;
+
+      // 🛡️ ЗАЩИТА: Не перезаписываем большее количество меньшим без явного разрешения
+      // Это предотвращает race condition когда sync перезаписывает восстановленные продукты
+      // ВАЖНО: Проверяем ОБА источника — store (memory) И localStorage напрямую!
+      // Memory cache может быть устаревшим если sync писал через ls.setItem
+      if (!opts.allowShrink) {
+        // 1. Проверяем memory cache через getAll
+        const fromGetAll = HEYS.products.getAll?.() || [];
+
+        // 2. Проверяем localStorage НАПРЯМУЮ (может быть новее чем cache)
+        // Ищем ВСЕ ключи с products чтобы найти максимум
+        let fromLocalStorage = [];
+        try {
+          const clientId = HEYS.currentClientId || '';
+          // Пробуем разные варианты ключей
+          const keysToTry = [
+            clientId ? `heys_${clientId}_products` : null,
+            'heys_products',
+          ].filter(Boolean);
+
+          // Также ищем любой ключ с _products (на случай если clientId другой)
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.includes('_products') && !key.includes('_backup') && !key.includes('_deleted')) {
+              keysToTry.push(key);
+            }
+          }
+
+          // Проверяем все найденные ключи и берём максимум
+          for (const key of keysToTry) {
+            try {
+              const raw = localStorage.getItem(key);
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length > fromLocalStorage.length) {
+                  fromLocalStorage = parsed;
+                }
+              }
+            } catch (e) { /* skip invalid */ }
+          }
+        } catch (e) { /* ignore */ }
+
+        // Берём МАКСИМУМ из обоих источников
+        const currentLen = Math.max(fromGetAll.length, fromLocalStorage.length);
+
+        if (currentLen > 0 && newLen < currentLen) {
+          console.warn(`[PRODUCTS.setAll] ⛔ BLOCKED: попытка уменьшить с ${currentLen} до ${newLen} без allowShrink.`);
+          console.warn(`[PRODUCTS.setAll] Source: ${opts.source || 'unknown'}, fromGetAll: ${fromGetAll.length}, fromLocalStorage: ${fromLocalStorage.length}`);
+          console.warn('[PRODUCTS.setAll] Stack:', new Error().stack?.split('\n').slice(1, 5).join(' <- '));
+          return; // НЕ перезаписываем!
+        }
       }
+
+      // Логируем для диагностики (throttled)
+      if (!opts.skipNotify) {
+        console.log(`[PRODUCTS.setAll] ${opts.allowShrink ? '⚠️ FORCE' : '✅'} Сохраняю ${newLen} продуктов, source: ${opts.source || 'unknown'}`);
+      }
+
       if (HEYS.store && HEYS.store.set) {
         HEYS.store.set('heys_products', arr);
-        // Проверка сохранения
-        const check = HEYS.store.get('heys_products', []);
-        if (shouldLogProducts('setAll')) {
-          console.log('[PRODUCTS.setAll] Проверка после store.set:', check?.length || 0);
-        }
       } else if (HEYS.utils && HEYS.utils.lsSet) {
         HEYS.utils.lsSet('heys_products', arr);
-        if (shouldLogProducts('setAll')) {
-          console.log('[PRODUCTS.setAll] Сохранено через utils.lsSet');
-        }
       }
     },
     watch: (fn) => { if (HEYS.store && HEYS.store.watch) return HEYS.store.watch('heys_products', fn); return () => { }; },
@@ -3684,8 +3738,9 @@
       const removed = original - unique.length;
 
       if (removed > 0) {
-        HEYS.products.setAll(unique);
-        // 🔇 v4.7.0: Лог отключён
+        // allowShrink: true — дедупликация ДОЛЖНА уменьшать количество
+        HEYS.products.setAll(unique, { source: 'deduplicate', allowShrink: true });
+        console.log(`[PRODUCTS.deduplicate] Удалено ${removed} дубликатов: ${original} → ${unique.length}`);
       }
 
       return { original, deduplicated: unique.length, removed };

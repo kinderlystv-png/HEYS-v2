@@ -28,34 +28,92 @@
             // persist current day explicitly before switching date
             try { flush(); } catch (e) { }
             setDate(d);
-            const v = lsGet('heys_dayv2_' + d, null);
             const profNow = getProfile();
-            if (v && v.date) {
-                const migratedTrainings = normalizeTrainings(v.trainings);
-                const cleanedTrainings = cleanEmptyTrainings(migratedTrainings);
-                const migratedDay = { ...v, trainings: cleanedTrainings };
-                // Сохраняем миграцию, чтобы не возвращались legacy поля при дальнейших загрузках
-                lsSet('heys_dayv2_' + d, migratedDay);
-                setDay(ensureDay(migratedDay, profNow));
-            } else {
-                setDay(ensureDay({
-                    date: d,
-                    meals: (loadMealsForDate(d) || []),
-                    trainings: [],
-                    // Явно устанавливаем пустые значения для всех полей
-                    weightMorning: '',
-                    deficitPct: '',
-                    sleepStart: '',
-                    sleepEnd: '',
-                    sleepQuality: '',
-                    sleepNote: '',
-                    dayScore: '',
-                    moodAvg: '',
-                    wellbeingAvg: '',
-                    stressAvg: '',
-                    dayComment: ''
-                }, profNow));
+            const applyDayData = (dayData) => {
+                if (dayData && dayData.date) {
+                    const migratedTrainings = normalizeTrainings(dayData.trainings);
+                    const cleanedTrainings = cleanEmptyTrainings(migratedTrainings);
+                    const migratedDay = { ...dayData, trainings: cleanedTrainings };
+                    // Сохраняем миграцию, чтобы не возвращались legacy поля при дальнейших загрузках
+                    lsSet('heys_dayv2_' + d, migratedDay);
+                    setDay(ensureDay(migratedDay, profNow));
+                    return true;
+                }
+                return false;
+            };
+
+            const v = lsGet('heys_dayv2_' + d, null);
+            if (applyDayData(v)) return;
+
+            const cloud = HEYS?.cloud;
+            if (cloud && typeof cloud.fetchDays === 'function') {
+                cloud.fetchDays([d])
+                    .then(() => {
+                        const fetched = lsGet('heys_dayv2_' + d, null);
+                        if (applyDayData(fetched)) return;
+                        setDay(ensureDay({
+                            date: d,
+                            meals: (loadMealsForDate(d) || []),
+                            trainings: [],
+                            // Явно устанавливаем пустые значения для всех полей
+                            weightMorning: '',
+                            deficitPct: '',
+                            sleepStart: '',
+                            sleepEnd: '',
+                            sleepQuality: '',
+                            sleepNote: '',
+                            dayScore: '',
+                            moodAvg: '',
+                            wellbeingAvg: '',
+                            stressAvg: '',
+                            dayComment: ''
+                        }, profNow));
+                    })
+                    .catch((err) => {
+                        if (HEYS?.analytics?.trackError) {
+                            HEYS.analytics.trackError(err, {
+                                where: 'dayCalendarBlock.fetchDays',
+                                date: d
+                            });
+                        }
+                        setDay(ensureDay({
+                            date: d,
+                            meals: (loadMealsForDate(d) || []),
+                            trainings: [],
+                            // Явно устанавливаем пустые значения для всех полей
+                            weightMorning: '',
+                            deficitPct: '',
+                            sleepStart: '',
+                            sleepEnd: '',
+                            sleepQuality: '',
+                            sleepNote: '',
+                            dayScore: '',
+                            moodAvg: '',
+                            wellbeingAvg: '',
+                            stressAvg: '',
+                            dayComment: ''
+                        }, profNow));
+                    });
+                return;
             }
+
+            setDay(ensureDay({
+                date: d,
+                meals: (loadMealsForDate(d) || []),
+                trainings: [],
+                // Явно устанавливаем пустые значения для всех полей
+                weightMorning: '',
+                deficitPct: '',
+                sleepStart: '',
+                sleepEnd: '',
+                sleepQuality: '',
+                sleepNote: '',
+                dayScore: '',
+                moodAvg: '',
+                wellbeingAvg: '',
+                stressAvg: '',
+                dayComment: ''
+            }, profNow));
         };
 
         const handleRemove = () => {

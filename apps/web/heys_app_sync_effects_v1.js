@@ -51,6 +51,18 @@
 
                             if (loadedProducts.length === 0 && Array.isArray(productsBeforeSync) && productsBeforeSync.length > 0) {
                                 // 🔇 v4.7.1: Лог отключён
+                                // 🛡️ v4.7.2: Перед fallback проверяем что productsBeforeSync не меньше текущих
+                                // Это предотвращает race condition когда новые продукты добавлены во время sync
+                                const currentProducts = window.HEYS?.products?.getAll?.() || [];
+                                const currentCount = currentProducts.length;
+                                const fallbackCount = productsBeforeSync.length;
+
+                                // Если текущие продукты больше — НЕ откатываем на старые
+                                if (currentCount > fallbackCount) {
+                                    // 🔇 Молчим — защита в setAll всё равно заблокирует
+                                    return;
+                                }
+
                                 setProducts(prev => {
                                     if (Array.isArray(prev) && prev.length === productsBeforeSync.length) return prev;
                                     return productsBeforeSync;

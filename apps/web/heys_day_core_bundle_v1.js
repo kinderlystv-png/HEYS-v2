@@ -505,7 +505,7 @@
                 // Используем HEYS.products.setAll для синхронизации с облаком и React state
                 if (HEYS.products?.setAll) {
                     console.log('[HEYS] 🔍 Calling HEYS.products.setAll with', newProducts.length, 'products');
-                    HEYS.products.setAll(newProducts);
+                    HEYS.products.setAll(newProducts, { source: 'button-restore-orphans' });
 
                     // 🔍 DEBUG: Проверяем что сохранилось
                     setTimeout(() => {
@@ -793,7 +793,7 @@
 
                 if (HEYS.products?.setAll) {
                     logRecovery('log', '[RECOVERY] 🔄 Вызываю HEYS.products.setAll...');
-                    HEYS.products.setAll(newProducts);
+                    HEYS.products.setAll(newProducts, { source: 'orphan-recovery' });
 
                     // Проверяем сохранение
                     const afterSave = HEYS.products.getAll?.() || [];
@@ -1014,14 +1014,53 @@
     // Базовая загрузка приёмов из storage (store-first) (без ночной логики)
     function loadMealsRaw(ds) {
         const keys = ['heys_dayv2_' + ds, 'heys_day_' + ds, 'day_' + ds + '_meals', 'meals_' + ds, 'food_' + ds];
+        const debugEnabled = !!(global.HEYS?.DEBUG_MODE || global.HEYS?.debug?.dayLoad);
+        const debugLog = debugEnabled ? (...args) => console.log(...args) : null;
+        const summarizeObjectArrays = (obj) => {
+            if (!obj || typeof obj !== 'object') return null;
+            const keys = Object.keys(obj);
+            const arrays = keys
+                .filter((key) => Array.isArray(obj[key]))
+                .map((key) => ({ key, count: obj[key].length }))
+                .filter((entry) => entry.count > 0);
+            return { keys, arrays };
+        };
         for (const k of keys) {
             try {
-                const raw = (global.HEYS?.store?.get ? global.HEYS.store.get(k, null) : null)
-                    ?? (global.localStorage ? global.localStorage.getItem(k) : null);
+                const fromStore = (global.HEYS?.store?.get ? global.HEYS.store.get(k, null) : null);
+                const raw = fromStore ?? (global.localStorage ? global.localStorage.getItem(k) : null);
                 if (!raw) continue;
+                if (debugLog) {
+                    debugLog('[MEALS LOAD] candidate', {
+                        date: ds,
+                        key: k,
+                        source: fromStore != null ? 'store' : 'localStorage',
+                        rawType: typeof raw
+                    });
+                }
                 if (typeof raw === 'object') {
-                    if (raw && Array.isArray(raw.meals)) return raw.meals;
-                    if (Array.isArray(raw)) return raw;
+                    if (raw && Array.isArray(raw.meals) && raw.meals.length > 0) {
+                        if (debugLog) debugLog('[MEALS LOAD] hit object.meals', { key: k, count: raw.meals.length });
+                        return raw.meals;
+                    }
+                    if (Array.isArray(raw) && raw.length > 0) {
+                        if (debugLog) debugLog('[MEALS LOAD] hit array', { key: k, count: raw.length });
+                        return raw;
+                    }
+                    if (debugLog) {
+                        const summary = summarizeObjectArrays(raw);
+                        const compact = summary
+                            ? {
+                                keys: summary.keys.slice(0, 30),
+                                arrays: summary.arrays.slice(0, 30)
+                            }
+                            : null;
+                        debugLog('[MEALS LOAD] object without meals', {
+                            key: k,
+                            summary: compact,
+                            summaryStr: compact ? JSON.stringify(compact) : null
+                        });
+                    }
                 }
                 if (typeof raw === 'string') {
                     let parsed = null;
@@ -1030,11 +1069,67 @@
                     } else {
                         parsed = JSON.parse(raw);
                     }
-                    if (parsed && Array.isArray(parsed.meals)) return parsed.meals;
-                    if (Array.isArray(parsed)) return parsed;
+                    if (parsed && Array.isArray(parsed.meals) && parsed.meals.length > 0) {
+                        if (debugLog) debugLog('[MEALS LOAD] hit parsed.meals', { key: k, count: parsed.meals.length });
+                        return parsed.meals;
+                    }
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        if (debugLog) debugLog('[MEALS LOAD] hit parsed array', { key: k, count: parsed.length });
+                        return parsed;
+                    }
+                    if (debugLog) {
+                        const summary = summarizeObjectArrays(parsed);
+                        const compact = summary
+                            ? {
+                                keys: summary.keys.slice(0, 30),
+                                arrays: summary.arrays.slice(0, 30)
+                            }
+                            : null;
+                        debugLog('[MEALS LOAD] parsed without meals', {
+                            key: k,
+                            summary: compact,
+                            summaryStr: compact ? JSON.stringify(compact) : null
+                        });
+                    }
                 }
             } catch (e) { }
         }
+        // 🔁 Fallback: искать данные по всем ключам localStorage для этой даты
+        // (на случай, если данные лежат под другим clientId)
+        try {
+            const patterns = [
+                `_dayv2_${ds}`,
+                `_day_${ds}`,
+                `day_${ds}_meals`,
+                `meals_${ds}`,
+                `food_${ds}`
+            ];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!key || !patterns.some((p) => key.includes(p))) continue;
+                const raw = localStorage.getItem(key);
+                if (!raw) continue;
+                let parsed = null;
+                if (typeof raw === 'string') {
+                    if (raw.startsWith('¤Z¤') && global.HEYS?.store?.decompress) {
+                        parsed = global.HEYS.store.decompress(raw);
+                    } else {
+                        parsed = JSON.parse(raw);
+                    }
+                } else if (typeof raw === 'object') {
+                    parsed = raw;
+                }
+                if (parsed && Array.isArray(parsed.meals) && parsed.meals.length > 0) {
+                    if (debugLog) debugLog('[MEALS LOAD] cross-key hit meals', { key, count: parsed.meals.length });
+                    return parsed.meals;
+                }
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    if (debugLog) debugLog('[MEALS LOAD] cross-key hit array', { key, count: parsed.length });
+                    return parsed;
+                }
+            }
+        } catch (e) { }
+        if (debugLog) debugLog('[MEALS LOAD] miss', { date: ds, triedKeys: keys });
         return [];
     }
 
@@ -2938,22 +3033,40 @@
                 const profNow = getProfile();
                 const key = 'heys_dayv2_' + date;
                 const v = lsGet(key, null);
-                if (v && v.date) {
+                const hasStoredData = !!(v && typeof v === 'object' && (
+                    v.date ||
+                    (Array.isArray(v.meals) && v.meals.length > 0) ||
+                    (Array.isArray(v.trainings) && v.trainings.length > 0) ||
+                    v.updatedAt || v.waterMl || v.steps || v.weightMorning
+                ));
+
+                // � DEBUG v59 → v4.8.2: Отключено — слишком много логов при навигации
+                // console.log(`[DAY LOAD] date=${date}, key=${key}, hasData=${hasStoredData}, meals=${v?.meals?.length || 0}`);
+
+                if (hasStoredData) {
+                    const normalizedDay = v?.date ? v : { ...v, date };
                     // ЗАЩИТА: не перезаписываем более свежие данные
                     // handleDayUpdated может уже загрузить sync данные
-                    if (v.updatedAt && lastLoadedUpdatedAtRef.current > 0 && v.updatedAt < lastLoadedUpdatedAtRef.current) {
+                    if (normalizedDay.updatedAt && lastLoadedUpdatedAtRef.current > 0 && normalizedDay.updatedAt < lastLoadedUpdatedAtRef.current) {
                         return;
                     }
-                    lastLoadedUpdatedAtRef.current = v.updatedAt || Date.now();
+                    lastLoadedUpdatedAtRef.current = normalizedDay.updatedAt || Date.now();
 
                     // Мигрируем оценки тренировок и очищаем пустые (только в памяти, НЕ сохраняем)
                     // Миграция сохранится автоматически при следующем реальном изменении данных
-                    const normalizedTrainings = normalizeTrainings(v.trainings);
+                    const normalizedTrainings = normalizeTrainings(normalizedDay.trainings);
                     const cleanedTrainings = cleanEmptyTrainings(normalizedTrainings);
                     const cleanedDay = {
-                        ...v,
+                        ...normalizedDay,
                         trainings: cleanedTrainings
                     };
+                    // 🔧 FIX: если meals пустые, пробуем подхватить legacy-ключи (heys_day_*, meals_*)
+                    if (!Array.isArray(cleanedDay.meals) || cleanedDay.meals.length === 0) {
+                        const legacyMeals = loadMealsForDate(date) || [];
+                        if (legacyMeals.length > 0) {
+                            cleanedDay.meals = legacyMeals;
+                        }
+                    }
                     // 🔒 НЕ сохраняем миграцию сразу — это вызывает DAY SAVE и мерцание UI
                     // Данные сохранятся при следующем изменении (добавление еды, воды и т.д.)
                     const newDay = ensureDay(cleanedDay, profNow);
@@ -3075,14 +3188,21 @@
                     const profNow = getProfile();
                     const key = 'heys_dayv2_' + date;
                     const v = lsGet(key, null);
-                    if (v && v.date) {
+                    const hasStoredData = !!(v && typeof v === 'object' && (
+                        v.date ||
+                        (Array.isArray(v.meals) && v.meals.length > 0) ||
+                        (Array.isArray(v.trainings) && v.trainings.length > 0) ||
+                        v.updatedAt || v.waterMl || v.steps || v.weightMorning
+                    ));
+                    if (hasStoredData) {
+                        const normalizedDay = v?.date ? v : { ...v, date };
                         // Проверяем: данные из storage новее текущих?
-                        const storageUpdatedAt = v.updatedAt || 0;
+                        const storageUpdatedAt = normalizedDay.updatedAt || 0;
                         const currentUpdatedAt = lastLoadedUpdatedAtRef.current || 0;
 
                         // Двойная защита: по timestamp И по количеству meals
                         // Не откатываем если в storage меньше meals чем в текущем state
-                        const storageMealsCount = (v.meals || []).length;
+                        const storageMealsCount = (normalizedDay.meals || []).length;
 
                         // Пропускаем проверку timestamp если forceReload
                         // ВАЖНО: используем < вместо <= чтобы обрабатывать первую загрузку (когда оба = 0)
@@ -3092,11 +3212,18 @@
 
                         // Обновляем ref чтобы doLocal() не перезаписал более старыми данными
                         lastLoadedUpdatedAtRef.current = storageUpdatedAt;
-                        const migratedTrainings = normalizeTrainings(v.trainings);
+                        const migratedTrainings = normalizeTrainings(normalizedDay.trainings);
                         const cleanedTrainings = cleanEmptyTrainings(migratedTrainings);
-                        const migratedDay = { ...v, trainings: cleanedTrainings };
+                        const migratedDay = { ...normalizedDay, trainings: cleanedTrainings };
+                        // 🔧 FIX: если meals пустые, пробуем подхватить legacy-ключи (heys_day_*, meals_*)
+                        if (!Array.isArray(migratedDay.meals) || migratedDay.meals.length === 0) {
+                            const legacyMeals = loadMealsForDate(date) || [];
+                            if (legacyMeals.length > 0) {
+                                migratedDay.meals = legacyMeals;
+                            }
+                        }
                         // Сохраняем миграцию ТОЛЬКО если данные изменились
-                        const trainingsChanged = JSON.stringify(v.trainings) !== JSON.stringify(cleanedTrainings);
+                        const trainingsChanged = JSON.stringify(normalizedDay.trainings) !== JSON.stringify(cleanedTrainings);
                         if (trainingsChanged) {
                             lsSet(key, migratedDay);
                         }

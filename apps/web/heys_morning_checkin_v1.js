@@ -80,36 +80,7 @@
           candidates.push(k);
         }
       }
-      // Основной (эффективный) ключ
-      console.log('[MorningCheckin][debug]', {
-        todayKey,
-        directKeyExists: !!rawDirect,
-        nsKeyExists: !!rawNs,
-        directWeight: parsedDirect?.weightMorning,
-        nsWeight: parsedNs?.weightMorning,
-        directUpdatedAt: parsedDirect?.updatedAt,
-        nsUpdatedAt: parsedNs?.updatedAt,
-        sampleKeys: candidates.slice(0, 10)
-      });
-
-      // Альтернативный календарный ключ (UTC) — для отладки рассинхрона
-      if (altKey && altKey !== todayKey) {
-        const altDirect = ls.getItem(`heys_dayv2_${altKey}`);
-        const altNsKey = currentClientId ? `heys_${currentClientId}_dayv2_${altKey}` : '';
-        const altNs = altNsKey ? ls.getItem(altNsKey) : null;
-        let altDirectParsed = null, altNsParsed = null;
-        try { altDirectParsed = altDirect ? JSON.parse(altDirect) : null; } catch(_){}
-        try { altNsParsed = altNs ? JSON.parse(altNs) : null; } catch(_){}
-        console.log('[MorningCheckin][debug-alt]', {
-          altKey,
-          altDirectExists: !!altDirect,
-          altNsExists: !!altNs,
-          altDirectWeight: altDirectParsed?.weightMorning,
-          altNsWeight: altNsParsed?.weightMorning,
-          altDirectUpdatedAt: altDirectParsed?.updatedAt,
-          altNsUpdatedAt: altNsParsed?.updatedAt
-        });
-      }
+      // 🔇 v4.8.2: Debug логи отключены — включить при необходимости
     } catch (e) {
       // не ломаем основной поток из-за debug
     }

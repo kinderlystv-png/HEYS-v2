@@ -199,13 +199,10 @@
     };
 
     cloud.searchSharedProducts = async function (query, options = {}) {
-      console.log('[SHARED SEARCH] Called with query:', query, 'user:', !!getUser());
-
       const { limit = 50, excludeBlocklist = true, fingerprint = null } = options;
       const normQuery = (HEYS?.models?.normalizeProductName
         ? HEYS.models.normalizeProductName(query)
         : (query || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
-      console.log('[SHARED SEARCH] Normalized query:', normQuery);
 
       try {
         const fetchByName = async (nameQ) => {
@@ -237,7 +234,6 @@
           order: 'created_at.desc',
           limit
         }));
-        console.log('[SHARED SEARCH] Query result:', data?.length, 'error:', error);
 
         if (error) {
           err('[SHARED PRODUCTS] Search error:', error);
@@ -286,32 +282,21 @@
     };
 
     cloud.publishToShared = async function (product) {
-      console.log('[SHARED] 📤 publishToShared called:', {
-        hasUser: !!getUser(),
-        userId: getUser()?.id,
-        productName: product?.name
-      });
-
       const user = getUser();
       if (!user) {
-        console.log('[SHARED] ❌ Not authenticated:', { user: !!user });
         return { data: null, error: 'Not authenticated', status: 'error' };
       }
 
       try {
-        console.log('[SHARED] 🔑 Computing fingerprint...');
         const fingerprint = await HEYS.models.computeProductFingerprint(product);
         const name_norm = HEYS.models.normalizeProductName(product.name);
-        console.log('[SHARED] Fingerprint:', fingerprint, 'Name norm:', name_norm);
 
         const curatorId = user?.id;
 
         if (!curatorId) {
-          console.error('[SHARED] ❌ No curator ID (user.id)');
+          console.error('[SHARED] No curator ID');
           return { data: null, error: 'Not authenticated as curator', status: 'error' };
         }
-
-        console.log('[SHARED] 👤 Using curator ID:', curatorId);
 
         const productData = {
           name: product.name,
