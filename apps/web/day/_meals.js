@@ -2,7 +2,6 @@
 
 ; (function (global) {
     'use strict';
-    console.log('[HEYS] 📦 day/_meals.js START loading');
 
     const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;
@@ -2097,7 +2096,6 @@
         };
     }
 
-    console.log('[HEYS] 📦 day/_meals.js exporting dayMealExpandState');
     HEYS.dayMealExpandState = {
         useMealExpandState,
     };
@@ -2466,7 +2464,5 @@
         createMealHandlers,
         sortMealsByTime,
     };
-
-    console.log('[HEYS] ✅ day/_meals.js FINISHED, dayMealExpandState =', !!HEYS.dayMealExpandState?.useMealExpandState);
 
 })(window);

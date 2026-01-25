@@ -2,7 +2,6 @@
 // Refactored: imports from heys_day_utils.js, heys_day_hooks.js, heys_day_pickers.js
 
 ; (function (global) {
-    console.log('[HEYS] 📦 heys_day_tab_impl_v1.js START, dayMealExpandState =', !!global.HEYS?.dayMealExpandState?.useMealExpandState);
 
     const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;
