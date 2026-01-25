@@ -1559,6 +1559,9 @@
             // 🔊 Звуковые эффекты
             React.createElement(SoundSettingsCard, null),
 
+            // 🚫 Скрытые продукты (игнор-лист)
+            React.createElement(DeletedProductsCard, null),
+
             // Статистика советов
             React.createElement(HEYS_AdviceStatsCard, null),
             // Настройки советов
@@ -1686,6 +1689,184 @@
             ? '✓ Звуки включены (при получении XP и достижений)'
             : 'Звуки отключены'
         )
+      )
+    );
+  }
+
+  // === 🚫 Скрытые (удалённые) продукты ===
+  function DeletedProductsCard() {
+    const [products, setProducts] = React.useState([]);
+    const [expanded, setExpanded] = React.useState(false);
+
+    // Загружаем список удалённых продуктов
+    const loadProducts = React.useCallback(() => {
+      if (window.HEYS?.deletedProducts?.getAll) {
+        const all = window.HEYS.deletedProducts.getAll();
+        setProducts(all);
+      }
+    }, []);
+
+    React.useEffect(() => {
+      loadProducts();
+      // Подписываемся на изменения
+      const handleChange = () => loadProducts();
+      window.addEventListener('heys:deleted-products-changed', handleChange);
+      return () => window.removeEventListener('heys:deleted-products-changed', handleChange);
+    }, [loadProducts]);
+
+    // Восстановить продукт (убрать из игнор-листа)
+    const handleRestore = (entry) => {
+      if (!window.HEYS?.deletedProducts?.remove) return;
+
+      if (!confirm(`Восстановить "${entry.name}" из скрытых?\n\nПродукт снова будет появляться в поиске и синхронизироваться с облаком.`)) {
+        return;
+      }
+
+      window.HEYS.deletedProducts.remove(entry.name, entry.id, entry.fingerprint);
+      loadProducts();
+
+      // Haptic feedback
+      if (window.HEYS?.dayUtils?.haptic) {
+        window.HEYS.dayUtils.haptic('light');
+      }
+    };
+
+    // Очистить весь список
+    const handleClearAll = () => {
+      if (products.length === 0) return;
+      if (!confirm(`Восстановить все ${products.length} скрытых продуктов?\n\nОни снова будут появляться в поиске.`)) {
+        return;
+      }
+      if (window.HEYS?.deletedProducts?.clear) {
+        window.HEYS.deletedProducts.clear();
+        loadProducts();
+      }
+    };
+
+    const count = products.length;
+    const ttlDays = window.HEYS?.deletedProducts?.TTL_DAYS || 90;
+
+    // Форматирование даты удаления
+    const formatDeletedDate = (timestamp) => {
+      if (!timestamp) return '';
+      const now = Date.now();
+      const daysAgo = Math.floor((now - timestamp) / (24 * 60 * 60 * 1000));
+      if (daysAgo === 0) return 'сегодня';
+      if (daysAgo === 1) return 'вчера';
+      if (daysAgo < 7) return `${daysAgo} дн. назад`;
+      if (daysAgo < 30) return `${Math.floor(daysAgo / 7)} нед. назад`;
+      return `${Math.floor(daysAgo / 30)} мес. назад`;
+    };
+
+    return React.createElement('div', { className: 'profile-field-group' },
+      React.createElement('div', {
+        className: 'profile-field-group__header',
+        style: { cursor: count > 0 ? 'pointer' : 'default' },
+        onClick: () => count > 0 && setExpanded(!expanded)
+      },
+        React.createElement('span', { className: 'profile-field-group__icon' }, '🚫'),
+        React.createElement('span', { className: 'profile-field-group__title' }, 'Скрытые продукты'),
+        count > 0 && React.createElement('span', {
+          style: {
+            marginLeft: 'auto',
+            background: 'var(--gray-200)',
+            color: 'var(--gray-600)',
+            padding: '2px 8px',
+            borderRadius: '10px',
+            fontSize: '12px',
+            fontWeight: '500'
+          }
+        }, count),
+        count > 0 && React.createElement('span', {
+          style: {
+            marginLeft: '8px',
+            color: 'var(--gray-400)',
+            fontSize: '16px',
+            transition: 'transform 0.2s',
+            transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)'
+          }
+        }, '▼')
+      ),
+      React.createElement('div', { style: { marginTop: '8px' } },
+        count === 0
+          ? React.createElement('div', {
+            className: 'muted',
+            style: { fontSize: '13px' }
+          }, '✓ Нет скрытых продуктов')
+          : React.createElement(React.Fragment, null,
+            React.createElement('div', {
+              className: 'muted',
+              style: { fontSize: '13px', marginBottom: '8px' }
+            }, `Продукты, которые вы удалили. Они не будут восстанавливаться из облака. Автоочистка через ${ttlDays} дней.`),
+            expanded && React.createElement('div', {
+              style: {
+                maxHeight: '200px',
+                overflowY: 'auto',
+                marginBottom: '8px',
+                borderRadius: '8px',
+                border: '1px solid var(--gray-200)'
+              }
+            },
+              products.map((entry, i) =>
+                React.createElement('div', {
+                  key: entry.name + i,
+                  style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    borderBottom: i < products.length - 1 ? '1px solid var(--gray-100)' : 'none',
+                    background: i % 2 === 0 ? 'var(--gray-50)' : 'white'
+                  }
+                },
+                  React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+                    React.createElement('div', {
+                      style: {
+                        fontSize: '14px',
+                        color: 'var(--gray-700)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }
+                    }, entry.name),
+                    React.createElement('div', {
+                      style: { fontSize: '11px', color: 'var(--gray-400)' }
+                    }, `Удалён ${formatDeletedDate(entry.deletedAt)}`)
+                  ),
+                  React.createElement('button', {
+                    style: {
+                      background: 'var(--green-50)',
+                      border: '1px solid var(--green-200)',
+                      color: 'var(--green-600)',
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      marginLeft: '8px',
+                      whiteSpace: 'nowrap'
+                    },
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      handleRestore(entry);
+                    }
+                  }, '↩ Вернуть')
+                )
+              )
+            ),
+            expanded && count > 1 && React.createElement('button', {
+              style: {
+                width: '100%',
+                background: 'var(--gray-100)',
+                border: '1px solid var(--gray-200)',
+                color: 'var(--gray-600)',
+                padding: '8px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                cursor: 'pointer'
+              },
+              onClick: handleClearAll
+            }, `↩ Восстановить все (${count})`)
+          )
       )
     );
   }

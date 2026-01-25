@@ -763,6 +763,27 @@
     };
 
     /**
+     * 🆕 v4.8.0: Check if product is in deleted products ignore list.
+     * Prevents "zombie" products from resurrecting via cloud sync.
+     * @param {Object} p
+     * @returns {boolean}
+     */
+    const isDeletedProduct = (p) => {
+      if (!p) return false;
+      // Используем HEYS.deletedProducts API если доступен
+      if (global.HEYS?.deletedProducts?.isProductDeleted) {
+        return global.HEYS.deletedProducts.isProductDeleted(p);
+      }
+      // Fallback: прямая проверка
+      if (global.HEYS?.deletedProducts?.isDeleted) {
+        return global.HEYS.deletedProducts.isDeleted(p.name) ||
+          global.HEYS.deletedProducts.isDeleted(p.id) ||
+          global.HEYS.deletedProducts.isDeleted(p.fingerprint);
+      }
+      return false;
+    };
+
+    /**
      * Calculate data completeness score for product conflict resolution.
      * @param {Object} p
      * @returns {number}
@@ -802,6 +823,28 @@
     };
 
     // ═══════════════════════════════════════════════════════════════
+    // ЭТАП 0.5: 🆕 Фильтрация удалённых продуктов (v4.8.0)
+    // ═══════════════════════════════════════════════════════════════
+
+    let deletedFiltered = 0;
+    const filterDeleted = (arr, source) => {
+      return arr.filter(p => {
+        if (isDeletedProduct(p)) {
+          deletedFiltered++;
+          return false;
+        }
+        return true;
+      });
+    };
+
+    const localFiltered = filterDeleted(local, 'local');
+    const remoteFiltered = filterDeleted(remote, 'remote');
+
+    if (deletedFiltered > 0) {
+      logCritical(`🚫 [MERGE] Filtered out ${deletedFiltered} deleted product(s) from ignore list`);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // ЭТАП 1: Дедупликация ВНУТРИ каждого массива (детектим legacy дубли)
     // ═══════════════════════════════════════════════════════════════
 
@@ -838,8 +881,8 @@
       return Array.from(seen.values());
     };
 
-    const localDeduped = dedupeArray(local, 'local');
-    const remoteDeduped = dedupeArray(remote, 'remote');
+    const localDeduped = dedupeArray(localFiltered, 'local');
+    const remoteDeduped = dedupeArray(remoteFiltered, 'remote');
 
     // Если одна из сторон пуста — возвращаем другую
     if (localDeduped.length === 0) return remoteDeduped;
@@ -4325,6 +4368,44 @@
               console.warn('[SHARED PRODUCTS] Pre-load error:', e);
             });
           }, 1500); // Задержка 1.5 сек — после основных данных
+        }
+
+        // 🆕 v4.8.0: Синхронизация игнор-листа удалённых продуктов с облаком
+        // Это предотвращает "воскрешение" удалённых продуктов на других устройствах
+        if (global.HEYS?.deletedProducts?.exportForSync) {
+          const deletedListKey = `heys_${client_id}_deleted_products`;
+          try {
+            // Пробуем загрузить из облака
+            const { data: cloudDeleted, error: deletedError } = await YandexAPI.from('client_kv_store')
+              .select('v')
+              .eq('client_id', client_id)
+              .eq('k', deletedListKey)
+              .single();
+
+            if (!deletedError && cloudDeleted?.v) {
+              // Мержим облачные с локальными
+              const imported = global.HEYS.deletedProducts.importFromSync(cloudDeleted.v);
+              if (imported > 0) {
+                logCritical(`☁️ [DELETED SYNC] Merged ${imported} deleted products from cloud`);
+              }
+            }
+
+            // Отправляем локальный список в облако
+            const localExport = global.HEYS.deletedProducts.exportForSync();
+            if (Object.keys(localExport.entries).length > 0) {
+              const upsertObj = {
+                client_id: client_id,
+                k: deletedListKey,
+                v: localExport,
+                updated_at: new Date().toISOString()
+              };
+              clientUpsertQueue.push(upsertObj);
+              scheduleClientPush();
+              logCritical(`☁️ [DELETED SYNC] Queued ${Object.keys(localExport.entries).length / 2} deleted products for cloud sync`);
+            }
+          } catch (e) {
+            console.warn('[DELETED SYNC] Error:', e);
+          }
         }
 
         // Уведомляем приложение о завершении синхронизации (для обновления stepsGoal и т.д.)
