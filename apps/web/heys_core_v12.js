@@ -3580,11 +3580,6 @@
         }
       }
 
-      // Логируем для диагностики (throttled)
-      if (!opts.skipNotify) {
-        console.log(`[PRODUCTS.setAll] ${opts.allowShrink ? '⚠️ FORCE' : '✅'} Сохраняю ${newLen} продуктов, source: ${opts.source || 'unknown'}`);
-      }
-
       if (HEYS.store && HEYS.store.set) {
         HEYS.store.set('heys_products', arr);
       } else if (HEYS.utils && HEYS.utils.lsSet) {
@@ -3740,7 +3735,6 @@
       if (removed > 0) {
         // allowShrink: true — дедупликация ДОЛЖНА уменьшать количество
         HEYS.products.setAll(unique, { source: 'deduplicate', allowShrink: true });
-        console.log(`[PRODUCTS.deduplicate] Удалено ${removed} дубликатов: ${original} → ${unique.length}`);
       }
 
       return { original, deduplicated: unique.length, removed };

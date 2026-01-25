@@ -210,12 +210,6 @@
                     return;
                 }
 
-                console.log('[RECOVERY] ✅ База готова для восстановления', {
-                    products: currentProducts.length,
-                    sharedCache: cachedShared.length,
-                    attempt: recoveryAttempts
-                });
-
                 recoveryScheduled = true;
                 if (clientId) recoveryRunCache.add(clientId);
                 const isFirstLoad = !syncedClientsCache.has(clientId);
