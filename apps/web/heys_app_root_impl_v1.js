@@ -363,6 +363,7 @@
             const {
                 backupAllKeys,
                 restoreFromBackup,
+                restoreFromBackupFile,
                 formatBackupTime,
                 backupActions,
             } = backupState;
@@ -404,6 +405,7 @@
                 clientId,
                 backupAllKeys,
                 restoreFromBackup,
+                restoreFromBackupFile,
                 backupMeta,
             });
 

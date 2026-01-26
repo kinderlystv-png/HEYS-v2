@@ -912,6 +912,12 @@
             try {
                 if (cloud && typeof cloud.signOut === 'function') await cloud.signOut();
             } catch (_) { }
+            if (window.HEYS) {
+                window.HEYS.currentClientId = null;
+                if (window.HEYS.store?.flushMemory) {
+                    window.HEYS.store.flushMemory();
+                }
+            }
             // Важно: при выходе из аккаунта куратора сбрасываем “client mode”,
             // иначе на следующем запуске может открыться ConsentGate по старому clientId.
             removeGlobalValue('heys_client_current');

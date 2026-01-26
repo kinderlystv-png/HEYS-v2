@@ -256,6 +256,11 @@
       // 🔐 Сохраняем session_token для безопасных RPC вызовов
       setSessionToken(sessionToken);
 
+      // 🔐 Сохраняем PIN-клиента заранее (на случай сбоя switchClient)
+      try {
+        localStorage.setItem('heys_pin_auth_client', clientId);
+      } catch (_) { }
+
       // 💡 Сохраняем имя клиента для предзаполнения профиля
       // ⚠️ v1.15 FIX: Используем localStorage.setItem напрямую (без namespace),
       // т.к. heys_profile_step_v1.js читает через localStorage.getItem('heys_pending_client_name')
@@ -398,7 +403,12 @@
       console.warn('[HEYS Auth] setSessionToken: empty token, ignoring');
       return;
     }
-    U.lsSet('heys_session_token', token);
+    try {
+      localStorage.setItem('heys_session_token', JSON.stringify(token));
+    } catch (_) { }
+    try {
+      U.lsSet('heys_session_token', token);
+    } catch (_) { }
   }
 
   /**

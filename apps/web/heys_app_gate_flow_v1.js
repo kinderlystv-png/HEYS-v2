@@ -665,6 +665,12 @@
                     // Выход из PIN auth
                     removeGlobalValue('heys_pin_auth_client');
                     window.HEYS?.cloud?._setPinAuthMode?.(false, null);
+                    if (window.HEYS) {
+                        window.HEYS.currentClientId = null;
+                        if (window.HEYS.store?.flushMemory) {
+                            window.HEYS.store.flushMemory();
+                        }
+                    }
                     setClientId(null);
                     window.location.reload();
                 }

@@ -2445,6 +2445,12 @@
     if (client) client.auth.signOut({ scope: 'local' });
     user = null;
     status = 'offline';
+    if (global.HEYS) {
+      global.HEYS.currentClientId = null;
+      if (global.HEYS.store?.flushMemory) {
+        global.HEYS.store.flushMemory();
+      }
+    }
     clearNamespace();
     // 🔄 Очистка auth токена — предотвращает 400 Bad Request при следующем запуске
     try {
@@ -3103,12 +3109,16 @@
         logCritical(`❌ [YANDEX SYNC] Ошибка: ${error}`);
         return { success: false, error: error };
       }
+      console.warn('[YANDEX SYNC] getAllKV result', {
+        clientId: clientId?.slice(0, 8),
+        rows: Array.isArray(data) ? data.length : 'n/a'
+      });
 
       // Записываем данные в localStorage
       muteMirror = true;
       let loadedCount = 0;
 
-      // Сначала очищаем старые данные этого клиента (если есть)
+      // Считаем текущие ключи клиента, чтобы безопасно решить очистку
       const prefix = `heys_${clientId}_`;
       const keysToRemove = [];
       for (let i = 0; i < ls.length; i++) {
@@ -3117,7 +3127,21 @@
           keysToRemove.push(key);
         }
       }
-      keysToRemove.forEach(key => ls.removeItem(key));
+
+      // Собираем список ключей, пришедших из облака (нормализованные)
+      const remoteKeys = new Set((data || []).map(row => row?.k).filter(Boolean));
+      const hasRemoteProfile = remoteKeys.has('heys_profile');
+      console.warn('[YANDEX SYNC] remote keys summary', {
+        hasRemoteProfile,
+        remoteKeysCount: remoteKeys.size
+      });
+
+      // 🛡️ SAFE MODE: НЕ чистим все локальные ключи.
+      // Перезаписываем только те, что пришли из облака.
+      const hasRemoteData = Array.isArray(data) && data.length > 0;
+      if (!hasRemoteData) {
+        logCritical(`⚠️ [YANDEX SYNC] Remote empty, local keys preserved (${keysToRemove.length})`);
+      }
 
       // Записываем новые данные и собираем ключи для инвалидации кэша
       const syncedKeys = [];
@@ -3148,6 +3172,24 @@
 
       muteMirror = false;
 
+      // 🧹 Если профиль уже заполнен — очищаем флаг регистрации
+      try {
+        const profileKey = `heys_${clientId}_profile`;
+        const rawProfile = ls.getItem(profileKey);
+        console.warn('[YANDEX SYNC] profile check', {
+          profileKey,
+          hasProfile: !!rawProfile,
+          loadedCount
+        });
+        if (rawProfile) {
+          const parsedProfile = JSON.parse(rawProfile);
+          if (parsedProfile?.profileCompleted === true) {
+            localStorage.removeItem('heys_registration_in_progress');
+            console.warn('[YANDEX SYNC] registrationInProgress cleared (profileCompleted)');
+          }
+        }
+      } catch (_) { }
+
       // 🔄 CRITICAL: Инвалидируем memory cache для всех синхронизированных ключей
       // Без этого Store.get() будет возвращать устаревшие данные из памяти
       if (global.HEYS && global.HEYS.store && global.HEYS.store.invalidate) {
@@ -3160,6 +3202,21 @@
       // Обновляем timestamp последней синхронизации
       cloud._lastClientSync = { clientId, ts: Date.now(), viaYandex: true };
 
+      // 🔐 Убеждаемся что currentClientId выставлен (важно для scoped store.get)
+      try {
+        if (global.HEYS) {
+          if (!global.HEYS.currentClientId || global.HEYS.currentClientId !== clientId) {
+            global.HEYS.currentClientId = clientId;
+            console.warn('[YANDEX SYNC] currentClientId set', clientId?.slice(0, 8));
+          }
+        }
+        const storedCurrent = localStorage.getItem('heys_client_current');
+        if (!storedCurrent) {
+          localStorage.setItem('heys_client_current', JSON.stringify(clientId));
+          console.warn('[YANDEX SYNC] heys_client_current set');
+        }
+      } catch (_) { }
+
       // Помечаем initial sync как завершённый и отменяем failsafe
       if (!initialSyncCompleted) {
         initialSyncCompleted = true;
@@ -3167,6 +3224,10 @@
       }
 
       logCritical(`✅ [YANDEX SYNC] Загружено ${loadedCount} ключей для клиента ${clientId.slice(0, 8)}`);
+      console.warn('[YANDEX SYNC] done', {
+        clientId: clientId?.slice(0, 8),
+        loadedCount
+      });
 
       // Уведомляем UI о завершении
       if (typeof window !== 'undefined' && window.dispatchEvent) {
@@ -5623,42 +5684,11 @@
       }
     }
 
-    // 2. Очищаем данные старого клиента из localStorage (кроме auth)
-    if (oldClientId) {
-      const keysToRemove = [];
-      for (let i = 0; i < global.localStorage.length; i++) {
-        const key = global.localStorage.key(i);
-        if (key && key.includes(oldClientId) && !key.includes('_auth')) {
-          // Не удаляем глобальные ключи
-          if (!key.includes('heys_client_current') && !key.includes('heys_user')) {
-            keysToRemove.push(key);
-          }
-        }
-      }
-      keysToRemove.forEach(k => global.localStorage.removeItem(k));
-      log(`🧹 Очищено ${keysToRemove.length} ключей старого клиента`);
-    }
-
-    // 3. Также удаляем дубликаты и данные других клиентов
-    cleanupDuplicateKeys();
-
-    // 4. Удаляем продукты ВСЕХ других клиентов (не только старого)
-    const otherProductKeys = [];
-    for (let i = 0; i < global.localStorage.length; i++) {
-      const key = global.localStorage.key(i);
-      if (key && key.includes('_products') && !key.includes(newClientId)) {
-        otherProductKeys.push(key);
-      }
-    }
-    otherProductKeys.forEach(k => global.localStorage.removeItem(k));
-    if (otherProductKeys.length > 0) {
-      log(`🧹 Удалено ${otherProductKeys.length} ключей продуктов других клиентов`);
-    }
-
-    // 5. Сохраняем новый clientId
+    // 2. Сохраняем новый clientId ДО синхронизации (иначе bootstrapClientSync может пропустить)
+    //    Но не очищаем старые данные, пока не убедимся что sync прошёл успешно.
     global.localStorage.setItem('heys_client_current', JSON.stringify(newClientId));
 
-    // 6. Синхронизируем данные нового клиента из облака
+    // 3. Синхронизируем данные нового клиента из облака
     log('📥 Загружаем данные нового клиента...');
     try {
       // Проверяем есть ли сессия куратора (токен в localStorage)
@@ -5674,6 +5704,12 @@
 
       // 🔍 DEBUG: Логируем какой путь выбран
       log(`🔍 [switchClient] user=${!!user}, hasCuratorSession=${hasCuratorSession}, → ${(user || hasCuratorSession) ? 'CURATOR path' : 'PIN path'}`);
+      try {
+        const hasSessionToken = typeof HEYS !== 'undefined' && HEYS.auth?.getSessionToken
+          ? !!HEYS.auth.getSessionToken()
+          : !!localStorage.getItem('heys_session_token');
+        logCritical(`🔍 [switchClient] hasSessionToken=${hasSessionToken}, pinAuthClient=${!!localStorage.getItem('heys_pin_auth_client')}`);
+      } catch (_) { }
 
       // Если есть Supabase user (куратор) — используем обычную синхронизацию
       // Если нет (вход по PIN) — используем RPC и включаем RPC-режим для сохранений
@@ -5708,6 +5744,38 @@
           throw new Error(rpcResult.error || 'RPC sync failed');
         }
       }
+      // ✅ Sync завершён — теперь безопасно чистить старые данные
+      if (oldClientId && oldClientId !== newClientId) {
+        const keysToRemove = [];
+        for (let i = 0; i < global.localStorage.length; i++) {
+          const key = global.localStorage.key(i);
+          if (key && key.includes(oldClientId) && !key.includes('_auth')) {
+            // Не удаляем глобальные ключи
+            if (!key.includes('heys_client_current') && !key.includes('heys_user')) {
+              keysToRemove.push(key);
+            }
+          }
+        }
+        keysToRemove.forEach(k => global.localStorage.removeItem(k));
+        log(`🧹 Очищено ${keysToRemove.length} ключей старого клиента`);
+      }
+
+      // Также удаляем дубликаты и данные других клиентов
+      cleanupDuplicateKeys();
+
+      // Удаляем продукты ВСЕХ других клиентов (не только старого)
+      const otherProductKeys = [];
+      for (let i = 0; i < global.localStorage.length; i++) {
+        const key = global.localStorage.key(i);
+        if (key && key.includes('_products') && !key.includes(newClientId)) {
+          otherProductKeys.push(key);
+        }
+      }
+      otherProductKeys.forEach(k => global.localStorage.removeItem(k));
+      if (otherProductKeys.length > 0) {
+        log(`🧹 Удалено ${otherProductKeys.length} ключей продуктов других клиентов`);
+      }
+
       log('✅ Переключение завершено успешно');
 
       // Показываем итоговый размер storage
@@ -5722,6 +5790,12 @@
       return true;
     } catch (e) {
       logCritical('❌ Ошибка загрузки данных нового клиента:', e);
+      // 🔁 Откатываем client_current на старого клиента, чтобы не оставаться в пустом состоянии
+      if (oldClientId) {
+        try {
+          global.localStorage.setItem('heys_client_current', JSON.stringify(oldClientId));
+        } catch (_) { }
+      }
       return false;
     }
   };
@@ -5747,6 +5821,10 @@
   // 🔐 Beforeunload: предупреждение если есть несохранённые данные
   if (typeof global.addEventListener === 'function') {
     global.addEventListener('beforeunload', (e) => {
+      const activeClientId = global.HEYS?.currentClientId || cloud.getCurrentClientId?.();
+      if (global.HEYS?._isLoggingOut || !activeClientId) {
+        return;
+      }
       if (clientUpsertQueue && clientUpsertQueue.length > 0) {
         logCritical(`⚠️ [BEFOREUNLOAD] ${clientUpsertQueue.length} unsaved items in queue!`);
         // Сохраняем в localStorage (персистентность уже должна быть, но на всякий случай)
@@ -5902,13 +5980,10 @@
    * @returns {Promise<{data: Array, error: any}>}
    */
   cloud.searchSharedProducts = async function (query, options = {}) {
-    console.log('[SHARED SEARCH] Called with query:', query, 'user:', !!user);
-
     const { limit = 50, excludeBlocklist = true, fingerprint = null } = options;
     const normQuery = (HEYS?.models?.normalizeProductName
       ? HEYS.models.normalizeProductName(query)
       : (query || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
-    console.log('[SHARED SEARCH] Normalized query:', normQuery);
 
     try {
       // Внутренний helper: выполнить запрос по name_norm через ilike
@@ -5944,7 +6019,6 @@
         order: 'created_at.desc',
         limit
       }));
-      console.log('[SHARED SEARCH] Query result:', data?.length, 'error:', error);
 
       if (error) {
         err('[SHARED PRODUCTS] Search error:', error);
@@ -6003,12 +6077,6 @@
    * @returns {Promise<{data: any, error: any, status: string}>}
    */
   cloud.publishToShared = async function (product) {
-    console.log('[SHARED] 📤 publishToShared called:', {
-      hasUser: !!user,
-      userId: user?.id,
-      productName: product?.name
-    });
-
     if (!user) {
       try {
         const token = localStorage.getItem('heys_curator_session');
@@ -6024,16 +6092,13 @@
     }
 
     if (!user) {
-      console.log('[SHARED] ❌ Not authenticated:', { user: !!user });
       return { data: null, error: 'Not authenticated', status: 'error' };
     }
 
     try {
       // Вычисляем fingerprint
-      console.log('[SHARED] 🔑 Computing fingerprint...');
       const fingerprint = await HEYS.models.computeProductFingerprint(product);
       const name_norm = HEYS.models.normalizeProductName(product.name);
-      console.log('[SHARED] Fingerprint:', fingerprint, 'Name norm:', name_norm);
 
       // 🔐 P3: Для куратора используем user.id напрямую (JWT auth)
       // Куратор НЕ имеет session_token — он авторизован через JWT
@@ -6043,8 +6108,6 @@
         console.error('[SHARED] ❌ No curator ID (user.id)');
         return { data: null, error: 'Not authenticated as curator', status: 'error' };
       }
-
-      console.log('[SHARED] 👤 Using curator ID:', curatorId);
 
       // 🔐 P3: Используем RPC вместо REST (REST теперь read-only)
       const productData = {
@@ -6064,35 +6127,27 @@
         description: product.description || null
       };
 
-      console.log('[SHARED] 📝 Publishing via RPC:', productData.name);
-
       const { data, error } = await YandexAPI.rpc('publish_shared_product_by_curator', {
         p_curator_id: curatorId,
         p_product_data: productData
       });
 
-      console.log('[SHARED] RPC result:', { data, error });
-
       if (error) {
-        console.error('[SHARED] ❌ Publish error:', error);
         err('[SHARED PRODUCTS] Publish error:', error);
         return { data: null, error, status: 'error' };
       }
 
       // Обрабатываем результат RPC
       if (data?.success === false) {
-        console.error('[SHARED] ❌ RPC returned error:', data.error);
         return { data: null, error: data.error, status: 'error', message: data.message };
       }
 
       const status = data?.status || 'published';
-      console.log('[SHARED] ✅ Result:', status, product.name);
       log('[SHARED PRODUCTS] Result:', status, product.name);
 
       // 🔧 v3.22.0: Инвалидируем кэш shared products после успешной публикации
       if (status === 'published') {
         _sharedProductsCacheTime = 0;
-        console.log('[SHARED] 🔄 Cache invalidated after publish');
 
         // Добавляем продукт в локальный кэш немедленно (чтобы не ждать re-fetch)
         const newSharedProduct = {
@@ -6101,7 +6156,6 @@
           created_at: new Date().toISOString()
         };
         _sharedProductsCache = [newSharedProduct, ..._sharedProductsCache];
-        console.log('[SHARED] ✅ Added to local cache:', product.name);
       }
 
       return {
@@ -6111,7 +6165,6 @@
         message: data?.message
       };
     } catch (e) {
-      console.error('[SHARED] ❌ Unexpected error:', e);
       err('[SHARED PRODUCTS] Unexpected error:', e);
       return { data: null, error: e.message, status: 'error' };
     }
@@ -6123,10 +6176,7 @@
    * @returns {Promise<{success: boolean, error: any}>}
    */
   cloud.deleteSharedProduct = async function (productId) {
-    console.log('[SHARED] 🗑️ deleteSharedProduct called:', productId);
-
     if (!user) {
-      console.log('[SHARED] ❌ Not authenticated');
       return { success: false, error: 'Not authenticated' };
     }
 
@@ -6141,7 +6191,6 @@
         return { success: false, error: error.message };
       }
 
-      console.log('[SHARED] ✅ Deleted from shared:', productId);
       return { success: true, error: null };
     } catch (e) {
       console.error('[SHARED] ❌ Unexpected error:', e);

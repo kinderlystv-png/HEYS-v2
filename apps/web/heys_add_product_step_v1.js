@@ -1210,8 +1210,15 @@
       }
     }, []);
 
-    const toggleHidden = useCallback((e, productId) => {
+    const toggleHidden = useCallback((e, productId, productName, isHiddenNow) => {
       e.stopPropagation();
+
+      const name = productName || 'продукт';
+      if (!isHiddenNow) {
+        const confirmed = confirm(`Убрать "${name}" из быстрых продуктов?\n\nОн исчезнет из списка. Вернуть можно в профиле → Скрытые продукты.`);
+        if (!confirmed) return;
+      }
+
       if (HEYS.store?.toggleHiddenProduct) {
         HEYS.store.toggleHiddenProduct(productId);
         setHiddenProducts(HEYS.store.getHiddenProducts());
@@ -1481,7 +1488,7 @@
         React.createElement('div', { className: 'aps-product-actions' },
           showHide && !isFromShared && React.createElement('button', {
             className: 'aps-hide-btn' + (isHidden ? ' aps-hide-btn--active' : ''),
-            onClick: (e) => toggleHidden(e, pid),
+            onClick: (e) => toggleHidden(e, pid, product.name, isHidden),
             title: isHidden ? 'Вернуть в список' : 'Скрыть из списка'
           }, '✕'),
           // Кнопка избранного — только для личных

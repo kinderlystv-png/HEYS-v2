@@ -185,15 +185,9 @@
     // Отслеживание продуктов, для которых данные берутся из штампа вместо базы
     const orphanProductsMap = new Map(); // name => { name, usedInDays: Set, firstSeen }
     const orphanLoggedRecently = new Map(); // name => timestamp (throttle логов)
-    const recoveryLogState = { lastTs: 0 };
-    const shouldLogRecovery = (force = false) => {
-        const debugEnabled = !!(HEYS && HEYS.debug && HEYS.debug.recovery);
-        if (debugEnabled || force) return true;
-        const now = Date.now();
-        const minInterval = 5000;
-        if (now - recoveryLogState.lastTs < minInterval) return false;
-        recoveryLogState.lastTs = now;
-        return true;
+    const shouldLogRecovery = () => {
+        // 🔇 v4.8.2: Recovery логи только при явном HEYS.debug.recovery = true
+        return !!(HEYS && HEYS.debug && HEYS.debug.recovery);
     };
     const logRecovery = (level, ...args) => {
         if (!shouldLogRecovery()) return;

@@ -121,11 +121,43 @@
                 setClientId(currentClient);
                 window.HEYS = window.HEYS || {};
                 window.HEYS.currentClientId = currentClient;
+                console.warn('[AuthInit] restored curator currentClientId', currentClient?.slice(0, 8));
             } else if (!skipPinAuthRestore && pinAuthClient) {
                 // 🔐 PIN auth: клиент вошёл по телефону+PIN — устанавливаем его clientId
                 setClientId(pinAuthClient);
                 window.HEYS = window.HEYS || {};
                 window.HEYS.currentClientId = pinAuthClient;
+                console.warn('[AuthInit] restored PIN currentClientId', pinAuthClient?.slice(0, 8));
+
+                // 🛠️ Миграция legacy ключей без clientId → scoped (PIN flow)
+                try {
+                    const clientId = pinAuthClient;
+                    const keysToMigrate = ['heys_profile', 'heys_products', 'heys_norms', 'heys_hr_zones', 'heys_game'];
+                    keysToMigrate.forEach((baseKey) => {
+                        const scopedKey = `heys_${clientId}_${baseKey.replace(/^heys_/, '')}`;
+                        const hasScoped = !!localStorage.getItem(scopedKey);
+                        if (hasScoped) return;
+                        const rawLegacy = localStorage.getItem(baseKey);
+                        if (!rawLegacy) return;
+                        localStorage.setItem(scopedKey, rawLegacy);
+                        if (window.HEYS?.store?.invalidate) {
+                            window.HEYS.store.invalidate(baseKey);
+                            window.HEYS.store.invalidate(scopedKey);
+                        }
+                        console.warn('[AuthInit] migrated legacy key to scoped', { baseKey, scopedKey });
+                    });
+
+                    // Если профиль мигрирован — очищаем флаг регистрации
+                    const scopedProfileKey = `heys_${clientId}_profile`;
+                    const rawProfile = localStorage.getItem(scopedProfileKey);
+                    if (rawProfile) {
+                        const prof = tryParseStoredValue(rawProfile, null);
+                        if (prof?.profileCompleted || prof?.firstName || prof?.birthDate) {
+                            localStorage.removeItem('heys_registration_in_progress');
+                            console.warn('[AuthInit] registrationInProgress cleared (migrated profile)');
+                        }
+                    }
+                } catch (_) { }
             }
 
             setSyncVer((v) => v + 1);

@@ -197,13 +197,6 @@
 
                 if (!Array.isArray(currentProducts) || currentProducts.length < minReady) {
                     recoveryAttempts += 1;
-                    if (recoveryAttempts === 1) {
-                        console.log('[RECOVERY] ⏳ Отложено: база продуктов ещё не готова', {
-                            products: Array.isArray(currentProducts) ? currentProducts.length : 0,
-                            sharedCache: cachedShared.length,
-                            attempt: recoveryAttempts
-                        });
-                    }
                     if (recoveryAttempts <= MAX_RECOVERY_ATTEMPTS) {
                         setTimeout(() => runOrphanRecovery(options), RECOVERY_RETRY_MS);
                     }

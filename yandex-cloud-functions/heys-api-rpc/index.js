@@ -22,6 +22,20 @@ function infoLog(...args) {
   if (IS_DEBUG || LOG_LEVEL === 'info') console.log(...args);
 }
 
+function normalizeEncryptionKey(rawKey) {
+  if (!rawKey) return null;
+  const key = String(rawKey).trim();
+  if (!key) return null;
+
+  const isHex = /^[0-9a-fA-F]+$/.test(key);
+  const hasEvenLength = key.length % 2 === 0;
+  if (isHex && hasEvenLength && key.length >= 32) {
+    return key;
+  }
+
+  return Buffer.from(key, 'utf8').toString('hex');
+}
+
 // 🔐 В production логируем только факт старта, без деталей конфигурации
 infoLog('[RPC Init] Starting... LOG_LEVEL=' + LOG_LEVEL);
 debugLog('[RPC Init] Debug mode enabled (never enable in production!)');
@@ -418,8 +432,81 @@ module.exports.handler = async function (event, context) {
     // 🔐 P2: Устанавливаем ключ шифрования для health_data (если настроен)
     const encryptionKey = process.env.HEYS_ENCRYPTION_KEY;
     if (encryptionKey) {
-      // SET не поддерживает параметры, используем format с экранированием
-      await client.query(`SET heys.encryption_key = '${encryptionKey.replace(/'/g, "''")}'`);
+      const normalizedKey = normalizeEncryptionKey(encryptionKey);
+      if (normalizedKey) {
+        // SET не поддерживает параметры, используем format с экранированием
+        await client.query(`SET heys.encryption_key = '${normalizedKey.replace(/'/g, "''")}'`);
+      }
+    }
+
+    // 🛟 SAFE FALLBACK: get_client_data_by_session
+    // Причина: в некоторых прод-данных возможны дубликаты по ключу (k),
+    // что ломает jsonb_object_agg внутри функции и даёт 500.
+    // Здесь собираем данные с DISTINCT ON (k) по updated_at.
+    if (fnName === 'get_client_data_by_session') {
+      const sessionToken = params.p_session_token;
+      if (!sessionToken) {
+        client.release();
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: 'Missing p_session_token' })
+        };
+      }
+
+      // 1) Валидируем сессию
+      const sessionRes = await client.query(
+        `select client_id
+         from client_sessions
+         where token_hash = digest($1, 'sha256')
+           and expires_at > now()
+           and revoked_at is null`,
+        [sessionToken]
+      );
+
+      const clientId = sessionRes.rows?.[0]?.client_id;
+      if (!clientId) {
+        client.release();
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: 'invalid_session' })
+        };
+      }
+
+      // 2) Собираем KV с защитой от дублей
+      const dataRes = await client.query(
+        `select jsonb_object_agg(
+            k,
+            case
+              when key_version is not null and v_encrypted is not null
+                then decrypt_health_data(v_encrypted)
+              else v
+            end
+          ) as payload
+         from (
+           select distinct on (k)
+             k, v, v_encrypted, key_version, updated_at
+           from client_kv_store
+           where client_id = $1
+           order by k, updated_at desc nulls last
+         ) t`,
+        [clientId]
+      );
+
+      const payload = dataRes.rows?.[0]?.payload || {};
+
+      client.release();
+
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: true,
+          client_id: clientId,
+          data: payload
+        })
+      };
     }
 
     // Формируем вызов RPC функции
@@ -433,7 +520,11 @@ module.exports.handler = async function (event, context) {
         'p_ip': '::text',
         'p_user_agent': '::text'
       },
-      // 🔐 P2: batch KV функции требуют ::jsonb для массива items
+      // 🔐 P2: KV функции требуют явные типы
+      'get_client_kv_by_session': {
+        'p_session_token': '::text',
+        'p_key': '::text'
+      },
       'batch_upsert_client_kv_by_session': {
         'p_session_token': '::text',
         'p_items': '::jsonb'
@@ -442,6 +533,13 @@ module.exports.handler = async function (event, context) {
         'p_session_token': '::text',
         'p_key': '::text',
         'p_value': '::jsonb'
+      },
+      'delete_client_kv_by_session': {
+        'p_session_token': '::text',
+        'p_key': '::text'
+      },
+      'get_client_data_by_session': {
+        'p_session_token': '::text'
       },
       'create_pending_product_by_session': {
         'p_session_token': '::text',

@@ -48,7 +48,27 @@
             return cloudSignIn(email, pwd, { rememberMe });
         }, [cloudSignIn, email, pwd, rememberMe]);
 
-        const handleSignOut = cloudSignOut;
+        const handleSignOut = useCallback(async () => {
+            try {
+                if (window.HEYS) {
+                    window.HEYS._isLoggingOut = true;
+                }
+                if (window.HEYS?.cloud?.isPinAuthClient?.() && window.HEYS?.auth?.logout) {
+                    await window.HEYS.auth.logout();
+                }
+            } catch (e) {
+                console.warn('[HEYS] Logout failed:', e);
+            } finally {
+                try {
+                    await cloudSignOut();
+                } catch (e) {
+                    console.warn('[HEYS] Cloud signOut failed:', e);
+                }
+                if (window.HEYS) {
+                    window.HEYS._isLoggingOut = false;
+                }
+            }
+        }, [cloudSignOut]);
 
         const [clientSearch, setClientSearch] = useState(''); // Поиск клиентов
         const [showClientDropdown, setShowClientDropdown] = useState(false); // Dropdown в шапке

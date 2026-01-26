@@ -33,6 +33,8 @@
             || ((options = {}) => ({ ok: false, reason: 'no-backup-helpers', options }));
         const restoreFromBackup = backupHelpers?.restoreFromBackup
             || ((target = 'heys_products', options = {}) => ({ ok: false, reason: 'no-backup-helpers', target, options }));
+        const restoreFromBackupFile = backupHelpers?.restoreFromBackupFile
+            || (async (options = {}) => ({ ok: false, reason: 'no-backup-helpers', options }));
         const formatBackupTime = backupHelpers?.formatBackupTime || (() => '—');
 
         const useBackupActions = AppBackupActions?.useBackupActions
@@ -54,6 +56,7 @@
         return {
             backupAllKeys,
             restoreFromBackup,
+            restoreFromBackupFile,
             formatBackupTime,
             backupActions,
         };

@@ -254,12 +254,131 @@
             return { ok: restored > 0, restored };
         };
 
+        const restoreFromBackupFile = async (options = {}) => {
+            if (!clientId) {
+                if (!options.silent) HEYS.Toast?.warning('Сначала выберите клиента') || alert('Сначала выберите клиента');
+                return { ok: false, reason: 'no-client' };
+            }
+
+            const openFile = HEYS.fileSystem?.openFile;
+            if (typeof openFile !== 'function') {
+                if (!options.silent) {
+                    HEYS.Toast?.warning('Импорт недоступен в этом окружении') || alert('Импорт недоступен в этом окружении');
+                }
+                return { ok: false, reason: 'no-file-picker' };
+            }
+
+            const result = await openFile(['.json']);
+            if (!result || !result.success || result.cancelled) {
+                return { ok: false, reason: 'cancelled' };
+            }
+
+            const data = result.data;
+            if (!data || typeof data !== 'object') {
+                if (!options.silent) HEYS.Toast?.warning('Неверный формат бэкапа') || alert('Неверный формат бэкапа');
+                return { ok: false, reason: 'invalid-format' };
+            }
+
+            const dates = Array.isArray(options.dates)
+                ? options.dates
+                : options.date
+                    ? [options.date]
+                    : null;
+            const shouldOverwrite = options.overwrite !== false;
+            const restoredDates = [];
+            const skippedDates = [];
+
+            const commitDay = (dateStr, dayData) => {
+                if (!dateStr || !dayData) return;
+                const key = dateStr.startsWith('heys_dayv2_')
+                    ? dateStr
+                    : `heys_dayv2_${dateStr}`;
+                const existing = U && typeof U.lsGet === 'function' ? U.lsGet(key, null) : null;
+                if (existing && !shouldOverwrite) {
+                    skippedDates.push(dateStr);
+                    return;
+                }
+                if (U && typeof U.lsSet === 'function') {
+                    U.lsSet(key, dayData);
+                } else {
+                    try {
+                        localStorage.setItem(key, JSON.stringify(dayData));
+                    } catch (_) { }
+                    if (window.HEYS && typeof window.HEYS.saveClientKey === 'function') {
+                        try {
+                            window.HEYS.saveClientKey(key, dayData);
+                        } catch (_) { }
+                    }
+                }
+                restoredDates.push(dateStr);
+            };
+
+            if (data.days && typeof data.days === 'object' && !Array.isArray(data.days)) {
+                const available = Object.keys(data.days);
+                const targetDates = dates || available;
+                targetDates.forEach((dateStr) => {
+                    const dayData = data.days[dateStr] || data.days[`heys_dayv2_${dateStr}`];
+                    commitDay(dateStr, dayData);
+                });
+            } else if (Array.isArray(data.items)) {
+                const dayItems = data.items.filter((item) => item && typeof item.key === 'string' && item.key.startsWith('heys_dayv2_'));
+                const available = dayItems.map((item) => item.key.replace('heys_dayv2_', ''));
+                const targetDates = dates || available;
+                dayItems.forEach((item) => {
+                    const dateStr = item.key.replace('heys_dayv2_', '');
+                    if (targetDates && !targetDates.includes(dateStr)) return;
+                    commitDay(dateStr, item.data);
+                });
+            } else {
+                if (!options.silent) HEYS.Toast?.warning('В бэкапе нет данных дней') || alert('В бэкапе нет данных дней');
+                return { ok: false, reason: 'no-days' };
+            }
+
+            if (options.restoreProducts && Array.isArray(data.products) && HEYS.products?.setAll) {
+                const existing = HEYS.products.getAll?.() || [];
+                const merged = Array.isArray(existing) ? [...existing] : [];
+                let added = 0;
+                data.products.forEach((product) => {
+                    if (!product || !product.id) return;
+                    if (merged.find((p) => p.id === product.id)) return;
+                    merged.push(product);
+                    added++;
+                });
+                if (added) {
+                    HEYS.products.setAll(merged, { source: 'restore-backup-file' });
+                }
+            }
+
+            if (restoredDates.length) {
+                setSyncVer((v) => v + 1);
+                if (options.sync !== false && HEYS.cloud?.syncClient) {
+                    HEYS.cloud.syncClient(clientId).catch(() => { });
+                }
+            }
+
+            if (!options.silent) {
+                const msg = restoredDates.length
+                    ? `Восстановлены дни: ${restoredDates.length}`
+                    : 'Не найдено данных для восстановления';
+                (restoredDates.length ? HEYS.Toast?.success(msg) : HEYS.Toast?.warning(msg)) || alert(msg);
+            }
+
+            return {
+                ok: restoredDates.length > 0,
+                restored: restoredDates.length,
+                restoredDates,
+                skippedDates,
+                filename: result.filename,
+            };
+        };
+
         return {
             CORE_BACKUP_KEYS,
             downloadBackupFile,
             listDayKeysForClient,
             backupAllKeys,
             restoreFromBackup,
+            restoreFromBackupFile,
             formatBackupTime,
         };
     };

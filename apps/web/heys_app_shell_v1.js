@@ -348,8 +348,13 @@
                                             fontSize: 14
                                         },
                                         onClick: () => {
+                                            if (window.HEYS) {
+                                                window.HEYS.currentClientId = null;
+                                                if (window.HEYS.store?.flushMemory) {
+                                                    window.HEYS.store.flushMemory();
+                                                }
+                                            }
                                             removeGlobalValue('heys_client_current');
-                                            window.HEYS.currentClientId = null;
                                             setClientId('');
                                             window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: null } }));
                                             setShowClientDropdown(false);
@@ -770,7 +775,8 @@
     }
 
     function AppShell(props) {
-        const { hideContent } = props;
+        const { hideContent, clientId } = props;
+        const shouldRenderContent = !!clientId;
 
         return React.createElement(
             'div',
@@ -778,10 +784,10 @@
                 className: 'wrap',
                 style: hideContent ? { display: 'none' } : undefined
             },
-            React.createElement(AppHeader, props),
-            React.createElement(AppTabsNav, props),
-            React.createElement(AppTabContent, props),
-            React.createElement(
+            shouldRenderContent && React.createElement(AppHeader, props),
+            shouldRenderContent && React.createElement(AppTabsNav, props),
+            shouldRenderContent && React.createElement(AppTabContent, props),
+            shouldRenderContent && React.createElement(
                 'div',
                 { className: 'text-center text-[11px] text-slate-400 pb-6 pt-2' },
                 'Версия ' + (HEYS.version || window.APP_VERSION || 'dev')

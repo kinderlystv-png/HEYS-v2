@@ -10,6 +10,7 @@
         clientId,
         backupAllKeys,
         restoreFromBackup,
+        restoreFromBackupFile,
         backupMeta,
     }) {
         const { useEffect } = React;
@@ -38,7 +39,8 @@
             window.HEYS.backupManager = window.HEYS.backupManager || {};
             window.HEYS.backupManager.backupAll = backupAllKeys;
             window.HEYS.backupManager.restore = restoreFromBackup;
+            window.HEYS.backupManager.restoreFromFile = restoreFromBackupFile;
             window.HEYS.backupManager.getLastBackupMeta = () => backupMeta;
-        }, [backupAllKeys, restoreFromBackup, backupMeta]);
+        }, [backupAllKeys, restoreFromBackup, restoreFromBackupFile, backupMeta]);
     };
 })();

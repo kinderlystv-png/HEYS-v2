@@ -10,8 +10,8 @@
 | ------------------------------------ | ------------------------------------------------- |
 | **`console.log()` в committed code** | **Временно при отладке → удалять перед коммитом** |
 | `console.trace()` в committed code   | Только временно при отладке                       |
-| Throttled/conditional debug logs     | Чистый код, логи добавлять при необходимости      |
-| `HEYS.debug.xxx` флаги для логов     | Не нужно — просто не коммить логи                 |
+| **`HEYS.debug.xxx` флаги**           | **Не нужно — просто удали логи после отладки**    |
+| **`?debug=1` параметры в URL**       | **Не нужно — просто удали логи после отладки**    |
 | `localStorage.setItem` напрямую      | `U.lsSet('heys_key', val)` — auto clientId        |
 | Monkey patching `console.*`          | Простой wrapper если нужен                        |
 | FPS/memory profiling                 | Это nutrition app, не game engine                 |

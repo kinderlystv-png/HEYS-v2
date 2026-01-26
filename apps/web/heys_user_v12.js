@@ -536,13 +536,6 @@
         newProfile.revision = newProfile.revision || 0;
         newProfile.updatedAt = newProfile.updatedAt || 0;
 
-        // 🔍 DEBUG: Логируем загрузку профиля
-        const isDefault = newProfile.weight === 70 && newProfile.height === 175 && newProfile.age === 30;
-        console.log('[Profile Load] clientId:', (window.HEYS?.currentClientId || '').substring(0, 8),
-          '| isDefault:', isDefault,
-          '| weight:', newProfile.weight, '| height:', newProfile.height, '| age:', newProfile.age,
-          '| updatedAt:', newProfile.updatedAt, '| revision:', newProfile.revision);
-
         // Умный reload: не перезаписываем если текущее состояние новее
         setProfile(prev => {
           const prevUpdatedAt = prev.updatedAt || 0;
@@ -590,7 +583,6 @@
     // Подписка на обновления профиля из wizard'а
     React.useEffect(() => {
       const handleProfileUpdate = (e) => {
-        console.log('[Profile] Received profile-updated event from:', e?.detail?.source);
         const newProfile = readStoredValue('heys_profile', DEFAULT_PROFILE);
         setProfile(newProfile);
       };
@@ -616,9 +608,6 @@
       setProfileSaved(false);
       setFieldStatus('pending');
       const timer = setTimeout(() => {
-        // 🔍 DEBUG: Логируем сохранение профиля
-        const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
-        console.log('[Profile Save] clientId:', clientId?.substring(0, 8), '| weight:', profile.weight, '| height:', profile.height, '| age:', profile.age, '| updatedAt:', profile.updatedAt);
         writeStoredValue('heys_profile', profile);
 
         // Синхронизация имени с списком клиентов
