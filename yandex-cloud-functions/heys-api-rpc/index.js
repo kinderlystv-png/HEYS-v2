@@ -439,6 +439,11 @@ module.exports.handler = async function (event, context) {
       }
     }
 
+    // 🔐 TEMP: Возможность отключить шифрование на уровне сессии (plaintext mode)
+    if (process.env.HEYS_ENCRYPTION_DISABLED === '1') {
+      await client.query("SET heys.encryption_disabled = '1'");
+    }
+
     // 🛟 SAFE FALLBACK: get_client_data_by_session
     // Причина: в некоторых прод-данных возможны дубликаты по ключу (k),
     // что ломает jsonb_object_agg внутри функции и даёт 500.

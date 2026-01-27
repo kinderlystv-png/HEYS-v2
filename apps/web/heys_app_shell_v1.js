@@ -287,6 +287,7 @@
                                                 },
                                                 onClick: async () => {
                                                     if (c.id !== clientIdValue) {
+                                                        console.info(`[HEYS.store] 🔄 Выбор клиента: ${c.name} (${c.id.slice(0, 8)}...)`);
                                                         if (HEYS.cloud && HEYS.cloud.switchClient) {
                                                             await HEYS.cloud.switchClient(c.id);
                                                         } else {

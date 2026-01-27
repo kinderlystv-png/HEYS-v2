@@ -419,7 +419,7 @@
     icon: '👤',
     component: ProfilePersonalComponent,
     getInitialData: () => {
-      const profile = lsGet('heys_profile', {});
+      const profile = lsGet('heys_profile', {}) || {};
       const currentYear = new Date().getFullYear();
 
       // 🛡️ Устанавливаем флаг "регистрация в процессе" только для незавершённого профиля
@@ -493,7 +493,7 @@
     save: (data) => {
       // Собираем дату в ISO формат перед сохранением
       const birthDate = `${data.birthYear}-${String(data.birthMonth).padStart(2, '0')}-${String(data.birthDay).padStart(2, '0')}`;
-      const profile = lsGet('heys_profile', {});
+      const profile = lsGet('heys_profile', {}) || {};
       profile.firstName = data.firstName;
       profile.gender = data.gender;
       profile.birthDate = birthDate;
@@ -632,7 +632,7 @@
     icon: '📊',
     component: ProfileBodyComponent,
     getInitialData: () => {
-      const profile = lsGet('heys_profile', {});
+      const profile = lsGet('heys_profile', {}) || {};
       return {
         weight: profile.weight || 70,
         height: profile.height || 175,
@@ -664,7 +664,7 @@
     const selectedPreset = GOAL_PRESETS.find(p => p.value === deficitPctTarget) || GOAL_PRESETS[3];
 
     // Для авто-норм нужны данные из предыдущих шагов
-    const profile = lsGet('heys_profile', {});
+    const profile = lsGet('heys_profile', {}) || {};
     const gender = data.gender || profile.gender || 'Мужской';
     const birthDate = data.birthDate || profile.birthDate || '';
     const age = birthDate ? calcAgeFromBirthDate(birthDate) : profile.age || 30;
@@ -767,7 +767,7 @@
     icon: '🎯',
     component: ProfileGoalsComponent,
     getInitialData: () => {
-      const profile = lsGet('heys_profile', {});
+      const profile = lsGet('heys_profile', {}) || {};
       return {
         deficitPctTarget: profile.deficitPctTarget ?? 0
       };
@@ -795,7 +795,7 @@
     const [showInsulinHint, setShowInsulinHint] = useState(false);
     const [showInsulinPresetHints, setShowInsulinPresetHints] = useState({});
 
-    const profile = lsGet('heys_profile', {});
+    const profile = lsGet('heys_profile', {}) || {};
     const gender = data.gender || profile.gender || 'Мужской';
     const birthDate = data.birthDate || profile.birthDate || '';
     const age = birthDate ? calcAgeFromBirthDate(birthDate) : profile.age || 30;
@@ -929,7 +929,7 @@
     icon: '⚡',
     component: ProfileMetabolismComponent,
     getInitialData: () => {
-      const profile = lsGet('heys_profile', {});
+      const profile = lsGet('heys_profile', {}) || {};
       const age = profile.birthDate ? calcAgeFromBirthDate(profile.birthDate) : profile.age || 30;
       const sleepNorm = calcSleepNorm(age, profile.gender || 'Мужской');
 
@@ -956,7 +956,7 @@
       console.log('[ProfileSteps] Saving with allStepsData:', JSON.stringify(allStepsData, null, 2));
       console.log('[ProfileSteps] step2 (body):', step2);
 
-      const profile = lsGet('heys_profile', {});
+      const profile = lsGet('heys_profile', {}) || {};
 
       // Вес из регистрации (целый) — это базовый и изначально текущий
       const registrationWeight = step2.weight || profile.weight || 70;
@@ -1061,7 +1061,7 @@
 
     console.log('[saveProfileFromStepData] Saving with data:', { step1, step2, step3, step4 });
 
-    const profile = lsGet('heys_profile', {});
+    const profile = lsGet('heys_profile', {}) || {};
 
     // Вес из регистрации (целый) — это базовый и изначально текущий
     const registrationWeight = step2.weight || profile.weight || 70;
@@ -1420,7 +1420,7 @@
   // ============================================================
 
   function showCongratulationsModal() {
-    const profile = lsGet('heys_profile', {});
+    const profile = lsGet('heys_profile', {}) || {};
     const norms = lsGet('heys_norms', {});
 
     const firstName = profile.firstName || '';
@@ -1501,10 +1501,14 @@
 
   // Проверка: нужно ли показывать profile-шаги
   function isProfileIncomplete(profile) {
+    // Защита от null/undefined
+    if (!profile) {
+      return true;
+    }
+
     // Если есть флаг profileCompleted — используем его (надёжный способ)
     if (profile.profileCompleted === true) {
       localStorage.removeItem('heys_registration_in_progress');
-      console.warn('[ProfileSteps] isProfileIncomplete: profileCompleted=true → false');
       return false;
     }
 
@@ -1533,10 +1537,6 @@
             localStorage.setItem(scopedKey, JSON.stringify(legacyProfile));
           }
           localStorage.removeItem('heys_registration_in_progress');
-          console.warn('[ProfileSteps] migrated legacy profile to scoped key', {
-            currentClientId: currentClientId.slice(0, 8),
-            scopedKey
-          });
           return false;
         }
       }
@@ -1545,24 +1545,40 @@
     // 🛡️ Если регистрация была прервана (перезагрузка страницы) — продолжить регистрацию
     const registrationInProgress = localStorage.getItem('heys_registration_in_progress') === 'true';
     if (registrationInProgress) {
-      console.log('[ProfileSteps] isProfileIncomplete: registrationInProgress flag found → returning true');
       try {
         const currentClientId = (window.HEYS?.currentClientId || '').toString();
         const scopedKey = currentClientId ? `heys_${currentClientId}_profile` : null;
-        const rawScoped = scopedKey ? localStorage.getItem(scopedKey) : null;
-        console.warn('[ProfileSteps] scoped profile check', {
-          currentClientId: currentClientId ? currentClientId.slice(0, 8) : null,
-          scopedKey,
-          hasScopedProfile: !!rawScoped
-        });
+        let rawScoped = scopedKey ? localStorage.getItem(scopedKey) : null;
+
+        if (rawScoped === 'null' || rawScoped === 'undefined') {
+          try {
+            localStorage.removeItem(scopedKey);
+          } catch (_) { }
+          rawScoped = null;
+        }
+
+        // 🔧 FIX: Если scoped профиль существует и содержит данные — сбросить флаг регистрации
+        if (rawScoped) {
+          let scopedProfile;
+          try {
+            scopedProfile = JSON.parse(rawScoped);
+          } catch (e) {
+            // JSON parse error — продолжаем с null
+          }
+          const hasRealData = scopedProfile && (
+            scopedProfile.profileCompleted === true ||
+            scopedProfile.firstName ||
+            scopedProfile.birthDate ||
+            (scopedProfile.weight && scopedProfile.weight !== 70) ||
+            (scopedProfile.height && scopedProfile.height !== 175) ||
+            (scopedProfile.age && scopedProfile.age !== 30)
+          );
+          if (hasRealData) {
+            localStorage.removeItem('heys_registration_in_progress');
+            return false;
+          }
+        }
       } catch (_) { }
-      console.warn('[ProfileSteps] isProfileIncomplete: registrationInProgress=true', {
-        hasFirstName: !!profile?.firstName,
-        hasBirthDate: !!profile?.birthDate,
-        weight: profile?.weight,
-        height: profile?.height,
-        age: profile?.age
-      });
       return true;
     }
 
@@ -1578,13 +1594,6 @@
     const isIncomplete = isDefaultGender && isDefaultWeight && isDefaultHeight && noBirthDate && isDefaultAge;
     if (!isIncomplete) {
       localStorage.removeItem('heys_registration_in_progress');
-      console.warn('[ProfileSteps] isProfileIncomplete: profile looks filled → false', {
-        hasFirstName: !!profile?.firstName,
-        hasBirthDate: !!profile?.birthDate,
-        weight: profile?.weight,
-        height: profile?.height,
-        age: profile?.age
-      });
     }
     return isIncomplete;
   }

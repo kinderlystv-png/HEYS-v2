@@ -23,6 +23,10 @@ DECLARE
   should_encrypt BOOLEAN;
   encrypted_val BYTEA;
   v_allowed BOOLEAN;
+  key_hex TEXT;
+  encryption_disabled BOOLEAN := FALSE;
+  has_key BOOLEAN := FALSE;
+  existing_encrypted BYTEA;
 BEGIN
   -- 🛡️ ЗАЩИТА ОТ ПОТЕРИ ДАННЫХ (для дней)
   v_allowed := check_day_overwrite_allowed(p_client_id, p_key, p_value);
@@ -35,8 +39,22 @@ BEGIN
 
   -- Проверяем нужно ли шифровать
   should_encrypt := is_health_key(p_key);
+  key_hex := current_setting('heys.encryption_key', true);
+  encryption_disabled := current_setting('heys.encryption_disabled', true) = '1';
+  has_key := key_hex is not null and length(key_hex) >= 32;
   
+  -- Если уже есть encrypted и приходит пустой payload — не перезаписываем
   IF should_encrypt THEN
+    SELECT v_encrypted INTO existing_encrypted
+    FROM client_kv_store
+    WHERE client_id = p_client_id AND k = p_key;
+
+    IF existing_encrypted IS NOT NULL AND (p_value IS NULL OR p_value = '{}'::jsonb) THEN
+      RETURN;
+    END IF;
+  END IF;
+
+  IF should_encrypt AND has_key AND NOT encryption_disabled THEN
     encrypted_val := encrypt_health_data(p_value);
     
     INSERT INTO client_kv_store (client_id, k, v, v_encrypted, key_version, updated_at)

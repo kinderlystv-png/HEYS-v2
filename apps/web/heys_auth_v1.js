@@ -271,6 +271,8 @@
       // 📡 Notify components about auth state change (for curator status refresh)
       window.dispatchEvent(new Event('heys:auth-changed'));
 
+      console.info(`[HEYS.auth] 🔐 Вход выполнен: ${clientId.slice(0, 8)}***`);
+
       return { ok: true, clientId, sessionToken, clientName };
     } catch (e) {
       registerFail('login', phoneNorm);
@@ -366,15 +368,14 @@
     // 2) Миграция: ищем токен под старым namespaced ключом
     //    Формат был: heys_{clientId}_session_token
     try {
-      const clientId = localStorage.getItem('heys_pin_auth_client') ||
-        localStorage.getItem('heys_client_current');
+      // 🔐 Миграция только для PIN auth (не для куратора)
+      const clientId = localStorage.getItem('heys_pin_auth_client');
       if (clientId) {
         const cid = clientId.replace(/"/g, ''); // убираем кавычки если JSON.stringify
         const oldKey = `heys_${cid}_session_token`;
         const oldToken = localStorage.getItem(oldKey);
         if (oldToken) {
           // Мигрируем в новый глобальный ключ
-          console.log('[HEYS Auth] 🔄 Migrating session_token from', oldKey, 'to heys_session_token');
           try {
             const parsed = JSON.parse(oldToken);
             localStorage.setItem('heys_session_token', oldToken);
@@ -388,7 +389,7 @@
         }
       }
     } catch (e) {
-      console.warn('[HEYS Auth] Migration error:', e);
+      // Migration error - ignore
     }
 
     return null;
@@ -400,7 +401,6 @@
    */
   function setSessionToken(token) {
     if (!token) {
-      console.warn('[HEYS Auth] setSessionToken: empty token, ignoring');
       return;
     }
     try {
@@ -439,7 +439,7 @@
         try {
           await api.rpc('revoke_session', { p_session_token: token });
         } catch (e) {
-          console.warn('[HEYS Auth] revoke_session failed:', e);
+          // Revoke failed - continue with local cleanup
         }
       }
     }
@@ -449,6 +449,8 @@
       localStorage.removeItem('heys_session_token');
       localStorage.removeItem('heys_client_current');
     } catch (_) { }
+
+    console.info('[HEYS.auth] 🚪 Выход из системы');
 
     // 📡 Notify components about auth state change
     window.dispatchEvent(new Event('heys:auth-changed'));

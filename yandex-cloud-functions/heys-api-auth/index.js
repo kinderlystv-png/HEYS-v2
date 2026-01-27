@@ -495,7 +495,8 @@ async function handleGetClientKv(curatorId, clientId, options = {}) {
     }
 
     // Устанавливаем ключ для расшифровки health данных
-    await client.query(`SET heys.encryption_key = $1`, [encryptionKey]);
+    // Используем set_config, т.к. SET не принимает параметр $1
+    await client.query(`SELECT set_config('heys.encryption_key', $1, true)`, [encryptionKey]);
     console.log('[GetClientKv] encryption key SET');
 
     const prefix = options.prefix ? String(options.prefix) : null;
@@ -739,10 +740,12 @@ module.exports.handler = async function (event, context) {
           const curatorId = jwtResult.payload.sub;
 
           // /auth/clients/:id/kv — выгрузка KV с расшифровкой
-          if (event.httpMethod === 'GET' && resourceId && subAction === 'kv') {
+          if (resourceId && subAction === 'kv' && (event.httpMethod === 'GET' || event.httpMethod === 'POST')) {
             const qp = event.queryStringParameters || {};
-            const keys = qp.keys ? String(qp.keys).split(',').map((k) => k.trim()).filter(Boolean) : null;
-            const prefix = qp.prefix || null;
+            const keysFromQuery = qp.keys ? String(qp.keys).split(',').map((k) => k.trim()).filter(Boolean) : null;
+            const keysFromBody = Array.isArray(body?.keys) ? body.keys : null;
+            const prefix = body?.prefix || qp.prefix || null;
+            const keys = keysFromBody || keysFromQuery;
             result = await handleGetClientKv(curatorId, resourceId, { keys, prefix });
             break;
           }

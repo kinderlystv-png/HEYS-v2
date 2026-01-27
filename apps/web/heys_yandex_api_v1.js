@@ -40,19 +40,26 @@
 
   let _isOnline = true;
   let _lastError = null;
+  let _curatorTokenLogged = false;
 
   // ═══════════════════════════════════════════════════════════════════
   // 🔧 УТИЛИТЫ
   // ═══════════════════════════════════════════════════════════════════
 
-  // 🔇 v4.7.1: Debug логи отключены для чистоты консоли
+  // Debug логи — только при localStorage.heys_debug_api = 'true'
   function log(...args) {
-    // Отключено - раскомментировать для отладки:
-    // if (global.HEYS?.debug) console.log('[YandexAPI]', ...args);
+    if (global.localStorage?.getItem('heys_debug_api') === 'true') {
+      console.log('[HEYS.api]', ...args);
+    }
+  }
+
+  // Критические логи — ВСЕГДА видны
+  function logInfo(...args) {
+    console.info('[HEYS.api]', ...args);
   }
 
   function err(...args) {
-    console.error('[YandexAPI] ❌', ...args);
+    console.error('[HEYS.api] ❌', ...args);
   }
 
   /**
@@ -115,6 +122,10 @@
       const curatorSession = localStorage.getItem('heys_curator_session');
       if (curatorSession) {
         log('getCuratorToken: using heys_curator_session');
+        if (!_curatorTokenLogged) {
+          logInfo('🔐 [HEYS.auth] Токен куратора найден (heys_curator_session)');
+          _curatorTokenLogged = true;
+        }
         return curatorSession;
       }
 
@@ -124,6 +135,10 @@
         const parsed = JSON.parse(supabaseAuth);
         if (parsed?.access_token) {
           log('getCuratorToken: fallback to heys_supabase_auth_token');
+          if (!_curatorTokenLogged) {
+            logInfo('🔐 [HEYS.auth] Токен куратора найден (legacy heys_supabase_auth_token)');
+            _curatorTokenLogged = true;
+          }
           return parsed.access_token;
         }
       }
@@ -395,6 +410,11 @@
       }
 
       // Успешный ответ: { access_token, token_type, expires_in, user }
+      if (data?.user?.id) {
+        logInfo('🔐 [HEYS.auth] Вход куратора OK:', `${data.user.id.slice(0, 8)}...`);
+      } else {
+        logInfo('🔐 [HEYS.auth] Вход куратора OK');
+      }
       return {
         data: {
           access_token: data.access_token,
@@ -433,10 +453,17 @@
       const data = await response.json();
 
       if (!response.ok || !data.valid) {
+        logInfo('🔐 [HEYS.auth] Проверка токена: invalid');
         return {
           data: { valid: false },
           error: data.error ? { message: data.error } : null
         };
+      }
+
+      if (data?.user?.id) {
+        logInfo('🔐 [HEYS.auth] Проверка токена: valid', `${data.user.id.slice(0, 8)}...`);
+      } else {
+        logInfo('🔐 [HEYS.auth] Проверка токена: valid');
       }
 
       return { data: { valid: true, user: data.user }, error: null };
@@ -693,8 +720,7 @@
       const namespacedKey = `heys_${clientId}_session_token`;
       const namespacedRaw = localStorage.getItem(namespacedKey);
       if (namespacedRaw) {
-        console.warn('[YandexAPI] 🔄 getSessionTokenForKV: migrating token from', namespacedKey);
-        // Мигрируем в глобальный ключ
+        // Мигрируем в глобальный ключ (одноразово)
         localStorage.setItem('heys_session_token', namespacedRaw);
         localStorage.removeItem(namespacedKey);
         try {

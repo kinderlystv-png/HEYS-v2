@@ -473,7 +473,30 @@
     const [query, setQuery] = React.useState('');
     const [paste, setPaste] = React.useState('');
     const [showModal, setShowModal] = React.useState(false);
-    const [draft, setDraft] = React.useState({ name: '', simple100: 0, complex100: 0, protein100: 0, badFat100: 0, goodFat100: 0, trans100: 0, fiber100: 0, gi: 0, harm: 0 });
+    // === EXTENDED PRODUCT DRAFT (v4.4.0) — все ~35 полей из DATA_MODEL_REFERENCE ===
+    const INITIAL_DRAFT = {
+      // Базовые (обязательные)
+      name: '', simple100: 0, complex100: 0, protein100: 0, badFat100: 0, goodFat100: 0, trans100: 0, fiber100: 0, gi: 0, harm: 0,
+      // Дополнительные нутриенты
+      sodium100: 0, cholesterol100: 0, sugar100: 0, omega3_100: 0, omega6_100: 0,
+      // Витамины (% от суточной нормы)
+      vitaminA: 0, vitaminC: 0, vitaminD: 0, vitaminE: 0, vitaminK: 0,
+      vitaminB1: 0, vitaminB2: 0, vitaminB3: 0, vitaminB6: 0, vitaminB9: 0, vitaminB12: 0,
+      // Минералы (% от суточной нормы)
+      calcium: 0, iron: 0, magnesium: 0, phosphorus: 0, potassium: 0, zinc: 0, selenium: 0, iodine: 0,
+      // NOVA и переработка
+      novaGroup: 0, // 0 = авто-детект, 1-4 = явно задано
+      additives: '', // строка E-добавок через запятую
+      // Флаги качества
+      isOrganic: false, isWholeGrain: false, isFermented: false, isRaw: false,
+      // Комментарий
+      harmNote: '',
+      // Категория
+      category: ''
+    };
+    const [draft, setDraft] = React.useState(INITIAL_DRAFT);
+    // Состояние раскрытых секций в модалке
+    const [expandedSections, setExpandedSections] = React.useState({ base: true, extra: false, vitamins: false, minerals: false, nova: false, flags: false });
     const derived = computeDerived(draft);
 
     // === PHASE 2: Shared Products UI ===
@@ -1067,7 +1090,7 @@
       }
     }, [window.HEYS && window.HEYS.currentClientId]);
 
-    function resetDraft() { setDraft({ name: '', simple100: 0, complex100: 0, protein100: 0, badFat100: 0, goodFat100: 0, trans100: 0, fiber100: 0, gi: 0, harm: 0 }); }
+    function resetDraft() { setDraft(INITIAL_DRAFT); setExpandedSections({ base: true, extra: false, vitamins: false, minerals: false, nova: false, flags: false }); }
     async function addProduct() {
       const name = (draft.name || '').trim();
       if (!name) {
@@ -1080,7 +1103,35 @@
         HEYS.Toast?.warning(`Продукт "${name}" уже существует в базе! Используйте другое название.`) || alert(`Продукт "${name}" уже существует в базе!`);
         return;
       }
-      const base = { id: uuid(), name: name, simple100: toNum(draft.simple100), complex100: toNum(draft.complex100), protein100: toNum(draft.protein100), badFat100: toNum(draft.badFat100), goodFat100: toNum(draft.goodFat100), trans100: toNum(draft.trans100), fiber100: toNum(draft.fiber100), gi: toNum(draft.gi), harm: toNum(draft.harm), createdAt: Date.now() };
+      // === Собираем расширенный продукт со всеми полями ===
+      const base = {
+        id: uuid(), name: name, createdAt: Date.now(),
+        // Базовые нутриенты
+        simple100: toNum(draft.simple100), complex100: toNum(draft.complex100), protein100: toNum(draft.protein100),
+        badFat100: toNum(draft.badFat100), goodFat100: toNum(draft.goodFat100), trans100: toNum(draft.trans100),
+        fiber100: toNum(draft.fiber100), gi: toNum(draft.gi), harm: toNum(draft.harm),
+        // Дополнительные нутриенты
+        sodium100: toNum(draft.sodium100), cholesterol100: toNum(draft.cholesterol100), sugar100: toNum(draft.sugar100),
+        omega3_100: toNum(draft.omega3_100), omega6_100: toNum(draft.omega6_100),
+        // Витамины (% от суточной нормы)
+        vitaminA: toNum(draft.vitaminA), vitaminC: toNum(draft.vitaminC), vitaminD: toNum(draft.vitaminD),
+        vitaminE: toNum(draft.vitaminE), vitaminK: toNum(draft.vitaminK),
+        vitaminB1: toNum(draft.vitaminB1), vitaminB2: toNum(draft.vitaminB2), vitaminB3: toNum(draft.vitaminB3),
+        vitaminB6: toNum(draft.vitaminB6), vitaminB9: toNum(draft.vitaminB9), vitaminB12: toNum(draft.vitaminB12),
+        // Минералы (% от суточной нормы)
+        calcium: toNum(draft.calcium), iron: toNum(draft.iron), magnesium: toNum(draft.magnesium),
+        phosphorus: toNum(draft.phosphorus), potassium: toNum(draft.potassium), zinc: toNum(draft.zinc),
+        selenium: toNum(draft.selenium), iodine: toNum(draft.iodine),
+        // NOVA и переработка
+        novaGroup: toNum(draft.novaGroup) || undefined, // 0 = авто-детект
+        additives: draft.additives ? draft.additives.split(',').map(s => s.trim()).filter(Boolean) : [],
+        // Флаги качества
+        isOrganic: !!draft.isOrganic, isWholeGrain: !!draft.isWholeGrain,
+        isFermented: !!draft.isFermented, isRaw: !!draft.isRaw,
+        // Комментарий и категория
+        harmNote: (draft.harmNote || '').trim() || undefined,
+        category: (draft.category || '').trim() || undefined
+      };
       const d = computeDerived(base);
       const newProduct = { ...base, ...d };
 
@@ -3098,15 +3149,29 @@
                   React.createElement('tbody', null,
                     (() => {
                       // Фильтрация по поиску
+                      const toTs = (v) => {
+                        if (v == null) return 0;
+                        if (typeof v === 'number') return v;
+                        const parsed = Date.parse(v);
+                        return Number.isFinite(parsed) ? parsed : 0;
+                      };
+                      const sortByCreatedAtDesc = (list) => {
+                        return [...list].sort((a, b) => {
+                          const aTs = toTs(a?.createdAt ?? a?.created_at ?? a?.updatedAt ?? a?.updated_at);
+                          const bTs = toTs(b?.createdAt ?? b?.created_at ?? b?.updatedAt ?? b?.updated_at);
+                          return bTs - aTs;
+                        });
+                      };
                       const filteredShared = sharedQuery.length >= 2
                         ? allSharedProducts.filter(p => (p.name || '').toLowerCase().includes(sharedQuery.toLowerCase()))
                         : allSharedProducts;
+                      const sortedShared = sortByCreatedAtDesc(filteredShared);
                       // Безопасное получение числового значения
                       const safeNum = (v) => {
                         const n = Number(v);
                         return isNaN(n) ? 0 : n;
                       };
-                      return filteredShared.map((p, idx) => {
+                      return sortedShared.map((p, idx) => {
                         // Supabase возвращает snake_case поля
                         const kcal = Math.round(safeNum(p.protein100) * 4 + safeNum(p.simple100) * 4 + safeNum(p.complex100) * 4 + (safeNum(p.badfat100) + safeNum(p.goodfat100) + safeNum(p.trans100)) * 9);
                         const carbs = safeNum(p.simple100) + safeNum(p.complex100);
@@ -3216,6 +3281,7 @@
           ),
           React.createElement('div', { className: 'grid grid-2', style: { marginTop: '8px' } },
             React.createElement('div', null, React.createElement('label', null, 'Название'), React.createElement('input', { value: draft.name, onChange: e => setDraft({ ...draft, name: e.target.value }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Категория'), React.createElement('input', { value: draft.category, onChange: e => setDraft({ ...draft, category: e.target.value }) })),
             React.createElement('div', null, React.createElement('label', null, 'ГИ'), React.createElement('input', { type: 'text', value: draft.gi, onChange: e => setDraft({ ...draft, gi: toNum(e.target.value) }) })),
             React.createElement('div', null, React.createElement('label', null, 'Простые (100г)'), React.createElement('input', { type: 'text', value: draft.simple100, onChange: e => setDraft({ ...draft, simple100: toNum(e.target.value) }) })),
             React.createElement('div', null, React.createElement('label', null, 'Сложные (100г)'), React.createElement('input', { type: 'text', value: draft.complex100, onChange: e => setDraft({ ...draft, complex100: toNum(e.target.value) }) })),
@@ -3228,6 +3294,89 @@
             React.createElement('div', null, React.createElement('label', null, 'Углеводы (100г) — авто'), React.createElement('input', { className: 'readOnly', readOnly: true, value: derived.carbs100 })),
             React.createElement('div', null, React.createElement('label', null, 'Жиры (100г) — авто'), React.createElement('input', { className: 'readOnly', readOnly: true, value: derived.fat100 })),
             React.createElement('div', null, React.createElement('label', null, 'Калории (100г) — авто'), React.createElement('input', { className: 'readOnly', readOnly: true, value: derived.kcal100 }))
+          ),
+          React.createElement('div', { className: 'row' },
+            React.createElement('button', {
+              className: 'btn',
+              onClick: () => setExpandedSections({ ...expandedSections, extra: !expandedSections.extra })
+            }, `${expandedSections.extra ? '▼' : '▶'} Доп. нутриенты`)
+          ),
+          expandedSections.extra && React.createElement('div', { className: 'grid grid-2' },
+            React.createElement('div', null, React.createElement('label', null, 'Натрий (мг/100г)'), React.createElement('input', { type: 'text', value: draft.sodium100, onChange: e => setDraft({ ...draft, sodium100: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Холестерин (мг/100г)'), React.createElement('input', { type: 'text', value: draft.cholesterol100, onChange: e => setDraft({ ...draft, cholesterol100: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Добавленный сахар (г/100г)'), React.createElement('input', { type: 'text', value: draft.sugar100, onChange: e => setDraft({ ...draft, sugar100: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Омега-3 (г/100г)'), React.createElement('input', { type: 'text', value: draft.omega3_100, onChange: e => setDraft({ ...draft, omega3_100: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Омега-6 (г/100г)'), React.createElement('input', { type: 'text', value: draft.omega6_100, onChange: e => setDraft({ ...draft, omega6_100: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Заметка по вредности'), React.createElement('input', { value: draft.harmNote, onChange: e => setDraft({ ...draft, harmNote: e.target.value }) }))
+          ),
+          React.createElement('div', { className: 'row' },
+            React.createElement('button', {
+              className: 'btn',
+              onClick: () => setExpandedSections({ ...expandedSections, vitamins: !expandedSections.vitamins })
+            }, `${expandedSections.vitamins ? '▼' : '▶'} Витамины (% от нормы)`)
+          ),
+          expandedSections.vitamins && React.createElement('div', { className: 'grid grid-2' },
+            React.createElement('div', null, React.createElement('label', null, 'Витамин A'), React.createElement('input', { type: 'text', value: draft.vitaminA, onChange: e => setDraft({ ...draft, vitaminA: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Витамин C'), React.createElement('input', { type: 'text', value: draft.vitaminC, onChange: e => setDraft({ ...draft, vitaminC: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Витамин D'), React.createElement('input', { type: 'text', value: draft.vitaminD, onChange: e => setDraft({ ...draft, vitaminD: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Витамин E'), React.createElement('input', { type: 'text', value: draft.vitaminE, onChange: e => setDraft({ ...draft, vitaminE: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Витамин K'), React.createElement('input', { type: 'text', value: draft.vitaminK, onChange: e => setDraft({ ...draft, vitaminK: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Витамин B1'), React.createElement('input', { type: 'text', value: draft.vitaminB1, onChange: e => setDraft({ ...draft, vitaminB1: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Витамин B2'), React.createElement('input', { type: 'text', value: draft.vitaminB2, onChange: e => setDraft({ ...draft, vitaminB2: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Витамин B3'), React.createElement('input', { type: 'text', value: draft.vitaminB3, onChange: e => setDraft({ ...draft, vitaminB3: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Витамин B6'), React.createElement('input', { type: 'text', value: draft.vitaminB6, onChange: e => setDraft({ ...draft, vitaminB6: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Витамин B9'), React.createElement('input', { type: 'text', value: draft.vitaminB9, onChange: e => setDraft({ ...draft, vitaminB9: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Витамин B12'), React.createElement('input', { type: 'text', value: draft.vitaminB12, onChange: e => setDraft({ ...draft, vitaminB12: toNum(e.target.value) }) }))
+          ),
+          React.createElement('div', { className: 'row' },
+            React.createElement('button', {
+              className: 'btn',
+              onClick: () => setExpandedSections({ ...expandedSections, minerals: !expandedSections.minerals })
+            }, `${expandedSections.minerals ? '▼' : '▶'} Минералы (% от нормы)`)
+          ),
+          expandedSections.minerals && React.createElement('div', { className: 'grid grid-2' },
+            React.createElement('div', null, React.createElement('label', null, 'Кальций'), React.createElement('input', { type: 'text', value: draft.calcium, onChange: e => setDraft({ ...draft, calcium: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Железо'), React.createElement('input', { type: 'text', value: draft.iron, onChange: e => setDraft({ ...draft, iron: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Магний'), React.createElement('input', { type: 'text', value: draft.magnesium, onChange: e => setDraft({ ...draft, magnesium: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Фосфор'), React.createElement('input', { type: 'text', value: draft.phosphorus, onChange: e => setDraft({ ...draft, phosphorus: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Калий'), React.createElement('input', { type: 'text', value: draft.potassium, onChange: e => setDraft({ ...draft, potassium: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Цинк'), React.createElement('input', { type: 'text', value: draft.zinc, onChange: e => setDraft({ ...draft, zinc: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Селен'), React.createElement('input', { type: 'text', value: draft.selenium, onChange: e => setDraft({ ...draft, selenium: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Йод'), React.createElement('input', { type: 'text', value: draft.iodine, onChange: e => setDraft({ ...draft, iodine: toNum(e.target.value) }) }))
+          ),
+          React.createElement('div', { className: 'row' },
+            React.createElement('button', {
+              className: 'btn',
+              onClick: () => setExpandedSections({ ...expandedSections, nova: !expandedSections.nova })
+            }, `${expandedSections.nova ? '▼' : '▶'} NOVA и добавки`)
+          ),
+          expandedSections.nova && React.createElement('div', { className: 'grid grid-2' },
+            React.createElement('div', null, React.createElement('label', null, 'NOVA группа (1–4)'), React.createElement('input', { type: 'text', value: draft.novaGroup, onChange: e => setDraft({ ...draft, novaGroup: toNum(e.target.value) }) })),
+            React.createElement('div', null, React.createElement('label', null, 'Добавки (E-коды, через запятую)'), React.createElement('input', { value: draft.additives, onChange: e => setDraft({ ...draft, additives: e.target.value }) }))
+          ),
+          React.createElement('div', { className: 'row' },
+            React.createElement('button', {
+              className: 'btn',
+              onClick: () => setExpandedSections({ ...expandedSections, flags: !expandedSections.flags })
+            }, `${expandedSections.flags ? '▼' : '▶'} Флаги качества`)
+          ),
+          expandedSections.flags && React.createElement('div', { className: 'grid grid-2' },
+            React.createElement('label', null,
+              React.createElement('input', { type: 'checkbox', checked: !!draft.isOrganic, onChange: e => setDraft({ ...draft, isOrganic: e.target.checked }) }),
+              ' Органический'
+            ),
+            React.createElement('label', null,
+              React.createElement('input', { type: 'checkbox', checked: !!draft.isWholeGrain, onChange: e => setDraft({ ...draft, isWholeGrain: e.target.checked }) }),
+              ' Цельнозерновой'
+            ),
+            React.createElement('label', null,
+              React.createElement('input', { type: 'checkbox', checked: !!draft.isFermented, onChange: e => setDraft({ ...draft, isFermented: e.target.checked }) }),
+              ' Ферментированный'
+            ),
+            React.createElement('label', null,
+              React.createElement('input', { type: 'checkbox', checked: !!draft.isRaw, onChange: e => setDraft({ ...draft, isRaw: e.target.checked }) }),
+              ' Сырой'
+            )
           ),
           // Checkbox: Опубликовать в общую базу
           React.createElement('label', {

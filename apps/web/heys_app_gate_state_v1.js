@@ -78,7 +78,7 @@
 
         // Читаем desktopAllowed из профиля
         const profile = U?.lsGet ? U.lsGet('heys_profile', {}) : {};
-        const desktopAllowed = profile.desktopAllowed === true;
+        const desktopAllowed = profile?.desktopAllowed === true;
 
         // Desktop Gate: если клиент на десктопе и десктоп НЕ разрешён
         const desktopGate = AppGateFlow.buildDesktopGate ? AppGateFlow.buildDesktopGate({

@@ -54,6 +54,9 @@ comment on column client_kv_store.v_encrypted is 'Encrypted value (when key_vers
 create or replace function read_client_kv_value(p_client_id uuid, p_key text) returns jsonb as $$
 declare
   rec record;
+  key_hex text;
+  encryption_disabled boolean := false;
+  has_key boolean := false;
 begin
   select v, v_encrypted, key_version into rec
   from client_kv_store
@@ -63,9 +66,17 @@ begin
     return null;
   end if;
   
+  -- Determine encryption availability
+  key_hex := current_setting('heys.encryption_key', true);
+  encryption_disabled := current_setting('heys.encryption_disabled', true) = '1';
+  has_key := key_hex is not null and length(key_hex) >= 32;
+
   -- Encrypted?
   if rec.key_version is not null and rec.v_encrypted is not null then
-    return decrypt_health_data(rec.v_encrypted);
+    if encryption_disabled or not has_key then
+      return rec.v;
+    end if;
+    return coalesce(decrypt_health_data(rec.v_encrypted), rec.v);
   end if;
   
   -- Plaintext
@@ -201,6 +212,9 @@ create or replace function get_client_data_by_session(
 declare
   v_client_id uuid;
   result jsonb;
+  key_hex text;
+  encryption_disabled boolean := false;
+  has_key boolean := false;
 begin
   -- Validate session
   select client_id into v_client_id
@@ -213,12 +227,20 @@ begin
     return jsonb_build_object('error', 'invalid_session');
   end if;
   
-  -- Build result with auto-decrypt for health_data
+  -- Determine encryption availability
+  key_hex := current_setting('heys.encryption_key', true);
+  encryption_disabled := current_setting('heys.encryption_disabled', true) = '1';
+  has_key := key_hex is not null and length(key_hex) >= 32;
+
+  -- Build result with guarded decrypt
   select jsonb_object_agg(
     k,
     case 
       when key_version is not null and v_encrypted is not null 
-        then decrypt_health_data(v_encrypted)
+        then case
+          when encryption_disabled or not has_key then v
+          else coalesce(decrypt_health_data(v_encrypted), v)
+        end
       else v
     end
   ) into result

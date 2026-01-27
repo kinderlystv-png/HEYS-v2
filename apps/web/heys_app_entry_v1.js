@@ -5,6 +5,8 @@
     HEYS.AppEntry = HEYS.AppEntry || {};
 
     HEYS.AppEntry.start = function start() {
+        console.info('[HEYS] 🚀 Приложение запущено');
+
         // 🔍 PWA Boot logging
         const bootLog = (msg) => window.__heysLog && window.__heysLog('[APP] ' + msg);
         bootLog('heys_app_entry_v1.js started');

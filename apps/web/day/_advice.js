@@ -911,9 +911,10 @@
             scheduledCount = 0,
         } = safeAdviceResult || {};
 
-        const safeBadgeAdvices = badgeAdvices || [];
-        const safeDismissedAdvices = dismissedAdvices || new Set();
-        const safeHiddenUntilTomorrow = hiddenUntilTomorrow || new Set();
+        const safeAdviceRelevant = Array.isArray(adviceRelevant) ? adviceRelevant : [];
+        const safeBadgeAdvices = Array.isArray(badgeAdvices) ? badgeAdvices : [];
+        const safeDismissedAdvices = dismissedAdvices instanceof Set ? dismissedAdvices : new Set();
+        const safeHiddenUntilTomorrow = hiddenUntilTomorrow instanceof Set ? hiddenUntilTomorrow : new Set();
 
         const totalAdviceCount = useMemo(() => {
             if (!Array.isArray(safeBadgeAdvices) || safeBadgeAdvices.length === 0) return 0;
@@ -971,7 +972,8 @@
         useEffect(() => {
             const checkScheduled = () => {
                 try {
-                    const scheduled = readStoredValue('heys_scheduled_advices', []) || [];
+                    const rawScheduled = readStoredValue('heys_scheduled_advices', []) || [];
+                    const scheduled = Array.isArray(rawScheduled) ? rawScheduled : [];
                     const now = Date.now();
                     const ready = scheduled.filter(s => s.showAt <= now);
                     if (ready.length > 0) {
@@ -1008,13 +1010,13 @@
 
             if (!isManualTrigger && !toastsEnabled) {
                 setDisplayedAdvice(advicePrimary);
-                setDisplayedAdviceList(adviceRelevant || []);
+                setDisplayedAdviceList(safeAdviceRelevant);
                 if (markShown) markShown(advicePrimary.id);
                 return;
             }
 
             setDisplayedAdvice(advicePrimary);
-            setDisplayedAdviceList(adviceRelevant || []);
+            setDisplayedAdviceList(safeAdviceRelevant);
             setAdviceExpanded(false);
             setToastVisible(true);
             toastAppearedAtRef.current = Date.now();
@@ -1042,7 +1044,7 @@
             }
 
             if (markShown) markShown(advicePrimary.id);
-        }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled, dismissedAdvices, markShown, toastsEnabled, setShowConfetti, haptic, HEYSRef, adviceRelevant]);
+        }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled, dismissedAdvices, markShown, toastsEnabled, setShowConfetti, haptic, HEYSRef, safeAdviceRelevant]);
 
         useEffect(() => {
             setAdviceTrigger(null);
@@ -1270,7 +1272,7 @@
             setDismissAllAnimation(true);
             haptic('medium');
 
-            const advices = adviceRelevant?.filter(a => !dismissedAdvices.has(a.id) && !hiddenUntilTomorrow.has(a.id)) || [];
+            const advices = safeAdviceRelevant.filter(a => !dismissedAdvices.has(a.id) && !hiddenUntilTomorrow.has(a.id));
 
             advices.forEach((advice, index) => {
                 setTimeout(() => {
@@ -1359,10 +1361,10 @@
             displayedAdviceList,
             setDisplayedAdviceList,
             advicePrimary,
-            adviceRelevant,
+            adviceRelevant: safeAdviceRelevant,
             adviceCount,
             allAdvices,
-            badgeAdvices,
+            badgeAdvices: safeBadgeAdvices,
             markShown,
             rateAdvice,
             scheduleAdvice,

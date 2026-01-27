@@ -203,6 +203,7 @@
       // 🚨 КРИТИЧНО: Сбрасываем user чтобы UI мог отреагировать
       user = null;
       status = CONNECTION_STATUS.OFFLINE;
+      logCritical('🔐 [TOKEN] Токен отсутствует — требуется вход');
       return { valid: false, refreshed: false, error: 'no_token' };
     }
 
@@ -214,7 +215,7 @@
     // ✅ FIX 2025-12-25: Если токен ещё свежий (>5 мин) — сразу возвращаем valid!
     // Раньше здесь был баг: при client=null (Supabase SDK удалён) всегда возвращался error
     if (timeUntilExpiry > TOKEN_REFRESH_BUFFER_MS) {
-      log('✅ [TOKEN] Token valid, expires in', Math.round(timeUntilExpiry / 60000), 'min');
+      logCritical('✅ [TOKEN] Токен валиден, истекает через', Math.round(timeUntilExpiry / 60000), 'мин');
       return { valid: true, refreshed: false };
     }
 
@@ -233,7 +234,7 @@
         if (!global.YandexAPI || !global.YandexAPI.verifyCuratorToken) {
           // YandexAPI ещё не загружен — доверяем локальному токену если он не сильно просрочен
           if (timeUntilExpiry > -60 * 60 * 1000) { // Просрочен менее чем на час
-            log('⚠️ [TOKEN] YandexAPI not loaded, trusting local token');
+            logCritical('⚠️ [TOKEN] YandexAPI не загружен, доверяем локальному токену');
             return { valid: true, refreshed: false };
           }
           logCritical('⚠️ [TOKEN] YandexAPI not loaded and token expired');
@@ -254,7 +255,7 @@
             return { valid: false, refreshed: false, error: 'token_expired', authRequired: true };
           }
           // Если не истёк — доверяем локально, возможно сеть глючит
-          log('⚠️ [TOKEN] Server rejected but token not expired locally, trusting local');
+          logCritical('⚠️ [TOKEN] Сервер отклонил, но локально не истёк — доверяем локальному');
           return { valid: true, refreshed: false };
         }
 
@@ -270,7 +271,7 @@
         try {
           const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
           setFn(AUTH_KEY, JSON.stringify(tokenData));
-          log('✅ [TOKEN] Token verified, extended expires_at to:', new Date(freshExpiresAt * 1000).toISOString());
+          logCritical('✅ [TOKEN] Токен подтверждён, продлили expires_at до', new Date(freshExpiresAt * 1000).toISOString());
         } catch (e) {
           logCritical('⚠️ [TOKEN] Ошибка сохранения:', e?.message);
         }
@@ -282,10 +283,10 @@
         return { valid: true, refreshed: true };
 
       } catch (e) {
-        logCritical('⚠️ [TOKEN] Exception:', e?.message);
+        logCritical('⚠️ [TOKEN] Ошибка проверки:', e?.message);
         // При ошибках сети — доверяем локальному токену если он не сильно просрочен
         if (timeUntilExpiry > -60 * 60 * 1000) {
-          log('⚠️ [TOKEN] Network error, trusting local token');
+          logCritical('⚠️ [TOKEN] Ошибка сети, доверяем локальному токену');
           return { valid: true, refreshed: false };
         }
         return { valid: false, refreshed: false, error: e?.message };
@@ -1167,6 +1168,10 @@
     const queueLen = clientQueueLen + userQueueLen;
     const inFlight = _uploadInProgress ? _uploadInFlightCount : 0;
     const total = queueLen + inFlight;
+    const flushStartTs = Date.now();
+    const logFlushSummary = (label, afterCount) => {
+      logCritical(`🧾 [FLUSH] ${label} before=${total} after=${afterCount} ms=${Date.now() - flushStartTs}`);
+    };
 
     // 🔄 v=34: ВСЕГДА логируем flush — это критическая операция!
     logCritical(`🔄 [FLUSH] Check: clientQueue=${clientQueueLen}, userQueue=${upsertQueue.length}${isClientOnlyMode ? ' (ignored in PIN mode)' : ''}, inFlight=${inFlight}`);
@@ -1174,6 +1179,7 @@
     // Если очередь пуста И ничего не в полёте — готово
     if (queueLen === 0 && !_uploadInProgress) {
       logCritical('✅ [FLUSH] Queue already empty and no uploads in progress');
+      logFlushSummary('noop', 0);
       return true;
     }
 
@@ -1198,6 +1204,7 @@
     const stillInQueue = stillClientQueue + stillUserQueue;
     if (stillInQueue === 0 && !_uploadInProgress) {
       logCritical('✅ [FLUSH] All uploaded after immediate push');
+      logFlushSummary('done', 0);
       return true;
     }
 
@@ -1211,6 +1218,7 @@
       const timeoutId = setTimeout(() => {
         const stillPending = cloud.getPendingCount();
         logCritical(`⚠️ [FLUSH] Timeout after ${timeoutMs}ms, ${stillPending} items still pending, inFlight=${_uploadInProgress}`);
+        logFlushSummary('timeout', stillPending);
         window.removeEventListener('heys:queue-drained', handler);
         resolve(false);
       }, timeoutMs);
@@ -1225,6 +1233,7 @@
         clearTimeout(timeoutId);
         const elapsed = Date.now() - startTime;
         logCritical(`✅ [FLUSH] Queue drained in ${elapsed}ms`);
+        logFlushSummary('done', 0);
         window.removeEventListener('heys:queue-drained', handler);
         resolve(true);
       };
@@ -1357,6 +1366,9 @@
   function notifySyncError(error, retryIn) {
     try {
       const errorMsg = error?.message || String(error);
+      if (typeof navigator !== 'undefined') {
+        logCritical(`🌐 [NET] Sync error: ${navigator.onLine ? 'online' : 'offline'}`);
+      }
       console.error('🔥 [SYNC ERROR] Critical sync failure:', errorMsg);
 
       addSyncLogEntry('sync_error', { error: errorMsg });
@@ -1476,7 +1488,7 @@
   const isDebugSync = () => global.localStorage.getItem('heys_debug_sync') === 'true';
 
   function log() {
-    // Тихий режим по умолчанию
+    // Тихий режим по умолчанию — только для debug
     if (isDebugSync()) {
       try {
         if (HEYS?.log) {
@@ -1497,17 +1509,15 @@
     } catch (e) { }
   }
 
-  // Критический лог — тоже тихий по умолчанию (включается через isDebugSync)
+  // 🔐 Критический лог — ВСЕГДА виден (синхронизация, auth, важные операции)
   function logCritical() {
-    if (isDebugSync()) {
-      try {
-        if (HEYS?.log) {
-          HEYS.log('HEYS', ...arguments);
-          return;
-        }
-        console.info.apply(console, ['[HEYS]'].concat([].slice.call(arguments)));
-      } catch (e) { }
-    }
+    try {
+      if (global.console && typeof global.console.info === 'function') {
+        global.console.info.apply(global.console, ['[HEYS.sync]'].concat([].slice.call(arguments)));
+        return;
+      }
+      console.info.apply(console, ['[HEYS.sync]'].concat([].slice.call(arguments)));
+    } catch (e) { }
   }
 
   /**
@@ -1999,6 +2009,19 @@
     const isLocalhost = typeof window !== 'undefined' &&
       (window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1'));
 
+    // 🌐 Статус сети при старте + слушатели online/offline
+    if (typeof navigator !== 'undefined') {
+      logCritical(`🌐 [NET] Старт: ${navigator.onLine ? 'online' : 'offline'}`);
+      if (typeof window !== 'undefined') {
+        window.addEventListener('online', () => {
+          logCritical('🌐 [NET] online');
+        });
+        window.addEventListener('offline', () => {
+          logCritical('🌐 [NET] offline');
+        });
+      }
+    }
+
     // 🔄 Smart выбор режима при старте
     let initialUrl = url;
     let needsHealthCheck = false;
@@ -2271,13 +2294,14 @@
             if (clientId) {
               logCritical('🔄 Запускаем bootstrap sync для клиента:', clientId.substring(0, 8) + '...');
               cloud.syncClient(clientId).then(result => {
-                if (result?.success) {
-                  logCritical('✅ Bootstrap sync завершён');
+                const errorText = result?.error || (result?.success === false ? 'unknown_error' : null);
+                if (errorText) {
+                  logCritical('⚠️ Bootstrap sync failed:', errorText);
                 } else {
-                  logCritical('⚠️ Bootstrap sync failed:', result?.error);
+                  logCritical('✅ Bootstrap sync завершён');
                 }
               }).catch(e => {
-                logCritical('⚠️ Bootstrap sync error:', e?.message);
+                logCritical('⚠️ Bootstrap sync error:', e?.message || e);
               });
             }
           }, 100);
@@ -3084,6 +3108,7 @@
     const ls = global.localStorage;
 
     try {
+      const syncStartTime = performance.now();
       logCritical(`🇷🇺 [YANDEX SYNC] Загрузка данных клиента ${clientId.slice(0, 8)}...`);
 
       // 🔴 CRITICAL FIX: Сначала отправляем локальные изменения в облако!
@@ -3106,13 +3131,9 @@
       const { data, error } = await YandexAPI.getAllKV(clientId);
 
       if (error) {
-        logCritical(`❌ [YANDEX SYNC] Ошибка: ${error}`);
+        logCritical(`❌ Ошибка загрузки: ${error}`);
         return { success: false, error: error };
       }
-      console.warn('[YANDEX SYNC] getAllKV result', {
-        clientId: clientId?.slice(0, 8),
-        rows: Array.isArray(data) ? data.length : 'n/a'
-      });
 
       // Записываем данные в localStorage
       muteMirror = true;
@@ -3131,10 +3152,6 @@
       // Собираем список ключей, пришедших из облака (нормализованные)
       const remoteKeys = new Set((data || []).map(row => row?.k).filter(Boolean));
       const hasRemoteProfile = remoteKeys.has('heys_profile');
-      console.warn('[YANDEX SYNC] remote keys summary', {
-        hasRemoteProfile,
-        remoteKeysCount: remoteKeys.size
-      });
 
       // 🛡️ SAFE MODE: НЕ чистим все локальные ключи.
       // Перезаписываем только те, что пришли из облака.
@@ -3176,16 +3193,10 @@
       try {
         const profileKey = `heys_${clientId}_profile`;
         const rawProfile = ls.getItem(profileKey);
-        console.warn('[YANDEX SYNC] profile check', {
-          profileKey,
-          hasProfile: !!rawProfile,
-          loadedCount
-        });
         if (rawProfile) {
           const parsedProfile = JSON.parse(rawProfile);
           if (parsedProfile?.profileCompleted === true) {
             localStorage.removeItem('heys_registration_in_progress');
-            console.warn('[YANDEX SYNC] registrationInProgress cleared (profileCompleted)');
           }
         }
       } catch (_) { }
@@ -3207,13 +3218,11 @@
         if (global.HEYS) {
           if (!global.HEYS.currentClientId || global.HEYS.currentClientId !== clientId) {
             global.HEYS.currentClientId = clientId;
-            console.warn('[YANDEX SYNC] currentClientId set', clientId?.slice(0, 8));
           }
         }
         const storedCurrent = localStorage.getItem('heys_client_current');
         if (!storedCurrent) {
           localStorage.setItem('heys_client_current', JSON.stringify(clientId));
-          console.warn('[YANDEX SYNC] heys_client_current set');
         }
       } catch (_) { }
 
@@ -3223,11 +3232,9 @@
         cancelFailsafeTimer(); // 🔐 Отменяем failsafe — sync успешен
       }
 
-      logCritical(`✅ [YANDEX SYNC] Загружено ${loadedCount} ключей для клиента ${clientId.slice(0, 8)}`);
-      console.warn('[YANDEX SYNC] done', {
-        clientId: clientId?.slice(0, 8),
-        loadedCount
-      });
+      logCritical(`✅ Загружено ${loadedCount} ключей для клиента ${clientId.slice(0, 8)}`);
+      const syncDuration = Math.round(performance.now() - syncStartTime);
+      logCritical(`✅ [SYNC DONE] client=${clientId.slice(0, 8)} keys=${loadedCount} ms=${syncDuration} via=rpc`);
 
       // Уведомляем UI о завершении
       if (typeof window !== 'undefined' && window.dispatchEvent) {
@@ -3306,10 +3313,9 @@
   let _syncInProgress = null; // null | Promise
   // options.force = true — bypass throttling (для pull-to-refresh)
   cloud.bootstrapClientSync = async function (client_id, options) {
-    // � DEBUG: Входные параметры
-    logCritical('[bootstrapClientSync] START client_id:', client_id, 'user:', !!user, 'user.email:', user?.email);
+    console.info(`[HEYS.sync] 🚀 Начало синхронизации для клиента ${client_id?.slice(0, 8)}...`);
 
-    // �🔐 PIN-авторизация: работаем без user, если client_id проверен через verify_client_pin
+    // 🔐 PIN-авторизация: работаем без user, если client_id проверен через verify_client_pin
     const isPinAuth = _pinAuthClientId && _pinAuthClientId === client_id;
 
     // 🔐 Если Yandex sync в процессе или уже завершён — пропускаем
@@ -3336,11 +3342,11 @@
     // 🔧 FIX 2025-12-24: Используем переменную `user` из scope (устанавливается при signIn)
     const hasAuth = isPinAuth || user;
     if (!hasAuth) {
-      log('[SYNC] Skipping — no auth (no PIN, no curator user). isPinAuth:', isPinAuth, 'user:', !!user);
+      console.warn('[HEYS.sync] ⚠️ Пропуск — нет авторизации');
       return;
     }
 
-    logCritical('[bootstrapClientSync] ✅ Auth check PASSED, hasAuth:', hasAuth, 'isPinAuth:', isPinAuth, 'user:', !!user);
+    console.info('[HEYS.sync] ✅ Авторизация подтверждена');
 
     // Дедупликация: если sync уже в процессе для этого клиента — ждём его завершения
     if (_syncInProgress) {
@@ -4418,16 +4424,17 @@
         muteMirror = false;
         cloud._lastClientSync = { clientId: client_id, ts: now };
 
-        // ⏱️ TIMING: 🔇 v4.7.1 отключено
-        // const syncDuration = Math.round(performance.now() - syncStartTime);
+        const syncDuration = Math.round(performance.now() - syncStartTime);
 
         // 🧹 Очистка дублирующихся ключей после синхронизации
         cleanupDuplicateKeys();
 
         // 🚨 Критический лог: первая синхронизация завершена
         if (!initialSyncCompleted) {
-          logCritical('✅ Синхронизация завершена | клиент:', client_id.substring(0, 8) + '...', '| ключей:', data?.length || 0);
+          console.info(`[HEYS.sync] ✅ Синхронизация завершена: ${data?.length || 0} ключей для клиента ${client_id.slice(0, 8)}***`);
         }
+
+        logCritical(`✅ [SYNC DONE] client=${client_id.slice(0, 8)} keys=${data?.length || 0} ms=${syncDuration} force=${!!forceSync}`);
 
         // 🚨 Разрешаем сохранение после первого sync
         initialSyncCompleted = true;
@@ -4437,7 +4444,6 @@
         // Иначе lsGet() вернёт устаревшие данные из кэша при pull-to-refresh
         if (global.HEYS?.store?.flushMemory) {
           global.HEYS.store.flushMemory();
-          logCritical('🧹 [CACHE] Memory cache flushed after sync');
         }
 
         // 🧹 Однократная очистка облака от невалидных продуктов (после первой синхронизации)
@@ -4519,7 +4525,6 @@
         // Задержка 300мс чтобы localStorage успел обновиться и React перечитал данные
         // ВСЕГДА отправляем событие — дедупликация на стороне получателя (проверка clientId)
         if (typeof window !== 'undefined' && window.dispatchEvent) {
-          logCritical('📢 Dispatching heysSyncCompleted | clientId:', client_id);
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id } }));
           }, 300);
@@ -5643,7 +5648,7 @@
    */
   cloud.switchClient = async function (newClientId) {
     if (!newClientId) {
-      console.log('❌ Не указан ID нового клиента');
+      console.error('[HEYS.sync] ❌ Не указан ID нового клиента');
       return false;
     }
 
@@ -5655,7 +5660,7 @@
       return true;
     }
 
-    log('🔄 Переключение клиента:', oldClientId?.substring(0, 8), '→', newClientId.substring(0, 8));
+    console.info(`[HEYS.sync] 🔄 Переключение клиента: ${oldClientId?.substring(0, 8) || 'нет'} → ${newClientId.substring(0, 8)}`);
 
     // 1. Сначала синхронизируем текущие данные в облако (если есть pending)
     if (oldClientId && cloud.getPendingCount() > 0) {
