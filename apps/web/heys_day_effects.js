@@ -184,9 +184,25 @@
                     return;
                 }
 
-                // Блокируем ВСЕ внешние обновления на 3 секунды после локального изменения
-                // Но НЕ блокируем forceReload (от шагов модалки)
-                if (!forceReload && Date.now() < blockCloudUpdatesUntilRef.current) {
+                // 🔧 v4.9.0: Определяем внешние источники (cloud sync)
+                const externalSources = ['cloud', 'cloud-sync', 'merge', 'fetchDays'];
+                const isExternalSource = externalSources.includes(source);
+
+                // 🔒 Блокируем ЛЮБЫЕ внешние обновления (включая forceReload)
+                // на 3 секунды после локального изменения
+                if (isExternalSource && Date.now() < blockCloudUpdatesUntilRef.current) {
+                    console.info('[HEYS.day] 🔒 External update blocked', {
+                        source,
+                        forceReload,
+                        remainingMs: blockCloudUpdatesUntilRef.current - Date.now()
+                    });
+                    return;
+                }
+
+                // Для внутренних источников (step-modal, training-step, morning-checkin)
+                // forceReload обходит блокировку как раньше
+                if (!isExternalSource && !forceReload && Date.now() < blockCloudUpdatesUntilRef.current) {
+                    console.info('[HEYS.day] 🔒 Internal update blocked (no forceReload)');
                     return;
                 }
 

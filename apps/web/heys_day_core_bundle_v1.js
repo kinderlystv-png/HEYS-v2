@@ -3153,6 +3153,12 @@
                 const updatedDate = e.detail?.date;
                 const source = e.detail?.source || 'unknown';
                 const forceReload = e.detail?.forceReload || false;
+                console.info('[HEYS.day] 🔄 heys:day-updated', {
+                    source,
+                    updatedDate,
+                    forceReload,
+                    blockUntil: blockCloudUpdatesUntilRef.current
+                });
 
                 // 🔧 v3.19.1: Дедупликация событий — игнорируем одинаковые события в течение 100мс
                 const now = Date.now();
@@ -3171,9 +3177,25 @@
                     return;
                 }
 
-                // Блокируем ВСЕ внешние обновления на 3 секунды после локального изменения
-                // Но НЕ блокируем forceReload (от шагов модалки)
-                if (!forceReload && Date.now() < blockCloudUpdatesUntilRef.current) {
+                // 🔧 v4.9.0: Определяем внешние источники (cloud sync)
+                const externalSources = ['cloud', 'cloud-sync', 'merge', 'fetchDays'];
+                const isExternalSource = externalSources.includes(source);
+
+                // 🔒 Блокируем ЛЮБЫЕ внешние обновления (включая forceReload)
+                // на 3 секунды после локального изменения
+                if (isExternalSource && Date.now() < blockCloudUpdatesUntilRef.current) {
+                    console.info('[HEYS.day] 🔒 External update blocked', {
+                        source,
+                        forceReload,
+                        remainingMs: blockCloudUpdatesUntilRef.current - Date.now()
+                    });
+                    return;
+                }
+
+                // Для внутренних источников (step-modal, training-step, morning-checkin)
+                // forceReload обходит блокировку как раньше
+                if (!isExternalSource && !forceReload && Date.now() < blockCloudUpdatesUntilRef.current) {
+                    console.info('[HEYS.day] 🔒 Internal update blocked (no forceReload)');
                     return;
                 }
 
@@ -3194,13 +3216,27 @@
                         const storageUpdatedAt = normalizedDay.updatedAt || 0;
                         const currentUpdatedAt = lastLoadedUpdatedAtRef.current || 0;
 
+                        const storageMealsCount = (normalizedDay.meals || []).length;
+                        console.info('[HEYS.day] 📥 storage snapshot', {
+                            source,
+                            storageUpdatedAt,
+                            currentUpdatedAt,
+                            storageMealsCount,
+                            forceReload
+                        });
+
                         // Двойная защита: по timestamp И по количеству meals
                         // Не откатываем если в storage меньше meals чем в текущем state
-                        const storageMealsCount = (normalizedDay.meals || []).length;
 
                         // Пропускаем проверку timestamp если forceReload
                         // ВАЖНО: используем < вместо <= чтобы обрабатывать первую загрузку (когда оба = 0)
                         if (!forceReload && storageUpdatedAt < currentUpdatedAt) {
+                            console.info('[HEYS.day] ⏭️ Day update skipped (stale storage)', {
+                                source,
+                                updatedDate,
+                                storageUpdatedAt,
+                                currentUpdatedAt
+                            });
                             return; // Не перезаписываем более новые данные старыми
                         }
 
@@ -3225,6 +3261,15 @@
 
                         // 🔒 Оптимизация: не вызываем setDay если контент идентичен (предотвращает мерцание)
                         setDay(prevDay => {
+                            const prevMealsCount = (prevDay?.meals || []).length;
+                            if (storageMealsCount < prevMealsCount) {
+                                console.warn('[HEYS.day] ⚠️ Potential overwrite (meals count down)', {
+                                    source,
+                                    prevMealsCount,
+                                    storageMealsCount,
+                                    forceReload
+                                });
+                            }
                             if (prevDay && prevDay.date === newDay.date) {
                                 const prevMealsJson = JSON.stringify(prevDay.meals || []);
                                 const newMealsJson = JSON.stringify(newDay.meals || []);

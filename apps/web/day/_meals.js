@@ -2344,6 +2344,13 @@
 
             haptic('light');
 
+            console.info('[HEYS.day] ➕ addProductToMeal', {
+                mealIndex: mi,
+                productId: p?.id ?? p?.product_id ?? null,
+                productName: p?.name || null,
+                source: p?._source || (p?._fromShared ? 'shared' : 'personal')
+            });
+
             let finalProduct = p;
             if (p?._fromShared || p?._source === 'shared' || p?.is_shared) {
                 const cloned = HEYS.products?.addFromShared?.(p);
@@ -2373,7 +2380,15 @@
                 harm: harmVal,  // Normalized harm (0-10)
             };
             setDay((prevDay) => {
-                const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
+                const mealsList = prevDay.meals || [];
+                if (!mealsList[mi]) {
+                    console.warn('[HEYS.day] ❌ Meal index not found for addProductToMeal', {
+                        mealIndex: mi,
+                        mealsCount: mealsList.length,
+                        productName: finalProduct?.name || null
+                    });
+                }
+                const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
                 return { ...prevDay, meals, updatedAt: Date.now() };
             });
 

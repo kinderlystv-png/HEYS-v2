@@ -36,6 +36,13 @@
           day,
           dateKey: date,
           onAdd: ({ product, grams, mealIndex }) => {
+            console.info('[HEYS.day] ➕ Add product to meal (modal)', {
+              mealIndex,
+              grams,
+              productId: product?.id ?? product?.product_id ?? null,
+              productName: product?.name || null,
+              source: product?._source || (product?._fromShared ? 'shared' : 'personal')
+            });
             // 🌐 Если продукт из общей базы — автоматически клонируем в личную
             let finalProduct = product;
             if (product?._fromShared || product?._source === 'shared') {
@@ -147,14 +154,26 @@
             if (HEYS.Day?.setBlockCloudUpdates) {
               HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
               // console.log('[MealAddProduct] 🔒 Blocking cloud updates until:', newUpdatedAt + 3000);
+            } else {
+              console.warn('[HEYS.day] ⚠️ setBlockCloudUpdates missing');
             }
             // 🔒 ВАЖНО: Обновляем lastLoadedUpdatedAt чтобы handleDayUpdated не перезаписал
             if (HEYS.Day?.setLastLoadedUpdatedAt) {
               HEYS.Day.setLastLoadedUpdatedAt(newUpdatedAt);
+            } else {
+              console.warn('[HEYS.day] ⚠️ setLastLoadedUpdatedAt missing');
             }
 
             setDay((prevDay = {}) => {
-              const meals = (prevDay.meals || []).map((m, i) =>
+              const mealsList = prevDay.meals || [];
+              if (!mealsList[mealIndex]) {
+                console.warn('[HEYS.day] ❌ Meal index not found for add', {
+                  mealIndex,
+                  mealsCount: mealsList.length,
+                  productName: finalProduct?.name || null
+                });
+              }
+              const meals = mealsList.map((m, i) =>
                 i === mealIndex
                   ? { ...m, items: [...(m.items || []), newItem] }
                   : m

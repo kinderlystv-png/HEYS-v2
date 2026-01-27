@@ -501,7 +501,21 @@
 
     // === PHASE 2: Shared Products UI ===
     // Подвкладки: 'personal' (👤 Продукты клиента) | 'shared' (🌐 Общая база)
-    const [activeSubtab, setActiveSubtab] = React.useState('personal');
+    // 🔧 FIX: сохраняем выбор под-вкладки per-client, чтобы syncVer-remount не сбрасывал UI
+    const getRationSubtabKey = () => {
+      const clientId = window.HEYS?.currentClientId;
+      return clientId ? `heys_${clientId}_ration_subtab` : 'heys_ration_subtab';
+    };
+    const readStoredSubtab = () => {
+      try {
+        const raw = localStorage.getItem(getRationSubtabKey());
+        const stored = raw ? JSON.parse(raw) : null;
+        return stored === 'shared' ? 'shared' : 'personal';
+      } catch (_) {
+        return 'personal';
+      }
+    };
+    const [activeSubtab, setActiveSubtab] = React.useState(readStoredSubtab);
     // Результаты поиска из shared_products
     const [sharedResults, setSharedResults] = React.useState([]);
     const [sharedLoading, setSharedLoading] = React.useState(false);
@@ -612,6 +626,24 @@
         loadPendingProducts();
       }
     }, [activeSubtab, isCurator, loadPendingProducts]);
+
+    // 🔄 Восстанавливаем под-вкладку при смене клиента
+    React.useEffect(() => {
+      const handleClientChange = () => {
+        const next = readStoredSubtab();
+        setActiveSubtab((prev) => (prev === next ? prev : next));
+      };
+      window.addEventListener('heys:client-changed', handleClientChange);
+      return () => window.removeEventListener('heys:client-changed', handleClientChange);
+    }, []);
+
+    // 💾 Сохраняем выбор под-вкладки (per-client key)
+    React.useEffect(() => {
+      try {
+        if (activeSubtab !== 'personal' && activeSubtab !== 'shared') return;
+        localStorage.setItem(getRationSubtabKey(), JSON.stringify(activeSubtab));
+      } catch (_) { }
+    }, [activeSubtab]);
 
     // Загружаем ВСЕ продукты общей базы при переключении на вкладку "Общая база"
     React.useEffect(() => {

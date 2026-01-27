@@ -3763,7 +3763,21 @@ NOVA: 1
     }, [data, onChange, kcal100]);
 
     const handleSubmit = useCallback(() => {
-      if (!product || grams <= 0) return;
+      if (!product || grams <= 0) {
+        console.warn('[HEYS.addProduct] ⚠️ GramsStep submit blocked', {
+          hasProduct: !!product,
+          grams,
+          mealIndex: context?.mealIndex ?? null,
+          productName: product?.name || null
+        });
+        return;
+      }
+      console.info('[HEYS.addProduct] 🟢 GramsStep submit', {
+        grams,
+        mealIndex: context?.mealIndex ?? null,
+        productId: product?.id ?? product?.product_id ?? null,
+        productName: product?.name || null
+      });
       // Режим редактирования — вызываем onSave
       if (context?.isEditMode && context?.onSave) {
         context.onSave({
@@ -3791,6 +3805,12 @@ NOVA: 1
           ? { ...product, kcal100: derivedKcal100 }
           : product;
 
+        console.info('[HEYS.addProduct] ➕ GramsStep onAdd', {
+          grams,
+          mealIndex: context?.mealIndex ?? null,
+          productId: productForSubmit?.id ?? productForSubmit?.product_id ?? null,
+          productName: productForSubmit?.name || null
+        });
         context.onAdd({
           product: productForSubmit,
           grams,
@@ -4164,6 +4184,13 @@ NOVA: 1
       products = fromLsGet;
     }
 
+    console.info('[HEYS.addProduct] 📦 Open modal', {
+      mealIndex,
+      dateKey,
+      productsCount: products.length,
+      hasProvidedProducts: Array.isArray(providedProducts) && providedProducts.length > 0
+    });
+
     // Mutable ref для обновления продуктов после создания
     let currentProducts = [...products];
 
@@ -4293,6 +4320,13 @@ NOVA: 1
         // console.log('[AddProductStep] selectedProduct:', selectedProduct?.name, 'grams:', grams);
 
         if (selectedProduct && grams) {
+          console.info('[HEYS.addProduct] ✅ onComplete -> onAdd', {
+            mealIndex,
+            grams,
+            productId: selectedProduct.id ?? selectedProduct.product_id ?? null,
+            productName: selectedProduct.name || null,
+            source: selectedProduct._source || (selectedProduct._fromShared ? 'shared' : 'personal')
+          });
           onAdd?.({
             product: selectedProduct,
             grams: grams,
@@ -4303,6 +4337,13 @@ NOVA: 1
           window.dispatchEvent(new CustomEvent('heysProductAdded', {
             detail: { product: selectedProduct, grams }
           }));
+        } else {
+          console.warn('[HEYS.addProduct] ⚠️ onComplete skipped (missing product or grams)', {
+            mealIndex,
+            grams,
+            hasSelectedProduct: !!selectedProduct,
+            selectedProductName: selectedProduct?.name || null
+          });
         }
       },
       onClose
