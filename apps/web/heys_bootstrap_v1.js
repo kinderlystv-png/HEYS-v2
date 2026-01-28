@@ -26,6 +26,12 @@
 
   const HEYS = window.HEYS = window.HEYS || {};
 
+  // Default feature flags (safe, local-only)
+  HEYS.features = HEYS.features || {
+    unifiedTables: true,
+    extendedNutrients: true
+  };
+
   // Check feature flag - если используется legacy mode, пропускаем модуль
   if (HEYS.featureFlags?.isEnabled('use_legacy_monolith')) {
     if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
@@ -194,8 +200,12 @@
    * @returns {boolean} true if curator session
    */
   function isCuratorSession() {
-    const curatorToken = readGlobalValue('heys_curator_token', null);
-    return !!(curatorToken && curatorToken.length > 10);
+    if (HEYS.auth?.isCuratorSession) return HEYS.auth.isCuratorSession();
+    const curatorSession = readGlobalValue('heys_curator_session', null);
+    if (curatorSession && curatorSession.length > 10) return true;
+    const legacy = readGlobalValue('heys_supabase_auth_token', null);
+    if (legacy?.access_token) return true;
+    return !!HEYS.cloud?.getUser?.();
   }
 
   /**

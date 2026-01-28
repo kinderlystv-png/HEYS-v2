@@ -354,6 +354,28 @@
     return { ok: true };
   }
 
+  /**
+   * Проверить, является ли сессия кураторской
+   * Источник правды: heys_curator_session (JWT), fallback: legacy supabase token,
+   * дополнительный fallback: HEYS.cloud.getUser()
+   */
+  function isCuratorSession() {
+    try {
+      const curatorSession = localStorage.getItem('heys_curator_session');
+      if (curatorSession && curatorSession.length > 10) return true;
+      const legacy = localStorage.getItem('heys_supabase_auth_token');
+      if (legacy) {
+        const parsed = JSON.parse(legacy);
+        if (parsed?.access_token) return true;
+      }
+    } catch (_) { }
+    try {
+      return !!HEYS.cloud?.getUser?.();
+    } catch (_) {
+      return false;
+    }
+  }
+
   // === Session Token Management ===
 
   /**
@@ -468,6 +490,7 @@
     loginClient,
     createClientWithPin,
     resetClientPin,
+    isCuratorSession,
     // 🔐 Session management
     getSessionToken,
     setSessionToken,

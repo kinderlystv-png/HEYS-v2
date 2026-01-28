@@ -918,7 +918,9 @@
     if (insightsTourCompleted) return false;
 
     // Не показываем кураторам
-    const isCurator = localStorage.getItem('heys_cloud_role') === 'curator' || HEYS.cloud?.isCurator?.();
+    const isCurator = typeof HEYS.auth?.isCuratorSession === 'function'
+      ? HEYS.auth.isCuratorSession()
+      : !!HEYS.cloud?.getUser?.();
     if (isCurator) return false;
 
     return true;
@@ -1377,7 +1379,11 @@
     if (widgetsCompleted) return false;
 
     // Для кураторов не показываем
-    if (HEYS.user?.isCurator?.()) return false;
+    if (typeof HEYS.auth?.isCuratorSession === 'function') {
+      if (HEYS.auth.isCuratorSession()) return false;
+    } else if (HEYS.user?.isCurator?.()) {
+      return false;
+    }
 
     return true;
   }

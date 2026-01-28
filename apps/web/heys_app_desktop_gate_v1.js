@@ -18,8 +18,12 @@
         // а не _rpcOnlyMode (который true для ВСЕХ после миграции на Yandex API)
         React.useEffect(() => {
             const checkCurator = () => {
+                const isCuratorSession = window.HEYS?.auth?.isCuratorSession;
+                if (typeof isCuratorSession === 'function') {
+                    setIsCurator(isCuratorSession());
+                    return;
+                }
                 const cloudUserLocal = window.HEYS?.cloud?.getUser?.();
-                // Куратор = есть user object (PIN-вход не создаёт user, только _pinAuthClientId)
                 setIsCurator(cloudUserLocal != null);
             };
             checkCurator();

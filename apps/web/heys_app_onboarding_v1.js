@@ -93,11 +93,11 @@
     // 🎓 v1.7: Tour ONLY for PIN-authenticated clients, NOT for curators
     // Централизованные проверки авторизации (выносим в HEYS для переиспользования)
     const isCuratorSession = () => {
-        // Куратор имеет JWT токен в localStorage (heys_curator_session или heys_supabase_auth_token)
+        const isCuratorSessionFn = HEYS.auth?.isCuratorSession;
+        if (typeof isCuratorSessionFn === 'function') return isCuratorSessionFn();
         const curatorSession = readStoredValue('heys_curator_session', null);
         const supabaseToken = readStoredValue('heys_supabase_auth_token', null);
-        // Также проверяем HEYS.cloud.role если уже установлен
-        return !!(curatorSession || supabaseToken || HEYS.cloud?.role === 'curator');
+        return !!(curatorSession || supabaseToken || HEYS.cloud?.getUser?.());
     };
 
     // 🆕 v1.7: Проверка что пользователь авторизован как КЛИЕНТ (не куратор, не гость)
