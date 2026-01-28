@@ -11,6 +11,12 @@
   // === Реестр открытых модалок ===
   const openModals = new Set();
   const modalClosers = new Map(); // modalId => closeFunction
+  const MODAL_SYNC_BLOCK_MS = 10 * 60 * 1000;
+  const syncState = {
+    token: null,
+    dayBlockUntil: 0,
+    transitioning: false
+  };
 
   // === API ===
   const ModalManager = {
@@ -22,16 +28,23 @@
      */
     register(modalId, closeFunction) {
       // Закрываем все другие модалки
+      syncState.transitioning = true;
       this.closeAll(modalId);
-      
+
       // Регистрируем новую
+      if (openModals.size === 0) {
+        this._pauseSyncForModal();
+      }
       openModals.add(modalId);
       modalClosers.set(modalId, closeFunction);
-      
+      syncState.transitioning = false;
+
       // Возвращаем cleanup функцию
       return () => {
-        openModals.delete(modalId);
-        modalClosers.delete(modalId);
+        this._unregister(modalId);
+        if (!syncState.transitioning) {
+          this._resumeSyncIfNeeded();
+        }
       };
     },
 
@@ -40,14 +53,24 @@
      * @param {string} exceptModalId - ID модалки которую НЕ закрывать
      */
     closeAll(exceptModalId = null) {
-      for (const [modalId, closer] of modalClosers.entries()) {
-        if (modalId !== exceptModalId) {
-          try {
-            closer();
-          } catch (e) {
-            console.warn(`[ModalManager] Ошибка при закрытии ${modalId}:`, e);
-          }
+      const idsToClose = [];
+      for (const modalId of modalClosers.keys()) {
+        if (modalId !== exceptModalId) idsToClose.push(modalId);
+      }
+
+      idsToClose.forEach((modalId) => {
+        const closer = modalClosers.get(modalId);
+        if (!closer) return;
+        try {
+          closer();
+        } catch (e) {
+          console.warn(`[ModalManager] Ошибка при закрытии ${modalId}:`, e);
         }
+        this._unregister(modalId);
+      });
+
+      if (!syncState.transitioning) {
+        this._resumeSyncIfNeeded();
       }
     },
 
@@ -64,6 +87,8 @@
           console.warn(`[ModalManager] Ошибка при закрытии ${modalId}:`, e);
         }
       }
+      this._unregister(modalId);
+      this._resumeSyncIfNeeded();
     },
 
     /**
@@ -89,6 +114,39 @@
      */
     getOpenCount() {
       return openModals.size;
+    },
+
+    _unregister(modalId) {
+      openModals.delete(modalId);
+      modalClosers.delete(modalId);
+    },
+
+    _pauseSyncForModal() {
+      if (syncState.token) return;
+
+      if (HEYS.Day?.setBlockCloudUpdates) {
+        syncState.dayBlockUntil = Date.now() + MODAL_SYNC_BLOCK_MS;
+        HEYS.Day.setBlockCloudUpdates(syncState.dayBlockUntil);
+      }
+
+      syncState.token = HEYS.cloud?.pauseSync?.(MODAL_SYNC_BLOCK_MS, 'modal') || null;
+    },
+
+    _resumeSyncIfNeeded() {
+      if (openModals.size > 0) return;
+
+      if (HEYS.cloud?.resumeSync && syncState.token) {
+        HEYS.cloud.resumeSync(syncState.token);
+      }
+      syncState.token = null;
+
+      if (HEYS.Day?.getBlockUntil && HEYS.Day?.setBlockCloudUpdates && syncState.dayBlockUntil) {
+        const currentBlock = HEYS.Day.getBlockUntil() || 0;
+        if (currentBlock >= syncState.dayBlockUntil - 50) {
+          HEYS.Day.setBlockCloudUpdates(Date.now());
+        }
+      }
+      syncState.dayBlockUntil = 0;
     }
   };
 
