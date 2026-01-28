@@ -623,7 +623,7 @@ PostgreSQL (harm)
 | ---------- | -------------------------------------- | --------------- |
 | `carbs100` | `simple100 + complex100`               | Всего углеводов |
 | `fat100`   | `badFat100 + goodFat100 + trans100`    | Всего жиров     |
-| `kcal100`  | `protein100*4 + carbs100*4 + fat100*9` | Калории         |
+| `kcal100`  | `protein100*3 + carbs100*4 + fat100*9` | Калории (TEF-aware) |
 
 ---
 

@@ -60,6 +60,12 @@
     };
 
     /**
+     * @architecture "Normalize Once, Render Anywhere"
+     * - Все shared продукты нормализуются при загрузке
+     * - Рендер использует готовые данные
+     * - SoT формулы = computeDerivedProduct()
+     */
+    /**
      * Normalize shared product to have both harm and harmScore fields
      * Uses centralized HEYS.models.normalizeHarm() if available
      * Extended in v4.4.0 to normalize all extended nutrient fields
@@ -67,30 +73,48 @@
     const normalizeSharedProduct = (p) => {
       if (!p || typeof p !== 'object') return p;
 
-      // Use extended normalization if available (v4.4.0+)
-      if (HEYS.models?.normalizeExtendedProduct) {
-        return HEYS.models.normalizeExtendedProduct(p);
+      if (HEYS.features?.unifiedTables === false) {
+        return HEYS.models?.normalizeProductFields
+          ? HEYS.models.normalizeProductFields({ ...p })
+          : { ...p };
       }
 
-      // Fallback to basic normalization
-      const next = { ...p };
+      // Use extended normalization if available (v4.4.0+)
+      if (HEYS.models?.normalizeExtendedProduct) {
+        try {
+          return HEYS.models.normalizeExtendedProduct(p);
+        } catch (e) {
+          err('[HEYS.shared] normalizeExtendedProduct failed:', e);
+        }
+      }
 
-      // Use centralized normalization if available
-      const harmVal = HEYS.models?.normalizeHarm?.(p) ?? toNum(p.harm ?? p.harmScore ?? p.harmscore);
+      // Fallback to basic normalization (без дублирования extended mapping)
+      let next = { ...p };
 
+      if (HEYS.models?.normalizeProductFields) {
+        next = HEYS.models.normalizeProductFields(next);
+      }
+
+      const harmVal = HEYS.models?.normalizeHarm?.(next) ?? toNum(next.harm ?? next.harmScore ?? next.harmscore);
       if (harmVal != null) {
-        next.harm = harmVal;      // Canonical field
-        next.harmScore = harmVal; // DB compatibility
+        next.harm = harmVal;
+        next.harmScore = harmVal;
       }
 
       if (next.gi != null) next.gi = toNum(next.gi);
 
-      // NOVA group — normalize snake_case → camelCase (fallback)
-      if (next.nova_group != null) {
-        next.nova_group = parseInt(next.nova_group, 10);
-        next.novaGroup = next.nova_group;
+      if (HEYS.models?.computeDerivedProduct) {
+        const derived = HEYS.models.computeDerivedProduct(next);
+        next.kcal100 = derived.kcal100;
+        next.carbs100 = derived.carbs100;
+        next.fat100 = derived.fat100;
+        if (derived.harm != null && next.harm == null) {
+          next.harm = derived.harm;
+          next.harmScore = derived.harm;
+        }
       }
 
+      next._normalized = true;
       return next;
     };
 
@@ -178,7 +202,15 @@
           return { data: null, error };
         }
 
-        let filtered = (data || []).map(normalizeSharedProduct);
+        const safeNormalize = (item) => {
+          try {
+            return normalizeSharedProduct(item);
+          } catch (e) {
+            err('[HEYS.shared] normalizeSharedProduct failed:', e);
+            return null;
+          }
+        };
+        let filtered = (data || []).map(safeNormalize).filter(Boolean);
         filtered = await backfillSharedHarm(filtered);
         const user = getUser();
         if (excludeBlocklist && user) {
@@ -265,7 +297,15 @@
           }
         }
 
-        let filtered = (data || []).map(normalizeSharedProduct);
+        const safeNormalize = (item) => {
+          try {
+            return normalizeSharedProduct(item);
+          } catch (e) {
+            err('[HEYS.shared] normalizeSharedProduct failed:', e);
+            return null;
+          }
+        };
+        let filtered = (data || []).map(safeNormalize).filter(Boolean);
         const user = getUser();
         if (excludeBlocklist && user) {
           const blocklist = await cloud.getBlocklist();

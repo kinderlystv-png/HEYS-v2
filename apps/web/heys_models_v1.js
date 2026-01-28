@@ -1442,47 +1442,187 @@ NOVA: 1-4
   function normalizeExtendedProduct(dbProduct) {
     if (!dbProduct) return dbProduct;
 
+    // Prevent double normalization
+    if (dbProduct._normalized) return dbProduct;
+
     const result = { ...dbProduct };
 
-    // harm normalization (существующая логика)
+    const warnNumber = (field, value) => {
+      if (value == null || !Number.isFinite(value)) return;
+      const maxByField = {
+        sodium100: 5000,
+        omega3_100: 100,
+        omega6_100: 100,
+        nutrient_density: 100,
+        vitamin_a: 300,
+        vitamin_c: 300,
+        vitamin_d: 300,
+        vitamin_e: 300,
+        vitamin_k: 300,
+        vitamin_b1: 300,
+        vitamin_b2: 300,
+        vitamin_b3: 300,
+        vitamin_b6: 300,
+        vitamin_b9: 300,
+        vitamin_b12: 300,
+        calcium: 300,
+        iron: 300,
+        magnesium: 300,
+        phosphorus: 300,
+        potassium: 300,
+        zinc: 300,
+        selenium: 300,
+        iodine: 300
+      };
+      const max = maxByField[field] ?? 1000;
+      if (value < 0 || value > max) {
+        console.warn('[HEYS.shared] ⚠️ Suspicious value', field, value, result?.id || 'unknown');
+      }
+    };
+
+    const normalizeBaseNumber = (field, value) => {
+      if (value == null || value === '') return 0;
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 0;
+      if (n < 0) {
+        console.warn('[HEYS.shared] ⚠️ Negative value clamped', field, n, result?.id || 'unknown');
+        return 0;
+      }
+      if (n > 1000) warnNumber(field, n);
+      return n;
+    };
+
+    const normalizeExtendedNumber = (field, value) => {
+      if (value == null || value === '') return null;
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 0;
+      if (n < 0) {
+        console.warn('[HEYS.shared] ⚠️ Negative value clamped', field, n, result?.id || 'unknown');
+        return 0;
+      }
+      if (n > 1000) warnNumber(field, n);
+      return n;
+    };
+
+    // === 1. Case mapping: snake_case → camelCase ===
+    const baseFieldAliases = [
+      { field: 'simple100' },
+      { field: 'complex100' },
+      { field: 'protein100' },
+      { field: 'badFat100', snake: 'badfat100' },
+      { field: 'goodFat100', snake: 'goodfat100' },
+      { field: 'trans100' },
+      { field: 'fiber100' }
+    ];
+
+    baseFieldAliases.forEach(({ field, snake }) => {
+      if (snake && result[field] == null && result[snake] != null) {
+        result[field] = result[snake];
+      }
+      if (snake && result[snake] == null && result[field] != null) {
+        result[snake] = result[field];
+      }
+      result[field] = normalizeBaseNumber(field, result[field]);
+    });
+
+    // === 2. Harm normalization (существующая логика) ===
     const harmVal = normalizeHarm(result);
     if (harmVal !== undefined) {
       result.harm = harmVal;
       result.harmScore = harmVal;
     }
 
-    // gi normalization
+    // === 3. GI normalization ===
     if (result.gi != null) {
-      result.gi = Number(result.gi);
+      const giVal = Number(result.gi);
+      result.gi = Number.isFinite(giVal) ? giVal : 0;
     }
 
-    // Extended fields - ensure numbers are numbers
-    const numericFields = [
-      'sodium100', 'omega3_100', 'omega6_100', 'nutrient_density',
-      'vitamin_a', 'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k',
-      'vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12',
-      'calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'selenium', 'iodine'
+    // === 4. Computed fields: kcal100, carbs100, fat100 ===
+    // TEF-aware formula: protein*3 + carbs*4 + fat*9
+    // Source of Truth: heys_core_v12.js:computeDerived()
+    const protein = Number(result.protein100) || 0;
+    const simple = Number(result.simple100) || 0;
+    const complex = Number(result.complex100) || 0;
+    const badFat = Number(result.badFat100) || 0;
+    const goodFat = Number(result.goodFat100) || 0;
+    const trans = Number(result.trans100) || 0;
+
+    const carbs100 = (result.carbs100 != null && result.carbs100 > 0)
+      ? Number(result.carbs100)
+      : (simple + complex);
+    const fat100 = (result.fat100 != null && result.fat100 > 0)
+      ? Number(result.fat100)
+      : (badFat + goodFat + trans);
+    const kcal100 = round1(protein * 3 + carbs100 * 4 + fat100 * 9);
+
+    result.carbs100 = round1(carbs100);
+    result.fat100 = round1(fat100);
+    result.kcal100 = kcal100;
+
+    // === 5. Extended nutrients — ensure numbers + aliases ===
+    const extendedAliases = [
+      { snake: 'nutrient_density', camel: 'nutrientDensity', type: 'number' },
+      { snake: 'nova_group', camel: 'novaGroup', type: 'int' },
+      { snake: 'is_organic', camel: 'isOrganic', type: 'boolean' },
+      { snake: 'is_whole_grain', camel: 'isWholeGrain', type: 'boolean' },
+      { snake: 'is_fermented', camel: 'isFermented', type: 'boolean' },
+      { snake: 'is_raw', camel: 'isRaw', type: 'boolean' },
+      { snake: 'vitamin_a', camel: 'vitaminA', type: 'number' },
+      { snake: 'vitamin_c', camel: 'vitaminC', type: 'number' },
+      { snake: 'vitamin_d', camel: 'vitaminD', type: 'number' },
+      { snake: 'vitamin_e', camel: 'vitaminE', type: 'number' },
+      { snake: 'vitamin_k', camel: 'vitaminK', type: 'number' },
+      { snake: 'vitamin_b1', camel: 'vitaminB1', type: 'number' },
+      { snake: 'vitamin_b2', camel: 'vitaminB2', type: 'number' },
+      { snake: 'vitamin_b3', camel: 'vitaminB3', type: 'number' },
+      { snake: 'vitamin_b6', camel: 'vitaminB6', type: 'number' },
+      { snake: 'vitamin_b9', camel: 'vitaminB9', type: 'number' },
+      { snake: 'vitamin_b12', camel: 'vitaminB12', type: 'number' },
+      { snake: 'calcium', camel: 'calcium', type: 'number' },
+      { snake: 'iron', camel: 'iron', type: 'number' },
+      { snake: 'magnesium', camel: 'magnesium', type: 'number' },
+      { snake: 'phosphorus', camel: 'phosphorus', type: 'number' },
+      { snake: 'potassium', camel: 'potassium', type: 'number' },
+      { snake: 'zinc', camel: 'zinc', type: 'number' },
+      { snake: 'selenium', camel: 'selenium', type: 'number' },
+      { snake: 'iodine', camel: 'iodine', type: 'number' }
     ];
 
-    for (const field of numericFields) {
-      if (result[field] != null) {
-        result[field] = Number(result[field]);
+    extendedAliases.forEach(({ snake, camel, type }) => {
+      if (result[camel] == null && result[snake] != null) {
+        result[camel] = result[snake];
       }
-    }
-
-    // NOVA group — normalize snake_case → camelCase
-    if (result.nova_group != null) {
-      result.nova_group = parseInt(result.nova_group, 10);
-      result.novaGroup = result.nova_group; // camelCase alias for heys_harm_v1.js
-    }
-
-    // Boolean flags
-    const boolFields = ['is_organic', 'is_whole_grain', 'is_fermented', 'is_raw'];
-    for (const field of boolFields) {
-      if (result[field] != null) {
-        result[field] = Boolean(result[field]);
+      if (result[snake] == null && result[camel] != null) {
+        result[snake] = result[camel];
       }
-    }
+
+      if (type === 'number') {
+        result[snake] = normalizeExtendedNumber(snake, result[snake]);
+        result[camel] = normalizeExtendedNumber(camel, result[camel]);
+      }
+      if (type === 'int') {
+        const snakeVal = normalizeExtendedNumber(snake, result[snake]);
+        const camelVal = normalizeExtendedNumber(camel, result[camel]);
+        if (snakeVal != null) result[snake] = parseInt(snakeVal, 10);
+        if (camelVal != null) result[camel] = parseInt(camelVal, 10);
+      }
+      if (type === 'boolean') {
+        if (result[snake] != null) result[snake] = Boolean(result[snake]);
+        if (result[camel] != null) result[camel] = Boolean(result[camel]);
+      }
+    });
+
+    const extendedNumericFields = [
+      'sodium100', 'omega3_100', 'omega6_100'
+    ];
+
+    extendedNumericFields.forEach((field) => {
+      result[field] = normalizeExtendedNumber(field, result[field]);
+    });
+
+    // Mark as normalized to prevent double processing
+    result._normalized = true;
 
     return result;
   }
