@@ -534,6 +534,46 @@
     // Collapsible секция бэкапов (свёрнута по умолчанию)
     const [showBackupSection, setShowBackupSection] = React.useState(false);
 
+    // Normalization for personal products (legacy-safe)
+    const normalizePersonalProduct = (product) => {
+      if (!product || typeof product !== 'object') return product;
+      if (product._normalizedPersonal) return product;
+      try {
+        let next = { ...product };
+        if (HEYS.features?.unifiedTables === false) {
+          if (HEYS.models?.normalizeProductFields) {
+            next = HEYS.models.normalizeProductFields(next);
+          }
+        } else if (HEYS.models?.normalizeExtendedProduct) {
+          next = HEYS.models.normalizeExtendedProduct(next);
+        } else if (HEYS.models?.normalizeProductFields) {
+          next = HEYS.models.normalizeProductFields(next);
+        }
+        const derived = HEYS.models?.computeDerivedProduct
+          ? HEYS.models.computeDerivedProduct(next)
+          : computeDerived(next);
+        if (derived?.kcal100 != null) {
+          next.kcal100 = derived.kcal100;
+          next.carbs100 = derived.carbs100;
+          next.fat100 = derived.fat100;
+          if (derived.harm != null && next.harm == null) {
+            next.harm = derived.harm;
+            next.harmScore = derived.harm;
+          }
+        }
+        next._normalizedPersonal = true;
+        return next;
+      } catch (e) {
+        console.error('[HEYS.store] ❌ normalizePersonalProduct failed', e);
+        return product;
+      }
+    };
+
+    const normalizePersonalProducts = (list) => {
+      if (!Array.isArray(list)) return [];
+      return list.map(normalizePersonalProduct).filter(Boolean);
+    };
+
     // Проверяем curator-режим (есть Supabase session)
     // Используем state для реактивности при изменении auth
     // ✅ FIX v47: Проверяем наличие cloudUser (curator login создаёт user),
@@ -542,9 +582,10 @@
     const [isCurator, setIsCurator] = React.useState(false);
     React.useEffect(() => {
       const checkCurator = () => {
-        const cloudUser = window.HEYS?.cloud?.getUser?.();
-        // Куратор = есть user object (PIN-вход не создаёт user, только _pinAuthClientId)
-        const result = cloudUser != null;
+        const isCuratorSession = window.HEYS?.auth?.isCuratorSession;
+        const result = typeof isCuratorSession === 'function'
+          ? isCuratorSession()
+          : window.HEYS?.cloud?.getUser?.() != null;
         setIsCurator(result);
       };
       checkCurator();
@@ -940,23 +981,24 @@
 
         const latest = (window.HEYS.store?.get?.('heys_products', null)) ||
           (window.HEYS.utils?.lsGet?.('heys_products', [])) || [];
-        if (Array.isArray(latest) && latest.length > 0) {
+        const normalizedLatest = normalizePersonalProducts(latest);
+        if (Array.isArray(normalizedLatest) && normalizedLatest.length > 0) {
           if (window.DEV) {
-            window.DEV.log('📦 [RATION] Products updated via event:', latest.length, 'items');
+            window.DEV.log('📦 [RATION] Products updated via event:', normalizedLatest.length, 'items');
           }
           // 🛡️ ЗАЩИТА: не уменьшаем количество продуктов (race condition защита)
           setProducts(prev => {
-            if (Array.isArray(prev) && prev.length > latest.length) {
+            if (Array.isArray(prev) && prev.length > normalizedLatest.length) {
               if (window.DEV) {
-                window.DEV.log('⚠️ [RATION] BLOCKED: не уменьшаем', prev.length, '→', latest.length);
+                window.DEV.log('⚠️ [RATION] BLOCKED: не уменьшаем', prev.length, '→', normalizedLatest.length);
               }
               return prev;
             }
             // 🔒 Не обновляем если количество одинаковое
-            if (Array.isArray(prev) && prev.length === latest.length) {
+            if (Array.isArray(prev) && prev.length === normalizedLatest.length) {
               return prev;
             }
-            return latest;
+            return normalizedLatest;
           });
         }
       };
@@ -992,12 +1034,13 @@
       const handleOrphansRecovered = () => {
         const latest = (window.HEYS.store?.get?.('heys_products', null)) ||
           (window.HEYS.utils?.lsGet?.('heys_products', [])) || [];
-        if (Array.isArray(latest) && latest.length > 0) {
+        const normalizedLatest = normalizePersonalProducts(latest);
+        if (Array.isArray(normalizedLatest) && normalizedLatest.length > 0) {
           if (window.DEV) {
-            window.DEV.log('🔄 [RATION] Orphans recovered, updating state:', latest.length, 'items');
+            window.DEV.log('🔄 [RATION] Orphans recovered, updating state:', normalizedLatest.length, 'items');
           }
           // После recovery всегда обновляем state — это source of truth
-          setProducts(latest);
+          setProducts(normalizedLatest);
         }
       };
 
@@ -1026,10 +1069,10 @@
           const before = safeLatest.length;
           const stats = window.HEYS.products.deduplicate();
           const deduped = window.HEYS.products.getAll();
-          if (stats?.removed > 0 && Array.isArray(deduped)) return deduped;
-          if (Array.isArray(deduped) && deduped.length === before) return deduped;
+          if (stats?.removed > 0 && Array.isArray(deduped)) return normalizePersonalProducts(deduped);
+          if (Array.isArray(deduped) && deduped.length === before) return normalizePersonalProducts(deduped);
         }
-        return safeLatest;
+        return normalizePersonalProducts(safeLatest);
       };
       if (clientId && cloud && typeof cloud.syncClient === 'function') {
         const startTime = performance.now();
@@ -2432,6 +2475,201 @@
       return String(value);
     };
 
+    const getDerivedKcal = (productLike) => {
+      const derived = computeDerived(productLike || {});
+      return derived.kcal100;
+    };
+
+    const renderProductTableRow = (product, options = {}) => {
+      const {
+        mode = 'personal',
+        idx = 0,
+        isCurator: canCurate = false,
+        onUpdateRow,
+        onDeleteRow,
+        onOpenNameEditor,
+        onOpenPortionsEditor,
+        onOpenSharedPortionsEditor,
+        onCloneShared,
+        onHideShared,
+        onDeleteShared
+      } = options;
+
+      const readOnly = mode === 'shared';
+      const safeNum = (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 0;
+      };
+      const toTs = (value) => {
+        if (value == null) return 0;
+        if (typeof value === 'number') return value;
+        const parsed = Date.parse(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+      };
+
+      const normalizedForDerived = {
+        ...product,
+        protein100: safeNum(product?.protein100),
+        simple100: safeNum(product?.simple100),
+        complex100: safeNum(product?.complex100),
+        badFat100: safeNum(product?.badFat100 ?? product?.badfat100),
+        goodFat100: safeNum(product?.goodFat100 ?? product?.goodfat100),
+        trans100: safeNum(product?.trans100)
+      };
+      const derived = computeDerived(normalizedForDerived);
+      const kcal = derived.kcal100;
+      const carbs = derived.carbs100;
+      const fat = derived.fat100;
+      const harmValue = HEYS.models?.normalizeHarm?.(product) ?? product.harm ?? product.harmScore ?? product.harmscore ?? product.harm100 ?? 0;
+      const safeHarm = Number.isFinite(Number(harmValue)) ? harmValue : 0;
+      const sharedUpdatedAt = toTs(product?.shared_updated_at ?? product?.sharedUpdatedAt);
+      const clonedAt = toTs(product?.cloned_at ?? product?.clonedAt);
+      const isSharedClone = !!product?.shared_origin_id;
+      const hasSharedUpdate = mode === 'personal' && isSharedClone && !product?.user_modified && sharedUpdatedAt > clonedAt;
+
+      const renderInput = (value, onChange, isReadOnly = false) => (
+        React.createElement('input', {
+          className: isReadOnly ? 'readOnly' : undefined,
+          type: 'text',
+          value: value,
+          readOnly: isReadOnly,
+          onChange: isReadOnly ? undefined : onChange
+        })
+      );
+
+      return React.createElement('tr', { key: `${product.id}_${idx}` },
+        React.createElement('td', null,
+          readOnly
+            ? React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
+              product.name,
+              product.is_mine && React.createElement('span', {
+                style: { fontSize: '10px', background: '#22c55e', color: '#fff', padding: '1px 4px', borderRadius: '4px', whiteSpace: 'nowrap' }
+              }, 'Вы')
+            )
+            : React.createElement('div', { className: 'product-name-cell' },
+              React.createElement('button', {
+                className: 'product-name-edit',
+                onClick: () => onOpenNameEditor?.(product),
+                title: 'Переименовать',
+                'aria-label': 'Переименовать'
+              }, '✏️'),
+              React.createElement('span', { className: 'product-name-text' }, product.name),
+              hasSharedUpdate && React.createElement('span', {
+                className: 'product-name-cell__badge',
+                title: 'В общей базе есть обновление'
+              }, '🔄')
+            )
+        ),
+        React.createElement('td', null, renderInput(kcal, null, true)),
+        React.createElement('td', null, renderInput(carbs, null, true)),
+        React.createElement('td', null, readOnly
+          ? renderInput(safeNum(product.simple100), null, true)
+          : renderInput(product.simple100, e => onUpdateRow?.(product.id, { simple100: toNum(e.target.value) }))
+        ),
+        React.createElement('td', null, readOnly
+          ? renderInput(safeNum(product.complex100), null, true)
+          : renderInput(product.complex100, e => onUpdateRow?.(product.id, { complex100: toNum(e.target.value) }))
+        ),
+        React.createElement('td', null, readOnly
+          ? renderInput(safeNum(product.protein100), null, true)
+          : renderInput(product.protein100, e => onUpdateRow?.(product.id, { protein100: toNum(e.target.value) }))
+        ),
+        React.createElement('td', null, renderInput(fat, null, true)),
+        React.createElement('td', null, readOnly
+          ? renderInput(safeNum(product.badFat100 ?? product.badfat100), null, true)
+          : renderInput(product.badFat100, e => onUpdateRow?.(product.id, { badFat100: toNum(e.target.value) }))
+        ),
+        React.createElement('td', null, readOnly
+          ? renderInput(safeNum(product.goodFat100 ?? product.goodfat100), null, true)
+          : renderInput(product.goodFat100, e => onUpdateRow?.(product.id, { goodFat100: toNum(e.target.value) }))
+        ),
+        React.createElement('td', null, readOnly
+          ? renderInput(safeNum(product.trans100), null, true)
+          : renderInput(product.trans100, e => onUpdateRow?.(product.id, { trans100: toNum(e.target.value) }))
+        ),
+        React.createElement('td', null, readOnly
+          ? renderInput(safeNum(product.fiber100), null, true)
+          : renderInput(product.fiber100, e => onUpdateRow?.(product.id, { fiber100: toNum(e.target.value) }))
+        ),
+        React.createElement('td', null, readOnly
+          ? renderInput(safeNum(product.gi), null, true)
+          : renderInput(product.gi, e => onUpdateRow?.(product.id, { gi: toNum(e.target.value) }))
+        ),
+        React.createElement('td', null, readOnly
+          ? renderInput(safeHarm, null, true)
+          : renderInput(HEYS.models?.normalizeHarm?.(product) ?? product.harm ?? product.harmScore ?? product.harmscore ?? product.harm100 ?? 0, e => onUpdateRow?.(product.id, { harm: toNum(e.target.value) }))
+        ),
+        React.createElement('td', null, renderInput(formatTableValue(product.sodium100), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.omega3_100), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.omega6_100), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.nova_group ?? product.novaGroup), null, true)),
+        React.createElement('td', null, renderInput(formatTableList(product.additives), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.nutrient_density ?? product.nutrientDensity), null, true)),
+        React.createElement('td', null, renderInput(formatTableBool(product.is_organic ?? product.isOrganic), null, true)),
+        React.createElement('td', null, renderInput(formatTableBool(product.is_whole_grain ?? product.isWholeGrain), null, true)),
+        React.createElement('td', null, renderInput(formatTableBool(product.is_fermented ?? product.isFermented), null, true)),
+        React.createElement('td', null, renderInput(formatTableBool(product.is_raw ?? product.isRaw), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.vitamin_a ?? product.vitaminA), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.vitamin_c ?? product.vitaminC), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.vitamin_d ?? product.vitaminD), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.vitamin_e ?? product.vitaminE), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.vitamin_k ?? product.vitaminK), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.vitamin_b1 ?? product.vitaminB1), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.vitamin_b2 ?? product.vitaminB2), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.vitamin_b3 ?? product.vitaminB3), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.vitamin_b6 ?? product.vitaminB6), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.vitamin_b9 ?? product.vitaminB9), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.vitamin_b12 ?? product.vitaminB12), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.calcium), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.iron), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.magnesium), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.phosphorus), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.potassium), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.zinc), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.selenium), null, true)),
+        React.createElement('td', null, renderInput(formatTableValue(product.iodine), null, true)),
+        React.createElement('td', null,
+          readOnly
+            ? ((canCurate || product.is_mine)
+              ? React.createElement('button', {
+                className: 'btn',
+                onClick: () => onOpenSharedPortionsEditor?.(product),
+                title: 'Редактировать порции'
+              }, `🥣 ${Array.isArray(product.portions) ? product.portions.length : 0}`)
+              : React.createElement('span', null, `🥣 ${Array.isArray(product.portions) ? product.portions.length : 0}`))
+            : React.createElement('button', {
+              className: 'btn',
+              onClick: () => onOpenPortionsEditor?.(product),
+              title: 'Редактировать порции'
+            }, `🥣 ${Array.isArray(product.portions) ? product.portions.length : 0}`)
+        ),
+        React.createElement('td', null,
+          readOnly
+            ? React.createElement('div', { style: { display: 'flex', gap: '4px' } },
+              React.createElement('button', {
+                className: 'btn acc',
+                onClick: () => onCloneShared?.(product),
+                title: 'Добавить в мою базу',
+                style: { padding: '4px 8px', fontSize: '11px' }
+              }, '➕'),
+              !product.is_mine && React.createElement('button', {
+                className: 'btn',
+                onClick: () => onHideShared?.(product.id),
+                title: 'Скрыть для меня',
+                style: { padding: '4px 8px', fontSize: '11px' }
+              }, '🚫'),
+              (canCurate || product.is_mine) && React.createElement('button', {
+                className: 'btn',
+                onClick: () => onDeleteShared?.(product.id, product.name),
+                title: 'Удалить из общей базы',
+                style: { padding: '4px 8px', fontSize: '11px', background: '#fee2e2', color: '#dc2626' }
+              }, '🗑️')
+            )
+            : React.createElement('button', { className: 'btn', onClick: () => onDeleteRow?.(product.id) }, 'Удалить')
+        )
+      );
+    };
+
     // Одобрить pending заявку
     async function approvePending(pending) {
       try {
@@ -2471,6 +2709,26 @@
       }
     }
 
+    const getCloneName = (baseName, list) => {
+      const safeBase = (baseName || '').trim() || 'Без названия';
+      const normalizeName = (name) => (name || '').toLowerCase().trim();
+      const hasName = (name) => list.some(p => normalizeName(p?.name) === normalizeName(name));
+
+      if (!hasName(safeBase)) return safeBase;
+
+      let candidate = `${safeBase} (копия)`;
+      if (!hasName(candidate)) return candidate;
+
+      let i = 2;
+      while (hasName(`${safeBase} (копия ${i})`)) i += 1;
+      return `${safeBase} (копия ${i})`;
+    };
+
+    const clonePortions = (portions) => {
+      if (!Array.isArray(portions)) return portions ?? null;
+      return portions.map((p) => ({ ...p }));
+    };
+
     // Клонировать shared продукт в личную базу
     function cloneSharedProduct(sharedProduct) {
       // Проверяем, нет ли уже клона этого продукта
@@ -2480,12 +2738,14 @@
         return existingClone;
       }
 
+      const cloneName = getCloneName(sharedProduct.name, products);
+
       // Создаём клон
       // Use centralized harm normalization
       const harmVal = HEYS.models?.normalizeHarm?.(sharedProduct);
       const clone = {
         id: uuid(),
-        name: sharedProduct.name,
+        name: cloneName,
         simple100: toNum(sharedProduct.simple100),
         complex100: toNum(sharedProduct.complex100),
         protein100: toNum(sharedProduct.protein100),
@@ -2496,7 +2756,7 @@
         gi: toNum(sharedProduct.gi),
         harm: harmVal,  // Canonical field
         category: sharedProduct.category || '',
-        portions: sharedProduct.portions || null,
+        portions: clonePortions(sharedProduct.portions),
         sodium100: toNum(sharedProduct.sodium100),
         omega3_100: toNum(sharedProduct.omega3_100),
         omega6_100: toNum(sharedProduct.omega6_100),
@@ -2540,7 +2800,7 @@
       const newProducts = [...products, withDerived];
       setProducts(newProducts);
 
-      HEYS.Toast?.success(`Продукт "${sharedProduct.name}" добавлен в вашу базу!`) || alert(`✅ Продукт "${sharedProduct.name}" добавлен в вашу базу!`);
+      HEYS.Toast?.success(`Продукт "${cloneName}" добавлен в вашу базу!`) || alert(`✅ Продукт "${cloneName}" добавлен в вашу базу!`);
       return withDerived;
     }
 
@@ -2592,12 +2852,14 @@
         return existingClone; // Возвращаем существующий клон
       }
 
+      const cloneName = getCloneName(sharedProduct.name, products);
+
       // Создаём новый клон с shared_origin_id
       // Use centralized harm normalization
       const harmVal = HEYS.models?.normalizeHarm?.(sharedProduct);
       const clone = {
         id: uuid(),
-        name: sharedProduct.name,
+        name: cloneName,
         simple100: sharedProduct.simple100 || 0,
         complex100: sharedProduct.complex100 || 0,
         protein100: sharedProduct.protein100 || 0,
@@ -2608,7 +2870,7 @@
         gi: sharedProduct.gi || 0,
         harm: harmVal,  // Canonical field
         category: sharedProduct.category || '',
-        portions: sharedProduct.portions || null,
+        portions: clonePortions(sharedProduct.portions),
         sodium100: toNum(sharedProduct.sodium100),
         omega3_100: toNum(sharedProduct.omega3_100),
         omega6_100: toNum(sharedProduct.omega6_100),
@@ -2950,69 +3212,16 @@
                 ),
                 React.createElement('tbody', null,
                   // Ограничиваем рендеринг для производительности (29k+ продуктов = тормоза)
-                  // 🛡️ v4.8.1: Используем `id_index` как key для предотвращения дубликатов
-                  (showAll ? filtered : filtered.slice(0, DISPLAY_LIMIT)).map((p, idx) => React.createElement('tr', { key: `${p.id}_${idx}` },
-                    React.createElement('td', null,
-                      React.createElement('div', { className: 'product-name-cell' },
-                        React.createElement('button', {
-                          className: 'product-name-edit',
-                          onClick: () => openProductNameEditor(p),
-                          title: 'Переименовать',
-                          'aria-label': 'Переименовать'
-                        }, '✏️'),
-                        React.createElement('span', { className: 'product-name-text' }, p.name)
-                      )
-                    ),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.kcal100, readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.carbs100, readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { type: 'text', value: p.simple100, onChange: e => updateRow(p.id, { simple100: toNum(e.target.value) }) })),
-                    React.createElement('td', null, React.createElement('input', { type: 'text', value: p.complex100, onChange: e => updateRow(p.id, { complex100: toNum(e.target.value) }) })),
-                    React.createElement('td', null, React.createElement('input', { type: 'text', value: p.protein100, onChange: e => updateRow(p.id, { protein100: toNum(e.target.value) }) })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: p.fat100, readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { type: 'text', value: p.badFat100, onChange: e => updateRow(p.id, { badFat100: toNum(e.target.value) }) })),
-                    React.createElement('td', null, React.createElement('input', { type: 'text', value: p.goodFat100, onChange: e => updateRow(p.id, { goodFat100: toNum(e.target.value) }) })),
-                    React.createElement('td', null, React.createElement('input', { type: 'text', value: p.trans100, onChange: e => updateRow(p.id, { trans100: toNum(e.target.value) }) })),
-                    React.createElement('td', null, React.createElement('input', { type: 'text', value: p.fiber100, onChange: e => updateRow(p.id, { fiber100: toNum(e.target.value) }) })),
-                    React.createElement('td', null, React.createElement('input', { type: 'text', value: p.gi, onChange: e => updateRow(p.id, { gi: toNum(e.target.value) }) })),
-                    React.createElement('td', null, React.createElement('input', { type: 'text', value: HEYS.models?.normalizeHarm?.(p) ?? p.harm ?? p.harmScore ?? p.harmscore ?? p.harm100 ?? 0, onChange: e => updateRow(p.id, { harm: toNum(e.target.value) }) })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.sodium100), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.omega3_100), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.omega6_100), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.nova_group), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableList(p.additives), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.nutrient_density), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableBool(p.is_organic), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableBool(p.is_whole_grain), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableBool(p.is_fermented), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableBool(p.is_raw), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_a), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_c), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_d), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_e), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_k), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b1), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b2), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b3), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b6), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b9), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b12), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.calcium), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.iron), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.magnesium), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.phosphorus), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.potassium), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.zinc), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.selenium), readOnly: true })),
-                    React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.iodine), readOnly: true })),
-                    React.createElement('td', null,
-                      React.createElement('button', {
-                        className: 'btn',
-                        onClick: () => openPortionsEditor(p),
-                        title: 'Редактировать порции'
-                      }, `🥣 ${Array.isArray(p.portions) ? p.portions.length : 0}`)
-                    ),
-                    React.createElement('td', null, React.createElement('button', { className: 'btn', onClick: () => deleteRow(p.id) }, 'Удалить'))
-                  ))
+                  (showAll ? filtered : filtered.slice(0, DISPLAY_LIMIT)).map((p, idx) =>
+                    renderProductTableRow(p, {
+                      mode: 'personal',
+                      idx,
+                      onUpdateRow: updateRow,
+                      onOpenNameEditor: openProductNameEditor,
+                      onOpenPortionsEditor: openPortionsEditor,
+                      onDeleteRow: deleteRow
+                    })
+                  )
                 )
               )
             ),
@@ -3025,7 +3234,7 @@
                 `Показано ${DISPLAY_LIMIT} из ${filtered.length}. Используйте поиск для быстрого нахождения.`
               )
             ),
-            React.createElement('div', { className: 'muted', style: { marginTop: '8px' } }, 'Серые поля — авто: У=простые+сложные; Ж=вредные+полезные+супервредные; Ккал=4×(Б+У)+8×Ж.')
+            React.createElement('div', { className: 'muted', style: { marginTop: '8px' } }, 'Серые поля — авто: У=простые+сложные; Ж=вредные+полезные+супервредные; Ккал=3×Б+4×У+9×Ж (TEF-aware).')
           )
         ) // Закрываем React.Fragment для личной подвкладки
       ) : (
@@ -3068,7 +3277,7 @@
                       React.createElement('div', { style: { flex: 1 } },
                         React.createElement('div', { style: { fontWeight: '500', marginBottom: '4px' } }, p.name || pending.name_norm),
                         React.createElement('div', { style: { fontSize: '12px', color: 'var(--text-muted)', display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-                          React.createElement('span', null, `${Math.round(p.kcal100 || ((p.protein100 || 0) * 4 + (p.simple100 || 0) * 4 + (p.complex100 || 0) * 4 + ((p.badFat100 || 0) + (p.goodFat100 || 0) + (p.trans100 || 0)) * 9))} ккал`),
+                          React.createElement('span', null, `${Math.round(getDerivedKcal(p))} ккал`),
                           React.createElement('span', null, `Б:${p.protein100 || 0}`),
                           React.createElement('span', null, `У:${(p.simple100 || 0) + (p.complex100 || 0)}`),
                           React.createElement('span', null, `Ж:${(p.badFat100 || 0) + (p.goodFat100 || 0) + (p.trans100 || 0)}`),
@@ -3198,104 +3407,15 @@
                         ? allSharedProducts.filter(p => (p.name || '').toLowerCase().includes(sharedQuery.toLowerCase()))
                         : allSharedProducts;
                       const sortedShared = sortByCreatedAtDesc(filteredShared);
-                      // Безопасное получение числового значения
-                      const safeNum = (v) => {
-                        const n = Number(v);
-                        return isNaN(n) ? 0 : n;
-                      };
-                      return sortedShared.map((p, idx) => {
-                        // Supabase возвращает snake_case поля
-                        const kcal = Math.round(safeNum(p.protein100) * 4 + safeNum(p.simple100) * 4 + safeNum(p.complex100) * 4 + (safeNum(p.badfat100) + safeNum(p.goodfat100) + safeNum(p.trans100)) * 9);
-                        const carbs = safeNum(p.simple100) + safeNum(p.complex100);
-                        const fat = safeNum(p.badfat100) + safeNum(p.goodfat100) + safeNum(p.trans100);
-                        const harmValue = HEYS.models?.normalizeHarm?.(p) ?? p.harm ?? p.harmScore ?? 0;
-                        const safeHarm = isNaN(harmValue) ? 0 : harmValue;
-                        // 🛡️ v4.8.1: Используем `id_index` как key для предотвращения дубликатов
-                        return React.createElement('tr', { key: `${p.id}_${idx}` },
-                          React.createElement('td', null,
-                            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
-                              p.name,
-                              p.is_mine && React.createElement('span', {
-                                style: { fontSize: '10px', background: '#22c55e', color: '#fff', padding: '1px 4px', borderRadius: '4px', whiteSpace: 'nowrap' }
-                              }, 'Вы')
-                            )
-                          ),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: kcal, readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: carbs, readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeNum(p.simple100), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeNum(p.complex100), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeNum(p.protein100), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: fat, readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeNum(p.badfat100), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeNum(p.goodfat100), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeNum(p.trans100), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeNum(p.fiber100), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeNum(p.gi), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: safeHarm, readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.sodium100), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.omega3_100), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.omega6_100), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.nova_group), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableList(p.additives), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.nutrient_density), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableBool(p.is_organic), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableBool(p.is_whole_grain), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableBool(p.is_fermented), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableBool(p.is_raw), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_a), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_c), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_d), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_e), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_k), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b1), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b2), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b3), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b6), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b9), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.vitamin_b12), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.calcium), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.iron), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.magnesium), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.phosphorus), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.potassium), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.zinc), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.selenium), readOnly: true })),
-                          React.createElement('td', null, React.createElement('input', { className: 'readOnly', value: formatTableValue(p.iodine), readOnly: true })),
-                          React.createElement('td', null,
-                            (isCurator || p.is_mine) ? React.createElement('button', {
-                              className: 'btn',
-                              onClick: () => openSharedPortionsEditor(p),
-                              title: 'Редактировать порции'
-                            }, `🥣 ${Array.isArray(p.portions) ? p.portions.length : 0}`)
-                              : React.createElement('span', null, `🥣 ${Array.isArray(p.portions) ? p.portions.length : 0}`)
-                          ),
-                          React.createElement('td', null,
-                            React.createElement('div', { style: { display: 'flex', gap: '4px' } },
-                              // ➕ Добавить в мою базу (для всех)
-                              React.createElement('button', {
-                                className: 'btn acc',
-                                onClick: () => cloneSharedProduct(p),
-                                title: 'Добавить в мою базу',
-                                style: { padding: '4px 8px', fontSize: '11px' }
-                              }, '➕'),
-                              // 🚫 Скрыть для меня (для НЕ своих)
-                              !p.is_mine && React.createElement('button', {
-                                className: 'btn',
-                                onClick: () => hideSharedProduct(p.id),
-                                title: 'Скрыть для меня',
-                                style: { padding: '4px 8px', fontSize: '11px' }
-                              }, '🚫'),
-                              // 🗑️ Удалить из общей базы (куратор или автор)
-                              (isCurator || p.is_mine) && React.createElement('button', {
-                                className: 'btn',
-                                onClick: () => deleteSharedProduct(p.id, p.name),
-                                title: 'Удалить из общей базы',
-                                style: { padding: '4px 8px', fontSize: '11px', background: '#fee2e2', color: '#dc2626' }
-                              }, '🗑️')
-                            )
-                          )
-                        );
-                      });
+                      return sortedShared.map((p, idx) => renderProductTableRow(p, {
+                        mode: 'shared',
+                        idx,
+                        isCurator,
+                        onCloneShared: cloneSharedProduct,
+                        onHideShared: hideSharedProduct,
+                        onDeleteShared: deleteSharedProduct,
+                        onOpenSharedPortionsEditor: openSharedPortionsEditor
+                      }));
                     })()
                   )
                 )
@@ -3438,7 +3558,7 @@
           React.createElement('div', { style: { background: 'var(--bg-secondary)', borderRadius: '8px', padding: '12px', marginBottom: '12px' } },
             React.createElement('div', { style: { fontWeight: '500' } }, mergeModal.existing?.name),
             React.createElement('div', { style: { fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' } },
-              `${Math.round((mergeModal.existing?.protein100 || 0) * 4 + (mergeModal.existing?.simple100 || 0 + mergeModal.existing?.complex100 || 0) * 4 + ((mergeModal.existing?.badfat100 || 0) + (mergeModal.existing?.goodfat100 || 0)) * 9)} ккал | ` +
+              `${Math.round(getDerivedKcal(mergeModal.existing))} ккал | ` +
               `Б: ${mergeModal.existing?.protein100 || 0} | ` +
               `У: ${(mergeModal.existing?.simple100 || 0) + (mergeModal.existing?.complex100 || 0)} | ` +
               `Ж: ${(mergeModal.existing?.badfat100 || 0) + (mergeModal.existing?.goodfat100 || 0)}`
@@ -3819,20 +3939,32 @@
         }
       }
 
-      // Проверяем по имени (нормализованному)
-      const normName = (sharedProduct.name || '').toLowerCase().trim();
-      const existingByName = products.find(p => (p.name || '').toLowerCase().trim() === normName);
-      if (existingByName) {
-        // 🔇 v4.7.1: Лог отключён
-        return mergeMissingFromShared(existingByName);
-      }
+      const normalizeName = (name) => (name || '').toLowerCase().trim();
+      const getCloneName = (baseName) => {
+        const safeBase = (baseName || '').trim() || 'Без названия';
+        const hasName = (name) => products.some(p => normalizeName(p?.name) === normalizeName(name));
+
+        if (!hasName(safeBase)) return safeBase;
+
+        let candidate = `${safeBase} (копия)`;
+        if (!hasName(candidate)) return candidate;
+
+        let i = 2;
+        while (hasName(`${safeBase} (копия ${i})`)) i += 1;
+        return `${safeBase} (копия ${i})`;
+      };
+
+      const clonePortions = (portions) => {
+        if (!Array.isArray(portions)) return portions ?? null;
+        return portions.map((p) => ({ ...p }));
+      };
 
       // Создаём клон
       // Use centralized harm normalization
       const harmVal = HEYS.models?.normalizeHarm?.(sharedProduct);
       const clone = {
         id: uuid(),
-        name: sharedProduct.name,
+        name: getCloneName(sharedProduct.name),
         simple100: toNum(sharedProduct.simple100),
         complex100: toNum(sharedProduct.complex100),
         protein100: toNum(sharedProduct.protein100),
@@ -3843,7 +3975,7 @@
         gi: toNum(sharedProduct.gi),
         harm: harmVal,  // Canonical field
         category: sharedProduct.category || '',
-        portions: sharedProduct.portions || null,
+        portions: clonePortions(sharedProduct.portions),
         sodium100: toNum(sharedProduct.sodium100),
         omega3_100: toNum(sharedProduct.omega3_100),
         omega6_100: toNum(sharedProduct.omega6_100),
