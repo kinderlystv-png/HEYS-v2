@@ -141,7 +141,11 @@
     }
   };
 
-  const isCuratorUser = () => !!HEYS.cloud?.getUser?.() || hasCuratorJwt();
+  const isCuratorUser = () => {
+    const isCuratorSession = HEYS.auth?.isCuratorSession;
+    if (typeof isCuratorSession === 'function') return isCuratorSession();
+    return !!HEYS.cloud?.getUser?.() || hasCuratorJwt();
+  };
 
   const isSharedProduct = (product) => {
     if (!product) return false;
@@ -841,10 +845,10 @@
               const trans100 = Number(p.trans100 ?? 0) || 0;
 
               // kcal100 — вычисляемое поле (не хранится в shared_products)
-              // Формула: protein*4 + carbs*4 + fat*9
+              // TEF-aware formula: protein*3 + carbs*4 + fat*9 (синхронизировано с heys_core_v12.js:computeDerived)
               const carbs100 = simple100 + complex100;
               const fat100 = badFat100 + goodFat100 + trans100;
-              const kcal100 = Math.round(protein100 * 4 + carbs100 * 4 + fat100 * 9);
+              const kcal100 = Math.round(protein100 * 3 + carbs100 * 4 + fat100 * 9);
 
               return {
                 ...p,
@@ -2429,7 +2433,8 @@ NOVA: 1
 
       const carbs100 = Math.round((finalSimple + finalComplex) * 10) / 10;
       const fat100 = Math.round((finalBad + finalGood + finalTrans) * 10) / 10;
-      const kcalFromMacros = Math.round((protein100 * 4 + carbs100 * 4 + fat100 * 9) * 10) / 10;
+      // TEF-aware formula: protein*3 + carbs*4 + fat*9 (синхронизировано с heys_core_v12.js:computeDerived)
+      const kcalFromMacros = Math.round((protein100 * 3 + carbs100 * 4 + fat100 * 9) * 10) / 10;
       const kcal100 = form.kcal100 === '' ? kcalFromMacros : toNum(form.kcal100, kcalFromMacros);
 
       const harm = harmInput != null
@@ -3626,7 +3631,7 @@ NOVA: 1
   // === Компонент выбора граммов (Шаг 2) ===
   function GramsStep({ data, onChange, context, stepData }) {
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
-    const { closeModal } = stepContext;
+    const { closeModal, goToStep, updateStepData } = stepContext;
 
     useEscapeToClose(closeModal, true);
     // Продукт берём: 1) из context (для edit mode), 2) из своих данных, 3) из create (newProduct или selectedProduct), 4) из search
@@ -3823,7 +3828,51 @@ NOVA: 1
       }
 
       if (HEYS.StepModal?.hide) {
-        HEYS.StepModal.hide({ scrollToDiary: true });
+        if (!context?.multiProductMode) {
+          HEYS.StepModal.hide({ scrollToDiary: true });
+          return;
+        }
+
+        const continueAdding = () => {
+          updateStepData?.('search', {
+            ...stepData?.search,
+            selectedProduct: null,
+            grams,
+            lastGrams: grams
+          });
+          updateStepData?.('grams', {
+            ...stepData?.grams,
+            selectedProduct: null,
+            grams
+          });
+          setTimeout(() => {
+            goToStep?.(0, 'right');
+          }, 0);
+        };
+
+        const finishMeal = () => {
+          HEYS.StepModal.hide({ scrollToDiary: true });
+        };
+
+        if (HEYS.ConfirmModal?.show) {
+          const mealName = (context?.day?.meals?.[context?.mealIndex]?.name || 'приём').toLowerCase();
+          Promise.resolve(HEYS.ConfirmModal.show({
+            icon: '🍽️',
+            title: `Добавить ещё в ${mealName}?`,
+            text: 'Можно продолжить добавлять продукты или завершить приём.',
+            confirmText: 'Добавить ещё',
+            cancelText: 'Завершить',
+            confirmStyle: 'success',
+            cancelStyle: 'primary',
+            confirmVariant: 'fill',
+            cancelVariant: 'fill'
+          })).then((result) => {
+            if (result) continueAdding();
+            else finishMeal();
+          });
+        } else {
+          continueAdding();
+        }
       }
     }, [product, grams, context, data, stepData]);
 
@@ -4161,6 +4210,7 @@ NOVA: 1
       products: providedProducts,
       day,
       dateKey = new Date().toISOString().slice(0, 10),
+      multiProductMode = false,
       onAdd,
       onAddPhoto, // Callback для добавления фото к приёму
       onNewProduct,
@@ -4190,6 +4240,10 @@ NOVA: 1
       productsCount: products.length,
       hasProvidedProducts: Array.isArray(providedProducts) && providedProducts.length > 0
     });
+
+    const handleModalClose = () => {
+      onClose?.();
+    };
 
     // Mutable ref для обновления продуктов после создания
     let currentProducts = [...products];
@@ -4255,6 +4309,7 @@ NOVA: 1
         day,
         dateKey,
         mealIndex,
+        multiProductMode,
         onNewProduct,
         onAdd, // Передаём callback для добавления в приём пищи
         onAddPhoto, // Callback для добавления фото к приёму
@@ -4346,7 +4401,7 @@ NOVA: 1
           });
         }
       },
-      onClose
+      onClose: handleModalClose
     });
   }
 

@@ -27,12 +27,21 @@
     confirmText: 'Подтвердить',
     cancelText: 'Отмена',
     confirmStyle: 'danger', // 'danger' | 'primary' | 'success'
+    cancelStyle: 'neutral', // 'neutral' | 'danger' | 'primary' | 'success'
+    confirmVariant: 'text', // 'text' | 'fill'
+    cancelVariant: 'text', // 'text' | 'fill'
     onConfirm: () => { },
     onCancel: () => { }
   };
 
   // === Стили для confirmStyle ===
   const CONFIRM_STYLES = {
+    neutral: {
+      color: '#6b7280',
+      activeBackground: '#f3f4f6',
+      darkColor: '#9ca3af',
+      darkActiveBackground: 'rgba(148, 163, 184, 0.2)'
+    },
     danger: {
       color: '#ef4444',
       activeBackground: '#fef2f2',
@@ -105,8 +114,11 @@
 
     if (!modal) return null;
 
-    const style = CONFIRM_STYLES[modal.confirmStyle] || CONFIRM_STYLES.danger;
+    const confirmStyle = CONFIRM_STYLES[modal.confirmStyle] || CONFIRM_STYLES.danger;
+    const cancelStyle = CONFIRM_STYLES[modal.cancelStyle] || CONFIRM_STYLES.neutral;
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const confirmVariant = modal.confirmVariant || 'text';
+    const cancelVariant = modal.cancelVariant || 'text';
 
     return React.createElement('div', {
       className: 'confirm-modal-backdrop',
@@ -128,15 +140,27 @@
         // Кнопки
         React.createElement('div', { className: 'confirm-modal-buttons' },
           React.createElement('button', {
-            className: 'confirm-modal-btn cancel',
+            className: 'confirm-modal-btn cancel'
+              + (modal.cancelStyle ? ` confirm-modal-btn--${modal.cancelStyle}` : '')
+              + (cancelVariant === 'fill' ? ' confirm-modal-btn--fill' : ''),
+            style: cancelVariant === 'fill'
+              ? { fontWeight: 600 }
+              : {
+                color: isDark ? cancelStyle.darkColor : cancelStyle.color,
+                fontWeight: 600
+              },
             onClick: handleCancel
           }, modal.cancelText),
           React.createElement('button', {
-            className: 'confirm-modal-btn confirm',
-            style: {
-              color: isDark ? style.darkColor : style.color,
-              fontWeight: 600
-            },
+            className: 'confirm-modal-btn confirm'
+              + (modal.confirmStyle ? ` confirm-modal-btn--${modal.confirmStyle}` : '')
+              + (confirmVariant === 'fill' ? ' confirm-modal-btn--fill' : ''),
+            style: confirmVariant === 'fill'
+              ? { fontWeight: 600 }
+              : {
+                color: isDark ? confirmStyle.darkColor : confirmStyle.color,
+                fontWeight: 600
+              },
             onClick: handleConfirm
           }, modal.confirmText)
         )
@@ -176,7 +200,10 @@
    * @param {string} options.text - Описание (опционально)
    * @param {string} options.confirmText - Текст кнопки подтверждения
    * @param {string} options.cancelText - Текст кнопки отмены
-   * @param {string} options.confirmStyle - Стиль: 'danger' | 'primary' | 'success'
+  * @param {string} options.confirmStyle - Стиль: 'danger' | 'primary' | 'success'
+  * @param {string} options.cancelStyle - Стиль: 'neutral' | 'danger' | 'primary' | 'success'
+  * @param {string} options.confirmVariant - Вариант: 'text' | 'fill'
+  * @param {string} options.cancelVariant - Вариант: 'text' | 'fill'
    * @param {Function} options.onConfirm - Callback при подтверждении
    * @param {Function} options.onCancel - Callback при отмене
    * @returns {Promise<boolean>} - true если подтверждено, false если отменено

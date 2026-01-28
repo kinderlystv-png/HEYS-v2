@@ -450,7 +450,33 @@
             ),
             React.createElement('div', { className: 'row desktop-add-product', style: { justifyContent: 'space-between', alignItems: 'center' } },
                 React.createElement('div', { className: 'section-title' }, 'Добавить продукт'),
-                React.createElement(MealAddProduct, { mi: mealIndex, products, date, setDay, isCurrentMeal }),
+                React.createElement('div', { className: 'aps-open-buttons' },
+                    React.createElement(MealAddProduct, {
+                        mi: mealIndex,
+                        products,
+                        date,
+                        setDay,
+                        isCurrentMeal,
+                        buttonText: 'Быстро добавить 1 продукт',
+                        buttonIcon: '⚡',
+                        buttonClassName: 'aps-open-btn--quick',
+                        highlightCurrent: false,
+                        ariaLabel: 'Быстро добавить 1 продукт'
+                    }),
+                    React.createElement(MealAddProduct, {
+                        mi: mealIndex,
+                        products,
+                        date,
+                        setDay,
+                        isCurrentMeal,
+                        multiProductMode: true,
+                        buttonText: 'Добавить несколько продуктов',
+                        buttonIcon: '➕',
+                        buttonClassName: 'aps-open-btn--multi',
+                        highlightCurrent: true,
+                        ariaLabel: 'Добавить несколько продуктов'
+                    }),
+                ),
             ),
             React.createElement('div', { style: { overflowX: 'auto', marginTop: '8px' } }, React.createElement('table', { className: 'tbl meals-table' },
                 React.createElement('thead', null, React.createElement('tr', null, headerMeta.map((h, i) => React.createElement('th', {
@@ -495,11 +521,40 @@
                         onClick: () => onToggleExpand(mealIndex, allMeals),
                     },
                         React.createElement('span', { className: 'toggle-arrow' }, '›'),
-                        React.createElement('span', null, isExpanded
-                            ? (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов')
-                            : 'развернуть ' + (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов')),
+                        React.createElement('span', { className: 'mpc-toggle-text' },
+                            React.createElement('span', { className: 'mpc-toggle-title' }, isExpanded ? 'Свернуть' : 'Развернуть'),
+                            React.createElement('span', { className: 'mpc-toggle-count' },
+                                (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов'),
+                            ),
+                        ),
                     ),
-                    React.createElement(MealAddProduct, { mi: mealIndex, products, date, setDay, isCurrentMeal }),
+                    React.createElement('div', { className: 'aps-open-buttons' },
+                        React.createElement(MealAddProduct, {
+                            mi: mealIndex,
+                            products,
+                            date,
+                            setDay,
+                            isCurrentMeal,
+                            buttonText: 'Быстро добавить 1 продукт',
+                            buttonIcon: '⚡',
+                            buttonClassName: 'aps-open-btn--quick',
+                            highlightCurrent: false,
+                            ariaLabel: 'Быстро добавить 1 продукт'
+                        }),
+                        React.createElement(MealAddProduct, {
+                            mi: mealIndex,
+                            products,
+                            date,
+                            setDay,
+                            isCurrentMeal,
+                            multiProductMode: true,
+                            buttonText: 'Добавить несколько продуктов',
+                            buttonIcon: '➕',
+                            buttonClassName: 'aps-open-btn--multi',
+                            highlightCurrent: true,
+                            ariaLabel: 'Добавить несколько продуктов'
+                        }),
+                    ),
                 ),
                 isExpanded && (meal.items || []).map((it) => {
                     const p = getProductFromItem(it, pIndex) || { name: it.name || '?' };
@@ -2190,6 +2245,7 @@
                             // Get current meals to find the new meal index
                             // Use a ref-based approach to avoid calling show() inside setDay
                             let foundMealIndex = -1;
+                            let foundMealName = '';
 
                             setDay((currentDay) => {
                                 const meals = currentDay.meals || [];
@@ -2197,20 +2253,27 @@
 
                                 if (foundMealIndex >= 0) {
                                     expandOnlyMeal(foundMealIndex);
+                                    foundMealName = (meals[foundMealIndex]?.name || `Приём ${foundMealIndex + 1}`).toLowerCase();
                                 }
 
                                 return currentDay;
                             });
 
-                            // Call AddProductStep.show OUTSIDE of setDay to avoid setState during render
+                            // 🆕 Показываем модалку выбора флоу добавления продуктов
                             setTimeout(() => {
-                                if (foundMealIndex >= 0 && window.HEYS?.AddProductStep?.show) {
+                                if (foundMealIndex < 0) return;
+
+                                // Функция открытия модалки добавления продукта
+                                const openAddProductModal = (targetMealIndex, multiProductMode, dayOverride) => {
+                                    if (!window.HEYS?.AddProductStep?.show) return;
+
                                     window.HEYS.AddProductStep.show({
-                                        mealIndex: foundMealIndex,
+                                        mealIndex: targetMealIndex,
+                                        multiProductMode: multiProductMode,
                                         products: products,
-                                        day: day,
+                                        day: dayOverride || HEYS.Day?.getDay?.() || day,
                                         dateKey: date,
-                                        onAdd: ({ product, grams, mealIndex: targetMealIndex }) => {
+                                        onAdd: ({ product, grams, mealIndex: addMealIndex }) => {
                                             let finalProduct = product;
                                             if (product?._fromShared || product?._source === 'shared' || product?.is_shared) {
                                                 const cloned = HEYS.products?.addFromShared?.(product);
@@ -2252,7 +2315,7 @@
 
                                             setDay((prevDay = {}) => {
                                                 const updatedMeals = (prevDay.meals || []).map((m, i) =>
-                                                    i === targetMealIndex
+                                                    i === addMealIndex
                                                         ? { ...m, items: [...(m.items || []), newItem] }
                                                         : m,
                                                 );
@@ -2278,6 +2341,21 @@
                                                 if (history[productId].length > 20) history[productId].shift();
                                                 lsSet('heys_grams_history', history);
                                             } catch (e) { }
+                                            if (multiProductMode && HEYS.dayAddProductSummary?.show) {
+                                                requestAnimationFrame(() => {
+                                                    setTimeout(() => {
+                                                        HEYS.dayAddProductSummary.show({
+                                                            day: HEYS.Day?.getDay?.() || day || {},
+                                                            mealIndex: addMealIndex,
+                                                            pIndex,
+                                                            getProductFromItem,
+                                                            per100,
+                                                            scale,
+                                                            onAddMore: (updatedDay) => openAddProductModal(addMealIndex, true, updatedDay),
+                                                        });
+                                                    }, 100);
+                                                });
+                                            }
                                             if (scrollToDiaryHeading) scrollToDiaryHeading();
                                         },
                                         onNewProduct: () => {
@@ -2286,7 +2364,101 @@
                                             }
                                         },
                                     });
+                                };
+
+                                // Показываем модалку выбора флоу
+                                if (!window.HEYS?.ConfirmModal?.show) {
+                                    // Fallback: сразу открываем быстрый режим
+                                    openAddProductModal(foundMealIndex, false);
+                                    return;
                                 }
+
+                                window.HEYS.ConfirmModal.show({
+                                    icon: '🍽️',
+                                    title: `Добавить продукты в ${foundMealName}`,
+                                    text: React.createElement('div', {
+                                        style: {
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '12px',
+                                            margin: '8px 0'
+                                        }
+                                    },
+                                        // Кнопка "Быстро добавить 1 продукт"
+                                        React.createElement('button', {
+                                            className: 'flow-selection-btn flow-selection-btn--quick',
+                                            style: {
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '12px',
+                                                padding: '14px 16px',
+                                                border: '1px solid #e2e8f0',
+                                                borderRadius: '12px',
+                                                background: '#fff',
+                                                cursor: 'pointer',
+                                                textAlign: 'left',
+                                                transition: 'all 0.15s ease'
+                                            },
+                                            onClick: () => {
+                                                window.HEYS.ConfirmModal.close?.();
+                                                setTimeout(() => openAddProductModal(foundMealIndex, false), 100);
+                                            }
+                                        },
+                                            React.createElement('span', {
+                                                style: { fontSize: '28px' }
+                                            }, '➕'),
+                                            React.createElement('div', {
+                                                style: { flex: 1 }
+                                            },
+                                                React.createElement('div', {
+                                                    style: { fontWeight: '600', color: '#1e293b', fontSize: '15px' }
+                                                }, 'Быстро добавить 1 продукт'),
+                                                React.createElement('div', {
+                                                    style: { fontSize: '12px', color: '#64748b', marginTop: '2px' }
+                                                }, 'Выбрать продукт и сразу закрыть')
+                                            )
+                                        ),
+                                        // Кнопка "Добавить несколько продуктов"
+                                        React.createElement('button', {
+                                            className: 'flow-selection-btn flow-selection-btn--multi',
+                                            style: {
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '12px',
+                                                padding: '14px 16px',
+                                                border: '2px solid #3b82f6',
+                                                borderRadius: '12px',
+                                                background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                                                cursor: 'pointer',
+                                                textAlign: 'left',
+                                                transition: 'all 0.15s ease'
+                                            },
+                                            onClick: () => {
+                                                window.HEYS.ConfirmModal.close?.();
+                                                setTimeout(() => openAddProductModal(foundMealIndex, true), 100);
+                                            }
+                                        },
+                                            React.createElement('span', {
+                                                style: { fontSize: '28px' }
+                                            }, '📝'),
+                                            React.createElement('div', {
+                                                style: { flex: 1 }
+                                            },
+                                                React.createElement('div', {
+                                                    style: { fontWeight: '600', color: '#1e40af', fontSize: '15px' }
+                                                }, 'Добавить несколько продуктов'),
+                                                React.createElement('div', {
+                                                    style: { fontSize: '12px', color: '#3b82f6', marginTop: '2px' }
+                                                }, 'Формировать приём пошагово')
+                                            )
+                                        )
+                                    ),
+                                    // Скрываем стандартные кнопки — используем кастомные внутри text
+                                    confirmText: null,
+                                    cancelText: 'Отмена',
+                                    cancelStyle: 'primary',
+                                    cancelVariant: 'outline'
+                                });
                             }, 0);
                         }, 50);
                     },

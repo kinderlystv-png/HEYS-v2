@@ -454,9 +454,11 @@
                 onClick: () => onToggleExpand(mealIndex, allMeals)
               },
                 React.createElement('span', { className: 'toggle-arrow' }, '›'),
-                React.createElement('span', null, isExpanded 
-                  ? (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов')
-                  : 'развернуть ' + (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов')
+                React.createElement('span', { className: 'mpc-toggle-text' },
+                  React.createElement('span', { className: 'mpc-toggle-title' }, isExpanded ? 'Свернуть' : 'Развернуть'),
+                  React.createElement('span', { className: 'mpc-toggle-count' },
+                    (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов')
+                  )
                 )
               ),
             // Кнопка добавить

@@ -135,13 +135,114 @@
                 if (mealIndex >= 0) {
                   expandOnlyMeal(mealIndex);
 
-                  // Открываем модалку добавления продукта
-                  if (window.HEYS?.AddProductStep?.show) {
+                  // 🆕 Показываем модалку выбора флоу добавления продуктов
+                  const showFlowSelectionModal = async () => {
+                    if (!window.HEYS?.ConfirmModal?.show) {
+                      // Fallback: сразу открываем быстрый режим
+                      openAddProductModal(mealIndex, false);
+                      return;
+                    }
+
+                    const mealName = (currentDay.meals?.[mealIndex]?.name || `Приём ${mealIndex + 1}`).toLowerCase();
+
+                    const result = await window.HEYS.ConfirmModal.show({
+                      icon: '🍽️',
+                      title: `Добавить продукты в ${mealName}`,
+                      text: React.createElement('div', {
+                        style: {
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '12px',
+                          margin: '8px 0'
+                        }
+                      },
+                        // Кнопка "Быстро добавить 1 продукт"
+                        React.createElement('button', {
+                          className: 'flow-selection-btn flow-selection-btn--quick',
+                          style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '14px 16px',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '12px',
+                            background: '#fff',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'all 0.15s ease'
+                          },
+                          onClick: () => {
+                            window.HEYS.ConfirmModal.close?.();
+                            setTimeout(() => openAddProductModal(mealIndex, false), 100);
+                          }
+                        },
+                          React.createElement('span', {
+                            style: { fontSize: '28px' }
+                          }, '➕'),
+                          React.createElement('div', {
+                            style: { flex: 1 }
+                          },
+                            React.createElement('div', {
+                              style: { fontWeight: '600', color: '#1e293b', fontSize: '15px' }
+                            }, 'Быстро добавить 1 продукт'),
+                            React.createElement('div', {
+                              style: { fontSize: '12px', color: '#64748b', marginTop: '2px' }
+                            }, 'Выбрать продукт и сразу закрыть')
+                          )
+                        ),
+                        // Кнопка "Добавить несколько продуктов"
+                        React.createElement('button', {
+                          className: 'flow-selection-btn flow-selection-btn--multi',
+                          style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '14px 16px',
+                            border: '2px solid #3b82f6',
+                            borderRadius: '12px',
+                            background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'all 0.15s ease'
+                          },
+                          onClick: () => {
+                            window.HEYS.ConfirmModal.close?.();
+                            setTimeout(() => openAddProductModal(mealIndex, true), 100);
+                          }
+                        },
+                          React.createElement('span', {
+                            style: { fontSize: '28px' }
+                          }, '📝'),
+                          React.createElement('div', {
+                            style: { flex: 1 }
+                          },
+                            React.createElement('div', {
+                              style: { fontWeight: '600', color: '#1e40af', fontSize: '15px' }
+                            }, 'Добавить несколько продуктов'),
+                            React.createElement('div', {
+                              style: { fontSize: '12px', color: '#3b82f6', marginTop: '2px' }
+                            }, 'Формировать приём пошагово')
+                          )
+                        )
+                      ),
+                      // Скрываем стандартные кнопки — используем кастомные внутри text
+                      confirmText: null,
+                      cancelText: 'Отмена',
+                      cancelStyle: 'primary',
+                      cancelVariant: 'outline'
+                    });
+                  };
+
+                  // Функция открытия модалки добавления продукта
+                  const openAddProductModal = (targetMealIndex, multiProductMode) => {
+                    if (!window.HEYS?.AddProductStep?.show) return;
+
                     window.HEYS.AddProductStep.show({
-                      mealIndex: mealIndex,
+                      mealIndex: targetMealIndex,
+                      multiProductMode: multiProductMode,
                       products: products,
                       dateKey: date,
-                      onAdd: ({ product, grams, mealIndex: targetMealIndex }) => {
+                      onAdd: ({ product, grams, mealIndex: addMealIndex }) => {
                         // 🔧 FIX: Auto-clone shared product to personal base (prevents orphans)
                         let finalProduct = product;
                         if (product?._fromShared || product?._source === 'shared' || product?.is_shared) {
@@ -188,7 +289,7 @@
 
                         setDay((prevDay = {}) => {
                           const updatedMeals = (prevDay.meals || []).map((m, i) =>
-                            i === targetMealIndex
+                            i === addMealIndex
                               ? { ...m, items: [...(m.items || []), newItem] }
                               : m
                           );
@@ -225,7 +326,10 @@
                         }
                       }
                     });
-                  }
+                  };
+
+                  // 🆕 Показываем модалку выбора флоу
+                  showFlowSelectionModal();
                 }
 
                 return currentDay; // Не меняем state, просто читаем
