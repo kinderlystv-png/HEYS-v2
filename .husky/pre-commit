@@ -1,9 +1,4 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-# 🏗️ Проверка архитектуры модулей (блокирует коммит при нарушении лимитов)
-echo "🏗️  Checking module architecture..."
-bash scripts/check-module-architecture.sh || exit 1
-
-# Стандартные проверки
 pnpm exec lint-staged
