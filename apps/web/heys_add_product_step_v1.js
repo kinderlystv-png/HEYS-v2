@@ -3854,6 +3854,39 @@ NOVA: 1
           HEYS.StepModal.hide({ scrollToDiary: true });
         };
 
+        // 🆕 Используем общий summary-хелпер если доступен
+        const summaryShow = HEYS.dayAddProductSummary?.show;
+        if (typeof summaryShow === 'function') {
+          let addMoreChosen = false;
+          const dayUtils = HEYS.dayUtils || {};
+          const getProductFromItem = dayUtils.getProductFromItem || (() => null);
+          const per100 = dayUtils.per100 || (() => ({
+            kcal100: 0, carbs100: 0, prot100: 0, fat100: 0,
+            simple100: 0, complex100: 0, bad100: 0, good100: 0,
+            trans100: 0, fiber100: 0
+          }));
+          const scale = dayUtils.scale || ((v, g) => Math.round(((+v || 0) * (+g || 0) / 100) * 10) / 10);
+          const currentDay = HEYS.Day?.getDay?.() || context?.day || {};
+          const pIndex = dayUtils.buildProductIndex?.() || HEYS.products?.buildIndex?.() || {};
+
+          Promise.resolve(summaryShow({
+            day: currentDay,
+            mealIndex: context?.mealIndex ?? 0,
+            pIndex,
+            getProductFromItem,
+            per100,
+            scale,
+            onAddMore: () => {
+              addMoreChosen = true;
+              continueAdding();
+            }
+          })).then(() => {
+            if (!addMoreChosen) finishMeal();
+          });
+          return;
+        }
+
+        // Fallback: старый ConfirmModal
         if (HEYS.ConfirmModal?.show) {
           const mealName = (context?.day?.meals?.[context?.mealIndex]?.name || 'приём').toLowerCase();
           Promise.resolve(HEYS.ConfirmModal.show({
