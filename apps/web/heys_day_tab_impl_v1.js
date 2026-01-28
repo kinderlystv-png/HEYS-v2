@@ -393,6 +393,11 @@
 
         const setDay = setDayRaw;
         const day = dayRaw;
+        const dayRef = useRef(day);
+
+        useEffect(() => {
+            dayRef.current = day;
+        }, [day]);
 
         // === EARLY RETURN #2: защита если day стал undefined при logout ===
         // Это может произойти при race condition когда localStorage очищается во время рендера
@@ -414,7 +419,8 @@
             React,
             flush,
             blockCloudUpdatesUntilRef,
-            lastLoadedUpdatedAtRef
+            lastLoadedUpdatedAtRef,
+            dayRef
         });
 
         // Логирование для диагностики рассинхрона продуктов и приёмов пищи

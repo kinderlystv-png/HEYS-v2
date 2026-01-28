@@ -1,5 +1,6 @@
 // heys_storage_supabase_v1.js — Supabase bridge, auth, cloud sync, localStorage mirroring
 // v59: Fix cache invalidation on cloud sync — UI now shows synced data when changing dates
+// v60: FIX dayv2 overwrite — БЛОКИРОВКА записи старых данных из cloud в localStorage (timestamp check)
 
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
@@ -126,6 +127,39 @@
   let status = CONNECTION_STATUS.OFFLINE;
   let user = null;
   let muteMirror = false;
+  let _syncPauseUntil = 0;
+  let _syncPauseToken = 0;
+  let _syncPauseReason = '';
+
+  cloud.pauseSync = function (durationMs = 10 * 60 * 1000, reason = '') {
+    const now = Date.now();
+    const until = now + Math.max(0, durationMs || 0);
+    if (until > _syncPauseUntil) {
+      _syncPauseUntil = until;
+      _syncPauseReason = reason || _syncPauseReason || '';
+    }
+    _syncPauseToken += 1;
+    return { token: _syncPauseToken, until: _syncPauseUntil, reason: _syncPauseReason };
+  };
+
+  cloud.resumeSync = function (token) {
+    if (token && token.token && token.token !== _syncPauseToken) return false;
+    _syncPauseUntil = 0;
+    _syncPauseReason = '';
+    return true;
+  };
+
+  cloud.isSyncPaused = function () {
+    return Date.now() < _syncPauseUntil;
+  };
+
+  cloud.getSyncPauseUntil = function () {
+    return _syncPauseUntil;
+  };
+
+  cloud.getSyncPauseReason = function () {
+    return _syncPauseReason;
+  };
 
   // 🔐 PIN-авторизация: client_id проверенный через verify_client_pin (без Supabase user)
   let _pinAuthClientId = null;
@@ -3105,6 +3139,10 @@
       return { success: false, error: 'no_client_id' };
     }
 
+    if (!options?.force && typeof cloud.isSyncPaused === 'function' && cloud.isSyncPaused()) {
+      return { success: false, error: 'sync_paused' };
+    }
+
     const ls = global.localStorage;
 
     try {
@@ -3386,6 +3424,9 @@
     // 5 сек было слишком мало — 3 компонента вызывают sync параллельно при монтировании
     const SYNC_THROTTLE_MS = 15000;
     const forceSync = options && options.force;
+    if (!forceSync && typeof cloud.isSyncPaused === 'function' && cloud.isSyncPaused()) {
+      return;
+    }
     if (!forceSync && cloud._lastClientSync && cloud._lastClientSync.clientId === client_id && (now - cloud._lastClientSync.ts) < SYNC_THROTTLE_MS) {
       // Тихий пропуск throttled запросов
       log('sync throttled, last sync:', Math.round((now - cloud._lastClientSync.ts) / 1000), 'sec ago');
@@ -4354,6 +4395,33 @@
               productsUpdated = true;
               latestProducts = valueToSave;
             } else {
+              // 🛡️ v60 FIX: ЗАЩИТА DAYV2 — не перезаписываем локальные данные старыми из cloud
+              if (key.includes('dayv2_')) {
+                const incomingUpdatedAt = valueToSave?.updatedAt || 0;
+                try {
+                  const existingRaw = ls.getItem(key);
+                  if (existingRaw) {
+                    const existing = tryParse(existingRaw);
+                    const existingUpdatedAt = existing?.updatedAt || 0;
+
+                    if (existingUpdatedAt > incomingUpdatedAt) {
+                      logCritical(`🛡️ [DAYV2] BLOCKED localStorage overwrite: local (${existingUpdatedAt}) > remote (${incomingUpdatedAt}) for ${key}`);
+                      // Не перезаписываем! Локальные данные новее.
+                      // Push локальные данные обратно в cloud чтобы синхронизировать
+                      const pushObj = {
+                        client_id: client_id,
+                        k: normalizeKeyForSupabase(row.k, client_id),
+                        v: existing,
+                        updated_at: new Date().toISOString()
+                      };
+                      clientUpsertQueue.push(pushObj);
+                      scheduleClientPush();
+                      return; // Пропускаем запись
+                    }
+                  }
+                } catch (e) { /* ignore parse errors */ }
+              }
+
               ls.setItem(key, JSON.stringify(valueToSave));
               log(`  ✅ Saved to localStorage: ${key}`);
 
@@ -4565,6 +4633,7 @@
     if (!Array.isArray(dates) || dates.length === 0) return [];
     const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
     if (!clientId) return [];
+    if (typeof cloud.isSyncPaused === 'function' && cloud.isSyncPaused()) return [];
 
     // 🔧 FIX: Ключи в базе могут быть как нормализованные, так и scoped (c clientId)
     const dayKeys = dates.map((d) => `heys_dayv2_${d}`);

@@ -5,7 +5,7 @@
     const HEYS = global.HEYS = global.HEYS || {};
 
     function useDayGlobalExportsEffect(deps) {
-        const { React, flush, blockCloudUpdatesUntilRef, lastLoadedUpdatedAtRef } = deps || {};
+        const { React, flush, blockCloudUpdatesUntilRef, lastLoadedUpdatedAtRef, dayRef } = deps || {};
 
         React.useEffect(() => {
             HEYS.Day = HEYS.Day || {};
@@ -14,6 +14,7 @@
             HEYS.Day.getBlockUntil = () => blockCloudUpdatesUntilRef.current;
             HEYS.Day.setBlockCloudUpdates = (until) => { blockCloudUpdatesUntilRef.current = until; };
             HEYS.Day.setLastLoadedUpdatedAt = (ts) => { lastLoadedUpdatedAtRef.current = ts; };
+            HEYS.Day.getDay = () => dayRef?.current;
 
             return () => {
                 if (HEYS.Day && HEYS.Day.requestFlush === flush) {
@@ -22,9 +23,10 @@
                     delete HEYS.Day.getBlockUntil;
                     delete HEYS.Day.setBlockCloudUpdates;
                     delete HEYS.Day.setLastLoadedUpdatedAt;
+                    delete HEYS.Day.getDay;
                 }
             };
-        }, [flush]);
+        }, [flush, dayRef]);
     }
 
     HEYS.dayGlobalExports = {
