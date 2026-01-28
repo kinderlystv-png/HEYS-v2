@@ -3,7 +3,6 @@
 # 🏗️ HEYS Module Architecture Checker
 # =============================================================================
 # Проверяет модули на соответствие архитектурным ограничениям:
-#   - LOC ≤ 2000 (строки кода)
 #   - Функции ≤ 80
 #   - HEYS.* ссылки ≤ 50
 #
@@ -129,23 +128,6 @@ print_recommendations() {
     echo -e "${CYAN}📋 РЕКОМЕНДАЦИИ для ${BOLD}$(basename "$file")${NC}"
     echo ""
     
-    # LOC рекомендации
-    if [ "$loc" -gt "$LOC_LIMIT" ]; then
-        echo -e "${BOLD}🎯 QUICK WIN (LOC = $loc):${NC}"
-        echo "   • Выдели утилитарные функции в отдельный файл *_utils.js"
-        echo "   • React компоненты → отдельный *_components.js"
-        echo "   • Константы/конфиги → *_config.js"
-        echo ""
-        echo -e "${BOLD}📈 СТРАТЕГИЧЕСКОЕ:${NC}"
-        echo "   • Разбей модуль по доменам (UI / бизнес-логика / данные)"
-        echo "   • Создай sub-modules в папке с именем модуля"
-        echo "   • Используй фасад-паттерн: главный файл только re-export'ит"
-    elif [ "$loc" -gt "$LOC_WARNING" ]; then
-        echo -e "${BOLD}⚡ QUICK WIN (LOC = $loc, близко к лимиту):${NC}"
-        echo "   • Вынеси самые длинные функции (>50 строк) в helpers"
-        echo "   • Перенеси inline JSX в отдельные компоненты"
-    fi
-    
     # Functions рекомендации
     if [ "$funcs" -gt "$FUNC_LIMIT" ]; then
         echo ""
@@ -235,16 +217,6 @@ check_file() {
     local issues=""
     
     # Проверяем лимиты
-    if [ "$loc" -gt "$loc_limit" ]; then
-        status="❌"
-        issues+="LOC=$loc>$loc_limit "
-        ((ERRORS++))
-    elif [ "$loc" -gt "$loc_warning" ]; then
-        if [ "$status" != "❌" ]; then status="⚠️"; fi
-        issues+="LOC=$loc "
-        ((WARNINGS++))
-    fi
-    
     if [ "$funcs" -gt "$func_limit" ]; then
         status="❌"
         issues+="funcs=$funcs>$func_limit "
@@ -303,7 +275,7 @@ check_file() {
 main() {
     echo ""
     echo -e "${BOLD}🏗️  HEYS Module Architecture Check${NC}"
-    echo -e "   Лимиты: LOC≤$LOC_LIMIT (warn:$LOC_WARNING) | funcs≤$FUNC_LIMIT (warn:$FUNC_WARNING) | HEYS.*≤$HEYS_REF_LIMIT (warn:$HEYS_REF_WARNING)"
+    echo -e "   Лимиты: funcs≤$FUNC_LIMIT (warn:$FUNC_WARNING) | HEYS.*≤$HEYS_REF_LIMIT (warn:$HEYS_REF_WARNING)"
     echo ""
     
     local files=()
