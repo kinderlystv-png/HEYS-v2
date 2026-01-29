@@ -1,6 +1,11 @@
 // heys_day_insights_data_v1.js — day insights calculations (kcal trend, balance viz, heatmap, meals chart)
 (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
+  // Debug marker: модуль загружен
+  try {
+    HEYS.debugData = HEYS.debugData || {};
+    HEYS.debugData.insightsModuleLoaded = { ts: Date.now(), version: 'v1-local' };
+  } catch (e) { }
   HEYS.dayInsightsData = HEYS.dayInsightsData || {};
 
   HEYS.dayInsightsData.computeDayInsightsData = function computeDayInsightsData(ctx) {
@@ -31,6 +36,17 @@
     const safeProducts = products || [];
     const safeU = U || HEYSRef.utils || {};
     const dayUtils = HEYSRef.dayUtils || {};
+
+    // Debug marker: фиксируем факт вызова computeDayInsightsData
+    try {
+      HEYSRef.debugData = HEYSRef.debugData || {};
+      HEYSRef.debugData.insightsDataSeen = {
+        date,
+        hasReact: !!React,
+        hasFmtDate: !!fmtDate,
+        ts: Date.now()
+      };
+    } catch (e) { }
 
     // Тренд калорий за последние N дней (среднее превышение/дефицит)
     const kcalTrend = React.useMemo(() => {
@@ -427,7 +443,7 @@
         const dayData = dayInfo?.dayData
           || (dayUtils.loadDay ? dayUtils.loadDay(dateStr) : (safeU.lsGet ? safeU.lsGet('heys_dayv2_' + dateStr, null) : null));
         const tdeeInfo = dayUtils.getDayTdee
-          ? dayUtils.getDayTdee(dateStr, prof, { includeNDTE: true, dayData })
+          ? dayUtils.getDayTdee(dateStr, prof, { includeNDTE: true, dayData, pIndex, products: safeProducts })
           : null;
         const target = (dayInfo?.target && dayInfo.target > 0)
           ? dayInfo.target
@@ -513,11 +529,13 @@
         });
       }
 
+      const isIncompleteToday = (d) => d.date === nowDateStr && (d.ratio === null || d.ratio < 0.5);
       const inNorm = days.filter(d => d.status === 'green' || d.status === 'perfect').length;
-      const withData = days.filter(d => d.status !== 'empty' && !d.isFuture).length;
+      const withData = days.filter(d => d.status !== 'empty' && !d.isFuture && !isIncompleteToday(d)).length;
+      const todayExcluded = days.some(d => isIncompleteToday(d));
 
       // Средний ratio в процентах за неделю (% от нормы)
-      const daysWithRatio = days.filter(d => d.ratio !== null && d.ratio > 0);
+      const daysWithRatio = days.filter(d => d.ratio !== null && d.ratio > 0 && !isIncompleteToday(d));
       const avgRatioPct = daysWithRatio.length > 0
         ? Math.round(daysWithRatio.reduce((sum, d) => sum + (d.ratio * 100), 0) / daysWithRatio.length)
         : 0;
@@ -542,14 +560,14 @@
       let daysWithDeficit = 0;
 
       days.forEach(d => {
-        if (d.kcal > 0) {
+        if (d.kcal > 0 && !isIncompleteToday(d)) {
           totalEaten += d.kcal;
           // Загружаем полные данные дня для расчёта TDEE
           const dayData = dayUtils.loadDay
             ? dayUtils.loadDay(d.date)
             : (safeU.lsGet ? safeU.lsGet('heys_dayv2_' + d.date, null) : null);
           const tdeeInfo = dayUtils.getDayTdee
-            ? dayUtils.getDayTdee(d.date, prof, { includeNDTE: true, dayData })
+            ? dayUtils.getDayTdee(d.date, prof, { includeNDTE: true, dayData, pIndex, products: safeProducts })
             : null;
           if (tdeeInfo && tdeeInfo.tdee > 0) {
             totalBurned += tdeeInfo.tdee;
@@ -568,7 +586,39 @@
       // Средний целевой дефицит за эти дни
       const avgTargetDeficit = daysWithDeficit > 0 ? Math.round(totalTargetDeficit / daysWithDeficit) : (prof?.deficitPctTarget || 0);
 
-      return { days, inNorm, withData, streak, weekendPattern, avgRatioPct, totalEaten, totalBurned, avgTargetDeficit };
+      // Debug snapshot: сравнение данных heatmap и источников (без логов)
+      try {
+        HEYSRef.debugData = HEYSRef.debugData || {};
+        HEYSRef.debugData.weekHeatmapData = {
+          date,
+          nowDateStr,
+          monday: fmtDate(monday),
+          inNorm,
+          withData,
+          avgRatioPct,
+          totalEaten,
+          totalBurned,
+          avgTargetDeficit,
+          days: days.map((d) => {
+            const dayInfo = allActiveDays.get(d.date);
+            const computedTarget = dayInfo ? getDayOptimum(d.date, dayInfo).target : 0;
+            return {
+              date: d.date,
+              kcal: d.kcal,
+              ratio: d.ratio,
+              status: d.status,
+              isToday: d.isToday,
+              isFuture: d.isFuture,
+              isIncompleteToday: isIncompleteToday(d),
+              activeKcal: dayInfo?.kcal || 0,
+              activeTarget: dayInfo?.target || 0,
+              computedTarget
+            };
+          })
+        };
+      } catch (e) { }
+
+      return { days, inNorm, withData, streak, weekendPattern, avgRatioPct, totalEaten, totalBurned, avgTargetDeficit, todayExcluded };
     }, [date, optimum, pIndex, safeProducts, prof]);
 
     // === Мини-график калорий по приёмам ===

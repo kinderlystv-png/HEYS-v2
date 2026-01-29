@@ -2128,7 +2128,8 @@
     }
 
     const includeNDTE = !!options.includeNDTE;
-    const cacheKey = dateStr + '|' + (includeNDTE ? '1' : '0');
+    const productsSig = options.products ? productsSignature(options.products) : (options.pIndex ? 'pindex' : 'nopindex');
+    const cacheKey = dateStr + '|' + (includeNDTE ? '1' : '0') + '|' + productsSig;
     const now = Date.now();
 
     if (TDEE_CACHE.has(cacheKey)) {
@@ -2142,11 +2143,13 @@
     TDEE_CACHE_MISSES += 1;
 
     const prof = profile || getProfile() || {};
-    const dayData = options.dayData || loadDay(dateStr);
+    const dayDataRaw = options.dayData || loadDay(dateStr);
+    const dayData = dayDataRaw ? { ...dayDataRaw, date: dayDataRaw.date || dateStr } : dayDataRaw;
+    const resolvedPIndex = options.pIndex || (options.products ? buildProductIndex(options.products) : null);
 
     let result = null;
     if (dayData && global.HEYS?.TDEE?.calculate) {
-      const tdeeResult = global.HEYS.TDEE.calculate(dayData, prof, { lsGet, includeNDTE }) || {};
+      const tdeeResult = global.HEYS.TDEE.calculate(dayData, prof, { lsGet, includeNDTE, pIndex: resolvedPIndex }) || {};
       result = {
         tdee: tdeeResult.tdee || 0,
         optimum: tdeeResult.optimum || 0,
@@ -2240,6 +2243,7 @@
           if (name) productsMap.set(name, p);
         }
       });
+      const pIndex = buildProductIndex(productsArr);
 
       // Проходим по всем дням месяца
       const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -2271,20 +2275,11 @@
 
         // Шаги: формула stepsKcal(steps, weight, sex, 0.7)
         const steps = dayInfo.steps || 0;
-        const stepsK = stepsKcal(steps, weight, sex, 0.7);
 
         // Быт: householdMin × kcalPerMin(2.5, weight)
         const householdMin = dayInfo.householdMin || 0;
-        const householdK = Math.round(householdMin * kcalPerMin(2.5, weight));
 
         // Тренировки: суммируем ккал из зон z (как на экране дня — только первые 3)
-        // Читаем кастомные MET из heys_hr_zones (как на экране дня)
-        const hrZones = lsGet('heys_hr_zones', []);
-        const customMets = hrZones.map(x => +x.MET || 0);
-        const mets = [2.5, 6, 8, 10].map((def, i) => customMets[i] || def);
-        const kcalMin = mets.map(m => kcalPerMin(m, weight));
-
-        let trainingsK = 0;
         const trainings = (dayInfo.trainings || []).slice(0, 3); // максимум 3 тренировки
 
         // Собираем типы тренировок с реальными минутами
@@ -2293,20 +2288,19 @@
           .map(t => t.type || 'cardio');
         const hasTraining = trainingTypes.length > 0;
 
-        trainings.forEach((t, tIdx) => {
-          if (t.z && Array.isArray(t.z)) {
-            let tKcal = 0;
-            t.z.forEach((min, i) => {
-              tKcal += Math.round((+min || 0) * (kcalMin[i] || 0));
-            });
-            trainingsK += tKcal;
-          }
-        });
-
-        const tdee = bmr + stepsK + householdK + trainingsK;
+        const dayForTdee = { ...dayInfo, date: dayInfo.date || dateStr };
+        const tdeeResult = global.HEYS?.TDEE?.calculate
+          ? global.HEYS.TDEE.calculate(dayForTdee, profile || {}, { lsGet, includeNDTE: true, pIndex })
+          : null;
+        const tdee = tdeeResult?.tdee || (bmr + stepsKcal(steps, weight, sex, 0.7) + Math.round(householdMin * kcalPerMin(2.5, weight)));
         // Используем дефицит дня если есть (не пустая строка и не null), иначе из профиля
-        const dayDeficit = (dayInfo.deficitPct !== '' && dayInfo.deficitPct != null) ? +dayInfo.deficitPct : deficitPct;
-        const calculatedTarget = Math.round(tdee * (1 + dayDeficit / 100));
+        const dayDeficit = (tdeeResult?.deficitPct != null)
+          ? tdeeResult.deficitPct
+          : ((dayInfo.deficitPct !== '' && dayInfo.deficitPct != null) ? +dayInfo.deficitPct : deficitPct);
+        const calculatedTarget = tdeeResult?.optimum || Math.round(tdee * (1 + dayDeficit / 100));
+        const calculatedBaseTarget = tdeeResult?.baseExpenditure
+          ? Math.round(tdeeResult.baseExpenditure * (1 + dayDeficit / 100))
+          : calculatedTarget;
 
         // 🔧 FIX: Используем сохранённую норму с долгом если есть, иначе расчётную
         // Это позволяет показывать корректную линию нормы в sparkline для прошлых дней
@@ -2336,7 +2330,7 @@
 
         daysData.set(dateStr, {
           kcal, target, ratio, // 🔧 FIX: kcal теперь использует savedEatenKcal если есть
-          baseTarget: calculatedTarget, // 🔧 Базовая норма БЕЗ долга — для расчёта caloricDebt
+          baseTarget: calculatedBaseTarget, // 🔧 Базовая норма БЕЗ долга — для расчёта caloricDebt
           hasTraining, trainingTypes, trainingMinutes,
           moodAvg, sleepHours, dayScore,
           prot, fat, carbs,

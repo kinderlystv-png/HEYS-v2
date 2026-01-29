@@ -2,7 +2,7 @@
 // WeightStep, SleepTimeStep, SleepQualityStep, StepsGoalStep
 (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
-  const { useState, useMemo, useCallback, useEffect } = React;
+  const { useState, useMemo, useCallback, useEffect, useRef } = React;
 
   // Ждём загрузки StepModal
   if (!HEYS.StepModal) {
@@ -141,8 +141,35 @@
     const kgValues = useMemo(() => Array.from({ length: 101 }, (_, i) => 40 + i), []);
     const gValues = useMemo(() => Array.from({ length: 10 }, (_, i) => i), []);
 
+    const prevWeightGRef = useRef(weightG);
+
+    useEffect(() => {
+      prevWeightGRef.current = weightG;
+    }, [weightG]);
+
     const setWeightKg = (v) => onChange({ ...data, weightKg: v, weightG: data.weightG ?? weightG });
-    const setWeightG = (v) => onChange({ ...data, weightKg: data.weightKg ?? weightKg, weightG: v });
+    const setWeightG = (v) => {
+      const prevG = prevWeightGRef.current;
+      const currentKg = data.weightKg ?? weightKg;
+      let nextKg = currentKg;
+
+      if (prevG === 9 && v === 0) {
+        const currentIndex = kgValues.indexOf(currentKg);
+        const nextIndex = currentIndex >= 0
+          ? (currentIndex + 1) % kgValues.length
+          : 0;
+        nextKg = kgValues[nextIndex];
+      } else if (prevG === 0 && v === 9) {
+        const currentIndex = kgValues.indexOf(currentKg);
+        const nextIndex = currentIndex >= 0
+          ? (currentIndex - 1 + kgValues.length) % kgValues.length
+          : kgValues.length - 1;
+        nextKg = kgValues[nextIndex];
+      }
+
+      prevWeightGRef.current = v;
+      onChange({ ...data, weightKg: nextKg, weightG: v });
+    };
 
     return React.createElement('div', { className: 'mc-weight-step' },
       React.createElement('div', { className: 'mc-weight-display' },
@@ -710,7 +737,26 @@
 
     const stepsValues = useMemo(() => [5000, 6000, 7000, 8000, 9000, 10000, 12000, 15000], []);
 
+    // Определяем тип дня по цели
+    const getDayTypeLabel = () => {
+      if (stepsGoal <= 5000) return { emoji: '🛋️', label: 'Малоподвижный день', desc: 'офис, дом, отдых' };
+      if (stepsGoal <= 7000) return { emoji: '💼', label: 'Обычный день', desc: 'работа, дела по дому' };
+      if (stepsGoal <= 10000) return { emoji: '🚶', label: 'Активный день', desc: 'прогулки, встречи' };
+      if (stepsGoal <= 15000) return { emoji: '🏃', label: 'Очень активный день', desc: 'много перемещений' };
+      return { emoji: '🏔️', label: 'Максимальная активность', desc: 'поход, экскурсия' };
+    };
+    const dayType = getDayTypeLabel();
+
     return React.createElement('div', { className: 'mc-steps-step' },
+      // Пояснение зачем нужна цель
+      React.createElement('div', { className: 'mc-steps-purpose' },
+        React.createElement('div', { className: 'mc-steps-purpose-main' },
+          '🎯 Какая активность ждёт тебя сегодня?'
+        ),
+        React.createElement('div', { className: 'mc-steps-purpose-sub' },
+          'Куратор увидит твой план и подстроит рекомендации по питанию'
+        )
+      ),
       React.createElement('div', { className: 'mc-steps-display' },
         React.createElement('span', { className: 'mc-steps-value' }, stepsGoal.toLocaleString()),
         React.createElement('span', { className: 'mc-steps-unit' }, ' шагов')
@@ -748,6 +794,14 @@
           )
         )
       ),
+      // Тип дня — что означает выбранная цель
+      React.createElement('div', { className: 'mc-steps-day-type' },
+        React.createElement('span', { className: 'mc-steps-day-type-emoji' }, dayType.emoji),
+        React.createElement('div', { className: 'mc-steps-day-type-info' },
+          React.createElement('span', { className: 'mc-steps-day-type-label' }, dayType.label),
+          React.createElement('span', { className: 'mc-steps-day-type-desc' }, dayType.desc)
+        )
+      ),
       React.createElement('div', { className: 'mc-steps-recommendation' },
         stepsGoal < 7000
           ? '❤️ Минимум 7000 шагов для здоровья сердца и сосудов'
@@ -765,13 +819,17 @@
             onClick: () => onChange({ ...data, stepsGoal: v })
           }, v >= 10000 ? `${v / 1000}к` : v.toLocaleString())
         )
+      ),
+      // Подсказка внизу
+      React.createElement('div', { className: 'mc-steps-footer-hint' },
+        '😴 Сон 7-8 часов = меньше тяги к сладкому'
       )
     );
   }
 
   registerStep('stepsGoal', {
     title: 'Шаги',
-    hint: 'Цель на сегодня',
+    hint: 'Какой день тебя ждёт?',
     icon: '👟',
     component: StepsGoalStepComponent,
     getInitialData: () => {
@@ -1046,8 +1104,14 @@
 
     // Парсим время для TimePicker (числа)
     const [currentHour, currentMinute] = useMemo(() => {
-      const [h, m] = (householdTime || '12:00').split(':').map(Number);
-      return [h || 12, Math.floor((m || 0) / 5) * 5]; // округляем минуты к ближайшим 5
+      if (householdTime) {
+        const [h, m] = householdTime.split(':').map(Number);
+        return [h || 0, Math.floor((m || 0) / 5) * 5];
+      }
+
+      const now = new Date();
+      const roundedMinutes = Math.floor(now.getMinutes() / 5) * 5;
+      return [now.getHours(), roundedMinutes];
     }, [householdTime]);
 
     // Используем переиспользуемый TimePicker из StepModal

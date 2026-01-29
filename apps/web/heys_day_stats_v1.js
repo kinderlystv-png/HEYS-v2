@@ -2313,12 +2313,31 @@
             weekHeatmapData.streak >= 2 && React.createElement('span', {
               className: 'week-heatmap-streak'
             }, '🔥 ' + weekHeatmapData.streak),
-            React.createElement('button', {
-              className: 'week-heatmap-action',
+            React.createElement('div', {
+              className: 'week-heatmap-action-wrap',
+              role: 'button',
+              tabIndex: 0,
               title: 'Итоги недели: ' + weekWrapRange,
               'aria-label': 'Итоги недели: ' + weekWrapRange,
-              onClick: openWeeklyWrapPopup
-            }, '📊')
+              onClick: openWeeklyWrapPopup,
+              onKeyDown: (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openWeeklyWrapPopup(e);
+                }
+              }
+            },
+              React.createElement('span', { className: 'week-heatmap-action-label' }, 'Сравнить неделю'),
+              React.createElement('button', {
+                className: 'week-heatmap-action',
+                title: 'Итоги недели: ' + weekWrapRange,
+                'aria-label': 'Итоги недели: ' + weekWrapRange,
+                onClick: (e) => {
+                  e.stopPropagation();
+                  openWeeklyWrapPopup(e);
+                }
+              }, '📊')
+            )
           ),
           // Grid с днями недели + статистика X/Y в норме
           React.createElement('div', { className: 'week-heatmap-row' },
@@ -2406,6 +2425,9 @@
                 }
               }
             },
+              weekHeatmapData.todayExcluded && React.createElement('span', {
+                className: 'week-heatmap-deficit-excluded'
+              }, 'Сегодня не учтён'),
               React.createElement('span', { style: deficitStyles?.stack },
                 // Первая строка: потрачено / съедено + процент
                 React.createElement('span', { style: deficitStyles?.row },

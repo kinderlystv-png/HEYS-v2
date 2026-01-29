@@ -17,12 +17,8 @@
       getScoreEmoji,
       getScoreGradient,
       getScoreTextColor,
-      dayScoreValues,
-      setPendingDayScore,
-      setShowDayScorePicker,
       setDay,
       calculateDayAverages,
-      openSleepQualityPicker,
       measurementsNeedUpdate,
       openMeasurementsEditor,
       measurementsByField,
@@ -31,6 +27,51 @@
       measurementsLastDateFormatted,
       renderMeasurementSpark
     } = ctx || {};
+
+    const openSleepCheckin = () => {
+      if (HEYS.showCheckin?.sleep) {
+        HEYS.showCheckin.sleep(date, (stepData) => {
+          if (stepData) {
+            const timeData = stepData.sleepTime || {};
+            const qualityData = stepData.sleepQuality || {};
+            setDay(prev => ({
+              ...prev,
+              sleepStart: timeData.sleepStart ?? prev.sleepStart,
+              sleepEnd: timeData.sleepEnd ?? prev.sleepEnd,
+              sleepHours: timeData.sleepHours ?? prev.sleepHours,
+              sleepQuality: qualityData.sleepQuality ?? prev.sleepQuality,
+              sleepNote: qualityData.sleepNote || prev.sleepNote,
+              updatedAt: Date.now()
+            }));
+          }
+        });
+      }
+    };
+
+    const openMorningMoodCheckin = () => {
+      if (HEYS.showCheckin?.morningMood) {
+        HEYS.showCheckin.morningMood(date, () => {
+          const dateKey = date || new Date().toISOString().slice(0, 10);
+          const storedDay = HEYS.utils?.lsGet ? HEYS.utils.lsGet(`heys_dayv2_${dateKey}`, {}) : null;
+
+          setDay(prev => {
+            const merged = { ...prev, ...(storedDay || {}) };
+            const averages = typeof calculateDayAverages === 'function'
+              ? calculateDayAverages(merged.meals, merged.trainings, merged)
+              : {};
+            const nextDayScore = merged.dayScoreManual ? merged.dayScore : averages.dayScore;
+
+            return {
+              ...merged,
+              ...averages,
+              dayScore: nextDayScore,
+              dayScoreManual: merged.dayScoreManual,
+              updatedAt: Date.now()
+            };
+          });
+        });
+      }
+    };
 
     return React.createElement('div', { className: 'area-side right-col' },
       React.createElement('div', { className: 'compact-sleep compact-card' },
@@ -58,57 +99,19 @@
               React.createElement('div', { className: 'sleep-card-times' },
                 React.createElement('span', {
                   className: 'sleep-time-display clickable',
-                  onClick: () => {
-                    if (HEYS.showCheckin?.sleep) {
-                      HEYS.showCheckin.sleep(date, (stepData) => {
-                        if (stepData) {
-                          // stepData = { sleepTime: {...}, sleepQuality: {...} }
-                          const timeData = stepData.sleepTime || {};
-                          const qualityData = stepData.sleepQuality || {};
-                          setDay(prev => ({
-                            ...prev,
-                            sleepStart: timeData.sleepStart ?? prev.sleepStart,
-                            sleepEnd: timeData.sleepEnd ?? prev.sleepEnd,
-                            sleepHours: timeData.sleepHours ?? prev.sleepHours,
-                            sleepQuality: qualityData.sleepQuality ?? prev.sleepQuality,
-                            sleepNote: qualityData.sleepNote || prev.sleepNote,
-                            updatedAt: Date.now()
-                          }));
-                        }
-                      });
-                    }
-                  }
+                  onClick: openSleepCheckin
                 }, day.sleepStart || '—:—'),
                 React.createElement('span', { className: 'sleep-arrow' }, '→'),
                 React.createElement('span', {
                   className: 'sleep-time-display clickable',
-                  onClick: () => {
-                    if (HEYS.showCheckin?.sleep) {
-                      HEYS.showCheckin.sleep(date, (stepData) => {
-                        if (stepData) {
-                          // stepData = { sleepTime: {...}, sleepQuality: {...} }
-                          const timeData = stepData.sleepTime || {};
-                          const qualityData = stepData.sleepQuality || {};
-                          setDay(prev => ({
-                            ...prev,
-                            sleepStart: timeData.sleepStart ?? prev.sleepStart,
-                            sleepEnd: timeData.sleepEnd ?? prev.sleepEnd,
-                            sleepHours: timeData.sleepHours ?? prev.sleepHours,
-                            sleepQuality: qualityData.sleepQuality ?? prev.sleepQuality,
-                            sleepNote: qualityData.sleepNote || prev.sleepNote,
-                            updatedAt: Date.now()
-                          }));
-                        }
-                      });
-                    }
-                  }
+                  onClick: openSleepCheckin
                 }, day.sleepEnd || '—:—')
               ),
               // Качество сна — большой блок как у оценки дня
               React.createElement('div', {
                 className: 'sleep-quality-display clickable' + (isPulse ? ' score-pulse' : ''),
                 style: { background: getScoreGradient(day.sleepQuality) },
-                onClick: openSleepQualityPicker
+                onClick: openSleepCheckin
               },
                 // Emoji + Value
                 React.createElement('div', { className: 'score-main-row' },
@@ -174,12 +177,7 @@
               React.createElement('div', {
                 className: 'day-score-display' + (day.dayScore ? ' clickable' : '') + (isPulse ? ' score-pulse' : ''),
                 style: { background: getScoreGradient(day.dayScore) },
-                onClick: () => {
-                  const currentScore = day.dayScore || 0;
-                  const idx = currentScore === 0 ? 0 : dayScoreValues.indexOf(String(currentScore));
-                  setPendingDayScore(idx >= 0 ? idx : 0);
-                  setShowDayScorePicker(true);
-                }
+                onClick: openMorningMoodCheckin
               },
                 // Emoji + Value
                 React.createElement('div', { className: 'score-main-row' },
@@ -211,7 +209,10 @@
                   : (day.moodAvg || day.wellbeingAvg || day.stressAvg) &&
                   React.createElement('span', { className: 'day-score-auto-hint' }, '✨ авто')
               ),
-              React.createElement('div', { className: 'day-mood-row' },
+              React.createElement('div', {
+                className: 'day-mood-row clickable',
+                onClick: openMorningMoodCheckin
+              },
                 React.createElement('div', { className: 'mood-card' },
                   React.createElement('span', { className: 'mood-card-icon' }, '😊'),
                   React.createElement('span', { className: 'mood-card-label' }, 'Настроение'),

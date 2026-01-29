@@ -618,20 +618,59 @@
     const targetDef = weekHeatmapData.avgTargetDeficit || 0;
     const deviation = Math.abs(diffPct - targetDef);
 
+    const getDeltaPctTone = (delta, target) => {
+      if (!Number.isFinite(delta) || !Number.isFinite(target)) return 'gray';
+
+      const targetAbs = Math.abs(target);
+      const hasTarget = targetAbs >= 1;
+
+      if (!hasTarget) {
+        if (delta === 0) return 'gray';
+        return delta > 0 ? 'red' : 'green';
+      }
+
+      if (delta === 0) return 'yellow';
+
+      if (Math.sign(delta) !== Math.sign(target)) {
+        return 'red';
+      }
+
+      const deltaAbs = Math.abs(delta);
+      const greenMin = targetAbs * 0.55;
+      const greenMax = targetAbs * 1.25;
+
+      if (deltaAbs >= greenMin && deltaAbs <= greenMax) {
+        return 'green';
+      }
+
+      return 'yellow';
+    };
+
+    const getDeltaPctColor = (delta, target) => {
+      const tone = getDeltaPctTone(delta, target);
+      if (tone === 'green') return '#22c55e';
+      if (tone === 'yellow') return '#f59e0b';
+      if (tone === 'red') return '#ef4444';
+      return '#94a3b8';
+    };
+
+    const tone = getDeltaPctTone(diffPct, targetDef);
     let colorClass;
     let icon;
-    if (deviation <= 5) {
+    if (tone === 'green') {
       colorClass = 'positive';
       icon = '✅';
-    } else if (deviation <= 15) {
+    } else if (tone === 'yellow') {
       colorClass = 'mixed';
       icon = isDeficit ? '📉' : '📈';
-    } else {
+    } else if (tone === 'red') {
       colorClass = 'warning';
       icon = '⚠️';
+    } else {
+      colorClass = 'mixed';
+      icon = '•';
     }
-
-    const pctColor = diffPct < 0 ? '#dc2626' : diffPct > 0 ? '#16a34a' : '#6b7280';
+    const pctColor = getDeltaPctColor(diffPct, targetDef);
     const diffSign = diffPct >= 0 ? '+' : '';
     const targetSign = targetDef >= 0 ? '+' : '';
 

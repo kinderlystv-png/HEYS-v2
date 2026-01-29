@@ -1195,7 +1195,26 @@
           };
         }
 
-        // 2. Если первый приём — берём средние за вчера
+        // 2. Если первый приём — берём оценки из утреннего чек-ина
+        const checkinMood = dayData?.moodAvg;
+        const checkinWellbeing = dayData?.wellbeingAvg;
+        const checkinStress = dayData?.stressAvg;
+
+        const hasCheckinRatings =
+          Number.isFinite(checkinMood) ||
+          Number.isFinite(checkinWellbeing) ||
+          Number.isFinite(checkinStress);
+
+        if (hasCheckinRatings) {
+          return {
+            mood: Number.isFinite(checkinMood) ? Math.round(checkinMood) : 5,
+            wellbeing: Number.isFinite(checkinWellbeing) ? Math.round(checkinWellbeing) : 5,
+            stress: Number.isFinite(checkinStress) ? Math.round(checkinStress) : 5,
+            comment: ''
+          };
+        }
+
+        // 3. Если первый приём — берём средние за вчера
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayKey = yesterday.toISOString().slice(0, 10);
@@ -1226,7 +1245,7 @@
           }
         }
 
-        // 3. Если нет данных — по умолчанию 5
+        // 4. Если нет данных — по умолчанию 5
         return { mood: 5, wellbeing: 5, stress: 5, comment: '' };
       },
       validate: () => true

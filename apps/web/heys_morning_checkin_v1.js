@@ -393,6 +393,23 @@
       }
     },
 
+    // Только утреннее настроение
+    morningMood: (dateKey, onComplete) => {
+      if (HEYS.StepModal) {
+        // Если первый аргумент — функция, это onComplete (обратная совместимость)
+        const actualDateKey = typeof dateKey === 'function' ? null : dateKey;
+        const actualOnComplete = typeof dateKey === 'function' ? dateKey : onComplete;
+
+        HEYS.StepModal.show({
+          steps: ['morning_mood'],
+          title: 'Самочувствие',
+          showProgress: false,
+          context: { dateKey: actualDateKey || new Date().toISOString().slice(0, 10) },
+          onComplete: actualOnComplete
+        });
+      }
+    },
+
     // Только замеры тела
     measurements: (dateKey, onComplete) => {
       if (HEYS.StepModal) {

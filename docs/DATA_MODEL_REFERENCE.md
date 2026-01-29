@@ -812,6 +812,15 @@ HEYS.Cycle.getWeightNormalizationForecast(cycleDay); // {daysUntilNormal, messag
 > чтобы норма не "догоняла" съеденное. TEF показывается в UI как фактические
 > затраты на переваривание.
 
+#### Контексты применения (итоговая логика)
+
+- **План/норма на день (optimum)**: только `baseExpenditure` + дефицит + цикл. **TEF НЕ добавляем**.
+- **Фактические затраты дня (TDEE)**: `baseExpenditure + TEF` **с учётом NDTE**.
+- **Ретроспектива (неделя/месяц/отчёты)**: используем **TDEE** (с TEF и NDTE).
+- **Метрики выполнения** (`ratio`, streak, heatmap): считаются от **optimum**.
+
+> Примечание: TEF рассчитывается только при наличии `pIndex`/продуктов (иначе 0).
+
 #### TEF (Thermic Effect of Food) — v3.9.0
 
 **Научное обоснование**: Westerterp 2004, Tappy 1996
