@@ -4929,6 +4929,78 @@ body:has(.offline-banner) .wrap {
   position: relative;
 }
 
+/* === Настройки: выпадающее меню вверх === */
+.tab-settings-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab-settings-menu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  min-width: 180px;
+  padding: 6px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 1002;
+  animation: settingsMenuSlideUp 0.18s ease;
+}
+
+.tab-settings-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.tab-settings-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.tab-settings-item:active {
+  transform: scale(0.98);
+}
+
+.tab-settings-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.tab-settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+}
+
+@keyframes settingsMenuSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .tab.tab-advice .tab-icon {
   font-size: 26px;
 }
@@ -5068,6 +5140,20 @@ body:has(.offline-banner) .wrap {
 /* Dark theme */
 [data-theme="dark"] .tab-switch-group {
   background: #3a3a3c;
+}
+
+[data-theme="dark"] .tab-settings-menu {
+  background: rgba(30, 30, 35, 0.95);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .tab-settings-item {
+  color: var(--text);
+}
+
+[data-theme="dark"] .tab-settings-item:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 [data-theme="dark"] .tab.tab-switch {

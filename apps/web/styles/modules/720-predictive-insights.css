@@ -1368,6 +1368,54 @@
 }
 
 /* =============================================================================
+   QUINT TAB SWITCH — 5 вкладок
+   ============================================================================= */
+
+.tab-switch-wrapper--quint {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 10px;
+}
+
+.tab-switch-group--quint {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.tab-switch-group--quint .tab.tab-switch {
+  min-width: 52px;
+  padding: 8px;
+}
+
+/* Средняя кнопка (Виджеты) — светло-голубой фон по умолчанию */
+.tab-switch-group--quint .tab.tab-switch:nth-child(3) {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+}
+
+.tab-switch-labels--quint {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 320px;
+  /* 5 кнопок по ~52px */
+  gap: 0;
+  margin-top: 4px;
+}
+
+.tab-switch-labels--quint .tab-switch-label {
+  text-align: center;
+  font-size: 9px;
+  cursor: pointer;
+  white-space: nowrap;
+  width: 52px;
+}
+
+/* =============================================================================
    COLLAPSIBLE SECTION v2 — Premium Accordions
    ============================================================================= */
 
