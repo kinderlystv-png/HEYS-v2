@@ -1881,26 +1881,38 @@
                 ? (HEYS.store.get(TRACKING_KEY, null) || {})
                 : (U.lsGet ? (U.lsGet(TRACKING_KEY, null) || {}) : JSON.parse(localStorage.getItem(TRACKING_KEY) || 'null') || {});
 
+            let stats = parsed;
+            if (typeof stats === 'string') {
+                try {
+                    stats = JSON.parse(stats);
+                } catch (e) {
+                    stats = {};
+                }
+            }
+            if (!stats || typeof stats !== 'object' || Array.isArray(stats)) {
+                stats = {};
+            }
+
             // Автоочистка: удаляем записи старше 30 дней
             const now = Date.now();
             const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
             let needsSave = false;
-            Object.keys(parsed).forEach(key => {
-                if (parsed[key].lastShown && (now - parsed[key].lastShown) > THIRTY_DAYS) {
-                    delete parsed[key];
+            Object.keys(stats).forEach(key => {
+                if (stats[key].lastShown && (now - stats[key].lastShown) > THIRTY_DAYS) {
+                    delete stats[key];
                     needsSave = true;
                 }
             });
             if (needsSave) {
                 if (HEYS.store?.set) {
-                    HEYS.store.set(TRACKING_KEY, parsed);
+                    HEYS.store.set(TRACKING_KEY, stats);
                 } else if (U.lsSet) {
-                    U.lsSet(TRACKING_KEY, parsed);
+                    U.lsSet(TRACKING_KEY, stats);
                 } else {
-                    localStorage.setItem(TRACKING_KEY, JSON.stringify(parsed));
+                    localStorage.setItem(TRACKING_KEY, JSON.stringify(stats));
                 }
             }
-            return parsed;
+            return stats;
         } catch (e) {
             return {};
         }
