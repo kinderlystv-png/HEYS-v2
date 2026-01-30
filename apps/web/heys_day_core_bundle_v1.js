@@ -2401,18 +2401,61 @@
         const readExisting = React.useCallback((key) => {
             if (!key) return null;
             try {
+                if (global.HEYS?.store?.invalidate) {
+                    global.HEYS.store.invalidate(key);
+                }
                 const stored = lsGetFunc ? lsGetFunc(key, null) : null;
                 if (stored && typeof stored === 'object') return stored;
+                if (typeof stored === 'string') {
+                    return JSON.parse(stored);
+                }
             } catch (e) { }
+
+            const readRawLocal = (rawKey) => {
+                if (!rawKey) return null;
+                try {
+                    const raw = global.localStorage?.getItem(rawKey);
+                    if (!raw) return null;
+                    if (raw.startsWith('¤Z¤') && global.HEYS?.store?.decompress) {
+                        return global.HEYS.store.decompress(raw);
+                    }
+                    return JSON.parse(raw);
+                } catch (e) {
+                    return null;
+                }
+            };
+
             try {
-                const raw = global.HEYS?.store?.get
-                    ? global.HEYS.store.get(key, null)
-                    : (global.localStorage ? global.localStorage.getItem(key) : null);
-                if (!raw) return null;
-                if (typeof raw === 'object') return raw;
-                return JSON.parse(raw);
-            } catch (e) { return null; }
+                const cid = global.HEYS?.currentClientId;
+                const isScoped = cid && key.startsWith('heys_') && !key.includes(cid);
+                const scopedKey = isScoped ? ('heys_' + cid + '_' + key.substring('heys_'.length)) : key;
+                const scopedVal = readRawLocal(scopedKey);
+                if (scopedVal && typeof scopedVal === 'object') return scopedVal;
+                const rawVal = readRawLocal(key);
+                if (rawVal && typeof rawVal === 'object') return rawVal;
+            } catch (e) { }
+            return null;
         }, [lsGetFunc]);
+
+        const isMeaningfulDayData = React.useCallback((data) => {
+            if (!data || typeof data !== 'object') return false;
+            const mealsCount = Array.isArray(data.meals) ? data.meals.length : 0;
+            const trainingsCount = Array.isArray(data.trainings) ? data.trainings.length : 0;
+            if (mealsCount > 0 || trainingsCount > 0) return true;
+            if ((data.waterMl || 0) > 0) return true;
+            if ((data.steps || 0) > 0) return true;
+            if ((data.weightMorning || 0) > 0) return true;
+            if (data.sleepStart || data.sleepEnd || data.sleepQuality || data.sleepNote) return true;
+            if (data.dayScore || data.moodAvg || data.wellbeingAvg || data.stressAvg) return true;
+            if (data.moodMorning || data.wellbeingMorning || data.stressMorning) return true;
+            if (data.householdMin || (Array.isArray(data.householdActivities) && data.householdActivities.length > 0)) return true;
+            if (data.isRefeedDay || data.refeedReason) return true;
+            if (data.cycleDay !== null && data.cycleDay !== undefined) return true;
+            if (data.deficitPct !== null && data.deficitPct !== undefined && data.deficitPct !== '') return true;
+            if ((Array.isArray(data.supplementsPlanned) && data.supplementsPlanned.length > 0) ||
+                (Array.isArray(data.supplementsTaken) && data.supplementsTaken.length > 0)) return true;
+            return false;
+        }, []);
 
         // Очистка фото от base64 данных перед сохранением (экономия localStorage)
         const stripPhotoData = React.useCallback((payload) => {
@@ -2453,6 +2496,8 @@
 
             if (current && current.updatedAt > incomingUpdatedAt) return;
             if (current && current.updatedAt === incomingUpdatedAt && current._sourceId && current._sourceId > sourceIdRef.current) return;
+
+            if (current && isMeaningfulDayData(current) && !isMeaningfulDayData(payload)) return;
 
             // 🔍 DEBUG: Проверка на продукты без нутриентов в meals
             const emptyItems = [];
@@ -2512,10 +2557,18 @@
             } catch (error) {
                 console.error('[AUTOSAVE] localStorage write failed:', error);
             }
-        }, [getKey, lsSetFn, now, readExisting, stripPhotoData]);
+        }, [getKey, lsSetFn, now, readExisting, stripPhotoData, isMeaningfulDayData]);
 
-        const flush = React.useCallback(() => {
-            if (disabled || isUnmountedRef.current || !day || !day.date) return;
+        const flush = React.useCallback((options = {}) => {
+            const force = options && options.force === true;
+            if (!force && (disabled || isUnmountedRef.current)) return;
+            if (!day || !day.date) return;
+
+            if (force) {
+                const key = getKey(day.date);
+                const existing = readExisting(key);
+                if (isMeaningfulDayData(existing) && !isMeaningfulDayData(day)) return;
+            }
 
             const daySnap = JSON.stringify(stripMeta(day));
             if (prevDaySnapRef.current === daySnap) return;
@@ -2531,7 +2584,7 @@
             saveToDate(day.date, payload);
             prevStoredSnapRef.current = JSON.stringify(payload);
             prevDaySnapRef.current = daySnap;
-        }, [day, now, saveToDate, stripMeta, disabled, getKey, readExisting]);
+        }, [day, now, saveToDate, stripMeta, disabled, getKey, readExisting, isMeaningfulDayData]);
 
         React.useEffect(() => {
             // 🔒 ЗАЩИТА: Не инициализируем prevDaySnapRef до гидратации!
@@ -2998,6 +3051,26 @@
             isSyncingRef
         } = deps || {};
 
+        const isMeaningfulDayData = (data) => {
+            if (!data || typeof data !== 'object') return false;
+            const mealsCount = Array.isArray(data.meals) ? data.meals.length : 0;
+            const trainingsCount = Array.isArray(data.trainings) ? data.trainings.length : 0;
+            if (mealsCount > 0 || trainingsCount > 0) return true;
+            if ((data.waterMl || 0) > 0) return true;
+            if ((data.steps || 0) > 0) return true;
+            if ((data.weightMorning || 0) > 0) return true;
+            if (data.sleepStart || data.sleepEnd || data.sleepQuality || data.sleepNote) return true;
+            if (data.dayScore || data.moodAvg || data.wellbeingAvg || data.stressAvg) return true;
+            if (data.moodMorning || data.wellbeingMorning || data.stressMorning) return true;
+            if (data.householdMin || (Array.isArray(data.householdActivities) && data.householdActivities.length > 0)) return true;
+            if (data.isRefeedDay || data.refeedReason) return true;
+            if (data.cycleDay !== null && data.cycleDay !== undefined) return true;
+            if (data.deficitPct !== null && data.deficitPct !== undefined && data.deficitPct !== '') return true;
+            if ((Array.isArray(data.supplementsPlanned) && data.supplementsPlanned.length > 0) ||
+                (Array.isArray(data.supplementsTaken) && data.supplementsTaken.length > 0)) return true;
+            return false;
+        };
+
         // Подгружать данные дня из облака при смене даты
         React.useEffect(() => {
             let cancelled = false;
@@ -3008,7 +3081,8 @@
             if (dateActuallyChanged && HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
                 console.info(`[HEYS] 📅 Смена даты: ${prevDateRef.current} → ${date}, сохраняем предыдущий день...`);
                 // Flush данные предыдущего дня синхронно
-                HEYS.Day.requestFlush();
+                // force=true — сохраняем предыдущий день даже если isHydrated=false
+                HEYS.Day.requestFlush({ force: true });
             }
             prevDateRef.current = date;
 
@@ -3026,6 +3100,7 @@
                 if (cancelled) return;
                 const profNow = getProfile();
                 const key = 'heys_dayv2_' + date;
+                HEYS?.store?.invalidate?.(key);
                 const v = lsGet(key, null);
                 const hasStoredData = !!(v && typeof v === 'object' && (
                     v.date ||
@@ -3203,6 +3278,7 @@
                 if (!updatedDate || updatedDate === date) {
                     const profNow = getProfile();
                     const key = 'heys_dayv2_' + date;
+                    HEYS?.store?.invalidate?.(key);
                     const v = lsGet(key, null);
                     const hasStoredData = !!(v && typeof v === 'object' && (
                         v.date ||
@@ -3212,6 +3288,7 @@
                     ));
                     if (hasStoredData) {
                         const normalizedDay = v?.date ? v : { ...v, date };
+                        const storageMeaningful = isMeaningfulDayData(normalizedDay);
                         // Проверяем: данные из storage новее текущих?
                         const storageUpdatedAt = normalizedDay.updatedAt || 0;
                         const currentUpdatedAt = lastLoadedUpdatedAtRef.current || 0;
@@ -3261,6 +3338,9 @@
 
                         // 🔒 Оптимизация: не вызываем setDay если контент идентичен (предотвращает мерцание)
                         setDay(prevDay => {
+                            if (!storageMeaningful && isMeaningfulDayData(prevDay)) {
+                                return prevDay;
+                            }
                             const prevMealsCount = (prevDay?.meals || []).length;
                             if (storageMealsCount < prevMealsCount) {
                                 console.warn('[HEYS.day] ⚠️ Potential overwrite (meals count down)', {

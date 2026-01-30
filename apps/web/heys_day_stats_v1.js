@@ -221,6 +221,33 @@
     const sparklinePerfectPopupMeta = vmComputed.sparklinePerfectPopupMeta;
     const popupPositionStyle = vmComputed.popupPositionStyle;
 
+    const weekHeatmapDates = (weekHeatmapDaysMeta || []).map((d) => d.date).filter(Boolean);
+
+    const selectDateWithPrefetch = (nextDate, options = {}) => {
+      if (!nextDate) return;
+      const prefetchDates = Array.isArray(options.prefetchDates) && options.prefetchDates.length
+        ? options.prefetchDates
+        : [nextDate];
+
+      try {
+        if (Day?.requestFlush) Day.requestFlush({ force: true });
+      } catch (e) { }
+
+      const applyDate = () => {
+        setDate(nextDate);
+        haptic('light');
+      };
+
+      if (HEYS?.cloud?.fetchDays && prefetchDates.length > 0) {
+        HEYS.cloud.fetchDays(prefetchDates)
+          .then(() => applyDate())
+          .catch(() => applyDate());
+        return;
+      }
+
+      applyDate();
+    };
+
     const statsBlock = React.createElement('div', { className: 'compact-stats compact-card' },
       React.createElement('div', { className: 'compact-card-header stats-header-with-badge' },
         React.createElement('span', null, '📊 СТАТИСТИКА'),
@@ -1020,8 +1047,7 @@
                 className: 'sparkline-popup-btn-v2',
                 onClick: () => {
                   setSparklinePopup(null);
-                  setDate(point.date);
-                  haptic('light');
+                  selectDateWithPrefetch(point.date, { reason: 'sparkline-kcal' });
                 }
               }, '→ Перейти к дню'),
               // Close
@@ -1123,8 +1149,7 @@
                 className: 'sparkline-popup-btn-v2 perfect',
                 onClick: () => {
                   setSparklinePopup(null);
-                  setDate(point.date);
-                  haptic('light');
+                  selectDateWithPrefetch(point.date, { reason: 'sparkline-perfect' });
                 }
               }, '→ Перейти к дню'),
               // Close
@@ -2350,8 +2375,10 @@
                   style: d.style,
                   onClick: () => {
                     if (!d.isFuture && d.status !== 'empty') {
-                      setDate(d.date);
-                      haptic('light');
+                      selectDateWithPrefetch(d.date, {
+                        reason: 'week-heatmap',
+                        prefetchDates: weekHeatmapDates
+                      });
                     }
                   }
                 },
@@ -2609,8 +2636,7 @@
                 className: 'sparkline-popup-btn-v2',
                 onClick: () => {
                   setSparklinePopup(null);
-                  setDate(point.date);
-                  haptic('light');
+                  selectDateWithPrefetch(point.date, { reason: 'sparkline-weight' });
                 }
               }, '→ Перейти к дню'),
               // Close

@@ -32,6 +32,26 @@
             isSyncingRef
         } = deps || {};
 
+        const isMeaningfulDayData = (data) => {
+            if (!data || typeof data !== 'object') return false;
+            const mealsCount = Array.isArray(data.meals) ? data.meals.length : 0;
+            const trainingsCount = Array.isArray(data.trainings) ? data.trainings.length : 0;
+            if (mealsCount > 0 || trainingsCount > 0) return true;
+            if ((data.waterMl || 0) > 0) return true;
+            if ((data.steps || 0) > 0) return true;
+            if ((data.weightMorning || 0) > 0) return true;
+            if (data.sleepStart || data.sleepEnd || data.sleepQuality || data.sleepNote) return true;
+            if (data.dayScore || data.moodAvg || data.wellbeingAvg || data.stressAvg) return true;
+            if (data.moodMorning || data.wellbeingMorning || data.stressMorning) return true;
+            if (data.householdMin || (Array.isArray(data.householdActivities) && data.householdActivities.length > 0)) return true;
+            if (data.isRefeedDay || data.refeedReason) return true;
+            if (data.cycleDay !== null && data.cycleDay !== undefined) return true;
+            if (data.deficitPct !== null && data.deficitPct !== undefined && data.deficitPct !== '') return true;
+            if ((Array.isArray(data.supplementsPlanned) && data.supplementsPlanned.length > 0) ||
+                (Array.isArray(data.supplementsTaken) && data.supplementsTaken.length > 0)) return true;
+            return false;
+        };
+
         // Подгружать данные дня из облака при смене даты
         React.useEffect(() => {
             let cancelled = false;
@@ -42,7 +62,8 @@
             if (dateActuallyChanged && HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
                 console.info(`[HEYS] 📅 Смена даты: ${prevDateRef.current} → ${date}, сохраняем предыдущий день...`);
                 // Flush данные предыдущего дня синхронно
-                HEYS.Day.requestFlush();
+                // force=true — сохраняем предыдущий день даже если isHydrated=false
+                HEYS.Day.requestFlush({ force: true });
             }
             prevDateRef.current = date;
 
@@ -57,6 +78,7 @@
                 if (cancelled) return;
                 const profNow = getProfile();
                 const key = 'heys_dayv2_' + date;
+                HEYS?.store?.invalidate?.(key);
                 const v = lsGet(key, null);
                 if (v && v.date) {
                     // ЗАЩИТА: не перезаписываем более свежие данные
@@ -210,8 +232,10 @@
                 if (!updatedDate || updatedDate === date) {
                     const profNow = getProfile();
                     const key = 'heys_dayv2_' + date;
+                    HEYS?.store?.invalidate?.(key);
                     const v = lsGet(key, null);
                     if (v && v.date) {
+                        const storageMeaningful = isMeaningfulDayData(v);
                         // Проверяем: данные из storage новее текущих?
                         const storageUpdatedAt = v.updatedAt || 0;
                         const currentUpdatedAt = lastLoadedUpdatedAtRef.current || 0;
@@ -240,6 +264,9 @@
 
                         // 🔒 Оптимизация: не вызываем setDay если контент идентичен (предотвращает мерцание)
                         setDay(prevDay => {
+                            if (!storageMeaningful && isMeaningfulDayData(prevDay)) {
+                                return prevDay;
+                            }
                             if (prevDay && prevDay.date === newDay.date) {
                                 const prevMealsJson = JSON.stringify(prevDay.meals || []);
                                 const newMealsJson = JSON.stringify(newDay.meals || []);
@@ -294,6 +321,7 @@
                 // Reload current day data from localStorage
                 const profNow = getProfile();
                 const key = 'heys_dayv2_' + date;
+                HEYS?.store?.invalidate?.(key);
                 const v = lsGet(key, null);
                 if (v && v.date) {
                     const newDay = ensureDay(v, profNow);
