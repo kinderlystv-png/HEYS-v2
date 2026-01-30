@@ -4667,6 +4667,10 @@
             day,
             mealsUI,
             daySummary,
+            caloricDebt,
+            eatenKcal,
+            optimum,
+            date,
             HEYS: rootHEYs
         } = params || {};
 
@@ -4674,6 +4678,28 @@
 
         const app = rootHEYs || HEYS;
         const showDiary = !isMobile || mobileSubTab === 'diary';
+
+        const ensureSupplementsModule = () => {
+            if (app.Supplements?.renderCard) return true;
+            if (typeof document === 'undefined') return false;
+            if (window.__heysSupplementsLoading) return false;
+
+            window.__heysSupplementsLoading = true;
+            const script = document.createElement('script');
+            script.src = 'heys_supplements_v1.js?v=1';
+            script.async = true;
+            script.onload = () => {
+                window.__heysSupplementsLoading = false;
+                window.dispatchEvent(new CustomEvent('heys:day-updated', {
+                    detail: { source: 'supplements-lazy', forceReload: true }
+                }));
+            };
+            script.onerror = () => {
+                window.__heysSupplementsLoading = false;
+            };
+            document.head.appendChild(script);
+            return false;
+        };
 
         const insulinIndicator = app.dayInsulinWaveUI?.renderInsulinWaveIndicator?.({
             React,
@@ -4684,6 +4710,29 @@
             isMobile,
             openExclusivePopup,
             HEYS: app
+        }) || null;
+
+        const refeedCard = app.Refeed?.renderRefeedCard?.({
+            isRefeedDay: day?.isRefeedDay,
+            refeedReason: day?.refeedReason,
+            caloricDebt,
+            eatenKcal,
+            optimum
+        }) || null;
+
+        const dateKey = date
+            || day?.date
+            || app.models?.todayISO?.()
+            || new Date().toISOString().slice(0, 10);
+        if (!app.Supplements?.renderCard) ensureSupplementsModule();
+        const supplementsCard = dateKey && app.Supplements?.renderCard?.({
+            dateKey,
+            dayData: day,
+            onForceUpdate: () => {
+                window.dispatchEvent(new CustomEvent('heys:day-updated', {
+                    detail: { date: dateKey, source: 'supplements-update', forceReload: true }
+                }));
+            }
         }) || null;
 
         if (!showDiary) return insulinIndicator;
@@ -4703,6 +4752,8 @@
                 }
             }, 'ОСТАЛОСЬ НА СЕГОДНЯ'),
             goalProgressBar,
+            refeedCard,
+            supplementsCard,
             mealsChart,
             insulinIndicator,
             React.createElement('h2', {
