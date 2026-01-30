@@ -84,6 +84,11 @@
 
                 console.log('[PWA Update] 🆕 Update available!', currentVersion, '→', data.version);
 
+                // ✅ Маркер: при обновлении требуется logout + чистка сессии
+                try {
+                    sessionStorage.setItem('heys_update_requires_logout', 'true');
+                } catch (e) { }
+
                 // 3. Принудительная очистка всех кэшей через SW
                 if (navigator.serviceWorker?.controller) {
                     console.log('[PWA Update] 🗑️ Clearing all caches...');

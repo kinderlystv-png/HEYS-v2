@@ -717,41 +717,55 @@
             }
           }
           if (event.data?.type === 'CACHES_CLEARED') {
+            const requiresLogout = sessionStorage.getItem('heys_update_requires_logout') === 'true';
             console.log('[SW] ✅ Caches cleared — resetting session for fresh data from cloud');
 
-            // 🔄 Сброс сессии после очистки кэша
+            if (requiresLogout) {
+              // ✅ Guard для хуков — показываем экран выхода до очистки
+              window.HEYS = window.HEYS || {};
+              window.HEYS._isLoggingOut = true;
+            }
+
+            // 🔄 Сброс сессии ТОЛЬКО при апдейте
             // ⚠️ КРИТИЧНО: НЕ очищаем localStorage.clear() — это удаляет heys_products!
             // Вместо этого удаляем только сессионные ключи, сохраняя критические данные
-            try {
-              // 1. Завершаем auth сессию (если есть)
-              if (HEYS.cloud?.signOut) {
-                HEYS.cloud.signOut();
-              }
-
-              // 2. Удаляем только сессионные данные, НЕ трогая products/profile
-              // ❌ БЫЛО: localStorage.clear(); — удаляло ВСЮ базу продуктов!
-              // ✅ СТАЛО: выборочная очистка
-              const keysToRemove = [];
-              const keysToKeep = ['heys_products', 'heys_profile', 'heys_norms', 'heys_hr_zones'];
-
-              for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                // Сохраняем критические ключи и данные дней
-                if (!keysToKeep.some(k => key.includes(k)) && !key.startsWith('heys_dayv2_')) {
-                  keysToRemove.push(key);
+            if (requiresLogout) {
+              try {
+                // 1. Завершаем auth сессию (если есть)
+                if (HEYS.cloud?.signOut) {
+                  HEYS.cloud.signOut();
                 }
+
+                // 2. Удаляем только сессионные данные, НЕ трогая products/profile
+                // ❌ БЫЛО: localStorage.clear(); — удаляло ВСЮ базу продуктов!
+                // ✅ СТАЛО: выборочная очистка
+                const keysToRemove = [];
+                const keysToKeep = ['heys_products', 'heys_profile', 'heys_norms', 'heys_hr_zones'];
+
+                for (let i = 0; i < localStorage.length; i++) {
+                  const key = localStorage.key(i);
+                  // Сохраняем критические ключи и данные дней
+                  if (!keysToKeep.some(k => key.includes(k)) && !key.startsWith('heys_dayv2_')) {
+                    keysToRemove.push(key);
+                  }
+                }
+
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                console.log(`[SW] 🗑️ Removed ${keysToRemove.length} session keys, kept critical data`);
+
+                // 3. Очищаем sessionStorage полностью (там только кэш)
+                sessionStorage.clear();
+
+                console.log('[SW] ✅ Session cleared safely, reloading...');
+              } catch (e) {
+                console.warn('[SW] Session clear error:', e);
               }
-
-              keysToRemove.forEach(key => localStorage.removeItem(key));
-              console.log(`[SW] 🗑️ Removed ${keysToRemove.length} session keys, kept critical data`);
-
-              // 3. Очищаем sessionStorage полностью (там только кэш)
-              sessionStorage.clear();
-
-              console.log('[SW] ✅ Session cleared safely, reloading...');
-            } catch (e) {
-              console.warn('[SW] Session clear error:', e);
             }
+
+            // Сбрасываем маркер после обработки
+            try {
+              sessionStorage.removeItem('heys_update_requires_logout');
+            } catch (e) { }
 
             // 4. Перезагружаем страницу — пользователь увидит экран входа
             setTimeout(() => {

@@ -3347,6 +3347,27 @@
     }
   };
 
+  // Вспомогательная проверка «день содержит реальные данные»
+  const isMeaningfulDayData = (data) => {
+    if (!data || typeof data !== 'object') return false;
+    const mealsCount = Array.isArray(data.meals) ? data.meals.length : 0;
+    const trainingsCount = Array.isArray(data.trainings) ? data.trainings.length : 0;
+    if (mealsCount > 0 || trainingsCount > 0) return true;
+    if ((data.waterMl || 0) > 0) return true;
+    if ((data.steps || 0) > 0) return true;
+    if ((data.weightMorning || 0) > 0) return true;
+    if (data.sleepStart || data.sleepEnd || data.sleepQuality || data.sleepNote) return true;
+    if (data.dayScore || data.moodAvg || data.wellbeingAvg || data.stressAvg) return true;
+    if (data.moodMorning || data.wellbeingMorning || data.stressMorning) return true;
+    if (data.householdMin || (Array.isArray(data.householdActivities) && data.householdActivities.length > 0)) return true;
+    if (data.isRefeedDay || data.refeedReason) return true;
+    if (data.cycleDay !== null && data.cycleDay !== undefined) return true;
+    if (data.deficitPct !== null && data.deficitPct !== undefined && data.deficitPct !== '') return true;
+    if ((Array.isArray(data.supplementsPlanned) && data.supplementsPlanned.length > 0) ||
+      (Array.isArray(data.supplementsTaken) && data.supplementsTaken.length > 0)) return true;
+    return false;
+  };
+
   // Флаг для дедупликации параллельных вызовов bootstrapClientSync
   let _syncInProgress = null; // null | Promise
   // options.force = true — bypass throttling (для pull-to-refresh)
@@ -3731,6 +3752,22 @@
               const remoteUpdatedAt = row.v?.updatedAt || 0;
               const localUpdatedAt = local?.updatedAt || 0;
 
+              // 🛡️ ЗАЩИТА: Не перезаписываем meaningful локальные данные пустым remote
+              const localMeaningful = isMeaningfulDayData(local);
+              const remoteMeaningful = isMeaningfulDayData(row.v);
+              if (localMeaningful && !remoteMeaningful) {
+                logCritical(`🛡️ [DAYV2] KEEP LOCAL: meaningful local, empty remote for ${key}`);
+                const pushObj = {
+                  client_id: client_id,
+                  k: normalizeKeyForSupabase(row.k, client_id),
+                  v: local,
+                  updated_at: new Date().toISOString()
+                };
+                clientUpsertQueue.push(pushObj);
+                scheduleClientPush();
+                return;
+              }
+
               // 🔍 ДИАГНОСТИКА: логируем состояние для отладки race conditions (ОТКЛЮЧЕНО - слишком много логов)
               // logCritical(`📅 [SYNC dayv2] key=${key} | local: ${local?.meals?.length || 0} meals, updatedAt=${localUpdatedAt} | remote: ${row.v?.meals?.length || 0} meals, updatedAt=${remoteUpdatedAt} | forceSync=${forceSync}`);
 
@@ -3744,7 +3781,23 @@
                 // logCritical(`   ☁️ remote: ${row.v.meals?.length || 0} meals, updatedAt: ${row.v?.updatedAt}`);
 
                 let valueToSave;
-                if (local && local.meals?.length > 0) {
+                // ✅ Даже в force-режиме не перезаписываем meaningful локальные данные пустым remote
+                if (localMeaningful && !remoteMeaningful) {
+                  valueToSave = local;
+                  const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+                  if (dateMatch) {
+                    const dayKey = `heys_dayv2_${dateMatch[1]}`;
+                    local.updatedAt = Date.now();
+                    const upsertObj = {
+                      client_id: client_id,
+                      k: dayKey,
+                      v: local,
+                      updated_at: new Date().toISOString()
+                    };
+                    clientUpsertQueue.push(upsertObj);
+                    scheduleClientPush();
+                  }
+                } else if (local && local.meals?.length > 0) {
                   // 🔄 ЗАЩИТА: Если local БОЛЬШЕ данных чем remote — это race condition!
                   // Remote ещё не получил последние изменения. Сохраняем local как есть.
                   // ⚠️ Условие: local больше данных ИЛИ local новее (не И!) — защищаем от потери любых данных
@@ -4686,6 +4739,15 @@
             try {
               freshLocalVal = JSON.parse(ls.getItem(targetKey));
             } catch (e2) { }
+
+            const localMeaningful = isMeaningfulDayData(freshLocalVal);
+            const remoteMeaningful = isMeaningfulDayData(row.v);
+
+            // 🛡️ ЗАЩИТА 0: meaningful локальные данные не затираем пустым remote
+            if (localMeaningful && !remoteMeaningful) {
+              logCritical(`🛡️ [fetchDays] KEEP LOCAL: meaningful local, empty remote for ${targetKey}`);
+              return;
+            }
 
             const remoteMealsCount = Array.isArray(row.v?.meals) ? row.v.meals.length : 0;
             const localMealsCount = Array.isArray(freshLocalVal?.meals) ? freshLocalVal.meals.length : 0;
