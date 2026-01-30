@@ -6044,6 +6044,19 @@
         if (!showDiary) return insulinIndicator;
 
         return React.createElement(React.Fragment, null,
+            React.createElement('h2', {
+                id: 'day-remaining-heading',
+                style: {
+                    fontSize: '24px',
+                    fontWeight: '800',
+                    color: '#1e293b',
+                    margin: '12px 0 16px 0',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    textAlign: 'center',
+                    scrollMarginTop: '150px'
+                }
+            }, 'ОСТАЛОСЬ НА СЕГОДНЯ'),
             goalProgressBar,
             mealsChart,
             insulinIndicator,
