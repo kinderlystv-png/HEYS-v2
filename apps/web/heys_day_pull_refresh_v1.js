@@ -60,24 +60,33 @@
           navigator.serviceWorker.ready.then(reg => reg.update?.()).catch(() => { });
         }
 
-        // 2. Flush pending данных в cloud (чтобы не потерять)
-        if (cloud?.flushPendingQueue) {
-          const pendingCount = (cloud._clientUpsertQueue?.length || 0);
+        // 2. КРИТИЧНО: Flush pending данных в cloud ПЕРЕД загрузкой!
+        // Используем публичное API getPendingCount() вместо приватной _clientUpsertQueue
+        if (cloud?.flushPendingQueue && cloud?.getPendingCount) {
+          const pendingCount = cloud.getPendingCount();
           if (pendingCount > 0) {
-            await Promise.race([
-              cloud.flushPendingQueue(3000),
-              new Promise(r => setTimeout(r, 3000))
-            ]);
+            console.info('[PullRefresh] ⏳ Flushing', pendingCount, 'pending items...');
+            // 🔧 FIX: Увеличиваем таймаут до 5 сек и ЖДЁМ завершения
+            const flushed = await cloud.flushPendingQueue(5000);
+            if (flushed) {
+              console.info('[PullRefresh] ✅ Flush completed');
+            } else {
+              console.warn('[PullRefresh] ⚠️ Flush timeout, continuing...');
+            }
+            // Даём серверу время обработать данные
+            await new Promise(r => setTimeout(r, 300));
           }
         }
 
         // 3. Sync данных из cloud (подтягиваем изменения куратора)
         // UI обновится автоматически через события heys:day-updated
         if (clientId && cloud && typeof cloud.syncClient === 'function') {
+          console.info('[PullRefresh] 🔄 Starting sync...');
           await Promise.race([
             cloud.syncClient(clientId, { force: true }),
             new Promise(r => setTimeout(r, 8000)) // max 8 сек (sync может быть долгим)
           ]);
+          console.info('[PullRefresh] ✅ Sync completed');
         }
 
         // 4. Показываем успех
