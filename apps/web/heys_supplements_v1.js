@@ -3315,6 +3315,17 @@
   // Загружаем кастомные добавки при инициализации
   loadCustomSupplements();
 
+  // Триггерим перерендер DayTab после инициализации модуля
+  try {
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: { source: 'supplements-init', forceReload: true }
+      }));
+    }
+  } catch (e) {
+    // no-op
+  }
+
   // Verbose init log removed
 
 })(typeof window !== 'undefined' ? window : global);
