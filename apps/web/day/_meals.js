@@ -2467,12 +2467,22 @@
                 if (openTimePickerForNewMeal) openTimePickerForNewMeal();
             } else {
                 const newMealId = uid('m_');
+                const newUpdatedAt = Date.now();
                 let newMealIndex = 0;
+                if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = newUpdatedAt;
+                if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
                 setDay((prevDay) => {
                     const baseMeals = prevDay.meals || [];
                     const newMeals = [...baseMeals, { id: newMealId, name: 'Приём', time: '', mood: '', wellbeing: '', stress: '', items: [] }];
                     newMealIndex = newMeals.length - 1;
-                    return { ...prevDay, meals: newMeals, updatedAt: Date.now() };
+                    const newDayData = { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
+                    const key = 'heys_dayv2_' + date;
+                    try {
+                        lsSet(key, newDayData);
+                    } catch (e) {
+                        trackError(e, { source: 'day/_meals.js', action: 'save_meal_desktop' });
+                    }
+                    return newDayData;
                 });
                 expandOnlyMeal(newMealIndex);
                 if (window.HEYS && window.HEYS.analytics) {
@@ -2551,6 +2561,9 @@
                 gi: finalProduct.gi ?? finalProduct.gi100,
                 harm: harmVal,  // Normalized harm (0-10)
             };
+            const newUpdatedAt = Date.now();
+            if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = newUpdatedAt;
+            if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
             setDay((prevDay) => {
                 const mealsList = prevDay.meals || [];
                 if (!mealsList[mi]) {
@@ -2561,7 +2574,14 @@
                     });
                 }
                 const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
-                return { ...prevDay, meals, updatedAt: Date.now() };
+                const newDayData = { ...prevDay, meals, updatedAt: newUpdatedAt };
+                const key = 'heys_dayv2_' + date;
+                try {
+                    lsSet(key, newDayData);
+                } catch (e) {
+                    trackError(e, { source: 'day/_meals.js', action: 'save_product_quick' });
+                }
+                return newDayData;
             });
 
             if (setNewItemIds) {

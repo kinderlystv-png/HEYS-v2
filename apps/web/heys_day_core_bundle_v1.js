@@ -3304,10 +3304,11 @@
 
                         // Двойная защита: по timestamp И по количеству meals
                         // Не откатываем если в storage меньше meals чем в текущем state
+                        const isStaleStorage = storageUpdatedAt < currentUpdatedAt;
 
                         // Пропускаем проверку timestamp если forceReload
                         // ВАЖНО: используем < вместо <= чтобы обрабатывать первую загрузку (когда оба = 0)
-                        if (!forceReload && storageUpdatedAt < currentUpdatedAt) {
+                        if (!forceReload && isStaleStorage) {
                             console.info('[HEYS.day] ⏭️ Day update skipped (stale storage)', {
                                 source,
                                 updatedDate,
@@ -3316,9 +3317,6 @@
                             });
                             return; // Не перезаписываем более новые данные старыми
                         }
-
-                        // Обновляем ref чтобы doLocal() не перезаписал более старыми данными
-                        lastLoadedUpdatedAtRef.current = storageUpdatedAt;
                         const migratedTrainings = normalizeTrainings(normalizedDay.trainings);
                         const cleanedTrainings = cleanEmptyTrainings(migratedTrainings);
                         const migratedDay = { ...normalizedDay, trainings: cleanedTrainings };
@@ -3350,6 +3348,24 @@
                                     forceReload
                                 });
                             }
+
+                            const shouldSkipOverwrite = isStaleStorage && storageMealsCount < prevMealsCount;
+                            if (shouldSkipOverwrite) {
+                                console.warn('[HEYS.day] 🛡️ Skip overwrite (stale + meals down)', {
+                                    source,
+                                    updatedDate,
+                                    storageUpdatedAt,
+                                    currentUpdatedAt,
+                                    prevMealsCount,
+                                    storageMealsCount,
+                                    forceReload
+                                });
+                                return prevDay;
+                            }
+
+                            // Обновляем ref только если приняли данные из storage
+                            lastLoadedUpdatedAtRef.current = storageUpdatedAt;
+
                             if (prevDay && prevDay.date === newDay.date) {
                                 const prevMealsJson = JSON.stringify(prevDay.meals || []);
                                 const newMealsJson = JSON.stringify(newDay.meals || []);
@@ -3375,7 +3391,6 @@
                                     prevSupplementsTaken === newSupplementsTaken;
 
                                 if (isSameContent) {
-                                    // DEBUG (отключено): console.log('[HEYS] 📅 handleDayUpdated SKIPPED — same content');
                                     return prevDay;
                                 }
                             }

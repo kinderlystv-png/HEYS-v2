@@ -324,12 +324,18 @@ const serviceWorkerManager = new ServiceWorkerManagerImpl();
 export { serviceWorkerManager };
 export type { CacheStatus, PerformanceMetrics, ServiceWorkerManager };
 
-// Auto-register в development и production
-if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
-  // Регистрируем после загрузки страницы
-  window.addEventListener('load', () => {
-    serviceWorkerManager.register().catch((error) => {
-      log.error('SW Manager: Auto registration failed', { error });
+// Auto-register только в production (локальную разработку не кэшируем)
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+  const isLocalhost =
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1';
+
+  if (!isLocalhost) {
+    // Регистрируем после загрузки страницы
+    window.addEventListener('load', () => {
+      serviceWorkerManager.register().catch((error) => {
+        log.error('SW Manager: Auto registration failed', { error });
+      });
     });
-  });
+  }
 }

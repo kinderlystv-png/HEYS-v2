@@ -5386,6 +5386,22 @@
     notifyPendingChange();
 
     scheduleClientPush();
+
+    // ⚡ IMMEDIATE: для критичных ключей отправляем в облако сразу
+    // Требование: любые изменения дня/профиля/норм/продуктов должны попасть в облако без задержки
+    const isCriticalKey = k && (
+      k.includes('dayv2_') ||
+      k === 'heys_profile' ||
+      k === 'heys_norms' ||
+      k === 'heys_hr_zones' ||
+      k === 'heys_products'
+    );
+    if (isCriticalKey && navigator.onLine && !waitingForSync) {
+      console.info('[HEYS.sync] ⚡ Immediate upload', { key: k, client: client_id?.slice(0, 8) });
+      doImmediateClientUpload().catch((e) => {
+        console.warn('[HEYS.sync] ⚠️ Immediate upload failed', e?.message || e);
+      });
+    }
   };
 
   // Функция только проверяет существование клиента (больше НЕ создаём автоматически)
