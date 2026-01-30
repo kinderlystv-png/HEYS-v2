@@ -4286,7 +4286,7 @@
   background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
   border: 2px solid #3b82f6;
   border-radius: 16px;
-  padding: 14px 18px 38px 18px;
+  padding: 18px 18px 44px 18px;
   position: relative;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
@@ -4838,22 +4838,58 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   flex: 1;
   min-width: 0;
-  max-width: 70px;
+  max-width: 90px;
 }
 
 .macro-ring {
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 50%, #e2e8f0 100%);
+  box-shadow:
+    0 8px 24px -8px rgba(15, 23, 42, 0.25),
+    0 4px 8px -4px rgba(15, 23, 42, 0.1),
+    inset 0 2px 4px rgba(255, 255, 255, 1),
+    inset 0 -3px 6px rgba(148, 163, 184, 0.2);
+}
+
+.macro-ring::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: rgba(255, 255, 255, 0.85);
+  border-left-color: rgba(255, 255, 255, 0.5);
+  box-sizing: border-box;
+  transform: rotate(-24deg);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.macro-ring::after {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-bottom-color: rgba(100, 116, 139, 0.15);
+  border-right-color: rgba(100, 116, 139, 0.1);
+  box-sizing: border-box;
+  transform: rotate(-24deg);
+  pointer-events: none;
 }
 
 .macro-ring-svg {
   transform: rotate(-90deg);
   width: 100%;
   height: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .macro-ring-bg {
@@ -4864,10 +4900,28 @@
 
 .macro-ring-fill {
   fill: none;
-  stroke-width: 3;
+  stroke-width: 5;
   stroke-linecap: round;
   transition: stroke-dasharray 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   animation: ringFillIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  stroke: var(--macro-ring-color, #6b7280);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+}
+
+.macro-ring-fill--over {
+  stroke: var(--macro-ring-over, #fca5a5);
+  stroke-width: 5.5;
+  filter: drop-shadow(0 0 8px var(--macro-ring-over, #fca5a5));
+}
+
+.macro-ring-marker {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 3 97;
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.3));
 }
 
 @keyframes ringFillIn {
@@ -4882,16 +4936,35 @@
 }
 
 /* Цвета для каждого макроса */
-.macro-ring.protein .macro-ring-fill {
-  stroke: var(--color-red-500);
+.macro-ring.protein {
+  --macro-ring-color: #ef4444;
+  --macro-ring-over: #f87171;
 }
 
-.macro-ring.fat .macro-ring-fill {
-  stroke: #f59e0b;
+.macro-ring.fat {
+  --macro-ring-color: #f59e0b;
+  --macro-ring-over: #fbbf24;
 }
 
-.macro-ring.carbs .macro-ring-fill {
-  stroke: #22c55e;
+.macro-ring.carbs {
+  --macro-ring-color: #22c55e;
+  --macro-ring-over: #4ade80;
+}
+
+.macro-ring--over .macro-ring-fill--over {
+  animation: ringGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes ringGlow {
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 6px var(--macro-ring-over));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 12px var(--macro-ring-over));
+  }
 }
 
 .macro-ring-value {
@@ -4899,14 +4972,16 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 700;
-  color: var(--color-slate-700);
+  color: #1e293b;
   text-align: center;
   white-space: nowrap;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 3;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
 }
 
 .macro-ring-label {

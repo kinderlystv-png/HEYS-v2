@@ -5492,8 +5492,10 @@ body:has(.offline-banner) .wrap {
 .tone-green textarea {
   min-height: 50px;
   resize: vertical;
-  width: 100%;
-  box-sizing: border-box;
+}
+
+.tabs.tabs--settings-open {
+  z-index: 1102;
 }
 
 .tone-green .grid>div {

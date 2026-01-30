@@ -925,6 +925,41 @@ body.tour-active .ios-pwa-banner {
   margin-top: 4px;
 }
 
+.weekly-wrap-step__macros {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.weekly-wrap-step__macros-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.weekly-wrap-step__macros-title {
+  font-weight: 700;
+  color: #475569;
+}
+
+.weekly-wrap-step__macros-subtitle {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.weekly-wrap-step__macros-rings {
+  padding-top: 2px;
+  gap: 6px;
+}
+
 .weekly-wrap-step__meta {
   display: flex;
   flex-wrap: wrap;
