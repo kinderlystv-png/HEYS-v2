@@ -10,12 +10,12 @@
  * - Ghost элемент и placeholder preview
  * - Undo/Redo кнопки в header
  */
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.Widgets = HEYS.Widgets || {};
-  
+
   const React = global.React;
   const { useState, useEffect, useMemo, useCallback, useRef } = React || {};
 
@@ -87,14 +87,14 @@
 
     return { cols, rows, area, isMicro, isTiny, isShort, isTall, isWide, sizeId };
   }
-  
+
   // === Widget Card Component ===
   function WidgetCard({ widget, isEditMode, onRemove, onSettings, index = 0 }) {
     const registry = HEYS.Widgets.registry;
     const widgetType = registry?.getType(widget.type);
     const category = registry?.getCategory(widgetType?.category);
     const elementRef = useRef(null);
-    
+
     // Refs для resize handles (для native touch events)
     const handleNRef = useRef(null);
     const handleERef = useRef(null);
@@ -130,7 +130,7 @@
     // Snap feedback: короткая подсветка при смене sizeId во время drag-resize
     const [isResizeSnap, setIsResizeSnap] = useState(false);
     const snapTimerRef = useRef(0);
-    
+
     // Pointer event handlers for DnD
     const handlePointerDown = useCallback((e) => {
       // Во время resize не должны стартовать DnD/long-press/prepareForDrag
@@ -156,18 +156,18 @@
       if (resizeDragRef.current?.active) return;
       HEYS.Widgets.dnd?.handlePointerUp?.(widget.id, e);
     }, [widget.id]);
-    
+
     const handleClick = useCallback(() => {
       if (!isEditMode) {
         HEYS.Widgets.emit('widget:click', { widget });
       }
     }, [isEditMode, widget]);
-    
+
     const handleRemoveClick = useCallback((e) => {
       e.stopPropagation();
       onRemove?.(widget.id);
     }, [widget.id, onRemove]);
-    
+
     const handleSettingsClick = useCallback((e) => {
       e.stopPropagation();
       onSettings?.(widget);
@@ -202,12 +202,12 @@
       const currentSizeInfo = HEYS.Widgets.registry?.getSize?.(currentSizeId);
       const currentCols = currentSizeInfo?.cols || widget.cols || 1;
       const currentRows = currentSizeInfo?.rows || widget.rows || 1;
-      
+
       // CRITICAL: Если нет движения — возвращаем текущий размер (не меняем)
       if (deltaCols === 0 && deltaRows === 0) {
         return { sizeId: currentSizeId, cols: currentCols, rows: currentRows };
       }
-      
+
       const sizes = (availableSizes && availableSizes.length) ? availableSizes : [currentSizeId];
       const reg = HEYS.Widgets.registry;
       const preferBigger = (deltaCols + deltaRows) >= 0;
@@ -289,13 +289,13 @@
 
     const endResizeDrag = useCallback((reason = 'up') => {
       const ref = resizeDragRef.current;
-      
+
       // КРИТИЧНО: Проверяем ref.active ПЕРЕД сбросом флага!
       if (!ref.active) return;
-      
+
       // Сбрасываем ref.active СРАЗУ чтобы повторные вызовы игнорились
       ref.active = false;
-      
+
       // И только теперь сбрасываем глобальный флаг resize + очищаем safety timeout
       try {
         if (HEYS.Widgets.dnd) {
@@ -365,16 +365,16 @@
     // Стартует resize drag (вызывается из onPointerDown или onTouchStart)
     const startResizeDrag = useCallback((direction, e, isTouchEvent = false) => {
       if (!isEditMode) return;
-      
+
       const ref = resizeDragRef.current;
       const now = Date.now();
-      
+
       // Защита от двойного вызова (pointerdown + touchstart на одно касание)
       if (ref?.startedAt && now - ref.startedAt < 100) return;
-      
+
       // Защита от повторного запуска resize пока предыдущий активен
       if (ref?.active) return;
-      
+
       e.stopPropagation();
       if (!isTouchEvent) e.preventDefault();
 
@@ -386,7 +386,7 @@
       try {
         if (HEYS.Widgets.dnd) {
           HEYS.Widgets.dnd._resizeActive = true;
-          
+
           // Safety timeout: сбросить флаг через 5 секунд если resize завис
           if (HEYS.Widgets.dnd._resizeTimeout) {
             clearTimeout(HEYS.Widgets.dnd._resizeTimeout);
@@ -456,16 +456,16 @@
           document.removeEventListener('touchend', ref.touchEndHandler, { capture: true });
           document.removeEventListener('touchcancel', ref.touchEndHandler, { capture: true });
         }
-        
+
         // Сохраняем handlers в ref для возможности cleanup
         ref.touchMoveHandler = (te) => {
           if (!ref.active) return;
           te.preventDefault();
           te.stopPropagation(); // Не даём другим handlers перехватить
-          
+
           const touch = te.touches[0];
           if (!touch) return;
-          
+
           const dx = touch.clientX - ref.startX;
           const dy = touch.clientY - ref.startY;
 
@@ -556,7 +556,7 @@
         e.stopPropagation();
         return; // Native touchstart handler обработает
       }
-      
+
       // CRITICAL: stop propagation чтобы widget card handlePointerDown НЕ вызвал dnd._prepareForDrag
       e.stopPropagation();
       e.preventDefault();
@@ -572,7 +572,7 @@
     // Native touch listeners для resize handles (с { passive: false } чтобы preventDefault работал)
     useEffect(() => {
       if (!isEditMode) return;
-      
+
       const handles = [
         { ref: handleNRef, dir: 'n' },
         { ref: handleERef, dir: 'e' },
@@ -583,20 +583,20 @@
         { ref: handleSWRef, dir: 'sw' },
         { ref: handleSERef, dir: 'se' }
       ];
-      
+
       const touchStartHandlers = handles.map(({ ref, dir }) => {
         const handler = (e) => {
           e.preventDefault(); // Теперь работает!
           e.stopPropagation();
           handleResizeHandleTouchStart(dir, e);
         };
-        
+
         if (ref.current) {
           ref.current.addEventListener('touchstart', handler, { passive: false });
         }
         return { ref, handler };
       });
-      
+
       return () => {
         touchStartHandlers.forEach(({ ref, handler }) => {
           if (ref.current) {
@@ -617,10 +617,10 @@
       // Универсальный обработчик движения (pointer и touch)
       const onMove = (e) => {
         if (!ref.active) return;
-        
+
         // CRITICAL: preventDefault чтобы iOS не скроллил страницу
         e.preventDefault();
-        
+
         // Проверяем pointerId только для pointer events
         if (!ref.isTouchBased && ref.pointerId != null && e.pointerId != null && e.pointerId !== ref.pointerId) return;
 
@@ -706,12 +706,12 @@
       window.addEventListener('pointermove', onMove, { passive: false });
       window.addEventListener('pointerup', onUp, { passive: true });
       window.addEventListener('pointercancel', onCancel, { passive: true });
-      
+
       // Touch events (fallback для iOS Safari / PWA)
       window.addEventListener('touchmove', onMove, { passive: false });
       window.addEventListener('touchend', onUp, { passive: true });
       window.addEventListener('touchcancel', onCancel, { passive: true });
-      
+
       return () => {
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
@@ -721,7 +721,7 @@
         window.removeEventListener('touchcancel', onCancel);
       };
     }, [isResizeDragActive, endResizeDrag, getGridCols, pickNearestSize, updateResizePreview, widget?.position?.col]);
-    
+
     const isResizing = !!resizePreview?.active;
     const previewCols = isResizing ? (resizePreview?.cols || widget.cols) : widget.cols;
     const previewRows = isResizing ? (resizePreview?.rows || widget.rows) : widget.rows;
@@ -752,7 +752,7 @@
     const gridCol = effectiveWidget?.position?.col;
     const gridRow = effectiveWidget?.position?.row;
     const hasGridPos = Number.isFinite(gridCol) && Number.isFinite(gridRow);
-    
+
     return React.createElement('div', {
       ref: elementRef,
       className: `widget ${sizeClass} ${typeClass} ${isEditMode ? 'widget--editing' : ''} ${isResizing ? 'widget--resizing' : ''} ${isResizing && isResizeSnap ? 'widget--resize-snap' : ''}`,
@@ -777,7 +777,7 @@
         React.createElement('span', { className: 'widget__icon' }, widgetType?.icon || '📊'),
         React.createElement('span', { className: 'widget__title' }, widgetType?.name || widget.type)
       ),
-      
+
       // Widget Content (placeholder - будет заменён конкретными виджетами)
       React.createElement('div', { className: 'widget__content' },
         React.createElement(WidgetContent, { widget: effectiveWidget, widgetType })
@@ -796,7 +796,7 @@
         `${previewCols}×${previewRows}`,
         !!resizePreview?.overflowRight && React.createElement('span', { className: 'widget__size-badge-warn' }, '↔')
       ),
-      
+
       // Edit Mode: Delete button
       isEditMode && React.createElement('button', {
         id: index === 0 ? 'tour-widgets-delete' : undefined,
@@ -807,7 +807,7 @@
         onClick: handleRemoveClick,
         title: 'Удалить'
       }, '✕'),
-      
+
       // Edit Mode: Settings button (optional)
       isEditMode && widgetType?.settings && React.createElement('button', {
         id: index === 0 ? 'tour-widgets-settings' : undefined,
@@ -928,16 +928,16 @@
       )
     );
   }
-  
+
   // === Widget Content Component (renders actual widget data) ===
   function WidgetContent({ widget, widgetType }) {
     // State для данных виджета
-    const [data, setData] = useState(() => 
+    const [data, setData] = useState(() =>
       HEYS.Widgets.data?.getDataForWidget?.(widget) || {}
     );
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    
+
     // Подписка на обновления данных
     useEffect(() => {
       // Первоначальная загрузка
@@ -956,12 +956,12 @@
         }
         setLoading(false);
       };
-      
+
       loadData();
-      
+
       // Подписка на события обновления данных
       const unsubData = HEYS.Widgets.on?.('data:updated', loadData);
-      
+
       // Подписка на глобальные события HEYS (meal:added, water:added, etc.)
       const heysEvents = ['day:updated', 'meal:added', 'water:added', 'profile:updated'];
       heysEvents.forEach(evt => {
@@ -969,7 +969,7 @@
           HEYS.events.on(evt, loadData);
         }
       });
-      
+
       // 🆕 Оптимистичное обновление для виджета воды
       // Слушаем DOM событие heysWaterAdded которое содержит актуальные данные (total)
       // Это решает проблему debounce 500ms в useDayAutosave
@@ -986,7 +986,7 @@
         }
       };
       window.addEventListener('heysWaterAdded', handleWaterAdded);
-      
+
       return () => {
         unsubData?.();
         heysEvents.forEach(evt => {
@@ -997,21 +997,21 @@
         window.removeEventListener('heysWaterAdded', handleWaterAdded);
       };
     }, [widget.id, widget.type]);
-    
+
     // Loading state
     if (loading) {
       return React.createElement('div', { className: 'widget__loading' },
         React.createElement('div', { className: 'widget__spinner' })
       );
     }
-    
+
     // Error state
     if (error) {
       return React.createElement('div', { className: 'widget__error' },
         '⚠️ Ошибка загрузки'
       );
     }
-    
+
     // Render based on widget type
     switch (widget.type) {
       case 'status':
@@ -1045,13 +1045,13 @@
         );
     }
   }
-  
+
   // === Individual Widget Content Components ===
-  
+
   // === Status Widget Content (Статус 0-100) ===
   function StatusWidgetContent({ widget, data }) {
     const d = getWidgetDims(widget);
-    
+
     // Используем HEYS.Status.StatusWidget если доступен
     if (HEYS.Status?.StatusWidget) {
       // Передаём status из data или вычисляем
@@ -1062,7 +1062,7 @@
         normAbs: data.normAbs || {},
         waterGoal: data.waterGoal || 2000
       });
-      
+
       if (status) {
         return React.createElement(HEYS.Status.StatusWidget, {
           status,
@@ -1072,11 +1072,11 @@
         });
       }
     }
-    
+
     // Fallback если модуль не загружен
     const score = data.status?.score ?? data.score ?? 0;
     const level = data.status?.level ?? 'okay';
-    
+
     const getColor = () => {
       if (score >= 85) return '#10b981'; // excellent
       if (score >= 70) return '#22c55e'; // good
@@ -1084,14 +1084,14 @@
       if (score >= 30) return '#f97316'; // low
       return '#ef4444'; // critical
     };
-    
+
     // 1x1 Micro
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-status widget-status--micro' },
         React.createElement('div', { className: 'widget-status__score', style: { color: getColor() } }, Math.round(score))
       );
     }
-    
+
     // Standard
     return React.createElement('div', { className: 'widget-status widget-status--standard' },
       React.createElement('div', { className: 'widget-status__score-big', style: { color: getColor() } }, Math.round(score)),
@@ -1110,14 +1110,14 @@
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : d.isTall ? 'tall' : 'std';
-    
+
     const getColor = () => {
       if (pct < 50) return 'var(--ratio-crash)';
       if (pct < 75) return 'var(--ratio-low)';
       if (pct < 110) return 'var(--ratio-good)';
       return 'var(--ratio-over)';
     };
-    
+
     // 1x1 Micro
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-calories widget-calories--micro' },
@@ -1125,7 +1125,7 @@
         React.createElement('div', { className: 'widget-calories__value', style: { color: getColor() } }, eaten)
       );
     }
-    
+
     // 2x2 — Оптимальный layout
     if (size === '2x2') {
       return React.createElement('div', { className: 'widget-calories widget-calories--2x2' },
@@ -1158,7 +1158,7 @@
         )
       );
     }
-    
+
     // Остальные размеры — стандартный layout
     const showPct = widget.settings?.showPercentage !== false;
     const showRemaining = widget.settings?.showRemaining !== false;
@@ -1178,18 +1178,18 @@
         : null,
       showProgress
         ? React.createElement('div', { className: 'widget-calories__progress' },
-            React.createElement('div', {
-              className: 'widget-calories__bar',
-              style: { width: `${Math.min(100, Math.max(0, pct))}%` }
-            })
-          )
+          React.createElement('div', {
+            className: 'widget-calories__bar',
+            style: { width: `${Math.min(100, Math.max(0, pct))}%` }
+          })
+        )
         : null,
       showRemainingLine
         ? React.createElement('div', { className: 'widget-calories__remaining' }, `Осталось: ${remaining.toLocaleString('ru-RU')}`)
         : null
     );
   }
-  
+
   function WaterWidgetContent({ widget, data }) {
     const drunk = data.drunk || 0;
     const target = data.target || 2000;
@@ -1200,14 +1200,14 @@
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
-    
+
     const getWaterColor = () => {
       if (pct >= 100) return '#22c55e';
       if (pct >= 70) return '#3b82f6';
       if (pct >= 40) return '#eab308';
       return '#ef4444';
     };
-    
+
     // 1x1 Micro
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-water widget-water--micro' },
@@ -1217,7 +1217,7 @@
         )
       );
     }
-    
+
     // 2x2 — Оптимальный layout
     if (size === '2x2') {
       const waterColor = getWaterColor();
@@ -1253,11 +1253,11 @@
         )
       );
     }
-    
+
     // Остальные размеры — стандартный layout
     const showProgress = true;
     const showPctPill = !d.isTiny;
-    
+
     return React.createElement('div', { className: `widget-water widget-water--${variant}` },
       React.createElement('div', { className: 'widget-water__top' },
         React.createElement('div', { className: 'widget-water__value' },
@@ -1266,16 +1266,16 @@
       ),
       showProgress
         ? React.createElement('div', { className: 'widget-water__progress' },
-            React.createElement('div', {
-              className: 'widget-water__bar',
-              style: { width: `${Math.min(100, pct)}%` }
-            })
-          )
+          React.createElement('div', {
+            className: 'widget-water__bar',
+            style: { width: `${Math.min(100, pct)}%` }
+          })
+        )
         : null,
       showPctPill ? React.createElement('div', { className: 'widget-water__label' }, `${pct}%`) : null
     );
   }
-  
+
   function SleepWidgetContent({ widget, data }) {
     const hours = data.hours || 0;
     const target = data.target || 8;
@@ -1286,22 +1286,22 @@
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
-    
+
     const pct = target > 0 ? Math.round((hours / target) * 100) : 0;
-    
+
     const getSleepColor = () => {
       if (hours >= target) return '#22c55e';
       if (hours >= target - 1) return '#3b82f6';
       if (hours >= target - 2) return '#eab308';
       return '#ef4444';
     };
-    
+
     const getEmoji = () => {
       if (hours >= target) return '😊';
       if (hours >= target - 1) return '😐';
       return '😴';
     };
-    
+
     // 1x1 Micro
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-sleep widget-sleep--micro' },
@@ -1309,7 +1309,7 @@
         React.createElement('div', { className: 'widget-sleep__value' }, `${hours.toFixed(1)}ч`)
       );
     }
-    
+
     // 2x2 — Оптимальный layout
     if (size === '2x2') {
       const sleepColor = getSleepColor();
@@ -1343,18 +1343,18 @@
         )
       );
     }
-    
+
     // Остальные размеры
     const showTarget = widget.settings?.showTarget !== false;
     const showQuality = widget.settings?.showQuality !== false && !!quality && !d.isTiny;
-    
+
     return React.createElement('div', { className: `widget-sleep widget-sleep--${variant}` },
       React.createElement('div', { className: 'widget-sleep__value' }, `${hours.toFixed(1)}ч ${getEmoji()}`),
       showTarget ? React.createElement('div', { className: 'widget-sleep__label' }, `из ${target}ч`) : null,
       showQuality ? React.createElement('div', { className: 'widget-sleep__quality' }, `Качество: ${quality}/10`) : null
     );
   }
-  
+
   function StreakWidgetContent({ widget, data }) {
     const current = data.current || 0;
     const max = data.max || 0;
@@ -1363,13 +1363,13 @@
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
-    
+
     const getStreakColor = () => {
       if (current >= 7) return '#22c55e';
       if (current >= 3) return '#f97316';
       return '#ef4444';
     };
-    
+
     // 1x1 Micro
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-streak widget-streak--micro' },
@@ -1377,12 +1377,12 @@
         React.createElement('div', { className: 'widget-streak__value' }, current)
       );
     }
-    
+
     // 2x2 — Оптимальный layout с мини-heatmap недели
     if (size === '2x2') {
       const streakColor = getStreakColor();
       const isNewRecord = current > 0 && current >= max;
-      
+
       return React.createElement('div', { className: 'widget-streak widget-streak--2x2' },
         // Верх: огонь + число + дни
         React.createElement('div', { className: 'widget-streak__header' },
@@ -1409,11 +1409,11 @@
         )
       );
     }
-    
+
     // Остальные размеры
     const showMax = widget.settings?.showMax !== false && max > current && !d.isTiny;
     const showFlame = widget.settings?.showFlame !== false && current > 0;
-    
+
     return React.createElement('div', { className: `widget-streak widget-streak--${variant}` },
       React.createElement('div', { className: 'widget-streak__value' },
         showFlame ? '🔥 ' : '',
@@ -1423,7 +1423,7 @@
       showMax ? React.createElement('div', { className: 'widget-streak__max' }, `Рекорд: ${max}`) : null
     );
   }
-  
+
   /**
    * WeightWidgetContent — Адаптивный виджет веса с системой блоков
    * Блоки заполняют пространство по приоритету
@@ -1454,7 +1454,7 @@
 
     // Размеры берём из реестра (единый источник правды). Здесь они не нужны для layout-веток,
     // но логика остаётся совместимой: неизвестный size упадёт в fallback-рендер ниже.
-    
+
     // Цвета тренда
     const getTrendInfo = () => {
       if (!Number.isFinite(trend)) return null;
@@ -1463,7 +1463,7 @@
       return { cls: 'stable', emoji: '→', label: 'стабилен', color: '#3b82f6' };
     };
     const trendInfo = getTrendInfo();
-    
+
     // Форматирование weekChange
     const formatWeekChange = () => {
       if (!Number.isFinite(weekChange)) return null;
@@ -1472,7 +1472,7 @@
     };
 
     // ============ БЛОКИ-КОМПОНЕНТЫ ============
-    
+
     // Блок: Главное значение веса
     const WeightValue = ({ scale = 'md' }) => {
       const sizes = { sm: 'widget-weight__val--sm', md: 'widget-weight__val--md', lg: 'widget-weight__val--lg', xl: 'widget-weight__val--xl' };
@@ -1482,12 +1482,12 @@
         React.createElement('span', { className: 'widget-weight__val-unit' }, 'кг')
       );
     };
-    
+
     // Блок: Тренд (стрелка + текст)
     const TrendBlock = ({ showText = false, vertical = false }) => {
       if (!showTrend || !trendInfo) return null;
       const weekText = formatWeekChange();
-      return React.createElement('div', { 
+      return React.createElement('div', {
         className: `widget-weight__trend ${vertical ? 'widget-weight__trend--vert' : ''}`,
         style: { color: trendInfo.color }
       },
@@ -1495,7 +1495,7 @@
         showText && weekText && React.createElement('span', { className: 'widget-weight__trend-label' }, weekText)
       );
     };
-    
+
     // Блок: График
     const ChartBlock = ({ days = 7, height = 60, showDots = true, showLabels = false, showGoalLine = false }) => {
       if (!hasSparkline) return null;
@@ -1511,7 +1511,7 @@
         goalWeight: goal
       });
     };
-    
+
     // Блок: Цель
     const GoalBlock = ({ inline = false }) => {
       if (!showGoal || !hasGoal) return null;
@@ -1527,7 +1527,7 @@
         weeksToGoal && React.createElement('div', { className: 'widget-weight__goal-eta' }, `~${weeksToGoal} нед`)
       );
     };
-    
+
     // Блок: Прогресс-бар к цели
     const ProgressBlock = ({ vertical = false }) => {
       if (!showGoal || !hasGoal || progressPct === null) return null;
@@ -1535,7 +1535,7 @@
       if (vertical) {
         return React.createElement('div', { className: 'widget-weight__progress-v' },
           React.createElement('div', { className: 'widget-weight__progress-track-v' },
-            React.createElement('div', { 
+            React.createElement('div', {
               className: 'widget-weight__progress-fill-v',
               style: { height: `${pct}%` }
             })
@@ -1545,7 +1545,7 @@
       }
       return React.createElement('div', { className: 'widget-weight__progress-h' },
         React.createElement('div', { className: 'widget-weight__progress-track-h' },
-          React.createElement('div', { 
+          React.createElement('div', {
             className: 'widget-weight__progress-fill-h',
             style: { width: `${pct}%` }
           })
@@ -1556,25 +1556,25 @@
         )
       );
     };
-    
+
     // Блок: BMI
     const BMIBlock = ({ compact = false }) => {
       if (!bmi) return null;
       if (compact) {
-        return React.createElement('div', { 
+        return React.createElement('div', {
           className: 'widget-weight__bmi-badge',
           style: { background: bmiCategory?.color ? `${bmiCategory.color}20` : undefined, color: bmiCategory?.color }
         }, `BMI ${bmi.toFixed(1)}`);
       }
       return React.createElement('div', { className: 'widget-weight__bmi-block' },
         React.createElement('div', { className: 'widget-weight__bmi-num' }, bmi.toFixed(1)),
-        React.createElement('div', { 
+        React.createElement('div', {
           className: 'widget-weight__bmi-cat',
           style: { color: bmiCategory?.color }
         }, bmiCategory?.label || 'BMI')
       );
     };
-    
+
     // Блок: Аналитика (прогноз на месяц, чистый тренд)
     const AnalyticsBlock = () => {
       const items = [];
@@ -1586,8 +1586,8 @@
       }
       if (items.length === 0) return null;
       return React.createElement('div', { className: 'widget-weight__stats' },
-        items.map((item, i) => React.createElement('div', { 
-          key: i, 
+        items.map((item, i) => React.createElement('div', {
+          key: i,
           className: `widget-weight__stat ${item.cls || ''}`
         },
           React.createElement('span', { className: 'widget-weight__stat-icon' }, item.icon),
@@ -1597,7 +1597,7 @@
     };
 
     // ============ LAYOUTS ПО РАЗМЕРАМ ============
-    
+
     // MINI (1×1) — метка + число (компактный шрифт для safe-area)
     if (size === '1x1') {
       return React.createElement('div', { className: 'widget-weight widget-weight--1x1' },
@@ -1628,8 +1628,8 @@
         React.createElement('div', { className: 'widget-weight__row-h' },
           React.createElement(WeightValue, { scale: 'lg' }),
           React.createElement(TrendBlock, { showText: true }),
-          showGoal && hasGoal 
-            ? React.createElement(GoalBlock, { inline: true }) 
+          showGoal && hasGoal
+            ? React.createElement(GoalBlock, { inline: true })
             : React.createElement(BMIBlock, { compact: true })
         )
       );
@@ -1657,7 +1657,7 @@
         React.createElement(BMIBlock, { compact: true })
       );
     }
-    
+
     // TALL3 (1×3) — узкий высокий: число | тренд | прогресс | BMI вертикально
     if (size === '1x3') {
       const showProgress = showGoal && hasGoal && progressPct !== null;
@@ -1669,7 +1669,7 @@
         React.createElement(AnalyticsBlock, null)
       );
     }
-    
+
     // TALL4 (1×4) — максимально высокий узкий: полная вертикальная компоновка
     if (size === '1x4') {
       const showProgress = showGoal && hasGoal && progressPct !== null;
@@ -1682,7 +1682,7 @@
         React.createElement(AnalyticsBlock, null)
       );
     }
-    
+
     // COMPACT (2×2) — число + тренд + (график или цель/BMI)
     if (size === '2x2') {
       return React.createElement('div', { className: 'widget-weight widget-weight--2x2' },
@@ -1690,14 +1690,14 @@
         React.createElement(TrendBlock, { showText: true }),
         hasSparkline
           ? React.createElement('div', { className: 'widget-weight__chart-compact' },
-              React.createElement(ChartBlock, { days: 7, height: 46, showDots: false })
-            )
+            React.createElement(ChartBlock, { days: 7, height: 46, showDots: false })
+          )
           : (showGoal && hasGoal
-              ? React.createElement(GoalBlock, { inline: true })
-              : React.createElement(BMIBlock, { compact: true }))
+            ? React.createElement(GoalBlock, { inline: true })
+            : React.createElement(BMIBlock, { compact: true }))
       );
     }
-    
+
     // MEDIUM (3×2) — число слева + (график или доп.блоки) справа + цель внизу
     if (size === '3x2') {
       return React.createElement('div', { className: 'widget-weight widget-weight--3x2' },
@@ -1708,17 +1708,17 @@
           ),
           hasSparkline
             ? React.createElement('div', { className: 'widget-weight__chart' },
-                React.createElement(ChartBlock, { days: 7, height: 50, showDots: true })
-              )
+              React.createElement(ChartBlock, { days: 7, height: 50, showDots: true })
+            )
             : ((hasBmi || hasAnalytics) && React.createElement('div', { className: 'widget-weight__side' },
-                React.createElement(BMIBlock, { compact: true }),
-                React.createElement(AnalyticsBlock, null)
-              ))
+              React.createElement(BMIBlock, { compact: true }),
+              React.createElement(AnalyticsBlock, null)
+            ))
         ),
         React.createElement(GoalBlock, { inline: true })
       );
     }
-    
+
     // WIDE (4×2) — число + тренд | (график или прогресс/аналитика) | цель+BMI
     if (size === '4x2') {
       const wideMidFallback = (!hasSparkline) ? React.createElement('div', { className: 'widget-weight__mid' },
@@ -1736,8 +1736,8 @@
           ),
           hasSparkline
             ? React.createElement('div', { className: 'widget-weight__chart' },
-                React.createElement(ChartBlock, { days: 7, height: 55, showDots: true, showLabels: true })
-              )
+              React.createElement(ChartBlock, { days: 7, height: 55, showDots: true, showLabels: true })
+            )
             : wideMidFallback,
           React.createElement('div', { className: 'widget-weight__right' },
             React.createElement(GoalBlock, { inline: false }),
@@ -1746,7 +1746,7 @@
         )
       );
     }
-    
+
     // TALL3 (2×3) — вертикальный: число | тренд | прогресс-бар
     if (size === '2x3') {
       return React.createElement('div', { className: 'widget-weight widget-weight--2x3' },
@@ -1756,16 +1756,16 @@
         React.createElement(BMIBlock, { compact: true })
       );
     }
-    
+
     // TALL (2×4) — вертикальный: число | тренд | (график или прогресс) | цель
     if (size === '2x4') {
       const tallMid = hasSparkline
         ? React.createElement('div', { className: 'widget-weight__chart-vert' },
-            React.createElement(ChartBlock, { days: 7, height: 80, showDots: true, showGoalLine: true })
-          )
+          React.createElement(ChartBlock, { days: 7, height: 80, showDots: true, showGoalLine: true })
+        )
         : (showGoal && hasGoal && progressPct !== null)
-            ? React.createElement(ProgressBlock, { vertical: true })
-            : React.createElement(AnalyticsBlock, null);
+          ? React.createElement(ProgressBlock, { vertical: true })
+          : React.createElement(AnalyticsBlock, null);
       return React.createElement('div', { className: 'widget-weight widget-weight--2x4' },
         React.createElement(WeightValue, { scale: 'xl' }),
         React.createElement(TrendBlock, { showText: true }),
@@ -1787,11 +1787,11 @@
         ),
         hasSparkline
           ? React.createElement('div', { className: 'widget-weight__chart-full' },
-              React.createElement(ChartBlock, { days: 10, height: 76, showDots: true, showLabels: false, showGoalLine: true })
-            )
+            React.createElement(ChartBlock, { days: 10, height: 76, showDots: true, showLabels: false, showGoalLine: true })
+          )
           : React.createElement('div', { className: 'widget-weight__chart-full' },
-              React.createElement('div', { className: 'widget-weight__hint' }, 'Добавьте вес 2+ дня для графика')
-            ),
+            React.createElement('div', { className: 'widget-weight__hint' }, 'Добавьте вес 2+ дня для графика')
+          ),
         React.createElement('div', { className: 'widget-weight__footer' },
           React.createElement(ProgressBlock, { vertical: false }),
           React.createElement(AnalyticsBlock, null)
@@ -1812,11 +1812,11 @@
         ),
         hasSparkline
           ? React.createElement('div', { className: 'widget-weight__chart-full' },
-              React.createElement(ChartBlock, { days: 14, height: 104, showDots: true, showLabels: false, showGoalLine: true })
-            )
+            React.createElement(ChartBlock, { days: 14, height: 104, showDots: true, showLabels: false, showGoalLine: true })
+          )
           : React.createElement('div', { className: 'widget-weight__chart-full' },
-              React.createElement('div', { className: 'widget-weight__hint' }, 'Добавьте вес 2+ дня для графика')
-            ),
+            React.createElement('div', { className: 'widget-weight__hint' }, 'Добавьте вес 2+ дня для графика')
+          ),
         React.createElement('div', { className: 'widget-weight__bottom' },
           React.createElement(ProgressBlock, { vertical: false }),
           React.createElement(AnalyticsBlock, null),
@@ -1824,7 +1824,7 @@
         )
       );
     }
-    
+
     // WIDE3 (4×3) — горизонтальный: верх(число+тренд | BMI) | график | цель+аналитика
     if (size === '4x3') {
       return React.createElement('div', { className: 'widget-weight widget-weight--4x3' },
@@ -1837,18 +1837,18 @@
         ),
         hasSparkline
           ? React.createElement('div', { className: 'widget-weight__chart-full' },
-              React.createElement(ChartBlock, { days: 10, height: 72, showDots: true, showLabels: true, showGoalLine: true })
-            )
+            React.createElement(ChartBlock, { days: 10, height: 72, showDots: true, showLabels: true, showGoalLine: true })
+          )
           : React.createElement('div', { className: 'widget-weight__chart-full' },
-              React.createElement('div', { className: 'widget-weight__hint' }, 'Добавьте вес 2+ дня для графика')
-            ),
+            React.createElement('div', { className: 'widget-weight__hint' }, 'Добавьте вес 2+ дня для графика')
+          ),
         React.createElement('div', { className: 'widget-weight__footer' },
           React.createElement(ProgressBlock, { vertical: false }),
           React.createElement(AnalyticsBlock, null)
         )
       );
     }
-    
+
     // LARGE (4×4) — максимум информации
     if (size === '4x4') {
       const hasProgress = showGoal && hasGoal && progressPct !== null;
@@ -1862,11 +1862,11 @@
         ),
         hasSparkline
           ? React.createElement('div', { className: 'widget-weight__chart-full' },
-              React.createElement(ChartBlock, { days: 14, height: 108, showDots: true, showLabels: true, showGoalLine: true })
-            )
+            React.createElement(ChartBlock, { days: 14, height: 108, showDots: true, showLabels: true, showGoalLine: true })
+          )
           : React.createElement('div', { className: 'widget-weight__chart-full' },
-              React.createElement('div', { className: 'widget-weight__hint' }, 'Добавьте вес 2+ дня для графика')
-            ),
+            React.createElement('div', { className: 'widget-weight__hint' }, 'Добавьте вес 2+ дня для графика')
+          ),
         React.createElement('div', { className: 'widget-weight__bottom' },
           React.createElement(ProgressBlock, { vertical: false }),
           React.createElement(AnalyticsBlock, null),
@@ -1875,7 +1875,7 @@
         )
       );
     }
-    
+
     // Fallback — неизвестный размер: рендерим базово и (один раз) логируем для диагностики
     if (widgetsOnce(`weight:unknownSize:${size}`)) {
       trackWidgetIssue('widgets_weight_unknown_size', {
@@ -1889,29 +1889,29 @@
       React.createElement(TrendBlock, { showText: false })
     );
   }
-  
+
   /**
    * WeightMiniSparkline — Мини-график веса для виджетов
    */
   function WeightMiniSparkline({ points, width, height, trendColor, showDots, showLabels, showGoalLine, goalWeight }) {
     const validPoints = points.filter(p => p.weight !== null);
     if (validPoints.length < 2) return null;
-    
+
     // Если width = '100%', используем viewBox и сохраняем пропорции
     const isFluid = width === '100%';
     const svgW = isFluid ? 200 : width;
     const svgH = height;
-    
+
     const weights = validPoints.map(p => p.weight);
     const minW = Math.min(...weights) - 0.3;
     const maxW = Math.max(...weights) + 0.3;
     const range = Math.max(1, maxW - minW);
-    
+
     const paddingX = showLabels ? 8 : 4;
     const paddingY = showLabels ? 12 : 4;
     const chartW = svgW - paddingX * 2;
     const chartH = svgH - paddingY * 2;
-    
+
     const pts = validPoints.map((p, i) => ({
       x: paddingX + (i / (validPoints.length - 1)) * chartW,
       y: paddingY + chartH - ((p.weight - minW) / range) * chartH,
@@ -1919,7 +1919,7 @@
       dayNum: p.dayNum,
       isToday: p.isToday
     }));
-    
+
     // Построение плавной линии
     const buildPath = () => {
       if (pts.length < 2) return '';
@@ -1932,15 +1932,15 @@
       }
       return d;
     };
-    
+
     const pathD = buildPath();
-    
+
     // Линия цели
-    const goalY = showGoalLine && goalWeight 
+    const goalY = showGoalLine && goalWeight
       ? paddingY + chartH - ((goalWeight - minW) / range) * chartH
       : null;
-    
-    return React.createElement('svg', { 
+
+    return React.createElement('svg', {
       className: 'widget-weight__sparkline',
       viewBox: `0 0 ${svgW} ${svgH}`,
       width: isFluid ? '100%' : svgW,
@@ -1949,16 +1949,16 @@
     },
       // Линия цели (пунктир)
       goalY !== null && goalY > paddingY && goalY < svgH - paddingY &&
-        React.createElement('line', {
-          x1: paddingX,
-          y1: goalY,
-          x2: svgW - paddingX,
-          y2: goalY,
-          stroke: '#8b5cf6',
-          strokeWidth: 1,
-          strokeDasharray: '4 2',
-          opacity: 0.5
-        }),
+      React.createElement('line', {
+        x1: paddingX,
+        y1: goalY,
+        x2: svgW - paddingX,
+        y2: goalY,
+        stroke: '#8b5cf6',
+        strokeWidth: 1,
+        strokeDasharray: '4 2',
+        opacity: 0.5
+      }),
       // Линия графика
       React.createElement('path', {
         d: pathD,
@@ -1991,7 +1991,7 @@
       )
     );
   }
-  
+
   function StepsWidgetContent({ widget, data }) {
     const steps = data.steps || 0;
     const goal = data.goal || 10000;
@@ -2002,14 +2002,14 @@
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
-    
+
     const getStepsColor = () => {
       if (pct >= 100) return '#22c55e';
       if (pct >= 70) return '#3b82f6';
       if (pct >= 40) return '#eab308';
       return '#ef4444';
     };
-    
+
     // 1x1 Micro
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-steps widget-steps--micro' },
@@ -2017,7 +2017,7 @@
         React.createElement('div', { className: 'widget-steps__value' }, steps)
       );
     }
-    
+
     // 2x2 — Оптимальный layout
     if (size === '2x2') {
       const stepsColor = getStepsColor();
@@ -2050,12 +2050,12 @@
         )
       );
     }
-    
+
     // Остальные размеры
     const showKm = widget.settings?.showKilometers && !d.isTiny;
     const showGoalBar = widget.settings?.showGoal !== false;
     const showPctInline = d.isShort;
-    
+
     return React.createElement('div', { className: `widget-steps widget-steps--${variant}` },
       React.createElement('div', { className: 'widget-steps__top' },
         React.createElement('div', { className: 'widget-steps__value' }, steps.toLocaleString('ru-RU')),
@@ -2064,28 +2064,28 @@
       showKm ? React.createElement('div', { className: 'widget-steps__km' }, `${km} км`) : null,
       showGoalBar
         ? React.createElement('div', { className: 'widget-steps__progress' },
-            React.createElement('div', {
-              className: 'widget-steps__bar',
-              style: { width: `${Math.min(100, pct)}%` }
-            })
-          )
+          React.createElement('div', {
+            className: 'widget-steps__bar',
+            style: { width: `${Math.min(100, pct)}%` }
+          })
+        )
         : null
     );
   }
-  
+
   function MacrosWidgetContent({ widget, data }) {
     const { protein, fat, carbs, proteinTarget, fatTarget, carbsTarget } = data;
 
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isTiny ? 'compact' : 'std';
-    
+
     // Расчёт процентов
     const pctP = proteinTarget > 0 ? Math.round((protein || 0) / proteinTarget * 100) : 0;
     const pctF = fatTarget > 0 ? Math.round((fat || 0) / fatTarget * 100) : 0;
     const pctC = carbsTarget > 0 ? Math.round((carbs || 0) / carbsTarget * 100) : 0;
     const avgPct = Math.round((pctP + pctF + pctC) / 3);
-    
+
     // 1x1 Micro
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-macros widget-macros--micro' },
@@ -2093,7 +2093,7 @@
         React.createElement('div', { className: 'widget-macros__micro-value' }, `${Math.min(999, avgPct)}%`)
       );
     }
-    
+
     // 4x1 — Компактный горизонтальный layout с минимальными интервалами
     if (size === '4x1') {
       const MacroBarCompact = ({ label, value, target, pct, color }) => {
@@ -2108,14 +2108,14 @@
           React.createElement('span', { className: 'widget-macros__value-4x1' }, `${Math.round(value)}г`)
         );
       };
-      
+
       return React.createElement('div', { className: 'widget-macros widget-macros--4x1' },
         React.createElement(MacroBarCompact, { label: 'Б', value: protein || 0, target: proteinTarget || 100, pct: pctP, color: '#ef4444' }),
         React.createElement(MacroBarCompact, { label: 'Ж', value: fat || 0, target: fatTarget || 70, pct: pctF, color: '#eab308' }),
         React.createElement(MacroBarCompact, { label: 'У', value: carbs || 0, target: carbsTarget || 250, pct: pctC, color: '#3b82f6' })
       );
     }
-    
+
     // 4x2 — Расширенный layout с дополнительной информацией
     if (size === '4x2') {
       const totalGrams = (protein || 0) + (fat || 0) + (carbs || 0);
@@ -2124,7 +2124,7 @@
       // Расчёт калорий: белки*4 + жиры*9 + углеводы*4
       const kcalEaten = Math.round((protein || 0) * 4 + (fat || 0) * 9 + (carbs || 0) * 4);
       const kcalTarget = Math.round((proteinTarget || 100) * 4 + (fatTarget || 70) * 9 + (carbsTarget || 250) * 4);
-      
+
       const MacroRowExtended = ({ label, emoji, value, target, pct, color }) => {
         const isGood = pct >= 80 && pct <= 120;
         const statusEmoji = pct < 80 ? '⬇️' : pct > 120 ? '⬆️' : '✅';
@@ -2133,7 +2133,7 @@
             React.createElement('span', { className: 'widget-macros__emoji' }, emoji),
             React.createElement('span', { className: 'widget-macros__label-text' }, label),
             React.createElement('span', { className: 'widget-macros__grams-4x2' }, `${Math.round(value)}/${target}г`),
-            React.createElement('span', { 
+            React.createElement('span', {
               className: 'widget-macros__pct-badge',
               style: { background: isGood ? '#22c55e20' : `${color}20`, color: isGood ? '#22c55e' : color }
             }, `${pct}%`),
@@ -2147,7 +2147,7 @@
           )
         );
       };
-      
+
       return React.createElement('div', { className: 'widget-macros widget-macros--4x2' },
         // Заголовок с общей статистикой
         React.createElement('div', { className: 'widget-macros__summary-4x2' },
@@ -2157,7 +2157,7 @@
           ),
           React.createElement('div', { className: 'widget-macros__summary-item' },
             React.createElement('span', { className: 'widget-macros__summary-label' }, '📊 Баланс'),
-            React.createElement('span', { 
+            React.createElement('span', {
               className: 'widget-macros__summary-value',
               style: { color: avgPct >= 80 && avgPct <= 120 ? '#22c55e' : avgPct < 80 ? '#ef4444' : '#eab308' }
             }, `${avgPct}%`)
@@ -2169,7 +2169,7 @@
         React.createElement(MacroRowExtended, { label: 'Углеводы', emoji: '🍞', value: carbs || 0, target: carbsTarget || 250, pct: pctC, color: '#3b82f6' })
       );
     }
-    
+
     // 2x2 — Оптимальный layout с барами и числами
     if (size === '2x2') {
       const MacroRow = ({ label, emoji, value, target, pct, color }) => {
@@ -2178,7 +2178,7 @@
           React.createElement('div', { className: 'widget-macros__row-header' },
             React.createElement('span', { className: 'widget-macros__emoji' }, emoji),
             React.createElement('span', { className: 'widget-macros__grams' }, `${Math.round(value)}/${target}г`),
-            React.createElement('span', { 
+            React.createElement('span', {
               className: 'widget-macros__pct-badge',
               style: { background: isGood ? '#22c55e20' : `${color}20`, color: isGood ? '#22c55e' : color }
             }, `${pct}%`)
@@ -2191,17 +2191,17 @@
           )
         );
       };
-      
+
       return React.createElement('div', { className: 'widget-macros widget-macros--2x2' },
         React.createElement(MacroRow, { label: 'Белки', emoji: '🍖', value: protein || 0, target: proteinTarget || 100, pct: pctP, color: '#ef4444' }),
         React.createElement(MacroRow, { label: 'Жиры', emoji: '🧈', value: fat || 0, target: fatTarget || 70, pct: pctF, color: '#eab308' }),
         React.createElement(MacroRow, { label: 'Углеводы', emoji: '🍞', value: carbs || 0, target: carbsTarget || 250, pct: pctC, color: '#3b82f6' })
       );
     }
-    
+
     // Остальные размеры
     const showGrams = widget.settings?.showGrams !== false && !d.isTiny;
-    
+
     const MacroBar = ({ label, value, target, color, cls }) => {
       const pct = target > 0 ? Math.round((value / target) * 100) : 0;
       return React.createElement('div', { className: 'widget-macros__row' },
@@ -2215,7 +2215,7 @@
         showGrams ? React.createElement('span', { className: 'widget-macros__value' }, `${Math.round(value)}г`) : null
       );
     };
-    
+
     return React.createElement('div', { className: `widget-macros widget-macros--${variant}` },
       React.createElement(MacroBar, {
         label: 'Б', value: protein || 0, target: proteinTarget || 100, color: '#ef4444', cls: 'widget-macros__label--prot'
@@ -2228,7 +2228,7 @@
       })
     );
   }
-  
+
   function InsulinWidgetContent({ widget, data }) {
     const status = data.status || 'unknown';
     const remaining = data.remaining;
@@ -2239,7 +2239,7 @@
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
-    
+
     const getStatusInfo = () => {
       switch (status) {
         case 'active': return { emoji: '📈', label: 'Волна активна', color: '#f97316', short: 'Активна' };
@@ -2249,10 +2249,10 @@
         default: return { emoji: '❓', label: 'Нет данных', color: '#94a3b8', short: '—' };
       }
     };
-    
+
     const info = getStatusInfo();
     const showTimer = Number.isFinite(remaining) && remaining > 0;
-    
+
     // 1x1 Micro
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-insulin widget-insulin--micro' },
@@ -2263,20 +2263,20 @@
         )
       );
     }
-    
+
     // 2x2 — Оптимальный layout с кольцевым прогрессом
     if (size === '2x2') {
-      const progressPct = showTimer && totalWave > 0 
-        ? Math.round(((totalWave - remaining) / totalWave) * 100) 
+      const progressPct = showTimer && totalWave > 0
+        ? Math.round(((totalWave - remaining) / totalWave) * 100)
         : (status === 'lipolysis' ? 100 : 0);
-      
+
       // SVG кольцо прогресса
       const ringSize = 44;
       const strokeWidth = 5;
       const radius = (ringSize - strokeWidth) / 2;
       const circumference = 2 * Math.PI * radius;
       const strokeDashoffset = circumference - (progressPct / 100) * circumference;
-      
+
       return React.createElement('div', { className: 'widget-insulin widget-insulin--2x2' },
         // Верх: статус + время последнего приёма
         React.createElement('div', { className: 'widget-insulin__header' },
@@ -2312,7 +2312,7 @@
           ),
           // Таймер в центре
           React.createElement('div', { className: 'widget-insulin__timer-center' },
-            showTimer 
+            showTimer
               ? `${remaining}м`
               : (status === 'lipolysis' ? '🔥' : '—')
           )
@@ -2323,7 +2323,7 @@
         )
       );
     }
-    
+
     // Остальные размеры
     const showPhase = widget.settings?.showPhase !== false && !!phase && !d.isTiny;
 
@@ -2335,7 +2335,7 @@
       showPhase ? React.createElement('div', { className: 'widget-insulin__phase' }, phase) : null
     );
   }
-  
+
   function HeatmapWidgetContent({ widget, data }) {
     const days = data.days || [];
     const currentStreak = data.currentStreak || 0;
@@ -2354,9 +2354,9 @@
     } else if (period === 'week') {
       renderDays = days.slice(-7);
     }
-    
+
     const variant = d.isMicro ? 'micro' : d.isTiny ? 'compact' : 'std';
-    
+
     // 1x1 Micro
     if (d.isMicro) {
       const today = renderDays[0];
@@ -2365,7 +2365,7 @@
         React.createElement('div', { className: `widget-heatmap__today widget-heatmap__today--${today?.status || 'empty'}` })
       );
     }
-    
+
     // 2x2 — Оптимальный layout: заголовок + сетка 7 дней + стрик
     // v3.22.0: с training/stress indicators
     if (size === '2x2') {
@@ -2374,7 +2374,7 @@
       // Определяем стартовый день недели
       const today = new Date();
       const startDayIndex = (today.getDay() + 6) % 7; // Понедельник = 0
-      
+
       return React.createElement('div', { className: 'widget-heatmap widget-heatmap--2x2' },
         // Заголовок: иконка + streak
         React.createElement('div', { className: 'widget-heatmap__header' },
@@ -2391,7 +2391,7 @@
             // 🆕 v3.22.0: training/stress indicators
             const hasTraining = day.hasTraining;
             const highStress = day.highStress;
-            
+
             return React.createElement('div', {
               key: i,
               className: `widget-heatmap__day-col ${isToday ? 'widget-heatmap__day-col--today' : ''} ${hasTraining ? 'widget-heatmap__day-col--training' : ''}`
@@ -2433,7 +2433,7 @@
       )
     );
   }
-  
+
   function CycleWidgetContent({ widget, data }) {
     const day = data.day;
     const phase = data.phase;
@@ -2443,11 +2443,11 @@
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
-    
+
     if (!day) {
       return React.createElement('div', { className: 'widget-cycle__empty' }, 'Нет данных');
     }
-    
+
     // 1x1 Micro
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-cycle widget-cycle--micro' },
@@ -2455,19 +2455,19 @@
         React.createElement('div', { className: 'widget-cycle__day' }, day)
       );
     }
-    
+
     // 2x2 — Оптимальный layout с кольцевым прогрессом
     if (size === '2x2') {
       const progressPct = Math.round((day / cycleLength) * 100);
       const phaseColor = phase?.color || '#ec4899';
-      
+
       // SVG кольцо
       const ringSize = 48;
       const strokeWidth = 5;
       const radius = (ringSize - strokeWidth) / 2;
       const circumference = 2 * Math.PI * radius;
       const strokeDashoffset = circumference - (progressPct / 100) * circumference;
-      
+
       return React.createElement('div', { className: 'widget-cycle widget-cycle--2x2' },
         // Верх: фаза
         phase && React.createElement('div', { className: 'widget-cycle__phase-header', style: { color: phaseColor } },
@@ -2508,25 +2508,25 @@
         )
       );
     }
-    
+
     // Остальные размеры
     return React.createElement('div', { className: `widget-cycle widget-cycle--${variant}` },
       React.createElement('div', { className: 'widget-cycle__day' },
         `День ${day}`
       ),
       widget.settings?.showPhase && phase && !d.isTiny &&
-        React.createElement('div', { className: 'widget-cycle__phase' },
-          phase.icon, ' ', phase.name
-        )
+      React.createElement('div', { className: 'widget-cycle__phase' },
+        phase.icon, ' ', phase.name
+      )
     );
   }
-  
+
   // === Crash Risk Widget Content (Риск срыва) ===
   function CrashRiskWidgetContent({ widget, data }) {
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
-    
+
     const risk = data.risk || 0;
     const level = data.level || 'low';
     const factors = data.factors || [];
@@ -2536,47 +2536,47 @@
     const emoji = data.emoji || '🟢';
     const levelText = data.levelText || 'Низкий';
     const riskHistory = data.riskHistory || [];
-    
+
     // State для popup с деталями
     const [showPopup, setShowPopup] = useState(false);
-    
+
     // Звук/вибрация при критическом риске (high + risk >= 70)
     const alertedRef = useRef(false);
     useEffect(() => {
       if (level === 'high' && risk >= 70 && !alertedRef.current) {
         alertedRef.current = true;
-        
+
         // Вибрация (если поддерживается)
         if (navigator.vibrate) {
           navigator.vibrate([200, 100, 200]); // Двойная вибрация
         }
-        
+
         // Звуковое уведомление (тихий beep)
         try {
           const audioContext = new (window.AudioContext || window.webkitAudioContext)();
           const oscillator = audioContext.createOscillator();
           const gainNode = audioContext.createGain();
-          
+
           oscillator.connect(gainNode);
           gainNode.connect(audioContext.destination);
-          
+
           oscillator.frequency.value = 440; // Нота A4
           oscillator.type = 'sine';
           gainNode.gain.value = 0.1; // Тихий
-          
+
           oscillator.start();
           oscillator.stop(audioContext.currentTime + 0.15);
         } catch (e) {
           // Игнорируем ошибки аудио
         }
       }
-      
+
       // Сброс флага при смене уровня
       if (level !== 'high') {
         alertedRef.current = false;
       }
     }, [level, risk]);
-    
+
     // Функция для генерации tooltip текста
     const getFactorTooltip = (factor) => {
       const tooltips = {
@@ -2591,25 +2591,25 @@
       };
       return tooltips[factor.id] || factor.desc || `Влияние на риск: +${factor.impact || 0}%`;
     };
-    
+
     // Sparkline SVG генератор
     const renderSparkline = (historyData, width = 80, height = 24) => {
       if (!historyData || historyData.length < 2) return null;
-      
+
       const maxRisk = Math.max(...historyData.map(d => d.risk), 100);
       const minRisk = Math.min(...historyData.map(d => d.risk), 0);
       const range = maxRisk - minRisk || 1;
-      
+
       const points = historyData.map((d, i) => {
         const x = (i / (historyData.length - 1)) * width;
         const y = height - ((d.risk - minRisk) / range) * height;
         return `${x},${y}`;
       }).join(' ');
-      
+
       // Цвет последней точки
       const lastLevel = historyData[historyData.length - 1]?.level || 'low';
       const strokeColor = lastLevel === 'high' ? '#ef4444' : lastLevel === 'medium' ? '#eab308' : '#22c55e';
-      
+
       return React.createElement('svg', {
         width,
         height,
@@ -2634,17 +2634,17 @@
         })
       );
     };
-    
+
     // Цвета светофора
     const getLevelStyle = () => ({
       color: color,
       background: `${color}15`
     });
-    
+
     // Popup с детальной информацией (через Portal в body)
     const renderPopup = () => {
       if (!showPopup) return null;
-      
+
       const popup = React.createElement('div', {
         className: 'widget-crash-risk__popup-overlay',
         onClick: (e) => {
@@ -2667,140 +2667,140 @@
               onClick: () => setShowPopup(false)
             }, '✕')
           ),
-          
+
           // Значение риска
           React.createElement('div', { className: 'widget-crash-risk__popup-value' },
-            React.createElement('div', { 
+            React.createElement('div', {
               className: 'widget-crash-risk__popup-risk-number',
               style: { color }
             }, `${risk}%`),
-            React.createElement('div', { 
+            React.createElement('div', {
               className: 'widget-crash-risk__popup-level',
               style: { color, background: `${color}20` }
             }, levelText)
           ),
-          
+
           // Sparkline
           riskHistory.length > 1 &&
-            React.createElement('div', { className: 'widget-crash-risk__popup-section' },
-              React.createElement('div', { className: 'widget-crash-risk__popup-section-title' }, '📈 Динамика за 7 дней'),
-              React.createElement('div', { className: 'widget-crash-risk__popup-sparkline' },
-                renderSparkline(riskHistory, 200, 40)
-              )
-            ),
-          
+          React.createElement('div', { className: 'widget-crash-risk__popup-section' },
+            React.createElement('div', { className: 'widget-crash-risk__popup-section-title' }, '📈 Динамика за 7 дней'),
+            React.createElement('div', { className: 'widget-crash-risk__popup-sparkline' },
+              renderSparkline(riskHistory, 200, 40)
+            )
+          ),
+
           // Факторы
           factors.length > 0 &&
-            React.createElement('div', { className: 'widget-crash-risk__popup-section' },
-              React.createElement('div', { className: 'widget-crash-risk__popup-section-title' }, '⚠️ Факторы риска'),
-              React.createElement('div', { className: 'widget-crash-risk__popup-factors' },
-                factors.map((factor, i) =>
-                  React.createElement('div', { 
-                    key: i,
-                    className: 'widget-crash-risk__popup-factor'
-                  },
-                    React.createElement('div', { className: 'widget-crash-risk__popup-factor-header' },
-                      React.createElement('span', { className: 'widget-crash-risk__popup-factor-label' }, factor.label || factor.id),
-                      factor.impact && React.createElement('span', { 
-                        className: 'widget-crash-risk__popup-factor-impact',
-                        style: { 
-                          color: factor.impact > 20 ? '#ef4444' : factor.impact > 10 ? '#eab308' : '#22c55e',
-                          background: factor.impact > 20 ? '#ef444420' : factor.impact > 10 ? '#eab30820' : '#22c55e20'
-                        }
-                      }, `+${factor.impact}%`)
-                    ),
-                    React.createElement('div', { className: 'widget-crash-risk__popup-factor-tooltip' }, 
-                      getFactorTooltip(factor)
-                    )
+          React.createElement('div', { className: 'widget-crash-risk__popup-section' },
+            React.createElement('div', { className: 'widget-crash-risk__popup-section-title' }, '⚠️ Факторы риска'),
+            React.createElement('div', { className: 'widget-crash-risk__popup-factors' },
+              factors.map((factor, i) =>
+                React.createElement('div', {
+                  key: i,
+                  className: 'widget-crash-risk__popup-factor'
+                },
+                  React.createElement('div', { className: 'widget-crash-risk__popup-factor-header' },
+                    React.createElement('span', { className: 'widget-crash-risk__popup-factor-label' }, factor.label || factor.id),
+                    factor.impact && React.createElement('span', {
+                      className: 'widget-crash-risk__popup-factor-impact',
+                      style: {
+                        color: factor.impact > 20 ? '#ef4444' : factor.impact > 10 ? '#eab308' : '#22c55e',
+                        background: factor.impact > 20 ? '#ef444420' : factor.impact > 10 ? '#eab30820' : '#22c55e20'
+                      }
+                    }, `+${factor.impact}%`)
+                  ),
+                  React.createElement('div', { className: 'widget-crash-risk__popup-factor-tooltip' },
+                    getFactorTooltip(factor)
                   )
                 )
               )
-            ),
-          
+            )
+          ),
+
           // Позитивные факторы (что держит риск низким)
           positiveFactors.length > 0 &&
-            React.createElement('div', { className: 'widget-crash-risk__popup-section' },
-              React.createElement('div', { className: 'widget-crash-risk__popup-section-title' }, '✅ Что держит риск низким'),
-              React.createElement('div', { className: 'widget-crash-risk__popup-factors widget-crash-risk__popup-factors--positive' },
-                positiveFactors.map((factor, i) =>
-                  React.createElement('div', { 
-                    key: i,
-                    className: 'widget-crash-risk__popup-factor widget-crash-risk__popup-factor--positive'
-                  },
-                    React.createElement('div', { className: 'widget-crash-risk__popup-factor-header' },
-                      React.createElement('span', { className: 'widget-crash-risk__popup-factor-label' }, factor.label || factor.id),
-                      factor.impact && React.createElement('span', { 
-                        className: 'widget-crash-risk__popup-factor-impact widget-crash-risk__popup-factor-impact--positive',
-                        style: { 
-                          color: '#22c55e',
-                          background: '#22c55e20'
-                        }
-                      }, `${factor.impact}%`)
-                    ),
-                    factor.details && React.createElement('div', { className: 'widget-crash-risk__popup-factor-tooltip' }, 
-                      factor.details
-                    )
+          React.createElement('div', { className: 'widget-crash-risk__popup-section' },
+            React.createElement('div', { className: 'widget-crash-risk__popup-section-title' }, '✅ Что держит риск низким'),
+            React.createElement('div', { className: 'widget-crash-risk__popup-factors widget-crash-risk__popup-factors--positive' },
+              positiveFactors.map((factor, i) =>
+                React.createElement('div', {
+                  key: i,
+                  className: 'widget-crash-risk__popup-factor widget-crash-risk__popup-factor--positive'
+                },
+                  React.createElement('div', { className: 'widget-crash-risk__popup-factor-header' },
+                    React.createElement('span', { className: 'widget-crash-risk__popup-factor-label' }, factor.label || factor.id),
+                    factor.impact && React.createElement('span', {
+                      className: 'widget-crash-risk__popup-factor-impact widget-crash-risk__popup-factor-impact--positive',
+                      style: {
+                        color: '#22c55e',
+                        background: '#22c55e20'
+                      }
+                    }, `${factor.impact}%`)
+                  ),
+                  factor.details && React.createElement('div', { className: 'widget-crash-risk__popup-factor-tooltip' },
+                    factor.details
                   )
                 )
               )
-            ),
-          
+            )
+          ),
+
           // Рекомендация
           recommendation &&
-            React.createElement('div', { className: 'widget-crash-risk__popup-section' },
-              React.createElement('div', { className: 'widget-crash-risk__popup-section-title' }, '💡 Рекомендация'),
-              React.createElement('div', { className: 'widget-crash-risk__popup-recommendation' }, recommendation)
-            )
+          React.createElement('div', { className: 'widget-crash-risk__popup-section' },
+            React.createElement('div', { className: 'widget-crash-risk__popup-section-title' }, '💡 Рекомендация'),
+            React.createElement('div', { className: 'widget-crash-risk__popup-recommendation' }, recommendation)
+          )
         )
       );
-      
+
       // Рендерим через Portal в document.body
       return ReactDOM.createPortal(popup, document.body);
     };
-    
+
     // 1x1 Micro — только светофор
     if (d.isMicro) {
-      return React.createElement('div', { 
+      return React.createElement('div', {
         className: 'widget-crash-risk widget-crash-risk--micro',
         style: getLevelStyle(),
         onClick: () => setShowPopup(true)
       },
         React.createElement('div', { className: 'widget-crash-risk__emoji' }, emoji),
-        React.createElement('div', { 
+        React.createElement('div', {
           className: 'widget-crash-risk__level-text',
           style: { color }
         }, risk),
         renderPopup()
       );
     }
-    
+
     // 1x2 / 2x1 Tiny — светофор + уровень
     if (d.isTiny) {
-      return React.createElement('div', { 
+      return React.createElement('div', {
         className: 'widget-crash-risk widget-crash-risk--tiny',
         style: getLevelStyle(),
         onClick: () => setShowPopup(true)
       },
         React.createElement('div', { className: 'widget-crash-risk__header' },
           React.createElement('span', { className: 'widget-crash-risk__emoji' }, emoji),
-          React.createElement('span', { 
+          React.createElement('span', {
             className: 'widget-crash-risk__risk-value',
             style: { color }
           }, `${risk}%`)
         ),
-        React.createElement('div', { 
+        React.createElement('div', {
           className: 'widget-crash-risk__level-text',
           style: { color }
         }, levelText),
         renderPopup()
       );
     }
-    
+
     // 2x2 — Оптимальный layout со светофором, факторами и рекомендацией
     if (size === '2x2') {
       const topFactors = factors.slice(0, 2);
-      
-      return React.createElement('div', { 
+
+      return React.createElement('div', {
         className: 'widget-crash-risk widget-crash-risk--2x2',
         onClick: () => setShowPopup(true)
       },
@@ -2808,155 +2808,156 @@
         React.createElement('div', { className: 'widget-crash-risk__top' },
           // Светофор (3 круга)
           React.createElement('div', { className: 'widget-crash-risk__traffic-light' },
-            React.createElement('div', { 
-              className: `widget-crash-risk__light widget-crash-risk__light--red ${level === 'high' ? 'active' : ''}` 
+            React.createElement('div', {
+              className: `widget-crash-risk__light widget-crash-risk__light--red ${level === 'high' ? 'active' : ''}`
             }),
-            React.createElement('div', { 
-              className: `widget-crash-risk__light widget-crash-risk__light--yellow ${level === 'medium' ? 'active' : ''}` 
+            React.createElement('div', {
+              className: `widget-crash-risk__light widget-crash-risk__light--yellow ${level === 'medium' ? 'active' : ''}`
             }),
-            React.createElement('div', { 
-              className: `widget-crash-risk__light widget-crash-risk__light--green ${level === 'low' ? 'active' : ''}` 
+            React.createElement('div', {
+              className: `widget-crash-risk__light widget-crash-risk__light--green ${level === 'low' ? 'active' : ''}`
             })
           ),
           // Значение риска
           React.createElement('div', { className: 'widget-crash-risk__value-block' },
-            React.createElement('div', { 
+            React.createElement('div', {
               className: 'widget-crash-risk__risk-value widget-crash-risk__risk-value--lg',
               style: { color }
             }, `${risk}%`),
-            React.createElement('div', { 
+            React.createElement('div', {
               className: 'widget-crash-risk__level-text',
               style: { color }
             }, levelText)
           )
         ),
-        
+
         // Середина: топ-2 фактора с tooltip
-        widget.settings?.showFactors !== false && topFactors.length > 0 && 
-          React.createElement('div', { className: 'widget-crash-risk__factors' },
-            topFactors.map((factor, i) =>
-              React.createElement('div', { 
-                key: i,
-                className: 'widget-crash-risk__factor',
-                title: getFactorTooltip(factor)
-              },
-                React.createElement('span', { className: 'widget-crash-risk__factor-label' }, factor.label || factor.id),
-                factor.impact && React.createElement('span', { 
-                  className: 'widget-crash-risk__factor-impact',
-                  style: { color: factor.impact > 20 ? '#ef4444' : factor.impact > 10 ? '#eab308' : '#9ca3af' }
-                }, `+${factor.impact}`)
-              )
+        widget.settings?.showFactors !== false && topFactors.length > 0 &&
+        React.createElement('div', { className: 'widget-crash-risk__factors' },
+          topFactors.map((factor, i) =>
+            React.createElement('div', {
+              key: i,
+              className: 'widget-crash-risk__factor',
+              title: getFactorTooltip(factor)
+            },
+              React.createElement('span', { className: 'widget-crash-risk__factor-label' }, factor.label || factor.id),
+              factor.impact && React.createElement('span', {
+                className: 'widget-crash-risk__factor-impact',
+                style: { color: factor.impact > 20 ? '#ef4444' : factor.impact > 10 ? '#eab308' : '#9ca3af' }
+              }, `+${factor.impact}`)
             )
-          ),
-        
+          )
+        ),
+
         // Sparkline истории риска
         riskHistory.length > 0 &&
-          React.createElement('div', { className: 'widget-crash-risk__sparkline-container' },
-            renderSparkline(riskHistory, 70, 20)
-          ),
-        
+        React.createElement('div', { className: 'widget-crash-risk__sparkline-container' },
+          renderSparkline(riskHistory, 70, 20)
+        ),
+
         // Низ: рекомендация
         widget.settings?.showRecommendation !== false && recommendation &&
-          React.createElement('div', { className: 'widget-crash-risk__recommendation' },
-            recommendation.length > 60 ? recommendation.slice(0, 57) + '...' : recommendation
-          ),
-        
+        React.createElement('div', { className: 'widget-crash-risk__recommendation' },
+          recommendation.length > 60 ? recommendation.slice(0, 57) + '...' : recommendation
+        ),
+
         // Popup
         renderPopup()
       );
     }
-    
+
     // 4x2 и больше — расширенный layout
     if (d.cols >= 4) {
-      return React.createElement('div', { 
+      return React.createElement('div', {
         className: 'widget-crash-risk widget-crash-risk--wide',
         onClick: () => setShowPopup(true)
       },
         // Левая часть: светофор
         React.createElement('div', { className: 'widget-crash-risk__left' },
           React.createElement('div', { className: 'widget-crash-risk__traffic-light widget-crash-risk__traffic-light--vertical' },
-            React.createElement('div', { 
-              className: `widget-crash-risk__light widget-crash-risk__light--red ${level === 'high' ? 'active' : ''}` 
+            React.createElement('div', {
+              className: `widget-crash-risk__light widget-crash-risk__light--red ${level === 'high' ? 'active' : ''}`
             }),
-            React.createElement('div', { 
-              className: `widget-crash-risk__light widget-crash-risk__light--yellow ${level === 'medium' ? 'active' : ''}` 
+            React.createElement('div', {
+              className: `widget-crash-risk__light widget-crash-risk__light--yellow ${level === 'medium' ? 'active' : ''}`
             }),
-            React.createElement('div', { 
-              className: `widget-crash-risk__light widget-crash-risk__light--green ${level === 'low' ? 'active' : ''}` 
+            React.createElement('div', {
+              className: `widget-crash-risk__light widget-crash-risk__light--green ${level === 'low' ? 'active' : ''}`
             })
           ),
-          React.createElement('div', { 
+          React.createElement('div', {
             className: 'widget-crash-risk__risk-value widget-crash-risk__risk-value--lg',
             style: { color }
           }, `${risk}%`),
-          React.createElement('div', { 
+          React.createElement('div', {
             className: 'widget-crash-risk__level-text',
             style: { color }
           }, levelText)
         ),
-        
+
         // Правая часть: все факторы + рекомендация + sparkline
         React.createElement('div', { className: 'widget-crash-risk__right' },
           // Sparkline истории
           riskHistory.length > 0 &&
-            React.createElement('div', { className: 'widget-crash-risk__sparkline-container widget-crash-risk__sparkline-container--wide' },
-              React.createElement('span', { className: 'widget-crash-risk__sparkline-label' }, '7 дней'),
-              renderSparkline(riskHistory, 120, 28)
-            ),
+          React.createElement('div', { className: 'widget-crash-risk__sparkline-container widget-crash-risk__sparkline-container--wide' },
+            React.createElement('span', { className: 'widget-crash-risk__sparkline-label' }, '7 дней'),
+            renderSparkline(riskHistory, 120, 28)
+          ),
           widget.settings?.showFactors !== false && factors.length > 0 &&
-            React.createElement('div', { className: 'widget-crash-risk__factors widget-crash-risk__factors--full' },
-              React.createElement('div', { className: 'widget-crash-risk__factors-title' }, 'Факторы:'),
-              factors.slice(0, 4).map((factor, i) =>
-                React.createElement('div', { 
-                  key: i,
-                  className: 'widget-crash-risk__factor',
-                  title: getFactorTooltip(factor)
-                },
-                  React.createElement('span', { className: 'widget-crash-risk__factor-label' }, factor.label || factor.id),
-                  factor.impact && React.createElement('span', { 
-                    className: 'widget-crash-risk__factor-impact',
-                    style: { color: factor.impact > 20 ? '#ef4444' : factor.impact > 10 ? '#eab308' : '#9ca3af' }
-                  }, `+${factor.impact}`)
-                )
+          React.createElement('div', { className: 'widget-crash-risk__factors widget-crash-risk__factors--full' },
+            React.createElement('div', { className: 'widget-crash-risk__factors-title' }, 'Факторы:'),
+            factors.slice(0, 4).map((factor, i) =>
+              React.createElement('div', {
+                key: i,
+                className: 'widget-crash-risk__factor',
+                title: getFactorTooltip(factor)
+              },
+                React.createElement('span', { className: 'widget-crash-risk__factor-label' }, factor.label || factor.id),
+                factor.impact && React.createElement('span', {
+                  className: 'widget-crash-risk__factor-impact',
+                  style: { color: factor.impact > 20 ? '#ef4444' : factor.impact > 10 ? '#eab308' : '#9ca3af' }
+                }, `+${factor.impact}`)
               )
-            ),
-          widget.settings?.showRecommendation !== false && recommendation &&
-            React.createElement('div', { className: 'widget-crash-risk__recommendation widget-crash-risk__recommendation--full' },
-              recommendation
             )
+          ),
+          widget.settings?.showRecommendation !== false && recommendation &&
+          React.createElement('div', { className: 'widget-crash-risk__recommendation widget-crash-risk__recommendation--full' },
+            recommendation
+          )
         ),
-        
+
         // Popup
         renderPopup()
       );
     }
-    
+
     // Стандартный fallback
-    return React.createElement('div', { 
+    return React.createElement('div', {
       className: `widget-crash-risk widget-crash-risk--${variant}`,
       onClick: () => setShowPopup(true)
     },
       React.createElement('div', { className: 'widget-crash-risk__emoji' }, emoji),
-      React.createElement('div', { 
+      React.createElement('div', {
         className: 'widget-crash-risk__risk-value',
         style: { color }
       }, `${risk}%`),
-      React.createElement('div', { 
+      React.createElement('div', {
         className: 'widget-crash-risk__level-text',
         style: { color }
       }, levelText),
       renderPopup()
     );
   }
-  
+
   // === Catalog Modal Component ===
-  function CatalogModal({ isOpen, onClose, onSelect }) {
+  function CatalogModal({ isOpen, onClose, onSelect, existingTypes }) {
     const registry = HEYS.Widgets.registry;
     const categories = registry?.getCategories() || [];
     const availableTypes = registry?.getAvailableTypes() || [];
-    
+    const existingTypeSet = existingTypes instanceof Set ? existingTypes : new Set(existingTypes || []);
+
     const [selectedCategory, setSelectedCategory] = useState(null);
-    
+
     useEffect(() => {
       if (isOpen) {
         HEYS.Widgets.emit('catalog:open');
@@ -2964,14 +2965,15 @@
         HEYS.Widgets.emit('catalog:close');
       }
     }, [isOpen]);
-    
+
     if (!isOpen) return null;
-    
+
     const filteredTypes = selectedCategory
       ? availableTypes.filter(t => t.category === selectedCategory)
       : availableTypes;
-    
+
     const handleSelect = (type) => {
+      if (existingTypeSet.has(type.type)) return;
       onSelect?.(type);
       HEYS.Widgets.emit('catalog:select', { type: type.type });
       onClose?.();
@@ -2980,7 +2982,7 @@
     if (widgetsDebugEnabled() && widgetsOnce(`catalog:render:${filteredTypes.length}`)) {
       trackWidgetIssue('widgets_catalog_render', { count: filteredTypes.length });
     }
-    
+
     return React.createElement('div', { className: 'widgets-catalog-overlay', onClick: onClose },
       React.createElement('div', {
         className: 'widgets-catalog',
@@ -2994,7 +2996,7 @@
             onClick: onClose
           }, '✕')
         ),
-        
+
         // Category Filters
         React.createElement('div', { className: 'widgets-catalog__categories' },
           React.createElement('button', {
@@ -3009,50 +3011,52 @@
             }, cat.icon, ' ', cat.label)
           )
         ),
-        
+
         // Widget List
         React.createElement('div', { className: 'widgets-catalog__list' },
-          filteredTypes.map(type =>
-            React.createElement('div', {
+          filteredTypes.map(type => {
+            const isAlreadyAdded = existingTypeSet.has(type.type);
+            return React.createElement('div', {
               key: type.type,
-              className: 'widgets-catalog__item',
+              className: `widgets-catalog__item ${isAlreadyAdded ? 'widgets-catalog__item--disabled' : ''}`,
               onClick: () => handleSelect(type)
             },
               React.createElement('div', { className: 'widgets-catalog__item-icon' }, type.icon),
               React.createElement('div', { className: 'widgets-catalog__item-info' },
                 React.createElement('div', { className: 'widgets-catalog__item-name' }, type.name),
                 React.createElement('div', { className: 'widgets-catalog__item-desc' }, type.description)
-              )
-            )
-          )
+              ),
+              isAlreadyAdded && React.createElement('div', { className: 'widgets-catalog__item-badge' }, '✓ Уже на экране')
+            );
+          })
         )
       )
     );
   }
-  
+
   // === Settings Modal Component ===
   function SettingsModal({ widget, isOpen, onClose, onSave }) {
     const registry = HEYS.Widgets.registry;
     const widgetType = widget ? registry?.getType(widget.type) : null;
     const [settings, setSettings] = useState({});
-    
+
     useEffect(() => {
       if (widget) {
         setSettings({ ...widget.settings });
       }
     }, [widget]);
-    
+
     if (!isOpen || !widget || !widgetType) return null;
-    
+
     const handleChange = (key, value) => {
       setSettings(prev => ({ ...prev, [key]: value }));
     };
-    
+
     const handleSave = () => {
       onSave?.(widget.id, settings);
       onClose?.();
     };
-    
+
     return React.createElement('div', { className: 'widgets-settings-overlay', onClick: onClose },
       React.createElement('div', {
         className: 'widgets-settings',
@@ -3065,7 +3069,7 @@
             onClick: onClose
           }, '✕')
         ),
-        
+
         React.createElement('div', { className: 'widgets-settings__content' },
           // Size selector
           React.createElement('div', { className: 'widgets-settings__field' },
@@ -3081,7 +3085,7 @@
               })
             )
           ),
-          
+
           // Custom settings
           widgetType.settings && Object.entries(widgetType.settings).map(([key, def]) =>
             React.createElement('div', { key, className: 'widgets-settings__field' },
@@ -3092,28 +3096,28 @@
                   checked: settings[key] ?? def.default,
                   onChange: e => handleChange(key, e.target.checked)
                 }) :
-              def.type === 'number' ?
-                React.createElement('input', {
-                  type: 'number',
-                  value: settings[key] ?? def.default,
-                  min: def.min,
-                  max: def.max,
-                  onChange: e => handleChange(key, parseInt(e.target.value, 10))
-                }) :
-              def.type === 'select' ?
-                React.createElement('select', {
-                  value: settings[key] ?? def.default,
-                  onChange: e => handleChange(key, e.target.value)
-                },
-                  def.options.map(opt =>
-                    React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
-                  )
-                ) :
-                null
+                def.type === 'number' ?
+                  React.createElement('input', {
+                    type: 'number',
+                    value: settings[key] ?? def.default,
+                    min: def.min,
+                    max: def.max,
+                    onChange: e => handleChange(key, parseInt(e.target.value, 10))
+                  }) :
+                  def.type === 'select' ?
+                    React.createElement('select', {
+                      value: settings[key] ?? def.default,
+                      onChange: e => handleChange(key, e.target.value)
+                    },
+                      def.options.map(opt =>
+                        React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
+                      )
+                    ) :
+                    null
             )
           )
         ),
-        
+
         React.createElement('div', { className: 'widgets-settings__footer' },
           React.createElement('button', {
             className: 'widgets-settings__btn widgets-settings__btn--cancel',
@@ -3127,7 +3131,7 @@
       )
     );
   }
-  
+
   // === Main WidgetsTab Component ===
   function WidgetsTab({ selectedDate, clientId, setTab, setSelectedDate }) {
     const [widgets, setWidgets] = useState([]);
@@ -3180,19 +3184,19 @@
         window.removeEventListener('orientationchange', update);
       };
     }, [isMobile, widgets.length, isEditMode]);
-    
+
     // Сохраняем selectedDate в HEYS.Widgets.data для использования в widget_data.js
     useEffect(() => {
       if (HEYS.Widgets.data) {
         HEYS.Widgets.data._selectedDate = selectedDate;
       }
     }, [selectedDate]);
-    
+
     // 🔄 Реинициализация виджетов при смене клиента
     // Критично: каждый клиент имеет свой layout виджетов!
     useEffect(() => {
       if (clientId) {
-        console.log(`[WidgetsTab] clientId changed: "${clientId.slice(0,8)}...", reinitializing widgets`);
+        console.log(`[WidgetsTab] clientId changed: "${clientId.slice(0, 8)}...", reinitializing widgets`);
         // Передаём clientId явно, т.к. HEYS.currentClientId может ещё не обновиться (race condition)
         HEYS.Widgets.state?.reinit?.(clientId);
         // Обновляем локальный state после reinit
@@ -3200,7 +3204,7 @@
         updateHistoryInfo();
       }
     }, [clientId]);
-    
+
     // Initialize and subscribe to state changes
     useEffect(() => {
       // Важно: на первом рендере widgets=[] и UI может кратко показать empty-state.
@@ -3209,13 +3213,13 @@
 
       // Initialize state if not already
       HEYS.Widgets.state?.init?.();
-      
+
       // Get initial widgets
       setWidgets(HEYS.Widgets.state?.getWidgets?.() || []);
       setIsEditMode(HEYS.Widgets.state?.isEditMode?.() || false);
       updateHistoryInfo();
       setIsLayoutHydrated(true);
-      
+
       // 🔧 v1.19: Проверяем WidgetsTour при монтировании компонента
       // (layout:loaded может уже произойти до завершения основного тура)
       const tourTimer = setTimeout(() => {
@@ -3235,7 +3239,7 @@
         setWidgets([...(layout || [])]);
         updateHistoryInfo();
         setIsLayoutHydrated(true);
-        
+
         // Auto-start WidgetsTour if applicable (after layout is ready)
         setTimeout(() => {
           if (HEYS.WidgetsTour?.shouldShow?.() && HEYS.WidgetsTour.start) {
@@ -3243,26 +3247,26 @@
           }
         }, 500);
       });
-      
+
       // Subscribe to layout changes
       const unsubLayout = HEYS.Widgets.on('layout:changed', ({ layout }) => {
         setWidgets([...layout]);
         updateHistoryInfo();
         setIsLayoutHydrated(true);
       });
-      
+
       // Subscribe to edit mode changes
       const unsubEditEnter = HEYS.Widgets.on('editmode:enter', () => {
         setIsEditMode(true);
       });
-      
+
       const unsubEditExit = HEYS.Widgets.on('editmode:exit', () => {
         setIsEditMode(false);
       });
-      
+
       // Subscribe to history changes
       const unsubHistory = HEYS.Widgets.on('history:changed', updateHistoryInfo);
-      
+
       return () => {
         clearTimeout(tourTimer);
         unsubLoaded?.();
@@ -3272,7 +3276,7 @@
         unsubHistory?.();
       };
     }, []);
-    
+
     // Update history info
     const updateHistoryInfo = useCallback(() => {
       setHistoryInfo({
@@ -3280,38 +3284,38 @@
         canRedo: HEYS.Widgets.canRedo?.() || false
       });
     }, []);
-    
+
     // Global pointer event handlers for DnD
     useEffect(() => {
       const handlePointerMove = (e) => {
         HEYS.Widgets.dnd?.handlePointerMove?.(e);
       };
-      
+
       const handlePointerUp = (e) => {
         HEYS.Widgets.dnd?.handlePointerUp?.(null, e);
       };
-      
+
       // Attach global listeners
       document.addEventListener('pointermove', handlePointerMove);
       document.addEventListener('pointerup', handlePointerUp);
       document.addEventListener('pointercancel', handlePointerUp);
-      
+
       return () => {
         document.removeEventListener('pointermove', handlePointerMove);
         document.removeEventListener('pointerup', handlePointerUp);
         document.removeEventListener('pointercancel', handlePointerUp);
       };
     }, []);
-    
+
     // Handle catalog widget selection
     const handleCatalogSelect = useCallback((widgetType) => {
       if (!HEYS.Widgets.registry) {
         trackWidgetIssue('widgets_registry_not_initialized', { source: 'handleCatalogSelect' });
         return;
       }
-      
+
       const widget = HEYS.Widgets.registry.createWidget(widgetType.type);
-      
+
       if (widget) {
         if (!HEYS.Widgets.state) {
           trackWidgetIssue('widgets_state_not_initialized', { source: 'handleCatalogSelect' });
@@ -3325,17 +3329,17 @@
         trackWidgetIssue('widgets_createWidget_null', { type: widgetType?.type });
       }
     }, []);
-    
+
     // Handle widget settings save
     const handleSettingsSave = useCallback((widgetId, settings) => {
       HEYS.Widgets.state?.updateWidget(widgetId, { settings });
     }, []);
-    
+
     // Handle widget remove
     const handleRemove = useCallback((widgetId) => {
       HEYS.Widgets.state?.removeWidget(widgetId);
     }, []);
-    
+
     // Toggle edit mode
     const toggleEdit = useCallback(() => {
       HEYS.Widgets.toggleEditMode?.();
@@ -3361,15 +3365,15 @@
         }
       }, 600);
     }, [setTab]);
-    
+
     // 💧 Добавить воду БЕЗ переключения вкладки — анимация прямо здесь
     const handleAddWater = useCallback((ml = 200) => {
       // Сначала показываем локальную анимацию
       setWaterAnim('+' + ml + 'мл');
-      
+
       // Вибрация
       if (navigator.vibrate) navigator.vibrate(50);
-      
+
       // Вызываем HEYS.Day.addWater напрямую (skipScroll=true, чтобы не скроллить)
       const addWaterFn = window.HEYS?.Day?.addWater;
       if (typeof addWaterFn === 'function') {
@@ -3391,18 +3395,18 @@
           } catch (e) {
             clientCurrent = localStorage.getItem('heys_client_current') || '';
           }
-          const storageKey = clientCurrent 
-            ? `heys_${clientCurrent}_dayv2_${dateKey}` 
+          const storageKey = clientCurrent
+            ? `heys_${clientCurrent}_dayv2_${dateKey}`
             : `heys_dayv2_${dateKey}`;
           const dayData = JSON.parse(localStorage.getItem(storageKey) || '{}');
           dayData.waterMl = (dayData.waterMl || 0) + ml;
           dayData.lastWaterTime = Date.now();
           dayData.updatedAt = Date.now();
           localStorage.setItem(storageKey, JSON.stringify(dayData));
-          
+
           // Dispatch event для синхронизации других компонентов
-          window.dispatchEvent(new CustomEvent('heysWaterAdded', { 
-            detail: { ml, total: dayData.waterMl } 
+          window.dispatchEvent(new CustomEvent('heysWaterAdded', {
+            detail: { ml, total: dayData.waterMl }
           }));
           // Также отправляем событие для виджетов
           if (typeof HEYS.events?.emit === 'function') {
@@ -3412,20 +3416,20 @@
           // silent
         }
       }
-      
+
       // Скрыть анимацию через 800мс
       setTimeout(() => setWaterAnim(null), 800);
     }, [selectedDate]);
-    
+
     // Undo/Redo handlers
     const handleUndo = useCallback(() => {
       HEYS.Widgets.undo?.();
     }, []);
-    
+
     const handleRedo = useCallback(() => {
       HEYS.Widgets.redo?.();
     }, []);
-    
+
     // Render empty state (только после первичной гидратации layout)
     if (isLayoutHydrated && widgets.length === 0 && !isEditMode) {
       return React.createElement('div', { className: 'widgets-tab' },
@@ -3447,14 +3451,14 @@
         })
       );
     }
-    
+
     return React.createElement('div', {
       className: `widgets-tab ${isEditMode ? 'widgets-tab--editing' : ''}`,
       ref: containerRef
     },
       // Header (пустой - кнопки перенесены в fixed блок снизу)
       React.createElement('div', { className: 'widgets-header' }),
-      
+
       // Widgets Grid
       React.createElement('div', {
         className: `widgets-grid ${isEditMode ? 'widgets-grid--editing' : ''}`,
@@ -3471,12 +3475,13 @@
           })
         )
       ),
-      
+
       // Modals
       React.createElement(CatalogModal, {
         isOpen: catalogOpen,
         onClose: () => setCatalogOpen(false),
-        onSelect: handleCatalogSelect
+        onSelect: handleCatalogSelect,
+        existingTypes: new Set((widgets || []).map(w => w.type))
       }),
       React.createElement(SettingsModal, {
         widget: settingsWidget,
@@ -3549,15 +3554,15 @@
       )
     );
   }
-  
+
   // === Exports ===
   HEYS.Widgets.WidgetsTab = WidgetsTab;
   HEYS.Widgets.WidgetCard = WidgetCard;
   HEYS.Widgets.CatalogModal = CatalogModal;
   HEYS.Widgets.SettingsModal = SettingsModal;
-  
+
   if (widgetsDebugEnabled() && widgetsOnce('widgets_ui_loaded')) {
     trackWidgetIssue('widgets_ui_loaded', { version: '1.1.0' });
   }
-  
+
 })(typeof window !== 'undefined' ? window : global);
