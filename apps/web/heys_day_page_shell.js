@@ -273,22 +273,6 @@
                 (!isMobile || mobileSubTab === 'stats') && compactActivity,
                 (!isMobile || mobileSubTab === 'stats') && sideBlock,
                 (!isMobile || mobileSubTab === 'stats') && cycleCard,
-                (!isMobile || mobileSubTab === 'stats') && HEYS.Supplements && HEYS.Supplements.renderCard({
-                    dateKey: date,
-                    dayData: day,
-                    onForceUpdate: () => {
-                        window.dispatchEvent(new CustomEvent('heys:day-updated', {
-                            detail: { date, source: 'supplements-update', forceReload: true }
-                        }));
-                    }
-                }),
-                (!isMobile || mobileSubTab === 'stats') && day.isRefeedDay && HEYS.Refeed && HEYS.Refeed.renderRefeedCard({
-                    isRefeedDay: day.isRefeedDay,
-                    refeedReason: day.refeedReason,
-                    caloricDebt,
-                    eatenKcal,
-                    optimum
-                }),
 
                 isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary') && React.createElement('div', {
                     className: 'fab-group',
