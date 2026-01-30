@@ -111,12 +111,16 @@
         const todayStr = new Date().toISOString().split('T')[0];
         const dayUtils = HEYS.dayUtils || {};
         const products = HEYS.products?.getAll?.() || [];
+        const normPerc = lsGet('heys_norms', {});
 
         const days = dates.map((dstr) => {
             const day = lsGet('heys_dayv2_' + dstr, null) || { date: dstr };
             const hasMeals = Array.isArray(day.meals) && day.meals.some((m) => (m.items || []).length > 0);
             const totals = getDayTotals(day, pIndex);
             const optimum = getDayOptimum(day, profile, lsGet, pIndex);
+            const normAbs = HEYS.dayCalculations?.computeDailyNorms
+                ? HEYS.dayCalculations.computeDailyNorms(optimum, normPerc)
+                : { carbs: 0, prot: 0, fat: 0 };
             const ratio = optimum ? (totals?.kcal || 0) / optimum : 0;
             const isToday = dstr === todayStr;
 
@@ -125,6 +129,7 @@
                 hasMeals,
                 totals,
                 optimum,
+                normAbs,
                 ratio,
                 isToday,
                 deficitPct: day.deficitPct,
@@ -152,6 +157,22 @@
 
         const totalDeltaKcal = visibleDays.reduce((s, d) => s + ((d.totals?.kcal || 0) - (d.optimum || 0)), 0);
         const avgDeltaKcal = daysWithData ? Math.round(totalDeltaKcal / daysWithData) : 0;
+
+        const totalProt = visibleDays.reduce((s, d) => s + (d.totals?.prot || 0), 0);
+        const totalFat = visibleDays.reduce((s, d) => s + (d.totals?.fat || 0), 0);
+        const totalCarbs = visibleDays.reduce((s, d) => s + (d.totals?.carbs || 0), 0);
+
+        const totalProtNorm = visibleDays.reduce((s, d) => s + (d.normAbs?.prot || 0), 0);
+        const totalFatNorm = visibleDays.reduce((s, d) => s + (d.normAbs?.fat || 0), 0);
+        const totalCarbsNorm = visibleDays.reduce((s, d) => s + (d.normAbs?.carbs || 0), 0);
+
+        const avgProt = daysWithData ? Math.round(totalProt / daysWithData) : 0;
+        const avgFat = daysWithData ? Math.round(totalFat / daysWithData) : 0;
+        const avgCarbs = daysWithData ? Math.round(totalCarbs / daysWithData) : 0;
+
+        const avgNormProt = daysWithData ? Math.round(totalProtNorm / daysWithData) : 0;
+        const avgNormFat = daysWithData ? Math.round(totalFatNorm / daysWithData) : 0;
+        const avgNormCarbs = daysWithData ? Math.round(totalCarbsNorm / daysWithData) : 0;
 
         let totalBurned = 0;
         let totalTargetDeficit = 0;
@@ -240,6 +261,12 @@
             avgDeltaKcal,
             avgDeltaPct,
             targetDeficitPct,
+            avgProt,
+            avgFat,
+            avgCarbs,
+            avgNormProt,
+            avgNormFat,
+            avgNormCarbs,
             todayExcluded,
             series,
             bestDay
@@ -397,6 +424,42 @@
 
         const deltaPctClass = getDeltaPctClass(deltaPct, targetPct);
 
+        const avgProt = report?.avgProt ?? 0;
+        const avgFat = report?.avgFat ?? 0;
+        const avgCarbs = report?.avgCarbs ?? 0;
+        const avgNormProt = report?.avgNormProt ?? 0;
+        const avgNormFat = report?.avgNormFat ?? 0;
+        const avgNormCarbs = report?.avgNormCarbs ?? 0;
+
+        const buildMacroRing = (label, value, norm, toneClass) => {
+            const ratio = norm > 0 ? value / norm : 0;
+            const basePct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
+            const overPct = ratio > 1 ? Math.min(100, Math.round((ratio - 1) * 100)) : 0;
+            const hasOver = overPct > 0;
+
+            return h('div', { className: 'macro-ring-item' },
+                h('div', { className: 'macro-ring ' + toneClass + (hasOver ? ' macro-ring--over' : '') },
+                    h('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
+                        h('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.9 }),
+                        h('circle', {
+                            className: 'macro-ring-fill',
+                            cx: 18, cy: 18, r: 15.9,
+                            style: { strokeDasharray: basePct + ' 100' }
+                        }),
+                        hasOver && h('circle', {
+                            className: 'macro-ring-fill macro-ring-fill--over',
+                            cx: 18, cy: 18, r: 15.9,
+                            style: { strokeDasharray: overPct + ' 100', strokeDashoffset: -100 }
+                        }),
+                        h('circle', { className: 'macro-ring-marker', cx: 18, cy: 18, r: 15.9 })
+                    ),
+                    h('span', { className: 'macro-ring-value' }, Math.round(value || 0))
+                ),
+                h('span', { className: 'macro-ring-label' }, label),
+                h('span', { className: 'macro-ring-target' }, '/ ' + Math.round(norm || 0) + 'г')
+            );
+        };
+
         return h('div', { className: 'weekly-wrap-step' },
             h('div', { className: 'weekly-wrap-step__title' }, '📊 Итоги недели'),
             h('div', { className: 'weekly-wrap-step__nav' },
@@ -455,6 +518,17 @@
                                     ' (цель ' + (targetPct > 0 ? '+' : '') + targetPct + '%)'
                                 )
                             )
+                        )
+                    ),
+                    h('div', { className: 'weekly-wrap-step__macros' },
+                        h('div', { className: 'weekly-wrap-step__macros-header' },
+                            h('span', { className: 'weekly-wrap-step__macros-title' }, 'Средние БЖУ'),
+                            h('span', { className: 'weekly-wrap-step__macros-subtitle' }, 'г/день')
+                        ),
+                        h('div', { className: 'weekly-wrap-step__macros-rings macro-rings' },
+                            buildMacroRing('Белки', avgProt, avgNormProt, 'protein'),
+                            buildMacroRing('Жиры', avgFat, avgNormFat, 'fat'),
+                            buildMacroRing('Углеводы', avgCarbs, avgNormCarbs, 'carbs')
                         )
                     ),
                     h('div', { className: 'weekly-wrap-step__sparkline' },
