@@ -3927,36 +3927,85 @@
               }
 
               // 🛡️ ЗАЩИТА GAMIFICATION: XP должен только расти, не сбрасываться
-              if (key.includes('_game')) {
+              // FIX v2.0: Ищем game данные во ВСЕХ вариантах ключа (legacy, разные clientId)
+              if (key.includes('_game') && !key.includes('_gamification')) {
                 const remoteTotalXP = row.v?.totalXP || 0;
-                const localTotalXP = local?.totalXP || 0;
+                let localTotalXP = local?.totalXP || 0;
+                let bestLocalGame = local;
 
-                // Если локальный XP больше — сохраняем локальные данные
+                // 🔍 Ищем game данные во всех вариантах ключа
+                if (localTotalXP === 0) {
+                  try {
+                    // 1. Прямой ключ heys_game (legacy без clientId)
+                    const legacyGame = tryParse(ls.getItem('heys_game'));
+                    if (legacyGame?.totalXP > localTotalXP) {
+                      localTotalXP = legacyGame.totalXP;
+                      bestLocalGame = legacyGame;
+                      logCritical(`🎮 [GAME] Found legacy heys_game with XP: ${localTotalXP}`);
+                    }
+
+                    // 2. Поиск по всем ключам с pattern *_game
+                    for (let i = 0; i < ls.length; i++) {
+                      const k = ls.key(i);
+                      if (k && k.endsWith('_game') && !k.includes('_gamification')) {
+                        const gameData = tryParse(ls.getItem(k));
+                        if (gameData?.totalXP > localTotalXP) {
+                          localTotalXP = gameData.totalXP;
+                          bestLocalGame = gameData;
+                          logCritical(`🎮 [GAME] Found better game data in ${k}: XP=${localTotalXP}`);
+                        }
+                      }
+                    }
+                  } catch (e) { }
+                }
+
+                logCritical(`🎮 [GAME SYNC] local XP=${localTotalXP}, remote XP=${remoteTotalXP}, key=${key}`);
+
+                // Если локальный XP больше — сохраняем локальные данные И отправляем в облако
                 if (localTotalXP > remoteTotalXP) {
                   logCritical(`🎮 [GAME] BLOCKED: Keeping local XP (${localTotalXP}) > remote (${remoteTotalXP})`);
+
+                  // Отправляем локальные данные в облако чтобы синхронизировать
+                  if (bestLocalGame && user?.id) {
+                    const gameUpsertObj = {
+                      user_id: user.id,
+                      client_id: client_id,
+                      k: normalizeKeyForSupabase(row.k, client_id),
+                      v: bestLocalGame,
+                      updated_at: (new Date()).toISOString(),
+                    };
+                    clientUpsertQueue.push(gameUpsertObj);
+                    scheduleClientPush();
+                    logCritical(`🎮 [GAME] Queued local game data to cloud (XP: ${localTotalXP})`);
+                  }
                   return;
                 }
 
-                // Если remote XP больше — берём remote, но сохраняем локальные achievements
-                if (remoteTotalXP > localTotalXP && local?.unlockedAchievements?.length > 0) {
-                  const mergedAchievements = [...new Set([
-                    ...(row.v?.unlockedAchievements || []),
-                    ...(local.unlockedAchievements || [])
-                  ])];
+                // Если remote XP больше — берём remote, но мержим achievements
+                if (remoteTotalXP > localTotalXP) {
+                  const localAchievements = bestLocalGame?.unlockedAchievements || [];
+                  const remoteAchievements = row.v?.unlockedAchievements || [];
+                  const mergedAchievements = [...new Set([...remoteAchievements, ...localAchievements])];
+
                   row.v = {
                     ...row.v,
                     unlockedAchievements: mergedAchievements,
                     // Сохраняем максимальные stats
                     stats: {
                       ...row.v?.stats,
-                      bestStreak: Math.max(row.v?.stats?.bestStreak || 0, local.stats?.bestStreak || 0),
-                      perfectDays: Math.max(row.v?.stats?.perfectDays || 0, local.stats?.perfectDays || 0),
-                      totalProducts: Math.max(row.v?.stats?.totalProducts || 0, local.stats?.totalProducts || 0),
-                      totalWater: Math.max(row.v?.stats?.totalWater || 0, local.stats?.totalWater || 0),
-                      totalTrainings: Math.max(row.v?.stats?.totalTrainings || 0, local.stats?.totalTrainings || 0)
+                      bestStreak: Math.max(row.v?.stats?.bestStreak || 0, bestLocalGame?.stats?.bestStreak || 0),
+                      perfectDays: Math.max(row.v?.stats?.perfectDays || 0, bestLocalGame?.stats?.perfectDays || 0),
+                      totalProducts: Math.max(row.v?.stats?.totalProducts || 0, bestLocalGame?.stats?.totalProducts || 0),
+                      totalWater: Math.max(row.v?.stats?.totalWater || 0, bestLocalGame?.stats?.totalWater || 0),
+                      totalTrainings: Math.max(row.v?.stats?.totalTrainings || 0, bestLocalGame?.stats?.totalTrainings || 0)
                     }
                   };
                   logCritical(`🎮 [GAME] MERGED: XP ${localTotalXP} → ${remoteTotalXP}, achievements: ${mergedAchievements.length}`);
+                }
+
+                // Если оба равны нулю — ничего не делаем, пусть remote запишется
+                if (remoteTotalXP === 0 && localTotalXP === 0) {
+                  logCritical(`🎮 [GAME] Both XP=0, accepting remote (may be fresh start)`);
                 }
               }
 

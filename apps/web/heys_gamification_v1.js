@@ -202,7 +202,55 @@
   function loadData() {
     if (_data) return _data;
 
-    const stored = readStoredValue(STORAGE_KEY, null);
+    let stored = readStoredValue(STORAGE_KEY, null);
+
+    // 🛡️ FIX v2.0: Fallback поиск по всем вариантам ключа если основной пустой
+    if (!stored || !stored.totalXP || stored.totalXP === 0) {
+      let bestXP = stored?.totalXP || 0;
+      let bestData = stored;
+
+      try {
+        // 1. Прямой ключ heys_game (legacy без clientId)
+        const legacyRaw = localStorage.getItem('heys_game');
+        if (legacyRaw) {
+          const legacy = JSON.parse(legacyRaw);
+          if (legacy?.totalXP > bestXP) {
+            bestXP = legacy.totalXP;
+            bestData = legacy;
+            console.log('[🎮 Gamification] Found legacy heys_game with XP:', bestXP);
+          }
+        }
+
+        // 2. Поиск по всем ключам *_game (разные clientId)
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.endsWith('_game') && !k.includes('_gamification') && !k.includes('sound')) {
+            try {
+              const raw = localStorage.getItem(k);
+              if (raw) {
+                // Проверяем сжатие
+                const parsed = raw.startsWith('¤Z¤')
+                  ? (HEYS.store?.decompress ? HEYS.store.decompress(raw) : JSON.parse(raw.substring(3)))
+                  : JSON.parse(raw);
+                if (parsed?.totalXP > bestXP) {
+                  bestXP = parsed.totalXP;
+                  bestData = parsed;
+                  console.log(`[🎮 Gamification] Found better data in ${k}: XP=${bestXP}, level=${parsed.level}`);
+                }
+              }
+            } catch (e) { }
+          }
+        }
+      } catch (e) {
+        console.warn('[🎮 Gamification] Fallback search error:', e);
+      }
+
+      if (bestData && bestData !== stored) {
+        stored = bestData;
+        console.log('[🎮 Gamification] Using best found data: XP=', bestXP, 'level=', calculateLevel(bestXP));
+      }
+    }
+
     if (stored) {
       _data = validateAndMigrate(stored);
     } else {
@@ -322,10 +370,30 @@
     };
   }
 
+  // 🔄 Debounce для синхронизации с облаком
+  let _cloudSyncTimer = null;
+  const CLOUD_SYNC_DEBOUNCE_MS = 3000; // 3 секунды debounce
+
+  function scheduleCloudSync() {
+    if (_cloudSyncTimer) clearTimeout(_cloudSyncTimer);
+    _cloudSyncTimer = setTimeout(() => {
+      _cloudSyncTimer = null;
+      // Асинхронная синхронизация — не блокирует UI
+      if (typeof HEYS.game?.syncToCloud === 'function') {
+        HEYS.game.syncToCloud().catch(e => {
+          console.warn('[🎮 Gamification] Background sync failed:', e?.message || e);
+        });
+      }
+    }, CLOUD_SYNC_DEBOUNCE_MS);
+  }
+
   function saveData() {
     if (!_data) return;
     _data.updatedAt = Date.now();
     setStoredValue(STORAGE_KEY, _data);
+
+    // 🔄 Автосинхронизация с облаком (debounced)
+    scheduleCloudSync();
   }
 
   function calculateLevel(totalXP) {
@@ -2274,22 +2342,31 @@
         }
 
         const data = loadData();
+
+        // 🛡️ Не синхронизируем пустые данные в облако
+        if (!data.totalXP || data.totalXP === 0) {
+          console.log('[🎮 Gamification] Skip cloud sync — no XP data');
+          return false;
+        }
+
         const cloudData = {
           totalXP: data.totalXP,
           level: data.level,
           unlockedAchievements: data.unlockedAchievements,
           stats: data.stats,
-          streak: data.streak,
+          dailyActions: data.dailyActions,
+          updatedAt: Date.now(),
           lastUpdated: new Date().toISOString()
         };
 
+        // Сохраняем в ОСНОВНОЙ ключ heys_game (совместимость с sync защитой)
         await HEYS.YandexAPI.rpc('upsert_client_kv_by_session', {
           session_token: HEYS.cloud.getSessionToken(),
-          k: 'heys_gamification',
-          v: JSON.stringify(cloudData)
+          k: STORAGE_KEY, // 'heys_game'
+          v: cloudData    // Отправляем объект, не JSON.stringify
         });
 
-        console.log('[🎮 Gamification] Synced to cloud');
+        console.log('[🎮 Gamification] Synced to cloud: XP=' + data.totalXP + ', level=' + data.level);
         return true;
       } catch (e) {
         console.warn('[🎮 Gamification] Cloud sync failed:', e.message);
@@ -2306,19 +2383,43 @@
           return false;
         }
 
-        const result = await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
+        // Пробуем оба ключа: новый (heys_game) и старый (heys_gamification)
+        let cloudData = null;
+
+        // 1. Новый ключ
+        const result1 = await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
           session_token: HEYS.cloud.getSessionToken(),
-          k: 'heys_gamification'
+          k: STORAGE_KEY // 'heys_game'
         });
 
-        if (result?.v) {
-          const cloudData = JSON.parse(result.v);
+        if (result1?.v) {
+          cloudData = typeof result1.v === 'string' ? JSON.parse(result1.v) : result1.v;
+        }
+
+        // 2. Старый ключ (fallback)
+        if (!cloudData || !cloudData.totalXP) {
+          const result2 = await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
+            session_token: HEYS.cloud.getSessionToken(),
+            k: 'heys_gamification'
+          });
+          if (result2?.v) {
+            const legacyData = typeof result2.v === 'string' ? JSON.parse(result2.v) : result2.v;
+            if (legacyData?.totalXP > (cloudData?.totalXP || 0)) {
+              cloudData = legacyData;
+              console.log('[🎮 Gamification] Found data in legacy key heys_gamification');
+            }
+          }
+        }
+
+        if (cloudData && cloudData.totalXP) {
           const localData = loadData();
 
           // Мержим данные — берём максимальные значения
+          let updated = false;
           if (cloudData.totalXP > localData.totalXP) {
             localData.totalXP = cloudData.totalXP;
-            localData.level = cloudData.level;
+            localData.level = cloudData.level || calculateLevel(cloudData.totalXP);
+            updated = true;
           }
 
           // Объединяем достижения
@@ -2326,10 +2427,16 @@
             ...localData.unlockedAchievements,
             ...(cloudData.unlockedAchievements || [])
           ]);
-          localData.unlockedAchievements = [...allAchievements];
+          if (allAchievements.size > localData.unlockedAchievements.length) {
+            localData.unlockedAchievements = [...allAchievements];
+            updated = true;
+          }
 
-          saveData();
-          console.log('[🎮 Gamification] Loaded from cloud');
+          if (updated) {
+            _data = localData; // Обновляем кэш
+            saveData();
+            console.log('[🎮 Gamification] Loaded from cloud: XP=' + localData.totalXP);
+          }
           return true;
         }
         return false;
