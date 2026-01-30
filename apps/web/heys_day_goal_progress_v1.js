@@ -336,7 +336,15 @@
             })()
           ),
           // Refeed Toggle — справа от прогресс-бара
-          Refeed && React.createElement('div', { className: 'goal-refeed-toggle-wrapper' },
+          Refeed && React.createElement('div', {
+            className: 'goal-refeed-toggle-wrapper',
+            style: {
+              position: 'relative',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }
+          },
             Refeed.renderRefeedToggle({
               isRefeedDay: day.isRefeedDay,
               refeedReason: day.refeedReason,
@@ -350,7 +358,19 @@
                   updatedAt: Date.now()
                 }));
               }
-            })
+            }),
+            React.createElement('div', {
+              style: {
+                position: 'absolute',
+                top: '100%',
+                marginTop: '4px',
+                fontSize: '10px',
+                lineHeight: '12px',
+                color: '#94a3b8',
+                textAlign: 'center',
+                whiteSpace: 'nowrap'
+              }
+            }, day.isRefeedDay ? 'рефид включен' : 'рефид')
           )
         ),
         // Метки зон под полосой (убрано по запросу)
