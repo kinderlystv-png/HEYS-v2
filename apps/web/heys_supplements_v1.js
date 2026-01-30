@@ -216,6 +216,29 @@
     return value;
   }
 
+  function readSessionValue(key, fallback = null) {
+    try {
+      const raw = sessionStorage.getItem(key);
+      if (raw == null) return fallback;
+      return JSON.parse(raw);
+    } catch {
+      return fallback;
+    }
+  }
+
+  function writeSessionValue(key, value) {
+    try {
+      sessionStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      // no-op
+    }
+  }
+
+  function isInteractiveTarget(target) {
+    if (!target || !target.closest) return false;
+    return !!target.closest('button, [role="button"], a, input, textarea, select, [data-supp-collapse-ignore="1"]');
+  }
+
   /**
    * Получить витамины сгруппированные по категориям
    */
@@ -2143,7 +2166,7 @@
       return React.createElement('div', {
         className: 'compact-card supplements-card',
         style: {
-          background: '#fff',
+          background: '#fff1f2',
           borderRadius: '16px',
           padding: '16px',
           marginBottom: '12px',
@@ -2210,6 +2233,24 @@
 
     // v3.3: Проверяем наличие научных данных
     const hasScience = HEYS.Supplements.SCIENCE?.BIOAVAILABILITY;
+
+    const cardStateKey = `heys_supplements_card_${dateKey}`;
+    const isExpanded = readSessionValue(cardStateKey, false);
+
+    const setExpanded = (next) => {
+      writeSessionValue(cardStateKey, !!next);
+      if (onForceUpdate) onForceUpdate();
+    };
+
+    const toggleExpanded = (e) => {
+      if (e?.stopPropagation) e.stopPropagation();
+      setExpanded(!isExpanded);
+    };
+
+    const handleCardClick = (e) => {
+      if (isInteractiveTarget(e?.target)) return;
+      setExpanded(!isExpanded);
+    };
 
     const toggleTaken = (id) => {
       const isTaken = taken.includes(id);
@@ -2420,21 +2461,22 @@
 
     return React.createElement('div', {
       className: 'compact-card supplements-card',
+      onClick: handleCardClick,
       style: {
-        background: '#fff',
+        background: '#fff1f2',
         borderRadius: '16px',
         padding: '16px',
         marginBottom: '12px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
       }
     },
-      // v4.0: Шапка с прогрессом и кнопкой "Мой курс"
+      // v4.1: Шапка (1 строка)
       React.createElement('div', {
         style: {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '12px'
+          marginBottom: '6px'
         }
       },
         // Левая часть: название + прогресс
@@ -2478,9 +2520,8 @@
             }, `${takenCount}/${planned.length}`)
           )
         ),
-        // Правая часть: бонус волны + кнопка курса
+        // Правая часть: бонус волны + кнопка курса + toggle
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-          // Бонус к инсулиновой волне
           insulinBonus < 0 && React.createElement('span', {
             style: {
               fontSize: '10px',
@@ -2492,9 +2533,12 @@
             },
             title: 'Бонус к инсулиновой волне от добавок'
           }, `🌊${Math.round(insulinBonus * 100)}%`),
-          // v4.0: Кнопка "Мой курс" — главная точка входа
           React.createElement('button', {
-            onClick: () => openMyCourseScreen(dateKey, onForceUpdate),
+            'data-supp-collapse-ignore': '1',
+            onClick: (e) => {
+              e.stopPropagation();
+              openMyCourseScreen(dateKey, onForceUpdate);
+            },
             style: {
               background: '#f1f5f9',
               border: '1px solid #e2e8f0',
@@ -2509,97 +2553,124 @@
               gap: '4px'
             },
             title: 'Открыть настройки курса'
-          }, '📊')
+          }, '📊'),
+          React.createElement('button', {
+            'data-supp-collapse-ignore': '1',
+            onClick: toggleExpanded,
+            style: {
+              width: '28px',
+              height: '28px',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0',
+              background: '#f8fafc',
+              color: '#64748b',
+              fontSize: '14px',
+              fontWeight: '700',
+              cursor: 'pointer'
+            },
+            title: isExpanded ? 'Свернуть' : 'Развернуть'
+          }, isExpanded ? '▴' : '▾')
         )
       ),
-      // v3.1: Напоминание по времени
-      (() => {
-        const reminder = getTimeReminder(planned, taken);
-        if (!reminder) return null;
-        return React.createElement('div', {
-          style: {
-            fontSize: '12px',
-            color: reminder.urgency === 'high' ? '#dc2626' : '#d97706',
-            background: reminder.urgency === 'high' ? '#fef2f2' : '#fffbeb',
-            padding: '8px 10px',
-            borderRadius: '8px',
-            marginBottom: '10px',
-            fontWeight: '500'
-          }
-        }, reminder.message);
-      })(),
-      // v3.0: Группы по времени
-      // UX: "Любое время" слито с "Утро" (см. groupByTimeOfDay)
-      ['morning', 'withMeal', 'evening'].map(gid => renderGroup(gid, timeGroups[gid])),
-      // v2.0: Синергии
-      synergies.length > 0 && React.createElement('div', {
-        style: {
-          fontSize: '12px',
-          color: '#16a34a',
-          background: '#f0fdf4',
-          padding: '8px 10px',
-          borderRadius: '8px',
-          marginBottom: '8px'
-        }
-      }, synergies.map((s, i) => React.createElement('div', { key: i }, s))),
-      // v2.0: Конфликты
-      conflicts.length > 0 && React.createElement('div', {
-        style: {
-          fontSize: '12px',
-          color: '#d97706',
-          background: '#fffbeb',
-          padding: '8px 10px',
-          borderRadius: '8px',
-          marginBottom: '8px'
-        }
-      }, conflicts.map((c, i) => React.createElement('div', { key: i }, c))),
-      // v4.0: Кнопка "Выпил все" — главное действие
-      !allTaken && React.createElement('button', {
-        onClick: markAll,
-        style: {
-          width: '100%',
-          padding: '12px',
-          borderRadius: '12px',
-          border: 'none',
-          background: '#3b82f6',
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: '600',
-          color: '#fff',
-          marginTop: '8px',
-          boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)'
-        }
-      }, '✅ Выпил все'),
-      // v4.0: Поздравление при полном выполнении
-      allTaken && React.createElement('div', {
-        style: {
-          textAlign: 'center',
-          padding: '12px',
-          background: '#f0fdf4',
-          borderRadius: '12px',
-          marginTop: '8px'
-        }
-      },
-        React.createElement('span', { style: { fontSize: '18px' } }, '🎉'),
-        React.createElement('span', { style: { fontSize: '13px', color: '#16a34a', fontWeight: '600', marginLeft: '8px' } }, 'Все витамины приняты!')
-      ),
-      // v4.0: Подсказка — компактная и понятная
+      // v4.1: Действие (2 строка)
       React.createElement('div', {
         style: {
-          fontSize: '11px',
-          color: '#94a3b8',
-          textAlign: 'center',
-          marginTop: '10px',
           display: 'flex',
-          justifyContent: 'center',
           alignItems: 'center',
-          gap: '12px',
-          flexWrap: 'wrap'
+          gap: '8px',
+          marginBottom: isExpanded ? '10px' : 0
         }
       },
-        React.createElement('span', null, '👆 Тап = ✅ принял'),
-        hasScience && React.createElement('span', null, '🔬 = подробности'),
-        React.createElement('span', null, '📊 = мой курс')
+        !allTaken && React.createElement('button', {
+          onClick: (e) => {
+            e.stopPropagation();
+            markAll();
+          },
+          style: {
+            flex: 1,
+            padding: '10px 12px',
+            borderRadius: '10px',
+            border: '1px solid #60a5fa',
+            background: '#f8fafc',
+            cursor: 'pointer',
+            fontSize: '13px',
+            fontWeight: '600',
+            color: '#2563eb',
+            boxShadow: '0 1px 2px rgba(59, 130, 246, 0.12)'
+          }
+        }, 'Выпить все'),
+        allTaken && React.createElement('div', {
+          style: {
+            flex: 1,
+            textAlign: 'center',
+            padding: '8px 10px',
+            background: '#f0fdf4',
+            borderRadius: '10px'
+          }
+        },
+          React.createElement('span', { style: { fontSize: '12px', color: '#16a34a', fontWeight: '600' } }, '🎉 Все витамины приняты')
+        )
+      ),
+      isExpanded && React.createElement(React.Fragment, null,
+        // v3.1: Напоминание по времени
+        (() => {
+          const reminder = getTimeReminder(planned, taken);
+          if (!reminder) return null;
+          return React.createElement('div', {
+            style: {
+              fontSize: '12px',
+              color: reminder.urgency === 'high' ? '#dc2626' : '#d97706',
+              background: reminder.urgency === 'high' ? '#fef2f2' : '#fffbeb',
+              padding: '8px 10px',
+              borderRadius: '8px',
+              marginBottom: '10px',
+              fontWeight: '500'
+            }
+          }, reminder.message);
+        })(),
+        // v3.0: Группы по времени
+        // UX: "Любое время" слито с "Утро" (см. groupByTimeOfDay)
+        ['morning', 'withMeal', 'evening'].map(gid => renderGroup(gid, timeGroups[gid])),
+        // v2.0: Синергии
+        synergies.length > 0 && React.createElement('div', {
+          style: {
+            fontSize: '12px',
+            color: '#16a34a',
+            background: '#f0fdf4',
+            padding: '8px 10px',
+            borderRadius: '8px',
+            marginBottom: '8px'
+          }
+        }, synergies.map((s, i) => React.createElement('div', { key: i }, s))),
+        // v2.0: Конфликты
+        conflicts.length > 0 && React.createElement('div', {
+          style: {
+            fontSize: '12px',
+            color: '#d97706',
+            background: '#fffbeb',
+            padding: '8px 10px',
+            borderRadius: '8px',
+            marginBottom: '8px'
+          }
+        }, conflicts.map((c, i) => React.createElement('div', { key: i }, c))),
+        // v4.0: Подсказка — компактная и понятная
+        React.createElement('div', {
+          style: {
+            fontSize: '11px',
+            color: '#94a3b8',
+            textAlign: 'center',
+            marginTop: '10px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '12px',
+            flexWrap: 'wrap'
+          }
+        },
+          React.createElement('span', null, '👆 Тап = ✅ принял'),
+          hasScience && React.createElement('span', null, '🔬 = подробности'),
+          React.createElement('span', null, '📊 = мой курс')
+        )
       )
     );
   }
