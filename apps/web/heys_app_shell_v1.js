@@ -86,6 +86,45 @@
             setActiveTab,
         } = props;
 
+        const haptic = HEYS?.haptic || (() => { });
+        const pad2 = (n) => String(n).padStart(2, '0');
+        const formatLocalISO = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+        const shiftISO = (iso, delta) => {
+            if (!iso) return null;
+            const d = new Date(iso + 'T12:00:00');
+            d.setDate(d.getDate() + delta);
+            return formatLocalISO(d);
+        };
+        const getDefaultPrefetchDates = (nextDate) => {
+            const dates = [nextDate, shiftISO(nextDate, -1), shiftISO(nextDate, 1)];
+            return Array.from(new Set(dates.filter(Boolean)));
+        };
+
+        const selectDateWithPrefetch = (nextDate, options = {}) => {
+            if (!nextDate) return;
+            const prefetchDates = Array.isArray(options.prefetchDates) && options.prefetchDates.length
+                ? options.prefetchDates
+                : getDefaultPrefetchDates(nextDate);
+
+            try {
+                if (HEYS?.Day?.requestFlush) HEYS.Day.requestFlush({ force: true });
+            } catch (e) { }
+
+            const applyDate = () => {
+                setSelectedDate(nextDate);
+                haptic('light');
+            };
+
+            if (HEYS?.cloud?.fetchDays && prefetchDates.length > 0) {
+                HEYS.cloud.fetchDays(prefetchDates)
+                    .then(() => applyDate())
+                    .catch(() => applyDate());
+                return;
+            }
+
+            applyDate();
+        };
+
         if (!clientId) return null;
 
         return React.createElement(
@@ -451,7 +490,8 @@
                                     if (d.getHours() < 3) d.setDate(d.getDate() - 1);
                                     d.setDate(d.getDate() - 1);
                                     // Локальное форматирование (не UTC!)
-                                    setSelectedDate(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'));
+                                    const nextDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                                    selectDateWithPrefetch(nextDate, { reason: 'quick-yesterday' });
                                 },
                                 title: 'Перейти на вчера'
                             }, (() => {
@@ -464,7 +504,7 @@
                             // Кнопка быстрого перехода на сегодня (учитываем ночной порог)
                             React.createElement('button', {
                                 className: 'today-quick-btn' + (selectedDate === todayISO() ? ' active' : ''),
-                                onClick: () => setSelectedDate(todayISO()),
+                                onClick: () => selectDateWithPrefetch(todayISO(), { reason: 'quick-today' }),
                                 title: 'Перейти на сегодня'
                             }, (() => {
                                 // До 3:00 — показываем вчерашнее число
@@ -475,9 +515,9 @@
                             // DatePicker
                             React.createElement(window.HEYS.DatePicker, {
                                 valueISO: selectedDate,
-                                onSelect: setSelectedDate,
+                                onSelect: (nextDate) => selectDateWithPrefetch(nextDate, { reason: 'date-picker' }),
                                 onRemove: () => {
-                                    setSelectedDate(todayISO());
+                                    selectDateWithPrefetch(todayISO(), { reason: 'date-picker-clear' });
                                 },
                                 activeDays: datePickerActiveDays,
                                 // Функция для загрузки данных при смене месяца
@@ -516,6 +556,12 @@
             setDefaultTab,
         } = props;
 
+        const [settingsMenuOpen, setSettingsMenuOpen] = React.useState(false);
+
+        React.useEffect(() => {
+            if (settingsMenuOpen) setSettingsMenuOpen(false);
+        }, [tab]);
+
         return React.createElement(
             'div',
             { className: 'tabs' + (widgetsEditMode ? ' tabs--edit-mode' : '') },
@@ -526,42 +572,28 @@
                 React.createElement('span', { className: 'default-tab-hint__icon' }, '🏠'),
                 React.createElement('span', { className: 'default-tab-hint__text' }, 'Нажми на вкладку, чтобы сделать её домашней'),
             ),
-            // Рацион — доступен на всех устройствах (не домашняя)
+            // Советы — первая кнопка в меню
             React.createElement(
                 'div',
                 {
-                    className: 'tab ' + (tab === 'ration' ? 'active' : '') + (widgetsEditMode ? ' tab--disabled-home' : ''),
-                    onClick: () => !widgetsEditMode && setTab('ration'),
-                },
-                React.createElement('span', { className: 'tab-icon' }, '📦'),
-                React.createElement('span', { className: 'tab-text' }, 'База'),
-            ),
-            // Виджеты — слева (тройной тап = debug panel)
-            React.createElement(
-                'div',
-                {
-                    className: 'tab ' + (tab === 'widgets' ? 'active' : '') + (widgetsEditMode ? ' tab--home-candidate' : '') + (widgetsEditMode && defaultTab === 'widgets' ? ' default-tab-indicator' : ''),
-                    id: 'tour-widgets-tab',
+                    className: 'tab tab-advice' + (widgetsEditMode ? ' tab--disabled-home' : ''),
                     onClick: () => {
-                        if (widgetsEditMode) {
-                            setDefaultTab('widgets');
-                        } else {
-                            window.HEYS?.debugPanel?.handleTap();
+                        if (tab !== 'stats' && tab !== 'diary') {
+                            setTab('stats');
                         }
-                        setTab('widgets');
+                        window.dispatchEvent(new CustomEvent('heysShowAdvice'));
                     },
                 },
-                widgetsEditMode && defaultTab === 'widgets' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
-                React.createElement('span', { className: 'tab-icon' }, '🎛️'),
-                React.createElement('span', { className: 'tab-text' }, 'Виджеты'),
+                React.createElement('span', { className: 'tab-icon' }, '💡'),
+                React.createElement('span', { className: 'tab-advice-badge', id: 'nav-advice-badge' }),
             ),
-            // iOS Switch группа для stats/diary — ПО ЦЕНТРУ + подписи
+            // iOS Switch группа для stats/diary/widgets/insights/month — ПО ЦЕНТРУ + подписи
             React.createElement(
                 'div',
-                { className: 'tab-switch-wrapper tab-switch-wrapper--quad' },
+                { className: 'tab-switch-wrapper tab-switch-wrapper--quint' },
                 React.createElement(
                     'div',
-                    { className: 'tab-switch-group tab-switch-group--quad' },
+                    { className: 'tab-switch-group tab-switch-group--quint' },
                     React.createElement(
                         'div',
                         {
@@ -590,6 +622,24 @@
                         widgetsEditMode && defaultTab === 'diary' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
                         React.createElement('span', { className: 'tab-icon' }, '🍴'),
                         React.createElement('span', { className: 'tab-text' }, 'Еда'),
+                    ),
+                    React.createElement(
+                        'div',
+                        {
+                            className: 'tab tab-switch ' + (tab === 'widgets' ? 'active' : '') + (widgetsEditMode && defaultTab === 'widgets' ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
+                            id: 'tour-widgets-tab',
+                            onClick: () => {
+                                if (widgetsEditMode) {
+                                    setDefaultTab('widgets');
+                                } else {
+                                    window.HEYS?.debugPanel?.handleTap();
+                                }
+                                setTab('widgets');
+                            },
+                        },
+                        widgetsEditMode && defaultTab === 'widgets' && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
+                        React.createElement('span', { className: 'tab-icon' }, '🎛️'),
+                        React.createElement('span', { className: 'tab-text' }, 'Виджеты'),
                     ),
                     React.createElement(
                         'div',
@@ -623,39 +673,62 @@
                 // Подписи под переключателем
                 React.createElement(
                     'div',
-                    { className: 'tab-switch-labels tab-switch-labels--quad' },
+                    { className: 'tab-switch-labels tab-switch-labels--quint' },
                     React.createElement('span', { className: 'tab-switch-label' + (tab === 'stats' ? ' active' : ''), onClick: () => setTab('stats') }, 'Отчёты'),
                     React.createElement('span', { className: 'tab-switch-label' + (tab === 'diary' ? ' active' : ''), onClick: () => setTab('diary') }, 'Дневник'),
+                    React.createElement('span', { className: 'tab-switch-label' + (tab === 'widgets' ? ' active' : ''), onClick: () => setTab('widgets') }, 'Виджеты'),
                     React.createElement('span', { className: 'tab-switch-label' + (tab === 'insights' ? ' active' : ''), onClick: () => setTab('insights') }, 'Инсайты'),
                     React.createElement('span', { className: 'tab-switch-label' + (tab === 'month' ? ' active' : ''), onClick: () => setTab('month') }, 'Месяц'),
                 ),
             ),
-            // Советы — кнопка между переключателем и настройками
+            // Настройки — раскрывающееся меню вверх
             React.createElement(
                 'div',
-                {
-                    className: 'tab tab-advice' + (widgetsEditMode ? ' tab--disabled-home' : ''),
-                    onClick: () => {
-                        // Переключаемся на stats если не там, и показываем советы
-                        if (tab !== 'stats' && tab !== 'diary') {
-                            setTab('stats');
-                        }
-                        // Триггерим показ советов через глобальный event
-                        window.dispatchEvent(new CustomEvent('heysShowAdvice'));
+                { className: 'tab-settings-wrap' },
+                settingsMenuOpen && React.createElement('div', {
+                    className: 'tab-settings-backdrop',
+                    onClick: () => setSettingsMenuOpen(false)
+                }),
+                React.createElement(
+                    'div',
+                    {
+                        className: 'tab ' + (tab === 'user' ? 'active' : '') + (widgetsEditMode ? ' tab--disabled-home' : ''),
+                        onClick: () => {
+                            if (widgetsEditMode) return;
+                            setSettingsMenuOpen(!settingsMenuOpen);
+                        },
                     },
-                },
-                React.createElement('span', { className: 'tab-icon' }, '💡'),
-                React.createElement('span', { className: 'tab-advice-badge', id: 'nav-advice-badge' }),
-            ),
-            // Настройки — справа
-            React.createElement(
-                'div',
-                {
-                    className: 'tab ' + (tab === 'user' ? 'active' : '') + (widgetsEditMode ? ' tab--disabled-home' : ''),
-                    onClick: () => setTab('user'),
-                },
-                React.createElement('span', { className: 'tab-icon' }, '⚙️'),
-                React.createElement('span', { className: 'tab-text' }, 'Настройки'),
+                    React.createElement('span', { className: 'tab-icon' }, '⚙️'),
+                    React.createElement('span', { className: 'tab-text' }, 'Настройки'),
+                ),
+                settingsMenuOpen && React.createElement(
+                    'div',
+                    { className: 'tab-settings-menu' },
+                    React.createElement(
+                        'div',
+                        {
+                            className: 'tab-settings-item',
+                            onClick: () => {
+                                setSettingsMenuOpen(false);
+                                setTab('user');
+                            }
+                        },
+                        React.createElement('span', { className: 'tab-settings-icon' }, '⚙️'),
+                        React.createElement('span', null, 'Настройки')
+                    ),
+                    React.createElement(
+                        'div',
+                        {
+                            className: 'tab-settings-item',
+                            onClick: () => {
+                                setSettingsMenuOpen(false);
+                                setTab('ration');
+                            }
+                        },
+                        React.createElement('span', { className: 'tab-settings-icon' }, '📦'),
+                        React.createElement('span', null, 'Список продуктов')
+                    )
+                )
             ),
         );
     }
