@@ -965,6 +965,32 @@
       return sortByCreatedAtDesc(result);
     }, [products, query, searchIndex]);
 
+    // ══════════════════════════════════════════════════════════════════════════════════
+    // 📊 UNIFIED: filteredShared — единый useMemo для shared данных (вместо inline IIFE)
+    // ══════════════════════════════════════════════════════════════════════════════════
+    const filteredShared = React.useMemo(() => {
+      const toTs = (v) => {
+        if (v == null) return 0;
+        if (typeof v === 'number') return v;
+        const parsed = Date.parse(v);
+        return Number.isFinite(parsed) ? parsed : 0;
+      };
+      const sortByCreatedAtDesc = (list) => {
+        return [...list].sort((a, b) => {
+          const aTs = toTs(a?.createdAt ?? a?.created_at ?? a?.updatedAt ?? a?.updated_at);
+          const bTs = toTs(b?.createdAt ?? b?.created_at ?? b?.updatedAt ?? b?.updated_at);
+          return bTs - aTs;
+        });
+      };
+
+      const q = (sharedQuery || '').toLowerCase().trim();
+      const filtered = q.length >= 2
+        ? allSharedProducts.filter(p => (p.name || '').toLowerCase().includes(q))
+        : allSharedProducts;
+
+      return sortByCreatedAtDesc(filtered);
+    }, [allSharedProducts, sharedQuery]);
+
     // Слушатель события обновления продуктов (для реактивности после sync)
     // 🔒 Ref для пропуска первого sync (предотвращает мерцание)
     const initialSyncDoneRef = React.useRef(false);
@@ -2480,6 +2506,90 @@
       return derived.kcal100;
     };
 
+    // ═══════════════════════════════════════════════════════════════════
+    // 📊 UNIFIED TABLE HEAD — единый заголовок для обеих таблиц продуктов
+    // ═══════════════════════════════════════════════════════════════════
+    const renderProductTableHead = () => {
+      return React.createElement('thead', null,
+        React.createElement('tr', null,
+          React.createElement('th', null, 'Название'),
+          React.createElement('th', { title: 'Калории на 100г' }, 'Ккал'),
+          React.createElement('th', { title: 'Углеводы (авто)' }, 'У'),
+          React.createElement('th', { title: 'Простые углеводы' }, 'Пр'),
+          React.createElement('th', { title: 'Сложные углеводы' }, 'Сл'),
+          React.createElement('th', { title: 'Белки' }, 'Б'),
+          React.createElement('th', { title: 'Жиры (авто)' }, 'Ж'),
+          React.createElement('th', { title: 'Вредные жиры' }, 'Вр'),
+          React.createElement('th', { title: 'Полезные жиры' }, 'Пол'),
+          React.createElement('th', { title: 'Транс-жиры' }, 'Тр'),
+          React.createElement('th', { title: 'Клетчатка' }, 'Кл'),
+          React.createElement('th', { title: 'Гликемический индекс' }, 'ГИ'),
+          React.createElement('th', { title: 'Индекс вредности' }, 'Вред'),
+          React.createElement('th', { title: 'Натрий (мг/100г)' }, 'Na'),
+          React.createElement('th', { title: 'Омега-3 (г/100г)' }, 'Ω3'),
+          React.createElement('th', { title: 'Омега-6 (г/100г)' }, 'Ω6'),
+          React.createElement('th', { title: 'NOVA группа' }, 'NOVA'),
+          React.createElement('th', { title: 'Добавки (E-коды)' }, 'Add'),
+          React.createElement('th', { title: 'Нутриентная плотность (0–100)' }, 'ND'),
+          React.createElement('th', { title: 'Органик' }, 'Org'),
+          React.createElement('th', { title: 'Цельнозерновой' }, 'ЦЗ'),
+          React.createElement('th', { title: 'Ферментированный' }, 'Ферм'),
+          React.createElement('th', { title: 'Сырой' }, 'Raw'),
+          React.createElement('th', { title: 'Витамин A (% DV)' }, 'A'),
+          React.createElement('th', { title: 'Витамин C (% DV)' }, 'C'),
+          React.createElement('th', { title: 'Витамин D (% DV)' }, 'D'),
+          React.createElement('th', { title: 'Витамин E (% DV)' }, 'E'),
+          React.createElement('th', { title: 'Витамин K (% DV)' }, 'K'),
+          React.createElement('th', { title: 'Витамин B1 (% DV)' }, 'B1'),
+          React.createElement('th', { title: 'Витамин B2 (% DV)' }, 'B2'),
+          React.createElement('th', { title: 'Витамин B3 (% DV)' }, 'B3'),
+          React.createElement('th', { title: 'Витамин B6 (% DV)' }, 'B6'),
+          React.createElement('th', { title: 'Витамин B9 (% DV)' }, 'B9'),
+          React.createElement('th', { title: 'Витамин B12 (% DV)' }, 'B12'),
+          React.createElement('th', { title: 'Кальций (% DV)' }, 'Ca'),
+          React.createElement('th', { title: 'Железо (% DV)' }, 'Fe'),
+          React.createElement('th', { title: 'Магний (% DV)' }, 'Mg'),
+          React.createElement('th', { title: 'Фосфор (% DV)' }, 'P'),
+          React.createElement('th', { title: 'Калий (% DV)' }, 'K'),
+          React.createElement('th', { title: 'Цинк (% DV)' }, 'Zn'),
+          React.createElement('th', { title: 'Селен (% DV)' }, 'Se'),
+          React.createElement('th', { title: 'Йод (% DV)' }, 'I'),
+          React.createElement('th', { title: 'Порции' }, 'Порц'),
+          React.createElement('th', null, '')
+        )
+      );
+    };
+
+    // ══════════════════════════════════════════════════════════════════════════════════
+    // 📊 UnifiedProductTable — единый компонент таблицы для Personal и Shared
+    // ══════════════════════════════════════════════════════════════════════════════════
+    const UnifiedProductTable = ({ mode, data, loading, callbacks }) => {
+      if (loading) {
+        return React.createElement('div', {
+          style: { padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }
+        }, '⏳ Загрузка продуктов...');
+      }
+
+      if (!data || data.length === 0) {
+        return React.createElement('div', {
+          style: { padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }
+        }, 'Нет продуктов');
+      }
+
+      return React.createElement('div', { className: 'products-table-scroll' },
+        React.createElement('table', { className: 'products-table' },
+          renderProductTableHead(),
+          React.createElement('tbody', null,
+            data.map((p, idx) => renderProductTableRow(p, {
+              mode,
+              idx,
+              ...callbacks
+            }))
+          )
+        )
+      );
+    };
+
     const renderProductTableRow = (product, options = {}) => {
       const {
         mode = 'personal',
@@ -3149,7 +3259,7 @@
             )
           ),
 
-          // === ТАБЛИЦА ПРОДУКТОВ ===
+          // === ТАБЛИЦА ПРОДУКТОВ (Personal) ===
           React.createElement('div', { className: 'card tone-blue' },
             React.createElement('div', { className: 'topbar' },
               React.createElement('div', { className: 'row' },
@@ -3160,71 +3270,18 @@
                 React.createElement('button', { className: 'btn acc', onClick: () => setShowModal(true) }, '+ Добавить продукт')
               )
             ),
-            React.createElement('div', { className: 'products-table-scroll' },
-              React.createElement('table', { className: 'products-table' },
-                React.createElement('thead', null,
-                  React.createElement('tr', null,
-                    React.createElement('th', null, 'Название'),
-                    React.createElement('th', { title: 'Калории на 100г' }, 'Ккал'),
-                    React.createElement('th', { title: 'Углеводы (авто)' }, 'У'),
-                    React.createElement('th', { title: 'Простые углеводы' }, 'Пр'),
-                    React.createElement('th', { title: 'Сложные углеводы' }, 'Сл'),
-                    React.createElement('th', { title: 'Белки' }, 'Б'),
-                    React.createElement('th', { title: 'Жиры (авто)' }, 'Ж'),
-                    React.createElement('th', { title: 'Вредные жиры' }, 'Вр'),
-                    React.createElement('th', { title: 'Полезные жиры' }, 'Пол'),
-                    React.createElement('th', { title: 'Транс-жиры' }, 'Тр'),
-                    React.createElement('th', { title: 'Клетчатка' }, 'Кл'),
-                    React.createElement('th', { title: 'Гликемический индекс' }, 'ГИ'),
-                    React.createElement('th', { title: 'Индекс вредности' }, 'Вред'),
-                    React.createElement('th', { title: 'Натрий (мг/100г)' }, 'Na'),
-                    React.createElement('th', { title: 'Омега-3 (г/100г)' }, 'Ω3'),
-                    React.createElement('th', { title: 'Омега-6 (г/100г)' }, 'Ω6'),
-                    React.createElement('th', { title: 'NOVA группа' }, 'NOVA'),
-                    React.createElement('th', { title: 'Добавки (E-коды)' }, 'Add'),
-                    React.createElement('th', { title: 'Нутриентная плотность (0–100)' }, 'ND'),
-                    React.createElement('th', { title: 'Органик' }, 'Org'),
-                    React.createElement('th', { title: 'Цельнозерновой' }, 'ЦЗ'),
-                    React.createElement('th', { title: 'Ферментированный' }, 'Ферм'),
-                    React.createElement('th', { title: 'Сырой' }, 'Raw'),
-                    React.createElement('th', { title: 'Витамин A (% DV)' }, 'A'),
-                    React.createElement('th', { title: 'Витамин C (% DV)' }, 'C'),
-                    React.createElement('th', { title: 'Витамин D (% DV)' }, 'D'),
-                    React.createElement('th', { title: 'Витамин E (% DV)' }, 'E'),
-                    React.createElement('th', { title: 'Витамин K (% DV)' }, 'K'),
-                    React.createElement('th', { title: 'Витамин B1 (% DV)' }, 'B1'),
-                    React.createElement('th', { title: 'Витамин B2 (% DV)' }, 'B2'),
-                    React.createElement('th', { title: 'Витамин B3 (% DV)' }, 'B3'),
-                    React.createElement('th', { title: 'Витамин B6 (% DV)' }, 'B6'),
-                    React.createElement('th', { title: 'Витамин B9 (% DV)' }, 'B9'),
-                    React.createElement('th', { title: 'Витамин B12 (% DV)' }, 'B12'),
-                    React.createElement('th', { title: 'Кальций (% DV)' }, 'Ca'),
-                    React.createElement('th', { title: 'Железо (% DV)' }, 'Fe'),
-                    React.createElement('th', { title: 'Магний (% DV)' }, 'Mg'),
-                    React.createElement('th', { title: 'Фосфор (% DV)' }, 'P'),
-                    React.createElement('th', { title: 'Калий (% DV)' }, 'K'),
-                    React.createElement('th', { title: 'Цинк (% DV)' }, 'Zn'),
-                    React.createElement('th', { title: 'Селен (% DV)' }, 'Se'),
-                    React.createElement('th', { title: 'Йод (% DV)' }, 'I'),
-                    React.createElement('th', { title: 'Порции' }, 'Порц'),
-                    React.createElement('th', null, '')
-                  )
-                ),
-                React.createElement('tbody', null,
-                  // Ограничиваем рендеринг для производительности (29k+ продуктов = тормоза)
-                  (showAll ? filtered : filtered.slice(0, DISPLAY_LIMIT)).map((p, idx) =>
-                    renderProductTableRow(p, {
-                      mode: 'personal',
-                      idx,
-                      onUpdateRow: updateRow,
-                      onOpenNameEditor: openProductNameEditor,
-                      onOpenPortionsEditor: openPortionsEditor,
-                      onDeleteRow: deleteRow
-                    })
-                  )
-                )
-              )
-            ),
+            // 📊 Unified Table Component
+            React.createElement(UnifiedProductTable, {
+              mode: 'personal',
+              data: showAll ? filtered : filtered.slice(0, DISPLAY_LIMIT),
+              loading: false,
+              callbacks: {
+                onUpdateRow: updateRow,
+                onOpenNameEditor: openProductNameEditor,
+                onOpenPortionsEditor: openPortionsEditor,
+                onDeleteRow: deleteRow
+              }
+            }),
             // Кнопка "Показать ещё" если продуктов больше лимита
             filtered.length > DISPLAY_LIMIT && !showAll && React.createElement('div', { style: { textAlign: 'center', marginTop: '8px' } },
               React.createElement('button', { className: 'btn', onClick: () => setShowAll(true) },
@@ -3310,6 +3367,7 @@
           ),
 
           // Таблица ВСЕХ продуктов общей базы (как в личной вкладке)
+          // === ТАБЛИЦА ПРОДУКТОВ (Shared) ===
           React.createElement('div', { className: 'card tone-blue' },
             React.createElement('div', { className: 'topbar' },
               React.createElement('div', { className: 'row' },
@@ -3320,10 +3378,7 @@
                   style: { minWidth: '260px' }
                 }),
                 React.createElement('span', { className: 'muted' },
-                  allSharedLoading ? '⏳ Загрузка...' : `Найдено: ${sharedQuery.length >= 2
-                    ? allSharedProducts.filter(p => (p.name || '').toLowerCase().includes(sharedQuery.toLowerCase())).length
-                    : allSharedProducts.length
-                    } из ${allSharedProducts.length}`
+                  allSharedLoading ? '⏳ Загрузка...' : `Найдено: ${filteredShared.length} из ${allSharedProducts.length}`
                 )
               ),
               React.createElement('button', {
@@ -3332,96 +3387,19 @@
                 style: { marginLeft: '8px' }
               }, '🔄 Обновить')
             ),
-            allSharedLoading ? (
-              React.createElement('div', { style: { padding: '32px', textAlign: 'center', color: 'var(--text-muted)' } },
-                '⏳ Загрузка продуктов из общей базы...'
-              )
-            ) : (
-              React.createElement('div', { className: 'products-table-scroll' },
-                React.createElement('table', { className: 'products-table' },
-                  React.createElement('thead', null,
-                    React.createElement('tr', null,
-                      React.createElement('th', null, 'Название'),
-                      React.createElement('th', { title: 'Калории на 100г' }, 'Ккал'),
-                      React.createElement('th', { title: 'Углеводы' }, 'У'),
-                      React.createElement('th', { title: 'Простые углеводы' }, 'Пр'),
-                      React.createElement('th', { title: 'Сложные углеводы' }, 'Сл'),
-                      React.createElement('th', { title: 'Белки' }, 'Б'),
-                      React.createElement('th', { title: 'Жиры' }, 'Ж'),
-                      React.createElement('th', { title: 'Вредные жиры' }, 'Вр'),
-                      React.createElement('th', { title: 'Полезные жиры' }, 'Пол'),
-                      React.createElement('th', { title: 'Транс-жиры' }, 'Тр'),
-                      React.createElement('th', { title: 'Клетчатка' }, 'Кл'),
-                      React.createElement('th', { title: 'Гликемический индекс' }, 'ГИ'),
-                      React.createElement('th', { title: 'Индекс вредности' }, 'Вред'),
-                      React.createElement('th', { title: 'Натрий (мг/100г)' }, 'Na'),
-                      React.createElement('th', { title: 'Омега-3 (г/100г)' }, 'Ω3'),
-                      React.createElement('th', { title: 'Омега-6 (г/100г)' }, 'Ω6'),
-                      React.createElement('th', { title: 'NOVA группа' }, 'NOVA'),
-                      React.createElement('th', { title: 'Добавки (E-коды)' }, 'Add'),
-                      React.createElement('th', { title: 'Нутриентная плотность (0–100)' }, 'ND'),
-                      React.createElement('th', { title: 'Органик' }, 'Org'),
-                      React.createElement('th', { title: 'Цельнозерновой' }, 'ЦЗ'),
-                      React.createElement('th', { title: 'Ферментированный' }, 'Ферм'),
-                      React.createElement('th', { title: 'Сырой' }, 'Raw'),
-                      React.createElement('th', { title: 'Витамин A (% DV)' }, 'A'),
-                      React.createElement('th', { title: 'Витамин C (% DV)' }, 'C'),
-                      React.createElement('th', { title: 'Витамин D (% DV)' }, 'D'),
-                      React.createElement('th', { title: 'Витамин E (% DV)' }, 'E'),
-                      React.createElement('th', { title: 'Витамин K (% DV)' }, 'K'),
-                      React.createElement('th', { title: 'Витамин B1 (% DV)' }, 'B1'),
-                      React.createElement('th', { title: 'Витамин B2 (% DV)' }, 'B2'),
-                      React.createElement('th', { title: 'Витамин B3 (% DV)' }, 'B3'),
-                      React.createElement('th', { title: 'Витамин B6 (% DV)' }, 'B6'),
-                      React.createElement('th', { title: 'Витамин B9 (% DV)' }, 'B9'),
-                      React.createElement('th', { title: 'Витамин B12 (% DV)' }, 'B12'),
-                      React.createElement('th', { title: 'Кальций (% DV)' }, 'Ca'),
-                      React.createElement('th', { title: 'Железо (% DV)' }, 'Fe'),
-                      React.createElement('th', { title: 'Магний (% DV)' }, 'Mg'),
-                      React.createElement('th', { title: 'Фосфор (% DV)' }, 'P'),
-                      React.createElement('th', { title: 'Калий (% DV)' }, 'K'),
-                      React.createElement('th', { title: 'Цинк (% DV)' }, 'Zn'),
-                      React.createElement('th', { title: 'Селен (% DV)' }, 'Se'),
-                      React.createElement('th', { title: 'Йод (% DV)' }, 'I'),
-                      React.createElement('th', { title: 'Порции' }, 'Порц'),
-                      React.createElement('th', null, '')
-                    )
-                  ),
-                  React.createElement('tbody', null,
-                    (() => {
-                      // Фильтрация по поиску
-                      const toTs = (v) => {
-                        if (v == null) return 0;
-                        if (typeof v === 'number') return v;
-                        const parsed = Date.parse(v);
-                        return Number.isFinite(parsed) ? parsed : 0;
-                      };
-                      const sortByCreatedAtDesc = (list) => {
-                        return [...list].sort((a, b) => {
-                          const aTs = toTs(a?.createdAt ?? a?.created_at ?? a?.updatedAt ?? a?.updated_at);
-                          const bTs = toTs(b?.createdAt ?? b?.created_at ?? b?.updatedAt ?? b?.updated_at);
-                          return bTs - aTs;
-                        });
-                      };
-                      const filteredShared = sharedQuery.length >= 2
-                        ? allSharedProducts.filter(p => (p.name || '').toLowerCase().includes(sharedQuery.toLowerCase()))
-                        : allSharedProducts;
-                      const sortedShared = sortByCreatedAtDesc(filteredShared);
-                      return sortedShared.map((p, idx) => renderProductTableRow(p, {
-                        mode: 'shared',
-                        idx,
-                        isCurator,
-                        onCloneShared: cloneSharedProduct,
-                        onHideShared: hideSharedProduct,
-                        onDeleteShared: deleteSharedProduct,
-                        onOpenSharedPortionsEditor: openSharedPortionsEditor
-                      }));
-                    })()
-                  )
-                )
-              )
-            ),
-            // Без лимита отображения — полный список
+            // 📊 Unified Table Component
+            React.createElement(UnifiedProductTable, {
+              mode: 'shared',
+              data: filteredShared,
+              loading: allSharedLoading,
+              callbacks: {
+                isCurator,
+                onCloneShared: cloneSharedProduct,
+                onHideShared: hideSharedProduct,
+                onDeleteShared: deleteSharedProduct,
+                onOpenSharedPortionsEditor: openSharedPortionsEditor
+              }
+            })
           )
         )
       ),

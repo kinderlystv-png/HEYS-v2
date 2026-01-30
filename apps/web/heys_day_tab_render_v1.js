@@ -72,6 +72,10 @@
             day: ctx.day,
             mealsUI: ctx.mealsUI,
             daySummary: ctx.daySummary,
+            caloricDebt: ctx.caloricDebt,
+            eatenKcal: ctx.eatenKcal,
+            optimum: ctx.optimum,
+            date: ctx.date,
             HEYS: heysRef
         }) || null;
 

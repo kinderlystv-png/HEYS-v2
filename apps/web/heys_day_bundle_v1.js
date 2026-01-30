@@ -6022,6 +6022,10 @@
             day,
             mealsUI,
             daySummary,
+            caloricDebt,
+            eatenKcal,
+            optimum,
+            date,
             HEYS: rootHEYs
         } = params || {};
 
@@ -6041,6 +6045,25 @@
             HEYS: app
         }) || null;
 
+        const refeedCard = app.Refeed?.renderRefeedCard?.({
+            isRefeedDay: day?.isRefeedDay,
+            refeedReason: day?.refeedReason,
+            caloricDebt,
+            eatenKcal,
+            optimum
+        }) || null;
+
+        const dateKey = date || day?.date;
+        const supplementsCard = dateKey && app.Supplements?.renderCard?.({
+            dateKey,
+            dayData: day,
+            onForceUpdate: () => {
+                window.dispatchEvent(new CustomEvent('heys:day-updated', {
+                    detail: { date: dateKey, source: 'supplements-update', forceReload: true }
+                }));
+            }
+        }) || null;
+
         if (!showDiary) return insulinIndicator;
 
         return React.createElement(React.Fragment, null,
@@ -6058,6 +6081,8 @@
                 }
             }, 'ОСТАЛОСЬ НА СЕГОДНЯ'),
             goalProgressBar,
+            refeedCard,
+            supplementsCard,
             mealsChart,
             insulinIndicator,
             React.createElement('h2', {
