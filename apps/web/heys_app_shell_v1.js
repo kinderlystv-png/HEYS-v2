@@ -564,7 +564,7 @@
 
         return React.createElement(
             'div',
-            { className: 'tabs' + (widgetsEditMode ? ' tabs--edit-mode' : '') },
+            { className: 'tabs' + (widgetsEditMode ? ' tabs--edit-mode' : '') + (settingsMenuOpen ? ' tabs--settings-open' : '') },
             // Подсказка в режиме редактирования (внутри tabs для абсолютного позиционирования)
             widgetsEditMode && React.createElement(
                 'div',
