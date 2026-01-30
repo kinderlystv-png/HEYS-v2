@@ -69,7 +69,10 @@
             optimum
         }) || null;
 
-        const dateKey = date || day?.date;
+        const dateKey = date
+            || day?.date
+            || app.models?.todayISO?.()
+            || new Date().toISOString().slice(0, 10);
         if (!app.Supplements?.renderCard) ensureSupplementsModule();
         const supplementsCard = dateKey && app.Supplements?.renderCard?.({
             dateKey,
