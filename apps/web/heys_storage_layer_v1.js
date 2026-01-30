@@ -604,7 +604,8 @@
     });
   }
 
-  // 🔧 Экспорт decompress для использования в cloud sync (чтобы не сохранять сжатые строки)
+  // 🔧 Экспорт compress/decompress для использования в cloud sync
   Store.decompress = decompress;
+  Store.compress = compress;
 
 })(window);
