@@ -4,7 +4,7 @@
 // Версия обновляется автоматически при билде
 // NOTE: Service Worker runs in isolated context - no access to @heys/logger
 
-const CACHE_VERSION = 'heys-1769790000000';
+const CACHE_VERSION = 'heys-1738420000000';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
@@ -101,26 +101,44 @@ const CDN_URLS = [
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing...', CACHE_VERSION);
 
+  // 🔥 КРИТИЧНО: Сначала skipWaiting, потом кэшируем в фоне
   // Не блокируем установку долгим precache — иначе чёрный экран при первом запуске
-  // Сначала активируемся, потом кэшируем в фоне
   event.waitUntil(
-    self.skipWaiting().then(() => {
-      console.log('[SW] skipWaiting done, now precaching in background...');
-      // Кэшируем в фоне — НЕ блокирует activate
-      caches.open(STATIC_CACHE)
-        .then((cache) => {
-          console.log('[SW] Background precaching App Shell');
-          const precacheUrls = PRECACHE_URLS.filter((url) => url !== '/version.json' && url !== '/build-meta.json');
-          return Promise.all(
-            precacheUrls.map(url =>
-              cache.add(url).catch(err => {
-                console.warn('[SW] Failed to cache:', url, err.message);
-              })
-            )
-          );
-        })
-        .then(() => console.log('[SW] Background precache complete'));
-    })
+    self.skipWaiting()
+      .then(() => {
+        console.log('[SW] ✅ skipWaiting done — SW now active');
+        
+        // Кэшируем App Shell в ФОНЕ с timeout
+        // Не используем waitUntil чтобы не блокировать активацию
+        setTimeout(() => {
+          caches.open(STATIC_CACHE)
+            .then((cache) => {
+              console.log('[SW] 📦 Background precaching started...');
+              const precacheUrls = PRECACHE_URLS.filter((url) => 
+                url !== '/version.json' && url !== '/build-meta.json'
+              );
+              
+              // Параллельно кэшируем с timeout на каждый файл
+              return Promise.allSettled(
+                precacheUrls.map(url =>
+                  Promise.race([
+                    cache.add(url),
+                    new Promise((_, reject) => 
+                      setTimeout(() => reject(new Error('Timeout')), 5000)
+                    )
+                  ]).catch(err => {
+                    console.warn('[SW] ⚠️ Skip cache:', url, err.message);
+                  })
+                )
+              );
+            })
+            .then(() => console.log('[SW] ✅ Background precache complete'))
+            .catch(err => console.warn('[SW] Precache error:', err));
+        }, 100);
+      })
+      .catch(err => {
+        console.error('[SW] Install error:', err);
+      })
   );
 });
 
@@ -128,104 +146,82 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   console.log('[SW] 🚀 Activating...', CACHE_VERSION);
 
-  event.waitUntil(
-    Promise.all([
-      // 1️⃣ Включаем Navigation Preload для ускорения загрузки
-      (async () => {
-        if (self.registration.navigationPreload) {
-          try {
-            await self.registration.navigationPreload.enable();
-            console.log('[SW] 🚀 Navigation Preload enabled');
-          } catch (e) {
-            console.warn('[SW] Navigation Preload not supported');
-          }
-        }
-      })(),
+  // 🔥 Timeout для активации — не блокируем UI дольше 5 сек
+  const activationTimeout = new Promise((resolve) => {
+    setTimeout(() => {
+      console.log('[SW] ⚠️ Activation timeout — proceeding anyway');
+      resolve();
+    }, 5000);
+  });
 
-      // 2️⃣ Очистка старых кэшей
-      caches.keys()
-        .then((cacheNames) => {
-          return Promise.all(
-            cacheNames
-              .filter(name => name.startsWith('heys-') && name !== STATIC_CACHE && name !== DYNAMIC_CACHE)
-              .map(name => {
-                console.log('[SW] Deleting old cache:', name);
-                return caches.delete(name);
-              })
-          );
-        }),
-    ])
+  const activationTasks = Promise.all([
+    // 1️⃣ Включаем Navigation Preload для ускорения загрузки
+    (async () => {
+      if (self.registration.navigationPreload) {
+        try {
+          await self.registration.navigationPreload.enable();
+          console.log('[SW] 🚀 Navigation Preload enabled');
+        } catch (e) {
+          console.warn('[SW] Navigation Preload not supported');
+        }
+      }
+    })(),
+
+    // 2️⃣ Очистка старых кэшей (НЕ блокируем)
+    caches.keys()
+      .then((cacheNames) => {
+        return Promise.all(
+          cacheNames
+            .filter(name => name.startsWith('heys-') && name !== STATIC_CACHE && name !== DYNAMIC_CACHE)
+            .map(name => {
+              console.log('[SW] Deleting old cache:', name);
+              return caches.delete(name).catch(() => {});
+            })
+        );
+      })
+      .catch(() => {}),
+  ]);
+
+  event.waitUntil(
+    Promise.race([activationTasks, activationTimeout])
       .then(() => {
         // clients.claim() — немедленно берём контроль над всеми открытыми страницами
-        // Без этого новый SW не контролирует страницу до следующего refresh
         console.log('[SW] 📡 Claiming all clients...');
         return self.clients.claim();
       })
       .then(() => {
-        // Очистка юридических документов (.md) из ВСЕХ кэшей
-        // Чтобы пользователь видел актуальную версию после обновления
-        console.log('[SW] Purging cached .md files (legal docs)...');
-        return caches.keys().then(names => {
-          return Promise.all(names.map(cacheName => {
-            return caches.open(cacheName).then(cache => {
-              return cache.keys().then(requests => {
-                return Promise.all(
-                  requests
-                    .filter(req => req.url.endsWith('.md') || req.url.includes('/docs/'))
-                    .map(req => {
-                      console.log('[SW] Purging cached doc:', req.url);
-                      return cache.delete(req);
-                    })
-                );
+        // Очистка юридических документов (.md) в фоне — НЕ блокируем
+        console.log('[SW] Purging cached .md files in background...');
+        caches.keys().then(names => {
+          names.forEach(cacheName => {
+            caches.open(cacheName).then(cache => {
+              cache.keys().then(requests => {
+                requests
+                  .filter(req => req.url.endsWith('.md') || req.url.includes('/docs/'))
+                  .forEach(req => cache.delete(req).catch(() => {}));
               });
             });
-          }));
-        });
-      })
-      .then(() => {
-        // Принудительно берём контроль над всеми клиентами
-        // Это критично для обновления PWA!
-        console.log('[SW] Claiming clients...');
-        return self.clients.claim();
-      })
-      .then(() => checkForUpdates())
-  );
-});
-
-// === MESSAGE: Обработка сообщений от клиента ===
-self.addEventListener('message', (event) => {
-  // Поддерживаем оба формата: строку 'skipWaiting' и объект { type: 'SKIP_WAITING' }
-  const isSkipWaiting = event.data === 'skipWaiting' ||
-    (event.data && event.data.type === 'SKIP_WAITING');
-
-  if (isSkipWaiting) {
-    console.log('[SW] skipWaiting requested');
-    self.skipWaiting();
-  }
-
-  // 🔄 Очистка ВСЕХ кэшей (для принудительного обновления)
-  if (event.data === 'clearAllCaches') {
-    console.log('[SW] 🗑️ Clearing ALL caches...');
-    event.waitUntil(
-      caches.keys().then(names => {
-        return Promise.all(
-          names.map(name => {
-            console.log('[SW] Deleting cache:', name);
-            return caches.delete(name);
-          })
-        );
-      }).then(() => {
-        console.log('[SW] ✅ All caches cleared');
-        // Уведомляем клиента
-        self.clients.matchAll().then(clients => {
-          clients.forEach(client => {
-            client.postMessage({ type: 'CACHES_CLEARED' });
           });
         });
       })
-    );
-  }
+      .then(() => {
+        console.log('[SW] ✅ Activation complete');
+        // checkForUpdates в фоне — не блокируем
+        setTimeout(() => checkForUpdates(), 1000);
+      })
+      .catch(err => {
+        console.error('[SW] ❌ Activation error:', err);
+        // Всё равно claim'им клиентов
+        return self.clients.claim();
+      })
+  );
 });
+
+// === MESSAGE: Обработка сообщений от клиента (ЕДИНЫЙ HANDLER) ===
+// NOTE: Все сообщения обрабатываются во втором listener ниже (строка ~558)
+// Этот блок оставлен для документации совместимости форматов:
+// - 'skipWaiting' (строка) — legacy формат
+// - { type: 'SKIP_WAITING' } — новый формат
 
 // === FETCH: Стратегии кэширования ===
 self.addEventListener('fetch', (event) => {
@@ -553,11 +549,17 @@ async function processSyncQueue() {
   }
 }
 
-// === Сообщения от клиента ===
+// === Сообщения от клиента (ЕДИНЫЙ HANDLER) ===
 self.addEventListener('message', (event) => {
-  if (event.data === 'skipWaiting') {
+  // 🔄 skipWaiting — поддерживаем оба формата
+  const isSkipWaiting = event.data === 'skipWaiting' ||
+    (event.data && event.data.type === 'SKIP_WAITING');
+  
+  if (isSkipWaiting) {
     console.log('[SW] 🔄 skipWaiting requested');
     self.skipWaiting();
+    return;
+  }
   }
 
   if (event.data === 'getVersion') {

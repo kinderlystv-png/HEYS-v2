@@ -434,6 +434,10 @@
                 }
             };
 
+            // 🔥 Debounce для auth_required — предотвращает дублирование toast
+            const authErrorShownRef = React.useRef(false);
+            const authErrorTimeoutRef = React.useRef(null);
+
             const handleSyncError = (e) => {
                 const code = e.detail?.error;
                 const isPersistent = e.detail?.persistent || false;
@@ -441,7 +445,18 @@
                 if (code === 'auth_required') {
                     setCloudStatus('offline');
                     setRetryCountdown(0);
-                    try { HEYS.Toast?.warning('Требуется повторный вход для синхронизации') || alert('Требуется повторный вход для синхронизации'); } catch (_) { }
+                    
+                    // 🔥 Debounce: показываем toast только если не показывали в последние 10 сек
+                    if (!authErrorShownRef.current) {
+                        authErrorShownRef.current = true;
+                        try { HEYS.Toast?.warning('Требуется повторный вход для синхронизации'); } catch (_) { }
+                        
+                        // Сбрасываем флаг через 10 секунд
+                        if (authErrorTimeoutRef.current) clearTimeout(authErrorTimeoutRef.current);
+                        authErrorTimeoutRef.current = setTimeout(() => {
+                            authErrorShownRef.current = false;
+                        }, 10000);
+                    }
                     return;
                 }
 
@@ -589,6 +604,8 @@
                 if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
                 // 🆕 Очистка таймера офлайн
                 if (offlineDurationIntervalRef.current) clearInterval(offlineDurationIntervalRef.current);
+                // 🔥 Очистка таймера auth error debounce
+                if (authErrorTimeoutRef.current) clearTimeout(authErrorTimeoutRef.current);
             };
         }, [pendingCount, showSyncedWithMinDuration, syncProgress.total]);
 
