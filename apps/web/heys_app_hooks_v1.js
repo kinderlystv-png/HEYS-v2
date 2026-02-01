@@ -307,7 +307,10 @@
         const syncingDelayTimeoutRef = useRef(null);
         const initialCheckDoneRef = useRef(false);
         const retryIntervalRef = useRef(null);
-        // 🔒 Cooldown после первого sync — не показываем "syncing" сразу после загрузки
+        // � Debounce для auth_required toast
+        const authErrorShownRef = useRef(false);
+        const authErrorTimeoutRef = useRef(null);
+        // �🔒 Cooldown после первого sync — не показываем "syncing" сразу после загрузки
         const initialSyncCompletedAtRef = useRef(0);
         const INITIAL_SYNC_COOLDOWN_MS = 3000; // 3 секунды после первого sync не показываем syncing
 
@@ -433,10 +436,6 @@
                     setSyncProgress({ synced, total });
                 }
             };
-
-            // 🔥 Debounce для auth_required — предотвращает дублирование toast
-            const authErrorShownRef = React.useRef(false);
-            const authErrorTimeoutRef = React.useRef(null);
 
             const handleSyncError = (e) => {
                 const code = e.detail?.error;
