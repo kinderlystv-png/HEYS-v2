@@ -107,23 +107,23 @@ self.addEventListener('install', (event) => {
     self.skipWaiting()
       .then(() => {
         console.log('[SW] ✅ skipWaiting done — SW now active');
-        
+
         // Кэшируем App Shell в ФОНЕ с timeout
         // Не используем waitUntil чтобы не блокировать активацию
         setTimeout(() => {
           caches.open(STATIC_CACHE)
             .then((cache) => {
               console.log('[SW] 📦 Background precaching started...');
-              const precacheUrls = PRECACHE_URLS.filter((url) => 
+              const precacheUrls = PRECACHE_URLS.filter((url) =>
                 url !== '/version.json' && url !== '/build-meta.json'
               );
-              
+
               // Параллельно кэшируем с timeout на каждый файл
               return Promise.allSettled(
                 precacheUrls.map(url =>
                   Promise.race([
                     cache.add(url),
-                    new Promise((_, reject) => 
+                    new Promise((_, reject) =>
                       setTimeout(() => reject(new Error('Timeout')), 5000)
                     )
                   ]).catch(err => {
@@ -175,11 +175,11 @@ self.addEventListener('activate', (event) => {
             .filter(name => name.startsWith('heys-') && name !== STATIC_CACHE && name !== DYNAMIC_CACHE)
             .map(name => {
               console.log('[SW] Deleting old cache:', name);
-              return caches.delete(name).catch(() => {});
+              return caches.delete(name).catch(() => { });
             })
         );
       })
-      .catch(() => {}),
+      .catch(() => { }),
   ]);
 
   event.waitUntil(
@@ -198,7 +198,7 @@ self.addEventListener('activate', (event) => {
               cache.keys().then(requests => {
                 requests
                   .filter(req => req.url.endsWith('.md') || req.url.includes('/docs/'))
-                  .forEach(req => cache.delete(req).catch(() => {}));
+                  .forEach(req => cache.delete(req).catch(() => { }));
               });
             });
           });
@@ -554,67 +554,67 @@ self.addEventListener('message', (event) => {
   // 🔄 skipWaiting — поддерживаем оба формата
   const isSkipWaiting = event.data === 'skipWaiting' ||
     (event.data && event.data.type === 'SKIP_WAITING');
-  
+
   if (isSkipWaiting) {
     console.log('[SW] 🔄 skipWaiting requested');
     self.skipWaiting();
     return;
   }
-  }
+}
 
   if (event.data === 'getVersion') {
-    event.ports[0]?.postMessage({ version: CACHE_VERSION });
-  }
+  event.ports[0]?.postMessage({ version: CACHE_VERSION });
+}
 
-  // === ОЧИСТКА ВСЕХ КЭШЕЙ (для принудительного обновления) ===
-  if (event.data === 'clearAllCaches') {
-    console.log('[SW] 🗑️ clearAllCaches requested — purging ALL caches...');
-    event.waitUntil(
-      caches.keys().then(cacheNames => {
-        console.log('[SW] Found caches to delete:', cacheNames);
-        return Promise.all(
-          cacheNames.map(cacheName => {
-            console.log('[SW] Deleting cache:', cacheName);
-            return caches.delete(cacheName);
-          })
-        );
-      }).then(() => {
-        console.log('[SW] ✅ All caches cleared!');
-        // Уведомляем клиента что кэши очищены
-        return self.clients.matchAll().then(clients => {
-          clients.forEach(client => {
-            client.postMessage({ type: 'CACHES_CLEARED' });
-          });
+// === ОЧИСТКА ВСЕХ КЭШЕЙ (для принудительного обновления) ===
+if (event.data === 'clearAllCaches') {
+  console.log('[SW] 🗑️ clearAllCaches requested — purging ALL caches...');
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      console.log('[SW] Found caches to delete:', cacheNames);
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          console.log('[SW] Deleting cache:', cacheName);
+          return caches.delete(cacheName);
+        })
+      );
+    }).then(() => {
+      console.log('[SW] ✅ All caches cleared!');
+      // Уведомляем клиента что кэши очищены
+      return self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({ type: 'CACHES_CLEARED' });
         });
-      }).catch(err => {
-        console.error('[SW] ❌ Error clearing caches:', err);
-      })
-    );
-  }
+      });
+    }).catch(err => {
+      console.error('[SW] ❌ Error clearing caches:', err);
+    })
+  );
+}
 
-  // Регистрация Background Sync
-  if (event.data === 'registerSync') {
-    self.registration.sync?.register(SYNC_TAG)
-      .then(() => console.log('[SW] Background sync registered'))
-      .catch(err => console.warn('[SW] Background sync not supported:', err));
-  }
+// Регистрация Background Sync
+if (event.data === 'registerSync') {
+  self.registration.sync?.register(SYNC_TAG)
+    .then(() => console.log('[SW] Background sync registered'))
+    .catch(err => console.warn('[SW] Background sync not supported:', err));
+}
 
-  // Запрос на немедленную синхронизацию (для тестирования)
-  if (event.data === 'forceSync') {
-    processSyncQueue();
-  }
+// Запрос на немедленную синхронизацию (для тестирования)
+if (event.data === 'forceSync') {
+  processSyncQueue();
+}
 
-  if (event.data && event.data.type === 'GET_CACHE_STATUS') {
-    const port = event.ports && event.ports[0];
-    const payload = {
-      version: CACHE_VERSION,
-      caches: {},
-      timestamp: Date.now(),
-    };
-    if (port) {
-      port.postMessage(payload);
-    }
+if (event.data && event.data.type === 'GET_CACHE_STATUS') {
+  const port = event.ports && event.ports[0];
+  const payload = {
+    version: CACHE_VERSION,
+    caches: {},
+    timestamp: Date.now(),
+  };
+  if (port) {
+    port.postMessage(payload);
   }
+}
 });
 
 // === 📤 Share Target API Handler ===

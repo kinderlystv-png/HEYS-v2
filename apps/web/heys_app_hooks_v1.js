@@ -445,12 +445,12 @@
                 if (code === 'auth_required') {
                     setCloudStatus('offline');
                     setRetryCountdown(0);
-                    
+
                     // 🔥 Debounce: показываем toast только если не показывали в последние 10 сек
                     if (!authErrorShownRef.current) {
                         authErrorShownRef.current = true;
                         try { HEYS.Toast?.warning('Требуется повторный вход для синхронизации'); } catch (_) { }
-                        
+
                         // Сбрасываем флаг через 10 секунд
                         if (authErrorTimeoutRef.current) clearTimeout(authErrorTimeoutRef.current);
                         authErrorTimeoutRef.current = setTimeout(() => {
