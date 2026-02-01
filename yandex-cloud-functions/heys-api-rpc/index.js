@@ -272,13 +272,16 @@ const CURATOR_ONLY_FUNCTIONS = [
 ];
 
 // Маппинг параметров (если нужно)
-// Сейчас не используем, т.к. функции ожидают те же имена что и фронтенд
+// Клиент передаёт короткие имена → маппим на p_* для PostgreSQL функций
 const PARAM_MAPPING = {
   // Маппинг клиентских параметров → параметры функций PostgreSQL
   'phone': 'p_phone',
   'pin': 'p_pin',
   'session_token': 'p_session_token',
   'client_id': 'p_client_id',
+  // KV функции: клиент передаёт k/v, PostgreSQL ожидает p_key/p_value
+  'k': 'p_key',
+  'v': 'p_value',
   // 'p_phone': 'p_phone_normalized',  // НЕ НУЖНО — функции уже используют p_phone
 };
 

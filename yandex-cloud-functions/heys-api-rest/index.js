@@ -540,8 +540,10 @@ module.exports.handler = async function (event, context) {
         // Колонки берём из первого объекта (все объекты должны иметь те же колонки)
         const columns = Object.keys(rows[0]);
 
-        // 🔐 FIX v2: JSON колонки ВСЕГДА нужно сериализовать в JSON строку
-        const JSON_COLUMNS = ['v']; // client_kv_store.v is json type
+        // 🔐 FIX v2: JSON/JSONB колонки нужно сериализовать в JSON строку
+        // 🔐 FIX v3: TEXT[] массивы нужно преобразовывать в PostgreSQL array format
+        const JSON_COLUMNS = ['v', 'portions']; // JSONB columns
+        const ARRAY_COLUMNS = ['additives'];    // TEXT[] columns
 
         // Формируем VALUES для batch insert
         const allValues = [];
@@ -552,9 +554,13 @@ module.exports.handler = async function (event, context) {
           const rowPlaceholders = [];
           for (const col of columns) {
             const val = row[col];
-            // Для JSON колонок ВСЕГДА сериализуем
-            if (JSON_COLUMNS.includes(col) && val !== undefined) {
+            // Для JSONB колонок — сериализуем в JSON строку
+            if (JSON_COLUMNS.includes(col) && val !== undefined && val !== null) {
               allValues.push(JSON.stringify(val));
+              // Для TEXT[] колонок — преобразуем JS array в PostgreSQL array literal
+            } else if (ARRAY_COLUMNS.includes(col) && Array.isArray(val)) {
+              // PostgreSQL array format: {"elem1","elem2"} — pg driver понимает JS массивы напрямую
+              allValues.push(val);
             } else {
               allValues.push(val);
             }

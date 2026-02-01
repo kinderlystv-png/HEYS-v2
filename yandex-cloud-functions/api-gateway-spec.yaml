@@ -25,11 +25,13 @@ paths:
       summary: PostgreSQL RPC calls
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4e9e90es31bgjp87j8i
     options:
       summary: CORS preflight for RPC
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4e9e90es31bgjp87j8i
 
   # ═══════════════════════════════════════════════════════════════
@@ -40,26 +42,31 @@ paths:
       summary: REST GET (SELECT) — ?table=xxx
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ea4j7eh05rtkjubipt
     post:
       summary: REST POST (INSERT)
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ea4j7eh05rtkjubipt
     patch:
       summary: REST PATCH (UPDATE)
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ea4j7eh05rtkjubipt
     delete:
       summary: REST DELETE
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ea4j7eh05rtkjubipt
     options:
       summary: CORS preflight for REST
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ea4j7eh05rtkjubipt
 
   # REST с path parameter (альтернативный путь)
@@ -74,6 +81,7 @@ paths:
             type: string
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ea4j7eh05rtkjubipt
     post:
       summary: REST POST (INSERT)
@@ -85,6 +93,7 @@ paths:
             type: string
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ea4j7eh05rtkjubipt
     patch:
       summary: REST PATCH (UPDATE)
@@ -96,6 +105,7 @@ paths:
             type: string
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ea4j7eh05rtkjubipt
     delete:
       summary: REST DELETE
@@ -107,6 +117,7 @@ paths:
             type: string
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ea4j7eh05rtkjubipt
     options:
       summary: CORS preflight for REST with path
@@ -118,6 +129,7 @@ paths:
             type: string
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ea4j7eh05rtkjubipt
 
   # ═══════════════════════════════════════════════════════════════
@@ -128,11 +140,13 @@ paths:
       summary: SMS sending via SMS.ru
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ejimndqnd8q72r9g00
     options:
       summary: CORS preflight for SMS
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ejimndqnd8q72r9g00
 
   # ═══════════════════════════════════════════════════════════════
@@ -143,11 +157,13 @@ paths:
       summary: Landing page leads
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4eml8vh341v41642cdu
     options:
       summary: CORS preflight for leads
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4eml8vh341v41642cdu
 
   # ═══════════════════════════════════════════════════════════════
@@ -158,11 +174,13 @@ paths:
       summary: Healthcheck
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4e0rqplbonspm84pk3n
     options:
       summary: CORS preflight for health
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4e0rqplbonspm84pk3n
 
   # ═══════════════════════════════════════════════════════════════
@@ -173,11 +191,13 @@ paths:
       summary: Curator login (email + password)
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
     options:
       summary: CORS preflight for auth login
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
 
   /auth/verify:
@@ -185,11 +205,13 @@ paths:
       summary: Verify JWT token
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
     options:
       summary: CORS preflight for auth verify
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
 
   /auth/register:
@@ -197,11 +219,13 @@ paths:
       summary: Register new curator (admin only)
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
     options:
       summary: CORS preflight for auth register
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
 
   /auth/clients:
@@ -209,16 +233,19 @@ paths:
       summary: Get curator's clients list (requires JWT)
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
     post:
       summary: Create new client (requires JWT)
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
     options:
       summary: CORS preflight for auth clients
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
 
   /auth/clients/{clientId}:
@@ -232,6 +259,7 @@ paths:
             type: string
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
     delete:
       summary: Delete client (requires JWT)
@@ -243,6 +271,7 @@ paths:
             type: string
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
     options:
       summary: CORS preflight for auth clients by ID
@@ -254,6 +283,7 @@ paths:
             type: string
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
 
   # ═══════════════════════════════════════════════════════════════
@@ -272,6 +302,7 @@ paths:
             type: string
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ea4j7eh05rtkjubipt
     post:
       summary: Supabase-compatible REST POST
@@ -283,6 +314,7 @@ paths:
             type: string
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ea4j7eh05rtkjubipt
     patch:
       summary: Supabase-compatible REST PATCH
@@ -294,6 +326,7 @@ paths:
             type: string
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ea4j7eh05rtkjubipt
     delete:
       summary: Supabase-compatible REST DELETE
@@ -305,6 +338,7 @@ paths:
             type: string
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ea4j7eh05rtkjubipt
     options:
       summary: CORS preflight for REST v1
@@ -316,6 +350,7 @@ paths:
             type: string
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ea4j7eh05rtkjubipt
 
   # Auth v1 — NEW: теперь редирект на реальную auth функцию
@@ -324,11 +359,13 @@ paths:
       summary: Supabase-compatible token endpoint (redirect to login)
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
     options:
       summary: CORS preflight for auth token
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
 
   /auth/v1/user:
@@ -336,9 +373,11 @@ paths:
       summary: Supabase-compatible auth user check
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
     options:
       summary: CORS preflight for auth user
       x-yc-apigateway-integration:
         type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
