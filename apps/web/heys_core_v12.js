@@ -120,10 +120,9 @@
     const hasFat = p && p.fat100 != null;
     const carbs100 = hasCarbs ? toNum(p.carbs100) : (toNum(p.simple100) + toNum(p.complex100));
     const fat100 = hasFat ? toNum(p.fat100) : (toNum(p.badFat100) + toNum(p.goodFat100) + toNum(p.trans100));
-    // TEF-aware formula: protein 3 kcal/g, carbs 4 kcal/g, fat 9 kcal/g
-    // (Учитывает термический эффект пищи для белка — ~25% калорий уходит на переваривание)
-    // Стандарт проекта: heys_models_v1.js, heys_day_add_product.js, parse_worker.js
-    const kcal100 = 3 * toNum(p.protein100) + 4 * carbs100 + 9 * fat100;
+    // v3.9.0: Standard Atwater factors (4/4/9). TEF is calculated separately in TDEE.
+    // Protein 4 kcal/g (was 3), Carbs 4 kcal/g, Fat 9 kcal/g
+    const kcal100 = 4 * toNum(p.protein100) + 4 * carbs100 + 9 * fat100;
 
     const derived = {
       carbs100: round1(carbs100),
@@ -534,6 +533,30 @@
     // Collapsible секция бэкапов (свёрнута по умолчанию)
     const [showBackupSection, setShowBackupSection] = React.useState(false);
 
+    // Пагинация диапазонами (1-99, 100-199, ...)
+    const RANGE_STEP = 100;
+    const getRangeSize = (start) => (start === 0 ? 99 : 100);
+    const getRangeEnd = (start, total) => Math.min(start + getRangeSize(start), total);
+    const buildRangeOptions = (total) => {
+      if (!total || total <= 0) return [];
+      const ranges = [];
+      let index = 0;
+      while (true) {
+        const start = index === 0 ? 0 : (index * RANGE_STEP - 1);
+        if (start >= total) break;
+        const end = getRangeEnd(start, total);
+        const label = `${start + 1}-${end}`;
+        ranges.push({ start, end, label });
+        index += 1;
+      }
+      return ranges;
+    };
+    const DEFAULT_DISPLAY_LIMIT = 5;
+    const [personalRangeStart, setPersonalRangeStart] = React.useState(0);
+    const [sharedRangeStart, setSharedRangeStart] = React.useState(0);
+    const [personalRangeActive, setPersonalRangeActive] = React.useState(false);
+    const [sharedRangeActive, setSharedRangeActive] = React.useState(false);
+
     // Normalization for personal products (legacy-safe)
     const normalizePersonalProduct = (product) => {
       if (!product || typeof product !== 'object') return product;
@@ -871,10 +894,7 @@
       return index;
     }, [products]);
 
-    // Без лимита отображения
-    const DISPLAY_LIMIT = Number.MAX_SAFE_INTEGER;
-    const [showAll, setShowAll] = React.useState(false);
-
+    // Лимит отображения последних продуктов (для скорости)
     const filtered = React.useMemo(() => {
       // Используем normalizeText из SmartSearch (единый источник)
       const normalizeSearchText = window.HEYS?.SmartSearchWithTypos?.utils?.normalizeText
@@ -965,6 +985,29 @@
       return sortByCreatedAtDesc(result);
     }, [products, query, searchIndex]);
 
+    const personalRanges = React.useMemo(() => buildRangeOptions(filtered.length), [filtered.length]);
+
+    React.useEffect(() => {
+      setPersonalRangeStart(0);
+      setPersonalRangeActive(false);
+    }, [query]);
+
+    React.useEffect(() => {
+      if (personalRangeStart >= filtered.length) setPersonalRangeStart(0);
+    }, [filtered.length, personalRangeStart]);
+
+    const renderRangeButtons = (ranges, activeStart, onSelect, isActive) => {
+      if (!ranges || ranges.length <= 1) return null;
+      return React.createElement('div', { className: 'products-range row' },
+        React.createElement('span', { className: 'products-range__label muted' }, 'Показать:'),
+        ranges.map((range) => React.createElement('button', {
+          key: `range_${range.start}_${range.end}`,
+          className: (isActive && activeStart === range.start) ? 'btn acc products-range__btn' : 'btn products-range__btn',
+          onClick: () => onSelect(range.start)
+        }, range.label))
+      );
+    };
+
     // ══════════════════════════════════════════════════════════════════════════════════
     // 📊 UNIFIED: filteredShared — единый useMemo для shared данных (вместо inline IIFE)
     // ══════════════════════════════════════════════════════════════════════════════════
@@ -990,6 +1033,17 @@
 
       return sortByCreatedAtDesc(filtered);
     }, [allSharedProducts, sharedQuery]);
+
+    const sharedRanges = React.useMemo(() => buildRangeOptions(filteredShared.length), [filteredShared.length]);
+
+    React.useEffect(() => {
+      setSharedRangeStart(0);
+      setSharedRangeActive(false);
+    }, [sharedQuery, activeSubtab]);
+
+    React.useEffect(() => {
+      if (sharedRangeStart >= filteredShared.length) setSharedRangeStart(0);
+    }, [filteredShared.length, sharedRangeStart]);
 
     // Слушатель события обновления продуктов (для реактивности после sync)
     // 🔒 Ref для пропуска первого sync (предотвращает мерцание)
@@ -1568,6 +1622,84 @@
       setProducts(products.filter(p => p.id !== id));
       if (window.HEYS && window.HEYS.analytics) {
         window.HEYS.analytics.trackDataOperation('storage-op');
+      }
+    }
+    // 🔄 Синхронизация продукта из личной базы в общую
+    async function syncProductToShared(localProduct) {
+      if (!localProduct) return;
+      const normalizeProductName = HEYS.models?.normalizeProductName
+        || ((name) => String(name || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
+
+      let sharedId = localProduct.shared_origin_id ?? localProduct.sharedOriginId ?? localProduct.shared_id ?? localProduct.sharedId;
+      let matchedShared = null;
+
+      const findSharedByName = (list) => {
+        if (!Array.isArray(list)) return null;
+        const nameKey = normalizeProductName(localProduct?.name);
+        if (!nameKey) return null;
+        return list.find((sp) => normalizeProductName(sp?.name) === nameKey) || null;
+      };
+
+      if (!sharedId) {
+        const cached = window.HEYS?.cloud?.getCachedSharedProducts?.() || allSharedProducts || [];
+        matchedShared = findSharedByName(cached);
+        if (!matchedShared && window.HEYS?.cloud?.getAllSharedProducts) {
+          try {
+            const result = await window.HEYS.cloud.getAllSharedProducts({ limit: 500 });
+            if (result?.data) {
+              setAllSharedProducts(result.data);
+              matchedShared = findSharedByName(result.data);
+            }
+          } catch (err) {
+            console.warn('[SYNC SHARED] Load shared failed:', err);
+          }
+        }
+        if (matchedShared?.id != null) {
+          sharedId = matchedShared.id;
+        }
+      }
+
+      if (!sharedId) {
+        HEYS.Toast?.warning('Нет связи с общей базой для этого продукта') || alert('Нет связи с общей базой для этого продукта');
+        return;
+      }
+      // Подготовим данные в формате shared (snake_case)
+      const productForShared = {
+        ...localProduct,
+        id: sharedId,
+        sodium100: localProduct.sodium100 ?? localProduct.Na ?? null,
+        omega3_100: localProduct.omega3_100 ?? localProduct['Ω3'] ?? null,
+        omega6_100: localProduct.omega6_100 ?? localProduct['Ω6'] ?? null,
+        nova_group: localProduct.nova_group ?? localProduct.novaGroup ?? null,
+        nutrient_density: localProduct.nutrient_density ?? localProduct.nutrientDensity ?? null,
+        is_organic: localProduct.is_organic ?? localProduct.isOrganic ?? false,
+        is_whole_grain: localProduct.is_whole_grain ?? localProduct.isWholeGrain ?? false,
+        is_fermented: localProduct.is_fermented ?? localProduct.isFermented ?? false,
+        is_raw: localProduct.is_raw ?? localProduct.isRaw ?? false,
+        vitamin_a: localProduct.vitamin_a ?? localProduct.vitaminA ?? null,
+        vitamin_c: localProduct.vitamin_c ?? localProduct.vitaminC ?? null,
+        vitamin_d: localProduct.vitamin_d ?? localProduct.vitaminD ?? null,
+        vitamin_e: localProduct.vitamin_e ?? localProduct.vitaminE ?? null,
+        vitamin_k: localProduct.vitamin_k ?? localProduct.vitaminK ?? null,
+        vitamin_b1: localProduct.vitamin_b1 ?? localProduct.vitaminB1 ?? null,
+        vitamin_b2: localProduct.vitamin_b2 ?? localProduct.vitaminB2 ?? null,
+        vitamin_b3: localProduct.vitamin_b3 ?? localProduct.vitaminB3 ?? null,
+        vitamin_b6: localProduct.vitamin_b6 ?? localProduct.vitaminB6 ?? null,
+        vitamin_b9: localProduct.vitamin_b9 ?? localProduct.vitaminB9 ?? null,
+        vitamin_b12: localProduct.vitamin_b12 ?? localProduct.vitaminB12 ?? null
+      };
+      try {
+        if (HEYS.AddProductStep?.updateSharedProduct) {
+          const result = await HEYS.AddProductStep.updateSharedProduct(productForShared, sharedId);
+          if (result?.ok) {
+            // Обновляем локальный продукт — убираем маркер обновления
+            setProducts(prev => prev.map(p => p.id === localProduct.id ? { ...p, _syncedAt: Date.now() } : p));
+          }
+        } else {
+          HEYS.Toast?.error('Функция обновления недоступна') || alert('Функция обновления недоступна');
+        }
+      } catch (e) {
+        HEYS.Toast?.error('Ошибка синхронизации: ' + e.message) || alert('Ошибка синхронизации: ' + e.message);
       }
     }
     async function importAppend() {
@@ -2337,11 +2469,6 @@
           importedProducts = data;
           DEV.log('[IMPORT FILE] Формат: массив продуктов, штук:', importedProducts.length);
         }
-        else {
-          HEYS.Toast?.error('Неизвестный формат файла. Ожидается JSON.') || alert('Неизвестный формат файла.');
-          return;
-        }
-
         if (importedProducts.length === 0) {
           HEYS.Toast?.warning('В файле не найдено продуктов для импорта') || alert('В файле не найдено продуктов.');
           return;
@@ -2602,10 +2729,14 @@
         onOpenSharedPortionsEditor,
         onCloneShared,
         onHideShared,
-        onDeleteShared
+        onDeleteShared,
+        onSyncToShared,
+        sharedNameMap
       } = options;
 
       const readOnly = mode === 'shared';
+      const normalizeProductName = HEYS.models?.normalizeProductName
+        || ((name) => String(name || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
       const safeNum = (v) => {
         const n = Number(v);
         return Number.isFinite(n) ? n : 0;
@@ -2634,8 +2765,84 @@
       const safeHarm = Number.isFinite(Number(harmValue)) ? harmValue : 0;
       const sharedUpdatedAt = toTs(product?.shared_updated_at ?? product?.sharedUpdatedAt);
       const clonedAt = toTs(product?.cloned_at ?? product?.clonedAt);
+      const sharedMatch = sharedNameMap?.get(normalizeProductName(product?.name || '')) || null;
+      const resolvedSharedId = product?.shared_origin_id ?? product?.sharedOriginId ?? product?.shared_id ?? product?.sharedId ?? sharedMatch?.id;
       const isSharedClone = !!product?.shared_origin_id;
       const hasSharedUpdate = mode === 'personal' && isSharedClone && !product?.user_modified && sharedUpdatedAt > clonedAt;
+
+      const copyProductParams = async () => {
+        const portionsValue = Array.isArray(product?.portions)
+          ? (product.portions.length ? JSON.stringify(product.portions) : '—')
+          : formatTableValue(product?.portions);
+
+        const rows = [
+          ['Название', product?.name],
+          ['Ккал', kcal],
+          ['Углеводы', carbs],
+          ['Простые', product?.simple100],
+          ['Сложные', product?.complex100],
+          ['Белки', product?.protein100],
+          ['Жиры', fat],
+          ['Вредные жиры', product?.badFat100 ?? product?.badfat100],
+          ['Полезные жиры', product?.goodFat100 ?? product?.goodfat100],
+          ['Транс-жиры', product?.trans100],
+          ['Клетчатка', product?.fiber100],
+          ['ГИ', product?.gi],
+          ['Вредность', safeHarm],
+          ['Na', product?.sodium100],
+          ['Ω3', product?.omega3_100],
+          ['Ω6', product?.omega6_100],
+          ['NOVA', product?.nova_group ?? product?.novaGroup],
+          ['Добавки', formatTableList(product?.additives)],
+          ['ND', product?.nutrient_density ?? product?.nutrientDensity],
+          ['Органик', formatTableBool(product?.is_organic ?? product?.isOrganic)],
+          ['Цельнозерновой', formatTableBool(product?.is_whole_grain ?? product?.isWholeGrain)],
+          ['Ферментированный', formatTableBool(product?.is_fermented ?? product?.isFermented)],
+          ['Сырой', formatTableBool(product?.is_raw ?? product?.isRaw)],
+          ['Витамин A', product?.vitamin_a ?? product?.vitaminA],
+          ['Витамин C', product?.vitamin_c ?? product?.vitaminC],
+          ['Витамин D', product?.vitamin_d ?? product?.vitaminD],
+          ['Витамин E', product?.vitamin_e ?? product?.vitaminE],
+          ['Витамин K', product?.vitamin_k ?? product?.vitaminK],
+          ['Витамин B1', product?.vitamin_b1 ?? product?.vitaminB1],
+          ['Витамин B2', product?.vitamin_b2 ?? product?.vitaminB2],
+          ['Витамин B3', product?.vitamin_b3 ?? product?.vitaminB3],
+          ['Витамин B6', product?.vitamin_b6 ?? product?.vitaminB6],
+          ['Витамин B9', product?.vitamin_b9 ?? product?.vitaminB9],
+          ['Витамин B12', product?.vitamin_b12 ?? product?.vitaminB12],
+          ['Кальций', product?.calcium],
+          ['Железо', product?.iron],
+          ['Магний', product?.magnesium],
+          ['Фосфор', product?.phosphorus],
+          ['Калий', product?.potassium],
+          ['Цинк', product?.zinc],
+          ['Селен', product?.selenium],
+          ['Йод', product?.iodine],
+          ['Порции', portionsValue]
+        ];
+
+        const text = rows
+          .map(([label, value]) => `${label}: ${formatTableValue(value)}`)
+          .join('\n');
+
+        try {
+          if (navigator?.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+          } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+          }
+          HEYS.Toast?.success('Параметры скопированы') || alert('Параметры скопированы');
+        } catch (err) {
+          HEYS.Toast?.error('Не удалось скопировать') || alert('Не удалось скопировать');
+        }
+      };
 
       const renderInput = (value, onChange, isReadOnly = false) => (
         React.createElement('input', {
@@ -2650,10 +2857,16 @@
       return React.createElement('tr', { key: `${product.id}_${idx}` },
         React.createElement('td', null,
           readOnly
-            ? React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
-              product.name,
+            ? React.createElement('div', { className: 'product-name-cell' },
+              React.createElement('span', { className: 'product-name-text' }, product.name),
+              React.createElement('button', {
+                className: 'btn product-copy-btn',
+                onClick: copyProductParams,
+                title: 'Скопировать параметры',
+                'aria-label': 'Скопировать параметры'
+              }, '📋'),
               product.is_mine && React.createElement('span', {
-                style: { fontSize: '10px', background: '#22c55e', color: '#fff', padding: '1px 4px', borderRadius: '4px', whiteSpace: 'nowrap' }
+                className: 'product-owner-badge'
               }, 'Вы')
             )
             : React.createElement('div', { className: 'product-name-cell' },
@@ -2663,6 +2876,12 @@
                 title: 'Переименовать',
                 'aria-label': 'Переименовать'
               }, '✏️'),
+              React.createElement('button', {
+                className: 'btn product-copy-btn',
+                onClick: copyProductParams,
+                title: 'Скопировать параметры',
+                'aria-label': 'Скопировать параметры'
+              }, '📋'),
               React.createElement('span', { className: 'product-name-text' }, product.name),
               hasSharedUpdate && React.createElement('span', {
                 className: 'product-name-cell__badge',
@@ -2755,27 +2974,31 @@
         ),
         React.createElement('td', null,
           readOnly
-            ? React.createElement('div', { style: { display: 'flex', gap: '4px' } },
+            ? React.createElement('div', { className: 'product-actions' },
               React.createElement('button', {
-                className: 'btn acc',
+                className: 'btn acc product-action-btn',
                 onClick: () => onCloneShared?.(product),
-                title: 'Добавить в мою базу',
-                style: { padding: '4px 8px', fontSize: '11px' }
+                title: 'Добавить в мою базу'
               }, '➕'),
               !product.is_mine && React.createElement('button', {
-                className: 'btn',
+                className: 'btn product-action-btn product-action-btn--ghost',
                 onClick: () => onHideShared?.(product.id),
-                title: 'Скрыть для меня',
-                style: { padding: '4px 8px', fontSize: '11px' }
+                title: 'Скрыть для меня'
               }, '🚫'),
               (canCurate || product.is_mine) && React.createElement('button', {
-                className: 'btn',
+                className: 'btn product-action-btn product-action-btn--danger',
                 onClick: () => onDeleteShared?.(product.id, product.name),
-                title: 'Удалить из общей базы',
-                style: { padding: '4px 8px', fontSize: '11px', background: '#fee2e2', color: '#dc2626' }
+                title: 'Удалить из общей базы'
               }, '🗑️')
             )
-            : React.createElement('button', { className: 'btn', onClick: () => onDeleteRow?.(product.id) }, 'Удалить')
+            : React.createElement('div', { className: 'product-actions' },
+              resolvedSharedId && React.createElement('button', {
+                className: 'btn product-action-btn product-action-btn--sync',
+                onClick: () => onSyncToShared?.(product),
+                title: 'Обновить в общей базе'
+              }, '🔄'),
+              React.createElement('button', { className: 'btn product-action-btn', onClick: () => onDeleteRow?.(product.id) }, 'Удалить')
+            )
         )
       );
     };
@@ -3270,27 +3493,38 @@
                 React.createElement('button', { className: 'btn acc', onClick: () => setShowModal(true) }, '+ Добавить продукт')
               )
             ),
+            renderRangeButtons(personalRanges, personalRangeStart, (start) => {
+              setPersonalRangeStart(start);
+              setPersonalRangeActive(true);
+            }, personalRangeActive),
             // 📊 Unified Table Component
             React.createElement(UnifiedProductTable, {
               mode: 'personal',
-              data: showAll ? filtered : filtered.slice(0, DISPLAY_LIMIT),
+              data: personalRangeActive
+                ? filtered.slice(personalRangeStart, getRangeEnd(personalRangeStart, filtered.length))
+                : filtered.slice(0, DEFAULT_DISPLAY_LIMIT),
               loading: false,
               callbacks: {
                 onUpdateRow: updateRow,
                 onOpenNameEditor: openProductNameEditor,
                 onOpenPortionsEditor: openPortionsEditor,
-                onDeleteRow: deleteRow
+                onDeleteRow: deleteRow,
+                onSyncToShared: syncProductToShared,
+                sharedNameMap: (() => {
+                  const normalizeProductName = HEYS.models?.normalizeProductName
+                    || ((name) => String(name || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
+                  const map = new Map();
+                  const cached = window.HEYS?.cloud?.getCachedSharedProducts?.() || [];
+                  const source = Array.isArray(allSharedProducts) && allSharedProducts.length ? allSharedProducts : cached;
+                  source.forEach((sp) => {
+                    if (sp?.name && sp?.id != null) {
+                      map.set(normalizeProductName(sp.name), sp);
+                    }
+                  });
+                  return map;
+                })()
               }
             }),
-            // Кнопка "Показать ещё" если продуктов больше лимита
-            filtered.length > DISPLAY_LIMIT && !showAll && React.createElement('div', { style: { textAlign: 'center', marginTop: '8px' } },
-              React.createElement('button', { className: 'btn', onClick: () => setShowAll(true) },
-                `Показать все ${filtered.length} продуктов (может тормозить)`
-              ),
-              React.createElement('div', { className: 'muted', style: { marginTop: '4px', fontSize: '12px' } },
-                `Показано ${DISPLAY_LIMIT} из ${filtered.length}. Используйте поиск для быстрого нахождения.`
-              )
-            ),
             React.createElement('div', { className: 'muted', style: { marginTop: '8px' } }, 'Серые поля — авто: У=простые+сложные; Ж=вредные+полезные+супервредные; Ккал=3×Б+4×У+9×Ж (TEF-aware).')
           )
         ) // Закрываем React.Fragment для личной подвкладки
@@ -3387,10 +3621,16 @@
                 style: { marginLeft: '8px' }
               }, '🔄 Обновить')
             ),
+            renderRangeButtons(sharedRanges, sharedRangeStart, (start) => {
+              setSharedRangeStart(start);
+              setSharedRangeActive(true);
+            }, sharedRangeActive),
             // 📊 Unified Table Component
             React.createElement(UnifiedProductTable, {
               mode: 'shared',
-              data: filteredShared,
+              data: sharedRangeActive
+                ? filteredShared.slice(sharedRangeStart, getRangeEnd(sharedRangeStart, filteredShared.length))
+                : filteredShared.slice(0, DEFAULT_DISPLAY_LIMIT),
               loading: allSharedLoading,
               callbacks: {
                 isCurator,

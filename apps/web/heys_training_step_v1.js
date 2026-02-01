@@ -1,6 +1,6 @@
 // heys_training_step_v1.js — Модалка добавления/редактирования тренировки (2 шага)
 // Шаг 1: Тип, время, оценки, заметка | Шаг 2: Зоны пульса
-(function(global) {
+(function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const { useState, useMemo, useCallback, useEffect, useRef } = React;
 
@@ -27,11 +27,11 @@
       const utils = HEYS.utils;
       if (utils?.lsSet) return utils.lsSet(key, val);
       localStorage.setItem(key, JSON.stringify(val));
-    } catch {}
+    } catch { }
   };
 
   const haptic = (style = 'light') => {
-    try { navigator.vibrate?.(style === 'error' ? [50, 30, 50] : style === 'success' ? 20 : 10); } catch {}
+    try { navigator.vibrate?.(style === 'error' ? [50, 30, 50] : style === 'success' ? 20 : 10); } catch { }
   };
 
   const pad2 = n => String(n).padStart(2, '0');
@@ -136,7 +136,7 @@
     };
 
     return React.createElement('div', { className: 'training-step' },
-      
+
       // === Тип тренировки ===
       React.createElement('div', { className: 'ts-section ts-type-section' },
         React.createElement('div', { className: 'ts-type-grid' },
@@ -173,13 +173,13 @@
       // === Оценки после тренировки ===
       React.createElement('div', { className: 'ts-section ts-ratings-section' },
         React.createElement('div', { className: 'ts-ratings-title' }, '📊 Какие ощущения после тренировки?'),
-        
+
         // Настроение
         React.createElement('div', { className: 'ts-rating-row' },
           React.createElement('div', { className: 'ts-rating-header' },
             React.createElement('span', { className: 'ts-rating-emoji' }, getMoodEmoji(mood)),
             React.createElement('span', { className: 'ts-rating-label' }, 'Настроение'),
-            React.createElement('span', { 
+            React.createElement('span', {
               className: 'ts-rating-value',
               style: { color: getMoodColor(mood) }
             }, mood + '/10')
@@ -202,7 +202,7 @@
           React.createElement('div', { className: 'ts-rating-header' },
             React.createElement('span', { className: 'ts-rating-emoji' }, getWellbeingEmoji(wellbeing)),
             React.createElement('span', { className: 'ts-rating-label' }, 'Самочувствие'),
-            React.createElement('span', { 
+            React.createElement('span', {
               className: 'ts-rating-value',
               style: { color: getMoodColor(wellbeing) }
             }, wellbeing + '/10')
@@ -225,7 +225,7 @@
           React.createElement('div', { className: 'ts-rating-header' },
             React.createElement('span', { className: 'ts-rating-emoji' }, getStressEmoji(stress)),
             React.createElement('span', { className: 'ts-rating-label' }, 'Стресс'),
-            React.createElement('span', { 
+            React.createElement('span', {
               className: 'ts-rating-value',
               style: { color: getStressColor(stress) }
             }, stress + '/10')
@@ -264,7 +264,7 @@
   function TrainingZonesStep({ data, onChange, context }) {
     const profile = useMemo(() => lsGet('heys_profile', {}), []);
     const weight = profile.weight || 70;
-    
+
     const hrZones = useMemo(() => lsGet('heys_hr_zones', []), []);
     const mets = useMemo(() => {
       const defaults = [2.5, 6, 8, 10];
@@ -291,23 +291,23 @@
     }, [zones, mets, weight]);
 
     return React.createElement('div', { className: 'training-step' },
-      
+
       // === Зоны пульса ===
       React.createElement('div', { className: 'ts-section ts-zones-section' },
         React.createElement('div', { className: 'ts-zones-header' },
           React.createElement('span', null, '❤️ Зоны пульса'),
-          React.createElement('span', { className: 'ts-zones-total' }, 
+          React.createElement('span', { className: 'ts-zones-total' },
             totalMinutes + ' мин · ~' + kcalBurned + ' ккал'
           )
         ),
         React.createElement('div', { className: 'ts-zones-wheels-grid' },
           HR_ZONES.map((zone, i) =>
-            React.createElement('div', { 
-              key: zone.id, 
+            React.createElement('div', {
+              key: zone.id,
               className: 'ts-zone-wheel-item',
               style: { '--zone-color': zone.color }
             },
-              React.createElement('div', { 
+              React.createElement('div', {
                 className: 'ts-zone-wheel-header',
                 style: { borderBottomColor: zone.color }
               },
@@ -348,7 +348,7 @@
   // ========================================
   // Регистрация шагов
   // ========================================
-  
+
   // Шаг 1: Инфо (тип, время, оценки, заметка)
   registerStep('training-info', {
     title: 'Тренировка',
@@ -361,7 +361,7 @@
       const day = lsGet(`heys_dayv2_${dateKey}`, {});
       const trainings = day.trainings || [];
       const T = trainings[trainingIndex] || {};
-      
+
       return {
         type: T.type || 'cardio',
         time: T.time || '',
@@ -391,7 +391,7 @@
       const day = lsGet(`heys_dayv2_${dateKey}`, {});
       const trainings = day.trainings || [];
       const T = trainings[trainingIndex] || {};
-      
+
       return {
         type: T.type || 'cardio',
         time: T.time || '',
@@ -415,16 +415,16 @@
       const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
       const trainingIndex = ctx?.trainingIndex ?? 0;
       const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
-      
+
       const trainings = day.trainings || [];
       while (trainings.length <= trainingIndex) {
         trainings.push({ z: [0, 0, 0, 0] });
       }
-      
+
       // Объединяем данные из шага 1 (info) и шага 2 (zones)
       const infoData = allStepData?.['training-info'] || {};
       const zonesData = data || {};
-      
+
       const finalTraining = {
         z: zonesData.zones || [0, 0, 0, 0],
         time: infoData.time || zonesData.time || '',
@@ -434,23 +434,30 @@
         stress: infoData.stress ?? zonesData.stress ?? 5,
         comment: infoData.comment || zonesData.comment || ''
       };
-      
+
       trainings[trainingIndex] = finalTraining;
-      
+
       day.trainings = trainings;
       day.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, day);
-      
+
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'trainings', source: 'training-step', forceReload: true }
       }));
+
+      const totalMinutes = (finalTraining.z || []).reduce((sum, v) => sum + (Number(v) || 0), 0);
+      if (typeof window !== 'undefined' && totalMinutes > 0) {
+        window.dispatchEvent(new CustomEvent('heysTrainingAdded', {
+          detail: { minutes: totalMinutes, date: dateKey, trainingIndex }
+        }));
+      }
     }
   });
 
   // === API: Показать модалку тренировки ===
   function showTrainingModal(options = {}) {
     const { dateKey, trainingIndex = 0, onComplete } = options;
-    
+
     if (!HEYS.StepModal?.show) {
       console.error('[TrainingStep] StepModal not loaded');
       return;

@@ -1417,6 +1417,12 @@
           forceReload: true
         }
       }));
+
+      if (typeof window !== 'undefined' && data.minutes > 0) {
+        window.dispatchEvent(new CustomEvent('heysHouseholdActivityAdded', {
+          detail: { minutes: data.minutes, date: dateKey }
+        }));
+      }
     },
     xpAction: 'household_logged'
   });
@@ -1467,6 +1473,12 @@
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'householdMin', value: data.minutes, householdTime: data.householdTime, source: 'household-step' }
       }));
+
+      if (typeof window !== 'undefined' && data.minutes > 0) {
+        window.dispatchEvent(new CustomEvent('heysHouseholdActivityAdded', {
+          detail: { minutes: data.minutes, date: dateKey }
+        }));
+      }
     },
     xpAction: 'household_logged'
   });

@@ -775,6 +775,11 @@
 
     saveDaySafe(dateKey, dayData);
     window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { dateKey, field: 'supplements' } }));
+    if (taken && suppIds && suppIds.length > 0) {
+      window.dispatchEvent(new CustomEvent('heysSupplementsTaken', {
+        detail: { date: dateKey, suppIds: [...suppIds] }
+      }));
+    }
   }
 
   // === НАПОМИНАНИЯ ПО ВРЕМЕНИ ===
@@ -1142,6 +1147,11 @@
     window.dispatchEvent(new CustomEvent('heys:day-updated', {
       detail: { date: dateKey, field: 'supplementsTaken' }
     }));
+    if (planned && planned.length > 0) {
+      window.dispatchEvent(new CustomEvent('heysSupplementsTaken', {
+        detail: { date: dateKey, suppIds: [...planned] }
+      }));
+    }
   }
 
   /**
