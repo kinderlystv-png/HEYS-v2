@@ -1,6 +1,7 @@
 // heys_storage_supabase_v1.js — Supabase bridge, auth, cloud sync, localStorage mirroring
 // v59: Fix cache invalidation on cloud sync — UI now shows synced data when changing dates
 // v60: FIX dayv2 overwrite — БЛОКИРОВКА записи старых данных из cloud в localStorage (timestamp check)
+// v61: FIX offline→online race — flush before download + dayv2 backup + meals count guard
 
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
@@ -3102,6 +3103,40 @@
             }
           }
 
+          // 🛡️ v61 FIX: Защита dayv2 от перезатирания пустыми данными
+          const isDayKey = key.includes('dayv2_');
+          if (isDayKey) {
+            const existingRaw = ls.getItem(key);
+            if (existingRaw) {
+              try {
+                const existing = JSON.parse(existingRaw);
+                const localMeaningful = isMeaningfulDayData(existing);
+                const remoteMeaningful = isMeaningfulDayData(valueToStore);
+
+                if (localMeaningful && !remoteMeaningful) {
+                  logCritical(`🛡️ [BOOTSTRAP] KEEP LOCAL: meaningful local, empty remote for ${key}`);
+                  return;
+                }
+
+                const localMealsCount = Array.isArray(existing?.meals) ? existing.meals.length : 0;
+                const remoteMealsCount = Array.isArray(valueToStore?.meals) ? valueToStore.meals.length : 0;
+                if (localMealsCount > remoteMealsCount) {
+                  logCritical(`🛡️ [BOOTSTRAP] KEEP LOCAL: local has MORE meals (${localMealsCount} > ${remoteMealsCount}) for ${key}`);
+                  return;
+                }
+
+                const existingUpdatedAt = existing?.updatedAt || 0;
+                const incomingUpdatedAt = valueToStore?.updatedAt || 0;
+                if (existingUpdatedAt > incomingUpdatedAt) {
+                  logCritical(`🛡️ [BOOTSTRAP] KEEP LOCAL: local is newer (${existingUpdatedAt} > ${incomingUpdatedAt}) for ${key}`);
+                  return;
+                }
+
+                backupDayV2BeforeOverwrite(key, valueToStore, 'bootstrap');
+              } catch (_) { }
+            }
+          }
+
           // Глобальный ключ или ключ текущего клиента — загружаем
           ls.setItem(key, JSON.stringify(valueToStore));
           loadedCount++;
@@ -3214,6 +3249,44 @@
             if (Store && typeof Store.decompress === 'function') {
               valueToStore = Store.decompress(row.v);
               log(`🔧 [YANDEX SYNC] Decompressed ${row.k} from cloud`);
+            }
+          }
+
+          // 🛡️ v61 FIX: Защита dayv2 от перезатирания пустыми данными (аналогично bootstrapClientSync)
+          const isDayKey = localKey.includes('dayv2_');
+          if (isDayKey) {
+            const existingRaw = ls.getItem(localKey);
+            if (existingRaw) {
+              try {
+                const existing = JSON.parse(existingRaw);
+                const localMeaningful = isMeaningfulDayData(existing);
+                const remoteMeaningful = isMeaningfulDayData(valueToStore);
+
+                // Не затираем meaningful локальные данные пустым remote
+                if (localMeaningful && !remoteMeaningful) {
+                  logCritical(`🛡️ [YANDEX SYNC] KEEP LOCAL: meaningful local, empty remote for ${localKey}`);
+                  return; // skip this row
+                }
+
+                // Не затираем если local имеет БОЛЬШЕ meals
+                const localMealsCount = Array.isArray(existing?.meals) ? existing.meals.length : 0;
+                const remoteMealsCount = Array.isArray(valueToStore?.meals) ? valueToStore.meals.length : 0;
+                if (localMealsCount > remoteMealsCount) {
+                  logCritical(`🛡️ [YANDEX SYNC] KEEP LOCAL: local has MORE meals (${localMealsCount} > ${remoteMealsCount}) for ${localKey}`);
+                  return; // skip this row
+                }
+
+                // Не затираем если local новее по timestamp
+                const existingUpdatedAt = existing?.updatedAt || 0;
+                const incomingUpdatedAt = valueToStore?.updatedAt || 0;
+                if (existingUpdatedAt > incomingUpdatedAt) {
+                  logCritical(`🛡️ [YANDEX SYNC] KEEP LOCAL: local is newer (${existingUpdatedAt} > ${incomingUpdatedAt}) for ${localKey}`);
+                  return; // skip this row
+                }
+
+                // 🧷 Backup перед возможной перезаписью
+                backupDayV2BeforeOverwrite(localKey, valueToStore, 'yandex-sync');
+              } catch (_) { }
             }
           }
 
@@ -3368,6 +3441,60 @@
     return false;
   };
 
+  /**
+   * 🧷 Backup dayv2 before overwriting with remote data
+   * Храним локальный снапшот чтобы можно было восстановиться после race condition
+   * Backup-ключи НЕ зеркалируются в облако (см. interceptSetItem)
+   */
+  function backupDayV2BeforeOverwrite(key, incomingValue, source = 'sync') {
+    try {
+      if (!key || !key.includes('dayv2_') || key.includes('dayv2_backup_')) return;
+
+      const ls = global.localStorage;
+      const existingRaw = ls.getItem(key);
+      if (!existingRaw) return;
+
+      const existing = tryParse(existingRaw);
+      if (!isMeaningfulDayData(existing)) return;
+
+      const incomingMeaningful = isMeaningfulDayData(incomingValue);
+      const existingUpdatedAt = existing?.updatedAt || 0;
+      const incomingUpdatedAt = incomingValue?.updatedAt || 0;
+      const existingMeals = Array.isArray(existing?.meals) ? existing.meals.length : 0;
+      const incomingMeals = Array.isArray(incomingValue?.meals) ? incomingValue.meals.length : 0;
+
+      // Бэкап нужен только если incoming выглядит «хуже» или потенциально рискованно
+      const shouldBackup = !incomingMeaningful || incomingMeals < existingMeals || incomingUpdatedAt < existingUpdatedAt;
+      if (!shouldBackup) return;
+
+      const backupKey = key.replace('dayv2_', 'dayv2_backup_');
+      const existingBackupRaw = ls.getItem(backupKey);
+      if (existingBackupRaw) {
+        try {
+          const existingBackup = tryParse(existingBackupRaw);
+          const lastTs = existingBackup?.ts || 0;
+          const lastUpdatedAt = existingBackup?.localUpdatedAt || 0;
+          if (Date.now() - lastTs < 5 * 60 * 1000 && lastUpdatedAt === existingUpdatedAt) {
+            return; // не плодим частые бэкапы
+          }
+        } catch (_) { }
+      }
+
+      const payload = {
+        ts: Date.now(),
+        source,
+        localUpdatedAt: existingUpdatedAt,
+        incomingUpdatedAt,
+        localMeals: existingMeals,
+        incomingMeals,
+        data: existing,
+      };
+
+      safeSetItem(backupKey, JSON.stringify(payload));
+      logCritical(`🧷 [DAYV2 BACKUP] Saved ${backupKey} (${existingMeals} meals) before overwrite | source=${source}`);
+    } catch (e) { }
+  }
+
   // Флаг для дедупликации параллельных вызовов bootstrapClientSync
   let _syncInProgress = null; // null | Promise
   // options.force = true — bypass throttling (для pull-to-refresh)
@@ -3462,15 +3589,18 @@
           window.dispatchEvent(new CustomEvent('heysSyncStarting', { detail: { clientId: client_id } }));
         }
 
-        // 🛡️ КРИТИЧНО: При force sync (PullRefresh) — СНАЧАЛА отправляем pending изменения в облако!
-        // Иначе локальные изменения будут затёрты при загрузке старых данных с сервера
-        if (forceSync) {
-          const pendingCount = cloud.getPendingCount();
-          if (pendingCount > 0) {
-            logCritical(`🔄 [FORCE SYNC] Flushing ${pendingCount} pending items BEFORE downloading...`);
-            const flushed = await cloud.flushPendingQueue(5000);
-            if (!flushed) {
-              logCritical('⚠️ [FORCE SYNC] Queue flush timeout — some changes may be lost!');
+        // 🛡️ КРИТИЧНО: Перед загрузкой из облака — СНАЧАЛА отправляем pending изменения!
+        // Иначе локальные изменения будут затёрты при скачивании старых данных с сервера
+        const pendingCount = cloud.getPendingCount?.() || 0;
+        if (pendingCount > 0 || _uploadInProgress) {
+          logCritical(`🔄 [SYNC] Flushing ${pendingCount} pending items (uploadInProgress: ${_uploadInProgress}) BEFORE download...`);
+          const flushed = await cloud.flushPendingQueue(8000);
+          if (!flushed) {
+            if (forceSync) {
+              logCritical('⚠️ [FORCE SYNC] Queue flush timeout — proceeding with extra guards');
+            } else {
+              logCritical('⚠️ [SYNC] Queue flush timeout — aborting download to avoid overwrite');
+              return;
             }
           }
         }
@@ -3768,6 +3898,24 @@
                 return;
               }
 
+              // 🛡️ ЗАЩИТА: Если local имеет БОЛЬШЕ meals — не затираем (race condition)
+              if (!forceSync) {
+                const localMealsCount = Array.isArray(local?.meals) ? local.meals.length : 0;
+                const remoteMealsCount = Array.isArray(row.v?.meals) ? row.v.meals.length : 0;
+                if (localMealsCount > remoteMealsCount) {
+                  logCritical(`🛡️ [DAYV2] KEEP LOCAL: local has MORE meals (${localMealsCount} > ${remoteMealsCount}) for ${key}`);
+                  const pushObj = {
+                    client_id: client_id,
+                    k: normalizeKeyForSupabase(row.k, client_id),
+                    v: local,
+                    updated_at: new Date().toISOString()
+                  };
+                  clientUpsertQueue.push(pushObj);
+                  scheduleClientPush();
+                  return;
+                }
+              }
+
               // 🔍 ДИАГНОСТИКА: логируем состояние для отладки race conditions (ОТКЛЮЧЕНО - слишком много логов)
               // logCritical(`📅 [SYNC dayv2] key=${key} | local: ${local?.meals?.length || 0} meals, updatedAt=${localUpdatedAt} | remote: ${row.v?.meals?.length || 0} meals, updatedAt=${remoteUpdatedAt} | forceSync=${forceSync}`);
 
@@ -3840,6 +3988,8 @@
 
                 // 🔇 PERF: Отключено
                 // logCritical(`🔄 [FORCE SYNC] Saving ${valueToSave.meals?.length || 0} meals to localStorage | key: ${key}`);
+                // 🧷 Backup перед возможной перезаписью dayv2
+                backupDayV2BeforeOverwrite(key, valueToSave, 'force-sync');
                 ls.setItem(key, JSON.stringify(valueToSave));
 
                 const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
@@ -4524,6 +4674,10 @@
                 } catch (e) { /* ignore parse errors */ }
               }
 
+              // 🧷 Backup перед возможной перезаписью dayv2
+              if (key.includes('dayv2_')) {
+                backupDayV2BeforeOverwrite(key, valueToSave, 'cloud-sync');
+              }
               ls.setItem(key, JSON.stringify(valueToSave));
               log(`  ✅ Saved to localStorage: ${key}`);
 
@@ -4836,6 +4990,10 @@
             }
           }
 
+          // 🧷 Backup перед возможной перезаписью dayv2
+          if (isDayKey) {
+            backupDayV2BeforeOverwrite(targetKey, valueToStore, 'fetchDays');
+          }
           ls.setItem(targetKey, JSON.stringify(valueToStore));
 
           // 🔧 FIX: Инвалидируем memory кэш Store чтобы следующий lsGet прочитал новые данные
@@ -4922,9 +5080,25 @@
       return;
     }
 
+    // �️ v61 FIX: Исключаем heys_game из обычного sync
+    // Gamification модуль синхронизирует свои данные сам с проверкой XP
+    const gamificationKeys = ['heys_game', 'heys_gamification', 'heys_sound_settings'];
+    const filteredBatch = batch.filter(item => {
+      const normalizedKey = item.k?.replace(/^heys_[0-9a-f-]+_/, 'heys_');
+      return !gamificationKeys.includes(normalizedKey) && !gamificationKeys.includes(item.k);
+    });
+
+    // Если отфильтровали всё — выходим
+    if (!filteredBatch.length) {
+      _uploadInProgress = false;
+      _uploadInFlightCount = 0;
+      notifySyncCompletedIfDrained();
+      return;
+    }
+
     // 🔄 Помечаем что данные "в полёте"
     _uploadInProgress = true;
-    _uploadInFlightCount = batch.length;
+    _uploadInFlightCount = filteredBatch.length;
 
     // 🔐 v=54 FIX: После миграции на Yandex API — ВСЕГДА используем RPC режим!
     // _rpcOnlyMode = true устанавливается для ВСЕХ (и клиент PIN, и куратор)
@@ -4934,7 +5108,7 @@
     if (!canSync) {
       // Вернуть в очередь
       console.warn('⚠️ [UPLOAD] canSync=false, returning batch to queue');
-      clientUpsertQueue.push(...batch);
+      clientUpsertQueue.push(...filteredBatch);
       _uploadInProgress = false;
       _uploadInFlightCount = 0;
       savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
@@ -4946,7 +5120,7 @@
     // Не пытаемся отправить если нет сети — данные уже в localStorage
     if (!navigator.onLine) {
       // Вернуть в очередь для повторной отправки когда сеть появится
-      clientUpsertQueue.push(...batch);
+      clientUpsertQueue.push(...filteredBatch);
       _uploadInProgress = false;
       _uploadInFlightCount = 0;
       incrementRetry();
@@ -4961,8 +5135,8 @@
     // Удаляем дубликаты по комбинации client_id+k, оставляя последние значения
     const uniqueBatch = [];
     const seenKeys = new Set();
-    for (let i = batch.length - 1; i >= 0; i--) {
-      const item = batch[i];
+    for (let i = filteredBatch.length - 1; i >= 0; i--) {
+      const item = filteredBatch[i];
       const key = `${item.client_id}:${item.k}`;
       if (!seenKeys.has(key)) {
         seenKeys.add(key);

@@ -172,7 +172,8 @@
   function scoped(k) {
     const cid = ns();
     if (!cid) return k;
-    if (/^heys_(clients|client_current)$/i.test(k)) return k;
+    // 🎮 Global keys — НЕ добавляем clientId (для совместимости с cloud sync)
+    if (/^heys_(clients|client_current|game|sound_settings)$/i.test(k)) return k;
 
     // 🐛 FIX: Если ключ уже содержит clientId — не добавляем повторно!
     if (cid && k.includes(cid)) {
