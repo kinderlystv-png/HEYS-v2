@@ -191,3 +191,4 @@ tsup.config.bundled_*.mjs
 
 # Cloud Functions local bundle
 yandex-cloud-functions/heys-api-rpc/shared/
+heys_shared_products_export_backup.json
