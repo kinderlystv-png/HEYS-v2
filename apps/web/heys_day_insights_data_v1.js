@@ -467,6 +467,7 @@
         let kcal = 0;
         let status = 'empty'; // empty | low | green | yellow | red | perfect
         let isRefeedDay = false; // Загрузочный день
+        let isStreakEligible = false;
 
         // Используем централизованный ratioZones
         const rz = HEYSRef.ratioZones;
@@ -490,15 +491,10 @@
                 status = rz ? rz.getHeatmapStatus(ratio) : 'empty';
               }
 
-              // Считаем streak (последовательные успешные дни — green) — с учётом refeed
-              const isSuccess = rz?.isStreakDayWithRefeed
+              // Определяем streak-статус дня (с учётом refeed)
+              isStreakEligible = rz?.isStreakDayWithRefeed
                 ? rz.isStreakDayWithRefeed(ratio, { isRefeedDay })
                 : (rz ? rz.isSuccess(ratio) : (ratio >= 0.75 && ratio <= 1.1));
-              if (isSuccess && (days.length === 0 || days[days.length - 1].status === 'green')) {
-                streak++;
-              } else if (!isSuccess) {
-                streak = 0;
-              }
 
               // Статистика для паттерна выходных
               if (isWeekend) {
@@ -523,10 +519,35 @@
           isFuture,
           isWeekend,
           isRefeedDay, // Загрузочный день
+          isStreakDay: false, // будет проставлено после расчёта streak
+          isStreakEligible,
           isPerfect: ratio && rz ? rz.isPerfect(ratio) : false, // Идеальный день (0.9-1.1)
           // Градиентный цвет из ratioZones
           bgColor: ratio && rz ? rz.getGradientColor(ratio, 0.6) : null
         });
+      }
+
+      // Проставляем streak-дни (последовательность до вчера/последнего полного дня)
+      const todayIndex = days.findIndex((d) => d.isToday);
+      let streakStartIndex = todayIndex > 0 ? todayIndex - 1 : -1;
+
+      if (streakStartIndex < 0) {
+        for (let i = days.length - 1; i >= 0; i--) {
+          if (!days[i].isFuture) {
+            streakStartIndex = i;
+            break;
+          }
+        }
+      }
+
+      if (streakStartIndex >= 0) {
+        for (let i = streakStartIndex; i >= 0; i--) {
+          const d = days[i];
+          if (d.isFuture || d.isToday) break;
+          if (!d.isStreakEligible) break;
+          d.isStreakDay = true;
+          streak++;
+        }
       }
 
       const isIncompleteToday = (d) => d.date === nowDateStr && (d.ratio === null || d.ratio < 0.5);

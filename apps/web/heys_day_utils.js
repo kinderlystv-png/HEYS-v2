@@ -684,7 +684,9 @@
       if (verbose) console.log('[HEYS] 🔍 autoRecoverOnLoad: начинаю проверку продуктов...');
 
       // 1. Собираем текущие продукты в Map по id и по name (normalized)
-      const products = lsGet('heys_products', []);
+      // 🆕 v4.9.0: Используем HEYS.products.getAll() вместо localStorage напрямую
+      // чтобы не потерять продукты которые уже загружены в память
+      const products = HEYS.products?.getAll?.() || lsGet('heys_products', []);
       const productsById = new Map();
       const productsByName = new Map();
       const productsByFingerprint = new Map(); // 🆕 v4.6.0: Индекс по fingerprint

@@ -429,8 +429,13 @@
                 detail: { streak: currentStreak }
             }));
 
-            // Confetti при streak 7, 14, 30, 100
-            if ([7, 14, 30, 100].includes(currentStreak) && HEYS.game && HEYS.game.celebrate) {
+            // ✅ Проверяем streak-достижения при каждом обновлении streak
+            if (HEYS.game?.checkStreakAchievements) {
+                HEYS.game.checkStreakAchievements(currentStreak);
+            }
+
+            // Confetti при streak 3, 5, 7
+            if ([3, 5, 7].includes(currentStreak) && HEYS.game && HEYS.game.celebrate) {
                 HEYS.game.celebrate();
             }
 

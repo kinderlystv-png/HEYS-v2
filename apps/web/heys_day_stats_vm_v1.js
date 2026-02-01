@@ -740,7 +740,8 @@
       const className = 'week-heatmap-day ' + d.status +
         (d.isToday ? ' today' : '') +
         (d.isWeekend ? ' weekend' : '') +
-        (d.isRefeedDay ? ' refeed-day' : '');
+        (d.isRefeedDay ? ' refeed-day' : '') +
+        (d.isStreakDay ? ' streak-day' : '');
 
       const style = {
         '--stagger-delay': (i * 50) + 'ms',

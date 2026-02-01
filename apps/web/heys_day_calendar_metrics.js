@@ -11,12 +11,17 @@
     }
 
     function computeCurrentStreak(params) {
-        const { optimum, pIndex, fmtDate, lsGet } = params || {};
+        const { optimum, pIndex, fmtDate, lsGet, includeToday } = params || {};
 
         try {
             let count = 0;
             let checkDate = new Date();
             checkDate.setHours(12);
+
+            // По умолчанию НЕ учитываем сегодня (день ещё может измениться)
+            if (!includeToday) {
+                checkDate.setDate(checkDate.getDate() - 1);
+            }
 
             for (let i = 0; i < 30; i++) {
                 const dateStr = fmtDate(checkDate);

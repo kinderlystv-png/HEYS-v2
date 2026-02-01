@@ -12,6 +12,8 @@
 
         const [savedStepsGoal, setSavedStepsGoal] = useState(() => safeProf.stepsGoal || 7000);
         const initialStepsSyncDoneRef = useRef(false);
+        const lastDispatchedStepsRef = useRef(safeDay.steps || 0);
+        const latestStepsRef = useRef(safeDay.steps || 0);
 
         useEffect(() => {
             const handleProfileUpdate = (e) => {
@@ -84,7 +86,8 @@
                     const extraPercent = (percent - 80) / 20;
                     newSteps = stepsGoal + Math.round((extraPercent * (stepsMax - stepsGoal)) / 100) * 100;
                 }
-                setDay(prev => ({ ...prev, steps: Math.min(stepsMax, Math.max(0, newSteps)), updatedAt: Date.now() }));
+                latestStepsRef.current = Math.min(stepsMax, Math.max(0, newSteps));
+                setDay(prev => ({ ...prev, steps: latestStepsRef.current, updatedAt: Date.now() }));
             };
 
             const onMove = (ev) => {
@@ -98,6 +101,14 @@
                 document.removeEventListener('mouseup', onEnd);
                 document.removeEventListener('touchmove', onMove);
                 document.removeEventListener('touchend', onEnd);
+
+                const latestSteps = latestStepsRef.current || 0;
+                if (latestSteps !== lastDispatchedStepsRef.current) {
+                    lastDispatchedStepsRef.current = latestSteps;
+                    window.dispatchEvent(new CustomEvent('heysStepsUpdated', {
+                        detail: { steps: latestSteps }
+                    }));
+                }
             };
 
             document.addEventListener('mousemove', onMove);
