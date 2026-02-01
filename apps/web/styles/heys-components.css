@@ -24,6 +24,31 @@
   min-width: 100% !important;
   width: max-content !important;
   table-layout: auto !important;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.products-table th,
+.products-table td {
+  min-width: 64px;
+  padding: 6px 6px;
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.products-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-color, #ffffff);
+  z-index: 1;
+}
+
+.products-table td input {
+  width: 100% !important;
+  min-width: 44px;
+  text-align: center;
 }
 
 .products-table th:first-child,
@@ -32,9 +57,9 @@
   left: 0 !important;
   background: var(--bg-color, #ffffff) !important;
   z-index: 2;
-  min-width: 90px !important;
-  width: 120px !important;
-  max-width: 160px !important;
+  min-width: 120px !important;
+  width: 160px !important;
+  max-width: 220px !important;
 }
 
 .products-table th:first-child {
@@ -99,6 +124,63 @@
   white-space: nowrap;
 }
 
+.product-owner-badge {
+  font-size: 10px;
+  background: #22c55e;
+  color: #fff;
+  padding: 1px 4px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.product-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.product-action-btn {
+  padding: 4px 6px;
+  font-size: 11px;
+  line-height: 12px;
+  min-height: 20px;
+}
+
+/* === Products range pagination (1-99, 100-199, ...) === */
+.products-range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+.products-range__label {
+  margin-right: 4px;
+  font-size: 12px;
+}
+
+.products-range__btn {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.product-action-btn--ghost {
+  background: transparent;
+}
+
+.product-action-btn--danger {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.product-action-btn--sync {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
 /* === Ration: backup actions === */
 .ration-backups__row {
   display: flex;
@@ -152,9 +234,9 @@
 
 .products-table th:last-child,
 .products-table td:last-child {
-  min-width: 44px !important;
-  width: 56px !important;
-  max-width: 72px !important;
+  min-width: 120px !important;
+  width: 140px !important;
+  max-width: 180px !important;
 }
 
 @media (max-width: 768px) {
@@ -1698,6 +1780,318 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .heys-system-banner {
   background: #111827;
   color: #e5e7eb;
+}
+
+/* === Gamification UX: Level Up Modal + Flying XP + Daily Missions === */
+
+.level-up-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10060;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.level-up-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.level-up-modal__card {
+  position: relative;
+  z-index: 10061;
+  width: min(320px, 90vw);
+  padding: 24px 20px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 2px solid var(--level-color, #22c55e);
+  text-align: center;
+  box-shadow: 0 18px 50px -20px rgba(15, 23, 42, 0.45);
+  animation: heys-levelup-pop 0.35s ease-out;
+}
+
+.level-up-modal__badge {
+  font-size: 36px;
+  margin-bottom: 8px;
+}
+
+.level-up-modal__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.level-up-modal__level {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--level-color, #22c55e);
+  margin: 6px 0;
+}
+
+.level-up-modal__subtitle {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 14px;
+}
+
+.level-up-modal__btn {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 16px;
+  background: var(--level-color, #22c55e);
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.level-up-modal__btn:active {
+  transform: scale(0.98);
+}
+
+@keyframes heys-levelup-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.flying-xp-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10020;
+}
+
+.flying-xp-item {
+  position: fixed;
+  left: var(--x);
+  top: var(--y);
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  font-weight: 700;
+  color: #fbbf24;
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+  animation: heys-xp-fly 0.9s ease-out forwards;
+}
+
+@keyframes heys-xp-fly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -70px) scale(0.9);
+  }
+}
+
+.game-missions-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #f59e0b;
+}
+
+.game-missions-dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.game-missions-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #e5e7eb;
+}
+
+.game-missions-dot.is-complete {
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+}
+
+.game-missions-count {
+  font-weight: 600;
+}
+
+.game-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.game-streak__count {
+  font-weight: 700;
+}
+
+.game-streak__flame {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.5));
+}
+
+.game-streak__flame.flame-mild {
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.45));
+  opacity: 0.75;
+}
+
+.game-streak__flame.flame-warm {
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6)) hue-rotate(0deg);
+}
+
+.game-streak__flame.flame-hot {
+  filter: drop-shadow(0 0 7px rgba(249, 115, 22, 0.7)) hue-rotate(-10deg);
+}
+
+.game-streak__flame.flame-epic {
+  filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.8)) hue-rotate(20deg);
+}
+
+.game-streak__flame.flame-legendary {
+  filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.9)) hue-rotate(160deg);
+  animation: heys-flame-glow 1.6s ease-in-out infinite;
+}
+
+@keyframes heys-flame-glow {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.95;
+  }
+
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
+.game-forecast {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.game-title-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.game-title-row .current-title {
+  justify-self: start;
+  text-align: left;
+}
+
+.game-title-row .next-level-hint {
+  justify-self: center;
+  text-align: center;
+  margin-top: 0;
+}
+
+.game-title-row .onboarding-medal {
+  justify-self: end;
+}
+
+.onboarding-medal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  font-size: 26px;
+  background: radial-gradient(circle at 30% 30%, #fff4c2, #fbbf24 70%);
+  border: 2px solid rgba(234, 179, 8, 0.9);
+  box-shadow: 0 10px 24px -16px rgba(250, 204, 21, 0.9);
+  cursor: help;
+  position: relative;
+  justify-self: end;
+}
+
+.onboarding-medal__tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  transform: translateY(6px);
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: nowrap;
+  background: rgba(15, 23, 42, 0.95);
+  color: #f8fafc;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 12px 24px -18px rgba(15, 23, 42, 0.8);
+}
+
+.onboarding-medal:hover .onboarding-medal__tooltip,
+.onboarding-medal:focus-visible .onboarding-medal__tooltip,
+.onboarding-medal.is-open .onboarding-medal__tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.achievement-story-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+
+.achievement-story-label.unlocked {
+  color: #10b981;
+}
+
+.achievement-story-label.locked {
+  color: #f59e0b;
+}
+
+[data-theme="dark"] .level-up-modal__card {
+  background: #111827;
+  color: #e5e7eb;
+  box-shadow: 0 18px 50px -20px rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="dark"] .level-up-modal__title {
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .level-up-modal__subtitle,
+[data-theme="dark"] .game-forecast {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .game-missions-dot {
+  background: #334155;
+}
+
+[data-theme="dark"] .onboarding-medal {
+  background: radial-gradient(circle at 30% 30%, #fcd34d, #b45309 75%);
+  border-color: rgba(245, 158, 11, 0.9);
+  box-shadow: 0 12px 26px -18px rgba(250, 204, 21, 0.8);
+}
+
+[data-theme="dark"] .onboarding-medal__tooltip {
+  background: rgba(2, 6, 23, 0.95);
+  color: #e2e8f0;
 }
 
 /* === Update badge === */

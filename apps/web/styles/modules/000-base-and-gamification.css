@@ -1692,6 +1692,29 @@ td:first-child input {
   color: #fbbf24;
 }
 
+.game-xp.big-gain {
+  animation: xpGlow 0.9s ease-out;
+  color: #fde047;
+  text-shadow: 0 0 10px rgba(253, 224, 71, 0.9);
+}
+
+@keyframes xpGlow {
+  0% {
+    transform: scale(1);
+    text-shadow: 0 0 0 rgba(253, 224, 71, 0.6);
+  }
+
+  40% {
+    transform: scale(1.2);
+    text-shadow: 0 0 14px rgba(253, 224, 71, 1);
+  }
+
+  100% {
+    transform: scale(1);
+    text-shadow: 0 0 6px rgba(253, 224, 71, 0.7);
+  }
+}
+
 @keyframes xpPop {
   0% {
     transform: scale(1);
@@ -1780,6 +1803,60 @@ td:first-child input {
 .game-progress:hover .game-progress-tooltip,
 .game-progress:active .game-progress-tooltip {
   opacity: 1;
+}
+
+/* Progress milestones (25/50/75%) */
+.game-progress-milestones {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.game-progress-milestone {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+  opacity: 0.6;
+}
+
+.game-progress-milestone[data-step='25'] {
+  left: 25%;
+}
+
+.game-progress-milestone[data-step='50'] {
+  left: 50%;
+}
+
+.game-progress-milestone[data-step='75'] {
+  left: 75%;
+}
+
+.game-progress-milestone.hit {
+  animation: milestonePulse 0.8s ease-out;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+  opacity: 1;
+}
+
+@keyframes milestonePulse {
+  0% {
+    transform: translate(-50%, -50%) scaleY(0.8);
+    opacity: 0.6;
+  }
+
+  60% {
+    transform: translate(-50%, -50%) scaleY(1.6);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scaleY(1);
+    opacity: 0.8;
+  }
 }
 
 .game-streak {
@@ -1895,6 +1972,27 @@ td:first-child input {
   animation: streakGrow 0.6s ease-out;
 }
 
+.game-personal-best.pulse {
+  animation: personalBestPulse 0.9s ease-out;
+}
+
+@keyframes personalBestPulse {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  50% {
+    transform: scale(1.25);
+    filter: brightness(1.3);
+  }
+
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
 @keyframes streakGrow {
   0% {
     transform: scale(1);
@@ -1986,6 +2084,421 @@ td:first-child input {
   animation: none;
   opacity: 0.5;
   cursor: default;
+}
+
+/* Notification pulse on expand button */
+.game-expand-btn.has-notif {
+  position: relative;
+}
+
+.game-expand-btn.has-notif::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: #f59e0b;
+  border-radius: 50%;
+  box-shadow: 0 0 0 rgba(245, 158, 11, 0.5);
+  animation: notifPulse 1.2s ease-out;
+}
+
+@keyframes notifPulse {
+  0% {
+    transform: scale(0.7);
+    box-shadow: 0 0 0 rgba(245, 158, 11, 0.4);
+  }
+
+  70% {
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.7);
+  }
+
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(245, 158, 11, 0.0);
+  }
+}
+
+/* Confetti overlay (gamification) */
+.game-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 6;
+}
+
+.game-confetti__piece {
+  position: absolute;
+  top: -10px;
+  width: 6px;
+  height: 12px;
+  border-radius: 2px;
+  animation: confettiFall 1.6s ease-out forwards;
+  opacity: 0.9;
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(140px) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+.game-confetti--rare .game-confetti__piece:nth-child(n+13) {
+  display: none;
+}
+
+.game-confetti--epic .game-confetti__piece:nth-child(n+19) {
+  display: none;
+}
+
+.game-confetti--legendary .game-confetti__piece:nth-child(n+23) {
+  display: none;
+}
+
+.game-confetti--mythic .game-confetti__piece {
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.7));
+}
+
+.game-confetti--rare .game-confetti__piece {
+  background: #60a5fa;
+}
+
+.game-confetti--epic .game-confetti__piece {
+  background: #c084fc;
+}
+
+.game-confetti--legendary .game-confetti__piece {
+  background: #fbbf24;
+}
+
+.game-confetti--mythic .game-confetti__piece {
+  background: linear-gradient(135deg, #f97316 0%, #ec4899 50%, #60a5fa 100%);
+}
+
+.game-confetti__piece:nth-child(1) {
+  left: 8%;
+  animation-delay: 0.02s;
+}
+
+.game-confetti__piece:nth-child(2) {
+  left: 14%;
+  animation-delay: 0.08s;
+}
+
+.game-confetti__piece:nth-child(3) {
+  left: 22%;
+  animation-delay: 0.04s;
+}
+
+.game-confetti__piece:nth-child(4) {
+  left: 28%;
+  animation-delay: 0.12s;
+}
+
+.game-confetti__piece:nth-child(5) {
+  left: 35%;
+  animation-delay: 0.06s;
+}
+
+.game-confetti__piece:nth-child(6) {
+  left: 42%;
+  animation-delay: 0.1s;
+}
+
+.game-confetti__piece:nth-child(7) {
+  left: 48%;
+  animation-delay: 0.14s;
+}
+
+.game-confetti__piece:nth-child(8) {
+  left: 54%;
+  animation-delay: 0.03s;
+}
+
+.game-confetti__piece:nth-child(9) {
+  left: 60%;
+  animation-delay: 0.09s;
+}
+
+.game-confetti__piece:nth-child(10) {
+  left: 66%;
+  animation-delay: 0.05s;
+}
+
+.game-confetti__piece:nth-child(11) {
+  left: 72%;
+  animation-delay: 0.13s;
+}
+
+.game-confetti__piece:nth-child(12) {
+  left: 78%;
+  animation-delay: 0.07s;
+}
+
+.game-confetti__piece:nth-child(13) {
+  left: 84%;
+  animation-delay: 0.11s;
+}
+
+.game-confetti__piece:nth-child(14) {
+  left: 90%;
+  animation-delay: 0.15s;
+}
+
+.game-confetti__piece:nth-child(15) {
+  left: 12%;
+  animation-delay: 0.16s;
+}
+
+.game-confetti__piece:nth-child(16) {
+  left: 26%;
+  animation-delay: 0.18s;
+}
+
+.game-confetti__piece:nth-child(17) {
+  left: 38%;
+  animation-delay: 0.2s;
+}
+
+.game-confetti__piece:nth-child(18) {
+  left: 50%;
+  animation-delay: 0.22s;
+}
+
+.game-confetti__piece:nth-child(19) {
+  left: 62%;
+  animation-delay: 0.19s;
+}
+
+.game-confetti__piece:nth-child(20) {
+  left: 74%;
+  animation-delay: 0.17s;
+}
+
+.game-confetti__piece:nth-child(21) {
+  left: 86%;
+  animation-delay: 0.21s;
+}
+
+.game-confetti__piece:nth-child(22) {
+  left: 18%;
+  animation-delay: 0.24s;
+}
+
+.game-confetti__piece:nth-child(23) {
+  left: 46%;
+  animation-delay: 0.26s;
+}
+
+.game-confetti__piece:nth-child(24) {
+  left: 68%;
+  animation-delay: 0.28s;
+}
+
+/* Weekly ceremony modal */
+.weekly-ceremony-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.weekly-ceremony-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+.weekly-ceremony-modal__card {
+  position: relative;
+  background: #111827;
+  color: #fff;
+  border-radius: 16px;
+  padding: 18px 20px;
+  width: min(92vw, 360px);
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  animation: weeklyModalIn 0.35s ease-out;
+}
+
+.weekly-ceremony-modal__icon {
+  font-size: 32px;
+  margin-bottom: 6px;
+}
+
+.weekly-ceremony-modal__title {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.weekly-ceremony-modal__subtitle {
+  margin-top: 4px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.weekly-ceremony-modal__reward {
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fbbf24;
+}
+
+.weekly-ceremony-modal__btn {
+  margin-top: 12px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+@keyframes weeklyModalIn {
+  0% {
+    transform: scale(0.95) translateY(10px);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Streak milestone toast */
+.streak-milestone-toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.9);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 13px;
+  z-index: 1200;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+  animation: streakToastIn 0.35s ease-out;
+}
+
+@keyframes streakToastIn {
+  0% {
+    transform: translateX(-50%) translateY(12px);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* XP history animation */
+.xp-history-chart.animate .xp-history-bar {
+  animation: xpBarIn 0.4s ease-out both;
+}
+
+.xp-history-chart.animate .xp-history-bar:nth-child(1) {
+  animation-delay: 0.02s;
+}
+
+.xp-history-chart.animate .xp-history-bar:nth-child(2) {
+  animation-delay: 0.05s;
+}
+
+.xp-history-chart.animate .xp-history-bar:nth-child(3) {
+  animation-delay: 0.08s;
+}
+
+.xp-history-chart.animate .xp-history-bar:nth-child(4) {
+  animation-delay: 0.11s;
+}
+
+.xp-history-chart.animate .xp-history-bar:nth-child(5) {
+  animation-delay: 0.14s;
+}
+
+.xp-history-chart.animate .xp-history-bar:nth-child(6) {
+  animation-delay: 0.17s;
+}
+
+.xp-history-chart.animate .xp-history-bar:nth-child(7) {
+  animation-delay: 0.2s;
+}
+
+@keyframes xpBarIn {
+  0% {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Achievement badge shine */
+.achievement-badge.unlocked {
+  position: relative;
+  overflow: hidden;
+}
+
+.achievement-badge.unlocked::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.45) 50%, transparent 100%);
+  transform: skewX(-20deg);
+  opacity: 0;
+}
+
+.achievement-badge.unlocked:hover::after {
+  animation: badgeShineSwipe 0.8s ease;
+  opacity: 1;
+}
+
+@keyframes badgeShineSwipe {
+  0% {
+    left: -120%;
+    opacity: 0;
+  }
+
+  40% {
+    opacity: 1;
+  }
+
+  100% {
+    left: 140%;
+    opacity: 0;
+  }
+}
+
+/* Notification extra badge */
+.notif-first-category {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fbbf24;
 }
 
 @keyframes bonusGlow {
@@ -3181,6 +3694,13 @@ td:first-child input {
   margin-bottom: 6px;
 }
 
+.achievement-category-hint {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: -2px 0 6px;
+  letter-spacing: 0.2px;
+}
+
 .achievements-row {
   display: flex;
   gap: 8px;
@@ -3193,6 +3713,8 @@ td:first-child input {
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.1);
   border: 2px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;

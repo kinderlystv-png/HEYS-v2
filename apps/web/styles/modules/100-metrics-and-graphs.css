@@ -2440,7 +2440,21 @@
   height: 28px;
   border-radius: 6px;
   background: var(--color-slate-200);
+  position: relative;
   transition: background 0.2s ease, transform 0.15s ease;
+}
+
+/* Streak dot (gold) */
+.week-heatmap-day.streak-day .week-heatmap-cell::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+  bottom: 2px;
+  right: 2px;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.35), 0 0 6px rgba(245, 158, 11, 0.6);
 }
 
 /* Hover эффект на ячейке */
