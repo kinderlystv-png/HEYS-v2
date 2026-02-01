@@ -55,6 +55,50 @@
         });
         const prevLevelRef = useRef(stats.level);
         const [storyAchId, setStoryAchId] = useState(null);
+        const [levelUpModal, setLevelUpModal] = useState(null);
+        const levelUpTimerRef = useRef(null);
+        const [xpBursts, setXpBursts] = useState([]);
+        const xpBurstIdRef = useRef(0);
+        const [notifPulse, setNotifPulse] = useState(false);
+        const [confettiBurst, setConfettiBurst] = useState(null);
+        const [weeklyCeremony, setWeeklyCeremony] = useState(null);
+        const [progressMilestone, setProgressMilestone] = useState(null);
+        const progressMilestoneTimerRef = useRef(null);
+        const [bigXpGlow, setBigXpGlow] = useState(false);
+        const [personalBestPulse, setPersonalBestPulse] = useState(false);
+        const [xpHistoryAnimate, setXpHistoryAnimate] = useState(false);
+        const [streakCelebration, setStreakCelebration] = useState(null);
+        const streakMilestoneRef = useRef(0);
+        const streakToastTimerRef = useRef(null);
+        const [dailyMissions, setDailyMissions] = useState(() => {
+            return HEYS.game?.getDailyMissions ? HEYS.game.getDailyMissions() : null;
+        });
+        const [isOnboardingTipOpen, setIsOnboardingTipOpen] = useState(false);
+
+        const isOnboardingComplete = useCallback(() => {
+            if (!HEYS.game) return false;
+            const onboardingAchievements = [
+                'first_checkin',
+                'first_meal',
+                'first_product',
+                'first_steps',
+                'first_advice',
+                'first_supplements',
+                'first_water',
+                'first_training',
+                'first_household'
+            ];
+            return onboardingAchievements.every((achId) => HEYS.game.isAchievementUnlocked(achId));
+        }, []);
+
+        const onboardingDone = isOnboardingComplete();
+
+        useEffect(() => {
+            if (HEYS.game) HEYS.game.useReactXPFX = true;
+            return () => {
+                if (HEYS.game) HEYS.game.useReactXPFX = false;
+            };
+        }, []);
 
         // Проверяем daily bonus и streak при монтировании + слушаем инициализацию Day
         useEffect(() => {
@@ -110,21 +154,40 @@
                     if (e.detail && e.detail.xpGained > 0) {
                         setIsXPCounting(true);
                         setTimeout(() => setIsXPCounting(false), 400);
+                        if (e.detail.xpGained >= 50) {
+                            setBigXpGlow(true);
+                            setTimeout(() => setBigXpGlow(false), 900);
+                        }
                     }
 
                     // Level up flash
-                    if (newStats.level > prevLevelRef.current) {
+                    const prevLevel = prevLevelRef.current;
+                    if (newStats.level > prevLevel) {
                         setIsLevelUpFlash(true);
                         setTimeout(() => setIsLevelUpFlash(false), 1000);
+
+                        setLevelUpModal({
+                            level: newStats.level,
+                            title: newStats.title?.title || 'Новый уровень',
+                            icon: newStats.title?.icon || '🎉',
+                            color: newStats.title?.color || '#22c55e'
+                        });
+
+                        if (levelUpTimerRef.current) clearTimeout(levelUpTimerRef.current);
+                        levelUpTimerRef.current = setTimeout(() => {
+                            setLevelUpModal(null);
+                        }, 2600);
+
                         prevLevelRef.current = newStats.level;
                     }
 
                     // 🔒 Оптимизация: не обновляем stats если они идентичны (предотвращает мерцание)
                     setStats(prevStats => {
                         if (prevStats &&
-                            prevStats.xp === newStats.xp &&
+                            prevStats.totalXP === newStats.totalXP &&
                             prevStats.level === newStats.level &&
-                            prevStats.streak === newStats.streak) {
+                            prevStats.unlockedCount === newStats.unlockedCount &&
+                            prevStats.progress?.percent === newStats.progress?.percent) {
                             return prevStats; // Без ре-рендера
                         }
                         return newStats;
@@ -141,16 +204,28 @@
                     prevStreakRef.current = newStreak;
                     return prevStreak === newStreak ? prevStreak : newStreak;
                 });
+
+                if (HEYS.game?.getDailyMissions) {
+                    setDailyMissions(HEYS.game.getDailyMissions());
+                }
             };
 
             const handleNotification = (e) => {
                 setNotification(e.detail);
+                setNotifPulse(true);
+                setTimeout(() => setNotifPulse(false), 1200);
                 setTimeout(() => setNotification(null), e.detail.type === 'level_up' ? 4000 : 3000);
 
                 // Achievement unlock animation
                 if (e.detail.type === 'achievement') {
                     setJustUnlockedAch(e.detail.data.achievement.id);
                     setTimeout(() => setJustUnlockedAch(null), 1000);
+
+                    const rarity = e.detail.data.achievement?.rarity;
+                    if (['rare', 'epic', 'legendary', 'mythic'].includes(rarity)) {
+                        setConfettiBurst({ rarity });
+                        setTimeout(() => setConfettiBurst(null), 1800);
+                    }
                 }
             };
 
@@ -206,6 +281,63 @@
             };
         }, []);
 
+        useEffect(() => {
+            const handleWeeklyComplete = (e) => {
+                const detail = e?.detail || {};
+                if (!detail.challenge) return;
+                setWeeklyCeremony({
+                    title: detail.challenge.title || detail.challenge.name || 'Недельный челлендж',
+                    reward: detail.reward || detail.challenge.reward || 100,
+                    icon: detail.challenge.icon || '🏆'
+                });
+            };
+
+            const handleMilestone = (e) => {
+                const milestone = e?.detail?.milestone;
+                if (!milestone) return;
+                setProgressMilestone(milestone);
+                if (progressMilestoneTimerRef.current) clearTimeout(progressMilestoneTimerRef.current);
+                progressMilestoneTimerRef.current = setTimeout(() => setProgressMilestone(null), 900);
+            };
+
+            window.addEventListener('heysWeeklyChallengeComplete', handleWeeklyComplete);
+            window.addEventListener('heysProgressMilestone', handleMilestone);
+
+            return () => {
+                window.removeEventListener('heysWeeklyChallengeComplete', handleWeeklyComplete);
+                window.removeEventListener('heysProgressMilestone', handleMilestone);
+            };
+        }, []);
+
+        useEffect(() => {
+            const handleXpGained = (e) => {
+                const detail = e?.detail || {};
+                if (!detail.xp) return;
+
+                const id = xpBurstIdRef.current++;
+                setXpBursts(prev => ([
+                    ...prev,
+                    { id, xp: detail.xp, x: detail.x, y: detail.y }
+                ]));
+
+                setTimeout(() => {
+                    setXpBursts(prev => prev.filter(item => item.id !== id));
+                }, 900);
+            };
+
+            const handleDailyMissionsUpdate = (e) => {
+                setDailyMissions(e?.detail || (HEYS.game?.getDailyMissions ? HEYS.game.getDailyMissions() : null));
+            };
+
+            window.addEventListener('heysXpGained', handleXpGained);
+            window.addEventListener('heysDailyMissionsUpdate', handleDailyMissionsUpdate);
+
+            return () => {
+                window.removeEventListener('heysXpGained', handleXpGained);
+                window.removeEventListener('heysDailyMissionsUpdate', handleDailyMissionsUpdate);
+            };
+        }, []);
+
         // Периодическое обновление streak (каждые 30 сек)
         useEffect(() => {
             const interval = setInterval(() => {
@@ -215,10 +347,38 @@
             return () => clearInterval(interval);
         }, []);
 
+        useEffect(() => {
+            const milestones = [1, 2, 3, 5, 7];
+            if (!milestones.includes(streak)) return;
+            if (streak <= streakMilestoneRef.current) return;
+
+            streakMilestoneRef.current = streak;
+            setStreakCelebration(streak);
+            if (streakToastTimerRef.current) clearTimeout(streakToastTimerRef.current);
+            streakToastTimerRef.current = setTimeout(() => setStreakCelebration(null), 2200);
+
+            if (HEYS.game?.isNewStreakRecord?.()) {
+                setPersonalBestPulse(true);
+                setTimeout(() => setPersonalBestPulse(false), 1000);
+            }
+        }, [streak]);
+
+        useEffect(() => {
+            if (!expanded) return;
+            setXpHistoryAnimate(true);
+            const timer = setTimeout(() => setXpHistoryAnimate(false), 900);
+            return () => clearTimeout(timer);
+        }, [expanded]);
+
         const toggleExpanded = () => setExpanded(!expanded);
 
         const { title, progress } = stats;
         const progressPercent = Math.max(5, progress.percent); // Minimum 5% для визуального feedback
+        const avgDailyXP = xpHistory?.length
+            ? Math.round(xpHistory.reduce((sum, d) => sum + (d?.xp || 0), 0) / xpHistory.length)
+            : 0;
+        const xpToNext = Math.max(0, progress.required - progress.current);
+        const daysToNext = avgDailyXP > 0 ? Math.ceil(xpToNext / avgDailyXP) : null;
         const storyAchievement = storyAchId && HEYS.game?.ACHIEVEMENTS
             ? HEYS.game.ACHIEVEMENTS[storyAchId]
             : null;
@@ -233,11 +393,24 @@
 
         // Streak класс по уровню
         const getStreakClass = (s) => {
-            if (s >= 30) return 'streak-legendary';  // 30+ дней — радужный
-            if (s >= 14) return 'streak-epic';       // 14+ дней — золотой
-            if (s >= 7) return 'streak-high';        // 7+ дней — яркий
-            if (s >= 3) return 'streak-mid';         // 3+ дней — мерцающий
-            return 'streak-low';                     // 1-2 дня — статичный
+            if (s >= 7) return 'streak-legendary';   // 7+ дней — радужный
+            if (s >= 5) return 'streak-epic';        // 5+ дней — золотой
+            if (s >= 3) return 'streak-high';        // 3+ дней — яркий
+            if (s >= 2) return 'streak-mid';         // 2 дня — мерцающий
+            return 'streak-low';                     // 1 день — статичный
+        };
+
+        const getStreakFlameClass = (s) => {
+            if (s >= 30) return 'flame-legendary';
+            if (s >= 14) return 'flame-epic';
+            if (s >= 7) return 'flame-hot';
+            if (s >= 3) return 'flame-warm';
+            return 'flame-mild';
+        };
+
+        const handleOnboardingMedalToggle = (e) => {
+            e.stopPropagation();
+            setIsOnboardingTipOpen((prev) => !prev);
         };
 
         // Ripple эффект на тапе по progress bar
@@ -271,6 +444,20 @@
         return React.createElement('div', {
             className: `game-bar-container ${isLevelUpFlash ? 'level-up-flash' : ''}`
         },
+            confettiBurst && React.createElement('div', {
+                className: `game-confetti game-confetti--${confettiBurst.rarity}`
+            },
+                Array.from({ length: 24 }).map((_, i) =>
+                    React.createElement('span', { key: i, className: 'game-confetti__piece' })
+                )
+            ),
+            xpBursts.length > 0 && React.createElement('div', { className: 'flying-xp-layer' },
+                xpBursts.map((item) => React.createElement('div', {
+                    key: item.id,
+                    className: 'flying-xp-item',
+                    style: { '--x': `${item.x}px`, '--y': `${item.y}px` }
+                }, `+${item.xp}`))
+            ),
             // Main bar — одна строка
             React.createElement('div', {
                 className: 'game-bar',
@@ -327,6 +514,22 @@
                             background: getProgressGradient(progress.percent)
                         }
                     }),
+                    React.createElement('div', {
+                        className: 'game-progress-milestones'
+                    },
+                        React.createElement('span', {
+                            className: `game-progress-milestone ${progressMilestone === 25 ? 'hit' : ''}`,
+                            'data-step': '25'
+                        }),
+                        React.createElement('span', {
+                            className: `game-progress-milestone ${progressMilestone === 50 ? 'hit' : ''}`,
+                            'data-step': '50'
+                        }),
+                        React.createElement('span', {
+                            className: `game-progress-milestone ${progressMilestone === 75 ? 'hit' : ''}`,
+                            'data-step': '75'
+                        })
+                    ),
                     // Tooltip
                     React.createElement('span', { className: 'game-progress-tooltip' },
                         `Ещё ${progress.required - progress.current} XP до ур.${stats.level + 1}`
@@ -345,15 +548,35 @@
                         : `⚡${dailyMultiplier.actions}`
                 ),
 
+                // Daily missions inline
+                dailyMissions && React.createElement('div', {
+                    className: 'game-missions-inline',
+                    title: `Миссии дня: ${dailyMissions.completedCount || 0}/3`
+                },
+                    React.createElement('span', { className: 'game-missions-label' }, '🧭'),
+                    React.createElement('div', { className: 'game-missions-dots' },
+                        [0, 1, 2].map((i) => React.createElement('span', {
+                            key: i,
+                            className: `game-missions-dot ${i < (dailyMissions.completedCount || 0) ? 'is-complete' : ''}`
+                        }))
+                    ),
+                    React.createElement('span', { className: 'game-missions-count' }, `${dailyMissions.completedCount || 0}/3`)
+                ),
+
                 // Streak
                 streak > 0 && React.createElement('span', {
                     className: `game-streak ${getStreakClass(streak)}${streakJustGrew ? ' just-grew' : ''}`,
-                    title: `${streak} дней подряд в норме!`
-                }, `🔥${streak}`),
+                    title: `${streak} дней подряд в норме (считаем только завершённые дни)`
+                },
+                    React.createElement('span', {
+                        className: `game-streak__flame ${getStreakFlameClass(streak)}`
+                    }, '🔥'),
+                    React.createElement('span', { className: 'game-streak__count' }, streak)
+                ),
 
                 // Personal Best
                 HEYS.game && HEYS.game.isNewStreakRecord() && streak > 0 && React.createElement('span', {
-                    className: 'game-personal-best',
+                    className: `game-personal-best${personalBestPulse ? ' pulse' : ''}`,
                     title: 'Новый рекорд streak!'
                 }, '🏆'),
 
@@ -371,12 +594,12 @@
 
                 // XP counter
                 React.createElement('span', {
-                    className: `game-xp ${isXPCounting ? 'counting' : ''}`
+                    className: `game-xp ${isXPCounting ? 'counting' : ''} ${bigXpGlow ? 'big-gain' : ''}`
                 }, `${progress.current}/${progress.required}`),
 
                 // Expand button
                 React.createElement('button', {
-                    className: `game-expand-btn ${expanded ? 'expanded' : ''}`,
+                    className: `game-expand-btn ${expanded ? 'expanded' : ''} ${notifPulse ? 'has-notif' : ''}`,
                     title: expanded ? 'Свернуть' : 'Подробнее'
                 }, expanded ? '▲' : '▼'),
 
@@ -423,7 +646,8 @@
                             React.createElement('span', { className: 'notif-icon' }, notification.data.achievement.icon),
                             React.createElement('div', { className: 'notif-content' },
                                 React.createElement('div', { className: 'notif-title' }, notification.data.achievement.name),
-                                React.createElement('div', { className: 'notif-subtitle' }, `+${notification.data.achievement.xp} XP`)
+                                React.createElement('div', { className: 'notif-subtitle' }, `+${notification.data.achievement.xp} XP`),
+                                notification.data.firstInCategory && React.createElement('div', { className: 'notif-first-category' }, '🆕 Новая категория')
                             )
                         )
                         : notification.type === 'daily_bonus'
@@ -443,7 +667,7 @@
                                     React.createElement('span', { className: 'notif-icon' }, '🎯'),
                                     React.createElement('div', { className: 'notif-content' },
                                         React.createElement('div', { className: 'notif-title' }, '🎉 Недельный челлендж!'),
-                                        React.createElement('div', { className: 'notif-subtitle' }, `+100 XP бонус!`)
+                                        React.createElement('div', { className: 'notif-subtitle' }, `+${notification.data.reward || 100} XP бонус!`)
                                     )
                                 )
                                 : notification.type === 'streak_shield'
@@ -545,7 +769,7 @@
                     // XP History — мини-график за 7 дней
                     xpHistory?.length > 0 && React.createElement('div', { className: 'xp-history-section' },
                         React.createElement('div', { className: 'xp-history-title' }, '📊 XP за неделю'),
-                        React.createElement('div', { className: 'xp-history-chart' },
+                        React.createElement('div', { className: `xp-history-chart${xpHistoryAnimate ? ' animate' : ''}` },
                             (() => {
                                 const maxXP = Math.max(...xpHistory.map(d => d.xp), 1);
                                 return xpHistory.map((day, i) =>
@@ -588,61 +812,91 @@
 
                     // Title & next level
                     React.createElement('div', { className: 'game-title-section' },
-                        React.createElement('div', {
-                            className: 'current-title',
-                            style: { color: title.color }
-                        }, `${title.icon} ${title.title}`),
-                        React.createElement('div', { className: 'next-level-hint' },
-                            `До уровня ${stats.level + 1}: ${progress.required - progress.current} XP`
+                        React.createElement('div', { className: 'game-title-row' },
+                            React.createElement('div', {
+                                className: 'current-title',
+                                style: { color: title.color }
+                            }, `${title.icon} ${title.title}`),
+                            React.createElement('div', { className: 'next-level-hint' },
+                                `До уровня ${stats.level + 1}: ${progress.required - progress.current} XP`
+                            ),
+                            onboardingDone && React.createElement('div', {
+                                className: `onboarding-medal${isOnboardingTipOpen ? ' is-open' : ''}`,
+                                role: 'button',
+                                tabIndex: 0,
+                                onClick: handleOnboardingMedalToggle,
+                                onMouseEnter: () => setIsOnboardingTipOpen(true),
+                                onMouseLeave: () => setIsOnboardingTipOpen(false),
+                                onBlur: () => setIsOnboardingTipOpen(false),
+                                onKeyDown: (e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        handleOnboardingMedalToggle(e);
+                                    }
+                                }
+                            },
+                                '🏅',
+                                React.createElement('span', { className: 'onboarding-medal__tooltip' },
+                                    'Первые шаги: все базовые достижения выполнены'
+                                )
+                            )
+                        ),
+                        daysToNext && React.createElement('div', { className: 'game-forecast' },
+                            `Прогноз: ур.${stats.level + 1} примерно через ${daysToNext} дн. (~${avgDailyXP} XP/день)`
                         )
                     ),
 
                     // Achievements grid
                     React.createElement('div', { className: 'game-achievements-section' },
                         React.createElement('h4', null, '🏆 Достижения'),
-                        HEYS.game && HEYS.game.getAchievementCategories().map(cat =>
-                            React.createElement('div', { key: cat.id, className: 'achievement-category' },
-                                React.createElement('div', { className: 'category-name' }, cat.name),
-                                React.createElement('div', { className: 'achievements-row' },
-                                    cat.achievements.map(achId => {
-                                        const ach = HEYS.game.ACHIEVEMENTS[achId];
-                                        const unlocked = HEYS.game.isAchievementUnlocked(achId);
-                                        const isJustUnlocked = justUnlockedAch === achId;
-                                        const rarityClass = unlocked ? `rarity-${ach.rarity}` : '';
+                        HEYS.game && HEYS.game.getAchievementCategories()
+                            .filter((cat) => !(cat.id === 'onboarding' && onboardingDone))
+                            .map(cat =>
+                                React.createElement('div', { key: cat.id, className: 'achievement-category' },
+                                    React.createElement('div', { className: 'category-name' }, cat.name),
+                                    cat.id === 'streak' && React.createElement('div', {
+                                        className: 'achievement-category-hint'
+                                    }, '⚡ Суперредко → максимум XP'),
+                                    React.createElement('div', { className: 'achievements-row' },
+                                        cat.achievements.map(achId => {
+                                            const ach = HEYS.game.ACHIEVEMENTS[achId];
+                                            const unlocked = HEYS.game.isAchievementUnlocked(achId);
+                                            const isJustUnlocked = justUnlockedAch === achId;
+                                            const rarityClass = unlocked ? `rarity-${ach.rarity}` : '';
 
-                                        // 🆕 Get progress for locked achievements
-                                        const progress = !unlocked && HEYS.game.getAchievementProgress
-                                            ? HEYS.game.getAchievementProgress(achId)
-                                            : null;
-                                        const progressPct = progress ? Math.min(100, Math.round((progress.current / progress.target) * 100)) : 0;
-                                        const isAlmostThere = progressPct >= 70 && progressPct < 100;
+                                            // 🆕 Get progress for locked achievements
+                                            const progress = !unlocked && HEYS.game.getAchievementProgress
+                                                ? HEYS.game.getAchievementProgress(achId)
+                                                : null;
+                                            const progressPct = progress ? Math.min(100, Math.round((progress.current / progress.target) * 100)) : 0;
+                                            const isAlmostThere = progressPct >= 70 && progressPct < 100;
 
-                                        return React.createElement('div', {
-                                            key: achId,
-                                            className: `achievement-badge ${unlocked ? 'unlocked' : 'locked'} ${rarityClass} ${isJustUnlocked ? 'just-unlocked' : ''} ${isAlmostThere ? 'almost-there' : ''}`,
-                                            title: `${ach.name}: ${ach.desc}${progress ? ` (${progress.current}/${progress.target})` : ''}`,
-                                            style: unlocked ? { borderColor: HEYS.game.RARITY_COLORS[ach.rarity] } : {},
-                                            onClick: (e) => {
-                                                e.stopPropagation();
-                                                setStoryAchId(achId);
-                                            }
-                                        },
-                                            React.createElement('span', { className: 'badge-icon' }, unlocked ? ach.icon : '🔒'),
-                                            unlocked
-                                                ? React.createElement('span', { className: 'badge-xp' }, `+${ach.xp}`)
-                                                : progress && progressPct > 0 && React.createElement('span', {
-                                                    className: `badge-progress ${isAlmostThere ? 'almost' : ''}`
-                                                }, `${progressPct}%`),
-                                            // 🆕 Progress bar for locked achievements
-                                            !unlocked && progress && progressPct > 0 && React.createElement('div', {
-                                                className: 'badge-progress-bar',
-                                                style: { width: `${progressPct}%` }
-                                            })
-                                        );
-                                    })
+                                            return React.createElement('div', {
+                                                key: achId,
+                                                className: `achievement-badge ${unlocked ? 'unlocked' : 'locked'} ${rarityClass} ${isJustUnlocked ? 'just-unlocked' : ''} ${isAlmostThere ? 'almost-there' : ''}`,
+                                                title: `${ach.name}: ${ach.desc}${progress ? ` (${progress.current}/${progress.target})` : ''}`,
+                                                style: unlocked ? { borderColor: HEYS.game.RARITY_COLORS[ach.rarity] } : {},
+                                                onClick: (e) => {
+                                                    e.stopPropagation();
+                                                    setStoryAchId(achId);
+                                                }
+                                            },
+                                                React.createElement('span', { className: 'badge-icon' }, unlocked ? ach.icon : '🔒'),
+                                                unlocked
+                                                    ? React.createElement('span', { className: 'badge-xp' }, `+${ach.xp}`)
+                                                    : progress && progressPct > 0 && React.createElement('span', {
+                                                        className: `badge-progress ${isAlmostThere ? 'almost' : ''}`
+                                                    }, `${progressPct}%`),
+                                                // 🆕 Progress bar for locked achievements
+                                                !unlocked && progress && progressPct > 0 && React.createElement('div', {
+                                                    className: 'badge-progress-bar',
+                                                    style: { width: `${progressPct}%` }
+                                                })
+                                            );
+                                        })
+                                    )
                                 )
                             )
-                        )
                     )
                 )
             ),
@@ -659,14 +913,64 @@
                     React.createElement('div', { className: 'achievement-story-rarity' }, storyAchievement.rarity),
                     React.createElement('div', { className: 'achievement-story-icon' }, storyUnlocked ? storyAchievement.icon : '🔒'),
                     React.createElement('div', { className: 'achievement-story-name' }, storyAchievement.name),
-                    React.createElement('div', { className: 'achievement-story-text' }, storyAchievement.story || storyAchievement.desc),
+                    React.createElement('div', {
+                        className: `achievement-story-label ${storyUnlocked ? 'unlocked' : 'locked'}`
+                    }, storyUnlocked ? 'Инсайт' : 'Как получить'),
+                    React.createElement('div', {
+                        className: 'achievement-story-text'
+                    }, storyUnlocked ? (storyAchievement.story || storyAchievement.desc) : storyAchievement.desc),
                     React.createElement('div', { className: 'achievement-story-xp' }, `+${storyAchievement.xp} XP`),
                     React.createElement('button', {
                         className: 'achievement-story-btn',
                         onClick: () => setStoryAchId(null)
                     }, 'Понятно')
                 )
-            )
+            ),
+
+            levelUpModal && React.createElement('div', {
+                className: 'level-up-modal',
+                onClick: () => setLevelUpModal(null)
+            },
+                React.createElement('div', { className: 'level-up-modal__backdrop' }),
+                React.createElement('div', {
+                    className: 'level-up-modal__card',
+                    style: { '--level-color': levelUpModal.color },
+                    onClick: (e) => e.stopPropagation()
+                },
+                    React.createElement('div', { className: 'level-up-modal__badge' }, levelUpModal.icon),
+                    React.createElement('div', { className: 'level-up-modal__title' }, 'Новый уровень!'),
+                    React.createElement('div', { className: 'level-up-modal__level' }, `Уровень ${levelUpModal.level}`),
+                    React.createElement('div', { className: 'level-up-modal__subtitle' }, levelUpModal.title),
+                    React.createElement('button', {
+                        className: 'level-up-modal__btn',
+                        onClick: () => setLevelUpModal(null)
+                    }, 'Продолжить')
+                )
+            ),
+
+            weeklyCeremony && React.createElement('div', {
+                className: 'weekly-ceremony-modal',
+                onClick: () => setWeeklyCeremony(null)
+            },
+                React.createElement('div', { className: 'weekly-ceremony-modal__backdrop' }),
+                React.createElement('div', {
+                    className: 'weekly-ceremony-modal__card',
+                    onClick: (e) => e.stopPropagation()
+                },
+                    React.createElement('div', { className: 'weekly-ceremony-modal__icon' }, weeklyCeremony.icon || '🏆'),
+                    React.createElement('div', { className: 'weekly-ceremony-modal__title' }, 'Недельный челлендж выполнен!'),
+                    React.createElement('div', { className: 'weekly-ceremony-modal__subtitle' }, weeklyCeremony.title),
+                    React.createElement('div', { className: 'weekly-ceremony-modal__reward' }, `+${weeklyCeremony.reward} XP`),
+                    React.createElement('button', {
+                        className: 'weekly-ceremony-modal__btn',
+                        onClick: () => setWeeklyCeremony(null)
+                    }, 'Отлично!')
+                )
+            ),
+
+            streakCelebration && React.createElement('div', {
+                className: 'streak-milestone-toast'
+            }, `🔥 Streak ${streakCelebration} дней!`)
         );
     }
 

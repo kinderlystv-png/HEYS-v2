@@ -89,14 +89,19 @@
    * XP за действия
    */
   const XP_ACTIONS = {
-    product_added: { xp: 5, maxPerDay: 50, label: 'Продукт добавлен' },
-    water_added: { xp: 2, maxPerDay: 10, label: 'Вода добавлена' },
-    training_added: { xp: 15, maxPerDay: 3, label: 'Тренировка' },
+    checkin_complete: { xp: 10, maxPerDay: 1, label: 'Утренний чек-ин' },
+    meal_added: { xp: 3, maxPerDay: 4, label: 'Приём пищи' },
+    product_added: { xp: 3, maxPerDay: 10, label: 'Продукт добавлен' },
+    steps_updated: { xp: 3, maxPerDay: 1, label: 'Шаги обновлены' },
+    supplements_taken: { xp: 5, maxPerDay: 1, label: 'Витамины приняты' },
+    household_added: { xp: 5, maxPerDay: 2, label: 'Бытовая активность' },
+    water_added: { xp: 2, maxPerDay: 5, label: 'Вода добавлена' },
+    training_added: { xp: 15, maxPerDay: 2, label: 'Тренировка' },
     sleep_logged: { xp: 5, maxPerDay: 1, label: 'Сон заполнен' },
     weight_logged: { xp: 5, maxPerDay: 1, label: 'Вес записан' },
     day_completed: { xp: 50, maxPerDay: 1, label: 'День выполнен' },
     perfect_day: { xp: 25, maxPerDay: 1, label: 'Идеальный день' },
-    advice_read: { xp: 2, maxPerDay: 20, label: 'Совет прочитан' }
+    advice_read: { xp: 2, maxPerDay: 10, label: 'Совет прочитан' }
   };
 
   /**
@@ -104,18 +109,22 @@
    */
   const ACHIEVEMENTS = {
     // 🔥 Streak (5)
-    streak_3: { id: 'streak_3', name: 'Три дня подряд', desc: 'Streak ≥ 3 дня', story: 'Три дня подряд — первый импульс. Ты уже в ритме.', xp: 30, icon: '🔥', category: 'streak', rarity: 'common' },
-    streak_7: { id: 'streak_7', name: 'Неделя успеха', desc: 'Streak ≥ 7 дней', story: 'Неделя дисциплины — привычка начинает закрепляться.', xp: 100, icon: '🏆', category: 'streak', rarity: 'rare' },
-    streak_14: { id: 'streak_14', name: 'Две недели', desc: 'Streak ≥ 14 дней', story: 'Две недели — это система, а не случайность.', xp: 200, icon: '⭐', category: 'streak', rarity: 'epic' },
-    streak_30: { id: 'streak_30', name: 'Месяц силы', desc: 'Streak ≥ 30 дней', story: 'Месяц силы — ты управляешь процессом.', xp: 500, icon: '👑', category: 'streak', rarity: 'legendary' },
-    streak_100: { id: 'streak_100', name: 'Железная воля', desc: 'Streak ≥ 100 дней', story: 'Сто дней — железная воля и новый образ жизни.', xp: 1000, icon: '💎', category: 'streak', rarity: 'mythic' },
+    streak_1: { id: 'streak_1', name: 'Первый день', desc: 'Streak ≥ 1 день', story: 'Первый день — начало устойчивого ритма.', xp: 100, icon: '🔥', category: 'streak', rarity: 'common' },
+    streak_2: { id: 'streak_2', name: 'Два дня подряд', desc: 'Streak ≥ 2 дня', story: 'Два дня подряд — уже не случайность.', xp: 200, icon: '🔥', category: 'streak', rarity: 'rare' },
+    streak_3: { id: 'streak_3', name: 'Три дня подряд', desc: 'Streak ≥ 3 дня', story: 'Три дня подряд — импульс закрепился.', xp: 350, icon: '🏆', category: 'streak', rarity: 'epic' },
+    streak_5: { id: 'streak_5', name: 'Пять дней подряд', desc: 'Streak ≥ 5 дней', story: 'Пять дней — стабильность уже видна.', xp: 700, icon: '👑', category: 'streak', rarity: 'legendary' },
+    streak_7: { id: 'streak_7', name: 'Семь дней подряд', desc: 'Streak ≥ 7 дней', story: 'Семь дней — это суперредко и очень сильно.', xp: 1200, icon: '💎', category: 'streak', rarity: 'mythic' },
 
-    // 🎯 Первые шаги (5)
-    first_meal: { id: 'first_meal', name: 'Первый шаг', desc: 'Добавить первый продукт', story: 'Первый продукт — начало пути и первый кирпич привычки.', xp: 50, icon: '🎯', category: 'onboarding', rarity: 'common' },
+    // 🎯 Первые шаги (10)
+    first_checkin: { id: 'first_checkin', name: 'Первый чек-ин', desc: 'Завершить утренний чек-ин', story: 'Первый чек-ин — утро под контролем.', xp: 40, icon: '☀️', category: 'onboarding', rarity: 'common' },
+    first_meal: { id: 'first_meal', name: 'Первый приём', desc: 'Добавить первый приём пищи', story: 'Первый приём — старт новой привычки.', xp: 50, icon: '🍽️', category: 'onboarding', rarity: 'common' },
+    first_product: { id: 'first_product', name: 'Первый продукт', desc: 'Добавить продукт в приём', story: 'Первый продукт — ты начал вести дневник.', xp: 40, icon: '🥗', category: 'onboarding', rarity: 'common' },
+    first_steps: { id: 'first_steps', name: 'Первые шаги', desc: 'Указать шаги хотя бы раз', story: 'Первые шаги — движение тоже в фокусе.', xp: 20, icon: '👟', category: 'onboarding', rarity: 'common' },
     first_water: { id: 'first_water', name: 'Водный старт', desc: 'Первый раз добавить воду', story: 'Первый стакан — маленький шаг к большой энергии.', xp: 20, icon: '💧', category: 'onboarding', rarity: 'common' },
+    first_advice: { id: 'first_advice', name: 'Первый совет', desc: 'Прочитать совет', story: 'Первый совет — бережный старт.', xp: 15, icon: '💡', category: 'onboarding', rarity: 'common' },
+    first_supplements: { id: 'first_supplements', name: 'Первые витамины', desc: 'Отметить приём добавок', story: 'Витамины отмечены — регулярность началась.', xp: 20, icon: '💊', category: 'onboarding', rarity: 'common' },
     first_training: { id: 'first_training', name: 'Активный старт', desc: 'Первая тренировка', story: 'Первая тренировка — тело услышало твой сигнал.', xp: 30, icon: '🏃', category: 'onboarding', rarity: 'common' },
-    first_weight: { id: 'first_weight', name: 'Точка отсчёта', desc: 'Первый раз ввести вес', story: 'Точка отсчёта — теперь прогресс измерим.', xp: 20, icon: '⚖️', category: 'onboarding', rarity: 'common' },
-    profile_complete: { id: 'profile_complete', name: 'Профиль готов', desc: 'Заполнить профиль на 100%', story: 'Профиль заполнен — ты настроил систему под себя.', xp: 50, icon: '📋', category: 'onboarding', rarity: 'common' },
+    first_household: { id: 'first_household', name: 'Первый быт', desc: 'Первая бытовая активность', story: 'Бытовая активность тоже считается — классный старт.', xp: 20, icon: '🏠', category: 'onboarding', rarity: 'common' },
 
     // 💎 Качество дня (4)
     perfect_day: { id: 'perfect_day', name: 'Идеальный день', desc: 'Калории 95-105% от нормы', story: 'Идеальный баланс — когда план и реальность совпали.', xp: 25, icon: '💎', category: 'quality', rarity: 'rare' },
@@ -153,8 +162,8 @@
   };
 
   const ACHIEVEMENT_CATEGORIES = [
-    { id: 'streak', name: '🔥 Streak', achievements: ['streak_3', 'streak_7', 'streak_14', 'streak_30', 'streak_100'] },
-    { id: 'onboarding', name: '🎯 Первые шаги', achievements: ['first_meal', 'first_water', 'first_training', 'first_weight', 'profile_complete'] },
+    { id: 'streak', name: '🔥 Streak', achievements: ['streak_1', 'streak_2', 'streak_3', 'streak_5', 'streak_7'] },
+    { id: 'onboarding', name: '🎯 Первые шаги', achievements: ['first_checkin', 'first_meal', 'first_product', 'first_steps', 'first_advice', 'first_supplements', 'first_water', 'first_training', 'first_household'] },
     { id: 'advice', name: '💡 Советы', achievements: ['advice_reader', 'advice_master'] },
     { id: 'quality', name: '💎 Качество дня', achievements: ['perfect_day', 'perfect_week', 'balanced_macros', 'fiber_champion'] },
     { id: 'activity', name: '💧 Вода и активность', achievements: ['water_day', 'water_master', 'training_week', 'steps_champion'] },
@@ -177,6 +186,7 @@
   let _debounceTimer = null;
   let _notificationQueue = [];
   let _isShowingNotification = false;
+  let _cloudLoaded = false; // 🛡️ Флаг что облако проверено
   const DEBOUNCE_MS = 100;
   const STORAGE_KEY = 'heys_game';
   const DATA_VERSION = 2; // Версия структуры данных для миграций
@@ -192,6 +202,45 @@
       return typeof HEYS.Day?.getStreak === 'function' ? HEYS.Day.getStreak() : 0;
     } catch {
       return 0;
+    }
+  }
+
+  // 🎵 Mission completion sound (short double ping)
+  function playMissionSound(isAllComplete = false) {
+    loadSoundSettings();
+    if (!SOUND_SETTINGS.enabled) return;
+
+    try {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      const volume = SOUND_SETTINGS.volume;
+      const notes = isAllComplete
+        ? [
+          { freq: 659.25, time: 0 },
+          { freq: 783.99, time: 0.08 },
+          { freq: 987.77, time: 0.16 }
+        ]
+        : [
+          { freq: 587.33, time: 0 },
+          { freq: 698.46, time: 0.1 }
+        ];
+
+      notes.forEach(({ freq, time }) => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(volume * 0.7, audioContext.currentTime + time);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + time + 0.18);
+        osc.start(audioContext.currentTime + time);
+        osc.stop(audioContext.currentTime + time + 0.18);
+      });
+    } catch (e) {
+      // Ignore audio errors
     }
   }
 
@@ -301,7 +350,29 @@
       console.log(`[HEYS.game] Data migrated from v${data.version || 1} to v${DATA_VERSION}`);
     }
 
+    migrateStreakAchievements(migrated);
     return migrated;
+  }
+
+  function migrateStreakAchievements(data) {
+    if (!data || !Array.isArray(data.unlockedAchievements)) return;
+
+    const legacyStreakIds = new Set(['streak_14', 'streak_30', 'streak_100']);
+    const hasLegacy = data.unlockedAchievements.some((id) => legacyStreakIds.has(id));
+
+    if (hasLegacy) {
+      const newStreakIds = ['streak_1', 'streak_2', 'streak_3', 'streak_5', 'streak_7'];
+      newStreakIds.forEach((id) => {
+        if (!data.unlockedAchievements.includes(id)) {
+          data.unlockedAchievements.push(id);
+        }
+      });
+    }
+
+    // Удаляем legacy-идентификаторы, чтобы не засорять список
+    if (hasLegacy) {
+      data.unlockedAchievements = data.unlockedAchievements.filter((id) => !legacyStreakIds.has(id));
+    }
   }
 
   /**
@@ -375,6 +446,11 @@
   const CLOUD_SYNC_DEBOUNCE_MS = 3000; // 3 секунды debounce
 
   function scheduleCloudSync() {
+    // 🛡️ ЗАЩИТА: Не синхронизируем пока не загрузили данные из облака
+    if (!_cloudLoaded) {
+      console.log('[🎮 Gamification] Skip sync — cloud not loaded yet');
+      return;
+    }
     if (_cloudSyncTimer) clearTimeout(_cloudSyncTimer);
     _cloudSyncTimer = setTimeout(() => {
       _cloudSyncTimer = null;
@@ -789,6 +865,9 @@
             name: mission.name,
             xp: mission.xp
           });
+
+          // Mission sound
+          playMissionSound(false);
         }
       }
     }
@@ -827,6 +906,9 @@
     celebrate();
 
     showNotification('all_missions_complete', { bonus: 50 });
+
+    // All missions sound
+    playMissionSound(true);
 
     return true;
   }
@@ -1105,6 +1187,13 @@
       handleRankTransition(oldLevel, data.level);
       saveData();
       celebrate();
+
+      window.dispatchEvent(new CustomEvent('heysWeeklyChallengeComplete', {
+        detail: {
+          challenge: { ...challenge },
+          reward: challenge.reward
+        }
+      }));
     }
   }
 
@@ -1146,6 +1235,13 @@
         handleRankTransition(oldLevel, data.level);
         saveData();
         celebrate();
+
+        window.dispatchEvent(new CustomEvent('heysWeeklyChallengeComplete', {
+          detail: {
+            challenge: { ...challenge },
+            reward: challenge.reward
+          }
+        }));
       }
     }
   }
@@ -1537,6 +1633,21 @@
     setTimeout(() => fly.remove(), 850);
   }
 
+  function dispatchXpGainedEvent(xpAmount, sourceEl) {
+    let x = window.innerWidth / 2;
+    let y = window.innerHeight / 2;
+
+    if (sourceEl && sourceEl.getBoundingClientRect) {
+      const rect = sourceEl.getBoundingClientRect();
+      x = rect.left + rect.width / 2;
+      y = rect.top + rect.height / 2;
+    }
+
+    window.dispatchEvent(new CustomEvent('heysXpGained', {
+      detail: { xp: xpAmount, x, y }
+    }));
+  }
+
   // ========== УВЕДОМЛЕНИЯ ==========
 
   function showNotification(type, data) {
@@ -1565,8 +1676,10 @@
 
   // ========== CONFETTI ==========
 
-  function celebrate() {
-    window.dispatchEvent(new CustomEvent('heysCelebrate'));
+  function celebrate(payload = null) {
+    window.dispatchEvent(new CustomEvent('heysCelebrate', {
+      detail: payload || undefined
+    }));
   }
 
   // ========== STREAK SHIELD ==========
@@ -1725,27 +1838,26 @@
       console.log('[🎮 Gamification] Streak check:', { streak });
     }
 
-    const streakMilestones = [
-      { days: 3, id: 'streak_3' },
-      { days: 7, id: 'streak_7' },
-      { days: 14, id: 'streak_14' },
-      { days: 30, id: 'streak_30' },
-      { days: 100, id: 'streak_100' }
-    ];
-
-    for (const m of streakMilestones) {
-      if (streak >= m.days && !data.unlockedAchievements.includes(m.id)) {
-        newAchievements.push(m.id);
-      }
-      // Обновляем прогресс для UI
-      if (!data.unlockedAchievements.includes(m.id)) {
-        updateAchievementProgress(m.id, streak, m.days);
-      }
-    }
+    newAchievements.push(...checkStreakAchievements(streak, { skipUnlock: true }));
 
     // ========== FIRST ACTIONS ==========
-    if (reason === 'product_added' && !data.unlockedAchievements.includes('first_meal')) {
+    if (reason === 'checkin_complete' && !data.unlockedAchievements.includes('first_checkin')) {
+      newAchievements.push('first_checkin');
+    }
+    if (reason === 'meal_added' && !data.unlockedAchievements.includes('first_meal')) {
       newAchievements.push('first_meal');
+    }
+    if (reason === 'product_added' && !data.unlockedAchievements.includes('first_product')) {
+      newAchievements.push('first_product');
+    }
+    if (reason === 'steps_updated' && !data.unlockedAchievements.includes('first_steps')) {
+      newAchievements.push('first_steps');
+    }
+    if (reason === 'advice_read' && !data.unlockedAchievements.includes('first_advice')) {
+      newAchievements.push('first_advice');
+    }
+    if (reason === 'supplements_taken' && !data.unlockedAchievements.includes('first_supplements')) {
+      newAchievements.push('first_supplements');
     }
     if (reason === 'water_added' && !data.unlockedAchievements.includes('first_water')) {
       newAchievements.push('first_water');
@@ -1753,8 +1865,8 @@
     if (reason === 'training_added' && !data.unlockedAchievements.includes('first_training')) {
       newAchievements.push('first_training');
     }
-    if (reason === 'weight_logged' && !data.unlockedAchievements.includes('first_weight')) {
-      newAchievements.push('first_weight');
+    if (reason === 'household_added' && !data.unlockedAchievements.includes('first_household')) {
+      newAchievements.push('first_household');
     }
 
     // ========== LEVEL ACHIEVEMENTS ==========
@@ -1959,6 +2071,36 @@
     return newAchievements;
   }
 
+  function checkStreakAchievements(streakValue, options = {}) {
+    const data = loadData();
+    const streak = typeof streakValue === 'number' ? streakValue : safeGetStreak();
+    const { skipUnlock = false } = options;
+
+    const streakMilestones = [
+      { days: 1, id: 'streak_1' },
+      { days: 2, id: 'streak_2' },
+      { days: 3, id: 'streak_3' },
+      { days: 5, id: 'streak_5' },
+      { days: 7, id: 'streak_7' }
+    ];
+
+    const newly = [];
+    for (const m of streakMilestones) {
+      if (streak >= m.days && !data.unlockedAchievements.includes(m.id)) {
+        newly.push(m.id);
+      }
+      if (!data.unlockedAchievements.includes(m.id)) {
+        updateAchievementProgress(m.id, streak, m.days);
+      }
+    }
+
+    if (!skipUnlock) {
+      newly.forEach((id) => unlockAchievement(id));
+    }
+
+    return newly;
+  }
+
   /**
    * Подсчёт последовательных дней из массива дат
    */
@@ -2005,12 +2147,18 @@
     handleRankTransition(oldLevel, data.level);
     saveData();
 
+    const hasCategoryUnlocked = data.unlockedAchievements
+      .map((id) => ACHIEVEMENTS[id])
+      .filter(Boolean)
+      .some((item) => item.category === ach.category);
+
     // Показываем notification (React компонент .game-notification)
     // NOTE: showAchievementToast убран — был дубль с showNotification
     showNotification('achievement', {
       achievement: ach,
       totalXP: data.totalXP,
-      level: data.level
+      level: data.level,
+      firstInCategory: !hasCategoryUnlocked
     });
 
     // Звук при получении достижения!
@@ -2018,11 +2166,20 @@
 
     // Confetti для rare+ достижений
     if (['rare', 'epic', 'legendary', 'mythic'].includes(ach.rarity)) {
-      celebrate();
+      celebrate({ type: 'achievement', rarity: ach.rarity });
     }
 
-    // Haptic
-    if (HEYS.haptic) HEYS.haptic('success');
+    // Haptic по редкости
+    if (HEYS.haptic) {
+      const hapticByRarity = {
+        common: 'light',
+        rare: 'medium',
+        epic: 'medium',
+        legendary: 'success',
+        mythic: 'success'
+      };
+      HEYS.haptic(hapticByRarity[ach.rarity] || 'light');
+    }
   }
 
   // ========== CORE API ==========
@@ -2034,12 +2191,12 @@
      * @param {string} reason - причина (из XP_ACTIONS)
      * @param {HTMLElement} sourceEl - элемент-источник для flying animation
      */
-    addXP(amount, reason, sourceEl) {
+    addXP(amount, reason, sourceEl, extraData) {
       // Debounce
       if (_debounceTimer) clearTimeout(_debounceTimer);
 
       _debounceTimer = setTimeout(() => {
-        _addXPInternal(amount, reason, sourceEl);
+        _addXPInternal(amount, reason, sourceEl, extraData);
       }, DEBOUNCE_MS);
     },
 
@@ -2242,7 +2399,7 @@
      */
     async recalculateAchievements() {
       const data = loadData();
-      const migrationKey = 'heys_achievements_v2_migrated';
+      const migrationKey = 'heys_achievements_v4_migrated';
 
       // Проверяем, была ли миграция
       if (readStoredValue(migrationKey, null) === 'true') {
@@ -2258,11 +2415,11 @@
 
       // === STREAK ACHIEVEMENTS ===
       const streakMilestones = [
+        { days: 1, id: 'streak_1' },
+        { days: 2, id: 'streak_2' },
         { days: 3, id: 'streak_3' },
-        { days: 7, id: 'streak_7' },
-        { days: 14, id: 'streak_14' },
-        { days: 30, id: 'streak_30' },
-        { days: 100, id: 'streak_100' }
+        { days: 5, id: 'streak_5' },
+        { days: 7, id: 'streak_7' }
       ];
 
       for (const m of streakMilestones) {
@@ -2285,10 +2442,85 @@
       }
 
       // === ONBOARDING (check stats) ===
-      if (stats.totalProducts > 0 && !data.unlockedAchievements.includes('first_meal')) {
+      const todayKey = `heys_dayv2_${getToday()}`;
+      const todayDay = readStoredValue(todayKey, null);
+      const mealsCount = HEYS.Day?.getMealsCount?.() || (todayDay?.meals?.length || 0);
+      const stepsValue = (todayDay?.steps || 0) || (HEYS.Day?.getDay?.()?.steps || 0);
+      const advicesRead = stats.totalAdvicesRead || 0;
+
+      let hasCheckin = false;
+      let hasSupplements = false;
+      let hasHousehold = false;
+
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (!key || !key.includes('_dayv2_')) continue;
+          const raw = localStorage.getItem(key);
+          if (!raw) continue;
+          let parsed = null;
+          try {
+            parsed = raw.startsWith('¤Z¤') && HEYS.store?.decompress
+              ? HEYS.store.decompress(raw.slice(3))
+              : JSON.parse(raw);
+          } catch (e) {
+            continue;
+          }
+          if (parsed) {
+            if (!hasCheckin && (parsed.weightMorning != null || parsed.sleepStart || parsed.sleepEnd || parsed.morningMood != null)) {
+              hasCheckin = true;
+            }
+            if (!hasSupplements && Array.isArray(parsed.supplementsTaken) && parsed.supplementsTaken.length > 0) {
+              hasSupplements = true;
+            }
+            if (!hasHousehold && (parsed.householdMin > 0 || (Array.isArray(parsed.householdActivities) && parsed.householdActivities.length > 0))) {
+              hasHousehold = true;
+            }
+          }
+          if (hasCheckin && hasSupplements && hasHousehold) break;
+        }
+      } catch (e) { }
+
+      if (hasCheckin && !data.unlockedAchievements.includes('first_checkin')) {
+        data.unlockedAchievements.push('first_checkin');
+        data.totalXP += ACHIEVEMENTS.first_checkin.xp;
+        missedAchievements.push('first_checkin');
+      }
+
+      if (stats.totalProducts > 0 && !data.unlockedAchievements.includes('first_product')) {
+        data.unlockedAchievements.push('first_product');
+        data.totalXP += ACHIEVEMENTS.first_product.xp;
+        missedAchievements.push('first_product');
+      }
+
+      if (mealsCount > 0 && !data.unlockedAchievements.includes('first_meal')) {
         data.unlockedAchievements.push('first_meal');
         data.totalXP += ACHIEVEMENTS.first_meal.xp;
         missedAchievements.push('first_meal');
+      }
+
+      if (stepsValue > 0 && !data.unlockedAchievements.includes('first_steps')) {
+        data.unlockedAchievements.push('first_steps');
+        data.totalXP += ACHIEVEMENTS.first_steps.xp;
+        missedAchievements.push('first_steps');
+      }
+
+      if (advicesRead > 0 && !data.unlockedAchievements.includes('first_advice')) {
+        data.unlockedAchievements.push('first_advice');
+        data.totalXP += ACHIEVEMENTS.first_advice.xp;
+        missedAchievements.push('first_advice');
+      }
+
+      if (hasSupplements && !data.unlockedAchievements.includes('first_supplements')) {
+        data.unlockedAchievements.push('first_supplements');
+        data.totalXP += ACHIEVEMENTS.first_supplements.xp;
+        missedAchievements.push('first_supplements');
+      }
+
+      if (hasHousehold && !data.unlockedAchievements.includes('first_household')) {
+        data.unlockedAchievements.push('first_household');
+        data.totalXP += ACHIEVEMENTS.first_household.xp;
+        missedAchievements.push('first_household');
       }
 
       // Сохраняем если нашли пропущенные
@@ -2334,10 +2566,15 @@
 
     /**
      * ☁️ Синхронизация прогресса с облаком
+     * 🛡️ ЗАЩИТА: Не перезаписывает облако если там больше XP
      */
     async syncToCloud() {
       try {
-        if (!HEYS.YandexAPI || !HEYS.cloud?.getSessionToken?.()) {
+        // 🔄 Получаем токен сессии — проверяем оба варианта
+        const sessionToken = HEYS.cloud?.getSessionToken?.() ||
+          localStorage.getItem('heys_session_token');
+
+        if (!HEYS.YandexAPI || !sessionToken) {
           return false;
         }
 
@@ -2347,6 +2584,24 @@
         if (!data.totalXP || data.totalXP === 0) {
           console.log('[🎮 Gamification] Skip cloud sync — no XP data');
           return false;
+        }
+
+        // 🛡️ ЗАЩИТА v2.1: Сначала проверяем облако — не перезаписываем если там больше
+        try {
+          const cloudResult = await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
+            session_token: sessionToken,
+            k: STORAGE_KEY
+          });
+          const cloudXP = cloudResult?.v?.totalXP || 0;
+          if (cloudXP > data.totalXP) {
+            console.warn(`[🎮 Gamification] BLOCKED: cloud XP (${cloudXP}) > local (${data.totalXP}), not overwriting!`);
+            // Вместо этого — загружаем из облака
+            await HEYS.game.loadFromCloud();
+            return false;
+          }
+        } catch (checkErr) {
+          // Если не удалось проверить — продолжаем синхронизацию (лучше чем ничего)
+          console.warn('[🎮 Gamification] Cloud check failed, proceeding:', checkErr.message);
         }
 
         const cloudData = {
@@ -2361,7 +2616,7 @@
 
         // Сохраняем в ОСНОВНОЙ ключ heys_game (совместимость с sync защитой)
         await HEYS.YandexAPI.rpc('upsert_client_kv_by_session', {
-          session_token: HEYS.cloud.getSessionToken(),
+          session_token: sessionToken,
           k: STORAGE_KEY, // 'heys_game'
           v: cloudData    // Отправляем объект, не JSON.stringify
         });
@@ -2379,16 +2634,24 @@
      */
     async loadFromCloud() {
       try {
-        if (!HEYS.YandexAPI || !HEYS.cloud?.getSessionToken?.()) {
+        // 🔄 Получаем токен сессии — проверяем оба варианта
+        const sessionToken = HEYS.cloud?.getSessionToken?.() ||
+          localStorage.getItem('heys_session_token');
+
+        if (!HEYS.YandexAPI || !sessionToken) {
+          console.log('[🎮 Gamification] loadFromCloud: no API or session token');
+          _cloudLoaded = true; // Помечаем как загружено даже если нет токена
           return false;
         }
+
+        console.log('[🎮 Gamification] loadFromCloud: fetching from cloud...');
 
         // Пробуем оба ключа: новый (heys_game) и старый (heys_gamification)
         let cloudData = null;
 
         // 1. Новый ключ
         const result1 = await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
-          session_token: HEYS.cloud.getSessionToken(),
+          session_token: sessionToken,
           k: STORAGE_KEY // 'heys_game'
         });
 
@@ -2399,7 +2662,7 @@
         // 2. Старый ключ (fallback)
         if (!cloudData || !cloudData.totalXP) {
           const result2 = await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
-            session_token: HEYS.cloud.getSessionToken(),
+            session_token: sessionToken,
             k: 'heys_gamification'
           });
           if (result2?.v) {
@@ -2411,8 +2674,13 @@
           }
         }
 
+        // 🛡️ Помечаем что облако проверено
+        _cloudLoaded = true;
+
         if (cloudData && cloudData.totalXP) {
           const localData = loadData();
+
+          console.log(`[🎮 Gamification] Cloud check: local XP=${localData.totalXP}, cloud XP=${cloudData.totalXP}`);
 
           // Мержим данные — берём максимальные значения
           let updated = false;
@@ -2420,6 +2688,7 @@
             localData.totalXP = cloudData.totalXP;
             localData.level = cloudData.level || calculateLevel(cloudData.totalXP);
             updated = true;
+            console.log(`[🎮 Gamification] Restoring from cloud: XP=${cloudData.totalXP}, level=${localData.level}`);
           }
 
           // Объединяем достижения
@@ -2434,13 +2703,16 @@
 
           if (updated) {
             _data = localData; // Обновляем кэш
-            saveData();
+            // 🛡️ Сохраняем ТОЛЬКО локально, без cloud sync (чтобы не циклить)
+            _data.updatedAt = Date.now();
+            setStoredValue(STORAGE_KEY, _data);
             console.log('[🎮 Gamification] Loaded from cloud: XP=' + localData.totalXP);
           }
           return true;
         }
         return false;
       } catch (e) {
+        _cloudLoaded = true; // Помечаем даже при ошибке
         console.warn('[🎮 Gamification] Cloud load failed:', e.message);
         return false;
       }
@@ -2535,12 +2807,15 @@
     getXPBreakdown,
 
     // Level-up Preview
-    getLevelUpPreview
+    getLevelUpPreview,
+
+    // Streak achievements
+    checkStreakAchievements
   };
 
   // ========== INTERNAL ==========
 
-  function _addXPInternal(amount, reason, sourceEl) {
+  function _addXPInternal(amount, reason, sourceEl, extraData) {
     const data = loadData();
     const action = XP_ACTIONS[reason];
     const today = getToday();
@@ -2575,9 +2850,16 @@
 
     // Floating XP animation (показываем если есть бонус)
     const hasBonus = dailyInfo.multiplier > 1;
-    showFloatingXP(sourceEl, xpToAdd, hasBonus);
+    const useReactXPFX = HEYS.game?.useReactXPFX === true;
+
+    dispatchXpGainedEvent(xpToAdd, sourceEl);
+
+    if (!useReactXPFX) {
+      showFloatingXP(sourceEl, xpToAdd, hasBonus);
+    }
 
     const oldLevel = data.level;
+    const oldProgress = game.getProgress();
     data.totalXP += xpToAdd;
     data.level = calculateLevel(data.totalXP);
 
@@ -2603,7 +2885,13 @@
 
     // Update daily missions
     if (reason !== 'daily_mission' && reason !== 'daily_missions_bonus') {
-      const missionValue = reason === 'water_added' ? (HEYS.Day?.getWaterPercent?.() || 0) : 0;
+      let missionValue = 0;
+      if (reason === 'water_added') {
+        missionValue = HEYS.Day?.getWaterPercent?.() || 0;
+      }
+      if (reason === 'steps_updated') {
+        missionValue = extraData?.steps || 0;
+      }
       updateDailyMission(reason, missionValue);
     }
 
@@ -2613,10 +2901,25 @@
     if (HEYS.haptic) HEYS.haptic('light');
 
     // Flying animation
-    flyToBar(sourceEl, xpToAdd);
+    if (!useReactXPFX) {
+      flyToBar(sourceEl, xpToAdd);
+    }
 
     // XP Sound
     playXPSound(false);
+
+    const newProgress = game.getProgress();
+    if (oldLevel === data.level) {
+      const thresholds = [25, 50, 75];
+      const crossed = thresholds.filter((t) => oldProgress.percent < t && newProgress.percent >= t);
+      if (crossed.length > 0) {
+        const milestone = crossed[crossed.length - 1];
+        if (HEYS.haptic) HEYS.haptic('light');
+        window.dispatchEvent(new CustomEvent('heysProgressMilestone', {
+          detail: { milestone, percent: newProgress.percent }
+        }));
+      }
+    }
 
     // Dispatch update event
     window.dispatchEvent(new CustomEvent('heysGameUpdate', {
@@ -2656,9 +2959,33 @@
 
   // ========== EVENT LISTENERS ==========
 
+  function handlePassiveEvent(reason, payload) {
+    if (reason === 'steps_updated') {
+      const stepsValue = payload?.steps || 0;
+      updateDailyMission('steps_updated', stepsValue);
+    }
+    checkAchievements(reason);
+  }
+
   // Слушаем события от других модулей
   window.addEventListener('heysProductAdded', (e) => {
     game.addXP(0, 'product_added', e.detail?.sourceEl);
+  });
+
+  window.addEventListener('heysMealAdded', (e) => {
+    game.addXP(0, 'meal_added', e.detail?.sourceEl);
+  });
+
+  window.addEventListener('heysStepsUpdated', (e) => {
+    game.addXP(0, 'steps_updated', e.detail?.sourceEl, { steps: e.detail?.steps || 0 });
+  });
+
+  window.addEventListener('heys:checkin-complete', (e) => {
+    game.addXP(0, 'checkin_complete', e.detail?.sourceEl);
+  });
+
+  window.addEventListener('heysSupplementsTaken', (e) => {
+    game.addXP(0, 'supplements_taken', e.detail?.sourceEl);
   });
 
   window.addEventListener('heysWaterAdded', (e) => {
@@ -2667,6 +2994,10 @@
 
   window.addEventListener('heysTrainingAdded', (e) => {
     game.addXP(0, 'training_added', e.detail?.sourceEl);
+  });
+
+  window.addEventListener('heysHouseholdActivityAdded', (e) => {
+    game.addXP(0, 'household_added', e.detail?.sourceEl);
   });
 
   window.addEventListener('heysSleepLogged', (e) => {
@@ -2687,9 +3018,8 @@
 
     // Запоминаем текущие stats ДО сброса кеша
     const oldStats = _data ? game.getStats() : null;
-    const oldXP = oldStats?.xp || 0;
+    const oldXP = oldStats?.totalXP || 0;
     const oldLevel = oldStats?.level || 0;
-    const oldStreak = oldStats?.streak || 0;
 
     // Сбрасываем in-memory кеш — при следующем loadData() прочитаем свежие данные из localStorage
     _data = null;
@@ -2715,9 +3045,8 @@
 
     // 🔒 Оптимизация: НЕ диспатчим heysGameUpdate если данные не изменились
     if (oldStats &&
-      newStats.xp === oldXP &&
-      newStats.level === oldLevel &&
-      newStats.streak === oldStreak) {
+      newStats.totalXP === oldXP &&
+      newStats.level === oldLevel) {
       return;
     }
 
@@ -2741,12 +3070,32 @@
         // Ignore errors during recalculation
       });
 
-      // Также загружаем данные из облака если доступно
-      if (HEYS.cloud?.getSessionToken?.()) {
-        HEYS.game.loadFromCloud().catch(() => { });
+      // 🔄 Загружаем данные из облака — проверяем ОБА способа авторизации
+      const hasCloudSession = HEYS.cloud?.getSessionToken?.();
+      const hasYandexAPI = HEYS.YandexAPI && (
+        localStorage.getItem('heys_curator_session') ||
+        localStorage.getItem('heys_session_token')
+      );
+
+      if (hasCloudSession || hasYandexAPI) {
+        console.log('[🎮 Gamification] Starting cloud load...');
+        HEYS.game.loadFromCloud().then(loaded => {
+          if (loaded) {
+            console.log('[🎮 Gamification] Cloud data loaded successfully');
+          } else {
+            console.log('[🎮 Gamification] No cloud data or already up to date');
+            _cloudLoaded = true; // Помечаем как загружено даже если нет данных
+          }
+        }).catch(e => {
+          console.warn('[🎮 Gamification] Cloud load error:', e.message);
+          _cloudLoaded = true; // Помечаем как загружено даже при ошибке
+        });
+      } else {
+        console.log('[🎮 Gamification] No session, skipping cloud load');
+        _cloudLoaded = true; // Нет сессии — считаем загруженным
       }
     }
-  }, 3000);
+  }, 2000); // Уменьшил до 2 сек чтобы успеть до первого sync
 
   // Debug
   if (typeof window !== 'undefined') {
