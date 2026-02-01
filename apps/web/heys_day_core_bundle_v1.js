@@ -3222,13 +3222,42 @@
         // НЕ слушаем heysSyncCompleted — это вызывает бесконечный цикл при каждом сохранении
         // 🔧 v3.19.1: Защита от дублирующихся событий fetchDays
         const lastProcessedEventRef = React.useRef({ date: null, source: null, timestamp: 0 });
+        const dayUpdateLogBufferRef = React.useRef([]);
+        const dayUpdateLogTimerRef = React.useRef(null);
 
         React.useEffect(() => {
+            const flushDayUpdateLog = () => {
+                if (!dayUpdateLogBufferRef.current.length) return;
+                const batch = dayUpdateLogBufferRef.current.splice(0);
+                const bySource = batch.reduce((acc, item) => {
+                    acc[item.source] = (acc[item.source] || 0) + 1;
+                    return acc;
+                }, {});
+                const sourcesSummary = Object.entries(bySource)
+                    .map(([source, count]) => `${source}:${count}`)
+                    .join(', ');
+                const dates = [...new Set(batch.map(item => item.updatedDate).filter(Boolean))].slice(0, 6).join(', ');
+                console.info('[HEYS.day] 🔄 heys:day-updated (batch)', {
+                    count: batch.length,
+                    sources: sourcesSummary,
+                    dates: dates ? dates + (batch.length > 6 ? '…' : '') : undefined
+                });
+            };
+
+            const scheduleDayUpdateLog = (payload) => {
+                dayUpdateLogBufferRef.current.push(payload);
+                if (dayUpdateLogTimerRef.current) return;
+                dayUpdateLogTimerRef.current = setTimeout(() => {
+                    dayUpdateLogTimerRef.current = null;
+                    flushDayUpdateLog();
+                }, 250);
+            };
+
             const handleDayUpdated = (e) => {
                 const updatedDate = e.detail?.date;
                 const source = e.detail?.source || 'unknown';
                 const forceReload = e.detail?.forceReload || false;
-                console.info('[HEYS.day] 🔄 heys:day-updated', {
+                scheduleDayUpdateLog({
                     source,
                     updatedDate,
                     forceReload,
@@ -3405,6 +3434,10 @@
 
             return () => {
                 global.removeEventListener('heys:day-updated', handleDayUpdated);
+                if (dayUpdateLogTimerRef.current) {
+                    clearTimeout(dayUpdateLogTimerRef.current);
+                    dayUpdateLogTimerRef.current = null;
+                }
             };
         }, [date]);
     }
@@ -3488,8 +3521,13 @@
                 detail: { streak: currentStreak }
             }));
 
-            // Confetti при streak 7, 14, 30, 100
-            if ([7, 14, 30, 100].includes(currentStreak) && HEYS.game && HEYS.game.celebrate) {
+            // ✅ Проверяем streak-достижения при каждом обновлении streak
+            if (HEYS.game?.checkStreakAchievements) {
+                HEYS.game.checkStreakAchievements(currentStreak);
+            }
+
+            // Confetti при streak 3, 5, 7
+            if ([3, 5, 7].includes(currentStreak) && HEYS.game && HEYS.game.celebrate) {
                 HEYS.game.celebrate();
             }
 

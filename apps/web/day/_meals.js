@@ -2240,6 +2240,7 @@
                             window.HEYS.analytics.trackDataOperation('meal-created');
                         }
                         HEYS.Toast?.success('Приём создан');
+                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
 
                         setTimeout(() => {
                             // Get current meals to find the new meal index
@@ -2467,13 +2468,14 @@
                 if (openTimePickerForNewMeal) openTimePickerForNewMeal();
             } else {
                 const newMealId = uid('m_');
+                const newMeal = { id: newMealId, name: 'Приём', time: '', mood: '', wellbeing: '', stress: '', items: [] };
                 const newUpdatedAt = Date.now();
                 let newMealIndex = 0;
                 if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = newUpdatedAt;
                 if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
                 setDay((prevDay) => {
                     const baseMeals = prevDay.meals || [];
-                    const newMeals = [...baseMeals, { id: newMealId, name: 'Приём', time: '', mood: '', wellbeing: '', stress: '', items: [] }];
+                    const newMeals = [...baseMeals, newMeal];
                     newMealIndex = newMeals.length - 1;
                     const newDayData = { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
                     const key = 'heys_dayv2_' + date;
@@ -2489,6 +2491,7 @@
                     window.HEYS.analytics.trackDataOperation('meal-created');
                 }
                 HEYS.Toast?.success('Приём создан');
+                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
             }
         }, [date, expandOnlyMeal, isMobile, openTimePickerForNewMeal, products, setDay, day, prof, pIndex, getProductFromItem, scrollToDiaryHeading, lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef]);
 

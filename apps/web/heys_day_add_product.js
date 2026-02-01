@@ -406,7 +406,8 @@
         const computeTEFKcal100 = (p) => {
           const carbs = (+p.carbs100) || ((+p.simple100 || 0) + (+p.complex100 || 0));
           const fat = (+p.fat100) || ((+p.badFat100 || 0) + (+p.goodFat100 || 0) + (+p.trans100 || 0));
-          return Math.round((3 * (+p.protein100 || 0) + 4 * carbs + 9 * fat) * 10) / 10;
+          // v3.9.0: Standard Atwater factors (4/4/9). TEF is calculated separately in TDEE.
+          return Math.round((4 * (+p.protein100 || 0) + 4 * carbs + 9 * fat) * 10) / 10;
         };
         const additivesList = Array.isArray(finalProduct.additives) ? finalProduct.additives : undefined;
         const novaGroup = finalProduct.nova_group ?? finalProduct.novaGroup;
@@ -417,6 +418,7 @@
           name: finalProduct.name,
           fingerprint: finalProduct.fingerprint,
           grams: grams || 100,
+          portions: Array.isArray(finalProduct.portions) ? finalProduct.portions : undefined,
           ...(finalProduct.kcal100 !== undefined && {
             kcal100: computeTEFKcal100(finalProduct),
             protein100: finalProduct.protein100,

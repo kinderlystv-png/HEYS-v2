@@ -114,7 +114,13 @@
     const pid = String(product.id ?? product.product_id ?? product.name);
     const idx = products.findIndex((p) => String(p.id ?? p.product_id ?? p.name) === pid);
 
-    if (idx === -1) return;
+    if (idx === -1) {
+      console.warn('[HEYS.portions] ⚠️ Продукт не найден в базе, сохраняю через upsert', {
+        productId: pid
+      });
+      upsertLocalProduct({ ...product, portions }, false);
+      return;
+    }
 
     const updated = {
       ...products[idx],
@@ -130,6 +136,43 @@
       HEYS.store.set('heys_products', nextProducts);
     } else if (U.lsSet) {
       U.lsSet('heys_products', nextProducts);
+    }
+  };
+
+  const upsertLocalProduct = (product, isUserEdit = true) => {
+    if (!product) return;
+    const U = HEYS.utils || {};
+    const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
+    const pid = String(product.id ?? product.product_id ?? product.name);
+    const idx = products.findIndex((p) => String(p.id ?? p.product_id ?? p.name) === pid);
+
+    let nextProducts = [...products];
+
+    if (idx === -1) {
+      nextProducts.push({
+        ...product,
+        user_modified: isUserEdit ? true : product.user_modified
+      });
+    } else {
+      const existing = products[idx];
+      const shouldMarkModified = isUserEdit && hasNutrientChanges(existing, product);
+      nextProducts[idx] = {
+        ...existing,
+        ...product,
+        user_modified: existing.user_modified === true || shouldMarkModified
+      };
+    }
+
+    if (HEYS.products?.setAll) {
+      HEYS.products.setAll(nextProducts);
+    } else if (HEYS.store?.set) {
+      HEYS.store.set('heys_products', nextProducts);
+    } else if (U.lsSet) {
+      U.lsSet('heys_products', nextProducts);
+    }
+
+    if (idx !== -1) {
+      cascadeMealItemsOnProductUpdate(products[idx], nextProducts[idx]);
     }
   };
 
@@ -152,6 +195,15 @@
     return !!(product._fromShared || product._source === 'shared' || product.is_shared);
   };
 
+  const resolveSharedProductId = (product) => {
+    if (!product) return null;
+    if (product.shared_origin_id != null) return product.shared_origin_id;
+    if (product.sharedId != null) return product.sharedId;
+    if (product._sharedId != null) return product._sharedId;
+    if (isSharedProduct(product)) return product.id ?? product.product_id ?? null;
+    return null;
+  };
+
   const canEditProduct = (product) => {
     if (!product) return false;
     if (!isSharedProduct(product)) return true;
@@ -172,27 +224,48 @@
   const updateSharedProductPortions = async (productId, portions) => {
     if (!HEYS?.YandexAPI?.rest) {
       HEYS.Toast?.warning('API недоступен для обновления') || alert('API недоступен для обновления');
+      console.warn('[HEYS.portions] ⚠️ API недоступен для обновления порций', {
+        productId,
+        portionsCount: Array.isArray(portions) ? portions.length : 0
+      });
       return { ok: false };
     }
 
     try {
+      console.info('[HEYS.portions] 📤 UPSERT shared_products', {
+        productId,
+        portionsCount: Array.isArray(portions) ? portions.length : 0
+      });
       const { error } = await HEYS.YandexAPI.rest('shared_products', {
-        method: 'PATCH',
-        data: { portions },
-        filters: { 'eq.id': productId },
+        method: 'POST',
+        data: { id: productId, portions },
+        upsert: true,
+        onConflict: 'id',
         select: 'id,portions'
       });
 
       if (error) {
         HEYS.Toast?.error('Ошибка обновления: ' + error) || alert('Ошибка обновления: ' + error);
+        console.error('[HEYS.portions] ❌ Ошибка обновления порций', {
+          productId,
+          error
+        });
         return { ok: false };
       }
 
       HEYS.Toast?.success('Порции обновлены') || alert('Порции обновлены');
+      console.info('[HEYS.portions] ✅ Порции обновлены в shared_products', {
+        productId,
+        portionsCount: Array.isArray(portions) ? portions.length : 0
+      });
       return { ok: true };
     } catch (e) {
       const msg = e?.message || 'Ошибка обновления';
       HEYS.Toast?.error(msg) || alert(msg);
+      console.error('[HEYS.portions] ❌ Исключение при обновлении порций', {
+        productId,
+        error: e?.message || e
+      });
       return { ok: false };
     }
   };
@@ -366,16 +439,36 @@
     }
   };
 
-  const updateSharedProduct = async (product) => {
-    if (!product || !product.id) return { ok: false };
+  const updateSharedProduct = async (product, sharedIdOverride = null) => {
+    const targetId = sharedIdOverride ?? product?.id ?? null;
+    if (!product || !targetId) return { ok: false };
     if (!HEYS?.YandexAPI?.rest) {
       HEYS.Toast?.warning('API недоступен для обновления') || alert('API недоступен для обновления');
       return { ok: false };
     }
 
+    let fingerprint = product?.fingerprint || null;
+    if (!fingerprint && HEYS.models?.computeProductFingerprint) {
+      try {
+        fingerprint = await HEYS.models.computeProductFingerprint(product);
+      } catch (e) {
+        console.warn('[HEYS.portions] ⚠️ Не удалось вычислить fingerprint', e?.message || e);
+      }
+    }
+
+    if (!fingerprint) {
+      console.warn('[HEYS.portions] ⚠️ Нет fingerprint для shared update', {
+        productId: targetId,
+        name: product?.name || null
+      });
+      return { ok: false };
+    }
+
     const payload = {
+      id: targetId,
       name: product.name || null,
       name_norm: normalizeName(product.name),
+      fingerprint: fingerprint,
       simple100: toNum(product.simple100, 0),
       complex100: toNum(product.complex100, 0),
       protein100: toNum(product.protein100, 0),
@@ -419,16 +512,55 @@
       iodine: toNum(product.iodine, null)
     };
 
+    const minimalPayload = {
+      id: targetId,
+      name: product.name || null,
+      name_norm: normalizeName(product.name),
+      fingerprint: fingerprint,
+      simple100: toNum(product.simple100, 0),
+      complex100: toNum(product.complex100, 0),
+      protein100: toNum(product.protein100, 0),
+      badfat100: toNum(product.badFat100 ?? product.badfat100, 0),
+      goodfat100: toNum(product.goodFat100 ?? product.goodfat100, 0),
+      trans100: toNum(product.trans100, 0),
+      fiber100: toNum(product.fiber100, 0),
+      gi: toNum(product.gi, null),
+      harm: toNum(HEYS.models?.normalizeHarm?.(product) ?? product.harm, null),
+      category: product.category || null,
+      portions: Array.isArray(product.portions) ? product.portions : null,
+      description: product.description || null
+    };
+
     try {
-      const { error } = await HEYS.YandexAPI.rest('shared_products', {
-        method: 'PATCH',
+      const primary = await HEYS.YandexAPI.rest('shared_products', {
+        method: 'POST',
         data: payload,
-        filters: { 'eq.id': product.id },
+        upsert: true,
+        onConflict: 'id',
         select: 'id,name'
       });
 
-      if (error) {
-        HEYS.Toast?.error('Ошибка обновления: ' + error) || alert('Ошибка обновления: ' + error);
+      if (primary?.error?.code === 500) {
+        console.warn('[HEYS.portions] ⚠️ Full payload failed, retry minimal payload', {
+          productId: targetId
+        });
+        const fallback = await HEYS.YandexAPI.rest('shared_products', {
+          method: 'POST',
+          data: minimalPayload,
+          upsert: true,
+          onConflict: 'id',
+          select: 'id,name'
+        });
+        if (fallback.error) {
+          HEYS.Toast?.error('Ошибка обновления: ' + fallback.error) || alert('Ошибка обновления: ' + fallback.error);
+          return { ok: false };
+        }
+        HEYS.Toast?.success('Продукт обновлён') || alert('Продукт обновлён');
+        return { ok: true, fallback: true };
+      }
+
+      if (primary.error) {
+        HEYS.Toast?.error('Ошибка обновления: ' + primary.error) || alert('Ошибка обновления: ' + primary.error);
         return { ok: false };
       }
 
@@ -486,11 +618,28 @@
             ...(normalized.length > 0 ? { portions: normalized } : {})
           };
 
-          if (isSharedProduct(product)) {
-            const result = await updateSharedProductPortions(product.id, normalized);
+          const sharedId = resolveSharedProductId(product);
+          if (isCuratorUser() && sharedId) {
+            const result = await updateSharedProductPortions(sharedId, normalized);
             if (result.ok) {
+              upsertLocalProduct(updatedProduct, false);
               notifyPortionsUpdated(updatedProduct, normalized);
             }
+            return;
+          }
+
+          if (isSharedProduct(product)) {
+            if (isCuratorUser()) {
+              const result = await updateSharedProductPortions(product.id, normalized);
+              if (result.ok) {
+                upsertLocalProduct(updatedProduct, false);
+                notifyPortionsUpdated(updatedProduct, normalized);
+              }
+              return;
+            }
+
+            upsertLocalProduct(updatedProduct, true);
+            notifyPortionsUpdated(updatedProduct, normalized);
             return;
           }
 
@@ -3051,11 +3200,23 @@ NOVA: 1
 
     const handleAddPortion = useCallback(() => {
       haptic('light');
-      setPortions((prev) => [...prev, { name: '', grams: '' }]);
+      setPortions((prev) => {
+        const next = [...prev, { name: '', grams: '' }];
+        console.info('[HEYS.portions] ➕ Добавить порцию', {
+          productId: product?.id ?? product?.product_id ?? null,
+          prevCount: prev.length,
+          nextCount: next.length
+        });
+        return next;
+      });
     }, []);
 
     const handleRemovePortion = useCallback((index) => {
       haptic('light');
+      console.info('[HEYS.portions] ➖ Удалить порцию', {
+        productId: product?.id ?? product?.product_id ?? null,
+        index
+      });
       setPortions((prev) => prev.filter((_, i) => i !== index));
     }, []);
 
@@ -3076,15 +3237,30 @@ NOVA: 1
     }, [autoPortions, toEditablePortions]);
 
     const handleContinue = useCallback(() => {
-      if (!product) return;
+      if (!product) {
+        console.warn('[HEYS.portions] ⚠️ Нет продукта при сохранении порций');
+        return;
+      }
 
       const normalized = normalizePortions(portions);
       if (portions.length > 0 && normalized.length === 0) {
         setError('Заполните название и граммы порции');
+        console.warn('[HEYS.portions] ⚠️ Порции невалидны', {
+          productId: product?.id ?? product?.product_id ?? null,
+          rawCount: portions.length
+        });
         return;
       }
 
       setError('');
+
+      console.info('[HEYS.portions] 💾 Сохранение порций', {
+        productId: product?.id ?? product?.product_id ?? null,
+        normalizedCount: normalized.length,
+        isEditMode: !!context?.isEditMode,
+        isShared: isSharedProduct(product),
+        isCurator: isCuratorUser()
+      });
 
       const updatedProduct = {
         ...product,
@@ -3121,6 +3297,10 @@ NOVA: 1
       }
 
       if (context?.onFinish) {
+        console.info('[HEYS.portions] ✅ Завершение шага порций', {
+          productId: product?.id ?? product?.product_id ?? null,
+          normalizedCount: normalized.length
+        });
         context.onFinish({ product: updatedProduct, portions: normalized });
         if (HEYS.StepModal?.hide) {
           HEYS.StepModal.hide();
@@ -4199,12 +4379,46 @@ NOVA: 1
 
           // v4.8.0: Track if name changed for UX feedback
           const nameChanged = product.name !== finalProduct.name;
+          const portionsChanged =
+            JSON.stringify(normalizePortions(product.portions || [])) !==
+            JSON.stringify(normalizePortions(finalProduct.portions || []));
+          const otherChanged =
+            nameChanged ||
+            hasNutrientChanges(product, finalProduct) ||
+            (product.category || '') !== (finalProduct.category || '') ||
+            (product.description || '') !== (finalProduct.description || '');
+
+          const sharedId = resolveSharedProductId(finalProduct);
+
+          if (isCuratorUser() && sharedId && portionsChanged && !otherChanged) {
+            const result = await updateSharedProductPortions(sharedId, finalProduct.portions || []);
+            if (result.ok) {
+              upsertLocalProduct(finalProduct, false);
+              notifyProductUpdated(finalProduct);
+              if (nameChanged) {
+                HEYS.Toast?.info?.('Имя обновлено во всех приёмах') ||
+                  console.log('[HEYS] Product renamed, cascaded to meals');
+              }
+            }
+            onSave?.(finalProduct);
+            return;
+          }
 
           if (isSharedProduct(product)) {
-            const result = await updateSharedProduct(finalProduct);
-            if (result.ok) {
+            if (isCuratorUser()) {
+              const result = await updateSharedProduct(finalProduct);
+              if (result.ok) {
+                upsertLocalProduct(finalProduct, false);
+                notifyProductUpdated(finalProduct);
+                // v4.8.0: Show cascade notification for shared products
+                if (nameChanged) {
+                  HEYS.Toast?.info?.('Имя обновлено во всех приёмах') ||
+                    console.log('[HEYS] Product renamed, cascaded to meals');
+                }
+              }
+            } else {
+              upsertLocalProduct(finalProduct, true);
               notifyProductUpdated(finalProduct);
-              // v4.8.0: Show cascade notification for shared products
               if (nameChanged) {
                 HEYS.Toast?.info?.('Имя обновлено во всех приёмах') ||
                   console.log('[HEYS] Product renamed, cascaded to meals');
@@ -4522,7 +4736,9 @@ NOVA: 1
     ProductEditExtraStep,
     HarmSelectStep,
     getCategoryIcon,
-    computeSmartProducts
+    computeSmartProducts,
+    updateSharedProduct,
+    updateSharedProductPortions
   };
 
   // console.log('[HEYS] AddProductStep v1 loaded');
