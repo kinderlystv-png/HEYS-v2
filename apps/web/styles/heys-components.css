@@ -922,6 +922,11 @@ body.tour-active .ios-pwa-banner {
   border-color: #ccefd8;
 }
 
+.weekly-wrap-step__stat--plan {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
 .weekly-wrap-step__stat--days {
   background: #fff7ed;
   border-color: #fed7aa;
@@ -933,6 +938,20 @@ body.tour-active .ios-pwa-banner {
 .weekly-wrap-step__stat--delta {
   background: #f5f3ff;
   border-color: #ddd6fe;
+}
+
+.weekly-wrap-step__stat--clickable {
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.weekly-wrap-step__stat--clickable:hover {
+  box-shadow: 0 10px 20px -14px rgba(15, 23, 42, 0.35);
+  transform: translateY(-1px);
+}
+
+.weekly-wrap-step__stat--clickable:active {
+  transform: scale(0.98);
 }
 
 .weekly-wrap-step__stat-value {
@@ -1054,6 +1073,122 @@ body.tour-active .ios-pwa-banner {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.weekly-wrap-breakdown {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 14px 14px 10px;
+  width: min(360px, 92vw);
+  max-height: min(420px, 80vh);
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 18px 40px -18px rgba(15, 23, 42, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.weekly-wrap-breakdown__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.weekly-wrap-breakdown__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.weekly-wrap-breakdown__subtitle {
+  font-size: 11px;
+  color: #64748b;
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.weekly-wrap-breakdown__note {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.weekly-wrap-breakdown__table {
+  display: grid;
+  gap: 6px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.weekly-wrap-breakdown__row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.6fr 0.6fr 0.6fr;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: #111827;
+}
+
+.weekly-wrap-breakdown__row--head {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.weekly-wrap-breakdown__cell {
+  text-align: right;
+}
+
+.weekly-wrap-breakdown__cell--day {
+  text-align: left;
+  color: #475569;
+}
+
+.weekly-wrap-breakdown__close {
+  align-self: flex-end;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  color: #64748b;
+  border-radius: 10px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.weekly-wrap-breakdown__close:active {
+  transform: scale(0.98);
+}
+
+[data-theme="dark"] .weekly-wrap-breakdown {
+  background: #0f172a;
+  border-color: #1f2937;
+}
+
+[data-theme="dark"] .weekly-wrap-breakdown__title {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .weekly-wrap-breakdown__subtitle {
+  background: #1f2937;
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .weekly-wrap-breakdown__row {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .weekly-wrap-breakdown__cell--day {
+  color: #cbd5f5;
+}
+
+[data-theme="dark"] .weekly-wrap-breakdown__close {
+  background: #111827;
+  border-color: #1f2937;
+  color: #94a3b8;
 }
 
 .sparkline {
