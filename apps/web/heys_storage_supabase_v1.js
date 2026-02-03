@@ -1453,9 +1453,16 @@
 
       // Только реальные ошибки аутентификации (401 Unauthorized, invalid token) должны удалять токен
       // Проверяем что это именно ошибка авторизации, а не что-то другое
-      const isRealAuthError = errMsg.includes('401') || errMsg.includes('Unauthorized') ||
-        errMsg.includes('invalid') || errMsg.includes('expired') ||
-        errMsg.includes('JWT') || errMsg.includes('token');
+      // ⚠️ Используем точные паттерны чтобы не матчить "token valid" или "policy token"
+      const isRealAuthError = errMsg.includes('401') ||
+        errMsg.includes('Unauthorized') ||
+        errMsg.includes('invalid token') ||
+        errMsg.includes('token expired') ||
+        errMsg.includes('token invalid') ||
+        errMsg.includes('missing token') ||
+        errMsg.includes('no token') ||
+        errMsg.includes('expired') ||
+        errMsg.includes('JWT');
 
       if (!isRealAuthError) {
         logCritical('⏭️ [handleAuthFailure] Не-auth ошибка — токен НЕ удаляем');

@@ -445,10 +445,15 @@
                     setCloudStatus('offline');
                     setRetryCountdown(0);
 
-                    // 🔥 Debounce: показываем toast только если не показывали в последние 10 сек
+                    // 🔥 Debounce: показываем toast и делаем logout только если не делали в последние 10 сек
                     if (!authErrorShownRef.current) {
                         authErrorShownRef.current = true;
-                        try { HEYS.Toast?.warning('Требуется повторный вход для синхронизации'); } catch (_) { }
+                        try { HEYS.Toast?.error('Сессия истекла. Требуется повторный вход'); } catch (_) { }
+
+                        // 🚪 FORCE LOGOUT: Dispatch события для автоматического выхода на экран логина
+                        window.dispatchEvent(new CustomEvent('heys:force-logout', {
+                            detail: { reason: 'auth_required' }
+                        }));
 
                         // Сбрасываем флаг через 10 секунд
                         if (authErrorTimeoutRef.current) clearTimeout(authErrorTimeoutRef.current);
@@ -682,7 +687,7 @@
         setLoginError,
     }) {
         const React = window.React;
-        const { useRef, useCallback } = React;
+        const { useRef, useCallback, useEffect } = React;
         const ONE_CURATOR_MODE = false;
         const signInCooldownUntilRef = useRef(0);
         const fetchingClientsRef = useRef(false); // 🔧 FIX: Защита от дублирования запросов
@@ -950,6 +955,20 @@
             setSyncVer((v) => v + 1);
             removeGlobalValue('heys_last_client_id');
         }, [cloud, setClientId, setClients, setCloudUser, setProducts, setStatus, setSyncVer]);
+
+        // 🚪 FORCE LOGOUT: Слушаем событие и автоматически выходим на экран логина
+        useEffect(() => {
+            const handleForceLogout = (e) => {
+                console.info('[HEYS] 🚪 Force logout triggered:', e.detail?.reason);
+                // Полный logout — сбросит все состояния и покажет LoginScreen
+                cloudSignOut();
+            };
+
+            window.addEventListener('heys:force-logout', handleForceLogout);
+            return () => {
+                window.removeEventListener('heys:force-logout', handleForceLogout);
+            };
+        }, [cloudSignOut]);
 
         return {
             ONE_CURATOR_MODE,
