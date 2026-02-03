@@ -35,8 +35,8 @@ HEYS-v2/
 ├── database/             # SQL migrations (PostgreSQL)
 ```
 
-**Key principle:** Legacy v12 код в `apps/web/` — это production runtime.
-API через Yandex Cloud Functions (`api.heyslab.ru`).
+**Key principle:** Legacy v12 код в `apps/web/` — это production runtime. API
+через Yandex Cloud Functions (`api.heyslab.ru`).
 
 **Арх‑контроль:** правила модульности и Quality Gate см. в
 `docs/dev/MODULE_ARCHITECTURE.md`, `docs/dev/QUALITY_GATE.md`,
@@ -44,32 +44,54 @@ API через Yandex Cloud Functions (`api.heyslab.ru`).
 
 ---
 
+## 📱 PWA устойчивость (offline/sync/slow network)
+
+**Цель:** гарантированная работа при слабой сети, офлайн и нестабильной
+синхронизации.
+
+**Ключевые механизмы:**
+
+- **Service Worker** (`public/sw.js`): Cache First / Network First / SWR, SPA
+  fallback на `/index.html`, preload navigation.
+- **Offline UX** (`heys_day_offline_sync_v1.js`): баннер offline,
+  `pendingChanges`, авто‑sync при `online`.
+- **Sync‑защита** (`heys_storage_supabase_v1.js`): `_syncInProgress`, throttle
+  15s, failsafe timeout 20s.
+- **Slow network** (`packages/shared/src/performance/lazy-loading-config.ts`):
+  `slowNetworkLazyConfig` (1 concurrent, 30s timeout).
+- **Device‑aware**
+  (`packages/shared/src/performance/mobile-performance-optimizer.ts`): low‑end
+  детект, бюджеты производительности.
+- **API retry** (`heys_yandex_api_v1.js`): 15s timeout + 2 ретрая с backoff.
+
+---
+
 ## 🌐 Yandex Cloud Architecture (152-ФЗ compliant)
 
-| Компонент     | URL / Host                                       | Назначение          |
-| ------------- | ------------------------------------------------ | ------------------- |
-| **PWA**       | `https://app.heyslab.ru`                         | Основное приложение |
-| **Landing**   | `https://heyslab.ru`                             | Лендинг             |
-| **API**       | `https://api.heyslab.ru`                         | API Gateway         |
-| **Database**  | `rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net:6432` | PostgreSQL 16       |
+| Компонент    | URL / Host                                       | Назначение          |
+| ------------ | ------------------------------------------------ | ------------------- |
+| **PWA**      | `https://app.heyslab.ru`                         | Основное приложение |
+| **Landing**  | `https://heyslab.ru`                             | Лендинг             |
+| **API**      | `https://api.heyslab.ru`                         | API Gateway         |
+| **Database** | `rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net:6432` | PostgreSQL 16       |
 
 ---
 
 ## Ключевые файлы по категориям
 
-| Категория              | Файлы                                                              |
-| ---------------------- | ------------------------------------------------------------------ |
-| **Core**               | `heys_app_v12.js`, `heys_core_v12.js`, `heys_day_v12.js`           |
-| **Auth**               | `heys_auth_v1.js`, `heys_storage_supabase_v1.js`                   |
-| **Subscriptions**      | `heys_subscriptions_v1.js`, `heys_morning_checkin_v1.js`           |
-| **Analytics**          | `heys_advice_v1.js`, `heys_insulin_wave_v1.js`, `heys_cycle_v1.js` |
-| **Legal**              | `heys_consents_v1.js`, `heys_sms_v1.js`, `docs/legal/`             |
-| **Landing**            | `apps/landing/` (Next.js 14, YandexAPI, Telegram)                  |
-| **Models**             | `heys_models_v1.js`                                                |
-| **Storage**            | `heys_storage_layer_v1.js`                                         |
-| **UI**                 | `heys_user_v12.js`, `heys_reports_v12.js`                          |
-| **Cloud Functions**    | `yandex-cloud-functions/heys-api-*` (7 функций)                    |
-| **Infrastructure**     | `infra/README.md` (VM, CDN, S3, DNS)                               |
+| Категория           | Файлы                                                              |
+| ------------------- | ------------------------------------------------------------------ |
+| **Core**            | `heys_app_v12.js`, `heys_core_v12.js`, `heys_day_v12.js`           |
+| **Auth**            | `heys_auth_v1.js`, `heys_storage_supabase_v1.js`                   |
+| **Subscriptions**   | `heys_subscriptions_v1.js`, `heys_morning_checkin_v1.js`           |
+| **Analytics**       | `heys_advice_v1.js`, `heys_insulin_wave_v1.js`, `heys_cycle_v1.js` |
+| **Legal**           | `heys_consents_v1.js`, `heys_sms_v1.js`, `docs/legal/`             |
+| **Landing**         | `apps/landing/` (Next.js 14, YandexAPI, Telegram)                  |
+| **Models**          | `heys_models_v1.js`                                                |
+| **Storage**         | `heys_storage_layer_v1.js`                                         |
+| **UI**              | `heys_user_v12.js`, `heys_reports_v12.js`                          |
+| **Cloud Functions** | `yandex-cloud-functions/heys-api-*` (7 функций)                    |
+| **Infrastructure**  | `infra/README.md` (VM, CDN, S3, DNS)                               |
 
 ---
 

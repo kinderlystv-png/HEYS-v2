@@ -50,7 +50,8 @@
 
 ### Сравнение версий
 
-**Проблема**: Версии `2025.12.12.2113.xxx` vs `2025.12.12.2057.yyy` сравнивались как строки
+**Проблема**: Версии `2025.12.12.2113.xxx` vs `2025.12.12.2057.yyy` сравнивались
+как строки
 
 **Решение**: Функция `isNewerVersion()`:
 
@@ -64,6 +65,24 @@ function isNewerVersion(serverVersion, currentVersion) {
   return getNumeric(serverVersion) > getNumeric(currentVersion);
 }
 ```
+
+---
+
+## Offline/Sync — ожидаемое поведение
+
+**Нормально, если:**
+
+- при офлайне показывается баннер и `pendingChanges` копится локально;
+- при возврате `online` запускается авто‑sync;
+- параллельные синхронизации не стартуют (дедуп через `_syncInProgress`).
+
+**Где смотреть логику:**
+
+- `heys_day_offline_sync_v1.js` — offline UI + авто‑sync;
+- `heys_storage_supabase_v1.js` — throttle 15s, failsafe 20s;
+- `public/sw.js` — offline fallback и кэш‑стратегии;
+- `packages/shared/src/performance/lazy-loading-config.ts` —
+  `slowNetworkLazyConfig`.
 
 ---
 
