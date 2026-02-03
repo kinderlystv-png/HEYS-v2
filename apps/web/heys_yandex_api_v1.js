@@ -906,6 +906,18 @@
         updated_at: item.updated_at || new Date().toISOString()
       }));
 
+      // DIAGNOSTIC: логируем размер payload для больших batch
+      try {
+        const payloadBytes = new TextEncoder().encode(JSON.stringify(restData)).length;
+        if (payloadBytes >= 100 * 1024) {
+          console.warn(
+            `[HEYS.api] ⚠️ Large payload: ${Math.round(payloadBytes / 1024)}KB (${items.length} items)`
+          );
+        }
+      } catch (e) {
+        console.warn('[HEYS.api] ⚠️ Payload size check failed');
+      }
+
       // REST POST с upsert
       // ⚠️ v59 FIX: PK таблицы client_kv_store = (client_id, k), НЕ (user_id, client_id, k)!
       const result = await rest('client_kv_store', {
