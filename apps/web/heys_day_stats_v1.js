@@ -2393,7 +2393,7 @@
                       className: 'week-heatmap-refeed-emoji',
                       style: d.emojiStyle
                     }, '🍕'),
-                    !d.isRefeedDay && d.isPerfect && React.createElement('span', {
+                    !d.isRefeedDay && d.isStreakDay && React.createElement('span', {
                       className: 'week-heatmap-perfect-emoji',
                       style: d.emojiStyle
                     }, '🔥')
