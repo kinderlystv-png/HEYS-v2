@@ -82,6 +82,7 @@ console.warn('[Module] Some debug info:', data);
 ```
 
 **Правила:**
+
 - Префикс модуля: `[HEYS.sync]`, `[HEYS.auth]`, `[HEYS.api]`, `[HEYS.store]`
 - Эмодзи статуса: ✅ успех, ⚠️ warning, ❌ ошибка, 🔐 auth
 - **БЕЗ персональных данных** (profile, meals, weight)
@@ -117,6 +118,21 @@ pnpm build      # Production build (только перед коммитом!)
 | Auth      | `heys_auth_v1.js`, `heys_storage_supabase_v1.js`         |
 | Analytics | `heys_advice_v1.js`, `heys_insulin_wave_v1.js`           |
 | API       | `heys_yandex_api_v1.js`                                  |
+
+---
+
+## 📱 PWA устойчивость (быстрый ориентир)
+
+- **Service Worker**: `public/sw.js` (Cache First / Network First / SWR + SPA
+  fallback).
+- **Offline UX**: `heys_day_offline_sync_v1.js` (баннер, pendingChanges,
+  авто‑sync).
+- **Sync‑защита**: `heys_storage_supabase_v1.js` (\_syncInProgress, throttle,
+  failsafe).
+- **Slow network**: `packages/shared/src/performance/lazy-loading-config.ts`
+  (`slowNetworkLazyConfig`).
+- **Device‑aware**:
+  `packages/shared/src/performance/mobile-performance-optimizer.ts`.
 
 ---
 
