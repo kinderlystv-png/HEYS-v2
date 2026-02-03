@@ -245,6 +245,8 @@ const ALLOWED_FUNCTIONS = [
   'publish_shared_product_by_session', // 🔐 P3: прямая публикация для кураторов (REST→RPC, session)
   'publish_shared_product_by_curator', // 🔐 P3: прямая публикация для кураторов (REST→RPC, JWT)
   'sync_shared_products_by_session',   // 🔐 Копирование всех shared_products в базу клиента
+  'update_shared_product_portions',    // 🔐 Обновление порций продукта (direct UPDATE, не INSERT)
+  'update_shared_product_portions_by_curator', // 🔐 Обновление порций куратором (JWT auth)
 
   // === CONSENTS ===
   'log_consents',                     // Логирование согласий с ПЭП
@@ -562,6 +564,18 @@ module.exports.handler = async function (event, context) {
       'publish_shared_product_by_curator': {
         'p_curator_id': '::uuid',
         'p_product_data': '::jsonb'
+      },
+      // 🔐 Обновление порций продукта
+      'update_shared_product_portions': {
+        'p_session_token': '::text',
+        'p_product_id': '::uuid',
+        'p_portions': '::jsonb'
+      },
+      // 🔐 Обновление порций куратором (JWT auth)
+      'update_shared_product_portions_by_curator': {
+        'p_curator_id': '::uuid',
+        'p_product_id': '::uuid',
+        'p_portions': '::jsonb'
       },
       // === TRIAL QUEUE ADMIN ===
       'admin_get_trial_queue_list': {

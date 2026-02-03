@@ -171,6 +171,22 @@
       return _sharedProductsCache || [];
     };
 
+    // 🔄 Обновление одного продукта в кэше (для мгновенного отображения изменений)
+    cloud.updateCachedSharedProduct = function (productId, updates) {
+      if (!productId || !_sharedProductsCache?.length) return false;
+      const idx = _sharedProductsCache.findIndex((p) => String(p?.id) === String(productId));
+      if (idx === -1) return false;
+      _sharedProductsCache[idx] = { ..._sharedProductsCache[idx], ...updates };
+      console.info('[HEYS.cloud] ✅ Кэш shared product обновлён', { productId, updates });
+      return true;
+    };
+
+    // 🔄 Инвалидация кэша (заставляет перезагрузить при следующем запросе)
+    cloud.invalidateSharedProductsCache = function () {
+      _sharedProductsCacheTime = 0;
+      console.info('[HEYS.cloud] 🔄 Кэш shared products инвалидирован');
+    };
+
     cloud.getAllSharedProducts = async function (options = {}) {
       const { limit = 500, excludeBlocklist = true } = options;
 

@@ -164,6 +164,20 @@
         }
       }
       // Fallback на прямой localStorage для глобальных ключей
+      // 🔧 FIX v60: при ранней загрузке пытаемся читать scoped-ключ напрямую
+      const clientSpecificKeys = ['heys_products', 'heys_profile', 'heys_hr_zones', 'heys_norms', 'heys_game'];
+      const isClientSpecific = clientSpecificKeys.some(k => key === k || key.includes('dayv2_'));
+      if (isClientSpecific) {
+        const clientId = getCurrentClientId();
+        if (clientId) {
+          const keyPart = key.startsWith('heys_') ? key.substring('heys_'.length) : key;
+          const scopedKey = `heys_${clientId}_${keyPart}`;
+          const scopedV = localStorage.getItem(scopedKey);
+          if (scopedV) {
+            return JSON.parse(scopedV);
+          }
+        }
+      }
       const v = localStorage.getItem(key);
       return v ? JSON.parse(v) : def;
     } catch (e) {
@@ -1128,6 +1142,7 @@
       window.addEventListener('heysSyncCompleted', handleProductsUpdated);
       window.addEventListener('heys:product-updated', handleProductPatched);
       window.addEventListener('heys:product-portions-updated', handleProductPatched);
+      window.addEventListener('heys:local-product-updated', handleProductPatched);
       window.addEventListener('heys:orphans-recovered', handleOrphansRecovered);
 
       return () => {
@@ -1135,6 +1150,7 @@
         window.removeEventListener('heysSyncCompleted', handleProductsUpdated);
         window.removeEventListener('heys:product-updated', handleProductPatched);
         window.removeEventListener('heys:product-portions-updated', handleProductPatched);
+        window.removeEventListener('heys:local-product-updated', handleProductPatched);
         window.removeEventListener('heys:orphans-recovered', handleOrphansRecovered);
       };
     }, []);
@@ -2228,6 +2244,17 @@
             debugInfo.updated.push({ key: 'harm', from: localHarm, to: sharedHarm });
           } else if (isEmpty(localHarm) && isEmpty(sharedHarm)) {
             debugInfo.reasons.push({ key: 'harm', reason: 'shared_empty' });
+          }
+
+          // 🔧 FIX: Синхронизация portions — берём из shared если local пустой
+          const localPortions = local?.portions;
+          const sharedPortions = shared?.portions;
+          const localHasPortions = Array.isArray(localPortions) && localPortions.length > 0;
+          const sharedHasPortions = Array.isArray(sharedPortions) && sharedPortions.length > 0;
+          if (!localHasPortions && sharedHasPortions) {
+            merged.portions = sharedPortions;
+            changed = true;
+            debugInfo.updated.push({ key: 'portions', from: localPortions, to: sharedPortions });
           }
 
           // shared_origin_id для связи
@@ -4046,6 +4073,17 @@
     },
     setAll: (arr, opts = {}) => {
       const newLen = arr?.length || 0;
+      const source = opts.source || 'unknown';
+
+      // 🔍 DEBUG: Логируем portions-sync
+      if (source === 'portions-sync') {
+        console.log('[PRODUCTS.setAll] portions-sync call', {
+          newLen,
+          firstProductPortions: arr?.[0]?.portions,
+          hasStore: !!HEYS.store?.set,
+          hasUtils: !!HEYS.utils?.lsSet
+        });
+      }
 
       // 🛡️ ЗАЩИТА: Не перезаписываем большее количество меньшим без явного разрешения
       // Это предотвращает race condition когда sync перезаписывает восстановленные продукты
@@ -4101,6 +4139,14 @@
 
       if (HEYS.store && HEYS.store.set) {
         HEYS.store.set('heys_products', arr);
+        // 🔍 DEBUG: Проверяем что portions-sync записалось
+        if (source === 'portions-sync') {
+          const verify = HEYS.store.get?.('heys_products') || [];
+          console.log('[PRODUCTS.setAll] portions-sync STORED', {
+            storedLen: verify.length,
+            samplePortions: verify.find(p => p?.portions?.length > 0)?.portions
+          });
+        }
       } else if (HEYS.utils && HEYS.utils.lsSet) {
         HEYS.utils.lsSet('heys_products', arr);
       }
@@ -4129,6 +4175,13 @@
         }
         if (!next.shared_origin_id && sharedProduct.id) {
           next.shared_origin_id = sharedProduct.id;
+          changed = true;
+        }
+        // 🔧 FIX: Синхронизируем portions из shared если local пустой
+        const localHasPortions = Array.isArray(next.portions) && next.portions.length > 0;
+        const sharedHasPortions = Array.isArray(sharedProduct.portions) && sharedProduct.portions.length > 0;
+        if (!localHasPortions && sharedHasPortions) {
+          next.portions = sharedProduct.portions.map((p) => ({ ...p }));
           changed = true;
         }
         // 🔧 FIX: Добавляем вычисляемые поля (kcal100, carbs100, fat100) если их нет

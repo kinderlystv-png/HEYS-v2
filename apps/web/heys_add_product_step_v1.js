@@ -4,6 +4,10 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const { useState, useMemo, useCallback, useEffect, useRef, useContext } = React;
 
+  // === ГЛОБАЛЬНЫЙ СЧЁТЧИК ВЕРСИИ ПРОДУКТОВ ===
+  // Должен быть доступен всем компонентам внутри модуля
+  let globalProductsVersion = 0;
+
   // Ждём загрузки StepModal
   if (!HEYS.StepModal) {
     console.warn('[HEYS] AddProductStep: StepModal not loaded yet');
@@ -98,17 +102,37 @@
   };
 
   const normalizePortions = (list) => {
-    if (!Array.isArray(list)) return [];
-    return list
+    if (!Array.isArray(list)) {
+      console.warn('[HEYS.portions] ⚠️ normalizePortions: не массив', { input: list });
+      return [];
+    }
+    const result = list
       .map((p) => ({
         name: String(p?.name || '').trim(),
         grams: Number(p?.grams || 0)
       }))
       .filter((p) => p.name && p.grams > 0);
+    console.info('[HEYS.portions] 🔄 normalizePortions', {
+      inputCount: list.length,
+      outputCount: result.length,
+      input: list.map(p => ({ name: p?.name, grams: p?.grams })),
+      output: result
+    });
+    return result;
   };
 
   const saveProductPortions = (product, portions) => {
-    if (!product || !Array.isArray(portions)) return;
+    console.info('[HEYS.portions] 📥 saveProductPortions ВЫЗВАН', {
+      productId: product?.id ?? product?.product_id ?? product?.name,
+      productName: product?.name,
+      portionsInput: portions,
+      isShared: isSharedProduct(product),
+      shared_origin_id: product?.shared_origin_id
+    });
+    if (!product || !Array.isArray(portions)) {
+      console.warn('[HEYS.portions] ⚠️ saveProductPortions: невалидные аргументы', { product: !!product, portions });
+      return;
+    }
     const U = HEYS.utils || {};
     const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
     const pid = String(product.id ?? product.product_id ?? product.name);
@@ -137,6 +161,28 @@
     } else if (U.lsSet) {
       U.lsSet('heys_products', nextProducts);
     }
+
+    console.info('[HEYS.portions] 📣 Отправляем событие heys:local-product-updated', {
+      productId: updated.id,
+      productName: updated.name,
+      portionsCount: portions.length,
+      shared_origin_id: updated.shared_origin_id
+    });
+    window.dispatchEvent(new CustomEvent('heys:local-product-updated', {
+      detail: {
+        productId: updated.id ?? updated.product_id ?? updated.name,
+        product: updated,
+        portions,
+        sharedId: updated.shared_origin_id
+      }
+    }));
+
+    console.info('[HEYS.portions] 📣 Отправляем событие heys:product-portions-updated', {
+      productId: updated.id ?? updated.product_id ?? updated.name,
+      productName: updated.name,
+      portionsCount: portions.length
+    });
+    notifyPortionsUpdated(updated, portions);
   };
 
   const upsertLocalProduct = (product, isUserEdit = true) => {
@@ -195,12 +241,21 @@
     return !!(product._fromShared || product._source === 'shared' || product.is_shared);
   };
 
+  const isUuidLike = (value) => {
+    if (value == null) return false;
+    const str = String(value).trim();
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  };
+
   const resolveSharedProductId = (product) => {
     if (!product) return null;
     if (product.shared_origin_id != null) return product.shared_origin_id;
     if (product.sharedId != null) return product.sharedId;
     if (product._sharedId != null) return product._sharedId;
-    if (isSharedProduct(product)) return product.id ?? product.product_id ?? null;
+    if (isSharedProduct(product)) {
+      const sharedId = product.id ?? product.product_id ?? null;
+      return isUuidLike(sharedId) ? sharedId : null;
+    }
     return null;
   };
 
@@ -221,8 +276,157 @@
     }));
   };
 
-  const updateSharedProductPortions = async (productId, portions) => {
-    if (!HEYS?.YandexAPI?.rest) {
+  const notifySharedProductUpdated = (sharedId, portions, product = null) => {
+    if (sharedId == null) return;
+    const eventProduct = product ? { ...product, id: sharedId } : { id: sharedId, portions };
+    window.dispatchEvent(new CustomEvent('heys:shared-product-updated', {
+      detail: {
+        productId: sharedId,
+        product: eventProduct,
+        portions: Array.isArray(portions) ? portions : []
+      }
+    }));
+  };
+
+  const updateSharedProductsCache = (sharedId, portions, product = null) => {
+    if (sharedId == null) return;
+
+    // 1. Обновляем через новый API (предпочтительно)
+    if (HEYS.cloud?.updateCachedSharedProduct) {
+      const updates = {
+        ...(product || {}),
+        portions: Array.isArray(portions) ? portions : undefined
+      };
+      HEYS.cloud.updateCachedSharedProduct(sharedId, updates);
+    } else {
+      // Fallback: обновляем напрямую
+      const cache = HEYS.cloud?.getCachedSharedProducts?.();
+      if (!Array.isArray(cache) || cache.length === 0) return;
+      const idx = cache.findIndex((p) => String(p?.id) === String(sharedId));
+      if (idx === -1) return;
+      const merged = {
+        ...cache[idx],
+        ...(product || {}),
+        id: sharedId,
+        portions: Array.isArray(portions) ? portions : cache[idx]?.portions
+      };
+      cache[idx] = merged;
+    }
+
+    // 🔧 FIX: Синхронизируем с локальным heys_products (личная база)
+    // Продукт мог быть клонирован туда ранее через addFromShared
+    try {
+      const U = HEYS.utils || {};
+      let localProducts = [];
+      if (HEYS.products?.getAll) localProducts = HEYS.products.getAll() || [];
+      if (localProducts.length === 0 && HEYS.store?.get) {
+        localProducts = HEYS.store.get('heys_products', []) || [];
+      }
+      if (localProducts.length === 0 && U.lsGet) {
+        localProducts = U.lsGet('heys_products', []) || [];
+      }
+      if (localProducts.length === 0) {
+        const rawProducts = readStoredValue('heys_products', []) || [];
+        if (Array.isArray(rawProducts)) localProducts = rawProducts;
+      }
+      if (!Array.isArray(localProducts) || localProducts.length === 0) return;
+
+      const normalizeName = HEYS.models?.normalizeProductName
+        || ((name) => String(name || '').trim().toLowerCase().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
+
+      const sharedName = product?.name
+        || (HEYS.cloud?.getCachedSharedProducts?.() || []).find(p => String(p?.id) === String(sharedId))?.name
+        || null;
+
+      const getSharedOriginId = (p) => p?.shared_origin_id ?? p?.sharedOriginId ?? p?.shared_id ?? p?.sharedId ?? null;
+
+      const localIndices = localProducts
+        .map((p, idx) => ({ idx, p }))
+        .filter(({ p }) => String(getSharedOriginId(p)) === String(sharedId) || String(p?.id) === String(sharedId))
+        .map((item) => item.idx);
+
+      if (localIndices.length === 0 && sharedName) {
+        const targetName = normalizeName(sharedName);
+        localProducts.forEach((p, idx) => {
+          if (normalizeName(p?.name) === targetName) {
+            localIndices.push(idx);
+          }
+        });
+      }
+
+      if (localIndices.length > 0) {
+        let updatedProducts = [...localProducts];
+        const incomingPortions = Array.isArray(portions) ? portions : [];
+        const hasIncomingPortions = incomingPortions.length > 0;
+
+        localIndices.forEach((idx) => {
+          const localProduct = updatedProducts[idx];
+          const finalPortions = hasIncomingPortions ? incomingPortions : (localProduct?.portions || []);
+
+          const updatedProduct = {
+            ...localProduct,
+            ...product,
+            portions: finalPortions,
+            id: localProduct?.id
+          };
+
+          if (!getSharedOriginId(localProduct)) {
+            updatedProduct.shared_origin_id = sharedId;
+          }
+
+          updatedProducts[idx] = updatedProduct;
+
+          window.dispatchEvent(new CustomEvent('heys:local-product-updated', {
+            detail: {
+              productId: localProduct?.id,
+              sharedId: sharedId,
+              product: updatedProduct,
+              portions: finalPortions
+            }
+          }));
+          window.dispatchEvent(new CustomEvent('heys:product-portions-updated', {
+            detail: {
+              productId: localProduct?.id,
+              product: updatedProduct,
+              portions: finalPortions
+            }
+          }));
+        });
+
+        if (HEYS.products?.setAll) {
+          HEYS.products.setAll(updatedProducts, { source: 'portions-sync-shared' });
+        } else if (HEYS.store?.set) {
+          HEYS.store.set('heys_products', updatedProducts);
+        } else if (U.lsSet) {
+          U.lsSet('heys_products', updatedProducts);
+        } else {
+          writeRawValue('heys_products', updatedProducts);
+        }
+      } else {
+        console.warn('[HEYS.portions] ⚠️ Не найден локальный продукт для синхронизации', { sharedId, sharedName });
+      }
+    } catch (e) {
+      console.warn('[HEYS.portions] ⚠️ Не удалось синхронизировать с локальной базой', e?.message || e);
+    }
+  };
+
+  // 🔄 Обновление порций через RPC (direct UPDATE, не INSERT ON CONFLICT)
+  // Причина: REST upsert с partial data fails NOT NULL constraint на name/fingerprint
+  const updateSharedProductPortions = async (productId, portions, product = null) => {
+    // 🔧 Для кураторов используем JWT авторизацию (curator_id из cloud.getUser())
+    // ПРИОРИТЕТ: curator mode если пользователь - куратор
+    const curatorUser = (typeof HEYS !== 'undefined' && HEYS.cloud?.getUser?.());
+    const curatorId = curatorUser?.id;
+    const isCurator = curatorUser?.role === 'curator';
+
+    // 🔧 Получаем session token для клиентов (PIN auth)
+    const sessionToken = (typeof HEYS !== 'undefined' && HEYS.Auth?.getSessionToken?.())
+      || localStorage.getItem('heys_session_token');
+
+    // Кураторы используют curator функцию, клиенты - session функцию
+    const isCuratorMode = isCurator && !!curatorId;
+
+    if (!HEYS?.YandexAPI?.rpc) {
       HEYS.Toast?.warning('API недоступен для обновления') || alert('API недоступен для обновления');
       console.warn('[HEYS.portions] ⚠️ API недоступен для обновления порций', {
         productId,
@@ -231,33 +435,88 @@
       return { ok: false };
     }
 
-    try {
-      console.info('[HEYS.portions] 📤 UPSERT shared_products', {
+    if (!sessionToken && !curatorId) {
+      HEYS.Toast?.warning('Сессия не авторизована') || alert('Сессия не авторизована');
+      console.warn('[HEYS.portions] ⚠️ Нет авторизации для обновления порций', { productId });
+      return { ok: false };
+    }
+
+    const resolvedSharedId = resolveSharedProductId(product) ?? productId;
+    if (!isUuidLike(resolvedSharedId)) {
+      console.warn('[HEYS.portions] ⚠️ Некорректный shared UUID для RPC порций', {
         productId,
-        portionsCount: Array.isArray(portions) ? portions.length : 0
+        resolvedSharedId
       });
-      const { error } = await HEYS.YandexAPI.rest('shared_products', {
-        method: 'POST',
-        data: { id: productId, portions },
-        upsert: true,
-        onConflict: 'id',
-        select: 'id,portions'
+      return { ok: false };
+    }
+
+    try {
+      // Выбираем функцию и параметры в зависимости от режима авторизации
+      const rpcFn = isCuratorMode ? 'update_shared_product_portions_by_curator' : 'update_shared_product_portions';
+      const rpcParams = isCuratorMode
+        ? {
+          p_curator_id: curatorId,
+          p_product_id: resolvedSharedId,
+          p_portions: Array.isArray(portions) ? portions : []
+        }
+        : {
+          p_session_token: sessionToken,
+          p_product_id: resolvedSharedId,
+          p_portions: Array.isArray(portions) ? portions : []
+        };
+
+      console.info(`[HEYS.portions] 📤 RPC ${rpcFn}`, {
+        productId: resolvedSharedId,
+        portionsCount: Array.isArray(portions) ? portions.length : 0,
+        portionsData: portions,
+        isCuratorMode,
+        curatorId: isCuratorMode ? curatorId : undefined
       });
 
+      const { data: rawData, error } = await HEYS.YandexAPI.rpc(rpcFn, rpcParams);
+
       if (error) {
-        HEYS.Toast?.error('Ошибка обновления: ' + error) || alert('Ошибка обновления: ' + error);
-        console.error('[HEYS.portions] ❌ Ошибка обновления порций', {
+        const errorMsg = error?.message || error;
+        HEYS.Toast?.error('Ошибка обновления: ' + errorMsg) || alert('Ошибка обновления: ' + errorMsg);
+        console.error('[HEYS.portions] ❌ RPC ошибка обновления порций', {
           productId,
           error
         });
         return { ok: false };
       }
 
-      HEYS.Toast?.success('Порции обновлены') || alert('Порции обновлены');
-      console.info('[HEYS.portions] ✅ Порции обновлены в shared_products', {
-        productId,
-        portionsCount: Array.isArray(portions) ? portions.length : 0
+      // 🔧 RPC возвращает { "[function_name]": { success: true/false, ... } }
+      // Извлекаем результат из nested структуры
+      const data = rawData?.[rpcFn] || rawData;
+
+      console.info('[HEYS.portions] 📥 RPC response parsed', {
+        rawDataKeys: rawData ? Object.keys(rawData) : [],
+        success: data?.success,
+        hasError: !!data?.error
       });
+
+      if (data?.success === false) {
+        const errorMsg = data?.message || data?.error || 'Ошибка сервера';
+        HEYS.Toast?.error(errorMsg) || alert(errorMsg);
+        console.error('[HEYS.portions] ❌ RPC вернул ошибку', {
+          productId,
+          data
+        });
+        return { ok: false };
+      }
+
+      HEYS.Toast?.success('Порции обновлены') || alert('Порции обновлены');
+      console.info('[HEYS.portions] ✅ Порции обновлены через RPC', {
+        productId: resolvedSharedId,
+        portionsCount: Array.isArray(portions) ? portions.length : 0,
+        portionsData: portions,
+        serverResponse: data,
+        isCuratorMode
+      });
+
+      // Обновляем кэш и уведомляем об изменениях
+      updateSharedProductsCache(resolvedSharedId, portions, product);
+      notifySharedProductUpdated(resolvedSharedId, portions, product);
       return { ok: true };
     } catch (e) {
       const msg = e?.message || 'Ошибка обновления';
@@ -612,6 +871,12 @@
         isEditMode: true,
         editProduct: product,
         onFinish: async ({ portions }) => {
+          console.info('[HEYS.portions] 🏁 onFinish shared/personal edit', {
+            productId: product?.id,
+            productName: product?.name,
+            receivedPortions: portions,
+            shared_origin_id: product?.shared_origin_id
+          });
           const normalized = normalizePortions(portions || []);
           const updatedProduct = {
             ...product,
@@ -620,7 +885,7 @@
 
           const sharedId = resolveSharedProductId(product);
           if (isCuratorUser() && sharedId) {
-            const result = await updateSharedProductPortions(sharedId, normalized);
+            const result = await updateSharedProductPortions(sharedId, normalized, updatedProduct);
             if (result.ok) {
               upsertLocalProduct(updatedProduct, false);
               notifyPortionsUpdated(updatedProduct, normalized);
@@ -630,7 +895,16 @@
 
           if (isSharedProduct(product)) {
             if (isCuratorUser()) {
-              const result = await updateSharedProductPortions(product.id, normalized);
+              const resolvedSharedId = resolveSharedProductId(product);
+              if (!resolvedSharedId) {
+                console.warn('[HEYS.portions] ⚠️ Не удалось определить shared UUID для порций', {
+                  productId: product?.id,
+                  productName: product?.name,
+                  shared_origin_id: product?.shared_origin_id
+                });
+                return;
+              }
+              const result = await updateSharedProductPortions(resolvedSharedId, normalized, updatedProduct);
               if (result.ok) {
                 upsertLocalProduct(updatedProduct, false);
                 notifyPortionsUpdated(updatedProduct, normalized);
@@ -824,7 +1098,7 @@
     // 🔧 FIX: Реактивное состояние для продуктов с подпиской на синхронизацию
     // Это решает проблему: при открытии модалки сразу после создания приёма
     // продукты ещё не загружены из облака, но после heysSyncCompleted они появятся
-    const [productsVersion, setProductsVersion] = useState(0);
+    const [productsVersion, setProductsVersion] = useState(globalProductsVersion);
     const [usageStatsVersion, setUsageStatsVersion] = useState(0);
 
     // 🔒 Ref для пропуска первого sync (предотвращает мерцание)
@@ -832,6 +1106,14 @@
 
     // Подписка на обновление продуктов (heysSyncCompleted или watch)
     useEffect(() => {
+      const clearSearchCache = () => {
+        try {
+          HEYS?.SmartSearchWithTypos?.clearCache?.();
+        } catch (e) {
+          // no-op
+        }
+      };
+
       const refreshUsageFromHistory = () => {
         try {
           if (HEYS?.SmartSearchWithTypos?.syncUsageStatsFromDays) {
@@ -858,10 +1140,29 @@
         }
         // console.log('[AddProductStep] 🔄 heysSyncCompleted → refreshing products');
         setProductsVersion(v => v + 1);
+        clearSearchCache();
         refreshUsageFromHistory();
       };
 
+      // 🆕 FIX v2: слушаем глобальное событие версии продуктов
+      // Глобальные listeners регистрируются 1 раз при загрузке модуля
+      // и dispatch'ат heys:products-version-changed для React компонентов
+      const handleVersionChanged = (e) => {
+        console.log('[AddProductStep] 🔄 handleVersionChanged fired', {
+          event: e?.type,
+          detail: e?.detail,
+          prevVersion: productsVersion
+        });
+        setProductsVersion(v => {
+          const next = v + 1;
+          console.log('[AddProductStep] ✅ productsVersion updating', { prev: v, next });
+          return next;
+        });
+        clearSearchCache();
+      };
+
       window.addEventListener('heysSyncCompleted', handleSyncComplete);
+      window.addEventListener('heys:products-version-changed', handleVersionChanged);
 
       // Также подписываемся через HEYS.products.watch если доступен
       let unwatchProducts = () => { };
@@ -869,11 +1170,13 @@
         unwatchProducts = HEYS.products.watch(() => {
           // console.log('[AddProductStep] 🔄 products.watch → refreshing products');
           setProductsVersion(v => v + 1);
+          clearSearchCache();
         });
       }
 
       return () => {
         window.removeEventListener('heysSyncCompleted', handleSyncComplete);
+        window.removeEventListener('heys:products-version-changed', handleVersionChanged);
         unwatchProducts();
       };
     }, [dateKey, usageWindowDays]);
@@ -881,6 +1184,7 @@
     // Всегда берём актуальные продукты из глобального стора (если появились новые)
     // productsVersion в зависимостях заставляет пересчитать при синхронизации
     const latestProducts = useMemo(() => {
+      console.log('[AddProductStep] 🔄 latestProducts useMemo START', { productsVersion });
       const base = Array.isArray(context?.products) ? context.products : [];
 
       // Пробуем получить из HEYS.products.getAll()
@@ -925,12 +1229,43 @@
       primary.forEach(pushUnique);
       secondary.forEach(pushUnique);
 
+      console.log('[AddProductStep] ✅ latestProducts useMemo DONE', {
+        count: merged.length,
+        sampleIds: merged.slice(0, 3).map(p => p.id),
+        productsVersion
+      });
       return merged;
     }, [context, productsVersion]);
 
     // 🌐 Результаты из общей базы (асинхронный поиск)
     const [sharedResults, setSharedResults] = useState([]);
     const [sharedLoading, setSharedLoading] = useState(false);
+
+    useEffect(() => {
+      const handleSharedUpdated = (event) => {
+        const detail = event?.detail || {};
+        const updatedId = detail.productId ?? detail.product?.id;
+        if (updatedId == null) return;
+        setSharedResults((prev) => {
+          if (!Array.isArray(prev) || prev.length === 0) return prev;
+          let changed = false;
+          const next = prev.map((p) => {
+            if (String(p?.id) !== String(updatedId)) return p;
+            changed = true;
+            return {
+              ...p,
+              ...(detail.product || {}),
+              id: p.id,
+              portions: Array.isArray(detail.portions) ? detail.portions : (detail.product?.portions || p.portions)
+            };
+          });
+          return changed ? next : prev;
+        });
+      };
+
+      window.addEventListener('heys:shared-product-updated', handleSharedUpdated);
+      return () => window.removeEventListener('heys:shared-product-updated', handleSharedUpdated);
+    }, []);
 
     useEscapeToClose(closeModal, true);
 
@@ -1320,11 +1655,33 @@
       sharedFiltered.forEach(p => pushCandidate(p, 'shared'));
 
       // Дедуп по нормализованному имени — оставляем лучший скор
+      // 🔧 FIX: Приоритет продуктам с порциями (личные настройки пользователя)
       const bestByName = new Map();
       candidates.forEach(p => {
         const key = p._nameNorm;
         const prev = bestByName.get(key);
-        if (!prev || (p._score ?? 0) > (prev._score ?? 0)) {
+        if (!prev) {
+          bestByName.set(key, p);
+          return;
+        }
+
+        // Проверяем наличие порций
+        const prevHasPortions = Array.isArray(prev.portions) && prev.portions.length > 0;
+        const currHasPortions = Array.isArray(p.portions) && p.portions.length > 0;
+
+        // Если у текущего есть порции, а у предыдущего нет — выбираем текущий
+        if (currHasPortions && !prevHasPortions) {
+          bestByName.set(key, p);
+          return;
+        }
+
+        // Если у предыдущего есть порции, а у текущего нет — оставляем предыдущий
+        if (prevHasPortions && !currHasPortions) {
+          return;
+        }
+
+        // Иначе выбираем по score (как раньше)
+        if ((p._score ?? 0) > (prev._score ?? 0)) {
           bestByName.set(key, p);
         }
       });
@@ -3221,13 +3578,18 @@ NOVA: 1
     }, []);
 
     const handleUpdatePortion = useCallback((index, field, value) => {
-      setPortions((prev) => prev.map((p, i) => {
-        if (i !== index) return p;
-        return {
-          ...p,
-          [field]: value
-        };
-      }));
+      console.info('[HEYS.portions] ✏️ handleUpdatePortion', { index, field, value });
+      setPortions((prev) => {
+        const next = prev.map((p, i) => {
+          if (i !== index) return p;
+          return {
+            ...p,
+            [field]: value
+          };
+        });
+        console.info('[HEYS.portions] ✏️ portions state updated', { prev, next });
+        return next;
+      });
     }, []);
 
     const handleApplyAuto = useCallback(() => {
@@ -3237,6 +3599,13 @@ NOVA: 1
     }, [autoPortions, toEditablePortions]);
 
     const handleContinue = useCallback(() => {
+      console.info('[HEYS.portions] 🔵 handleContinue START', {
+        productId: product?.id ?? product?.product_id ?? null,
+        productName: product?.name,
+        productPortions: product?.portions,
+        statePortions: portions,
+        isEditMode: !!context?.isEditMode
+      });
       if (!product) {
         console.warn('[HEYS.portions] ⚠️ Нет продукта при сохранении порций');
         return;
@@ -3256,6 +3625,9 @@ NOVA: 1
 
       console.info('[HEYS.portions] 💾 Сохранение порций', {
         productId: product?.id ?? product?.product_id ?? null,
+        productName: product?.name,
+        rawPortions: portions,
+        normalizedPortions: normalized,
         normalizedCount: normalized.length,
         isEditMode: !!context?.isEditMode,
         isShared: isSharedProduct(product),
@@ -4391,7 +4763,7 @@ NOVA: 1
           const sharedId = resolveSharedProductId(finalProduct);
 
           if (isCuratorUser() && sharedId && portionsChanged && !otherChanged) {
-            const result = await updateSharedProductPortions(sharedId, finalProduct.portions || []);
+            const result = await updateSharedProductPortions(sharedId, finalProduct.portions || [], finalProduct);
             if (result.ok) {
               upsertLocalProduct(finalProduct, false);
               notifyProductUpdated(finalProduct);
@@ -4741,6 +5113,51 @@ NOVA: 1
     updateSharedProductPortions
   };
 
-  // console.log('[HEYS] AddProductStep v1 loaded');
+  // === ГЛОБАЛЬНЫЙ МЕХАНИЗМ СОБЫТИЙ ПРОДУКТОВ ===
+  // Слушатели на уровне модуля — переживают монтирование/размонтирование компонентов
+  // Решение для EDIT flow (showEditProductModal), где ProductSearchStep никогда не монтируется
+
+  function initializeGlobalProductListeners() {
+    const handleGlobalProductUpdate = (e) => {
+      console.log('[AddProductStep GLOBAL] 🔄 Product event received', {
+        event: e?.type,
+        detail: e?.detail,
+        currentVersion: globalProductsVersion,
+        timestamp: new Date().toISOString()
+      });
+
+      globalProductsVersion++;
+
+      console.log('[AddProductStep GLOBAL] ✅ Version incremented', {
+        newVersion: globalProductsVersion
+      });
+
+      // Диспатчим событие для React компонентов
+      window.dispatchEvent(new CustomEvent('heys:products-version-changed', {
+        detail: {
+          version: globalProductsVersion,
+          sourceEvent: e?.type
+        }
+      }));
+
+      console.log('[AddProductStep GLOBAL] 📢 Dispatched version-changed event', {
+        version: globalProductsVersion
+      });
+    };
+
+    // Регистрируем постоянные глобальные слушатели (никогда не удаляются)
+    window.addEventListener('heys:local-product-updated', handleGlobalProductUpdate);
+    window.addEventListener('heys:product-portions-updated', handleGlobalProductUpdate);
+    window.addEventListener('heys:product-updated', handleGlobalProductUpdate);
+
+    console.log('[AddProductStep GLOBAL] ✅ Global product listeners initialized', {
+      initialVersion: globalProductsVersion
+    });
+  }
+
+  // Инициализация при загрузке модуля
+  initializeGlobalProductListeners();
+
+  console.log('[HEYS] AddProductStep v1 loaded with global listeners');
 
 })(typeof window !== 'undefined' ? window : global);
