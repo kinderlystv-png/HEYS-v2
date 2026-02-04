@@ -1,18 +1,18 @@
 
-> @heys/search@14.0.0 build /Users/poplavskijanton/HEYS-v2/packages/search
+> @heys/search@14.0.0 build C:\Users\Ant\HEYS-v2\packages\search
 > tsup
 
-CLI Building entry: src/index.ts
-CLI Using tsconfig: tsconfig.json
-CLI tsup v7.3.0
-CLI Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/search/tsup.config.ts
-CLI Target: es2022
-CLI Cleaning output folder
-CJS Build start
-ESM Build start
-ESM dist/index.js     6.16 KB
-ESM dist/index.js.map 17.56 KB
-ESM ⚡️ Build success in 462ms
-CJS dist/index.cjs     6.17 KB
-CJS dist/index.cjs.map 17.56 KB
-CJS ⚡️ Build success in 463ms
+[34mCLI[39m Building entry: src/index.ts
+[34mCLI[39m Using tsconfig: tsconfig.json
+[34mCLI[39m tsup v7.3.0
+[34mCLI[39m Using tsup config: C:\Users\Ant\HEYS-v2\packages\search\tsup.config.ts
+[34mCLI[39m Target: es2022
+[34mCLI[39m Cleaning output folder
+[34mCJS[39m Build start
+[34mESM[39m Build start
+[32mCJS[39m [1mdist\index.cjs     [22m[32m6.17 KB[39m
+[32mCJS[39m [1mdist\index.cjs.map [22m[32m18.36 KB[39m
+[32mCJS[39m ⚡️ Build success in 424ms
+[32mESM[39m [1mdist\index.js     [22m[32m6.16 KB[39m
+[32mESM[39m [1mdist\index.js.map [22m[32m18.36 KB[39m
+[32mESM[39m ⚡️ Build success in 424ms

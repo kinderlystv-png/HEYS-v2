@@ -1,5 +1,5 @@
 
-> @heys/ui@14.0.0 type-check /Users/poplavskijanton/HEYS-v2/packages/ui
+> @heys/ui@14.0.0 type-check C:\Users\Ant\HEYS-v2\packages\ui
 > tsc --noEmit
 
 ../shared/src/logging/AppLogger.ts(61,5): error TS2375: Type '{ msg: string; meta: LogMeta | undefined; }' is not assignable to type '{ msg: string; meta?: LogMeta; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.

@@ -54,6 +54,69 @@
         try { localStorage.removeItem(key); } catch { }
     };
 
+    // 🆕 Хелперы для статуса подписки
+    const getSubscriptionBadge = (client) => {
+        const status = client.subscription_status || 'none';
+        const endDate = client.trial_ends_at ? new Date(client.trial_ends_at) : null;
+        const now = new Date();
+        const daysLeft = endDate ? Math.ceil((endDate - now) / (1000 * 60 * 60 * 24)) : null;
+
+        if (!endDate || status === 'none') {
+            return { emoji: '⚪', color: '#6b7280', bg: '#f3f4f6', text: 'Нет подписки', urgent: false };
+        }
+
+        if (daysLeft !== null && daysLeft < 0) {
+            return { emoji: '🔴', color: '#dc2626', bg: '#fee2e2', text: `Просрочена ${Math.abs(daysLeft)} дн.`, urgent: true };
+        }
+
+        if (daysLeft !== null && daysLeft <= 3) {
+            return { emoji: '🟡', color: '#d97706', bg: '#fef3c7', text: `Истекает через ${daysLeft} дн.`, urgent: true };
+        }
+
+        if (daysLeft !== null && daysLeft <= 7) {
+            return { emoji: '🟡', color: '#ca8a04', bg: '#fef9c3', text: `До ${endDate.toLocaleDateString('ru-RU')}`, urgent: false };
+        }
+
+        if (status === 'trial') {
+            return { emoji: '⏳', color: '#6366f1', bg: '#e0e7ff', text: `Триал до ${endDate.toLocaleDateString('ru-RU')}`, urgent: false };
+        }
+
+        if (status === 'active') {
+            return { emoji: '🟢', color: '#16a34a', bg: '#dcfce7', text: `Активна до ${endDate.toLocaleDateString('ru-RU')}`, urgent: false };
+        }
+
+        return { emoji: '⚪', color: '#6b7280', bg: '#f3f4f6', text: status, urgent: false };
+    };
+
+    const extendClientSubscription = async (clientId, curatorId, clientName) => {
+        if (!confirm(`Продлить подписку для "${clientName}" на 1 месяц?`)) return null;
+
+        try {
+            const { data: res, error } = await HEYS.YandexAPI?.rpc?.('admin_extend_subscription', {
+                p_curator_id: curatorId,
+                p_client_id: clientId,
+                p_months: 1
+            }) || {};
+
+            if (error) {
+                HEYS.Toast?.error?.(error.message || 'Ошибка продления');
+                return null;
+            }
+
+            if (res && res.success) {
+                HEYS.Toast?.success?.(`✅ Подписка продлена до ${new Date(res.new_end_date).toLocaleDateString('ru-RU')}`);
+                return res;
+            } else {
+                HEYS.Toast?.error?.(res?.message || 'Ошибка продления');
+                return null;
+            }
+        } catch (e) {
+            console.error('[extend_subscription]', e);
+            HEYS.Toast?.error?.('Ошибка: ' + (e.message || 'Не удалось продлить'));
+            return null;
+        }
+    };
+
     function buildGate(props) {
         const {
             clientId,
@@ -391,6 +454,29 @@
                                                                 { style: { fontSize: 13, color: 'var(--muted)', marginTop: 2 } },
                                                                 '📱 ' + c.phone_normalized
                                                             ),
+                                                            // 🆕 Статус подписки
+                                                            (() => {
+                                                                const badge = getSubscriptionBadge(c);
+                                                                return React.createElement(
+                                                                    'div',
+                                                                    {
+                                                                        style: {
+                                                                            display: 'inline-flex',
+                                                                            alignItems: 'center',
+                                                                            gap: 4,
+                                                                            padding: '3px 8px',
+                                                                            borderRadius: 6,
+                                                                            background: badge.bg,
+                                                                            color: badge.color,
+                                                                            fontSize: 11,
+                                                                            fontWeight: 600,
+                                                                            marginTop: 4,
+                                                                            animation: badge.urgent ? 'pulse 2s infinite' : 'none'
+                                                                        }
+                                                                    },
+                                                                    badge.emoji + ' ' + badge.text
+                                                                );
+                                                            })(),
                                                             React.createElement(
                                                                 'div',
                                                                 { style: { fontSize: 12, color: 'var(--muted)', marginTop: 3, display: 'flex', gap: 8, flexWrap: 'wrap' } },
@@ -461,6 +547,42 @@
                                                                     }
                                                                 },
                                                                 '✏️'
+                                                            ),
+                                                            // 🆕 Кнопка продления подписки
+                                                            React.createElement(
+                                                                'button',
+                                                                {
+                                                                    className: 'btn-icon',
+                                                                    title: 'Продлить на 1 месяц',
+                                                                    onClick: async () => {
+                                                                        const curatorId = cloudUser?.id;
+                                                                        if (!curatorId) {
+                                                                            HEYS.Toast?.error?.('Не удалось определить куратора');
+                                                                            return;
+                                                                        }
+                                                                        const res = await extendClientSubscription(c.id, curatorId, c.name);
+                                                                        if (res && res.success) {
+                                                                            // Обновляем локально данные клиента
+                                                                            c.trial_ends_at = res.new_end_date;
+                                                                            c.subscription_status = res.new_status;
+                                                                            // Триггерим перерисовку через событие
+                                                                            window.dispatchEvent(new CustomEvent('heys:clients-updated'));
+                                                                        }
+                                                                    },
+                                                                    style: {
+                                                                        width: 32,
+                                                                        height: 32,
+                                                                        borderRadius: 8,
+                                                                        border: 'none',
+                                                                        background: '#dcfce7',
+                                                                        cursor: 'pointer',
+                                                                        fontSize: 14,
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center'
+                                                                    }
+                                                                },
+                                                                '➕'
                                                             ),
                                                             React.createElement(
                                                                 'button',

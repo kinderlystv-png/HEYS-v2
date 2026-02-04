@@ -118,7 +118,10 @@
             const hasMeals = Array.isArray(day.meals) && day.meals.some((m) => (m.items || []).length > 0);
             const totals = getDayTotals(day, pIndex);
             const optimum = getDayOptimum(day, profile, lsGet, pIndex);
-            const goalOptimum = day?.savedDisplayOptimum > 0 ? day.savedDisplayOptimum : optimum;
+            let goalOptimum = day?.savedDisplayOptimum > 0 ? day.savedDisplayOptimum : optimum;
+            if (day?.isRefeedDay && HEYS.Refeed && !(day?.savedDisplayOptimum > 0)) {
+                goalOptimum = HEYS.Refeed.getRefeedOptimum(optimum, true);
+            }
             const normAbs = HEYS.dayCalculations?.computeDailyNorms
                 ? HEYS.dayCalculations.computeDailyNorms(goalOptimum, normPerc)
                 : { carbs: 0, prot: 0, fat: 0 };
@@ -191,9 +194,13 @@
             d.burned = burned;
             if (burned > 0) {
                 totalBurned += burned;
-                totalTargetDeficit += (tdeeInfo?.deficitPct != null
-                    ? tdeeInfo.deficitPct
-                    : (d.deficitPct != null ? d.deficitPct : (profile?.deficitPctTarget || 0)));
+                const goal = d.goalOptimum || 0;
+                const targetPctFromGoal = goal > 0 ? ((goal - burned) / burned) * 100 : null;
+                totalTargetDeficit += (Number.isFinite(targetPctFromGoal)
+                    ? targetPctFromGoal
+                    : (tdeeInfo?.deficitPct != null
+                        ? tdeeInfo.deficitPct
+                        : (d.deficitPct != null ? d.deficitPct : (profile?.deficitPctTarget || 0))));
                 daysWithBurned += 1;
             }
         });
@@ -204,7 +211,7 @@
 
         const avgDeltaPct = totalBurned ? Math.round(((totalKcal - totalBurned) / totalBurned) * 100) : 0;
         const targetDeficitPct = daysWithBurned
-            ? Math.round((totalTargetDeficit / daysWithBurned) * 10) / 10
+            ? Math.round(totalTargetDeficit / daysWithBurned)
             : (profile?.deficitPctTarget ?? 0);
 
         const ratios = visibleDays.map((d) => (d.goalOptimum ? (d.totals?.kcal || 0) / d.goalOptimum : 0));
@@ -343,7 +350,7 @@
                     h('div', { className: 'weekly-report-card__stat-label' }, 'ккал/день')
                 ),
                 h('div', { className: 'weekly-report-card__stat' },
-                    h('div', { className: 'weekly-report-card__stat-value' }, report.avgTarget),
+                    h('div', { className: 'weekly-report-card__stat-value' }, Math.round(report.avgTarget || 0)),
                     h('div', { className: 'weekly-report-card__stat-label' }, 'затраты')
                 )
             ),
@@ -399,9 +406,10 @@
         const deltaPct = report?.avgDeltaPct ?? 0;
         const targetPct = report?.targetDeficitPct ?? 0;
         const avgOptimum = report?.avgOptimum ?? 0;
+        const avgTargetRounded = Math.round(report?.avgTarget ?? 0);
         // Реальный дефицит от затрат = (затраты - съедено) / затраты * 100
-        const realDeficitPct = report?.avgTarget && report?.avgKcal != null
-            ? Math.round(((report.avgTarget - report.avgKcal) / report.avgTarget) * 100)
+        const realDeficitPct = avgTargetRounded && report?.avgKcal != null
+            ? Math.round(((avgTargetRounded - report.avgKcal) / avgTargetRounded) * 100)
             : 0;
         const realDeficitLabel = realDeficitPct === 0
             ? 'баланс'
@@ -411,6 +419,34 @@
             if (!report?.days) return [];
             return report.days.filter((d) => d.hasMeals && (!d.isToday || d.ratio >= 0.5));
         }, [report]);
+
+        const breakdownTotals = useMemo(() => {
+            const totals = includedDays.reduce((acc, d) => {
+                const eaten = d.totals?.kcal || 0;
+                const goal = d.goalOptimum || 0;
+                const burned = d.burned || 0;
+                const deficit = eaten - burned;
+                acc.eaten += eaten;
+                acc.goal += goal;
+                acc.burned += burned;
+                acc.deficit += deficit;
+                return acc;
+            }, {
+                eaten: 0,
+                goal: 0,
+                burned: 0,
+                deficit: 0
+            });
+            const count = includedDays.length || 1;
+            return {
+                ...totals,
+                count,
+                avgEaten: totals.eaten / count,
+                avgGoal: Math.round(totals.goal / count),
+                avgBurned: totals.burned / count,
+                avgDeficit: totals.deficit / count
+            };
+        }, [includedDays]);
 
         const openWeekBreakdown = (e) => {
             if (!PopupWithBackdrop || includedDays.length === 0) return;
@@ -467,6 +503,60 @@
         };
 
         const deltaPctClass = getDeltaPctClass(deltaPct, targetPct);
+
+        const getTargetToneClass = (value, target) => {
+            if (!Number.isFinite(value)) return 'weekly-wrap-step__delta-value--neutral';
+            if (value === 0) return 'weekly-wrap-step__delta-value--neutral';
+            if (target > 0) {
+                return value > 0
+                    ? 'weekly-wrap-step__delta-value--good'
+                    : 'weekly-wrap-step__delta-value--bad';
+            }
+            if (target < 0) {
+                return value < 0
+                    ? 'weekly-wrap-step__delta-value--good'
+                    : 'weekly-wrap-step__delta-value--bad';
+            }
+            return value < 0
+                ? 'weekly-wrap-step__delta-value--good'
+                : 'weekly-wrap-step__delta-value--bad';
+        };
+
+        const deltaToneClass = getTargetToneClass(deltaPct, targetPct);
+        const targetToneClass = getTargetToneClass(targetPct, targetPct);
+        const avgGoalPct = breakdownTotals.avgBurned
+            ? ((breakdownTotals.avgGoal - breakdownTotals.avgBurned) / breakdownTotals.avgBurned) * 100
+            : 0;
+        const avgGoalPctClass = getTargetToneClass(avgGoalPct, targetPct);
+
+        const formatSignedValue = (value, suffix = '') => {
+            const rounded = Math.round(value);
+            const sign = rounded > 0 ? '+' : '';
+            return sign + rounded + suffix;
+        };
+
+        const formatDeficitWithPct = (deficitValue, burnedValue) => {
+            const pct = burnedValue ? (deficitValue / burnedValue) * 100 : 0;
+            return formatSignedValue(deficitValue) + ' / ' + formatSignedValue(pct, '%');
+        };
+
+        const getDeltaToneClass = (value, target) => {
+            if (!Number.isFinite(value)) return 'weekly-wrap-breakdown__value--neutral';
+            if (value === 0) return 'weekly-wrap-breakdown__value--neutral';
+            if (target > 0) {
+                return value > 0
+                    ? 'weekly-wrap-breakdown__value--good'
+                    : 'weekly-wrap-breakdown__value--bad';
+            }
+            if (target < 0) {
+                return value < 0
+                    ? 'weekly-wrap-breakdown__value--good'
+                    : 'weekly-wrap-breakdown__value--bad';
+            }
+            return value < 0
+                ? 'weekly-wrap-breakdown__value--good'
+                : 'weekly-wrap-breakdown__value--bad';
+        };
 
         const avgProt = report?.avgProt ?? 0;
         const avgFat = report?.avgFat ?? 0;
@@ -542,8 +632,8 @@
                             onKeyDown: handleBreakdownKey,
                             title: 'Показать дни в расчёте'
                         },
-                            h('div', { className: 'weekly-wrap-step__stat-value' }, report.avgTarget),
-                            h('div', { className: 'weekly-wrap-step__stat-label' }, 'затраты')
+                            h('div', { className: 'weekly-wrap-step__stat-value' }, avgTargetRounded),
+                            h('div', { className: 'weekly-wrap-step__stat-label' }, 'потрачено')
                         ),
                         h('div', {
                             className: 'weekly-wrap-step__stat weekly-wrap-step__stat--fact weekly-wrap-step__stat--clickable',
@@ -554,7 +644,7 @@
                             title: 'Показать дни в расчёте'
                         },
                             h('div', { className: 'weekly-wrap-step__stat-value' }, report.avgKcal),
-                            h('div', { className: 'weekly-wrap-step__stat-label' }, 'ккал/день')
+                            h('div', { className: 'weekly-wrap-step__stat-label' }, 'съедено')
                         ),
                         h('div', {
                             className: 'weekly-wrap-step__stat weekly-wrap-step__stat--plan weekly-wrap-step__stat--clickable',
@@ -565,27 +655,30 @@
                             title: 'Показать дни в расчёте'
                         },
                             h('div', { className: 'weekly-wrap-step__stat-value' }, avgOptimum),
-                            h('div', { className: 'weekly-wrap-step__stat-label' }, 'цель'),
-                            h('div', { className: 'weekly-wrap-step__stat-sub' }, realDeficitLabel + ' от затрат')
+                            h('div', { className: 'weekly-wrap-step__stat-label' }, 'цель')
                         ),
                         h('div', { className: 'weekly-wrap-step__stat weekly-wrap-step__stat--days' },
                             h('div', { className: 'weekly-wrap-step__stat-value' }, report.daysWithData),
-                            h('div', { className: 'weekly-wrap-step__stat-label' }, 'дней с едой')
+                            h('div', { className: 'weekly-wrap-step__stat-label weekly-wrap-step__stat-label--days' }, 'дней с едой')
                         ),
                         h('div', { className: 'weekly-wrap-step__stat weekly-wrap-step__stat--delta' },
-                            h('div', {
-                                className: 'weekly-wrap-step__stat-value ' + deltaPctClass
-                            }, (deltaPct > 0 ? '+' : '') + deltaPct + '%'),
-                            h('div', { className: 'weekly-wrap-step__stat-label' },
+                            h('div', { className: 'weekly-wrap-step__stat-label weekly-wrap-step__stat-label--delta' },
                                 deltaPct > 0
-                                    ? 'профицит'
+                                    ? 'Фактический профицит составил'
                                     : deltaPct < 0
-                                        ? 'дефицит'
-                                        : 'баланс'
+                                        ? 'Фактический дефицит составил'
+                                        : 'Фактический баланс'
                             ),
+                            h('div', {
+                                className: 'weekly-wrap-step__stat-value weekly-wrap-step__delta-value ' + deltaToneClass
+                            }, (deltaPct > 0 ? '+' : '') + deltaPct + '%'),
                             h('div', { className: 'weekly-wrap-step__stat-sub' },
                                 h('span', { className: 'weekly-wrap-step__delta-target' },
-                                    ' (цель ' + (targetPct > 0 ? '+' : '') + targetPct + '%)'
+                                    '(цель средняя ',
+                                    h('span', { className: 'weekly-wrap-step__delta-target-value ' + targetToneClass },
+                                        (targetPct > 0 ? '+' : '') + targetPct + '%'
+                                    ),
+                                    ')'
                                 )
                             )
                         )
@@ -648,20 +741,52 @@
                     h('div', { className: 'weekly-wrap-breakdown__table' },
                         h('div', { className: 'weekly-wrap-breakdown__row weekly-wrap-breakdown__row--head' },
                             h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--day' }, 'День'),
+                            h('span', { className: 'weekly-wrap-breakdown__cell' }, 'Затраты'),
                             h('span', { className: 'weekly-wrap-breakdown__cell' }, 'Съедено'),
                             h('span', { className: 'weekly-wrap-breakdown__cell' }, 'Цель'),
-                            h('span', { className: 'weekly-wrap-breakdown__cell' }, 'Затраты')
+                            h('span', { className: 'weekly-wrap-breakdown__cell' }, 'Дефицит', h('br'), 'от потрач.')
                         ),
                         includedDays.map((d, i) => {
                             const labels = getDayLabels(d.dateStr);
                             const dayText = labels.secondary ? labels.primary + ' · ' + labels.secondary : labels.primary;
+                            const eaten = d.totals?.kcal || 0;
+                            const goal = d.goalOptimum || 0;
+                            const burned = d.burned || 0;
+                            const deficit = eaten - burned;
+                            const goalPct = burned ? ((goal - burned) / burned) * 100 : 0;
+                            const goalPctClass = getTargetToneClass(goalPct, targetPct);
+                            const toneClass = getDeltaToneClass(deficit, targetPct);
                             return h('div', { key: i, className: 'weekly-wrap-breakdown__row' },
                                 h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--day' }, dayText),
-                                h('span', { className: 'weekly-wrap-breakdown__cell' }, Math.round(d.totals?.kcal || 0)),
-                                h('span', { className: 'weekly-wrap-breakdown__cell' }, Math.round(d.goalOptimum || 0)),
-                                h('span', { className: 'weekly-wrap-breakdown__cell' }, Math.round(d.burned || 0))
+                                h('span', { className: 'weekly-wrap-breakdown__cell' }, Math.round(burned)),
+                                h('span', { className: 'weekly-wrap-breakdown__cell' }, Math.round(eaten)),
+                                h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--goal' },
+                                    Math.round(goal),
+                                    ' ',
+                                    h('span', { className: 'weekly-wrap-breakdown__goal-pct ' + goalPctClass },
+                                        '(' + (goalPct > 0 ? '+' : '') + Math.round(goalPct) + '%)'
+                                    )
+                                ),
+                                h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--delta ' + toneClass }, formatDeficitWithPct(deficit, burned))
                             );
-                        })
+                        }),
+                        h('div', { className: 'weekly-wrap-breakdown__row weekly-wrap-breakdown__row--total' },
+                            h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--day' }, 'Итого в среднем'),
+                            h('span', { className: 'weekly-wrap-breakdown__cell' }, Math.round(breakdownTotals.avgBurned)),
+                            h('span', { className: 'weekly-wrap-breakdown__cell' }, Math.round(breakdownTotals.avgEaten)),
+                            h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--goal' },
+                                Math.round(breakdownTotals.avgGoal),
+                                ' ',
+                                h('span', {
+                                    className: 'weekly-wrap-breakdown__goal-pct ' + avgGoalPctClass
+                                },
+                                    '(' + (avgGoalPct > 0 ? '+' : '') + Math.round(avgGoalPct) + '%)'
+                                )
+                            ),
+                            h('span', {
+                                className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--delta ' + getDeltaToneClass(breakdownTotals.avgDeficit, targetPct)
+                            }, formatDeficitWithPct(breakdownTotals.avgDeficit, breakdownTotals.avgBurned))
+                        )
                     ),
                     PopupCloseButton
                         ? h(PopupCloseButton, { onClose: () => setWeekBreakdownPopup(false), className: 'weekly-wrap-breakdown__close' })

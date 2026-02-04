@@ -1,10 +1,12 @@
 /**
  * heys-api-auth — Аутентификация кураторов
+ * @version 2.1.0 — 2026-02-04: Добавлены subscription_status и trial_ends_at в getClients
  * 
  * Endpoints:
  *   POST /auth/login — вход по email+password, возвращает JWT
  *   POST /auth/verify — проверка JWT токена
  *   POST /auth/refresh — обновление токена (опционально)
+ *   GET  /auth/clients — список клиентов куратора (с subscription_status, trial_ends_at)
  * 
  * JWT payload: { sub: curator_id, email, role: 'curator', iat, exp }
  */

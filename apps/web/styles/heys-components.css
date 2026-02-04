@@ -900,15 +900,15 @@ body.tour-active .ios-pwa-banner {
 
 .weekly-wrap-step__stats {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: 1fr 1fr 1fr 0.7fr;
+  gap: 10px;
 }
 
 .weekly-wrap-step__stat {
   background: #f8fafc;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  padding: 10px;
+  padding: 8px 10px;
   text-align: center;
 }
 
@@ -933,11 +933,14 @@ body.tour-active .ios-pwa-banner {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  padding: 6px 10px;
 }
 
 .weekly-wrap-step__stat--delta {
   background: #f5f3ff;
   border-color: #ddd6fe;
+  grid-column: 1 / -1;
+  box-shadow: 0 12px 24px -18px rgba(15, 23, 42, 0.45);
 }
 
 .weekly-wrap-step__stat--clickable {
@@ -955,8 +958,34 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-step__stat-value {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
+  color: #111827;
+}
+
+.weekly-wrap-step__stat--delta .weekly-wrap-step__stat-value {
+  font-size: 18px;
+}
+
+.weekly-wrap-step__delta-value {
+  color: #111827;
+}
+
+.weekly-wrap-step__stat--delta .weekly-wrap-step__stat-label--delta {
+  font-size: 12px;
+  color: #111827;
+  font-weight: 600;
+}
+
+.weekly-wrap-step__delta-value--good {
+  color: #16a34a;
+}
+
+.weekly-wrap-step__delta-value--bad {
+  color: #ef4444;
+}
+
+.weekly-wrap-step__delta-value--neutral {
   color: #111827;
 }
 
@@ -973,12 +1002,18 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-step__stat-label {
-  font-size: 11px;
+  font-size: 9px;
   color: #6b7280;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  white-space: nowrap;
+}
+
+.weekly-wrap-step__stat-label--days {
+  font-size: 8px;
+  letter-spacing: 0.02em;
 }
 
 .weekly-wrap-step__stat-sub {
@@ -1014,9 +1049,25 @@ body.tour-active .ios-pwa-banner {
   margin-left: 4px;
 }
 
+.weekly-wrap-step__delta-target-value.weekly-wrap-step__delta-value--good {
+  color: #16a34a;
+}
+
+.weekly-wrap-step__delta-target-value.weekly-wrap-step__delta-value--bad {
+  color: #ef4444;
+}
+
+.weekly-wrap-step__delta-target-value.weekly-wrap-step__delta-value--neutral {
+  color: #111827;
+}
+
 @media (min-width: 640px) {
   .weekly-wrap-step__stats {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: 1fr 1fr 1fr 0.7fr;
+  }
+
+  .weekly-wrap-step__stat--delta {
+    grid-column: 1 / -1;
   }
 }
 
@@ -1079,7 +1130,7 @@ body.tour-active .ios-pwa-banner {
   background: #ffffff;
   border-radius: 16px;
   padding: 14px 14px 10px;
-  width: min(360px, 92vw);
+  width: min(420px, 94vw);
   max-height: min(420px, 80vh);
   overflow: hidden;
   border: 1px solid #e5e7eb;
@@ -1112,22 +1163,20 @@ body.tour-active .ios-pwa-banner {
 
 .weekly-wrap-breakdown__note {
   font-size: 11px;
-  color: #9ca3af;
+  grid-template-columns: 1fr 0.55fr 0.55fr 0.6fr 0.9fr;
 }
 
 .weekly-wrap-breakdown__table {
-  display: grid;
-  gap: 6px;
+  display: table;
+  width: calc(100% - 8px);
+  border-collapse: collapse;
   overflow: auto;
-  padding-right: 2px;
+  margin: 0 4px;
 }
 
 .weekly-wrap-breakdown__row {
-  display: grid;
-  grid-template-columns: 1.2fr 0.6fr 0.6fr 0.6fr;
-  gap: 8px;
-  align-items: center;
-  font-size: 12px;
+  display: table-row;
+  font-size: 11px;
   color: #111827;
 }
 
@@ -1137,15 +1186,60 @@ body.tour-active .ios-pwa-banner {
   color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  background: transparent;
+}
+
+.weekly-wrap-breakdown__row:nth-child(even):not(.weekly-wrap-breakdown__row--head):not(.weekly-wrap-breakdown__row--total) {
+  background: #f8fafc;
+}
+
+.weekly-wrap-breakdown__row--total {
+  background: #eef2ff;
+  font-weight: 700;
 }
 
 .weekly-wrap-breakdown__cell {
-  text-align: right;
+  display: table-cell;
+  padding: 6px 8px;
+  text-align: center;
+  border-left: 1px solid #e5e7eb;
+  vertical-align: middle;
 }
 
 .weekly-wrap-breakdown__cell--day {
   text-align: left;
   color: #475569;
+  font-size: 11px;
+  border-left: none;
+}
+
+.weekly-wrap-breakdown__cell--goal {
+  white-space: nowrap;
+}
+
+.weekly-wrap-breakdown__cell--delta {
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.weekly-wrap-breakdown__goal-pct {
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+.weekly-wrap-breakdown__value--good {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.weekly-wrap-breakdown__value--bad {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.weekly-wrap-breakdown__value--neutral {
+  color: #64748b;
+  font-weight: 600;
 }
 
 .weekly-wrap-breakdown__close {
@@ -1181,8 +1275,32 @@ body.tour-active .ios-pwa-banner {
   color: #e2e8f0;
 }
 
+[data-theme="dark"] .weekly-wrap-breakdown__row:nth-child(even):not(.weekly-wrap-breakdown__row--head):not(.weekly-wrap-breakdown__row--total) {
+  background: #111827;
+}
+
+[data-theme="dark"] .weekly-wrap-breakdown__row--total {
+  background: rgba(59, 130, 246, 0.16);
+}
+
 [data-theme="dark"] .weekly-wrap-breakdown__cell--day {
   color: #cbd5f5;
+}
+
+[data-theme="dark"] .weekly-wrap-breakdown__cell {
+  border-left-color: #1f2937;
+}
+
+[data-theme="dark"] .weekly-wrap-breakdown__value--good {
+  color: #22c55e;
+}
+
+[data-theme="dark"] .weekly-wrap-breakdown__value--bad {
+  color: #f87171;
+}
+
+[data-theme="dark"] .weekly-wrap-breakdown__value--neutral {
+  color: #94a3b8;
 }
 
 [data-theme="dark"] .weekly-wrap-breakdown__close {
@@ -2058,6 +2176,29 @@ body.tour-active .ios-pwa-banner {
   font-weight: 600;
 }
 
+.game-missions-panel {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.game-missions-panel__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f8fafc;
+  letter-spacing: 0.2px;
+}
+
+.game-missions-panel__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .game-streak {
   display: inline-flex;
   align-items: center;
@@ -2216,6 +2357,10 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .game-missions-dot {
   background: #334155;
+}
+
+[data-theme="dark"] .game-missions-panel {
+  background: rgba(15, 23, 42, 0.4);
 }
 
 [data-theme="dark"] .onboarding-medal {

@@ -548,21 +548,6 @@
                         : `⚡${dailyMultiplier.actions}`
                 ),
 
-                // Daily missions inline
-                dailyMissions && React.createElement('div', {
-                    className: 'game-missions-inline',
-                    title: `Миссии дня: ${dailyMissions.completedCount || 0}/3`
-                },
-                    React.createElement('span', { className: 'game-missions-label' }, '🧭'),
-                    React.createElement('div', { className: 'game-missions-dots' },
-                        [0, 1, 2].map((i) => React.createElement('span', {
-                            key: i,
-                            className: `game-missions-dot ${i < (dailyMissions.completedCount || 0) ? 'is-complete' : ''}`
-                        }))
-                    ),
-                    React.createElement('span', { className: 'game-missions-count' }, `${dailyMissions.completedCount || 0}/3`)
-                ),
-
                 // Streak
                 streak > 0 && React.createElement('span', {
                     className: `game-streak ${getStreakClass(streak)}${streakJustGrew ? ' just-grew' : ''}`,
@@ -807,6 +792,22 @@
                         React.createElement('div', { className: 'game-stat' },
                             React.createElement('span', { className: 'stat-value' }, `${stats.unlockedCount}/${stats.totalAchievements}`),
                             React.createElement('span', { className: 'stat-label' }, 'Достижения')
+                        )
+                    ),
+
+                    // Daily missions (expanded)
+                    dailyMissions && React.createElement('div', {
+                        className: 'game-missions-panel'
+                    },
+                        React.createElement('div', { className: 'game-missions-panel__title' }, '🧭 Миссии дня'),
+                        React.createElement('div', { className: 'game-missions-panel__row' },
+                            React.createElement('div', { className: 'game-missions-dots' },
+                                [0, 1, 2].map((i) => React.createElement('span', {
+                                    key: i,
+                                    className: `game-missions-dot ${i < (dailyMissions.completedCount || 0) ? 'is-complete' : ''}`
+                                }))
+                            ),
+                            React.createElement('span', { className: 'game-missions-count' }, `${dailyMissions.completedCount || 0}/3`)
                         )
                     ),
 

@@ -58,6 +58,16 @@
     return value;
   }
 
+  function getCurrentClientId() {
+    const U = HEYS.utils || {};
+    if (U.getCurrentClientId) return U.getCurrentClientId();
+    return HEYS.currentClientId || '';
+  }
+
+  function getCheckinSessionKey(clientId, dateKey) {
+    return `heys_morning_checkin_done_${clientId || 'unknown'}_${dateKey || 'unknown'}`;
+  }
+
   function debugDayStorage(todayKey, currentClientId, altKey) {
     // DEBUG функция закомментирована для чистоты консоли
     return;
@@ -98,16 +108,26 @@
   function shouldShowMorningCheckin() {
     const U = HEYS.utils || {};
 
-    // 🆕 v1.9.1: Если чек-ин уже был показан/пропущен в этой сессии — НЕ показываем
-    if (sessionStorage.getItem('heys_morning_checkin_done') === 'true') {
-      // console.log('[MorningCheckin] Skip — already done/skipped this session');
+    // Если клиент не выбран — НЕ показываем чек-ин (чтобы не показывать до авторизации)
+    const currentClientId = getCurrentClientId();
+    if (!currentClientId) {
+      // console.log('[MorningCheckin] No clientId, skip check');
       return false;
     }
 
-    // Если клиент не выбран — НЕ показываем чек-ин (чтобы не показывать до авторизации)
-    const currentClientId = U.getCurrentClientId ? U.getCurrentClientId() : '';
-    if (!currentClientId) {
-      // console.log('[MorningCheckin] No clientId, skip check');
+    const todayKey = getTodayKey();
+    const sessionKey = getCheckinSessionKey(currentClientId, todayKey);
+
+    // 🆕 v1.9.1: Если чек-ин уже был показан/пропущен в этой сессии — НЕ показываем
+    // Переводим legacy-флаг в per-client/per-day ключ, чтобы не блокировать других клиентов
+    try {
+      if (sessionStorage.getItem('heys_morning_checkin_done') === 'true') {
+        sessionStorage.setItem(sessionKey, 'true');
+        sessionStorage.removeItem('heys_morning_checkin_done');
+      }
+    } catch (_) { }
+    if (sessionStorage.getItem(sessionKey) === 'true') {
+      // console.log('[MorningCheckin] Skip — already done/skipped this session');
       return false;
     }
 
@@ -121,7 +141,6 @@
       }
     }
 
-    const todayKey = getTodayKey();
     const dayData = readStoredValue(`heys_dayv2_${todayKey}`, {});
     const calendarKey = new Date().toISOString().slice(0, 10);
     const altDayData = calendarKey !== todayKey ? readStoredValue(`heys_dayv2_${calendarKey}`, {}) : {};
@@ -244,7 +263,10 @@
 
         // 🔔 Устанавливаем флаг для советов по витаминам
         try {
-          sessionStorage.setItem('heys_morning_checkin_done', 'true');
+          const currentClientId = getCurrentClientId();
+          const sessionKey = getCheckinSessionKey(currentClientId, todayKey);
+          sessionStorage.setItem(sessionKey, 'true');
+          sessionStorage.removeItem('heys_morning_checkin_done');
           // Очищаем флаг показа совета — чтобы он показался после чек-ина
           sessionStorage.removeItem('heys_morning_supplements_advice_shown');
         } catch (e) { /* sessionStorage недоступен */ }
@@ -321,7 +343,11 @@
 
           // 🔔 Устанавливаем флаг для советов по витаминам
           try {
-            sessionStorage.setItem('heys_morning_checkin_done', 'true');
+            const currentClientId = getCurrentClientId();
+            const todayKey = (HEYS.utils && HEYS.utils.getTodayKey) ? HEYS.utils.getTodayKey() : new Date().toISOString().slice(0, 10);
+            const sessionKey = getCheckinSessionKey(currentClientId, todayKey);
+            sessionStorage.setItem(sessionKey, 'true');
+            sessionStorage.removeItem('heys_morning_checkin_done');
             // Очищаем флаг показа совета — чтобы он показался после чек-ина
             sessionStorage.removeItem('heys_morning_supplements_advice_shown');
           } catch (e) { /* sessionStorage недоступен */ }

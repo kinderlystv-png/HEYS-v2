@@ -176,6 +176,7 @@
     'create_client_with_pin',
     'reset_client_pin',
     'get_curator_clients',
+    'admin_extend_subscription',
   ];
 
   /**

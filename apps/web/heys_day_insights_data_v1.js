@@ -590,14 +590,25 @@
           const tdeeInfo = dayUtils.getDayTdee
             ? dayUtils.getDayTdee(d.date, prof, { includeNDTE: true, dayData, pIndex, products: safeProducts })
             : null;
-          if (tdeeInfo && tdeeInfo.tdee > 0) {
-            totalBurned += tdeeInfo.tdee;
-            totalTargetDeficit += tdeeInfo.deficitPct || 0;
+          const burned = tdeeInfo?.tdee || 0;
+          const dayInfo = allActiveDays.get(d.date);
+          let goalTarget = getDayOptimum(d.date, dayInfo).target || optimum;
+          if (dayData?.savedDisplayOptimum > 0) {
+            goalTarget = dayData.savedDisplayOptimum;
+          } else if (dayData?.isRefeedDay && HEYSRef.Refeed && tdeeInfo?.optimum) {
+            goalTarget = HEYSRef.Refeed.getRefeedOptimum(tdeeInfo.optimum, true);
+          }
+
+          if (burned > 0) {
+            totalBurned += burned;
+            const targetPctFromGoal = goalTarget > 0 ? ((goalTarget - burned) / burned) * 100 : null;
+            totalTargetDeficit += Number.isFinite(targetPctFromGoal)
+              ? targetPctFromGoal
+              : (tdeeInfo?.deficitPct || prof?.deficitPctTarget || 0);
             daysWithDeficit++;
           } else {
             // Fallback на норму если модуль не загружен
-            const dayTarget = getDayOptimum(d.date, allActiveDays.get(d.date)).target || optimum;
-            totalBurned += dayTarget;
+            totalBurned += goalTarget;
             totalTargetDeficit += prof?.deficitPctTarget || 0;
             daysWithDeficit++;
           }

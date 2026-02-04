@@ -187,10 +187,12 @@
   let _notificationQueue = [];
   let _isShowingNotification = false;
   let _cloudLoaded = false; // 🛡️ Флаг что облако проверено
+  let _pendingCloudSync = false; // 🔄 Отложенный sync до загрузки облака
   const DEBOUNCE_MS = 100;
   const STORAGE_KEY = 'heys_game';
   const DATA_VERSION = 2; // Версия структуры данных для миграций
   const MAX_DAILY_XP_DAYS = 30; // Хранить историю XP максимум 30 дней
+  let _cloudWatchBound = false;
 
   // ========== ХЕЛПЕРЫ ==========
 
@@ -354,6 +356,266 @@
     return migrated;
   }
 
+  function mergeUniqueArray(a, b) {
+    const arrA = Array.isArray(a) ? a : [];
+    const arrB = Array.isArray(b) ? b : [];
+    return Array.from(new Set([...arrA, ...arrB]));
+  }
+
+  function mergeDateStrings(a, b) {
+    if (!a && !b) return null;
+    if (!a) return b;
+    if (!b) return a;
+    return a >= b ? a : b;
+  }
+
+  function mergeStats(localStats, cloudStats) {
+    const base = {
+      totalProducts: 0,
+      totalWater: 0,
+      totalTrainings: 0,
+      totalAdvicesRead: 0,
+      perfectDays: 0,
+      bestStreak: 0
+    };
+    const local = { ...base, ...(localStats || {}) };
+    const cloud = { ...base, ...(cloudStats || {}) };
+    return {
+      totalProducts: Math.max(local.totalProducts || 0, cloud.totalProducts || 0),
+      totalWater: Math.max(local.totalWater || 0, cloud.totalWater || 0),
+      totalTrainings: Math.max(local.totalTrainings || 0, cloud.totalTrainings || 0),
+      totalAdvicesRead: Math.max(local.totalAdvicesRead || 0, cloud.totalAdvicesRead || 0),
+      perfectDays: Math.max(local.perfectDays || 0, cloud.perfectDays || 0),
+      bestStreak: Math.max(local.bestStreak || 0, cloud.bestStreak || 0)
+    };
+  }
+
+  function mergeAchievementProgress(localProgress, cloudProgress) {
+    const merged = { ...(localProgress || {}) };
+    const cloud = cloudProgress || {};
+
+    Object.keys(cloud).forEach((achId) => {
+      const localEntry = merged[achId] || {};
+      const cloudEntry = cloud[achId] || {};
+
+      const mergedDates = mergeUniqueArray(localEntry.dates, cloudEntry.dates);
+      const mergedEntry = {
+        ...localEntry,
+        ...cloudEntry,
+        current: Math.max(localEntry.current || 0, cloudEntry.current || 0),
+        target: Math.max(localEntry.target || 0, cloudEntry.target || 0),
+        updatedAt: Math.max(localEntry.updatedAt || 0, cloudEntry.updatedAt || 0)
+      };
+      if (mergedDates.length > 0) {
+        mergedEntry.dates = mergedDates;
+      }
+      merged[achId] = mergedEntry;
+    });
+
+    return merged;
+  }
+
+  function mergeDailyXP(localXP, cloudXP) {
+    const merged = { ...(localXP || {}) };
+    const cloud = cloudXP || {};
+
+    Object.keys(cloud).forEach((dateStr) => {
+      const localDay = merged[dateStr] || {};
+      const cloudDay = cloud[dateStr] || {};
+      const mergedDay = { ...localDay };
+
+      Object.keys(cloudDay).forEach((reason) => {
+        const localCount = localDay[reason] || 0;
+        const cloudCount = cloudDay[reason] || 0;
+        const summed = localCount + cloudCount;
+        const maxPerDay = XP_ACTIONS[reason]?.maxPerDay || summed;
+        mergedDay[reason] = Math.min(summed, maxPerDay);
+      });
+
+      merged[dateStr] = mergedDay;
+    });
+
+    return merged;
+  }
+
+  /**
+   * 🛡️ Smart Merge Daily Actions
+   * Конфликт слияния данных, когда на разных устройствах за день сделано разное кол-во действий.
+   * Старая логика (Math.max) приводила к потере прогресса.
+   * Новая логика:
+   * 1. Если даты совпадают -> берем версию с большим `updatedAt` (последнее изменение).
+   * 2. Если `updatedAt` нет -> приоритет у большего значения (safe fallback).
+   */
+  function mergeDailyActions(localActions, cloudActions) {
+    if (!localActions) return cloudActions || { date: null, count: 0, updatedAt: 0 };
+    if (!cloudActions) return localActions || { date: null, count: 0, updatedAt: 0 };
+
+    const localDate = localActions.date;
+    const cloudDate = cloudActions.date;
+
+    // 1. Нет дат — возвращаем пустой
+    if (!localDate && !cloudDate) return { date: null, count: 0, updatedAt: 0 };
+
+    // 2. Одна из дат пустая
+    if (!localDate) return { ...cloudActions };
+    if (!cloudDate) return { ...localActions };
+
+    // 3. Даты разные — берем более новую (предполагаем, что старый день закончился)
+    if (localDate > cloudDate) return { ...localActions };
+    if (cloudDate > localDate) return { ...cloudActions };
+
+    // 4. Даты равны (конфликт за один день)
+    // ГЛАВНОЕ: Берём MAX, потому что действия только накапливаются.
+    // Если на телефоне 5, а в облаке 3 — значит истина 5.
+    return {
+      date: localDate,
+      count: Math.max(localActions.count || 0, cloudActions.count || 0),
+      updatedAt: Math.max(localActions.updatedAt || 0, cloudActions.updatedAt || 0)
+    };
+  }
+
+  function mergeWeeklyChallenge(localChallenge, cloudChallenge) {
+    const local = localChallenge || {};
+    const cloud = cloudChallenge || {};
+    const localWeek = local.weekStart || null;
+    const cloudWeek = cloud.weekStart || null;
+
+    if (!localWeek && !cloudWeek) return { ...local };
+    if (!localWeek) return { ...cloud };
+    if (!cloudWeek) return { ...local };
+
+    if (cloudWeek !== localWeek) {
+      return cloudWeek > localWeek ? { ...cloud } : { ...local };
+    }
+
+    return {
+      ...local,
+      ...cloud,
+      earned: Math.max(local.earned || 0, cloud.earned || 0),
+      mealsCount: Math.max(local.mealsCount || 0, cloud.mealsCount || 0),
+      waterDays: Math.max(local.waterDays || 0, cloud.waterDays || 0),
+      trainingsCount: Math.max(local.trainingsCount || 0, cloud.trainingsCount || 0),
+      perfectDays: Math.max(local.perfectDays || 0, cloud.perfectDays || 0),
+      earlyBirdDays: Math.max(local.earlyBirdDays || 0, cloud.earlyBirdDays || 0)
+    };
+  }
+
+  function mergeDailyMissions(localMissions, cloudMissions) {
+    const local = localMissions || null;
+    const cloud = cloudMissions || null;
+    if (!local && !cloud) return null;
+    if (!local) return { ...cloud };
+    if (!cloud) return { ...local };
+
+    if (local.date !== cloud.date) {
+      return local.date > cloud.date ? { ...local } : { ...cloud };
+    }
+
+    const localList = Array.isArray(local.missions) ? local.missions : [];
+    const cloudList = Array.isArray(cloud.missions) ? cloud.missions : [];
+    const mergedById = new Map();
+
+    localList.forEach((m) => mergedById.set(m.id, { ...m }));
+    cloudList.forEach((m) => {
+      const existing = mergedById.get(m.id) || {};
+      mergedById.set(m.id, {
+        ...existing,
+        ...m,
+        progress: Math.max(existing.progress || 0, m.progress || 0),
+        completed: Boolean(existing.completed || m.completed)
+      });
+    });
+
+    const mergedMissions = Array.from(mergedById.values());
+    const completedCount = mergedMissions.filter((m) => m.completed).length;
+
+    return {
+      date: local.date,
+      missions: mergedMissions,
+      completedCount,
+      bonusClaimed: Boolean(local.bonusClaimed || cloud.bonusClaimed)
+    };
+  }
+
+  function mergeGameData(localData, cloudData) {
+    const local = validateAndMigrate(localData || {});
+    const cloud = validateAndMigrate(cloudData || {});
+    const merged = createDefaultData();
+
+    merged.totalXP = Math.max(local.totalXP || 0, cloud.totalXP || 0);
+    merged.level = calculateLevel(merged.totalXP);
+    merged.unlockedAchievements = mergeUniqueArray(local.unlockedAchievements, cloud.unlockedAchievements);
+    merged.achievementProgress = mergeAchievementProgress(local.achievementProgress, cloud.achievementProgress);
+    merged.dailyXP = mergeDailyXP(local.dailyXP, cloud.dailyXP);
+    merged.dailyBonusClaimed = mergeDateStrings(local.dailyBonusClaimed, cloud.dailyBonusClaimed);
+    merged.dailyActions = mergeDailyActions(local.dailyActions, cloud.dailyActions);
+    merged.weeklyChallenge = mergeWeeklyChallenge(local.weeklyChallenge, cloud.weeklyChallenge);
+    merged.dailyMissions = mergeDailyMissions(local.dailyMissions, cloud.dailyMissions);
+    merged.weeklyTrainings = local.weeklyTrainings || cloud.weeklyTrainings || null;
+    merged.earlyBirdDays = mergeUniqueArray(local.earlyBirdDays, cloud.earlyBirdDays);
+    merged.streakShieldUsed = mergeDateStrings(local.streakShieldUsed, cloud.streakShieldUsed);
+    merged.stats = mergeStats(local.stats, cloud.stats);
+    merged.createdAt = Math.min(local.createdAt || Date.now(), cloud.createdAt || Date.now());
+    merged.updatedAt = Math.max(local.updatedAt || 0, cloud.updatedAt || 0) || Date.now();
+    merged.version = DATA_VERSION;
+
+    return merged;
+  }
+
+  // 🛡️ FIX v2.3: Флаг для предотвращения рекурсии в watch callback
+  let _isProcessingWatch = false;
+
+  function bindCloudWatch() {
+    if (_cloudWatchBound || !HEYS.store?.watch) return;
+    _cloudWatchBound = true;
+
+    HEYS.store.watch(STORAGE_KEY, (nextVal) => {
+      // 🛡️ FIX v2.3: Предотвращаем рекурсию — если мы сами записали, не обрабатываем
+      if (_isProcessingWatch) return;
+      if (!nextVal || typeof nextVal !== 'object') return;
+
+      const current = _data || loadData();
+      const nextXP = nextVal.totalXP || 0;
+      const nextAchievements = Array.isArray(nextVal.unlockedAchievements)
+        ? nextVal.unlockedAchievements.length
+        : 0;
+      const currentXP = current?.totalXP || 0;
+      const currentAchievements = Array.isArray(current?.unlockedAchievements)
+        ? current.unlockedAchievements.length
+        : 0;
+      const nextUpdated = nextVal.updatedAt || 0;
+      const currentUpdated = current?.updatedAt || 0;
+
+      if (
+        nextUpdated && currentUpdated &&
+        nextUpdated <= currentUpdated &&
+        nextXP <= currentXP &&
+        nextAchievements <= currentAchievements
+      ) {
+        return;
+      }
+
+      const merged = mergeGameData(current, nextVal);
+      _data = merged;
+
+      // 🛡️ FIX v2.3: Защита от рекурсии при записи
+      _isProcessingWatch = true;
+      try {
+        setStoredValue(STORAGE_KEY, _data);
+      } finally {
+        _isProcessingWatch = false;
+      }
+
+      _cloudLoaded = true;
+      if (_pendingCloudSync) {
+        _pendingCloudSync = false;
+        triggerImmediateSync('pending_sync');
+      }
+
+      window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: game.getStats() }));
+    });
+  }
+
   function migrateStreakAchievements(data) {
     if (!data || !Array.isArray(data.unlockedAchievements)) return;
 
@@ -443,24 +705,59 @@
 
   // 🔄 Debounce для синхронизации с облаком
   let _cloudSyncTimer = null;
-  const CLOUD_SYNC_DEBOUNCE_MS = 3000; // 3 секунды debounce
+  const CLOUD_SYNC_DEBOUNCE_MS = 1000; // 🔥 Оптимизация: 1 сек вместо 3
+  let _lastImmediateSync = 0;
+  const IMMEDIATE_SYNC_COOLDOWN_MS = 2000; // 🔥 Оптимизация: 2 сек вместо 10
 
-  function scheduleCloudSync() {
-    // 🛡️ ЗАЩИТА: Не синхронизируем пока не загрузили данные из облака
+  function scheduleCloudSync(immediate = false) {
     if (!_cloudLoaded) {
-      console.log('[🎮 Gamification] Skip sync — cloud not loaded yet');
+      _pendingCloudSync = true;
       return;
     }
+
     if (_cloudSyncTimer) clearTimeout(_cloudSyncTimer);
-    _cloudSyncTimer = setTimeout(() => {
-      _cloudSyncTimer = null;
-      // Асинхронная синхронизация — не блокирует UI
-      if (typeof HEYS.game?.syncToCloud === 'function') {
-        HEYS.game.syncToCloud().catch(e => {
-          console.warn('[🎮 Gamification] Background sync failed:', e?.message || e);
-        });
-      }
-    }, CLOUD_SYNC_DEBOUNCE_MS);
+
+    if (immediate) {
+      triggerImmediateSync('auto_sync');
+    } else {
+      _cloudSyncTimer = setTimeout(() => {
+        _cloudSyncTimer = null;
+        triggerImmediateSync('auto_sync');
+      }, CLOUD_SYNC_DEBOUNCE_MS);
+    }
+  }
+
+  function triggerImmediateSync(reason) {
+    if (!_cloudLoaded) {
+      _pendingCloudSync = true;
+      return;
+    }
+    const now = Date.now();
+
+    // 🔥 ОПТИМИЗАЦИЯ: для критических событий (level_up, achievement) игнорируем кулдаун
+    const isCritical = ['level_up', 'achievement_unlocked', 'daily_bonus', 'daily_missions_bonus'].includes(reason);
+    const cooldown = isCritical ? 0 : IMMEDIATE_SYNC_COOLDOWN_MS;
+
+    if (now - _lastImmediateSync < cooldown) {
+      // Если часто — откладываем
+      if (_cloudSyncTimer) clearTimeout(_cloudSyncTimer);
+      _cloudSyncTimer = setTimeout(() => triggerImmediateSync(reason), CLOUD_SYNC_DEBOUNCE_MS);
+      return;
+    }
+
+    _lastImmediateSync = now;
+    if (_data) {
+      _data.updatedAt = Date.now();
+      // 🔧 FIX v2.3: Сохраняем ТОЛЬКО в localStorage (setStoredValue), НЕ через HEYS.store.set
+      // HEYS.store.set вызывает saveClientKey → который фильтруется в doClientUpload
+      // Это избыточно — syncToCloud() сам отправляет данные через RPC
+      setStoredValue(STORAGE_KEY, _data);
+    }
+
+    // 🔄 Синхронизируем с облаком через прямой RPC (не через saveClientKey)
+    if (HEYS.game?.syncToCloud) {
+      HEYS.game.syncToCloud();
+    }
   }
 
   function saveData() {
@@ -542,6 +839,7 @@
     data.level = calculateLevel(data.totalXP);
     handleRankTransition(oldLevel, data.level);
     saveData();
+    triggerImmediateSync('daily_bonus');
 
     showNotification('daily_bonus', { xp: bonusXP, multiplier: getXPMultiplier() });
     window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: { xpGained: bonusXP, reason: 'daily_bonus' } }));
@@ -900,6 +1198,7 @@
 
     data.dailyMissions.bonusClaimed = true;
     saveData();
+    triggerImmediateSync('daily_missions_bonus');
 
     // Бонус 50 XP за выполнение всех миссий
     _addXPInternal(50, 'daily_missions_bonus');
@@ -2146,6 +2445,7 @@
     data.level = calculateLevel(data.totalXP);
     handleRankTransition(oldLevel, data.level);
     saveData();
+    triggerImmediateSync('achievement_unlocked');
 
     const hasCategoryUnlocked = data.unlockedAchievements
       .map((id) => ACHIEVEMENTS[id])
@@ -2442,7 +2742,7 @@
       }
 
       // === ONBOARDING (check stats) ===
-      const todayKey = `heys_dayv2_${getToday()}`;
+      const todayKey = `heys_dayv2_${today}`; // 🔥 Фикс: явно используем переменную today из контекста 
       const todayDay = readStoredValue(todayKey, null);
       const mealsCount = HEYS.Day?.getMealsCount?.() || (todayDay?.meals?.length || 0);
       const stepsValue = (todayDay?.steps || 0) || (HEYS.Day?.getDay?.()?.steps || 0);
@@ -2527,6 +2827,7 @@
       if (missedAchievements.length > 0) {
         data.level = calculateLevel(data.totalXP);
         saveData();
+        triggerImmediateSync('achievement_unlocked'); // 🔥 Сразу в облако
 
         console.log('[🎮 Gamification] Found missed achievements:', missedAchievements);
 
@@ -2586,16 +2887,49 @@
           return false;
         }
 
-        // 🛡️ ЗАЩИТА v2.1: Сначала проверяем облако — не перезаписываем если там больше
+        // 🛡️ ЗАЩИТА v2.1: Сначала проверяем облако — не перезаписываем если там новее/больше
         try {
           const cloudResult = await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
             session_token: sessionToken,
             k: STORAGE_KEY
           });
-          const cloudXP = cloudResult?.v?.totalXP || 0;
+          const cloudData_ = cloudResult?.v || {};
+          const cloudXP = cloudData_.totalXP || 0;
+          const cloudUpdatedAt = cloudData_.updatedAt || 0;
+
+          // 🛡️ v2.2: Проверка "качества" данных — не перезаписывать богатые данные бедными
+          const cloudAchievements = Array.isArray(cloudData_.unlockedAchievements) ? cloudData_.unlockedAchievements.length : 0;
+          const localAchievements = Array.isArray(data.unlockedAchievements) ? data.unlockedAchievements.length : 0;
+          const cloudStatsCount = Object.keys(cloudData_.stats || {}).filter(k => cloudData_.stats[k] > 0).length;
+          const localStatsCount = Object.keys(data.stats || {}).filter(k => data.stats[k] > 0).length;
+          const cloudDailyXPCount = Object.keys(cloudData_.dailyXP || {}).length;
+          const localDailyXPCount = Object.keys(data.dailyXP || {}).length;
+
+          // Облако "богаче" если: больше XP ИЛИ (XP равен И больше деталей)
+          const cloudIsRicher = cloudXP > data.totalXP || (
+            cloudXP === data.totalXP && (
+              cloudAchievements > localAchievements ||
+              cloudStatsCount > localStatsCount ||
+              cloudDailyXPCount > localDailyXPCount
+            )
+          );
+
           if (cloudXP > data.totalXP) {
             console.warn(`[🎮 Gamification] BLOCKED: cloud XP (${cloudXP}) > local (${data.totalXP}), not overwriting!`);
             // Вместо этого — загружаем из облака
+            await HEYS.game.loadFromCloud();
+            return false;
+          }
+
+          // 🛡️ v2.2: Блокируем если облако богаче деталями при равном XP
+          if (cloudXP === data.totalXP && cloudIsRicher) {
+            console.warn(`[🎮 Gamification] BLOCKED: cloud has richer data (achievements: ${cloudAchievements} vs ${localAchievements}, stats: ${cloudStatsCount} vs ${localStatsCount})`);
+            await HEYS.game.loadFromCloud();
+            return false;
+          }
+
+          if (cloudUpdatedAt && data.updatedAt && cloudUpdatedAt > data.updatedAt) {
+            console.warn('[🎮 Gamification] BLOCKED: cloud data is newer, loading instead');
             await HEYS.game.loadFromCloud();
             return false;
           }
@@ -2605,12 +2939,22 @@
         }
 
         const cloudData = {
+          version: DATA_VERSION,
           totalXP: data.totalXP,
           level: data.level,
           unlockedAchievements: data.unlockedAchievements,
-          stats: data.stats,
+          achievementProgress: data.achievementProgress,
+          dailyXP: data.dailyXP,
+          dailyBonusClaimed: data.dailyBonusClaimed,
           dailyActions: data.dailyActions,
-          updatedAt: Date.now(),
+          dailyMissions: data.dailyMissions,
+          weeklyChallenge: data.weeklyChallenge,
+          weeklyTrainings: data.weeklyTrainings,
+          earlyBirdDays: data.earlyBirdDays,
+          streakShieldUsed: data.streakShieldUsed,
+          stats: data.stats,
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt || Date.now(),
           lastUpdated: new Date().toISOString()
         };
 
@@ -2641,6 +2985,10 @@
         if (!HEYS.YandexAPI || !sessionToken) {
           console.log('[🎮 Gamification] loadFromCloud: no API or session token');
           _cloudLoaded = true; // Помечаем как загружено даже если нет токена
+          if (_pendingCloudSync) {
+            _pendingCloudSync = false;
+            triggerImmediateSync('pending_sync');
+          }
           return false;
         }
 
@@ -2676,43 +3024,30 @@
 
         // 🛡️ Помечаем что облако проверено
         _cloudLoaded = true;
+        if (_pendingCloudSync) {
+          _pendingCloudSync = false;
+          triggerImmediateSync('pending_sync');
+        }
 
         if (cloudData && cloudData.totalXP) {
           const localData = loadData();
+          const merged = mergeGameData(localData, cloudData);
 
-          console.log(`[🎮 Gamification] Cloud check: local XP=${localData.totalXP}, cloud XP=${cloudData.totalXP}`);
+          _data = merged;
+          setStoredValue(STORAGE_KEY, _data);
+          _cloudLoaded = true;
 
-          // Мержим данные — берём максимальные значения
-          let updated = false;
-          if (cloudData.totalXP > localData.totalXP) {
-            localData.totalXP = cloudData.totalXP;
-            localData.level = cloudData.level || calculateLevel(cloudData.totalXP);
-            updated = true;
-            console.log(`[🎮 Gamification] Restoring from cloud: XP=${cloudData.totalXP}, level=${localData.level}`);
-          }
+          window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: game.getStats() }));
 
-          // Объединяем достижения
-          const allAchievements = new Set([
-            ...localData.unlockedAchievements,
-            ...(cloudData.unlockedAchievements || [])
-          ]);
-          if (allAchievements.size > localData.unlockedAchievements.length) {
-            localData.unlockedAchievements = [...allAchievements];
-            updated = true;
-          }
-
-          if (updated) {
-            _data = localData; // Обновляем кэш
-            // 🛡️ Сохраняем ТОЛЬКО локально, без cloud sync (чтобы не циклить)
-            _data.updatedAt = Date.now();
-            setStoredValue(STORAGE_KEY, _data);
-            console.log('[🎮 Gamification] Loaded from cloud: XP=' + localData.totalXP);
-          }
           return true;
         }
         return false;
       } catch (e) {
         _cloudLoaded = true; // Помечаем даже при ошибке
+        if (_pendingCloudSync) {
+          _pendingCloudSync = false;
+          triggerImmediateSync('pending_sync');
+        }
         console.warn('[🎮 Gamification] Cloud load failed:', e.message);
         return false;
       }
@@ -2896,6 +3231,7 @@
     }
 
     saveData();
+    triggerImmediateSync('xp_gain');
 
     // Haptic
     if (HEYS.haptic) HEYS.haptic('light');
@@ -2934,6 +3270,9 @@
 
     // Level up notification
     if (data.level > oldLevel) {
+      // 🔥 LEVEL UP — критическое событие, сохраняем сразу!
+      triggerImmediateSync('level_up');
+
       handleRankTransition(oldLevel, data.level);
       const title = getLevelTitle(data.level);
 
@@ -3030,28 +3369,53 @@
     if (!_initialSyncDone) {
       _initialSyncDone = true;
       _lastSyncTime = now;
+
+      // 🔄 FIX v2.3: При первой синхронизации ОБЯЗАТЕЛЬНО загружаем из облака
+      // Это гарантирует кросс-устройственную синхронизацию
+      if (HEYS.game?.loadFromCloud) {
+        HEYS.game.loadFromCloud().catch(() => { });
+      }
       return;
     }
 
-    // 🔒 Cooldown: не реагируем на sync если прошло < 5 секунд
-    // Это предотвращает цепную реакцию sync → save → sync
-    if (now - _lastSyncTime < SYNC_COOLDOWN_MS) {
+    // 🔒 Cooldown: не реагируем на sync если прошло < 2 секунд
+    // Оптимизация: уменьшили cooldown c 5 сек для быстрого отклика
+    if (now - _lastSyncTime < 2000) {
       return;
     }
     _lastSyncTime = now;
 
-    // Получаем новые stats
-    const newStats = game.getStats();
+    // 🔄 FIX v2.3: При каждой синхронизации загружаем данные из облака
+    // Это обеспечивает кросс-устройственную синхронизацию
+    if (HEYS.game?.loadFromCloud) {
+      HEYS.game.loadFromCloud().then(() => {
+        // Получаем новые stats ПОСЛЕ загрузки из облака
+        const newStats = game.getStats();
 
-    // 🔒 Оптимизация: НЕ диспатчим heysGameUpdate если данные не изменились
-    if (oldStats &&
-      newStats.totalXP === oldXP &&
-      newStats.level === oldLevel) {
+        // 🔒 Оптимизация: НЕ диспатчим heysGameUpdate если данные не изменились
+        if (oldStats &&
+          newStats.totalXP === oldXP &&
+          newStats.level === oldLevel) {
+          return;
+        }
+
+        // Уведомляем UI об обновлении (GamificationBar перечитает stats)
+        window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: newStats }));
+      }).catch(() => {
+        // При ошибке всё равно обновляем UI с локальными данными
+        const newStats = game.getStats();
+        if (!oldStats || newStats.totalXP !== oldXP || newStats.level !== oldLevel) {
+          window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: newStats }));
+        }
+      });
       return;
     }
 
-    // Уведомляем UI об обновлении (GamificationBar перечитает stats)
-    window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: newStats }));
+    // Fallback если loadFromCloud недоступен
+    const newStats = game.getStats();
+    if (!oldStats || newStats.totalXP !== oldXP || newStats.level !== oldLevel) {
+      window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: newStats }));
+    }
   });
 
   // ========== ЭКСПОРТ ==========
@@ -3062,6 +3426,7 @@
   // Запускается один раз при загрузке страницы (с задержкой для инициализации)
   setTimeout(() => {
     if (HEYS.game && typeof HEYS.game.recalculateAchievements === 'function') {
+      bindCloudWatch();
       HEYS.game.recalculateAchievements().then(missed => {
         if (missed && missed.length > 0) {
           console.log('[🎮 Gamification] Recovered', missed.length, 'missed achievements');
@@ -3085,17 +3450,57 @@
           } else {
             console.log('[🎮 Gamification] No cloud data or already up to date');
             _cloudLoaded = true; // Помечаем как загружено даже если нет данных
+            if (_pendingCloudSync) {
+              _pendingCloudSync = false;
+              triggerImmediateSync('pending_sync');
+            }
           }
         }).catch(e => {
           console.warn('[🎮 Gamification] Cloud load error:', e.message);
           _cloudLoaded = true; // Помечаем как загружено даже при ошибке
+          if (_pendingCloudSync) {
+            _pendingCloudSync = false;
+            triggerImmediateSync('pending_sync');
+          }
         });
       } else {
         console.log('[🎮 Gamification] No session, skipping cloud load');
         _cloudLoaded = true; // Нет сессии — считаем загруженным
+        if (_pendingCloudSync) {
+          _pendingCloudSync = false;
+          triggerImmediateSync('pending_sync');
+        }
       }
     }
   }, 2000); // Уменьшил до 2 сек чтобы успеть до первого sync
+
+  // 🔄 FIX v2.3: Кросс-устройственная синхронизация при возвращении на вкладку
+  // Когда пользователь переключается между устройствами/вкладками — проверяем облако
+  let _lastVisibilitySync = 0;
+  const VISIBILITY_SYNC_COOLDOWN_MS = 30000; // 30 секунд между проверками
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        const now = Date.now();
+        // Проверяем облако не чаще чем раз в 30 секунд
+        if (now - _lastVisibilitySync < VISIBILITY_SYNC_COOLDOWN_MS) {
+          return;
+        }
+        _lastVisibilitySync = now;
+
+        // Проверяем наличие сессии
+        const hasSession = HEYS.cloud?.getSessionToken?.() ||
+          localStorage.getItem('heys_session_token');
+        if (!hasSession || !HEYS.game?.loadFromCloud) {
+          return;
+        }
+
+        console.log('[🎮 Gamification] Tab visible, checking cloud for updates...');
+        HEYS.game.loadFromCloud().catch(() => { });
+      }
+    });
+  }
 
   // Debug
   if (typeof window !== 'undefined') {
@@ -3114,6 +3519,30 @@
     window.disableGameDebug = () => {
       localStorage.removeItem('heys_debug_gamification');
       console.log('[🎮 Gamification] Debug mode disabled.');
+    };
+
+    // 🔧 FIX v2.3: Принудительная синхронизация с облаком
+    window.syncGameToCloud = async () => {
+      if (!HEYS.game?.syncToCloud) {
+        console.error('[🎮 Gamification] syncToCloud not available');
+        return false;
+      }
+      console.log('[🎮 Gamification] Manual sync to cloud...');
+      const result = await HEYS.game.syncToCloud();
+      console.log('[🎮 Gamification] Sync result:', result);
+      return result;
+    };
+
+    // 🔧 FIX v2.3: Принудительная загрузка из облака
+    window.loadGameFromCloud = async () => {
+      if (!HEYS.game?.loadFromCloud) {
+        console.error('[🎮 Gamification] loadFromCloud not available');
+        return false;
+      }
+      console.log('[🎮 Gamification] Manual load from cloud...');
+      const result = await HEYS.game.loadFromCloud();
+      console.log('[🎮 Gamification] Load result:', result);
+      return result;
     };
   }
 
