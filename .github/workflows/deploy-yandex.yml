@@ -480,8 +480,8 @@ jobs:
   deploy-functions:
     name: Deploy Cloud Functions
     runs-on: ubuntu-latest
-    # Запускается параллельно, не зависит от build-and-deploy
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(toJSON(github.event.commits.*.modified), 'yandex-cloud-functions/') || contains(toJSON(github.event.commits.*.added), 'yandex-cloud-functions/') }}
+    # Всегда запускается — условия проверяются внутри шагов
+    if: always()
 
     steps:
       - name: Checkout code
