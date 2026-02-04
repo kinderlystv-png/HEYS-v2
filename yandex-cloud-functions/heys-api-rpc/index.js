@@ -1,7 +1,7 @@
 /**
  * HEYS API RPC — Yandex Cloud Function
  * PostgreSQL RPC вызовы напрямую к Yandex.Cloud PostgreSQL
- * v2.5.0 — gamification audit support (2026-02-05)
+ * v2.5.1 — force redeploy for gamification audit (2026-02-05)
  */
 
 const { getPool } = require('./shared/db-pool');
