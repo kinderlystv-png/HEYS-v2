@@ -234,6 +234,10 @@ const ALLOWED_FUNCTIONS = [
   'batch_upsert_client_kv_by_session',    // 🔐 P1: пакетная запись (session-safe)
   'delete_client_kv_by_session',          // 🔐 P1: удаление KV (session-safe)
 
+  // === GAMIFICATION AUDIT (client) ===
+  'log_gamification_event_by_session',
+  'get_gamification_events_by_session',
+
   // ❌ УБРАНО (IDOR — принимают UUID от клиента!):
   // 'save_client_kv'             — IDOR: клиент может передать чужой UUID
   // 'get_client_kv'              — IDOR: клиент может читать чужие данные
@@ -274,6 +278,8 @@ const CURATOR_ONLY_FUNCTIONS = [
   'reset_client_pin',                 // Сброс PIN клиента
   'get_curator_clients',              // Список клиентов куратора
   'admin_extend_subscription',        // Продление подписки клиента
+  'log_gamification_event_by_curator',
+  'get_gamification_events_by_curator',
 ];
 
 // Маппинг параметров (если нужно)
@@ -554,6 +560,10 @@ module.exports.handler = async function (event, context) {
       'get_client_data_by_session': {
         'p_session_token': '::text'
       },
+      // 🔐 Curator-only функции
+      'get_curator_clients': {
+        'p_curator_id': '::uuid'
+      },
       'create_pending_product_by_session': {
         'p_session_token': '::text',
         'p_product_name': '::text',
@@ -579,6 +589,45 @@ module.exports.handler = async function (event, context) {
         'p_curator_id': '::uuid',
         'p_product_id': '::uuid',
         'p_portions': '::jsonb'
+      },
+      // === GAMIFICATION AUDIT ===
+      'log_gamification_event_by_session': {
+        'p_session_token': '::text',
+        'p_action': '::text',
+        'p_reason': '::text',
+        'p_xp_before': '::int',
+        'p_xp_after': '::int',
+        'p_xp_delta': '::int',
+        'p_level_before': '::int',
+        'p_level_after': '::int',
+        'p_achievements_before': '::int',
+        'p_achievements_after': '::int',
+        'p_metadata': '::jsonb'
+      },
+      'log_gamification_event_by_curator': {
+        'p_curator_id': '::uuid',
+        'p_client_id': '::uuid',
+        'p_action': '::text',
+        'p_reason': '::text',
+        'p_xp_before': '::int',
+        'p_xp_after': '::int',
+        'p_xp_delta': '::int',
+        'p_level_before': '::int',
+        'p_level_after': '::int',
+        'p_achievements_before': '::int',
+        'p_achievements_after': '::int',
+        'p_metadata': '::jsonb'
+      },
+      'get_gamification_events_by_session': {
+        'p_session_token': '::text',
+        'p_limit': '::int',
+        'p_offset': '::int'
+      },
+      'get_gamification_events_by_curator': {
+        'p_curator_id': '::uuid',
+        'p_client_id': '::uuid',
+        'p_limit': '::int',
+        'p_offset': '::int'
       },
       // === TRIAL QUEUE ADMIN ===
       'admin_get_trial_queue_list': {

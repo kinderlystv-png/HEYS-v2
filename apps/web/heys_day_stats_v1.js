@@ -2794,11 +2794,16 @@
             haptic('light');
           };
 
+          // Получаем данные о переборе из ViewModel
+          const protOverData = macroRingsMeta.protOverData || { hasOver: false, overPct: 0 };
+          const fatOverData = macroRingsMeta.fatOverData || { hasOver: false, overPct: 0 };
+          const carbsOverData = macroRingsMeta.carbsOverData || { hasOver: false, overPct: 0 };
+
           return React.createElement('div', { className: 'macro-rings' },
             // Белки
             React.createElement('div', { className: 'macro-ring-item' },
               React.createElement('div', {
-                className: 'macro-ring' + (protColor === '#ef4444' ? ' macro-ring-pulse' : ''),
+                className: 'macro-ring' + (protOverData.hasOver ? ' macro-ring--over' : '') + (protColor === '#ef4444' ? ' macro-ring-pulse' : ''),
                 onClick: (e) => openRingPopup(e, 'Белки', dayTot.prot, normAbs.prot, protRatio, protColor, protBadges),
                 style: macroRingsMeta.styles?.ringButton
               },
@@ -2808,6 +2813,17 @@
                     className: 'macro-ring-fill',
                     cx: 18, cy: 18, r: 15.9,
                     style: macroRingsMeta.protRingStrokeStyle
+                  }),
+                  // Красная дуга перебора
+                  protOverData.hasOver && React.createElement('circle', {
+                    className: 'macro-ring-fill--over',
+                    cx: 18, cy: 18, r: 15.9,
+                    style: { strokeDasharray: protOverData.overPct + ' 100', strokeDashoffset: -100 }
+                  }),
+                  // Чёрная линия-маркер на позиции 100%
+                  protOverData.hasOver && React.createElement('line', {
+                    className: 'macro-ring-norm-marker',
+                    x1: 18, y1: 2, x2: 18, y2: 6
                   })
                 ),
                 React.createElement('span', { className: 'macro-ring-value', style: macroRingsMeta.styles?.value ? macroRingsMeta.styles.value(protColor) : undefined },
@@ -2821,7 +2837,7 @@
             // Жиры
             React.createElement('div', { className: 'macro-ring-item' },
               React.createElement('div', {
-                className: 'macro-ring' + (fatColor === '#ef4444' ? ' macro-ring-pulse' : ''),
+                className: 'macro-ring' + (fatOverData.hasOver ? ' macro-ring--over' : '') + (fatColor === '#ef4444' ? ' macro-ring-pulse' : ''),
                 onClick: (e) => openRingPopup(e, 'Жиры', dayTot.fat, normAbs.fat, fatRatio, fatColor, fatBadges),
                 style: macroRingsMeta.styles?.ringButton
               },
@@ -2831,6 +2847,17 @@
                     className: 'macro-ring-fill',
                     cx: 18, cy: 18, r: 15.9,
                     style: macroRingsMeta.fatRingStrokeStyle
+                  }),
+                  // Красная дуга перебора
+                  fatOverData.hasOver && React.createElement('circle', {
+                    className: 'macro-ring-fill--over',
+                    cx: 18, cy: 18, r: 15.9,
+                    style: { strokeDasharray: fatOverData.overPct + ' 100', strokeDashoffset: -100 }
+                  }),
+                  // Чёрная линия-маркер на позиции 100%
+                  fatOverData.hasOver && React.createElement('line', {
+                    className: 'macro-ring-norm-marker',
+                    x1: 18, y1: 2, x2: 18, y2: 6
                   })
                 ),
                 React.createElement('span', { className: 'macro-ring-value', style: macroRingsMeta.styles?.value ? macroRingsMeta.styles.value(fatColor) : undefined },
@@ -2844,7 +2871,7 @@
             // Углеводы
             React.createElement('div', { className: 'macro-ring-item' },
               React.createElement('div', {
-                className: 'macro-ring' + (carbsColor === '#ef4444' ? ' macro-ring-pulse' : ''),
+                className: 'macro-ring' + (carbsOverData.hasOver ? ' macro-ring--over' : '') + (carbsColor === '#ef4444' ? ' macro-ring-pulse' : ''),
                 onClick: (e) => openRingPopup(e, 'Углеводы', dayTot.carbs, normAbs.carbs, carbsRatio, carbsColor, carbsBadges),
                 style: macroRingsMeta.styles?.ringButton
               },
@@ -2854,6 +2881,17 @@
                     className: 'macro-ring-fill',
                     cx: 18, cy: 18, r: 15.9,
                     style: macroRingsMeta.carbsRingStrokeStyle
+                  }),
+                  // Красная дуга перебора
+                  carbsOverData.hasOver && React.createElement('circle', {
+                    className: 'macro-ring-fill--over',
+                    cx: 18, cy: 18, r: 15.9,
+                    style: { strokeDasharray: carbsOverData.overPct + ' 100', strokeDashoffset: -100 }
+                  }),
+                  // Чёрная линия-маркер на позиции 100%
+                  carbsOverData.hasOver && React.createElement('line', {
+                    className: 'macro-ring-norm-marker',
+                    x1: 18, y1: 2, x2: 18, y2: 6
                   })
                 ),
                 React.createElement('span', { className: 'macro-ring-value', style: macroRingsMeta.styles?.value ? macroRingsMeta.styles.value(carbsColor) : undefined },

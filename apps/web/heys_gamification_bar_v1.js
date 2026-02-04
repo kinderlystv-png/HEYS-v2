@@ -74,6 +74,10 @@
             return HEYS.game?.getDailyMissions ? HEYS.game.getDailyMissions() : null;
         });
         const [isOnboardingTipOpen, setIsOnboardingTipOpen] = useState(false);
+        const [auditOpen, setAuditOpen] = useState(false);
+        const [auditEvents, setAuditEvents] = useState([]);
+        const [auditLoading, setAuditLoading] = useState(false);
+        const [auditError, setAuditError] = useState(null);
 
         const isOnboardingComplete = useCallback(() => {
             if (!HEYS.game) return false;
@@ -370,7 +374,37 @@
             return () => clearTimeout(timer);
         }, [expanded]);
 
-        const toggleExpanded = () => setExpanded(!expanded);
+        const loadAuditHistory = useCallback(async () => {
+            if (!HEYS.game?.getAuditHistory) return;
+            setAuditLoading(true);
+            setAuditError(null);
+
+            const result = await HEYS.game.getAuditHistory({ limit: 50, offset: 0 });
+            if (result?.error) {
+                const message = result.error?.message || result.error || 'Не удалось загрузить историю';
+                setAuditError(message);
+                setAuditEvents([]);
+                setAuditLoading(false);
+                return;
+            }
+
+            const items = Array.isArray(result?.items) ? result.items : [];
+            setAuditEvents(items);
+            setAuditLoading(false);
+        }, []);
+
+        useEffect(() => {
+            if (expanded && auditOpen) {
+                loadAuditHistory();
+            }
+        }, [expanded, auditOpen, loadAuditHistory]);
+
+        const toggleExpanded = () => {
+            if (expanded) {
+                setAuditOpen(false);
+            }
+            setExpanded(!expanded);
+        };
 
         const { title, progress } = stats;
         const progressPercent = Math.max(5, progress.percent); // Minimum 5% для визуального feedback
@@ -422,6 +456,25 @@
             ripple.style.top = `${e.clientY - rect.top}px`;
             e.currentTarget.appendChild(ripple);
             setTimeout(() => ripple.remove(), 600);
+        };
+
+        const getAuditActionLabel = (action, metadata) => {
+            const map = {
+                xp_gain: 'Начисление XP',
+                level_up: 'Новый уровень',
+                achievement_unlocked: 'Достижение',
+                daily_bonus: 'Ежедневный бонус'
+            };
+            if (action === 'achievement_unlocked' && metadata?.achievementName) {
+                return `Достижение: ${metadata.achievementName}`;
+            }
+            return map[action] || action || 'Событие';
+        };
+
+        const getAuditReasonLabel = (reason) => {
+            if (!reason) return '';
+            const actionLabel = HEYS.game?.XP_ACTIONS?.[reason]?.label;
+            return actionLabel || reason;
         };
 
         // Динамический золотой градиент — чем ближе к 100%, тем ярче золото
@@ -898,6 +951,60 @@
                                     )
                                 )
                             )
+                    )
+                    ,
+
+                    React.createElement('div', { className: 'game-audit-section' },
+                        React.createElement('div', { className: 'game-audit-title' }, '🧾 История геймификации'),
+                        React.createElement('div', { className: 'game-audit-subtitle' }, 'Лента изменений XP, уровней и наград. Доступна клиенту и куратору.'),
+                        React.createElement('button', {
+                            className: 'game-audit-btn',
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                const nextState = !auditOpen;
+                                setAuditOpen(nextState);
+                                if (nextState) {
+                                    loadAuditHistory();
+                                }
+                            }
+                        }, auditOpen ? 'Скрыть историю' : 'Показать историю'),
+                        auditOpen && React.createElement('div', { className: 'game-audit-list' },
+                            auditLoading && React.createElement('div', { className: 'game-audit-loading' }, 'Загружаем историю...'),
+                            !auditLoading && auditError && React.createElement('div', { className: 'game-audit-error' }, 'Не удалось загрузить историю'),
+                            !auditLoading && !auditError && auditEvents.length === 0 && React.createElement('div', { className: 'game-audit-empty' }, 'Пока нет событий'),
+                            !auditLoading && !auditError && auditEvents.map((event) => {
+                                const meta = event?.metadata || {};
+                                const actionLabel = getAuditActionLabel(event.action, meta);
+                                const reasonLabel = getAuditReasonLabel(event.reason);
+                                const when = event.created_at
+                                    ? new Date(event.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+                                    : '';
+                                const actorLabel = event.actor_type === 'curator'
+                                    ? 'Куратор'
+                                    : event.actor_type === 'pin'
+                                        ? 'PIN'
+                                        : 'Система';
+                                const xpDelta = typeof event.xp_delta === 'number' ? event.xp_delta : null;
+                                const levelBefore = event.level_before;
+                                const levelAfter = event.level_after;
+                                const levelChange = levelBefore && levelAfter && levelAfter !== levelBefore
+                                    ? `ур.${levelBefore} → ур.${levelAfter}`
+                                    : null;
+
+                                return React.createElement('div', { key: event.id, className: 'game-audit-item' },
+                                    React.createElement('div', { className: 'game-audit-item__row' },
+                                        React.createElement('div', { className: 'game-audit-item__title' }, actionLabel),
+                                        xpDelta !== null && React.createElement('div', { className: 'game-audit-item__delta' }, `+${xpDelta} XP`)
+                                    ),
+                                    React.createElement('div', { className: 'game-audit-item__meta' },
+                                        React.createElement('span', { className: `game-audit-badge game-audit-badge--${event.actor_type || 'system'}` }, actorLabel),
+                                        reasonLabel && React.createElement('span', { className: 'game-audit-meta' }, reasonLabel),
+                                        levelChange && React.createElement('span', { className: 'game-audit-meta' }, levelChange),
+                                        when && React.createElement('span', { className: 'game-audit-meta' }, when)
+                                    )
+                                );
+                            })
+                        )
                     )
                 )
             ),

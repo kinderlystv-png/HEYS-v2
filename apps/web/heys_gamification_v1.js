@@ -562,6 +562,91 @@
     return merged;
   }
 
+  function getAuditContext() {
+    const sessionToken = HEYS.cloud?.getSessionToken?.() || localStorage.getItem('heys_session_token');
+    const curatorToken = localStorage.getItem('heys_curator_session');
+    const clientIdRaw = HEYS.utils?.getCurrentClientId?.() ||
+      localStorage.getItem('heys_client_current') ||
+      localStorage.getItem('heys_pin_auth_client');
+
+    return {
+      sessionToken: sessionToken ? String(sessionToken).replace(/"/g, '') : null,
+      curatorToken: curatorToken ? String(curatorToken) : null,
+      clientId: clientIdRaw ? String(clientIdRaw).replace(/"/g, '') : null
+    };
+  }
+
+  async function logGamificationEvent(payload) {
+    if (!HEYS.YandexAPI?.rpc) return false;
+
+    const { sessionToken, curatorToken, clientId } = getAuditContext();
+    const body = {
+      p_action: payload.action,
+      p_reason: payload.reason || null,
+      p_xp_before: payload.xpBefore ?? null,
+      p_xp_after: payload.xpAfter ?? null,
+      p_xp_delta: payload.xpDelta ?? null,
+      p_level_before: payload.levelBefore ?? null,
+      p_level_after: payload.levelAfter ?? null,
+      p_achievements_before: payload.achievementsBefore ?? null,
+      p_achievements_after: payload.achievementsAfter ?? null,
+      p_metadata: payload.metadata || {}
+    };
+
+    if (curatorToken && clientId) {
+      return HEYS.YandexAPI.rpc('log_gamification_event_by_curator', {
+        p_client_id: clientId,
+        ...body
+      });
+    }
+
+    if (sessionToken) {
+      return HEYS.YandexAPI.rpc('log_gamification_event_by_session', {
+        p_session_token: sessionToken,
+        ...body
+      });
+    }
+
+    return false;
+  }
+
+  function queueGamificationEvent(payload) {
+    setTimeout(() => {
+      logGamificationEvent(payload).catch(() => { });
+    }, 0);
+  }
+
+  async function fetchGamificationHistory(options = {}) {
+    if (!HEYS.YandexAPI?.rpc) return { items: [], error: 'no_api' };
+
+    const { limit = 50, offset = 0 } = options;
+    const { sessionToken, curatorToken, clientId } = getAuditContext();
+
+    if (curatorToken && clientId) {
+      const result = await HEYS.YandexAPI.rpc('get_gamification_events_by_curator', {
+        p_client_id: clientId,
+        p_limit: limit,
+        p_offset: offset
+      });
+      if (result?.error) return { items: [], error: result.error };
+      const payload = result?.data || {};
+      return { items: payload.items || [], total: payload.total || 0 };
+    }
+
+    if (sessionToken) {
+      const result = await HEYS.YandexAPI.rpc('get_gamification_events_by_session', {
+        p_session_token: sessionToken,
+        p_limit: limit,
+        p_offset: offset
+      });
+      if (result?.error) return { items: [], error: result.error };
+      const payload = result?.data || {};
+      return { items: payload.items || [], total: payload.total || 0 };
+    }
+
+    return { items: [], error: 'no_auth' };
+  }
+
   // 🛡️ FIX v2.3: Флаг для предотвращения рекурсии в watch callback
   let _isProcessingWatch = false;
 
@@ -835,11 +920,28 @@
     data.dailyBonusClaimed = today;
     const bonusXP = 10 * getXPMultiplier();
     const oldLevel = data.level; // Store the old level before updating
+    const beforeXP = data.totalXP;
+    const beforeAchievements = data.unlockedAchievements.length;
     data.totalXP += bonusXP;
     data.level = calculateLevel(data.totalXP);
+    const afterXP = data.totalXP;
+    const afterAchievements = data.unlockedAchievements.length;
     handleRankTransition(oldLevel, data.level);
     saveData();
     triggerImmediateSync('daily_bonus');
+
+    queueGamificationEvent({
+      action: 'daily_bonus',
+      reason: 'daily_bonus',
+      xpBefore: beforeXP,
+      xpAfter: afterXP,
+      xpDelta: bonusXP,
+      levelBefore: oldLevel,
+      levelAfter: data.level,
+      achievementsBefore: beforeAchievements,
+      achievementsAfter: afterAchievements,
+      metadata: { multiplier: getXPMultiplier() }
+    });
 
     showNotification('daily_bonus', { xp: bonusXP, multiplier: getXPMultiplier() });
     window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: { xpGained: bonusXP, reason: 'daily_bonus' } }));
@@ -2437,15 +2539,39 @@
     const ach = ACHIEVEMENTS[achievementId];
     if (!ach || data.unlockedAchievements.includes(achievementId)) return;
 
+    const beforeXP = data.totalXP;
+    const beforeLevel = data.level;
+    const beforeAchievements = data.unlockedAchievements.length;
+
     data.unlockedAchievements.push(achievementId);
 
     // Начисляем XP за достижение
     const oldLevel = data.level;
     data.totalXP += ach.xp;
     data.level = calculateLevel(data.totalXP);
+    const afterXP = data.totalXP;
+    const afterAchievements = data.unlockedAchievements.length;
     handleRankTransition(oldLevel, data.level);
     saveData();
     triggerImmediateSync('achievement_unlocked');
+
+    queueGamificationEvent({
+      action: 'achievement_unlocked',
+      reason: achievementId,
+      xpBefore: beforeXP,
+      xpAfter: afterXP,
+      xpDelta: ach.xp,
+      levelBefore: beforeLevel,
+      levelAfter: data.level,
+      achievementsBefore: beforeAchievements,
+      achievementsAfter: afterAchievements,
+      metadata: {
+        achievementId: ach.id,
+        achievementName: ach.name,
+        rarity: ach.rarity,
+        category: ach.category
+      }
+    });
 
     const hasCategoryUnlocked = data.unlockedAchievements
       .map((id) => ACHIEVEMENTS[id])
@@ -3133,6 +3259,9 @@
     // XP History (7 days)
     getXPHistory,
 
+    // Audit History (cloud)
+    getAuditHistory: fetchGamificationHistory,
+
     // Streak Shield
     canUseStreakShield,
     useStreakShield,
@@ -3194,9 +3323,13 @@
     }
 
     const oldLevel = data.level;
+    const beforeXP = data.totalXP;
+    const beforeAchievements = data.unlockedAchievements.length;
     const oldProgress = game.getProgress();
     data.totalXP += xpToAdd;
     data.level = calculateLevel(data.totalXP);
+    const afterXP = data.totalXP;
+    const afterAchievements = data.unlockedAchievements.length;
 
     // Обновляем stats
     if (reason === 'product_added') data.stats.totalProducts++;
@@ -3232,6 +3365,23 @@
 
     saveData();
     triggerImmediateSync('xp_gain');
+
+    queueGamificationEvent({
+      action: 'xp_gain',
+      reason,
+      xpBefore: beforeXP,
+      xpAfter: afterXP,
+      xpDelta: xpToAdd,
+      levelBefore: oldLevel,
+      levelAfter: data.level,
+      achievementsBefore: beforeAchievements,
+      achievementsAfter: afterAchievements,
+      metadata: {
+        streakMultiplier,
+        dailyMultiplier: dailyInfo.multiplier,
+        dailyActions: dailyInfo.actions
+      }
+    });
 
     // Haptic
     if (HEYS.haptic) HEYS.haptic('light');
@@ -3275,6 +3425,22 @@
 
       handleRankTransition(oldLevel, data.level);
       const title = getLevelTitle(data.level);
+
+      queueGamificationEvent({
+        action: 'level_up',
+        reason,
+        xpBefore: beforeXP,
+        xpAfter: afterXP,
+        xpDelta: xpToAdd,
+        levelBefore: oldLevel,
+        levelAfter: data.level,
+        achievementsBefore: beforeAchievements,
+        achievementsAfter: afterAchievements,
+        metadata: {
+          title: title.title,
+          icon: title.icon
+        }
+      });
 
       // Level-up sound!
       playXPSound(true);

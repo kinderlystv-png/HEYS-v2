@@ -1043,6 +1043,17 @@
       stroke: color
     });
 
+    // Данные для отрисовки перебора
+    const getOverData = (ratio) => {
+      const hasOver = ratio > 1;
+      const overPct = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0;
+      return { hasOver, overPct };
+    };
+
+    const protOverData = getOverData(protRatio);
+    const fatOverData = getOverData(fatRatio);
+    const carbsOverData = getOverData(carbsRatio);
+
     const styles = {
       ringButton: { cursor: 'pointer' },
       value: (color) => ({ color })
@@ -1063,6 +1074,9 @@
       protRingStrokeStyle: ringStrokeStyle(protRatio, protColor),
       fatRingStrokeStyle: ringStrokeStyle(fatRatio, fatColor),
       carbsRingStrokeStyle: ringStrokeStyle(carbsRatio, carbsColor),
+      protOverData,
+      fatOverData,
+      carbsOverData,
       styles
     };
   }

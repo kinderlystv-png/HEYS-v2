@@ -177,6 +177,8 @@
     'reset_client_pin',
     'get_curator_clients',
     'admin_extend_subscription',
+    'log_gamification_event_by_curator',
+    'get_gamification_events_by_curator',
   ];
 
   /**
@@ -1119,6 +1121,7 @@
       );
 
       if (missingSubscriptionFields) {
+        // 🔐 get_curator_clients требует JWT — rpc() автоматически добавит токен из CURATOR_ONLY_FUNCTIONS
         const fallback = await rpc('get_curator_clients', {});
         if (!fallback.error && Array.isArray(fallback.data)) {
           clients = fallback.data;

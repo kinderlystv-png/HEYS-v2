@@ -4900,10 +4900,17 @@
 }
 
 .macro-ring-fill--over {
-  stroke: var(--macro-ring-over, #fca5a5);
+  fill: none;
+  stroke: #ef4444; /* Ярко-красный для перебора */
   stroke-width: 4;
-  filter: none;
-  /* Убираем размытое свечение, делаем четче */
+  stroke-linecap: round;
+}
+
+/* Чёрная линия-маркер на позиции нормы (100%) */
+.macro-ring-norm-marker {
+  stroke: #1e293b; /* Slate-800 — тёмный, контрастный */
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 
 @keyframes ringFillIn {

@@ -567,25 +567,38 @@
 
         const buildMacroRing = (label, value, norm, toneClass) => {
             const ratio = norm > 0 ? value / norm : 0;
-            const basePct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
-            const overPct = ratio > 1 ? Math.min(100, Math.round((ratio - 1) * 100)) : 0;
-            const hasOver = overPct > 0;
+            // Основная дуга: от 0 до min(100%, ratio)
+            const basePct = Math.min(100, Math.round(ratio * 100));
+            // Перебор: от 100% до ratio (если ratio > 1)
+            const hasOver = ratio > 1;
+            const overPct = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0; // max 150% визуально
 
             return h('div', { className: 'macro-ring-item' },
                 h('div', { className: 'macro-ring ' + toneClass + (hasOver ? ' macro-ring--over' : '') },
                     h('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
+                        // Фоновый трек
                         h('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.9 }),
+                        // Основная дуга (до 100%)
                         h('circle', {
                             className: 'macro-ring-fill',
                             cx: 18, cy: 18, r: 15.9,
                             style: { strokeDasharray: basePct + ' 100' }
                         }),
+                        // Красная дуга перебора (от 100% дальше)
                         hasOver && h('circle', {
-                            className: 'macro-ring-fill macro-ring-fill--over',
+                            className: 'macro-ring-fill--over',
                             cx: 18, cy: 18, r: 15.9,
-                            style: { strokeDasharray: overPct + ' 100', strokeDashoffset: -100 }
+                            style: { 
+                                strokeDasharray: overPct + ' 100',
+                                strokeDashoffset: -100  // начинается с позиции 100%
+                            }
                         }),
-                        h('circle', { className: 'macro-ring-marker', cx: 18, cy: 18, r: 15.9 })
+                        // Чёрная линия-маркер на позиции 100% (норма)
+                        hasOver && h('line', {
+                            className: 'macro-ring-norm-marker',
+                            x1: 18, y1: 2,   // верх круга (после rotate -90deg = позиция 100%)
+                            x2: 18, y2: 6
+                        })
                     ),
                     h('span', { className: 'macro-ring-value' }, Math.round(value || 0))
                 ),

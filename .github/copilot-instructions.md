@@ -100,7 +100,30 @@ console.warn('[Module] Some debug info:', data);
 
 ---
 
-## 🚀 Quick Start
+## �️ Database Credentials (ВРЕМЕННО — для миграций)
+
+> ⚠️ **УДАЛИТЬ ПОСЛЕ РЕЛИЗА И СМЕНЫ ПАРОЛЯ!**
+
+```bash
+# Yandex Cloud PostgreSQL
+PG_HOST=rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net
+PG_PORT=6432
+PG_DATABASE=heys_production
+PG_USER=heys_admin
+PG_PASSWORD=heys007670
+PG_SSL=verify-full
+
+# Пример запуска миграций:
+cd yandex-cloud-functions/heys-api-rpc
+node apply_migrations.js
+
+# Пример подключения psql (если установлен):
+# PGPASSWORD=heys007670 psql -h rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net -p 6432 -U heys_admin -d heys_production
+```
+
+---
+
+## �🚀 Quick Start
 
 ```bash
 pnpm install    # Bootstrap
