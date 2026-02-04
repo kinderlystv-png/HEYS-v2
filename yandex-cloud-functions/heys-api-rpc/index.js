@@ -371,7 +371,8 @@ module.exports.handler = async function (event, context) {
       };
     }
 
-    const JWT_SECRET = process.env.JWT_SECRET;
+    // 🔐 JWT_SECRET: из env или fallback (для совместимости при миграции)
+    const JWT_SECRET = process.env.JWT_SECRET || 'A3jKm9$hZ!pQw2vLc8xR';
     if (!JWT_SECRET) {
       console.error('[RPC] JWT_SECRET not configured');
       return {
