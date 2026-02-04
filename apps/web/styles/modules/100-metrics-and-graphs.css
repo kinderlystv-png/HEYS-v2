@@ -4853,7 +4853,7 @@
   /* Чистый белый фон без "грязи" */
   background: #ffffff;
   /* Мягкая внешняя тень вместо жесткой "грязной" */
-  box-shadow: 
+  box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.06),
     0 1px 3px rgba(0, 0, 0, 0.04);
   display: flex;
@@ -4871,13 +4871,15 @@
   transform: rotate(-90deg);
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05)); /* Легкий объем самого кольца */
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.05));
+  /* Легкий объем самого кольца */
 }
 
 /* Фон трека - очень прозрачный серый, не грязный */
 .macro-ring-bg {
   fill: none;
-  stroke: #f1f5f9; /* Slate-100 - очень светлый */
+  stroke: #f1f5f9;
+  /* Slate-100 - очень светлый */
   stroke-width: 4;
 }
 
@@ -4893,34 +4895,48 @@
 
 /* Маркер конца линии (белая точка для блика/объема) */
 .macro-ring-marker {
-  display: none; /* Убираем, если не нужна */
+  display: none;
+  /* Убираем, если не нужна */
 }
 
 .macro-ring-fill--over {
   stroke: var(--macro-ring-over, #fca5a5);
   stroke-width: 4;
-  filter: none; /* Убираем размытое свечение, делаем четче */
+  filter: none;
+  /* Убираем размытое свечение, делаем четче */
 }
 
 @keyframes ringFillIn {
-  from { stroke-dasharray: 0 100; opacity: 0; }
-  to { opacity: 1; }
+  from {
+    stroke-dasharray: 0 100;
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* Цвета - делаем чуть насыщеннее */
 .macro-ring.protein {
-  --macro-ring-color: #ef4444; /* Red-500 */
-  --macro-ring-over: #b91c1c;   /* Red-700 */
+  --macro-ring-color: #ef4444;
+  /* Red-500 */
+  --macro-ring-over: #b91c1c;
+  /* Red-700 */
 }
 
 .macro-ring.fat {
-  --macro-ring-color: #f59e0b; /* Amber-500 */
-  --macro-ring-over: #b45309;  /* Amber-700 */
+  --macro-ring-color: #f59e0b;
+  /* Amber-500 */
+  --macro-ring-over: #b45309;
+  /* Amber-700 */
 }
 
 .macro-ring.carbs {
-  --macro-ring-color: #22c55e; /* Green-500 */
-  --macro-ring-over: #15803d;  /* Green-700 */
+  --macro-ring-color: #22c55e;
+  /* Green-500 */
+  --macro-ring-over: #15803d;
+  /* Green-700 */
 }
 
 .macro-ring-value {
@@ -4931,21 +4947,24 @@
   font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: #1e293b; /* Slate-800 */
+  color: #1e293b;
+  /* Slate-800 */
   z-index: 2;
 }
 
 .macro-ring-label {
   font-size: 13px;
   font-weight: 600;
-  color: #334155; /* Slate-700 */
+  color: #334155;
+  /* Slate-700 */
   letter-spacing: -0.01em;
 }
 
 .macro-ring-target {
   font-size: 11px;
   font-weight: 500;
-  color: #94a3b8; /* Slate-400 */
+  color: #94a3b8;
+  /* Slate-400 */
 }
 
 .macro-ring-badges {

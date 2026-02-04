@@ -1111,8 +1111,23 @@
         return { data: null, error: { message: result.error || 'Failed to get clients', code: response.status } };
       }
 
+      let clients = (result.data || []);
+
+      // 🔧 Fallback: если /auth/clients вернул старый формат без подписки
+      const missingSubscriptionFields = clients.length > 0 && clients.every(c =>
+        typeof c.subscription_status === 'undefined' && typeof c.trial_ends_at === 'undefined'
+      );
+
+      if (missingSubscriptionFields) {
+        const fallback = await rpc('get_curator_clients', {});
+        if (!fallback.error && Array.isArray(fallback.data)) {
+          clients = fallback.data;
+          log('getClients: fallback to get_curator_clients');
+        }
+      }
+
       // Сортируем по updated_at (ascending)
-      const clients = (result.data || []).sort((a, b) => {
+      clients = clients.sort((a, b) => {
         const dateA = new Date(a.updated_at || 0);
         const dateB = new Date(b.updated_at || 0);
         return dateA - dateB;

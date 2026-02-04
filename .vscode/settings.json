@@ -47,5 +47,33 @@
         {
             "mode": "auto"
         }
-    ]
+    ],
+    // ===========================================
+    // 🗄️ Yandex Cloud PostgreSQL (для миграций и скриптов)
+    // ⚠️ ВРЕМЕННО! Убрать после релиза и смены пароля
+    // ===========================================
+    "terminal.integrated.env.windows": {
+        "PG_HOST": "rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net",
+        "PG_PORT": "6432",
+        "PG_DATABASE": "heys_production",
+        "PG_USER": "heys_admin",
+        "PG_PASSWORD": "heys007670",
+        "PG_SSL": "verify-full"
+    },
+    "terminal.integrated.env.linux": {
+        "PG_HOST": "rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net",
+        "PG_PORT": "6432",
+        "PG_DATABASE": "heys_production",
+        "PG_USER": "heys_admin",
+        "PG_PASSWORD": "heys007670",
+        "PG_SSL": "verify-full"
+    },
+    "terminal.integrated.env.osx": {
+        "PG_HOST": "rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net",
+        "PG_PORT": "6432",
+        "PG_DATABASE": "heys_production",
+        "PG_USER": "heys_admin",
+        "PG_PASSWORD": "heys007670",
+        "PG_SSL": "verify-full"
+    }
 }
