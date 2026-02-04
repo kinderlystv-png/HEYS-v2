@@ -588,9 +588,10 @@
                         hasOver && h('circle', {
                             className: 'macro-ring-fill--over',
                             cx: 18, cy: 18, r: 15.9,
-                            style: { 
-                                strokeDasharray: overPct + ' 100',
-                                strokeDashoffset: -100  // начинается с позиции 100%
+                            style: {
+                                strokeDasharray: overPct + ' ' + (100 - overPct),
+                                strokeDashoffset: -100,  // начинается с позиции 100%
+                                stroke: '#ef4444'
                             }
                         }),
                         // Чёрная линия-маркер на позиции 100% (норма)

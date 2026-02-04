@@ -970,7 +970,7 @@
                         }, auditOpen ? 'Скрыть историю' : 'Показать историю'),
                         auditOpen && React.createElement('div', { className: 'game-audit-list' },
                             auditLoading && React.createElement('div', { className: 'game-audit-loading' }, 'Загружаем историю...'),
-                            !auditLoading && auditError && React.createElement('div', { className: 'game-audit-error' }, 'Не удалось загрузить историю'),
+                            !auditLoading && auditError && React.createElement('div', { className: 'game-audit-error' }, auditError),
                             !auditLoading && !auditError && auditEvents.length === 0 && React.createElement('div', { className: 'game-audit-empty' }, 'Пока нет событий'),
                             !auditLoading && !auditError && auditEvents.map((event) => {
                                 const meta = event?.metadata || {};

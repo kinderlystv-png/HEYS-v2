@@ -4901,14 +4901,16 @@
 
 .macro-ring-fill--over {
   fill: none;
-  stroke: #ef4444; /* Ярко-красный для перебора */
+  stroke: #ef4444;
+  /* Ярко-красный для перебора */
   stroke-width: 4;
   stroke-linecap: round;
 }
 
 /* Чёрная линия-маркер на позиции нормы (100%) */
 .macro-ring-norm-marker {
-  stroke: #1e293b; /* Slate-800 — тёмный, контрастный */
+  stroke: #1e293b;
+  /* Slate-800 — тёмный, контрастный */
   stroke-width: 2;
   stroke-linecap: round;
 }

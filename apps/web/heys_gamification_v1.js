@@ -617,7 +617,9 @@
   }
 
   async function fetchGamificationHistory(options = {}) {
-    if (!HEYS.YandexAPI?.rpc) return { items: [], error: 'no_api' };
+    if (!HEYS.YandexAPI?.rpc) {
+      return { items: [], error: { message: 'API недоступен' } };
+    }
 
     const { limit = 50, offset = 0 } = options;
     const { sessionToken, curatorToken, clientId } = getAuditContext();
@@ -644,7 +646,7 @@
       return { items: payload.items || [], total: payload.total || 0 };
     }
 
-    return { items: [], error: 'no_auth' };
+    return { items: [], error: { message: 'Нужна авторизация (PIN или куратор)' } };
   }
 
   // 🛡️ FIX v2.3: Флаг для предотвращения рекурсии в watch callback
