@@ -2818,7 +2818,7 @@
                   protOverData.hasOver && React.createElement('circle', {
                     className: 'macro-ring-fill--over',
                     cx: 18, cy: 18, r: 15.9,
-                    style: { strokeDasharray: protOverData.overPct + ' ' + (100 - protOverData.overPct), strokeDashoffset: -100, stroke: '#ef4444' }
+                    style: { strokeDasharray: protOverData.overPct + ' ' + (100 - protOverData.overPct), strokeDashoffset: -(100 - protOverData.overPct), stroke: '#ef4444' }
                   }),
                   // Чёрная линия-маркер на позиции 100%
                   protOverData.hasOver && React.createElement('line', {
@@ -2852,7 +2852,7 @@
                   fatOverData.hasOver && React.createElement('circle', {
                     className: 'macro-ring-fill--over',
                     cx: 18, cy: 18, r: 15.9,
-                    style: { strokeDasharray: fatOverData.overPct + ' ' + (100 - fatOverData.overPct), strokeDashoffset: -100, stroke: '#ef4444' }
+                    style: { strokeDasharray: fatOverData.overPct + ' ' + (100 - fatOverData.overPct), strokeDashoffset: -(100 - fatOverData.overPct), stroke: '#ef4444' }
                   }),
                   // Чёрная линия-маркер на позиции 100%
                   fatOverData.hasOver && React.createElement('line', {
@@ -2886,7 +2886,7 @@
                   carbsOverData.hasOver && React.createElement('circle', {
                     className: 'macro-ring-fill--over',
                     cx: 18, cy: 18, r: 15.9,
-                    style: { strokeDasharray: carbsOverData.overPct + ' ' + (100 - carbsOverData.overPct), strokeDashoffset: -100, stroke: '#ef4444' }
+                    style: { strokeDasharray: carbsOverData.overPct + ' ' + (100 - carbsOverData.overPct), strokeDashoffset: -(100 - carbsOverData.overPct), stroke: '#ef4444' }
                   }),
                   // Чёрная линия-маркер на позиции 100%
                   carbsOverData.hasOver && React.createElement('line', {

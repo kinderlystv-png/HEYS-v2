@@ -590,7 +590,7 @@
                             cx: 18, cy: 18, r: 15.9,
                             style: {
                                 strokeDasharray: overPct + ' ' + (100 - overPct),
-                                strokeDashoffset: -100,  // начинается с позиции 100%
+                                strokeDashoffset: -(100 - overPct),  // стартуем после 100%
                                 stroke: '#ef4444'
                             }
                         }),
