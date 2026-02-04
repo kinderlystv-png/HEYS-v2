@@ -281,9 +281,9 @@ async function handleGetClients(curatorId) {
 
   try {
 
-    // Получаем клиентов куратора (включая телефон для отображения куратору)
+    // Получаем клиентов куратора (включая телефон и подписку для отображения куратору)
     const result = await client.query(
-      `SELECT id, name, phone_normalized, updated_at 
+      `SELECT id, name, phone_normalized, updated_at, subscription_status, trial_ends_at 
        FROM clients 
        WHERE curator_id = $1 
        ORDER BY updated_at ASC`,
