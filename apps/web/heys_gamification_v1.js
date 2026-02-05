@@ -576,8 +576,16 @@
     };
   }
 
+  // 🔐 Audit RPC feature-flag (auto-disabled on 403)
+  let _auditRpcBlocked = false;
+
+  function isAuditRpcBlocked() {
+    return _auditRpcBlocked === true;
+  }
+
   async function logGamificationEvent(payload) {
     if (!HEYS.YandexAPI?.rpc) return false;
+    if (isAuditRpcBlocked()) return false;
 
     const { sessionToken, curatorToken, clientId } = getAuditContext();
     const body = {
@@ -593,18 +601,40 @@
       p_metadata: payload.metadata || {}
     };
 
-    if (curatorToken && clientId) {
-      return HEYS.YandexAPI.rpc('log_gamification_event_by_curator', {
-        p_client_id: clientId,
-        ...body
-      });
-    }
-
     if (sessionToken) {
-      return HEYS.YandexAPI.rpc('log_gamification_event_by_session', {
+      const result = await HEYS.YandexAPI.rpc('log_gamification_event_by_session', {
         p_session_token: sessionToken,
         ...body
       });
+      if (!result?.error) return result;
+
+      if (curatorToken && clientId && (result.error?.code === 401 || result.error?.code === 403)) {
+        const curatorResult = await HEYS.YandexAPI.rpc('log_gamification_event_by_curator', {
+          p_client_id: clientId,
+          ...body
+        });
+        if (curatorResult?.error?.code === 403) {
+          _auditRpcBlocked = true;
+        }
+        return curatorResult;
+      }
+
+      if (result.error?.code === 403) {
+        _auditRpcBlocked = true;
+      }
+
+      return result;
+    }
+
+    if (curatorToken && clientId) {
+      const result = await HEYS.YandexAPI.rpc('log_gamification_event_by_curator', {
+        p_client_id: clientId,
+        ...body
+      });
+      if (result?.error?.code === 403) {
+        _auditRpcBlocked = true;
+      }
+      return result;
     }
 
     return false;
@@ -621,19 +651,12 @@
       return { items: [], error: { message: 'API недоступен' } };
     }
 
+    if (isAuditRpcBlocked()) {
+      return { items: [], error: { message: 'История недоступна' } };
+    }
+
     const { limit = 50, offset = 0 } = options;
     const { sessionToken, curatorToken, clientId } = getAuditContext();
-
-    if (curatorToken && clientId) {
-      const result = await HEYS.YandexAPI.rpc('get_gamification_events_by_curator', {
-        p_client_id: clientId,
-        p_limit: limit,
-        p_offset: offset
-      });
-      if (result?.error) return { items: [], error: result.error };
-      const payload = result?.data || {};
-      return { items: payload.items || [], total: payload.total || 0 };
-    }
 
     if (sessionToken) {
       const result = await HEYS.YandexAPI.rpc('get_gamification_events_by_session', {
@@ -641,7 +664,46 @@
         p_limit: limit,
         p_offset: offset
       });
-      if (result?.error) return { items: [], error: result.error };
+      if (!result?.error) {
+        const payload = result?.data || {};
+        return { items: payload.items || [], total: payload.total || 0 };
+      }
+
+      if (curatorToken && clientId && (result.error?.code === 401 || result.error?.code === 403)) {
+        const curatorResult = await HEYS.YandexAPI.rpc('get_gamification_events_by_curator', {
+          p_client_id: clientId,
+          p_limit: limit,
+          p_offset: offset
+        });
+        if (curatorResult?.error) {
+          if (curatorResult.error?.code === 403) {
+            _auditRpcBlocked = true;
+          }
+          return { items: [], error: curatorResult.error };
+        }
+        const payload = curatorResult?.data || {};
+        return { items: payload.items || [], total: payload.total || 0 };
+      }
+
+      if (result.error?.code === 403) {
+        _auditRpcBlocked = true;
+      }
+
+      return { items: [], error: result.error };
+    }
+
+    if (curatorToken && clientId) {
+      const result = await HEYS.YandexAPI.rpc('get_gamification_events_by_curator', {
+        p_client_id: clientId,
+        p_limit: limit,
+        p_offset: offset
+      });
+      if (result?.error) {
+        if (result.error?.code === 403) {
+          _auditRpcBlocked = true;
+        }
+        return { items: [], error: result.error };
+      }
       const payload = result?.data || {};
       return { items: payload.items || [], total: payload.total || 0 };
     }

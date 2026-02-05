@@ -60,6 +60,20 @@
         const endDate = client.trial_ends_at ? new Date(client.trial_ends_at) : null;
         const now = new Date();
         const daysLeft = endDate ? Math.ceil((endDate - now) / (1000 * 60 * 60 * 24)) : null;
+        const debugSet = (HEYS._subBadgeDebug = HEYS._subBadgeDebug || new Set());
+        const clientId = client && client.id ? String(client.id) : '';
+        const clientShortId = clientId ? clientId.slice(0, 8) : 'unknown';
+        const debugKey = `${clientShortId}:${status}:${endDate ? endDate.toISOString().slice(0, 10) : 'no_end'}`;
+
+        if (!debugSet.has(debugKey)) {
+            debugSet.add(debugKey);
+            console.info('[HEYS.subs] ℹ️ Badge reason', {
+                clientId: clientShortId,
+                status,
+                hasEndDate: !!endDate,
+                daysLeft
+            });
+        }
 
         if (!endDate || status === 'none') {
             return { emoji: '⚪', color: '#6b7280', bg: '#f3f4f6', text: 'Нет подписки', urgent: false };

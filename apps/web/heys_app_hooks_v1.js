@@ -709,13 +709,55 @@
                 return { data: [], source: 'error' };
             }
 
+            const curatorShortId = String(curatorId).slice(0, 8);
+            const summarizeClients = (list) => {
+                const now = Date.now();
+                const statusCounts = {};
+                let missingStatus = 0;
+                let missingEndDate = 0;
+                let expired = 0;
+                const sample = [];
+
+                (list || []).forEach((c, idx) => {
+                    const status = c?.subscription_status || 'none';
+                    statusCounts[status] = (statusCounts[status] || 0) + 1;
+                    if (!c?.subscription_status) missingStatus += 1;
+                    if (!c?.trial_ends_at) missingEndDate += 1;
+
+                    if (c?.trial_ends_at) {
+                        const endTs = new Date(c.trial_ends_at).getTime();
+                        if (!Number.isNaN(endTs) && endTs < now) expired += 1;
+                    }
+
+                    if (idx < 5 && c?.id) {
+                        sample.push({
+                            clientId: String(c.id).slice(0, 8),
+                            status,
+                            hasEndDate: !!c?.trial_ends_at,
+                        });
+                    }
+                });
+
+                return {
+                    total: (list || []).length,
+                    statusCounts,
+                    missingStatus,
+                    missingEndDate,
+                    expired,
+                    sample,
+                };
+            };
+
             // 🔧 FIX: Пропускаем если уже загружаем
             if (fetchingClientsRef.current) {
+                console.info('[HEYS.clients] ⏭️ Skip fetch (already in progress)', { curatorId: curatorShortId });
                 return { data: [], source: 'skip' };
             }
             fetchingClientsRef.current = true;
 
             setClientsSource('loading');
+
+            console.info('[HEYS.clients] 🔄 Fetch clients start', { curatorId: curatorShortId });
 
             try {
                 // 🔄 Используем YandexAPI вместо Supabase
@@ -725,10 +767,19 @@
 
                 if (result.error) {
                     // 🏠 При ошибке — используем localStorage кэш
-                    console.warn('[HEYS] ⚠️ fetchClients error, using localStorage cache');
+                    console.warn('[HEYS.clients] ⚠️ fetchClients error, using localStorage cache', {
+                        curatorId: curatorShortId,
+                        message: result.error?.message || 'unknown_error'
+                    });
                     const cached = readGlobalValue('heys_clients', null);
                     if (cached) {
                         const data = Array.isArray(cached) ? cached : JSON.parse(cached);
+                        const summary = summarizeClients(data);
+                        console.info('[HEYS.clients] 📦 Loaded clients from cache', {
+                            curatorId: curatorShortId,
+                            source: 'local',
+                            ...summary
+                        });
                         setClientsSource('local');
                         return { data, source: 'local' };
                     }
@@ -739,16 +790,31 @@
                 const data = result.data;
                 // Сохраняем в localStorage для кэширования
                 if (data && data.length > 0) writeGlobalValue('heys_clients', data);
+                const summary = summarizeClients(data);
+                console.info('[HEYS.clients] ✅ Loaded clients from cloud', {
+                    curatorId: curatorShortId,
+                    source: 'cloud',
+                    ...summary
+                });
                 setClientsSource('cloud');
                 return { data: data || [], source: 'cloud' };
             } catch (e) {
                 fetchingClientsRef.current = false;
-                console.error('[HEYS] ❌ fetchClientsFromCloud failed:', e.message);
+                console.error('[HEYS.clients] ❌ fetchClientsFromCloud failed', {
+                    curatorId: curatorShortId,
+                    message: e.message || 'unknown_error'
+                });
                 // 🏠 При exception — тоже используем localStorage
                 const cached = readGlobalValue('heys_clients', null);
                 if (cached) {
                     try {
                         const data = Array.isArray(cached) ? cached : JSON.parse(cached);
+                        const summary = summarizeClients(data);
+                        console.info('[HEYS.clients] 📦 Loaded clients from cache after error', {
+                            curatorId: curatorShortId,
+                            source: 'local',
+                            ...summary
+                        });
                         setClientsSource('local');
                         return { data, source: 'local' };
                     } catch { }

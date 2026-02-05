@@ -235,7 +235,7 @@ const ALLOWED_FUNCTIONS = [
   'batch_upsert_client_kv_by_session',    // 🔐 P1: пакетная запись (session-safe)
   'delete_client_kv_by_session',          // 🔐 P1: удаление KV (session-safe)
 
-  // === GAMIFICATION AUDIT (client) ===
+  // === GAMIFICATION AUDIT (client, session-based) ===
   'log_gamification_event_by_session',
   'get_gamification_events_by_session',
 
@@ -707,7 +707,17 @@ module.exports.handler = async function (event, context) {
       values = [];
     }
 
+    if (fnName === 'get_curator_clients') {
+      const shortCuratorId = params?.p_curator_id ? String(params.p_curator_id).slice(0, 8) : 'unknown';
+      infoLog('[RPC] get_curator_clients start', { curatorId: shortCuratorId, hasCuratorId: !!params?.p_curator_id });
+      debugLog('[RPC] get_curator_clients SQL', query);
+    }
+
     const result = await client.query(query, values);
+
+    if (fnName === 'get_curator_clients') {
+      infoLog('[RPC] get_curator_clients success', { rows: result.rows?.length || 0 });
+    }
 
     // 🔐 P2 FIX: Освобождаем клиент в pool ДО return (serverless best practice)
     client.release();
@@ -719,7 +729,17 @@ module.exports.handler = async function (event, context) {
     };
 
   } catch (error) {
-    console.error('[RPC Error]', fnName, error.message);
+    if (fnName === 'get_curator_clients') {
+      console.error('[RPC Error]', fnName, {
+        message: error.message,
+        code: error.code,
+        detail: error.detail,
+        hint: error.hint,
+        where: error.where
+      });
+    } else {
+      console.error('[RPC Error]', fnName, error.message);
+    }
 
     // Освобождаем клиент в pool даже при ошибке
     try { client.release(); } catch (e) { /* ignore */ }

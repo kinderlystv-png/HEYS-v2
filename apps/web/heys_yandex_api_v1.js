@@ -217,7 +217,24 @@
       const data = await response.json();
 
       if (!response.ok) {
-        return { data: null, error: { message: data.error || 'RPC error', code: response.status } };
+        try {
+          console.error('[HEYS.api] ❌ RPC failed', {
+            fn: fnName,
+            code: response.status,
+            message: data?.error || 'RPC error',
+            details: data?.details,
+            rawKeys: data ? Object.keys(data) : []
+          });
+        } catch (_) { }
+        return {
+          data: null,
+          error: {
+            message: data.error || 'RPC error',
+            code: response.status,
+            details: data.details,
+            raw: data
+          }
+        };
       }
 
       return { data, error: null };
@@ -1113,14 +1130,27 @@
         return { data: null, error: { message: result.error || 'Failed to get clients', code: response.status } };
       }
 
-      let clients = (result.data || []);
-
-      // 🔧 Fallback: если /auth/clients вернул старый формат без подписки
-      const missingSubscriptionFields = clients.length > 0 && clients.every(c =>
-        typeof c.subscription_status === 'undefined' && typeof c.trial_ends_at === 'undefined'
+      const rawClients = result.data || [];
+      const hasSubscriptionFields = rawClients.some((client) =>
+        Object.prototype.hasOwnProperty.call(client, 'subscription_status') ||
+        Object.prototype.hasOwnProperty.call(client, 'trial_ends_at')
       );
 
-      if (missingSubscriptionFields) {
+      let clients = rawClients.map((client) => ({
+        ...client,
+        subscription_status: typeof client.subscription_status === 'undefined'
+          ? null
+          : client.subscription_status,
+        trial_ends_at: typeof client.trial_ends_at === 'undefined'
+          ? null
+          : client.trial_ends_at
+      }));
+
+      // 🔧 Fallback: если /auth/clients вернул старый формат без подписки
+      if (!hasSubscriptionFields && clients.length > 0) {
+        logInfo('⚠️ [HEYS.clients] /auth/clients missing subscription fields, fallback to RPC', {
+          total: clients.length
+        });
         // 🔐 get_curator_clients требует JWT — rpc() автоматически добавит токен из CURATOR_ONLY_FUNCTIONS
         const fallback = await rpc('get_curator_clients', {});
         if (!fallback.error && Array.isArray(fallback.data)) {
