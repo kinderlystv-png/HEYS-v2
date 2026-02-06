@@ -1169,7 +1169,9 @@
           React.createElement('span', null, '0'),
           React.createElement('span', null, '30'),
           React.createElement('span', null, '1ч'),
+          React.createElement('span', null, '1.5ч'),
           React.createElement('span', null, '2ч'),
+          React.createElement('span', null, '2.5ч'),
           React.createElement('span', null, '3ч')
         )
       ),

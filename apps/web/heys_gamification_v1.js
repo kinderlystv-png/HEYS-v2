@@ -584,6 +584,13 @@
   }
 
   async function logGamificationEvent(payload) {
+    const AUDIT_LOG_PREFIX = '[HEYS.game.audit]';
+    const logAuditInfo = (...args) => console.info(AUDIT_LOG_PREFIX, ...args);
+    const logAuditWarn = (...args) => console.warn(AUDIT_LOG_PREFIX, ...args);
+    const logAuditError = (...args) => console.error(AUDIT_LOG_PREFIX, ...args);
+    const startedAt = Date.now();
+    const isCuratorSession = HEYS.auth?.isCuratorSession?.() === true;
+
     if (!HEYS.YandexAPI?.rpc) return false;
     if (isAuditRpcBlocked()) return false;
 
@@ -601,98 +608,163 @@
       p_metadata: payload.metadata || {}
     };
 
-    if (sessionToken) {
-      const result = await HEYS.YandexAPI.rpc('log_gamification_event_by_session', {
-        p_session_token: sessionToken,
-        ...body
-      });
-      if (!result?.error) return result;
+    logAuditInfo('log:request', {
+      action: payload?.action,
+      reason: payload?.reason || null,
+      hasSession: Boolean(sessionToken),
+      hasCurator: Boolean(curatorToken),
+      hasClientId: Boolean(clientId)
+    });
 
-      if (curatorToken && clientId && (result.error?.code === 401 || result.error?.code === 403)) {
-        const curatorResult = await HEYS.YandexAPI.rpc('log_gamification_event_by_curator', {
-          p_client_id: clientId,
-          ...body
-        });
-        if (curatorResult?.error?.code === 403) {
-          _auditRpcBlocked = true;
-        }
-        return curatorResult;
-      }
-
-      if (result.error?.code === 403) {
-        _auditRpcBlocked = true;
-      }
-
-      return result;
-    }
-
-    if (curatorToken && clientId) {
+    const canUseCurator = isCuratorSession && curatorToken && clientId;
+    if (canUseCurator) {
+      logAuditInfo('log:mode', { mode: 'curator' });
       const result = await HEYS.YandexAPI.rpc('log_gamification_event_by_curator', {
         p_client_id: clientId,
         ...body
       });
       if (result?.error?.code === 403) {
         _auditRpcBlocked = true;
+        logAuditWarn('log:curator:blocked', { code: 403 });
+      }
+      if (result?.error) {
+        logAuditError('log:curator:error', {
+          code: result.error?.code,
+          message: result.error?.message || result.error,
+          tookMs: Date.now() - startedAt
+        });
+      } else {
+        logAuditInfo('log:curator:success', { tookMs: Date.now() - startedAt });
       }
       return result;
     }
 
+    if (sessionToken) {
+      logAuditInfo('log:mode', { mode: 'session' });
+      const result = await HEYS.YandexAPI.rpc('log_gamification_event_by_session', {
+        p_session_token: sessionToken,
+        ...body
+      });
+      if (!result?.error) {
+        logAuditInfo('log:session:success', { tookMs: Date.now() - startedAt });
+        return result;
+      }
+
+      if (curatorToken && clientId && (result.error?.code === 401 || result.error?.code === 403)) {
+        logAuditWarn('log:session:fallback', { code: result.error?.code, reason: 'session_denied' });
+        const curatorResult = await HEYS.YandexAPI.rpc('log_gamification_event_by_curator', {
+          p_client_id: clientId,
+          ...body
+        });
+        if (curatorResult?.error?.code === 403) {
+          _auditRpcBlocked = true;
+          logAuditWarn('log:curator:blocked', { code: 403 });
+        }
+        if (curatorResult?.error) {
+          logAuditError('log:curator:error', {
+            code: curatorResult.error?.code,
+            message: curatorResult.error?.message || curatorResult.error,
+            tookMs: Date.now() - startedAt
+          });
+        } else {
+          logAuditInfo('log:curator:success', { tookMs: Date.now() - startedAt });
+        }
+        return curatorResult;
+      }
+
+      if (result.error?.code === 403) {
+        _auditRpcBlocked = true;
+        logAuditWarn('log:session:blocked', { code: 403 });
+      }
+
+      logAuditError('log:session:error', {
+        code: result.error?.code,
+        message: result.error?.message || result.error,
+        tookMs: Date.now() - startedAt
+      });
+      return result;
+    }
+
+    if (curatorToken && clientId) {
+      logAuditInfo('log:mode', { mode: 'curator-fallback' });
+      const result = await HEYS.YandexAPI.rpc('log_gamification_event_by_curator', {
+        p_client_id: clientId,
+        ...body
+      });
+      if (result?.error?.code === 403) {
+        _auditRpcBlocked = true;
+        logAuditWarn('log:curator:blocked', { code: 403 });
+      }
+      if (result?.error) {
+        logAuditError('log:curator:error', {
+          code: result.error?.code,
+          message: result.error?.message || result.error,
+          tookMs: Date.now() - startedAt
+        });
+      } else {
+        logAuditInfo('log:curator:success', { tookMs: Date.now() - startedAt });
+      }
+      return result;
+    }
+
+    logAuditWarn('log:auth:missing', { hasSession: false, hasCurator: false });
     return false;
   }
 
   function queueGamificationEvent(payload) {
     setTimeout(() => {
+      try {
+        const AUDIT_LOG_PREFIX = '[HEYS.game.audit]';
+        console.info(AUDIT_LOG_PREFIX, 'log:queue', {
+          action: payload?.action,
+          reason: payload?.reason || null
+        });
+      } catch (e) { }
       logGamificationEvent(payload).catch(() => { });
     }, 0);
   }
 
   async function fetchGamificationHistory(options = {}) {
+    const AUDIT_LOG_PREFIX = '[HEYS.game.audit]';
+    const logAuditInfo = (...args) => console.info(AUDIT_LOG_PREFIX, ...args);
+    const logAuditWarn = (...args) => console.warn(AUDIT_LOG_PREFIX, ...args);
+    const logAuditError = (...args) => console.error(AUDIT_LOG_PREFIX, ...args);
+    const startedAt = Date.now();
+    const isCuratorSession = HEYS.auth?.isCuratorSession?.() === true;
+
+    const unwrapPayload = (data) => {
+      if (!data) return {};
+      if (data.items || data.total || data.success === false || data.success === true) return data;
+      const keys = Object.keys(data || {});
+      if (keys.length === 1 && data[keys[0]] && typeof data[keys[0]] === 'object') {
+        return data[keys[0]];
+      }
+      return data;
+    };
+
     if (!HEYS.YandexAPI?.rpc) {
+      logAuditError('rpc:unavailable', { reason: 'YandexAPI.rpc_missing' });
       return { items: [], error: { message: 'API недоступен' } };
     }
 
     if (isAuditRpcBlocked()) {
+      logAuditWarn('rpc:blocked', { reason: 'audit_rpc_blocked' });
       return { items: [], error: { message: 'История недоступна' } };
     }
 
     const { limit = 50, offset = 0 } = options;
     const { sessionToken, curatorToken, clientId } = getAuditContext();
+    logAuditInfo('rpc:request', {
+      limit,
+      offset,
+      hasSession: Boolean(sessionToken),
+      hasCurator: Boolean(curatorToken),
+      hasClientId: Boolean(clientId)
+    });
 
-    if (sessionToken) {
-      const result = await HEYS.YandexAPI.rpc('get_gamification_events_by_session', {
-        p_session_token: sessionToken,
-        p_limit: limit,
-        p_offset: offset
-      });
-      if (!result?.error) {
-        const payload = result?.data || {};
-        return { items: payload.items || [], total: payload.total || 0 };
-      }
-
-      if (curatorToken && clientId && (result.error?.code === 401 || result.error?.code === 403)) {
-        const curatorResult = await HEYS.YandexAPI.rpc('get_gamification_events_by_curator', {
-          p_client_id: clientId,
-          p_limit: limit,
-          p_offset: offset
-        });
-        if (curatorResult?.error) {
-          if (curatorResult.error?.code === 403) {
-            _auditRpcBlocked = true;
-          }
-          return { items: [], error: curatorResult.error };
-        }
-        const payload = curatorResult?.data || {};
-        return { items: payload.items || [], total: payload.total || 0 };
-      }
-
-      if (result.error?.code === 403) {
-        _auditRpcBlocked = true;
-      }
-
-      return { items: [], error: result.error };
-    }
-
-    if (curatorToken && clientId) {
+    const canUseCurator = isCuratorSession && curatorToken && clientId;
+    if (canUseCurator) {
+      logAuditInfo('rpc:mode', { mode: 'curator' });
       const result = await HEYS.YandexAPI.rpc('get_gamification_events_by_curator', {
         p_client_id: clientId,
         p_limit: limit,
@@ -701,13 +773,117 @@
       if (result?.error) {
         if (result.error?.code === 403) {
           _auditRpcBlocked = true;
+          logAuditWarn('rpc:curator:blocked', { code: 403 });
         }
+        logAuditError('rpc:curator:error', {
+          code: result.error?.code,
+          message: result.error?.message || result.error,
+          tookMs: Date.now() - startedAt
+        });
         return { items: [], error: result.error };
       }
-      const payload = result?.data || {};
+      const payload = unwrapPayload(result?.data || {});
+      logAuditInfo('rpc:curator:payload', { keys: Object.keys(result?.data || {}) });
+      logAuditInfo('rpc:curator:success', {
+        count: payload.items ? payload.items.length : 0,
+        total: typeof payload.total === 'number' ? payload.total : null,
+        tookMs: Date.now() - startedAt
+      });
       return { items: payload.items || [], total: payload.total || 0 };
     }
 
+    if (sessionToken) {
+      logAuditInfo('rpc:mode', { mode: 'session' });
+      logAuditInfo('rpc:session:start', { limit, offset });
+      const result = await HEYS.YandexAPI.rpc('get_gamification_events_by_session', {
+        p_session_token: sessionToken,
+        p_limit: limit,
+        p_offset: offset
+      });
+      if (!result?.error) {
+        const payload = unwrapPayload(result?.data || {});
+        logAuditInfo('rpc:session:payload', { keys: Object.keys(result?.data || {}) });
+        logAuditInfo('rpc:session:success', {
+          count: payload.items ? payload.items.length : 0,
+          total: typeof payload.total === 'number' ? payload.total : null,
+          tookMs: Date.now() - startedAt
+        });
+        return { items: payload.items || [], total: payload.total || 0 };
+      }
+
+      if (curatorToken && clientId && (result.error?.code === 401 || result.error?.code === 403)) {
+        logAuditWarn('rpc:session:fallback', { code: result.error?.code, reason: 'session_denied' });
+        const curatorResult = await HEYS.YandexAPI.rpc('get_gamification_events_by_curator', {
+          p_client_id: clientId,
+          p_limit: limit,
+          p_offset: offset
+        });
+        if (curatorResult?.error) {
+          if (curatorResult.error?.code === 403) {
+            _auditRpcBlocked = true;
+            logAuditWarn('rpc:curator:blocked', { code: 403 });
+          }
+          logAuditError('rpc:curator:error', {
+            code: curatorResult.error?.code,
+            message: curatorResult.error?.message || curatorResult.error,
+            tookMs: Date.now() - startedAt
+          });
+          return { items: [], error: curatorResult.error };
+        }
+        const payload = unwrapPayload(curatorResult?.data || {});
+        logAuditInfo('rpc:curator:payload', { keys: Object.keys(curatorResult?.data || {}) });
+        logAuditInfo('rpc:curator:success', {
+          count: payload.items ? payload.items.length : 0,
+          total: typeof payload.total === 'number' ? payload.total : null,
+          tookMs: Date.now() - startedAt
+        });
+        return { items: payload.items || [], total: payload.total || 0 };
+      }
+
+      if (result.error?.code === 403) {
+        _auditRpcBlocked = true;
+        logAuditWarn('rpc:session:blocked', { code: 403 });
+      }
+
+      logAuditError('rpc:session:error', {
+        code: result.error?.code,
+        message: result.error?.message || result.error,
+        tookMs: Date.now() - startedAt
+      });
+      return { items: [], error: result.error };
+    }
+
+    if (curatorToken && clientId) {
+      logAuditInfo('rpc:mode', { mode: 'curator-fallback' });
+      logAuditInfo('rpc:curator:start', { limit, offset });
+      const result = await HEYS.YandexAPI.rpc('get_gamification_events_by_curator', {
+        p_client_id: clientId,
+        p_limit: limit,
+        p_offset: offset
+      });
+      if (result?.error) {
+        if (result.error?.code === 403) {
+          _auditRpcBlocked = true;
+          logAuditWarn('rpc:curator:blocked', { code: 403 });
+        }
+        logAuditError('rpc:curator:error', {
+          code: result.error?.code,
+          message: result.error?.message || result.error,
+          tookMs: Date.now() - startedAt
+        });
+        return { items: [], error: result.error };
+      }
+      const payload = unwrapPayload(result?.data || {});
+      logAuditInfo('rpc:curator:payload', { keys: Object.keys(result?.data || {}) });
+      logAuditInfo('rpc:curator:success', {
+        count: payload.items ? payload.items.length : 0,
+        total: typeof payload.total === 'number' ? payload.total : null,
+        tookMs: Date.now() - startedAt
+      });
+      return { items: payload.items || [], total: payload.total || 0 };
+    }
+
+    logAuditWarn('rpc:auth:missing', { hasSession: false, hasCurator: false });
     return { items: [], error: { message: 'Нужна авторизация (PIN или куратор)' } };
   }
 

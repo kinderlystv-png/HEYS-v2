@@ -2538,6 +2538,18 @@
   position: relative;
 }
 
+.week-heatmap-deficit-badge {
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #f97316;
+  background: rgba(249, 115, 22, 0.12);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  padding: 1px 6px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
 .week-heatmap-deficit-excluded {
   position: absolute;
   top: -8px;
@@ -4880,13 +4892,13 @@
   fill: none;
   stroke: #f1f5f9;
   /* Slate-100 - очень светлый */
-  stroke-width: 4;
+  stroke-width: 5;
 }
 
 /* Само кольцо прогресса - с аккуратным скруглением */
 .macro-ring-fill {
   fill: none;
-  stroke-width: 4;
+  stroke-width: 5;
   stroke-linecap: round;
   transition: stroke-dasharray 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
   animation: ringFillIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
@@ -4903,7 +4915,7 @@
   fill: none;
   stroke: #ef4444;
   /* Ярко-красный для перебора */
-  stroke-width: 4;
+  stroke-width: 5;
   stroke-linecap: round;
 }
 
@@ -4911,8 +4923,9 @@
 .macro-ring-norm-marker {
   stroke: #1e293b;
   /* Slate-800 — тёмный, контрастный */
-  stroke-width: 2;
+  stroke-width: 1.5;
   stroke-linecap: round;
+  fill: none;
 }
 
 @keyframes ringFillIn {
@@ -7695,7 +7708,7 @@
   }
 
   75% {
-    transform: rotate(10deg);
+    transform: rotate(-70deg);
   }
 }
 

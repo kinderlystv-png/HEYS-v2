@@ -612,6 +612,9 @@
     const totalEaten = weekHeatmapData.totalEaten;
     const totalBurned = weekHeatmapData.totalBurned;
     const daysWithData = weekHeatmapData.withData || 7;
+    const hasRefeedInWeek = Array.isArray(weekHeatmapData.days)
+      ? weekHeatmapData.days.some((d) => d?.isRefeedDay)
+      : false;
     const diff = totalEaten - totalBurned;
     const diffPct = totalBurned > 0 ? Math.round((diff / totalBurned) * 100) : 0;
     const isDeficit = diff < 0;
@@ -712,6 +715,7 @@
       fatBurnedGrams,
       fatBurnedText,
       styles,
+      hasRefeedInWeek,
       popupData: {
         totalEaten,
         totalBurned,

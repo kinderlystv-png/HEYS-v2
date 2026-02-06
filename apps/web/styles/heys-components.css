@@ -879,6 +879,13 @@ body.tour-active .ios-pwa-banner {
   border: 1px solid #cbd5f5;
 }
 
+.weekly-wrap-step__badge--refeed {
+  background: #ffedd5;
+  color: #c2410c;
+  border: 1px solid #fdba74;
+  margin-left: 6px;
+}
+
 .weekly-wrap-step__hint {
   font-size: 11px;
   color: #94a3b8;
@@ -1225,6 +1232,26 @@ body.tour-active .ios-pwa-banner {
 .weekly-wrap-breakdown__goal-pct {
   font-size: 10px;
   margin-left: 4px;
+}
+
+.weekly-wrap-breakdown__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.weekly-wrap-breakdown__badge--refeed {
+  background: #ffedd5;
+  color: #c2410c;
+  border: 1px solid #fdba74;
 }
 
 .weekly-wrap-breakdown__value--good {

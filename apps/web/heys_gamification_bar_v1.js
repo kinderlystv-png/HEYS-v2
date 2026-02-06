@@ -22,6 +22,10 @@
     function GamificationBar() {
         const React = window.React;
         const { useState, useEffect, useRef, useCallback } = React;
+        const AUDIT_LOG_PREFIX = '[HEYS.game.audit]';
+        const logAuditInfo = (...args) => console.info(AUDIT_LOG_PREFIX, ...args);
+        const logAuditWarn = (...args) => console.warn(AUDIT_LOG_PREFIX, ...args);
+        const logAuditError = (...args) => console.error(AUDIT_LOG_PREFIX, ...args);
 
         const [stats, setStats] = useState(() => {
             return HEYS.game ? HEYS.game.getStats() : {
@@ -375,13 +379,23 @@
         }, [expanded]);
 
         const loadAuditHistory = useCallback(async () => {
-            if (!HEYS.game?.getAuditHistory) return;
+            if (!HEYS.game?.getAuditHistory) {
+                logAuditWarn('load:skip', { reason: 'getAuditHistory_missing' });
+                return;
+            }
+            const startedAt = Date.now();
+            logAuditInfo('load:start', { limit: 50, offset: 0, expanded, auditOpen });
             setAuditLoading(true);
             setAuditError(null);
 
             const result = await HEYS.game.getAuditHistory({ limit: 50, offset: 0 });
             if (result?.error) {
                 const message = result.error?.message || result.error || 'Не удалось загрузить историю';
+                logAuditError('load:error', {
+                    message,
+                    code: result.error?.code,
+                    tookMs: Date.now() - startedAt
+                });
                 setAuditError(message);
                 setAuditEvents([]);
                 setAuditLoading(false);
@@ -389,12 +403,18 @@
             }
 
             const items = Array.isArray(result?.items) ? result.items : [];
+            logAuditInfo('load:success', {
+                count: items.length,
+                total: typeof result?.total === 'number' ? result.total : null,
+                tookMs: Date.now() - startedAt
+            });
             setAuditEvents(items);
             setAuditLoading(false);
         }, []);
 
         useEffect(() => {
             if (expanded && auditOpen) {
+                logAuditInfo('auto-load', { expanded, auditOpen });
                 loadAuditHistory();
             }
         }, [expanded, auditOpen, loadAuditHistory]);
@@ -962,6 +982,7 @@
                             onClick: (e) => {
                                 e.stopPropagation();
                                 const nextState = !auditOpen;
+                                logAuditInfo('toggle:click', { nextState, expanded, auditOpen });
                                 setAuditOpen(nextState);
                                 if (nextState) {
                                     loadAuditHistory();

@@ -137,6 +137,7 @@
                 normAbs,
                 ratio,
                 isToday,
+                isRefeedDay: !!day?.isRefeedDay,
                 deficitPct: day.deficitPct,
                 steps: day.steps || 0,
                 sleepHours: day.sleepHours || 0,
@@ -420,6 +421,10 @@
             return report.days.filter((d) => d.hasMeals && (!d.isToday || d.ratio >= 0.5));
         }, [report]);
 
+        const hasRefeedInWeek = useMemo(() => {
+            return includedDays.some((d) => d.isRefeedDay);
+        }, [includedDays]);
+
         const breakdownTotals = useMemo(() => {
             const totals = includedDays.reduce((acc, d) => {
                 const eaten = d.totals?.kcal || 0;
@@ -577,28 +582,29 @@
                 h('div', { className: 'macro-ring ' + toneClass + (hasOver ? ' macro-ring--over' : '') },
                     h('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
                         // Фоновый трек
-                        h('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.9 }),
+                        h('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5 }),
                         // Основная дуга (до 100%)
                         h('circle', {
                             className: 'macro-ring-fill',
-                            cx: 18, cy: 18, r: 15.9,
+                            cx: 18, cy: 18, r: 15.5,
                             style: { strokeDasharray: basePct + ' 100' }
                         }),
                         // Красная дуга перебора (от 100% дальше)
                         hasOver && h('circle', {
                             className: 'macro-ring-fill--over',
-                            cx: 18, cy: 18, r: 15.9,
+                            cx: 18, cy: 18, r: 15.5,
                             style: {
                                 strokeDasharray: overPct + ' ' + (100 - overPct),
-                                strokeDashoffset: -(100 - overPct),  // стартуем после 100%
+                                strokeDashoffset: -(100 - overPct),  // дуга заканчивается на 360°
                                 stroke: '#ef4444'
                             }
                         }),
-                        // Чёрная линия-маркер на позиции 100% (норма)
+                        // Чёрная линия-маркер в начале красной дуги
                         hasOver && h('line', {
                             className: 'macro-ring-norm-marker',
-                            x1: 18, y1: 2,   // верх круга (после rotate -90deg = позиция 100%)
-                            x2: 18, y2: 6
+                            x1: 26, y1: 18,
+                            x2: 36, y2: 18,
+                            transform: 'rotate(' + (360 - (overPct * 3.6)) + ' 18 18)'
                         })
                     ),
                     h('span', { className: 'macro-ring-value' }, Math.round(value || 0))
@@ -692,6 +698,9 @@
                                     h('span', { className: 'weekly-wrap-step__delta-target-value ' + targetToneClass },
                                         (targetPct > 0 ? '+' : '') + targetPct + '%'
                                     ),
+                                    hasRefeedInWeek
+                                        ? h('span', { className: 'weekly-wrap-step__badge weekly-wrap-step__badge--refeed' }, 'Был рефид')
+                                        : null,
                                     ')'
                                 )
                             )
@@ -779,7 +788,10 @@
                                     ' ',
                                     h('span', { className: 'weekly-wrap-breakdown__goal-pct ' + goalPctClass },
                                         '(' + (goalPct > 0 ? '+' : '') + Math.round(goalPct) + '%)'
-                                    )
+                                    ),
+                                    d.isRefeedDay
+                                        ? h('span', { className: 'weekly-wrap-breakdown__badge weekly-wrap-breakdown__badge--refeed' }, 'Был рефид')
+                                        : null
                                 ),
                                 h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--delta ' + toneClass }, formatDeficitWithPct(deficit, burned))
                             );
