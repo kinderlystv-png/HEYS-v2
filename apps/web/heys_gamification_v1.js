@@ -188,6 +188,13 @@
   let _isShowingNotification = false;
   let _cloudLoaded = false; // 🛡️ Флаг что облако проверено
   let _pendingCloudSync = false; // 🔄 Отложенный sync до загрузки облака
+  let _auditRebuildDone = false; // 🧾 Одноразовый пересчёт из аудит-лога за сессию
+  let _syncInProgress = false; // 🔒 Mutex для syncToCloud — предотвращает параллельные записи
+  let _isRebuilding = false; // 🔒 Блокировка ачивок во време rebuild (предотвращает дубли стриков)
+  let _unlockingAchievements = new Set(); // 🔒 Mutex для unlockAchievement — Set ID достижений в процессе разблокировки
+  let _lastAddXPKey = ''; // 🛡️ Dedup guard для _addXPInternal
+  let _lastAddXPTime = 0; // 🛡️ Timestamp последнего addXP
+  const DEDUP_WINDOW_MS = 200; // 🛡️ Окно дедупликации (мс)
   const DEBOUNCE_MS = 100;
   const STORAGE_KEY = 'heys_game';
   const DATA_VERSION = 2; // Версия структуры данных для миграций
@@ -204,6 +211,91 @@
       return typeof HEYS.Day?.getStreak === 'function' ? HEYS.Day.getStreak() : 0;
     } catch {
       return 0;
+    }
+  }
+
+  // 🛡️ Safe wrapper for HEYS.Day metric getters
+  function safeGetDayMetric(getter, fallback = 0) {
+    try {
+      return getter?.() ?? fallback;
+    } catch (e) {
+      console.warn('[HEYS.missions] Metric getter failed:', e);
+      return fallback;
+    }
+  }
+
+  // 📊 Calculate behavior metrics from last 14 days (for adaptive missions)
+  let _behaviorMetricsCache = null;
+  let _behaviorMetricsCacheTime = 0;
+  function calculateBehaviorMetrics() {
+    const now = Date.now();
+    // Cache for 1 hour
+    if (_behaviorMetricsCache && (now - _behaviorMetricsCacheTime) < 3600000) {
+      return _behaviorMetricsCache;
+    }
+
+    const metrics = {
+      avgMealsPerDay: 0,
+      avgWaterPercent: 0,
+      avgUniqueProducts: 0,
+      avgFiberPercent: 0,
+      sampleDays: 0
+    };
+
+    try {
+      const fmtDate = U.fmtDate || ((d) => d.toISOString().split('T')[0]);
+      const lsGet = U.lsGet || ((k) => {
+        try {
+          return JSON.parse(localStorage.getItem(k));
+        } catch { return null; }
+      });
+
+      const today = new Date();
+      let totalMeals = 0, totalWater = 0, totalProducts = 0, totalFiber = 0, validDays = 0;
+
+      for (let i = 1; i <= 14; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dateStr = fmtDate(d);
+        const dayData = lsGet(`heys_dayv2_${dateStr}`);
+
+        if (dayData?.meals?.length > 0) {
+          validDays++;
+          totalMeals += dayData.meals.length;
+
+          // Water percentage
+          if (dayData.water?.current && dayData.water?.target) {
+            totalWater += Math.min(100, (dayData.water.current / dayData.water.target) * 100);
+          }
+
+          // Unique products
+          const uniqueProductIds = new Set();
+          dayData.meals.forEach(m => {
+            (m.items || []).forEach(it => uniqueProductIds.add(it.productId));
+          });
+          totalProducts += uniqueProductIds.size;
+
+          // Fiber percentage (if dayTot exists)
+          if (dayData.dayTot?.fiber && dayData.normAbs?.fiber) {
+            totalFiber += Math.min(100, (dayData.dayTot.fiber / dayData.normAbs.fiber) * 100);
+          }
+        }
+      }
+
+      if (validDays > 0) {
+        metrics.avgMealsPerDay = Math.round(totalMeals / validDays);
+        metrics.avgWaterPercent = Math.round(totalWater / validDays);
+        metrics.avgUniqueProducts = Math.round(totalProducts / validDays);
+        metrics.avgFiberPercent = Math.round(totalFiber / validDays);
+        metrics.sampleDays = validDays;
+      }
+
+      _behaviorMetricsCache = metrics;
+      _behaviorMetricsCacheTime = now;
+      return metrics;
+    } catch (e) {
+      console.warn('[HEYS.missions] calculateBehaviorMetrics failed:', e);
+      return metrics;
     }
   }
 
@@ -577,11 +669,27 @@
     };
   }
 
-  // 🔐 Audit RPC feature-flag (auto-disabled on 403)
+  // 🔐 Audit RPC feature-flag (auto-disabled on 403, auto-reset after 30s)
   let _auditRpcBlocked = false;
+  let _auditRpcBlockedAt = 0;
+  const AUDIT_RPC_BLOCK_RESET_MS = 30000; // 30 секунд — auto-reset blocked flag
 
   function isAuditRpcBlocked() {
+    if (_auditRpcBlocked && _auditRpcBlockedAt > 0) {
+      // 🔄 Auto-reset after 30 seconds
+      if (Date.now() - _auditRpcBlockedAt >= AUDIT_RPC_BLOCK_RESET_MS) {
+        _auditRpcBlocked = false;
+        _auditRpcBlockedAt = 0;
+        console.info('[HEYS.game.audit] 🔓 Audit RPC block auto-reset after 30s');
+        return false;
+      }
+    }
     return _auditRpcBlocked === true;
+  }
+
+  function setAuditRpcBlocked() {
+    _auditRpcBlocked = true;
+    _auditRpcBlockedAt = Date.now();
   }
 
   async function logGamificationEvent(payload) {
@@ -625,7 +733,7 @@
         ...body
       });
       if (result?.error?.code === 403) {
-        _auditRpcBlocked = true;
+        setAuditRpcBlocked();
         logAuditWarn('log:curator:blocked', { code: 403 });
       }
       if (result?.error) {
@@ -658,7 +766,7 @@
           ...body
         });
         if (curatorResult?.error?.code === 403) {
-          _auditRpcBlocked = true;
+          setAuditRpcBlocked();
           logAuditWarn('log:curator:blocked', { code: 403 });
         }
         if (curatorResult?.error) {
@@ -674,7 +782,7 @@
       }
 
       if (result.error?.code === 403) {
-        _auditRpcBlocked = true;
+        setAuditRpcBlocked();
         logAuditWarn('log:session:blocked', { code: 403 });
       }
 
@@ -693,7 +801,7 @@
         ...body
       });
       if (result?.error?.code === 403) {
-        _auditRpcBlocked = true;
+        setAuditRpcBlocked();
         logAuditWarn('log:curator:blocked', { code: 403 });
       }
       if (result?.error) {
@@ -712,17 +820,74 @@
     return false;
   }
 
+  // 🔄 Batch audit queue — накапливает события и отправляет пачкой
+  const _auditQueue = [];
+  let _auditFlushTimer = null;
+  let _auditFlushInProgress = false;
+  const AUDIT_FLUSH_DEBOUNCE_MS = 500;
+  const AUDIT_MAX_RETRIES = 3;
+
   function queueGamificationEvent(payload) {
-    setTimeout(() => {
-      try {
-        const AUDIT_LOG_PREFIX = '[HEYS.game.audit]';
-        console.info(AUDIT_LOG_PREFIX, 'log:queue', {
-          action: payload?.action,
-          reason: payload?.reason || null
-        });
-      } catch (e) { }
-      logGamificationEvent(payload).catch(() => { });
-    }, 0);
+    try {
+      console.info('[HEYS.game.audit]', 'log:queue', {
+        action: payload?.action,
+        reason: payload?.reason || null,
+        queueSize: _auditQueue.length + 1
+      });
+    } catch (e) { }
+
+    _auditQueue.push({ payload, retries: 0 });
+    _scheduleAuditFlush();
+  }
+
+  function _scheduleAuditFlush() {
+    if (_auditFlushTimer) clearTimeout(_auditFlushTimer);
+    _auditFlushTimer = setTimeout(() => _flushAuditQueue(), AUDIT_FLUSH_DEBOUNCE_MS);
+  }
+
+  async function _flushAuditQueue() {
+    if (_auditFlushInProgress || _auditQueue.length === 0) return;
+    _auditFlushInProgress = true;
+
+    try {
+      // Забираем все из очереди
+      const batch = _auditQueue.splice(0, _auditQueue.length);
+
+      for (const item of batch) {
+        try {
+          await logGamificationEvent(item.payload);
+        } catch (err) {
+          item.retries++;
+          if (item.retries < AUDIT_MAX_RETRIES) {
+            // Retry with exponential backoff — возвращаем в очередь
+            _auditQueue.push(item);
+            console.warn('[HEYS.game.audit] Retry', item.retries, '/', AUDIT_MAX_RETRIES, 'for', item.payload?.action);
+          } else {
+            console.error('[HEYS.game.audit] ❌ Dropped after', AUDIT_MAX_RETRIES, 'retries:', item.payload?.action);
+          }
+        }
+      }
+
+      // Если остались retry-элементы — перепланировать с backoff
+      if (_auditQueue.length > 0) {
+        const maxRetries = Math.max(..._auditQueue.map(i => i.retries));
+        const backoffMs = Math.min(1000 * Math.pow(2, maxRetries - 1), 8000);
+        setTimeout(() => _flushAuditQueue(), backoffMs);
+      }
+    } finally {
+      _auditFlushInProgress = false;
+    }
+  }
+
+  /** Дождаться отправки всех pending audit events (для rebuild) */
+  async function flushAuditQueue() {
+    if (_auditFlushTimer) {
+      clearTimeout(_auditFlushTimer);
+      _auditFlushTimer = null;
+    }
+    if (_auditQueue.length > 0 || _auditFlushInProgress) {
+      await _flushAuditQueue();
+    }
   }
 
   async function fetchGamificationHistory(options = {}) {
@@ -773,7 +938,7 @@
       });
       if (result?.error) {
         if (result.error?.code === 403) {
-          _auditRpcBlocked = true;
+          setAuditRpcBlocked();
           logAuditWarn('rpc:curator:blocked', { code: 403 });
         }
         logAuditError('rpc:curator:error', {
@@ -821,7 +986,7 @@
         });
         if (curatorResult?.error) {
           if (curatorResult.error?.code === 403) {
-            _auditRpcBlocked = true;
+            setAuditRpcBlocked();
             logAuditWarn('rpc:curator:blocked', { code: 403 });
           }
           logAuditError('rpc:curator:error', {
@@ -842,7 +1007,7 @@
       }
 
       if (result.error?.code === 403) {
-        _auditRpcBlocked = true;
+        setAuditRpcBlocked();
         logAuditWarn('rpc:session:blocked', { code: 403 });
       }
 
@@ -864,7 +1029,7 @@
       });
       if (result?.error) {
         if (result.error?.code === 403) {
-          _auditRpcBlocked = true;
+          setAuditRpcBlocked();
           logAuditWarn('rpc:curator:blocked', { code: 403 });
         }
         logAuditError('rpc:curator:error', {
@@ -904,10 +1069,15 @@
    * @returns {Object} { rebuilt: boolean, auditXP, cachedXP, delta, events }
    */
   async function rebuildXPFromAudit(options = {}) {
-    const { force = false, dryRun = false } = options;
+    const { force = false, dryRun = false, trustAudit = false } = options;
     const LOG = '[🎮 GAME REBUILD]';
 
+    // 🔒 Блокируем выдачу ачивок пока идёт rebuild
+    _isRebuilding = true;
     try {
+      // 0. Дождёмся отправки pending audit events
+      await flushAuditQueue();
+
       // 1. Получаем ВСЕ записи из аудит-лога (пагинация по 100)
       const allEvents = [];
       let offset = 0;
@@ -945,14 +1115,16 @@
       };
       // 2d. Собираем first_* actions для восстановления onboarding ачивок
       const seenReasons = new Set();
+      // 2e. Восстанавливаем dailyXP из аудит-событий для графика "XP за неделю"
+      const auditDailyXP = {};
 
       for (const event of allEvents) {
         const eventDelta = event.xp_delta || event.xpDelta || 0;
         const action = event.action || event.p_action || '';
         const reason = event.reason || event.p_reason || '';
 
-        // XP суммирование (только xp_gain, не level_up — это дубль)
-        if (action === 'xp_gain' && typeof eventDelta === 'number' && eventDelta > 0) {
+        // XP суммирование (xp_gain + daily_bonus, не level_up — это дубль)
+        if ((action === 'xp_gain' || action === 'daily_bonus') && typeof eventDelta === 'number' && eventDelta > 0) {
           auditXP += eventDelta;
           xpGainCount++;
           seenReasons.add(reason);
@@ -963,14 +1135,24 @@
           if (reason === 'training_added') auditStats.totalTrainings++;
           if (reason === 'advice_read') auditStats.totalAdvicesRead++;
           if (reason === 'perfect_day') auditStats.perfectDays++;
+
+          // 2e. dailyXP: восстанавливаем счётчики по дате+reason
+          const eventDate = event.created_at || event.createdAt;
+          if (eventDate && reason) {
+            const dateStr = new Date(eventDate).toISOString().slice(0, 10);
+            if (!auditDailyXP[dateStr]) auditDailyXP[dateStr] = {};
+            auditDailyXP[dateStr][reason] = (auditDailyXP[dateStr][reason] || 0) + 1;
+          }
         }
 
         // Достижения — восстанавливаем из audit
+        // Защита от дублей: считаем XP только за первое появление каждого achievement
         if (action === 'achievement_unlocked' && reason) {
-          auditAchievements.add(reason);
-          // XP за ачивку уже включён в xp_gain? Нет — achievement_unlocked тоже имеет xp_delta
-          if (typeof eventDelta === 'number' && eventDelta > 0) {
-            auditXP += eventDelta;
+          if (!auditAchievements.has(reason)) {
+            auditAchievements.add(reason);
+            if (typeof eventDelta === 'number' && eventDelta > 0) {
+              auditXP += eventDelta;
+            }
           }
         }
       }
@@ -1046,7 +1228,8 @@
 
       // 5. Применяем rebuild
       const oldLevel = currentData.level;
-      let rebuiltXP = Math.max(auditXP, cachedXP); // Берём максимум — не теряем XP
+      // 🔒 trustAudit=true: cleanup mode — используем audit как source of truth (игнорируем cached XP)
+      let rebuiltXP = trustAudit ? auditXP : Math.max(auditXP, cachedXP);
 
       // 5a. Восстанавливаем stats (берём max из audit и текущих)
       if (!currentData.stats) currentData.stats = {};
@@ -1055,6 +1238,16 @@
       currentData.stats.totalTrainings = Math.max(currentData.stats.totalTrainings || 0, auditStats.totalTrainings);
       currentData.stats.totalAdvicesRead = Math.max(currentData.stats.totalAdvicesRead || 0, auditStats.totalAdvicesRead);
       currentData.stats.perfectDays = Math.max(currentData.stats.perfectDays || 0, auditStats.perfectDays);
+
+      // 5a-1. Восстанавливаем dailyXP из аудит-событий (для графика "XP за неделю")
+      if (!currentData.dailyXP) currentData.dailyXP = {};
+      for (const [dateStr, reasons] of Object.entries(auditDailyXP)) {
+        if (!currentData.dailyXP[dateStr]) currentData.dailyXP[dateStr] = {};
+        for (const [reason, count] of Object.entries(reasons)) {
+          // Берём max — не теряем локальные данные
+          currentData.dailyXP[dateStr][reason] = Math.max(currentData.dailyXP[dateStr][reason] || 0, count);
+        }
+      }
 
       // 5a-2. FIX v2.6: Восстанавливаем bestStreak из streak-ачивок
       // streak_7 → min 7, streak_5 → min 5, streak_3 → min 3, streak_2 → min 2, streak_1 → min 1
@@ -1100,23 +1293,32 @@
       _data = currentData;
       setStoredValue(STORAGE_KEY, _data);
 
-      // 6. Логируем rebuild в аудит
-      queueGamificationEvent({
-        action: 'xp_rebuild',
-        reason: 'audit_reconciliation',
-        xpBefore: cachedXP,
-        xpAfter: rebuiltXP,
-        xpDelta: rebuiltXP - cachedXP,
-        levelBefore: oldLevel,
-        levelAfter: currentData.level,
-        metadata: {
-          auditEvents: xpGainCount,
-          totalAuditRecords: allEvents.length,
-          restoredAchievements: restoredAchievements.map(a => a.id),
-          statsUpdated: statsNeedRebuild,
-          trigger: force ? 'manual' : 'auto'
-        }
-      });
+      // 6. Логируем rebuild в аудит ТОЛЬКО если XP или ачивки реально изменились
+      // (stats-only обновления не генерируют audit event — это локальная операция)
+      const actualDelta = rebuiltXP - cachedXP;
+      const hasXPOrAchievementChanges = actualDelta !== 0 || restoredAchievements.length > 0;
+
+      if (hasXPOrAchievementChanges) {
+        queueGamificationEvent({
+          action: 'xp_rebuild',
+          reason: 'audit_reconciliation',
+          xpBefore: cachedXP,
+          xpAfter: rebuiltXP,
+          xpDelta: actualDelta,
+          levelBefore: oldLevel,
+          levelAfter: currentData.level,
+          metadata: {
+            auditEvents: xpGainCount,
+            totalAuditRecords: allEvents.length,
+            restoredAchievements: restoredAchievements.map(a => a.id),
+            statsUpdated: statsNeedRebuild,
+            trigger: force ? 'manual' : 'auto'
+          }
+        });
+      } else {
+        console.info(LOG, 'Rebuild verified consistency — no audit event needed (delta=0, no new achievements)' +
+          (statsNeedRebuild ? ', stats updated locally' : ''));
+      }
 
       // 7. Синхронизируем в облако
       triggerImmediateSync('xp_rebuild');
@@ -1149,13 +1351,103 @@
       }
 
       return {
-        rebuilt: true, auditXP, cachedXP, delta: rebuiltXP - cachedXP,
-        events: xpGainCount, restoredAchievements, reason: 'rebuilt'
+        rebuilt: hasXPOrAchievementChanges, auditXP, cachedXP, delta: rebuiltXP - cachedXP,
+        events: xpGainCount, restoredAchievements,
+        reason: hasXPOrAchievementChanges ? 'rebuilt' : (statsNeedRebuild ? 'stats_only' : 'verified_consistent')
       };
 
     } catch (err) {
       console.error(LOG, '❌ Rebuild failed:', err.message);
       return { rebuilt: false, auditXP: 0, cachedXP: 0, delta: 0, events: 0, reason: 'error', error: err.message };
+    } finally {
+      _isRebuilding = false; // 🔓 Разблокируем выдачу ачивок
+    }
+  }
+
+  /**
+   * 🔄 Lightweight consistency check — 1 RPC вместо full rebuild.
+   * Загружает ОДНО последнее событие из аудита, сравнивает xp_after + total event count
+   * с кэшированными данными. Full rebuild только при реальном расхождении.
+   */
+  async function ensureAuditConsistency(trigger = 'auto') {
+    if (_auditRebuildDone) return;
+    _auditRebuildDone = true;
+
+    try {
+      // Дождёмся отправки pending events
+      await flushAuditQueue();
+
+      const data = loadData();
+      const result = await fetchGamificationHistory({ limit: 1, offset: 0 });
+
+      if (!result || !result.items || result.items.length === 0) {
+        console.info('[🎮 GAME SYNC]', trigger, '— no audit events, skip');
+        return;
+      }
+
+      const lastEvent = result.items[0];
+      const auditTotal = result.total || 0;
+      const lastXPAfter = lastEvent?.xp_after ?? null;
+      const cachedXP = data.totalXP || 0;
+      const cachedEventCount = data._lastKnownEventCount || 0;
+
+      // Проверяем консистентность:
+      // 1. XP в последнем событии совпадает с кэшем?
+      // 2. Количество событий не изменилось?
+      const xpConsistent = lastXPAfter === null || lastXPAfter === cachedXP;
+      const countConsistent = cachedEventCount > 0 && cachedEventCount === auditTotal;
+
+      if (xpConsistent && countConsistent) {
+        // Одноразовая миграция: восстановить историческую dailyXP из аудит-событий.
+        // dailyXP может содержать только сегодня (из реал-тайм _addXPInternal),
+        // но не иметь предыдущих дней. Rebuild восстановит ВСЁ из аудита.
+        // XP совпадает → rebuild НЕ создаст audit event (hasXPOrAchievementChanges=false).
+        if (!data._dailyXPRebuiltV1 && cachedXP > 0) {
+          console.info('[🎮 GAME SYNC]', trigger, '— XP consistent ✅ but dailyXP not yet rebuilt, restoring from audit...');
+          await rebuildXPFromAudit({ force: true });
+          const d2 = loadData();
+          d2._dailyXPRebuiltV1 = true;
+          setStoredValue(STORAGE_KEY, d2);
+          return;
+        }
+        console.info('[🎮 GAME SYNC]', trigger, '— consistent ✅ (XP=' + cachedXP + ', events=' + auditTotal + ')');
+        return;
+      }
+
+      // Если XP совпадает но count отличается — это нормально (xp_rebuild события увеличивают count).
+      // Просто обновляем cached count, rebuild не нужен.
+      if (xpConsistent && !countConsistent) {
+        console.info('[🎮 GAME SYNC]', trigger, '— XP consistent ✅ (XP=' + cachedXP +
+          '), updating event count: ' + cachedEventCount + ' → ' + auditTotal);
+        const d = loadData();
+        d._lastKnownEventCount = auditTotal;
+        setStoredValue(STORAGE_KEY, d);
+        // Аналогично: одноразовая миграция dailyXP
+        if (!d._dailyXPRebuiltV1 && cachedXP > 0) {
+          console.info('[🎮 GAME SYNC]', trigger, '— dailyXP not yet rebuilt, restoring from audit...');
+          await rebuildXPFromAudit({ force: true });
+          const d3 = loadData();
+          d3._dailyXPRebuiltV1 = true;
+          setStoredValue(STORAGE_KEY, d3);
+        }
+        return;
+      }
+
+      // XP расхождение обнаружено — нужен полный rebuild
+      console.warn('[🎮 GAME SYNC]', trigger, '— XP DRIFT detected! Cached XP=' + cachedXP +
+        ', audit xp_after=' + lastXPAfter + ', events: cached=' + cachedEventCount + ', actual=' + auditTotal);
+
+      const rebuildResult = await rebuildXPFromAudit({ force: true });
+
+      // Сохраняем event count после rebuild
+      // +1 только если rebuild реально записал audit event (XP или ачивки изменились)
+      const updatedData = loadData();
+      updatedData._lastKnownEventCount = rebuildResult?.rebuilt ? auditTotal + 1 : auditTotal;
+      setStoredValue(STORAGE_KEY, updatedData);
+      console.info('[🎮 GAME SYNC]', trigger, '— rebuild done, eventCount saved:', updatedData._lastKnownEventCount,
+        '(rebuilt:', rebuildResult?.rebuilt, ', reason:', rebuildResult?.reason, ')');
+    } catch (err) {
+      console.warn('[🎮 GAME SYNC] Consistency check failed:', err.message, { trigger });
     }
   }
 
@@ -1282,6 +1574,17 @@
         earned: 0,            // набрано XP
         type: 'xp'            // тип челленджа
       },
+      // Mission history (anti-repeat) — store last 7 days
+      missionHistory: [],     // [{ date: '2025-12-01', ids: ['meals_3', 'water_100', ...] }]
+      // Mission statistics (completion rates, favorites)
+      missionStats: {
+        totalAttempts: 0,     // Всего выдано миссий
+        totalCompleted: 0,    // Всего выполнено
+        byType: {},           // { meals: { attempts: 0, completed: 0 }, ... }
+        completionRate: 0,    // % выполнения
+        favoriteCategories: [], // Топ-3 категории
+        lastUpdated: null     // Дата пересчёта
+      },
       // Прогресс к достижениям (для UI)
       achievementProgress: {
         // perfect_week: { current: 3, target: 7 }
@@ -1295,6 +1598,7 @@
         perfectDays: 0,
         bestStreak: 0
       },
+      _lastKnownEventCount: 0, // 🔄 Для lightweight consistency check
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
@@ -1564,64 +1868,7 @@
   }
 
   // ========== DAILY MISSIONS ==========
-
-  const DAILY_MISSION_POOL = [
-    // Питание
-    { id: 'log_3_meals', name: 'Три приёма пищи', icon: '🍽️', desc: 'Запиши 3 приёма пищи', xp: 25, type: 'meals', target: 3 },
-    { id: 'log_breakfast', name: 'Завтрак чемпиона', icon: '🌅', desc: 'Запиши завтрак до 10:00', xp: 20, type: 'early_meal', target: 10 },
-    { id: 'add_5_products', name: 'Разнообразие', icon: '🥗', desc: 'Добавь 5 разных продуктов', xp: 20, type: 'products', target: 5 },
-    { id: 'fiber_50', name: 'Больше клетчатки', icon: '🥦', desc: 'Набери 50% нормы клетчатки', xp: 25, type: 'fiber', target: 50 },
-    { id: 'protein_80', name: 'Белковый день', icon: '🥩', desc: 'Набери 80% нормы белка', xp: 30, type: 'protein', target: 80 },
-
-    // Вода
-    { id: 'water_50', name: 'Полпути', icon: '💧', desc: 'Выпей 50% нормы воды', xp: 15, type: 'water', target: 50 },
-    { id: 'water_100', name: 'Норма воды', icon: '🌊', desc: 'Выполни норму воды на 100%', xp: 30, type: 'water', target: 100 },
-    { id: 'water_3_times', name: 'Регулярность', icon: '⏱️', desc: 'Запиши воду 3 раза', xp: 20, type: 'water_entries', target: 3 },
-
-    // Активность
-    { id: 'log_training', name: 'Тренировка дня', icon: '💪', desc: 'Запиши тренировку', xp: 30, type: 'training', target: 1 },
-    { id: 'steps_5k', name: '5000 шагов', icon: '👟', desc: 'Пройди 5000 шагов', xp: 25, type: 'steps', target: 5000 },
-    { id: 'steps_8k', name: '8000 шагов', icon: '🚶', desc: 'Пройди 8000 шагов', xp: 35, type: 'steps', target: 8000 },
-
-    // Здоровье
-    { id: 'log_weight', name: 'Взвешивание', icon: '⚖️', desc: 'Запиши утренний вес', xp: 15, type: 'weight', target: 1 },
-    { id: 'log_sleep', name: 'Режим сна', icon: '😴', desc: 'Запиши время сна', xp: 15, type: 'sleep', target: 1 },
-
-    // Качество
-    { id: 'balance_day', name: 'Баланс БЖУ', icon: '⚖️', desc: 'Все макросы в диапазоне 80-120%', xp: 40, type: 'balance', target: 1 },
-    { id: 'low_gi_meal', name: 'Низкий ГИ', icon: '🎯', desc: 'Приём пищи с ГИ < 50', xp: 25, type: 'low_gi', target: 1 }
-  ];
-
-  function selectDailyMissions(level) {
-    // Выбираем 3 случайные миссии из пула
-    const shuffled = [...DAILY_MISSION_POOL].sort(() => Math.random() - 0.5);
-
-    // Для разнообразия берём миссии разных типов
-    const selectedTypes = new Set();
-    const missions = [];
-
-    for (const mission of shuffled) {
-      const baseType = mission.type.split('_')[0]; // water_entries -> water
-      if (!selectedTypes.has(baseType) && missions.length < 3) {
-        missions.push({
-          ...mission,
-          completed: false,
-          progress: 0
-        });
-        selectedTypes.add(baseType);
-      }
-    }
-
-    // Если не набрали 3 разных типа, добавляем оставшиеся
-    while (missions.length < 3 && shuffled.length > missions.length) {
-      const remaining = shuffled.filter(m => !missions.find(selected => selected.id === m.id));
-      if (remaining.length > 0) {
-        missions.push({ ...remaining[0], completed: false, progress: 0 });
-      } else break;
-    }
-
-    return missions;
-  }
+  // Pool & selection engine → heys_daily_missions_v1.js (HEYS.missions)
 
   function getDailyMissions() {
     const data = loadData();
@@ -1629,11 +1876,50 @@
 
     // Инициализация или новый день
     if (!data.dailyMissions || data.dailyMissions.date !== today) {
+      const selectFn = HEYS.missions?.selectDailyMissions;
+
+      // Build excludeIds from last 7 days history
+      const excludeIds = [];
+      if (data.missionHistory) {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - 7);
+        data.missionHistory
+          .filter(h => new Date(h.date) >= cutoff)
+          .forEach(h => excludeIds.push(...(h.ids || [])));
+      }
+
       data.dailyMissions = {
         date: today,
-        missions: selectDailyMissions(data.level),
+        missions: selectFn ? selectFn(data.level, excludeIds) : [],
         completedCount: 0
       };
+
+      // 📊 Update mission stats (attempts)
+      data.missionStats = data.missionStats || {
+        totalAttempts: 0,
+        totalCompleted: 0,
+        byType: {},
+        completionRate: 0,
+        favoriteCategories: [],
+        lastUpdated: null
+      };
+      data.missionStats.totalAttempts += data.dailyMissions.missions.length;
+      data.dailyMissions.missions.forEach(m => {
+        if (!data.missionStats.byType[m.type]) {
+          data.missionStats.byType[m.type] = { attempts: 0, completed: 0 };
+        }
+        data.missionStats.byType[m.type].attempts++;
+      });
+
+      // Store today's mission IDs in history
+      data.missionHistory = data.missionHistory || [];
+      data.missionHistory.push({
+        date: today,
+        ids: data.dailyMissions.missions.map(m => m.id)
+      });
+      // Keep only last 7 days
+      data.missionHistory = data.missionHistory.slice(-7);
+
       saveData();
     }
 
@@ -1642,6 +1928,7 @@
       missions: data.dailyMissions.missions,
       completedCount: data.dailyMissions.completedCount,
       allCompleted: data.dailyMissions.completedCount >= 3,
+      bonusClaimed: !!data.dailyMissions.bonusClaimed,
       bonusAvailable: data.dailyMissions.completedCount >= 3 && !data.dailyMissions.bonusClaimed
     };
   }
@@ -1666,32 +1953,46 @@
       switch (mission.type) {
         case 'meals':
           if (type === 'product_added') {
-            // Считаем уникальные приёмы (проверяем через HEYS.Day)
             const mealsCount = HEYS.Day?.getMealsCount?.() || 0;
             newProgress = mealsCount;
             matches = true;
           }
           break;
         case 'early_meal':
-          if (type === 'product_added' && new Date().getHours() < mission.target) {
-            newProgress = 1;
-            matches = true;
+          if (type === 'product_added') {
+            const meals = HEYS.Day?.getMeals?.() || [];
+            const firstMeal = meals[0];
+            if (firstMeal?.time) {
+              const hour = parseInt(firstMeal.time.split(':')[0]) || 0;
+              if (hour < mission.target) {
+                newProgress = 1;
+                matches = true;
+              }
+            }
           }
           break;
         case 'products':
           if (type === 'product_added') {
-            newProgress = (mission.progress || 0) + 1;
+            newProgress = HEYS.Day?.getUniqueProductsCount?.() || 0;
+            matches = true;
+          }
+          break;
+        case 'kcal':
+          if (type === 'product_added') {
+            const kcalPct = HEYS.Day?.getKcalPercent?.() || 0;
+            newProgress = kcalPct;
             matches = true;
           }
           break;
         case 'water':
-          if (type === 'water_added' && value >= mission.target) {
+          if (type === 'water_added') {
             newProgress = value;
             matches = true;
           }
           break;
         case 'water_entries':
           if (type === 'water_added') {
+            // Инкрементируем счетчик (dailyXP имеет лимит maxPerDay=5, реальных добавлений может быть больше)
             newProgress = (mission.progress || 0) + 1;
             matches = true;
           }
@@ -1703,37 +2004,57 @@
           }
           break;
         case 'steps':
-          if (type === 'steps_updated' && value >= mission.target) {
+          if (type === 'steps_updated') {
             newProgress = value;
             matches = true;
           }
           break;
-        case 'weight':
-          if (type === 'weight_logged') {
-            newProgress = 1;
+        case 'steps_goal':
+          if (type === 'steps_updated') {
+            newProgress = value;
             matches = true;
           }
           break;
-        case 'sleep':
-          if (type === 'sleep_logged') {
-            newProgress = 1;
-            matches = true;
+        case 'active_day':
+          if (type === 'training_added' || type === 'steps_updated') {
+            const hasTraining = type === 'training_added' || (HEYS.Day?.getTrainingsCount?.() || 0) > 0;
+            const hasSteps = type === 'steps_updated' ? value >= 3000 : (HEYS.Day?.getSteps?.() || 0) >= 3000;
+            if (hasTraining && hasSteps) {
+              newProgress = 1;
+              matches = true;
+            }
           }
           break;
         case 'fiber':
           if (type === 'product_added') {
             const fiberPct = HEYS.Day?.getFiberPercent?.() || 0;
-            if (fiberPct >= mission.target) {
-              newProgress = fiberPct;
-              matches = true;
-            }
+            newProgress = fiberPct;
+            matches = true;
           }
           break;
         case 'protein':
           if (type === 'product_added') {
             const proteinPct = HEYS.Day?.getProteinPercent?.() || 0;
-            if (proteinPct >= mission.target) {
-              newProgress = proteinPct;
+            newProgress = proteinPct;
+            matches = true;
+          }
+          break;
+        case 'complex_carbs':
+          if (type === 'product_added') {
+            const complexPct = HEYS.Day?.getComplexCarbsPercent?.() || 0;
+            newProgress = complexPct;
+            matches = true;
+          }
+          break;
+        case 'low_harm':
+          if (type === 'product_added') {
+            const harmPct = HEYS.Day?.getHarmPercent?.() || 100;
+            // Low harm = harm% < target (30). Progress is inverted: progress = target if harmPct <= target
+            if (harmPct <= mission.target) {
+              newProgress = mission.target;
+              matches = true;
+            } else {
+              newProgress = Math.max(0, mission.target - (harmPct - mission.target));
               matches = true;
             }
           }
@@ -1759,6 +2080,65 @@
             }
           }
           break;
+        case 'streak_keep':
+          if (type === 'product_added') {
+            newProgress = 1;
+            matches = true;
+          }
+          break;
+        case 'dinner_time':
+          if (type === 'product_added') {
+            const meals = HEYS.Day?.getMeals?.() || [];
+            if (meals.length > 0) {
+              const lastHour = meals.reduce((max, m) => {
+                const t = (m.time || '').split(':');
+                const h = parseInt(t[0]) || 0;
+                return h > max ? h : max;
+              }, 0);
+              if (lastHour > 0 && lastHour < (mission.threshold || 20)) {
+                newProgress = 1;
+                matches = true;
+              }
+            }
+          }
+          break;
+        case 'no_late_snack':
+          if (type === 'product_added') {
+            const allMeals = HEYS.Day?.getMeals?.() || [];
+            const hasLate = allMeals.some(m => {
+              const h = parseInt((m.time || '').split(':')[0]) || 0;
+              return h >= (mission.threshold || 21);
+            });
+            newProgress = hasLate ? 0 : 1;
+            matches = true;
+          }
+          break;
+        case 'eating_window':
+          if (type === 'product_added') {
+            const ew_meals = HEYS.Day?.getMeals?.() || [];
+            if (ew_meals.length >= 2) {
+              const times = ew_meals.map(m => {
+                const [h, min] = (m.time || '0:0').split(':').map(Number);
+                return h * 60 + (min || 0);
+              });
+              const windowHrs = (Math.max(...times) - Math.min(...times)) / 60;
+              if (windowHrs <= (mission.threshold || 12)) {
+                newProgress = 1;
+                matches = true;
+              }
+            }
+          }
+          break;
+        case 'log_mood':
+          if (type === 'product_added') {
+            const moodMeals = HEYS.Day?.getMeals?.() || [];
+            const hasMood = moodMeals.some(m => m.mood && m.mood > 0);
+            if (hasMood) {
+              newProgress = 1;
+              matches = true;
+            }
+          }
+          break;
       }
 
       if (matches) {
@@ -1769,6 +2149,28 @@
           mission.completed = true;
           data.dailyMissions.completedCount++;
           missionCompleted = true;
+
+          // 📊 Update mission stats (completed)
+          data.missionStats = data.missionStats || {
+            totalAttempts: 0,
+            totalCompleted: 0,
+            byType: {},
+            completionRate: 0,
+            favoriteCategories: [],
+            lastUpdated: null
+          };
+          data.missionStats.totalCompleted++;
+          if (!data.missionStats.byType[mission.type]) {
+            data.missionStats.byType[mission.type] = { attempts: 0, completed: 0 };
+          }
+          data.missionStats.byType[mission.type].completed++;
+          // Recalculate completion rate
+          if (data.missionStats.totalAttempts > 0) {
+            data.missionStats.completionRate = Math.round(
+              (data.missionStats.totalCompleted / data.missionStats.totalAttempts) * 100
+            );
+          }
+          data.missionStats.lastUpdated = new Date().toISOString();
 
           // Начисляем XP за миссию
           _addXPInternal(mission.xp, 'daily_mission');
@@ -1786,9 +2188,15 @@
 
     saveData();
 
-    // Проверяем бонус за все 3 миссии
+    // Проверяем бонус за все 3 миссии — автоклейм
     if (data.dailyMissions.completedCount >= 3 && !data.dailyMissions.bonusClaimed) {
-      // Бонус будет доступен для клейма через claimDailyMissionsBonus
+      data.dailyMissions.bonusClaimed = true;
+      saveData();
+      triggerImmediateSync('daily_missions_bonus');
+      _addXPInternal(50, 'daily_missions_bonus');
+      celebrate();
+      showNotification('all_missions_complete', { bonus: 50 });
+      playMissionSound(true);
     }
 
     // Dispatch event для UI
@@ -1824,6 +2232,132 @@
     playMissionSound(true);
 
     return true;
+  }
+
+  // ========== RECALCULATE MISSIONS PROGRESS ==========
+  /**
+   * Recalculate daily missions progress from current day state
+   * Called on day load, product added, water added events
+   * Does NOT complete missions or award XP - only updates progress
+   */
+  function recalculateDailyMissionsProgress() {
+    const data = loadData();
+    const today = getToday();
+
+    if (!data.dailyMissions || data.dailyMissions.date !== today) {
+      return { updated: false, missions: [] };
+    }
+
+    let updated = false;
+
+    for (const mission of data.dailyMissions.missions) {
+      if (mission.completed) continue;
+
+      let newProgress = 0;
+
+      switch (mission.type) {
+        case 'meals':
+          newProgress = HEYS.Day?.getMealsCount?.() || 0;
+          break;
+        case 'products':
+          newProgress = HEYS.Day?.getUniqueProductsCount?.() || 0;
+          break;
+        case 'water':
+          newProgress = HEYS.Day?.getWaterPercent?.() || 0;
+          break;
+        case 'water_entries':
+          // Не пересчитываем - используем инкрементальный счетчик из updateDailyMission
+          // (вода не хранится как массив записей, только суммарный waterMl)
+          newProgress = mission.progress || 0;
+          break;
+        case 'kcal':
+          newProgress = HEYS.Day?.getKcalPercent?.() || 0;
+          break;
+        case 'fiber':
+          newProgress = HEYS.Day?.getFiberPercent?.() || 0;
+          break;
+        case 'protein':
+          newProgress = HEYS.Day?.getProteinPercent?.() || 0;
+          break;
+        case 'complex_carbs':
+          newProgress = HEYS.Day?.getComplexCarbsPercent?.() || 0;
+          break;
+        case 'harm':
+          newProgress = HEYS.Day?.getHarmPercent?.() || 0;
+          break;
+        case 'steps':
+          newProgress = HEYS.Day?.getSteps?.() || 0;
+          break;
+        case 'steps_goal':
+          newProgress = HEYS.Day?.getSteps?.() || 0;
+          break;
+        case 'training':
+          newProgress = (HEYS.Day?.getTrainingsCount?.() || 0) > 0 ? 1 : 0;
+          break;
+        case 'active_day':
+          const hasTraining = (HEYS.Day?.getTrainingsCount?.() || 0) > 0;
+          const hasSteps = (HEYS.Day?.getSteps?.() || 0) >= 3000;
+          newProgress = (hasTraining && hasSteps) ? 1 : 0;
+          break;
+        case 'early_meal':
+          const meals = HEYS.Day?.getMeals?.() || [];
+          const firstMeal = meals[0];
+          if (firstMeal?.time) {
+            const hour = parseInt(firstMeal.time.split(':')[0]) || 0;
+            newProgress = (hour < mission.target) ? 1 : 0;
+          }
+          break;
+        case 'dinner_time':
+          const allMeals = HEYS.Day?.getMeals?.() || [];
+          if (allMeals.length > 0) {
+            const lastHour = allMeals.reduce((max, m) => {
+              const t = (m.time || '').split(':');
+              const h = parseInt(t[0]) || 0;
+              return h > max ? h : max;
+            }, 0);
+            newProgress = (lastHour > 0 && lastHour < (mission.threshold || 20)) ? 1 : 0;
+          }
+          break;
+        case 'no_late_snack':
+          const mls = HEYS.Day?.getMeals?.() || [];
+          const hasLate = mls.some(m => {
+            const h = parseInt((m.time || '').split(':')[0]) || 0;
+            return h >= (mission.threshold || 21);
+          });
+          newProgress = hasLate ? 0 : 1;
+          break;
+        case 'eating_window':
+          const ewMeals = HEYS.Day?.getMeals?.() || [];
+          if (ewMeals.length >= 2) {
+            const times = ewMeals.map(m => {
+              const [h, min] = (m.time || '0:0').split(':').map(Number);
+              return h * 60 + (min || 0);
+            });
+            const windowHrs = (Math.max(...times) - Math.min(...times)) / 60;
+            newProgress = (windowHrs <= (mission.threshold || 12)) ? 1 : 0;
+          }
+          break;
+        case 'log_mood':
+          const moodMeals = HEYS.Day?.getMeals?.() || [];
+          const hasMood = moodMeals.some(m => m.mood && m.mood > 0);
+          newProgress = hasMood ? 1 : 0;
+          break;
+      }
+
+      if (mission.progress !== newProgress) {
+        mission.progress = newProgress;
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      saveData();
+      window.dispatchEvent(new CustomEvent('heysDailyMissionsUpdate', {
+        detail: getDailyMissions()
+      }));
+    }
+
+    return { updated, missions: data.dailyMissions.missions };
   }
 
   // ========== WEEKLY CHALLENGE ==========
@@ -2729,6 +3263,9 @@
   }
 
   function checkAchievements(reason) {
+    // 🛡️ FIX: Не проверяем ачивки пока идёт rebuild — предотвращает дубли стриков
+    if (_isRebuilding) return [];
+
     const data = loadData();
     const newAchievements = [];
 
@@ -2985,6 +3522,9 @@
   }
 
   function checkStreakAchievements(streakValue, options = {}) {
+    // 🛡️ FIX: Не выдаём ачивки пока идёт rebuild — _data может быть пустым
+    if (_isRebuilding) return [];
+
     const data = loadData();
     const streak = typeof streakValue === 'number' ? streakValue : safeGetStreak();
     const { skipUnlock = false } = options;
@@ -3047,76 +3587,97 @@
   }
 
   function unlockAchievement(achievementId) {
-    const data = loadData();
-    const ach = ACHIEVEMENTS[achievementId];
-    if (!ach || data.unlockedAchievements.includes(achievementId)) return;
+    // 🛡️ FIX: Не выдаём ачивки пока идёт rebuild — данные могут быть неполными
+    if (_isRebuilding) return;
 
-    const beforeXP = data.totalXP;
-    const beforeLevel = data.level;
-    const beforeAchievements = data.unlockedAchievements.length;
-
-    data.unlockedAchievements.push(achievementId);
-
-    // Начисляем XP за достижение
-    const oldLevel = data.level;
-    data.totalXP += ach.xp;
-    data.level = calculateLevel(data.totalXP);
-    const afterXP = data.totalXP;
-    const afterAchievements = data.unlockedAchievements.length;
-    handleRankTransition(oldLevel, data.level);
-    saveData();
-    triggerImmediateSync('achievement_unlocked');
-
-    queueGamificationEvent({
-      action: 'achievement_unlocked',
-      reason: achievementId,
-      xpBefore: beforeXP,
-      xpAfter: afterXP,
-      xpDelta: ach.xp,
-      levelBefore: beforeLevel,
-      levelAfter: data.level,
-      achievementsBefore: beforeAchievements,
-      achievementsAfter: afterAchievements,
-      metadata: {
-        achievementId: ach.id,
-        achievementName: ach.name,
-        rarity: ach.rarity,
-        category: ach.category
-      }
-    });
-
-    const hasCategoryUnlocked = data.unlockedAchievements
-      .map((id) => ACHIEVEMENTS[id])
-      .filter(Boolean)
-      .some((item) => item.category === ach.category);
-
-    // Показываем notification (React компонент .game-notification)
-    // NOTE: showAchievementToast убран — был дубль с showNotification
-    showNotification('achievement', {
-      achievement: ach,
-      totalXP: data.totalXP,
-      level: data.level,
-      firstInCategory: !hasCategoryUnlocked
-    });
-
-    // Звук при получении достижения!
-    playXPSound(true); // Level-up мелодия для достижений
-
-    // Confetti для rare+ достижений
-    if (['rare', 'epic', 'legendary', 'mythic'].includes(ach.rarity)) {
-      celebrate({ type: 'achievement', rarity: ach.rarity });
+    // 🔒 FIX v2.7: Mutex — предотвращаем параллельную разблокировку одного достижения
+    if (_unlockingAchievements.has(achievementId)) {
+      console.warn(`[🎮 Gamification] Blocked duplicate unlock attempt: ${achievementId}`);
+      return;
     }
+    _unlockingAchievements.add(achievementId);
 
-    // Haptic по редкости
-    if (HEYS.haptic) {
-      const hapticByRarity = {
-        common: 'light',
-        rare: 'medium',
-        epic: 'medium',
-        legendary: 'success',
-        mythic: 'success'
-      };
-      HEYS.haptic(hapticByRarity[ach.rarity] || 'light');
+    try {
+      const data = loadData();
+      const ach = ACHIEVEMENTS[achievementId];
+      if (!ach || data.unlockedAchievements.includes(achievementId)) {
+        _unlockingAchievements.delete(achievementId);
+        return;
+      }
+
+      const beforeXP = data.totalXP;
+      const beforeLevel = data.level;
+      const beforeAchievements = data.unlockedAchievements.length;
+
+      data.unlockedAchievements.push(achievementId);
+
+      // Начисляем XP за достижение
+      const oldLevel = data.level;
+      data.totalXP += ach.xp;
+      data.level = calculateLevel(data.totalXP);
+      const afterXP = data.totalXP;
+      const afterAchievements = data.unlockedAchievements.length;
+      handleRankTransition(oldLevel, data.level);
+
+      // 🔒 FIX: Синхронизируем кеш ПЕРЕД saveData() чтобы избежать race condition с rebuild
+      _data = data;
+      saveData();
+      triggerImmediateSync('achievement_unlocked');
+
+      queueGamificationEvent({
+        action: 'achievement_unlocked',
+        reason: achievementId,
+        xpBefore: beforeXP,
+        xpAfter: afterXP,
+        xpDelta: ach.xp,
+        levelBefore: beforeLevel,
+        levelAfter: data.level,
+        achievementsBefore: beforeAchievements,
+        achievementsAfter: afterAchievements,
+        metadata: {
+          achievementId: ach.id,
+          achievementName: ach.name,
+          rarity: ach.rarity,
+          category: ach.category
+        }
+      });
+
+      const hasCategoryUnlocked = data.unlockedAchievements
+        .map((id) => ACHIEVEMENTS[id])
+        .filter(Boolean)
+        .some((item) => item.category === ach.category);
+
+      // Показываем notification (React компонент .game-notification)
+      // NOTE: showAchievementToast убран — был дубль с showNotification
+      showNotification('achievement', {
+        achievement: ach,
+        totalXP: data.totalXP,
+        level: data.level,
+        firstInCategory: !hasCategoryUnlocked
+      });
+
+      // Звук при получении достижения!
+      playXPSound(true); // Level-up мелодия для достижений
+
+      // Confetti для rare+ достижений
+      if (['rare', 'epic', 'legendary', 'mythic'].includes(ach.rarity)) {
+        celebrate({ type: 'achievement', rarity: ach.rarity });
+      }
+
+      // Haptic по редкости
+      if (HEYS.haptic) {
+        const hapticByRarity = {
+          common: 'light',
+          rare: 'medium',
+          epic: 'medium',
+          legendary: 'success',
+          mythic: 'success'
+        };
+        HEYS.haptic(hapticByRarity[ach.rarity] || 'light');
+      }
+    } finally {
+      // 🔓 FIX v2.7: Всегда очищаем mutex, даже при ошибке
+      _unlockingAchievements.delete(achievementId);
     }
   }
 
@@ -3337,19 +3898,30 @@
      */
     async recalculateAchievements() {
       const data = loadData();
-      const migrationKey = 'heys_achievements_v4_migrated';
+      const migrationKey = 'heys_achievements_v5_migrated'; // 🔥 V5: фикс first_meal/first_product
 
       // Проверяем, была ли миграция
       if (readStoredValue(migrationKey, null) === 'true') {
+        console.log('[🎮 Gamification] Migration v5 already done, skipping');
         return [];
       }
 
       console.log('[🎮 Gamification] Recalculating missed achievements...');
+      console.log('[🎮 Gamification] Current state:', {
+        totalXP: data.totalXP,
+        level: data.level,
+        unlockedCount: data.unlockedAchievements.length,
+        unlocked: data.unlockedAchievements
+      });
+
       const missedAchievements = [];
+      const today = getToday(); // 🔥 FIX: определяем today
 
       // Получаем историю
       const streak = safeGetStreak();
       const stats = data.stats || {};
+
+      console.log('[🎮 Gamification] Checking streak:', streak);
 
       // === STREAK ACHIEVEMENTS ===
       const streakMilestones = [
@@ -3380,12 +3952,54 @@
       }
 
       // === ONBOARDING (check stats) ===
-      const todayKey = `heys_dayv2_${today}`; // 🔥 Фикс: явно используем переменную today из контекста 
+      const todayKey = `heys_dayv2_${today}`;
       const todayDay = readStoredValue(todayKey, null);
       const mealsCount = HEYS.Day?.getMealsCount?.() || (todayDay?.meals?.length || 0);
       const stepsValue = (todayDay?.steps || 0) || (HEYS.Day?.getDay?.()?.steps || 0);
       const advicesRead = stats.totalAdvicesRead || 0;
 
+      // 🔥 V5 FIX: Проверяем реальное количество продуктов в localStorage
+      let hasProducts = false;
+      let hasMealsWithProducts = false;
+      let daysWithMealsCount = 0;
+      try {
+        // Проверка 1: есть ли продукты в базе (heys_products)
+        const productsKey = HEYS.cloud?.scopeKey ? HEYS.cloud.scopeKey('heys_products') : 'heys_products';
+        const productsData = readStoredValue(productsKey, null);
+        if (Array.isArray(productsData) && productsData.length > 0) {
+          hasProducts = true;
+        }
+        console.log('[🎮 Gamification] Products check:', { productsKey, count: productsData?.length || 0, hasProducts });
+
+        // Проверка 2: есть ли хотя бы один приём с продуктами в днях
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (!key || !key.includes('_dayv2_')) continue;
+          const raw = localStorage.getItem(key);
+          if (!raw) continue;
+          let parsed = null;
+          try {
+            parsed = raw.startsWith('¤Z¤') && HEYS.store?.decompress
+              ? HEYS.store.decompress(raw.slice(3))
+              : JSON.parse(raw);
+          } catch (e) {
+            continue;
+          }
+          if (parsed?.meals) {
+            for (const meal of parsed.meals) {
+              if (meal.items && meal.items.length > 0) {
+                hasMealsWithProducts = true;
+                daysWithMealsCount++;
+                break;
+              }
+            }
+          }
+          if (hasMealsWithProducts && daysWithMealsCount >= 3) break; // Достаточно для проверки
+        }
+        console.log('[🎮 Gamification] Meals check:', { daysWithMealsCount, hasMealsWithProducts, mealsCount });
+      } catch (e) {
+        console.warn('[🎮 Gamification] Error checking products:', e);
+      }
       let hasCheckin = false;
       let hasSupplements = false;
       let hasHousehold = false;
@@ -3425,13 +4039,25 @@
         missedAchievements.push('first_checkin');
       }
 
-      if (stats.totalProducts > 0 && !data.unlockedAchievements.includes('first_product')) {
+      console.log('[🎮 Gamification] Onboarding checks:', {
+        hasProducts,
+        hasMealsWithProducts,
+        mealsCount,
+        hasFirstProduct: data.unlockedAchievements.includes('first_product'),
+        hasFirstMeal: data.unlockedAchievements.includes('first_meal')
+      });
+
+      // 🔥 V5 FIX: используем hasMealsWithProducts вместо stats.totalProducts
+      if (hasMealsWithProducts && !data.unlockedAchievements.includes('first_product')) {
+        console.log('[🎮 Gamification] ✅ Adding first_product achievement');
         data.unlockedAchievements.push('first_product');
         data.totalXP += ACHIEVEMENTS.first_product.xp;
         missedAchievements.push('first_product');
       }
 
-      if (mealsCount > 0 && !data.unlockedAchievements.includes('first_meal')) {
+      // 🔥 V5 FIX: проверяем наличие хотя бы одного приёма из сканирования
+      if ((mealsCount > 0 || hasMealsWithProducts) && !data.unlockedAchievements.includes('first_meal')) {
+        console.log('[🎮 Gamification] ✅ Adding first_meal achievement');
         data.unlockedAchievements.push('first_meal');
         data.totalXP += ACHIEVEMENTS.first_meal.xp;
         missedAchievements.push('first_meal');
@@ -3558,122 +4184,134 @@
      */
     async syncToCloud() {
       try {
-        // 🔧 FIX v2.6: Для кураторов cloud sync через storage sync layer
-        if (this._isCuratorMode()) {
-          // Куратор: данные синхронизируются через storage sync layer (heys_storage_supabase_v1.js)
-          // который уже сохраняет heys_game в облако под scoped ключом
-          return true;
-        }
-
-        const sessionToken = this._getSessionTokenForCloud();
-
-        if (!HEYS.YandexAPI || !sessionToken) {
+        // � Mutex: предотвращаем параллельные записи в облако
+        if (_syncInProgress) {
+          console.info('[🎮 Gamification] syncToCloud: already in progress, skipping');
           return false;
         }
+        _syncInProgress = true;
 
-        const data = loadData();
-
-        // 🛡️ Не синхронизируем пустые данные в облако
-        // FIX v2.4: typeof check — XP=0 is valid, only skip if data is truly broken
-        if (typeof data.totalXP !== 'number') {
-          console.log('[🎮 Gamification] Skip cloud sync — no XP data');
-          return false;
-        }
-
-        // 🛡️ ЗАЩИТА v2.1: Сначала проверяем облако — не перезаписываем если там новее/больше
         try {
-          // 🔧 FIX v2.5: p_ prefixed params + proper response unwrap
-          const cloudResult = await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
+          // �🔧 FIX v2.6: Для кураторов cloud sync через storage sync layer
+          if (this._isCuratorMode()) {
+            // Куратор: данные синхронизируются через storage sync layer (heys_storage_supabase_v1.js)
+            // который уже сохраняет heys_game в облако под scoped ключом
+            return true;
+          }
+
+          const sessionToken = this._getSessionTokenForCloud();
+
+          if (!HEYS.YandexAPI || !sessionToken) {
+            return false;
+          }
+
+          const data = loadData();
+
+          // 🛡️ Не синхронизируем пустые данные в облако
+          // FIX v2.4: typeof check — XP=0 is valid, only skip if data is truly broken
+          if (typeof data.totalXP !== 'number') {
+            console.log('[🎮 Gamification] Skip cloud sync — no XP data');
+            return false;
+          }
+
+          // 🛡️ ЗАЩИТА v2.1: Сначала проверяем облако — не перезаписываем если там новее/больше
+          try {
+            // 🔧 FIX v2.5: p_ prefixed params + proper response unwrap
+            const cloudResult = await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
+              p_session_token: sessionToken,
+              p_key: STORAGE_KEY
+            });
+
+            if (cloudResult?.error) {
+              console.warn('[🎮 Gamification] Cloud check RPC error:', cloudResult.error?.message || cloudResult.error);
+              // Продолжаем синхронизацию — лучше записать чем ничего
+            }
+
+            const kvData = this._unwrapKvResult(cloudResult);
+            const cloudData_ = kvData?.value || {};
+            const cloudXP = cloudData_.totalXP || 0;
+            const cloudUpdatedAt = cloudData_.updatedAt || 0;
+
+            // 🛡️ v2.2: Проверка "качества" данных — не перезаписывать богатые данные бедными
+            const cloudAchievements = Array.isArray(cloudData_.unlockedAchievements) ? cloudData_.unlockedAchievements.length : 0;
+            const localAchievements = Array.isArray(data.unlockedAchievements) ? data.unlockedAchievements.length : 0;
+            const cloudStatsCount = Object.keys(cloudData_.stats || {}).filter(k => cloudData_.stats[k] > 0).length;
+            const localStatsCount = Object.keys(data.stats || {}).filter(k => data.stats[k] > 0).length;
+            const cloudDailyXPCount = Object.keys(cloudData_.dailyXP || {}).length;
+            const localDailyXPCount = Object.keys(data.dailyXP || {}).length;
+
+            // Облако "богаче" если: больше XP ИЛИ (XP равен И больше деталей)
+            const cloudIsRicher = cloudXP > data.totalXP || (
+              cloudXP === data.totalXP && (
+                cloudAchievements > localAchievements ||
+                cloudStatsCount > localStatsCount ||
+                cloudDailyXPCount > localDailyXPCount
+              )
+            );
+
+            if (cloudXP > data.totalXP) {
+              console.warn(`[🎮 Gamification] BLOCKED: cloud XP (${cloudXP}) > local (${data.totalXP}), not overwriting!`);
+              // Вместо этого — загружаем из облака
+              await HEYS.game.loadFromCloud();
+              return false;
+            }
+
+            // 🛡️ v2.2: Блокируем если облако богаче деталями при равном XP
+            if (cloudXP === data.totalXP && cloudIsRicher) {
+              console.warn(`[🎮 Gamification] BLOCKED: cloud has richer data (achievements: ${cloudAchievements} vs ${localAchievements}, stats: ${cloudStatsCount} vs ${localStatsCount})`);
+              await HEYS.game.loadFromCloud();
+              return false;
+            }
+
+            if (cloudUpdatedAt && data.updatedAt && cloudUpdatedAt > data.updatedAt) {
+              console.warn('[🎮 Gamification] BLOCKED: cloud data is newer, loading instead');
+              await HEYS.game.loadFromCloud();
+              return false;
+            }
+          } catch (checkErr) {
+            // Если не удалось проверить — продолжаем синхронизацию (лучше чем ничего)
+            console.warn('[🎮 Gamification] Cloud check failed, proceeding:', checkErr.message);
+          }
+
+          const cloudData = {
+            version: DATA_VERSION,
+            totalXP: data.totalXP,
+            level: data.level,
+            unlockedAchievements: data.unlockedAchievements,
+            achievementProgress: data.achievementProgress,
+            dailyXP: data.dailyXP,
+            dailyBonusClaimed: data.dailyBonusClaimed,
+            dailyActions: data.dailyActions,
+            dailyMissions: data.dailyMissions,
+            weeklyChallenge: data.weeklyChallenge,
+            weeklyTrainings: data.weeklyTrainings,
+            earlyBirdDays: data.earlyBirdDays,
+            streakShieldUsed: data.streakShieldUsed,
+            stats: data.stats,
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt || Date.now(),
+            lastUpdated: new Date().toISOString()
+          };
+
+          // 🔧 FIX v2.5: p_ prefixed params + error checking
+          const upsertResult = await HEYS.YandexAPI.rpc('upsert_client_kv_by_session', {
             p_session_token: sessionToken,
-            p_key: STORAGE_KEY
+            p_key: STORAGE_KEY,   // 'heys_game'
+            p_value: cloudData    // Отправляем объект, не JSON.stringify
           });
 
-          if (cloudResult?.error) {
-            console.warn('[🎮 Gamification] Cloud check RPC error:', cloudResult.error?.message || cloudResult.error);
-            // Продолжаем синхронизацию — лучше записать чем ничего
-          }
-
-          const kvData = this._unwrapKvResult(cloudResult);
-          const cloudData_ = kvData?.value || {};
-          const cloudXP = cloudData_.totalXP || 0;
-          const cloudUpdatedAt = cloudData_.updatedAt || 0;
-
-          // 🛡️ v2.2: Проверка "качества" данных — не перезаписывать богатые данные бедными
-          const cloudAchievements = Array.isArray(cloudData_.unlockedAchievements) ? cloudData_.unlockedAchievements.length : 0;
-          const localAchievements = Array.isArray(data.unlockedAchievements) ? data.unlockedAchievements.length : 0;
-          const cloudStatsCount = Object.keys(cloudData_.stats || {}).filter(k => cloudData_.stats[k] > 0).length;
-          const localStatsCount = Object.keys(data.stats || {}).filter(k => data.stats[k] > 0).length;
-          const cloudDailyXPCount = Object.keys(cloudData_.dailyXP || {}).length;
-          const localDailyXPCount = Object.keys(data.dailyXP || {}).length;
-
-          // Облако "богаче" если: больше XP ИЛИ (XP равен И больше деталей)
-          const cloudIsRicher = cloudXP > data.totalXP || (
-            cloudXP === data.totalXP && (
-              cloudAchievements > localAchievements ||
-              cloudStatsCount > localStatsCount ||
-              cloudDailyXPCount > localDailyXPCount
-            )
-          );
-
-          if (cloudXP > data.totalXP) {
-            console.warn(`[🎮 Gamification] BLOCKED: cloud XP (${cloudXP}) > local (${data.totalXP}), not overwriting!`);
-            // Вместо этого — загружаем из облака
-            await HEYS.game.loadFromCloud();
+          if (upsertResult?.error) {
+            console.error('[🎮 Gamification] Cloud upsert FAILED:', upsertResult.error?.message || upsertResult.error);
             return false;
           }
 
-          // 🛡️ v2.2: Блокируем если облако богаче деталями при равном XP
-          if (cloudXP === data.totalXP && cloudIsRicher) {
-            console.warn(`[🎮 Gamification] BLOCKED: cloud has richer data (achievements: ${cloudAchievements} vs ${localAchievements}, stats: ${cloudStatsCount} vs ${localStatsCount})`);
-            await HEYS.game.loadFromCloud();
-            return false;
-          }
-
-          if (cloudUpdatedAt && data.updatedAt && cloudUpdatedAt > data.updatedAt) {
-            console.warn('[🎮 Gamification] BLOCKED: cloud data is newer, loading instead');
-            await HEYS.game.loadFromCloud();
-            return false;
-          }
-        } catch (checkErr) {
-          // Если не удалось проверить — продолжаем синхронизацию (лучше чем ничего)
-          console.warn('[🎮 Gamification] Cloud check failed, proceeding:', checkErr.message);
+          console.info('[🎮 Gamification] ✅ Synced to cloud: XP=' + data.totalXP + ', level=' + data.level);
+          return true;
+        } finally {
+          _syncInProgress = false;
         }
-
-        const cloudData = {
-          version: DATA_VERSION,
-          totalXP: data.totalXP,
-          level: data.level,
-          unlockedAchievements: data.unlockedAchievements,
-          achievementProgress: data.achievementProgress,
-          dailyXP: data.dailyXP,
-          dailyBonusClaimed: data.dailyBonusClaimed,
-          dailyActions: data.dailyActions,
-          dailyMissions: data.dailyMissions,
-          weeklyChallenge: data.weeklyChallenge,
-          weeklyTrainings: data.weeklyTrainings,
-          earlyBirdDays: data.earlyBirdDays,
-          streakShieldUsed: data.streakShieldUsed,
-          stats: data.stats,
-          createdAt: data.createdAt,
-          updatedAt: data.updatedAt || Date.now(),
-          lastUpdated: new Date().toISOString()
-        };
-
-        // 🔧 FIX v2.5: p_ prefixed params + error checking
-        const upsertResult = await HEYS.YandexAPI.rpc('upsert_client_kv_by_session', {
-          p_session_token: sessionToken,
-          p_key: STORAGE_KEY,   // 'heys_game'
-          p_value: cloudData    // Отправляем объект, не JSON.stringify
-        });
-
-        if (upsertResult?.error) {
-          console.error('[🎮 Gamification] Cloud upsert FAILED:', upsertResult.error?.message || upsertResult.error);
-          return false;
-        }
-
-        console.info('[🎮 Gamification] ✅ Synced to cloud: XP=' + data.totalXP + ', level=' + data.level);
-        return true;
       } catch (e) {
+        _syncInProgress = false;
         console.warn('[🎮 Gamification] Cloud sync failed:', e.message);
         return false;
       }
@@ -3699,6 +4337,7 @@
           // Перечитываем данные из localStorage (storage sync мог обновить)
           _data = null; // сбросим кеш
           window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: game.getStats() }));
+          ensureAuditConsistency('curator-load');
           return true;
         }
 
@@ -3771,24 +4410,16 @@
 
           window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: game.getStats() }));
 
-          // 🔧 FIX v2.4: Проверяем расхождение с аудит-логом после merge
-          // Если merged XP подозрительно мал — аудит может содержать больше
-          setTimeout(() => {
-            rebuildXPFromAudit({ force: false }).catch((err) => {
-              console.warn('[🎮 GAME REBUILD] Post-merge audit check failed:', err.message);
-            });
-          }, 3000); // Отложенный запуск — не блокируем UI
+          // � v3.0: Единственная точка проверки — lightweight consistency check
+          // Заменяет двойной rebuild (setTimeout + ensureAuditConsistency)
+          ensureAuditConsistency('cloud-merge');
 
           return true;
         }
 
         // FIX v2.4: Даже если cloud пуст — пробуем восстановить из аудита
         console.info('[🎮 Gamification] No cloud data, attempting audit rebuild...');
-        setTimeout(() => {
-          rebuildXPFromAudit({ force: false }).catch((err) => {
-            console.warn('[🎮 GAME REBUILD] Audit rebuild failed:', err.message);
-          });
-        }, 3000);
+        ensureAuditConsistency('cloud-empty');
 
         return false;
       } catch (e) {
@@ -3843,11 +4474,61 @@
     updateWeeklyProgress,
     WEEKLY_CHALLENGE_TYPES,
 
-    // Daily Missions
+    // Daily Missions (pool → HEYS.missions module)
     getDailyMissions,
     updateDailyMission,
     claimDailyMissionsBonus,
-    DAILY_MISSION_POOL,
+    recalculateDailyMissionsProgress,
+
+    // 📊 Get mission statistics (completion rates, favorites)
+    getMissionStats() {
+      const data = loadData();
+      const stats = data.missionStats || {
+        totalAttempts: 0,
+        totalCompleted: 0,
+        byType: {},
+        completionRate: 0,
+        favoriteCategories: [],
+        lastUpdated: null
+      };
+
+      // Recalculate favorite categories based on completion rates
+      const categoryStats = {};
+      const CATEGORY_META = HEYS.missions?.CATEGORY_META || {};
+
+      Object.entries(stats.byType).forEach(([type, typeStats]) => {
+        const mission = (HEYS.missions?.DAILY_MISSION_POOL || []).find(m => m.type === type);
+        if (mission && mission.category) {
+          if (!categoryStats[mission.category]) {
+            categoryStats[mission.category] = { attempts: 0, completed: 0 };
+          }
+          categoryStats[mission.category].attempts += typeStats.attempts;
+          categoryStats[mission.category].completed += typeStats.completed;
+        }
+      });
+
+      const favorites = Object.entries(categoryStats)
+        .map(([cat, catStats]) => ({
+          category: cat,
+          label: CATEGORY_META[cat]?.label || cat,
+          emoji: CATEGORY_META[cat]?.emoji || '📋',
+          attempts: catStats.attempts,
+          completed: catStats.completed,
+          completionRate: catStats.attempts > 0
+            ? Math.round((catStats.completed / catStats.attempts) * 100)
+            : 0
+        }))
+        .sort((a, b) => b.completionRate - a.completionRate)
+        .slice(0, 3);
+
+      return {
+        ...stats,
+        favoriteCategories: favorites
+      };
+    },
+
+    // 📊 Calculate behavior metrics (for adaptive missions)
+    calculateBehaviorMetrics,
 
     // Achievement Progress (используем функцию напрямую)
     getInProgressAchievements() {
@@ -3900,12 +4581,222 @@
     getLevelUpPreview,
 
     // Streak achievements
-    checkStreakAchievements
+    checkStreakAchievements,
+
+    // 🔍 Debug: верификация XP
+    async verifyXP() {
+      try {
+        console.group('🔍 [HEYS.game] XP Verification');
+        const data = loadData();
+        const cachedXP = data.totalXP || 0;
+        console.log('📊 UI (localStorage):', cachedXP, 'XP');
+        console.log('📊 Level:', data.level, '/', calculateLevel(cachedXP));
+        console.log('📊 Achievements:', data.unlockedAchievements?.length || 0);
+
+        // Fetch audit
+        await flushAuditQueue();
+        const allEvents = [];
+        let offset = 0;
+        const PAGE_SIZE = 100;
+        for (let page = 0; page < 20; page++) {
+          const result = await fetchGamificationHistory({ limit: PAGE_SIZE, offset });
+          const items = result?.items || [];
+          if (items.length === 0) break;
+          allEvents.push(...items);
+          offset += items.length;
+          if (items.length < PAGE_SIZE) break;
+        }
+
+        // Calculate from audit
+        let auditXP = 0;
+        const seenAch = new Set();
+        const breakdown = { xp_gain: 0, daily_bonus: 0, achievements: 0, rebuilds: 0 };
+        allEvents.forEach(e => {
+          const delta = e.xp_delta || 0;
+          if (e.action === 'xp_gain' && delta > 0) {
+            auditXP += delta;
+            breakdown.xp_gain += delta;
+          } else if (e.action === 'daily_bonus' && delta > 0) {
+            auditXP += delta;
+            breakdown.daily_bonus += delta;
+          } else if (e.action === 'achievement_unlocked' && e.reason && delta > 0) {
+            if (!seenAch.has(e.reason)) {
+              seenAch.add(e.reason);
+              auditXP += delta;
+              breakdown.achievements += delta;
+            }
+          } else if (e.action === 'xp_rebuild' && delta > 0) {
+            breakdown.rebuilds += delta;
+          }
+        });
+
+        console.log('📊 Audit XP:', auditXP);
+        console.log('   - xp_gain:', breakdown.xp_gain);
+        console.log('   - daily_bonus:', breakdown.daily_bonus);
+        console.log('   - achievements:', breakdown.achievements, `(${seenAch.size} unique)`);
+        console.log('   - rebuilds:', breakdown.rebuilds, '(не входят в total)');
+        console.log('📊 Drift:', cachedXP - auditXP, cachedXP > auditXP ? '(UI > audit)' : '(audit > UI)');
+        console.log('📊 Total events:', allEvents.length);
+
+        // Дубликаты ачивок
+        const achDupes = {};
+        allEvents.forEach(e => {
+          if (e.action === 'achievement_unlocked' && e.reason) {
+            achDupes[e.reason] = (achDupes[e.reason] || 0) + 1;
+          }
+        });
+        const dupes = Object.entries(achDupes).filter(([_, count]) => count > 1);
+        if (dupes.length > 0) {
+          console.warn('⚠️ Duplicate achievements:');
+          dupes.forEach(([ach, count]) => console.warn(`   - ${ach}: ${count}x`));
+          console.log('💡 Cleanup: await HEYS.game.cleanupDuplicateAchievements()');
+        }
+
+        console.groupEnd();
+        return { cachedXP, auditXP, drift: cachedXP - auditXP, breakdown, dupes, events: allEvents.length };
+      } catch (err) {
+        console.error('❌ verifyXP failed:', err);
+        console.groupEnd();
+        return { error: err.message };
+      }
+    },
+
+    // 🧹 Cleanup: удалить дубли ачивок из localStorage + audit log
+    async cleanupDuplicateAchievements() {
+      console.group('🧹 [HEYS.game] Cleanup Duplicate Achievements');
+      try {
+        const data = loadData();
+        let changed = false;
+
+        // ✅ STEP 1: Дедупликация unlockedAchievements в localStorage
+        const beforeCount = data.unlockedAchievements.length;
+        const beforeUnique = new Set(data.unlockedAchievements).size;
+
+        if (beforeCount > beforeUnique) {
+          console.warn(`Found ${beforeCount - beforeUnique} duplicates in localStorage unlockedAchievements`);
+          data.unlockedAchievements = [...new Set(data.unlockedAchievements)];
+          changed = true;
+          console.log(`✅ Deduplicated: ${beforeCount} → ${data.unlockedAchievements.length}`);
+        }
+
+        // ✅ STEP 2: Scan audit log for duplicates
+        await flushAuditQueue();
+        const allEvents = [];
+        let offset = 0;
+        for (let page = 0; page < 20; page++) {
+          const result = await fetchGamificationHistory({ limit: 100, offset });
+          const items = result?.items || [];
+          if (items.length === 0) break;
+          allEvents.push(...items);
+          offset += items.length;
+          if (items.length < 100) break;
+        }
+
+        const achEvents = {};
+        allEvents.forEach(e => {
+          if (e.action === 'achievement_unlocked' && e.reason) {
+            if (!achEvents[e.reason]) achEvents[e.reason] = [];
+            achEvents[e.reason].push(e);
+          }
+        });
+
+        const auditDupes = [];
+        for (const [achId, events] of Object.entries(achEvents)) {
+          if (events.length > 1) {
+            // Сортируем по времени, первое — оригинал, остальные — дубли
+            events.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            auditDupes.push(...events.slice(1));
+          }
+        }
+
+        if (auditDupes.length > 0) {
+          console.warn(`Found ${auditDupes.length} duplicate achievement events in audit log:`);
+          const grouped = {};
+          auditDupes.forEach(e => {
+            grouped[e.reason] = (grouped[e.reason] || 0) + 1;
+          });
+          Object.entries(grouped).forEach(([ach, count]) => {
+            console.warn(`  - ${ach}: ${count} duplicates`);
+          });
+          console.log('⚠️ Audit log cleanup requires RPC delete_gamification_events() - not implemented yet');
+          console.table(auditDupes.slice(0, 10).map(e => ({
+            id: e.id,
+            reason: e.reason,
+            created_at: e.created_at
+          })));
+        }
+
+        // ✅ STEP 3: Check XP drift (UI vs audit)
+        let auditXP = 0;
+        const seenAch = new Set();
+        allEvents.forEach(e => {
+          const delta = e.xp_delta || 0;
+          if (e.action === 'xp_gain' && delta > 0) {
+            auditXP += delta;
+          } else if (e.action === 'daily_bonus' && delta > 0) {
+            auditXP += delta;
+          } else if (e.action === 'achievement_unlocked' && e.reason && delta > 0) {
+            if (!seenAch.has(e.reason)) {
+              seenAch.add(e.reason);
+              auditXP += delta;
+            }
+          }
+        });
+
+        const drift = data.totalXP - auditXP;
+        const needsRebuild = changed || Math.abs(drift) > 0;
+
+        console.log(`📊 XP Check: UI=${data.totalXP}, Audit=${auditXP}, Drift=${drift}`);
+
+        // ✅ STEP 4: Rebuild XP from audit if needed
+        if (needsRebuild) {
+          if (drift !== 0) {
+            console.warn(`⚠️ XP drift detected: ${drift > 0 ? '+' : ''}${drift} XP (${drift > 0 ? 'UI > audit' : 'audit > UI'})`);
+          }
+          console.log('🔄 Rebuilding XP from audit (source of truth)...');
+
+          // Сохраняем очищенный массив достижений (если был changed)
+          if (changed) {
+            saveData();
+            triggerImmediateSync('achievements_cleanup');
+          }
+
+          // Пересчитываем XP из audit (trustAudit=true — audit как source of truth)
+          await rebuildXPFromAudit({ force: true, trustAudit: true });
+
+          console.log('✅ Cleanup complete, XP rebuilt from audit');
+        } else {
+          console.log('✅ No duplicates or drift found — system consistent');
+        }
+
+        console.groupEnd();
+        return {
+          localStorageDupes: beforeCount - beforeUnique,
+          auditDupes: auditDupes.length,
+          drift,
+          xpRebuilt: needsRebuild
+        };
+      } catch (err) {
+        console.error('❌ Cleanup failed:', err);
+        console.groupEnd();
+        return { error: err.message };
+      }
+    }
   };
 
   // ========== INTERNAL ==========
 
   function _addXPInternal(amount, reason, sourceEl, extraData) {
+    // 🛡️ Dedup guard: предотвращаем двойное начисление из разных источников (DOM event + прямой вызов)
+    const now = Date.now();
+    const dedupKey = reason + '_' + (extraData?.dedupId || '');
+    if (dedupKey === _lastAddXPKey && (now - _lastAddXPTime) < DEDUP_WINDOW_MS) {
+      console.info('[🎮 GAME] Dedup: skipping duplicate', reason, 'within', DEDUP_WINDOW_MS, 'ms');
+      return;
+    }
+    _lastAddXPKey = dedupKey;
+    _lastAddXPTime = now;
+
     const data = loadData();
     const action = XP_ACTIONS[reason];
     const today = getToday();
@@ -3915,11 +4806,25 @@
       data.dailyXP[today] = {};
     }
 
-    // Проверяем лимит за день
+    // 🎯 Update daily missions BEFORE checking XP limit
+    // (миссии должны обновляться независимо от лимита XP)
+    if (reason !== 'daily_mission' && reason !== 'daily_missions_bonus') {
+      let missionValue = 0;
+      if (reason === 'water_added') {
+        missionValue = HEYS.Day?.getWaterPercent?.() || 0;
+      }
+      if (reason === 'steps_updated') {
+        missionValue = extraData?.steps || 0;
+      }
+      updateDailyMission(reason, missionValue);
+    }
+
+    // Проверяем лимит за день (для начисления XP)
     if (action) {
       const dailyCount = data.dailyXP[today][reason] || 0;
       if (dailyCount >= action.maxPerDay) {
-        // Лимит достигнут, не начисляем
+        // Лимит достигнут XP, не начисляем (но миссия уже обновлена выше!)
+        saveData(); // Сохраняем прогресс миссии
         return;
       }
       data.dailyXP[today][reason] = dailyCount + 1;
@@ -3975,18 +4880,6 @@
     // Update weekly progress for specific actions
     if (['product_added', 'water_added', 'training_added', 'perfect_day'].includes(reason)) {
       updateWeeklyProgress(reason, { waterPercent: HEYS.Day?.getWaterPercent?.() || 0 });
-    }
-
-    // Update daily missions
-    if (reason !== 'daily_mission' && reason !== 'daily_missions_bonus') {
-      let missionValue = 0;
-      if (reason === 'water_added') {
-        missionValue = HEYS.Day?.getWaterPercent?.() || 0;
-      }
-      if (reason === 'steps_updated') {
-        missionValue = extraData?.steps || 0;
-      }
-      updateDailyMission(reason, missionValue);
     }
 
     saveData();
@@ -4270,14 +5163,13 @@
   // 🔄 FIX v2.3: Кросс-устройственная синхронизация при возвращении на вкладку
   // Когда пользователь переключается между устройствами/вкладками — проверяем облако
   let _lastVisibilitySync = 0;
-  const VISIBILITY_SYNC_COOLDOWN_MS = 30000; // 30 секунд между проверками
 
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         const now = Date.now();
-        // Проверяем облако не чаще чем раз в 30 секунд
-        if (now - _lastVisibilitySync < VISIBILITY_SYNC_COOLDOWN_MS) {
+        // 🔄 v3.0: Проверяем облако не чаще чем раз в 60 секунд
+        if (now - _lastVisibilitySync < 60000) {
           return;
         }
         _lastVisibilitySync = now;
@@ -4285,12 +5177,14 @@
         // Проверяем наличие сессии
         const hasSession = HEYS.cloud?.getSessionToken?.() ||
           localStorage.getItem('heys_session_token');
-        if (!hasSession || !HEYS.game?.loadFromCloud) {
+        if (!hasSession) {
           return;
         }
 
-        console.log('[🎮 Gamification] Tab visible, checking cloud for updates...');
-        HEYS.game.loadFromCloud().catch(() => { });
+        // 🔄 v3.0: Lightweight consistency check вместо полной loadFromCloud()
+        console.log('[🎮 Gamification] Tab visible, running consistency check...');
+        _auditRebuildDone = false;
+        ensureAuditConsistency('tab-visible').catch(() => { });
       }
     });
   }
@@ -4360,6 +5254,28 @@
       const result = await HEYS.game.rebuildXPFromAudit({ dryRun: true });
       console.log('[🎮 Gamification] Check result:', result);
       return result;
+    };
+
+    // 🔧 V5: Команда для сброса миграции и пересчёта достижений
+    window.recalcGameAchievements = async () => {
+      console.log('[🎮 Gamification] Resetting migration flag and recalculating...');
+
+      // Удаляем флаг миграции
+      localStorage.removeItem('heys_achievements_v5_migrated');
+      localStorage.removeItem('heys_achievements_v4_migrated');
+
+      // Запускаем пересчёт
+      if (HEYS.game?.recalculateAchievements) {
+        const missed = await HEYS.game.recalculateAchievements();
+        console.log('[🎮 Gamification] Recalculation complete:', {
+          found: missed.length,
+          achievements: missed
+        });
+        return missed;
+      } else {
+        console.error('[🎮 Gamification] recalculateAchievements not available');
+        return [];
+      }
     };
 
     // 🔧 FIX v2.6: Диагностика streak (почему streak = 0?)
@@ -4449,6 +5365,41 @@
       console.groupEnd();
       return results;
     };
+  }
+
+  // ========== EVENT LISTENERS FOR MISSION RESYNC ==========
+  // Recalculate mission progress when day data changes
+  if (typeof window !== 'undefined') {
+    window.addEventListener('heysProductAdded', () => {
+      if (HEYS.game?.recalculateDailyMissionsProgress) {
+        HEYS.game.recalculateDailyMissionsProgress();
+      }
+    });
+
+    window.addEventListener('heysWaterAdded', () => {
+      if (HEYS.game?.recalculateDailyMissionsProgress) {
+        HEYS.game.recalculateDailyMissionsProgress();
+      }
+    });
+
+    // 🔄 Откат прогресса при удалении item или meal
+    window.addEventListener('heysItemRemoved', () => {
+      if (HEYS.game?.recalculateDailyMissionsProgress) {
+        HEYS.game.recalculateDailyMissionsProgress();
+      }
+    });
+
+    window.addEventListener('heysMealDeleted', () => {
+      if (HEYS.game?.recalculateDailyMissionsProgress) {
+        HEYS.game.recalculateDailyMissionsProgress();
+      }
+    });
+
+    window.addEventListener('heys:day-updated', () => {
+      if (HEYS.game?.recalculateDailyMissionsProgress) {
+        HEYS.game.recalculateDailyMissionsProgress();
+      }
+    });
   }
 
 })(typeof window !== 'undefined' ? window : global);
