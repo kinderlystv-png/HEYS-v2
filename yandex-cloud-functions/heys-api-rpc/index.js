@@ -281,6 +281,7 @@ const CURATOR_ONLY_FUNCTIONS = [
   'admin_extend_subscription',        // Продление подписки клиента
   'log_gamification_event_by_curator',
   'get_gamification_events_by_curator',
+  'delete_gamification_events_by_curator', // 🆕 Удаление дубликатов из audit log
 ];
 
 // Маппинг параметров (если нужно)
@@ -630,6 +631,10 @@ module.exports.handler = async function (event, context) {
         'p_client_id': '::uuid',
         'p_limit': '::int',
         'p_offset': '::int'
+      },
+      'delete_gamification_events_by_curator': {
+        'p_curator_id': '::uuid',
+        'p_event_ids': '::uuid[]'
       },
       // === TRIAL QUEUE ADMIN ===
       'admin_get_trial_queue_list': {

@@ -4781,6 +4781,82 @@
         console.groupEnd();
         return { error: err.message };
       }
+    },
+
+    /**
+     * 🆕 Удаляет дубликаты из audit log через RPC (требует curator auth)
+     * Использует delete_gamification_events_by_curator для удаления событий из БД
+     * 
+     * @returns {Promise<{deleted: number, eventIds: string[]}>}
+     */
+    async deleteDuplicateAuditEvents() {
+      console.log('🗑️ [HEYS.game] Delete Duplicate Audit Events');
+
+      try {
+        // STEP 1: Собираем дубликаты из audit
+        const allEvents = await _getAllAuditEvents();
+        const achievementEvents = allEvents.filter(e => e.action === 'achievement_unlocked');
+
+        // Группируем по reason (achievement_id)
+        const grouped = {};
+        achievementEvents.forEach(event => {
+          const key = event.reason;
+          if (!grouped[key]) grouped[key] = [];
+          grouped[key].push(event);
+        });
+
+        // Находим дубликаты (оставляем первое событие, остальные помечаем на удаление)
+        const duplicateIds = [];
+        Object.entries(grouped).forEach(([achievementId, events]) => {
+          if (events.length > 1) {
+            // Сортируем по created_at (ASC = старые первыми)
+            events.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            // Первое оставляем, остальные удаляем
+            const toDelete = events.slice(1).map(e => e.id);
+            duplicateIds.push(...toDelete);
+          }
+        });
+
+        if (duplicateIds.length === 0) {
+          console.log('✅ No audit duplicates found');
+          return { deleted: 0, eventIds: [] };
+        }
+
+        console.log(`📊 Found ${duplicateIds.length} duplicate events to delete`);
+        console.table(duplicateIds.map(id => {
+          const event = achievementEvents.find(e => e.id === id);
+          return {
+            id,
+            reason: event.reason,
+            created_at: event.created_at
+          };
+        }));
+
+        // STEP 2: Вызываем RPC для удаления
+        // 🔒 Требует curator auth (JWT token через HEYS.cloud)
+        if (!HEYS.cloud?.client?.auth?.user) {
+          console.error('❌ Curator auth required (Supabase JWT)');
+          return { error: 'curator_auth_required' };
+        }
+
+        const curatorId = HEYS.cloud.client.auth.user().id;
+
+        const result = await HEYS.YandexAPI.rpc('delete_gamification_events_by_curator', {
+          p_curator_id: curatorId,
+          p_event_ids: duplicateIds
+        });
+
+        console.log(`✅ Deleted ${result.deleted_count || 0} events from audit log`);
+        
+        return {
+          deleted: result.deleted_count || 0,
+          eventIds: result.event_ids || []
+        };
+
+      } catch (err) {
+        console.error('❌ Delete audit events failed:', err);
+        return { error: err.message };
+      }
     }
   };
 
