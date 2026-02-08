@@ -27,6 +27,7 @@ const MIGRATIONS = [
     '2026-02-04_update_get_curator_clients.sql',
     '2026-02-04_extend_trials.sql',
     '2026-02-04_admin_extend_subscription.sql',
+    '2026-02-08_delete_gamification_events.sql',
 ];
 
 async function main() {

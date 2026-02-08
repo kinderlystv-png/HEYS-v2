@@ -42,8 +42,8 @@ BEGIN
 END;
 $$;
 
--- Grant выполнения для heys_rpc_only роли
-GRANT EXECUTE ON FUNCTION delete_gamification_events_by_curator(UUID, UUID[]) TO heys_rpc_only;
+-- Grant выполнения для heys_rpc роли
+GRANT EXECUTE ON FUNCTION delete_gamification_events_by_curator(UUID, UUID[]) TO heys_rpc;
 
 -- Комментарий для документации
 COMMENT ON FUNCTION delete_gamification_events_by_curator(UUID, UUID[]) IS 
