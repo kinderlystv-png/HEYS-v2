@@ -744,6 +744,19 @@ module.exports.handler = async function (event, context) {
     // Освобождаем клиент в pool даже при ошибке
     try { client.release(); } catch (e) { /* ignore */ }
 
+    // 🔐 P0001 = RAISE EXCEPTION (бизнес-ошибка, НЕ сбой БД)
+    // Возвращаем 200 с error-объектом, чтобы фронтенд парсил корректно
+    if (error.code === 'P0001') {
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: error.message,
+          code: error.code
+        })
+      };
+    }
+
     return {
       statusCode: 500,
       headers: corsHeaders,
