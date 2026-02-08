@@ -518,6 +518,10 @@ jobs:
         if: steps.changes.outputs.rpc_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           cd yandex-cloud-functions/heys-api-rpc
+          # Build environment string, skipping empty secrets
+          ENV_VARS="PG_HOST=${{ secrets.PG_HOST }},PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=${{ secrets.PG_USER }},PG_PASSWORD=${{ secrets.PG_PASSWORD }},PG_SSL=verify-full"
+          if [ -n "${{ secrets.JWT_SECRET }}" ]; then ENV_VARS="${ENV_VARS},JWT_SECRET=${{ secrets.JWT_SECRET }}"; fi
+          if [ -n "${{ secrets.HEYS_ENCRYPTION_KEY }}" ]; then ENV_VARS="${ENV_VARS},HEYS_ENCRYPTION_KEY=${{ secrets.HEYS_ENCRYPTION_KEY }}"; fi
           yc serverless function version create \
             --function-name heys-api-rpc \
             --runtime nodejs18 \
@@ -525,7 +529,7 @@ jobs:
             --memory 256m \
             --execution-timeout 30s \
             --source-path . \
-            --environment "PG_HOST=${{ secrets.PG_HOST }},PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=${{ secrets.PG_USER }},PG_PASSWORD=${{ secrets.PG_PASSWORD }},PG_SSL=verify-full,JWT_SECRET=${{ secrets.JWT_SECRET }},HEYS_ENCRYPTION_KEY=${{ secrets.HEYS_ENCRYPTION_KEY }}"
+            --environment "$ENV_VARS"
 
       - name: Deploy heys-api-rest
         if: steps.changes.outputs.rest_changed == 'true' || github.event_name == 'workflow_dispatch'
@@ -570,6 +574,8 @@ jobs:
         if: steps.changes.outputs.auth_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           cd yandex-cloud-functions/heys-api-auth
+          ENV_VARS="PG_HOST=${{ secrets.PG_HOST }},PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=${{ secrets.PG_USER }},PG_PASSWORD=${{ secrets.PG_PASSWORD }},PG_SSL=verify-full"
+          if [ -n "${{ secrets.JWT_SECRET }}" ]; then ENV_VARS="${ENV_VARS},JWT_SECRET=${{ secrets.JWT_SECRET }}"; fi
           yc serverless function version create \
             --function-name heys-api-auth \
             --runtime nodejs18 \
@@ -577,4 +583,4 @@ jobs:
             --memory 256m \
             --execution-timeout 30s \
             --source-path . \
-            --environment "PG_HOST=${{ secrets.PG_HOST }},PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=${{ secrets.PG_USER }},PG_PASSWORD=${{ secrets.PG_PASSWORD }},PG_SSL=verify-full,JWT_SECRET=${{ secrets.JWT_SECRET }}"
+            --environment "$ENV_VARS"
