@@ -801,7 +801,8 @@
       // Можно писать если: trial, active, или нет данных (новый пользователь до регистрации)
       if (!status || !status.status) return true; // Новый пользователь
       return status.status === HEYS.Subscription.STATUS.TRIAL ||
-        status.status === HEYS.Subscription.STATUS.ACTIVE;
+        status.status === HEYS.Subscription.STATUS.ACTIVE ||
+        status.status === HEYS.Subscription.STATUS.TRIAL_PENDING;
     } catch (err) {
       devWarn('[Paywall] Error checking status:', err);
       trackError(err, { scope: 'Paywall', action: 'checkStatus' });
@@ -820,7 +821,8 @@
     if (!cached || !cached.status) return true;
 
     return cached.status === HEYS.Subscription.STATUS.TRIAL ||
-      cached.status === HEYS.Subscription.STATUS.ACTIVE;
+      cached.status === HEYS.Subscription.STATUS.ACTIVE ||
+      cached.status === HEYS.Subscription.STATUS.TRIAL_PENDING;
   }
 
   /**

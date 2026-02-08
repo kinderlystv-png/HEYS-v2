@@ -177,6 +177,7 @@
     'reset_client_pin',
     'get_curator_clients',
     'admin_extend_subscription',
+    'admin_cancel_subscription',
     'log_gamification_event_by_curator',
     'get_gamification_events_by_curator',
     'delete_gamification_events_by_curator',

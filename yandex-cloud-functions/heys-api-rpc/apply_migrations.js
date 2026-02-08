@@ -30,6 +30,7 @@ const MIGRATIONS = [
     '2026-02-08_delete_gamification_events.sql',
     '2026-02-08_trial_machine_fix.sql',
     '2026-02-09_trial_machine_v3.sql',
+    '2026-02-08_fix_extend_and_curator_clients.sql',
 ];
 
 async function main() {

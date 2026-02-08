@@ -57,7 +57,9 @@
     // 🆕 Хелперы для статуса подписки
     const getSubscriptionBadge = (client) => {
         const status = client.subscription_status || 'none';
-        const endDate = client.trial_ends_at ? new Date(client.trial_ends_at) : null;
+        // active_until приоритетнее trial_ends_at для вычисления end date
+        const rawEndDate = client.active_until || client.trial_ends_at;
+        const endDate = rawEndDate ? new Date(rawEndDate) : null;
         const now = new Date();
         const daysLeft = endDate ? Math.ceil((endDate - now) / (1000 * 60 * 60 * 24)) : null;
         const debugSet = (HEYS._subBadgeDebug = HEYS._subBadgeDebug || new Set());
@@ -95,41 +97,255 @@
             return { emoji: '⏳', color: '#6366f1', bg: '#e0e7ff', text: `Триал до ${endDate.toLocaleDateString('ru-RU')}`, urgent: false };
         }
 
+        if (status === 'trial_pending') {
+            const startDate = client.trial_ends_at ? new Date(new Date(client.trial_ends_at).getTime() - 7 * 24 * 60 * 60 * 1000) : null;
+            const startText = startDate ? startDate.toLocaleDateString('ru-RU') : '?';
+            return { emoji: '🕐', color: '#3b82f6', bg: '#dbeafe', text: `Ожидает с ${startText}`, urgent: false };
+        }
+
         if (status === 'active') {
             return { emoji: '🟢', color: '#16a34a', bg: '#dcfce7', text: `Активна до ${endDate.toLocaleDateString('ru-RU')}`, urgent: false };
+        }
+
+        if (status === 'read_only') {
+            return { emoji: '🔒', color: '#dc2626', bg: '#fee2e2', text: 'Доступ ограничен', urgent: true };
         }
 
         return { emoji: '⚪', color: '#6b7280', bg: '#f3f4f6', text: status, urgent: false };
     };
 
-    const extendClientSubscription = async (clientId, curatorId, clientName) => {
-        if (!confirm(`Продлить подписку для "${clientName}" на 1 месяц?`)) return null;
+    // ⚙️ Компонент управления подпиской клиента (с собственным state для модала)
+    function ClientSubscriptionButton({ client, curatorId, onUpdate }) {
+        const [open, setOpen] = React.useState(false);
+        const [view, setView] = React.useState('main'); // main | trial | extend
+        const [loading, setLoading] = React.useState(false);
+        const [trialDate, setTrialDate] = React.useState(() => new Date().toISOString().split('T')[0]);
+        const [months, setMonths] = React.useState(1);
 
-        try {
-            const { data: res, error } = await HEYS.YandexAPI?.rpc?.('admin_extend_subscription', {
-                p_curator_id: curatorId,
-                p_client_id: clientId,
-                p_months: 1
-            }) || {};
+        const status = client.subscription_status || 'none';
+        const badge = getSubscriptionBadge(client);
 
-            if (error) {
-                HEYS.Toast?.error?.(error.message || 'Ошибка продления');
-                return null;
+        const formatDate = (d) => d ? new Date(d).toLocaleDateString('ru-RU') : '—';
+
+        // Активировать триал
+        const handleActivateTrial = async () => {
+            setLoading(true);
+            try {
+                const res = await HEYS.TrialQueue?.admin?.activateTrial?.(client.id, trialDate);
+                if (res && res.success) {
+                    const isToday = trialDate === new Date().toISOString().split('T')[0];
+                    HEYS.Toast?.success?.(isToday
+                        ? '✅ Триал активирован! 7 дней доступа.'
+                        : `✅ Триал запланирован на ${trialDate}`
+                    );
+                    client.subscription_status = res.status || (isToday ? 'trial' : 'trial_pending');
+                    client.trial_ends_at = res.trial_ends_at;
+                    onUpdate?.();
+                    setOpen(false);
+                    setView('main');
+                } else {
+                    HEYS.Toast?.error?.(res?.message || 'Ошибка активации триала');
+                }
+            } catch (e) {
+                console.error('[HEYS.sub] ❌ activateTrial error:', e);
+                HEYS.Toast?.error?.('Ошибка: ' + (e.message || 'Не удалось активировать'));
             }
+            setLoading(false);
+        };
 
-            if (res && res.success) {
-                HEYS.Toast?.success?.(`✅ Подписка продлена до ${new Date(res.new_end_date).toLocaleDateString('ru-RU')}`);
-                return res;
-            } else {
-                HEYS.Toast?.error?.(res?.message || 'Ошибка продления');
-                return null;
+        // Продлить подписку
+        const handleExtend = async () => {
+            setLoading(true);
+            try {
+                const { data: res, error } = await HEYS.YandexAPI?.rpc?.('admin_extend_subscription', {
+                    p_curator_id: curatorId,
+                    p_client_id: client.id,
+                    p_months: months
+                }) || {};
+                if (error) {
+                    HEYS.Toast?.error?.(error.message || 'Ошибка продления');
+                } else if (res && res.success) {
+                    HEYS.Toast?.success?.(`✅ Подписка продлена до ${formatDate(res.new_end_date)}`);
+                    client.active_until = res.new_end_date;
+                    client.subscription_status = res.new_status || 'active';
+                    onUpdate?.();
+                    setOpen(false);
+                    setView('main');
+                } else {
+                    HEYS.Toast?.error?.(res?.message || 'Ошибка продления');
+                }
+            } catch (e) {
+                console.error('[HEYS.sub] ❌ extend error:', e);
+                HEYS.Toast?.error?.('Ошибка: ' + (e.message || 'Не удалось продлить'));
             }
-        } catch (e) {
-            console.error('[extend_subscription]', e);
-            HEYS.Toast?.error?.('Ошибка: ' + (e.message || 'Не удалось продлить'));
-            return null;
-        }
-    };
+            setLoading(false);
+        };
+
+        // Сбросить подписку
+        const handleCancel = async () => {
+            if (!confirm(`Сбросить подписку для "${client.name}"?\nСтатус станет «Нет подписки».`)) return;
+            setLoading(true);
+            try {
+                const { data: res, error } = await HEYS.YandexAPI?.rpc?.('admin_cancel_subscription', {
+                    p_curator_id: curatorId,
+                    p_client_id: client.id
+                }) || {};
+                if (error) {
+                    HEYS.Toast?.error?.(error.message || 'Ошибка сброса');
+                } else if (res && res.success) {
+                    HEYS.Toast?.success?.('🚫 Подписка сброшена');
+                    client.subscription_status = 'none';
+                    client.active_until = null;
+                    client.trial_ends_at = null;
+                    onUpdate?.();
+                    setOpen(false);
+                    setView('main');
+                } else {
+                    HEYS.Toast?.error?.(res?.message || 'Ошибка сброса');
+                }
+            } catch (e) {
+                console.error('[HEYS.sub] ❌ cancel error:', e);
+                HEYS.Toast?.error?.('Ошибка: ' + (e.message || 'Не удалось сбросить'));
+            }
+            setLoading(false);
+        };
+
+        const h = React.createElement;
+        const btnBase = { border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 14, fontWeight: 600, cursor: 'pointer', width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 };
+
+        // === Подвид: Активация триала ===
+        const trialView = () => h('div', null,
+            h('div', { style: { fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text, #1f2937)' } }, '🎫 Активировать триал'),
+            h('label', { style: { display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text, #374151)', marginBottom: 6 } }, 'Дата начала:'),
+            h('input', {
+                type: 'date', value: trialDate,
+                onChange: (e) => setTrialDate(e.target.value),
+                min: new Date().toISOString().split('T')[0],
+                style: { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 14, marginBottom: 8, boxSizing: 'border-box' }
+            }),
+            h('div', { style: { fontSize: 12, color: '#9ca3af', marginBottom: 16 } },
+                trialDate === new Date().toISOString().split('T')[0]
+                    ? '⚡ Триал начнётся сразу (7 дней)'
+                    : `📅 Триал начнётся ${trialDate}, доступ на 7 дней`
+            ),
+            h('div', { style: { display: 'flex', gap: 8 } },
+                h('button', { onClick: () => setView('main'), style: { ...btnBase, background: 'var(--border, #e5e7eb)', color: 'var(--text, #374151)', flex: 1, justifyContent: 'center' } }, '← Назад'),
+                h('button', {
+                    onClick: handleActivateTrial, disabled: loading,
+                    style: { ...btnBase, background: loading ? '#9ca3af' : 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff', flex: 1, justifyContent: 'center' }
+                }, loading ? '⏳...' : '✅ Активировать')
+            )
+        );
+
+        // === Подвид: Продление подписки ===
+        const extendView = () => h('div', null,
+            h('div', { style: { fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text, #1f2937)' } }, '➕ Продлить подписку'),
+            h('label', { style: { display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text, #374151)', marginBottom: 6 } }, 'Количество месяцев:'),
+            h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 16 } },
+                [1, 2, 3, 6].map(m => h('button', {
+                    key: m, onClick: () => setMonths(m),
+                    style: {
+                        padding: '10px 0', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                        border: months === m ? '2px solid #4285f4' : '2px solid #e5e7eb',
+                        background: months === m ? '#eff6ff' : 'var(--card, #fff)',
+                        color: months === m ? '#2563eb' : 'var(--text, #374151)'
+                    }
+                }, `${m} мес`))
+            ),
+            h('div', { style: { fontSize: 12, color: '#9ca3af', marginBottom: 16 } },
+                `Подписка будет продлена на ${months} мес. от текущей даты окончания`
+            ),
+            h('div', { style: { display: 'flex', gap: 8 } },
+                h('button', { onClick: () => setView('main'), style: { ...btnBase, background: 'var(--border, #e5e7eb)', color: 'var(--text, #374151)', flex: 1, justifyContent: 'center' } }, '← Назад'),
+                h('button', {
+                    onClick: handleExtend, disabled: loading,
+                    style: { ...btnBase, background: loading ? '#9ca3af' : 'linear-gradient(135deg, #4285f4, #2563eb)', color: '#fff', flex: 1, justifyContent: 'center' }
+                }, loading ? '⏳...' : `✅ +${months} мес`)
+            )
+        );
+
+        // === Главный вид модала ===
+        const mainView = () => h('div', null,
+            // Заголовок
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 } },
+                h('div', { style: { width: 40, height: 40, borderRadius: '50%', background: badge.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 } }, badge.emoji),
+                h('div', null,
+                    h('div', { style: { fontSize: 16, fontWeight: 700, color: 'var(--text, #1f2937)' } }, client.name),
+                    h('div', { style: { fontSize: 13, color: badge.color, fontWeight: 600 } }, badge.text)
+                )
+            ),
+            // Информация
+            h('div', { style: { background: 'var(--bg-secondary, #f9fafb)', borderRadius: 10, padding: '12px 14px', marginBottom: 16, fontSize: 13 } },
+                h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px' } },
+                    h('span', { style: { color: '#6b7280' } }, 'Статус:'),
+                    h('span', { style: { fontWeight: 600, color: badge.color } }, status),
+                    h('span', { style: { color: '#6b7280' } }, 'Триал до:'),
+                    h('span', { style: { fontWeight: 500 } }, formatDate(client.trial_ends_at)),
+                    h('span', { style: { color: '#6b7280' } }, 'Подписка до:'),
+                    h('span', { style: { fontWeight: 500 } }, formatDate(client.active_until))
+                )
+            ),
+            // Действия
+            h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+                // Активировать триал (для none, read_only, trial_pending)
+                (status === 'none' || status === 'read_only' || status === 'trial_pending') && h('button', {
+                    onClick: () => { setTrialDate(new Date().toISOString().split('T')[0]); setView('trial'); },
+                    style: { ...btnBase, background: '#ecfdf5', color: '#059669' }
+                }, status === 'trial_pending' ? '⚡ Запустить триал сейчас' : '🎫 Активировать триал'),
+                // Продлить подписку (всегда доступно)
+                h('button', {
+                    onClick: () => { setMonths(1); setView('extend'); },
+                    style: { ...btnBase, background: '#eff6ff', color: '#2563eb' }
+                }, '➕ Продлить подписку'),
+                // Сбросить (если есть что сбрасывать)
+                status !== 'none' && h('button', {
+                    onClick: handleCancel, disabled: loading,
+                    style: { ...btnBase, background: '#fef2f2', color: '#dc2626', marginTop: 4 }
+                }, loading ? '⏳ Сброс...' : '🚫 Сбросить подписку')
+            )
+        );
+
+        return h(React.Fragment, null,
+            // Кнопка ⚙️
+            h('button', {
+                className: 'btn-icon',
+                title: 'Управление подпиской',
+                onClick: (e) => { e.stopPropagation(); setOpen(true); setView('main'); },
+                style: {
+                    width: 32, height: 32, borderRadius: 8, border: 'none',
+                    background: '#e0e7ff', cursor: 'pointer', fontSize: 14,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }
+            }, '⚙️'),
+            // Модальное окно
+            open && h('div', {
+                style: {
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.5)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', zIndex: 10000
+                },
+                onClick: (e) => { if (e.target === e.currentTarget) { setOpen(false); setView('main'); } }
+            },
+                h('div', {
+                    style: {
+                        background: 'var(--card, #fff)', borderRadius: 16, padding: 24,
+                        width: 360, maxWidth: '90vw', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                        maxHeight: '80vh', overflow: 'auto'
+                    },
+                    onClick: (e) => e.stopPropagation()
+                },
+                    // Кнопка закрытия
+                    h('div', { style: { display: 'flex', justifyContent: 'flex-end', marginBottom: 4 } },
+                        h('button', {
+                            onClick: () => { setOpen(false); setView('main'); },
+                            style: { background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#9ca3af', padding: '0 4px' }
+                        }, '✕')
+                    ),
+                    view === 'main' ? mainView() : view === 'trial' ? trialView() : extendView()
+                )
+            )
+        );
+    }
 
     function buildGate(props) {
         const {
@@ -562,42 +778,12 @@
                                                                 },
                                                                 '✏️'
                                                             ),
-                                                            // 🆕 Кнопка продления подписки
-                                                            React.createElement(
-                                                                'button',
-                                                                {
-                                                                    className: 'btn-icon',
-                                                                    title: 'Продлить на 1 месяц',
-                                                                    onClick: async () => {
-                                                                        const curatorId = cloudUser?.id;
-                                                                        if (!curatorId) {
-                                                                            HEYS.Toast?.error?.('Не удалось определить куратора');
-                                                                            return;
-                                                                        }
-                                                                        const res = await extendClientSubscription(c.id, curatorId, c.name);
-                                                                        if (res && res.success) {
-                                                                            // Обновляем локально данные клиента
-                                                                            c.trial_ends_at = res.new_end_date;
-                                                                            c.subscription_status = res.new_status;
-                                                                            // Триггерим перерисовку через событие
-                                                                            window.dispatchEvent(new CustomEvent('heys:clients-updated'));
-                                                                        }
-                                                                    },
-                                                                    style: {
-                                                                        width: 32,
-                                                                        height: 32,
-                                                                        borderRadius: 8,
-                                                                        border: 'none',
-                                                                        background: '#dcfce7',
-                                                                        cursor: 'pointer',
-                                                                        fontSize: 14,
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center'
-                                                                    }
-                                                                },
-                                                                '➕'
-                                                            ),
+                                                            // ⚙️ Управление подпиской клиента
+                                                            React.createElement(ClientSubscriptionButton, {
+                                                                client: c,
+                                                                curatorId: cloudUser?.id,
+                                                                onUpdate: () => window.dispatchEvent(new CustomEvent('heys:clients-updated'))
+                                                            }),
                                                             React.createElement(
                                                                 'button',
                                                                 {

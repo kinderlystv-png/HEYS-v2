@@ -226,6 +226,7 @@ const ALLOWED_FUNCTIONS = [
   'admin_get_queue_stats',              // Статистика очереди
   'admin_update_queue_settings',        // Изменить настройки (is_accepting и т.д.)
   'admin_extend_trial',                 // 🆕 Продление триала (для куратора)
+  'admin_cancel_subscription',          // 🆕 Сброс подписки (для куратора)
   'admin_get_all_clients',              // 🆕 Список всех клиентов (для куратора)
   'admin_get_leads',                    // 🆕 v3.0: Список лидов с лендинга
   'admin_convert_lead',                 // 🆕 v3.0: Конвертация лида в клиента
@@ -282,6 +283,7 @@ const CURATOR_ONLY_FUNCTIONS = [
   'reset_client_pin',                 // Сброс PIN клиента
   'get_curator_clients',              // Список клиентов куратора
   'admin_extend_subscription',        // Продление подписки клиента
+  'admin_cancel_subscription',        // 🆕 Сброс подписки клиента
   'log_gamification_event_by_curator',
   'get_gamification_events_by_curator',
   'delete_gamification_events_by_curator', // 🆕 Удаление дубликатов из audit log
