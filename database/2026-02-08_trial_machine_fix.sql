@@ -38,6 +38,10 @@ COMMENT ON COLUMN public.subscriptions.trial_approved_at
 --    Таймер стартует при первом логине через activate_trial_timer_by_session.
 -- ═══════════════════════════════════════════════════════════════════════════════════
 
+-- Удаляем старые версии функций, если сигнатура отличается (чтобы избежать ошибки return type)
+DROP FUNCTION IF EXISTS public.admin_activate_trial(UUID, INT);
+DROP FUNCTION IF EXISTS public.admin_activate_trial(UUID, INT, TEXT);
+
 CREATE OR REPLACE FUNCTION admin_activate_trial(
   p_queue_id UUID,
   p_trial_days INT DEFAULT 7,
@@ -86,12 +90,12 @@ BEGIN
     );
   END IF;
   
-  IF v_queue_record.status != 'pending' THEN
+  IF v_queue_record.status != 'queued' THEN
     RETURN jsonb_build_object(
       'success', false, 
       'error', 'invalid_status',
       'current_status', v_queue_record.status,
-      'message', 'Можно активировать только заявки со статусом pending'
+      'message', 'Можно активировать только заявки со статусом queued'
     );
   END IF;
   
@@ -116,7 +120,7 @@ BEGIN
   
   -- 6. Логируем событие
   INSERT INTO trial_queue_events (client_id, event_type, meta)
-  VALUES (v_queue_record.client_id, 'trial_approved', jsonb_build_object(
+  VALUES (v_queue_record.client_id, 'claimed', jsonb_build_object(
     'approved_by', COALESCE(v_curator_id::text, 'admin'),
     'trial_days', p_trial_days,
     'note', 'Timer starts on first client login'
@@ -235,6 +239,9 @@ AS $$
 $$;
 
 -- ═══════════════════════════════════════════════════════════════════════════════════
+-- Удаляем, так как изменился возвращаемый тип (добавили trial_approved_at)
+DROP FUNCTION IF EXISTS public.get_subscription_status_by_session(TEXT);
+
 -- 5. ОБНОВЛЁННЫЙ get_subscription_status_by_session
 --    Возвращает trial_approved_at для фронтенда
 -- ═══════════════════════════════════════════════════════════════════════════════════

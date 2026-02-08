@@ -227,6 +227,8 @@ const ALLOWED_FUNCTIONS = [
   'admin_update_queue_settings',        // Изменить настройки (is_accepting и т.д.)
   'admin_extend_trial',                 // 🆕 Продление триала (для куратора)
   'admin_get_all_clients',              // 🆕 Список всех клиентов (для куратора)
+  'admin_get_leads',                    // 🆕 v3.0: Список лидов с лендинга
+  'admin_convert_lead',                 // 🆕 v3.0: Конвертация лида в клиента
   // ❌ check_subscription_status(UUID) — убрано, принимает UUID без проверки владельца
 
   // === KV STORAGE (🔐 P1: session-версии — IDOR fix!) ===
@@ -661,9 +663,10 @@ module.exports.handler = async function (event, context) {
         'p_offer_window_minutes': '::int',
         'p_curator_session_token': '::text'
       },
-      // 🆕 Manual trial activation (Phase 3)
+      // 🆕 v3.0: Manual trial activation with start date
       'admin_activate_trial': {
         'p_client_id': '::uuid',
+        'p_start_date': '::date',
         'p_trial_days': '::int',
         'p_curator_session_token': '::text'
       },
@@ -681,6 +684,15 @@ module.exports.handler = async function (event, context) {
         'p_offer_window_minutes': '::int',
         'p_trial_days': '::int',
         'p_curator_session_token': '::text'
+      },
+      // 🆕 v3.0: Leads management
+      'admin_get_leads': {
+        'p_status': '::text'
+      },
+      'admin_convert_lead': {
+        'p_lead_id': '::uuid',
+        'p_pin': '::text',
+        'p_curator_id': '::uuid'
       }
     };
 
