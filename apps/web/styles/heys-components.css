@@ -1054,6 +1054,13 @@ body.tour-active .ios-pwa-banner {
   font-size: 11px;
   color: #94a3b8;
   margin-left: 4px;
+
+  .weekly-wrap-step__delta-target-line {
+    display: block;
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: 2px;
+  }
 }
 
 .weekly-wrap-step__delta-target-value.weekly-wrap-step__delta-value--good {
@@ -1252,6 +1259,8 @@ body.tour-active .ios-pwa-banner {
   background: #ffedd5;
   color: #c2410c;
   border: 1px solid #fdba74;
+  display: block;
+  margin: 4px auto 0;
 }
 
 .weekly-wrap-breakdown__value--good {

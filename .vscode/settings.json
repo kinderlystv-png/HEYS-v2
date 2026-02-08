@@ -1,11 +1,14 @@
 {
     // === Agent Mode (VS Code 1.108+) ===
     "chat.useAgentSkills": true,
+    "chat.agentCustomizationSkill.enabled": true,
     "chat.viewSessions.orientation": "sideBySide",
     // === Copilot Settings ===
     "github.copilot.chat.codeGeneration.useInstructionFiles": true,
     "github.copilot.chat.reviewSelection.enabled": true,
     "github.copilot.chat.temporalContext.enabled": true,
+    "github.copilot.chat.scopeSelection.enabled": true,
+    "github.copilot.chat.localeOverride": "ru",
     "github.copilot.chat.commitMessageGeneration.instructions": [
         {
             "text": "Формат: type: краткое описание на английском. Types: feat, fix, refactor, docs, chore"
@@ -49,31 +52,10 @@
         }
     ],
     // ===========================================
-    // 🗄️ Yandex Cloud PostgreSQL (для миграций и скриптов)
-    // ⚠️ ВРЕМЕННО! Убрать после релиза и смены пароля
+    // 🗄️ Yandex Cloud PostgreSQL
+    // Переменные в .env (корень проекта). Загрузка:
+    //   Windows PowerShell: Get-Content .env | ForEach { if ($_ -match '^([^#].+?)=(.*)$') { [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process') } }
+    //   Bash/WSL: set -a; source .env; set +a
+    //   Или: npx dotenv -- node script.js
     // ===========================================
-    "terminal.integrated.env.windows": {
-        "PG_HOST": "rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net",
-        "PG_PORT": "6432",
-        "PG_DATABASE": "heys_production",
-        "PG_USER": "heys_admin",
-        "PG_PASSWORD": "heys007670",
-        "PG_SSL": "verify-full"
-    },
-    "terminal.integrated.env.linux": {
-        "PG_HOST": "rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net",
-        "PG_PORT": "6432",
-        "PG_DATABASE": "heys_production",
-        "PG_USER": "heys_admin",
-        "PG_PASSWORD": "heys007670",
-        "PG_SSL": "verify-full"
-    },
-    "terminal.integrated.env.osx": {
-        "PG_HOST": "rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net",
-        "PG_PORT": "6432",
-        "PG_DATABASE": "heys_production",
-        "PG_USER": "heys_admin",
-        "PG_PASSWORD": "heys007670",
-        "PG_SSL": "verify-full"
-    }
 }

@@ -1042,15 +1042,19 @@
       return Math.min(100, Math.max(0, raw * 100));
     };
 
+    const ringStartOffsetPct = 7; // чуть больше (~25°)
+    const ringCapCompPct = 5; // компенсация скруглённых концов
     const ringStrokeStyle = (ratio, color) => ({
-      strokeDasharray: clampPct(ratio) + ' 100',
+      strokeDasharray: Math.max(0, clampPct(ratio) - ringCapCompPct) + ' 100',
+      strokeDashoffset: -ringStartOffsetPct,
       stroke: color
     });
 
     // Данные для отрисовки перебора
     const getOverData = (ratio) => {
       const hasOver = ratio > 1;
-      const overPct = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0;
+      const overPctRaw = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0;
+      const overPct = Math.max(0, overPctRaw - ringCapCompPct);
       return { hasOver, overPct };
     };
 

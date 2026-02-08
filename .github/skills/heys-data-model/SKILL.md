@@ -1,5 +1,5 @@
 ---
-applyTo: "apps/web/heys_*.js"
+applyTo: 'apps/web/**/*.{js,jsx,ts,tsx}'
 description: Модель данных HEYS — dayTot, meals, products, формулы
 ---
 
@@ -8,6 +8,7 @@ description: Модель данных HEYS — dayTot, meals, products, фор�
 > Активируется при работе с данными, аналитикой, формулами
 
 ## Триггеры (keywords)
+
 - dayTot, normAbs, optimum
 - калории, БЖУ, макросы
 - инсулиновая волна, советы
@@ -16,14 +17,16 @@ description: Модель данных HEYS — dayTot, meals, products, фор�
 ## Критические поля
 
 ### ⚠️ Частые ошибки
-| Ошибка | Правильно |
-|--------|-----------|
-| `dayTot.protein` | `dayTot.prot` |
-| `normAbs.protein` | `normAbs.prot` |
-| `heys_day_` | `heys_dayv2_` (v2!) |
-| `item.category` | `getProductFromItem(item, pIndex).category` |
+
+| Ошибка            | Правильно                                   |
+| ----------------- | ------------------------------------------- |
+| `dayTot.protein`  | `dayTot.prot`                               |
+| `normAbs.protein` | `normAbs.prot`                              |
+| `heys_day_`       | `heys_dayv2_` (v2!)                         |
+| `item.category`   | `getProductFromItem(item, pIndex).category` |
 
 ### Структура DayRecord (localStorage: `heys_dayv2_{YYYY-MM-DD}`)
+
 ```javascript
 {
   date: "2025-11-29",
@@ -39,21 +42,30 @@ description: Модель данных HEYS — dayTot, meals, products, фор�
 ```
 
 ### Продукт (на 100г)
+
 ```javascript
 {
-  simple100, complex100,  // Углеводы
-  protein100,             // Белок
-  badFat100, goodFat100, trans100,  // Жиры
-  fiber100, gi, harm      // Клетчатка, ГИ, вред
+  (simple100,
+    complex100, // Углеводы
+    protein100, // Белок
+    badFat100,
+    goodFat100,
+    trans100, // Жиры
+    fiber100,
+    gi,
+    harm); // Клетчатка, ГИ, вред
 }
 ```
 
 ### Вычисляемые
+
 - `carbs100 = simple100 + complex100`
 - `fat100 = badFat100 + goodFat100 + trans100`
-- `kcal100 = protein100*4 + carbs100*4 + fat100*9`
+- `kcal100 = protein100*3 + carbs100*4 + fat100*9` (**TEF-adjusted**: белок = 3
+  kcal/g, не 4)
 
 ## Аналитика
+
 - **182 совета** в `heys_advice_v1.js`
 - **37 факторов** инсулиновой волны
 - **Status Score** 0-100 (9 факторов)

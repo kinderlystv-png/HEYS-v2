@@ -2550,6 +2550,27 @@
   white-space: nowrap;
 }
 
+.week-heatmap-deficit-target {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  line-height: 1.2;
+}
+
+.week-heatmap-deficit-target-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.week-heatmap-deficit-target .week-heatmap-deficit-badge {
+  margin-left: 0;
+  margin-top: 0;
+}
+
 .week-heatmap-deficit-excluded {
   position: absolute;
   top: -8px;

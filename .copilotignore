@@ -1,0 +1,53 @@
+# ===========================================
+# .copilotignore — исключить из контекста Copilot
+# Уменьшает шум, экономит context window
+# ===========================================
+
+# Архивные и устаревшие документы
+docs/archive/
+docs/website/
+docs/sprints/
+docs/plans/
+docs/anchors/
+docs/guides/
+docs/metrics/
+docs/automation/
+docs/tasks/
+
+# Юридические документы (длинные, не нужны для кода)
+docs/legal/
+
+# Бэкапы
+*.backup.js
+*.backup.ts
+*.backup.css
+*-old.*
+*-copy.*
+
+# Сертификаты
+yandex-cloud-functions/*/certs/
+
+# Тестовые артефакты
+coverage/
+test-results/
+*.lcov
+
+# Сборка и кеш
+dist/
+build/
+.turbo/
+.next/
+.cache/
+.parcel-cache/
+
+# Зависимости
+node_modules/
+pnpm-lock.yaml
+
+# Системные
+.DS_Store
+Thumbs.db
+*.log
+
+# Временные файлы Claude Code
+tmpclaude-*

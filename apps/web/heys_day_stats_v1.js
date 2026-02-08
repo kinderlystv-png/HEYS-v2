@@ -2461,13 +2461,12 @@
                   React.createElement('span', { style: deficitStyles?.value }, totalBurned?.toLocaleString('ru')),
                   React.createElement('span', { style: deficitStyles?.slash }, '/'),
                   React.createElement('span', { style: deficitStyles?.value }, totalEaten?.toLocaleString('ru')),
-                  React.createElement('span', { style: deficitMeta.pctStyle || deficitStyles?.pct }, (diffSign || '') + diffPct + '%'),
-                  React.createElement('span', { style: deficitStyles?.target },
-                    '(цель ' + (targetSign || '') + targetDef + '%',
-                    deficitMeta.hasRefeedInWeek && React.createElement('span', {
-                      className: 'week-heatmap-deficit-badge'
-                    }, 'Был рефид'),
-                    ')'
+                  React.createElement('span', { style: deficitMeta.pctStyle || deficitStyles?.pct }, (diffSign || '') + diffPct + '%')
+                ),
+                React.createElement('span', { className: 'week-heatmap-deficit-target' },
+                  React.createElement('span', { className: 'week-heatmap-deficit-target-line' },
+                    'Средняя цель была ' + (targetSign || '') + targetDef + '%',
+                    deficitMeta.hasRefeedInWeek && React.createElement('span', { className: 'week-heatmap-deficit-badge' }, 'Был рефид')
                   )
                 ),
                 // Вторая строка: сожжённый жир
@@ -2814,25 +2813,21 @@
                 style: macroRingsMeta.styles?.ringButton
               },
                 React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
-                  React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5 }),
+                  React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5, pathLength: 100 }),
                   React.createElement('circle', {
                     className: 'macro-ring-fill',
                     cx: 18, cy: 18, r: 15.5,
+                    pathLength: 100,
                     style: macroRingsMeta.protRingStrokeStyle
                   }),
                   // Красная дуга перебора
                   protOverData.hasOver && React.createElement('circle', {
                     className: 'macro-ring-fill--over',
                     cx: 18, cy: 18, r: 15.5,
-                    style: { strokeDasharray: protOverData.overPct + ' ' + (100 - protOverData.overPct), strokeDashoffset: -(100 - protOverData.overPct), stroke: '#ef4444' }
+                    pathLength: 100,
+                    style: { strokeDasharray: protOverData.overPct + ' ' + (100 - protOverData.overPct), strokeDashoffset: -(100 - protOverData.overPct), stroke: '#22c55e' }
                   }),
-                  // Чёрная линия-маркер в начале красной дуги
-                  protOverData.hasOver && React.createElement('line', {
-                    className: 'macro-ring-norm-marker',
-                    x1: 26, y1: 18,
-                    x2: 36, y2: 18,
-                    transform: 'rotate(' + (360 - (protOverData.overPct * 3.6)) + ' 18 18)'
-                  })
+                  // Маркер убран по просьбе
                 ),
                 React.createElement('span', { className: 'macro-ring-value', style: macroRingsMeta.styles?.value ? macroRingsMeta.styles.value(protColor) : undefined },
                   Math.round(dayTot.prot || 0)
@@ -2850,25 +2845,21 @@
                 style: macroRingsMeta.styles?.ringButton
               },
                 React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
-                  React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5 }),
+                  React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5, pathLength: 100 }),
                   React.createElement('circle', {
                     className: 'macro-ring-fill',
                     cx: 18, cy: 18, r: 15.5,
+                    pathLength: 100,
                     style: macroRingsMeta.fatRingStrokeStyle
                   }),
                   // Красная дуга перебора
                   fatOverData.hasOver && React.createElement('circle', {
                     className: 'macro-ring-fill--over',
                     cx: 18, cy: 18, r: 15.5,
+                    pathLength: 100,
                     style: { strokeDasharray: fatOverData.overPct + ' ' + (100 - fatOverData.overPct), strokeDashoffset: -(100 - fatOverData.overPct), stroke: '#ef4444' }
                   }),
-                  // Чёрная линия-маркер в начале красной дуги
-                  fatOverData.hasOver && React.createElement('line', {
-                    className: 'macro-ring-norm-marker',
-                    x1: 26, y1: 18,
-                    x2: 36, y2: 18,
-                    transform: 'rotate(' + (360 - (fatOverData.overPct * 3.6)) + ' 18 18)'
-                  })
+                  // Маркер убран по просьбе
                 ),
                 React.createElement('span', { className: 'macro-ring-value', style: macroRingsMeta.styles?.value ? macroRingsMeta.styles.value(fatColor) : undefined },
                   Math.round(dayTot.fat || 0)
@@ -2886,25 +2877,21 @@
                 style: macroRingsMeta.styles?.ringButton
               },
                 React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
-                  React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5 }),
+                  React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5, pathLength: 100 }),
                   React.createElement('circle', {
                     className: 'macro-ring-fill',
                     cx: 18, cy: 18, r: 15.5,
+                    pathLength: 100,
                     style: macroRingsMeta.carbsRingStrokeStyle
                   }),
                   // Красная дуга перебора
                   carbsOverData.hasOver && React.createElement('circle', {
                     className: 'macro-ring-fill--over',
                     cx: 18, cy: 18, r: 15.5,
+                    pathLength: 100,
                     style: { strokeDasharray: carbsOverData.overPct + ' ' + (100 - carbsOverData.overPct), strokeDashoffset: -(100 - carbsOverData.overPct), stroke: '#ef4444' }
                   }),
-                  // Чёрная линия-маркер в начале красной дуги
-                  carbsOverData.hasOver && React.createElement('line', {
-                    className: 'macro-ring-norm-marker',
-                    x1: 26, y1: 18,
-                    x2: 36, y2: 18,
-                    transform: 'rotate(' + (360 - (carbsOverData.overPct * 3.6)) + ' 18 18)'
-                  })
+                  // Маркер убран по просьбе
                 ),
                 React.createElement('span', { className: 'macro-ring-value', style: macroRingsMeta.styles?.value ? macroRingsMeta.styles.value(carbsColor) : undefined },
                   Math.round(dayTot.carbs || 0)

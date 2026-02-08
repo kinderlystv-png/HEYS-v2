@@ -571,41 +571,42 @@
         const avgNormCarbs = report?.avgNormCarbs ?? 0;
 
         const buildMacroRing = (label, value, norm, toneClass) => {
+            const ringStartOffsetPct = 7; // чуть больше (~25°)
+            const ringCapCompPct = 5; // компенсация скруглённых концов
+            const overColor = toneClass === 'protein' ? '#22c55e' : '#ef4444';
             const ratio = norm > 0 ? value / norm : 0;
             // Основная дуга: от 0 до min(100%, ratio)
-            const basePct = Math.min(100, Math.round(ratio * 100));
+            const basePctRaw = Math.min(100, Math.round(ratio * 100));
+            const basePct = Math.max(0, basePctRaw - ringCapCompPct);
             // Перебор: от 100% до ratio (если ratio > 1)
             const hasOver = ratio > 1;
-            const overPct = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0; // max 150% визуально
+            const overPctRaw = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0; // max 150% визуально
+            const overPct = Math.max(0, overPctRaw - ringCapCompPct);
 
             return h('div', { className: 'macro-ring-item' },
                 h('div', { className: 'macro-ring ' + toneClass + (hasOver ? ' macro-ring--over' : '') },
                     h('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
                         // Фоновый трек
-                        h('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5 }),
+                        h('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5, pathLength: 100 }),
                         // Основная дуга (до 100%)
                         h('circle', {
                             className: 'macro-ring-fill',
                             cx: 18, cy: 18, r: 15.5,
-                            style: { strokeDasharray: basePct + ' 100' }
+                            pathLength: 100,
+                            style: { strokeDasharray: basePct + ' 100', strokeDashoffset: -ringStartOffsetPct }
                         }),
                         // Красная дуга перебора (от 100% дальше)
                         hasOver && h('circle', {
                             className: 'macro-ring-fill--over',
                             cx: 18, cy: 18, r: 15.5,
+                            pathLength: 100,
                             style: {
                                 strokeDasharray: overPct + ' ' + (100 - overPct),
                                 strokeDashoffset: -(100 - overPct),  // дуга заканчивается на 360°
-                                stroke: '#ef4444'
+                                stroke: overColor
                             }
                         }),
-                        // Чёрная линия-маркер в начале красной дуги
-                        hasOver && h('line', {
-                            className: 'macro-ring-norm-marker',
-                            x1: 26, y1: 18,
-                            x2: 36, y2: 18,
-                            transform: 'rotate(' + (360 - (overPct * 3.6)) + ' 18 18)'
-                        })
+                        // Маркер убран по просьбе
                     ),
                     h('span', { className: 'macro-ring-value' }, Math.round(value || 0))
                 ),
@@ -693,16 +694,17 @@
                                 className: 'weekly-wrap-step__stat-value weekly-wrap-step__delta-value ' + deltaToneClass
                             }, (deltaPct > 0 ? '+' : '') + deltaPct + '%'),
                             h('div', { className: 'weekly-wrap-step__stat-sub' },
-                                h('span', { className: 'weekly-wrap-step__delta-target' },
-                                    '(цель средняя ',
+                                h('span', { className: 'weekly-wrap-step__delta-target-line' },
+                                    'Средняя цель была ',
                                     h('span', { className: 'weekly-wrap-step__delta-target-value ' + targetToneClass },
                                         (targetPct > 0 ? '+' : '') + targetPct + '%'
-                                    ),
-                                    hasRefeedInWeek
-                                        ? h('span', { className: 'weekly-wrap-step__badge weekly-wrap-step__badge--refeed' }, 'Был рефид')
-                                        : null,
-                                    ')'
-                                )
+                                    )
+                                ),
+                                hasRefeedInWeek
+                                    ? h('span', { className: 'weekly-wrap-step__delta-target-line' },
+                                        h('span', { className: 'weekly-wrap-step__badge weekly-wrap-step__badge--refeed' }, 'Был рефид')
+                                    )
+                                    : null
                             )
                         )
                     ),

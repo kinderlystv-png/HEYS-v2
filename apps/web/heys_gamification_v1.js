@@ -256,7 +256,8 @@
     let stored = readStoredValue(STORAGE_KEY, null);
 
     // 🛡️ FIX v2.0: Fallback поиск по всем вариантам ключа если основной пустой
-    if (!stored || !stored.totalXP || stored.totalXP === 0) {
+    // FIX v2.4: typeof check — totalXP=0 is valid (fresh data), don't treat as missing
+    if (!stored || typeof stored.totalXP !== 'number') {
       let bestXP = stored?.totalXP || 0;
       let bestData = stored;
 
@@ -885,6 +886,261 @@
 
     logAuditWarn('rpc:auth:missing', { hasSession: false, hasCurator: false });
     return { items: [], error: { message: 'Нужна авторизация (PIN или куратор)' } };
+  }
+
+  /**
+   * 🔧 FIX v2.4: Восстановление XP из аудит-лога (source of truth)
+   *
+   * Если XP в кэше (localStorage/cloud) расходится с суммой xp_delta из аудита,
+   * пересчитывает XP целиком из аудит-записей.
+   *
+   * Вызывается:
+   * 1. Из loadFromCloud() если cloud XP < audit XP
+   * 2. Вручную через HEYS.game.rebuildXPFromAudit()
+   *
+   * @param {Object} options
+   * @param {boolean} options.force — пересчитать даже если разницы нет
+   * @param {boolean} options.dryRun — только проверить, не применять
+   * @returns {Object} { rebuilt: boolean, auditXP, cachedXP, delta, events }
+   */
+  async function rebuildXPFromAudit(options = {}) {
+    const { force = false, dryRun = false } = options;
+    const LOG = '[🎮 GAME REBUILD]';
+
+    try {
+      // 1. Получаем ВСЕ записи из аудит-лога (пагинация по 100)
+      const allEvents = [];
+      let offset = 0;
+      const PAGE_SIZE = 100;
+      const MAX_PAGES = 20; // Безопасный лимит — 2000 записей
+
+      for (let page = 0; page < MAX_PAGES; page++) {
+        const result = await fetchGamificationHistory({ limit: PAGE_SIZE, offset });
+        const items = result?.items || [];
+        if (items.length === 0) break;
+        allEvents.push(...items);
+        offset += items.length;
+        // Если получили меньше чем запрошено — это последняя страница
+        if (items.length < PAGE_SIZE) break;
+      }
+
+      if (allEvents.length === 0) {
+        console.info(LOG, 'No audit events found — nothing to rebuild');
+        return { rebuilt: false, auditXP: 0, cachedXP: 0, delta: 0, events: 0, reason: 'no_events' };
+      }
+
+      // 2. Считаем суммарный XP из аудита (только xp_gain события)
+      let auditXP = 0;
+      let xpGainCount = 0;
+      // 2b. Собираем unlocked achievements из аудита
+      const auditAchievements = new Set();
+      // 2c. Собираем stats из audit reasons
+      const auditStats = {
+        totalProducts: 0,
+        totalWater: 0,
+        totalTrainings: 0,
+        totalAdvicesRead: 0,
+        perfectDays: 0,
+        bestStreak: 0
+      };
+      // 2d. Собираем first_* actions для восстановления onboarding ачивок
+      const seenReasons = new Set();
+
+      for (const event of allEvents) {
+        const eventDelta = event.xp_delta || event.xpDelta || 0;
+        const action = event.action || event.p_action || '';
+        const reason = event.reason || event.p_reason || '';
+
+        // XP суммирование (только xp_gain, не level_up — это дубль)
+        if (action === 'xp_gain' && typeof eventDelta === 'number' && eventDelta > 0) {
+          auditXP += eventDelta;
+          xpGainCount++;
+          seenReasons.add(reason);
+
+          // Пересчёт stats из reasons
+          if (reason === 'product_added') auditStats.totalProducts++;
+          if (reason === 'water_added') auditStats.totalWater++;
+          if (reason === 'training_added') auditStats.totalTrainings++;
+          if (reason === 'advice_read') auditStats.totalAdvicesRead++;
+          if (reason === 'perfect_day') auditStats.perfectDays++;
+        }
+
+        // Достижения — восстанавливаем из audit
+        if (action === 'achievement_unlocked' && reason) {
+          auditAchievements.add(reason);
+          // XP за ачивку уже включён в xp_gain? Нет — achievement_unlocked тоже имеет xp_delta
+          if (typeof eventDelta === 'number' && eventDelta > 0) {
+            auditXP += eventDelta;
+          }
+        }
+      }
+
+      // 3. Получаем текущий кэшированный XP
+      const currentData = loadData();
+      const cachedXP = currentData.totalXP || 0;
+      const delta = auditXP - cachedXP;
+      const currentAchievements = new Set(currentData.unlockedAchievements || []);
+      const missingAchievements = [...auditAchievements].filter(a => !currentAchievements.has(a));
+
+      // 3b. Определяем first_* ачивки из seenReasons
+      const reasonToFirstAchievement = {
+        checkin_complete: 'first_checkin',
+        meal_added: 'first_meal',
+        product_added: 'first_product',
+        steps_updated: 'first_steps',
+        advice_read: 'first_advice',
+        supplements_taken: 'first_supplements',
+        water_added: 'first_water',
+        training_added: 'first_training',
+        household_added: 'first_household'
+      };
+      for (const [reason, achId] of Object.entries(reasonToFirstAchievement)) {
+        if (seenReasons.has(reason) && !currentAchievements.has(achId) && !auditAchievements.has(achId)) {
+          missingAchievements.push(achId);
+        }
+      }
+
+      // 3c. Level-based ачивки
+      const rebuiltLevel = calculateLevel(Math.max(auditXP, cachedXP));
+      const levelMilestones = [5, 10, 15, 20, 25];
+      for (const lvl of levelMilestones) {
+        const achId = `level_${lvl}`;
+        if (rebuiltLevel >= lvl && !currentAchievements.has(achId) && !auditAchievements.has(achId)) {
+          missingAchievements.push(achId);
+        }
+      }
+
+      console.info(LOG, `Audit: ${xpGainCount} xp_gain events, total XP=${auditXP}. Cached XP=${cachedXP}. Delta=${delta}`);
+      console.info(LOG, `Achievements in audit: ${auditAchievements.size}, missing: ${missingAchievements.length}`, missingAchievements);
+      console.info(LOG, `Stats from audit:`, auditStats);
+
+      // 4. Проверяем нужен ли rebuild
+      const THRESHOLD_PERCENT = 0.2;
+      const xpNeedsRebuild = force || (
+        auditXP > cachedXP &&
+        (cachedXP === 0 || delta / Math.max(cachedXP, 1) >= THRESHOLD_PERCENT)
+      );
+      const achievementsNeedRebuild = missingAchievements.length > 0;
+      const statsNeedRebuild = (
+        auditStats.totalProducts > (currentData.stats?.totalProducts || 0) ||
+        auditStats.totalWater > (currentData.stats?.totalWater || 0) ||
+        auditStats.totalTrainings > (currentData.stats?.totalTrainings || 0) ||
+        auditStats.totalAdvicesRead > (currentData.stats?.totalAdvicesRead || 0) ||
+        auditStats.perfectDays > (currentData.stats?.perfectDays || 0)
+      );
+
+      const needsRebuild = xpNeedsRebuild || achievementsNeedRebuild || statsNeedRebuild;
+
+      if (!needsRebuild) {
+        console.info(LOG, `Everything consistent — no rebuild needed`);
+        return { rebuilt: false, auditXP, cachedXP, delta, events: xpGainCount, missingAchievements: [], reason: 'consistent' };
+      }
+
+      if (dryRun) {
+        console.warn(LOG, `DRY RUN: XP ${cachedXP} → ${auditXP}, +${missingAchievements.length} achievements, stats update`);
+        return {
+          rebuilt: false, auditXP, cachedXP, delta, events: xpGainCount,
+          missingAchievements, auditStats, reason: 'dry_run'
+        };
+      }
+
+      // 5. Применяем rebuild
+      const oldLevel = currentData.level;
+      let rebuiltXP = Math.max(auditXP, cachedXP); // Берём максимум — не теряем XP
+
+      // 5a. Восстанавливаем stats (берём max из audit и текущих)
+      if (!currentData.stats) currentData.stats = {};
+      currentData.stats.totalProducts = Math.max(currentData.stats.totalProducts || 0, auditStats.totalProducts);
+      currentData.stats.totalWater = Math.max(currentData.stats.totalWater || 0, auditStats.totalWater);
+      currentData.stats.totalTrainings = Math.max(currentData.stats.totalTrainings || 0, auditStats.totalTrainings);
+      currentData.stats.totalAdvicesRead = Math.max(currentData.stats.totalAdvicesRead || 0, auditStats.totalAdvicesRead);
+      currentData.stats.perfectDays = Math.max(currentData.stats.perfectDays || 0, auditStats.perfectDays);
+
+      // 5b. Восстанавливаем достижения (добавляем XP за каждую ачивку)
+      const restoredAchievements = [];
+      for (const achId of missingAchievements) {
+        if (!currentData.unlockedAchievements.includes(achId)) {
+          currentData.unlockedAchievements.push(achId);
+          const ach = ACHIEVEMENTS[achId];
+          if (ach) {
+            // XP за ачивку добавляем только если это ачивка НЕ из audit
+            // (audit achievement_unlocked XP уже включён в auditXP)
+            if (!auditAchievements.has(achId)) {
+              rebuiltXP += ach.xp;
+            }
+            restoredAchievements.push({ id: achId, name: ach.name, xp: ach.xp });
+          }
+        }
+      }
+
+      // 5c. Обновляем XP и level
+      if (rebuiltXP !== cachedXP) {
+        console.warn(LOG, `⚠️ REBUILDING XP: ${cachedXP} → ${rebuiltXP}`);
+      }
+      currentData.totalXP = rebuiltXP;
+      currentData.level = calculateLevel(rebuiltXP);
+      currentData.updatedAt = Date.now();
+
+      _data = currentData;
+      setStoredValue(STORAGE_KEY, _data);
+
+      // 6. Логируем rebuild в аудит
+      queueGamificationEvent({
+        action: 'xp_rebuild',
+        reason: 'audit_reconciliation',
+        xpBefore: cachedXP,
+        xpAfter: rebuiltXP,
+        xpDelta: rebuiltXP - cachedXP,
+        levelBefore: oldLevel,
+        levelAfter: currentData.level,
+        metadata: {
+          auditEvents: xpGainCount,
+          totalAuditRecords: allEvents.length,
+          restoredAchievements: restoredAchievements.map(a => a.id),
+          statsUpdated: statsNeedRebuild,
+          trigger: force ? 'manual' : 'auto'
+        }
+      });
+
+      // 7. Синхронизируем в облако
+      triggerImmediateSync('xp_rebuild');
+
+      // 8. Обновляем UI
+      window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+        detail: {
+          xpGained: rebuiltXP - cachedXP,
+          reason: 'xp_rebuild',
+          totalXP: rebuiltXP,
+          level: currentData.level,
+          progress: game.getProgress(),
+          restoredAchievements
+        }
+      }));
+
+      // Уведомление о восстановлении
+      if (rebuiltXP > cachedXP || restoredAchievements.length > 0) {
+        showNotification('xp_rebuilt', {
+          oldXP: cachedXP,
+          newXP: rebuiltXP,
+          delta: rebuiltXP - cachedXP,
+          achievements: restoredAchievements.length
+        });
+      }
+
+      console.info(LOG, `✅ Rebuild complete: XP=${rebuiltXP}, level=${currentData.level}, +${restoredAchievements.length} achievements`);
+      if (restoredAchievements.length > 0) {
+        console.info(LOG, `Restored achievements:`, restoredAchievements.map(a => `${a.name} (+${a.xp} XP)`));
+      }
+
+      return {
+        rebuilt: true, auditXP, cachedXP, delta: rebuiltXP - cachedXP,
+        events: xpGainCount, restoredAchievements, reason: 'rebuilt'
+      };
+
+    } catch (err) {
+      console.error(LOG, '❌ Rebuild failed:', err.message);
+      return { rebuilt: false, auditXP: 0, cachedXP: 0, delta: 0, events: 0, reason: 'error', error: err.message };
+    }
   }
 
   // 🛡️ FIX v2.3: Флаг для предотвращения рекурсии в watch callback
@@ -3232,14 +3488,51 @@
     },
 
     /**
+     * 🔧 FIX v2.5: Получение session token с правильной десериализацией
+     * HEYS.cloud.getSessionToken НЕ существует — используем HEYS.auth.getSessionToken
+     */
+    _getSessionTokenForCloud() {
+      // Priority 1: Auth module (properly JSON-parsed)
+      if (HEYS.auth?.getSessionToken) {
+        return HEYS.auth.getSessionToken();
+      }
+      // Priority 2: Parse from localStorage (lsGet does JSON.parse)
+      try {
+        const raw = localStorage.getItem('heys_session_token');
+        if (raw) {
+          try { return JSON.parse(raw); } catch { return raw; }
+        }
+      } catch (e) { /* ignore */ }
+      return null;
+    },
+
+    /**
+     * 🔧 FIX v2.5: Unwrap PG scalar function response
+     * SELECT * FROM func() wraps JSONB result in {func_name: {actual_data}}
+     */
+    _unwrapKvResult(rpcResult) {
+      if (!rpcResult || rpcResult.error) return null;
+      const data = rpcResult.data;
+      if (!data || typeof data !== 'object') return null;
+      // If data already has 'success' or 'value' key — it's already unwrapped
+      if ('success' in data || 'value' in data || 'found' in data) return data;
+      // Unwrap single-key column wrapper (e.g. {get_client_kv_by_session: {...}})
+      const keys = Object.keys(data);
+      if (keys.length === 1 && data[keys[0]] && typeof data[keys[0]] === 'object') {
+        return data[keys[0]];
+      }
+      return data;
+    },
+
+    /**
      * ☁️ Синхронизация прогресса с облаком
      * 🛡️ ЗАЩИТА: Не перезаписывает облако если там больше XP
+     * 🔧 FIX v2.5: Правильные p_ параметры + unwrap ответа + error checking
      */
     async syncToCloud() {
       try {
-        // 🔄 Получаем токен сессии — проверяем оба варианта
-        const sessionToken = HEYS.cloud?.getSessionToken?.() ||
-          localStorage.getItem('heys_session_token');
+        // 🔧 FIX v2.5: Используем HEYS.auth.getSessionToken (не cloud)
+        const sessionToken = this._getSessionTokenForCloud();
 
         if (!HEYS.YandexAPI || !sessionToken) {
           return false;
@@ -3248,18 +3541,27 @@
         const data = loadData();
 
         // 🛡️ Не синхронизируем пустые данные в облако
-        if (!data.totalXP || data.totalXP === 0) {
+        // FIX v2.4: typeof check — XP=0 is valid, only skip if data is truly broken
+        if (typeof data.totalXP !== 'number') {
           console.log('[🎮 Gamification] Skip cloud sync — no XP data');
           return false;
         }
 
         // 🛡️ ЗАЩИТА v2.1: Сначала проверяем облако — не перезаписываем если там новее/больше
         try {
+          // 🔧 FIX v2.5: p_ prefixed params + proper response unwrap
           const cloudResult = await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
-            session_token: sessionToken,
-            k: STORAGE_KEY
+            p_session_token: sessionToken,
+            p_key: STORAGE_KEY
           });
-          const cloudData_ = cloudResult?.v || {};
+
+          if (cloudResult?.error) {
+            console.warn('[🎮 Gamification] Cloud check RPC error:', cloudResult.error?.message || cloudResult.error);
+            // Продолжаем синхронизацию — лучше записать чем ничего
+          }
+
+          const kvData = this._unwrapKvResult(cloudResult);
+          const cloudData_ = kvData?.value || {};
           const cloudXP = cloudData_.totalXP || 0;
           const cloudUpdatedAt = cloudData_.updatedAt || 0;
 
@@ -3324,14 +3626,19 @@
           lastUpdated: new Date().toISOString()
         };
 
-        // Сохраняем в ОСНОВНОЙ ключ heys_game (совместимость с sync защитой)
-        await HEYS.YandexAPI.rpc('upsert_client_kv_by_session', {
-          session_token: sessionToken,
-          k: STORAGE_KEY, // 'heys_game'
-          v: cloudData    // Отправляем объект, не JSON.stringify
+        // 🔧 FIX v2.5: p_ prefixed params + error checking
+        const upsertResult = await HEYS.YandexAPI.rpc('upsert_client_kv_by_session', {
+          p_session_token: sessionToken,
+          p_key: STORAGE_KEY,   // 'heys_game'
+          p_value: cloudData    // Отправляем объект, не JSON.stringify
         });
 
-        console.log('[🎮 Gamification] Synced to cloud: XP=' + data.totalXP + ', level=' + data.level);
+        if (upsertResult?.error) {
+          console.error('[🎮 Gamification] Cloud upsert FAILED:', upsertResult.error?.message || upsertResult.error);
+          return false;
+        }
+
+        console.info('[🎮 Gamification] ✅ Synced to cloud: XP=' + data.totalXP + ', level=' + data.level);
         return true;
       } catch (e) {
         console.warn('[🎮 Gamification] Cloud sync failed:', e.message);
@@ -3341,12 +3648,12 @@
 
     /**
      * ☁️ Загрузка прогресса из облака
+     * 🔧 FIX v2.5: Правильные p_ параметры + unwrap ответа + error checking
      */
     async loadFromCloud() {
       try {
-        // 🔄 Получаем токен сессии — проверяем оба варианта
-        const sessionToken = HEYS.cloud?.getSessionToken?.() ||
-          localStorage.getItem('heys_session_token');
+        // 🔧 FIX v2.5: Используем HEYS.auth.getSessionToken (не cloud)
+        const sessionToken = this._getSessionTokenForCloud();
 
         if (!HEYS.YandexAPI || !sessionToken) {
           console.log('[🎮 Gamification] loadFromCloud: no API or session token');
@@ -3364,23 +3671,32 @@
         let cloudData = null;
 
         // 1. Новый ключ
+        // 🔧 FIX v2.5: p_ prefixed params + unwrap response
         const result1 = await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
-          session_token: sessionToken,
-          k: STORAGE_KEY // 'heys_game'
+          p_session_token: sessionToken,
+          p_key: STORAGE_KEY // 'heys_game'
         });
 
-        if (result1?.v) {
-          cloudData = typeof result1.v === 'string' ? JSON.parse(result1.v) : result1.v;
+        if (result1?.error) {
+          console.warn('[🎮 Gamification] loadFromCloud RPC error:', result1.error?.message || result1.error);
+        }
+
+        const kv1 = this._unwrapKvResult(result1);
+        if (kv1?.value) {
+          cloudData = typeof kv1.value === 'string' ? JSON.parse(kv1.value) : kv1.value;
+          console.log('[🎮 Gamification] loadFromCloud: found data in heys_game, XP=' + (cloudData?.totalXP ?? 'N/A'));
         }
 
         // 2. Старый ключ (fallback)
-        if (!cloudData || !cloudData.totalXP) {
+        // FIX v2.4: typeof check — totalXP=0 is valid cloud data, not missing
+        if (!cloudData || typeof cloudData.totalXP !== 'number') {
           const result2 = await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
-            session_token: sessionToken,
-            k: 'heys_gamification'
+            p_session_token: sessionToken,
+            p_key: 'heys_gamification'
           });
-          if (result2?.v) {
-            const legacyData = typeof result2.v === 'string' ? JSON.parse(result2.v) : result2.v;
+          const kv2 = this._unwrapKvResult(result2);
+          if (kv2?.value) {
+            const legacyData = typeof kv2.value === 'string' ? JSON.parse(kv2.value) : kv2.value;
             if (legacyData?.totalXP > (cloudData?.totalXP || 0)) {
               cloudData = legacyData;
               console.log('[🎮 Gamification] Found data in legacy key heys_gamification');
@@ -3395,7 +3711,8 @@
           triggerImmediateSync('pending_sync');
         }
 
-        if (cloudData && cloudData.totalXP) {
+        // FIX v2.4: typeof check — allow merging even when cloud totalXP=0
+        if (cloudData && typeof cloudData.totalXP === 'number') {
           const localData = loadData();
           const merged = mergeGameData(localData, cloudData);
 
@@ -3405,8 +3722,25 @@
 
           window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: game.getStats() }));
 
+          // 🔧 FIX v2.4: Проверяем расхождение с аудит-логом после merge
+          // Если merged XP подозрительно мал — аудит может содержать больше
+          setTimeout(() => {
+            rebuildXPFromAudit({ force: false }).catch((err) => {
+              console.warn('[🎮 GAME REBUILD] Post-merge audit check failed:', err.message);
+            });
+          }, 3000); // Отложенный запуск — не блокируем UI
+
           return true;
         }
+
+        // FIX v2.4: Даже если cloud пуст — пробуем восстановить из аудита
+        console.info('[🎮 Gamification] No cloud data, attempting audit rebuild...');
+        setTimeout(() => {
+          rebuildXPFromAudit({ force: false }).catch((err) => {
+            console.warn('[🎮 GAME REBUILD] Audit rebuild failed:', err.message);
+          });
+        }, 3000);
+
         return false;
       } catch (e) {
         _cloudLoaded = true; // Помечаем даже при ошибке
@@ -3501,6 +3835,9 @@
 
     // Audit History (cloud)
     getAuditHistory: fetchGamificationHistory,
+
+    // 🔧 FIX v2.4: Rebuild XP from audit log (source of truth)
+    rebuildXPFromAudit,
 
     // Streak Shield
     canUseStreakShield,
@@ -3948,6 +4285,30 @@
       console.log('[🎮 Gamification] Manual load from cloud...');
       const result = await HEYS.game.loadFromCloud();
       console.log('[🎮 Gamification] Load result:', result);
+      return result;
+    };
+
+    // 🔧 FIX v2.4: Пересчёт XP из аудит-лога
+    window.rebuildGameXP = async (force = false) => {
+      if (!HEYS.game?.rebuildXPFromAudit) {
+        console.error('[🎮 Gamification] rebuildXPFromAudit not available');
+        return false;
+      }
+      console.log('[🎮 Gamification] Rebuilding XP from audit...', force ? '(FORCED)' : '');
+      const result = await HEYS.game.rebuildXPFromAudit({ force });
+      console.log('[🎮 Gamification] Rebuild result:', result);
+      return result;
+    };
+
+    // 🔧 FIX v2.4: Dry-run проверка (без применения)
+    window.checkGameXP = async () => {
+      if (!HEYS.game?.rebuildXPFromAudit) {
+        console.error('[🎮 Gamification] rebuildXPFromAudit not available');
+        return false;
+      }
+      console.log('[🎮 Gamification] Checking XP consistency (dry run)...');
+      const result = await HEYS.game.rebuildXPFromAudit({ dryRun: true });
+      console.log('[🎮 Gamification] Check result:', result);
       return result;
     };
   }
