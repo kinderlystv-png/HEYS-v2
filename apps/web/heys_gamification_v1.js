@@ -4784,6 +4784,45 @@
     },
 
     /**
+     * 🔧 Вспомогательная функция: загрузка всех событий из audit log
+     * @returns {Promise<Array>} Все события из аудита
+     */
+    async _getAllAuditEvents() {
+      await flushAuditQueue();
+      const allEvents = [];
+      let offset = 0;
+      const PAGE_SIZE = 100;
+      
+      for (let page = 0; page < 20; page++) {
+        const result = await fetchGamificationHistory({ limit: PAGE_SIZE, offset });
+        const items = result?.items || [];
+        if (items.length === 0) break;
+        allEvents.push(...items);
+        offset += items.length;
+        if (items.length < PAGE_SIZE) break;
+      }
+      
+      return allEvents;
+    },
+
+    /**
+     * 🔧 Вспомогательная функция: получение curator_id из сохранённой сессии
+     * @returns {string|null} ID куратора или null
+     */
+    _getCuratorId() {
+      try {
+        const tokenJson = localStorage.getItem('heys_supabase_auth_token');
+        if (!tokenJson) return null;
+        
+        const tokenData = JSON.parse(tokenJson);
+        return tokenData?.user?.id || null;
+      } catch (e) {
+        console.error('[HEYS.game] Failed to parse curator session:', e);
+        return null;
+      }
+    },
+
+    /**
      * 🆕 Удаляет дубликаты из audit log через RPC (требует curator auth)
      * Использует delete_gamification_events_by_curator для удаления событий из БД
      * 
@@ -4794,7 +4833,7 @@
 
       try {
         // STEP 1: Собираем дубликаты из audit
-        const allEvents = await _getAllAuditEvents();
+        const allEvents = await this._getAllAuditEvents();
         const achievementEvents = allEvents.filter(e => e.action === 'achievement_unlocked');
 
         // Группируем по reason (achievement_id)
@@ -4827,30 +4866,41 @@
           const event = achievementEvents.find(e => e.id === id);
           return {
             id,
-            reason: event.reason,
-            created_at: event.created_at
+            reason: event?.reason || 'unknown',
+            created_at: event?.created_at || 'unknown'
           };
         }));
 
-        // STEP 2: Вызываем RPC для удаления
-        // 🔒 Требует curator auth (JWT token через HEYS.cloud)
-        if (!HEYS.cloud?.client?.auth?.user) {
-          console.error('❌ Curator auth required (Supabase JWT)');
+        // STEP 2: Проверяем curator auth
+        const { curatorToken } = getAuditContext();
+        const curatorId = this._getCuratorId();
+        
+        if (!curatorToken || !curatorId) {
+          console.error('❌ Curator auth required (JWT token + curatorId)');
           return { error: 'curator_auth_required' };
         }
 
-        const curatorId = HEYS.cloud.client.auth.user().id;
+        console.log(`🔐 Using curator_id: ${curatorId.slice(0, 8)}...`);
 
+        // STEP 3: Вызываем RPC для удаления
         const result = await HEYS.YandexAPI.rpc('delete_gamification_events_by_curator', {
           p_curator_id: curatorId,
           p_event_ids: duplicateIds
         });
 
-        console.log(`✅ Deleted ${result.deleted_count || 0} events from audit log`);
-        
+        if (result?.error) {
+          console.error('❌ RPC delete failed:', result.error);
+          return { error: result.error?.message || 'RPC failed' };
+        }
+
+        const payload = result?.data || {};
+        const deletedCount = payload.deleted_count || 0;
+
+        console.log(`✅ Deleted ${deletedCount} events from audit log`);
+
         return {
-          deleted: result.deleted_count || 0,
-          eventIds: result.event_ids || []
+          deleted: deletedCount,
+          eventIds: payload.event_ids || duplicateIds
         };
 
       } catch (err) {
