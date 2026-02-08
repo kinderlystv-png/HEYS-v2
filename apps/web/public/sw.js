@@ -4,7 +4,7 @@
 // Версия обновляется автоматически при билде
 // NOTE: Service Worker runs in isolated context - no access to @heys/logger
 
-const CACHE_VERSION = 'heys-1738420000000';
+const CACHE_VERSION = 'heys-1770566233444';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
@@ -560,61 +560,64 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
     return;
   }
-}
 
   if (event.data === 'getVersion') {
-  event.ports[0]?.postMessage({ version: CACHE_VERSION });
-}
-
-// === ОЧИСТКА ВСЕХ КЭШЕЙ (для принудительного обновления) ===
-if (event.data === 'clearAllCaches') {
-  console.log('[SW] 🗑️ clearAllCaches requested — purging ALL caches...');
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      console.log('[SW] Found caches to delete:', cacheNames);
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          console.log('[SW] Deleting cache:', cacheName);
-          return caches.delete(cacheName);
-        })
-      );
-    }).then(() => {
-      console.log('[SW] ✅ All caches cleared!');
-      // Уведомляем клиента что кэши очищены
-      return self.clients.matchAll().then(clients => {
-        clients.forEach(client => {
-          client.postMessage({ type: 'CACHES_CLEARED' });
-        });
-      });
-    }).catch(err => {
-      console.error('[SW] ❌ Error clearing caches:', err);
-    })
-  );
-}
-
-// Регистрация Background Sync
-if (event.data === 'registerSync') {
-  self.registration.sync?.register(SYNC_TAG)
-    .then(() => console.log('[SW] Background sync registered'))
-    .catch(err => console.warn('[SW] Background sync not supported:', err));
-}
-
-// Запрос на немедленную синхронизацию (для тестирования)
-if (event.data === 'forceSync') {
-  processSyncQueue();
-}
-
-if (event.data && event.data.type === 'GET_CACHE_STATUS') {
-  const port = event.ports && event.ports[0];
-  const payload = {
-    version: CACHE_VERSION,
-    caches: {},
-    timestamp: Date.now(),
-  };
-  if (port) {
-    port.postMessage(payload);
+    event.ports[0]?.postMessage({ version: CACHE_VERSION });
+    return;
   }
-}
+
+  // === ОЧИСТКА ВСЕХ КЭШЕЙ (для принудительного обновления) ===
+  if (event.data === 'clearAllCaches') {
+    console.log('[SW] 🗑️ clearAllCaches requested — purging ALL caches...');
+    event.waitUntil(
+      caches.keys().then(cacheNames => {
+        console.log('[SW] Found caches to delete:', cacheNames);
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            console.log('[SW] Deleting cache:', cacheName);
+            return caches.delete(cacheName);
+          })
+        );
+      }).then(() => {
+        console.log('[SW] ✅ All caches cleared!');
+        // Уведомляем клиента что кэши очищены
+        return self.clients.matchAll().then(clients => {
+          clients.forEach(client => {
+            client.postMessage({ type: 'CACHES_CLEARED' });
+          });
+        });
+      }).catch(err => {
+        console.error('[SW] ❌ Error clearing caches:', err);
+      })
+    );
+    return;
+  }
+
+  // Регистрация Background Sync
+  if (event.data === 'registerSync') {
+    self.registration.sync?.register(SYNC_TAG)
+      .then(() => console.log('[SW] Background sync registered'))
+      .catch(err => console.warn('[SW] Background sync not supported:', err));
+    return;
+  }
+
+  // Запрос на немедленную синхронизацию (для тестирования)
+  if (event.data === 'forceSync') {
+    processSyncQueue();
+    return;
+  }
+
+  if (event.data && event.data.type === 'GET_CACHE_STATUS') {
+    const port = event.ports && event.ports[0];
+    const payload = {
+      version: CACHE_VERSION,
+      caches: {},
+      timestamp: Date.now(),
+    };
+    if (port) {
+      port.postMessage(payload);
+    }
+  }
 });
 
 // === 📤 Share Target API Handler ===

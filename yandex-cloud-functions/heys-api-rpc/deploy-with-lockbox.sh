@@ -10,6 +10,11 @@ if [[ -z "${HEYS_ENCRYPTION_KEY:-}" ]]; then
   exit 1
 fi
 
+if [[ -z "${JWT_SECRET:-}" ]]; then
+  echo "❌ JWT_SECRET is not set. Aborting deploy."
+  exit 1
+fi
+
 SERVICE_ACCOUNT_NAME="heys-function-invoker"
 SA_ID=$(yc iam service-account get "$SERVICE_ACCOUNT_NAME" --format json 2>/dev/null | jq -r '.id')
 if [[ -z "$SA_ID" || "$SA_ID" == "null" ]]; then
@@ -29,7 +34,7 @@ yc serverless function version create \
   --execution-timeout 30s \
   --source-path . \
   --service-account-id "$SA_ID" \
-  --environment "PG_HOST=rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net,PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=heys_rpc,HEYS_ENCRYPTION_KEY=${HEYS_ENCRYPTION_KEY}" \
+  --environment "PG_HOST=rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net,PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=heys_rpc,HEYS_ENCRYPTION_KEY=${HEYS_ENCRYPTION_KEY},JWT_SECRET=${JWT_SECRET}" \
   --secret "environment-variable=PG_PASSWORD,id=${SECRET_ID},version-id=${VERSION_ID},key=postgresql_password"
 
 echo "✅ Deployed!"
