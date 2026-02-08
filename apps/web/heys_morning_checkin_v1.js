@@ -242,24 +242,12 @@
       const wrappedOnComplete = () => {
         // 🎉 Поздравительная модалка теперь показывается как шаг 'welcome' внутри flow
 
-        // 🎫 Автостарт триала при первом чек-ине после регистрации
-        // Условие: это регистрационный чек-ин (профиль был пуст) И подписка не активна
-        if (isRegistrationCheckin && HEYS.Subscription) {
-          // Используем async/await внутри .then() т.к. wrappedOnComplete не async
-          HEYS.Subscription.getStatus().then(statusData => {
-            // Стартуем триал только если статус 'none' (новый пользователь без подписки)
-            if (statusData?.status === HEYS.Subscription.STATUS.NONE) {
-              console.log('[MorningCheckin] 🎫 Registration complete — starting Pro trial');
-              return HEYS.Subscription.startTrial();
-            }
-          }).then(result => {
-            if (result) {
-              console.log('[MorningCheckin] ✅ Pro trial started successfully:', result);
-            }
-          }).catch(err => {
-            console.error('[MorningCheckin] ❌ Failed to start trial:', err);
-          });
-        }
+        // 🎫 Автостарт триала УБРАН (v5.0)
+        // Триал стартует только через куратора:
+        //   1. Клиент оставляет заявку на лендинге
+        //   2. Куратор одобряет → даёт PIN
+        //   3. При первом логине → activate_trial_timer_by_session
+        // См. database/2026-02-08_trial_machine_fix.sql
 
         // 🔔 Устанавливаем флаг для советов по витаминам
         try {

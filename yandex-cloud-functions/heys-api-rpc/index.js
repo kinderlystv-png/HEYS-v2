@@ -206,6 +206,7 @@ const ALLOWED_FUNCTIONS = [
   // === SUBSCRIPTION (клиентская) ===
   'get_subscription_status_by_session', // Статус подписки по session_token
   'start_trial_by_session',             // Старт триала (идемпотентно)
+  'activate_trial_timer_by_session',    // 🆕 v2.0: Старт таймера при первом логине
 
   // === TRIAL QUEUE (очередь на триал) ===
   'get_public_trial_capacity',          // Публичный виджет мест (без auth!)

@@ -4792,7 +4792,7 @@
       const allEvents = [];
       let offset = 0;
       const PAGE_SIZE = 100;
-      
+
       for (let page = 0; page < 20; page++) {
         const result = await fetchGamificationHistory({ limit: PAGE_SIZE, offset });
         const items = result?.items || [];
@@ -4801,7 +4801,7 @@
         offset += items.length;
         if (items.length < PAGE_SIZE) break;
       }
-      
+
       return allEvents;
     },
 
@@ -4813,7 +4813,7 @@
       try {
         const tokenJson = localStorage.getItem('heys_supabase_auth_token');
         if (!tokenJson) return null;
-        
+
         const tokenData = JSON.parse(tokenJson);
         return tokenData?.user?.id || null;
       } catch (e) {
@@ -4874,7 +4874,7 @@
         // STEP 2: Проверяем curator auth
         const { curatorToken } = getAuditContext();
         const curatorId = this._getCuratorId();
-        
+
         if (!curatorToken || !curatorId) {
           console.error('❌ Curator auth required (JWT token + curatorId)');
           return { error: 'curator_auth_required' };

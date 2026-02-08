@@ -655,22 +655,10 @@
       }
     }, []);
 
-    // Таймер для offer
+    // Таймер для offer (депрекейтед, оставлен для обратной совместимости)
     useEffect(() => {
-      if (queueStatus?.status !== QUEUE_STATUS.OFFER || !queueStatus?.offer_expires_at) {
-        setTimeRemaining('');
-        return;
-      }
-
-      const updateTimer = () => {
-        setTimeRemaining(formatTimeRemaining(queueStatus.offer_expires_at));
-      };
-
-      updateTimer();
-      const interval = setInterval(updateTimer, 1000);
-
-      return () => clearInterval(interval);
-    }, [queueStatus?.status, queueStatus?.offer_expires_at]);
+      setTimeRemaining('');
+    }, [queueStatus?.status]);
 
     useEffect(() => {
       refresh();
@@ -791,29 +779,12 @@
         }, timeRemaining)
       ),
 
-      // Кнопки действий
+      // Действия
       React.createElement('div', {
         style: { display: 'flex', gap: '8px', flexDirection: 'column' }
       },
-        // Основное действие
-        status === QUEUE_STATUS.OFFER && !isOfferExpired(queueStatus?.offer_expires_at) &&
-        React.createElement('button', {
-          onClick: handleClaim,
-          disabled: isActioning,
-          style: {
-            padding: '12px',
-            borderRadius: '8px',
-            border: 'none',
-            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-            color: 'white',
-            fontWeight: 600,
-            cursor: 'pointer',
-            fontSize: '15px'
-          }
-        }, isActioning ? '⏳...' : '🎉 Начать триал!'),
-
-        // Запросить снова (для expired/canceled)
-        (status === QUEUE_STATUS.EXPIRED || status === QUEUE_STATUS.CANCELED) &&
+        // Запросить снова (для rejected/canceled)
+        (status === QUEUE_STATUS.REJECTED || status === QUEUE_STATUS.EXPIRED || status === QUEUE_STATUS.CANCELED) &&
         React.createElement('button', {
           onClick: handleRequestAgain,
           disabled: isActioning,
@@ -829,8 +800,8 @@
           }
         }, isActioning ? '⏳...' : 'Запросить снова'),
 
-        // Отмена (для queued)
-        status === QUEUE_STATUS.QUEUED &&
+        // Отмена (для pending)
+        (status === QUEUE_STATUS.PENDING || status === QUEUE_STATUS.QUEUED) &&
         React.createElement('button', {
           onClick: handleCancel,
           disabled: isActioning,
@@ -959,7 +930,7 @@
 
       // Действия
       requestTrial: doRequestTrial,
-      claimOffer: doClaimOffer,
+      claimOffer: doClaimOffer,  // @deprecated v5.0
       cancelQueue: doCancelQueue,
 
       // Обновление
@@ -967,11 +938,10 @@
       refreshStatus,
 
       // Хелперы
-      hasOffer: queueStatus?.status === QUEUE_STATUS.OFFER &&
-        !isOfferExpired(queueStatus?.offer_expires_at),
-      isInQueue: queueStatus?.status === QUEUE_STATUS.QUEUED,
+      isPending: queueStatus?.status === QUEUE_STATUS.PENDING ||
+        queueStatus?.status === QUEUE_STATUS.QUEUED,
+      isAssigned: queueStatus?.status === QUEUE_STATUS.ASSIGNED,
       position: queueStatus?.position,
-      offerExpiresAt: queueStatus?.offer_expires_at,
       capacityMeta: capacity ? getCapacityMeta(capacity) : null,
       queueMeta: queueStatus ? getQueueStatusMeta(
         queueStatus.status,

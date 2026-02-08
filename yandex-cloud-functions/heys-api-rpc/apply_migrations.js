@@ -28,6 +28,7 @@ const MIGRATIONS = [
     '2026-02-04_extend_trials.sql',
     '2026-02-04_admin_extend_subscription.sql',
     '2026-02-08_delete_gamification_events.sql',
+    '2026-02-08_trial_machine_fix.sql',
 ];
 
 async function main() {
@@ -78,7 +79,9 @@ async function main() {
             'get_curator_clients',
             'admin_extend_trial',
             'admin_get_all_clients',
-            'admin_extend_subscription'
+            'admin_extend_subscription',
+            'activate_trial_timer_by_session',
+            'admin_activate_trial'
         ];
 
         for (const fn of functions) {
