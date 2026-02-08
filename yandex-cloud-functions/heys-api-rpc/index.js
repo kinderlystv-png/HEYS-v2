@@ -374,14 +374,14 @@ module.exports.handler = async function (event, context) {
       };
     }
 
-    // 🔐 JWT_SECRET: из env или fallback (для совместимости при миграции)
-    const JWT_SECRET = process.env.JWT_SECRET || 'A3jKm9$hZ!pQw2vLc8xR';
+    // 🔐 JWT_SECRET: ОБЯЗАТЕЛЕН из env. Без fallback — чтобы не было silent mismatch!
+    const JWT_SECRET = process.env.JWT_SECRET;
     if (!JWT_SECRET) {
-      console.error('[RPC] JWT_SECRET not configured');
+      console.error('[RPC] FATAL: JWT_SECRET not configured in env! Curator functions will NOT work.');
       return {
         statusCode: 500,
         headers: corsHeaders,
-        body: JSON.stringify({ error: 'Server configuration error' })
+        body: JSON.stringify({ error: 'Server configuration error: JWT_SECRET missing' })
       };
     }
 
