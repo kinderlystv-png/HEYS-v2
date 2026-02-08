@@ -1,0 +1,9 @@
+{
+  "name": "@heys/shared-db-pool",
+  "version": "1.0.0",
+  "description": "Shared PostgreSQL connection pool for HEYS Cloud Functions",
+  "main": "db-pool.js",
+  "dependencies": {
+    "pg": "^8.11.3"
+  }
+}

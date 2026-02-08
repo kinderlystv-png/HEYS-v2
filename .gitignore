@@ -189,6 +189,6 @@ tsup.config.bundled_*.mjs
 # Git worktrees
 .worktrees/
 
-# Cloud Functions local bundle
-yandex-cloud-functions/heys-api-rpc/shared/
+# Cloud Functions local bundle (shared/ MUST be tracked — required for deploy!)
+# yandex-cloud-functions/heys-api-rpc/shared/  # ← НЕ игнорировать! Нужен для деплоя
 heys_shared_products_export_backup.json

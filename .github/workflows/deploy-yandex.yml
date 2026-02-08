@@ -518,6 +518,16 @@ jobs:
         if: steps.changes.outputs.rpc_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           cd yandex-cloud-functions/heys-api-rpc
+          # Pre-deploy safety checks
+          if [ ! -f "shared/db-pool.js" ]; then
+            echo "❌ FATAL: shared/db-pool.js missing! Deploy would break the function."
+            echo "   Ensure shared/ is tracked in git (not in .gitignore)"
+            exit 1
+          fi
+          if [ ! -f "package.json" ]; then
+            echo "❌ FATAL: package.json missing!"
+            exit 1
+          fi
           # Build environment string, skipping empty secrets
           ENV_VARS="PG_HOST=${{ secrets.PG_HOST }},PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=${{ secrets.PG_USER }},PG_PASSWORD=${{ secrets.PG_PASSWORD }},PG_SSL=verify-full"
           if [ -n "${{ secrets.JWT_SECRET }}" ]; then ENV_VARS="${ENV_VARS},JWT_SECRET=${{ secrets.JWT_SECRET }}"; fi
@@ -530,6 +540,17 @@ jobs:
             --execution-timeout 30s \
             --source-path . \
             --environment "$ENV_VARS"
+          # Post-deploy health check
+          sleep 10
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            'https://api.heyslab.ru/rpc?fn=get_shared_products' \
+            -H 'Content-Type: application/json' \
+            -H 'Origin: https://app.heyslab.ru' -d '{}' --max-time 30)
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "⚠️ Post-deploy health check returned HTTP $HTTP_CODE (may need cold start)"
+          else
+            echo "✅ Health check passed"
+          fi
 
       - name: Deploy heys-api-rest
         if: steps.changes.outputs.rest_changed == 'true' || github.event_name == 'workflow_dispatch'
