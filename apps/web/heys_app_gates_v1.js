@@ -105,7 +105,7 @@
                     // QR-код (через API)
                     React.createElement('div', {
                         style: {
-                            background: '#fff',
+                            background: 'var(--card, #fff)',
                             padding: 16,
                             borderRadius: 16,
                             marginBottom: 24,

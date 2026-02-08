@@ -13,58 +13,82 @@
 
 /* === 01. DARK THEME === */
 [data-theme="dark"] {
-  /* Color palette overrides */
+  /* ══════════════════════════════════════════════════════════════
+   * COLOR PALETTE OVERRIDES — Унифицированная палитра
+   * ══════════════════════════════════════════════════════════════ */
+  
+  /* Base colors */
   --color-white: #ffffff;
-  --color-slate-100: #1e293b;
-  --color-slate-200: #334155;
-  --color-slate-400: #94a3b8;
-  --color-slate-500: #94a3b8;
-  --color-gray-500: #9ca3af;
-  --color-slate-700: #0f172a;
-  --color-blue-500: #3b82f6;
-  --color-emerald-500: #10b981;
-  --color-red-500: #ef4444;
+  --color-slate-100: #f1f5f9;    /* Светлый текст (высокий контраст) */
+  --color-slate-200: #e2e8f0;    /* Очень светлый */
+  --color-slate-300: #cbd5e1;    /* Светлый серый */
+  --color-slate-400: #94a3b8;    /* Средний серый (для вторичного текста) */
+  --color-slate-500: #64748b;    /* Темный серый (для приглушенного текста) */
+  --color-slate-600: #475569;    /* Границы */
+  --color-slate-700: #334155;    /* Темнее границы */
+  --color-slate-800: #1e293b;    /* Карточки */
+  --color-slate-900: #0f172a;    /* Фон страницы */
+  
   --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  
+  /* Semantic colors (ярче для темного фона) */
+  --color-blue-500: #60a5fa;     /* Blue 400 */
+  --color-blue-600: #3b82f6;     /* Blue 500 */
   --color-blue-ios: #60a5fa;
-
-  --bg: #0f172a;
-  --card: #1e293b;
-  --text: var(--color-slate-100);
-  --muted: var(--color-slate-400);
-  --border: var(--color-slate-700);
-  --acc: var(--color-blue-500);
-  --acc-contrast: var(--color-white);
+  --color-emerald-500: #4ade80;  /* Green 400 */
+  --color-red-500: #f87171;      /* Red 400 */
   
-  /* Stats block (тёмно-синий) */
+  /* ══════════════════════════════════════════════════════════════
+   * SEMANTIC UI TOKENS
+   * ══════════════════════════════════════════════════════════════ */
+  --bg: var(--heys-bg-page);
+  --card: var(--heys-bg-card);
+  --text: var(--heys-text-primary);
+  --muted: var(--heys-text-muted);
+  --border: var(--heys-border-default);
+  --acc: var(--heys-primary);
+  --acc-contrast: var(--heys-text-inverted);
+  
+  /* Специальные блоки (улучшенная видимость) */
+  /* Stats block (тёмно-синий с лучшей границей) */
   --stats-bg: #1e3a5f;
-  --stats-border: var(--color-blue-500);
+  --stats-border: var(--heys-primary);
   
-  /* Activity block (тёмно-жёлтый) */
-  --activity-bg: #2d2a1f;
-  --activity-border: #b8a04e;
+  /* Activity block (тёмно-жёлтый с улучшенным контрастом) */
+  --activity-bg: #3d3520;
+  --activity-border: #d4a76a;
   
-  /* Sleep/Day block (тёмно-розовый) */
-  --sleep-bg: #3d1f2f;
-  --sleep-border: #9d4e6d;
+  /* Sleep/Day block (тёмно-розовый с четкими границами) */
+  --sleep-bg: #4a2639;
+  --sleep-border: #c26691;
 }
 
-/* Dark theme overrides */
+/* ══════════════════════════════════════════════════════════════
+ * GLOBAL OVERRIDES — Базовые элементы
+ * ══════════════════════════════════════════════════════════════ */
+
 [data-theme="dark"] body {
   background: var(--bg);
   color: var(--text);
 }
 
-/* Dark theme glassmorphism modals */
+/* ══════════════════════════════════════════════════════════════
+ * MODALS & OVERLAYS — Glassmorphism с улучшенной видимостью
+ * ══════════════════════════════════════════════════════════════ */
+
 [data-theme="dark"] .modal-backdrop {
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.65);
 }
 
 [data-theme="dark"] .modal {
-  background: rgba(30, 41, 59, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow:
-    0 24px 48px -12px rgba(0, 0, 0, 0.4),
-    0 8px 16px -6px rgba(0, 0, 0, 0.3),
+    0 24px 48px -12px rgba(0, 0, 0, 0.6),
+    0 8px 16px -6px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
@@ -74,140 +98,174 @@
   color: var(--text);
 }
 
+/* ══════════════════════════════════════════════════════════════
+ * FORM ELEMENTS — Улучшенный контраст
+ * ══════════════════════════════════════════════════════════════ */
+
 [data-theme="dark"] input,
 [data-theme="dark"] select,
 [data-theme="dark"] textarea {
-  background: var(--bg);
+  background: var(--heys-bg-elevated);
   color: var(--text);
   border-color: var(--border);
 }
 
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--heys-text-muted);
+  opacity: 0.7;
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+  background: var(--card);
+  border-color: var(--heys-border-focus);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * MACRO TOASTS — Улучшенная читаемость
+ * ══════════════════════════════════════════════════════════════ */
+
 [data-theme="dark"] .macro-toast {
   background: var(--card);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  color: var(--text);
 }
 
+/* Protein toast */
 [data-theme="dark"] .macro-toast-protein {
-  border-left-color: #f87171;
-  background: linear-gradient(135deg, #2d1f1f 0%, #3d2525 100%);
+  border-left-color: #f87171;  /* Яркий красный */
+  background: linear-gradient(135deg, #37222c 0%, #4a2d39 100%);
 }
 
+/* Fat toast */
 [data-theme="dark"] .macro-toast-fat {
-  border-left-color: #fbbf24;
-  background: linear-gradient(135deg, #2d2a1f 0%, #3d3625 100%);
+  border-left-color: #fbbf24;  /* Яркий жёлтый */
+  background: linear-gradient(135deg, #3d3520 0%, #4a4028 100%);
 }
 
+/* Carbs toast */
 [data-theme="dark"] .macro-toast-carbs {
-  border-left-color: #4ade80;
-  background: linear-gradient(135deg, #1f2d1f 0%, #253d25 100%);
+  border-left-color: #4ade80;  /* Яркий зелёный */
+  background: linear-gradient(135deg, #1f3a2c 0%, #2a4638 100%);
 }
 
+/* Warning toast */
 [data-theme="dark"] .macro-toast-warning {
   border-left-color: #fbbf24;
-  background: linear-gradient(135deg, #2d2a1f 0%, #3d3625 100%);
+  background: linear-gradient(135deg, #3d3520 0%, #4a4028 100%);
 }
 
+/* Success toast */
 [data-theme="dark"] .macro-toast-success {
   border-left-color: #4ade80;
-  background: linear-gradient(135deg, #1f2d1f 0%, #253d25 100%);
+  background: linear-gradient(135deg, #1f3a2c 0%, #2a4638 100%);
 }
 
+/* Fiber toast */
 [data-theme="dark"] .macro-toast-fiber {
-  border-left-color: var(--color-emerald-500);
-  background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  border-left-color: var(--heys-success);
+  background: linear-gradient(135deg, #0d3a2e 0%, #115240 100%);
 }
 
+/* Tip toast */
 [data-theme="dark"] .macro-toast-tip {
-  border-left-color: var(--color-blue-500);
-  background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%);
+  border-left-color: var(--heys-primary);
+  background: linear-gradient(135deg, #1e3a5f 0%, #2547a8 100%);
 }
 
+/* Achievement toast */
 [data-theme="dark"] .macro-toast-achievement {
-  border-left-color: #f59e0b;
-  background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+  border-left-color: #fb923c;  /* Яркий оранжевый */
+  background: linear-gradient(135deg, #833d12 0%, #a14818 100%);
 }
 
-/* 🌙 Тёмная тема для popup БЖУ */
+/* ══════════════════════════════════════════════════════════════
+ * MACRO BADGE POPUP — Попап БЖУ
+ * ══════════════════════════════════════════════════════════════ */
+
 [data-theme="dark"] .macro-badge-popup {
-  background: #1e293b;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  background: var(--heys-bg-card);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 [data-theme="dark"] .macro-badge-popup-arrow {
-  border-bottom-color: #1e293b;
+  border-bottom-color: var(--heys-bg-card);
 }
 
 [data-theme="dark"] .macro-badge-popup-swipe {
-  background: #475569;
+  background: #64748b;  /* Slate 500 - ярче */
 }
 
 [data-theme="dark"] .macro-badge-popup-title {
-  color: var(--color-slate-100);
+  color: var(--heys-text-primary);
 }
 
 [data-theme="dark"] .macro-badge-popup-sparkline {
-  background: #0f172a;
+  background: var(--heys-bg-page);
 }
 
 [data-theme="dark"] .macro-badge-popup-spark-label {
-  color: var(--color-slate-500);
+  color: var(--heys-text-muted);
 }
 
 [data-theme="dark"] .macro-badge-popup-progress {
-  background: var(--color-slate-700);
+  background: var(--heys-bg-elevated);
 }
 
 [data-theme="dark"] .macro-badge-popup-norm {
-  color: var(--color-slate-500);
+  color: var(--heys-text-muted);
 }
 
 [data-theme="dark"] .macro-badge-popup-compare {
-  background: var(--color-slate-700);
-  color: var(--color-slate-400);
+  background: var(--heys-bg-elevated);
+  color: var(--heys-text-secondary);
 }
 
 [data-theme="dark"] .macro-badge-popup-compare.up {
-  background: #14532d;
-  color: #4ade80;
+  background: rgba(74, 222, 128, 0.2);  /* Green */
+  color: #86efac;
 }
 
 [data-theme="dark"] .macro-badge-popup-compare.down {
-  background: #450a0a;
-  color: #f87171;
+  background: rgba(248, 113, 113, 0.2);  /* Red */
+  color: #fca5a5;
 }
 
 [data-theme="dark"] .macro-badge-popup-time-msg {
-  color: var(--color-slate-400);
+  color: var(--heys-text-secondary);
 }
 
 [data-theme="dark"] .macro-badge-popup-streak {
-  background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
-  border-color: #92400e;
-  color: #fbbf24;
+  background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+  border-color: #fb923c;
+  color: #fde68a;
 }
 
 [data-theme="dark"] .macro-badge-popup-desc {
-  border-top-color: var(--color-slate-700);
+  border-top-color: var(--heys-border-subtle);
 }
 
 [data-theme="dark"] .macro-badge-popup-item {
-  color: #cbd5e1;
+  color: var(--heys-text-secondary);
 }
 
 [data-theme="dark"] .macro-badge-popup-rec {
-  background: linear-gradient(135deg, #14532d 0%, #166534 100%);
-  border-color: #22c55e;
-  color: #86efac;
+  background: linear-gradient(135deg, #166534 0%, #15803d 100%);
+  border-color: #4ade80;
+  color: #bbf7d0;
 }
 
 [data-theme="dark"] .macro-badge-popup-close {
   background: rgba(255, 255, 255, 0.1);
-  color: var(--color-slate-400);
+  color: var(--heys-text-muted);
 }
 
 [data-theme="dark"] .macro-badge-popup-close:hover {
   background: rgba(255, 255, 255, 0.2);
-  color: var(--color-slate-100);
+  color: var(--heys-text-primary);
 }
 
 /* Dark theme: Metric Popup */
@@ -299,32 +357,80 @@
   border-color: var(--border);
 }
 
-/* Стили типов приёмов в тёмной теме */
-[data-theme="dark"] .meal-sep { color: #cbd5e1; }
-[data-theme="dark"] .meal-sep.meal-type-breakfast { color: #fb923c; }
-[data-theme="dark"] .meal-sep.meal-type-lunch { color: #4ade80; }
-[data-theme="dark"] .meal-sep.meal-type-dinner { color: #60a5fa; }
+/* ══════════════════════════════════════════════════════════════
+ * MEAL TYPES — Типы приёмов пищи
+ * ══════════════════════════════════════════════════════════════ */
+
+[data-theme="dark"] .meal-sep { 
+  color: var(--heys-text-secondary); 
+}
+
+[data-theme="dark"] .meal-sep.meal-type-breakfast { 
+  color: #fb923c;  /* Orange 400 */
+}
+
+[data-theme="dark"] .meal-sep.meal-type-lunch { 
+  color: #4ade80;  /* Green 400 */
+}
+
+[data-theme="dark"] .meal-sep.meal-type-dinner { 
+  color: #60a5fa;  /* Blue 400 */
+}
+
 [data-theme="dark"] .meal-sep.meal-type-snack1,
 [data-theme="dark"] .meal-sep.meal-type-snack2,
-[data-theme="dark"] .meal-sep.meal-type-snack3 { color: var(--color-gray-400); }
-[data-theme="dark"] .meal-sep.meal-type-night { color: #60a5fa; }
-
-[data-theme="dark"] .meal-time-badge { 
-  background: #78350f; 
-  color: #fcd34d; 
+[data-theme="dark"] .meal-sep.meal-type-snack3 { 
+  color: var(--heys-text-muted); 
 }
+
+[data-theme="dark"] .meal-sep.meal-type-night { 
+  color: #93c5fd;  /* Blue 300 */
+}
+
+/* Meal badges */
+[data-theme="dark"] .meal-time-badge { 
+  background: rgba(251, 146, 60, 0.2);
+  color: #fde68a; 
+}
+
 [data-theme="dark"] .meal-type-label { 
-  background: linear-gradient(135deg, #1e3a5f 0%, #312e81 100%); 
+  background: linear-gradient(135deg, #1e3a5f 0%, #2a5298 100%); 
   color: #93c5fd; 
 }
-[data-theme="dark"] .meal-type-label:hover { background: linear-gradient(135deg, #1e40af 0%, #4338ca 100%); }
-[data-theme="dark"] .meal-type-arrow { color: var(--color-slate-400); }
 
-[data-theme="dark"] .meal-kcal-badge { background: var(--color-slate-700); color: var(--color-slate-200); }
-[data-theme="dark"] .meal-sep.meal-type-breakfast .meal-kcal-badge { background: #431407; color: #fb923c; }
-[data-theme="dark"] .meal-sep.meal-type-lunch .meal-kcal-badge { background: #14532d; color: #4ade80; }
-[data-theme="dark"] .meal-sep.meal-type-dinner .meal-kcal-badge { background: #1e3a8a; color: #60a5fa; }
-[data-theme="dark"] .meal-sep.meal-type-night .meal-kcal-badge { background: #3730a3; color: #60a5fa; }
+[data-theme="dark"] .meal-type-label:hover { 
+  background: linear-gradient(135deg, #2547a8 0%, #3b5bbd 100%); 
+}
+
+[data-theme="dark"] .meal-type-arrow { 
+  color: var(--heys-text-muted); 
+}
+
+/* Kcal badges per meal type */
+[data-theme="dark"] .meal-kcal-badge { 
+  background: var(--heys-bg-elevated);
+  color: var(--heys-text-secondary); 
+}
+
+[data-theme="dark"] .meal-sep.meal-type-breakfast .meal-kcal-badge { 
+  background: rgba(251, 146, 60, 0.2);
+  color: #fde68a; 
+}
+
+[data-theme="dark"] .meal-sep.meal-type-lunch .meal-kcal-badge { 
+  background: rgba(74, 222, 128, 0.2);
+  color: #86efac; 
+}
+
+[data-theme="dark"] .meal-sep.meal-type-dinner .meal-kcal-badge { 
+  background: rgba(96, 165, 250, 0.2);
+  color: #93c5fd; 
+}
+
+[data-theme="dark"] .meal-sep.meal-type-night .meal-kcal-badge { 
+  background: rgba(139, 92, 246, 0.2);
+  color: #c4b5fd; 
+}
 
 /* ============================================
    DARK: Meal Header Inside Card
@@ -392,27 +498,39 @@
   background: linear-gradient(135deg, #3730a3 0%, #4338ca 50%, #1e293b 100%);
   border-bottom-color: #3b82f6;
 }
+
 [data-theme="dark"] .meal-header-inside.meal-type-night .meal-kcal-badge-inside {
   background: #3730a3;
   color: #60a5fa;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * BUTTONS & NAVIGATION
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
 [data-theme="dark"] .btn {
-  background: var(--card);
+  background: var(--heys-bg-card);
   color: var(--text);
   border-color: var(--border);
 }
 
 [data-theme="dark"] .btn:hover {
-  background: var(--border);
+  background: var(--heys-bg-elevated);
+  border-color: var(--heys-border-focus);
 }
 
 [data-theme="dark"] .btn-primary {
-  background: var(--acc);
-  color: var(--acc-contrast);
-  border-color: var(--acc);
+  background: var(--heys-primary);
+  color: var(--heys-text-inverted);
+  border-color: var(--heys-primary);
 }
 
+[data-theme="dark"] .btn-primary:hover {
+  background: var(--heys-primary-hover);
+  border-color: var(--heys-primary-hover);
+}
+
+/* Navigation */
 [data-theme="dark"] .nav-link {
   color: var(--muted);
 }
@@ -421,152 +539,223 @@
   color: var(--acc);
 }
 
+/* FAB */
 [data-theme="dark"] .fab-add-meal {
   background: var(--acc);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.4);
 }
 
+/* Empty states */
 [data-theme="dark"] .empty-state {
   background: var(--card);
   border-color: var(--border);
+  color: var(--text);
 }
 
-/* Dark theme for Insulin Wave Indicator (WOW VERSION) */
+/* Cards */
+[data-theme="dark"] .meal-card,
+[data-theme="dark"] .card {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+/* Skeleton */
+[data-theme="dark"] .skeleton-item {
+  background: linear-gradient(90deg, var(--heys-bg-elevated) 0%, #475569 50%, var(--heys-bg-elevated) 100%);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * INSULIN WAVE INDICATOR
+ * ═══════════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════
+ * INSULIN WAVE INDICATOR
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
 [data-theme="dark"] .insulin-wave-indicator {
-  background: linear-gradient(135deg, #0c4a6e 0%, #075985 100%);
-  border-color: #0369a1;
+  background: linear-gradient(135deg, #0c4a6e 0%, #0e7490 100%);
+  border-color: #22d3ee;
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.2);
 }
 
 [data-theme="dark"] .insulin-wave-indicator.insulin-lipolysis {
-  background: linear-gradient(135deg, #052e16 0%, #064e3b 100%);
-  border-color: #22c55e;
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+  background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+  border-color: #34d399;
+  box-shadow: 0 2px 12px rgba(52, 211, 153, 0.4), 
+              0 0 24px rgba(16, 185, 129, 0.2);
 }
 
 [data-theme="dark"] .insulin-wave-indicator.insulin-almost {
-  background: linear-gradient(135deg, #431407 0%, #7c2d12 100%);
-  border-color: #f97316;
+  background: linear-gradient(135deg, #7c2d12 0%, #9a3412 100%);
+  border-color: #fb923c;
+  box-shadow: 0 2px 8px rgba(251, 146, 60, 0.3);
 }
 
 [data-theme="dark"] .insulin-wave-indicator.insulin-soon {
-  background: linear-gradient(135deg, #422006 0%, #713f12 100%);
-  border-color: #eab308;
+  background: linear-gradient(135deg, #713f12 0%, #854d0e 100%);
+  border-color: #fbbf24;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
 }
 
 [data-theme="dark"] .insulin-wave-bg {
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.06) 0%,
-    rgba(255, 255, 255, 0.03) 100%
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.04) 100%
   );
 }
 
 [data-theme="dark"] .insulin-lipolysis .insulin-wave-bg {
   background: linear-gradient(
     135deg,
-    rgba(34, 197, 94, 0.1) 0%,
-    rgba(34, 197, 94, 0.05) 100%
+    rgba(52, 211, 153, 0.15) 0%,
+    rgba(16, 185, 129, 0.08) 100%
   );
 }
 
 [data-theme="dark"] .insulin-wave-label {
-  color: #7dd3fc;
+  color: #67e8f9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme="dark"] .insulin-lipolysis .insulin-wave-label {
-  color: #86efac;
+  color: #6ee7b7;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .insulin-almost .insulin-wave-label {
+  color: #fdba74;
+}
+
+[data-theme="dark"] .insulin-soon .insulin-wave-label {
+  color: #fcd34d;
 }
 
 [data-theme="dark"] .insulin-wave-progress {
   background: rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
 }
 
 [data-theme="dark"] .insulin-wave-bar::after {
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.2) 0%,
+    rgba(255, 255, 255, 0.25) 0%,
     transparent 100%
   );
 }
 
 [data-theme="dark"] .insulin-time-start {
-  color: #94a3b8;
+  color: var(--heys-text-muted);
 }
 
 [data-theme="dark"] .insulin-time-end {
-  color: #7dd3fc;
+  color: #67e8f9;
+  font-weight: 600;
 }
 
 [data-theme="dark"] .insulin-lipolysis .insulin-time-end {
-  color: #86efac;
+  color: #6ee7b7;
 }
 
-[data-theme="dark"] .insulin-wave-suggestion {
-  background: rgba(0, 0, 0, 0.3);
-  color: #cbd5e1;
-}
-
-[data-theme="dark"] .insulin-lipolysis .insulin-wave-suggestion {
-  background: rgba(34, 197, 94, 0.15);
-  color: #86efac;
-}
-
-[data-theme="dark"] .insulin-almost .insulin-wave-suggestion {
-  background: rgba(249, 115, 22, 0.15);
+[data-theme="dark"] .insulin-almost .insulin-time-end {
   color: #fdba74;
 }
 
-/* Dark theme for expanded section */
+[data-theme="dark"] .insulin-soon .insulin-time-end {
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .insulin-wave-suggestion {
+  background: rgba(6, 182, 212, 0.15);
+  color: #a5f3fc;
+  border-left: 3px solid #22d3ee;
+}
+
+[data-theme="dark"] .insulin-lipolysis .insulin-wave-suggestion {
+  background: rgba(52, 211, 153, 0.15);
+  color: #6ee7b7;
+  border-left-color: #34d399;
+}
+
+[data-theme="dark"] .insulin-almost .insulin-wave-suggestion {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fdba74;
+  border-left-color: #fb923c;
+}
+
+[data-theme="dark"] .insulin-soon .insulin-wave-suggestion {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fcd34d;
+  border-left-color: #fbbf24;
+}
+
 [data-theme="dark"] .insulin-wave-expanded {
-  background: #1e293b;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  background: var(--heys-bg-elevated);
+  border-color: var(--heys-border-focus);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 /* Убран .insulin-gi-info — используем inline styles */
 
+[data-theme="dark"] .insulin-wave-expanded {
+  background: var(--heys-bg-elevated);
+  border-color: var(--heys-border-focus);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
 [data-theme="dark"] .insulin-history {
   background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
 }
 
 [data-theme="dark"] .insulin-history-legend {
   background: rgba(0, 0, 0, 0.4);
-  color: #94a3b8;
+  color: var(--heys-text-muted);
 }
 
 [data-theme="dark"] .insulin-gi-badge {
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(148, 163, 184, 0.15) !important;
+  color: var(--heys-text-secondary);
 }
 
-/* Dark mode focus overlay */
+/* Focus overlay */
 [data-theme="dark"] .expand-focus-overlay {
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
 }
 
 [data-theme="dark"] .insulin-wave-indicator.expanded::before,
 [data-theme="dark"] .expandable-card--expanded::before {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3));
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.3), rgba(167, 139, 250, 0.3));
+  box-shadow: 0 0 40px rgba(96, 165, 250, 0.4);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * SPARKLINES & GRAPHS
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
 [data-theme="dark"] .sparkline-skeleton-line {
-  background: linear-gradient(90deg, var(--color-slate-700) 0%, #475569 50%, var(--color-slate-700) 100%);
+  background: linear-gradient(90deg, var(--heys-bg-elevated) 0%, #475569 50%, var(--heys-bg-elevated) 100%);
 }
 
 [data-theme="dark"] .sparkline-skeleton-dot {
   background: #475569;
 }
 
-/* Dark theme for kcal sparkline container */
+/* Kcal sparkline */
 [data-theme="dark"] .kcal-sparkline-container {
-  background: linear-gradient(135deg, #052e16 0%, #064e3b 100%);
-  border-color: #166534;
+  background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+  border-color: #10b981;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
 }
 
 [data-theme="dark"] .kcal-sparkline-title {
-  color: #86efac;
+  color: #6ee7b7;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme="dark"] .kcal-period-pills {
-  background: rgba(74, 222, 128, 0.15);
+  background: rgba(52, 211, 153, 0.15);
 }
 
 [data-theme="dark"] .kcal-period-pill {
@@ -574,57 +763,51 @@
 }
 
 [data-theme="dark"] .kcal-period-pill.active {
-  background: #166534;
-  color: #dcfce7;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  background: #10b981;
+  color: #d1fae5;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.4);
 }
 
-/* Dark theme for sparkline chart */
+/* Sparkline chart */
 [data-theme="dark"] .sparkline-container {
   background: transparent;
 }
 
 [data-theme="dark"] .sparkline-line {
   stroke: #4ade80;
+  filter: drop-shadow(0 1px 3px rgba(74, 222, 128, 0.4));
 }
 
 [data-theme="dark"] .sparkline-goal {
-  stroke: var(--color-slate-500);
+  stroke: var(--heys-border-default);
+  stroke-dasharray: 4 4;
 }
 
 [data-theme="dark"] .sparkline-dot-ok {
   fill: #4ade80;
+  stroke: #065f46;
+  stroke-width: 1.5;
 }
 
 [data-theme="dark"] .sparkline-dot-warn {
   fill: #fbbf24;
+  stroke: #713f12;
+  stroke-width: 1.5;
 }
 
 [data-theme="dark"] .sparkline-dot-over {
   fill: #f87171;
+  stroke: #7f1d1d;
+  stroke-width: 1.5;
 }
 
 [data-theme="dark"] .sparkline-day-label {
-  fill: var(--color-slate-500);
+  fill: var(--heys-text-muted);
 }
 
 [data-theme="dark"] .sparkline-day-today {
   fill: #4ade80;
-}
-
-/* Dark mode для пунктирных линий от точек к дням */
-[data-theme="dark"] .sparkline-point-line {
-  stroke: var(--color-slate-500); /* slate-500 — ярче */
-}
-
-[data-theme="dark"] .weight-sparkline-point-line {
-  stroke: #60a5fa; /* purple-400 — ярче */
-}
-
-/* Dark theme for new sparkline elements */
-[data-theme="dark"] .sparkline-streak-line {
-  stroke: #fbbf24;
-  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.5));
+  font-weight: 600;
 }
 
 [data-theme="dark"] .sparkline-day-weekend {
@@ -632,494 +815,605 @@
 }
 
 [data-theme="dark"] .sparkline-day-forecast {
-  fill: var(--color-slate-500);
+  fill: var(--heys-text-muted);
+  font-style: italic;
+}
+
+/* Point lines */
+[data-theme="dark"] .sparkline-point-line {
+  stroke: var(--heys-border-default);
+  stroke-dasharray: 2 2;
+}
+
+[data-theme="dark"] .weight-sparkline-point-line {
+  stroke: #a78bfa;
+  stroke-dasharray: 2 2;
+}
+
+/* Special elements */
+[data-theme="dark"] .sparkline-streak-line {
+  stroke: #fbbf24;
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.6));
 }
 
 [data-theme="dark"] .sparkline-mood-label {
-  color: var(--color-slate-400);
+  color: var(--heys-text-secondary);
 }
 
+/* Slider tooltip */
 [data-theme="dark"] .sparkline-slider-line {
   stroke: #60a5fa;
+  filter: drop-shadow(0 0 4px rgba(96, 165, 250, 0.5));
 }
 
 [data-theme="dark"] .sparkline-slider-point {
   fill: #60a5fa;
-  stroke: #1e293b;
-  filter: drop-shadow(0 2px 4px rgba(96, 165, 250, 0.5));
+  stroke: var(--heys-bg-page);
+  stroke-width: 3;
+  filter: drop-shadow(0 2px 8px rgba(96, 165, 250, 0.6));
 }
 
-/* Dark theme: Today line & Brush */
 [data-theme="dark"] .sparkline-today-line {
   fill: rgba(96, 165, 250, 0.15);
 }
 
 [data-theme="dark"] .sparkline-today-label {
-  fill: rgba(96, 165, 250, 0.8);
+  fill: #93c5fd;
 }
 
 [data-theme="dark"] .sparkline-brush-overlay {
   fill: rgba(96, 165, 250, 0.15);
-  stroke: rgba(96, 165, 250, 0.4);
+  stroke: #60a5fa;
+  stroke-opacity: 0.6;
 }
 
 [data-theme="dark"] .sparkline-brush-stats {
   background: rgba(96, 165, 250, 0.2);
   color: #93c5fd;
+  border: 1px solid rgba(96, 165, 250, 0.3);
 }
 
 [data-theme="dark"] .sparkline-zoom-indicator {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(148, 163, 184, 0.3);
+  color: var(--heys-text-secondary);
 }
 
 [data-theme="dark"] .sparkline-slider-tooltip {
-  background: rgba(30, 41, 59, 0.95);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid var(--heys-border-focus);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(96, 165, 250, 0.2);
+  backdrop-filter: blur(8px);
 }
 
 [data-theme="dark"] .sparkline-slider-tooltip-date {
-  color: var(--color-slate-100);
+  color: var(--heys-text-primary);
 }
 
 [data-theme="dark"] .sparkline-slider-tooltip-kcal {
-  color: var(--color-slate-400);
+  color: var(--heys-text-primary);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .sparkline-slider-tooltip-kcal small {
+  color: var(--heys-text-muted);
+  font-weight: 400;
 }
 
 [data-theme="dark"] .sparkline-slider-tooltip-ratio.ratio-ok {
-  background: #064e3b;
+  background: #065f46;
   color: #6ee7b7;
+  border-left: 3px solid #10b981;
 }
 
 [data-theme="dark"] .sparkline-slider-tooltip-ratio.ratio-warn {
   background: #713f12;
   color: #fcd34d;
+  border-left: 3px solid #fbbf24;
 }
 
 [data-theme="dark"] .sparkline-slider-tooltip-ratio.ratio-over {
   background: #7f1d1d;
   color: #fca5a5;
+  border-left: 3px solid #f87171;
 }
 
-/* Dark theme for new sparkline elements */
-/* Dark mode slider tooltip tags */
-[data-theme="dark"] .sparkline-slider-tooltip-kcal {
-  color: var(--color-slate-100);
-}
-[data-theme="dark"] .sparkline-slider-tooltip-kcal small {
-  color: var(--color-slate-500);
-}
 [data-theme="dark"] .sparkline-slider-tooltip-tag {
-  background: var(--color-slate-700);
-  color: var(--color-slate-400);
+  background: var(--heys-bg-elevated);
+  color: var(--heys-text-secondary);
+  border: 1px solid var(--heys-border-default);
 }
+
 [data-theme="dark"] .sparkline-slider-tooltip-tag.good {
-  background: #064e3b;
+  background: #065f46;
   color: #6ee7b7;
+  border-color: #10b981;
 }
+
 [data-theme="dark"] .sparkline-slider-tooltip-tag.bad {
   background: #7f1d1d;
   color: #fca5a5;
+  border-color: #f87171;
 }
 
 [data-theme="dark"] .sparkline-week-separator {
-  stroke: var(--color-slate-700);
+  stroke: var(--heys-border-default);
+  stroke-opacity: 0.5;
+}
+
+[data-theme="dark"] .sparkline-week-separator {
+  stroke: var(--heys-border-default);
+  stroke-opacity: 0.5;
 }
 
 [data-theme="dark"] .sparkline-burn-glow {
   fill: #fb923c;
+  filter: drop-shadow(0 0 4px rgba(251, 146, 60, 0.5));
 }
 
-/* Dark theme for correlation block */
+/* ═══════════════════════════════════════════════════════════════════════════
+ * CORRELATION & CALORIC BALANCE
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
 [data-theme="dark"] .correlation-block {
-  background: linear-gradient(135deg, #1a1f2e 0%, #151a24 100%);
-  border-color: var(--color-slate-700);
+  background: linear-gradient(135deg, var(--heys-bg-card) 0%, var(--heys-bg-elevated) 100%);
+  border-color: var(--heys-border-default);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 [data-theme="dark"] .correlation-block.positive {
-  background: linear-gradient(135deg, #0d2818 0%, #0a1f14 100%);
-  border-color: #166534;
+  background: linear-gradient(135deg, #065f46 0%, #064e3b 100%);
+  border-color: #10b981;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
 }
 
 [data-theme="dark"] .correlation-block.warning {
-  background: linear-gradient(135deg, #2c1f0f 0%, #1f160a 100%);
-  border-color: #b45309;
+  background: linear-gradient(135deg, #7c2d12 0%, #78350f 100%);
+  border-color: #f97316;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.2);
 }
 
 [data-theme="dark"] .correlation-block.mixed {
-  background: linear-gradient(135deg, #2c2a0f 0%, #1f1d0a 100%);
-  border-color: #a16207;
+  background: linear-gradient(135deg, #713f12 0%, #78350f 100%);
+  border-color: #fbbf24;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.2);
 }
 
 [data-theme="dark"] .correlation-text {
-  color: var(--color-slate-200);
+  color: var(--heys-text-primary);
 }
 
 [data-theme="dark"] .correlation-clickable:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
 }
 
-/* Dark theme for caloric balance cards (упрощённые) */
+/* Caloric balance cards */
 [data-theme="dark"] .caloric-balance-card {
-  background: rgba(30, 41, 59, 0.6);
+  background: var(--heys-bg-card);
+  border: 1px solid var(--heys-border-default);
 }
 
 [data-theme="dark"] .caloric-balance-text {
-  color: var(--color-slate-200);
+  color: var(--heys-text-primary);
 }
 
 [data-theme="dark"] .caloric-balance-trend-text {
-  opacity: 0.9;
+  color: var(--heys-text-secondary);
 }
 
 [data-theme="dark"] .caloric-balance-steps {
-  color: var(--color-slate-400);
+  color: var(--heys-text-muted);
 }
 
 [data-theme="dark"] .caloric-balance-rec {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--heys-bg-elevated);
+  border: 1px solid var(--heys-border-default);
 }
 
 [data-theme="dark"] .caloric-balance-rec-text {
-  color: var(--color-slate-300);
+  color: var(--heys-text-secondary);
 }
 
 [data-theme="dark"] .caloric-balance-warning {
-  background: rgba(239, 68, 68, 0.15);
+  background: rgba(248, 113, 113, 0.15);
   color: #fca5a5;
+  border-left: 3px solid #ef4444;
 }
 
-/* Dark theme for caloric balance insights */
 [data-theme="dark"] .caloric-balance-insight-item {
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
-/* Dark theme for science summary */
 [data-theme="dark"] .caloric-excess-science-summary {
-  background: rgba(59, 130, 246, 0.15) !important;
+  background: rgba(96, 165, 250, 0.15) !important;
+  border: 1px solid rgba(96, 165, 250, 0.3);
 }
 
 [data-theme="dark"] .caloric-excess-science-summary:hover {
-  background: rgba(59, 130, 246, 0.22) !important;
+  background: rgba(96, 165, 250, 0.25) !important;
 }
 
-/* Dark theme for caloric debt card */
+/* Caloric debt */
 [data-theme="dark"] .caloric-debt-card {
-  background: rgba(59, 130, 246, 0.12);
-  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.3);
+  box-shadow: 0 2px 8px rgba(96, 165, 250, 0.1);
 }
 
 [data-theme="dark"] .caloric-debt-title {
-  color: var(--color-slate-200);
+  color: var(--heys-text-primary);
 }
 
 [data-theme="dark"] .caloric-debt-day {
-  background: rgba(30, 41, 59, 0.8);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--heys-bg-elevated);
+  border-color: var(--heys-border-default);
 }
 
 [data-theme="dark"] .caloric-debt-day.positive {
-  background: rgba(34, 197, 94, 0.15);
-  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(52, 211, 153, 0.15);
+  border-color: #10b981;
 }
 
 [data-theme="dark"] .caloric-debt-day.negative {
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.25);
+  background: rgba(248, 113, 113, 0.15);
+  border-color: #ef4444;
 }
 
 [data-theme="dark"] .caloric-debt-day-num {
-  color: var(--color-slate-400);
+  color: var(--heys-text-muted);
 }
 
 [data-theme="dark"] .caloric-debt-recommendation {
-  background: rgba(30, 41, 59, 0.6);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--heys-bg-elevated);
+  border-color: var(--heys-border-default);
 }
 
 [data-theme="dark"] .caloric-debt-rec-text {
-  color: var(--color-slate-200);
+  color: var(--heys-text-primary);
 }
 
 [data-theme="dark"] .caloric-debt-warning {
-  background: rgba(239, 68, 68, 0.15);
+  background: rgba(248, 113, 113, 0.15);
   color: #fca5a5;
+  border-left: 3px solid #ef4444;
 }
 
 [data-theme="dark"] .caloric-debt-explanation {
-  background: rgba(59, 130, 246, 0.1);
-  border-left-color: rgba(59, 130, 246, 0.4);
+  background: rgba(96, 165, 250, 0.12);
+  border-left: 3px solid #60a5fa;
 }
 
 [data-theme="dark"] .caloric-debt-explanation-text {
-  color: var(--color-slate-400);
+  color: var(--heys-text-secondary);
 }
 
-/* Dark theme for caloric excess card */
+/* Caloric excess */
 [data-theme="dark"] .caloric-excess-card {
-  background: rgba(34, 197, 94, 0.12);
-  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
 }
 
 [data-theme="dark"] .caloric-excess-recommendation {
-  background: rgba(30, 41, 59, 0.7);
-  border-color: rgba(34, 197, 94, 0.25);
+  background: var(--heys-bg-elevated);
+  border-color: rgba(16, 185, 129, 0.3);
 }
 
 [data-theme="dark"] .caloric-excess-recommendation .caloric-debt-rec-text {
-  color: var(--excess-color, #4ade80);
+  color: #6ee7b7;
 }
 
-/* Dark theme for insights card */
+/* Insights card */
 [data-theme="dark"] .caloric-insights-card {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(99, 102, 241, 0.08) 100%);
-  border-color: rgba(59, 130, 246, 0.25);
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.15) 0%, rgba(139, 92, 246, 0.10) 100%);
+  border-color: rgba(96, 165, 250, 0.3);
+  box-shadow: 0 2px 8px rgba(96, 165, 250, 0.15);
 }
 
 [data-theme="dark"] .caloric-insights-card:hover {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.18) 0%, rgba(99, 102, 241, 0.12) 100%);
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.22) 0%, rgba(139, 92, 246, 0.15) 100%);
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.2);
 }
 
 [data-theme="dark"] .caloric-insights-label {
-  color: var(--color-slate-200);
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .caloric-insights-label {
+  color: var(--heys-text-primary);
 }
 
 [data-theme="dark"] .caloric-insights-chevron {
-  color: var(--color-slate-500);
+  color: var(--heys-text-muted);
 }
 
 [data-theme="dark"] .caloric-insights-divider {
-  background: rgba(59, 130, 246, 0.25);
+  background: rgba(96, 165, 250, 0.25);
 }
 
 [data-theme="dark"] .caloric-insight-item {
-  background: rgba(30, 41, 59, 0.6);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--heys-bg-elevated);
+  border-color: var(--heys-border-default);
 }
 
 [data-theme="dark"] .caloric-insight-item:hover {
-  background: rgba(30, 41, 59, 0.8);
+  background: var(--heys-bg-card);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* === SCIENTIFIC INSIGHTS V2 — Dark Mode === */
+/* ═══════════════════════════════════════════════════════════════════════════
+ * SCIENTIFIC INSIGHTS V2
+ * ═══════════════════════════════════════════════════════════════════════════ */
 
 [data-theme="dark"] .insight-main {
-  color: var(--color-slate-400);
-  border-bottom-color: rgba(255, 255, 255, 0.08);
+  color: var(--heys-text-secondary);
+  border-bottom-color: var(--heys-border-default);
 }
 
 [data-theme="dark"] .caloric-insight-item-v2 {
-  background: rgba(30, 41, 59, 0.6);
+  background: var(--heys-bg-elevated);
+  border: 1px solid var(--heys-border-default);
 }
 
 [data-theme="dark"] .caloric-insight-item-v2:hover {
-  background: rgba(30, 41, 59, 0.9);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  background: var(--heys-bg-card);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
 }
 
 [data-theme="dark"] .caloric-insight-item-v2.severity-critical {
-  background: rgba(239, 68, 68, 0.12);
+  background: rgba(248, 113, 113, 0.15);
+  border-color: #ef4444;
 }
 
 [data-theme="dark"] .caloric-insight-item-v2.severity-warning {
-  background: rgba(245, 158, 11, 0.1);
+  background: rgba(251, 146, 60, 0.12);
+  border-color: #f97316;
 }
 
 [data-theme="dark"] .caloric-insight-item-v2.severity-positive {
-  background: rgba(34, 197, 94, 0.1);
+  background: rgba(52, 211, 153, 0.12);
+  border-color: #10b981;
 }
 
 [data-theme="dark"] .caloric-insight-item-v2.severity-info {
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(96, 165, 250, 0.12);
+  border-color: #3b82f6;
 }
 
 [data-theme="dark"] .insight-action {
-  background: rgba(59, 130, 246, 0.15);
-  color: var(--color-slate-300);
+  background: rgba(96, 165, 250, 0.15);
+  color: var(--heys-text-secondary);
+  border-left: 3px solid #60a5fa;
 }
 
 [data-theme="dark"] .insights-summary {
-  border-top-color: rgba(255, 255, 255, 0.08);
+  border-top-color: var(--heys-border-default);
 }
 
 [data-theme="dark"] .insights-summary-icon {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--heys-bg-elevated);
 }
 
+/* Group-specific backgrounds */
 [data-theme="dark"] .caloric-insight-item-v2.group-sleep {
-  background: rgba(99, 102, 241, 0.12);
+  background: rgba(129, 140, 248, 0.12);
+  border-color: #6366f1;
 }
 
 [data-theme="dark"] .caloric-insight-item-v2.group-metabolism {
-  background: rgba(249, 115, 22, 0.12);
+  background: rgba(251, 146, 60, 0.12);
+  border-color: #f97316;
 }
 
 [data-theme="dark"] .caloric-insight-item-v2.group-timing {
-  background: rgba(6, 182, 212, 0.12);
+  background: rgba(34, 211, 238, 0.12);
+  border-color: #06b6d4;
 }
 
 [data-theme="dark"] .caloric-insight-item-v2.group-nutrition {
-  background: rgba(34, 197, 94, 0.12);
+  background: rgba(52, 211, 153, 0.12);
+  border-color: #10b981;
 }
 
 [data-theme="dark"] .caloric-insight-item-v2.group-activity {
-  background: rgba(236, 72, 153, 0.12);
+  background: rgba(244, 114, 182, 0.12);
+  border-color: #ec4899;
 }
 
 [data-theme="dark"] .caloric-insight-item-v2.group-hormones {
-  background: rgba(139, 92, 246, 0.12);
+  background: rgba(167, 139, 250, 0.12);
+  border-color: #8b5cf6;
 }
 
 [data-theme="dark"] .caloric-insight-item-v2.group-pattern {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%);
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.15) 0%, rgba(96, 165, 250, 0.15) 100%);
+  border-color: #a78bfa;
 }
 
-/* Dark theme for balance day popup */
+/* Balance day popup */
 [data-theme="dark"] .balance-day-popup {
-  background: #1e293b !important;
-  color: var(--color-slate-200);
+  background: var(--heys-bg-elevated) !important;
+  border: 1px solid var(--heys-border-focus) !important;
+  color: var(--heys-text-primary);
 }
 
 [data-theme="dark"] .balance-day-popup button {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--color-slate-400);
+  background: var(--heys-bg-card);
+  color: var(--heys-text-secondary);
+  border: 1px solid var(--heys-border-default);
 }
 
-/* Dark theme for weight sparkline */
+[data-theme="dark"] .balance-day-popup button:hover {
+  background: var(--heys-bg-elevated);
+  border-color: var(--heys-border-focus);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * WEIGHT SPARKLINE
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
 [data-theme="dark"] .weight-sparkline-container {
-  background: linear-gradient(135deg, #1e1b2e 0%, #1a1625 100%);
-  border-color: #4c3d6e;
+  background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
+  border-color: #6366f1;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
 }
 
 [data-theme="dark"] .weight-sparkline-container.trend-down {
-  background: linear-gradient(135deg, #0d2818 0%, #0a1f14 100%);
-  border-color: #166534;
+  background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+  border-color: #10b981;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
 }
 
 [data-theme="dark"] .weight-sparkline-container.trend-up {
-  background: linear-gradient(135deg, #2c1616 0%, #1f1010 100%);
-  border-color: #991b1b;
+  background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+  border-color: #ef4444;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
 }
 
 [data-theme="dark"] .weight-sparkline-container.trend-same {
-  background: linear-gradient(135deg, #1e1b2e 0%, #1a1625 100%);
-  border-color: #4c3d6e;
+  background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
+  border-color: #6366f1;
 }
 
 [data-theme="dark"] .weight-sparkline-title {
-  color: #93c5fd;
+  color: #c7d2fe;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme="dark"] .weight-trend-badge.down {
-  background: #064e3b;
-  color: #34d399;
+  background: #065f46;
+  color: #6ee7b7;
+  border: 1px solid #10b981;
 }
 
 [data-theme="dark"] .weight-trend-badge.up {
   background: #7f1d1d;
   color: #fca5a5;
+  border: 1px solid #ef4444;
 }
 
 [data-theme="dark"] .weight-trend-badge.same {
-  background: #3b2f63;
-  color: #93c5fd;
+  background: #3730a3;
+  color: #c7d2fe;
+  border: 1px solid #6366f1;
 }
 
 [data-theme="dark"] .weight-forecast-badge {
-  background: var(--color-slate-700);
-  color: var(--color-slate-400);
+  background: var(--heys-bg-elevated);
+  color: var(--heys-text-muted);
+  border: 1px solid var(--heys-border-default);
 }
 
 [data-theme="dark"] .weight-forecast-badge.down {
-  background: #064e3b;
+  background: #065f46;
   color: #6ee7b7;
+  border-color: #10b981;
 }
 
 [data-theme="dark"] .weight-forecast-badge.up {
   background: #7f1d1d;
   color: #fca5a5;
+  border-color: #ef4444;
 }
 
 [data-theme="dark"] .weight-sparkline-line {
-  stroke: #60a5fa;
+  stroke: #a78bfa;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 1px 3px rgba(167, 139, 250, 0.4));
 }
 
 [data-theme="dark"] .weight-sparkline-container.trend-down .weight-sparkline-line {
-  stroke: #34d399;
+  stroke: #4ade80;
+  filter: drop-shadow(0 1px 3px rgba(74, 222, 128, 0.4));
 }
 
 [data-theme="dark"] .weight-sparkline-container.trend-up .weight-sparkline-line {
   stroke: #f87171;
+  filter: drop-shadow(0 1px 3px rgba(248, 113, 113, 0.4));
 }
 
 [data-theme="dark"] .weight-sparkline-container.trend-same .weight-sparkline-line {
-  stroke: #60a5fa;
+  stroke: #a78bfa;
 }
 
 [data-theme="dark"] .weight-sparkline-label {
-  fill: #7c3aed;
+  fill: #c4b5fd;
 }
 
 [data-theme="dark"] .weight-sparkline-label-today {
-  fill: #93c5fd;
+  fill: #e0e7ff;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .weight-sparkline-label-today {
+  fill: #e0e7ff;
+  font-weight: 600;
 }
 
 [data-theme="dark"] .weight-sparkline-day-label {
-  fill: var(--color-slate-500);
+  fill: var(--heys-text-muted);
 }
 
 [data-theme="dark"] .weight-sparkline-day-today {
-  fill: var(--color-slate-400);
+  fill: var(--heys-text-secondary);
+  font-weight: 600;
 }
 
-/* Кнопки периода для графика веса — dark mode */
+/* Weight period pills */
 [data-theme="dark"] .weight-period-pills {
-  background: rgba(139, 92, 246, 0.25);
+  background: rgba(167, 139, 250, 0.2);
 }
 
 [data-theme="dark"] .weight-period-pills .kcal-period-pill {
-  color: #60a5fa;
+  color: #c4b5fd;
 }
 
 [data-theme="dark"] .weight-period-pills .kcal-period-pill.active {
-  background: var(--color-slate-700);
-  color: #93c5fd;
+  background: #312e81;
+  color: #e0e7ff;
+  box-shadow: 0 2px 4px rgba(99, 102, 241, 0.4);
 }
 
-/* Подсказка о целевом весе — dark mode */
+/* Weight goal */
 [data-theme="dark"] .weight-goal-hint {
-  background: rgba(234, 179, 8, 0.15);
-  border-color: rgba(234, 179, 8, 0.4);
-  color: var(--color-slate-400);
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: var(--heys-text-secondary);
 }
 
 [data-theme="dark"] .weight-goal-hint-link {
-  color: #fbbf24;
+  color: #fcd34d;
 }
 
 [data-theme="dark"] .weight-goal-hint-link:hover {
-  color: #f59e0b;
+  color: #fbbf24;
 }
 
-/* Линия целевого веса — dark mode */
 [data-theme="dark"] .weight-goal-line {
-  stroke: #34d399;
-  stroke-opacity: 0.5;
+  stroke: #4ade80;
+  stroke-opacity: 0.6;
+  stroke-dasharray: 4 4;
 }
 
 [data-theme="dark"] .weight-goal-label {
-  fill: #34d399;
-  opacity: 0.7;
+  fill: #6ee7b7;
 }
 
-/* === ЗАДЕРЖКА ВОДЫ — DARK THEME === */
+/* ═══════════════════════════════════════════════════════════════════════════
+ * WATER RETENTION (ЗАДЕРЖКА ВОДЫ)
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
 [data-theme="dark"] .weight-clean-trend-badge {
-  background: rgba(236, 72, 153, 0.2);
+  background: rgba(244, 114, 182, 0.2);
   color: #f9a8d4;
+  border: 1px solid rgba(244, 114, 182, 0.4);
 }
 
 [data-theme="dark"] .weight-retention-note {
-  background: linear-gradient(135deg, rgba(157, 23, 77, 0.15) 0%, rgba(190, 24, 93, 0.1) 100%);
-  border-left-color: #f472b6;
+  background: linear-gradient(135deg, rgba(157, 23, 77, 0.18) 0%, rgba(190, 24, 93, 0.12) 100%);
+  border-left: 3px solid #f472b6;
+  box-shadow: 0 2px 8px rgba(244, 114, 182, 0.15);
 }
 
 [data-theme="dark"] .weight-retention-note-text {
@@ -1135,84 +1429,77 @@
 }
 
 [data-theme="dark"] .weight-retention-insight {
-  color: #9ca3af;
+  color: var(--heys-text-muted);
 }
 
 [data-theme="dark"] .weight-retention-stats {
-  color: #6b7280;
-  border-top-color: rgba(244, 114, 182, 0.15);
+  color: var(--heys-text-secondary);
+  border-top: 1px solid rgba(244, 114, 182, 0.2);
 }
 
 [data-theme="dark"] .weight-retention-stats b {
   color: #f9a8d4;
 }
 
-/* Dark theme for bottom sheets (Glassmorphism) */
-[data-theme="dark"] .time-picker-backdrop {
-  background: rgba(0, 0, 0, 0.5);
-}
+/* ═══════════════════════════════════════════════════════════════════════════
+ * BOTTOM SHEETS & POPUPS
+ * ═══════════════════════════════════════════════════════════════════════════ */
 
-[data-theme="dark"] .time-picker-modal {
-  background: rgba(28, 28, 30, 0.95);
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
-}
-
-/* Zone Formula Popup - Dark Mode */
+[data-theme="dark"] .time-picker-backdrop,
 [data-theme="dark"] .zone-formula-backdrop {
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
 }
 
+[data-theme="dark"] .time-picker-modal,
 [data-theme="dark"] .zone-formula-popup {
-  background: rgba(28, 28, 30, 0.98);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
 }
 
+[data-theme="dark"] .time-picker-header,
 [data-theme="dark"] .zone-formula-header {
-  border-bottom-color: #38383a;
+  border-bottom: 1px solid var(--heys-border-default);
 }
 
-[data-theme="dark"] .zone-formula-name {
-  color: #f2f2f7;
-}
-
-[data-theme="dark"] .zone-formula-label {
-  color: #8e8e93;
-}
-
+[data-theme="dark"] .time-picker-title,
+[data-theme="dark"] .zone-formula-name,
 [data-theme="dark"] .zone-formula-value {
-  color: #f2f2f7;
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .zone-formula-label,
+[data-theme="dark"] .mood-hint-first,
+[data-theme="dark"] .tap-hint {
+  color: var(--heys-text-muted);
 }
 
 [data-theme="dark"] .zone-formula-calc {
-  background: #2c2c2e;
+  background: var(--heys-bg-elevated);
+  border-radius: 8px;
+  padding: 12px;
 }
 
 [data-theme="dark"] .zone-formula-expression {
-  color: #8e8e93;
+  color: var(--heys-text-secondary);
+  font-family: 'SF Mono', 'Monaco', monospace;
 }
 
 [data-theme="dark"] .zone-formula-hint {
-  color: #636366;
+  color: var(--heys-text-muted);
+  font-size: 12px;
 }
 
 [data-theme="dark"] .zone-formula-edit-btn {
-  background: linear-gradient(135deg, #0a84ff, #0066cc);
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
 }
 
-[data-theme="dark"] .tap-hint {
-  color: #636366;
-}
-
-[data-theme="dark"] .time-picker-header {
-  border-bottom-color: #38383a;
-}
-
-[data-theme="dark"] .time-picker-title {
-  color: #f2f2f7;
-}
-
-[data-theme="dark"] .mood-hint-first {
-  color: #8e8e93;
+[data-theme="dark"] .zone-formula-edit-btn:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
 }
 
 [data-theme="dark"] .mood-hint-change {

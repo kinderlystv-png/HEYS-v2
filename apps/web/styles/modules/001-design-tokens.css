@@ -189,26 +189,116 @@
 
 .dark-theme,
 [data-theme="dark"] {
-  /* Backgrounds */
-  --heys-bg-page: #0f172a;
-  --heys-bg-card: #1e293b;
-  --heys-bg-elevated: #334155;
-  --heys-bg-muted: #1e293b;
-  --heys-bg-subtle: #0f172a;
+  /* ══════════════════════════════════
+   * BACKGROUNDS — Темная палитра
+   * ══════════════════════════════════ */
+  --heys-bg-page: #0f172a;        /* Slate 900 - основной фон */
+  --heys-bg-card: #1e293b;        /* Slate 800 - карточки */
+  --heys-bg-elevated: #334155;    /* Slate 700 - приподнятые элементы */
+  --heys-bg-muted: #1e293b;       /* Slate 800 - приглушенный фон */
+  --heys-bg-subtle: #0f172a;      /* Slate 900 - едва заметный фон */
   
-  /* Text */
-  --heys-text-primary: #f1f5f9;
-  --heys-text-secondary: #94a3b8;
-  --heys-text-muted: #64748b;
+  /* ══════════════════════════════════
+   * TEXT — Улучшенная читаемость
+   * ══════════════════════════════════ */
+  --heys-text-primary: #f1f5f9;   /* Slate 100 - основной текст (высокий контраст) */
+  --heys-text-secondary: #cbd5e1; /* Slate 300 - вторичный текст (средний контраст) */
+  --heys-text-muted: #94a3b8;     /* Slate 400 - приглушенный текст (низкий контраст) */
+  --heys-text-inverted: #0f172a;  /* Инверсия для кнопок и акцентов */
   
-  /* Borders */
-  --heys-border-default: #334155;
-  --heys-border-subtle: #1e293b;
+  /* ══════════════════════════════════
+   * BORDERS — Видимые границы
+   * ══════════════════════════════════ */
+  --heys-border-default: #475569; /* Slate 600 - основные границы (видимые) */
+  --heys-border-subtle: #334155;  /* Slate 700 - едва заметные границы */
+  --heys-border-focus: #60a5fa;   /* Blue 400 - фокус (яркий) */
   
-  /* Semantic backgrounds */
-  --heys-primary-bg: rgba(37, 99, 235, 0.2);
-  --heys-success-bg: rgba(34, 197, 94, 0.2);
-  --heys-warning-bg: rgba(234, 179, 8, 0.2);
-  --heys-danger-bg: rgba(239, 68, 68, 0.2);
-  --heys-info-bg: rgba(59, 130, 246, 0.2);
+  /* ══════════════════════════════════
+   * SEMANTIC COLORS — Темная версия
+   * ══════════════════════════════════ */
+  /* Primary */
+  --heys-primary: #60a5fa;        /* Blue 400 - ярче для темного фона */
+  --heys-primary-hover: #3b82f6;  /* Blue 500 */
+  --heys-primary-light: #93c5fd;  /* Blue 300 */
+  --heys-primary-bg: rgba(96, 165, 250, 0.15);
+  
+  /* Success */
+  --heys-success: #4ade80;        /* Green 400 - ярче для темного фона */
+  --heys-success-hover: #22c55e;  /* Green 500 */
+  --heys-success-light: #86efac;  /* Green 300 */
+  --heys-success-bg: rgba(74, 222, 128, 0.15);
+  
+  /* Warning */
+  --heys-warning: #fbbf24;        /* Amber 400 - ярче для темного фона */
+  --heys-warning-hover: #f59e0b;  /* Amber 500 */
+  --heys-warning-light: #fde047;  /* Amber 300 */
+  --heys-warning-bg: rgba(251, 191, 36, 0.15);
+  
+  /* Danger */
+  --heys-danger: #f87171;         /* Red 400 - ярче для темного фона */
+  --heys-danger-hover: #ef4444;   /* Red 500 */
+  --heys-danger-light: #fca5a5;   /* Red 300 */
+  --heys-danger-bg: rgba(248, 113, 113, 0.15);
+  
+  /* Info */
+  --heys-info: #60a5fa;           /* Blue 400 */
+  --heys-info-hover: #3b82f6;     /* Blue 500 */
+  --heys-info-light: #93c5fd;     /* Blue 300 */
+  --heys-info-bg: rgba(96, 165, 250, 0.15);
+  
+  /* ══════════════════════════════════
+   * SHADOWS — Адаптированы для темной темы
+   * ══════════════════════════════════ */
+  --heys-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --heys-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --heys-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+  --heys-shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.6), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+  
+  /* ══════════════════════════════════
+   * NUTRITION — Адаптированные цвета
+   * ══════════════════════════════════ */
+  --heys-ratio-crash: #f87171;    /* Red 400 */
+  --heys-ratio-low: #fbbf24;      /* Amber 400 */
+  --heys-ratio-good: #4ade80;     /* Green 400 */
+  --heys-ratio-perfect: #34d399;  /* Green 300 */
+  --heys-ratio-over: #fbbf24;     /* Amber 400 */
+  --heys-ratio-binge: #f87171;    /* Red 400 */
+  
+  --heys-protein: #60a5fa;        /* Blue 400 */
+  --heys-carbs: #fb923c;          /* Orange 400 */
+  --heys-fat: #60a5fa;            /* Blue 400 */
+  --heys-fiber: #4ade80;          /* Green 400 */
+  
+  --heys-good-fat: #4ade80;
+  --heys-bad-fat: #fb923c;
+  --heys-trans-fat: #f87171;
+  --heys-simple-carbs: #fca5a5;
+  --heys-complex-carbs: #86efac;
+
+  /* ══════════════════════════════════
+   * BADGE & INLINE COMPONENT COLORS — Dark theme overrides
+   * ══════════════════════════════════ */
+  --mood-badge-bg: rgba(251, 191, 36, 0.2);
+  --mood-badge-color: #fcd34d;
+  --wellbeing-badge-bg: rgba(74, 222, 128, 0.2);
+  --wellbeing-badge-color: #86efac;
+  --stress-badge-bg: rgba(244, 114, 182, 0.2);
+  --stress-badge-color: #f9a8d4;
+  --info-badge-bg: rgba(96, 165, 250, 0.2);
+  --info-badge-color: #93c5fd;
+  --warning-badge-bg: rgba(251, 191, 36, 0.2);
+  --warning-badge-color: #fcd34d;
+  --bg-secondary: var(--heys-bg-elevated);
+  --bg-tertiary: var(--heys-bg-elevated);
+  --surface: var(--heys-bg-card);
+  --text-primary: var(--heys-text-primary);
+  --text-secondary: var(--heys-text-secondary);
+  --flow-multi-bg: linear-gradient(135deg, #1e3a5f 0%, #2547a8 100%);
+
+  /* Tinted subtle backgrounds (interceptor uses these) */
+  --bg-success-subtle: rgba(16, 185, 129, 0.12);
+  --bg-warning-subtle: rgba(251, 191, 36, 0.12);
+  --bg-danger-subtle: rgba(239, 68, 68, 0.12);
+  --bg-info-subtle: rgba(96, 165, 250, 0.12);
+  --bg-pink-subtle: rgba(244, 114, 182, 0.12);
 }

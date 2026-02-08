@@ -412,10 +412,176 @@
             setAuditLoading(false);
         }, []);
 
+        // 📋 Копирование всей истории в буфер обмена
+        const copyFullAuditLog = useCallback(async () => {
+            if (!HEYS.game?.getAuditHistory) {
+                logAuditWarn('copy:skip', { reason: 'getAuditHistory_missing' });
+                HEYS.Toast?.error?.('История недоступна');
+                return;
+            }
+
+            logAuditInfo('copy:start');
+            const startedAt = Date.now();
+            const allEvents = [];
+            const batchSize = 100;
+            let offset = 0;
+            let hasMore = true;
+
+            // Показываем toast о процессе
+            HEYS.Toast?.info?.('Загружаем полную историю...');
+
+            try {
+                // Загружаем все события пачками
+                while (hasMore) {
+                    const result = await HEYS.game.getAuditHistory({ limit: batchSize, offset });
+
+                    if (result?.error) {
+                        throw new Error(result.error?.message || result.error || 'Ошибка загрузки');
+                    }
+
+                    const items = Array.isArray(result?.items) ? result.items : [];
+                    allEvents.push(...items);
+
+                    logAuditInfo('copy:batch', { offset, loaded: items.length, total: allEvents.length });
+
+                    // Если получили меньше чем batchSize, значит это последняя пачка
+                    if (items.length < batchSize) {
+                        hasMore = false;
+                    } else {
+                        offset += batchSize;
+                    }
+
+                    // Защита от бесконечного цикла
+                    if (offset > 10000) {
+                        logAuditWarn('copy:limit', { offset });
+                        hasMore = false;
+                    }
+                }
+
+                logAuditInfo('copy:loaded', { total: allEvents.length, tookMs: Date.now() - startedAt });
+
+                // 🔍 Фильтруем xp_rebuild +0 (спам)
+                const filteredEvents = allEvents.filter(e => {
+                    if (e.action === 'xp_rebuild' && (e.xp_delta === 0 || !e.xp_delta)) return false;
+                    return true;
+                });
+                const hiddenCount = allEvents.length - filteredEvents.length;
+
+                // 🔍 Счётчик дублей достижений (для пометки в истории)
+                const achievementCounts = {};
+                filteredEvents.forEach((e) => {
+                    if (e.action === 'achievement_unlocked' && e.reason) {
+                        achievementCounts[e.reason] = (achievementCounts[e.reason] || 0) + 1;
+                    }
+                });
+
+                // Форматируем события в текст
+                const lines = [
+                    '═══════════════════════════════════════════════',
+                    '🎮 ИСТОРИЯ ОПЫТА HEYS',
+                    `Всего событий: ${filteredEvents.length}${hiddenCount > 0 ? ` (скрыто ${hiddenCount} rebuild +0)` : ''}`,
+                    `Дата выгрузки: ${new Date().toLocaleString('ru-RU')}`,
+                    '═══════════════════════════════════════════════',
+                    ''
+                ];
+
+                filteredEvents.forEach((event, idx) => {
+                    const meta = event?.metadata || {};
+                    const actionLabel = getAuditActionLabel(event.action, meta);
+                    const reasonLabel = getAuditReasonLabel(event.reason);
+                    const when = event.created_at
+                        ? new Date(event.created_at).toLocaleString('ru-RU', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })
+                        : '';
+                    const actorLabel = event.actor_type === 'curator'
+                        ? 'Куратор'
+                        : event.actor_type === 'pin'
+                            ? 'PIN'
+                            : 'Система';
+                    const xpDelta = typeof event.xp_delta === 'number' ? event.xp_delta : null;
+                    const levelBefore = event.level_before;
+                    const levelAfter = event.level_after;
+
+                    const isDupAchievement = event.action === 'achievement_unlocked' && event.reason && achievementCounts[event.reason] > 1;
+                    const dupMark = isDupAchievement ? ' ⚠️ дубль' : '';
+
+                    lines.push(`${idx + 1}. ${actionLabel}${dupMark}`);
+                    if (xpDelta !== null) lines.push(`   XP: +${xpDelta}`);
+                    if (levelBefore && levelAfter && levelAfter !== levelBefore) {
+                        lines.push(`   Уровень: ${levelBefore} → ${levelAfter}`);
+                    }
+                    if (reasonLabel) lines.push(`   Причина: ${reasonLabel}`);
+                    lines.push(`   Кем: ${actorLabel} | Когда: ${when}`);
+                    lines.push('');
+                });
+
+                lines.push('═══════════════════════════════════════════════');
+                lines.push(`Статистика по типам:`);
+
+                // Подсчёт по типам событий
+                const actionCounts = {};
+                // FIX: Правильный подсчёт XP — только xp_gain + daily_bonus + уникальные achievement_unlocked
+                // level_up дублирует xp_gain delta, xp_rebuild — это корректировки, не новый XP
+                let totalXP = 0;
+                const seenAchievements = new Set();
+                filteredEvents.forEach(e => {
+                    const label = getAuditActionLabel(e.action, e.metadata || {});
+                    actionCounts[label] = (actionCounts[label] || 0) + 1;
+                    const delta = typeof e.xp_delta === 'number' ? e.xp_delta : 0;
+                    if ((e.action === 'xp_gain' || e.action === 'daily_bonus') && delta > 0) {
+                        totalXP += delta;
+                    } else if (e.action === 'achievement_unlocked' && e.reason && delta > 0) {
+                        if (!seenAchievements.has(e.reason)) {
+                            seenAchievements.add(e.reason);
+                            totalXP += delta;
+                        }
+                    }
+                });
+                Object.entries(actionCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .forEach(([label, count]) => {
+                        lines.push(`  - ${label}: ${count} раз(а)`);
+                    });
+
+                // 🔍 Показываем drift если есть
+                const currentXP = HEYS.game?.getStats?.()?.totalXP || 0;
+                const drift = currentXP - totalXP;
+                const driftStr = drift !== 0 ? ` (δ ${drift > 0 ? '+' : ''}${drift})` : '';
+                lines.push(`\nЧистый XP (audit): ${totalXP}`);
+                lines.push(`UI XP: ${currentXP}${driftStr}`);
+                lines.push('═══════════════════════════════════════════════');
+
+                const text = lines.join('\n');
+
+                // Копируем в буфер обмена
+                await navigator.clipboard.writeText(text);
+
+                logAuditInfo('copy:success', {
+                    events: allEvents.length,
+                    chars: text.length,
+                    tookMs: Date.now() - startedAt
+                });
+
+                HEYS.Toast?.success?.(`История скопирована (${allEvents.length} событий)`);
+            } catch (err) {
+                logAuditError('copy:error', { message: err.message });
+                HEYS.Toast?.error?.('Не удалось скопировать: ' + err.message);
+            }
+        }, []);
+
         useEffect(() => {
             if (expanded && auditOpen) {
                 logAuditInfo('auto-load', { expanded, auditOpen });
                 loadAuditHistory();
+                // 🔍 Auto-debug при открытии истории
+                if (HEYS.game?.verifyXP) {
+                    setTimeout(() => HEYS.game.verifyXP(), 500);
+                }
             }
         }, [expanded, auditOpen, loadAuditHistory]);
 
@@ -736,7 +902,23 @@
                                             React.createElement('div', { className: 'notif-subtitle' }, notification.data.message || 'Щит защитил твою серию')
                                         )
                                     )
-                                    : null
+                                    : notification.type === 'mission_complete'
+                                        ? React.createElement(React.Fragment, null,
+                                            React.createElement('span', { className: 'notif-icon' }, '✅'),
+                                            React.createElement('div', { className: 'notif-content' },
+                                                React.createElement('div', { className: 'notif-title' }, 'Миссия выполнена!'),
+                                                React.createElement('div', { className: 'notif-subtitle' }, `${notification.data.name} — +${notification.data.xp} XP`)
+                                            )
+                                        )
+                                        : notification.type === 'all_missions_complete'
+                                            ? React.createElement(React.Fragment, null,
+                                                React.createElement('span', { className: 'notif-icon' }, '🎉'),
+                                                React.createElement('div', { className: 'notif-content' },
+                                                    React.createElement('div', { className: 'notif-title' }, 'Все миссии дня!'),
+                                                    React.createElement('div', { className: 'notif-subtitle' }, `Бонус +${notification.data.bonus || 50} XP 🎊`)
+                                                )
+                                            )
+                                            : null
             ),
 
             // Expanded panel (backdrop + content)
@@ -868,19 +1050,79 @@
                         )
                     ),
 
-                    // Daily missions (expanded)
+                    // Daily missions (expanded) — full card UI
                     dailyMissions && React.createElement('div', {
                         className: 'game-missions-panel'
                     },
                         React.createElement('div', { className: 'game-missions-panel__title' }, '🧭 Миссии дня'),
-                        React.createElement('div', { className: 'game-missions-panel__row' },
-                            React.createElement('div', { className: 'game-missions-dots' },
-                                [0, 1, 2].map((i) => React.createElement('span', {
-                                    key: i,
-                                    className: `game-missions-dot ${i < (dailyMissions.completedCount || 0) ? 'is-complete' : ''}`
-                                }))
-                            ),
-                            React.createElement('span', { className: 'game-missions-count' }, `${dailyMissions.completedCount || 0}/3`)
+                        React.createElement('div', { className: 'game-missions-list' },
+                            (dailyMissions.missions || []).map((m, i) => {
+                                const progressPct = m.target > 0 ? Math.min(100, Math.round((m.progress / m.target) * 100)) : 0;
+                                const CATEGORY_META = HEYS.missions?.CATEGORY_META || {};
+                                const categoryMeta = CATEGORY_META[m.category] || {};
+
+                                // Progress text for missions with target > 1
+                                let progressText = '';
+                                if (!m.completed && m.target > 1) {
+                                    if (m.type === 'water' || m.type === 'kcal' || m.type === 'fiber' ||
+                                        m.type === 'protein' || m.type === 'complex_carbs' || m.type === 'harm') {
+                                        progressText = `${m.progress || 0}%`;
+                                    } else {
+                                        progressText = `${m.progress || 0}/${m.target}`;
+                                    }
+                                }
+
+                                return React.createElement('div', {
+                                    key: m.id || i,
+                                    className: `game-mission-card ${m.completed ? 'is-complete' : ''}`
+                                },
+                                    React.createElement('div', { className: 'game-mission-card__icon' }, m.completed ? '✅' : (m.icon || '⚪')),
+                                    React.createElement('div', { className: 'game-mission-card__body' },
+                                        React.createElement('div', { className: 'game-mission-card__header' },
+                                            React.createElement('div', { className: 'game-mission-card__name' }, m.name || m.id),
+                                            categoryMeta.label && React.createElement('div', {
+                                                className: 'game-mission-card__category',
+                                                style: {
+                                                    fontSize: '10px',
+                                                    padding: '2px 6px',
+                                                    borderRadius: '4px',
+                                                    backgroundColor: 'rgba(255,255,255,0.15)',
+                                                    color: 'rgba(255,255,255,0.85)',
+                                                    whiteSpace: 'nowrap'
+                                                }
+                                            }, `${categoryMeta.icon || ''} ${categoryMeta.label}`.trim())
+                                        ),
+                                        React.createElement('div', { className: 'game-mission-card__desc' }, m.desc || ''),
+                                        !m.completed && React.createElement('div', { className: 'game-mission-card__bar-wrapper' },
+                                            React.createElement('div', { className: 'game-mission-card__bar' },
+                                                React.createElement('div', {
+                                                    className: 'game-mission-card__bar-fill',
+                                                    style: { width: progressPct + '%' }
+                                                })
+                                            ),
+                                            progressText && React.createElement('div', {
+                                                className: 'game-mission-card__progress-text',
+                                                style: {
+                                                    fontSize: '11px',
+                                                    color: 'rgba(255,255,255,0.7)',
+                                                    marginTop: '4px'
+                                                }
+                                            }, progressText)
+                                        )
+                                    ),
+                                    React.createElement('div', { className: 'game-mission-card__xp' },
+                                        m.completed ? `+${m.xp}` : `${m.xp} XP`
+                                    )
+                                );
+                            })
+                        ),
+                        // Бонус счётчик
+                        React.createElement('div', { className: 'game-missions-panel__footer' },
+                            dailyMissions.completedCount >= 3 && dailyMissions.bonusClaimed
+                                ? React.createElement('span', { className: 'game-missions-bonus-done' }, '🎉 Бонус +50 XP получен!')
+                                : React.createElement('span', { className: 'game-missions-bonus-hint' },
+                                    `${dailyMissions.completedCount || 0}/3 — выполни все для +50 XP 🎁`
+                                )
                         )
                     ),
 
@@ -977,18 +1219,28 @@
                     React.createElement('div', { className: 'game-audit-section' },
                         React.createElement('div', { className: 'game-audit-title' }, '🧾 История геймификации'),
                         React.createElement('div', { className: 'game-audit-subtitle' }, 'Лента изменений XP, уровней и наград. Доступна клиенту и куратору.'),
-                        React.createElement('button', {
-                            className: 'game-audit-btn',
-                            onClick: (e) => {
-                                e.stopPropagation();
-                                const nextState = !auditOpen;
-                                logAuditInfo('toggle:click', { nextState, expanded, auditOpen });
-                                setAuditOpen(nextState);
-                                if (nextState) {
-                                    loadAuditHistory();
+                        React.createElement('div', { className: 'game-audit-buttons' },
+                            React.createElement('button', {
+                                className: 'game-audit-btn',
+                                onClick: (e) => {
+                                    e.stopPropagation();
+                                    const nextState = !auditOpen;
+                                    logAuditInfo('toggle:click', { nextState, expanded, auditOpen });
+                                    setAuditOpen(nextState);
+                                    if (nextState) {
+                                        loadAuditHistory();
+                                    }
                                 }
-                            }
-                        }, auditOpen ? 'Скрыть историю' : 'Показать историю'),
+                            }, auditOpen ? 'Скрыть историю' : 'Показать историю'),
+                            React.createElement('button', {
+                                className: 'game-audit-btn game-audit-btn--copy',
+                                onClick: (e) => {
+                                    e.stopPropagation();
+                                    copyFullAuditLog();
+                                },
+                                title: 'Скопировать весь лог в буфер обмена'
+                            }, '📋 Копировать лог')
+                        ),
                         auditOpen && React.createElement('div', { className: 'game-audit-list' },
                             auditLoading && React.createElement('div', { className: 'game-audit-loading' }, 'Загружаем историю...'),
                             !auditLoading && auditError && React.createElement('div', { className: 'game-audit-error' }, auditError),

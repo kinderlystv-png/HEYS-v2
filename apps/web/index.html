@@ -1805,6 +1805,8 @@
     <!-- ВАЖНО: Загружается СИНХРОННО перед defer-скриптами (blocking script) -->
     <!-- Собирается: npx esbuild src/react-globals-sync.ts --bundle --format=iife --minify -->
     <script src="react-bundle.js"></script>
+    <!-- Dark theme interceptor — patches React.createElement for CSS var colors -->
+    <script src="heys_dark_theme_interceptor.js"></script>
     <!-- Supabase CDN — УДАЛЁН 2025-12-24 (152-ФЗ compliance)
          Причина: SDK делал запросы к серверам Supabase (Германия), 
          нарушая ст.18 ч.5 152-ФЗ о локализации ПДн.
@@ -1855,8 +1857,10 @@
     <script defer src="heys_sparkline_utils_v1.js?v=20" fetchpriority="low"></script>
     <!-- Shared mini-sparklines -->
     <script defer src="heys_sparklines_shared_v1.js?v=6" fetchpriority="low"></script>
+    <!-- Daily missions pool & selection engine -->
+    <script defer src="heys_daily_missions_v1.js?v=1" fetchpriority="low"></script>
     <!-- Gamification system (XP, levels, achievements) -->
-    <script defer src="heys_gamification_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_gamification_v1.js?v=22" fetchpriority="low"></script>
     <!-- Day module split (Phase 2-5) -->
     <script defer src="heys_day_core_bundle_v1.js?v=1" fetchpriority="low"></script>
     <script defer src="heys_day_utils.js?v=1" fetchpriority="low"></script>
@@ -2055,9 +2059,9 @@
     <script defer src="heys_app_root_impl_v1.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_app_root_component_v1.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_app_root_v1.js?v=1" fetchpriority="high"></script>
-    <script defer src="heys_app_dependency_loader_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_dependency_loader_v1.js?v=2026.02.08" fetchpriority="high"></script>
     <script defer src="heys_app_ui_state_v1.js?v=1" fetchpriority="high"></script>
-    <script defer src="heys_app_initialize_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_initialize_v1.js?v=2026.02.08" fetchpriority="high"></script>
     <script defer src="heys_app_entry_v1.js?v=1" fetchpriority="high"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: heys_app_entry_v1.js')"></script>
     <script defer src="heys_app_v12.js?v=2026.01.25.2313.5890eba" fetchpriority="high"

@@ -1509,7 +1509,7 @@
             flex: 1,
             marginTop: '40px',
             marginBottom: `${COURSE_MODAL_BOTTOM_GAP_PX}px`,
-            background: '#f8fafc',
+            background: 'var(--bg-secondary, #f8fafc)',
             borderTopLeftRadius: '20px',
             borderTopRightRadius: '20px',
             borderBottomLeftRadius: '20px',
@@ -1526,7 +1526,7 @@
             style: {
               position: 'sticky',
               top: 0,
-              background: '#fff',
+              background: 'var(--card, #fff)',
               borderTopLeftRadius: '20px',
               borderTopRightRadius: '20px',
               padding: '16px 20px',
@@ -1556,7 +1556,7 @@
             // === Статистика курса ===
             React.createElement('div', {
               style: {
-                background: '#fff',
+                background: 'var(--card, #fff)',
                 borderRadius: '16px',
                 padding: '16px',
                 marginBottom: '16px',
@@ -1591,14 +1591,14 @@
                 ),
                 // Дней
                 React.createElement('div', {
-                  style: { background: '#f1f5f9', borderRadius: '12px', padding: '12px 8px' }
+                  style: { background: 'var(--bg-secondary, #f1f5f9)', borderRadius: '12px', padding: '12px 8px' }
                 },
                   React.createElement('div', { style: { fontSize: '24px', fontWeight: '700', color: '#334155' } }, stats.daysWithData),
                   React.createElement('div', { style: { fontSize: '11px', color: '#64748b' } }, 'дней трекинга')
                 ),
                 // Принято
                 React.createElement('div', {
-                  style: { background: '#f1f5f9', borderRadius: '12px', padding: '12px 8px' }
+                  style: { background: 'var(--bg-secondary, #f1f5f9)', borderRadius: '12px', padding: '12px 8px' }
                 },
                   React.createElement('div', { style: { fontSize: '24px', fontWeight: '700', color: '#334155' } }, `${stats.totalTaken}/${stats.totalPlanned}`),
                   React.createElement('div', { style: { fontSize: '11px', color: '#64748b' } }, 'принято')
@@ -1609,7 +1609,7 @@
             // === Мои витамины (список с настройками) ===
             React.createElement('div', {
               style: {
-                background: '#fff',
+                background: 'var(--card, #fff)',
                 borderRadius: '16px',
                 padding: '16px',
                 marginBottom: '16px',
@@ -1673,7 +1673,7 @@
                     return React.createElement('div', {
                       key: id,
                       style: {
-                        background: '#f8fafc',
+                        background: 'var(--bg-secondary, #f8fafc)',
                         borderRadius: '12px',
                         padding: '12px',
                         border: '1px solid #e2e8f0'
@@ -1725,7 +1725,7 @@
                         // Время приёма
                         timingInfo && React.createElement('span', {
                           style: {
-                            background: '#fff',
+                            background: 'var(--card, #fff)',
                             padding: '2px 8px',
                             borderRadius: '6px',
                             border: '1px solid #e2e8f0'
@@ -1810,7 +1810,7 @@
                               renderScreenRoot();
                             },
                             style: {
-                              background: '#fff',
+                              background: 'var(--card, #fff)',
                               border: '1px solid #e2e8f0',
                               borderRadius: '8px',
                               padding: '4px 8px',
@@ -1918,7 +1918,7 @@
             // === Мои условия (user flags) ===
             React.createElement('div', {
               style: {
-                background: '#fff',
+                background: 'var(--card, #fff)',
                 borderRadius: '16px',
                 padding: '16px',
                 marginBottom: '16px',
@@ -1964,7 +1964,7 @@
               if (!dietSuggestions || dietSuggestions.length === 0) return null;
               return React.createElement('div', {
                 style: {
-                  background: '#fff',
+                  background: 'var(--card, #fff)',
                   borderRadius: '16px',
                   padding: '16px',
                   marginBottom: '16px',
@@ -2023,7 +2023,7 @@
 
               return React.createElement('div', {
                 style: {
-                  background: '#fff',
+                  background: 'var(--card, #fff)',
                   borderRadius: '16px',
                   padding: '16px',
                   marginBottom: '16px',
@@ -2056,7 +2056,7 @@
             // === Готовые курсы ===
             React.createElement('div', {
               style: {
-                background: '#fff',
+                background: 'var(--card, #fff)',
                 borderRadius: '16px',
                 padding: '16px',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
@@ -2199,7 +2199,7 @@
           style: {
             textAlign: 'center',
             padding: '16px',
-            background: '#f8fafc',
+            background: 'var(--bg-secondary, #f8fafc)',
             borderRadius: '12px'
           }
         },
@@ -2550,7 +2550,7 @@
               openMyCourseScreen(dateKey, onForceUpdate);
             },
             style: {
-              background: '#f1f5f9',
+              background: 'var(--bg-secondary, #f1f5f9)',
               border: '1px solid #e2e8f0',
               borderRadius: '8px',
               padding: '4px 10px',
@@ -2572,7 +2572,7 @@
               height: '28px',
               borderRadius: '8px',
               border: '1px solid #e2e8f0',
-              background: '#f8fafc',
+              background: 'var(--bg-secondary, #f8fafc)',
               color: '#64748b',
               fontSize: '14px',
               fontWeight: '700',
@@ -2601,7 +2601,7 @@
             padding: '10px 12px',
             borderRadius: '10px',
             border: '1px solid #60a5fa',
-            background: '#f8fafc',
+            background: 'var(--bg-secondary, #f8fafc)',
             cursor: 'pointer',
             fontSize: '13px',
             fontWeight: '600',
@@ -2891,11 +2891,11 @@
 
       React.createElement('div', { style: { display: 'flex', gap: '16px', fontSize: '13px' } },
         React.createElement('div', null,
-          React.createElement('div', { style: { fontWeight: '600', fontSize: '18px', color: '#1e293b' } }, h.days),
+          React.createElement('div', { style: { fontWeight: '600', fontSize: '18px', color: 'var(--text, #1e293b)' } }, h.days),
           React.createElement('div', { style: { color: '#64748b', fontSize: '11px' } }, 'дней приёма')
         ),
         React.createElement('div', null,
-          React.createElement('div', { style: { fontWeight: '600', fontSize: '18px', color: '#1e293b' } }, h.totalTaken || 0),
+          React.createElement('div', { style: { fontWeight: '600', fontSize: '18px', color: 'var(--text, #1e293b)' } }, h.totalTaken || 0),
           React.createElement('div', { style: { color: '#64748b', fontSize: '11px' } }, 'всего принято')
         ),
         isActiveStreak && React.createElement('div', null,
@@ -2938,7 +2938,7 @@
     const sectionStyle = {
       marginBottom: '12px',
       padding: '10px',
-      background: '#f8fafc',
+      background: 'var(--bg-secondary, #f8fafc)',
       borderRadius: '10px'
     };
 
@@ -2953,7 +2953,7 @@
 
     const valueStyle = {
       fontSize: '14px',
-      color: '#1e293b'
+      color: 'var(--text, #1e293b)'
     };
 
     return React.createElement('div', {
@@ -2971,7 +2971,7 @@
     },
       React.createElement('div', {
         style: {
-          background: '#fff',
+          background: 'var(--card, #fff)',
           borderRadius: '20px',
           maxWidth: '400px',
           width: '100%',
@@ -3189,7 +3189,7 @@
           style: {
             width: '100%',
             padding: '12px',
-            background: '#f1f5f9',
+            background: 'var(--bg-secondary, #f1f5f9)',
             border: 'none',
             borderRadius: '12px',
             fontSize: '14px',
@@ -3219,7 +3219,7 @@
 
     return React.createElement('div', {
       style: {
-        background: '#fff',
+        background: 'var(--card, #fff)',
         borderRadius: '16px',
         padding: '16px',
         marginBottom: '12px',

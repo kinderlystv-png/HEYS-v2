@@ -270,7 +270,7 @@
                   top: '-4px',
                   width: '4px',
                   height: '16px',
-                  background: '#fff',
+                  background: 'var(--card, #fff)',
                   borderRadius: '2px',
                   boxShadow: '0 0 4px rgba(0,0,0,0.4)',
                   transform: 'translateX(-50%)',

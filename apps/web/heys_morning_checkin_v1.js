@@ -302,7 +302,7 @@
       style: {
         padding: '20px',
         textAlign: 'center',
-        background: '#fff',
+        background: 'var(--card, #fff)',
         borderRadius: '12px',
         margin: '20px'
       }

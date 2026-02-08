@@ -838,7 +838,7 @@
             })
             : { values: [], targets: [], labels: [] };
 
-        return React.createElement('div', { className: 'card tone-indigo', style: { margin: '8px 0', width: '700px', background: '#fff', border: '1px dashed #9ca3af', borderRadius: '12px' } },
+        return React.createElement('div', { className: 'card tone-indigo', style: { margin: '8px 0', width: '700px', background: 'var(--card, #fff)', border: '1px dashed #9ca3af', borderRadius: '12px' } },
             React.createElement('div', { style: { margin: '4px 0', fontWeight: 600, textAlign: 'center' } }, 'Съедено vs цель (7 дней)'),
             React.createElement('div', { className: 'reports-sparkline' },
                 Sparklines.renderMiniSparkline?.({

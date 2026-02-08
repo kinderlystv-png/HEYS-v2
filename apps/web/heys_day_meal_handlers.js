@@ -121,6 +121,7 @@
             if (window.HEYS && window.HEYS.analytics) {
               window.HEYS.analytics.trackDataOperation('meal-created');
             }
+
             // Success toast
             HEYS.Toast?.success('Приём создан');
 
@@ -164,9 +165,9 @@
                             alignItems: 'center',
                             gap: '12px',
                             padding: '14px 16px',
-                            border: '1px solid #e2e8f0',
+                            border: '1px solid var(--border, #e2e8f0)',
                             borderRadius: '12px',
-                            background: '#fff',
+                            background: 'var(--card, #fff)',
                             cursor: 'pointer',
                             textAlign: 'left',
                             transition: 'all 0.15s ease'
@@ -183,10 +184,10 @@
                             style: { flex: 1 }
                           },
                             React.createElement('div', {
-                              style: { fontWeight: '600', color: '#1e293b', fontSize: '15px' }
+                              style: { fontWeight: '600', color: 'var(--text, #1e293b)', fontSize: '15px' }
                             }, 'Быстро добавить 1 продукт'),
                             React.createElement('div', {
-                              style: { fontSize: '12px', color: '#64748b', marginTop: '2px' }
+                              style: { fontSize: '12px', color: 'var(--muted, #64748b)', marginTop: '2px' }
                             }, 'Выбрать продукт и сразу закрыть')
                           )
                         ),
@@ -198,9 +199,9 @@
                             alignItems: 'center',
                             gap: '12px',
                             padding: '14px 16px',
-                            border: '2px solid #3b82f6',
+                            border: '2px solid var(--acc, #3b82f6)',
                             borderRadius: '12px',
-                            background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                            background: 'var(--flow-multi-bg, linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%))',
                             cursor: 'pointer',
                             textAlign: 'left',
                             transition: 'all 0.15s ease'
@@ -217,10 +218,10 @@
                             style: { flex: 1 }
                           },
                             React.createElement('div', {
-                              style: { fontWeight: '600', color: '#1e40af', fontSize: '15px' }
+                              style: { fontWeight: '600', color: 'var(--acc, #1e40af)', fontSize: '15px' }
                             }, 'Добавить несколько продуктов'),
                             React.createElement('div', {
-                              style: { fontSize: '12px', color: '#3b82f6', marginTop: '2px' }
+                              style: { fontSize: '12px', color: 'var(--acc, #3b82f6)', marginTop: '2px' }
                             }, 'Формировать приём пошагово')
                           )
                         )
@@ -390,6 +391,10 @@
         const meals = (prevDay.meals || []).filter((_, idx) => idx !== i);
         return { ...prevDay, meals, updatedAt: Date.now() };
       });
+      // 🔄 Notify missions about deletion
+      window.dispatchEvent(new CustomEvent('heysMealDeleted', {
+        detail: { mealIndex: i }
+      }));
     }, [haptic, setDay]);
 
     /**
@@ -479,6 +484,10 @@
         const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: (m.items || []).filter(it => it.id !== itId) } : m);
         return { ...prevDay, meals, updatedAt: Date.now() };
       });
+      // 🔄 Notify missions about deletion
+      window.dispatchEvent(new CustomEvent('heysItemRemoved', {
+        detail: { mealIndex: mi, itemId: itId }
+      }));
       // 🔄 Пересчитываем orphan-продукты после удаления item
       // (возможно этот item был единственным использованием orphan продукта)
       setTimeout(() => {
@@ -563,6 +572,5 @@
     createMealHandlers,
     sortMealsByTime
   };
-  
-*/
+
 })(window);

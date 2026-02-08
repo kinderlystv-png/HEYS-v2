@@ -125,7 +125,26 @@
         // Hooks moved to apps/web/heys_app_hooks_v1.js (HEYS.AppHooks)
 
         function renderRoot(AppComponent) {
-            const root = ReactDOM.createRoot(document.getElementById('root'));
+            const getRootElement = () => {
+                const existingRoot = document.getElementById('root');
+                if (existingRoot && existingRoot.nodeType === 1) {
+                    return existingRoot;
+                }
+                if (!document.body) {
+                    console.error('[HEYS.app] ❌ Root element is missing and document.body is not ready.');
+                    return null;
+                }
+                const newRoot = document.createElement('div');
+                newRoot.id = 'root';
+                document.body.appendChild(newRoot);
+                return newRoot;
+            };
+
+            const rootElement = getRootElement();
+            if (!rootElement) {
+                return;
+            }
+            const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(ErrorBoundary, null, React.createElement(AppComponent)));
 
             // 🆕 Уведомляем SW об успешной загрузке (сбрасывает счётчик boot failures)

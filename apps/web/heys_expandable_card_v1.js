@@ -289,7 +289,7 @@
       style: {
         margin: '8px 0',
         padding: '12px',
-        background: '#fff',
+        background: 'var(--card, #fff)',
         borderRadius: '12px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
         cursor: disabled ? 'default' : 'pointer',
@@ -314,7 +314,7 @@
           icon && React.createElement('span', { style: { fontSize: '18px' } }, icon),
           React.createElement('div', null,
             React.createElement('div', {
-              style: { fontWeight: '600', fontSize: '14px', color: '#1e293b' }
+              style: { fontWeight: '600', fontSize: '14px', color: 'var(--text, #1e293b)' }
             }, 
               title,
               // Expand indicator

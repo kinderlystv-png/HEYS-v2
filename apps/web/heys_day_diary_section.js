@@ -92,7 +92,7 @@
                 style: {
                     fontSize: '24px',
                     fontWeight: '800',
-                    color: '#1e293b',
+                    color: 'var(--text, #1e293b)',
                     margin: '12px 0 16px 0',
                     textTransform: 'uppercase',
                     letterSpacing: '1px',
@@ -110,7 +110,7 @@
                 style: {
                     fontSize: '24px',
                     fontWeight: '800',
-                    color: '#1e293b',
+                    color: 'var(--text, #1e293b)',
                     margin: '28px 0 20px 0',
                     textTransform: 'uppercase',
                     letterSpacing: '1px',

@@ -640,49 +640,59 @@ body.tour-active .ios-pwa-banner {
   }
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .body--dark .tour-tooltip-content {
-    background: #1f2937;
-    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
-  }
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Tour & Onboarding
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .tour-tooltip-content {
+  background: var(--heys-bg-card);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--heys-border-default);
+}
 
-  .body--dark .tour-title {
-    color: #f3f4f6;
-  }
+[data-theme="dark"] .tour-title {
+  color: var(--heys-text-primary);
+}
 
-  .body--dark .tour-text {
-    color: #d1d5db;
-  }
+[data-theme="dark"] .tour-text {
+  color: var(--heys-text-secondary);
+}
 
-  .body--dark .tour-dot {
-    background: #374151;
-  }
+[data-theme="dark"] .tour-dot {
+  background: var(--heys-bg-elevated);
+}
 
-  .body--dark .tour-tooltip-content::before {
-    background: #1f2937;
-  }
+[data-theme="dark"] .tour-dot.active {
+  background: var(--heys-primary);
+}
 
-  .body--dark .tour-btn-skip:hover {
-    background: #374151;
-  }
+[data-theme="dark"] .tour-tooltip-content::before {
+  background: var(--heys-bg-card);
+}
 
-  /* Welcome modal dark mode */
-  .body--dark .tour-welcome-content {
-    background: #1f2937;
-  }
+[data-theme="dark"] .tour-btn-skip {
+  color: var(--heys-text-muted);
+}
 
-  .body--dark .tour-welcome-title {
-    color: #f3f4f6;
-  }
+[data-theme="dark"] .tour-btn-skip:hover {
+  background: var(--heys-bg-elevated);
+  color: var(--heys-text-secondary);
+}
 
-  .body--dark .tour-welcome-text {
-    color: #9ca3af;
-  }
+[data-theme="dark"] .tour-welcome-content {
+  background: var(--heys-bg-card);
+  border: 1px solid var(--heys-border-default);
+}
 
-  .body--dark .tour-welcome-btn-later {
-    color: #9ca3af;
-  }
+[data-theme="dark"] .tour-welcome-title {
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .tour-welcome-text {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .tour-welcome-btn-later {
+  color: var(--heys-text-muted);
 }
 
 /* === WEEKLY REPORTS v2 === */
@@ -1419,13 +1429,13 @@ body.tour-active .ios-pwa-banner {
   color: #b45309;
 }
 
-.body--dark .reports-legacy-banner {
-  background: #1f2937;
-  border-color: #374151;
+[data-theme="dark"] .reports-legacy-banner {
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.3);
   color: #fbbf24;
 }
 
-.body--dark .reports-legacy-banner__text {
+[data-theme="dark"] .reports-legacy-banner__text {
   color: #fcd34d;
 }
 
@@ -2212,27 +2222,143 @@ body.tour-active .ios-pwa-banner {
   font-weight: 600;
 }
 
+/* === Mission Panel (card UI) === */
+
 .game-missions-panel {
   margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
+  padding: 12px;
+  border-radius: 14px;
   background: rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.game-missions-panel__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: 0.2px;
+}
+
+.game-missions-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.game-missions-panel__title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #f8fafc;
-  letter-spacing: 0.2px;
-}
+/* Mission Card */
 
-.game-missions-panel__row {
+.game-mission-card {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  transition: background 0.2s, transform 0.15s;
+}
+
+.game-mission-card.is-complete {
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.game-mission-card__icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  width: 32px;
+  text-align: center;
+}
+
+.game-mission-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.game-mission-card__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f1f5f9;
+  line-height: 1.3;
+}
+
+.game-mission-card.is-complete .game-mission-card__name {
+  color: #86efac;
+}
+
+.game-mission-card__desc {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.3;
+  margin-top: 1px;
+}
+
+/* Progress bar */
+
+.game-mission-card__bar {
+  margin-top: 6px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.game-mission-card__bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  transition: width 0.4s ease;
+}
+
+/* XP badge */
+
+.game-mission-card__xp {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fbbf24;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.game-mission-card.is-complete .game-mission-card__xp {
+  color: #86efac;
+}
+
+/* Footer — bonus section */
+
+.game-missions-panel__footer {
+  text-align: center;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.game-missions-bonus-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.game-missions-bonus-done {
+  font-size: 13px;
+  font-weight: 700;
+  color: #86efac;
+  animation: missionBonusPop 0.5s ease;
+}
+
+@keyframes missionBonusPop {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .game-audit-section {
@@ -2257,6 +2383,13 @@ body.tour-active .ios-pwa-banner {
   color: #6b7280;
 }
 
+.game-audit-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 .game-audit-btn {
   align-self: flex-start;
   border: 1px solid #e2e8f0;
@@ -2267,6 +2400,23 @@ body.tour-active .ios-pwa-banner {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.game-audit-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.game-audit-btn--copy {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border-color: #3b82f6;
+}
+
+.game-audit-btn--copy:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: #2563eb;
 }
 
 .game-audit-btn:active {
@@ -2373,6 +2523,22 @@ body.tour-active .ios-pwa-banner {
   background: #111827;
   border-color: #1f2937;
   color: #e2e8f0;
+}
+
+[data-theme="dark"] .game-audit-btn:hover {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+[data-theme="dark"] .game-audit-btn--copy {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border-color: #3b82f6;
+}
+
+[data-theme="dark"] .game-audit-btn--copy:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: #2563eb;
 }
 
 [data-theme="dark"] .game-audit-item {
@@ -2579,7 +2745,19 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .game-missions-panel {
-  background: rgba(15, 23, 42, 0.4);
+  background: rgba(15, 23, 42, 0.5);
+}
+
+[data-theme="dark"] .game-mission-card {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .game-mission-card.is-complete {
+  background: rgba(34, 197, 94, 0.08);
+}
+
+[data-theme="dark"] .game-mission-card__bar {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 [data-theme="dark"] .onboarding-medal {
@@ -2938,6 +3116,219 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .aps-hide-btn--active {
   background: #064e3b;
   color: #6ee7b7;
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Products & Tables
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .products-table th {
+  background: var(--heys-bg-card);
+  color: var(--heys-text-secondary);
+  border-color: var(--heys-border-default);
+}
+
+[data-theme="dark"] .products-table td {
+  border-color: var(--heys-border-subtle);
+}
+
+[data-theme="dark"] .product-name-cell__badge {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .product-owner-badge {
+  background: #065f46;
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .product-action-btn--danger {
+  background: rgba(248, 113, 113, 0.15);
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .product-action-btn--sync {
+  background: rgba(96, 165, 250, 0.15);
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .ration-backups__badge {
+  background: rgba(96, 165, 250, 0.2);
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .ration-backups__row--divider {
+  border-top-color: var(--heys-border-default);
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Weekly Reports
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .weekly-report-card {
+  background: var(--heys-bg-card);
+  border-color: var(--heys-border-default);
+  box-shadow: 0 10px 30px -20px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .weekly-report-card--empty {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .weekly-report-card__title {
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .weekly-report-card__range {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .weekly-report-card__stat {
+  background: var(--heys-bg-elevated);
+}
+
+[data-theme="dark"] .weekly-report-card__stat-value {
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .weekly-report-card__stat-label {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .weekly-report-card__meta {
+  color: var(--heys-text-muted);
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Weekly Wrap Steps
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .weekly-wrap-step__title {
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .weekly-wrap-step__range {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .weekly-wrap-step__nav {
+  background: var(--heys-bg-elevated);
+}
+
+[data-theme="dark"] .weekly-wrap-step__nav-btn {
+  background: var(--heys-bg-card);
+  border-color: var(--heys-border-default);
+  color: var(--heys-text-secondary);
+}
+
+[data-theme="dark"] .weekly-wrap-step__nav-btn:hover {
+  background: rgba(96, 165, 250, 0.15);
+  border-color: rgba(96, 165, 250, 0.35);
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .weekly-wrap-step__nav-btn.is-disabled,
+[data-theme="dark"] .weekly-wrap-step__nav-btn:disabled {
+  background: var(--heys-bg-card);
+  border-color: var(--heys-border-subtle);
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .weekly-wrap-step__nav-range {
+  color: var(--heys-text-secondary);
+}
+
+[data-theme="dark"] .weekly-wrap-step__nav-subtitle {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .weekly-wrap-step__empty {
+  background: var(--heys-bg-elevated);
+}
+
+[data-theme="dark"] .weekly-wrap-step__stat {
+  background: var(--heys-bg-elevated);
+  border-color: var(--heys-border-default);
+}
+
+[data-theme="dark"] .weekly-wrap-step__stat--goal {
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+[data-theme="dark"] .weekly-wrap-step__stat--fact {
+  background: rgba(74, 222, 128, 0.12);
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+[data-theme="dark"] .weekly-wrap-step__stat--plan {
+  background: rgba(251, 146, 60, 0.12);
+  border-color: rgba(251, 146, 60, 0.3);
+}
+
+[data-theme="dark"] .weekly-wrap-step__stat--days {
+  background: rgba(251, 146, 60, 0.12);
+  border-color: rgba(251, 146, 60, 0.3);
+}
+
+[data-theme="dark"] .weekly-wrap-step__stat--delta {
+  background: rgba(167, 139, 250, 0.12);
+  border-color: rgba(167, 139, 250, 0.3);
+  box-shadow: 0 12px 24px -18px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .weekly-wrap-step__stat-value {
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .weekly-wrap-step__stat-label {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .weekly-wrap-step__stat-sub {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .weekly-wrap-step__delta-value {
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .weekly-wrap-step__delta-target {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .weekly-wrap-step__hint {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .weekly-wrap-step__badge--current {
+  background: rgba(74, 222, 128, 0.2);
+  color: #86efac;
+  border-color: #22c55e;
+}
+
+[data-theme="dark"] .weekly-wrap-step__badge--excluded {
+  background: var(--heys-bg-elevated);
+  color: var(--heys-text-muted);
+  border-color: var(--heys-border-default);
+}
+
+[data-theme="dark"] .weekly-wrap-step__badge--refeed {
+  background: rgba(251, 146, 60, 0.2);
+  color: #fdba74;
+  border-color: #f97316;
+}
+
+[data-theme="dark"] .weekly-wrap-step__stat--delta .weekly-wrap-step__stat-label--delta {
+  color: var(--heys-text-primary);
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Sparkline metrics in reports
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .sparkline-metric__value {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .sparkline-metric__subtitle {
+  color: var(--heys-text-muted);
 }
 
 /* === vConsole: ultra-subtle FAB (debug only) === */

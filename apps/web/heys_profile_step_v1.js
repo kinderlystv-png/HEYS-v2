@@ -1238,7 +1238,7 @@
         style: {
           fontSize: '24px',
           fontWeight: 'bold',
-          color: '#1f2937',
+          color: 'var(--text, #1f2937)',
           marginBottom: '8px'
         }
       }, firstName ? `Добро пожаловать, ${firstName}!` : 'Добро пожаловать!'),
@@ -1272,7 +1272,7 @@
             marginBottom: '12px'
           }
         },
-          React.createElement('span', { style: { color: '#374151' } }, '🎯 Цель:'),
+          React.createElement('span', { style: { color: 'var(--text, #374151)' } }, '🎯 Цель:'),
           React.createElement('span', {
             style: { fontWeight: '500', color: '#059669' }
           }, `${weightGoal} кг (${diffSign}${Math.abs(weightDiff).toFixed(1)} кг)`)
@@ -1287,7 +1287,7 @@
             marginBottom: '12px'
           }
         },
-          React.createElement('span', { style: { color: '#374151' } }, '📊 БЖУ:'),
+          React.createElement('span', { style: { color: 'var(--text, #374151)' } }, '📊 БЖУ:'),
           React.createElement('span', {
             style: { fontWeight: '500', color: '#059669' }
           }, `Б${protPct}% У${carbsPct}% Ж${fatPct}%`)
@@ -1301,7 +1301,7 @@
             alignItems: 'center'
           }
         },
-          React.createElement('span', { style: { color: '#374151' } }, '⏱ Прогноз:'),
+          React.createElement('span', { style: { color: 'var(--text, #374151)' } }, '⏱ Прогноз:'),
           React.createElement('span', {
             style: { fontWeight: '500', color: '#059669' }
           }, weeks)

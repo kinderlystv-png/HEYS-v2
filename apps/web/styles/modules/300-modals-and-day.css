@@ -221,58 +221,74 @@
 }
 
 /* Dark mode for Sleep Quality */
-.dark .sleep-quality-picker-modal {
-  background: #1c1c1e;
+[data-theme="dark"] .sleep-quality-picker-modal {
+  background: var(--heys-bg-elevated);
+  border: 1px solid var(--heys-border-focus);
 }
 
-.dark .sleep-quality-face-text {
-  color: var(--color-gray-400);
+[data-theme="dark"] .sleep-quality-face-text {
+  color: var(--heys-text-secondary);
 }
 
-.dark .sleep-quality-preset {
-  background: #2c2c2e;
-  border-color: #3a3a3c;
-  color: #f3f4f6;
+[data-theme="dark"] .sleep-quality-preset {
+  background: var(--heys-bg-card);
+  border-color: var(--heys-border-default);
+  color: var(--heys-text-primary);
 }
 
-.dark .sleep-quality-preset-bad.active {
-  background: rgba(239, 68, 68, 0.2);
+[data-theme="dark"] .sleep-quality-preset:hover {
+  background: var(--heys-bg-elevated);
+  border-color: var(--heys-border-focus);
 }
 
-.dark .sleep-quality-preset-ok.active {
-  background: rgba(234, 179, 8, 0.2);
+[data-theme="dark"] .sleep-quality-preset-bad.active {
+  background: rgba(248, 113, 113, 0.2);
+  border-color: #ef4444;
 }
 
-.dark .sleep-quality-preset-good.active {
-  background: rgba(16, 185, 129, 0.2);
+[data-theme="dark"] .sleep-quality-preset-ok.active {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: #fbbf24;
 }
 
-.dark .sleep-quality-comment-prompt {
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.25);
+[data-theme="dark"] .sleep-quality-preset-good.active {
+  background: rgba(52, 211, 153, 0.2);
+  border-color: #10b981;
 }
 
-.dark .comment-history {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--color-gray-400);
+[data-theme="dark"] .sleep-quality-comment-prompt {
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-.dark .sleep-quality-comment-input {
-  background: rgba(255, 255, 255, 0.08);
-  color: #f3f4f6;
+[data-theme="dark"] .comment-history {
+  background: var(--heys-bg-elevated);
+  color: var(--heys-text-secondary);
+  border: 1px solid var(--heys-border-default);
 }
 
-.dark .sleep-quality-comment-input::placeholder {
-  color: var(--color-gray-500);
+[data-theme="dark"] .sleep-quality-comment-input {
+  background: var(--heys-bg-elevated);
+  color: var(--heys-text-primary);
+  border: 1px solid var(--heys-border-default);
 }
 
-.dark .sleep-quality-comment-input:focus {
-  background: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+[data-theme="dark"] .sleep-quality-comment-input::placeholder {
+  color: var(--heys-text-muted);
 }
 
-.dark .sleep-quality-hours-info {
-  color: var(--color-gray-400);
+[data-theme="dark"] .sleep-quality-comment-input:focus {
+  background: var(--heys-bg-card);
+  border-color: var(--heys-border-focus);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+}
+
+[data-theme="dark"] .sleep-quality-hours-info {
+  color: var(--heys-text-secondary);
+}
+
+[data-theme="dark"] .sleep-quality-hours-info strong {
+  color: #60a5fa;
 }
 
 .day-score-auto-info {
@@ -3705,3 +3721,404 @@ input, textarea, select {
 /* MODULE 04 — Modals & Day UI
  * Scope: day score/sleep pickers, modals/bottom-sheets, forms, loaders.
  */
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Mood Cards & Day Insights (Module 04)
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .mood-card {
+  background: linear-gradient(135deg, var(--heys-bg-elevated) 0%, var(--heys-bg-card) 100%);
+  border-color: var(--heys-border-default);
+}
+
+[data-theme="dark"] .mood-card-label {
+  color: var(--heys-text-secondary);
+}
+
+[data-theme="dark"] .mood-card-value {
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .day-insight {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .day-insight.correlation {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+}
+
+[data-theme="dark"] .smart-tip {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.15));
+  color: #fcd34d;
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Mood Sliders & Presets
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .mood-preset {
+  background: var(--heys-bg-card);
+  border-color: var(--heys-border-default);
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .mood-preset-bad.active {
+  background: rgba(248, 113, 113, 0.2);
+  border-color: #ef4444;
+}
+
+[data-theme="dark"] .mood-preset-ok.active {
+  background: rgba(96, 165, 250, 0.2);
+  border-color: #3b82f6;
+}
+
+[data-theme="dark"] .mood-preset-good.active {
+  background: rgba(74, 222, 128, 0.2);
+  border-color: #22c55e;
+}
+
+[data-theme="dark"] .mood-face-text {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .mood-slider-label {
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .mood-slider-value {
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .mood-time-hint {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .mood-ai-insight {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15));
+  color: #93c5fd;
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+[data-theme="dark"] .mood-journal-prompt {
+  border-color: var(--heys-border-default);
+}
+
+[data-theme="dark"] .mood-journal-prompt.negative {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="dark"] .mood-journal-prompt.positive {
+  background: rgba(74, 222, 128, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="dark"] .mood-journal-prompt.neutral {
+  background: rgba(148, 163, 184, 0.1);
+  border-color: var(--heys-border-default);
+}
+
+[data-theme="dark"] .mood-journal-text {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .mood-journal-input {
+  background: var(--heys-bg-elevated);
+  color: var(--heys-text-primary);
+  border: 1px solid var(--heys-border-default);
+}
+
+[data-theme="dark"] .mood-journal-input::placeholder {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .mood-journal-input:focus {
+  background: var(--heys-bg-card);
+  border-color: var(--heys-border-focus);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+}
+
+[data-theme="dark"] .correlation-hint {
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.25);
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .quick-chip {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.2);
+  color: var(--heys-text-secondary);
+}
+
+[data-theme="dark"] .quick-chip.selected {
+  background: rgba(74, 222, 128, 0.2);
+  border-color: rgba(74, 222, 128, 0.35);
+  color: #86efac;
+}
+
+[data-theme="dark"] .rating-progress-dot {
+  background: var(--heys-bg-elevated);
+}
+
+[data-theme="dark"] .rating-progress-dot.filled {
+  background: #4ade80;
+}
+
+[data-theme="dark"] .rating-progress-dot.partial {
+  background: #fbbf24;
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Time Picker / Wheel
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .time-picker-separator {
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .wheel-label {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .wheel-item {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .wheel-item.selected {
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .wheel-highlight {
+  background: rgba(148, 163, 184, 0.15);
+}
+
+[data-theme="dark"] .bottom-sheet-handle::before {
+  background: var(--heys-border-default);
+}
+
+[data-theme="dark"] .time-picker-header {
+  border-bottom-color: var(--heys-border-default);
+}
+
+[data-theme="dark"] .time-picker-title {
+  color: var(--heys-text-primary);
+}
+
+[data-theme="dark"] .time-picker-confirm.disabled,
+[data-theme="dark"] .time-picker-confirm:disabled {
+  color: var(--heys-text-muted);
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Meal Timer Hint
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .meal-timer-hint.ok {
+  background: rgba(74, 222, 128, 0.15);
+  border-color: rgba(74, 222, 128, 0.3);
+  color: #86efac;
+}
+
+[data-theme="dark"] .meal-timer-hint.warning {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: rgba(251, 191, 36, 0.3);
+  color: #fcd34d;
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Steps Slider
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .steps-label {
+  color: var(--heys-text-secondary);
+}
+
+[data-theme="dark"] .steps-value {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .steps-value b {
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .steps-kcal-hint {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .steps-slider-track {
+  background: var(--heys-bg-elevated);
+}
+
+[data-theme="dark"] .steps-slider-thumb {
+  background: var(--heys-bg-card);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .steps-motivation {
+  background: rgba(148, 163, 184, 0.08);
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Compact Activity
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .compact-activity-label {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .compact-activity-unit {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .compact-activity-stats {
+  color: var(--heys-text-muted);
+  border-top-color: var(--heys-border-subtle);
+}
+
+[data-theme="dark"] .compact-activity-stats b {
+  color: var(--heys-text-secondary);
+}
+
+[data-theme="dark"] .compact-activity-stats.secondary {
+  border-top-color: var(--heys-border-subtle);
+  color: var(--heys-text-muted);
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Skeleton Loader
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .skeleton-card {
+  background: var(--heys-bg-card);
+  border-color: var(--heys-border-default);
+}
+
+[data-theme="dark"] .skeleton-header,
+[data-theme="dark"] .skeleton-metric,
+[data-theme="dark"] .skeleton-sparkline,
+[data-theme="dark"] .skeleton-progress,
+[data-theme="dark"] .skeleton-ring,
+[data-theme="dark"] .skeleton-slider,
+[data-theme="dark"] .skeleton-block,
+[data-theme="dark"] .skeleton-meal-header,
+[data-theme="dark"] .skeleton-search {
+  background: linear-gradient(90deg, var(--heys-bg-elevated) 25%, #475569 50%, var(--heys-bg-elevated) 75%);
+  background-size: 200% 100%;
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Mobile Daily Summary
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .mobile-daily-summary {
+  background: var(--heys-bg-card);
+}
+
+[data-theme="dark"] .mds-header > span:nth-child(even),
+[data-theme="dark"] .mds-row > span:nth-child(even) {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+[data-theme="dark"] .mds-header {
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .mds-label {
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .mds-dim {
+  color: var(--heys-text-muted);
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Day Score Legacy Buttons
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .day-score-btn {
+  background: var(--heys-bg-card);
+  border-color: var(--heys-border-default);
+}
+
+[data-theme="dark"] .day-score-btn:active {
+  background: var(--heys-bg-elevated);
+}
+
+[data-theme="dark"] .day-score-label {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .day-score-value {
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .sleep-quality-btn {
+  background: var(--heys-bg-card);
+  border-color: var(--heys-border-default);
+}
+
+[data-theme="dark"] .sleep-quality-btn:active {
+  background: var(--heys-bg-elevated);
+}
+
+[data-theme="dark"] .sleep-quality-label {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .sleep-quality-value {
+  color: #fbbf24;
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Mood Diff
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .mood-diff.diff-up {
+  background: rgba(74, 222, 128, 0.2);
+  color: #86efac;
+}
+
+[data-theme="dark"] .mood-diff.diff-down {
+  background: rgba(248, 113, 113, 0.2);
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .mood-diff.diff-same {
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--heys-text-muted);
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Grams Input Modal (already mostly done)
+ * Missing pieces
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .grams-preview-separator {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .grams-input-suffix {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .grams-slider-mark {
+  background: var(--heys-border-default);
+}
+
+[data-theme="dark"] .grams-slider-labels {
+  color: var(--heys-text-muted);
+}
+
+[data-theme="dark"] .grams-portion-btn .portion-name {
+  color: var(--heys-text-primary);
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * DARK MODE — Result cells
+ * ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .result-good {
+  background: rgba(74, 222, 128, 0.15);
+  color: #86efac;
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+[data-theme="dark"] .result-bad {
+  background: rgba(248, 113, 113, 0.15);
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+[data-theme="dark"] .table-divider {
+  background: var(--heys-border-default);
+}

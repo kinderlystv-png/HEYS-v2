@@ -367,7 +367,7 @@
     const isBoosted = !isRefeedDay && displayHeroOptimum > optimum;
 
     return {
-      tdeeCardStyle: { background: '#f8fafc', borderColor: '#e2e8f0', cursor: 'pointer' },
+      tdeeCardStyle: { background: 'var(--bg-secondary, #f8fafc)', borderColor: '#e2e8f0', cursor: 'pointer' },
       tdeeValueStyle: { color: '#64748b' },
       goalCardStyle: {
         background: isRefeedDay ? '#fff7ed' : '#f0f9ff',
@@ -1108,7 +1108,7 @@
     const styles = {
       popup: {
         position: 'fixed',
-        background: 'white',
+        background: 'var(--card, white)',
         borderRadius: '16px',
         boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
         padding: '16px',
@@ -1126,7 +1126,7 @@
       headerValue: { fontSize: '18px', fontWeight: 800, color: '#475569' },
       ndteLabel: { display: 'flex', alignItems: 'center', gap: '4px' },
       ndteLink: { fontSize: '9px', color: '#6366f1', textDecoration: 'none' },
-      bmiRow: { marginTop: '4px', padding: '6px 8px', background: '#f8fafc', borderRadius: '8px' },
+      bmiRow: { marginTop: '4px', padding: '6px 8px', background: 'var(--bg-secondary, #f8fafc)', borderRadius: '8px' },
       bmiRowText: {
         fontSize: '10px',
         color: '#64748b',
@@ -1173,7 +1173,7 @@
     const styles = {
       popup: {
         position: 'fixed',
-        background: 'white',
+        background: 'var(--card, white)',
         borderRadius: '16px',
         boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
         padding: '16px',
@@ -1197,7 +1197,7 @@
       tefNote: {
         marginTop: '12px',
         padding: '8px',
-        background: '#f8fafc',
+        background: 'var(--bg-secondary, #f8fafc)',
         borderRadius: '8px',
         fontSize: '11px',
         color: '#64748b',
@@ -1234,7 +1234,7 @@
         transform: 'translate(-50%, -50%)',
         width: '320px',
         maxWidth: '90vw',
-        background: 'white',
+        background: 'var(--card, white)',
         borderRadius: '20px',
         boxShadow: '0 16px 64px rgba(0,0,0,0.2)',
         padding: '20px',
@@ -1704,7 +1704,7 @@
         position: 'fixed',
         width: '240px',
         zIndex: 10001,
-        background: '#fff',
+        background: 'var(--card, #fff)',
         borderRadius: '16px',
         boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
         overflow: 'hidden',
@@ -1719,7 +1719,7 @@
         marginBottom: '12px',
         paddingRight: '24px'
       },
-      headerTitle: { fontSize: '16px', fontWeight: 600, color: '#1e293b' },
+      headerTitle: { fontSize: '16px', fontWeight: 600, color: 'var(--text, #1e293b)' },
       trainingIcon: { fontSize: '14px' },
       grid: {
         display: 'grid',
@@ -1811,7 +1811,7 @@
       popup: { position: 'fixed', zIndex: 9999 },
       stripe: { background: color },
       pct: { color },
-      value: { color: '#374151', fontWeight: 700, fontSize: '18px' }
+      value: { color: 'var(--text, #374151)', fontWeight: 700, fontSize: '18px' }
     };
 
     return { trend, color, trendIcon, trendText, styles };
@@ -1864,7 +1864,7 @@
       popup: {
         position: 'fixed',
         zIndex: 10001,
-        background: '#fff',
+        background: 'var(--card, #fff)',
         borderRadius: '20px',
         boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
         overflow: 'hidden',
@@ -1874,12 +1874,12 @@
       content: { padding: '20px' },
       header: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' },
       headerIcon: { fontSize: '28px' },
-      title: { fontSize: '18px', fontWeight: 700, color: '#1e293b' },
+      title: { fontSize: '18px', fontWeight: 700, color: 'var(--text, #1e293b)' },
       subtitle: { fontSize: '13px', color: '#64748b' },
       description: { fontSize: '14px', color: '#475569', marginBottom: '16px', lineHeight: '1.5' },
       formulaBox: { background: 'rgba(249, 115, 22, 0.08)', borderRadius: '12px', padding: '14px', marginBottom: '16px' },
       formulaLabel: { fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#f97316', fontWeight: 600, marginBottom: '8px' },
-      formulaCode: { fontSize: '13px', fontFamily: 'monospace', color: '#1e293b', background: 'rgba(0,0,0,0.04)', padding: '10px 12px', borderRadius: '8px', lineHeight: '1.6' },
+      formulaCode: { fontSize: '13px', fontFamily: 'monospace', color: 'var(--text, #1e293b)', background: 'rgba(0,0,0,0.04)', padding: '10px 12px', borderRadius: '8px', lineHeight: '1.6' },
       formulaIndent: { paddingLeft: '38px' },
       rangeGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' },
       rangeBoxProtein: { textAlign: 'center', padding: '10px', background: 'rgba(239, 68, 68, 0.08)', borderRadius: '10px' },

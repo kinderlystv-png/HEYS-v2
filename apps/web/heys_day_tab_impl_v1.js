@@ -1234,6 +1234,94 @@
 
         // adviceState is provided by dayAdviceIntegration
 
+        // === Export HEYS.Day mission helper methods ===
+        React.useEffect(() => {
+            HEYS.Day = HEYS.Day || {};
+            HEYS.Day.getMealsCount = () => (day.meals || []).length;
+            HEYS.Day.getMeals = () => day.meals || [];
+            HEYS.Day.getSteps = () => day.steps || 0;
+            HEYS.Day.getTrainingsCount = () => (day.trainings || []).length;
+            HEYS.Day.getWaterPercent = () => {
+                const w = day.water || 0;
+                const goal = waterGoal || 2000;
+                return goal > 0 ? Math.round((w / goal) * 100) : 0;
+            };
+            HEYS.Day.getKcalPercent = () => {
+                const norm = normAbs.kcal || 2000;
+                return norm > 0 ? Math.round(((dayTot.kcal || 0) / norm) * 100) : 0;
+            };
+            HEYS.Day.getFiberPercent = () => {
+                const norm = normAbs.fiber || 25;
+                return norm > 0 ? Math.round(((dayTot.fiber || 0) / norm) * 100) : 0;
+            };
+            HEYS.Day.getProteinPercent = () => {
+                const norm = normAbs.prot || 100;
+                return norm > 0 ? Math.round(((dayTot.prot || 0) / norm) * 100) : 0;
+            };
+            HEYS.Day.getComplexCarbsPercent = () => {
+                const totalCarbs = dayTot.carbs || 0;
+                const complexCarbs = dayTot.complex || 0;
+                return totalCarbs > 0 ? Math.round((complexCarbs / totalCarbs) * 100) : 0;
+            };
+            HEYS.Day.getHarmPercent = () => {
+                const norm = normAbs.harm || 10;
+                return norm > 0 ? Math.round(((dayTot.harm || 0) / norm) * 100) : 0;
+            };
+            HEYS.Day.getMacroBalance = () => {
+                const np = normAbs.prot || 1;
+                const nc = normAbs.carbs || 1;
+                const nf = normAbs.fat || 1;
+                return {
+                    protein: np > 0 ? (dayTot.prot || 0) / np : 0,
+                    carbs: nc > 0 ? (dayTot.carbs || 0) / nc : 0,
+                    fat: nf > 0 ? (dayTot.fat || 0) / nf : 0
+                };
+            };
+            HEYS.Day.getLastMealGI = () => {
+                const meals = day.meals || [];
+                if (meals.length === 0) return 100;
+                const lastMeal = meals[meals.length - 1];
+                if (!lastMeal || !lastMeal.items || lastMeal.items.length === 0) return 100;
+                let totalGI = 0, count = 0;
+                for (const item of lastMeal.items) {
+                    const p = pIndex ? pIndex[item.productId || item.id] : null;
+                    if (p && typeof p.gi === 'number' && p.gi > 0) {
+                        totalGI += p.gi;
+                        count++;
+                    }
+                }
+                return count > 0 ? Math.round(totalGI / count) : 100;
+            };
+            HEYS.Day.getUniqueProductsCount = () => {
+                const meals = day?.meals || [];
+                const productIds = new Set();
+                meals.forEach(meal => {
+                    (meal.items || []).forEach(item => {
+                        const pid = item.product_id ?? item.productId ?? item.id;
+                        if (pid != null) productIds.add(String(pid));
+                    });
+                });
+                return productIds.size;
+            };
+            return () => {
+                if (HEYS.Day) {
+                    delete HEYS.Day.getMealsCount;
+                    delete HEYS.Day.getMeals;
+                    delete HEYS.Day.getSteps;
+                    delete HEYS.Day.getTrainingsCount;
+                    delete HEYS.Day.getWaterPercent;
+                    delete HEYS.Day.getKcalPercent;
+                    delete HEYS.Day.getFiberPercent;
+                    delete HEYS.Day.getProteinPercent;
+                    delete HEYS.Day.getComplexCarbsPercent;
+                    delete HEYS.Day.getHarmPercent;
+                    delete HEYS.Day.getMacroBalance;
+                    delete HEYS.Day.getLastMealGI;
+                    delete HEYS.Day.getUniqueProductsCount;
+                }
+            };
+        }, [day, dayTot, normAbs, waterGoal, pIndex]);
+
         // 🔄 Orphan products state (extracted)
         if (!HEYS.dayOrphanState?.useOrphanState) {
             throw new Error('[heys_day_v12] HEYS.dayOrphanState not loaded before heys_day_v12.js');

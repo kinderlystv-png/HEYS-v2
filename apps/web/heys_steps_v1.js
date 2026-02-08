@@ -2469,7 +2469,7 @@
         style: {
           padding: '10px 12px',
           borderRadius: '12px',
-          background: '#fff',
+          background: 'var(--card, #fff)',
           boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
           border: '1px solid #e2e8f0'
         }
@@ -2488,7 +2488,7 @@
               className: poppingEmoji === field ? 'mood-emoji-pop' : '',
               style: { fontSize: '22px', transition: 'all 0.2s' }
             }, emojiFn(value)),
-            React.createElement('span', { style: { fontWeight: '600', fontSize: '14px', color: '#1e293b' } }, title)
+            React.createElement('span', { style: { fontWeight: '600', fontSize: '14px', color: 'var(--text, #1e293b)' } }, title)
           ),
           React.createElement('span', {
             className: pulsingField === field ? 'mood-value-pulse' : '',
@@ -2828,7 +2828,7 @@
           style: {
             fontSize: '20px',
             fontWeight: '700',
-            color: '#1e293b',
+            color: 'var(--text, #1e293b)',
             marginBottom: '4px'
           }
         }, personalGreeting.text),
@@ -3001,7 +3001,7 @@
                 style: {
                   fontSize: '15px',
                   fontWeight: '600',
-                  color: '#1e293b',
+                  color: 'var(--text, #1e293b)',
                   marginBottom: '2px'
                 }
               }, item.title),

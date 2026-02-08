@@ -93,7 +93,7 @@
       style: {
         margin: '10px 0',
         padding: '8px 10px',
-        background: '#f8fafc',
+        background: 'var(--bg-secondary, #f8fafc)',
         borderRadius: '8px',
         fontSize: '13px'
       }

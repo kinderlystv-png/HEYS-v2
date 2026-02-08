@@ -1444,7 +1444,7 @@
           alignItems: 'center',
           gap: '12px',
           padding: '12px 14px',
-          background: '#fff',
+          background: 'var(--card, #fff)',
           borderRadius: '10px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
           transition: 'box-shadow 0.2s'
@@ -1489,7 +1489,7 @@
             style: {
               fontWeight: 600,
               fontSize: '14px',
-              color: '#1f2937',
+              color: 'var(--text, #1f2937)',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap'
@@ -1560,7 +1560,7 @@
               padding: '8px 10px',
               borderRadius: '8px',
               border: '1px solid #fecaca',
-              background: '#fff',
+              background: 'var(--card, #fff)',
               color: '#dc2626',
               cursor: actionLoading === item.client_id ? 'not-allowed' : 'pointer',
               fontSize: '13px',
@@ -1597,7 +1597,7 @@
             style: {
               fontWeight: 600,
               fontSize: '15px',
-              color: '#374151'
+              color: 'var(--text, #374151)'
             }
           }, title),
           React.createElement('span', {
@@ -1634,7 +1634,7 @@
         padding: '20px',
         maxHeight: '75vh',
         overflowY: 'auto',
-        background: '#fff'
+        background: 'var(--card, #fff)'
       }
     },
       // ========== HEADER: Статус очереди ==========
@@ -1701,7 +1701,7 @@
               width: '28px',
               height: '28px',
               borderRadius: '50%',
-              background: '#fff',
+              background: 'var(--card, #fff)',
               boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
               transition: 'left 0.3s'
             }
@@ -1813,11 +1813,11 @@
             padding: '8px 16px',
             borderRadius: '8px',
             border: '1px solid #d1d5db',
-            background: '#fff',
+            background: 'var(--card, #fff)',
             cursor: loading ? 'not-allowed' : 'pointer',
             fontSize: '13px',
             fontWeight: 500,
-            color: '#374151',
+            color: 'var(--text, #374151)',
             display: 'flex',
             alignItems: 'center',
             gap: '6px'
@@ -1913,7 +1913,7 @@
         style: {
           marginTop: '24px',
           padding: '12px 16px',
-          background: '#f3f4f6',
+          background: 'var(--bg-secondary, #f3f4f6)',
           borderRadius: '10px',
           fontSize: '12px',
           color: '#6b7280'

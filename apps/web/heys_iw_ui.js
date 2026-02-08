@@ -619,7 +619,7 @@
         React.createElement('div', {
           className: 'wave-details-popup',
           style: {
-            background: '#fff',
+            background: 'var(--card, #fff)',
             borderRadius: '16px',
             padding: '20px',
             maxWidth: '360px',
@@ -639,7 +639,7 @@
             }
           },
             React.createElement('h3', { 
-              style: { margin: 0, fontSize: '16px', fontWeight: 600, color: '#1f2937' }
+              style: { margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text, #1f2937)' }
             }, '📊 Расчёт волны'),
             React.createElement('button', {
               onClick: () => setShowWaveDetails(false),
@@ -675,7 +675,7 @@
           // Формула
           React.createElement('div', {
             style: {
-              background: '#f8fafc',
+              background: 'var(--bg-secondary, #f8fafc)',
               borderRadius: '10px',
               padding: '12px',
               marginBottom: '16px',
@@ -759,7 +759,7 @@
           // Факторы еды
           React.createElement('div', { style: { marginBottom: '12px' } },
             React.createElement('div', { 
-              style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' }
+              style: { fontSize: '12px', fontWeight: 600, color: 'var(--text, #1f2937)', marginBottom: '8px' }
             }, '🍽️ Факторы еды'),
             
             // GI
@@ -811,7 +811,7 @@
           // Дневные факторы
           React.createElement('div', { style: { marginBottom: '12px' } },
             React.createElement('div', { 
-              style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' }
+              style: { fontSize: '12px', fontWeight: 600, color: 'var(--text, #1f2937)', marginBottom: '8px' }
             }, '⏰ Дневные факторы'),
             
             // Циркадный ритм
@@ -1199,7 +1199,7 @@
     const metricValueStyle = {
       fontSize: '20px',
       fontWeight: '700',
-      color: '#1e293b',
+      color: 'var(--text, #1e293b)',
       lineHeight: 1.2
     };
     
@@ -1403,14 +1403,14 @@
       details && React.createElement('div', {
         style: {
           padding: '12px 16px',
-          background: '#f8fafc',
+          background: 'var(--bg-secondary, #f8fafc)',
           borderRadius: '12px',
           marginBottom: '16px',
           animation: 'fadeIn 0.2s ease'
         }
       },
         React.createElement('div', {
-          style: { fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '10px' }
+          style: { fontSize: '14px', fontWeight: '600', color: 'var(--text, #1e293b)', marginBottom: '10px' }
         }, details.title),
         
         // Для волны — формула расчёта
@@ -1432,7 +1432,7 @@
             style: { 
               fontSize: '18px', 
               fontWeight: '700', 
-              color: '#1e293b', 
+              color: 'var(--text, #1e293b)', 
               marginTop: '6px',
               display: 'flex',
               alignItems: 'center',
@@ -1499,7 +1499,7 @@
           }
         },
           React.createElement('span', { style: { color: '#64748b' } }, 'Средний gap'),
-          React.createElement('span', { style: { fontWeight: '600', color: '#1e293b' } }, 
+          React.createElement('span', { style: { fontWeight: '600', color: 'var(--text, #1e293b)' } }, 
             utils.formatDuration(data.personalAvgGap)
           )
         ),

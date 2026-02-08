@@ -3319,7 +3319,7 @@
                                     style: {
                                         margin: '10px 0',
                                         padding: '8px 10px',
-                                        background: '#f8fafc',
+                                        background: 'var(--bg-secondary, #f8fafc)',
                                         borderRadius: '8px',
                                         fontSize: '13px'
                                     }
@@ -4547,7 +4547,7 @@
                             padding: '10px 12px',
                             cursor: 'pointer',
                             fontSize: '13px', fontWeight: 600,
-                            color: hasAnyOverlap ? '#b91c1c' : '#1f2937',
+                            color: hasAnyOverlap ? '#b91c1c' : 'var(--text, #1f2937)',
                         },
                     },
                         React.createElement('span', null,
@@ -4728,7 +4728,7 @@
                                     color: '#94a3b8',
                                     padding: '4px 8px',
                                     borderRadius: '8px',
-                                    background: '#f1f5f9',
+                                    background: 'var(--bg-secondary, #f1f5f9)',
                                 },
                             }, '+ оценки'))
                         : React.createElement(React.Fragment, null,
@@ -4896,7 +4896,7 @@
                     React.createElement('div', {
                         className: 'wave-details-popup',
                         style: {
-                            background: '#fff',
+                            background: 'var(--card, #fff)',
                             borderRadius: '16px',
                             padding: '20px',
                             maxWidth: '360px',
@@ -4915,7 +4915,7 @@
                             },
                         },
                             React.createElement('h3', {
-                                style: { margin: 0, fontSize: '16px', fontWeight: 600, color: '#1f2937' },
+                                style: { margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text, #1f2937)' },
                             }, 'Расчёт волны'),
                             React.createElement('button', {
                                 onClick: () => setShowWaveCalcPopup(false),
@@ -4943,7 +4943,7 @@
 
                         React.createElement('div', {
                             style: {
-                                background: '#f8fafc',
+                                background: 'var(--bg-secondary, #f8fafc)',
                                 borderRadius: '10px',
                                 padding: '12px',
                                 marginBottom: '16px',
@@ -4956,14 +4956,14 @@
                         + (currentWave.finalMultiplier || 1).toFixed(2) + ' = ' + (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'),
 
                         React.createElement('div', { style: { marginBottom: '12px' } },
-                            React.createElement('div', { style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '🍽️ Факторы еды'),
+                            React.createElement('div', { style: { fontSize: '12px', fontWeight: 600, color: 'var(--text, #1f2937)', marginBottom: '8px' } }, '🍽️ Факторы еды'),
                             React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
                                 React.createElement('span', { style: { color: '#64748b' } }, 'ГИ'),
                                 React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.gi || 0)),
                             ),
                             React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
                                 React.createElement('span', { style: { color: '#64748b' } }, 'GL (нагрузка)'),
-                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.gl < 10 ? '#22c55e' : currentWave.gl > 20 ? '#ef4444' : '#1f2937' } }, (currentWave.gl || 0).toFixed(1)),
+                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.gl < 10 ? '#22c55e' : currentWave.gl > 20 ? '#ef4444' : 'var(--text, #1f2937)' } }, (currentWave.gl || 0).toFixed(1)),
                             ),
                             React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
                                 React.createElement('span', { style: { color: '#64748b' } }, 'Белок'),
@@ -4971,7 +4971,7 @@
                             ),
                             React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
                                 React.createElement('span', { style: { color: '#64748b' } }, 'Клетчатка'),
-                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.fiber >= 5 ? '#22c55e' : '#1f2937' } }, Math.round(currentWave.fiber || 0) + 'г'),
+                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.fiber >= 5 ? '#22c55e' : 'var(--text, #1f2937)' } }, Math.round(currentWave.fiber || 0) + 'г'),
                             ),
                             React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
                                 React.createElement('span', { style: { color: '#64748b' } }, 'Жиры'),
@@ -4984,10 +4984,10 @@
                         ),
 
                         React.createElement('div', { style: { marginBottom: '12px' } },
-                            React.createElement('div', { style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' } }, '⏰ Дневные факторы'),
+                            React.createElement('div', { style: { fontSize: '12px', fontWeight: 600, color: 'var(--text, #1f2937)', marginBottom: '8px' } }, '⏰ Дневные факторы'),
                             React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
                                 React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
-                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } }, '×' + (currentWave.circadianMultiplier || 1).toFixed(2)),
+                                React.createElement('span', { style: { fontWeight: 500, color: currentWave.circadianMultiplier > 1.05 ? '#f97316' : 'var(--text, #1f2937)' } }, '×' + (currentWave.circadianMultiplier || 1).toFixed(2)),
                             ),
                             currentWave.activityBonus && currentWave.activityBonus !== 0 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
                                 React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
@@ -6098,7 +6098,7 @@
                 style: {
                     fontSize: '24px',
                     fontWeight: '800',
-                    color: '#1e293b',
+                    color: 'var(--text, #1e293b)',
                     margin: '12px 0 16px 0',
                     textTransform: 'uppercase',
                     letterSpacing: '1px',
@@ -6116,7 +6116,7 @@
                 style: {
                     fontSize: '24px',
                     fontWeight: '800',
-                    color: '#1e293b',
+                    color: 'var(--text, #1e293b)',
                     margin: '28px 0 20px 0',
                     textTransform: 'uppercase',
                     letterSpacing: '1px',

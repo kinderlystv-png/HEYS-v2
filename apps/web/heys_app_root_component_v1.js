@@ -52,14 +52,14 @@
                 minHeight: '100vh',
                 padding: '20px',
                 fontFamily: 'system-ui, sans-serif',
-                background: '#f3f4f6',
+                background: 'var(--bg-secondary, #f3f4f6)',
                 textAlign: 'center'
             }
         }, [
             React.createElement('div', {
                 key: 'card',
                 style: {
-                    background: 'white',
+                    background: 'var(--card, white)',
                     borderRadius: '16px',
                     padding: '32px',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
@@ -105,8 +105,8 @@
                             padding: '12px 24px',
                             borderRadius: '8px',
                             border: '1px solid #d1d5db',
-                            background: 'white',
-                            color: '#374151',
+                            background: 'var(--card, white)',
+                            color: 'var(--text, #374151)',
                             fontWeight: '500',
                             cursor: clearing ? 'wait' : 'pointer',
                             fontSize: '14px',
