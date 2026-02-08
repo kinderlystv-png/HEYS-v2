@@ -108,6 +108,62 @@ cloud.client.from('table'); // DOES NOT WORK
 cloud.client.rpc('fn'); // DOES NOT WORK
 ```
 
+### Trial Machine v3.0 — Curator-Controlled Flow
+
+**Флоу онбординга клиентов (v3.0 — февраль 2026):**
+
+1. **Лендинг** → лид в `leads` таблицу (via `heys-api-leads` cloud function)
+2. **Админка куратора** → видит лиды в секции «Лиды с сайта» (🌐)
+3. **Конвертация лида** → `admin_convert_lead(lead_id, pin)` → создаёт клиента +
+   добавляет в `trial_queue` (`status='queued'`)
+4. **Активация триала** → куратор выбирает дату старта →
+   `admin_activate_trial(client_id, start_date)`:
+   - `start_date = сегодня` → `trial` немедленно (7 дней от NOW())
+   - `start_date > сегодня` → `trial_pending` (ждём дату)
+5. **Дата наступила** → `get_effective_subscription_status` переводит в `trial`
+   (7 дней)
+6. **Триал истёк** → `read_only` → paywall
+
+**RPC-функции Trial Machine:**
+
+```javascript
+// Список лидов с лендинга
+await HEYS.YandexAPI.rpc('admin_get_leads', { p_status: 'new' }); // new|converted|all
+
+// Конвертация лида в клиента
+await HEYS.YandexAPI.rpc('admin_convert_lead', {
+  p_lead_id: 'uuid',
+  p_pin: '1234',
+  p_curator_id: curatorId, // optional
+});
+
+// Активация триала с выбором даты
+await HEYS.YandexAPI.rpc('admin_activate_trial', {
+  p_client_id: clientId,
+  p_start_date: '2026-02-15', // DATE format, default = CURRENT_DATE
+  p_trial_days: 7, // default = 7
+  p_curator_session_token: token, // optional
+});
+// Returns: { success, status, trial_started_at, trial_ends_at, is_future }
+```
+
+**Subscription statuses:**
+
+- `none` — нет подписки
+- `trial_pending` — одобрен, но дата старта в будущем (v3.0)
+- `trial` — активный триал (7 дней)
+- `active` — оплаченная подписка
+- `read_only` — триал/подписка истекла
+
+**Типы данных:**
+
+- `leads.id` = UUID (не INT!)
+- `clients` не имеет `created_at` (only `updated_at`)
+- `trial_queue.status` CHECK:
+  `('queued','offer','assigned','canceled','canceled_by_purchase','expired')`
+- `trial_queue_events.event_type` CHECK:
+  `('queued','offer_sent','claimed','offer_expired','canceled','canceled_by_purchase','purchased')`
+
 ### Storage — never use raw localStorage
 
 ```javascript

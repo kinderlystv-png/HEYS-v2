@@ -123,7 +123,83 @@ cloud.syncToCloud(); // POST /sync/push
 cloud.syncFromCloud(); // POST /sync/pull
 ```
 
-### 4. Nutrition Management
+### 4. Trial Machine & Subscription Management
+
+> **Version:** v3.0 (February 2026)  
+> **Flow:** Curator-controlled trial start date + leads management
+
+#### Trial Lifecycle Functions
+
+```javascript
+// Get leads from landing page
+await HEYS.YandexAPI.rpc('admin_get_leads', {
+  p_status: 'new', // 'new' | 'converted' | 'all'
+});
+// Returns: [{ id: UUID, name, phone, messenger, utm_source, status, created_at, updated_at }]
+
+// Convert lead to client
+await HEYS.YandexAPI.rpc('admin_convert_lead', {
+  p_lead_id: 'b5a0f0ae-f92e-46ab-a805-fc3f9044af8e', // UUID
+  p_pin: '1234', // 4-digit PIN
+  p_curator_id: curatorId, // UUID, optional (auto-assign if null)
+});
+// Returns: { success: true, client_id, client_name, already_existed }
+
+// Activate trial with custom start date
+await HEYS.YandexAPI.rpc('admin_activate_trial', {
+  p_client_id: clientId, // UUID
+  p_start_date: '2026-02-15', // DATE, default = CURRENT_DATE
+  p_trial_days: 7, // INT, default = 7
+  p_curator_session_token: token, // TEXT, optional
+});
+// Returns: {
+//   success: true,
+//   client_id,
+//   status: 'trial' | 'trial_pending',
+//   trial_started_at: timestamp,
+//   trial_ends_at: timestamp,
+//   is_future: boolean
+// }
+```
+
+#### Subscription Status Logic
+
+```javascript
+// Get effective subscription status (internal function, called by other RPC)
+get_effective_subscription_status(client_id);
+// Returns: 'none' | 'trial_pending' | 'trial' | 'active' | 'read_only'
+
+// Status Rules (v3.0):
+// 'active' → active_until > NOW()
+// 'trial' → trial_started_at ≤ NOW() AND trial_ends_at > NOW()
+// 'trial_pending' → trial_started_at > NOW() (curator set future date)
+// 'read_only' → trial/subscription expired
+// 'none' → no subscription
+```
+
+#### Trial Machine Flow (v3.0)
+
+1. **Landing** → `leads` table (via `heys-api-leads` cloud function)
+2. **Admin UI** → curator sees leads via `admin_get_leads()`
+3. **Conversion** → curator creates client via `admin_convert_lead()` → client
+   added to `trial_queue` with `status='queued'`
+4. **Activation** → curator picks start date via `admin_activate_trial()`:
+   - If `start_date = today` → `status='trial'` immediately (7 days from NOW())
+   - If `start_date > today` → `status='trial_pending'` until date arrives
+5. **Date arrives** → status automatically becomes `'trial'` (via
+   `get_effective_subscription_status`)
+6. **Trial expires** → `status='read_only'` → paywall
+
+#### Data Types & Constraints
+
+- `leads.id` → UUID (not INT)
+- `clients` → no `created_at` column (only `updated_at`)
+- `trial_queue.status` → CHECK:
+  `('queued','offer','assigned','canceled','canceled_by_purchase','expired')`
+- `trial_queue_events.event_type` → CHECK:
+  `('queued','offer_sent','claimed','offer_expired','canceled','canceled_by_purchase','purchased')`
+
+### 5. Nutrition Management
 
 #### Food Database
 
