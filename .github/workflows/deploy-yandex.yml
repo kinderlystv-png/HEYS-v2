@@ -525,7 +525,7 @@ jobs:
             --memory 256m \
             --execution-timeout 30s \
             --source-path . \
-            --environment "PG_HOST=${{ secrets.PG_HOST }},PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=${{ secrets.PG_USER }},PG_PASSWORD=${{ secrets.PG_PASSWORD }},PG_SSL=verify-full,JWT_SECRET=${{ secrets.JWT_SECRET }}"
+            --environment "PG_HOST=${{ secrets.PG_HOST }},PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=${{ secrets.PG_USER }},PG_PASSWORD=${{ secrets.PG_PASSWORD }},PG_SSL=verify-full"
 
       - name: Deploy heys-api-rest
         if: steps.changes.outputs.rest_changed == 'true' || github.event_name == 'workflow_dispatch'
