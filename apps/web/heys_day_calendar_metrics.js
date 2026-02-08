@@ -43,7 +43,13 @@
                         });
                     });
 
-                    const ratio = totalKcal / (optimum || 1);
+                    // 🔧 FIX v2.6: Используем savedDisplayOptimum дня (TDEE того дня),
+                    // а не текущий optimum (сегодняшний TDEE без активности).
+                    // Каждый день имеет свой TDEE в зависимости от тренировок, шагов и т.д.
+                    const dayOptimum = (+dayData.savedDisplayOptimum > 0)
+                        ? +dayData.savedDisplayOptimum
+                        : (optimum || 1);
+                    const ratio = totalKcal / dayOptimum;
                     const rz = HEYS.ratioZones;
                     const isStreakDay = rz?.isStreakDayWithRefeed
                         ? rz.isStreakDayWithRefeed(ratio, dayData)

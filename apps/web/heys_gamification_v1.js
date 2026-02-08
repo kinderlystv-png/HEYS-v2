@@ -1056,6 +1056,22 @@
       currentData.stats.totalAdvicesRead = Math.max(currentData.stats.totalAdvicesRead || 0, auditStats.totalAdvicesRead);
       currentData.stats.perfectDays = Math.max(currentData.stats.perfectDays || 0, auditStats.perfectDays);
 
+      // 5a-2. FIX v2.6: Восстанавливаем bestStreak из streak-ачивок
+      // streak_7 → min 7, streak_5 → min 5, streak_3 → min 3, streak_2 → min 2, streak_1 → min 1
+      const allAchievements = new Set([...currentData.unlockedAchievements, ...auditAchievements, ...missingAchievements]);
+      const streakAchLevels = [7, 5, 3, 2, 1];
+      let inferredBestStreak = 0;
+      for (const lvl of streakAchLevels) {
+        if (allAchievements.has(`streak_${lvl}`)) {
+          inferredBestStreak = lvl;
+          break;
+        }
+      }
+      // Также проверяем текущий streak
+      const currentStreak = safeGetStreak();
+      inferredBestStreak = Math.max(inferredBestStreak, currentStreak);
+      currentData.stats.bestStreak = Math.max(currentData.stats.bestStreak || 0, inferredBestStreak);
+
       // 5b. Восстанавливаем достижения (добавляем XP за каждую ачивку)
       const restoredAchievements = [];
       for (const achId of missingAchievements) {
@@ -3488,13 +3504,24 @@
     },
 
     /**
+     * 🔧 FIX v2.5: Проверяем, является ли текущая сессия кураторской
+     * Для кураторов нет PIN session — cloud sync делается через storage sync layer
+     */
+    _isCuratorMode() {
+      return HEYS.auth?.isCuratorSession?.() === true ||
+        !!localStorage.getItem('heys_curator_session');
+    },
+
+    /**
      * 🔧 FIX v2.5: Получение session token с правильной десериализацией
      * HEYS.cloud.getSessionToken НЕ существует — используем HEYS.auth.getSessionToken
+     * Для кураторов возвращает null — они используют storage sync layer
      */
     _getSessionTokenForCloud() {
       // Priority 1: Auth module (properly JSON-parsed)
       if (HEYS.auth?.getSessionToken) {
-        return HEYS.auth.getSessionToken();
+        const token = HEYS.auth.getSessionToken();
+        if (token) return token;
       }
       // Priority 2: Parse from localStorage (lsGet does JSON.parse)
       try {
@@ -3531,7 +3558,13 @@
      */
     async syncToCloud() {
       try {
-        // 🔧 FIX v2.5: Используем HEYS.auth.getSessionToken (не cloud)
+        // 🔧 FIX v2.6: Для кураторов cloud sync через storage sync layer
+        if (this._isCuratorMode()) {
+          // Куратор: данные синхронизируются через storage sync layer (heys_storage_supabase_v1.js)
+          // который уже сохраняет heys_game в облако под scoped ключом
+          return true;
+        }
+
         const sessionToken = this._getSessionTokenForCloud();
 
         if (!HEYS.YandexAPI || !sessionToken) {
@@ -3652,7 +3685,23 @@
      */
     async loadFromCloud() {
       try {
-        // 🔧 FIX v2.5: Используем HEYS.auth.getSessionToken (не cloud)
+        // 🔧 FIX v2.6: Для кураторов cloud sync через storage sync layer
+        if (this._isCuratorMode()) {
+          // Куратор: данные загружаются через storage sync layer (heys_storage_supabase_v1.js)
+          // который пишет game data в localStorage как heys_game
+          // Данные уже в localStorage — просто помечаем как загруженные
+          console.info('[🎮 Gamification] loadFromCloud: curator mode — using storage sync layer');
+          _cloudLoaded = true;
+          if (_pendingCloudSync) {
+            _pendingCloudSync = false;
+            triggerImmediateSync('pending_sync');
+          }
+          // Перечитываем данные из localStorage (storage sync мог обновить)
+          _data = null; // сбросим кеш
+          window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: game.getStats() }));
+          return true;
+        }
+
         const sessionToken = this._getSessionTokenForCloud();
 
         if (!HEYS.YandexAPI || !sessionToken) {
@@ -4178,14 +4227,15 @@
         // Ignore errors during recalculation
       });
 
-      // 🔄 Загружаем данные из облака — проверяем ОБА способа авторизации
-      const hasCloudSession = HEYS.cloud?.getSessionToken?.();
-      const hasYandexAPI = HEYS.YandexAPI && (
+      // 🔄 Загружаем данные из облака
+      // FIX v2.6: Для кураторов loadFromCloud грациозно использует storage sync layer
+      const hasAnyAuth = HEYS.YandexAPI && (
+        HEYS.auth?.getSessionToken?.() ||
         localStorage.getItem('heys_curator_session') ||
         localStorage.getItem('heys_session_token')
       );
 
-      if (hasCloudSession || hasYandexAPI) {
+      if (hasAnyAuth) {
         console.log('[🎮 Gamification] Starting cloud load...');
         HEYS.game.loadFromCloud().then(loaded => {
           if (loaded) {
@@ -4310,6 +4360,94 @@
       const result = await HEYS.game.rebuildXPFromAudit({ dryRun: true });
       console.log('[🎮 Gamification] Check result:', result);
       return result;
+    };
+
+    // 🔧 FIX v2.6: Диагностика streak (почему streak = 0?)
+    window.debugStreak = () => {
+      const U = HEYS.utils || {};
+      const fmtDate = U.fmtDate || ((d) => d.toISOString().split('T')[0]);
+      const lsGet = HEYS.dayStorage?.lsGet || U.lsGet || (() => null);
+      const rz = HEYS.ratioZones;
+
+      console.group('🔥 [STREAK DEBUG]');
+      console.log('HEYS.Day.getStreak:', typeof HEYS.Day?.getStreak === 'function' ? HEYS.Day.getStreak() : 'NOT AVAILABLE');
+      console.log('safeGetStreak():', typeof HEYS.utils?.safeGetStreak === 'function' ? HEYS.utils.safeGetStreak() : 'N/A');
+
+      // Пробуем получить текущий optimum
+      const prof = lsGet('heys_profile', {});
+      let currentOptimum = 0;
+      // Из TDEE если доступен
+      if (HEYS.TDEE?.calculate) {
+        const today = new Date();
+        const dateStr = fmtDate(today);
+        const todayData = lsGet('heys_dayv2_' + dateStr, {});
+        const tdeeResult = HEYS.TDEE.calculate(todayData, prof, { lsGet });
+        currentOptimum = tdeeResult?.optimum || 0;
+        console.log('TDEE optimum (сегодня):', currentOptimum, '| baseExpenditure:', tdeeResult?.baseExpenditure, '| tdee:', tdeeResult?.tdee);
+      }
+
+      const today = new Date();
+      today.setHours(12);
+      console.log('Проверяем последние 10 дней (от вчера назад):');
+      const results = [];
+      for (let i = 1; i <= 10; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dateStr = fmtDate(d);
+        const key = 'heys_dayv2_' + dateStr;
+        const dayData = lsGet(key, null);
+        const hasMeals = !!(dayData && dayData.meals && dayData.meals.length > 0);
+        const mealCount = dayData?.meals?.length || 0;
+        let totalKcal = 0;
+        if (hasMeals) {
+          (dayData.meals || []).forEach(m => {
+            (m.items || []).forEach(item => {
+              const g = +item.grams || 0;
+              if (g <= 0) return;
+              const src = item;
+              if (src.kcal100 != null) totalKcal += ((+src.kcal100 || 0) * g / 100);
+            });
+          });
+        }
+        const savedOpt = dayData?.savedDisplayOptimum || dayData?.savedEatenKcal ? undefined : undefined;
+        // Используем savedDisplayOptimum дня или текущий optimum
+        const dayOptimum = dayData?.savedDisplayOptimum || currentOptimum || 1;
+        const ratio = totalKcal / dayOptimum;
+        const isRefeed = !!dayData?.isRefeedDay;
+        const isStreakDay = rz?.isStreakDayWithRefeed
+          ? rz.isStreakDayWithRefeed(ratio, dayData)
+          : (ratio >= 0.75 && ratio <= 1.10);
+
+        results.push({
+          date: dateStr,
+          kcal: Math.round(totalKcal),
+          optimum: Math.round(dayOptimum),
+          ratio: Math.round(ratio * 100) + '%',
+          isStreak: isStreakDay ? '✅' : '❌',
+          refeed: isRefeed ? '🔄' : '',
+          meals: mealCount
+        });
+      }
+      console.table(results);
+
+      // Попробуем вызвать computeCurrentStreak напрямую
+      if (HEYS.dayCalendarMetrics?.computeCurrentStreak) {
+        const pIndex = HEYS._productIndex || null;
+        const directStreak = HEYS.dayCalendarMetrics.computeCurrentStreak({
+          optimum: currentOptimum, pIndex, fmtDate, lsGet
+        });
+        console.log('computeCurrentStreak (direct call, optimum=' + currentOptimum + '):', directStreak);
+        // Тест с includeToday
+        const withToday = HEYS.dayCalendarMetrics.computeCurrentStreak({
+          optimum: currentOptimum, pIndex, fmtDate, lsGet, includeToday: true
+        });
+        console.log('computeCurrentStreak (includeToday=true):', withToday);
+      }
+
+      const gameData = HEYS.game?.getStats?.();
+      console.log('stats.bestStreak:', gameData?.stats?.bestStreak || 0);
+      console.groupEnd();
+      return results;
     };
   }
 
