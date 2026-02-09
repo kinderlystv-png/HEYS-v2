@@ -94,8 +94,12 @@ function createPoolConfig() {
     
     // Connection pool settings
     max: 3,                      // Максимум 3 соединения (лимит для serverless)
-    idleTimeoutMillis: 10000,    // 10 секунд до закрытия idle соединения
+    idleTimeoutMillis: 3000,     // 3 секунды — закрываем ДО того как PgBouncer убьёт
     connectionTimeoutMillis: 5000, // 5 секунд таймаут на подключение
+    
+    // TCP keepalive — обнаружение мёртвых PgBouncer-соединений
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000, // Первый probe через 10с
     
     // Query settings
     query_timeout: 10000,        // 10 секунд таймаут на запрос

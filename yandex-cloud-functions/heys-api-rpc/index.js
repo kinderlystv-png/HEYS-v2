@@ -457,8 +457,28 @@ module.exports.handler = async function (event, context) {
   }
 
   // Подключаемся к PostgreSQL через connection pool
+  // 🛟 Retry с health check — PgBouncer убивает idle-соединения
   const pool = getPool();
-  const client = await pool.connect();
+  let client;
+  for (let _attempt = 0; _attempt < 3; _attempt++) {
+    try {
+      client = await pool.connect();
+      await client.query('SELECT 1');
+      break;
+    } catch (connErr) {
+      console.warn(`[RPC] Pool connection stale (attempt ${_attempt + 1}/3):`, connErr.message);
+      try { client?.release(true); } catch (e) { /* ignore */ }
+      client = null;
+      if (_attempt === 2) {
+        return {
+          statusCode: 503,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: 'Service temporarily unavailable', message: 'Database connection failed after 3 attempts' })
+        };
+      }
+      await new Promise(r => setTimeout(r, 100));
+    }
+  }
 
   try {
     // 🔐 P2: Устанавливаем ключ шифрования для health_data (если настроен)
@@ -804,7 +824,13 @@ module.exports.handler = async function (event, context) {
     }
 
     // Освобождаем клиент в pool даже при ошибке
-    try { client.release(); } catch (e) { /* ignore */ }
+    // 🛟 release(true) при connection errors — уничтожает мёртвое соединение
+    const isConnectionError = 
+      error.message?.includes('Connection terminated') ||
+      error.message?.includes('connection') ||
+      error.code === 'ECONNRESET' ||
+      error.code === 'EPIPE';
+    try { client.release(isConnectionError); } catch (e) { /* ignore */ }
 
     // 🔐 P0001 = RAISE EXCEPTION (бизнес-ошибка, НЕ сбой БД)
     // Возвращаем 200 с error-объектом, чтобы фронтенд парсил корректно
