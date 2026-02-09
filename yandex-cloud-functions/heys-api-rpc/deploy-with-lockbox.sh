@@ -51,7 +51,7 @@ yc serverless function version create \
   --execution-timeout 30s \
   --source-path . \
   --service-account-id "$SA_ID" \
-  --environment "PG_HOST=rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net,PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=heys_rpc,HEYS_ENCRYPTION_KEY=${HEYS_ENCRYPTION_KEY},JWT_SECRET=${JWT_SECRET}" \
+  --environment "PG_HOST=rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net,PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=heys_admin,HEYS_ENCRYPTION_KEY=${HEYS_ENCRYPTION_KEY},JWT_SECRET=${JWT_SECRET}" \
   --secret "environment-variable=PG_PASSWORD,id=${SECRET_ID},key=postgresql_password"
 
 echo "✅ Deployed! Running post-deploy health check..."

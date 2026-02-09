@@ -1112,7 +1112,7 @@
     },
 
     /**
-     * Активировать триал для клиента с выбором даты старта (v3.0)
+     * Активировать триал для клиента с выбором даты старта (v4.0 JWT-only)
      * @param {string} clientId - UUID клиента
      * @param {string} [startDate] - Дата старта (YYYY-MM-DD). По умолчанию — сегодня.
      * @returns {Promise<{success: boolean, status?: string, trial_ends_at?: string, error?: string}>}
@@ -1123,6 +1123,8 @@
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
       }
 
+      // 🔐 v4.0: JWT токен передаётся через Authorization header (YandexAPI.rpc)
+      // p_curator_session_token удалён, p_curator_id добавляет cloud function
       const curatorSession = localStorage.getItem('heys_curator_session');
       if (!curatorSession) {
         return { success: false, error: 'no_auth', message: 'Нет сессии куратора' };
@@ -1130,12 +1132,12 @@
 
       try {
         const params = {
-          p_client_id: clientId,
-          p_curator_session_token: curatorSession
+          p_client_id: clientId
         };
         if (startDate) {
           params.p_start_date = startDate;
         }
+        // ❌ Убрано: p_curator_session_token (теперь JWT в Authorization header)
 
         const res = await api.rpc('admin_activate_trial', params);
 

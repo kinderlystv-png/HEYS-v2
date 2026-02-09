@@ -24,13 +24,15 @@ const pool = new Pool({
 
 // Миграции для применения (в порядке)
 const MIGRATIONS = [
+    '2025-01-10_curator_sessions.sql',          // 🔑 Таблица сессий кураторов (КРИТИЧНА!)
     '2026-02-04_update_get_curator_clients.sql',
     '2026-02-04_extend_trials.sql',
     '2026-02-04_admin_extend_subscription.sql',
     '2026-02-08_delete_gamification_events.sql',
     '2026-02-08_trial_machine_fix.sql',
-    '2026-02-09_trial_machine_v3.sql',
+    '2026-02-09_trial_machine_v3.sql',          // 🆕 Trial Machine v3.0
     '2026-02-08_fix_extend_and_curator_clients.sql',
+    '2026-02-09_admin_functions_jwt_only.sql',  // 🔐 JWT-only авторизация для admin_* функций (v4.0)
 ];
 
 async function main() {

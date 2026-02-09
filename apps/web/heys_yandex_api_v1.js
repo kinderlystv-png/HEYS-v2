@@ -173,11 +173,32 @@
 
   // 🔐 Функции, требующие JWT токен куратора
   const CURATOR_ONLY_FUNCTIONS = [
+    // === CLIENT MANAGEMENT ===
     'create_client_with_pin',
     'reset_client_pin',
     'get_curator_clients',
+    'admin_get_all_clients',
+
+    // === SUBSCRIPTION MANAGEMENT ===
     'admin_extend_subscription',
     'admin_cancel_subscription',
+    'admin_extend_trial',
+
+    // === TRIAL QUEUE ADMIN ===
+    'admin_get_trial_queue_list',
+    'admin_add_to_queue',
+    'admin_remove_from_queue',
+    'admin_send_offer',
+    'admin_activate_trial',           // 🆕 v4.0: JWT-only
+    'admin_reject_request',
+    'admin_get_queue_stats',
+    'admin_update_queue_settings',
+
+    // === LEADS MANAGEMENT (v3.0) ===
+    'admin_get_leads',
+    'admin_convert_lead',
+
+    // === GAMIFICATION AUDIT ===
     'log_gamification_event_by_curator',
     'get_gamification_events_by_curator',
     'delete_gamification_events_by_curator',

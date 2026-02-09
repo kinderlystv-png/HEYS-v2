@@ -216,21 +216,8 @@ const ALLOWED_FUNCTIONS = [
   'cancel_trial_queue',                 // Отмена запроса на триал
   'assign_trials_from_queue',           // Воркер: раздача offers (cron)
 
-  // === TRIAL QUEUE ADMIN (для куратора) ===
-  'admin_get_trial_queue_list',         // Список очереди с данными клиентов
-  'admin_add_to_queue',                 // Добавить клиента в очередь
-  'admin_remove_from_queue',            // Удалить из очереди
-  'admin_send_offer',                   // @deprecated — use admin_activate_trial
-  'admin_activate_trial',               // 🆕 Активировать триал (ручная верификация)
-  'admin_reject_request',               // 🆕 Отклонить заявку с причиной
-  'admin_get_queue_stats',              // Статистика очереди
-  'admin_update_queue_settings',        // Изменить настройки (is_accepting и т.д.)
-  'admin_extend_trial',                 // 🆕 Продление триала (для куратора)
-  'admin_cancel_subscription',          // 🆕 Сброс подписки (для куратора)
-  'admin_get_all_clients',              // 🆕 Список всех клиентов (для куратора)
-  'admin_get_leads',                    // 🆕 v3.0: Список лидов с лендинга
-  'admin_convert_lead',                 // 🆕 v3.0: Конвертация лида в клиента
-  // ❌ check_subscription_status(UUID) — убрано, принимает UUID без проверки владельца
+  // ❌ TRIAL QUEUE ADMIN функции ПЕРЕМЕЩЕНЫ в CURATOR_ONLY_FUNCTIONS
+  // (требуют JWT-авторизацию, см. ниже)
 
   // === KV STORAGE (🔐 P1: session-версии — IDOR fix!) ===
   'get_client_data_by_session',           // 🔐 P1: session-версия (IDOR fix)
@@ -279,14 +266,35 @@ const ALLOWED_FUNCTIONS = [
 // 🔐 CURATOR_ONLY_FUNCTIONS — требуют JWT токен куратора!
 // ═══════════════════════════════════════════════════════════════════════════
 const CURATOR_ONLY_FUNCTIONS = [
+  // === CLIENT MANAGEMENT ===
   'create_client_with_pin',           // Создание клиента (только куратор!)
   'reset_client_pin',                 // Сброс PIN клиента
   'get_curator_clients',              // Список клиентов куратора
+  'admin_get_all_clients',            // 🆕 Список всех клиентов (JWT-only v4.0)
+
+  // === SUBSCRIPTION MANAGEMENT ===
   'admin_extend_subscription',        // Продление подписки клиента
-  'admin_cancel_subscription',        // 🆕 Сброс подписки клиента
+  'admin_cancel_subscription',        // Сброс подписки клиента
+  'admin_extend_trial',               // 🆕 Продление триала (JWT-only v2.0)
+
+  // === TRIAL QUEUE ADMIN ===
+  'admin_get_trial_queue_list',       // Список очереди с данными клиентов
+  'admin_add_to_queue',               // Добавить клиента в очередь
+  'admin_remove_from_queue',          // Удалить из очереди
+  'admin_send_offer',                 // @deprecated — use admin_activate_trial
+  'admin_activate_trial',             // 🆕 Активировать триал (JWT-only v4.0)
+  'admin_reject_request',             // Отклонить заявку с причиной
+  'admin_get_queue_stats',            // Статистика очереди
+  'admin_update_queue_settings',      // Изменить настройки (is_accepting и т.д.)
+
+  // === LEADS MANAGEMENT (v3.0) ===
+  'admin_get_leads',                  // Список лидов с лендинга
+  'admin_convert_lead',               // Конвертация лида в клиента
+
+  // === GAMIFICATION AUDIT ===
   'log_gamification_event_by_curator',
   'get_gamification_events_by_curator',
-  'delete_gamification_events_by_curator', // 🆕 Удаление дубликатов из audit log
+  'delete_gamification_events_by_curator', // Удаление дубликатов из audit log
 ];
 
 // Маппинг параметров (если нужно)
