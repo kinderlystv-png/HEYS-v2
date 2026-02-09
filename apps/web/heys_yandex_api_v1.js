@@ -197,6 +197,7 @@
     // === LEADS MANAGEMENT (v3.0) ===
     'admin_get_leads',
     'admin_convert_lead',
+    'admin_update_lead_status',       // 🆕 v3.0: Отклонение лидов
 
     // === GAMIFICATION AUDIT ===
     'log_gamification_event_by_curator',

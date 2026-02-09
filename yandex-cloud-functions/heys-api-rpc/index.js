@@ -290,6 +290,7 @@ const CURATOR_ONLY_FUNCTIONS = [
   // === LEADS MANAGEMENT (v3.0) ===
   'admin_get_leads',                  // Список лидов с лендинга
   'admin_convert_lead',               // Конвертация лида в клиента
+  'admin_update_lead_status',         // Обновление статуса лида (отклонение и т.д.)
 
   // === GAMIFICATION AUDIT ===
   'log_gamification_event_by_curator',
@@ -480,6 +481,11 @@ module.exports.handler = async function (event, context) {
     }
   }
 
+  // Объявляем переменные перед try блоком, чтобы они были доступны в catch
+  let query;
+  let paramKeys = [];
+  let values = [];
+
   try {
     // 🔐 P2: Устанавливаем ключ шифрования для health_data (если настроен)
     const encryptionKey = process.env.HEYS_ENCRYPTION_KEY;
@@ -569,7 +575,7 @@ module.exports.handler = async function (event, context) {
     }
 
     // Формируем вызов RPC функции
-    const paramKeys = Object.keys(params);
+    paramKeys = Object.keys(params);
 
     // 🔐 P2: Для некоторых функций нужны явные типы (pg передаёт unknown)
     const TYPE_HINTS = {
@@ -729,6 +735,12 @@ module.exports.handler = async function (event, context) {
         'p_pin': '::text',
         'p_curator_id': '::uuid'
       },
+      'admin_update_lead_status': {
+        'p_lead_id': '::uuid',
+        'p_status': '::text',
+        'p_reason': '::text',
+        'p_curator_id': '::uuid'  // JWT authenticated curator (unused in function but required)
+      },
       // 🔐 JWT-only: functions that need p_curator_id type hint
       'admin_get_all_clients': {
         'p_curator_id': '::uuid'
@@ -770,9 +782,6 @@ module.exports.handler = async function (event, context) {
       return `${k} => $${i + 1}${hint}`;
     }).join(', ');
 
-    let query;
-    let values;
-
     if (paramKeys.length > 0) {
       // Вызов функции с именованными параметрами
       query = `SELECT * FROM ${fnName}(${paramNames})`;
@@ -813,13 +822,18 @@ module.exports.handler = async function (event, context) {
     };
 
   } catch (error) {
-    if (fnName === 'get_curator_clients') {
+    // Детальное логирование для admin функций и критичных функций
+    const needsDetailedLog = fnName.startsWith('admin_') || fnName === 'get_curator_clients';
+
+    if (needsDetailedLog) {
       console.error('[RPC Error]', fnName, {
         message: error.message,
         code: error.code,
         detail: error.detail,
         hint: error.hint,
-        where: error.where
+        where: error.where,
+        query: query || 'no query',
+        params: paramKeys.length > 0 ? paramKeys.join(', ') : 'no params'
       });
     } else {
       console.error('[RPC Error]', fnName, error.message);

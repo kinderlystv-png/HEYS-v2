@@ -3,7 +3,7 @@
  * Сохранение лидов с landing page + Telegram уведомления
  */
 
-const { getPool } = require('../shared/db-pool');
+const { getPool } = require('./shared/db-pool');
 const fs = require('fs');
 const path = require('path');
 

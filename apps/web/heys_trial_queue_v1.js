@@ -1306,6 +1306,37 @@
         console.error('[TrialQueue.admin] convertLead error:', e);
         return { success: false, error: 'request_failed', message: e.message };
       }
+    },
+
+    /**
+     * Отклонить лида (v3.0)
+     * @param {string} leadId - UUID лида
+     * @param {string} [reason] - Причина отклонения
+     * @returns {Promise<{success: boolean, error?: string}>}
+     */
+    async rejectLead(leadId, reason = 'rejected_by_curator') {
+      const api = HEYS.YandexAPI;
+      if (!api) {
+        return { success: false, error: 'api_not_ready', message: 'API не готов' };
+      }
+
+      try {
+        const res = await api.rpc('admin_update_lead_status', {
+          p_lead_id: leadId,
+          p_status: 'rejected',
+          p_reason: reason
+        });
+
+        if (res.error) {
+          return { success: false, error: res.error.code, message: res.error.message };
+        }
+
+        const fnData = res.data?.admin_update_lead_status || res.data || res;
+        return fnData.success !== undefined ? fnData : { success: true };
+      } catch (e) {
+        console.error('[TrialQueue.admin] rejectLead error:', e);
+        return { success: false, error: 'request_failed', message: e.message };
+      }
     }
   };
 
@@ -1324,6 +1355,8 @@
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState(null);
     const [actionLoading, setActionLoading] = React.useState(null);
+    const [activeTab, setActiveTab] = React.useState('leads');
+    const [leadStatusFilter, setLeadStatusFilter] = React.useState('new');
     // Диалог активации триала (v3.0: с выбором даты)
     const [trialDialog, setTrialDialog] = React.useState(null); // { clientId, clientName }
     const [trialStartDate, setTrialStartDate] = React.useState('');
@@ -1340,7 +1373,7 @@
         const [queueRes, statsRes, leadsRes] = await Promise.all([
           adminAPI.getQueueList(),
           adminAPI.getStats(),
-          adminAPI.getLeads('new')
+          adminAPI.getLeads(leadStatusFilter)
         ]);
 
         if (queueRes.success) {
@@ -1356,6 +1389,7 @@
         }
 
         if (leadsRes.success) {
+          console.log('[TrialQueueAdmin] Loaded leads:', leadsRes.data);
           setLeads(leadsRes.data || []);
         }
       } catch (e) {
@@ -1363,7 +1397,7 @@
       } finally {
         setLoading(false);
       }
-    }, []);
+    }, [leadStatusFilter]);
 
     React.useEffect(() => {
       loadData();
@@ -1442,6 +1476,22 @@
     const handleConvertLead = (lead) => {
       setConvertPin('');
       setConvertDialog({ leadId: lead.id, leadName: lead.name, leadPhone: lead.phone });
+    };
+
+    // Отклонить лида (v3.0)
+    const handleRejectLead = async (lead) => {
+      const reason = prompt(`Отклонить лида "${lead.name}"?\nУкажите причину (опционально):`, '');
+      if (reason === null) return; // Отмена
+
+      setActionLoading('lead-reject-' + lead.id);
+      const res = await adminAPI.rejectLead(lead.id, reason || 'rejected_by_curator');
+      setActionLoading(null);
+
+      if (res.success) {
+        loadData();
+      } else {
+        alert('Ошибка: ' + (res.message || 'Не удалось отклонить лида'));
+      }
     };
 
     const confirmConvertLead = async () => {
@@ -1535,555 +1585,364 @@
     const freeSlots = stats ? Math.max(0, (stats.limits?.max_active_trials || 3) - (grouped.assigned?.length || 0)) : 0;
     const isAccepting = stats?.limits?.is_accepting_trials ?? false;
 
-    // Карточка клиента
-    const ClientCard = ({ item, showPosition, showActions, showOfferTimer }) => {
+    const tabs = [
+      { id: 'leads', label: '🌐 Лиды', count: leads.length },
+      { id: 'pending', label: '📋 Заявки', count: grouped.pending.length },
+      { id: 'active', label: '✅ Активные', count: grouped.assigned.length },
+      { id: 'rejected', label: '❌ Отклонённые', count: grouped.rejected.length }
+    ];
+
+    const leadStatusOptions = [
+      { value: 'new', label: 'Новые' },
+      { value: 'converted', label: 'Сконвертированные' },
+      { value: 'rejected', label: 'Отклонённые' },
+      { value: 'all', label: 'Все' }
+    ];
+
+    const LeadRow = ({ item }) => React.createElement('div', {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '12px 14px',
+        borderRadius: 12,
+        background: '#fff',
+        border: '1px solid var(--border, #e5e7eb)',
+        transition: 'box-shadow 0.2s'
+      },
+      onMouseEnter: (e) => { e.currentTarget.style.boxShadow = '0 6px 16px -8px rgba(0,0,0,0.25)'; },
+      onMouseLeave: (e) => { e.currentTarget.style.boxShadow = 'none'; }
+    },
+      React.createElement('div', {
+        style: {
+          width: 40,
+          height: 40,
+          borderRadius: '50%',
+          background: item.messenger === 'telegram' ? '#0088cc'
+            : item.messenger === 'whatsapp' ? '#25d366'
+              : item.messenger === 'max' ? '#8b5cf6' : '#9ca3af',
+          color: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 16,
+          flexShrink: 0
+        }
+      }, item.messenger === 'telegram' ? '📱' : item.messenger === 'whatsapp' ? '💬' : item.messenger === 'max' ? '🟣' : '👤'),
+      React.createElement('div', { style: { flex: 1, minWidth: 0, paddingRight: 8 } },
+        React.createElement('div', {
+          style: {
+            fontWeight: 700,
+            fontSize: 15,
+            color: 'var(--text, #111827)',
+            lineHeight: 1.2,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }
+        }, item.name || '—'),
+        React.createElement('div', {
+          style: {
+            fontSize: 13,
+            color: '#6b7280',
+            fontFamily: 'monospace',
+            lineHeight: 1.3,
+            marginTop: 2
+          }
+        }, item.phone || '—'),
+        React.createElement('div', {
+          style: {
+            fontSize: 11,
+            color: '#9ca3af',
+            marginTop: 4,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            overflow: 'hidden'
+          }
+        },
+          React.createElement('span', { style: { whiteSpace: 'nowrap' } }, formatDate(item.created_at)),
+          item.utm_source && React.createElement('span', { style: { opacity: 0.5 } }, '|'),
+          item.utm_source && React.createElement('span', {
+            style: {
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: 100
+            }
+          }, item.utm_source)
+        )
+      ),
+      React.createElement('div', { style: { display: 'flex', gap: 6, flexShrink: 0 } },
+        React.createElement('button', {
+          onClick: () => handleConvertLead(item),
+          disabled: actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id,
+          style: {
+            padding: '8px 12px',
+            borderRadius: 8,
+            border: 'none',
+            background: (actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id)
+              ? '#d1d5db'
+              : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            color: '#fff',
+            cursor: (actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id) ? 'not-allowed' : 'pointer',
+            fontSize: 13,
+            fontWeight: 600,
+            whiteSpace: 'nowrap'
+          }
+        }, actionLoading === 'lead-' + item.id ? '⏳' : 'Создать'),
+        React.createElement('button', {
+          onClick: () => handleRejectLead(item),
+          disabled: actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id,
+          style: {
+            padding: '8px 10px',
+            borderRadius: 8,
+            border: '1px solid #fecaca',
+            background: '#fef2f2',
+            color: '#dc2626',
+            cursor: (actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id) ? 'not-allowed' : 'pointer',
+            fontSize: 13,
+            fontWeight: 600
+          }
+        }, actionLoading === 'lead-reject-' + item.id ? '⏳' : '❌')
+      )
+    );
+
+    const ClientRow = ({ item, allowActions }) => {
+      const statusColor = item.status === 'assigned'
+        ? { bg: '#dcfce7', text: '#16a34a', label: 'Активен' }
+        : item.status === 'rejected' || item.status === 'expired'
+          ? { bg: '#fee2e2', text: '#dc2626', label: 'Отклонён' }
+          : { bg: '#fef9c3', text: '#ca8a04', label: 'Ожидает' };
+
       return React.createElement('div', {
         style: {
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
-          padding: '12px 14px',
-          background: 'var(--card, #fff)',
-          borderRadius: '10px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          gap: 12,
+          padding: '14px 16px',
+          borderRadius: 12,
+          background: '#fff',
+          border: '1px solid var(--border, #e5e7eb)',
           transition: 'box-shadow 0.2s'
-        }
+        },
+        onMouseEnter: (e) => { e.currentTarget.style.boxShadow = '0 6px 16px -8px rgba(0,0,0,0.25)'; },
+        onMouseLeave: (e) => { e.currentTarget.style.boxShadow = 'none'; }
       },
-        // Позиция (если показываем)
-        showPosition && React.createElement('div', {
+        React.createElement('div', {
           style: {
-            width: '32px',
-            height: '32px',
+            width: 42,
+            height: 42,
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
             color: '#fff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            fontSize: 16,
             fontWeight: 700,
-            fontSize: '14px',
             flexShrink: 0
           }
-        }, item.queue_position || '?'),
-
-        // Аватар (если без позиции)
-        !showPosition && React.createElement('div', {
-          style: {
-            width: '32px',
-            height: '32px',
-            borderRadius: '50%',
-            background: item.status === 'assigned' ? '#dcfce7' : '#fef3c7',
-            color: item.status === 'assigned' ? '#16a34a' : '#d97706',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '16px',
-            flexShrink: 0
-          }
-        }, item.status === 'assigned' ? '✓' : '⏳'),
-
-        // Инфо
+        }, (item.client_name || item.name || '?')[0].toUpperCase()),
         React.createElement('div', { style: { flex: 1, minWidth: 0 } },
           React.createElement('div', {
-            style: {
-              fontWeight: 600,
-              fontSize: '14px',
-              color: 'var(--text, #1f2937)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }
-          }, item.client_name || item.name || 'Без имени'),
+            style: { fontWeight: 700, fontSize: 15, color: 'var(--text, #111827)' }
+          }, item.client_name || item.name || '—'),
+          React.createElement('div', {
+            style: { fontSize: 13, color: '#6b7280', fontFamily: 'monospace' }
+          }, item.client_phone || item.phone_normalized || '—'),
           React.createElement('div', {
             style: {
-              fontSize: '12px',
-              color: '#6b7280',
-              marginTop: '2px'
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '2px 8px',
+              borderRadius: 6,
+              background: statusColor.bg,
+              color: statusColor.text,
+              fontSize: 11,
+              fontWeight: 700,
+              marginTop: 4
             }
-          }, item.client_phone || item.phone_normalized || '—')
+          }, statusColor.label)
         ),
-
-        // Таймер offer
-        showOfferTimer && item.offer_expires_at && React.createElement('div', {
-          style: {
-            padding: '4px 10px',
-            background: '#fef3c7',
-            color: '#92400e',
-            borderRadius: '6px',
-            fontSize: '12px',
-            fontWeight: 600,
-            whiteSpace: 'nowrap'
-          }
-        }, '⏱ ' + getOfferTimeLeft(item.offer_expires_at)),
-
-        // Дата начала (для активных)
-        item.status === 'assigned' && item.assigned_at && React.createElement('div', {
-          style: {
-            fontSize: '11px',
-            color: '#6b7280',
-            textAlign: 'right'
-          }
-        },
-          React.createElement('div', null, 'Начало:'),
-          React.createElement('div', { style: { fontWeight: 500 } }, formatDate(item.assigned_at))
-        ),
-
-        // Действия (v2.0: Активировать + Отклонить)
-        showActions && React.createElement('div', {
-          style: { display: 'flex', gap: '6px', flexShrink: 0 }
-        },
-          // Кнопка "Активировать триал" (для pending заявок)
-          (item.status === 'pending' || item.status === 'queued' || item.status === 'offer') && React.createElement('button', {
+        allowActions && React.createElement('div', { style: { display: 'flex', gap: 6 } },
+          React.createElement('button', {
             onClick: () => handleActivateTrial(item.client_id, item.client_name || item.name),
             disabled: actionLoading === item.client_id,
-            title: 'Активировать триал',
             style: {
               padding: '8px 12px',
-              borderRadius: '8px',
+              borderRadius: 8,
               border: 'none',
-              background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+              background: actionLoading === item.client_id
+                ? '#d1d5db'
+                : 'linear-gradient(135deg, #22c55e, #16a34a)',
               color: '#fff',
               cursor: actionLoading === item.client_id ? 'not-allowed' : 'pointer',
-              fontSize: '13px',
-              fontWeight: 500,
-              opacity: actionLoading === item.client_id ? 0.7 : 1
+              fontSize: 12,
+              fontWeight: 700
             }
           }, actionLoading === item.client_id ? '⏳' : '✅ Активировать'),
-
-          // Кнопка "Отклонить" (для pending заявок)
-          (item.status === 'pending' || item.status === 'queued' || item.status === 'offer') && React.createElement('button', {
+          React.createElement('button', {
             onClick: () => handleReject(item.client_id, item.client_name || item.name),
             disabled: actionLoading === item.client_id,
-            title: 'Отклонить заявку',
             style: {
               padding: '8px 10px',
-              borderRadius: '8px',
+              borderRadius: 8,
               border: '1px solid #fecaca',
-              background: 'var(--card, #fff)',
+              background: '#fef2f2',
               color: '#dc2626',
               cursor: actionLoading === item.client_id ? 'not-allowed' : 'pointer',
-              fontSize: '13px',
-              opacity: actionLoading === item.client_id ? 0.7 : 1
+              fontSize: 12,
+              fontWeight: 700
             }
           }, '❌')
         )
       );
     };
 
-    // Секция с заголовком
-    const Section = ({ title, icon, count, color, children, emptyText }) => {
-      return React.createElement('div', {
-        style: {
-          marginBottom: '20px',
-          background: '#f9fafb',
-          borderRadius: '12px',
-          padding: '16px',
-          border: '1px solid #e5e7eb'
-        }
-      },
-        React.createElement('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            marginBottom: count > 0 ? '12px' : 0,
-            paddingBottom: count > 0 ? '12px' : 0,
-            borderBottom: count > 0 ? '1px solid #e5e7eb' : 'none'
-          }
-        },
-          React.createElement('span', { style: { fontSize: '18px' } }, icon),
-          React.createElement('span', {
-            style: {
-              fontWeight: 600,
-              fontSize: '15px',
-              color: 'var(--text, #374151)'
-            }
-          }, title),
-          React.createElement('span', {
-            style: {
-              marginLeft: 'auto',
-              padding: '2px 10px',
-              background: color,
-              color: '#fff',
-              borderRadius: '12px',
-              fontSize: '13px',
-              fontWeight: 600
-            }
-          }, count)
-        ),
-        count === 0 && React.createElement('div', {
-          style: {
-            color: '#9ca3af',
-            fontSize: '13px',
-            textAlign: 'center',
-            padding: '8px'
-          }
-        }, emptyText),
-        count > 0 && React.createElement('div', {
-          style: { display: 'flex', flexDirection: 'column', gap: '8px' }
-        }, children)
-      );
-    };
-
-    // ========================================
-    // РЕНДЕР
-    // ========================================
     return React.createElement('div', {
       style: {
-        padding: '20px',
-        maxHeight: '75vh',
-        overflowY: 'auto',
-        background: 'var(--card, #fff)'
+        height: '75vh',
+        display: 'flex',
+        flexDirection: 'column',
+        background: '#f8fafc'
       }
     },
-      // ========== HEADER: Статус очереди ==========
       React.createElement('div', {
         style: {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: '20px',
-          padding: '16px 20px',
-          background: isAccepting
-            ? 'linear-gradient(135deg, #dcfce7, #bbf7d0)'
-            : 'linear-gradient(135deg, #fee2e2, #fecaca)',
-          borderRadius: '16px',
-          border: isAccepting ? '2px solid #86efac' : '2px solid #fca5a5'
+          padding: '12px 16px',
+          background: '#fff',
+          borderBottom: '1px solid #e5e7eb'
         }
       },
-        React.createElement('div', null,
-          React.createElement('div', {
-            style: {
-              fontSize: '13px',
-              color: isAccepting ? '#166534' : '#991b1b',
-              fontWeight: 500,
-              marginBottom: '4px'
-            }
-          }, 'СТАТУС ОЧЕРЕДИ'),
-          React.createElement('div', {
-            style: {
-              fontSize: '22px',
-              fontWeight: 700,
-              color: isAccepting ? '#15803d' : '#b91c1c',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }
-          },
-            isAccepting ? '🟢 Открыта' : '🔴 Закрыта',
-            toggleLoading && React.createElement('span', {
-              style: { fontSize: '14px', opacity: 0.7 }
-            }, '⏳')
-          )
+        React.createElement('div', {
+          style: { display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#6b7280' }
+        },
+          React.createElement('span', null, isAccepting ? '🟢 Очередь открыта' : '🔴 Очередь закрыта'),
+          React.createElement('span', null, `Слотов: ${grouped.assigned.length}/${stats?.limits?.max_active_trials || 3}`)
         ),
-        // Toggle Switch
         React.createElement('button', {
           onClick: handleToggleAccepting,
           disabled: toggleLoading || !stats,
           style: {
-            position: 'relative',
-            width: '64px',
-            height: '34px',
-            borderRadius: '17px',
-            border: 'none',
-            background: isAccepting ? '#22c55e' : '#d1d5db',
+            padding: '6px 10px',
+            borderRadius: 8,
+            border: '1px solid #e5e7eb',
+            background: '#fff',
             cursor: toggleLoading ? 'not-allowed' : 'pointer',
-            transition: 'background 0.3s',
-            opacity: toggleLoading ? 0.7 : 1
+            fontSize: 12,
+            fontWeight: 600
           }
-        },
-          React.createElement('div', {
-            style: {
-              position: 'absolute',
-              top: '3px',
-              left: isAccepting ? '33px' : '3px',
-              width: '28px',
-              height: '28px',
-              borderRadius: '50%',
-              background: 'var(--card, #fff)',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-              transition: 'left 0.3s'
-            }
-          })
-        )
+        }, toggleLoading ? '⏳' : isAccepting ? 'Закрыть' : 'Открыть')
       ),
-
-      // ========== STATS CARDS ==========
       React.createElement('div', {
         style: {
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '12px',
-          marginBottom: '24px'
+          display: 'flex',
+          gap: 6,
+          padding: '10px 16px',
+          background: '#fff',
+          borderBottom: '1px solid #e5e7eb'
         }
       },
-        // Активных триалов
-        React.createElement('div', {
+        tabs.map((tab) => React.createElement('button', {
+          key: tab.id,
+          onClick: () => setActiveTab(tab.id),
           style: {
-            padding: '16px',
-            background: 'linear-gradient(135deg, #dbeafe, #bfdbfe)',
-            borderRadius: '12px',
-            textAlign: 'center'
+            padding: '8px 12px',
+            borderRadius: 8,
+            border: 'none',
+            background: activeTab === tab.id ? 'linear-gradient(135deg, #0ea5e9, #6366f1)' : 'transparent',
+            color: activeTab === tab.id ? '#fff' : '#6b7280',
+            cursor: 'pointer',
+            fontSize: 12,
+            fontWeight: 700
+          }
+        }, `${tab.label} (${tab.count})`))
+      ),
+      activeTab === 'leads' && React.createElement('div', {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '8px 16px',
+          background: '#f9fafb',
+          borderBottom: '1px solid #e5e7eb'
+        }
+      },
+        React.createElement('label', {
+          style: { fontSize: 12, fontWeight: 600, color: '#6b7280', whiteSpace: 'nowrap' }
+        }, 'Статус:'),
+        React.createElement('select', {
+          value: leadStatusFilter,
+          onChange: (e) => setLeadStatusFilter(e.target.value),
+          style: {
+            padding: '6px 10px',
+            borderRadius: 6,
+            border: '1px solid #d1d5db',
+            fontSize: 12,
+            fontWeight: 500,
+            color: '#374151',
+            background: '#fff',
+            cursor: 'pointer'
           }
         },
-          React.createElement('div', {
-            style: { fontSize: '28px', fontWeight: 700, color: '#1d4ed8' }
-          }, grouped.assigned.length),
-          React.createElement('div', {
-            style: { fontSize: '12px', color: '#3b82f6', fontWeight: 500, marginTop: '4px' }
-          }, 'АКТИВНЫХ')
-        ),
-
-        // Свободных слотов
-        React.createElement('div', {
-          style: {
-            padding: '16px',
-            background: freeSlots > 0
-              ? 'linear-gradient(135deg, #dcfce7, #bbf7d0)'
-              : 'linear-gradient(135deg, #fef3c7, #fde68a)',
-            borderRadius: '12px',
-            textAlign: 'center'
-          }
-        },
-          React.createElement('div', {
-            style: {
-              fontSize: '28px',
-              fontWeight: 700,
-              color: freeSlots > 0 ? '#15803d' : '#b45309'
-            }
-          }, freeSlots),
-          React.createElement('div', {
-            style: {
-              fontSize: '12px',
-              color: freeSlots > 0 ? '#16a34a' : '#d97706',
-              fontWeight: 500,
-              marginTop: '4px'
-            }
-          }, 'СВОБОДНО')
-        ),
-
-        // Заявки (pending)
-        React.createElement('div', {
-          style: {
-            padding: '16px',
-            background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
-            borderRadius: '12px',
-            textAlign: 'center'
-          }
-        },
-          React.createElement('div', {
-            style: { fontSize: '28px', fontWeight: 700, color: '#b45309' }
-          }, grouped.pending.length),
-          React.createElement('div', {
-            style: { fontSize: '12px', color: '#d97706', fontWeight: 500, marginTop: '4px' }
-          }, 'ЗАЯВКИ')
-        ),
-
-        // Отклонённые
-        React.createElement('div', {
-          style: {
-            padding: '16px',
-            background: 'linear-gradient(135deg, #fee2e2, #fecaca)',
-            borderRadius: '12px',
-            textAlign: 'center'
-          }
-        },
-          React.createElement('div', {
-            style: { fontSize: '28px', fontWeight: 700, color: '#dc2626' }
-          }, grouped.rejected.length),
-          React.createElement('div', {
-            style: { fontSize: '12px', color: '#ef4444', fontWeight: 500, marginTop: '4px' }
-          }, 'ОТКЛОНЕНО')
+          leadStatusOptions.map(opt => React.createElement('option', { key: opt.value, value: opt.value }, opt.label))
         )
       ),
-
-      // ========== REFRESH BUTTON ==========
+      React.createElement('div', {
+        style: {
+          flex: 1,
+          overflowY: 'auto',
+          padding: '16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10
+        }
+      },
+        loading && React.createElement('div', {
+          style: { textAlign: 'center', padding: '40px', color: '#9ca3af' }
+        }, '⏳ Загрузка...'),
+        !loading && error && React.createElement('div', {
+          style: { padding: '12px 16px', background: '#fee2e2', color: '#b91c1c', borderRadius: 10, fontSize: 13 }
+        }, '❌ ' + error),
+        !loading && !error && activeTab === 'leads' && (leads.length ? leads.map(item => React.createElement(LeadRow, { key: item.id, item })) : React.createElement('div', {
+          style: { textAlign: 'center', padding: '40px', color: '#9ca3af' }
+        }, 'Нет новых лидов')),
+        !loading && !error && activeTab === 'pending' && (grouped.pending.length ? grouped.pending.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item, allowActions: true })) : React.createElement('div', {
+          style: { textAlign: 'center', padding: '40px', color: '#9ca3af' }
+        }, 'Нет заявок')),
+        !loading && !error && activeTab === 'active' && (grouped.assigned.length ? grouped.assigned.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item })) : React.createElement('div', {
+          style: { textAlign: 'center', padding: '40px', color: '#9ca3af' }
+        }, 'Нет активных триалов')),
+        !loading && !error && activeTab === 'rejected' && (grouped.rejected.length ? grouped.rejected.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item })) : React.createElement('div', {
+          style: { textAlign: 'center', padding: '40px', color: '#9ca3af' }
+        }, 'Нет отклонённых заявок'))
+      ),
       React.createElement('div', {
         style: {
           display: 'flex',
           justifyContent: 'flex-end',
-          marginBottom: '16px'
+          padding: '10px 16px',
+          background: '#fff',
+          borderTop: '1px solid #e5e7eb'
         }
       },
         React.createElement('button', {
           onClick: loadData,
           disabled: loading,
           style: {
-            padding: '8px 16px',
-            borderRadius: '8px',
-            border: '1px solid #d1d5db',
-            background: 'var(--card, #fff)',
+            padding: '6px 12px',
+            borderRadius: 8,
+            border: '1px solid #e5e7eb',
+            background: '#fff',
             cursor: loading ? 'not-allowed' : 'pointer',
-            fontSize: '13px',
-            fontWeight: 500,
-            color: 'var(--text, #374151)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
+            fontSize: 12,
+            fontWeight: 600
           }
-        }, loading ? '⏳ Загрузка...' : '🔄 Обновить')
-      ),
-
-      // ========== ERROR ==========
-      error && React.createElement('div', {
-        style: {
-          padding: '16px',
-          background: '#fee2e2',
-          color: '#dc2626',
-          borderRadius: '12px',
-          marginBottom: '16px',
-          fontWeight: 500
-        }
-      }, '❌ ' + error),
-
-      // ========== LOADING ==========
-      loading && React.createElement('div', {
-        style: {
-          padding: '48px',
-          textAlign: 'center',
-          color: '#6b7280'
-        }
-      },
-        React.createElement('div', {
-          style: { fontSize: '32px', marginBottom: '8px' }
-        }, '⏳'),
-        'Загрузка данных...'
-      ),
-
-      // ========== CONTENT ==========
-      !loading && React.createElement(React.Fragment, null,
-        // Секция: Лиды с лендинга (v3.0)
-        Section({
-          title: 'Лиды с сайта',
-          icon: '🌐',
-          count: leads.length,
-          color: '#8b5cf6',
-          emptyText: 'Нет новых заявок с лендинга',
-          children: leads.map((lead, idx) =>
-            React.createElement('div', {
-              key: lead.id || idx,
-              style: {
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px 14px',
-                background: 'var(--card, #fff)',
-                borderRadius: '10px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
-              }
-            },
-              // Иконка
-              React.createElement('div', {
-                style: {
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: '#f3e8ff',
-                  color: '#7c3aed',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '16px',
-                  flexShrink: 0
-                }
-              }, '🌐'),
-              // Инфо
-              React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-                React.createElement('div', {
-                  style: {
-                    fontWeight: 600,
-                    fontSize: '14px',
-                    color: 'var(--text, #1f2937)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }
-                }, lead.name || 'Без имени'),
-                React.createElement('div', {
-                  style: { fontSize: '12px', color: '#6b7280', marginTop: '2px' }
-                }, lead.phone + (lead.messenger ? ' · ' + lead.messenger : '')),
-                lead.utm_source && React.createElement('div', {
-                  style: { fontSize: '11px', color: '#9ca3af', marginTop: '2px' }
-                }, 'UTM: ' + lead.utm_source)
-              ),
-              // Дата
-              React.createElement('div', {
-                style: { fontSize: '11px', color: '#9ca3af', textAlign: 'right', flexShrink: 0 }
-              }, formatDate(lead.created_at)),
-              // Кнопка "Создать клиента"
-              React.createElement('button', {
-                onClick: () => handleConvertLead(lead),
-                disabled: actionLoading === 'lead-' + lead.id,
-                style: {
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                  color: '#fff',
-                  cursor: actionLoading === 'lead-' + lead.id ? 'not-allowed' : 'pointer',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  opacity: actionLoading === 'lead-' + lead.id ? 0.7 : 1,
-                  whiteSpace: 'nowrap'
-                }
-              }, actionLoading === 'lead-' + lead.id ? '⏳' : '👤 Создать клиента')
-            )
-          )
-        }),
-
-        // Секция: Активные триалы
-        Section({
-          title: 'Активные триалы',
-          icon: '🎯',
-          count: grouped.assigned.length,
-          color: '#3b82f6',
-          emptyText: 'Нет активных триалов',
-          children: grouped.assigned.map((item, idx) =>
-            React.createElement(ClientCard, {
-              key: item.client_id || item.queue_id || idx,
-              item,
-              showPosition: false,
-              showActions: false,
-              showOfferTimer: false
-            })
-          )
-        }),
-
-        // Секция: Заявки на рассмотрении (v2.0)
-        Section({
-          title: 'Заявки на рассмотрении',
-          icon: '📋',
-          count: grouped.pending.length,
-          color: '#f59e0b',
-          emptyText: 'Нет новых заявок',
-          children: grouped.pending.map((item, idx) =>
-            React.createElement(ClientCard, {
-              key: item.client_id || item.queue_id || idx,
-              item,
-              showPosition: false,
-              showActions: true,
-              showOfferTimer: false
-            })
-          )
-        }),
-
-        // Секция: Отклонённые
-        grouped.rejected.length > 0 && Section({
-          title: 'Отклонённые заявки',
-          icon: '❌',
-          count: grouped.rejected.length,
-          color: '#ef4444',
-          emptyText: '',
-          children: grouped.rejected.map((item, idx) =>
-            React.createElement(ClientCard, {
-              key: item.client_id || item.queue_id || idx,
-              item,
-              showPosition: false,
-              showActions: false,
-              showOfferTimer: false
-            })
-          )
-        })
+        }, loading ? '⏳' : '🔄 Обновить')
       ),
 
       // ========== ДИАЛОГ: Активация триала (v3.0 — с выбором даты) ==========
