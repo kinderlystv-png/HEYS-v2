@@ -170,21 +170,36 @@
 
                     // Level up flash
                     const prevLevel = prevLevelRef.current;
+                    const hasXpGained = typeof e?.detail?.xpGained === 'number' && e.detail.xpGained > 0;
+                    const reason = typeof e?.detail?.reason === 'string' ? e.detail.reason : '';
+                    const hasReason = reason.length > 0;
+                    // 🔒 v4.0: isInitialLoad — полностью подавляем модалки при загрузке/синке/смене клиента
+                    const isInitialLoad = !!e?.detail?.isInitialLoad;
+                    const isSyncUpdate = isInitialLoad || (!hasXpGained && (!hasReason || reason === 'client_changed' || reason === 'xp_rebuild'));
+
                     if (newStats.level > prevLevel) {
-                        setIsLevelUpFlash(true);
-                        setTimeout(() => setIsLevelUpFlash(false), 1000);
+                        if (!isSyncUpdate) {
+                            console.info('[🎮 GamificationBar] 🎉 LEVEL UP modal! level:', prevLevel, '→', newStats.level,
+                                '| xpGained:', e?.detail?.xpGained, '| reason:', reason, '| isInitialLoad:', isInitialLoad,
+                                '| isSyncUpdate:', isSyncUpdate);
+                            setIsLevelUpFlash(true);
+                            setTimeout(() => setIsLevelUpFlash(false), 1000);
 
-                        setLevelUpModal({
-                            level: newStats.level,
-                            title: newStats.title?.title || 'Новый уровень',
-                            icon: newStats.title?.icon || '🎉',
-                            color: newStats.title?.color || '#22c55e'
-                        });
+                            setLevelUpModal({
+                                level: newStats.level,
+                                title: newStats.title?.title || 'Новый уровень',
+                                icon: newStats.title?.icon || '🎉',
+                                color: newStats.title?.color || '#22c55e'
+                            });
 
-                        if (levelUpTimerRef.current) clearTimeout(levelUpTimerRef.current);
-                        levelUpTimerRef.current = setTimeout(() => {
-                            setLevelUpModal(null);
-                        }, 2600);
+                            if (levelUpTimerRef.current) clearTimeout(levelUpTimerRef.current);
+                            levelUpTimerRef.current = setTimeout(() => {
+                                setLevelUpModal(null);
+                            }, 2600);
+                        } else {
+                            console.info('[🎮 GamificationBar] 🔒 Level up SUPPRESSED:', prevLevel, '→', newStats.level,
+                                '| reason:', reason, '| isInitialLoad:', isInitialLoad, '| isSyncUpdate:', isSyncUpdate);
+                        }
 
                         prevLevelRef.current = newStats.level;
                     }
@@ -287,6 +302,31 @@
                 window.removeEventListener('heysDailyMultiplierUpdate', handleDailyMultiplierUpdate);
                 window.removeEventListener('heysGameUpdate', handleWeeklyUpdate);
             };
+        }, []);
+
+        // 🔄 v3.1: Полный сброс UI при смене клиента куратором
+        useEffect(() => {
+            const handleClientChanged = () => {
+                // Немедленно обнуляем все данные до дефолтов, пока грузятся новые
+                const freshStats = HEYS.game ? HEYS.game.getStats() : {
+                    totalXP: 0, level: 1,
+                    title: { icon: '🌱', title: 'Новичок', color: '#94a3b8' },
+                    progress: { current: 0, required: 100, percent: 0 },
+                    unlockedCount: 0, totalAchievements: 25
+                };
+                setStats(freshStats);
+                setStreak(safeGetStreak());
+                setXpHistory(HEYS.game?.getXPHistory ? HEYS.game.getXPHistory() : []);
+                setWeeklyChallenge(HEYS.game ? HEYS.game.getWeeklyChallenge() : { earned: 0, target: 500, percent: 0, completed: false });
+                setDailyMultiplier(HEYS.game ? HEYS.game.getDailyMultiplier() : { multiplier: 1, actions: 0, label: '' });
+                setDailyBonusAvailable(HEYS.game ? HEYS.game.canClaimDailyBonus() : false);
+                setDailyMissions(HEYS.game?.getDailyMissions ? HEYS.game.getDailyMissions() : null);
+                prevLevelRef.current = freshStats.level;
+                prevStreakRef.current = safeGetStreak();
+            };
+
+            window.addEventListener('heys:client-changed', handleClientChanged);
+            return () => window.removeEventListener('heys:client-changed', handleClientChanged);
         }, []);
 
         useEffect(() => {

@@ -1016,9 +1016,8 @@
       }
 
       try {
-        const res = await api.rpc('admin_get_trial_queue_list', {
-          p_curator_session_token: curatorSession
-        });
+        // p_curator_session_token removed — JWT auth via Authorization header
+        const res = await api.rpc('admin_get_trial_queue_list', {});
 
         if (res.error) {
           return { success: false, error: res.error.code, message: res.error.message };
@@ -1057,8 +1056,8 @@
         const res = await api.rpc('admin_add_to_queue', {
           p_client_id: clientId,
           p_source: source,
-          p_priority: priority,
-          p_curator_session_token: curatorSession
+          p_priority: priority
+          // p_curator_id injected by cloud function from JWT
         });
 
         if (res.error) {
@@ -1173,8 +1172,8 @@
       try {
         const res = await api.rpc('admin_reject_request', {
           p_client_id: clientId,
-          p_reason: reason,
-          p_curator_session_token: curatorSession
+          p_reason: reason
+          // p_curator_id injected by cloud function from JWT
         });
 
         if (res.error) {

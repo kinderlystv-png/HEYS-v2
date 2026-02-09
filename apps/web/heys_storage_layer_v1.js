@@ -173,7 +173,8 @@
     const cid = ns();
     if (!cid) return k;
     // 🎮 Global keys — НЕ добавляем clientId (для совместимости с cloud sync)
-    if (/^heys_(clients|client_current|game|sound_settings)$/i.test(k)) return k;
+    // heys_game теперь client-scoped (иначе XP смешивается между клиентами)
+    if (/^heys_(clients|client_current|sound_settings)$/i.test(k)) return k;
 
     // 🐛 FIX: Если ключ уже содержит clientId — не добавляем повторно!
     if (cid && k.includes(cid)) {
@@ -212,14 +213,35 @@
       }
       let v = rawGet(sk, undefined);
       if (v === undefined || v === null) {
-        // try legacy unscoped key
+        // try legacy unscoped key (with safeguards for heys_game)
         try {
-          const legacy = rawGet(k, undefined);
-          if (legacy !== undefined && legacy !== null) {
-            // migrate to scoped key for future reads/writes
-            memory.set(sk, legacy);
-            rawSet(sk, legacy);
-            return legacy;
+          let allowLegacy = true;
+          const cid = ns();
+          if (cid && k === 'heys_game') {
+            allowLegacy = false;
+            // Разрешаем legacy только если нет других client-scoped game ключей
+            const clientPrefix = `heys_${cid}_`;
+            let hasOtherGame = false;
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && key.endsWith('_game') && key.startsWith('heys_') && !key.startsWith(clientPrefix)) {
+                hasOtherGame = true;
+                break;
+              }
+            }
+            if (!hasOtherGame) {
+              allowLegacy = true;
+            }
+          }
+
+          if (allowLegacy) {
+            const legacy = rawGet(k, undefined);
+            if (legacy !== undefined && legacy !== null) {
+              // migrate to scoped key for future reads/writes
+              memory.set(sk, legacy);
+              rawSet(sk, legacy);
+              return legacy;
+            }
           }
         } catch (e) { }
         // Fallback: if products are stored under another clientId scope

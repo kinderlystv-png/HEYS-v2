@@ -4093,18 +4093,26 @@
                 // 🔍 Ищем game данные во всех вариантах ключа
                 if (localTotalXP === 0) {
                   try {
+                    const clientPrefix = client_id ? `heys_${client_id}_` : null;
+
                     // 1. Прямой ключ heys_game (legacy без clientId)
-                    const legacyGame = tryParse(ls.getItem('heys_game'));
-                    if (legacyGame?.totalXP > localTotalXP) {
-                      localTotalXP = legacyGame.totalXP;
-                      bestLocalGame = legacyGame;
-                      logCritical(`🎮 [GAME] Found legacy heys_game with XP: ${localTotalXP}`);
+                    // ⚠️ Используем ТОЛЬКО если client_id неизвестен — иначе риск чужих данных
+                    if (!clientPrefix) {
+                      const legacyGame = tryParse(ls.getItem('heys_game'));
+                      if (legacyGame?.totalXP > localTotalXP) {
+                        localTotalXP = legacyGame.totalXP;
+                        bestLocalGame = legacyGame;
+                        logCritical(`🎮 [GAME] Found legacy heys_game with XP: ${localTotalXP}`);
+                      }
                     }
 
-                    // 2. Поиск по всем ключам с pattern *_game
+                    // 2. Поиск по ключам *_game только в рамках текущего клиента
                     for (let i = 0; i < ls.length; i++) {
                       const k = ls.key(i);
-                      if (k && k.endsWith('_game') && !k.includes('_gamification')) {
+                      if (!k) continue;
+                      if (clientPrefix && !k.startsWith(clientPrefix)) continue;
+                      if (!clientPrefix && k === 'heys_game') continue;
+                      if (k.endsWith('_game') && !k.includes('_gamification')) {
                         const gameData = tryParse(ls.getItem(k));
                         if (gameData?.totalXP > localTotalXP) {
                           localTotalXP = gameData.totalXP;

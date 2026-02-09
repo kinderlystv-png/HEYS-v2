@@ -430,12 +430,14 @@
             }));
 
             // ✅ Проверяем streak-достижения при каждом обновлении streak
-            if (HEYS.game?.checkStreakAchievements) {
+            // 🔒 v4.0: Не выдаём ачивки во время loading phase
+            if (HEYS.game?.checkStreakAchievements && !HEYS.game?.isLoadingPhase) {
                 HEYS.game.checkStreakAchievements(currentStreak);
             }
 
             // Confetti при streak 3, 5, 7
-            if ([3, 5, 7].includes(currentStreak) && HEYS.game && HEYS.game.celebrate) {
+            // 🔒 v4.0: Не показываем конфетти при загрузке
+            if ([3, 5, 7].includes(currentStreak) && HEYS.game && HEYS.game.celebrate && !HEYS.game?.isLoadingPhase) {
                 HEYS.game.celebrate();
             }
 

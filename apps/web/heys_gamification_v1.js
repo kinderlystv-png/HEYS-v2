@@ -194,6 +194,9 @@
   let _unlockingAchievements = new Set(); // 🔒 Mutex для unlockAchievement — Set ID достижений в процессе разблокировки
   let _lastAddXPKey = ''; // 🛡️ Dedup guard для _addXPInternal
   let _lastAddXPTime = 0; // 🛡️ Timestamp последнего addXP
+  let _suppressUIUpdates = false; // 🔒 v3.1: Подавляем промежуточные UI-обновления во время rebuild chain
+  let _isLoadingPhase = false; // 🔒 v4.0: Подавляет ВСЕ UI-уведомления во время загрузки/переключения клиента
+  let _loadFromCloudPromise = null; // 🔒 v4.0: Dedup для параллельных вызовов loadFromCloud()
   const DEDUP_WINDOW_MS = 200; // 🛡️ Окно дедупликации (мс)
   const DEBOUNCE_MS = 100;
   const STORAGE_KEY = 'heys_game';
@@ -354,36 +357,52 @@
       let bestData = stored;
 
       try {
+        const currentClientId = HEYS.utils?.getCurrentClientId?.() ||
+          localStorage.getItem('heys_client_current') ||
+          localStorage.getItem('heys_pin_auth_client');
+        const normalizedClientId = currentClientId ? String(currentClientId).replace(/"/g, '') : null;
+        const clientPrefix = normalizedClientId ? `heys_${normalizedClientId}_` : null;
+
         // 1. Прямой ключ heys_game (legacy без clientId)
-        const legacyRaw = localStorage.getItem('heys_game');
-        if (legacyRaw) {
-          const legacy = JSON.parse(legacyRaw);
-          if (legacy?.totalXP > bestXP) {
-            bestXP = legacy.totalXP;
-            bestData = legacy;
-            console.log('[🎮 Gamification] Found legacy heys_game with XP:', bestXP);
+        // ⚠️ Используем только если clientId неизвестен (иначе можем захватить чужой XP)
+        if (!normalizedClientId) {
+          const legacyRaw = localStorage.getItem('heys_game');
+          if (legacyRaw) {
+            const legacy = JSON.parse(legacyRaw);
+            if (legacy?.totalXP > bestXP) {
+              bestXP = legacy.totalXP;
+              bestData = legacy;
+              console.log('[🎮 Gamification] Found legacy heys_game with XP:', bestXP);
+            }
           }
         }
 
-        // 2. Поиск по всем ключам *_game (разные clientId)
+        // 2. Поиск по ключам *_game (только для текущего клиента)
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
-          if (k && k.endsWith('_game') && !k.includes('_gamification') && !k.includes('sound')) {
-            try {
-              const raw = localStorage.getItem(k);
-              if (raw) {
-                // Проверяем сжатие
-                const parsed = raw.startsWith('¤Z¤')
-                  ? (HEYS.store?.decompress ? HEYS.store.decompress(raw) : JSON.parse(raw.substring(3)))
-                  : JSON.parse(raw);
-                if (parsed?.totalXP > bestXP) {
-                  bestXP = parsed.totalXP;
-                  bestData = parsed;
-                  console.log(`[🎮 Gamification] Found better data in ${k}: XP=${bestXP}, level=${parsed.level}`);
-                }
-              }
-            } catch (e) { }
+          if (!k) continue;
+          if (normalizedClientId) {
+            if (!k.startsWith(clientPrefix)) continue;
+            if (!k.endsWith('_game') && !k.endsWith('_gamification')) continue;
+          } else {
+            if (!k.endsWith('_game')) continue;
+            if (k.includes('_gamification')) continue;
           }
+          if (k.includes('sound')) continue;
+          try {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+              // Проверяем сжатие
+              const parsed = raw.startsWith('¤Z¤')
+                ? (HEYS.store?.decompress ? HEYS.store.decompress(raw) : JSON.parse(raw.substring(3)))
+                : JSON.parse(raw);
+              if (parsed?.totalXP > bestXP) {
+                bestXP = parsed.totalXP;
+                bestData = parsed;
+                console.log(`[🎮 Gamification] Found better data in ${k}: XP=${bestXP}, level=${parsed.level}`);
+              }
+            }
+          } catch (e) { }
         }
       } catch (e) {
         console.warn('[🎮 Gamification] Fallback search error:', e);
@@ -648,6 +667,15 @@
     merged.earlyBirdDays = mergeUniqueArray(local.earlyBirdDays, cloud.earlyBirdDays);
     merged.streakShieldUsed = mergeDateStrings(local.streakShieldUsed, cloud.streakShieldUsed);
     merged.stats = mergeStats(local.stats, cloud.stats);
+
+    // 🔄 v3.1: Merge _dailyXPTotals (actual XP sums per day from audit)
+    const localTotals = local._dailyXPTotals || {};
+    const cloudTotals = cloud._dailyXPTotals || {};
+    const mergedTotals = { ...cloudTotals };
+    for (const day of Object.keys(localTotals)) {
+      mergedTotals[day] = Math.max(mergedTotals[day] || 0, localTotals[day] || 0);
+    }
+    merged._dailyXPTotals = mergedTotals;
     merged.createdAt = Math.min(local.createdAt || Date.now(), cloud.createdAt || Date.now());
     merged.updatedAt = Math.max(local.updatedAt || 0, cloud.updatedAt || 0) || Date.now();
     merged.version = DATA_VERSION;
@@ -1117,6 +1145,8 @@
       const seenReasons = new Set();
       // 2e. Восстанавливаем dailyXP из аудит-событий для графика "XP за неделю"
       const auditDailyXP = {};
+      // 2f. v3.1: Также храним реальные суммы XP по дням для точного графика
+      const auditDailyXPTotals = {};
 
       for (const event of allEvents) {
         const eventDelta = event.xp_delta || event.xpDelta || 0;
@@ -1142,6 +1172,8 @@
             const dateStr = new Date(eventDate).toISOString().slice(0, 10);
             if (!auditDailyXP[dateStr]) auditDailyXP[dateStr] = {};
             auditDailyXP[dateStr][reason] = (auditDailyXP[dateStr][reason] || 0) + 1;
+            // 2f. v3.1: Суммируем реальный XP по дням (включая daily_bonus, daily_mission и т.д.)
+            auditDailyXPTotals[dateStr] = (auditDailyXPTotals[dateStr] || 0) + eventDelta;
           }
         }
 
@@ -1152,6 +1184,12 @@
             auditAchievements.add(reason);
             if (typeof eventDelta === 'number' && eventDelta > 0) {
               auditXP += eventDelta;
+              // 2f. v3.1: Achievement XP тоже считаем в дневной итог
+              const achEventDate = event.created_at || event.createdAt;
+              if (achEventDate) {
+                const achDateStr = new Date(achEventDate).toISOString().slice(0, 10);
+                auditDailyXPTotals[achDateStr] = (auditDailyXPTotals[achDateStr] || 0) + eventDelta;
+              }
             }
           }
         }
@@ -1249,6 +1287,12 @@
         }
       }
 
+      // 5a-1b. v3.1: Сохраняем реальные суммы XP по дням (для точного графика)
+      if (!currentData._dailyXPTotals) currentData._dailyXPTotals = {};
+      for (const [dateStr, total] of Object.entries(auditDailyXPTotals)) {
+        currentData._dailyXPTotals[dateStr] = Math.max(currentData._dailyXPTotals[dateStr] || 0, total);
+      }
+
       // 5a-2. FIX v2.6: Восстанавливаем bestStreak из streak-ачивок
       // streak_7 → min 7, streak_5 → min 5, streak_3 → min 3, streak_2 → min 2, streak_1 → min 1
       const allAchievements = new Set([...currentData.unlockedAchievements, ...auditAchievements, ...missingAchievements]);
@@ -1323,20 +1367,23 @@
       // 7. Синхронизируем в облако
       triggerImmediateSync('xp_rebuild');
 
-      // 8. Обновляем UI
-      window.dispatchEvent(new CustomEvent('heysGameUpdate', {
-        detail: {
-          xpGained: rebuiltXP - cachedXP,
-          reason: 'xp_rebuild',
-          totalXP: rebuiltXP,
-          level: currentData.level,
-          progress: game.getProgress(),
-          restoredAchievements
-        }
-      }));
+      // 8. Обновляем UI (если не подавлены промежуточные обновления)
+      if (!_suppressUIUpdates) {
+        window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+          detail: {
+            xpGained: rebuiltXP - cachedXP,
+            reason: 'xp_rebuild',
+            totalXP: rebuiltXP,
+            level: currentData.level,
+            progress: game.getProgress(),
+            restoredAchievements,
+            isInitialLoad: _isLoadingPhase // 🔒 v4.0: React не покажет модалки если мы в loading phase
+          }
+        }));
+      }
 
-      // Уведомление о восстановлении
-      if (rebuiltXP > cachedXP || restoredAchievements.length > 0) {
+      // 🔒 v4.0: Rebuild — это восстановление, не геймплей. Уведомление только вне loading phase
+      if (!_isLoadingPhase && (rebuiltXP > cachedXP || restoredAchievements.length > 0)) {
         showNotification('xp_rebuilt', {
           oldXP: cachedXP,
           newXP: rebuiltXP,
@@ -1501,7 +1548,9 @@
         triggerImmediateSync('pending_sync');
       }
 
-      window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: game.getStats() }));
+      window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+        detail: { ...game.getStats(), isInitialLoad: _isLoadingPhase }
+      }));
     });
   }
 
@@ -2951,10 +3000,24 @@
   function handleRankTransition(oldLevel, newLevel) {
     if (newLevel <= oldLevel) return;
 
+    // 🔒 v4.0: Полная блокировка UI во время загрузки/rebuild
+    if (_isLoadingPhase || _isRebuilding || _suppressUIUpdates) return;
+
     const fromTitle = getLevelTitle(oldLevel);
     const toTitle = getLevelTitle(newLevel);
 
     if (fromTitle.title === toTitle.title) return;
+
+    // 🛡️ Не показываем повторно один и тот же ранг при входе/синке
+    const lastShown = readStoredValue('heys_rank_ceremony_last', null);
+    if (lastShown && lastShown.title === toTitle.title && (lastShown.level || 0) >= newLevel) {
+      return;
+    }
+    setStoredValue('heys_rank_ceremony_last', {
+      title: toTitle.title,
+      level: newLevel,
+      ts: Date.now()
+    });
 
     playRankCeremonySound();
     showRankCeremony({ fromTitle, toTitle });
@@ -2970,15 +3033,36 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().slice(0, 10);
-      const dayXP = data.dailyXP[dateStr] || {};
 
-      // Сумма XP за день
+      // v3.1: Приоритет — реальные суммы XP из аудита (_dailyXPTotals)
+      // Fallback — подсчёт через XP_ACTIONS (для реал-тайм данных сегодня)
       let totalDayXP = 0;
-      for (const reason of Object.keys(dayXP)) {
-        const action = XP_ACTIONS[reason];
-        if (action) {
-          totalDayXP += dayXP[reason] * action.xp;
+
+      if (data._dailyXPTotals && data._dailyXPTotals[dateStr]) {
+        totalDayXP = data._dailyXPTotals[dateStr];
+      } else {
+        // Fallback: старый метод через XP_ACTIONS (работает для текущего дня)
+        const dayXP = data.dailyXP[dateStr] || {};
+        for (const reason of Object.keys(dayXP)) {
+          const action = XP_ACTIONS[reason];
+          if (action) {
+            totalDayXP += dayXP[reason] * action.xp;
+          }
         }
+      }
+
+      // v3.1: Для сегодня — берём max из обоих источников
+      // (реал-тайм действия могут быть новее чем последний rebuild)
+      if (dateStr === today.toISOString().slice(0, 10) && data.dailyXP[dateStr]) {
+        let realtimeXP = 0;
+        const dayXP = data.dailyXP[dateStr];
+        for (const reason of Object.keys(dayXP)) {
+          const action = XP_ACTIONS[reason];
+          if (action) {
+            realtimeXP += dayXP[reason] * action.xp;
+          }
+        }
+        totalDayXP = Math.max(totalDayXP, realtimeXP);
       }
 
       history.push({
@@ -3098,6 +3182,8 @@
   // ========== УВЕДОМЛЕНИЯ ==========
 
   function showNotification(type, data) {
+    // 🔒 v4.0: Не показываем уведомления во время загрузки данных
+    if (_isLoadingPhase) return;
     _notificationQueue.push({ type, data });
     processNotificationQueue();
   }
@@ -3124,6 +3210,7 @@
   // ========== CONFETTI ==========
 
   function celebrate(payload = null) {
+    if (_isLoadingPhase) return;
     window.dispatchEvent(new CustomEvent('heysCelebrate', {
       detail: payload || undefined
     }));
@@ -3263,8 +3350,8 @@
   }
 
   function checkAchievements(reason) {
-    // 🛡️ FIX: Не проверяем ачивки пока идёт rebuild — предотвращает дубли стриков
-    if (_isRebuilding) return [];
+    // 🛡️ FIX: Не проверяем ачивки пока идёт rebuild/загрузка — предотвращает дубли
+    if (_isRebuilding || _isLoadingPhase) return [];
 
     const data = loadData();
     const newAchievements = [];
@@ -3522,8 +3609,8 @@
   }
 
   function checkStreakAchievements(streakValue, options = {}) {
-    // 🛡️ FIX: Не выдаём ачивки пока идёт rebuild — _data может быть пустым
-    if (_isRebuilding) return [];
+    // 🛡️ FIX: Не выдаём ачивки пока идёт rebuild/загрузка
+    if (_isRebuilding || _isLoadingPhase) return [];
 
     const data = loadData();
     const streak = typeof streakValue === 'number' ? streakValue : safeGetStreak();
@@ -3587,8 +3674,9 @@
   }
 
   function unlockAchievement(achievementId) {
-    // 🛡️ FIX: Не выдаём ачивки пока идёт rebuild — данные могут быть неполными
-    if (_isRebuilding) return;
+    // 🛡️ FIX: Не выдаём ачивки пока идёт rebuild или загрузка — данные могут быть неполными
+    // 🔒 v4.0: Во время loading phase rebuild сам восстанавливает ачивки из аудита
+    if (_isRebuilding || _isLoadingPhase) return;
 
     // 🔒 FIX v2.7: Mutex — предотвращаем параллельную разблокировку одного достижения
     if (_unlockingAchievements.has(achievementId)) {
@@ -3742,6 +3830,11 @@
         totalAchievements: Object.keys(ACHIEVEMENTS).length,
         stats: data.stats
       };
+    },
+
+    /** Фаза загрузки — все UI-нотификации подавлены */
+    get isLoadingPhase() {
+      return _isLoadingPhase;
     },
 
     /**
@@ -4322,6 +4415,20 @@
      * 🔧 FIX v2.5: Правильные p_ параметры + unwrap ответа + error checking
      */
     async loadFromCloud() {
+      // 🔒 v4.0: Promise dedup — предотвращаем параллельные вызовы
+      if (_loadFromCloudPromise) {
+        console.info('[🎮 Gamification] loadFromCloud: reusing existing promise');
+        return _loadFromCloudPromise;
+      }
+      _loadFromCloudPromise = this._loadFromCloudImpl();
+      try {
+        return await _loadFromCloudPromise;
+      } finally {
+        _loadFromCloudPromise = null;
+      }
+    },
+
+    async _loadFromCloudImpl() {
       try {
         // 🔧 FIX v2.6: Для кураторов cloud sync через storage sync layer
         if (this._isCuratorMode()) {
@@ -4336,8 +4443,19 @@
           }
           // Перечитываем данные из localStorage (storage sync мог обновить)
           _data = null; // сбросим кеш
-          window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: game.getStats() }));
-          ensureAuditConsistency('curator-load');
+          // v3.1: Подавляем промежуточные UI-обновления — финальный dispatch будет после rebuild
+          _suppressUIUpdates = true;
+          try {
+            await ensureAuditConsistency('curator-load');
+          } finally {
+            _suppressUIUpdates = false;
+          }
+          // Теперь диспатчим финальное обновление UI с полными данными
+          // 🔒 v4.0: Помечаем как initial load — React не покажет модалки
+          const stats = game.getStats();
+          window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+            detail: { ...stats, isInitialLoad: true }
+          }));
           return true;
         }
 
@@ -4408,7 +4526,9 @@
           setStoredValue(STORAGE_KEY, _data);
           _cloudLoaded = true;
 
-          window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: game.getStats() }));
+          window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+            detail: { ...game.getStats(), isInitialLoad: _isLoadingPhase }
+          }));
 
           // � v3.0: Единственная точка проверки — lightweight consistency check
           // Заменяет двойной rebuild (setTimeout + ensureAuditConsistency)
@@ -4913,7 +5033,9 @@
   // ========== INTERNAL ==========
 
   function _addXPInternal(amount, reason, sourceEl, extraData) {
-    // 🛡️ Dedup guard: предотвращаем двойное начисление из разных источников (DOM event + прямой вызов)
+    // � v4.0: Не начисляем XP во время загрузки — rebuild начисляет напрямую
+    if (_isLoadingPhase) return;
+    // �🛡️ Dedup guard: предотвращаем двойное начисление из разных источников (DOM event + прямой вызов)
     const now = Date.now();
     const dedupKey = reason + '_' + (extraData?.dedupId || '');
     if (dedupKey === _lastAddXPKey && (now - _lastAddXPTime) < DEDUP_WINDOW_MS) {
@@ -4987,6 +5109,10 @@
     data.level = calculateLevel(data.totalXP);
     const afterXP = data.totalXP;
     const afterAchievements = data.unlockedAchievements.length;
+
+    // 🔄 v3.1: Обновляем _dailyXPTotals для realtime графика
+    if (!data._dailyXPTotals) data._dailyXPTotals = {};
+    data._dailyXPTotals[today] = (data._dailyXPTotals[today] || 0) + xpToAdd;
 
     // Обновляем stats
     if (reason === 'product_added') data.stats.totalProducts++;
@@ -5211,12 +5337,16 @@
         }
 
         // Уведомляем UI об обновлении (GamificationBar перечитает stats)
-        window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: newStats }));
+        window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+          detail: { ...newStats, isInitialLoad: _isLoadingPhase }
+        }));
       }).catch(() => {
         // При ошибке всё равно обновляем UI с локальными данными
         const newStats = game.getStats();
         if (!oldStats || newStats.totalXP !== oldXP || newStats.level !== oldLevel) {
-          window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: newStats }));
+          window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+            detail: { ...newStats, isInitialLoad: _isLoadingPhase }
+          }));
         }
       });
       return;
@@ -5225,7 +5355,52 @@
     // Fallback если loadFromCloud недоступен
     const newStats = game.getStats();
     if (!oldStats || newStats.totalXP !== oldXP || newStats.level !== oldLevel) {
-      window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: newStats }));
+      window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+        detail: { ...newStats, isInitialLoad: _isLoadingPhase }
+      }));
+    }
+  });
+
+  // ========== CLIENT SWITCH (Bug fix v3.1 → v4.0) ==========
+  // Куратор переключает клиента — полностью сбрасываем кеш и перезагружаем данные
+  window.addEventListener('heys:client-changed', (e) => {
+    const newClientId = e?.detail?.clientId || 'unknown';
+    console.info('[🎮 Gamification] 🔄 Client changed →', newClientId);
+
+    // 🔒 v4.0: Блокируем ВСЕ UI-уведомления на время загрузки нового клиента
+    _isLoadingPhase = true;
+
+    // 1. Полный сброс in-memory кеша
+    _data = null;
+    _cloudLoaded = false;
+    _auditRebuildDone = false;
+    _initialSyncDone = false;
+    _pendingCloudSync = false;
+    _suppressUIUpdates = false;
+
+    // 2. Загружаем данные нового клиента из localStorage (будут свежие через storage layer)
+    const freshData = loadData();
+
+    // 3. Немедленно диспатчим UI-обновление с данными (isInitialLoad → React не покажет модалки)
+    const newStats = game.getStats();
+    window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+      detail: { ...newStats, reason: 'client_changed', isInitialLoad: true }
+    }));
+
+    // 4. Запускаем облачную загрузку (полный цикл rebuild)
+    if (HEYS.game?.loadFromCloud) {
+      HEYS.game.loadFromCloud().then(loaded => {
+        if (loaded) {
+          console.info('[🎮 Gamification] ✅ Cloud data loaded for new client:', newClientId);
+        }
+      }).catch(err => {
+        console.warn('[🎮 Gamification] ⚠️ Cloud load error after client switch:', err?.message || err);
+      }).finally(() => {
+        _isLoadingPhase = false;
+        console.info('[🎮 Gamification] 🔓 Loading phase ended for client:', newClientId);
+      });
+    } else {
+      _isLoadingPhase = false;
     }
   });
 
@@ -5237,6 +5412,8 @@
   // Запускается один раз при загрузке страницы (с задержкой для инициализации)
   setTimeout(() => {
     if (HEYS.game && typeof HEYS.game.recalculateAchievements === 'function') {
+      // 🔒 v4.0: Блокируем ВСЕ UI-уведомления на время начальной загрузки
+      _isLoadingPhase = true;
       bindCloudWatch();
       HEYS.game.recalculateAchievements().then(missed => {
         if (missed && missed.length > 0) {
@@ -5261,7 +5438,7 @@
             console.log('[🎮 Gamification] Cloud data loaded successfully');
           } else {
             console.log('[🎮 Gamification] No cloud data or already up to date');
-            _cloudLoaded = true; // Помечаем как загружено даже если нет данных
+            _cloudLoaded = true;
             if (_pendingCloudSync) {
               _pendingCloudSync = false;
               triggerImmediateSync('pending_sync');
@@ -5269,19 +5446,24 @@
           }
         }).catch(e => {
           console.warn('[🎮 Gamification] Cloud load error:', e.message);
-          _cloudLoaded = true; // Помечаем как загружено даже при ошибке
+          _cloudLoaded = true;
           if (_pendingCloudSync) {
             _pendingCloudSync = false;
             triggerImmediateSync('pending_sync');
           }
+        }).finally(() => {
+          _isLoadingPhase = false;
+          console.info('[🎮 Gamification] 🔓 Initial loading phase ended');
         });
       } else {
         console.log('[🎮 Gamification] No session, skipping cloud load');
-        _cloudLoaded = true; // Нет сессии — считаем загруженным
+        _cloudLoaded = true;
         if (_pendingCloudSync) {
           _pendingCloudSync = false;
           triggerImmediateSync('pending_sync');
         }
+        _isLoadingPhase = false;
+        console.info('[🎮 Gamification] 🔓 Initial loading phase ended (no auth)');
       }
     }
   }, 2000); // Уменьшил до 2 сек чтобы успеть до первого sync

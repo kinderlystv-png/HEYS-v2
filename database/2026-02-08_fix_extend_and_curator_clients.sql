@@ -129,6 +129,7 @@ COMMENT ON FUNCTION public.admin_extend_subscription IS 'Продление по
 --    DROP обязателен — return type изменился (добавлен active_until)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
+DROP FUNCTION IF EXISTS public.get_curator_clients(TEXT);  -- Remove old TEXT overload (references non-existent c.created_at)
 DROP FUNCTION IF EXISTS public.get_curator_clients(UUID);
 
 CREATE OR REPLACE FUNCTION public.get_curator_clients(p_curator_id UUID)

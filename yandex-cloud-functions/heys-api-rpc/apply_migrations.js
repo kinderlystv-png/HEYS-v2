@@ -33,6 +33,7 @@ const MIGRATIONS = [
     '2026-02-09_trial_machine_v3.sql',          // 🆕 Trial Machine v3.0
     '2026-02-08_fix_extend_and_curator_clients.sql',
     '2026-02-09_admin_functions_jwt_only.sql',  // 🔐 JWT-only авторизация для admin_* функций (v4.0)
+    '2026-02-09_fix_get_client_data_by_session.sql', // 🐛 Fix: remove non-existent clients.created_at
 ];
 
 async function main() {

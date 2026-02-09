@@ -41,7 +41,6 @@ BEGIN
     'subscription_status', c.subscription_status,
     'subscription_plan', c.subscription_plan,
     'trial_ends_at', c.trial_ends_at,
-    'created_at', c.created_at,
     'updated_at', c.updated_at
   )
   INTO v_data

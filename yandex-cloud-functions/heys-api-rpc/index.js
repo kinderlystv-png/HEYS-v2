@@ -439,6 +439,8 @@ module.exports.handler = async function (event, context) {
   // 🔐 Для curator-only функций добавляем curator_id из JWT
   if (isCuratorFunction && curatorId) {
     params.p_curator_id = curatorId;
+    // Remove old session token param — DB functions now use p_curator_id only
+    delete params.p_curator_session_token;
     debugLog('[RPC Handler] Added p_curator_id for curator function');
   }
 
@@ -651,7 +653,7 @@ module.exports.handler = async function (event, context) {
       },
       // === TRIAL QUEUE ADMIN ===
       'admin_get_trial_queue_list': {
-        'p_curator_session_token': '::text',
+        'p_curator_id': '::uuid',
         'p_status_filter': '::text',
         'p_search': '::text',
         'p_limit': '::int',
@@ -661,47 +663,79 @@ module.exports.handler = async function (event, context) {
         'p_client_id': '::uuid',
         'p_source': '::text',
         'p_priority': '::int',
-        'p_curator_session_token': '::text'
+        'p_curator_id': '::uuid'
       },
       'admin_remove_from_queue': {
         'p_client_id': '::uuid',
         'p_reason': '::text',
-        'p_curator_session_token': '::text'
+        'p_curator_id': '::uuid'
       },
       'admin_send_offer': {
         'p_client_id': '::uuid',
         'p_offer_window_minutes': '::int',
-        'p_curator_session_token': '::text'
+        'p_curator_id': '::uuid'
       },
       // 🆕 v3.0: Manual trial activation with start date
       'admin_activate_trial': {
         'p_client_id': '::uuid',
         'p_start_date': '::date',
         'p_trial_days': '::int',
-        'p_curator_session_token': '::text'
+        'p_curator_id': '::uuid'
       },
       'admin_reject_request': {
         'p_client_id': '::uuid',
         'p_rejection_reason': '::text',
-        'p_curator_session_token': '::text'
+        'p_curator_id': '::uuid'
       },
       'admin_get_queue_stats': {
-        'p_curator_session_token': '::text'
+        'p_curator_id': '::uuid'
       },
       'admin_update_queue_settings': {
         'p_is_accepting': '::boolean',
         'p_max_active': '::int',
         'p_offer_window_minutes': '::int',
         'p_trial_days': '::int',
-        'p_curator_session_token': '::text'
+        'p_curator_id': '::uuid'
       },
       // 🆕 v3.0: Leads management
       'admin_get_leads': {
-        'p_status': '::text'
+        'p_status': '::text',
+        'p_curator_id': '::uuid'
       },
       'admin_convert_lead': {
         'p_lead_id': '::uuid',
         'p_pin': '::text',
+        'p_curator_id': '::uuid'
+      },
+      // 🔐 JWT-only: functions that need p_curator_id type hint
+      'admin_get_all_clients': {
+        'p_curator_id': '::uuid'
+      },
+      'admin_extend_trial': {
+        'p_client_id': '::uuid',
+        'p_days': '::int',
+        'p_curator_id': '::uuid'
+      },
+      'admin_extend_subscription': {
+        'p_curator_id': '::uuid',
+        'p_client_id': '::uuid',
+        'p_months': '::int'
+      },
+      'admin_cancel_subscription': {
+        'p_curator_id': '::uuid',
+        'p_client_id': '::uuid'
+      },
+      'create_client_with_pin': {
+        'p_name': '::text',
+        'p_phone': '::text',
+        'p_pin_salt': '::text',
+        'p_pin_hash': '::text',
+        'p_curator_id': '::uuid'
+      },
+      'reset_client_pin': {
+        'p_client_id': '::uuid',
+        'p_pin_salt': '::text',
+        'p_pin_hash': '::text',
         'p_curator_id': '::uuid'
       }
     };
