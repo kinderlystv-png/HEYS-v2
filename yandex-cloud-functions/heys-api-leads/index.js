@@ -120,7 +120,7 @@ module.exports.handler = async function (event, context) {
   try {
     // Парсим тело запроса
     const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-    
+
     const {
       name,
       phone,
@@ -139,9 +139,9 @@ module.exports.handler = async function (event, context) {
       return {
         statusCode: 400,
         headers: corsHeaders,
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           success: false,
-          error: 'Missing required fields: name, phone, messenger' 
+          error: 'Missing required fields: name, phone, messenger'
         })
       };
     }
@@ -151,25 +151,8 @@ module.exports.handler = async function (event, context) {
     const client = await pool.connect();
 
     try {
-      // Создаём таблицу если нет
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS leads (
-          id SERIAL PRIMARY KEY,
-          name VARCHAR(255) NOT NULL,
-          phone VARCHAR(20) NOT NULL,
-          messenger VARCHAR(20) NOT NULL,
-          utm_source VARCHAR(255),
-          utm_medium VARCHAR(255),
-          utm_campaign VARCHAR(255),
-          utm_term VARCHAR(255),
-          utm_content VARCHAR(255),
-          referrer TEXT,
-          landing_page VARCHAR(255),
-          status VARCHAR(20) DEFAULT 'new',
-          created_at TIMESTAMPTZ DEFAULT NOW(),
-          updated_at TIMESTAMPTZ DEFAULT NOW()
-        )
-      `);
+      // Таблица leads создаётся миграциями (database/yandex_migration/001_schema.sql)
+      // с правильным типом id UUID DEFAULT gen_random_uuid()
 
       // Вставляем лид
       const result = await client.query(`
@@ -195,7 +178,7 @@ module.exports.handler = async function (event, context) {
       return {
         statusCode: 200,
         headers: corsHeaders,
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           success: true,
           id: leadId
         })
@@ -207,11 +190,11 @@ module.exports.handler = async function (event, context) {
 
   } catch (error) {
     console.error('[Leads Error]', error.message);
-    
+
     return {
       statusCode: 500,
       headers: corsHeaders,
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         success: false,
         error: 'Failed to save lead',
         message: error.message

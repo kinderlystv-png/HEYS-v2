@@ -1352,12 +1352,17 @@
    * @param {string} clientId - ID клиента
    * @returns {Promise<{data: object, error: any}>}
    */
-  async function checkSubscriptionStatus(clientId) {
+  async function checkSubscriptionStatus(sessionToken = null) {
     try {
-      log(`checkSubscriptionStatus: clientId=${clientId}`);
+      const token = sessionToken || HEYS.auth?.getSessionToken?.();
+      if (!token) {
+        return { data: null, error: { message: 'No session token' } };
+      }
 
-      const result = await rpc('check_subscription_status', {
-        p_client_id: clientId
+      log(`checkSubscriptionStatus: using session-based RPC`);
+
+      const result = await rpc('get_subscription_status_by_session', {
+        p_session_token: token
       });
 
       return result;

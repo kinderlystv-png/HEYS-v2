@@ -215,12 +215,20 @@
    */
   async function getStatus(clientId) {
     try {
-      // Используем YandexAPI
+      // Используем YandexAPI (session-based)
       if (HEYS.YandexAPI) {
-        const result = await HEYS.YandexAPI.checkSubscriptionStatus(clientId);
+        const sessionToken = HEYS.auth?.getSessionToken?.();
+        if (!sessionToken) {
+          throw new Error('No session token available');
+        }
+
+        const result = await HEYS.YandexAPI.rpc('get_subscription_status_by_session', {
+          p_session_token: sessionToken
+        });
+
         if (result.error) throw new Error(result.error.message || result.error);
-        // Распаковываем данные: { data: { check_subscription_status: {...} } }
-        const statusData = result.data?.check_subscription_status || result.data || result;
+        // Распаковываем данные: { data: { get_subscription_status_by_session: {...} } }
+        const statusData = result.data?.get_subscription_status_by_session || result.data || result;
         devLog('[Subscriptions] getStatus result:', statusData);
         return statusData;
       }

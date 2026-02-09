@@ -34,6 +34,7 @@ const MIGRATIONS = [
     '2026-02-08_fix_extend_and_curator_clients.sql',
     '2026-02-09_admin_functions_jwt_only.sql',  // 🔐 JWT-only авторизация для admin_* функций (v4.0)
     '2026-02-09_fix_get_client_data_by_session.sql', // 🐛 Fix: remove non-existent clients.created_at
+    '2026-02-10_trial_chain_fixes.sql',         // 🔧 Trial chain fixes: JWT params, phone normalization, session management
 ];
 
 async function main() {
