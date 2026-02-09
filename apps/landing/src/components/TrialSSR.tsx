@@ -1,6 +1,7 @@
 // TrialSSR.tsx — Server Component версия секции Trial
 // Рендерится на сервере для SEO
 
+import TrialForm from '@/components/TrialForm'
 import type { LandingVariant, VariantContent } from '@/config/landing-variants'
 
 interface TrialSSRProps {
@@ -54,52 +55,8 @@ export default function TrialSSR({ content, variant: _variant }: TrialSSRProps) 
               </div>
             </div>
 
-            {/* Правая часть - simplified form placeholder */}
-            <div className="bg-white rounded-3xl p-8 shadow-2xl">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">Заявка на участие</h3>
-
-              {/* Статическая форма для SSR */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Ваше имя</label>
-                  <input
-                    type="text"
-                    placeholder="Имя"
-                    className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50"
-                    disabled
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Телефон</label>
-                  <input
-                    type="tel"
-                    placeholder="+7 (___) ___-__-__"
-                    className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50"
-                    disabled
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  className="w-full py-4 bg-blue-600 text-white font-semibold rounded-xl"
-                  disabled
-                >
-                  {trial.ctaAvailable}
-                </button>
-
-                <p className="text-xs text-gray-500 text-center mt-4">
-                  Нажимая кнопку, вы соглашаетесь с{' '}
-                  <a href="/legal/user-agreement" className="text-blue-600 hover:underline">
-                    условиями
-                  </a>{' '}
-                  и{' '}
-                  <a href="/legal/privacy-policy" className="text-blue-600 hover:underline">
-                    политикой
-                  </a>
-                </p>
-              </div>
-            </div>
+            {/* Правая часть - интерактивная форма */}
+            <TrialForm ctaLabel={trial.ctaAvailable} />
           </div>
         </div>
       </div>

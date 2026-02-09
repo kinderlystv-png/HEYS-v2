@@ -47,7 +47,7 @@ function loadCACert() {
     path.join(__dirname, 'certs', 'root.crt'),
     path.join(process.cwd(), 'certs', 'root.crt')
   ];
-  
+
   for (const certPath of possiblePaths) {
     if (fs.existsSync(certPath)) {
       try {
@@ -57,7 +57,7 @@ function loadCACert() {
       }
     }
   }
-  
+
   if (process.env.NODE_ENV === 'development') {
     console.warn('[DB-Pool] CA cert not found, SSL verification disabled (development mode)');
   } else {
@@ -74,14 +74,14 @@ function loadCACert() {
  */
 function createPoolConfig() {
   const CA_CERT = loadCACert();
-  
+
   return {
     host: process.env.PG_HOST || 'rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net',
     port: parseInt(process.env.PG_PORT || '6432'),
     database: process.env.PG_DATABASE || 'heys_production',
     user: process.env.PG_USER || 'heys_admin',
     password: process.env.PG_PASSWORD,
-    
+
     // SSL configuration
     ssl: CA_CERT ? {
       rejectUnauthorized: true,
@@ -91,19 +91,19 @@ function createPoolConfig() {
     } : {
       rejectUnauthorized: true  // Production: fail if no cert (secure by default)
     }),
-    
+
     // Connection pool settings
     max: 3,                      // Максимум 3 соединения (лимит для serverless)
     idleTimeoutMillis: 3000,     // 3 секунды — закрываем ДО того как PgBouncer убьёт
     connectionTimeoutMillis: 5000, // 5 секунд таймаут на подключение
-    
+
     // TCP keepalive — обнаружение мёртвых PgBouncer-соединений
     keepAlive: true,
     keepAliveInitialDelayMillis: 10000, // Первый probe через 10с
-    
+
     // Query settings
     query_timeout: 10000,        // 10 секунд таймаут на запрос
-    
+
     // Error handling
     allowExitOnIdle: true        // Позволяет процессу завершиться если все соединения idle
   };
@@ -122,67 +122,67 @@ function getPool(functionName = null) {
     if (!poolsByFunction.has(functionName)) {
       const config = createPoolConfig();
       const funcPool = new Pool(config);
-      
+
       // Tag pool с именем функции для метрик
       funcPool._functionName = functionName;
-      
+
       const IS_DEBUG = process.env.LOG_LEVEL === 'debug';
-      
+
       if (IS_DEBUG) {
         funcPool.on('connect', (client) => {
           console.log(`[DB-Pool:${functionName}] New client connected`);
         });
-        
+
         funcPool.on('acquire', (client) => {
           console.log(`[DB-Pool:${functionName}] Client acquired from pool`);
         });
-        
+
         funcPool.on('remove', (client) => {
           console.log(`[DB-Pool:${functionName}] Client removed from pool`);
         });
       }
-      
+
       funcPool.on('error', (err, client) => {
         console.error(`[DB-Pool:${functionName}] Unexpected error on idle client:`, err.message);
       });
-      
+
       console.log(`[DB-Pool:${functionName}] Pool initialized with max:`, config.max);
       poolsByFunction.set(functionName, funcPool);
     }
-    
+
     return poolsByFunction.get(functionName);
   }
-  
+
   // Иначе используем общий pool
   if (!pool) {
     const config = createPoolConfig();
     pool = new Pool(config);
-    
+
     // Event handlers для мониторинга (только в debug режиме)
     const IS_DEBUG = process.env.LOG_LEVEL === 'debug';
-    
+
     if (IS_DEBUG) {
       pool.on('connect', (client) => {
         console.log('[DB-Pool] New client connected');
       });
-      
+
       pool.on('acquire', (client) => {
         console.log('[DB-Pool] Client acquired from pool');
       });
-      
+
       pool.on('remove', (client) => {
         console.log('[DB-Pool] Client removed from pool');
       });
     }
-    
+
     // Error handler всегда активен (критичные ошибки)
     pool.on('error', (err, client) => {
       console.error('[DB-Pool] Unexpected error on idle client:', err.message);
     });
-    
+
     console.log('[DB-Pool] Pool initialized with max:', config.max);
   }
-  
+
   return pool;
 }
 
@@ -198,13 +198,13 @@ function getPool(functionName = null) {
 async function withClient(callback, maxRetries = 2) {
   const pool = getPool();
   let lastError = null;
-  
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     let client = null;
-    
+
     try {
       client = await pool.connect();
-      
+
       // Проверяем живость соединения простым запросом
       // Это необходимо для serverless где соединение может устареть
       if (attempt > 0) {
@@ -217,18 +217,18 @@ async function withClient(callback, maxRetries = 2) {
           continue;
         }
       }
-      
+
       return await callback(client);
     } catch (err) {
       lastError = err;
-      
+
       // Если это ошибка соединения, пробуем ещё раз
-      const isConnectionError = 
+      const isConnectionError =
         err.message?.includes('Connection terminated') ||
         err.message?.includes('connection') ||
         err.code === 'ECONNRESET' ||
         err.code === 'EPIPE';
-        
+
       if (isConnectionError && attempt < maxRetries) {
         console.warn(`[DB-Pool] Connection error (attempt ${attempt + 1}/${maxRetries + 1}):`, err.message);
         if (client) {
@@ -239,7 +239,7 @@ async function withClient(callback, maxRetries = 2) {
         await new Promise(resolve => setTimeout(resolve, 100));
         continue;
       }
-      
+
       throw err;
     } finally {
       if (client) {
@@ -247,7 +247,7 @@ async function withClient(callback, maxRetries = 2) {
       }
     }
   }
-  
+
   throw lastError || new Error('Unknown error in withClient');
 }
 
@@ -262,7 +262,7 @@ async function closePool() {
     pool = null;
     console.log('[DB-Pool] Pool closed');
   }
-  
+
   // Закрываем все per-function pools
   for (const [funcName, funcPool] of poolsByFunction.entries()) {
     console.log(`[DB-Pool:${funcName}] Closing pool...`);
@@ -278,7 +278,7 @@ async function closePool() {
  */
 function getAllPools() {
   const pools = [];
-  
+
   if (pool) {
     pools.push({
       name: 'shared',
@@ -290,7 +290,7 @@ function getAllPools() {
       }
     });
   }
-  
+
   for (const [funcName, funcPool] of poolsByFunction.entries()) {
     pools.push({
       name: funcName,
@@ -302,7 +302,7 @@ function getAllPools() {
       }
     });
   }
-  
+
   return pools;
 }
 
