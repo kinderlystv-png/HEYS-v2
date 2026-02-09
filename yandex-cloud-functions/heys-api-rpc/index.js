@@ -532,12 +532,14 @@ module.exports.handler = async function (event, context) {
       }
 
       // 2) Собираем KV с защитой от дублей
+      // COALESCE: если decrypt_health_data вернёт NULL (неверный ключ / corrupt data)
+      // → фолбечим на plain-text колонку v (данные могут быть в обоих колонках)
       const dataRes = await client.query(
         `select jsonb_object_agg(
             k,
             case
               when key_version is not null and v_encrypted is not null
-                then decrypt_health_data(v_encrypted)
+                then coalesce(decrypt_health_data(v_encrypted), v)
               else v
             end
           ) as payload
@@ -825,7 +827,7 @@ module.exports.handler = async function (event, context) {
 
     // Освобождаем клиент в pool даже при ошибке
     // 🛟 release(true) при connection errors — уничтожает мёртвое соединение
-    const isConnectionError = 
+    const isConnectionError =
       error.message?.includes('Connection terminated') ||
       error.message?.includes('connection') ||
       error.code === 'ECONNRESET' ||
