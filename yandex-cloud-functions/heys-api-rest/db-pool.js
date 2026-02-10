@@ -27,9 +27,10 @@
  *   });
  */
 
-const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
+
+const { Pool } = require('pg');
 
 // Singleton pool instance
 let pool = null;

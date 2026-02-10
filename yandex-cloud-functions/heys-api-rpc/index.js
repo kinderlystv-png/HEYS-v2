@@ -4,10 +4,11 @@
  * v2.5.3 — verify stable deployment (2026-02-10)
  */
 
-const { getPool } = require('./shared/db-pool');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
+
+const { getPool } = require('./shared/db-pool');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔐 P0 SECURITY: Conditional logging (never log env in production)
@@ -645,6 +646,12 @@ module.exports.handler = async function (event, context) {
       'publish_shared_product_by_curator': {
         'p_curator_id': '::uuid',
         'p_product_data': '::jsonb'
+      },
+      // 🔐 Получение shared products
+      'get_shared_products': {
+        'p_search': '::text',
+        'p_limit': '::int',
+        'p_offset': '::int'
       },
       // 🔐 Обновление порций продукта
       'update_shared_product_portions': {
