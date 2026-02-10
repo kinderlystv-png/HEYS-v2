@@ -16,6 +16,9 @@ applyTo: '**/*'
 4. **Tailwind first** — inline styles forbidden, custom CSS only in
    `styles/heys-components.css`
 5. **`pnpm build`** only before commit — HMR is sufficient for dev
+6. **PRODUCTION-ONLY API** — NEVER suggest switching to localhost:4001 or local
+   API. Always fix/redeploy production `api.heyslab.ru` cloud functions. This is
+   a live production app, not a local development setup.
 
 ---
 
@@ -208,6 +211,26 @@ localStorage.setItem('heys_products', …);  // ❌ Breaks namespacing
 RPC always uses `*_by_session` pattern — never pass `client_id` directly.
 Migrations: `yandex-cloud-functions/heys-api-rpc/apply_migrations.js`
 
+### Cloud Functions Deployment
+
+When API returns 502 or auth fails, redeploy production cloud functions:
+
+```bash
+cd yandex-cloud-functions
+./deploy-all.sh                    # Deploy all 6 functions
+./deploy-all.sh heys-api-auth      # Deploy single function
+./health-check.sh                  # Verify all endpoints after deploy
+```
+
+Secrets managed in `yandex-cloud-functions/.env` (PG_PASSWORD, JWT_SECRET, etc).
+Never edit env vars through YC Console — always use centralized `deploy-all.sh`
+script for consistency.
+
+**Health monitoring**: `./health-check.sh` checks all endpoints,
+`./validate-env.sh` validates secrets before deploy. GitHub Actions monitors API
+every 15 minutes. See
+[MONITORING_QUICK_REF.md](../yandex-cloud-functions/MONITORING_QUICK_REF.md).
+
 ---
 
 ## Security
@@ -221,8 +244,6 @@ Migrations: `yandex-cloud-functions/heys-api-rpc/apply_migrations.js`
 - **Encrypted localStorage**: `heys_profile`, `heys_dayv2_*`, `heys_hr_zones`
   (AES-256); `heys_products`/`heys_norms` plaintext
 - **CORS whitelist**: `app.heyslab.ru`, `heyslab.ru` only
-- **Cloud function env vars**: edit ONLY through YC Console (CLI leaks
-  PG_PASSWORD to stdout)
 - **152-ФЗ compliance**: all data in Yandex Cloud (Russian data sovereignty)
 
 ---
