@@ -14,6 +14,7 @@ NC='\033[0m' # No Color
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ENV_FILE="$SCRIPT_DIR/.env"
+VALIDATE_SCRIPT="$SCRIPT_DIR/validate-env.sh"
 
 # Check if .env exists
 if [ ! -f "$ENV_FILE" ]; then
@@ -23,11 +24,21 @@ if [ ! -f "$ENV_FILE" ]; then
     exit 1
 fi
 
+# Run validation script if available
+if [ -f "$VALIDATE_SCRIPT" ]; then
+    echo -e "${BLUE}🔍 Running .env validation...${NC}"
+    if ! "$VALIDATE_SCRIPT"; then
+        echo -e "${RED}❌ .env validation failed! Fix errors before deploying.${NC}"
+        exit 1
+    fi
+    echo ""
+fi
+
 # Load environment variables from .env
 echo -e "${BLUE}📥 Loading secrets from .env...${NC}"
 source "$ENV_FILE"
 
-# Validate required variables
+# Validate required variables (fallback if validate-env.sh not found)
 required_vars=("PG_HOST" "PG_PORT" "PG_DATABASE" "PG_USER" "PG_PASSWORD")
 for var in "${required_vars[@]}"; do
     if [ -z "${!var}" ]; then

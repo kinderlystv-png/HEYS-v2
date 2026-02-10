@@ -1,0 +1,163 @@
+name: API Health Monitor
+
+# Регулярный мониторинг состояния production API
+# При падении критических endpoints отправляет алерт в Telegram
+
+on:
+  schedule:
+    # Каждые 5 минут в рабочее время (MSK: 09:00-23:00)
+    - cron: "*/5 6-20 * * *" # UTC: 06:00-20:00 = MSK 09:00-23:00
+  workflow_dispatch: # Ручной запуск для тестирования
+  push:
+    branches: [main]
+    paths:
+      - "yandex-cloud-functions/**"
+      - ".github/workflows/api-health-monitor.yml"
+
+env:
+  API_BASE_URL: https://api.heyslab.ru
+
+jobs:
+  health-check:
+    name: Check API Health
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Test Health Endpoint
+        id: health
+        run: |
+          echo "🏥 Testing /health endpoint..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 10 "${{ env.API_BASE_URL }}/health")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+
+          echo "http_code=$HTTP_CODE" >> $GITHUB_OUTPUT
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Health check failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          # Проверка статуса БД
+          DB_STATUS=$(echo "$BODY" | jq -r '.checks.database.status // "unknown"')
+          if [ "$DB_STATUS" != "ok" ]; then
+            echo "::warning::Database status: $DB_STATUS"
+          fi
+
+          echo "✅ Health check passed"
+
+      - name: Test RPC Endpoint
+        id: rpc
+        run: |
+          echo "🔌 Testing RPC endpoint (get_shared_products)..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 15 \
+            -X POST "${{ env.API_BASE_URL }}/rpc?fn=get_shared_products" \
+            -H "Content-Type: application/json" \
+            -H "Origin: https://app.heyslab.ru" \
+            -d '{"p_limit": 1}')
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+
+          echo "http_code=$HTTP_CODE" >> $GITHUB_OUTPUT
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::RPC endpoint failed with HTTP $HTTP_CODE"
+            echo "Response: $BODY"
+            exit 1
+          fi
+
+          # Проверка структуры ответа
+          ITEM_COUNT=$(echo "$BODY" | jq 'length // 0')
+          if [ "$ITEM_COUNT" -lt 1 ]; then
+            echo "::error::RPC returned empty array"
+            exit 1
+          fi
+
+          echo "✅ RPC endpoint passed ($ITEM_COUNT products)"
+
+      - name: Test REST Endpoint
+        id: rest
+        run: |
+          echo "📊 Testing REST endpoint (shared_products)..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 15 \
+            "${{ env.API_BASE_URL }}/rest/shared_products?limit=1" \
+            -H "Origin: https://app.heyslab.ru")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+
+          echo "http_code=$HTTP_CODE" >> $GITHUB_OUTPUT
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::REST endpoint failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          echo "✅ REST endpoint passed"
+
+      - name: Test Auth Endpoint
+        id: auth
+        run: |
+          echo "🔐 Testing Auth endpoint..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 10 \
+            -X POST "${{ env.API_BASE_URL }}/auth/login" \
+            -H "Content-Type: application/json" \
+            -H "Origin: https://app.heyslab.ru" \
+            -d '{"email":"test@test.com","password":"wrong"}')
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+
+          echo "http_code=$HTTP_CODE" >> $GITHUB_OUTPUT
+
+          # Auth должен вернуть 401 или 400 с JSON (не 502!)
+          if [ "$HTTP_CODE" = "502" ] || [ "$HTTP_CODE" = "503" ]; then
+            echo "::error::Auth endpoint down (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+          # Проверка, что вернулся JSON с ошибкой
+          if ! echo "$BODY" | jq -e '.message or .error' > /dev/null 2>&1; then
+            echo "::error::Auth returned invalid JSON"
+            exit 1
+          fi
+
+          echo "✅ Auth endpoint passed"
+
+      # Алерт в Telegram при падении (только для schedule/push, не для manual)
+      - name: Send Telegram Alert on Failure
+        if: failure() && (github.event_name == 'schedule' || github.event_name == 'push')
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          MESSAGE="🚨 *HEYS API Health Check Failed*%0A%0A"
+          MESSAGE="${MESSAGE}❌ One or more endpoints down%0A"
+          MESSAGE="${MESSAGE}🕐 Time: $(date -u +'%Y-%m-%d %H:%M:%S UTC')%0A"
+          MESSAGE="${MESSAGE}🔗 [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})%0A%0A"
+          MESSAGE="${MESSAGE}*Health*: ${{ steps.health.outputs.http_code || 'N/A' }}%0A"
+          MESSAGE="${MESSAGE}*RPC*: ${{ steps.rpc.outputs.http_code || 'N/A' }}%0A"
+          MESSAGE="${MESSAGE}*REST*: ${{ steps.rest.outputs.http_code || 'N/A' }}%0A"
+          MESSAGE="${MESSAGE}*Auth*: ${{ steps.auth.outputs.http_code || 'N/A' }}%0A%0A"
+          MESSAGE="${MESSAGE}📝 Action: Run \`./deploy-all.sh\` to redeploy"
+
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=Markdown" \
+            -d "disable_web_page_preview=true"
+
+      # Успешный результат — silent (не спамим в Telegram каждые 5 минут)
+      - name: Summary
+        if: success()
+        run: |
+          echo "✅ All API endpoints healthy"
+          echo "  - Health: ${{ steps.health.outputs.http_code }}"
+          echo "  - RPC: ${{ steps.rpc.outputs.http_code }}"
+          echo "  - REST: ${{ steps.rest.outputs.http_code }}"
+          echo "  - Auth: ${{ steps.auth.outputs.http_code }}"

@@ -1,0 +1,153 @@
+# Автоматический деплой cloud functions при изменениях в yandex-cloud-functions/
+# Это предотвращает ситуацию "изменили код, но забыли задеплоить"
+
+name: Auto-deploy Cloud Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "yandex-cloud-functions/heys-api-*/**"
+      - "yandex-cloud-functions/shared/**"
+      - "yandex-cloud-functions/deploy-all.sh"
+  workflow_dispatch:
+    inputs:
+      function_name:
+        description: "Function to deploy (leave empty for all)"
+        required: false
+        type: choice
+        options:
+          - "all"
+          - "heys-api-rpc"
+          - "heys-api-rest"
+          - "heys-api-auth"
+          - "heys-api-leads"
+          - "heys-api-sms"
+          - "heys-api-health"
+
+jobs:
+  deploy:
+    name: Deploy Cloud Functions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Yandex Cloud CLI
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+          echo "$HOME/yandex-cloud/bin" >> $GITHUB_PATH
+
+      - name: Configure Yandex Cloud
+        env:
+          YC_SERVICE_ACCOUNT_KEY: ${{ secrets.YC_SERVICE_ACCOUNT_KEY }}
+          YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
+        run: |
+          echo "$YC_SERVICE_ACCOUNT_KEY" > key.json
+          yc config profile create ci-profile
+          yc config set service-account-key key.json
+          yc config set folder-id $YC_FOLDER_ID
+          rm key.json
+
+      - name: Create .env file
+        working-directory: yandex-cloud-functions
+        env:
+          PG_HOST: ${{ secrets.PG_HOST }}
+          PG_PORT: ${{ secrets.PG_PORT }}
+          PG_DATABASE: ${{ secrets.PG_DATABASE }}
+          PG_USER: ${{ secrets.PG_USER }}
+          PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
+          PG_SSL: ${{ secrets.PG_SSL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SMS_API_KEY: ${{ secrets.SMS_API_KEY }}
+        run: |
+          cat > .env << EOF
+          PG_HOST=$PG_HOST
+          PG_PORT=$PG_PORT
+          PG_DATABASE=$PG_DATABASE
+          PG_USER=$PG_USER
+          PG_PASSWORD=$PG_PASSWORD
+          PG_SSL=$PG_SSL
+          JWT_SECRET=$JWT_SECRET
+          SESSION_SECRET=$SESSION_SECRET
+          TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
+          TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID
+          SMS_API_KEY=$SMS_API_KEY
+          YC_FOLDER_ID=${{ secrets.YC_FOLDER_ID }}
+          EOF
+
+      - name: Deploy functions
+        working-directory: yandex-cloud-functions
+        run: |
+          chmod +x deploy-all.sh
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.function_name }}" != "all" ]; then
+            echo "🎯 Deploying single function: ${{ inputs.function_name }}"
+            ./deploy-all.sh ${{ inputs.function_name }}
+          else
+            echo "🚀 Deploying all functions"
+            ./deploy-all.sh
+          fi
+
+      - name: Verify deployment
+        run: |
+          echo "⏳ Waiting 10s for functions to warm up..."
+          sleep 10
+
+          echo "🧪 Testing deployed functions..."
+
+          # Test RPC
+          RPC_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "https://api.heyslab.ru/rpc?fn=get_shared_products" \
+            -H "Content-Type: application/json" \
+            -H "Origin: https://app.heyslab.ru" \
+            -d '{}')
+
+          if [ "$RPC_STATUS" != "200" ]; then
+            echo "::error::RPC endpoint failed (HTTP $RPC_STATUS)"
+            exit 1
+          fi
+
+          echo "✅ Deployment verified successfully"
+
+      - name: Notify Telegram on Success
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s" | head -c 100)
+          MESSAGE="✅ *Cloud Functions Deployed*%0A%0A"
+          MESSAGE="${MESSAGE}📦 Commit: \`${COMMIT_MSG}\`%0A"
+          MESSAGE="${MESSAGE}👤 Author: ${{ github.actor }}%0A"
+          MESSAGE="${MESSAGE}🕐 Time: $(date -u +'%H:%M UTC')%0A"
+          MESSAGE="${MESSAGE}🔗 [View Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=Markdown" \
+            -d "disable_web_page_preview=true"
+
+      - name: Notify Telegram on Failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          MESSAGE="🚨 *Cloud Functions Deployment Failed*%0A%0A"
+          MESSAGE="${MESSAGE}❌ Auto-deployment failed%0A"
+          MESSAGE="${MESSAGE}👤 Author: ${{ github.actor }}%0A"
+          MESSAGE="${MESSAGE}🔗 [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})%0A%0A"
+          MESSAGE="${MESSAGE}📝 Action: Check logs and deploy manually"
+
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=Markdown" \
+            -d "disable_web_page_preview=true"
