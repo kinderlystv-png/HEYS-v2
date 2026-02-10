@@ -2744,6 +2744,27 @@
           const fatRatio = macroRingsMeta.fatRatio ?? ((dayTot.fat || 0) / (normAbs.fat || 1));
           const carbsRatio = macroRingsMeta.carbsRatio ?? ((dayTot.carbs || 0) / (normAbs.carbs || 1));
 
+          const ringStartOffsetPct = 9;
+          const ringCapCompPct = 5;
+          const getRingDot = (ratio) => {
+            const pctRaw = Math.max(0, Math.min(100, Math.round((Number.isFinite(ratio) ? ratio : 0) * 100)) - ringCapCompPct);
+            const dotPct = Math.max(0, pctRaw - 3); // слегка смещаем точку назад, чтобы оставался стартовый интервал
+            if (dotPct <= 0) return null;
+            const angle = ((dotPct + ringStartOffsetPct) / 100) * Math.PI * 2;
+            return {
+              x: 18 + 15.5 * Math.cos(angle),
+              y: 18 + 15.5 * Math.sin(angle)
+            };
+          };
+
+          const getDotColor = (ratio) => (ratio > 1 ? '#ef4444' : '#22c55e');
+          const protDot = getRingDot(protRatio);
+          const fatDot = getRingDot(fatRatio);
+          const carbsDot = getRingDot(carbsRatio);
+          const protDotColor = getDotColor(protRatio);
+          const fatDotColor = getDotColor(fatRatio);
+          const carbsDotColor = getDotColor(carbsRatio);
+
           const protColor = macroRingsMeta.protColor || '#6b7280';
           const fatColor = macroRingsMeta.fatColor || '#6b7280';
           const carbsColor = macroRingsMeta.carbsColor || '#6b7280';
@@ -2813,6 +2834,15 @@
                 style: macroRingsMeta.styles?.ringButton
               },
                 React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
+                  React.createElement('defs', null,
+                    React.createElement('linearGradient', {
+                      id: 'macro-ring-gradient-protein',
+                      x1: '0%', y1: '0%', x2: '100%', y2: '100%'
+                    },
+                      React.createElement('stop', { offset: '0%', stopColor: '#fecaca' }),
+                      React.createElement('stop', { offset: '100%', stopColor: '#ef4444' })
+                    )
+                  ),
                   React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5, pathLength: 100 }),
                   React.createElement('circle', {
                     className: 'macro-ring-fill',
@@ -2825,7 +2855,19 @@
                     className: 'macro-ring-fill--over',
                     cx: 18, cy: 18, r: 15.5,
                     pathLength: 100,
-                    style: { strokeDasharray: protOverData.overPct + ' ' + (100 - protOverData.overPct), strokeDashoffset: -(100 - protOverData.overPct), stroke: '#22c55e' }
+                    style: {
+                      strokeDasharray: protOverData.overPct + ' ' + (100 - protOverData.overPct),
+                      '--over-dasharray': protOverData.overPct + ' ' + (100 - protOverData.overPct),
+                      '--over-offset': -(100 - protOverData.overPct),
+                      stroke: '#22c55e'
+                    }
+                  }),
+                  protDot && React.createElement('circle', {
+                    className: 'macro-ring-dot',
+                    cx: protDot.x,
+                    cy: protDot.y,
+                    r: 2.2,
+                    style: { '--macro-ring-dot': protDotColor }
                   }),
                   // Маркер убран по просьбе
                 ),
@@ -2845,6 +2887,15 @@
                 style: macroRingsMeta.styles?.ringButton
               },
                 React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
+                  React.createElement('defs', null,
+                    React.createElement('linearGradient', {
+                      id: 'macro-ring-gradient-fat',
+                      x1: '0%', y1: '0%', x2: '100%', y2: '100%'
+                    },
+                      React.createElement('stop', { offset: '0%', stopColor: '#fde68a' }),
+                      React.createElement('stop', { offset: '100%', stopColor: '#f59e0b' })
+                    )
+                  ),
                   React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5, pathLength: 100 }),
                   React.createElement('circle', {
                     className: 'macro-ring-fill',
@@ -2857,7 +2908,19 @@
                     className: 'macro-ring-fill--over',
                     cx: 18, cy: 18, r: 15.5,
                     pathLength: 100,
-                    style: { strokeDasharray: fatOverData.overPct + ' ' + (100 - fatOverData.overPct), strokeDashoffset: -(100 - fatOverData.overPct), stroke: '#ef4444' }
+                    style: {
+                      strokeDasharray: fatOverData.overPct + ' ' + (100 - fatOverData.overPct),
+                      '--over-dasharray': fatOverData.overPct + ' ' + (100 - fatOverData.overPct),
+                      '--over-offset': -(100 - fatOverData.overPct),
+                      stroke: '#ef4444'
+                    }
+                  }),
+                  fatDot && React.createElement('circle', {
+                    className: 'macro-ring-dot',
+                    cx: fatDot.x,
+                    cy: fatDot.y,
+                    r: 2.2,
+                    style: { '--macro-ring-dot': fatDotColor }
                   }),
                   // Маркер убран по просьбе
                 ),
@@ -2877,6 +2940,15 @@
                 style: macroRingsMeta.styles?.ringButton
               },
                 React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
+                  React.createElement('defs', null,
+                    React.createElement('linearGradient', {
+                      id: 'macro-ring-gradient-carbs',
+                      x1: '0%', y1: '0%', x2: '100%', y2: '100%'
+                    },
+                      React.createElement('stop', { offset: '0%', stopColor: '#bbf7d0' }),
+                      React.createElement('stop', { offset: '100%', stopColor: '#22c55e' })
+                    )
+                  ),
                   React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5, pathLength: 100 }),
                   React.createElement('circle', {
                     className: 'macro-ring-fill',
@@ -2889,7 +2961,19 @@
                     className: 'macro-ring-fill--over',
                     cx: 18, cy: 18, r: 15.5,
                     pathLength: 100,
-                    style: { strokeDasharray: carbsOverData.overPct + ' ' + (100 - carbsOverData.overPct), strokeDashoffset: -(100 - carbsOverData.overPct), stroke: '#ef4444' }
+                    style: {
+                      strokeDasharray: carbsOverData.overPct + ' ' + (100 - carbsOverData.overPct),
+                      '--over-dasharray': carbsOverData.overPct + ' ' + (100 - carbsOverData.overPct),
+                      '--over-offset': -(100 - carbsOverData.overPct),
+                      stroke: '#ef4444'
+                    }
+                  }),
+                  carbsDot && React.createElement('circle', {
+                    className: 'macro-ring-dot',
+                    cx: carbsDot.x,
+                    cy: carbsDot.y,
+                    r: 2.2,
+                    style: { '--macro-ring-dot': carbsDotColor }
                   }),
                   // Маркер убран по просьбе
                 ),
@@ -2963,27 +3047,45 @@
           )
         ),
         // Плашка дефицита - кликабельная
-        React.createElement('div', {
-          className: 'deficit-card-modern',
-          onClick: openDeficitPicker
-        },
-          React.createElement('span', { className: 'weight-card-label' }, 'ЦЕЛЬ ДЕФИЦИТ'),
-          React.createElement('div', { className: 'weight-card-row' },
-            React.createElement('span', {
-              className: 'deficit-value-number' + (currentDeficit < 0 ? ' deficit-negative' : currentDeficit > 0 ? ' deficit-positive' : '')
-            },
-              (currentDeficit > 0 ? '+' : '') + currentDeficit
-            ),
-            React.createElement('span', { className: 'weight-value-unit' }, '%')
-          ),
-          // Разница от профиля
-          currentDeficit !== profileDeficit && React.createElement('div', {
-            className: 'deficit-card-trend ' + (currentDeficit < profileDeficit ? 'trend-down' : 'trend-up')
+        (() => {
+          // Фактический дефицит: (съедено - затраты) / затраты * 100
+          // TDEE уже включает TEF, используем его напрямую
+          const actualDeficitPct = tdee > 0 ? Math.round(((eatenKcal - tdee) / tdee) * 100) : null;
+          const showActualDeficit = actualDeficitPct !== null && eatenKcal > 0;
+
+          return React.createElement('div', {
+            className: 'deficit-card-modern',
+            onClick: openDeficitPicker
           },
-            React.createElement('span', { className: 'trend-arrow' }, currentDeficit < profileDeficit ? '↓' : '↑'),
-            (currentDeficit > profileDeficit ? '+' : '') + (currentDeficit - profileDeficit) + '%'
-          )
-        )
+            React.createElement('span', { className: 'weight-card-label' }, 'ЦЕЛЬ ДЕФИЦИТ'),
+            React.createElement('div', { className: 'weight-card-row' },
+              React.createElement('span', {
+                className: 'deficit-value-number' + (currentDeficit < 0 ? ' deficit-negative' : currentDeficit > 0 ? ' deficit-positive' : '')
+              },
+                (currentDeficit > 0 ? '+' : '') + currentDeficit
+              ),
+              React.createElement('span', { className: 'weight-value-unit' }, '%')
+            ),
+            // Фактический дефицит (если есть данные)
+            showActualDeficit && React.createElement('div', {
+              className: 'deficit-card-actual'
+            },
+              React.createElement('span', { className: 'deficit-actual-label' }, 'Факт: '),
+              React.createElement('span', {
+                className: 'deficit-actual-value' + (actualDeficitPct < 0 ? ' deficit-negative' : actualDeficitPct > 0 ? ' deficit-positive' : '')
+              },
+                (actualDeficitPct > 0 ? '+' : '') + actualDeficitPct + '%'
+              )
+            ),
+            // Разница от профиля
+            currentDeficit !== profileDeficit && React.createElement('div', {
+              className: 'deficit-card-trend ' + (currentDeficit < profileDeficit ? 'trend-down' : 'trend-up')
+            },
+              React.createElement('span', { className: 'trend-arrow' }, currentDeficit < profileDeficit ? '↓' : '↑'),
+              (currentDeficit > profileDeficit ? '+' : '') + (currentDeficit - profileDeficit) + '%'
+            )
+          );
+        })()
       )
     );
 

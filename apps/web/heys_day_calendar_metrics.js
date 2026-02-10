@@ -51,12 +51,17 @@
                         : (optimum || 1);
                     const ratio = totalKcal / dayOptimum;
                     const rz = HEYS.ratioZones;
+                    const isRefeedDay = !!dayData?.isRefeedDay;
                     const isStreakDay = rz?.isStreakDayWithRefeed
                         ? rz.isStreakDayWithRefeed(ratio, dayData)
                         : (rz ? rz.isSuccess(ratio) : (ratio >= 0.75 && ratio <= 1.10));
-                    if (isStreakDay) {
-                        count++;
-                    } else if (i > 0) break;
+
+                    // Рефид-день: не добавляет к стрику и не обрывает его
+                    if (!isRefeedDay) {
+                        if (isStreakDay) {
+                            count++;
+                        } else if (i > 0) break;
+                    }
                 } else if (i > 0) break;
 
                 checkDate.setDate(checkDate.getDate() - 1);

@@ -150,6 +150,8 @@
   background: linear-gradient(135deg, #ecfdf5 0%, #dcfce7 100%);
   border: 1px solid #bbf7d0;
   border-radius: 12px;
+  --sparkline-bg-start: #ecfdf5;
+  --sparkline-bg-end: #dcfce7;
   padding: 12px 12px 14px;
   padding-top: 24px;
   /* место для аннотаций сверху */
@@ -2067,6 +2069,24 @@
   animation: fadeIn 0.3s ease-out forwards;
   animation-delay: var(--delay, 0s);
   pointer-events: none;
+}
+
+/* Refeed эмодзи 🍕 вместо точки */
+.sparkline-refeed-emoji {
+  font-size: 15px;
+  opacity: 0;
+  animation: fadeIn 0.3s ease-out forwards;
+  animation-delay: var(--delay, 0s);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.18));
+}
+
+.sparkline-refeed-emoji-today {
+  font-size: 16px;
+}
+
+.sparkline-refeed-emoji-gap {
+  fill: url(#sparklineBgGradient);
+  opacity: 1;
 }
 
 @keyframes pulseRefeed {
@@ -4921,9 +4941,10 @@
   fill: none;
   stroke-width: 5;
   stroke-linecap: round;
-  transition: stroke-dasharray 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-  animation: ringFillIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   stroke: var(--macro-ring-color, #6b7280);
+  /* Плавное заполнение от 0 до значения */
+  stroke-dashoffset: var(--ring-start-offset, -7);
+  animation: macroRingFillIn 1.4s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
 }
 
 /* Маркер конца линии (белая точка для блика/объема) */
@@ -4938,6 +4959,16 @@
   /* Ярко-красный для перебора */
   stroke-width: 5;
   stroke-linecap: round;
+  stroke-dashoffset: var(--over-offset, 0);
+  animation: macroRingOverFillIn 1s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+/* Точка-блик на конце дуги */
+.macro-ring-dot {
+  fill: #ffffff;
+  stroke: var(--macro-ring-dot, #ffffff);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.18));
 }
 
 /* Чёрная линия-маркер на позиции нормы (100%) */
@@ -4949,14 +4980,23 @@
   fill: none;
 }
 
-@keyframes ringFillIn {
+@keyframes macroRingFillIn {
   from {
     stroke-dasharray: 0 100;
-    opacity: 0;
   }
 
   to {
-    opacity: 1;
+    stroke-dasharray: var(--ring-dasharray, 0 100);
+  }
+}
+
+@keyframes macroRingOverFillIn {
+  from {
+    stroke-dasharray: 0 100;
+  }
+
+  to {
+    stroke-dasharray: var(--over-dasharray, 0 100);
   }
 }
 
@@ -4968,6 +5008,7 @@
   /* Red-700 */
 }
 
+
 .macro-ring.fat {
   --macro-ring-color: #f59e0b;
   /* Amber-500 */
@@ -4975,12 +5016,14 @@
   /* Amber-700 */
 }
 
+
 .macro-ring.carbs {
   --macro-ring-color: #22c55e;
   /* Green-500 */
   --macro-ring-over: #15803d;
   /* Green-700 */
 }
+
 
 .macro-ring-value {
   position: absolute;
@@ -5864,6 +5907,34 @@
 }
 
 .deficit-card-trend.trend-up {
+  color: #f59e0b;
+}
+
+/* Фактический дефицит */
+.deficit-card-actual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.deficit-actual-label {
+  color: var(--color-slate-500);
+  font-weight: 500;
+}
+
+.deficit-actual-value {
+  font-weight: 600;
+  color: #4f46e5;
+}
+
+.deficit-actual-value.deficit-negative {
+  color: var(--success-dark);
+}
+
+.deficit-actual-value.deficit-positive {
   color: #f59e0b;
 }
 

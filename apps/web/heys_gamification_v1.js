@@ -1997,31 +1997,37 @@
   // Pool & selection engine → heys_daily_missions_v1.js (HEYS.missions)
 
   function getDailyMissions() {
-    const data = loadData();
+    const gameData = loadData();
     const today = getToday();
+    const dayKey = `heys_dayv2_${today}`;
 
-    // Инициализация или новый день
-    if (!data.dailyMissions || data.dailyMissions.date !== today) {
+    // Load dayData directly to store missions
+    let dayData = readStoredValue(dayKey, {});
+    if (!dayData || typeof dayData !== 'object') dayData = {};
+
+    // Инициализация или новый день (если в dayData пусто)
+    if (!dayData.dailyMissions || dayData.dailyMissions.date !== today) {
       const selectFn = HEYS.missions?.selectDailyMissions;
 
       // Build excludeIds from last 7 days history
       const excludeIds = [];
-      if (data.missionHistory) {
+      if (gameData.missionHistory) {
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - 7);
-        data.missionHistory
+        gameData.missionHistory
           .filter(h => new Date(h.date) >= cutoff)
           .forEach(h => excludeIds.push(...(h.ids || [])));
       }
 
-      data.dailyMissions = {
+      dayData.dailyMissions = {
         date: today,
-        missions: selectFn ? selectFn(data.level, excludeIds) : [],
-        completedCount: 0
+        missions: selectFn ? selectFn(gameData.level, excludeIds) : [],
+        completedCount: 0,
+        bonusClaimed: false
       };
 
       // 📊 Update mission stats (attempts)
-      data.missionStats = data.missionStats || {
+      gameData.missionStats = gameData.missionStats || {
         totalAttempts: 0,
         totalCompleted: 0,
         byType: {},
@@ -2029,48 +2035,61 @@
         favoriteCategories: [],
         lastUpdated: null
       };
-      data.missionStats.totalAttempts += data.dailyMissions.missions.length;
-      data.dailyMissions.missions.forEach(m => {
-        if (!data.missionStats.byType[m.type]) {
-          data.missionStats.byType[m.type] = { attempts: 0, completed: 0 };
+      gameData.missionStats.totalAttempts += dayData.dailyMissions.missions.length;
+      dayData.dailyMissions.missions.forEach(m => {
+        if (!gameData.missionStats.byType[m.type]) {
+          gameData.missionStats.byType[m.type] = { attempts: 0, completed: 0 };
         }
-        data.missionStats.byType[m.type].attempts++;
+        gameData.missionStats.byType[m.type].attempts++;
       });
 
       // Store today's mission IDs in history
-      data.missionHistory = data.missionHistory || [];
-      data.missionHistory.push({
+      gameData.missionHistory = gameData.missionHistory || [];
+      gameData.missionHistory.push({
         date: today,
-        ids: data.dailyMissions.missions.map(m => m.id)
+        ids: dayData.dailyMissions.missions.map(m => m.id)
       });
       // Keep only last 7 days
-      data.missionHistory = data.missionHistory.slice(-7);
+      gameData.missionHistory = gameData.missionHistory.slice(-7);
 
+      // Save both
+      setStoredValue(dayKey, dayData);
+
+      // Update local gameData mirror for compatibility (if any legacy code reads it)
+      gameData.dailyMissions = dayData.dailyMissions;
       saveData();
     }
 
+    const dm = dayData.dailyMissions || {};
     return {
-      date: data.dailyMissions.date,
-      missions: data.dailyMissions.missions,
-      completedCount: data.dailyMissions.completedCount,
-      allCompleted: data.dailyMissions.completedCount >= 3,
-      bonusClaimed: !!data.dailyMissions.bonusClaimed,
-      bonusAvailable: data.dailyMissions.completedCount >= 3 && !data.dailyMissions.bonusClaimed
+      date: dm.date,
+      missions: dm.missions || [],
+      completedCount: dm.completedCount || 0,
+      allCompleted: (dm.completedCount || 0) >= 3,
+      bonusClaimed: !!dm.bonusClaimed,
+      bonusAvailable: (dm.completedCount || 0) >= 3 && !dm.bonusClaimed
     };
   }
 
   function updateDailyMission(type, value) {
-    const data = loadData();
+    const gameData = loadData();
     const today = getToday();
+    const dayKey = `heys_dayv2_${today}`;
 
-    if (!data.dailyMissions || data.dailyMissions.date !== today) {
-      getDailyMissions(); // Инициализирует
-      return;
+    let dayData = readStoredValue(dayKey, {});
+    // Fallback
+    if (!dayData || typeof dayData !== 'object') dayData = {};
+
+    if (!dayData.dailyMissions || dayData.dailyMissions.date !== today) {
+      getDailyMissions(); // Will create in dayData
+      dayData = readStoredValue(dayKey, {});
+      if (!dayData.dailyMissions) return;
     }
 
     let missionCompleted = false;
+    const missions = dayData.dailyMissions.missions || [];
 
-    for (const mission of data.dailyMissions.missions) {
+    for (const mission of missions) {
       if (mission.completed) continue;
 
       let matches = false;
@@ -2273,11 +2292,11 @@
         // Проверяем выполнение
         if (newProgress >= mission.target && !mission.completed) {
           mission.completed = true;
-          data.dailyMissions.completedCount++;
+          dayData.dailyMissions.completedCount++;
           missionCompleted = true;
 
           // 📊 Update mission stats (completed)
-          data.missionStats = data.missionStats || {
+          gameData.missionStats = gameData.missionStats || {
             totalAttempts: 0,
             totalCompleted: 0,
             byType: {},
@@ -2285,18 +2304,18 @@
             favoriteCategories: [],
             lastUpdated: null
           };
-          data.missionStats.totalCompleted++;
-          if (!data.missionStats.byType[mission.type]) {
-            data.missionStats.byType[mission.type] = { attempts: 0, completed: 0 };
+          gameData.missionStats.totalCompleted++;
+          if (!gameData.missionStats.byType[mission.type]) {
+            gameData.missionStats.byType[mission.type] = { attempts: 0, completed: 0 };
           }
-          data.missionStats.byType[mission.type].completed++;
+          gameData.missionStats.byType[mission.type].completed++;
           // Recalculate completion rate
-          if (data.missionStats.totalAttempts > 0) {
-            data.missionStats.completionRate = Math.round(
-              (data.missionStats.totalCompleted / data.missionStats.totalAttempts) * 100
+          if (gameData.missionStats.totalAttempts > 0) {
+            gameData.missionStats.completionRate = Math.round(
+              (gameData.missionStats.totalCompleted / gameData.missionStats.totalAttempts) * 100
             );
           }
-          data.missionStats.lastUpdated = new Date().toISOString();
+          gameData.missionStats.lastUpdated = new Date().toISOString();
 
           // Начисляем XP за миссию
           _addXPInternal(mission.xp, 'daily_mission');
@@ -2312,12 +2331,21 @@
       }
     }
 
+    // Save dayData
+    setStoredValue(dayKey, dayData);
+
+    // Mirror to gameData for safety
+    gameData.dailyMissions = dayData.dailyMissions;
     saveData();
 
     // Проверяем бонус за все 3 миссии — автоклейм
-    if (data.dailyMissions.completedCount >= 3 && !data.dailyMissions.bonusClaimed) {
-      data.dailyMissions.bonusClaimed = true;
+    if (dayData.dailyMissions.completedCount >= 3 && !dayData.dailyMissions.bonusClaimed) {
+      dayData.dailyMissions.bonusClaimed = true;
+      setStoredValue(dayKey, dayData); // Save bonus state to day
+
+      gameData.dailyMissions = dayData.dailyMissions; // Mirror
       saveData();
+
       triggerImmediateSync('daily_missions_bonus');
       _addXPInternal(50, 'daily_missions_bonus');
       celebrate();

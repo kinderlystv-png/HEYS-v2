@@ -510,7 +510,10 @@
         const rz = HEYSRef.ratioZones;
 
         if (!isFuture) {
-          const dayInfo = allActiveDays.get(dateStr);
+          // Для сегодняшнего дня используем свежие данные из переданного day, а не кэш
+          const dayInfo = isToday && eatenKcal > 0
+            ? { kcal: eatenKcal, target: optimum, isRefeedDay: safeDay.isRefeedDay, dayData: safeDay }
+            : allActiveDays.get(dateStr);
           isRefeedDay = dayInfo?.isRefeedDay || false;
 
           if (dayInfo && dayInfo.kcal > 0) {
@@ -625,10 +628,12 @@
       days.forEach(d => {
         if (shouldIncludeDay(d, { requireKcal: true })) {
           totalEaten += d.kcal;
-          // Загружаем полные данные дня для расчёта TDEE
-          const dayData = dayUtils.loadDay
-            ? dayUtils.loadDay(d.date)
-            : (safeU.lsGet ? safeU.lsGet('heys_dayv2_' + d.date, null) : null);
+          // Для сегодняшнего дня используем актуальный safeDay, для остальных - loadDay
+          const dayData = d.isToday
+            ? safeDay
+            : (dayUtils.loadDay
+              ? dayUtils.loadDay(d.date)
+              : (safeU.lsGet ? safeU.lsGet('heys_dayv2_' + d.date, null) : null));
           const tdeeInfo = dayUtils.getDayTdee
             ? dayUtils.getDayTdee(d.date, prof, { includeNDTE: true, dayData, pIndex, products: safeProducts })
             : null;
@@ -700,7 +705,7 @@
       } catch (e) { }
 
       return { days, inNorm, withData, streak, weekendPattern, avgRatioPct, totalEaten, totalBurned, avgTargetDeficit, todayExcluded };
-    }, [date, optimum, pIndex, safeProducts, prof]);
+    }, [date, optimum, pIndex, safeProducts, prof, eatenKcal, safeDay.updatedAt, safeDay.isRefeedDay]);
 
     // === Мини-график калорий по приёмам ===
     const mealsChartData = React.useMemo(() => {

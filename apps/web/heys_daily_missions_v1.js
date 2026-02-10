@@ -454,13 +454,24 @@
             ? HEYS.game.calculateBehaviorMetrics()
             : null;
 
-        // Filter pool by level + condition + excludeIds
-        const available = DAILY_MISSION_POOL.filter(m => {
+        // 1. Get ALL valid candidates for this user/level (ignoring excludes first)
+        const validCandidates = DAILY_MISSION_POOL.filter(m => {
             if (level < (m.minLevel || 1)) return false;
             if (m.condition && !m.condition(profile)) return false;
-            if (excludeIds.includes(m.id)) return false;
             return true;
         });
+
+        // 2. Filter by exclusion list
+        let available = validCandidates.filter(m => !excludeIds.includes(m.id));
+
+        // 3. Fallback: If available < 3, add back some excluded missions to ensure 3
+        if (available.length < 3 && validCandidates.length >= 3) {
+            const excluded = validCandidates.filter(m => excludeIds.includes(m.id));
+            const shuffledExcluded = [...excluded].sort(() => Math.random() - 0.5);
+            // Add what's needed to reach 3
+            const needed = 3 - available.length;
+            available = [...available, ...shuffledExcluded.slice(0, needed)];
+        }
 
         // Shuffle
         const shuffled = [...available].sort(() => Math.random() - 0.5);

@@ -1044,10 +1044,11 @@
 
     const ringStartOffsetPct = 7; // чуть больше (~25°)
     const ringCapCompPct = 5; // компенсация скруглённых концов
-    const ringStrokeStyle = (ratio, color) => ({
+    const ringStrokeStyle = (ratio, color, gradientId) => ({
       strokeDasharray: Math.max(0, clampPct(ratio) - ringCapCompPct) + ' 100',
-      strokeDashoffset: -ringStartOffsetPct,
-      stroke: color
+      '--ring-dasharray': Math.max(0, clampPct(ratio) - ringCapCompPct) + ' 100',
+      '--ring-start-offset': -ringStartOffsetPct,
+      stroke: gradientId ? 'url(#' + gradientId + ')' : color
     });
 
     // Данные для отрисовки перебора
@@ -1079,9 +1080,9 @@
       protBadges,
       fatBadges,
       carbsBadges,
-      protRingStrokeStyle: ringStrokeStyle(protRatio, protColor),
-      fatRingStrokeStyle: ringStrokeStyle(fatRatio, fatColor),
-      carbsRingStrokeStyle: ringStrokeStyle(carbsRatio, carbsColor),
+      protRingStrokeStyle: ringStrokeStyle(protRatio, protColor, 'macro-ring-gradient-protein'),
+      fatRingStrokeStyle: ringStrokeStyle(fatRatio, fatColor, 'macro-ring-gradient-fat'),
+      carbsRingStrokeStyle: ringStrokeStyle(carbsRatio, carbsColor, 'macro-ring-gradient-carbs'),
       protOverData,
       fatOverData,
       carbsOverData,

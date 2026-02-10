@@ -28,20 +28,20 @@
       brushStartRef
     } = ctx || {};
 
-    const safeHaptic = typeof haptic === 'function' ? haptic : () => {};
-    const safeOpenPopup = typeof openExclusivePopup === 'function' ? openExclusivePopup : () => {};
-    const safeSetSparklineZoom = typeof setSparklineZoom === 'function' ? setSparklineZoom : () => {};
-    const safeSetSparklinePan = typeof setSparklinePan === 'function' ? setSparklinePan : () => {};
-    const safeSetSliderPoint = typeof setSliderPoint === 'function' ? setSliderPoint : () => {};
-    const safeSetBrushing = typeof setBrushing === 'function' ? setBrushing : () => {};
-    const safeSetBrushRange = typeof setBrushRange === 'function' ? setBrushRange : () => {};
+    const safeHaptic = typeof haptic === 'function' ? haptic : () => { };
+    const safeOpenPopup = typeof openExclusivePopup === 'function' ? openExclusivePopup : () => { };
+    const safeSetSparklineZoom = typeof setSparklineZoom === 'function' ? setSparklineZoom : () => { };
+    const safeSetSparklinePan = typeof setSparklinePan === 'function' ? setSparklinePan : () => { };
+    const safeSetSliderPoint = typeof setSliderPoint === 'function' ? setSliderPoint : () => { };
+    const safeSetBrushing = typeof setBrushing === 'function' ? setBrushing : () => { };
+    const safeSetBrushRange = typeof setBrushRange === 'function' ? setBrushRange : () => { };
 
     // Skeleton loader пока данные загружаются
     if (!data) {
       return React.createElement('div', { className: 'sparkline-skeleton' },
         React.createElement('div', { className: 'sparkline-skeleton-line' }),
         React.createElement('div', { className: 'sparkline-skeleton-dots' },
-          Array.from({length: 7}).map((_, i) => 
+          Array.from({ length: 7 }).map((_, i) =>
             React.createElement('div', { key: i, className: 'sparkline-skeleton-dot' })
           )
         )
@@ -57,7 +57,7 @@
       return React.createElement('div', { className: 'sparkline-empty-state' },
         React.createElement('div', { className: 'sparkline-empty-icon' }, '📊'),
         React.createElement('div', { className: 'sparkline-empty-text' },
-          daysWithData === 0 
+          daysWithData === 0
             ? 'Начните вести дневник питания'
             : 'Добавьте еду ещё за ' + daysNeeded + ' день'
         ),
@@ -65,7 +65,7 @@
           'График появится после 2+ дней с данными'
         ),
         React.createElement('div', { className: 'sparkline-empty-progress' },
-          React.createElement('div', { 
+          React.createElement('div', {
             className: 'sparkline-empty-progress-bar',
             style: { width: (daysWithData / 2 * 100) + '%' }
           }),
@@ -73,7 +73,7 @@
             daysWithData + ' / 2 дней'
           )
         ),
-        React.createElement('button', { 
+        React.createElement('button', {
           className: 'sparkline-empty-btn',
           onClick: () => {
             // Открываем модалку добавления приёма
@@ -254,7 +254,7 @@
       const calculateForecastKcal = (dayIndex, prevKcal) => {
         if (dayIndex <= 2) {
           // Первые 2 дня — продолжаем тренд
-          return dayIndex === 1 
+          return dayIndex === 1
             ? Math.round(blendedNext)
             : Math.round(blendedNext + clampedSlope * (dayIndex - 1));
         } else {
@@ -315,7 +315,7 @@
         // Определяем базовую дату для прогноза:
         // - Если сегодня неполный — прогноз начинается от сегодня (уже добавлен выше)
         // - Иначе прогноз на день после последнего в chartData
-        const baseDate = isTodayIncomplete && todayData 
+        const baseDate = isTodayIncomplete && todayData
           ? todayData.date  // Сегодня уже добавлен как прогноз
           : lastChartDate;
 
@@ -383,14 +383,14 @@
       // Хороший день: используем централизованный ratioZones с учётом refeed
       const rz = HEYS.ratioZones;
       // isPerfect учитывает refeed (расширенный диапазон 0.70-1.35)
-      const isPerfect = d.isUnknown ? false : (rz?.isStreakDayWithRefeed 
+      const isPerfect = d.isUnknown ? false : (rz?.isStreakDayWithRefeed
         ? rz.isStreakDayWithRefeed(ratio, d)
         : (rz ? rz.isSuccess(ratio) : (ratio >= 0.75 && ratio <= 1.10)));
       // Выходные/праздники
       const isWeekendDay = isWeekend(d.date) || isHoliday(d.date);
       // День недели (0=Вс, 1=Пн, ...)
       const dayOfWeek = d.date ? new Date(d.date).getDay() : 0;
-      return { 
+      return {
         x, y, kcal: d.kcal, target: effectiveTarget, targetY, ratio,
         isToday: d.isToday, dayNum, date: d.date, isPerfect,
         isUnknown: d.isUnknown || false, // флаг неизвестного дня
@@ -413,11 +413,11 @@
       const y = paddingTop + chartHeight - yNorm * chartHeight;
       const targetNorm = scaleRange > 0 ? ((d.target || goal) - scaleMin) / scaleRange : 0.5;
       const targetY = paddingTop + chartHeight - targetNorm * chartHeight;
-      return { 
-        x, y, kcal: d.kcal, target: d.target, targetY, isForecast: true, 
+      return {
+        x, y, kcal: d.kcal, target: d.target, targetY, isForecast: true,
         isTodayForecast: d.isTodayForecast || false,
         isFutureDay: d.isFutureDay || false,  // Маркер будущего дня для UI
-        dayNum: d.dayNum || '', date: d.date, isWeekend: d.isWeekend 
+        dayNum: d.dayNum || '', date: d.date, isWeekend: d.isWeekend
       };
     });
 
@@ -472,8 +472,8 @@
         const s = t / steps;
         const u = 1 - s;
         // Cubic Bezier formula: B(t) = (1-t)³P0 + 3(1-t)²tP1 + 3(1-t)t²P2 + t³P3
-        const x = u*u*u*p1.x + 3*u*u*s*cp1.x + 3*u*s*s*cp2.x + s*s*s*p2.x;
-        const y = u*u*u*p1.y + 3*u*u*s*cp1.y + 3*u*s*s*cp2.y + s*s*s*p2.y;
+        const x = u * u * u * p1.x + 3 * u * u * s * cp1.x + 3 * u * s * s * cp2.x + s * s * s * p2.x;
+        const y = u * u * u * p1.y + 3 * u * u * s * cp1.y + 3 * u * s * s * cp2.y + s * s * s * p2.y;
         length += Math.sqrt((x - prevX) ** 2 + (y - prevY) ** 2);
         prevX = x;
         prevY = y;
@@ -512,7 +512,7 @@
     // Cubic Bezier formula: B(t) = (1-t)³P0 + 3(1-t)²tP1 + 3(1-t)t²P2 + t³P3
     const cubicBezier = (t, p0, cp1, cp2, p3) => {
       const u = 1 - t;
-      return u*u*u*p0 + 3*u*u*t*cp1 + 3*u*t*t*cp2 + t*t*t*p3;
+      return u * u * u * p0 + 3 * u * u * t * cp1 + 3 * u * t * t * cp2 + t * t * t * p3;
     };
 
     points.forEach((p) => {
@@ -558,7 +558,7 @@
 
         // Производная Bezier по t
         const u = 1 - t;
-        const dx = 3*u*u*(cp1x - p1.x) + 6*u*t*(cp2x - cp1x) + 3*t*t*(p2.x - cp2x);
+        const dx = 3 * u * u * (cp1x - p1.x) + 6 * u * t * (cp2x - cp1x) + 3 * t * t * (p2.x - cp2x);
         if (Math.abs(dx) > 0.001) t -= error / dx;
         t = Math.max(0, Math.min(1, t));
       }
@@ -800,17 +800,17 @@
     // === 1. Goal Achievement % — процент дней в норме ===
     const successDays = points.filter(p => p.kcal > 0 && p.isPerfect).length;
     const totalDaysWithData = points.filter(p => p.kcal > 0).length;
-    const goalAchievementPct = totalDaysWithData > 0 
-      ? Math.round((successDays / totalDaysWithData) * 100) 
+    const goalAchievementPct = totalDaysWithData > 0
+      ? Math.round((successDays / totalDaysWithData) * 100)
       : 0;
 
     // === 2. Confidence interval для прогноза ===
     // Стандартное отклонение калорий за период
-    const avgKcal = points.length > 0 
-      ? points.reduce((s, p) => s + p.kcal, 0) / points.length 
+    const avgKcal = points.length > 0
+      ? points.reduce((s, p) => s + p.kcal, 0) / points.length
       : 0;
-    const variance = points.length > 1 
-      ? points.reduce((s, p) => s + Math.pow(p.kcal - avgKcal, 2), 0) / (points.length - 1) 
+    const variance = points.length > 1
+      ? points.reduce((s, p) => s + Math.pow(p.kcal - avgKcal, 2), 0) / (points.length - 1)
       : 0;
     const stdDev = Math.sqrt(variance);
     // Коридор: ±1 стандартное отклонение (≈68% уверенность)
@@ -854,7 +854,7 @@
         const svg = e.currentTarget;
         const rect = svg.getBoundingClientRect();
         const x = (e.clientX - rect.left) * (width / rect.width);
-        const nearestIdx = points.reduce((prevIdx, curr, idx) => 
+        const nearestIdx = points.reduce((prevIdx, curr, idx) =>
           Math.abs(curr.x - x) < Math.abs(points[prevIdx].x - x) ? idx : prevIdx, 0);
 
         const startIdx = brushStartRef.current;
@@ -870,7 +870,7 @@
       const x = (e.clientX - rect.left) * (width / rect.width);
 
       // Найти ближайшую точку (только основные, не прогноз)
-      const nearest = points.reduce((prev, curr) => 
+      const nearest = points.reduce((prev, curr) =>
         Math.abs(curr.x - x) < Math.abs(prev.x - x) ? curr : prev
       );
 
@@ -899,7 +899,7 @@
       const svg = e.currentTarget;
       const rect = svg.getBoundingClientRect();
       const x = (e.clientX - rect.left) * (width / rect.width);
-      const nearestIdx = points.reduce((prevIdx, curr, idx) => 
+      const nearestIdx = points.reduce((prevIdx, curr, idx) =>
         Math.abs(curr.x - x) < Math.abs(points[prevIdx].x - x) ? idx : prevIdx, 0);
 
       if (brushStartRef) {
@@ -984,10 +984,10 @@
     })() : null;
 
     // Класс для Goal Achievement badge
-    const goalBadgeClass = 'sparkline-goal-badge' + 
+    const goalBadgeClass = 'sparkline-goal-badge' +
       (goalAchievementPct >= 70 ? '' : goalAchievementPct >= 40 ? ' goal-low' : ' goal-critical');
 
-    return React.createElement('div', { 
+    return React.createElement('div', {
       className: 'sparkline-container' + (sparklineZoom > 1 ? ' sparkline-zoomed' : ''),
       style: { position: 'relative', overflow: 'hidden' },
       ref: (el) => {
@@ -997,756 +997,794 @@
         }
       }
     },
-    // Goal Achievement Badge перенесён в header (kcal-sparkline-header)
-    // === Brush Stats Badge (при выборе диапазона) ===
-    brushStats && React.createElement('div', {
-      className: 'sparkline-brush-stats',
-      onClick: clearBrush
-    },
-      React.createElement('span', { className: 'brush-days' }, brushStats.daysInRange + ' дн'),
-      React.createElement('span', { className: 'brush-avg' }, 'Ø ' + brushStats.avgKcal + ' ккал'),
-      React.createElement('span', { 
-        className: 'brush-ratio',
-        style: { backgroundColor: rz ? rz.getGradientColor(brushStats.avgRatio, 0.9) : '#22c55e' }
-      }, Math.round(brushStats.avgRatio * 100) + '%'),
-      React.createElement('span', { className: 'brush-close' }, '✕')
-    ),
-    // === Zoom indicator ===
-    sparklineZoom > 1 && React.createElement('div', {
-      className: 'sparkline-zoom-indicator',
-      onClick: handleDoubleClick
-    }, Math.round(sparklineZoom * 100) + '%'),
-    React.createElement('svg', { 
-      className: 'sparkline-svg animate-always',
-      viewBox: '0 0 ' + width + ' ' + height,
-      preserveAspectRatio: 'none',
-      onPointerMove: handlePointerMove,
-      onPointerLeave: handlePointerLeave,
-      onPointerDown: handleBrushStart,
-      onPointerUp: handleBrushEnd,
-      onTouchStart: handleTouchStart,
-      onTouchMove: handleTouchMove,
-      onTouchEnd: handleTouchEnd,
-      onDoubleClick: handleDoubleClick,
-      style: { 
-        touchAction: sparklineZoom > 1 ? 'pan-x' : 'none', 
-        height: height + 'px',
-        transform: sparklineZoom > 1 ? `scale(${sparklineZoom}) translateX(${sparklinePan}%)` : 'none',
-        transformOrigin: 'center center'
-      }
-    },
-      // Градиенты с цветами по точкам (для области и линии)
-      React.createElement('defs', null,
-        // Градиент для заливки области (с прозрачностью)
-        React.createElement('linearGradient', { id: 'kcalAreaGradient', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
-          gradientStops.map((stop, i) => 
-            React.createElement('stop', { 
-              key: i, 
-              offset: stop.offset + '%', 
-              stopColor: stop.color, 
-              stopOpacity: 0.25 
-            })
-          )
-        ),
-        // Градиент для линии (полная яркость) — цвета по ratio zones
-        React.createElement('linearGradient', { id: 'kcalLineGradient', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
-          gradientStops.map((stop, i) => 
-            React.createElement('stop', { 
-              key: i, 
-              offset: stop.offset + '%', 
-              stopColor: stop.color, 
-              stopOpacity: 1 
-            })
-          )
-        )
+      // Goal Achievement Badge перенесён в header (kcal-sparkline-header)
+      // === Brush Stats Badge (при выборе диапазона) ===
+      brushStats && React.createElement('div', {
+        className: 'sparkline-brush-stats',
+        onClick: clearBrush
+      },
+        React.createElement('span', { className: 'brush-days' }, brushStats.daysInRange + ' дн'),
+        React.createElement('span', { className: 'brush-avg' }, 'Ø ' + brushStats.avgKcal + ' ккал'),
+        React.createElement('span', {
+          className: 'brush-ratio',
+          style: { backgroundColor: rz ? rz.getGradientColor(brushStats.avgRatio, 0.9) : '#22c55e' }
+        }, Math.round(brushStats.avgRatio * 100) + '%'),
+        React.createElement('span', { className: 'brush-close' }, '✕')
       ),
-      // Заливка области с градиентом (анимированная)
-      React.createElement('path', {
-        d: fullAreaPath,
-        fill: 'url(#kcalAreaGradient)',
-        className: 'sparkline-area-animated'
-      }),
-      // Линия цели (плавная пунктирная)
-      React.createElement('path', {
-        d: goalPathD,
-        className: 'sparkline-goal',
-        fill: 'none'
-      }),
-      // Линия графика с градиентом по ratio zones
-      React.createElement('path', {
-        d: pathD,
-        className: 'sparkline-line',
-        style: { 
-          stroke: 'url(#kcalLineGradient)',
-          strokeDasharray: totalPathLength, 
-          strokeDashoffset: totalPathLength 
+      // === Zoom indicator ===
+      sparklineZoom > 1 && React.createElement('div', {
+        className: 'sparkline-zoom-indicator',
+        onClick: handleDoubleClick
+      }, Math.round(sparklineZoom * 100) + '%'),
+      React.createElement('svg', {
+        className: 'sparkline-svg animate-always',
+        viewBox: '0 0 ' + width + ' ' + height,
+        preserveAspectRatio: 'none',
+        onPointerMove: handlePointerMove,
+        onPointerLeave: handlePointerLeave,
+        onPointerDown: handleBrushStart,
+        onPointerUp: handleBrushEnd,
+        onTouchStart: handleTouchStart,
+        onTouchMove: handleTouchMove,
+        onTouchEnd: handleTouchEnd,
+        onDoubleClick: handleDoubleClick,
+        style: {
+          touchAction: sparklineZoom > 1 ? 'pan-x' : 'none',
+          height: height + 'px',
+          transform: sparklineZoom > 1 ? `scale(${sparklineZoom}) translateX(${sparklinePan}%)` : 'none',
+          transformOrigin: 'center center'
         }
-      }),
-      // Золотые streak-линии между 🔥 днями (анимируются синхронно с основной линией)
-      streakData.map((data, i) => 
-        React.createElement('path', {
-          key: 'streak-' + i,
-          d: data.path,
-          className: 'sparkline-streak-line sparkline-streak-animated',
-          style: {
-            strokeDasharray: data.segmentLength,
-            strokeDashoffset: data.segmentLength,
-            animationDelay: data.animDelay + 's',
-            animationDuration: data.segmentDuration + 's'
-          }
-        })
-      ),
-      // Прогнозная линия калорий — маска для анимации + пунктир
-      forecastPathD && React.createElement('g', { key: 'forecast-group' },
-        // Маска: сплошная линия которая рисуется
+      },
+        // Градиенты с цветами по точкам (для области и линии)
         React.createElement('defs', null,
-          React.createElement('mask', { id: 'forecastMask' },
-            React.createElement('path', {
-              d: forecastPathD,
-              fill: 'none',
-              stroke: 'white',
-              strokeWidth: 4,
-              strokeLinecap: 'round',
-              strokeDasharray: forecastPathLength,
-              strokeDashoffset: forecastPathLength,
-              className: 'sparkline-forecast-mask'
+          // Градиент фона (для зазора под 🍕)
+          React.createElement('linearGradient', { id: 'sparklineBgGradient', x1: '0%', y1: '0%', x2: '100%', y2: '100%' },
+            React.createElement('stop', {
+              offset: '0%',
+              stopColor: 'var(--sparkline-bg-start, #ecfdf5)'
+            }),
+            React.createElement('stop', {
+              offset: '100%',
+              stopColor: 'var(--sparkline-bg-end, #dcfce7)'
             })
+          ),
+          // Градиент для заливки области (с прозрачностью)
+          React.createElement('linearGradient', { id: 'kcalAreaGradient', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
+            gradientStops.map((stop, i) =>
+              React.createElement('stop', {
+                key: i,
+                offset: stop.offset + '%',
+                stopColor: stop.color,
+                stopOpacity: 0.25
+              })
+            )
+          ),
+          // Градиент для линии (полная яркость) — цвета по ratio zones
+          React.createElement('linearGradient', { id: 'kcalLineGradient', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
+            gradientStops.map((stop, i) =>
+              React.createElement('stop', {
+                key: i,
+                offset: stop.offset + '%',
+                stopColor: stop.color,
+                stopOpacity: 1
+              })
+            )
           )
         ),
-        // Видимая пунктирная линия под маской
+        // Заливка области с градиентом (анимированная)
         React.createElement('path', {
-          d: forecastPathD,
-          fill: 'none',
-          stroke: forecastColor,
-          strokeWidth: 2,
-          strokeDasharray: '6 4',
-          strokeOpacity: 0.7,
-          strokeLinecap: 'round',
-          mask: 'url(#forecastMask)'
-        })
-      ),
-      // Прогнозная линия нормы (цели)
-      forecastGoalPathD && React.createElement('path', {
-        key: 'forecast-goal-line',
-        d: forecastGoalPathD,
-        fill: 'none',
-        stroke: 'rgba(148, 163, 184, 0.7)', // серый slate-400
-        strokeWidth: 1.5,
-        strokeDasharray: '4 3',
-        strokeLinecap: 'round'
-      }),
-      // === Confidence interval для прогноза (коридор ±σ) — заливка области ===
-      forecastPts.length > 0 && confidenceMargin > 50 && (() => {
-        // Строим path для области: верхняя граница → нижняя граница (обратно)
-        const marginPx = (confidenceMargin / scaleRange) * chartHeight;
-
-        // Верхняя линия (слева направо)
-        const upperPoints = forecastPts.map(p => ({
-          x: p.x,
-          y: Math.max(paddingTop, p.y - marginPx)
-        }));
-
-        // Нижняя линия (справа налево)
-        const lowerPoints = forecastPts.map(p => ({
-          x: p.x,
-          y: Math.min(paddingTop + chartHeight, p.y + marginPx)
-        })).reverse();
-
-        // Добавляем начальную точку от последней реальной точки
-        const lastRealPoint = points[points.length - 1];
-        const startX = lastRealPoint ? lastRealPoint.x : forecastPts[0].x;
-
-        // Строим path
-        let areaPath = 'M ' + startX + ' ' + upperPoints[0].y;
-        upperPoints.forEach(p => { areaPath += ' L ' + p.x + ' ' + p.y; });
-        lowerPoints.forEach(p => { areaPath += ' L ' + p.x + ' ' + p.y; });
-        areaPath += ' Z';
-
-        return React.createElement('path', {
-          key: 'confidence-area',
-          d: areaPath,
-          fill: forecastColor,
-          fillOpacity: 0.08,
-          stroke: 'none'
-        });
-      })(),
-      // Точки прогноза (с цветом по тренду) — появляются после прогнозной линии
-      // Для isFutureDay используем серый цвет с пунктиром
-      forecastPts.map((p, i) => {
-        // Задержка = 3с (основная линия) + время до этой точки в прогнозе
-        const forecastDelay = 3 + (i + 1) / forecastPts.length * Math.max(0.5, (forecastPathLength / totalPathLength) * 3);
-        const isFutureDay = p.isFutureDay;
-        const dotColor = isFutureDay ? 'rgba(156, 163, 175, 0.6)' : forecastColor;
-        return React.createElement('circle', {
-          key: 'forecast-dot-' + i,
-          cx: p.x, 
-          cy: p.y, 
-          r: isFutureDay ? 6 : (p.isTodayForecast ? 4 : 3), // будущие дни крупнее для "?"
-          className: 'sparkline-dot sparkline-forecast-dot' + (isFutureDay ? ' sparkline-future-dot' : ''),
+          d: fullAreaPath,
+          fill: 'url(#kcalAreaGradient)',
+          className: 'sparkline-area-animated'
+        }),
+        // Линия цели (плавная пунктирная)
+        React.createElement('path', {
+          d: goalPathD,
+          className: 'sparkline-goal',
+          fill: 'none'
+        }),
+        // Линия графика с градиентом по ratio zones
+        React.createElement('path', {
+          d: pathD,
+          className: 'sparkline-line',
           style: {
-            fill: isFutureDay ? 'rgba(156, 163, 175, 0.3)' : forecastColor,
-            opacity: 0, // начинаем скрытым
-            '--delay': forecastDelay + 's',
-            strokeDasharray: isFutureDay ? '3 2' : '2 2',
-            stroke: dotColor,
-            strokeWidth: isFutureDay ? 1.5 : (p.isTodayForecast ? 2 : 1)
+            stroke: 'url(#kcalLineGradient)',
+            strokeDasharray: totalPathLength,
+            strokeDashoffset: totalPathLength
           }
-        });
-      }),
-      // Метки прогнозных ккал над точками (бледные)
-      // Для isFutureDay показываем "?" вместо прогнозных ккал
-      forecastPts.map((p, i) => {
-        const isLast = i === forecastPts.length - 1;
-        const isFutureDay = p.isFutureDay;
-        // Цифра прогноза: синяя для сегодня, оранжевая для будущих
-        const kcalColor = p.isTodayForecast ? '#3b82f6' : (isFutureDay ? 'rgba(156, 163, 175, 0.9)' : forecastColor);
-        return React.createElement('g', { key: 'forecast-kcal-group-' + i },
-          // "прогноз на сегодня" НАД цифрой — только для сегодняшнего прогноза
-          p.isTodayForecast && React.createElement('text', {
-            key: 'forecast-label-' + i,
-            x: p.x,
-            y: p.y - 38,
-            className: 'sparkline-day-label sparkline-day-forecast',
-            textAnchor: isLast ? 'end' : 'middle',
-            style: { opacity: 0.9, fontSize: '9px', fill: '#3b82f6' }
-          }, 'прогноз на сегодня'),
-          // Цифра ккал (с гапом от треугольника)
-          React.createElement('text', {
-            key: 'forecast-kcal-' + i,
-            x: p.x,
-            y: p.y - (p.isTodayForecast ? 22 : 12),
-            className: 'sparkline-day-label' + (p.isTodayForecast ? ' sparkline-day-today' : ' sparkline-day-forecast'),
-            textAnchor: isLast ? 'end' : 'middle',
-            style: { 
-              opacity: isFutureDay ? 0.6 : (p.isTodayForecast ? 0.9 : 0.5), 
-              fill: kcalColor,
-              fontSize: p.isTodayForecast ? '12px' : (isFutureDay ? '11px' : undefined),
-              fontWeight: p.isTodayForecast ? '700' : (isFutureDay ? '600' : undefined)
+        }),
+        // Золотые streak-линии между 🔥 днями (анимируются синхронно с основной линией)
+        streakData.map((data, i) =>
+          React.createElement('path', {
+            key: 'streak-' + i,
+            d: data.path,
+            className: 'sparkline-streak-line sparkline-streak-animated',
+            style: {
+              strokeDasharray: data.segmentLength,
+              strokeDashoffset: data.segmentLength,
+              animationDelay: data.animDelay + 's',
+              animationDuration: data.segmentDuration + 's'
             }
-          }, isFutureDay ? '?' : p.kcal),
-          // Анимированный треугольник-указатель между цифрой и точкой для сегодняшнего прогноза
-          p.isTodayForecast && React.createElement('text', {
-            key: 'forecast-arrow-' + i,
+          })
+        ),
+        // Прогнозная линия калорий — маска для анимации + пунктир
+        forecastPathD && React.createElement('g', { key: 'forecast-group' },
+          // Маска: сплошная линия которая рисуется
+          React.createElement('defs', null,
+            React.createElement('mask', { id: 'forecastMask' },
+              React.createElement('path', {
+                d: forecastPathD,
+                fill: 'none',
+                stroke: 'white',
+                strokeWidth: 4,
+                strokeLinecap: 'round',
+                strokeDasharray: forecastPathLength,
+                strokeDashoffset: forecastPathLength,
+                className: 'sparkline-forecast-mask'
+              })
+            )
+          ),
+          // Видимая пунктирная линия под маской
+          React.createElement('path', {
+            d: forecastPathD,
+            fill: 'none',
+            stroke: forecastColor,
+            strokeWidth: 2,
+            strokeDasharray: '6 4',
+            strokeOpacity: 0.7,
+            strokeLinecap: 'round',
+            mask: 'url(#forecastMask)'
+          })
+        ),
+        // Прогнозная линия нормы (цели)
+        forecastGoalPathD && React.createElement('path', {
+          key: 'forecast-goal-line',
+          d: forecastGoalPathD,
+          fill: 'none',
+          stroke: 'rgba(148, 163, 184, 0.7)', // серый slate-400
+          strokeWidth: 1.5,
+          strokeDasharray: '4 3',
+          strokeLinecap: 'round'
+        }),
+        // === Confidence interval для прогноза (коридор ±σ) — заливка области ===
+        forecastPts.length > 0 && confidenceMargin > 50 && (() => {
+          // Строим path для области: верхняя граница → нижняя граница (обратно)
+          const marginPx = (confidenceMargin / scaleRange) * chartHeight;
+
+          // Верхняя линия (слева направо)
+          const upperPoints = forecastPts.map(p => ({
             x: p.x,
-            y: p.y - 8,
-            textAnchor: 'middle',
-            className: 'sparkline-today-label sparkline-forecast-arrow',
-            style: { 
-              fill: '#3b82f6', 
-              fontSize: '10px', 
-              fontWeight: '600',
-              opacity: 0.9
+            y: Math.max(paddingTop, p.y - marginPx)
+          }));
+
+          // Нижняя линия (справа налево)
+          const lowerPoints = forecastPts.map(p => ({
+            x: p.x,
+            y: Math.min(paddingTop + chartHeight, p.y + marginPx)
+          })).reverse();
+
+          // Добавляем начальную точку от последней реальной точки
+          const lastRealPoint = points[points.length - 1];
+          const startX = lastRealPoint ? lastRealPoint.x : forecastPts[0].x;
+
+          // Строим path
+          let areaPath = 'M ' + startX + ' ' + upperPoints[0].y;
+          upperPoints.forEach(p => { areaPath += ' L ' + p.x + ' ' + p.y; });
+          lowerPoints.forEach(p => { areaPath += ' L ' + p.x + ' ' + p.y; });
+          areaPath += ' Z';
+
+          return React.createElement('path', {
+            key: 'confidence-area',
+            d: areaPath,
+            fill: forecastColor,
+            fillOpacity: 0.08,
+            stroke: 'none'
+          });
+        })(),
+        // Точки прогноза (с цветом по тренду) — появляются после прогнозной линии
+        // Для isFutureDay используем серый цвет с пунктиром
+        forecastPts.map((p, i) => {
+          // Задержка = 3с (основная линия) + время до этой точки в прогнозе
+          const forecastDelay = 3 + (i + 1) / forecastPts.length * Math.max(0.5, (forecastPathLength / totalPathLength) * 3);
+          const isFutureDay = p.isFutureDay;
+          const dotColor = isFutureDay ? 'rgba(156, 163, 175, 0.6)' : forecastColor;
+          return React.createElement('circle', {
+            key: 'forecast-dot-' + i,
+            cx: p.x,
+            cy: p.y,
+            r: isFutureDay ? 6 : (p.isTodayForecast ? 4 : 3), // будущие дни крупнее для "?"
+            className: 'sparkline-dot sparkline-forecast-dot' + (isFutureDay ? ' sparkline-future-dot' : ''),
+            style: {
+              fill: isFutureDay ? 'rgba(156, 163, 175, 0.3)' : forecastColor,
+              opacity: 0, // начинаем скрытым
+              '--delay': forecastDelay + 's',
+              strokeDasharray: isFutureDay ? '3 2' : '2 2',
+              stroke: dotColor,
+              strokeWidth: isFutureDay ? 1.5 : (p.isTodayForecast ? 2 : 1)
             }
-          }, '▼')
-        );
-      }),
-      // Метки прогнозных дней (дата внизу, "прогноз на завтра" для завтра)
-      // Для isFutureDay показываем просто дату без "прогноз на завтра"
-      // "прогноз на сегодня" теперь отрисовывается НАВЕРХУ над цифрой прогноза
-      forecastPts.map((p, i) => {
-        const isLast = i === forecastPts.length - 1;
-        const isFutureDay = p.isFutureDay;
-        const isTomorrow = !p.isTodayForecast && !isFutureDay && i === 0;
-        // Только для завтра показываем "прогноз на завтра" внизу
-        const showTomorrowLabel = isTomorrow && !isFutureDay;
+          });
+        }),
+        // Метки прогнозных ккал над точками (бледные)
+        // Для isFutureDay показываем "?" вместо прогнозных ккал
+        forecastPts.map((p, i) => {
+          const isLast = i === forecastPts.length - 1;
+          const isFutureDay = p.isFutureDay;
+          // Цифра прогноза: синяя для сегодня, оранжевая для будущих
+          const kcalColor = p.isTodayForecast ? '#3b82f6' : (isFutureDay ? 'rgba(156, 163, 175, 0.9)' : forecastColor);
+          return React.createElement('g', { key: 'forecast-kcal-group-' + i },
+            // "прогноз на сегодня" НАД цифрой — только для сегодняшнего прогноза
+            p.isTodayForecast && React.createElement('text', {
+              key: 'forecast-label-' + i,
+              x: p.x,
+              y: p.y - 38,
+              className: 'sparkline-day-label sparkline-day-forecast',
+              textAnchor: isLast ? 'end' : 'middle',
+              style: { opacity: 0.9, fontSize: '9px', fill: '#3b82f6' }
+            }, 'прогноз на сегодня'),
+            // Цифра ккал (с гапом от треугольника)
+            React.createElement('text', {
+              key: 'forecast-kcal-' + i,
+              x: p.x,
+              y: p.y - (p.isTodayForecast ? 22 : 12),
+              className: 'sparkline-day-label' + (p.isTodayForecast ? ' sparkline-day-today' : ' sparkline-day-forecast'),
+              textAnchor: isLast ? 'end' : 'middle',
+              style: {
+                opacity: isFutureDay ? 0.6 : (p.isTodayForecast ? 0.9 : 0.5),
+                fill: kcalColor,
+                fontSize: p.isTodayForecast ? '12px' : (isFutureDay ? '11px' : undefined),
+                fontWeight: p.isTodayForecast ? '700' : (isFutureDay ? '600' : undefined)
+              }
+            }, isFutureDay ? '?' : p.kcal),
+            // Анимированный треугольник-указатель между цифрой и точкой для сегодняшнего прогноза
+            p.isTodayForecast && React.createElement('text', {
+              key: 'forecast-arrow-' + i,
+              x: p.x,
+              y: p.y - 8,
+              textAnchor: 'middle',
+              className: 'sparkline-today-label sparkline-forecast-arrow',
+              style: {
+                fill: '#3b82f6',
+                fontSize: '10px',
+                fontWeight: '600',
+                opacity: 0.9
+              }
+            }, '▼')
+          );
+        }),
+        // Метки прогнозных дней (дата внизу, "прогноз на завтра" для завтра)
+        // Для isFutureDay показываем просто дату без "прогноз на завтра"
+        // "прогноз на сегодня" теперь отрисовывается НАВЕРХУ над цифрой прогноза
+        forecastPts.map((p, i) => {
+          const isLast = i === forecastPts.length - 1;
+          const isFutureDay = p.isFutureDay;
+          const isTomorrow = !p.isTodayForecast && !isFutureDay && i === 0;
+          // Только для завтра показываем "прогноз на завтра" внизу
+          const showTomorrowLabel = isTomorrow && !isFutureDay;
 
-        return React.createElement('g', { key: 'forecast-day-' + i },
-          // "прогноз на завтра" выше даты — только для завтра
-          showTomorrowLabel && React.createElement('text', {
-            x: p.x,
-            y: height - 34,
-            className: 'sparkline-day-label sparkline-day-forecast',
-            textAnchor: isLast ? 'end' : 'middle',
-            style: { opacity: 0.9, fontSize: '8px', fill: '#3b82f6' }
-          }, 'прогноз'),
-          showTomorrowLabel && React.createElement('text', {
-            x: p.x,
-            y: height - 25,
-            className: 'sparkline-day-label sparkline-day-forecast',
-            textAnchor: isLast ? 'end' : 'middle',
-            style: { opacity: 0.9, fontSize: '8px', fill: '#3b82f6' }
-          }, 'на завтра'),
-          // Дата — на том же уровне что и обычные дни
-          React.createElement('text', {
-            x: p.x,
-            y: height - 26,
-            className: 'sparkline-day-label' + 
-              (p.isTodayForecast ? ' sparkline-day-today' : '') +
-              (isFutureDay ? ' sparkline-day-future' : ' sparkline-day-forecast') + 
-              (p.isWeekend ? ' sparkline-day-weekend' : ''),
-            textAnchor: isLast ? 'end' : 'middle',
-            dominantBaseline: 'alphabetic',
-            style: { 
-              opacity: isFutureDay ? 0.5 : (p.isTodayForecast ? 1 : 0.8),
-              fontSize: p.isTodayForecast ? '9.5px' : undefined,
-              fontWeight: p.isTodayForecast ? '700' : undefined,
-              fill: p.isTodayForecast ? '#3b82f6' : undefined
-            }
-          }, p.dayNum),
-          // День недели для прогнозных дней
-          React.createElement('text', {
-            x: p.x,
-            y: height - 2,
-            className: 'sparkline-weekday-label' + (p.isWeekend ? ' sparkline-weekday-weekend' : ''),
-            textAnchor: 'middle',
-            style: { fontSize: '8px', fill: p.isWeekend ? '#ef4444' : 'rgba(100, 116, 139, 0.5)' }
-          }, ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][p.dayOfWeek !== undefined ? p.dayOfWeek : (p.date ? new Date(p.date).getDay() : 0)] || '')
-        );
-      }),
-      // Метки дней внизу + дельта для всех дней (дельта появляется синхронно с точкой)
-      points.map((p, i) => {
-        // Классы для выходных и сегодня
-        let dayClass = 'sparkline-day-label';
-        if (p.isToday) dayClass += ' sparkline-day-today';
-        if (p.isWeekend) dayClass += ' sparkline-day-weekend';
-        if (p.isUnknown) dayClass += ' sparkline-day-unknown';
+          return React.createElement('g', { key: 'forecast-day-' + i },
+            // "прогноз на завтра" выше даты — только для завтра
+            showTomorrowLabel && React.createElement('text', {
+              x: p.x,
+              y: height - 34,
+              className: 'sparkline-day-label sparkline-day-forecast',
+              textAnchor: isLast ? 'end' : 'middle',
+              style: { opacity: 0.9, fontSize: '8px', fill: '#3b82f6' }
+            }, 'прогноз'),
+            showTomorrowLabel && React.createElement('text', {
+              x: p.x,
+              y: height - 25,
+              className: 'sparkline-day-label sparkline-day-forecast',
+              textAnchor: isLast ? 'end' : 'middle',
+              style: { opacity: 0.9, fontSize: '8px', fill: '#3b82f6' }
+            }, 'на завтра'),
+            // Дата — на том же уровне что и обычные дни
+            React.createElement('text', {
+              x: p.x,
+              y: height - 26,
+              className: 'sparkline-day-label' +
+                (p.isTodayForecast ? ' sparkline-day-today' : '') +
+                (isFutureDay ? ' sparkline-day-future' : ' sparkline-day-forecast') +
+                (p.isWeekend ? ' sparkline-day-weekend' : ''),
+              textAnchor: isLast ? 'end' : 'middle',
+              dominantBaseline: 'alphabetic',
+              style: {
+                opacity: isFutureDay ? 0.5 : (p.isTodayForecast ? 1 : 0.8),
+                fontSize: p.isTodayForecast ? '9.5px' : undefined,
+                fontWeight: p.isTodayForecast ? '700' : undefined,
+                fill: p.isTodayForecast ? '#3b82f6' : undefined
+              }
+            }, p.dayNum),
+            // День недели для прогнозных дней
+            React.createElement('text', {
+              x: p.x,
+              y: height - 2,
+              className: 'sparkline-weekday-label' + (p.isWeekend ? ' sparkline-weekday-weekend' : ''),
+              textAnchor: 'middle',
+              style: { fontSize: '8px', fill: p.isWeekend ? '#ef4444' : 'rgba(100, 116, 139, 0.5)' }
+            }, ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][p.dayOfWeek !== undefined ? p.dayOfWeek : (p.date ? new Date(p.date).getDay() : 0)] || '')
+          );
+        }),
+        // Метки дней внизу + дельта для всех дней (дельта появляется синхронно с точкой)
+        points.map((p, i) => {
+          // Классы для выходных и сегодня
+          let dayClass = 'sparkline-day-label';
+          if (p.isToday) dayClass += ' sparkline-day-today';
+          if (p.isWeekend) dayClass += ' sparkline-day-weekend';
+          if (p.isUnknown) dayClass += ' sparkline-day-unknown';
 
-        // Дельта: разница между съеденным и нормой
-        // Для сегодня используем goal (= displayOptimum с учётом долга), т.к. p.target может быть устаревшим на первом рендере
-        const effectiveTarget = p.isToday && goal > 0 ? goal : p.target;
-        const delta = p.kcal - effectiveTarget;
-        const deltaText = delta >= 0 ? '+' + Math.round(delta) : Math.round(delta);
-        // Цвет дельты: минус (дефицит) = зелёный, плюс (переел) = красный
-        const deltaColor = delta >= 0 ? '#ef4444' : '#22c55e';
-
-        // Delay: все дельты и эмодзи появляются одновременно — взрыв от оси X
-        const deltaDelay = 2.6; // все сразу
-
-        return React.createElement('g', { key: 'day-group-' + i },
-          // Дата — для сегодня чуть крупнее и жирнее, цвет по ratio
-          React.createElement('text', {
-            x: p.x,
-            y: height - 26,
-            className: dayClass,
-            textAnchor: 'middle',
-            dominantBaseline: 'alphabetic',
-            style: p.isUnknown ? { opacity: 0.5 } : (p.isToday && p.kcal > 0 ? { fontSize: '9.5px', fontWeight: '700', fill: deltaColor } : {})
-          }, p.dayNum),
-          // Дельта под датой (для всех дней с данными, кроме unknown)
-          p.kcal > 0 && !p.isUnknown && React.createElement('text', {
-            x: p.x,
-            y: height - 14,
-            className: 'sparkline-delta-label',
-            textAnchor: 'middle',
-            style: { fill: deltaColor, '--delay': deltaDelay + 's' }
-          }, deltaText),
-          // День недели под дельтой
-          React.createElement('text', {
-            x: p.x,
-            y: height - 2,
-            className: 'sparkline-weekday-label' + (p.isWeekend ? ' sparkline-weekday-weekend' : '') + (p.isToday ? ' sparkline-weekday-today' : ''),
-            textAnchor: 'middle',
-            style: { fontSize: '8px', fill: p.isWeekend ? '#ef4444' : 'rgba(100, 116, 139, 0.7)' }
-          }, ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][p.dayOfWeek !== undefined ? p.dayOfWeek : (p.date ? new Date(p.date).getDay() : 0)] || ''),
-          // Для unknown дней — показываем "—" вместо дельты
-          p.isUnknown && React.createElement('text', {
-            x: p.x,
-            y: height - 14,
-            className: 'sparkline-delta-label sparkline-delta-unknown',
-            textAnchor: 'middle',
-            style: { fill: 'rgba(156, 163, 175, 0.6)', '--delay': deltaDelay + 's' }
-          }, '—')
-        );
-      }),
-      // Точки на все дни с hover и цветом по статусу (анимация с задержкой)
-      // Weekly Rhythm — вертикальные сепараторы перед понедельниками (но не первым)
-      points.filter((p, i) => i > 0 && p.dayOfWeek === 1).map((p, i) =>
-        React.createElement('line', {
-          key: 'week-sep-' + i,
-          x1: p.x - 4,
-          y1: paddingTop + 4,
-          x2: p.x - 4,
-          y2: height - paddingBottom - 4,
-          className: 'sparkline-week-separator'
-        })
-      ),
-      // Золотые пульсирующие точки для идеальных дней, иначе обычные точки
-      // Точки появляются синхронно с рисованием линии (по реальной длине кривой Безье)
-      (() => {
-        const lineDrawDuration = 3; // секунд — должно совпадать с CSS animation
-        const leadTime = 0.15; // точки появляются чуть раньше линии
-
-        return points.map((p, i) => {
+          // Дельта: разница между съеденным и нормой
           // Для сегодня используем goal (= displayOptimum с учётом долга), т.к. p.target может быть устаревшим на первом рендере
           const effectiveTarget = p.isToday && goal > 0 ? goal : p.target;
-          const ratio = effectiveTarget > 0 ? p.kcal / effectiveTarget : 0;
-          // Задержка пропорциональна реальной длине пути до точки
-          const pathProgress = cumulativeLengths[i] / totalPathLength;
-          const animDelay = Math.max(0, pathProgress * lineDrawDuration - leadTime);
+          const delta = p.kcal - effectiveTarget;
+          const deltaText = delta >= 0 ? '+' + Math.round(delta) : Math.round(delta);
+          // Цвет дельты: минус (дефицит) = зелёный, плюс (переел) = красный
+          const deltaColor = delta >= 0 ? '#ef4444' : '#22c55e';
 
-          // Неизвестный день — серый кружок с "?"
-          if (p.isUnknown) {
-            return React.createElement('g', { key: 'unknown-' + i },
-              React.createElement('circle', {
-                cx: p.x,
-                cy: p.y,
-                r: 6,
-                className: 'sparkline-dot sparkline-dot-unknown',
-                style: { 
-                  cursor: 'pointer', 
-                  '--delay': animDelay + 's',
-                  fill: 'rgba(156, 163, 175, 0.3)',
-                  stroke: 'rgba(156, 163, 175, 0.6)',
-                  strokeWidth: 1.5,
-                  strokeDasharray: '2 2'
-                },
-                onClick: (e) => {
-                  e.stopPropagation();
-                  safeHaptic('light');
-                  safeOpenPopup('sparkline', { type: 'unknown', point: p, x: e.clientX, y: e.clientY });
-                }
-              }),
-              React.createElement('text', {
-                x: p.x,
-                y: p.y + 3,
-                textAnchor: 'middle',
-                className: 'sparkline-unknown-label',
-                style: { 
-                  fill: 'rgba(156, 163, 175, 0.9)',
-                  fontSize: '9px',
-                  fontWeight: '600',
-                  pointerEvents: 'none'
-                }
-              }, '?')
-            );
-          }
+          // Delay: все дельты и эмодзи появляются одновременно — взрыв от оси X
+          const deltaDelay = 2.6; // все сразу
 
-          // Идеальный день — золотая пульсирующая точка (или оранжевая для refeed)
-          if (p.isPerfect && p.kcal > 0) {
-            // Refeed день: оранжевая граница + 🔄 бейдж
-            const isRefeed = p.isRefeedDay && ratio > 1.1;
-            return React.createElement('g', { key: 'perfect-' + i },
-              React.createElement('circle', {
-                key: 'gold-' + i,
-                cx: p.x,
-                cy: p.y,
-                r: p.isToday ? 5 : 4,
-                className: isRefeed 
-                  ? 'sparkline-dot-refeed' + (p.isToday ? ' sparkline-dot-refeed-today' : '')
-                  : 'sparkline-dot-gold' + (p.isToday ? ' sparkline-dot-gold-today' : ''),
-                style: { cursor: 'pointer', '--delay': animDelay + 's' },
+          return React.createElement('g', { key: 'day-group-' + i },
+            // Дата — для сегодня чуть крупнее и жирнее, цвет по ratio
+            React.createElement('text', {
+              x: p.x,
+              y: height - 26,
+              className: dayClass,
+              textAnchor: 'middle',
+              dominantBaseline: 'alphabetic',
+              style: p.isUnknown ? { opacity: 0.5 } : (p.isToday && p.kcal > 0 ? { fontSize: '9.5px', fontWeight: '700', fill: deltaColor } : {})
+            }, p.dayNum),
+            // Дельта под датой (для всех дней с данными, кроме unknown)
+            p.kcal > 0 && !p.isUnknown && React.createElement('text', {
+              x: p.x,
+              y: height - 14,
+              className: 'sparkline-delta-label',
+              textAnchor: 'middle',
+              style: { fill: deltaColor, '--delay': deltaDelay + 's' }
+            }, deltaText),
+            // День недели под дельтой
+            React.createElement('text', {
+              x: p.x,
+              y: height - 2,
+              className: 'sparkline-weekday-label' + (p.isWeekend ? ' sparkline-weekday-weekend' : '') + (p.isToday ? ' sparkline-weekday-today' : ''),
+              textAnchor: 'middle',
+              style: { fontSize: '8px', fill: p.isWeekend ? '#ef4444' : 'rgba(100, 116, 139, 0.7)' }
+            }, ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][p.dayOfWeek !== undefined ? p.dayOfWeek : (p.date ? new Date(p.date).getDay() : 0)] || ''),
+            // Для unknown дней — показываем "—" вместо дельты
+            p.isUnknown && React.createElement('text', {
+              x: p.x,
+              y: height - 14,
+              className: 'sparkline-delta-label sparkline-delta-unknown',
+              textAnchor: 'middle',
+              style: { fill: 'rgba(156, 163, 175, 0.6)', '--delay': deltaDelay + 's' }
+            }, '—')
+          );
+        }),
+        // Точки на все дни с hover и цветом по статусу (анимация с задержкой)
+        // Weekly Rhythm — вертикальные сепараторы перед понедельниками (но не первым)
+        points.filter((p, i) => i > 0 && p.dayOfWeek === 1).map((p, i) =>
+          React.createElement('line', {
+            key: 'week-sep-' + i,
+            x1: p.x - 4,
+            y1: paddingTop + 4,
+            x2: p.x - 4,
+            y2: height - paddingBottom - 4,
+            className: 'sparkline-week-separator'
+          })
+        ),
+        // Золотые пульсирующие точки для идеальных дней, иначе обычные точки
+        // Точки появляются синхронно с рисованием линии (по реальной длине кривой Безье)
+        (() => {
+          const lineDrawDuration = 3; // секунд — должно совпадать с CSS animation
+          const leadTime = 0.15; // точки появляются чуть раньше линии
+
+          return points.map((p, i) => {
+            // Для сегодня используем goal (= displayOptimum с учётом долга), т.к. p.target может быть устаревшим на первом рендере
+            const effectiveTarget = p.isToday && goal > 0 ? goal : p.target;
+            const ratio = effectiveTarget > 0 ? p.kcal / effectiveTarget : 0;
+            // Задержка пропорциональна реальной длине пути до точки
+            const pathProgress = cumulativeLengths[i] / totalPathLength;
+            const animDelay = Math.max(0, pathProgress * lineDrawDuration - leadTime);
+
+            // Неизвестный день — серый кружок с "?"
+            if (p.isUnknown) {
+              return React.createElement('g', { key: 'unknown-' + i },
+                React.createElement('circle', {
+                  cx: p.x,
+                  cy: p.y,
+                  r: 6,
+                  className: 'sparkline-dot sparkline-dot-unknown',
+                  style: {
+                    cursor: 'pointer',
+                    '--delay': animDelay + 's',
+                    fill: 'rgba(156, 163, 175, 0.3)',
+                    stroke: 'rgba(156, 163, 175, 0.6)',
+                    strokeWidth: 1.5,
+                    strokeDasharray: '2 2'
+                  },
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    safeHaptic('light');
+                    safeOpenPopup('sparkline', { type: 'unknown', point: p, x: e.clientX, y: e.clientY });
+                  }
+                }),
+                React.createElement('text', {
+                  x: p.x,
+                  y: p.y + 3,
+                  textAnchor: 'middle',
+                  className: 'sparkline-unknown-label',
+                  style: {
+                    fill: 'rgba(156, 163, 175, 0.9)',
+                    fontSize: '9px',
+                    fontWeight: '600',
+                    pointerEvents: 'none'
+                  }
+                }, '?')
+              );
+            }
+
+            // Refeed день — показываем эмодзи 🍕 вместо точки
+            if (p.isRefeedDay && p.kcal > 0) {
+              const emojiClass = 'sparkline-refeed-emoji' + (p.isToday ? ' sparkline-refeed-emoji-today' : '');
+              return React.createElement('g', {
+                key: 'refeed-emoji-' + i,
                 onClick: (e) => {
                   e.stopPropagation();
                   safeHaptic('medium');
-                  safeOpenPopup('sparkline', { type: isRefeed ? 'refeed' : 'perfect', point: p, x: e.clientX, y: e.clientY });
+                  safeOpenPopup('sparkline', { type: 'refeed', point: p, x: e.clientX, y: e.clientY });
                 }
-              }),
-              // Refeed бейдж (🔄) над точкой
-              isRefeed && React.createElement('text', {
-                x: p.x,
-                y: p.y - 10,
-                textAnchor: 'middle',
-                className: 'sparkline-refeed-badge',
-                style: { fontSize: '10px', '--delay': animDelay + 0.2 + 's' }
-              }, '🔄')
-            );
-          }
-
-          // Обычная точка — цвет через inline style из ratioZones
-          const dotColor = rz ? rz.getGradientColor(ratio, 1) : '#22c55e';
-          let dotClass = 'sparkline-dot';
-          if (p.isToday) dotClass += ' sparkline-dot-today';
-
-          return React.createElement('circle', {
-            key: 'dot-' + i,
-            cx: p.x, 
-            cy: p.y, 
-            r: p.isToday ? 5 : 4,
-            className: dotClass,
-            style: { cursor: 'pointer', '--delay': animDelay + 's', fill: dotColor },
-            onClick: (e) => {
-              e.stopPropagation();
-              safeHaptic('light');
-              safeOpenPopup('sparkline', { type: 'kcal', point: p, x: e.clientX, y: e.clientY });
+              },
+                React.createElement('circle', {
+                  className: 'sparkline-refeed-emoji-gap',
+                  cx: p.x,
+                  cy: p.y,
+                  r: 6.5
+                }),
+                React.createElement('text', {
+                  x: p.x - 1.8,
+                  y: p.y + 1.8,
+                  textAnchor: 'middle',
+                  className: emojiClass,
+                  style: { cursor: 'pointer', '--delay': animDelay + 's' }
+                }, '🍕')
+              );
             }
-          },
-            React.createElement('title', null, p.dayNum + ': ' + p.kcal + ' / ' + p.target + ' ккал')
-          );
-        });
-      })(),
-      // Пунктирные линии от точек к меткам дней (появляются синхронно с точкой)
-      points.map((p, i) => {
-        if (p.kcal <= 0) return null;
-        const pathProgress = cumulativeLengths[i] / totalPathLength;
-        const lineDelay = Math.max(0, pathProgress * 3 - 0.15);
-        return React.createElement('line', {
-          key: 'point-line-' + i,
-          x1: p.x,
-          y1: p.y + 6, // от точки
-          x2: p.x,
-          y2: height - paddingBottom + 6, // до меток дней
-          className: 'sparkline-point-line',
-          style: { '--delay': lineDelay + 's' }
-        });
-      }).filter(Boolean),
-      // Аннотации тренировок — пунктирные линии вниз к точкам (появляются синхронно с точкой)
-      points.map((p, i) => {
-        if (!p.hasTraining || !p.trainingTypes.length) return null;
-        const lineDelay = 2.6; // все сразу
-        return React.createElement('line', {
-          key: 'train-line-' + i,
-          x1: p.x,
-          y1: 6, // от верхней линии
-          x2: p.x,
-          y2: p.y - 6, // до точки
-          className: 'sparkline-training-line',
-          style: { '--delay': lineDelay + 's' }
-        });
-      }).filter(Boolean),
-      // Аннотации тренировок — иконки в одну линию сверху
-      // Используем SVG <image> с Twemoji CDN напрямую
-      points.map((p, i) => {
-        if (!p.hasTraining || !p.trainingTypes.length) return null;
-        // Маппинг типов на Twemoji codepoints
-        const typeCodepoint = { 
-          cardio: '1f3c3',      // 🏃
-          strength: '1f3cb',    // 🏋️ (без -fe0f!)
-          hobby: '26bd'         // ⚽
-        };
-        const emojiDelay = 2.6;
-        const emojiSize = 16;
-        const emojiCount = p.trainingTypes.length;
-        const totalWidth = emojiCount * emojiSize;
-        const startX = p.x - totalWidth / 2;
 
-        return React.createElement('g', {
-          key: 'train-' + i,
-          className: 'sparkline-annotation sparkline-annotation-training',
-          style: { '--delay': emojiDelay + 's' }
-        },
-          p.trainingTypes.map((t, j) => {
-            const code = typeCodepoint[t] || '1f3c3';
-            const url = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/' + code + '.svg';
-            return React.createElement('image', {
-              key: j,
-              href: url,
-              x: startX + j * emojiSize,
-              y: 1,
-              width: emojiSize,
-              height: emojiSize
+            // Идеальный день — золотая пульсирующая точка (или оранжевая для refeed)
+            if (p.isPerfect && p.kcal > 0) {
+              // Refeed день: оранжевая граница + 🔄 бейдж
+              const isRefeed = p.isRefeedDay && ratio > 1.1;
+              return React.createElement('g', { key: 'perfect-' + i },
+                React.createElement('circle', {
+                  key: 'gold-' + i,
+                  cx: p.x,
+                  cy: p.y,
+                  r: p.isToday ? 5 : 4,
+                  className: isRefeed
+                    ? 'sparkline-dot-refeed' + (p.isToday ? ' sparkline-dot-refeed-today' : '')
+                    : 'sparkline-dot-gold' + (p.isToday ? ' sparkline-dot-gold-today' : ''),
+                  style: { cursor: 'pointer', '--delay': animDelay + 's' },
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    safeHaptic('medium');
+                    safeOpenPopup('sparkline', { type: isRefeed ? 'refeed' : 'perfect', point: p, x: e.clientX, y: e.clientY });
+                  }
+                }),
+                // Refeed бейдж (🔄) над точкой
+                isRefeed && React.createElement('text', {
+                  x: p.x,
+                  y: p.y - 10,
+                  textAnchor: 'middle',
+                  className: 'sparkline-refeed-badge',
+                  style: { fontSize: '10px', '--delay': animDelay + 0.2 + 's' }
+                }, '🔄')
+              );
+            }
+
+            // Обычная точка — цвет через inline style из ratioZones
+            const dotColor = rz ? rz.getGradientColor(ratio, 1) : '#22c55e';
+            let dotClass = 'sparkline-dot';
+            if (p.isToday) dotClass += ' sparkline-dot-today';
+
+            return React.createElement('circle', {
+              key: 'dot-' + i,
+              cx: p.x,
+              cy: p.y,
+              r: p.isToday ? 5 : 4,
+              className: dotClass,
+              style: { cursor: 'pointer', '--delay': animDelay + 's', fill: dotColor },
+              onClick: (e) => {
+                e.stopPropagation();
+                safeHaptic('light');
+                safeOpenPopup('sparkline', { type: 'kcal', point: p, x: e.clientX, y: e.clientY });
+              }
+            },
+              React.createElement('title', null, p.dayNum + ': ' + p.kcal + ' / ' + p.target + ' ккал')
+            );
+          });
+        })(),
+        // Пунктирные линии от точек к меткам дней (появляются синхронно с точкой)
+        points.map((p, i) => {
+          if (p.kcal <= 0) return null;
+          const pathProgress = cumulativeLengths[i] / totalPathLength;
+          const lineDelay = Math.max(0, pathProgress * 3 - 0.15);
+          return React.createElement('line', {
+            key: 'point-line-' + i,
+            x1: p.x,
+            y1: p.y + 6, // от точки
+            x2: p.x,
+            y2: height - paddingBottom + 6, // до меток дней
+            className: 'sparkline-point-line',
+            style: { '--delay': lineDelay + 's' }
+          });
+        }).filter(Boolean),
+        // Аннотации тренировок — пунктирные линии вниз к точкам (появляются синхронно с точкой)
+        points.map((p, i) => {
+          if (!p.hasTraining || !p.trainingTypes.length) return null;
+          const lineDelay = 2.6; // все сразу
+          return React.createElement('line', {
+            key: 'train-line-' + i,
+            x1: p.x,
+            y1: 6, // от верхней линии
+            x2: p.x,
+            y2: p.y - 6, // до точки
+            className: 'sparkline-training-line',
+            style: { '--delay': lineDelay + 's' }
+          });
+        }).filter(Boolean),
+        // Аннотации тренировок — иконки в одну линию сверху
+        // Используем SVG <image> с Twemoji CDN напрямую
+        points.map((p, i) => {
+          if (!p.hasTraining || !p.trainingTypes.length) return null;
+          // Маппинг типов на Twemoji codepoints
+          const typeCodepoint = {
+            cardio: '1f3c3',      // 🏃
+            strength: '1f3cb',    // 🏋️ (без -fe0f!)
+            hobby: '26bd'         // ⚽
+          };
+          const emojiDelay = 2.6;
+          const emojiSize = 16;
+          const emojiCount = p.trainingTypes.length;
+          const totalWidth = emojiCount * emojiSize;
+          const startX = p.x - totalWidth / 2;
+
+          return React.createElement('g', {
+            key: 'train-' + i,
+            className: 'sparkline-annotation sparkline-annotation-training',
+            style: { '--delay': emojiDelay + 's' }
+          },
+            p.trainingTypes.map((t, j) => {
+              const code = typeCodepoint[t] || '1f3c3';
+              const url = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/' + code + '.svg';
+              return React.createElement('image', {
+                key: j,
+                href: url,
+                x: startX + j * emojiSize,
+                y: 1,
+                width: emojiSize,
+                height: emojiSize
+              });
+            })
+          );
+        }).filter(Boolean),
+        // Слайдер — вертикальная линия
+        sliderPoint && React.createElement('line', {
+          key: 'slider-line',
+          x1: sliderPoint.x,
+          y1: paddingTop,
+          x2: sliderPoint.x,
+          y2: height - paddingBottom + 2,
+          className: 'sparkline-slider-line'
+        }),
+        // Слайдер — увеличенная точка
+        sliderPoint && React.createElement('circle', {
+          key: 'slider-point',
+          cx: sliderPoint.x,
+          cy: sliderPoint.y,
+          r: 6,
+          className: 'sparkline-slider-point'
+        }),
+        // === TODAY LINE — вертикальная линия на сегодня ===
+        todayPoint && React.createElement('g', { key: 'today-line-group' },
+          // Полупрозрачная полоса
+          React.createElement('rect', {
+            x: todayPoint.x - 1.5,
+            y: paddingTop,
+            width: 3,
+            height: chartHeight,
+            className: 'sparkline-today-line',
+            fill: 'rgba(59, 130, 246, 0.2)'
+          }),
+          // Процент отклонения от нормы (с гапом от треугольника)
+          todayPoint.target > 0 && React.createElement('text', {
+            x: todayPoint.x,
+            y: todayPoint.y - 26,
+            textAnchor: 'middle',
+            className: 'sparkline-today-pct',
+            style: {
+              fill: rz ? rz.getGradientColor(todayPoint.kcal / todayPoint.target, 1) : '#22c55e',
+              fontSize: '12px',
+              fontWeight: '700'
+            }
+          }, (() => {
+            const deviation = Math.round((todayPoint.kcal / todayPoint.target - 1) * 100);
+            return deviation >= 0 ? '+' + deviation + '%' : deviation + '%';
+          })()),
+          // Анимированный треугольник-указатель (между процентом и точкой)
+          React.createElement('text', {
+            x: todayPoint.x,
+            y: todayPoint.y - 14,
+            textAnchor: 'middle',
+            className: 'sparkline-today-label sparkline-forecast-arrow',
+            style: { fill: 'rgba(59, 130, 246, 0.9)', fontSize: '10px', fontWeight: '600' }
+          }, '▼')
+        ),
+        // === BRUSH SELECTION — полоса выбора диапазона ===
+        brushRange && points[brushRange.start] && points[brushRange.end] && React.createElement('rect', {
+          key: 'brush-overlay',
+          x: Math.min(points[brushRange.start].x, points[brushRange.end].x),
+          y: paddingTop,
+          width: Math.abs(points[brushRange.end].x - points[brushRange.start].x),
+          height: chartHeight,
+          className: 'sparkline-brush-overlay',
+          fill: 'rgba(59, 130, 246, 0.12)',
+          stroke: 'rgba(59, 130, 246, 0.4)',
+          strokeWidth: 1,
+          rx: 2
+        })
+      ),
+      // Glassmorphism тултип для слайдера (компактный)
+      sliderPoint && React.createElement('div', {
+        className: 'sparkline-slider-tooltip',
+        style: {
+          left: Math.min(Math.max(sliderPoint.x, 60), width - 60) + 'px',
+          transform: 'translateX(-50%)'
+        }
+      },
+        // Header: дата + badge процент
+        React.createElement('div', { className: 'sparkline-slider-tooltip-header' },
+          React.createElement('span', { className: 'sparkline-slider-tooltip-date' },
+            (() => {
+              if (sliderPoint.isForecast) return sliderPoint.dayNum + ' П';
+              const weekDays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+              const wd = weekDays[sliderPoint.dayOfWeek] || '';
+              return sliderPoint.dayNum + ' ' + wd;
+            })()
+          ),
+          sliderPoint.ratio && React.createElement('span', {
+            className: 'sparkline-slider-tooltip-ratio',
+            style: { backgroundColor: rz ? rz.getGradientColor(sliderPoint.ratio, 0.9) : '#22c55e' }
+          }, Math.round(sliderPoint.ratio * 100) + '%')
+        ),
+        // Калории
+        React.createElement('div', { className: 'sparkline-slider-tooltip-kcal' },
+          sliderPoint.kcal + ' ',
+          React.createElement('small', null, '/ ' + sliderPoint.target)
+        ),
+        // Теги: сон, оценка сна, тренировка, шаги, оценка дня
+        (sliderPoint.sleepHours > 0 || sliderPoint.sleepQuality > 0 || sliderPoint.dayScore > 0 || sliderPoint.trainingMinutes > 0 || sliderPoint.steps > 0) &&
+        React.createElement('div', { className: 'sparkline-slider-tooltip-tags' },
+          // Сон
+          sliderPoint.sleepHours > 0 &&
+          React.createElement('span', {
+            className: 'sparkline-slider-tooltip-tag' + (sliderPoint.sleepHours < 6 ? ' bad' : '')
+          }, 'Сон: ' + sliderPoint.sleepHours.toFixed(1) + 'ч'),
+          // Оценка сна (1-10) — динамический цвет
+          sliderPoint.sleepQuality > 0 &&
+          React.createElement('span', {
+            className: 'sparkline-slider-tooltip-tag',
+            style: {
+              backgroundColor: sliderPoint.sleepQuality <= 3 ? '#ef4444' :
+                sliderPoint.sleepQuality <= 5 ? '#f97316' :
+                  sliderPoint.sleepQuality <= 7 ? '#eab308' : '#22c55e',
+              color: sliderPoint.sleepQuality <= 5 ? '#fff' : '#000'
+            }
+          }, 'Оценка сна: ' + sliderPoint.sleepQuality),
+          // Тренировка
+          sliderPoint.trainingMinutes > 0 &&
+          React.createElement('span', {
+            className: 'sparkline-slider-tooltip-tag good'
+          }, 'Тренировка: ' + sliderPoint.trainingMinutes + 'м'),
+          // Шаги
+          sliderPoint.steps > 0 &&
+          React.createElement('span', {
+            className: 'sparkline-slider-tooltip-tag' + (sliderPoint.steps >= 10000 ? ' good' : '')
+          }, 'Шаги: ' + sliderPoint.steps.toLocaleString()),
+          // Оценка дня (1-10) — динамический цвет
+          sliderPoint.dayScore > 0 &&
+          React.createElement('span', {
+            className: 'sparkline-slider-tooltip-tag',
+            style: {
+              backgroundColor: sliderPoint.dayScore <= 3 ? '#ef4444' :
+                sliderPoint.dayScore <= 5 ? '#f97316' :
+                  sliderPoint.dayScore <= 7 ? '#eab308' : '#22c55e',
+              color: sliderPoint.dayScore <= 5 ? '#fff' : '#000'
+            }
+          }, 'Оценка дня: ' + sliderPoint.dayScore)
+        )
+      ),
+      // Полоса оценки дня (dayScore) под графиком
+      (() => {
+        // Используем исходные data (до фильтрации excludeFromChart), чтобы включить сегодня
+        const allDaysWithScore = data.filter(d => d.dayScore > 0);
+        const hasDayScoreData = allDaysWithScore.length > 0;
+
+        if (hasDayScoreData) {
+          // Полоса с градиентом по dayScore (1-10)
+          const getDayScoreColor = (score) => {
+            if (!score || score <= 0) return 'transparent'; // нет данных — прозрачный пропуск
+            if (score <= 3) return '#ef4444'; // 😢 плохо — красный
+            if (score <= 5) return '#f97316'; // 😐 средне — оранжевый
+            if (score <= 7) return '#eab308'; // 🙂 нормально — жёлтый
+            return '#22c55e'; // 😊 хорошо — зелёный
+          };
+
+          // Используем все дни из data для градиента (включая сегодня)
+          const moodStops = data.map((d, i) => ({
+            offset: data.length > 1 ? (i / (data.length - 1)) * 100 : 50,
+            color: getDayScoreColor(d.dayScore)
+          }));
+
+          // Бар заканчивается на сегодня, справа место для надписи
+          // Вычисляем ширину бара: data.length дней из totalPoints (включая прогноз)
+          const barWidthPct = totalPoints > 1 ? ((data.length) / totalPoints) * 100 : 85;
+
+          // ВРЕМЕННО ЗАКОММЕНТИРОВАНО: надпись и бар оценки дня
+          return null;
+          /*
+          return React.createElement('div', { className: 'sparkline-mood-container' },
+            React.createElement('span', { 
+              className: 'sparkline-mood-label',
+              style: { textAlign: 'left', lineHeight: '1', fontSize: '8px', marginRight: '4px' }
+            }, 'Оценка дня'),
+            React.createElement('div', { 
+              className: 'sparkline-mood-bar-modern',
+              style: { 
+                width: barWidthPct + '%',
+                background: 'linear-gradient(to right, ' + 
+                  moodStops.map(s => s.color + ' ' + s.offset + '%').join(', ') + ')'
+              }
+            })
+          );
+          */
+        }
+
+        // Fallback: Mini heatmap калорий
+        return React.createElement('div', { className: 'sparkline-heatmap' },
+          points.map((p, i) => {
+            const ratio = p.target > 0 ? p.kcal / p.target : 0;
+            let level;
+            if (ratio === 0) level = 0;
+            else if (ratio < 0.5) level = 1;
+            else if (ratio < 0.8) level = 2;
+            else if (ratio < 0.95) level = 3;
+            else if (ratio <= 1.05) level = 4;
+            else if (ratio <= 1.15) level = 5;
+            else level = 6;
+
+            return React.createElement('div', {
+              key: 'hm-' + i,
+              className: 'sparkline-heatmap-cell level-' + level,
+              title: p.dayNum + ': ' + Math.round(ratio * 100) + '%'
             });
           })
         );
-      }).filter(Boolean),
-      // Слайдер — вертикальная линия
-      sliderPoint && React.createElement('line', {
-        key: 'slider-line',
-        x1: sliderPoint.x,
-        y1: paddingTop,
-        x2: sliderPoint.x,
-        y2: height - paddingBottom + 2,
-        className: 'sparkline-slider-line'
-      }),
-      // Слайдер — увеличенная точка
-      sliderPoint && React.createElement('circle', {
-        key: 'slider-point',
-        cx: sliderPoint.x,
-        cy: sliderPoint.y,
-        r: 6,
-        className: 'sparkline-slider-point'
-      }),
-      // === TODAY LINE — вертикальная линия на сегодня ===
-      todayPoint && React.createElement('g', { key: 'today-line-group' },
-        // Полупрозрачная полоса
-        React.createElement('rect', {
-          x: todayPoint.x - 1.5,
-          y: paddingTop,
-          width: 3,
-          height: chartHeight,
-          className: 'sparkline-today-line',
-          fill: 'rgba(59, 130, 246, 0.2)'
-        }),
-        // Процент отклонения от нормы (с гапом от треугольника)
-        todayPoint.target > 0 && React.createElement('text', {
-          x: todayPoint.x,
-          y: todayPoint.y - 26,
-          textAnchor: 'middle',
-          className: 'sparkline-today-pct',
-          style: { 
-            fill: rz ? rz.getGradientColor(todayPoint.kcal / todayPoint.target, 1) : '#22c55e', 
-            fontSize: '12px', 
-            fontWeight: '700'
-          }
-        }, (() => {
-          const deviation = Math.round((todayPoint.kcal / todayPoint.target - 1) * 100);
-          return deviation >= 0 ? '+' + deviation + '%' : deviation + '%';
-        })()),
-        // Анимированный треугольник-указатель (между процентом и точкой)
-        React.createElement('text', {
-          x: todayPoint.x,
-          y: todayPoint.y - 14,
-          textAnchor: 'middle',
-          className: 'sparkline-today-label sparkline-forecast-arrow',
-          style: { fill: 'rgba(59, 130, 246, 0.9)', fontSize: '10px', fontWeight: '600' }
-        }, '▼')
-      ),
-      // === BRUSH SELECTION — полоса выбора диапазона ===
-      brushRange && points[brushRange.start] && points[brushRange.end] && React.createElement('rect', {
-        key: 'brush-overlay',
-        x: Math.min(points[brushRange.start].x, points[brushRange.end].x),
-        y: paddingTop,
-        width: Math.abs(points[brushRange.end].x - points[brushRange.start].x),
-        height: chartHeight,
-        className: 'sparkline-brush-overlay',
-        fill: 'rgba(59, 130, 246, 0.12)',
-        stroke: 'rgba(59, 130, 246, 0.4)',
-        strokeWidth: 1,
-        rx: 2
-      })
-    ),
-    // Glassmorphism тултип для слайдера (компактный)
-    sliderPoint && React.createElement('div', {
-      className: 'sparkline-slider-tooltip',
-      style: {
-        left: Math.min(Math.max(sliderPoint.x, 60), width - 60) + 'px',
-        transform: 'translateX(-50%)'
-      }
-    },
-      // Header: дата + badge процент
-      React.createElement('div', { className: 'sparkline-slider-tooltip-header' }, 
-        React.createElement('span', { className: 'sparkline-slider-tooltip-date' }, 
-          (() => {
-            if (sliderPoint.isForecast) return sliderPoint.dayNum + ' П';
-            const weekDays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-            const wd = weekDays[sliderPoint.dayOfWeek] || '';
-            return sliderPoint.dayNum + ' ' + wd;
-          })()
-        ),
-        sliderPoint.ratio && React.createElement('span', { 
-          className: 'sparkline-slider-tooltip-ratio',
-          style: { backgroundColor: rz ? rz.getGradientColor(sliderPoint.ratio, 0.9) : '#22c55e' }
-        }, Math.round(sliderPoint.ratio * 100) + '%')
-      ),
-      // Калории
-      React.createElement('div', { className: 'sparkline-slider-tooltip-kcal' }, 
-        sliderPoint.kcal + ' ',
-        React.createElement('small', null, '/ ' + sliderPoint.target)
-      ),
-      // Теги: сон, оценка сна, тренировка, шаги, оценка дня
-      (sliderPoint.sleepHours > 0 || sliderPoint.sleepQuality > 0 || sliderPoint.dayScore > 0 || sliderPoint.trainingMinutes > 0 || sliderPoint.steps > 0) &&
-        React.createElement('div', { className: 'sparkline-slider-tooltip-tags' },
-          // Сон
-          sliderPoint.sleepHours > 0 && 
-            React.createElement('span', { 
-              className: 'sparkline-slider-tooltip-tag' + (sliderPoint.sleepHours < 6 ? ' bad' : '')
-            }, 'Сон: ' + sliderPoint.sleepHours.toFixed(1) + 'ч'),
-          // Оценка сна (1-10) — динамический цвет
-          sliderPoint.sleepQuality > 0 && 
-            React.createElement('span', { 
-              className: 'sparkline-slider-tooltip-tag',
-              style: { 
-                backgroundColor: sliderPoint.sleepQuality <= 3 ? '#ef4444' : 
-                                 sliderPoint.sleepQuality <= 5 ? '#f97316' : 
-                                 sliderPoint.sleepQuality <= 7 ? '#eab308' : '#22c55e',
-                color: sliderPoint.sleepQuality <= 5 ? '#fff' : '#000'
-              }
-            }, 'Оценка сна: ' + sliderPoint.sleepQuality),
-          // Тренировка
-          sliderPoint.trainingMinutes > 0 && 
-            React.createElement('span', { 
-              className: 'sparkline-slider-tooltip-tag good'
-            }, 'Тренировка: ' + sliderPoint.trainingMinutes + 'м'),
-          // Шаги
-          sliderPoint.steps > 0 && 
-            React.createElement('span', { 
-              className: 'sparkline-slider-tooltip-tag' + (sliderPoint.steps >= 10000 ? ' good' : '')
-            }, 'Шаги: ' + sliderPoint.steps.toLocaleString()),
-          // Оценка дня (1-10) — динамический цвет
-          sliderPoint.dayScore > 0 && 
-            React.createElement('span', { 
-              className: 'sparkline-slider-tooltip-tag',
-              style: { 
-                backgroundColor: sliderPoint.dayScore <= 3 ? '#ef4444' : 
-                                 sliderPoint.dayScore <= 5 ? '#f97316' : 
-                                 sliderPoint.dayScore <= 7 ? '#eab308' : '#22c55e',
-                color: sliderPoint.dayScore <= 5 ? '#fff' : '#000'
-              }
-            }, 'Оценка дня: ' + sliderPoint.dayScore)
-        )
-    ),
-    // Полоса оценки дня (dayScore) под графиком
-    (() => {
-      // Используем исходные data (до фильтрации excludeFromChart), чтобы включить сегодня
-      const allDaysWithScore = data.filter(d => d.dayScore > 0);
-      const hasDayScoreData = allDaysWithScore.length > 0;
-
-      if (hasDayScoreData) {
-        // Полоса с градиентом по dayScore (1-10)
-        const getDayScoreColor = (score) => {
-          if (!score || score <= 0) return 'transparent'; // нет данных — прозрачный пропуск
-          if (score <= 3) return '#ef4444'; // 😢 плохо — красный
-          if (score <= 5) return '#f97316'; // 😐 средне — оранжевый
-          if (score <= 7) return '#eab308'; // 🙂 нормально — жёлтый
-          return '#22c55e'; // 😊 хорошо — зелёный
-        };
-
-        // Используем все дни из data для градиента (включая сегодня)
-        const moodStops = data.map((d, i) => ({
-          offset: data.length > 1 ? (i / (data.length - 1)) * 100 : 50,
-          color: getDayScoreColor(d.dayScore)
-        }));
-
-        // Бар заканчивается на сегодня, справа место для надписи
-        // Вычисляем ширину бара: data.length дней из totalPoints (включая прогноз)
-        const barWidthPct = totalPoints > 1 ? ((data.length) / totalPoints) * 100 : 85;
-
-        // ВРЕМЕННО ЗАКОММЕНТИРОВАНО: надпись и бар оценки дня
-        return null;
-        /*
-        return React.createElement('div', { className: 'sparkline-mood-container' },
-          React.createElement('span', { 
-            className: 'sparkline-mood-label',
-            style: { textAlign: 'left', lineHeight: '1', fontSize: '8px', marginRight: '4px' }
-          }, 'Оценка дня'),
-          React.createElement('div', { 
-            className: 'sparkline-mood-bar-modern',
-            style: { 
-              width: barWidthPct + '%',
-              background: 'linear-gradient(to right, ' + 
-                moodStops.map(s => s.color + ' ' + s.offset + '%').join(', ') + ')'
-            }
-          })
-        );
-        */
-      }
-
-      // Fallback: Mini heatmap калорий
-      return React.createElement('div', { className: 'sparkline-heatmap' },
-        points.map((p, i) => {
-          const ratio = p.target > 0 ? p.kcal / p.target : 0;
-          let level;
-          if (ratio === 0) level = 0;
-          else if (ratio < 0.5) level = 1;
-          else if (ratio < 0.8) level = 2;
-          else if (ratio < 0.95) level = 3;
-          else if (ratio <= 1.05) level = 4;
-          else if (ratio <= 1.15) level = 5;
-          else level = 6;
-
-          return React.createElement('div', {
-            key: 'hm-' + i,
-            className: 'sparkline-heatmap-cell level-' + level,
-            title: p.dayNum + ': ' + Math.round(ratio * 100) + '%'
-          });
-        })
-      );
-    })()
-    // Ряд индикаторов сна убран — информация дублируется с баром "Оценка дня"
-  );
+      })()
+      // Ряд индикаторов сна убран — информация дублируется с баром "Оценка дня"
+    );
   };
 
   HEYS.daySparklines.renderWeightSparkline = function renderWeightSparkline(ctx) {
     const { data, React, prof, openExclusivePopup, haptic } = ctx || {};
 
-    const safeHaptic = typeof haptic === 'function' ? haptic : () => {};
-    const safeOpenPopup = typeof openExclusivePopup === 'function' ? openExclusivePopup : () => {};
+    const safeHaptic = typeof haptic === 'function' ? haptic : () => { };
+    const safeOpenPopup = typeof openExclusivePopup === 'function' ? openExclusivePopup : () => { };
 
     // Skeleton loader пока данные загружаются
     if (!data) {
       return React.createElement('div', { className: 'sparkline-skeleton' },
         React.createElement('div', { className: 'sparkline-skeleton-line' }),
         React.createElement('div', { className: 'sparkline-skeleton-dots' },
-          Array.from({length: 7}).map((_, i) => 
+          Array.from({ length: 7 }).map((_, i) =>
             React.createElement('div', { key: i, className: 'sparkline-skeleton-dot' })
           )
         )
@@ -1800,13 +1838,13 @@
     const points = data.map((d, i) => {
       const x = paddingX + (i / (totalPoints - 1)) * (width - paddingX * 2);
       const y = paddingTop + chartHeight - ((d.weight - adjustedMin) / range) * chartHeight;
-      return { 
-        x, 
-        y, 
-        weight: d.weight, 
-        isToday: d.isToday, 
+      return {
+        x,
+        y,
+        weight: d.weight,
+        isToday: d.isToday,
         isFuture: d.isFuture || false, // Маркер прогнозного дня
-        dayNum: d.dayNum, 
+        dayNum: d.dayNum,
         date: d.date,
         // Данные о цикле
         cycleDay: d.cycleDay,
@@ -1871,14 +1909,14 @@
     const forecastColor = '#9ca3af'; // gray-400
 
     // Область под графиком (только реальные точки)
-    const areaPath = realPoints.length >= 2 
-      ? pathD + ` L${realPoints[realPoints.length-1].x},${paddingTop + chartHeight} L${realPoints[0].x},${paddingTop + chartHeight} Z`
+    const areaPath = realPoints.length >= 2
+      ? pathD + ` L${realPoints[realPoints.length - 1].x},${paddingTop + chartHeight} L${realPoints[0].x},${paddingTop + chartHeight} Z`
       : '';
 
     // Gradient stops для линии веса — по локальному тренду каждой точки (только реальные)
     // Зелёный = вес снижается, красный = вес растёт, фиолетовый = стабильно
     const weightLineGradientStops = realPoints.map((p, i) => {
-      const prevWeight = i > 0 ? realPoints[i-1].weight : p.weight;
+      const prevWeight = i > 0 ? realPoints[i - 1].weight : p.weight;
       const localTrend = p.weight - prevWeight;
       const dotColor = localTrend < -0.05 ? '#22c55e' : (localTrend > 0.05 ? '#ef4444' : '#3b82f6');
       const offset = realPoints.length > 1 ? (i / (realPoints.length - 1)) * 100 : 50;
@@ -1917,7 +1955,7 @@
       forecastLineD = `M${lastRealPoint.x},${lastRealPoint.y} L${futurePt.x},${futurePt.y}`;
     }
 
-    return React.createElement('svg', { 
+    return React.createElement('svg', {
       className: 'weight-sparkline-svg animate-always',
       viewBox: '0 0 ' + width + ' ' + height,
       preserveAspectRatio: 'none', // растягиваем по всей ширине
@@ -1932,12 +1970,12 @@
         ),
         // Горизонтальный градиент для линии — цвета по локальному тренду
         React.createElement('linearGradient', { id: 'weightLineGrad', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
-          weightLineGradientStops.map((stop, i) => 
-            React.createElement('stop', { 
-              key: i, 
-              offset: stop.offset + '%', 
-              stopColor: stop.color, 
-              stopOpacity: 1 
+          weightLineGradientStops.map((stop, i) =>
+            React.createElement('stop', {
+              key: i,
+              offset: stop.offset + '%',
+              stopColor: stop.color,
+              stopOpacity: 1
             })
           )
         ),
@@ -2098,9 +2136,9 @@
             x: todayPt.x,
             y: todayPt.y - 26,
             textAnchor: 'middle',
-            style: { 
-              fill: changeColor, 
-              fontSize: '9px', 
+            style: {
+              fill: changeColor,
+              fontSize: '9px',
               fontWeight: '700'
             }
           }, changeText + ' кг'),
@@ -2134,8 +2172,8 @@
 
         // На длинных графиках (>10 точек) показываем только ключевые метки дней
         const totalPoints = points.length;
-        const showDayLabel = totalPoints <= 10 || 
-          isFirst || isLast || p.isToday || 
+        const showDayLabel = totalPoints <= 10 ||
+          isFirst || isLast || p.isToday ||
           (!p.isFuture && i % 3 === 0) ||  // Каждая 3-я реальная
           (p.isFuture && i % 5 === 0);      // Каждая 5-я прогнозная
 
@@ -2145,7 +2183,7 @@
           key: 'wday-' + i,
           x: p.x,
           y: height - 2,
-          className: 'weight-sparkline-day-label' + 
+          className: 'weight-sparkline-day-label' +
             (p.isToday ? ' weight-sparkline-day-today' : '') +
             (p.isFuture ? ' weight-sparkline-day-forecast weight-sparkline-label-forecast' : ''),
           textAnchor: anchor
@@ -2165,7 +2203,7 @@
 
         // На длинных графиках (>10 точек) показываем только ключевые метки веса
         const totalPoints = points.length;
-        const showWeightLabel = totalPoints <= 10 || 
+        const showWeightLabel = totalPoints <= 10 ||
           isFirst || isLast || p.isToday || isLastReal || isFirstFuture ||
           (!p.isFuture && i % 3 === 0) ||  // Каждая 3-я реальная
           (p.isFuture && i % 7 === 0);      // Каждая 7-я прогнозная
@@ -2176,7 +2214,7 @@
           key: 'wlabel-' + i,
           x: p.x,
           y: p.y - 8,
-          className: 'weight-sparkline-weight-label' + 
+          className: 'weight-sparkline-weight-label' +
             (p.isToday ? ' weight-sparkline-day-today' : '') +
             (p.isFuture ? ' weight-sparkline-day-forecast weight-sparkline-label-forecast' : ''),
           textAnchor: anchor
@@ -2185,11 +2223,11 @@
       // Точки с цветом по локальному тренду (анимация с задержкой)
       points.map((p, i) => {
         // Локальный тренд: сравниваем с предыдущей точкой
-        const prevWeight = i > 0 ? points[i-1].weight : p.weight;
+        const prevWeight = i > 0 ? points[i - 1].weight : p.weight;
         const localTrend = p.weight - prevWeight;
 
         // Для прогнозных точек — серый цвет
-        const dotColor = p.isFuture 
+        const dotColor = p.isFuture
           ? forecastColor  // серый для прогноза
           : (localTrend < -0.05 ? '#22c55e' : (localTrend > 0.05 ? '#ef4444' : '#3b82f6'));
 
@@ -2202,9 +2240,9 @@
         const animDelay = 3 + i * 0.15;
 
         // Стили для точки
-        const dotStyle = { 
-          cursor: 'pointer', 
-          fill: dotColor, 
+        const dotStyle = {
+          cursor: 'pointer',
+          fill: dotColor,
           '--delay': animDelay + 's'
         };
 
@@ -2223,7 +2261,7 @@
         }
 
         // Tooltip с учётом прогноза и задержки воды
-        let tooltipText = p.isFuture 
+        let tooltipText = p.isFuture
           ? '(прогноз): ~' + p.weight.toFixed(1) + ' кг'
           : p.dayNum + ': ' + p.weight + ' кг';
         if (!p.isFuture && localTrend !== 0) {
@@ -2235,8 +2273,8 @@
 
         return React.createElement('circle', {
           key: 'wdot-' + i,
-          cx: p.x, 
-          cy: p.y, 
+          cx: p.x,
+          cy: p.y,
           r: p.isFuture ? 3.5 : (p.isToday ? 5 : 4),
           className: dotClass,
           style: dotStyle,
@@ -2248,23 +2286,23 @@
               // Клик на прогнозную точку
               const lastRealWeight = realPoints.length > 0 ? realPoints[realPoints.length - 1].weight : p.weight;
               const forecastChange = p.weight - lastRealWeight;
-              safeOpenPopup('sparkline', { 
-                type: 'weight-forecast', 
-                point: { 
-                  ...p, 
+              safeOpenPopup('sparkline', {
+                type: 'weight-forecast',
+                point: {
+                  ...p,
                   forecastChange,
                   lastWeight: lastRealWeight
                 },
-                x: e.clientX, 
-                y: e.clientY 
+                x: e.clientX,
+                y: e.clientY
               });
             } else {
               // Клик на реальную точку
-              safeOpenPopup('sparkline', { 
-                type: 'weight', 
+              safeOpenPopup('sparkline', {
+                type: 'weight',
                 point: { ...p, localTrend },
-                x: e.clientX, 
-                y: e.clientY 
+                x: e.clientX,
+                y: e.clientY
               });
             }
           }

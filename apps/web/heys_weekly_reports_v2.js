@@ -401,6 +401,7 @@
         const { PopupWithBackdrop, PopupCloseButton } = HEYS.dayPopups || {};
         const haptic = HEYS.dayUtils?.haptic || (() => { });
         const formatDateDisplay = HEYS.dayUtils?.formatDateDisplay;
+        const todayStr = new Date().toISOString().split('T')[0];
 
         const availableWeeks = useMemo(() => {
             const getter = getLsGet();
@@ -597,10 +598,14 @@
         const avgNormCarbs = report?.avgNormCarbs ?? 0;
 
         const buildMacroRing = (label, value, norm, toneClass) => {
-            const ringStartOffsetPct = 7; // чуть больше (~25°)
+            const ringStartOffsetPct = 9; // чуть больше (~32°)
             const ringCapCompPct = 5; // компенсация скруглённых концов
             const overColor = toneClass === 'protein' ? '#22c55e' : '#ef4444';
+            const ringColor = toneClass === 'protein'
+                ? '#ef4444'
+                : (toneClass === 'fat' ? '#f59e0b' : '#22c55e');
             const ratio = norm > 0 ? value / norm : 0;
+            const dotColor = ratio > 1 ? '#ef4444' : '#22c55e';
             // Основная дуга: от 0 до min(100%, ratio)
             const basePctRaw = Math.min(100, Math.round(ratio * 100));
             const basePct = Math.max(0, basePctRaw - ringCapCompPct);
@@ -608,10 +613,34 @@
             const hasOver = ratio > 1;
             const overPctRaw = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0; // max 150% визуально
             const overPct = Math.max(0, overPctRaw - ringCapCompPct);
+            const gradientId = 'macro-ring-gradient-' + toneClass;
+            const gradientStops = toneClass === 'protein'
+                ? ['#fecaca', '#ef4444']
+                : (toneClass === 'fat' ? ['#fde68a', '#f59e0b'] : ['#bbf7d0', '#22c55e']);
+            const getRingDotPos = (pct) => {
+                if (!pct || pct <= 0) return null;
+                const dotPct = Math.max(0, pct - 3); // слегка смещаем точку назад
+                if (dotPct <= 0) return null;
+                const angle = ((dotPct + ringStartOffsetPct) / 100) * Math.PI * 2;
+                return {
+                    x: 18 + 15.5 * Math.cos(angle),
+                    y: 18 + 15.5 * Math.sin(angle)
+                };
+            };
+            const dot = getRingDotPos(basePct);
 
             return h('div', { className: 'macro-ring-item' },
                 h('div', { className: 'macro-ring ' + toneClass + (hasOver ? ' macro-ring--over' : '') },
                     h('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
+                        h('defs', null,
+                            h('linearGradient', {
+                                id: gradientId,
+                                x1: '0%', y1: '0%', x2: '100%', y2: '100%'
+                            },
+                                h('stop', { offset: '0%', stopColor: gradientStops[0] }),
+                                h('stop', { offset: '100%', stopColor: gradientStops[1] })
+                            )
+                        ),
                         // Фоновый трек
                         h('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5, pathLength: 100 }),
                         // Основная дуга (до 100%)
@@ -619,7 +648,12 @@
                             className: 'macro-ring-fill',
                             cx: 18, cy: 18, r: 15.5,
                             pathLength: 100,
-                            style: { strokeDasharray: basePct + ' 100', strokeDashoffset: -ringStartOffsetPct }
+                            style: {
+                                strokeDasharray: basePct + ' 100',
+                                '--ring-dasharray': basePct + ' 100',
+                                '--ring-start-offset': -ringStartOffsetPct,
+                                stroke: 'url(#' + gradientId + ')'
+                            }
                         }),
                         // Красная дуга перебора (от 100% дальше)
                         hasOver && h('circle', {
@@ -628,9 +662,17 @@
                             pathLength: 100,
                             style: {
                                 strokeDasharray: overPct + ' ' + (100 - overPct),
-                                strokeDashoffset: -(100 - overPct),  // дуга заканчивается на 360°
+                                '--over-dasharray': overPct + ' ' + (100 - overPct),
+                                '--over-offset': -(100 - overPct),
                                 stroke: overColor
                             }
+                        }),
+                        dot && h('circle', {
+                            className: 'macro-ring-dot',
+                            cx: dot.x,
+                            cy: dot.y,
+                            r: 2.2,
+                            style: { '--macro-ring-dot': dotColor }
                         }),
                         // Маркер убран по просьбе
                     ),
