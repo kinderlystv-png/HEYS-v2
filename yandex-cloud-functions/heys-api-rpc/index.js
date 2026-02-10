@@ -1,7 +1,7 @@
 /**
  * HEYS API RPC — Yandex Cloud Function
  * PostgreSQL RPC вызовы напрямую к Yandex.Cloud PostgreSQL
- * v2.5.2 — force redeploy with JWT_SECRET fix (2026-02-08)
+ * v2.5.3 — verify stable deployment (2026-02-10)
  */
 
 const { getPool } = require('./shared/db-pool');

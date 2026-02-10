@@ -2709,6 +2709,433 @@ body.tour-active .ios-pwa-banner {
   transform: translateY(0);
 }
 
+/* === Onboarding Fusion Ceremony === */
+.onboarding-fusion {
+  position: fixed;
+  inset: 0;
+  z-index: 10070;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.onboarding-fusion__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(6px);
+  animation: fusionBackdropIn 0.4s ease-out;
+}
+
+@keyframes fusionBackdropIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.onboarding-fusion__stage {
+  position: relative;
+  z-index: 10071;
+  width: min(340px, 88vw);
+  height: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.onboarding-fusion__title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #f8fafc;
+  text-align: center;
+  margin-bottom: 24px;
+  opacity: 0;
+  animation: fusionTitleIn 0.5s ease-out 0.3s forwards;
+}
+
+@keyframes fusionTitleIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.onboarding-fusion__ring {
+  position: relative;
+  width: 240px;
+  height: 240px;
+}
+
+.onboarding-fusion__icon {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  opacity: 0;
+  /* Positions set via inline styles from JS */
+}
+
+@keyframes fusionIconAppear {
+  from {
+    opacity: 0;
+    transform: scale(0) rotate(-90deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Golden ring pulse while icons orbit */
+.onboarding-fusion__ring::before {
+  content: '';
+  position: absolute;
+  inset: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(250, 204, 21, 0.3);
+  animation: fusionRingPulse 1.2s ease-in-out 0.5s infinite;
+}
+
+@keyframes fusionRingPulse {
+
+  0%,
+  100% {
+    border-color: rgba(250, 204, 21, 0.2);
+    transform: scale(1);
+  }
+
+  50% {
+    border-color: rgba(250, 204, 21, 0.5);
+    transform: scale(1.05);
+  }
+}
+
+/* The medal that appears after fusion */
+.onboarding-fusion__medal {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  font-size: 56px;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff8dc, #fbbf24 60%, #b45309 100%);
+  border: 3px solid rgba(234, 179, 8, 0.9);
+  box-shadow:
+    0 0 40px rgba(250, 204, 21, 0.6),
+    0 0 80px rgba(250, 204, 21, 0.3),
+    inset 0 0 20px rgba(255, 255, 255, 0.3);
+  opacity: 0;
+  z-index: 2;
+}
+
+.onboarding-fusion__medal.is-visible {
+  animation: fusionMedalBorn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes fusionMedalBorn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0) rotate(-180deg);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.3) rotate(10deg);
+  }
+
+  75% {
+    transform: translate(-50%, -50%) scale(0.95) rotate(-5deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+  }
+}
+
+/* Starburst rays behind the medal */
+.onboarding-fusion__rays {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 200px;
+  height: 200px;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  z-index: 1;
+}
+
+.onboarding-fusion__rays.is-visible {
+  animation: fusionRaysIn 0.6s ease-out forwards;
+}
+
+@keyframes fusionRaysIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5) rotate(0deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(15deg);
+  }
+}
+
+.onboarding-fusion__ray {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 60px;
+  background: linear-gradient(to top, transparent, rgba(250, 204, 21, 0.8), transparent);
+  transform-origin: center bottom;
+  border-radius: 2px;
+}
+
+.onboarding-fusion__ray:nth-child(1) {
+  transform: translate(-50%, -100%) rotate(0deg);
+}
+
+.onboarding-fusion__ray:nth-child(2) {
+  transform: translate(-50%, -100%) rotate(30deg);
+}
+
+.onboarding-fusion__ray:nth-child(3) {
+  transform: translate(-50%, -100%) rotate(60deg);
+}
+
+.onboarding-fusion__ray:nth-child(4) {
+  transform: translate(-50%, -100%) rotate(90deg);
+}
+
+.onboarding-fusion__ray:nth-child(5) {
+  transform: translate(-50%, -100%) rotate(120deg);
+}
+
+.onboarding-fusion__ray:nth-child(6) {
+  transform: translate(-50%, -100%) rotate(150deg);
+}
+
+.onboarding-fusion__ray:nth-child(7) {
+  transform: translate(-50%, -100%) rotate(180deg);
+}
+
+.onboarding-fusion__ray:nth-child(8) {
+  transform: translate(-50%, -100%) rotate(210deg);
+}
+
+.onboarding-fusion__ray:nth-child(9) {
+  transform: translate(-50%, -100%) rotate(240deg);
+}
+
+.onboarding-fusion__ray:nth-child(10) {
+  transform: translate(-50%, -100%) rotate(270deg);
+}
+
+.onboarding-fusion__ray:nth-child(11) {
+  transform: translate(-50%, -100%) rotate(300deg);
+}
+
+.onboarding-fusion__ray:nth-child(12) {
+  transform: translate(-50%, -100%) rotate(330deg);
+}
+
+/* Medal flight animation (to target position) */
+.onboarding-fusion__medal.is-flying {
+  animation: none;
+  transition: all 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  position: fixed;
+  z-index: 10080;
+}
+
+/* Subtitle text */
+.onboarding-fusion__subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  text-align: center;
+  margin-top: 20px;
+  opacity: 0;
+}
+
+.onboarding-fusion__subtitle.is-visible {
+  animation: fusionSubtitleIn 0.4s ease-out forwards;
+}
+
+@keyframes fusionSubtitleIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* XP reward badge */
+.onboarding-fusion__xp {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fbbf24;
+  text-align: center;
+  margin-top: 8px;
+  opacity: 0;
+  text-shadow: 0 0 12px rgba(250, 204, 21, 0.5);
+}
+
+.onboarding-fusion__xp.is-visible {
+  animation: fusionXpIn 0.5s ease-out forwards;
+}
+
+@keyframes fusionXpIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Confetti particles for fusion */
+.onboarding-fusion__confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 3;
+}
+
+.onboarding-fusion__confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.onboarding-fusion__confetti-piece.is-active {
+  animation: fusionConfettiBurst 1.2s ease-out forwards;
+}
+
+@keyframes fusionConfettiBurst {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(var(--cx), var(--cy)) scale(0.3);
+  }
+}
+
+/* CTA button */
+.onboarding-fusion__btn {
+  margin-top: 16px;
+  border: none;
+  border-radius: 14px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #111827;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0;
+  box-shadow: 0 8px 24px -8px rgba(250, 204, 21, 0.5);
+  transition: transform 0.15s ease;
+}
+
+.onboarding-fusion__btn.is-visible {
+  animation: fusionBtnIn 0.4s ease-out forwards;
+}
+
+.onboarding-fusion__btn:active {
+  transform: scale(0.96);
+}
+
+@keyframes fusionBtnIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Medal landing glow on the target Medal in header */
+.onboarding-medal.fusion-landing {
+  animation: fusionMedalLanding 0.8s ease-out;
+}
+
+@keyframes fusionMedalLanding {
+  0% {
+    box-shadow: 0 0 40px rgba(250, 204, 21, 0.9), 0 0 80px rgba(250, 204, 21, 0.5);
+    transform: scale(1.3);
+  }
+
+  50% {
+    box-shadow: 0 0 60px rgba(250, 204, 21, 0.7), 0 0 120px rgba(250, 204, 21, 0.3);
+    transform: scale(1.1);
+  }
+
+  100% {
+    box-shadow: 0 10px 24px -16px rgba(250, 204, 21, 0.9);
+    transform: scale(1);
+  }
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .onboarding-fusion__backdrop {
+  background: rgba(2, 6, 23, 0.85);
+}
+
+[data-theme="dark"] .onboarding-fusion__medal {
+  background: radial-gradient(circle at 35% 35%, #fcd34d, #b45309 70%, #78350f 100%);
+  box-shadow:
+    0 0 50px rgba(250, 204, 21, 0.5),
+    0 0 100px rgba(250, 204, 21, 0.2),
+    inset 0 0 20px rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .onboarding-fusion__icon {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
 .achievement-story-label {
   font-size: 11px;
   text-transform: uppercase;

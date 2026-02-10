@@ -602,9 +602,14 @@
           if (burned > 0) {
             totalBurned += burned;
             const targetPctFromGoal = goalTarget > 0 ? ((goalTarget - burned) / burned) * 100 : null;
-            totalTargetDeficit += Number.isFinite(targetPctFromGoal)
-              ? targetPctFromGoal
-              : (tdeeInfo?.deficitPct || prof?.deficitPctTarget || 0);
+            const targetPctFromDay = (dayData?.deficitPct != null
+              ? dayData.deficitPct
+              : (tdeeInfo?.deficitPct != null
+                ? tdeeInfo.deficitPct
+                : (prof?.deficitPctTarget ?? null)));
+            totalTargetDeficit += Number.isFinite(targetPctFromDay)
+              ? targetPctFromDay
+              : (Number.isFinite(targetPctFromGoal) ? targetPctFromGoal : 0);
             daysWithDeficit++;
           } else {
             // Fallback на норму если модуль не загружен

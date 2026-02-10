@@ -197,11 +197,13 @@
   let _suppressUIUpdates = false; // 🔒 v3.1: Подавляем промежуточные UI-обновления во время rebuild chain
   let _isLoadingPhase = false; // 🔒 v4.0: Подавляет ВСЕ UI-уведомления во время загрузки/переключения клиента
   let _loadFromCloudPromise = null; // 🔒 v4.0: Dedup для параллельных вызовов loadFromCloud()
+  let _dailyBonusAuditCache = { date: null, checkedAt: 0, claimed: false };
   const DEDUP_WINDOW_MS = 200; // 🛡️ Окно дедупликации (мс)
   const DEBOUNCE_MS = 100;
   const STORAGE_KEY = 'heys_game';
   const DATA_VERSION = 2; // Версия структуры данных для миграций
   const MAX_DAILY_XP_DAYS = 30; // Хранить историю XP максимум 30 дней
+  const DAILY_BONUS_AUDIT_CACHE_MS = 60000;
   let _cloudWatchBound = false;
 
   // ========== ХЕЛПЕРЫ ==========
@@ -1777,7 +1779,82 @@
     return data.dailyBonusClaimed !== today;
   }
 
-  function claimDailyBonus() {
+  async function refreshDailyBonusFromAudit(options = {}) {
+    const { force = false } = options;
+    const today = getToday();
+    const data = loadData();
+
+    try {
+      if (!force && data.dailyBonusClaimed === today) {
+        _dailyBonusAuditCache = { date: today, checkedAt: Date.now(), claimed: true };
+        return true;
+      }
+
+      const now = Date.now();
+      if (!force && _dailyBonusAuditCache.date === today && (now - _dailyBonusAuditCache.checkedAt) < DAILY_BONUS_AUDIT_CACHE_MS) {
+        return _dailyBonusAuditCache.claimed;
+      }
+
+      const hasSession = Boolean(
+        HEYS.auth?.getSessionToken?.() ||
+        localStorage.getItem('heys_session_token') ||
+        localStorage.getItem('heys_curator_session')
+      );
+
+      if (!HEYS.YandexAPI?.rpc || !hasSession || isAuditRpcBlocked()) {
+        _dailyBonusAuditCache = { date: today, checkedAt: now, claimed: data.dailyBonusClaimed === today };
+        return data.dailyBonusClaimed === today;
+      }
+
+      const PAGE_SIZE = 100;
+      const MAX_PAGES = 5;
+      let offset = 0;
+      let found = false;
+      let oldestDate = null;
+
+      for (let page = 0; page < MAX_PAGES; page++) {
+        const result = await fetchGamificationHistory({ limit: PAGE_SIZE, offset });
+        const items = result?.items || [];
+        if (items.length === 0) break;
+
+        for (const event of items) {
+          const action = event.action || event.p_action || '';
+          if (action !== 'daily_bonus') continue;
+          const eventDate = event.created_at || event.createdAt;
+          if (!eventDate) continue;
+          const dateStr = new Date(eventDate).toISOString().slice(0, 10);
+          if (dateStr === today) {
+            found = true;
+            break;
+          }
+        }
+
+        if (found) break;
+
+        const lastEvent = items[items.length - 1];
+        const lastEventDate = lastEvent?.created_at || lastEvent?.createdAt || null;
+        oldestDate = lastEventDate ? new Date(lastEventDate).toISOString().slice(0, 10) : null;
+
+        if (!oldestDate || oldestDate < today) break;
+        offset += items.length;
+      }
+
+      _dailyBonusAuditCache = { date: today, checkedAt: now, claimed: found };
+
+      if (found && data.dailyBonusClaimed !== today) {
+        data.dailyBonusClaimed = today;
+        saveData();
+      }
+
+      return found;
+    } catch (e) {
+      _dailyBonusAuditCache = { date: today, checkedAt: Date.now(), claimed: data.dailyBonusClaimed === today };
+      return data.dailyBonusClaimed === today;
+    }
+  }
+
+  async function claimDailyBonus() {
+    await refreshDailyBonusFromAudit();
     const data = loadData();
     const today = getToday();
     if (data.dailyBonusClaimed === today) return false;
@@ -4580,6 +4657,7 @@
     getRankBadge,
     getXPMultiplier,
     canClaimDailyBonus,
+    refreshDailyBonusFromAudit,
     claimDailyBonus,
     isNewStreakRecord,
     getNextLevelTitle,

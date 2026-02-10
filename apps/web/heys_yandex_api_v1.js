@@ -1125,19 +1125,16 @@
    * @returns {Promise<{data: Array<{id, name}>, error: any}>}
    */
   async function getClients(curatorId) {
-    if (!curatorId) {
-      return { data: [], error: { message: 'curatorId required' } };
-    }
-
     try {
-      log(`getClients: curatorId=${curatorId}`);
-
       // 🔐 Используем /auth/clients вместо REST API (clients убран из REST по security)
       // Требует JWT токен куратора
       const token = getCuratorToken();
       if (!token) {
         return { data: null, error: { message: 'Curator not authenticated' } };
       }
+
+      const safeCuratorId = curatorId || 'self';
+      log(`getClients: curatorId=${safeCuratorId}`);
 
       const url = `${CONFIG.API_URL}/auth/clients`;
       const response = await fetchWithRetry(url, {
@@ -1181,6 +1178,18 @@
           clients = fallback.data;
           log('getClients: fallback to get_curator_clients');
         }
+      }
+
+      // 🐛 DEBUG: логируем поля для отладки Trial Machine
+      if (clients.length > 0) {
+        console.info('[HEYS.clients] 🐛 Client fields:', Object.keys(clients[0]));
+        console.info('[HEYS.clients] 🐛 First client sample:', {
+          id: clients[0].id?.substring(0, 8),
+          name: clients[0].name,
+          subscription_status: clients[0].subscription_status,
+          trial_ends_at: clients[0].trial_ends_at,
+          active_until: clients[0].active_until
+        });
       }
 
       // Сортируем по updated_at (ascending)

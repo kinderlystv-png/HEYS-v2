@@ -68,7 +68,7 @@ BEGIN
     ) AS item
     FROM trial_queue tq
     LEFT JOIN clients c ON tq.client_id = c.id
-    WHERE tq.curator_id = p_curator_id
+    WHERE (tq.curator_id = p_curator_id OR tq.curator_id IS NULL) -- Allow pending/queued items without curator assignment yet? OR check if converted leads have curator_id
       AND (p_status_filter IS NULL OR tq.status = p_status_filter)
       AND (p_search IS NULL OR c.name ILIKE '%' || p_search || '%' OR c.phone_normalized ILIKE '%' || p_search || '%')
     ORDER BY tq.queued_at DESC

@@ -1,0 +1,16 @@
+file:///Users/poplavskijanton/HEYS-v2/yandex-cloud-functions/quick_check_poplanton.js:27
+      const trialEnds      const trialEnds      const trialEnds      const trialEnds      const trialEnds      const trita      const trialEnds      const  > now) ?       co: (client.subsc      const trialEnds      const tons      const trialEnds      const trialEnds      const tria;
+            ^^^^^^^^^
+
+SyntaxError: Missing initializer in const declaration
+    at compileSourceTextModule (node:internal/modules/esm/utils:357:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:109:18)
+    at #translate (node:internal/modules/esm/loader:575:20)
+    at afterLoad (node:internal/modules/esm/loader:625:29)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:630:12)
+    at #createModuleJob (node:internal/modules/esm/loader:654:36)
+    at #getJobFromResolveResult (node:internal/modules/esm/loader:354:34)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:319:41)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:696:25)
+
+Node.js v24.8.0

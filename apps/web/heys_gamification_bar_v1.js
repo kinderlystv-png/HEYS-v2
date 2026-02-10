@@ -21,7 +21,7 @@
 
     function GamificationBar() {
         const React = window.React;
-        const { useState, useEffect, useRef, useCallback } = React;
+        const { useState, useEffect, useRef, useCallback, useMemo } = React;
         const AUDIT_LOG_PREFIX = '[HEYS.game.audit]';
         const logAuditInfo = (...args) => console.info(AUDIT_LOG_PREFIX, ...args);
         const logAuditWarn = (...args) => console.warn(AUDIT_LOG_PREFIX, ...args);
@@ -47,6 +47,7 @@
         const [dailyBonusAvailable, setDailyBonusAvailable] = useState(() => {
             return HEYS.game ? HEYS.game.canClaimDailyBonus() : false;
         });
+        const [dailyBonusLoading, setDailyBonusLoading] = useState(false);
         const [justUnlockedAch, setJustUnlockedAch] = useState(null);
         const [dailyMultiplier, setDailyMultiplier] = useState(() => {
             return HEYS.game ? HEYS.game.getDailyMultiplier() : { multiplier: 1, actions: 0, label: '' };
@@ -83,21 +84,32 @@
         const [auditLoading, setAuditLoading] = useState(false);
         const [auditError, setAuditError] = useState(null);
 
+        // === Onboarding Fusion Ceremony ===
+        const [fusionPhase, setFusionPhase] = useState(null); // null | 'gather' | 'merge' | 'medal' | 'fly' | 'done'
+        const fusionMedalRef = useRef(null);
+        const targetMedalRef = useRef(null);
+        const fusionTimerRef = useRef(null);
+
+        const ONBOARDING_ACHIEVEMENTS = useMemo(() => [
+            'first_checkin',
+            'first_meal',
+            'first_product',
+            'first_steps',
+            'first_advice',
+            'first_supplements',
+            'first_water',
+            'first_training',
+            'first_household'
+        ], []);
+
         const isOnboardingComplete = useCallback(() => {
             if (!HEYS.game) return false;
-            const onboardingAchievements = [
-                'first_checkin',
-                'first_meal',
-                'first_product',
-                'first_steps',
-                'first_advice',
-                'first_supplements',
-                'first_water',
-                'first_training',
-                'first_household'
-            ];
-            return onboardingAchievements.every((achId) => HEYS.game.isAchievementUnlocked(achId));
-        }, []);
+            return ONBOARDING_ACHIEVEMENTS.every((achId) => HEYS.game.isAchievementUnlocked(achId));
+        }, [ONBOARDING_ACHIEVEMENTS]);
+
+        // Track previous onboarding state to detect the moment it completes
+        const prevOnboardingDoneRef = useRef(false);
+        const fusionShownRef = useRef(false);
 
         const onboardingDone = isOnboardingComplete();
 
@@ -123,6 +135,13 @@
 
             if (HEYS.game) {
                 setDailyBonusAvailable(HEYS.game.canClaimDailyBonus());
+                if (HEYS.game.refreshDailyBonusFromAudit) {
+                    HEYS.game.refreshDailyBonusFromAudit()
+                        .then(() => {
+                            setDailyBonusAvailable(HEYS.game.canClaimDailyBonus());
+                        })
+                        .catch(() => { });
+                }
             }
 
             // Пробуем сразу
@@ -216,6 +235,10 @@
                         return newStats;
                     });
                 }
+                setDailyBonusAvailable(prev => {
+                    const next = HEYS.game ? HEYS.game.canClaimDailyBonus() : false;
+                    return prev === next ? prev : next;
+                });
                 // Обновляем streak (используем safeGetStreak для защиты от race condition)
                 setStreak(prevStreak => {
                     const newStreak = safeGetStreak();
@@ -248,6 +271,19 @@
                     if (['rare', 'epic', 'legendary', 'mythic'].includes(rarity)) {
                         setConfettiBurst({ rarity });
                         setTimeout(() => setConfettiBurst(null), 1800);
+                    }
+
+                    // === Detect onboarding completion → trigger fusion ceremony ===
+                    const achId = e.detail.data.achievement?.id;
+                    if (achId && ONBOARDING_ACHIEVEMENTS.includes(achId) && !fusionShownRef.current) {
+                        // Check if this was the LAST onboarding achievement
+                        setTimeout(() => {
+                            if (isOnboardingComplete() && !prevOnboardingDoneRef.current && !fusionShownRef.current) {
+                                fusionShownRef.current = true;
+                                prevOnboardingDoneRef.current = true;
+                                startFusionCeremony();
+                            }
+                        }, 1200); // Wait for single-achievement notification to finish
                     }
                 }
             };
@@ -320,6 +356,13 @@
                 setWeeklyChallenge(HEYS.game ? HEYS.game.getWeeklyChallenge() : { earned: 0, target: 500, percent: 0, completed: false });
                 setDailyMultiplier(HEYS.game ? HEYS.game.getDailyMultiplier() : { multiplier: 1, actions: 0, label: '' });
                 setDailyBonusAvailable(HEYS.game ? HEYS.game.canClaimDailyBonus() : false);
+                if (HEYS.game?.refreshDailyBonusFromAudit) {
+                    HEYS.game.refreshDailyBonusFromAudit()
+                        .then(() => {
+                            setDailyBonusAvailable(HEYS.game.canClaimDailyBonus());
+                        })
+                        .catch(() => { });
+                }
                 setDailyMissions(HEYS.game?.getDailyMissions ? HEYS.game.getDailyMissions() : null);
                 prevLevelRef.current = freshStats.level;
                 prevStreakRef.current = safeGetStreak();
@@ -673,6 +716,147 @@
             setIsOnboardingTipOpen((prev) => !prev);
         };
 
+        // === Onboarding Fusion Ceremony ===
+        const ONBOARDING_ICONS = ['☀️', '🍽️', '🥗', '👟', '💡', '💊', '💧', '🏃', '🏠'];
+
+        const startFusionCeremony = useCallback(() => {
+            console.info('[🎮 GamificationBar] 🏅 Starting onboarding fusion ceremony!');
+            setFusionPhase('gather');
+
+            // Timeline: gather (icons appear) → merge (icons fly to center) → medal (medal appears) → subtitle/btn
+            if (fusionTimerRef.current) clearTimeout(fusionTimerRef.current);
+
+            // After icons have appeared (~1.5s) → start merge
+            fusionTimerRef.current = setTimeout(() => setFusionPhase('merge'), 2000);
+        }, []);
+
+        // Phase transitions via useEffect
+        useEffect(() => {
+            if (!fusionPhase) return;
+            let t;
+            if (fusionPhase === 'merge') {
+                // After merge animation (~0.8s) → show medal
+                t = setTimeout(() => setFusionPhase('medal'), 800);
+            } else if (fusionPhase === 'medal') {
+                // Medal visible for 1.5s, then show button/text
+                t = setTimeout(() => setFusionPhase('ready'), 600);
+            }
+            return () => { if (t) clearTimeout(t); };
+        }, [fusionPhase]);
+
+        // Init prevOnboardingDoneRef on mount (to avoid triggering on already-complete)
+        useEffect(() => {
+            if (isOnboardingComplete()) {
+                prevOnboardingDoneRef.current = true;
+                fusionShownRef.current = true;
+            }
+        }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+        const handleFusionDismiss = useCallback(() => {
+            // Expand gamification panel so the medal target is visible
+            setExpanded(true);
+
+            // Small delay to let DOM render the medal target
+            setTimeout(() => {
+                const targetEl = targetMedalRef.current || document.querySelector('.onboarding-medal');
+                const medalEl = fusionMedalRef.current;
+
+                const startFly = () => {
+                    if (targetEl && medalEl) {
+                        const targetRect = targetEl.getBoundingClientRect();
+                        const medalRect = medalEl.getBoundingClientRect();
+
+                        // Set initial position as fixed
+                        setFusionPhase('fly');
+                        medalEl.style.position = 'fixed';
+                        medalEl.style.left = `${medalRect.left}px`;
+                        medalEl.style.top = `${medalRect.top}px`;
+                        medalEl.style.width = `${medalRect.width}px`;
+                        medalEl.style.height = `${medalRect.height}px`;
+                        medalEl.style.transform = 'none';
+                        medalEl.style.transition = 'all 0.7s cubic-bezier(0.22, 1, 0.36, 1)';
+                        medalEl.style.zIndex = '10080';
+
+                        // Force reflow
+                        medalEl.offsetHeight; // eslint-disable-line no-unused-expressions
+
+                        // Fly to target
+                        requestAnimationFrame(() => {
+                            medalEl.style.left = `${targetRect.left}px`;
+                            medalEl.style.top = `${targetRect.top}px`;
+                            medalEl.style.width = `${targetRect.width}px`;
+                            medalEl.style.height = `${targetRect.height}px`;
+                            medalEl.style.fontSize = '26px';
+                            medalEl.style.borderRadius = '14px';
+                            medalEl.style.opacity = '0.8';
+                        });
+
+                        setTimeout(() => {
+                            setFusionPhase(null);
+                            // Add landing glow to the real medal
+                            if (targetEl) {
+                                targetEl.classList.add('fusion-landing');
+                                setTimeout(() => targetEl.classList.remove('fusion-landing'), 800);
+                            }
+                        }, 750);
+                    } else {
+                        // No target element visible — just close
+                        setFusionPhase(null);
+                    }
+
+                    // Haptic feedback
+                    if (HEYS.haptic) HEYS.haptic('success');
+                };
+
+                if (targetEl && typeof window !== 'undefined') {
+                    const targetRect = targetEl.getBoundingClientRect();
+                    const currentY = window.scrollY || window.pageYOffset || 0;
+                    const targetY = Math.max(
+                        0,
+                        targetRect.top + currentY - (window.innerHeight / 2) + (targetRect.height / 2)
+                    );
+                    const distance = Math.abs(targetY - currentY);
+                    const scrollDelay = Math.min(900, Math.max(300, Math.round(distance * 0.6)));
+
+                    if (distance > 6) {
+                        window.scrollTo({ top: targetY, behavior: 'smooth' });
+                        setTimeout(startFly, scrollDelay);
+                        return;
+                    }
+                }
+
+                startFly();
+            }, 100);
+        }, []);
+
+        // Generate confetti particles data
+        const fusionConfetti = useMemo(() => {
+            return Array.from({ length: 20 }, (_, i) => {
+                const angle = (Math.PI * 2 * i) / 20 + Math.random() * 0.3;
+                const distance = 80 + Math.random() * 60;
+                const colors = ['#fbbf24', '#f59e0b', '#eab308', '#fcd34d', '#fef3c7', '#f97316', '#ef4444', '#22c55e', '#3b82f6'];
+                return {
+                    cx: `${Math.cos(angle) * distance}px`,
+                    cy: `${Math.sin(angle) * distance}px`,
+                    color: colors[i % colors.length],
+                    delay: `${Math.random() * 0.3}s`,
+                    size: 5 + Math.random() * 5
+                };
+            });
+        }, []);
+
+        // Calculate icon positions in a circle
+        const fusionIconPositions = useMemo(() => {
+            return ONBOARDING_ICONS.map((_, i) => {
+                const angle = ((Math.PI * 2) / 9) * i - Math.PI / 2; // Start from top
+                const radius = 90;
+                return {
+                    left: `${50 + (Math.cos(angle) * radius / 120) * 50}%`,
+                    top: `${50 + (Math.sin(angle) * radius / 120) * 50}%`
+                };
+            });
+        }, [ONBOARDING_ICONS]);
+
         // Ripple эффект на тапе по progress bar
         const handleProgressClick = (e) => {
             const rect = e.currentTarget.getBoundingClientRect();
@@ -847,10 +1031,19 @@
                 // Daily Bonus
                 dailyBonusAvailable && React.createElement('button', {
                     className: 'game-daily-bonus',
-                    onClick: (e) => {
+                    onClick: async (e) => {
                         e.stopPropagation();
-                        if (HEYS.game && HEYS.game.claimDailyBonus()) {
-                            setDailyBonusAvailable(false);
+                        if (!HEYS.game || dailyBonusLoading) return;
+                        setDailyBonusLoading(true);
+                        try {
+                            const claimed = await HEYS.game.claimDailyBonus();
+                            if (claimed) {
+                                setDailyBonusAvailable(false);
+                                return;
+                            }
+                            setDailyBonusAvailable(HEYS.game.canClaimDailyBonus());
+                        } finally {
+                            setDailyBonusLoading(false);
                         }
                     },
                     title: 'Забрать ежедневный бонус!'
@@ -1177,6 +1370,7 @@
                                 `До уровня ${stats.level + 1}: ${progress.required - progress.current} XP`
                             ),
                             onboardingDone && React.createElement('div', {
+                                ref: targetMedalRef,
                                 className: `onboarding-medal${isOnboardingTipOpen ? ' is-open' : ''}`,
                                 role: 'button',
                                 tabIndex: 0,
@@ -1391,7 +1585,98 @@
 
             streakCelebration && React.createElement('div', {
                 className: 'streak-milestone-toast'
-            }, `🔥 Streak ${streakCelebration} дней!`)
+            }, `🔥 Streak ${streakCelebration} дней!`),
+
+            // === Onboarding Fusion Ceremony ===
+            fusionPhase && React.createElement('div', {
+                className: 'onboarding-fusion',
+                onClick: (e) => { if (fusionPhase === 'ready') handleFusionDismiss(); }
+            },
+                React.createElement('div', { className: 'onboarding-fusion__backdrop' }),
+                React.createElement('div', {
+                    className: 'onboarding-fusion__stage',
+                    onClick: (e) => e.stopPropagation()
+                },
+                    // Title
+                    React.createElement('div', {
+                        className: 'onboarding-fusion__title'
+                    }, '✨ Все первые шаги пройдены!'),
+
+                    // Ring with achievement icons
+                    React.createElement('div', { className: 'onboarding-fusion__ring' },
+                        // Achievement icons positioned in a circle
+                        ONBOARDING_ICONS.map((icon, i) => {
+                            const isMerging = fusionPhase === 'merge' || fusionPhase === 'medal' || fusionPhase === 'ready' || fusionPhase === 'fly';
+                            return React.createElement('div', {
+                                key: i,
+                                className: 'onboarding-fusion__icon',
+                                style: {
+                                    left: isMerging ? 'calc(50% - 22px)' : `calc(${fusionIconPositions[i].left} - 22px)`,
+                                    top: isMerging ? 'calc(50% - 22px)' : `calc(${fusionIconPositions[i].top} - 22px)`,
+                                    opacity: isMerging ? 0 : 1,
+                                    transform: isMerging ? 'scale(0)' : 'scale(1)',
+                                    transition: isMerging ? `all 0.6s cubic-bezier(0.55, 0, 0.1, 1) ${i * 0.05}s` : 'none',
+                                    animation: fusionPhase === 'gather' ? `fusionIconAppear 0.4s ease-out ${0.4 + i * 0.1}s forwards` : 'none'
+                                }
+                            }, icon);
+                        }),
+
+                        // Starburst rays
+                        (fusionPhase === 'medal' || fusionPhase === 'ready') && React.createElement('div', {
+                            className: 'onboarding-fusion__rays is-visible'
+                        },
+                            Array.from({ length: 12 }).map((_, i) =>
+                                React.createElement('div', { key: i, className: 'onboarding-fusion__ray' })
+                            )
+                        ),
+
+                        // Medal
+                        React.createElement('div', {
+                            ref: fusionMedalRef,
+                            className: `onboarding-fusion__medal${(fusionPhase === 'medal' || fusionPhase === 'ready') ? ' is-visible' : ''}`,
+                            style: fusionPhase === 'fly' ? {} : {}
+                        }, '🏅'),
+
+                        // Confetti particles
+                        (fusionPhase === 'medal' || fusionPhase === 'ready') && React.createElement('div', {
+                            className: 'onboarding-fusion__confetti'
+                        },
+                            fusionConfetti.map((p, i) =>
+                                React.createElement('div', {
+                                    key: i,
+                                    className: 'onboarding-fusion__confetti-piece is-active',
+                                    style: {
+                                        '--cx': p.cx,
+                                        '--cy': p.cy,
+                                        background: p.color,
+                                        width: `${p.size}px`,
+                                        height: `${p.size}px`,
+                                        left: '50%',
+                                        top: '50%',
+                                        animationDelay: p.delay
+                                    }
+                                })
+                            )
+                        )
+                    ),
+
+                    // Subtitle
+                    fusionPhase === 'ready' && React.createElement('div', {
+                        className: 'onboarding-fusion__subtitle is-visible'
+                    }, 'Все базовые достижения собраны и объединены'),
+
+                    // XP total
+                    fusionPhase === 'ready' && React.createElement('div', {
+                        className: 'onboarding-fusion__xp is-visible'
+                    }, `+${ONBOARDING_ACHIEVEMENTS.reduce((sum, id) => sum + (HEYS.game?.ACHIEVEMENTS?.[id]?.xp || 0), 0)} XP заработано`),
+
+                    // Button
+                    fusionPhase === 'ready' && React.createElement('button', {
+                        className: 'onboarding-fusion__btn is-visible',
+                        onClick: handleFusionDismiss
+                    }, '🏅 Отлично!')
+                )
+            )
         );
     }
 

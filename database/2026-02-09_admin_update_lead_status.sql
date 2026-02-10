@@ -1,4 +1,4 @@
--- admin_update_lead_status — отклонение / изменение статуса лида (v3.0)
+-- admin_update_lead_0status — отклонение / изменение статуса лида (v3.0)
 -- Purpose: Update lead status (reject, convert, etc.)
 -- Called by: curator admin panel via heys-api-rpc
 

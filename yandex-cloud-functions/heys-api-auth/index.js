@@ -1,12 +1,12 @@
 /**
  * heys-api-auth — Аутентификация кураторов
- * @version 2.1.0 — 2026-02-04: Добавлены subscription_status и trial_ends_at в getClients
+ * @version 2.2.0 — 2026-02-10: Добавлен LEFT JOIN с subscriptions для active_until в getClients
  * 
  * Endpoints:
  *   POST /auth/login — вход по email+password, возвращает JWT
  *   POST /auth/verify — проверка JWT токена
  *   POST /auth/refresh — обновление токена (опционально)
- *   GET  /auth/clients — список клиентов куратора (с subscription_status, trial_ends_at)
+ *   GET  /auth/clients — список клиентов куратора (с subscription_status, trial_ends_at, active_until)
  * 
  * JWT payload: { sub: curator_id, email, role: 'curator', iat, exp }
  */
@@ -284,11 +284,20 @@ async function handleGetClients(curatorId) {
   try {
 
     // Получаем клиентов куратора (включая телефон и подписку для отображения куратору)
+    // 🔧 v2.2.0 — добавлен LEFT JOIN с subscriptions для active_until (UI показывает даты подписок)
     const result = await client.query(
-      `SELECT id, name, phone_normalized, updated_at, subscription_status, trial_ends_at 
-       FROM clients 
-       WHERE curator_id = $1 
-       ORDER BY updated_at ASC`,
+      `SELECT 
+         c.id, 
+         c.name, 
+         c.phone_normalized, 
+         c.updated_at, 
+         c.subscription_status, 
+         c.trial_ends_at,
+         s.active_until
+       FROM clients c
+       LEFT JOIN subscriptions s ON s.client_id = c.id
+       WHERE c.curator_id = $1 
+       ORDER BY c.updated_at ASC`,
       [curatorId]
     );
 

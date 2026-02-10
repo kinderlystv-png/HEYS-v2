@@ -56,8 +56,22 @@
     };
 
     // 🆕 Хелперы для статуса подписки
+    const getEffectiveSubscriptionStatus = (client) => {
+        const statusRaw = client.subscription_status || 'none';
+        const now = Date.now();
+        const activeUntil = client.active_until ? new Date(client.active_until).getTime() : null;
+        const trialEndsAt = client.trial_ends_at ? new Date(client.trial_ends_at).getTime() : null;
+        const trialStartsAt = client.trial_started_at ? new Date(client.trial_started_at).getTime() : null;
+
+        if (activeUntil && activeUntil > now) return 'active';
+        if (trialStartsAt && trialStartsAt > now) return 'trial_pending';
+        if (trialEndsAt && trialEndsAt > now) return 'trial';
+
+        return statusRaw || 'none';
+    };
+
     const getSubscriptionBadge = (client) => {
-        const status = client.subscription_status || 'none';
+        const status = getEffectiveSubscriptionStatus(client);
         // active_until приоритетнее trial_ends_at для вычисления end date
         const rawEndDate = client.active_until || client.trial_ends_at;
         const endDate = rawEndDate ? new Date(rawEndDate) : null;
@@ -123,7 +137,7 @@
         const [trialDate, setTrialDate] = React.useState(() => new Date().toISOString().split('T')[0]);
         const [months, setMonths] = React.useState(1);
 
-        const status = client.subscription_status || 'none';
+        const status = getEffectiveSubscriptionStatus(client);
         const badge = getSubscriptionBadge(client);
         const formatDate = (d) => d ? new Date(d).toLocaleDateString('ru-RU') : '—';
         const h = React.createElement;
@@ -148,8 +162,9 @@
                     onUpdate?.();
                     closeModal();
                 } else {
-                    console.warn('[HEYS.subs] ⚠️ Ошибка активации триала', { message: res?.message });
-                    HEYS.Toast?.error?.(res?.message || 'Ошибка активации триала');
+                    const errorMessage = res?.message || res?.error?.message || res?.error || 'Ошибка активации триала';
+                    console.warn('[HEYS.subs] ⚠️ Ошибка активации триала', { message: errorMessage, response: res });
+                    HEYS.Toast?.error?.(errorMessage);
                 }
             } catch (e) {
                 console.error('[HEYS.sub] ❌ activateTrial error:', e);

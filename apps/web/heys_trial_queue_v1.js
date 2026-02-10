@@ -1352,11 +1352,11 @@
     const [queue, setQueue] = React.useState([]);
     const [stats, setStats] = React.useState(null);
     const [leads, setLeads] = React.useState([]);
+    const [allClients, setAllClients] = React.useState([]); // Все клиенты куратора (для отображения trial вне очереди)
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState(null);
     const [actionLoading, setActionLoading] = React.useState(null);
-    const [activeTab, setActiveTab] = React.useState('leads');
-    const [leadStatusFilter, setLeadStatusFilter] = React.useState('new');
+    const [activeTab, setActiveTab] = React.useState('new');
     // Диалог активации триала (v3.0: с выбором даты)
     const [trialDialog, setTrialDialog] = React.useState(null); // { clientId, clientName }
     const [trialStartDate, setTrialStartDate] = React.useState('');
@@ -1365,15 +1365,16 @@
     const [convertPin, setConvertPin] = React.useState('');
 
     // Загрузка данных
-    const loadData = React.useCallback(async () => {
-      setLoading(true);
+    const loadData = React.useCallback(async (isSilent = false) => {
+      if (!isSilent) setLoading(true);
       setError(null);
 
       try {
-        const [queueRes, statsRes, leadsRes] = await Promise.all([
+        const [queueRes, statsRes, leadsRes, clientsRes] = await Promise.all([
           adminAPI.getQueueList(),
           adminAPI.getStats(),
-          adminAPI.getLeads(leadStatusFilter)
+          adminAPI.getLeads('all'),
+          HEYS.YandexAPI.getClients() // Все клиенты куратора (для trial вне очереди)
         ]);
 
         if (queueRes.success) {
@@ -1392,15 +1393,20 @@
           console.log('[TrialQueueAdmin] Loaded leads:', leadsRes.data);
           setLeads(leadsRes.data || []);
         }
+
+        // Загружаем всех клиентов куратора (для отображения trial вне очереди)
+        if (!clientsRes.error && Array.isArray(clientsRes.data)) {
+          setAllClients(clientsRes.data);
+        }
       } catch (e) {
         setError(e.message);
       } finally {
-        setLoading(false);
+        if (!isSilent) setLoading(false);
       }
-    }, [leadStatusFilter]);
+    }, []);
 
     React.useEffect(() => {
-      loadData();
+      loadData(false);
     }, [loadData]);
 
     // Группировка по статусам (v2.0: pending/rejected вместо offer/queued)
@@ -1435,7 +1441,7 @@
       setActionLoading(null);
 
       if (res.success) {
-        loadData();
+        loadData(true);
       } else {
         alert('Ошибка: ' + (res.message || 'Не удалось удалить'));
       }
@@ -1460,7 +1466,8 @@
       setActionLoading(null);
 
       if (res.success) {
-        loadData();
+        loadData(true);
+        setActiveTab('pending'); // Переключаем на вкладку "Ждут триала"
         const isToday = !trialStartDate || trialStartDate === new Date().toISOString().split('T')[0];
         if (isToday) {
           alert('✅ Триал активирован! Клиент получил доступ на 7 дней.');
@@ -1468,7 +1475,9 @@
           alert(`✅ Триал запланирован! Начнётся ${trialStartDate}, доступ на 7 дней.`);
         }
       } else {
-        alert('Ошибка: ' + (res.message || 'Не удалось активировать триал'));
+        const errorMessage = res?.message || res?.error?.message || res?.error || 'Не удалось активировать триал';
+        alert('Ошибка: ' + errorMessage);
+        console.warn('[TrialQueue.admin] activateTrial failed', { response: res, message: errorMessage });
       }
     };
 
@@ -1488,7 +1497,7 @@
       setActionLoading(null);
 
       if (res.success) {
-        loadData();
+        loadData(true);
       } else {
         alert('Ошибка: ' + (res.message || 'Не удалось отклонить лида'));
       }
@@ -1509,7 +1518,8 @@
       setActionLoading(null);
 
       if (res.success) {
-        loadData();
+        loadData(true);
+        setActiveTab('pending'); // Переключаем на вкладку "Ждут триала", куда попадает новый клиент
         if (res.already_existed) {
           alert(`ℹ️ Клиент с этим телефоном уже существует. Лид помечен как сконвертированный.`);
         } else {
@@ -1530,7 +1540,7 @@
       setActionLoading(null);
 
       if (res.success) {
-        loadData();
+        loadData(true);
       } else {
         alert('Ошибка: ' + (res.message || 'Не удалось отклонить заявку'));
       }
@@ -1585,18 +1595,36 @@
     const freeSlots = stats ? Math.max(0, (stats.limits?.max_active_trials || 3) - (grouped.assigned?.length || 0)) : 0;
     const isAccepting = stats?.limits?.is_accepting_trials ?? false;
 
-    const tabs = [
-      { id: 'leads', label: '🌐 Лиды', count: leads.length },
-      { id: 'pending', label: '📋 Заявки', count: grouped.pending.length },
-      { id: 'active', label: '✅ Активные', count: grouped.assigned.length },
-      { id: 'rejected', label: '❌ Отклонённые', count: grouped.rejected.length }
-    ];
+    // Клиентская фильтрация лидов (вместо RPC — обход бага с пропадающими лидами)
+    const newLeads = leads.filter(l => l.status === 'new');
+    const rejectedLeads = leads.filter(l => l.status === 'rejected');
 
-    const leadStatusOptions = [
-      { value: 'new', label: 'Новые' },
-      { value: 'converted', label: 'Сконвертированные' },
-      { value: 'rejected', label: 'Отклонённые' },
-      { value: 'all', label: 'Все' }
+    const getEffectiveSubscriptionStatus = (client) => {
+      const statusRaw = client.subscription_status || 'none';
+      const now = Date.now();
+      const activeUntil = client.active_until ? new Date(client.active_until).getTime() : null;
+      const trialEndsAt = client.trial_ends_at ? new Date(client.trial_ends_at).getTime() : null;
+      const trialStartsAt = client.trial_started_at ? new Date(client.trial_started_at).getTime() : null;
+
+      if (activeUntil && activeUntil > now) return 'active';
+      if (trialStartsAt && trialStartsAt > now) return 'trial_pending';
+      if (trialEndsAt && trialEndsAt > now) return 'trial';
+
+      return statusRaw || 'none';
+    };
+
+    // Клиенты с активным триалом, которые НЕ в trial_queue (старые триалы до введения очереди)
+    const queueClientIds = new Set(queue.map(q => q.client_id));
+    const trialClients = allClients.filter(c =>
+      (getEffectiveSubscriptionStatus(c) === 'trial' || getEffectiveSubscriptionStatus(c) === 'trial_pending') &&
+      !queueClientIds.has(c.id)
+    );
+
+    const tabs = [
+      { id: 'new', label: '� С лендинга', count: newLeads.length, hint: 'Заявки с сайта — нужно создать клиента' },
+      { id: 'pending', label: '⏳ Ждут триала', count: grouped.pending.length, hint: 'Клиенты созданы — нужно активировать триал' },
+      { id: 'active', label: '🎯 Активные', count: grouped.assigned.length + trialClients.length, hint: 'Триал идёт (7 дней)' },
+      { id: 'rejected', label: '❌ Отклонённые', count: rejectedLeads.length + grouped.rejected.length, hint: 'Отказано в триале' }
     ];
 
     const LeadRow = ({ item }) => React.createElement('div', {
@@ -1850,6 +1878,7 @@
         tabs.map((tab) => React.createElement('button', {
           key: tab.id,
           onClick: () => setActiveTab(tab.id),
+          title: tab.hint,
           style: {
             padding: '8px 12px',
             borderRadius: 8,
@@ -1862,36 +1891,16 @@
           }
         }, `${tab.label} (${tab.count})`))
       ),
-      activeTab === 'leads' && React.createElement('div', {
+      React.createElement('div', {
         style: {
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '8px 16px',
-          background: '#f9fafb',
-          borderBottom: '1px solid #e5e7eb'
+          padding: '10px 16px',
+          background: '#f0f9ff',
+          borderBottom: '1px solid #bfdbfe',
+          fontSize: 12,
+          color: '#1e40af',
+          lineHeight: 1.5
         }
-      },
-        React.createElement('label', {
-          style: { fontSize: 12, fontWeight: 600, color: '#6b7280', whiteSpace: 'nowrap' }
-        }, 'Статус:'),
-        React.createElement('select', {
-          value: leadStatusFilter,
-          onChange: (e) => setLeadStatusFilter(e.target.value),
-          style: {
-            padding: '6px 10px',
-            borderRadius: 6,
-            border: '1px solid #d1d5db',
-            fontSize: 12,
-            fontWeight: 500,
-            color: '#374151',
-            background: '#fff',
-            cursor: 'pointer'
-          }
-        },
-          leadStatusOptions.map(opt => React.createElement('option', { key: opt.value, value: opt.value }, opt.label))
-        )
-      ),
+      }, tabs.find(t => t.id === activeTab)?.hint || ''),
       React.createElement('div', {
         style: {
           flex: 1,
@@ -1908,18 +1917,35 @@
         !loading && error && React.createElement('div', {
           style: { padding: '12px 16px', background: '#fee2e2', color: '#b91c1c', borderRadius: 10, fontSize: 13 }
         }, '❌ ' + error),
-        !loading && !error && activeTab === 'leads' && (leads.length ? leads.map(item => React.createElement(LeadRow, { key: item.id, item })) : React.createElement('div', {
-          style: { textAlign: 'center', padding: '40px', color: '#9ca3af' }
-        }, 'Нет новых лидов')),
+        !loading && !error && activeTab === 'new' && (newLeads.length ? newLeads.map(item => React.createElement(LeadRow, { key: item.id, item })) : React.createElement('div', {
+          style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
+        }, '📭 Нет заявок с лендинга')),
         !loading && !error && activeTab === 'pending' && (grouped.pending.length ? grouped.pending.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item, allowActions: true })) : React.createElement('div', {
-          style: { textAlign: 'center', padding: '40px', color: '#9ca3af' }
-        }, 'Нет заявок')),
-        !loading && !error && activeTab === 'active' && (grouped.assigned.length ? grouped.assigned.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item })) : React.createElement('div', {
-          style: { textAlign: 'center', padding: '40px', color: '#9ca3af' }
-        }, 'Нет активных триалов')),
-        !loading && !error && activeTab === 'rejected' && (grouped.rejected.length ? grouped.rejected.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item })) : React.createElement('div', {
-          style: { textAlign: 'center', padding: '40px', color: '#9ca3af' }
-        }, 'Нет отклонённых заявок'))
+          style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
+        }, '⏸️ Нет клиентов в очереди на триал')),
+        !loading && !error && activeTab === 'active' && ((grouped.assigned.length + trialClients.length) ? [
+          ...grouped.assigned.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item })),
+          ...trialClients.map(client => React.createElement(ClientRow, {
+            key: 'trial-' + client.id, // Уникальный ключ
+            item: {
+              client_id: client.id,
+              client_name: client.name || client.phone || '?', // Имя или телефон если имени нет
+              client_phone: client.phone || '—',
+              status: 'assigned', // Визуально как активный
+              created_at: client.created_at
+            }
+          }))
+        ] : React.createElement('div', {
+          style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
+        }, '💤 Нет активных триалов')),
+        !loading && !error && activeTab === 'rejected' && (
+          (rejectedLeads.length || grouped.rejected.length) ? [
+            ...rejectedLeads.map(item => React.createElement(LeadRow, { key: 'lead-' + item.id, item })),
+            ...grouped.rejected.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item }))
+          ] : React.createElement('div', {
+            style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
+          }, '✅ Нет отклонённых заявок')
+        )
       ),
       React.createElement('div', {
         style: {
@@ -1931,7 +1957,7 @@
         }
       },
         React.createElement('button', {
-          onClick: loadData,
+          onClick: () => loadData(false),
           disabled: loading,
           style: {
             padding: '6px 12px',

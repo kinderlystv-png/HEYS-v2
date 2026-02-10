@@ -146,11 +146,16 @@
         });
 
         const todayDay = days.find((d) => d.isToday) || null;
-        const todayExcluded = !!(filterEmptyDays && todayDay && todayDay.ratio < 0.5);
-        const visibleDays = filterEmptyDays
-            ? days.filter((d) => d.hasMeals && (!d.isToday || d.ratio >= 0.5))
-            : days;
-        const daysWithData = filterEmptyDays ? visibleDays.length : days.filter((d) => d.hasMeals).length;
+        const isTodayIncomplete = !!(todayDay && todayDay.ratio < 0.5);
+        const todayExcluded = isTodayIncomplete; // всегда исключаем неполный сегодня (ratio < 0.5)
+
+        // visibleDays: исключаем неполный сегодня + опционально дни без еды (если filterEmptyDays)
+        const visibleDays = days.filter((d) => {
+            if (d.isToday && d.ratio < 0.5) return false; // всегда исключаем неполный сегодня
+            if (filterEmptyDays && !d.hasMeals) return false; // опционально: дни без еды
+            return true;
+        });
+        const daysWithData = visibleDays.filter((d) => d.hasMeals).length;
         const totalKcal = visibleDays.reduce((s, d) => s + (d.totals?.kcal || 0), 0);
         const totalTarget = visibleDays.reduce((s, d) => s + (d.goalOptimum || 0), 0);
         const avgKcal = daysWithData ? Math.round(totalKcal / daysWithData) : 0;
@@ -197,11 +202,14 @@
                 totalBurned += burned;
                 const goal = d.goalOptimum || 0;
                 const targetPctFromGoal = goal > 0 ? ((goal - burned) / burned) * 100 : null;
-                totalTargetDeficit += (Number.isFinite(targetPctFromGoal)
-                    ? targetPctFromGoal
+                const targetPctFromDay = (d.deficitPct != null
+                    ? d.deficitPct
                     : (tdeeInfo?.deficitPct != null
                         ? tdeeInfo.deficitPct
-                        : (d.deficitPct != null ? d.deficitPct : (profile?.deficitPctTarget || 0))));
+                        : (profile?.deficitPctTarget ?? null)));
+                totalTargetDeficit += (Number.isFinite(targetPctFromDay)
+                    ? targetPctFromDay
+                    : (Number.isFinite(targetPctFromGoal) ? targetPctFromGoal : 0));
                 daysWithBurned += 1;
             }
         });

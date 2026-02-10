@@ -29,6 +29,9 @@ const PG_CONFIG = {
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
+// Окно дедупликации (30 минут)
+const DEDUPLICATION_WINDOW_MINUTES = 30;
+
 const ALLOWED_ORIGINS = [
   'https://heyslab.ru',
   'https://www.heyslab.ru',
@@ -36,6 +39,32 @@ const ALLOWED_ORIGINS = [
   'https://heys-static.website.yandexcloud.net',
   'http://localhost:3003',
 ];
+
+/**
+ * Нормализует телефон к формату +7XXXXXXXXXX
+ * @param {string} phone - сырой телефон (может быть с пробелами, дефисами, скобками)
+ * @returns {string} - нормализованный телефон +7XXXXXXXXXX
+ */
+function normalizePhone(phone) {
+  // Убираем всё кроме цифр и +
+  let digits = phone.replace(/[^\d+]/g, '');
+
+  // Убираем + в начале если есть
+  digits = digits.replace(/^\+/, '');
+
+  // Если начинается с 8 — заменяем на 7
+  if (digits.startsWith('8')) {
+    digits = '7' + digits.slice(1);
+  }
+
+  // Если не начинается с 7 — добавляем 7 в начало (для РФ)
+  if (!digits.startsWith('7')) {
+    digits = '7' + digits;
+  }
+
+  // Возвращаем в формате +7XXXXXXXXXX
+  return '+' + digits;
+}
 
 function getCorsHeaders(origin) {
   const isAllowed = ALLOWED_ORIGINS.some(allowed => origin?.startsWith(allowed));
@@ -146,6 +175,9 @@ module.exports.handler = async function (event, context) {
       };
     }
 
+    // Нормализуем телефон к формату +7XXXXXXXXXX
+    const normalizedPhone = normalizePhone(phone);
+
     // Сохраняем в PostgreSQL через connection pool
     const pool = getPool();
     const client = await pool.connect();
@@ -154,33 +186,58 @@ module.exports.handler = async function (event, context) {
       // Таблица leads создаётся миграциями (database/yandex_migration/001_schema.sql)
       // с правильным типом id UUID DEFAULT gen_random_uuid()
 
-      // Вставляем лид
-      const result = await client.query(`
-        INSERT INTO leads (name, phone, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        RETURNING id
-      `, [name, phone, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page]);
+      // 1. Проверяем дубликаты за последние N минут
+      const duplicateCheck = await client.query(`
+        SELECT id, created_at
+        FROM leads
+        WHERE phone = $1
+          AND created_at > NOW() - INTERVAL '${DEDUPLICATION_WINDOW_MINUTES} minutes'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `, [normalizedPhone]);
 
-      const leadId = result.rows[0].id;
+      let leadId;
+      let isDuplicate = false;
 
-      // Отправляем уведомление в Telegram
-      await sendTelegramNotification({
-        id: leadId,
-        name,
-        phone,
-        messenger,
-        utm_source,
-        referrer
-      });
+      if (duplicateCheck.rows.length > 0) {
+        // Дубликат найден — возвращаем существующий ID
+        leadId = duplicateCheck.rows[0].id;
+        isDuplicate = true;
+        console.log('[Leads] Duplicate detected:', leadId, 'within', DEDUPLICATION_WINDOW_MINUTES, 'minutes');
+      } else {
+        // 2. Вставляем новый лид
+        const result = await client.query(`
+          INSERT INTO leads (name, phone, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          RETURNING id
+        `, [name, normalizedPhone, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page]);
 
-      console.log('[Leads] New lead saved:', leadId);
+        leadId = result.rows[0].id;
+      }
+
+      // 3. Отправляем уведомление в Telegram только для новых лидов
+      if (!isDuplicate) {
+        await sendTelegramNotification({
+          id: leadId,
+          name,
+          phone: normalizedPhone,
+          messenger,
+          utm_source,
+          referrer
+        });
+
+        console.log('[Leads] New lead saved:', leadId);
+      } else {
+        console.log('[Leads] Duplicate lead ignored:', leadId);
+      }
 
       return {
         statusCode: 200,
         headers: corsHeaders,
         body: JSON.stringify({
           success: true,
-          id: leadId
+          id: leadId,
+          duplicate: isDuplicate
         })
       };
 
