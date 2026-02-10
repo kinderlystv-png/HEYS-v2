@@ -8,6 +8,43 @@
   } catch (e) { }
   HEYS.dayInsightsData = HEYS.dayInsightsData || {};
 
+  HEYS.weeklyCalc = HEYS.weeklyCalc || {};
+  HEYS.weeklyCalc.resolveTargetDeficitPct = HEYS.weeklyCalc.resolveTargetDeficitPct || function ({ dayData, tdeeInfo, profile, goalTarget, burned }) {
+    const fromDay = dayData?.deficitPct;
+    if (Number.isFinite(fromDay)) return fromDay;
+    const fromTdee = tdeeInfo?.deficitPct;
+    if (Number.isFinite(fromTdee)) return fromTdee;
+    const fromProfile = profile?.deficitPctTarget;
+    if (Number.isFinite(fromProfile)) return fromProfile;
+    const fromGoal = (Number.isFinite(goalTarget) && goalTarget > 0 && Number.isFinite(burned) && burned > 0)
+      ? ((goalTarget - burned) / burned) * 100
+      : null;
+    return Number.isFinite(fromGoal) ? fromGoal : 0;
+  };
+
+  HEYS.weeklyCalc.isIncompleteToday = HEYS.weeklyCalc.isIncompleteToday || function ({ isToday, dateStr, nowDateStr, ratio }) {
+    const isSameDay = isToday || (dateStr && nowDateStr && dateStr === nowDateStr);
+    if (!isSameDay) return false;
+    return ratio == null || ratio < 0.5;
+  };
+
+  HEYS.weeklyCalc.shouldIncludeDay = HEYS.weeklyCalc.shouldIncludeDay || function ({ day, nowDateStr, requireMeals = false, requireKcal = false, requireRatio = false }) {
+    if (!day) return false;
+    if (day.isFuture) return false;
+    const dateStr = day.dateStr || day.date;
+    const incomplete = HEYS.weeklyCalc.isIncompleteToday({
+      isToday: !!day.isToday,
+      dateStr,
+      nowDateStr,
+      ratio: day.ratio
+    });
+    if (incomplete) return false;
+    if (requireMeals && !day.hasMeals) return false;
+    if (requireKcal && !(day.kcal > 0)) return false;
+    if (requireRatio && !(day.ratio != null && day.ratio > 0)) return false;
+    return true;
+  };
+
   HEYS.dayInsightsData.computeDayInsightsData = function computeDayInsightsData(ctx) {
     const {
       React,
@@ -550,13 +587,18 @@
         }
       }
 
-      const isIncompleteToday = (d) => d.date === nowDateStr && (d.ratio === null || d.ratio < 0.5);
+      const isIncompleteToday = (d) => HEYSRef.weeklyCalc?.isIncompleteToday
+        ? HEYSRef.weeklyCalc.isIncompleteToday({ isToday: d.isToday, dateStr: d.date, nowDateStr, ratio: d.ratio })
+        : (d.date === nowDateStr && (d.ratio === null || d.ratio < 0.5));
+      const shouldIncludeDay = (d, opts) => HEYSRef.weeklyCalc?.shouldIncludeDay
+        ? HEYSRef.weeklyCalc.shouldIncludeDay({ day: d, nowDateStr, ...opts })
+        : (!d.isFuture && !isIncompleteToday(d));
       const inNorm = days.filter(d => d.status === 'green' || d.status === 'perfect').length;
-      const withData = days.filter(d => d.status !== 'empty' && !d.isFuture && !isIncompleteToday(d)).length;
+      const withData = days.filter(d => d.status !== 'empty' && shouldIncludeDay(d, { requireKcal: true })).length;
       const todayExcluded = days.some(d => isIncompleteToday(d));
 
       // Средний ratio в процентах за неделю (% от нормы)
-      const daysWithRatio = days.filter(d => d.ratio !== null && d.ratio > 0 && !isIncompleteToday(d));
+      const daysWithRatio = days.filter(d => shouldIncludeDay(d, { requireRatio: true }));
       const avgRatioPct = daysWithRatio.length > 0
         ? Math.round(daysWithRatio.reduce((sum, d) => sum + (d.ratio * 100), 0) / daysWithRatio.length)
         : 0;
@@ -581,7 +623,7 @@
       let daysWithDeficit = 0;
 
       days.forEach(d => {
-        if (d.kcal > 0 && !isIncompleteToday(d)) {
+        if (shouldIncludeDay(d, { requireKcal: true })) {
           totalEaten += d.kcal;
           // Загружаем полные данные дня для расчёта TDEE
           const dayData = dayUtils.loadDay
@@ -602,14 +644,16 @@
           if (burned > 0) {
             totalBurned += burned;
             const targetPctFromGoal = goalTarget > 0 ? ((goalTarget - burned) / burned) * 100 : null;
-            const targetPctFromDay = (dayData?.deficitPct != null
-              ? dayData.deficitPct
-              : (tdeeInfo?.deficitPct != null
-                ? tdeeInfo.deficitPct
-                : (prof?.deficitPctTarget ?? null)));
-            totalTargetDeficit += Number.isFinite(targetPctFromDay)
-              ? targetPctFromDay
-              : (Number.isFinite(targetPctFromGoal) ? targetPctFromGoal : 0);
+            const targetPctFromDay = HEYSRef.weeklyCalc?.resolveTargetDeficitPct
+              ? HEYSRef.weeklyCalc.resolveTargetDeficitPct({
+                dayData,
+                tdeeInfo,
+                profile: prof,
+                goalTarget,
+                burned
+              })
+              : (Number.isFinite(targetPctFromGoal) ? targetPctFromGoal : (prof?.deficitPctTarget ?? 0));
+            totalTargetDeficit += Number.isFinite(targetPctFromDay) ? targetPctFromDay : 0;
             daysWithDeficit++;
           } else {
             // Fallback на норму если модуль не загружен

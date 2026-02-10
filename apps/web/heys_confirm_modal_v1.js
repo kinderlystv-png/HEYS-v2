@@ -151,7 +151,7 @@
               },
             onClick: handleCancel
           }, modal.cancelText),
-          React.createElement('button', {
+          modal.confirmText && React.createElement('button', {
             className: 'confirm-modal-btn confirm'
               + (modal.confirmStyle ? ` confirm-modal-btn--${modal.confirmStyle}` : '')
               + (confirmVariant === 'fill' ? ' confirm-modal-btn--fill' : ''),
@@ -302,6 +302,7 @@
   HEYS.ConfirmModal = {
     show,
     hide,
+    close: hide,  // Алиас для обратной совместимости (используется в day/_meals.js)
     confirmDelete,
     confirmAction,
     confirmSave,

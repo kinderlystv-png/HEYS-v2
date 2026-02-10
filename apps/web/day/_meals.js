@@ -2242,30 +2242,34 @@
                         HEYS.Toast?.success('Приём создан');
                         window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
 
-                        setTimeout(() => {
-                            // Get current meals to find the new meal index
-                            // Use a ref-based approach to avoid calling show() inside setDay
-                            let foundMealIndex = -1;
-                            let foundMealName = '';
+                        // 🆕 Стабильный флоу: lazy-вычисление индекса через HEYS.Day, retry через rAF
+                        const savedMealName = (newMeal.name || '').toLowerCase();
 
-                            setDay((currentDay) => {
-                                const meals = currentDay.meals || [];
-                                foundMealIndex = meals.findIndex((m) => m.id === newMealId);
+                        const findMealIndex = () => {
+                            const currentDay = HEYS.Day?.getDay?.();
+                            if (!currentDay?.meals) return -1;
+                            return currentDay.meals.findIndex((m) => m.id === newMealId);
+                        };
 
-                                if (foundMealIndex >= 0) {
-                                    expandOnlyMeal(foundMealIndex);
-                                    foundMealName = (meals[foundMealIndex]?.name || `Приём ${foundMealIndex + 1}`).toLowerCase();
+                        const showFlowModal = (attempt) => {
+                            const maxAttempts = 5;
+                            const mealIndex = findMealIndex();
+
+                            if (mealIndex < 0) {
+                                if (attempt < maxAttempts) {
+                                    // Retry: React ещё не применил state update
+                                    requestAnimationFrame(() => showFlowModal(attempt + 1));
+                                    return;
                                 }
+                                console.warn('[HEYS.Day] ⚠️ Flow modal skipped: meal not found after', maxAttempts, 'attempts', { newMealId });
+                                return;
+                            }
 
-                                return currentDay;
-                            });
+                            expandOnlyMeal(mealIndex);
+                            const mealName = savedMealName || `приём ${mealIndex + 1}`;
 
-                            // 🆕 Показываем модалку выбора флоу добавления продуктов
-                            setTimeout(() => {
-                                if (foundMealIndex < 0) return;
-
-                                // Функция открытия модалки добавления продукта
-                                const openAddProductModal = (targetMealIndex, multiProductMode, dayOverride) => {
+                            // Функция открытия модалки добавления продукта
+                            const openAddProductModal = (targetMealIndex, multiProductMode, dayOverride) => {
                                     if (!window.HEYS?.AddProductStep?.show) return;
 
                                     window.HEYS.AddProductStep.show({
@@ -2370,13 +2374,13 @@
                                 // Показываем модалку выбора флоу
                                 if (!window.HEYS?.ConfirmModal?.show) {
                                     // Fallback: сразу открываем быстрый режим
-                                    openAddProductModal(foundMealIndex, false);
+                                    openAddProductModal(mealIndex, false);
                                     return;
                                 }
 
                                 window.HEYS.ConfirmModal.show({
                                     icon: '🍽️',
-                                    title: `Добавить продукты в ${foundMealName}`,
+                                    title: `Добавить продукты в ${mealName}`,
                                     text: React.createElement('div', {
                                         style: {
                                             display: 'flex',
@@ -2401,8 +2405,12 @@
                                                 transition: 'all 0.15s ease'
                                             },
                                             onClick: () => {
-                                                window.HEYS.ConfirmModal.close?.();
-                                                setTimeout(() => openAddProductModal(foundMealIndex, false), 100);
+                                                window.HEYS.ConfirmModal.hide();
+                                                // Lazy-вычисляем актуальный индекс на момент клика
+                                                const actualIdx = findMealIndex();
+                                                if (actualIdx >= 0) {
+                                                    setTimeout(() => openAddProductModal(actualIdx, false), 100);
+                                                }
                                             }
                                         },
                                             React.createElement('span', {
@@ -2435,8 +2443,12 @@
                                                 transition: 'all 0.15s ease'
                                             },
                                             onClick: () => {
-                                                window.HEYS.ConfirmModal.close?.();
-                                                setTimeout(() => openAddProductModal(foundMealIndex, true), 100);
+                                                window.HEYS.ConfirmModal.hide();
+                                                // Lazy-вычисляем актуальный индекс на момент клика
+                                                const actualIdx = findMealIndex();
+                                                if (actualIdx >= 0) {
+                                                    setTimeout(() => openAddProductModal(actualIdx, true), 100);
+                                                }
                                             }
                                         },
                                             React.createElement('span', {
@@ -2454,14 +2466,16 @@
                                             )
                                         )
                                     ),
-                                    // Скрываем стандартные кнопки — используем кастомные внутри text
-                                    confirmText: null,
+                                    // Скрываем стандартную кнопку confirm — используем кастомные внутри text
+                                    confirmText: '',
                                     cancelText: 'Отмена',
                                     cancelStyle: 'primary',
                                     cancelVariant: 'outline'
                                 });
-                            }, 0);
-                        }, 50);
+                            };
+
+                        // Запускаем через rAF — ждём пока React применит state update
+                        requestAnimationFrame(() => showFlowModal(1));
                     },
                 });
             } else if (isMobile) {

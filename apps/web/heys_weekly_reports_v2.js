@@ -146,12 +146,23 @@
         });
 
         const todayDay = days.find((d) => d.isToday) || null;
-        const isTodayIncomplete = !!(todayDay && todayDay.ratio < 0.5);
+        const isTodayIncomplete = HEYS.weeklyCalc?.isIncompleteToday
+            ? HEYS.weeklyCalc.isIncompleteToday({
+                isToday: !!todayDay?.isToday,
+                dateStr: todayDay?.dateStr,
+                nowDateStr: todayStr,
+                ratio: todayDay?.ratio
+            })
+            : !!(todayDay && todayDay.ratio < 0.5);
         const todayExcluded = isTodayIncomplete; // всегда исключаем неполный сегодня (ratio < 0.5)
+
+        const shouldIncludeDay = (d, opts) => HEYS.weeklyCalc?.shouldIncludeDay
+            ? HEYS.weeklyCalc.shouldIncludeDay({ day: d, nowDateStr: todayStr, ...opts })
+            : (!d.isFuture && !(d.isToday && d.ratio < 0.5));
 
         // visibleDays: исключаем неполный сегодня + опционально дни без еды (если filterEmptyDays)
         const visibleDays = days.filter((d) => {
-            if (d.isToday && d.ratio < 0.5) return false; // всегда исключаем неполный сегодня
+            if (!shouldIncludeDay(d, { requireMeals: false })) return false;
             if (filterEmptyDays && !d.hasMeals) return false; // опционально: дни без еды
             return true;
         });
@@ -202,14 +213,16 @@
                 totalBurned += burned;
                 const goal = d.goalOptimum || 0;
                 const targetPctFromGoal = goal > 0 ? ((goal - burned) / burned) * 100 : null;
-                const targetPctFromDay = (d.deficitPct != null
-                    ? d.deficitPct
-                    : (tdeeInfo?.deficitPct != null
-                        ? tdeeInfo.deficitPct
-                        : (profile?.deficitPctTarget ?? null)));
-                totalTargetDeficit += (Number.isFinite(targetPctFromDay)
-                    ? targetPctFromDay
-                    : (Number.isFinite(targetPctFromGoal) ? targetPctFromGoal : 0));
+                const targetPctFromDay = HEYS.weeklyCalc?.resolveTargetDeficitPct
+                    ? HEYS.weeklyCalc.resolveTargetDeficitPct({
+                        dayData,
+                        tdeeInfo,
+                        profile,
+                        goalTarget: goal,
+                        burned
+                    })
+                    : (Number.isFinite(targetPctFromGoal) ? targetPctFromGoal : (profile?.deficitPctTarget ?? 0));
+                totalTargetDeficit += Number.isFinite(targetPctFromDay) ? targetPctFromDay : 0;
                 daysWithBurned += 1;
             }
         });
@@ -426,8 +439,13 @@
 
         const includedDays = useMemo(() => {
             if (!report?.days) return [];
-            return report.days.filter((d) => d.hasMeals && (!d.isToday || d.ratio >= 0.5));
-        }, [report]);
+            return report.days.filter((d) => {
+                const isIncluded = HEYS.weeklyCalc?.shouldIncludeDay
+                    ? HEYS.weeklyCalc.shouldIncludeDay({ day: d, nowDateStr: todayStr, requireMeals: true })
+                    : (d.hasMeals && !(d.isToday && d.ratio < 0.5));
+                return isIncluded;
+            });
+        }, [report, todayStr]);
 
         const hasRefeedInWeek = useMemo(() => {
             return includedDays.some((d) => d.isRefeedDay);

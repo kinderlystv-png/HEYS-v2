@@ -23,6 +23,24 @@ const path = require('path');
 const JWT_EXPIRES_IN = 24 * 60 * 60; // 24 часа в секундах
 
 // ═══════════════════════════════════════════════════════════════════════════
+// 🛡️ Startup env validation — логируем проблемы сразу при cold start
+// ═══════════════════════════════════════════════════════════════════════════
+(function validateEnv() {
+  const required = ['PG_PASSWORD', 'JWT_SECRET'];
+  for (const key of required) {
+    if (!process.env[key]) {
+      console.error(`[HEYS.auth] ❌ FATAL: Missing required env: ${key}`);
+    }
+  }
+  if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
+    console.error(`[HEYS.auth] ❌ JWT_SECRET too short (${process.env.JWT_SECRET.length} < 32)`);
+  }
+  if (!process.env.PG_HOST) {
+    console.warn('[HEYS.auth] ⚠️ PG_HOST not set, using hardcoded default');
+  }
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
 // 🔐 P0 SECURITY: CORS Whitelist (no wildcards!)
 // ═══════════════════════════════════════════════════════════════════════════
 const ALLOWED_ORIGINS = new Set([
@@ -467,10 +485,10 @@ async function handleDeleteClient(curatorId, clientId) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function handleGetClientKv(curatorId, clientId, options = {}) {
-  console.log('[GetClientKv] START', { curatorId, clientId, options });
+  console.info('[GetClientKv] ℹ️ START', { curatorId, clientId, options });
 
   if (!clientId) {
-    console.log('[GetClientKv] ERROR: Client ID required');
+    console.error('[GetClientKv] ❌ ERROR: Client ID required');
     return {
       statusCode: 400,
       body: JSON.stringify({ error: 'Client ID required' })
@@ -478,10 +496,10 @@ async function handleGetClientKv(curatorId, clientId, options = {}) {
   }
 
   const encryptionKey = process.env.HEYS_ENCRYPTION_KEY;
-  console.log('[GetClientKv] encryptionKey length:', encryptionKey?.length || 0);
+  console.info('[GetClientKv] ℹ️ encryptionKey length:', encryptionKey?.length || 0);
 
   if (!encryptionKey || encryptionKey.length < 16) {
-    console.log('[GetClientKv] ERROR: Server encryption key missing');
+    console.error('[GetClientKv] ❌ ERROR: Server encryption key missing');
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Server encryption key missing' })
@@ -496,7 +514,7 @@ async function handleGetClientKv(curatorId, clientId, options = {}) {
       `SELECT 1 FROM clients WHERE id = $1 AND curator_id = $2 LIMIT 1`,
       [clientId, curatorId]
     );
-    console.log('[GetClientKv] access check:', access.rows.length > 0 ? 'OK' : 'DENIED');
+    console.info('[GetClientKv] ℹ️ access check:', access.rows.length > 0 ? 'OK' : 'DENIED');
 
     if (!access.rows.length) {
       return {
@@ -508,11 +526,11 @@ async function handleGetClientKv(curatorId, clientId, options = {}) {
     // Устанавливаем ключ для расшифровки health данных
     // Используем set_config, т.к. SET не принимает параметр $1
     await client.query(`SELECT set_config('heys.encryption_key', $1, true)`, [encryptionKey]);
-    console.log('[GetClientKv] encryption key SET');
+    console.info('[GetClientKv] ℹ️ encryption key SET');
 
     const prefix = options.prefix ? String(options.prefix) : null;
     const keys = Array.isArray(options.keys) ? options.keys : null;
-    console.log('[GetClientKv] filter:', { prefix, keys });
+    console.info('[GetClientKv] ℹ️ filter:', { prefix, keys });
 
     let query = `
       SELECT k,
@@ -537,11 +555,11 @@ async function handleGetClientKv(curatorId, clientId, options = {}) {
     }
 
     const result = await client.query(query, params);
-    console.log('[GetClientKv] result rows:', result.rows.length);
+    console.info('[GetClientKv] ℹ️ result rows:', result.rows.length);
 
     // Проверяем что v не null/пустой
     const sample = result.rows.slice(0, 3).map(r => ({ k: r.k, hasV: r.v != null, vType: typeof r.v }));
-    console.log('[GetClientKv] sample:', JSON.stringify(sample));
+    console.info('[GetClientKv] ℹ️ sample:', JSON.stringify(sample));
 
     return {
       statusCode: 200,

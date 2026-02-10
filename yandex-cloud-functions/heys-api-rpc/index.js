@@ -15,12 +15,34 @@ const crypto = require('crypto');
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info';  // debug | info | warn | error
 const IS_DEBUG = LOG_LEVEL === 'debug';
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 🛡️ Startup env validation — логируем проблемы сразу при cold start
+// ═══════════════════════════════════════════════════════════════════════════
+(function validateEnv() {
+  const required = ['PG_PASSWORD'];
+  const recommended = ['PG_HOST', 'JWT_SECRET', 'HEYS_ENCRYPTION_KEY'];
+
+  for (const key of required) {
+    if (!process.env[key]) {
+      console.error(`[HEYS.rpc] ❌ FATAL: Missing required env: ${key}`);
+    }
+  }
+  for (const key of recommended) {
+    if (!process.env[key]) {
+      console.warn(`[HEYS.rpc] ⚠️ Missing recommended env: ${key}`);
+    }
+  }
+  if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
+    console.error(`[HEYS.rpc] ❌ JWT_SECRET too short (${process.env.JWT_SECRET.length} < 32)`);
+  }
+})();
+
 function debugLog(...args) {
-  if (IS_DEBUG) console.log(...args);
+  if (IS_DEBUG) console.info(...args);
 }
 
 function infoLog(...args) {
-  if (IS_DEBUG || LOG_LEVEL === 'info') console.log(...args);
+  if (IS_DEBUG || LOG_LEVEL === 'info') console.info(...args);
 }
 
 function normalizeEncryptionKey(rawKey) {
@@ -399,11 +421,11 @@ module.exports.handler = async function (event, context) {
     }
 
     const token = authHeader.slice(7);
-    console.log('[RPC] JWT token received, length:', token.length, 'first 20 chars:', token.substring(0, 20));
+    console.info('[RPC] ℹ️ JWT token received, length:', token.length, 'first 20 chars:', token.substring(0, 20));
     const jwtResult = verifyJwt(token, JWT_SECRET);
 
     if (!jwtResult.valid) {
-      console.log('[RPC] JWT verification FAILED:', jwtResult.error);
+      console.error('[RPC] ❌ JWT verification FAILED:', jwtResult.error);
       return {
         statusCode: 403,
         headers: corsHeaders,

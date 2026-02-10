@@ -49,7 +49,7 @@
   // Debug логи — только при localStorage.heys_debug_api = 'true'
   function log(...args) {
     if (global.localStorage?.getItem('heys_debug_api') === 'true') {
-      console.log('[HEYS.api]', ...args);
+      console.info('[HEYS.api]', ...args);
     }
   }
 
@@ -94,7 +94,6 @@
     for (let i = 0; i <= retries; i++) {
       try {
         const response = await fetchWithTimeout(url, options);
-        _isOnline = true;
         return response;
       } catch (e) {
         lastError = e;
