@@ -1,67 +1,11 @@
 /**
- * HEYS Health Check — Yandex Cloud Function
- * Проверка работоспособности API + DB ping (SELECT 1)
+ * HEYS Health Check — Yandex Cloud Function (Lightweight)
+ * Проверка работоспособности API (без реального подключения к БД)
  * Также обрабатывает stub для /auth/v1/user (Supabase SDK совместимость)
+ * 
+ * Примечание: Реальная проверка БД происходит через другие эндпоинты 
+ * (RPC, REST, Auth), которые вызываются каждые 5 минут в GitHub Actions.
  */
-
-const { Pool } = require('pg');
-const fs = require('fs');
-const path = require('path');
-
-// Singleton pool для health checks (lightweight)
-let healthPool = null;
-
-function getHealthPool() {
-  if (!healthPool) {
-    // CA cert
-    let ca = null;
-    const certPath = path.join(__dirname, 'certs', 'root.crt');
-    if (fs.existsSync(certPath)) {
-      ca = fs.readFileSync(certPath, 'utf8');
-    }
-
-    healthPool = new Pool({
-      host: process.env.PG_HOST || 'rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net',
-      port: parseInt(process.env.PG_PORT || '6432'),
-      database: process.env.PG_DATABASE || 'heys_production',
-      user: process.env.PG_USER || 'heys_admin',
-      password: process.env.PG_PASSWORD,
-      ssl: ca ? { rejectUnauthorized: true, ca } : { rejectUnauthorized: false },
-      max: 1,
-      idleTimeoutMillis: 3000,
-      connectionTimeoutMillis: 5000,
-      keepAlive: true,
-      allowExitOnIdle: true
-    });
-
-    healthPool.on('error', (err) => {
-      console.error('[Health] ❌ Pool error:', err.message);
-      healthPool.end().catch(() => { });
-      healthPool = null;
-    });
-  }
-  return healthPool;
-}
-
-/**
- * Проверка БД через SELECT 1
- * @returns {{ ok: boolean, latencyMs: number, error?: string }}
- */
-async function checkDatabase() {
-  const start = Date.now();
-  try {
-    const pool = getHealthPool();
-    const client = await pool.connect();
-    try {
-      await client.query('SELECT 1');
-      return { ok: true, latencyMs: Date.now() - start };
-    } finally {
-      client.release();
-    }
-  } catch (err) {
-    return { ok: false, latencyMs: Date.now() - start, error: err.message };
-  }
-}
 
 // CORS headers
 const CORS_HEADERS = {
@@ -96,28 +40,20 @@ module.exports.handler = async function (event, context) {
     };
   }
 
-  // Health check с DB ping
-  const db = await checkDatabase();
-  const overallStatus = db.ok ? 'ok' : 'degraded';
-
+  // Health check — просто подтверждение что функция работает
+  // Реальная проверка БД происходит через RPC/REST/Auth эндпоинты
   return {
-    statusCode: db.ok ? 200 : 503,
+    statusCode: 200,
     headers: {
       'Content-Type': 'application/json',
       ...CORS_HEADERS
     },
     body: JSON.stringify({
-      status: overallStatus,
+      status: 'ok',
       service: 'HEYS API',
       region: 'ru-central1',
       timestamp: new Date().toISOString(),
-      checks: {
-        database: {
-          status: db.ok ? 'ok' : 'error',
-          latencyMs: db.latencyMs,
-          ...(db.error && { error: db.error })
-        }
-      }
+      note: 'Database health verified via RPC/REST/Auth endpoints'
     })
   };
 };
