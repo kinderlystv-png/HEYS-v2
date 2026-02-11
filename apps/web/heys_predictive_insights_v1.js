@@ -296,7 +296,8 @@
   let _cache = {
     data: null,
     timestamp: 0,
-    clientId: null
+    clientId: null,
+    daysBack: null
   };
 
   // === УТИЛИТЫ ===
@@ -501,9 +502,26 @@
         try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
       }),
       profile = lsGet('heys_profile', {}),
-      pIndex = null,
       optimum = 2000
     } = options;
+
+    // Получаем pIndex: из аргументов или строим из массива продуктов
+    let pIndex = options.pIndex || null;
+    if (!pIndex || !pIndex.byId) {
+      const products = HEYS.products?.getAll?.() || [];
+      const buildIndex = HEYS.dayUtils?.buildProductIndex || HEYS.models?.buildProductIndex;
+      if (buildIndex && products.length > 0) {
+        pIndex = buildIndex(products);
+      } else if (products.length > 0) {
+        const byId = new Map();
+        const byName = new Map();
+        for (const p of products) {
+          if (p.id) byId.set(String(p.id).toLowerCase(), p);
+          if (p.name) byName.set(p.name.toLowerCase(), p);
+        }
+        pIndex = { byId, byName };
+      }
+    }
 
     // Проверяем кэш
     const clientId = lsGet('heys_client_current', 'default');
@@ -511,6 +529,7 @@
 
     if (_cache.data &&
       _cache.clientId === clientId &&
+      _cache.daysBack === daysBack &&
       (now - _cache.timestamp) < CONFIG.CACHE_TTL_MS) {
       return _cache.data;
     }
@@ -563,13 +582,18 @@
       analyzeNutrientTiming(days, pIndex, profile),      // Тайминг нутриентов
       analyzeInsulinSensitivity(days, pIndex, profile),  // Чувствительность к инсулину
       analyzeGutHealth(days, pIndex)                     // Здоровье ЖКТ
-    ].filter(p => p && p.hasPattern);
+    ].filter(p => p && (p.available || p.hasPattern));
+
+    console.info(`[HEYS.insights] 📊 daysBack=${daysBack}, days=${days.length}, patterns=${patterns.length}`,
+      patterns.map(p => `${p.pattern}:${p.score}`));
 
     // Рассчитываем Health Score
-    const healthScore = calculateHealthScore(days, profile, pIndex, optimum);
+    const healthScore = calculateHealthScore(patterns, profile);
+
+    console.info(`[HEYS.insights] 🎯 healthScore=${healthScore.total}, categories=`, healthScore.categories);
 
     // What-If Scenarios
-    const whatIfScenarios = generateWhatIfScenarios(days, profile, pIndex);
+    const whatIfScenarios = generateWhatIfScenarios(patterns, healthScore, days, profile);
 
     // Weight Prediction
     const weightPrediction = predictWeight(days, profile);
@@ -594,6 +618,7 @@
     _cache = {
       data: result,
       clientId,
+      daysBack,
       timestamp: now
     };
 

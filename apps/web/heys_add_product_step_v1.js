@@ -4277,8 +4277,23 @@ NOVA: 1
         const detail = event?.detail || {};
         const updatedProduct = detail.product;
         const updatedId = String(detail.productId ?? updatedProduct?.id ?? updatedProduct?.product_id ?? updatedProduct?.name);
+        const updatedSharedId = String(detail.sharedId ?? updatedProduct?.shared_origin_id ?? updatedProduct?.sharedId ?? updatedProduct?._sharedId ?? '');
+
         const currentId = String(product?.id ?? product?.product_id ?? product?.name);
-        if (!updatedId || updatedId !== currentId) return;
+        const currentSharedId = String(resolveSharedProductId(product) ?? '');
+
+        const isDirectMatch = !!updatedId && updatedId === currentId;
+        const isSharedMatch = !!updatedSharedId && !!currentSharedId && updatedSharedId === currentSharedId;
+        if (!isDirectMatch && !isSharedMatch) return;
+
+        console.info('[HEYS.portions] 🔄 GramsStep update', {
+          event: event?.type,
+          match: isSharedMatch ? 'shared' : 'direct',
+          updatedId,
+          updatedSharedId: updatedSharedId || null,
+          currentId,
+          currentSharedId: currentSharedId || null
+        });
 
         const nextPortions = Array.isArray(detail.portions)
           ? detail.portions
@@ -4286,7 +4301,20 @@ NOVA: 1
 
         setLocalPortions(nextPortions);
         if (updatedProduct) {
-          onChange({ ...data, selectedProduct: updatedProduct });
+          const mergedProduct = {
+            ...product,
+            ...updatedProduct,
+            portions: nextPortions
+          };
+
+          if (isSharedMatch) {
+            mergedProduct.shared_origin_id = resolveSharedProductId(product) || updatedProduct?.shared_origin_id || updatedProduct?.sharedId || mergedProduct.shared_origin_id;
+            if (product?.id != null) {
+              mergedProduct.id = product.id;
+            }
+          }
+
+          onChange({ ...data, selectedProduct: mergedProduct });
         }
       };
 

@@ -1049,60 +1049,6 @@
             };
         }, [isInitialized]);
 
-        // 28 дней — для графиков и усреднений (ленивое вычисление)
-        const rows28 = useMemo(() => {
-            if (!isInitialized) return [];
-
-            const arr = [];
-            for (let i = 27; i >= 0; i--) {
-                const dt = new Date(); dt.setDate(dt.getDate() - i);
-                arr.push(collectDay(fmtDate(dt), prodIndex, profile, zones, products));
-            }
-            return arr;
-        }, [JSON.stringify(products), JSON.stringify(profile), JSON.stringify(zones), updateTrigger, isInitialized]);
-
-        const collectWeek = React.useCallback((offsetDays) => {
-            if (!isInitialized) return [];
-
-            // Создаем ключ кэша для недели
-            const weekKey = `week_${offsetDays}_${JSON.stringify(profile).substring(0, 50)}_${updateTrigger}`;
-
-            if (weekCache.has(weekKey)) {
-                if (window.HEYS && window.HEYS.performance) {
-                    window.HEYS.performance.increment('weekCacheHits');
-                }
-                return weekCache.get(weekKey);
-            }
-
-            if (window.HEYS && window.HEYS.performance) {
-                window.HEYS.performance.increment('weekCacheMisses');
-            }
-
-            const rows = [];
-            for (let i = 0; i < 7; i++) {
-                const dt = new Date(); dt.setDate(dt.getDate() - (offsetDays + i));
-                rows.push(collectDay(fmtDate(dt), prodIndex, profile, zones, products));
-            }
-            rows.sort((a, b) => (a.dstr < b.dstr ? 1 : -1));
-
-            // Управляем размером кэша недель
-            if (weekCache.size >= maxWeekCacheSize) {
-                const firstKey = weekCache.keys().next().value;
-                weekCache.delete(firstKey);
-            }
-
-            weekCache.set(weekKey, rows);
-            return rows;
-        }, [prodIndex, profile, zones, products, updateTrigger, isInitialized]);
-
-        const week1 = useMemo(() => collectWeek(0), [collectWeek]);
-        const week2 = useMemo(() => collectWeek(7), [collectWeek]);
-        const week3 = useMemo(() => collectWeek(14), [collectWeek]);
-        const week4 = useMemo(() => collectWeek(21), [collectWeek]);
-        const all28 = [].concat(week1, week2, week3, week4);
-
-        const [showCharts, setShowCharts] = useState(false);
-
         // Показываем индикатор загрузки пока инициализируется
         if (!isInitialized || isLoading) {
             return React.createElement('div', { className: 'card', style: { margin: '8px 0', padding: '24px', textAlign: 'center' } },
@@ -1111,35 +1057,12 @@
             );
         }
 
-        return React.createElement('div', null,
-            React.createElement('div', { className: 'card reports-legacy-banner' },
-                React.createElement('div', { className: 'reports-legacy-banner__title' }, 'Legacy-отчёты (скоро будут сняты)'),
-                React.createElement('div', { className: 'reports-legacy-banner__text' }, 'Этот раздел сохранён на один спринт для обратной совместимости. Новый weekly-отчёт доступен во вкладке «Инсайты».')
-            ),
-            React.createElement('div', { className: 'row', style: { justifyContent: 'space-between', alignItems: 'center', margin: '8px 0' } },
-                React.createElement('div', { style: { fontWeight: 700 } }, 'Таблицы за последние 4 недели'),
-                React.createElement('div', null,
-                    React.createElement('button', { className: 'btn acc', onClick: () => setShowCharts(true) }, 'Показать графики')
-                )
-            ),
-            React.createElement(WeekTable, { title: 'Неделя 1 (последние 7 дней)', rows: week1, tone: 'tone-blue' }),
-            React.createElement(CalorieChart, { week1Data: week1 }),
-            React.createElement(WeekTable, { title: 'Неделя 2', rows: week2, tone: 'tone-amber' }),
-            React.createElement(WeekTable, { title: 'Неделя 3', rows: week3, tone: 'tone-green' }),
-            React.createElement(WeekTable, { title: 'Неделя 4', rows: week4, tone: 'tone-slate' }),
-            React.createElement(MonthAverage, { rows: all28 }),
-
-            showCharts && React.createElement('div', {
-                className: 'modal-backdrop',
-                onClick: (e) => { if (e.target.classList.contains('modal-backdrop')) setShowCharts(false); }
-            },
-                React.createElement('div', { className: 'modal', style: { maxWidth: '980px', width: '100%', maxHeight: '85vh', overflow: 'auto' } },
-                    React.createElement('div', { className: 'row', style: { justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' } },
-                        React.createElement('div', { style: { fontWeight: 700 } }, 'Графики (последние 28 дней)'),
-                        React.createElement('button', { className: 'btn', onClick: () => setShowCharts(false) }, '×')
-                    ),
-                    React.createElement(ChartsBlock, { rows28 })
-                )
+        return React.createElement('div', { className: 'page page-reports' },
+            React.createElement('div', { className: 'card' },
+                React.createElement('h2', { className: 'reports-title' }, 'Месячные отчёты'),
+                HEYS.monthlyReports?.MonthlyReportsContent
+                    ? React.createElement(HEYS.monthlyReports.MonthlyReportsContent)
+                    : React.createElement('div', { className: 'muted' }, 'Загружаем модуль месячных отчётов...')
             )
         );
     };

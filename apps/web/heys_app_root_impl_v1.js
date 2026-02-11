@@ -68,9 +68,9 @@
             };
 
             const fallbackUseTabState = ({ React: HookReact }) => ({
-                tab: HookReact.useState('stats')[0],
+                tab: HookReact.useState('diary')[0],
                 setTab: () => { },
-                defaultTab: 'stats',
+                defaultTab: 'diary',
                 setDefaultTab: () => { },
             });
             const useTabState = getStableHook(AppTabState.useTabState, fallbackUseTabState);

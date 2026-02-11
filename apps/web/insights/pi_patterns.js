@@ -130,6 +130,8 @@
 
     return {
       pattern: PATTERNS.MEAL_TIMING,
+      available: gaps.length > 0,
+      score: Math.round(gapScore),
       avgGapMinutes: Math.round(avgGap),
       idealGapMinutes: idealGap,
       gapScore: Math.round(gapScore),
@@ -155,6 +157,7 @@
     if (overlaps.length === 0) {
       return {
         pattern: PATTERNS.WAVE_OVERLAP,
+        available: true,
         hasOverlaps: false,
         overlapCount: 0,
         avgOverlapPct: 0,
@@ -169,6 +172,7 @@
 
     return {
       pattern: PATTERNS.WAVE_OVERLAP,
+      available: true,
       hasOverlaps: true,
       overlapCount: overlaps.length,
       avgOverlapPct: Math.round(avgOverlapPct),
@@ -209,6 +213,7 @@
 
     return {
       pattern: PATTERNS.LATE_EATING,
+      available: true,
       lateCount: lateMeals.length,
       totalMeals,
       latePct: Math.round(latePct),
@@ -399,7 +404,7 @@
         available: false,
         confidence: 0.2,
         insight: 'Недостаточно данных для анализа связи сна и аппетита',
-        formula: SCIENCE_INFO.CORRELATION.formula
+        formula: SCIENCE_INFO?.CORRELATION?.formula || 'r = pearson(x, y)'
       };
     }
 
@@ -434,7 +439,7 @@
       debug: {
         avgSleepDeficit: Math.round(average(deficitArr) * 10) / 10,
         avgKcal: Math.round(average(kcalArr)),
-        source: SCIENCE_INFO.hormones.source
+        source: SCIENCE_INFO?.hormones?.source || 'Spiegel et al., 2004'
       }
     };
   }
@@ -717,7 +722,7 @@
       formula: `Клетчатка/1000ккал = (fiber_g / total_kcal) × 1000\nНорма: ≥14г/1000ккал`,
       debug: {
         avgKcal: Math.round(average(fiberData.map(d => d.kcal))),
-        source: SCIENCE_INFO.gutHealth.source
+        source: SCIENCE_INFO?.gutHealth?.source || 'Sonnenburg & Sonnenburg, 2014'
       }
     };
   }
@@ -948,11 +953,11 @@
       confidence: dailyData.length >= 7 ? 0.8 : 0.5,
       insight,
       // DEBUG INFO
-      formula: SCIENCE_INFO.CIRCADIAN.formula,
+      formula: SCIENCE_INFO?.CIRCADIAN?.formula || 'circadian score',
       debug: {
         timeWeights,
         dailyData: dailyData.slice(0, 3),
-        source: SCIENCE_INFO.CIRCADIAN.source
+        source: SCIENCE_INFO?.CIRCADIAN?.source || 'Panda, 2016'
       }
     };
   }
@@ -1064,10 +1069,10 @@
       confidence: dailyData.length >= 7 ? 0.8 : 0.5,
       insight,
       // DEBUG INFO
-      formula: SCIENCE_INFO.NUTRIENT_TIMING.formula,
+      formula: SCIENCE_INFO?.NUTRIENT_TIMING?.formula || 'nutrient timing score',
       debug: {
         dailyData: dailyData.slice(0, 3),
-        source: SCIENCE_INFO.NUTRIENT_TIMING.source
+        source: SCIENCE_INFO?.NUTRIENT_TIMING?.source || 'Arble et al., 2009'
       }
     };
   }
@@ -1185,10 +1190,10 @@
       confidence: dailyData.length >= 7 ? 0.8 : 0.5,
       insight,
       // DEBUG INFO
-      formula: SCIENCE_INFO.INSULIN_SENSITIVITY.formula,
+      formula: SCIENCE_INFO?.INSULIN_SENSITIVITY?.formula || 'insulin sensitivity score',
       debug: {
         dailyData: dailyData.slice(0, 3),
-        source: SCIENCE_INFO.INSULIN_SENSITIVITY.source
+        source: SCIENCE_INFO?.INSULIN_SENSITIVITY?.source || 'Ludwig, 2002'
       }
     };
   }
@@ -1307,11 +1312,11 @@
       confidence: dailyData.length >= 7 ? 0.8 : 0.5,
       insight,
       // DEBUG INFO
-      formula: SCIENCE_INFO.GUT_HEALTH.formula,
+      formula: SCIENCE_INFO?.GUT_HEALTH?.formula || 'gut health score',
       debug: {
         dailyData: dailyData.slice(0, 3),
         fermentedKeywords,
-        source: SCIENCE_INFO.GUT_HEALTH.source
+        source: SCIENCE_INFO?.GUT_HEALTH?.source || 'Sonnenburg & Sonnenburg, 2014'
       }
     };
   }

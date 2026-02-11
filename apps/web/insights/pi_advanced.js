@@ -35,6 +35,11 @@
     GUT_HEALTH: 'gut_health'
   };
 
+  const CONFIG = piConst.CONFIG || {
+    MIN_CORRELATION_DISPLAY: 0.35,
+    MIN_DAYS_FOR_FULL_ANALYSIS: 7
+  };
+
   // Импорт статистических функций из pi_stats.js (централизовано)
   const { average, calculateLinearRegression } = piStats;
 

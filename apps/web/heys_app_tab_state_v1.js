@@ -9,12 +9,12 @@
             const U = window.HEYS?.utils;
             const profile = U?.lsGet?.('heys_profile', {}) || {};
             const validTabs = ['widgets', 'stats', 'diary', 'insights', 'month'];
-            const savedTab = validTabs.includes(profile.defaultTab) ? profile.defaultTab : 'stats';
+            const savedTab = validTabs.includes(profile.defaultTab) ? profile.defaultTab : 'diary';
             return savedTab;
         };
 
-        const [defaultTab, setDefaultTabState] = React.useState('stats');
-        const [tab, setTab] = React.useState('stats');
+        const [defaultTab, setDefaultTabState] = React.useState('diary');
+        const [tab, setTab] = React.useState('diary');
         const [initialTabLoaded, setInitialTabLoaded] = React.useState(false);
 
         React.useEffect(() => {

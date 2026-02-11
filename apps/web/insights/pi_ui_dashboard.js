@@ -798,13 +798,80 @@
         };
       }, [insightsTourCompleted]);
 
+      // 🔧 Получаем недостающие данные из localStorage если они не переданы
+      const effectiveData = useMemo(() => {
+        const U = window.HEYS?.utils;
+        const getter = lsGet || U?.lsGet || ((k, d) => {
+          try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+        });
+
+        // Получаем данные дня
+        const currentDayData = dayData || getter(`heys_dayv2_${selectedDate}`, {});
+
+        // Получаем профиль
+        const currentProfile = profile || getter('heys_profile', {});
+
+        // Получаем индекс продуктов
+        let currentPIndex = pIndex || window.HEYS?.products?.getIndex?.();
+
+        // Если getIndex не существует, строим индекс из массива продуктов
+        if (!currentPIndex || !currentPIndex.byId) {
+          const products = window.HEYS?.products?.getAll?.() || [];
+          const buildIndex = window.HEYS?.dayUtils?.buildProductIndex
+            || window.HEYS?.models?.buildProductIndex;
+          if (buildIndex && products.length > 0) {
+            currentPIndex = buildIndex(products);
+          } else if (products.length > 0) {
+            // Fallback: строим простой индекс вручную
+            const byId = new Map();
+            const byName = new Map();
+            for (const p of products) {
+              if (p.id) byId.set(String(p.id).toLowerCase(), p);
+              if (p.name) byName.set(p.name.toLowerCase(), p);
+            }
+            currentPIndex = { byId, byName };
+          }
+        }
+
+        // Вычисляем dayTot если не передан
+        let currentDayTot = dayTot;
+        if (!currentDayTot && currentDayData.meals?.length > 0 && window.HEYS?.Day?.computeDayTot) {
+          currentDayTot = window.HEYS.Day.computeDayTot(currentDayData, currentPIndex);
+        }
+
+        // Вычисляем normAbs если не передан
+        let currentNormAbs = normAbs;
+        if (!currentNormAbs && currentProfile && window.HEYS?.Day?.calcNormAbs) {
+          currentNormAbs = window.HEYS.Day.calcNormAbs(currentProfile);
+        }
+
+        // Вычисляем optimum если не передан
+        const currentOptimum = optimum || currentNormAbs?.kcal || 2000;
+
+        // Вычисляем waterGoal если не передан
+        const currentWaterGoal = waterGoal || (currentProfile.weight ? currentProfile.weight * 30 : 2000);
+
+        return {
+          dayData: currentDayData,
+          profile: currentProfile,
+          pIndex: currentPIndex,
+          dayTot: currentDayTot,
+          normAbs: currentNormAbs,
+          optimum: currentOptimum,
+          waterGoal: currentWaterGoal
+        };
+      }, [dayData, profile, pIndex, dayTot, normAbs, optimum, waterGoal, selectedDate, lsGet]);
+
       // Анализ данных
       const realInsights = useMemo(() => {
         return HEYS.PredictiveInsights.analyze({
           lsGet: lsGet || (window.HEYS?.utils?.lsGet),
-          daysBack: activeTab === 'today' ? 7 : 30
+          daysBack: activeTab === 'today' ? 7 : 30,
+          profile: effectiveData.profile,
+          pIndex: effectiveData.pIndex,
+          optimum: effectiveData.optimum
         });
-      }, [lsGet, activeTab, selectedDate]);
+      }, [lsGet, activeTab, selectedDate, effectiveData.profile, effectiveData.pIndex, effectiveData.optimum]);
 
       // 🎭 Используем демо-данные если тур не пройден И реальных данных нет
       const showDemoMode = !insightsTourCompleted && !realInsights.available;
@@ -815,13 +882,13 @@
         if (showDemoMode) return DEMO_STATUS;
         if (!HEYS.Status?.calculateStatus) return null;
         return HEYS.Status.calculateStatus({
-          dayData: dayData || {},
-          profile: profile || {},
-          dayTot: dayTot || {},
-          normAbs: normAbs || {},
-          waterGoal: waterGoal || 2000
+          dayData: effectiveData.dayData,
+          profile: effectiveData.profile,
+          dayTot: effectiveData.dayTot,
+          normAbs: effectiveData.normAbs,
+          waterGoal: effectiveData.waterGoal
         });
-      }, [dayData, profile, dayTot, normAbs, waterGoal, showDemoMode]);
+      }, [effectiveData, showDemoMode]);
 
       // Получить все метрики для фильтров
       const allMetrics = useMemo(() => getAllMetricsByPriority(), []);
@@ -877,11 +944,11 @@
             h('button', {
               className: 'insights-tab__tab' + (activeTab === 'today' ? ' active' : ''),
               onClick: () => setActiveTab('today')
-            }, '📅 Сегодня'),
+            }, '📅 7 дней'),
             h('button', {
               className: 'insights-tab__tab' + (activeTab === 'week' ? ' active' : ''),
               onClick: () => setActiveTab('week')
-            }, '📊 Неделя')
+            }, '📊 30 дней')
           ),
 
           // 🎯 Demo Mode Banner — показываем только в демо режиме
@@ -945,29 +1012,29 @@
             ),
 
             // 🆕 StatusCard вместо TotalHealthRing + HealthRingsGrid
-            status && HEYS.Status?.StatusCard
+            /* status && HEYS.Status?.StatusCard
               ? h(HEYS.Status.StatusCard, { status })
-              : h('div', { className: 'insights-tab__score-card' },
-                h('div', { className: 'insights-tab__score' },
-                  h(TotalHealthRing, {
-                    score: insights.healthScore.total,
-                    size: 140,
-                    strokeWidth: 12,
-                    debugData: insights.healthScore.debug || {
-                      mode: insights.healthScore.mode,
-                      weights: insights.healthScore.weights,
-                      breakdown: insights.healthScore.breakdown
-                    }
-                  })
-                ),
-                h('div', { className: 'insights-tab__rings' },
-                  h(HealthRingsGrid, {
-                    healthScore: insights.healthScore,
-                    onCategoryClick: setSelectedCategory,
-                    compact: true
-                  })
-                )
+              : */ h('div', { className: 'insights-tab__score-card' },
+              h('div', { className: 'insights-tab__score' },
+                h(TotalHealthRing, {
+                  score: insights.healthScore.total,
+                  size: 140,
+                  strokeWidth: 12,
+                  debugData: insights.healthScore.debug || {
+                    mode: insights.healthScore.mode,
+                    weights: insights.healthScore.weights,
+                    breakdown: insights.healthScore.breakdown
+                  }
+                })
+              ),
+              h('div', { className: 'insights-tab__rings' },
+                h(HealthRingsGrid, {
+                  healthScore: insights.healthScore,
+                  onCategoryClick: setSelectedCategory,
+                  compact: true
+                })
               )
+            )
           ),
 
           // Metabolic Status + Risk (CRITICAL) — собственный заголовок внутри
