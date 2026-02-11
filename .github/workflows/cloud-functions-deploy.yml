@@ -96,14 +96,24 @@ jobs:
 
       - name: Verify deployment
         run: |
-          echo "⏳ Waiting 10s for functions to warm up..."
-          sleep 10
+          echo "⏳ Waiting 15s for functions to warm up..."
+          sleep 15
 
           echo "🧪 Testing deployed functions..."
 
+          # Test Health
+          HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 10 "https://api.heyslab.ru/health")
+
+          if [ "$HEALTH_STATUS" != "200" ]; then
+            echo "::error::Health check failed (HTTP $HEALTH_STATUS)"
+            exit 1
+          fi
+          echo "✅ Health: OK"
+
           # Test RPC
           RPC_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X POST "https://api.heyslab.ru/rpc?fn=get_shared_products" \
+            --max-time 15 -X POST "https://api.heyslab.ru/rpc?fn=get_shared_products" \
             -H "Content-Type: application/json" \
             -H "Origin: https://app.heyslab.ru" \
             -d '{}')
@@ -112,6 +122,18 @@ jobs:
             echo "::error::RPC endpoint failed (HTTP $RPC_STATUS)"
             exit 1
           fi
+          echo "✅ RPC: OK"
+
+          # Test REST (критичный endpoint, который падал)
+          REST_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 15 "https://api.heyslab.ru/rest/shared_products?limit=1" \
+            -H "Origin: https://app.heyslab.ru")
+
+          if [ "$REST_STATUS" != "200" ]; then
+            echo "::error::REST endpoint failed (HTTP $REST_STATUS) — THIS WAS THE ISSUE!"
+            exit 1
+          fi
+          echo "✅ REST: OK"
 
           echo "✅ Deployment verified successfully"
 

@@ -19,6 +19,41 @@ applyTo: '**/*'
 6. **PRODUCTION-ONLY API** — NEVER suggest switching to localhost:4001 or local
    API. Always fix/redeploy production `api.heyslab.ru` cloud functions. This is
    a live production app, not a local development setup.
+7. **ALWAYS validate deployment** — run `./health-check.sh` after ANY changes to
+   cloud functions. If 502 errors occur, redeploy immediately with
+   `./deploy-all.sh`
+
+---
+
+## Deployment & Monitoring (v5.0.1)
+
+**Pre-commit checklist** when modifying `yandex-cloud-functions/`:
+
+```bash
+cd yandex-cloud-functions
+./validate-env.sh            # Validate secrets
+./health-check.sh            # Check current state
+./deploy-all.sh <function>   # Deploy changed function
+sleep 15                     # Wait for warmup
+./health-check.sh            # Verify deployment
+```
+
+**If 502 Bad Gateway appears**:
+
+```bash
+cd yandex-cloud-functions
+./deploy-all.sh              # Redeploy all functions
+./health-check.sh --watch    # Monitor recovery
+```
+
+**Auto-protection**:
+
+- 🔍 GitHub Actions monitors API every 15 min (24/7)
+- 🔄 Auto-redeploy triggers on REST/RPC 502 errors
+- 📢 Telegram alerts on API failures
+- ✅ CI/CD verifies Health + RPC + REST after every push
+
+**See**: `yandex-cloud-functions/INCIDENT_PREVENTION.md` for full runbook
 
 ---
 
