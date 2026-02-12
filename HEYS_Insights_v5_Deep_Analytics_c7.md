@@ -15,6 +15,16 @@
 **Вес кода**: ~6000 LOC (pi_patterns 2864, pi_advanced 466, pi_constants 1336,
 pi_ui_cards 1648, main 1190)
 
+## Status v6.0 Phase 1 (12.02.2026)
+
+**Прогресс v6.0**: 2/10 новых паттернов реализованы (C13 + C22), общий итог:
+**33 активных паттерна** (31 v5 + 2 v6)  
+**C13**: Vitamin Defense Radar — в проде (анализатор + UI + SCIENCE_INFO +
+тесты)  
+**C22**: B-Complex & Anemia Risk — в проде (анализатор + UI + SCIENCE_INFO +
+тесты)  
+**Тесты**: 75/75 passing (57 data-model + 18 pattern tests), регрессий нет
+
 ---
 
 ## Implemented Patterns (31 total)
@@ -1205,9 +1215,10 @@ apps/web/insights/
 
 ## Version History
 
-- **v6.0.0** (planned): C13-C22 deep science (vitamins, GL, protein
-  distribution, antioxidants, bone, sugar, training-type match, electrolytes,
-  nutrient density, B-complex)
+- **v6.0.0** (in progress, Phase 1 complete): C13 + C22 реализованы (Vitamin
+  Defense, B-Complex & Anemia). В работе: C14-C21 (GL, protein distribution,
+  antioxidants, bone, sugar, training-type match, electrolytes, nutrient
+  density)
 - **v5.0.0** (2026-02-12): COMPLETE — C7-C12 реализованы, 31/31 паттернов, 100%
   data coverage
 - **v4.0.0** (2025-Q4): B1-B6 advanced patterns (sleep quality, wellbeing,
