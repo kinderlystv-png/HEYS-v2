@@ -933,7 +933,9 @@
         heart_health: '❤️ Сердце и метаболизм',
         nova_quality: '🥫 Качество еды (NOVA)',
         training_recovery: '🏋️ Нагрузка и восстановление',
-        hypertrophy: '💪 Гипертрофия'
+        hypertrophy: '💪 Гипертрофия',
+        // v6.0: C13-C22 паттерны (Phase 1-4)
+        vitamin_defense: '🛡️ Радар 11 витаминов'
       };
 
       // v2.0: Маппинг pattern → SCIENCE_INFO ключ
@@ -952,7 +954,9 @@
         heart_health: 'HEART_HEALTH',
         nova_quality: 'NOVA_QUALITY',
         training_recovery: 'TRAINING_RECOVERY',
-        hypertrophy: 'HYPERTROPHY_COMPOSITION'
+        hypertrophy: 'HYPERTROPHY_COMPOSITION',
+        // v6.0: C13-C22 паттерны (Phase 1-4)
+        vitamin_defense: 'VITAMIN_DEFENSE'
       };
 
       const infoKey = patternToInfoKey[pattern.pattern];
