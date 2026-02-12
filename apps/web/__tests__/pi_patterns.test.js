@@ -25,23 +25,6 @@ const piStats = {
 };
 
 /**
- * Mock UNIT_REGISTRY (from Phase 0)
- */
-const UNIT_REGISTRY = {
-    vitamin_a: { canonical: 'mcg', si: 'mcg', display: 'мкг' },
-    vitamin_c: { canonical: 'mg', si: 'mg', display: 'мг' },
-    vitamin_d: { canonical: 'mcg', si: 'mcg', display: 'мкг' },
-    vitamin_e: { canonical: 'mg', si: 'mg', display: 'мг' },
-    vitamin_k: { canonical: 'mcg', si: 'mcg', display: 'мкг' },
-    vitamin_b1: { canonical: 'mg', si: 'mg', display: 'мг' },
-    vitamin_b2: { canonical: 'mg', si: 'mg', display: 'мг' },
-    vitamin_b3: { canonical: 'mg', si: 'mg', display: 'мг' },
-    vitamin_b6: { canonical: 'mg', si: 'mg', display: 'мг' },
-    vitamin_b9: { canonical: 'mcg', si: 'mcg', display: 'мкг' },
-    vitamin_b12: { canonical: 'mcg', si: 'mcg', display: 'мкг' }
-};
-
-/**
  * Build product index by name (minimal version of buildProductIndex)
  */
 function buildProductIndex(products) {
@@ -762,5 +745,233 @@ describe('C22: B-Complex & Anemia Risk', () => {
         expect(result14.confidence).toBeGreaterThanOrEqual(0.65);
         expect(result7.confidence).toBeLessThanOrEqual(0.75);
         expect(result14.confidence).toBeLessThanOrEqual(0.75);
+    });
+});
+
+// === C14: GLYCEMIC LOAD OPTIMIZER ===
+
+function analyzeGlycemicLoad(days, productIndex) {
+    const pattern = 'glycemic_load';
+    const minDays = 5;
+    const minMealsPerDay = 3;
+
+    const nCheck = piStats.checkMinN(days, minDays);
+    if (!nCheck.ok) {
+        return { pattern, available: false, reason: 'min_days_required' };
+    }
+
+    const totalMeals = days.reduce((sum, d) => sum + (d.meals?.length || 0), 0);
+    const avgMealsPerDay = totalMeals / days.length;
+    if (avgMealsPerDay < minMealsPerDay) {
+        return { pattern, available: false, reason: 'min_meals_required' };
+    }
+
+    const dailyGLValues = [];
+    const eveningRatios = [];
+
+    days.forEach(day => {
+        let dailyGL = 0;
+        let eveningGL = 0;
+
+        (day.meals || []).forEach(meal => {
+            let mealGL = 0;
+            (meal.items || meal.products || []).forEach(item => {
+                const product = getProductFromItem(item, productIndex);
+                if (!product) return;
+                const gi = product.gi || 0;
+                const carbs = (product.simple100 || 0) + (product.complex100 || 0);
+                const grams = item.grams || 0;
+                mealGL += (gi * carbs * grams) / 10000;
+            });
+
+            dailyGL += mealGL;
+            const hour = parseInt(String(meal.time || '00:00').split(':')[0], 10);
+            if (!Number.isNaN(hour) && hour >= 18) eveningGL += mealGL;
+        });
+
+        if (dailyGL > 0) {
+            dailyGLValues.push(dailyGL);
+            eveningRatios.push(eveningGL / dailyGL);
+        }
+    });
+
+    const avgDailyGL = dailyGLValues.reduce((a, b) => a + b, 0) / dailyGLValues.length;
+    const avgEveningRatio = eveningRatios.reduce((a, b) => a + b, 0) / eveningRatios.length;
+    const eveningPenalty = avgEveningRatio > 0.5 ? 15 : 0;
+    const score = Math.max(0, Math.round(100 - Math.max(0, avgDailyGL - 80) * 0.5 - eveningPenalty));
+
+    return {
+        pattern,
+        available: true,
+        avgDailyGL: Math.round(avgDailyGL * 10) / 10,
+        avgEveningRatio: Math.round(avgEveningRatio * 100) / 100,
+        score
+    };
+}
+
+describe('C14: Glycemic Load Optimizer', () => {
+    it('returns unavailable for < 5 days', () => {
+        const days = Array.from({ length: 4 }, (_, i) => ({
+            date: `2026-02-${i + 1}`,
+            meals: [{ time: '08:00', items: [] }, { time: '13:00', items: [] }, { time: '19:00', items: [] }]
+        }));
+        const result = analyzeGlycemicLoad(days, { byName: new Map() });
+        expect(result.available).toBe(false);
+        expect(result.reason).toBe('min_days_required');
+    });
+
+    it('calculates daily GL from GI and carbs', () => {
+        const products = [
+            { name: 'rice', gi: 70, simple100: 5, complex100: 45 },
+            { name: 'apple', gi: 40, simple100: 12, complex100: 2 },
+            { name: 'bread', gi: 75, simple100: 5, complex100: 45 }
+        ];
+        const pIndex = buildProductIndex(products);
+
+        const days = Array.from({ length: 5 }, (_, i) => ({
+            date: `2026-02-${String(i + 1).padStart(2, '0')}`,
+            meals: [
+                { time: '08:00', items: [{ name: 'rice', grams: 150 }] },
+                { time: '13:00', items: [{ name: 'apple', grams: 200 }] },
+                { time: '19:30', items: [{ name: 'bread', grams: 100 }] }
+            ]
+        }));
+
+        const result = analyzeGlycemicLoad(days, pIndex);
+        expect(result.available).toBe(true);
+        expect(result.avgDailyGL).toBeGreaterThan(0);
+        expect(result.score).toBeLessThanOrEqual(100);
+    });
+
+    it('applies evening penalty when evening ratio > 0.5', () => {
+        const products = [
+            { name: 'rice', gi: 80, simple100: 10, complex100: 50 },
+            { name: 'salad', gi: 20, simple100: 2, complex100: 3 }
+        ];
+        const pIndex = buildProductIndex(products);
+
+        const days = Array.from({ length: 5 }, () => ({
+            date: '2026-02-01',
+            meals: [
+                { time: '08:00', items: [{ name: 'salad', grams: 200 }] },
+                { time: '13:00', items: [{ name: 'salad', grams: 200 }] },
+                { time: '20:30', items: [{ name: 'rice', grams: 250 }] }
+            ]
+        }));
+
+        const result = analyzeGlycemicLoad(days, pIndex);
+        expect(result.available).toBe(true);
+        expect(result.avgEveningRatio).toBeGreaterThan(0.5);
+        expect(result.score).toBeLessThan(100);
+    });
+});
+
+// === C15: PROTEIN DISTRIBUTION ===
+
+function analyzeProteinDistribution(days, profile, productIndex) {
+    const pattern = 'protein_distribution';
+    const minDays = 7;
+    const minMealsPerDay = 2;
+
+    const nCheck = piStats.checkMinN(days, minDays);
+    if (!nCheck.ok) {
+        return { pattern, available: false, reason: 'min_days_required' };
+    }
+
+    const totalMeals = days.reduce((sum, d) => sum + (d.meals?.length || 0), 0);
+    if ((totalMeals / days.length) < minMealsPerDay) {
+        return { pattern, available: false, reason: 'min_meals_required' };
+    }
+
+    const targetProtein = (profile?.weight || 70) * 1.6;
+    let optimalMeals = 0;
+    let allMeals = 0;
+    let totalProtein = 0;
+    const spreads = [];
+
+    days.forEach(day => {
+        const mealProteins = [];
+        (day.meals || []).forEach(meal => {
+            let mealProtein = 0;
+            (meal.items || []).forEach(item => {
+                const p = getProductFromItem(item, productIndex);
+                if (!p) return;
+                mealProtein += (p.protein100 || 0) * (item.grams || 0) / 100;
+            });
+
+            mealProteins.push(mealProtein);
+            totalProtein += mealProtein;
+            allMeals++;
+            if (mealProtein >= 20 && mealProtein <= 40) optimalMeals++;
+        });
+
+        if (mealProteins.length >= 2) spreads.push(Math.max(...mealProteins) - Math.min(...mealProteins));
+    });
+
+    const distributionScore = allMeals > 0 ? (optimalMeals / allMeals) * 100 : 0;
+    const avgDailyProtein = totalProtein / days.length;
+    const targetProteinPct = Math.min(100, (avgDailyProtein / targetProtein) * 100);
+    const avgSpread = spreads.length ? spreads.reduce((a, b) => a + b, 0) / spreads.length : 0;
+    const evenBonus = avgSpread < 20 ? 10 : 0;
+    const score = Math.round(distributionScore * 0.7 + targetProteinPct * 0.3 + evenBonus);
+
+    return {
+        pattern,
+        available: true,
+        distributionScore: Math.round(distributionScore),
+        avgDailyProtein: Math.round(avgDailyProtein * 10) / 10,
+        targetProtein: Math.round(targetProtein),
+        evenBonus,
+        score
+    };
+}
+
+describe('C15: Protein Distribution', () => {
+    it('returns unavailable for < 7 days', () => {
+        const days = Array.from({ length: 6 }, (_, i) => ({ date: `2026-02-${i + 1}`, meals: [] }));
+        const result = analyzeProteinDistribution(days, { weight: 70 }, { byName: new Map() });
+        expect(result.available).toBe(false);
+        expect(result.reason).toBe('min_days_required');
+    });
+
+    it('counts optimal 20-40g meals', () => {
+        const products = [
+            { name: 'chicken', protein100: 31 },
+            { name: 'eggs', protein100: 13 },
+            { name: 'yogurt', protein100: 10 }
+        ];
+        const pIndex = buildProductIndex(products);
+        const days = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            meals: [
+                { items: [{ name: 'chicken', grams: 100 }] }, // 31g optimal
+                { items: [{ name: 'eggs', grams: 120 }] },    // ~16g below
+                { items: [{ name: 'yogurt', grams: 250 }] }   // 25g optimal
+            ]
+        }));
+
+        const result = analyzeProteinDistribution(days, { weight: 70 }, pIndex);
+        expect(result.available).toBe(true);
+        expect(result.distributionScore).toBeGreaterThan(50);
+    });
+
+    it('calculates score with target protein and even bonus', () => {
+        const products = [
+            { name: 'protein_mix', protein100: 20 }
+        ];
+        const pIndex = buildProductIndex(products);
+        const days = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            meals: [
+                { items: [{ name: 'protein_mix', grams: 120 }] },
+                { items: [{ name: 'protein_mix', grams: 130 }] },
+                { items: [{ name: 'protein_mix', grams: 125 }] }
+            ]
+        }));
+
+        const result = analyzeProteinDistribution(days, { weight: 70 }, pIndex);
+        expect(result.available).toBe(true);
+        expect(result.evenBonus).toBe(10);
+        expect(result.score).toBeGreaterThan(70);
     });
 });

@@ -490,6 +490,8 @@
   // NEW v6.0 (C13-C22)
   const analyzeVitaminDefense = piPatterns.analyzeVitaminDefense || function () { return { pattern: 'vitamin_defense', available: false }; };
   const analyzeBComplexAnemia = piPatterns.analyzeBComplexAnemia || function () { return { pattern: 'b_complex_anemia', available: false }; };
+  const analyzeGlycemicLoad = piPatterns.analyzeGlycemicLoad || function () { return { pattern: 'glycemic_load', available: false }; };
+  const analyzeProteinDistribution = piPatterns.analyzeProteinDistribution || function () { return { pattern: 'protein_distribution', available: false }; };
 
   // === ПРОДВИНУТАЯ АНАЛИТИКА ===
   // Делегируем в pi_advanced.js
@@ -630,10 +632,12 @@
 
       // === NEW v6.0 (C13-C22) ===
       analyzeVitaminDefense(days, profile),     // C13: Vitamin Defense Radar (11 vitamins)
-      analyzeBComplexAnemia(days, profile)      // C22: B-Complex Energy & Anemia Risk
+      analyzeBComplexAnemia(days, profile),      // C22: B-Complex Energy & Anemia Risk
+      analyzeGlycemicLoad(days, pIndex),         // C14: Glycemic Load Optimizer
+      analyzeProteinDistribution(days, profile, pIndex) // C15: Protein Distribution
     ].filter(p => p && (p.available || p.hasPattern));
 
-    console.info(`[HEYS.insights] 📊 v6.0 | daysBack=${daysBack}, days=${days.length}, patterns=${patterns.length}/33 possible (v6.0: +C13+C22)`,
+    console.info(`[HEYS.insights] 📊 v6.0 | daysBack=${daysBack}, days=${days.length}, patterns=${patterns.length}/35 possible (v6.0: +C13+C22+C14+C15)`,
       patterns.map(p => `${p.pattern}:${p.score}`));
 
     // Рассчитываем Health Score

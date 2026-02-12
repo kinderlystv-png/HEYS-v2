@@ -1403,6 +1403,56 @@
       actionability: 'WEEKLY',
       impactScore: 0.80,
       whyImportant: 'B-комплекс критичен для энергии и настроения. Анемия (Fe/B12/B9 дефицит) = снижение работоспособности и здоровья.'
+    },
+    // C14: Glycemic Load Optimizer (NEW v6.0 — Phase 2, 12.02.2026)
+    GLYCEMIC_LOAD: {
+      name: 'Гликемическая нагрузка (GL)',
+      short: 'Оценивает гликемическую нагрузку по приёмам и за день: GI × количество углеводов.',
+      details: 'В отличие от GI, метрика GL учитывает и качество, и количество углеводов. Расчёт ведётся по каждому приёму: GI × (simple+complex carbs) × grams / 10000, затем суммируется за день. Классы: mealGL <10 low, 10-20 medium, >20 high; dailyGL <80 low, 80-120 medium, >120 high. Дополнительно оценивается вечерняя нагрузка (после 18:00): если >50% суточного GL приходится на вечер, применяется штраф к score. Это помогает снижать риск сахарных «качелей», вечерних пиков глюкозы и ухудшения сна.',
+      formula: 'mealGL = Σ(GI × (simple100 + complex100) × grams / 10000)\ndailyGL = Σ(mealGL)\neveningRatio = eveningGL / dailyGL\n\nScore = max(0, 100 - (dailyGL - 80) × 0.5 - eveningPenalty)\nwhere eveningPenalty = 15 if eveningRatio > 0.5 else 0',
+      sources: [
+        {
+          label: 'Brand-Miller et al., 2003 — Glycemic index and glycemic load in chronic disease',
+          pmid: '12081850'
+        },
+        {
+          label: 'Barclay et al., 2008 — Glycemic index, glycemic load and chronic disease risk',
+          pmid: '18835944'
+        }
+      ],
+      interpretation: '≥80 — хорошо. 60-79 — умеренный риск. <60 — высокий GL/вечерняя углеводная нагрузка.',
+      priority: 'HIGH',
+      category: 'METABOLISM',
+      actionability: 'DAILY',
+      impactScore: 0.78,
+      whyImportant: 'GL точнее GI для реального рациона: учитывает порции и лучше отражает гликемическую нагрузку дня.'
+    },
+    // C15: Protein Distribution (NEW v6.0 — Phase 2, 12.02.2026)
+    PROTEIN_DISTRIBUTION: {
+      name: 'Распределение белка',
+      short: 'Показывает, насколько белок распределён по приёмам с попаданием в зону 20–40г/приём.',
+      details: 'Метрика оценивает не только суточный белок, но и распределение по приёмам. Для каждого приёма рассчитывается mealProtein = Σ(protein100 × grams / 100), затем классификация: <10г subthreshold, 10-20г below optimal, 20-40г optimal, >50г excess. На уровне дня считается доля optimal-приёмов и равномерность распределения (protein spread). Если разница между max и min приёмом <20г — даётся bonus за равномерность. Итоговый score объединяет распределение (70%), достижение суточной цели по белку (до 30%) и evenness-бонус.',
+      formula: 'mealProtein = Σ(protein100 × grams / 100)\ndistributionScore = optimalMeals / totalMeals × 100\nevenBonus = 10 if (maxMealProtein - minMealProtein) < 20 else 0\n\nScore = distributionScore × 0.7 + min(100, totalProtein/targetProtein × 100) × 0.3 + evenBonus',
+      sources: [
+        {
+          label: 'Schoenfeld et al., 2018 — Protein timing and hypertrophy',
+          pmid: '29497353'
+        },
+        {
+          label: 'Moore et al., 2009 — Dose-response of muscle protein synthesis',
+          pmid: '19056590'
+        },
+        {
+          label: 'Leidy et al., 2015 — Morning protein and satiety',
+          pmid: '25926512'
+        }
+      ],
+      interpretation: '≥80 — отличное распределение. 60-79 — частично оптимально. <60 — белок распределён неэффективно.',
+      priority: 'HIGH',
+      category: 'NUTRITION',
+      actionability: 'DAILY',
+      impactScore: 0.76,
+      whyImportant: 'Распределение белка по приёмам усиливает MPS и улучшает сытость, даже при одинаковом суточном белке.'
     }
   };
 
@@ -1457,7 +1507,9 @@
 
     // NEW v6.0 (C13-C22) — Phase 1-4 implementation
     VITAMIN_DEFENSE: 'vitamin_defense',         // C13: радар 11 витаминов (Phase 1, 12.02.2026)
-    B_COMPLEX_ANEMIA: 'b_complex_anemia'        // C22: B-комплекс + риск анемии (Phase 1, 12.02.2026)
+    B_COMPLEX_ANEMIA: 'b_complex_anemia',       // C22: B-комплекс + риск анемии (Phase 1, 12.02.2026)
+    GLYCEMIC_LOAD: 'glycemic_load',             // C14: гликемическая нагрузка (Phase 2, 12.02.2026)
+    PROTEIN_DISTRIBUTION: 'protein_distribution' // C15: распределение белка (Phase 2, 12.02.2026)
   };
 
   // === UNIT REGISTRY (Phase 0, 12.02.2026) ===

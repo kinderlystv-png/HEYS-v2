@@ -81,7 +81,9 @@
     HEART_HEALTH: 'heart_health',
     NOVA_QUALITY: 'nova_quality',
     TRAINING_RECOVERY: 'training_recovery',
-    HYPERTROPHY: 'hypertrophy'
+    HYPERTROPHY: 'hypertrophy',
+    GLYCEMIC_LOAD: 'glycemic_load',
+    PROTEIN_DISTRIBUTION: 'protein_distribution'
   };
 
   // Импорт статистических функций из pi_stats.js (централизовано)
@@ -3160,6 +3162,275 @@
     };
   }
 
+  /**
+   * C14: Glycemic Load Optimizer
+   * Отслеживает гликемическую нагрузку per meal и per day (GI × количество углеводов).
+   * MinDays: 5, MinMeals: 3/day average
+   * @param {Array} days
+   * @param {Object} pIndex
+   * @returns {Object}
+   */
+  function analyzeGlycemicLoad(days, pIndex) {
+    const pattern = PATTERNS.GLYCEMIC_LOAD || 'glycemic_load';
+    const minDays = 5;
+    const minMealsPerDay = 3;
+
+    if (!Array.isArray(days) || days.length < minDays) {
+      return {
+        pattern,
+        available: false,
+        reason: 'min_days_required',
+        minDaysRequired: minDays,
+        daysProvided: Array.isArray(days) ? days.length : 0
+      };
+    }
+
+    const validDays = days.filter(d => Array.isArray(d?.meals) && d.meals.length > 0);
+    if (validDays.length === 0) {
+      return { pattern, available: false, reason: 'no_meals_data' };
+    }
+
+    const totalMeals = validDays.reduce((sum, d) => sum + d.meals.length, 0);
+    const avgMealsPerDay = totalMeals / validDays.length;
+    if (avgMealsPerDay < minMealsPerDay) {
+      return {
+        pattern,
+        available: false,
+        reason: 'min_meals_required',
+        minMealsPerDay,
+        avgMealsPerDay: Math.round(avgMealsPerDay * 10) / 10
+      };
+    }
+
+    const dailyGLValues = [];
+    const eveningRatios = [];
+    let highMealGLCount = 0;
+    let mediumMealGLCount = 0;
+    let lowMealGLCount = 0;
+
+    for (const day of validDays) {
+      let dailyGL = 0;
+      let eveningGL = 0;
+
+      for (const meal of day.meals) {
+        let mealGL = 0;
+
+        for (const item of (meal.items || [])) {
+          const prod = pIndex?.byId?.get?.(item?.product_id);
+          if (!prod) continue;
+
+          const gi = Number(prod.gi) || 0;
+          const carbs = (Number(prod.simple100) || 0) + (Number(prod.complex100) || 0);
+          const grams = Number(item.grams) || 0;
+
+          if (gi <= 0 || carbs <= 0 || grams <= 0) continue;
+          mealGL += (gi * carbs * grams) / 10000;
+        }
+
+        if (mealGL > 20) highMealGLCount++;
+        else if (mealGL >= 10) mediumMealGLCount++;
+        else lowMealGLCount++;
+
+        dailyGL += mealGL;
+
+        const hour = parseInt(String(meal.time || '00:00').split(':')[0], 10);
+        if (!Number.isNaN(hour) && hour >= 18) {
+          eveningGL += mealGL;
+        }
+      }
+
+      if (dailyGL > 0) {
+        dailyGLValues.push(dailyGL);
+        eveningRatios.push(eveningGL / dailyGL);
+      }
+    }
+
+    if (dailyGLValues.length === 0) {
+      return { pattern, available: false, reason: 'insufficient_gl_data' };
+    }
+
+    const avgDailyGL = average(dailyGLValues);
+    const avgEveningRatio = average(eveningRatios);
+
+    const eveningPenalty = avgEveningRatio > 0.5 ? 15 : 0;
+    const glPenalty = Math.max(0, avgDailyGL - 80) * 0.5;
+    const score = Math.max(0, Math.min(100, Math.round(100 - glPenalty - eveningPenalty)));
+
+    let dailyClass = 'low';
+    if (avgDailyGL > 120) dailyClass = 'high';
+    else if (avgDailyGL >= 80) dailyClass = 'medium';
+
+    let insight = '';
+    if (dailyClass === 'low') {
+      insight = `✅ Низкая GL нагрузка: ${Math.round(avgDailyGL)} (цель <80).`;
+    } else if (dailyClass === 'medium') {
+      insight = `🟡 Умеренная GL нагрузка: ${Math.round(avgDailyGL)}. Контролируй порции быстрых углеводов.`;
+    } else {
+      insight = `🔴 Высокая GL нагрузка: ${Math.round(avgDailyGL)} (>120). Риск сахарных качелей.`;
+    }
+
+    if (avgEveningRatio > 0.5) {
+      insight += ` Вечерний GL ${(avgEveningRatio * 100).toFixed(0)}% (штраф -15).`;
+    }
+
+    const baseConfidence = days.length >= 10 ? 0.8 : 0.7;
+    const confidence = piStats.applySmallSamplePenalty
+      ? piStats.applySmallSamplePenalty(baseConfidence, days.length, minDays)
+      : baseConfidence;
+
+    return {
+      pattern,
+      available: true,
+      avgDailyGL: Math.round(avgDailyGL * 10) / 10,
+      avgEveningRatio: Math.round(avgEveningRatio * 100) / 100,
+      mealGLDistribution: {
+        low: lowMealGLCount,
+        medium: mediumMealGLCount,
+        high: highMealGLCount
+      },
+      dailyClass,
+      daysAnalyzed: validDays.length,
+      avgMealsPerDay: Math.round(avgMealsPerDay * 10) / 10,
+      score,
+      confidence: Math.round(confidence * 100) / 100,
+      insight
+    };
+  }
+
+  /**
+   * C15: Protein Distribution (Leucine Threshold)
+   * Оценивает распределение белка по приёмам: цель 20-40г/приём.
+   * MinDays: 7, MinMeals: 2/day average
+   * @param {Array} days
+   * @param {Object} profile
+   * @param {Object} pIndex
+   * @returns {Object}
+   */
+  function analyzeProteinDistribution(days, profile, pIndex) {
+    const pattern = PATTERNS.PROTEIN_DISTRIBUTION || 'protein_distribution';
+    const minDays = 7;
+    const minMealsPerDay = 2;
+
+    if (!Array.isArray(days) || days.length < minDays) {
+      return {
+        pattern,
+        available: false,
+        reason: 'min_days_required',
+        minDaysRequired: minDays,
+        daysProvided: Array.isArray(days) ? days.length : 0
+      };
+    }
+
+    const validDays = days.filter(d => Array.isArray(d?.meals) && d.meals.length > 0);
+    if (validDays.length === 0) {
+      return { pattern, available: false, reason: 'no_meals_data' };
+    }
+
+    const totalMeals = validDays.reduce((sum, d) => sum + d.meals.length, 0);
+    const avgMealsPerDay = totalMeals / validDays.length;
+    if (avgMealsPerDay < minMealsPerDay) {
+      return {
+        pattern,
+        available: false,
+        reason: 'min_meals_required',
+        minMealsPerDay,
+        avgMealsPerDay: Math.round(avgMealsPerDay * 10) / 10
+      };
+    }
+
+    const profileWeight = Number(profile?.weight) || 70;
+    const targetProtein = profileWeight * 1.6;
+
+    let optimalMeals = 0;
+    let subthresholdMeals = 0;
+    let belowOptimalMeals = 0;
+    let excessMeals = 0;
+    const dayTotals = [];
+    const spreads = [];
+
+    for (const day of validDays) {
+      let dayProtein = 0;
+      const mealProteins = [];
+
+      for (const meal of day.meals) {
+        let mealProtein = 0;
+
+        for (const item of (meal.items || [])) {
+          const prod = pIndex?.byId?.get?.(item?.product_id);
+          if (!prod) continue;
+          const grams = Number(item.grams) || 0;
+          if (grams <= 0) continue;
+          mealProtein += (Number(prod.protein100) || 0) * grams / 100;
+        }
+
+        mealProteins.push(mealProtein);
+        dayProtein += mealProtein;
+
+        if (mealProtein < 10) subthresholdMeals++;
+        else if (mealProtein > 50) excessMeals++;
+        else if (mealProtein < 20 || mealProtein > 40) belowOptimalMeals++;
+        else optimalMeals++;
+      }
+
+      dayTotals.push(dayProtein);
+      if (mealProteins.length >= 2) {
+        spreads.push(Math.max(...mealProteins) - Math.min(...mealProteins));
+      }
+    }
+
+    const distributionScore = totalMeals > 0 ? (optimalMeals / totalMeals) * 100 : 0;
+    const avgSpread = spreads.length > 0 ? average(spreads) : 0;
+    const evenBonus = avgSpread > 0 && avgSpread < 20 ? 10 : 0;
+    const avgTotalProtein = dayTotals.length > 0 ? average(dayTotals) : 0;
+    const targetProteinPct = Math.min(100, (avgTotalProtein / targetProtein) * 100);
+
+    const score = Math.max(
+      0,
+      Math.min(
+        100,
+        Math.round(distributionScore * 0.7 + targetProteinPct * 0.3 + evenBonus)
+      )
+    );
+
+    let insight = `Оптимальных белковых приёмов: ${optimalMeals}/${totalMeals}.`;
+    if (distributionScore >= 60) {
+      insight = `✅ Хорошее распределение белка: ${Math.round(distributionScore)}% приёмов в зоне 20-40г.`;
+    } else if (distributionScore >= 35) {
+      insight = `🟡 Частично оптимально: ${Math.round(distributionScore)}% приёмов попадают в 20-40г.`;
+    } else {
+      insight = `🔴 Слабое распределение белка: только ${Math.round(distributionScore)}% приёмов в целевой зоне.`;
+    }
+
+    if (evenBonus > 0) insight += ' Равномерное распределение по приёмам (+10).';
+    if (targetProteinPct < 80) insight += ` Суточный белок ${Math.round(targetProteinPct)}% от цели (${Math.round(targetProtein)}г).`;
+
+    const baseConfidence = days.length >= 14 ? 0.8 : 0.7;
+    const confidence = piStats.applySmallSamplePenalty
+      ? piStats.applySmallSamplePenalty(baseConfidence, days.length, minDays)
+      : baseConfidence;
+
+    return {
+      pattern,
+      available: true,
+      optimalMeals,
+      subthresholdMeals,
+      belowOptimalMeals,
+      excessMeals,
+      totalMeals,
+      distributionScore: Math.round(distributionScore),
+      avgDailyProtein: Math.round(avgTotalProtein * 10) / 10,
+      targetProtein: Math.round(targetProtein),
+      targetProteinPct: Math.round(targetProteinPct),
+      avgProteinSpread: Math.round(avgSpread * 10) / 10,
+      evenBonus,
+      daysAnalyzed: validDays.length,
+      avgMealsPerDay: Math.round(avgMealsPerDay * 10) / 10,
+      score,
+      confidence: Math.round(confidence * 100) / 100,
+      insight
+    };
+  }
+
 
   // === ЭКСПОРТ ===
   HEYS.InsightsPI.patterns = {
@@ -3196,13 +3467,15 @@
     analyzeMicronutrients,
     analyzeHeartHealth,
     analyzeOmegaBalance,
-    analyzeVitaminDefense,  // C13: Vitamin Defense Radar (v6.0)
-    analyzeBComplexAnemia   // C22: B-Complex Energy & Anemia Risk (v6.0)
+    analyzeVitaminDefense,   // C13: Vitamin Defense Radar (v6.0)
+    analyzeBComplexAnemia,   // C22: B-Complex Energy & Anemia Risk (v6.0)
+    analyzeGlycemicLoad,     // C14: Glycemic Load Optimizer (v6.0)
+    analyzeProteinDistribution // C15: Protein Distribution (v6.0)
   };
 
   // Fallback для прямого доступа
   global.piPatterns = HEYS.InsightsPI.patterns;
 
-  devLog('[PI Patterns] v6.0.0 loaded — 32 pattern analyzers (C13, C22 added)');
+  devLog('[PI Patterns] v6.0.0 loaded — 34 pattern analyzers (C13, C22, C14, C15 added)');
 
 })(typeof window !== 'undefined' ? window : global);
