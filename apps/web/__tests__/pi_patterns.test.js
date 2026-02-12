@@ -423,6 +423,204 @@ describe('C13: Vitamin Defense Radar', () => {
         expect(result14.confidence).toBeLessThanOrEqual(0.8);
     });
 });
+
+// === C17: BONE HEALTH ===
+
+function analyzeBoneHealth(days, profile, productIndex) {
+    const pattern = 'bone_health';
+    const minDays = 14;
+    const nCheck = piStats.checkMinN(days, minDays);
+    if (!nCheck.ok) return { pattern, available: false, reason: 'min_days_required' };
+
+    const isFemale = profile?.gender === 'female' || profile?.gender === 'Женской';
+    const age = profile?.age || 30;
+    const riskPenalty = isFemale && age > 55 ? 12 : (isFemale && age > 45 ? 6 : 0);
+    const targetMult = riskPenalty > 0 ? 1.2 : 1.0;
+    const kTarget = isFemale ? 90 : 120;
+
+    let ca = 0, d = 0, k = 0, p = 0, strengthDays = 0;
+    days.forEach(day => {
+        (day.meals || []).forEach(meal => {
+            (meal.items || []).forEach(item => {
+                const prod = getProductFromItem(item, productIndex);
+                if (!prod) return;
+                const f = (item.grams || 0) / 100;
+                ca += (prod.calcium || 0) * f;
+                d += (prod.vitamin_d || 0) * f;
+                k += (prod.vitamin_k || 0) * f;
+                p += (prod.phosphorus || 0) * f;
+            });
+        });
+        if ((day.trainings || []).some(t => t?.type === 'strength')) strengthDays++;
+    });
+
+    const avgCa = ca / days.length;
+    const avgD = d / days.length;
+    const avgK = k / days.length;
+    const avgP = p / days.length;
+
+    const caPct = Math.min(1, avgCa / (1000 * targetMult)) * 35;
+    const dPct = Math.min(1, avgD / (15 * targetMult)) * 25;
+    const kPct = Math.min(1, avgK / (kTarget * targetMult)) * 15;
+    const pPct = Math.min(1, avgP / (700 * targetMult)) * 10;
+
+    const ratio = avgP > 0 ? avgCa / avgP : 0;
+    let ratioBonus = 0;
+    if (ratio >= 1 && ratio <= 2) ratioBonus = 10;
+    else if (ratio < 0.5) ratioBonus = -15;
+    else if (ratio > 3) ratioBonus = -5;
+
+    const exerciseBonus = strengthDays >= 6 ? 10 : (strengthDays >= 4 ? 5 : 0);
+    const score = Math.max(0, Math.min(100, Math.round(caPct + dPct + kPct + pPct + ratioBonus + exerciseBonus - riskPenalty)));
+
+    return {
+        pattern,
+        available: true,
+        caPRatio: Math.round(ratio * 100) / 100,
+        strengthDays,
+        riskPenalty,
+        score
+    };
+}
+
+describe('C17: Bone Health', () => {
+    it('returns unavailable for <14 days', () => {
+        const days = Array.from({ length: 10 }, (_, i) => ({ date: `2026-02-${i + 1}`, meals: [] }));
+        const result = analyzeBoneHealth(days, { gender: 'male', age: 30 }, { byName: new Map() });
+        expect(result.available).toBe(false);
+        expect(result.reason).toBe('min_days_required');
+    });
+
+    it('computes score from Ca/D/K/P and ratio bonus', () => {
+        const products = [{ name: 'bone_mix', calcium: 1000, vitamin_d: 15, vitamin_k: 120, phosphorus: 700 }];
+        const pIndex = buildProductIndex(products);
+        const days = Array.from({ length: 14 }, () => ({
+            date: '2026-02-01',
+            trainings: [{ type: 'strength' }],
+            meals: [{ items: [{ name: 'bone_mix', grams: 100 }] }]
+        }));
+        const result = analyzeBoneHealth(days, { gender: 'male', age: 30 }, pIndex);
+        expect(result.available).toBe(true);
+        expect(result.caPRatio).toBeCloseTo(1.43, 1);
+        expect(result.score).toBeGreaterThanOrEqual(80);
+    });
+
+    it('applies female age risk penalty', () => {
+        const products = [{ name: 'light_mix', calcium: 600, vitamin_d: 8, vitamin_k: 70, phosphorus: 900 }];
+        const pIndex = buildProductIndex(products);
+        const days = Array.from({ length: 14 }, () => ({
+            date: '2026-02-01',
+            trainings: [],
+            meals: [{ items: [{ name: 'light_mix', grams: 100 }] }]
+        }));
+        const younger = analyzeBoneHealth(days, { gender: 'female', age: 35 }, pIndex);
+        const older = analyzeBoneHealth(days, { gender: 'female', age: 56 }, pIndex);
+        expect(older.available).toBe(true);
+        expect(older.riskPenalty).toBeGreaterThan(younger.riskPenalty);
+        expect(older.score).toBeLessThanOrEqual(younger.score);
+    });
+});
+
+// === C19: TRAINING-TYPE MATCH ===
+
+function analyzeTrainingTypeMatch(days, profile, productIndex) {
+    const pattern = 'training_type_match';
+    const minDays = 5;
+    const nCheck = piStats.checkMinN(days, minDays);
+    if (!nCheck.ok) return { pattern, available: false, reason: 'min_days_required' };
+
+    let trainingCount = 0, cardio = 0, strength = 0, hobby = 0;
+    let prot = 0, carbs = 0, mg = 0, vitc = 0;
+
+    days.forEach(day => {
+        const tr = day.trainings || [];
+        trainingCount += tr.length;
+        tr.forEach(t => {
+            if (t.type === 'strength') strength++;
+            else if (t.type === 'cardio') cardio++;
+            else if (t.type === 'hobby') hobby++;
+        });
+
+        prot += day?.tot?.prot || 0;
+        carbs += day?.tot?.carbs || 0;
+
+        (day.meals || []).forEach(meal => {
+            (meal.items || []).forEach(item => {
+                const p = getProductFromItem(item, productIndex);
+                if (!p) return;
+                const f = (item.grams || 0) / 100;
+                mg += (p.magnesium || 0) * f;
+                vitc += (p.vitamin_c || 0) * f;
+            });
+        });
+    });
+
+    if (trainingCount < 3) return { pattern, available: false, reason: 'min_trainings_required' };
+
+    let dominantType = 'mixed';
+    if (strength >= cardio && strength >= hobby) dominantType = 'strength';
+    else if (cardio >= strength && cardio >= hobby) dominantType = 'cardio';
+    else if (hobby > 0) dominantType = 'hobby';
+
+    const w = profile?.weight || 70;
+    const protKg = (prot / days.length) / w;
+    const carbKg = (carbs / days.length) / w;
+    const mgDay = mg / days.length;
+    const vcDay = vitc / days.length;
+
+    let pMin = 1.0, pMax = 1.2, cMin = 3, cMax = 5;
+    if (dominantType === 'strength') { pMin = 1.6; pMax = 2.2; cMin = 3; cMax = 5; }
+    if (dominantType === 'cardio') { pMin = 1.2; pMax = 1.4; cMin = 5; cMax = 7; }
+
+    const pDev = protKg < pMin ? (pMin - protKg) / pMin : (protKg > pMax ? (protKg - pMax) / pMax : 0);
+    const cDev = carbKg < cMin ? (cMin - carbKg) / cMin : (carbKg > cMax ? (carbKg - cMax) / cMax : 0);
+    const macroMatchScore = Math.max(0, 100 - Math.round((pDev * 50 + cDev * 50) * 100));
+    const postWorkoutScore = dominantType === 'strength' ? (protKg >= 1.6 ? 90 : 60) : (dominantType === 'cardio' ? (carbKg >= 5 ? 90 : 60) : 75);
+    const recoveryNutrientScore = Math.min(100, Math.round(Math.min(1, mgDay / 400) * 50 + Math.min(1, vcDay / 90) * 50));
+    const score = Math.round(macroMatchScore * 0.5 + postWorkoutScore * 0.3 + recoveryNutrientScore * 0.2);
+
+    return {
+        pattern,
+        available: true,
+        dominantType,
+        trainingCount,
+        macroMatchScore,
+        score
+    };
+}
+
+describe('C19: Training-Type Nutrition Match', () => {
+    it('returns unavailable for <5 days', () => {
+        const days = Array.from({ length: 4 }, (_, i) => ({ date: `2026-02-${i + 1}`, trainings: [] }));
+        const result = analyzeTrainingTypeMatch(days, { weight: 70 }, { byName: new Map() });
+        expect(result.available).toBe(false);
+        expect(result.reason).toBe('min_days_required');
+    });
+
+    it('returns unavailable for <3 trainings', () => {
+        const days = Array.from({ length: 7 }, () => ({ date: '2026-02-01', trainings: [{ type: 'cardio' }] })).slice(0, 2)
+            .concat(Array.from({ length: 5 }, () => ({ date: '2026-02-01', trainings: [] })));
+        const result = analyzeTrainingTypeMatch(days, { weight: 70 }, { byName: new Map() });
+        expect(result.available).toBe(false);
+        expect(result.reason).toBe('min_trainings_required');
+    });
+
+    it('detects dominant type and computes macro match', () => {
+        const products = [{ name: 'recovery', magnesium: 200, vitamin_c: 90 }];
+        const pIndex = buildProductIndex(products);
+        const days = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            trainings: [{ type: 'strength' }],
+            tot: { prot: 130, carbs: 280 },
+            meals: [{ items: [{ name: 'recovery', grams: 100 }] }]
+        }));
+        const result = analyzeTrainingTypeMatch(days, { weight: 70 }, pIndex);
+        expect(result.available).toBe(true);
+        expect(result.dominantType).toBe('strength');
+        expect(result.macroMatchScore).toBeGreaterThan(70);
+        expect(result.score).toBeGreaterThan(70);
+    });
+});
 // === C22: B-COMPLEX & ANEMIA RISK ===
 
 /**

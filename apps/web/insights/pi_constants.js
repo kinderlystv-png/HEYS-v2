@@ -1503,6 +1503,52 @@
       actionability: 'DAILY',
       impactScore: 0.79,
       whyImportant: 'Избыточный добавленный сахар связан с метаболическими рисками и нестабильностью энергии/настроения.'
+    },
+    // C17: Bone Health Index (NEW v6.0 — Phase 4, 12.02.2026)
+    BONE_HEALTH: {
+      name: 'Здоровье костей',
+      short: 'Комплексная оценка костного профиля: Ca + D + K + P + силовая нагрузка и Ca:P ratio.',
+      details: 'Метрика оценивает нутриентную поддержку костной ткани (кальций, витамин D, витамин K, фосфор), баланс Ca:P и наличие weight-bearing нагрузки (strength training). Базовые веса: Ca 35%, D 25%, K 15%, P 10%. Ratio-блок: оптимум Ca:P 1.0–2.0 даёт бонус, крайние значения дают штраф. Exercise-блок: регулярные силовые добавляют бонус как стимул костного ремоделирования. Риск-модификатор для женщин старшего возраста ужесточает целевые пороги. Синергетические флаги: VitD<50% и VitK<50% как признаки ухудшения утилизации кальция.',
+      formula: 'Score = Ca_pct + VitD_pct + VitK_pct + P_pct + ratioBonus + exerciseBonus - riskPenalty\nwhere Ca_pct=min(1,Ca/1000)×35, VitD_pct=min(1,D/15)×25, VitK_pct=min(1,K/DRI_K)×15, P_pct=min(1,P/700)×10',
+      sources: [
+        {
+          label: 'Weaver et al., 2016 — Calcium plus vitamin D and bone health',
+          pmid: '26856587'
+        },
+        {
+          label: 'Cashman et al., 2011 — Vitamin D and musculoskeletal health',
+          pmid: '21118827'
+        }
+      ],
+      interpretation: '≥80 — хороший костный профиль. 60-79 — умеренный риск. <60 — выраженный дефицит поддержки костей.',
+      priority: 'HIGH',
+      category: 'RECOVERY',
+      actionability: 'WEEKLY',
+      impactScore: 0.74,
+      whyImportant: 'Костное здоровье зависит от сочетания питания и силовой нагрузки, а не от одного нутриента.'
+    },
+    // C19: Training-Type Nutrition Match (NEW v6.0 — Phase 4, 12.02.2026)
+    TRAINING_TYPE_MATCH: {
+      name: 'Питание под тип тренировки',
+      short: 'Сопоставляет тип тренировок (cardio/strength/hobby) с макро- и post-workout стратегией.',
+      details: 'Метрика определяет преобладающий тренировочный профиль и проверяет соответствие питания целям этой нагрузки. Для cardio-intense фокус на углеводах и восполнении гликогена; для strength — повышенный белок и белковое окно после тренировки; для hobby/light — поддерживающий режим без жёсткого тайминга. Дополнительно оценивается post-workout окно (2ч), а также recovery-нутриенты (Mg и VitC) как поддержка восстановления. Итоговый score объединяет macro-match (50%), post-workout (30%) и recovery-блок (20%).',
+      formula: 'Score = macroMatchScore×0.5 + postWorkoutScore×0.3 + recoveryNutrientScore×0.2',
+      sources: [
+        {
+          label: 'Thomas et al., 2016 — Position of the Academy/ACSM on nutrition and athletic performance',
+          pmid: '26891166'
+        },
+        {
+          label: 'Kerksick et al., 2017 — Nutrient timing and exercise outcomes',
+          pmid: '29182451'
+        }
+      ],
+      interpretation: '≥80 — питание хорошо соответствует типу нагрузок. 60-79 — частичное соответствие. <60 — mismatch.',
+      priority: 'HIGH',
+      category: 'ACTIVITY',
+      actionability: 'DAILY',
+      impactScore: 0.81,
+      whyImportant: 'Одинаковое питание не работает одинаково для cardio и strength: нужен тип-специфичный подход.'
     }
   };
 
@@ -1561,7 +1607,9 @@
     GLYCEMIC_LOAD: 'glycemic_load',             // C14: гликемическая нагрузка (Phase 2, 12.02.2026)
     PROTEIN_DISTRIBUTION: 'protein_distribution', // C15: распределение белка (Phase 2, 12.02.2026)
     ANTIOXIDANT_DEFENSE: 'antioxidant_defense',   // C16: антиоксидантная защита (Phase 3, 12.02.2026)
-    ADDED_SUGAR_DEPENDENCY: 'added_sugar_dependency' // C18: добавленный сахар + зависимость (Phase 3, 12.02.2026)
+    ADDED_SUGAR_DEPENDENCY: 'added_sugar_dependency', // C18: добавленный сахар + зависимость (Phase 3, 12.02.2026)
+    BONE_HEALTH: 'bone_health',                   // C17: здоровье костей (Phase 4, 12.02.2026)
+    TRAINING_TYPE_MATCH: 'training_type_match'   // C19: питание под тип тренировки (Phase 4, 12.02.2026)
   };
 
   // === UNIT REGISTRY (Phase 0, 12.02.2026) ===

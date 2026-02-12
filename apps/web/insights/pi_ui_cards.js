@@ -940,7 +940,9 @@
         glycemic_load: '🍚 Гликемическая нагрузка (GL)',
         protein_distribution: '🥩 Распределение белка',
         antioxidant_defense: '🛡️ Антиоксидантная защита',
-        added_sugar_dependency: '🍬 Добавленный сахар'
+        added_sugar_dependency: '🍬 Добавленный сахар',
+        bone_health: '🦴 Здоровье костей',
+        training_type_match: '🏋️ Питание под тип тренировки'
       };
 
       // v2.0: Маппинг pattern → SCIENCE_INFO ключ
@@ -966,7 +968,9 @@
         glycemic_load: 'GLYCEMIC_LOAD',
         protein_distribution: 'PROTEIN_DISTRIBUTION',
         antioxidant_defense: 'ANTIOXIDANT_DEFENSE',
-        added_sugar_dependency: 'ADDED_SUGAR_DEPENDENCY'
+        added_sugar_dependency: 'ADDED_SUGAR_DEPENDENCY',
+        bone_health: 'BONE_HEALTH',
+        training_type_match: 'TRAINING_TYPE_MATCH'
       };
 
       const infoKey = patternToInfoKey[pattern.pattern];

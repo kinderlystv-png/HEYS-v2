@@ -85,7 +85,9 @@
     GLYCEMIC_LOAD: 'glycemic_load',
     PROTEIN_DISTRIBUTION: 'protein_distribution',
     ANTIOXIDANT_DEFENSE: 'antioxidant_defense',
-    ADDED_SUGAR_DEPENDENCY: 'added_sugar_dependency'
+    ADDED_SUGAR_DEPENDENCY: 'added_sugar_dependency',
+    BONE_HEALTH: 'bone_health',
+    TRAINING_TYPE_MATCH: 'training_type_match'
   };
 
   // Импорт статистических функций из pi_stats.js (централизовано)
@@ -3720,6 +3722,283 @@
     };
   }
 
+  /**
+   * C17: Bone Health Index
+   * Комплекс: Ca + D + K + P + Ca:P ratio + strength stimulus.
+   * @param {Array} days
+   * @param {Object} profile
+   * @param {Object} pIndex
+   * @returns {Object}
+   */
+  function analyzeBoneHealth(days, profile, pIndex) {
+    const pattern = PATTERNS.BONE_HEALTH || 'bone_health';
+    const minDays = 14;
+
+    if (!Array.isArray(days) || days.length < minDays) {
+      return {
+        pattern,
+        available: false,
+        reason: 'min_days_required',
+        minDaysRequired: minDays,
+        daysProvided: Array.isArray(days) ? days.length : 0
+      };
+    }
+
+    const isFemale = profile?.gender === 'female' || profile?.gender === 'Женской';
+    const age = Number(profile?.age) || 0;
+    const vitKTarget = isFemale ? 90 : 120;
+    const riskPenalty = isFemale && age > 55 ? 12 : (isFemale && age > 45 ? 6 : 0);
+    const targetMultiplier = riskPenalty > 0 ? 1.2 : 1.0;
+
+    let caSum = 0;
+    let dSum = 0;
+    let kSum = 0;
+    let pSum = 0;
+    let strengthDays = 0;
+    let validDays = 0;
+
+    for (const day of days) {
+      if (!Array.isArray(day?.meals)) continue;
+
+      let dayCa = 0;
+      let dayD = 0;
+      let dayK = 0;
+      let dayP = 0;
+
+      for (const meal of day.meals) {
+        for (const item of (meal.items || [])) {
+          const prod = pIndex?.byId?.get?.(item?.product_id);
+          if (!prod) continue;
+
+          const grams = Number(item.grams) || 0;
+          if (grams <= 0) continue;
+          const factor = grams / 100;
+
+          dayCa += (Number(prod.calcium) || 0) * factor;
+          dayD += (Number(prod.vitamin_d) || 0) * factor;
+          dayK += (Number(prod.vitamin_k) || 0) * factor;
+          dayP += (Number(prod.phosphorus) || 0) * factor;
+        }
+      }
+
+      if (dayCa + dayD + dayK + dayP > 0) {
+        caSum += dayCa;
+        dSum += dayD;
+        kSum += dayK;
+        pSum += dayP;
+        validDays++;
+      }
+
+      const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
+      if (trainings.some(t => t?.type === 'strength')) strengthDays++;
+    }
+
+    if (validDays === 0) {
+      return { pattern, available: false, reason: 'insufficient_data' };
+    }
+
+    const avgCa = caSum / validDays;
+    const avgD = dSum / validDays;
+    const avgK = kSum / validDays;
+    const avgP = pSum / validDays;
+
+    const caPct = Math.min(1, avgCa / (1000 * targetMultiplier)) * 35;
+    const dPct = Math.min(1, avgD / (15 * targetMultiplier)) * 25;
+    const kPct = Math.min(1, avgK / (vitKTarget * targetMultiplier)) * 15;
+    const pPct = Math.min(1, avgP / (700 * targetMultiplier)) * 10;
+
+    const caPRatio = avgP > 0 ? avgCa / avgP : 0;
+    let ratioBonus = 0;
+    if (caPRatio >= 1.0 && caPRatio <= 2.0) ratioBonus = 10;
+    else if (caPRatio < 0.5) ratioBonus = -15;
+    else if (caPRatio > 3.0) ratioBonus = -5;
+
+    const exerciseBonus = strengthDays >= 6 ? 10 : (strengthDays >= 4 ? 5 : 0);
+
+    const vitDAbsorptionFlag = (avgD / (15 * targetMultiplier)) < 0.5;
+    const vitKUtilizationFlag = (avgK / (vitKTarget * targetMultiplier)) < 0.5;
+
+    const score = Math.max(
+      0,
+      Math.min(100, Math.round(caPct + dPct + kPct + pPct + ratioBonus + exerciseBonus - riskPenalty))
+    );
+
+    let insight = '';
+    if (score >= 80) insight = `✅ Костный профиль хороший (${score}/100).`;
+    else if (score >= 60) insight = `🟡 Умеренный риск по костному профилю (${score}/100).`;
+    else insight = `🔴 Высокий риск дефицита костной поддержки (${score}/100).`;
+
+    if (vitDAbsorptionFlag) insight += ' VitD <50%: риск ухудшения абсорбции Ca.';
+    if (vitKUtilizationFlag) insight += ' VitK <50%: риск ухудшения утилизации Ca.';
+    if (ratioBonus < 0) insight += ` Ca:P=${caPRatio.toFixed(2)} (неоптимально).`;
+
+    const baseConfidence = days.length >= 21 ? 0.8 : 0.7;
+    const confidence = piStats.applySmallSamplePenalty
+      ? piStats.applySmallSamplePenalty(baseConfidence, days.length, minDays)
+      : baseConfidence;
+
+    return {
+      pattern,
+      available: true,
+      avgCa: Math.round(avgCa),
+      avgVitD: Math.round(avgD * 10) / 10,
+      avgVitK: Math.round(avgK),
+      avgPhosphorus: Math.round(avgP),
+      caPRatio: Math.round(caPRatio * 100) / 100,
+      strengthDays,
+      riskPenalty,
+      vitDAbsorptionFlag,
+      vitKUtilizationFlag,
+      score,
+      confidence: Math.round(confidence * 100) / 100,
+      insight
+    };
+  }
+
+  /**
+   * C19: Training-Type Nutrition Match
+   * Проверяет соответствие питания преобладающему типу нагрузки.
+   * @param {Array} days
+   * @param {Object} profile
+   * @param {Object} pIndex
+   * @returns {Object}
+   */
+  function analyzeTrainingTypeMatch(days, profile, pIndex) {
+    const pattern = PATTERNS.TRAINING_TYPE_MATCH || 'training_type_match';
+    const minDays = 5;
+    const minTrainings = 3;
+
+    if (!Array.isArray(days) || days.length < minDays) {
+      return {
+        pattern,
+        available: false,
+        reason: 'min_days_required',
+        minDaysRequired: minDays,
+        daysProvided: Array.isArray(days) ? days.length : 0
+      };
+    }
+
+    let trainingCount = 0;
+    let cardioCount = 0;
+    let strengthCount = 0;
+    let hobbyCount = 0;
+
+    let totalProt = 0;
+    let totalCarbs = 0;
+    let totalMg = 0;
+    let totalVitC = 0;
+
+    for (const day of days) {
+      const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
+      trainingCount += trainings.length;
+
+      trainings.forEach(t => {
+        const type = t?.type;
+        if (type === 'strength') strengthCount++;
+        else if (type === 'cardio') cardioCount++;
+        else if (type === 'hobby') hobbyCount++;
+      });
+
+      totalProt += Number(day?.tot?.prot || day?.tot?.protein || 0);
+      totalCarbs += Number(day?.tot?.carbs || 0);
+
+      for (const meal of (day.meals || [])) {
+        for (const item of (meal.items || [])) {
+          const prod = pIndex?.byId?.get?.(item?.product_id);
+          if (!prod) continue;
+          const grams = Number(item.grams) || 0;
+          if (grams <= 0) continue;
+          const factor = grams / 100;
+          totalMg += (Number(prod.magnesium) || 0) * factor;
+          totalVitC += (Number(prod.vitamin_c) || 0) * factor;
+        }
+      }
+    }
+
+    if (trainingCount < minTrainings) {
+      return {
+        pattern,
+        available: false,
+        reason: 'min_trainings_required',
+        minTrainingsRequired: minTrainings,
+        trainingsProvided: trainingCount
+      };
+    }
+
+    let dominantType = 'mixed';
+    if (strengthCount >= cardioCount && strengthCount >= hobbyCount) dominantType = 'strength';
+    else if (cardioCount >= strengthCount && cardioCount >= hobbyCount) dominantType = 'cardio';
+    else if (hobbyCount > 0) dominantType = 'hobby';
+
+    const weight = Number(profile?.weight) || 70;
+    const avgProtPerKg = (totalProt / days.length) / weight;
+    const avgCarbsPerKg = (totalCarbs / days.length) / weight;
+    const avgMg = totalMg / days.length;
+    const avgVitC = totalVitC / days.length;
+
+    let protTargetMin = 1.0;
+    let protTargetMax = 1.2;
+    let carbsTargetMin = 3;
+    let carbsTargetMax = 5;
+
+    if (dominantType === 'cardio') {
+      protTargetMin = 1.2; protTargetMax = 1.4;
+      carbsTargetMin = 5; carbsTargetMax = 7;
+    } else if (dominantType === 'strength') {
+      protTargetMin = 1.6; protTargetMax = 2.2;
+      carbsTargetMin = 3; carbsTargetMax = 5;
+    }
+
+    const protDeviation = avgProtPerKg < protTargetMin
+      ? (protTargetMin - avgProtPerKg) / protTargetMin
+      : (avgProtPerKg > protTargetMax ? (avgProtPerKg - protTargetMax) / protTargetMax : 0);
+
+    const carbsDeviation = avgCarbsPerKg < carbsTargetMin
+      ? (carbsTargetMin - avgCarbsPerKg) / carbsTargetMin
+      : (avgCarbsPerKg > carbsTargetMax ? (avgCarbsPerKg - carbsTargetMax) / carbsTargetMax : 0);
+
+    const macroMatchScore = Math.max(0, 100 - Math.round((protDeviation * 50 + carbsDeviation * 50) * 100));
+    const postWorkoutScore = dominantType === 'strength'
+      ? (avgProtPerKg >= 1.6 ? 90 : 60)
+      : (dominantType === 'cardio' ? (avgCarbsPerKg >= 5 ? 90 : 60) : 75);
+    const recoveryNutrientScore = Math.min(100, Math.round((Math.min(1, avgMg / 400) * 50) + (Math.min(1, avgVitC / 90) * 50)));
+
+    const score = Math.max(
+      0,
+      Math.min(100, Math.round(macroMatchScore * 0.5 + postWorkoutScore * 0.3 + recoveryNutrientScore * 0.2))
+    );
+
+    let insight = `Тип нагрузки: ${dominantType}. Macro match: ${macroMatchScore}%.`;
+    if (score >= 80) insight = `✅ Отличный match питания под ${dominantType} (${score}/100).`;
+    else if (score >= 60) insight = `🟡 Частичный match под ${dominantType} (${score}/100).`;
+    else insight = `🔴 Выраженный mismatch питания и нагрузки (${score}/100).`;
+
+    if (dominantType === 'strength' && avgProtPerKg < 1.6) insight += ' Белок ниже целевого для силовых.';
+    if (dominantType === 'cardio' && avgCarbsPerKg < 5) insight += ' Углеводы ниже целевого для cardio.';
+
+    const baseConfidence = days.length >= 10 ? 0.8 : 0.7;
+    const confidence = piStats.applySmallSamplePenalty
+      ? piStats.applySmallSamplePenalty(baseConfidence, days.length, minDays)
+      : baseConfidence;
+
+    return {
+      pattern,
+      available: true,
+      dominantType,
+      trainingCount,
+      macroMatchScore,
+      postWorkoutScore,
+      recoveryNutrientScore,
+      avgProtPerKg: Math.round(avgProtPerKg * 100) / 100,
+      avgCarbsPerKg: Math.round(avgCarbsPerKg * 100) / 100,
+      avgMagnesium: Math.round(avgMg),
+      avgVitC: Math.round(avgVitC),
+      score,
+      confidence: Math.round(confidence * 100) / 100,
+      insight
+    };
+  }
+
 
   // === ЭКСПОРТ ===
   HEYS.InsightsPI.patterns = {
@@ -3761,12 +4040,14 @@
     analyzeGlycemicLoad,     // C14: Glycemic Load Optimizer (v6.0)
     analyzeProteinDistribution, // C15: Protein Distribution (v6.0)
     analyzeAntioxidantDefense, // C16: Antioxidant Defense (v6.0)
-    analyzeAddedSugarDependency // C18: Added Sugar & Dependency (v6.0)
+    analyzeAddedSugarDependency, // C18: Added Sugar & Dependency (v6.0)
+    analyzeBoneHealth, // C17: Bone Health (v6.0)
+    analyzeTrainingTypeMatch // C19: Training-Type Match (v6.0)
   };
 
   // Fallback для прямого доступа
   global.piPatterns = HEYS.InsightsPI.patterns;
 
-  devLog('[PI Patterns] v6.0.0 loaded — 36 pattern analyzers (C13, C22, C14, C15, C16, C18 added)');
+  devLog('[PI Patterns] v6.0.0 loaded — 38 pattern analyzers (C13..C19 partial added)');
 
 })(typeof window !== 'undefined' ? window : global);
