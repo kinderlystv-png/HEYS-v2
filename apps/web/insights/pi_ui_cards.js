@@ -25,6 +25,7 @@
 
     const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
     const piScience = HEYS.InsightsPI?.science || window.SCIENCE_INFO || {};
+    const piUIHelpers = HEYS.InsightsPI?.uiHelpers || window.piUIHelpers || {};
 
     // Safe accessor for analytics functions (may be in InsightsPI.analyticsAPI or PredictiveInsights)
     const getAnalyticsFn = (fnName) => {
@@ -34,9 +35,64 @@
         (() => ({ hasData: false, error: `${fnName} not loaded` }));
     };
 
+    // Safe products index builder (buildIndex is not always available on HEYS.products)
+    const getProductsList = (lsGet) => {
+      let products = HEYS.products?.getAll?.() || [];
+      if (!Array.isArray(products) || products.length === 0) {
+        const storeGet = HEYS?.store?.get;
+        if (storeGet) products = storeGet('heys_products', []);
+        else if (lsGet) products = lsGet('heys_products', []);
+        else products = HEYS?.utils?.lsGet?.('heys_products', []) || [];
+      }
+      if (products && !Array.isArray(products) && Array.isArray(products.products)) {
+        products = products.products;
+      }
+      return Array.isArray(products) ? products : [];
+    };
+
+    const buildProductsIndex = (lsGet) => {
+      const buildIndex = HEYS.dayUtils?.buildProductIndex || HEYS.models?.buildProductIndex;
+      if (!buildIndex) return null;
+      const products = getProductsList(lsGet);
+      return buildIndex(products);
+    };
+
+    const getMetabolismDate = (lsGet, selectedDate) => {
+      const getter = lsGet || window.HEYS?.utils?.lsGet;
+      const today = HEYS.dayUtils?.todayISO?.() || new Date().toISOString().split('T')[0];
+      const baseDate = selectedDate || today;
+      const canFallback = !selectedDate || selectedDate === today;
+      if (!getter || !canFallback) return baseDate;
+
+      const hasMetabolismData = (day) => {
+        if (!day || typeof day !== 'object') return false;
+        if ((day.meals || []).length > 0) return true;
+        if ((day.trainings || []).length > 0) return true;
+        if ((day.sleepHours || 0) > 0) return true;
+        if (day.sleepStart || day.sleepEnd) return true;
+        return false;
+      };
+
+      const baseDay = getter(`heys_dayv2_${baseDate}`, {});
+      if (hasMetabolismData(baseDay)) return baseDate;
+
+      for (let i = 1; i <= 14; i++) {
+        const d = new Date(baseDate);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const day = getter(`heys_dayv2_${dateStr}`, {});
+        if (hasMetabolismData(day)) return dateStr;
+      }
+
+      return baseDate;
+    };
+
     // InfoButton is defined in pi_ui_dashboard.js which loads AFTER this module
     // Use lazy getter to defer resolution until runtime
     const getInfoButton = () => {
+      if (typeof piUIHelpers.getInfoButton === 'function') {
+        return piUIHelpers.getInfoButton(h);
+      }
       return HEYS.InsightsPI?.uiDashboard?.InfoButton ||
         HEYS.PredictiveInsights?.components?.InfoButton ||
         // Fallback: simple button that does nothing if InfoButton not loaded
@@ -100,7 +156,7 @@
         const opts = {
           lsGet: lsGet || window.HEYS?.utils?.lsGet,
           profile: profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
-          pIndex: pIndex || window.HEYS?.products?.buildIndex?.(),
+          pIndex: pIndex || buildProductsIndex(lsGet || window.HEYS?.utils?.lsGet),
           selectedDate
         };
 
@@ -659,14 +715,18 @@
      * MetabolismSection — секция научной аналитики (v2.0: с InfoButtons)
      */
     function MetabolismSection({ lsGet, profile, pIndex, selectedDate }) {
+      const resolvedDate = useMemo(() => {
+        return getMetabolismDate(lsGet || window.HEYS?.utils?.lsGet, selectedDate);
+      }, [lsGet, selectedDate]);
+
       const metabolism = useMemo(() => {
         return getAnalyticsFn('analyzeMetabolism')({
           lsGet: lsGet || window.HEYS?.utils?.lsGet,
           profile: profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
-          pIndex: pIndex || window.HEYS?.products?.buildIndex?.(),
-          selectedDate
+          pIndex: pIndex || buildProductsIndex(lsGet || window.HEYS?.utils?.lsGet),
+          selectedDate: resolvedDate
         });
-      }, [lsGet, profile, pIndex, selectedDate]);
+      }, [lsGet, profile, pIndex, resolvedDate]);
 
       if (!metabolism || !metabolism.hasData) {
         return h('div', { className: 'insights-metabolism-empty' },
@@ -683,6 +743,14 @@
       if (epocAnalysis.kcal > 0) summaryParts.push(`EPOC +${epocAnalysis.kcal}`);
       if (hormonalBalance.isDisrupted) summaryParts.push('⚠️ Гормоны');
       else summaryParts.push('✓ Гормоны');
+
+      const today = HEYS.dayUtils?.todayISO?.() || new Date().toISOString().split('T')[0];
+      const baseDate = selectedDate || today;
+      const isFallbackDate = resolvedDate && resolvedDate !== baseDate;
+      if (isFallbackDate) {
+        const shortDate = resolvedDate.split('-').reverse().slice(0, 2).join('.');
+        summaryParts.push(`данные за ${shortDate}`);
+      }
 
       return h('div', { className: 'metabolism-section' },
         // Header с InfoButton

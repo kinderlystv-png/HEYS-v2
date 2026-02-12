@@ -30,9 +30,13 @@
     const piUICards = HEYS.InsightsPI?.uiCards || {};
     const piUIRings = HEYS.InsightsPI?.uiRings || {};
     const piConstants = HEYS.InsightsPI?.constants || {};
+    const piUIHelpers = HEYS.InsightsPI?.uiHelpers || window.piUIHelpers || {};
 
     // Lazy getter для InfoButton с полной fallback цепочкой (fix load order)
     function getInfoButton() {
+      if (typeof piUIHelpers.getInfoButton === 'function') {
+        return piUIHelpers.getInfoButton(h);
+      }
       return HEYS.InsightsPI?.uiDashboard?.InfoButton ||
         HEYS.PredictiveInsights?.components?.InfoButton ||
         HEYS.day?.InfoButton ||
@@ -59,31 +63,56 @@
     // Получаем Ring компоненты из piUIRings
     const { TotalHealthRing } = piUIRings;
 
-    // Получаем константы из piConstants (с hardcoded fallback для защиты от сбоев загрузки)
-    const PRIORITY_LEVELS = piConstants.PRIORITY_LEVELS || {
-      CRITICAL: { level: 1, name: 'Критический', emoji: '🔴', color: '#ef4444' },
-      HIGH: { level: 2, name: 'Высокий', emoji: '🟠', color: '#f97316' },
-      MEDIUM: { level: 3, name: 'Средний', emoji: '🟡', color: '#eab308' },
-      LOW: { level: 4, name: 'Низкий', emoji: '🟢', color: '#22c55e' },
-      INFO: { level: 5, name: 'Справочный', emoji: '🔵', color: '#3b82f6' }
-    };
-    const CATEGORIES = piConstants.CATEGORIES || {
-      METABOLISM: { id: 'metabolism', name: 'Метаболизм', emoji: '🔥', color: '#f97316' },
-      NUTRITION: { id: 'nutrition', name: 'Питание', emoji: '🍽️', color: '#22c55e' },
-      TIMING: { id: 'timing', name: 'Тайминг', emoji: '⏰', color: '#8b5cf6' },
-      RECOVERY: { id: 'recovery', name: 'Восстановление', emoji: '😴', color: '#6366f1' },
-      RISK: { id: 'risk', name: 'Риски', emoji: '⚠️', color: '#ef4444' },
-      PREDICTION: { id: 'prediction', name: 'Прогнозы', emoji: '🔮', color: '#a855f7' },
-      PATTERNS: { id: 'patterns', name: 'Паттерны', emoji: '🧬', color: '#ec4899' },
-      COMPOSITE: { id: 'composite', name: 'Композитные', emoji: '📊', color: '#14b8a6' },
-      STATISTICS: { id: 'statistics', name: 'Статистика', emoji: '📈', color: '#64748b' }
-    };
+    // Получаем константы через shared helpers (уменьшаем дублирование между модулями)
+    const PRIORITY_LEVELS = typeof piUIHelpers.getPriorityLevels === 'function'
+      ? piUIHelpers.getPriorityLevels(piConstants)
+      : (piConstants.PRIORITY_LEVELS || {});
+    const CATEGORIES = typeof piUIHelpers.getCategories === 'function'
+      ? piUIHelpers.getCategories(piConstants)
+      : (piConstants.CATEGORIES || {});
     const SCIENCE_INFO = piConstants.SCIENCE_INFO || {};
     const ACTIONABILITY = piConstants.ACTIONABILITY || {};
     const getAllMetricsByPriority = piConstants.getAllMetricsByPriority || function () {
       devWarn('[pi_ui_dashboard] getAllMetricsByPriority not available, returning empty array');
       return [];
     };
+
+    /**
+     * getMetabolismDate — fallback для показа последних доступных данных метаболизма
+     * Если сегодня нет данных (0 meals/trainings/sleep), ищет последний день с данными (до 14 дней назад)
+     */
+    function getMetabolismDate(lsGet, selectedDate) {
+      const getter = lsGet || window.HEYS?.utils?.lsGet;
+      const today = HEYS.dayUtils?.todayISO?.() || new Date().toISOString().split('T')[0];
+      const baseDate = selectedDate || today;
+      // Fallback только для текущего дня (не для явно выбранной даты)
+      const canFallback = !selectedDate || selectedDate === today;
+      if (!getter || !canFallback) return baseDate;
+
+      // Проверка, есть ли данные для метаболизма
+      const hasMetabolismData = (day) => {
+        if (!day || typeof day !== 'object') return false;
+        if ((day.meals || []).length > 0) return true;
+        if ((day.trainings || []).length > 0) return true;
+        if ((day.sleepHours || 0) > 0) return true;
+        return false;
+      };
+
+      // Сначала проверяем базовую дату
+      const baseDay = getter(`heys_dayv2_${baseDate}`, {});
+      if (hasMetabolismData(baseDay)) return baseDate;
+
+      // Fallback: ищем последний день с данными (до 14 дней назад)
+      for (let i = 1; i <= 14; i++) {
+        const d = new Date(baseDate);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const day = getter(`heys_dayv2_${dateStr}`, {});
+        if (hasMetabolismData(day)) return dateStr;
+      }
+
+      return baseDate; // Если ничего не нашли, возвращаем базовую дату
+    }
 
     function WeightPrediction({ prediction }) {
       if (!prediction || !prediction.available) return null;
@@ -114,6 +143,40 @@
           )
         )
       );
+    }
+
+    class InsightsErrorBoundary extends Component {
+      constructor(props) {
+        super(props);
+        this.state = { hasError: false };
+      }
+
+      static getDerivedStateFromError() {
+        return { hasError: true };
+      }
+
+      componentDidCatch(error, errorInfo) {
+        devWarn('[InsightsErrorBoundary] render failure:', error, errorInfo);
+        trackError(error, {
+          scope: 'PI UI Dashboard',
+          action: 'render_boundary',
+          componentStack: errorInfo?.componentStack
+        });
+      }
+
+      render() {
+        if (this.state.hasError) {
+          return h('div', { className: 'insights-tab' },
+            h('div', { className: 'insights-empty' },
+              h('div', { className: 'insights-empty__icon' }, '⚠️'),
+              h('div', { className: 'insights-empty__title' }, 'Не удалось отрисовать инсайты'),
+              h('div', { className: 'insights-empty__subtitle' }, 'Обнови экран — данные сохранены')
+            )
+          );
+        }
+
+        return this.props.children;
+      }
     }
 
     /**
@@ -1028,17 +1091,19 @@
 
       // EmptyState если мало данных И тур уже пройден
       if (!insights.available && insightsTourCompleted) {
-        return h('div', { className: 'insights-tab' },
-          h('div', { className: 'insights-tab__hero' },
-            h('div', { className: 'insights-tab__header' },
-              h('h2', { className: 'insights-tab__title' }, '🔮 Умная аналитика')
+        return h(InsightsErrorBoundary, null,
+          h('div', { className: 'insights-tab' },
+            h('div', { className: 'insights-tab__hero' },
+              h('div', { className: 'insights-tab__header' },
+                h('h2', { className: 'insights-tab__title' }, '🔮 Умная аналитика')
+              )
+            ),
+            h('div', { className: 'insights-tab__content' },
+              h(EmptyState, {
+                daysAnalyzed: realInsights.daysAnalyzed || realInsights.daysWithData || 0,
+                minRequired: realInsights.minDaysRequired || 3
+              })
             )
-          ),
-          h('div', { className: 'insights-tab__content' },
-            h(EmptyState, {
-              daysAnalyzed: realInsights.daysAnalyzed || realInsights.daysWithData || 0,
-              minRequired: realInsights.minDaysRequired || 3
-            })
           )
         );
       }
@@ -1049,323 +1114,308 @@
         return sectionPriority === priorityFilter;
       };
 
-      return h('div', { className: 'insights-tab' },
-        // === HERO HEADER ===
-        h('div', { className: 'insights-tab__hero' },
-          h('div', { className: 'insights-tab__header' },
-            h('h2', { className: 'insights-tab__title' }, '🔮 Умная аналитика'),
-            h('div', { className: 'insights-tab__subtitle' },
-              activeTab === 'today'
-                ? 'Анализ за 7 дней'
-                : 'Глубокий анализ за 30 дней'
-            )
-          ),
-
-          // Glass Tabs внутри hero
-          h('div', { className: 'insights-tab__tabs' },
-            h('button', {
-              className: 'insights-tab__tab' + (activeTab === 'today' ? ' active' : ''),
-              onClick: () => setActiveTab('today')
-            }, '📅 7 дней'),
-            h('button', {
-              className: 'insights-tab__tab' + (activeTab === 'week' ? ' active' : ''),
-              onClick: () => setActiveTab('week')
-            }, '📊 30 дней')
-          ),
-
-          // 🎯 Demo Mode Banner — показываем только в демо режиме
-          showDemoMode && h('div', {
-            className: 'insights-tab__demo-banner',
-            style: {
-              background: 'linear-gradient(135deg, rgba(138, 43, 226, 0.15), rgba(75, 0, 130, 0.1))',
-              border: '1px solid rgba(138, 43, 226, 0.3)',
-              borderRadius: '12px',
-              padding: '12px 16px',
-              marginBottom: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              fontSize: '13px',
-              color: 'var(--color-text-secondary)'
-            }
-          },
-            h('span', { style: { fontSize: '20px' } }, '✨'),
-            h('div', null,
-              h('div', { style: { fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '2px' } },
-                'Демо-режим аналитики'
-              ),
-              h('div', null, 'Это пример данных. После 3 дней использования появится ваша реальная статистика')
-            )
-          ),
-
-          // Priority Filter (compact)
-          h('div', { className: 'insights-tab__filters' },
-            h('button', {
-              className: `insights-tab__filter-btn ${!priorityFilter ? 'active' : ''}`,
-              onClick: () => setPriorityFilter(null)
-            }, '🎯 Всё'),
-            h('button', {
-              className: `insights-tab__filter-btn ${priorityFilter === 'CRITICAL' ? 'active' : ''}`,
-              onClick: () => setPriorityFilter(priorityFilter === 'CRITICAL' ? null : 'CRITICAL'),
-              style: { '--filter-color': PRIORITY_LEVELS.CRITICAL.color }
-            }, '🔴 Важное'),
-            h('button', {
-              className: `insights-tab__filter-btn ${priorityFilter === 'HIGH' ? 'active' : ''}`,
-              onClick: () => setPriorityFilter(priorityFilter === 'HIGH' ? null : 'HIGH'),
-              style: { '--filter-color': PRIORITY_LEVELS.HIGH.color }
-            }, '🟠 Полезное')
-          )
-        ),
-
-        // === MAIN CONTENT (отсортировано по приоритету) ===
-        h('div', { className: 'insights-tab__content' },
-
-          // ═══════════════════════════════════════════════════════════
-          // 🔴 КРИТИЧЕСКИЙ ПРИОРИТЕТ — Самое важное сверху
-          // ═══════════════════════════════════════════════════════════
-
-          // L0: Status 0-100 Card (CRITICAL — показывается всегда)
-          shouldShowSection('CRITICAL') && h('div', {
-            className: 'insights-tab__section insights-tab__section--critical',
-            id: 'tour-insights-status' // 🎯 Mini-tour target
-          },
-            h('div', { className: 'insights-tab__section-badge' },
-              h(PriorityBadge, { priority: 'CRITICAL', showLabel: true })
+      return h(InsightsErrorBoundary, null,
+        h('div', { className: 'insights-tab' },
+          // === HERO HEADER ===
+          h('div', { className: 'insights-tab__hero' },
+            h('div', { className: 'insights-tab__header' },
+              h('h2', { className: 'insights-tab__title' }, '🔮 Умная аналитика'),
+              h('div', { className: 'insights-tab__subtitle' },
+                activeTab === 'today'
+                  ? 'Анализ за 7 дней'
+                  : 'Глубокий анализ за 30 дней'
+              )
             ),
+
+            // Glass Tabs внутри hero
+            h('div', { className: 'insights-tab__tabs' },
+              h('button', {
+                className: 'insights-tab__tab' + (activeTab === 'today' ? ' active' : ''),
+                onClick: () => setActiveTab('today')
+              }, '📅 7 дней'),
+              h('button', {
+                className: 'insights-tab__tab' + (activeTab === 'week' ? ' active' : ''),
+                onClick: () => setActiveTab('week')
+              }, '📊 30 дней')
+            ),
+
+            // 🎯 Demo Mode Banner — показываем только в демо режиме
+            showDemoMode && h('div', {
+              className: 'insights-tab__demo-banner'
+            },
+              h('span', { className: 'insights-tab__demo-banner-icon' }, '✨'),
+              h('div', null,
+                h('div', { className: 'insights-tab__demo-banner-title' },
+                  'Демо-режим аналитики'
+                ),
+                h('div', { className: 'insights-tab__demo-banner-desc' },
+                  'Это пример данных. После 3 дней использования появится ваша реальная статистика'
+                )
+              )
+            ),
+
+            // Priority Filter (compact)
+            h('div', { className: 'insights-tab__filters' },
+              h('button', {
+                className: `insights-tab__filter-btn ${!priorityFilter ? 'active' : ''}`,
+                onClick: () => setPriorityFilter(null)
+              }, '🎯 Всё'),
+              h('button', {
+                className: `insights-tab__filter-btn ${priorityFilter === 'CRITICAL' ? 'active' : ''}`,
+                onClick: () => setPriorityFilter(priorityFilter === 'CRITICAL' ? null : 'CRITICAL'),
+                style: { '--filter-color': PRIORITY_LEVELS.CRITICAL.color }
+              }, '🔴 Важное'),
+              h('button', {
+                className: `insights-tab__filter-btn ${priorityFilter === 'HIGH' ? 'active' : ''}`,
+                onClick: () => setPriorityFilter(priorityFilter === 'HIGH' ? null : 'HIGH'),
+                style: { '--filter-color': PRIORITY_LEVELS.HIGH.color }
+              }, '🟠 Полезное')
+            )
+          ),
+
+          // === MAIN CONTENT (отсортировано по приоритету) ===
+          h('div', { className: 'insights-tab__content' },
+
+            // ═══════════════════════════════════════════════════════════
+            // 🔴 КРИТИЧЕСКИЙ ПРИОРИТЕТ — Самое важное сверху
+            // ═══════════════════════════════════════════════════════════
+
+            // L0: Status 0-100 Card (CRITICAL — показывается всегда)
+            shouldShowSection('CRITICAL') && h('div', {
+              className: 'insights-tab__section insights-tab__section--critical',
+              id: 'tour-insights-status' // 🎯 Mini-tour target
+            },
+              h('div', { className: 'insights-tab__section-badge' },
+                h(PriorityBadge, { priority: 'CRITICAL', showLabel: true })
+              ),
 
             // 🆕 StatusCard вместо TotalHealthRing + HealthRingsGrid
             /* status && HEYS.Status?.StatusCard
               ? h(HEYS.Status.StatusCard, { status })
               : */ h('div', { className: 'insights-tab__score-card' },
-              h('div', { className: 'insights-tab__score' },
-                h(TotalHealthRing, {
-                  score: insights.healthScore.total,
-                  size: 140,
-                  strokeWidth: 12,
-                  debugData: insights.healthScore.debug || {
-                    mode: insights.healthScore.mode,
-                    weights: insights.healthScore.weights,
-                    breakdown: insights.healthScore.breakdown
-                  }
-                })
-              ),
-              h('div', { className: 'insights-tab__rings' },
-                h(HealthRingsGrid, {
-                  healthScore: insights.healthScore,
-                  onCategoryClick: setSelectedCategory,
-                  compact: true
-                })
-              )
-            )
-          ),
-
-          // Metabolic Status + Risk (CRITICAL) — собственный заголовок внутри
-          shouldShowSection('CRITICAL') && h('div', {
-            className: 'insights-tab__section insights-tab__section--critical insights-tab__section--no-header',
-            id: 'tour-insights-metabolic' // 🎯 Mini-tour target
-          },
-            h(MetabolicQuickStatus, {
-              lsGet,
-              profile,
-              pIndex,
-              selectedDate
-            })
-          ),
-
-          // Divider между критическими и важными
-          shouldShowSection('CRITICAL') && h('div', { className: 'insights-tab__divider insights-tab__divider--priority' },
-            h('span', null, '↓ Важные инсайты ↓')
-          ),
-
-          // ═══════════════════════════════════════════════════════════
-          // 🟠 ВЫСОКИЙ ПРИОРИТЕТ — Важно для результата
-          // ═══════════════════════════════════════════════════════════
-
-          // Predictive Dashboard (HIGH) — собственный заголовок внутри
-          shouldShowSection('HIGH') && h('div', {
-            className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
-            id: 'tour-insights-prediction' // 🎯 Mini-tour target
-          },
-            h(PredictiveDashboard, {
-              lsGet,
-              profile,
-              selectedDate
-            })
-          ),
-
-          // Phenotype Card (HIGH) — отдельная expandable карточка
-          // В демо-режиме показываем placeholder если компонент ещё не загружен
-          shouldShowSection('HIGH') && h('div', {
-            className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
-            id: 'tour-insights-phenotype' // 🎯 Mini-tour target
-          },
-            HEYS.Phenotype?.PhenotypeExpandableCard
-              ? h(HEYS.Phenotype.PhenotypeExpandableCard, { profile })
-              : showDemoMode && h('div', {
-                className: 'insights-card',
-                style: {
-                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(109, 40, 217, 0.05))',
-                  border: '1px solid rgba(139, 92, 246, 0.2)',
-                  borderRadius: '16px',
-                  padding: '16px',
-                  minHeight: '120px'
-                }
-              },
-                h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' } },
-                  h('span', { style: { fontSize: '20px' } }, '🧬'),
-                  h('span', { style: { fontWeight: '600', color: 'var(--color-text-primary)' } }, 'Метаболический фенотип')
+                h('div', { className: 'insights-tab__score' },
+                  h(TotalHealthRing, {
+                    score: insights.healthScore.total,
+                    size: 140,
+                    strokeWidth: 12,
+                    debugData: insights.healthScore.debug || {
+                      mode: insights.healthScore.mode,
+                      weights: insights.healthScore.weights,
+                      breakdown: insights.healthScore.breakdown
+                    }
+                  })
                 ),
-                h('div', { style: { fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: '1.5' } },
-                  'После анализа ваших данных за 7+ дней система определит ваш метаболический тип и даст персональные рекомендации.'
+                h('div', { className: 'insights-tab__rings' },
+                  h(HealthRingsGrid, {
+                    healthScore: insights.healthScore,
+                    onCategoryClick: setSelectedCategory,
+                    compact: true
+                  })
                 )
               )
-          ),
-
-          // Advanced Analytics (HIGH) — собственный заголовок внутри
-          shouldShowSection('HIGH') && h('div', {
-            className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
-            id: 'tour-insights-analytics' // 🎯 Mini-tour target
-          },
-            h(AdvancedAnalyticsCard, {
-              lsGet,
-              profile,
-              pIndex,
-              selectedDate
-            })
-          ),
-
-          // Metabolism Section (HIGH) — собственный заголовок внутри
-          shouldShowSection('HIGH') && h('div', {
-            className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
-            id: 'tour-insights-metabolism' // 🎯 Mini-tour target
-          },
-            h(MetabolismSection, {
-              lsGet,
-              profile,
-              pIndex,
-              selectedDate
-            })
-          ),
-
-          // Meal Timing (HIGH) — собственный заголовок внутри
-          shouldShowSection('HIGH') && h('div', {
-            className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
-            id: 'tour-insights-timing' // 🎯 Mini-tour target
-          },
-            h(MealTimingCard, {
-              lsGet,
-              profile,
-              pIndex,
-              selectedDate
-            })
-          ),
-
-          // Divider между важными и средними
-          (shouldShowSection('HIGH') || shouldShowSection('CRITICAL')) && shouldShowSection('MEDIUM') &&
-          h('div', { className: 'insights-tab__divider insights-tab__divider--priority' },
-            h('span', null, '↓ Дополнительно ↓')
-          ),
-
-          // ═══════════════════════════════════════════════════════════
-          // 🟡 СРЕДНИЙ ПРИОРИТЕТ — Полезный контекст
-          // ═══════════════════════════════════════════════════════════
-
-          // What-If (MEDIUM)
-          shouldShowSection('MEDIUM') && h(CollapsibleSection, {
-            title: 'Что если...',
-            icon: '🎯',
-            badge: insights.whatIf?.length > 0 ? `${insights.whatIf.length} сценариев` : null,
-            defaultOpen: true,
-            infoKey: 'WHATIF',
-            priority: 'MEDIUM'
-          },
-            h(WhatIfSection, { scenarios: insights.whatIf })
-          ),
-
-          // Patterns (MEDIUM)
-          shouldShowSection('MEDIUM') && insights.patterns?.length > 0 && h(CollapsibleSection, {
-            title: 'Паттерны',
-            icon: '🔍',
-            badge: `${insights.patterns.filter(p => p.available).length} найдено`,
-            defaultOpen: false,
-            infoKey: 'PATTERNS',
-            priority: 'MEDIUM'
-          },
-            h(PatternsList, { patterns: insights.patterns })
-          ),
-
-          // Weight Prediction (MEDIUM)
-          shouldShowSection('MEDIUM') && insights.weightPrediction && h(CollapsibleSection, {
-            title: 'Прогноз веса',
-            icon: '⚖️',
-            badge: insights.weightPrediction.weeklyChange ?
-              `${insights.weightPrediction.weeklyChange > 0 ? '+' : ''}${insights.weightPrediction.weeklyChange.toFixed(1)} кг/нед` : null,
-            defaultOpen: false,
-            infoKey: 'WEIGHT_PREDICTION',
-            priority: 'MEDIUM'
-          },
-            h(WeightPrediction, { prediction: insights.weightPrediction })
-          ),
-
-          // ═══════════════════════════════════════════════════════════
-          // 🟢 НИЗКИЙ ПРИОРИТЕТ — Дополнительная информация
-          // ═══════════════════════════════════════════════════════════
-
-          // Weekly Report Card (LOW — только на вкладке "Неделя")
-          shouldShowSection('LOW') && activeTab === 'week' && HEYS.weeklyReports?.WeeklyReportCard && h('div', {
-            className: 'insights-tab__section insights-tab__section--low'
-          },
-            h(HEYS.weeklyReports.WeeklyReportCard, {
-              lsGet,
-              profile,
-              pIndex,
-              anchorDate: selectedDate
-            })
-          ),
-
-          // Weekly Wrap (LOW — только на вкладке "Неделя")
-          shouldShowSection('LOW') && activeTab === 'week' && insights.weeklyWrap && h(CollapsibleSection, {
-            title: 'Итоги недели',
-            icon: '📋',
-            defaultOpen: true,
-            infoKey: 'WEEKLY_WRAP',
-            priority: 'LOW'
-          },
-            h(WeeklyWrap, { wrap: insights.weeklyWrap })
-          ),
-
-          // Data Completeness (LOW)
-          shouldShowSection('LOW') && h('div', { className: 'insights-tab__section insights-tab__section--low' },
-            h(SectionHeader, {
-              title: 'Полнота данных',
-              icon: '📊',
-              priority: 'LOW',
-              infoKey: 'DATA_COMPLETENESS'
-            }),
-            h(DataCompletenessCard, { lsGet, profile })
-          ),
-
-          // ═══════════════════════════════════════════════════════════
-          // 🔵 FOOTER — Информационные метрики
-          // ═══════════════════════════════════════════════════════════
-
-          // Footer: Confidence
-          h('div', { className: 'insights-tab__confidence' },
-            h('span', { className: 'insights-tab__confidence-icon' }, '📊'),
-            h('span', { className: 'insights-tab__confidence-text' },
-              `Уверенность: ${insights.confidence || 50}% (${insights.daysWithData || 0} дней данных)`
             ),
-            h(getInfoButton(), {
-              infoKey: 'CONFIDENCE',
-              debugData: {
-                confidence: insights.confidence,
-                daysWithData: insights.daysWithData,
-                daysAnalyzed: insights.daysAnalyzed
-              }
-            })
-          )
 
-        ) // закрытие insights-tab__content
+            // Metabolic Status + Risk (CRITICAL) — собственный заголовок внутри
+            shouldShowSection('CRITICAL') && h('div', {
+              className: 'insights-tab__section insights-tab__section--critical insights-tab__section--no-header',
+              id: 'tour-insights-metabolic' // 🎯 Mini-tour target
+            },
+              h(MetabolicQuickStatus, {
+                lsGet,
+                profile,
+                pIndex,
+                selectedDate
+              })
+            ),
+
+            // Divider между критическими и важными
+            shouldShowSection('CRITICAL') && h('div', { className: 'insights-tab__divider insights-tab__divider--priority' },
+              h('span', null, '↓ Важные инсайты ↓')
+            ),
+
+            // ═══════════════════════════════════════════════════════════
+            // 🟠 ВЫСОКИЙ ПРИОРИТЕТ — Важно для результата
+            // ═══════════════════════════════════════════════════════════
+
+            // Predictive Dashboard (HIGH) — собственный заголовок внутри
+            shouldShowSection('HIGH') && h('div', {
+              className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
+              id: 'tour-insights-prediction' // 🎯 Mini-tour target
+            },
+              h(PredictiveDashboard, {
+                lsGet,
+                profile,
+                selectedDate
+              })
+            ),
+
+            // Phenotype Card (HIGH) — отдельная expandable карточка
+            // В демо-режиме показываем placeholder если компонент ещё не загружен
+            shouldShowSection('HIGH') && h('div', {
+              className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
+              id: 'tour-insights-phenotype' // 🎯 Mini-tour target
+            },
+              HEYS.Phenotype?.PhenotypeExpandableCard
+                ? h(HEYS.Phenotype.PhenotypeExpandableCard, { profile })
+                : showDemoMode && h('div', {
+                  className: 'insights-card insights-tab__phenotype-placeholder'
+                },
+                  h('div', { className: 'insights-tab__phenotype-placeholder-header' },
+                    h('span', { className: 'insights-tab__phenotype-placeholder-icon' }, '🧬'),
+                    h('span', { className: 'insights-tab__phenotype-placeholder-title' }, 'Метаболический фенотип')
+                  ),
+                  h('div', { className: 'insights-tab__phenotype-placeholder-text' },
+                    'После анализа ваших данных за 7+ дней система определит ваш метаболический тип и даст персональные рекомендации.'
+                  )
+                )
+            ),
+
+            // Advanced Analytics (HIGH) — собственный заголовок внутри
+            shouldShowSection('HIGH') && h('div', {
+              className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
+              id: 'tour-insights-analytics' // 🎯 Mini-tour target
+            },
+              h(AdvancedAnalyticsCard, {
+                lsGet,
+                profile,
+                pIndex,
+                selectedDate
+              })
+            ),
+
+            // Metabolism Section (HIGH) — собственный заголовок внутри
+            shouldShowSection('HIGH') && h('div', {
+              className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
+              id: 'tour-insights-metabolism' // 🎯 Mini-tour target
+            },
+              h(MetabolismSection, {
+                lsGet,
+                profile,
+                pIndex,
+                selectedDate
+              })
+            ),
+
+            // Meal Timing (HIGH) — собственный заголовок внутри
+            shouldShowSection('HIGH') && h('div', {
+              className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
+              id: 'tour-insights-timing' // 🎯 Mini-tour target
+            },
+              h(MealTimingCard, {
+                lsGet,
+                profile,
+                pIndex,
+                selectedDate
+              })
+            ),
+
+            // Divider между важными и средними
+            (shouldShowSection('HIGH') || shouldShowSection('CRITICAL')) && shouldShowSection('MEDIUM') &&
+            h('div', { className: 'insights-tab__divider insights-tab__divider--priority' },
+              h('span', null, '↓ Дополнительно ↓')
+            ),
+
+            // ═══════════════════════════════════════════════════════════
+            // 🟡 СРЕДНИЙ ПРИОРИТЕТ — Полезный контекст
+            // ═══════════════════════════════════════════════════════════
+
+            // What-If (MEDIUM)
+            shouldShowSection('MEDIUM') && h(CollapsibleSection, {
+              title: 'Что если...',
+              icon: '🎯',
+              badge: insights.whatIf?.length > 0 ? `${insights.whatIf.length} сценариев` : null,
+              defaultOpen: true,
+              infoKey: 'WHATIF',
+              priority: 'MEDIUM'
+            },
+              h(WhatIfSection, { scenarios: insights.whatIf })
+            ),
+
+            // Patterns (MEDIUM)
+            shouldShowSection('MEDIUM') && insights.patterns?.length > 0 && h(CollapsibleSection, {
+              title: 'Паттерны',
+              icon: '🔍',
+              badge: `${insights.patterns.filter(p => p.available).length} найдено`,
+              defaultOpen: false,
+              infoKey: 'PATTERNS',
+              priority: 'MEDIUM'
+            },
+              h(PatternsList, { patterns: insights.patterns })
+            ),
+
+            // Weight Prediction (MEDIUM)
+            shouldShowSection('MEDIUM') && insights.weightPrediction && h(CollapsibleSection, {
+              title: 'Прогноз веса',
+              icon: '⚖️',
+              badge: insights.weightPrediction.weeklyChange ?
+                `${insights.weightPrediction.weeklyChange > 0 ? '+' : ''}${insights.weightPrediction.weeklyChange.toFixed(1)} кг/нед` : null,
+              defaultOpen: false,
+              infoKey: 'WEIGHT_PREDICTION',
+              priority: 'MEDIUM'
+            },
+              h(WeightPrediction, { prediction: insights.weightPrediction })
+            ),
+
+            // ═══════════════════════════════════════════════════════════
+            // 🟢 НИЗКИЙ ПРИОРИТЕТ — Дополнительная информация
+            // ═══════════════════════════════════════════════════════════
+
+            // Weekly Report Card (LOW — только на вкладке "Неделя")
+            shouldShowSection('LOW') && activeTab === 'week' && HEYS.weeklyReports?.WeeklyReportCard && h('div', {
+              className: 'insights-tab__section insights-tab__section--low'
+            },
+              h(HEYS.weeklyReports.WeeklyReportCard, {
+                lsGet,
+                profile,
+                pIndex,
+                anchorDate: selectedDate
+              })
+            ),
+
+            // Weekly Wrap (LOW — только на вкладке "Неделя")
+            shouldShowSection('LOW') && activeTab === 'week' && insights.weeklyWrap && h(CollapsibleSection, {
+              title: 'Итоги недели',
+              icon: '📋',
+              defaultOpen: true,
+              infoKey: 'WEEKLY_WRAP',
+              priority: 'LOW'
+            },
+              h(WeeklyWrap, { wrap: insights.weeklyWrap })
+            ),
+
+            // Data Completeness (LOW)
+            shouldShowSection('LOW') && h('div', { className: 'insights-tab__section insights-tab__section--low' },
+              h(SectionHeader, {
+                title: 'Полнота данных',
+                icon: '📊',
+                priority: 'LOW',
+                infoKey: 'DATA_COMPLETENESS'
+              }),
+              h(DataCompletenessCard, { lsGet, profile })
+            ),
+
+            // ═══════════════════════════════════════════════════════════
+            // 🔵 FOOTER — Информационные метрики
+            // ═══════════════════════════════════════════════════════════
+
+            // Footer: Confidence
+            h('div', { className: 'insights-tab__confidence' },
+              h('span', { className: 'insights-tab__confidence-icon' }, '📊'),
+              h('span', { className: 'insights-tab__confidence-text' },
+                `Уверенность: ${insights.confidence || 50}% (${insights.daysWithData || 0} дней данных)`
+              ),
+              h(getInfoButton(), {
+                infoKey: 'CONFIDENCE',
+                debugData: {
+                  confidence: insights.confidence,
+                  daysWithData: insights.daysWithData,
+                  daysAnalyzed: insights.daysAnalyzed
+                }
+              })
+            )
+
+          ) // закрытие insights-tab__content
+        )
       );
     }
 
@@ -1877,14 +1927,13 @@
       };
 
       const c = config[confidence] || config.low;
+      const level = confidence === 'high' ? 'high' : (confidence === 'medium' ? 'medium' : 'low');
 
       return h('div', {
-        className: 'confidence-badge',
-        style: { borderColor: c.color }
+        className: `confidence-badge confidence-badge--${level}`
       },
         h('span', {
-          className: 'confidence-badge__icon',
-          style: { backgroundColor: c.color }
+          className: 'confidence-badge__icon'
         }, c.icon),
         h('span', { className: 'confidence-badge__label' },
           `${c.label} уверенность`
@@ -1900,16 +1949,21 @@
      * Показывает: Score 0-100, фазу метаболизма, риск срыва
      */
     function MetabolicQuickStatus({ lsGet, profile, pIndex, selectedDate }) {
+      // Fallback: если сегодня нет данных, показываем последний день с данными
+      const resolvedDate = useMemo(() => {
+        return getMetabolismDate(lsGet || window.HEYS?.utils?.lsGet, selectedDate);
+      }, [lsGet, selectedDate]);
+
       const status = useMemo(() => {
         if (!HEYS.Metabolic?.getStatus) return null;
 
         return HEYS.Metabolic.getStatus({
-          dateStr: selectedDate || new Date().toISOString().split('T')[0],
-          pIndex: pIndex || window.HEYS?.products?.buildIndex?.(),
+          dateStr: resolvedDate,
+          pIndex: pIndex || null,
           profile: profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
           forceRefresh: false
         });
-      }, [lsGet, profile, pIndex, selectedDate]);
+      }, [lsGet, profile, pIndex, resolvedDate]);
 
       // 🆕 v3.22.0: Extended Analytics (proteinDebt, emotionalRisk, trainingContext)
       const extendedAnalytics = useMemo(() => {
@@ -1930,7 +1984,8 @@
             const dStr = d.toISOString().split('T')[0];
             const dData = getter('heys_dayv2_' + dStr, {});
             if (dData.meals?.length > 0) {
-              const idx = pIndex || window.HEYS?.products?.buildIndex?.();
+              const buildIdx = HEYS.dayUtils?.buildProductIndex || HEYS.models?.buildProductIndex;
+              const idx = pIndex || (buildIdx ? buildIdx(HEYS.products?.getAll?.() || []) : null);
               let prot = 0, kcal = 0;
               (dData.meals || []).forEach(m => {
                 (m.items || []).forEach(item => {
@@ -1972,7 +2027,8 @@
           yesterday.setDate(yesterday.getDate() - 1);
           const yData = getter('heys_dayv2_' + yesterday.toISOString().split('T')[0], {});
           if (yData.meals?.length > 0) {
-            const idx = pIndex || window.HEYS?.products?.buildIndex?.();
+            const buildIdx = HEYS.dayUtils?.buildProductIndex || HEYS.models?.buildProductIndex;
+            const idx = pIndex || (buildIdx ? buildIdx(HEYS.products?.getAll?.() || []) : null);
             let yKcal = 0;
             (yData.meals || []).forEach(m => {
               (m.items || []).forEach(item => {
@@ -2185,17 +2241,22 @@
     function MetabolicStatusCard({ lsGet, profile, pIndex, selectedDate }) {
       const [showDetails, setShowDetails] = useState(false);
 
+      // Fallback: если сегодня нет данных, показываем последний день с данными
+      const resolvedDate = useMemo(() => {
+        return getMetabolismDate(lsGet || window.HEYS?.utils?.lsGet, selectedDate);
+      }, [lsGet, selectedDate]);
+
       // Получаем текущий статус
       const status = useMemo(() => {
         if (!HEYS.Metabolic?.getStatus) return null;
 
         return HEYS.Metabolic.getStatus({
-          dateStr: selectedDate || new Date().toISOString().split('T')[0],
-          pIndex: pIndex || window.HEYS?.products?.buildIndex?.(),
+          dateStr: resolvedDate,
+          pIndex: pIndex || null,
           profile: profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
           forceRefresh: false
         });
-      }, [lsGet, profile, pIndex, selectedDate]);
+      }, [lsGet, profile, pIndex, resolvedDate]);
 
       // Получаем вчерашний статус для тренда
       const prevStatus = useMemo(() => {
@@ -2209,7 +2270,7 @@
         try {
           return HEYS.Metabolic.getStatus({
             dateStr: prevDateStr,
-            pIndex: pIndex || window.HEYS?.products?.buildIndex?.(),
+            pIndex: pIndex || null,
             profile: profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
             forceRefresh: false
           });
@@ -3061,7 +3122,7 @@
             status: 'burning',
             label: '🔥 Липолиз активен',
             desc: 'Сейчас идёт активное жиросжигание',
-            color: '#22c55e'
+            tone: 'success'
           };
         }
 
@@ -3070,7 +3131,7 @@
             status: 'wave',
             label: `⏳ ${remaining} мин до окончания волны`,
             desc: `Окончание в ${endTime}${currentPhase ? ` • Фаза: ${currentPhase}` : ''}`,
-            color: '#f59e0b'
+            tone: 'warning'
           };
         }
 
@@ -3079,7 +3140,7 @@
             status: 'almost',
             label: `⚡ ${remaining} мин до липолиза`,
             desc: 'Скоро начнётся жиросжигание',
-            color: '#3b82f6'
+            tone: 'info'
           };
         }
 
@@ -3095,11 +3156,12 @@
 
         // 🆕 Insulin Wave Status
         waveEndInfo && h('div', {
-          className: 'forecast-panel__wave-status',
-          style: { borderColor: waveEndInfo.color }
+          className: `forecast-panel__wave-status forecast-panel__wave-status--${waveEndInfo.tone || 'info'}`
         },
           h('div', { className: 'forecast-panel__wave-header' },
-            h('div', { className: 'forecast-panel__wave-label', style: { color: waveEndInfo.color } },
+            h('div', {
+              className: `forecast-panel__wave-label forecast-panel__wave-label--${waveEndInfo.tone || 'info'}`
+            },
               waveEndInfo.label
             ),
             h(getInfoButton(), { infoKey: 'INSULIN_WAVE_STATUS', size: 'small' })

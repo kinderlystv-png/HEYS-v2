@@ -6,6 +6,7 @@
     HEYS.InsightsPI = HEYS.InsightsPI || {};
 
     const piStats = HEYS.InsightsPI?.stats || global.piStats || {};
+    const SCIENCE_INFO = HEYS.InsightsPI?.science || global.piScience || {};
     const piConst = HEYS.InsightsPI?.constants || global.piConst || {};
     const CONFIG = piConst.CONFIG || { MIN_DAYS_FOR_FULL_ANALYSIS: 7 };
     const average = piStats.average || function (arr) {
@@ -17,7 +18,9 @@
         GLYCEMIC_LOAD: 'glycemic_load',
         OMEGA_BALANCER: 'omega_balancer',
         HEART_HEALTH: 'heart_health',
-        ELECTROLYTE_HOMEOSTASIS: 'electrolyte_homeostasis'
+        ELECTROLYTE_HOMEOSTASIS: 'electrolyte_homeostasis',
+        INSULIN_SENSITIVITY: 'insulin_sensitivity',
+        GUT_HEALTH: 'gut_health'
     };
 
     /**
@@ -451,9 +454,259 @@
         };
     }
 
+    /**
+     * Insulin sensitivity proxy by GI/fiber/timing.
+     * @param {Array} days - Массив дней.
+     * @param {object} pIndex - Индекс продуктов.
+     * @param {object} profile - Профиль пользователя.
+     * @returns {object} Результат паттерна.
+     */
+    function analyzeInsulinSensitivity(days, pIndex, profile) {
+        void profile;
+        const pattern = PATTERNS.INSULIN_SENSITIVITY || 'insulin_sensitivity';
+        const dailyData = [];
+
+        for (const day of (days || [])) {
+            if (!day?.meals || day.meals.length === 0) continue;
+
+            let totalCarbs = 0;
+            let weightedGI = 0;
+            let totalFiber = 0;
+            let eveningCarbs = 0;
+            let totalKcal = 0;
+
+            for (const meal of day.meals) {
+                if (!meal?.items) continue;
+                const hour = meal.time ? parseInt(String(meal.time).split(':')[0], 10) : 12;
+
+                for (const item of meal.items) {
+                    const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id || '').toLowerCase());
+                    if (!prod || !item.grams) continue;
+
+                    const grams = Number(item.grams) || 0;
+                    const carbs = ((Number(prod.simple100) || 0) + (Number(prod.complex100) || 0)) * grams / 100;
+                    const gi = Number(prod.gi || prod.gi100 || prod.GI) || 50;
+                    const fiber = (Number(prod.fiber100) || 0) * grams / 100;
+                    const p = Number(prod.protein100) || 0;
+                    const f = (Number(prod.badFat100) || 0) + (Number(prod.goodFat100) || 0);
+
+                    totalCarbs += carbs;
+                    weightedGI += carbs * gi;
+                    totalFiber += fiber;
+                    totalKcal += (p * 3 + carbs * 4 + f * 9) * grams / 100;
+
+                    if (!Number.isNaN(hour) && hour >= 18) eveningCarbs += carbs;
+                }
+            }
+
+            if (totalCarbs === 0 || totalKcal === 0) continue;
+
+            const avgGI = weightedGI / totalCarbs;
+            const fiberPer1000 = (totalFiber / totalKcal) * 1000;
+            const eveningCarbsPct = (eveningCarbs / totalCarbs) * 100;
+            const hasTraining = Array.isArray(day.trainings) && day.trainings.length > 0;
+            const sleepOk = (Number(day.sleepHours) || 7) >= 7;
+
+            let score = 0;
+            if (avgGI <= 55) score += 20;
+            else if (avgGI <= 70) score += 10;
+
+            if (fiberPer1000 >= 14) score += 20;
+            else if (fiberPer1000 >= 10) score += 10;
+
+            if (eveningCarbsPct <= 30) score += 15;
+            else if (eveningCarbsPct <= 40) score += 8;
+
+            if (hasTraining) score += 15;
+            if (sleepOk) score += 10;
+            score += 20;
+
+            dailyData.push({
+                date: day.date,
+                avgGI: Math.round(avgGI),
+                fiberPer1000: Math.round(fiberPer1000 * 10) / 10,
+                eveningCarbsPct: Math.round(eveningCarbsPct),
+                hasTraining,
+                sleepOk,
+                score: Math.min(100, score)
+            });
+        }
+
+        if (dailyData.length < 3) {
+            return {
+                pattern,
+                available: false,
+                insight: 'Недостаточно данных для оценки инсулиновой чувствительности'
+            };
+        }
+
+        const avgScore = average(dailyData.map(d => d.score));
+        const avgGI = average(dailyData.map(d => d.avgGI));
+        const avgFiber = average(dailyData.map(d => d.fiberPer1000));
+
+        let insight;
+        if (avgScore >= 75) {
+            insight = '🩺 Хорошие маркеры инсулиновой чувствительности!';
+        } else if (avgGI > 65) {
+            insight = `⚠️ Высокий средний GI (${Math.round(avgGI)}). Замени быстрые углеводы на медленные`;
+        } else if (avgFiber < 10) {
+            insight = `⚠️ Мало клетчатки (${Math.round(avgFiber)}г/1000ккал). Добавь овощи`;
+        } else {
+            insight = 'Инсулиновая чувствительность в норме';
+        }
+
+        return {
+            pattern,
+            available: true,
+            score: Math.round(avgScore),
+            avgGI: Math.round(avgGI),
+            avgFiberPer1000: Math.round(avgFiber * 10) / 10,
+            dataPoints: dailyData.length,
+            confidence: dailyData.length >= 7 ? 0.8 : 0.5,
+            insight,
+            formula: SCIENCE_INFO?.INSULIN_SENSITIVITY?.formula || 'insulin sensitivity score',
+            debug: {
+                dailyData: dailyData.slice(0, 3),
+                source: SCIENCE_INFO?.INSULIN_SENSITIVITY?.source || 'Ludwig, 2002'
+            }
+        };
+    }
+
+    /**
+     * Gut health / microbiome proxy.
+     * @param {Array} days - Массив дней.
+     * @param {object} pIndex - Индекс продуктов.
+     * @returns {object} Результат паттерна.
+     */
+    function analyzeGutHealth(days, pIndex) {
+        const pattern = PATTERNS.GUT_HEALTH || 'gut_health';
+        const dailyData = [];
+        const fermentedKeywords = ['кефир', 'йогурт', 'квашен', 'кимчи', 'мисо', 'темпе', 'комбуча'];
+
+        for (const day of (days || [])) {
+            if (!day?.meals || day.meals.length === 0) continue;
+
+            let totalFiber = 0;
+            let totalKcal = 0;
+            const uniqueProducts = new Set();
+            const uniqueCategories = new Set();
+            let hasFermented = false;
+
+            for (const meal of day.meals) {
+                if (!meal?.items) continue;
+
+                for (const item of meal.items) {
+                    const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id || '').toLowerCase());
+                    if (!prod || !item.grams) continue;
+
+                    const grams = Number(item.grams) || 0;
+                    const p = Number(prod.protein100) || 0;
+                    const c = (Number(prod.simple100) || 0) + (Number(prod.complex100) || 0);
+                    const f = (Number(prod.badFat100) || 0) + (Number(prod.goodFat100) || 0);
+
+                    totalFiber += (Number(prod.fiber100) || 0) * grams / 100;
+                    totalKcal += (p * 3 + c * 4 + f * 9) * grams / 100;
+
+                    uniqueProducts.add(prod.name || prod.id);
+
+                    const category = prod.category || prod.group || prod.foodGroup || prod.type;
+                    if (category) uniqueCategories.add(String(category).toLowerCase());
+
+                    const prodName = String(prod.name || '').toLowerCase();
+                    if (fermentedKeywords.some(kw => prodName.includes(kw))) {
+                        hasFermented = true;
+                    }
+                }
+            }
+
+            if (totalKcal === 0) continue;
+
+            const fiberTotal = totalFiber;
+            const diversity = uniqueProducts.size;
+            let score = 0;
+
+            if (fiberTotal >= 30) score += 30;
+            else if (fiberTotal >= 25) score += 25;
+            else if (fiberTotal >= 20) score += 18;
+            else if (fiberTotal >= 15) score += 10;
+
+            const categoryDiversity = uniqueCategories.size;
+            if (categoryDiversity >= 12) score += 15;
+            else if (categoryDiversity >= 8) score += 10;
+            else if (categoryDiversity >= 5) score += 5;
+
+            if (diversity >= 20) score += 10;
+            else if (diversity >= 15) score += 8;
+            else if (diversity >= 10) score += 6;
+            else if (diversity >= 5) score += 3;
+
+            if (hasFermented) score += 15;
+            score += 30;
+
+            dailyData.push({
+                date: day.date,
+                fiberTotal: Math.round(fiberTotal),
+                diversity,
+                categoryDiversity,
+                hasFermented,
+                score: Math.min(100, score)
+            });
+        }
+
+        if (dailyData.length < 3) {
+            return {
+                pattern,
+                available: false,
+                insight: 'Недостаточно данных для оценки здоровья кишечника'
+            };
+        }
+
+        const avgScore = average(dailyData.map(d => d.score));
+        const avgFiber = average(dailyData.map(d => d.fiberTotal));
+        const avgDiversity = average(dailyData.map(d => d.diversity));
+        const avgCategoryDiversity = average(dailyData.map(d => d.categoryDiversity));
+        const fermentedDays = dailyData.filter(d => d.hasFermented).length;
+
+        let insight;
+        if (avgScore >= 75) {
+            insight = '🦠 Отлично для микробиома! Много клетчатки и разнообразие';
+        } else if (avgFiber < 20) {
+            insight = `⚠️ Мало клетчатки (${Math.round(avgFiber)}г). Добавь овощи, бобовые, цельнозерновые`;
+        } else if (avgCategoryDiversity < 8) {
+            insight = `⚠️ Мало разнообразия категорий (${Math.round(avgCategoryDiversity)}). Добавь новые группы продуктов`;
+        } else if (avgDiversity < 10) {
+            insight = `⚠️ Мало разнообразия (${Math.round(avgDiversity)} продуктов/день). Пробуй новое!`;
+        } else if (fermentedDays < dailyData.length * 0.3) {
+            insight = 'Добавь ферментированные продукты: кефир, йогурт, квашеную капусту';
+        } else {
+            insight = 'Здоровье кишечника в норме';
+        }
+
+        return {
+            pattern,
+            available: true,
+            score: Math.round(avgScore),
+            avgFiber: Math.round(avgFiber),
+            avgDiversity: Math.round(avgDiversity),
+            avgCategoryDiversity: Math.round(avgCategoryDiversity),
+            fermentedDaysPct: Math.round((fermentedDays / dailyData.length) * 100),
+            dataPoints: dailyData.length,
+            confidence: dailyData.length >= 7 ? 0.8 : 0.5,
+            insight,
+            formula: SCIENCE_INFO?.GUT_HEALTH?.formula || 'gut health score',
+            debug: {
+                dailyData: dailyData.slice(0, 3),
+                fermentedKeywords,
+                source: SCIENCE_INFO?.GUT_HEALTH?.source || 'Sonnenburg & Sonnenburg, 2014'
+            }
+        };
+    }
+
     HEYS.InsightsPI.patternModules = HEYS.InsightsPI.patternModules || {};
     HEYS.InsightsPI.patternModules.analyzeHeartHealth = analyzeHeartHealth;
     HEYS.InsightsPI.patternModules.analyzeOmegaBalance = analyzeOmegaBalance;
     HEYS.InsightsPI.patternModules.analyzeGlycemicLoad = analyzeGlycemicLoad;
     HEYS.InsightsPI.patternModules.analyzeElectrolyteHomeostasis = analyzeElectrolyteHomeostasis;
+    HEYS.InsightsPI.patternModules.analyzeInsulinSensitivity = analyzeInsulinSensitivity;
+    HEYS.InsightsPI.patternModules.analyzeGutHealth = analyzeGutHealth;
 })(typeof window !== 'undefined' ? window : global);

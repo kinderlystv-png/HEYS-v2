@@ -10,6 +10,7 @@
 
   // React imports
   const { createElement: h, useState, useEffect } = window.React || {};
+  const piUIHelpers = HEYS.InsightsPI?.uiHelpers || window.piUIHelpers || {};
 
   // Зависимости (reserved for future use)
   const _SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {}; // eslint-disable-line no-unused-vars
@@ -17,6 +18,9 @@
   // === LAZY GETTER для InfoButton (fix load order) ===
   // InfoButton определён в pi_ui_dashboard.js который загружается ПОСЛЕ этого модуля
   const getInfoButton = () => {
+    if (typeof piUIHelpers.getInfoButton === 'function') {
+      return piUIHelpers.getInfoButton(h);
+    }
     return HEYS.InsightsPI?.uiDashboard?.InfoButton ||
       HEYS.PredictiveInsights?.components?.InfoButton ||
       HEYS.day?.InfoButton ||

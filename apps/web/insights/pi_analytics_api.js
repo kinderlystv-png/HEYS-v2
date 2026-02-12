@@ -24,6 +24,9 @@
   function getConst() {
     return HEYS.InsightsPI?.constants || window.piConst || {};
   }
+  function getMath() {
+    return HEYS.InsightsPI?.math || window.piMath || {};
+  }
   function getCalc() {
     return HEYS.InsightsPI?.calculations || window.piCalculations || {};
   }
@@ -73,13 +76,17 @@
   // === Stats helpers (lazy access) ===
   function average(arr) {
     const stats = getStats();
+    const math = getMath();
     if (stats.average) return stats.average(arr);
+    if (math.average) return math.average(arr);
     if (!arr || arr.length === 0) return 0;
     return arr.reduce((a, b) => a + b, 0) / arr.length;
   }
   function stdDev(arr) {
     const stats = getStats();
+    const math = getMath();
     if (stats.stdDev) return stats.stdDev(arr);
+    if (math.stdDev) return math.stdDev(arr);
     if (!arr || arr.length < 2) return 0;
     const mean = average(arr);
     const sq = arr.map(x => Math.pow(x - mean, 2));
@@ -87,7 +94,9 @@
   }
   function pearsonCorrelation(x, y) {
     const stats = getStats();
+    const math = getMath();
     if (stats.pearsonCorrelation) return stats.pearsonCorrelation(x, y);
+    if (math.pearsonCorrelation) return math.pearsonCorrelation(x, y);
     return 0;
   }
   function variance(arr) {
@@ -119,8 +128,14 @@
   }
   function linearTrend(arr) {
     const stats = getStats();
+    const math = getMath();
     if (stats.linearTrend) return stats.linearTrend(arr);
     if (stats.calculateTrend) return stats.calculateTrend(arr);
+    if (math.calculateLinearRegression && Array.isArray(arr)) {
+      const points = arr.map((y, x) => ({ x, y }));
+      return math.calculateLinearRegression(points);
+    }
+    if (math.calculateTrend) return { slope: math.calculateTrend(arr), intercept: 0 };
     return { slope: 0, intercept: 0 };
   }
 
@@ -164,7 +179,8 @@
       meals.forEach(meal => {
         (meal.items || []).forEach(item => {
           const g = item.grams || 0;
-          const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+          // v3.0.2: Поддержка обоих форматов ID (product_id и productId)
+          const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id)?.toLowerCase());
           if (prod && g > 0) {
             totalProtein += (prod.protein100 || 0) * g / 100;
             totalCarbs += ((prod.simple100 || 0) + (prod.complex100 || 0)) * g / 100;
@@ -174,8 +190,20 @@
       });
 
       totalKcal = totalProtein * 4 + totalCarbs * 4 + totalFat * 9;
-      // 🔬 TEF v1.0.0: используем единый модуль HEYS.TEF
-      const tefResult = HEYS.TEF?.calculate?.(totalProtein, totalCarbs, totalFat) || { total: 0, breakdown: { protein: 0, carbs: 0, fat: 0 } };
+      // 🔬 TEF v1.0.0: используем единый модуль HEYS.TEF с fallback
+      let tefResult;
+      if (HEYS.TEF?.calculate) {
+        tefResult = HEYS.TEF.calculate(totalProtein, totalCarbs, totalFat);
+      } else {
+        // Fallback: inline расчёт если модуль не загружен (Westerterp 2004, Tappy 1996)
+        const proteinTEF = Math.round(totalProtein * 4 * 0.25);
+        const carbsTEF = Math.round(totalCarbs * 4 * 0.075);
+        const fatTEF = Math.round(totalFat * 9 * 0.015);
+        tefResult = {
+          total: proteinTEF + carbsTEF + fatTEF,
+          breakdown: { protein: proteinTEF, carbs: carbsTEF, fat: fatTEF }
+        };
+      }
       const totalTEF = tefResult.total;
       const tefPct = totalKcal > 0 ? Math.round(totalTEF / totalKcal * 100) : 0;
 
@@ -397,7 +425,7 @@
 
         meals.forEach(m => (m.items || []).forEach(item => {
           const g = item.grams || 0;
-          const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+          const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id)?.toLowerCase());
           if (prod && g > 0) {
             protein += (prod.protein100 || 0) * g / 100;
             carbs += ((prod.simple100 || 0) + (prod.complex100 || 0)) * g / 100;
@@ -539,7 +567,7 @@
         let simpleCarbs = 0;
         (prevDay.meals || []).forEach(m => (m.items || []).forEach(item => {
           const g = item.grams || 0;
-          const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+          const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id)?.toLowerCase());
           if (prod && g > 0) {
             simpleCarbs += (prod.simple100 || 0) * g / 100;
           }
@@ -578,7 +606,7 @@
         let fat = 0, carbs = 0;
         (d.meals || []).forEach(m => (m.items || []).forEach(item => {
           const g = item.grams || 0;
-          const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+          const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id)?.toLowerCase());
           if (prod && g > 0) {
             fat += ((prod.badFat100 || 0) + (prod.goodFat100 || 0)) * g / 100;
             carbs += ((prod.simple100 || 0) + (prod.complex100 || 0)) * g / 100;
@@ -765,7 +793,7 @@
 
       todayMeals.forEach(m => (m.items || []).forEach(item => {
         const g = item.grams || 0;
-        const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+        const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id)?.toLowerCase());
         if (prod && g > 0) {
           simpleCarbs += (prod.simple100 || 0) * g / 100;
         }
@@ -1126,7 +1154,7 @@
           let simple = 0;
           (d.meals || []).forEach(m => (m.items || []).forEach(item => {
             const g = item.grams || 0;
-            const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+            const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id)?.toLowerCase());
             if (prod && g > 0) simple += (prod.simple100 || 0) * g / 100;
           }));
           return simple;
@@ -1253,7 +1281,7 @@
           let mealGL = 0;
           (meal.items || []).forEach(item => {
             const g = item.grams || 0;
-            const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+            const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id)?.toLowerCase());
             if (prod && g > 0) {
               const gi = prod.gi || prod.gi100 || 50;
               const carbs = ((prod.simple100 || 0) + (prod.complex100 || 0)) * g / 100;
@@ -1428,7 +1456,7 @@
       days.forEach(d => {
         (d.meals || []).forEach(m => (m.items || []).forEach(item => {
           const g = item.grams || 0;
-          const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+          const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id)?.toLowerCase());
           if (prod && g > 0) {
             totalHarm += (prod.harm || prod.harm100 || 0) * g / 100;
             totalGrams += g;

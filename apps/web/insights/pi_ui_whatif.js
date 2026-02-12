@@ -16,6 +16,7 @@
   // Зависимости
   const piAdvanced = HEYS.InsightsPI?.advanced || window.piAdvanced || {};
   const piUICards = HEYS.InsightsPI?.uiCards || window.piUICards || {};
+  const piUIHelpers = HEYS.InsightsPI?.uiHelpers || window.piUIHelpers || {};
 
   // Импорт из pi_ui_cards.js (lazy-загрузка из namespace)
   const getWhatIfDeps = () => {
@@ -29,6 +30,9 @@
 
   // Lazy getter для InfoButton (загружается позже в pi_ui_dashboard.js)
   function getInfoButton() {
+    if (typeof piUIHelpers.getInfoButton === 'function') {
+      return piUIHelpers.getInfoButton(h);
+    }
     return HEYS.InsightsPI?.uiDashboard?.InfoButton ||
       HEYS.PredictiveInsights?.components?.InfoButton ||
       HEYS.day?.InfoButton ||

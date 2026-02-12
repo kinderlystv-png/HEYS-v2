@@ -13,7 +13,9 @@
 **Архитектура**: Модульная (5 JS-модулей), React UI, Health Score, What-If
 симулятор  
 **Вес кода**: ~6000 LOC (pi_patterns 2864, pi_advanced 466, pi_constants 1336,
-pi_ui_cards 1648, main 1190)
+pi_ui_cards 1648, main 1190)  
+**React State v4.8.8**: ✅ Store API integration fixed (290 Fe verified,
+patterns active)
 
 ## Status v6.0 Phase 1 (12.02.2026)
 
@@ -24,6 +26,289 @@ pi_ui_cards 1648, main 1190)
 **C22**: B-Complex & Anemia Risk — в проде (анализатор + UI + SCIENCE_INFO +
 тесты)  
 **Тесты**: 75/75 passing (57 data-model + 18 pattern tests), регрессий нет
+
+## Status v6.3 Modular Router Update (12.02.2026)
+
+**✅ Завершён модульный этап для `pi_patterns.js`**: вынесены и подключены через
+`patternModules` ещё 4 анализатора:
+
+- `analyzeVitaminDefense` (C13)
+- `analyzeBComplexAnemia` (C22)
+- `analyzeAddedSugarDependency` (C18)
+- `analyzeBoneHealth` (C17)
+
+**Новый модуль**: `apps/web/insights/patterns/micronutrients.js` (router-ready,
+без изменения публичного API `HEYS.InsightsPI.patterns`).
+
+**Подключение**:
+
+- `apps/web/index.html` — добавлен скрипт
+  `insights/patterns/micronutrients.js?v=1`
+- `insights/pi_patterns.js?v=9` — обновлён роутинг fallback/override для C13,
+  C17, C18, C22
+
+**Верификация**:
+
+- `pi_patterns.test.js`: **42/42 passing**
+- Проверка ошибок в изменённых файлах: **0 ошибок**
+
+**Важно**: в модуле исправлены хрупкие сценарии резолва продуктов (lookup по
+`product_id`/`byName`) для паттернов C13/C17/C18/C22.
+
+## Status v6.4 Monolith Reduction (12.02.2026)
+
+**✅ Удалены дублирующие реализации в `pi_patterns.js`** для уже модульных
+паттернов. Теперь монолит содержит тонкие обёртки и fallback, а единственным
+источником логики остаются `patterns/*`:
+
+- C8 `analyzeOmegaBalance`
+- C9 `analyzeHeartHealth`
+- C14 `analyzeGlycemicLoad`
+- C15 `analyzeProteinDistribution`
+- C16 `analyzeAntioxidantDefense`
+- C19 `analyzeTrainingTypeMatch`
+- C20 `analyzeElectrolyteHomeostasis`
+- C21 `analyzeNutrientDensity`
+
+**Верификация**:
+
+- `pi_patterns.test.js`: **42/42 passing**
+- Проверка ошибок в изменённых файлах: **0 ошибок**
+
+## Status v6.5 Timing Module Split (12.02.2026)
+
+**✅ Вынесены тайминговые паттерны в модуль**
+`apps/web/insights/patterns/timing.js`:
+
+- `analyzeMealTiming` (C1)
+- `analyzeWaveOverlap` (C1)
+- `analyzeLateEating` (C1)
+- `analyzeCircadianTiming` (C2)
+- `analyzeNutrientTiming` (C3)
+
+**Подключение**:
+
+- `apps/web/index.html` — добавлен скрипт `insights/patterns/timing.js?v=1`
+- `pi_patterns.js` — оставлены thin-wrapper обёртки с делегацией в
+  `patternModules`
+
+## Status v6.6 Psychology Module Split (12.02.2026)
+
+**✅ Вынесен психологический блок** в
+`apps/web/insights/patterns/psychology.js`:
+
+- `analyzeStressEating`
+- `analyzeMoodFood`
+- `analyzeMoodTrajectory`
+
+**Подключение**:
+
+- `apps/web/index.html` — добавлен скрипт `insights/patterns/psychology.js?v=1`
+- `pi_patterns.js` — для трёх функций оставлены thin-wrapper обёртки через
+  `patternModules`
+
+**Верификация**:
+
+- `pi_patterns.test.js`: **42/42 passing**
+- Проверка ошибок в изменённых файлах: **0 ошибок**
+
+## Status v6.7 Sleep Module Split (12.02.2026)
+
+**✅ Вынесен sleep-блок** в `apps/web/insights/patterns/sleep.js`:
+
+- `analyzeSleepWeight`
+- `analyzeSleepHunger`
+- `analyzeSleepQuality`
+
+**Подключение**:
+
+- `apps/web/index.html` — добавлен скрипт `insights/patterns/sleep.js?v=1`
+- `pi_patterns.js` — для sleep-функций оставлены thin-wrapper обёртки через
+  `patternModules`
+
+**Верификация**:
+
+- `pi_patterns.test.js`: **42/42 passing**
+- Проверка ошибок в изменённых файлах: **0 ошибок**
+
+## Status v6.8 Activity Module Split (12.02.2026)
+
+**✅ Вынесен activity-блок** в `apps/web/insights/patterns/activity.js`:
+
+- `analyzeTrainingKcal`
+- `analyzeStepsWeight`
+- `analyzeNEATTrend`
+- `analyzeTrainingRecovery`
+
+**Подключение**:
+
+- `apps/web/index.html` — добавлен скрипт `insights/patterns/activity.js?v=1`
+- `pi_patterns.js` — для activity-функций оставлены thin-wrapper обёртки через
+  `patternModules`
+
+**Верификация**:
+
+- `pi_patterns.test.js`: **42/42 passing**
+- Проверка ошибок в изменённых файлах: **0 ошибок**
+
+## Status v6.9 Lifestyle Module Split (12.02.2026)
+
+**✅ Вынесен lifestyle/body блок** в `apps/web/insights/patterns/lifestyle.js`:
+
+- `analyzeWellbeing`
+- `analyzeHydration`
+- `analyzeBodyComposition`
+- `analyzeCyclePatterns`
+- `analyzeWeekendEffect`
+
+**Подключение**:
+
+- `apps/web/index.html` — добавлен скрипт `insights/patterns/lifestyle.js?v=1`
+- `pi_patterns.js` — для B2-B6 оставлены thin-wrapper обёртки через
+  `patternModules`
+
+**Верификация**:
+
+- `pi_patterns.test.js`: **42/42 passing**
+- Проверка ошибок в изменённых файлах: **0 ошибок**
+
+## Status v6.10 Body Module Split (12.02.2026)
+
+**✅ Вынесен body-блок C12** в `apps/web/insights/patterns/body.js`:
+
+- `analyzeHypertrophy`
+
+**Подключение**:
+
+- `apps/web/index.html` — добавлен скрипт `insights/patterns/body.js?v=1`
+- `pi_patterns.js` — для C12 оставлен thin-wrapper через `patternModules`
+
+**Верификация**:
+
+- `pi_patterns.test.js`: **42/42 passing**
+- Проверка ошибок в изменённых файлах: **0 ошибок**
+
+## Status v6.11 NOVA Extraction to Quality Module (12.02.2026)
+
+**✅ Вынесен C10 NOVA Quality** в `apps/web/insights/patterns/quality.js`:
+
+- `analyzeNOVAQuality`
+
+**Подключение**:
+
+- `pi_patterns.js` — `analyzeNOVAQuality` переведён на thin-wrapper делегацию
+  через `patternModules`
+- `quality.js` — зарегистрирован экспорт
+  `HEYS.InsightsPI.patternModules.analyzeNOVAQuality`
+
+**Верификация**:
+
+- `pi_patterns.test.js`: **42/42 passing**
+- Проверка ошибок в изменённых файлах: **0 ошибок**
+
+## Status v6.12 Micronutrients Router Extraction (12.02.2026)
+
+**✅ Вынесен C7 Micronutrient Radar** в
+`apps/web/insights/patterns/micronutrients.js`:
+
+- `analyzeMicronutrients`
+
+**Подключение**:
+
+- `pi_patterns.js` — `analyzeMicronutrients` переведён на thin-wrapper делегацию
+  через `patternModules`
+- `micronutrients.js` — зарегистрирован экспорт
+  `HEYS.InsightsPI.patternModules.analyzeMicronutrients`
+
+**Верификация**:
+
+- `pi_patterns.test.js`: **42/42 passing**
+- Проверка ошибок в изменённых файлах: **0 ошибок**
+
+## Status v6.13 Nutrition Quality Extraction to Quality Module (12.02.2026)
+
+**✅ Вынесен C2 Nutrition Quality** в `apps/web/insights/patterns/quality.js`:
+
+- `analyzeNutritionQuality`
+
+**Подключение**:
+
+- `pi_patterns.js` — `analyzeNutritionQuality` переведён на thin-wrapper
+  делегацию через `patternModules`
+- `quality.js` — зарегистрирован экспорт
+  `HEYS.InsightsPI.patternModules.analyzeNutritionQuality`
+
+**Верификация**:
+
+- `pi_patterns.test.js`: **42/42 passing**
+- Проверка ошибок в изменённых файлах: **0 ошибок**
+
+## Status v6.14 Protein Satiety Extraction to Quality Module (12.02.2026)
+
+**✅ Вынесен Protein Satiety** в `apps/web/insights/patterns/quality.js`:
+
+- `analyzeProteinSatiety`
+
+**Подключение**:
+
+- `pi_patterns.js` — `analyzeProteinSatiety` переведён на thin-wrapper делегацию
+  через `patternModules`
+- `quality.js` — зарегистрирован экспорт
+  `HEYS.InsightsPI.patternModules.analyzeProteinSatiety`
+
+**Верификация**:
+
+- `pi_patterns.test.js`: **42/42 passing**
+- Проверка ошибок в изменённых файлах: **0 ошибок**
+
+## Status v6.15 Fiber Regularity Extraction to Quality Module (12.02.2026)
+
+**✅ Вынесен Fiber Regularity** в `apps/web/insights/patterns/quality.js`:
+
+- `analyzeFiberRegularity`
+
+**Подключение**:
+
+- `pi_patterns.js` — `analyzeFiberRegularity` переведён на thin-wrapper
+  делегацию через `patternModules`
+- `quality.js` — зарегистрирован экспорт
+  `HEYS.InsightsPI.patternModules.analyzeFiberRegularity`
+
+**Верификация**:
+
+- `pi_patterns.test.js`: **42/42 passing**
+- Проверка ошибок в изменённых файлах: **0 ошибок**
+
+## Status v6.16 Final Monolith Extraction (12.02.2026)
+
+**✅ Вынесены последние 3 «тяжёлые» анализатора из `pi_patterns.js`**:
+
+- `analyzeMealQualityTrend` → `apps/web/insights/patterns/quality.js`
+- `analyzeInsulinSensitivity` → `apps/web/insights/patterns/metabolic.js`
+- `analyzeGutHealth` → `apps/web/insights/patterns/metabolic.js`
+
+**Подключение**:
+
+- `pi_patterns.js` — все 3 функции переведены на thin-wrapper делегацию через
+  `patternModules`
+- `quality.js` — зарегистрирован экспорт
+  `HEYS.InsightsPI.patternModules.analyzeMealQualityTrend`
+- `metabolic.js` — зарегистрированы экспорты `analyzeInsulinSensitivity` и
+  `analyzeGutHealth`
+
+**Итог**:
+
+- В `pi_patterns.js` не осталось «толстых» `analyze*` реализаций — файл стал
+  router/fallback-слоем
+
+**Верификация**:
+
+- `pi_patterns.test.js`: **42/42 passing**
+- Проверка ошибок в изменённых файлах: **0 ошибок**
+
+> ℹ️ **Актуальный источник статуса**: секции `Status v6.x` выше. Разделы ниже
+> содержат исторические заметки/плановые материалы (v5/v6 design notes) и могут
+> не отражать финальное состояние после `v6.16` построчно.
 
 ## Status v5.2.0 Performance & Quality (12.02.2026)
 
@@ -109,7 +394,7 @@ pi_ui_cards 1648, main 1190)
 
 ---
 
-## Implemented Patterns (31 total)
+## Implemented Patterns (v5 baseline, 31 total)
 
 ### Core Patterns (v2-v3, 19 total)
 
@@ -199,20 +484,27 @@ pi_ui_cards 1648, main 1190)
 
 ---
 
-## Architecture
+## Architecture (v6.16 snapshot)
 
-### Files (5 modules, ~6000 LOC)
+### Files (modular router architecture)
 
-- **pi_patterns.js** (2864 LOC) — 31 анализатор (meal timing, nutrition, sleep,
-  activity, micronutrients, omega, heart, NOVA, training, hypertrophy)
-- **pi_advanced.js** (466 LOC) — Health Score aggregator, What-If scenario
-  simulator, Weight prediction, Weekly Wrap
-- **pi_constants.js** (1336 LOC) — PATTERNS enum (31), SCIENCE_INFO (76
-  entries), PRIORITY_LEVELS, CATEGORIES
-- **pi_ui_cards.js** (1648 LOC) — React UI components (PatternCard,
-  MetabolismCard, HealthRings, WhatIfSimulator)
-- **heys_predictive_insights_v1.js** (1190 LOC) — Main orchestration engine,
-  data loading, localStorage cache, export API
+- **`apps/web/insights/pi_patterns.js`** — thin router/fallback слой
+  (`patternModules` delegation, без «толстых» `analyze*` реализаций после v6.16)
+- **`apps/web/insights/patterns/timing.js`** — timing/circadian analyzers
+- **`apps/web/insights/patterns/psychology.js`** — stress/mood analyzers
+- **`apps/web/insights/patterns/sleep.js`** — sleep analyzers
+- **`apps/web/insights/patterns/activity.js`** — activity/recovery analyzers
+- **`apps/web/insights/patterns/lifestyle.js`** —
+  wellbeing/hydration/cycle/weekend
+- **`apps/web/insights/patterns/body.js`** — body composition/hypertrophy
+- **`apps/web/insights/patterns/quality.js`** — meal
+  quality/NOVA/density/protein/fiber
+- **`apps/web/insights/patterns/metabolic.js`** —
+  insulin/gut/heart/omega/GL/electrolytes
+- **`apps/web/insights/patterns/micronutrients.js`** —
+  micronutrient/vitamin/B-complex/sugar/bone
+- **`apps/web/insights/patterns/training_nutrition.js`** — training-type/protein
+  distribution/antioxidant
 
 ### Health Score (Goal-Aware)
 
@@ -278,6 +570,12 @@ crash risk, satiety, wave overlap
 
 - **Storage**: localStorage (encrypted: profile, days, hr_zones; plaintext:
   products, norms)
+  - ⚠️ **CRITICAL v4.8.8**: В React ВСЕГДА используй **Store API**
+    (`products.getAll()`), НЕ `utils.lsGet()`
+  - Store API handles scoped keys (`heys_{clientId}_products`) автоматически
+  - Direct `utils.lsGet('heys_products')` reads unscoped key → broken React
+    state (42 instead of 290)
+  - См. [STORE_API_QUICKREF.md](docs/STORE_API_QUICKREF.md) для деталей
 - **API**: YandexAPI (session_token auth, `*_by_session` RPC pattern)
 - **UI**: React 18 (via CDN), Material-UI-inspired components, responsive grid
 - **PWA**: Service Worker, offline-first day sync, background data refresh
@@ -315,7 +613,7 @@ crash risk, satiety, wave overlap
 - ✅ **Действия вместо тревоги** — "Что можно сделать сегодня?" + конкретные
   рекомендации
 - 🎯 **Прозрачность** — "Недостаточно данных" + что нужно добавить
-- � **All-41 Policy** — показывать **все 41 карточку** (без Pro-toggle, без
+- ✅ **All-41 Policy** — показывать **все 41 карточку** (без Pro-toggle, без
   Top-5 лимита)
   - Группировка по 5 категориям (Nutrition, Timing, Activity, Recovery,
     Metabolism)
@@ -639,11 +937,10 @@ const { confidence, warning } = piStats.confidenceWithWarning(
 
 ---
 
-## v6.0 — Next Level Science (C13-C22) — READY TO IMPLEMENT
+## v6.0 — Next Level Science (C13-C22) — Historical Design Notes
 
-> **Цель**: Использовать 100% доступных данных. Сейчас 11 витаминных полей, 3
-> минерала (P, Se, I), тип тренировки, simple100 (как прокси added sugar), GL —
-> **полностью не покрыты** ни одним паттерном. C13-C22 закрывают все пробелы.
+> Исторический раздел проектирования (использовался как roadmap на этапе v6.0).
+> Фактический прогресс/закрытие по модулям см. в `Status v6.0 … v6.16` выше.
 
 ### Обзор пробелов → паттерны
 
@@ -1247,24 +1544,24 @@ Metabolism (10%): ... + C18 (Sugar/Addiction), C20 (Electrolyte), C22 (B-Complex
 
 ---
 
-### Architecture v6.0 — Modular Split (обязательно)
+### Architecture v6.0 — Modular Split (historical plan)
 
-**BEFORE** (v5.0): pi_patterns.js = 2864 LOC (все 31 паттерна в 1 файле)  
-**AFTER** (v6.0): pi_patterns.js → index + 10 модулей (~300-400 LOC каждый)
+**BEFORE** (v5.0): monolith-first `pi_patterns.js`  
+**AFTER** (v6.16): `pi_patterns.js` = router + `patterns/*` модульная логика
 
 ```
 apps/web/insights/
-  pi_patterns.js           → index/router (150 LOC, re-exports all)
+  pi_patterns.js           → router/fallback (patternModules delegation)
   patterns/
-    nutrition.js           → nutrition_quality, meal_quality (v2-v3)
     sleep.js               → sleep_weight, sleep_hunger, sleep_quality (v2-v4)
     activity.js            → steps, NEAT, training_kcal, training_recovery (v2-v5)
     timing.js              → meal_timing, wave_overlap, late_eating, circadian, nutrient_timing (v2-v3)
     psychology.js          → stress_eating, mood_food, mood_trajectory (v2-v3)
-    body.js                → body_composition, hypertrophy, bone_health (v4-v6)
-    micronutrients.js      → micronutrient_radar, vitamin_defense, b_complex (v5-v6)
-    quality.js             → nova_quality, gut_health, nutrient_density, sugar (v3-v6)
-    metabolic.js           → insulin_sensitivity, glycemic_load, omega_balance, heart_health, electrolyte (v3-v6)
+    lifestyle.js           → wellbeing, hydration, body_composition, cycle, weekend (v4-v6)
+    body.js                → hypertrophy (v5-v6)
+    micronutrients.js      → micronutrient_radar, vitamin_defense, b_complex, sugar, bone (v5-v6)
+    quality.js             → meal_quality, nutrition_quality, protein_satiety, fiber_regularity, nova_quality, nutrient_density (v3-v6)
+    metabolic.js           → insulin_sensitivity, gut_health, glycemic_load, omega_balance, heart_health, electrolyte (v3-v6)
     training_nutrition.js  → training_type_match, protein_distribution, antioxidant (v6)
 ```
 
@@ -1297,10 +1594,10 @@ apps/web/insights/
 
 ## Version History
 
-- **v6.0.0** (in progress, Phase 1 complete): C13 + C22 реализованы (Vitamin
-  Defense, B-Complex & Anemia). В работе: C14-C21 (GL, protein distribution,
-  antioxidants, bone, sugar, training-type match, electrolytes, nutrient
-  density)
+- **v6.16.0** (2026-02-12): завершён финальный modular extraction —
+  `pi_patterns.js` приведён к router/fallback слою, последние тяжёлые
+  анализаторы вынесены в `patterns/*`
+- **v6.0.0** (historical phase): старт C13+ и roadmap C13-C22
 - **v5.0.0** (2026-02-12): COMPLETE — C7-C12 реализованы, 31/31 паттернов, 100%
   data coverage
 - **v4.0.0** (2025-Q4): B1-B6 advanced patterns (sleep quality, wellbeing,
