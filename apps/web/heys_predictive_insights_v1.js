@@ -487,6 +487,9 @@
   const analyzeHeartHealth = piPatterns.analyzeHeartHealth || function () { return { pattern: 'heart_health', available: false }; };
   const analyzeOmegaBalance = piPatterns.analyzeOmegaBalance || function () { return { pattern: 'omega_balancer', available: false }; };
 
+  // NEW v6.0 (C13-C22)
+  const analyzeVitaminDefense = piPatterns.analyzeVitaminDefense || function () { return { pattern: 'vitamin_defense', available: false }; };
+
   // === ПРОДВИНУТАЯ АНАЛИТИКА ===
   // Делегируем в pi_advanced.js
   const calculateHealthScore = piAdvanced.calculateHealthScore || function (patterns, profile) {
@@ -622,10 +625,13 @@
       analyzeHypertrophy(days, profile),                 // C12: гипертрофия + композиция тела
       analyzeMicronutrients(days, pIndex, profile),      // C7: микронутриенты (железо, магний, цинк, кальций)
       analyzeHeartHealth(days, pIndex),                  // C9: Na/K ratio + холестерин
-      analyzeOmegaBalance(days, pIndex)                  // C8: омега-6:3 баланс + воспалительная нагрузка
+      analyzeOmegaBalance(days, pIndex),                 // C8: омега-6:3 баланс + воспалительная нагрузка
+
+      // === NEW v6.0 (C13-C22) ===
+      analyzeVitaminDefense(days, profile)               // C13: Vitamin Defense Radar (11 vitamins)
     ].filter(p => p && (p.available || p.hasPattern));
 
-    console.info(`[HEYS.insights] 📊 v5.0 | daysBack=${daysBack}, days=${days.length}, patterns=${patterns.length}/31 possible`,
+    console.info(`[HEYS.insights] 📊 v6.0 | daysBack=${daysBack}, days=${days.length}, patterns=${patterns.length}/32 possible (v6.0: +C13)`,
       patterns.map(p => `${p.pattern}:${p.score}`));
 
     // Рассчитываем Health Score
