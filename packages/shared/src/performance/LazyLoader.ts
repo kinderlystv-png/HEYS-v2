@@ -139,7 +139,7 @@ export class LazyLoader {
       return;
     }
 
-    this.observer = new IntersectionObserver(
+    const observer = new IntersectionObserver(
       this.debounce(this.handleIntersection.bind(this), this.config.debounceDelay),
       {
         root: this.config.root,
@@ -147,6 +147,19 @@ export class LazyLoader {
         threshold: this.config.threshold,
       },
     );
+
+    const hasObserverApi =
+      typeof observer.observe === 'function' &&
+      typeof observer.unobserve === 'function' &&
+      typeof observer.disconnect === 'function';
+
+    if (!hasObserverApi) {
+      this.logger.warn('IntersectionObserver имеет неполный API, используется fallback');
+      this.observer = null;
+      return;
+    }
+
+    this.observer = observer;
   }
 
   /**
@@ -645,7 +658,7 @@ export class LazyLoader {
    * Очистка ресурсов
    */
   destroy(): void {
-    if (this.observer) {
+    if (this.observer && typeof this.observer.disconnect === 'function') {
       this.observer.disconnect();
       this.observer = null;
     }

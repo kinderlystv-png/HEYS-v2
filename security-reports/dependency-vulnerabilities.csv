@@ -1,0 +1,2 @@
+ID,Package,Title,Severity,Vulnerable Versions,Patched Versions,Overview
+TEST-001,test-package,Test Vulnerability,high,>= 1.0.0,1.2.0,Test vulnerability for testing purposes

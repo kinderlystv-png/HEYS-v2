@@ -1,0 +1,38 @@
+{
+  "projectName": "test-project",
+  "assessmentDate": "2026-02-12T17:41:30.446Z",
+  "keyFindings": {
+    "securityScore": 75,
+    "riskLevel": "medium",
+    "criticalIssues": 0,
+    "highIssues": 2,
+    "totalIssues": 5
+  },
+  "businessImpact": {
+    "level": "low",
+    "description": "Security posture is acceptable with manageable risks.",
+    "financialRisk": "Low likelihood of security incidents affecting business.",
+    "recommendations": [
+      "Continue regular security maintenance",
+      "Monitor for emerging threats",
+      "Maintain security best practices"
+    ]
+  },
+  "immediateActions": [
+    {
+      "action": "Test Recommendation",
+      "timeframe": "24-48 hours"
+    }
+  ],
+  "complianceStatus": {
+    "owasp": "unknown",
+    "overall": "passing"
+  },
+  "trendAnalysis": {},
+  "nextSteps": [
+    "Review and prioritize security recommendations",
+    "Implement immediate fixes for critical vulnerabilities",
+    "Schedule regular security assessments",
+    "Update security policies and procedures"
+  ]
+}

@@ -141,6 +141,9 @@ export class AdvancedCacheManager {
   };
   private serviceWorkerRegistration: ServiceWorkerRegistration | null = null;
   private compressionWorker: Worker | null = null;
+  private serviceWorkerMessageHandler?: (event: MessageEvent) => void;
+  private readonly intervalIds: ReturnType<typeof setInterval>[] = [];
+  private isDestroyed = false;
   private readonly logger = baseLogger.child({ component: 'AdvancedCacheManager' });
 
   constructor(config: CacheConfig) {
@@ -161,6 +164,8 @@ export class AdvancedCacheManager {
    */
   private async initialize(): Promise<void> {
     try {
+      if (this.isDestroyed) return;
+
       if (this.config.strategies.serviceWorker.enabled) {
         await this.initializeServiceWorker();
       }
@@ -193,17 +198,25 @@ export class AdvancedCacheManager {
         { scope: this.config.strategies.serviceWorker.scope },
       );
 
+      if (this.isDestroyed) {
+        await this.serviceWorkerRegistration.unregister();
+        this.serviceWorkerRegistration = null;
+        return;
+      }
+
       this.logger.info('Service Worker registered successfully');
 
       // Listen for messages from Service Worker
-      navigator.serviceWorker.addEventListener('message', (event) => {
+      this.serviceWorkerMessageHandler = (event: MessageEvent) => {
         this.handleServiceWorkerMessage(event);
-      });
+      };
+      navigator.serviceWorker.addEventListener('message', this.serviceWorkerMessageHandler);
 
       // Update Service Worker periodically
-      setInterval(() => {
+      const updateIntervalId = setInterval(() => {
         this.serviceWorkerRegistration?.update();
       }, this.config.strategies.serviceWorker.updateInterval);
+      this.intervalIds.push(updateIntervalId);
     } catch (error) {
       this.logger.error({ error }, 'Service Worker registration failed');
     }
@@ -739,20 +752,24 @@ export class AdvancedCacheManager {
    * Start cleanup intervals
    */
   private startCleanupIntervals(): void {
+    if (this.isDestroyed) return;
+
     // Cleanup expired entries every 5 minutes
-    setInterval(
+    const cleanupIntervalId = setInterval(
       () => {
         this.cleanupExpiredEntries();
       },
       5 * 60 * 1000,
     );
+    this.intervalIds.push(cleanupIntervalId);
 
     // Memory pressure cleanup every minute
-    setInterval(() => {
+    const memoryPressureIntervalId = setInterval(() => {
       if (this.memoryCache.size > this.config.strategies.memory.maxSize * 0.8) {
         this.evictFromMemory();
       }
     }, 60 * 1000);
+    this.intervalIds.push(memoryPressureIntervalId);
   }
 
   /**
@@ -922,6 +939,25 @@ export class AdvancedCacheManager {
    * Destroy the cache manager
    */
   async destroy(): Promise<void> {
+    this.isDestroyed = true;
+
+    // Stop all background intervals first to avoid dangling timers in tests/runtime.
+    while (this.intervalIds.length > 0) {
+      const intervalId = this.intervalIds.pop();
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    }
+
+    if (
+      this.serviceWorkerMessageHandler &&
+      'serviceWorker' in navigator &&
+      typeof navigator.serviceWorker.removeEventListener === 'function'
+    ) {
+      navigator.serviceWorker.removeEventListener('message', this.serviceWorkerMessageHandler);
+      this.serviceWorkerMessageHandler = undefined;
+    }
+
     await this.clearAll();
 
     if (this.compressionWorker) {

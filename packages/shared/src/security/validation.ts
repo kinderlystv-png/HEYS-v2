@@ -67,10 +67,12 @@ export const ValidationSchemas = {
  */
 export class InputSanitizer {
   private readonly dompurify: typeof DOMPurify;
+  private readonly sanitizeFn?: (input: string, config?: DOMPurifyConfig) => unknown;
   private readonly config: DOMPurifyConfig;
 
   constructor(purifier: typeof DOMPurify = DOMPurify) {
     this.dompurify = purifier;
+    this.sanitizeFn = this.resolveSanitizeFn(purifier);
     this.config = {
       ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br'],
       ALLOWED_ATTR: ['href', 'title'],
@@ -79,6 +81,84 @@ export class InputSanitizer {
       SANITIZE_DOM: true,
       KEEP_CONTENT: true,
     };
+  }
+
+  private resolveSanitizeFn(
+    purifier: unknown,
+  ): ((input: string, config?: DOMPurifyConfig) => unknown) | undefined {
+    const asDirect = purifier as { sanitize?: (input: string, config?: DOMPurifyConfig) => unknown };
+    if (typeof asDirect?.sanitize === 'function') {
+      return asDirect.sanitize.bind(asDirect);
+    }
+
+    const asDefault = purifier as {
+      default?: { sanitize?: (input: string, config?: DOMPurifyConfig) => unknown };
+    };
+    if (typeof asDefault?.default?.sanitize === 'function') {
+      return asDefault.default.sanitize.bind(asDefault.default);
+    }
+
+    if (typeof purifier === 'function' && typeof globalThis !== 'undefined') {
+      try {
+        const factoryResult = (purifier as (w: unknown) => unknown)(
+          (globalThis as { window?: unknown }).window ?? globalThis,
+        ) as { sanitize?: (input: string, config?: DOMPurifyConfig) => unknown };
+
+        if (typeof factoryResult?.sanitize === 'function') {
+          return factoryResult.sanitize.bind(factoryResult);
+        }
+      } catch {
+        // noop - fallback sanitizer will be used
+      }
+    }
+
+    return undefined;
+  }
+
+  private fallbackSanitize(input: string, config?: DOMPurifyConfig): string {
+    const allowedTags = new Set((config?.ALLOWED_TAGS || []).map((t) => String(t).toLowerCase()));
+    const allowedAttrs = new Set((config?.ALLOWED_ATTR || []).map((a) => String(a).toLowerCase()));
+
+    let output = input;
+
+    // Remove highly dangerous blocks first.
+    output = output.replace(/<\s*(script|style|iframe|object|embed)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
+
+    // Remove inline event handlers and javascript: URLs.
+    output = output
+      .replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+      .replace(/\s+(href|src)\s*=\s*("|')\s*javascript:[^"']*\2/gi, '');
+
+    // If no tags are allowed, strip all tags.
+    if (allowedTags.size === 0) {
+      return output.replace(/<[^>]+>/g, '');
+    }
+
+    // Keep only allowed tags and allowed attributes.
+    output = output.replace(/<\/?([a-z0-9-]+)([^>]*)>/gi, (match, tagName: string, rawAttrs: string) => {
+      const tag = String(tagName).toLowerCase();
+      if (!allowedTags.has(tag)) return '';
+
+      if (match.startsWith('</')) {
+        return `</${tag}>`;
+      }
+
+      const safeAttrs: string[] = [];
+      rawAttrs.replace(
+        /([a-z0-9-:]+)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi,
+        (_m: string, attrName: string, attrValue: string) => {
+          const attr = String(attrName).toLowerCase();
+          if (allowedAttrs.has(attr)) {
+            safeAttrs.push(`${attr}=${attrValue}`);
+          }
+          return '';
+        },
+      );
+
+      return `<${tag}${safeAttrs.length > 0 ? ` ${safeAttrs.join(' ')}` : ''}>`;
+    });
+
+    return output;
   }
 
   /**
@@ -140,7 +220,9 @@ export class InputSanitizer {
   }
 
   private sanitizeToString(input: string, config?: DOMPurifyConfig): string {
-    const result = this.dompurify.sanitize(input, config);
+    const result = this.sanitizeFn
+      ? this.sanitizeFn(input, config)
+      : this.fallbackSanitize(input, config);
     if (typeof result === 'string') {
       return result;
     }

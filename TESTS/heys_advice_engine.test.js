@@ -67,14 +67,19 @@ const makeCtx = (overrides = {}) => {
     emotionalState: overrides.emotionalState ?? 'normal',
     prof: overrides.prof ?? { deficitPctTarget: -15, sleepHours: 8 },
     waterGoal: overrides.waterGoal ?? 2000,
-    goal: overrides.goal
+    goal: overrides.goal ?? {
+      mode: 'deficit',
+      targetRange: { min: 0.9, max: 1.05 },
+      criticalOver: 1.15,
+      criticalUnder: 0.75
+    }
   };
 };
 
 beforeAll(async () => {
   ensureWindow();
   await import('../apps/web/heys_advice_rules_v1.js');
-  await import('../apps/web/heys_advice_v1.js');
+  await import('../apps/web/heys_advice_bundle_v1.js');
 });
 
 beforeEach(() => {

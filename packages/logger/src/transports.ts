@@ -73,7 +73,10 @@ export function createTransports(config: AdvancedLoggerConfig): pino.StreamEntry
 
   // Файловый транспорт (только в Node.js)
   if (config.transports.file.enabled && path) {
-    ensureLogDirectory(config.transports.file.path);
+    const canUseFileTransport = ensureLogDirectory(config.transports.file.path);
+    if (!canUseFileTransport) {
+      return streams;
+    }
 
     // Основной лог файл
     const fileLevel = resolveStreamLevel(config.level);
@@ -83,7 +86,6 @@ export function createTransports(config: AdvancedLoggerConfig): pino.StreamEntry
         stream: pino.destination({
           dest: path.join(config.transports.file.path, `${config.service}.log`),
           sync: false,
-          mkdir: true,
         }),
       });
     }
@@ -94,7 +96,6 @@ export function createTransports(config: AdvancedLoggerConfig): pino.StreamEntry
       stream: pino.destination({
         dest: path.join(config.transports.file.path, `${config.service}.error.log`),
         sync: false,
-        mkdir: true,
       }),
     });
   }
@@ -129,7 +130,10 @@ export function createRotatingFileTransport(config: AdvancedLoggerConfig) {
     return null;
   }
 
-  ensureLogDirectory(config.transports.file.path);
+  const canUseFileTransport = ensureLogDirectory(config.transports.file.path);
+  if (!canUseFileTransport) {
+    return null;
+  }
 
   return pino.transport({
     target: 'pino-roll',
@@ -145,17 +149,19 @@ export function createRotatingFileTransport(config: AdvancedLoggerConfig) {
 /**
  * Обеспечивает существование директории для логов (только Node.js)
  */
-function ensureLogDirectory(logPath: string): void {
+function ensureLogDirectory(logPath: string): boolean {
   if (!fs || !isNodeEnvironment) {
-    return;
+    return false;
   }
-  
+
   try {
     if (!fs.existsSync(logPath)) {
       fs.mkdirSync(logPath, { recursive: true });
     }
+    return true;
   } catch {
-    // Если не можем создать директорию, продолжаем работу
+    // Если не можем создать директорию, отключаем файловые транспорты.
+    return false;
   }
 }
 

@@ -187,9 +187,10 @@ export class PerformanceProfiler {
   private observeNavigationTiming(): void {
     if (!window.performance?.getEntriesByType) return;
 
-    const navigationEntries = window.performance.getEntriesByType(
-      'navigation',
-    ) as PerformanceNavigationTiming[];
+    const navigationEntriesRaw = window.performance.getEntriesByType('navigation');
+    const navigationEntries = Array.isArray(navigationEntriesRaw)
+      ? (navigationEntriesRaw as PerformanceNavigationTiming[])
+      : [];
 
     navigationEntries.forEach((entry) => {
       this.addMetric({

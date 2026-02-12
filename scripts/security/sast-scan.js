@@ -7,7 +7,6 @@
  * @author HEYS Security Team
  */
 
-import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -46,11 +45,13 @@ const SCAN_CONFIG = {
         /query.*\+.*\$\{/gi,
         /sql.*\+.*\$\{/gi,
         /SELECT.*\+.*\$\{/gi,
+        /query\s*=\s*['"`].*\+\s*[a-zA-Z_][a-zA-Z0-9_]*/gi,
+        /SELECT\s+.*\s+FROM\s+.*\+\s*[a-zA-Z_][a-zA-Z0-9_]*/gi,
         /INSERT.*\+.*\$\{/gi,
         /UPDATE.*\+.*\$\{/gi,
         /DELETE.*\+.*\$\{/gi,
       ],
-      severity: 'high',
+      severity: 'critical',
       description: 'Potential SQL Injection vulnerability',
     },
 
@@ -133,6 +134,12 @@ const SCAN_CONFIG = {
 
 class SASTScanner {
   constructor() {
+    this.config = {
+      ...SCAN_CONFIG,
+      securityRules: { ...SCAN_CONFIG.securityRules },
+      targetPaths: [SCAN_CONFIG.projectRoot],
+    };
+
     this.results = {
       timestamp: new Date().toISOString(),
       scannedFiles: 0,
@@ -153,6 +160,19 @@ class SASTScanner {
   async runScan() {
     console.log('🛡️ Starting SAST Security Scan...\n');
 
+    this.results = {
+      timestamp: new Date().toISOString(),
+      scannedFiles: 0,
+      vulnerabilities: [],
+      summary: {
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+        total: 0,
+      },
+    };
+
     try {
       // Создаем директорию для отчетов
       this.ensureOutputDirectory();
@@ -172,11 +192,11 @@ class SASTScanner {
       // Выводим результаты
       this.printResults();
 
-      // Возвращаем код выхода
-      return this.getExitCode();
+      return this.results;
     } catch (error) {
       console.error('❌ SAST scan failed:', error.message);
-      return 1;
+      this.results.error = error.message;
+      return this.results;
     }
   }
 
@@ -184,29 +204,47 @@ class SASTScanner {
    * Получение списка файлов для сканирования
    */
   async getFilesToScan() {
-    const files = [];
+    const files = new Set();
+    const extensions = new Set(['.ts', '.tsx', '.js', '.jsx']);
+    const targetPaths =
+      Array.isArray(this.config.targetPaths) && this.config.targetPaths.length > 0
+        ? this.config.targetPaths
+        : [this.config.projectRoot];
 
-    for (const pattern of SCAN_CONFIG.scanPatterns) {
-      try {
-        const globFiles = execSync(`find ${SCAN_CONFIG.projectRoot} -name "${pattern}" -type f`, {
-          encoding: 'utf8',
-        })
-          .trim()
-          .split('\n')
-          .filter(Boolean);
-
-        files.push(...globFiles);
-      } catch (error) {
-        // Игнорируем ошибки поиска файлов
+    const shouldExclude = (filePath) => {
+      const normalized = filePath.replace(/\\/g, '/');
+      if (
+        normalized.includes('/node_modules/') ||
+        normalized.includes('/dist/') ||
+        normalized.includes('/build/') ||
+        normalized.includes('/coverage/')
+      ) {
+        return true;
       }
+      return /\.(test|spec)\.[jt]sx?$/.test(normalized);
+    };
+
+    const walk = (entryPath) => {
+      if (!fs.existsSync(entryPath)) return;
+
+      const stat = fs.statSync(entryPath);
+      if (stat.isDirectory()) {
+        for (const child of fs.readdirSync(entryPath)) {
+          walk(path.join(entryPath, child));
+        }
+        return;
+      }
+
+      if (!extensions.has(path.extname(entryPath))) return;
+      if (shouldExclude(entryPath)) return;
+      files.add(entryPath);
+    };
+
+    for (const targetPath of targetPaths) {
+      walk(path.resolve(targetPath));
     }
 
-    // Фильтруем исключения
-    return files.filter((file) => {
-      return !SCAN_CONFIG.excludePatterns.some((pattern) =>
-        new RegExp(pattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*')).test(file),
-      );
-    });
+    return [...files];
   }
 
   /**
@@ -215,25 +253,28 @@ class SASTScanner {
   async scanFile(filePath) {
     try {
       const content = fs.readFileSync(filePath, 'utf8');
-      const relativePath = path.relative(SCAN_CONFIG.projectRoot, filePath);
+      const relativePath = path.relative(this.config.projectRoot, filePath);
 
       this.results.scannedFiles++;
 
       // Применяем все правила безопасности
-      for (const [ruleName, rule] of Object.entries(SCAN_CONFIG.securityRules)) {
+      for (const [ruleName, rule] of Object.entries(this.config.securityRules)) {
         for (const pattern of rule.patterns) {
           const matches = [...content.matchAll(new RegExp(pattern, 'gi'))];
 
           for (const match of matches) {
             const lineNumber = this.getLineNumber(content, match.index);
 
+            const normalizedRule = this.normalizeRuleName(ruleName);
             const vulnerability = {
               id: `${ruleName}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               file: relativePath,
               line: lineNumber,
-              rule: ruleName,
+              rule: normalizedRule,
+              ruleKey: ruleName,
               severity: rule.severity,
               description: rule.description,
+              message: rule.description,
               evidence: match[0].trim(),
               recommendation: this.getRecommendation(ruleName),
               timestamp: new Date().toISOString(),
@@ -248,6 +289,20 @@ class SASTScanner {
     } catch (error) {
       console.warn(`⚠️ Failed to scan ${filePath}: ${error.message}`);
     }
+  }
+
+  normalizeRuleName(ruleName) {
+    const aliases = {
+      sqlInjection: 'sql-injection',
+      xss: 'xss-vulnerability',
+      hardcodedSecrets: 'hardcoded-secrets',
+      insecureOperations: 'insecure-operations',
+      insecureHttp: 'insecure-http',
+      insecureCors: 'insecure-cors',
+      debugInformation: 'debug-information',
+    };
+
+    return aliases[ruleName] || ruleName;
   }
 
   /**
@@ -279,8 +334,8 @@ class SASTScanner {
    * Создание директории для отчетов
    */
   ensureOutputDirectory() {
-    if (!fs.existsSync(SCAN_CONFIG.outputDir)) {
-      fs.mkdirSync(SCAN_CONFIG.outputDir, { recursive: true });
+    if (!fs.existsSync(this.config.outputDir)) {
+      fs.mkdirSync(this.config.outputDir, { recursive: true });
     }
   }
 
@@ -291,23 +346,23 @@ class SASTScanner {
     const reportData = {
       ...this.results,
       scanConfig: {
-        patterns: SCAN_CONFIG.scanPatterns,
-        excludes: SCAN_CONFIG.excludePatterns,
-        rules: Object.keys(SCAN_CONFIG.securityRules),
+        patterns: this.config.scanPatterns,
+        excludes: this.config.excludePatterns,
+        rules: Object.keys(this.config.securityRules),
       },
     };
 
     // JSON отчет
-    const jsonReportPath = path.join(SCAN_CONFIG.outputDir, 'sast-report.json');
+    const jsonReportPath = path.join(this.config.outputDir, 'sast-report.json');
     fs.writeFileSync(jsonReportPath, JSON.stringify(reportData, null, 2));
 
     // HTML отчет
-    const htmlReportPath = path.join(SCAN_CONFIG.outputDir, 'sast-report.html');
+    const htmlReportPath = path.join(this.config.outputDir, 'sast-report.html');
     const htmlContent = this.generateHtmlReport(reportData);
     fs.writeFileSync(htmlReportPath, htmlContent);
 
     // SARIF отчет для GitHub
-    const sarifReportPath = path.join(SCAN_CONFIG.outputDir, 'sast-report.sarif');
+    const sarifReportPath = path.join(this.config.outputDir, 'sast-report.sarif');
     const sarifContent = this.generateSarifReport(reportData);
     fs.writeFileSync(sarifReportPath, JSON.stringify(sarifContent, null, 2));
 
@@ -380,8 +435,8 @@ class SASTScanner {
         
         <h2>Vulnerabilities</h2>
         ${data.vulnerabilities
-          .map(
-            (vuln) => `
+        .map(
+          (vuln) => `
             <div class="vulnerability">
                 <div class="vuln-header severity-${vuln.severity}">
                     <h3 style="margin: 0;">${vuln.description}</h3>
@@ -393,8 +448,8 @@ class SASTScanner {
                 </div>
             </div>
         `,
-          )
-          .join('')}
+        )
+        .join('')}
     </div>
 </body>
 </html>`;
@@ -496,8 +551,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const scanner = new SASTScanner();
   scanner
     .runScan()
-    .then((exitCode) => {
-      process.exit(exitCode);
+    .then(() => {
+      process.exit(scanner.getExitCode());
     })
     .catch((error) => {
       console.error('Fatal error:', error);

@@ -223,7 +223,7 @@ describe('JWTAuthMiddleware', () => {
         }),
       };
 
-      const mockNext = () => {};
+      const mockNext = () => { };
 
       const expressMiddleware = middleware.createExpressMiddleware();
       await expressMiddleware(mockReq, mockRes, mockNext);
@@ -262,12 +262,12 @@ describe('JWTAuthMiddleware', () => {
       const signature = 'mock-signature';
       const token = `${header}.${payload}.${signature}`;
 
-      const request = new Request('https://test.com/api/users', {
-        method: 'GET',
+      const request = {
+        url: 'https://test.com/api/users',
         headers: {
-          Cookie: `supabase-auth-token=${token}; other-cookie=value`,
+          cookie: `supabase-auth-token=${token}; other-cookie=value`,
         },
-      });
+      } as unknown as Request;
 
       const result = await middleware.authenticate(request, '/api/users');
       expect(result.success).toBe(true);

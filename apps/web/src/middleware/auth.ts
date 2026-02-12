@@ -91,16 +91,25 @@ export class JWTAuthMiddleware {
    * Извлечь JWT токен из запроса
    */
   private extractToken(request: Request): string | null {
+    const headersAny = (request as unknown as { headers?: Record<string, unknown> | { get?: (name: string) => string | null } }).headers;
+    const getHeader = (name: string): string | undefined => {
+      if (!headersAny) return undefined;
+      if (typeof (headersAny as { get?: (n: string) => string | null }).get === 'function') {
+        return (headersAny as { get: (n: string) => string | null }).get(name) || undefined;
+      }
+      const raw = (headersAny as Record<string, unknown>)[name] ?? (headersAny as Record<string, unknown>)[name.toLowerCase()];
+      if (Array.isArray(raw)) return String(raw[0] ?? '');
+      return typeof raw === 'string' ? raw : undefined;
+    };
+
     // Проверяем Authorization header
-    const authHeader = request.headers['authorization'];
-    const authValue = Array.isArray(authHeader) ? authHeader[0] : authHeader;
+    const authValue = getHeader('authorization');
     if (authValue && authValue.startsWith('Bearer ')) {
       return authValue.substring(7);
     }
 
     // Проверяем cookie (fallback для браузерных запросов)
-    const cookieHeader = request.headers['cookie'];
-    const cookieValue = Array.isArray(cookieHeader) ? cookieHeader[0] : cookieHeader;
+    const cookieValue = getHeader('cookie');
     if (cookieValue) {
       const match = cookieValue.match(/supabase-auth-token=([^;]+)/);
       if (match && match[1]) {
@@ -260,9 +269,15 @@ export function getUserFromRequest(request: RequestWithUser): AuthenticatedUser 
 
   // Fallback - извлекаем из headers (Express style)
   const getUserHeader = (name: string): string | undefined => {
-    const value = req.headers?.[name];
+    const headersAny = req.headers as unknown as Record<string, unknown> & {
+      get?: (headerName: string) => string | null;
+    };
+    if (typeof headersAny?.get === 'function') {
+      return headersAny.get(name) || undefined;
+    }
+    const value = headersAny?.[name] ?? headersAny?.[name.toLowerCase()];
     if (Array.isArray(value)) return value[0];
-    return value;
+    return typeof value === 'string' ? value : undefined;
   };
 
   const userId = getUserHeader('x-user-id');

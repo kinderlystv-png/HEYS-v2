@@ -1,7 +1,7 @@
 // filepath: apps/web/src/components/OptimizedImage/__tests__/OptimizedImage.test.tsx
 
 import { render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { imageOptimizer } from '../../../utils/image-optimizer';
 import OptimizedImage from '../OptimizedImage';
@@ -24,10 +24,23 @@ vi.mock('../../../hooks/useLazyLoad', () => ({
 }));
 
 const mockImageOptimizer = vi.mocked(imageOptimizer);
+const OriginalImage = globalThis.Image;
+
+class MockImage {
+  onload: ((this: GlobalEventHandlers, ev: Event) => void) | null = null;
+  onerror: ((this: GlobalEventHandlers, ev: Event | string) => void) | null = null;
+
+  set src(_value: string) {
+    setTimeout(() => {
+      this.onload?.call(this as unknown as GlobalEventHandlers, new Event('load'));
+    }, 0);
+  }
+}
 
 describe('OptimizedImage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    globalThis.Image = MockImage as unknown as typeof Image;
 
     // Default mock response
     mockImageOptimizer.optimizeImage.mockResolvedValue({
@@ -42,12 +55,16 @@ describe('OptimizedImage', () => {
     });
   });
 
+  afterAll(() => {
+    globalThis.Image = OriginalImage;
+  });
+
   it('renders with basic props', async () => {
     render(
       <OptimizedImage src="/test-image.jpg" alt="Test image" width={400} height={300} priority />,
     );
 
-    expect(screen.getByAltText('Test image')).toBeInTheDocument();
+    expect(screen.getByAltText('Test image')).toBeTruthy();
   });
 
   it('calls image optimizer with correct options', async () => {
@@ -79,7 +96,7 @@ describe('OptimizedImage', () => {
   it('displays loading state initially', () => {
     render(<OptimizedImage src="/test-image.jpg" alt="Test image" priority />);
 
-    expect(screen.getByRole('img')).toHaveClass('loading');
+    expect(screen.getByRole('img').className).toContain('loading');
   });
 
   it('handles optimization errors gracefully', async () => {
@@ -91,7 +108,7 @@ describe('OptimizedImage', () => {
 
     // Should not crash and should attempt fallback
     await waitFor(() => {
-      expect(screen.getByAltText('Test image')).toBeInTheDocument();
+      expect(screen.getByAltText('Test image')).toBeTruthy();
     });
   });
 
@@ -99,16 +116,16 @@ describe('OptimizedImage', () => {
     render(<OptimizedImage src="/test-image.jpg" alt="Test image" priority />);
 
     const img = screen.getByRole('img');
-    expect(img).toHaveAttribute('loading', 'eager');
-    expect(img).toHaveAttribute('decoding', 'sync');
+    expect(img.getAttribute('loading')).toBe('eager');
+    expect(img.getAttribute('decoding')).toBe('sync');
   });
 
   it('applies lazy loading attributes for non-priority images', () => {
     render(<OptimizedImage src="/test-image.jpg" alt="Test image" lazy />);
 
     const img = screen.getByRole('img');
-    expect(img).toHaveAttribute('loading', 'lazy');
-    expect(img).toHaveAttribute('decoding', 'async');
+    expect(img.getAttribute('loading')).toBe('lazy');
+    expect(img.getAttribute('decoding')).toBe('async');
   });
 
   it('shows optimization info in development mode', async () => {
@@ -118,8 +135,8 @@ describe('OptimizedImage', () => {
     render(<OptimizedImage src="/test-image.jpg" alt="Test image" priority />);
 
     await waitFor(() => {
-      expect(screen.getByText(/WEBP/)).toBeInTheDocument();
-      expect(screen.getByText(/Optimized/)).toBeInTheDocument();
+      expect(Boolean(screen.queryByText(/WEBP/))).toBe(true);
+      expect(Boolean(screen.queryByText(/Optimized/))).toBe(true);
     });
 
     process.env.NODE_ENV = originalEnv;

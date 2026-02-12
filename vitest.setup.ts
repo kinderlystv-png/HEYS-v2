@@ -19,49 +19,11 @@ beforeEach(() => {
   (global.console as any).error = vi.fn();
   (global.console as any).log = vi.fn();
 
-  // Security: Prevent any accidental script execution
-  (global as any).eval = vi.fn(() => {
-    throw new Error('eval() blocked for security in tests');
-  });
+  // Keep native eval behavior for legacy tests that intentionally execute script payloads.
+  // Blocking eval globally causes unrelated suites to fail during module bootstrap.
 
-  // Security: Mock dangerous DOM methods
-  const mockCreateElement = vi.fn((tagName: string) => {
-    const element: any = {
-      tagName: tagName.toUpperCase(),
-      innerHTML: '',
-      textContent: '',
-      setAttribute: vi.fn(),
-      getAttribute: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      appendChild: vi.fn(),
-      removeChild: vi.fn(),
-      style: {},
-      click: vi.fn(),
-      focus: vi.fn(),
-      blur: vi.fn(),
-      src: '',
-      href: '',
-    };
-
-    // Intercept dangerous assignments
-    Object.defineProperty(element, 'innerHTML', {
-      get: () => element._innerHTML || '',
-      set: (value: string) => {
-          // Security check — не исполняем опасный контент.
-          // Логи тут намеренно отключены: lint запрещает console.*, а лишний вывод
-          // может ухудшать стабильность тест-раннера.
-        element._innerHTML = value;
-      },
-    });
-
-    return element;
-  });
-
-  // Mock document with security enhancements
-  if (global.document) {
-    (global.document as any).createElement = mockCreateElement;
-  }
+  // ВАЖНО: не переопределяем document.createElement глобально.
+  // Иначе ломается happy-dom/React render pipeline (appendChild/inclusive ancestor checks).
 
   // Enhanced URL mocking
   if (!(global.URL as any).createObjectURL) {
@@ -112,6 +74,14 @@ beforeEach(() => {
   // Mock performance.now for consistent timing
   if (!(global.performance as any).now) {
     (global.performance as any).now = vi.fn(() => Date.now());
+  }
+
+  // Ensure Web Crypto helpers exist for storage/security tests.
+  if (!(global as any).crypto) {
+    (global as any).crypto = {};
+  }
+  if (typeof (global as any).crypto.randomUUID !== 'function') {
+    (global as any).crypto.randomUUID = vi.fn(() => `test-uuid-${Date.now()}-${Math.random()}`);
   }
 
   // Enhanced IndexedDB mocking
@@ -217,14 +187,14 @@ beforeEach(() => {
     configurable: true,
   });
 
-  // Mock document for event listeners
-  if (global.document) {
-    const originalAddEventListener = global.document.addEventListener;
-    const originalRemoveEventListener = global.document.removeEventListener;
+  // Some performance heuristics read navigator.platform directly.
+  Object.defineProperty(global.navigator, 'platform', {
+    value: 'MacIntel',
+    configurable: true,
+  });
 
-    (global.document as any).addEventListener = vi.fn(originalAddEventListener);
-    (global.document as any).removeEventListener = vi.fn(originalRemoveEventListener);
-  }
+  // Avoid patching document event listener methods globally.
+  // Some UI tests rely on native DOM method binding semantics.
 });
 
 // Cleanup after each test

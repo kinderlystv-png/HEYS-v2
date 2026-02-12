@@ -272,6 +272,100 @@
   font-weight: 600;
 }
 
+/* === INSIGHTS DEMO/PLACEHOLDER THEMING (v5.2.1) === */
+.insights-tab__demo-banner {
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), rgba(75, 0, 130, 0.1));
+  border: 1px solid rgba(138, 43, 226, 0.3);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--pi-text-secondary);
+}
+
+.insights-tab__demo-banner-icon {
+  font-size: 20px;
+}
+
+.insights-tab__demo-banner-title {
+  font-weight: 600;
+  color: var(--pi-text-primary);
+  margin-bottom: 2px;
+}
+
+.insights-tab__demo-banner-desc {
+  color: var(--pi-text-secondary);
+}
+
+.insights-tab__phenotype-placeholder {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(109, 40, 217, 0.05));
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+  min-height: 120px;
+}
+
+.insights-tab__phenotype-placeholder-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.insights-tab__phenotype-placeholder-icon {
+  font-size: 20px;
+}
+
+.insights-tab__phenotype-placeholder-title {
+  font-weight: 600;
+  color: var(--pi-text-primary);
+}
+
+.insights-tab__phenotype-placeholder-text {
+  font-size: 13px;
+  color: var(--pi-text-secondary);
+  line-height: 1.5;
+}
+
+.forecast-panel__wave-status--success {
+  border-color: var(--pi-success) !important;
+}
+
+.forecast-panel__wave-status--warning {
+  border-color: var(--pi-warning) !important;
+}
+
+.forecast-panel__wave-status--info {
+  border-color: var(--pi-info) !important;
+}
+
+.forecast-panel__wave-label--success {
+  color: var(--pi-success);
+}
+
+.forecast-panel__wave-label--warning {
+  color: var(--pi-warning);
+}
+
+.forecast-panel__wave-label--info {
+  color: var(--pi-info);
+}
+
+@media (prefers-color-scheme: dark) {
+  .insights-tab__demo-banner {
+    background: linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(76, 29, 149, 0.16));
+    border-color: rgba(167, 139, 250, 0.38);
+  }
+
+  .insights-tab__phenotype-placeholder {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.22), rgba(91, 33, 182, 0.16));
+    border-color: rgba(167, 139, 250, 0.3);
+  }
+}
+
 /* === POPUP BACKDROP (GLOBAL) === */
 .popup-backdrop-invisible {
   position: fixed;
@@ -4281,6 +4375,57 @@ body.tour-active .ios-pwa-banner {
   .action-card__priority--3 {
     background-color: #16a34a;
     color: #f0fdf4;
+  }
+}
+
+/* === CONFIDENCE BADGE LEVELS (v5.2.1) === */
+.confidence-badge--high {
+  border-color: #22c55e;
+}
+
+.confidence-badge--high .confidence-badge__icon {
+  background-color: #22c55e;
+}
+
+.confidence-badge--medium {
+  border-color: #eab308;
+}
+
+.confidence-badge--medium .confidence-badge__icon {
+  background-color: #eab308;
+}
+
+.confidence-badge--low {
+  border-color: #ef4444;
+}
+
+.confidence-badge--low .confidence-badge__icon {
+  background-color: #ef4444;
+}
+
+@media (prefers-color-scheme: dark) {
+  .confidence-badge--high {
+    border-color: #4ade80;
+  }
+
+  .confidence-badge--high .confidence-badge__icon {
+    background-color: #4ade80;
+  }
+
+  .confidence-badge--medium {
+    border-color: #facc15;
+  }
+
+  .confidence-badge--medium .confidence-badge__icon {
+    background-color: #facc15;
+  }
+
+  .confidence-badge--low {
+    border-color: #f87171;
+  }
+
+  .confidence-badge--low .confidence-badge__icon {
+    background-color: #f87171;
   }
 }
 

@@ -1,0 +1,32 @@
+{
+  "timestamp": "2026-02-12T17:41:30.516Z",
+  "scannedFiles": 0,
+  "vulnerabilities": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "total": 0
+  },
+  "scanConfig": {
+    "patterns": ["apps/**/*.{ts,tsx,js,jsx}", "packages/**/*.{ts,tsx,js,jsx}", "src/**/*.{ts,tsx,js,jsx}"],
+    "excludes": [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/*.test.{ts,tsx,js,jsx}",
+      "**/*.spec.{ts,tsx,js,jsx}",
+      "**/coverage/**"
+    ],
+    "rules": [
+      "sqlInjection",
+      "xss",
+      "insecureOperations",
+      "hardcodedSecrets",
+      "insecureHttp",
+      "insecureCors",
+      "debugInformation"
+    ]
+  }
+}

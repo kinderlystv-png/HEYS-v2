@@ -244,12 +244,22 @@ export class StructuredLogger {
   /**
    * Core logging method
    */
+  private getHostname(): string {
+    if (typeof window === 'undefined') return 'unknown';
+
+    try {
+      return window.location?.hostname || 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  }
+
   private log(level: LogLevel, message: string, context?: LogContext): void {
     const entry: LogEntry = {
       level,
       message,
       timestamp: new Date().toISOString(),
-      hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
+      hostname: this.getHostname(),
       environment: this.config.environment,
     };
 

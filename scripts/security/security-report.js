@@ -49,6 +49,11 @@ const REPORT_CONFIG = {
 
 class SecurityReportConsolidator {
   constructor() {
+    this.config = {
+      ...REPORT_CONFIG,
+      reportSources: { ...REPORT_CONFIG.reportSources },
+    };
+
     this.consolidatedReport = {
       metadata: {
         timestamp: new Date().toISOString(),
@@ -143,9 +148,10 @@ class SecurityReportConsolidator {
    */
   async initializeProject() {
     console.log('📋 Initializing project information...');
+    const projectRoot = this.config.projectRoot || REPORT_CONFIG.projectRoot;
 
     // Читаем package.json для информации о проекте
-    const packageJsonPath = path.join(REPORT_CONFIG.projectRoot, 'package.json');
+    const packageJsonPath = path.join(projectRoot, 'package.json');
     if (fs.existsSync(packageJsonPath)) {
       const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
@@ -160,8 +166,9 @@ class SecurityReportConsolidator {
     }
 
     // Создаем директории для отчетов
-    if (!fs.existsSync(REPORT_CONFIG.outputDir)) {
-      fs.mkdirSync(REPORT_CONFIG.outputDir, { recursive: true });
+    const outputDir = this.config.outputDir || REPORT_CONFIG.outputDir;
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
     }
 
     console.log(`   📦 Project: ${this.consolidatedReport.metadata.projectInfo.name}`);
@@ -173,9 +180,11 @@ class SecurityReportConsolidator {
    */
   async loadScanResults() {
     console.log('\n🔍 Loading scan results...');
+    const reportsDir = this.config.reportsDir || REPORT_CONFIG.reportsDir;
+    const reportSources = this.config.reportSources || REPORT_CONFIG.reportSources;
 
-    for (const [scanType, filename] of Object.entries(REPORT_CONFIG.reportSources)) {
-      const reportPath = path.join(REPORT_CONFIG.reportsDir, filename);
+    for (const [scanType, filename] of Object.entries(reportSources)) {
+      const reportPath = path.join(reportsDir, filename);
 
       if (fs.existsSync(reportPath)) {
         try {
@@ -643,26 +652,30 @@ class SecurityReportConsolidator {
    */
   async generateConsolidatedReports() {
     console.log('\n📊 Generating consolidated reports...');
+    const outputDir = this.config.outputDir || REPORT_CONFIG.outputDir;
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
 
     // JSON отчет
-    const jsonReportPath = path.join(REPORT_CONFIG.outputDir, 'consolidated-security-report.json');
+    const jsonReportPath = path.join(outputDir, 'consolidated-security-report.json');
     fs.writeFileSync(jsonReportPath, JSON.stringify(this.consolidatedReport, null, 2));
 
     // Исполнительный отчет
     const executiveReportPath = path.join(
-      REPORT_CONFIG.outputDir,
+      outputDir,
       'executive-security-summary.json',
     );
     const executiveSummary = this.generateExecutiveSummary();
     fs.writeFileSync(executiveReportPath, JSON.stringify(executiveSummary, null, 2));
 
     // HTML дашборд
-    const htmlDashboardPath = path.join(REPORT_CONFIG.outputDir, 'security-dashboard.html');
+    const htmlDashboardPath = path.join(outputDir, 'security-dashboard.html');
     const htmlContent = this.generateSecurityDashboard();
     fs.writeFileSync(htmlDashboardPath, htmlContent);
 
     // Сохранение в историю
-    const historicalDir = path.join(REPORT_CONFIG.outputDir, 'historical');
+    const historicalDir = path.join(outputDir, 'historical');
     if (!fs.existsSync(historicalDir)) {
       fs.mkdirSync(historicalDir, { recursive: true });
     }
@@ -852,15 +865,15 @@ class SecurityReportConsolidator {
                 <h2>Coverage Status</h2>
                 <div style="margin-top: 15px;">
                     ${Object.entries(this.consolidatedReport.summary.coverage)
-                      .map(
-                        ([type, covered]) => `
+        .map(
+          ([type, covered]) => `
                         <div style="display: flex; justify-content: space-between; margin: 8px 0;">
                             <span>${type.replace('Coverage', '').toUpperCase()}</span>
                             <span class="badge" style="background: ${covered ? '#10b981' : '#ef4444'};">${covered ? 'COVERED' : 'MISSING'}</span>
                         </div>
                     `,
-                      )
-                      .join('')}
+        )
+        .join('')}
                 </div>
             </div>
         </div>
@@ -870,15 +883,15 @@ class SecurityReportConsolidator {
             <h2>Vulnerability Overview</h2>
             <div class="stat-grid" style="margin-top: 15px;">
                 ${Object.entries(this.consolidatedReport.summary.issuesBySeverity)
-                  .map(
-                    ([severity, count]) => `
+        .map(
+          ([severity, count]) => `
                     <div class="stat-item">
                         <h3 style="color: ${severityColors[severity] || '#6b7280'};">${count}</h3>
                         <p>${severity.charAt(0).toUpperCase() + severity.slice(1)}</p>
                     </div>
                 `,
-                  )
-                  .join('')}
+        )
+        .join('')}
             </div>
         </div>
         
@@ -888,16 +901,16 @@ class SecurityReportConsolidator {
                 <h2>Top Vulnerabilities</h2>
                 <div class="vulnerability-list">
                     ${this.consolidatedReport.vulnerabilities
-                      .slice(0, 10)
-                      .map(
-                        (vuln) => `
+        .slice(0, 10)
+        .map(
+          (vuln) => `
                         <div class="vulnerability-item ${vuln.severity}" style="border-left-color: ${severityColors[vuln.severity]};">
                             <h4>${vuln.title || vuln.message || 'Security Issue'}</h4>
                             <p class="meta">${vuln.source?.toUpperCase()} | ${vuln.severity?.toUpperCase()} | ${vuln.file || vuln.package || vuln.component || 'Unknown location'}</p>
                         </div>
                     `,
-                      )
-                      .join('')}
+        )
+        .join('')}
                 </div>
             </div>
             
@@ -905,29 +918,28 @@ class SecurityReportConsolidator {
                 <h2>Priority Recommendations</h2>
                 <div>
                     ${this.consolidatedReport.recommendations
-                      .slice(0, 5)
-                      .map(
-                        (rec) => `
+        .slice(0, 5)
+        .map(
+          (rec) => `
                         <div class="recommendation-item">
                             <h4>${rec.title}</h4>
                             <p>${rec.description}</p>
                             <p class="meta">Priority: ${rec.priority} | ${rec.timeframe}</p>
                         </div>
                     `,
-                      )
-                      .join('')}
+        )
+        .join('')}
                 </div>
             </div>
             
             <div class="card">
                 <h2>Compliance Status</h2>
                 <div style="margin-top: 15px;">
-                    ${
-                      this.consolidatedReport.complianceStatus
-                        ? Object.entries(this.consolidatedReport.complianceStatus)
-                            .slice(0, 3)
-                            .map(
-                              ([standard, status]) => `
+                    ${this.consolidatedReport.complianceStatus
+        ? Object.entries(this.consolidatedReport.complianceStatus)
+          .slice(0, 3)
+          .map(
+            ([standard, status]) => `
                         <div style="margin: 10px 0; padding: 10px; background: #f8fafc; border-radius: 6px;">
                             <strong>${standard.toUpperCase()}</strong><br>
                             <span class="badge" style="background: ${status.score === 'compliant' ? '#10b981' : '#ef4444'}; margin-top: 5px;">
@@ -935,19 +947,18 @@ class SecurityReportConsolidator {
                             </span>
                         </div>
                     `,
-                            )
-                            .join('')
-                        : '<p class="meta">Compliance data not available</p>'
-                    }
+          )
+          .join('')
+        : '<p class="meta">Compliance data not available</p>'
+      }
                 </div>
             </div>
         </div>
         
         <!-- Trend Analysis -->
-        ${
-          this.consolidatedReport.trendAnalysis &&
-          this.consolidatedReport.trendAnalysis.historicalData
-            ? `
+        ${this.consolidatedReport.trendAnalysis &&
+        this.consolidatedReport.trendAnalysis.historicalData
+        ? `
         <div class="card" style="margin-top: 20px;">
             <h2>Security Trends</h2>
             <div class="grid grid-3" style="margin-top: 15px;">
@@ -966,8 +977,8 @@ class SecurityReportConsolidator {
             </div>
         </div>
         `
-            : ''
-        }
+        : ''
+      }
     </div>
 </body>
 </html>`;

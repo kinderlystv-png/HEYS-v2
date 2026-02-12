@@ -1,0 +1,76 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dependency Security Report - HEYS</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: system-ui; margin: 0; padding: 20px; background: #f8fafc; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
+        .stat-card { background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .vulnerability { background: white; margin: 10px 0; border-radius: 8px; border-left: 4px solid; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .critical { border-left-color: #dc2626; }
+        .high { border-left-color: #ea580c; }
+        .moderate { border-left-color: #d97706; }
+        .low { border-left-color: #65a30d; }
+        .info { border-left-color: #3b82f6; }
+        .meta { color: #64748b; font-size: 14px; }
+        .recommendation { background: #f1f5f9; padding: 10px; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦 Dependency Security Report</h1>
+            <p class="meta">Project: test-project v1.0.0</p>
+            <p class="meta">Generated: 2026-02-12T17:41:30.397Z</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total Packages</h3>
+                <p style="font-size: 24px; margin: 5px 0; color: #3b82f6;">50</p>
+            </div>
+            <div class="stat-card">
+                <h3>Direct Dependencies</h3>
+                <p style="font-size: 24px; margin: 5px 0; color: #059669;">10</p>
+            </div>
+            <div class="stat-card">
+                <h3>Total Vulnerabilities</h3>
+                <p style="font-size: 24px; margin: 5px 0; color: #dc2626;">1</p>
+            </div>
+            <div class="stat-card">
+                <h3>Critical</h3>
+                <p style="font-size: 24px; margin: 5px 0; color: #dc2626;">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>High</h3>
+                <p style="font-size: 24px; margin: 5px 0; color: #ea580c;">1</p>
+            </div>
+        </div>
+        
+        <h2>Vulnerabilities</h2>
+        
+            <div class="vulnerability high">
+                <h3>Test Vulnerability</h3>
+                <p class="meta">Package: test-package | Severity: HIGH | ID: TEST-001</p>
+                <p>Test vulnerability for testing purposes</p>
+                <div class="recommendation">
+                    <strong>Recommendation:</strong> Update to latest version
+                </div>
+                <p class="meta">Vulnerable versions: >= 1.0.0 | Patched: 1.2.0</p>
+            </div>
+        
+        
+        <h2>Security Recommendations</h2>
+        
+            <div class="vulnerability info">
+                <h3>[HIGH] High Priority Updates</h3>
+                <p>Update vulnerable packages</p>
+            </div>
+        
+    </div>
+</body>
+</html>

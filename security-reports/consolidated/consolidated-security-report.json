@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "timestamp": "2026-02-12T17:41:30.446Z",
+    "projectInfo": {
+      "name": "test-project",
+      "version": "1.0.0"
+    },
+    "scanners": ["sast", "dependencies"],
+    "duration": 5000
+  },
+  "summary": {
+    "securityScore": 75,
+    "riskLevel": "medium",
+    "totalIssues": 5,
+    "issuesBySeverity": {
+      "critical": 0,
+      "high": 2,
+      "moderate": 2,
+      "low": 1,
+      "info": 0
+    },
+    "coverage": {
+      "sastCoverage": true,
+      "dependencyCoverage": true
+    }
+  },
+  "vulnerabilities": [
+    {
+      "title": "Test Vulnerability",
+      "severity": "high",
+      "source": "sast",
+      "file": "test.js"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": 2,
+      "title": "Test Recommendation",
+      "description": "Test description",
+      "timeframe": "24-48 hours"
+    }
+  ],
+  "complianceStatus": {
+    "summary": {
+      "overallCompliance": "passing"
+    }
+  },
+  "trendAnalysis": {}
+}

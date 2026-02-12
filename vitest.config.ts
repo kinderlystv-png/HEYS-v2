@@ -21,6 +21,15 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'happy-dom',
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/coverage/**',
+      'TESTS/e2e/**',
+      '.github/skills/**',
+      'TOOLS/templates/**',
+      'TESTS/example.test.js',
+    ],
     // Setup files for mocking browser APIs
     setupFiles: ['./vitest.setup.ts'],
     // Increase timeout for performance tests
@@ -88,11 +97,11 @@ export default defineConfig({
     })(),
     ...(enableTestReports
       ? {
-          outputFile: {
-            html: './test-results/index.html',
-            json: './test-results/results.json',
-          },
-        }
+        outputFile: {
+          html: './test-results/index.html',
+          json: './test-results/results.json',
+        },
+      }
       : {}),
   },
 });

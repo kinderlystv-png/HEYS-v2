@@ -30,6 +30,8 @@ interface OptimizedImageProps
   className?: string;
 }
 
+const EMPTY_OPTIMIZATION: ImageOptimizationOptions = {};
+
 /**
  * OptimizedImage Component для intelligent image loading
  * Автоматически оптимизирует изображения и обеспечивает lazy loading
@@ -39,7 +41,7 @@ export function OptimizedImage({
   alt,
   width,
   height,
-  optimization = {},
+  optimization,
   lazy = true,
   priority = false,
   placeholder = 'blur',
@@ -50,6 +52,7 @@ export function OptimizedImage({
   ...imgProps
 }: OptimizedImageProps) {
   const { sendImageLoadMetrics, sendErrorMetrics } = usePerformanceMetrics();
+  const resolvedOptimization = optimization ?? EMPTY_OPTIMIZATION;
 
   const [imageState, setImageState] = useState<{
     src: string;
@@ -99,7 +102,7 @@ export function OptimizedImage({
 
         // Применяем размеры из props к optimization options
         const optimizationOptions: ImageOptimizationOptions = {
-          ...optimization,
+          ...resolvedOptimization,
           ...(width && { width }),
           ...(height && { height }),
           priority,
@@ -212,7 +215,7 @@ export function OptimizedImage({
     src,
     width,
     height,
-    optimization,
+    resolvedOptimization,
     priority,
     lazy,
     fallback,

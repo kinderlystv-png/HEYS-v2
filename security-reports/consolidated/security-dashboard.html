@@ -1,0 +1,155 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Security Dashboard - test-project</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; line-height: 1.5; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .grid { display: grid; gap: 20px; }
+        .grid-3 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+        .grid-4 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .score-card { text-align: center; padding: 30px; }
+        .score-circle { width: 120px; height: 120px; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: white; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 15px; text-align: center; }
+        .stat-item h3 { font-size: 24px; margin-bottom: 5px; }
+        .vulnerability-list { max-height: 400px; overflow-y: auto; }
+        .vulnerability-item { padding: 10px; margin: 8px 0; border-radius: 6px; border-left: 4px solid; }
+        .recommendation-item { background: #f1f5f9; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #3b82f6; }
+        .meta { color: #64748b; font-size: 14px; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: white; }
+        .trend { display: flex; align-items: center; gap: 5px; }
+        .trend-up { color: #10b981; }
+        .trend-down { color: #ef4444; }
+        .trend-stable { color: #6b7280; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🛡️ Security Dashboard</h1>
+            <p class="meta">Project: test-project | Generated: 2/12/2026, 8:41:30 PM</p>
+        </div>
+        
+        <!-- Score and Risk Level -->
+        <div class="grid grid-3" style="margin-bottom: 20px;">
+            <div class="card score-card">
+                <div class="score-circle" style="background: #f59e0b;">
+                    75
+                </div>
+                <h2>Security Score</h2>
+                <p class="meta">Out of 100 points</p>
+            </div>
+            
+            <div class="card score-card">
+                <div class="score-circle" style="background: #f59e0b;">
+                    MEDIUM
+                </div>
+                <h2>Risk Level</h2>
+                <p class="meta">Overall security risk</p>
+            </div>
+            
+            <div class="card">
+                <h2>Coverage Status</h2>
+                <div style="margin-top: 15px;">
+                    
+                        <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+                            <span>SAST</span>
+                            <span class="badge" style="background: #10b981;">COVERED</span>
+                        </div>
+                    
+                        <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+                            <span>DEPENDENCY</span>
+                            <span class="badge" style="background: #10b981;">COVERED</span>
+                        </div>
+                    
+                </div>
+            </div>
+        </div>
+        
+        <!-- Vulnerability Statistics -->
+        <div class="card" style="margin-bottom: 20px;">
+            <h2>Vulnerability Overview</h2>
+            <div class="stat-grid" style="margin-top: 15px;">
+                
+                    <div class="stat-item">
+                        <h3 style="color: #dc2626;">0</h3>
+                        <p>Critical</p>
+                    </div>
+                
+                    <div class="stat-item">
+                        <h3 style="color: #ea580c;">2</h3>
+                        <p>High</p>
+                    </div>
+                
+                    <div class="stat-item">
+                        <h3 style="color: #d97706;">2</h3>
+                        <p>Moderate</p>
+                    </div>
+                
+                    <div class="stat-item">
+                        <h3 style="color: #65a30d;">1</h3>
+                        <p>Low</p>
+                    </div>
+                
+                    <div class="stat-item">
+                        <h3 style="color: #3b82f6;">0</h3>
+                        <p>Info</p>
+                    </div>
+                
+            </div>
+        </div>
+        
+        <!-- Top Vulnerabilities and Recommendations -->
+        <div class="grid grid-3">
+            <div class="card">
+                <h2>Top Vulnerabilities</h2>
+                <div class="vulnerability-list">
+                    
+                        <div class="vulnerability-item high" style="border-left-color: #ea580c;">
+                            <h4>Test Vulnerability</h4>
+                            <p class="meta">SAST | HIGH | test.js</p>
+                        </div>
+                    
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>Priority Recommendations</h2>
+                <div>
+                    
+                        <div class="recommendation-item">
+                            <h4>Test Recommendation</h4>
+                            <p>Test description</p>
+                            <p class="meta">Priority: 2 | 24-48 hours</p>
+                        </div>
+                    
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>Compliance Status</h2>
+                <div style="margin-top: 15px;">
+                    
+                        <div style="margin: 10px 0; padding: 10px; background: #f8fafc; border-radius: 6px;">
+                            <strong>SUMMARY</strong><br>
+                            <span class="badge" style="background: #ef4444; margin-top: 5px;">
+                                Unknown
+                            </span>
+                        </div>
+                    
+                </div>
+            </div>
+        </div>
+        
+        <!-- Trend Analysis -->
+        
+    </div>
+</body>
+</html>

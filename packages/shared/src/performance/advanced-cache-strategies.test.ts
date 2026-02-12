@@ -196,26 +196,52 @@ const mockFetch = vi.fn();
 
 // Setup global mocks
 beforeEach(() => {
-  Object.defineProperty(global, 'localStorage', { value: mockLocalStorage });
-  Object.defineProperty(global, 'sessionStorage', { value: mockSessionStorage });
-  Object.defineProperty(global, 'indexedDB', { value: mockIndexedDB });
-  Object.defineProperty(global, 'Worker', { value: MockWorker });
+  Object.defineProperty(global, 'localStorage', {
+    value: mockLocalStorage,
+    configurable: true,
+    writable: true,
+  });
+  Object.defineProperty(global, 'sessionStorage', {
+    value: mockSessionStorage,
+    configurable: true,
+    writable: true,
+  });
+  Object.defineProperty(global, 'indexedDB', {
+    value: mockIndexedDB,
+    configurable: true,
+    writable: true,
+  });
+  Object.defineProperty(global, 'Worker', {
+    value: MockWorker,
+    configurable: true,
+    writable: true,
+  });
   Object.defineProperty(global, 'navigator', {
     value: { serviceWorker: mockServiceWorker },
+    configurable: true,
+    writable: true,
   });
-  Object.defineProperty(global, 'fetch', { value: mockFetch });
+  Object.defineProperty(global, 'fetch', {
+    value: mockFetch,
+    configurable: true,
+    writable: true,
+  });
   Object.defineProperty(global, 'URL', {
     value: class {
       createObjectURL = vi.fn().mockReturnValue('blob:mock-url');
     },
+    configurable: true,
+    writable: true,
   });
   Object.defineProperty(global, 'Blob', {
     value: class {
       constructor(
         public data: any[],
         public options: any,
-      ) {}
+      ) { }
     },
+    configurable: true,
+    writable: true,
   });
 
   mockLocalStorage.clear();

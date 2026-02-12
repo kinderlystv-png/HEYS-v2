@@ -1,7 +1,18 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { MobileOptimizationConfig } from './mobile-performance-optimizer';
 import { MobilePerformanceOptimizer } from './mobile-performance-optimizer';
+
+const originalGlobals = {
+  navigator: global.navigator,
+  window: global.window,
+  document: global.document,
+  screen: global.screen,
+  performance: global.performance,
+  IntersectionObserver: (global as Record<string, unknown>).IntersectionObserver,
+  WebAssembly: (global as Record<string, unknown>).WebAssembly,
+  PerformanceObserver: global.PerformanceObserver,
+};
 
 // Mock DOM APIs
 const mockNavigator = {
@@ -156,6 +167,19 @@ describe('MobilePerformanceOptimizer', () => {
     if (optimizer) {
       optimizer.destroy();
     }
+  });
+
+  afterAll(() => {
+    global.navigator = originalGlobals.navigator as any;
+    global.window = originalGlobals.window as any;
+    global.document = originalGlobals.document as any;
+    global.screen = originalGlobals.screen as any;
+    global.performance = originalGlobals.performance as any;
+
+    (global as Record<string, unknown>).IntersectionObserver =
+      originalGlobals.IntersectionObserver;
+    (global as Record<string, unknown>).WebAssembly = originalGlobals.WebAssembly;
+    global.PerformanceObserver = originalGlobals.PerformanceObserver as any;
   });
 
   describe('Initialization', () => {

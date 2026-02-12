@@ -39,7 +39,7 @@ describe('ErrorBoundary', () => {
     );
 
     expect(screen.getByText(/Что-то пошло не так/i)).toBeTruthy();
-    expect(screen.getByText(/Перезагрузить страницу/i)).toBeTruthy();
+    expect(screen.getByText(/Обновить/i)).toBeTruthy();
   });
 
   it('renders custom fallback when provided', () => {

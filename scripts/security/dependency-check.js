@@ -70,6 +70,8 @@ const DEPENDENCY_CONFIG = {
 
 class DependencySecurityChecker {
   constructor() {
+    this.config = { ...DEPENDENCY_CONFIG };
+
     this.results = {
       timestamp: new Date().toISOString(),
       scanType: 'dependency-security',
@@ -136,7 +138,8 @@ class DependencySecurityChecker {
     console.log('🔍 Analyzing project structure...');
 
     // Читаем package.json
-    const packageJsonPath = path.join(DEPENDENCY_CONFIG.projectRoot, 'package.json');
+    const projectRoot = this.config.projectRoot || DEPENDENCY_CONFIG.projectRoot;
+    const packageJsonPath = path.join(projectRoot, 'package.json');
     if (fs.existsSync(packageJsonPath)) {
       const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
@@ -155,7 +158,7 @@ class DependencySecurityChecker {
     }
 
     // Анализируем pnpm-lock.yaml для точного количества пакетов
-    const lockfilePath = path.join(DEPENDENCY_CONFIG.projectRoot, 'pnpm-lock.yaml');
+    const lockfilePath = path.join(projectRoot, 'pnpm-lock.yaml');
     if (fs.existsSync(lockfilePath)) {
       try {
         const lockContent = fs.readFileSync(lockfilePath, 'utf8');
@@ -182,7 +185,7 @@ class DependencySecurityChecker {
     try {
       // Запускаем pnpm audit для получения JSON отчета
       const auditOutput = execSync('pnpm audit --json', {
-        cwd: DEPENDENCY_CONFIG.projectRoot,
+        cwd: this.config.projectRoot || DEPENDENCY_CONFIG.projectRoot,
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'pipe'],
       });
@@ -304,7 +307,7 @@ class DependencySecurityChecker {
       const licenseOutput = execSync(
         'npx license-checker --json --onlyAllow "MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC"',
         {
-          cwd: DEPENDENCY_CONFIG.projectRoot,
+          cwd: this.config.projectRoot || DEPENDENCY_CONFIG.projectRoot,
           encoding: 'utf8',
           stdio: ['pipe', 'pipe', 'pipe'],
         },
@@ -360,7 +363,7 @@ class DependencySecurityChecker {
     // Рекомендации по устаревшим пакетам
     try {
       const outdatedOutput = execSync('pnpm outdated --format=json', {
-        cwd: DEPENDENCY_CONFIG.projectRoot,
+        cwd: this.config.projectRoot || DEPENDENCY_CONFIG.projectRoot,
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'pipe'],
       });
@@ -404,27 +407,28 @@ class DependencySecurityChecker {
     console.log('\n📊 Generating dependency security reports...');
 
     // Создаем директорию если не существует
-    if (!fs.existsSync(DEPENDENCY_CONFIG.outputDir)) {
-      fs.mkdirSync(DEPENDENCY_CONFIG.outputDir, { recursive: true });
+    const outputDir = this.config.outputDir || DEPENDENCY_CONFIG.outputDir;
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
     }
 
     // JSON отчет
     const jsonReportPath = path.join(
-      DEPENDENCY_CONFIG.outputDir,
+      outputDir,
       'dependency-security-report.json',
     );
     fs.writeFileSync(jsonReportPath, JSON.stringify(this.results, null, 2));
 
     // HTML отчет
     const htmlReportPath = path.join(
-      DEPENDENCY_CONFIG.outputDir,
+      outputDir,
       'dependency-security-report.html',
     );
     const htmlContent = this.generateHtmlReport();
     fs.writeFileSync(htmlReportPath, htmlContent);
 
     // CSV отчет для анализа
-    const csvReportPath = path.join(DEPENDENCY_CONFIG.outputDir, 'dependency-vulnerabilities.csv');
+    const csvReportPath = path.join(outputDir, 'dependency-vulnerabilities.csv');
     const csvContent = this.generateCsvReport();
     fs.writeFileSync(csvReportPath, csvContent);
 
@@ -500,8 +504,8 @@ class DependencySecurityChecker {
         
         <h2>Vulnerabilities</h2>
         ${this.results.vulnerabilities
-          .map(
-            (vuln) => `
+        .map(
+          (vuln) => `
             <div class="vulnerability ${vuln.severity}">
                 <h3>${vuln.title}</h3>
                 <p class="meta">Package: ${vuln.package} | Severity: ${vuln.severity.toUpperCase()} | ID: ${vuln.id}</p>
@@ -512,20 +516,20 @@ class DependencySecurityChecker {
                 <p class="meta">Vulnerable versions: ${vuln.versions} | Patched: ${vuln.patched || 'Not available'}</p>
             </div>
         `,
-          )
-          .join('')}
+        )
+        .join('')}
         
         <h2>Security Recommendations</h2>
         ${this.results.recommendations
-          .map(
-            (rec) => `
+        .map(
+          (rec) => `
             <div class="vulnerability info">
                 <h3>[${rec.type.toUpperCase()}] ${rec.title}</h3>
                 <p>${rec.description}</p>
             </div>
         `,
-          )
-          .join('')}
+        )
+        .join('')}
     </div>
 </body>
 </html>`;

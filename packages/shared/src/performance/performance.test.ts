@@ -19,6 +19,19 @@ import {
   measurePerformance,
 } from './index';
 
+const originalGlobals = {
+  navigator: global.navigator,
+  PerformanceObserver: global.PerformanceObserver,
+  indexedDB: (global as Record<string, unknown>).indexedDB,
+  localStorage: global.localStorage,
+  sessionStorage: global.sessionStorage,
+  performance: global.performance,
+  URL: global.URL,
+  window: global.window,
+  document: global.document,
+  fetch: global.fetch,
+};
+
 // Mock browser APIs
 Object.defineProperty(global, 'navigator', {
   writable: true,
@@ -264,6 +277,17 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+
+  global.navigator = originalGlobals.navigator as any;
+  global.PerformanceObserver = originalGlobals.PerformanceObserver as any;
+  (global as Record<string, unknown>).indexedDB = originalGlobals.indexedDB;
+  global.localStorage = originalGlobals.localStorage as any;
+  global.sessionStorage = originalGlobals.sessionStorage as any;
+  global.performance = originalGlobals.performance as any;
+  global.URL = originalGlobals.URL as any;
+  global.window = originalGlobals.window as any;
+  global.document = originalGlobals.document as any;
+  global.fetch = originalGlobals.fetch as any;
 });
 
 describe('PerformanceProfiler', () => {

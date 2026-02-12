@@ -131,7 +131,7 @@ export class MobilePerformanceOptimizer {
    */
   private estimateCPUPerformance(): number {
     const cores = navigator.hardwareConcurrency || 4;
-    const platform = navigator.platform.toLowerCase();
+    const platform = typeof navigator.platform === 'string' ? navigator.platform.toLowerCase() : '';
 
     // Basic heuristics for CPU performance estimation
     if (platform.includes('arm') || platform.includes('mobile')) {
