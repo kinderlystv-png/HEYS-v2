@@ -2972,6 +2972,194 @@
     };
   }
 
+  /**
+   * C22: B-Complex Energy & Anemia Risk
+   * Анализирует 6 витаминов группы B (energy quartet + blood pair) + железо для оценки
+   * энергетического метаболизма и риска анемии (iron-deficiency, pernicious, megaloblastic).
+   * Кластеры: energyBscore (B1/B2/B3/B6) и bloodBscore (B9/B12).
+   * Gender-adjusted: железо 18mg (female) vs 8mg (male).
+   * @param {Array} days — массив дней с meals
+   * @param {Object} profile — {gender}
+   * @returns {Object} — {pattern, available, energyBscore, bloodBscore, anemiaRisk, score, confidence, insight}
+   */
+  function analyzeBComplexAnemia(days, profile) {
+    const pattern = 'b_complex_anemia';
+    const minDays = 7;
+
+    // Safety gate: минимум 7 дней
+    const nCheck = piStats.checkMinN(days, minDays);
+    if (!nCheck.ok) {
+      return {
+        pattern,
+        available: false,
+        reason: 'min_days_required',
+        minDaysRequired: minDays,
+        daysProvided: days.length
+      };
+    }
+
+    // Gender-adjusted DRI для железа (IOM 2011)
+    const isFemale = profile?.gender === 'female' || profile?.gender === 'Женской';
+    const ironDRI = isFemale ? 18 : 8;  // mg
+
+    // DRI values для витаминов B (IOM 2011)
+    const DRI = {
+      vitamin_b1: 1.2,     // mg thiamine
+      vitamin_b2: 1.3,     // mg riboflavin
+      vitamin_b3: 16,      // mg niacin (NE)
+      vitamin_b6: 1.3,     // mg pyridoxine
+      vitamin_b9: 400,     // mcg folate (DFE)
+      vitamin_b12: 2.4,    // mcg cobalamin
+      iron: ironDRI        // mg (gender-adjusted)
+    };
+
+    // Nutrients для анализа
+    const bVitamins = ['vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12'];
+
+    // Расчёт среднего потребления за период
+    const nutrientData = {};
+    [...bVitamins, 'iron'].forEach(nutrient => {
+      let totalIntake = 0;
+      let daysWithData = 0;
+
+      days.forEach(day => {
+        const meals = day.meals || [];
+        let dayIntake = 0;
+
+        meals.forEach(item => {
+          const product = getProductFromItem(item, productIndex);
+          if (!product) return;
+
+          // Пробуем найти значение нутриента
+          const value = product[nutrient] || product[`${nutrient}_100`] || 0;
+          const grams = item.grams || item.amount || 0;
+          dayIntake += (value * grams) / 100;
+        });
+
+        if (dayIntake > 0) {
+          totalIntake += dayIntake;
+          daysWithData++;
+        }
+      });
+
+      const avgIntake = daysWithData > 0 ? totalIntake / days.length : 0;
+      const dri = DRI[nutrient];
+      const pctDV = dri > 0 ? (avgIntake / dri) * 100 : 0;
+
+      nutrientData[nutrient] = {
+        intake: Math.round(avgIntake * 10) / 10,
+        dri,
+        pctDV: Math.round(pctDV),
+        deficit: pctDV < 70
+      };
+    });
+
+    // Кластеры: Energy quartet (B1, B2, B3, B6) и Blood pair (B9, B12)
+    const energyQuartet = ['vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6'];
+    const bloodPair = ['vitamin_b9', 'vitamin_b12'];
+
+    const energyBscore = Math.round(
+      energyQuartet.reduce((sum, v) => sum + (nutrientData[v]?.pctDV || 0), 0) / energyQuartet.length
+    );
+
+    const bloodBscore = Math.round(
+      bloodPair.reduce((sum, v) => sum + (nutrientData[v]?.pctDV || 0), 0) / bloodPair.length
+    );
+
+    // Anemia Risk Assessment
+    let anemiaRisk = 0;
+    const ironDeficit = nutrientData.iron?.pctDV < 70;
+    const b12Deficit = nutrientData.vitamin_b12?.pctDV < 70;
+    const folateDeficit = nutrientData.vitamin_b9?.pctDV < 70;
+
+    if (ironDeficit) anemiaRisk += 30;    // iron-deficiency anemia
+    if (b12Deficit) anemiaRisk += 30;     // pernicious anemia
+    if (folateDeficit) anemiaRisk += 25;  // megaloblastic anemia
+
+    // Если все три дефицита одновременно — compound risk
+    if (ironDeficit && b12Deficit && folateDeficit) {
+      anemiaRisk = 100;
+    }
+
+    // Score calculation: energyBscore × 0.4 + bloodBscore × 0.3 + (100 - anemiaRisk) × 0.3
+    const score = Math.round(
+      energyBscore * 0.4 + bloodBscore * 0.3 + (100 - anemiaRisk) * 0.3
+    );
+
+    // Confidence с small sample penalty (Phase 0)
+    const baseConfidence = score >= 70 ? 0.75 : 0.65;
+    const confidence = piStats.applySmallSamplePenalty(baseConfidence, days.length, minDays);
+
+    // Insight generation (3-tier escalation)
+    let insight = '';
+    const deficits = [];
+    if (ironDeficit) deficits.push('железо');
+    if (b12Deficit) deficits.push('B12');
+    if (folateDeficit) deficits.push('фолат (B9)');
+
+    bVitamins.filter(v => v !== 'vitamin_b9' && v !== 'vitamin_b12' && nutrientData[v].deficit)
+      .forEach(v => {
+        const vNames = {
+          vitamin_b1: 'B1 (тиамин)',
+          vitamin_b2: 'B2 (рибофлавин)',
+          vitamin_b3: 'B3 (ниацин)',
+          vitamin_b6: 'B6 (пиридоксин)'
+        };
+        deficits.push(vNames[v]);
+      });
+
+    if (anemiaRisk === 0 && energyBscore >= 80 && bloodBscore >= 80) {
+      insight = '✅ Отлично! B-комплекс и железо в норме (≥70% DRI). Энергообмен и кроветворение оптимальны.';
+    } else if (anemiaRisk >= 70) {
+      insight = `❌ ВЫСОКИЙ РИСК АНЕМИИ (${anemiaRisk})! Дефициты: ${deficits.join(', ')}. Срочная коррекция рациона или консультация врача.`;
+    } else if (anemiaRisk >= 30) {
+      insight = `⚠️ Умеренный риск анемии (${anemiaRisk}). Дефициты: ${deficits.join(', ')}. Рекомендуется коррекция рациона.`;
+    } else if (energyBscore < 60) {
+      insight = `⚠️ Низкий энергетический B-комплекс (${energyBscore}%). Возможна связь с усталостью. Добавьте цельнозерновые, бобовые, мясо.`;
+    } else {
+      insight = `✅ B-комплекс удовлетворителен (энергия: ${energyBscore}%, кровь: ${bloodBscore}%). Риск анемии низкий.`;
+    }
+
+    // Дополнительный флаг для vegetarian B12 risk
+    let vegetarianRisk = false;
+    if (b12Deficit) {
+      // Проверяем наличие источников B12 (животные продукты)
+      let animalProductDays = 0;
+      days.forEach(day => {
+        const meals = day.meals || [];
+        const hasB12Source = meals.some(item => {
+          const product = getProductFromItem(item, productIndex);
+          if (!product) return false;
+          const b12 = product.vitamin_b12 || product.vitamin_b12_100 || 0;
+          return b12 > 0;
+        });
+        if (hasB12Source) animalProductDays++;
+      });
+
+      const avgB12SourceDays = animalProductDays / days.length;
+      if (avgB12SourceDays < 0.3) {  // <30% дней = low animal products
+        vegetarianRisk = true;
+        insight += ' 🌱 Растительный рацион? B12 критичен — рассмотрите добавки.';
+      }
+    }
+
+    return {
+      pattern,
+      available: true,
+      nutrientData,
+      energyBscore,
+      bloodBscore,
+      anemiaRisk,
+      deficits: deficits.length > 0 ? deficits : null,
+      vegetarianRisk,
+      daysAnalyzed: days.length,
+      genderAdjusted: isFemale ? 'female (Fe DRI 18mg)' : 'male (Fe DRI 8mg)',
+      score,
+      confidence: Math.round(confidence * 100) / 100,
+      insight
+    };
+  }
+
 
   // === ЭКСПОРТ ===
   HEYS.InsightsPI.patterns = {
@@ -3008,12 +3196,13 @@
     analyzeMicronutrients,
     analyzeHeartHealth,
     analyzeOmegaBalance,
-    analyzeVitaminDefense  // C13: Vitamin Defense Radar (v6.0)
+    analyzeVitaminDefense,  // C13: Vitamin Defense Radar (v6.0)
+    analyzeBComplexAnemia   // C22: B-Complex Energy & Anemia Risk (v6.0)
   };
 
   // Fallback для прямого доступа
   global.piPatterns = HEYS.InsightsPI.patterns;
 
-  devLog('[PI Patterns] v5.0.0 loaded — 31 pattern analyzers');
+  devLog('[PI Patterns] v6.0.0 loaded — 32 pattern analyzers (C13, C22 added)');
 
 })(typeof window !== 'undefined' ? window : global);

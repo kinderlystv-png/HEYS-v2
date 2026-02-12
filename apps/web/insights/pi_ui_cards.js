@@ -935,7 +935,8 @@
         training_recovery: '🏋️ Нагрузка и восстановление',
         hypertrophy: '💪 Гипертрофия',
         // v6.0: C13-C22 паттерны (Phase 1-4)
-        vitamin_defense: '🛡️ Радар 11 витаминов'
+        vitamin_defense: '🛡️ Радар 11 витаминов',
+        b_complex_anemia: '⚡ B-комплекс + анемия'
       };
 
       // v2.0: Маппинг pattern → SCIENCE_INFO ключ
@@ -956,7 +957,8 @@
         training_recovery: 'TRAINING_RECOVERY',
         hypertrophy: 'HYPERTROPHY_COMPOSITION',
         // v6.0: C13-C22 паттерны (Phase 1-4)
-        vitamin_defense: 'VITAMIN_DEFENSE'
+        vitamin_defense: 'VITAMIN_DEFENSE',
+        b_complex_anemia: 'B_COMPLEX_ANEMIA'
       };
 
       const infoKey = patternToInfoKey[pattern.pattern];

@@ -1380,6 +1380,29 @@
       actionability: 'WEEKLY',
       impactScore: 0.75,
       whyImportant: 'Витамины определяют иммунитет, энергию, восстановление. Дефицит множественных витаминов = высокий риск.'
+    },
+    // C22: B-Complex Energy & Anemia Risk (NEW v6.0 — Phase 1, 12.02.2026)
+    B_COMPLEX_ANEMIA: {
+      name: 'B-комплекс + анемия',
+      short: 'Оценивает витамины группы B (энергообмен) + железо (риск анемии).',
+      details: 'Метрика анализирует 6 витаминов группы B (B1/B2/B3/B6 — "energy quartet", B9/B12 — "blood pair") + железо за 7+ дней. Два кластера: energyBscore (энергетический метаболизм) и bloodBscore (кроветворение). Риск анемии рассчитывается на основе дефицитов: железо <70% DRI → iron-deficiency anemia (+30), B12 <70% → pernicious anemia (+30), фолат (B9) <70% → megaloblastic anemia (+25). Все три дефицита → compound risk (100). Gender-adjusted: железо 18mg (female) vs 8mg (male). Vegetarian risk flag: если B12 дефицит + <30% дней с источниками B12.',
+      formula: 'energyBscore = avg(B1%, B2%, B3%, B6%)\nbloodBscore = avg(B9%, B12%)\n\nanemiaRisk = 0\n  if Fe < 70% → +30 (iron-def)\n  if B12 < 70% → +30 (pernicious)\n  if B9 < 70% → +25 (megaloblastic)\n  if all three → 100 (compound)\n\nScore = energyBscore × 0.4 + bloodBscore × 0.3 + (100 - anemiaRisk) × 0.3',
+      sources: [
+        {
+          label: 'Kennedy, 2016 — B-vitamins and brain function',
+          pmid: '26828517'
+        },
+        {
+          label: 'Ssonko, 2018 — Anemia and micronutrients',
+          pmid: '29215971'
+        }
+      ],
+      interpretation: '≥70 — хорошо (низкий риск анемии). 50-69 — риск (умеренный). <50 — опасно (высокий риск анемии).',
+      priority: 'HIGH',
+      category: 'METABOLISM',
+      actionability: 'WEEKLY',
+      impactScore: 0.80,
+      whyImportant: 'B-комплекс критичен для энергии и настроения. Анемия (Fe/B12/B9 дефицит) = снижение работоспособности и здоровья.'
     }
   };
 
@@ -1433,7 +1456,8 @@
     HYPERTROPHY: 'hypertrophy',                 // C12: гипертрофия/композиция
 
     // NEW v6.0 (C13-C22) — Phase 1-4 implementation
-    VITAMIN_DEFENSE: 'vitamin_defense'          // C13: радар 11 витаминов (Phase 1, 12.02.2026)
+    VITAMIN_DEFENSE: 'vitamin_defense',         // C13: радар 11 витаминов (Phase 1, 12.02.2026)
+    B_COMPLEX_ANEMIA: 'b_complex_anemia'        // C22: B-комплекс + риск анемии (Phase 1, 12.02.2026)
   };
 
   // === UNIT REGISTRY (Phase 0, 12.02.2026) ===

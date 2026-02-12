@@ -489,6 +489,7 @@
 
   // NEW v6.0 (C13-C22)
   const analyzeVitaminDefense = piPatterns.analyzeVitaminDefense || function () { return { pattern: 'vitamin_defense', available: false }; };
+  const analyzeBComplexAnemia = piPatterns.analyzeBComplexAnemia || function () { return { pattern: 'b_complex_anemia', available: false }; };
 
   // === ПРОДВИНУТАЯ АНАЛИТИКА ===
   // Делегируем в pi_advanced.js
@@ -628,10 +629,11 @@
       analyzeOmegaBalance(days, pIndex),                 // C8: омега-6:3 баланс + воспалительная нагрузка
 
       // === NEW v6.0 (C13-C22) ===
-      analyzeVitaminDefense(days, profile)               // C13: Vitamin Defense Radar (11 vitamins)
+      analyzeVitaminDefense(days, profile),     // C13: Vitamin Defense Radar (11 vitamins)
+      analyzeBComplexAnemia(days, profile)      // C22: B-Complex Energy & Anemia Risk
     ].filter(p => p && (p.available || p.hasPattern));
 
-    console.info(`[HEYS.insights] 📊 v6.0 | daysBack=${daysBack}, days=${days.length}, patterns=${patterns.length}/32 possible (v6.0: +C13)`,
+    console.info(`[HEYS.insights] 📊 v6.0 | daysBack=${daysBack}, days=${days.length}, patterns=${patterns.length}/33 possible (v6.0: +C13+C22)`,
       patterns.map(p => `${p.pattern}:${p.score}`));
 
     // Рассчитываем Health Score

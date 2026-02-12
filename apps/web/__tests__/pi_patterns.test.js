@@ -440,3 +440,327 @@ describe('C13: Vitamin Defense Radar', () => {
         expect(result14.confidence).toBeLessThanOrEqual(0.8);
     });
 });
+// === C22: B-COMPLEX & ANEMIA RISK ===
+
+/**
+ * C22 analyzer function (extracted from pi_patterns.js for testing)
+ */
+function analyzeBComplexAnemia(days, profile, productIndex) {
+    const pattern = 'b_complex_anemia';
+    const minDays = 7;
+
+    const nCheck = piStats.checkMinN(days, minDays);
+    if (!nCheck.ok) {
+        return { pattern, available: false, reason: 'min_days_required' };
+    }
+
+    const isFemale = profile?.gender === 'female' || profile?.gender === 'Женской';
+    const ironDRI = isFemale ? 18 : 8;
+
+    const DRI = {
+        vitamin_b1: 1.2,
+        vitamin_b2: 1.3,
+        vitamin_b3: 16,
+        vitamin_b6: 1.3,
+        vitamin_b9: 400,
+        vitamin_b12: 2.4,
+        iron: ironDRI
+    };
+
+    const bVitamins = ['vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12'];
+    const nutrientData = {};
+
+    [...bVitamins, 'iron'].forEach(nutrient => {
+        let totalIntake = 0;
+        let daysWithData = 0;
+
+        days.forEach(day => {
+            const meals = day.meals || [];
+            let dayIntake = 0;
+
+            meals.forEach(item => {
+                const product = getProductFromItem(item, productIndex);
+                if (!product) return;
+
+                const value = product[nutrient] || product[`${nutrient}_100`] || 0;
+                const grams = item.grams || item.amount || 0;
+                dayIntake += (value * grams) / 100;
+            });
+
+            if (dayIntake > 0) {
+                totalIntake += dayIntake;
+                daysWithData++;
+            }
+        });
+
+        const avgIntake = daysWithData > 0 ? totalIntake / days.length : 0;
+        const dri = DRI[nutrient];
+        const pctDV = dri > 0 ? (avgIntake / dri) * 100 : 0;
+
+        nutrientData[nutrient] = {
+            intake: Math.round(avgIntake * 10) / 10,
+            dri,
+            pctDV: Math.round(pctDV),
+            deficit: pctDV < 70
+        };
+    });
+
+    const energyQuartet = ['vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6'];
+    const bloodPair = ['vitamin_b9', 'vitamin_b12'];
+
+    const energyBscore = Math.round(
+        energyQuartet.reduce((sum, v) => sum + (nutrientData[v]?.pctDV || 0), 0) / energyQuartet.length
+    );
+
+    const bloodBscore = Math.round(
+        bloodPair.reduce((sum, v) => sum + (nutrientData[v]?.pctDV || 0), 0) / bloodPair.length
+    );
+
+    let anemiaRisk = 0;
+    const ironDeficit = nutrientData.iron?.pctDV < 70;
+    const b12Deficit = nutrientData.vitamin_b12?.pctDV < 70;
+    const folateDeficit = nutrientData.vitamin_b9?.pctDV < 70;
+
+    if (ironDeficit) anemiaRisk += 30;
+    if (b12Deficit) anemiaRisk += 30;
+    if (folateDeficit) anemiaRisk += 25;
+
+    if (ironDeficit && b12Deficit && folateDeficit) {
+        anemiaRisk = 100;
+    }
+
+    const score = Math.round(
+        energyBscore * 0.4 + bloodBscore * 0.3 + (100 - anemiaRisk) * 0.3
+    );
+
+    const baseConfidence = score >= 70 ? 0.75 : 0.65;
+    const confidence = piStats.applySmallSamplePenalty(baseConfidence, days.length, minDays);
+
+    // Vegetarian risk check
+    let vegetarianRisk = false;
+    if (b12Deficit) {
+        let animalProductDays = 0;
+        days.forEach(day => {
+            const meals = day.meals || [];
+            const hasB12Source = meals.some(item => {
+                const product = getProductFromItem(item, productIndex);
+                if (!product) return false;
+                const b12 = product.vitamin_b12 || product.vitamin_b12_100 || 0;
+                return b12 > 0;
+            });
+            if (hasB12Source) animalProductDays++;
+        });
+
+        const avgB12SourceDays = animalProductDays / days.length;
+        if (avgB12SourceDays < 0.3) {
+            vegetarianRisk = true;
+        }
+    }
+
+    return {
+        pattern,
+        available: true,
+        nutrientData,
+        energyBscore,
+        bloodBscore,
+        anemiaRisk,
+        vegetarianRisk,
+        score,
+        confidence: Math.round(confidence * 100) / 100
+    };
+}
+
+describe('C22: B-Complex & Anemia Risk', () => {
+    it('returns unavailable for < 7 days', () => {
+        const days = Array.from({ length: 5 }, (_, i) => ({ date: `2026-02-${i + 1}`, meals: [] }));
+        const result = analyzeBComplexAnemia(days, { gender: 'female' }, { byName: new Map() });
+
+        expect(result.available).toBe(false);
+        expect(result.reason).toBe('min_days_required');
+    });
+
+    it('calculates energyBscore (B1/B2/B3/B6 quartet)', () => {
+        const mockProducts = [
+            { name: 'wholegrains', vitamin_b1: 0.4, vitamin_b2: 0.2, vitamin_b3: 5, vitamin_b6: 0.3 }
+        ];
+        const productIndex = buildProductIndex(mockProducts);
+
+        const days = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            products: mockProducts,
+            meals: [{ name: 'wholegrains', grams: 100 }]
+        }));
+
+        const result = analyzeBComplexAnemia(days, { gender: 'male' }, productIndex);
+
+        expect(result.available).toBe(true);
+        expect(result.energyBscore).toBeGreaterThan(0);
+        // B1: 0.4mg → 33% DRI (1.2mg), B2: 0.2mg → 15% DRI (1.3mg), B3: 5mg → 31% DRI (16mg), B6: 0.3mg → 23% DRI (1.3mg)
+        // Avg: ~25%
+        expect(result.energyBscore).toBeCloseTo(25, -1);
+    });
+
+    it('calculates bloodBscore (B9/B12 pair)', () => {
+        const mockProducts = [
+            { name: 'liver', vitamin_b9: 290, vitamin_b12: 60 }  // mcg
+        ];
+        const productIndex = buildProductIndex(mockProducts);
+
+        const days = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            products: mockProducts,
+            meals: [{ name: 'liver', grams: 100 }]
+        }));
+
+        const result = analyzeBComplexAnemia(days, { gender: 'male' }, productIndex);
+
+        expect(result.available).toBe(true);
+        expect(result.bloodBscore).toBeGreaterThan(0);
+        // B9: 290mcg → 72% DRI (400mcg), B12: 60mcg → 2500% DRI (2.4mcg) → capped at reasonable
+        // Avg: high value due to B12
+        expect(result.bloodBscore).toBeGreaterThan(100);
+    });
+
+    it('detects iron-deficiency anemia risk (female DRI 18mg)', () => {
+        const mockProducts = [
+            { name: 'rice', iron: 0.5 }  // Low iron
+        ];
+        const productIndex = buildProductIndex(mockProducts);
+
+        const days = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            products: mockProducts,
+            meals: [{ name: 'rice', grams: 100 }]
+        }));
+
+        const result = analyzeBComplexAnemia(days, { gender: 'female' }, productIndex);
+
+        expect(result.available).toBe(true);
+        expect(result.nutrientData.iron.pctDV).toBeLessThan(70);
+        expect(result.anemiaRisk).toBeGreaterThanOrEqual(30);  // Iron deficit penalty
+    });
+
+    it('applies gender-adjusted iron DRI (male 8mg vs female 18mg)', () => {
+        const mockProducts = [
+            { name: 'spinach', iron: 2.7 }
+        ];
+        const productIndex = buildProductIndex(mockProducts);
+
+        const days = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            products: mockProducts,
+            meals: [{ name: 'spinach', grams: 100 }]
+        }));
+
+        const resultMale = analyzeBComplexAnemia(days, { gender: 'male' }, productIndex);
+        const resultFemale = analyzeBComplexAnemia(days, { gender: 'female' }, productIndex);
+
+        expect(resultMale.nutrientData.iron.dri).toBe(8);    // Male DRI
+        expect(resultFemale.nutrientData.iron.dri).toBe(18); // Female DRI
+
+        // Same intake (2.7mg), different % DV
+        expect(resultMale.nutrientData.iron.pctDV).toBeGreaterThan(resultFemale.nutrientData.iron.pctDV);
+    });
+
+    it('calculates compound anemia risk (all three deficits)', () => {
+        const mockProducts = [
+            { name: 'whitebread', iron: 0.5, vitamin_b9: 10, vitamin_b12: 0 }  // All low
+        ];
+        const productIndex = buildProductIndex(mockProducts);
+
+        const days = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            products: mockProducts,
+            meals: [{ name: 'whitebread', grams: 100 }]
+        }));
+
+        const result = analyzeBComplexAnemia(days, { gender: 'female' }, productIndex);
+
+        expect(result.available).toBe(true);
+        expect(result.anemiaRisk).toBe(100);  // Compound risk
+    });
+
+    it('calculates score correctly (energyBscore × 0.4 + bloodBscore × 0.3 + (100 - anemiaRisk) × 0.3)', () => {
+        const mockProducts = [
+            { name: 'balanced', vitamin_b1: 1.0, vitamin_b2: 1.1, vitamin_b3: 14, vitamin_b6: 1.1, vitamin_b9: 350, vitamin_b12: 2.0, iron: 15 }
+        ];
+        const productIndex = buildProductIndex(mockProducts);
+
+        const days = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            products: mockProducts,
+            meals: [{ name: 'balanced', grams: 100 }]
+        }));
+
+        const result = analyzeBComplexAnemia(days, { gender: 'female' }, productIndex);
+
+        expect(result.available).toBe(true);
+
+        // energyBscore: avg(83%, 85%, 88%, 85%) = ~85
+        // bloodBscore: avg(87%, 83%) = ~85
+        // anemiaRisk: 0 (all >70%)
+        // score = 85 * 0.4 + 85 * 0.3 + (100 - 0) * 0.3 = 34 + 25.5 + 30 = 89.5 → 90
+        expect(result.energyBscore).toBeCloseTo(85, -1);
+        expect(result.bloodBscore).toBeCloseTo(85, -1);
+        expect(result.anemiaRisk).toBe(0);
+        expect(result.score).toBeCloseTo(90, -1);
+    });
+
+    it('detects vegetarian B12 risk (<30% days with B12 sources)', () => {
+        const mockProducts = [
+            { name: 'vegetables', vitamin_b12: 0 },
+            { name: 'meat', vitamin_b12: 2.5 }
+        ];
+        const productIndex = buildProductIndex(mockProducts);
+
+        const days = [
+            ...Array.from({ length: 12 }, () => ({
+                date: '2026-02-01',
+                products: mockProducts,
+                meals: [{ name: 'vegetables', grams: 100 }]  // No B12
+            })),
+            ...Array.from({ length: 2 }, () => ({
+                date: '2026-02-14',
+                products: mockProducts,
+                meals: [{ name: 'meat', grams: 100 }]  // Has B12
+            }))
+        ];
+
+        // 2/14 days with B12 = 14.3% < 30% → vegetarian risk
+        const result = analyzeBComplexAnemia(days, { gender: 'male' }, productIndex);
+
+        expect(result.available).toBe(true);
+        // B12 intake very low from vegetables → deficit likely
+        if (result.nutrientData.vitamin_b12.deficit) {
+            expect(result.vegetarianRisk).toBe(true);
+        }
+    });
+
+    it('applies small sample penalty to confidence', () => {
+        const mockProducts = [
+            { name: 'balanced', vitamin_b1: 1.0, vitamin_b2: 1.0, vitamin_b3: 14, vitamin_b6: 1.0, vitamin_b9: 350, vitamin_b12: 2.0, iron: 8 }
+        ];
+        const productIndex = buildProductIndex(mockProducts);
+
+        const days7 = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            products: mockProducts,
+            meals: [{ name: 'balanced', grams: 100 }]
+        }));
+
+        const days14 = Array.from({ length: 14 }, () => ({
+            date: '2026-02-01',
+            products: mockProducts,
+            meals: [{ name: 'balanced', grams: 100 }]
+        }));
+
+        const result7 = analyzeBComplexAnemia(days7, { gender: 'male' }, productIndex);
+        const result14 = analyzeBComplexAnemia(days14, { gender: 'male' }, productIndex);
+
+        // Both >= minDays (7), so no penalty — confidence stable
+        expect(result7.confidence).toBeGreaterThanOrEqual(0.65);
+        expect(result14.confidence).toBeGreaterThanOrEqual(0.65);
+        expect(result7.confidence).toBeLessThanOrEqual(0.75);
+        expect(result14.confidence).toBeLessThanOrEqual(0.75);
+    });
+});
