@@ -8,7 +8,7 @@
  * 4. Validation — проверка структуры данных
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 // === HELPER FUNCTIONS (из heys_models_v1.js) ===
 const round1 = (v) => Math.round((+v || 0) * 10) / 10;
@@ -305,9 +305,9 @@ describe('getProductFromItem', () => {
   });
 
   it('returns item itself if it has nutrient data (stamp fallback)', () => {
-    const item = { 
-      name: 'OrphanProduct', 
-      product_id: 'orphan', 
+    const item = {
+      name: 'OrphanProduct',
+      product_id: 'orphan',
       grams: 100,
       kcal100: 200, // Has nutrient data from stamp
       protein100: 10
@@ -343,11 +343,11 @@ describe('getProductFromItem', () => {
 // === ТЕСТЫ: mealTotals ===
 describe('mealTotals', () => {
   const products = [
-    { 
-      id: 'prod_1', 
-      name: 'Apple', 
-      kcal100: 52, 
-      protein100: 0.3, 
+    {
+      id: 'prod_1',
+      name: 'Apple',
+      kcal100: 52,
+      protein100: 0.3,
       carbs100: 14,
       simple100: 10,
       complex100: 4,
@@ -357,11 +357,11 @@ describe('mealTotals', () => {
       trans100: 0,
       fiber100: 2.4
     },
-    { 
-      id: 'prod_2', 
-      name: 'Chicken', 
-      kcal100: 165, 
-      protein100: 31, 
+    {
+      id: 'prod_2',
+      name: 'Chicken',
+      kcal100: 165,
+      protein100: 31,
       carbs100: 0,
       simple100: 0,
       complex100: 0,
@@ -438,8 +438,8 @@ describe('mealTotals', () => {
   it('uses stamp data for orphan products', () => {
     const meal = {
       name: 'Test',
-      items: [{ 
-        name: 'OrphanProduct', 
+      items: [{
+        name: 'OrphanProduct',
         grams: 100,
         kcal100: 300,
         protein100: 20
@@ -529,9 +529,9 @@ describe('Validation Functions', () => {
     });
 
     it('returns true for day with meals', () => {
-      const day = { 
-        date: '2025-01-15', 
-        meals: [{ name: 'Lunch', items: [] }] 
+      const day = {
+        date: '2025-01-15',
+        meals: [{ name: 'Lunch', items: [] }]
       };
       expect(validateDay(day)).toBe(true);
     });

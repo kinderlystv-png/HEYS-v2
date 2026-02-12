@@ -2817,6 +2817,161 @@
     };
   }
 
+  // === C13: VITAMIN DEFENSE RADAR (v6.0, Phase 1, 12.02.2026) ===
+  // Полный радар 11 витаминов — детекция дефицитов, группировка по функциям
+  // PMID: 24566440 (IOM DRI 2011), 26828517 (Kennedy 2016 — micronutrient impact on cognition)
+
+  function analyzeVitaminDefense(days, profile) {
+    const piStats = HEYS.InsightsPI?.stats || {};
+    const piConst = HEYS.InsightsPI?.constants || {};
+    const UNIT_REGISTRY = piConst.UNIT_REGISTRY || {};
+
+    // Safety: minDays = 7, minProducts avg >= 3
+    if (!piStats.checkMinN || !piStats.checkMinN(days, 7)) {
+      return { pattern: 'vitamin_defense', available: false, reason: 'min-data', daysAnalyzed: days.length };
+    }
+
+    const validDays = days.filter(d => d && d.meals && d.meals.length > 0);
+    const avgProductsPerDay = validDays.reduce((sum, d) => {
+      const products = d.meals.reduce((pSum, m) => pSum + (m.items?.length || 0), 0);
+      return sum + products;
+    }, 0) / validDays.length;
+
+    if (avgProductsPerDay < 3) {
+      return { pattern: 'vitamin_defense', available: false, reason: 'min-products', avgProducts: Math.round(avgProductsPerDay * 10) / 10 };
+    }
+
+    // 11 vitamins with DRI values (gender-adjusted where needed)
+    const gender = profile?.gender || 'male';
+    const DRI = {
+      vitamin_a: gender === 'female' ? 700 : 900,  // mcg RAE
+      vitamin_c: gender === 'female' ? 75 : 90,    // mg
+      vitamin_d: 15,                                // mcg (same for both)
+      vitamin_e: 15,                                // mg
+      vitamin_k: gender === 'female' ? 90 : 120,   // mcg
+      vitamin_b1: 1.2,                              // mg
+      vitamin_b2: 1.3,                              // mg
+      vitamin_b3: 16,                               // mg NE
+      vitamin_b6: 1.3,                              // mg
+      vitamin_b9: 400,                              // mcg DFE (folate)
+      vitamin_b12: 2.4                              // mcg
+    };
+
+    // Calculate daily intake for each vitamin
+    const vitaminData = {};
+    const vitaminKeys = Object.keys(DRI);
+
+    vitaminKeys.forEach(vitKey => {
+      let totalIntake = 0;
+      let daysWithData = 0;
+
+      validDays.forEach(day => {
+        let dayIntake = 0;
+        (day.meals || []).forEach(meal => {
+          (meal.items || []).forEach(item => {
+            const prod = getProductFromItem(item, day.pIndex);
+            if (!prod) return;
+            const vitValue = prod[vitKey];
+            if (vitValue != null && vitValue > 0) {
+              const grams = Number(item.grams) || 0;
+              dayIntake += vitValue * grams / 100;
+            }
+          });
+        });
+
+        if (dayIntake > 0) {
+          totalIntake += dayIntake;
+          daysWithData++;
+        }
+      });
+
+      const avgDailyIntake = daysWithData > 0 ? totalIntake / daysWithData : 0;
+      const pctDV = (avgDailyIntake / DRI[vitKey]) * 100;
+      const deficit = pctDV < 70;
+
+      vitaminData[vitKey] = {
+        intake: Math.round(avgDailyIntake * 10) / 10,
+        dri: DRI[vitKey],
+        pctDV: Math.round(pctDV),
+        deficit: deficit,
+        daysWithData: daysWithData,
+        unit: UNIT_REGISTRY[vitKey]?.unit || 'mg'
+      };
+    });
+
+    // Cluster analysis (4 functional groups)
+    const clusters = {
+      antioxidant: ['vitamin_a', 'vitamin_c', 'vitamin_e'],
+      bone: ['vitamin_d', 'vitamin_k'],
+      energy: ['vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6'],
+      blood: ['vitamin_b9', 'vitamin_b12']
+    };
+
+    const clusterScores = {};
+    Object.keys(clusters).forEach(clusterKey => {
+      const vitKeys = clusters[clusterKey];
+      const avgPct = vitKeys.reduce((sum, vk) => sum + vitaminData[vk].pctDV, 0) / vitKeys.length;
+      const risk = avgPct < 70;
+      clusterScores[clusterKey] = {
+        avgPct: Math.round(avgPct),
+        risk: risk,
+        vitamins: vitKeys
+      };
+    });
+
+    // Count deficits
+    const deficitList = vitaminKeys.filter(vk => vitaminData[vk].deficit);
+    const countDeficits = deficitList.length;
+
+    // Score: 100 - (countDeficits × 8), clamp 0-100
+    let score = 100 - (countDeficits * 8);
+    score = Math.max(0, Math.min(100, score));
+
+    // Confidence with small sample penalty
+    let baseConfidence = validDays.length >= 14 ? 0.80 : 0.70;
+    const confidence = piStats.applySmallSamplePenalty
+      ? piStats.applySmallSamplePenalty(baseConfidence, validDays.length, 10)
+      : baseConfidence;
+
+    // Insight generation
+    let insight = `Vitamin Defense Radar: ${countDeficits} из 11 витаминов ниже 70% DRI`;
+
+    if (countDeficits === 0) {
+      insight = '🌟 Отлично! Все 11 витаминов в норме (≥70% DRI)';
+    } else if (countDeficits <= 2) {
+      insight = `⚠️ Легкий дефицит: ${deficitList.join(', ')} < 70% DRI`;
+    } else if (countDeficits >= 5) {
+      insight = `🚨 Множественный дефицит: ${countDeficits} витаминов требуют внимания`;
+    }
+
+    // Add cluster risks
+    const riskyСlusters = Object.keys(clusterScores).filter(c => clusterScores[c].risk);
+    if (riskyСlusters.length > 0) {
+      const clusterNames = {
+        antioxidant: 'антиоксиданты',
+        bone: 'костная система',
+        energy: 'энергообмен',
+        blood: 'кроветворение'
+      };
+      const riskText = riskyСlusters.map(c => clusterNames[c]).join(', ');
+      insight += `. Риск: ${riskText}`;
+    }
+
+    return {
+      pattern: 'vitamin_defense',
+      available: true,
+      vitaminData: vitaminData,
+      clusterScores: clusterScores,
+      deficitList: deficitList,
+      countDeficits: countDeficits,
+      daysAnalyzed: validDays.length,
+      avgProductsPerDay: Math.round(avgProductsPerDay * 10) / 10,
+      score: score,
+      confidence: Math.round(confidence * 100) / 100,
+      insight: insight
+    };
+  }
+
 
   // === ЭКСПОРТ ===
   HEYS.InsightsPI.patterns = {
@@ -2852,7 +3007,8 @@
     analyzeHypertrophy,
     analyzeMicronutrients,
     analyzeHeartHealth,
-    analyzeOmegaBalance
+    analyzeOmegaBalance,
+    analyzeVitaminDefense  // C13: Vitamin Defense Radar (v6.0)
   };
 
   // Fallback для прямого доступа

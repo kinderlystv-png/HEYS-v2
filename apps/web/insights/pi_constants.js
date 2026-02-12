@@ -1356,6 +1356,29 @@
       actionability: 'WEEKLY',
       impactScore: 0.60,
       whyImportant: 'Измерения показывают прогресс лучше, чем вес на весах.'
+    },
+    // C13: Vitamin Defense Radar (NEW v6.0 — Phase 1, 12.02.2026)
+    VITAMIN_DEFENSE: {
+      name: 'Радар 11 витаминов',
+      short: 'Отслеживает дефицит ключевых витаминов относительно DRI: A, C, D, E, K, B1-B6, B9, B12.',
+      details: 'Метрика анализирует поступление 11 витаминов за 7+ дней и выявляет дефициты (<70% DRI). Используется функциональная кластеризация: антиоксиданты (A/C/E), костная система (D/K), энергообмен (B1/B2/B3/B6), кроветворение (B9/B12). Снижение балла указывает на высокий риск: множественный дефицит (≥5 витаминов) требует коррекции рациона. Используются gender-adjusted DRI из IOM 2011.',
+      formula: 'Для каждого витамина:\n  intake = Σ(products × grams/100) / days\n  pctDV = (intake / DRI[gender]) × 100\n  deficit = pctDV < 70%\n\nScore = 100 - (countDeficits × 8), clamp [0, 100]\nКластеры: antioxidant / bone / energy / blood.',
+      sources: [
+        {
+          label: 'IOM, 2011 — Dietary Reference Intakes',
+          pmid: '24566440'
+        },
+        {
+          label: 'Kennedy, 2016 — Vitamin defence mechanisms',
+          pmid: '26828517'
+        }
+      ],
+      interpretation: '≥85 — отлично (0-1 дефицит). 70-84 — риск (2-3 дефицита). <70 — опасно (≥5 дефицитов).',
+      priority: 'HIGH',
+      category: 'NUTRITION',
+      actionability: 'WEEKLY',
+      impactScore: 0.75,
+      whyImportant: 'Витамины определяют иммунитет, энергию, восстановление. Дефицит множественных витаминов = высокий риск.'
     }
   };
 
@@ -1406,7 +1429,10 @@
     HEART_HEALTH: 'heart_health',               // C9: сердце/метаболизм
     NOVA_QUALITY: 'nova_quality',               // C10: качество по NOVA
     TRAINING_RECOVERY: 'training_recovery',     // C11: нагрузка/восстановление
-    HYPERTROPHY: 'hypertrophy'                  // C12: гипертрофия/композиция
+    HYPERTROPHY: 'hypertrophy',                 // C12: гипертрофия/композиция
+
+    // NEW v6.0 (C13-C22) — Phase 1-4 implementation
+    VITAMIN_DEFENSE: 'vitamin_defense'          // C13: радар 11 витаминов (Phase 1, 12.02.2026)
   };
 
   // === UNIT REGISTRY (Phase 0, 12.02.2026) ===
