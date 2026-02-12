@@ -1344,3 +1344,189 @@ describe('C18: Added Sugar & Dependency', () => {
         expect(result.dependencyRisk).toBe(true);
     });
 });
+
+// === C20: ELECTROLYTE HOMEOSTASIS ===
+
+function analyzeElectrolyteHomeostasis(days, productIndex) {
+    const pattern = 'electrolyte_homeostasis';
+    const minDays = 7;
+    const nCheck = piStats.checkMinN(days, minDays);
+    if (!nCheck.ok) return { pattern, available: false, reason: 'min_days_required' };
+
+    let na = 0, k = 0, mg = 0, ca = 0, highDemandDays = 0;
+
+    days.forEach(day => {
+        (day.meals || []).forEach(meal => {
+            (meal.items || []).forEach(item => {
+                const p = getProductFromItem(item, productIndex);
+                if (!p) return;
+                const f = (item.grams || 0) / 100;
+                na += (p.sodium100 || p.sodium || 0) * f;
+                k += (p.potassium || 0) * f;
+                mg += (p.magnesium || 0) * f;
+                ca += (p.calcium || 0) * f;
+            });
+        });
+
+        const sweatMax = (day.trainings || []).reduce((m, t) => Math.max(m, t.sweat_ml_h || 0), 0);
+        if (sweatMax > 800) highDemandDays++;
+    });
+
+    const avgNa = na / days.length;
+    const avgK = k / days.length;
+    const avgMg = mg / days.length;
+    const avgCa = ca / days.length;
+    const naKRatio = avgK > 0 ? avgNa / avgK : 0;
+
+    const naKScore = naKRatio <= 1 ? 100 : (naKRatio <= 1.5 ? 85 : (naKRatio <= 2 ? 65 : 40));
+    const mgScore = Math.min(100, (avgMg / 400) * 100);
+    const caScore = Math.min(100, (avgCa / 1000) * 100);
+    const kScore = Math.min(100, (avgK / 3500) * 100);
+    const demandPenalty = highDemandDays > 0 ? 6 : 0;
+    const score = Math.max(0, Math.min(100, Math.round(naKScore * 0.5 + mgScore * 0.2 + caScore * 0.15 + kScore * 0.15 - demandPenalty)));
+
+    return {
+        pattern,
+        available: true,
+        naKRatio: Math.round(naKRatio * 100) / 100,
+        highDemandDays,
+        hyponatremiaFlag: highDemandDays > 0 && avgNa < 1500,
+        score
+    };
+}
+
+describe('C20: Electrolyte Homeostasis', () => {
+    it('returns unavailable for < 7 days', () => {
+        const days = Array.from({ length: 6 }, (_, i) => ({ date: `2026-02-${i + 1}`, meals: [] }));
+        const result = analyzeElectrolyteHomeostasis(days, { byName: new Map() });
+        expect(result.available).toBe(false);
+        expect(result.reason).toBe('min_days_required');
+    });
+
+    it('computes Na:K ratio and score', () => {
+        const products = [{ name: 'electro_mix', sodium100: 1000, potassium: 2000, magnesium: 400, calcium: 1000 }];
+        const pIndex = buildProductIndex(products);
+        const days = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            meals: [{ items: [{ name: 'electro_mix', grams: 100 }] }],
+            trainings: []
+        }));
+
+        const result = analyzeElectrolyteHomeostasis(days, pIndex);
+        expect(result.available).toBe(true);
+        expect(result.naKRatio).toBeCloseTo(0.5, 1);
+        expect(result.score).toBeGreaterThan(75);
+    });
+
+    it('flags hyponatremia pattern under high demand and low sodium', () => {
+        const products = [{ name: 'low_salt', sodium100: 200, potassium: 1800, magnesium: 200, calcium: 500 }];
+        const pIndex = buildProductIndex(products);
+        const days = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            meals: [{ items: [{ name: 'low_salt', grams: 100 }] }],
+            trainings: [{ sweat_ml_h: 900 }]
+        }));
+
+        const result = analyzeElectrolyteHomeostasis(days, pIndex);
+        expect(result.available).toBe(true);
+        expect(result.highDemandDays).toBeGreaterThan(0);
+        expect(result.hyponatremiaFlag).toBe(true);
+    });
+});
+
+// === C21: NUTRIENT DENSITY ===
+
+function analyzeNutrientDensity(days, productIndex) {
+    const pattern = 'nutrient_density';
+    const minDays = 7;
+    const nCheck = piStats.checkMinN(days, minDays);
+    if (!nCheck.ok) return { pattern, available: false, reason: 'min_days_required' };
+
+    let kcal = 0, prot = 0, fiber = 0, vitC = 0, iron = 0, mg = 0, k = 0, ca = 0, sugar = 0, sodium = 0;
+
+    days.forEach(day => {
+        (day.meals || []).forEach(meal => {
+            (meal.items || []).forEach(item => {
+                const p = getProductFromItem(item, productIndex);
+                if (!p) return;
+                const f = (item.grams || 0) / 100;
+                kcal += (p.kcal100 || 0) * f;
+                prot += (p.protein100 || 0) * f;
+                fiber += (p.fiber100 || 0) * f;
+                vitC += (p.vitamin_c || 0) * f;
+                iron += (p.iron || 0) * f;
+                mg += (p.magnesium || 0) * f;
+                k += (p.potassium || 0) * f;
+                ca += (p.calcium || 0) * f;
+                sodium += (p.sodium100 || 0) * f;
+                if (p.sugar100 != null) sugar += (p.sugar100 || 0) * f;
+                else if ((p.nova_group || 1) === 4) sugar += ((p.simple100 || 0) * f) * 0.7;
+                else sugar += ((p.simple100 || 0) * f) * 0.3;
+            });
+        });
+    });
+
+    if (kcal < 500) return { pattern, available: false, reason: 'insufficient_energy_data' };
+
+    const per1000 = (v) => (v / kcal) * 1000;
+    const d = {
+        prot: per1000(prot), fiber: per1000(fiber), vitC: per1000(vitC), iron: per1000(iron),
+        mg: per1000(mg), k: per1000(k), ca: per1000(ca), sugar: per1000(sugar), sodium: per1000(sodium)
+    };
+
+    const pos =
+        Math.min(1, d.prot / 35) * 20 +
+        Math.min(1, d.fiber / 14) * 20 +
+        Math.min(1, d.vitC / 45) * 15 +
+        Math.min(1, d.iron / 6) * 10 +
+        Math.min(1, d.mg / 200) * 10 +
+        Math.min(1, d.k / 1750) * 15 +
+        Math.min(1, d.ca / 500) * 10;
+    const penalty = (d.sugar > 25 ? Math.min(15, (d.sugar - 25) * 0.4) : 0) + (d.sodium > 1000 ? Math.min(15, (d.sodium - 1000) * 0.01) : 0);
+    const score = Math.max(0, Math.min(100, Math.round(pos - penalty)));
+
+    return { pattern, available: true, density: d, score };
+}
+
+describe('C21: Nutrient Density', () => {
+    it('returns unavailable for < 7 days', () => {
+        const days = Array.from({ length: 5 }, (_, i) => ({ date: `2026-02-${i + 1}`, meals: [] }));
+        const result = analyzeNutrientDensity(days, { byName: new Map() });
+        expect(result.available).toBe(false);
+        expect(result.reason).toBe('min_days_required');
+    });
+
+    it('yields high score for nutrient-dense products', () => {
+        const products = [{
+            name: 'dense_food', kcal100: 200, protein100: 25, fiber100: 8, vitamin_c: 90,
+            iron: 8, magnesium: 300, potassium: 2500, calcium: 800, sodium100: 300, sugar100: 4, simple100: 4, nova_group: 1
+        }];
+        const pIndex = buildProductIndex(products);
+        const days = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            meals: [{ items: [{ name: 'dense_food', grams: 300 }] }]
+        }));
+
+        const result = analyzeNutrientDensity(days, pIndex);
+        expect(result.available).toBe(true);
+        expect(result.score).toBeGreaterThanOrEqual(80);
+    });
+
+    it('applies penalties for sugar and sodium density', () => {
+        const products = [{
+            name: 'empty_food', kcal100: 250, protein100: 4, fiber100: 1, vitamin_c: 5,
+            iron: 1, magnesium: 40, potassium: 300, calcium: 80, sodium100: 2200, sugar100: 35, simple100: 35, nova_group: 4
+        }];
+        const pIndex = buildProductIndex(products);
+        const days = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            meals: [{ items: [{ name: 'empty_food', grams: 250 }] }]
+        }));
+
+        const result = analyzeNutrientDensity(days, pIndex);
+        expect(result.available).toBe(true);
+        expect(result.density.sugar).toBeGreaterThan(25);
+        expect(result.density.sodium).toBeGreaterThan(1000);
+        expect(result.score).toBeLessThan(60);
+    });
+});

@@ -496,6 +496,8 @@
   const analyzeAddedSugarDependency = piPatterns.analyzeAddedSugarDependency || function () { return { pattern: 'added_sugar_dependency', available: false }; };
   const analyzeBoneHealth = piPatterns.analyzeBoneHealth || function () { return { pattern: 'bone_health', available: false }; };
   const analyzeTrainingTypeMatch = piPatterns.analyzeTrainingTypeMatch || function () { return { pattern: 'training_type_match', available: false }; };
+  const analyzeElectrolyteHomeostasis = piPatterns.analyzeElectrolyteHomeostasis || function () { return { pattern: 'electrolyte_homeostasis', available: false }; };
+  const analyzeNutrientDensity = piPatterns.analyzeNutrientDensity || function () { return { pattern: 'nutrient_density', available: false }; };
 
   // === ПРОДВИНУТАЯ АНАЛИТИКА ===
   // Делегируем в pi_advanced.js
@@ -642,10 +644,12 @@
       analyzeAntioxidantDefense(days, pIndex), // C16: Antioxidant Defense Score
       analyzeAddedSugarDependency(days, pIndex), // C18: Added Sugar & Dependency
       analyzeBoneHealth(days, profile, pIndex), // C17: Bone Health Index
-      analyzeTrainingTypeMatch(days, profile, pIndex) // C19: Training-Type Nutrition Match
+      analyzeTrainingTypeMatch(days, profile, pIndex), // C19: Training-Type Nutrition Match
+      analyzeElectrolyteHomeostasis(days, pIndex), // C20: Electrolyte Homeostasis
+      analyzeNutrientDensity(days, pIndex) // C21: Nutrient Density
     ].filter(p => p && (p.available || p.hasPattern));
 
-    console.info(`[HEYS.insights] 📊 v6.0 | daysBack=${daysBack}, days=${days.length}, patterns=${patterns.length}/39 possible (v6.0: +C13+C22+C14+C15+C16+C18+C17+C19)`,
+    console.info(`[HEYS.insights] 📊 v6.0 | daysBack=${daysBack}, days=${days.length}, patterns=${patterns.length}/41 possible (v6.0: +C13+C22+C14+C15+C16+C18+C17+C19+C20+C21)`,
       patterns.map(p => `${p.pattern}:${p.score}`));
 
     // Рассчитываем Health Score

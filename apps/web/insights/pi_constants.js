@@ -1549,6 +1549,52 @@
       actionability: 'DAILY',
       impactScore: 0.81,
       whyImportant: 'Одинаковое питание не работает одинаково для cardio и strength: нужен тип-специфичный подход.'
+    },
+    // C20: Electrolyte Homeostasis (NEW v6.0 — Phase 5, 12.02.2026)
+    ELECTROLYTE_HOMEOSTASIS: {
+      name: 'Электролитный баланс',
+      short: 'Оценивает Na/K/Mg/Ca баланс с учётом потерь при тренировках и рисков гипонатриемии/дисбаланса.',
+      details: 'Метрика анализирует ключевые электролиты (натрий, калий, магний, кальций) и их соотношения. Основной риск-фактор — высокий Na:K ratio (цель <1.0), а также низкий натрий при высоком потоотделении (гипонатриемический паттерн) и дефицит магния. При нагрузках с потом >800 мл/ч потребности в электролитах повышаются, поэтому применяется demand-модификатор. Итоговый score учитывает ratio-блок, абсолютное покрытие и тренировочную нагрузку.',
+      formula: 'Base = NaK_score×0.5 + Mg_score×0.2 + Ca_score×0.15 + K_score×0.15\nScore = Base - demandPenalty + adaptationBonus',
+      sources: [
+        {
+          label: 'Shirreffs et al., 2005 — Fluid and electrolyte needs for training and competition',
+          pmid: '16078019'
+        },
+        {
+          label: 'Maughan et al., 2012 — IOC hydration consensus',
+          pmid: '22308527'
+        }
+      ],
+      interpretation: '≥80 — хороший электролитный профиль. 60-79 — умеренный риск. <60 — выраженный дисбаланс.',
+      priority: 'HIGH',
+      category: 'RECOVERY',
+      actionability: 'DAILY',
+      impactScore: 0.78,
+      whyImportant: 'Электролитный баланс влияет на восстановление, работоспособность и сердечно-мышечную функцию.'
+    },
+    // C21: Nutrient Density Score (NEW v6.0 — Phase 5, 12.02.2026)
+    NUTRIENT_DENSITY: {
+      name: 'Плотность нутриентов',
+      short: 'Показывает, сколько микронутриентов рацион даёт на 1000 ккал (без перерасхода калорий).',
+      details: 'Метрика отражает «качество калории»: отношение полезных нутриентов к энергоёмкости рациона. Используется NRF-подобный подход: суммируется вклад белка, клетчатки, витаминов и минералов на 1000 ккал с вычетом пенальти за добавленный сахар и избыток натрия. Важный плюс метрики — она не зависит только от количества еды: даже при дефиците калорий можно держать высокий nutrient density за счёт выбора продуктов.',
+      formula: 'DensityScore = Σ(nutrients_per_1000kcal / target)×weights - penalty(sugar, sodium)',
+      sources: [
+        {
+          label: 'Drewnowski, 2005 — Concept of nutrient density',
+          pmid: '15795449'
+        },
+        {
+          label: 'Drewnowski et al., 2018 — NRF nutrient profiling models',
+          pmid: '29581729'
+        }
+      ],
+      interpretation: '≥80 — высокая нутриентная плотность. 60-79 — средняя. <60 — калории бедны нутриентами.',
+      priority: 'HIGH',
+      category: 'NUTRITION',
+      actionability: 'DAILY',
+      impactScore: 0.82,
+      whyImportant: 'Высокая плотность нутриентов улучшает насыщение и покрытие дефицитов без лишних калорий.'
     }
   };
 
@@ -1609,7 +1655,9 @@
     ANTIOXIDANT_DEFENSE: 'antioxidant_defense',   // C16: антиоксидантная защита (Phase 3, 12.02.2026)
     ADDED_SUGAR_DEPENDENCY: 'added_sugar_dependency', // C18: добавленный сахар + зависимость (Phase 3, 12.02.2026)
     BONE_HEALTH: 'bone_health',                   // C17: здоровье костей (Phase 4, 12.02.2026)
-    TRAINING_TYPE_MATCH: 'training_type_match'   // C19: питание под тип тренировки (Phase 4, 12.02.2026)
+    TRAINING_TYPE_MATCH: 'training_type_match',  // C19: питание под тип тренировки (Phase 4, 12.02.2026)
+    ELECTROLYTE_HOMEOSTASIS: 'electrolyte_homeostasis', // C20: электролитный баланс (Phase 5, 12.02.2026)
+    NUTRIENT_DENSITY: 'nutrient_density'         // C21: плотность нутриентов (Phase 5, 12.02.2026)
   };
 
   // === UNIT REGISTRY (Phase 0, 12.02.2026) ===

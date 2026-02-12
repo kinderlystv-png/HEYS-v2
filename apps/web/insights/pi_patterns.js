@@ -87,7 +87,9 @@
     ANTIOXIDANT_DEFENSE: 'antioxidant_defense',
     ADDED_SUGAR_DEPENDENCY: 'added_sugar_dependency',
     BONE_HEALTH: 'bone_health',
-    TRAINING_TYPE_MATCH: 'training_type_match'
+    TRAINING_TYPE_MATCH: 'training_type_match',
+    ELECTROLYTE_HOMEOSTASIS: 'electrolyte_homeostasis',
+    NUTRIENT_DENSITY: 'nutrient_density'
   };
 
   // Импорт статистических функций из pi_stats.js (централизовано)
@@ -3999,6 +4001,274 @@
     };
   }
 
+  /**
+   * C20: Electrolyte Homeostasis
+   * Оценка электролитного баланса Na/K/Mg/Ca с учётом тренировочного потоотделения.
+   * @param {Array} days
+   * @param {Object} pIndex
+   * @returns {Object}
+   */
+  function analyzeElectrolyteHomeostasis(days, pIndex) {
+    const pattern = PATTERNS.ELECTROLYTE_HOMEOSTASIS || 'electrolyte_homeostasis';
+    const minDays = 7;
+
+    if (!Array.isArray(days) || days.length < minDays) {
+      return {
+        pattern,
+        available: false,
+        reason: 'min_days_required',
+        minDaysRequired: minDays,
+        daysProvided: Array.isArray(days) ? days.length : 0
+      };
+    }
+
+    let sodiumSum = 0;
+    let potassiumSum = 0;
+    let magnesiumSum = 0;
+    let calciumSum = 0;
+    let validDays = 0;
+    let highDemandDays = 0;
+
+    for (const day of days) {
+      let dayNa = 0;
+      let dayK = 0;
+      let dayMg = 0;
+      let dayCa = 0;
+
+      for (const meal of (day.meals || [])) {
+        for (const item of (meal.items || [])) {
+          const prod = pIndex?.byId?.get?.(item?.product_id);
+          if (!prod) continue;
+          const grams = Number(item.grams) || 0;
+          if (grams <= 0) continue;
+          const factor = grams / 100;
+
+          dayNa += (Number(prod.sodium100) || Number(prod.sodium) || 0) * factor;
+          dayK += (Number(prod.potassium) || 0) * factor;
+          dayMg += (Number(prod.magnesium) || 0) * factor;
+          dayCa += (Number(prod.calcium) || 0) * factor;
+        }
+      }
+
+      const trainings = Array.isArray(day.trainings) ? day.trainings : [];
+      const sweatRateMax = trainings.reduce((max, t) => {
+        const direct = Number(t?.sweatRateMlHour || t?.sweat_ml_h || t?.sweatLossMlPerHour || 0);
+        if (direct > 0) return Math.max(max, direct);
+        const volume = Number(t?.sweatLossMl || t?.sweat_ml || 0);
+        const durationMin = Number(t?.durationMin || t?.duration || 0);
+        if (volume > 0 && durationMin > 0) {
+          return Math.max(max, (volume / durationMin) * 60);
+        }
+        return max;
+      }, 0);
+
+      if (sweatRateMax > 800) highDemandDays++;
+
+      if (dayNa + dayK + dayMg + dayCa > 0) {
+        sodiumSum += dayNa;
+        potassiumSum += dayK;
+        magnesiumSum += dayMg;
+        calciumSum += dayCa;
+        validDays++;
+      }
+    }
+
+    if (validDays === 0) {
+      return { pattern, available: false, reason: 'insufficient_data' };
+    }
+
+    const avgNa = sodiumSum / validDays;
+    const avgK = potassiumSum / validDays;
+    const avgMg = magnesiumSum / validDays;
+    const avgCa = calciumSum / validDays;
+    const naKRatio = avgK > 0 ? avgNa / avgK : 0;
+
+    const naKScore = naKRatio <= 1 ? 100 : (naKRatio <= 1.5 ? 85 : (naKRatio <= 2 ? 65 : (naKRatio <= 3 ? 40 : 20)));
+    const mgScore = Math.min(100, (avgMg / 400) * 100);
+    const caScore = Math.min(100, (avgCa / 1000) * 100);
+    const kScore = Math.min(100, (avgK / 3500) * 100);
+
+    const demandPenalty = highDemandDays >= 3 ? 12 : (highDemandDays > 0 ? 6 : 0);
+    const adaptationBonus = (naKRatio <= 1 && mgScore >= 80) ? 5 : 0;
+    const hyponatremiaFlag = highDemandDays > 0 && avgNa < 1500;
+    const magnesiumLowFlag = avgMg < 300;
+
+    const rawScore = naKScore * 0.5 + mgScore * 0.2 + caScore * 0.15 + kScore * 0.15;
+    const score = Math.max(0, Math.min(100, Math.round(rawScore - demandPenalty + adaptationBonus)));
+
+    let insight = '';
+    if (score >= 80) insight = `✅ Электролитный профиль хороший (${score}/100).`;
+    else if (score >= 60) insight = `🟡 Умеренный электролитный риск (${score}/100).`;
+    else insight = `🔴 Выраженный электролитный дисбаланс (${score}/100).`;
+
+    if (naKRatio > 1.5) insight += ` Na:K=${naKRatio.toFixed(2)} (цель <1.0).`;
+    if (hyponatremiaFlag) insight += ' Признаки гипонатриемического паттерна при высокой нагрузке.';
+    if (magnesiumLowFlag) insight += ' Магний ниже желательного уровня.';
+
+    const baseConfidence = days.length >= 14 ? 0.8 : 0.7;
+    const confidence = piStats.applySmallSamplePenalty
+      ? piStats.applySmallSamplePenalty(baseConfidence, days.length, minDays)
+      : baseConfidence;
+
+    return {
+      pattern,
+      available: true,
+      avgSodium: Math.round(avgNa),
+      avgPotassium: Math.round(avgK),
+      avgMagnesium: Math.round(avgMg),
+      avgCalcium: Math.round(avgCa),
+      naKRatio: Math.round(naKRatio * 100) / 100,
+      highDemandDays,
+      hyponatremiaFlag,
+      magnesiumLowFlag,
+      score,
+      confidence: Math.round(confidence * 100) / 100,
+      insight
+    };
+  }
+
+  /**
+   * C21: Nutrient Density Score
+   * Оценка нутриентной плотности на 1000 ккал (NRF-подобная логика).
+   * @param {Array} days
+   * @param {Object} pIndex
+   * @returns {Object}
+   */
+  function analyzeNutrientDensity(days, pIndex) {
+    const pattern = PATTERNS.NUTRIENT_DENSITY || 'nutrient_density';
+    const minDays = 7;
+
+    if (!Array.isArray(days) || days.length < minDays) {
+      return {
+        pattern,
+        available: false,
+        reason: 'min_days_required',
+        minDaysRequired: minDays,
+        daysProvided: Array.isArray(days) ? days.length : 0
+      };
+    }
+
+    let totalKcal = 0;
+    let protein = 0;
+    let fiber = 0;
+    let vitC = 0;
+    let iron = 0;
+    let magnesium = 0;
+    let potassium = 0;
+    let calcium = 0;
+    let addedSugar = 0;
+    let sodium = 0;
+
+    for (const day of days) {
+      for (const meal of (day.meals || [])) {
+        for (const item of (meal.items || [])) {
+          const prod = pIndex?.byId?.get?.(item?.product_id);
+          if (!prod) continue;
+
+          const grams = Number(item.grams) || 0;
+          if (grams <= 0) continue;
+          const factor = grams / 100;
+
+          totalKcal += calculateItemKcal(item, pIndex);
+          protein += (Number(prod.protein100) || 0) * factor;
+          fiber += (Number(prod.fiber100) || 0) * factor;
+          vitC += (Number(prod.vitamin_c) || 0) * factor;
+          iron += (Number(prod.iron) || 0) * factor;
+          magnesium += (Number(prod.magnesium) || 0) * factor;
+          potassium += (Number(prod.potassium) || 0) * factor;
+          calcium += (Number(prod.calcium) || 0) * factor;
+          sodium += (Number(prod.sodium100) || Number(prod.sodium) || 0) * factor;
+
+          const simple = (Number(prod.simple100) || 0) * factor;
+          const sugar100 = Number(prod.sugar100);
+          if (Number.isFinite(sugar100) && sugar100 > 0) {
+            addedSugar += sugar100 * factor;
+          } else if (Number(prod.nova_group) === 4 && simple > 0) {
+            addedSugar += simple * 0.7;
+          } else if (simple > 0) {
+            addedSugar += simple * 0.3;
+          }
+        }
+      }
+    }
+
+    if (totalKcal < 500) {
+      return { pattern, available: false, reason: 'insufficient_energy_data' };
+    }
+
+    const per1000 = (value) => (value / totalKcal) * 1000;
+
+    const density = {
+      protein: per1000(protein),
+      fiber: per1000(fiber),
+      vitamin_c: per1000(vitC),
+      iron: per1000(iron),
+      magnesium: per1000(magnesium),
+      potassium: per1000(potassium),
+      calcium: per1000(calcium),
+      sugar: per1000(addedSugar),
+      sodium: per1000(sodium)
+    };
+
+    const targets = {
+      protein: 35,
+      fiber: 14,
+      vitamin_c: 45,
+      iron: 6,
+      magnesium: 200,
+      potassium: 1750,
+      calcium: 500
+    };
+
+    const positives =
+      Math.min(1, density.protein / targets.protein) * 20 +
+      Math.min(1, density.fiber / targets.fiber) * 20 +
+      Math.min(1, density.vitamin_c / targets.vitamin_c) * 15 +
+      Math.min(1, density.iron / targets.iron) * 10 +
+      Math.min(1, density.magnesium / targets.magnesium) * 10 +
+      Math.min(1, density.potassium / targets.potassium) * 15 +
+      Math.min(1, density.calcium / targets.calcium) * 10;
+
+    const sugarPenalty = density.sugar > 25 ? Math.min(15, (density.sugar - 25) * 0.4) : 0;
+    const sodiumPenalty = density.sodium > 1000 ? Math.min(15, (density.sodium - 1000) * 0.01) : 0;
+
+    const score = Math.max(0, Math.min(100, Math.round(positives - sugarPenalty - sodiumPenalty)));
+
+    let insight = '';
+    if (score >= 80) insight = `✅ Высокая нутриентная плотность (${score}/100).`;
+    else if (score >= 60) insight = `🟡 Средняя нутриентная плотность (${score}/100).`;
+    else insight = `🔴 Низкая нутриентная плотность (${score}/100): «пустые калории».`;
+
+    if (density.fiber < targets.fiber) insight += ' Клетчатка на 1000 ккал ниже цели.';
+    if (density.sugar > 25) insight += ` Добавленный сахар ${density.sugar.toFixed(1)}г/1000ккал.`;
+    if (density.sodium > 1000) insight += ` Натрий ${Math.round(density.sodium)}мг/1000ккал.`;
+
+    const baseConfidence = days.length >= 14 ? 0.8 : 0.7;
+    const confidence = piStats.applySmallSamplePenalty
+      ? piStats.applySmallSamplePenalty(baseConfidence, days.length, minDays)
+      : baseConfidence;
+
+    return {
+      pattern,
+      available: true,
+      kcalAnalyzed: Math.round(totalKcal),
+      density: {
+        protein: Math.round(density.protein * 10) / 10,
+        fiber: Math.round(density.fiber * 10) / 10,
+        vitamin_c: Math.round(density.vitamin_c * 10) / 10,
+        iron: Math.round(density.iron * 10) / 10,
+        magnesium: Math.round(density.magnesium),
+        potassium: Math.round(density.potassium),
+        calcium: Math.round(density.calcium),
+        sugar: Math.round(density.sugar * 10) / 10,
+        sodium: Math.round(density.sodium)
+      },
+      score,
+      confidence: Math.round(confidence * 100) / 100,
+      insight
+    };
+  }
+
 
   // === ЭКСПОРТ ===
   HEYS.InsightsPI.patterns = {
@@ -4042,12 +4312,14 @@
     analyzeAntioxidantDefense, // C16: Antioxidant Defense (v6.0)
     analyzeAddedSugarDependency, // C18: Added Sugar & Dependency (v6.0)
     analyzeBoneHealth, // C17: Bone Health (v6.0)
-    analyzeTrainingTypeMatch // C19: Training-Type Match (v6.0)
+    analyzeTrainingTypeMatch, // C19: Training-Type Match (v6.0)
+    analyzeElectrolyteHomeostasis, // C20: Electrolyte Homeostasis (v6.0)
+    analyzeNutrientDensity // C21: Nutrient Density (v6.0)
   };
 
   // Fallback для прямого доступа
   global.piPatterns = HEYS.InsightsPI.patterns;
 
-  devLog('[PI Patterns] v6.0.0 loaded — 38 pattern analyzers (C13..C19 partial added)');
+  devLog('[PI Patterns] v6.0.0 loaded — 40 pattern analyzers (C13..C21 added)');
 
 })(typeof window !== 'undefined' ? window : global);

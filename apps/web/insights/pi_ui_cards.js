@@ -942,7 +942,9 @@
         antioxidant_defense: '🛡️ Антиоксидантная защита',
         added_sugar_dependency: '🍬 Добавленный сахар',
         bone_health: '🦴 Здоровье костей',
-        training_type_match: '🏋️ Питание под тип тренировки'
+        training_type_match: '🏋️ Питание под тип тренировки',
+        electrolyte_homeostasis: '⚡ Электролитный баланс',
+        nutrient_density: '🥗 Плотность нутриентов'
       };
 
       // v2.0: Маппинг pattern → SCIENCE_INFO ключ
@@ -970,7 +972,9 @@
         antioxidant_defense: 'ANTIOXIDANT_DEFENSE',
         added_sugar_dependency: 'ADDED_SUGAR_DEPENDENCY',
         bone_health: 'BONE_HEALTH',
-        training_type_match: 'TRAINING_TYPE_MATCH'
+        training_type_match: 'TRAINING_TYPE_MATCH',
+        electrolyte_homeostasis: 'ELECTROLYTE_HOMEOSTASIS',
+        nutrient_density: 'NUTRIENT_DENSITY'
       };
 
       const infoKey = patternToInfoKey[pattern.pattern];
