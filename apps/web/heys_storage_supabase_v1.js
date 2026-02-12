@@ -844,6 +844,9 @@
       if (p.gi > 0) score += 1;
       if (p.portions && p.portions.length > 0) score += 2; // Порции важны
       if (p.createdAt) score += 1;
+      // v4.8.2: Микронутриенты дают бонус — предпочитаем продукты с полными данными
+      if (p.iron > 0 || p.vitamin_c > 0 || p.calcium > 0) score += 2;
+      if (p.magnesium > 0 || p.zinc > 0 || p.potassium > 0) score += 1;
       return score;
     };
 
@@ -944,6 +947,20 @@
       resultMap.set(key, p);
     });
 
+    // 🆕 v4.8.3: Field-level merge для микронутриентов
+    // Когда один продукт выбран как "лучший", копируем missing микронутриенты из другого
+    const MICRO_FIELDS = ['iron', 'vitamin_c', 'calcium', 'vitamin_d', 'vitamin_b12',
+      'vitamin_a', 'vitamin_e', 'magnesium', 'zinc', 'potassium', 'sodium', 'folate'];
+    const enrichMicronutrients = (winner, donor) => {
+      for (const f of MICRO_FIELDS) {
+        const wVal = Number(winner[f]) || 0;
+        const dVal = Number(donor[f]) || 0;
+        if (wVal === 0 && dVal > 0) {
+          winner[f] = dVal;
+        }
+      }
+    };
+
     // Затем мержим локальные
     let addedFromLocal = 0;
     let updatedFromLocal = 0;
@@ -957,11 +974,17 @@
         resultMap.set(key, p);
         addedFromLocal++;
       } else if (isBetterProduct(p, existing)) {
-        // Локальная версия лучше — заменяем
-        resultMap.set(key, p);
+        // Локальная версия лучше — заменяем, но копируем микронутриенты из remote
+        const enriched = { ...p };
+        enrichMicronutrients(enriched, existing);
+        resultMap.set(key, enriched);
         updatedFromLocal++;
+      } else {
+        // Remote лучше — копируем микронутриенты из local если remote их не имеет
+        const enriched = { ...existing };
+        enrichMicronutrients(enriched, p);
+        resultMap.set(key, enriched);
       }
-      // Иначе оставляем remote (уже в map)
     });
 
     const merged = Array.from(resultMap.values());
@@ -992,6 +1015,22 @@
     if (addedFromLocal > 0 || updatedFromLocal > 0) {
       log(`📦 [MERGE] Added ${addedFromLocal} new, updated ${updatedFromLocal} existing`);
     }
+
+    // 🆕 v4.8.4: Set updatedAt for all merged products to enable timestamp-based stale detection
+    // After sync, localStorage will have fresh timestamps, while stale React state has old ones
+    const now = Date.now();
+
+    // v4.8.5: DEBUG - проверяем микронутриенты BEFORE timestamp update
+    const beforeIron = merged.filter(p => p.iron && +p.iron > 0).length;
+    const beforeVitC = merged.filter(p => p.vitamin_c && +p.vitamin_c > 0).length;
+    const beforeCa = merged.filter(p => p.calcium && +p.calcium > 0).length;
+
+    merged.forEach(p => {
+      p.updatedAt = now;
+    });
+
+    logCritical(`🕐 [MERGE TIMESTAMP] Set updatedAt=${now} (${new Date(now).toISOString()}) for all ${merged.length} products`);
+    logCritical(`   Micronutrients: Fe=${beforeIron}, VitC=${beforeVitC}, Ca=${beforeCa}`);
 
     return merged;
   }
@@ -4368,11 +4407,16 @@
                   // 🛡️ v4.8.1: Проверяем что не перезаписываем больший набор
                   const memoryNow = global.HEYS?.products?.getAll?.()?.length || 0;
                   if (localDeduped.length < memoryNow) {
-                    log(`⚠️ [PRODUCTS] Skip setAll: localDeduped (${localDeduped.length}) < memory (${memoryNow})`);
-                    return;
+                    // v4.8.2: Разрешаем дедупликацию если разница <= 5%
+                    const shrinkPct = ((memoryNow - localDeduped.length) / memoryNow) * 100;
+                    if (shrinkPct > 5) {
+                      log(`⚠️ [PRODUCTS] Skip setAll: localDeduped (${localDeduped.length}) significantly < memory (${memoryNow}), ${shrinkPct.toFixed(1)}%`);
+                      return;
+                    }
+                    log(`🧹 [PRODUCTS] Allowing dedup shrink: ${memoryNow} → ${localDeduped.length} (−${shrinkPct.toFixed(1)}%)`);
                   }
                   if (global.HEYS?.products?.setAll) {
-                    global.HEYS.products.setAll(localDeduped, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
+                    global.HEYS.products.setAll(localDeduped, { source: 'cloud-sync', skipNotify: true, skipCloud: true, allowShrink: true });
                     productsUpdated = true;
                     latestProducts = localDeduped;
                     if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
@@ -4391,7 +4435,7 @@
                 if (merged.length > remoteProducts.length) {
                   logCritical(`📦 [PRODUCTS MERGE] ${currentLocal.length} local + ${remoteProducts.length} remote → ${merged.length} merged`);
                   if (global.HEYS?.products?.setAll) {
-                    global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
+                    global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true, allowShrink: true });
                     productsUpdated = true;
                     latestProducts = merged;
                     if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
@@ -4418,7 +4462,7 @@
                 const memoryCount = global.HEYS?.products?.getAll?.()?.length || 0;
                 if (merged.length === remoteProducts.length && merged.length === currentLocal.length && merged.length >= memoryCount) {
                   if (global.HEYS?.products?.setAll) {
-                    global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
+                    global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true, allowShrink: true });
                     productsUpdated = true;
                     latestProducts = merged;
                     if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
@@ -4433,12 +4477,17 @@
                 // Это предотвращает race condition когда новые продукты добавлены между чтением и merge
                 const currentInMemory = global.HEYS?.products?.getAll?.()?.length || 0;
                 if (merged.length < currentInMemory) {
-                  log(`⚠️ [PRODUCTS] Skipping setAll: merged (${merged.length}) < memory (${currentInMemory})`);
-                  return; // Не перезаписываем — setAll всё равно заблокирует
+                  // v4.8.2: Разрешаем уменьшение если это дедупликация (разница <= 5%)
+                  const shrinkPct = ((currentInMemory - merged.length) / currentInMemory) * 100;
+                  if (shrinkPct > 5) {
+                    log(`⚠️ [PRODUCTS] Skipping setAll: merged (${merged.length}) significantly < memory (${currentInMemory}), ${shrinkPct.toFixed(1)}%`);
+                    return;
+                  }
+                  log(`🧹 [PRODUCTS] Allowing merge shrink: ${currentInMemory} → ${merged.length} (−${shrinkPct.toFixed(1)}%, dedup)`);
                 }
 
                 if (global.HEYS?.products?.setAll) {
-                  global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
+                  global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true, allowShrink: true });
                   productsUpdated = true;
                   latestProducts = merged;
                   if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
@@ -4680,6 +4729,11 @@
                   return;
                 }
               }
+
+              // v4.8.5: DEBUG - что записываем в setAll после merge
+              const setAllIron = valueToSave.filter(p => p && p.iron && +p.iron > 0).length;
+              const setAllTs = valueToSave.filter(p => p && p.updatedAt).length;
+              logCritical(`📝 [SETALL DEBUG] About to call setAll with ${valueToSave.length} products: withIron=${setAllIron}, withTimestamp=${setAllTs}`);
 
               global.HEYS.products.setAll(valueToSave, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
               productsUpdated = true;
@@ -5572,7 +5626,83 @@
       updated_at: (new Date()).toISOString(),
     };
 
-    // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: НЕ сохраняем пустые массивы продуктов в Supabase
+    // �️ v4.8.3: НЕ сохраняем продукты в облако ДО завершения initial sync
+    // При старте React useEffect([products]) отправляет stale localStorage в cloud,
+    // перезатирая обогащённые микронутриентами данные. Sync сам загрузит актуальную версию.
+    if (waitingForSync && k && (k.includes('products') || k === 'heys_products')) {
+      log(`🚫 [SAVE DEFERRED] Products save blocked — waiting for initial sync to load cloud version`);
+      return;
+    }
+    // v4.8.3: Timestamp check для products — блокируем если сохраняемая версия СТАРЕЕ текущей
+    // React useEffect с debounce может попытаться сохранить stale state ПОСЛЕ того как sync загрузил свежую версию
+    if ((k === 'heys_products' || normalizedKey === 'heys_products') && Array.isArray(value) && value.length > 0) {
+      // v4.8.6: ПЕРВИЧНАЯ защита — качественная проверка ДО попыток чтения localStorage
+      const savingWithIron = value.filter(p => p && p.iron && +p.iron > 0).length;
+      const savingWithTs = value.filter(p => p && p.updatedAt).length;
+      logCritical(`🔍 [SAVE DEBUG] Products to save: total=${value.length}, withIron=${savingWithIron}, withTimestamp=${savingWithTs}`);
+
+      // 🚨 КРИТИЧЕСКАЯ защита: если пытаемся сохранить продукты БЕЗ микронутриентов — это stale state!
+      // В облаке 290+ products с железом, а React пытается сохранить <50 — БЛОКИРУЕМ
+      if (savingWithIron < 50) {
+        logCritical(`🚨 [SAVE BLOCKED] Quality check: only ${savingWithIron} products with iron (expected 250+)`);
+        logCritical(`   This is stale React state without micronutrients. Refusing to overwrite cloud.`);
+        return;
+      }
+
+      try {
+        const currentKey = client_id ? `heys_${client_id}_products` : 'heys_products';
+        const currentRaw = localStorage.getItem(currentKey);
+
+        if (currentRaw) {
+          const current = JSON.parse(currentRaw);
+          if (Array.isArray(current) && current.length > 0) {
+            const currentWithIron = current.filter(p => p && p.iron && +p.iron > 0).length;
+            const currentWithTs = current.filter(p => p && p.updatedAt).length;
+            logCritical(`🔍 [SAVE DEBUG] Current localStorage: total=${current.length}, withIron=${currentWithIron}, withTimestamp=${currentWithTs}`);
+
+            // Находим самый свежий updatedAt в обеих версиях
+            const getMaxTimestamp = (arr) => {
+              let max = 0;
+              for (const p of arr) {
+                if (p && p.updatedAt) {
+                  const ts = typeof p.updatedAt === 'number' ? p.updatedAt : new Date(p.updatedAt).getTime();
+                  if (ts > max) max = ts;
+                }
+              }
+              return max;
+            };
+
+            const savingMaxTs = getMaxTimestamp(value);
+            const currentMaxTs = getMaxTimestamp(current);
+            const delta = currentMaxTs - savingMaxTs;
+
+            logCritical(`🔍 [TIMESTAMP CHECK] savingMaxTs=${savingMaxTs} (${new Date(savingMaxTs).toISOString()})`);
+            logCritical(`🔍 [TIMESTAMP CHECK] currentMaxTs=${currentMaxTs} (${new Date(currentMaxTs).toISOString()})`);
+            logCritical(`🔍 [TIMESTAMP CHECK] delta=${delta}ms (${Math.round(delta / 1000)}s), threshold=30000ms`);
+
+            // Если сохраняемая версия старее текущей на >30 секунд — блокируем (это stale state)
+            if (currentMaxTs > 0 && savingMaxTs > 0 && delta > 30000) {
+              logCritical(`🚨 [SAVE BLOCKED] Stale products: saving timestamp ${new Date(savingMaxTs).toISOString()} vs current ${new Date(currentMaxTs).toISOString()}`);
+              logCritical(`   React state outdated (delta ${Math.round(delta / 1000)}s), current localStorage is fresher`);
+              logCritical(`   Refusing to overwrite ${currentWithIron} products with iron with stale version (${savingWithIron} products with iron)`);
+              return;
+            }
+
+            // v4.8.5: Дополнительная защита на основе КАЧЕСТВА данных (если прошли первичную проверку)
+            // Если сохраняемая версия имеет ЗНАЧИТЕЛЬНО меньше микронутриентов — блокируем
+            if (currentWithIron >= 100 && savingWithIron < currentWithIron * 0.5) {
+              logCritical(`🚨 [SAVE BLOCKED] Quality degradation: current has ${currentWithIron} products with iron, saving only ${savingWithIron}`);
+              logCritical(`   This looks like stale React state without micronutrients. Blocking save.`);
+              return;
+            }
+          }
+        }
+      } catch (e) {
+        // Ignore parsing errors, allow save to proceed
+      }
+    }
+
+    // �🚨 КРИТИЧЕСКАЯ ЗАЩИТА: НЕ сохраняем пустые массивы продуктов в Supabase
     if (k && (k.includes('products') || k === 'heys_products') && Array.isArray(value) && value.length === 0) {
       log(`🚫 [SAVE BLOCKED] Refused to save empty products array to Supabase (key: ${normalizedKey})`);
       return; // Блокируем затирание реальных данных пустым массивом

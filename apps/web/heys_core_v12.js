@@ -4089,6 +4089,7 @@
       // Это предотвращает race condition когда sync перезаписывает восстановленные продукты
       // ВАЖНО: Проверяем ОБА источника — store (memory) И localStorage напрямую!
       // Memory cache может быть устаревшим если sync писал через ls.setItem
+      // v4.8.2: allowShrink для cloud-sync с проверенным merge (удаление дубликатов)
       if (!opts.allowShrink) {
         // 1. Проверяем memory cache через getAll
         const fromGetAll = HEYS.products.getAll?.() || [];

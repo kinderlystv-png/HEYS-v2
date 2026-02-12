@@ -361,7 +361,7 @@
   // === ВЫЧИСЛИТЕЛЬНЫЕ ФУНКЦИИ (делегируем в pi_calculations.js) ===
   const calculateItemKcal = piCalculations.calculateItemKcal || function (item, pIndex) {
     if (!item || !item.grams) return 0;
-    const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+    const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id)?.toLowerCase());
     if (!prod) return 0;
     const p = prod.protein100 || 0;
     const c = (prod.simple100 || 0) + (prod.complex100 || 0);

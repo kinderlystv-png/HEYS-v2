@@ -148,6 +148,7 @@
 
     const day = lsGet(`heys_dayv2_${dateStr}`, {});
     const profile = lsGet('heys_profile', {});
+    console.info('[HEYS.Metabolic] 🔍 inventoryData("' + dateStr + '") day keys:', Object.keys(day || {}), 'meals:', day?.meals?.length || 0);
 
     return {
       // День
@@ -515,8 +516,10 @@
     // Используем HEYS.InsulinWave.calculate() если доступно
     if (HEYS.InsulinWave && HEYS.InsulinWave.calculate && day.meals && day.meals.length > 0) {
       try {
-        // Получаем pIndex и getProductFromItem из HEYS.products
-        const pIndex = HEYS.products?.buildIndex?.() || { byId: new Map() };
+        // 🔧 Fix: buildIndex через dayUtils (HEYS.products.buildIndex не существует)
+        const buildIdx = HEYS.dayUtils?.buildProductIndex || HEYS.models?.buildProductIndex;
+        const prods = HEYS.products?.getAll?.() || lsGet('heys_products', []);
+        const pIndex = buildIdx ? buildIdx(prods) : { byId: new Map() };
         const getProductFromItem = (item, idx) => {
           if (!item) return null;
           // Пробуем найти по product_id
@@ -526,6 +529,17 @@
           // Fallback: данные внутри item (штамп)
           return item;
         };
+
+        // 🔧 Fix: Если используется fallback дата (не сегодня), передаём конец того дня как "now"
+        const today = HEYS.dayUtils?.todayISO?.() || new Date().toISOString().split('T')[0];
+        const isFallback = dateStr !== today;
+        let effectiveNow;
+        if (isFallback) {
+          // Fallback: используем 23:59 того дня (конец дня)
+          effectiveNow = new Date(dateStr + 'T23:59:00');
+        } else {
+          effectiveNow = new Date();
+        }
 
         const waveData = HEYS.InsulinWave.calculate({
           meals: day.meals,
@@ -539,7 +553,7 @@
             date: dateStr,
             lsGet
           },
-          now: new Date()
+          now: effectiveNow
         });
 
         if (waveData && waveData.status === 'lipolysis') {
@@ -744,7 +758,10 @@
 
     const days = [];
     const today = new Date();
-    const pIndex = HEYS.products?.buildIndex?.() || { byId: new Map() };
+    // 🔧 Fix: buildIndex через dayUtils
+    const buildIdx = HEYS.dayUtils?.buildProductIndex || HEYS.models?.buildProductIndex;
+    const prods = HEYS.products?.getAll?.() || lsGet('heys_products', []);
+    const pIndex = buildIdx ? buildIdx(prods) : { byId: new Map() };
 
     for (let i = 0; i < daysBack; i++) {
       const d = new Date(today);
@@ -788,11 +805,22 @@
    * @returns {Object} полная структура статуса
    */
   function getStatus(options = {}) {
+    console.info('[HEYS.Metabolic] 🔍 getStatus() called with options:', JSON.stringify(Object.keys(options)));
     const lsGet = getScopedLsGet();
+
+    // 🔧 Fix: buildIndex fallback — HEYS.products.buildIndex не существует
+    const buildIdx = HEYS.dayUtils?.buildProductIndex || HEYS.models?.buildProductIndex;
+    console.info('[HEYS.Metabolic] 🔍 buildIdx available:', !!buildIdx, 'dayUtils:', !!HEYS.dayUtils?.buildProductIndex, 'models:', !!HEYS.models?.buildProductIndex);
+    const products = HEYS.products?.getAll?.() || lsGet('heys_products', []);
+    console.info('[HEYS.Metabolic] 🔍 products count:', Array.isArray(products) ? products.length : 'not-array');
+    const defaultPIndex = buildIdx
+      ? buildIdx(products)
+      : null;
+    console.info('[HEYS.Metabolic] 🔍 defaultPIndex:', defaultPIndex ? `{byId:${defaultPIndex.byId?.size},byName:${defaultPIndex.byName?.size}}` : 'null');
 
     const {
       dateStr = new Date().toISOString().split('T')[0],
-      pIndex = HEYS.products?.buildIndex?.(),
+      pIndex = defaultPIndex,
       profile = lsGet('heys_profile', {}),
       forceRefresh = false
     } = options;
@@ -807,28 +835,73 @@
       };
     }
 
-    // Проверка кэша
+    // Проверка кэша — 🔧 Fix: включаем dateStr в ключ кэша
     const clientId = lsGet('heys_client_current', 'default');
     const now = Date.now();
 
     if (!forceRefresh &&
       _cache.status &&
       _cache.clientId === clientId &&
+      _cache.dateStr === dateStr &&
       (now - _cache.timestamp) < CONFIG.CACHE_TTL_MS) {
       return _cache.status;
     }
 
     // Инвентаризация данных
-    const inventory = inventoryData(dateStr);
+    let inventory = inventoryData(dateStr);
     inventory.completeness = calculateDataCompleteness(inventory);
+    console.info('[HEYS.Metabolic] 🔍 inventory for', dateStr, ':', JSON.stringify({
+      hasMeals: inventory.hasMeals,
+      hasSleep: inventory.hasSleep,
+      hasWeight: inventory.hasWeight,
+      completeness: inventory.completeness,
+      meals: inventory.meals
+    }));
+
+    // 🔧 Fix: Если сегодня нет данных — fallback на последний день с данными (до 14 дней)
+    let effectiveDateStr = dateStr;
+    const today = HEYS.dayUtils?.todayISO?.() || new Date().toISOString().split('T')[0];
+    console.info('[HEYS.Metabolic] 🔍 today:', today, 'dateStr:', dateStr);
+
+    if (!inventory.hasMeals) {
+      // 🔧 Fix: fallback если нет ПРИЁМОВ ПИЩИ (meals) — ключевой показатель для метаболизма
+      if (dateStr === today) {
+        console.info('[HEYS.Metabolic] 🔍 No meals for today, searching fallback...');
+        for (let i = 1; i <= 14; i++) {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const fallbackDate = d.toISOString().split('T')[0];
+          const fallbackInv = inventoryData(fallbackDate);
+          if (fallbackInv.hasMeals) {
+            // 🔧 Ищем именно день с meals — ключ для метаболической фазы и score
+            console.info('[HEYS.Metabolic] ✅ Fallback found:', fallbackDate, JSON.stringify({
+              hasMeals: fallbackInv.hasMeals,
+              hasSleep: fallbackInv.hasSleep,
+              hasWeight: fallbackInv.hasWeight
+            }));
+            effectiveDateStr = fallbackDate;
+            inventory = fallbackInv;
+            inventory.completeness = calculateDataCompleteness(inventory);
+            inventory.isFallbackDate = true;
+            inventory.originalDate = dateStr;
+            break;
+          }
+        }
+        if (effectiveDateStr === dateStr) {
+          console.warn('[HEYS.Metabolic] ⚠️ No fallback data found in 14 days!');
+        }
+      }
+    }
 
     // Confidence уровень
     const confidence = inventory.completeness >= 80 ? 'high'
       : inventory.completeness >= 50 ? 'medium'
         : 'low';
 
-    // Минимальные данные для расчёта
+    // Минимальные данные для расчёта — после fallback
     if (!inventory.hasMeals && !inventory.hasSleep && !inventory.hasWeight) {
+      // 🔧 Fix: НЕ кэшируем отрицательный результат
+      console.warn('[HEYS.Metabolic] ⚠️ insufficient_data AFTER fallback, returning available:false');
       return {
         available: false,
         reason: 'insufficient_data',
@@ -841,16 +914,16 @@
     // История для предиктивной логики
     const history = getDaysHistory(30);
 
-    // === Расчёты ===
+    // === Расчёты (используем effectiveDateStr — может быть fallback дата) ===
 
     // 1. Plan Adherence
-    const adherence = calculatePlanAdherence(dateStr, pIndex, profile);
+    const adherence = calculatePlanAdherence(effectiveDateStr, pIndex, profile);
 
     // 2. Crash Risk
-    const crash = calculateCrashRisk(dateStr, profile, history);
+    const crash = calculateCrashRisk(effectiveDateStr, profile, history);
 
     // 3. Metabolic Phase
-    const metabolicPhase = calculateMetabolicPhase(dateStr);
+    const metabolicPhase = calculateMetabolicPhase(effectiveDateStr);
 
     // 4. Сглаживание score
     const rawScore = adherence.score;
@@ -891,6 +964,10 @@
       // Уверенность
       confidence,
 
+      // 🔧 Fallback дата (если сегодня пустой)
+      effectiveDate: effectiveDateStr,
+      isFallbackDate: effectiveDateStr !== dateStr,
+
       // Debug инфо
       debug: {
         inventory,
@@ -899,15 +976,18 @@
         smoothedScore,
         rawScore,
         riskLevel,
-        prevRiskLevel: _cache.lastRiskLevel
+        prevRiskLevel: _cache.lastRiskLevel,
+        requestedDate: dateStr,
+        effectiveDate: effectiveDateStr
       }
     };
 
-    // Кэшируем
+    // Кэшируем — 🔧 Fix: dateStr включён в ключ кэша
     _cache = {
       status: result,
       timestamp: now,
       clientId,
+      dateStr,
       smoothedScore,
       lastRiskLevel: riskLevel
     };
@@ -1415,7 +1495,7 @@
         stability: calculateMealTimingStability(history).score,
         recovery: Math.round(carbTolerance.score * 0.8 + 20),
         insulinSensitivity: Math.round(70 + Math.random() * 20), // TODO: реальный расчёт
-        consistency: Math.round(50 + daysAvailable * 1.5),
+        consistency: Math.min(100, Math.round(50 + daysAvailable * 1.5)), // Clamp to 0-100
         chronotype: analyzeCircadianPattern(history).chronotypeScore
       },
       tolerances: {
@@ -1922,7 +2002,10 @@
     }
 
     const profile = lsGet('heys_profile', {});
-    const pIndex = HEYS.products?.buildIndex?.();
+    // 🔧 Fix: buildIndex через dayUtils
+    const buildIdx = HEYS.dayUtils?.buildProductIndex || HEYS.models?.buildProductIndex;
+    const prods = HEYS.products?.getAll?.() || lsGet('heys_products', []);
+    const pIndex = buildIdx ? buildIdx(prods) : null;
 
     // Собираем статусы за каждый день
     const dailyStatuses = [];
@@ -2189,7 +2272,10 @@
 
     const lsGet = getScopedLsGet();
     const profile = lsGet('heys_profile', {});
-    const pIndex = HEYS.products?.buildIndex?.();
+    // 🔧 Fix: buildIndex через dayUtils
+    const buildIdx = HEYS.dayUtils?.buildProductIndex || HEYS.models?.buildProductIndex;
+    const prods = HEYS.products?.getAll?.() || lsGet('heys_products', []);
+    const pIndex = buildIdx ? buildIdx(prods) : null;
     const analysis = HEYS.PredictiveInsights.analyze({
       daysBack: 14,
       lsGet,

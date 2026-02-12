@@ -19,12 +19,9 @@
         React.useEffect(() => {
             if (products.length === 0) {
                 try {
-                    const stored =
-                        (window.HEYS &&
-                            window.HEYS.utils &&
-                            window.HEYS.utils.lsGet &&
-                            window.HEYS.utils.lsGet('heys_products', [])) ||
-                        [];
+                    // 🔄 v4.8.8: FIX — читаем из Store API вместо utils.lsGet
+                    // Единый источник истины для products — HEYS.products.getAll()
+                    const stored = window.HEYS?.products?.getAll?.() || [];
                     if (Array.isArray(stored) && stored.length) setProducts(stored);
                 } catch (e) { }
             }
@@ -43,11 +40,16 @@
 
                     cloud.syncClient(clientId)
                         .then(() => {
-                            const loadedProducts = Array.isArray(
-                                window.HEYS.utils.lsGet('heys_products', []),
-                            )
-                                ? window.HEYS.utils.lsGet('heys_products', [])
+                            // 🔄 v4.8.8: FIX — читаем из Store API, не напрямую из localStorage
+                            // Store.set пишет в scoped ключ, utils.lsGet читает из другого → несоответствие
+                            // Правильно: sync → setAll → Store.set → products.getAll() (единый источник истины)
+                            const loadedProducts = Array.isArray(window.HEYS?.products?.getAll?.())
+                                ? window.HEYS.products.getAll()
                                 : [];
+
+                            // 🔍 v4.8.7: DEBUG — что загрузилось из Store после sync
+                            const loadedIron = loadedProducts.filter(p => p?.iron && +p.iron > 0).length;
+                            console.info(`[HEYS.sync] 🔍 After sync: loadedProducts.length=${loadedProducts.length}, withIron=${loadedIron}`);
 
                             if (loadedProducts.length === 0 && Array.isArray(productsBeforeSync) && productsBeforeSync.length > 0) {
                                 // 🔇 v4.7.1: Лог отключён
@@ -77,8 +79,23 @@
                                     window.HEYS.utils.lsSet('heys_products', productsBeforeSync);
                                 }
                             } else {
+                                // 🔄 v4.8.7: Проверяем качество данных вместо длины
+                                // Сравниваем количество продуктов с микронутриентами (iron) вместо общей длины
                                 setProducts(prev => {
-                                    if (Array.isArray(prev) && prev.length === loadedProducts.length) return prev;
+                                    const prevIron = Array.isArray(prev) ? prev.filter(p => p?.iron && +p.iron > 0).length : 0;
+                                    const loadedIron = loadedProducts.filter(p => p?.iron && +p.iron > 0).length;
+
+                                    // 🔍 v4.8.7: DEBUG — какое состояние пытаемся обновить
+                                    console.info(`[HEYS.sync] 🔍 setProducts callback: prev.length=${prev.length}, prevIron=${prevIron}, loadedIron=${loadedIron}`);
+
+                                    // Если качество одинаковое — не обновляем (оптимизация)
+                                    // Если качество разное — ВСЕГДА обновляем (42 Fe → 290 Fe)
+                                    if (Array.isArray(prev) && prev.length === loadedProducts.length && prevIron === loadedIron) {
+                                        console.info(`[HEYS.sync] 🚫 React state NOT updated (same quality)`);
+                                        return prev;
+                                    }
+
+                                    console.info(`[HEYS.sync] 🔄 React state updated: ${prev.length}→${loadedProducts.length} products, ${prevIron}→${loadedIron} with iron`);
                                     return loadedProducts;
                                 });
                             }
@@ -140,9 +157,10 @@
             const handleProductsUpdate = (event) => {
                 const detail = event?.detail || {};
                 const incoming = detail.products;
+                // 🔄 v4.8.8: Единый источник истины — Store API
                 const latest = Array.isArray(incoming)
                     ? incoming
-                    : (window.HEYS?.products?.getAll?.() || window.HEYS?.utils?.lsGet?.('heys_products', []) || []);
+                    : (window.HEYS?.products?.getAll?.() || []);
 
                 setProducts(latest);
                 if (!initialSyncDoneRef.current) return;

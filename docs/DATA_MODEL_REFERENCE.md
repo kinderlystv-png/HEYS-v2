@@ -1,12 +1,13 @@
 # 📊 HEYS Data Model Reference
 
 > **Справочник всех аналитических параметров HEYS**  
-> Версия: 5.2.0 | Обновлено: 2026-02-12 | **182 умных совета** | **37 факторов
-> инсулиновой волны** | **🧠 Insulin Wave v4.1.0** | **🔬 PMID Science Links** |
-> **🏋️ Training Context** | **💰 Caloric Debt** | **🔄 Refeed Day** | **📊
-> Status Score** | **🎮 Gamification** | **🏭 NOVA Classification** | **🧬
+> Версия: 5.3.0 (v4.8.8) | Обновлено: 2026-02-12 | **182 умных совета** | **37
+> факторов инсулиновой волны** | **🧠 Insulin Wave v4.1.0** | **🔬 PMID Science
+> Links** | **🏋️ Training Context** | **💰 Caloric Debt** | **🔄 Refeed Day** |
+> **📊 Status Score** | **🎮 Gamification** | **🏭 NOVA Classification** | **🧬
 > Extended Nutrients** | **🔮 Predictive Insights v5.2.0: 41 паттерн (100%
-> научное покрытие + ⚡ мемоизация)**
+> научное покрытие + ⚡ мемоизация)** | **🛡️ Store API v4.8.8 (React State Sync
+> Fix)**
 
 📚 **[SCIENTIFIC_REFERENCES.md](./SCIENTIFIC_REFERENCES.md)** — полный список
 научных источников с PMID ссылками
@@ -1808,23 +1809,56 @@ stats = {
 
 **Правила работы с localStorage:**
 
-1. **Используй `U.lsSet()` / `U.lsGet()`** вместо прямого `localStorage` — они
+> ⚠️ **КРИТИЧНО (v4.8.8)**: В React компонентах НЕ используй прямой доступ к
+> localStorage через `U.lsGet/U.lsSet`. Всегда используй **Store API**!
+
+**✅ ПРАВИЛЬНО v4.8.8+ (React):**
+
+```javascript
+// Читаем продукты через Store API (handles scoping internally)
+const products = window.HEYS?.products?.getAll?.() || [];
+
+// Пишем через Store API (sync + localStorage + memory cache)
+HEYS.products.setAll(newProducts);
+```
+
+**❌ НЕПРАВИЛЬНО (broken in React):**
+
+```javascript
+// Bypasses scoping → reads unscoped key → empty array
+const products = window.HEYS.utils.lsGet('heys_products', []);
+```
+
+**Почему это критично:**
+
+- Store API пишет в scoped key: `heys_{clientId}_products`
+- `U.lsGet('heys_products')` читает unscoped key → empty
+- Результат: React видит 42 продукта вместо 290 → паттерны не активируются
+
+**Legacy code (вне React):**
+
+1. **Используй `U.lsSet()` / `U.lsGet()`** для legacy sync logic — они
    автоматически добавляют clientId prefix
 2. **Глобальные ключи** (❌) — только для auth/session, НЕ для данных
    пользователя
 3. **sessionStorage** — только для временного кэша, НЕ персистентные данные
 
+**Дополнительно**: См. [STORE_API_QUICKREF.md](./STORE_API_QUICKREF.md) для
+полного руководства
+
 ---
 
 ## Частые ошибки
 
-| Ошибка                   | Правильно                                   |
-| ------------------------ | ------------------------------------------- |
-| `dayTot.protein`         | `dayTot.prot` ⚠️                            |
-| `normAbs.protein`        | `normAbs.prot` ⚠️                           |
-| `item.category`          | `getProductFromItem(item, pIndex).category` |
-| `heys_day_`              | `heys_dayv2_` (v2!)                         |
-| `localStorage.setItem()` | `U.lsSet()`                                 |
+| Ошибка                         | Правильно                                   |
+| ------------------------------ | ------------------------------------------- |
+| `dayTot.protein`               | `dayTot.prot` ⚠️                            |
+| `normAbs.protein`              | `normAbs.prot` ⚠️                           |
+| `item.category`                | `getProductFromItem(item, pIndex).category` |
+| `heys_day_`                    | `heys_dayv2_` (v2!)                         |
+| `localStorage.setItem()`       | `U.lsSet()` (legacy) / `Store API` (React)  |
+| `utils.lsGet()` in React       | `products.getAll()` ⚠️ **v4.8.8 CRITICAL**  |
+| `utils.lsGet('heys_products')` | `HEYS.products.getAll()` ⚠️ **BROKEN**      |
 
 ## Meal Quality Score (2025-12-10)
 

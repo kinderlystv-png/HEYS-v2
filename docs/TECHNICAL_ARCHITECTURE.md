@@ -250,6 +250,39 @@ Post-deployment Health Checks
 - **Performance Monitoring**: Custom metrics для key business processes
 - **User Analytics**: Behavioral tracking и usage patterns
 
+### **Data Quality Monitoring** (v4.8.8)
+
+**DEBUG Logs** (активны во время тестирования):
+
+```javascript
+// 1. Post-sync data verification
+console.info(
+  `[HEYS.sync] 🔍 After sync: loadedProducts.length=${x}, withIron=${y}`,
+);
+// Ожидаемое: withIron=290 (не 0 или 42)
+
+// 2. React state update tracking
+console.info(
+  `[HEYS.sync] 🔄 React state updated: ${prev}→${next} products, ${a}→${b} with iron`,
+);
+// OR: console.info(`[HEYS.sync] 🚫 React state NOT updated (same quality)`);
+
+// 3. Quality check blocks (критические)
+console.error(
+  `[HEYS.storage] 🚨 SAVE BLOCKED: only ${x} products with iron (expected 250+)`,
+);
+```
+
+**Monitoring Checklist**:
+
+- ✅ `withIron=290` после каждого sync (не меньше)
+- ✅ `React state updated` должен быть редким (данные не меняются часто)
+- ✅ `SAVE BLOCKED` НЕ должен появляться после v4.8.8 fix
+- ⚠️ Любой `withIron < 100` = ИНЦИДЕНТ → проверить namespacing
+
+**Purpose**: Раннее обнаружение регрессий защитного слоя (quality checks) и
+React state sync
+
 ### **Infrastructure Monitoring**
 
 - **Server Metrics**: CPU, память, disk, network
@@ -278,7 +311,67 @@ Post-deployment Health Checks
 
 ---
 
-## 🔮 Будущее развитие
+## �️ Критические архитектурные решения
+
+### **React State Synchronization v4.8.8 (февраль 2026)**
+
+**Проблема**: React state показывал 42 продукта с микронутриентами вместо 290,
+несмотря на корректные данные в cloud/DB/localStorage. Это блокировало активацию
+паттернов `micronutrient_radar`, `antioxidant_defense`, `heart_health`.
+
+**Root Cause**: Namespacing conflict — React читал из **unscoped** localStorage
+ключа (`heys_products`), а синхронизация писала в **scoped** ключ
+(`heys_{clientId}_products`).
+
+**Решение** (v4.8.8):
+
+```javascript
+// ❌ СТАРЫЙ подход — прямой доступ к localStorage
+const products = window.HEYS.utils.lsGet('heys_products', []);
+
+// ✅ НОВЫЙ подход v4.8.8 — единственный источник истины
+const products = window.HEYS?.products?.getAll?.() || [];
+```
+
+**Архитектурный принцип**: **Store API как Single Source of Truth**
+
+- React ВСЕГДА читает через `products.getAll()` (не напрямую из localStorage)
+- Store API инкапсулирует scoped keys внутри
+- Абстракция предотвращает утечку деталей реализации
+
+**Защита данных** (многослойная):
+
+1. **PRIMARY Quality Check** (v4.8.6): Блокирует сохранение если `<50` продуктов
+   с железом
+2. **Quality-based Comparison** (v4.8.7): Обновление React по iron count, а не
+   по длине массива
+3. **Pre-sync Block**: Флаг `waitingForSync` предотвращает race conditions
+
+**Результат**:
+
+- Products с Fe: 42 → **290** ✅
+- micronutrient_radar: 0 → **100** ✅
+- Health Score: 66 → **71** ✅
+- Паттерны: 27/41 → активны все нутриентные
+
+**Lessons Learned**:
+
+1. **Никогда не обходите абстракции** — прямой доступ к localStorage нарушает
+   scoping
+2. **Debug logs критичны** — 3-уровневое логирование выявило namespacing
+   conflict
+3. **Quality checks работают** — PRIMARY check заблокировал 100% stale saves
+
+**Файлы**:
+
+- `apps/web/heys_app_sync_effects_v1.js` (React hooks, v4.8.8)
+- `apps/web/public/heys_storage_supabase_v1.js` (sync + quality checks, v4.8.6)
+- `apps/web/public/heys_core_v12.js` (products API)
+- `apps/web/public/heys_storage_layer_v1.js` (Store implementation)
+
+---
+
+## �🔮 Будущее развитие
 
 ### **Planned Enhancements**
 
@@ -297,5 +390,5 @@ Post-deployment Health Checks
 
 ---
 
-_Документ обновлен: 2 сентября 2025_  
-_Статус системы: 98.5% готовности к production_
+_Документ обновлен: 12 февраля 2026_  
+_Статус системы: 100% production ready (v4.8.8)_

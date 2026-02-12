@@ -1,8 +1,8 @@
 # � HEYS API Documentation
 
-> **Version:** 15.0.0  
-> **Last Updated:** September 2, 2025  
-> **Status:** Production Ready (98.5% test coverage)  
+> **Version:** 15.1.0  
+> **Last Updated:** February 12, 2026  
+> **Status:** Production Ready (v4.8.8 — React State Sync Fix)  
 > **Maintainer:** @development-team
 
 ## 📋 Overview
@@ -122,6 +122,111 @@ cloud.bootstrapClientSync(clientId); // GET /sync/client/:clientId
 cloud.syncToCloud(); // POST /sync/push
 cloud.syncFromCloud(); // POST /sync/pull
 ```
+
+---
+
+### 🛡️ Store API Best Practices (v4.8.8)
+
+**CRITICAL RULE:** ВСЕГДА используй Store API для доступа к данным в React.
+НИКОГДА не обращайся напрямую к localStorage через `utils.lsGet/lsSet`.
+
+**Проблема namespacing conflict (решена в v4.8.8):**
+
+```javascript
+// ❌ НЕПРАВИЛЬНО — bypasses scoping, reads unscoped key
+const products = window.HEYS.utils.lsGet('heys_products', []);
+
+// ✅ ПРАВИЛЬНО v4.8.8 — Store API handles scoping internally
+const products = window.HEYS?.products?.getAll?.() || [];
+```
+
+**Почему это критично?**
+
+- Store API автоматически добавляет `clientId` в ключи:
+  `heys_{clientId}_products`
+- Прямой доступ к localStorage ищет unscoped ключ `heys_products` → empty array
+- React видит пустой массив → откатывается к stale state → 42 продукта вместо
+  290
+- Паттерны `micronutrient_radar` и др. не активируются → healthScore падает
+
+**Store API Methods:**
+
+```javascript
+// Products
+HEYS.products.getAll(); // Read all products (scoped)
+HEYS.products.setAll(array); // Write products (scoped)
+HEYS.products.update(id, changes); // Update single product
+
+// Generic Store Access (для других данных)
+HEYS.store.get('heys_profile'); // Read with scoping
+HEYS.store.set('heys_profile', data); // Write with scoping
+```
+
+**Data Quality Checks** (защита от stale saves):
+
+```javascript
+// PRIMARY Quality Check (v4.8.6) — в heys_storage_supabase_v1.js
+const savingWithIron = value.filter((p) => p && p.iron && +p.iron > 0).length;
+if (savingWithIron < 50) {
+  logCritical(`🚨 [SAVE BLOCKED] Only ${savingWithIron} products with iron`);
+  return; // Блокирует сохранение немедленно
+}
+// Эта проверка блокирует 100% stale saves (проверено в production)
+```
+
+**React Integration Pattern:**
+
+```javascript
+// В useEffect или event handlers
+useEffect(
+  () => {
+    // 1. Check if sync in progress
+    if (waitingForSync.current === true) {
+      return; // Don't load stale data before sync completes
+    }
+
+    // 2. Load from Store API (not utils.lsGet!)
+    const loadedProducts = window.HEYS?.products?.getAll?.() || [];
+
+    // 3. Verify quality (iron count, not just length)
+    const loadedIron = loadedProducts.filter(
+      (p) => p?.iron && +p.iron > 0,
+    ).length;
+
+    // 4. Update React state with quality check
+    setProducts((prev) => {
+      const prevIron = Array.isArray(prev)
+        ? prev.filter((p) => p?.iron && +p.iron > 0).length
+        : 0;
+
+      // Only update if quality changed (not same stale data)
+      if (prevIron === loadedIron && prev.length === loadedProducts.length) {
+        return prev; // Skip re-render, same data
+      }
+
+      return loadedProducts; // Quality improved or data changed
+    });
+  },
+  [
+    /* deps */
+  ],
+);
+```
+
+**Expected Values** (production):
+
+- `products.filter(x => x.iron > 0).length` → **290** (не 0, не 42)
+- `micronutrient_radar` pattern → **100** (не 0)
+- `healthScore` → **71+** (не 66-)
+
+**Files to Study:**
+
+- `apps/web/heys_app_sync_effects_v1.js` — React integration (v4.8.8)
+- `apps/web/public/heys_storage_supabase_v1.js` — Quality checks (v4.8.6)
+- `apps/web/public/heys_core_v12.js` — Store API implementation
+- `apps/web/public/heys_storage_layer_v1.js` — Scoping logic
+
+---
 
 ### 4. Trial Machine & Subscription Management
 

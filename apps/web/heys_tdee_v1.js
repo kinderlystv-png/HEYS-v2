@@ -138,15 +138,44 @@
     // Общая активность
     const actTotal = r0(trainingsKcal + stepsK + householdKcal);
 
-    // 🔬 TEF v1.0.0: используем единый модуль HEYS.TEF
+    // 🔬 TEF v1.0.0: используем единый модуль HEYS.TEF с fallback
     let tefData = { total: 0, breakdown: { protein: 0, carbs: 0, fat: 0 } };
-    if (options.dayMacros) {
-      // Если макросы переданы явно
-      tefData = HEYS.TEF?.calculateFromMacros?.(options.dayMacros) || tefData;
-    } else if (d.meals && Array.isArray(d.meals) && options.pIndex) {
-      // Расчёт из приёмов пищи через модуль
-      const getProduct = (item) => options.pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
-      tefData = HEYS.TEF?.calculateFromMeals?.(d.meals, options.pIndex, (item) => getProduct(item)) || tefData;
+    if (HEYS.TEF) {
+      if (options.dayMacros) {
+        // Если макросы переданы явно
+        tefData = HEYS.TEF.calculateFromMacros(options.dayMacros);
+      } else if (d.meals && Array.isArray(d.meals) && options.pIndex) {
+        // Расчёт из приёмов пищи через модуль
+        const getProduct = (item) => options.pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+        tefData = HEYS.TEF.calculateFromMeals(d.meals, options.pIndex, (item) => getProduct(item));
+      }
+    } else {
+      // Fallback: inline расчёт если модуль не загружен (Westerterp 2004, Tappy 1996)
+      let totalProt = 0, totalCarbs = 0, totalFat = 0;
+      if (options.dayMacros) {
+        totalProt = options.dayMacros.prot || options.dayMacros.protein || 0;
+        totalCarbs = options.dayMacros.carbs || options.dayMacros.carbohydrates || 0;
+        totalFat = options.dayMacros.fat || options.dayMacros.fats || 0;
+      } else if (d.meals && Array.isArray(d.meals) && options.pIndex) {
+        d.meals.forEach(meal => {
+          (meal.items || []).forEach(item => {
+            const g = item.grams || 0;
+            const prod = options.pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+            if (prod && g > 0) {
+              totalProt += (prod.protein100 || 0) * g / 100;
+              totalCarbs += ((prod.simple100 || 0) + (prod.complex100 || 0)) * g / 100;
+              totalFat += ((prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0)) * g / 100;
+            }
+          });
+        });
+      }
+      const proteinTEF = Math.round(totalProt * 4 * 0.25);
+      const carbsTEF = Math.round(totalCarbs * 4 * 0.075);
+      const fatTEF = Math.round(totalFat * 9 * 0.015);
+      tefData = {
+        total: proteinTEF + carbsTEF + fatTEF,
+        breakdown: { protein: proteinTEF, carbs: carbsTEF, fat: fatTEF }
+      };
     }
     const tefKcal = tefData.total || 0;
 

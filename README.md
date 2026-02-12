@@ -1,8 +1,9 @@
 # 🚀 HEYS v2
 
-**Enterprise‑grade monorepo** — TypeScript/React ecosystem for nutrition tracking, training management, and productivity enhancement.
+**Enterprise‑grade monorepo** — TypeScript/React ecosystem for nutrition
+tracking, training management, and productivity enhancement.
 
-[![Version](https://img.shields.io/badge/version-14.0.0-blue.svg)](./CHANGELOG.md)
+[![Version](<https://img.shields.io/badge/version-15.0.0_(v4.8.8)-blue.svg>)](./apps/web/CHANGELOG.md)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](./.nvmrc)
 [![PNPM](https://img.shields.io/badge/pnpm-%3E%3D8.0.0-orange.svg)](./package.json)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
@@ -52,6 +53,67 @@ pnpm build:web    # Build web app only
 pnpm --dir apps/web run dev:iw-config
 # Version is auto-hashed from config content; do not edit inline block manually
 ```
+
+---
+
+## 🆕 Recent Updates
+
+### v4.8.8 — React State Sync Fix (February 12, 2026) 🛡️
+
+**Major architectural fix** resolving critical namespacing conflict in React
+state management.
+
+#### 🐛 Problem Solved
+
+React components displayed **42 products** with micronutrients instead of
+**290**, blocking pattern activation:
+
+- `micronutrient_radar` stuck at 0 (should be 100)
+- `antioxidant_defense` at 21 (should be 79)
+- Health Score: 66 (should be 71+)
+
+#### ✅ Root Cause
+
+**Namespacing conflict**: React read from unscoped localStorage key
+(`heys_products`), while sync wrote to scoped key (`heys_{clientId}_products`).
+
+#### 🔧 Solution
+
+**Store API as Single Source of Truth** — React now ALWAYS reads via
+`products.getAll()` (never direct localStorage):
+
+```javascript
+// ❌ OLD (broken — reads unscoped key)
+const products = window.HEYS.utils.lsGet('heys_products', []);
+
+// ✅ NEW v4.8.8 (correct — uses Store API)
+const products = window.HEYS?.products?.getAll?.() || [];
+```
+
+#### 📊 Results
+
+- ✅ Products with Fe: 42 → **290**
+- ✅ Patterns activated: 27/41 (all micronutrient patterns now working)
+- ✅ Health Score: 66 → **71**
+- ✅ 100% effectiveness: 0 stale saves after fix
+
+#### 📚 Documentation Updated
+
+- [TECHNICAL_ARCHITECTURE.md](docs/TECHNICAL_ARCHITECTURE.md) — Added
+  "Критические архитектурные решения" section
+- [API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md) — Added "Store API Best
+  Practices" section
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) — Added "Critical Architecture
+  Evolution" section
+- [CHANGELOG.md](apps/web/CHANGELOG.md) — Full technical details
+
+#### 🔗 Learn More
+
+- [Store API Best Practices](docs/API_DOCUMENTATION.md#🛡️-store-api-best-practices-v488)
+- [React State Sync Fix](docs/TECHNICAL_ARCHITECTURE.md#🛡️-критические-архитектурные-решения)
+- [Architecture Evolution](docs/ARCHITECTURE.md#🛡️-critical-architecture-evolution)
+
+---
 
 ## ✨ Features
 
@@ -111,7 +173,8 @@ pnpm setup:dev
 
 ### Onboarding
 
-- **[Developer Onboarding](docs/dev/ONBOARDING.md)** — короткий старт и ссылки на ключевые доки
+- **[Developer Onboarding](docs/dev/ONBOARDING.md)** — короткий старт и ссылки
+  на ключевые доки
 
 ## 🔄 Migration from v12
 
@@ -120,7 +183,8 @@ The project has been migrated from legacy v12 structure to modern monorepo:
 - **Legacy files** preserved in root for compatibility
 - **New structure** in `packages/` and `apps/`
 - **Migration scripts** available in `tools/scripts/`
-- **Legacy ReportsTab** снят из UI; архив сохранён в `archive/legacy-v12/`, weekly‑отчёт теперь в Insights (`apps/web/heys_weekly_reports_v2.js`)
+- **Legacy ReportsTab** снят из UI; архив сохранён в `archive/legacy-v12/`,
+  weekly‑отчёт теперь в Insights (`apps/web/heys_weekly_reports_v2.js`)
 
 ## 📚 Документация
 

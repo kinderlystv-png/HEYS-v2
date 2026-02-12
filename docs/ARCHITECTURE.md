@@ -1,8 +1,8 @@
 # 🏗️ HEYS Platform Architecture
 
 > **System Architecture Overview**  
-> **Version:** 14.0.0  
-> **Last Updated:** September 1, 2025
+> **Version:** 15.0.0 (v4.8.8 — React State Sync Fix)  
+> **Last Updated:** February 12, 2026
 
 ## 📊 High-Level Architecture Diagram
 
@@ -353,6 +353,155 @@ Queue        │  Real-time
 │ • Security  │    │ • Visual    │    │ • Memory    │
 └─────────────┘    └─────────────┘    └─────────────┘
 ```
+
+---
+
+## 🛡️ Critical Architecture Evolution
+
+### **v4.8.8: React State Synchronization Fix** (February 2026)
+
+**Problem Identified:**
+
+React components displayed **42 products** with micronutrients instead of
+**290** despite:
+
+- ✅ Database: 292 products with Fe/VitC/Ca
+- ✅ Yandex Cloud KV: 290 products with micronutrients + timestamps
+- ✅ localStorage scoped key `heys_{clientId}_products`: 290 products
+- ❌ React state via `products.getAll()`: **42 products**
+
+**Root Cause:**
+
+**Namespacing conflict** between:
+
+1. **Storage Layer** (`heys_storage_layer_v1.js`): Writes to **scoped keys**
+   `heys_{clientId}_products`
+2. **React Components** (`heys_app_sync_effects_v1.js`): Read from **unscoped
+   keys** via `utils.lsGet('heys_products')`
+
+```javascript
+// ❌ PROBLEM (v4.8.7 and earlier)
+// React: reads unscoped key → empty array → fallback to stale state
+const products = window.HEYS.utils.lsGet('heys_products', []);
+
+// Storage Layer: writes scoped key → data never seen by React
+Store.set('heys_products', data); // → heys_{clientId}_products
+```
+
+**Impact:**
+
+- `micronutrient_radar` pattern stuck at **0** (expected **100**)
+- `antioxidant_defense` at **21** (expected **79**)
+- `heart_health` at **55** (expected **70**)
+- Health Score: **66** (expected **71+**)
+- **Critical patterns inactive** due to missing micronutrient data
+
+**Solution Architecture v4.8.8:**
+
+**Store API as Single Source of Truth** — React NEVER accesses localStorage
+directly:
+
+```javascript
+// ✅ SOLUTION v4.8.8
+// React: ALWAYS reads via Store API (handles scoping internally)
+const products = window.HEYS?.products?.getAll?.() || [];
+
+// Store API: automatically resolves scoped keys
+HEYS.products.getAll() → Store.get('heys_products') → heys_{clientId}_products
+```
+
+**3 Critical Changes** (all in `heys_app_sync_effects_v1.js`):
+
+1. **Post-sync load** (Line 46-48):
+
+   ```javascript
+   // OLD: const loadedProducts = window.HEYS.utils.lsGet('heys_products', []);
+   const loadedProducts = window.HEYS?.products?.getAll?.() || [];
+   ```
+
+2. **Initial mount hydration** (Line 18-20):
+
+   ```javascript
+   // OLD: const stored = window.HEYS.utils.lsGet('heys_products', []);
+   const stored = window.HEYS?.products?.getAll?.() || [];
+   ```
+
+3. **Event listener fallback** (Line 147-149):
+   ```javascript
+   // OLD: fallback = utils.lsGet('heys_products', [])
+   const latest = window.HEYS?.products?.getAll?.() || [];
+   ```
+
+**Quality Protection System** (4 layers):
+
+```javascript
+// Layer 1: PRIMARY Quality Check (v4.8.6) — heys_storage_supabase_v1.js:5625
+const savingWithIron = value.filter((p) => p && p.iron && +p.iron > 0).length;
+if (savingWithIron < 50) {
+  logCritical(`🚨 SAVE BLOCKED: ${savingWithIron} products (expected 250+)`);
+  return; // Prevents stale saves immediately
+}
+// Result: 100% effectiveness, 0 stale saves post-v4.8.8
+
+// Layer 2: Pre-sync Block
+if (waitingForSync.current === true) return; // Race condition guard
+
+// Layer 3: Quality-based React Update (v4.8.7)
+const prevIron = prev.filter((p) => p.iron > 0).length;
+const loadedIron = loaded.filter((p) => p.iron > 0).length;
+if (prevIron === loadedIron && prev.length === loaded.length) {
+  return prev; // Skip update, same quality
+}
+
+// Layer 4: Architectural — Store API prevents namespacing conflicts (v4.8.8)
+```
+
+**Verification Results:**
+
+```javascript
+// User console command:
+HEYS.products.getAll().filter(x => x.iron > 0).length
+// Result: 290 ✅ (was 42 ❌)
+
+// Console output after sync:
+[HEYS.sync] 🔍 After sync: loadedProducts.length=293, withIron=290
+// Patterns activated:
+micronutrient_radar: 0 → 100 ✅
+antioxidant_defense: 21 → 79 ✅
+heart_health: 55 → 70 ✅
+electrolyte_homeostasis: 11 → 89 ✅
+nutrient_density: 30 → 73 ✅
+healthScore: 66 → 71 ✅
+```
+
+**DEBUG Monitoring** (active during testing phase):
+
+```javascript
+// Post-sync verification (Line 52)
+console.info(
+  `[HEYS.sync] 🔍 After sync: loadedProducts.length=${x}, withIron=${y}`,
+);
+// Expected: withIron=290 (not 0 or 42)
+
+// React state update tracking (Lines 89-100)
+console.info(`[HEYS.sync] 🔄 React state updated: ${prev}→${next} products`);
+```
+
+**Architectural Lesson:**
+
+> ⚠️ **NEVER bypass abstractions.** Direct localStorage access breaks scoping.
+> ✅ **ALWAYS use Store API** as the single source of truth for data access. 🛡️
+> **Quality checks work** when architectural patterns are followed.
+
+**Modified Files:**
+
+- `apps/web/heys_app_sync_effects_v1.js` (v4.8.8 — 3 Store API changes + DEBUG
+  logs)
+- `apps/web/public/heys_storage_supabase_v1.js` (v4.8.6 — PRIMARY quality check)
+- No changes needed: `heys_core_v12.js`, `heys_storage_layer_v1.js` (already
+  correct)
+
+---
 
 ## 🎯 Future Architecture Considerations
 

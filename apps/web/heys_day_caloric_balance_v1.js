@@ -472,8 +472,20 @@
           });
         });
 
-        // 🔬 TEF v1.0.0: используем единый модуль HEYS.TEF
-        const tefResult = HEYS.TEF?.calculate?.(todayProtein, todayCarbs, todayFat) || { total: 0, breakdown: { protein: 0, carbs: 0, fat: 0 } };
+        // 🔬 TEF v1.0.0: используем единый модуль HEYS.TEF с fallback
+        let tefResult;
+        if (HEYS.TEF?.calculate) {
+          tefResult = HEYS.TEF.calculate(todayProtein, todayCarbs, todayFat);
+        } else {
+          // Fallback: inline расчёт если модуль не загружен (Westerterp 2004, Tappy 1996)
+          const proteinTEF = Math.round(todayProtein * 4 * 0.25);
+          const carbsTEF = Math.round(todayCarbs * 4 * 0.075);
+          const fatTEF = Math.round(todayFat * 9 * 0.015);
+          tefResult = {
+            total: proteinTEF + carbsTEF + fatTEF,
+            breakdown: { protein: proteinTEF, carbs: carbsTEF, fat: fatTEF }
+          };
+        }
         const totalTEF = tefResult.total;
         const tefPct = eatenKcal > 0 ? Math.round((totalTEF / eatenKcal) * 100) : 0;
 
