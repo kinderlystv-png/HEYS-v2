@@ -83,7 +83,9 @@
     TRAINING_RECOVERY: 'training_recovery',
     HYPERTROPHY: 'hypertrophy',
     GLYCEMIC_LOAD: 'glycemic_load',
-    PROTEIN_DISTRIBUTION: 'protein_distribution'
+    PROTEIN_DISTRIBUTION: 'protein_distribution',
+    ANTIOXIDANT_DEFENSE: 'antioxidant_defense',
+    ADDED_SUGAR_DEPENDENCY: 'added_sugar_dependency'
   };
 
   // Импорт статистических функций из pi_stats.js (централизовано)
@@ -3431,6 +3433,293 @@
     };
   }
 
+  /**
+   * C16: Antioxidant Defense Score
+   * Индекс антиоксидантной защиты: A/C/E + Se + Zn с учётом тренировочной нагрузки.
+   * @param {Array} days
+   * @param {Object} pIndex
+   * @returns {Object}
+   */
+  function analyzeAntioxidantDefense(days, pIndex) {
+    const pattern = PATTERNS.ANTIOXIDANT_DEFENSE || 'antioxidant_defense';
+    const minDays = 7;
+
+    if (!Array.isArray(days) || days.length < minDays) {
+      return {
+        pattern,
+        available: false,
+        reason: 'min_days_required',
+        minDaysRequired: minDays,
+        daysProvided: Array.isArray(days) ? days.length : 0
+      };
+    }
+
+    const dailyIndices = [];
+    const trainingDemandPoints = [];
+    let highDemandDays = 0;
+    let moderateDemandDays = 0;
+
+    for (const day of days) {
+      let vitA = 0;
+      let vitC = 0;
+      let vitE = 0;
+      let selenium = 0;
+      let zinc = 0;
+      let nova4Carbs = 0;
+
+      for (const meal of (day.meals || [])) {
+        for (const item of (meal.items || [])) {
+          const prod = pIndex?.byId?.get?.(item?.product_id);
+          if (!prod) continue;
+
+          const grams = Number(item.grams) || 0;
+          if (grams <= 0) continue;
+          const factor = grams / 100;
+
+          vitA += (Number(prod.vitamin_a) || 0) * factor;
+          vitC += (Number(prod.vitamin_c) || 0) * factor;
+          vitE += (Number(prod.vitamin_e) || 0) * factor;
+          selenium += (Number(prod.selenium) || 0) * factor;
+          zinc += (Number(prod.zinc) || 0) * factor;
+
+          if (Number(prod.nova_group) === 4) {
+            nova4Carbs += ((Number(prod.simple100) || 0) + (Number(prod.complex100) || 0)) * factor;
+          }
+        }
+      }
+
+      const aScore = Math.min(1, vitA / 900) * 20;
+      const cScore = Math.min(1, vitC / 90) * 30;
+      const eScore = Math.min(1, vitE / 15) * 20;
+      const seScore = Math.min(1, selenium / 55) * 15;
+      const znScore = Math.min(1, zinc / 11) * 15;
+      const antioxidantIndex = aScore + cScore + eScore + seScore + znScore;
+
+      const trainings = Array.isArray(day.trainings) ? day.trainings : [];
+      const highIntensityMinutes = trainings.reduce((sum, t) => {
+        const z = t?.z || [];
+        const z4 = Number(z[3]) || 0;
+        const z5 = Number(z[4]) || 0;
+        return sum + z4 + z5;
+      }, 0);
+
+      let demand = 'low';
+      if (highIntensityMinutes > 20) {
+        demand = 'high';
+        highDemandDays++;
+      } else if (trainings.length > 0) {
+        demand = 'moderate';
+        moderateDemandDays++;
+      }
+
+      const demandMultiplier = demand === 'high' ? 1.3 : (demand === 'moderate' ? 1.15 : 1.0);
+
+      dailyIndices.push({
+        antioxidantIndex,
+        demand,
+        demandMultiplier,
+        vitCPct: (vitC / (90 * demandMultiplier)) * 100,
+        vitEPct: (vitE / (15 * demandMultiplier)) * 100,
+        nova4High: nova4Carbs > 30
+      });
+
+      trainingDemandPoints.push(demandMultiplier);
+    }
+
+    if (dailyIndices.length === 0) {
+      return { pattern, available: false, reason: 'insufficient_data' };
+    }
+
+    const avgAntioxidantIndex = average(dailyIndices.map(d => d.antioxidantIndex));
+    const dominantDemand = highDemandDays > 0 ? 'high' : (moderateDemandDays > 0 ? 'moderate' : 'low');
+    const adjustedScore = Math.round(
+      avgAntioxidantIndex * (dominantDemand === 'high' ? 0.85 : 1.0)
+    );
+
+    const defenseGapDays = dailyIndices.filter(d => d.antioxidantIndex < 60).length;
+    const vitCRiskDays = dailyIndices.filter(d => d.demand === 'high' && d.vitCPct < 50).length;
+    const doubleStressDays = dailyIndices.filter(d => d.vitEPct < 50 && d.nova4High).length;
+
+    let insight = '';
+    if (adjustedScore >= 80) {
+      insight = `✅ Хорошая антиоксидантная защита (${adjustedScore}/100).`;
+    } else if (adjustedScore >= 60) {
+      insight = `🟡 Умеренная антиоксидантная защита (${adjustedScore}/100).`;
+    } else {
+      insight = `🔴 Низкая антиоксидантная защита (${adjustedScore}/100), требуется коррекция рациона.`;
+    }
+
+    if (defenseGapDays > 0) insight += ` Defense gap: ${defenseGapDays} дн.`;
+    if (vitCRiskDays > 0) insight += ` VitC risk при high-load: ${vitCRiskDays} дн.`;
+    if (doubleStressDays > 0) insight += ` Double oxidative stress: ${doubleStressDays} дн.`;
+
+    const baseConfidence = days.length >= 14 ? 0.8 : 0.7;
+    const confidence = piStats.applySmallSamplePenalty
+      ? piStats.applySmallSamplePenalty(baseConfidence, days.length, minDays)
+      : baseConfidence;
+
+    return {
+      pattern,
+      available: true,
+      antioxidantIndex: Math.round(avgAntioxidantIndex),
+      dominantDemand,
+      highDemandDays,
+      moderateDemandDays,
+      defenseGapDays,
+      vitCRiskDays,
+      doubleStressDays,
+      score: Math.max(0, Math.min(100, adjustedScore)),
+      confidence: Math.round(confidence * 100) / 100,
+      insight
+    };
+  }
+
+  /**
+   * C18: Added Sugar & Dependency Patterns
+   * Tier-aware оценка добавленного сахара (A/B/C) + dependency flags.
+   * @param {Array} days
+   * @param {Object} pIndex
+   * @returns {Object}
+   */
+  function analyzeAddedSugarDependency(days, pIndex) {
+    const pattern = PATTERNS.ADDED_SUGAR_DEPENDENCY || 'added_sugar_dependency';
+    const minDays = 7;
+
+    if (!Array.isArray(days) || days.length < minDays) {
+      return {
+        pattern,
+        available: false,
+        reason: 'min_days_required',
+        minDaysRequired: minDays,
+        daysProvided: Array.isArray(days) ? days.length : 0
+      };
+    }
+
+    const dailySugar = [];
+    const dailyConfidence = [];
+    const dailySugarPctOfCarbs = [];
+    let sugarTrapDays = 0;
+
+    for (const day of days) {
+      let sugar = 0;
+      let confWeighted = 0;
+      let carbTotal = 0;
+      let nova4Carbs = 0;
+
+      for (const meal of (day.meals || [])) {
+        for (const item of (meal.items || [])) {
+          const prod = pIndex?.byId?.get?.(item?.product_id);
+          if (!prod) continue;
+
+          const grams = Number(item.grams) || 0;
+          if (grams <= 0) continue;
+          const factor = grams / 100;
+
+          const simple = (Number(prod.simple100) || 0) * factor;
+          const complex = (Number(prod.complex100) || 0) * factor;
+          const carbs = simple + complex;
+          carbTotal += carbs;
+
+          let addedSugar = 0;
+          let conf = 0;
+
+          const sugar100 = Number(prod.sugar100);
+          if (Number.isFinite(sugar100) && sugar100 > 0) {
+            // Tier A
+            addedSugar = sugar100 * factor;
+            conf = 1.0;
+          } else if (Number(prod.nova_group) === 4 && simple > 0) {
+            // Tier B
+            addedSugar = simple * 0.70;
+            conf = 0.70;
+          } else if (simple > 0) {
+            // Tier C
+            addedSugar = simple * 0.30;
+            conf = 0.50;
+          }
+
+          sugar += addedSugar;
+          confWeighted += addedSugar * conf;
+
+          if (Number(prod.nova_group) === 4) {
+            nova4Carbs += carbs;
+          }
+        }
+      }
+
+      const dayConf = sugar > 0 ? confWeighted / sugar : 0;
+      const sugarPctOfCarbs = carbTotal > 0 ? (sugar / carbTotal) * 100 : 0;
+
+      if (sugar > 25 && carbTotal > 0 && (nova4Carbs / carbTotal) > 0.3) {
+        sugarTrapDays++;
+      }
+
+      dailySugar.push(sugar);
+      dailyConfidence.push(dayConf);
+      dailySugarPctOfCarbs.push(sugarPctOfCarbs);
+    }
+
+    const avgDailySugar = average(dailySugar);
+    const avgConfidence = average(dailyConfidence);
+    const avgSugarPctOfCarbs = average(dailySugarPctOfCarbs);
+
+    let maxStreak = 0;
+    let streak = 0;
+    for (const s of dailySugar) {
+      if (s > 25) {
+        streak++;
+        maxStreak = Math.max(maxStreak, streak);
+      } else {
+        streak = 0;
+      }
+    }
+
+    const dependencyPenalty = maxStreak >= 5 ? 20 : (maxStreak >= 3 ? 10 : 0);
+    const sugarPenalty = Math.max(0, avgDailySugar - 25) * 1.5;
+    const sugarDominantPenalty = avgSugarPctOfCarbs > 40 ? 10 : 0;
+    const moodSwingPenalty = 0;
+
+    const rawScore = Math.max(0, 100 - sugarPenalty - dependencyPenalty - sugarDominantPenalty - moodSwingPenalty);
+    const score = Math.round(rawScore * (avgConfidence > 0 ? avgConfidence : 0.5));
+
+    let whoClass = 'safe';
+    if (avgDailySugar > 50) whoClass = 'excess';
+    else if (avgDailySugar >= 25) whoClass = 'attention';
+
+    let insight = '';
+    if (whoClass === 'safe') {
+      insight = `✅ Добавленный сахар под контролем: ${avgDailySugar.toFixed(1)}г/день.`;
+    } else if (whoClass === 'attention') {
+      insight = `🟡 Сахар в зоне внимания: ${avgDailySugar.toFixed(1)}г/день (цель <25г).`;
+    } else {
+      insight = `🔴 Избыточный добавленный сахар: ${avgDailySugar.toFixed(1)}г/день (>50г).`;
+    }
+
+    if (maxStreak >= 5) insight += ` Streak >25г: ${maxStreak} дней (dependency risk).`;
+    if (avgSugarPctOfCarbs > 40) insight += ` Sugar-dominant carbs: ${avgSugarPctOfCarbs.toFixed(0)}%.`;
+    if (sugarTrapDays > 0) insight += ` Ultra-processed sugar trap: ${sugarTrapDays} дн.`;
+
+    const baseConfidence = days.length >= 14 ? 0.75 : 0.65;
+    const confidence = piStats.applySmallSamplePenalty
+      ? piStats.applySmallSamplePenalty(baseConfidence, days.length, minDays)
+      : baseConfidence;
+
+    return {
+      pattern,
+      available: true,
+      avgDailySugar: Math.round(avgDailySugar * 10) / 10,
+      avgConfidence: Math.round(avgConfidence * 100) / 100,
+      avgSugarPctOfCarbs: Math.round(avgSugarPctOfCarbs),
+      whoClass,
+      maxStreak,
+      sugarTrapDays,
+      dependencyRisk: maxStreak >= 5,
+      score,
+      confidence: Math.round(confidence * 100) / 100,
+      insight
+    };
+  }
+
 
   // === ЭКСПОРТ ===
   HEYS.InsightsPI.patterns = {
@@ -3470,12 +3759,14 @@
     analyzeVitaminDefense,   // C13: Vitamin Defense Radar (v6.0)
     analyzeBComplexAnemia,   // C22: B-Complex Energy & Anemia Risk (v6.0)
     analyzeGlycemicLoad,     // C14: Glycemic Load Optimizer (v6.0)
-    analyzeProteinDistribution // C15: Protein Distribution (v6.0)
+    analyzeProteinDistribution, // C15: Protein Distribution (v6.0)
+    analyzeAntioxidantDefense, // C16: Antioxidant Defense (v6.0)
+    analyzeAddedSugarDependency // C18: Added Sugar & Dependency (v6.0)
   };
 
   // Fallback для прямого доступа
   global.piPatterns = HEYS.InsightsPI.patterns;
 
-  devLog('[PI Patterns] v6.0.0 loaded — 34 pattern analyzers (C13, C22, C14, C15 added)');
+  devLog('[PI Patterns] v6.0.0 loaded — 36 pattern analyzers (C13, C22, C14, C15, C16, C18 added)');
 
 })(typeof window !== 'undefined' ? window : global);

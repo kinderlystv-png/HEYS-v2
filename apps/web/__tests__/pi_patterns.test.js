@@ -975,3 +975,174 @@ describe('C15: Protein Distribution', () => {
         expect(result.score).toBeGreaterThan(70);
     });
 });
+
+// === C16: ANTIOXIDANT DEFENSE ===
+
+function analyzeAntioxidantDefense(days, productIndex) {
+    const pattern = 'antioxidant_defense';
+    const minDays = 7;
+
+    const nCheck = piStats.checkMinN(days, minDays);
+    if (!nCheck.ok) return { pattern, available: false, reason: 'min_days_required' };
+
+    const dailyScores = [];
+    let highDemandDays = 0;
+
+    days.forEach(day => {
+        let a = 0, c = 0, e = 0, se = 0, zn = 0;
+        (day.meals || []).forEach(meal => {
+            (meal.items || []).forEach(item => {
+                const p = getProductFromItem(item, productIndex);
+                if (!p) return;
+                const factor = (item.grams || 0) / 100;
+                a += (p.vitamin_a || 0) * factor;
+                c += (p.vitamin_c || 0) * factor;
+                e += (p.vitamin_e || 0) * factor;
+                se += (p.selenium || 0) * factor;
+                zn += (p.zinc || 0) * factor;
+            });
+        });
+
+        const idx = Math.min(1, a / 900) * 20 + Math.min(1, c / 90) * 30 + Math.min(1, e / 15) * 20 + Math.min(1, se / 55) * 15 + Math.min(1, zn / 11) * 15;
+        dailyScores.push(idx);
+
+        const hiMin = (day.trainings || []).reduce((sum, t) => sum + (t?.z?.[3] || 0) + (t?.z?.[4] || 0), 0);
+        if (hiMin > 20) highDemandDays++;
+    });
+
+    const avg = dailyScores.reduce((a, b) => a + b, 0) / dailyScores.length;
+    const score = Math.round(avg * (highDemandDays > 0 ? 0.85 : 1.0));
+
+    return { pattern, available: true, antioxidantIndex: Math.round(avg), highDemandDays, score };
+}
+
+describe('C16: Antioxidant Defense', () => {
+    it('returns unavailable for < 7 days', () => {
+        const days = Array.from({ length: 6 }, (_, i) => ({ date: `2026-02-${i + 1}`, meals: [] }));
+        const result = analyzeAntioxidantDefense(days, { byName: new Map() });
+        expect(result.available).toBe(false);
+        expect(result.reason).toBe('min_days_required');
+    });
+
+    it('calculates antioxidant index from A/C/E/Se/Zn', () => {
+        const products = [{ name: 'mix', vitamin_a: 900, vitamin_c: 90, vitamin_e: 15, selenium: 55, zinc: 11 }];
+        const pIndex = buildProductIndex(products);
+        const days = Array.from({ length: 7 }, () => ({ date: '2026-02-01', meals: [{ items: [{ name: 'mix', grams: 100 }] }] }));
+        const result = analyzeAntioxidantDefense(days, pIndex);
+        expect(result.available).toBe(true);
+        expect(result.antioxidantIndex).toBe(100);
+        expect(result.score).toBe(100);
+    });
+
+    it('applies high-demand adjustment when Z4/Z5 > 20 min', () => {
+        const products = [{ name: 'mix', vitamin_a: 900, vitamin_c: 90, vitamin_e: 15, selenium: 55, zinc: 11 }];
+        const pIndex = buildProductIndex(products);
+        const days = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            trainings: [{ z: [0, 0, 0, 15, 10] }],
+            meals: [{ items: [{ name: 'mix', grams: 100 }] }]
+        }));
+        const result = analyzeAntioxidantDefense(days, pIndex);
+        expect(result.available).toBe(true);
+        expect(result.highDemandDays).toBeGreaterThan(0);
+        expect(result.score).toBeLessThan(100);
+    });
+});
+
+// === C18: ADDED SUGAR & DEPENDENCY ===
+
+function analyzeAddedSugarDependency(days, productIndex) {
+    const pattern = 'added_sugar_dependency';
+    const minDays = 7;
+
+    const nCheck = piStats.checkMinN(days, minDays);
+    if (!nCheck.ok) return { pattern, available: false, reason: 'min_days_required' };
+
+    const dailySugar = [];
+    const confidences = [];
+
+    days.forEach(day => {
+        let sugar = 0;
+        let weighted = 0;
+        (day.meals || []).forEach(meal => {
+            (meal.items || []).forEach(item => {
+                const p = getProductFromItem(item, productIndex);
+                if (!p) return;
+                const factor = (item.grams || 0) / 100;
+                const simple = (p.simple100 || 0) * factor;
+
+                let add = 0;
+                let conf = 0;
+                if (p.sugar100 != null && p.sugar100 > 0) {
+                    add = p.sugar100 * factor; conf = 1.0;
+                } else if (p.nova_group === 4 && simple > 0) {
+                    add = simple * 0.70; conf = 0.70;
+                } else if (simple > 0) {
+                    add = simple * 0.30; conf = 0.50;
+                }
+
+                sugar += add;
+                weighted += add * conf;
+            });
+        });
+        dailySugar.push(sugar);
+        confidences.push(sugar > 0 ? weighted / sugar : 0);
+    });
+
+    let streak = 0, maxStreak = 0;
+    dailySugar.forEach(s => {
+        if (s > 25) { streak++; maxStreak = Math.max(maxStreak, streak); } else streak = 0;
+    });
+
+    const avgSugar = dailySugar.reduce((a, b) => a + b, 0) / dailySugar.length;
+    const avgConf = confidences.reduce((a, b) => a + b, 0) / confidences.length;
+    const score = Math.round(Math.max(0, 100 - Math.max(0, avgSugar - 25) * 1.5 - (maxStreak >= 5 ? 20 : 0)) * (avgConf || 0.5));
+
+    return {
+        pattern,
+        available: true,
+        avgDailySugar: Math.round(avgSugar * 10) / 10,
+        maxStreak,
+        avgConfidence: Math.round(avgConf * 100) / 100,
+        dependencyRisk: maxStreak >= 5,
+        score
+    };
+}
+
+describe('C18: Added Sugar & Dependency', () => {
+    it('returns unavailable for < 7 days', () => {
+        const days = Array.from({ length: 5 }, (_, i) => ({ date: `2026-02-${i + 1}`, meals: [] }));
+        const result = analyzeAddedSugarDependency(days, { byName: new Map() });
+        expect(result.available).toBe(false);
+        expect(result.reason).toBe('min_days_required');
+    });
+
+    it('uses tier B/C estimation when sugar100 missing', () => {
+        const products = [
+            { name: 'cola', simple100: 10, nova_group: 4 },
+            { name: 'fruit', simple100: 12, nova_group: 1 }
+        ];
+        const pIndex = buildProductIndex(products);
+        const days = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            meals: [{ items: [{ name: 'cola', grams: 300 }, { name: 'fruit', grams: 200 }] }]
+        }));
+        const result = analyzeAddedSugarDependency(days, pIndex);
+        expect(result.available).toBe(true);
+        expect(result.avgDailySugar).toBeGreaterThan(0);
+        expect(result.avgConfidence).toBeLessThanOrEqual(0.7);
+    });
+
+    it('detects dependency risk with 5+ high-sugar streak', () => {
+        const products = [{ name: 'dessert', sugar100: 30, simple100: 30, nova_group: 4 }];
+        const pIndex = buildProductIndex(products);
+        const days = Array.from({ length: 7 }, () => ({
+            date: '2026-02-01',
+            meals: [{ items: [{ name: 'dessert', grams: 120 }] }]
+        }));
+        const result = analyzeAddedSugarDependency(days, pIndex);
+        expect(result.available).toBe(true);
+        expect(result.maxStreak).toBeGreaterThanOrEqual(5);
+        expect(result.dependencyRisk).toBe(true);
+    });
+});

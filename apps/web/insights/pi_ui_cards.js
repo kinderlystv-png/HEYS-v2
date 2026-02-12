@@ -938,7 +938,9 @@
         vitamin_defense: '🛡️ Радар 11 витаминов',
         b_complex_anemia: '⚡ B-комплекс + анемия',
         glycemic_load: '🍚 Гликемическая нагрузка (GL)',
-        protein_distribution: '🥩 Распределение белка'
+        protein_distribution: '🥩 Распределение белка',
+        antioxidant_defense: '🛡️ Антиоксидантная защита',
+        added_sugar_dependency: '🍬 Добавленный сахар'
       };
 
       // v2.0: Маппинг pattern → SCIENCE_INFO ключ
@@ -962,7 +964,9 @@
         vitamin_defense: 'VITAMIN_DEFENSE',
         b_complex_anemia: 'B_COMPLEX_ANEMIA',
         glycemic_load: 'GLYCEMIC_LOAD',
-        protein_distribution: 'PROTEIN_DISTRIBUTION'
+        protein_distribution: 'PROTEIN_DISTRIBUTION',
+        antioxidant_defense: 'ANTIOXIDANT_DEFENSE',
+        added_sugar_dependency: 'ADDED_SUGAR_DEPENDENCY'
       };
 
       const infoKey = patternToInfoKey[pattern.pattern];

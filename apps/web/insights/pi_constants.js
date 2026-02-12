@@ -1453,6 +1453,56 @@
       actionability: 'DAILY',
       impactScore: 0.76,
       whyImportant: 'Распределение белка по приёмам усиливает MPS и улучшает сытость, даже при одинаковом суточном белке.'
+    },
+    // C16: Antioxidant Defense (NEW v6.0 — Phase 3, 12.02.2026)
+    ANTIOXIDANT_DEFENSE: {
+      name: 'Антиоксидантная защита',
+      short: 'Оценивает индекс антиоксидантной защиты (A/C/E + Se + Zn) с учётом тренировочной нагрузки.',
+      details: 'Метрика агрегирует 5 ключевых нутриентов антиоксидантной системы: витамин A (20%), витамин C (30%), витамин E (20%), селен (15%), цинк (15%). Дополнительно учитывается оксидативный спрос от тренировок: high demand при нагрузке Z4-Z5 >20 минут, moderate при любой тренировке, low при отсутствии тренировок. При high demand итоговый score понижается мультипликатором 0.85, поскольку одинаковое поступление нутриентов покрывает большую физиологическую потребность. Флаги риска: antioxidant index <60, vitC <50% при high demand, vitE <50% в связке с высокой долей NOVA-4.',
+      formula: 'antioxidantIndex = min(1, A/DRI_A)×20 + min(1, C/DRI_C)×30 + min(1, E/DRI_E)×20 + min(1, Se/55)×15 + min(1, Zn/11)×15\n\nScore = antioxidantIndex × (demand === high ? 0.85 : 1.0)',
+      sources: [
+        {
+          label: 'Carlsen et al., 2010 — Total antioxidant content of foods',
+          pmid: '20096093'
+        },
+        {
+          label: 'Powers et al., 2004 — Exercise-induced oxidative stress',
+          pmid: '12424324'
+        }
+      ],
+      interpretation: '≥80 — хорошая защита. 60-79 — умеренный дефицит антиоксидантов. <60 — защитный дефицит.',
+      priority: 'HIGH',
+      category: 'RECOVERY',
+      actionability: 'DAILY',
+      impactScore: 0.77,
+      whyImportant: 'Оксидативный стресс от тренировок без нутриентной поддержки может ухудшать восстановление и прогресс.'
+    },
+    // C18: Added Sugar & Dependency (NEW v6.0 — Phase 3, 12.02.2026)
+    ADDED_SUGAR_DEPENDENCY: {
+      name: 'Добавленный сахар и зависимость',
+      short: 'Tier-оценка добавленного сахара (A/B/C) + паттерн зависимости и сахарные streak-риски.',
+      details: 'Метрика использует data reality проекта: в shared_products нет колонки sugar100, поэтому применяется tier-based оценка. Tier A: прямое sugar100 (confidence 1.0), Tier B: simple100×0.70 при NOVA-4 (confidence 0.70), Tier C: simple100×0.30 при NOVA<4 (confidence 0.50). Рассчитывается dailySugar, streak дней >25г (WHO threshold), доля сахара в углеводах, а также cross-pattern флаг «ultra-processed sugar trap» при сочетании high sugar и NOVA-4. Итоговый score масштабируется на confidence, чтобы отличать измеренные и оценочные данные.',
+      formula: 'dailySugar = Σ(tierAdjustedSugar)\nScore = max(0, 100 - max(0, dailySugar - 25)×1.5 - dependencyPenalty - moodSwingPenalty) × dayConfidence',
+      sources: [
+        {
+          label: 'WHO, 2015 — Guideline: Sugars intake for adults and children',
+          pmid: '25231862'
+        },
+        {
+          label: 'Lustig et al., 2012 — Metabolic effects of sugar',
+          pmid: '22351714'
+        },
+        {
+          label: 'Monteiro et al., 2019 — NOVA and ultra-processed foods',
+          pmid: '31142457'
+        }
+      ],
+      interpretation: '≥80 — контролируемый уровень сахара. 60-79 — зона внимания. <60 — избыток/зависимый паттерн.',
+      priority: 'HIGH',
+      category: 'METABOLISM',
+      actionability: 'DAILY',
+      impactScore: 0.79,
+      whyImportant: 'Избыточный добавленный сахар связан с метаболическими рисками и нестабильностью энергии/настроения.'
     }
   };
 
@@ -1509,7 +1559,9 @@
     VITAMIN_DEFENSE: 'vitamin_defense',         // C13: радар 11 витаминов (Phase 1, 12.02.2026)
     B_COMPLEX_ANEMIA: 'b_complex_anemia',       // C22: B-комплекс + риск анемии (Phase 1, 12.02.2026)
     GLYCEMIC_LOAD: 'glycemic_load',             // C14: гликемическая нагрузка (Phase 2, 12.02.2026)
-    PROTEIN_DISTRIBUTION: 'protein_distribution' // C15: распределение белка (Phase 2, 12.02.2026)
+    PROTEIN_DISTRIBUTION: 'protein_distribution', // C15: распределение белка (Phase 2, 12.02.2026)
+    ANTIOXIDANT_DEFENSE: 'antioxidant_defense',   // C16: антиоксидантная защита (Phase 3, 12.02.2026)
+    ADDED_SUGAR_DEPENDENCY: 'added_sugar_dependency' // C18: добавленный сахар + зависимость (Phase 3, 12.02.2026)
   };
 
   // === UNIT REGISTRY (Phase 0, 12.02.2026) ===
