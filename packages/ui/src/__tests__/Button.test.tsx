@@ -1,11 +1,44 @@
 import '@testing-library/jest-dom';
+import { Window as HappyDomWindow } from 'happy-dom';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Button } from '../components/Button/Button.js';
 
+const ensureDomEnvironment = () => {
+  const hasValidDom =
+    typeof globalThis.window !== 'undefined' &&
+    typeof globalThis.document !== 'undefined' &&
+    typeof globalThis.document.createElement === 'function' &&
+    typeof globalThis.document.body?.appendChild === 'function';
+
+  if (!hasValidDom) {
+    const win = new HappyDomWindow();
+    globalThis.window = win as unknown as typeof globalThis.window;
+    globalThis.document = win.document;
+    globalThis.navigator = win.navigator as unknown as Navigator;
+    globalThis.HTMLElement = win.HTMLElement as unknown as typeof HTMLElement;
+    globalThis.Node = win.Node as unknown as typeof Node;
+    globalThis.Event = win.Event as unknown as typeof Event;
+  }
+
+  if (!globalThis.navigator.clipboard) {
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: vi.fn(),
+        readText: vi.fn(),
+      },
+    });
+  }
+};
+
 describe('Button Component', () => {
+  beforeEach(() => {
+    ensureDomEnvironment();
+  });
+
   describe('Rendering', () => {
     it('should render with children', () => {
       render(<Button>Click me</Button>);

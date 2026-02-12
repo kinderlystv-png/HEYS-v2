@@ -5,17 +5,17 @@ const { Pool } = require('pg');
 const sslCaPath = process.env.PG_SSL_CA_PATH || '/Users/poplavskijanton/.postgresql/root.crt';
 
 if (!process.env.PG_PASSWORD) {
-  console.error('❌ Missing PG_PASSWORD env variable');
-  process.exit(1);
+    console.error('❌ Missing PG_PASSWORD env variable');
+    process.exit(1);
 }
 
 const pool = new Pool({
-  host: process.env.PG_HOST || 'rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net',
-  port: Number(process.env.PG_PORT) || 6432,
-  database: process.env.PG_DATABASE || 'heys_production',
-  user: process.env.PG_USER || 'heys_admin',
-  password: process.env.PG_PASSWORD,
-  ssl: { rejectUnauthorized: true, ca: fs.readFileSync(sslCaPath) }
+    host: process.env.PG_HOST || 'rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net',
+    port: Number(process.env.PG_PORT) || 6432,
+    database: process.env.PG_DATABASE || 'heys_production',
+    user: process.env.PG_USER || 'heys_admin',
+    password: process.env.PG_PASSWORD,
+    ssl: { rejectUnauthorized: true, ca: fs.readFileSync(sslCaPath) }
 });
 
 (async () => {
