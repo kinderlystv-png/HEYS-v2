@@ -375,12 +375,20 @@
     // Создаём Promise и сохраняем его для deduplication
     const syncPromise = (async () => {
       try {
+        let result;
         if (isPinAuth && typeof cloud.syncClientViaRPC === 'function') {
-          return await cloud.syncClientViaRPC(clientId);
+          result = await cloud.syncClientViaRPC(clientId);
         } else if (typeof cloud.bootstrapClientSync === 'function') {
-          return await cloud.bootstrapClientSync(clientId, options);
+          result = await cloud.bootstrapClientSync(clientId, options);
         }
-        // Fallback — ничего не делаем
+
+        // ⚡ v5.2.0: Invalidate pattern cache after successful sync
+        if (result?.success && HEYS.InsightsPI?.cache?.invalidateCache) {
+          HEYS.InsightsPI.cache.invalidateCache('all');
+          logCritical('🔄 [SYNC] Pattern cache invalidated after successful sync');
+        }
+
+        return result;
       } finally {
         // Очищаем in-flight после завершения
         if (_syncInFlight && _syncInFlight.clientId === clientId) {
