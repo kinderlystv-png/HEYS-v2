@@ -40,6 +40,21 @@
     return total;
   };
 
+  /**
+   * Helper to resolve product from item wrapper
+   * @param {Object} item - meal item wrapper
+   * @param {Object} pIndex - products index
+   * @returns {Object} product object or item itself
+   */
+  const getProductFromItem = function (item, pIndex) {
+    if (!item) return null;
+    if (item.product_id && pIndex && pIndex.byId) {
+      const prod = pIndex.byId.get(item.product_id);
+      if (prod) return prod;
+    }
+    return item;
+  };
+
   // Импорт статистических функций из pi_stats.js
   const calculateTrend = piStats.calculateTrend || function (values) {
     if (!values || values.length < 2) return 0;
@@ -76,6 +91,13 @@
     NUTRITION_QUALITY: 'nutrition_quality',
     NEAT_ACTIVITY: 'neat_activity',
     MOOD_TRAJECTORY: 'mood_trajectory',
+    // v4.0 patterns (B1-B6)
+    SLEEP_QUALITY: 'sleep_quality',
+    WELLBEING_CORRELATION: 'wellbeing_correlation',
+    HYDRATION: 'hydration',
+    BODY_COMPOSITION: 'body_composition',
+    CYCLE_IMPACT: 'cycle_impact',
+    WEEKEND_EFFECT: 'weekend_effect',
     // v5.0 patterns (C7-C12)
     MICRONUTRIENT_RADAR: 'micronutrient_radar',
     OMEGA_BALANCER: 'omega_balancer',
@@ -4306,11 +4328,11 @@
     analyzeTrainingRecovery,
     analyzeHypertrophy,
     analyzeMicronutrients,
-    analyzeHeartHealth,
-    analyzeOmegaBalance,
+    analyzeHeartHealth: patternModules.analyzeHeartHealth || analyzeHeartHealth, // C9: Heart Health (v6.0, modular-ready)
+    analyzeOmegaBalance: patternModules.analyzeOmegaBalance || analyzeOmegaBalance, // C8: Omega Balance (v6.0, modular-ready)
     analyzeVitaminDefense,   // C13: Vitamin Defense Radar (v6.0)
     analyzeBComplexAnemia,   // C22: B-Complex Energy & Anemia Risk (v6.0)
-    analyzeGlycemicLoad,     // C14: Glycemic Load Optimizer (v6.0)
+    analyzeGlycemicLoad: patternModules.analyzeGlycemicLoad || analyzeGlycemicLoad, // C14: Glycemic Load Optimizer (v6.0, modular-ready)
     analyzeProteinDistribution: patternModules.analyzeProteinDistribution || analyzeProteinDistribution, // C15: Protein Distribution (v6.0, modular-ready)
     analyzeAntioxidantDefense: patternModules.analyzeAntioxidantDefense || analyzeAntioxidantDefense, // C16: Antioxidant Defense (v6.0, modular-ready)
     analyzeAddedSugarDependency, // C18: Added Sugar & Dependency (v6.0)
@@ -4323,6 +4345,6 @@
   // Fallback для прямого доступа
   global.piPatterns = HEYS.InsightsPI.patterns;
 
-  devLog('[PI Patterns] v6.1.1 loaded — 40 pattern analyzers (modular-router for C15/C16/C19/C20/C21)');
+  devLog('[PI Patterns] v6.2.0 loaded — 40 pattern analyzers (modular-router for C8/C9/C14/C15/C16/C19/C20/C21)');
 
 })(typeof window !== 'undefined' ? window : global);

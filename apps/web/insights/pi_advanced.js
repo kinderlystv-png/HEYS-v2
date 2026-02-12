@@ -246,8 +246,9 @@
     });
 
     // Сценарий 2: Текущий курс
-    const avgTrend = average(patterns.filter(p => p.trend !== undefined).map(p => p.trend));
-    const currentProjection = healthScore.total + Math.round(avgTrend * 7);
+    const trendValues = patterns.filter(p => p.trend !== undefined).map(p => p.trend);
+    const avgTrend = trendValues.length > 0 ? average(trendValues) : 0;
+    const currentProjection = healthScore.total + Math.round((isNaN(avgTrend) ? 0 : avgTrend) * 7);
 
     scenarios.push({
       id: 'current',
@@ -375,6 +376,7 @@
    */
   function generateWeeklyWrap(days, patterns, healthScore, weightPrediction, profile) {
     const safeProfile = profile || {};
+    const allDaysHistory = Array.isArray(days) ? days : [];
     const daysWithMeals = days.filter(d => d.meals && d.meals.length > 0);
 
     // Находим лучший и худший дни
@@ -441,11 +443,99 @@
       }
     }
 
+    // === SCIENTIFIC WEEK-OVER-WEEK ANALYSIS (v5.2.0) ===
+    // Используем статистические тесты для определения значимости изменений
+    let scoreChange = 0;
+    let weekOverWeekStats = null;
+
+    if (allDaysHistory && allDaysHistory.length >= 14) {
+      const currentStart = new Date(days[0].date);
+      const prevWeekStart = new Date(currentStart);
+      prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+
+      const prevWeekDays = allDaysHistory.filter(d => {
+        const date = new Date(d.date);
+        return date >= prevWeekStart && date < currentStart;
+      });
+
+      if (prevWeekDays.length >= 5) {
+        // Извлекаем dayScore для обеих недель
+        const prevWeekScores = prevWeekDays
+          .map(d => Number(d.dayScore))
+          .filter(s => Number.isFinite(s) && s >= 0);
+
+        const currentWeekScores = days
+          .map(d => Number(d.dayScore))
+          .filter(s => Number.isFinite(s) && s >= 0);
+
+        if (prevWeekScores.length >= 3 && currentWeekScores.length >= 3) {
+          // Базовое изменение
+          const prevWeekAvg = average(prevWeekScores);
+          const currentWeekAvg = average(currentWeekScores);
+          scoreChange = Math.round(currentWeekAvg - prevWeekAvg);
+
+          // Статистические тесты
+          const tTest = piStats.twoSampleTTest(prevWeekScores, currentWeekScores, 0.05);
+          const effectSize = piStats.cohenD(prevWeekScores, currentWeekScores);
+
+          // Confidence intervals
+          const prevWeekCI = piStats.calculateConfidenceInterval(prevWeekScores, 0.95);
+          const currentWeekCI = piStats.calculateConfidenceInterval(currentWeekScores, 0.95);
+
+          // Statistical power (для оценки надёжности)
+          const power = piStats.statisticalPower(
+            prevWeekScores.length + currentWeekScores.length,
+            Math.abs(effectSize.d)
+          );
+
+          weekOverWeekStats = {
+            // Средние значения
+            prevWeekAvg: Math.round(prevWeekAvg),
+            currentWeekAvg: Math.round(currentWeekAvg),
+            change: scoreChange,
+            changePercent: prevWeekAvg > 0 ? Math.round((scoreChange / prevWeekAvg) * 100) : 0,
+
+            // Статистическая значимость
+            isSignificant: tTest.isSignificant,
+            pValue: tTest.pValue,
+            tStat: Math.round(tTest.tStat * 100) / 100,
+            direction: tTest.direction, // 'increase' | 'decrease' | 'no_change'
+
+            // Размер эффекта
+            effectSize: Math.round(effectSize.d * 100) / 100,
+            effectSizeInterpretation: effectSize.interpretation, // 'small' | 'medium' | 'large'
+
+            // Доверительные интервалы
+            prevWeekCI: {
+              mean: Math.round(prevWeekCI.mean),
+              lower: Math.round(prevWeekCI.lower),
+              upper: Math.round(prevWeekCI.upper),
+              margin: Math.round(prevWeekCI.margin)
+            },
+            currentWeekCI: {
+              mean: Math.round(currentWeekCI.mean),
+              lower: Math.round(currentWeekCI.lower),
+              upper: Math.round(currentWeekCI.upper),
+              margin: Math.round(currentWeekCI.margin)
+            },
+
+            // Statistical power
+            power: Math.round(power * 100) / 100,
+
+            // Sample sizes
+            prevWeekN: prevWeekScores.length,
+            currentWeekN: currentWeekScores.length
+          };
+        }
+      }
+    }
+
     return {
       periodDays: days.length,
       daysWithData: daysWithMeals.length,
       healthScore: healthScore.total,
-      scoreChange: 0, // TODO: сравнить с прошлой неделей
+      scoreChange, // Week-over-week change (v5.1.0 — deprecated, use weekOverWeekStats)
+      weekOverWeekStats, // Scientific week-over-week analysis (v5.2.0)
       bestDay: bestDay ? {
         date: bestDay.date,
         dayScore: bestDay.dayScore,

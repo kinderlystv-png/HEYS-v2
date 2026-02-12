@@ -919,10 +919,17 @@
         stress_eating: '😰 Стресс → Еда',
         mood_food: '😊 Настроение',
         // v2.0: новые паттерны
-        circadian_timing: '🌅 Циркадные ритмы',
+        circadian: '🌅 Циркадные ритмы',
         nutrient_timing: '⏰ Тайминг нутриентов',
         insulin_sensitivity: '📉 Инсулин. чувств.',
         gut_health: '🦠 Здоровье ЖКТ',
+        // v4.0: B1-B6 паттерны
+        sleep_quality: '💤 Качество сна',
+        wellbeing_correlation: '🌡️ Самочувствие',
+        hydration: '💧 Гидратация',
+        body_composition: '📐 Композиция тела',
+        cycle_impact: '🔄 Влияние цикла',
+        weekend_effect: '📅 Эффект выходных',
         // v4.0: C1-C6 паттерны
         nutrition_quality: '🥗 Качество питания',
         neat_activity: '🏃 NEAT-активность',
@@ -949,10 +956,31 @@
 
       // v2.0: Маппинг pattern → SCIENCE_INFO ключ
       const patternToInfoKey = {
-        circadian_timing: 'CIRCADIAN',
+        // Core v2-v3 паттерны (12.02.2026 enrichment)
+        meal_timing: 'MEAL_TIMING',
+        wave_overlap: 'WAVE_OVERLAP',
+        late_eating: 'LATE_EATING',
+        meal_quality: 'MEAL_QUALITY_TREND',
+        sleep_weight: 'SLEEP_WEIGHT',
+        sleep_hunger: 'SLEEP_HUNGER',
+        training_kcal: 'TRAINING_KCAL',
+        steps_weight: 'STEPS_WEIGHT',
+        protein_satiety: 'PROTEIN_SATIETY',
+        fiber_regularity: 'FIBER_REGULARITY',
+        stress_eating: 'STRESS_EATING',
+        mood_food: 'MOOD_FOOD',
+        // v2.0 extended
+        circadian: 'CIRCADIAN',
         nutrient_timing: 'NUTRIENT_TIMING',
         insulin_sensitivity: 'INSULIN_SENSITIVITY',
         gut_health: 'GUT_HEALTH',
+        // v4.0: B1-B6 паттерны
+        sleep_quality: 'SLEEP_QUALITY',
+        wellbeing_correlation: 'WELLBEING_CORRELATION',
+        hydration: 'HYDRATION',
+        body_composition: 'BODY_COMPOSITION',
+        cycle_impact: 'CYCLE_IMPACT',
+        weekend_effect: 'WEEKEND_EFFECT',
         // v4.0: C1-C6 паттерны
         nutrition_quality: 'NUTRITION_QUALITY',
         neat_activity: 'NEAT_ACTIVITY',
@@ -963,7 +991,7 @@
         heart_health: 'HEART_HEALTH',
         nova_quality: 'NOVA_QUALITY',
         training_recovery: 'TRAINING_RECOVERY',
-        hypertrophy: 'HYPERTROPHY_COMPOSITION',
+        hypertrophy: 'HYPERTROPHY',
         // v6.0: C13-C22 паттерны (Phase 1-4)
         vitamin_defense: 'VITAMIN_DEFENSE',
         b_complex_anemia: 'B_COMPLEX_ANEMIA',
@@ -1641,6 +1669,84 @@
       );
     }
 
+    /**
+     * DataCompletenessCard — анализ полноты данных (v5.1.0)
+     */
+    function DataCompletenessCard({ days }) {
+      if (!days || days.length === 0) return null;
+
+      const analysis = React.useMemo(() => {
+        const totalDays = days.length;
+        const daysWithMeals = days.filter(d => d.meals && d.meals.length > 0).length;
+        const daysWithWeight = days.filter(d => d.weight && d.weight > 0).length;
+        const daysWithSleep = days.filter(d => d.sleepHours && d.sleepHours > 0).length;
+        const daysWithSteps = days.filter(d => d.steps && d.steps > 0).length;
+        const daysWithTraining = days.filter(d => d.hasTraining).length;
+
+        return {
+          totalDays,
+          daysWithMeals,
+          daysWithWeight,
+          daysWithSleep,
+          daysWithSteps,
+          daysWithTraining,
+          completeness: {
+            meals: Math.round((daysWithMeals / totalDays) * 100),
+            weight: Math.round((daysWithWeight / totalDays) * 100),
+            sleep: Math.round((daysWithSleep / totalDays) * 100),
+            activity: Math.round((daysWithSteps / totalDays) * 100)
+          }
+        };
+      }, [days]);
+
+      const { completeness } = analysis;
+      const avgCompleteness = Math.round((completeness.meals + completeness.weight + completeness.sleep + completeness.activity) / 4);
+
+      return h('div', { className: 'pi-card pi-card--low data-completeness-card' },
+        h('div', { className: 'data-completeness-card__header' },
+          h('h3', null, '📊 Полнота данных'),
+          h('div', { className: 'data-completeness-card__score' },
+            h('span', { className: `completeness-score completeness-score--${avgCompleteness >= 80 ? 'good' : avgCompleteness >= 60 ? 'medium' : 'low'}` },
+              avgCompleteness, '%'
+            )
+          )
+        ),
+        h('div', { className: 'data-completeness-card__metrics' },
+          [
+            { key: 'meals', label: 'Приёмы пищи', value: completeness.meals, icon: '🍽️' },
+            { key: 'weight', label: 'Вес', value: completeness.weight, icon: '⚖️' },
+            { key: 'sleep', label: 'Сон', value: completeness.sleep, icon: '😴' },
+            { key: 'activity', label: 'Активность', value: completeness.activity, icon: '👟' }
+          ].map(metric =>
+            h('div', { key: metric.key, className: 'completeness-metric' },
+              h('div', { className: 'completeness-metric__bar-container' },
+                h('div', { className: 'completeness-metric__bar-bg' }),
+                h('div', {
+                  className: `completeness-metric__bar completeness-metric__bar--${metric.value >= 80 ? 'good' : metric.value >= 60 ? 'medium' : 'low'}`,
+                  style: { width: `${metric.value}%` }
+                })
+              ),
+              h('div', { className: 'completeness-metric__label' },
+                h('span', null, metric.icon, ' ', metric.label),
+                h('span', { className: 'completeness-metric__value' }, metric.value, '%')
+              )
+            )
+          )
+        ),
+        h('div', { className: 'data-completeness-card__suggestions' },
+          completeness.weight < 80 && h('p', { className: 'completeness-suggestion' },
+            '⚠️ Добавь вес — анализ композиции точнее на 35%'
+          ),
+          completeness.sleep < 70 && h('p', { className: 'completeness-suggestion' },
+            '⚠️ Отмечай сон — раскроет 6 паттернов восстановления'
+          ),
+          completeness.meals < 90 && h('p', { className: 'completeness-suggestion' },
+            '💡 Полный дневник питания = максимум инсайтов'
+          )
+        )
+      );
+    }
+
     // === EXPORT ===
     HEYS.InsightsPI = HEYS.InsightsPI || {};
     HEYS.InsightsPI.uiCards = {
@@ -1654,7 +1760,8 @@
       ScenarioCard,
       WhatIfSimulator,
       WhatIfCard,
-      WhatIfSection
+      WhatIfSection,
+      DataCompletenessCard
     };
 
     // Backward compatibility fallback

@@ -53,15 +53,31 @@
       ScenarioCard,
       WhatIfSimulator,
       WhatIfCard,
-      WhatIfSection
+      WhatIfSection,
     } = piUICards;
 
     // Получаем Ring компоненты из piUIRings
     const { TotalHealthRing } = piUIRings;
 
-    // Получаем константы из piConstants
-    const PRIORITY_LEVELS = piConstants.PRIORITY_LEVELS || {};
-    const CATEGORIES = piConstants.CATEGORIES || {};
+    // Получаем константы из piConstants (с hardcoded fallback для защиты от сбоев загрузки)
+    const PRIORITY_LEVELS = piConstants.PRIORITY_LEVELS || {
+      CRITICAL: { level: 1, name: 'Критический', emoji: '🔴', color: '#ef4444' },
+      HIGH: { level: 2, name: 'Высокий', emoji: '🟠', color: '#f97316' },
+      MEDIUM: { level: 3, name: 'Средний', emoji: '🟡', color: '#eab308' },
+      LOW: { level: 4, name: 'Низкий', emoji: '🟢', color: '#22c55e' },
+      INFO: { level: 5, name: 'Справочный', emoji: '🔵', color: '#3b82f6' }
+    };
+    const CATEGORIES = piConstants.CATEGORIES || {
+      METABOLISM: { id: 'metabolism', name: 'Метаболизм', emoji: '🔥', color: '#f97316' },
+      NUTRITION: { id: 'nutrition', name: 'Питание', emoji: '🍽️', color: '#22c55e' },
+      TIMING: { id: 'timing', name: 'Тайминг', emoji: '⏰', color: '#8b5cf6' },
+      RECOVERY: { id: 'recovery', name: 'Восстановление', emoji: '😴', color: '#6366f1' },
+      RISK: { id: 'risk', name: 'Риски', emoji: '⚠️', color: '#ef4444' },
+      PREDICTION: { id: 'prediction', name: 'Прогнозы', emoji: '🔮', color: '#a855f7' },
+      PATTERNS: { id: 'patterns', name: 'Паттерны', emoji: '🧬', color: '#ec4899' },
+      COMPOSITE: { id: 'composite', name: 'Композитные', emoji: '📊', color: '#14b8a6' },
+      STATISTICS: { id: 'statistics', name: 'Статистика', emoji: '📈', color: '#64748b' }
+    };
     const SCIENCE_INFO = piConstants.SCIENCE_INFO || {};
     const ACTIONABILITY = piConstants.ACTIONABILITY || {};
     const getAllMetricsByPriority = piConstants.getAllMetricsByPriority || function () {
@@ -79,17 +95,7 @@
 
       return h('div', { className: 'insights-weight' },
         h('div', { className: 'insights-weight__header' },
-          h('span', null, '⚖️ Прогноз веса'),
-          h(getInfoButton(), {
-            infoKey: 'WEIGHT_PREDICTION',
-            debugData: {
-              currentWeight: prediction.currentWeight,
-              projectedWeight: prediction.projectedWeight,
-              weeklyChange: prediction.weeklyChange,
-              slope: prediction.slope,
-              dataPoints: prediction.dataPoints
-            }
-          })
+          h('span', null, '⚖️ Прогноз веса')
         ),
         h('div', { className: 'insights-weight__body' },
           h('div', { className: 'insights-weight__current' },
@@ -121,89 +127,79 @@
       if (!wrap) return null;
 
       // 🆕 v3.22.0: Extended Analytics Summary за неделю
-      const extendedSummary = useMemo(() => {
-        const U = window.HEYS?.utils;
-        const getter = lsGet || U?.lsGet || ((k, d) => {
-          try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-        });
-        const profile = getter('heys_profile', {});
-        const pIndex = window.HEYS?.products?.getIndex?.();
+      // NOTE: Removed useMemo — this is called via h(), not a real React component
+      const U = window.HEYS?.utils;
+      const getter = lsGet || U?.lsGet || ((k, d) => {
+        try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+      });
+      const profile = getter('heys_profile', {});
+      const pIndex = window.HEYS?.products?.getIndex?.();
 
-        let proteinDeficitDays = 0;
-        let highStressDays = 0;
-        let trainingDays = 0;
-        let avgEmotionalRisk = 0;
-        let totalDays = 0;
+      let proteinDeficitDays = 0;
+      let highStressDays = 0;
+      let trainingDays = 0;
+      let avgEmotionalRisk = 0;
+      let totalDays = 0;
 
-        // Анализ за 7 дней
-        for (let i = 0; i < 7; i++) {
-          const d = new Date();
-          d.setDate(d.getDate() - i);
-          const dateStr = d.toISOString().split('T')[0];
-          const day = getter(`heys_dayv2_${dateStr}`, {});
+      // Анализ за 7 дней
+      for (let i = 0; i < 7; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const day = getter(`heys_dayv2_${dateStr}`, {});
 
-          if (!day.meals || day.meals.length === 0) continue;
-          totalDays++;
+        if (!day.meals || day.meals.length === 0) continue;
+        totalDays++;
 
-          // Protein analysis
-          let dayProtein = 0;
-          let dayKcal = 0;
+        // Protein analysis
+        let dayProtein = 0;
+        let dayKcal = 0;
 
-          for (const meal of day.meals) {
-            for (const item of (meal.items || [])) {
-              const product = pIndex?.byId?.get(item.product_id) || item;
-              const grams = item.grams || 0;
-              dayProtein += (product.protein100 || 0) * grams / 100;
-              dayKcal += (product.kcal100 || 0) * grams / 100;
-            }
+        for (const meal of day.meals) {
+          for (const item of (meal.items || [])) {
+            const product = pIndex?.byId?.get(item.product_id) || item;
+            const grams = item.grams || 0;
+            dayProtein += (product.protein100 || 0) * grams / 100;
+            dayKcal += (product.kcal100 || 0) * grams / 100;
           }
-
-          const targetProtein = (dayKcal * 0.25) / 4;
-          if (targetProtein > 0 && dayProtein < targetProtein * 0.8) {
-            proteinDeficitDays++;
-          }
-
-          // Stress
-          if (day.stressAvg >= 6) highStressDays++;
-
-          // Training
-          if (day.trainings?.length > 0) trainingDays++;
-
-          // Emotional risk accumulator
-          let dayRisk = 0;
-          if (day.stressAvg >= 6) dayRisk += 35;
-          else if (day.stressAvg >= 4) dayRisk += 15;
-          const sleepDef = (profile.sleepHours || 8) - (day.sleepHours || 0);
-          if (sleepDef > 2) dayRisk += 15;
-          avgEmotionalRisk += dayRisk;
         }
 
-        if (totalDays > 0) {
-          avgEmotionalRisk = Math.round(avgEmotionalRisk / totalDays);
+        const targetProtein = (dayKcal * 0.25) / 4;
+        if (targetProtein > 0 && dayProtein < targetProtein * 0.8) {
+          proteinDeficitDays++;
         }
 
-        return {
-          proteinDeficitDays,
-          highStressDays,
-          trainingDays,
-          avgEmotionalRisk,
-          totalDays,
-          hasData: totalDays >= 3
-        };
-      }, [wrap, lsGet]);
+        // Stress
+        if (day.stressAvg >= 6) highStressDays++;
+
+        // Training
+        if (day.trainings?.length > 0) trainingDays++;
+
+        // Emotional risk accumulator
+        let dayRisk = 0;
+        if (day.stressAvg >= 6) dayRisk += 35;
+        else if (day.stressAvg >= 4) dayRisk += 15;
+        const sleepDef = (profile.sleepHours || 8) - (day.sleepHours || 0);
+        if (sleepDef > 2) dayRisk += 15;
+        avgEmotionalRisk += dayRisk;
+      }
+
+      if (totalDays > 0) {
+        avgEmotionalRisk = Math.round(avgEmotionalRisk / totalDays);
+      }
+
+      const extendedSummary = {
+        proteinDeficitDays,
+        highStressDays,
+        trainingDays,
+        avgEmotionalRisk,
+        totalDays,
+        hasData: totalDays >= 3
+      };
 
       return h('div', { className: 'insights-wrap' },
         h('div', { className: 'insights-wrap__header' },
-          h('span', { className: 'insights-wrap__title' }, '📋 Итоги'),
-          h(getInfoButton(), {
-            infoKey: 'WEEKLY_WRAP',
-            debugData: {
-              daysWithData: wrap.daysWithData,
-              healthScore: wrap.healthScore,
-              bestDay: wrap.bestDay,
-              hiddenWinsCount: wrap.hiddenWins?.length || 0
-            }
-          })
+          h('span', { className: 'insights-wrap__title' }, '📋 Итоги')
         ),
         h('div', { className: 'insights-wrap__summary' },
           h('div', { className: 'insights-wrap__stat' },
@@ -211,7 +207,17 @@
             h('div', { className: 'insights-wrap__stat-label' }, 'дней с данными')
           ),
           h('div', { className: 'insights-wrap__stat' },
-            h('div', { className: 'insights-wrap__stat-value' }, wrap.healthScore),
+            h('div', { className: 'insights-wrap__stat-container' },
+              h('div', { className: 'insights-wrap__stat-value' }, wrap.healthScore),
+              wrap.scoreChange !== 0 && h('span', {
+                className: `insights-wrap__stat-change insights-wrap__stat-change--${wrap.scoreChange > 0 ? 'up' : 'down'}`,
+                title: `Изменение за неделю: ${wrap.scoreChange > 0 ? '+' : ''}${wrap.scoreChange}`
+              },
+                wrap.scoreChange > 0 ? '📈' : '📉',
+                ' ',
+                wrap.scoreChange > 0 ? `+${wrap.scoreChange}` : wrap.scoreChange
+              )
+            ),
             h('div', { className: 'insights-wrap__stat-label' }, 'Health Score')
           )
         ),
@@ -273,6 +279,120 @@
               ),
               h('span', { className: 'insights-wrap__extended-label' },
                 extendedSummary.avgEmotionalRisk < 20 ? 'Эмоц. ОК' : 'ср. эмоц.риск'
+              )
+            )
+          )
+        ),
+
+        // 🆕 v5.2.0: Scientific Week-Over-Week Analysis
+        wrap.weekOverWeekStats && h('div', { className: 'insights-wrap__scientific' },
+          h('div', { className: 'insights-wrap__scientific-header' },
+            h('span', { className: 'insights-wrap__scientific-title' }, '📊 Научный анализ'),
+            h('span', {
+              className: `insights-wrap__significance-badge insights-wrap__significance-badge--${wrap.weekOverWeekStats.isSignificant ? 'sig' : 'nonsig'}`,
+              title: `p-value: ${wrap.weekOverWeekStats.pValue.toFixed(3)}, t-статистика: ${wrap.weekOverWeekStats.tStat}`
+            },
+              wrap.weekOverWeekStats.isSignificant ? '✓ Значимо' : '— Не значимо'
+            )
+          ),
+
+          h('div', { className: 'insights-wrap__scientific-grid' },
+            // Change direction & magnitude
+            h('div', { className: 'insights-wrap__scientific-item' },
+              h('div', { className: 'insights-wrap__scientific-label' }, 'Изменение'),
+              h('div', {
+                className: `insights-wrap__scientific-value insights-wrap__scientific-value--${wrap.weekOverWeekStats.direction}`
+              },
+                wrap.weekOverWeekStats.direction === 'increase' ? '📈' : (wrap.weekOverWeekStats.direction === 'decrease' ? '📉' : '—'),
+                ' ',
+                wrap.weekOverWeekStats.change > 0 ? `+${wrap.weekOverWeekStats.change}` : wrap.weekOverWeekStats.change,
+                ' ',
+                h('span', { className: 'insights-wrap__scientific-percent' },
+                  `(${wrap.weekOverWeekStats.changePercent > 0 ? '+' : ''}${wrap.weekOverWeekStats.changePercent}%)`
+                )
+              )
+            ),
+
+            // Effect size
+            h('div', { className: 'insights-wrap__scientific-item' },
+              h('div', { className: 'insights-wrap__scientific-label' }, 'Размер эффекта'),
+              h('div', { className: 'insights-wrap__scientific-value' },
+                `Cohen's d = ${wrap.weekOverWeekStats.effectSize}`,
+                ' ',
+                h('span', {
+                  className: `insights-wrap__effect-badge insights-wrap__effect-badge--${wrap.weekOverWeekStats.effectSizeInterpretation}`,
+                  title: 'small(<0.5) | medium(0.5-0.8) | large(≥0.8)'
+                },
+                  wrap.weekOverWeekStats.effectSizeInterpretation === 'large' ? '🔥' :
+                    (wrap.weekOverWeekStats.effectSizeInterpretation === 'medium' ? '⚡' : '~')
+                )
+              )
+            ),
+
+            // Statistical power
+            h('div', { className: 'insights-wrap__scientific-item' },
+              h('div', { className: 'insights-wrap__scientific-label' }, 'Мощность теста'),
+              h('div', { className: 'insights-wrap__scientific-value' },
+                `${(wrap.weekOverWeekStats.power * 100).toFixed(0)}%`,
+                ' ',
+                wrap.weekOverWeekStats.power < 0.5 && h('span', {
+                  className: 'insights-wrap__power-warning',
+                  title: 'Низкая мощность теста - возможны ложноотрицательные результаты'
+                }, '⚠️')
+              )
+            ),
+
+            // p-value
+            h('div', { className: 'insights-wrap__scientific-item' },
+              h('div', { className: 'insights-wrap__scientific-label' }, 'p-значение'),
+              h('div', { className: 'insights-wrap__scientific-value' },
+                wrap.weekOverWeekStats.pValue < 0.001 ? '<0.001' : wrap.weekOverWeekStats.pValue.toFixed(3),
+                ' ',
+                h('a', {
+                  href: 'https://en.wikipedia.org/wiki/P-value',
+                  target: '_blank',
+                  className: 'insights-wrap__scientific-link',
+                  title: 'p < 0.05 = статистически значимо'
+                }, 'ℹ️')
+              )
+            )
+          ),
+
+          // Confidence intervals visualization
+          h('div', { className: 'insights-wrap__ci-comparison' },
+            h('div', { className: 'insights-wrap__ci-title' }, 'Доверительные интервалы (95%)'),
+
+            // Previous week CI
+            h('div', { className: 'insights-wrap__ci-row' },
+              h('div', { className: 'insights-wrap__ci-label' }, 'Прошлая неделя'),
+              h('div', { className: 'insights-wrap__ci-bar' },
+                h('div', {
+                  className: 'insights-wrap__ci-range',
+                  style: `width: ${Math.min(100, wrap.weekOverWeekStats.prevWeekCI.margin / 5 * 100)}%`,
+                  title: `${wrap.weekOverWeekStats.prevWeekCI.lower}-${wrap.weekOverWeekStats.prevWeekCI.upper} (±${wrap.weekOverWeekStats.prevWeekCI.margin})`
+                }),
+                h('span', { className: 'insights-wrap__ci-value' },
+                  `${wrap.weekOverWeekStats.prevWeekAvg} ± ${wrap.weekOverWeekStats.prevWeekCI.margin}`,
+                  ' ',
+                  h('span', { className: 'insights-wrap__ci-n' }, `(n=${wrap.weekOverWeekStats.prevWeekN})`)
+                )
+              )
+            ),
+
+            // Current week CI
+            h('div', { className: 'insights-wrap__ci-row' },
+              h('div', { className: 'insights-wrap__ci-label' }, 'Текущая неделя'),
+              h('div', { className: 'insights-wrap__ci-bar' },
+                h('div', {
+                  className: 'insights-wrap__ci-range insights-wrap__ci-range--current',
+                  style: `width: ${Math.min(100, wrap.weekOverWeekStats.currentWeekCI.margin / 5 * 100)}%`,
+                  title: `${wrap.weekOverWeekStats.currentWeekCI.lower}-${wrap.weekOverWeekStats.currentWeekCI.upper} (±${wrap.weekOverWeekStats.currentWeekCI.margin})`
+                }),
+                h('span', { className: 'insights-wrap__ci-value' },
+                  `${wrap.weekOverWeekStats.currentWeekAvg} ± ${wrap.weekOverWeekStats.currentWeekCI.margin}`,
+                  ' ',
+                  h('span', { className: 'insights-wrap__ci-n' }, `(n=${wrap.weekOverWeekStats.currentWeekN})`)
+                )
               )
             )
           )
@@ -1212,18 +1332,15 @@
             h(WeeklyWrap, { wrap: insights.weeklyWrap })
           ),
 
-          // Data Completeness (LOW) - TODO: DataCompletenessCard not implemented in refactoring
+          // Data Completeness (LOW)
           shouldShowSection('LOW') && h('div', { className: 'insights-tab__section insights-tab__section--low' },
             h(SectionHeader, {
               title: 'Полнота данных',
               icon: '📊',
               priority: 'LOW',
-              infoKey: 'CONFIDENCE'
+              infoKey: 'DATA_COMPLETENESS'
             }),
-            h('div', {
-              className: 'pi-card pi-card--low',
-              style: { padding: '16px', textAlign: 'center', color: '#6b7280' }
-            }, '📊 DataCompletenessCard — в разработке')
+            h(DataCompletenessCard, { lsGet, profile })
           ),
 
           // ═══════════════════════════════════════════════════════════
@@ -2260,13 +2377,6 @@
      * ActionCard — карточка приоритизированного действия
      */
     function ActionCard({ step }) {
-      const priorityColors = {
-        0: '#ef4444', // urgent
-        1: '#f97316', // high
-        2: '#eab308', // medium
-        3: '#22c55e'  // low
-      };
-
       const priorityLabels = {
         0: 'СРОЧНО',
         1: 'Важно',
@@ -2278,8 +2388,7 @@
         h('div', { className: 'action-card__header' },
           h('span', { className: 'action-card__label' }, step.label),
           h('span', {
-            className: 'action-card__priority',
-            style: { backgroundColor: priorityColors[step.priority || 3] }
+            className: `action-card__priority action-card__priority--${step.priority || 3}`
           }, priorityLabels[step.priority || 3])
         ),
         step.why && h('div', { className: 'action-card__why' }, step.why),
@@ -3312,8 +3421,7 @@
         h('div', { className: 'data-completeness-card__today' },
           h('span', { className: 'data-completeness-card__today-label' }, 'Сегодня: '),
           h('span', {
-            className: 'data-completeness-card__today-value',
-            style: { color: completeness.todayCompleteness >= 80 ? '#22c55e' : completeness.todayCompleteness >= 50 ? '#eab308' : '#ef4444' }
+            className: `data-completeness-card__today-value data-completeness-card__today-value--${completeness.todayCompleteness >= 80 ? 'high' : completeness.todayCompleteness >= 50 ? 'medium' : 'low'}`
           }, `${completeness.todayCompleteness}% заполнено`)
         ),
 
@@ -3321,8 +3429,7 @@
         h('div', { className: 'data-completeness-card__extended' },
           h('span', { className: 'data-completeness-card__extended-label' }, '🧠 Extended Analytics: '),
           h('span', {
-            className: 'data-completeness-card__extended-value',
-            style: { color: completeness.extendedUnlocked === completeness.extendedTotal ? '#22c55e' : '#6366f1' }
+            className: `data-completeness-card__extended-value data-completeness-card__extended-value--${completeness.extendedUnlocked === completeness.extendedTotal ? 'complete' : 'partial'}`
           }, `${completeness.extendedUnlocked}/${completeness.extendedTotal}`),
           completeness.extendedUnlocked === completeness.extendedTotal && h('span', { className: 'data-completeness-card__extended-badge' }, '✓')
         ),

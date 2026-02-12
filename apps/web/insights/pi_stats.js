@@ -350,6 +350,132 @@
     return { confidence: adjusted, warning };
   }
 
+  /**
+   * Calculate Cohen's d effect size for two samples
+   * Measures the standardized difference between two means
+   * @param {Array<number>} group1 - первая выборка
+   * @param {Array<number>} group2 - вторая выборка
+   * @returns {Object} { d, interpretation }
+   * Effect size interpretation:
+   * - Small: |d| < 0.5
+   * - Medium: 0.5 ≤ |d| < 0.8
+   * - Large: |d| ≥ 0.8
+   */
+  function cohenD(group1, group2) {
+    if (!group1 || !group2 || group1.length < 2 || group2.length < 2) {
+      return { d: 0, interpretation: 'insufficient_data' };
+    }
+
+    const mean1 = average(group1);
+    const mean2 = average(group2);
+    const std1 = stdDev(group1);
+    const std2 = stdDev(group2);
+
+    // Pooled standard deviation
+    const n1 = group1.length;
+    const n2 = group2.length;
+    const pooledStd = Math.sqrt(((n1 - 1) * std1 * std1 + (n2 - 1) * std2 * std2) / (n1 + n2 - 2));
+
+    if (pooledStd === 0) {
+      return { d: 0, interpretation: 'no_variance' };
+    }
+
+    const d = (mean2 - mean1) / pooledStd;
+    const absD = Math.abs(d);
+
+    let interpretation;
+    if (absD < 0.2) interpretation = 'negligible';
+    else if (absD < 0.5) interpretation = 'small';
+    else if (absD < 0.8) interpretation = 'medium';
+    else interpretation = 'large';
+
+    return { d, interpretation };
+  }
+
+  /**
+   * Two-sample t-test (Welch's t-test for unequal variances)
+   * Tests if two samples have significantly different means
+   * @param {Array<number>} group1 - первая выборка
+   * @param {Array<number>} group2 - вторая выборка
+   * @param {number} alpha - significance level (default: 0.05)
+   * @returns {Object} { tStat, pValue (approx), isSignificant, direction }
+   * direction: 'increase' | 'decrease' | 'no_change'
+   */
+  function twoSampleTTest(group1, group2, alpha = 0.05) {
+    if (!group1 || !group2 || group1.length < 2 || group2.length < 2) {
+      return {
+        tStat: 0,
+        pValue: 1,
+        isSignificant: false,
+        direction: 'no_change',
+        warning: 'insufficient_sample_size'
+      };
+    }
+
+    const mean1 = average(group1);
+    const mean2 = average(group2);
+    const var1 = variance(group1);
+    const var2 = variance(group2);
+    const n1 = group1.length;
+    const n2 = group2.length;
+
+    // Welch's t-statistic
+    const se = Math.sqrt(var1 / n1 + var2 / n2);
+    if (se === 0) {
+      return {
+        tStat: 0,
+        pValue: 1,
+        isSignificant: false,
+        direction: 'no_change',
+        warning: 'zero_standard_error'
+      };
+    }
+
+    const tStat = (mean2 - mean1) / se;
+
+    // Welch-Satterthwaite degrees of freedom
+    const numerator = Math.pow(var1 / n1 + var2 / n2, 2);
+    const denominator = Math.pow(var1 / n1, 2) / (n1 - 1) + Math.pow(var2 / n2, 2) / (n2 - 1);
+    const df = numerator / denominator;
+
+    // Approximate p-value using t-distribution
+    // For simplicity, use critical values for common df
+    // t-critical(df=∞, α=0.05, two-tailed) ≈ 1.96
+    // t-critical(df=10, α=0.05, two-tailed) ≈ 2.228
+    // t-critical(df=5, α=0.05, two-tailed) ≈ 2.571
+    let tCritical;
+    if (df >= 30) tCritical = 1.96;
+    else if (df >= 20) tCritical = 2.086;
+    else if (df >= 10) tCritical = 2.228;
+    else if (df >= 5) tCritical = 2.571;
+    else tCritical = 3.182; // df ≈ 3
+
+    const absTStat = Math.abs(tStat);
+    const isSignificant = absTStat > tCritical;
+
+    // Rough p-value approximation (two-tailed)
+    let pValue;
+    if (absTStat < 1) pValue = 0.8;
+    else if (absTStat < 1.5) pValue = 0.3;
+    else if (absTStat < 2) pValue = 0.1;
+    else if (absTStat < 2.5) pValue = 0.05;
+    else if (absTStat < 3) pValue = 0.01;
+    else pValue = 0.001;
+
+    const direction = mean2 > mean1 ? 'increase' : (mean2 < mean1 ? 'decrease' : 'no_change');
+
+    return {
+      tStat,
+      pValue,
+      df,
+      isSignificant,
+      direction,
+      mean1,
+      mean2,
+      diff: mean2 - mean1
+    };
+  }
+
   // === ЭКСПОРТ ===
   HEYS.InsightsPI.stats = {
     // Базовые статистические функции
@@ -380,12 +506,16 @@
     checkMinN,
     applySmallSamplePenalty,
     statisticalPower,
-    confidenceWithWarning
+    confidenceWithWarning,
+
+    // Statistical inference (v3.2.0 — научный week-over-week)
+    cohenD,
+    twoSampleTTest
   };
 
   // Fallback для прямого доступа
   global.piStats = HEYS.InsightsPI.stats;
 
-  devLog('[PI Stats] v3.1.0 loaded — 16 statistical functions (+ EMA)');
+  devLog('[PI Stats] v3.2.0 loaded — 18 statistical functions (+ t-test, Cohen\'s d)');
 
 })(typeof window !== 'undefined' ? window : global);
