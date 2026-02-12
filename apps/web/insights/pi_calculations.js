@@ -22,7 +22,8 @@
     const p = prod.protein100 || 0;
     const c = (prod.simple100 || 0) + (prod.complex100 || 0);
     const f = (prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0);
-    return (p * 4 + c * 4 + f * 9) * item.grams / 100;
+    // TEF-adjusted: protein 3 kcal/g (25% TEF), согласовано с heys_day_core_bundle_v1.js
+    return (p * 3 + c * 4 + f * 9) * item.grams / 100;
   }
 
   /**

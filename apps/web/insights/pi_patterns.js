@@ -1,6 +1,6 @@
-// pi_patterns.js — Pattern Analysis Functions v3.0.0
+// pi_patterns.js — Pattern Analysis Functions v4.0.0
 // Extracted from heys_predictive_insights_v1.js (Phase 3)
-// 16 analyze* функций для анализа паттернов питания, сна, активности
+// 22 analyze* функций для анализа паттернов питания, сна, активности, цикла
 (function (global) {
   'use strict';
 
@@ -54,7 +54,7 @@
     return isNaN(slope) ? 0 : slope;
   };
 
-  // Импорт констант
+  // Импорт констант (полный список из pi_constants.js)
   const PATTERNS = piConst.PATTERNS || {
     MEAL_TIMING: 'meal_timing',
     WAVE_OVERLAP: 'wave_overlap',
@@ -71,7 +71,17 @@
     CIRCADIAN: 'circadian',
     NUTRIENT_TIMING: 'nutrient_timing',
     INSULIN_SENSITIVITY: 'insulin_sensitivity',
-    GUT_HEALTH: 'gut_health'
+    GUT_HEALTH: 'gut_health',
+    NUTRITION_QUALITY: 'nutrition_quality',
+    NEAT_ACTIVITY: 'neat_activity',
+    MOOD_TRAJECTORY: 'mood_trajectory',
+    // v5.0 patterns (C7-C12)
+    MICRONUTRIENT_RADAR: 'micronutrient_radar',
+    OMEGA_BALANCER: 'omega_balancer',
+    HEART_HEALTH: 'heart_health',
+    NOVA_QUALITY: 'nova_quality',
+    TRAINING_RECOVERY: 'training_recovery',
+    HYPERTROPHY: 'hypertrophy'
   };
 
   // Импорт статистических функций из pi_stats.js (централизовано)
@@ -301,6 +311,144 @@
   }
 
   /**
+   * C2: Nutrition Quality — качество питания (макро + клетчатка + категории)
+   */
+  function analyzeNutritionQuality(days, pIndex) {
+    const dailyData = [];
+
+    for (const day of days) {
+      if (!day.meals || day.meals.length === 0) continue;
+
+      let totalProtein = 0;
+      let totalCarbs = 0;
+      let totalSimple = 0;
+      let totalFat = 0;
+      let totalGoodFat = 0;
+      let totalFiber = 0;
+      let totalKcal = 0;
+
+      const uniqueProducts = new Set();
+      const uniqueCategories = new Set();
+
+      for (const meal of day.meals) {
+        if (!meal.items) continue;
+        for (const item of meal.items) {
+          const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+          if (!prod || !item.grams) continue;
+
+          const p = prod.protein100 || 0;
+          const simple = prod.simple100 || 0;
+          const complex = prod.complex100 || 0;
+          const carbs = simple + complex;
+          const goodFat = prod.goodFat100 || 0;
+          const badFat = prod.badFat100 || 0;
+          const trans = prod.trans100 || 0;
+          const fat = goodFat + badFat + trans;
+          const fiber = prod.fiber100 || 0;
+
+          totalProtein += p * item.grams / 100;
+          totalCarbs += carbs * item.grams / 100;
+          totalSimple += simple * item.grams / 100;
+          totalFat += fat * item.grams / 100;
+          totalGoodFat += goodFat * item.grams / 100;
+          totalFiber += fiber * item.grams / 100;
+          // TEF-adjusted: protein 3 kcal/g
+          totalKcal += (p * 3 + carbs * 4 + fat * 9) * item.grams / 100;
+
+          uniqueProducts.add(prod.name || prod.id || item.product_id);
+          const category = prod.category || prod.group || prod.foodGroup || prod.type;
+          if (category) uniqueCategories.add(String(category).toLowerCase());
+        }
+      }
+
+      if (totalKcal <= 0) continue;
+
+      const proteinPct = (totalProtein * 3 / totalKcal) * 100;
+      const fiberPer1000 = (totalFiber / totalKcal) * 1000;
+      const simplePct = totalCarbs > 0 ? (totalSimple / totalCarbs) * 100 : 0;
+      const goodFatPct = totalFat > 0 ? (totalGoodFat / totalFat) * 100 : 0;
+
+      let score = 0;
+
+      // Белок
+      if (proteinPct >= 25) score += 20;
+      else if (proteinPct >= 20) score += 15;
+      else if (proteinPct >= 15) score += 8;
+
+      // Клетчатка
+      if (fiberPer1000 >= 14) score += 20;
+      else if (fiberPer1000 >= 10) score += 12;
+      else if (fiberPer1000 >= 7) score += 6;
+
+      // Простые углеводы
+      if (simplePct <= 30) score += 15;
+      else if (simplePct <= 45) score += 8;
+
+      // Качество жиров
+      if (goodFatPct >= 60) score += 15;
+      else if (goodFatPct >= 40) score += 8;
+
+      // Разнообразие категорий (15 баллов)
+      if (uniqueCategories.size >= 12) score += 15;
+      else if (uniqueCategories.size >= 8) score += 10;
+      else if (uniqueCategories.size >= 5) score += 5;
+
+      // Старый diversity остаётся (10 баллов вместо 25)
+      if (uniqueProducts.size >= 12) score += 10;
+      else if (uniqueProducts.size >= 8) score += 6;
+      else if (uniqueProducts.size >= 5) score += 3;
+
+      dailyData.push({
+        date: day.date,
+        score: Math.min(100, score),
+        proteinPct: Math.round(proteinPct),
+        fiberPer1000: Math.round(fiberPer1000 * 10) / 10,
+        simplePct: Math.round(simplePct),
+        goodFatPct: Math.round(goodFatPct),
+        categories: uniqueCategories.size,
+        products: uniqueProducts.size
+      });
+    }
+
+    if (dailyData.length < 3) {
+      return {
+        pattern: PATTERNS.NUTRITION_QUALITY,
+        available: false,
+        insight: 'Недостаточно данных для оценки качества питания'
+      };
+    }
+
+    const avgScore = average(dailyData.map(d => d.score));
+    const avgFiber = average(dailyData.map(d => d.fiberPer1000));
+    const avgProtein = average(dailyData.map(d => d.proteinPct));
+
+    let insight;
+    if (avgScore >= 80) {
+      insight = '🌿 Отличное качество питания: баланс и разнообразие на высоте';
+    } else if (avgFiber < 10) {
+      insight = `⚠️ Мало клетчатки (${Math.round(avgFiber)}г/1000ккал) — добавь овощи`;
+    } else if (avgProtein < 20) {
+      insight = `⚠️ Белка маловато (${Math.round(avgProtein)}%) — добавь источник белка`;
+    } else {
+      insight = 'Качество питания в норме, есть потенциал улучшения';
+    }
+
+    return {
+      pattern: PATTERNS.NUTRITION_QUALITY,
+      available: true,
+      score: Math.round(avgScore),
+      avgProteinPct: Math.round(avgProtein),
+      avgFiberPer1000: Math.round(avgFiber * 10) / 10,
+      dataPoints: dailyData.length,
+      confidence: dailyData.length >= 7 ? 0.8 : 0.5,
+      insight,
+      debug: {
+        dailyData: dailyData.slice(0, 3)
+      }
+    };
+  }
+
+  /**
    * Корреляция сна и веса
    */
   function analyzeSleepWeight(days) {
@@ -317,7 +465,7 @@
       }
     }
 
-    if (pairs.length < 5) {
+    if (pairs.length < 7) {
       return {
         pattern: PATTERNS.SLEEP_WEIGHT,
         available: false,
@@ -326,12 +474,16 @@
       };
     }
 
+    // Низкая confidence при малой выборке (7-13 дней)
+    const baseConfidence = pairs.length < 14 ? 0.25 : 0.5;
+
     const sleepArr = pairs.map(p => p.sleep);
     const weightArr = pairs.map(p => p.weight);
     const correlation = pearsonCorrelation(sleepArr, weightArr);
 
     // Обычно негативная корреляция: больше сна → меньше вес
     const score = Math.round(50 + correlation * -50); // Инвертируем
+    const confidence = Math.abs(correlation) >= CONFIG.MIN_CORRELATION_DISPLAY ? baseConfidence * (1 + Math.abs(correlation)) : baseConfidence;
 
     let insight;
     if (Math.abs(correlation) < CONFIG.MIN_CORRELATION_DISPLAY) {
@@ -398,7 +550,7 @@
       }
     }
 
-    if (pairs.length < 5) {
+    if (pairs.length < 7) {
       return {
         pattern: PATTERNS.SLEEP_HUNGER,
         available: false,
@@ -408,12 +560,15 @@
       };
     }
 
+    const baseConfidence = pairs.length < 14 ? 0.25 : 0.5;
+
     const deficitArr = pairs.map(p => p.sleepDeficit);
     const kcalArr = pairs.map(p => p.kcal);
     const correlation = pearsonCorrelation(deficitArr, kcalArr);
 
     // Позитивная корреляция: больше недосып → больше ккал
     const score = Math.round(50 - correlation * 50);
+    const confidence = Math.abs(correlation) >= CONFIG.MIN_CORRELATION_DISPLAY ? baseConfidence * (1 + Math.abs(correlation)) : baseConfidence;
 
     let insight;
     if (Math.abs(correlation) < CONFIG.MIN_CORRELATION_DISPLAY) {
@@ -527,7 +682,7 @@
       }
     }
 
-    if (pairs.length < 5) {
+    if (pairs.length < 7) {
       return {
         pattern: PATTERNS.STEPS_WEIGHT,
         available: false,
@@ -535,6 +690,8 @@
         insight: 'Недостаточно данных шагов и веса'
       };
     }
+
+    const baseConfidence = pairs.length < 14 ? 0.25 : 0.5;
 
     const stepsArr = pairs.map(p => p.steps);
     const deltaArr = pairs.map(p => p.weightDelta);
@@ -568,6 +725,66 @@
   }
 
   /**
+   * C4: NEAT Trend — бытовая активность и тренд
+   */
+  function analyzeNEATTrend(days) {
+    const neatData = [];
+
+    for (const day of days) {
+      const householdMin = Number(day.householdMin) || 0;
+      const activities = Array.isArray(day.householdActivities) ? day.householdActivities : [];
+      const activitiesMin = activities.reduce((sum, a) => sum + (Number(a.minutes) || 0), 0);
+      const totalMin = householdMin > 0 ? householdMin : activitiesMin;
+
+      if (totalMin > 0) {
+        neatData.push({ date: day.date, minutes: totalMin });
+      }
+    }
+
+    if (neatData.length < 3) {
+      return {
+        pattern: PATTERNS.NEAT_ACTIVITY,
+        available: false,
+        insight: 'Недостаточно данных о бытовой активности'
+      };
+    }
+
+    neatData.sort((a, b) => a.date.localeCompare(b.date));
+    const minutesArr = neatData.map(d => d.minutes);
+    const avgMinutes = average(minutesArr);
+    const trend = calculateTrend(minutesArr);
+
+    let score = avgMinutes >= 60 ? 100 : avgMinutes >= 40 ? 80 : avgMinutes >= 20 ? 60 : 40;
+    if (trend > 1) score += 5;
+    if (trend < -1) score -= 5;
+    score = Math.max(0, Math.min(100, Math.round(score)));
+
+    let insight;
+    if (avgMinutes >= 60) {
+      insight = '🏡 Отличный NEAT: бытовая активность даёт ощутимый расход';
+    } else if (avgMinutes < 20) {
+      insight = '⚠️ Мало бытовой активности. Добавь 20-30 минут движения';
+    } else if (trend > 1) {
+      insight = '📈 NEAT растёт — хорошая динамика';
+    } else if (trend < -1) {
+      insight = '📉 NEAT снижается — попробуй чаще вставать и двигаться';
+    } else {
+      insight = 'NEAT стабилен, можно чуть усилить';
+    }
+
+    return {
+      pattern: PATTERNS.NEAT_ACTIVITY,
+      available: true,
+      score,
+      avgMinutes: Math.round(avgMinutes),
+      trend: Math.round(trend * 100) / 100,
+      dataPoints: neatData.length,
+      confidence: neatData.length >= 7 ? 0.8 : 0.5,
+      insight
+    };
+  }
+
+  /**
    * Корреляция белка и сытости
    * FIX v2.0: Используем pIndex для расчёта макросов
    */
@@ -589,19 +806,21 @@
               const c = (prod.simple100 || 0) + (prod.complex100 || 0);
               const f = (prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0);
               dayProtein += p * item.grams / 100;
-              dayKcal += (p * 4 + c * 4 + f * 9) * item.grams / 100;
+              // TEF-adjusted: protein 3 kcal/g
+              dayKcal += (p * 3 + c * 4 + f * 9) * item.grams / 100;
             }
           }
         }
       }
 
       if (dayKcal > 0) {
-        const proteinPct = (dayProtein * 4 / dayKcal) * 100;
+        // TEF-adjusted: protein 3 kcal/g in percentage calculation
+        const proteinPct = (dayProtein * 3 / dayKcal) * 100;
         pairs.push({ proteinPct, protein: dayProtein, kcal: dayKcal, date: day.date });
       }
     }
 
-    if (pairs.length < 5) {
+    if (pairs.length < 7) {
       return {
         pattern: PATTERNS.PROTEIN_SATIETY,
         available: false,
@@ -609,6 +828,8 @@
         insight: 'Недостаточно данных о белке'
       };
     }
+
+    const baseConfidence = pairs.length < 14 ? 0.25 : 0.5;
 
     const proteinArr = pairs.map(p => p.proteinPct);
     const kcalArr = pairs.map(p => p.kcal);
@@ -618,6 +839,7 @@
     const avgProteinG = average(pairs.map(p => p.protein));
     // Негативная корреляция: больше белка → меньше общих ккал
     const score = avgProteinPct >= 25 ? 100 : avgProteinPct >= 20 ? 80 : 60;
+    const confidence = Math.abs(correlation) >= CONFIG.MIN_CORRELATION_DISPLAY ? baseConfidence * (1 + Math.abs(correlation)) : baseConfidence;
 
     let insight;
     if (correlation < -0.3) {
@@ -671,7 +893,8 @@
               const c = (prod.simple100 || 0) + (prod.complex100 || 0);
               const f = (prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0);
               dayFiber += (prod.fiber100 || 0) * item.grams / 100;
-              dayKcal += (p * 4 + c * 4 + f * 9) * item.grams / 100;
+              // TEF-adjusted: protein 3 kcal/g
+              dayKcal += (p * 3 + c * 4 + f * 9) * item.grams / 100;
             }
           }
         }
@@ -684,7 +907,7 @@
       }
     }
 
-    if (fiberData.length < 5) {
+    if (fiberData.length < 7) {
       return {
         pattern: PATTERNS.FIBER_REGULARITY,
         available: false,
@@ -693,11 +916,14 @@
       };
     }
 
+    const baseConfidence = fiberData.length < 14 ? 0.25 : 0.5;
+
     const avgFiber = average(fiberData.map(d => d.fiber));
     const avgFiberPer1000 = average(fiberData.map(d => d.fiberPer1000));
     const consistency = 100 - (stdDev(fiberData.map(d => d.fiber)) / avgFiber) * 100;
 
     const score = avgFiberPer1000 >= 14 ? 100 : avgFiberPer1000 >= 10 ? 70 : 40;
+    const confidence = fiberData.length >= 14 ? baseConfidence * 1.5 : baseConfidence;
 
     let insight;
     if (avgFiberPer1000 >= 14) {
@@ -745,7 +971,7 @@
       }
     }
 
-    if (pairs.length < 5) {
+    if (pairs.length < 7) {
       return {
         pattern: PATTERNS.STRESS_EATING,
         available: false,
@@ -754,6 +980,8 @@
       };
     }
 
+    const baseConfidence = pairs.length < 14 ? 0.25 : 0.5;
+
     const stressArr = pairs.map(p => p.stress);
     const kcalArr = pairs.map(p => p.kcal);
     const correlation = pearsonCorrelation(stressArr, kcalArr);
@@ -761,6 +989,7 @@
     const avgStress = average(stressArr);
     // Позитивная корреляция: больше стресс → больше ккал
     const score = Math.round(50 - correlation * 50);
+    const confidence = Math.abs(correlation) >= CONFIG.MIN_CORRELATION_DISPLAY ? baseConfidence * (1 + Math.abs(correlation)) : baseConfidence;
 
     let insight;
     if (Math.abs(correlation) < CONFIG.MIN_CORRELATION_DISPLAY) {
@@ -780,7 +1009,7 @@
       avgStress: Math.round(avgStress * 10) / 10,
       dataPoints: pairs.length,
       score,
-      confidence: pairs.length >= 10 ? 0.8 : 0.5,
+      confidence,
       insight
     };
   }
@@ -819,7 +1048,7 @@
       }
     }
 
-    if (pairs.length < 5) {
+    if (pairs.length < 7) {
       return {
         pattern: PATTERNS.MOOD_FOOD,
         available: false,
@@ -827,6 +1056,8 @@
         insight: 'Недостаточно данных о настроении'
       };
     }
+
+    const baseConfidence = pairs.length < 14 ? 0.25 : 0.5;
 
     const moodArr = pairs.map(p => p.mood);
     const qualityArr = pairs.map(p => p.quality);
@@ -848,6 +1079,10 @@
       insight = `Умеренная связь настроения и питания`;
     }
 
+    const confidence = Math.abs(correlation) > CONFIG.MIN_CORRELATION_DISPLAY
+      ? baseConfidence * (1 + Math.abs(correlation))
+      : baseConfidence;
+
     return {
       pattern: PATTERNS.MOOD_FOOD,
       available: true,
@@ -856,8 +1091,96 @@
       avgQuality: Math.round(avgQuality),
       dataPoints: pairs.length,
       score,
-      confidence: pairs.length >= 10 ? 0.8 : 0.5,
+      confidence,
       insight
+    };
+  }
+
+  /**
+   * C6: Mood Trajectory — настроение vs состав каждого приёма
+   */
+  function analyzeMoodTrajectory(days, pIndex) {
+    const moodArr = [];
+    const simpleArr = [];
+    const proteinArr = [];
+
+    for (const day of days) {
+      if (!day.meals) continue;
+
+      for (const meal of day.meals) {
+        if (meal.mood == null || !meal.items) continue;
+
+        let mealProtein = 0;
+        let mealCarbs = 0;
+        let mealSimple = 0;
+        let mealFat = 0;
+        let mealKcal = 0;
+
+        for (const item of meal.items) {
+          const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+          if (!prod || !item.grams) continue;
+
+          const p = prod.protein100 || 0;
+          const simple = prod.simple100 || 0;
+          const complex = prod.complex100 || 0;
+          const carbs = simple + complex;
+          const fat = (prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0);
+
+          mealProtein += p * item.grams / 100;
+          mealCarbs += carbs * item.grams / 100;
+          mealSimple += simple * item.grams / 100;
+          mealFat += fat * item.grams / 100;
+          // TEF-adjusted: protein 3 kcal/g
+          mealKcal += (p * 3 + carbs * 4 + fat * 9) * item.grams / 100;
+        }
+
+        if (mealKcal <= 0) continue;
+
+        const simplePct = mealCarbs > 0 ? (mealSimple / mealCarbs) * 100 : 0;
+        const proteinPct = (mealProtein * 3 / mealKcal) * 100;
+
+        moodArr.push(meal.mood);
+        simpleArr.push(simplePct);
+        proteinArr.push(proteinPct);
+      }
+    }
+
+    if (moodArr.length < 7) {
+      return {
+        pattern: PATTERNS.MOOD_TRAJECTORY,
+        available: false,
+        insight: 'Недостаточно данных для анализа настроения по приёмам'
+      };
+    }
+
+    const simpleCorr = pearsonCorrelation(simpleArr, moodArr);
+    const proteinCorr = pearsonCorrelation(proteinArr, moodArr);
+
+    let insight;
+    let score = 60;
+
+    if (simpleCorr < -CONFIG.MIN_CORRELATION_DISPLAY) {
+      insight = '😕 Настроение падает после простых углеводов — попробуй снизить быстрые';
+      score = 40;
+    } else if (proteinCorr > CONFIG.MIN_CORRELATION_DISPLAY) {
+      insight = '😊 Белок улучшает настроение — держи высокий белок в приёмах';
+      score = 80;
+    } else {
+      insight = 'Настроение стабильнее при сбалансированных приёмах';
+    }
+
+    return {
+      pattern: PATTERNS.MOOD_TRAJECTORY,
+      available: true,
+      score,
+      dataPoints: moodArr.length,
+      simpleCorr: Math.round(simpleCorr * 100) / 100,
+      proteinCorr: Math.round(proteinCorr * 100) / 100,
+      confidence: moodArr.length >= 14 ? 0.8 : 0.5,
+      insight,
+      debug: {
+        formula: 'corr(mood, simple%) vs corr(mood, protein%)'
+      }
     };
   }
 
@@ -1107,7 +1430,8 @@
             totalCarbs += carbs;
             weightedGI += carbs * gi;
             totalFiber += fiber;
-            totalKcal += (p * 4 + carbs * 4 + f * 9) * item.grams / 100;
+            // TEF-adjusted: protein 3 kcal/g
+            totalKcal += (p * 3 + carbs * 4 + f * 9) * item.grams / 100;
 
             if (hour >= 18) eveningCarbs += carbs;
           }
@@ -1206,13 +1530,15 @@
     const dailyData = [];
 
     // Список ферментированных продуктов (по названию)
-    const fermentedKeywords = ['кефир', 'йогурт', 'творог', 'сыр', 'квашен', 'кимчи', 'мисо', 'темпе', 'комбуча'];
+    // v4.0: Убраны творог/сыр (не ферментированы в строгом смысле)
+    const fermentedKeywords = ['кефир', 'йогурт', 'квашен', 'кимчи', 'мисо', 'темпе', 'комбуча'];
 
     for (const day of days) {
       if (!day.meals || day.meals.length === 0) continue;
 
       let totalFiber = 0, totalKcal = 0;
       const uniqueProducts = new Set();
+      const uniqueCategories = new Set();
       let hasFermented = false;
 
       for (const meal of day.meals) {
@@ -1226,10 +1552,15 @@
             const f = (prod.badFat100 || 0) + (prod.goodFat100 || 0);
 
             totalFiber += (prod.fiber100 || 0) * item.grams / 100;
-            totalKcal += (p * 4 + c * 4 + f * 9) * item.grams / 100;
+            // TEF-adjusted: protein 3 kcal/g
+            totalKcal += (p * 3 + c * 4 + f * 9) * item.grams / 100;
 
             // Уникальные продукты
             uniqueProducts.add(prod.name || prod.id);
+
+            // Категории
+            const category = prod.category || prod.group || prod.foodGroup || prod.type;
+            if (category) uniqueCategories.add(String(category).toLowerCase());
 
             // Ферментированные
             const prodName = (prod.name || '').toLowerCase();
@@ -1254,11 +1585,17 @@
       else if (fiberTotal >= 20) score += 18;
       else if (fiberTotal >= 15) score += 10;
 
-      // Разнообразие продуктов (25)
-      if (diversity >= 20) score += 25;
-      else if (diversity >= 15) score += 20;
-      else if (diversity >= 10) score += 15;
-      else if (diversity >= 5) score += 8;
+      // Разнообразие категорий (15)
+      const categoryDiversity = uniqueCategories.size;
+      if (categoryDiversity >= 12) score += 15;
+      else if (categoryDiversity >= 8) score += 10;
+      else if (categoryDiversity >= 5) score += 5;
+
+      // Разнообразие продуктов (10)
+      if (diversity >= 20) score += 10;
+      else if (diversity >= 15) score += 8;
+      else if (diversity >= 10) score += 6;
+      else if (diversity >= 5) score += 3;
 
       // Ферментированные (15)
       if (hasFermented) score += 15;
@@ -1270,6 +1607,7 @@
         date: day.date,
         fiberTotal: Math.round(fiberTotal),
         diversity,
+        categoryDiversity,
         hasFermented,
         score: Math.min(100, score)
       });
@@ -1286,6 +1624,7 @@
     const avgScore = average(dailyData.map(d => d.score));
     const avgFiber = average(dailyData.map(d => d.fiberTotal));
     const avgDiversity = average(dailyData.map(d => d.diversity));
+    const avgCategoryDiversity = average(dailyData.map(d => d.categoryDiversity));
     const fermentedDays = dailyData.filter(d => d.hasFermented).length;
 
     let insight;
@@ -1293,6 +1632,8 @@
       insight = '🦠 Отлично для микробиома! Много клетчатки и разнообразие';
     } else if (avgFiber < 20) {
       insight = `⚠️ Мало клетчатки (${Math.round(avgFiber)}г). Добавь овощи, бобовые, цельнозерновые`;
+    } else if (avgCategoryDiversity < 8) {
+      insight = `⚠️ Мало разнообразия категорий (${Math.round(avgCategoryDiversity)}). Добавь новые группы продуктов`;
     } else if (avgDiversity < 10) {
       insight = `⚠️ Мало разнообразия (${Math.round(avgDiversity)} продуктов/день). Пробуй новое!`;
     } else if (fermentedDays < dailyData.length * 0.3) {
@@ -1307,6 +1648,7 @@
       score: Math.round(avgScore),
       avgFiber: Math.round(avgFiber),
       avgDiversity: Math.round(avgDiversity),
+      avgCategoryDiversity: Math.round(avgCategoryDiversity),
       fermentedDaysPct: Math.round((fermentedDays / dailyData.length) * 100),
       dataPoints: dailyData.length,
       confidence: dailyData.length >= 7 ? 0.8 : 0.5,
@@ -1318,6 +1660,1160 @@
         fermentedKeywords,
         source: SCIENCE_INFO?.GUT_HEALTH?.source || 'Sonnenburg & Sonnenburg, 2014'
       }
+    };
+  }
+
+  // === NEW v4.0 PATTERNS (B1-B6) ===
+
+  /**
+   * B1: Sleep Quality → Next Day Metrics (time-lagged correlation)
+   * Научный подход: качество сна влияет на метрики СЛЕДУЮЩЕГО дня
+   */
+  function analyzeSleepQuality(days, pIndex) {
+    if (!days || days.length < 8) {
+      return {
+        pattern: PATTERNS.SLEEP_QUALITY,
+        available: false,
+        confidence: 0.2,
+        insight: 'Недостаточно данных о качестве сна'
+      };
+    }
+
+    const timeLaggedPairs = {
+      weight: [],
+      hunger: [],
+      steps: [],
+      kcal: []
+    };
+
+    // Time-lagged: день N → день N+1
+    for (let i = 0; i < days.length - 1; i++) {
+      const today = days[i];
+      const tomorrow = days[i + 1];
+
+      const sleepQuality = today.sleepQuality;
+      if (!sleepQuality) continue;
+
+      if (tomorrow.weightMorning) {
+        timeLaggedPairs.weight.push({ quality: sleepQuality, value: tomorrow.weightMorning });
+      }
+      if (tomorrow.hungerAvg) {
+        timeLaggedPairs.hunger.push({ quality: sleepQuality, value: tomorrow.hungerAvg });
+      }
+      if (tomorrow.steps) {
+        timeLaggedPairs.steps.push({ quality: sleepQuality, value: tomorrow.steps });
+      }
+      const tomorrowKcal = calculateDayKcal(tomorrow, pIndex);
+      if (tomorrowKcal > 0) {
+        timeLaggedPairs.kcal.push({ quality: sleepQuality, value: tomorrowKcal });
+      }
+    }
+
+    // Ищем сильнейшую корреляцию
+    const correlations = {};
+    let maxAbsCorr = 0;
+    let keyMetric = null;
+
+    for (const [metric, pairs] of Object.entries(timeLaggedPairs)) {
+      if (pairs.length < 7) continue;
+
+      const qualityArr = pairs.map(p => p.quality);
+      const valueArr = pairs.map(p => p.value);
+      const corr = pearsonCorrelation(qualityArr, valueArr);
+
+      correlations[metric] = {
+        correlation: corr,
+        dataPoints: pairs.length,
+        avgQuality: average(qualityArr),
+        avgValue: average(valueArr)
+      };
+
+      if (Math.abs(corr) > maxAbsCorr && Math.abs(corr) >= CONFIG.MIN_CORRELATION_DISPLAY) {
+        maxAbsCorr = Math.abs(corr);
+        keyMetric = metric;
+      }
+    }
+
+    if (!keyMetric) {
+      return {
+        pattern: PATTERNS.SLEEP_QUALITY,
+        available: true,
+        correlations,
+        dataPoints: Object.values(correlations)[0]?.dataPoints || 0,
+        score: 50,
+        confidence: 0.3,
+        insight: 'Связь качества сна с метриками следующего дня пока не выявлена'
+      };
+    }
+
+    const keyData = correlations[keyMetric];
+    const baseConfidence = keyData.dataPoints < 14 ? 0.25 : 0.5;
+    const confidence = baseConfidence * (1 + maxAbsCorr);
+
+    const score = maxAbsCorr >= 0.5 ? 90 : maxAbsCorr >= 0.4 ? 75 : 60;
+
+    const metricNames = {
+      weight: 'вес',
+      hunger: 'голод',
+      steps: 'шаги',
+      kcal: 'калории'
+    };
+
+    let insight;
+    if (keyData.correlation < -0.4) {
+      insight = `💤 Хороший сон → ниже ${metricNames[keyMetric]} на след. день (r=${keyData.correlation.toFixed(2)})`;
+    } else if (keyData.correlation > 0.4) {
+      insight = `⚠️ Плохой сон → выше ${metricNames[keyMetric]} на след. день (r=${keyData.correlation.toFixed(2)})`;
+    } else {
+      insight = `Умеренная связь сна с ${metricNames[keyMetric]} (r=${keyData.correlation.toFixed(2)})`;
+    }
+
+    return {
+      pattern: PATTERNS.SLEEP_QUALITY,
+      available: true,
+      keyMetric,
+      correlations,
+      dataPoints: keyData.dataPoints,
+      score,
+      confidence,
+      insight
+    };
+  }
+
+  /**
+   * B2: Wellbeing Correlation — что влияет на самочувствие
+   */
+  function analyzeWellbeing(days, pIndex) {
+    const correlations = {
+      sleepQuality: { pairs: [] },
+      sleepHours: { pairs: [] },
+      steps: { pairs: [] },
+      protein: { pairs: [] },
+      kcal: { pairs: [] }
+    };
+
+    for (const day of days) {
+      const wellbeing = day.wellbeingAvg;
+      if (!wellbeing) continue;
+
+      if (day.sleepQuality) {
+        correlations.sleepQuality.pairs.push({ wellbeing, value: day.sleepQuality });
+      }
+
+      const sleepHours = day.sleepHours || (day.sleepStart && day.sleepEnd
+        ? calculateSleepHours(day.sleepStart, day.sleepEnd)
+        : null);
+      if (sleepHours) {
+        correlations.sleepHours.pairs.push({ wellbeing, value: sleepHours });
+      }
+
+      if (day.steps) {
+        correlations.steps.pairs.push({ wellbeing, value: day.steps });
+      }
+
+      // Считаем protein и kcal
+      if (day.meals && day.meals.length > 0) {
+        let dayProtein = 0;
+        const dayKcal = calculateDayKcal(day, pIndex);
+
+        for (const meal of day.meals) {
+          if (!meal.items) continue;
+          for (const item of meal.items) {
+            const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+            if (prod && item.grams) {
+              dayProtein += (prod.protein100 || 0) * item.grams / 100;
+            }
+          }
+        }
+
+        if (dayProtein > 0) {
+          correlations.protein.pairs.push({ wellbeing, value: dayProtein });
+        }
+        if (dayKcal > 0) {
+          correlations.kcal.pairs.push({ wellbeing, value: dayKcal });
+        }
+      }
+    }
+
+    // Вычисляем корреляции
+    const results = {};
+    let maxAbsCorr = 0;
+    let keyFactor = null;
+
+    for (const [factor, data] of Object.entries(correlations)) {
+      if (data.pairs.length < 7) continue;
+
+      const wellbeingArr = data.pairs.map(p => p.wellbeing);
+      const valueArr = data.pairs.map(p => p.value);
+      const corr = pearsonCorrelation(wellbeingArr, valueArr);
+
+      results[factor] = {
+        correlation: corr,
+        dataPoints: data.pairs.length,
+        avgWellbeing: average(wellbeingArr),
+        avgValue: average(valueArr)
+      };
+
+      if (Math.abs(corr) > maxAbsCorr && Math.abs(corr) >= CONFIG.MIN_CORRELATION_DISPLAY) {
+        maxAbsCorr = Math.abs(corr);
+        keyFactor = factor;
+      }
+    }
+
+    if (Object.keys(results).length === 0) {
+      return {
+        pattern: PATTERNS.WELLBEING_CORRELATION,
+        available: false,
+        confidence: 0.2,
+        insight: 'Недостаточно данных о самочувствии'
+      };
+    }
+
+    if (!keyFactor) {
+      return {
+        pattern: PATTERNS.WELLBEING_CORRELATION,
+        available: true,
+        correlations: results,
+        dataPoints: Object.values(results)[0]?.dataPoints || 0,
+        score: 50,
+        confidence: 0.3,
+        insight: 'Ключевые факторы самочувствия пока не выявлены'
+      };
+    }
+
+    const keyData = results[keyFactor];
+    const baseConfidence = keyData.dataPoints < 14 ? 0.25 : 0.5;
+    const confidence = baseConfidence * (1 + maxAbsCorr);
+
+    const score = maxAbsCorr >= 0.5 ? 90 : maxAbsCorr >= 0.4 ? 75 : 60;
+
+    const factorNames = {
+      sleepQuality: 'качество сна',
+      sleepHours: 'длительность сна',
+      steps: 'шаги',
+      protein: 'белок',
+      kcal: 'калории'
+    };
+
+    const insight = keyData.correlation > 0.4
+      ? `😊 ${factorNames[keyFactor]} ↑ → самочувствие ↑ (r=${keyData.correlation.toFixed(2)})`
+      : `🔍 ${factorNames[keyFactor]} влияет на самочувствие (r=${keyData.correlation.toFixed(2)})`;
+
+    return {
+      pattern: PATTERNS.WELLBEING_CORRELATION,
+      available: true,
+      keyFactor,
+      correlations: results,
+      dataPoints: keyData.dataPoints,
+      score,
+      confidence,
+      insight
+    };
+  }
+
+  /**
+   * B3: Hydration — достаточность гидратации (30ml/kg ВОЗ)
+   */
+  function analyzeHydration(days) {
+    const hydrationData = [];
+    const exponentialMovingAverage = piStats.exponentialMovingAverage || function (arr) { return arr; };
+
+    for (const day of days) {
+      const weight = day.weightMorning || day.weightEvening;
+      const waterMl = day.waterMl;
+
+      if (weight && waterMl != null) {
+        const goal = weight * 30; // ВОЗ: 30ml/kg
+        const achievement = (waterMl / goal) * 100;
+        hydrationData.push({
+          date: day.date,
+          waterMl,
+          goal,
+          achievement: Math.round(achievement)
+        });
+      }
+    }
+
+    if (hydrationData.length < 3) {
+      return {
+        pattern: PATTERNS.HYDRATION,
+        available: false,
+        confidence: 0.2,
+        insight: 'Недостаточно данных о гидратации'
+      };
+    }
+
+    const avgAchievement = average(hydrationData.map(d => d.achievement));
+    const avgWater = average(hydrationData.map(d => d.waterMl));
+    const avgGoal = average(hydrationData.map(d => d.goal));
+
+    // EMA тренд (если достаточно данных)
+    let trend = 'stable';
+    if (hydrationData.length >= 7) {
+      const waterValues = hydrationData.map(d => d.waterMl);
+      const emaValues = exponentialMovingAverage(waterValues, 7);
+      if (emaValues.length >= 2) {
+        const firstEma = emaValues[0];
+        const lastEma = emaValues[emaValues.length - 1];
+        const slope = lastEma - firstEma;
+        if (slope > avgGoal * 0.05) trend = 'up';
+        else if (slope < -avgGoal * 0.05) trend = 'down';
+      }
+    }
+
+    let score, insight;
+    if (avgAchievement >= 90) {
+      score = 100;
+      insight = `💧 Отлично! ${Math.round(avgWater)}мл (${Math.round(avgAchievement)}% нормы)`;
+    } else if (avgAchievement >= 70) {
+      score = 75;
+      insight = `✅ Норма. ${Math.round(avgWater)}мл (${Math.round(avgAchievement)}%). Можно чуть больше`;
+    } else {
+      score = 50;
+      insight = `⚠️ Маловато. ${Math.round(avgWater)}мл (${Math.round(avgAchievement)}%). Цель: ${Math.round(avgGoal)}мл`;
+    }
+
+    const confidence = hydrationData.length >= 7 ? 0.8 : 0.5;
+
+    return {
+      pattern: PATTERNS.HYDRATION,
+      available: true,
+      avgWater: Math.round(avgWater),
+      avgGoal: Math.round(avgGoal),
+      achievement: Math.round(avgAchievement),
+      trend,
+      dataPoints: hydrationData.length,
+      score,
+      confidence,
+      insight
+    };
+  }
+
+  /**
+   * B4: Body Composition — WHR (waist-hip ratio) с трендом
+   */
+  function analyzeBodyComposition(days, profile) {
+    const measurements = [];
+
+    for (const day of days) {
+      if (day.measurements && day.measurements.waist && day.measurements.hip) {
+        const whr = day.measurements.waist / day.measurements.hip;
+        measurements.push({
+          date: day.date,
+          waist: day.measurements.waist,
+          hip: day.measurements.hip,
+          whr: Math.round(whr * 100) / 100
+        });
+      }
+    }
+
+    if (measurements.length < 10) {
+      return {
+        pattern: PATTERNS.BODY_COMPOSITION,
+        available: false,
+        confidence: 0.2,
+        insight: 'Недостаточно замеров обхватов (нужно 10+)'
+      };
+    }
+
+    const avgWHR = average(measurements.map(m => m.whr));
+
+    // Тренд (linear regression)
+    const whrArr = measurements.map(m => m.whr);
+    const trend = calculateTrend(whrArr);
+
+    // Норма WHR (WHO): <0.85 жен, <0.9 муж
+    const gender = profile?.gender || 'female';
+    const threshold = gender === 'male' ? 0.9 : 0.85;
+
+    let score, insight;
+    if (avgWHR < threshold) {
+      score = 90;
+      const trendText = trend < -0.001 ? ' 📉 Улучшается!' : trend > 0.001 ? ' ⚠️ Растёт' : ' Стабильно';
+      insight = `✅ WHR ${avgWHR.toFixed(2)} < ${threshold} (норма).${trendText}`;
+    } else {
+      score = 60;
+      const trendText = trend < -0.001 ? ' 📉 Снижается — продолжай!' : trend > 0.001 ? ' ⚠️ Растёт' : '';
+      insight = `⚠️ WHR ${avgWHR.toFixed(2)} > ${threshold}. Висцеральный жир.${trendText}`;
+    }
+
+    const confidence = measurements.length >= 30 ? 0.9 : measurements.length >= 20 ? 0.7 : 0.5;
+
+    return {
+      pattern: PATTERNS.BODY_COMPOSITION,
+      available: true,
+      avgWHR: Math.round(avgWHR * 100) / 100,
+      threshold,
+      trend: trend > 0.001 ? 'up' : trend < -0.001 ? 'down' : 'stable',
+      dataPoints: measurements.length,
+      score,
+      confidence,
+      insight
+    };
+  }
+
+  /**
+   * B5: Cycle Impact — влияние менструального цикла (динамическая фазировка)
+   */
+  function analyzeCyclePatterns(days, pIndex, profile) {
+    // Guard: только для женщин с трекингом цикла
+    if (profile?.gender === 'male' || !profile?.cycleTrackingEnabled) {
+      return {
+        pattern: PATTERNS.CYCLE_IMPACT,
+        available: false,
+        confidence: 0,
+        insight: 'Трекинг цикла не активирован'
+      };
+    }
+
+    const cycleDays = days.filter(d => d.cycleDay != null);
+    if (cycleDays.length < 14) {
+      return {
+        pattern: PATTERNS.CYCLE_IMPACT,
+        available: false,
+        confidence: 0.2,
+        insight: 'Недостаточно данных о цикле (нужно 14+ дней)'
+      };
+    }
+
+    // Динамический детект овуляции (обычно день 14, но может быть раньше/позже)
+    const cycleDayNumbers = cycleDays.map(d => d.cycleDay);
+    const maxCycleDay = Math.max(...cycleDayNumbers);
+    const ovulationDay = maxCycleDay >= 28 ? 14 : Math.round(maxCycleDay / 2);
+
+    // Разделяем фазы
+    const follicular = [];
+    const luteal = [];
+
+    for (const day of cycleDays) {
+      const phaseData = {
+        date: day.date,
+        cycleDay: day.cycleDay,
+        kcal: calculateDayKcal(day, pIndex),
+        weight: day.weightMorning,
+        mood: day.moodAvg || (day.meals ? average(day.meals.filter(m => m.mood).map(m => m.mood)) : null),
+        steps: day.steps
+      };
+
+      if (day.cycleDay <= ovulationDay) {
+        follicular.push(phaseData);
+      } else {
+        luteal.push(phaseData);
+      }
+    }
+
+    if (follicular.length < 5 || luteal.length < 5) {
+      return {
+        pattern: PATTERNS.CYCLE_IMPACT,
+        available: false,
+        confidence: 0.3,
+        insight: 'Недостаточно данных для сравнения фаз'
+      };
+    }
+
+    // Сравниваем метрики
+    const follicularKcal = average(follicular.filter(d => d.kcal > 0).map(d => d.kcal));
+    const lutealKcal = average(luteal.filter(d => d.kcal > 0).map(d => d.kcal));
+    const kcalDiff = lutealKcal - follicularKcal;
+
+    const follicularMood = average(follicular.filter(d => d.mood).map(d => d.mood));
+    const lutealMood = average(luteal.filter(d => d.mood).map(d => d.mood));
+    const moodDiff = lutealMood - follicularMood;
+
+    let insight;
+    if (kcalDiff > 150 && moodDiff < -0.3) {
+      insight = `🌙 Лютеиновая фаза: +${Math.round(kcalDiff)}ккал, настроение хуже. Это норма (прогестерон↑)`;
+    } else if (kcalDiff > 150) {
+      insight = `🌙 Лютеиновая фаза: +${Math.round(kcalDiff)}ккал (прогестерон↑ BMR на 5-10%)`;
+    } else if (moodDiff < -0.5) {
+      insight = `😔 Настроение падает во 2-й фазе. ПМС? Цикл влияет`;
+    } else {
+      insight = `✅ Цикл влияет умеренно. Различия в норме`;
+    }
+
+    const score = Math.abs(kcalDiff) < 200 && Math.abs(moodDiff) < 0.5 ? 90 : 70;
+    const confidence = cycleDays.length >= 21 ? 0.8 : 0.6;
+
+    return {
+      pattern: PATTERNS.CYCLE_IMPACT,
+      available: true,
+      ovulationDay,
+      follicularDays: follicular.length,
+      lutealDays: luteal.length,
+      kcalDiff: Math.round(kcalDiff),
+      moodDiff: Math.round(moodDiff * 10) / 10,
+      dataPoints: cycleDays.length,
+      score,
+      confidence,
+      insight
+    };
+  }
+
+  /**
+   * B6: Weekend Effect — паттерн пт-вс vs пн-чт
+   */
+  function analyzeWeekendEffect(days, pIndex) {
+    const weekdays = []; // пн-чт
+    const weekends = []; // пт-вс
+
+    for (const day of days) {
+      if (!day.date) continue;
+      const date = new Date(day.date);
+      const dayOfWeek = date.getDay(); // 0=вс, 1=пн, ..., 6=сб
+
+      const dayData = {
+        date: day.date,
+        kcal: calculateDayKcal(day, pIndex),
+        sleep: day.sleepHours || (day.sleepStart && day.sleepEnd ? calculateSleepHours(day.sleepStart, day.sleepEnd) : null),
+        steps: day.steps
+      };
+
+      // Выходные: пт=5, сб=6, вс=0
+      if (dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0) {
+        weekends.push(dayData);
+      }
+      // Будни: пн=1, вт=2, ср=3, чт=4
+      else if (dayOfWeek >= 1 && dayOfWeek <= 4) {
+        weekdays.push(dayData);
+      }
+    }
+
+    if (weekdays.length < 4 || weekends.length < 3) {
+      return {
+        pattern: PATTERNS.WEEKEND_EFFECT,
+        available: false,
+        confidence: 0.2,
+        insight: 'Недостаточно данных для сравнения будней и выходных'
+      };
+    }
+
+    // Считаем средние
+    const weekdayKcal = average(weekdays.filter(d => d.kcal > 0).map(d => d.kcal));
+    const weekendKcal = average(weekends.filter(d => d.kcal > 0).map(d => d.kcal));
+    const kcalDiffPct = ((weekendKcal - weekdayKcal) / weekdayKcal) * 100;
+
+    const weekdaySleep = average(weekdays.filter(d => d.sleep).map(d => d.sleep));
+    const weekendSleep = average(weekends.filter(d => d.sleep).map(d => d.sleep));
+    const sleepDiff = weekendSleep - weekdaySleep;
+
+    const weekdaySteps = average(weekdays.filter(d => d.steps).map(d => d.steps));
+    const weekendSteps = average(weekends.filter(d => d.steps).map(d => d.steps));
+    const stepsDiffPct = ((weekendSteps - weekdaySteps) / weekdaySteps) * 100;
+
+    let score, insight;
+    if (kcalDiffPct > 30) {
+      score = 50;
+      insight = `⚠️ В выходные +${Math.round(kcalDiffPct)}% калорий! Дефицит улетает`;
+    } else if (kcalDiffPct > 10 && kcalDiffPct <= 30) {
+      score = 70;
+      insight = `🟡 Выходные +${Math.round(kcalDiffPct)}% ккал. Норма, но следи`;
+    } else {
+      score = 90;
+      insight = `✅ Стабильный режим! Выходные ${kcalDiffPct > 0 ? '+' : ''}${Math.round(kcalDiffPct)}% ккал`;
+    }
+
+    const confidence = weekdays.length >= 8 && weekends.length >= 6 ? 0.8 : 0.6;
+
+    return {
+      pattern: PATTERNS.WEEKEND_EFFECT,
+      available: true,
+      weekdayKcal: Math.round(weekdayKcal),
+      weekendKcal: Math.round(weekendKcal),
+      kcalDiffPct: Math.round(kcalDiffPct),
+      weekdaySleep: Math.round(weekdaySleep * 10) / 10,
+      weekendSleep: Math.round(weekendSleep * 10) / 10,
+      sleepDiff: Math.round(sleepDiff * 10) / 10,
+      weekdaySteps: Math.round(weekdaySteps),
+      weekendSteps: Math.round(weekendSteps),
+      stepsDiffPct: Math.round(stepsDiffPct),
+      dataPoints: weekdays.length + weekends.length,
+      score,
+      confidence,
+      insight
+    };
+  }
+
+  // === C10: NOVA QUALITY SCORE ===
+  /**
+   * Анализ качества питания по классификации NOVA
+   * @returns {Object} - { pattern, available, novaDistribution, ultraProcessedPct, livingFoodsBonus, score, insight, confidence }
+   */
+  function analyzeNOVAQuality(days, pIndex) {
+    if (!days || days.length < CONFIG.MIN_DAYS_FOR_FULL_ANALYSIS) {
+      return { pattern: PATTERNS.NOVA_QUALITY, available: false };
+    }
+
+    const novaKcal = { 1: 0, 2: 0, 3: 0, 4: 0 }; // NOVA groups 1-4
+    let totalKcal = 0;
+    let fermentedKcal = 0;
+    let rawKcal = 0;
+
+    for (const day of days) {
+      if (!day.meals?.length) continue;
+
+      for (const meal of day.meals) {
+        for (const item of (meal.items || [])) {
+          const prod = pIndex?.byId?.get?.(item?.product_id);
+          if (!prod) continue;
+
+          const itemKcal = calculateItemKcal(item, pIndex);
+          totalKcal += itemKcal;
+
+          // NOVA group classification
+          const novaGroup = prod.nova_group || prod.novaGroup || 3; // default = group 3
+          novaKcal[novaGroup] = (novaKcal[novaGroup] || 0) + itemKcal;
+
+          // Quality flags (snake_case in DB, camelCase in JS)
+          if (prod.is_fermented || prod.isFermented) fermentedKcal += itemKcal;
+          if (prod.is_raw || prod.isRaw) rawKcal += itemKcal;
+        }
+      }
+    }
+
+    if (totalKcal < 100) {
+      return { pattern: PATTERNS.NOVA_QUALITY, available: false };
+    }
+
+    // Calculate percentages
+    const novaDistribution = {
+      1: Math.round((novaKcal[1] / totalKcal) * 1000) / 10,
+      2: Math.round((novaKcal[2] / totalKcal) * 1000) / 10,
+      3: Math.round((novaKcal[3] / totalKcal) * 1000) / 10,
+      4: Math.round((novaKcal[4] / totalKcal) * 1000) / 10
+    };
+
+    const ultraProcessedPct = novaDistribution[4];
+    const livingFoodsPct = Math.round(((fermentedKcal + rawKcal) / totalKcal) * 1000) / 10;
+
+    // Scoring: base 100 - ultra-processed penalty + living foods bonus
+    let score = 100 - (ultraProcessedPct * 0.8); // -0.8 за каждый % NOVA 4
+    score += Math.min(livingFoodsPct * 0.5, 10); // +0.5 за каждый % ферментированных/сырых (max +10)
+    score = Math.max(0, Math.min(100, Math.round(score)));
+
+    // Insight
+    let insight = '';
+    if (ultraProcessedPct > 50) {
+      insight = `🔴 ${ultraProcessedPct}% калорий из ультрапереработки (NOVA-4). Высокий риск!`;
+    } else if (ultraProcessedPct > 25) {
+      insight = `🟠 ${ultraProcessedPct}% ультрапереработки. Снижай колбасы/снеки/сладости`;
+    } else if (ultraProcessedPct > 10) {
+      insight = `🟡 ${ultraProcessedPct}% ультрапереработки. В пределах нормы`;
+    } else {
+      insight = `✅ ${ultraProcessedPct}% ультрапереработки. Отличное качество рациона!`;
+    }
+
+    if (livingFoodsPct > 5) {
+      insight += ` +${livingFoodsPct}% живых продуктов 🌱`;
+    }
+
+    const confidence = days.length >= 14 ? 0.85 : 0.70;
+
+    return {
+      pattern: PATTERNS.NOVA_QUALITY,
+      available: true,
+      novaDistribution,
+      ultraProcessedPct,
+      livingFoodsPct,
+      fermentedKcal: Math.round(fermentedKcal),
+      rawKcal: Math.round(rawKcal),
+      totalKcal: Math.round(totalKcal),
+      dataPoints: days.length,
+      score,
+      confidence,
+      insight
+    };
+  }
+
+  // === C11: TRAINING INTENSITY & RECOVERY ===
+  /**
+   * Анализ интенсивности тренировок и качества восстановления
+   * @returns {Object} - { pattern, available, highIntensityDays, avgRecovery, overtrainingRisk, score, insight, confidence }
+   */
+  function analyzeTrainingRecovery(days) {
+    if (!days || days.length < 5) {
+      return { pattern: PATTERNS.TRAINING_RECOVERY, available: false };
+    }
+
+    const daysWithZones = days.filter(d => d.trainings?.some(t => t.z?.length >= 4));
+    if (daysWithZones.length < 3) {
+      return { pattern: PATTERNS.TRAINING_RECOVERY, available: false };
+    }
+
+    let highIntensityDays = 0;
+    let consecutiveHighIntensity = 0;
+    let maxConsecutive = 0;
+    const recoveryScores = [];
+
+    for (let i = 0; i < days.length; i++) {
+      const day = days[i];
+      const trainings = day.trainings || [];
+
+      // Calculate high intensity % (Zones 4-5)
+      let totalMin = 0;
+      let highMin = 0;
+      for (const training of trainings) {
+        if (!training.z || training.z.length < 4) continue;
+        const [z1, z2, z3, z4] = training.z;
+        totalMin += (z1 + z2 + z3 + z4);
+        highMin += z4; // Zone 4 = high intensity
+      }
+
+      const highIntensityPct = totalMin > 0 ? (highMin / totalMin) * 100 : 0;
+      const isHighIntensity = highIntensityPct >= 40;
+
+      if (isHighIntensity) {
+        highIntensityDays++;
+        consecutiveHighIntensity++;
+        maxConsecutive = Math.max(maxConsecutive, consecutiveHighIntensity);
+      } else {
+        consecutiveHighIntensity = 0;
+      }
+
+      // Recovery quality = sleep + mood next day
+      if (i < days.length - 1) {
+        const nextDay = days[i + 1];
+        const sleepHours = nextDay.sleepHours || 0;
+        const mood = nextDay.mood || 3;
+        const recoveryScore = (sleepHours >= 7 ? 50 : sleepHours * 7) + (mood * 10);
+        recoveryScores.push(recoveryScore);
+      }
+    }
+
+    const avgRecovery = recoveryScores.length > 0 ? average(recoveryScores) : 0;
+    const overtrainingRisk = maxConsecutive >= 3 && avgRecovery < 60;
+
+    // Scoring
+    let score = 100;
+    if (overtrainingRisk) {
+      score = 40;
+    } else if (maxConsecutive >= 3) {
+      score = 60;
+    } else if (avgRecovery < 60) {
+      score = 70;
+    } else {
+      score = 85;
+    }
+
+    // Insight
+    let insight = '';
+    if (overtrainingRisk) {
+      insight = `⚠️ Риск перетренированности! ${maxConsecutive} дней подряд высокой интенсивности + плохое восстановление`;
+    } else if (maxConsecutive >= 3) {
+      insight = `🟡 ${maxConsecutive} дней подряд тяжёлых тренировок. Добавь день отдыха`;
+    } else if (avgRecovery < 60) {
+      insight = `🟠 Восстановление слабое (${Math.round(avgRecovery)}/100). Больше сна!`;
+    } else {
+      insight = `✅ Баланс нагрузки и восстановления оптимален (${Math.round(avgRecovery)}/100)`;
+    }
+
+    const confidence = daysWithZones.length >= 5 ? 0.80 : 0.65;
+
+    return {
+      pattern: PATTERNS.TRAINING_RECOVERY,
+      available: true,
+      highIntensityDays,
+      maxConsecutive,
+      avgRecovery: Math.round(avgRecovery),
+      overtrainingRisk,
+      dataPoints: daysWithZones.length,
+      score,
+      confidence,
+      insight
+    };
+  }
+
+  // === C12: HYPERTROPHY & BODY COMPOSITION ===
+  /**
+   * Анализ изменений композиции тела (мышечная масса vs жировая)
+   * @returns {Object} - { pattern, available, bicepsTrend, thighTrend, weightChange, compositionQuality, score, insight, confidence }
+   */
+  function analyzeHypertrophy(days, profile) {
+    if (!days || days.length < 14) {
+      return { pattern: PATTERNS.HYPERTROPHY, available: false };
+    }
+
+    // Collect measurements (biceps, thigh) with at least 7-day interval
+    const measurements = days
+      .filter(d => d.measurements?.biceps || d.measurements?.thigh)
+      .map(d => ({
+        date: d.date,
+        biceps: d.measurements?.biceps || 0,
+        thigh: d.measurements?.thigh || 0,
+        weight: d.weight || profile?.weight || 0
+      }));
+
+    if (measurements.length < 5) {
+      return { pattern: PATTERNS.HYPERTROPHY, available: false };
+    }
+
+    // Calculate trends
+    const bicepsValues = measurements.map(m => m.biceps).filter(v => v > 0);
+    const thighValues = measurements.map(m => m.thigh).filter(v => v > 0);
+    const weightValues = measurements.map(m => m.weight).filter(v => v > 0);
+
+    if (bicepsValues.length < 3 && thighValues.length < 3) {
+      return { pattern: PATTERNS.HYPERTROPHY, available: false };
+    }
+
+    const bicepsTrend = bicepsValues.length >= 3 ? calculateTrend(bicepsValues) : 0;
+    const thighTrend = thighValues.length >= 3 ? calculateTrend(thighValues) : 0;
+    const weightTrend = weightValues.length >= 3 ? calculateTrend(weightValues) : 0;
+
+    // Protein adequacy (>= 1.6g/kg/day)
+    const proteinDays = days.filter(d => {
+      const proteinGrams = d.tot?.prot || 0;
+      const weight = d.weight || profile?.weight || 70;
+      return (proteinGrams / weight) >= 1.6;
+    });
+    const proteinAdequacy = (proteinDays.length / days.length) * 100;
+
+    // Composition quality assessment
+    let compositionQuality = 'unknown';
+    if (weightTrend > 0.05 && (bicepsTrend > 0.01 || thighTrend > 0.02)) {
+      compositionQuality = 'muscle_gain'; // Вес ↑ + обхваты ↑ = мышцы
+    } else if (weightTrend > 0.05 && bicepsTrend <= 0 && thighTrend <= 0) {
+      compositionQuality = 'fat_gain'; // Вес ↑ + обхваты → = жир
+    } else if (weightTrend < -0.05 && (bicepsTrend > -0.01 || thighTrend > -0.02)) {
+      compositionQuality = 'fat_loss'; // Вес ↓ + обхваты держатся = жир уходит
+    } else {
+      compositionQuality = 'maintenance'; // Стабильно
+    }
+
+    // Scoring
+    let score = 70;
+    if (compositionQuality === 'muscle_gain' && proteinAdequacy >= 70) {
+      score = 95;
+    } else if (compositionQuality === 'fat_loss' && proteinAdequacy >= 70) {
+      score = 90;
+    } else if (compositionQuality === 'fat_gain') {
+      score = 50;
+    } else if (proteinAdequacy < 50) {
+      score = 60;
+    }
+
+    // Insight
+    let insight = '';
+    if (compositionQuality === 'muscle_gain') {
+      insight = `💪 Мышечная масса растёт! Бицепс ${bicepsTrend > 0 ? '+' : ''}${(bicepsTrend * 100).toFixed(1)}см/мес, бедро ${thighTrend > 0 ? '+' : ''}${(thighTrend * 100).toFixed(1)}см/мес`;
+    } else if (compositionQuality === 'fat_loss') {
+      insight = `✅ Жир уходит, мышцы держатся! Белок ${Math.round(proteinAdequacy)}% дней >= 1.6г/кг`;
+    } else if (compositionQuality === 'fat_gain') {
+      insight = `⚠️ Вес растёт без роста мышц. Проверь белок (${Math.round(proteinAdequacy)}% дней) и силовые`;
+    } else {
+      insight = `📊 Композиция стабильна. Белок ${Math.round(proteinAdequacy)}% дней >= 1.6г/кг`;
+    }
+
+    const confidence = measurements.length >= 7 ? 0.80 : 0.65;
+
+    return {
+      pattern: PATTERNS.HYPERTROPHY,
+      available: true,
+      bicepsTrend: Math.round(bicepsTrend * 1000) / 1000,
+      thighTrend: Math.round(thighTrend * 1000) / 1000,
+      weightTrend: Math.round(weightTrend * 1000) / 1000,
+      compositionQuality,
+      proteinAdequacy: Math.round(proteinAdequacy),
+      measurements: measurements.length,
+      dataPoints: days.length,
+      score,
+      confidence,
+      insight
+    };
+  }
+
+  // === C7: MICRONUTRIENT RADAR ("Hidden Hunger") ===
+  /**
+   * Анализ достаточности микронутриентов (железо, магний, цинк, кальций)
+   * @returns {Object} - { pattern, available, deficits, avgIntake, score, insight, confidence }
+   */
+  function analyzeMicronutrients(days, pIndex, profile) {
+    if (!days || days.length < CONFIG.MIN_DAYS_FOR_FULL_ANALYSIS) {
+      return { pattern: PATTERNS.MICRONUTRIENT_RADAR, available: false };
+    }
+
+    // DRI targets (Daily Reference Intake, % of DV)
+    const DRI_TARGETS = {
+      iron: 100,       // 18mg для женщин, 8mg для мужчин
+      magnesium: 100,  // 400mg взрослые
+      zinc: 100,       // 11mg мужчины, 8mg женщины
+      calcium: 100     // 1000mg взрослые
+    };
+
+    const micronutrients = { iron: [], magnesium: [], zinc: [], calcium: [] };
+
+    for (const day of days) {
+      if (!day.meals?.length) continue;
+
+      const dayNutrients = { iron: 0, magnesium: 0, zinc: 0, calcium: 0 };
+
+      for (const meal of day.meals) {
+        for (const item of (meal.items || [])) {
+          const prod = pIndex?.byId?.get?.(item?.product_id);
+          if (!prod) continue;
+
+          const grams = item.grams || 0;
+          const factor = grams / 100;
+
+          // Aggregate micronutrients (mg per 100g in DB)
+          if (prod.iron) dayNutrients.iron += prod.iron * factor;
+          if (prod.magnesium) dayNutrients.magnesium += prod.magnesium * factor;
+          if (prod.zinc) dayNutrients.zinc += prod.zinc * factor;
+          if (prod.calcium) dayNutrients.calcium += prod.calcium * factor;
+        }
+      }
+
+      // Convert to % DV (assuming iron 18mg, magnesium 400mg, zinc 11mg, calcium 1000mg)
+      micronutrients.iron.push((dayNutrients.iron / 18) * 100);
+      micronutrients.magnesium.push((dayNutrients.magnesium / 400) * 100);
+      micronutrients.zinc.push((dayNutrients.zinc / 11) * 100);
+      micronutrients.calcium.push((dayNutrients.calcium / 1000) * 100);
+    }
+
+    // Calculate 7-day averages
+    const avgIntake = {
+      iron: average(micronutrients.iron),
+      magnesium: average(micronutrients.magnesium),
+      zinc: average(micronutrients.zinc),
+      calcium: average(micronutrients.calcium)
+    };
+
+    // Identify deficits (< 70% DRI)
+    const deficits = [];
+    for (const [nutrient, avgPct] of Object.entries(avgIntake)) {
+      if (avgPct < 70) {
+        deficits.push({ nutrient, avgPct: Math.round(avgPct), target: DRI_TARGETS[nutrient] });
+      }
+    }
+
+    // Correlate with symptoms (if available)
+    const lowEnergyDays = days.filter(d => d.energy && d.energy < 3).length;
+    const poorSleepDays = days.filter(d => d.sleepQuality && d.sleepQuality < 3).length;
+
+    // Scoring
+    let score = 100;
+    deficits.forEach(d => {
+      score -= (100 - d.avgPct) * 0.5; // Штраф за каждый недостаток
+    });
+    score = Math.max(0, Math.round(score));
+
+    // Insight
+    let insight = '';
+    if (deficits.length === 0) {
+      insight = `✅ Все 4 микроэлемента в норме (Fe ${Math.round(avgIntake.iron)}%, Mg ${Math.round(avgIntake.magnesium)}%, Zn ${Math.round(avgIntake.zinc)}%, Ca ${Math.round(avgIntake.calcium)}%)`;
+    } else {
+      const deficitNames = deficits.map(d => {
+        const names = { iron: 'Fe', magnesium: 'Mg', zinc: 'Zn', calcium: 'Ca' };
+        return `${names[d.nutrient]} ${d.avgPct}%`;
+      }).join(', ');
+      insight = `⚠️ Дефициты: ${deficitNames}. `;
+
+      // Correlations
+      if (deficits.some(d => d.nutrient === 'iron') && lowEnergyDays > days.length * 0.4) {
+        insight += `Низкое Fe → усталость (${lowEnergyDays} дней). `;
+      }
+      if (deficits.some(d => d.nutrient === 'magnesium') && poorSleepDays > days.length * 0.4) {
+        insight += `Низкий Mg → плохой сон (${poorSleepDays} дней). `;
+      }
+    }
+
+    const confidence = days.length >= 14 ? 0.75 : 0.60;
+
+    return {
+      pattern: PATTERNS.MICRONUTRIENT_RADAR,
+      available: true,
+      avgIntake: {
+        iron: Math.round(avgIntake.iron),
+        magnesium: Math.round(avgIntake.magnesium),
+        zinc: Math.round(avgIntake.zinc),
+        calcium: Math.round(avgIntake.calcium)
+      },
+      deficits,
+      lowEnergyDays,
+      poorSleepDays,
+      dataPoints: days.length,
+      score,
+      confidence,
+      insight
+    };
+  }
+
+  // === C9: HEART & METABOLIC HEALTH ===
+  /**
+   * Анализ сердечно-сосудистых рисков (Na/K соотношение, холестерин)
+   * @returns {Object} - { pattern, available, naKRatio, sodiumLoad, cholesterolAvg, score, insight, confidence }
+   */
+  function analyzeHeartHealth(days, pIndex) {
+    if (!days || days.length < CONFIG.MIN_DAYS_FOR_FULL_ANALYSIS) {
+      return { pattern: PATTERNS.HEART_HEALTH, available: false };
+    }
+
+    const sodiumValues = [];
+    const potassiumValues = [];
+    const cholesterolValues = [];
+
+    for (const day of days) {
+      if (!day.meals?.length) continue;
+
+      let daySodium = 0;
+      let dayPotassium = 0;
+      let dayCholesterol = 0;
+
+      for (const meal of day.meals) {
+        for (const item of (meal.items || [])) {
+          const prod = pIndex?.byId?.get?.(item?.product_id);
+          if (!prod) continue;
+
+          const grams = item.grams || 0;
+          const factor = grams / 100;
+
+          // sodium100 in mg/100g
+          if (prod.sodium100) daySodium += prod.sodium100 * factor;
+          if (prod.potassium) dayPotassium += prod.potassium * factor;
+          if (prod.cholesterol100 || prod.cholesterol) {
+            dayCholesterol += (prod.cholesterol100 || prod.cholesterol) * factor;
+          }
+        }
+      }
+
+      if (daySodium > 0) sodiumValues.push(daySodium);
+      if (dayPotassium > 0) potassiumValues.push(dayPotassium);
+      if (dayCholesterol > 0) cholesterolValues.push(dayCholesterol);
+    }
+
+    if (sodiumValues.length < 5 || potassiumValues.length < 5) {
+      return { pattern: PATTERNS.HEART_HEALTH, available: false };
+    }
+
+    const avgSodium = average(sodiumValues);
+    const avgPotassium = average(potassiumValues);
+    const avgCholesterol = cholesterolValues.length > 0 ? average(cholesterolValues) : 0;
+
+    // Na:K ratio (optimal < 1.0 per WHO 2012)
+    const naKRatio = avgSodium / avgPotassium;
+
+    // Scoring
+    let score = 100;
+    if (avgSodium > 2300) score -= 20; // Excess sodium (>2300mg WHO limit)
+    if (avgSodium > 3000) score -= 20; // Very high sodium
+    if (naKRatio > 1.5) score -= 25;   // Poor Na:K ratio
+    else if (naKRatio > 1.0) score -= 10;
+    if (avgCholesterol > 300) score -= 15; // High cholesterol intake
+
+    score = Math.max(0, Math.round(score));
+
+    // Insight
+    let insight = '';
+    if (naKRatio < 1.0 && avgSodium < 2000) {
+      insight = `✅ Отличный Na:K баланс (${naKRatio.toFixed(2)}), натрий ${Math.round(avgSodium)}мг/день`;
+    } else if (naKRatio > 1.5) {
+      insight = `🔴 Na:K = ${naKRatio.toFixed(2)} (норма <1.0). Риск гипертензии! Меньше соли, больше овощей/фруктов`;
+    } else if (avgSodium > 2300) {
+      insight = `🟠 Натрий ${Math.round(avgSodium)}мг/день (норма <2000мг). Меньше колбас/сыров/солений`;
+    } else {
+      insight = `🟡 Na:K = ${naKRatio.toFixed(2)} (норма <1.0), натрий ${Math.round(avgSodium)}мг. Можно лучше`;
+    }
+
+    if (avgCholesterol > 300) {
+      insight += `. Холестерин ${Math.round(avgCholesterol)}мг (много яиц/мяса)`;
+    }
+
+    const confidence = days.length >= 14 ? 0.80 : 0.65;
+
+    return {
+      pattern: PATTERNS.HEART_HEALTH,
+      available: true,
+      avgSodium: Math.round(avgSodium),
+      avgPotassium: Math.round(avgPotassium),
+      avgCholesterol: Math.round(avgCholesterol),
+      naKRatio: Math.round(naKRatio * 100) / 100,
+      dataPoints: days.length,
+      score,
+      confidence,
+      insight
+    };
+  }
+
+  // === C8: OMEGA BALANCE & INFLAMMATION ===
+  /**
+   * Анализ балансаомега-3/омега-6 и воспалительной нагрузки
+   * @returns {Object} - { pattern, available, omega6to3Ratio, inflammatoryLoad, score, insight, confidence }
+   */
+  function analyzeOmegaBalance(days, pIndex) {
+    if (!days || days.length < CONFIG.MIN_DAYS_FOR_FULL_ANALYSIS) {
+      return { pattern: PATTERNS.OMEGA_BALANCER, available: false };
+    }
+
+    let totalOmega3 = 0;
+    let totalOmega6 = 0;
+    let inflammatoryLoad = 0; // (Sugar + Trans) vs (Omega3 + Fiber)
+
+    for (const day of days) {
+      if (!day.meals?.length) continue;
+
+      for (const meal of day.meals) {
+        for (const item of (meal.items || [])) {
+          const prod = pIndex?.byId?.get?.(item?.product_id);
+          if (!prod) continue;
+
+          const grams = item.grams || 0;
+          const factor = grams / 100;
+
+          // Omega fatty acids (g/100g in DB)
+          if (prod.omega3_100 || prod.omega3) totalOmega3 += (prod.omega3_100 || prod.omega3) * factor;
+          if (prod.omega6_100 || prod.omega6) totalOmega6 += (prod.omega6_100 || prod.omega6) * factor;
+
+          // Inflammatory load components
+          const sugar = (prod.simple100 || 0) * factor;
+          const trans = (prod.trans100 || 0) * factor;
+          const fiber = (prod.fiber100 || 0) * factor;
+          inflammatoryLoad += (sugar * 0.5 + trans * 2) - (fiber * 0.3 + (prod.omega3_100 || 0) * factor * 1.5);
+        }
+      }
+    }
+
+    if (totalOmega3 < 0.1 || totalOmega6 < 0.1) {
+      return { pattern: PATTERNS.OMEGA_BALANCER, available: false };
+    }
+
+    const omega6to3Ratio = totalOmega6 / totalOmega3;
+
+    // Scoring (optimal ratio < 4:1)
+    let score = 100;
+    if (omega6to3Ratio > 10) score = 40;
+    else if (omega6to3Ratio > 6) score = 60;
+    else if (omega6to3Ratio > 4) score = 75;
+    else score = 95;
+
+    if (inflammatoryLoad > 50) score -= 10;
+    score = Math.max(0, Math.round(score));
+
+    // Insight
+    let insight = '';
+    if (omega6to3Ratio < 4) {
+      insight = `✅ Отличный баланс омега-6:3 = ${omega6to3Ratio.toFixed(1)} (оптимум <4:1)`;
+    } else if (omega6to3Ratio < 6) {
+      insight = `🟡 Омега-6:3 = ${omega6to3Ratio.toFixed(1)} (норма <4:1). Добавь рыбу/льняное масло`;
+    } else {
+      insight = `🔴 Омега-6:3 = ${omega6to3Ratio.toFixed(1)} (риск воспаления!). Меньше подсолнечного масла, больше рыбы`;
+    }
+
+    if (inflammatoryLoad > 50) {
+      insight += `. Высокая воспалительная нагрузка (${Math.round(inflammatoryLoad)})`;
+    }
+
+    const confidence = days.length >= 14 ? 0.75 : 0.60;
+
+    return {
+      pattern: PATTERNS.OMEGA_BALANCER,
+      available: true,
+      totalOmega3: Math.round(totalOmega3 * 10) / 10,
+      totalOmega6: Math.round(totalOmega6 * 10) / 10,
+      omega6to3Ratio: Math.round(omega6to3Ratio * 10) / 10,
+      inflammatoryLoad: Math.round(inflammatoryLoad),
+      dataPoints: days.length,
+      score,
+      confidence,
+      insight
     };
   }
 
@@ -1334,17 +2830,34 @@
     analyzeStepsWeight,
     analyzeProteinSatiety,
     analyzeFiberRegularity,
+    analyzeNutritionQuality,
     analyzeStressEating,
     analyzeMoodFood,
+    analyzeMoodTrajectory,
     analyzeCircadianTiming,
     analyzeNutrientTiming,
     analyzeInsulinSensitivity,
-    analyzeGutHealth
+    analyzeGutHealth,
+    analyzeNEATTrend,
+    // v4.0 (B1-B6)
+    analyzeSleepQuality,
+    analyzeWellbeing,
+    analyzeHydration,
+    analyzeBodyComposition,
+    analyzeCyclePatterns,
+    analyzeWeekendEffect,
+    // v5.0 (C7-C12)
+    analyzeNOVAQuality,
+    analyzeTrainingRecovery,
+    analyzeHypertrophy,
+    analyzeMicronutrients,
+    analyzeHeartHealth,
+    analyzeOmegaBalance
   };
 
   // Fallback для прямого доступа
   global.piPatterns = HEYS.InsightsPI.patterns;
 
-  devLog('[PI Patterns] v3.0.0 loaded — 16 pattern analyzers');
+  devLog('[PI Patterns] v5.0.0 loaded — 31 pattern analyzers');
 
 })(typeof window !== 'undefined' ? window : global);

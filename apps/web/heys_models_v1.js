@@ -1455,22 +1455,35 @@ NOVA: 1-4
         omega3_100: 100,
         omega6_100: 100,
         nutrient_density: 100,
-        vitamin_a: 300,
-        vitamin_c: 300,
+        // Vitamins (snake_case + camelCase)
+        vitamin_a: 3000,      // Liver, carrots (retinol can be 2500+)
+        vitaminA: 3000,
+        vitamin_c: 500,       // Superfoods (acerola, rosehip)
+        vitaminC: 500,
         vitamin_d: 300,
+        vitaminD: 300,
         vitamin_e: 300,
+        vitaminE: 300,
         vitamin_k: 300,
+        vitaminK: 300,
         vitamin_b1: 300,
+        vitaminB1: 300,
         vitamin_b2: 300,
+        vitaminB2: 300,
         vitamin_b3: 300,
+        vitaminB3: 300,
         vitamin_b6: 300,
+        vitaminB6: 300,
         vitamin_b9: 300,
+        vitaminB9: 300,
         vitamin_b12: 300,
-        calcium: 300,
-        iron: 300,
-        magnesium: 300,
-        phosphorus: 300,
-        potassium: 300,
+        vitaminB12: 300,
+        // Minerals (snake_case + camelCase)
+        calcium: 1500,        // Dairy, sesame seeds
+        iron: 30,             // Liver, wheat bran (KPD = 10.57)
+        magnesium: 700,       // Wheat bran (KPD = 611)
+        phosphorus: 1500,     // Seeds, wheat bran (sunflower = 1158, KPD = 1013)
+        potassium: 1500,      // Dried fruits, wheat bran, chips (kuraga = 1162, KPD = 1182, Lay's = 1196)
         zinc: 300,
         selenium: 300,
         iodine: 300
@@ -1587,7 +1600,11 @@ NOVA: 1-4
       { snake: 'potassium', camel: 'potassium', type: 'number' },
       { snake: 'zinc', camel: 'zinc', type: 'number' },
       { snake: 'selenium', camel: 'selenium', type: 'number' },
-      { snake: 'iodine', camel: 'iodine', type: 'number' }
+      { snake: 'iodine', camel: 'iodine', type: 'number' },
+      // Phase 0: omega3/omega6 + cholesterol aliases (12.02.2026)
+      { snake: 'omega3_100', camel: 'omega3', type: 'number' },
+      { snake: 'omega6_100', camel: 'omega6', type: 'number' },
+      { snake: 'cholesterol', camel: 'cholesterol100', type: 'number' }
     ];
 
     extendedAliases.forEach(({ snake, camel, type }) => {
@@ -1615,7 +1632,7 @@ NOVA: 1-4
     });
 
     const extendedNumericFields = [
-      'sodium100', 'omega3_100', 'omega6_100'
+      'sodium100' // omega3_100, omega6_100 moved to extendedAliases (Phase 0, 12.02.2026)
     ];
 
     extendedNumericFields.forEach((field) => {

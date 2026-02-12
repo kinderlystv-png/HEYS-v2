@@ -922,7 +922,18 @@
         circadian_timing: '🌅 Циркадные ритмы',
         nutrient_timing: '⏰ Тайминг нутриентов',
         insulin_sensitivity: '📉 Инсулин. чувств.',
-        gut_health: '🦠 Здоровье ЖКТ'
+        gut_health: '🦠 Здоровье ЖКТ',
+        // v4.0: C1-C6 паттерны
+        nutrition_quality: '🥗 Качество питания',
+        neat_activity: '🏃 NEAT-активность',
+        mood_trajectory: '😊 Траектория настроения',
+        // v5.0: C7-C12 паттерны
+        micronutrient_radar: '🧪 Микронутриенты',
+        omega_balancer: '🧈 Омега-баланс',
+        heart_health: '❤️ Сердце и метаболизм',
+        nova_quality: '🥫 Качество еды (NOVA)',
+        training_recovery: '🏋️ Нагрузка и восстановление',
+        hypertrophy: '💪 Гипертрофия'
       };
 
       // v2.0: Маппинг pattern → SCIENCE_INFO ключ
@@ -930,7 +941,18 @@
         circadian_timing: 'CIRCADIAN',
         nutrient_timing: 'NUTRIENT_TIMING',
         insulin_sensitivity: 'INSULIN_SENSITIVITY',
-        gut_health: 'GUT_HEALTH'
+        gut_health: 'GUT_HEALTH',
+        // v4.0: C1-C6 паттерны
+        nutrition_quality: 'NUTRITION_QUALITY',
+        neat_activity: 'NEAT_ACTIVITY',
+        mood_trajectory: 'MOOD_TRAJECTORY',
+        // v5.0: C7-C12 паттерны
+        micronutrient_radar: 'MICRONUTRIENT_RADAR',
+        omega_balancer: 'OMEGA_BALANCER',
+        heart_health: 'HEART_HEALTH',
+        nova_quality: 'NOVA_QUALITY',
+        training_recovery: 'TRAINING_RECOVERY',
+        hypertrophy: 'HYPERTROPHY_COMPOSITION'
       };
 
       const infoKey = patternToInfoKey[pattern.pattern];

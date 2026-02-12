@@ -3847,6 +3847,9 @@
         let keysProcessed = 0;
         let productsUpdated = false;
         let latestProducts = null;
+        // 🆕 v5.0: Snapshot of products BEFORE applying cloud-sync.
+        // Used by UI to cascade historical MealItems updates correctly.
+        let previousProducts = null;
 
         // 🔄 ФАЗ 2: ОБРАБОТКА дедуплицированных ключей
         deduped.forEach(({ scopedKey, row }) => {
@@ -4259,6 +4262,12 @@
                 }
               } catch (e) { }
 
+              // 🆕 v5.0: Keep snapshot of previous products for downstream cascade
+              // Only capture once per sync cycle.
+              if (!previousProducts && Array.isArray(currentLocal) && currentLocal.length > 0) {
+                previousProducts = currentLocal;
+              }
+
               // 🛡️ КРИТИЧНО: Фильтруем невалидные продукты из облака ПЕРЕД любой обработкой
               remoteProducts = row.v;
               if (Array.isArray(row.v)) {
@@ -4298,6 +4307,8 @@
                           global.HEYS.products.setAll(backupData, { source: 'cloud-recovery', skipNotify: true, skipCloud: true });
                           productsUpdated = true;
                           latestProducts = backupData;
+                          // If we restored from backup, previousProducts may be empty; fallback to in-memory snapshot.
+                          if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
                         } else {
                           ls.setItem(key, JSON.stringify(backupData));
                         }
@@ -4356,6 +4367,7 @@
                     global.HEYS.products.setAll(localDeduped, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
                     productsUpdated = true;
                     latestProducts = localDeduped;
+                    if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
                   } else {
                     ls.setItem(key, JSON.stringify(localDeduped));
                   }
@@ -4374,6 +4386,7 @@
                     global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
                     productsUpdated = true;
                     latestProducts = merged;
+                    if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
                   } else {
                     ls.setItem(key, JSON.stringify(merged));
                   }
@@ -4400,6 +4413,7 @@
                     global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
                     productsUpdated = true;
                     latestProducts = merged;
+                    if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
                   } else {
                     ls.setItem(key, JSON.stringify(merged));
                   }
@@ -4419,6 +4433,7 @@
                   global.HEYS.products.setAll(merged, { source: 'cloud-sync', skipNotify: true, skipCloud: true });
                   productsUpdated = true;
                   latestProducts = merged;
+                  if (!previousProducts) previousProducts = currentLocal || global.HEYS?.products?.getAll?.() || null;
                 } else {
                   ls.setItem(key, JSON.stringify(merged));
                 }
@@ -4752,10 +4767,10 @@
         if (productsUpdated && Array.isArray(latestProducts)) {
           if (typeof window !== 'undefined' && window.dispatchEvent) {
             window.dispatchEvent(new CustomEvent('heys:products-updated', {
-              detail: { products: latestProducts, count: latestProducts.length, source: 'cloud-sync' }
+              detail: { products: latestProducts, previousProducts, count: latestProducts.length, source: 'cloud-sync' }
             }));
             window.dispatchEvent(new CustomEvent('heysProductsUpdated', {
-              detail: { products: latestProducts, count: latestProducts.length, source: 'cloud-sync' }
+              detail: { products: latestProducts, previousProducts, count: latestProducts.length, source: 'cloud-sync' }
             }));
           }
         }

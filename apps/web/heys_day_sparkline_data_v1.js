@@ -87,6 +87,7 @@
               date: fmtDate(d),
               kcal: 0,
               target: optimum,
+              spent: optimum, // 🆕 v5.0: Затраты = норма для пустых дней
               isToday: i === 0,
               hasTraining: false,
               trainingTypes: [],
@@ -149,10 +150,18 @@
             // Используем savedDisplayOptimum (с учётом долга) если есть, иначе optimum
             const todayTarget = day.savedDisplayOptimum > 0 ? day.savedDisplayOptimum : optimum;
             const todayRatio = todayTarget > 0 ? todayKcal / todayTarget : 0;
+            // 🆕 v5.0: Рассчитываем затраты дня (TDEE) для сегодня
+            const lsGet = (H && H.utils && H.utils.lsGet) || ((k, d) => d);
+            const pIndex = productsMap;
+            const tdeeResult = (H && H.TDEE && H.TDEE.calculate)
+              ? H.TDEE.calculate(day, prof, { lsGet, includeNDTE: true, pIndex })
+              : null;
+            const todaySpent = tdeeResult?.tdee || todayTarget; // Fallback к target если TDEE недоступен
             return {
               date: dateStr,
               kcal: todayKcal,
               target: todayTarget,
+              spent: todaySpent, // 🆕 v5.0: Затраты дня (TDEE) для расчета дефицита/профицита
               ratio: todayRatio, // 🆕 Ratio для инсайтов
               isToday: true,
               hasTraining,
@@ -178,6 +187,7 @@
               kcal: dayInfo.kcal,
               target: dayInfo.target,
               baseTarget: dayInfo.baseTarget || dayInfo.target, // 🔧 Базовая норма для caloricDebt
+              spent: dayInfo.spent || dayInfo.target, // 🆕 v5.0: Затраты дня (TDEE)
               ratio: dayInfo.ratio || (dayInfo.target > 0 ? dayInfo.kcal / dayInfo.target : 0), // 🆕 Ratio для инсайтов
               isToday: false,
               hasTraining: dayInfo.hasTraining || false,
@@ -221,7 +231,7 @@
                 dayData = JSON.parse(raw);
               }
             }
-          } catch (e) {}
+          } catch (e) { }
 
           if (dayData && dayData.meals) {
             let totalKcal = 0;
@@ -255,6 +265,7 @@
               date: dateStr,
               kcal: fallbackKcal,
               target: fallbackTarget,
+              spent: fallbackTarget, // 🆕 v5.0: Затраты = норма для fallback дней (нет TDEE)
               ratio: fallbackTarget > 0 ? fallbackKcal / fallbackTarget : 0, // 🆕 Ratio для инсайтов
               isToday: false,
               hasTraining: dayTrainings.length > 0,
@@ -279,6 +290,7 @@
             date: dateStr,
             kcal: 0,
             target: optimum,
+            spent: optimum, // 🆕 v5.0: Затраты = норма для пустых дней
             ratio: 0,
             isToday: false,
             hasTraining: false,
@@ -317,6 +329,7 @@
             date: dateStr,
             kcal: 0,
             target: optimum,
+            spent: optimum, // 🆕 v5.0: Затраты = норма для будущих дней
             ratio: 0, // 🆕 Для консистентности
             isToday: false,
             isFuture: true, // Маркер будущего дня

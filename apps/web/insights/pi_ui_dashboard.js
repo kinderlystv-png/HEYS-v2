@@ -1260,6 +1260,9 @@
      */
     function InfoButton({ infoKey, debugData, size }) {
       const [isOpen, setIsOpen] = useState(false);
+      const [isDetailsOpen, setIsDetailsOpen] = useState(true);
+      const [isFormulaOpen, setIsFormulaOpen] = useState(true);
+      const [isSourcesOpen, setIsSourcesOpen] = useState(true);
 
       const info = SCIENCE_INFO[infoKey];
       if (!info) return null;
@@ -1289,6 +1292,144 @@
         setIsOpen(false);
       };
 
+      const categoryFallbackSources = {
+        METABOLISM: [
+          { label: 'Hall et al., 2012 — Energy balance and body weight dynamics', pmid: '22522362' }
+        ],
+        NUTRITION: [
+          { label: 'WHO Healthy Diet guidance', url: 'https://www.who.int/news-room/fact-sheets/detail/healthy-diet' }
+        ],
+        TIMING: [
+          { label: 'Sutton et al., 2018 — Early Time-Restricted Feeding', pmid: '29754952' }
+        ],
+        RECOVERY: [
+          { label: 'Walker, 2017 — Why We Sleep (overview)', url: 'https://www.sleepdiplomat.com/' }
+        ],
+        RISK: [
+          { label: 'Marlatt & Gordon — Relapse prevention framework', url: 'https://psycnet.apa.org/record/1986-97729-000' }
+        ],
+        PREDICTION: [
+          { label: 'Hyndman & Athanasopoulos — Forecasting principles', url: 'https://otexts.com/fpp3/' }
+        ],
+        PATTERNS: [
+          { label: 'Zeevi et al., 2015 — Personalized nutrition by glycemic response', pmid: '26590418' }
+        ],
+        COMPOSITE: [
+          { label: 'NASEM framework — integrated health behavior indicators', url: 'https://nap.nationalacademies.org/' }
+        ],
+        STATISTICS: [
+          { label: 'Pearson correlation basics (NIST)', url: 'https://www.itl.nist.gov/div898/handbook/' }
+        ]
+      };
+
+      const rawSources = Array.isArray(info.sources)
+        ? info.sources
+        : (info.source ? [{ label: info.source, pmid: info.pmid, url: info.url }] : []);
+
+      const sources = rawSources.length > 0
+        ? rawSources
+        : (categoryFallbackSources[info.category] || categoryFallbackSources.STATISTICS || []);
+
+      const simplifyText = (text) => {
+        if (!text || typeof text !== 'string') return '';
+        return text
+          .replace(/\s+/g, ' ')
+          .replace(/[;]+/g, ', ')
+          .replace(/инсулинорезистентност[ьи]/gi, 'снижения чувствительности к инсулину')
+          .replace(/кардиометаболическ[а-я]+/gi, 'сердечно-метаболических')
+          .replace(/ультра[-\s]?переработанн[а-я]+/gi, 'сильно переработанные')
+          .replace(/липолиз/gi, 'сжигание жира')
+          .replace(/прокси/gi, 'косвенная оценка')
+          .replace(/HbA1c/gi, 'долгосрочный сахар крови (HbA1c)')
+          .replace(/LDL/gi, '«плохой» холестерин (LDL)')
+          .replace(/HDL/gi, '«хороший» холестерин (HDL)')
+          .replace(/TEF/gi, 'термический эффект пищи (TEF)')
+          .replace(/\s+,/g, ',')
+          .replace(/\s+\./g, '.')
+          .trim();
+      };
+
+      const splitSentences = (text) => simplifyText(text)
+        .split(/(?<=[.!?])\s+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      const simplifyDetailedText = (text) => {
+        if (!text || typeof text !== 'string') return '';
+        return text
+          .split(/\n+/)
+          .map((line) => simplifyText(line))
+          .filter(Boolean)
+          .join('\n\n');
+      };
+
+      const capSentence = (sentence, maxLen = 170) => {
+        if (!sentence) return '';
+        if (sentence.length <= maxLen) return sentence;
+        const sliced = sentence.slice(0, maxLen);
+        const cutAt = Math.max(sliced.lastIndexOf('. '), sliced.lastIndexOf(', '), sliced.lastIndexOf(' '));
+        const base = cutAt > 60 ? sliced.slice(0, cutAt) : sliced;
+        return `${base.trim()}…`;
+      };
+
+      const buildShortSummary = (meta) => {
+        if (meta.short && typeof meta.short === 'string' && meta.short.trim()) {
+          return capSentence(simplifyText(meta.short.trim()), 190);
+        }
+
+        const candidatePool = [meta.whyImportant, meta.interpretation, meta.formula]
+          .flatMap(splitSentences)
+          .filter(s => !/[=/*^]|>=|<=|\+\d+%|\b[A-Z]{3,}\b/.test(s))
+          .map(s => capSentence(s))
+          .filter(s => s.length >= 28);
+
+        const unique = [];
+        const seen = new Set();
+        for (const sentence of candidatePool) {
+          const key = sentence.toLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          unique.push(sentence);
+          if (unique.length >= 2) break;
+        }
+
+        if (unique.length > 0) {
+          const summary = unique.join(' ').trim();
+          return /[.!?]$/.test(summary) ? summary : `${summary}.`;
+        }
+
+        const fallbackName = simplifyText(meta.name || 'Этот показатель');
+        return `${fallbackName} помогает оценить текущее состояние и подсказывает, что улучшить в повседневных привычках.`;
+      };
+
+      const shortText = buildShortSummary(info);
+
+      const buildDetailsFallback = (meta) => {
+        const interpretation = simplifyText(meta.interpretation || '');
+        const whyImportant = simplifyText(meta.whyImportant || '');
+        const formulaLead = meta.formula ? 'Метрика рассчитывается по формуле ниже и отражает совокупный эффект нескольких факторов.' : '';
+        const actionLead = meta.actionability
+          ? `Практический горизонт: ${meta.actionability.toLowerCase()}. Фокусируйтесь на одном-двух главных рычагах, а не на всём сразу.`
+          : '';
+
+        const paragraphOne = [
+          shortText,
+          whyImportant && whyImportant !== shortText ? whyImportant : ''
+        ].filter(Boolean).join(' ');
+
+        const paragraphTwo = [
+          interpretation,
+          formulaLead,
+          actionLead
+        ].filter(Boolean).join(' ');
+
+        return [paragraphOne, paragraphTwo].filter(Boolean).join('\n\n');
+      };
+
+      const detailsText = simplifyDetailedText(
+        info.details || info.interpretation || info.whyImportant || buildDetailsFallback(info)
+      );
+
       // Рендерим модалку через Portal в body
       const modal = isOpen && ReactDOM.createPortal(
         h('div', {
@@ -1312,32 +1453,87 @@
               }, '×')
             ),
 
-            // Formula
-            h('div', { className: 'info-modal__section' },
-              h('div', { className: 'info-modal__label' }, '📐 Формула'),
-              h('pre', { className: 'info-modal__formula' }, info.formula)
+            // Short version
+            shortText && h('div', { className: 'info-modal__section' },
+              h('div', { className: 'info-modal__label' }, '🧠 Коротко и по делу'),
+              h('div', { className: 'info-modal__text' }, shortText)
             ),
 
-            // Source
-            info.source && h('div', { className: 'info-modal__section' },
-              h('div', { className: 'info-modal__label' }, '📚 Источник'),
-              h('div', { className: 'info-modal__source' },
-                info.pmid
-                  ? h('a', {
-                    href: `https://pubmed.ncbi.nlm.nih.gov/${info.pmid}/`,
-                    target: '_blank',
-                    rel: 'noopener noreferrer',
-                    className: 'info-modal__link',
-                    onClick: (e) => e.stopPropagation()
-                  }, `${info.source} (PMID: ${info.pmid})`)
-                  : info.source
+            // Detailed version (accordion)
+            detailsText && detailsText !== shortText && h('div', { className: 'info-modal__section' },
+              h('button', {
+                className: `info-modal__accordion-trigger ${isDetailsOpen ? 'is-open' : ''}`,
+                type: 'button',
+                onClick: (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDetailsOpen(prev => !prev);
+                }
+              },
+                h('span', { className: 'info-modal__accordion-title' }, '📖 Подробнее и научное обоснование'),
+                h('span', { className: 'info-modal__accordion-chevron' }, isDetailsOpen ? '▾' : '▸')
+              ),
+              isDetailsOpen && h('div', { className: 'info-modal__accordion-content' },
+                h('div', { className: 'info-modal__text', style: { whiteSpace: 'pre-line' } }, detailsText)
               )
             ),
 
-            // Interpretation
-            info.interpretation && h('div', { className: 'info-modal__section' },
-              h('div', { className: 'info-modal__label' }, '💡 Интерпретация'),
-              h('div', { className: 'info-modal__text' }, info.interpretation)
+            // Formula (accordion)
+            info.formula && h('div', { className: 'info-modal__section' },
+              h('button', {
+                className: `info-modal__accordion-trigger ${isFormulaOpen ? 'is-open' : ''}`,
+                type: 'button',
+                onClick: (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsFormulaOpen(prev => !prev);
+                }
+              },
+                h('span', { className: 'info-modal__accordion-title' }, '📐 Формула расчёта'),
+                h('span', { className: 'info-modal__accordion-chevron' }, isFormulaOpen ? '▾' : '▸')
+              ),
+              isFormulaOpen && h('div', { className: 'info-modal__accordion-content' },
+                h('pre', { className: 'info-modal__formula' }, info.formula)
+              )
+            ),
+
+            // Sources (accordion)
+            sources.length > 0 && h('div', { className: 'info-modal__section' },
+              h('button', {
+                className: `info-modal__accordion-trigger ${isSourcesOpen ? 'is-open' : ''}`,
+                type: 'button',
+                onClick: (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsSourcesOpen(prev => !prev);
+                }
+              },
+                h('span', { className: 'info-modal__accordion-title' }, '📚 Научные источники'),
+                h('span', { className: 'info-modal__accordion-chevron' }, isSourcesOpen ? '▾' : '▸')
+              ),
+              isSourcesOpen && h('div', { className: 'info-modal__accordion-content' },
+                h('div', { className: 'info-modal__sources-list' },
+                  sources.map((source, index) => {
+                    const link = source.url || (source.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${source.pmid}/` : null);
+                    const label = source.label || source.source || '';
+                    return h('div', { key: `${label}_${index}`, className: 'info-modal__source-card' },
+                      h('div', { className: 'info-modal__source-index' }, `${index + 1}`),
+                      h('div', { className: 'info-modal__source-main' },
+                        link
+                          ? h('a', {
+                            href: link,
+                            target: '_blank',
+                            rel: 'noopener noreferrer',
+                            className: 'info-modal__link',
+                            onClick: (e) => e.stopPropagation()
+                          }, label)
+                          : h('span', { className: 'info-modal__source-text' }, label),
+                        source.pmid && h('span', { className: 'info-modal__source-pmid' }, `PMID: ${source.pmid}`)
+                      )
+                    );
+                  })
+                )
+              )
             ),
 
             // Debug data (for testing)

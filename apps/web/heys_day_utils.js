@@ -2333,6 +2333,7 @@
         daysData.set(dateStr, {
           kcal, target, ratio, // 🔧 FIX: kcal теперь использует savedEatenKcal если есть
           baseTarget: calculatedBaseTarget, // 🔧 Базовая норма БЕЗ долга — для расчёта caloricDebt
+          spent: tdee, // 🆕 v5.0: Затраты дня (TDEE) для расчета дефицита/профицита
           hasTraining, trainingTypes, trainingMinutes,
           moodAvg, sleepHours, dayScore,
           prot, fat, carbs,

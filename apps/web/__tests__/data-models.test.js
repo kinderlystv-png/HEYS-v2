@@ -584,3 +584,97 @@ describe('scale helper', () => {
     expect(scale(undefined, 100)).toBe(0);
   });
 });
+// === ТЕСТЫ: Phase 0 — Extended Nutrient Aliases (12.02.2026) ===
+// Проверяем, что omega3/omega6/cholesterol получают правильные aliases в normalizer
+describe('Extended nutrient aliases (Phase 0)', () => {
+  // Эмуляция normalizeExtendedProduct() из heys_models_v1.js:1443
+  function normalizeExtendedProduct(product) {
+    const result = { ...product };
+
+    const extendedAliases = [
+      { snake: 'omega3_100', camel: 'omega3', type: 'number' },
+      { snake: 'omega6_100', camel: 'omega6', type: 'number' },
+      { snake: 'cholesterol', camel: 'cholesterol100', type: 'number' }
+    ];
+
+    extendedAliases.forEach(({ snake, camel, type }) => {
+      if (result[camel] == null && result[snake] != null) {
+        result[camel] = result[snake];
+      }
+      if (result[snake] == null && result[camel] != null) {
+        result[snake] = result[camel];
+      }
+
+      if (type === 'number') {
+        if (result[snake] != null && typeof result[snake] !== 'number') {
+          result[snake] = parseFloat(result[snake]) || 0;
+        }
+        if (result[camel] != null && typeof result[camel] !== 'number') {
+          result[camel] = parseFloat(result[camel]) || 0;
+        }
+      }
+    });
+
+    return result;
+  }
+
+  it('creates omega3 alias from omega3_100', () => {
+    const product = { id: 'test', title: 'Salmon', omega3_100: 500 };
+    const normalized = normalizeExtendedProduct(product);
+    expect(normalized.omega3_100).toBe(500);
+    expect(normalized.omega3).toBe(500);
+  });
+
+  it('creates omega6 alias from omega6_100', () => {
+    const product = { id: 'test', title: 'Walnuts', omega6_100: 1200 };
+    const normalized = normalizeExtendedProduct(product);
+    expect(normalized.omega6_100).toBe(1200);
+    expect(normalized.omega6).toBe(1200);
+  });
+
+  it('creates cholesterol100 alias from cholesterol', () => {
+    const product = { id: 'test', title: 'Eggs', cholesterol: 372 };
+    const normalized = normalizeExtendedProduct(product);
+    expect(normalized.cholesterol).toBe(372);
+    expect(normalized.cholesterol100).toBe(372);
+  });
+
+  it('handles all three fields together', () => {
+    const product = {
+      id: 'test',
+      title: 'Mackerel',
+      omega3_100: 2670,
+      omega6_100: 219,
+      cholesterol: 70
+    };
+    const normalized = normalizeExtendedProduct(product);
+    expect(normalized.omega3).toBe(2670);
+    expect(normalized.omega6).toBe(219);
+    expect(normalized.cholesterol100).toBe(70);
+  });
+
+  it('handles missing values', () => {
+    const product = { id: 'test', title: 'Rice' };
+    const normalized = normalizeExtendedProduct(product);
+    expect(normalized.omega3).toBeUndefined();
+    expect(normalized.omega6).toBeUndefined();
+    expect(normalized.cholesterol100).toBeUndefined();
+  });
+
+  it('parses string values to numbers', () => {
+    const product = { id: 'test', title: 'Test', omega3_100: '500', cholesterol: '45' };
+    const normalized = normalizeExtendedProduct(product);
+    expect(normalized.omega3_100).toBe(500);
+    expect(normalized.omega3).toBe(500);
+    expect(normalized.cholesterol).toBe(45);
+    expect(normalized.cholesterol100).toBe(45);
+  });
+
+  it('handles fallback chains (like pi_patterns.js)', () => {
+    const product = { id: 'test', title: 'Chia', omega3_100: 17830 };
+    const normalized = normalizeExtendedProduct(product);
+    // Эмулируем fallback из pi_patterns.js:2762
+    const omega3Val = normalized.omega3_100 || normalized.omega3;
+    expect(omega3Val).toBe(17830);
+  });
+});

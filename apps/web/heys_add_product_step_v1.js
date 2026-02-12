@@ -571,12 +571,18 @@
     }));
   };
 
-  // Хелпер для проверки изменений нутриентов (для user_modified флага)
+  // Хелпер для проверки изменений нутриентов (для user_modified флага + cascade update)
   const hasNutrientChanges = (oldProduct, newProduct) => {
     const nutrientKeys = [
       'simple100', 'complex100', 'protein100',
       'badFat100', 'goodFat100', 'trans100',
-      'fiber100', 'gi', 'harm'
+      'fiber100', 'gi', 'harm',
+      // 🆕 v5.0 Enrichment support: микронутриенты для cascade update
+      'iron', 'magnesium', 'zinc', 'selenium', 'calcium', 'phosphorus', 'potassium', 'iodine',
+      'vitamin_a', 'vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12',
+      'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k',
+      'omega3_100', 'omega6_100', 'cholesterol',
+      'is_fermented', 'is_raw', 'is_organic', 'is_whole_grain', 'nova_group'
     ];
     return nutrientKeys.some(key => {
       const oldVal = oldProduct?.[key];
@@ -660,6 +666,7 @@
               }
               // Update inline nutrients if changed
               if (nutrientsChanged) {
+                // Macronutrients
                 item.kcal100 = newProduct.kcal100;
                 item.protein100 = newProduct.protein100;
                 item.fat100 = newProduct.fat100;
@@ -671,6 +678,38 @@
                 item.fiber100 = newProduct.fiber100;
                 item.gi = newProduct.gi ?? newProduct.gi100;
                 item.harm = HEYS.models?.normalizeHarm?.(newProduct) ?? newProduct.harm;
+
+                // 🆕 v5.0 Enrichment: Micronutrients (cascade update)
+                if (newProduct.iron != null) item.iron = newProduct.iron;
+                if (newProduct.magnesium != null) item.magnesium = newProduct.magnesium;
+                if (newProduct.zinc != null) item.zinc = newProduct.zinc;
+                if (newProduct.selenium != null) item.selenium = newProduct.selenium;
+                if (newProduct.calcium != null) item.calcium = newProduct.calcium;
+                if (newProduct.phosphorus != null) item.phosphorus = newProduct.phosphorus;
+                if (newProduct.potassium != null) item.potassium = newProduct.potassium;
+                if (newProduct.iodine != null) item.iodine = newProduct.iodine;
+
+                if (newProduct.vitamin_a != null) item.vitamin_a = newProduct.vitamin_a;
+                if (newProduct.vitamin_b1 != null) item.vitamin_b1 = newProduct.vitamin_b1;
+                if (newProduct.vitamin_b2 != null) item.vitamin_b2 = newProduct.vitamin_b2;
+                if (newProduct.vitamin_b3 != null) item.vitamin_b3 = newProduct.vitamin_b3;
+                if (newProduct.vitamin_b6 != null) item.vitamin_b6 = newProduct.vitamin_b6;
+                if (newProduct.vitamin_b9 != null) item.vitamin_b9 = newProduct.vitamin_b9;
+                if (newProduct.vitamin_b12 != null) item.vitamin_b12 = newProduct.vitamin_b12;
+                if (newProduct.vitamin_c != null) item.vitamin_c = newProduct.vitamin_c;
+                if (newProduct.vitamin_d != null) item.vitamin_d = newProduct.vitamin_d;
+                if (newProduct.vitamin_e != null) item.vitamin_e = newProduct.vitamin_e;
+                if (newProduct.vitamin_k != null) item.vitamin_k = newProduct.vitamin_k;
+
+                if (newProduct.omega3_100 != null) item.omega3_100 = newProduct.omega3_100;
+                if (newProduct.omega6_100 != null) item.omega6_100 = newProduct.omega6_100;
+                if (newProduct.cholesterol != null) item.cholesterol = newProduct.cholesterol;
+
+                if (newProduct.is_fermented != null) item.is_fermented = newProduct.is_fermented;
+                if (newProduct.is_raw != null) item.is_raw = newProduct.is_raw;
+                if (newProduct.is_organic != null) item.is_organic = newProduct.is_organic;
+                if (newProduct.is_whole_grain != null) item.is_whole_grain = newProduct.is_whole_grain;
+                if (newProduct.nova_group != null) item.nova_group = newProduct.nova_group;
               }
               dayChanged = true;
               updatedItems++;
@@ -697,6 +736,167 @@
       }));
     }
   };
+
+  /**
+   * 🆕 v5.0: Batch cascade update — efficiently updates MealItems for multiple products
+   * Called automatically when products sync from cloud (heysProductsUpdated event)
+   * @param {Array<Object>} products - Products to potentially update (only those with nutrient changes will cascade)
+   */
+  const cascadeBatchProductUpdates = (products, previousProducts = null) => {
+    if (!Array.isArray(products) || products.length === 0) return;
+
+    const prevArr = Array.isArray(previousProducts) ? previousProducts : null;
+
+    // Build map: product_id → oldProduct for O(1) lookup
+    const prevById = new Map();
+    if (prevArr) {
+      for (const p of prevArr) {
+        const pid = String(p?.id ?? p?.product_id ?? '');
+        if (pid) prevById.set(pid, p);
+      }
+    }
+
+    // Build map: product_id → { old, new } for products with changes
+    const changesMap = new Map();
+
+    for (const newProduct of products) {
+      const pid = String(newProduct?.id ?? newProduct?.product_id ?? '');
+      if (!pid) continue;
+
+      const oldProduct = prevById.get(pid);
+      if (!oldProduct) continue; // Skip new products (no history to update)
+
+      const nameChanged = oldProduct.name !== newProduct.name;
+      const nutrientsChanged = hasNutrientChanges(oldProduct, newProduct);
+
+      if (nameChanged || nutrientsChanged) {
+        changesMap.set(pid, { old: oldProduct, new: newProduct, nameChanged, nutrientsChanged });
+      }
+    }
+
+    if (changesMap.size === 0) {
+      console.log('[HEYS.sync] ✅ No nutrient changes detected in batch update');
+      return;
+    }
+
+    console.log(`[HEYS.sync] 🔄 Cascade batch update: ${changesMap.size} products changed`);
+
+    // Single pass through all days — efficient!
+    const dayKeys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
+    let updatedDays = 0;
+    let updatedItems = 0;
+
+    for (const key of dayKeys) {
+      try {
+        const day = readStoredValue(key, null);
+        if (!day || !day.meals) continue;
+
+        let dayChanged = false;
+
+        for (const meal of day.meals) {
+          if (!meal.items) continue;
+          for (const item of meal.items) {
+            const itemPid = String(item.product_id ?? item.productId ?? '');
+            const change = changesMap.get(itemPid);
+
+            if (change) {
+              const { new: newProduct, nameChanged, nutrientsChanged } = change;
+
+              if (nameChanged) {
+                item.name = newProduct.name;
+              }
+
+              if (nutrientsChanged) {
+                // Macronutrients
+                item.kcal100 = newProduct.kcal100;
+                item.protein100 = newProduct.protein100;
+                item.fat100 = newProduct.fat100;
+                item.simple100 = newProduct.simple100;
+                item.complex100 = newProduct.complex100;
+                item.badFat100 = newProduct.badFat100;
+                item.goodFat100 = newProduct.goodFat100;
+                item.trans100 = newProduct.trans100;
+                item.fiber100 = newProduct.fiber100;
+                item.gi = newProduct.gi ?? newProduct.gi100;
+                item.harm = HEYS.models?.normalizeHarm?.(newProduct) ?? newProduct.harm;
+
+                // 🆕 v5.0 Enrichment: Micronutrients (batch cascade)
+                if (newProduct.iron != null) item.iron = newProduct.iron;
+                if (newProduct.magnesium != null) item.magnesium = newProduct.magnesium;
+                if (newProduct.zinc != null) item.zinc = newProduct.zinc;
+                if (newProduct.selenium != null) item.selenium = newProduct.selenium;
+                if (newProduct.calcium != null) item.calcium = newProduct.calcium;
+                if (newProduct.phosphorus != null) item.phosphorus = newProduct.phosphorus;
+                if (newProduct.potassium != null) item.potassium = newProduct.potassium;
+                if (newProduct.iodine != null) item.iodine = newProduct.iodine;
+
+                if (newProduct.vitamin_a != null) item.vitamin_a = newProduct.vitamin_a;
+                if (newProduct.vitamin_b1 != null) item.vitamin_b1 = newProduct.vitamin_b1;
+                if (newProduct.vitamin_b2 != null) item.vitamin_b2 = newProduct.vitamin_b2;
+                if (newProduct.vitamin_b3 != null) item.vitamin_b3 = newProduct.vitamin_b3;
+                if (newProduct.vitamin_b6 != null) item.vitamin_b6 = newProduct.vitamin_b6;
+                if (newProduct.vitamin_b9 != null) item.vitamin_b9 = newProduct.vitamin_b9;
+                if (newProduct.vitamin_b12 != null) item.vitamin_b12 = newProduct.vitamin_b12;
+                if (newProduct.vitamin_c != null) item.vitamin_c = newProduct.vitamin_c;
+                if (newProduct.vitamin_d != null) item.vitamin_d = newProduct.vitamin_d;
+                if (newProduct.vitamin_e != null) item.vitamin_e = newProduct.vitamin_e;
+                if (newProduct.vitamin_k != null) item.vitamin_k = newProduct.vitamin_k;
+
+                if (newProduct.omega3_100 != null) item.omega3_100 = newProduct.omega3_100;
+                if (newProduct.omega6_100 != null) item.omega6_100 = newProduct.omega6_100;
+                if (newProduct.cholesterol != null) item.cholesterol = newProduct.cholesterol;
+
+                if (newProduct.is_fermented != null) item.is_fermented = newProduct.is_fermented;
+                if (newProduct.is_raw != null) item.is_raw = newProduct.is_raw;
+                if (newProduct.is_organic != null) item.is_organic = newProduct.is_organic;
+                if (newProduct.is_whole_grain != null) item.is_whole_grain = newProduct.is_whole_grain;
+                if (newProduct.nova_group != null) item.nova_group = newProduct.nova_group;
+              }
+
+              dayChanged = true;
+              updatedItems++;
+            }
+          }
+        }
+
+        if (dayChanged) {
+          day.updatedAt = Date.now();
+          writeRawValue(key, day);
+          updatedDays++;
+        }
+      } catch (e) {
+        console.warn('[HEYS] Batch cascade error for key:', key, e);
+      }
+    }
+
+    if (updatedDays > 0) {
+      console.log(`[HEYS.sync] ✅ Batch cascade complete: ${updatedItems} items in ${updatedDays} days`);
+      // Clear caches to reflect changes
+      HEYS.models?.clearMealTotalsCache?.();
+      window.dispatchEvent(new CustomEvent('heys:mealitems-cascaded', {
+        detail: { batchSize: changesMap.size, updatedDays, updatedItems }
+      }));
+    } else {
+      console.log('[HEYS.sync] ℹ️ No historical items affected by batch update');
+    }
+  };
+
+  /**
+   * 🆕 v5.0: Auto-cascade listener for cloud sync
+   * Automatically updates historical MealItems when products sync from shared_products
+   */
+  if (typeof window !== 'undefined') {
+    // Guard against duplicate listeners if this module is evaluated multiple times
+    if (!window.__heysProductsCascadeListenerV1) {
+      window.__heysProductsCascadeListenerV1 = true;
+      window.addEventListener('heysProductsUpdated', (event) => {
+        if (event?.detail?.source === 'cloud-sync' && Array.isArray(event.detail.products)) {
+          console.log('[HEYS.sync] 🔄 Products synced from cloud, triggering cascade update...');
+          cascadeBatchProductUpdates(event.detail.products, event?.detail?.previousProducts);
+        }
+      });
+    }
+  }
 
   const updateSharedProduct = async (product, sharedIdOverride = null) => {
     const targetId = sharedIdOverride ?? product?.id ?? null;

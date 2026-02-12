@@ -1,4 +1,4 @@
-// heys_predictive_insights_v1.js — Predictive Insights Module v3.1.0
+// heys_predictive_insights_v1.js — Predictive Insights Module v4.0.0
 // Анализ данных за 7-30 дней, корреляции, паттерны, прогнозы
 // v2.2.0: What-If Simulator — интерактивный симулятор еды
 // v2.2.1: Refactored - constants extracted to insights/pi_constants.js
@@ -6,6 +6,9 @@
 //         Main file reduced from 10,206 to 3,557 lines (-65%)
 // v3.1.0: Final refactoring (Phases 10-12) - extracted calculations, removed UI duplicates
 //         Main file reduced to 1,005 lines (-90% from original, pure orchestration)
+// v4.0.0: Insights Deep Analytics — 6 new patterns (sleep quality, wellbeing, hydration, body composition,
+//         cycle impact, weekend effect), EMA smoothing, TEF-adjusted protein=3kcal/g, scientific thresholds,
+//         25 patterns total (was 19)
 //         Total 11 Layer B modules created
 // Зависимости: HEYS.InsulinWave, HEYS.Cycle, HEYS.ratioZones, HEYS.models, U.lsGet
 //              HEYS.InsightsPI.* (pi_constants, pi_math, pi_stats, pi_science_info, pi_patterns, 
@@ -458,12 +461,31 @@
   const analyzeStepsWeight = piPatterns.analyzeStepsWeight || function () { return { pattern: 'steps_weight', available: false }; };
   const analyzeProteinSatiety = piPatterns.analyzeProteinSatiety || function () { return { pattern: 'protein_satiety', available: false }; };
   const analyzeFiberRegularity = piPatterns.analyzeFiberRegularity || function () { return { pattern: 'fiber_regularity', available: false }; };
+  const analyzeNutritionQuality = piPatterns.analyzeNutritionQuality || function () { return { pattern: 'nutrition_quality', available: false }; };
   const analyzeStressEating = piPatterns.analyzeStressEating || function () { return { pattern: 'stress_eating', available: false }; };
   const analyzeMoodFood = piPatterns.analyzeMoodFood || function () { return { pattern: 'mood_food', available: false }; };
+  const analyzeMoodTrajectory = piPatterns.analyzeMoodTrajectory || function () { return { pattern: 'mood_trajectory', available: false }; };
   const analyzeCircadianTiming = piPatterns.analyzeCircadianTiming || function () { return { pattern: 'circadian', available: false }; };
   const analyzeNutrientTiming = piPatterns.analyzeNutrientTiming || function () { return { pattern: 'nutrient_timing', available: false }; };
   const analyzeInsulinSensitivity = piPatterns.analyzeInsulinSensitivity || function () { return { pattern: 'insulin_sensitivity', available: false }; };
   const analyzeGutHealth = piPatterns.analyzeGutHealth || function () { return { pattern: 'gut_health', available: false }; };
+  const analyzeNEATTrend = piPatterns.analyzeNEATTrend || function () { return { pattern: 'neat_activity', available: false }; };
+
+  // NEW v4.0 (B1-B6)
+  const analyzeSleepQuality = piPatterns.analyzeSleepQuality || function () { return { pattern: 'sleep_quality', available: false }; };
+  const analyzeWellbeing = piPatterns.analyzeWellbeing || function () { return { pattern: 'wellbeing_correlation', available: false }; };
+  const analyzeHydration = piPatterns.analyzeHydration || function () { return { pattern: 'hydration', available: false }; };
+  const analyzeBodyComposition = piPatterns.analyzeBodyComposition || function () { return { pattern: 'body_composition', available: false }; };
+  const analyzeCyclePatterns = piPatterns.analyzeCyclePatterns || function () { return { pattern: 'cycle_impact', available: false }; };
+  const analyzeWeekendEffect = piPatterns.analyzeWeekendEffect || function () { return { pattern: 'weekend_effect', available: false }; };
+
+  // NEW v5.0 (C7-C12)
+  const analyzeNOVAQuality = piPatterns.analyzeNOVAQuality || function () { return { pattern: 'nova_quality', available: false }; };
+  const analyzeTrainingRecovery = piPatterns.analyzeTrainingRecovery || function () { return { pattern: 'training_recovery', available: false }; };
+  const analyzeHypertrophy = piPatterns.analyzeHypertrophy || function () { return { pattern: 'hypertrophy', available: false }; };
+  const analyzeMicronutrients = piPatterns.analyzeMicronutrients || function () { return { pattern: 'micronutrient_radar', available: false }; };
+  const analyzeHeartHealth = piPatterns.analyzeHeartHealth || function () { return { pattern: 'heart_health', available: false }; };
+  const analyzeOmegaBalance = piPatterns.analyzeOmegaBalance || function () { return { pattern: 'omega_balancer', available: false }; };
 
   // === ПРОДВИНУТАЯ АНАЛИТИКА ===
   // Делегируем в pi_advanced.js
@@ -479,7 +501,7 @@
     return { available: false };
   };
 
-  const generateWeeklyWrap = piAdvanced.generateWeeklyWrap || function (days, patterns, healthScore, weightPrediction) {
+  const generateWeeklyWrap = piAdvanced.generateWeeklyWrap || function (days, patterns, healthScore, weightPrediction, profile) {
     return null;
   };
 
@@ -562,9 +584,11 @@
 
       // === Качество питания ===
       analyzeMealQualityTrend(days, pIndex, optimum),
+      analyzeNutritionQuality(days, pIndex),
       analyzeProteinSatiety(days, profile, pIndex),     // v2.0: добавлен pIndex
       analyzeFiberRegularity(days, pIndex),              // v2.0: добавлен pIndex
       analyzeMoodFood(days, pIndex, optimum),
+      analyzeMoodTrajectory(days, pIndex),
 
       // === Сон и корреляции ===
       analyzeSleepWeight(days),
@@ -573,6 +597,7 @@
       // === Активность ===
       analyzeTrainingKcal(days, pIndex),                 // v2.0: добавлен pIndex
       analyzeStepsWeight(days),
+      analyzeNEATTrend(days),
 
       // === Стресс ===
       analyzeStressEating(days, pIndex),                 // v2.0: добавлен pIndex
@@ -581,10 +606,26 @@
       analyzeCircadianTiming(days, pIndex),              // Циркадные ритмы
       analyzeNutrientTiming(days, pIndex, profile),      // Тайминг нутриентов
       analyzeInsulinSensitivity(days, pIndex, profile),  // Чувствительность к инсулину
-      analyzeGutHealth(days, pIndex)                     // Здоровье ЖКТ
+      analyzeGutHealth(days, pIndex),                    // Здоровье ЖКТ
+
+      // === NEW v4.0 (B1-B6) ===
+      analyzeSleepQuality(days, pIndex),                 // B1: качество сна → метрики след. дня
+      analyzeWellbeing(days, pIndex),                    // B2: самочувствие ↔ образ жизни
+      analyzeHydration(days),                            // B3: гидратация (30ml/кг)
+      analyzeBodyComposition(days, profile),             // B4: WHR тренд
+      analyzeCyclePatterns(days, pIndex, profile),       // B5: цикл (фолликулярная/лютеиновая)
+      analyzeWeekendEffect(days, pIndex),                // B6: выходные vs будни
+
+      // === NEW v5.0 (C7-C12) ===
+      analyzeNOVAQuality(days, pIndex),                  // C10: NOVA Quality Score (ультрапереработка)
+      analyzeTrainingRecovery(days),                     // C11: интенсивность тренировок + восстановление
+      analyzeHypertrophy(days, profile),                 // C12: гипертрофия + композиция тела
+      analyzeMicronutrients(days, pIndex, profile),      // C7: микронутриенты (железо, магний, цинк, кальций)
+      analyzeHeartHealth(days, pIndex),                  // C9: Na/K ratio + холестерин
+      analyzeOmegaBalance(days, pIndex)                  // C8: омега-6:3 баланс + воспалительная нагрузка
     ].filter(p => p && (p.available || p.hasPattern));
 
-    console.info(`[HEYS.insights] 📊 daysBack=${daysBack}, days=${days.length}, patterns=${patterns.length}`,
+    console.info(`[HEYS.insights] 📊 v5.0 | daysBack=${daysBack}, days=${days.length}, patterns=${patterns.length}/31 possible`,
       patterns.map(p => `${p.pattern}:${p.score}`));
 
     // Рассчитываем Health Score
@@ -599,7 +640,7 @@
     const weightPrediction = predictWeight(days, profile);
 
     // Weekly Wrap - сигнатура: (days, patterns, healthScore, weightPrediction)
-    const weeklyWrap = generateWeeklyWrap(days, patterns, healthScore, weightPrediction);
+    const weeklyWrap = generateWeeklyWrap(days, patterns, healthScore, weightPrediction, profile);
 
     // Сохраняем в кэш
     const result = {

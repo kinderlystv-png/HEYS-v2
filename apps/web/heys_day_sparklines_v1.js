@@ -391,7 +391,7 @@
       // День недели (0=Вс, 1=Пн, ...)
       const dayOfWeek = d.date ? new Date(d.date).getDay() : 0;
       return {
-        x, y, kcal: d.kcal, target: effectiveTarget, targetY, ratio,
+        x, y, kcal: d.kcal, target: effectiveTarget, spent: d.spent || effectiveTarget, targetY, ratio,
         isToday: d.isToday, dayNum, date: d.date, isPerfect,
         isUnknown: d.isUnknown || false, // флаг неизвестного дня
         hasTraining: d.hasTraining, trainingTypes: d.trainingTypes || [],
@@ -1594,19 +1594,19 @@
             className: 'sparkline-today-line',
             fill: 'rgba(59, 130, 246, 0.2)'
           }),
-          // Процент отклонения от нормы (с гапом от треугольника)
-          todayPoint.target > 0 && React.createElement('text', {
+          // Процент дефицита/профицита от затрат (с гапом от треугольника)
+          todayPoint.spent > 0 && React.createElement('text', {
             x: todayPoint.x,
             y: todayPoint.y - 26,
             textAnchor: 'middle',
             className: 'sparkline-today-pct',
             style: {
-              fill: rz ? rz.getGradientColor(todayPoint.kcal / todayPoint.target, 1) : '#22c55e',
+              fill: rz ? rz.getGradientColor(todayPoint.kcal / todayPoint.spent, 1) : '#22c55e',
               fontSize: '12px',
               fontWeight: '700'
             }
           }, (() => {
-            const deviation = Math.round((todayPoint.kcal / todayPoint.target - 1) * 100);
+            const deviation = Math.round((todayPoint.kcal / todayPoint.spent - 1) * 100);
             return deviation >= 0 ? '+' + deviation + '%' : deviation + '%';
           })()),
           // Анимированный треугольник-указатель (между процентом и точкой)

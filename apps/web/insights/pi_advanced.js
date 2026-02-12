@@ -15,7 +15,7 @@
   const SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {};
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
 
-  // Импорт констант
+  // Импорт констант (полный список включая v5.0)
   const PATTERNS = piConst.PATTERNS || {
     MEAL_TIMING: 'meal_timing',
     WAVE_OVERLAP: 'wave_overlap',
@@ -32,7 +32,17 @@
     CIRCADIAN: 'circadian',
     NUTRIENT_TIMING: 'nutrient_timing',
     INSULIN_SENSITIVITY: 'insulin_sensitivity',
-    GUT_HEALTH: 'gut_health'
+    GUT_HEALTH: 'gut_health',
+    NUTRITION_QUALITY: 'nutrition_quality',
+    NEAT_ACTIVITY: 'neat_activity',
+    MOOD_TRAJECTORY: 'mood_trajectory',
+    // v5.0 patterns (C7-C12)
+    MICRONUTRIENT_RADAR: 'micronutrient_radar',
+    OMEGA_BALANCER: 'omega_balancer',
+    HEART_HEALTH: 'heart_health',
+    NOVA_QUALITY: 'nova_quality',
+    TRAINING_RECOVERY: 'training_recovery',
+    HYPERTROPHY: 'hypertrophy'
   };
 
   const CONFIG = piConst.CONFIG || {
@@ -94,15 +104,20 @@
       metabolism: []
     };
 
-    // Распределяем паттерны по категориям (включая новые)
+    // Распределяем паттерны по категориям (включая новые v4.0 и v5.0)
     for (const p of patterns) {
       if (!p.available || p.score === undefined) continue;
 
       switch (p.pattern) {
         case PATTERNS.MEAL_QUALITY_TREND:
+        case PATTERNS.NUTRITION_QUALITY:
         case PATTERNS.PROTEIN_SATIETY:
         case PATTERNS.FIBER_REGULARITY:
         case PATTERNS.GUT_HEALTH:
+        case PATTERNS.HYDRATION: // v4.0 B3
+        case PATTERNS.MICRONUTRIENT_RADAR: // v5.0 C7
+        case PATTERNS.OMEGA_BALANCER: // v5.0 C8
+        case PATTERNS.NOVA_QUALITY: // v5.0 C10
           scores.nutrition.push(p.score);
           break;
 
@@ -111,11 +126,14 @@
         case PATTERNS.LATE_EATING:
         case PATTERNS.CIRCADIAN:
         case PATTERNS.NUTRIENT_TIMING:
+        case PATTERNS.WEEKEND_EFFECT: // v4.0 B6
           scores.timing.push(p.score);
           break;
 
         case PATTERNS.TRAINING_KCAL:
         case PATTERNS.STEPS_WEIGHT:
+        case PATTERNS.NEAT_ACTIVITY:
+        case PATTERNS.TRAINING_RECOVERY: // v5.0 C11
           scores.activity.push(p.score);
           break;
 
@@ -123,10 +141,17 @@
         case PATTERNS.SLEEP_HUNGER:
         case PATTERNS.STRESS_EATING:
         case PATTERNS.MOOD_FOOD:
+        case PATTERNS.MOOD_TRAJECTORY:
+        case PATTERNS.SLEEP_QUALITY: // v4.0 B1
+        case PATTERNS.WELLBEING_CORRELATION: // v4.0 B2
+        case PATTERNS.CYCLE_IMPACT: // v4.0 B5
           scores.recovery.push(p.score);
           break;
 
         case PATTERNS.INSULIN_SENSITIVITY:
+        case PATTERNS.BODY_COMPOSITION: // v4.0 B4
+        case PATTERNS.HEART_HEALTH: // v5.0 C9
+        case PATTERNS.HYPERTROPHY: // v5.0 C12
           scores.metabolism.push(p.score);
           break;
       }
@@ -337,7 +362,8 @@
   /**
    * Генерация Weekly Wrap (сводка недели)
    */
-  function generateWeeklyWrap(days, patterns, healthScore, weightPrediction) {
+  function generateWeeklyWrap(days, patterns, healthScore, weightPrediction, profile) {
+    const safeProfile = profile || {};
     const daysWithMeals = days.filter(d => d.meals && d.meals.length > 0);
 
     // Находим лучший и худший дни
@@ -361,8 +387,8 @@
         }
       }
 
-      // Получаем optimum из profile или дефолт
-      const optimum = 2000; // fallback
+      // Получаем optimum из TDEE или profile
+      const optimum = HEYS.TDEE?.calculate?.(day, safeProfile)?.optimum || safeProfile?.normAbs?.kcal || 2000;
       const ratio = dayKcal / optimum;
       const isGood = ratioZones.isSuccess(ratio);
 

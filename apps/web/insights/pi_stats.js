@@ -226,6 +226,23 @@
   }
 
   /**
+   * Рассчитать экспоненциальное скользящее среднее (EMA)
+   * Используется для сглаживания временных рядов с большим весом на недавние данные
+   * @param {Array<number>} arr - массив значений
+   * @param {number} span - период EMA (по умолчанию 7)
+   * @returns {Array<number>} массив EMA значений
+   */
+  function exponentialMovingAverage(arr, span = 7) {
+    if (!arr || arr.length === 0) return [];
+    const alpha = 2 / (span + 1);
+    const result = [arr[0]];
+    for (let i = 1; i < arr.length; i++) {
+      result.push(alpha * arr[i] + (1 - alpha) * result[i - 1]);
+    }
+    return result;
+  }
+
+  /**
    * Рассчитать доверительный интервал
    * @param {Array<number>} arr - массив значений
    * @param {number} confidence - уровень доверия (0-1), по умолчанию 0.95
@@ -276,6 +293,63 @@
     return Math.max(min, Math.min(max, value));
   }
 
+  // === STATISTICS SAFETY HELPERS (Phase 0, 12.02.2026) ===
+  // Prevent false positives from small samples in C13-C22 patterns
+  // Example: if (checkMinN(validDays, 3)) { ... compute confidence ... }
+
+  /**
+   * Check minimum sample size gate (minN)
+   * @param {Array} arr - sample array
+   * @param {number} minN - minimum required count (default: 3)
+   * @returns {boolean} true if arr.length >= minN
+   */
+  function checkMinN(arr, minN = 3) {
+    return arr && arr.length >= minN;
+  }
+
+  /**
+   * Apply confidence penalty for small samples
+   * @param {number} baseConfidence - raw confidence score [0-1]
+   * @param {number} n - sample size
+   * @param {number} minN - minimum recommended count (default: 7)
+   * @returns {number} adjusted confidence [0-1]
+   * @example applySmallSamplePenalty(0.8, 5, 7) → 0.8 × (5/7) = 0.57
+   */
+  function applySmallSamplePenalty(baseConfidence, n, minN = 7) {
+    if (n >= minN) return baseConfidence;
+    if (n <= 0) return 0;
+    return baseConfidence * (n / minN); // linear penalty
+  }
+
+  /**
+   * Calculate statistical power estimate (rough heuristic)
+   * @param {number} n - sample size
+   * @param {number} effectSize - Cohen's d or correlation magnitude [0-1]
+   * @returns {number} power estimate [0-1]
+   * @example statisticalPower(10, 0.5) → 0.68 (medium effect, small sample)
+   */
+  function statisticalPower(n, effectSize) {
+    if (n < 3 || effectSize <= 0) return 0;
+    // Rough approximation: power ≈ 1 - exp(-n × effectSize² / 4)
+    // For large n + large effect → power ≈ 1.0
+    // For small n + small effect → power ≈ 0.2
+    const scaledEffect = Math.pow(effectSize, 2);
+    return Math.min(1, 1 - Math.exp(-(n * scaledEffect) / 4));
+  }
+
+  /**
+   * Flag low-confidence results with warning
+   * @param {number} confidence - raw confidence score [0-1]
+   * @param {number} n - sample size
+   * @param {number} threshold - warning threshold (default: 0.5)
+   * @returns {Object} { confidence: adjusted, warning: '⚠️ N=5 (min 7)' | null }
+   */
+  function confidenceWithWarning(confidence, n, threshold = 0.5) {
+    const adjusted = applySmallSamplePenalty(confidence, n, 7);
+    const warning = adjusted < threshold ? `⚠️ N=${n} (min 7)` : null;
+    return { confidence: adjusted, warning };
+  }
+
   // === ЭКСПОРТ ===
   HEYS.InsightsPI.stats = {
     // Базовые статистические функции
@@ -295,16 +369,23 @@
     linearTrend,
     calculatePercentile,
     calculateMovingAverage,
+    exponentialMovingAverage,
     calculateConfidenceInterval,
 
     // Утилиты
     normalizeValue,
-    clamp
+    clamp,
+
+    // Statistics safety (Phase 0)
+    checkMinN,
+    applySmallSamplePenalty,
+    statisticalPower,
+    confidenceWithWarning
   };
 
   // Fallback для прямого доступа
   global.piStats = HEYS.InsightsPI.stats;
 
-  devLog('[PI Stats] v3.0.0 loaded — 15 statistical functions');
+  devLog('[PI Stats] v3.1.0 loaded — 16 statistical functions (+ EMA)');
 
 })(typeof window !== 'undefined' ? window : global);

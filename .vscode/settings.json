@@ -9,6 +9,15 @@
     "github.copilot.chat.temporalContext.enabled": true,
     "github.copilot.chat.scopeSelection.enabled": true,
     "github.copilot.chat.localeOverride": "ru",
+    "github.copilot.chat.editor.enableAutoApply": true,
+    "github.copilot.chat.autoApproval.enabled": true,
+    "github.copilot.chat.executeCommand.confirmation": "off",
+    "github.copilot.chat.terminalShellIntegration": true,
+    "chat.editing.confirmEditRequestRemoval": false,
+    "github.copilot.chat.codeGeneration.autoInsertEdit": true,
+    "github.copilot.chat.commandApproval.enable": false,
+    "github.copilot.chat.terminalCommandExecution.confirmAll": false,
+    "github.copilot.chat.terminalCommandExecution.confirmDestructive": false,
     "github.copilot.chat.commitMessageGeneration.instructions": [
         {
             "text": "Формат: type: краткое описание на английском. Types: feat, fix, refactor, docs, chore"

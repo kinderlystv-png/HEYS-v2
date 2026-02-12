@@ -817,6 +817,7 @@
                 ),
             weekBreakdownPopup && PopupWithBackdrop && PopupWithBackdrop({
                 onClose: () => setWeekBreakdownPopup(false),
+                zIndex: 10001,
                 children: h('div', {
                     className: 'weekly-wrap-breakdown',
                     role: 'dialog',
