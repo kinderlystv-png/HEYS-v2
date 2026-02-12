@@ -2,36 +2,36 @@
 // Extracted from heys_predictive_insights_v1.js (Phase 7)
 // Кольцевые компоненты для визуализации прогресса и состояния
 // v3.0.1: Lazy getter для InfoButton (fix load order issues)
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.InsightsPI = HEYS.InsightsPI || {};
-  
+
   // React imports
   const { createElement: h, useState, useEffect } = window.React || {};
-  
+
   // Зависимости (reserved for future use)
   const _SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {}; // eslint-disable-line no-unused-vars
-  
+
   // === LAZY GETTER для InfoButton (fix load order) ===
   // InfoButton определён в pi_ui_dashboard.js который загружается ПОСЛЕ этого модуля
   const getInfoButton = () => {
     return HEYS.InsightsPI?.uiDashboard?.InfoButton ||
-           HEYS.PredictiveInsights?.components?.InfoButton ||
-           HEYS.day?.InfoButton || 
-           HEYS.InfoButton || 
-           window.InfoButton || 
-           // Fallback: простая кнопка если InfoButton не загружен
-           function InfoButtonFallback({ infoKey, size: _size }) { // eslint-disable-line no-unused-vars
-             return h('span', { 
-               className: 'info-button-placeholder',
-               title: infoKey,
-               style: { cursor: 'help', opacity: 0.5 }
-             }, 'ℹ️');
-           };
+      HEYS.PredictiveInsights?.components?.InfoButton ||
+      HEYS.day?.InfoButton ||
+      HEYS.InfoButton ||
+      window.InfoButton ||
+      // Fallback: простая кнопка если InfoButton не загружен
+      function InfoButtonFallback({ infoKey, size: _size }) { // eslint-disable-line no-unused-vars
+        return h('span', {
+          className: 'info-button-placeholder',
+          title: infoKey,
+          style: { cursor: 'help', opacity: 0.5 }
+        }, 'ℹ️');
+      };
   };
-  
+
   /**
    * HealthRing — кольцо здоровья для категории
    * Кольцевой индикатор прогресса с поддержкой InfoButton и emotional warnings
@@ -41,21 +41,21 @@
     const circumference = 2 * Math.PI * radius;
     const progress = Math.min(100, Math.max(0, score || 0));
     const offset = circumference - (progress / 100) * circumference;
-    
+
     const [showTooltip, setShowTooltip] = useState(false);
     const [isPressed, setIsPressed] = useState(false);
-    
+
     // 🆕 v3.22.0: emotionalWarning влияет на цвет и отображение
     const hasEmotionalRisk = emotionalWarning?.hasRisk;
     const effectiveColor = hasEmotionalRisk ? '#f87171' : color;
-    
+
     const handleClick = () => {
       // Haptic feedback
       if (navigator.vibrate) navigator.vibrate(10);
       setShowTooltip(!showTooltip);
       if (onClick) onClick(category);
     };
-    
+
     return h('div', {
       className: `insights-ring insights-ring--${category} ${showTooltip ? 'insights-ring--active' : ''} ${isPressed ? 'insights-ring--pressed' : ''} ${hasEmotionalRisk ? 'insights-ring--emotional-warning' : ''}`,
       onClick: handleClick,
@@ -89,13 +89,12 @@
       ),
       h('div', { className: 'insights-ring__center' },
         h('span', { className: 'insights-ring__score' }, score || '—'),
-        h('span', { className: 'insights-ring__label' },
-          label,
-          infoKey && h(getInfoButton(), { infoKey, debugData, size: 'small' })
+        h('span', { className: 'insights-ring__label' }, label
+          // InfoButton removed — TotalHealthRing is h()-factory (no hooks allowed)
         ),
         // 🆕 v3.22.0: Emotional risk badge в кольце
         hasEmotionalRisk && h('div', { className: 'insights-ring__emotional' },
-          h('span', { 
+          h('span', {
             className: 'insights-ring__emotional-badge',
             title: `Эмоц. риск: ${emotionalWarning.bingeRisk}%\nФакторы: ${emotionalWarning.factors.join(', ')}`
           }, '🧠'),
@@ -111,7 +110,7 @@
         )
       ),
       showTooltip && h('div', { className: 'insights-ring__tooltip' },
-        hasEmotionalRisk 
+        hasEmotionalRisk
           ? `${label}: ${score}/100\n🧠 Эмоц. риск: ${emotionalWarning.bingeRisk}%`
           : `${label}: ${score}/100`
       )
@@ -126,7 +125,7 @@
     const circumference = 2 * Math.PI * radius;
     const progress = Math.min(100, Math.max(0, score || 0));
     const offset = circumference - (progress / 100) * circumference;
-    
+
     return h('div', { className: 'insights-total' },
       h('div', { className: 'insights-total__ring' },
         h('svg', {
@@ -182,14 +181,14 @@
     const circumference = 2 * Math.PI * radius;
     const progress = (displayScore / 100) * circumference;
     const offset = circumference - progress;
-    
+
     // Count-up анимация при изменении score
     useEffect(() => {
       const duration = 1500; // ms
       const start = displayScore;
       const diff = score - start;
       const startTime = performance.now();
-      
+
       const animate = (currentTime) => {
         const elapsed = currentTime - startTime;
         const t = Math.min(elapsed / duration, 1);
@@ -197,15 +196,15 @@
         const eased = 1 - Math.pow(1 - t, 3);
         const current = Math.round(start + diff * eased);
         setDisplayScore(current);
-        
+
         if (t < 1) {
           requestAnimationFrame(animate);
         }
       };
-      
+
       requestAnimationFrame(animate);
     }, [score]);
-    
+
     // Градиентный цвет по score (0-100)
     const getGradientColor = (s) => {
       if (s >= 85) return { start: '#10b981', end: '#22c55e' }; // emerald → green
@@ -214,10 +213,10 @@
       if (s >= 30) return { start: '#f59e0b', end: '#ef4444' }; // amber → red
       return { start: '#ef4444', end: '#dc2626' }; // red shades
     };
-    
+
     const colors = getGradientColor(displayScore);
     const gradientId = 'statusGradient' + Math.random().toString(36).substr(2, 9);
-    
+
     return h('svg', {
       width: size,
       height: size,
@@ -261,7 +260,7 @@
         textAnchor: 'middle',
         dominantBaseline: 'middle',
         className: 'status-progress-ring__score',
-        style: { 
+        style: {
           fontSize: size * 0.28,
           fontWeight: 700,
           fill: 'var(--text-primary, #0f172a)'
@@ -280,7 +279,7 @@
       }, 'из 100')
     );
   }
-  
+
   /**
    * StatusTrendBadge — тренд ↑/↓ относительно вчера
    */
@@ -291,13 +290,13 @@
     const halfCircumference = Math.PI * radius;
     const progress = (safeRisk / 100) * halfCircumference;
     const offset = halfCircumference - progress;
-    
+
     const colors = {
       low: '#22c55e',
       medium: '#eab308',
       high: '#ef4444'
     };
-    
+
     return h('div', { className: 'mini-risk-meter', style: { width: size, height: size / 2 + 25 } },
       h('svg', {
         viewBox: `0 0 ${size} ${size / 2 + 15}`,
@@ -327,7 +326,7 @@
           x: size / 2,
           y: size / 2 - 2,
           textAnchor: 'middle',
-          style: { 
+          style: {
             fontSize: 28,
             fontWeight: 700,
             fill: colors[riskLevel] || 'var(--text-primary)'
@@ -343,7 +342,7 @@
       )
     );
   }
-  
+
   /**
    * MetabolicStateRing — кольцо метаболической фазы
    */
@@ -353,16 +352,16 @@
         h('div', { className: 'metabolic-ring__placeholder' }, '❓')
       );
     }
-    
+
     const phaseColors = {
       anabolic: { primary: '#3b82f6', secondary: '#93c5fd', gradient: 'linear-gradient(135deg, #3b82f6, #60a5fa)' },
       transitional: { primary: '#f59e0b', secondary: '#fcd34d', gradient: 'linear-gradient(135deg, #f59e0b, #fbbf24)' },
       catabolic: { primary: '#22c55e', secondary: '#86efac', gradient: 'linear-gradient(135deg, #22c55e, #4ade80)' },
       unknown: { primary: '#6b7280', secondary: '#d1d5db', gradient: 'linear-gradient(135deg, #6b7280, #9ca3af)' }
     };
-    
+
     const colors = phaseColors[phase.phase] || phaseColors.unknown;
-    
+
     // Прогресс внутри фазы (для анимации)
     let progress = 0;
     if (phase.phase === 'anabolic') {
@@ -372,13 +371,13 @@
     } else if (phase.phase === 'catabolic') {
       progress = Math.min(100, ((phase.hoursInPhase - 5) / 3) * 100);
     }
-    
+
     const radius = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference - (progress / 100) * circumference;
-    
+
     return h('div', { className: `metabolic-ring metabolic-ring--${phase.phase}`, style: { width: size, height: size } },
-      h('svg', { 
+      h('svg', {
         className: 'metabolic-ring__svg',
         viewBox: `0 0 ${size} ${size}`,
         style: { transform: 'rotate(-90deg)' }
@@ -420,9 +419,9 @@
       )
     );
   }
-  
+
   // === TRAFFIC LIGHT — светофор для рисков ===
-  
+
   /**
    * RiskTrafficLight — светофор риска срыва
    * Low = зелёный, Medium = жёлтый, High = красный
@@ -433,10 +432,10 @@
       { level: 'medium', color: '#eab308', label: 'Средний', emoji: '⚠️' },
       { level: 'high', color: '#ef4444', label: 'Высокий', emoji: '🚨' }
     ];
-    
+
     const currentLevel = riskLevel || 'low';
     const currentLight = lights.find(l => l.level === currentLevel) || lights[0];
-    
+
     if (compact) {
       return h('div', { className: `risk-traffic-light risk-traffic-light--compact risk-traffic-light--${currentLevel}` },
         h('div', { className: 'risk-traffic-light__indicator', style: { backgroundColor: currentLight.color } },
@@ -446,7 +445,7 @@
         riskValue !== undefined && h('span', { className: 'risk-traffic-light__value' }, `${riskValue}%`)
       );
     }
-    
+
     // Полная версия (не compact)
     return h('div', { className: `risk-traffic-light risk-traffic-light--${currentLevel}` },
       h('div', { className: 'risk-traffic-light__header' },
@@ -470,10 +469,10 @@
     MetabolicStateRing,
     RiskTrafficLight
   };
-  
+
   // Fallback для прямого доступа
   global.piUIRings = HEYS.InsightsPI.uiRings;
-  
+
   // v3.0.1: 6 ring components (added RiskTrafficLight)
-  
+
 })(typeof window !== 'undefined' ? window : global);

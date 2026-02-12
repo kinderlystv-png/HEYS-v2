@@ -368,7 +368,7 @@
               h('div', { className: 'insights-wrap__ci-bar' },
                 h('div', {
                   className: 'insights-wrap__ci-range',
-                  style: `width: ${Math.min(100, wrap.weekOverWeekStats.prevWeekCI.margin / 5 * 100)}%`,
+                  style: { width: `${Math.min(100, wrap.weekOverWeekStats.prevWeekCI.margin / 5 * 100)}%` },
                   title: `${wrap.weekOverWeekStats.prevWeekCI.lower}-${wrap.weekOverWeekStats.prevWeekCI.upper} (±${wrap.weekOverWeekStats.prevWeekCI.margin})`
                 }),
                 h('span', { className: 'insights-wrap__ci-value' },
@@ -385,7 +385,7 @@
               h('div', { className: 'insights-wrap__ci-bar' },
                 h('div', {
                   className: 'insights-wrap__ci-range insights-wrap__ci-range--current',
-                  style: `width: ${Math.min(100, wrap.weekOverWeekStats.currentWeekCI.margin / 5 * 100)}%`,
+                  style: { width: `${Math.min(100, wrap.weekOverWeekStats.currentWeekCI.margin / 5 * 100)}%` },
                   title: `${wrap.weekOverWeekStats.currentWeekCI.lower}-${wrap.weekOverWeekStats.currentWeekCI.upper} (±${wrap.weekOverWeekStats.currentWeekCI.margin})`
                 }),
                 h('span', { className: 'insights-wrap__ci-value' },
@@ -753,6 +753,8 @@
 
     /**
      * SectionHeader — заголовок секции с приоритетом
+     * NOTE: This is a h()-factory (not a React component), so NO HOOKS allowed!
+     * Using simple placeholder instead of InfoButton
      */
     function SectionHeader({ title, icon, priority, infoKey, badge }) {
       const priorityConfig = PRIORITY_LEVELS[priority] || PRIORITY_LEVELS.INFO;
@@ -764,8 +766,8 @@
           priority && h(PriorityBadge, { priority, size: 'small' })
         ),
         h('div', { className: 'section-header__right' },
-          badge && h('span', { className: 'section-header__badge' }, badge),
-          infoKey && h(getInfoButton(), { infoKey })
+          badge && h('span', { className: 'section-header__badge' }, badge)
+          // infoKey removed — InfoButton has hooks, can't use in h()-factory
         )
       );
     }
@@ -1680,12 +1682,13 @@
 
     /**
      * Метрика с кнопкой info — переиспользуемый компонент
+     * NOTE: This is a h()-factory (not a React component), so NO HOOKS allowed!
      */
     function MetricWithInfo({ label, value, unit, infoKey, debugData, color, className }) {
       return h('div', { className: `metric-with-info ${className || ''}` },
         h('div', { className: 'metric-with-info__row' },
-          h('span', { className: 'metric-with-info__label' }, label),
-          h(getInfoButton(), { infoKey, debugData })
+          h('span', { className: 'metric-with-info__label' }, label)
+          // InfoButton removed — has hooks, can't use in h()-factory
         ),
         h('div', { className: 'metric-with-info__value', style: color ? { color } : null },
           value,

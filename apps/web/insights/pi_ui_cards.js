@@ -63,9 +63,12 @@
 
     /**
      * CollapsibleSection — сворачиваемая секция (v2.1: с InfoButton)
+     * CRITICAL FIX: Always render InfoButton unconditionally to avoid hooks count changes
      */
     function CollapsibleSection({ title, icon, badge, children, defaultOpen = false, compact = false, infoKey }) {
       const [isOpen, setIsOpen] = useState(defaultOpen);
+
+      const InfoButtonComp = getInfoButton();
 
       return h('div', { className: `insights-collapsible ${isOpen ? 'insights-collapsible--open' : ''} ${compact ? 'insights-collapsible--compact' : ''}` },
         h('div', {
@@ -75,7 +78,8 @@
           h('div', { className: 'insights-collapsible__title' },
             icon && h('span', { className: 'insights-collapsible__icon' }, icon),
             h('span', { className: 'insights-collapsible__text' }, title),
-            infoKey && h(getInfoButton(), { infoKey, size: 'small' })
+            // ALWAYS render InfoButton (even if infoKey is falsy) — it will return null internally after hooks
+            h(InfoButtonComp, { infoKey, size: 'small' })
           ),
           badge && h('span', { className: 'insights-collapsible__badge' }, badge),
           h('span', { className: 'insights-collapsible__chevron' }, '›')
@@ -617,6 +621,8 @@
       };
       const color = qualityColors[quality] || qualityColors.normal;
 
+      const InfoButtonComp = getInfoButton();
+
       return h('div', {
         className: `insights-metabolism-card insights-metabolism-card--${quality} ${showDetails ? 'insights-metabolism-card--expanded' : ''}`,
         onClick: () => setShowDetails(!showDetails)
@@ -626,8 +632,8 @@
           h('div', { className: 'insights-metabolism-card__info' },
             h('div', { className: 'insights-metabolism-card__title' },
               title,
-              // v2.0: InfoButton рядом с заголовком
-              infoKey && h(getInfoButton(), { infoKey, debugData })
+              // ALWAYS render InfoButton to avoid hooks count changes
+              h(InfoButtonComp, { infoKey, debugData })
             ),
             h('div', { className: 'insights-metabolism-card__value' },
               h('span', { style: { color, fontWeight: 700 } }, value),
@@ -1011,16 +1017,8 @@
         h('div', { className: `insights-pattern__icon insights-pattern__icon--${iconClass}` }, icon),
         h('div', { className: 'insights-pattern__content' },
           h('div', { className: 'insights-pattern__title' },
-            patternLabels[pattern.pattern] || pattern.pattern,
-            // v2.0: InfoButton для новых паттернов с формулами
-            (infoKey || pattern.formula) && h(getInfoButton(), {
-              infoKey: infoKey,
-              debugData: pattern.debug || {
-                formula: pattern.formula,
-                score: pattern.score,
-                confidence: pattern.confidence
-              }
-            })
+            patternLabels[pattern.pattern] || pattern.pattern
+            // InfoButton removed — PatternCard is h()-factory (no hooks allowed)
           ),
           h('div', { className: 'insights-pattern__insight' }, pattern.insight),
           pattern.confidence && h('div', { className: 'insights-pattern__confidence' },
