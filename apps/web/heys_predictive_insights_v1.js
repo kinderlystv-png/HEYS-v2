@@ -650,7 +650,7 @@
     ].filter(p => p && (p.available || p.hasPattern));
 
     console.info(`[HEYS.insights] 📊 v6.0 | daysBack=${daysBack}, days=${days.length}, patterns=${patterns.length}/41 possible (v6.0: +C13+C22+C14+C15+C16+C18+C17+C19+C20+C21)`,
-      patterns.map(p => `${p.pattern}:${p.score}`));
+      patterns.map(p => `${p.pattern || 'unknown_pattern'}:${p.score ?? 'n/a'}`));
 
     // Рассчитываем Health Score
     const healthScore = calculateHealthScore(patterns, profile);

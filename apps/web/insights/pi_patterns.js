@@ -14,6 +14,7 @@
   const SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {};
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
   const piCalculations = HEYS.InsightsPI?.calculations || window.piCalculations || {};
+  const patternModules = HEYS.InsightsPI?.patternModules || {};
 
   // Импорт конфигурации
   const CONFIG = piConst.CONFIG || {
@@ -89,7 +90,9 @@
     BONE_HEALTH: 'bone_health',
     TRAINING_TYPE_MATCH: 'training_type_match',
     ELECTROLYTE_HOMEOSTASIS: 'electrolyte_homeostasis',
-    NUTRIENT_DENSITY: 'nutrient_density'
+    NUTRIENT_DENSITY: 'nutrient_density',
+    VITAMIN_DEFENSE: 'vitamin_defense',
+    B_COMPLEX_ANEMIA: 'b_complex_anemia'
   };
 
   // Импорт статистических функций из pi_stats.js (централизовано)
@@ -4308,18 +4311,18 @@
     analyzeVitaminDefense,   // C13: Vitamin Defense Radar (v6.0)
     analyzeBComplexAnemia,   // C22: B-Complex Energy & Anemia Risk (v6.0)
     analyzeGlycemicLoad,     // C14: Glycemic Load Optimizer (v6.0)
-    analyzeProteinDistribution, // C15: Protein Distribution (v6.0)
-    analyzeAntioxidantDefense, // C16: Antioxidant Defense (v6.0)
+    analyzeProteinDistribution: patternModules.analyzeProteinDistribution || analyzeProteinDistribution, // C15: Protein Distribution (v6.0, modular-ready)
+    analyzeAntioxidantDefense: patternModules.analyzeAntioxidantDefense || analyzeAntioxidantDefense, // C16: Antioxidant Defense (v6.0, modular-ready)
     analyzeAddedSugarDependency, // C18: Added Sugar & Dependency (v6.0)
     analyzeBoneHealth, // C17: Bone Health (v6.0)
-    analyzeTrainingTypeMatch, // C19: Training-Type Match (v6.0)
-    analyzeElectrolyteHomeostasis, // C20: Electrolyte Homeostasis (v6.0)
-    analyzeNutrientDensity // C21: Nutrient Density (v6.0)
+    analyzeTrainingTypeMatch: patternModules.analyzeTrainingTypeMatch || analyzeTrainingTypeMatch, // C19: Training-Type Match (v6.0, modular-ready)
+    analyzeElectrolyteHomeostasis: patternModules.analyzeElectrolyteHomeostasis || analyzeElectrolyteHomeostasis, // C20: Electrolyte Homeostasis (v6.0, modular-ready)
+    analyzeNutrientDensity: patternModules.analyzeNutrientDensity || analyzeNutrientDensity // C21: Nutrient Density (v6.0, modular-ready)
   };
 
   // Fallback для прямого доступа
   global.piPatterns = HEYS.InsightsPI.patterns;
 
-  devLog('[PI Patterns] v6.0.0 loaded — 40 pattern analyzers (C13..C21 added)');
+  devLog('[PI Patterns] v6.1.1 loaded — 40 pattern analyzers (modular-router for C15/C16/C19/C20/C21)');
 
 })(typeof window !== 'undefined' ? window : global);

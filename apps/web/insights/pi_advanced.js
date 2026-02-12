@@ -42,7 +42,18 @@
     HEART_HEALTH: 'heart_health',
     NOVA_QUALITY: 'nova_quality',
     TRAINING_RECOVERY: 'training_recovery',
-    HYPERTROPHY: 'hypertrophy'
+    HYPERTROPHY: 'hypertrophy',
+    // v6.0 patterns (fallback for load order)
+    VITAMIN_DEFENSE: 'vitamin_defense',
+    B_COMPLEX_ANEMIA: 'b_complex_anemia',
+    GLYCEMIC_LOAD: 'glycemic_load',
+    PROTEIN_DISTRIBUTION: 'protein_distribution',
+    ANTIOXIDANT_DEFENSE: 'antioxidant_defense',
+    ADDED_SUGAR_DEPENDENCY: 'added_sugar_dependency',
+    BONE_HEALTH: 'bone_health',
+    TRAINING_TYPE_MATCH: 'training_type_match',
+    ELECTROLYTE_HOMEOSTASIS: 'electrolyte_homeostasis',
+    NUTRIENT_DENSITY: 'nutrient_density'
   };
 
   const CONFIG = piConst.CONFIG || {
@@ -187,7 +198,7 @@
         metabolism: { score: categoryScores.metabolism, weight: weights.metabolism, label: 'Метаболизм' }
       },
       // DEBUG INFO
-      formula: SCIENCE_INFO.HEALTH_SCORE.formula,
+      formula: SCIENCE_INFO?.HEALTH_SCORE?.formula || 'Health score composite formula',
       debug: {
         goalMode,
         deficitPct,
