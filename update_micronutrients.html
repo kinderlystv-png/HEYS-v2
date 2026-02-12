@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>🥗 HEYS Micronutrients Update</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f7;
+        }
+
+        .card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+        }
+
+        h2 {
+            margin: 20px 0 12px;
+            font-size: 20px;
+            color: #333;
+        }
+
+        h3 {
+            margin: 16px 0 8px;
+            font-size: 16px;
+            color: #666;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-right: 12px;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary {
+            background: #007AFF;
+            color: white;
+        }
+
+        .btn-success {
+            background: #34C759;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #FF9500;
+            color: white;
+        }
+
+        pre {
+            background: #f8f8f8;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 0;
+        }
+
+        .status-success {
+            background: #D1F2EB;
+            color: #006644;
+        }
+
+        .status-error {
+            background: #FFE5E5;
+            color: #CC0000;
+        }
+
+        .status-info {
+            background: #E3F2FD;
+            color: #0D47A1;
+        }
+
+        .pattern-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .pattern-item {
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            border: 2px solid #eee;
+        }
+
+        .pattern-active {
+            background: #D1F2EB;
+            border-color: #34C759;
+        }
+
+        .pattern-inactive {
+            background: #FFE5E5;
+            border-color: #FF3B30;
+        }
+
+        .emoji {
+            font-size: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h1>🥗 HEYS Micronutrients Update</h1>
+        <div class="subtitle">Обновление products с микронутриентами + проверка инсайтов</div>
+
+        <h2>Шаг 1: Обновить products из API</h2>
+        <p>В базе уже есть 292 продукта с железом/витаминами/кальцием. Нужно загрузить их в PWA.</p>
+        <button class="btn-primary" onclick="updateProducts()">🔄 Обновить Products</button>
+        <button class="btn-warning" onclick="clearCache()">🗑️ Очистить Кэш</button>
+        <div id="updateStatus"></div>
+
+        <h2>Шаг 2: Проверить данные products</h2>
+        <button class="btn-success" onclick="checkMicronutrients()">🔍 Проверить Микронутриенты</button>
+        <div id="checkStatus"></div>
+
+        <h2>Шаг 3: Перезапустить инсайты</h2>
+        <button class="btn-success" onclick="reanalyzeInsights()">🧠 Перезапустить Инсайты</button>
+        <div id="insightsStatus"></div>
+
+        <h2>Результаты</h2>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        async function updateProducts() {
+            const status = document.getElementById('updateStatus');
+            status.innerHTML = '<div class="status status-info">⏳ Загружаем products из API...</div>';
+
+            try {
+                // Проверка API доступности
+                if (!window.HEYS?.YandexAPI?.rest) {
+                    throw new Error('HEYS.YandexAPI.rest не доступен');
+                }
+
+                // Загрузка через REST API
+                console.log('[UPDATE] Запрос shared_products...');
+                const result = await HEYS.YandexAPI.rest('shared_products', {
+                    limit: 500,
+                    order: 'created_at.desc'
+                });
+
+                if (result.error) {
+                    throw new Error(result.error.message || result.error);
+                }
+
+                const products = result.data || [];
+                console.log('[UPDATE] Получено продуктов:', products.length);
+
+                // Проверка наличия микронутриентов
+                const withIron = products.filter(p => p.iron && parseFloat(p.iron) > 0).length;
+                const withVitC = products.filter(p => p.vitamin_c && parseFloat(p.vitamin_c) > 0).length;
+                const withCalc = products.filter(p => p.calcium && parseFloat(p.calcium) > 0).length;
+
+                console.log('[UPDATE] С микронутриентами:', { withIron, withVitC, withCalc });
+
+                // Сохранить в localStorage через HEYS.store
+                if (HEYS.store?.set) {
+                    HEYS.store.set('heys_products', products);
+                    console.log('[UPDATE] ✅ Сохранено через HEYS.store.set');
+                } else if (HEYS.utils?.lsSet) {
+                    HEYS.utils.lsSet('heys_products', products);
+                    console.log('[UPDATE] ✅ Сохранено через HEYS.utils.lsSet');
+                } else {
+                    throw new Error('Нет методов для сохранения products');
+                }
+
+                // Обновить глобальный индекс products
+                if (HEYS.products?.setAll) {
+                    HEYS.products.setAll(products, { source: 'micronutrients-update' });
+                    console.log('[UPDATE] ✅ Обновлён HEYS.products.setAll');
+                }
+
+                // Инвалидировать кэш shared products
+                if (HEYS.cloud?.invalidateSharedProductsCache) {
+                    HEYS.cloud.invalidateSharedProductsCache();
+                    console.log('[UPDATE] ✅ Кэш инвалидирован');
+                }
+
+                status.innerHTML = `
+                    <div class="status status-success">
+                        ✅ Обновлено ${products.length} продуктов<br>
+                        🥗 С железом: ${withIron}<br>
+                        🍊 С витамином C: ${withVitC}<br>
+                        🥛 С кальцием: ${withCalc}
+                    </div>`;
+
+            } catch (err) {
+                console.error('[UPDATE] Ошибка:', err);
+                status.innerHTML = `<div class="status status-error">❌ ${err.message}</div>`;
+            }
+        }
+
+        async function clearCache() {
+            const status = document.getElementById('updateStatus');
+            try {
+                // Инвалидировать кэш
+                if (HEYS.cloud?.invalidateSharedProductsCache) {
+                    HEYS.cloud.invalidateSharedProductsCache();
+                }
+
+                // Очистить кэш инсайтов
+                if (HEYS.InsightsPI?.clearCache) {
+                    HEYS.InsightsPI.clearCache();
+                }
+
+                status.innerHTML = '<div class="status status-success">✅ Кэш очищен</div>';
+            } catch (err) {
+                status.innerHTML = `<div class="status status-error">❌ ${err.message}</div>`;
+            }
+        }
+
+        function checkMicronutrients() {
+            const status = document.getElementById('checkStatus');
+            try {
+                // Получить products
+                let products = [];
+                if (HEYS.products?.getAll) {
+                    products = HEYS.products.getAll();
+                } else if (HEYS.store?.get) {
+                    products = HEYS.store.get('heys_products', []);
+                } else if (HEYS.utils?.lsGet) {
+                    products = HEYS.utils.lsGet('heys_products', []);
+                }
+
+                if (!Array.isArray(products) || products.length === 0) {
+                    throw new Error('Products не загружены');
+                }
+
+                // Анализ микронутриентов
+                const withIron = products.filter(p => p.iron && parseFloat(p.iron) > 0);
+                const withVitC = products.filter(p => p.vitamin_c && parseFloat(p.vitamin_c) > 0);
+                const withCalc = products.filter(p => p.calcium && parseFloat(p.calcium) > 0);
+                const withMagnesium = products.filter(p => p.magnesium && parseFloat(p.magnesium) > 0);
+                const withZinc = products.filter(p => p.zinc && parseFloat(p.zinc) > 0);
+
+                // Топ-5 примеров
+                const topIron = withIron.sort((a, b) => parseFloat(b.iron) - parseFloat(a.iron)).slice(0, 5);
+                const topVitC = withVitC.sort((a, b) => parseFloat(b.vitamin_c) - parseFloat(a.vitamin_c)).slice(0, 5);
+
+                console.log('[CHECK] Топ железо:', topIron.map(p => `${p.name}: ${p.iron}`));
+                console.log('[CHECK] Топ витамин C:', topVitC.map(p => `${p.name}: ${p.vitamin_c}`));
+
+                status.innerHTML = `
+                    <div class="status status-success">
+                        <h3>📊 Статистика Products (${products.length} шт)</h3>
+                        <pre>
+🥗 Железо (iron):        ${withIron.length} продуктов
+🍊 Витамин C:            ${withVitC.length} продуктов  
+🥛 Кальций:              ${withCalc.length} продуктов
+🧲 Магний:               ${withMagnesium.length} продуктов
+🛡️  Цинк:                ${withZinc.length} продуктов
+
+Топ-3 железо:
+${topIron.slice(0, 3).map(p => `  • ${p.name}: ${p.iron} мг`).join('\n')}
+
+Топ-3 витамин C:
+${topVitC.slice(0, 3).map(p => `  • ${p.name}: ${p.vitamin_c} мг`).join('\n')}
+                        </pre>
+                    </div>`;
+
+            } catch (err) {
+                console.error('[CHECK] Ошибка:', err);
+                status.innerHTML = `<div class="status status-error">❌ ${err.message}</div>`;
+            }
+        }
+
+        async function reanalyzeInsights() {
+            const status = document.getElementById('insightsStatus');
+            const results = document.getElementById('results');
+
+            status.innerHTML = '<div class="status status-info">⏳ Перезапуск инсайтов...</div>';
+
+            try {
+                // Очистить кэш
+                if (HEYS.InsightsPI?.clearCache) {
+                    HEYS.InsightsPI.clearCache();
+                    console.log('[INSIGHTS] ✅ Кэш очищен');
+                }
+
+                // Перезапустить analyze
+                if (!HEYS.InsightsPI?.analyzeAll) {
+                    throw new Error('HEYS.InsightsPI.analyzeAll не доступен');
+                }
+
+                console.log('[INSIGHTS] Запуск analyzeAll...');
+                const insights = await HEYS.InsightsPI.analyzeAll();
+
+                console.log('[INSIGHTS] Результат:', insights);
+
+                // Подсчёт паттернов
+                const patterns = insights?.patterns || [];
+                const activePatterns = patterns.filter(p => p.available || p.hasPattern);
+                const inactivePatterns = patterns.filter(p => !p.available && !p.hasPattern);
+
+                // Группировка
+                const microPatterns = patterns.filter(p =>
+                    p.pattern?.includes('vitamin') ||
+                    p.pattern?.includes('iron') ||
+                    p.pattern?.includes('bone') ||
+                    p.pattern?.includes('magnesium') ||
+                    p.pattern?.includes('zinc')
+                );
+                const activeMicro = microPatterns.filter(p => p.available || p.hasPattern);
+                const inactiveMicro = microPatterns.filter(p => !p.available && !p.hasPattern);
+
+                status.innerHTML = `
+                    <div class="status status-success">
+                        ✅ Инсайты перезапущены<br>
+                        Активно: ${activePatterns.length}/${patterns.length}<br>
+                        Микронутриенты: ${activeMicro.length}/${microPatterns.length}
+                    </div>`;
+
+                results.innerHTML = `
+                    <h3>🎯 Активные паттерны (${activePatterns.length})</h3>
+                    <div class="pattern-list">
+                        ${activePatterns.map(p => `
+                            <div class="pattern-item pattern-active">
+                                ${p.pattern}
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <h3>❌ Неактивные паттерны (${inactivePatterns.length})</h3>
+                    <div class="pattern-list">
+                        ${inactivePatterns.map(p => `
+                            <div class="pattern-item pattern-inactive">
+                                ${p.pattern}<br>
+                                <small>${p.reason || 'N/A'}</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <h3>🥗 Микронутриенты паттерны</h3>
+                    <pre>${JSON.stringify(microPatterns.map(p => ({
+                    pattern: p.pattern,
+                    available: p.available,
+                    hasPattern: p.hasPattern,
+                    reason: p.reason
+                })), null, 2)}</pre>
+                `;
+
+            } catch (err) {
+                console.error('[INSIGHTS] Ошибка:', err);
+                status.innerHTML = `<div class="status status-error">❌ ${err.message}</div>`;
+                results.innerHTML = `<pre>${err.stack}</pre>`;
+            }
+        }
+
+        // Auto-check on load
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('[HEYS] Micronutrients Update Tool Ready');
+            console.log('[HEYS] HEYS.YandexAPI:', !!window.HEYS?.YandexAPI);
+            console.log('[HEYS] HEYS.InsightsPI:', !!window.HEYS?.InsightsPI);
+            console.log('[HEYS] HEYS.products:', !!window.HEYS?.products);
+        });
+    </script>
+</body>
+
+</html>

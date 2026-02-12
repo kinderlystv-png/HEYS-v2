@@ -11,7 +11,10 @@
 import fs from 'fs';
 import path from 'path';
 
-import { describe, it, expect } from 'vitest';
+import { afterAll, describe, it, expect } from 'vitest';
+
+const originalWindow = global.window;
+const originalHEYS = global.HEYS;
 
 // Mock global HEYS object
 global.HEYS = {
@@ -165,4 +168,9 @@ describe('Insulin Wave Module (Critical)', () => {
       expect(context.waveBonus).toBeGreaterThanOrEqual(-0.65);
     });
   });
+});
+
+afterAll(() => {
+  global.window = originalWindow;
+  global.HEYS = originalHEYS;
 });
