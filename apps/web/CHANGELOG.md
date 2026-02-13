@@ -1,5 +1,51 @@
 # @heys/web
 
+## 13.2.0 — v4.8.8 AI Product Parser Update (February 12, 2026)
+
+### Feature: Cholesterol Support + Schema Alignment 🧬
+
+**Added cholesterol field parsing** — AI product parser now supports cholesterol (mg/100g), aligned with `shared_products` DB schema.
+
+#### Changes
+
+- **ADDED**: Cholesterol field support in AI parser
+  - `AI_PRODUCT_FIELD_MAP`: Added `'cholesterol'` with Russian aliases `['холестерин', 'холестер', 'cholesterol']`
+  - `EXTENDED_NUTRIENT_KEYS`: Added `'Chol': 'cholesterol'` for compact notation
+- **FIXED**: Case mismatch between parser and DB
+  - Changed `'badFat100'/'goodFat100'` → `'badfat100'/'goodfat100'` (lowercase)
+  - Added `normalizeProductFields()` call in parser for app compatibility
+- **VERIFIED**: Legacy fields not in use
+  - `folate` column: 0/292 products (data in `vitamin_b9`)
+  - `sodium` column: 0/292 products (data in `sodium100`)
+
+#### New AI Prompt Format
+
+```
+ОБЯЗАТЕЛЬНО:
+Название: X
+...
+Вредные жиры: X
+Полезные жиры: X
+...
+
+ОПЦИОНАЛЬНО:
+Холестерин: X (мг/100г)  ← NEW!
+Натрий: X
+...
+```
+
+#### Modified Files
+
+- `apps/web/heys_models_v1.js` (v4.8.8 — AI parser update)
+- `docs/AI_PRODUCT_PARSE_PROMPT.md` (NEW — comprehensive prompt guide)
+
+#### Documentation
+
+- [AI_PRODUCT_PARSE_PROMPT.md](../../docs/AI_PRODUCT_PARSE_PROMPT.md) — Full AI parsing guide with 50+ field examples
+- Test file: `test_ai_parser_v4.8.8.html` — Interactive parser testing
+
+---
+
 ## 13.1.0 — v4.8.8 React State Sync Fix (February 12, 2026)
 
 ### Critical Bug Fix 🛡️

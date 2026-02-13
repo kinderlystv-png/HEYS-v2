@@ -129,6 +129,9 @@
         case PATTERNS.MICRONUTRIENT_RADAR: // v5.0 C7
         case PATTERNS.OMEGA_BALANCER: // v5.0 C8
         case PATTERNS.NOVA_QUALITY: // v5.0 C10
+        case PATTERNS.VITAMIN_DEFENSE: // v6.0 C13 (Phase 3, 12.02.2026)
+        case PATTERNS.PROTEIN_DISTRIBUTION: // v6.0 C15 (Phase 3, 12.02.2026)
+        case PATTERNS.NUTRIENT_DENSITY: // v6.0 C21 (Phase 3, 12.02.2026)
           scores.nutrition.push(p.score);
           break;
 
@@ -145,6 +148,7 @@
         case PATTERNS.STEPS_WEIGHT:
         case PATTERNS.NEAT_ACTIVITY:
         case PATTERNS.TRAINING_RECOVERY: // v5.0 C11
+        case PATTERNS.TRAINING_TYPE_MATCH: // v6.0 C19 (Phase 3, 12.02.2026)
           scores.activity.push(p.score);
           break;
 
@@ -156,6 +160,9 @@
         case PATTERNS.SLEEP_QUALITY: // v4.0 B1
         case PATTERNS.WELLBEING_CORRELATION: // v4.0 B2
         case PATTERNS.CYCLE_IMPACT: // v4.0 B5
+        case PATTERNS.ANTIOXIDANT_DEFENSE: // v6.0 C16 (Phase 3, 12.02.2026)
+        case PATTERNS.BONE_HEALTH: // v6.0 C17 (Phase 3, 12.02.2026)
+        case PATTERNS.ELECTROLYTE_HOMEOSTASIS: // v6.0 C20 (Phase 3, 12.02.2026)
           scores.recovery.push(p.score);
           break;
 
@@ -163,6 +170,9 @@
         case PATTERNS.BODY_COMPOSITION: // v4.0 B4
         case PATTERNS.HEART_HEALTH: // v5.0 C9
         case PATTERNS.HYPERTROPHY: // v5.0 C12
+        case PATTERNS.B_COMPLEX_ANEMIA: // v6.0 C22 (Phase 3, 12.02.2026)
+        case PATTERNS.GLYCEMIC_LOAD: // v6.0 C14 (Phase 3, 12.02.2026)
+        case PATTERNS.ADDED_SUGAR_DEPENDENCY: // v6.0 C18 (Phase 3, 12.02.2026)
           scores.metabolism.push(p.score);
           break;
       }

@@ -972,6 +972,83 @@
             zoneNames
         } = trainingHandlers || {};
 
+        const executeInsightsDataAction = React.useCallback((actionId) => {
+            switch (actionId) {
+                case 'open_training':
+                    if (typeof openTrainingPicker === 'function') {
+                        openTrainingPicker('add');
+                        return true;
+                    }
+                    return false;
+                case 'open_household':
+                    if (typeof openHouseholdPicker === 'function') {
+                        openHouseholdPicker('add');
+                        return true;
+                    }
+                    return false;
+                case 'open_sleep_quality':
+                    if (typeof openSleepQualityPicker === 'function') {
+                        openSleepQualityPicker();
+                        return true;
+                    }
+                    return false;
+                case 'open_measurements':
+                    if (typeof openMeasurementsEditor === 'function') {
+                        openMeasurementsEditor();
+                        return true;
+                    }
+                    return false;
+                case 'open_steps':
+                    if (typeof openStepsGoalPicker === 'function') {
+                        openStepsGoalPicker();
+                        return true;
+                    }
+                    return false;
+                case 'open_weight':
+                    if (typeof openWeightPicker === 'function') {
+                        openWeightPicker();
+                        return true;
+                    }
+                    return false;
+                default:
+                    return false;
+            }
+        }, [
+            openTrainingPicker,
+            openHouseholdPicker,
+            openSleepQualityPicker,
+            openMeasurementsEditor,
+            openStepsGoalPicker,
+            openWeightPicker
+        ]);
+
+        // Экспорт обработчика для quick-actions из Insights
+        useEffect(() => {
+            HEYS.ui = HEYS.ui || {};
+            HEYS.ui.openDataEntryFromInsights = executeInsightsDataAction;
+
+            return () => {
+                if (HEYS.ui?.openDataEntryFromInsights === executeInsightsDataAction) {
+                    delete HEYS.ui.openDataEntryFromInsights;
+                }
+            };
+        }, [executeInsightsDataAction]);
+
+        // Авто-выполнение pending action после перехода из Insights
+        useEffect(() => {
+            const pendingAction = HEYS.ui?.pendingDataEntryAction;
+            if (!pendingAction) return;
+
+            const timer = setTimeout(() => {
+                const opened = executeInsightsDataAction(pendingAction);
+                if (opened && HEYS.ui) {
+                    delete HEYS.ui.pendingDataEntryAction;
+                }
+            }, 80);
+
+            return () => clearTimeout(timer);
+        }, [executeInsightsDataAction]);
+
         const sleepH = sleepHours(day.sleepStart, day.sleepEnd);
 
         // Автоматически обновляем sleepHours в объекте дня при изменении времени сна

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>🔬 Parser Debug Test</title>
+    <style>
+        body {
+            font-family: system-ui;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        .test {
+            background: #2a2a2a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+
+        .pass {
+            border-left: 4px solid #22c55e;
+        }
+
+        .fail {
+            border-left: 4px solid #ef4444;
+        }
+
+        pre {
+            background: #000;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        h2 {
+            color: #6ba6ff;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔬 AI Parser Debug Test</h1>
+    <button onclick="runTest()">▶️ Запустить тест</button>
+    <div id="results"></div>
+
+    <script>
+        // Copy-paste normalizeAIKey function
+        function normalizeAIKey(rawKey) {
+            return String(rawKey || '')
+                .toLowerCase()
+                .replace(/ё/g, 'е')
+                .replace(/[^a-z0-9а-я]/gi, '');
+        }
+
+        // Test cases
+        const testCases = [
+            { input: 'Витамин K', expected: 'витаминk', desc: 'Витамин K с пробелом' },
+            { input: 'ГИ', expected: 'ги', desc: 'ГИ заглавными' },
+            { input: 'Омега-3', expected: 'омега3', desc: 'Омега-3 с дефисом' },
+            { input: 'Железо', expected: 'железо', desc: 'Железо' },
+            { input: 'Витамин B1', expected: 'витаминb1', desc: 'B1 с пробелом' },
+            { input: 'Транс-жиры', expected: 'трансжиры', desc: 'Транс-жиры с дефисом' },
+        ];
+
+        // Test parseNumber
+        function parseAIValueNumber(rawValue) {
+            if (rawValue == null) return undefined;
+            const cleaned = String(rawValue)
+                .replace(/,/g, '.')
+                .replace(/[^0-9+\-.]/g, ' ');
+            const match = cleaned.match(/[-+]?\d+(?:\.\d+)?/);
+            if (!match) return undefined;
+            const n = Number(match[0]);
+            return Number.isFinite(n) ? n : undefined;
+        }
+
+        const numberTests = [
+            { input: '0.1', expected: 0.1 },
+            { input: '1.2', expected: 1.2 },
+            { input: '12', expected: 12 },
+            { input: '450', expected: 450 },
+            { input: '0', expected: 0 },
+            { input: '0.0', expected: 0 },
+        ];
+
+        function runTest() {
+            const results = document.getElementById('results');
+            results.innerHTML = '';
+
+            // Test key normalization
+            results.innerHTML += '<h2>🔑 Тест normalizeAIKey</h2>';
+            testCases.forEach(test => {
+                const actual = normalizeAIKey(test.input);
+                const pass = actual === test.expected;
+                results.innerHTML += `
+                    <div class="test ${pass ? 'pass' : 'fail'}">
+                        <strong>${test.desc}</strong><br>
+                        Ввод: <code>${test.input}</code><br>
+                        Ожидалось: <code>${test.expected}</code><br>
+                        Получено: <code>${actual}</code><br>
+                        ${pass ? '✅ PASS' : '❌ FAIL'}
+                    </div>
+                `;
+            });
+
+            // Test number parsing
+            results.innerHTML += '<h2>🔢 Тест parseAIValueNumber</h2>';
+            numberTests.forEach(test => {
+                const actual = parseAIValueNumber(test.input);
+                const pass = actual === test.expected;
+                results.innerHTML += `
+                    <div class="test ${pass ? 'pass' : 'fail'}">
+                        Ввод: <code>${test.input}</code><br>
+                        Ожидалось: <code>${test.expected}</code><br>
+                        Получено: <code>${actual}</code><br>
+                        ${pass ? '✅ PASS' : '❌ FAIL'}
+                    </div>
+                `;
+            });
+
+            // Test full string parsing
+            results.innerHTML += '<h2>📝 Тест полной строки</h2>';
+            const fullString = `Название: Салат с копчёной курицей
+Ккал: 108.4
+Углеводы: 8.5
+Простые: 3.8
+Сложные: 3.3
+Белок: 8.7
+Жиры: 3.9
+Вредные жиры: 0.8
+Полезные жиры: 3.2
+Транс-жиры: 0
+Клетчатка: 1.5
+ГИ: 45
+Вред: 2.2
+Натрий: 950
+Холестерин: 20
+Омега-3: 0.1
+Омега-6: 1.1
+Железо: 1.2
+Витамин K: 12`;
+
+            const lines = fullString.split('\n');
+            const parsed = [];
+            lines.forEach(line => {
+                const match = line.match(/^(.+?)[\s]*[:=][\s]+(.+)$/);
+                if (!match) return;
+                const rawKey = match[1].trim();
+                const rawValue = match[2].trim();
+                const normalizedKey = normalizeAIKey(rawKey);
+                const numVal = parseAIValueNumber(rawValue);
+                parsed.push({
+                    raw: rawKey,
+                    normalized: normalizedKey,
+                    value: rawValue,
+                    parsed: numVal
+                });
+            });
+
+            results.innerHTML += '<pre>' + JSON.stringify(parsed, null, 2) + '</pre>';
+        }
+    </script>
+</body>
+
+</html>

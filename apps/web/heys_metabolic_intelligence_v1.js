@@ -2277,7 +2277,7 @@
     const prods = HEYS.products?.getAll?.() || lsGet('heys_products', []);
     const pIndex = buildIdx ? buildIdx(prods) : null;
     const analysis = HEYS.PredictiveInsights.analyze({
-      daysBack: 14,
+      daysBack: 60,
       lsGet,
       profile,
       pIndex

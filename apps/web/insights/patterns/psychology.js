@@ -45,6 +45,8 @@
     };
 
     const calculateDayKcal = piCalculations.calculateDayKcal || function (day, pIndex) {
+        const savedKcal = Number(day?.savedEatenKcal);
+        if (Number.isFinite(savedKcal) && savedKcal > 0) return savedKcal;
         if (!day?.meals?.length) return 0;
         let total = 0;
         for (const meal of day.meals) {
@@ -82,6 +84,7 @@
             return {
                 pattern: PATTERNS.STRESS_EATING,
                 available: false,
+                reason: 'no_stress_data',
                 confidence: 0.2,
                 insight: 'Недостаточно данных о стрессе'
             };
@@ -128,11 +131,13 @@
      * @returns {object}
      */
     function analyzeMoodFood(days, pIndex, optimum) {
-        const getMealQualityScore = HEYS.getMealQualityScore;
+        const getMealQualityScore = HEYS.getMealQualityScore
+            || HEYS.mealScoring?.getMealQualityScore;
         if (!getMealQualityScore) {
             return {
                 pattern: PATTERNS.MOOD_FOOD,
                 available: false,
+                reason: 'no_quality_function',
                 insight: 'Оценка качества приёмов недоступна'
             };
         }
@@ -162,6 +167,7 @@
             return {
                 pattern: PATTERNS.MOOD_FOOD,
                 available: false,
+                reason: 'no_mood_data',
                 confidence: 0.2,
                 insight: 'Недостаточно данных о настроении'
             };

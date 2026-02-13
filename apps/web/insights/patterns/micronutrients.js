@@ -197,8 +197,9 @@
         const minDays = 7;
 
         const nCheck = checkMinN(days, minDays);
-        if (!nCheck.ok) {
-            return { pattern, available: false, reason: 'min-data', daysAnalyzed: Array.isArray(days) ? days.length : 0 };
+        const hasMinDays = typeof nCheck === 'boolean' ? nCheck : Boolean(nCheck?.ok);
+        if (!hasMinDays) {
+            return { pattern, available: false, reason: 'min_days_required', minDaysRequired: minDays, daysProvided: Array.isArray(days) ? days.length : 0 };
         }
 
         const validDays = (days || []).filter(d => d && d.meals && d.meals.length > 0);
@@ -322,7 +323,8 @@
         const minDays = 7;
 
         const nCheck = checkMinN(days, minDays);
-        if (!nCheck.ok) {
+        const hasMinDays = typeof nCheck === 'boolean' ? nCheck : Boolean(nCheck?.ok);
+        if (!hasMinDays) {
             return {
                 pattern,
                 available: false,
@@ -380,8 +382,9 @@
         const energyQuartet = ['vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6'];
         const bloodPair = ['vitamin_b9', 'vitamin_b12'];
 
-        const energyBscore = Math.round(average(energyQuartet.map(v => nutrientData[v]?.pctDV || 0)));
-        const bloodBscore = Math.round(average(bloodPair.map(v => nutrientData[v]?.pctDV || 0)));
+        // Normalize pctDV to max 200% to prevent score overflow (user may take vitamin supplements with 500-3000% DV)
+        const energyBscore = Math.round(average(energyQuartet.map(v => Math.min(200, nutrientData[v]?.pctDV || 0))));
+        const bloodBscore = Math.round(average(bloodPair.map(v => Math.min(200, nutrientData[v]?.pctDV || 0))));
 
         const ironDeficit = nutrientData.iron?.pctDV < 70;
         const b12Deficit = nutrientData.vitamin_b12?.pctDV < 70;
@@ -393,7 +396,7 @@
         if (folateDeficit) anemiaRisk += 25;
         if (ironDeficit && b12Deficit && folateDeficit) anemiaRisk = 100;
 
-        const score = Math.round(energyBscore * 0.4 + bloodBscore * 0.3 + (100 - anemiaRisk) * 0.3);
+        const score = Math.max(0, Math.min(100, Math.round(energyBscore * 0.4 + bloodBscore * 0.3 + (100 - anemiaRisk) * 0.3)));
         const baseConfidence = score >= 70 ? 0.75 : 0.65;
         const confidence = applySmallSamplePenalty(baseConfidence, days.length, minDays);
 
@@ -427,7 +430,8 @@
         const minDays = 7;
 
         const nCheck = checkMinN(days, minDays);
-        if (!nCheck.ok) {
+        const hasMinDays = typeof nCheck === 'boolean' ? nCheck : Boolean(nCheck?.ok);
+        if (!hasMinDays) {
             return {
                 pattern,
                 available: false,
@@ -522,7 +526,8 @@
         const minDays = 14;
 
         const nCheck = checkMinN(days, minDays);
-        if (!nCheck.ok) {
+        const hasMinDays = typeof nCheck === 'boolean' ? nCheck : Boolean(nCheck?.ok);
+        if (!hasMinDays) {
             return { pattern, available: false, reason: 'min_days_required' };
         }
 

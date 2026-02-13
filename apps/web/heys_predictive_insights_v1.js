@@ -65,12 +65,12 @@
   }
 
   const CONFIG = piConst.CONFIG || {
-    DEFAULT_DAYS: 14,
+    DEFAULT_DAYS: 60,
     MIN_DAYS_FOR_INSIGHTS: 3,
     MIN_DAYS_FOR_FULL_ANALYSIS: 7,
     MIN_CORRELATION_DISPLAY: 0.35,
     CACHE_TTL_MS: 5 * 60 * 1000,
-    VERSION: '3.1.0'
+    VERSION: '4.1.0'
   };
 
   // === СИСТЕМА ПРИОРИТЕТОВ И КРИТЕРИЕВ ===
@@ -398,7 +398,7 @@
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
       const dayData = lsGet(`heys_dayv2_${dateStr}`, null);
-      if (dayData && dayData.meals && dayData.meals.length > 0) {
+      if (dayData && Object.keys(dayData).length > 0) {
         days.push({ date: dateStr, daysAgo: i, ...dayData });
       }
     }
@@ -647,10 +647,62 @@
       analyzeTrainingTypeMatch(days, profile, pIndex), // C19: Training-Type Nutrition Match
       analyzeElectrolyteHomeostasis(days, pIndex), // C20: Electrolyte Homeostasis
       analyzeNutrientDensity(days, pIndex) // C21: Nutrient Density
-    ].filter(p => p && (p.available || p.hasPattern));
+    ]
+      .flat() // Раскрываем массивы (на случай если анализатор вернул несколько паттернов)
+      .filter(p => p != null)
+      .reduce((acc, p) => {
+        // Дедупликация: берем только первое вхождение каждого pattern ID
+        if (!acc.some(existing => existing.pattern === p.pattern)) {
+          acc.push(p);
+        } else {
+          console.warn(`[HEYS.insights] ⚠️ Duplicate pattern detected and skipped: ${p.pattern}`);
+        }
+        return acc;
+      }, [])
+      .map(p => {
+        // Нормализация: если available=false, но reason отсутствует, пытаемся извлечь или дать дефолтный
+        if (!p.available && !p.reason) {
+          const msg = (p.message || p.insight || '').toLowerCase();
+          if (msg.includes('недостаточно данных') || msg.includes('мало дней')) {
+            p.reason = 'insufficient_data';
+          } else if (msg.includes('нет приём') || msg.includes('нет данных о приём')) {
+            p.reason = 'no_meals';
+          } else if (msg.includes('нет трениров')) {
+            p.reason = 'no_training';
+          } else if (msg.includes('нет сна') || msg.includes('нет данных о сне')) {
+            p.reason = 'no_sleep';
+          } else {
+            p.reason = 'insufficient_data'; // Дефолтный reason
+          }
+        }
+        return p;
+      });
 
     console.info(`[HEYS.insights] 📊 v6.0 | daysBack=${daysBack}, days=${days.length}, patterns=${patterns.length}/41 possible (v6.0: +C13+C22+C14+C15+C16+C18+C17+C19+C20+C21)`,
       patterns.map(p => `${p.pattern || 'unknown_pattern'}:${p.score ?? 'n/a'}`));
+
+    // Detailed unavailable patterns logging
+    const unavailable = patterns.filter(p => !p.available);
+    if (unavailable.length > 0) {
+      console.group(`[HEYS.insights] ⏸️ Недоступные паттерны (${unavailable.length}/${patterns.length})`);
+      unavailable.forEach(p => {
+        console.log(
+          `├─ ${p.pattern}:`,
+          `reason="${p.reason || 'none'}"`,
+          p.message ? `msg="${p.message}"` : ''
+        );
+      });
+      console.groupEnd();
+    }
+
+    // Category distribution log
+    const catCounts = patterns.reduce((acc, p) => {
+      const meta = HEYS.InsightsPI?.patternDebugger?.PATTERN_METADATA?.[p.pattern];
+      const cat = meta?.category || 'unknown';
+      acc[cat] = (acc[cat] || 0) + 1;
+      return acc;
+    }, {});
+    console.info(`[HEYS.insights] 📂 Category counts:`, catCounts);
 
     // Рассчитываем Health Score
     const healthScore = calculateHealthScore(patterns, profile);
@@ -1069,7 +1121,7 @@
     const lsGet = U.lsGet || ((k, d) => {
       try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
     });
-    const analysis = HEYS.PredictiveInsights.analyze({ daysBack: 14, lsGet });
+    const analysis = HEYS.PredictiveInsights.analyze({ daysBack: 60, lsGet });
     return analysis?.weeklyWrap || null;
   };
 

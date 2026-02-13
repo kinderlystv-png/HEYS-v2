@@ -97,7 +97,7 @@
       const dateStr = d.toISOString().split('T')[0];
       const dayData = lsGet(`heys_dayv2_${dateStr}`, null);
 
-      if (dayData && dayData.meals && dayData.meals.length > 0) {
+      if (dayData && Object.keys(dayData).length > 0) {
         days.push({
           date: dateStr,
           daysAgo: i,

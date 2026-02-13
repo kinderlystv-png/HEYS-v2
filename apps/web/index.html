@@ -1967,29 +1967,31 @@
     <!-- Predictive Insights (split modules) v6 -->
     <script defer src="insights/pi_constants.js?v=7" fetchpriority="low"></script>
     <script defer src="insights/pi_math.js?v=6" fetchpriority="low"></script>
-    <script defer src="insights/pi_stats.js?v=7" fetchpriority="low"></script>
-    <script defer src="insights/pi_science_info.js?v=7" fetchpriority="low"></script>
-    <script defer src="insights/patterns/timing.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/patterns/sleep.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/patterns/psychology.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/patterns/activity.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/patterns/lifestyle.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/patterns/body.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/patterns/training_nutrition.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/patterns/metabolic.js?v=2" fetchpriority="low"></script>
-    <script defer src="insights/patterns/quality.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/patterns/micronutrients.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/pi_patterns.js?v=9" fetchpriority="low"></script>
-    <script defer src="insights/pi_advanced.js?v=8" fetchpriority="low"></script>
+    <script defer src="insights/pi_stats.js?v=7"></script>
+    <script defer src="insights/pi_science_info.js?v=7"></script>
+    <!-- Pattern modules MUST load before pi_patterns.js (fix race condition) -->
+    <script defer src="insights/patterns/timing.js?v=2"></script>
+    <script defer src="insights/patterns/sleep.js?v=3"></script>
+    <script defer src="insights/patterns/psychology.js?v=3"></script>
+    <script defer src="insights/patterns/activity.js?v=3"></script>
+    <script defer src="insights/patterns/lifestyle.js?v=4"></script>
+    <script defer src="insights/patterns/body.js?v=2"></script>
+    <script defer src="insights/patterns/training_nutrition.js?v=2"></script>
+    <script defer src="insights/patterns/metabolic.js?v=3"></script>
+    <script defer src="insights/patterns/quality.js?v=3"></script>
+    <script defer src="insights/patterns/micronutrients.js?v=4"></script>
+    <script defer src="insights/pi_patterns.js?v=10"></script>
+    <script defer src="insights/pi_advanced.js?v=10" fetchpriority="low"></script>
     <script defer src="insights/pi_cache.js?v=1" fetchpriority="high"></script>
     <script defer src="insights/pi_analytics_api.js?v=7" fetchpriority="low"></script>
-    <script defer src="insights/pi_calculations.js?v=7" fetchpriority="low"></script>
+    <script defer src="insights/pi_calculations.js?v=8" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_helpers.js?v=1" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_rings.js?v=6" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_cards.js?v=8" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_whatif.js?v=6" fetchpriority="low"></script>
-    <script defer src="insights/pi_ui_dashboard.js?v=7" fetchpriority="low"></script>
-    <script defer src="insights/pi_data.js?v=6" fetchpriority="low"></script>
+    <script defer src="insights/pi_ui_dashboard.js?v=8" fetchpriority="low"></script>
+    <script defer src="insights/pi_pattern_debugger.js?v=6" fetchpriority="low"></script>
+    <script defer src="insights/pi_data.js?v=7" fetchpriority="low"></script>
     <!-- Bridge: creates HEYS.PredictiveInsights.components getter from InsightsPI submodules -->
     <script defer src="heys_predictive_insights_v1.js?v=6" fetchpriority="low"></script>
     <script defer src="heys_phenotype_v1.js?v=2" fetchpriority="low"></script>
@@ -2010,7 +2012,7 @@
     <!-- Day module: consolidated meals (card/list/display/chart/state/handlers) -->
     <script defer src="day/_meals.js?v=4" fetchpriority="low"></script>
     <!-- End Day module split -->
-    <script defer src="heys_day_tab_impl_v1.js?v=4" fetchpriority="low"></script>
+    <script defer src="heys_day_tab_impl_v1.js?v=5" fetchpriority="low"></script>
     <script defer src="heys_day_v12.js?v=54" fetchpriority="low"></script>
     <script defer src="heys_user_tab_impl_v1.js?v=1" fetchpriority="low"></script>
     <script defer src="heys_user_v12.js?v=20" fetchpriority="low"></script>

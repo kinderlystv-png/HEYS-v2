@@ -550,8 +550,10 @@
       const [selectedCategory, setSelectedCategory] = useState(null);
 
       const insights = useMemo(() => {
+        // 🔧 v6.0.2: Динамический daysBack в зависимости от выбранного таба
+        const daysBack = activeTab === 'today' ? 7 : 30;
         return HEYS.PredictiveInsights.analyze({
-          daysBack: activeTab === 'today' ? 7 : 14,
+          daysBack,
           lsGet,
           profile,
           pIndex,
@@ -944,6 +946,7 @@
       const [activeTab, setActiveTab] = useState('today');
       const [selectedCategory, setSelectedCategory] = useState(null);
       const [priorityFilter, setPriorityFilter] = useState(null); // null = показать всё
+      const [showPatternDebug, setShowPatternDebug] = useState(false); // Pattern Transparency Modal
 
       // 🎯 State для отслеживания прохождения тура (нужен для перерисовки после завершения)
       // 🔧 v1.13 FIX: Проверяем ОБА источника — scoped (HEYS.store) И unscoped (localStorage)
@@ -1049,9 +1052,11 @@
 
       // Анализ данных
       const realInsights = useMemo(() => {
+        // 🔧 v6.0.2: Динамический daysBack в зависимости от выбранного таба
+        const daysBack = activeTab === 'today' ? 7 : 30;
         return HEYS.PredictiveInsights.analyze({
           lsGet: lsGet || (window.HEYS?.utils?.lsGet),
-          daysBack: activeTab === 'today' ? 7 : 30,
+          daysBack,
           profile: effectiveData.profile,
           pIndex: effectiveData.pIndex,
           optimum: effectiveData.optimum
@@ -1122,8 +1127,8 @@
               h('h2', { className: 'insights-tab__title' }, '🔮 Умная аналитика'),
               h('div', { className: 'insights-tab__subtitle' },
                 activeTab === 'today'
-                  ? 'Анализ за 7 дней'
-                  : 'Глубокий анализ за 30 дней'
+                  ? `Анализ за ${insights.daysAnalyzed || 7} дней`
+                  : `Глубокий анализ за ${insights.daysAnalyzed || 30} дней`
               )
             ),
 
@@ -1202,7 +1207,8 @@
                       mode: insights.healthScore.mode,
                       weights: insights.healthScore.weights,
                       breakdown: insights.healthScore.breakdown
-                    }
+                    },
+                    onClick: () => setShowPatternDebug(true) // 🔍 Открыть Pattern Transparency Modal
                   })
                 ),
                 h('div', { className: 'insights-tab__rings' },
@@ -1415,6 +1421,17 @@
             )
 
           ) // закрытие insights-tab__content
+          ,
+
+          // Pattern Debug Modal — показывается при клике на Health Score
+          showPatternDebug && window.PatternDebugModal && h(window.PatternDebugModal, {
+            lsGet,
+            profile,
+            pIndex,
+            optimum,
+            onClose: () => setShowPatternDebug(false)
+          })
+
         )
       );
     }

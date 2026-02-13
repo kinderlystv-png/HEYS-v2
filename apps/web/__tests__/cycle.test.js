@@ -10,7 +10,10 @@
 import fs from 'fs';
 import path from 'path';
 
-import { describe, it, expect } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
+
+const originalWindow = global.window;
+const originalHEYS = global.HEYS;
 
 // Mock global HEYS object
 global.HEYS = {
@@ -18,6 +21,8 @@ global.HEYS = {
     lsGet: () => null
   }
 };
+
+global.window = global;
 
 // Load the legacy file
 const filePath = path.resolve(__dirname, '../heys_cycle_v1.js');
@@ -86,4 +91,9 @@ describe('Cycle Module (Critical)', () => {
       expect(info.hasRetention).toBe(false);
     });
   });
+});
+
+afterAll(() => {
+  global.window = originalWindow;
+  global.HEYS = originalHEYS;
 });

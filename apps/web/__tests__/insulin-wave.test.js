@@ -11,7 +11,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import { afterAll, describe, it, expect } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 
 const originalWindow = global.window;
 const originalHEYS = global.HEYS;
@@ -64,7 +64,7 @@ describe('Insulin Wave Module (Critical)', () => {
         console.log('⚠️ calculateContinuousGLMultiplier moved to __internals, testing via calculate()');
         return; // Internal function not exposed - test via main API
       }
-      
+
       // GL=5 -> ~0.48 (v3.0.0 table)
       const gl5 = fn(5);
       expect(gl5).toBeGreaterThan(0.4);
@@ -88,7 +88,7 @@ describe('Insulin Wave Module (Critical)', () => {
         console.log('⚠️ calculatePersonalBaselineWave moved to __internals, testing via calculate()');
         return; // Internal function not exposed - test via main API
       }
-      
+
       const profile = { age: 25, weight: 70, height: 175, gender: 'Мужской' }; // BMI ~22.8 (Normal)
       const res = fn(profile);
       // Base 3.0 * (1 + 0.03 male) = 3.09
@@ -101,7 +101,7 @@ describe('Insulin Wave Module (Critical)', () => {
         console.log('⚠️ calculatePersonalBaselineWave moved to __internals, testing via calculate()');
         return; // Internal function not exposed - test via main API
       }
-      
+
       const profile = { age: 50, weight: 100, height: 175, gender: 'Мужской' }; // BMI ~32.6 (Obese)
       // Age 45-59: +10%
       // BMI 30+: +15%
@@ -121,7 +121,7 @@ describe('Insulin Wave Module (Critical)', () => {
         householdMin: 0,
         steps: 0
       });
-      
+
       expect(context.type).toBe('post');
       expect(context.waveBonus).toBeLessThan(0); // Should reduce wave
     });
@@ -134,7 +134,7 @@ describe('Insulin Wave Module (Critical)', () => {
         householdMin: 0,
         steps: 0
       });
-      
+
       expect(context.type).toBe('peri');
       expect(context.harmMultiplier).toBeLessThan(1.0); // Should reduce harm
     });
@@ -144,17 +144,17 @@ describe('Insulin Wave Module (Critical)', () => {
     it('should reduce wave significantly for high-kcal workout (POST)', () => {
       // Mock internal helper if needed, or test via calculateActivityContext
       // But calculateActivityContext returns waveBonus based on kcal
-      
+
       const context = IW.calculateActivityContext({
         mealTimeMin: 14 * 60 + 15, // 14:15 (15 min after workout)
         mealKcal: 500,
-        trainings: [{ 
-          time: '12:00', 
-          type: 'cardio', 
-          duration: 120, 
+        trainings: [{
+          time: '12:00',
+          type: 'cardio',
+          duration: 120,
           z: [0, 0, 60, 60], // 120 min HIIT -> ~1200 kcal
-          kcal: 1200 
-        }], 
+          kcal: 1200
+        }],
         householdMin: 0,
         steps: 0
       });

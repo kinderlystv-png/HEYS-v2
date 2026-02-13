@@ -13,7 +13,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import { afterAll, describe, it, expect, beforeAll } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const originalWindow = global.window;
 const originalHEYS = global.HEYS;
@@ -57,7 +57,7 @@ describe('InsulinWave API Canary', () => {
     const publicKeys = Object.keys(IW)
       .filter(k => k !== '__internals')
       .sort();
-    
+
     // This snapshot captures the EXACT public API before refactoring
     expect(publicKeys).toMatchSnapshot();
   });
@@ -122,7 +122,7 @@ describe('InsulinWave API Canary', () => {
   it('constants are exposed', () => {
     expect(IW.GI_CATEGORIES).toBeDefined();
     expect(typeof IW.GI_CATEGORIES).toBe('object');
-    
+
     expect(IW.PROTEIN_BONUS).toBeDefined();
     expect(IW.STATUS_CONFIG).toBeDefined();
     expect(IW.LIPOLYSIS_THRESHOLDS).toBeDefined();
@@ -147,7 +147,7 @@ describe('InsulinWave API Canary', () => {
       mealTimeMin: 720, // 12:00
       profile: { age: 25, weight: 70, height: 175, gender: 'Мужской' }
     });
-    
+
     expect(result).toBeDefined();
     // Result might be null if some deps are missing, but function should exist
     if (result) {
@@ -160,7 +160,7 @@ describe('InsulinWave API Canary', () => {
     // Before shim is loaded, __internals should not exist in monolith
     // After shim, it will exist - this test documents the transition
     const hasInternals = '__internals' in IW;
-    
+
     // Document current state (may be true or false depending on when test runs)
     expect(typeof hasInternals).toBe('boolean');
   });

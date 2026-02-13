@@ -8,12 +8,12 @@
   const piConst = (window.piConst || HEYS.InsightsPI.constants || {});
 
   const CONFIG = piConst.CONFIG || {
-    DEFAULT_DAYS: 14,
+    DEFAULT_DAYS: 60,
     MIN_DAYS_FOR_INSIGHTS: 3,
     MIN_DAYS_FOR_FULL_ANALYSIS: 7,
     MIN_CORRELATION_DISPLAY: 0.35,
     CACHE_TTL_MS: 5 * 60 * 1000,
-    VERSION: '4.0.0'
+    VERSION: '4.1.0'
   };
 
   // === СИСТЕМА ПРИОРИТЕТОВ И КРИТЕРИЕВ ===

@@ -36,7 +36,7 @@
      */
     function analyzeHypertrophy(days, profile) {
         if (!days || days.length < 14) {
-            return { pattern: PATTERNS.HYPERTROPHY, available: false };
+            return { pattern: PATTERNS.HYPERTROPHY, available: false, reason: 'no_measurements' };
         }
 
         const measurements = days
@@ -45,11 +45,11 @@
                 date: d.date,
                 biceps: d.measurements?.biceps || 0,
                 thigh: d.measurements?.thigh || 0,
-                weight: d.weight || profile?.weight || 0
+                weight: d.weightMorning || profile?.weight || 0
             }));
 
         if (measurements.length < 5) {
-            return { pattern: PATTERNS.HYPERTROPHY, available: false };
+            return { pattern: PATTERNS.HYPERTROPHY, available: false, reason: 'no_measurements' };
         }
 
         const bicepsValues = measurements.map(m => m.biceps).filter(v => v > 0);
@@ -57,7 +57,7 @@
         const weightValues = measurements.map(m => m.weight).filter(v => v > 0);
 
         if (bicepsValues.length < 3 && thighValues.length < 3) {
-            return { pattern: PATTERNS.HYPERTROPHY, available: false };
+            return { pattern: PATTERNS.HYPERTROPHY, available: false, reason: 'no_measurements' };
         }
 
         const bicepsTrend = bicepsValues.length >= 3 ? calculateTrend(bicepsValues) : 0;
@@ -65,8 +65,18 @@
         const weightTrend = weightValues.length >= 3 ? calculateTrend(weightValues) : 0;
 
         const proteinDays = days.filter(d => {
-            const proteinGrams = d.tot?.prot || 0;
-            const weight = d.weight || profile?.weight || 70;
+            // dayTot не хранится в localStorage — вычисляем протеин из meals
+            let proteinGrams = 0;
+            if (d.meals) {
+                for (const meal of d.meals) {
+                    for (const item of (meal.items || [])) {
+                        const grams = Number(item.grams) || 0;
+                        const prot100 = Number(item.prot100) || 0;
+                        proteinGrams += (prot100 * grams / 100);
+                    }
+                }
+            }
+            const weight = d.weightMorning || profile?.weight || 70;
             return (proteinGrams / weight) >= 1.6;
         });
         const proteinAdequacy = (proteinDays.length / days.length) * 100;

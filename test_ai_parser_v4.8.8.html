@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 AI Product Parser v4.8.8 Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .version {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .panel {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 400px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+            background: white;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.5;
+            margin-top: 15px;
+        }
+
+        .success {
+            color: #27ae60;
+            font-weight: 600;
+        }
+
+        .error {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 16px;
+            margin-top: 3px;
+        }
+
+        .test-samples {
+            margin-top: 15px;
+        }
+
+        .test-btn {
+            background: #27ae60;
+            padding: 8px 15px;
+            font-size: 13px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .test-btn:hover {
+            background: #229954;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🧪 AI Product Parser v4.8.8 Test</h1>
+        <div class="version">
+            HEYS PWA | Обновление: холестерин + case fix (badfat100/goodfat100)
+        </div>
+
+        <div class="columns">
+            <div class="panel">
+                <h2>📝 AI Input (Ключ: значение)</h2>
+                <textarea id="aiInput" placeholder="Вставьте текст от AI или выберите тестовый пример..."></textarea>
+                <div class="test-samples">
+                    <button class="test-btn" onclick="loadSample1()">🍫 Шоколад (полный)</button>
+                    <button class="test-btn" onclick="loadSample2()">🥚 Яйцо (с холестерином)</button>
+                    <button class="test-btn" onclick="loadSample3()">🥗 Салат (минимум)</button>
+                </div>
+                <button onclick="parseProduct()">🚀 Парсить продукт</button>
+            </div>
+
+            <div class="panel">
+                <h2>✨ Результат</h2>
+                <div id="stats" class="stats" style="display:none;">
+                    <div class="stat">
+                        <div class="stat-label">Ккал</div>
+                        <div class="stat-value" id="statKcal">—</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Белки</div>
+                        <div class="stat-value" id="statProt">—</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Углеводы</div>
+                        <div class="stat-value" id="statCarbs">—</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Жиры</div>
+                        <div class="stat-value" id="statFat">—</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Холестерин</div>
+                        <div class="stat-value" id="statChol">—</div>
+                    </div>
+                </div>
+                <pre id="output">{ "product": null, "missingFields": [] }</pre>
+            </div>
+        </div>
+    </div>
+
+    <script src="heys_models_v1.js"></script>
+    <script>
+        // Minimal HEYS mock
+        if (!window.HEYS) window.HEYS = {};
+        HEYS.models = HEYS.models || {};
+
+        function parseProduct() {
+            const input = document.getElementById('aiInput').value.trim();
+            if (!input) {
+                alert('❌ Введите текст для парсинга');
+                return;
+            }
+
+            try {
+                const result = HEYS.models.parseAIProductString(input);
+                document.getElementById('output').textContent = JSON.stringify(result, null, 2);
+
+                if (result && result.product && !result.missingFields.length) {
+                    const p = result.product;
+                    document.getElementById('stats').style.display = 'flex';
+                    document.getElementById('statKcal').textContent = Math.round(p.kcal100) + ' ккал';
+                    document.getElementById('statProt').textContent = (p.protein100 || 0).toFixed(1) + ' г';
+                    document.getElementById('statCarbs').textContent = (p.carbs100 || 0).toFixed(1) + ' г';
+                    document.getElementById('statFat').textContent = (p.fat100 || 0).toFixed(1) + ' г';
+                    document.getElementById('statChol').textContent = (p.cholesterol != null ? p.cholesterol + ' мг' : '—');
+
+                    console.log('✅ Parsed product:', result.product);
+                    console.log('🔍 Field check:');
+                    console.log('  badfat100:', p.badfat100, '→ badFat100:', p.badFat100);
+                    console.log('  goodfat100:', p.goodfat100, '→ goodFat100:', p.goodFat100);
+                    console.log('  cholesterol:', p.cholesterol);
+                } else {
+                    document.getElementById('stats').style.display = 'none';
+                }
+            } catch (err) {
+                document.getElementById('output').textContent = '❌ ERROR:\n' + err.message;
+                document.getElementById('stats').style.display = 'none';
+                console.error(err);
+            }
+        }
+
+        function loadSample1() {
+            document.getElementById('aiInput').value = `Название: Шоколад «Шоколадная медуза»
+Ккал: 584.9
+Углеводы: 37.0
+Простые: 26.8
+Сложные: 10.2
+Белок: 5.9
+Жиры: 43.7
+Вредные жиры: 26.8
+Полезные жиры: 16.1
+Транс-жиры: 0.64
+Клетчатка: 6.8
+ГИ: 45
+Вред: 6.8
+Натрий: 80
+Omega-3: 0.05
+Omega-6: 0.85
+NOVA: 3
+Добавки: нет
+Нутриентная плотность: 46
+Холестерин: 0
+Органик: 0
+Цельнозерновой: 0
+Ферментированный: 0
+Сырой: 0
+Витамин A: 0
+Витамин C: 0
+Витамин D: 0.75
+Витамин E: 1.85`;
+        }
+
+        function loadSample2() {
+            document.getElementById('aiInput').value = `Название: Яйцо куриное (1 шт, 50г)
+Ккал: 155
+Углеводы: 1.1
+Простые: 1.1
+Сложные: 0
+Белок: 12.6
+Жиры: 10.6
+Вредные жиры: 3.3
+Полезные жиры: 7.0
+Транс-жиры: 0
+Клетчатка: 0
+ГИ: 48
+Вред: 3.2
+Холестерин: 372
+Натрий: 142
+Витамин A: 15
+Витамин D: 10
+Витамин B12: 18
+Железо: 6
+Селен: 15`;
+        }
+
+        function loadSample3() {
+            document.getElementById('aiInput').value = `Название: Салат «Цезарь»
+Ккал: 120
+Углеводы: 8.5
+Простые: 2.0
+Сложные: 6.5
+Белок: 7.2
+Жиры: 6.3
+Вредные жиры: 1.8
+Полезные жиры: 4.2
+Транс-жиры: 0.1
+Клетчатка: 2.1
+ГИ: 35
+Вред: 4.5`;
+        }
+
+        // Auto-load первый пример
+        loadSample1();
+    </script>
+</body>
+
+</html>

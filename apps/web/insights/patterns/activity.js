@@ -62,12 +62,18 @@
     };
 
     const calculateItemKcal = piCalculations.calculateItemKcal || function (item, pIndex) {
-        const prod = pIndex?.byId?.get?.(item?.product_id);
+        if (!item || !item.grams) return 0;
+        const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id)?.toLowerCase());
         if (!prod) return 0;
-        return (prod.kcal100 || 0) * (item.grams || 0) / 100;
+        const p = prod.protein100 || 0;
+        const c = (prod.simple100 || 0) + (prod.complex100 || 0);
+        const f = (prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0);
+        return (p * 3 + c * 4 + f * 9) * item.grams / 100;
     };
 
     const calculateDayKcal = piCalculations.calculateDayKcal || function (day, pIndex) {
+        const savedKcal = Number(day?.savedEatenKcal);
+        if (Number.isFinite(savedKcal) && savedKcal > 0) return savedKcal;
         if (!day?.meals?.length) return 0;
         let total = 0;
         for (const meal of day.meals) {
@@ -104,6 +110,7 @@
             return {
                 pattern: PATTERNS.TRAINING_KCAL,
                 available: false,
+                reason: 'no_training',
                 confidence: 0.2,
                 insight: 'Недостаточно данных о тренировках'
             };
@@ -166,6 +173,7 @@
             return {
                 pattern: PATTERNS.STEPS_WEIGHT,
                 available: false,
+                reason: 'no_steps_data',
                 confidence: 0.2,
                 insight: 'Недостаточно данных шагов и веса'
             };
@@ -224,6 +232,7 @@
             return {
                 pattern: PATTERNS.NEAT_ACTIVITY,
                 available: false,
+                reason: 'no_household_data',
                 insight: 'Недостаточно данных о бытовой активности'
             };
         }
@@ -310,7 +319,7 @@
             if (i < days.length - 1) {
                 const nextDay = days[i + 1];
                 const sleepHours = nextDay.sleepHours || 0;
-                const mood = nextDay.mood || 3;
+                const mood = nextDay.moodAvg || 3;
                 const recoveryScore = (sleepHours >= 7 ? 50 : sleepHours * 7) + (mood * 10);
                 recoveryScores.push(recoveryScore);
             }

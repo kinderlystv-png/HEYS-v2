@@ -218,6 +218,7 @@
             return {
                 pattern: PATTERNS.SLEEP_QUALITY,
                 available: false,
+                reason: 'no_sleep_quality',
                 confidence: 0.2,
                 insight: 'Недостаточно данных о качестве сна'
             };
@@ -225,9 +226,9 @@
 
         const timeLaggedPairs = {
             weight: [],
-            hunger: [],
             steps: [],
-            kcal: []
+            kcal: [],
+            mood: []
         };
 
         for (let i = 0; i < days.length - 1; i++) {
@@ -240,8 +241,8 @@
             if (tomorrow.weightMorning) {
                 timeLaggedPairs.weight.push({ quality: sleepQuality, value: tomorrow.weightMorning });
             }
-            if (tomorrow.hungerAvg) {
-                timeLaggedPairs.hunger.push({ quality: sleepQuality, value: tomorrow.hungerAvg });
+            if (tomorrow.moodAvg) {
+                timeLaggedPairs.mood.push({ quality: sleepQuality, value: tomorrow.moodAvg });
             }
             if (tomorrow.steps) {
                 timeLaggedPairs.steps.push({ quality: sleepQuality, value: tomorrow.steps });
@@ -296,7 +297,7 @@
 
         const metricNames = {
             weight: 'вес',
-            hunger: 'голод',
+            mood: 'настроение',
             steps: 'шаги',
             kcal: 'калории'
         };

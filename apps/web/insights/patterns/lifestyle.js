@@ -63,12 +63,18 @@
     };
 
     const calculateItemKcal = piCalculations.calculateItemKcal || function (item, pIndex) {
-        const prod = pIndex?.byId?.get?.(item?.product_id);
+        if (!item || !item.grams) return 0;
+        const prod = pIndex?.byId?.get?.(String(item.product_id || item.productId || item.id)?.toLowerCase());
         if (!prod) return 0;
-        return (prod.kcal100 || 0) * (item.grams || 0) / 100;
+        const p = prod.protein100 || 0;
+        const c = (prod.simple100 || 0) + (prod.complex100 || 0);
+        const f = (prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0);
+        return (p * 3 + c * 4 + f * 9) * item.grams / 100;
     };
 
     const calculateDayKcal = piCalculations.calculateDayKcal || function (day, pIndex) {
+        const savedKcal = Number(day?.savedEatenKcal);
+        if (Number.isFinite(savedKcal) && savedKcal > 0) return savedKcal;
         if (!day?.meals?.length) return 0;
         let total = 0;
         for (const meal of day.meals) {
@@ -323,23 +329,24 @@
         const measurements = [];
 
         for (const day of days) {
-            if (day.measurements && day.measurements.waist && day.measurements.hip) {
-                const whr = day.measurements.waist / day.measurements.hip;
+            if (day.measurements && day.measurements.waist && day.measurements.hips) {
+                const whr = day.measurements.waist / day.measurements.hips;
                 measurements.push({
                     date: day.date,
                     waist: day.measurements.waist,
-                    hip: day.measurements.hip,
+                    hip: day.measurements.hips,
                     whr: Math.round(whr * 100) / 100
                 });
             }
         }
 
-        if (measurements.length < 10) {
+        if (measurements.length === 0) {
             return {
                 pattern: PATTERNS.BODY_COMPOSITION,
                 available: false,
+                reason: 'no_measurements',
                 confidence: 0.2,
-                insight: 'Недостаточно замеров обхватов (нужно 10+)'
+                insight: 'Недостаточно замеров обхватов (нужно 3+)'
             };
         }
 
@@ -350,19 +357,27 @@
         const gender = profile?.gender || 'female';
         const threshold = gender === 'male' ? 0.9 : 0.85;
 
+        const isPreliminary = measurements.length < 3;
+
         let score;
         let insight;
         if (avgWHR < threshold) {
-            score = 90;
+            score = isPreliminary ? 82 : 90;
             const trendText = trend < -0.001 ? ' 📉 Улучшается!' : trend > 0.001 ? ' ⚠️ Растёт' : ' Стабильно';
             insight = `✅ WHR ${avgWHR.toFixed(2)} < ${threshold} (норма).${trendText}`;
         } else {
-            score = 60;
+            score = isPreliminary ? 56 : 60;
             const trendText = trend < -0.001 ? ' 📉 Снижается — продолжай!' : trend > 0.001 ? ' ⚠️ Растёт' : '';
             insight = `⚠️ WHR ${avgWHR.toFixed(2)} > ${threshold}. Висцеральный жир.${trendText}`;
         }
 
-        const confidence = measurements.length >= 30 ? 0.9 : measurements.length >= 20 ? 0.7 : 0.5;
+        const confidence = isPreliminary
+            ? 0.35
+            : measurements.length >= 30 ? 0.9 : measurements.length >= 20 ? 0.7 : 0.5;
+
+        if (isPreliminary) {
+            insight = `ℹ️ Предварительная оценка по ${measurements.length} замер${measurements.length === 1 ? 'у' : 'ам'}: ${insight} Точность будет высокой после 3+ замеров.`;
+        }
 
         return {
             pattern: PATTERNS.BODY_COMPOSITION,
@@ -373,6 +388,8 @@
             dataPoints: measurements.length,
             score,
             confidence,
+            isPreliminary,
+            requiredDataPoints: 3,
             insight
         };
     }
@@ -385,10 +402,13 @@
      * @returns {object}
      */
     function analyzeCyclePatterns(days, pIndex, profile) {
-        if (profile?.gender === 'male' || !profile?.cycleTrackingEnabled) {
+        const g = String(profile?.gender || '').toLowerCase();
+        const isMale = g === 'male' || g === 'мужской' || g === 'мужчина';
+        if (isMale || !profile?.cycleTrackingEnabled) {
             return {
                 pattern: PATTERNS.CYCLE_IMPACT,
                 available: false,
+                reason: 'male_only',
                 confidence: 0,
                 insight: 'Трекинг цикла не активирован'
             };
@@ -399,6 +419,7 @@
             return {
                 pattern: PATTERNS.CYCLE_IMPACT,
                 available: false,
+                reason: 'no_cycle_data',
                 confidence: 0.2,
                 insight: 'Недостаточно данных о цикле (нужно 14+ дней)'
             };

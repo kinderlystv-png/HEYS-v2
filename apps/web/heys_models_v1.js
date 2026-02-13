@@ -1053,6 +1053,7 @@
     // Basic
     'NOVA': 'nova_group',      // 1-4
     'Na': 'sodium100',         // mg/100g
+    'Chol': 'cholesterol',     // mg/100g
     'O3': 'omega3_100',        // g/100g
     'O6': 'omega6_100',        // g/100g
     'ND': 'nutrient_density',  // 0-100
@@ -1112,14 +1113,15 @@
     add('complex100', ['сложные', 'сложныеуглеводы', 'complex']);
     add('protein100', ['белок', 'протеин', 'protein']);
     add('fat100', ['жиры', 'жирывсего', 'fat']);
-    add('badFat100', ['вредныежиры', 'насыщенные', 'badfat']);
-    add('goodFat100', ['полезныежиры', 'ненасыщенные', 'goodfat']);
+    add('badfat100', ['вредныежиры', 'насыщенные', 'badfat']);
+    add('goodfat100', ['полезныежиры', 'ненасыщенные', 'goodfat']);
     add('trans100', ['трансжиры', 'транс-жиры', 'trans']);
     add('fiber100', ['клетчатка', 'fiber']);
     add('gi', ['ги', 'гликемическийиндекс', 'гликемический индекс', 'gi']);
     add('harm', ['вред', 'вредность', 'harm']);
 
     add('sodium100', ['натрий', 'na', 'соль']);
+    add('cholesterol', ['холестерин', 'холестер', 'cholesterol']);
     add('omega3_100', ['омега3', 'омега-3', 'omega3', 'о3']);
     add('omega6_100', ['омега6', 'омега-6', 'omega6', 'о6']);
     add('nova_group', ['nova', 'нова']);
@@ -1162,8 +1164,8 @@
     'complex100',
     'protein100',
     'fat100',
-    'badFat100',
-    'goodFat100',
+    'badfat100',
+    'goodfat100',
     'trans100',
     'fiber100',
     'gi',
@@ -1286,13 +1288,16 @@
       : ((result.simple100 || 0) + (result.complex100 || 0));
     const derivedFat = (Number.isFinite(result.fat100) && result.fat100 > 0)
       ? result.fat100
-      : ((result.badFat100 || 0) + (result.goodFat100 || 0) + (result.trans100 || 0));
+      : ((result.badfat100 || 0) + (result.goodfat100 || 0) + (result.trans100 || 0));
 
     result.carbs100 = round1(derivedCarbs);
     result.fat100 = round1(derivedFat);
     // v3.9.0: Standard Atwater factors (4/4/9). TEF is calculated separately.
     result.kcal100 = round1(4 * (result.protein100 || 0) + 4 * derivedCarbs + 9 * derivedFat);
     result.createdAt = result.createdAt || Date.now();
+
+    // v4.8.8: Normalize field names (badfat100 → badFat100 for app compatibility)
+    normalizeProductFields(result);
 
     return { product: result, missingFields: [] };
   }
@@ -1374,9 +1379,9 @@
    */
   function generateExtendedNutrientPrompt(productName) {
     return `Для продукта "${productName}" дай расширенную информацию в формате:
-NOVA:X|Na:X|O3:X|O6:X|Org:0/1|WG:0/1|Fer:0/1|Raw:0/1|vA:X|vC:X|vD:X|vE:X|vK:X|vB1:X|vB2:X|vB3:X|vB6:X|vB9:X|vB12:X|Ca:X|Fe:X|Mg:X|P:X|K:X|Zn:X|Se:X|I:X
+NOVA:X|Na:X|Chol:X|O3:X|O6:X|Org:0/1|WG:0/1|Fer:0/1|Raw:0/1|vA:X|vC:X|vD:X|vE:X|vK:X|vB1:X|vB2:X|vB3:X|vB6:X|vB9:X|vB12:X|Ca:X|Fe:X|Mg:X|P:X|K:X|Zn:X|Se:X|I:X
 
-Расшифровка: NOVA (1-4), Na=натрий мг/100г, O3/O6=омега г/100г, витамины и минералы в % от суточной нормы на 100г.
+Расшифровка: NOVA (1-4), Na=натрий мг/100г, Chol=холестерин мг/100г, O3/O6=омега г/100г, витамины и минералы в % от суточной нормы на 100г.
 Пропусти неизвестные значения. Только строка, без объяснений.`;
   }
 
@@ -1405,6 +1410,7 @@ NOVA:X|Na:X|O3:X|O6:X|Org:0/1|WG:0/1|Fer:0/1|Raw:0/1|vA:X|vC:X|vD:X|vE:X|vK:X|vB
 
 ОПЦИОНАЛЬНО (если знаешь — добавь):
 Натрий: X
+Холестерин: X
 Омега-3: X
 Омега-6: X
 NOVA: 1-4

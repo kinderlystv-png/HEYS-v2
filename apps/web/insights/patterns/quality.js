@@ -56,12 +56,14 @@
      */
     function analyzeMealQualityTrend(days, pIndex, optimum) {
         const pattern = PATTERNS.MEAL_QUALITY_TREND || 'meal_quality';
-        const getMealQualityScore = HEYS.getMealQualityScore;
+        const getMealQualityScore = HEYS.getMealQualityScore
+            || HEYS.mealScoring?.getMealQualityScore;
 
         if (typeof getMealQualityScore !== 'function') {
             return {
                 pattern,
                 available: false,
+                reason: 'no_quality_function',
                 insight: 'Оценка качества приёмов недоступна'
             };
         }
@@ -93,6 +95,7 @@
             return {
                 pattern,
                 available: false,
+                reason: 'insufficient_data',
                 confidence: 0.3,
                 insight: 'Недостаточно данных для анализа качества'
             };

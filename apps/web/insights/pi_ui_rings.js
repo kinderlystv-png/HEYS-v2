@@ -124,13 +124,23 @@
   /**
    * Total Health Score — большое центральное кольцо (v2.0: с InfoButton)
    */
-  function TotalHealthRing({ score, label = 'Health Score', size = 120, strokeWidth = 20, debugData }) {
+  function TotalHealthRing({ score, label = 'Health Score', size = 120, strokeWidth = 20, debugData, onClick }) {
     const radius = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
     const progress = Math.min(100, Math.max(0, score || 0));
     const offset = circumference - (progress / 100) * circumference;
 
-    return h('div', { className: 'insights-total' },
+    const handleClick = () => {
+      // Haptic feedback
+      if (navigator.vibrate) navigator.vibrate(10);
+      if (onClick) onClick();
+    };
+
+    return h('div', {
+      className: `insights-total ${onClick ? 'insights-total--clickable' : ''}`,
+      onClick: handleClick,
+      style: { cursor: onClick ? 'pointer' : 'default' }
+    },
       h('div', { className: 'insights-total__ring' },
         h('svg', {
           className: 'insights-total__svg',
