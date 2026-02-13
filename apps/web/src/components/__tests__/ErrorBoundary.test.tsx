@@ -1,5 +1,7 @@
-import { render, screen } from '@testing-library/react';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+// @vitest-environment happy-dom
+
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { ErrorBoundary } from '../ErrorBoundary';
 
@@ -19,6 +21,10 @@ describe('ErrorBoundary', () => {
   });
   afterAll(() => {
     console.error = originalError;
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it('renders children when there is no error', () => {

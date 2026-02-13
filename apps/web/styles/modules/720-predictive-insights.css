@@ -5291,6 +5291,29 @@
   color: #e5e7eb;
 }
 
+.pattern-debug-modal__preview-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  line-height: 1;
+  cursor: help;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .pattern-debug-modal__preview-badge {
+  border-color: rgba(251, 191, 36, 0.38);
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+}
+
 .pattern-debug-modal__cell--pattern .pattern-debug-modal__emoji {
   font-size: 13px;
 }
@@ -5666,6 +5689,12 @@
   .pattern-debug-modal__cell {
     padding: 6px 8px;
     font-size: 11px;
+  }
+
+  .pattern-debug-modal__preview-badge {
+    font-size: 8px;
+    padding: 0 5px;
+    height: 14px;
   }
 
   .pattern-debug-modal__unlock-plan {

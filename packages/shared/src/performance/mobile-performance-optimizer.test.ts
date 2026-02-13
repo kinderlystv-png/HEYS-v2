@@ -96,30 +96,57 @@ const mockBattery = {
   removeEventListener: vi.fn(),
 };
 
-// Apply mocks to global
-global.navigator = mockNavigator as any;
-global.window = mockWindow as any;
-global.document = mockDocument as any;
-global.screen = mockScreen as any;
-(global.navigator as any).getBattery = vi.fn().mockResolvedValue(mockBattery);
+function applyGlobalMocks(): void {
+  Object.defineProperty(global, 'navigator', {
+    value: {
+      ...mockNavigator,
+      getBattery: vi.fn().mockResolvedValue(mockBattery),
+    },
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(global, 'screen', {
+    value: mockScreen,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(global, 'window', {
+    value: mockWindow,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(global, 'document', {
+    value: mockDocument,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(global, 'performance', {
+    value: mockWindow.performance,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(global, 'IntersectionObserver', {
+    value: vi.fn(),
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(global, 'WebAssembly', {
+    value: {},
+    writable: true,
+    configurable: true,
+  });
 
-// Global mocks
-Object.defineProperty(global, 'navigator', { value: mockNavigator, writable: true });
-Object.defineProperty(global, 'screen', { value: mockScreen, writable: true });
-Object.defineProperty(global, 'window', { value: mockWindow, writable: true });
-Object.defineProperty(global, 'document', { value: mockDocument, writable: true });
-Object.defineProperty(global, 'performance', { value: mockWindow.performance, writable: true });
-Object.defineProperty(global, 'IntersectionObserver', { value: vi.fn(), writable: true });
-Object.defineProperty(global, 'WebAssembly', { value: {}, writable: true });
+  global.PerformanceObserver = mockPerformanceObserver as any;
+  (global.PerformanceObserver as any).supportedEntryTypes = [
+    'navigation',
+    'resource',
+    'measure',
+    'mark',
+  ];
+}
 
-// Mock PerformanceObserver
-global.PerformanceObserver = mockPerformanceObserver as any;
-(global.PerformanceObserver as any).supportedEntryTypes = [
-  'navigation',
-  'resource',
-  'measure',
-  'mark',
-];
+// Apply once for module initialization phase
+applyGlobalMocks();
 
 describe('MobilePerformanceOptimizer', () => {
   let optimizer: MobilePerformanceOptimizer;
@@ -127,6 +154,7 @@ describe('MobilePerformanceOptimizer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    applyGlobalMocks();
 
     config = {
       touchOptimization: {

@@ -62,7 +62,7 @@
     "prepare": "husky install",
     "release": "pnpm run build:packages && changeset publish",
     "test": "turbo run test",
-    "test:all": "cross-env NODE_OPTIONS=--max-old-space-size=6144 vitest run --coverage",
+    "test:all": "node -e \"require('fs').mkdirSync('coverage/.tmp',{ recursive: true })\" && cross-env NODE_OPTIONS=--max-old-space-size=6144 vitest run --coverage",
     "test:coverage": "pnpm -r run test:coverage",
     "test:e2e": "playwright test",
     "test:e2e:debug": "playwright test --debug",

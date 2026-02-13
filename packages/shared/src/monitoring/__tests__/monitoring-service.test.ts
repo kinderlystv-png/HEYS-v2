@@ -193,6 +193,8 @@ describe('MonitoringService', () => {
     });
 
     test('should measure performance of async functions', async () => {
+      vi.spyOn(performance, 'now').mockReturnValueOnce(0).mockReturnValueOnce(120);
+
       const testFn = async () => {
         await new Promise((resolve) => setTimeout(resolve, 100));
         return 'async result';
@@ -227,6 +229,8 @@ describe('MonitoringService', () => {
     });
 
     test('should detect slow operations', async () => {
+      vi.spyOn(performance, 'now').mockReturnValueOnce(0).mockReturnValueOnce(650);
+
       const slowFn = async () => {
         await new Promise((resolve) => setTimeout(resolve, 600)); // Exceeds 500ms threshold
         return 'slow result';

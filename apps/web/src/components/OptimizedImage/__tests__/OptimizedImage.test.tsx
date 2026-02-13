@@ -1,7 +1,7 @@
 // filepath: apps/web/src/components/OptimizedImage/__tests__/OptimizedImage.test.tsx
 
-import { render, screen, waitFor } from '@testing-library/react';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, waitFor } from '@testing-library/react';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { imageOptimizer } from '../../../utils/image-optimizer';
 import OptimizedImage from '../OptimizedImage';
@@ -59,12 +59,16 @@ describe('OptimizedImage', () => {
     globalThis.Image = OriginalImage;
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   it('renders with basic props', async () => {
-    render(
+    const view = render(
       <OptimizedImage src="/test-image.jpg" alt="Test image" width={400} height={300} priority />,
     );
 
-    expect(screen.getByAltText('Test image')).toBeTruthy();
+    expect(view.getByAltText('Test image')).toBeTruthy();
   });
 
   it('calls image optimizer with correct options', async () => {
@@ -94,36 +98,36 @@ describe('OptimizedImage', () => {
   });
 
   it('displays loading state initially', () => {
-    render(<OptimizedImage src="/test-image.jpg" alt="Test image" priority />);
+    const view = render(<OptimizedImage src="/test-image.jpg" alt="Test image" priority />);
 
-    expect(screen.getByRole('img').className).toContain('loading');
+    expect(view.getByRole('img').className).toContain('loading');
   });
 
   it('handles optimization errors gracefully', async () => {
     mockImageOptimizer.optimizeImage.mockRejectedValue(new Error('Optimization failed'));
 
-    render(
+    const view = render(
       <OptimizedImage src="/test-image.jpg" alt="Test image" fallback="/fallback.jpg" priority />,
     );
 
     // Should not crash and should attempt fallback
     await waitFor(() => {
-      expect(screen.getByAltText('Test image')).toBeTruthy();
+      expect(view.getByAltText('Test image')).toBeTruthy();
     });
   });
 
   it('applies priority attributes correctly', async () => {
-    render(<OptimizedImage src="/test-image.jpg" alt="Test image" priority />);
+    const view = render(<OptimizedImage src="/test-image.jpg" alt="Test image" priority />);
 
-    const img = screen.getByRole('img');
+    const img = view.getByRole('img');
     expect(img.getAttribute('loading')).toBe('eager');
     expect(img.getAttribute('decoding')).toBe('sync');
   });
 
   it('applies lazy loading attributes for non-priority images', () => {
-    render(<OptimizedImage src="/test-image.jpg" alt="Test image" lazy />);
+    const view = render(<OptimizedImage src="/test-image.jpg" alt="Test image" lazy />);
 
-    const img = screen.getByRole('img');
+    const img = view.getByRole('img');
     expect(img.getAttribute('loading')).toBe('lazy');
     expect(img.getAttribute('decoding')).toBe('async');
   });
@@ -132,11 +136,11 @@ describe('OptimizedImage', () => {
     const originalEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = 'development';
 
-    render(<OptimizedImage src="/test-image.jpg" alt="Test image" priority />);
+    const view = render(<OptimizedImage src="/test-image.jpg" alt="Test image" priority />);
 
     await waitFor(() => {
-      expect(Boolean(screen.queryByText(/WEBP/))).toBe(true);
-      expect(Boolean(screen.queryByText(/Optimized/))).toBe(true);
+      expect(Boolean(view.queryByText(/WEBP/))).toBe(true);
+      expect(Boolean(view.queryByText(/Optimized/))).toBe(true);
     });
 
     process.env.NODE_ENV = originalEnv;

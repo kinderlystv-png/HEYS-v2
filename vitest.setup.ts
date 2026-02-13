@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, vi } from 'vitest';
 
+const baselineWindow = global.window;
+const baselineDocument = global.document;
+
 // Уменьшаем шум логов в тестах.
 // В проекте используется pino-логгер, который по умолчанию пишет INFO в stdout,
 // что может перегружать вывод и провоцировать нестабильность Vitest (RPC timeouts).
@@ -81,7 +84,14 @@ beforeEach(() => {
     (global as any).crypto = {};
   }
   if (typeof (global as any).crypto.randomUUID !== 'function') {
-    (global as any).crypto.randomUUID = vi.fn(() => `test-uuid-${Date.now()}-${Math.random()}`);
+    (global as any).crypto.randomUUID = vi.fn(() => {
+      const bytes = Array.from({ length: 16 }, () => Math.floor(Math.random() * 256));
+      bytes[6] = (bytes[6] & 0x0f) | 0x40;
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+      const hex = bytes.map((b) => b.toString(16).padStart(2, '0')).join('');
+      return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+    });
   }
 
   // Enhanced IndexedDB mocking
@@ -199,5 +209,23 @@ beforeEach(() => {
 
 // Cleanup after each test
 afterEach(() => {
+  // В ряде perf-тестов глобальный document/window временно переопределяются.
+  // Восстанавливаем эталон happy-dom, чтобы следующий suite не получил «сломанный» DOM.
+  if (baselineWindow && global.window !== baselineWindow) {
+    Object.defineProperty(global, 'window', {
+      value: baselineWindow,
+      writable: true,
+      configurable: true,
+    });
+  }
+
+  if (baselineDocument && global.document !== baselineDocument) {
+    Object.defineProperty(global, 'document', {
+      value: baselineDocument,
+      writable: true,
+      configurable: true,
+    });
+  }
+
   vi.clearAllMocks();
 });
