@@ -3,7 +3,7 @@
 **Enterprise‑grade monorepo** — TypeScript/React ecosystem for nutrition
 tracking, training management, and productivity enhancement.
 
-[![Version](<https://img.shields.io/badge/version-15.0.0_(v4.8.8)-blue.svg>)](./apps/web/CHANGELOG.md)
+[![Version](<https://img.shields.io/badge/version-15.1.0_(v13.3.0)-blue.svg>)](./apps/web/CHANGELOG.md)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](./.nvmrc)
 [![PNPM](https://img.shields.io/badge/pnpm-%3E%3D8.0.0-orange.svg)](./package.json)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
@@ -57,6 +57,32 @@ pnpm --dir apps/web run dev:iw-config
 ---
 
 ## 🆕 Recent Updates
+
+### v13.3.0 — Health Score Algorithm Fixes (February 13, 2026) 🎯
+
+**Critical correctness fixes** in Health Score calculation algorithm.
+
+#### 🐛 Bugs Fixed
+
+1. **Weight sum error**: Deficit mode summed to 1.10 instead of 1.00
+   - Fixed: `deficit.nutrition: 0.35 → 0.25`
+   - Bonus: nutrition weight now truly lower than maintenance (as intended)
+
+2. **Category mismatch**: 6 v6 patterns assigned to wrong categories
+   - `antioxidant_defense`, `bone_health`, `electrolyte_homeostasis` →
+     **recovery**
+   - `b_complex_anemia`, `glycemic_load`, `added_sugar_dependency` →
+     **metabolism**
+
+#### ✅ Impact
+
+- Health Score calculations now mathematically correct for all 3 goal modes
+- UI Pattern Transparency modal shows patterns in correct categories
+- Contribution percentages accurate across all 41 patterns
+
+**Details**: [@heys/web Changelog](./apps/web/CHANGELOG.md)
+
+---
 
 ### v4.8.8 — React State Sync Fix (February 12, 2026) 🛡️
 

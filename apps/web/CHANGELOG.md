@@ -1,5 +1,60 @@
 # @heys/web
 
+## 13.3.0 — Health Score Algorithm Fixes (February 13, 2026)
+
+### Critical: Health Score Calculation Corrections 🎯
+
+**Fixed two critical bugs in Health Score calculation algorithm** that caused incorrect weight distribution and category assignment.
+
+#### Bug Fixes
+
+1. **FIXED: Deficit weight sum was 1.10 instead of 1.00**
+   - `apps/web/insights/pi_advanced.js` (v12): `deficit.nutrition: 0.35 → 0.25`
+   - Old sum: 0.35 + 0.30 + 0.20 + 0.15 + 0.10 = **1.10** ❌
+   - New sum: 0.25 + 0.30 + 0.20 + 0.15 + 0.10 = **1.00** ✅
+   - Bonus: nutrition weight is now truly **lower** in deficit mode (0.25 < maintenance 0.35)
+
+2. **FIXED: 6 patterns had wrong category assignments**
+   - Category mismatch between `calculateHealthScore` (pi_advanced.js) and `PATTERN_METADATA` (pi_pattern_debugger.js)
+   - This caused UI to display patterns in wrong category tabs and incorrect contribution calculations
+   
+   | Pattern | Was in UI | Fixed to (= calc engine) |
+   |---------|-----------|-------------------------|
+   | antioxidant_defense | nutrition | **recovery** ✅ |
+   | bone_health | nutrition | **recovery** ✅ |
+   | electrolyte_homeostasis | metabolism | **recovery** ✅ |
+   | b_complex_anemia | nutrition | **metabolism** ✅ |
+   | glycemic_load | nutrition | **metabolism** ✅ |
+   | added_sugar_dependency | nutrition | **metabolism** ✅
+
+#### Verified Correct
+
+- ✅ `getPatternReliability` — identical in both files
+- ✅ `contributionByPattern` — formula `share * effectiveWeight` correct
+- ✅ Scoring loop — reliability-weighted average correct
+- ✅ Goal detection — deficit ≤ -10%, bulk ≥ 10%
+- ✅ Bulk weights (1.00) and maintenance weights (1.00)
+- ✅ Breakdown reliability in return object
+
+#### Modified Files
+
+- `apps/web/insights/pi_advanced.js` (v11 → v12) — Fixed deficit weights
+- `apps/web/insights/pi_pattern_debugger.js` (v25 → v26) — Synced pattern categories
+- `apps/web/index.html` — Bumped script versions for cache busting
+
+#### Documentation Updates
+
+- `docs/DATA_MODEL_REFERENCE.md` — Updated v6 pattern table, category descriptions, goal-aware weights
+- `HEYS_Insights_v5_Deep_Analytics_c7.md` — Updated Health Score section with correct weights and categories
+
+#### Impact
+
+- Health Score calculations now mathematically correct for all 3 goal modes
+- UI Pattern Transparency modal now shows patterns in correct categories
+- Contribution percentages now accurate across all 41 patterns
+
+---
+
 ## 13.2.0 — v4.8.8 AI Product Parser Update (February 12, 2026)
 
 ### Feature: Cholesterol Support + Schema Alignment 🧬

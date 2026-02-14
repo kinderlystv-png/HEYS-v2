@@ -220,6 +220,47 @@ localStorage.setItem('heys_products', …);  // ❌ Breaks namespacing
 | `product.harmScore` | `product.harm`                              | `harm` is canonical      |
 | protein = 4 kcal/g  | protein = **3** kcal/g                      | TEF-adjusted formula     |
 
+### Adaptive Thresholds — v2.0 ✅
+
+**Production status (14.02.2026):**
+
+- 7d requests correctly reuse 30d cache via `dateRange` coverage check
+- Adaptive TTL works in prod: `stability=0.30 → ttlHours=30.0`
+- 59d requests correctly MISS 30d cache (`covered=false`)
+
+```javascript
+// Core module: apps/web/insights/pi_thresholds.js (~989 LOC)
+getAdaptiveThresholds(days, profile, pIndex) {
+  // 1. CACHE FIRST
+  // 2. Adaptive TTL (12-72h) based on behavior stability
+  // 3. Event-based invalidation (goal/weight/pattern change)
+  // 4. 3-tier compute (FULL/PARTIAL/DEFAULT)
+}
+```
+
+**Implemented v2.0 features:**
+
+- CASCADE strategy (`isCurrentPeriodCovered`)
+- Adaptive TTL (`calculateBehaviorStability`, `calculateAdaptiveTTL`)
+- Event invalidation (`detectSignificantChange`)
+- Bayesian priors (`POPULATION_PRIORS`, `bayesianBlend`)
+- Per-threshold confidence (`thresholdsWithConfidence`)
+
+**3-Tier system:**
+
+- Tier 1 (FULL): 14+ days → computed thresholds, confidence up to 1.0
+- Tier 2 (PARTIAL): 7-13 days → hybrid compute + defaults
+- Tier 3 (DEFAULT): <7 days → prior-based defaults
+
+**Important behavior rule:**
+
+- Missing `profile` is **not fatal**: system computes available thresholds and
+  avoids hard fallback to full defaults.
+
+**Deferred to v2.1:**
+
+- Incremental rolling-window updates (performance optimization only)
+
 ### Auth modes
 
 - **Curator** (nutritionist): Supabase user, full sync, `_rpcOnlyMode=false`
