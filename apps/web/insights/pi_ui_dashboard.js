@@ -477,6 +477,158 @@
     }
 
     /**
+     * EarlyWarningCard — компактная карточка с предупреждениями под Health Score Ring
+     * 
+     * Показывает summary warnings count с severity badges.
+     * При клике открывает EarlyWarningPanel modal для детального просмотра.
+     * 
+     * @param {function} lsGet - localStorage getter (namespace-aware)
+     * @param {object} profile - User profile
+     * @param {object} pIndex - Product index
+     */
+    function EarlyWarningCard({ lsGet, profile, pIndex }) {
+      const [warnings, setWarnings] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [panelOpen, setPanelOpen] = useState(false);
+
+      // Load warnings on mount + day updates
+      useEffect(() => {
+        if (!HEYS.InsightsPI?.earlyWarning) {
+          setLoading(false);
+          return;
+        }
+
+        const checkWarnings = async () => {
+          try {
+            performance.mark('ews_card_detect_start');
+
+            // Load 30 days of data (namespace-aware via lsGet)
+            const days = [];
+            const U = window.HEYS?.utils || {};
+            const fmtDate = HEYS.dayUtils?.fmtDate || U.fmtDate;
+            if (!fmtDate) {
+              console.warn('[EarlyWarningCard] fmtDate not available');
+              setLoading(false);
+              return;
+            }
+
+            for (let i = 0; i < 30; i++) {
+              const d = new Date();
+              d.setDate(d.getDate() - i);
+              const dateStr = fmtDate(d);
+              const dayData = lsGet(`heys_dayv2_${dateStr}`);
+              if (dayData) days.push({ ...dayData, date: dateStr });
+            }
+
+            if (days.length < 7) {
+              console.info('[EarlyWarningCard] ⏸️ Insufficient data:', days.length, 'days');
+              setLoading(false);
+              return;
+            }
+
+            // Get current patterns (7 days) for context
+            const currentInsights = HEYS.PredictiveInsights?.analyze?.({
+              daysBack: 7,
+              profile,
+              pIndex,
+              lsGet
+            });
+
+            // Detect warnings
+            const result = HEYS.InsightsPI.earlyWarning.detect(
+              days,
+              profile,
+              pIndex,
+              { currentPatterns: currentInsights?.patterns }
+            );
+
+            performance.mark('ews_card_detect_end');
+            performance.measure('ews_card_detect', 'ews_card_detect_start', 'ews_card_detect_end');
+
+            if (result.available && result.warnings) {
+              setWarnings(result.warnings);
+
+              console.info('[EarlyWarningCard] ✅ Warnings loaded:', {
+                total: result.warnings.length,
+                high: result.warnings.filter(w => w.severity === 'high').length,
+                medium: result.warnings.filter(w => w.severity === 'medium').length,
+                low: result.warnings.filter(w => w.severity === 'low').length
+              });
+            }
+
+            setLoading(false);
+          } catch (err) {
+            console.error('[EarlyWarningCard] ❌ Detection failed:', err);
+            setLoading(false);
+          }
+        };
+
+        checkWarnings();
+        window.addEventListener('day-updated', checkWarnings);
+        window.addEventListener('heys-sync-complete', checkWarnings);
+
+        return () => {
+          window.removeEventListener('day-updated', checkWarnings);
+          window.removeEventListener('heys-sync-complete', checkWarnings);
+        };
+      }, [lsGet, profile, pIndex]);
+
+      // Don't show card if no module or no warnings
+      if (!HEYS.InsightsPI?.earlyWarning) return null;
+      if (loading) return null;
+      if (warnings.length === 0) {
+        // Show success state briefly
+        return h('div', { className: 'early-warning-card early-warning-card--success' },
+          h('div', { className: 'early-warning-card__icon' }, '✅'),
+          h('div', { className: 'early-warning-card__text' }, 'Всё отлично! Нет активных предупреждений')
+        );
+      }
+
+      // Group warnings by severity
+      const severityCounts = {
+        high: warnings.filter(w => w.severity === 'high').length,
+        medium: warnings.filter(w => w.severity === 'medium').length,
+        low: warnings.filter(w => w.severity === 'low').length
+      };
+
+      return h('div', null,
+        // Compact warning card
+        h('div', {
+          className: 'early-warning-card early-warning-card--has-warnings',
+          onClick: () => setPanelOpen(true)
+        },
+          h('div', { className: 'early-warning-card__header' },
+            h('span', { className: 'early-warning-card__icon' }, '⚠️'),
+            h('span', { className: 'early-warning-card__title' },
+              `${warnings.length} ${warnings.length === 1 ? 'предупреждение' : warnings.length < 5 ? 'предупреждения' : 'предупреждений'}`
+            )
+          ),
+          h('div', { className: 'early-warning-card__badges' },
+            severityCounts.high > 0 && h('span', { className: 'early-warning-badge early-warning-badge--high' },
+              '🚨 ', severityCounts.high
+            ),
+            severityCounts.medium > 0 && h('span', { className: 'early-warning-badge early-warning-badge--medium' },
+              '⚠️ ', severityCounts.medium
+            ),
+            severityCounts.low > 0 && h('span', { className: 'early-warning-badge early-warning-badge--low' },
+              'ℹ️ ', severityCounts.low
+            )
+          ),
+          h('div', { className: 'early-warning-card__cta' },
+            'Смотреть подробнее →'
+          )
+        ),
+
+        // Early Warning Panel Modal
+        panelOpen && HEYS.EarlyWarningPanel && h(HEYS.EarlyWarningPanel, {
+          isOpen: panelOpen,
+          onClose: () => setPanelOpen(false),
+          warnings
+        })
+      );
+    }
+
+    /**
      * Empty State — нет данных
      */
     function EmptyState({ daysAnalyzed, minRequired }) {
@@ -947,6 +1099,8 @@
       const [selectedCategory, setSelectedCategory] = useState(null);
       const [priorityFilter, setPriorityFilter] = useState(null); // null = показать всё
       const [showPatternDebug, setShowPatternDebug] = useState(false); // Pattern Transparency Modal
+      const [showPhenotypeClassifier, setShowPhenotypeClassifier] = useState(false); // Phenotype Classifier Panel
+      const [showWhatIfScenarios, setShowWhatIfScenarios] = useState(false); // What-If Scenarios Panel
 
       // 🎯 State для отслеживания прохождения тура (нужен для перерисовки после завершения)
       // 🔧 v1.13 FIX: Проверяем ОБА источника — scoped (HEYS.store) И unscoped (localStorage)
@@ -1437,7 +1591,20 @@
                     compact: true
                   })
                 )
-              )
+              ),
+
+              // Early Warning Card (под кольцами, но до секций)
+              h(EarlyWarningCard, { lsGet, profile, pIndex }),
+
+              // Phenotype Classifier Card
+              HEYS.InsightsPI?.PhenotypeClassifierCard && h(HEYS.InsightsPI.PhenotypeClassifierCard, {
+                onClick: () => setShowPhenotypeClassifier(true)
+              }),
+
+              // What-If Scenarios Card
+              HEYS.InsightsPI?.WhatIfScenariosCard && h(HEYS.InsightsPI.WhatIfScenariosCard, {
+                onClick: () => setShowWhatIfScenarios(true)
+              })
             ),
 
             // Metabolic Status + Risk (CRITICAL) — собственный заголовок внутри
@@ -1649,6 +1816,21 @@
             pIndex: effectiveData.pIndex,
             optimum: effectiveData.optimum,
             onClose: () => setShowPatternDebug(false)
+          }),
+
+          // What-If Scenarios Panel
+          showWhatIfScenarios && HEYS.InsightsPI?.WhatIfScenariosPanel && h(HEYS.InsightsPI.WhatIfScenariosPanel, {
+            lsGet: lsGet || (window.HEYS?.utils?.lsGet),
+            profile: effectiveData.profile,
+            pIndex: effectiveData.pIndex,
+            onClose: () => setShowWhatIfScenarios(false)
+          }),
+
+          // Phenotype Classifier Panel
+          showPhenotypeClassifier && HEYS.InsightsPI?.PhenotypeClassifierPanel && h(HEYS.InsightsPI.PhenotypeClassifierPanel, {
+            profile: effectiveData.profile,
+            pIndex: effectiveData.pIndex,
+            onClose: () => setShowPhenotypeClassifier(false)
           })
 
         )

@@ -216,9 +216,9 @@
     <link rel="prefetch" href="heys_models_v1.js" />
 
     <!-- Load non-critical CSS asynchronously -->
-    <link rel="preload" href="styles/main.css?v=21" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <link rel="preload" href="styles/main.css?v=36" as="style" onload="this.onload=null;this.rel='stylesheet'" />
     <noscript>
-        <link rel="stylesheet" href="styles/main.css?v=21" />
+        <link rel="stylesheet" href="styles/main.css?v=36" />
     </noscript>
 
     <!-- PWA Manifest and Meta Tags -->
@@ -1934,6 +1934,8 @@
     <script defer src="heys_day_rating_averages_v1.js?v=1" fetchpriority="low"></script>
     <script defer src="heys_day_advice_integration_v1.js?v=1" fetchpriority="low"></script>
     <script defer src="heys_day_products_context_v1.js?v=1" fetchpriority="low"></script>
+    <!-- Diary section (ПР #2.3: meal rec card integration) -->
+    <script defer src="heys_day_diary_section.js?v=1" fetchpriority="low"></script>
     <script defer src="heys_day_tab_render_v1.js?v=1" fetchpriority="low"></script>
     <script defer src="heys_day_cycle_state.js" fetchpriority="low"></script>
     <!-- End PR #29 extractions -->
@@ -1990,15 +1992,19 @@
     <script defer src="insights/pi_calculations.js?v=8" fetchpriority="low"></script>
     <!-- 🆕 Insights PI v3.5.0+ — Advanced Modules (Early Warning, What-If, Meal Rec, Feedback) -->
     <script defer src="insights/pi_phenotype.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/pi_early_warning.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/pi_whatif.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/pi_meal_recommender.js?v=1" fetchpriority="low"></script>
+    <script defer src="insights/pi_early_warning.js?v=3" fetchpriority="low"></script>
+    <script defer src="insights/pi_whatif.js?v=2" fetchpriority="low"></script>
+    <script defer src="insights/pi_ui_phenotype.js?v=1" fetchpriority="low"></script>
+    <script defer src="insights/pi_ui_whatif_scenarios.js?v=6" fetchpriority="low"></script>
+    <script defer src="insights/pi_product_picker.js?v=1" fetchpriority="low"></script>
+    <script defer src="insights/pi_meal_recommender.js?v=2" fetchpriority="low"></script>
     <script defer src="insights/pi_feedback_loop.js?v=1" fetchpriority="low"></script>
+    <script defer src="insights/pi_ui_meal_rec_card.js?v=1" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_helpers.js?v=1" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_rings.js?v=6" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_cards.js?v=8" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_whatif.js?v=6" fetchpriority="low"></script>
-    <script defer src="insights/pi_ui_dashboard.js?v=8" fetchpriority="low"></script>
+    <script defer src="insights/pi_ui_dashboard.js?v=9" fetchpriority="low"></script>
     <script defer src="insights/pi_pattern_debugger.js?v=27" fetchpriority="low"></script>
     <!-- Bridge: creates HEYS.PredictiveInsights.components getter from InsightsPI submodules -->
     <script defer src="heys_predictive_insights_v1.js?v=6" fetchpriority="low"></script>
@@ -2045,6 +2051,7 @@
     <script src="heys_ui_onboarding_v1.js"></script>
     <script defer src="heys_app_hooks_v1.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_app_tabs_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_early_warning_panel_v1.js?v=8" fetchpriority="high"></script>
     <script defer src="heys_gamification_bar_v1.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_app_gates_v1.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_app_shell_v1.js?v=2" fetchpriority="high"></script>

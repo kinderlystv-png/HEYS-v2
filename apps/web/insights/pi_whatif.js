@@ -1,13 +1,18 @@
 /**
- * HEYS Predictive Insights — What-If Scenarios v1.0
+ * HEYS Predictive Insights — What-If Scenarios v2.0
  * 
- * Action-level simulations: predict pattern changes from specific actions.
+ * Realistic action-level simulations: predict pattern changes from specific actions.
+ * Uses actual pattern scores (0-100 scale), evidence-based impact coefficients,
+ * and real baseline data from HEYS.InsightsPI analysis.
  * 
- * Сценарии:
- * 1. Изменить protein в завтраке → predict satiety, meal_timing scores
- * 2. Изменить meal gap → predict wave_overlap, training_kcal scores
- * 3. Изменить bedtime → predict sleep_weight, recovery scores
- * 4. Добавить тренировку → predict steps_weight, training_kcal scores
+ * v2.0 changes:
+ * - Score scale: 0-100 (matching real pattern scores)
+ * - 15+ patterns covered in prediction engine
+ * - Fixed param name mismatches with UI (targetGapHours, targetSteps, etc.)
+ * - Realistic deltas: 3-15 points per action
+ * - Evidence-based impact coefficients
+ * - Comprehensive practical tips for all 10 action types
+ * - Health score delta: weighted average across affected patterns
  * 
  * Dependencies: pi_patterns.js, pi_calculations.js
  * @param global
@@ -43,106 +48,332 @@
     };
 
     /**
-     * Pattern impact matrix: which patterns are affected by which actions
+     * Impact rules: which patterns are affected by each action.
+     * delta = base points change (0-100 scale) for PRIMARY patterns.
+     * Secondary patterns get 40-60% of the delta.
+     * Each rule has a coefficient function that scales the delta based on actionParams.
      */
-    const IMPACT_MATRIX = {
+    const IMPACT_RULES = {
         [ACTION_TYPES.ADD_PROTEIN]: {
-            primary: ['protein_satiety', 'meal_quality_trend'],
-            secondary: ['meal_timing', 'training_recovery']
+            primary: [
+                { pattern: 'protein_satiety', delta: 12, desc: 'Насыщение растёт с белком' },
+                { pattern: 'meal_quality', delta: 8, desc: 'Качество приёма повышается' },
+                { pattern: 'protein_distribution', delta: 10, desc: 'Распределение белка улучшается' },
+                { pattern: 'nutrition_quality', delta: 6, desc: 'Общее качество нутриентов' }
+            ],
+            secondary: [
+                { pattern: 'training_recovery', delta: 5, desc: 'Лучше восстановление' },
+                { pattern: 'nutrient_density', delta: 4, desc: 'Плотность нутриентов' }
+            ],
+            coeff: (params) => {
+                const grams = params.proteinGrams || 30;
+                return Math.min(grams / 30, 1.5); // 30g=1x, 45g=1.5x, 15g=0.5x
+            }
         },
         [ACTION_TYPES.ADD_FIBER]: {
-            primary: ['fiber_regularity', 'meal_quality_trend'],
-            secondary: ['protein_satiety']
+            primary: [
+                { pattern: 'fiber_regularity', delta: 14, desc: 'Клетчатка нормализует пищеварение' },
+                { pattern: 'gut_health', delta: 10, desc: 'Здоровье ЖКТ улучшается' },
+                { pattern: 'meal_quality', delta: 6, desc: 'Качество рациона повышается' }
+            ],
+            secondary: [
+                { pattern: 'nutrition_quality', delta: 5, desc: 'Общее качество питания' },
+                { pattern: 'glycemic_load', delta: 4, desc: 'Снижает гликемическую нагрузку' },
+                { pattern: 'nutrient_density', delta: 3, desc: 'Готовая плотность нутриентов' }
+            ],
+            coeff: (params) => {
+                const grams = params.fiberGrams || 15;
+                return Math.min(grams / 15, 1.8); // 15g=1x, 30g=2x clamp 1.8
+            }
         },
         [ACTION_TYPES.REDUCE_CARBS]: {
-            primary: ['insulin_wave', 'late_eating'],
-            secondary: ['sleep_weight', 'meal_quality_trend']
+            primary: [
+                { pattern: 'glycemic_load', delta: 12, desc: 'Гликемическая нагрузка снижается' },
+                { pattern: 'insulin_sensitivity', delta: 8, desc: 'Чувствительность к инсулину' },
+                { pattern: 'added_sugar_dependency', delta: 10, desc: 'Сахарная зависимость снижается' }
+            ],
+            secondary: [
+                { pattern: 'meal_quality', delta: 5, desc: 'Качество рациона' },
+                { pattern: 'nutrition_quality', delta: 4, desc: 'Нутритивная ценность' },
+                { pattern: 'sleep_weight', delta: 3, desc: 'Сон и масса тела' }
+            ],
+            coeff: (params) => {
+                const pct = params.carbsPercent || 25;
+                return Math.min(pct / 25, 1.6); // 25%=1x, 50%=2x clamp 1.6
+            }
         },
         [ACTION_TYPES.INCREASE_MEAL_GAP]: {
-            primary: ['wave_overlap', 'meal_timing'],
-            secondary: ['training_kcal', 'insulin_wave']
+            primary: [
+                { pattern: 'wave_overlap', delta: 10, desc: 'Меньше наложения инсулиновых волн' },
+                { pattern: 'meal_timing', delta: 7, desc: 'Улучшение тайминга приёмов' },
+                { pattern: 'insulin_sensitivity', delta: 6, desc: 'Чувствительность к инсулину' }
+            ],
+            secondary: [
+                { pattern: 'circadian', delta: 4, desc: 'Циркадные ритмы' },
+                { pattern: 'nutrient_timing', delta: 3, desc: 'Тайминг нутриентов' }
+            ],
+            coeff: (params) => {
+                const targetGap = params.targetGapHours || 4;
+                // Bigger gap = bigger effect, but diminishing returns
+                return 0.5 + (targetGap - 3) * 0.5; // 3h=0.5x, 4h=1x, 5h=1.5x
+            }
         },
         [ACTION_TYPES.SHIFT_MEAL_TIME]: {
-            primary: ['meal_timing', 'late_eating'],
-            secondary: ['sleep_quality', 'training_kcal']
+            primary: [
+                { pattern: 'meal_timing', delta: 8, desc: 'Оптимизация тайминга приёмов' },
+                { pattern: 'circadian', delta: 7, desc: 'Синхронизация с циркадным ритмом' },
+                { pattern: 'late_eating', delta: 6, desc: 'Уменьшение поздних приёмов' }
+            ],
+            secondary: [
+                { pattern: 'nutrient_timing', delta: 4, desc: 'Тайминг нутриентов' },
+                { pattern: 'insulin_sensitivity', delta: 3, desc: 'Инсулиновая чувствительность' }
+            ],
+            coeff: (params) => {
+                const shiftMin = Math.abs(params.shiftMinutes || 30);
+                return Math.min(shiftMin / 30, 2.0); // 30min=1x, 60min=2x
+            }
         },
         [ACTION_TYPES.SKIP_LATE_MEAL]: {
-            primary: ['late_eating', 'sleep_weight'],
-            secondary: ['sleep_quality', 'insulin_wave']
+            primary: [
+                { pattern: 'late_eating', delta: 15, desc: 'Нет поздних приёмов' },
+                { pattern: 'sleep_weight', delta: 8, desc: 'Сон без тяжести' },
+                { pattern: 'circadian', delta: 7, desc: 'Циркадный ритм в норме' }
+            ],
+            secondary: [
+                { pattern: 'sleep_quality', delta: 5, desc: 'Качество сна улучшается' },
+                { pattern: 'insulin_sensitivity', delta: 4, desc: 'Инсулиновая чувствительность' },
+                { pattern: 'wave_overlap', delta: 3, desc: 'Меньше наложений волн' }
+            ],
+            coeff: () => 1.0 // Fixed action, no params
         },
         [ACTION_TYPES.INCREASE_SLEEP]: {
-            primary: ['sleep_weight', 'sleep_quality'],
-            secondary: ['training_recovery', 'meal_quality_trend']
+            primary: [
+                { pattern: 'sleep_quality', delta: 12, desc: 'Качество сна растёт' },
+                { pattern: 'sleep_weight', delta: 8, desc: 'Нормализуется связь сна и веса' },
+                { pattern: 'training_recovery', delta: 7, desc: 'Восстановление после тренировок' }
+            ],
+            secondary: [
+                { pattern: 'mood_trajectory', delta: 5, desc: 'Настроение стабилизируется' },
+                { pattern: 'wellbeing_correlation', delta: 4, desc: 'Самочувствие улучшается' },
+                { pattern: 'insulin_sensitivity', delta: 3, desc: 'Чувствительность к инсулину' }
+            ],
+            coeff: (params) => {
+                const target = params.targetSleepHours || 8;
+                // 7h→8h = 1x, 7h→9h = 1.5x, 7h→10h = 1.8x
+                return 0.5 + (target - 7) * 0.5;
+            }
         },
         [ACTION_TYPES.ADJUST_BEDTIME]: {
-            primary: ['sleep_quality', 'sleep_weight'],
-            secondary: ['late_eating', 'training_recovery']
+            primary: [
+                { pattern: 'sleep_quality', delta: 10, desc: 'Оптимальное время отбоя' },
+                { pattern: 'circadian', delta: 9, desc: 'Синхронизация циркадного ритма' },
+                { pattern: 'sleep_weight', delta: 6, desc: 'Улучшение связи сна и веса' }
+            ],
+            secondary: [
+                { pattern: 'late_eating', delta: 4, desc: 'Ранний отбой = уменьшение поздней еды' },
+                { pattern: 'training_recovery', delta: 3, desc: 'Лучше восстановление' },
+                { pattern: 'mood_trajectory', delta: 3, desc: 'Стабильное настроение' }
+            ],
+            coeff: (params) => {
+                const targetBedtime = params.targetBedtime || '22:30';
+                const hour = parseTime(targetBedtime);
+                // Оптимум 22-23: чем ближе к 22, тем лучше
+                if (hour >= 21.5 && hour <= 23) return 1.2;
+                if (hour >= 23 && hour <= 23.5) return 1.0;
+                if (hour < 21.5) return 0.8; // Слишком рано
+                return 0.6; // После 23:30
+            }
         },
         [ACTION_TYPES.ADD_TRAINING]: {
-            primary: ['training_kcal', 'training_recovery'],
-            secondary: ['steps_weight', 'sleep_quality']
+            primary: [
+                { pattern: 'training_kcal', delta: 12, desc: 'Больше сжигаемых калорий' },
+                { pattern: 'training_recovery', delta: 8, desc: 'Тренировочная нагрузка' },
+                { pattern: 'training_type_match', delta: 7, desc: 'Соответствие питания тренировке' }
+            ],
+            secondary: [
+                { pattern: 'steps_weight', delta: 5, desc: 'Активность и вес' },
+                { pattern: 'sleep_quality', delta: 4, desc: 'Физическая усталость улучшает сон' },
+                { pattern: 'heart_health', delta: 3, desc: 'Здоровье сердца' }
+            ],
+            coeff: (params) => {
+                const duration = params.durationMinutes || 45;
+                const intensity = params.intensity || 1;
+                const intensityMult = [0.7, 1.0, 1.3][intensity] || 1.0;
+                return Math.min((duration / 45) * intensityMult, 2.0);
+            }
         },
         [ACTION_TYPES.INCREASE_STEPS]: {
-            primary: ['steps_weight', 'training_kcal'],
-            secondary: ['sleep_quality']
+            primary: [
+                { pattern: 'steps_weight', delta: 10, desc: 'NEAT-активность и вес' },
+                { pattern: 'heart_health', delta: 7, desc: 'Кардио-здоровье' },
+                { pattern: 'training_kcal', delta: 5, desc: 'Дополнительный расход калорий' }
+            ],
+            secondary: [
+                { pattern: 'sleep_quality', delta: 4, desc: 'Физическая нагрузка помогает сну' },
+                { pattern: 'mood_trajectory', delta: 3, desc: 'Прогулки улучшают настроение' },
+                { pattern: 'wellbeing_correlation', delta: 3, desc: 'Общее самочувствие' }
+            ],
+            coeff: (params) => {
+                const target = params.targetSteps || 10000;
+                // 8000=0.8x, 10000=1x, 15000=1.5x, 20000=1.8x
+                return Math.min(target / 10000, 1.8);
+            }
         }
+    };
+
+    /**
+     * Category weights for health score calculation (must sum to 1.0)
+     */
+    const CATEGORY_WEIGHTS = {
+        nutrition: 0.25,
+        timing: 0.2,
+        recovery: 0.2,
+        activity: 0.15,
+        metabolism: 0.2
+    };
+
+    /**
+     * Pattern → category mapping for weighted health score
+     */
+    const PATTERN_CATEGORY = {
+        protein_satiety: 'nutrition',
+        meal_quality: 'nutrition',
+        nutrition_quality: 'nutrition',
+        fiber_regularity: 'nutrition',
+        protein_distribution: 'nutrition',
+        nutrient_density: 'nutrition',
+        glycemic_load: 'metabolism',
+        insulin_sensitivity: 'metabolism',
+        added_sugar_dependency: 'metabolism',
+        meal_timing: 'timing',
+        wave_overlap: 'timing',
+        late_eating: 'timing',
+        circadian: 'timing',
+        nutrient_timing: 'timing',
+        sleep_quality: 'recovery',
+        sleep_weight: 'recovery',
+        training_recovery: 'recovery',
+        mood_trajectory: 'recovery',
+        wellbeing_correlation: 'recovery',
+        gut_health: 'recovery',
+        steps_weight: 'activity',
+        training_kcal: 'activity',
+        training_type_match: 'activity',
+        heart_health: 'activity'
     };
 
     /**
      * Simulate an action and predict pattern changes
      * @param {string} actionType - One of ACTION_TYPES
-     * @param {object} actionParams - Action parameters (e.g., { proteinGrams: 30, mealIndex: 0 })
+     * @param {object} actionParams - Action parameters from UI
      * @param {object[]} days - Historical days
      * @param {object} profile
      * @param {object} pIndex
      * @returns {object} - Simulation result with predictions
      */
     function simulateAction(actionType, actionParams, days, profile, pIndex) {
-        console.log('[WhatIf] 🔮 simulateAction called:', {
+        console.info('[WhatIf] 🔮 simulateAction called:', {
             actionType,
             actionParams,
             daysCount: days?.length || 0,
             profileId: profile?.id
         });
 
-        // Validate action type (check if actionType is a valid ACTION_TYPES value)
+        // Validate action type
         const validActionTypes = Object.values(ACTION_TYPES);
         if (!validActionTypes.includes(actionType)) {
             console.warn('[WhatIf] ❌ Unknown action type:', actionType);
             return { available: false, error: 'Unknown action type' };
         }
 
-        if (days.length < 7) {
+        if (!days || days.length < 7) {
             return { available: false, error: 'Need at least 7 days of data' };
         }
 
-        // Get current pattern scores (baseline)
-        const baseline = calculateBaselineScores(days, profile, pIndex);
+        const rules = IMPACT_RULES[actionType];
+        if (!rules) {
+            return { available: false, error: 'No impact rules for action' };
+        }
 
-        // Apply action to create modified day
-        const modifiedDay = applyAction(days[days.length - 1], actionType, actionParams, profile, pIndex);
+        // 1. Get current pattern scores (baseline) — real 0-100 scores
+        const baseline = collectBaselineScores(days, profile, pIndex);
 
-        // Predict new pattern scores
-        const predicted = predictScoresAfterAction(modifiedDay, days, profile, pIndex, actionType);
+        // 2. Calculate coefficient from action params
+        const coeff = typeof rules.coeff === 'function' ? rules.coeff(actionParams || {}) : 1.0;
 
-        // Calculate impact
-        const impact = calculateImpact(baseline, predicted, actionType);
+        // 3. Predict pattern score changes
+        const predicted = {};
+        const impact = [];
+
+        // Process primary impacts
+        rules.primary.forEach(rule => {
+            const baseScore = baseline[rule.pattern];
+            if (baseScore === null || baseScore === undefined) return; // Pattern not available
+
+            const rawDelta = Math.round(rule.delta * coeff);
+            const newScore = clampScore(baseScore + rawDelta);
+            const actualDelta = newScore - baseScore;
+
+            if (actualDelta !== 0) {
+                predicted[rule.pattern] = newScore;
+                impact.push({
+                    pattern: rule.pattern,
+                    baseline: baseScore,
+                    predicted: newScore,
+                    delta: actualDelta,
+                    percentChange: baseScore > 0 ? Math.round((actualDelta / baseScore) * 100) : actualDelta,
+                    significance: Math.abs(actualDelta) >= 10 ? 'high' : Math.abs(actualDelta) >= 5 ? 'medium' : 'low',
+                    desc: rule.desc,
+                    tier: 'primary'
+                });
+            }
+        });
+
+        // Process secondary impacts (reduced effect: 40-60%)
+        rules.secondary.forEach(rule => {
+            const baseScore = baseline[rule.pattern];
+            if (baseScore === null || baseScore === undefined) return;
+
+            const secondaryMult = 0.5; // 50% of primary effect
+            const rawDelta = Math.round(rule.delta * coeff * secondaryMult);
+            const newScore = clampScore(baseScore + rawDelta);
+            const actualDelta = newScore - baseScore;
+
+            if (actualDelta !== 0) {
+                predicted[rule.pattern] = newScore;
+                impact.push({
+                    pattern: rule.pattern,
+                    baseline: baseScore,
+                    predicted: newScore,
+                    delta: actualDelta,
+                    percentChange: baseScore > 0 ? Math.round((actualDelta / baseScore) * 100) : actualDelta,
+                    significance: Math.abs(actualDelta) >= 8 ? 'medium' : 'low',
+                    desc: rule.desc,
+                    tier: 'secondary'
+                });
+            }
+        });
+
+        // Sort by absolute delta descending
+        impact.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
 
         const result = {
             available: true,
             actionType,
             actionParams,
-            baseline: baseline.scores,
-            predicted: predicted.scores,
+            baseline,
+            predicted,
             impact,
             sideBenefits: identifySideBenefits(impact),
-            healthScoreChange: calculateHealthScoreChange(impact),
+            healthScoreChange: calculateHealthScoreChange(impact, baseline),
             practicalTips: generatePracticalTips(actionType, actionParams, impact)
         };
 
-        console.log('[WhatIf] ✅ Simulation complete:', {
+        console.info('[WhatIf] ✅ Simulation complete:', {
             actionType,
+            coeff: coeff.toFixed(2),
             impactCount: impact.length,
+            topImpact: impact[0] ? `${impact[0].pattern}: +${impact[0].delta}` : 'none',
             sideBenefitsCount: result.sideBenefits.length,
             healthScoreDelta: result.healthScoreChange.delta
         });
@@ -151,304 +382,245 @@
     }
 
     /**
-     * Calculate baseline pattern scores from recent days
+     * Collect baseline pattern scores from latest insights analysis (0-100 scale).
+     * Uses cached pattern results if available, or falls back to direct analysis.
      * @private
      */
-    function calculateBaselineScores(days, profile, pIndex) {
+    function collectBaselineScores(days, profile, pIndex) {
+        const scores = {};
+
+        // Try to get scores from latest insights analysis (cached results)
+        const cachedPatterns = HEYS.InsightsPI?._lastPatterns || HEYS.InsightsPI?._patterns;
+        if (cachedPatterns && Array.isArray(cachedPatterns)) {
+            cachedPatterns.forEach(p => {
+                if (p.available && typeof p.score === 'number') {
+                    scores[p.pattern] = p.score;
+                }
+            });
+
+            if (Object.keys(scores).length >= 5) {
+                console.info('[WhatIf] 📊 Baseline from cached patterns:', {
+                    count: Object.keys(scores).length,
+                    sample: Object.entries(scores).slice(0, 5).map(([k, v]) => `${k}:${v}`)
+                });
+                return scores;
+            }
+        }
+
+        // Fallback: compute key patterns directly
         const patterns = HEYS.InsightsPI?.patterns;
         if (!patterns) {
-            console.warn('[WhatIf] Patterns module not available');
-            return { scores: {} };
+            console.warn('[WhatIf] ⚠️ No patterns module, using moderate defaults');
+            return getDefaultBaseline();
         }
 
-        const recentDays = days.slice(-14);
-        const scores = {};
-
-        // Calculate scores for key patterns
         try {
-            const proteinSatiety = patterns.lifestyle?.analyzeProteinSatiety?.(recentDays, profile, pIndex);
-            scores.protein_satiety = proteinSatiety?.correlation || 0;
+            const recentDays = days.slice(-14);
 
-            const mealTiming = patterns.timing?.analyzeMealTiming?.(recentDays, profile, pIndex);
-            scores.meal_timing = mealTiming?.score || 0;
+            const runners = [
+                { key: 'meal_timing', fn: () => patterns.analyzeMealTiming?.(recentDays, profile, pIndex) },
+                { key: 'wave_overlap', fn: () => patterns.analyzeWaveOverlap?.(recentDays, profile) },
+                { key: 'late_eating', fn: () => patterns.analyzeLateEating?.(recentDays, profile, pIndex) },
+                { key: 'meal_quality', fn: () => patterns.analyzeMealQualityTrend?.(recentDays, pIndex) },
+                { key: 'nutrition_quality', fn: () => patterns.analyzeNutritionQuality?.(recentDays, pIndex) },
+                { key: 'protein_satiety', fn: () => patterns.analyzeProteinSatiety?.(recentDays, profile, pIndex) },
+                { key: 'fiber_regularity', fn: () => patterns.analyzeFiberRegularity?.(recentDays, pIndex) },
+                { key: 'sleep_weight', fn: () => patterns.analyzeSleepWeight?.(recentDays, profile, pIndex) },
+                { key: 'sleep_quality', fn: () => patterns.analyzeSleepQuality?.(recentDays, pIndex) },
+                { key: 'training_kcal', fn: () => patterns.analyzeTrainingKcal?.(recentDays, pIndex) },
+                { key: 'training_recovery', fn: () => patterns.analyzeTrainingRecovery?.(recentDays) },
+                { key: 'steps_weight', fn: () => patterns.analyzeStepsWeight?.(recentDays, profile, pIndex) },
+                { key: 'circadian', fn: () => patterns.analyzeCircadianTiming?.(recentDays, profile, pIndex) },
+                { key: 'nutrient_timing', fn: () => patterns.analyzeNutrientTiming?.(recentDays, pIndex) },
+                { key: 'insulin_sensitivity', fn: () => patterns.analyzeInsulinSensitivity?.(recentDays, pIndex, profile) },
+                { key: 'gut_health', fn: () => patterns.analyzeGutHealth?.(recentDays, pIndex) },
+                { key: 'glycemic_load', fn: () => patterns.analyzeGlycemicLoad?.(recentDays, pIndex) },
+                { key: 'protein_distribution', fn: () => patterns.analyzeProteinDistribution?.(recentDays, profile, pIndex) },
+                { key: 'added_sugar_dependency', fn: () => patterns.analyzeAddedSugarDependency?.(recentDays, pIndex) },
+                { key: 'heart_health', fn: () => patterns.analyzeHeartHealth?.(recentDays, pIndex) },
+                { key: 'training_type_match', fn: () => patterns.analyzeTrainingTypeMatch?.(recentDays, profile, pIndex) },
+                { key: 'nutrient_density', fn: () => patterns.analyzeNutrientDensity?.(recentDays, pIndex) },
+                { key: 'mood_trajectory', fn: () => patterns.analyzeMoodTrajectory?.(recentDays, pIndex) },
+                { key: 'wellbeing_correlation', fn: () => patterns.analyzeWellbeing?.(recentDays, pIndex) }
+            ];
 
-            const waveOverlap = patterns.timing?.analyzeWaveOverlap?.(recentDays, profile, pIndex);
-            scores.wave_overlap = waveOverlap?.score || 0;
-
-            const lateEating = patterns.timing?.analyzeLateEating?.(recentDays, profile, pIndex);
-            scores.late_eating = lateEating?.score || 0;
-
-            const sleepWeight = patterns.lifestyle?.analyzeSleepWeight?.(recentDays, profile, pIndex);
-            scores.sleep_weight = sleepWeight?.correlation || 0;
-
-            const sleepQuality = patterns.quality?.analyzeSleepQuality?.(recentDays, profile, pIndex);
-            scores.sleep_quality = sleepQuality?.overall || 0;
-
-            const stepsWeight = patterns.activity?.analyzeStepsWeight?.(recentDays, profile, pIndex);
-            scores.steps_weight = stepsWeight?.correlation || 0;
-        } catch (e) {
-            console.warn('[WhatIf] Error calculating baseline:', e.message);
-        }
-
-        return { scores };
-    }
-
-    /**
-     * Apply action to a day (create modified copy)
-     * @private
-     */
-    function applyAction(day, actionType, actionParams, profile, pIndex) {
-        const modified = JSON.parse(JSON.stringify(day)); // Deep clone
-
-        switch (actionType) {
-            case ACTION_TYPES.ADD_PROTEIN:
-                modified.meals = modified.meals || [];
-                const mealIndex = actionParams.mealIndex || 0;
-                if (modified.meals[mealIndex]) {
-                    modified.meals[mealIndex].protein_added = actionParams.proteinGrams || 30;
-                }
-                break;
-
-            case ACTION_TYPES.ADD_FIBER:
-                modified.fiber_added = actionParams.fiberGrams || 10;
-                break;
-
-            case ACTION_TYPES.REDUCE_CARBS:
-                modified.carbs_reduced = actionParams.carbReduction || 50;
-                break;
-
-            case ACTION_TYPES.INCREASE_MEAL_GAP:
-                modified.meal_gap_increased = actionParams.gapIncrease || 1; // hours
-                break;
-
-            case ACTION_TYPES.SKIP_LATE_MEAL:
-                modified.meals = modified.meals || [];
-                if (modified.meals.length > 0) {
-                    const lastMeal = modified.meals[modified.meals.length - 1];
-                    if (lastMeal.time && parseTime(lastMeal.time) > 20) {
-                        modified.meals.pop(); // Remove last meal
-                        modified.late_meal_skipped = true;
+            runners.forEach(({ key, fn }) => {
+                try {
+                    const result = fn();
+                    if (result && result.available && typeof result.score === 'number') {
+                        scores[key] = result.score;
                     }
+                } catch (e) {
+                    // Silently skip failed pattern
                 }
-                break;
+            });
 
-            case ACTION_TYPES.INCREASE_SLEEP:
-                modified.sleepHours = (modified.sleepHours || 7) + (actionParams.sleepIncrease || 1);
-                break;
-
-            case ACTION_TYPES.ADJUST_BEDTIME:
-                modified.bedtime_adjusted = actionParams.bedtimeShift || -1; // hours (negative = earlier)
-                break;
-
-            case ACTION_TYPES.ADD_TRAINING:
-                modified.training_added = {
-                    duration: actionParams.trainingDuration || 60,
-                    intensity: actionParams.trainingIntensity || 'medium'
-                };
-                break;
-
-            case ACTION_TYPES.INCREASE_STEPS:
-                modified.steps = (modified.steps || 5000) + (actionParams.stepsIncrease || 3000);
-                break;
-        }
-
-        return modified;
-    }
-
-    /**
-     * Predict pattern scores after applying action
-     * @private
-     */
-    function predictScoresAfterAction(modifiedDay, days, profile, pIndex, actionType) {
-        const scores = {};
-        const affectedPatterns = IMPACT_MATRIX[actionType];
-
-        if (!affectedPatterns) {
-            return { scores };
-        }
-
-        // Predict primary impacts
-        affectedPatterns.primary.forEach(patternKey => {
-            scores[patternKey] = predictPatternScore(patternKey, modifiedDay, days, profile, pIndex);
-        });
-
-        // Predict secondary impacts (smaller effect)
-        affectedPatterns.secondary.forEach(patternKey => {
-            scores[patternKey] = predictPatternScore(patternKey, modifiedDay, days, profile, pIndex, 0.5);
-        });
-
-        return { scores };
-    }
-
-    /**
-     * Predict single pattern score
-     * @private
-     */
-    function predictPatternScore(patternKey, modifiedDay, days, profile, pIndex, multiplier = 1.0) {
-        // Simplified prediction logic (placeholder for ML-based prediction)
-        const baseline = getPatternBaseline(patternKey, days, profile, pIndex);
-
-        // Heuristic adjustments based on pattern type
-        let predicted = baseline;
-
-        switch (patternKey) {
-            case 'protein_satiety':
-                if (modifiedDay.meals?.[0]?.protein_added) {
-                    predicted += 0.15 * multiplier; // +15% correlation
-                }
-                break;
-
-            case 'meal_timing':
-                if (modifiedDay.meal_gap_increased) {
-                    predicted += 0.1 * multiplier; // +10% score
-                }
-                break;
-
-            case 'late_eating':
-                if (modifiedDay.late_meal_skipped) {
-                    predicted += 0.2 * multiplier; // +20% score
-                }
-                break;
-
-            case 'sleep_weight':
-                if (modifiedDay.sleepHours > 7.5) {
-                    predicted += 0.1 * multiplier; // +10% correlation
-                }
-                break;
-
-            case 'steps_weight':
-                if (modifiedDay.steps > 8000) {
-                    predicted += 0.12 * multiplier; // +12% correlation
-                }
-                break;
-        }
-
-        return Math.min(1.0, Math.max(-1.0, predicted));
-    }
-
-    /**
-     * Get baseline pattern score
-     * @private
-     */
-    function getPatternBaseline(patternKey, days, profile, pIndex) {
-        const patterns = HEYS.InsightsPI?.patterns;
-        if (!patterns) return 0;
-
-        const recentDays = days.slice(-14);
-
-        try {
-            switch (patternKey) {
-                case 'protein_satiety':
-                    const ps = patterns.lifestyle?.analyzeProteinSatiety?.(recentDays, profile, pIndex);
-                    return ps?.correlation || 0;
-
-                case 'meal_timing':
-                    const mt = patterns.timing?.analyzeMealTiming?.(recentDays, profile, pIndex);
-                    return mt?.score || 0;
-
-                case 'late_eating':
-                    const le = patterns.timing?.analyzeLateEating?.(recentDays, profile, pIndex);
-                    return le?.score || 0;
-
-                case 'sleep_weight':
-                    const sw = patterns.lifestyle?.analyzeSleepWeight?.(recentDays, profile, pIndex);
-                    return sw?.correlation || 0;
-
-                case 'steps_weight':
-                    const stw = patterns.activity?.analyzeStepsWeight?.(recentDays, profile, pIndex);
-                    return stw?.correlation || 0;
-
-                default:
-                    return 0;
-            }
+            console.info('[WhatIf] 📊 Baseline computed:', {
+                count: Object.keys(scores).length,
+                sample: Object.entries(scores).slice(0, 5).map(([k, v]) => `${k}:${v}`)
+            });
         } catch (e) {
-            return 0;
-        }
-    }
-
-    /**
-     * Calculate impact metrics
-     * @private
-     */
-    function calculateImpact(baseline, predicted, actionType) {
-        const impacts = [];
-
-        for (const [patternKey, predictedScore] of Object.entries(predicted.scores)) {
-            const baselineScore = baseline.scores[patternKey] || 0;
-            const delta = predictedScore - baselineScore;
-            const percentChange = baselineScore !== 0 ? (delta / Math.abs(baselineScore)) * 100 : 0;
-
-            if (Math.abs(delta) > 0.05) { // Significant change threshold
-                impacts.push({
-                    pattern: patternKey,
-                    baseline: Math.round(baselineScore * 100) / 100,
-                    predicted: Math.round(predictedScore * 100) / 100,
-                    delta: Math.round(delta * 100) / 100,
-                    percentChange: Math.round(percentChange),
-                    significance: Math.abs(delta) > 0.15 ? 'high' : 'medium'
-                });
-            }
+            console.warn('[WhatIf] ⚠️ Error computing baseline:', e.message);
         }
 
-        return impacts;
+        return scores;
     }
 
     /**
-     * Identify side benefits (positive impacts on secondary patterns)
+     * Default baseline scores for common patterns (when no data available)
      * @private
      */
-    function identifySideBenefits(impact) {
-        return impact.filter(i => i.delta > 0.05).map(i => ({
-            pattern: i.pattern,
-            improvement: `+${i.percentChange}%`
-        }));
-    }
-
-    /**
-     * Calculate overall Health Score change
-     * @private
-     */
-    function calculateHealthScoreChange(impact) {
-        const totalDelta = impact.reduce((sum, i) => sum + i.delta, 0);
-        const avgDelta = impact.length > 0 ? totalDelta / impact.length : 0;
+    function getDefaultBaseline() {
         return {
-            delta: Math.round(avgDelta * 100) / 100,
-            percent: Math.round(avgDelta * 100)
+            meal_timing: 60, wave_overlap: 50, late_eating: 50,
+            meal_quality: 55, nutrition_quality: 45, protein_satiety: 40,
+            fiber_regularity: 40, sleep_weight: 50, sleep_quality: 50,
+            training_kcal: 50, training_recovery: 55, steps_weight: 45,
+            circadian: 60, nutrient_timing: 50, insulin_sensitivity: 50,
+            gut_health: 50, glycemic_load: 55, protein_distribution: 45,
+            added_sugar_dependency: 40, heart_health: 60, training_type_match: 40,
+            nutrient_density: 50, mood_trajectory: 55, wellbeing_correlation: 50
         };
     }
 
     /**
-     * Generate practical tips for action
+     * Identify side benefits (positive impacts from secondary patterns)
      * @private
      */
-    function generatePracticalTips(actionType, actionParams, impact) {
+    function identifySideBenefits(impact) {
+        return impact
+            .filter(i => i.tier === 'secondary' && i.delta > 0)
+            .map(i => ({
+                pattern: i.pattern,
+                improvement: `+${i.delta} баллов`,
+                desc: i.desc
+            }));
+    }
+
+    /**
+     * Calculate overall Health Score change (weighted by category importance)
+     * @private
+     */
+    function calculateHealthScoreChange(impact, baseline) {
+        if (impact.length === 0) {
+            return { delta: 0, percent: 0 };
+        }
+
+        // Weighted sum by category
+        let totalWeightedDelta = 0;
+        let totalWeight = 0;
+
+        impact.forEach(i => {
+            const category = PATTERN_CATEGORY[i.pattern] || 'nutrition';
+            const categoryWeight = CATEGORY_WEIGHTS[category] || 0.15;
+            // Each pattern gets equal share within its category
+            const patternWeight = categoryWeight * (i.tier === 'primary' ? 1.0 : 0.5);
+
+            totalWeightedDelta += i.delta * patternWeight;
+            totalWeight += patternWeight;
+        });
+
+        // Normalize to approximate health score delta (0-100 scale)
+        const delta = totalWeight > 0 ? Math.round(totalWeightedDelta / totalWeight) : 0;
+        const percent = delta; // Already on 0-100 scale
+
+        return { delta, percent };
+    }
+
+    /**
+     * Generate practical tips for action (all 10 types covered)
+     * @private
+     */
+    function generatePracticalTips(actionType, params, impact) {
         const tips = [];
+        const p = params || {};
 
         switch (actionType) {
-            case ACTION_TYPES.ADD_PROTEIN:
-                tips.push('Добавьте яйца, творог или протеиновый коктейль');
-                tips.push(`Цель: ${actionParams.proteinGrams || 30}г белка в ${getMealName(actionParams.mealIndex || 0)}`);
+            case ACTION_TYPES.ADD_PROTEIN: {
+                const grams = p.proteinGrams || 30;
+                const meal = getMealName(p.mealIndex || 0);
+                tips.push(`Добавьте ${grams}г белка в ${meal}`);
+                tips.push('🥚 Яйца, творог 5%, куриная грудка или протеиновый коктейль');
+                if (grams >= 30) {
+                    tips.push('Распределите белок равномерно в течение дня (25-35г на приём)');
+                }
                 break;
-
-            case ACTION_TYPES.INCREASE_MEAL_GAP:
-                tips.push(`Увеличьте промежуток между приёмами до ${actionParams.gapIncrease + 3}ч`);
-                tips.push('Пейте воду или чай между приёмами');
+            }
+            case ACTION_TYPES.ADD_FIBER: {
+                const grams = p.fiberGrams || 15;
+                tips.push(`Добавьте ${grams}г клетчатки в рацион`);
+                tips.push('🥦 Брокколи, овёс, чечевица, ягоды, авокадо');
+                tips.push('Увеличивайте клетчатку постепенно (+5г/неделю) и пейте больше воды');
                 break;
-
+            }
+            case ACTION_TYPES.REDUCE_CARBS: {
+                const pct = p.carbsPercent || 25;
+                tips.push(`Снизить быстрые углеводы на ~${pct}%`);
+                tips.push('🍞 Замените белый хлеб → цельнозерновой, сахар → стевия');
+                tips.push('Сложные углеводы (гречка, бурый рис) в первой половине дня');
+                break;
+            }
+            case ACTION_TYPES.INCREASE_MEAL_GAP: {
+                const gap = p.targetGapHours || 4;
+                tips.push(`Увеличьте промежуток между приёмами до ${gap}ч`);
+                tips.push('☕ Между приёмами — вода, чай, чёрный кофе (без сахара)');
+                tips.push('Это поможет инсулину вернуться к базальному уровню');
+                break;
+            }
+            case ACTION_TYPES.SHIFT_MEAL_TIME: {
+                const shiftMin = Math.abs(p.shiftMinutes || 30);
+                const direction = (p.shiftMinutes || -30) < 0 ? 'раньше' : 'позже';
+                const meal = getMealName(p.mealIndex || 0);
+                tips.push(`Сдвиньте ${meal} на ${shiftMin} мин ${direction}`);
+                tips.push('🕐 Оптимальное окно: завтрак 7-9, обед 12-14, ужин 18-19:30');
+                tips.push('Придерживайтесь стабильного расписания каждый день');
+                break;
+            }
             case ACTION_TYPES.SKIP_LATE_MEAL:
-                tips.push('Последний приём пищи — не позже 20:00');
-                tips.push('Если голодны вечером — кефир или лёгкий овощной салат');
+                tips.push('Последний приём пищи — не позже 19:00-20:00');
+                tips.push('🌙 Если голодны вечером — травяной чай или кефир 1%');
+                tips.push('Пищевое окно 10-12ч (напр. 8:00-20:00) для циркадного ритма');
                 break;
 
-            case ACTION_TYPES.INCREASE_SLEEP:
-                tips.push(`Ложитесь спать на ${actionParams.sleepIncrease || 1}ч раньше`);
-                tips.push('Установите напоминание за 30 мин до сна');
+            case ACTION_TYPES.INCREASE_SLEEP: {
+                const target = p.targetSleepHours || 8;
+                tips.push(`Целевая длительность сна: ${target}ч`);
+                tips.push('😴 Ложитесь на 30-60 мин раньше привычного');
+                tips.push('Установите будильник-напоминание «пора спать» за 30 мин');
+                if (target >= 9) {
+                    tips.push('9+ часов подходит при высоких тренировочных нагрузках');
+                }
                 break;
+            }
+            case ACTION_TYPES.ADJUST_BEDTIME: {
+                const bt = p.targetBedtime || '22:30';
+                tips.push(`Оптимальное время отбоя: ${bt}`);
+                tips.push('🛏️ За 1 час до сна: нет экранов, тёплый душ, лёгкая растяжка');
+                tips.push('Фиксированное время отбоя ±15 мин, включая выходные');
+                break;
+            }
+            case ACTION_TYPES.ADD_TRAINING: {
+                const dur = p.durationMinutes || 45;
+                const intensityLabels = ['лёгкая', 'средняя', 'высокая'];
+                const intLabel = intensityLabels[p.intensity || 1] || 'средняя';
+                tips.push(`Добавьте тренировку ${dur} мин, интенсивность: ${intLabel}`);
+                tips.push('🏋️ Силовая 2-3 раза/нед + кардио 2 раза/нед = оптимум');
+                tips.push('Приём белка 25-30г в течение 2ч после тренировки');
+                break;
+            }
+            case ACTION_TYPES.INCREASE_STEPS: {
+                const target = p.targetSteps || 10000;
+                tips.push(`Цель: ${target.toLocaleString('ru')} шагов в день`);
+                tips.push('🚶 Прогулка 20 мин после обеда = ~2000 шагов');
+                tips.push('Используйте лестницу вместо лифта, паркуйтесь дальше');
+                break;
+            }
+        }
 
-            case ACTION_TYPES.INCREASE_STEPS:
-                tips.push(`Цель: ${actionParams.stepsIncrease + 5000} шагов/день`);
-                tips.push('Прогулка после обеда или вечером');
-                break;
+        // Add impact-based tip if significant improvement expected
+        const topImpact = impact[0];
+        if (topImpact && topImpact.delta >= 8) {
+            tips.push(`📈 Наибольший эффект ожидается на: ${topImpact.desc} (+${topImpact.delta} баллов)`);
         }
 
         return tips;
@@ -473,12 +645,20 @@
         return names[index] || 'приём пищи';
     }
 
+    /**
+     * Clamp score to 0-100 range
+     * @private
+     */
+    function clampScore(score) {
+        return Math.max(0, Math.min(100, Math.round(score)));
+    }
+
     // Export API
     HEYS.InsightsPI.whatif = {
         ACTION_TYPES,
         simulate: simulateAction
     };
 
-    console.info('[HEYS.InsightsPI.whatif] ✅ What-If Scenarios v1.0 initialized');
+    console.info('[HEYS.InsightsPI.whatif] ✅ What-If Scenarios v2.0 initialized (realistic predictions)');
 
 })(typeof window !== 'undefined' ? window : global);

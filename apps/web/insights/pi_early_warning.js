@@ -1,15 +1,16 @@
 /**
- * HEYS Predictive Insights — Early Warning System v1.0
+ * HEYS Predictive Insights — Early Warning System v1.1
  * 
  * Проактивная детекция негативных трендов до того, как они станут проблемой.
  * 
  * Сценарии:
  * 1. Health Score падает 3 дня подряд
- * 2. Критичный паттерн (C1-C10) ухудшился на 20%+ за 7 дней
- * 3. Sleep debt накопился (3+ дня <7ч)
- * 4. Caloric debt >1500 kcal 2 дня подряд
+ * 2. Критичный паттерн (C1-C22) ухудшился на 20%+ за 7 дней OR низкий score
+ * 3. Status Score (0-100) падает 3 дня подряд
+ * 4. Sleep debt накопился (3+ дня <7ч)
+ * 5. Caloric debt >1500 kcal 2 дня подряд
  * 
- * Dependencies: pi_patterns.js, pi_advanced.js
+ * Dependencies: pi_patterns.js, pi_advanced.js, heys_status_v1.js
  * @param global
  */
 
@@ -23,6 +24,8 @@
     const THRESHOLDS = {
         HEALTH_SCORE_DECLINE_DAYS: 3,
         HEALTH_SCORE_MIN_DELTA: 10, // minimum total drop over N days (positive = decline)
+        STATUS_SCORE_DECLINE_DAYS: 3,
+        STATUS_SCORE_MIN_DELTA: 10, // minimum total drop over N days (positive = decline)
         CRITICAL_PATTERN_DEGRADATION: -0.2, // -20%
         SLEEP_DEFICIT_DAYS: 3,
         SLEEP_DEFICIT_HOURS: 7,
@@ -108,7 +111,11 @@
      * @returns {object|null}
      */
     function checkHealthScoreDecline(days, profile, pIndex, options = {}) {
-        if (days.length < THRESHOLDS.MIN_DAYS_FOR_ANALYSIS) return null;
+        console.log('[EWS] 📉 Checking health score decline...');
+        if (days.length < THRESHOLDS.MIN_DAYS_FOR_ANALYSIS) {
+            console.log('[EWS]   ⏭️ Skip: insufficient days', days.length, '<', THRESHOLDS.MIN_DAYS_FOR_ANALYSIS);
+            return null;
+        }
 
         // Check if we have pattern data passed from UI
         const { currentPatterns, previousPatterns } = options;
@@ -118,7 +125,7 @@
         if (!currentPatterns || !previousPatterns) {
             const calcDayHealthScore = HEYS.InsightsPI?.calculations?.calculateHealthScore;
             if (!calcDayHealthScore) {
-                console.log('[EWS] No pattern data and no day-level health score calculator, skipping health score decline check');
+                console.log('[EWS]   ⏭️ Skip: no pattern snapshots and no day-level health score calculator');
                 return null;
             }
 
@@ -148,6 +155,7 @@
                     .filter(score => Number.isFinite(score) && score > 0);
 
                 if (currentScores.length < THRESHOLDS.HEALTH_SCORE_DECLINE_DAYS || previousScores.length < THRESHOLDS.HEALTH_SCORE_DECLINE_DAYS) {
+                    console.log('[EWS]   ⏭️ Skip: insufficient valid scores after filtering');
                     return null;
                 }
 
@@ -155,10 +163,12 @@
                 const previousScore = previousScores.reduce((sum, v) => sum + v, 0) / previousScores.length;
                 const totalDrop = previousScore - currentScore;
 
+                console.log(`[EWS]   Health scores (fallback): prev=${Math.round(previousScore)}, curr=${Math.round(currentScore)}, drop=${Math.round(totalDrop)}`);
+
                 if (totalDrop >= THRESHOLDS.HEALTH_SCORE_MIN_DELTA) {
                     const percentChange = Math.round((totalDrop / previousScore) * 100);
 
-                    return {
+                    const warning = {
                         type: 'HEALTH_SCORE_DECLINE',
                         severity: totalDrop >= 20 ? 'high' : 'medium',
                         days: THRESHOLDS.HEALTH_SCORE_DECLINE_DAYS,
@@ -171,8 +181,11 @@
                         action: 'Проверить breakdown по категориям в Pattern Debugger',
                         actionable: true
                     };
+                    console.log(`[EWS]   ✅ HEALTH_SCORE_DECLINE warning: severity=${warning.severity}, drop=${warning.totalDrop}`);
+                    return warning;
                 }
 
+                console.log('[EWS]   ➖ No significant health score decline (fallback)');
                 return null;
             } catch (e) {
                 console.error('[EWS] Error in day-level health score fallback:', e);
@@ -361,13 +374,109 @@
     }
 
     /**
-     * Warning 3: Sleep debt accumulation
+     * Warning 3: Status Score decline
+     * @param {object[]} days - Array of day objects with statusScore property
+     * @returns {object|null}
+     */
+    function checkStatusScoreDecline(days) {
+        console.log('[EWS] 📊 Checking Status Score decline...');
+
+        if (days.length < THRESHOLDS.STATUS_SCORE_DECLINE_DAYS) {
+            console.log('[EWS]   ⏭️ Skip: insufficient days', days.length, '<', THRESHOLDS.STATUS_SCORE_DECLINE_DAYS);
+            return null;
+        }
+
+        // Get Status Score for recent days
+        const recentDays = days.slice(-7); // Most recent 7 days
+        const statusScores = [];
+
+        for (const day of recentDays) {
+            // Try to get cached status or calculate
+            let status = null;
+
+            if (day.statusScore !== undefined) {
+                status = day.statusScore;
+            } else if (day._statusCalculated && day._statusCalculated.score !== undefined) {
+                status = day._statusCalculated.score;
+            } else if (typeof HEYS !== 'undefined' && HEYS.Status && typeof HEYS.Status.calculate === 'function') {
+                // Try to calculate status Score on the fly
+                try {
+                    const result = HEYS.Status.calculate({ dayData: day });
+                    if (result && result.score !== undefined) {
+                        status = result.score;
+                    }
+                } catch (e) {
+                    console.warn('[EWS]   ⚠️ Failed to calculate status for day', day.date, e.message);
+                }
+            }
+
+            if (status !== null && status !== undefined) {
+                statusScores.push({
+                    date: day.date,
+                    score: status
+                });
+            }
+        }
+
+        console.log(`[EWS]   Collected ${statusScores.length} status scores from ${recentDays.length} days`);
+
+        if (statusScores.length < THRESHOLDS.STATUS_SCORE_DECLINE_DAYS) {
+            console.log('[EWS]   ⏭️ Skip: not enough status scores', statusScores.length, '<', THRESHOLDS.STATUS_SCORE_DECLINE_DAYS);
+            return null;
+        }
+
+        // Check consecutive decline
+        const recent = statusScores.slice(-THRESHOLDS.STATUS_SCORE_DECLINE_DAYS);
+        const scores = recent.map(d => d.score);
+        const isDecline = isConsecutiveDecline(scores, THRESHOLDS.STATUS_SCORE_DECLINE_DAYS);
+
+        console.log(`[EWS]   Status scores (${recent.length}d):`, scores.map(s => Math.round(s)));
+
+        if (isDecline) {
+            const totalDrop = scores[0] - scores[scores.length - 1];
+            const avgDailyDrop = calculateDeclineRate(scores);
+
+            console.log(`[EWS]   📉 Decline detected: totalDrop=${totalDrop.toFixed(1)}, avgDaily=${avgDailyDrop.toFixed(1)}`);
+
+            if (totalDrop >= THRESHOLDS.STATUS_SCORE_MIN_DELTA) {
+                const startScore = Math.round(scores[0]);
+                const endScore = Math.round(scores[scores.length - 1]);
+
+                const warning = {
+                    type: 'STATUS_SCORE_DECLINE',
+                    severity: totalDrop >= 20 ? 'high' : (totalDrop >= 15 ? 'medium' : 'low'),
+                    days: THRESHOLDS.STATUS_SCORE_DECLINE_DAYS,
+                    startScore,
+                    endScore,
+                    totalDrop: Math.round(totalDrop),
+                    avgDailyDrop: Math.round(avgDailyDrop * 10) / 10,
+                    message: `📊 Status Score падает ${THRESHOLDS.STATUS_SCORE_DECLINE_DAYS} дня подряд`,
+                    detail: `С ${startScore} до ${endScore} (падение ${Math.round(totalDrop)} баллов)`,
+                    action: 'Проверить слабые факторы в Status карточке',
+                    actionable: true
+                };
+
+                console.log(`[EWS]   ✅ STATUS_SCORE_DECLINE warning: severity=${warning.severity}, drop=${warning.totalDrop}`);
+                return warning;
+            }
+        }
+
+        console.log('[EWS]   ➖ No Status Score decline detected');
+        return null;
+    }
+
+    /**
+     * Warning 4: Sleep debt accumulation
      * @param {object[]} days - Array of day objects (sorted oldest to newest)
      * @param {object} profile
      * @returns {object|null}
      */
     function checkSleepDebt(days, profile) {
-        if (days.length < THRESHOLDS.SLEEP_DEFICIT_DAYS) return null;
+        console.log('[EWS] 🛌 Checking sleep debt...');
+        if (days.length < THRESHOLDS.SLEEP_DEFICIT_DAYS) {
+            console.log('[EWS]   ⏭️ Skip: insufficient days', days.length, '<', THRESHOLDS.SLEEP_DEFICIT_DAYS);
+            return null;
+        }
 
         const targetSleep = profile?.sleepHours || 8;
         const recentDays = days.slice(-7); // Most recent first
@@ -379,17 +488,22 @@
             return { date: day.date, sleep, deficit: sleep ? Math.max(0, targetSleep - sleep) : 0 };
         }).filter(d => d.sleep !== null);
 
-        if (sleepData.length < THRESHOLDS.SLEEP_DEFICIT_DAYS) return null;
+        if (sleepData.length < THRESHOLDS.SLEEP_DEFICIT_DAYS) {
+            console.log('[EWS]   ⏭️ Skip: not enough sleep data after filter', sleepData.length, '<', THRESHOLDS.SLEEP_DEFICIT_DAYS);
+            return null;
+        }
 
         // Check last N consecutive days (most recent first)
         const recent = sleepData.slice(0, THRESHOLDS.SLEEP_DEFICIT_DAYS);
         const allDeficit = recent.every(d => d.sleep < THRESHOLDS.SLEEP_DEFICIT_HOURS);
 
+        console.log(`[EWS]   Sleep stats: recent=${recent.length}d, avgSleep=${(recent.reduce((s, d) => s + d.sleep, 0) / recent.length).toFixed(1)}h, target=${targetSleep}h, allDeficit=${allDeficit}`);
+
         if (allDeficit) {
             const totalDeficit = recent.reduce((sum, d) => sum + d.deficit, 0);
             const avgSleep = recent.reduce((sum, d) => sum + d.sleep, 0) / recent.length;
 
-            return {
+            const warning = {
                 type: 'SLEEP_DEBT',
                 severity: totalDeficit > 6 ? 'high' : 'medium',
                 days: THRESHOLDS.SLEEP_DEFICIT_DAYS,
@@ -401,8 +515,11 @@
                 action: 'Запланировать ранний отход ко сну на ближайшие 2-3 дня',
                 actionable: true
             };
+            console.log(`[EWS]   ✅ SLEEP_DEBT warning: severity=${warning.severity}, totalDeficit=${warning.totalDeficit}h`);
+            return warning;
         }
 
+        console.log('[EWS]   ➖ No sleep debt detected');
         return null;
     }
 
@@ -414,11 +531,15 @@
      * @returns {object|null}
      */
     function checkCaloricDebt(days, profile, pIndex) {
-        if (days.length < THRESHOLDS.CALORIC_DEBT_DAYS) return null;
+        console.log('[EWS] 🍽️ Checking caloric debt...');
+        if (days.length < THRESHOLDS.CALORIC_DEBT_DAYS) {
+            console.log('[EWS]   ⏭️ Skip: insufficient days', days.length, '<', THRESHOLDS.CALORIC_DEBT_DAYS);
+            return null;
+        }
 
         const calculateItemKcal = HEYS.InsightsPI?.calculations?.calculateItemKcal;
         if (!calculateItemKcal) {
-            console.warn('[EWS] calculateItemKcal not available');
+            console.warn('[EWS]   ⏭️ Skip: calculateItemKcal not available');
             return null;
         }
 
@@ -445,11 +566,13 @@
         const recent = caloricData.slice(0, THRESHOLDS.CALORIC_DEBT_DAYS);
         const totalDebt = recent.reduce((sum, d) => sum + d.debt, 0);
 
+        console.log(`[EWS]   Caloric stats: recent=${recent.length}d, optimum=${optimum}kcal, totalDebt=${Math.round(totalDebt)}kcal, threshold=${THRESHOLDS.CALORIC_DEBT_THRESHOLD}kcal`);
+
         if (totalDebt > THRESHOLDS.CALORIC_DEBT_THRESHOLD) {
             const avgEaten = recent.reduce((sum, d) => sum + d.eaten, 0) / recent.length;
             const avgDebt = totalDebt / recent.length;
 
-            return {
+            const warning = {
                 type: 'CALORIC_DEBT',
                 severity: totalDebt > 2500 ? 'high' : 'medium',
                 days: THRESHOLDS.CALORIC_DEBT_DAYS,
@@ -462,8 +585,11 @@
                 action: 'Запланировать refeed meal или увеличить порции',
                 actionable: true
             };
+            console.log(`[EWS]   ✅ CALORIC_DEBT warning: severity=${warning.severity}, totalDebt=${warning.totalDebt}kcal`);
+            return warning;
         }
 
+        console.log('[EWS]   ➖ No caloric debt detected');
         return null;
     }
 
@@ -524,9 +650,16 @@
 
         const warnings = [];
 
+        console.log('[EWS] 🎯 Running 5 warning checks...');
+
         // Warning 1: Health Score decline
         const scoreWarning = checkHealthScoreDecline(days, profile, pIndex, options);
-        if (scoreWarning) warnings.push(scoreWarning);
+        if (scoreWarning) {
+            console.log('[EWS]   ✅ Check 1 (HealthScore): found warning');
+            warnings.push(scoreWarning);
+        } else {
+            console.log('[EWS]   ➖ Check 1 (HealthScore): no warning');
+        }
 
         // Warning 2: Critical pattern degradation OR low pattern scores
         if (options.currentPatterns) {
@@ -537,16 +670,42 @@
                 options.previousPatterns,  // optional
                 options.currentPatterns    // required
             );
-            if (patternWarnings) warnings.push(...patternWarnings);
+            if (patternWarnings) {
+                console.log(`[EWS]   ✅ Check 2 (Patterns): found ${patternWarnings.length} warning(s)`);
+                warnings.push(...patternWarnings);
+            } else {
+                console.log('[EWS]   ➖ Check 2 (Patterns): no warnings');
+            }
+        } else {
+            console.log('[EWS]   ⏭️ Check 2 (Patterns): skipped (no currentPatterns)');
         }
 
-        // Warning 3: Sleep debt
-        const sleepWarning = checkSleepDebt(days, profile);
-        if (sleepWarning) warnings.push(sleepWarning);
+        // Warning 3: Status Score decline
+        const statusWarning = checkStatusScoreDecline(days);
+        if (statusWarning) {
+            console.log('[EWS]   ✅ Check 3 (Status): found warning');
+            warnings.push(statusWarning);
+        } else {
+            console.log('[EWS]   ➖ Check 3 (Status): no warning');
+        }
 
-        // Warning 4: Caloric debt
+        // Warning 4: Sleep debt
+        const sleepWarning = checkSleepDebt(days, profile);
+        if (sleepWarning) {
+            console.log('[EWS]   ✅ Check 4 (Sleep): found warning');
+            warnings.push(sleepWarning);
+        } else {
+            console.log('[EWS]   ➖ Check 4 (Sleep): no warning');
+        }
+
+        // Warning 5: Caloric debt
         const caloricWarning = checkCaloricDebt(days, profile, pIndex);
-        if (caloricWarning) warnings.push(caloricWarning);
+        if (caloricWarning) {
+            console.log('[EWS]   ✅ Check 5 (Caloric): found warning');
+            warnings.push(caloricWarning);
+        } else {
+            console.log('[EWS]   ➖ Check 5 (Caloric): no warning');
+        }
 
         // Sort by severity
         warnings.sort((a, b) => {
@@ -577,9 +736,9 @@
     HEYS.InsightsPI.earlyWarning = {
         detect: detectEarlyWarnings,
         thresholds: THRESHOLDS,
-        version: '1.0.0'
+        version: '1.1.0'
     };
 
-    console.log('[HEYS.InsightsPI] ✅ Early Warning System v1.0 loaded');
+    console.log('[HEYS.InsightsPI] ✅ Early Warning System v1.1 loaded (5 checks)');
 
 })(typeof window !== 'undefined' ? window : global);

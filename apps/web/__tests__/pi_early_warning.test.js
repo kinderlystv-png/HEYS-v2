@@ -5,6 +5,7 @@ beforeAll(async () => {
     global.HEYS = global.HEYS || {};
     global.HEYS.InsightsPI = global.HEYS.InsightsPI || {};
     global.HEYS.InsightsPI.calculations = global.HEYS.InsightsPI.calculations || {};
+    global.HEYS.Status = global.HEYS.Status || {};
 
     // Mock calculateHealthScore
     global.HEYS.InsightsPI.calculations.calculateHealthScore = function (day, profile, pIndex, days) {
@@ -25,6 +26,19 @@ beforeAll(async () => {
         const c = (prod.simple100 || 0) + (prod.complex100 || 0);
         const f = (prod.badFat100 || 0) + (prod.goodFat100 || 0);
         return (p * 3 + c * 4 + f * 9) * item.grams / 100;
+    };
+
+    // Mock Status.calculate
+    global.HEYS.Status.calculate = function (opts) {
+        // Return cached statusScore if available
+        if (opts.dayData?.statusScore !== undefined) {
+            return { score: opts.dayData.statusScore };
+        }
+        if (opts.dayData?._statusCalculated) {
+            return opts.dayData._statusCalculated;
+        }
+        // Default: calculate from factors
+        return { score: 75 };
     };
 
     await import('../insights/pi_early_warning.js');
@@ -233,5 +247,52 @@ describe('Early Warning System', () => {
         expect(patternWarning).toBeDefined();
         expect(patternWarning.pattern).toBe('meal_timing');
         expect(patternWarning.relativeChange).toBeLessThan(-20);
+    });
+
+    it('detects Status Score decline (3 days consecutive drop)', () => {
+        const detect = global.HEYS.InsightsPI.earlyWarning.detect;
+        const pIndex = makePIndex();
+        // Days sorted OLDEST to NEWEST (as documented)
+        const days = [
+            makeDay('2026-02-08', { statusScore: 77 }),    // Day 1 (oldest)
+            makeDay('2026-02-09', { statusScore: 76 }),
+            makeDay('2026-02-10', { statusScore: 78 }),
+            makeDay('2026-02-11', { statusScore: 75 }),
+            makeDay('2026-02-12', { statusScore: 70 }),    // Start of decline
+            makeDay('2026-02-13', { statusScore: 62 }),    // Continues  
+            makeDay('2026-02-14', { statusScore: 55 })     // Day 7 (newest) - 15 point total drop
+        ];
+
+        const result = detect(days, { optimum: 2000 }, pIndex);
+        expect(result.available).toBe(true);
+
+        const statusWarning = result.warnings.find(w => w.type === 'STATUS_SCORE_DECLINE');
+        expect(statusWarning).toBeDefined();
+        expect(statusWarning.days).toBe(3);
+        expect(statusWarning.startScore).toBe(70);
+        expect(statusWarning.endScore).toBe(55);
+        expect(statusWarning.totalDrop).toBeGreaterThanOrEqual(10);
+        expect(statusWarning.severity).toMatch(/high|medium/);
+    });
+
+    it('does not warn on Status Score decline if drop is too small', () => {
+        const detect = global.HEYS.InsightsPI.earlyWarning.detect;
+        const pIndex = makePIndex();
+        // Days sorted OLDEST to NEWEST
+        const days = [
+            makeDay('2026-02-08', { statusScore: 80 }),    // Day 1 (oldest)
+            makeDay('2026-02-09', { statusScore: 79 }),
+            makeDay('2026-02-10', { statusScore: 81 }),
+            makeDay('2026-02-11', { statusScore: 80 }),
+            makeDay('2026-02-12', { statusScore: 78 }),    // Slight decline
+            makeDay('2026-02-13', { statusScore: 76 }),    // Continues
+            makeDay('2026-02-14', { statusScore: 73 })     // Day 7 (newest) - only 5 point drop
+        ];
+
+        const result = detect(days, { optimum: 2000 }, pIndex);
+        expect(result.available).toBe(true);
+
+        const statusWarning = result.warnings.find(w => w.type === 'STATUS_SCORE_DECLINE');
+        expect(statusWarning).toBeUndefined(); // Should NOT warn for small decline
     });
 });
