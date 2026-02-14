@@ -11,9 +11,10 @@
   // React imports
   const { createElement: h, useState, useEffect } = window.React || {};
   const piUIHelpers = HEYS.InsightsPI?.uiHelpers || window.piUIHelpers || {};
+  const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
 
   // Зависимости (reserved for future use)
-  const _SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {}; // eslint-disable-line no-unused-vars
+  const _SCIENCE_INFO = piConst.SCIENCE_INFO || HEYS.InsightsPI?.science || window.piScience || {}; // eslint-disable-line no-unused-vars
 
   // === LAZY GETTER для InfoButton (fix load order) ===
   // InfoButton определён в pi_ui_dashboard.js который загружается ПОСЛЕ этого модуля

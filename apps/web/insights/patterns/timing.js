@@ -8,7 +8,7 @@
     const piStats = HEYS.InsightsPI?.stats || global.piStats || {};
     const piConst = HEYS.InsightsPI?.constants || global.piConst || {};
     const piCalculations = HEYS.InsightsPI?.calculations || global.piCalculations || {};
-    const SCIENCE_INFO = HEYS.InsightsPI?.science || global.piScience || {};
+    const SCIENCE_INFO = piConst.SCIENCE_INFO || HEYS.InsightsPI?.science || global.piScience || {};
 
     const CONFIG = piConst.CONFIG || {
         MIN_DAYS_FOR_FULL_ANALYSIS: 7,

@@ -428,7 +428,12 @@
           contributionOverallPct: contributionByPattern.get(p.pattern)?.contributionOverallPct ?? null,
           reliability: contributionByPattern.get(p.pattern)?.reliability ?? null,
           reliabilityLabel: contributionByPattern.get(p.pattern)?.reliabilityLabel ?? null,
-          message: p.message || p.insight || null
+          message: p.message || p.insight || null,
+          // Statistical significance fields (v3.4.0+)
+          correlation: p.correlation ?? null,
+          pValue: p.pValue ?? null,
+          isSignificant: p.isSignificant ?? null,
+          effectSize: p.effectSize ?? null
         });
       });
 
@@ -633,6 +638,7 @@
                         h('th', null, 'Паттерн'),
                         h('th', null, 'Статус'),
                         h('th', null, 'Скор'),
+                        h('th', { className: 'pattern-debug-modal__th--correlation', title: 'Корреляция и статистическая значимость (p-value)' }, '📊 r / p'),
                         h('th', { className: 'pattern-debug-modal__th--adaptive', title: 'Адаптивные пороги — персональные значения на основе 14-21 дней данных' }, '🎯 Adaptive'),
                         h('th', null,
                           h('span', null, 'Вклад'),
@@ -677,6 +683,30 @@
                             }, row.score)
                             : h('span', { className: 'pattern-debug-modal__score pattern-debug-modal__score--na' }, '—')
                         ),
+                        // Correlation + p-value (statistical significance)
+                        h('td', { className: 'pattern-debug-modal__cell pattern-debug-modal__cell--correlation' },
+                          row.correlation !== null && row.pValue !== null
+                            ? h('div', { className: 'pattern-debug-modal__correlation' },
+                              h('span', {
+                                className: `pattern-debug-modal__correlation-r ${row.isSignificant ? 'pattern-debug-modal__correlation-r--significant' : 'pattern-debug-modal__correlation-r--nonsignificant'
+                                  }`,
+                                title: `Effect size: ${row.effectSize || 'unknown'}`
+                              },
+                                `r=${row.correlation.toFixed(2)}`
+                              ),
+                              h('span', {
+                                className: `pattern-debug-modal__correlation-p ${row.isSignificant ? 'pattern-debug-modal__correlation-p--significant' : 'pattern-debug-modal__correlation-p--nonsignificant'
+                                  }`,
+                                title: row.isSignificant ? 'Statistically significant' : 'Not significant'
+                              },
+                                row.pValue < 0.001 ? 'p<0.001' :
+                                  row.pValue < 0.01 ? 'p<0.01' :
+                                    row.pValue < 0.05 ? 'p<0.05' :
+                                      `p=${row.pValue.toFixed(3)}`
+                              )
+                            )
+                            : h('span', { className: 'pattern-debug-modal__correlation-na' }, '—')
+                        ),
                         // Adaptive Thresholds
                         h('td', { className: 'pattern-debug-modal__cell pattern-debug-modal__cell--adaptive' },
                           (() => {
@@ -692,10 +722,15 @@
                               return h('span', { className: 'pattern-debug-modal__adaptive-na', title: 'Нет данных для расчёта' }, '—');
                             }
 
-                            console.log(`[PatternDebug] 🎯 Rendering thresholds for ${patternId}:`, {
-                              keys: thresholdKeys,
-                              values: thresholdKeys.map(k => ({ [k]: adaptiveThresholds.thresholds[k] }))
-                            });
+                            // Debug log only on first render (avoid 70+ repeated logs)
+                            if (!window.__patternDebugLoggedThresholds) window.__patternDebugLoggedThresholds = {};
+                            if (!window.__patternDebugLoggedThresholds[patternId]) {
+                              window.__patternDebugLoggedThresholds[patternId] = true;
+                              console.log(`[PatternDebug] 🎯 Rendering thresholds for ${patternId}:`, {
+                                keys: thresholdKeys,
+                                values: thresholdKeys.map(k => ({ [k]: adaptiveThresholds.thresholds[k] }))
+                              });
+                            }
 
                             const thresholdBadges = thresholdKeys.map(key => {
                               const value = adaptiveThresholds.thresholds[key];

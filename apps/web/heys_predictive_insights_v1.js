@@ -29,7 +29,7 @@
 
   // === НАУЧНАЯ БД (из pi_science_info.js) ===
   // Используем извлечённую базу данных, fallback если модуль не загружен
-  const SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {};
+  const SCIENCE_INFO = piConst.SCIENCE_INFO || HEYS.InsightsPI?.science || window.piScience || {};
 
   // === АНАЛИЗ ПАТТЕРНОВ (из pi_patterns.js) ===
   // Используем извлечённые функции анализа, fallback если модуль не загружен
@@ -590,9 +590,9 @@
     // Анализируем паттерны — v2.0: добавлены pIndex и новые анализаторы
     const patterns = [
       // === Тайминг и волны ===
-      analyzeMealTiming(days, profile),
+      analyzeMealTiming(days, profile, pIndex),
       analyzeWaveOverlap(days, profile),
-      analyzeLateEating(days),
+      analyzeLateEating(days, profile, pIndex),
 
       // === Качество питания ===
       analyzeMealQualityTrend(days, pIndex, optimum),
@@ -615,7 +615,7 @@
       analyzeStressEating(days, pIndex),                 // v2.0: добавлен pIndex
 
       // === Научные анализаторы (v2.1) ===
-      analyzeCircadianTiming(days, pIndex),              // Циркадные ритмы
+      analyzeCircadianTiming(days, pIndex, profile),     // Циркадные ритмы
       analyzeNutrientTiming(days, pIndex, profile),      // Тайминг нутриентов
       analyzeInsulinSensitivity(days, pIndex, profile),  // Чувствительность к инсулину
       analyzeGutHealth(days, pIndex),                    // Здоровье ЖКТ

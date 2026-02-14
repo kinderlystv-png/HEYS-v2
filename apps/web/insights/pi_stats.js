@@ -492,6 +492,344 @@
     return std / Math.abs(avg);
   }
 
+  /**
+   * 🆕 v3.4.0: Pearson correlation with statistical significance test
+   * Tests null hypothesis: true correlation = 0
+   * Uses t-distribution with df = n-2
+   * @param {Array<number>} x - first variable
+   * @param {Array<number>} y - second variable
+   * @param {number} alpha - significance level (default: 0.05)
+   * @returns {Object} { r, pValue, isSignificant, n, df, tStat, effectSize, interpretation }
+   * @example
+   * const result = pearsonWithSignificance([1,2,3,4,5], [2,4,6,8,10]);
+   * // → { r: 1.0, pValue: 0.001, isSignificant: true, effectSize: 'large' }
+   */
+  function pearsonWithSignificance(x, y, alpha = 0.05) {
+    const r = pearsonCorrelation(x, y);
+    const n = x.length;
+
+    // Insufficient data
+    if (n < 3 || x.length !== y.length) {
+      return {
+        r: 0,
+        pValue: 1,
+        isSignificant: false,
+        n,
+        df: 0,
+        tStat: 0,
+        effectSize: 'insufficient_data',
+        interpretation: 'insufficient sample size (n<3)',
+        warning: 'insufficient_sample_size'
+      };
+    }
+
+    // Perfect correlation or no variance
+    if (Math.abs(r) === 1 || isNaN(r)) {
+      return {
+        r,
+        pValue: Math.abs(r) === 1 ? 0.001 : 1,
+        isSignificant: Math.abs(r) === 1,
+        n,
+        df: n - 2,
+        tStat: Math.abs(r) === 1 ? Infinity : 0,
+        effectSize: Math.abs(r) === 1 ? 'large' : 'no_variance',
+        interpretation: Math.abs(r) === 1 ? 'perfect correlation (p<0.001)' : 'no variance in one or both variables'
+      };
+    }
+
+    // t-statistic: t = r * sqrt((n-2)/(1-r²))
+    const df = n - 2;
+    const tStat = r * Math.sqrt(df / (1 - r * r));
+    const absTStat = Math.abs(tStat);
+
+    // Critical t-value for two-tailed test at alpha level
+    // Approximate values for common df ranges
+    let tCritical;
+    if (df >= 30) tCritical = 1.96;       // α=0.05, df=∞
+    else if (df >= 20) tCritical = 2.086; // α=0.05, df=20
+    else if (df >= 10) tCritical = 2.228; // α=0.05, df=10
+    else if (df >= 5) tCritical = 2.571;  // α=0.05, df=5
+    else if (df >= 3) tCritical = 3.182;  // α=0.05, df=3
+    else tCritical = 12.706;              // α=0.05, df=1
+
+    const isSignificant = absTStat > tCritical;
+
+    // Approximate p-value bins (two-tailed)
+    let pValue;
+    if (absTStat < 1.0) pValue = 0.8;
+    else if (absTStat < 1.5) pValue = 0.3;
+    else if (absTStat < 2.0) pValue = 0.1;
+    else if (absTStat < 2.5) pValue = 0.05;
+    else if (absTStat < 3.0) pValue = 0.01;
+    else if (absTStat < 4.0) pValue = 0.005;
+    else pValue = 0.001;
+
+    // Effect size interpretation (Cohen's conventions for correlation)
+    const absR = Math.abs(r);
+    let effectSize;
+    if (absR < 0.1) effectSize = 'negligible';
+    else if (absR < 0.3) effectSize = 'small';
+    else if (absR < 0.5) effectSize = 'medium';
+    else effectSize = 'large';
+
+    // Human-readable interpretation
+    const interpretation = isSignificant
+      ? `${effectSize} effect, statistically significant (p<${alpha})`
+      : `${effectSize} effect, not significant (p≈${pValue.toFixed(2)})`;
+
+    return {
+      r,
+      pValue,
+      isSignificant,
+      n,
+      df,
+      tStat,
+      effectSize,
+      interpretation
+    };
+  }
+
+  /**
+   * 🆕 v3.5.0: Bayesian correlation with prior knowledge
+   * Shrinks observed correlation towards prior mean (empirical Bayes)
+   * Useful for small N where sample correlation is unstable
+   * @param {Array<number>} x - first variable
+   * @param {Array<number>} y - second variable
+   * @param {number} priorR - prior correlation (e.g., 0 = no effect, 0.3 = typical)
+   * @param {number} priorN - effective sample size of prior (weight, typically 5-20)
+   * @returns {Object} { posteriorR, observedR, shrinkage, effectiveN, confidence }
+   * @example
+   * const result = bayesianCorrelation([1,2,3], [2,3,5], 0, 10);
+   * // → { posteriorR: 0.85, observedR: 0.98, shrinkage: 0.13 } (shrunk towards 0)
+   */
+  function bayesianCorrelation(x, y, priorR = 0, priorN = 10) {
+    const observedR = pearsonCorrelation(x, y);
+    const observedN = x.length;
+
+    if (observedN < 2) {
+      return {
+        posteriorR: priorR,
+        observedR: 0,
+        shrinkage: 1,
+        effectiveN: priorN,
+        confidence: 0.1,
+        warning: 'insufficient_data'
+      };
+    }
+
+    // Weighted average: posterior = (prior*priorN + observed*observedN) / (priorN + observedN)
+    const effectiveN = priorN + observedN;
+    const posteriorR = (priorR * priorN + observedR * observedN) / effectiveN;
+    const shrinkage = Math.abs(observedR - posteriorR);
+
+    // Confidence increases with more data (less prior influence)
+    const confidence = Math.min(0.95, observedN / (observedN + priorN));
+
+    const result = {
+      posteriorR,
+      observedR,
+      priorR,
+      shrinkage,
+      effectiveN,
+      observedN,
+      priorN,
+      confidence,
+      interpretation: shrinkage > 0.2
+        ? `Strong shrinkage (${Math.round(shrinkage * 100)}%) towards prior`
+        : shrinkage > 0.1
+          ? `Moderate shrinkage (${Math.round(shrinkage * 100)}%) towards prior`
+          : `Minimal shrinkage (${Math.round(shrinkage * 100)}%)`
+    };
+
+    // Verification logging
+    console.info('[pi_stats.bayesian] ✅ Correlation computed:', {
+      observedR: observedR.toFixed(2),
+      posteriorR: posteriorR.toFixed(2),
+      shrinkage: shrinkage.toFixed(2),
+      confidence: confidence.toFixed(2),
+      n: observedN
+    });
+
+    return result;
+  }
+
+  /**
+   * 🆕 v3.5.0: Confidence interval for Pearson correlation
+   * Uses Fisher z-transformation for normality
+   * @param {number} r - observed correlation coefficient
+   * @param {number} n - sample size
+   * @param {number} confidenceLevel - confidence level (default: 0.95 for 95% CI)
+   * @returns {Object} { lower, upper, margin, width, r, n }
+   * @example
+   * const ci = confidenceIntervalForCorrelation(0.5, 30);
+   * // → { lower: 0.19, upper: 0.71, margin: 0.26 }
+   */
+  function confidenceIntervalForCorrelation(r, n, confidenceLevel = 0.95) {
+    if (n < 4) {
+      return {
+        lower: -1,
+        upper: 1,
+        margin: 1,
+        width: 2,
+        r,
+        n,
+        warning: 'insufficient_sample_size'
+      };
+    }
+
+    if (Math.abs(r) >= 0.999) {
+      // Perfect correlation: CI is very narrow
+      return {
+        lower: r > 0 ? 0.95 : -1,
+        upper: r > 0 ? 1 : -0.95,
+        margin: 0.05,
+        width: 0.05,
+        r,
+        n
+      };
+    }
+
+    // Fisher z-transformation: z = 0.5 * ln((1+r)/(1-r))
+    const fisherZ = 0.5 * Math.log((1 + r) / (1 - r));
+
+    // Standard error of z: SE_z = 1 / sqrt(n - 3)
+    const seZ = 1 / Math.sqrt(n - 3);
+
+    // Z-score for confidence level (approximate)
+    let zScore;
+    if (confidenceLevel >= 0.99) zScore = 2.576;
+    else if (confidenceLevel >= 0.95) zScore = 1.96;
+    else if (confidenceLevel >= 0.90) zScore = 1.645;
+    else zScore = 1.96; // default to 95%
+
+    // CI in z-space
+    const zLower = fisherZ - zScore * seZ;
+    const zUpper = fisherZ + zScore * seZ;
+
+    // Transform back to r-space: r = (e^(2z) - 1) / (e^(2z) + 1)
+    const lower = (Math.exp(2 * zLower) - 1) / (Math.exp(2 * zLower) + 1);
+    const upper = (Math.exp(2 * zUpper) - 1) / (Math.exp(2 * zUpper) + 1);
+
+    const margin = (upper - lower) / 2;
+    const width = upper - lower;
+
+    const result = {
+      lower: Math.max(-1, Math.min(1, lower)),
+      upper: Math.max(-1, Math.min(1, upper)),
+      margin,
+      width,
+      r,
+      n,
+      confidenceLevel
+    };
+
+    // Verification logging
+    console.info('[pi_stats.CI] ✅ Confidence interval:', {
+      r: r.toFixed(2),
+      n,
+      CI: `[${result.lower.toFixed(2)}, ${result.upper.toFixed(2)}]`,
+      width: width.toFixed(2)
+    });
+
+    return result;
+  }
+
+  /**
+   * 🆕 v3.5.0: Outlier detection using IQR method
+   * Identifies values outside [Q1 - 1.5*IQR, Q3 + 1.5*IQR]
+   * @param {Array<number>} arr - array of numbers
+   * @param {number} iqrMultiplier - IQR multiplier (default: 1.5, use 3.0 for extreme outliers)
+   * @returns {Object} { outliers, cleaned, indices, stats }
+   * @example
+   * const result = detectOutliers([1, 2, 3, 4, 100]);
+   * // → { outliers: [100], cleaned: [1,2,3,4], indices: [4] }
+   */
+  function detectOutliers(arr, iqrMultiplier = 1.5) {
+    if (!Array.isArray(arr) || arr.length < 4) {
+      return {
+        outliers: [],
+        cleaned: arr || [],
+        indices: [],
+        stats: null,
+        warning: 'insufficient_data'
+      };
+    }
+
+    // Remove NaN/null/undefined values - explicit null check before isFinite
+    const validData = arr
+      .map((v, i) => ({ rawValue: v, index: i }))
+      .filter(item => {
+        const val = item.rawValue;
+        return val !== null && val !== undefined && Number.isFinite(Number(val));
+      })
+      .map(item => ({ value: Number(item.rawValue), index: item.index }));
+
+    const values = validData.map(item => item.value);
+    const sorted = values.slice().sort((a, b) => a - b);
+    const n = sorted.length;
+
+    if (n < 4) {
+      return {
+        outliers: [],
+        cleaned: values,
+        indices: [],
+        stats: null,
+        warning: 'insufficient_data'
+      };
+    }
+
+    // Calculate quartiles
+    const q1 = calculatePercentile(sorted, 25);
+    const q3 = calculatePercentile(sorted, 75);
+    const iqr = q3 - q1;
+
+    // Outlier bounds
+    const lowerBound = q1 - iqrMultiplier * iqr;
+    const upperBound = q3 + iqrMultiplier * iqr;
+
+    // Identify outliers
+    const outliers = [];
+    const outlierIndices = [];
+    const cleaned = [];
+
+    validData.forEach(item => {
+      if (item.value < lowerBound || item.value > upperBound) {
+        outliers.push(item.value);
+        outlierIndices.push(item.index);
+      } else {
+        cleaned.push(item.value);
+      }
+    });
+
+    const result = {
+      outliers,
+      cleaned,
+      indices: outlierIndices,
+      stats: {
+        q1,
+        q3,
+        iqr,
+        lowerBound,
+        upperBound,
+        n: values.length,
+        nOutliers: outliers.length,
+        outlierRate: outliers.length / values.length
+      }
+    };
+
+    // Verification logging
+    if (outliers.length > 0) {
+      console.info('[pi_stats.outliers] ⚠️ Outliers detected:', {
+        total: values.length,
+        outliers: outliers.length,
+        rate: (outliers.length / values.length * 100).toFixed(1) + '%',
+        cleaned: cleaned.length
+      });
+    }
+
+    return result;
+  }
+
   HEYS.InsightsPI.stats = {
     // Базовые статистические функции
     average,
@@ -501,6 +839,10 @@
 
     // Корреляции и регрессии
     pearsonCorrelation,
+    pearsonWithSignificance,
+    bayesianCorrelation,
+    confidenceIntervalForCorrelation,
+    detectOutliers,
     calculateTrend,
     calculateLinearRegression,
     calculateR2,
@@ -532,6 +874,6 @@
   // Fallback для прямого доступа
   global.piStats = HEYS.InsightsPI.stats;
 
-  devLog('[PI Stats] v3.3.0 loaded — 19 statistical functions (+ coefficientOfVariation)');
+  devLog('[PI Stats] v3.5.0 loaded — 27 statistical functions (+ Bayesian, CI, outliers)');
 
 })(typeof window !== 'undefined' ? window : global);

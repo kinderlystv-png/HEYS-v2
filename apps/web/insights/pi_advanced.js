@@ -12,7 +12,7 @@
   // Зависимости
   const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
   const piPatterns = HEYS.InsightsPI?.patterns || window.piPatterns || {};
-  const SCIENCE_INFO = HEYS.InsightsPI?.science || window.piScience || {};
+  const SCIENCE_INFO = HEYS.InsightsPI?.constants?.SCIENCE_INFO || window.piConst?.SCIENCE_INFO || HEYS.InsightsPI?.science || window.piScience || {};
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
 
   // Импорт констант (полный список включая v5.0)

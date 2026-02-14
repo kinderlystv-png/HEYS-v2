@@ -1217,6 +1217,109 @@
                       breakdown: insights.healthScore.breakdown
                     },
                     onClick: () => {
+                      // 🆕 v3.5.0: Early Warning System Check при клике на Health Score
+                      console.group('🚨 [HEYS Early Warning System] HEALTH SCORE CLICK');
+                      try {
+                        const earlyWarning = HEYS.InsightsPI?.earlyWarning;
+                        if (earlyWarning && typeof earlyWarning.detect === 'function') {
+                          const U = window.HEYS?.dayUtils || window.HEYS?.utils;
+                          if (!U || !U.fmtDate || !U.lsGet) {
+                            console.error('❌ HEYS.dayUtils not available for Early Warning');
+                            console.groupEnd();
+                            return;
+                          }
+
+                          // Функция для получения даты со смещением
+                          const dateOffsetStr = (offset) => {
+                            const d = new Date();
+                            d.setDate(d.getDate() + offset);
+                            return U.fmtDate(d);
+                          };
+
+                          // Собираем последние 30 дней через правильный lsGet (учитывает namespace)
+                          const daysBack = 30;
+                          const days = [];
+                          for (let i = 0; i < daysBack; i++) {
+                            const date = dateOffsetStr(-i);
+                            const dayKey = `heys_dayv2_${date}`;
+                            const dayData = U.lsGet(dayKey);
+                            if (dayData) days.push({ ...dayData, date });
+                          }
+
+                          // Используем effectiveData для profile и pIndex (как в остальном коде)
+                          const profile = effectiveData.profile;
+                          const pIndex = effectiveData.pIndex;
+
+                          console.log('🔍 Running Early Warning detection:', {
+                            daysAvailable: days.length,
+                            datesRange: days.length > 0 ? `${days[days.length - 1].date} → ${days[0].date}` : 'none',
+                            hasProfile: !!profile,
+                            profileId: profile?.id,
+                            hasPIndex: !!pIndex,
+                            pIndexSize: pIndex?.byId?.size || 0
+                          });
+
+                          // Get current patterns for warning detection
+                          let currentPatterns = null;
+                          let previousPatterns = null;
+
+                          if (days.length >= 7 && HEYS.PredictiveInsights?.analyze) {
+                            try {
+                              // Get insights for last 7 days (current period)
+                              const currentInsights = HEYS.PredictiveInsights.analyze({
+                                daysBack: 7,
+                                profile,
+                                pIndex,
+                                lsGet: U.lsGet
+                              });
+                              currentPatterns = currentInsights?.patterns || null;
+
+                              // For health score decline detection, we'd need patterns from 2 different periods
+                              // For now, focus on current low pattern scores (more actionable)
+                              // TODO: Implement time-based pattern comparison when we have historical pattern data
+
+                              console.log('[EWS] 📊 Pattern data collected:', {
+                                currentPatternsCount: currentPatterns ? currentPatterns.length : 0,
+                                period: '7 days',
+                                hasHealthScore: !!currentInsights?.healthScore
+                              });
+                            } catch (e) {
+                              console.warn('[EWS] ⚠️ Failed to get pattern data:', e.message);
+                            }
+                          }
+
+                          const result = earlyWarning.detect(days, profile, pIndex, {
+                            currentPatterns,
+                            previousPatterns
+                          });
+
+                          console.log('✅ Early Warning result:', {
+                            available: result.available,
+                            warningCount: result.warnings?.length || 0,
+                            highSeverity: result.warnings?.filter(w => w.severity === 'high').length || 0,
+                            mediumSeverity: result.warnings?.filter(w => w.severity === 'medium').length || 0,
+                            lowSeverity: result.warnings?.filter(w => w.severity === 'low').length || 0,
+                            warnings: result.warnings
+                          });
+
+                          if (result.warnings && result.warnings.length > 0) {
+                            console.log('⚠️ Detected warnings:');
+                            result.warnings.forEach((w, i) => {
+                              console.log(`  ${i + 1}. [${w.severity.toUpperCase()}] ${w.message}`);
+                              console.log(`     ${w.detail}`);
+                              if (w.action) console.log(`     → Action: ${w.action}`);
+                            });
+                          } else {
+                            console.log('✅ No warnings detected - all metrics healthy!');
+                          }
+                        } else {
+                          console.warn('⚠️ Early Warning module not loaded or not available');
+                        }
+                      } catch (err) {
+                        console.error('❌ Early Warning detection error:', err);
+                      }
+                      console.groupEnd();
+
                       // 🔬 Автоматическая диагностика перед открытием модала
                       console.group('🩺 [HEYS Adaptive Thresholds] AUTO DIAGNOSTIC');
 
@@ -3778,6 +3881,143 @@
       );
     }
 
+    /**
+     * 🆕 Early Warning Badge — notification badge for health warnings
+     * v3.5.0: Integrated with pi_early_warning.js module
+     */
+    function EarlyWarningBadge({ onClick }) {
+      const [warnings, setWarnings] = useState([]);
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => {
+        loadWarnings();
+        // Refresh every 5 minutes
+        const interval = setInterval(loadWarnings, 5 * 60 * 1000);
+        return () => clearInterval(interval);
+      }, []);
+
+      function loadWarnings() {
+        try {
+          const earlyWarning = HEYS.InsightsPI?.earlyWarning;
+          if (!earlyWarning || typeof earlyWarning.detect !== 'function') {
+            devWarn('[EarlyWarningBadge] earlyWarning module not loaded');
+            setLoading(false);
+            return;
+          }
+
+          const U = window.HEYS?.utils;
+          const getter = U?.lsGet || ((k, d) => {
+            try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+          });
+          const days = Object.keys(localStorage)
+            .filter(k => k.startsWith('heys_dayv2_'))
+            .map(k => getter(k, {}))
+            .filter(d => d && d.date);
+          const profile = getter('heys_profile', {});
+          const pIndex = window.HEYS?.products?.getIndex?.();
+
+          const result = earlyWarning.detect(days, profile, pIndex);
+          devLog('[EarlyWarningBadge] Detected warnings:', result);
+
+          if (result.available) {
+            setWarnings(result.warnings || []);
+          }
+        } catch (error) {
+          devWarn('[EarlyWarningBadge] Error detecting warnings:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      const warningCount = warnings.length;
+      if (warningCount === 0 || loading) return null;
+
+      const severityColors = {
+        high: 'bg-red-500 text-white',
+        medium: 'bg-yellow-500 text-white',
+        low: 'bg-gray-400 text-white'
+      };
+
+      const highCount = warnings.filter(w => w.severity === 'high').length;
+      const mediumCount = warnings.filter(w => w.severity === 'medium').length;
+      const badgeColor = highCount > 0 ? 'bg-red-500' : 'bg-yellow-500';
+
+      return h('button', {
+        className: `relative px-3 py-1.5 rounded-lg ${badgeColor} text-white text-sm font-medium flex items-center gap-2 hover:opacity-90 transition-opacity`,
+        onClick: onClick,
+        'aria-label': `${warningCount} health warnings`
+      },
+        h('span', { className: 'text-lg' }, '🚨'),
+        h('span', null, warningCount),
+        (highCount > 0 || mediumCount > 0) && h('div', { className: 'absolute -top-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center text-xs font-bold text-red-600' },
+          highCount || mediumCount
+        )
+      );
+    }
+
+    /**
+     * 🆕 Early Warning Panel — detailed view of health warnings
+     * v3.5.0: Integrated with pi_early_warning.js module
+     */
+    function EarlyWarningPanel({ warnings, onClose }) {
+      if (!warnings || warnings.length === 0) {
+        return h('div', { className: 'early-warning-panel' },
+          h('div', { className: 'text-center p-8 text-gray-500' },
+            h('div', { className: 'text-4xl mb-2' }, '✅'),
+            h('div', { className: 'text-lg font-medium' }, 'All clear!'),
+            h('div', { className: 'text-sm mt-1' }, 'No health warnings detected')
+          )
+        );
+      }
+
+      const grouped = warnings.reduce((acc, w) => {
+        acc[w.severity] = acc[w.severity] || [];
+        acc[w.severity].push(w);
+        return acc;
+      }, {});
+
+      const severityOrder = ['high', 'medium', 'low'];
+      const severityConfig = {
+        high: { icon: '🔴', label: 'High Priority', border: 'border-red-500', bg: 'bg-red-50' },
+        medium: { icon: '🟡', label: 'Medium Priority', border: 'border-yellow-500', bg: 'bg-yellow-50' },
+        low: { icon: '⚪', label: 'Low Priority', border: 'border-gray-400', bg: 'bg-gray-50' }
+      };
+
+      return h('div', { className: 'early-warning-panel space-y-4 p-6 bg-white rounded-lg shadow-lg max-w-2xl mx-auto' },
+        // Header
+        h('div', { className: 'flex items-center justify-between mb-4' },
+          h('h3', { className: 'text-xl font-bold text-gray-900' }, '🚨 Health Warnings'),
+          onClose && h('button', {
+            onClick: onClose,
+            className: 'text-gray-400 hover:text-gray-600'
+          }, '✕')
+        ),
+
+        // Grouped warnings by severity
+        severityOrder.filter(s => grouped[s]).map(severity => {
+          const config = severityConfig[severity];
+          return h('div', { key: severity, className: `border-l-4 ${config.border} ${config.bg} p-4 rounded-r-lg space-y-3` },
+            h('div', { className: 'flex items-center gap-2 font-medium text-gray-900 mb-2' },
+              h('span', null, config.icon),
+              h('span', null, config.label),
+              h('span', { className: 'text-sm text-gray-500' }, `(${grouped[severity].length})`)
+            ),
+
+            grouped[severity].map((warning, idx) =>
+              h('div', { key: idx, className: 'bg-white p-3 rounded border border-gray-200' },
+                h('div', { className: 'font-medium text-gray-900 mb-1' }, warning.message),
+                h('div', { className: 'text-sm text-gray-600 mb-2' }, warning.detail),
+                warning.action && h('button', {
+                  className: 'text-sm text-blue-600 hover:text-blue-800 font-medium',
+                  onClick: () => devLog('[EarlyWarning] Action clicked:', warning.action)
+                }, `→ ${warning.action}`)
+              )
+            )
+          );
+        })
+      );
+    }
+
     // === EXPORT ===
     HEYS.InsightsPI = HEYS.InsightsPI || {};
     HEYS.InsightsPI.uiDashboard = {
@@ -3818,7 +4058,10 @@
       // Metabolic cards
       MetabolicStatusCard,
       ReasonCard,
-      ActionCard
+      ActionCard,
+      // 🆕 v3.5.0: Early Warning System (EWS)
+      EarlyWarningBadge,
+      EarlyWarningPanel
     };
 
     // Backward compatibility fallback

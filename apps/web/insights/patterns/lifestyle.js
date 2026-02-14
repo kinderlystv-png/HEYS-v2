@@ -46,6 +46,35 @@
         return denominator === 0 ? 0 : numerator / denominator;
     };
 
+    const pearsonWithSignificance = piStats.pearsonWithSignificance || function (x, y, alpha = 0.05) {
+        // Fallback if piStats not loaded
+        const r = pearsonCorrelation(x, y);
+        return {
+            r,
+            pValue: 1,
+            isSignificant: false,
+            n: x.length,
+            df: x.length - 2,
+            tStat: 0,
+            effectSize: 'unknown',
+            interpretation: 'pearsonWithSignificance not available',
+            warning: 'fallback_mode'
+        };
+    };
+
+    const bayesianCorrelation = piStats.bayesianCorrelation || function (x, y, priorR = 0, priorN = 10) {
+        const r = pearsonCorrelation(x, y);
+        return { posteriorR: r, observedR: r, shrinkage: 0, effectiveN: x.length, confidence: 0.5 };
+    };
+
+    const confidenceIntervalForCorrelation = piStats.confidenceIntervalForCorrelation || function (r, n, confidenceLevel = 0.95) {
+        return { lower: Math.max(-1, r - 0.5), upper: Math.min(1, r + 0.5), margin: 0.5, width: 1.0, r, n };
+    };
+
+    const detectOutliers = piStats.detectOutliers || function (arr, iqrMultiplier = 1.5) {
+        return { outliers: [], cleaned: arr.slice(), indices: [], stats: null };
+    };
+
     const calculateTrend = piStats.calculateTrend || function (values) {
         if (!Array.isArray(values) || values.length < 2) return 0;
         const n = values.length;
@@ -167,24 +196,70 @@
         const results = {};
         let maxAbsCorr = 0;
         let keyFactor = null;
+        let keyPValue = 1;
+        let keyIsSignificant = false;
+        let keyEffectSize = null;
 
         for (const [factor, data] of Object.entries(correlations)) {
             if (data.pairs.length < 7) continue;
 
             const wellbeingArr = data.pairs.map(p => p.wellbeing);
             const valueArr = data.pairs.map(p => p.value);
-            const corr = pearsonCorrelation(wellbeingArr, valueArr);
+            const wellbeingOutlierCheck = detectOutliers(wellbeingArr);
+            const valueOutlierCheck = detectOutliers(valueArr);
+            const outlierIndices = new Set([
+                ...wellbeingOutlierCheck.indices,
+                ...valueOutlierCheck.indices
+            ]);
+
+            const cleanWellbeing = [];
+            const cleanValues = [];
+            for (let i = 0; i < wellbeingArr.length; i++) {
+                if (!outlierIndices.has(i)) {
+                    cleanWellbeing.push(wellbeingArr[i]);
+                    cleanValues.push(valueArr[i]);
+                }
+            }
+
+            if (cleanWellbeing.length < 7) continue;
+
+            const corrResult = pearsonWithSignificance(cleanWellbeing, cleanValues);
+            const priorMean = factor === 'kcal' ? -0.1 : 0.1;
+            const bayesResult = bayesianCorrelation(cleanWellbeing, cleanValues, priorMean, 6);
+            const ci = confidenceIntervalForCorrelation(corrResult.r, cleanWellbeing.length);
 
             results[factor] = {
-                correlation: corr,
-                dataPoints: data.pairs.length,
-                avgWellbeing: average(wellbeingArr),
-                avgValue: average(valueArr)
+                correlation: corrResult.r,
+                bayesianR: bayesResult.posteriorR,
+                pValue: corrResult.pValue,
+                isSignificant: corrResult.isSignificant,
+                effectSize: corrResult.effectSize,
+                confidenceInterval: {
+                    lower: Math.round(ci.lower * 100) / 100,
+                    upper: Math.round(ci.upper * 100) / 100,
+                    width: Math.round(ci.width * 100) / 100
+                },
+                outlierStats: {
+                    wellbeingOutliers: wellbeingOutlierCheck.outliers.length,
+                    valueOutliers: valueOutlierCheck.outliers.length,
+                    cleanedN: cleanWellbeing.length,
+                    rawN: data.pairs.length
+                },
+                dataPoints: cleanWellbeing.length,
+                avgWellbeing: average(cleanWellbeing),
+                avgValue: average(cleanValues)
             };
 
-            if (Math.abs(corr) > maxAbsCorr && Math.abs(corr) >= CONFIG.MIN_CORRELATION_DISPLAY) {
-                maxAbsCorr = Math.abs(corr);
-                keyFactor = factor;
+            // Choose most significant factor (lowest p-value + highest |r|)
+            if (corrResult.isSignificant && Math.abs(bayesResult.posteriorR) >= 0.3) {
+                if (!keyFactor || corrResult.pValue < keyPValue ||
+                    (corrResult.pValue === keyPValue && Math.abs(bayesResult.posteriorR) > maxAbsCorr)) {
+                    maxAbsCorr = Math.abs(bayesResult.posteriorR);
+                    keyFactor = factor;
+                    keyPValue = corrResult.pValue;
+                    keyIsSignificant = true;
+                    keyEffectSize = corrResult.effectSize;
+                }
             }
         }
 
@@ -205,13 +280,24 @@
                 dataPoints: Object.values(results)[0]?.dataPoints || 0,
                 score: 50,
                 confidence: 0.3,
-                insight: 'Ключевые факторы самочувствия пока не выявлены'
+                insight: 'Ключевые факторы самочувствия пока не выявлены (недостаточно статистически значимых связей)'
             };
         }
 
         const keyData = results[keyFactor];
-        const baseConfidence = keyData.dataPoints < 14 ? 0.25 : 0.5;
-        const confidence = baseConfidence * (1 + maxAbsCorr);
+
+        // Calculate confidence based on effect size and significance
+        let confidence = 0.5;
+        if (keyIsSignificant) {
+            if (keyEffectSize === 'large') confidence = 0.9;
+            else if (keyEffectSize === 'medium') confidence = 0.75;
+            else if (keyEffectSize === 'small') confidence = 0.6;
+        } else {
+            confidence = 0.3;
+        }
+
+        const ciPenalty = Math.min(0.1, (Number(keyData?.confidenceInterval?.width) || 2) / 2 * 0.1);
+        confidence = Math.max(0.2, confidence - ciPenalty);
 
         const score = maxAbsCorr >= 0.5 ? 90 : maxAbsCorr >= 0.4 ? 75 : 60;
 
@@ -223,18 +309,25 @@
             kcal: 'калории'
         };
 
-        const insight = keyData.correlation > 0.4
-            ? `😊 ${factorNames[keyFactor]} ↑ → самочувствие ↑ (r=${keyData.correlation.toFixed(2)})`
-            : `🔍 ${factorNames[keyFactor]} влияет на самочувствие (r=${keyData.correlation.toFixed(2)})`;
+        const insight = keyData.bayesianR > 0.4
+            ? `😊 ${factorNames[keyFactor]} ↑ → самочувствие ↑ (r=${keyData.bayesianR.toFixed(2)}, p<${keyData.pValue < 0.01 ? '0.01' : '0.05'}, N=${keyData.dataPoints})`
+            : `🔍 ${factorNames[keyFactor]} влияет на самочувствие (r=${keyData.bayesianR.toFixed(2)}, p<${keyData.pValue < 0.01 ? '0.01' : '0.05'}, N=${keyData.dataPoints})`;
 
         return {
             pattern: PATTERNS.WELLBEING_CORRELATION,
             available: true,
             keyFactor,
+            correlation: keyData.correlation,
+            bayesianR: Math.round(keyData.bayesianR * 100) / 100,
+            pValue: keyData.pValue,
+            isSignificant: keyData.isSignificant,
+            effectSize: keyData.effectSize,
+            confidenceInterval: keyData.confidenceInterval,
+            outlierStats: keyData.outlierStats,
             correlations: results,
             dataPoints: keyData.dataPoints,
             score,
-            confidence,
+            confidence: Math.round(confidence * 100) / 100,
             insight
         };
     }

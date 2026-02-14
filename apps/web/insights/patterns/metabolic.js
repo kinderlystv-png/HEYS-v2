@@ -6,8 +6,8 @@
     HEYS.InsightsPI = HEYS.InsightsPI || {};
 
     const piStats = HEYS.InsightsPI?.stats || global.piStats || {};
-    const SCIENCE_INFO = HEYS.InsightsPI?.science || global.piScience || {};
     const piConst = HEYS.InsightsPI?.constants || global.piConst || {};
+    const SCIENCE_INFO = piConst.SCIENCE_INFO || HEYS.InsightsPI?.science || global.piScience || {};
     const CONFIG = piConst.CONFIG || { MIN_DAYS_FOR_FULL_ANALYSIS: 7 };
     const average = piStats.average || function (arr) {
         if (!Array.isArray(arr) || arr.length === 0) return 0;

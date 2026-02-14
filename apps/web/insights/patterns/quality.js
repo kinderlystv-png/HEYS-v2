@@ -47,6 +47,54 @@
         return Number.isFinite(slope) ? slope : 0;
     };
 
+    const pearsonCorrelation = piStats.pearsonCorrelation || function (x, y) {
+        if (!Array.isArray(x) || !Array.isArray(y) || x.length !== y.length || x.length < 2) return 0;
+        const n = x.length;
+        const xMean = average(x);
+        const yMean = average(y);
+        let numerator = 0;
+        let xDen = 0;
+        let yDen = 0;
+        for (let i = 0; i < n; i++) {
+            const dx = (Number(x[i]) || 0) - xMean;
+            const dy = (Number(y[i]) || 0) - yMean;
+            numerator += dx * dy;
+            xDen += dx * dx;
+            yDen += dy * dy;
+        }
+        const denominator = Math.sqrt(xDen * yDen);
+        return denominator === 0 ? 0 : numerator / denominator;
+    };
+
+    const pearsonWithSignificance = piStats.pearsonWithSignificance || function (x, y, alpha = 0.05) {
+        // Fallback if piStats not loaded
+        const r = pearsonCorrelation(x, y);
+        return {
+            r,
+            pValue: 1,
+            isSignificant: false,
+            n: x.length,
+            df: x.length - 2,
+            tStat: 0,
+            effectSize: 'unknown',
+            interpretation: 'pearsonWithSignificance not available',
+            warning: 'fallback_mode'
+        };
+    };
+
+    const bayesianCorrelation = piStats.bayesianCorrelation || function (x, y, priorR = 0, priorN = 10) {
+        const r = pearsonCorrelation(x, y);
+        return { posteriorR: r, observedR: r, shrinkage: 0, effectiveN: x.length, confidence: 0.5 };
+    };
+
+    const confidenceIntervalForCorrelation = piStats.confidenceIntervalForCorrelation || function (r, n, confidenceLevel = 0.95) {
+        return { lower: Math.max(-1, r - 0.5), upper: Math.min(1, r + 0.5), margin: 0.5, width: 1.0, r, n };
+    };
+
+    const detectOutliers = piStats.detectOutliers || function (arr, iqrMultiplier = 1.5) {
+        return { outliers: [], cleaned: arr.slice(), indices: [], stats: null };
+    };
+
     /**
      * Meal Quality Trend: тренд качества приемов пищи.
      * @param {Array} days - Массив дней для анализа.
@@ -326,23 +374,60 @@
             };
         }
 
-        const baseConfidence = pairs.length < 14 ? 0.25 : 0.5;
-
         const proteinArr = pairs.map(p => p.proteinPct);
         const kcalArr = pairs.map(p => p.kcal);
-        const pearsonCorrelation = piStats.pearsonCorrelation || (() => 0);
-        const correlation = pearsonCorrelation(proteinArr, kcalArr);
+        const proteinOutlierCheck = detectOutliers(proteinArr);
+        const kcalOutlierCheck = detectOutliers(kcalArr);
+        const outlierIndices = new Set([
+            ...proteinOutlierCheck.indices,
+            ...kcalOutlierCheck.indices
+        ]);
 
-        const avgProteinPct = average(proteinArr);
+        const cleanProtein = [];
+        const cleanKcal = [];
+        for (let i = 0; i < proteinArr.length; i++) {
+            if (!outlierIndices.has(i)) {
+                cleanProtein.push(proteinArr[i]);
+                cleanKcal.push(kcalArr[i]);
+            }
+        }
+
+        if (cleanProtein.length < 7) {
+            return {
+                pattern,
+                available: false,
+                confidence: 0.2,
+                insight: `Недостаточно данных после фильтрации выбросов (${cleanProtein.length}/7)`
+            };
+        }
+
+        const corrResult = pearsonWithSignificance(cleanProtein, cleanKcal);
+        const bayesResult = bayesianCorrelation(cleanProtein, cleanKcal, 0.15, 8);
+        const ci = confidenceIntervalForCorrelation(corrResult.r, cleanProtein.length);
+
+        const avgProteinPct = average(cleanProtein);
         const avgProteinG = average(pairs.map(p => p.protein));
         const score = avgProteinPct >= 25 ? 100 : avgProteinPct >= 20 ? 80 : 60;
-        const calculatedConfidence = Math.abs(correlation) >= (CONFIG.MIN_CORRELATION_DISPLAY || 0.35)
-            ? baseConfidence * (1 + Math.abs(correlation))
-            : baseConfidence;
+
+        // Calculate confidence based on effect size and significance
+        let calculatedConfidence = 0.5;
+        if (corrResult.isSignificant) {
+            if (corrResult.effectSize === 'large') calculatedConfidence = 0.9;
+            else if (corrResult.effectSize === 'medium') calculatedConfidence = 0.75;
+            else if (corrResult.effectSize === 'small') calculatedConfidence = 0.6;
+        } else {
+            calculatedConfidence = pairs.length >= 14 ? 0.4 : 0.3;
+        }
+
+        const ciPenalty = Math.min(0.1, ci.width / 2 * 0.1);
+        calculatedConfidence = Math.max(0.2, calculatedConfidence - ciPenalty);
 
         let insight;
-        if (correlation < -0.3) {
-            insight = '🥩 Больше белка → меньше общих калорий! Белок насыщает';
+        const r = bayesResult.posteriorR;
+        if (!corrResult.isSignificant) {
+            insight = `Связь белка и калорий пока не выявлена (N=${corrResult.n}, p=${corrResult.pValue.toFixed(3)}, 95% CI [${ci.lower.toFixed(2)}, ${ci.upper.toFixed(2)}])`;
+        } else if (r < -0.3) {
+            insight = `🥩 Больше белка → меньше общих калорий! Белок насыщает (r=${r.toFixed(2)}, p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${corrResult.n})`;
         } else if (avgProteinPct >= 25) {
             insight = `💪 Отличный уровень белка: ${Math.round(avgProteinPct)}% калоража`;
         } else if (avgProteinPct < 20) {
@@ -356,14 +441,29 @@
             available: true,
             avgProteinPct: Math.round(avgProteinPct),
             avgProteinG: Math.round(avgProteinG),
-            correlation: Math.round(correlation * 100) / 100,
-            dataPoints: pairs.length,
+            correlation: Math.round(corrResult.r * 100) / 100,
+            bayesianR: Math.round(bayesResult.posteriorR * 100) / 100,
+            pValue: corrResult.pValue,
+            isSignificant: corrResult.isSignificant,
+            effectSize: corrResult.effectSize,
+            confidenceInterval: {
+                lower: Math.round(ci.lower * 100) / 100,
+                upper: Math.round(ci.upper * 100) / 100,
+                width: Math.round(ci.width * 100) / 100
+            },
+            outlierStats: {
+                proteinOutliers: proteinOutlierCheck.outliers.length,
+                kcalOutliers: kcalOutlierCheck.outliers.length,
+                cleanedN: cleanProtein.length,
+                rawN: pairs.length
+            },
+            dataPoints: cleanProtein.length,
             score,
-            confidence: pairs.length >= 10 ? 0.8 : 0.5,
+            confidence: Math.round(calculatedConfidence * 100) / 100,
             insight,
             formula: 'Белок% = (protein_g × 4 / total_kcal) × 100\nПорог сытости: ≥25% = отлично, 20-25% = норма',
             debug: {
-                avgKcal: Math.round(average(kcalArr)),
+                avgKcal: Math.round(average(cleanKcal)),
                 source: 'Westerterp-Plantenga, 2003 (PMID: 12724520)',
                 calculatedConfidence: Math.round(calculatedConfidence * 100) / 100
             }

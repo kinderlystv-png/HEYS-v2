@@ -44,6 +44,35 @@
         return denominator === 0 ? 0 : numerator / denominator;
     };
 
+    const pearsonWithSignificance = piStats.pearsonWithSignificance || function (x, y, alpha = 0.05) {
+        // Fallback if piStats not loaded
+        const r = pearsonCorrelation(x, y);
+        return {
+            r,
+            pValue: 1,
+            isSignificant: false,
+            n: x.length,
+            df: x.length - 2,
+            tStat: 0,
+            effectSize: 'unknown',
+            interpretation: 'pearsonWithSignificance not available',
+            warning: 'fallback_mode'
+        };
+    };
+
+    const bayesianCorrelation = piStats.bayesianCorrelation || function (x, y, priorR = 0, priorN = 10) {
+        const r = pearsonCorrelation(x, y);
+        return { posteriorR: r, observedR: r, shrinkage: 0, effectiveN: x.length, confidence: 0.5 };
+    };
+
+    const confidenceIntervalForCorrelation = piStats.confidenceIntervalForCorrelation || function (r, n, confidenceLevel = 0.95) {
+        return { lower: Math.max(-1, r - 0.5), upper: Math.min(1, r + 0.5), margin: 0.5, width: 1.0, r, n };
+    };
+
+    const detectOutliers = piStats.detectOutliers || function (arr, iqrMultiplier = 1.5) {
+        return { outliers: [], cleaned: arr.slice(), indices: [], stats: null };
+    };
+
     const calculateDayKcal = piCalculations.calculateDayKcal || function (day, pIndex) {
         const savedKcal = Number(day?.savedEatenKcal);
         if (Number.isFinite(savedKcal) && savedKcal > 0) return savedKcal;
@@ -90,35 +119,89 @@
             };
         }
 
-        const baseConfidence = pairs.length < 14 ? 0.25 : 0.5;
-
         const stressArr = pairs.map(p => p.stress);
         const kcalArr = pairs.map(p => p.kcal);
-        const correlation = pearsonCorrelation(stressArr, kcalArr);
+        const stressOutlierCheck = detectOutliers(stressArr);
+        const kcalOutlierCheck = detectOutliers(kcalArr);
+        const outlierIndices = new Set([
+            ...stressOutlierCheck.indices,
+            ...kcalOutlierCheck.indices
+        ]);
 
-        const avgStress = average(stressArr);
-        const score = Math.round(50 - correlation * 50);
-        const confidence = Math.abs(correlation) >= CONFIG.MIN_CORRELATION_DISPLAY ? baseConfidence * (1 + Math.abs(correlation)) : baseConfidence;
+        const cleanStress = [];
+        const cleanKcal = [];
+        for (let i = 0; i < stressArr.length; i++) {
+            if (!outlierIndices.has(i)) {
+                cleanStress.push(stressArr[i]);
+                cleanKcal.push(kcalArr[i]);
+            }
+        }
+
+        if (cleanStress.length < 7) {
+            return {
+                pattern: PATTERNS.STRESS_EATING,
+                available: false,
+                reason: 'insufficient_after_outliers',
+                confidence: 0.2,
+                insight: `Недостаточно данных после фильтрации выбросов (${cleanStress.length}/7)`
+            };
+        }
+
+        const corrResult = pearsonWithSignificance(cleanStress, cleanKcal);
+        const bayesResult = bayesianCorrelation(cleanStress, cleanKcal, 0.1, 6);
+        const ci = confidenceIntervalForCorrelation(corrResult.r, cleanStress.length);
+
+        const avgStress = average(cleanStress);
+        const score = Math.round(50 - bayesResult.posteriorR * 50);
+
+        // Calculate confidence based on effect size and significance
+        let confidence = 0.5;
+        if (corrResult.isSignificant) {
+            if (corrResult.effectSize === 'large') confidence = 0.9;
+            else if (corrResult.effectSize === 'medium') confidence = 0.75;
+            else if (corrResult.effectSize === 'small') confidence = 0.6;
+        } else {
+            confidence = 0.3;
+        }
+
+        const ciPenalty = Math.min(0.1, ci.width / 2 * 0.1);
+        confidence = Math.max(0.2, confidence - ciPenalty);
 
         let insight;
-        if (Math.abs(correlation) < CONFIG.MIN_CORRELATION_DISPLAY) {
-            insight = 'Связь стресса и еды пока не выявлена';
-        } else if (correlation > 0.3) {
-            insight = `😰 Стресс → переедание! При стрессе ≈ +${Math.round(correlation * 300)} ккал`;
-        } else if (correlation < -0.3) {
-            insight = '💪 Стресс не влияет на аппетит — отлично!';
+        const r = bayesResult.posteriorR;
+        if (!corrResult.isSignificant) {
+            insight = `Связь стресса и еды пока не выявлена (N=${corrResult.n}, p=${corrResult.pValue.toFixed(3)}, 95% CI [${ci.lower.toFixed(2)}, ${ci.upper.toFixed(2)}])`;
+        } else if (r > 0.3) {
+            insight = `😰 Стресс → переедание! При стрессе ≈ +${Math.round(r * 300)} ккал (p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${corrResult.n})`;
+        } else if (r < -0.3) {
+            insight = `💪 Стресс не влияет на аппетит — отлично! (r=${r.toFixed(2)}, p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'})`;
         } else {
-            insight = 'Умеренная связь стресса и аппетита';
+            insight = `Умеренная связь стресса и аппетита (r=${r.toFixed(2)}, p=${corrResult.pValue.toFixed(3)}, N=${corrResult.n})`;
         }
 
         return {
             pattern: PATTERNS.STRESS_EATING,
             available: true,
-            correlation: Math.round(correlation * 100) / 100,
+            correlation: Math.round(corrResult.r * 100) / 100,
+            bayesianR: Math.round(bayesResult.posteriorR * 100) / 100,
+            pValue: corrResult.pValue,
+            isSignificant: corrResult.isSignificant,
+            effectSize: corrResult.effectSize,
+            confidenceInterval: {
+                lower: Math.round(ci.lower * 100) / 100,
+                upper: Math.round(ci.upper * 100) / 100,
+                width: Math.round(ci.width * 100) / 100
+            },
+            outlierStats: {
+                stressOutliers: stressOutlierCheck.outliers.length,
+                kcalOutliers: kcalOutlierCheck.outliers.length,
+                cleanedN: cleanStress.length,
+                rawN: pairs.length
+            },
             avgStress: Math.round(avgStress * 10) / 10,
-            dataPoints: pairs.length,
+            dataPoints: cleanStress.length,
             score,
-            confidence,
+            confidence: Math.round(confidence * 100) / 100,
             insight
         };
     }
@@ -173,40 +256,91 @@
             };
         }
 
-        const baseConfidence = pairs.length < 14 ? 0.25 : 0.5;
-
         const moodArr = pairs.map(p => p.mood);
         const qualityArr = pairs.map(p => p.quality);
-        const correlation = pearsonCorrelation(moodArr, qualityArr);
+        const moodOutlierCheck = detectOutliers(moodArr);
+        const qualityOutlierCheck = detectOutliers(qualityArr);
+        const outlierIndices = new Set([
+            ...moodOutlierCheck.indices,
+            ...qualityOutlierCheck.indices
+        ]);
 
-        const avgMood = average(moodArr);
-        const avgQuality = average(qualityArr);
+        const cleanMood = [];
+        const cleanQuality = [];
+        for (let i = 0; i < moodArr.length; i++) {
+            if (!outlierIndices.has(i)) {
+                cleanMood.push(moodArr[i]);
+                cleanQuality.push(qualityArr[i]);
+            }
+        }
+
+        if (cleanMood.length < 7) {
+            return {
+                pattern: PATTERNS.MOOD_FOOD,
+                available: false,
+                reason: 'insufficient_after_outliers',
+                confidence: 0.2,
+                insight: `Недостаточно данных после фильтрации выбросов (${cleanMood.length}/7)`
+            };
+        }
+
+        const corrResult = pearsonWithSignificance(cleanMood, cleanQuality);
+        const bayesResult = bayesianCorrelation(cleanMood, cleanQuality, 0.1, 6);
+        const ci = confidenceIntervalForCorrelation(corrResult.r, cleanMood.length);
+
+        const avgMood = average(cleanMood);
+        const avgQuality = average(cleanQuality);
         const score = Math.round(avgQuality);
 
         let insight;
-        if (Math.abs(correlation) < CONFIG.MIN_CORRELATION_DISPLAY) {
-            insight = 'Связь настроения и качества еды пока не выявлена';
-        } else if (correlation > 0.3) {
-            insight = '😊 Хорошее настроение → качественнее еда! Береги себя';
-        } else if (correlation < -0.3) {
-            insight = '🤔 При плохом настроении ешь лучше — это способ заботы?';
+        const r = bayesResult.posteriorR;
+        if (!corrResult.isSignificant) {
+            insight = `Связь настроения и качества еды пока не выявлена (N=${corrResult.n}, p=${corrResult.pValue.toFixed(3)}, 95% CI [${ci.lower.toFixed(2)}, ${ci.upper.toFixed(2)}])`;
+        } else if (r > 0.3) {
+            insight = `😊 Хорошее настроение → качественнее еда! Береги себя (p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${corrResult.n})`;
+        } else if (r < -0.3) {
+            insight = `🤔 При плохом настроении ешь лучше — это способ заботы? (p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${corrResult.n})`;
         } else {
-            insight = 'Умеренная связь настроения и питания';
+            insight = `Умеренная связь настроения и питания (r=${r.toFixed(2)}, p=${corrResult.pValue.toFixed(3)}, N=${corrResult.n})`;
         }
 
-        const confidence = Math.abs(correlation) > CONFIG.MIN_CORRELATION_DISPLAY
-            ? baseConfidence * (1 + Math.abs(correlation))
-            : baseConfidence;
+        // Calculate confidence based on effect size and significance
+        let confidence = 0.5;
+        if (corrResult.isSignificant) {
+            if (corrResult.effectSize === 'large') confidence = 0.9;
+            else if (corrResult.effectSize === 'medium') confidence = 0.75;
+            else if (corrResult.effectSize === 'small') confidence = 0.6;
+        } else {
+            confidence = 0.3;
+        }
+
+        const ciPenalty = Math.min(0.1, ci.width / 2 * 0.1);
+        confidence = Math.max(0.2, confidence - ciPenalty);
 
         return {
             pattern: PATTERNS.MOOD_FOOD,
             available: true,
-            correlation: Math.round(correlation * 100) / 100,
+            correlation: Math.round(corrResult.r * 100) / 100,
+            bayesianR: Math.round(bayesResult.posteriorR * 100) / 100,
+            pValue: corrResult.pValue,
+            isSignificant: corrResult.isSignificant,
+            effectSize: corrResult.effectSize,
+            confidenceInterval: {
+                lower: Math.round(ci.lower * 100) / 100,
+                upper: Math.round(ci.upper * 100) / 100,
+                width: Math.round(ci.width * 100) / 100
+            },
+            outlierStats: {
+                moodOutliers: moodOutlierCheck.outliers.length,
+                qualityOutliers: qualityOutlierCheck.outliers.length,
+                cleanedN: cleanMood.length,
+                rawN: pairs.length
+            },
             avgMood: Math.round(avgMood * 10) / 10,
             avgQuality: Math.round(avgQuality),
-            dataPoints: pairs.length,
+            dataPoints: cleanMood.length,
             score,
-            confidence,
+            confidence: Math.round(confidence * 100) / 100,
             insight
         };
     }
@@ -227,6 +361,8 @@
 
             for (const meal of day.meals) {
                 if (meal.mood == null || !meal.items) continue;
+                const moodValue = Number(meal.mood);
+                if (!Number.isFinite(moodValue)) continue;
 
                 let mealProtein = 0;
                 let mealCarbs = 0;
@@ -254,7 +390,7 @@
                 const simplePct = mealCarbs > 0 ? (mealSimple / mealCarbs) * 100 : 0;
                 const proteinPct = (mealProtein * 3 / mealKcal) * 100;
 
-                moodArr.push(meal.mood);
+                moodArr.push(moodValue);
                 simpleArr.push(simplePct);
                 proteinArr.push(proteinPct);
             }
@@ -268,33 +404,157 @@
             };
         }
 
-        const simpleCorr = pearsonCorrelation(simpleArr, moodArr);
-        const proteinCorr = pearsonCorrelation(proteinArr, moodArr);
+        const simpleOutlierCheck = detectOutliers(simpleArr);
+        const proteinOutlierCheck = detectOutliers(proteinArr);
+        const moodOutlierCheck = detectOutliers(moodArr);
+
+        const outlierIndicesSimple = new Set([
+            ...simpleOutlierCheck.indices,
+            ...moodOutlierCheck.indices
+        ]);
+        const outlierIndicesProtein = new Set([
+            ...proteinOutlierCheck.indices,
+            ...moodOutlierCheck.indices
+        ]);
+
+        const cleanSimple = [];
+        const cleanMoodForSimple = [];
+        const cleanProtein = [];
+        const cleanMoodForProtein = [];
+
+        for (let i = 0; i < moodArr.length; i++) {
+            if (!outlierIndicesSimple.has(i)) {
+                cleanSimple.push(simpleArr[i]);
+                cleanMoodForSimple.push(moodArr[i]);
+            }
+            if (!outlierIndicesProtein.has(i)) {
+                cleanProtein.push(proteinArr[i]);
+                cleanMoodForProtein.push(moodArr[i]);
+            }
+        }
+
+        if (cleanSimple.length < 7 && cleanProtein.length < 7) {
+            return {
+                pattern: PATTERNS.MOOD_TRAJECTORY,
+                available: false,
+                insight: `Недостаточно данных после фильтрации выбросов (simple=${cleanSimple.length}, protein=${cleanProtein.length})`
+            };
+        }
+
+        const simpleCorrResult = cleanSimple.length >= 7
+            ? pearsonWithSignificance(cleanSimple, cleanMoodForSimple)
+            : { r: 0, pValue: 1, isSignificant: false, effectSize: 'insufficient_data', n: cleanSimple.length };
+        const proteinCorrResult = cleanProtein.length >= 7
+            ? pearsonWithSignificance(cleanProtein, cleanMoodForProtein)
+            : { r: 0, pValue: 1, isSignificant: false, effectSize: 'insufficient_data', n: cleanProtein.length };
+        const simpleBayes = cleanSimple.length >= 7
+            ? bayesianCorrelation(cleanSimple, cleanMoodForSimple, -0.1, 6)
+            : { posteriorR: simpleCorrResult.r };
+        const proteinBayes = cleanProtein.length >= 7
+            ? bayesianCorrelation(cleanProtein, cleanMoodForProtein, 0.1, 6)
+            : { posteriorR: proteinCorrResult.r };
+        const simpleCI = cleanSimple.length >= 7
+            ? confidenceIntervalForCorrelation(simpleCorrResult.r, cleanSimple.length)
+            : { lower: -1, upper: 1, width: 2 };
+        const proteinCI = cleanProtein.length >= 7
+            ? confidenceIntervalForCorrelation(proteinCorrResult.r, cleanProtein.length)
+            : { lower: -1, upper: 1, width: 2 };
+
+        const safeR = (v) => Number.isFinite(v) ? v : 0;
+        const safeP = (v) => Number.isFinite(v) ? v : 1;
 
         let insight;
         let score = 60;
+        let primaryCorr = null;
+        let primaryPValue = null;
+        let primaryIsSignificant = false;
+        let primaryEffectSize = null;
 
-        if (simpleCorr < -CONFIG.MIN_CORRELATION_DISPLAY) {
-            insight = '😕 Настроение падает после простых углеводов — попробуй снизить быстрые';
+        if (simpleCorrResult.isSignificant && simpleBayes.posteriorR < -0.3) {
+            insight = `😕 Настроение падает после простых углеводов (r=${simpleBayes.posteriorR.toFixed(2)}, p<${simpleCorrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${simpleCorrResult.n})`;
             score = 40;
-        } else if (proteinCorr > CONFIG.MIN_CORRELATION_DISPLAY) {
-            insight = '😊 Белок улучшает настроение — держи высокий белок в приёмах';
+            primaryCorr = simpleBayes.posteriorR;
+            primaryPValue = simpleCorrResult.pValue;
+            primaryIsSignificant = true;
+            primaryEffectSize = simpleCorrResult.effectSize;
+        } else if (proteinCorrResult.isSignificant && proteinBayes.posteriorR > 0.3) {
+            insight = `😊 Белок улучшает настроение (r=${proteinBayes.posteriorR.toFixed(2)}, p<${proteinCorrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${proteinCorrResult.n})`;
             score = 80;
+            primaryCorr = proteinBayes.posteriorR;
+            primaryPValue = proteinCorrResult.pValue;
+            primaryIsSignificant = true;
+            primaryEffectSize = proteinCorrResult.effectSize;
         } else {
-            insight = 'Настроение стабильнее при сбалансированных приёмах';
+            insight = `Настроение стабильнее при сбалансированных приёмах (simple: r=${safeR(simpleBayes.posteriorR).toFixed(2)}, p=${safeP(simpleCorrResult.pValue).toFixed(3)}; protein: r=${safeR(proteinBayes.posteriorR).toFixed(2)}, p=${safeP(proteinCorrResult.pValue).toFixed(3)})`;
+            // Take the more significant one as primary
+            if (simpleCorrResult.pValue < proteinCorrResult.pValue) {
+                primaryCorr = simpleBayes.posteriorR;
+                primaryPValue = simpleCorrResult.pValue;
+                primaryIsSignificant = simpleCorrResult.isSignificant;
+                primaryEffectSize = simpleCorrResult.effectSize;
+            } else {
+                primaryCorr = proteinBayes.posteriorR;
+                primaryPValue = proteinCorrResult.pValue;
+                primaryIsSignificant = proteinCorrResult.isSignificant;
+                primaryEffectSize = proteinCorrResult.effectSize;
+            }
         }
+
+        // Calculate confidence based on primary correlation's effect size
+        let confidence = 0.5;
+        if (primaryIsSignificant) {
+            if (primaryEffectSize === 'large') confidence = 0.9;
+            else if (primaryEffectSize === 'medium') confidence = 0.75;
+            else if (primaryEffectSize === 'small') confidence = 0.6;
+        } else {
+            confidence = moodArr.length >= 14 ? 0.4 : 0.3;
+        }
+
+        const primaryCIWidth = simpleCorrResult.pValue <= proteinCorrResult.pValue
+            ? simpleCI.width
+            : proteinCI.width;
+        const ciPenalty = Math.min(0.1, (Number(primaryCIWidth) || 2) / 2 * 0.1);
+        confidence = Math.max(0.2, confidence - ciPenalty);
 
         return {
             pattern: PATTERNS.MOOD_TRAJECTORY,
             available: true,
             score,
-            dataPoints: moodArr.length,
-            simpleCorr: Math.round(simpleCorr * 100) / 100,
-            proteinCorr: Math.round(proteinCorr * 100) / 100,
-            confidence: moodArr.length >= 14 ? 0.8 : 0.5,
+            dataPoints: Math.max(cleanSimple.length, cleanProtein.length),
+            correlation: primaryCorr,
+            pValue: primaryPValue,
+            isSignificant: primaryIsSignificant,
+            effectSize: primaryEffectSize,
+            confidenceInterval: {
+                simple: {
+                    lower: Math.round(simpleCI.lower * 100) / 100,
+                    upper: Math.round(simpleCI.upper * 100) / 100,
+                    width: Math.round(simpleCI.width * 100) / 100
+                },
+                protein: {
+                    lower: Math.round(proteinCI.lower * 100) / 100,
+                    upper: Math.round(proteinCI.upper * 100) / 100,
+                    width: Math.round(proteinCI.width * 100) / 100
+                }
+            },
+            outlierStats: {
+                moodOutliers: moodOutlierCheck.outliers.length,
+                simpleOutliers: simpleOutlierCheck.outliers.length,
+                proteinOutliers: proteinOutlierCheck.outliers.length,
+                cleanedSimpleN: cleanSimple.length,
+                cleanedProteinN: cleanProtein.length,
+                rawN: moodArr.length
+            },
+            simpleCorr: Math.round(simpleCorrResult.r * 100) / 100,
+            proteinCorr: Math.round(proteinCorrResult.r * 100) / 100,
+            simpleBayesianR: Math.round(simpleBayes.posteriorR * 100) / 100,
+            proteinBayesianR: Math.round(proteinBayes.posteriorR * 100) / 100,
+            confidence: Math.round(confidence * 100) / 100,
             insight,
             debug: {
-                formula: 'corr(mood, simple%) vs corr(mood, protein%)'
+                formula: 'corr(mood, simple%) vs corr(mood, protein%)',
+                simplePValue: simpleCorrResult.pValue,
+                proteinPValue: proteinCorrResult.pValue
             }
         };
     }

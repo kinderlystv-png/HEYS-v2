@@ -24,7 +24,7 @@
     const { createElement: h, useState, useEffect, useMemo, Component } = React;
 
     const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
-    const piScience = HEYS.InsightsPI?.science || window.SCIENCE_INFO || {};
+    const piScience = HEYS.InsightsPI?.constants?.SCIENCE_INFO || window.piConst?.SCIENCE_INFO || HEYS.InsightsPI?.science || window.piScience || {};
     const piUIHelpers = HEYS.InsightsPI?.uiHelpers || window.piUIHelpers || {};
 
     // Safe accessor for analytics functions (may be in InsightsPI.analyticsAPI or PredictiveInsights)

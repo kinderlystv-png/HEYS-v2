@@ -45,6 +45,35 @@
         return denominator === 0 ? 0 : numerator / denominator;
     };
 
+    const pearsonWithSignificance = piStats.pearsonWithSignificance || function (x, y, alpha = 0.05) {
+        // Fallback if piStats not loaded
+        const r = pearsonCorrelation(x, y);
+        return {
+            r,
+            pValue: 1,
+            isSignificant: false,
+            n: x.length,
+            df: x.length - 2,
+            tStat: 0,
+            effectSize: 'unknown',
+            interpretation: 'pearsonWithSignificance not available',
+            warning: 'fallback_mode'
+        };
+    };
+
+    const bayesianCorrelation = piStats.bayesianCorrelation || function (x, y, priorR = 0, priorN = 10) {
+        const r = pearsonCorrelation(x, y);
+        return { posteriorR: r, observedR: r, shrinkage: 0, effectiveN: x.length, confidence: 0.5 };
+    };
+
+    const confidenceIntervalForCorrelation = piStats.confidenceIntervalForCorrelation || function (r, n, confidenceLevel = 0.95) {
+        return { lower: Math.max(-1, r - 0.5), upper: Math.min(1, r + 0.5), margin: 0.5, width: 1.0, r, n };
+    };
+
+    const detectOutliers = piStats.detectOutliers || function (arr, iqrMultiplier = 1.5) {
+        return { outliers: [], cleaned: arr.slice(), indices: [], stats: null };
+    };
+
     const calculateTrend = piStats.calculateTrend || function (values) {
         if (!Array.isArray(values) || values.length < 2) return 0;
         const n = values.length;
@@ -205,36 +234,98 @@
 
         const stepsArr = pairs.map(p => p.steps);
         const deltaArr = pairs.map(p => p.weightDelta);
-        const correlation = pairs.length >= 2 ? pearsonCorrelation(stepsArr, deltaArr) : 0;
 
-        const score = Math.round(50 + correlation * -50);
-        const avgSteps = average(stepsArr);
+        const stepsOutlierCheck = detectOutliers(stepsArr);
+        const deltaOutlierCheck = detectOutliers(deltaArr);
+        const outlierIndices = new Set([
+            ...stepsOutlierCheck.indices,
+            ...deltaOutlierCheck.indices
+        ]);
 
-        let insight;
-        if (Math.abs(correlation) < CONFIG.MIN_CORRELATION_DISPLAY) {
-            insight = 'Связь шагов и веса пока не выявлена';
-        } else if (correlation < -0.3) {
-            insight = `👟 Больше шагов → вес стабильнее! При ${Math.round(avgSteps)} шагов/день`;
-        } else if (correlation > 0.3) {
-            insight = 'Интересно: больше ходишь, но вес растёт. Проверь калории';
-        } else {
-            insight = 'Умеренное влияние шагов на вес';
+        const cleanSteps = [];
+        const cleanDelta = [];
+        for (let i = 0; i < stepsArr.length; i++) {
+            if (!outlierIndices.has(i)) {
+                cleanSteps.push(stepsArr[i]);
+                cleanDelta.push(deltaArr[i]);
+            }
         }
 
-        const isPreliminary = pairs.length < robustPairsRequired;
+        if (cleanSteps.length < 2) {
+            return {
+                pattern: PATTERNS.STEPS_WEIGHT,
+                available: false,
+                reason: 'insufficient_after_outliers',
+                confidence: 0.2,
+                insight: `Недостаточно данных после фильтрации выбросов (${cleanSteps.length}/2)`
+            };
+        }
+
+        const corrResult = pearsonWithSignificance(cleanSteps, cleanDelta);
+        const bayesResult = bayesianCorrelation(cleanSteps, cleanDelta, 0, 10);
+        const ci = cleanSteps.length >= 4
+            ? confidenceIntervalForCorrelation(corrResult.r, cleanSteps.length)
+            : { lower: -1, upper: 1, width: 2 };
+
+        const score = Math.round(50 + bayesResult.posteriorR * -50);
+        const avgSteps = average(cleanSteps);
+
+        let insight;
+        const r = bayesResult.posteriorR;
+        if (!corrResult.isSignificant || cleanSteps.length < 2) {
+            insight = `Связь шагов и веса пока не выявлена (N=${cleanSteps.length}, p=${corrResult.pValue.toFixed(3)}, 95% CI [${ci.lower.toFixed(2)}, ${ci.upper.toFixed(2)}])`;
+        } else if (r < -0.3) {
+            insight = `👟 Больше шагов → вес стабильнее! При ${Math.round(avgSteps)} шагов/день (p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${corrResult.n})`;
+        } else if (r > 0.3) {
+            insight = `Интересно: больше ходишь, но вес растёт. Проверь калории (r=${r.toFixed(2)}, p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'})`;
+        } else {
+            insight = `Умеренное влияние шагов на вес (r=${r.toFixed(2)}, p=${corrResult.pValue.toFixed(3)}, N=${corrResult.n})`;
+        }
+
+        const isPreliminary = cleanSteps.length < robustPairsRequired;
+
+        // Calculate confidence based on effect size and significance
+        let confidence = 0.5;
+        if (corrResult.isSignificant && !isPreliminary) {
+            if (corrResult.effectSize === 'large') confidence = 0.9;
+            else if (corrResult.effectSize === 'medium') confidence = 0.75;
+            else if (corrResult.effectSize === 'small') confidence = 0.6;
+        } else if (isPreliminary) {
+            confidence = 0.35;
+        } else {
+            confidence = 0.3;
+        }
+
+        const ciPenalty = Math.min(0.1, (Number(ci.width) || 2) / 2 * 0.1);
+        confidence = Math.max(0.2, confidence - ciPenalty);
 
         return {
             pattern: PATTERNS.STEPS_WEIGHT,
             available: true,
-            correlation: Math.round(correlation * 100) / 100,
+            correlation: Math.round(corrResult.r * 100) / 100,
+            bayesianR: Math.round(bayesResult.posteriorR * 100) / 100,
+            pValue: corrResult.pValue,
+            isSignificant: corrResult.isSignificant,
+            effectSize: corrResult.effectSize,
+            confidenceInterval: {
+                lower: Math.round(ci.lower * 100) / 100,
+                upper: Math.round(ci.upper * 100) / 100,
+                width: Math.round(ci.width * 100) / 100
+            },
+            outlierStats: {
+                stepsOutliers: stepsOutlierCheck.outliers.length,
+                deltaOutliers: deltaOutlierCheck.outliers.length,
+                cleanedN: cleanSteps.length,
+                rawN: pairs.length
+            },
             avgSteps: Math.round(avgSteps),
-            dataPoints: pairs.length,
+            dataPoints: cleanSteps.length,
             score,
-            confidence: pairs.length >= 10 ? 0.8 : (isPreliminary ? 0.35 : 0.5),
+            confidence: Math.round(confidence * 100) / 100,
             isPreliminary,
             requiredDataPoints: robustPairsRequired,
             insight: isPreliminary
-                ? `${insight}. Предварительно: ${pairs.length}/${robustPairsRequired} пар, точность растёт с данными`
+                ? `${insight}. Предварительно: ${cleanSteps.length}/${robustPairsRequired} пар, точность растёт с данными`
                 : insight
         };
     }

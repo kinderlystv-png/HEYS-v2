@@ -19,13 +19,10 @@
     return HEYS.InsightsPI?.stats || window.piStats || {};
   }
   function getScienceInfo() {
-    return HEYS.InsightsPI?.science || window.piScience || {};
+    return HEYS.InsightsPI?.constants?.SCIENCE_INFO || window.piConst?.SCIENCE_INFO || HEYS.InsightsPI?.science || window.piScience || {};
   }
   function getConst() {
     return HEYS.InsightsPI?.constants || window.piConst || {};
-  }
-  function getMath() {
-    return HEYS.InsightsPI?.math || window.piMath || {};
   }
   function getCalc() {
     return HEYS.InsightsPI?.calculations || window.piCalculations || {};
@@ -76,17 +73,13 @@
   // === Stats helpers (lazy access) ===
   function average(arr) {
     const stats = getStats();
-    const math = getMath();
     if (stats.average) return stats.average(arr);
-    if (math.average) return math.average(arr);
     if (!arr || arr.length === 0) return 0;
     return arr.reduce((a, b) => a + b, 0) / arr.length;
   }
   function stdDev(arr) {
     const stats = getStats();
-    const math = getMath();
     if (stats.stdDev) return stats.stdDev(arr);
-    if (math.stdDev) return math.stdDev(arr);
     if (!arr || arr.length < 2) return 0;
     const mean = average(arr);
     const sq = arr.map(x => Math.pow(x - mean, 2));
@@ -94,10 +87,69 @@
   }
   function pearsonCorrelation(x, y) {
     const stats = getStats();
-    const math = getMath();
     if (stats.pearsonCorrelation) return stats.pearsonCorrelation(x, y);
-    if (math.pearsonCorrelation) return math.pearsonCorrelation(x, y);
-    return 0;
+    if (!Array.isArray(x) || !Array.isArray(y) || x.length !== y.length || x.length < 2) return 0;
+    const n = x.length;
+    const xMean = average(x);
+    const yMean = average(y);
+    let numerator = 0;
+    let xDen = 0;
+    let yDen = 0;
+    for (let i = 0; i < n; i++) {
+      const dx = (Number(x[i]) || 0) - xMean;
+      const dy = (Number(y[i]) || 0) - yMean;
+      numerator += dx * dy;
+      xDen += dx * dx;
+      yDen += dy * dy;
+    }
+    const denominator = Math.sqrt(xDen * yDen);
+    if (denominator === 0) return 0;
+    if (n < 3) return 0;
+    return numerator / denominator;
+  }
+  function calculateTrend(arr) {
+    const stats = getStats();
+    if (stats.calculateTrend) return stats.calculateTrend(arr);
+    if (!Array.isArray(arr) || arr.length < 2) return 0;
+    const n = arr.length;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    for (let i = 0; i < n; i++) {
+      const y = Number(arr[i]) || 0;
+      sumX += i;
+      sumY += y;
+      sumXY += i * y;
+      sumX2 += i * i;
+    }
+    const denominator = (n * sumX2 - sumX * sumX);
+    if (!denominator) return 0;
+    return (n * sumXY - sumX * sumY) / denominator;
+  }
+  function linearTrend(arr) {
+    const stats = getStats();
+    if (stats.linearTrend) return stats.linearTrend(arr);
+    if (stats.calculateTrend) return stats.calculateTrend(arr);
+    return calculateTrend(arr);
+  }
+  function calculateLinearRegression(points) {
+    const stats = getStats();
+    if (stats.calculateLinearRegression) return stats.calculateLinearRegression(points);
+    if (!Array.isArray(points) || points.length < 2) return 0;
+    let sumX = 0;
+    let sumY = 0;
+    let sumXY = 0;
+    let sumX2 = 0;
+    const n = points.length;
+    for (const p of points) {
+      const x = Number(p?.x) || 0;
+      const y = Number(p?.y) || 0;
+      sumX += x;
+      sumY += y;
+      sumXY += x * y;
+      sumX2 += x * x;
+    }
+    const denominator = (n * sumX2 - sumX * sumX);
+    if (!denominator) return 0;
+    return (n * sumXY - sumX * sumY) / denominator;
   }
   function variance(arr) {
     const stats = getStats();
@@ -125,18 +177,6 @@
     const ssTot = actual.reduce((sum, a) => sum + Math.pow(a - meanActual, 2), 0);
     const ssRes = actual.reduce((sum, a, i) => sum + Math.pow(a - predicted[i], 2), 0);
     return ssTot === 0 ? 0 : 1 - ssRes / ssTot;
-  }
-  function linearTrend(arr) {
-    const stats = getStats();
-    const math = getMath();
-    if (stats.linearTrend) return stats.linearTrend(arr);
-    if (stats.calculateTrend) return stats.calculateTrend(arr);
-    if (math.calculateLinearRegression && Array.isArray(arr)) {
-      const points = arr.map((y, x) => ({ x, y }));
-      return math.calculateLinearRegression(points);
-    }
-    if (math.calculateTrend) return { slope: math.calculateTrend(arr), intercept: 0 };
-    return { slope: 0, intercept: 0 };
   }
 
   function calculateBMR(profile) {

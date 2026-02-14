@@ -13,6 +13,7 @@
   // Зависимости
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
   const patternModules = HEYS.InsightsPI?.patternModules || {};
+  let _thresholdsCtxCache = { key: null, thresholds: null };
 
   /**
    * Get adaptive thresholds for current context
@@ -20,6 +21,23 @@
    * In-memory кэш удален — pi_thresholds.js сам управляет кэшированием через localStorage
    */
   function getThresholdsContext(days, profile, pIndex) {
+    const firstDate = days?.[0]?.date || '';
+    const lastDate = days?.[days.length - 1]?.date || '';
+    const pIndexSize = pIndex?.byId?.size || 0;
+    const cacheKey = [
+      days?.length || 0,
+      firstDate,
+      lastDate,
+      profile?.id || '',
+      profile?.weight || '',
+      profile?.goal || '',
+      pIndexSize
+    ].join('|');
+
+    if (_thresholdsCtxCache.key === cacheKey && _thresholdsCtxCache.thresholds) {
+      return _thresholdsCtxCache.thresholds;
+    }
+
     console.log('[pi_patterns] 🎯 getThresholdsContext called:', {
       daysCount: days?.length,
       profileId: profile?.id,
@@ -39,7 +57,12 @@
       meta: computed.meta
     });
 
-    return computed.thresholds || {};
+    _thresholdsCtxCache = {
+      key: cacheKey,
+      thresholds: computed.thresholds || {}
+    };
+
+    return _thresholdsCtxCache.thresholds;
   }
 
   // Импорт констант (полный список из pi_constants.js)

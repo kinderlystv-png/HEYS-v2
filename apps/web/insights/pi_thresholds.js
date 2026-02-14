@@ -185,8 +185,16 @@
      * @param cacheRange - диапазон дат кэша {from, to}
      * @param requestedDays - запрошенные дни
      */
-    function isCurrentPeriodCovered(cacheRange, requestedDays) {
-        if (!cacheRange || !requestedDays?.length) return false;
+    function isCurrentPeriodCovered(cacheRange, requestedDays, cachedDaysUsed) {
+        if (!requestedDays?.length) return false;
+
+        // 🆕 CASCADE fast-path: если кэш содержит >= запрошенных дней,
+        // он по определению покрывает запрос (все запросы идут от "сегодня" назад)
+        if (cachedDaysUsed && cachedDaysUsed >= requestedDays.length) {
+            return true;
+        }
+
+        if (!cacheRange) return false;
 
         const cacheFrom = new Date(cacheRange.from);
         const cacheTo = new Date(cacheRange.to);
@@ -214,8 +222,8 @@
         const stats = global.HEYS.InsightsPI.stats;
 
         // Метрики для оценки стабильности
-        const kcals = days.map(d => d.dayTot?.kcal || 0).filter(k => k > 0);
-        const proteins = days.map(d => d.dayTot?.prot || 0).filter(p => p > 0);
+        // ✅ FIX: dayTot не хранится в localStorage — используем savedEatenKcal
+        const kcals = days.map(d => d.savedEatenKcal || d.dayTot?.kcal || 0).filter(k => k > 0);
         const mealCounts = days.map(d => d.meals?.length || 0).filter(c => c > 0);
         const lastMealHours = days.map(getLastMealHour).filter(Boolean);
 
@@ -223,28 +231,26 @@
 
         // Coefficient of variation (CV) для каждой метрики
         const cvKcal = stats.coefficientOfVariation(kcals);
-        const cvProtein = stats.coefficientOfVariation(proteins);
         const cvMeals = stats.coefficientOfVariation(mealCounts);
-        const cvTiming = stats.coefficientOfVariation(lastMealHours);
+        const cvTiming = lastMealHours.length >= 3 ? stats.coefficientOfVariation(lastMealHours) : 0.15;
 
         // Нормализация: CV < 0.15 = stable, CV > 0.35 = volatile
         const stabilityKcal = Math.max(0, 1 - cvKcal / 0.35);
-        const stabilityProtein = Math.max(0, 1 - cvProtein / 0.4);
         const stabilityMeals = Math.max(0, 1 - cvMeals / 0.3);
         const stabilityTiming = Math.max(0, 1 - cvTiming / 0.2);
 
-        // Weighted average (kcal и timing важнее)
+        // Weighted average (без protein — нет savedEatenProt в day data)
         const overallStability = (
-            stabilityKcal * 0.35 +
-            stabilityProtein * 0.25 +
-            stabilityMeals * 0.2 +
-            stabilityTiming * 0.2
+            stabilityKcal * 0.45 +
+            stabilityMeals * 0.25 +
+            stabilityTiming * 0.30
         );
 
         console.log('[HEYS.thresholds.stability] 📊 Behavior stability:', {
             cvKcal: cvKcal.toFixed(3),
-            cvProtein: cvProtein.toFixed(3),
+            cvMeals: cvMeals.toFixed(3),
             cvTiming: cvTiming.toFixed(3),
+            kcalSamples: kcals.length,
             overallScore: overallStability.toFixed(2)
         });
 
@@ -279,6 +285,7 @@
      */
     function detectSignificantChange(profile, cachedMeta, recentDays) {
         if (!cachedMeta || !cachedMeta.snapshot) return null;
+        if (!profile) return null; // ✅ Защита от undefined profile
 
         const snapshot = cachedMeta.snapshot;
         const events = [];
@@ -306,16 +313,22 @@
 
         // 3. Diet pattern break (3+ consecutive anomalous days)
         if (recentDays && recentDays.length >= 3) {
-            const avgKcal = recentDays.reduce((sum, d) => sum + (d.dayTot?.kcal || 0), 0) / recentDays.length;
-            const snapshotKcal = snapshot.avgKcal || avgKcal; // Fallback if not tracked
+            // ✅ FIX: используем savedEatenKcal (dayTot нет в raw localStorage data)
+            const daysWithKcal = recentDays.filter(d => (d.savedEatenKcal || d.dayTot?.kcal || 0) > 0);
+            // ✅ FIX v2: snapshot.avgKcal >= 200 — защита от stale cache с нулевыми/мизерными значениями
+            // (старый баг записывал avgKcal≈0 из-за dayTot?.kcal)
+            if (daysWithKcal.length >= 3 && snapshot.avgKcal >= 200) {
+                const avgKcal = daysWithKcal.reduce((sum, d) => sum + (d.savedEatenKcal || d.dayTot?.kcal || 0), 0) / daysWithKcal.length;
+                const snapshotKcal = snapshot.avgKcal;
 
-            const kcalDeviation = Math.abs((avgKcal - snapshotKcal) / snapshotKcal);
-            if (kcalDeviation > 0.3) { // 30%+ deviation
-                events.push({
-                    type: 'DIET_PATTERN_BREAK',
-                    weight: INVALIDATION_EVENTS.DIET_PATTERN_BREAK.weight,
-                    reason: `Calorie pattern changed ${(kcalDeviation * 100).toFixed(0)}%`
-                });
+                const kcalDeviation = Math.abs((avgKcal - snapshotKcal) / snapshotKcal);
+                if (kcalDeviation > 0.3) { // 30%+ deviation
+                    events.push({
+                        type: 'DIET_PATTERN_BREAK',
+                        weight: INVALIDATION_EVENTS.DIET_PATTERN_BREAK.weight,
+                        reason: `Calorie pattern changed ${(kcalDeviation * 100).toFixed(0)}%`
+                    });
+                }
             }
         }
 
@@ -531,6 +544,19 @@
             confidence: confidence.toFixed(2)
         });
 
+        // dateRange для кэша (oldest to newest)
+        const dates = days.map(d => d.date).filter(Boolean).sort();
+        const dateRange = dates.length > 0 ? {
+            from: dates[0],
+            to: dates[dates.length - 1]
+        } : null;
+
+        // Profile snapshot для event detection (используем savedEatenKcal)
+        const daysWithMeals = days.filter(d => (d.savedEatenKcal || d.dayTot?.kcal || 0) > 0);
+        const avgKcal = daysWithMeals.length > 0
+            ? daysWithMeals.reduce((sum, d) => sum + (d.savedEatenKcal || d.dayTot?.kcal || 0), 0) / daysWithMeals.length
+            : 0;
+
         return {
             thresholds,
             thresholdsWithConfidence,
@@ -539,6 +565,12 @@
             meta: {
                 computedAt: new Date().toISOString(),
                 partial: true,
+                dateRange,
+                snapshot: {
+                    goal: profile?.goal,
+                    weight: profile?.weight,
+                    avgKcal: Math.round(avgKcal)
+                },
                 thresholdsComputed: computedCount,
                 thresholdsDefault: 8 - computedCount,
                 version: '2.0.0'
@@ -814,7 +846,11 @@
         } : null;
 
         // 🆕 v2.0: Profile snapshot для event detection
-        const avgKcal = days.reduce((sum, d) => sum + (d.dayTot?.kcal || 0), 0) / days.length;
+        // ✅ FIX: используем savedEatenKcal (dayTot не хранится в localStorage raw data)
+        const daysWithMeals = days.filter(d => (d.savedEatenKcal || d.dayTot?.kcal || 0) > 0);
+        const avgKcal = daysWithMeals.length > 0
+            ? daysWithMeals.reduce((sum, d) => sum + (d.savedEatenKcal || d.dayTot?.kcal || 0), 0) / daysWithMeals.length
+            : 0;
         const profileSnapshot = {
             goal: profile?.goal,
             weight: profile?.weight,
@@ -861,7 +897,7 @@
             const cached = U.lsGet(STORAGE_KEY);
             if (cached?.meta) {
                 const age = Date.now() - new Date(cached.meta.computedAt).getTime();
-                const covered = cached.meta.dateRange ? isCurrentPeriodCovered(cached.meta.dateRange, days) : false;
+                const covered = isCurrentPeriodCovered(cached.meta.dateRange, days, cached.daysUsed);
 
                 // 🆕 v2.0: Calculate adaptive TTL instead of fixed CACHE_TTL_MS
                 const stability = calculateBehaviorStability(days);
@@ -887,7 +923,22 @@
                         confidence: cached.confidence,
                         thresholds: Object.keys(cached.thresholds).length
                     });
-                    return cached;
+
+                    // 🆕 v2.1: Apply phenotype multipliers to cached thresholds
+                    let result = cached;
+                    if (profile?.phenotype && global.HEYS.InsightsPI?.phenotype?.applyMultipliers) {
+                        const baseThresholds = { ...cached.thresholds };
+                        const adjustedThresholds = global.HEYS.InsightsPI.phenotype.applyMultipliers(
+                            baseThresholds,
+                            profile.phenotype
+                        );
+                        result = { ...cached, thresholds: adjustedThresholds, phenotypeApplied: true };
+                        console.log('[HEYS.thresholds] 🧬 Applied phenotype multipliers to cache:', {
+                            phenotype: profile.phenotype
+                        });
+                    }
+
+                    return result;
                 } else {
                     console.log('[HEYS.thresholds] 🔄 Cache miss:', {
                         age: Math.round(age / 1000 / 60) + 'min',
@@ -930,6 +981,8 @@
         }
 
         // 🔬 Вычислить на основе доступных данных (3-tier cascade)
+        let result;
+
         if (days.length >= MIN_DAYS_FULL_COMPUTE) {
             // Tier 1: Полный расчет (14-30 дней) → 5-8 порогов, confidence=1.0
             const computed = computeAdaptiveThresholds(days, profile, pIndex);
@@ -949,18 +1002,56 @@
                 );
             }
 
-            return computed;
+            result = computed;
         }
-
-        if (days.length >= MIN_DAYS_PARTIAL) {
+        else if (days.length >= MIN_DAYS_PARTIAL) {
             // Tier 2: Частичный расчет (7-13 дней) → 3 порога + 5 Bayesian, confidence=0.375
             console.log('[HEYS.thresholds] ⚠️ Partial compute mode:', { days: days.length });
-            return computePartialThresholds(days, profile, pIndex);
+            const partial = computePartialThresholds(days, profile, pIndex);
+
+            // ✅ FIX: Кэшируем partial — но НЕ затираем более качественный кэш (full > partial)
+            if (partial.confidence > 0 && U) {
+                const existingCache = U.lsGet(STORAGE_KEY);
+                const existingDays = existingCache?.daysUsed || 0;
+                const existingThresholds = Object.keys(existingCache?.thresholds || {}).length;
+                const partialThresholds = Object.keys(partial.thresholds || {}).length;
+                // Перезаписываем только если partial лучше или кэш пуст/хуже
+                if (!existingCache || existingDays < partial.daysUsed ||
+                    (existingDays === partial.daysUsed && existingThresholds <= partialThresholds)) {
+                    U.lsSet(STORAGE_KEY, partial);
+                }
+            }
+
+            result = partial;
+        }
+        else {
+            // Tier 3: Дефолтные пороги (<7 дней) → Bayesian priors, confidence=0
+            console.log('[HEYS.thresholds] 🔧 Using defaults (Bayesian priors):', { days: days.length });
+            result = getDefaultThresholds(profile);
         }
 
-        // Tier 3: Дефолтные пороги (<7 дней) → Bayesian priors, confidence=0
-        console.log('[HEYS.thresholds] 🔧 Using defaults (Bayesian priors):', { days: days.length });
-        return getDefaultThresholds(profile);
+        // 🆕 v2.1: Apply phenotype multipliers if phenotype is defined
+        if (profile?.phenotype && global.HEYS.InsightsPI?.phenotype?.applyMultipliers) {
+            const baseThresholds = { ...result.thresholds };
+            const adjustedThresholds = global.HEYS.InsightsPI.phenotype.applyMultipliers(
+                baseThresholds,
+                profile.phenotype
+            );
+
+            console.log('[HEYS.thresholds] 🧬 Applied phenotype multipliers:', {
+                phenotype: profile.phenotype,
+                before: Object.keys(baseThresholds).length,
+                after: Object.keys(adjustedThresholds).length,
+                changed: Object.keys(adjustedThresholds).filter(k =>
+                    adjustedThresholds[k] !== baseThresholds[k]
+                ).length
+            });
+
+            result.thresholds = adjustedThresholds;
+            result.phenotypeApplied = true;
+        }
+
+        return result;
     }
 
     /**
