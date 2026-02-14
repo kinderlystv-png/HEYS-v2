@@ -252,6 +252,11 @@
         const logoutScreen = dayGuards.getLogoutScreen({ React, HEYSRef: window.HEYS });
         if (logoutScreen) return logoutScreen;
 
+        console.log('[HEYS.DayTab] 📅 DayTab component mounting/rendering', {
+            hasProps: !!props,
+            propsKeys: props ? Object.keys(props).slice(0, 10).join(', ') : 'none'
+        });
+
         const { useState, useMemo, useEffect, useRef } = React;
 
         const [mealsDepsReady, setMealsDepsReady] = useState(() => {
@@ -1979,7 +1984,9 @@
             setInsulinExpanded,
             openExclusivePopup,
             mealsUI,
-            daySummary
+            daySummary,
+            dayTot,
+            normAbs
         });
     };
 

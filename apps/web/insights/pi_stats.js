@@ -51,7 +51,8 @@
     const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
 
     if (denominator === 0) return 0;
-    return numerator / denominator;
+    const correlation = numerator / denominator;
+    return isNaN(correlation) ? 0 : correlation;
   }
 
   /**
@@ -614,6 +615,23 @@
         effectiveN: priorN,
         confidence: 0.1,
         warning: 'insufficient_data'
+      };
+    }
+
+    // Handle NaN from zero variance (all values identical)
+    if (isNaN(observedR)) {
+      console.info('[pi_stats.bayesian] ⚠️ Zero variance detected:', {
+        n: observedN,
+        fallback: 'using_prior',
+        priorR: priorR.toFixed(2)
+      });
+      return {
+        posteriorR: priorR,
+        observedR: 0,
+        shrinkage: Math.abs(priorR),
+        effectiveN: priorN,
+        confidence: 0.2,
+        warning: 'zero_variance'
       };
     }
 
