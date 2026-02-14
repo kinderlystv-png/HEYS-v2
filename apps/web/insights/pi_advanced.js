@@ -74,6 +74,42 @@
    * @param {Object} profile - профиль с deficitPctTarget
    */
   function calculateHealthScore(patterns, profile) {
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+    /**
+     * Надёжность паттерна для взвешивания в агрегированном score.
+     * 1. Берём confidence (0..1, либо 0..100 -> нормализуем)
+     * 2. Понижаем вклад preliminary паттернов
+     * 3. Учитываем заполненность до requiredDataPoints, если есть
+     */
+    const getPatternReliability = (p) => {
+      let baseConfidence = Number(p?.confidence);
+
+      if (!Number.isFinite(baseConfidence)) {
+        baseConfidence = 0.5;
+      }
+
+      if (baseConfidence > 1 && baseConfidence <= 100) {
+        baseConfidence = baseConfidence / 100;
+      }
+
+      baseConfidence = clamp(baseConfidence, 0.15, 1);
+
+      if (p?.isPreliminary) {
+        baseConfidence = Math.min(baseConfidence, 0.55);
+      }
+
+      const dataPoints = Number(p?.dataPoints);
+      const requiredDataPoints = Number(p?.requiredDataPoints);
+
+      if (Number.isFinite(dataPoints) && Number.isFinite(requiredDataPoints) && requiredDataPoints > 0) {
+        const completionRatio = clamp(dataPoints / requiredDataPoints, 0.25, 1);
+        baseConfidence *= completionRatio;
+      }
+
+      return clamp(baseConfidence, 0.1, 1);
+    };
+
     // Определяем цель (Number() для корректного сравнения строк из localStorage)
     const deficitPct = Number(profile?.deficitPctTarget) || 0;
     let goalMode = 'maintenance';
@@ -83,7 +119,7 @@
     // Goal-aware веса
     const weightsByGoal = {
       deficit: {
-        nutrition: 0.35,   // Меньше, т.к. дефицит = меньше еды
+        nutrition: 0.25,   // Меньше, т.к. дефицит = меньше еды (was 0.35, fixed sum to 1.0)
         timing: 0.30,      // Важнее, чтобы не переедать вечером
         activity: 0.20,    // Важно для сохранения мышц
         recovery: 0.15,    // Сон критичен
@@ -132,7 +168,11 @@
         case PATTERNS.VITAMIN_DEFENSE: // v6.0 C13 (Phase 3, 12.02.2026)
         case PATTERNS.PROTEIN_DISTRIBUTION: // v6.0 C15 (Phase 3, 12.02.2026)
         case PATTERNS.NUTRIENT_DENSITY: // v6.0 C21 (Phase 3, 12.02.2026)
-          scores.nutrition.push(p.score);
+          scores.nutrition.push({
+            score: p.score,
+            reliability: getPatternReliability(p),
+            pattern: p.pattern
+          });
           break;
 
         case PATTERNS.MEAL_TIMING:
@@ -141,7 +181,11 @@
         case PATTERNS.CIRCADIAN:
         case PATTERNS.NUTRIENT_TIMING:
         case PATTERNS.WEEKEND_EFFECT: // v4.0 B6
-          scores.timing.push(p.score);
+          scores.timing.push({
+            score: p.score,
+            reliability: getPatternReliability(p),
+            pattern: p.pattern
+          });
           break;
 
         case PATTERNS.TRAINING_KCAL:
@@ -149,7 +193,11 @@
         case PATTERNS.NEAT_ACTIVITY:
         case PATTERNS.TRAINING_RECOVERY: // v5.0 C11
         case PATTERNS.TRAINING_TYPE_MATCH: // v6.0 C19 (Phase 3, 12.02.2026)
-          scores.activity.push(p.score);
+          scores.activity.push({
+            score: p.score,
+            reliability: getPatternReliability(p),
+            pattern: p.pattern
+          });
           break;
 
         case PATTERNS.SLEEP_WEIGHT:
@@ -163,7 +211,11 @@
         case PATTERNS.ANTIOXIDANT_DEFENSE: // v6.0 C16 (Phase 3, 12.02.2026)
         case PATTERNS.BONE_HEALTH: // v6.0 C17 (Phase 3, 12.02.2026)
         case PATTERNS.ELECTROLYTE_HOMEOSTASIS: // v6.0 C20 (Phase 3, 12.02.2026)
-          scores.recovery.push(p.score);
+          scores.recovery.push({
+            score: p.score,
+            reliability: getPatternReliability(p),
+            pattern: p.pattern
+          });
           break;
 
         case PATTERNS.INSULIN_SENSITIVITY:
@@ -173,7 +225,11 @@
         case PATTERNS.B_COMPLEX_ANEMIA: // v6.0 C22 (Phase 3, 12.02.2026)
         case PATTERNS.GLYCEMIC_LOAD: // v6.0 C14 (Phase 3, 12.02.2026)
         case PATTERNS.ADDED_SUGAR_DEPENDENCY: // v6.0 C18 (Phase 3, 12.02.2026)
-          scores.metabolism.push(p.score);
+          scores.metabolism.push({
+            score: p.score,
+            reliability: getPatternReliability(p),
+            pattern: p.pattern
+          });
           break;
       }
     }
@@ -185,10 +241,27 @@
 
     for (const [cat, weight] of Object.entries(weights)) {
       if (scores[cat].length > 0) {
-        const catScore = average(scores[cat]);
+        const reliabilitySum = scores[cat].reduce((sum, item) => sum + (Number(item.reliability) || 0), 0);
+        const weightedScoreSum = scores[cat].reduce(
+          (sum, item) => sum + ((Number(item.score) || 0) * (Number(item.reliability) || 0)),
+          0
+        );
+
+        const catScore = reliabilitySum > 0
+          ? (weightedScoreSum / reliabilitySum)
+          : average(scores[cat].map(item => Number(item.score) || 0));
+
+        const categoryReliability = scores[cat].length > 0
+          ? (reliabilitySum / scores[cat].length)
+          : 0;
+
+        // Даже при низкой уверенности категория остаётся видимой,
+        // но её влияние на итоговый score уменьшается.
+        const effectiveWeight = weight * (0.4 + 0.6 * categoryReliability);
+
         categoryScores[cat] = Math.round(catScore);
-        weightedSum += catScore * weight;
-        totalWeight += weight;
+        weightedSum += catScore * effectiveWeight;
+        totalWeight += effectiveWeight;
       } else {
         categoryScores[cat] = null;
       }
@@ -201,11 +274,36 @@
       goalMode,
       categories: categoryScores,
       breakdown: {
-        nutrition: { score: categoryScores.nutrition, weight: weights.nutrition, label: 'Питание' },
-        timing: { score: categoryScores.timing, weight: weights.timing, label: 'Тайминг' },
-        activity: { score: categoryScores.activity, weight: weights.activity, label: 'Активность' },
-        recovery: { score: categoryScores.recovery, weight: weights.recovery, label: 'Восстановление' },
-        metabolism: { score: categoryScores.metabolism, weight: weights.metabolism, label: 'Метаболизм' }
+        nutrition: {
+          score: categoryScores.nutrition,
+          weight: weights.nutrition,
+          reliability: scores.nutrition.length > 0 ? Math.round((scores.nutrition.reduce((s, i) => s + i.reliability, 0) / scores.nutrition.length) * 100) / 100 : null,
+          label: 'Питание'
+        },
+        timing: {
+          score: categoryScores.timing,
+          weight: weights.timing,
+          reliability: scores.timing.length > 0 ? Math.round((scores.timing.reduce((s, i) => s + i.reliability, 0) / scores.timing.length) * 100) / 100 : null,
+          label: 'Тайминг'
+        },
+        activity: {
+          score: categoryScores.activity,
+          weight: weights.activity,
+          reliability: scores.activity.length > 0 ? Math.round((scores.activity.reduce((s, i) => s + i.reliability, 0) / scores.activity.length) * 100) / 100 : null,
+          label: 'Активность'
+        },
+        recovery: {
+          score: categoryScores.recovery,
+          weight: weights.recovery,
+          reliability: scores.recovery.length > 0 ? Math.round((scores.recovery.reduce((s, i) => s + i.reliability, 0) / scores.recovery.length) * 100) / 100 : null,
+          label: 'Восстановление'
+        },
+        metabolism: {
+          score: categoryScores.metabolism,
+          weight: weights.metabolism,
+          reliability: scores.metabolism.length > 0 ? Math.round((scores.metabolism.reduce((s, i) => s + i.reliability, 0) / scores.metabolism.length) * 100) / 100 : null,
+          label: 'Метаболизм'
+        }
       },
       // DEBUG INFO
       formula: SCIENCE_INFO?.HEALTH_SCORE?.formula || 'Health score composite formula',
@@ -213,6 +311,7 @@
         goalMode,
         deficitPct,
         weights,
+        confidenceWeighted: true,
         patternCount: patterns.filter(p => p.available).length
       }
     };

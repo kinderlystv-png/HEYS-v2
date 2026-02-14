@@ -258,15 +258,17 @@
 }
 
 /* ===== Table Wrapper ===== */
-.pattern-debug-modal__table-wrapper {
+.pattern-debug-modal__table-wrap {
   flex: 1;
   overflow-y: auto;
+  overflow-x: auto;
   padding: 0 24px 24px;
 }
 
 /* ===== Table ===== */
 .pattern-debug-modal__table {
   width: 100%;
+  min-width: 900px;
   border-collapse: collapse;
   font-size: 14px;
 }
@@ -380,6 +382,48 @@
 .pattern-debug-modal__cell--score {
   font-weight: 600;
   font-size: 16px;
+}
+
+/* Adaptive Thresholds Column */
+.pattern-debug-modal__th--adaptive {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.pattern-debug-modal__cell--adaptive {
+  font-size: 11px;
+  max-width: 180px;
+}
+
+.pattern-debug-modal__adaptive-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pattern-debug-modal__threshold-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #3b82f6;
+  white-space: nowrap;
+}
+
+.pattern-debug-modal__adaptive-na {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pattern-debug-modal__threshold-badge {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #60a5fa;
+  }
 }
 
 .pattern-debug-modal__score--excellent {
@@ -570,7 +614,7 @@
     gap: 12px;
   }
 
-  .pattern-debug-modal__table-wrapper {
+  .pattern-debug-modal__table-wrap {
     padding: 0 16px 16px;
   }
 
@@ -597,34 +641,34 @@
 }
 
 /* ===== Scrollbar Styling (optional) ===== */
-.pattern-debug-modal__table-wrapper::-webkit-scrollbar {
+.pattern-debug-modal__table-wrap::-webkit-scrollbar {
   width: 8px;
 }
 
-.pattern-debug-modal__table-wrapper::-webkit-scrollbar-track {
+.pattern-debug-modal__table-wrap::-webkit-scrollbar-track {
   background: var(--bg-secondary, #f3f4f6);
   border-radius: 4px;
 }
 
-.pattern-debug-modal__table-wrapper::-webkit-scrollbar-thumb {
+.pattern-debug-modal__table-wrap::-webkit-scrollbar-thumb {
   background: var(--text-tertiary, #9ca3af);
   border-radius: 4px;
 }
 
-.pattern-debug-modal__table-wrapper::-webkit-scrollbar-thumb:hover {
+.pattern-debug-modal__table-wrap::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary, #6b7280);
 }
 
 @media (prefers-color-scheme: dark) {
-  .pattern-debug-modal__table-wrapper::-webkit-scrollbar-track {
+  .pattern-debug-modal__table-wrap::-webkit-scrollbar-track {
     background: #111827;
   }
 
-  .pattern-debug-modal__table-wrapper::-webkit-scrollbar-thumb {
+  .pattern-debug-modal__table-wrap::-webkit-scrollbar-thumb {
     background: #4b5563;
   }
 
-  .pattern-debug-modal__table-wrapper::-webkit-scrollbar-thumb:hover {
+  .pattern-debug-modal__table-wrap::-webkit-scrollbar-thumb:hover {
     background: #6b7280;
   }
 }
