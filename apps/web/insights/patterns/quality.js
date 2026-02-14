@@ -138,7 +138,7 @@
      * @param {object} pIndex - Индекс продуктов по id.
      * @returns {object} Результат паттерна качества питания.
      */
-    function analyzeNutritionQuality(days, pIndex) {
+    function analyzeNutritionQuality(days, pIndex, thresholds = {}, profile = {}) {
         const pattern = PATTERNS.NUTRITION_QUALITY || 'nutrition_quality';
         const dailyData = [];
 
@@ -198,13 +198,17 @@
 
             let score = 0;
 
+            const FIBER_TARGET = thresholds.fiberTarget ? (thresholds.fiberTarget / (profile?.kcalTarget || 2000)) * 1000 : 14;
+            const FIBER_MID = FIBER_TARGET * 0.71;
+            const FIBER_MIN = FIBER_TARGET * 0.5;
+
             if (proteinPct >= 25) score += 20;
             else if (proteinPct >= 20) score += 15;
             else if (proteinPct >= 15) score += 8;
 
-            if (fiberPer1000 >= 14) score += 20;
-            else if (fiberPer1000 >= 10) score += 12;
-            else if (fiberPer1000 >= 7) score += 6;
+            if (fiberPer1000 >= FIBER_TARGET) score += 20;
+            else if (fiberPer1000 >= FIBER_MID) score += 12;
+            else if (fiberPer1000 >= FIBER_MIN) score += 6;
 
             if (simplePct <= 30) score += 15;
             else if (simplePct <= 45) score += 8;

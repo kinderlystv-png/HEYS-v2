@@ -14,6 +14,34 @@
   const piConst = HEYS.InsightsPI?.constants || window.piConst || {};
   const patternModules = HEYS.InsightsPI?.patternModules || {};
 
+  /**
+   * Get adaptive thresholds for current context
+   * Теперь использует cache-first cascade strategy из pi_thresholds.js
+   * In-memory кэш удален — pi_thresholds.js сам управляет кэшированием через localStorage
+   */
+  function getThresholdsContext(days, profile, pIndex) {
+    console.log('[pi_patterns] 🎯 getThresholdsContext called:', {
+      daysCount: days?.length,
+      profileId: profile?.id,
+      hasPIndex: !!pIndex
+    });
+
+    if (!HEYS.InsightsPI.thresholds || !days || days.length === 0) {
+      console.warn('[pi_patterns] ⚠️ Missing thresholds module or days');
+      return {};
+    }
+
+    console.log('[pi_patterns] 🔄 Fetching thresholds (may use cache)...');
+    const computed = HEYS.InsightsPI.thresholds.get(days, profile, pIndex);
+    console.log('[pi_patterns] ✅ Received thresholds:', {
+      confidence: computed.confidence,
+      count: Object.keys(computed.thresholds || {}).length,
+      meta: computed.meta
+    });
+
+    return computed.thresholds || {};
+  }
+
   // Импорт констант (полный список из pi_constants.js)
   const PATTERNS = piConst.PATTERNS || {
     MEAL_TIMING: 'meal_timing',
@@ -67,10 +95,12 @@
    * Анализ тайминга приёмов пищи и инсулиновых волн
    * @param days
    * @param profile
+   * @param pIndex
    */
-  function analyzeMealTiming(days, profile) {
+  function analyzeMealTiming(days, profile, pIndex) {
     if (typeof patternModules.analyzeMealTiming === 'function') {
-      return patternModules.analyzeMealTiming(days, profile);
+      const thresholds = getThresholdsContext(days, profile, pIndex);
+      return patternModules.analyzeMealTiming(days, profile, thresholds);
     }
 
     return {
@@ -100,10 +130,13 @@
   /**
    * Анализ поздних приёмов пищи
    * @param days
+   * @param profile
+   * @param pIndex
    */
-  function analyzeLateEating(days) {
+  function analyzeLateEating(days, profile, pIndex) {
     if (typeof patternModules.analyzeLateEating === 'function') {
-      return patternModules.analyzeLateEating(days);
+      const thresholds = getThresholdsContext(days, profile, pIndex);
+      return patternModules.analyzeLateEating(days, thresholds);
     }
 
     return {
@@ -135,10 +168,12 @@
    * C2: Nutrition Quality — качество питания (макро + клетчатка + категории)
    * @param days
    * @param pIndex
+   * @param profile
    */
-  function analyzeNutritionQuality(days, pIndex) {
+  function analyzeNutritionQuality(days, pIndex, profile) {
     if (typeof patternModules.analyzeNutritionQuality === 'function') {
-      return patternModules.analyzeNutritionQuality(days, pIndex);
+      const thresholds = getThresholdsContext(days, profile, pIndex);
+      return patternModules.analyzeNutritionQuality(days, pIndex, thresholds);
     }
 
     return {
@@ -330,10 +365,12 @@
    * PMID: 23512957 (Garaulet), 24154571 (Jakubowicz)
    * @param days
    * @param pIndex
+   * @param profile
    */
-  function analyzeCircadianTiming(days, pIndex) {
+  function analyzeCircadianTiming(days, pIndex, profile) {
     if (typeof patternModules.analyzeCircadianTiming === 'function') {
-      return patternModules.analyzeCircadianTiming(days, pIndex);
+      const thresholds = getThresholdsContext(days, profile, pIndex);
+      return patternModules.analyzeCircadianTiming(days, pIndex, thresholds);
     }
 
     return {
@@ -352,7 +389,8 @@
    */
   function analyzeNutrientTiming(days, pIndex, profile) {
     if (typeof patternModules.analyzeNutrientTiming === 'function') {
-      return patternModules.analyzeNutrientTiming(days, pIndex, profile);
+      const thresholds = getThresholdsContext(days, profile, pIndex);
+      return patternModules.analyzeNutrientTiming(days, pIndex, profile, thresholds);
     }
 
     return {
@@ -372,7 +410,8 @@
    */
   function analyzeInsulinSensitivity(days, pIndex, profile) {
     if (typeof patternModules.analyzeInsulinSensitivity === 'function') {
-      return patternModules.analyzeInsulinSensitivity(days, pIndex, profile);
+      const thresholds = getThresholdsContext(days, profile, pIndex);
+      return patternModules.analyzeInsulinSensitivity(days, pIndex, profile, thresholds);
     }
 
     return {
@@ -692,7 +731,8 @@
    */
   function analyzeProteinDistribution(days, profile, pIndex) {
     if (typeof patternModules.analyzeProteinDistribution === 'function') {
-      return patternModules.analyzeProteinDistribution(days, profile, pIndex);
+      const thresholds = getThresholdsContext(days, profile, pIndex);
+      return patternModules.analyzeProteinDistribution(days, profile, pIndex, thresholds);
     }
 
     return {

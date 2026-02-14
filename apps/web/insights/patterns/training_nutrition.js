@@ -26,10 +26,15 @@
      * @param {object} pIndex - Индекс продуктов по id.
      * @returns {object} Результат паттерна распределения белка.
      */
-    function analyzeProteinDistribution(days, profile, pIndex) {
+    function analyzeProteinDistribution(days, profile, pIndex, thresholds = {}) {
         const pattern = PATTERNS.PROTEIN_DISTRIBUTION || 'protein_distribution';
         const minDays = 7;
         const minMealsPerDay = 2;
+        const PROTEIN_PER_MEAL = thresholds.proteinPerMealG || 30;
+        const PROTEIN_MIN = PROTEIN_PER_MEAL - 10;
+        const PROTEIN_MAX = PROTEIN_PER_MEAL + 10;
+        const PROTEIN_SUBTHRESHOLD = 10;
+        const PROTEIN_EXCESS = 50;
 
         if (!Array.isArray(days) || days.length < minDays) {
             return {
@@ -86,9 +91,9 @@
                 mealProteins.push(mealProtein);
                 dayProtein += mealProtein;
 
-                if (mealProtein < 10) subthresholdMeals++;
-                else if (mealProtein > 50) excessMeals++;
-                else if (mealProtein < 20 || mealProtein > 40) belowOptimalMeals++;
+                if (mealProtein < PROTEIN_SUBTHRESHOLD) subthresholdMeals++;
+                else if (mealProtein > PROTEIN_EXCESS) excessMeals++;
+                else if (mealProtein < PROTEIN_MIN || mealProtein > PROTEIN_MAX) belowOptimalMeals++;
                 else optimalMeals++;
             }
 

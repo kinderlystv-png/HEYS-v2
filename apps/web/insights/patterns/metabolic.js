@@ -461,10 +461,12 @@
      * @param {object} profile - Профиль пользователя.
      * @returns {object} Результат паттерна.
      */
-    function analyzeInsulinSensitivity(days, pIndex, profile) {
+    function analyzeInsulinSensitivity(days, pIndex, profile, thresholds = {}) {
         void profile;
         const pattern = PATTERNS.INSULIN_SENSITIVITY || 'insulin_sensitivity';
         const dailyData = [];
+        const GI_OPTIMAL = thresholds.giOptimal || 55;
+        const GI_MODERATE = (thresholds.giOptimal || 55) + 15;
 
         for (const day of (days || [])) {
             if (!day?.meals || day.meals.length === 0) continue;
@@ -508,8 +510,8 @@
             const sleepOk = (Number(day.sleepHours) || 7) >= 7;
 
             let score = 0;
-            if (avgGI <= 55) score += 20;
-            else if (avgGI <= 70) score += 10;
+            if (avgGI <= GI_OPTIMAL) score += 20;
+            else if (avgGI <= GI_MODERATE) score += 10;
 
             if (fiberPer1000 >= 14) score += 20;
             else if (fiberPer1000 >= 10) score += 10;

@@ -477,11 +477,27 @@
   }
 
   // === ЭКСПОРТ ===
+  /**
+   * 🆕 v3.3.0: Coefficient of Variation (CV)
+   * Normalized measure of dispersion (std/mean)
+   * Useful for comparing variability across metrics with different scales
+   * @param {Array<number>} arr - массив чисел
+   * @returns {number} CV (0-1+ где 0=no variation, 0.15=low, 0.35=high)
+   */
+  function coefficientOfVariation(arr) {
+    if (!arr || arr.length < 2) return 0;
+    const avg = average(arr);
+    if (avg === 0) return 0; // Avoid division by zero
+    const std = stdDev(arr);
+    return std / Math.abs(avg);
+  }
+
   HEYS.InsightsPI.stats = {
     // Базовые статистические функции
     average,
     stdDev,
     variance,
+    coefficientOfVariation,
 
     // Корреляции и регрессии
     pearsonCorrelation,
@@ -516,6 +532,6 @@
   // Fallback для прямого доступа
   global.piStats = HEYS.InsightsPI.stats;
 
-  devLog('[PI Stats] v3.2.0 loaded — 18 statistical functions (+ t-test, Cohen\'s d)');
+  devLog('[PI Stats] v3.3.0 loaded — 19 statistical functions (+ coefficientOfVariation)');
 
 })(typeof window !== 'undefined' ? window : global);

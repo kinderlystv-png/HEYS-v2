@@ -38,10 +38,12 @@
      * Анализ тайминга приёмов пищи и инсулиновых волн.
      * @param {Array} days
      * @param {object} profile
+     * @param {object} thresholds - Adaptive thresholds
      * @returns {object}
      */
-    function analyzeMealTiming(days, profile) {
+    function analyzeMealTiming(days, profile, thresholds = {}) {
         const waveHours = profile?.insulinWaveHours || 3;
+        const idealGapMin = thresholds.idealMealGapMin || (waveHours * 60);
         const gaps = [];
         const waveOverlaps = [];
 
@@ -80,7 +82,7 @@
         }
 
         const avgGap = average(gaps);
-        const idealGap = waveHours * 60;
+        const idealGap = idealGapMin;
         const gapScore = Math.min(100, Math.max(0, (avgGap / idealGap) * 100));
 
         return {
@@ -144,11 +146,12 @@
     /**
      * Анализ поздних приёмов пищи.
      * @param {Array} days
+     * @param {object} thresholds - Adaptive thresholds
      * @returns {object}
      */
-    function analyzeLateEating(days) {
+    function analyzeLateEating(days, thresholds = {}) {
         const lateMeals = [];
-        const LATE_HOUR = 21;
+        const LATE_HOUR = thresholds.lateEatingHour || 21;
 
         for (const day of days) {
             if (!day.meals) continue;
@@ -290,8 +293,10 @@
      * @param {object} _profile
      * @returns {object}
      */
-    function analyzeNutrientTiming(days, pIndex, _profile) {
+    function analyzeNutrientTiming(days, pIndex, _profile, thresholds = {}) {
         const dailyData = [];
+        const MIN_MORNING_PROTEIN = thresholds.morningProteinG || 20;
+        const OPT_MORNING_PROTEIN = (thresholds.morningProteinG || 20) * 1.5;
 
         for (const day of days) {
             if (!day.meals || day.meals.length === 0) continue;
@@ -332,8 +337,8 @@
             const totalProtein = morningProtein + eveningProtein;
 
             let score = 50;
-            if (morningProtein >= 20) score += 10;
-            if (morningProtein >= 30) score += 5;
+            if (morningProtein >= MIN_MORNING_PROTEIN) score += 10;
+            if (morningProtein >= OPT_MORNING_PROTEIN) score += 5;
 
             if (trainingHour && postWorkoutCarbs >= 30) score += 15;
 

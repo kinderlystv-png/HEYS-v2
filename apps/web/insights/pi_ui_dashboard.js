@@ -999,6 +999,14 @@
         // Получаем профиль
         const currentProfile = profile || getter('heys_profile', {});
 
+        // 🆕 Добавляем clientId в профиль (для кэша adaptive thresholds)
+        if (currentProfile && !currentProfile.id) {
+          const clientId = window.HEYS?.cloud?.getPinAuthClient?.();
+          if (clientId) {
+            currentProfile.id = clientId;
+          }
+        }
+
         // Получаем индекс продуктов
         let currentPIndex = pIndex || window.HEYS?.products?.getIndex?.();
 
@@ -1208,7 +1216,115 @@
                       weights: insights.healthScore.weights,
                       breakdown: insights.healthScore.breakdown
                     },
-                    onClick: () => setShowPatternDebug(true) // 🔍 Открыть Pattern Transparency Modal
+                    onClick: () => {
+                      // 🔬 Автоматическая диагностика перед открытием модала
+                      console.group('🩺 [HEYS Adaptive Thresholds] AUTO DIAGNOSTIC');
+
+                      try {
+                        // Проверка доступности HEYS.dayUtils
+                        const U = HEYS.dayUtils || window.HEYS?.dayUtils;
+                        if (!U || !U.fmtDate || !U.lsGet) {
+                          console.error('❌ HEYS.dayUtils or required methods not available:', {
+                            hasU: !!U,
+                            hasFmtDate: !!U?.fmtDate,
+                            hasLsGet: !!U?.lsGet
+                          });
+                          console.groupEnd();
+                          setShowPatternDebug(true);
+                          return;
+                        }
+
+                        // Функция для получения даты со смещением
+                        const dateOffsetStr = (offset) => {
+                          const d = new Date();
+                          d.setDate(d.getDate() + offset);
+                          return U.fmtDate(d);
+                        };
+
+                        // 1. Проверка данных дней
+                        const daysBack = 7;
+                        const days = [];
+                        for (let i = 0; i < daysBack; i++) {
+                          const date = dateOffsetStr(-i);
+                          const dayKey = `heys_dayv2_${date}`;
+                          const dayData = U.lsGet(dayKey);
+                          if (dayData) days.push({ ...dayData, date });
+                        }
+                        console.log('📅 Days collected:', {
+                          requested: daysBack,
+                          found: days.length,
+                          dates: days.map(d => d.date),
+                          firstDay: days[0]
+                        });
+
+                        // 2. Проверка profile (используем effectiveData, а не HEYS.c)
+                        const profile = effectiveData.profile;
+                        const clientId = HEYS.cloud?.getPinAuthClient?.();
+                        console.log('👤 Profile:', {
+                          exists: !!profile,
+                          id: profile?.id,
+                          clientId: clientId,
+                          weight: profile?.weight,
+                          goal: profile?.goal,
+                          allKeys: profile ? Object.keys(profile) : []
+                        });
+
+                        // 3. Проверка pIndex (используем effectiveData)
+                        const pIndex = effectiveData.pIndex;
+                        console.log('🗂️ Product Index:', {
+                          exists: !!pIndex,
+                          byIdSize: pIndex?.byId?.size || 0,
+                          byNameSize: pIndex?.byName?.size || 0,
+                          sampleIds: pIndex?.byId ? Array.from(pIndex.byId.keys()).slice(0, 3) : []
+                        });
+
+                        // 4. Проверка модуля thresholds
+                        const hasThresholdsModule = typeof HEYS.InsightsPI?.thresholds?.get === 'function';
+                        console.log('🧩 Thresholds Module:', {
+                          loaded: hasThresholdsModule,
+                          methods: HEYS.InsightsPI?.thresholds ? Object.keys(HEYS.InsightsPI.thresholds) : []
+                        });
+
+                        // 5. Автоматический вызов get (cascade strategy)
+                        if (hasThresholdsModule) {
+                          console.log('🔬 Calling thresholds.get() with cascade strategy...');
+                          const result = HEYS.InsightsPI.thresholds.get(days, profile, pIndex);
+                          console.log('✅ Thresholds result:', {
+                            confidence: result.confidence,
+                            daysUsed: result.daysUsed,
+                            requestedDays: days.length,
+                            thresholdsCount: Object.keys(result.thresholds || {}).length,
+                            thresholds: result.thresholds,
+                            meta: result.meta,
+                            tier: result.meta?.partial ? 'PARTIAL (7-13d)' :
+                              result.meta?.default ? 'DEFAULT (<7d)' :
+                                result.confidence >= 1.0 ? 'FULL (14+d)' : 'UNKNOWN',
+                            fromCache: result.meta?.dateRange ? '♻️ (possibly from cache)' : '✨ (freshly computed)'
+                          });
+                        } else {
+                          console.warn('⚠️ Thresholds module not loaded');
+                        }
+
+                        // 6. Проверка что Pattern Debugger получит
+                        console.log('🪟 Pattern Debugger will receive:', {
+                          profile: !!profile,
+                          profileId: profile?.id,
+                          clientId: clientId,
+                          lsGet: typeof U?.lsGet,
+                          pIndex: !!pIndex,
+                          dayUtils: !!HEYS.dayUtils,
+                          fmtDate: typeof HEYS.dayUtils?.fmtDate
+                        });
+
+                      } catch (err) {
+                        console.error('❌ Diagnostic error:', err);
+                      }
+
+                      console.groupEnd();
+
+                      // Открыть модал
+                      setShowPatternDebug(true);
+                    } // 🔍 Открыть Pattern Transparency Modal с диагностикой
                   })
                 ),
                 h('div', { className: 'insights-tab__rings' },
@@ -1425,10 +1541,10 @@
 
           // Pattern Debug Modal — показывается при клике на Health Score
           showPatternDebug && window.PatternDebugModal && h(window.PatternDebugModal, {
-            lsGet,
-            profile,
-            pIndex,
-            optimum,
+            lsGet: lsGet || (window.HEYS?.utils?.lsGet),
+            profile: effectiveData.profile,
+            pIndex: effectiveData.pIndex,
+            optimum: effectiveData.optimum,
             onClose: () => setShowPatternDebug(false)
           })
 

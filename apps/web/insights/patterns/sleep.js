@@ -214,7 +214,20 @@
      * @returns {object}
      */
     function analyzeSleepQuality(days, pIndex) {
-        if (!days || days.length < 8) {
+        if (!Array.isArray(days) || days.length === 0) {
+            return {
+                pattern: PATTERNS.SLEEP_QUALITY,
+                available: false,
+                reason: 'no_sleep_quality',
+                confidence: 0.2,
+                insight: 'Недостаточно данных о качестве сна'
+            };
+        }
+
+        const robustPairsRequired = days.length >= 14 ? 7 : 4;
+        const sleepQualityDays = days.filter(d => Number(d?.sleepQuality) > 0).length;
+
+        if (sleepQualityDays === 0) {
             return {
                 pattern: PATTERNS.SLEEP_QUALITY,
                 available: false,
@@ -258,11 +271,11 @@
         let keyMetric = null;
 
         for (const [metric, pairs] of Object.entries(timeLaggedPairs)) {
-            if (pairs.length < 7) continue;
+            if (pairs.length < 1) continue;
 
             const qualityArr = pairs.map(p => p.quality);
             const valueArr = pairs.map(p => p.value);
-            const corr = pearsonCorrelation(qualityArr, valueArr);
+            const corr = pairs.length >= 2 ? pearsonCorrelation(qualityArr, valueArr) : 0;
 
             correlations[metric] = {
                 correlation: corr,
@@ -277,15 +290,24 @@
             }
         }
 
+        const bestDataPoints = Object.values(correlations).reduce((max, item) => {
+            return Math.max(max, Number(item?.dataPoints) || 0);
+        }, 0);
+
         if (!keyMetric) {
+            const hasLagData = bestDataPoints > 0;
             return {
                 pattern: PATTERNS.SLEEP_QUALITY,
                 available: true,
                 correlations,
-                dataPoints: Object.values(correlations)[0]?.dataPoints || 0,
+                dataPoints: hasLagData ? bestDataPoints : sleepQualityDays,
                 score: 50,
-                confidence: 0.3,
-                insight: 'Связь качества сна с метриками следующего дня пока не выявлена'
+                confidence: hasLagData ? 0.3 : 0.25,
+                isPreliminary: hasLagData ? bestDataPoints < robustPairsRequired : true,
+                requiredDataPoints: robustPairsRequired,
+                insight: hasLagData
+                    ? 'Связь качества сна с метриками следующего дня пока не выявлена'
+                    : `🌙 Есть оценки сна (${sleepQualityDays} дн.), но пока мало метрик следующего дня для надёжной связи`
             };
         }
 
@@ -319,7 +341,11 @@
             dataPoints: keyData.dataPoints,
             score,
             confidence,
-            insight
+            isPreliminary: keyData.dataPoints < robustPairsRequired,
+            requiredDataPoints: robustPairsRequired,
+            insight: keyData.dataPoints < robustPairsRequired
+                ? `${insight}. Предварительно: ${keyData.dataPoints}/${robustPairsRequired} пар`
+                : insight
         };
     }
 

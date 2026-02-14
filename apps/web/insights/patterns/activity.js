@@ -154,6 +154,14 @@
      */
     function analyzeStepsWeight(days) {
         const pairs = [];
+        const directDataDays = [];
+        const robustPairsRequired = days.length >= 14 ? 7 : 4;
+
+        for (const day of days) {
+            if (day?.steps > 0 && day?.weightMorning) {
+                directDataDays.push(day);
+            }
+        }
 
         for (let i = 1; i < days.length; i++) {
             const prevDay = days[i];
@@ -169,7 +177,7 @@
             }
         }
 
-        if (pairs.length < 7) {
+        if (pairs.length === 0 && directDataDays.length === 0) {
             return {
                 pattern: PATTERNS.STEPS_WEIGHT,
                 available: false,
@@ -179,9 +187,25 @@
             };
         }
 
+        if (pairs.length === 0 && directDataDays.length > 0) {
+            const avgStepsDirect = average(directDataDays.map(d => Number(d.steps) || 0));
+            const score = avgStepsDirect >= 8000 ? 70 : avgStepsDirect >= 5000 ? 60 : 50;
+
+            return {
+                pattern: PATTERNS.STEPS_WEIGHT,
+                available: true,
+                dataPoints: directDataDays.length,
+                score,
+                confidence: 0.25,
+                isPreliminary: true,
+                requiredDataPoints: 2,
+                insight: `👣 Есть ${directDataDays.length} дн. с шагами и весом. Добавь ещё 1 последовательный день для связи с динамикой веса`
+            };
+        }
+
         const stepsArr = pairs.map(p => p.steps);
         const deltaArr = pairs.map(p => p.weightDelta);
-        const correlation = pearsonCorrelation(stepsArr, deltaArr);
+        const correlation = pairs.length >= 2 ? pearsonCorrelation(stepsArr, deltaArr) : 0;
 
         const score = Math.round(50 + correlation * -50);
         const avgSteps = average(stepsArr);
@@ -197,6 +221,8 @@
             insight = 'Умеренное влияние шагов на вес';
         }
 
+        const isPreliminary = pairs.length < robustPairsRequired;
+
         return {
             pattern: PATTERNS.STEPS_WEIGHT,
             available: true,
@@ -204,8 +230,12 @@
             avgSteps: Math.round(avgSteps),
             dataPoints: pairs.length,
             score,
-            confidence: pairs.length >= 10 ? 0.8 : 0.5,
-            insight
+            confidence: pairs.length >= 10 ? 0.8 : (isPreliminary ? 0.35 : 0.5),
+            isPreliminary,
+            requiredDataPoints: robustPairsRequired,
+            insight: isPreliminary
+                ? `${insight}. Предварительно: ${pairs.length}/${robustPairsRequired} пар, точность растёт с данными`
+                : insight
         };
     }
 
