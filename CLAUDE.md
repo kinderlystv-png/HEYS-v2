@@ -66,20 +66,29 @@ await HEYS.YandexAPI.rpc('get_shared_products', {});
 U.lsSet('heys_products', products); // Namespaced by clientId
 // ❌ localStorage.setItem() — breaks namespacing
 
-// ✅ Logging
-console.info('[HEYS.sync] ✅ Loaded 15 keys');
+// ✅ Verification Logging (MANDATORY for all features)
+console.info('[HEYS.insights.EWS] ✅ Early Warning detected:', {
+  warningCount: 6,
+  highSeverity: 3,
+});
+console.info('[HEYS.thresholds] ✅ Adaptive thresholds computed:', {
+  source: 'FULL',
+  confidence: 0.92,
+});
 // ❌ console.log('debug:', data) — forbidden in commits
+// 🔴 ALWAYS add console.info logs to prove features work in production
 ```
 
 ## Data Model Gotchas
 
-| Wrong               | Correct                                     | Why                      |
-| ------------------- | ------------------------------------------- | ------------------------ |
-| `dayTot.protein`    | `dayTot.prot`                               | Short form everywhere    |
-| `item.category`     | `getProductFromItem(item, pIndex).category` | MealItem has NO category |
-| `heys_day_{date}`   | `heys_dayv2_{date}`                         | v2 prefix required       |
-| `product.harmScore` | `product.harm`                              | `harm` is canonical      |
-| protein = 4 kcal/g  | protein = **3** kcal/g                      | TEF-adjusted formula     |
+| Wrong                   | Correct                                     | Why                               |
+| ----------------------- | ------------------------------------------- | --------------------------------- |
+| `dayTot.protein`        | `dayTot.prot`                               | Short form everywhere             |
+| `item.category`         | `getProductFromItem(item, pIndex).category` | MealItem has NO category          |
+| `heys_day_{date}`       | `heys_dayv2_{date}`                         | v2 prefix required                |
+| `product.harmScore`     | `product.harm`                              | `harm` is canonical               |
+| protein = 4 kcal/g      | protein = **3** kcal/g                      | TEF-adjusted formula              |
+| `pi_stats.js` functions | **27** (v3.5.0)                             | Bayesian+CI+outliers (15.02.2026) |
 
 ## Security
 
@@ -97,6 +106,7 @@ console.info('[HEYS.sync] ✅ Loaded 15 keys');
 | Core runtime | `heys_app_v12.js`, `heys_core_v12.js`, `heys_day_v12.js` |
 | Auth         | `heys_auth_v1.js`, `heys_storage_supabase_v1.js`         |
 | Analytics    | `heys_advice_v1.js`, `heys_insulin_wave_v1.js`           |
+| Insights     | `insights/pi_stats.js` (v3.5.0, 27 functions)            |
 | API          | `heys_yandex_api_v1.js`                                  |
 | Serverless   | `yandex-cloud-functions/heys-api-rpc/index.js`           |
 | API server   | `packages/core/src/server.js` (Express, port 4001)       |
@@ -108,4 +118,6 @@ console.info('[HEYS.sync] ✅ Loaded 15 keys');
 - `docs/API_DOCUMENTATION.md` — API и RPC
 - `docs/DATA_MODEL_REFERENCE.md` — модель данных
 - `docs/HEYS_BRIEF.md` — бизнес-контекст
+- `HEYS_Insights_v5_Deep_Analytics_c7.md` — insights система (паттерны +
+  статистика)
 - `docs/SECURITY_RUNBOOK.md` — безопасность при деплое

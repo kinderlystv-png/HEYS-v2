@@ -2,7 +2,7 @@
     // === Agent Mode (VS Code 1.108+) ===
     "chat.useAgentSkills": true,
     "chat.agentCustomizationSkill.enabled": true,
-    "chat.viewSessions.orientation": "sideBySide",
+    "chat.viewSessions.orientation": "stacked",
     // === Copilot Settings ===
     "github.copilot.chat.codeGeneration.useInstructionFiles": true,
     "github.copilot.chat.reviewSelection.enabled": true,

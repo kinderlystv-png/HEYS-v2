@@ -131,6 +131,49 @@ console.log('debug:', data); // No console.log in commits
 // ❌ Never log personal data (profile, meals, weight)
 ```
 
+**MANDATORY: Verification Logging** (v5.0.1):
+
+```javascript
+// 🔴 CRITICAL RULE: ALWAYS add verification logs to prove functionality works
+// Every new feature, integration, or major change MUST include console logs that:
+// 1. Show the feature is active and working
+// 2. Display key metrics/results
+// 3. Validate data flow and calculations
+// 4. Include severity emoji and module prefix
+
+// ✅ GOOD Examples:
+console.info('[HEYS.insights.EWS] ✅ Early Warning detected:', {
+  warningCount: 6,
+  highSeverity: 3,
+  mediumSeverity: 3,
+});
+console.info(
+  '[HEYS.insights.EWS] ⚠️ Detected warnings:',
+  warnings.map((w) => `[${w.severity.toUpperCase()}] ${w.message}`),
+);
+console.info('[HEYS.thresholds] ✅ Adaptive thresholds computed:', {
+  source: 'FULL',
+  confidence: 0.92,
+  ttlHours: 36,
+});
+console.info('[HEYS.phenotype] 🧬 Auto-detected:', {
+  metabolic: 'insulin_resistant',
+  circadian: 'evening_type',
+  confidence: 0.85,
+});
+
+// ❌ BAD: No logging at all
+function detectWarnings(data) {
+  return analyze(data); // Silent execution — user can't verify it works!
+}
+
+// 📋 Logging Strategy:
+// - Feature entry point: log key inputs
+// - Feature exit point: log results/metrics
+// - Error cases: log severity + actionable message
+// - Complex calculations: log intermediate steps for debugging
+```
+
 ---
 
 ## Project Conventions
@@ -212,24 +255,43 @@ localStorage.setItem('heys_products', …);  // ❌ Breaks namespacing
 
 ### Data model gotchas
 
-| Wrong               | Correct                                     | Why                      |
-| ------------------- | ------------------------------------------- | ------------------------ |
-| `dayTot.protein`    | `dayTot.prot`                               | Short form everywhere    |
-| `item.category`     | `getProductFromItem(item, pIndex).category` | MealItem has NO category |
-| `heys_day_{date}`   | `heys_dayv2_{date}`                         | v2 prefix required       |
-| `product.harmScore` | `product.harm`                              | `harm` is canonical      |
-| protein = 4 kcal/g  | protein = **3** kcal/g                      | TEF-adjusted formula     |
+| Wrong                        | Correct                                     | Why                                               |
+| ---------------------------- | ------------------------------------------- | ------------------------------------------------- |
+| `dayTot.protein`             | `dayTot.prot`                               | Short form everywhere                             |
+| `item.category`              | `getProductFromItem(item, pIndex).category` | MealItem has NO category                          |
+| `heys_day_{date}`            | `heys_dayv2_{date}`                         | v2 prefix required                                |
+| `product.harmScore`          | `product.harm`                              | `harm` is canonical                               |
+| protein = 4 kcal/g           | protein = **3** kcal/g                      | TEF-adjusted formula                              |
+| `pi_stats.js` = 24 functions | `pi_stats.js` = **27** functions            | v3.5.0: added Bayesian, CI, outliers (15.02.2026) |
 
 ### Adaptive Thresholds — v2.0 ✅
 
-**Production status (14.02.2026):**
+**Production status (15.02.2026):**
 
-- 7d requests correctly reuse 30d cache via `dateRange` coverage check
-- Adaptive TTL works in prod: `stability=0.30 → ttlHours=30.0`
-- 59d requests correctly MISS 30d cache (`covered=false`)
+- 7d requests correctly reuse 30d/59d cache via cascade fast-path
+  (`cachedDaysUsed >= requestedDays`)
+- 30d requests use dedicated 30d cache (separate from 59d)
+- Adaptive TTL works in prod: example logs show
+  `stability=0.19 → ttlHours=23.4`, formula correct
+- Partial results never overwrite Full cache (quality guard)
+- Missing `profile` is not fatal — graceful degradation
+
+### Advanced Confidence Layer — v3.5.0 ✅
+
+**Production status (15.02.2026):**
+
+- **3 new functions** in `pi_stats.js` v3.5.0 (27 total, was 24):
+  `bayesianCorrelation`, `confidenceIntervalForCorrelation`, `detectOutliers`
+- 131 unit tests (30 new), 100% pass rate
+- SLEEP_WEIGHT pattern updated as reference implementation
+- Fallback functions added to all correlation patterns
+- **Impact**: Reliable insights at any sample size (3d → 30d+)
+- **Details**: See
+  [HEYS_Insights_v5_Deep_Analytics_c7.md](../HEYS_Insights_v5_Deep_Analytics_c7.md)
+  Section 8
 
 ```javascript
-// Core module: apps/web/insights/pi_thresholds.js (~989 LOC)
+// Core module: apps/web/insights/pi_thresholds.js (~1040 LOC, v2.0.0)
 getAdaptiveThresholds(days, profile, pIndex) {
   // 1. CACHE FIRST
   // 2. Adaptive TTL (12-72h) based on behavior stability
@@ -340,14 +402,15 @@ every 15 minutes. See
 
 ## Reference Docs
 
-| Тема                                  | Файл                                                                            |
-| ------------------------------------- | ------------------------------------------------------------------------------- |
-| Архитектура, файловая структура       | [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)                                 |
-| Техническая архитектура (подробно)    | [docs/TECHNICAL_ARCHITECTURE.md](../docs/TECHNICAL_ARCHITECTURE.md)             |
-| API документация (YandexAPI, RPC)     | [docs/API_DOCUMENTATION.md](../docs/API_DOCUMENTATION.md)                       |
-| Модель данных (dayTot, normAbs и др.) | [docs/DATA_MODEL_REFERENCE.md](../docs/DATA_MODEL_REFERENCE.md)                 |
-| Методология разработки                | [docs/HEYS_Development_Methodology.md](../docs/HEYS_Development_Methodology.md) |
-| Бизнес + продукт + чеклисты           | [docs/HEYS_BRIEF.md](../docs/HEYS_BRIEF.md)                                     |
-| Безопасность при деплое               | [docs/SECURITY_RUNBOOK.md](../docs/SECURITY_RUNBOOK.md)                         |
-| Безопасность (документация)           | [docs/SECURITY_DOCUMENTATION.md](../docs/SECURITY_DOCUMENTATION.md)             |
-| Деплой гайд                           | [docs/DEPLOYMENT_GUIDE.md](../docs/DEPLOYMENT_GUIDE.md)                         |
+| Тема                                     | Файл                                                                              |
+| ---------------------------------------- | --------------------------------------------------------------------------------- |
+| Архитектура, файловая структура          | [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)                                   |
+| Техническая архитектура (подробно)       | [docs/TECHNICAL_ARCHITECTURE.md](../docs/TECHNICAL_ARCHITECTURE.md)               |
+| API документация (YandexAPI, RPC)        | [docs/API_DOCUMENTATION.md](../docs/API_DOCUMENTATION.md)                         |
+| Модель данных (dayTot, normAbs и др.)    | [docs/DATA_MODEL_REFERENCE.md](../docs/DATA_MODEL_REFERENCE.md)                   |
+| Методология разработки                   | [docs/HEYS_Development_Methodology.md](../docs/HEYS_Development_Methodology.md)   |
+| Бизнес + продукт + чеклисты              | [docs/HEYS_BRIEF.md](../docs/HEYS_BRIEF.md)                                       |
+| Insights система (паттерны + статистика) | [HEYS_Insights_v5_Deep_Analytics_c7.md](../HEYS_Insights_v5_Deep_Analytics_c7.md) |
+| Безопасность при деплое                  | [docs/SECURITY_RUNBOOK.md](../docs/SECURITY_RUNBOOK.md)                           |
+| Безопасность (документация)              | [docs/SECURITY_DOCUMENTATION.md](../docs/SECURITY_DOCUMENTATION.md)               |
+| Деплой гайд                              | [docs/DEPLOYMENT_GUIDE.md](../docs/DEPLOYMENT_GUIDE.md)                           |
