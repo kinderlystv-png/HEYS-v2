@@ -1868,6 +1868,7 @@
             caloricDebt,
             eatenKcal,
             optimum,
+            displayOptimum,
             addMeal,
             addWater,
             adviceState,

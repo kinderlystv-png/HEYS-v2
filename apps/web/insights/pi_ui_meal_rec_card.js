@@ -21,7 +21,7 @@
     /**
      * Собрать контекст для recommend() из данных дня
      */
-    function buildRecommendationContext(day, dayTot, normAbs, prof) {
+    function buildRecommendationContext(day, dayTot, normAbs, prof, optimum) {
         console.log('[HEYS.mealRec.card] 🔍 buildContext called:', {
             hasDay: !!day,
             hasDayTot: !!dayTot,
@@ -74,7 +74,7 @@
             currentTime: currentTimeStr,
             lastMeal: lastMeal ? { time: lastMeal.time } : null,
             dayTarget: {
-                kcal: normAbs.kcal || 0,
+                kcal: optimum || normAbs.kcal || 0,
                 protein: normAbs.prot || 0,
                 carbs: normAbs.carb || 0
             },
@@ -97,7 +97,7 @@
             lastMealTime: lastMeal?.time || 'none',
             mealsToday: meals.length,
             dayEaten: `${Math.round(dayTot.kcal)}ккал, ${Math.round(dayTot.prot)}г белка`,
-            dayTarget: `${Math.round(normAbs.kcal)}ккал, ${Math.round(normAbs.prot)}г белка`,
+            dayTarget: `${Math.round(optimum || normAbs.kcal)}ккал (optimum=${optimum || 'N/A'}, normAbs=${normAbs.kcal}), ${Math.round(normAbs.prot)}г белка`,
             hasTraining: !!training,
             trainingTime: training?.time || 'none',
             hasLsGet: typeof context.lsGet === 'function',
@@ -126,8 +126,16 @@
     /**
      * Компонент карточки рекомендации
      */
-    function MealRecommenderCard({ React, day, prof, pIndex, dayTot, normAbs }) {
+    function MealRecommenderCard({ React, day, prof, pIndex, dayTot, normAbs, optimum }) {
         const [expanded, setExpanded] = useState(false);
+
+        // Stable primitive deps to prevent excessive re-renders (30+ → ~3)
+        const mealsCount = day?.meals?.length || 0;
+        const lastMealTime = day?.meals?.[mealsCount - 1]?.time || '';
+        const eatenKcal = Math.round(dayTot?.kcal || 0);
+        const eatenProt = Math.round(dayTot?.prot || 0);
+        const targetKcal = Math.round(optimum || normAbs?.kcal || 0);
+        const targetProt = Math.round(normAbs?.prot || 0);
 
         // Собираем рекомендацию
         const recommendation = useMemo(() => {
@@ -140,7 +148,7 @@
 
             console.log('[HEYS.mealRec.card] ✅ Backend available');
 
-            const context = buildRecommendationContext(day, dayTot, normAbs, prof);
+            const context = buildRecommendationContext(day, dayTot, normAbs, prof, optimum);
             if (!context) {
                 console.warn('[HEYS.mealRec.card] ⚠️ Insufficient data for context');
                 return null;
@@ -175,7 +183,7 @@
                 console.error('[HEYS.mealRec.card] ❌ Error:', err);
                 return null;
             }
-        }, [day, prof, pIndex, dayTot, normAbs]);
+        }, [mealsCount, lastMealTime, eatenKcal, eatenProt, targetKcal, targetProt, pIndex]);
 
         // Если рекомендация недоступна — не рендерим карточку
         if (!recommendation) {
@@ -309,6 +317,21 @@
         return cardElement;
     }
 
+    // Memoized component — prevents 30+ re-renders per page load
+    const MemoizedMealRecommenderCard = React.memo(MealRecommenderCard, (prev, next) => {
+        // Return true = skip re-render (props are equal)
+        return (
+            (prev.day?.meals?.length || 0) === (next.day?.meals?.length || 0) &&
+            (prev.day?.meals?.[(prev.day?.meals?.length || 1) - 1]?.time || '') ===
+            (next.day?.meals?.[(next.day?.meals?.length || 1) - 1]?.time || '') &&
+            Math.round(prev.dayTot?.kcal || 0) === Math.round(next.dayTot?.kcal || 0) &&
+            Math.round(prev.dayTot?.prot || 0) === Math.round(next.dayTot?.prot || 0) &&
+            Math.round(prev.normAbs?.kcal || 0) === Math.round(next.normAbs?.kcal || 0) &&
+            prev.optimum === next.optimum &&
+            prev.pIndex === next.pIndex
+        );
+    });
+
     /**
      * Render function для интеграции в diary section
      */
@@ -325,7 +348,7 @@
             return null;
         }
 
-        return h(MealRecommenderCard, props);
+        return h(MemoizedMealRecommenderCard, props);
     }
 
     // Export to global

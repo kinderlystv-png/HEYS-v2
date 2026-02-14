@@ -7,7 +7,7 @@
  * - LATE_EVENING: after adaptive late_eating_hour threshold
  * - PRE_WORKOUT: training in 1-2h
  * - POST_WORKOUT: training was 0-2h ago
- * - PROTEIN_DEFICIT: protein <80% target
+ * - PROTEIN_DEFICIT: protein <50% target
  * - STRESS_EATING: stress >3 OR mood <3
  * - BALANCED: default scenario
  * 
@@ -317,9 +317,16 @@
         // Adjust for sleep target (no eating 3h before sleep)
         const mealDeadline = sleepTarget - 3;
         if (idealStart > mealDeadline) {
-            idealStart = Math.max(currentTime, mealDeadline - 1);
-            idealEnd = mealDeadline;
-            reason = `Последний приём — за 3ч до сна`;
+            if (currentTime >= mealDeadline) {
+                // Already past ideal meal window — suggest eating now with short window
+                idealStart = currentTime;
+                idealEnd = Math.min(currentTime + 0.5, sleepTarget);
+                reason = `⚠️ Поздний приём — постарайся до ${formatTime(sleepTarget)}`;
+            } else {
+                idealStart = Math.max(currentTime, mealDeadline - 1);
+                idealEnd = mealDeadline;
+                reason = `Последний приём — за 3ч до сна`;
+            }
         }
 
         return {

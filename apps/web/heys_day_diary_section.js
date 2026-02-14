@@ -24,6 +24,7 @@
             caloricDebt,
             eatenKcal,
             optimum,
+            displayOptimum,
             date,
             prof,
             pIndex,
@@ -123,7 +124,8 @@
             prof,
             pIndex,
             dayTot,
-            normAbs
+            normAbs,
+            optimum: displayOptimum || optimum
         }) || null;
 
         if (mealRecCard) {

@@ -94,6 +94,7 @@
             caloricDebt: ctx.caloricDebt,
             eatenKcal: ctx.eatenKcal,
             optimum: ctx.optimum,
+            displayOptimum: ctx.displayOptimum,
             date: ctx.date,
             prof: ctx.prof,
             pIndex: ctx.pIndex,
