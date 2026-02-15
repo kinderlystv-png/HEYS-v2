@@ -674,153 +674,59 @@
      * Получить данные о риске срыва
      * @returns {Object} { risk, level, factors, recommendation, color }
      */
-    getCrashRiskData() {
+    getCrashRiskData(settings = {}) {
       // 🎭 Demo mode
       if (this._isDemoMode()) {
         return { ...DEMO_WIDGET_DATA.crashRisk };
       }
 
       try {
-        const profile = this._getProfile() || {};
-        const today = this._formatDate(new Date());
+        // ✅ Используем специализированный data provider v2.0
+        const provider = HEYS.Widgets.DataProviders?.crashRisk;
 
-        // Собираем историю за 7 дней
-        const history = [];
-        for (let i = 0; i < 7; i++) {
-          const date = new Date();
-          date.setDate(date.getDate() - i);
-          const dateStr = this._formatDate(date);
-          const dayData = this._getDayByDate(dateStr);
-          if (dayData) history.push({ date: dateStr, ...dayData });
+        if (!provider) {
+          console.warn('[widget_data.getCrashRiskData] crashRisk provider not loaded');
+          return {
+            hasData: false,
+            weeklyLossPercent: 0,
+            isWarning: false,
+            severity: 'none',
+            message: 'Data provider не загружен',
+            ewsCount: 0,
+            ewsData: null
+          };
         }
 
-        // Используем calculateCrashRisk24h если доступен
-        let crashData = null;
-        try {
-          if (HEYS.Metabolic?.calculateCrashRisk24h) {
-            crashData = HEYS.Metabolic.calculateCrashRisk24h(today, profile, history);
-          } else if (HEYS.Metabolic?.calculateCrashRisk) {
-            crashData = HEYS.Metabolic.calculateCrashRisk(today, profile, history);
-          }
-        } catch (_calcError) {
-          crashData = null;
-        }
+        // Получаем период из settings виджета (по умолчанию 7 дней)
+        const days = settings?.periodDays || 7;
 
-        // Fallback если модуль не загружен или ошибка
-        if (!crashData) {
-          crashData = { risk: 0, level: 'low', factors: [], recommendation: null };
-        }
+        // Запрашиваем данные у provider
+        const result = provider.getData({ days });
 
-        // Определяем цвет светофора
-        const getColor = (level) => {
-          switch (level) {
-            case 'high': return '#ef4444';   // Красный
-            case 'medium': return '#eab308'; // Жёлтый
-            case 'low':
-            default: return '#22c55e';       // Зелёный
-          }
-        };
-
-        // Определяем эмодзи
-        const getEmoji = (level) => {
-          switch (level) {
-            case 'high': return '🔴';
-            case 'medium': return '🟡';
-            case 'low':
-            default: return '🟢';
-          }
-        };
-
-        // Определяем текст уровня
-        const getLevelText = (level) => {
-          switch (level) {
-            case 'high': return 'Высокий';
-            case 'medium': return 'Средний';
-            case 'low':
-            default: return 'Низкий';
-          }
-        };
-
-        return {
-          risk: crashData.risk || 0,
-          level: crashData.level || 'low',
-          factors: crashData.factors || [],
-          positiveFactors: crashData.positiveFactors || [], // 🆕 Положительные факторы
-          recommendation: crashData.recommendation || this._getDefaultRecommendation(crashData.level),
-          color: getColor(crashData.level),
-          emoji: getEmoji(crashData.level),
-          levelText: getLevelText(crashData.level),
-          // Sparkline: история риска за 7 дней
-          riskHistory: this._calculateRiskHistory(history, profile)
-        };
-      } catch (_e) {
-        return {
-          risk: 0,
-          level: 'low',
-          factors: [],
-          recommendation: 'Всё под контролем!',
-          color: '#22c55e',
-          emoji: '🟢',
-          levelText: 'Низкий',
-          riskHistory: []
-        };
-      }
-    },
-
-    /**
-     * Рассчитать историю риска за 7 дней для sparkline
-     * Упрощённая версия - используем сохранённые данные дней без пересчёта
-     * @param {Array} history - данные за 7 дней
-     * @param {Object} profile - профиль пользователя
-     * @returns {Array} [{ date, risk, level }]
-     */
-    _calculateRiskHistory(history, _profile) {
-      const result = [];
-
-      try {
-        for (let i = 6; i >= 0; i--) {
-          const date = new Date();
-          date.setDate(date.getDate() - i);
-          const dateStr = this._formatDate(date);
-
-          // Находим данные этого дня
-          const dayData = history.find(h => h.date === dateStr);
-
-          // Упрощённый расчёт риска на основе данных дня
-          let risk = 0;
-          let level = 'low';
-
-          if (dayData) {
-            // Базовый риск от недосыпа
-            const sleepHours = dayData.sleepHours || 0;
-            if (sleepHours > 0 && sleepHours < 6) risk += 25;
-            else if (sleepHours > 0 && sleepHours < 7) risk += 15;
-
-            // Риск от стресса
-            const stress = dayData.stressAvg || 0;
-            if (stress >= 7) risk += 20;
-            else if (stress >= 5) risk += 10;
-
-            // Риск от недоедания (ratio калорий)
-            const meals = dayData.meals || [];
-            if (meals.length === 0) risk += 15;
-
-            // Определяем уровень
-            if (risk >= 50) level = 'high';
-            else if (risk >= 25) level = 'medium';
-          }
-
-          result.push({
-            date: dateStr,
-            risk: Math.min(risk, 100),
-            level
+        // Добавляем verification logging
+        if (result?.hasData) {
+          console.info('[widget_data.getCrashRiskData] ✅ Data loaded:', {
+            weeklyLossPercent: result.weeklyLossPercent.toFixed(2) + '%',
+            severity: result.severity,
+            ewsCount: result.ewsCount,
+            dataPoints: result.dataPoints
           });
         }
-      } catch (_e) {
-        return [];
-      }
 
-      return result;
+        return result;
+
+      } catch (error) {
+        console.error('[widget_data.getCrashRiskData] ❌ Error:', error);
+        return {
+          hasData: false,
+          weeklyLossPercent: 0,
+          isWarning: false,
+          severity: 'none',
+          message: 'Ошибка загрузки данных',
+          ewsCount: 0,
+          ewsData: null
+        };
+      }
     },
 
     /**

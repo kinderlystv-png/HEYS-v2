@@ -4969,3 +4969,180 @@
 .widget-crash-risk:active {
   transform: scale(0.98);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   CRASH RISK WIDGET v2.0 — Weight Loss & EWS Integration
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Weight Loss Percent Display */
+.widget-crash-risk__percent {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.widget-crash-risk__percent-unit {
+  font-size: 20px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+/* Severity Colors */
+.widget-crash-risk--none .widget-crash-risk__percent {
+  color: #10b981;
+}
+
+.widget-crash-risk--medium .widget-crash-risk__percent {
+  color: #f97316;
+}
+
+.widget-crash-risk--high .widget-crash-risk__percent {
+  color: #ef4444;
+}
+
+/* Widget Header */
+.widget-crash-risk__header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.widget-crash-risk__header-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.widget-crash-risk__header-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+}
+
+/* Weight Loss Description */
+.widget-crash-risk__description {
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  text-align: center;
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+/* EWS Badge in Widget */
+.widget-crash-risk__ews-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.widget-crash-risk__ews-badge--none {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.widget-crash-risk__ews-badge--medium {
+  background: rgba(249, 115, 22, 0.15);
+  color: #ea580c;
+}
+
+.widget-crash-risk__ews-badge--high {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+.widget-crash-risk__ews-badge-icon {
+  font-size: 12px;
+}
+
+/* Extended Layout (4×3) - EWS Preview */
+.widget-crash-risk__ews-preview {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  font-size: 11px;
+}
+
+.widget-crash-risk__ews-preview-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary, #9ca3af);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.widget-crash-risk__ews-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.widget-crash-risk__ews-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.widget-crash-risk__ews-preview-item-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.widget-crash-risk__ews-preview-item-text {
+  flex: 1;
+  color: var(--text-primary, #374151);
+}
+
+/* Dark Mode v2.0 */
+[data-theme="dark"] .widget-crash-risk--none .widget-crash-risk__percent {
+  color: #34d399;
+}
+
+[data-theme="dark"] .widget-crash-risk--medium .widget-crash-risk__percent {
+  color: #fb923c;
+}
+
+[data-theme="dark"] .widget-crash-risk--high .widget-crash-risk__percent {
+  color: #f87171;
+}
+
+[data-theme="dark"] .widget-crash-risk__ews-badge--none {
+  background: rgba(52, 211, 153, 0.2);
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .widget-crash-risk__ews-badge--medium {
+  background: rgba(251, 146, 60, 0.2);
+  color: #fb923c;
+}
+
+[data-theme="dark"] .widget-crash-risk__ews-badge--high {
+  background: rgba(248, 113, 113, 0.2);
+  color: #f87171;
+}
+
+[data-theme="dark"] .widget-crash-risk__ews-preview {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .widget-crash-risk__ews-preview-item {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .widget-crash-risk__ews-preview-item-text {
+  color: var(--text-dark-primary, #f3f4f6);
+}

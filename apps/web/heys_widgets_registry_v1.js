@@ -6,12 +6,12 @@
  * 
  * Паттерн: Registry для регистрации и получения типов виджетов
  */
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.Widgets = HEYS.Widgets || {};
-  
+
   // === Widget Categories ===
   const CATEGORIES = {
     nutrition: {
@@ -45,7 +45,7 @@
       color: '#ec4899'
     }
   };
-  
+
   // === Widget Size Presets ===
   // Legacy size-id aliases (обратная совместимость для сохранённых layout'ов).
   // ВАЖНО: наружу (UI) мы используем только формат NxM, но старые значения
@@ -100,7 +100,7 @@
 
   // Все размеры 1x1..4x4 (в порядке объявления в SIZES)
   const ALL_SIZES_4X4 = Object.keys(SIZES);
-  
+
   // === Widget Type Definitions ===
   // 10 типов виджетов согласно ТЗ
   const WIDGET_TYPES = {
@@ -120,7 +120,7 @@
         showRemaining: { type: 'boolean', default: true, label: 'Показывать остаток' }
       }
     },
-    
+
     macros: {
       type: 'macros',
       name: 'БЖУ',
@@ -136,7 +136,7 @@
         showPercentage: { type: 'boolean', default: true, label: 'Показывать %' }
       }
     },
-    
+
     insulin: {
       type: 'insulin',
       name: 'Инсулин',
@@ -152,7 +152,7 @@
         showPhase: { type: 'boolean', default: true, label: 'Показывать фазу' }
       }
     },
-    
+
     // === Категория: Здоровье ===
     status: {
       type: 'status',
@@ -169,7 +169,7 @@
         showIssues: { type: 'boolean', default: true, label: 'Показывать проблемы' }
       }
     },
-    
+
     sleep: {
       type: 'sleep',
       name: 'Сон',
@@ -185,7 +185,7 @@
         showTarget: { type: 'boolean', default: true, label: 'Показывать норму' }
       }
     },
-    
+
     water: {
       type: 'water',
       name: 'Вода',
@@ -201,7 +201,7 @@
         showGlasses: { type: 'boolean', default: false, label: 'Показывать стаканы' }
       }
     },
-    
+
     weight: {
       type: 'weight',
       name: 'Вес',
@@ -218,7 +218,7 @@
         periodDays: { type: 'number', default: 7, label: 'Период (дней)', min: 3, max: 30 }
       }
     },
-    
+
     steps: {
       type: 'steps',
       name: 'Шаги',
@@ -234,7 +234,7 @@
         showKilometers: { type: 'boolean', default: false, label: 'Показывать км' }
       }
     },
-    
+
     // === Категория: Мотивация ===
     streak: {
       type: 'streak',
@@ -251,7 +251,7 @@
         showFlame: { type: 'boolean', default: true, label: 'Показывать огонь' }
       }
     },
-    
+
     heatmap: {
       type: 'heatmap',
       name: 'Тепловая карта',
@@ -263,13 +263,15 @@
       dataKeys: ['activeDays'],
       component: 'WidgetHeatmap',
       settings: {
-        period: { type: 'select', default: 'week', label: 'Период', options: [
-          { value: 'week', label: 'Неделя' },
-          { value: 'month', label: 'Месяц' }
-        ]}
+        period: {
+          type: 'select', default: 'week', label: 'Период', options: [
+            { value: 'week', label: 'Неделя' },
+            { value: 'month', label: 'Месяц' }
+          ]
+        }
       }
     },
-    
+
     // === Категория: Цикл ===
     cycle: {
       type: 'cycle',
@@ -290,25 +292,26 @@
         showCorrections: { type: 'boolean', default: true, label: 'Показывать коррекции' }
       }
     },
-    
+
     // === Категория: Продвинутое ===
     crashRisk: {
       type: 'crashRisk',
       name: 'Риск срыва',
-      category: 'advanced',
+      category: 'health',
       icon: '⚠️',
-      description: 'Прогноз риска срыва на основе паттернов',
-      defaultSize: '2x2',
-      availableSizes: ALL_SIZES_4X4,
-      dataKeys: ['crashRisk'],
+      description: 'Early Warning: 5% недельная потеря веса',
+      defaultSize: '4x2',
+      availableSizes: ['2x2', '3x2', '4x2', '4x3', '4x4'],
+      dataKeys: ['day.weightMorning', 'weightTrend', 'earlyWarnings'],
       component: 'WidgetCrashRisk',
       settings: {
-        showFactors: { type: 'boolean', default: true, label: 'Показывать факторы' },
-        showRecommendation: { type: 'boolean', default: true, label: 'Показывать совет' }
+        showWarnings: { type: 'boolean', default: true, label: 'Показывать предупреждения' },
+        showTrend: { type: 'boolean', default: true, label: 'Показывать тренд' },
+        periodDays: { type: 'number', default: 7, label: 'Период (дней)', min: 7, max: 14 }
       }
     }
   };
-  
+
   // === Registry Implementation ===
   const registry = {
     /**
@@ -352,7 +355,7 @@
     getType(type) {
       return WIDGET_TYPES[type] || null;
     },
-    
+
     /**
      * Получить все типы виджетов
      * @returns {Object[]}
@@ -360,7 +363,7 @@
     getAllTypes() {
       return Object.values(WIDGET_TYPES);
     },
-    
+
     /**
      * Получить типы по категории
      * @param {string} categoryId - ID категории
@@ -369,7 +372,7 @@
     getTypesByCategory(categoryId) {
       return Object.values(WIDGET_TYPES).filter(w => w.category === categoryId);
     },
-    
+
     /**
      * Получить доступные типы (учитывая условия)
      * @returns {Object[]}
@@ -382,7 +385,7 @@
         return true;
       });
     },
-    
+
     /**
      * Получить все категории
      * @returns {Object[]}
@@ -390,7 +393,7 @@
     getCategories() {
       return Object.values(CATEGORIES);
     },
-    
+
     /**
      * Получить категорию по ID
      * @param {string} categoryId
@@ -399,7 +402,7 @@
     getCategory(categoryId) {
       return CATEGORIES[categoryId] || null;
     },
-    
+
     /**
      * Получить preset размера
      * @param {string} sizeId
@@ -409,7 +412,7 @@
       const norm = this.normalizeSizeId(sizeId);
       return (norm && SIZES[norm]) ? SIZES[norm] : null;
     },
-    
+
     /**
      * Получить все размеры
      * @returns {Object}
@@ -417,7 +420,7 @@
     getSizes() {
       return { ...SIZES };
     },
-    
+
     /**
      * Проверить, поддерживает ли виджет размер
      * @param {string} type - Тип виджета
@@ -430,7 +433,7 @@
       const norm = this.normalizeSizeId(sizeId);
       return widgetType.availableSizes.includes(norm);
     },
-    
+
     /**
      * Создать экземпляр виджета
      * @param {string} type - Тип виджета
@@ -443,16 +446,16 @@
         console.error(`[Widgets Registry] Unknown widget type: ${type}`);
         return null;
       }
-      
+
       const rawSize = options.size || widgetType.defaultSize;
       const size = this.normalizeSizeId(rawSize) || widgetType.defaultSize;
       const sizePreset = SIZES[size];
-      
+
       if (!sizePreset) {
         console.error(`[Widgets Registry] Unknown size: ${rawSize}`);
         return null;
       }
-      
+
       // Merge default settings with provided settings
       const defaultSettings = {};
       if (widgetType.settings) {
@@ -460,7 +463,7 @@
           defaultSettings[key] = def.default;
         });
       }
-      
+
       return {
         id: options.id || `widget_${type}_${Date.now()}`,
         type: type,
@@ -472,7 +475,7 @@
         createdAt: Date.now()
       };
     },
-    
+
     /**
      * Валидировать экземпляр виджета
      * @param {Object} widget
@@ -486,7 +489,7 @@
       if (!norm || !SIZES[norm]) return false;
       return true;
     },
-    
+
     /**
      * Зарегистрировать кастомный тип виджета
      * @param {Object} widgetDef - Определение виджета
@@ -496,29 +499,29 @@
         console.error('[Widgets Registry] Widget definition must have a type');
         return false;
       }
-      
+
       if (WIDGET_TYPES[widgetDef.type]) {
         console.warn(`[Widgets Registry] Overwriting existing widget type: ${widgetDef.type}`);
       }
-      
+
       WIDGET_TYPES[widgetDef.type] = {
         ...widgetDef,
         defaultSize: widgetDef.defaultSize || '2x2',
         availableSizes: widgetDef.availableSizes || ['2x2'],
         category: widgetDef.category || 'advanced'
       };
-      
+
       return true;
     }
   };
-  
+
   // === Exports ===
   HEYS.Widgets.registry = registry;
   HEYS.Widgets.CATEGORIES = CATEGORIES;
   HEYS.Widgets.SIZES = SIZES;
   HEYS.Widgets.LEGACY_SIZE_ALIASES = LEGACY_SIZE_ALIASES;
   HEYS.Widgets.WIDGET_TYPES = WIDGET_TYPES;
-  
+
   // Verbose init log removed
-  
+
 })(typeof window !== 'undefined' ? window : global);

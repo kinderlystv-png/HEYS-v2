@@ -2521,432 +2521,208 @@
     );
   }
 
-  // === Crash Risk Widget Content (Риск срыва) ===
+  // === Crash Risk Widget Content v2.0 (EWS + Weight Loss Detection) ===
   function CrashRiskWidgetContent({ widget, data }) {
     const d = getWidgetDims(widget);
-    const size = widget?.size || '2x2';
-    const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
+    const size = widget?.size || '4x2';
 
-    const risk = data.risk || 0;
-    const level = data.level || 'low';
-    const factors = data.factors || [];
-    const positiveFactors = data.positiveFactors || [];
-    const recommendation = data.recommendation || '';
-    const color = data.color || '#22c55e';
-    const emoji = data.emoji || '🟢';
-    const levelText = data.levelText || 'Низкий';
-    const riskHistory = data.riskHistory || [];
+    // Extract data from provider
+    const hasData = data?.hasData || false;
+    const weeklyLossPercent = data?.weeklyLossPercent || 0;
+    const isWarning = data?.isWarning || false;
+    const severity = data?.severity || 'none';
+    const currentWeight = data?.currentWeight || 0;
+    const ewsCount = data?.ewsCount || 0;
+    const ewsData = data?.ewsData || null;
+    const message = data?.message || '';
 
-    // State для popup с деталями
-    const [showPopup, setShowPopup] = useState(false);
-
-    // Звук/вибрация при критическом риске (high + risk >= 70)
-    const alertedRef = useRef(false);
-    useEffect(() => {
-      if (level === 'high' && risk >= 70 && !alertedRef.current) {
-        alertedRef.current = true;
-
-        // Вибрация (если поддерживается)
-        if (navigator.vibrate) {
-          navigator.vibrate([200, 100, 200]); // Двойная вибрация
-        }
-
-        // Звуковое уведомление (тихий beep)
-        try {
-          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          const oscillator = audioContext.createOscillator();
-          const gainNode = audioContext.createGain();
-
-          oscillator.connect(gainNode);
-          gainNode.connect(audioContext.destination);
-
-          oscillator.frequency.value = 440; // Нота A4
-          oscillator.type = 'sine';
-          gainNode.gain.value = 0.1; // Тихий
-
-          oscillator.start();
-          oscillator.stop(audioContext.currentTime + 0.15);
-        } catch (e) {
-          // Игнорируем ошибки аудио
-        }
+    // Color scheme based on severity
+    const getColorBySeverity = (sev) => {
+      switch (sev) {
+        case 'high': return { bg: '#ef4444', text: '#ffffff', light: '#fee2e2' };
+        case 'medium': return { bg: '#f97316', text: '#ffffff', light: '#ffedd5' };
+        default: return { bg: '#10b981', text: '#ffffff', light: '#d1fae5' };
       }
-
-      // Сброс флага при смене уровня
-      if (level !== 'high') {
-        alertedRef.current = false;
-      }
-    }, [level, risk]);
-
-    // Функция для генерации tooltip текста
-    const getFactorTooltip = (factor) => {
-      const tooltips = {
-        sleepDebt: 'Недосып влияет на гормоны голода (грелин ↑, лептин ↓)',
-        stress: 'Стресс повышает кортизол → тяга к сладкому',
-        chronicDeficit: 'Длительный дефицит калорий истощает волю',
-        eveningRisk: 'Вечером самоконтроль ослабевает',
-        weekendTrigger: 'Выходные снижают дисциплину питания',
-        moodDrop: 'Падение настроения → эмоциональное переедание',
-        lowProtein: 'Недостаток белка → постоянный голод',
-        trainingStress: 'Интенсивная тренировка без восстановления'
-      };
-      return tooltips[factor.id] || factor.desc || `Влияние на риск: +${factor.impact || 0}%`;
     };
 
-    // Sparkline SVG генератор
-    const renderSparkline = (historyData, width = 80, height = 24) => {
-      if (!historyData || historyData.length < 2) return null;
+    const colors = getColorBySeverity(severity);
 
-      const maxRisk = Math.max(...historyData.map(d => d.risk), 100);
-      const minRisk = Math.min(...historyData.map(d => d.risk), 0);
-      const range = maxRisk - minRisk || 1;
+    // Open EWS Panel on click
+    const handleOpenEWS = useCallback(() => {
+      const event = new CustomEvent('heysShowEWSPanel');
+      document.dispatchEvent(event);
+    }, []);
 
-      const points = historyData.map((d, i) => {
-        const x = (i / (historyData.length - 1)) * width;
-        const y = height - ((d.risk - minRisk) / range) * height;
-        return `${x},${y}`;
-      }).join(' ');
-
-      // Цвет последней точки
-      const lastLevel = historyData[historyData.length - 1]?.level || 'low';
-      const strokeColor = lastLevel === 'high' ? '#ef4444' : lastLevel === 'medium' ? '#eab308' : '#22c55e';
-
-      return React.createElement('svg', {
-        width,
-        height,
-        className: 'widget-crash-risk__sparkline',
-        style: { overflow: 'visible' }
-      },
-        // Линия
-        React.createElement('polyline', {
-          points,
-          fill: 'none',
-          stroke: strokeColor,
-          strokeWidth: 2,
-          strokeLinecap: 'round',
-          strokeLinejoin: 'round'
-        }),
-        // Точка на последнем значении
-        React.createElement('circle', {
-          cx: width,
-          cy: height - ((historyData[historyData.length - 1]?.risk - minRisk) / range) * height,
-          r: 3,
-          fill: strokeColor
-        })
+    // === NO DATA STATE ===
+    if (!hasData) {
+      return React.createElement('div', { className: 'widget-crash-risk widget-crash-risk--no-data' },
+        React.createElement('div', { className: 'widget-crash-risk__icon' }, '⚠️'),
+        React.createElement('div', { className: 'widget-crash-risk__message' }, message || 'Недостаточно данных')
       );
-    };
+    }
 
-    // Цвета светофора
-    const getLevelStyle = () => ({
-      color: color,
-      background: `${color}15`
-    });
-
-    // Popup с детальной информацией (через Portal в body)
-    const renderPopup = () => {
-      if (!showPopup) return null;
-
-      const popup = React.createElement('div', {
-        className: 'widget-crash-risk__popup-overlay',
-        onClick: (e) => {
-          e.stopPropagation();
-          setShowPopup(false);
-        }
+    // === 2×2 COMPACT LAYOUT ===
+    if (size === '2x2') {
+      return React.createElement('div', {
+        className: `widget-crash-risk widget-crash-risk--compact widget-crash-risk--${severity}`,
+        onClick: handleOpenEWS
       },
-        React.createElement('div', {
-          className: 'widget-crash-risk__popup',
-          onClick: (e) => e.stopPropagation()
+        // Top: Icon + Percentage
+        React.createElement('div', { className: 'widget-crash-risk__header' },
+          React.createElement('div', { className: 'widget-crash-risk__icon', style: { color: colors.bg } },
+            isWarning ? '⚠️' : '✅'
+          ),
+          React.createElement('div', {
+            className: 'widget-crash-risk__percent',
+            style: { color: colors.bg }
+          }, `${weeklyLossPercent.toFixed(1)}%`)
+        ),
+
+        // Middle: Title
+        React.createElement('div', { className: 'widget-crash-risk__title' }, 'Потеря веса'),
+
+        // Bottom: EWS Badge
+        ewsCount > 0 && React.createElement('div', {
+          className: 'widget-crash-risk__ews-badge',
+          style: { background: colors.light, color: colors.bg }
         },
-          // Header
-          React.createElement('div', { className: 'widget-crash-risk__popup-header' },
-            React.createElement('div', { className: 'widget-crash-risk__popup-title' },
-              React.createElement('span', { style: { fontSize: '24px' } }, emoji),
-              React.createElement('span', null, 'Риск срыва')
-            ),
-            React.createElement('button', {
-              className: 'widget-crash-risk__popup-close',
-              onClick: () => setShowPopup(false)
-            }, '✕')
+          `${ewsCount} предупрежд.`
+        )
+      );
+    }
+
+    // === 4×2 STANDARD LAYOUT ===
+    if (size === '4x2') {
+      const topWarnings = ewsData?.warnings?.slice(0, 2) || [];
+
+      return React.createElement('div', {
+        className: `widget-crash-risk widget-crash-risk--standard widget-crash-risk--${severity}`,
+        onClick: handleOpenEWS
+      },
+        // Left: KPI Block
+        React.createElement('div', { className: 'widget-crash-risk__kpi' },
+          React.createElement('div', { className: 'widget-crash-risk__icon-big', style: { color: colors.bg } },
+            isWarning ? '⚠️' : '✅'
+          ),
+          React.createElement('div', { className: 'widget-crash-risk__percent-big', style: { color: colors.bg } },
+            `${weeklyLossPercent.toFixed(1)}%`
+          ),
+          React.createElement('div', { className: 'widget-crash-risk__label' }, '/неделя')
+        ),
+
+        // Right: Details
+        React.createElement('div', { className: 'widget-crash-risk__details' },
+          React.createElement('div', { className: 'widget-crash-risk__title-big' }, 'Потеря веса'),
+          React.createElement('div', { className: 'widget-crash-risk__subtitle' },
+            `Текущий вес: ${currentWeight.toFixed(1)} кг`
           ),
 
-          // Значение риска
-          React.createElement('div', { className: 'widget-crash-risk__popup-value' },
-            React.createElement('div', {
-              className: 'widget-crash-risk__popup-risk-number',
-              style: { color }
-            }, `${risk}%`),
-            React.createElement('div', {
-              className: 'widget-crash-risk__popup-level',
-              style: { color, background: `${color}20` }
-            }, levelText)
+          // EWS Count Badge
+          ewsCount > 0 && React.createElement('div', {
+            className: 'widget-crash-risk__ews-count',
+            style: { background: colors.light, color: colors.bg }
+          },
+            `${ewsCount} предупрежд. → Подробнее`
           ),
 
-          // Sparkline
-          riskHistory.length > 1 &&
-          React.createElement('div', { className: 'widget-crash-risk__popup-section' },
-            React.createElement('div', { className: 'widget-crash-risk__popup-section-title' }, '📈 Динамика за 7 дней'),
-            React.createElement('div', { className: 'widget-crash-risk__popup-sparkline' },
-              renderSparkline(riskHistory, 200, 40)
-            )
-          ),
-
-          // Факторы
-          factors.length > 0 &&
-          React.createElement('div', { className: 'widget-crash-risk__popup-section' },
-            React.createElement('div', { className: 'widget-crash-risk__popup-section-title' }, '⚠️ Факторы риска'),
-            React.createElement('div', { className: 'widget-crash-risk__popup-factors' },
-              factors.map((factor, i) =>
-                React.createElement('div', {
-                  key: i,
-                  className: 'widget-crash-risk__popup-factor'
-                },
-                  React.createElement('div', { className: 'widget-crash-risk__popup-factor-header' },
-                    React.createElement('span', { className: 'widget-crash-risk__popup-factor-label' }, factor.label || factor.id),
-                    factor.impact && React.createElement('span', {
-                      className: 'widget-crash-risk__popup-factor-impact',
-                      style: {
-                        color: factor.impact > 20 ? '#ef4444' : factor.impact > 10 ? '#eab308' : '#22c55e',
-                        background: factor.impact > 20 ? '#ef444420' : factor.impact > 10 ? '#eab30820' : '#22c55e20'
-                      }
-                    }, `+${factor.impact}%`)
-                  ),
-                  React.createElement('div', { className: 'widget-crash-risk__popup-factor-tooltip' },
-                    getFactorTooltip(factor)
-                  )
+          // Top 2 warnings preview
+          widget.settings?.showWarnings !== false && topWarnings.length > 0 &&
+          React.createElement('div', { className: 'widget-crash-risk__warnings-preview' },
+            topWarnings.map((w, i) =>
+              React.createElement('div', {
+                key: i,
+                className: `widget-crash-risk__warning widget-crash-risk__warning--${w.severity}`
+              },
+                React.createElement('span', { className: 'widget-crash-risk__warning-icon' }, getSeverityIcon(w.severity)),
+                React.createElement('span', { className: 'widget-crash-risk__warning-text' },
+                  w.message?.length > 40 ? w.message.slice(0, 37) + '...' : w.message
                 )
               )
             )
-          ),
-
-          // Позитивные факторы (что держит риск низким)
-          positiveFactors.length > 0 &&
-          React.createElement('div', { className: 'widget-crash-risk__popup-section' },
-            React.createElement('div', { className: 'widget-crash-risk__popup-section-title' }, '✅ Что держит риск низким'),
-            React.createElement('div', { className: 'widget-crash-risk__popup-factors widget-crash-risk__popup-factors--positive' },
-              positiveFactors.map((factor, i) =>
-                React.createElement('div', {
-                  key: i,
-                  className: 'widget-crash-risk__popup-factor widget-crash-risk__popup-factor--positive'
-                },
-                  React.createElement('div', { className: 'widget-crash-risk__popup-factor-header' },
-                    React.createElement('span', { className: 'widget-crash-risk__popup-factor-label' }, factor.label || factor.id),
-                    factor.impact && React.createElement('span', {
-                      className: 'widget-crash-risk__popup-factor-impact widget-crash-risk__popup-factor-impact--positive',
-                      style: {
-                        color: '#22c55e',
-                        background: '#22c55e20'
-                      }
-                    }, `${factor.impact}%`)
-                  ),
-                  factor.details && React.createElement('div', { className: 'widget-crash-risk__popup-factor-tooltip' },
-                    factor.details
-                  )
-                )
-              )
-            )
-          ),
-
-          // Рекомендация
-          recommendation &&
-          React.createElement('div', { className: 'widget-crash-risk__popup-section' },
-            React.createElement('div', { className: 'widget-crash-risk__popup-section-title' }, '💡 Рекомендация'),
-            React.createElement('div', { className: 'widget-crash-risk__popup-recommendation' }, recommendation)
           )
         )
       );
-
-      // Рендерим через Portal в document.body
-      return ReactDOM.createPortal(popup, document.body);
-    };
-
-    // 1x1 Micro — только светофор
-    if (d.isMicro) {
-      return React.createElement('div', {
-        className: 'widget-crash-risk widget-crash-risk--micro',
-        style: getLevelStyle(),
-        onClick: () => setShowPopup(true)
-      },
-        React.createElement('div', { className: 'widget-crash-risk__emoji' }, emoji),
-        React.createElement('div', {
-          className: 'widget-crash-risk__level-text',
-          style: { color }
-        }, risk),
-        renderPopup()
-      );
     }
 
-    // 1x2 / 2x1 Tiny — светофор + уровень
-    if (d.isTiny) {
+    // === 4×3 EXTENDED LAYOUT ===
+    if (size === '4x3' || d.cols >= 4 && d.rows >= 3) {
+      const topWarnings = ewsData?.warnings?.slice(0, 3) || [];
+
       return React.createElement('div', {
-        className: 'widget-crash-risk widget-crash-risk--tiny',
-        style: getLevelStyle(),
-        onClick: () => setShowPopup(true)
+        className: `widget-crash-risk widget-crash-risk--extended widget-crash-risk--${severity}`,
+        onClick: handleOpenEWS
       },
-        React.createElement('div', { className: 'widget-crash-risk__header' },
-          React.createElement('span', { className: 'widget-crash-risk__emoji' }, emoji),
-          React.createElement('span', {
-            className: 'widget-crash-risk__risk-value',
-            style: { color }
-          }, `${risk}%`)
+        // Header: Title + EWS Count
+        React.createElement('div', { className: 'widget-crash-risk__header-extended' },
+          React.createElement('div', { className: 'widget-crash-risk__title-extended' }, 'Early Warning System'),
+          ewsCount > 0 && React.createElement('div', {
+            className: 'widget-crash-risk__ews-badge-extended',
+            style: { background: colors.light, color: colors.bg }
+          }, `${ewsCount} предупр.`)
         ),
-        React.createElement('div', {
-          className: 'widget-crash-risk__level-text',
-          style: { color }
-        }, levelText),
-        renderPopup()
-      );
-    }
 
-    // 2x2 — Оптимальный layout со светофором, факторами и рекомендацией
-    if (size === '2x2') {
-      const topFactors = factors.slice(0, 2);
-
-      return React.createElement('div', {
-        className: 'widget-crash-risk widget-crash-risk--2x2',
-        onClick: () => setShowPopup(true)
-      },
-        // Верх: светофор + значение
-        React.createElement('div', { className: 'widget-crash-risk__top' },
-          // Светофор (3 круга)
-          React.createElement('div', { className: 'widget-crash-risk__traffic-light' },
-            React.createElement('div', {
-              className: `widget-crash-risk__light widget-crash-risk__light--red ${level === 'high' ? 'active' : ''}`
-            }),
-            React.createElement('div', {
-              className: `widget-crash-risk__light widget-crash-risk__light--yellow ${level === 'medium' ? 'active' : ''}`
-            }),
-            React.createElement('div', {
-              className: `widget-crash-risk__light widget-crash-risk__light--green ${level === 'low' ? 'active' : ''}`
-            })
+        // KPI Section
+        React.createElement('div', { className: 'widget-crash-risk__kpi-section' },
+          React.createElement('div', { className: 'widget-crash-risk__kpi-block' },
+            React.createElement('div', { className: 'widget-crash-risk__icon-big', style: { color: colors.bg } },
+              isWarning ? '⚠️' : '✅'
+            ),
+            React.createElement('div', { className: 'widget-crash-risk__percent-big', style: { color: colors.bg } },
+              `${weeklyLossPercent.toFixed(1)}%`
+            ),
+            React.createElement('div', { className: 'widget-crash-risk__label' }, 'потеря/неделя')
           ),
-          // Значение риска
-          React.createElement('div', { className: 'widget-crash-risk__value-block' },
-            React.createElement('div', {
-              className: 'widget-crash-risk__risk-value widget-crash-risk__risk-value--lg',
-              style: { color }
-            }, `${risk}%`),
-            React.createElement('div', {
-              className: 'widget-crash-risk__level-text',
-              style: { color }
-            }, levelText)
+          React.createElement('div', { className: 'widget-crash-risk__weight-info' },
+            React.createElement('div', { className: 'widget-crash-risk__weight-label' }, 'Текущий вес'),
+            React.createElement('div', { className: 'widget-crash-risk__weight-value' }, `${currentWeight.toFixed(1)} кг`)
           )
         ),
 
-        // Середина: топ-2 фактора с tooltip
-        widget.settings?.showFactors !== false && topFactors.length > 0 &&
-        React.createElement('div', { className: 'widget-crash-risk__factors' },
-          topFactors.map((factor, i) =>
-            React.createElement('div', {
-              key: i,
-              className: 'widget-crash-risk__factor',
-              title: getFactorTooltip(factor)
-            },
-              React.createElement('span', { className: 'widget-crash-risk__factor-label' }, factor.label || factor.id),
-              factor.impact && React.createElement('span', {
-                className: 'widget-crash-risk__factor-impact',
-                style: { color: factor.impact > 20 ? '#ef4444' : factor.impact > 10 ? '#eab308' : '#9ca3af' }
-              }, `+${factor.impact}`)
-            )
-          )
-        ),
-
-        // Sparkline истории риска
-        riskHistory.length > 0 &&
-        React.createElement('div', { className: 'widget-crash-risk__sparkline-container' },
-          renderSparkline(riskHistory, 70, 20)
-        ),
-
-        // Низ: рекомендация
-        widget.settings?.showRecommendation !== false && recommendation &&
-        React.createElement('div', { className: 'widget-crash-risk__recommendation' },
-          recommendation.length > 60 ? recommendation.slice(0, 57) + '...' : recommendation
-        ),
-
-        // Popup
-        renderPopup()
-      );
-    }
-
-    // 4x2 и больше — расширенный layout
-    if (d.cols >= 4) {
-      return React.createElement('div', {
-        className: 'widget-crash-risk widget-crash-risk--wide',
-        onClick: () => setShowPopup(true)
-      },
-        // Левая часть: светофор
-        React.createElement('div', { className: 'widget-crash-risk__left' },
-          React.createElement('div', { className: 'widget-crash-risk__traffic-light widget-crash-risk__traffic-light--vertical' },
-            React.createElement('div', {
-              className: `widget-crash-risk__light widget-crash-risk__light--red ${level === 'high' ? 'active' : ''}`
-            }),
-            React.createElement('div', {
-              className: `widget-crash-risk__light widget-crash-risk__light--yellow ${level === 'medium' ? 'active' : ''}`
-            }),
-            React.createElement('div', {
-              className: `widget-crash-risk__light widget-crash-risk__light--green ${level === 'low' ? 'active' : ''}`
-            })
-          ),
-          React.createElement('div', {
-            className: 'widget-crash-risk__risk-value widget-crash-risk__risk-value--lg',
-            style: { color }
-          }, `${risk}%`),
-          React.createElement('div', {
-            className: 'widget-crash-risk__level-text',
-            style: { color }
-          }, levelText)
-        ),
-
-        // Правая часть: все факторы + рекомендация + sparkline
-        React.createElement('div', { className: 'widget-crash-risk__right' },
-          // Sparkline истории
-          riskHistory.length > 0 &&
-          React.createElement('div', { className: 'widget-crash-risk__sparkline-container widget-crash-risk__sparkline-container--wide' },
-            React.createElement('span', { className: 'widget-crash-risk__sparkline-label' }, '7 дней'),
-            renderSparkline(riskHistory, 120, 28)
-          ),
-          widget.settings?.showFactors !== false && factors.length > 0 &&
-          React.createElement('div', { className: 'widget-crash-risk__factors widget-crash-risk__factors--full' },
-            React.createElement('div', { className: 'widget-crash-risk__factors-title' }, 'Факторы:'),
-            factors.slice(0, 4).map((factor, i) =>
+        // Warnings List (Top 3)
+        widget.settings?.showWarnings !== false && topWarnings.length > 0 &&
+        React.createElement('div', { className: 'widget-crash-risk__warnings-section' },
+          React.createElement('div', { className: 'widget-crash-risk__warnings-title' }, 'Предупреждения:'),
+          React.createElement('div', { className: 'widget-crash-risk__warnings-list' },
+            topWarnings.map((w, i) =>
               React.createElement('div', {
                 key: i,
-                className: 'widget-crash-risk__factor',
-                title: getFactorTooltip(factor)
+                className: `widget-crash-risk__warning-item widget-crash-risk__warning-item--${w.severity}`
               },
-                React.createElement('span', { className: 'widget-crash-risk__factor-label' }, factor.label || factor.id),
-                factor.impact && React.createElement('span', {
-                  className: 'widget-crash-risk__factor-impact',
-                  style: { color: factor.impact > 20 ? '#ef4444' : factor.impact > 10 ? '#eab308' : '#9ca3af' }
-                }, `+${factor.impact}`)
+                React.createElement('span', { className: 'widget-crash-risk__warning-icon' }, getSeverityIcon(w.severity)),
+                React.createElement('span', { className: 'widget-crash-risk__warning-msg' }, w.message)
               )
             )
-          ),
-          widget.settings?.showRecommendation !== false && recommendation &&
-          React.createElement('div', { className: 'widget-crash-risk__recommendation widget-crash-risk__recommendation--full' },
-            recommendation
           )
         ),
 
-        // Popup
-        renderPopup()
+        // Footer: CTA
+        React.createElement('div', { className: 'widget-crash-risk__footer' },
+          React.createElement('div', { className: 'widget-crash-risk__cta' }, '→ Открыть полный отчёт')
+        )
       );
     }
 
-    // Стандартный fallback
+    // === FALLBACK (other sizes) ===
     return React.createElement('div', {
-      className: `widget-crash-risk widget-crash-risk--${variant}`,
-      onClick: () => setShowPopup(true)
+      className: `widget-crash-risk widget-crash-risk--fallback widget-crash-risk--${severity}`
     },
-      React.createElement('div', { className: 'widget-crash-risk__emoji' }, emoji),
-      React.createElement('div', {
-        className: 'widget-crash-risk__risk-value',
-        style: { color }
-      }, `${risk}%`),
-      React.createElement('div', {
-        className: 'widget-crash-risk__level-text',
-        style: { color }
-      }, levelText),
-      renderPopup()
+      React.createElement('div', { className: 'widget-crash-risk__icon', style: { color: colors.bg } },
+        isWarning ? '⚠️' : '✅'
+      ),
+      React.createElement('div', { className: 'widget-crash-risk__percent', style: { color: colors.bg } },
+        `${weeklyLossPercent.toFixed(1)}%`
+      ),
+      React.createElement('div', { className: 'widget-crash-risk__label' }, 'потеря/неделя')
     );
+  }
+
+  // Helper: Severity icon mapping
+  function getSeverityIcon(severity) {
+    switch (severity) {
+      case 'high': return '🔴';
+      case 'medium': return '🟡';
+      default: return '🟢';
+    }
   }
 
   // === Catalog Modal Component ===
