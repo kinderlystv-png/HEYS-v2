@@ -167,9 +167,9 @@
   // === КОНФИГУРАЦИЯ СЕКЦИЙ UI ===
   // pi_constants.js — источник истины для этих констант
   const SECTIONS_CONFIG = {
-    STATUS_SCORE: { id: 'status_score', component: 'StatusScoreCard', priority: 'CRITICAL', order: 1, alwaysShow: true, title: 'Метаболический статус', icon: '🎯' },
-    CRASH_RISK: { id: 'crash_risk', component: 'MetabolicQuickStatus', priority: 'CRITICAL', order: 2, alwaysShow: true, title: 'Риск срыва', icon: '⚠️' },
-    PRIORITY_ACTIONS: { id: 'priority_actions', component: 'PriorityActions', priority: 'CRITICAL', order: 3, alwaysShow: true, title: 'Действия сейчас', icon: '⚡' },
+    STATUS_SCORE: { id: 'status_score', component: 'StatusScoreCard', priority: 'CRITICAL', dynamicPriority: true, order: 1, alwaysShow: true, title: 'Метаболический статус', icon: '🎯' },
+    CRASH_RISK: { id: 'crash_risk', component: 'MetabolicQuickStatus', priority: 'CRITICAL', dynamicPriority: true, order: 2, alwaysShow: true, title: 'Риск срыва', icon: '⚠️' },
+    PRIORITY_ACTIONS: { id: 'priority_actions', component: 'PriorityActions', priority: 'CRITICAL', dynamicPriority: true, order: 3, alwaysShow: true, title: 'Действия сейчас', icon: '⚡' },
     PREDICTIVE_DASHBOARD: { id: 'predictive_dashboard', component: 'PredictiveDashboard', priority: 'HIGH', order: 10, title: 'Прогнозы на сегодня', icon: '🔮' },
     ADVANCED_ANALYTICS: { id: 'advanced_analytics', component: 'AdvancedAnalyticsCard', priority: 'HIGH', order: 11, title: 'Продвинутая аналитика', icon: '📊' },
     METABOLISM: { id: 'metabolism', component: 'MetabolismSection', priority: 'HIGH', order: 12, title: 'Метаболизм', icon: '🔥' },
@@ -205,6 +205,92 @@
       priorityName: priorityLevel?.name || 'Справочный'
     };
   }
+
+  /**
+   * Вычислить динамический приоритет секции на основе комбинированной формулы
+   * @param {Object} options - { sectionId, score, trend, warnings }
+   * @returns {string} - один из: 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'
+   */
+  function computeDynamicPriority(options = {}) {
+    const { sectionId, score, trend, warnings } = options;
+
+    // Fallback к статическому приоритету если данных нет
+    const section = SECTIONS_CONFIG[sectionId];
+    if (!section || !section.dynamicPriority || score == null) {
+      return section?.priority || 'INFO';
+    }
+
+    // 1. Базовый уровень по Health Score (0-100)
+    let basePriority = 'INFO';
+    if (score >= 80) basePriority = 'LOW';
+    else if (score >= 60) basePriority = 'MEDIUM';
+    else if (score >= 40) basePriority = 'HIGH';
+    else basePriority = 'CRITICAL';
+
+    // 2. Коррекция по тренду (падение score за 7 дней)
+    let trendBoost = 0;
+    if (trend != null && trend < 0) {
+      const decline = Math.abs(trend);
+      if (decline >= 20) trendBoost = 2; // резкое падение → минимум HIGH
+      else if (decline >= 10) trendBoost = 1; // устойчивое падение → +1 уровень
+    }
+
+    // 3. Коррекция по Early Warnings
+    let warningsBoost = 0;
+    if (warnings && Array.isArray(warnings)) {
+      const highCount = warnings.filter(w => w.severity === 'high').length;
+      const hasChronicHigh = warnings.some(w => w.severity === 'high' && w.criticalPriority);
+
+      if (highCount >= 3 || hasChronicHigh) warningsBoost = 3; // >=3 high warnings → CRITICAL
+      else if (highCount >= 1) warningsBoost = 2; // есть high warnings → минимум HIGH
+    }
+
+    // 4. Итоговый приоритет: берём максимальный boost (меньший level = выше приоритет)
+    const priorityLevels = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
+    let baseIndex = priorityLevels.indexOf(basePriority);
+
+    // Применяем максимальный boost (уменьшаем index = повышаем приоритет)
+    const maxBoost = Math.max(trendBoost, warningsBoost);
+    const finalIndex = Math.max(0, baseIndex - maxBoost);
+    const finalPriority = priorityLevels[finalIndex];
+
+    // Верификационное логирование
+    if (typeof console !== 'undefined' && console.info) {
+      console.info('priority / resolver ✅ result:', {
+        section: sectionId,
+        score,
+        trend7d: trend,
+        highWarnings: warnings ? warnings.filter(w => w.severity === 'high').length : 0,
+        basePriority,
+        trendBoost,
+        warningsBoost,
+        resolvedPriority: finalPriority,
+        reason: `score:${basePriority} + trend:${trendBoost > 0 ? `+${trendBoost}` : '0'} + ews:${warningsBoost > 0 ? `+${warningsBoost}` : '0'}`
+      });
+    }
+
+    return finalPriority;
+  }
+
+  /**
+   * Context-specific labels для Priority Badge
+   * Используются когда badge отображается для health-секций с хорошим состоянием
+   */
+  const PRIORITY_CONTEXT_LABELS = {
+    STATUS_SCORE: {
+      LOW: 'Всё отлично',
+      MEDIUM: 'Обратите внимание',
+      HIGH: 'Важно',
+      CRITICAL: 'Критический'
+    },
+    // Можно добавить для других секций
+    CRASH_RISK: {
+      LOW: 'Низкий риск',
+      MEDIUM: 'Средний риск',
+      HIGH: 'Высокий риск',
+      CRITICAL: 'Критический риск'
+    }
+  };
 
   // === НАУЧНЫЕ СПРАВКИ ДЛЯ UI ===
   // Ключи в UPPERCASE для совместимости с infoKey в компонентах
@@ -558,6 +644,22 @@
       actionability: 'TODAY',
       impactScore: 0.70,
       whyImportant: 'Недосып и стресс — главные враги похудения. Высыпайся!'
+    },
+    CATEGORY_METABOLISM: {
+      name: 'Метаболизм (5-10%)',
+      short: 'Эффективность обмена веществ. Оценивает инсулиновую чувствительность, композицию тела, гликемическую нагрузку и маркеры кардио-метаболического здоровья.',
+      details: 'Метаболизм занимает 5-10% итогового score (зависит от цели). Категория включает четыре компонента: инсулиновую чувствительность (50% — способность тела эффективно использовать углеводы без резких скачков глюкозы), композицию тела (25% — соотношение мышц и жира, а не просто вес), гликемическую нагрузку рациона (15% — средний GI × углеводы) и маркеры сердечно-сосудистого здоровья (10% — на основе паттерна Heart Health). Высокий score в этой категории означает метаболическую гибкость: тело легко переключается между источниками энергии, нет хронических воспалительных процессов. Для похудения (дефицит) эта категория получает больший вес (10%), т.к. нарушенная чувствительность к инсулину блокирует мобилизацию жира.',
+      formula: 'Компоненты:\n  Инсулиновая чувствительность: 50% (паттерн Insulin Sensitivity)\n  Композиция тела: 25% (паттерн Body Composition)\n  Гликемическая нагрузка: 15% (паттерн Glycemic Load)\n  Кардио здоровье: 10% (паттерн Heart Health)',
+      source: 'Galgani & Ravussin, 2008 — Energy metabolism, fuel selection and body weight regulation',
+      sources: [{ pmid: '18700873', level: 'A', title: 'Galgani & Ravussin, 2008 — Energy metabolism and weight regulation' }],
+      evidenceLevel: 'A',
+      confidenceScore: 0.88,
+      interpretation: '>80 — отличная метаболическая гибкость. <60 — возможна инсулинорезистентность или нарушения композиции.',
+      priority: 'MEDIUM',
+      category: 'METABOLISM',
+      actionability: 'WEEKLY',
+      impactScore: 0.55,
+      whyImportant: 'Здоровый метаболизм = эффективное сжигание жира. Критично при инсулинорезистентности.'
     },
 
     // === WHAT-IF СЦЕНАРИИ — Средний ===
@@ -2079,6 +2181,8 @@
     SECTIONS_CONFIG,
     getSortedSections,
     getSectionPriority,
+    computeDynamicPriority,      // NEW: Dynamic priority resolver
+    PRIORITY_CONTEXT_LABELS,     // NEW: Context-specific badge labels
     getMetricPriority,
     getAllMetricsByPriority,
     getMetricsByCategory,

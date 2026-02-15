@@ -1856,6 +1856,85 @@
   color: #94a3b8;
 }
 
+/* Score display */
+.early-warning-modal-card__score {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+[data-theme="dark"] .early-warning-modal-card__score {
+  color: #94a3b8;
+}
+
+/* Science section */
+.early-warning-modal-card__science {
+  margin-top: 12px;
+  border-top: 1px solid rgba(100, 116, 139, 0.15);
+  padding-top: 12px;
+}
+
+[data-theme="dark"] .early-warning-modal-card__science {
+  border-top-color: rgba(148, 163, 184, 0.15);
+}
+
+.early-warning-modal-card__science-toggle {
+  background: transparent;
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  transition: all 0.2s ease;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.early-warning-modal-card__science-toggle:hover {
+  background: rgba(37, 99, 235, 0.04);
+  border-color: rgba(37, 99, 235, 0.3);
+  color: #1d4ed8;
+}
+
+[data-theme="dark"] .early-warning-modal-card__science-toggle {
+  background: transparent;
+  border-color: rgba(148, 163, 184, 0.25);
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .early-warning-modal-card__science-toggle:hover {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #818cf8;
+}
+
+.early-warning-modal-card__science-content {
+  background: rgba(241, 245, 249, 0.8);
+  padding: 14px;
+  border-radius: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #475569;
+  white-space: pre-line;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  min-height: 40px;
+  display: block;
+}
+
+[data-theme="dark"] .early-warning-modal-card__science-content {
+  background: rgba(30, 41, 59, 0.6);
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.15);
+}
+
 /* Action buttons */
 .early-warning-modal-card__actions {
   display: flex;
@@ -1984,13 +2063,218 @@
   }
 }
 
-
-.insights-rings-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+/* === COMPACT MODE: вертикальные мини-карточки === */
+.insights-rings-compact {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  /* Firefox */
+  padding: 2px 0;
 }
 
+.insights-rings-compact::-webkit-scrollbar {
+  display: none;
+  /* Chrome/Safari */
+}
+
+/* Обёртка для каждой категории (название + карточка) */
+.insights-ring-mini-wrapper {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Заголовок с названием и info кнопкой */
+.insights-ring-mini-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 16px;
+}
+
+.insights-ring-mini-header__name {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+[data-theme="dark"] .insights-ring-mini-header__name {
+  color: var(--text-secondary);
+}
+
+/* Карточка с кольцом */
+.insights-ring-mini {
+  background: white;
+  border-radius: 12px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  position: relative;
+}
+
+[data-theme="dark"] .insights-ring-mini {
+  border-color: var(--heys-border-default);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.insights-ring-mini:active {
+  transform: scale(0.96);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* 🚦 Цветовая индикация "СВЕТОФОР" по score (мягкий фон) */
+.insights-ring-mini--excellent {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.2) 100%);
+  /* Зеленый 80+ */
+  border-color: rgba(5, 150, 105, 0.3);
+}
+
+.insights-ring-mini--good {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.2) 100%);
+  /* Желтый 60-79 */
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.insights-ring-mini--fair {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.15) 0%, rgba(249, 115, 22, 0.2) 100%);
+  /* Оранжевый 40-59 */
+  border-color: rgba(249, 115, 22, 0.3);
+}
+
+.insights-ring-mini--poor {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.15) 0%, rgba(239, 68, 68, 0.2) 100%);
+  /* Красный <40 */
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Dark theme: чуть ярче для контраста */
+[data-theme="dark"] .insights-ring-mini--excellent {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.25) 100%);
+}
+
+[data-theme="dark"] .insights-ring-mini--good {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.25) 100%);
+}
+
+[data-theme="dark"] .insights-ring-mini--fair {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.2) 0%, rgba(249, 115, 22, 0.25) 100%);
+}
+
+[data-theme="dark"] .insights-ring-mini--poor {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.2) 0%, rgba(239, 68, 68, 0.25) 100%);
+}
+
+/* Цветные акценты сверху (категории) */
+.insights-ring-mini--nutrition {
+  border-top: 3px solid #22c55e;
+}
+
+.insights-ring-mini--timing {
+  border-top: 3px solid #3b82f6;
+}
+
+.insights-ring-mini--activity {
+  border-top: 3px solid #f59e0b;
+}
+
+.insights-ring-mini--recovery {
+  border-top: 3px solid #8b5cf6;
+}
+
+.insights-ring-mini--metabolism {
+  border-top: 3px solid #f43f5e;
+}
+
+.insights-ring-mini__ring {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.insights-ring-mini__ring svg {
+  display: block;
+  transform: rotate(-90deg);
+}
+
+.insights-ring-mini__value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary, #1f2937);
+}
+
+.insights-ring-mini__badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  font-size: 10px;
+  background: #fee2e2;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid white;
+}
+
+.insights-ring-mini__status {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.insights-ring-mini--warning .insights-ring-mini__status {
+  animation: pulse-warning 2s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+/* Footer с info-кнопкой под карточкой */
+.insights-ring-mini-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.insights-ring-mini-wrapper:hover .insights-ring-mini-footer {
+  opacity: 1;
+}
+
+/* Legacy support: старые карточки (не используются в compact) */
 .insights-ring-card {
   background: white;
   border-radius: 16px;

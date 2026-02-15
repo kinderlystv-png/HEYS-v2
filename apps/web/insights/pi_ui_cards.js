@@ -880,72 +880,79 @@
         { key: 'nutrition', label: 'Питание', color: '#22c55e', infoKey: 'CATEGORY_NUTRITION' },
         { key: 'timing', label: 'Тайминг', color: '#3b82f6', infoKey: 'CATEGORY_TIMING' },
         { key: 'activity', label: 'Активность', color: '#f59e0b', infoKey: 'CATEGORY_ACTIVITY' },
-        { key: 'recovery', label: 'Восстановление', color: '#8b5cf6', infoKey: 'CATEGORY_RECOVERY' }
+        { key: 'recovery', label: 'Восстановление', color: '#8b5cf6', infoKey: 'CATEGORY_RECOVERY' },
+        { key: 'metabolism', label: 'Метаболизм', color: '#f43f5e', infoKey: 'CATEGORY_METABOLISM' }
       ];
 
-      // Compact mode: карточки с мини-кольцами
+      // Compact mode: вертикальные мини-карточки в одну строку
       if (compact) {
-        return h('div', { className: 'insights-rings-grid' },
+        return h('div', { className: 'insights-rings-compact' },
           categories.map(cat => {
             const score = healthScore.breakdown[cat.key]?.score || 0;
-            const radius = 18;
+            const radius = 15;
             const circumference = 2 * Math.PI * radius;
             const offset = circumference - (score / 100) * circumference;
 
             // 🆕 emotionalRisk overlay для Recovery
             const hasEmotionalWarning = cat.key === 'recovery' && emotionalRiskData.hasRisk;
 
+            // 🎨 Цветовая индикация "светофор" (динамический фон)
+            const getScoreColor = (s) => {
+              if (s >= 80) return 'excellent'; // Зеленый
+              if (s >= 60) return 'good';      // Желтый
+              if (s >= 40) return 'fair';      // Оранжевый
+              return 'poor';                   // Красный
+            };
+
             return h('div', {
               key: cat.key,
-              className: `insights-ring-card insights-ring-card--${cat.key} ${hasEmotionalWarning ? 'insights-ring-card--emotional-warning' : ''}`,
-              onClick: () => onCategoryClick && onCategoryClick(cat.key)
+              className: 'insights-ring-mini-wrapper'
             },
-              // Mini ring
-              h('div', { className: 'insights-ring-card__ring' },
-                h('svg', { width: 48, height: 48, viewBox: '0 0 48 48' },
-                  h('circle', {
-                    cx: 24, cy: 24, r: radius,
-                    fill: 'none',
-                    stroke: 'rgba(0,0,0,0.06)',
-                    strokeWidth: 4
-                  }),
-                  h('circle', {
-                    cx: 24, cy: 24, r: radius,
-                    fill: 'none',
-                    stroke: hasEmotionalWarning ? '#f87171' : cat.color, // красный при риске
-                    strokeWidth: 4,
-                    strokeLinecap: 'round',
-                    strokeDasharray: circumference,
-                    strokeDashoffset: offset,
-                    style: { transition: 'stroke-dashoffset 0.8s ease' }
-                  })
-                ),
-                h('span', { className: 'insights-ring-card__value' }, Math.round(score)),
-                // 🆕 Emotional warning badge
-                hasEmotionalWarning && h('span', {
-                  className: 'insights-ring-card__emotional-badge',
-                  title: `Эмоц. риск: ${emotionalRiskData.bingeRisk}%\n${emotionalRiskData.factors.join(', ')}`
-                }, '🧠')
+              // Название сверху (без info-кнопки)
+              h('div', { className: 'insights-ring-mini-header' },
+                h('span', { className: 'insights-ring-mini-header__name' }, cat.label)
               ),
-              // Info
-              h('div', { className: 'insights-ring-card__info' },
-                h('div', { className: 'insights-ring-card__header' },
-                  h('div', { className: 'insights-ring-card__label' }, cat.label),
-                  h(getInfoButton(), { infoKey: cat.infoKey, size: 'small' })
+              // Карточка с кольцом + цветовая индикация
+              h('div', {
+                className: `insights-ring-mini insights-ring-mini--${cat.key} insights-ring-mini--${getScoreColor(score)} ${hasEmotionalWarning ? 'insights-ring-mini--warning' : ''}`,
+                onClick: () => onCategoryClick && onCategoryClick(cat.key)
+              },
+                // Mini ring (36x36)
+                h('div', { className: 'insights-ring-mini__ring' },
+                  h('svg', { width: 36, height: 36, viewBox: '0 0 36 36' },
+                    h('circle', {
+                      cx: 18, cy: 18, r: radius,
+                      fill: 'none',
+                      stroke: 'rgba(0,0,0,0.06)',
+                      strokeWidth: 3
+                    }),
+                    h('circle', {
+                      cx: 18, cy: 18, r: radius,
+                      fill: 'none',
+                      stroke: hasEmotionalWarning ? '#f87171' : cat.color,
+                      strokeWidth: 3,
+                      strokeLinecap: 'round',
+                      strokeDasharray: circumference,
+                      strokeDashoffset: offset,
+                      style: { transition: 'stroke-dashoffset 0.8s ease' }
+                    })
+                  ),
+                  h('span', { className: 'insights-ring-mini__value' }, Math.round(score)),
+                  hasEmotionalWarning && h('span', {
+                    className: 'insights-ring-mini__badge',
+                    title: `Эмоц. риск: ${emotionalRiskData.bingeRisk}%\n${emotionalRiskData.factors.join(', ')}`
+                  }, '🧠')
                 ),
-                h('div', { className: 'insights-ring-card__title' },
+                // Status (короткий эмодзи)
+                h('div', { className: 'insights-ring-mini__status' },
                   hasEmotionalWarning
-                    ? `🧠 ${emotionalRiskData.bingeRisk}%`
-                    : score >= 80 ? 'Отлично' : score >= 60 ? 'Хорошо' : score >= 40 ? 'Норма' : 'Улучшить'
-                ),
-                // 🆕 PMID link при высоком риске
-                hasEmotionalWarning && emotionalRiskData.level !== 'low' && h('a', {
-                  href: 'https://pubmed.ncbi.nlm.nih.gov/11070333/',
-                  target: '_blank',
-                  className: 'insights-ring-card__pmid',
-                  title: 'Epel 2001 — стресс и кортизол',
-                  onClick: (e) => e.stopPropagation()
-                }, '🔬')
+                    ? '⚠️'
+                    : score >= 80 ? '✅' : score >= 60 ? '👍' : score >= 40 ? '➖' : '⚡'
+                )
+              ),
+              // Info-кнопка снизу (под карточкой)
+              h('div', { className: 'insights-ring-mini-footer' },
+                h(getInfoButton(), { infoKey: cat.infoKey, size: 'small' })
               )
             );
           })

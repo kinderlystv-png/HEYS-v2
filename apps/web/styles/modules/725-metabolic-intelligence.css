@@ -173,11 +173,11 @@
   left: 16px;
   right: 16px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.06), transparent);
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.06), transparent);
 }
 
 .dark .metabolic-status-card--v2 .metabolic-status-card__header--v2::after {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
 }
 
 .metabolic-status-card__ring-container {
@@ -775,30 +775,30 @@
   .metabolic-status-card__header {
     padding: 12px;
   }
-  
+
   .metabolic-status-card__score-badge {
     min-width: 40px;
     height: 40px;
     font-size: 16px;
   }
-  
+
   .metabolic-status-card__summary,
   .metabolic-status-card__section {
     padding: 12px;
   }
-  
+
   .crash-risk-alert {
     padding: 12px;
   }
-  
+
   .crash-risk-alert__icon {
     font-size: 20px;
   }
-  
+
   .crash-risk-alert__title {
     font-size: 14px;
   }
-  
+
   .crash-risk-alert__risk {
     font-size: 18px;
   }
@@ -1346,8 +1346,15 @@
 }
 
 @keyframes pulse-factor-emotional {
-  0%, 100% { background: linear-gradient(90deg, rgba(239, 68, 68, 0.08), rgba(249, 115, 22, 0.05)); }
-  50% { background: linear-gradient(90deg, rgba(239, 68, 68, 0.12), rgba(249, 115, 22, 0.08)); }
+
+  0%,
+  100% {
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.08), rgba(249, 115, 22, 0.05));
+  }
+
+  50% {
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.12), rgba(249, 115, 22, 0.08));
+  }
 }
 
 /* Dark mode variants */
@@ -1515,7 +1522,7 @@
     align-items: center;
     gap: 12px;
   }
-  
+
   .dual-risk-panel__meter-card {
     width: 100%;
     max-width: 180px;
@@ -2479,8 +2486,15 @@
 }
 
 @keyframes radarPulse {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 .phenotype-radar__point {
@@ -3617,7 +3631,7 @@
   gap: 4px;
 }
 
-.adv-analytics__science-recs > div {
+.adv-analytics__science-recs>div {
   font-size: 11px;
   color: #64748b;
   padding: 4px 8px;
@@ -3625,8 +3639,8 @@
   border-radius: 6px;
 }
 
-.dark .adv-analytics__science-recs > div,
-[data-theme="dark"] .adv-analytics__science-recs > div {
+.dark .adv-analytics__science-recs>div,
+[data-theme="dark"] .adv-analytics__science-recs>div {
   color: #94a3b8;
   background: rgba(34, 197, 94, 0.15);
 }
@@ -3885,7 +3899,7 @@
   font-weight: 600;
   border: 1px solid;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
 }
 
 .priority-badge--small {
@@ -4030,7 +4044,7 @@
 
 .insights-tab__section-badge {
   position: absolute;
-  top: -8px;
+  top: 12px;
   right: 12px;
   z-index: 2;
 }
@@ -4043,13 +4057,11 @@
   justify-content: center;
   margin: 20px 0;
   height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(100, 116, 139, 0.2) 20%,
-    rgba(100, 116, 139, 0.2) 80%,
-    transparent
-  );
+  background: linear-gradient(to right,
+      transparent,
+      rgba(100, 116, 139, 0.2) 20%,
+      rgba(100, 116, 139, 0.2) 80%,
+      transparent);
 }
 
 .insights-tab__divider--priority span {
@@ -4384,9 +4396,17 @@
   margin-bottom: 6px;
 }
 
-.whatif-card__verdict--good { color: #10b981; }
-.whatif-card__verdict--neutral { color: #eab308; }
-.whatif-card__verdict--bad { color: #ef4444; }
+.whatif-card__verdict--good {
+  color: #10b981;
+}
+
+.whatif-card__verdict--neutral {
+  color: #eab308;
+}
+
+.whatif-card__verdict--bad {
+  color: #ef4444;
+}
 
 .whatif-card__advice {
   font-size: 12px;
@@ -4408,8 +4428,13 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .whatif-modal {
@@ -4428,8 +4453,13 @@
 }
 
 @keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
 }
 
 /* === WHAT-IF SIMULATOR (полная версия) === */
@@ -4602,7 +4632,7 @@
   flex: 2;
 }
 
-.whatif-custom__field > span:first-child {
+.whatif-custom__field>span:first-child {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary, #64748b);
@@ -4742,8 +4772,13 @@
   font-variant-numeric: tabular-nums;
 }
 
-.whatif-result__card-value--good { color: #10b981; }
-.whatif-result__card-value--bad { color: #ef4444; }
+.whatif-result__card-value--good {
+  color: #10b981;
+}
+
+.whatif-result__card-value--bad {
+  color: #ef4444;
+}
 
 .whatif-result__delta {
   font-size: 16px;
@@ -4756,8 +4791,13 @@
   margin-top: 4px;
 }
 
-.whatif-result__card-detail--good { color: #10b981; }
-.whatif-result__card-detail--bad { color: #ef4444; }
+.whatif-result__card-detail--good {
+  color: #10b981;
+}
+
+.whatif-result__card-detail--bad {
+  color: #ef4444;
+}
 
 .whatif-result__card-warning {
   font-size: 11px;
@@ -4869,6 +4909,7 @@
 [data-theme="dark"] .whatif-simulator__close {
   background: rgba(255, 255, 255, 0.1);
 }
+
 /* ==========================================================================
    PHENOTYPE CARD — Standalone карточка фенотипа
    ========================================================================== */
@@ -5072,8 +5113,13 @@
 }
 
 @keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
 }
 
 .phenotype-modal__header {
@@ -5401,16 +5447,16 @@
   .phenotype-card__header {
     flex-wrap: wrap;
   }
-  
+
   .phenotype-card__tier {
     margin-left: 60px;
     margin-top: 4px;
   }
-  
+
   .phenotype-modal__thresholds {
     grid-template-columns: 1fr;
   }
-  
+
   .phenotype-modal__strengths-weaknesses {
     grid-template-columns: 1fr;
   }
@@ -5574,6 +5620,7 @@
     opacity: 0;
     transform: translateY(-8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -5834,17 +5881,17 @@
     padding: 12px;
     gap: 8px;
   }
-  
+
   .phenotype-expandable-card__emoji {
     width: 38px;
     height: 38px;
     font-size: 18px;
   }
-  
+
   .phenotype-expandable-card__center {
     display: none;
   }
-  
+
   .phenotype-expandable-card__lists {
     grid-template-columns: 1fr;
   }

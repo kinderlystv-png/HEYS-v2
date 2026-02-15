@@ -1,16 +1,19 @@
 /**
- * HEYS Insights — Smart Product Picker v2.5
+ * HEYS Insights — Smart Product Picker v2.6
  * Персонализированный подбор продуктов на основе истории питания (30 дней)
+ * v2.6: Caffeine-awareness filter (time-sensitive penalty after 20:00)
  * 
  * @module pi_product_picker
- * @version 2.5.0
- * @date 14.02.2026
+ * @version 2.6.0
+ * @date 15.02.2026
  */
 
 (function (global) {
     'use strict';
 
     const MODULE_NAME = 'HEYS.InsightsPI.productPicker';
+    const LOG_FILTER = 'MEALREC';
+    const LOG_PREFIX = `[${LOG_FILTER}][${MODULE_NAME}]`;
 
     // ============================================================================
     // Constants
@@ -29,6 +32,20 @@
         OTHER: 'other',
     };
 
+    // Caffeine keywords for time-aware filtering (v2.6 feature - prevents coffee before sleep)
+    const CAFFEINE_KEYWORDS = [
+        'кофе', 'coffee', 'эспрессо', 'espresso', 'капучино', 'cappuccino', 'латте', 'latte',
+        'чай черный', 'чёрный чай', 'black tea', 'энергетик', 'energy drink', 'энерджи'
+    ];
+
+    // Added sugar cues for dependency-aware penalty (Phase A: C37)
+    const ADDED_SUGAR_KEYWORDS = [
+        'сахар', 'sugar', 'шоколад', 'конфет', 'печенье', 'торт', 'пирож', 'сироп',
+        'газировка', 'cola', 'кока-кола', 'сок', 'juice', 'мороженое', 'варенье', 'мед'
+    ];
+
+    const EVENING_CAFFEINE_CUTOFF_HOUR = 20; // After 20:00, penalize caffeine heavily
+
     // Category keywords для автоматической классификации
     const CATEGORY_KEYWORDS = {
         dairy: ['молоко', 'творог', 'йогурт', 'кефир', 'сыр', 'ряженка', 'сметана'],
@@ -39,14 +56,16 @@
         snacks: ['орех', 'батончик', 'печенье', 'крекер', 'чипсы'],
     };
 
-    // Scoring weights для multi-factor системы
+    // Scoring weights для multi-factor системы (v2.6 - rebalanced with caffeine awareness)
     const SCORING_WEIGHTS = {
-        proteinAlignment: 0.25,
-        carbAlignment: 0.20,
-        kcalFit: 0.20,
-        giAwareness: 0.15,
+        proteinAlignment: 0.24,
+        carbAlignment: 0.18,
+        kcalFit: 0.18,
+        caffeineAwareness: 0.10, // v2.6: time-aware caffeine penalty (evening)
+        sugarAwareness: 0.10, // Phase A: C37 added sugar dependency
         harmMinimization: 0.10,
-        familiarityBoost: 0.10,
+        familiarityBoost: 0.08,
+        giAwareness: 0.02,
     };
 
     function buildLocalStorageFallbackLsGet() {
@@ -56,7 +75,7 @@
                 if (raw === null || raw === undefined) return fallback;
                 return JSON.parse(raw);
             } catch (err) {
-                console.warn(`[${MODULE_NAME}] ⚠️ localStorage fallback read failed:`, {
+                console.warn(`${LOG_PREFIX} ⚠️ localStorage fallback read failed:`, {
                     key,
                     message: err?.message,
                 });
@@ -148,7 +167,7 @@
         const grouped = groupByCategory(products);
         const avgFrequency = products.reduce((sum, p) => sum + p.frequency, 0) / products.length || 0;
 
-        console.info(`[${MODULE_NAME}] 📊 History analyzed:`, {
+        console.info(`${LOG_PREFIX} 📊 History analyzed:`, {
             daysAnalyzed: days,
             totalProducts: products.length,
             avgFrequency: Math.round(avgFrequency * 10) / 10,
@@ -233,9 +252,29 @@
     // ============================================================================
 
     /**
+     * Проверяет, содержит ли продукт кофеин
+     * @param {string} productName - название продукта
+     * @returns {boolean} true если содержит кофеин
+     */
+    function containsCaffeine(productName) {
+        const normalized = productName.toLowerCase();
+        return CAFFEINE_KEYWORDS.some((kw) => normalized.includes(kw));
+    }
+
+    /**
+     * Проверяет, содержит ли продукт добавленный сахар (по названию)
+     * @param {string} productName
+     * @returns {boolean}
+     */
+    function containsAddedSugar(productName) {
+        const normalized = productName.toLowerCase();
+        return ADDED_SUGAR_KEYWORDS.some((kw) => normalized.includes(kw));
+    }
+
+    /**
      * Вычисляет multi-factor score для продукта в контексте сценария
      * @param {Object} product - продукт из истории
-     * @param {Object} scenario - контекст сценария (remainingKcal, targetProtein, etc.)
+     * @param {Object} scenario - контекст сценария (remainingKcal, targetProtein, currentTime, etc.)
      * @param {number} typicalPortion - типичная порция (grams) для этого продукта
      * @returns {number} score от 0 до 100
      */
@@ -266,16 +305,58 @@
             scores.kcalFit = Math.max(0, 50 + (kcalRatio / 0.4) * 50); // Penalize lightly
         }
 
-        // 4. GI Awareness (15%)
+        // 4. Caffeine Awareness (10%) - v2.6 time-sensitive filter
+        const hasCaffeine = containsCaffeine(product.name);
+        const currentHour = scenario.currentTime ? Math.floor(scenario.currentTime) : 12; // Default to noon if not provided
+        if (hasCaffeine && currentHour >= EVENING_CAFFEINE_CUTOFF_HOUR) {
+            scores.caffeineAwareness = 0; // Hard penalty after 20:00
+            console.warn(`${LOG_PREFIX} ☕❌ Caffeine product penalized (evening):`, {
+                product: product.name,
+                currentHour,
+                cutoffHour: EVENING_CAFFEINE_CUTOFF_HOUR,
+                currentTime: scenario.currentTime
+            });
+        } else if (hasCaffeine) {
+            scores.caffeineAwareness = 80; // Minor penalty even during day (not ideal for all scenarios)
+            console.info(`${LOG_PREFIX} ☕⚠️ Caffeine product (daytime):`, {
+                product: product.name,
+                currentHour,
+                score: 80
+            });
+        } else {
+            scores.caffeineAwareness = 100; // No caffeine - perfect
+        }
+
+        // 5. Sugar Awareness (10%) - Phase A C37 dependency-aware penalty
+        const hasAddedSugar = containsAddedSugar(product.name);
+        const sugarRiskScore = Number(scenario.addedSugarScore);
+        const dependencyRisk = !!scenario.sugarDependencyRisk;
+
+        if (dependencyRisk && hasAddedSugar) {
+            scores.sugarAwareness = 0;
+            console.warn(`${LOG_PREFIX} 🍬❌ Added sugar product penalized (dependency risk):`, {
+                product: product.name,
+                dependencyRisk,
+                sugarRiskScore
+            });
+        } else if (hasAddedSugar && Number.isFinite(sugarRiskScore) && sugarRiskScore < 0.6) {
+            scores.sugarAwareness = 30;
+        } else if (hasAddedSugar) {
+            scores.sugarAwareness = 70;
+        } else {
+            scores.sugarAwareness = 100;
+        }
+
+        // 6. GI Awareness (2%)
         const idealGI = scenario.idealGI || 50;
         const giDiff = Math.abs(product.gi - idealGI);
         scores.giAwareness = Math.max(0, 100 - giDiff);
 
-        // 5. Harm Minimization (10%)
+        // 7. Harm Minimization (10%)
         const harmScore = product.harm || 0;
         scores.harmMinimization = Math.max(0, 100 - harmScore * 10); // harm 0-10 scale
 
-        // 6. Familiarity Boost (10%)
+        // 8. Familiarity Boost (8%)
         scores.familiarityBoost = product.familiarityScore * 10; // 1-10 -> 10-100
 
         // Weighted sum
@@ -283,15 +364,17 @@
             scores.proteinAlignment * SCORING_WEIGHTS.proteinAlignment +
             scores.carbAlignment * SCORING_WEIGHTS.carbAlignment +
             scores.kcalFit * SCORING_WEIGHTS.kcalFit +
-            scores.giAwareness * SCORING_WEIGHTS.giAwareness +
+            scores.caffeineAwareness * SCORING_WEIGHTS.caffeineAwareness +
+            scores.sugarAwareness * SCORING_WEIGHTS.sugarAwareness +
             scores.harmMinimization * SCORING_WEIGHTS.harmMinimization +
-            scores.familiarityBoost * SCORING_WEIGHTS.familiarityBoost;
+            scores.familiarityBoost * SCORING_WEIGHTS.familiarityBoost +
+            scores.giAwareness * SCORING_WEIGHTS.giAwareness;
 
         const finalScore = Math.round(totalScore);
 
         // Verbose logging only for high scores (> 70) to avoid spam
         if (finalScore > 70) {
-            console.info(`[${MODULE_NAME}] 🎯 High-score product:`, {
+            console.info(`${LOG_PREFIX} 🎯 High-score product:`, {
                 product: product.name,
                 score: finalScore,
                 topFactors: Object.entries(scores)
@@ -385,19 +468,25 @@
         candidates.sort((a, b) => b.score - a.score);
         const picked = candidates.slice(0, limit);
 
-        console.info(`[${MODULE_NAME}] 🥇 Products picked:`, {
-            scenario: scenario.scenario,
-            category: targetCategory,
-            strategy: historyProducts.length >= MIN_PRODUCTS_PER_CATEGORY ? 'HISTORY' :
-                (fallbackProducts.length > 0 ? 'FALLBACK' : 'LIMITED_HISTORY'),
-            candidatesEvaluated: candidates.length,
-            topPicks: picked.map(p => ({
-                name: p.name,
-                score: p.score,
-                source: p.source,
-                grams: Math.round(p.avgGrams || 100)
-            }))
-        });
+        const topPicks = picked.map(p => ({
+            name: p.name,
+            score: p.score,
+            source: p.source,
+            grams: Math.round(p.avgGrams || 100),
+            caffeineAwareness: p.scoreBreakdown?.caffeineAwareness, // v2.6: show caffeine penalty
+            topFactors: Object.entries(p.scoreBreakdown || {})
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([key, val]) => `${key}=${Math.round(val)}`)
+                .join(', ')
+        }));
+
+        // Log with expanded topPicks (more readable in console)
+        console.group(
+            `${LOG_PREFIX} 🥇 Products picked: [${scenario.scenario}] ${targetCategory.toUpperCase()} | Strategy: ${historyProducts.length >= MIN_PRODUCTS_PER_CATEGORY ? 'HISTORY' : (fallbackProducts.length > 0 ? 'FALLBACK' : 'LIMITED_HISTORY')} | Evaluated: ${candidates.length}`
+        );
+        console.table(topPicks);
+        console.groupEnd();
 
         return picked;
     }
@@ -418,6 +507,9 @@
             targetCarbsG = 40,
             targetFatG = 10,
             idealGI = 50,
+            currentTime, // v2.6: for caffeine-awareness filtering
+            addedSugarScore,
+            sugarDependencyRisk,
             lsGet,
             sharedProducts = [],
             limit = 3,
@@ -425,11 +517,13 @@
 
         const safeLsGet = resolveLsGet(lsGet);
 
-        console.info(`[${MODULE_NAME}] 🚀 Generating suggestions:`, {
+        console.info(`${LOG_PREFIX} 🚀 Generating suggestions:`, {
             scenario,
             remainingKcal,
             targetMacros: { protein: targetProteinG, carbs: targetCarbsG, fat: targetFatG },
             idealGI,
+            addedSugarScore,
+            sugarDependencyRisk,
             limit,
             hasLsGet: typeof safeLsGet === 'function',
         });
@@ -446,6 +540,9 @@
             targetFatG,
             targetKcal: remainingKcal,
             idealGI,
+            currentTime, // v2.6: pass time for caffeine-awareness
+            addedSugarScore,
+            sugarDependencyRisk,
             category: mapScenarioToCategory(scenario),
         };
 
@@ -478,7 +575,7 @@
             kcal: sum.kcal + s.macros.kcal
         }), { protein: 0, carbs: 0, kcal: 0 });
 
-        console.info(`[${MODULE_NAME}] ✅ Selected products:`, {
+        console.info(`${LOG_PREFIX} ✅ Selected products:`, {
             scenario,
             count: suggestions.length,
             historyUsed: historyCount,
@@ -549,5 +646,5 @@
         },
     };
 
-    console.info(`[${MODULE_NAME}] ✅ Smart Product Picker v2.5 initialized (30d history, 6-factor scoring)`);
+    console.info(`${LOG_PREFIX} ✅ Smart Product Picker v2.6 initialized (30d history, 7-factor scoring + caffeine-awareness)`);
 })(typeof window !== 'undefined' ? window : global);

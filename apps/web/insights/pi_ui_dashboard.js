@@ -72,6 +72,11 @@
       : (piConstants.CATEGORIES || {});
     const SCIENCE_INFO = piConstants.SCIENCE_INFO || {};
     const ACTIONABILITY = piConstants.ACTIONABILITY || {};
+    const computeDynamicPriority = piConstants.computeDynamicPriority || ((opts) => {
+      const section = piConstants.SECTIONS_CONFIG?.[opts?.sectionId];
+      return section?.priority || 'INFO';
+    });
+    const PRIORITY_CONTEXT_LABELS = piConstants.PRIORITY_CONTEXT_LABELS || {};
     const getAllMetricsByPriority = piConstants.getAllMetricsByPriority || function () {
       devWarn('[pi_ui_dashboard] getAllMetricsByPriority not available, returning empty array');
       return [];
@@ -573,6 +578,23 @@
         };
       }, [lsGet, profile, pIndex]);
 
+      // Event listener для открытия панели из внешних источников (header badge, виджет)
+      useEffect(() => {
+        console.info('[EarlyWarningCard] 🎧 Event listener registered for heysShowEWSPanel');
+        const handleShowPanel = () => {
+          console.info('[EarlyWarningCard] 📢 Event received: heysShowEWSPanel');
+          setPanelOpen(true);
+          console.info('[EarlyWarningCard] ✅ Panel opened');
+        };
+
+        window.addEventListener('heysShowEWSPanel', handleShowPanel);
+
+        return () => {
+          console.info('[EarlyWarningCard] 🔇 Event listener removed');
+          window.removeEventListener('heysShowEWSPanel', handleShowPanel);
+        };
+      }, []);
+
       // Don't show card if no module or no warnings
       if (!HEYS.InsightsPI?.earlyWarning) return null;
       if (loading) return null;
@@ -830,8 +852,9 @@
     /**
      * PriorityBadge — визуализация приоритета с emoji и цветом
      */
-    function PriorityBadge({ priority, showLabel = false, size = 'normal' }) {
+    function PriorityBadge({ priority, showLabel = false, size = 'normal', contextLabels = null }) {
       const config = PRIORITY_LEVELS[priority] || PRIORITY_LEVELS.INFO;
+      const label = contextLabels?.[priority] || config.name;
 
       return h('span', {
         className: `priority-badge priority-badge--${priority?.toLowerCase() || 'info'} priority-badge--${size}`,
@@ -844,7 +867,7 @@
         title: config.description
       },
         h('span', { className: 'priority-badge__emoji' }, config.emoji),
-        showLabel && h('span', { className: 'priority-badge__label' }, config.name)
+        showLabel && h('span', { className: 'priority-badge__label' }, label)
       );
     }
 
@@ -1101,6 +1124,7 @@
       const [showPatternDebug, setShowPatternDebug] = useState(false); // Pattern Transparency Modal
       const [showPhenotypeClassifier, setShowPhenotypeClassifier] = useState(false); // Phenotype Classifier Panel
       const [showWhatIfScenarios, setShowWhatIfScenarios] = useState(false); // What-If Scenarios Panel
+      const [ewsWarnings, setEwsWarnings] = useState([]);
 
       // 🎯 State для отслеживания прохождения тура (нужен для перерисовки после завершения)
       // 🔧 v1.13 FIX: Проверяем ОБА источника — scoped (HEYS.store) И unscoped (localStorage)
@@ -1242,6 +1266,118 @@
         });
       }, [effectiveData, showDemoMode]);
 
+      // 🆕 EWS warnings на уровне InsightsTab — для динамического priority badge
+      useEffect(() => {
+        let cancelled = false;
+
+        const collectWarnings = () => {
+          try {
+            console.info('priority / resolver 🚀 start:', { scope: 'InsightsTab', section: 'STATUS_SCORE' });
+
+            const earlyWarning = HEYS.InsightsPI?.earlyWarning;
+            const getter = lsGet || window.HEYS?.utils?.lsGet;
+            const fmtDate = HEYS.dayUtils?.fmtDate || window.HEYS?.utils?.fmtDate;
+
+            if (!earlyWarning || typeof earlyWarning.detect !== 'function' || !getter || !fmtDate) {
+              if (!cancelled) setEwsWarnings([]);
+              console.info('priority / resolver ⚠️ skipped:', {
+                reason: 'EWS module or storage utils unavailable',
+                hasDetect: !!earlyWarning?.detect,
+                hasGetter: !!getter,
+                hasFmtDate: !!fmtDate
+              });
+              return;
+            }
+
+            const days = [];
+            for (let i = 0; i < 30; i++) {
+              const d = new Date();
+              d.setDate(d.getDate() - i);
+              const dateStr = fmtDate(d);
+              const dayData = getter(`heys_dayv2_${dateStr}`);
+              if (dayData) days.push({ ...dayData, date: dateStr });
+            }
+
+            if (days.length < 7) {
+              if (!cancelled) setEwsWarnings([]);
+              console.info('priority / resolver ⚠️ skipped:', {
+                reason: 'insufficient days for EWS',
+                days: days.length
+              });
+              return;
+            }
+
+            const currentInsights = HEYS.PredictiveInsights?.analyze?.({
+              daysBack: 7,
+              profile: effectiveData.profile,
+              pIndex: effectiveData.pIndex,
+              lsGet: getter
+            });
+
+            const result = earlyWarning.detect(days, effectiveData.profile, effectiveData.pIndex, {
+              currentPatterns: currentInsights?.patterns
+            });
+
+            const warnings = result?.available && Array.isArray(result?.warnings)
+              ? result.warnings
+              : [];
+
+            if (!cancelled) setEwsWarnings(warnings);
+
+            console.info('priority / resolver 📥 input:', {
+              score: insights?.healthScore?.total,
+              warningsCount: warnings.length,
+              highWarnings: warnings.filter(w => w.severity === 'high').length
+            });
+          } catch (error) {
+            if (!cancelled) setEwsWarnings([]);
+            console.error('priority / resolver ❌ failed:', { scope: 'InsightsTab', error: error?.message || error });
+          }
+        };
+
+        collectWarnings();
+        const interval = setInterval(collectWarnings, 5 * 60 * 1000);
+        window.addEventListener('day-updated', collectWarnings);
+        window.addEventListener('heys-sync-complete', collectWarnings);
+
+        return () => {
+          cancelled = true;
+          clearInterval(interval);
+          window.removeEventListener('day-updated', collectWarnings);
+          window.removeEventListener('heys-sync-complete', collectWarnings);
+        };
+      }, [lsGet, effectiveData.profile, effectiveData.pIndex, insights?.healthScore?.total]);
+
+      const statusSectionPriority = useMemo(() => {
+        const score = insights?.healthScore?.total;
+        const trend = insights?.healthScore?.trend7d ?? insights?.healthScore?.trend ?? null;
+        const resolved = computeDynamicPriority({
+          sectionId: 'STATUS_SCORE',
+          score,
+          trend,
+          warnings: ewsWarnings
+        });
+
+        console.info('priority / resolver 🧮 compute:', {
+          section: 'STATUS_SCORE',
+          score,
+          trend7d: trend,
+          warnings: ewsWarnings.length,
+          highWarnings: ewsWarnings.filter(w => w.severity === 'high').length,
+          resolvedPriority: resolved
+        });
+
+        return resolved;
+      }, [computeDynamicPriority, insights?.healthScore?.total, insights?.healthScore?.trend7d, insights?.healthScore?.trend, ewsWarnings]);
+
+      useEffect(() => {
+        console.info('priority / resolver 🖥️ ui:', {
+          section: 'STATUS_SCORE',
+          renderedPriority: statusSectionPriority,
+          filter: priorityFilter || 'ALL'
+        });
+      }, [statusSectionPriority, priorityFilter]);
+
       // Получить все метрики для фильтров
       const allMetrics = useMemo(() => getAllMetricsByPriority(), []);
 
@@ -1347,13 +1483,17 @@
             // 🔴 КРИТИЧЕСКИЙ ПРИОРИТЕТ — Самое важное сверху
             // ═══════════════════════════════════════════════════════════
 
-            // L0: Status 0-100 Card (CRITICAL — показывается всегда)
-            shouldShowSection('CRITICAL') && h('div', {
-              className: 'insights-tab__section insights-tab__section--critical',
+            // L0: Status 0-100 Card (dynamic priority)
+            shouldShowSection(statusSectionPriority) && h('div', {
+              className: `insights-tab__section insights-tab__section--${statusSectionPriority.toLowerCase()}`,
               id: 'tour-insights-status' // 🎯 Mini-tour target
             },
               h('div', { className: 'insights-tab__section-badge' },
-                h(PriorityBadge, { priority: 'CRITICAL', showLabel: true })
+                h(PriorityBadge, {
+                  priority: statusSectionPriority,
+                  showLabel: true,
+                  contextLabels: PRIORITY_CONTEXT_LABELS.STATUS_SCORE
+                })
               ),
 
             // 🆕 StatusCard вместо TotalHealthRing + HealthRingsGrid
@@ -1432,13 +1572,13 @@
                               // For now, focus on current low pattern scores (more actionable)
                               // TODO: Implement time-based pattern comparison when we have historical pattern data
 
-                              console.log('[EWS] 📊 Pattern data collected:', {
+                              console.log('ews / dashboard 📊 pattern data collected:', {
                                 currentPatternsCount: currentPatterns ? currentPatterns.length : 0,
                                 period: '7 days',
                                 hasHealthScore: !!currentInsights?.healthScore
                               });
                             } catch (e) {
-                              console.warn('[EWS] ⚠️ Failed to get pattern data:', e.message);
+                              console.warn('ews / dashboard ⚠️ failed to get pattern data:', e.message);
                             }
                           }
 

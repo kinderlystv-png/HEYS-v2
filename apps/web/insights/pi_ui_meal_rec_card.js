@@ -1,6 +1,6 @@
 /**
  * Meal Recommender Card — Compact UI for Day View
- * v2.4.0 — Scenario-aware UI
+ * v2.9.0 — R2.6 Deep Insights Integration (profile parameter fix)
  * Рендерит карточку рекомендации следующего приёма пищи в дневнике
  * Позиция: между refeedCard и supplementsCard (выше витаминов)
  * 
@@ -8,6 +8,26 @@
  * - Scenario-specific icons and titles
  * - Conditional rendering for GOAL_REACHED (water instead of macros)
  * - Adaptive header text based on detected scenario
+ * 
+ * v2.6 features (R2.6):
+ * - Historical days loading (30d from localStorage)
+ * - Deep Insights enhancement via pi_meal_rec_patterns.js
+ * - Dynamic confidence display (0.5-1.0)
+ * 
+ * v2.7 fixes:
+ * - Added resolveLsGet() with localStorage fallback (like Product Picker)
+ * - Fixes issue where global.U.lsGet was unavailable during useMemo execution
+ * - Historical days now load successfully (was: count=0, now: 30)
+ * 
+ * v2.8 fixes:
+ * - Fixed parameter order: recommend(context, profile, pIndex, days)
+ * - Historical days now properly passed as 4th parameter (was: 2nd)
+ * - R2.6 enhancement now active (was: daysCount=0, now: 30)
+ * 
+ * v2.9 fixes:
+ * - Fixed profile/pIndex parameters: now passed from component props (was: undefined)
+ * - Recommender validation now passes (was: "Missing context or profile")
+ * - Card now renders successfully
  */
 (function (global) {
     'use strict';
@@ -17,12 +37,42 @@
 
     const h = React.createElement;
     const { useState, useMemo } = React;
+    const LOG_FILTER = 'MEALREC';
+    const LOG_PREFIX = `[${LOG_FILTER}][HEYS.mealRec.card]`;
+
+    /**
+     * Fallback lsGet — прямое чтение из localStorage (если global.U недоступен)
+     */
+    function buildLocalStorageFallbackLsGet() {
+        return function (key, fallback = null) {
+            try {
+                const raw = localStorage.getItem(key);
+                if (raw === null || raw === undefined) return fallback;
+                return JSON.parse(raw);
+            } catch (err) {
+                console.warn(`${LOG_PREFIX} ⚠️ localStorage fallback read failed:`, {
+                    key,
+                    message: err?.message,
+                });
+                return fallback;
+            }
+        };
+    }
+
+    /**
+     * Resolve lsGet function (try global.U, then global.HEYS.utils, then fallback)
+     */
+    function resolveLsGet() {
+        if (typeof global.U?.lsGet === 'function') return global.U.lsGet.bind(global.U);
+        if (typeof global.HEYS?.utils?.lsGet === 'function') return global.HEYS.utils.lsGet.bind(global.HEYS.utils);
+        return buildLocalStorageFallbackLsGet();
+    }
 
     /**
      * Собрать контекст для recommend() из данных дня
      */
     function buildRecommendationContext(day, dayTot, normAbs, prof, optimum) {
-        console.log('[HEYS.mealRec.card] 🔍 buildContext called:', {
+        console.info(`${LOG_PREFIX} 🔍 buildContext called:`, {
             hasDay: !!day,
             hasDayTot: !!dayTot,
             hasNormAbs: !!normAbs,
@@ -32,7 +82,7 @@
         });
 
         if (!day || !dayTot || !normAbs) {
-            console.warn('[HEYS.mealRec.card] ❌ Missing required data:', {
+            console.warn(`${LOG_PREFIX} ❌ Missing required data:`, {
                 hasDay: !!day,
                 hasDayTot: !!dayTot,
                 hasNormAbs: !!normAbs
@@ -65,7 +115,7 @@
                     if (raw === null || raw === undefined) return fallback;
                     return JSON.parse(raw);
                 } catch (err) {
-                    console.warn('[HEYS.mealRec.card] ⚠️ localStorage fallback read failed:', { key, message: err?.message });
+                    console.warn(`${LOG_PREFIX} ⚠️ localStorage fallback read failed:`, { key, message: err?.message });
                     return fallback;
                 }
             };
@@ -92,7 +142,7 @@
             sharedProducts: global.HEYS?.products?.getAll?.() || []
         };
 
-        console.info('[HEYS.mealRec.card] ✅ Context built:', {
+        console.info(`${LOG_PREFIX} ✅ Context built:`, {
             currentTime: currentTimeStr,
             lastMealTime: lastMeal?.time || 'none',
             mealsToday: meals.length,
@@ -128,6 +178,7 @@
      */
     function MealRecommenderCard({ React, day, prof, pIndex, dayTot, normAbs, optimum }) {
         const [expanded, setExpanded] = useState(false);
+        const [userFeedback, setUserFeedback] = useState(null); // null | 'positive' | 'negative'
 
         // Stable primitive deps to prevent excessive re-renders (30+ → ~3)
         const mealsCount = day?.meals?.length || 0;
@@ -137,40 +188,100 @@
         const targetKcal = Math.round(optimum || normAbs?.kcal || 0);
         const targetProt = Math.round(normAbs?.prot || 0);
 
+        // Handler для feedback кнопок (R2.7)
+        const handleFeedback = (rating) => {
+            if (!global.HEYS?.InsightsPI?.mealRecFeedback) {
+                console.warn(`${LOG_PREFIX} ⚠️ Feedback module not loaded`);
+                return;
+            }
+
+            if (!recommendation) {
+                console.warn(`${LOG_PREFIX} ⚠️ No recommendation to give feedback on`);
+                return;
+            }
+
+            const feedbackData = {
+                scenario: recommendation.scenario || 'UNKNOWN',
+                rating: rating, // 1 for 👍, -1 for 👎
+                products: (recommendation.suggestions || []).map(s => s.product),
+                confidence: recommendation.confidence || 0,
+                clientId: global.HEYS?.currentClientId, // Явно передаём clientId
+                context: {
+                    time: new Date().toISOString(),
+                    mealsCount: mealsCount,
+                    eatenKcal: eatenKcal,
+                    targetKcal: targetKcal
+                }
+            };
+
+            const success = global.HEYS.InsightsPI.mealRecFeedback.addFeedback(feedbackData);
+            if (success) {
+                setUserFeedback(rating === 1 ? 'positive' : 'negative');
+                console.info(`${LOG_PREFIX} ✅ Feedback submitted:`, rating === 1 ? '👍' : '👎');
+            }
+        };
+
         // Собираем рекомендацию
         const recommendation = useMemo(() => {
-            console.log('[HEYS.mealRec.card] 🎬 useMemo triggered');
+            console.info(`${LOG_PREFIX} 🎬 useMemo triggered`);
 
             if (!global.HEYS?.InsightsPI?.mealRecommender?.recommend) {
-                console.warn('[HEYS.mealRec.card] ❌ Backend not loaded');
+                console.warn(`${LOG_PREFIX} ❌ Backend not loaded`);
                 return null;
             }
 
-            console.log('[HEYS.mealRec.card] ✅ Backend available');
+            console.info(`${LOG_PREFIX} ✅ Backend available`);
 
             const context = buildRecommendationContext(day, dayTot, normAbs, prof, optimum);
             if (!context) {
-                console.warn('[HEYS.mealRec.card] ⚠️ Insufficient data for context');
+                console.warn(`${LOG_PREFIX} ⚠️ Insufficient data for context`);
                 return null;
             }
 
-            console.log('[HEYS.mealRec.card] 🚀 Calling recommend()...');
+            console.info(`${LOG_PREFIX} 🚀 Calling recommend()...`);
 
             try {
+                // R2.6: Load historical days for Deep Insights enhancement
+                const historicalDays = [];
+                const today = new Date();
+
+                // Resolve lsGet (with fallback to direct localStorage access)
+                const safeLsGet = resolveLsGet();
+
+                // Load last 30 days from localStorage (lsGet auto-scopes by HEYS.currentClientId)
+                for (let i = 0; i < 30; i++) {
+                    const date = new Date(today);
+                    date.setDate(date.getDate() - i);
+                    const dateStr = date.toISOString().split('T')[0];
+                    const dayKey = `heys_dayv2_${dateStr}`;
+                    const dayData = safeLsGet(dayKey); // lsGet auto-scopes by currentClientId
+                    if (dayData && dayData.date) {
+                        historicalDays.push(dayData);
+                    }
+                }
+
+                console.info(`${LOG_PREFIX} 📊 Historical days loaded:`, {
+                    count: historicalDays.length,
+                    currentClientId: global.HEYS?.currentClientId || 'none'
+                });
+
+                // Call recommend with historical days for R2.6 enhancement
+                // Signature: recommend(context, profile, pIndex, days)
                 const result = global.HEYS.InsightsPI.mealRecommender.recommend(
                     context,
-                    prof,
-                    pIndex
+                    prof,           // profile (required for validation)
+                    pIndex,         // product index (for smart suggestions)
+                    historicalDays  // days for R2.6 Deep Insights enhancement
                 );
 
                 if (!result || !result.available) {
-                    console.info('[HEYS.mealRec.card] ⚠️ Hidden:', {
+                    console.info(`${LOG_PREFIX} ⚠️ Hidden:`, {
                         reason: result?.error || 'Not available'
                     });
                     return null;
                 }
 
-                console.info('[HEYS.mealRec.card] ✅ Rendered:', {
+                console.info(`${LOG_PREFIX} ✅ Rendered:`, {
                     idealTime: result.timing?.ideal || '—',
                     protein: result.macros?.protein || 0,
                     carbs: result.macros?.carbs || 0,
@@ -180,18 +291,18 @@
 
                 return result;
             } catch (err) {
-                console.error('[HEYS.mealRec.card] ❌ Error:', err);
+                console.error(`${LOG_PREFIX} ❌ Error:`, err);
                 return null;
             }
         }, [mealsCount, lastMealTime, eatenKcal, eatenProt, targetKcal, targetProt, pIndex]);
 
         // Если рекомендация недоступна — не рендерим карточку
         if (!recommendation) {
-            console.warn('[HEYS.mealRec.card] 🚫 Card NOT rendered (recommendation is null)');
+            console.warn(`${LOG_PREFIX} 🚫 Card NOT rendered (recommendation is null)`);
             return null;
         }
 
-        console.log('[HEYS.mealRec.card] 🎨 Rendering card UI...');
+        console.info(`${LOG_PREFIX} 🎨 Rendering card UI...`);
 
         const { timing, macros, suggestions, reasoning, confidence, scenario, scenarioIcon, scenarioReason } = recommendation;
 
@@ -202,7 +313,7 @@
         const remainingKcal = macros?.remainingKcal || 0;
 
         if (!isGoalReached && (remainingKcal < 50 || (macros?.protein <= 0 && macros?.carbs <= 0))) {
-            console.info('[HEYS.mealRec.card] ℹ️ Hiding card: insufficient remaining budget:', {
+            console.info(`${LOG_PREFIX} ℹ️ Hiding card: insufficient remaining budget:`, {
                 scenario,
                 remainingKcal,
                 protein: macros?.protein,
@@ -299,6 +410,34 @@
             // Confidence badge
             confidence !== undefined && h('div', { className: 'meal-rec-card__confidence' },
                 `Уверенность: ${Math.round(confidence * 100)}%`
+            ),
+
+            // Feedback buttons (R2.7)
+            h('div', { className: 'meal-rec-card__feedback' },
+                h('div', { className: 'meal-rec-card__feedback-title' }, 'Помогла рекомендация?'),
+                h('div', { className: 'meal-rec-card__feedback-buttons' },
+                    h('button', {
+                        className: `meal-rec-card__feedback-btn ${userFeedback === 'positive' ? 'meal-rec-card__feedback-btn--selected' : ''}`,
+                        onClick: (e) => {
+                            e.stopPropagation(); // prevent card collapse
+                            handleFeedback(1);
+                        },
+                        disabled: userFeedback !== null,
+                        title: 'Да, помогла'
+                    }, '👍'),
+                    h('button', {
+                        className: `meal-rec-card__feedback-btn ${userFeedback === 'negative' ? 'meal-rec-card__feedback-btn--selected' : ''}`,
+                        onClick: (e) => {
+                            e.stopPropagation(); // prevent card collapse
+                            handleFeedback(-1);
+                        },
+                        disabled: userFeedback !== null,
+                        title: 'Нет, не помогла'
+                    }, '👎')
+                ),
+                userFeedback && h('div', { className: 'meal-rec-card__feedback-thanks' },
+                    'Спасибо за отзыв! 💚'
+                )
             )
         );
 
@@ -312,7 +451,7 @@
             expandedDetails
         );
 
-        console.info('[HEYS.mealRec.card] ✅ Card element created successfully');
+        console.info(`${LOG_PREFIX} ✅ Card element created successfully`);
 
         return cardElement;
     }
@@ -320,6 +459,7 @@
     // Memoized component — prevents 30+ re-renders per page load
     const MemoizedMealRecommenderCard = React.memo(MealRecommenderCard, (prev, next) => {
         // Return true = skip re-render (props are equal)
+        // P2 Fix: Removed pIndex reference check — parent may create new object each render
         return (
             (prev.day?.meals?.length || 0) === (next.day?.meals?.length || 0) &&
             (prev.day?.meals?.[(prev.day?.meals?.length || 1) - 1]?.time || '') ===
@@ -327,8 +467,7 @@
             Math.round(prev.dayTot?.kcal || 0) === Math.round(next.dayTot?.kcal || 0) &&
             Math.round(prev.dayTot?.prot || 0) === Math.round(next.dayTot?.prot || 0) &&
             Math.round(prev.normAbs?.kcal || 0) === Math.round(next.normAbs?.kcal || 0) &&
-            prev.optimum === next.optimum &&
-            prev.pIndex === next.pIndex
+            prev.optimum === next.optimum
         );
     });
 
@@ -336,15 +475,8 @@
      * Render function для интеграции в diary section
      */
     function renderCard(props) {
-        console.log('[HEYS.mealRec.card] 📞 renderCard called:', {
-            hasProps: !!props,
-            hasReact: !!props?.React,
-            hasDay: !!props?.day,
-            hasProf: !!props?.prof
-        });
-
         if (!props || !props.React) {
-            console.warn('[HEYS.mealRec.card] ❌ renderCard: missing props or React');
+            console.warn(`${LOG_PREFIX} ❌ renderCard: missing props or React`);
             return null;
         }
 
@@ -357,6 +489,6 @@
         renderCard
     };
 
-    console.info('[HEYS.mealRec.card] 📦 Module loaded');
+    console.info(`${LOG_PREFIX} 📦 Module loaded`);
 
 })(window);
