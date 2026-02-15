@@ -1964,6 +1964,37 @@
             highSeverity: warnings.filter(w => w.severity === 'high').length
         });
 
+        // Visual summary table of all 15 checks (v3.0 verification)
+        const checkMapping = [
+            { num: 1, name: 'Health Score Decline', tier: 'Baseline', types: ['HEALTH_SCORE_DECLINE'] },
+            { num: 2, name: 'Pattern Issues', tier: 'Baseline', types: ['CRITICAL_PATTERN_DEGRADATION', 'LOW_PATTERN_SCORE'] },
+            { num: 3, name: 'Status Score Decline', tier: 'Baseline', types: ['STATUS_SCORE_DECLINE'] },
+            { num: 4, name: 'Sleep Debt', tier: 'Baseline', types: ['SLEEP_DEBT'] },
+            { num: 5, name: 'Caloric Debt', tier: 'Baseline', types: ['CALORIC_DEBT'] },
+            { num: 6, name: 'Weight Spike', tier: 'Tier 1', types: ['WEIGHT_SPIKE'] },
+            { num: 7, name: 'Hydration Deficit', tier: 'Tier 1', types: ['HYDRATION_DEFICIT'] },
+            { num: 8, name: 'Logging Gap', tier: 'Tier 1', types: ['LOGGING_GAP'] },
+            { num: 9, name: 'Protein Deficit', tier: 'Tier 2', types: ['PROTEIN_DEFICIT'] },
+            { num: 10, name: 'Stress Accumulation', tier: 'Tier 2', types: ['STRESS_ACCUMULATION'] },
+            { num: 11, name: 'Meal Skip Pattern', tier: 'Tier 2', types: ['MEAL_SKIP_PATTERN'] },
+            { num: 12, name: 'Binge Risk', tier: 'Tier 2', types: ['BINGE_RISK'] },
+            { num: 13, name: 'Mood/Wellbeing Decline', tier: 'Tier 3', types: ['MOOD_WELLBEING_DECLINE'] },
+            { num: 14, name: 'Weight Plateau', tier: 'Tier 3', types: ['WEIGHT_PLATEAU'] },
+            { num: 15, name: 'Weekend Pattern', tier: 'Tier 3', types: ['WEEKEND_PATTERN'] }
+        ];
+        const warningTypes = new Set(warnings.map(function(w) { return w.type; }));
+        const checkSummary = checkMapping.map(function(check) {
+            var hasWarning = check.types.some(function(t) { return warningTypes.has(t); });
+            return {
+                '#': check.num,
+                'Check Name': check.name,
+                'Tier': check.tier,
+                'Status': hasWarning ? '⚠️ WARNING' : '✓ Clean'
+            };
+        });
+        console.table(checkSummary);
+        console.info('[EWS] 📊 Summary: ' + warnings.length + ' warning(s) detected from 15 checks');
+
         return {
             available: true,
             count: warnings.length,
