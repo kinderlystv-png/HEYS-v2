@@ -86,6 +86,137 @@
             setActiveTab,
         } = props;
 
+        // 🚨 EWS Badge State (v1.0)
+        const [ewsData, setEWSData] = React.useState(null);
+        const clientDropdownAnchorRef = React.useRef(null);
+        const [clientDropdownMaxHeight, setClientDropdownMaxHeight] = React.useState(320);
+
+        React.useEffect(() => {
+            if (!showClientDropdown) return;
+
+            const updateClientDropdownHeight = () => {
+                try {
+                    const anchorRect = clientDropdownAnchorRef.current?.getBoundingClientRect?.();
+                    const tabsRect = document.querySelector('.tabs')?.getBoundingClientRect?.();
+                    const viewportHeight = window.visualViewport?.height || window.innerHeight || 800;
+
+                    const dropdownTop = (anchorRect?.bottom || 120) + 8;
+                    const tabsHeight = Math.max(56, Math.ceil(tabsRect?.height || 0));
+                    const bottomGapAboveMenu = tabsHeight + 12;
+                    const calculatedMaxHeight = Math.floor(viewportHeight - dropdownTop - bottomGapAboveMenu);
+                    const clampedMaxHeight = Math.max(220, calculatedMaxHeight);
+
+                    setClientDropdownMaxHeight(clampedMaxHeight);
+
+                    console.info('[HEYS.header.clientDropdown] ✅ Calculated dropdown max height:', {
+                        viewportHeight,
+                        dropdownTop,
+                        tabsHeight,
+                        bottomGapAboveMenu,
+                        maxHeight: clampedMaxHeight,
+                        scrollAreaMaxHeight: Math.max(120, clampedMaxHeight - 128),
+                        clientsCount: Array.isArray(clients) ? clients.length : 0,
+                    });
+                } catch (err) {
+                    console.warn('[HEYS.header.clientDropdown] ⚠️ Failed to calculate dropdown max height:', err?.message);
+                    setClientDropdownMaxHeight(320);
+                }
+            };
+
+            updateClientDropdownHeight();
+            window.addEventListener('resize', updateClientDropdownHeight);
+            window.visualViewport?.addEventListener?.('resize', updateClientDropdownHeight);
+
+            return () => {
+                window.removeEventListener('resize', updateClientDropdownHeight);
+                window.visualViewport?.removeEventListener?.('resize', updateClientDropdownHeight);
+            };
+        }, [showClientDropdown, clients]);
+
+        // Load EWS data on mount and when date changes
+        React.useEffect(() => {
+            console.info('ews / badge 🔄 useEffect triggered');
+
+            const loadEWSData = async () => {
+                try {
+                    console.info('ews / badge 🚀 loadEWSData started');
+
+                    if (!HEYS?.InsightsPI?.earlyWarning?.detect) {
+                        console.warn('ews / badge ⚠️ EWS module not available');
+                        return;
+                    }
+
+                    console.info('ews / badge ✅ EWS module detected');
+
+                    // Load 7 days of data (using local formatLocalISO function)
+                    const days = [];
+                    for (let i = 0; i < 7; i++) {
+                        const d = new Date();
+                        d.setDate(d.getDate() - i);
+                        const dateStr = formatLocalISO(d);
+                        const U = HEYS.utils || {};
+                        const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${dateStr}`) : null;
+                        if (dayData) days.push({ ...dayData, date: dateStr });
+                    }
+
+                    console.info('ews / badge 📦 Days loaded:', days.length);
+
+                    if (days.length < 3) {
+                        console.info('ews / badge ⏸️ Insufficient data:', days.length, 'days (need 3+)');
+                        setEWSData(null);
+                        return;
+                    }
+
+                    const profile = cachedProfile || HEYS.store?.get?.('heys_profile') || null;
+                    const pIndex = products || HEYS.products?.getAll?.() || [];
+
+                    const result = await HEYS.InsightsPI.earlyWarning.detect(days, profile, pIndex, { includeDetails: true });
+
+                    if (result.available && result.count > 0) {
+                        setEWSData(result);
+                        console.info('ews / badge ✅ Badge data loaded:', {
+                            count: result.count,
+                            high: result.highSeverityCount,
+                            medium: result.count - result.highSeverityCount,
+                            daysAnalyzed: days.length,
+                            hasWarnings: Array.isArray(result.warnings) && result.warnings.length > 0,
+                        });
+                    } else {
+                        setEWSData(null);
+                        console.info('ews / badge ℹ️ No warnings detected:', {
+                            available: result.available,
+                            reason: result.reason || 'no_warnings',
+                            daysAnalyzed: days.length,
+                        });
+                    }
+                } catch (err) {
+                    console.warn('ews / badge ⚠️ Failed to load EWS data:', err.message);
+                    setEWSData(null);
+                }
+            };
+
+            loadEWSData();
+
+            // Reload on day-data-changed event
+            const handleDayDataChanged = () => loadEWSData();
+            window.addEventListener('day-data-changed', handleDayDataChanged);
+
+            // Reload after sync complete
+            const handleSyncComplete = () => {
+                setTimeout(loadEWSData, 500); // Small delay to ensure data is written
+            };
+            window.addEventListener('heys-sync-complete', handleSyncComplete);
+
+            // Reload every 5 minutes
+            const interval = setInterval(loadEWSData, 5 * 60 * 1000);
+
+            return () => {
+                window.removeEventListener('day-data-changed', handleDayDataChanged);
+                window.removeEventListener('heys-sync-complete', handleSyncComplete);
+                clearInterval(interval);
+            };
+        }, [selectedDate, clientId]);
+
         const haptic = HEYS?.haptic || (() => { });
         const pad2 = (n) => String(n).padStart(2, '0');
         const formatLocalISO = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -125,6 +256,8 @@
             applyDate();
         };
 
+        const clientListMaxHeight = Math.max(120, clientDropdownMaxHeight - 128);
+
         if (!clientId) return null;
 
         return React.createElement(
@@ -143,7 +276,7 @@
                 // Информация о клиенте + DatePicker
                 React.createElement(
                     'div',
-                    { className: 'hdr-client', style: { position: 'relative' } },
+                    { className: 'hdr-client', style: { position: 'relative' }, ref: clientDropdownAnchorRef },
                     // Кликабельный блок для dropdown
                     React.createElement(
                         'div',
@@ -206,8 +339,8 @@
                                 boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
                                 border: '1px solid var(--border)',
                                 minWidth: 260,
-                                maxHeight: 320,
-                                overflow: 'auto',
+                                maxHeight: clientDropdownMaxHeight,
+                                overflow: 'hidden',
                                 zIndex: 1000,
                                 animation: 'fadeSlideIn 0.2s ease'
                             }
@@ -298,132 +431,149 @@
                                         letterSpacing: '0.5px'
                                     }
                                 }, `Быстрый выбор (${clients.length})`),
-                                // Список клиентов (сортировка: последний использованный сверху)
-                                [...clients]
-                                    .sort((a, b) => {
-                                        const lastA = readGlobalValue('heys_last_client_id', '') === a.id ? 1 : 0;
-                                        const lastB = readGlobalValue('heys_last_client_id', '') === b.id ? 1 : 0;
-                                        if (lastA !== lastB) return lastB - lastA;
-                                        // Затем по активности (streak)
-                                        const statsA = getClientStats(a.id);
-                                        const statsB = getClientStats(b.id);
-                                        return (statsB.streak || 0) - (statsA.streak || 0);
-                                    })
-                                    .map((c) =>
-                                        React.createElement(
-                                            'div',
-                                            {
-                                                key: c.id,
-                                                className: 'client-dropdown-item' + (c.id === clientIdValue ? ' active' : ''),
-                                                style: {
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 10,
-                                                    padding: '10px 16px',
-                                                    cursor: 'pointer',
-                                                    transition: 'background 0.15s',
-                                                    background: c.id === clientIdValue ? 'rgba(102, 126, 234, 0.1)' : 'transparent'
-                                                },
-                                                onClick: async () => {
-                                                    if (c.id !== clientIdValue) {
-                                                        console.info(`[HEYS.store] 🔄 Выбор клиента: ${c.name} (${c.id.slice(0, 8)}...)`);
-                                                        if (HEYS.cloud && HEYS.cloud.switchClient) {
-                                                            await HEYS.cloud.switchClient(c.id);
-                                                        } else {
-                                                            U.lsSet('heys_client_current', c.id);
+                                // Список клиентов (скролл только для списка)
+                                React.createElement(
+                                    'div',
+                                    {
+                                        key: 'client-list-scroll',
+                                        className: 'client-dropdown-scroll-list',
+                                        style: {
+                                            maxHeight: clientListMaxHeight,
+                                            overflowY: 'auto',
+                                            overflowX: 'hidden',
+                                            overscrollBehavior: 'contain'
+                                        }
+                                    },
+                                    [...clients]
+                                        .sort((a, b) => {
+                                            const lastA = readGlobalValue('heys_last_client_id', '') === a.id ? 1 : 0;
+                                            const lastB = readGlobalValue('heys_last_client_id', '') === b.id ? 1 : 0;
+                                            if (lastA !== lastB) return lastB - lastA;
+                                            // Затем по активности (streak)
+                                            const statsA = getClientStats(a.id);
+                                            const statsB = getClientStats(b.id);
+                                            return (statsB.streak || 0) - (statsA.streak || 0);
+                                        })
+                                        .map((c) =>
+                                            React.createElement(
+                                                'div',
+                                                {
+                                                    key: c.id,
+                                                    className: 'client-dropdown-item' + (c.id === clientIdValue ? ' active' : ''),
+                                                    style: {
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 10,
+                                                        padding: '10px 16px',
+                                                        cursor: 'pointer',
+                                                        transition: 'background 0.15s',
+                                                        background: c.id === clientIdValue ? 'rgba(102, 126, 234, 0.1)' : 'transparent'
+                                                    },
+                                                    onClick: async () => {
+                                                        if (c.id !== clientIdValue) {
+                                                            console.info(`[HEYS.store] 🔄 Выбор клиента: ${c.name} (${c.id.slice(0, 8)}...)`);
+                                                            if (HEYS.cloud && HEYS.cloud.switchClient) {
+                                                                await HEYS.cloud.switchClient(c.id);
+                                                            } else {
+                                                                U.lsSet('heys_client_current', c.id);
+                                                            }
+                                                            writeGlobalValue('heys_last_client_id', c.id);
+                                                            setClientId(c.id);
+                                                            window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
                                                         }
-                                                        writeGlobalValue('heys_last_client_id', c.id);
-                                                        setClientId(c.id);
-                                                        window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
+                                                        setShowClientDropdown(false);
                                                     }
-                                                    setShowClientDropdown(false);
-                                                }
-                                            },
-                                            // Мини-аватар
-                                            React.createElement('div', {
-                                                style: {
-                                                    width: 32,
-                                                    height: 32,
-                                                    borderRadius: '50%',
-                                                    background: getAvatarColor(c.name),
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    color: '#fff',
-                                                    fontWeight: 600,
-                                                    fontSize: 12,
-                                                    flexShrink: 0
-                                                }
-                                            }, getClientInitials(c.name)),
-                                            // Имя
-                                            React.createElement('span', {
-                                                style: {
-                                                    flex: 1,
-                                                    fontWeight: c.id === clientIdValue ? 600 : 400,
-                                                    color: c.id === clientIdValue ? '#4285f4' : 'var(--text)'
-                                                }
-                                            }, c.name),
-                                            // Галочка для выбранного
-                                            c.id === clientIdValue && React.createElement('span', {
-                                                style: { color: '#4285f4' }
-                                            }, '✓')
+                                                },
+                                                // Мини-аватар
+                                                React.createElement('div', {
+                                                    style: {
+                                                        width: 32,
+                                                        height: 32,
+                                                        borderRadius: '50%',
+                                                        background: getAvatarColor(c.name),
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: '#fff',
+                                                        fontWeight: 600,
+                                                        fontSize: 12,
+                                                        flexShrink: 0
+                                                    }
+                                                }, getClientInitials(c.name)),
+                                                // Имя
+                                                React.createElement('span', {
+                                                    style: {
+                                                        flex: 1,
+                                                        fontWeight: c.id === clientIdValue ? 600 : 400,
+                                                        color: c.id === clientIdValue ? '#4285f4' : 'var(--text)'
+                                                    }
+                                                }, c.name),
+                                                // Галочка для выбранного
+                                                c.id === clientIdValue && React.createElement('span', {
+                                                    style: { color: '#4285f4' }
+                                                }, '✓')
+                                            )
                                         )
-                                    ),
-                                // Разделитель
-                                React.createElement('div', {
-                                    key: 'divider',
-                                    style: { height: 1, background: 'var(--border)', margin: '8px 0' }
-                                }),
-                                // Кнопка "Все клиенты"
-                                React.createElement(
-                                    'div',
-                                    {
-                                        key: 'all-clients',
-                                        style: {
-                                            padding: '10px 16px 12px',
-                                            textAlign: 'center',
-                                            color: '#4285f4',
-                                            fontWeight: 500,
-                                            cursor: 'pointer',
-                                            fontSize: 14
-                                        },
-                                        onClick: () => {
-                                            if (window.HEYS) {
-                                                window.HEYS.currentClientId = null;
-                                                if (window.HEYS.store?.flushMemory) {
-                                                    window.HEYS.store.flushMemory();
-                                                }
-                                            }
-                                            removeGlobalValue('heys_client_current');
-                                            setClientId('');
-                                            window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: null } }));
-                                            setShowClientDropdown(false);
-                                        }
-                                    },
-                                    '👥 Все клиенты'
                                 ),
-                                // Кнопка Выход с email
+                                // Нижний блок действий (визуально закреплённый)
                                 React.createElement(
                                     'div',
                                     {
-                                        key: 'logout',
-                                        style: {
-                                            padding: '8px 16px 12px',
-                                            textAlign: 'center',
-                                            cursor: 'pointer',
-                                            fontSize: 13
-                                        },
-                                        onClick: () => {
-                                            setShowClientDropdown(false);
-                                            handleSignOut();
-                                        }
+                                        key: 'sticky-actions',
+                                        className: 'client-dropdown-sticky-actions'
                                     },
-                                    React.createElement('div', {
-                                        style: { color: 'var(--muted)', fontSize: 11, marginBottom: 4 }
-                                    }, cloudUser?.email || ''),
-                                    React.createElement('span', {
-                                        style: { color: '#ef4444' }
-                                    }, '🚪 Выйти')
+                                    // Кнопка "Все клиенты"
+                                    React.createElement(
+                                        'div',
+                                        {
+                                            key: 'all-clients',
+                                            className: 'client-dropdown-sticky-btn client-dropdown-sticky-btn--all',
+                                            style: {
+                                                padding: '10px 16px 12px',
+                                                textAlign: 'center',
+                                                cursor: 'pointer',
+                                                fontSize: 14
+                                            },
+                                            onClick: () => {
+                                                if (window.HEYS) {
+                                                    window.HEYS.currentClientId = null;
+                                                    if (window.HEYS.store?.flushMemory) {
+                                                        window.HEYS.store.flushMemory();
+                                                    }
+                                                }
+                                                removeGlobalValue('heys_client_current');
+                                                setClientId('');
+                                                window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: null } }));
+                                                setShowClientDropdown(false);
+                                            }
+                                        },
+                                        '👥 Все клиенты'
+                                    ),
+                                    // Кнопка Выход с email
+                                    React.createElement(
+                                        'div',
+                                        {
+                                            key: 'logout',
+                                            className: 'client-dropdown-sticky-btn client-dropdown-sticky-btn--logout',
+                                            style: {
+                                                padding: '8px 16px 12px',
+                                                textAlign: 'center',
+                                                cursor: 'pointer',
+                                                fontSize: 13
+                                            },
+                                            onClick: () => {
+                                                setShowClientDropdown(false);
+                                                handleSignOut();
+                                            }
+                                        },
+                                        React.createElement('div', {
+                                            className: 'client-dropdown-sticky-email',
+                                            style: { fontSize: 11, marginBottom: 4 }
+                                        }, cloudUser?.email || ''),
+                                        React.createElement('span', {
+                                            className: 'client-dropdown-sticky-logout-label'
+                                        }, '🚪 Выйти')
+                                    )
                                 )
                             ]
                     ),
@@ -438,111 +588,132 @@
                             zIndex: 999
                         },
                         onClick: () => setShowClientDropdown(false)
-                    }),
-                    // Cloud sync indicator
-                    React.createElement('div', {
-                        key: 'cloud-' + cloudStatus, // Force re-render on status change
-                        className: 'cloud-sync-indicator ' + cloudStatus,
-                        title: (() => {
-                            const routingMode = HEYS?.cloud?.getRoutingStatus?.()?.mode || 'unknown';
-                            const modeLabel = routingMode === 'direct' ? '🔗 Direct' : routingMode === 'proxy' ? '🔀 Proxy' : '';
-                            const baseTitle = cloudStatus === 'syncing'
-                                ? (syncProgress.total > 1
-                                    ? `Синхронизация... ${syncProgress.synced}/${syncProgress.total}`
-                                    : 'Синхронизация...')
-                                : cloudStatus === 'synced' ? 'Сохранено в облако'
-                                    : cloudStatus === 'offline'
-                                        ? (pendingCount > 0
-                                            ? `Офлайн — ${pendingCount} изменений ожидают синхронизации`
-                                            : 'Офлайн — данные сохраняются локально')
-                                        : cloudStatus === 'error'
-                                            ? (retryCountdown > 0 ? `Ошибка. Повтор через ${retryCountdown}с` : 'Ошибка синхронизации')
-                                            : 'Подключено к облаку';
-                            return modeLabel ? `${baseTitle} (${modeLabel})` : baseTitle;
-                        })(),
-                        // Синее облако — сеть есть, зелёная галочка — синхронизировано
-                        dangerouslySetInnerHTML: {
-                            __html: cloudStatus === 'syncing'
-                                ? '<div class="sync-spinner"></div>' + (syncProgress.total > 1 ? '<span class="sync-progress">' + syncProgress.synced + '/' + syncProgress.total + '</span>' : '')
-                                : cloudStatus === 'synced'
-                                    ? '<span class="cloud-icon synced">✓</span>'
-                                    : cloudStatus === 'offline'
-                                        ? '<svg class="cloud-icon offline" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2"/></svg>' + (pendingCount > 0 ? '<span class="pending-badge">' + pendingCount + '</span>' : '')
-                                        : cloudStatus === 'error'
-                                            ? '<span class="cloud-icon error">⚠</span>' + (retryCountdown > 0 ? '<span class="retry-countdown">' + retryCountdown + '</span>' : '')
-                                            : '<svg class="cloud-icon idle" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>'
-                        }
-                    }),
-                    // Кнопки "Вчера" + "Сегодня" + DatePicker
-                    (tab === 'stats' || tab === 'diary' || tab === 'insights' || tab === 'month' || tab === 'widgets') && window.HEYS.DatePicker
-                        ? React.createElement('div', { className: 'hdr-date-group' },
-                            // Кнопка быстрого перехода на вчера
-                            React.createElement('button', {
-                                className: 'yesterday-quick-btn' + (selectedDate === (() => {
-                                    const d = new Date();
-                                    if (d.getHours() < 3) d.setDate(d.getDate() - 1);
-                                    d.setDate(d.getDate() - 1);
-                                    // Локальное форматирование (не UTC!)
-                                    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-                                })() ? ' active' : ''),
-                                onClick: () => {
-                                    const d = new Date();
-                                    if (d.getHours() < 3) d.setDate(d.getDate() - 1);
-                                    d.setDate(d.getDate() - 1);
-                                    // Локальное форматирование (не UTC!)
-                                    const nextDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-                                    selectDateWithPrefetch(nextDate, { reason: 'quick-yesterday' });
-                                },
-                                title: 'Перейти на вчера'
-                            }, (() => {
-                                // До 3:00 — вчера = позавчера реально
+                    })
+                ),
+                // Cloud sync indicator
+                React.createElement('div', {
+                    key: 'cloud-' + cloudStatus, // Force re-render on status change
+                    className: 'cloud-sync-indicator ' + cloudStatus,
+                    title: (() => {
+                        const routingMode = HEYS?.cloud?.getRoutingStatus?.()?.mode || 'unknown';
+                        const modeLabel = routingMode === 'direct' ? '🔗 Direct' : routingMode === 'proxy' ? '🔀 Proxy' : '';
+                        const baseTitle = cloudStatus === 'syncing'
+                            ? (syncProgress.total > 1
+                                ? `Синхронизация... ${syncProgress.synced}/${syncProgress.total}`
+                                : 'Синхронизация...')
+                            : cloudStatus === 'synced' ? 'Сохранено в облако'
+                                : cloudStatus === 'offline'
+                                    ? (pendingCount > 0
+                                        ? `Офлайн — ${pendingCount} изменений ожидают синхронизации`
+                                        : 'Офлайн — данные сохраняются локально')
+                                    : cloudStatus === 'error'
+                                        ? (retryCountdown > 0 ? `Ошибка. Повтор через ${retryCountdown}с` : 'Ошибка синхронизации')
+                                        : 'Подключено к облаку';
+                        return modeLabel ? `${baseTitle} (${modeLabel})` : baseTitle;
+                    })(),
+                    // Синее облако — сеть есть, зелёная галочка — синхронизировано
+                    dangerouslySetInnerHTML: {
+                        __html: cloudStatus === 'syncing'
+                            ? '<div class="sync-spinner"></div>' + (syncProgress.total > 1 ? '<span class="sync-progress">' + syncProgress.synced + '/' + syncProgress.total + '</span>' : '')
+                            : cloudStatus === 'synced'
+                                ? '<span class="cloud-icon synced">✓</span>'
+                                : cloudStatus === 'offline'
+                                    ? '<svg class="cloud-icon offline" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2"/></svg>' + (pendingCount > 0 ? '<span class="pending-badge">' + pendingCount + '</span>' : '')
+                                    : cloudStatus === 'error'
+                                        ? '<span class="cloud-icon error">⚠</span>' + (retryCountdown > 0 ? '<span class="retry-countdown">' + retryCountdown + '</span>' : '')
+                                        : '<svg class="cloud-icon idle" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>'
+                    }
+                }),                    // 🚨 EWS Badge (v1.0)
+                ewsData && ewsData.count > 0 && React.createElement('div', {
+                    className: 'ews-badge' + (ewsData.highSeverityCount > 0 ? ' ews-badge--high' : ' ews-badge--medium'),
+                    title: (() => {
+                        const high = ewsData.highSeverityCount || 0;
+                        const medium = ewsData.count - high;
+                        const parts = [];
+                        if (high > 0) parts.push(`${high} критич.`);
+                        if (medium > 0) parts.push(`${medium} предупр.`);
+                        return `⚠️ Early Warning System: ${parts.join(', ')}`;
+                    })(),
+                    onClick: () => {
+                        haptic('medium');
+                        console.info('ews / badge 🚨 Badge clicked → opening panel globally');
+                        // Отправляем событие с warnings для глобального менеджера панели
+                        window.dispatchEvent(new CustomEvent('heysShowEWSPanel', {
+                            detail: { warnings: ewsData.warnings || [] }
+                        }));
+                    }
+                }, [
+                    React.createElement('span', { className: 'ews-badge__icon' }, '⚠️'),
+                    React.createElement('span', { className: 'ews-badge__count' }, ewsData.count)
+                ]),                    // Кнопки "Вчера" + "Сегодня" + DatePicker
+                (tab === 'stats' || tab === 'diary' || tab === 'insights' || tab === 'month' || tab === 'widgets') && window.HEYS.DatePicker
+                    ? React.createElement('div', { className: 'hdr-date-group' },
+                        // Кнопка быстрого перехода на вчера
+                        React.createElement('button', {
+                            className: 'yesterday-quick-btn' + (selectedDate === (() => {
                                 const d = new Date();
                                 if (d.getHours() < 3) d.setDate(d.getDate() - 1);
                                 d.setDate(d.getDate() - 1);
-                                return d.getDate();
-                            })()),
-                            // Кнопка быстрого перехода на сегодня (учитываем ночной порог)
-                            React.createElement('button', {
-                                className: 'today-quick-btn' + (selectedDate === todayISO() ? ' active' : ''),
-                                onClick: () => selectDateWithPrefetch(todayISO(), { reason: 'quick-today' }),
-                                title: 'Перейти на сегодня'
-                            }, (() => {
-                                // До 3:00 — показываем вчерашнее число
+                                // Локальное форматирование (не UTC!)
+                                return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                            })() ? ' active' : ''),
+                            onClick: () => {
                                 const d = new Date();
                                 if (d.getHours() < 3) d.setDate(d.getDate() - 1);
-                                return d.getDate();
-                            })()),
-                            // DatePicker
-                            React.createElement(window.HEYS.DatePicker, {
-                                valueISO: selectedDate,
-                                onSelect: (nextDate) => selectDateWithPrefetch(nextDate, { reason: 'date-picker' }),
-                                onRemove: () => {
-                                    selectDateWithPrefetch(todayISO(), { reason: 'date-picker-clear' });
-                                },
-                                activeDays: datePickerActiveDays,
-                                // Функция для загрузки данных при смене месяца
-                                getActiveDaysForMonth: (year, month) => {
-                                    const getActiveDaysForMonthFn = window.HEYS.dayUtils && window.HEYS.dayUtils.getActiveDaysForMonth;
-                                    // Fallback chain для products
-                                    const effectiveProducts = (products && products.length > 0) ? products
-                                        : (window.HEYS.products?.getAll?.() || [])
-                                            .length > 0 ? window.HEYS.products.getAll()
-                                            : (U.lsGet?.('heys_products', []) || []);
-                                    // Fallback chain для profile
-                                    const effectiveProfile = cachedProfile || (U && U.lsGet ? U.lsGet('heys_profile', {}) : {});
-                                    if (!getActiveDaysForMonthFn || !clientId || effectiveProducts.length === 0) {
-                                        return new Map();
-                                    }
-                                    try {
-                                        return getActiveDaysForMonthFn(year, month, effectiveProfile, effectiveProducts);
-                                    } catch (e) {
-                                        return new Map();
-                                    }
+                                d.setDate(d.getDate() - 1);
+                                // Локальное форматирование (не UTC!)
+                                const nextDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                                selectDateWithPrefetch(nextDate, { reason: 'quick-yesterday' });
+                            },
+                            title: 'Перейти на вчера'
+                        }, (() => {
+                            // До 3:00 — вчера = позавчера реально
+                            const d = new Date();
+                            if (d.getHours() < 3) d.setDate(d.getDate() - 1);
+                            d.setDate(d.getDate() - 1);
+                            return d.getDate();
+                        })()),
+                        // Кнопка быстрого перехода на сегодня (учитываем ночной порог)
+                        React.createElement('button', {
+                            className: 'today-quick-btn' + (selectedDate === todayISO() ? ' active' : ''),
+                            onClick: () => selectDateWithPrefetch(todayISO(), { reason: 'quick-today' }),
+                            title: 'Перейти на сегодня'
+                        }, (() => {
+                            // До 3:00 — показываем вчерашнее число
+                            const d = new Date();
+                            if (d.getHours() < 3) d.setDate(d.getDate() - 1);
+                            return d.getDate();
+                        })()),
+                        // DatePicker
+                        React.createElement(window.HEYS.DatePicker, {
+                            valueISO: selectedDate,
+                            onSelect: (nextDate) => selectDateWithPrefetch(nextDate, { reason: 'date-picker' }),
+                            onRemove: () => {
+                                selectDateWithPrefetch(todayISO(), { reason: 'date-picker-clear' });
+                            },
+                            activeDays: datePickerActiveDays,
+                            // Функция для загрузки данных при смене месяца
+                            getActiveDaysForMonth: (year, month) => {
+                                const getActiveDaysForMonthFn = window.HEYS.dayUtils && window.HEYS.dayUtils.getActiveDaysForMonth;
+                                // Fallback chain для products
+                                const effectiveProducts = (products && products.length > 0) ? products
+                                    : (window.HEYS.products?.getAll?.() || [])
+                                        .length > 0 ? window.HEYS.products.getAll()
+                                        : (U.lsGet?.('heys_products', []) || []);
+                                // Fallback chain для profile
+                                const effectiveProfile = cachedProfile || (U && U.lsGet ? U.lsGet('heys_profile', {}) : {});
+                                if (!getActiveDaysForMonthFn || !clientId || effectiveProducts.length === 0) {
+                                    return new Map();
                                 }
-                            }),
-                        )
-                        : null,
-                ),
+                                try {
+                                    return getActiveDaysForMonthFn(year, month, effectiveProfile, effectiveProducts);
+                                } catch (e) {
+                                    return new Map();
+                                }
+                            }
+                        }),
+                    )
+                    : null
             )
         );
     }

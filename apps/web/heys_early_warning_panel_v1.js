@@ -22,7 +22,7 @@
     const ReactDOM = global.ReactDOM;
 
     if (!React) {
-        console.error('[HEYS.EarlyWarningPanel] ❌ React not found');
+        console.error('ews / panel ❌ React not found');
         return;
     }
 
@@ -44,7 +44,7 @@
             const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored;
             return new Set(Array.isArray(parsed) ? parsed : []);
         } catch (err) {
-            console.warn('[HEYS.EarlyWarningPanel] Failed to load dismissed warnings:', err);
+            console.warn('ews / panel ⚠️ failed to load dismissed warnings:', err);
             return new Set();
         }
     }
@@ -63,7 +63,7 @@
                 localStorage.setItem(DISMISSED_WARNINGS_KEY, JSON.stringify(arr));
             }
         } catch (err) {
-            console.error('[HEYS.EarlyWarningPanel] Failed to save dismissed warnings:', err);
+            console.error('ews / panel ❌ failed to save dismissed warnings:', err);
         }
     }
 
@@ -125,6 +125,7 @@
      * Displays single warning with severity badge, message, detail, and actions
      */
     function WarningCard({ warning, onDismiss, onViewDetails }) {
+        const [showScience, setShowScience] = useState(false);
         const severity = warning.severity || 'low';
         const config = SEVERITY_CONFIG[severity] || SEVERITY_CONFIG.low;
 
@@ -132,9 +133,9 @@
             onDismiss(warning);
         }, [warning, onDismiss]);
 
-        const handleViewDetails = useCallback(() => {
-            onViewDetails(warning);
-        }, [warning, onViewDetails]);
+        const toggleScience = useCallback(() => {
+            setShowScience(prev => !prev);
+        }, []);
 
         return h('div', {
             className: `early-warning-modal-card early-warning-modal-card--${severity}`
@@ -163,21 +164,33 @@
                 }, '×')
             ),
 
-            // Message
-            h('p', { className: 'early-warning-modal-card__message' }, warning.message),
-
-            // Detail (if available)
+            // Main message (дружелюбное описание)
             warning.detail && h('p', {
-                className: 'early-warning-modal-card__detail'
+                className: 'early-warning-modal-card__message'
             }, warning.detail),
 
-            // Actions
-            warning.actionable && h('div', { className: 'early-warning-modal-card__actions' },
+            // Insight (более подробное объяснение)
+            warning.insight && h('p', {
+                className: 'early-warning-modal-card__detail'
+            }, warning.insight),
+
+            // Score info (if available)
+            warning.currentScore !== undefined && h('p', {
+                className: 'early-warning-modal-card__score'
+            }, `Текущий показатель: ${warning.currentScore} из 100`),
+
+            // Science toggle button (show if science is available)
+            warning.science && h('div', { className: 'early-warning-modal-card__actions' },
                 h('button', {
                     className: 'early-warning-modal-card__action-btn',
-                    onClick: handleViewDetails
-                }, '🔍 Подробнее')
-            )
+                    onClick: toggleScience
+                }, showScience ? '📖 Скрыть обоснование' : '🔬 Научное обоснование')
+            ),
+
+            // Science explanation (collapsible)
+            showScience && warning.science && h('div', {
+                className: 'early-warning-modal-card__science-content'
+            }, warning.science)
         );
     }
 
@@ -245,7 +258,7 @@
             setDismissed(newDismissed);
             saveDismissedWarnings(newDismissed);
 
-            console.info('[HEYS.EarlyWarningPanel] ✅ Warning dismissed:', warningId);
+            console.info('ews / panel ✅ warning dismissed:', warningId);
         }, [dismissed]);
 
         const handleViewDetails = useCallback((warning) => {
@@ -257,7 +270,7 @@
             // Close panel
             onClose();
 
-            console.info('[HEYS.EarlyWarningPanel] 🔍 Navigate to pattern:', warning.pattern);
+            console.info('ews / panel 🔍 navigate to pattern:', warning.pattern);
         }, [onClose]);
 
         const handleDismissAll = useCallback(() => {
@@ -269,7 +282,7 @@
             setDismissed(newDismissed);
             saveDismissedWarnings(newDismissed);
 
-            console.info('[HEYS.EarlyWarningPanel] ✅ All warnings dismissed');
+            console.info('ews / panel ✅ all warnings dismissed');
 
             // Close panel after dismissing all
             setTimeout(onClose, 300);
@@ -395,9 +408,93 @@
         return modalNode;
     }
 
+    // Global EWS Panel Manager — глобальный механизм управления панелью
+    // Позволяет открывать панель из любого места приложения (header badge, виджеты и т.д.)
+    let globalPanelState = {
+        isOpen: false,
+        warnings: null,
+        container: null
+    };
+
+    /**
+     * Глобальная функция для открытия EWS панели с предупреждениями
+     * @param {Array} warnings - массив предупреждений для отображения
+     */
+    function showEWSPanel(warnings) {
+        if (!warnings || warnings.length === 0) {
+            console.warn('ews / panel ⚠️ no warnings to display');
+            return;
+        }
+
+        console.info('ews / panel 🚨 opening panel with', warnings.length, 'warnings');
+        globalPanelState.isOpen = true;
+        globalPanelState.warnings = warnings;
+        renderGlobalPanel();
+    }
+
+    /**
+     * Закрыть глобальную панель
+     */
+    function hideEWSPanel() {
+        console.info('ews / panel closing panel');
+        globalPanelState.isOpen = false;
+        renderGlobalPanel();
+    }
+
+    /**
+     * Рендер глобальной панели
+     */
+    function renderGlobalPanel() {
+        if (!global.document || !ReactDOM) return;
+
+        // Создаём контейнер если его нет
+        if (!globalPanelState.container) {
+            globalPanelState.container = global.document.getElementById('ews-panel-root');
+            if (!globalPanelState.container) {
+                globalPanelState.container = global.document.createElement('div');
+                globalPanelState.container.id = 'ews-panel-root';
+                global.document.body.appendChild(globalPanelState.container);
+            }
+        }
+
+        // Рендерим панель
+        const root = ReactDOM.createRoot || ((container) => ({
+            render: (element) => ReactDOM.render(element, container)
+        }));
+
+        if (ReactDOM.createRoot && !globalPanelState.container.__reactRoot) {
+            globalPanelState.container.__reactRoot = ReactDOM.createRoot(globalPanelState.container);
+        }
+
+        const rootInstance = globalPanelState.container.__reactRoot || root(globalPanelState.container);
+        rootInstance.render(
+            globalPanelState.isOpen
+                ? h(EarlyWarningPanel, {
+                    isOpen: true,
+                    onClose: hideEWSPanel,
+                    warnings: globalPanelState.warnings || []
+                })
+                : null
+        );
+    }
+
     // Export
     HEYS.EarlyWarningPanel = EarlyWarningPanel;
+    HEYS.showEWSPanel = showEWSPanel;
+    HEYS.hideEWSPanel = hideEWSPanel;
 
-    console.log('[HEYS.EarlyWarningPanel] ✅ Component v1.0 loaded');
+    // Event listener для совместимости с существующим кодом
+    if (global.window) {
+        window.addEventListener('heysShowEWSPanel', function (event) {
+            const warnings = event.detail?.warnings;
+            if (warnings && warnings.length > 0) {
+                showEWSPanel(warnings);
+            } else {
+                console.warn('ews / panel ⚠️ event received but no warnings in event.detail');
+            }
+        });
+    }
+
+    console.info('ews / panel ✅ component loaded + global panel manager');
 
 })(typeof window !== 'undefined' ? window : global);
