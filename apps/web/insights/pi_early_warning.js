@@ -1965,6 +1965,7 @@
         });
 
         // Visual summary table of all 15 checks (v3.0 verification)
+        console.groupCollapsed('[EWS] 📋 All 15 Checks Summary (click to expand)');
         const checkMapping = [
             { num: 1, name: 'Health Score Decline', tier: 'Baseline', types: ['HEALTH_SCORE_DECLINE'] },
             { num: 2, name: 'Pattern Issues', tier: 'Baseline', types: ['CRITICAL_PATTERN_DEGRADATION', 'LOW_PATTERN_SCORE'] },
@@ -1982,9 +1983,9 @@
             { num: 14, name: 'Weight Plateau', tier: 'Tier 3', types: ['WEIGHT_PLATEAU'] },
             { num: 15, name: 'Weekend Pattern', tier: 'Tier 3', types: ['WEEKEND_PATTERN'] }
         ];
-        const warningTypes = new Set(warnings.map(function(w) { return w.type; }));
-        const checkSummary = checkMapping.map(function(check) {
-            var hasWarning = check.types.some(function(t) { return warningTypes.has(t); });
+        const warningTypes = new Set(warnings.map(function (w) { return w.type; }));
+        const checkSummary = checkMapping.map(function (check) {
+            var hasWarning = check.types.some(function (t) { return warningTypes.has(t); });
             return {
                 '#': check.num,
                 'Check Name': check.name,
@@ -1993,6 +1994,8 @@
             };
         });
         console.table(checkSummary);
+        console.info('[EWS]   Legend: Baseline(5) + Tier1(3) + Tier2(4) + Tier3(3) = 15 checks total');
+        console.groupEnd();
         console.info('[EWS] 📊 Summary: ' + warnings.length + ' warning(s) detected from 15 checks');
 
         return {
