@@ -1969,6 +1969,35 @@
   color: #f87171;
 }
 
+/* EWS Badge dark mode (v1.0) */
+[data-theme="dark"] .ews-badge--medium {
+  background: rgba(251, 146, 60, 0.2);
+  color: #fb923c;
+}
+
+[data-theme="dark"] .ews-badge--medium .ews-badge__count {
+  background: #fb923c;
+}
+
+[data-theme="dark"] .ews-badge--medium:hover {
+  background: rgba(251, 146, 60, 0.3);
+  box-shadow: 0 2px 8px rgba(251, 146, 60, 0.4);
+}
+
+[data-theme="dark"] .ews-badge--high {
+  background: rgba(248, 113, 113, 0.2);
+  color: #f87171;
+}
+
+[data-theme="dark"] .ews-badge--high .ews-badge__count {
+  background: #f87171;
+}
+
+[data-theme="dark"] .ews-badge--high:hover {
+  background: rgba(248, 113, 113, 0.3);
+  box-shadow: 0 2px 8px rgba(248, 113, 113, 0.4);
+}
+
 /* Offline banner dark */
 [data-theme="dark"] .offline-banner {
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);

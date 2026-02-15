@@ -7,15 +7,13 @@
     HEYS.AppTwemojiEffect.useTwemojiEffect = function ({ React, tab }) {
         const { useEffect } = React;
         useEffect(() => {
-            if (window.applyTwemoji) {
-                // Immediate + delayed to catch React render
-                window.applyTwemoji();
-                setTimeout(() => {
-                    window.applyTwemoji();
-                }, 50);
-                setTimeout(() => {
-                    window.applyTwemoji();
-                }, 150);
+            const root = document.getElementById('root') || document.body;
+
+            if (window.scheduleTwemojiParse) {
+                // Debounced reparse for current viewport content
+                window.scheduleTwemojiParse(root);
+            } else if (window.applyTwemoji) {
+                window.applyTwemoji(root);
             } else {
                 console.warn('[App] ⚠️ applyTwemoji not available');
             }

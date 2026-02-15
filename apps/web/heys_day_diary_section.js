@@ -2,10 +2,6 @@
     'use strict';
 
     const renderDiarySection = (params) => {
-        console.log('[HEYS.diary] 🚀 renderDiarySection ENTRY', {
-            hasParams: !!params,
-            paramsKeys: params ? Object.keys(params).slice(0, 10).join(', ') : 'none'
-        });
 
         const {
             React,
@@ -33,33 +29,10 @@
             HEYS: rootHEYs
         } = params || {};
 
-        console.log('[HEYS.diary] 🔍 After destructuring:', {
-            hasReact: !!React,
-            isMobile,
-            mobileSubTab,
-            hasProf: !!prof,
-            hasPIndex: pIndex !== undefined,
-            hasDayTot: !!dayTot,
-            hasNormAbs: !!normAbs
-        });
-
         if (!React) {
             console.warn('[HEYS.diary] ❌ No React provided, returning null');
             return null;
         }
-
-        console.log('[HEYS.diary] 📋 renderDiarySection called:', {
-            showDiary: !isMobile || mobileSubTab === 'diary',
-            hasProf: !!prof,
-            hasPIndex: !!pIndex,
-            hasDayTot: !!dayTot,
-            hasNormAbs: !!normAbs,
-            hasDay: !!day,
-            mealsCount: day?.meals?.length || 0,
-            profKeys: prof ? Object.keys(prof).slice(0, 5).join(', ') : 'none',
-            dayTotKeys: dayTot ? Object.keys(dayTot).slice(0, 5).join(', ') : 'none',
-            normAbsKeys: normAbs ? Object.keys(normAbs).slice(0, 5).join(', ') : 'none'
-        });
 
         const app = rootHEYs || HEYS;
         const showDiary = !isMobile || mobileSubTab === 'diary';
@@ -105,18 +78,6 @@
             optimum
         }) || null;
 
-        console.log('[HEYS.diary] 🍽️ Creating meal rec card:', {
-            hasMealRecModule: !!app.MealRecCard,
-            hasRenderCard: !!app.MealRecCard?.renderCard,
-            hasDay: !!day,
-            hasProf: !!prof,
-            hasPIndex: !!pIndex,
-            hasDayTot: !!dayTot,
-            hasNormAbs: !!normAbs,
-            mealsCount: day?.meals?.length || 0,
-            dayTotKcal: dayTot?.kcal,
-            normAbsKcal: normAbs?.kcal
-        });
 
         const mealRecCard = app.MealRecCard?.renderCard?.({
             React,

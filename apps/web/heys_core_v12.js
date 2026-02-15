@@ -570,6 +570,8 @@
     const [sharedRangeStart, setSharedRangeStart] = React.useState(0);
     const [personalRangeActive, setPersonalRangeActive] = React.useState(false);
     const [sharedRangeActive, setSharedRangeActive] = React.useState(false);
+    const lastSharedLoadRef = React.useRef(0);
+    const SHARED_LOAD_TTL_MS = 30000;
 
     // Normalization for personal products (legacy-safe)
     const normalizePersonalProduct = (product) => {
@@ -673,19 +675,29 @@
     }, [isCurator]);
 
     // Загрузка ВСЕХ продуктов из общей базы
-    const loadAllSharedProducts = React.useCallback(async () => {
+    const loadAllSharedProducts = React.useCallback(async (options = {}) => {
+      const force = !!options.force;
+      const now = Date.now();
+      if (!force && Array.isArray(allSharedProducts) && allSharedProducts.length > 0) {
+        const age = now - (lastSharedLoadRef.current || 0);
+        if (age < SHARED_LOAD_TTL_MS) {
+          return;
+        }
+      }
+
       setAllSharedLoading(true);
       try {
         const result = await window.HEYS?.cloud?.getAllSharedProducts?.({ limit: 500 });
         if (result?.data) {
           setAllSharedProducts(result.data);
+          lastSharedLoadRef.current = Date.now();
         }
       } catch (err) {
         console.error('[SHARED ALL] Load error:', err);
       } finally {
         setAllSharedLoading(false);
       }
-    }, []);
+    }, [allSharedProducts]);
 
     React.useEffect(() => {
       const cached = window.HEYS?.cloud?.getCachedSharedProducts?.();
@@ -2881,7 +2893,11 @@
         })
       );
 
-      return React.createElement('tr', { key: `${product.id}_${idx}` },
+      const rowKey = product?.id != null
+        ? String(product.id)
+        : `${mode || 'table'}_${String(product?.name || 'row')}_${idx}`;
+
+      return React.createElement('tr', { key: rowKey },
         React.createElement('td', null,
           readOnly
             ? React.createElement('div', { className: 'product-name-cell' },
@@ -3325,13 +3341,17 @@
           // 👤 Личные продукты (для клиента: "Мои", для куратора: "Клиента")
           React.createElement('button', {
             className: activeSubtab === 'personal' ? 'btn acc' : 'btn',
-            onClick: () => setActiveSubtab('personal'),
+            onClick: () => {
+              if (activeSubtab !== 'personal') setActiveSubtab('personal');
+            },
             style: { flex: 1, borderRadius: '6px' }
           }, isCurator ? '👤 Личные' : '👤 Мои продукты'),
           // 🌐 Общая база (только для куратора)
           isCurator && React.createElement('button', {
             className: activeSubtab === 'shared' ? 'btn acc' : 'btn',
-            onClick: () => setActiveSubtab('shared'),
+            onClick: () => {
+              if (activeSubtab !== 'shared') setActiveSubtab('shared');
+            },
             style: { flex: 1, borderRadius: '6px', position: 'relative' }
           },
             '🌐 Общая база',
@@ -3358,7 +3378,10 @@
       ),
 
       // === КОНТЕНТ ПОДВКЛАДКИ ===
-      activeSubtab === 'personal' ? (
+      React.createElement('div', {
+        key: `ration-subtab-${activeSubtab}`,
+        className: 'ration-subtab-content'
+      }, activeSubtab === 'personal' ? (
         // ============================================
         // 👤 ПОДВКЛАДКА: Продукты клиента
         // ============================================
@@ -3644,7 +3667,7 @@
               ),
               React.createElement('button', {
                 className: 'btn acc',
-                onClick: loadAllSharedProducts,
+                onClick: () => loadAllSharedProducts({ force: true }),
                 style: { marginLeft: '8px' }
               }, '🔄 Обновить')
             ),
@@ -3669,7 +3692,7 @@
             })
           )
         )
-      ),
+      )),
       showModal && React.createElement('div', { className: 'modal-backdrop', onClick: (e) => { if (e.target.classList.contains('modal-backdrop')) setShowModal(false); } },
         React.createElement('div', { className: 'modal' },
           React.createElement('div', { className: 'row', style: { justifyContent: 'space-between' } },
@@ -3853,11 +3876,14 @@
       U.lsSet ? U.lsSet('heys_emoji_style', style) : localStorage.setItem('heys_emoji_style', style);
     } catch { }
     document.body.className = document.body.className.replace(/emoji-\w+/g, '') + ' emoji-' + style;
-    // Reparse emoji if twemoji selected - multiple times to ensure all are caught
-    if (style === 'twemoji' && window.applyTwemoji) {
-      window.applyTwemoji();
-      setTimeout(window.applyTwemoji, 50);
-      setTimeout(window.applyTwemoji, 200);
+    // Reparse emoji if twemoji selected (single debounced pass)
+    if (style === 'twemoji') {
+      const target = document.getElementById('root') || document.body;
+      if (window.scheduleTwemojiParse) {
+        window.scheduleTwemojiParse(target);
+      } else if (window.applyTwemoji) {
+        window.applyTwemoji(target);
+      }
     }
   };
 

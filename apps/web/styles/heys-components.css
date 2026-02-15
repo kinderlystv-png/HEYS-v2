@@ -4039,6 +4039,38 @@ body.tour-active .ios-pwa-banner {
   color: #111827;
 }
 
+.monthly-week-card__header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.monthly-week-card__expand-btn {
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 7px;
+  padding: 2px 7px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  line-height: 1.2;
+  transition: all 0.15s ease;
+}
+
+.monthly-week-card__expand-btn--open {
+  background: #dbeafe;
+}
+
+.monthly-week-card__expand-btn-icon {
+  font-size: 8px;
+}
+
 .monthly-week-card__badge {
   font-size: 9px;
   font-weight: 600;
@@ -4227,6 +4259,116 @@ body.tour-active .ios-pwa-banner {
   font-weight: 500;
 }
 
+.monthly-week-days {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.monthly-week-breakdown {
+  width: 100%;
+  max-height: none;
+  border-radius: 10px;
+  box-shadow: none;
+  padding: 10px 10px 8px;
+}
+
+.monthly-week-breakdown .weekly-wrap-breakdown__table {
+  overflow: visible;
+  table-layout: fixed;
+}
+
+.monthly-week-breakdown .weekly-wrap-breakdown__cell {
+  padding: 4px 4px;
+  font-size: 10px;
+  line-height: 1.15;
+}
+
+.monthly-week-breakdown .weekly-wrap-breakdown__row--head {
+  font-size: 8px;
+}
+
+.monthly-week-breakdown .weekly-wrap-breakdown__row--head .weekly-wrap-breakdown__cell {
+  color: #64748b;
+  letter-spacing: 0.01em;
+  padding: 3px 2px;
+}
+
+.monthly-week-breakdown .weekly-wrap-breakdown__cell:nth-child(1) {
+  width: 24%;
+}
+
+.monthly-week-breakdown .weekly-wrap-breakdown__cell:nth-child(2),
+.monthly-week-breakdown .weekly-wrap-breakdown__cell:nth-child(3) {
+  width: 15%;
+}
+
+.monthly-week-breakdown .weekly-wrap-breakdown__cell:nth-child(4) {
+  width: 19%;
+}
+
+.monthly-week-breakdown .weekly-wrap-breakdown__cell:nth-child(5) {
+  width: 27%;
+}
+
+.monthly-week-breakdown .weekly-wrap-breakdown__cell--day {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  padding-left: 2px;
+}
+
+.monthly-week-day-row {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 8px;
+  background: #f9fafb;
+}
+
+.monthly-week-day-row--muted {
+  opacity: 0.75;
+}
+
+.monthly-week-day-row__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.monthly-week-day-row__title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #111827;
+  text-transform: capitalize;
+}
+
+.monthly-week-day-row__badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.monthly-week-day-row__badge {
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 2px 5px;
+  border-radius: 999px;
+}
+
+.monthly-week-day-row__badge--today {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.monthly-week-day-row__metrics {
+  gap: 3px;
+}
+
 /* Dark theme для месячных отчётов */
 [data-theme="dark"] .monthly-reports-tabs {
   background: #0f172a;
@@ -4275,6 +4417,16 @@ body.tour-active .ios-pwa-banner {
   background: #1e3a8a;
 }
 
+[data-theme="dark"] .monthly-week-card__expand-btn {
+  background: #1e3a8a;
+  border-color: #1d4ed8;
+  color: #dbeafe;
+}
+
+[data-theme="dark"] .monthly-week-card__expand-btn--open {
+  background: #1d4ed8;
+}
+
 [data-theme="dark"] .monthly-metric-block {
   background: #0f172a;
 }
@@ -4309,6 +4461,29 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .monthly-metric-label {
   color: #9ca3af;
+}
+
+[data-theme="dark"] .monthly-week-day-row {
+  background: #0f172a;
+  border-color: #1f2937;
+}
+
+[data-theme="dark"] .monthly-week-breakdown {
+  border-color: #1f2937;
+}
+
+[data-theme="dark"] .monthly-week-day-row__title {
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .monthly-week-day-row__badge {
+  color: #9ca3af;
+  background: #111827;
+}
+
+[data-theme="dark"] .monthly-week-day-row__badge--today {
+  color: #bfdbfe;
+  background: #1e3a8a;
 }
 
 [data-theme="dark"] .monthly-macro-bg {
@@ -4455,4 +4630,329 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .monthly-macro-diff-value--neutral {
   color: #9ca3af;
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * MEAL RECOMMENDER CARD (R2.7 ML Feedback)
+ * ══════════════════════════════════════════════════════════════ */
+
+.meal-rec-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.meal-rec-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.meal-rec-card--expanded {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.meal-rec-card__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.meal-rec-card__icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.meal-rec-card__title {
+  flex: 1;
+  min-width: 0;
+}
+
+.meal-rec-card__time {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.meal-rec-card__time-value {
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.meal-rec-card__subtitle {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.meal-rec-card__expand-icon {
+  font-size: 14px;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.meal-rec-card__macros {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 16px 16px;
+  flex-wrap: wrap;
+}
+
+.meal-rec-card__macro-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.meal-rec-card__macro-chip--protein {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.meal-rec-card__macro-chip--carbs {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.meal-rec-card__macro-chip--kcal {
+  background: #fce7f3;
+  color: #9f1239;
+}
+
+.meal-rec-card__macro-label {
+  font-weight: 600;
+}
+
+.meal-rec-card__macro-value {
+  font-weight: 700;
+}
+
+.meal-rec-card__macro-unit {
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.meal-rec-card__details {
+  padding: 0 16px 16px 16px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.meal-rec-card__section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 8px;
+  margin-top: 12px;
+}
+
+.meal-rec-card__suggestions {
+  margin-bottom: 12px;
+}
+
+.meal-rec-card__suggestion {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #374151;
+  padding-left: 8px;
+}
+
+.meal-rec-card__suggestion-product {
+  font-weight: 500;
+}
+
+.meal-rec-card__suggestion-grams {
+  font-weight: 600;
+  color: #6b7280;
+  margin-left: 6px;
+}
+
+.meal-rec-card__suggestion-reason {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.meal-rec-card__reasoning {
+  margin-bottom: 12px;
+}
+
+.meal-rec-card__reason {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #6b7280;
+  padding-left: 8px;
+}
+
+.meal-rec-card__confidence {
+  font-size: 12px;
+  color: #9ca3af;
+  text-align: center;
+  padding: 8px 0;
+}
+
+/* FEEDBACK SECTION (R2.7) */
+.meal-rec-card__feedback {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f3f4f6;
+  text-align: center;
+}
+
+.meal-rec-card__feedback-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+
+.meal-rec-card__feedback-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.meal-rec-card__feedback-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid #e5e7eb;
+  background: #ffffff;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.meal-rec-card__feedback-btn:hover:not(:disabled) {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  transform: scale(1.1);
+}
+
+.meal-rec-card__feedback-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.meal-rec-card__feedback-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.meal-rec-card__feedback-btn--selected {
+  border-color: #10b981;
+  background: #d1fae5;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.meal-rec-card__feedback-thanks {
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #10b981;
+}
+
+/* DARK MODE */
+[data-theme="dark"] .meal-rec-card {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+[data-theme="dark"] .meal-rec-card__time {
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .meal-rec-card__time-value {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .meal-rec-card__subtitle {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .meal-rec-card__macro-chip {
+  background: #374151;
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .meal-rec-card__macro-chip--protein {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .meal-rec-card__macro-chip--carbs {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .meal-rec-card__macro-chip--kcal {
+  background: rgba(244, 63, 94, 0.2);
+  color: #fda4af;
+}
+
+[data-theme="dark"] .meal-rec-card__details {
+  border-top-color: #374151;
+}
+
+[data-theme="dark"] .meal-rec-card__section-title {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .meal-rec-card__suggestion {
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .meal-rec-card__suggestion-grams {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .meal-rec-card__suggestion-reason {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .meal-rec-card__reason {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .meal-rec-card__confidence {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .meal-rec-card__feedback {
+  border-top-color: #374151;
+}
+
+[data-theme="dark"] .meal-rec-card__feedback-title {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .meal-rec-card__feedback-btn {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+[data-theme="dark"] .meal-rec-card__feedback-btn:hover:not(:disabled) {
+  border-color: #3b82f6;
+  background: #1e3a8a;
+}
+
+[data-theme="dark"] .meal-rec-card__feedback-btn--selected {
+  border-color: #10b981;
+  background: #064e3b;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="dark"] .meal-rec-card__feedback-thanks {
+  color: #6ee7b7;
 }

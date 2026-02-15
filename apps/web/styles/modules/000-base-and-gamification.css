@@ -3929,8 +3929,8 @@ td:first-child input {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 6px 16px;
+  gap: 6px;
+  padding: 6px 10px;
   background: #f0f0f0;
   border: 1px solid #4285f4;
   border-top: none;
@@ -3948,8 +3948,9 @@ td:first-child input {
 .hdr-client {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex: 1;
+  gap: 5px;
+  flex-shrink: 1;
+  min-width: 0;
   overflow: visible;
 }
 
@@ -3957,13 +3958,14 @@ td:first-child input {
 .hdr-date-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 0;
   margin-left: auto;
 }
 
 .hdr-client-avatar {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   border-radius: 8px;
   display: flex;
@@ -3971,7 +3973,7 @@ td:first-child input {
   justify-content: center;
   color: white;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
@@ -3988,26 +3990,37 @@ td:first-child input {
   flex-direction: column;
   gap: 0;
   line-height: 1.1;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .hdr-client-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hdr-client-firstname {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: #1f2937;
   line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hdr-client-lastname {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 400;
   color: var(--color-gray-500);
   line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Cloud sync indicator */
@@ -4023,6 +4036,7 @@ td:first-child input {
   color: var(--color-gray-500);
   transition: all 0.3s ease;
   cursor: default;
+  flex-shrink: 0;
 }
 
 /* Не использовать эмодзи, только обычные символы для offline-безопасности */
@@ -4154,6 +4168,109 @@ td:first-child input {
   background: rgba(239, 68, 68, 0.15);
   color: var(--color-red-500);
   position: relative;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   EWS BADGE — Early Warning System indicator in header (v1.0)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ews-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-width: 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  animation: ewsBadgeAppear 0.4s ease;
+  flex-shrink: 0;
+}
+
+.ews-badge__icon {
+  font-size: 14px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
+}
+
+.ews-badge__count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  color: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Medium severity (orange) */
+.ews-badge--medium {
+  background: rgba(249, 115, 22, 0.15);
+  color: #ea580c;
+}
+
+.ews-badge--medium .ews-badge__count {
+  background: #ea580c;
+}
+
+.ews-badge--medium:hover {
+  background: rgba(249, 115, 22, 0.25);
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+}
+
+.ews-badge--medium:active {
+  transform: scale(0.95);
+}
+
+/* High severity (red) */
+.ews-badge--high {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+.ews-badge--high .ews-badge__count {
+  background: #dc2626;
+}
+
+.ews-badge--high:hover {
+  background: rgba(239, 68, 68, 0.25);
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.ews-badge--high:active {
+  transform: scale(0.95);
+}
+
+/* Appearance animation */
+@keyframes ewsBadgeAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -6765,9 +6882,64 @@ body:has(.offline-banner) .wrap {
   background: rgba(102, 126, 234, 0.08) !important;
 }
 
+.client-dropdown-scroll-list {
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.client-dropdown-sticky-actions {
+  border-top: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.08) 0%, var(--card) 36%);
+  box-shadow: 0 -10px 16px -16px rgba(15, 23, 42, 0.5);
+}
+
+.client-dropdown-sticky-btn {
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.client-dropdown-sticky-btn:active {
+  transform: scale(0.99);
+}
+
+.client-dropdown-sticky-btn--all {
+  color: #4285f4;
+  font-weight: 500;
+}
+
+.client-dropdown-sticky-btn--all:hover {
+  background: rgba(66, 133, 244, 0.08);
+}
+
+.client-dropdown-sticky-btn--logout:hover {
+  background: rgba(239, 68, 68, 0.07);
+}
+
+.client-dropdown-sticky-email {
+  color: var(--muted);
+}
+
+.client-dropdown-sticky-logout-label {
+  color: #ef4444;
+}
+
 [data-theme="dark"] .client-dropdown {
   background: var(--card) !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .client-dropdown-sticky-actions {
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.12) 0%, var(--card) 42%);
+  box-shadow: 0 -10px 18px -16px rgba(2, 6, 23, 0.85);
+}
+
+[data-theme="dark"] .client-dropdown-sticky-btn--all:hover {
+  background: rgba(66, 133, 244, 0.16);
+}
+
+[data-theme="dark"] .client-dropdown-sticky-btn--logout:hover {
+  background: rgba(239, 68, 68, 0.14);
 }
 
 @keyframes pop {

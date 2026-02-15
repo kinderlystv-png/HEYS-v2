@@ -146,6 +146,14 @@
                     ? Math.round(weights.reduce((s, w) => s + w, 0) / weights.length * 10) / 10
                     : (profile.weight || 0);
 
+                const reportDays = (report.days || []).map((d) => {
+                    const sourceDay = dayMap.get(d.dateStr);
+                    return {
+                        ...d,
+                        weightMorning: Number.isFinite(sourceDay?.weightMorning) ? sourceDay.weightMorning : 0
+                    };
+                });
+
                 const mondayLabel = monday.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
                 const sundayLabel = sundayDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
                 const rangeLabel = `${mondayLabel} – ${sundayLabel}`;
@@ -154,7 +162,7 @@
                     rangeLabel,
                     monday: mondayStr,
                     sunday: sundayStr,
-                    report: { ...report, avgWeight },
+                    report: { ...report, avgWeight, days: reportDays },
                     isCurrent: weekOffset === 0
                 });
             }
