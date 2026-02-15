@@ -1723,8 +1723,17 @@
 
                 window.twemojiReady = true;
 
-                // Apply Twemoji parsing
-                window.applyTwemoji = function (el) {
+                var parseTimeout = null;
+                var isParsing = false;
+                var pendingTarget = null;
+                var lastParsedAt = 0;
+                var MIN_PARSE_INTERVAL_MS = 120;
+
+                function resolveTwemojiTarget(el) {
+                    return el || document.getElementById('root') || document.body;
+                }
+
+                function runTwemojiParse(el) {
                     if (window.heysEmojiStyle !== 'twemoji') return;
                     if (!window.twemoji) return;
                     // Не парсить эмодзи когда нет сети — иначе бесконечные ошибки загрузки SVG
@@ -1735,36 +1744,99 @@
                         document.body.classList.add('emoji-twemoji');
                     }
 
-                    var target = el || document.body;
-                    twemoji.parse(target, {
-                        folder: 'svg',
-                        ext: '.svg',
-                        base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/'
-                    });
+                    var target = resolveTwemojiTarget(el);
+
+                    if (isParsing) {
+                        pendingTarget = pendingTarget || target;
+                        return;
+                    }
+
+                    var now = Date.now();
+                    var elapsed = now - lastParsedAt;
+                    if (elapsed < MIN_PARSE_INTERVAL_MS) {
+                        if (parseTimeout) clearTimeout(parseTimeout);
+                        parseTimeout = setTimeout(function () {
+                            runTwemojiParse(target);
+                        }, MIN_PARSE_INTERVAL_MS - elapsed);
+                        return;
+                    }
+
+                    isParsing = true;
+                    try {
+                        twemoji.parse(target, {
+                            folder: 'svg',
+                            ext: '.svg',
+                            base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/'
+                        });
+                        lastParsedAt = Date.now();
+                    } finally {
+                        isParsing = false;
+                    }
+
+                    if (pendingTarget) {
+                        var nextTarget = pendingTarget;
+                        pendingTarget = null;
+                        if (parseTimeout) clearTimeout(parseTimeout);
+                        parseTimeout = setTimeout(function () {
+                            runTwemojiParse(nextTarget);
+                        }, MIN_PARSE_INTERVAL_MS);
+                    }
+                }
+
+                // Apply Twemoji parsing
+                window.applyTwemoji = function (el) {
+                    runTwemojiParse(el);
                 };
 
                 // Debounced parse
-                var parseTimeout = null;
-                window.scheduleTwemojiParse = function () {
+                window.scheduleTwemojiParse = function (el) {
                     // Не ставить таймер если нет сети
                     if (!navigator.onLine) return;
                     if (parseTimeout) clearTimeout(parseTimeout);
-                    parseTimeout = setTimeout(window.applyTwemoji, 30);
+                    parseTimeout = setTimeout(function () {
+                        runTwemojiParse(el);
+                    }, 80);
                 };
 
                 // Parse immediately
-                window.applyTwemoji();
+                window.applyTwemoji(document.getElementById('root') || document.body);
 
                 // MutationObserver for dynamic content
-                var observer = new MutationObserver(function () {
-                    window.scheduleTwemojiParse();
+                var observer = new MutationObserver(function (mutations) {
+                    var parseTarget = null;
+
+                    for (var i = 0; i < mutations.length; i++) {
+                        var m = mutations[i];
+
+                        if (m.type === 'childList' && m.addedNodes && m.addedNodes.length) {
+                            for (var j = 0; j < m.addedNodes.length; j++) {
+                                var node = m.addedNodes[j];
+                                if (node && node.nodeType === 1) {
+                                    parseTarget = node;
+                                    break;
+                                }
+                                if (node && node.nodeType === 3 && m.target && m.target.nodeType === 1) {
+                                    parseTarget = m.target;
+                                    break;
+                                }
+                            }
+                        } else if (m.type === 'characterData' && m.target && m.target.parentElement) {
+                            parseTarget = m.target.parentElement;
+                        }
+
+                        if (parseTarget) break;
+                    }
+
+                    if (parseTarget) {
+                        window.scheduleTwemojiParse(parseTarget);
+                    }
                 });
 
                 // Wait for root to exist
                 var startObserver = function () {
                     var root = document.getElementById('root');
                     if (root) {
-                        observer.observe(root, { childList: true, subtree: true });
+                        observer.observe(root, { childList: true, subtree: true, characterData: true });
                     } else {
                         setTimeout(startObserver, 10);
                     }
@@ -1773,16 +1845,13 @@
 
                 // Reparse when back online
                 window.addEventListener('online', function () {
-                    window.applyTwemoji();
+                    window.scheduleTwemojiParse(document.getElementById('root') || document.body);
                 });
 
-                // Aggressive reparsing during page load
-                setTimeout(window.applyTwemoji, 100);
-                setTimeout(window.applyTwemoji, 300);
-                setTimeout(window.applyTwemoji, 600);
-                setTimeout(window.applyTwemoji, 1000);
-                setTimeout(window.applyTwemoji, 2000);
-                setTimeout(window.applyTwemoji, 4000);
+                // One delayed pass after initial React mount
+                setTimeout(function () {
+                    window.scheduleTwemojiParse(document.getElementById('root') || document.body);
+                }, 250);
             }
 
             // If Twemoji already loaded, init now. Otherwise wait for it.
@@ -1992,14 +2061,16 @@
     <script defer src="insights/pi_calculations.js?v=8" fetchpriority="low"></script>
     <!-- 🆕 Insights PI v3.5.0+ — Advanced Modules (Early Warning, What-If, Meal Rec, Feedback) -->
     <script defer src="insights/pi_phenotype.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/pi_early_warning.js?v=3" fetchpriority="low"></script>
+    <script defer src="insights/pi_early_warning.js?v=9" fetchpriority="low"></script>
     <script defer src="insights/pi_whatif.js?v=2" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_phenotype.js?v=1" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_whatif_scenarios.js?v=6" fetchpriority="low"></script>
     <script defer src="insights/pi_product_picker.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/pi_meal_recommender.js?v=2" fetchpriority="low"></script>
+    <script defer src="insights/pi_meal_rec_patterns.js?v=1" fetchpriority="low"></script>
+    <script defer src="insights/pi_meal_recommender.js?v=4" fetchpriority="low"></script>
     <script defer src="insights/pi_feedback_loop.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/pi_ui_meal_rec_card.js?v=1" fetchpriority="low"></script>
+    <script defer src="insights/pi_meal_rec_feedback.js?v=3" fetchpriority="low"></script>
+    <script defer src="insights/pi_ui_meal_rec_card.js?v=11" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_helpers.js?v=1" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_rings.js?v=6" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_cards.js?v=8" fetchpriority="low"></script>
@@ -2039,9 +2110,10 @@
     <!-- Widgets Dashboard system -->
     <script defer src="heys_widgets_events_v1.js?v=1" fetchpriority="low"></script>
     <script defer src="heys_widgets_registry_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_widgets_data_crash_risk_v1.js?v=1" fetchpriority="low"></script>
     <script defer src="heys_widgets_core_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="widgets/widget_data.js?v=5" fetchpriority="low"></script>
-    <script defer src="heys_widgets_ui_v1.js?v=3" fetchpriority="low"></script>
+    <script defer src="widgets/widget_data.js?v=6" fetchpriority="low"></script>
+    <script defer src="heys_widgets_ui_v1.js?v=4" fetchpriority="low"></script>
     <!-- Auth + Login (client phone+PIN, curator email+password) -->
     <script defer src="heys_auth_v1.js?v=3" fetchpriority="high"></script>
     <script defer src="heys_subscription_v1.js?v=1" fetchpriority="high"></script>
@@ -2051,10 +2123,10 @@
     <script src="heys_ui_onboarding_v1.js"></script>
     <script defer src="heys_app_hooks_v1.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_app_tabs_v1.js?v=1" fetchpriority="high"></script>
-    <script defer src="heys_early_warning_panel_v1.js?v=8" fetchpriority="high"></script>
+    <script defer src="heys_early_warning_panel_v1.js?v=15" fetchpriority="high"></script>
     <script defer src="heys_gamification_bar_v1.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_app_gates_v1.js?v=1" fetchpriority="high"></script>
-    <script defer src="heys_app_shell_v1.js?v=2" fetchpriority="high"></script>
+    <script defer src="heys_app_shell_v1.js?v=8" fetchpriority="high"></script>
     <script defer src="heys_app_overlays_v1.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_app_gate_flow_v1.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_app_backup_v1.js?v=1" fetchpriority="high"></script>
