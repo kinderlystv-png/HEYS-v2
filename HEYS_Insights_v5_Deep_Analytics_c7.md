@@ -394,6 +394,142 @@ onClick: async () => {
 
 ---
 
+#### **✅ EWS v3.1 — Advanced Features** (15.02.2026) — **ЗАВЕРШЕНО**
+
+**Upgrade:** `pi_early_warning.js` v1.0 (510 LOC) → **v3.1 (2427 LOC)**
+
+**Статус:** ✅ Все 4 фичи реализованы и проверены
+
+**Release Notes:**
+
+1. **✅ Pipeline Logging Standard** — структурированные логи с фильтром `ews /`
+   - 5 обязательных фаз: 🚀 start → 📥 input → 🧮 compute → ✅ result → 🖥️ ui
+   - Все 15 checks имеют JSON-логи с метриками
+   - Таблица развернута по умолчанию (`console.group`)
+   - DoD: фича неполная без полного lifecycle в консоли
+
+2. **✅ Actionable Steps** — конкретные действия для 11 warning типов
+   - Каждый warning имеет `actions: [...]` массив с 2-3 шагами
+   - Формат: время, цифры, измеримые параметры
+   - Примеры:
+     - SLEEP_DEBT: "Установите будильник на отбой сон за 8 часов до подъёма"
+     - PROTEIN_DEFICIT: "Добавьте 20-40г белка к каждому приёму пищи"
+     - WEEKEND_PATTERN: "Включите выходные в план: calorie cycling 80/20"
+
+3. **✅ Warning Trends Tracking** — частота warnings за 14/30 дней
+   - localStorage: `heys_ews_trends_v1` с историей occurrences
+   - Auto-cleanup: удаляет данные >30 дней
+   - Top-3 chronic warnings по frequency30d
+   - Pipeline logs: `ews / trends` с таблицей топ-3
+   - Структура:
+     ```json
+     {
+       "version": 1,
+       "trends": {
+         "SLEEP_DEBT": {
+           "occurrences": [
+             {
+               "date": "2026-02-15",
+               "timestamp": 1739577600000,
+               "severity": "high"
+             }
+           ],
+           "frequency14d": 3,
+           "frequency30d": 7
+         }
+       },
+       "lastUpdated": "2026-02-15"
+     }
+     ```
+
+4. **✅ Priority Queue** — ранжирование по severity × frequency × health impact
+   - Формула:
+     `severity_weight (1-3) × frequency14d (1-14) × health_impact (0-100)`
+   - Health Impact Scores:
+     - High Impact (80-100): SLEEP_DEBT=95, STRESS=90, MOOD=85, BINGE_RISK=85
+     - Medium (60-79): HEALTH_SCORE_DECLINE=75, STATUS=70, PROTEIN=65
+     - Lower (30-59): MEAL_SKIP=55, WEEKEND=50, WEIGHT_PLATEAU=30
+   - Top-3 маркировка: `criticalPriority: true`,
+     `priorityLabel: '🔥 Fix First!'`
+   - Pipeline logs: `ews / priority` с приоритетной таблицей
+
+**API Updates:**
+
+```javascript
+// Export API (v3.1)
+HEYS.InsightsPI.EarlyWarning = {
+  detect: detectEarlyWarnings, // Main detection function
+  trackTrends: trackWarningTrends, // Manual trends tracking
+  prioritize: prioritizeWarnings, // Manual prioritization
+  thresholds: THRESHOLDS, // Configuration constants
+  healthImpact: HEALTH_IMPACT_SCORES, // Health impact scores (0-100)
+  version: '3.1.0',
+};
+
+// Result format (enhanced)
+const result = {
+  available: true,
+  count: 6,
+  warnings: [
+    // Prioritized warnings with full metadata
+    {
+      type: 'SLEEP_DEBT',
+      severity: 'high',
+      message: '...',
+      detail: '...',
+      actions: ['action1', 'action2', 'action3'],
+      priorityScore: 855, // 3 × 3 × 95
+      frequency14d: 3,
+      healthImpact: 95,
+      severityWeight: 3,
+      criticalPriority: true, // Top-3 only
+      priorityLabel: '🔥 Fix First!',
+    },
+  ],
+  trends: {
+    chronicWarnings: [
+      {
+        type: 'SLEEP_DEBT',
+        frequency14d: 3,
+        frequency30d: 7,
+        lastOccurrence: '2026-02-15',
+      },
+    ],
+    allTrends: {
+      /* full trends object */
+    },
+  },
+  criticalPriority: [
+    /* top-3 warnings */
+  ],
+};
+```
+
+**Testing:**
+
+- ✅ Test script: `apps/web/insights/test_ews_v3.1.js` (автоматическая
+  валидация)
+- ✅ Guide: `docs/EWS_V3.1_TESTING_GUIDE.md` (полная инструкция)
+- ✅ Console filter: `ews /` показывает все фазы (detect/trends/priority)
+- ✅ No syntax errors, module loads correctly
+- ✅ localStorage persistence работает
+- ✅ Priority формула проверена на mock data
+
+**Cache-bust:** `pi_early_warning.js?v=15`
+
+**Files changed:**
+
+- `apps/web/insights/pi_early_warning.js` (v3.1, 2427 LOC)
+- `apps/web/index.html` (cache-bust v15)
+- `apps/web/insights/test_ews_v3.1.js` (new)
+- `docs/EWS_V3.1_TESTING_GUIDE.md` (new)
+
+**Performance:** <100ms для 30 дней данных
+
+**Next:** UI Panel интеграция — отображение chronic warnings + priority badges
+
+---
+
 ### **✅ ФАЗА 3: Phenotype-Aware Thresholds** (Priority 3, 5-7 дней) — **ЗАВЕРШЕНА 15.02.2026**
 
 **🧬 Пункт 8 — Персонализация порогов**
@@ -1622,9 +1758,70 @@ console.info('[HEYS.ewsBadge] ✅ Badge updated:', {
   `BINGE_RISK`
 - **Tier 3:** `MOOD_WELLBEING_DECLINE`, `WEIGHT_PLATEAU`, `WEEKEND_PATTERN`
 
-#### Logging Standard (обязательно)
+#### EWS v3.1 — Enterprise Hardening Backlog (после v3.0)
 
-Для всех новых EWS предупреждений вводится единый фильтр логов: **`ews /`**.
+1. **Warning Trends (14/30 дней)**
+
+- Частота каждого warning: разовые vs хронические.
+- Вывод в панель и в консоль агрегатом.
+
+2. **Priority Queue (что чинить первым)**
+
+- Приоритизация по формуле: `severity × frequency × healthImpact`.
+- Top-3 действий в UI + верификационный лог.
+
+3. **Actionable Steps (2-3 шага на warning)**
+
+- Для каждого warning добавить `actions[]` с конкретными next steps.
+- Обязателен рендер steps в panel card.
+
+4. **Cross-warning Causal Chains**
+
+- Каскады вида: `sleep_debt -> stress_accumulation -> binge_risk`.
+- Показывать root-cause и связанный риск.
+
+5. **Weekly Progress Tracking**
+
+- Delta week-over-week: improved / worsened / new.
+- Визуальный и консольный summary.
+
+6. **EWS Global Score (0-100)**
+
+- Интегральный risk score + breakdown по доменам.
+
+7. **Phenotype-aware EWS Thresholds**
+
+- Мультипликаторы порогов EWS по phenotype.
+
+8. **Proactive Notifications (PWA)**
+
+- Push/Local notifications для high severity.
+
+#### Logging Standard (обязательно, hard rule)
+
+Для всех новых EWS предупреждений и любых связанных EWS-фич
+(badge/panel/trends/actions/score/notifications) вводится единый фильтр логов:
+**`ews /`**.
+
+**Жёсткое правило:** новая EWS-фича считается незавершённой, пока по фильтру
+`ews /` не видно полный жизненный цикл:
+`start -> input -> compute -> result -> ui`.
+
+Минимальные обязательные логи на каждую новую фичу:
+
+1. `ews / <feature> 🚀 start`
+2. `ews / <feature> 📥 input` (ключевые входные данные)
+3. `ews / <feature> 🧮 compute` (метрики/промежуточные расчёты)
+4. `ews / <feature> ✅ result` (итог, severity/count/score)
+5. `ews / <feature> 🖥️ ui` (рендер/обновление badge/panel/card)
+
+Если фича была пропущена или не выполнена:
+
+- `ews / <feature> ⚠️ skipped: { reason }`
+
+Если ошибка:
+
+- `ews / <feature> ❌ failed: { error }`
 
 ```javascript
 // Detection pipeline
@@ -1642,6 +1839,16 @@ console.info('ews / badge ✅ updated:', {
 
 // Panel
 console.info('ews / panel 🚨 opening panel with', warnings.length, 'warnings');
+
+// New feature template (mandatory)
+console.info('ews / trend 🚀 start:', { windowDays: 14 });
+console.info('ews / trend 📥 input:', { warningsHistoryCount });
+console.info('ews / trend 🧮 compute:', { recurringTypes, chronicRate });
+console.info('ews / trend ✅ result:', { topRecurring, chronicCount });
+console.info('ews / trend 🖥️ ui:', {
+  rendered: true,
+  cards: topRecurring.length,
+});
 ```
 
 **Definition of Done для каждого нового предупреждения:**
@@ -1651,6 +1858,9 @@ console.info('ews / panel 🚨 opening panel with', warnings.length, 'warnings')
 3. Научное обоснование (`science`) в панели.
 4. Проверяемый расчёт (unit test + edge cases).
 5. Логи доступны по единому фильтру `ews /`.
+6. Логи покрывают pipeline `start/input/compute/result/ui`.
+7. В консоли по фильтру `ews /` видно, что фича реально отработала на текущих
+   данных.
 
 ---
 
@@ -1961,3 +2171,255 @@ All 4 patches successfully deployed and tested:
 - ✅ No breaking changes to public APIs
 
 **Module is production-ready for deployment!** 🚀
+
+---
+
+## 10) Meal Recommender v3.1 — План расширения паттернов + обязательные MEALREC логи (15.02.2026)
+
+### Цель
+
+Подключить к `Meal Recommender` дополнительные паттерны из C1–C41, которые дают
+максимальный практический эффект именно для:
+
+- выбора сценария (`scenario selection`),
+- расчёта макросов (`macro strategy`),
+- выбора продуктов (`product scoring/picker`),
+- динамической уверенности (`confidence composition`).
+
+Текущее состояние: используются 4 паттерна (`C09`, `C11`, `C13`, `C30`).
+
+---
+
+### Фаза A — Critical Core (высший приоритет)
+
+Подключить 6 паттернов с прямым влиянием на recommendation pipeline:
+
+1. `C35 Protein Distribution`
+
+- Влияние: корректировка целевого белка на текущий прием.
+- Точка интеграции: `calculateOptimalMacros()` / macro strategy.
+
+2. `C34 Glycemic Load`
+
+- Влияние: динамический `idealGI`, особенно для вечерних сценариев.
+- Точка интеграции: `generateSmartMealSuggestions()` + Product Picker.
+
+3. `C15 Insulin Sensitivity`
+
+- Влияние: снижение/повышение доли углеводов по метаболическому профилю.
+- Точка интеграции: scenario-specific macro multipliers.
+
+4. `C37 Added Sugar Dependency`
+
+- Влияние: штраф сахарным продуктам (аналог caffeine-aware).
+- Точка интеграции: `pi_product_picker.js` (new scoring factor).
+
+5. `C01 Meal Timing`
+
+- Влияние: персональный `ideal gap` между приемами.
+- Точка интеграции: `calculateOptimalTiming()`.
+
+6. `C02 Wave Overlap`
+
+- Влияние: предотвращение частых перекрытий инсулиновых волн.
+- Точка интеграции: timing guard + GI moderation.
+
+---
+
+### Фаза B — Context Modifiers
+
+Подключить 4 паттерна для ситуационной адаптации:
+
+1. `C06 Sleep → Hunger`
+2. `C14 Nutrient Timing`
+3. `C10 Fiber Regularity`
+4. `C12 Mood ↔ Food`
+
+Принцип: не ломаем 8 базовых сценариев, а добавляем контролируемые корректоры
+макросов/подбора продуктов.
+
+---
+
+### Фаза C — Nutrient Intelligence
+
+Подключить 2 паттерна для нутриентной персонализации:
+
+1. `C26 Micronutrient Radar`
+2. `C29 NOVA Quality`
+
+Принцип: приоритет quality-first рекомендаций без нарушения kcal/macro safety.
+
+---
+
+### Обязательные MEALREC логи (Definition of Done для каждой доработки)
+
+Любая новая фича в Meal Recommender считается незавершенной, если в консоли по
+фильтру `MEALREC` не виден полный цикл:
+
+1. `MEALREC / <feature> 🚀 start`
+2. `MEALREC / <feature> 📥 input`
+3. `MEALREC / <feature> 🧮 compute`
+4. `MEALREC / <feature> ✅ result`
+5. `MEALREC / <feature> 🖥️ ui`
+
+Если шаг пропущен:
+
+- `MEALREC / <feature> ⚠️ skipped: { reason }`
+
+Если ошибка:
+
+- `MEALREC / <feature> ❌ failed: { error }`
+
+---
+
+### Что уже сделано и уже покрыто MEALREC логами
+
+- ✅ Scenario evaluation tree (ALL 8) — табличный вывод
+- ✅ Macro strategy breakdown — табличный вывод
+- ✅ Product picks + score factors — табличный вывод
+- ✅ Dynamic confidence breakdown — табличный вывод
+- ✅ Pattern scores used in recommendation — табличный вывод
+- ✅ Caffeine-awareness penalties (evening hard-stop после 20:00)
+
+---
+
+### Технический критерий готовности v3.1
+
+1. Новые паттерны влияют на рекомендации воспроизводимо и предсказуемо.
+2. Нет регрессий по текущим сценариям (`31/31` тестов meal recommender).
+3. Все ключевые изменения наблюдаемы через единый фильтр `MEALREC`.
+4. Сохраняются safety-инварианты: timing не в прошлом, kcal budget не нарушен,
+   вечерний caffeine-stop работает.
+
+---
+
+## 11) Priority Badge (CRITICAL/HIGH/MEDIUM/LOW/INFO) — Enterprise Hardening Plan (15.02.2026)
+
+### Что это за badge и почему там «Критический»
+
+`Priority Badge` — это системный индикатор важности секции инсайтов.
+
+Текущее состояние в UI:
+
+- уровни берутся из `PRIORITY_LEVELS` (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`,
+  `INFO`);
+- для ряда секций (`STATUS_SCORE`, `CRASH_RISK`, `PRIORITY_ACTIONS`) приоритет
+  задан **статически** как `CRITICAL`;
+- из-за этого пользователь может видеть «🔴 Критический» даже при хорошем
+  состоянии (например, высокий Health Score).
+
+### Проблема текущей реализации
+
+Статический бейдж решает только задачу архитектурной сортировки секций, но не
+отражает **фактический риск пользователя в текущий момент**.
+
+Риски UX/продукта:
+
+1. **False alarm perception** — красный статус при нормальных метриках.
+2. **Alert fatigue** — пользователь привыкает игнорировать «критические»
+   сигналы.
+3. **Trust erosion** — противоречие между цифрами (`score`) и маркировкой
+   (`CRITICAL`).
+
+### Целевое enterprise-поведение
+
+Приоритет бейджа для ключевых health-секций должен быть **динамическим** и
+вычисляться по фактическим данным:
+
+1. `Health Score` (текущее значение)
+2. `Health Score Trend` (динамика за 7 дней)
+3. `Early Warnings` (severity + count + chronicity)
+
+Итоговый приоритет:
+
+- 🔴 `CRITICAL` — высокий риск, нужна немедленная коррекция
+- 🟠 `HIGH` — заметные негативные сигналы, важно действовать
+- 🟡 `MEDIUM` — умеренный риск, требуется внимание
+- 🟢 `LOW` — стабильное/хорошее состояние
+- 🔵 `INFO` — справочный режим
+
+### Комбинированная формула (предлагаемый baseline)
+
+1. Базовый уровень по `Health Score`:
+
+- `>=80` → `LOW`
+- `60-79` → `MEDIUM`
+- `40-59` → `HIGH`
+- `<40` → `CRITICAL`
+
+2. Коррекция по тренду:
+
+- устойчивое падение (`>=10` пунктов/7д) повышает приоритет на 1 уровень;
+- резкое падение (`>=20` пунктов/7д) повышает до минимум `HIGH`.
+
+3. Коррекция по EWS:
+
+- есть `high` warnings → минимум `HIGH`;
+- `>=3` high warnings или chronic top-risk → `CRITICAL`.
+
+4. Финал:
+
+- берём наиболее строгий уровень из трёх источников (score/trend/ews).
+
+### Правила отображения и текста (UX)
+
+Для health-sections вместо «низкий приоритет» использовать человеко-понятные
+подписи:
+
+- `LOW` → `Всё отлично`
+- `MEDIUM` → `Обратите внимание`
+- `HIGH` → `Важно`
+- `CRITICAL` → `Критический`
+
+Требования к UI:
+
+- бейдж не должен перекрывать контент и должен быть на белом фоне карточки;
+- цвет бейджа = функция приоритета (без конфликта с ring/category color system);
+- плавные transition при смене состояния;
+- tooltip с причиной приоритета (`score/trend/warnings`).
+
+### Архитектура внедрения (без ломки текущего API)
+
+1. Сохранить `SECTIONS_CONFIG.priority` как fallback.
+2. Добавить dynamic resolver:
+
+- `computeDynamicPriority({ sectionId, score, trend, warnings })`.
+
+3. В `InsightsTab` вычислять `resolvedPriority` и рендерить `PriorityBadge` по
+   нему.
+4. Фильтры `🔴 Важное / 🟠 Полезное` переводить на `resolvedPriority`, а не на
+   static config.
+
+### Observability / Logging Standard (обязательно)
+
+Единый фильтр логов: `priority /`
+
+Минимальный pipeline:
+
+1. `priority / resolver 🚀 start`
+2. `priority / resolver 📥 input` (score, trend, warning stats)
+3. `priority / resolver 🧮 compute` (base + boosts)
+4. `priority / resolver ✅ result` (resolvedPriority + reason)
+5. `priority / resolver 🖥️ ui` (badge rendered/updated)
+
+Пример:
+
+```javascript
+console.info('priority / resolver ✅ result:', {
+  section: 'STATUS_SCORE',
+  score: 72,
+  trend7d: -9,
+  highWarnings: 1,
+  resolvedPriority: 'HIGH',
+  reason: 'score:MEDIUM + ews:HIGH',
+});
+```
+
+### Definition of Done
+
+1. Бейдж в health-секциях соответствует реальному состоянию, а не статическому
+   preset.
+2. Нет кейсов «🔴 Критический» при явно хорошем состоянии без warning-сигналов.
+3. Фильтры секций работают по `resolvedPriority`.
+4. В логах по `priority /` виден полный pipeline.
+5. Нет регрессий в сортировке/рендеринге секций и существующих EWS компонентов.
