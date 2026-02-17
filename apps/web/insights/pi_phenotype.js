@@ -47,6 +47,15 @@
             neutral: 1.0
         },
 
+        // Daily protein target (g/kg body weight)
+        proteinTarget: {
+            low_satiety: 1.2,           // Need more protein for satiety
+            high_satiety: 0.9,          // Lower needs
+            insulin_resistant: 1.15,    // Higher protein ratio
+            metabolic_syndrome_risk: 1.1, // Preserve muscle mass
+            neutral: 1.0
+        },
+
         // Meal frequency (default = 3-4 meals/day)
         mealFrequency: {
             low_satiety: 1.2,           // More frequent meals OK (4 → 4.8)
@@ -82,6 +91,56 @@
         stressEatingThreshold: {
             stress_eater: 1.3,          // More sensitive detection
             stress_anorexic: 0.8,       // Less sensitive
+            neutral: 1.0
+        },
+
+        // NEW v5.0: EWS Specific Thresholds
+
+        // Sodium limit (default = 2300-2500 mg)
+        sodiumLimit: {
+            insulin_resistant: 0.8,     // Stricter limit for BP/water retention
+            metabolic_syndrome_risk: 0.7, // Very strict
+            high_satiety: 1.1,          // Can tolerate slightly more
+            neutral: 1.0
+        },
+
+        // Sugar limit (default = 25-30g added sugar)
+        sugarLimit: {
+            insulin_resistant: 0.5,     // Very strict reduction needed
+            metabolic_syndrome_risk: 0.4, // Minimal sugar
+            stress_eater: 0.6,          // Trigger food reduction
+            neutral: 1.0
+        },
+
+        // Fiber target (default = 25-30g)
+        fiberTarget: {
+            insulin_resistant: 1.2,     // Need more for blood sugar control
+            low_satiety: 1.3,           // Maximize volume/satiety
+            gut_health_risk: 1.25,      // (Future phenotype)
+            neutral: 1.0
+        },
+
+        // Fasting window hours (eating window duration)
+        mealTimeWindow: {
+            insulin_resistant: 0.9,     // Shorter eating window better (TRF)
+            evening_type: 1.1,          // Shifted window
+            stress_anorexic: 1.2,       // Longer window to ensure intake
+            neutral: 1.0
+        },
+
+        // Binge volume threshold (kcal in one sitting)
+        bingeVolume: {
+            volume_eater: 1.2,          // Higher threshold (adaptation)
+            stress_eater: 0.8,          // Lower threshold (early warning)
+            low_satiety: 0.9,           // Lower threshold
+            neutral: 1.0
+        },
+
+        // Meal skip tolerance (hours between meals)
+        mealSkipTolerance: {
+            stress_anorexic: 0.7,       // Alert earlier on skips
+            low_satiety: 0.8,           // Needs frequent meals
+            morning_type: 0.9,          // Early energy needs
             neutral: 1.0
         }
     };

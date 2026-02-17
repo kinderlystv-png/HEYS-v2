@@ -1,5 +1,5 @@
 /**
- * HEYS Predictive Insights — Early Warning System v3.1
+ * HEYS Predictive Insights — Early Warning System v3.2
  * 
  * Проактивная детекция негативных трендов до того, как они станут проблемой.
  * 
@@ -24,8 +24,12 @@
 (function (global) {
     'use strict';
 
+    console.info('[pi_early_warning.js] 🚀 Script execution started');
+
     const HEYS = global.HEYS = global.HEYS || {};
     HEYS.InsightsPI = HEYS.InsightsPI || {};
+
+    console.info('[pi_early_warning.js] 🔧 Initializing module...');
 
     // Thresholds for warnings
     const THRESHOLDS = {
@@ -38,7 +42,7 @@
         SLEEP_DEFICIT_HOURS: 7,
         CALORIC_DEBT_DAYS: 2,
         CALORIC_DEBT_THRESHOLD: 1500,
-        MIN_DAYS_FOR_ANALYSIS: 7
+        MIN_DAYS_FOR_ANALYSIS: 6  // Temporarily lowered from 7 for testing
     };
 
     // Critical patterns (C1-C22) that require immediate attention
@@ -71,8 +75,18 @@
         important: 45  // Important patterns below this = medium severity warning
     };
 
+    // Dual-Mode Architecture (v4.0): Acute vs Full mode checks
+    // ACUTE mode: 10 checks for badge (≤5 day window, current state alerts)
+    //   - Focus: immediate actionable signals, hydration, sleep, weight, stress
+    //   - Use case: header badge quick glance (7 days data)
+    // FULL mode: all 25 checks for insights dashboard (7-30 day patterns, comprehensive audit)
+    //   - Focus: accumulated patterns, nutrition quality, trends
+    //   - Use case: insights card deep dive (30 days data)
+    const ACUTE_CHECK_IDS = [1, 3, 4, 5, 6, 7, 8, 9, 10, 19];
+
     // localStorage key for warning trends tracking (v3.1)
     const TRENDS_STORAGE_KEY = 'heys_ews_trends_v1';
+    const WEEKLY_PROGRESS_STORAGE_KEY = 'heys_ews_weekly_v1';
 
     // Trends tracking configuration
     const TRENDS_CONFIG = {
@@ -81,6 +95,24 @@
         FREQUENCY_WINDOW_30D: 30, // Calculate 30-day frequency
         TOP_CHRONIC_COUNT: 3     // Show top-3 chronic warnings
     };
+
+    // Weekly progress tracking configuration (Wave 3.1)
+    const WEEKLY_CONFIG = {
+        WEEKS_TO_TRACK: 4,       // Track last 4 weeks
+        IMPROVEMENT_THRESHOLD: -15, // -15% warnings = improving
+        STABLE_THRESHOLD: 15,    // ±15% warnings = stable
+        // > 15% warnings = worsening
+    };
+
+    // Cloud sync configuration (Wave 3.1 cloud sync)
+    const CLOUD_SYNC_CONFIG = {
+        ENABLED: true,           // Enable cloud sync
+        LOAD_TIMEOUT_MS: 3000,   // Max wait time for cloud load
+        SAVE_TIMEOUT_MS: 5000,   // Max wait time for cloud save
+        FALLBACK_TO_LOCAL: true  // Use localStorage if cloud fails
+    };
+
+
 
     // Health impact scores for priority calculation (0-100 scale)
     // Based on long-term health consequences and scientific evidence
@@ -108,7 +140,19 @@
         WEIGHT_PLATEAU: 30,          // Adaptation, not health risk
 
         // Pattern-specific (varies)
-        CRITICAL_PATTERN_DEGRADATION: 70  // Depends on specific pattern
+        CRITICAL_PATTERN_DEGRADATION: 70,  // Depends on specific pattern
+
+        // NEW v3.2: Advanced Tier (40-80)
+        FIBER_DEFICIT: 70,           // Gut health, metabolic
+        SODIUM_EXCESS: 55,           // Water retention, BP
+        CIRCADIAN_DISRUPTION: 75,    // Sleep quality, hormones
+        TRAINING_WITHOUT_RECOVERY: 80, // Overtraining, injury risk
+        FAT_QUALITY_DECLINE: 60,     // Inflammation, omega balance
+        SUGAR_DEPENDENCY: 65,        // Insulin resistance
+        MICRONUTRIENT_GAP: 70,       // Multiple deficiencies
+        STEP_DECLINE: 45,            // NEAT reduction
+        MEAL_TIMING_DRIFT: 50,       // Circadian alignment
+        ELECTROLYTE_IMBALANCE: 60    // Performance, hydration
     };
 
     // Severity weights for priority calculation
@@ -393,6 +437,127 @@
                 'Ограничьте алкоголь до 1-2 порций: вино 150 мл или пиво 330 мл (блокирует жиросжигание на 12-36ч)',
                 'Планируйте приёмы пищи заранее: составьте menu на Сб-Вс в пятницу вечером'
             ]
+        },
+
+        // NEW v3.2: Advanced Warnings
+        FIBER_DEFICIT: {
+            title: 'Хронический дефицит клетчатки',
+            message: 'Потребление клетчатки ниже минимума 5+ дней подряд — риск для кишечника и метаболизма',
+            insight: 'Клетчатка критична для микробиома, насыщения и регуляции сахара крови. Дефицит (<15г/день) ведёт к дисбиозу, запорам, повышенному аппетиту.',
+            science: 'Fiber — prebiotic для микробиома: норма 25-35 г/день (WHO). Дефицит (<15 г) снижает SCFA production (масляная кислота — питание колоноцитов), ухудшает GLP-1 секрецию (гормон насыщения), повышает spike глюкозы после еды. Исследование NHANES: связь <15 г клетчатки с +40% риском obesity, +25% CVD (Nutrients, 2020). Постепенное повышение клетчатки (5 г/нед) предотвращает газообразование.',
+            actions: [
+                'Добавьте 5-10г клетчатки: 1 яблоко (4г) + 30г овсянки (3г) + 100г брокколи (3г)',
+                'Включите бобовые/чечевицу 3-4 раза в неделю (8-10г клетчатки на порцию)',
+                'Замените белый рис на бурый/киноа (+2-3г клетчатки на порцию)'
+            ]
+        },
+
+        SODIUM_EXCESS: {
+            title: 'Избыток натрия',
+            message: 'Потребление соли >4000 мг 3+ дня подряд — задержка воды, ложный вес, риск для давления',
+            insight: 'Избыток натрия вызывает задержку 1-3 кг воды, маскирует реальный прогресс по весу/жиру. Хронически высокий натрий (>3500 мг) повышает артериальное давление.',
+            science: 'Норма натрия: 1500-2300 мг/день (AHA). Каждый 1 г избытка натрия задерживает ~400 мл воды через ADH/aldosterone механизм. Высокий натрий (>4000 мг/день) повышает systolic BP на 5-8 mmHg у чувствительных людей (Hypertension, 2018). Water retention маскирует fat loss: вес стоит, но жир уходит. Стратегия: снизить processed foods (70% натрия), увеличить калий (овощи, фрукты) — K/Na ratio критичен для BP.',
+            actions: [
+                'Ограничьте processed foods: колбасы, сыр, соусы содержат 500-1200 мг натрия на порцию',
+                'Увеличьте калий до 3500 мг/день: бананы, картофель, авокадо (K/Na balance для давления)',
+                'Готовьте дома без соли: используйте специи/травы для вкуса'
+            ]
+        },
+
+        CIRCADIAN_DISRUPTION: {
+            title: 'Нарушение циркадных ритмов',
+            message: 'Поздние приёмы пищи (после 22:00) или большая вариативность времени сна нарушают метаболизм',
+            insight: 'Циркадные ритмы контролируют insulin sensitivity, cortisol, GHOST production. Нарушения снижают fat burning, качество сна, повышают аппетит.',
+            science: 'Peripheral clocks (печень, жировая ткань, мышцы) синхронизируются с едой. Поздний ужин (после 22:00) снижает insulin sensitivity на 20-35% vs дневной приём (Obesity, 2019). Sleep timing variance >2h между днями нарушает cortisol rhythm (утренний пик важен для жиросжигания), снижает GHOST secretion на 15-30%. Исследование: eating within 10-hour window (14:00-22:00) vs поздние перекусы — +5% fat loss при той же калорийности (Cell Metab, 2021).',
+            actions: [
+                'Закончите последний приём пищи до 21:00 (минимум за 2ч до сна)',
+                'Стабилизируйте время отхода ко сну: вариативность <1ч между днями',
+                'Если тренировка поздно — лёгкий ужин после (белок + овощи, без углеводов)'
+            ]
+        },
+
+        TRAINING_WITHOUT_RECOVERY: {
+            title: 'Тренировки без восстановления',
+            message: '3+ тренировки за 5 дней при недостаточном сне (<6.5ч) или высоком стрессе — риск overtraining',
+            insight: 'Тренировки без восстановления (сон, питание, низкий стресс) ведут к overreaching: снижение силы, иммунитета, рост кортизола, травмы.',
+            science: 'Recovery triangle: сон (7-9ч), питание (белок 1.6-2.2 г/кг, углеводы для гликогена), low stress (cortisol <7). Недостаточное восстановление при частых тренировках (3+/неделю) ведёт к sympathetic dominance (HRV снижается), повышает риск injury на 40-60% (Br J Sports Med, 2016). Sleep <6.5h после тренировки снижает MPS (muscle protein synthesis) на 18%, ухудшает glycogen replenishment. Stress >7 при тренировках — cortisol блокирует testosterone, замедляет адаптацию.',
+            actions: [
+                'Увеличьте сон до 7-8 часов: если тренируетесь 3+ раз/неделю, сон — приоритет №1',
+                'Добавьте 1 день полного отдыха между интенсивными тренировками',
+                'Снизьте стресс: meditation 10 мин/день, прогулка 20 мин (снижает cortisol на 15-25%)'
+            ]
+        },
+
+        FAT_QUALITY_DECLINE: {
+            title: 'Снижение качества жиров',
+            message: 'Omega Balancer score <40 в течение 7+ дней — дисбаланс омега-3/омега-6, воспаление',
+            insight: 'Качество жиров (omega-3 vs omega-6, насыщенные vs ненасыщенные) влияет на воспаление, insulin sensitivity, сердечно-сосудистое здоровье.',
+            science: 'Optimal omega-6/omega-3 ratio: 4:1 to 1:1 (современная диета: 15:1 — proinflammatory). Omega-3 (EPA/DHA): снижают TNF-alpha, IL-6 (маркеры воспаления), улучшают insulin sensitivity на 10-20% (Lipids, 2018). Избыток насыщенных жиров (>10% калорий) при низком omega-3 повышает LDL oxidation, endothelial dysfunction. Стратегия: жирная рыба 2-3 раза/неделю (salmon, sardines), льняное масло, грецкие орехи; ограничить processed oils (подсолнечное, кукурузное — высокий omega-6).',
+            actions: [
+                'Добавьте жирную рыбу 2 раза в неделю: лосось, сардины, скумбрия (EPA+DHA 1-2г)',
+                'Замените растительные масла на оливковое/льняное (выше omega-3)',
+                'Ограничьте processed foods с trans fats: маргарин, выпечка промышленная'
+            ]
+        },
+
+        SUGAR_DEPENDENCY: {
+            title: 'Сахарная зависимость',
+            message: 'Added Sugar Dependency score <35 в течение 7+ дней — частые спайки глюкозы, cravings',
+            insight: 'Добавленный сахар (>50 г/день) создаёт dopamine-driven cravings, insulin spikes, accumulation жира в печени (NAFLD).',
+            science: 'Добавленный сахар: норма <25-50 г/день (WHO: <10% калорий). Избыток (>50 г) повышает fructose в печень → de novo lipogenesis (синтез жиров), insulin resistance в печени, visceral fat accumulation. Frequent sugar spikes подавляют leptin sensitivity (гормон насыщения), усиливают dopamine cravings (как addiction pattern). Исследование: снижение added sugar с 100г до 25г/день — -4% висцерального жира за 8 недель при той же калорийности (Hepatology, 2020).',
+            actions: [
+                'Снизьте добавленный сахар до <30г/день: исключите сладкие напитки, соки (30-40г на стакан)',
+                'Замените десерты на фрукты: 1-2 порции/день (fructose в фруктах с клетчаткой безопасен)',
+                'Читайте этикетки: added sugar скрыт в соусах, йогуртах, granola (5-15г на порцию)'
+            ]
+        },
+
+        MICRONUTRIENT_GAP: {
+            title: 'Комплексный дефицит микронутриентов',
+            message: '2+ паттерна микронутриентов с score <50 — риск множественных дефицитов (D, Mg, Zn, Fe)',
+            insight: 'Дефицит микронутриентов (витамин D, магний, цинк, железо) снижает энергию, иммунитет, метаболизм, настроение.',
+            science: 'Микронутриенты — cofactors для 300+ ферментов. Vitamin D (<30 ng/ml): снижает insulin sensitivity, иммунитет, testosterone synthesis. Magnesium (<400 mg/day): ухудшает sleep quality, повышает cortisol, снижает ATP production (энергия). Zinc (<11 mg/day мужчины, <8 мг женщины): подавляет immune function, замедляет wound healing. Iron deficiency (ferritin <30 ng/ml): fatigue, снижение VO2max на 10-15%. Стратегия: разнообразное питание (мясо, рыба, орехи, зелень), sunlight 15 мин/день (D), supplementation при дефиците.',
+            actions: [
+                'Сдайте анализы на D, Mg, Zn, Fe: корректируйте дефициты с помощью врача',
+                'Добавьте разнообразие: шпинат/зелень (Mg, Fe), мясо/морепродукты (Zn), яйца (D)',
+                'Солнце 15-20 мин/день без SPF: синтез витамина D (альтернатива: D3 supplement 2000-4000 IU)'
+            ]
+        },
+
+        STEP_DECLINE: {
+            title: 'Снижение активности (шаги)',
+            message: 'Среднее количество шагов за последние 7 дней упало на 50%+ от среднего за 30 дней — NEAT снижается',
+            insight: 'NEAT (Non-Exercise Activity Thermogenesis) — до 15-30% daily expenditure. Резкое снижение шагов замедляет метаболизм, уменьшает дефицит.',
+            science: 'NEAT (шаги, fidgeting, стояние) — 200-800 kcal/day у активных людей. Снижение шагов с 10k до 5k/day = -200 kcal/day = -1.5 кг жира за месяц потеряно (если не компенсировать diet). Сидячий образ жизни (<5k steps) снижает insulin sensitivity на 15-20% vs 10k+ steps/day (Diabetes Care, 2016). Walking после еды (10-15 мин) снижает glucose spike на 20-30%. Стратегия: walking breaks каждые 90 мин, standing desk, parking подальше.',
+            actions: [
+                'Увеличьте шаги на 2000/день: 2 прогулки по 10 мин (утро + вечер)',
+                'Walking after meals: 10-15 мин после обеда/ужина (снижает glucose spike на 20-30%)',
+                'Используйте standing desk 2-3 часа/день или walking breaks каждые 90 мин'
+            ]
+        },
+
+        MEAL_TIMING_DRIFT: {
+            title: 'Нестабильное время приёмов пищи',
+            message: 'Время завтрака варьируется >2.5 часов между днями — нарушает circadian clocks и аппетит',
+            insight: 'Стабильное время приёмов пищи синхронизирует peripheral clocks (печень, ЖКТ), улучшает insulin sensitivity, снижает evening cravings.',
+            science: 'Food timing — zeitgeber (синхронизатор) для peripheral clocks. Нестабильное время eating (variance >2h) десинхронизирует clock genes в печени/жировой ткани от central circadian clock (SCN). Исследование: irregular meal timing увеличивает risk obesity на 30%, снижает postprandial insulin sensitivity на 10-15% (Proc Nutr Soc, 2020). Consistent breakfast timing улучшает morning cortisol peak (жиросжигание), снижает evening ghrelin (голод). Стратегия: фиксированное окно еды (e.g., 08:00-20:00) ±1h.',
+            actions: [
+                'Стабилизируйте время завтрака: ±30 мин между днями (e.g., 08:00-08:30 ежедневно)',
+                'Установите eating window 10-12 часов: e.g., 08:00-20:00 (consistent front/back boundary)',
+                'Используйте будильник для напоминаний о приёмах пищи в первые 2 недели'
+            ]
+        },
+
+        ELECTROLYTE_IMBALANCE: {
+            title: 'Дисбаланс электролитов',
+            message: 'Electrolyte Homeostasis score <40 при активных тренировках — риск судорог, падения производительности',
+            insight: 'Электролиты (Na, K, Mg, Ca) критичны для мышечных сокращений, hydration, nerve conduction. Дисбаланс при тренировках снижает силу, вызывает судороги.',
+            science: 'Electrolyte losses: пот содержит Na 500-1200 mg/L, K 150-300 mg/L, Mg 20-50 mg/L. Интенсивная тренировка (60+ мин) — потеря 1-2L пота = 1000-2000 mg Na, 200-400 mg K. Недостаточное восполнение → мышечные судороги (Mg, Ca), падение силы на 10-15% (dehydration + electrolyte depletion), arrhythmias при severe дефиците. Стратегия: electrolyte drink при тренировках >60 мин (Na 300-600 mg, K 100-200 mg на порцию), увеличить овощи/фрукты (K, Mg).',
+            actions: [
+                'Добавьте electrolyte drink при тренировках >60 мин: Na 300-600 мг, K 100-200 мг',
+                'Увеличьте потребление K/Mg: бананы, картофель (K 400-600 мг), шпинат/орехи (Mg 80-150 мг)',
+                'Солите пищу после тренировки: 1/4 ч.л. соли (500 мг Na) для восполнения потерь с потом'
+            ]
         }
     };
 
@@ -644,6 +809,806 @@
         });
 
         return prioritizedWarnings;
+    }
+
+    // ========================================
+    // Weekly Progress Tracking (Wave 3.1)
+    // ========================================
+
+    /**
+     * Load weekly progress data (localStorage + cloud sync)
+     * @returns {Object} Weekly progress data structure
+     */
+    async function loadWeeklyProgress() {
+
+        console.info('ews / weekly 🚀 load:', { key: WEEKLY_PROGRESS_STORAGE_KEY });
+
+        // 1. Try cloud first (if enabled)
+        if (CLOUD_SYNC_CONFIG.ENABLED && typeof HEYS?.YandexAPI?.rpc === 'function') {
+            try {
+                // Helper: validate token is not null/undefined/empty string
+                const isValidToken = (token) => {
+                    if (!token) return false;
+                    const str = String(token).trim();
+                    if (str === '' || str === 'null' || str === 'undefined') return false;
+                    return true;
+                };
+
+                // Get session token for authentication (with multiple fallbacks)
+                let sessionToken = null;
+
+                // Attempt 1: HEYS.auth API
+                sessionToken = HEYS.auth?.getSessionToken?.();
+                console.info('ews / weekly 🔍 token.attempt1 (HEYS.auth):', sessionToken ? `found: ${String(sessionToken).slice(0, 16)}...` : 'NOT FOUND');
+                if (!isValidToken(sessionToken)) sessionToken = null;
+
+                // Attempt 2: Direct localStorage read
+                if (!sessionToken) {
+                    const raw = localStorage.getItem('heys_session_token');
+                    console.info('ews / weekly 🔍 token.attempt2 (localStorage direct):', raw ? `found: ${String(raw).slice(0, 40)}...` : 'NOT FOUND');
+                    if (raw && isValidToken(raw)) {
+                        try {
+                            const parsed = JSON.parse(raw);
+                            sessionToken = isValidToken(parsed) ? parsed : null;
+                        } catch {
+                            sessionToken = raw;
+                        }
+                    }
+                }
+
+                // Attempt 3: Using HEYS.utils.lsGet (namespace-aware)
+                if (!sessionToken && typeof HEYS?.utils?.lsGet === 'function') {
+                    const tokenViaUtils = HEYS.utils.lsGet('heys_session_token', null);
+                    console.info('ews / weekly 🔍 token.attempt3 (U.lsGet):', tokenViaUtils ? `found: ${String(tokenViaUtils).slice(0, 16)}...` : 'NOT FOUND');
+                    if (isValidToken(tokenViaUtils)) {
+                        sessionToken = tokenViaUtils;
+                    }
+                }
+
+                // Attempt 4: Namespaced key (legacy migration)
+                if (!sessionToken) {
+                    const clientId = localStorage.getItem('heys_pin_auth_client') || localStorage.getItem('heys_client_current');
+                    if (clientId) {
+                        const cid = String(clientId).replace(/"/g, '');
+                        const namespacedKey = `heys_${cid}_session_token`;
+                        const namespacedToken = localStorage.getItem(namespacedKey);
+                        console.info('ews / weekly 🔍 token.attempt4 (namespaced):', namespacedToken ? `found at ${namespacedKey}: ${String(namespacedToken).slice(0, 16)}...` : `NOT FOUND at ${namespacedKey}`);
+                        if (namespacedToken && isValidToken(namespacedToken)) {
+                            try {
+                                const parsed = JSON.parse(namespacedToken);
+                                sessionToken = isValidToken(parsed) ? parsed : null;
+                            } catch {
+                                sessionToken = namespacedToken;
+                            }
+                        }
+                    } else {
+                        console.info('ews / weekly 🔍 token.attempt4 (namespaced): SKIPPED (no clientId found)');
+                    }
+                }
+
+                // Attempt 5: Curator session (for curator access)
+                if (!sessionToken) {
+                    const curatorToken = localStorage.getItem('heys_curator_session');
+                    console.info('ews / weekly 🔍 token.attempt5 (curator_session):', curatorToken ? `found: ${String(curatorToken).slice(0, 16)}...` : 'NOT FOUND');
+                    if (isValidToken(curatorToken)) {
+                        sessionToken = curatorToken;
+                    }
+                }
+
+                if (!sessionToken) {
+                    console.warn('ews / weekly ☁️ load.cloud.skip: no valid session token after 5 attempts');
+                    throw new Error('No session token available');
+                }
+
+                console.info('ews / weekly ✅ token.final:', `using token: ${String(sessionToken).slice(0, 16)}...`);
+                console.info('ews / weekly ☁️ load.cloud.start');
+                const { data: cloudData, error: cloudError } = await Promise.race([
+                    HEYS.YandexAPI.rpc('get_weekly_snapshots_by_session', {
+                        p_session_token: sessionToken,
+                        p_weeks_count: WEEKLY_CONFIG.WEEKS_TO_TRACK
+                    }),
+                    new Promise((_, reject) => setTimeout(
+                        () => reject(new Error('Cloud load timeout')),
+                        CLOUD_SYNC_CONFIG.LOAD_TIMEOUT_MS
+                    ))
+                ]);
+
+                if (cloudError) {
+                    throw new Error(cloudError.message || 'Cloud load failed');
+                }
+
+                if (cloudData && Array.isArray(cloudData) && cloudData.length > 0) {
+                    const weeks = cloudData.map(row => ({
+                        weekStart: row.week_start,
+                        weekEnd: row.week_end,
+                        weekNumber: row.week_number,
+                        year: row.year,
+                        warningsCount: row.warnings_count,
+                        globalScore: row.global_score,
+                        severityBreakdown: row.severity_breakdown,
+                        topWarnings: row.top_warnings,
+                        lastUpdate: row.updated_at?.split('T')[0] || row.week_start,
+                        lastUpdateTimestamp: new Date(row.updated_at || row.week_start).getTime()
+                    }));
+
+                    console.info('ews / weekly ☁️ load.cloud.success:', {
+                        weeksLoaded: weeks.length,
+                        source: 'cloud'
+                    });
+
+                    // Save to localStorage for fast access
+                    const progressData = { version: 1, weeks, lastUpdated: weeks[0]?.lastUpdate || null };
+                    try {
+                        localStorage.setItem(WEEKLY_PROGRESS_STORAGE_KEY, JSON.stringify(progressData));
+                        console.info('ews / weekly 💾 cached locally from cloud');
+                    } catch (e) {
+                        console.warn('ews / weekly ⚠️ localStorage cache failed:', e.message);
+                    }
+
+                    return progressData;
+                }
+
+                console.info('ews / weekly ☁️ load.cloud.empty: no data in cloud');
+            } catch (error) {
+                console.error('ews / weekly ☁️ load.cloud.error:', {
+                    message: error.message,
+                    code: error.code,
+                    details: error.details,
+                    raw: error.raw,
+                    stack: error.stack?.split('\n')[0]
+                });
+                if (!CLOUD_SYNC_CONFIG.FALLBACK_TO_LOCAL) {
+                    throw error;
+                }
+                console.info('ews / weekly 💾 falling back to localStorage');
+            }
+        }
+
+        // 2. Fallback to localStorage
+        try {
+            const stored = localStorage.getItem(WEEKLY_PROGRESS_STORAGE_KEY);
+            if (!stored) {
+                console.info('ews / weekly 📥 load.empty:', { reason: 'no_stored_data', source: 'localStorage' });
+                return { version: 1, weeks: [], lastUpdated: null };
+            }
+
+            const parsed = JSON.parse(stored);
+            console.info('ews / weekly ✅ load.success:', {
+                weeksStored: parsed.weeks?.length || 0,
+                lastUpdated: parsed.lastUpdated,
+                source: 'localStorage'
+            });
+            return parsed;
+        } catch (error) {
+            console.error('ews / weekly ❌ load.error:', error.message);
+            return { version: 1, weeks: [], lastUpdated: null };
+        }
+    }
+
+    /**
+     * Save weekly progress data (localStorage + cloud sync)
+     * @param {Object} progressData - Weekly progress data structure
+     * @param {Object} currentWeekSnapshot - Current week snapshot for cloud upsert
+     */
+    async function saveWeeklyProgress(progressData, currentWeekSnapshot = null) {
+        console.info('ews / weekly 🚀 save:', {
+            weeksCount: progressData.weeks?.length || 0
+        });
+
+        // 1. Save to localStorage first (fast, always succeeds)
+        try {
+            localStorage.setItem(WEEKLY_PROGRESS_STORAGE_KEY, JSON.stringify(progressData));
+            console.info('ews / weekly ✅ save.success:', {
+                size: JSON.stringify(progressData).length,
+                lastUpdated: progressData.lastUpdated,
+                target: 'localStorage'
+            });
+        } catch (error) {
+            console.error('ews / weekly ❌ save.error:', error.message);
+        }
+
+        // 2. Sync current week to cloud (if enabled)
+        if (CLOUD_SYNC_CONFIG.ENABLED && currentWeekSnapshot && typeof HEYS?.YandexAPI?.rpc === 'function') {
+            try {
+                // Helper function: validate token content (not just existence)
+                const isValidToken = (token) => {
+                    if (!token) return false;
+                    const str = String(token).trim();
+                    // Reject literal strings "null"/"undefined" and empty values
+                    if (str === '' || str === 'null' || str === 'undefined') return false;
+                    return true;
+                };
+
+                // Get session token: multi-tier fallback with validation
+                let sessionToken = null;
+
+                // Attempt 1: HEYS.auth API
+                sessionToken = HEYS.auth?.getSessionToken?.();
+                console.info('ews / weekly 🔍 token.attempt1 (HEYS.auth):', sessionToken ? `found: ${sessionToken.slice(0, 16)}...` : 'NOT FOUND');
+                if (!isValidToken(sessionToken)) sessionToken = null;
+
+                // Attempt 2: localStorage direct (JSON.parse safe)
+                if (!sessionToken) {
+                    const raw = localStorage.getItem('heys_session_token');
+                    console.info('ews / weekly 🔍 token.attempt2 (localStorage direct):', raw ? `found: ${String(raw).slice(0, 16)}...` : 'NOT FOUND');
+                    if (raw && isValidToken(raw)) {
+                        try {
+                            const parsed = JSON.parse(raw);
+                            sessionToken = isValidToken(parsed) ? parsed : null;
+                        } catch {
+                            sessionToken = raw; // Use raw string if not JSON
+                        }
+                    }
+                }
+
+                // Attempt 3: HEYS.utils.lsGet (namespace-aware)
+                if (!sessionToken) {
+                    const tokenViaUtils = HEYS.utils.lsGet('heys_session_token', null);
+                    console.info('ews / weekly 🔍 token.attempt3 (U.lsGet):', tokenViaUtils ? `found: ${String(tokenViaUtils).slice(0, 16)}...` : 'NOT FOUND');
+                    if (isValidToken(tokenViaUtils)) {
+                        sessionToken = tokenViaUtils;
+                    }
+                }
+
+                // Attempt 4: Namespaced key (legacy migration)
+                if (!sessionToken) {
+                    const cid = HEYS.getCurrentClientId?.() || HEYS.clientId;
+                    if (cid) {
+                        const namespacedKey = `heys_${cid}_session_token`;
+                        const namespacedToken = localStorage.getItem(namespacedKey);
+                        console.info('ews / weekly 🔍 token.attempt4 (namespaced):', namespacedToken ? `found at ${namespacedKey}: ${String(namespacedToken).slice(0, 16)}...` : `NOT FOUND at ${namespacedKey}`);
+                        if (namespacedToken && isValidToken(namespacedToken)) {
+                            try {
+                                const parsed = JSON.parse(namespacedToken);
+                                sessionToken = isValidToken(parsed) ? parsed : null;
+                            } catch {
+                                sessionToken = namespacedToken;
+                            }
+                        }
+                    } else {
+                        console.info('ews / weekly 🔍 token.attempt4 (namespaced): SKIPPED (no clientId found)');
+                    }
+                }
+
+                // Attempt 5: Curator session (alternative auth mechanism)
+                if (!sessionToken) {
+                    const curatorToken = localStorage.getItem('heys_curator_session');
+                    console.info('ews / weekly 🔍 token.attempt5 (curator_session):', curatorToken ? `found: ${String(curatorToken).slice(0, 16)}...` : 'NOT FOUND');
+                    if (isValidToken(curatorToken)) {
+                        sessionToken = curatorToken;
+                    }
+                }
+
+                // Final validation
+                if (!sessionToken) {
+                    console.warn('ews / weekly ☁️ save.cloud.skip: no valid session token after 5 attempts');
+                    return;
+                }
+
+                console.info('ews / weekly ✅ token.final: using token:', `${String(sessionToken).slice(0, 16)}...`);
+                console.info('ews / weekly ☁️ save.cloud.start:', {
+                    weekStart: currentWeekSnapshot.weekStart
+                });
+
+                const { data: result, error: saveError } = await Promise.race([
+                    HEYS.YandexAPI.rpc('upsert_weekly_snapshot_by_session', {
+                        p_session_token: sessionToken,
+                        p_week_start: currentWeekSnapshot.weekStart,
+                        p_week_end: currentWeekSnapshot.weekEnd,
+                        p_week_number: currentWeekSnapshot.weekNumber,
+                        p_year: currentWeekSnapshot.year,
+                        p_warnings_count: currentWeekSnapshot.warningsCount,
+                        p_global_score: currentWeekSnapshot.globalScore,
+                        p_severity_breakdown: currentWeekSnapshot.severityBreakdown,
+                        p_top_warnings: currentWeekSnapshot.topWarnings
+                    }),
+                    new Promise((_, reject) => setTimeout(
+                        () => reject(new Error('Cloud save timeout')),
+                        CLOUD_SYNC_CONFIG.SAVE_TIMEOUT_MS
+                    ))
+                ]);
+
+                // Extract response (handle both array and object formats)
+                const response = Array.isArray(result) ? result[0] : result;
+
+                if (saveError) {
+                    console.warn('ews / weekly ☁️ save.cloud.error:', saveError.message);
+                } else if (response?.success) {
+                    console.info('ews / weekly ☁️ save.cloud.success:', {
+                        action: response.message,
+                        snapshotId: response.snapshot_id
+                    });
+                } else if (response?.message === 'invalid_or_expired_session') {
+                    // Graceful degradation: curator session token doesn't have write permissions
+                    console.info('ews / weekly ☁️ save.cloud.skip: curator_mode (no client session)');
+                } else {
+                    console.warn('ews / weekly ☁️ save.cloud.failed:', {
+                        message: response?.message || 'unknown_error',
+                        response
+                    });
+                }
+            } catch (error) {
+                console.error('ews / weekly ☁️ save.cloud.error:', {
+                    message: error.message,
+                    code: error.code,
+                    details: error.details,
+                    raw: error.raw,
+                    stack: error.stack?.split('\n')[0]
+                });
+                // Non-critical: localStorage already saved
+            }
+        }
+    }
+
+    /**
+     * Get week boundaries (Monday 00:00 to Sunday 23:59)
+     * @param {Date} date - Reference date
+     * @returns {Object} Week start and end dates
+     */
+    function getWeekBoundaries(date) {
+        const d = new Date(date);
+        const day = d.getDay(); // 0 = Sunday, 1 = Monday, ...
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+
+        const weekStart = new Date(d.setDate(diff));
+        weekStart.setHours(0, 0, 0, 0);
+
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+
+        return {
+            weekStart: weekStart.toISOString().split('T')[0],
+            weekEnd: weekEnd.toISOString().split('T')[0],
+            weekStartTimestamp: weekStart.getTime(),
+            weekEndTimestamp: weekEnd.getTime()
+        };
+    }
+
+    /**
+     * Get ISO week number for a date
+     * @param {Date} date - Date to get week number for
+     * @returns {number} ISO week number (1-53)
+     */
+    function getWeekNumber(date) {
+        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+        const dayNum = d.getUTCDay() || 7;
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    }
+
+    /**
+     * Determine weekly trend (improving/stable/worsening)
+     * @param {Array} weeks - Array of weekly snapshots (sorted newest first)
+     * @returns {Object} Trend analysis
+     */
+    function determineWeeklyTrend(weeks) {
+        console.info('ews / weekly 🧮 trend:', {
+            phase: 'analysis',
+            weeksCount: weeks.length
+        });
+
+        if (weeks.length < 2) {
+            console.info('ews / weekly ⚠️ trend.insufficient:', {
+                reason: 'need_at_least_2_weeks',
+                current: weeks.length
+            });
+            return {
+                status: 'insufficient_data',
+                direction: null,
+                percentChange: 0,
+                description: 'Недостаточно данных (нужно ≥2 недель)'
+            };
+        }
+
+        const currentWeek = weeks[0]; // Newest
+        const previousWeek = weeks[1];
+
+        const currentCount = currentWeek.warningsCount;
+        const previousCount = previousWeek.warningsCount;
+
+        // Calculate percent change
+        const percentChange = previousCount === 0
+            ? (currentCount > 0 ? 100 : 0)
+            : Math.round(((currentCount - previousCount) / previousCount) * 100);
+
+        let status, direction, description;
+
+        if (percentChange <= WEEKLY_CONFIG.IMPROVEMENT_THRESHOLD) {
+            status = 'improving';
+            direction = 'down';
+            description = `Улучшение: ${Math.abs(percentChange)}% меньше предупреждений`;
+        } else if (percentChange >= WEEKLY_CONFIG.STABLE_THRESHOLD) {
+            status = 'worsening';
+            direction = 'up';
+            description = `Ухудшение: +${percentChange}% больше предупреждений`;
+        } else {
+            status = 'stable';
+            direction = 'flat';
+            description = `Стабильно: ±${Math.abs(percentChange)}% (норма)`;
+        }
+
+        console.info('ews / weekly ✅ trend.result:', {
+            status,
+            direction,
+            percentChange,
+            current: currentCount,
+            previous: previousCount
+        });
+
+        return {
+            status,
+            direction,
+            percentChange,
+            currentCount,
+            previousCount,
+            description
+        };
+    }
+
+    /**
+     * Backfill weekly snapshots from historical data
+     * Creates snapshots for last N weeks using historical day data
+     * @param {Array} allDays - All available historical day data (sorted newest first)
+     * @param {Object} profile - User profile
+     * @param {Array} pIndex - Product index
+     * @param {number} weeksToBackfill - Number of weeks to backfill (default: 4)
+     * @returns {Promise<Object>} { success, weeksCreated, snapshots }
+     */
+    async function backfillWeeklySnapshots(allDays, profile, pIndex, weeksToBackfill = 4) {
+        console.info('ews / weekly 🔄 backfill.start:', {
+            totalDays: allDays.length,
+            weeksToBackfill
+        });
+
+        if (!allDays || allDays.length < 7) {
+            console.warn('ews / weekly ⚠️ backfill.insufficient_data:', {
+                daysAvailable: allDays?.length || 0,
+                required: 7
+            });
+            return { success: false, weeksCreated: 0, reason: 'insufficient_data' };
+        }
+
+        const snapshots = [];
+        const today = new Date();
+
+        // Generate week boundaries for last N weeks
+        for (let weekOffset = 0; weekOffset < weeksToBackfill; weekOffset++) {
+            const weekDate = new Date(today);
+            weekDate.setDate(weekDate.getDate() - (weekOffset * 7));
+
+            const weekBoundaries = getWeekBoundaries(weekDate);
+            console.info(`ews / weekly 🔄 backfill.week_${weekOffset + 1}:`, {
+                weekStart: weekBoundaries.weekStart,
+                weekEnd: weekBoundaries.weekEnd
+            });
+
+            // Filter days for this specific week
+            const weekDays = allDays.filter(day => {
+                const dayDate = day.date;
+                return dayDate >= weekBoundaries.weekStart && dayDate <= weekBoundaries.weekEnd;
+            });
+
+            if (weekDays.length === 0) {
+                console.info(`ews / weekly ⏭️ backfill.skip_week_${weekOffset + 1}: no data`);
+                continue;
+            }
+
+            console.info(`ews / weekly 🧮 backfill.compute_week_${weekOffset + 1}:`, {
+                daysInWeek: weekDays.length
+            });
+
+            // Run detect() for this week (use mode depending on days available)
+            const mode = weekDays.length >= 14 ? 'full' : 'acute';
+            try {
+                const weekResult = await detectEarlyWarnings(weekDays, profile, pIndex, {
+                    mode,
+                    includeDetails: true
+                });
+
+                if (!weekResult.available) {
+                    console.warn(`ews / weekly ⚠️ backfill.week_${weekOffset + 1}.unavailable`);
+                    continue;
+                }
+
+                // Create snapshot for this week
+                const snapshot = {
+                    weekStart: weekBoundaries.weekStart,
+                    weekEnd: weekBoundaries.weekEnd,
+                    weekNumber: getWeekNumber(weekDate),
+                    year: weekDate.getFullYear(),
+                    warningsCount: weekResult.count || 0,
+                    globalScore: weekResult.globalScore || 0,
+                    severityBreakdown: {
+                        high: weekResult.highSeverityCount || 0,
+                        medium: (weekResult.count || 0) - (weekResult.highSeverityCount || 0),
+                        low: 0
+                    },
+                    topWarnings: (weekResult.warnings || [])
+                        .slice(0, 3)
+                        .map(w => ({ type: w.type, severity: w.severity })),
+                    lastUpdate: weekBoundaries.weekEnd, // Use week end as update date
+                    lastUpdateTimestamp: new Date(weekBoundaries.weekEnd).getTime()
+                };
+
+                snapshots.push(snapshot);
+
+                console.info(`ews / weekly ✅ backfill.week_${weekOffset + 1}.created:`, {
+                    warnings: snapshot.warningsCount,
+                    globalScore: snapshot.globalScore
+                });
+
+                // Upload to cloud immediately
+                if (CLOUD_SYNC_CONFIG.ENABLED && typeof HEYS?.YandexAPI?.rpc === 'function') {
+                    try {
+                        // Helper function: validate token content (not just existence)
+                        const isValidToken = (token) => {
+                            if (!token) return false;
+                            const str = String(token).trim();
+                            // Reject literal strings "null"/"undefined" and empty values
+                            if (str === '' || str === 'null' || str === 'undefined') return false;
+                            return true;
+                        };
+
+                        // Get session token: multi-tier fallback with validation
+                        let sessionToken = null;
+
+                        // Attempt 1: HEYS.auth API
+                        sessionToken = HEYS.auth?.getSessionToken?.();
+                        console.info('ews / weekly 🔍 token.attempt1 (HEYS.auth):', sessionToken ? `found: ${String(sessionToken).slice(0, 16)}...` : 'NOT FOUND');
+                        if (!isValidToken(sessionToken)) sessionToken = null;
+
+                        // Attempt 2: localStorage direct (JSON.parse safe)
+                        if (!sessionToken) {
+                            const raw = localStorage.getItem('heys_session_token');
+                            console.info('ews / weekly 🔍 token.attempt2 (localStorage direct):', raw ? `found: ${String(raw).slice(0, 16)}...` : 'NOT FOUND');
+                            if (raw && isValidToken(raw)) {
+                                try {
+                                    const parsed = JSON.parse(raw);
+                                    sessionToken = isValidToken(parsed) ? parsed : null;
+                                } catch {
+                                    sessionToken = raw; // Use raw string if not JSON
+                                }
+                            }
+                        }
+
+                        // Attempt 3: HEYS.utils.lsGet (namespace-aware)
+                        if (!sessionToken) {
+                            const tokenViaUtils = HEYS.utils.lsGet('heys_session_token', null);
+                            console.info('ews / weekly 🔍 token.attempt3 (U.lsGet):', tokenViaUtils ? `found: ${String(tokenViaUtils).slice(0, 16)}...` : 'NOT FOUND');
+                            if (isValidToken(tokenViaUtils)) {
+                                sessionToken = tokenViaUtils;
+                            }
+                        }
+
+                        // Attempt 4: Namespaced key (legacy migration)
+                        if (!sessionToken) {
+                            const cid = HEYS.getCurrentClientId?.() || HEYS.clientId;
+                            if (cid) {
+                                const namespacedKey = `heys_${cid}_session_token`;
+                                const namespacedToken = localStorage.getItem(namespacedKey);
+                                console.info('ews / weekly 🔍 token.attempt4 (namespaced):', namespacedToken ? `found at ${namespacedKey}: ${String(namespacedToken).slice(0, 16)}...` : `NOT FOUND at ${namespacedKey}`);
+                                if (namespacedToken && isValidToken(namespacedToken)) {
+                                    try {
+                                        const parsed = JSON.parse(namespacedToken);
+                                        sessionToken = isValidToken(parsed) ? parsed : null;
+                                    } catch {
+                                        sessionToken = namespacedToken;
+                                    }
+                                }
+                            } else {
+                                console.info('ews / weekly 🔍 token.attempt4 (namespaced): SKIPPED (no clientId found)');
+                            }
+                        }
+
+                        // Attempt 5: Curator session (alternative auth mechanism)
+                        if (!sessionToken) {
+                            const curatorToken = localStorage.getItem('heys_curator_session');
+                            console.info('ews / weekly 🔍 token.attempt5 (curator_session):', curatorToken ? `found: ${String(curatorToken).slice(0, 16)}...` : 'NOT FOUND');
+                            if (isValidToken(curatorToken)) {
+                                sessionToken = curatorToken;
+                            }
+                        }
+
+                        // Final validation
+                        if (!sessionToken) {
+                            console.warn(`ews / weekly ⚠️ backfill.week_${weekOffset + 1}.skip: no valid session token after 5 attempts`);
+                            continue;
+                        }
+
+                        console.info('ews / weekly ✅ token.final: using token:', `${String(sessionToken).slice(0, 16)}...`);
+
+                        const { data: result, error: cloudError } = await HEYS.YandexAPI.rpc('upsert_weekly_snapshot_by_session', {
+                            p_session_token: sessionToken,
+                            p_week_start: snapshot.weekStart,
+                            p_week_end: snapshot.weekEnd,
+                            p_week_number: snapshot.weekNumber,
+                            p_year: snapshot.year,
+                            p_warnings_count: snapshot.warningsCount,
+                            p_global_score: snapshot.globalScore,
+                            p_severity_breakdown: snapshot.severityBreakdown,
+                            p_top_warnings: snapshot.topWarnings
+                        });
+
+                        if (cloudError) {
+                            throw cloudError;
+                        }
+
+                        if (result && Array.isArray(result) && result[0]?.success) {
+                            console.info(`ews / weekly ☁️ backfill.week_${weekOffset + 1}.uploaded`);
+                        }
+                    } catch (cloudError) {
+                        console.warn(`ews / weekly ⚠️ backfill.week_${weekOffset + 1}.cloud_error:`, cloudError.message);
+                    }
+                }
+
+            } catch (error) {
+                console.error(`ews / weekly ❌ backfill.week_${weekOffset + 1}.error:`, error.message);
+                continue;
+            }
+        }
+
+        // Save all snapshots to localStorage
+        if (snapshots.length > 0) {
+            const progressData = {
+                version: 1,
+                weeks: snapshots.sort((a, b) =>
+                    new Date(b.weekStart).getTime() - new Date(a.weekStart).getTime()
+                ),
+                lastUpdated: snapshots[0]?.lastUpdate || null
+            };
+
+            try {
+                localStorage.setItem(WEEKLY_PROGRESS_STORAGE_KEY, JSON.stringify(progressData));
+                console.info('ews / weekly ✅ backfill.saved_to_localStorage:', {
+                    snapshotsCount: snapshots.length
+                });
+            } catch (e) {
+                console.error('ews / weekly ❌ backfill.localStorage_error:', e.message);
+            }
+        }
+
+        console.info('ews / weekly ✅ backfill.complete:', {
+            weeksCreated: snapshots.length,
+            weeksRequested: weeksToBackfill
+        });
+
+        return {
+            success: true,
+            weeksCreated: snapshots.length,
+            snapshots
+        };
+    }
+
+    /**
+     * Calculate weekly progress summary from warnings and global score
+     * @param {Array} warnings - Current warnings array
+     * @param {number} globalScore - Current EWS global score (0-100)
+     * @returns {Promise<Object>} Weekly summary with trend analysis
+     */
+    async function calculateWeeklyProgress(warnings, globalScore) {
+        console.info('ews / weekly 🚀 start:', {
+            currentWarnings: warnings.length,
+            globalScore
+        });
+
+        const today = new Date();
+        const weekBoundaries = getWeekBoundaries(today);
+        const todayStr = today.toISOString().split('T')[0];
+
+        console.info('ews / weekly 📥 input:', {
+            date: todayStr,
+            weekStart: weekBoundaries.weekStart,
+            weekEnd: weekBoundaries.weekEnd
+        });
+
+        // Load existing weekly data (cloud + localStorage)
+        const progressData = await loadWeeklyProgress();
+
+        // Check if current week already has a snapshot
+        const existingWeekIndex = progressData.weeks.findIndex(
+            w => w.weekStart === weekBoundaries.weekStart
+        );
+
+        // Create or update current week snapshot
+        const weekSnapshot = {
+            weekStart: weekBoundaries.weekStart,
+            weekEnd: weekBoundaries.weekEnd,
+            weekNumber: getWeekNumber(today),
+            year: today.getFullYear(),
+            warningsCount: warnings.length,
+            globalScore: globalScore || 0,
+            severityBreakdown: {
+                high: warnings.filter(w => w.severity === 'high').length,
+                medium: warnings.filter(w => w.severity === 'medium').length,
+                low: warnings.filter(w => w.severity === 'low').length
+            },
+            topWarnings: warnings
+                .slice(0, 3)
+                .map(w => ({ type: w.type, severity: w.severity })),
+            lastUpdate: todayStr,
+            lastUpdateTimestamp: today.getTime()
+        };
+
+        console.info('ews / weekly 🧮 compute:', {
+            phase: 'snapshot',
+            weekNumber: weekSnapshot.weekNumber,
+            warningsCount: weekSnapshot.warningsCount,
+            globalScore: weekSnapshot.globalScore
+        });
+
+        // Update or add snapshot
+        if (existingWeekIndex >= 0) {
+            // Update existing week
+            progressData.weeks[existingWeekIndex] = weekSnapshot;
+            console.info('ews / weekly ♻️ updated:', {
+                weekStart: weekBoundaries.weekStart
+            });
+        } else {
+            // Add new week at the beginning (newest first)
+            progressData.weeks.unshift(weekSnapshot);
+            console.info('ews / weekly ➕ added:', {
+                weekStart: weekBoundaries.weekStart
+            });
+        }
+
+        // Keep only last 4 weeks
+        if (progressData.weeks.length > WEEKLY_CONFIG.WEEKS_TO_TRACK) {
+            const removed = progressData.weeks.splice(WEEKLY_CONFIG.WEEKS_TO_TRACK);
+            console.info('ews / weekly 🗑️ pruned:', {
+                removedCount: removed.length,
+                oldestRemoved: removed[0]?.weekStart
+            });
+        }
+
+        // Sort by week start descending (newest first)
+        progressData.weeks.sort((a, b) =>
+            new Date(b.weekStart).getTime() - new Date(a.weekStart).getTime()
+        );
+
+        // Update metadata
+        progressData.lastUpdated = todayStr;
+
+        // Calculate trend
+        const trend = determineWeeklyTrend(progressData.weeks);
+
+        console.info('ews / weekly ✅ result:', {
+            weeksTracked: progressData.weeks.length,
+            trend: trend.status,
+            trendDirection: trend.direction,
+            percentChange: trend.percentChange
+        });
+
+        // Save updated data (localStorage + cloud sync)
+        await saveWeeklyProgress(progressData, weekSnapshot);
+
+        console.group('ews / weekly 🖥️ ui.summary - Last 4 Weeks');
+        console.table(progressData.weeks.map((w, idx) => ({
+            '#': idx + 1,
+            'Week': `${w.weekStart} to ${w.weekEnd}`,
+            'Warnings': w.warningsCount,
+            'Global Score': w.globalScore,
+            'High/Med/Low': `${w.severityBreakdown.high}/${w.severityBreakdown.medium}/${w.severityBreakdown.low}`,
+            'Last Update': w.lastUpdate
+        })));
+        console.groupEnd();
+
+        console.info('ews / weekly 🖥️ ui.trend:', {
+            status: trend.status,
+            description: trend.description
+        });
+
+        console.info('ews / weekly 🖥️ ui.complete:', {
+            weeksDisplayed: progressData.weeks.length,
+            trendAvailable: trend.status !== 'insufficient_data'
+        });
+
+        return {
+            weeks: progressData.weeks,
+            trend,
+            currentWeek: weekSnapshot
+        };
     }
 
     /**
@@ -1460,14 +2425,22 @@
      * @returns {object|null}
      */
     function checkProteinDeficit(days, profile, pIndex) {
-        console.info('ews / detect 🥩 checking protein deficit...');
+        // v2.0: Phenotype-aware protein target
+        const proteinMultiplier = getEwsThreshold('proteinTarget', 1.0, profile);
+        const targetProtein = 1.2 * proteinMultiplier; // g/kg (minimum for muscle preservation)
+
+        console.info('ews / detect 🥩 checking protein deficit...', {
+            proteinMultiplier,
+            targetProtein: targetProtein.toFixed(2)
+        });
+
         if (days.length < 3) {
             console.info('ews / detect ⏭️ skip protein: insufficient days', days.length);
             return null;
         }
 
         const weight = profile?.weight || 70;
-        const targetProtein = 1.2; // g/kg (minimum for muscle preservation)
+        // targetProtein defined at start of function
         const minProteinGrams = weight * targetProtein;
         const consecutiveDays = 3;
 
@@ -1538,7 +2511,17 @@
      * @returns {object|null}
      */
     function checkStressAccumulation(days, profile) {
-        console.info('ews / detect 😰 checking stress accumulation...');
+        // v2.0: Phenotype-aware sensitivity
+        const sensitivity = getEwsThreshold('stressEatingThreshold', 1.0, profile);
+        // Lower limit = higher sensitivity
+        const STRESS_LEVEL_LIMIT = 7 * sensitivity; // e.g. 5.6 for stress_eater
+        const STATUS_SCORE_LIMIT = 50 / sensitivity; // e.g. 62.5 for stress_eater (easier to satisfy <62.5)
+
+        console.info('ews / detect 😰 checking stress accumulation...', {
+            sensitivity,
+            limits: { stress: STRESS_LEVEL_LIMIT.toFixed(1), status: STATUS_SCORE_LIMIT.toFixed(0) }
+        });
+
         if (days.length < 5) {
             console.info('ews / detect ⏭️ skip stress: insufficient days', days.length);
             return null;
@@ -1553,11 +2536,11 @@
             const poorSleep = day.sleepHours && day.sleepHours < 6;
             // 3. High training load without recovery
             const highTraining = day.training && day.training.duration > 90;
-            // 4. Low status score (<50)
-            const lowStatus = day.statusScore !== undefined && day.statusScore < 50;
+            // 4. Low status score (<50 or dynamic)
+            const lowStatus = day.statusScore !== undefined && day.statusScore < STATUS_SCORE_LIMIT;
 
             const stressSignals = [
-                explicitStress > 7,
+                explicitStress > STRESS_LEVEL_LIMIT,
                 poorSleep,
                 highTraining,
                 lowStatus
@@ -1625,7 +2608,15 @@
      * @returns {object|null}
      */
     function checkMealSkipPattern(days, profile) {
-        console.info('ews / detect 🍽️ checking meal skip pattern...');
+        // v2.0: Phenotype-aware tolerance
+        const tolerance = getEwsThreshold('mealSkipTolerance', 1.0, profile);
+        const GAP_THRESHOLD = 8 * tolerance; // Base 8h
+
+        console.info('ews / detect 🍽️ checking meal skip pattern...', {
+            tolerance,
+            GAP_THRESHOLD
+        });
+
         if (days.length < 5) {
             console.info('ews / detect ⏭️ skip meal pattern: insufficient days', days.length);
             return null;
@@ -1644,8 +2635,9 @@
                     const prevTime = meals[i - 1].time;
                     const currTime = meals[i].time;
                     if (prevTime && currTime) {
-                        const gap = calculateTimeGap(prevTime, currTime);
-                        if (gap > 8) longGaps++;
+                        const gap = calculateTimeGap(prevTime, currTime); // Helper function
+                        // v2.0: Use dynamic gap threshold
+                        if (gap > GAP_THRESHOLD) longGaps++;
                     }
                 }
             }
@@ -1676,7 +2668,7 @@
         });
 
         // Warning if >60% of days have irregular patterns
-        if (irregularRate > 0.6) {
+        if (irregularRate > 0.6 * tolerance) {
             const avgMealCount = mealData.reduce((s, d) => s + d.mealCount, 0) / mealData.length;
             const humanMsg = WARNING_HUMAN_MESSAGES.MEAL_SKIP_PATTERN;
 
@@ -1719,7 +2711,17 @@
      * @returns {object|null}
      */
     function checkBingeRisk(days, profile, pIndex) {
-        console.info('ews / detect 🍔 checking binge risk...');
+        // v5.0: Phenotype-aware binge sensitivity
+        const bingeLimitMultiplier = getEwsThreshold('bingeVolume', 1.0, profile);
+        const SINGLE_MEAL_PERCENT = 40 * bingeLimitMultiplier; // default 40%
+        const EXTREME_OVEREAT_PERCENT = 1.5 * bingeLimitMultiplier; // default 150%
+
+        console.info('ews / detect 🍔 checking binge risk...', {
+            bingeLimitMultiplier,
+            SINGLE_MEAL_PERCENT: `${SINGLE_MEAL_PERCENT}%`,
+            EXTREME_OVEREAT_PERCENT: `${(EXTREME_OVEREAT_PERCENT * 100).toFixed(0)}%`
+        });
+
         if (days.length < 5) {
             console.info('ews / detect ⏭️ skip binge: insufficient days', days.length);
             return null;
@@ -1745,7 +2747,7 @@
                 if (!meal.items) return;
                 const mealKcal = meal.items.reduce((sum, item) => sum + calculateItemKcal(item, pIndex), 0);
                 const mealPercent = (mealKcal / optimum) * 100;
-                if (mealPercent > 40) {
+                if (mealPercent > SINGLE_MEAL_PERCENT) {
                     bingeMeals++;
                 }
             });
@@ -1759,7 +2761,7 @@
             // - 2+ large meals in one day
             // - OR single huge meal (>50% optimum)
             // - OR extreme overeating (>150% optimum) after restriction
-            const extremeOvereat = totalKcal > (optimum * 1.5);
+            const extremeOvereat = totalKcal > (optimum * EXTREME_OVEREAT_PERCENT);
             const bingeDay = bingeMeals >= 2 || extremeOvereat;
 
             return {
@@ -2094,6 +3096,611 @@
         return null;
     }
 
+    // ========================================
+    // Warning 16: Fiber deficit (v3.2)
+    // ========================================
+    function checkFiberDeficit(days, profile) {
+        console.info('ews / detect check_16:', { name: 'FiberDeficit', days: days.length });
+
+        const MIN_DAYS = 5;
+        // v5.0: Phenotype-aware threshold
+        const FIBER_THRESHOLD = getEwsThreshold('fiberTarget', 15, profile); // default 15g
+        console.info('ews / detect 🌾 fiber params:', { FIBER_THRESHOLD: `${FIBER_THRESHOLD}g` });
+
+        if (days.length < MIN_DAYS) return null;
+
+        const lowFiberDays = [];
+        for (const day of days) {
+            const fiber = day.dayTot?.fiber || 0;
+            if (fiber < FIBER_THRESHOLD) {
+                lowFiberDays.push({ date: day.date, fiber });
+            }
+        }
+
+        if (lowFiberDays.length >= MIN_DAYS) {
+            const avgFiber = lowFiberDays.reduce((sum, d) => sum + d.fiber, 0) / lowFiberDays.length;
+            const humanMsg = WARNING_HUMAN_MESSAGES.FIBER_DEFICIT;
+            const fiberScore = Math.min(100, Math.round((avgFiber / 30) * 100)); // Optimal target: 30g
+            console.info('ews / detect 🔶 FiberDeficit:', { lowDays: lowFiberDays.length, avgFiber: avgFiber.toFixed(1) });
+
+            return {
+                type: 'FIBER_DEFICIT',
+                severity: 'medium',
+                patternName: humanMsg.title,
+                message: `📊 ${humanMsg.title}`,
+                detail: `Средняя клетчатка: ${avgFiber.toFixed(1)}г (цель: ${FIBER_THRESHOLD}+г)`,
+                insight: humanMsg.insight,
+                science: humanMsg.science,
+                dates: lowFiberDays.map(d => d.date),
+                metrics: {
+                    avgFiber: Math.round(avgFiber * 10) / 10,
+                    threshold: FIBER_THRESHOLD,
+                    lowDays: lowFiberDays.length
+                },
+                currentScore: fiberScore,
+                actionable: true
+            };
+        }
+
+        return null;
+    }
+
+    // ========================================
+    // Warning 17: Sodium excess (v3.2)
+    // ========================================
+    function checkSodiumExcess(days, profile) {
+        console.info('ews / detect check_17:', { name: 'SodiumExcess', days: days.length });
+
+        const MIN_DAYS = 3;
+        // v5.0: Phenotype-aware threshold
+        const SODIUM_THRESHOLD = getEwsThreshold('sodiumLimit', 4000, profile); // default 4000mg
+        console.info('ews / detect 🧂 sodium params:', { SODIUM_THRESHOLD: `${SODIUM_THRESHOLD}mg` });
+
+        if (days.length < MIN_DAYS) return null;
+
+        const highSodiumDays = [];
+        for (const day of days) {
+            const sodium = day.dayTot?.sodium || 0;
+            if (sodium > SODIUM_THRESHOLD) {
+                highSodiumDays.push({ date: day.date, sodium });
+            }
+        }
+
+        if (highSodiumDays.length >= MIN_DAYS) {
+            const avgSodium = highSodiumDays.reduce((sum, d) => sum + d.sodium, 0) / highSodiumDays.length;
+            const humanMsg = WARNING_HUMAN_MESSAGES.SODIUM_EXCESS;
+            const sodiumScore = Math.max(0, Math.round((1 - (avgSodium - 2300) / 2300) * 100)); // Optimal: 2300mg
+            console.info('ews / detect 🔶 SodiumExcess:', { highDays: highSodiumDays.length, avgSodium: avgSodium.toFixed(0) });
+
+            return {
+                type: 'SODIUM_EXCESS',
+                severity: 'medium',
+                patternName: humanMsg.title,
+                message: `🧂 ${humanMsg.title}`,
+                detail: `Средний натрий: ${Math.round(avgSodium)} мг (цель: <${SODIUM_THRESHOLD} мг)`,
+                insight: humanMsg.insight,
+                science: humanMsg.science,
+                dates: highSodiumDays.map(d => d.date),
+                metrics: {
+                    avgSodium: Math.round(avgSodium),
+                    threshold: SODIUM_THRESHOLD,
+                    highDays: highSodiumDays.length
+                },
+                currentScore: sodiumScore,
+                actionable: true
+            };
+        }
+
+        return null;
+    }
+
+    // ========================================
+    // Warning 18: Circadian disruption (v3.2)
+    // ========================================
+    function checkCircadianDisruption(days, profile) {
+        console.info('ews / detect check_18:', { name: 'CircadianDisruption', days: days.length });
+
+        const MIN_DAYS = 7;
+
+        // v5.0: Phenotype-aware late meal threshold
+        const lateHourDecimal = getEwsThreshold('lateEatingHour', 22.0, profile); // default 22:00
+        const lateH = Math.floor(lateHourDecimal);
+        const lateM = Math.round((lateHourDecimal % 1) * 60);
+        const LATE_MEAL_TIME = `${String(lateH).padStart(2, '0')}:${String(lateM).padStart(2, '0')}`;
+
+        const varianceThresholdBase = 2.0;
+        // Apply sleep variability multiplier (if defined in phenotype)
+        const SLEEP_VARIANCE_THRESHOLD = getEwsThreshold('sleepVariabilityHours', varianceThresholdBase, profile);
+        console.info('ews / detect 🌙 circadian params:', { LATE_MEAL_TIME, SLEEP_VARIANCE_THRESHOLD: `${SLEEP_VARIANCE_THRESHOLD}h` });
+
+        if (days.length < MIN_DAYS) return null;
+
+        let lateMealCount = 0;
+        const sleepTimes = [];
+
+        for (const day of days) {
+            // Check for late meals
+            if (day.meals && Array.isArray(day.meals)) {
+                for (const meal of day.meals) {
+                    if (meal.time && meal.time >= LATE_MEAL_TIME) {
+                        lateMealCount++;
+                        break; // Count day once
+                    }
+                }
+            }
+
+            // Check sleep time
+            if (day.sleep?.time) {
+                const [h, m] = day.sleep.time.split(':').map(Number);
+                sleepTimes.push(h + m / 60);
+            }
+        }
+
+        const lateMealRatio = lateMealCount / days.length;
+
+        let sleepVariance = 0;
+        if (sleepTimes.length >= 3) {
+            const avgSleep = sleepTimes.reduce((sum, t) => sum + t, 0) / sleepTimes.length;
+            const maxDiff = Math.max(...sleepTimes.map(t => Math.abs(t - avgSleep)));
+            sleepVariance = maxDiff;
+        }
+
+        const isDisrupted = (lateMealRatio >= 4 / 7) || (sleepVariance > SLEEP_VARIANCE_THRESHOLD);
+
+        if (isDisrupted) {
+            const humanMsg = WARNING_HUMAN_MESSAGES.CIRCADIAN_DISRUPTION;
+            const circadianScore = Math.max(0, Math.round(100 - (lateMealRatio * 100 + sleepVariance * 10)));
+            console.info('ews / detect 🔶 CircadianDisruption:', {
+                lateMeals: lateMealCount,
+                lateMealRatio: lateMealRatio.toFixed(2),
+                sleepVariance: sleepVariance.toFixed(1)
+            });
+
+            return {
+                type: 'CIRCADIAN_DISRUPTION',
+                severity: 'high',
+                patternName: humanMsg.title,
+                message: `🌙 ${humanMsg.title}`,
+                detail: `Поздние приёмы пищи: ${lateMealCount} дней, разброс сна: ${sleepVariance.toFixed(1)}ч`,
+                insight: humanMsg.insight,
+                science: humanMsg.science,
+                dates: days.map(d => d.date),
+                metrics: {
+                    lateMealCount,
+                    sleepVariance: Math.round(sleepVariance * 10) / 10
+                },
+                currentScore: circadianScore,
+                actionable: true
+            };
+        }
+
+        return null;
+    }
+
+    // ========================================
+    // Warning 19: Training without recovery (v3.2)
+    // ========================================
+    function checkTrainingWithoutRecovery(days, profile) {
+        console.info('ews / detect check_19:', { name: 'TrainingWithoutRecovery', days: days.length });
+
+        const MIN_DAYS = 5;
+        const TRAINING_THRESHOLD = 3; // trainings in 5 days
+        const SLEEP_THRESHOLD = 6.5; // hours
+        const STRESS_THRESHOLD = 7;
+
+        if (days.length < MIN_DAYS) return null;
+
+        const recentDays = days.slice(-MIN_DAYS);
+        let trainingCount = 0;
+        let poorRecoveryCount = 0;
+
+        for (const day of recentDays) {
+            if (day.training?.duration && day.training.duration > 0) {
+                trainingCount++;
+
+                const sleepHours = calculateSleepHours(day.sleep?.duration);
+                const stress = day.stress || 0;
+
+                if (sleepHours < SLEEP_THRESHOLD || stress > STRESS_THRESHOLD) {
+                    poorRecoveryCount++;
+                }
+            }
+        }
+
+        if (trainingCount >= TRAINING_THRESHOLD && poorRecoveryCount >= 2) {
+            const humanMsg = WARNING_HUMAN_MESSAGES.TRAINING_WITHOUT_RECOVERY;
+            const recoveryScore = Math.max(0, Math.round(100 - (poorRecoveryCount / trainingCount) * 100));
+            console.info('ews / detect 🔴 TrainingWithoutRecovery:', {
+                trainings: trainingCount,
+                poorRecovery: poorRecoveryCount
+            });
+
+            return {
+                type: 'TRAINING_WITHOUT_RECOVERY',
+                severity: 'high',
+                patternName: humanMsg.title,
+                message: `💪 ${humanMsg.title}`,
+                detail: `${trainingCount} тренировок за ${MIN_DAYS} дней при ${poorRecoveryCount} днях плохого восстановления`,
+                insight: humanMsg.insight,
+                science: humanMsg.science,
+                dates: recentDays.map(d => d.date),
+                metrics: {
+                    trainingCount,
+                    poorRecoveryCount,
+                    windowDays: MIN_DAYS
+                },
+                currentScore: recoveryScore,
+                actionable: true
+            };
+        }
+
+        return null;
+    }
+
+    // ========================================
+    // Warning 20: Fat quality decline (v3.2)
+    // ========================================
+    function checkFatQualityDecline(days, profile, pIndex) {
+        console.info('ews / detect check_20:', { name: 'FatQualityDecline', days: days.length });
+
+        const MIN_DAYS = 7;
+        const SCORE_THRESHOLD = 40;
+
+        if (days.length < MIN_DAYS) return null;
+
+        let lowScoreDays = 0;
+        let totalScore = 0;
+
+        for (const day of days) {
+            const score = day.patterns?.omega_balancer?.score;
+            if (typeof score === 'number') {
+                totalScore += score;
+                if (score < SCORE_THRESHOLD) {
+                    lowScoreDays++;
+                }
+            }
+        }
+
+        if (lowScoreDays >= MIN_DAYS) {
+            const avgScore = totalScore / days.length;
+            const humanMsg = WARNING_HUMAN_MESSAGES.FAT_QUALITY_DECLINE;
+            console.info('ews / detect 🔶 FatQualityDecline:', { lowDays: lowScoreDays, avgScore: avgScore.toFixed(1) });
+
+            return {
+                type: 'FAT_QUALITY_DECLINE',
+                severity: 'medium',
+                patternName: humanMsg.title,
+                message: `🥑 ${humanMsg.title}`,
+                detail: `Omega Balancer: ${Math.round(avgScore)} баллов (цель: ${SCORE_THRESHOLD}+)`,
+                insight: humanMsg.insight,
+                science: humanMsg.science,
+                dates: days.map(d => d.date),
+                metrics: {
+                    avgScore: Math.round(avgScore),
+                    threshold: SCORE_THRESHOLD,
+                    lowDays: lowScoreDays
+                },
+                currentScore: Math.round(avgScore),
+                actionable: true
+            };
+        }
+
+        return null;
+    }
+
+    // ========================================
+    // Warning 21: Sugar dependency (v3.2)
+    // ========================================
+    function checkSugarDependency(days, profile) {
+        console.info('ews / detect check_21:', { name: 'SugarDependency', days: days.length });
+
+        const MIN_DAYS = 7;
+
+        // v5.0: Phenotype-aware sensitivity
+        // Logic: Lower sugar limit (e.g. 0.5 multiplier for IR) -> Higher score threshold required
+        // If multiplier < 1 (strict), we divide base threshold by it to raise the bar
+        // Base threshold 35 / 0.5 = 70 (warn if score < 70)
+
+        const sugarLimitMultiplier = getEwsThreshold('sugarLimit', 1.0, profile);
+        const SCORE_THRESHOLD = Math.round(35 / (sugarLimitMultiplier > 0 ? sugarLimitMultiplier : 1));
+        console.info('ews / detect 🍬 sugar params:', { sugarLimitMultiplier, SCORE_THRESHOLD });
+
+        if (days.length < MIN_DAYS) return null;
+
+        let lowScoreDays = 0;
+        let totalScore = 0;
+
+        for (const day of days) {
+            const score = day.patterns?.added_sugar_dependency?.score;
+            if (typeof score === 'number') {
+                totalScore += score;
+                if (score < SCORE_THRESHOLD) {
+                    lowScoreDays++;
+                }
+            }
+        }
+
+        if (lowScoreDays >= MIN_DAYS) {
+            const avgScore = totalScore / days.length;
+            const humanMsg = WARNING_HUMAN_MESSAGES.SUGAR_DEPENDENCY;
+            console.info('ews / detect 🔶 SugarDependency:', { lowDays: lowScoreDays, avgScore: avgScore.toFixed(1) });
+
+            return {
+                type: 'SUGAR_DEPENDENCY',
+                severity: 'medium',
+                patternName: humanMsg.title,
+                message: `🍬 ${humanMsg.title}`,
+                detail: `Added Sugar Dependency: ${Math.round(avgScore)} баллов (цель: ${SCORE_THRESHOLD}+)`,
+                insight: humanMsg.insight,
+                science: humanMsg.science,
+                dates: days.map(d => d.date),
+                metrics: {
+                    avgScore: Math.round(avgScore),
+                    threshold: SCORE_THRESHOLD,
+                    lowDays: lowScoreDays
+                },
+                currentScore: Math.round(avgScore),
+                actionable: true
+            };
+        }
+
+        return null;
+    }
+
+    // ========================================
+    // Warning 22: Micronutrient gap (v3.2)
+    // ========================================
+    function checkMicronutrientGap(days, profile) {
+        console.info('ews / detect check_22:', { name: 'MicronutrientGap', days: days.length });
+
+        const MIN_DAYS = 7;
+        const SCORE_THRESHOLD = 50;
+        const MIN_LOW_PATTERNS = 2;
+
+        if (days.length < MIN_DAYS) return null;
+
+        const microPatterns = ['vitamin_d', 'magnesium', 'zinc', 'iron', 'calcium'];
+        const patternScores = {};
+
+        for (const pattern of microPatterns) {
+            let totalScore = 0;
+            let count = 0;
+            for (const day of days) {
+                const score = day.patterns?.[pattern]?.score;
+                if (typeof score === 'number') {
+                    totalScore += score;
+                    count++;
+                }
+            }
+            if (count > 0) {
+                patternScores[pattern] = totalScore / count;
+            }
+        }
+
+        const lowPatterns = Object.entries(patternScores)
+            .filter(([_, score]) => score < SCORE_THRESHOLD)
+            .map(([name, score]) => ({ name, score }));
+
+        if (lowPatterns.length >= MIN_LOW_PATTERNS) {
+            const humanMsg = WARNING_HUMAN_MESSAGES.MICRONUTRIENT_GAP;
+            const avgLowScore = lowPatterns.reduce((sum, p) => sum + p.score, 0) / lowPatterns.length;
+            console.info('ews / detect 🔶 MicronutrientGap:', {
+                lowPatterns: lowPatterns.length,
+                patterns: lowPatterns.map(p => p.name)
+            });
+
+            return {
+                type: 'MICRONUTRIENT_GAP',
+                severity: 'medium',
+                patternName: humanMsg.title,
+                message: `🔬 ${humanMsg.title}`,
+                detail: `${lowPatterns.length} микронутриентов с низким score: ${lowPatterns.map(p => p.name).join(', ')}`,
+                insight: humanMsg.insight,
+                science: humanMsg.science,
+                dates: days.map(d => d.date),
+                metrics: {
+                    lowPatternCount: lowPatterns.length,
+                    patterns: lowPatterns
+                },
+                currentScore: Math.round(avgLowScore),
+                actionable: true
+            };
+        }
+
+        return null;
+    }
+
+    // ========================================
+    // Warning 23: Step decline (v3.2)
+    // ========================================
+    function checkStepDecline(days, profile) {
+        console.info('ews / detect check_23:', { name: 'StepDecline', days: days.length });
+
+        const MIN_DAYS = 30;
+        const RECENT_WINDOW = 7;
+        const DECLINE_THRESHOLD = 0.5; // 50% decline
+
+        if (days.length < MIN_DAYS) return null;
+
+        const recentDays = days.slice(-RECENT_WINDOW);
+        const allDays = days.slice(-MIN_DAYS);
+
+        let recentSteps = 0;
+        let recentCount = 0;
+        for (const day of recentDays) {
+            if (day.steps && day.steps > 0) {
+                recentSteps += day.steps;
+                recentCount++;
+            }
+        }
+
+        let allSteps = 0;
+        let allCount = 0;
+        for (const day of allDays) {
+            if (day.steps && day.steps > 0) {
+                allSteps += day.steps;
+                allCount++;
+            }
+        }
+
+        if (recentCount < 3 || allCount < 15) return null;
+
+        const recentAvg = recentSteps / recentCount;
+        const allAvg = allSteps / allCount;
+
+        const declineRatio = recentAvg / allAvg;
+
+        if (declineRatio < DECLINE_THRESHOLD) {
+            const humanMsg = WARNING_HUMAN_MESSAGES.STEP_DECLINE;
+            const declinePercent = Math.round((1 - declineRatio) * 100);
+            const stepScore = Math.max(0, Math.round(100 - declinePercent));
+            console.info('ews / detect 🔶 StepDecline:', {
+                recentAvg: recentAvg.toFixed(0),
+                allAvg: allAvg.toFixed(0),
+                decline: declinePercent + '%'
+            });
+
+            return {
+                type: 'STEP_DECLINE',
+                severity: 'low',
+                patternName: humanMsg.title,
+                message: `🚶 ${humanMsg.title}`,
+                detail: `Шаги упали на ${declinePercent}%: с ${Math.round(allAvg)} до ${Math.round(recentAvg)} шагов/день`,
+                insight: humanMsg.insight,
+                science: humanMsg.science,
+                dates: recentDays.map(d => d.date),
+                metrics: {
+                    recentAvg: Math.round(recentAvg),
+                    normalAvg: Math.round(allAvg),
+                    declinePercent
+                },
+                currentScore: stepScore,
+                actionable: true
+            };
+        }
+
+        return null;
+    }
+
+    // ========================================
+    // Warning 24: Meal timing drift (v3.2)
+    // ========================================
+    function checkMealTimingDrift(days, profile) {
+        console.info('ews / detect check_24:', { name: 'MealTimingDrift', days: days.length });
+
+        const MIN_DAYS = 7;
+
+        // v5.0: Phenotype-aware stability check
+        // Smaller window (e.g. 0.9 for IR) -> Stricter variance 
+        const VARIANCE_THRESHOLD = getEwsThreshold('mealTimeWindow', 2.5, profile); // default 2.5h
+        console.info('ews / detect ⏰ timing params:', { VARIANCE_THRESHOLD: `${VARIANCE_THRESHOLD}h` });
+
+        if (days.length < MIN_DAYS) return null;
+
+        const breakfastTimes = [];
+
+        for (const day of days) {
+            if (day.meals && Array.isArray(day.meals) && day.meals.length > 0) {
+                const firstMeal = day.meals[0];
+                if (firstMeal.time) {
+                    const [h, m] = firstMeal.time.split(':').map(Number);
+                    breakfastTimes.push(h + m / 60);
+                }
+            }
+        }
+
+        if (breakfastTimes.length < MIN_DAYS) return null;
+
+        const avgTime = breakfastTimes.reduce((sum, t) => sum + t, 0) / breakfastTimes.length;
+        const maxDiff = Math.max(...breakfastTimes.map(t => Math.abs(t - avgTime)));
+
+        if (maxDiff > VARIANCE_THRESHOLD) {
+            const humanMsg = WARNING_HUMAN_MESSAGES.MEAL_TIMING_DRIFT;
+            const timingScore = Math.max(0, Math.round(100 - (maxDiff / 4) * 100)); // Score decreases with variance
+            console.info('ews / detect 🔶 MealTimingDrift:', { variance: maxDiff.toFixed(1) });
+
+            return {
+                type: 'MEAL_TIMING_DRIFT',
+                severity: 'low',
+                patternName: humanMsg.title,
+                message: `⏰ ${humanMsg.title}`,
+                detail: `Время первого приёма пищи колеблется на ${maxDiff.toFixed(1)} часа`,
+                insight: humanMsg.insight,
+                science: humanMsg.science,
+                dates: days.map(d => d.date),
+                metrics: {
+                    variance: Math.round(maxDiff * 10) / 10,
+                    threshold: VARIANCE_THRESHOLD
+                },
+                currentScore: timingScore,
+                actionable: true
+            };
+        }
+
+        return null;
+    }
+
+    // ========================================
+    // Warning 25: Electrolyte imbalance (v3.2)
+    // ========================================
+    function checkElectrolyteImbalance(days, profile) {
+        console.info('ews / detect check_25:', { name: 'ElectrolyteImbalance', days: days.length });
+
+        const MIN_DAYS = 5;
+        const SCORE_THRESHOLD = 40;
+        const MIN_TRAININGS = 2;
+
+        if (days.length < MIN_DAYS) return null;
+
+        let lowScoreDays = 0;
+        let trainingCount = 0;
+        let totalScore = 0;
+
+        for (const day of days) {
+            const score = day.patterns?.electrolyte_homeostasis?.score;
+            if (typeof score === 'number') {
+                totalScore += score;
+                if (score < SCORE_THRESHOLD) {
+                    lowScoreDays++;
+                }
+            }
+            if (day.training?.duration && day.training.duration > 0) {
+                trainingCount++;
+            }
+        }
+
+        if (lowScoreDays >= 3 && trainingCount >= MIN_TRAININGS) {
+            const avgScore = totalScore / days.length;
+            const humanMsg = WARNING_HUMAN_MESSAGES.ELECTROLYTE_IMBALANCE;
+            console.info('ews / detect 🔶 ElectrolyteImbalance:', {
+                lowDays: lowScoreDays,
+                trainings: trainingCount,
+                avgScore: avgScore.toFixed(1)
+            });
+
+            return {
+                type: 'ELECTROLYTE_IMBALANCE',
+                severity: 'medium',
+                patternName: humanMsg.title,
+                message: `⚡ ${humanMsg.title}`,
+                detail: `Electrolyte Homeostasis: ${Math.round(avgScore)} баллов при ${trainingCount} тренировках`,
+                insight: humanMsg.insight,
+                science: humanMsg.science,
+                dates: days.map(d => d.date),
+                metrics: {
+                    avgScore: Math.round(avgScore),
+                    threshold: SCORE_THRESHOLD,
+                    lowDays: lowScoreDays,
+                    trainingCount
+                },
+                currentScore: Math.round(avgScore),
+                actionable: true
+            };
+        }
+
+        return null;
+    }
+
     /**
      * Helper: Calculate time gap between two time strings
      * @param {string} time1 - "08:30"
@@ -2144,18 +3751,191 @@
     }
 
     /**
+     * Calculate EWS Global Score (0-100) - Single summary metric of overall risk
+     * Formula: Aggregate severity × healthImpact × chronicity, normalized to 0-100
+     * Higher score = higher risk
+     * 
+     * @param {object[]} warnings - Array of detected warnings
+     * @param {object} trends - Trends object with chronicWarnings and allTrends
+     * @returns {object} { score: number, breakdown: object }
+     */
+    function calculateEwsGlobalScore(warnings, trends) {
+        const LOG_PREFIX = 'ews / global_score';
+
+        console.info(`${LOG_PREFIX} 🚀 start`, { warningsCount: warnings.length });
+
+        // Graceful fallback for empty warnings
+        if (!warnings || warnings.length === 0) {
+            console.info(`${LOG_PREFIX} ✅ result`, { score: 0, reason: 'no_warnings' });
+            return { score: 0, breakdown: { totalWeight: 0, components: [] } };
+        }
+
+        console.info(`${LOG_PREFIX} 📥 input`, {
+            warnings: warnings.length,
+            hasHighSeverity: warnings.filter(w => w.severity === 'high').length,
+            hasChronicWarnings: trends?.chronicWarnings?.length || 0
+        });
+
+        // Severity weights
+        const SEVERITY_WEIGHTS = { high: 3, medium: 2, low: 1 };
+
+        // Calculate weighted score for each warning
+        const components = warnings.map(w => {
+            const severityWeight = SEVERITY_WEIGHTS[w.severity] || 1;
+            const healthImpact = w.healthImpact || HEALTH_IMPACT_SCORES[w.type] || 50;
+
+            // Chronicity factor from trends (1.0 baseline, up to 2.0 for chronic)
+            let chronicityFactor = 1.0;
+            if (trends?.allTrends && trends.allTrends[w.type]) {
+                const trend = trends.allTrends[w.type];
+                if (trend.chronic) chronicityFactor = 2.0;
+                else if (trend.frequent) chronicityFactor = 1.5;
+            }
+
+            const componentWeight = severityWeight * (healthImpact / 100) * chronicityFactor;
+
+            return {
+                type: w.type,
+                severity: w.severity,
+                healthImpact,
+                chronicityFactor,
+                weight: componentWeight
+            };
+        });
+
+        const totalWeight = components.reduce((sum, c) => sum + c.weight, 0);
+
+        console.info(`${LOG_PREFIX} 🧮 compute`, {
+            components: components.length,
+            totalWeight: totalWeight.toFixed(2),
+            maxTheoreticalPerWarning: 3 * 1.0 * 2.0, // high severity × max impact × max chronicity
+            topContributors: components.sort((a, b) => b.weight - a.weight).slice(0, 3).map(c => c.type)
+        });
+
+        // Normalize to 0-100 scale
+        // Max theoretical: if all warnings were high severity (3) × max health impact (1.0) × chronic (2.0) = 6 per warning
+        // We'll use a more conservative normalization: score = totalWeight × 10, capped at 100
+        // This gives meaningful scores: 1 high-impact chronic warning ≈ 60 score
+        const rawScore = Math.min(100, totalWeight * 10);
+        const finalScore = Math.round(rawScore);
+
+        console.info(`${LOG_PREFIX} ✅ result`, {
+            score: finalScore,
+            totalWeight: totalWeight.toFixed(2),
+            warningsCount: warnings.length,
+            chronicCount: trends?.chronicWarnings?.length || 0
+        });
+
+        return {
+            score: finalScore,
+            breakdown: {
+                totalWeight,
+                components,
+                normalizationFactor: 10
+            }
+        };
+    }
+
+    /**
+     * Get phenotype-adjusted threshold for EWS check
+     * @param {string} key - Threshold key (e.g., 'sodiumLimit')
+     * @param {number} defaultVal - Default value if no adjustment
+     * @param {object} profile - User profile
+     * @returns {number} - Adjusted threshold
+     */
+    let _phenotypeHintShown = false; // Show friendly hint only once per session
+    function getEwsThreshold(key, defaultVal, profile) {
+        // v2.1: Smart auto-detection on first real usage (no setTimeout guessing!)
+        const isFirstCall = !_phenotypeHintShown;
+
+        // If no phenotype module or profile, return default
+        if (!HEYS.InsightsPI?.phenotype?.applyMultipliers || !profile?.phenotype) {
+            if (!_phenotypeHintShown) {
+                console.warn(`%c[HEYS.ews.phenotype] ⚠️ Using DEFAULT thresholds (no phenotype set)`, 'color: #ffaa00; font-weight: bold');
+                console.info(`%c  💡 Tip: Set phenotype for personalized thresholds:`, 'color: #ffaa00');
+                console.info(`     HEYS.InsightsPI.phenotype.setPreset('IR_EVENING')  // insulin resistant + evening type`);
+                console.info(`     HEYS.InsightsPI.phenotype.setPreset('OPTIMAL')     // optimal metabolism`);
+                console.info(`  Then reload page to see 🧬 Adjusted thresholds in action`);
+                _phenotypeHintShown = true;
+            }
+            return defaultVal;
+        }
+
+        // First call with active phenotype - show success message
+        if (isFirstCall) {
+            console.info('%c[HEYS.ews.phenotype] 🧬 Active phenotype detected:', 'color: #00ff00; font-weight: bold', profile.phenotype);
+            console.info('%c  ✅ Personalized thresholds enabled. Expected adjustments:', 'color: #00ff00');
+            if (profile.phenotype.metabolic === 'insulin_resistant') {
+                console.info('     • Fiber target: 15g → ~23g (+56%)');
+                console.info('     • Sodium limit: 4000mg → ~3200mg (-20%)');
+                console.info('     • Sugar tolerance: 1.0x → ~0.3x (-70%)');
+                console.info('     • Protein target: 1.0x → ~1.4x (+40%)');
+            }
+            if (profile.phenotype.circadian === 'evening_type') {
+                console.info('     • Late eating: 22:00 → ~20:36 (-1.4h)');
+                console.info('     • Sleep variability: 2h → ~2.3h (+15%)');
+            }
+            if (profile.phenotype.satiety === 'low_satiety') {
+                console.info('     • Meal skip tolerance: 1.0x → ~0.8x (-20% stricter)');
+                console.info('     • Binge volume: 1.0x → ~0.7x (-30% stricter)');
+            }
+            if (profile.phenotype.stress === 'stress_eater') {
+                console.info('     • Stress sensitivity: 1.0x → ~1.3x (+30% more sensitive)');
+            }
+            _phenotypeHintShown = true;
+        }
+
+        // Apply multipliers
+        const thresholds = { [key]: defaultVal };
+        const adjusted = HEYS.InsightsPI.phenotype.applyMultipliers(thresholds, profile.phenotype);
+        const result = adjusted[key];
+
+        // Show individual adjustment (every time, for transparency)
+        if (result !== defaultVal) {
+            const categories = [
+                profile.phenotype.metabolic,
+                profile.phenotype.circadian,
+                profile.phenotype.satiety,
+                profile.phenotype.stress
+            ].filter(Boolean).join('/');
+            console.info(`[HEYS.ews.phenotype] 🧬 Adjusted ${key}: ${defaultVal} → ${result} (${categories})`);
+        }
+
+        return result;
+    }
+
+    /**
      * Main API: Detect all early warning signals
      * @param {object[]} days - Array of day objects (sorted oldest to newest)
      * @param {object} profile - User profile
      * @param {object} pIndex - Product index
-     * @param {object} [options] - Optional previous/current pattern snapshots
+     * @param {object} [options] - Optional config: { mode: 'acute'|'full', includeDetails, currentPatterns, previousPatterns }
      * @returns {object}
      */
     function detectEarlyWarnings(days, profile, pIndex, options = {}) {
+        // Mode validation & default
+        const mode = options.mode || 'full';
+        if (!['acute', 'full'].includes(mode)) {
+            console.warn('ews / detect ⚠️ invalid mode:', mode, '→ defaulting to "full"');
+            mode = 'full';
+        }
+
+        const checksCount = mode === 'acute' ? 10 : 25;
+
         console.info('ews / detect 🚀 start:', {
+            mode: mode,
             windowDays: days?.length || 0,
-            checks: 15,
-            tiers: '5 Baseline + 3 Tier1 + 4 Tier2 + 3 Tier3'
+            checks: checksCount,
+            tiers: mode === 'acute'
+                ? '10 Acute (Health, Status, Sleep, Caloric, Weight, Hydration, Logging, Protein, Stress, Training)'
+                : '25 Full (5 Baseline + 3 Tier1 + 4 Tier2 + 3 Tier3 + 10 Advanced)'
+        });
+        console.info('ews / detect 📥 received options:', {
+            mode: mode,
+            includeDetails: options?.includeDetails || false,
+            hasCurrentPatterns: !!options?.currentPatterns,
+            patternsCount: options?.currentPatterns ? Object.keys(options.currentPatterns).length : 0,
+            patternNames: options?.currentPatterns ? Object.keys(options.currentPatterns).slice(0, 5) : []
         });
 
         if (!Array.isArray(days) || days.length < THRESHOLDS.MIN_DAYS_FOR_ANALYSIS) {
@@ -2182,9 +3962,9 @@
 
         const warnings = [];
 
-        console.info('ews / detect 🧮 compute:', { phase: 'running_15_checks', checksTotal: 15 });
+        console.info('ews / detect 🧮 compute:', { phase: 'running_checks', checksTotal: checksCount, mode: mode });
 
-        // Warning 1: Health Score decline
+        // Warning 1: Health Score decline (ACUTE)
         const scoreWarning = checkHealthScoreDecline(days, profile, pIndex, options);
         if (scoreWarning) {
             console.info('ews / detect 🧮   ✅ check_1:', { name: 'HealthScore', status: 'WARNING' });
@@ -2193,8 +3973,8 @@
             console.info('ews / detect 🧮   ➖ check_1:', { name: 'HealthScore', status: 'clean' });
         }
 
-        // Warning 2: Critical pattern degradation OR low pattern scores
-        if (options.currentPatterns) {
+        // Warning 2: Critical pattern degradation OR low pattern scores (FULL-only)
+        if ((mode === 'full') && options.currentPatterns) {
             const patternWarnings = checkCriticalPatternDegradation(
                 days,
                 profile,
@@ -2209,10 +3989,11 @@
                 console.info('ews / detect 🧮   ➖ check_2:', { name: 'Patterns', status: 'clean' });
             }
         } else {
-            console.info('ews / detect 🧮   ⏭️ check_2:', { name: 'Patterns', status: 'skipped', reason: 'no_currentPatterns' });
+            const skipReason = mode === 'acute' ? 'acute_mode' : 'no_currentPatterns';
+            console.info('ews / detect 🧮   ⏭️ check_2:', { name: 'Patterns', status: 'skipped', reason: skipReason });
         }
 
-        // Warning 3: Status Score decline
+        // Warning 3: Status Score decline (ACUTE)
         const statusWarning = checkStatusScoreDecline(days);
         if (statusWarning) {
             console.info('ews / detect 🧮   ✅ check_3:', { name: 'Status', status: 'WARNING' });
@@ -2288,51 +4069,201 @@
             console.info('ews / detect 🧮   ➖ check_10:', { name: 'Stress', status: 'clean' });
         }
 
-        // Warning 11: Meal skip pattern
-        const mealSkipWarning = checkMealSkipPattern(days, profile);
-        if (mealSkipWarning) {
-            console.info('ews / detect 🧮   ✅ check_11:', { name: 'MealSkip', status: 'WARNING' });
-            warnings.push(mealSkipWarning);
+        // Warning 11: Meal skip pattern (FULL-only)
+        if (mode === 'full') {
+            const mealSkipWarning = checkMealSkipPattern(days, profile);
+            if (mealSkipWarning) {
+                console.info('ews / detect 🧮   ✅ check_11:', { name: 'MealSkip', status: 'WARNING' });
+                warnings.push(mealSkipWarning);
+            } else {
+                console.info('ews / detect 🧮   ➖ check_11:', { name: 'MealSkip', status: 'clean' });
+            }
         } else {
-            console.info('ews / detect 🧮   ➖ check_11:', { name: 'MealSkip', status: 'clean' });
+            console.info('ews / detect 🧮   ⏭️ check_11:', { name: 'MealSkip', status: 'skipped', reason: 'acute_mode' });
         }
 
-        // Warning 12: Binge risk
-        const bingeWarning = checkBingeRisk(days, profile, pIndex);
-        if (bingeWarning) {
-            console.info('ews / detect 🧮   ✅ check_12:', { name: 'BingeRisk', status: 'WARNING' });
-            warnings.push(bingeWarning);
+        // Warning 12: Binge risk (FULL-only)
+        if (mode === 'full') {
+            const bingeWarning = checkBingeRisk(days, profile, pIndex);
+            if (bingeWarning) {
+                console.info('ews / detect 🧮   ✅ check_12:', { name: 'BingeRisk', status: 'WARNING' });
+                warnings.push(bingeWarning);
+            } else {
+                console.info('ews / detect 🧮   ➖ check_12:', { name: 'BingeRisk', status: 'clean' });
+            }
         } else {
-            console.info('ews / detect 🧮   ➖ check_12:', { name: 'BingeRisk', status: 'clean' });
+            console.info('ews / detect 🧮   ⏭️ check_12:', { name: 'BingeRisk', status: 'skipped', reason: 'acute_mode' });
         }
 
         // === Tier 3 Warnings (v3.0) ===
 
-        // Warning 13: Mood/wellbeing decline
-        const moodWarning = checkMoodWellbeingDecline(days, profile);
-        if (moodWarning) {
-            console.info('ews / detect 🧮   ✅ check_13:', { name: 'MoodDecline', status: 'WARNING' });
-            warnings.push(moodWarning);
+        // Warning 13: Mood/wellbeing decline (FULL-only)
+        if (mode === 'full') {
+            const moodWarning = checkMoodWellbeingDecline(days, profile);
+            if (moodWarning) {
+                console.info('ews / detect 🧮   ✅ check_13:', { name: 'MoodDecline', status: 'WARNING' });
+                warnings.push(moodWarning);
+            } else {
+                console.info('ews / detect 🧮   ➖ check_13:', { name: 'MoodDecline', status: 'clean' });
+            }
         } else {
-            console.info('ews / detect 🧮   ➖ check_13:', { name: 'MoodDecline', status: 'clean' });
+            console.info('ews / detect 🧮   ⏭️ check_13:', { name: 'MoodDecline', status: 'skipped', reason: 'acute_mode' });
         }
 
-        // Warning 14: Weight plateau
-        const plateauWarning = checkWeightPlateau(days, profile);
-        if (plateauWarning) {
-            console.info('ews / detect 🧮   ✅ check_14:', { name: 'WeightPlateau', status: 'WARNING' });
-            warnings.push(plateauWarning);
+        // Warning 14: Weight plateau (FULL-only)
+        if (mode === 'full') {
+            const plateauWarning = checkWeightPlateau(days, profile);
+            if (plateauWarning) {
+                console.info('ews / detect 🧮   ✅ check_14:', { name: 'WeightPlateau', status: 'WARNING' });
+                warnings.push(plateauWarning);
+            } else {
+                console.info('ews / detect 🧮   ➖ check_14:', { name: 'WeightPlateau', status: 'clean' });
+            }
         } else {
-            console.info('ews / detect 🧮   ➖ check_14:', { name: 'WeightPlateau', status: 'clean' });
+            console.info('ews / detect 🧮   ⏭️ check_14:', { name: 'WeightPlateau', status: 'skipped', reason: 'acute_mode' });
         }
 
-        // Warning 15: Weekend pattern
-        const weekendWarning = checkWeekendPattern(days, profile, pIndex);
-        if (weekendWarning) {
-            console.info('ews / detect 🧮   ✅ check_15:', { name: 'WeekendPattern', status: 'WARNING' });
-            warnings.push(weekendWarning);
+        // Warning 15: Weekend pattern (FULL-only)
+        if (mode === 'full') {
+            const weekendWarning = checkWeekendPattern(days, profile, pIndex);
+            if (weekendWarning) {
+                console.info('ews / detect 🧮   ✅ check_15:', { name: 'WeekendPattern', status: 'WARNING' });
+                warnings.push(weekendWarning);
+            } else {
+                console.info('ews / detect 🧮   ➖ check_15:', { name: 'WeekendPattern', status: 'clean' });
+            }
         } else {
-            console.info('ews / detect 🧮   ➖ check_15:', { name: 'WeekendPattern', status: 'clean' });
+            console.info('ews / detect 🧮   ⏭️ check_15:', { name: 'WeekendPattern', status: 'skipped', reason: 'acute_mode' });
+        }
+
+        // ========================================
+        // Advanced Warnings (v3.2)
+        // ========================================
+
+        // Warning 16: Fiber deficit (FULL-only)
+        if (mode === 'full') {
+            const fiberWarning = checkFiberDeficit(days, profile);
+            if (fiberWarning) {
+                console.info('ews / detect 🧮   ✅ check_16:', { name: 'FiberDeficit', status: 'WARNING' });
+                warnings.push(fiberWarning);
+            } else {
+                console.info('ews / detect 🧮   ➖ check_16:', { name: 'FiberDeficit', status: 'clean' });
+            }
+        } else {
+            console.info('ews / detect 🧮   ⏭️ check_16:', { name: 'FiberDeficit', status: 'skipped', reason: 'acute_mode' });
+        }
+
+        // Warning 17: Sodium excess (FULL-only)
+        if (mode === 'full') {
+            const sodiumWarning = checkSodiumExcess(days, profile);
+            if (sodiumWarning) {
+                console.info('ews / detect 🧮   ✅ check_17:', { name: 'SodiumExcess', status: 'WARNING' });
+                warnings.push(sodiumWarning);
+            } else {
+                console.info('ews / detect 🧮   ➖ check_17:', { name: 'SodiumExcess', status: 'clean' });
+            }
+        } else {
+            console.info('ews / detect 🧮   ⏭️ check_17:', { name: 'SodiumExcess', status: 'skipped', reason: 'acute_mode' });
+        }
+
+        // Warning 18: Circadian disruption (FULL-only)
+        if (mode === 'full') {
+            const circadianWarning = checkCircadianDisruption(days, profile);
+            if (circadianWarning) {
+                console.info('ews / detect 🧮   ✅ check_18:', { name: 'CircadianDisruption', status: 'WARNING' });
+                warnings.push(circadianWarning);
+            } else {
+                console.info('ews / detect 🧮   ➖ check_18:', { name: 'CircadianDisruption', status: 'clean' });
+            }
+        } else {
+            console.info('ews / detect 🧮   ⏭️ check_18:', { name: 'CircadianDisruption', status: 'skipped', reason: 'acute_mode' });
+        }
+
+        // Warning 19: Training without recovery
+        const trainingRecoveryWarning = checkTrainingWithoutRecovery(days, profile);
+        if (trainingRecoveryWarning) {
+            console.info('ews / detect 🧮   ✅ check_19:', { name: 'TrainingWithoutRecovery', status: 'WARNING' });
+            warnings.push(trainingRecoveryWarning);
+        } else {
+            console.info('ews / detect 🧮   ➖ check_19:', { name: 'TrainingWithoutRecovery', status: 'clean' });
+        }
+
+        // Warning 20: Fat quality decline (FULL-only)
+        if (mode === 'full') {
+            const fatQualityWarning = checkFatQualityDecline(days, profile, pIndex);
+            if (fatQualityWarning) {
+                console.info('ews / detect 🧮   ✅ check_20:', { name: 'FatQualityDecline', status: 'WARNING' });
+                warnings.push(fatQualityWarning);
+            } else {
+                console.info('ews / detect 🧮   ➖ check_20:', { name: 'FatQualityDecline', status: 'clean' });
+            }
+        } else {
+            console.info('ews / detect 🧮   ⏭️ check_20:', { name: 'FatQualityDecline', status: 'skipped', reason: 'acute_mode' });
+        }
+
+        // Warning 21: Sugar dependency (FULL-only)
+        if (mode === 'full') {
+            const sugarWarning = checkSugarDependency(days, profile);
+            if (sugarWarning) {
+                console.info('ews / detect 🧮   ✅ check_21:', { name: 'SugarDependency', status: 'WARNING' });
+                warnings.push(sugarWarning);
+            } else {
+                console.info('ews / detect 🧮   ➖ check_21:', { name: 'SugarDependency', status: 'clean' });
+            }
+        } else {
+            console.info('ews / detect 🧮   ⏭️ check_21:', { name: 'SugarDependency', status: 'skipped', reason: 'acute_mode' });
+        }
+
+        // Warning 22: Micronutrient gap (FULL-only)
+        if (mode === 'full') {
+            const microWarning = checkMicronutrientGap(days, profile);
+            if (microWarning) {
+                console.info('ews / detect 🧮   ✅ check_22:', { name: 'MicronutrientGap', status: 'WARNING' });
+                warnings.push(microWarning);
+            } else {
+                console.info('ews / detect 🧮   ➖ check_22:', { name: 'MicronutrientGap', status: 'clean' });
+            }
+        } else {
+            console.info('ews / detect 🧮   ⏭️ check_22:', { name: 'MicronutrientGap', status: 'skipped', reason: 'acute_mode' });
+        }
+
+        // Warning 23: Step decline (FULL-only)
+        if (mode === 'full') {
+            const stepWarning = checkStepDecline(days, profile);
+            if (stepWarning) {
+                console.info('ews / detect 🧮   ✅ check_23:', { name: 'StepDecline', status: 'WARNING' });
+                warnings.push(stepWarning);
+            } else {
+                console.info('ews / detect 🧮   ➖ check_23:', { name: 'StepDecline', status: 'clean' });
+            }
+        } else {
+            console.info('ews / detect 🧮   ⏭️ check_23:', { name: 'StepDecline', status: 'skipped', reason: 'acute_mode' });
+        }
+
+        // Warning 24: Meal timing drift (FULL-only)
+        if (mode === 'full') {
+            const mealTimingWarning = checkMealTimingDrift(days, profile);
+            if (mealTimingWarning) {
+                console.info('ews / detect 🧮   ✅ check_24:', { name: 'MealTimingDrift', status: 'WARNING' });
+                warnings.push(mealTimingWarning);
+            } else {
+                console.info('ews / detect 🧮   ➖ check_24:', { name: 'MealTimingDrift', status: 'clean' });
+            }
+        } else {
+            console.info('ews / detect 🧮   ⏭️ check_24:', { name: 'MealTimingDrift', status: 'skipped', reason: 'acute_mode' });
+        }
+
+        // Warning 25: Electrolyte imbalance (FULL-only)
+        if (mode === 'full') {
+            const electrolyteWarning = checkElectrolyteImbalance(days, profile);
+            if (electrolyteWarning) {
+                console.info('ews / detect 🧮   ✅ check_25:', { name: 'ElectrolyteImbalance', status: 'WARNING' });
+                warnings.push(electrolyteWarning);
+            } else {
+                console.info('ews / detect 🧮   ➖ check_25:', { name: 'ElectrolyteImbalance', status: 'clean' });
+            }
+        } else {
+            console.info('ews / detect 🧮   ⏭️ check_25:', { name: 'ElectrolyteImbalance', status: 'skipped', reason: 'acute_mode' });
         }
 
         // Sort by severity
@@ -2351,7 +4282,7 @@
         });
 
         // Visual summary table of all 15 checks (v3.0 verification +  pipeline logs v3.1)
-        console.group('ews / detect 🖥️ ui.summary - All 15 Checks');
+        console.group('ews / detect 🖥️ ui.summary - All 25 Checks');
         const checkMapping = [
             { num: 1, name: 'Health Score Decline', tier: 'Baseline', types: ['HEALTH_SCORE_DECLINE'] },
             { num: 2, name: 'Pattern Issues', tier: 'Baseline', types: ['CRITICAL_PATTERN_DEGRADATION', 'LOW_PATTERN_SCORE'] },
@@ -2367,7 +4298,17 @@
             { num: 12, name: 'Binge Risk', tier: 'Tier 2', types: ['BINGE_RISK'] },
             { num: 13, name: 'Mood/Wellbeing Decline', tier: 'Tier 3', types: ['MOOD_WELLBEING_DECLINE'] },
             { num: 14, name: 'Weight Plateau', tier: 'Tier 3', types: ['WEIGHT_PLATEAU'] },
-            { num: 15, name: 'Weekend Pattern', tier: 'Tier 3', types: ['WEEKEND_PATTERN'] }
+            { num: 15, name: 'Weekend Pattern', tier: 'Tier 3', types: ['WEEKEND_PATTERN'] },
+            { num: 16, name: 'Fiber Deficit', tier: 'Advanced', types: ['FIBER_DEFICIT'] },
+            { num: 17, name: 'Sodium Excess', tier: 'Advanced', types: ['SODIUM_EXCESS'] },
+            { num: 18, name: 'Circadian Disruption', tier: 'Advanced', types: ['CIRCADIAN_DISRUPTION'] },
+            { num: 19, name: 'Training w/o Recovery', tier: 'Advanced', types: ['TRAINING_WITHOUT_RECOVERY'] },
+            { num: 20, name: 'Fat Quality Decline', tier: 'Advanced', types: ['FAT_QUALITY_DECLINE'] },
+            { num: 21, name: 'Sugar Dependency', tier: 'Advanced', types: ['SUGAR_DEPENDENCY'] },
+            { num: 22, name: 'Micronutrient Gap', tier: 'Advanced', types: ['MICRONUTRIENT_GAP'] },
+            { num: 23, name: 'Step Decline', tier: 'Advanced', types: ['STEP_DECLINE'] },
+            { num: 24, name: 'Meal Timing Drift', tier: 'Advanced', types: ['MEAL_TIMING_DRIFT'] },
+            { num: 25, name: 'Electrolyte Imbalance', tier: 'Advanced', types: ['ELECTROLYTE_IMBALANCE'] }
         ];
         const warningTypes = new Set(warnings.map(function (w) { return w.type; }));
         const checkSummary = checkMapping.map(function (check) {
@@ -2380,15 +4321,61 @@
             };
         });
         console.table(checkSummary);
-        console.info('ews / detect 🖥️ ui.legend:', 'Baseline(5) + Tier1(3) + Tier2(4) + Tier3(3) = 15 checks total');
+        console.info('ews / detect 🖥️ ui.legend:', 'Baseline(5) + Tier1(3) + Tier2(4) + Tier3(3) + Advanced(10) = 25 checks total');
         console.groupEnd();
-        console.info('ews / detect 🖥️ ui.complete:', { warningsDisplayed: warnings.length, checksTotal: 15 });
+        console.info('ews / detect 🖥️ ui.complete:', { warningsDisplayed: warnings.length, checksTotal: 25 });
 
         // Track warning trends (v3.1)
         const trendsResult = trackWarningTrends(warnings);
 
         // Prioritize warnings by severity × frequency × health impact (v3.1)
         const prioritizedWarnings = prioritizeWarnings(warnings, trendsResult.allTrends);
+
+        // Calculate EWS Global Score (v4.0)
+        const globalScoreResult = calculateEwsGlobalScore(prioritizedWarnings, trendsResult);
+
+        console.info('ews / global_score 🖥️ ui', {
+            score: globalScoreResult.score,
+            interpretation: globalScoreResult.score >= 70 ? 'HIGH_RISK'
+                : globalScoreResult.score >= 40 ? 'MEDIUM_RISK'
+                    : globalScoreResult.score >= 20 ? 'LOW_RISK'
+                        : 'MINIMAL_RISK'
+        });
+
+        // Calculate Weekly Progress Tracking (v4.1, Wave 3.1 + cloud sync)
+        // Fire-and-forget: weekly progress runs in background (detect() must stay sync for callers)
+        const weeklyProgressDefault = { weeks: [], trend: 'stable', currentWeek: null };
+        calculateWeeklyProgress(prioritizedWarnings, globalScoreResult.score)
+            .then(result => {
+                console.info('ews / weekly ✅ Background weekly progress computed:', {
+                    weeks: result.weeks?.length || 0,
+                    trend: result.trend
+                });
+            })
+            .catch(err => {
+                console.warn('ews / weekly ⚠️ Background weekly progress failed:', err?.message);
+            });
+
+        // Detect Causal Chains (v4.0)
+        let causalChainsResult = [];
+        if (typeof HEYS.InsightsPI?.causalChains?.detect === 'function') {
+            causalChainsResult = HEYS.InsightsPI.causalChains.detect({
+                warnings: prioritizedWarnings,
+                patterns: options.currentPatterns || {},
+                trends: trendsResult
+            });
+
+            console.info('ews / causal_chain 🖥️ ui', {
+                chainsDetected: causalChainsResult.length,
+                topChains: causalChainsResult.slice(0, 3).map(c => ({
+                    id: c.chainId,
+                    confidence: c.adjustedConfidence,
+                    coverage: c.matchRatio + '%'
+                }))
+            });
+        } else {
+            console.info('ews / causal_chain ⚠️ skipped', { reason: 'module_not_loaded' });
+        }
 
         return {
             available: true,
@@ -2405,20 +4392,116 @@
                 allTrends: trendsResult.allTrends
             },
             // Priority queue (v3.1)
-            criticalPriority: prioritizedWarnings.filter(w => w.criticalPriority)
+            criticalPriority: prioritizedWarnings.filter(w => w.criticalPriority),
+            // Global Score (v4.0)
+            globalScore: globalScoreResult.score,
+            globalScoreBreakdown: globalScoreResult.breakdown,
+            // Causal Chains (v4.0)
+            causalChains: causalChainsResult,
+            // Weekly Progress (v4.1, Wave 3.1)
+            weeklyProgress: weeklyProgressDefault
         };
     }
+
+
 
     // Export API
     HEYS.InsightsPI.earlyWarning = {
         detect: detectEarlyWarnings,
         trackTrends: trackWarningTrends,
         prioritize: prioritizeWarnings,
+        calculateGlobalScore: calculateEwsGlobalScore,
+        calculateWeeklyProgress: calculateWeeklyProgress,
+        backfillWeeklySnapshots: backfillWeeklySnapshots,
         thresholds: THRESHOLDS,
         healthImpact: HEALTH_IMPACT_SCORES,
-        version: '3.1.0'
+        version: '4.2.0'
     };
 
-    console.log('[HEYS.InsightsPI] ✅ Early Warning System v3.1 loaded (15 checks + trends + priority queue: severity × frequency × impact)');
+    console.log('[HEYS.InsightsPI] ✅ Early Warning System v4.2 loaded (25 checks + trends + priority + global score + weekly progress + cloud sync)');
+    console.info('[HEYS.InsightsPI.earlyWarning] 🎯 Module ready:', {
+        detect: typeof HEYS.InsightsPI.earlyWarning.detect,
+        trackTrends: typeof HEYS.InsightsPI.earlyWarning.trackTrends,
+        calculateWeeklyProgress: typeof HEYS.InsightsPI.earlyWarning.calculateWeeklyProgress,
+        backfillWeeklySnapshots: typeof HEYS.InsightsPI.earlyWarning.backfillWeeklySnapshots,
+        version: HEYS.InsightsPI.earlyWarning.version,
+        checks: 25,
+        cloudSyncEnabled: CLOUD_SYNC_CONFIG.ENABLED
+    });
+
+    // === PHENOTYPE QUICK HELPERS (console API) ===
+    if (!HEYS.InsightsPI.phenotype.set) {
+        const PRESETS = {
+            IR_EVENING: { metabolic: 'insulin_resistant', circadian: 'evening_type', satiety: 'low_satiety', stress: 'stress_eater' },
+            IR_MORNING: { metabolic: 'insulin_resistant', circadian: 'morning_type', satiety: 'high_satiety', stress: 'neutral' },
+            METABOLIC_SYNDROME: { metabolic: 'metabolic_syndrome_risk', circadian: 'evening_type', satiety: 'volume_eater', stress: 'stress_eater' },
+            OPTIMAL: { metabolic: 'insulin_sensitive', circadian: 'flexible', satiety: 'normal', stress: 'neutral' }
+        };
+
+        HEYS.InsightsPI.phenotype.set = function (metabolic, circadian, satiety, stress) {
+            const utils = window.HEYS?.utils;
+            if (!utils || !utils.lsGet || !utils.lsSet) {
+                console.error('❌ HEYS.utils not available');
+                return false;
+            }
+            const profile = utils.lsGet('heys_profile', {});
+            if (!profile || Object.keys(profile).length === 0) {
+                console.error('❌ Profile not found');
+                return false;
+            }
+            profile.phenotype = { metabolic, circadian, satiety, stress };
+            utils.lsSet('heys_profile', profile);
+            console.info('✅ Phenotype set:', profile.phenotype);
+            console.info('🔄 Refresh page or re-run EWS detect() to apply');
+            return true;
+        };
+
+        HEYS.InsightsPI.phenotype.setPreset = function (presetName) {
+            const preset = PRESETS[presetName];
+            if (!preset) {
+                console.error('❌ Unknown preset. Available:', Object.keys(PRESETS));
+                return false;
+            }
+            return HEYS.InsightsPI.phenotype.set(preset.metabolic, preset.circadian, preset.satiety, preset.stress);
+        };
+
+        HEYS.InsightsPI.phenotype.clear = function () {
+            const utils = window.HEYS?.utils;
+            if (!utils || !utils.lsGet || !utils.lsSet) return false;
+            const profile = utils.lsGet('heys_profile', {});
+            if (!profile) return false;
+            delete profile.phenotype;
+            utils.lsSet('heys_profile', profile);
+            console.info('✅ Phenotype cleared (defaults restored)');
+            return true;
+        };
+
+        HEYS.InsightsPI.phenotype.status = function () {
+            const utils = window.HEYS?.utils;
+            if (!utils || !utils.lsGet) return null;
+            const profile = utils.lsGet('heys_profile', {});
+            if (!profile || !profile.phenotype) {
+                console.info('⚠️ No phenotype set (using defaults)');
+                return null;
+            }
+            console.info('🧬 Current phenotype:', profile.phenotype);
+            return profile.phenotype;
+        };
+
+        console.info('[HEYS.InsightsPI.phenotype] 🛠️ Quick API loaded:');
+        console.info('  • HEYS.InsightsPI.phenotype.set(metabolic, circadian, satiety, stress)');
+        console.info('  • HEYS.InsightsPI.phenotype.setPreset("IR_EVENING" | "IR_MORNING" | "METABOLIC_SYNDROME" | "OPTIMAL")');
+        console.info('  • HEYS.InsightsPI.phenotype.clear()');
+        console.info('  • HEYS.InsightsPI.phenotype.status()');
+    }
+
+    // Dispatch event for components waiting for EWS module
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('heys-ews-ready', {
+            detail: { version: '4.2.0', timestamp: Date.now() }
+        }));
+        console.info('[HEYS.InsightsPI.earlyWarning] 📡 Dispatched heys-ews-ready event');
+        // Note: Phenotype status auto-displays on first detect() via getEwsThreshold() smart logging
+    }
 
 })(typeof window !== 'undefined' ? window : global);
