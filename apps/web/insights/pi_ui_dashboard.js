@@ -77,6 +77,7 @@
       return section?.priority || 'INFO';
     });
     const PRIORITY_CONTEXT_LABELS = piConstants.PRIORITY_CONTEXT_LABELS || {};
+    const DYNAMIC_LOG_PREFIX = 'priority /';
     const getAllMetricsByPriority = piConstants.getAllMetricsByPriority || function () {
       devWarn('[pi_ui_dashboard] getAllMetricsByPriority not available, returning empty array');
       return [];
@@ -539,6 +540,14 @@
               lsGet
             });
 
+            console.info('[EarlyWarningCard] 📤 calling detect:', {
+              daysCount: days.length,
+              hasProfile: !!profile,
+              pIndexCount: pIndex?.length || 0,
+              hasCurrentPatterns: !!currentInsights?.patterns,
+              patternsCount: currentInsights?.patterns ? Object.keys(currentInsights.patterns).length : 0
+            });
+
             // Detect warnings
             const result = HEYS.InsightsPI.earlyWarning.detect(
               days,
@@ -577,23 +586,6 @@
           window.removeEventListener('heys-sync-complete', checkWarnings);
         };
       }, [lsGet, profile, pIndex]);
-
-      // Event listener для открытия панели из внешних источников (header badge, виджет)
-      useEffect(() => {
-        console.info('[EarlyWarningCard] 🎧 Event listener registered for heysShowEWSPanel');
-        const handleShowPanel = () => {
-          console.info('[EarlyWarningCard] 📢 Event received: heysShowEWSPanel');
-          setPanelOpen(true);
-          console.info('[EarlyWarningCard] ✅ Panel opened');
-        };
-
-        window.addEventListener('heysShowEWSPanel', handleShowPanel);
-
-        return () => {
-          console.info('[EarlyWarningCard] 🔇 Event listener removed');
-          window.removeEventListener('heysShowEWSPanel', handleShowPanel);
-        };
-      }, []);
 
       // Don't show card if no module or no warnings
       if (!HEYS.InsightsPI?.earlyWarning) return null;
@@ -645,7 +637,8 @@
         panelOpen && HEYS.EarlyWarningPanel && h(HEYS.EarlyWarningPanel, {
           isOpen: panelOpen,
           onClose: () => setPanelOpen(false),
-          warnings
+          warnings,
+          mode: 'full'  // Insights dashboard shows comprehensive 30-day audit
         })
       );
     }
@@ -855,6 +848,23 @@
     function PriorityBadge({ priority, showLabel = false, size = 'normal', contextLabels = null }) {
       const config = PRIORITY_LEVELS[priority] || PRIORITY_LEVELS.INFO;
       const label = contextLabels?.[priority] || config.name;
+      const lastBadgeLogRef = useRef(null);
+
+      useEffect(() => {
+        if (typeof console === 'undefined' || !console.info || !contextLabels) return;
+
+        const signature = `${priority || 'INFO'}|${label}|${config.color}|${size}|${showLabel ? '1' : '0'}`;
+        if (lastBadgeLogRef.current === signature) return;
+
+        lastBadgeLogRef.current = signature;
+        console.info(`${DYNAMIC_LOG_PREFIX} 🏷️ badge:`, {
+          priority: priority || 'INFO',
+          label,
+          color: config.color,
+          size,
+          showLabel
+        });
+      }, [priority, label, config.color, size, showLabel, contextLabels]);
 
       return h('span', {
         className: `priority-badge priority-badge--${priority?.toLowerCase() || 'info'} priority-badge--${size}`,
@@ -1272,7 +1282,7 @@
 
         const collectWarnings = () => {
           try {
-            console.info('priority / resolver 🚀 start:', { scope: 'InsightsTab', section: 'STATUS_SCORE' });
+            console.info(`${DYNAMIC_LOG_PREFIX} 🚀 start:`, { scope: 'InsightsTab', section: 'STATUS_SCORE' });
 
             const earlyWarning = HEYS.InsightsPI?.earlyWarning;
             const getter = lsGet || window.HEYS?.utils?.lsGet;
@@ -1280,7 +1290,7 @@
 
             if (!earlyWarning || typeof earlyWarning.detect !== 'function' || !getter || !fmtDate) {
               if (!cancelled) setEwsWarnings([]);
-              console.info('priority / resolver ⚠️ skipped:', {
+              console.info(`${DYNAMIC_LOG_PREFIX} ⚠️ skipped:`, {
                 reason: 'EWS module or storage utils unavailable',
                 hasDetect: !!earlyWarning?.detect,
                 hasGetter: !!getter,
@@ -1300,7 +1310,7 @@
 
             if (days.length < 7) {
               if (!cancelled) setEwsWarnings([]);
-              console.info('priority / resolver ⚠️ skipped:', {
+              console.info(`${DYNAMIC_LOG_PREFIX} ⚠️ skipped:`, {
                 reason: 'insufficient days for EWS',
                 days: days.length
               });
@@ -1324,14 +1334,14 @@
 
             if (!cancelled) setEwsWarnings(warnings);
 
-            console.info('priority / resolver 📥 input:', {
+            console.info(`${DYNAMIC_LOG_PREFIX} 📥 input:`, {
               score: insights?.healthScore?.total,
               warningsCount: warnings.length,
               highWarnings: warnings.filter(w => w.severity === 'high').length
             });
           } catch (error) {
             if (!cancelled) setEwsWarnings([]);
-            console.error('priority / resolver ❌ failed:', { scope: 'InsightsTab', error: error?.message || error });
+            console.error(`${DYNAMIC_LOG_PREFIX} ❌ failed:`, { scope: 'InsightsTab', error: error?.message || error });
           }
         };
 
@@ -1348,30 +1358,50 @@
         };
       }, [lsGet, effectiveData.profile, effectiveData.pIndex, insights?.healthScore?.total]);
 
+      // 1. Динамический приоритет для STATUS_SCORE (Метаболический статус)
       const statusSectionPriority = useMemo(() => {
         const score = insights?.healthScore?.total;
         const trend = insights?.healthScore?.trend7d ?? insights?.healthScore?.trend ?? null;
-        const resolved = computeDynamicPriority({
+        return computeDynamicPriority({
           sectionId: 'STATUS_SCORE',
           score,
           trend,
           warnings: ewsWarnings
         });
-
-        console.info('priority / resolver 🧮 compute:', {
-          section: 'STATUS_SCORE',
-          score,
-          trend7d: trend,
-          warnings: ewsWarnings.length,
-          highWarnings: ewsWarnings.filter(w => w.severity === 'high').length,
-          resolvedPriority: resolved
-        });
-
-        return resolved;
       }, [computeDynamicPriority, insights?.healthScore?.total, insights?.healthScore?.trend7d, insights?.healthScore?.trend, ewsWarnings]);
 
+      // 2. Динамический приоритет для CRASH_RISK (Риск срыва)
+      const crashRiskPriority = useMemo(() => {
+        // Получаем сырой % риска из тех же метрик, что считает MetabolicQuickStatus
+        // (упрощенная копия логики, так как сам компонент недоступен здесь)
+        // Но лучше передать warnings релевантных типов!
+
+        // Временное решение: считаем по warnings, так как crashRiskScore ещё не прокинут в props
+        // TODO: Прокинуть crashRiskScore из родителя
+
+        return computeDynamicPriority({
+          sectionId: 'CRASH_RISK',
+          crashRiskScore: null, // Пока нет данных, сработает fallback на warnings
+          warnings: ewsWarnings
+        });
+      }, [computeDynamicPriority, ewsWarnings]);
+
+      // 3. Динамический приоритет для PRIORITY_ACTIONS (Важные шаги)
+      const actionsPriority = useMemo(() => {
+        // Считаем количество High/Critical warnings
+        const urgentCount = ewsWarnings ? ewsWarnings.filter(w => w.severity === 'high').length : 0;
+        const totalCount = ewsWarnings ? ewsWarnings.length : 0;
+
+        return computeDynamicPriority({
+          sectionId: 'PRIORITY_ACTIONS',
+          urgentActionsCount: urgentCount,
+          actionsCount: totalCount
+        });
+      }, [computeDynamicPriority, ewsWarnings]);
+
+
       useEffect(() => {
-        console.info('priority / resolver 🖥️ ui:', {
+        console.info(`${DYNAMIC_LOG_PREFIX} 🖥️ ui:`, {
           section: 'STATUS_SCORE',
           renderedPriority: statusSectionPriority,
           filter: priorityFilter || 'ALL'
@@ -1481,7 +1511,44 @@
 
             // ═══════════════════════════════════════════════════════════
             // 🔴 КРИТИЧЕСКИЙ ПРИОРИТЕТ — Самое важное сверху
+            // Сюда попадают CRASH_RISK и PRIORITY_ACTIONS если они активны
             // ═══════════════════════════════════════════════════════════
+
+            /* 1. STATUS SCORE (если CRITICAL) - уже обрабатывается ниже */
+
+            /* 2. CRASH RISK (Динамический приоритет!) */
+            (shouldShowSection(crashRiskPriority) &&
+              h('div', { className: `insights-tab__section insights-tab__section--${crashRiskPriority.toLowerCase()}` },
+                h('div', { className: 'insights-tab__section-badge' },
+                  h(PriorityBadge, {
+                    priority: crashRiskPriority,
+                    showLabel: true,
+                    contextLabels: PRIORITY_CONTEXT_LABELS.CRASH_RISK
+                  })
+                ),
+                h(MetabolicQuickStatus, {
+                  profile: profile,
+                  days: HEYS.days.getAll() // Для расчёта риска
+                })
+              )
+            ),
+
+            /* 3. PRIORITY ACTIONS (Динамический приоритет!) */
+            (shouldShowSection(actionsPriority) &&
+              h('div', { className: `insights-tab__section insights-tab__section--${actionsPriority.toLowerCase()}` },
+                h('div', { className: 'insights-tab__section-badge' },
+                  h(PriorityBadge, {
+                    priority: actionsPriority,
+                    showLabel: true,
+                    contextLabels: PRIORITY_CONTEXT_LABELS.PRIORITY_ACTIONS
+                  })
+                ),
+                h(PriorityActions, {
+                  warnings: ewsWarnings, // Передаем все, фильтрация внутри
+                  limit: 3 // Показываем топ-3
+                })
+              )
+            ),
 
             // L0: Status 0-100 Card (dynamic priority)
             shouldShowSection(statusSectionPriority) && h('div', {

@@ -13,7 +13,7 @@
     MIN_DAYS_FOR_FULL_ANALYSIS: 7,
     MIN_CORRELATION_DISPLAY: 0.35,
     CACHE_TTL_MS: 5 * 60 * 1000,
-    VERSION: '4.1.0'
+    VERSION: '4.2.0'
   };
 
   // === СИСТЕМА ПРИОРИТЕТОВ И КРИТЕРИЕВ ===
@@ -207,20 +207,113 @@
   }
 
   /**
+   * Конфигурация приоритетов для специфичных секций
+   * Каждая функция возвращает приоритет или null (для fallback к generic)
+   */
+  const SECTION_PRIORITY_RULES = {
+    // 1. Метаболический статус (Health Score)
+    // Инверсия логики: "Всё отлично" (Score >= 80) не должно скрываться фильтром
+    STATUS_SCORE: (options) => {
+      const { score } = options;
+      if (score >= 80) return 'LOW'; // Показываем позитивный статус
+      return null; // Fallback to generic thresholds (60/40) + trend + warnings
+    },
+
+    // 2. Риск срыва (Crash Risk)
+    // Инвертированная логика: чем выше Score, тем ХУЖЕ (выше риск)
+    CRASH_RISK: (options) => {
+      const { crashRiskScore, warnings } = options; // score 0-100%
+      if (crashRiskScore == null) return 'INFO';
+
+      // 1. Базовый уровень по % риска
+      let basePriority = 'LOW';
+      if (crashRiskScore >= 60) basePriority = 'CRITICAL';
+      else if (crashRiskScore >= 30) basePriority = 'HIGH';
+      else if (crashRiskScore >= 15) basePriority = 'MEDIUM';
+
+      // 2. Коррекция по релевантным warnings (Sleep, Stress, Binge, Caloric)
+      // Только критические факторы срыва
+      const RELEVANT_TYPES = ['SLEEP_DEBT', 'STRESS_ACCUMULATION', 'BINGE_RISK', 'CALORIC_DEBT'];
+      let warningsBoost = 0;
+      if (warnings && Array.isArray(warnings)) {
+        const relevantWarnings = warnings.filter(w => RELEVANT_TYPES.includes(w.type));
+        const highCount = relevantWarnings.filter(w => w.severity === 'high').length;
+
+        if (highCount >= 1) warningsBoost = 2; // Высокий риск срыва из-за фактора
+        else if (relevantWarnings.length >= 2) warningsBoost = 1; // Комбинация факторов
+      }
+
+      // Применяем boost (уменьшаем index = повышаем приоритет)
+      const priorityLevels = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
+      let baseIndex = priorityLevels.indexOf(basePriority);
+      const finalIndex = Math.max(0, baseIndex - warningsBoost);
+
+      return priorityLevels[finalIndex];
+    },
+
+    // 3. Приоритетные действия (Priority Actions)
+    // Зависит от количества СРОЧНЫХ действий, а не от здоровья
+    PRIORITY_ACTIONS: (options) => {
+      const { urgentActionsCount, actionsCount } = options;
+
+      if (urgentActionsCount >= 3) return 'CRITICAL';
+      if (urgentActionsCount >= 1) return 'HIGH';
+      if (actionsCount >= 1) return 'MEDIUM';
+
+      return 'LOW'; // Нет срочных действий -> низкий приоритет
+    }
+  };
+
+  /**
    * Вычислить динамический приоритет секции на основе комбинированной формулы
-   * @param {Object} options - { sectionId, score, trend, warnings }
+   * @param {Object} options - { sectionId, score, trend, warnings, crashRiskScore, urgentActionsCount... }
    * @returns {string} - один из: 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'
    */
   function computeDynamicPriority(options = {}) {
     const { sectionId, score, trend, warnings } = options;
+    const LOG_PREFIX = 'priority /';
+
+    // 🚀 Step 1: Start
+    // (Логирование убрано для краткости, оставим только важные шаги)
+
+    // 🛠️ Step 1.5: Custom Rules
+    if (SECTION_PRIORITY_RULES[sectionId]) {
+      const customPriority = SECTION_PRIORITY_RULES[sectionId](options);
+      if (customPriority) {
+        if (typeof console !== 'undefined' && console.info) {
+          console.info(`${LOG_PREFIX} 🛠️ custom_rule applied`, { section: sectionId, priority: customPriority });
+        }
+        return customPriority;
+      }
+    }
+
+    // 📥 Step 2: Input (Generic Fallback)
+    if (typeof console !== 'undefined' && console.info) {
+      console.info(`${LOG_PREFIX} 📥 input (generic):`, {
+        section: sectionId,
+        score,
+        trend7d: trend,
+        warningsCount: warnings ? warnings.length : 0,
+        highWarnings: warnings ? warnings.filter(w => w.severity === 'high').length : 0
+      });
+    }
 
     // Fallback к статическому приоритету если данных нет
     const section = SECTIONS_CONFIG[sectionId];
     if (!section || !section.dynamicPriority || score == null) {
+      if (typeof console !== 'undefined' && console.info) {
+        console.info(`${LOG_PREFIX} ⚠️ fallback:`, {
+          section: sectionId,
+          score,
+          hasSection: !!section,
+          dynamicPriority: !!section?.dynamicPriority,
+          resolvedPriority: section?.priority || 'INFO'
+        });
+      }
       return section?.priority || 'INFO';
     }
 
-    // 1. Базовый уровень по Health Score (0-100)
+    // 🧮 Step 3: Compute — 1. Базовый уровень по Health Score (0-100)
     let basePriority = 'INFO';
     if (score >= 80) basePriority = 'LOW';
     else if (score >= 60) basePriority = 'MEDIUM';
@@ -254,17 +347,28 @@
     const finalIndex = Math.max(0, baseIndex - maxBoost);
     const finalPriority = priorityLevels[finalIndex];
 
-    // Верификационное логирование
+    // 🧮 Step 3: Compute (result summary)
     if (typeof console !== 'undefined' && console.info) {
-      console.info('priority / resolver ✅ result:', {
+      console.info(`${LOG_PREFIX} 🧮 compute (generic):`, {
+        section: sectionId,
+        basePriority,
+        trendBoost,
+        warningsBoost,
+        maxBoost,
+        finalIndex,
+        computation: `base=${basePriority}[${baseIndex}] → boost=${maxBoost} → final[${finalIndex}]`
+      });
+    }
+
+    // ✅ Step 4: Result
+    if (typeof console !== 'undefined' && console.info) {
+      console.info(`${LOG_PREFIX} ✅ result (generic):`, {
         section: sectionId,
         score,
         trend7d: trend,
         highWarnings: warnings ? warnings.filter(w => w.severity === 'high').length : 0,
-        basePriority,
-        trendBoost,
-        warningsBoost,
         resolvedPriority: finalPriority,
+        rule: 'generic',
         reason: `score:${basePriority} + trend:${trendBoost > 0 ? `+${trendBoost}` : '0'} + ews:${warningsBoost > 0 ? `+${warningsBoost}` : '0'}`
       });
     }
@@ -289,6 +393,13 @@
       MEDIUM: 'Средний риск',
       HIGH: 'Высокий риск',
       CRITICAL: 'Критический риск'
+    },
+    // Context labels для важных действий
+    PRIORITY_ACTIONS: {
+      LOW: 'Нет срочных',
+      MEDIUM: 'Рекомендации',
+      HIGH: 'Внимание!',
+      CRITICAL: 'Критически 🔥'
     }
   };
 
