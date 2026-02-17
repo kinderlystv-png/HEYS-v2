@@ -116,4 +116,57 @@ describe('Feedback Loop', () => {
         expect(analysis.positiveOutcomes).toBe(1);
         expect(analysis.avgSatiety).toBeCloseTo(4.0, 1);
     });
+
+    it('stores recommendation with productIds in suggestions', () => {
+        const recommendation = {
+            timing: { ideal: '13:00-14:00' },
+            macros: { protein: 30, carbs: 40, kcal: 350 },
+            suggestions: [
+                {
+                    product: 'Творог',
+                    productId: 123,
+                    grams: 200,
+                    reason: 'Высокое содержание белка'
+                },
+                {
+                    product: 'Банан',
+                    productId: 456,
+                    grams: 150,
+                    reason: 'Быстрые углеводы'
+                }
+            ]
+        };
+        const profile = { id: 'client_123' };
+
+        const recId = HEYS.InsightsPI.feedbackLoop.storeRecommendation(recommendation, 'meal', profile);
+
+        expect(recId).toMatch(/^rec_meal_\d+_\d+$/);
+
+        // Verify stored data includes productId
+        const lastCall = HEYS.dayUtils.lsSet.mock.calls[HEYS.dayUtils.lsSet.mock.calls.length - 1];
+        const storedData = lastCall[1];
+
+        expect(storedData[0].recommendation.suggestions).toHaveLength(2);
+        expect(storedData[0].recommendation.suggestions[0].productId).toBe(123);
+        expect(storedData[0].recommendation.suggestions[1].productId).toBe(456);
+    });
+
+    it('handles suggestions without productId gracefully', () => {
+        const recommendation = {
+            timing: { ideal: '13:00-14:00' },
+            suggestions: [
+                {
+                    product: 'Овсянка',
+                    grams: 100,
+                    reason: 'Медленные углеводы'
+                }
+            ]
+        };
+        const profile = { id: 'client_123' };
+
+        const recId = HEYS.InsightsPI.feedbackLoop.storeRecommendation(recommendation, 'meal', profile);
+
+        expect(recId).toMatch(/^rec_meal_\d+_\d+$/);
+        expect(HEYS.dayUtils.lsSet).toHaveBeenCalled();
+    });
 });

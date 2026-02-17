@@ -1,13 +1,15 @@
 /**
- * HEYS Predictive Insights — Feedback Loop v1.0
+ * HEYS Predictive Insights — Feedback Loop v1.1
  * 
  * Outcome learning: collect user feedback on recommendations and patterns.
+ * ML weight adjustment via exponential moving average (EMA).
  * 
  * Flow:
  * 1. Recommendation given → store with ID
  * 2. User follows/ignores → track
  * 3. User provides outcome feedback (satiety, energy, mood)
- * 4. 3-day/7-day outcome analysis → reinforcement learning
+ * 4. ML weight adjustment: EMA (α=0.1, ±5% boost/penalty, range 0.5-2.0)
+ * 5. Product Picker reads learned weights for scoring
  * 
  * Dependencies: pi_meal_recommender.js, pi_whatif.js
  * @param global
@@ -29,7 +31,7 @@
      * @returns {string} - Recommendation ID
      */
     function storeRecommendation(recommendation, type, profile) {
-        console.log('[FeedbackLoop] 💾 storeRecommendation called:', {
+        console.log('[MEALREC][FeedbackLoop] 💾 storeRecommendation called:', {
             type,
             profileId: profile?.id,
             hasRecommendation: !!recommendation
@@ -52,7 +54,7 @@
         };
 
         saveRecommendationRecord(record, profile);
-        console.log('[FeedbackLoop] ✅ Recommendation stored:', { recId, type });
+        console.log('[MEALREC][FeedbackLoop] ✅ Recommendation stored:', { recId, type });
         return recId;
     }
 
@@ -65,7 +67,7 @@
     function markRecommendationFollowed(recId, followed, profile) {
         const record = getRecommendationRecord(recId, profile);
         if (!record) {
-            console.warn('[FeedbackLoop] Recommendation not found:', recId);
+            console.warn('[MEALREC][FeedbackLoop] Recommendation not found:', recId);
             return;
         }
 
@@ -73,7 +75,7 @@
         record.followedAt = new Date().toISOString();
 
         saveRecommendationRecord(record, profile);
-        console.info(`[FeedbackLoop] Recommendation ${recId} marked as ${followed ? 'followed' : 'ignored'}`);
+        console.info(`[MEALREC][FeedbackLoop] Recommendation ${recId} marked as ${followed ? 'followed' : 'ignored'}`);
     }
 
     /**
@@ -85,7 +87,7 @@
     function submitOutcomeFeedback(recId, outcome, profile) {
         const record = getRecommendationRecord(recId, profile);
         if (!record) {
-            console.warn('[FeedbackLoop] Recommendation not found:', recId);
+            console.warn('[MEALREC][FeedbackLoop] Recommendation not found:', recId);
             return;
         }
 
@@ -95,7 +97,7 @@
         };
 
         saveRecommendationRecord(record, profile);
-        console.info('[FeedbackLoop] Outcome feedback submitted for:', recId);
+        console.info('[MEALREC][FeedbackLoop] Outcome feedback submitted for:', recId);
 
         // Trigger learning update (placeholder for ML integration)
         updateRecommendationWeights(record, profile);
@@ -124,7 +126,7 @@
      * @returns {object} - Analysis result
      */
     function analyzeOutcomes(profile, daysBack = 7) {
-        console.log('[FeedbackLoop] 📊 analyzeOutcomes called:', {
+        console.log('[MEALREC][FeedbackLoop] 📊 analyzeOutcomes called:', {
             profileId: profile?.id,
             daysBack
         });
@@ -175,7 +177,7 @@
             analysis.avgMood = Math.round((totalMood / withOutcome.length) * 10) / 10;
         }
 
-        console.log('[FeedbackLoop] ✅ Analysis complete:', {
+        console.log('[MEALREC][FeedbackLoop] ✅ Analysis complete:', {
             total: analysis.total,
             followed: analysis.followed,
             positiveOutcomes: analysis.positiveOutcomes,
@@ -186,30 +188,178 @@
     }
 
     /**
-     * Update recommendation weights based on outcomes (placeholder for ML)
+     * Update recommendation weights based on outcomes
+     * Uses exponential moving average to adjust product scoring weights
      * @private
      */
     function updateRecommendationWeights(record, profile) {
-        // Placeholder for incremental learning
-        // In production: send to backend for ML model update
-
         const outcome = record.outcome;
-        if (!outcome) return;
-
-        // Simple heuristic: boost similar recommendations if outcome is positive
-        if (outcome.satiety >= 4 && outcome.energy >= 4 && outcome.mood >= 4) {
-            console.info('[FeedbackLoop] Positive outcome detected, boosting similar recommendations');
-            // TODO: Implement feature extraction and weight update
-        } else {
-            console.info('[FeedbackLoop] Negative outcome detected, reducing weight for similar recommendations');
+        if (!outcome) {
+            console.warn('[MEALREC][FeedbackLoop] ⚠️ No outcome data, skipping weight update');
+            return;
         }
 
-        // TODO: Backend integration
-        // await HEYS.YandexAPI.rpc('update_recommendation_weights', {
-        //   client_id: profile.id,
-        //   rec_id: record.id,
-        //   outcome: record.outcome
-        // });
+        // Handle quick feedback (👍/👎) vs full outcome (satiety/energy/mood)
+        let isPositive;
+        let avgScore;
+
+        if (outcome.quickRating !== undefined) {
+            // Quick feedback: 1 = positive (👍), -1 = negative (👎)
+            isPositive = outcome.quickRating === 1;
+            avgScore = isPositive ? 5 : 2; // Map to outcome scale for logging
+        } else {
+            // Full outcome: calculate average of 3 dimensions
+            avgScore = (outcome.satiety + outcome.energy + outcome.mood) / 3;
+            isPositive = avgScore >= 3.5;
+        }
+
+        console.info('[MEALREC][FeedbackLoop] 🧮 Processing outcome:', {
+            type: outcome.quickRating !== undefined ? 'quick' : 'full',
+            avgScore: avgScore.toFixed(2),
+            isPositive,
+            quickRating: outcome.quickRating,
+            satiety: outcome.satiety,
+            energy: outcome.energy,
+            mood: outcome.mood
+        });
+
+        // Extract features from recommendation
+        const recommendation = record.recommendation;
+        if (!recommendation) {
+            console.warn('[MEALREC][FeedbackLoop] ⚠️ No recommendation data in record');
+            return;
+        }
+
+        const scenario = recommendation.scenario || 'UNKNOWN';
+        const suggestions = recommendation.suggestions || [];
+
+        if (suggestions.length === 0) {
+            console.warn('[MEALREC][FeedbackLoop] ⚠️ No products in recommendation');
+            return;
+        }
+
+        // Get product IDs from suggestions
+        const productIds = suggestions
+            .map(s => s.id || s.product_id || s.productId)
+            .filter(Boolean);
+
+        if (productIds.length === 0) {
+            console.warn('[MEALREC][FeedbackLoop] ⚠️ Cannot extract product IDs from suggestions');
+            return;
+        }
+
+        console.info('[MEALREC][FeedbackLoop] 📦 Adjusting weights for:', {
+            scenario,
+            productCount: productIds.length,
+            recId: record.id
+        });
+
+        // Load current weights
+        const weights = loadProductWeights(profile);
+
+        // Exponential moving average parameters
+        const ALPHA = 0.1; // Learning rate (0.1 = slow, stable learning)
+        const BOOST_FACTOR = 1.05; // +5% for positive outcomes
+        const PENALTY_FACTOR = 0.95; // -5% for negative outcomes
+
+        const adjustmentFactor = isPositive ? BOOST_FACTOR : PENALTY_FACTOR;
+        let updatedCount = 0;
+
+        // Update weights for each product in this scenario
+        productIds.forEach(productId => {
+            const key = `${scenario}_${productId}`;
+            const currentWeight = weights[key] || 1.0;
+
+            // EMA: new_weight = old_weight * (1 - α) + (old_weight * adjustment) * α
+            const targetWeight = currentWeight * adjustmentFactor;
+            const newWeight = currentWeight * (1 - ALPHA) + targetWeight * ALPHA;
+
+            // Clamp weights to reasonable range [0.5, 2.0]
+            const clampedWeight = Math.max(0.5, Math.min(2.0, newWeight));
+
+            weights[key] = clampedWeight;
+            updatedCount++;
+
+            console.info(`[MEALREC][FeedbackLoop] 📊 ${key}: ${currentWeight.toFixed(3)} → ${clampedWeight.toFixed(3)}`);
+        });
+
+        // Save updated weights
+        saveProductWeights(profile, weights);
+
+        console.info('[MEALREC][FeedbackLoop] ✅ Weights updated:', {
+            updatedCount,
+            direction: isPositive ? 'boost (+5%)' : 'reduce (-5%)',
+            scenario,
+            recId: record.id
+        });
+    }
+
+    /**
+     * Load product weights from localStorage
+     * @private
+     * @returns {object} - Weight map: { "SCENARIO_productId": weight }
+     */
+    function loadProductWeights(profile) {
+        const U = global.HEYS.dayUtils;
+        if (!U) return {};
+
+        const storageKey = `heys_meal_rec_weights_${profile?.id || 'default'}`;
+        const weights = U.lsGet(storageKey) || {};
+
+        return weights;
+    }
+
+    /**
+     * Save product weights to localStorage
+     * @private
+     */
+    function saveProductWeights(profile, weights) {
+        const U = global.HEYS.dayUtils;
+        if (!U) {
+            console.warn('[MEALREC][FeedbackLoop] ⚠️ Cannot save weights: dayUtils unavailable');
+            return;
+        }
+
+        const storageKey = `heys_meal_rec_weights_${profile?.id || 'default'}`;
+        U.lsSet(storageKey, weights);
+
+        console.info('[MEALREC][FeedbackLoop] 💾 Weights saved to localStorage:', storageKey);
+    }
+
+    /**
+     * Get product weight for scoring (used by Product Picker)
+     * @param {object} profile
+     * @param {string} productId
+     * @param {string} scenario
+     * @returns {number} - Weight multiplier (default 1.0)
+     */
+    function getProductWeight(profile, productId, scenario) {
+        const weights = loadProductWeights(profile);
+        const key = `${scenario}_${productId}`;
+        return weights[key] || 1.0;
+    }
+
+    /**
+     * Get all weights for debugging
+     * @param {object} profile
+     * @returns {object} - All weights
+     */
+    function getAllWeights(profile) {
+        return loadProductWeights(profile);
+    }
+
+    /**
+     * Reset weights to default (1.0 for all)
+     * @param {object} profile
+     */
+    function resetWeights(profile) {
+        const U = global.HEYS.dayUtils;
+        if (!U) return;
+
+        const storageKey = `heys_meal_rec_weights_${profile?.id || 'default'}`;
+        U.lsSet(storageKey, {});
+
+        console.info('[MEALREC][FeedbackLoop] 🔄 Weights reset to default');
     }
 
     /**
@@ -238,7 +388,7 @@
     function saveRecommendationRecord(record, profile) {
         const U = global.HEYS.dayUtils;
         if (!U) {
-            console.warn('[FeedbackLoop] HEYS.dayUtils not available');
+            console.warn('[MEALREC][FeedbackLoop] HEYS.dayUtils not available');
             return;
         }
 
@@ -275,15 +425,56 @@
         return history.find(r => r.id === recId);
     }
 
+    /**
+     * Mark reminder as shown (prevent duplicate prompts)
+     * @param {string} recId - Recommendation ID
+     * @param {number} daysThreshold - Days since recommendation (3, 7, or 14)
+     * @param {object} profile
+     */
+    function markReminderShown(recId, daysThreshold, profile) {
+        const record = getRecommendationRecord(recId, profile);
+        if (!record) {
+            console.warn('[MEALREC][FeedbackLoop] Recommendation not found:', recId);
+            return;
+        }
+
+        if (!record.reminders) {
+            record.reminders = {};
+        }
+
+        record.reminders[`day${daysThreshold}`] = {
+            shown: true,
+            shownAt: new Date().toISOString()
+        };
+
+        saveRecommendationRecord(record, profile);
+        console.info(`[MEALREC][FeedbackLoop] ✅ Reminder marked as shown:`, { recId, days: daysThreshold });
+    }
+
+    /**
+     * Get recommendation history (public wrapper)
+     * @param {object} profile
+     * @returns {object[]} - Array of recommendation records
+     */
+    function getRecommendationHistoryPublic(profile) {
+        return getRecommendationHistory(profile);
+    }
+
     // Export API
     HEYS.InsightsPI.feedbackLoop = {
         storeRecommendation,
         markFollowed: markRecommendationFollowed,
         submitFeedback: submitOutcomeFeedback,
         getHistory: getRecommendationHistory,
-        analyzeOutcomes
+        getRecommendationHistory: getRecommendationHistoryPublic,
+        analyzeOutcomes,
+        markReminderShown,
+        // ML Weight API (for Product Picker integration)
+        getProductWeight,
+        getAllWeights,
+        resetWeights
     };
 
-    console.info('[HEYS.InsightsPI.feedbackLoop] ✅ Feedback Loop v1.0 initialized (client-side)');
+    console.info('[MEALREC][HEYS.InsightsPI.feedbackLoop] ✅ Feedback Loop v1.1 initialized (client-side + ML weights)');
 
 })(typeof window !== 'undefined' ? window : global);
