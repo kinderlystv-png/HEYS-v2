@@ -183,9 +183,17 @@
     // Effect 4: Handle heys:day-updated events
     useEffect(() => {
       const handleDayUpdated = (event) => {
-        const { date: eventDate, source, data } = event.detail || {};
+        const { date: eventDate, source, data, syncTimestampOnly, updatedAt } = event.detail || {};
 
         if (eventDate !== date) return; // Not for current date
+
+        // v25.8.6.1: Handle timestamp-only sync (prevent fetchDays overwrite)
+        if (syncTimestampOnly && updatedAt) {
+          const newTimestamp = Math.max(lastLoadedUpdatedAtRef.current || 0, updatedAt);
+          lastLoadedUpdatedAtRef.current = newTimestamp;
+          console.info(`[HEYS.day] ⏱️ Timestamp ref synced: ${newTimestamp} (source: ${source})`);
+          return; // Don't reload day, just updated timestamp ref
+        }
 
         // Deduplicate events
         const now = Date.now();

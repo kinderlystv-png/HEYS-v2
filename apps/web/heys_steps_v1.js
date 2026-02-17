@@ -641,8 +641,8 @@
   }
 
   registerStep('sleepQuality', {
-    title: 'Качество сна',
-    hint: 'Как выспались?',
+    title: 'Как выспались?',
+    hint: '',
     icon: '✨',
     component: SleepQualityStepComponent,
     getInitialData: (context) => {

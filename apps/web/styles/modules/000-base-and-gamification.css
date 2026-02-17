@@ -4255,6 +4255,22 @@ td:first-child input {
   transform: scale(0.95);
 }
 
+/* All OK (green) - показывается когда нет warnings */
+.ews-badge--ok {
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+}
+
+.ews-badge--ok:hover {
+  background: rgba(34, 197, 94, 0.25);
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+}
+
+.ews-badge--ok:active {
+  transform: scale(0.95);
+}
+
 /* Appearance animation */
 @keyframes ewsBadgeAppear {
   0% {

@@ -4637,34 +4637,49 @@ body.tour-active .ios-pwa-banner {
  * ══════════════════════════════════════════════════════════════ */
 
 .meal-rec-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  margin-bottom: 16px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  margin-bottom: 8px;
   overflow: hidden;
   transition: box-shadow 0.2s ease;
 }
 
 .meal-rec-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
 }
 
 .meal-rec-card--expanded {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.15);
+}
+
+.meal-rec-card__badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #15803d;
+  background: #dcfce7;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-bottom: 2px;
 }
 
 .meal-rec-card__header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px;
+  gap: 8px;
+  padding: 10px 12px;
   cursor: pointer;
   user-select: none;
 }
 
 .meal-rec-card__icon {
-  font-size: 24px;
+  font-size: 20px;
   flex-shrink: 0;
+  width: 28px;
+  text-align: center;
 }
 
 .meal-rec-card__title {
@@ -4673,43 +4688,47 @@ body.tour-active .ios-pwa-banner {
 }
 
 .meal-rec-card__time {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: #111827;
-  margin-bottom: 4px;
+  line-height: 1.3;
 }
 
 .meal-rec-card__time-value {
   font-weight: 500;
   color: #6b7280;
+  font-size: 13px;
 }
 
 .meal-rec-card__subtitle {
-  font-size: 13px;
-  color: #6b7280;
-  line-height: 1.4;
+  font-size: 12px;
+  color: #9ca3af;
+  line-height: 1.3;
+  margin-top: 1px;
 }
 
 .meal-rec-card__expand-icon {
-  font-size: 14px;
-  color: #9ca3af;
+  font-size: 12px;
+  color: #c0c4cc;
   flex-shrink: 0;
+  width: 20px;
+  text-align: center;
 }
 
 .meal-rec-card__macros {
   display: flex;
-  gap: 8px;
-  padding: 0 16px 16px 16px;
+  gap: 6px;
+  padding: 0 12px 10px 12px;
   flex-wrap: wrap;
 }
 
 .meal-rec-card__macro-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 13px;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 12px;
   font-weight: 500;
   background: #f3f4f6;
   color: #374151;
@@ -4740,99 +4759,352 @@ body.tour-active .ios-pwa-banner {
 
 .meal-rec-card__macro-unit {
   font-weight: 400;
-  opacity: 0.8;
+  opacity: 0.7;
+  font-size: 11px;
 }
 
 .meal-rec-card__details {
-  padding: 0 16px 16px 16px;
+  padding: 0 12px 10px 12px;
   border-top: 1px solid #f3f4f6;
 }
 
 .meal-rec-card__section-title {
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 600;
-  color: #6b7280;
-  margin-bottom: 8px;
-  margin-top: 12px;
+  color: #b0b5bf;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  margin-top: 8px;
 }
 
 .meal-rec-card__suggestions {
-  margin-bottom: 12px;
+  margin-bottom: 6px;
+  margin-top: 6px;
 }
 
 .meal-rec-card__suggestion {
-  font-size: 14px;
-  line-height: 1.8;
-  color: #374151;
-  padding-left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid #f9fafb;
+}
+
+.meal-rec-card__suggestion:last-child {
+  border-bottom: none;
+  padding-bottom: 2px;
+}
+
+/* R2.7: Add to diary button */
+.meal-rec-card__suggestion-add {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border-radius: 50%;
+  background: var(--heys-green, #4CAF50);
+  color: white;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.meal-rec-card__suggestion-add:hover {
+  background: #45a049;
+  transform: scale(1.1);
+}
+
+.meal-rec-card__suggestion-add:active {
+  transform: scale(0.9);
+}
+
+.meal-rec-card__suggestion-add:disabled {
+  background: var(--heys-gray, #ccc);
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.meal-rec-card__suggestion-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.meal-rec-card__suggestion-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .meal-rec-card__suggestion-product {
+  font-size: 13px;
   font-weight: 500;
+  color: #111827;
 }
 
 .meal-rec-card__suggestion-grams {
+  font-size: 12px;
   font-weight: 600;
-  color: #6b7280;
-  margin-left: 6px;
+  color: #9ca3af;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .meal-rec-card__suggestion-reason {
-  color: #9ca3af;
-  font-size: 13px;
+  font-size: 11px;
+  color: #b0b5bf;
+  margin-top: 1px;
+  line-height: 1.2;
 }
 
-.meal-rec-card__reasoning {
-  margin-bottom: 12px;
+/* v27: Grouped products with checkboxes */
+.meal-rec-card__grouped-products {
+  margin-bottom: 6px;
+  margin-top: 6px;
 }
 
-.meal-rec-card__reason {
-  font-size: 13px;
-  line-height: 1.6;
+.meal-rec-card__product-group {
+  margin-bottom: 8px;
+}
+
+.meal-rec-card__product-group:last-child {
+  margin-bottom: 0;
+}
+
+.meal-rec-card__group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 2px;
+}
+
+.meal-rec-card__group-emoji {
+  font-size: 16px;
+}
+
+.meal-rec-card__group-name {
+  font-size: 12px;
+  font-weight: 600;
   color: #6b7280;
-  padding-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.meal-rec-card__group-products {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* v27.3: Clickable product cards (like vitamins) */
+.meal-rec-card__product-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: white;
+}
+
+.meal-rec-card__product-item:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+
+.meal-rec-card__product-item--selected {
+  border-color: #10b981;
+  background: #d1fae5;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.meal-rec-card__product-item--selected:hover {
+  border-color: #10b981;
+  background: #d1fae5;
+}
+
+.meal-rec-card__product-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.meal-rec-card__product-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.meal-rec-card__product-name-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.meal-rec-card__product-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+}
+
+.meal-rec-card__product-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.meal-rec-card__product-grams {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ca3af;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* v27.4: Add button for grouped products */
+.meal-rec-card__product-add-btn {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 6px;
+  border: none;
+  background: var(--heys-green, #4CAF50);
+  color: white;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  padding: 0;
+  margin-left: 8px;
+}
+
+.meal-rec-card__product-add-btn:hover {
+  background: #45a049;
+  transform: scale(1.1);
+}
+
+.meal-rec-card__product-add-btn:active {
+  transform: scale(0.9);
+}
+
+/* Bulk add button (v27.5) */
+.meal-rec-card__add-selected-btn {
+  width: 100%;
+  padding: 12px;
+  margin-top: 12px;
+  border: 2px dashed #d1d5db;
+  background: #f9fafb;
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: not-allowed;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.meal-rec-card__add-selected-btn--active {
+  border: 2px solid #3b82f6;
+  background: #3b82f6;
+  color: white;
+  cursor: pointer;
+}
+
+.meal-rec-card__add-selected-btn--active:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.meal-rec-card__add-selected-btn--active:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+/* Reasoning — compact tags */
+.meal-rec-card__reasoning {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.meal-rec-card__reason-tag {
+  display: inline-block;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #374151;
+  background: transparent;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* Footer: confidence + feedback on one line */
+.meal-rec-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 6px;
+  border-top: 1px solid #f3f4f6;
 }
 
 .meal-rec-card__confidence {
-  font-size: 12px;
-  color: #9ca3af;
-  text-align: center;
-  padding: 8px 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #b0b5bf;
 }
 
-/* FEEDBACK SECTION (R2.7) */
-.meal-rec-card__feedback {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #f3f4f6;
-  text-align: center;
-}
-
-.meal-rec-card__feedback-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: #6b7280;
-  margin-bottom: 12px;
-}
-
-.meal-rec-card__feedback-buttons {
+/* FEEDBACK SECTION — inline compact (v25.9) */
+.meal-rec-card__feedback-inline {
   display: flex;
-  justify-content: center;
-  gap: 16px;
+  align-items: center;
+  gap: 6px;
+}
+
+.meal-rec-card__feedback-label {
+  font-size: 11px;
+  color: #b0b5bf;
 }
 
 .meal-rec-card__feedback-btn {
-  width: 48px;
-  height: 48px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  border: 2px solid #e5e7eb;
+  border: 1.5px solid #e5e7eb;
   background: #ffffff;
-  font-size: 24px;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
 }
 
 .meal-rec-card__feedback-btn:hover:not(:disabled) {
@@ -4853,20 +5125,75 @@ body.tour-active .ios-pwa-banner {
 .meal-rec-card__feedback-btn--selected {
   border-color: #10b981;
   background: #d1fae5;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 .meal-rec-card__feedback-thanks {
+  font-size: 14px;
+}
+
+/* === MULTI-MEAL PLANNING (v26) === */
+.meal-rec-card__details--multi {
+  padding: 0 12px 10px 12px;
+}
+
+.meal-rec-card__meal-subcard {
   margin-top: 12px;
-  font-size: 13px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.meal-rec-card__meal-subcard:last-of-type {
+  border-bottom: none;
+  padding-bottom: 6px;
+}
+
+.meal-rec-card__meal-divider {
+  font-size: 11px;
+  font-weight: 600;
+  color: #b0b5bf;
+  letter-spacing: 0.3px;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.meal-rec-card__meal-scenario {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.meal-rec-card__meal-macros {
+  font-size: 12px;
   font-weight: 500;
-  color: #10b981;
+  color: #6b7280;
+  margin-top: 6px;
+  margin-bottom: 4px;
+}
+
+.meal-rec-card__meal-wave {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-bottom: 4px;
+}
+
+.meal-rec-card__meal-hint {
+  font-size: 11px;
+  color: #b0b5bf;
+  font-style: italic;
+  margin-top: 4px;
 }
 
 /* DARK MODE */
 [data-theme="dark"] .meal-rec-card {
-  background: #1f2937;
-  border-color: #374151;
+  background: linear-gradient(135deg, #0a2618 0%, #0f2d1f 100%);
+  border-color: #166534;
+}
+
+[data-theme="dark"] .meal-rec-card__badge {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.15);
 }
 
 [data-theme="dark"] .meal-rec-card__time {
@@ -4911,6 +5238,20 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .meal-rec-card__suggestion {
   color: #e5e7eb;
+  border-bottom-color: #374151;
+}
+
+/* R2.7: Dark mode for add button */
+[data-theme="dark"] .meal-rec-card__suggestion-add {
+  background: var(--heys-green, #4CAF50);
+}
+
+[data-theme="dark"] .meal-rec-card__suggestion-add:hover {
+  background: #45a049;
+}
+
+[data-theme="dark"] .meal-rec-card__suggestion-product {
+  color: #f3f4f6;
 }
 
 [data-theme="dark"] .meal-rec-card__suggestion-grams {
@@ -4921,20 +5262,89 @@ body.tour-active .ios-pwa-banner {
   color: #6b7280;
 }
 
-[data-theme="dark"] .meal-rec-card__reason {
+/* v27: Dark mode for grouped products */
+[data-theme="dark"] .meal-rec-card__group-header {
+  border-bottom-color: #374151;
+}
+
+[data-theme="dark"] .meal-rec-card__group-name {
   color: #9ca3af;
+}
+
+[data-theme="dark"] .meal-rec-card__product-item {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+[data-theme="dark"] .meal-rec-card__product-item:hover {
+  border-color: #4b5563;
+  background: #111827;
+}
+
+[data-theme="dark"] .meal-rec-card__product-item--selected {
+  border-color: #10b981;
+  background: #064e3b;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="dark"] .meal-rec-card__product-item--selected:hover {
+  border-color: #10b981;
+  background: #064e3b;
+}
+
+[data-theme="dark"] .meal-rec-card__product-name {
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .meal-rec-card__product-grams {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .meal-rec-card__product-add-btn {
+  background: var(--heys-green, #4CAF50);
+}
+
+[data-theme="dark"] .meal-rec-card__product-add-btn:hover {
+  background: #45a049;
+}
+
+[data-theme="dark"] .meal-rec-card__add-selected-btn {
+  border-color: #374151;
+  background: #1f2937;
+  color: #6b7280;
+}
+
+[data-theme="dark"] .meal-rec-card__add-selected-btn--active {
+  border-color: #3b82f6;
+  background: #3b82f6;
+  color: white;
+}
+
+[data-theme="dark"] .meal-rec-card__add-selected-btn--active:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
+}
+
+[data-theme="dark"] .meal-rec-card__reasoning {
+  border-top-color: #374151;
+}
+
+[data-theme="dark"] .meal-rec-card__reason-tag {
+  color: #d1d5db;
+  background: transparent;
+}
+
+[data-theme="dark"] .meal-rec-card__footer {
+  border-top-color: #374151;
 }
 
 [data-theme="dark"] .meal-rec-card__confidence {
   color: #6b7280;
 }
 
-[data-theme="dark"] .meal-rec-card__feedback {
-  border-top-color: #374151;
-}
-
-[data-theme="dark"] .meal-rec-card__feedback-title {
-  color: #9ca3af;
+[data-theme="dark"] .meal-rec-card__feedback-label {
+  color: #6b7280;
 }
 
 [data-theme="dark"] .meal-rec-card__feedback-btn {
@@ -4950,9 +5360,311 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .meal-rec-card__feedback-btn--selected {
   border-color: #10b981;
   background: #064e3b;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
 }
 
 [data-theme="dark"] .meal-rec-card__feedback-thanks {
   color: #6ee7b7;
+}
+
+/* Dark mode: multi-meal (v26) */
+[data-theme="dark"] .meal-rec-card__meal-subcard {
+  border-bottom-color: #374151;
+}
+
+[data-theme="dark"] .meal-rec-card__meal-divider {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .meal-rec-card__meal-scenario {
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .meal-rec-card__meal-macros {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .meal-rec-card__meal-wave {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .meal-rec-card__meal-hint {
+  color: #6b7280;
+}
+
+/* === OUTCOME TRACKING MODAL (R2.7) === */
+.outcome-modal-backdrop {
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.outcome-modal {
+  max-width: 480px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--pi-bg-primary, #ffffff);
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  padding: 0;
+}
+
+.outcome-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid var(--pi-border-light, #f3f4f6);
+}
+
+.outcome-modal__title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--pi-text-primary, #111827);
+  margin: 0;
+}
+
+.outcome-modal__close-btn {
+  background: transparent;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  color: var(--pi-text-secondary, #6b7280);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.outcome-modal__close-btn:hover {
+  background: var(--pi-bg-tertiary, #f3f4f6);
+  color: var(--pi-text-primary, #111827);
+}
+
+.outcome-modal__description {
+  padding: 0 24px 16px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--pi-text-secondary, #6b7280);
+}
+
+.outcome-modal__form {
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.outcome-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.outcome-modal__label {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--pi-text-primary, #111827);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.outcome-modal__emoji {
+  font-size: 20px;
+}
+
+.outcome-modal__slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.outcome-modal__slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--pi-bg-tertiary, #f3f4f6);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.outcome-modal__slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.outcome-modal__slider::-webkit-slider-thumb:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
+}
+
+.outcome-modal__slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.outcome-modal__slider::-moz-range-thumb:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
+}
+
+.outcome-modal__value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--pi-text-secondary, #6b7280);
+  padding-left: 2px;
+}
+
+.outcome-modal__value-number {
+  font-weight: 600;
+  color: #3b82f6;
+  font-size: 16px;
+}
+
+.outcome-modal__value-label {
+  font-weight: 500;
+  color: var(--pi-text-primary, #111827);
+}
+
+.outcome-modal__footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px 24px;
+  border-top: 1px solid var(--pi-border-light, #f3f4f6);
+}
+
+.outcome-modal__btn {
+  flex: 1;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.outcome-modal__btn--cancel {
+  background: var(--pi-bg-tertiary, #f3f4f6);
+  color: var(--pi-text-secondary, #6b7280);
+}
+
+.outcome-modal__btn--cancel:hover:not(:disabled) {
+  background: var(--pi-border, #e5e7eb);
+  color: var(--pi-text-primary, #111827);
+}
+
+.outcome-modal__btn--submit {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.outcome-modal__btn--submit:hover:not(:disabled) {
+  background: #2563eb;
+  border-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.outcome-modal__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .outcome-modal-backdrop {
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  .outcome-modal__slider {
+    background: #374151;
+  }
+}
+
+[data-theme="dark"] .outcome-modal-backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="dark"] .outcome-modal {
+  background: #1f2937;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .outcome-modal__header {
+  border-bottom-color: #374151;
+}
+
+[data-theme="dark"] .outcome-modal__title {
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .outcome-modal__close-btn {
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .outcome-modal__close-btn:hover {
+  background: #374151;
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .outcome-modal__description {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .outcome-modal__label {
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .outcome-modal__slider {
+  background: #374151;
+}
+
+[data-theme="dark"] .outcome-modal__value {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .outcome-modal__value-label {
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .outcome-modal__footer {
+  border-top-color: #374151;
+}
+
+[data-theme="dark"] .outcome-modal__btn--cancel {
+  background: #374151;
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .outcome-modal__btn--cancel:hover:not(:disabled) {
+  background: #4b5563;
+  color: #f9fafb;
 }

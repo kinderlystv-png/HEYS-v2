@@ -249,6 +249,11 @@ const ALLOWED_FUNCTIONS = [
   'batch_upsert_client_kv_by_session',    // 🔐 P1: пакетная запись (session-safe)
   'delete_client_kv_by_session',          // 🔐 P1: удаление KV (session-safe)
 
+  // === EWS WEEKLY SNAPSHOTS (🔐 Wave 3.1: облачная синхронизация) ===
+  'upsert_weekly_snapshot_by_session',    // 🔐 Сохранение weekly snapshot
+  'get_weekly_snapshots_by_session',      // 🔐 Загрузка последних N недель
+  'delete_old_weekly_snapshots_by_session', // 🔐 Cleanup старых snapshots
+
   // === GAMIFICATION AUDIT (client, session-based) ===
   'log_gamification_event_by_session',
   'get_gamification_events_by_session',
@@ -628,6 +633,26 @@ module.exports.handler = async function (event, context) {
       },
       'get_client_data_by_session': {
         'p_session_token': '::text'
+      },
+      // 🔐 EWS Weekly Snapshots (Wave 3.1 cloud sync)
+      'upsert_weekly_snapshot_by_session': {
+        'p_session_token': '::text',
+        'p_week_start': '::date',
+        'p_week_end': '::date',
+        'p_week_number': '::int',
+        'p_year': '::int',
+        'p_warnings_count': '::int',
+        'p_global_score': '::int',
+        'p_severity_breakdown': '::jsonb',
+        'p_top_warnings': '::jsonb'
+      },
+      'get_weekly_snapshots_by_session': {
+        'p_session_token': '::text',
+        'p_weeks_count': '::int'
+      },
+      'delete_old_weekly_snapshots_by_session': {
+        'p_session_token': '::text',
+        'p_weeks_to_keep': '::int'
       },
       // 🔐 Curator-only функции
       'get_curator_clients': {

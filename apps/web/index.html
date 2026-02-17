@@ -2039,7 +2039,7 @@
     <script defer src="heys_subscriptions_v1.js?v=1" fetchpriority="low"></script>
     <script defer src="heys_status_v1.js?v=1" fetchpriority="low"></script>
     <!-- Predictive Insights (split modules) v6 -->
-    <script defer src="insights/pi_constants.js?v=7" fetchpriority="low"></script>
+    <script defer src="insights/pi_constants.js?v=42" fetchpriority="low"></script>
     <script defer src="insights/pi_stats.js?v=7"></script>
     <script defer src="insights/pi_thresholds.js?v=1"></script>
     <script defer src="insights/pi_science_info.js?v=7"></script>
@@ -2059,23 +2059,32 @@
     <script defer src="insights/pi_cache.js?v=1" fetchpriority="high"></script>
     <script defer src="insights/pi_analytics_api.js?v=7" fetchpriority="low"></script>
     <script defer src="insights/pi_calculations.js?v=8" fetchpriority="low"></script>
+    <!-- Modal Management System (before insights to prevent race conditions) -->
+    <script defer src="heys_modal_manager_v1.js?v=2" fetchpriority="low"></script>
+    <script defer src="heys_step_modal_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_steps_v1.js?v=21" fetchpriority="low"></script>
+    <script defer src="heys_add_product_step_v1.js?v=25.3" fetchpriority="low"></script>
+    <script defer src="heys_confirm_modal_v1.js?v=20" fetchpriority="low"></script>
     <!-- 🆕 Insights PI v3.5.0+ — Advanced Modules (Early Warning, What-If, Meal Rec, Feedback) -->
     <script defer src="insights/pi_phenotype.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/pi_early_warning.js?v=17" fetchpriority="low"></script>
+    <script defer src="insights/pi_causal_chains.js?v=1" fetchpriority="low"></script>
+    <script defer src="insights/pi_early_warning.js?v=44" fetchpriority="high"></script>
     <script defer src="insights/pi_whatif.js?v=2" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_phenotype.js?v=1" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_whatif_scenarios.js?v=6" fetchpriority="low"></script>
-    <script defer src="insights/pi_product_picker.js?v=1" fetchpriority="low"></script>
+    <script defer src="insights/pi_product_picker.js?v=3.2.1" fetchpriority="low"></script>
     <script defer src="insights/pi_meal_rec_patterns.js?v=1" fetchpriority="low"></script>
-    <script defer src="insights/pi_meal_recommender.js?v=4" fetchpriority="low"></script>
-    <script defer src="insights/pi_feedback_loop.js?v=1" fetchpriority="low"></script>
+    <script defer src="insights/pi_meal_planner.js?v=1.3.1" fetchpriority="low"></script>
+    <script defer src="insights/pi_meal_recommender.js?v=3.1" fetchpriority="low"></script>
+    <script defer src="insights/pi_feedback_loop.js?v=3" fetchpriority="low"></script>
+    <script defer src="insights/pi_outcome_modal.js?v=2" fetchpriority="low"></script>
     <script defer src="insights/pi_meal_rec_feedback.js?v=3" fetchpriority="low"></script>
-    <script defer src="insights/pi_ui_meal_rec_card.js?v=11" fetchpriority="low"></script>
+    <script defer src="insights/pi_ui_meal_rec_card.js?v=27.5" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_helpers.js?v=1" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_rings.js?v=6" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_cards.js?v=8" fetchpriority="low"></script>
     <script defer src="insights/pi_ui_whatif.js?v=6" fetchpriority="low"></script>
-    <script defer src="insights/pi_ui_dashboard.js?v=10" fetchpriority="low"></script>
+    <script defer src="insights/pi_ui_dashboard.js?v=13" fetchpriority="low"></script>
     <script defer src="insights/pi_pattern_debugger.js?v=27" fetchpriority="low"></script>
     <!-- Bridge: creates HEYS.PredictiveInsights.components getter from InsightsPI submodules -->
     <script defer src="heys_predictive_insights_v1.js?v=6" fetchpriority="low"></script>
@@ -2083,17 +2092,11 @@
     <script defer src="heys_metabolic_intelligence_v1.js?v=3" fetchpriority="low"></script>
     <script defer src="heys_supplements_v1.js?v=1" fetchpriority="low"></script>
     <script defer src="heys_supplements_science_v1.js?v=1" fetchpriority="low"></script>
-    <!-- Modal Management System -->
-    <script defer src="heys_modal_manager_v1.js?v=2" fetchpriority="low"></script>
-    <!-- StepModal system (modular step-based modals) -->
-    <script defer src="heys_step_modal_v1.js?v=20" fetchpriority="low"></script>
-    <script defer src="heys_steps_v1.js?v=21" fetchpriority="low"></script>
+    <!-- Other StepModal components (profile, meal, training loaded after core modals) -->
     <script defer src="heys_profile_step_v1.js?v=20" fetchpriority="low"></script>
     <script defer src="heys_meal_step_v1.js?v=20" fetchpriority="low"></script>
-    <script defer src="heys_add_product_step_v1.js?v=22" fetchpriority="low"></script>
     <script defer src="heys_training_step_v1.js?v=20" fetchpriority="low"></script>
     <script defer src="heys_morning_checkin_v1.js?v=20" fetchpriority="low"></script>
-    <script defer src="heys_confirm_modal_v1.js?v=20" fetchpriority="low"></script>
     <!-- Day module: consolidated meals (card/list/display/chart/state/handlers) -->
     <script defer src="day/_meals.js?v=4" fetchpriority="low"></script>
     <!-- End Day module split -->
@@ -2123,10 +2126,10 @@
     <script src="heys_ui_onboarding_v1.js"></script>
     <script defer src="heys_app_hooks_v1.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_app_tabs_v1.js?v=1" fetchpriority="high"></script>
-    <script defer src="heys_early_warning_panel_v1.js?v=15" fetchpriority="high"></script>
+    <script defer src="heys_early_warning_panel_v1.js?v=16" fetchpriority="high"></script>
     <script defer src="heys_gamification_bar_v1.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_app_gates_v1.js?v=1" fetchpriority="high"></script>
-    <script defer src="heys_app_shell_v1.js?v=8" fetchpriority="high"></script>
+    <script defer src="heys_app_shell_v1.js?v=12" fetchpriority="high"></script>
     <script defer src="heys_app_overlays_v1.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_app_gate_flow_v1.js?v=1" fetchpriority="high"></script>
     <script defer src="heys_app_backup_v1.js?v=1" fetchpriority="high"></script>

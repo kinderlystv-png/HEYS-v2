@@ -3257,6 +3257,18 @@
                 const updatedDate = e.detail?.date;
                 const source = e.detail?.source || 'unknown';
                 const forceReload = e.detail?.forceReload || false;
+                const syncTimestampOnly = e.detail?.syncTimestampOnly || false;
+                const updatedAt = e.detail?.updatedAt;
+                const payloadData = e.detail?.data;
+
+                // v25.8.6.1: Handle timestamp-only sync (prevent fetchDays overwrite)
+                if (syncTimestampOnly && updatedAt) {
+                    const newTimestamp = Math.max(lastLoadedUpdatedAtRef.current || 0, updatedAt);
+                    lastLoadedUpdatedAtRef.current = newTimestamp;
+                    console.info(`[HEYS.day] ⏱️ Timestamp ref synced: ${newTimestamp} (source: ${source})`);
+                    return; // Don't reload day, just updated timestamp ref
+                }
+
                 scheduleDayUpdateLog({
                     source,
                     updatedDate,
@@ -3278,6 +3290,44 @@
                 // 🔒 Игнорируем события во время начальной синхронизации
                 // doLocal() в конце синхронизации загрузит все финальные данные
                 if (isSyncingRef.current && (source === 'cloud' || source === 'merge')) {
+                    return;
+                }
+
+                // v25.8.6.5: Если событие пришло с полным payload дня — применяем его напрямую.
+                // Это обходит риск чтения устаревшего localStorage во время/после fetchDays.
+                if (payloadData && (!updatedDate || updatedDate === date)) {
+                    const profNow = getProfile();
+                    const normalizedPayload = ensureDay(payloadData?.date ? payloadData : { ...payloadData, date }, profNow);
+                    const payloadUpdatedAt = normalizedPayload.updatedAt || updatedAt || Date.now();
+                    const payloadMealsCount = (normalizedPayload.meals || []).length;
+
+                    setDay(prevDay => {
+                        const prevUpdatedAt = prevDay?.updatedAt || 0;
+                        const prevMealsCount = (prevDay?.meals || []).length;
+
+                        // Защита от отката: принимаем payload, если он не старее
+                        // или если в нём больше приемов пищи (локальный прогресс).
+                        if (!forceReload && payloadUpdatedAt < prevUpdatedAt && payloadMealsCount <= prevMealsCount) {
+                            console.info('[HEYS.day] ⏭️ Payload skipped (older than current)', {
+                                source,
+                                payloadUpdatedAt,
+                                prevUpdatedAt,
+                                payloadMealsCount,
+                                prevMealsCount
+                            });
+                            return prevDay;
+                        }
+
+                        console.info('[HEYS.day] 📦 Applied day-updated payload', {
+                            source,
+                            payloadUpdatedAt,
+                            payloadMealsCount,
+                            forceReload
+                        });
+                        return normalizedPayload;
+                    });
+
+                    lastLoadedUpdatedAtRef.current = Math.max(lastLoadedUpdatedAtRef.current || 0, payloadUpdatedAt);
                     return;
                 }
 
@@ -3392,6 +3442,26 @@
                                 return prevDay;
                             }
 
+                            // v25.8.6.6: Защита от cloud/fetchDays отката количества приёмов.
+                            // Внешние источники не должны уменьшать локально подтвержденные meals
+                            // (особенно кейс 1 -> 0 при запаздывающем merge/fetchDays).
+                            const shouldSkipExternalMealsRollback =
+                                isExternalSource &&
+                                storageMealsCount < prevMealsCount;
+
+                            if (shouldSkipExternalMealsRollback) {
+                                console.warn('[HEYS.day] 🛡️ Skip overwrite (external meals rollback)', {
+                                    source,
+                                    updatedDate,
+                                    prevMealsCount,
+                                    storageMealsCount,
+                                    storageUpdatedAt,
+                                    currentUpdatedAt,
+                                    forceReload
+                                });
+                                return prevDay;
+                            }
+
                             // Обновляем ref только если приняли данные из storage
                             lastLoadedUpdatedAtRef.current = storageUpdatedAt;
 
@@ -3437,6 +3507,50 @@
                 if (dayUpdateLogTimerRef.current) {
                     clearTimeout(dayUpdateLogTimerRef.current);
                     dayUpdateLogTimerRef.current = null;
+                }
+            };
+        }, [date]);
+
+        // v25.8.6.7: Export addMealDirect — direct React state update for external callers
+        // Used by meal rec card instead of unreliable event dispatch pipeline
+        React.useEffect(() => {
+            HEYS.Day = HEYS.Day || {};
+
+            /**
+             * Add a meal directly to day state + localStorage (synchronous).
+             * Mirrors the pattern from heys_day_meal_handlers.js addMeal onComplete.
+             * @param {Object} newMeal - Meal object from MealStep.showAddMeal onComplete
+             * @returns {boolean} success
+             */
+            HEYS.Day.addMealDirect = (newMeal) => {
+                if (!newMeal || !newMeal.id) {
+                    console.warn('[HEYS.Day.addMealDirect] ❌ Invalid meal:', newMeal);
+                    return false;
+                }
+
+                const newUpdatedAt = Date.now();
+                lastLoadedUpdatedAtRef.current = newUpdatedAt;
+                blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
+
+                setDay(prevDay => {
+                    const newMeals = [...(prevDay.meals || []), newMeal];
+                    const newDayData = { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
+                    const key = 'heys_dayv2_' + (prevDay.date || date);
+                    try {
+                        lsSet(key, newDayData);
+                    } catch (e) {
+                        console.error('[HEYS.Day.addMealDirect] ❌ lsSet failed:', e);
+                    }
+                    return newDayData;
+                });
+
+                console.info('[HEYS.Day.addMealDirect] ✅ Meal added:', newMeal.name, 'id=' + newMeal.id);
+                return true;
+            };
+
+            return () => {
+                if (HEYS.Day && HEYS.Day.addMealDirect) {
+                    delete HEYS.Day.addMealDirect;
                 }
             };
         }, [date]);

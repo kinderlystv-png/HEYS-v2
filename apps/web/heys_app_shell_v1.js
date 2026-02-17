@@ -137,18 +137,35 @@
         React.useEffect(() => {
             console.info('ews / badge 🔄 useEffect triggered');
 
-            const loadEWSData = async () => {
+            const loadEWSData = async (retryCount = 0) => {
                 try {
-                    console.info('ews / badge 🚀 loadEWSData started');
+                    console.info('ews / badge 🚀 loadEWSData started', { attempt: retryCount + 1 });
+
+                    // Debug: проверка структуры HEYS объекта
+                    console.info('ews / badge 🔍 HEYS state:', {
+                        hasHEYS: typeof HEYS !== 'undefined',
+                        hasInsightsPI: typeof HEYS?.InsightsPI !== 'undefined',
+                        hasEarlyWarning: typeof HEYS?.InsightsPI?.earlyWarning !== 'undefined',
+                        hasDetect: typeof HEYS?.InsightsPI?.earlyWarning?.detect === 'function',
+                        version: HEYS?.InsightsPI?.earlyWarning?.version || 'unknown'
+                    });
 
                     if (!HEYS?.InsightsPI?.earlyWarning?.detect) {
-                        console.warn('ews / badge ⚠️ EWS module not available');
+                        // Retry with exponential backoff (max 3 attempts)
+                        if (retryCount < 3) {
+                            const delay = Math.min(1000 * Math.pow(2, retryCount), 4000);
+                            console.warn(`ews / badge ⏳ EWS module not ready, retry in ${delay}ms (attempt ${retryCount + 1}/3)`);
+                            setTimeout(() => loadEWSData(retryCount + 1), delay);
+                            return;
+                        }
+                        console.error('ews / badge ❌ EWS module not available after 3 attempts');
+                        setEWSData(null);
                         return;
                     }
 
                     console.info('ews / badge ✅ EWS module detected');
 
-                    // Load 7 days of data (using local formatLocalISO function)
+                    // Load 7 days of data (ACUTE mode: current state alerts only)
                     const days = [];
                     for (let i = 0; i < 7; i++) {
                         const d = new Date();
@@ -170,22 +187,39 @@
                     const profile = cachedProfile || HEYS.store?.get?.('heys_profile') || null;
                     const pIndex = products || HEYS.products?.getAll?.() || [];
 
-                    const result = await HEYS.InsightsPI.earlyWarning.detect(days, profile, pIndex, { includeDetails: true });
+                    console.info('ews / badge 📤 calling detect:', {
+                        mode: 'acute',
+                        daysCount: days.length,
+                        hasProfile: !!profile,
+                        pIndexCount: pIndex?.length || 0,
+                        checksExpected: 10
+                    });
 
-                    if (result.available && result.count > 0) {
+                    const result = await HEYS.InsightsPI.earlyWarning.detect(days, profile, pIndex, {
+                        mode: 'acute',
+                        includeDetails: true
+                    });
+
+                    if (result.available) {
                         setEWSData(result);
-                        console.info('ews / badge ✅ Badge data loaded:', {
-                            count: result.count,
-                            high: result.highSeverityCount,
-                            medium: result.count - result.highSeverityCount,
-                            daysAnalyzed: days.length,
-                            hasWarnings: Array.isArray(result.warnings) && result.warnings.length > 0,
-                        });
+                        if (result.count > 0) {
+                            console.info('ews / badge ✅ Badge data loaded:', {
+                                count: result.count,
+                                high: result.highSeverityCount,
+                                medium: result.count - result.highSeverityCount,
+                                daysAnalyzed: days.length,
+                                hasWarnings: Array.isArray(result.warnings) && result.warnings.length > 0,
+                            });
+                        } else {
+                            console.info('ews / badge ✅ All OK (no warnings):', {
+                                daysAnalyzed: days.length,
+                                status: 'healthy'
+                            });
+                        }
                     } else {
                         setEWSData(null);
-                        console.info('ews / badge ℹ️ No warnings detected:', {
-                            available: result.available,
-                            reason: result.reason || 'no_warnings',
+                        console.info('ews / badge ℹ️ EWS unavailable:', {
+                            reason: result.reason || 'insufficient_data',
                             daysAnalyzed: days.length,
                         });
                     }
@@ -194,6 +228,13 @@
                     setEWSData(null);
                 }
             };
+
+            // Listen for EWS module ready event (fired by pi_early_warning.js on load)
+            const handleEWSReady = (event) => {
+                console.info('ews / badge 📡 heys-ews-ready event received:', event.detail);
+                loadEWSData(); // Immediately load data when module becomes available
+            };
+            window.addEventListener('heys-ews-ready', handleEWSReady);
 
             loadEWSData();
 
@@ -211,6 +252,7 @@
             const interval = setInterval(loadEWSData, 5 * 60 * 1000);
 
             return () => {
+                window.removeEventListener('heys-ews-ready', handleEWSReady);
                 window.removeEventListener('day-data-changed', handleDayDataChanged);
                 window.removeEventListener('heys-sync-complete', handleSyncComplete);
                 clearInterval(interval);
@@ -623,10 +665,16 @@
                                         ? '<span class="cloud-icon error">⚠</span>' + (retryCountdown > 0 ? '<span class="retry-countdown">' + retryCountdown + '</span>' : '')
                                         : '<svg class="cloud-icon idle" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>'
                     }
-                }),                    // 🚨 EWS Badge (v1.0)
-                ewsData && ewsData.count > 0 && React.createElement('div', {
-                    className: 'ews-badge' + (ewsData.highSeverityCount > 0 ? ' ews-badge--high' : ' ews-badge--medium'),
+                }),                    // 🚨 EWS Badge (v1.1 - показывает "✅ все ок" когда warnings = 0)
+                ewsData && React.createElement('div', {
+                    className: 'ews-badge' + (
+                        ewsData.count === 0 ? ' ews-badge--ok' :
+                            ewsData.highSeverityCount > 0 ? ' ews-badge--high' : ' ews-badge--medium'
+                    ),
                     title: (() => {
+                        if (ewsData.count === 0) {
+                            return '✅ Early Warning System: все показатели в норме';
+                        }
                         const high = ewsData.highSeverityCount || 0;
                         const medium = ewsData.count - high;
                         const parts = [];
@@ -636,15 +684,22 @@
                     })(),
                     onClick: () => {
                         haptic('medium');
-                        console.info('ews / badge 🚨 Badge clicked → opening panel globally');
+                        if (ewsData.count === 0) {
+                            console.info('ews / badge ✅ Badge clicked (all ok) → opening panel globally');
+                        } else {
+                            console.info('ews / badge 🚨 Badge clicked → opening panel globally (acute mode)');
+                        }
                         // Отправляем событие с warnings для глобального менеджера панели
                         window.dispatchEvent(new CustomEvent('heysShowEWSPanel', {
-                            detail: { warnings: ewsData.warnings || [] }
+                            detail: {
+                                warnings: ewsData.warnings || [],
+                                mode: 'acute'
+                            }
                         }));
                     }
                 }, [
-                    React.createElement('span', { className: 'ews-badge__icon' }, '⚠️'),
-                    React.createElement('span', { className: 'ews-badge__count' }, ewsData.count)
+                    React.createElement('span', { className: 'ews-badge__icon' }, ewsData.count === 0 ? '✅' : '⚠️'),
+                    ewsData.count > 0 && React.createElement('span', { className: 'ews-badge__count' }, ewsData.count)
                 ]),                    // Кнопки "Вчера" + "Сегодня" + DatePicker
                 (tab === 'stats' || tab === 'diary' || tab === 'insights' || tab === 'month' || tab === 'widgets') && window.HEYS.DatePicker
                     ? React.createElement('div', { className: 'hdr-date-group' },

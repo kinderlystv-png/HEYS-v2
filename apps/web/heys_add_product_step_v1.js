@@ -1272,9 +1272,23 @@
 
   // === Компонент поиска продукта (Шаг 1) ===
   function ProductSearchStep({ data, onChange, context }) {
-    const [searchInput, setSearchInput] = useState('');
-    const [search, setSearch] = useState('');
+    const [searchInput, setSearchInput] = useState(data?.searchQuery || '');
+    const [search, setSearch] = useState(data?.searchQuery || '');
     const [selectedCategory, setSelectedCategory] = useState('all');
+
+    // v25.8.6.7: Sync searchQuery from StepModal's getInitialData
+    // useState initializer runs only once at mount, but stepData is set via useEffect
+    // (after first render), so data?.searchQuery may be empty on mount.
+    // This effect picks up the initial search query once StepModal provides it.
+    const initialSearchAppliedRef = useRef(false);
+    useEffect(() => {
+      if (!initialSearchAppliedRef.current && data?.searchQuery && !searchInput) {
+        setSearchInput(data.searchQuery);
+        setSearch(data.searchQuery);
+        initialSearchAppliedRef.current = true;
+        console.info('[HEYS.addProduct] 🔍 Pre-filled search from initialSearch:', data.searchQuery);
+      }
+    }, [data?.searchQuery]);
     const [favorites, setFavorites] = useState(() =>
       HEYS.store?.getFavorites?.() || new Set()
     );
@@ -1951,7 +1965,9 @@
       // Последние использованные граммы для этого продукта
       const productId = product.id ?? product.product_id ?? product.name;
       const lastGrams = lsGet(`heys_last_grams_${productId}`, null);
-      const defaultGrams = lastGrams || 100;
+      // v25.3: Use ML grams only from _mlGrams (set once by recommendation), not stale data.grams
+      const mlGrams = data._mlGrams || null;
+      const defaultGrams = mlGrams || lastGrams || 100;
 
       // 🔍 DEBUG: Подробный лог выбранного продукта
       const hasNutrients = !!(product.kcal100 || product.protein100 || product.carbs100);
@@ -1964,7 +1980,8 @@
         ...data,
         selectedProduct: product,
         grams: defaultGrams,
-        lastGrams: lastGrams // Для отображения подсказки
+        _mlGrams: null, // v25.3: clear ML grams after first use
+        lastGrams: lastGrams
       });
       // Автопереход на шаг граммов (index 4: search → grams)
       // Шаги create/portions/harm — только для НОВЫХ продуктов
@@ -5061,6 +5078,8 @@ NOVA: 1
       day,
       dateKey = new Date().toISOString().slice(0, 10),
       multiProductMode = false,
+      initialSearch = '', // 🆕 Предзаполнение поиска (MealRec UX fix)
+      initialGrams = 100, // 🆕 v24: Smart Grams Pre-fill (R6, Sprint 1)
       onAdd,
       onAddPhoto, // Callback для добавления фото к приёму
       onNewProduct,
@@ -5088,7 +5107,11 @@ NOVA: 1
       mealIndex,
       dateKey,
       productsCount: products.length,
-      hasProvidedProducts: Array.isArray(providedProducts) && providedProducts.length > 0
+      hasProvidedProducts: Array.isArray(providedProducts) && providedProducts.length > 0,
+      // 🆕 v24: Sprint 1 verification — show initialGrams from MealRec
+      initialSearch: initialSearch || '(none)',
+      initialGrams: initialGrams,
+      usingMLGrams: initialGrams !== 100
     });
 
     const handleModalClose = () => {
@@ -5111,7 +5134,12 @@ NOVA: 1
           hint: '',
           icon: '',
           component: ProductSearchStep,
-          getInitialData: () => ({ selectedProduct: null, grams: 100 }),
+          getInitialData: () => ({
+            selectedProduct: null,
+            grams: initialGrams,
+            _mlGrams: initialGrams !== 100 ? initialGrams : null, // v25.3: separate ML grams flag
+            searchQuery: initialSearch
+          }),
           validate: (data) => !!data?.selectedProduct
         },
         {

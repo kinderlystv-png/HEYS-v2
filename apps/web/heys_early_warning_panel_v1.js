@@ -203,8 +203,9 @@
      * @param {boolean} props.isOpen - Panel visibility
      * @param {function} props.onClose - Close handler
      * @param {array} props.warnings - Array of warning objects from earlyWarning.detect()
+     * @param {string} props.mode - Detection mode: 'acute' (10 checks, 7d) or 'full' (25 checks, 30d)
      */
-    function EarlyWarningPanel({ isOpen, onClose, warnings = [] }) {
+    function EarlyWarningPanel({ isOpen, onClose, warnings = [], mode = 'full' }) {
         const [dismissed, setDismissed] = useState(() => getDismissedWarnings());
 
         // Block body scroll when modal is open
@@ -301,8 +302,12 @@
                 // Header
                 h('div', { className: 'pattern-debug-modal__header early-warning-modal__header' },
                     h('div', { className: 'pattern-debug-modal__title early-warning-modal__title' },
-                        h('span', { className: 'pattern-debug-modal__emoji early-warning-modal__emoji' }, '⚠️'),
-                        h('span', null, 'Early Warning System')
+                        h('span', { className: 'pattern-debug-modal__emoji early-warning-modal__emoji' },
+                            mode === 'acute' ? '⚡' : '📊'
+                        ),
+                        h('span', null,
+                            mode === 'acute' ? 'Оперативные предупреждения' : 'Аудит за 30 дней'
+                        )
                     ),
                     h('button', {
                         className: 'pattern-debug-modal__close early-warning-modal__close',
@@ -313,21 +318,33 @@
 
                 // Stats summary (как в Pattern Debugger)
                 h('div', { className: 'pattern-debug-modal__stats early-warning-modal__stats' },
-                    h('div', { className: 'pattern-debug-modal__stat' },
-                        h('span', { className: 'pattern-debug-modal__stat-label' }, 'Всего предупреждений'),
-                        h('span', { className: 'pattern-debug-modal__stat-value' }, activeWarnings.length)
+                    h('div', { className: 'pattern-debug-modal__stat pattern-debug-modal__stat--total' },
+                        h('span', { className: 'pattern-debug-modal__stat-icon' }, '📊'),
+                        h('div', { className: 'pattern-debug-modal__stat-content' },
+                            h('span', { className: 'pattern-debug-modal__stat-label' }, 'Всего'),
+                            h('span', { className: 'pattern-debug-modal__stat-value' }, activeWarnings.length)
+                        )
                     ),
-                    h('div', { className: 'pattern-debug-modal__stat' },
-                        h('span', { className: 'pattern-debug-modal__stat-label' }, 'Критичных'),
-                        h('span', { className: 'pattern-debug-modal__stat-value' }, groupedWarnings.high.length)
+                    h('div', { className: 'pattern-debug-modal__stat pattern-debug-modal__stat--high' },
+                        h('span', { className: 'pattern-debug-modal__stat-icon' }, '🚨'),
+                        h('div', { className: 'pattern-debug-modal__stat-content' },
+                            h('span', { className: 'pattern-debug-modal__stat-label' }, 'Критичных'),
+                            h('span', { className: 'pattern-debug-modal__stat-value' }, groupedWarnings.high.length)
+                        )
                     ),
-                    h('div', { className: 'pattern-debug-modal__stat' },
-                        h('span', { className: 'pattern-debug-modal__stat-label' }, 'Внимание'),
-                        h('span', { className: 'pattern-debug-modal__stat-value' }, groupedWarnings.medium.length)
+                    h('div', { className: 'pattern-debug-modal__stat pattern-debug-modal__stat--medium' },
+                        h('span', { className: 'pattern-debug-modal__stat-icon' }, '⚠️'),
+                        h('div', { className: 'pattern-debug-modal__stat-content' },
+                            h('span', { className: 'pattern-debug-modal__stat-label' }, 'Внимание'),
+                            h('span', { className: 'pattern-debug-modal__stat-value' }, groupedWarnings.medium.length)
+                        )
                     ),
-                    h('div', { className: 'pattern-debug-modal__stat' },
-                        h('span', { className: 'pattern-debug-modal__stat-label' }, 'Рекомендаций'),
-                        h('span', { className: 'pattern-debug-modal__stat-value' }, groupedWarnings.low.length)
+                    h('div', { className: 'pattern-debug-modal__stat pattern-debug-modal__stat--low' },
+                        h('span', { className: 'pattern-debug-modal__stat-icon' }, 'ℹ️'),
+                        h('div', { className: 'pattern-debug-modal__stat-content' },
+                            h('span', { className: 'pattern-debug-modal__stat-label' }, 'Рекомендаций'),
+                            h('span', { className: 'pattern-debug-modal__stat-value' }, groupedWarnings.low.length)
+                        )
                     )
                 ),
 
@@ -413,22 +430,25 @@
     let globalPanelState = {
         isOpen: false,
         warnings: null,
+        mode: 'full',
         container: null
     };
 
     /**
      * Глобальная функция для открытия EWS панели с предупреждениями
      * @param {Array} warnings - массив предупреждений для отображения
+     * @param {string} mode - 'acute' (10 checks, 7d badge) or 'full' (25 checks, 30d insights)
      */
-    function showEWSPanel(warnings) {
+    function showEWSPanel(warnings, mode = 'full') {
         if (!warnings || warnings.length === 0) {
             console.warn('ews / panel ⚠️ no warnings to display');
             return;
         }
 
-        console.info('ews / panel 🚨 opening panel with', warnings.length, 'warnings');
+        console.info('ews / panel 🚨 opening panel with', warnings.length, 'warnings, mode:', mode);
         globalPanelState.isOpen = true;
         globalPanelState.warnings = warnings;
+        globalPanelState.mode = mode;
         renderGlobalPanel();
     }
 
@@ -472,7 +492,8 @@
                 ? h(EarlyWarningPanel, {
                     isOpen: true,
                     onClose: hideEWSPanel,
-                    warnings: globalPanelState.warnings || []
+                    warnings: globalPanelState.warnings || [],
+                    mode: globalPanelState.mode || 'full'
                 })
                 : null
         );
@@ -487,8 +508,10 @@
     if (global.window) {
         window.addEventListener('heysShowEWSPanel', function (event) {
             const warnings = event.detail?.warnings;
+            const mode = event.detail?.mode || 'full';  // Default to 'full' for backward compat
+
             if (warnings && warnings.length > 0) {
-                showEWSPanel(warnings);
+                showEWSPanel(warnings, mode);
             } else {
                 console.warn('ews / panel ⚠️ event received but no warnings in event.detail');
             }
