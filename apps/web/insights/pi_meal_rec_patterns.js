@@ -16,8 +16,8 @@
     const HEYS = global.HEYS = global.HEYS || {};
     HEYS.InsightsPI = HEYS.InsightsPI || {};
 
-    // Unified logging filter for console filtering
-    const LOG_FILTER = 'MEALREC';
+    // Unified logging filter for console filtering (supports quick filters: "mealrec" and "dynamic")
+    const LOG_FILTER = 'MEALREC|dynamic';
 
     // Critical patterns that affect meal recommendations
     const CRITICAL_PATTERNS = {
@@ -230,6 +230,111 @@
             console.warn(`[${LOG_FILTER}] ⚠️ Failed to get added_sugar_dependency:`, err.message);
         }
 
+        // === PHASE B: CONTEXT MODIFIERS (4 patterns) ===
+
+        // C06: Sleep → Hunger (влияет на POOR_SLEEP scenario modifier)
+        try {
+            const sleepHunger = patterns.analyzeSleepHunger?.(days, profile, pIndex);
+            if (sleepHunger?.available) {
+                scores.sleepHunger = {
+                    score: normalizeScore(sleepHunger.score),
+                    scoreRaw: Number(sleepHunger.score) || 0,
+                    confidence: sleepHunger.confidence || 0.7,
+                    correlation: sleepHunger.correlation,
+                    poorSleepDays: sleepHunger.poorSleepDays || 0,
+                    avgLag: sleepHunger.lagEffect || 0
+                };
+            }
+        } catch (err) {
+            console.warn(`[${LOG_FILTER}] ⚠️ Failed to get sleep_hunger:`, err.message);
+        }
+
+        // C14: Nutrient Timing (влияет на PRE/POST_WORKOUT macro fine-tuning)
+        try {
+            const nutrientTiming = patterns.analyzeNutrientTiming?.(days, pIndex, profile);
+            if (nutrientTiming?.available) {
+                scores.nutrientTiming = {
+                    score: normalizeScore(nutrientTiming.score),
+                    scoreRaw: Number(nutrientTiming.score) || 0,
+                    confidence: nutrientTiming.confidence || 0.7,
+                    carbTimingScore: nutrientTiming.carbTimingScore || 0,
+                    proteinTimingScore: nutrientTiming.proteinTimingScore || 0,
+                    optimalWindow: nutrientTiming.optimalWindow || 'N/A'
+                };
+            }
+        } catch (err) {
+            console.warn(`[${LOG_FILTER}] ⚠️ Failed to get nutrient_timing:`, err.message);
+        }
+
+        // C10: Fiber Regularity (влияет на product picker fiber boost)
+        try {
+            const fiberRegularity = patterns.analyzeFiberRegularity?.(days, pIndex);
+            if (fiberRegularity?.available) {
+                scores.fiberRegularity = {
+                    score: normalizeScore(fiberRegularity.score),
+                    scoreRaw: Number(fiberRegularity.score) || 0,
+                    confidence: fiberRegularity.confidence || 0.7,
+                    avgFiberG: fiberRegularity.avgFiberG || 0,
+                    targetFiberG: fiberRegularity.targetFiberG || 25,
+                    fiberPer1000: fiberRegularity.fiberPer1000 || 0
+                };
+            }
+        } catch (err) {
+            console.warn(`[${LOG_FILTER}] ⚠️ Failed to get fiber_regularity:`, err.message);
+        }
+
+        // C12: Mood ↔ Food (влияет на STRESS_EATING macro strategy)
+        try {
+            const optimum = profile?.optimum || 2000;
+            const moodFood = patterns.analyzeMoodFood?.(days, pIndex, optimum);
+            if (moodFood?.available) {
+                scores.moodFood = {
+                    score: normalizeScore(moodFood.score),
+                    scoreRaw: Number(moodFood.score) || 0,
+                    confidence: moodFood.confidence || 0.7,
+                    correlation: moodFood.correlation || 0,
+                    bestFoods: moodFood.bestFoods || [],
+                    worstFoods: moodFood.worstFoods || []
+                };
+            }
+        } catch (err) {
+            console.warn(`[${LOG_FILTER}] ⚠️ Failed to get mood_food:`, err.message);
+        }
+
+        // === PHASE C: MICRONUTRIENT INTELLIGENCE (2 patterns) ===
+
+        // C26: Micronutrient Radar (влияет на product boost for Fe/Mg/Zn/Ca sources)
+        try {
+            const micronutrients = patterns.analyzeMicronutrients?.(days, pIndex, profile);
+            if (micronutrients?.available) {
+                scores.micronutrients = {
+                    score: normalizeScore(micronutrients.score),
+                    scoreRaw: Number(micronutrients.score) || 0,
+                    confidence: micronutrients.confidence || 0.7,
+                    deficits: micronutrients.deficits || [],
+                    avgIntake: micronutrients.avgIntake || {}
+                };
+            }
+        } catch (err) {
+            console.warn(`[${LOG_FILTER}] ⚠️ Failed to get micronutrients:`, err.message);
+        }
+
+        // C29: NOVA Quality (влияет на product filter - penalty NOVA-4)
+        try {
+            const novaQuality = patterns.analyzeNOVAQuality?.(days, pIndex);
+            if (novaQuality?.available) {
+                scores.novaQuality = {
+                    score: normalizeScore(novaQuality.score),
+                    scoreRaw: Number(novaQuality.score) || 0,
+                    confidence: novaQuality.confidence || 0.7,
+                    nova4Share: novaQuality.nova4SharePct || 0,
+                    avgNOVA: novaQuality.avgNOVA || 2.5
+                };
+            }
+        } catch (err) {
+            console.warn(`[${LOG_FILTER}] ⚠️ Failed to get nova_quality:`, err.message);
+        }
+
         const availableCount = Object.keys(scores).length;
         if (availableCount === 0) {
             console.warn(`[${LOG_FILTER}] ⚠️ No pattern scores available`);
@@ -264,6 +369,20 @@
             if (data.avgDailySugar !== undefined) row.avgDailySugar = data.avgDailySugar;
             if (data.maxStreak !== undefined) row.sugarStreak = data.maxStreak;
             if (data.dependencyRisk !== undefined) row.sugarRisk = data.dependencyRisk;
+            // Phase B specific metrics
+            if (data.poorSleepDays !== undefined) row.poorSleepDays = data.poorSleepDays;
+            if (data.avgLag !== undefined) row.sleepLag = data.avgLag;
+            if (data.carbTimingScore !== undefined) row.carbTiming = data.carbTimingScore;
+            if (data.proteinTimingScore !== undefined) row.proteinTiming = data.proteinTimingScore;
+            if (data.avgFiberG !== undefined) row.avgFiberG = data.avgFiberG;
+            if (data.fiberPer1000 !== undefined) row.fiberPer1000 = data.fiberPer1000;
+            if (data.bestFoods !== undefined) row.bestFoodCount = data.bestFoods.length;
+            if (data.worstFoods !== undefined) row.worstFoodCount = data.worstFoods.length;
+            // Phase C specific metrics
+            if (data.deficits !== undefined) row.deficitCount = data.deficits.length;
+            if (data.avgIntake !== undefined && data.avgIntake.iron) row.avgFe = data.avgIntake.iron;
+            if (data.nova4Share !== undefined) row.nova4Pct = data.nova4Share;
+            if (data.avgNOVA !== undefined) row.avgNOVA = data.avgNOVA;
             return row;
         });
 
@@ -560,6 +679,6 @@
         enhanceRecommendation
     };
 
-    console.info(`[${LOG_FILTER}] ✅ Module loaded (v1.0)`);
+    console.info(`[${LOG_FILTER}] ✅ Module loaded (v3.0 - Phase A/B/C: 12 patterns integrated)`);
 
 })(typeof window !== 'undefined' ? window : global);

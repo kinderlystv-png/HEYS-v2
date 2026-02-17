@@ -134,7 +134,7 @@ describe('Meal Recommender v2.6', () => {
             expect(result.suggestions).toBeDefined();
             expect(result.reasoning).toBeDefined();
             expect(result.method).toBe('context_engine');
-            expect(result.version).toBe('2.6');
+            expect(result.version).toBe('3.0'); // R2.7: Full Pattern Integration
         });
 
         it('returns error for missing context', () => {

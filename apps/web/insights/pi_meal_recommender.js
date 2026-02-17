@@ -1,7 +1,7 @@
 /**
- * HEYS Predictive Insights — Next Meal Recommender v2.6
+ * HEYS Predictive Insights — Next Meal Recommender v3.2.0
  * 
- * Context-aware meal guidance with 8 scenarios + Deep Insights Integration.
+ * Context-aware meal guidance with 8 scenarios + 12 Pattern Integration (Phase A/B/C).
  * 
  * Scenarios:
  * - GOAL_REACHED: day target met (<50 kcal remaining)
@@ -13,19 +13,30 @@
  * - STRESS_EATING: stress >3 OR mood <3
  * - BALANCED: default scenario
  * 
- * v2.4 Features:
- * - Adaptive thresholds integration (late_eating_hour, meal_gap_hours)
- * - Scenario-specific macro strategies
- * - Context-aware reasoning
- * - Enhanced verification logging
+ * v3.2.0 CRITICAL FIX (17.02.2026):
+ * - NEW: "Last meal override" — if mealsRemaining === 1 && remainingKcal > 300, use 90% of remainder
+ * - ISSUE: LATE_EVENING caps at 200 kcal even when it's the LAST meal with 764 kcal remaining
+ * - SOLUTION: Detect last meal context, override scenario cap with actual budget (90% to leave buffer)
+ * - EXAMPLE: LATE_EVENING 21:49, 764 kcal left, 1 meal remaining → 688 kcal (not 200)
+ * - IMPACT: All scenarios with caps (LATE_EVENING, LIGHT_SNACK, etc.) now adapt to last meal reality
  * 
- * v2.6 Features (R2.6 Deep Insights Integration):
- * - Pattern scores integration (C09, C11, C13, C30)
- * - Dynamic confidence calculation (0.5-1.0)
- * - Phenotype-adjusted macro ratios
- * - Scenario priority multipliers
+ * v3.1.1 Bugfix (17.02.2026):
+ * - FIXED: Product Picker now receives target meal kcal instead of day remaining kcal
+ * - ISSUE: LATE_EVENING recommended 200 kcal but generated products for 764 kcal (full day remainder)
+ * - SOLUTION: Pass macrosRec.kcal (meal target) instead of macrosRec.remainingKcal (day remainder)
+ * - IMPACT: Product selection now matches recommended meal size for all scenarios with kcal limits
  * 
- * Dependencies: pi_thresholds.js, pi_phenotype.js, pi_meal_rec_patterns.js, pi_patterns.js
+ * v3.0 Features (R2.7 Full Pattern Integration):
+ * - Phase A (Core): 6 patterns (C01, C02, C15, C34, C35, C37)
+ *   → Timing shifts, macro tuning, GI moderation, sugar filtering
+ * - Phase B (Context): 4 patterns (C06, C14, C10, C12)
+ *   → Sleep recovery, nutrient timing, fiber boost, mood-food
+ * - Phase C (Micronutrients): 2 patterns (C26, C29)
+ *   → Mineral boosts (Fe/Mg/Zn/Ca), NOVA quality filtering
+ * - 11-factor Product Picker scoring system
+ * - Pattern impact tracking + observability logging
+ * 
+ * Dependencies: pi_thresholds.js, pi_phenotype.js, pi_meal_rec_patterns.js, pi_patterns.js, pi_product_picker.js
  * @param global
  */
 
@@ -299,7 +310,7 @@
      * @returns {object} - Recommendation result
      */
     function recommendNextMeal(context, profile, pIndex, days = []) {
-        console.info(`${LOG_PREFIX} 🍽️ recommendNextMeal v2.6 called:`, {
+        console.info(`${LOG_PREFIX} 🍽️ recommendNextMeal v3.0 called:`, {
             contextTime: context?.currentTime,
             lastMealTime: context?.lastMeal?.time,
             hasTraining: !!context?.training,
@@ -336,8 +347,8 @@
             }
         }
 
-        // Phase A (v3.1): Load core pattern hints for timing/macros/picker modifiers
-        const phaseAPatternHints = loadPhaseAPatternHints(days, profile, pIndex);
+        // Phase A/B (v3.1): Load pattern hints for timing/macros/picker modifiers
+        const patternHints = loadPatternHints(days, profile, pIndex);
 
         // Analyze context → determine scenario (v2.4 feature)
         const contextAnalysis = analyzeCurrentContext(context, dayTarget, dayEaten, profile, currentTime, thresholds);
@@ -351,16 +362,98 @@
         const patternImpact = [];
 
         // Calculate timing recommendation
-        const timingRec = calculateOptimalTiming(currentTime, lastMeal, training, sleepTarget, thresholds, phaseAPatternHints, patternImpact);
+        const timingRec = calculateOptimalTiming(currentTime, lastMeal, training, sleepTarget, thresholds, patternHints, patternImpact);
 
         // Calculate macros recommendation (scenario-aware v2.4)
-        const macrosRec = calculateOptimalMacros(contextAnalysis, dayTarget, dayEaten, training, profile, timingRec, phaseAPatternHints, patternImpact);
+        const macrosRec = calculateOptimalMacros(contextAnalysis, dayTarget, dayEaten, training, profile, timingRec, patternHints, patternImpact);
 
         // Generate meal suggestions (Smart Product Picker v2.5)
-        const suggestions = generateSmartMealSuggestions(contextAnalysis, macrosRec, context, profile, pIndex, phaseAPatternHints, patternImpact);
+        const suggestionsResult = generateSmartMealSuggestions(contextAnalysis, macrosRec, context, profile, pIndex, patternHints, patternImpact);
+
+        // v3.1: Handle both grouped and flat modes
+        let suggestions, mode, groups;
+        if (suggestionsResult && typeof suggestionsResult === 'object' && suggestionsResult.mode) {
+            // v3.1: Structured response from Product Picker
+            mode = suggestionsResult.mode;
+            if (mode === 'grouped') {
+                groups = suggestionsResult.groups;
+                suggestions = undefined; // No flat array in grouped mode
+            } else {
+                suggestions = suggestionsResult.suggestions || [];
+                groups = undefined;
+            }
+        } else {
+            // Legacy: direct array
+            mode = 'flat';
+            suggestions = Array.isArray(suggestionsResult) ? suggestionsResult : [];
+            groups = undefined;
+        }
+
+        console.info(`${LOG_PREFIX} [MEALREC.suggestions] 📦 Suggestions mode:`, {
+            mode,
+            hasSuggestions: !!suggestions,
+            suggestionsCount: suggestions?.length || 0,
+            hasGroups: !!groups,
+            groupsCount: groups?.length || 0,
+        });
 
         // Generate reasoning (scenario-aware v2.4)
         const reasoning = generateReasoning(contextAnalysis, timingRec, macrosRec, dayTarget, dayEaten, training);
+
+        // 🆕 v3.1: Multi-Meal Planning (Phase 1)
+        // Вызываем планировщик для расчёта всех оставшихся приёмов до сна
+        let mealsPlan = null;
+
+        console.info(`${LOG_PREFIX} [MEALREC.planner] 🔍 Checking multi-meal conditions:`, {
+            hasPlanner: !!HEYS.InsightsPI?.mealPlanner?.planRemainingMeals,
+            hasLastMealTime: !!lastMeal?.time,
+            daysCount: days.length,
+            dayTarget: dayTarget,
+            dayEaten: dayEaten,
+            remainingKcal: (dayTarget?.kcal || 0) - (dayEaten?.kcal || 0)
+        });
+
+        if (HEYS.InsightsPI?.mealPlanner?.planRemainingMeals && lastMeal?.time && days.length >= 3) {
+            console.info(`${LOG_PREFIX} [MEALREC.planner] ✅ Calling planRemainingMeals...`);
+            try {
+                mealsPlan = HEYS.InsightsPI.mealPlanner.planRemainingMeals({
+                    currentTime: context.currentTime || getCurrentTime(),
+                    lastMeal: lastMeal,
+                    dayTarget: dayTarget,
+                    dayEaten: dayEaten,
+                    profile: profile,
+                    days: days,
+                    pIndex: pIndex
+                });
+
+                if (mealsPlan?.available && mealsPlan.meals?.length > 0) {
+                    console.info(`${LOG_PREFIX} [MEALREC.planner] 🍽️ Multi-meal plan generated:`, {
+                        totalMeals: mealsPlan.meals.length,
+                        timeline: mealsPlan.meals.map(m => m.timeStart).join(' → '),
+                        totalKcal: Math.round(mealsPlan.summary?.totalMacros?.kcal || 0),
+                        firstMealMacros: mealsPlan.meals[0]?.macros
+                    });
+
+                    // v3.1: Присваиваем suggestions или groups первому приёму
+                    if (mealsPlan.meals[0]) {
+                        if (mode === 'grouped' && groups) {
+                            mealsPlan.meals[0].groups = groups;
+                            console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Assigned ${groups.length} groups to first meal`);
+                        } else if (suggestions) {
+                            mealsPlan.meals[0].suggestions = suggestions;
+                            console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Assigned ${suggestions.length} suggestions to first meal`);
+                        }
+                    }
+                } else {
+                    console.info(`${LOG_PREFIX} [MEALREC.planner] ℹ️ Planner returned no meals:`, mealsPlan);
+                }
+            } catch (err) {
+                console.warn(`${LOG_PREFIX} [MEALREC.planner] ⚠️ Failed to generate meal plan:`, err.message);
+                mealsPlan = null;
+            }
+        } else {
+            console.info(`${LOG_PREFIX} [MEALREC.planner] ❌ Conditions NOT met for multi-meal planning`);
+        }
 
         const result = {
             available: true,
@@ -369,11 +462,16 @@
             scenarioReason: contextAnalysis.reason,
             timing: timingRec,
             macros: macrosRec,
+            // v3.1: Support both grouped and flat modes
+            mode,
             suggestions,
+            groups,
             reasoning,
             confidence: 0.75, // Base confidence, will be enhanced below
-            method: 'context_engine', // v2.4 identifier
-            version: '2.6' // R2.6: Deep Insights Integration
+            method: 'context_engine', // Context-aware pipeline
+            version: '3.1', // 🆕 Multi-meal planning
+            // 🆕 Multi-meal plan
+            mealsPlan: mealsPlan?.available ? mealsPlan : null
         };
 
         // MEALREC / impact: show what pattern modifiers were actually applied in this recommendation
@@ -381,9 +479,22 @@
             console.group(`${LOG_PREFIX} [MEALREC / impact] ✅ Pattern → recommendation impact (${patternImpact.length})`);
             console.table(patternImpact);
             console.groupEnd();
+
+            // Compact summary string for quick scanning (without expanding tables)
+            const impactSummary = patternImpact.map(i => {
+                if (i.area === 'timing') return `⏰ ${i.before} → ${i.after}`;
+                if (i.area === 'macros') return `🍽️ ${i.before} → ${i.after}`;
+                if (i.area === 'productPicker') return `🛒 ${i.before} → ${i.after}`;
+                return `${i.pattern}: ${i.before} → ${i.after}`;
+            }).join(' | ');
+            console.info(`${LOG_PREFIX} [MEALREC / impact] 📋 Summary: ${impactSummary}`);
         } else {
-            console.info(`${LOG_PREFIX} [MEALREC / impact] ⚠️ No Phase A modifiers applied`);
+            console.info(`${LOG_PREFIX} [MEALREC / impact] ⚠️ No pattern modifiers applied (insufficient data or neutral scores)`);
         }
+
+        // Attach pattern impact to result for downstream UI display
+        result.insights = result.insights || {};
+        result.insights.patternImpact = patternImpact;
 
         // R2.6: Deep Insights Integration (pattern scores + phenotype + dynamic confidence)
         let enhanced = result;
@@ -443,7 +554,9 @@
             scenario: enhanced.scenario,
             timingIdeal: enhanced.timing?.ideal,
             macrosKcal: enhanced.macros?.kcal,
-            suggestionsCount: enhanced.suggestions.length,
+            mode: enhanced.mode,
+            suggestionsCount: enhanced.suggestions?.length || 0,
+            groupsCount: enhanced.groups?.length || 0,
             confidence: enhanced.confidence
         });
 
@@ -451,10 +564,12 @@
     }
 
     /**
-     * Load Phase A pattern hints (C01/C02/C15/C34/C35/C37)
+     * Load pattern hints (Phase A + B: 10 patterns total)
+     * Phase A (Core): C01, C02, C15, C34, C35, C37
+     * Phase B (Context): C06, C14, C10, C12
      * @private
      */
-    function loadPhaseAPatternHints(days, profile, pIndex) {
+    function loadPatternHints(days, profile, pIndex) {
         if (!Array.isArray(days) || days.length < 7 || !HEYS.InsightsPI?.patterns) {
             return null;
         }
@@ -550,9 +665,105 @@
             console.warn(`${LOG_PREFIX} ⚠️ Phase A hint failed: addedSugarDependency`, err.message);
         }
 
+        // === PHASE B: CONTEXT MODIFIERS (4 patterns) ===
+
+        // C06: Sleep → Hunger (poor sleep recovery modifier)
+        try {
+            const sleepHunger = patterns.analyzeSleepHunger?.(days, profile, pIndex);
+            if (sleepHunger?.available) {
+                hints.sleepHunger = {
+                    score: normalize(sleepHunger.score),
+                    correlation: sleepHunger.correlation || 0,
+                    poorSleepDays: sleepHunger.poorSleepDays || 0,
+                    lagEffect: sleepHunger.lagEffect || 0,
+                };
+            }
+        } catch (err) {
+            console.warn(`${LOG_PREFIX} ⚠️ Phase B hint failed: sleepHunger`, err.message);
+        }
+
+        // C14: Nutrient Timing (PRE/POST workout fine-tuning)
+        try {
+            const nutrientTiming = patterns.analyzeNutrientTiming?.(days, pIndex, profile);
+            if (nutrientTiming?.available) {
+                hints.nutrientTiming = {
+                    score: normalize(nutrientTiming.score),
+                    carbTimingScore: nutrientTiming.carbTimingScore || 0,
+                    proteinTimingScore: nutrientTiming.proteinTimingScore || 0,
+                    optimalWindow: nutrientTiming.optimalWindow || 'N/A',
+                };
+            }
+        } catch (err) {
+            console.warn(`${LOG_PREFIX} ⚠️ Phase B hint failed: nutrientTiming`, err.message);
+        }
+
+        // C10: Fiber Regularity (product picker fiber boost)
+        try {
+            const fiberRegularity = patterns.analyzeFiberRegularity?.(days, pIndex);
+            if (fiberRegularity?.available) {
+                hints.fiberRegularity = {
+                    score: normalize(fiberRegularity.score),
+                    avgFiberG: fiberRegularity.avgFiberG || 0,
+                    targetFiberG: fiberRegularity.targetFiberG || 25,
+                    fiberPer1000: fiberRegularity.fiberPer1000 || 0,
+                };
+            }
+        } catch (err) {
+            console.warn(`${LOG_PREFIX} ⚠️ Phase B hint failed: fiberRegularity`, err.message);
+        }
+
+        // C12: Mood ↔ Food (STRESS_EATING enhancement)
+        try {
+            const optimum = profile?.optimum || 2000;
+            const moodFood = patterns.analyzeMoodFood?.(days, pIndex, optimum);
+            if (moodFood?.available) {
+                hints.moodFood = {
+                    score: normalize(moodFood.score),
+                    correlation: moodFood.correlation || 0,
+                    bestFoods: moodFood.bestFoods || [],
+                    worstFoods: moodFood.worstFoods || [],
+                };
+            }
+        } catch (err) {
+            console.warn(`${LOG_PREFIX} ⚠️ Phase B hint failed: moodFood`, err.message);
+        }
+
+        // === PHASE C: MICRONUTRIENT INTELLIGENCE (2 patterns) ===
+
+        // C26: Micronutrient Radar (product boost for Fe/Mg/Zn/Ca deficit)
+        try {
+            const micronutrients = patterns.analyzeMicronutrients?.(days, pIndex, profile);
+            if (micronutrients?.available) {
+                hints.micronutrients = {
+                    score: normalize(micronutrients.score),
+                    deficits: micronutrients.deficits || [],
+                    avgIntake: micronutrients.avgIntake || {},
+                };
+            }
+        } catch (err) {
+            console.warn(`${LOG_PREFIX} ⚠️ Phase C hint failed: micronutrients`, err.message);
+        }
+
+        // C29: NOVA Quality (penalty for ultra-processed)
+        try {
+            const novaQuality = patterns.analyzeNOVAQuality?.(days, pIndex);
+            if (novaQuality?.available) {
+                hints.novaQuality = {
+                    score: normalize(novaQuality.score),
+                    nova4SharePct: novaQuality.nova4SharePct || 0,
+                    avgNOVA: novaQuality.avgNOVA || 2.5,
+                };
+            }
+        } catch (err) {
+            console.warn(`${LOG_PREFIX} ⚠️ Phase C hint failed: novaQuality`, err.message);
+        }
+
         const keys = Object.keys(hints);
         if (keys.length > 0) {
-            console.group(`${LOG_PREFIX} [MEALREC / phaseA] ✅ Pattern hints loaded: ${keys.length}`);
+            const phaseACount = ['mealTiming', 'waveOverlap', 'insulinSensitivity', 'glycemicLoad', 'proteinDistribution', 'addedSugarDependency'].filter(k => hints[k]).length;
+            const phaseBCount = ['sleepHunger', 'nutrientTiming', 'fiberRegularity', 'moodFood'].filter(k => hints[k]).length;
+            const phaseCCount = ['micronutrients', 'novaQuality'].filter(k => hints[k]).length;
+            console.group(`${LOG_PREFIX} [MEALREC / patterns] ✅ Pattern hints loaded: ${keys.length} (A:${phaseACount}, B:${phaseBCount}, C:${phaseCCount})`);
             console.table(keys.map((k) => ({ pattern: k, score: hints[k].score, ...hints[k] })));
             console.groupEnd();
             return hints;
@@ -565,7 +776,7 @@
      * Calculate optimal meal timing (threshold-aware v2.4)
      * @private
      */
-    function calculateOptimalTiming(currentTime, lastMeal, training, sleepTarget, thresholds, phaseAPatternHints, patternImpact = []) {
+    function calculateOptimalTiming(currentTime, lastMeal, training, sleepTarget, thresholds, patternHints, patternImpact = []) {
         // P0 Fix: Check if lastMeal actually exists (not empty object)
         const hasLastMeal = lastMeal && lastMeal.time;
         const lastMealTime = hasLastMeal ? parseTime(lastMeal.time) : 0;
@@ -600,17 +811,17 @@
 
         // Phase A: C01/C02 timing adjustments (small, safe deltas)
         let phaseATimingShiftMin = 0;
-        if (phaseAPatternHints?.mealTiming?.score !== undefined && phaseAPatternHints.mealTiming.score < 0.45) {
+        if (patternHints?.mealTiming?.score !== undefined && patternHints.mealTiming.score < 0.45) {
             phaseATimingShiftMin += 20;
         }
-        if (phaseAPatternHints?.waveOverlap?.avgOverlapPct !== undefined && phaseAPatternHints.waveOverlap.avgOverlapPct > 25) {
+        if (patternHints?.waveOverlap?.avgOverlapPct !== undefined && patternHints.waveOverlap.avgOverlapPct > 25) {
             phaseATimingShiftMin += 20;
         }
         if (phaseATimingShiftMin > 0) {
             console.info(`${LOG_PREFIX} [MEALREC / timing] 🧮 Phase A timing modifier:`, {
                 shiftMinutes: phaseATimingShiftMin,
-                mealTimingScore: phaseAPatternHints?.mealTiming?.score,
-                waveOverlapPct: phaseAPatternHints?.waveOverlap?.avgOverlapPct,
+                mealTimingScore: patternHints?.mealTiming?.score,
+                waveOverlapPct: patternHints?.waveOverlap?.avgOverlapPct,
             });
         }
 
@@ -696,7 +907,7 @@
      * Calculate optimal macros (scenario-aware v2.4)
      * @private
      */
-    function calculateOptimalMacros(contextAnalysis, dayTarget, dayEaten, training, profile, timingRec, phaseAPatternHints, patternImpact = []) {
+    function calculateOptimalMacros(contextAnalysis, dayTarget, dayEaten, training, profile, timingRec, patternHints, patternImpact = []) {
         const scenario = contextAnalysis.scenario;
         const targetKcal = dayTarget.kcal || profile.optimum || 2000;
         const targetProtein = dayTarget.protein || profile.norm?.prot || 120;
@@ -726,10 +937,22 @@
             avgKcalPerMeal: mealsRemaining > 0 ? Math.round(remainingKcal / mealsRemaining) : 0
         });
 
+        // v3.2.0: Last meal override — if this is the LAST meal with substantial budget remaining,
+        // ignore scenario caps and use actual remaining budget (with 10% buffer for flexibility)
+        const isLastMeal = mealsRemaining === 1 && remainingKcal > 300;
+        const lastMealKcalTarget = isLastMeal ? Math.round(remainingKcal * 0.90) : null;
+        if (isLastMeal) {
+            console.info(`${LOG_PREFIX} 🎯 LAST MEAL OVERRIDE detected:`, {
+                remainingKcal,
+                targetKcal: lastMealKcalTarget,
+                reason: `Last meal of day with ${remainingKcal} kcal remaining — using 90% of budget instead of scenario cap`
+            });
+        }
+
         let mealKcal, mealProtein, mealCarbs, mealFat;
         let macroStrategy = ''; // For detailed logging
 
-        // Scenario-specific macro strategies (v2.4)
+        // Scenario-specific macro strategies (v3.2.0: with last meal override)
         switch (scenario) {
             case SCENARIOS.GOAL_REACHED:
                 // No meal recommended
@@ -741,57 +964,69 @@
                 break;
 
             case SCENARIOS.LIGHT_SNACK:
-                // Small snack: 50-150 kcal
-                mealKcal = Math.min(remainingKcal, 150);
+                // Small snack: 50-150 kcal (or last meal override)
+                mealKcal = lastMealKcalTarget || Math.min(remainingKcal, 150);
                 mealProtein = Math.round(mealKcal * 0.3 / 3); // 30% from protein
                 mealCarbs = Math.round(mealKcal * 0.4 / 4); // 40% from carbs
                 mealFat = Math.round(mealKcal * 0.3 / 9); // 30% from fat
-                macroStrategy = 'Light snack: max 150 kcal, 30% protein, 40% carbs, 30% fat';
+                macroStrategy = isLastMeal
+                    ? `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), 30% protein, 40% carbs, 30% fat`
+                    : 'Light snack: max 150 kcal, 30% protein, 40% carbs, 30% fat';
                 break;
 
             case SCENARIOS.LATE_EVENING:
-                // Light evening meal: max 200 kcal, high protein (slow digestion)
-                mealKcal = Math.min(remainingKcal, 200);
+                // Light evening meal: max 200 kcal, high protein (slow digestion) — OR last meal override
+                mealKcal = lastMealKcalTarget || Math.min(remainingKcal, 200);
                 mealProtein = Math.round(mealKcal * 0.6 / 3); // 60% from protein (casein)
                 mealCarbs = Math.round(mealKcal * 0.2 / 4); // 20% from carbs
                 mealFat = Math.round(mealKcal * 0.2 / 9); // 20% from fat
-                macroStrategy = 'Late evening: max 200 kcal (sleep quality), 60% protein (casein), 20% carbs, 20% fat';
+                macroStrategy = isLastMeal
+                    ? `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), 60% protein, 20% carbs, 20% fat`
+                    : 'Late evening: max 200 kcal (sleep quality), 60% protein (casein), 20% carbs, 20% fat';
                 break;
 
             case SCENARIOS.PRE_WORKOUT:
-                // Pre-workout: max 300 kcal, high carbs for energy
-                mealKcal = Math.min(remainingKcal, 300);
+                // Pre-workout: max 300 kcal, high carbs for energy (or last meal override)
+                mealKcal = lastMealKcalTarget || Math.min(remainingKcal, 300);
                 mealProtein = Math.round(mealKcal * 0.25 / 3); // 25% from protein
                 mealCarbs = Math.round(mealKcal * 0.60 / 4); // 60% from carbs (fast)
                 mealFat = Math.round(mealKcal * 0.15 / 9); // 15% from fat
-                macroStrategy = 'Pre-workout: max 300 kcal, 60% fast carbs, 25% protein, 15% fat';
+                macroStrategy = isLastMeal
+                    ? `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), 60% carbs, 25% protein, 15% fat`
+                    : 'Pre-workout: max 300 kcal, 60% fast carbs, 25% protein, 15% fat';
                 break;
 
             case SCENARIOS.POST_WORKOUT:
-                // Post-workout: max 400 kcal, high protein + carbs
-                mealKcal = Math.min(remainingKcal, 400);
+                // Post-workout: max 400 kcal, high protein + carbs (or last meal override)
+                mealKcal = lastMealKcalTarget || Math.min(remainingKcal, 400);
                 mealProtein = Math.round(mealKcal * 0.40 / 3); // 40% from protein (recovery)
                 mealCarbs = Math.round(mealKcal * 0.45 / 4); // 45% from carbs (glycogen)
                 mealFat = Math.round(mealKcal * 0.15 / 9); // 15% from fat
-                macroStrategy = 'Post-workout: max 400 kcal, 40% protein (recovery), 45% carbs (glycogen), 15% fat';
+                macroStrategy = isLastMeal
+                    ? `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), 40% protein, 45% carbs, 15% fat`
+                    : 'Post-workout: max 400 kcal, 40% protein (recovery), 45% carbs (glycogen), 15% fat';
                 break;
 
             case SCENARIOS.PROTEIN_DEFICIT:
-                // High protein meal: max 300 kcal
-                mealKcal = Math.min(remainingKcal, 300);
+                // High protein meal: max 300 kcal (or last meal override)
+                mealKcal = lastMealKcalTarget || Math.min(remainingKcal, 300);
                 mealProtein = Math.round(mealKcal * 0.50 / 3); // 50% from protein
                 mealCarbs = Math.round(mealKcal * 0.30 / 4); // 30% from carbs
                 mealFat = Math.round(mealKcal * 0.20 / 9); // 20% from fat
-                macroStrategy = 'Protein deficit: max 300 kcal, 50% protein, 30% carbs, 20% fat';
+                macroStrategy = isLastMeal
+                    ? `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), 50% protein, 30% carbs, 20% fat`
+                    : 'Protein deficit: max 300 kcal, 50% protein, 30% carbs, 20% fat';
                 break;
 
             case SCENARIOS.STRESS_EATING:
-                // Comfort food (healthy): max 250 kcal, balanced with omega-3
-                mealKcal = Math.min(remainingKcal, 250);
+                // Comfort food (healthy): max 250 kcal, balanced with omega-3 (or last meal override)
+                mealKcal = lastMealKcalTarget || Math.min(remainingKcal, 250);
                 mealProtein = Math.round(mealKcal * 0.30 / 3); // 30% from protein
                 mealCarbs = Math.round(mealKcal * 0.40 / 4); // 40% from carbs (serotonin)
                 mealFat = Math.round(mealKcal * 0.30 / 9); // 30% from fat (omega-3)
-                macroStrategy = 'Stress eating: max 250 kcal, 40% carbs (serotonin), 30% protein, 30% fat (omega-3)';
+                macroStrategy = isLastMeal
+                    ? `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), 40% carbs, 30% protein, 30% fat`
+                    : 'Stress eating: max 250 kcal, 40% carbs (serotonin), 30% protein, 30% fat (omega-3)';
                 break;
 
             case SCENARIOS.BALANCED:
@@ -833,18 +1068,97 @@
             }
         }
 
+        // Phase B: C06 Sleep→Hunger modifier (poor sleep recovery → more protein, less simple carbs)
+        if (patternHints?.sleepHunger?.score !== undefined && patternHints.sleepHunger.score < 0.5 && scenario === SCENARIOS.BALANCED) {
+            const before = { protein: mealProtein, carbs: mealCarbs };
+            mealProtein = Math.round(mealProtein * 1.12); // +12% protein
+            mealCarbs = Math.round(mealCarbs * 0.92); // -8% carbs (reduce simple carbs craving)
+            console.info(`${LOG_PREFIX} [MEALREC / macros] 🧮 Phase B C06 (poor sleep recovery):`, {
+                scenario,
+                sleepHungerScore: patternHints.sleepHunger.score,
+                proteinBefore: before.protein,
+                proteinAfter: mealProtein,
+                carbsBefore: before.carbs,
+                carbsAfter: mealCarbs
+            });
+            patternImpact.push({
+                pattern: 'C06',
+                area: 'macros',
+                before: `P${before.protein}/C${before.carbs}`,
+                after: `P${mealProtein}/C${mealCarbs}`,
+                reason: `sleepHunger=${patternHints.sleepHunger.score} (poor sleep recovery)`
+            });
+        }
+
+        // Phase B: C14 Nutrient Timing fine-tuning for PRE/POST WORKOUT
+        if (patternHints?.nutrientTiming && (scenario === SCENARIOS.PRE_WORKOUT || scenario === SCENARIOS.POST_WORKOUT)) {
+            const carbTiming = patternHints.nutrientTiming.carbTimingScore || 0;
+            const proteinTiming = patternHints.nutrientTiming.proteinTimingScore || 0;
+            const before = { protein: mealProtein, carbs: mealCarbs };
+
+            // Good carb timing → can increase carbs slightly for PRE
+            if (scenario === SCENARIOS.PRE_WORKOUT && carbTiming > 0.7) {
+                mealCarbs = Math.round(mealCarbs * 1.08);
+            }
+
+            // Poor protein timing → increase protein for POST
+            if (scenario === SCENARIOS.POST_WORKOUT && proteinTiming < 0.5) {
+                mealProtein = Math.round(mealProtein * 1.1);
+            }
+
+            if (before.protein !== mealProtein || before.carbs !== mealCarbs) {
+                console.info(`${LOG_PREFIX} [MEALREC / macros] 🧮 Phase B C14 (nutrient timing):`, {
+                    scenario,
+                    carbTimingScore: carbTiming,
+                    proteinTimingScore: proteinTiming,
+                    delta: `P ${before.protein}→${mealProtein}, C ${before.carbs}→${mealCarbs}`
+                });
+                patternImpact.push({
+                    pattern: 'C14',
+                    area: 'macros',
+                    before: `P${before.protein}/C${before.carbs}`,
+                    after: `P${mealProtein}/C${mealCarbs}`,
+                    reason: `nutrientTiming: carb=${carbTiming}, protein=${proteinTiming}`
+                });
+            }
+        }
+
+        // Phase B: C12 Mood↔Food enhancement for STRESS_EATING
+        if (patternHints?.moodFood && scenario === SCENARIOS.STRESS_EATING) {
+            const moodCorr = Math.abs(patternHints.moodFood.correlation || 0);
+            const before = { protein: mealProtein, carbs: mealCarbs };
+
+            // Strong mood-food correlation → optimize for serotonin boost (complex carbs + omega-3)
+            if (moodCorr > 0.4) {
+                mealCarbs = Math.round(mealCarbs * 1.1); // +10% carbs (complex for serotonin)
+                mealProtein = Math.round(mealProtein * 1.05); // +5% protein (amino acids)
+                console.info(`${LOG_PREFIX} [MEALREC / macros] 🧮 Phase B C12 (mood-food):`, {
+                    scenario,
+                    moodCorrelation: moodCorr,
+                    delta: `P ${before.protein}→${mealProtein}, C ${before.carbs}→${mealCarbs}`
+                });
+                patternImpact.push({
+                    pattern: 'C12',
+                    area: 'macros',
+                    before: `P${before.protein}/C${before.carbs}`,
+                    after: `P${mealProtein}/C${mealCarbs}`,
+                    reason: `moodFood correlation=${moodCorr} (serotonin optimization)`
+                });
+            }
+        }
+
         // Phase A: C15 + C35 macro tuning
-        if (phaseAPatternHints?.insulinSensitivity?.score !== undefined || phaseAPatternHints?.proteinDistribution?.score !== undefined) {
+        if (patternHints?.insulinSensitivity?.score !== undefined || patternHints?.proteinDistribution?.score !== undefined) {
             const before = { protein: mealProtein, carbs: mealCarbs, fat: mealFat };
 
             // C15: insulin sensitivity low -> lower carbs, increase protein slightly
-            if (phaseAPatternHints?.insulinSensitivity?.score < 0.45) {
+            if (patternHints?.insulinSensitivity?.score < 0.45) {
                 mealCarbs = Math.round(mealCarbs * 0.9);
                 mealProtein = Math.round(mealProtein * 1.08);
             }
 
             // C35: poor protein distribution -> stronger scenario-aware protein push
-            const proteinDistributionScore = phaseAPatternHints?.proteinDistribution?.score;
+            const proteinDistributionScore = patternHints?.proteinDistribution?.score;
             if (proteinDistributionScore !== undefined && mealProtein > 0) {
                 let c35Multiplier = 1.0;
                 if (proteinDistributionScore < 0.35) c35Multiplier = 1.20;
@@ -868,8 +1182,8 @@
                 scenario,
                 before,
                 after: { protein: mealProtein, carbs: mealCarbs, fat: mealFat },
-                insulinSensitivityScore: phaseAPatternHints?.insulinSensitivity?.score,
-                proteinDistributionScore: phaseAPatternHints?.proteinDistribution?.score,
+                insulinSensitivityScore: patternHints?.insulinSensitivity?.score,
+                proteinDistributionScore: patternHints?.proteinDistribution?.score,
             });
 
             patternImpact.push({
@@ -877,7 +1191,7 @@
                 area: 'macros',
                 before: `P${before.protein}/C${before.carbs}/F${before.fat}`,
                 after: `P${mealProtein}/C${mealCarbs}/F${mealFat}`,
-                reason: `insulin=${phaseAPatternHints?.insulinSensitivity?.score ?? 'n/a'}, proteinDist=${phaseAPatternHints?.proteinDistribution?.score ?? 'n/a'}`
+                reason: `insulin=${patternHints?.insulinSensitivity?.score ?? 'n/a'}, proteinDist=${patternHints?.proteinDistribution?.score ?? 'n/a'}`
             });
         }
 
@@ -921,7 +1235,7 @@
      * Falls back to rule-based suggestions if Product Picker unavailable
      * @private
      */
-    function generateSmartMealSuggestions(contextAnalysis, macrosRec, context, profile, pIndex, phaseAPatternHints, patternImpact = []) {
+    function generateSmartMealSuggestions(contextAnalysis, macrosRec, context, profile, pIndex, patternHints, patternImpact = []) {
         const scenario = contextAnalysis.scenario;
 
         // Extract currentTime from context for caffeine-awareness (v2.6)
@@ -952,9 +1266,9 @@
             }
 
             // Phase A: C34 glycemic load → dynamic GI moderation
-            if (phaseAPatternHints?.glycemicLoad?.score !== undefined) {
-                const glScore = phaseAPatternHints.glycemicLoad.score;
-                const eveningRatio = phaseAPatternHints.glycemicLoad.avgEveningRatio || 0;
+            if (patternHints?.glycemicLoad?.score !== undefined) {
+                const glScore = patternHints.glycemicLoad.score;
+                const eveningRatio = patternHints.glycemicLoad.avgEveningRatio || 0;
                 const idealGiBefore = idealGI;
 
                 if (glScore < 0.45) {
@@ -999,21 +1313,43 @@
                 sharedProductsCount: sharedProducts.length,
             });
 
-            // Call Product Picker
-            const suggestions = global.HEYS.InsightsPI.productPicker.generateProductSuggestions({
+            // Call Product Picker with full Phase A/B/C context
+            // v3.1.1: Pass target meal kcal (not day remaining) for correct product selection
+            const pickerResult = global.HEYS.InsightsPI.productPicker.generateProductSuggestions({
                 scenario,
-                remainingKcal: macrosRec.remainingKcal,
+                remainingKcal: macrosRec.kcal, // v3.1.1: Use meal target kcal (200 for LATE_EVENING) not day remainder (764)
                 targetProteinG: macrosRec.protein,
                 targetCarbsG: macrosRec.carbs,
                 targetFatG: macrosRec.fat,
                 idealGI,
                 currentTime: currentTime, // v2.6: Pass time for caffeine-awareness
-                addedSugarScore: phaseAPatternHints?.addedSugarDependency?.score,
-                sugarDependencyRisk: phaseAPatternHints?.addedSugarDependency?.dependencyRisk,
+                addedSugarScore: patternHints?.addedSugarDependency?.score, // Phase A: C37
+                sugarDependencyRisk: patternHints?.addedSugarDependency?.dependencyRisk, // Phase A: C37
+                fiberRegularityScore: patternHints?.fiberRegularity?.score, // Phase B: C10
+                micronutrientDeficits: patternHints?.micronutrients?.deficits, // Phase C: C26
+                novaQualityScore: patternHints?.novaQuality?.score, // Phase C: C29
                 lsGet: resolvedLsGet,
                 sharedProducts,
                 limit: 3,
             });
+
+            // Handle both modes: flat (legacy) vs grouped (v3.1)
+            let suggestions;
+            if (pickerResult.mode === 'grouped' && pickerResult.groups) {
+                // v3.1: Return groups structure for UI
+                console.info(`${LOG_PREFIX} ✅ Smart suggestions via Product Picker v3.1 (grouped):`, {
+                    scenario,
+                    groupsCount: pickerResult.groups.length,
+                    totalProducts: pickerResult.totalProducts,
+                    historyUsed: pickerResult.historyUsed,
+                });
+                return pickerResult; // Return full structure with groups
+            } else if (pickerResult.mode === 'flat' && pickerResult.suggestions) {
+                suggestions = pickerResult.suggestions;
+            } else {
+                // Legacy format (direct array) - for backward compatibility
+                suggestions = Array.isArray(pickerResult) ? pickerResult : [];
+            }
 
             // If insufficient suggestions, fallback
             if (!suggestions || suggestions.length === 0) {
@@ -1021,7 +1357,7 @@
                 return generateMealSuggestions(contextAnalysis, macrosRec, profile, pIndex);
             }
 
-            console.info(`${LOG_PREFIX} ✅ Smart suggestions via Product Picker v2.5:`, {
+            console.info(`${LOG_PREFIX} ✅ Smart suggestions via Product Picker (flat mode):`, {
                 scenario,
                 count: suggestions.length,
                 sources: suggestions.map(s => s.source),
@@ -1331,6 +1667,6 @@
         recommend: recommendNextMeal
     };
 
-    console.info(`[${LOG_FILTER}][HEYS.InsightsPI.mealRecommender] ✅ Smart Meal Recommender v2.6 initialized (8 scenarios + detailed logging + caffeine-awareness)`);
+    console.info(`[${LOG_FILTER}][HEYS.InsightsPI.mealRecommender] ✅ Smart Meal Recommender v3.2.0 initialized (8 scenarios + Phase A/B/C: 12 patterns + last meal override)`);
 
 })(typeof window !== 'undefined' ? window : global);

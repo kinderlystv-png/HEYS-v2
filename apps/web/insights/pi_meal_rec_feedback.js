@@ -30,12 +30,23 @@
         globalObj.HEYS.InsightsPI.mealRecFeedback = {};
     }
 
+    const MODULE_NAME = 'HEYS.InsightsPI.mealRecFeedback';
     const STORAGE_KEY = 'heys_meal_feedback';
+    const CLOUD_KV_KEY = 'meal_rec_feedback_v1';
     const RETENTION_DAYS = 90;
     const HALF_LIFE_DAYS = 14; // период полураспада для exponential decay
 
     // Unified logging filter for console filtering
     const LOG_FILTER = 'MEALREC';
+    const LOG_PREFIX = `[${LOG_FILTER}][${MODULE_NAME}]`;
+
+    // Cloud sync runtime state (best effort, non-blocking)
+    const syncState = {
+        lastSyncAt: null,
+        lastSyncStatus: 'idle', // idle | syncing | success | error | skipped
+        lastSyncReason: null,
+        lastError: null,
+    };
 
     /**
      * Получить текущий clientId из профиля
@@ -45,9 +56,71 @@
             const profile = globalObj.U?.lsGet('heys_profile');
             return profile?.id || null;
         } catch (err) {
-            console.warn(`[${LOG_FILTER}] ⚠️ Cannot get clientId:`, err?.message);
+            console.warn(`${LOG_PREFIX} ⚠️ Cannot get clientId:`, err?.message);
             return null;
         }
+    }
+
+    /**
+     * Проверка доступности cloud KV API
+     */
+    function canUseCloudKV() {
+        return !!(
+            globalObj.HEYS?.YandexAPI &&
+            typeof globalObj.HEYS.YandexAPI.getKV === 'function' &&
+            typeof globalObj.HEYS.YandexAPI.saveKV === 'function'
+        );
+    }
+
+    /**
+     * Создать уникальный ID feedback-записи
+     */
+    function makeFeedbackId() {
+        return `fb_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    }
+
+    /**
+     * Нормализация записи feedback (backward compatibility)
+     */
+    function normalizeFeedbackEntry(item) {
+        if (!item || typeof item !== 'object') return null;
+        if (!item.timestamp) return null;
+
+        return {
+            id: item.id || makeFeedbackId(),
+            timestamp: item.timestamp,
+            scenario: item.scenario || 'UNKNOWN',
+            rating: item.rating === 1 ? 1 : -1,
+            products: Array.isArray(item.products) ? item.products : [],
+            confidence: Number.isFinite(Number(item.confidence)) ? Number(item.confidence) : 0,
+            context: item.context || null,
+        };
+    }
+
+    /**
+     * Объединить локальную и облачную историю без дублей
+     */
+    function mergeHistories(localHistory, cloudHistory) {
+        const byId = new Map();
+        const byFingerprint = new Set();
+
+        const add = (entry) => {
+            const normalized = normalizeFeedbackEntry(entry);
+            if (!normalized) return;
+
+            if (normalized.id && byId.has(normalized.id)) return;
+
+            const fingerprint = `${normalized.timestamp}|${normalized.scenario}|${normalized.rating}|${(normalized.products || []).join(',')}`;
+            if (byFingerprint.has(fingerprint)) return;
+
+            if (normalized.id) byId.set(normalized.id, normalized);
+            byFingerprint.add(fingerprint);
+        };
+
+        (localHistory || []).forEach(add);
+        (cloudHistory || []).forEach(add);
+
+        return Array.from(byId.values()).sort((a, b) => a.timestamp - b.timestamp);
     }
 
     /**
@@ -82,7 +155,7 @@
                     if (U && typeof U.lsSet === 'function') {
                         U.lsSet(STORAGE_KEY, data);
                         localStorage.removeItem(legacyKey); // Clean up old key
-                        console.info(`[${LOG_FILTER}] 🔄 Migrated feedback from legacy key`);
+                        console.info(`${LOG_PREFIX} 🔄 Migrated feedback from legacy key`);
                     }
                 }
             }
@@ -92,14 +165,14 @@
             // Фильтрация старых записей (retention: 90 дней)
             const now = Date.now();
             const retentionMs = RETENTION_DAYS * 24 * 60 * 60 * 1000;
-            const filtered = data.filter(item => {
-                if (!item.timestamp) return false;
-                return (now - item.timestamp) < retentionMs;
-            });
+            const filtered = data
+                .map(normalizeFeedbackEntry)
+                .filter(Boolean)
+                .filter(item => (now - item.timestamp) < retentionMs);
 
             return filtered;
         } catch (err) {
-            console.warn(`[${LOG_FILTER}] ⚠️ Cannot load feedback history:`, err?.message);
+            console.warn(`${LOG_PREFIX} ⚠️ Cannot load feedback history:`, err?.message);
             return [];
         }
     }
@@ -119,8 +192,138 @@
                 localStorage.setItem(legacyKey, JSON.stringify(feedback));
             }
         } catch (err) {
-            console.error(`[${LOG_FILTER}] ❌ Cannot save feedback:`, err?.message);
+            console.error(`${LOG_PREFIX} ❌ Cannot save feedback:`, err?.message);
         }
+    }
+
+    /**
+     * Загрузить историю feedback из cloud KV (если доступно)
+     */
+    async function loadCloudHistory(clientId) {
+        if (!clientId || !canUseCloudKV()) return [];
+
+        try {
+            const result = await globalObj.HEYS.YandexAPI.getKV(clientId, CLOUD_KV_KEY);
+            if (result?.error) {
+                console.warn(`${LOG_PREFIX} ⚠️ Cloud getKV failed:`, result.error);
+                return [];
+            }
+
+            const payload = result?.data;
+            if (!payload) return [];
+
+            const cloudItems = Array.isArray(payload?.items)
+                ? payload.items
+                : Array.isArray(payload)
+                    ? payload
+                    : [];
+
+            return cloudItems.map(normalizeFeedbackEntry).filter(Boolean);
+        } catch (err) {
+            console.warn(`${LOG_PREFIX} ⚠️ Cloud history load error:`, err?.message);
+            return [];
+        }
+    }
+
+    /**
+     * Сохранить историю feedback в cloud KV (если доступно)
+     */
+    async function saveCloudHistory(clientId, history, reason = 'manual') {
+        if (!clientId || !canUseCloudKV()) return { success: false, skipped: true };
+
+        try {
+            const payload = {
+                version: '1.1.0',
+                updatedAt: Date.now(),
+                reason,
+                items: Array.isArray(history) ? history : [],
+            };
+
+            const result = await globalObj.HEYS.YandexAPI.saveKV(clientId, CLOUD_KV_KEY, payload);
+            if (!result?.success) {
+                return { success: false, error: result?.error || 'Unknown saveKV error' };
+            }
+
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err?.message || 'Cloud save failed' };
+        }
+    }
+
+    /**
+     * Выполнить cloud sync (pull + merge + push), не ломая локальный UX
+     */
+    async function syncWithCloud(options = {}) {
+        const reason = options.reason || 'manual';
+        const clientId = options.clientId || getCurrentClientId();
+
+        if (!clientId) {
+            syncState.lastSyncStatus = 'skipped';
+            syncState.lastSyncReason = reason;
+            syncState.lastError = 'No clientId';
+            console.info(`${LOG_PREFIX} ℹ️ Cloud sync skipped: no clientId`);
+            return { success: false, skipped: true, reason: 'no_client' };
+        }
+
+        if (!canUseCloudKV()) {
+            syncState.lastSyncStatus = 'skipped';
+            syncState.lastSyncReason = reason;
+            syncState.lastError = 'YandexAPI KV unavailable';
+            console.info(`${LOG_PREFIX} ℹ️ Cloud sync skipped: YandexAPI KV unavailable`);
+            return { success: false, skipped: true, reason: 'no_api' };
+        }
+
+        syncState.lastSyncStatus = 'syncing';
+        syncState.lastSyncReason = reason;
+        syncState.lastError = null;
+
+        try {
+            const localHistory = loadFeedbackHistory(clientId);
+            const cloudHistory = await loadCloudHistory(clientId);
+            const merged = mergeHistories(localHistory, cloudHistory);
+
+            saveFeedbackHistory(clientId, merged);
+
+            const pushResult = await saveCloudHistory(clientId, merged, reason);
+            if (!pushResult.success) {
+                syncState.lastSyncStatus = 'error';
+                syncState.lastError = pushResult.error || 'push failed';
+                console.warn(`${LOG_PREFIX} ⚠️ Cloud sync push failed:`, pushResult.error);
+                return { success: false, error: pushResult.error || 'push failed' };
+            }
+
+            syncState.lastSyncStatus = 'success';
+            syncState.lastSyncAt = Date.now();
+            syncState.lastError = null;
+
+            console.info(`${LOG_PREFIX} ✅ Cloud sync completed:`, {
+                reason,
+                localCount: localHistory.length,
+                cloudCount: cloudHistory.length,
+                mergedCount: merged.length,
+            });
+
+            return {
+                success: true,
+                localCount: localHistory.length,
+                cloudCount: cloudHistory.length,
+                mergedCount: merged.length,
+            };
+        } catch (err) {
+            syncState.lastSyncStatus = 'error';
+            syncState.lastError = err?.message || 'sync failed';
+            console.error(`${LOG_PREFIX} ❌ Cloud sync error:`, err?.message);
+            return { success: false, error: err?.message || 'sync failed' };
+        }
+    }
+
+    /**
+     * Текущий статус последней синхронизации
+     */
+    function getSyncStatus() {
+        return {
+            ...syncState,
+        };
     }
 
     /**
@@ -136,18 +339,19 @@
     function addFeedback(feedbackData) {
         const clientId = feedbackData.clientId || getCurrentClientId();
         if (!clientId) {
-            console.warn(`[${LOG_FILTER}] ⚠️ Cannot add feedback: no clientId`);
+            console.warn(`${LOG_PREFIX} ⚠️ Cannot add feedback: no clientId`);
             return false;
         }
 
         if (!feedbackData || !feedbackData.scenario || !feedbackData.rating) {
-            console.warn(`[${LOG_FILTER}] ⚠️ Invalid feedback data:`, feedbackData);
+            console.warn(`${LOG_PREFIX} ⚠️ Invalid feedback data:`, feedbackData);
             return false;
         }
 
         try {
             const history = loadFeedbackHistory(clientId);
             const newEntry = {
+                id: makeFeedbackId(),
                 timestamp: Date.now(),
                 scenario: feedbackData.scenario,
                 rating: feedbackData.rating, // 1 or -1
@@ -159,15 +363,19 @@
             history.push(newEntry);
             saveFeedbackHistory(clientId, history);
 
-            console.info(`[${LOG_FILTER}] ✅ Feedback added:`, {
+            console.info(`${LOG_PREFIX} ✅ Feedback added:`, {
                 scenario: newEntry.scenario,
                 rating: newEntry.rating === 1 ? '👍' : '👎',
                 totalFeedback: history.length
             });
 
+            // Best-effort cloud sync, no blocking UI
+            syncWithCloud({ clientId, reason: 'add_feedback' })
+                .catch((err) => console.warn(`${LOG_PREFIX} ⚠️ Async sync failed:`, err?.message));
+
             return true;
         } catch (err) {
-            console.error(`[${LOG_FILTER}] ❌ Cannot add feedback:`, err?.message);
+            console.error(`${LOG_PREFIX} ❌ Cannot add feedback:`, err?.message);
             return false;
         }
     }
@@ -223,7 +431,7 @@
         // successRate=0.0 (все 👎) → adjustment=0.5
         const adjustmentFactor = 0.5 + (successRate * 1.0);
 
-        console.info(`[${LOG_FILTER}] 📊 Adjustment calculated:`, {
+        console.info(`${LOG_PREFIX} 📊 Adjustment calculated:`, {
             scenario,
             feedbackCount: scenarioFeedback.length,
             successRate: successRate.toFixed(2),
@@ -293,13 +501,19 @@
                 const legacyKey = buildLegacyStorageKey(clientId);
                 localStorage.removeItem(legacyKey);
             }
-            console.info(`[${LOG_FILTER}] ✅ Feedback history cleared`);
+            console.info(`${LOG_PREFIX} ✅ Feedback history cleared`);
             return true;
         } catch (err) {
-            console.error(`[${LOG_FILTER}] ❌ Cannot clear feedback:`, err?.message);
+            console.error(`${LOG_PREFIX} ❌ Cannot clear feedback:`, err?.message);
             return false;
         }
     }
+
+    // Initial cloud bootstrap (non-blocking): pull+merge+push once on module load
+    setTimeout(() => {
+        syncWithCloud({ reason: 'bootstrap' })
+            .catch((err) => console.warn(`${LOG_PREFIX} ⚠️ Bootstrap sync failed:`, err?.message));
+    }, 0);
 
     // Публичное API
     globalObj.HEYS.InsightsPI.mealRecFeedback = {
@@ -307,11 +521,14 @@
         calculateAdjustmentFactor,
         getFeedbackStats,
         clearFeedbackHistory,
+        syncWithCloud,
+        getSyncStatus,
         // Для тестирования
         _loadHistory: loadFeedbackHistory,
         _saveHistory: saveFeedbackHistory,
-        _getCurrentClientId: getCurrentClientId
+        _getCurrentClientId: getCurrentClientId,
+        _mergeHistories: mergeHistories,
     };
 
-    console.info(`[${LOG_FILTER}] 📦 Module loaded (v1.0)`);
+    console.info(`${LOG_PREFIX} 📦 Module loaded (v1.1.0 hybrid local+cloud)`);
 })();
