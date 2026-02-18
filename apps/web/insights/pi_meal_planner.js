@@ -1,11 +1,18 @@
 /**
- * HEYS Predictive Insights — Multi-Meal Timeline Planner v1.3.1
+ * HEYS Predictive Insights — Multi-Meal Timeline Planner v1.4.0
  * 
  * Планирует все оставшиеся приёмы пищи до сна с учётом:
  * - Инсулиновых волн (HEYS.InsulinWave.calculate)
  * - Окон жиросжигания (+30 мин после волны)
  * - Научно обоснованного времени последнего приёма (sleepTarget - 3h)
  * - Распределения макросов между приёмами
+ * 
+ * v1.4.0 changes (18.02.2026):
+ * - Fixed: fitsAnotherMeal критерий исправлен (было: <lastMealDeadline=sleepTarget-3h,
+ *   требовало 5h до сна; стало: <lastMealDeadline И >=2h до sleepTarget)
+ * - Adaptive distributeBudget: для 2 приёмов сплит адаптируется по hoursToSleep второго
+ *   (>=4h→60/40, >=3h→65/35, >=2.5h→70/30, >=2h→75/25)
+ * - Step 6: передаём hoursToSleepPerMeal в distributeBudget для адаптивного сплита
  * 
  * v1.3.1 changes (17.02.2026):
  * - Fixed: avgBudget → budgetForThisMeal (was ReferenceError in production)
@@ -110,9 +117,10 @@
      * Распределить оставшийся бюджет между N приёмами
      * @param {object} remainingBudget - { prot, carbs, fat, kcal }
      * @param {number} mealsCount - количество приёмов
+     * @param {Array<number>} [hoursToSleepPerMeal] - часов до сна у каждого приёма (для адаптивного сплита)
      * @returns {Array<object>} - массив бюджетов для каждого приёма
      */
-    function distributeBudget(remainingBudget, mealsCount) {
+    function distributeBudget(remainingBudget, mealsCount, hoursToSleepPerMeal) {
         if (mealsCount === 1) {
             return [remainingBudget];
         }
@@ -120,12 +128,29 @@
         // Ratios: первый приём побольше, последний полегче
         const ratios = {
             1: [1.0],
-            2: [0.60, 0.40],
+            2: [0.60, 0.40], // дефолт для 2 приёмов
             3: [0.45, 0.35, 0.20],
             4: [0.35, 0.30, 0.20, 0.15]
         };
 
-        const ratio = ratios[mealsCount] || ratios[4];
+        let ratio = ratios[mealsCount] || ratios[4];
+
+        // 🆕 v1.4: Адаптивный сплит для 2 приёмов на основе hoursToSleep второго приёма
+        // Чем ближе второй приём к сну → тем меньше его доля (нельзя есть много перед сном)
+        if (mealsCount === 2 && hoursToSleepPerMeal?.length >= 2) {
+            const h2 = hoursToSleepPerMeal[1]; // часов до сна у второго приёма
+            if (h2 >= 4.0) {
+                ratio = [0.60, 0.40]; // стандарт — оба большие
+            } else if (h2 >= 3.0) {
+                ratio = [0.65, 0.35]; // второй чуть меньше
+            } else if (h2 >= 2.5) {
+                ratio = [0.70, 0.30]; // второй лёгкий
+            } else {
+                ratio = [0.75, 0.25]; // второй совсем лёгкий (близко ко сну)
+            }
+            console.info(`${LOG_PREFIX} [PLANNER.split] ⚖️ Adaptive 2-meal split: h2Sleep=${h2.toFixed(1)}h → ${(ratio[0] * 100).toFixed(0)}/${(ratio[1] * 100).toFixed(0)}`);
+        }
+
         const budgets = [];
 
         for (let i = 0; i < mealsCount; i++) {
@@ -353,6 +378,23 @@
             kcal: Math.max(0, (dayTarget.kcal || 0) - (dayEaten.kcal || 0))
         };
 
+        // Физиологический minimum: если ккал значительный, но нутриент выполнен —
+        // применяем floor чтобы product picker предлагал разнообразные продукты
+        if (remainingBudget.kcal >= 200) {
+            // Минимум 20% ккал из углеводов (~4 ккал/г)
+            const minCarbs = Math.round(remainingBudget.kcal * 0.20 / 4);
+            if (remainingBudget.carbs < minCarbs) {
+                console.info(`${LOG_PREFIX} [PLANNER.budget] ⚠️ Carbs floor applied: goal met, using min ${minCarbs}g for product variety (was ${remainingBudget.carbs}g)`);
+                remainingBudget.carbs = minCarbs;
+            }
+            // Минимум 15% ккал из жиров (~9 ккал/г)
+            const minFat = Math.round(remainingBudget.kcal * 0.15 / 9);
+            if (remainingBudget.fat < minFat) {
+                console.info(`${LOG_PREFIX} [PLANNER.budget] ⚠️ Fat floor applied: goal met, using min ${minFat}g for product variety (was ${remainingBudget.fat}g)`);
+                remainingBudget.fat = minFat;
+            }
+        }
+
         console.info(`${LOG_PREFIX} [PLANNER.budget] 💰 Remaining budget:`, {
             ...remainingBudget,
             percentOfTarget: {
@@ -411,11 +453,18 @@
 
             // Проверка: влезает ли ещё один приём после этого?
             const nextPossibleStart = fatBurnWindowEnd;
-            const fitsAnotherMeal = (nextPossibleStart + 2.0 < lastMealDeadline); // минимум 2ч на следующую волну
+            // 🆕 v1.4: Корректный критерий:
+            //   1. nextPossibleStart должен быть ДО deadline (sleepTarget - 3h)
+            //   2. От nextPossibleStart до sleepTarget должно быть >=2h (чтобы успела пройти хоть часть волны)
+            // Старый баг: nextPossibleStart + 2.0 < lastMealDeadline = sleepTarget-3h
+            //   → требовал 5h до сна вместо 2h
+            const hoursToSleepIfNextMeal = sleepTarget - nextPossibleStart;
+            const fitsAnotherMeal = nextPossibleStart < lastMealDeadline && hoursToSleepIfNextMeal >= 2.0;
 
             console.info(`${LOG_PREFIX} [PLANNER.loop.${iteration}] 🤔 Can fit another meal?`, {
                 nextPossibleStart: formatTime(nextPossibleStart),
                 deadline: formatTime(lastMealDeadline),
+                hoursToSleepIfNext: hoursToSleepIfNextMeal.toFixed(1),
                 fitsAnotherMeal
             });
 
@@ -463,7 +512,9 @@
         }
 
         // === Шаг 6: Перераспределить бюджет между найденными приёмами ===
-        const finalBudgets = distributeBudget(remainingBudget, plannedMeals.length);
+        // 🆕 v1.4: Передаём hoursToSleep каждого приёма для адаптивного сплита
+        const hoursToSleepPerMeal = plannedMeals.map(m => m.hoursToSleep);
+        const finalBudgets = distributeBudget(remainingBudget, plannedMeals.length, hoursToSleepPerMeal);
         for (let i = 0; i < plannedMeals.length; i++) {
             plannedMeals[i].macros = finalBudgets[i];
             // Обновить сценарий
@@ -526,6 +577,6 @@
         minutesToHours
     };
 
-    console.info(`${LOG_PREFIX} 📦 Module loaded (v1.3.1 — fixed avgBudget reference error)`);
+    console.info(`${LOG_PREFIX} 📦 Module loaded (v1.4.1 — + physiological macro floor: carbs/fat min when goal met but kcal remaining)`);
 
 })(window);

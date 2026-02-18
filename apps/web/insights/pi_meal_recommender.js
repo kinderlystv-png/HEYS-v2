@@ -1,5 +1,5 @@
 /**
- * HEYS Predictive Insights — Next Meal Recommender v3.2.0
+ * HEYS Predictive Insights — Next Meal Recommender v3.3.0
  * 
  * Context-aware meal guidance with 8 scenarios + 12 Pattern Integration (Phase A/B/C).
  * 
@@ -12,6 +12,14 @@
  * - PROTEIN_DEFICIT: protein <50% target
  * - STRESS_EATING: stress >3 OR mood <3
  * - BALANCED: default scenario
+ * 
+ * v3.3.0 (18.02.2026):
+ * - NEW: Per-meal product generation for multi-meal plans
+ * - ISSUE: When planner returns 2+ meals, products were generated only for meal[0]
+ *   using wrong (scenario-overridden) macros, so 2nd meal had no products
+ * - SOLUTION: For mealsPlan.meals.length > 1, loop through all meals and call
+ *   generateSmartMealSuggestions for each with that meal's actual macros budget
+ * - IMPACT: Each planned meal now has correct products matching its real kcal/BJU
  * 
  * v3.2.0 CRITICAL FIX (17.02.2026):
  * - NEW: "Last meal override" — if mealsRemaining === 1 && remainingKcal > 300, use 90% of remainder
@@ -434,14 +442,75 @@
                         firstMealMacros: mealsPlan.meals[0]?.macros
                     });
 
-                    // v3.1: Присваиваем suggestions или groups первому приёму
-                    if (mealsPlan.meals[0]) {
+                    if (mealsPlan.meals.length > 1) {
+                        // 🆕 v3.3: Multi-meal mode — генерируем продукты для КАЖДОГО приёма отдельно
+                        // Это позволяет учесть реальный бюджет ккал/БЖУ каждого приёма
+                        console.info(`${LOG_PREFIX} [MEALREC.planner] 🔄 Generating per-meal products for ${mealsPlan.meals.length} meals...`);
+
+                        for (let mealIdx = 0; mealIdx < mealsPlan.meals.length; mealIdx++) {
+                            const plannedMeal = mealsPlan.meals[mealIdx];
+                            // Строим macrosRec из бюджета этого приёма (prot→protein, остальное совпадает)
+                            const mealMacrosRec = {
+                                ...macrosRec,
+                                protein: plannedMeal.macros.prot,
+                                carbs: plannedMeal.macros.carbs,
+                                fat: plannedMeal.macros.fat,
+                                kcal: plannedMeal.macros.kcal,
+                                remainingKcal: plannedMeal.macros.kcal,
+                                remainingMeals: mealsPlan.meals.length - mealIdx,
+                                // Переопределяем isLastMeal — только последний приём легче
+                                isLastMeal: mealIdx === mealsPlan.meals.length - 1
+                            };
+                            // contextAnalysis для этого приёма — берём сценарий из планировщика
+                            const mealContextAnalysis = {
+                                ...contextAnalysis,
+                                scenario: plannedMeal.scenario || contextAnalysis.scenario
+                            };
+
+                            try {
+                                const mealProducts = generateSmartMealSuggestions(
+                                    mealContextAnalysis,
+                                    mealMacrosRec,
+                                    context,
+                                    profile,
+                                    pIndex,
+                                    patternHints || []
+                                );
+
+                                if (mealProducts?.mode === 'grouped' && mealProducts.groups) {
+                                    plannedMeal.groups = mealProducts.groups;
+                                    plannedMeal.productMode = 'grouped';
+                                    console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Meal ${mealIdx + 1}: assigned ${mealProducts.groups.length} groups (${Math.round(mealMacrosRec.kcal)} kcal, scenario=${plannedMeal.scenario})`);
+                                } else if (mealProducts?.suggestions) {
+                                    plannedMeal.suggestions = mealProducts.suggestions;
+                                    plannedMeal.productMode = 'flat';
+                                    console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Meal ${mealIdx + 1}: assigned ${mealProducts.suggestions.length} suggestions (${Math.round(mealMacrosRec.kcal)} kcal)`);
+                                } else {
+                                    console.warn(`${LOG_PREFIX} [MEALREC.planner] ⚠️ Meal ${mealIdx + 1}: no products generated`);
+                                }
+                            } catch (mealErr) {
+                                console.warn(`${LOG_PREFIX} [MEALREC.planner] ⚠️ Meal ${mealIdx + 1}: product generation failed:`, mealErr.message);
+                            }
+                        }
+
+                        console.info(`${LOG_PREFIX} [MEALREC.planner] ✅ Per-meal products generated:`, {
+                            meals: mealsPlan.meals.map((m, i) => ({
+                                meal: i + 1,
+                                kcal: Math.round(m.macros.kcal),
+                                scenario: m.scenario,
+                                hasGroups: !!m.groups,
+                                hasSuggestions: !!m.suggestions
+                            }))
+                        });
+
+                    } else if (mealsPlan.meals[0]) {
+                        // Single meal from planner — используем уже сгенерированные продукты
                         if (mode === 'grouped' && groups) {
                             mealsPlan.meals[0].groups = groups;
-                            console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Assigned ${groups.length} groups to first meal`);
+                            console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Assigned ${groups.length} groups to single planned meal`);
                         } else if (suggestions) {
                             mealsPlan.meals[0].suggestions = suggestions;
-                            console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Assigned ${suggestions.length} suggestions to first meal`);
+                            console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Assigned ${suggestions.length} suggestions to single planned meal`);
                         }
                     }
                 } else {
@@ -469,7 +538,7 @@
             reasoning,
             confidence: 0.75, // Base confidence, will be enhanced below
             method: 'context_engine', // Context-aware pipeline
-            version: '3.1', // 🆕 Multi-meal planning
+            version: '3.3', // 🆕 Per-meal product generation
             // 🆕 Multi-meal plan
             mealsPlan: mealsPlan?.available ? mealsPlan : null
         };
