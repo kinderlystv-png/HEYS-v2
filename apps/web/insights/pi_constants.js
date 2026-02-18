@@ -13,7 +13,7 @@
     MIN_DAYS_FOR_FULL_ANALYSIS: 7,
     MIN_CORRELATION_DISPLAY: 0.35,
     CACHE_TTL_MS: 5 * 60 * 1000,
-    VERSION: '4.2.0'
+    VERSION: '4.3.0'
   };
 
   // === СИСТЕМА ПРИОРИТЕТОВ И КРИТЕРИЕВ ===
@@ -232,15 +232,32 @@
       else if (crashRiskScore >= 15) basePriority = 'MEDIUM';
 
       // 2. Коррекция по релевантным warnings (Sleep, Stress, Binge, Caloric)
-      // Только критические факторы срыва
+      // #11 Acuteness decay: острые (short-window) warnings весят больше хронических
+      // decay = max(0.3, 1 - (days - 3) / 27) → days=3→1.0, days=7→0.85, days=14→0.59, days=25→0.3
       const RELEVANT_TYPES = ['SLEEP_DEBT', 'STRESS_ACCUMULATION', 'BINGE_RISK', 'CALORIC_DEBT'];
+      const getAcutenessWeight = (w) => {
+        const d = typeof w.days === 'number' ? Math.max(3, w.days) : 7;
+        return Math.max(0.3, 1 - (d - 3) / 27);
+      };
       let warningsBoost = 0;
+      let weightedHighSum = 0;
       if (warnings && Array.isArray(warnings)) {
         const relevantWarnings = warnings.filter(w => RELEVANT_TYPES.includes(w.type));
-        const highCount = relevantWarnings.filter(w => w.severity === 'high').length;
+        const highFiltered = relevantWarnings.filter(w => w.severity === 'high');
+        weightedHighSum = highFiltered.reduce((sum, w) => sum + getAcutenessWeight(w), 0);
 
-        if (highCount >= 1) warningsBoost = 2; // Высокий риск срыва из-за фактора
+        if (weightedHighSum >= 0.7) warningsBoost = 2; // Острое high → сильный boost
         else if (relevantWarnings.length >= 2) warningsBoost = 1; // Комбинация факторов
+      }
+
+      if (typeof console !== 'undefined' && console.info) {
+        console.info('priority / 🛠️ custom_rule CRASH_RISK:', {
+          section: 'CRASH_RISK',
+          basePriority,
+          weightedHighSum: Math.round(weightedHighSum * 100) / 100,
+          warningsBoost,
+          rule: 'custom'
+        });
       }
 
       // Применяем boost (уменьшаем index = повышаем приоритет)
@@ -270,7 +287,7 @@
    * @returns {string} - один из: 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'
    */
   function computeDynamicPriority(options = {}) {
-    const { sectionId, score, trend, warnings } = options;
+    const { sectionId, score, trend, warnings, patterns } = options;
     const LOG_PREFIX = 'priority /';
 
     // 🚀 Step 1: Start
@@ -338,12 +355,24 @@
       else if (highCount >= 1) warningsBoost = 2; // есть high warnings → минимум HIGH
     }
 
-    // 4. Итоговый приоритет: берём максимальный boost (меньший level = выше приоритет)
+    // 4. #12 Pattern Degradation boost
+    // Если ≥2 паттернов с score < 40 (деградация) → +1 к приоритету
+    let patternDegradationBoost = 0;
+    if (patterns && Array.isArray(patterns)) {
+      const degradedCount = patterns.filter(
+        p => p.available === true && typeof p.score === 'number' && p.score < 40
+      ).length;
+      if (degradedCount >= 2) {
+        patternDegradationBoost = 1;
+      }
+    }
+
+    // 5. Итоговый приоритет: берём максимальный boost (меньший level = выше приоритет)
     const priorityLevels = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
     let baseIndex = priorityLevels.indexOf(basePriority);
 
     // Применяем максимальный boost (уменьшаем index = повышаем приоритет)
-    const maxBoost = Math.max(trendBoost, warningsBoost);
+    const maxBoost = Math.max(trendBoost, warningsBoost, patternDegradationBoost);
     const finalIndex = Math.max(0, baseIndex - maxBoost);
     const finalPriority = priorityLevels[finalIndex];
 
@@ -354,9 +383,10 @@
         basePriority,
         trendBoost,
         warningsBoost,
+        patternDegradationBoost,
         maxBoost,
         finalIndex,
-        computation: `base=${basePriority}[${baseIndex}] → boost=${maxBoost} → final[${finalIndex}]`
+        computation: `base=${basePriority}[${baseIndex}] → boost=${maxBoost} (t:${trendBoost}+w:${warningsBoost}+pd:${patternDegradationBoost}) → final[${finalIndex}]`
       });
     }
 
@@ -367,9 +397,10 @@
         score,
         trend7d: trend,
         highWarnings: warnings ? warnings.filter(w => w.severity === 'high').length : 0,
+        degradedPatterns: patterns ? patterns.filter(p => p.available && typeof p.score === 'number' && p.score < 40).length : 0,
         resolvedPriority: finalPriority,
         rule: 'generic',
-        reason: `score:${basePriority} + trend:${trendBoost > 0 ? `+${trendBoost}` : '0'} + ews:${warningsBoost > 0 ? `+${warningsBoost}` : '0'}`
+        reason: `score:${basePriority} + trend:${trendBoost > 0 ? `+${trendBoost}` : '0'} + ews:${warningsBoost > 0 ? `+${warningsBoost}` : '0'} + pd:${patternDegradationBoost > 0 ? `+${patternDegradationBoost}` : '0'}`
       });
     }
 
@@ -382,6 +413,7 @@
    */
   const PRIORITY_CONTEXT_LABELS = {
     STATUS_SCORE: {
+      INFO: 'Нет данных',
       LOW: 'Всё отлично',
       MEDIUM: 'Обратите внимание',
       HIGH: 'Важно',
@@ -389,6 +421,7 @@
     },
     // Можно добавить для других секций
     CRASH_RISK: {
+      INFO: 'Нет данных для риска',
       LOW: 'Низкий риск',
       MEDIUM: 'Средний риск',
       HIGH: 'Высокий риск',
@@ -396,6 +429,7 @@
     },
     // Context labels для важных действий
     PRIORITY_ACTIONS: {
+      INFO: 'Нет данных',
       LOW: 'Нет срочных',
       MEDIUM: 'Рекомендации',
       HIGH: 'Внимание!',

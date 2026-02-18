@@ -1366,9 +1366,10 @@
           sectionId: 'STATUS_SCORE',
           score,
           trend,
-          warnings: ewsWarnings
+          warnings: ewsWarnings,
+          patterns: insights?.patterns ?? [] // #12 pattern degradation boost
         });
-      }, [computeDynamicPriority, insights?.healthScore?.total, insights?.healthScore?.trend7d, insights?.healthScore?.trend, ewsWarnings]);
+      }, [computeDynamicPriority, insights?.healthScore?.total, insights?.healthScore?.trend7d, insights?.healthScore?.trend, ewsWarnings, insights?.patterns]);
 
       // 2. Динамический приоритет для CRASH_RISK (Риск срыва)
       const crashRiskPriority = useMemo(() => {
@@ -1401,12 +1402,16 @@
 
 
       useEffect(() => {
-        console.info(`${DYNAMIC_LOG_PREFIX} 🖥️ ui:`, {
-          section: 'STATUS_SCORE',
-          renderedPriority: statusSectionPriority,
-          filter: priorityFilter || 'ALL'
+        const urgentCount = ewsWarnings ? ewsWarnings.filter(w => w.severity === 'high').length : 0;
+        console.info(`${DYNAMIC_LOG_PREFIX} 🖥️ sections_priority:`, {
+          STATUS_SCORE: `${statusSectionPriority}  → "${PRIORITY_CONTEXT_LABELS?.STATUS_SCORE?.[statusSectionPriority] ?? ''}"`,
+          CRASH_RISK: `${crashRiskPriority}  → "${PRIORITY_CONTEXT_LABELS?.CRASH_RISK?.[crashRiskPriority] ?? ''}"`,
+          PRIORITY_ACTIONS: `${actionsPriority}  → "${PRIORITY_CONTEXT_LABELS?.PRIORITY_ACTIONS?.[actionsPriority] ?? ''}"`,
+          filter: priorityFilter || 'ALL',
+          ewsWarnings: ewsWarnings?.length ?? 0,
+          urgentWarnings: urgentCount,
         });
-      }, [statusSectionPriority, priorityFilter]);
+      }, [statusSectionPriority, crashRiskPriority, actionsPriority, priorityFilter, ewsWarnings]);
 
       // Получить все метрики для фильтров
       const allMetrics = useMemo(() => getAllMetricsByPriority(), []);
@@ -1508,47 +1513,6 @@
 
           // === MAIN CONTENT (отсортировано по приоритету) ===
           h('div', { className: 'insights-tab__content' },
-
-            // ═══════════════════════════════════════════════════════════
-            // 🔴 КРИТИЧЕСКИЙ ПРИОРИТЕТ — Самое важное сверху
-            // Сюда попадают CRASH_RISK и PRIORITY_ACTIONS если они активны
-            // ═══════════════════════════════════════════════════════════
-
-            /* 1. STATUS SCORE (если CRITICAL) - уже обрабатывается ниже */
-
-            /* 2. CRASH RISK (Динамический приоритет!) */
-            (shouldShowSection(crashRiskPriority) &&
-              h('div', { className: `insights-tab__section insights-tab__section--${crashRiskPriority.toLowerCase()}` },
-                h('div', { className: 'insights-tab__section-badge' },
-                  h(PriorityBadge, {
-                    priority: crashRiskPriority,
-                    showLabel: true,
-                    contextLabels: PRIORITY_CONTEXT_LABELS.CRASH_RISK
-                  })
-                ),
-                h(MetabolicQuickStatus, {
-                  profile: profile,
-                  days: HEYS.days.getAll() // Для расчёта риска
-                })
-              )
-            ),
-
-            /* 3. PRIORITY ACTIONS (Динамический приоритет!) */
-            (shouldShowSection(actionsPriority) &&
-              h('div', { className: `insights-tab__section insights-tab__section--${actionsPriority.toLowerCase()}` },
-                h('div', { className: 'insights-tab__section-badge' },
-                  h(PriorityBadge, {
-                    priority: actionsPriority,
-                    showLabel: true,
-                    contextLabels: PRIORITY_CONTEXT_LABELS.PRIORITY_ACTIONS
-                  })
-                ),
-                h(PriorityActions, {
-                  warnings: ewsWarnings, // Передаем все, фильтрация внутри
-                  limit: 3 // Показываем топ-3
-                })
-              )
-            ),
 
             // L0: Status 0-100 Card (dynamic priority)
             shouldShowSection(statusSectionPriority) && h('div', {
@@ -1800,7 +1764,7 @@
                 )
               ),
 
-              // Early Warning Card (под кольцами, но до секций)
+              // Early Warning Card (под скором и кольцами)
               h(EarlyWarningCard, { lsGet, profile, pIndex }),
 
               // Phenotype Classifier Card
