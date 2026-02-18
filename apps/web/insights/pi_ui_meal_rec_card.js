@@ -1227,11 +1227,11 @@
             const pluralMeals = mealsCount === 2 ? 'приёма' : mealsCount >= 5 ? 'приёмов' : 'приёма';
             headerTitle = `${mealsCount} ${pluralMeals} до сна`;
             headerTimeRange = `${mealsPlan.summary.timelineStart}-${mealsPlan.summary.timelineEnd}`;
-            headerSubtitle = scenarioReason || `План питания до ${mealsPlan.summary.sleepTarget}`;
+            headerSubtitle = 'Следуйте рекомендациям — и день будет идеальным';
         } else {
             headerTitle = scenarioTitle;
             headerTimeRange = !isGoalReached && timing?.ideal ? timing.ideal : null;
-            headerSubtitle = scenarioReason || timing?.reason || 'На основе анализа вашего дня';
+            headerSubtitle = scenarioReason || timing?.reason || 'Подобрано на основе вашего дня и привычек';
         }
 
         // Compact header (collapsed state)
@@ -1241,7 +1241,7 @@
         },
             h('div', { className: 'meal-rec-card__icon' }, displayIcon),
             h('div', { className: 'meal-rec-card__title' },
-                h('div', { className: 'meal-rec-card__badge' }, 'Рекомендуем'),
+                h('div', { className: 'meal-rec-card__badge' }, 'Умный планировщик'),
                 h('div', { className: 'meal-rec-card__time' },
                     headerTitle,
                     headerTimeRange && h('span', { className: 'meal-rec-card__time-value' },
@@ -1287,32 +1287,72 @@
             );
         }
 
+        // Smart meal name by time of day
+        function getMealNameByTime(timeStr) {
+            if (!timeStr) return 'Приём пищи';
+            const h = parseInt(timeStr.split(':')[0], 10);
+            if (h < 10) return 'Завтрак';
+            if (h < 12) return 'Второй завтрак';
+            if (h < 15) return 'Обед';
+            if (h < 17) return 'Полдник';
+            if (h < 21) return 'Ужин';
+            return 'Поздний ужин';
+        }
+
+        // Scenario badge config: text + CSS modifier
+        const SCENARIO_BADGE = {
+            'PROTEIN_DEFICIT': { text: 'Белок', mod: 'protein' },
+            'LATE_EVENING': { text: 'Лёгкий', mod: 'light' },
+            'BALANCED': { text: 'Баланс', mod: 'balanced' },
+            'LIGHT_SNACK': { text: 'Перекус', mod: 'light' },
+            'POST_WORKOUT': { text: 'Восст.', mod: 'sport' },
+            'PRE_WORKOUT': { text: 'Перед Т', mod: 'sport' },
+            'STRESS_EATING': { text: 'Антистресс', mod: 'balanced' },
+        };
+
         // Expanded details — v26: multi-meal support или original compact layout
         let expandedDetails = null;
         if (expanded) {
             if (isMultiMeal) {
                 // 🆕 Multi-meal mode: показываем sub-cards для каждого приёма
                 const mealSubCards = mealsPlan.meals.map((meal, mealIdx) => {
-                    const mealTitle = `Приём ${meal.index} • ${meal.timeStart}-${meal.timeEnd}`;
-                    const scenarioText = HEYS.InsightsPI?.mealRecommender?.getScenarioTitle?.(meal.scenario) || 'Приём пищи';
-
-                    // Wave info line: "Волна до ~21:30 · жиросж. 21:30-22:00"
-                    const waveInfo = `Волна до ~${meal.estimatedWaveEnd} · жиросж. ${meal.fatBurnWindow.start}-${meal.fatBurnWindow.end}`;
+                    const mealName = getMealNameByTime(meal.timeStart);
+                    const badge = SCENARIO_BADGE[meal.scenario] || { text: 'Приём пищи', mod: 'balanced' };
+                    const waveInfo = `Волна до ${meal.estimatedWaveEnd} · жиросж. ${meal.fatBurnWindow.start}–${meal.fatBurnWindow.end}`;
 
                     return h('div', { className: 'meal-rec-card__meal-subcard', key: mealIdx },
-                        // Divider with time
-                        h('div', { className: 'meal-rec-card__meal-divider' }, `━━━ ${mealTitle} ━━━━━`),
+                        // Шапка: название + время + badge сценария
+                        h('div', { className: 'meal-rec-card__meal-header' },
+                            h('div', { className: 'meal-rec-card__meal-header-left' },
+                                h('div', { className: 'meal-rec-card__meal-title' }, mealName),
+                                h('div', { className: 'meal-rec-card__meal-time' }, `${meal.timeStart}–${meal.timeEnd}`)
+                            ),
+                            h('div', { className: `meal-rec-card__meal-badge meal-rec-card__meal-badge--${badge.mod}` }, badge.text)
+                        ),
+                        // Макро-чипы в стиле главной карточки
+                        h('div', { className: 'meal-rec-card__meal-chips' },
+                            h('div', { className: 'meal-rec-card__macro-chip meal-rec-card__macro-chip--protein' },
+                                h('span', { className: 'meal-rec-card__macro-label' }, 'Б'),
+                                h('span', { className: 'meal-rec-card__macro-value' }, Math.round(meal.macros.prot)),
+                                h('span', { className: 'meal-rec-card__macro-unit' }, 'г')
+                            ),
+                            h('div', { className: 'meal-rec-card__macro-chip meal-rec-card__macro-chip--carbs' },
+                                h('span', { className: 'meal-rec-card__macro-label' }, 'У'),
+                                h('span', { className: 'meal-rec-card__macro-value' }, Math.round(meal.macros.carbs)),
+                                h('span', { className: 'meal-rec-card__macro-unit' }, 'г')
+                            ),
+                            h('div', { className: 'meal-rec-card__macro-chip meal-rec-card__macro-chip--kcal' },
+                                h('span', { className: 'meal-rec-card__macro-label' }, 'ккал'),
+                                h('span', { className: 'meal-rec-card__macro-value' }, Math.round(meal.macros.kcal))
+                            )
+                        ),
 
-                        // Scenario title
-                        h('div', { className: 'meal-rec-card__meal-scenario' }, scenarioText),
-
-                        // v27: Grouped products mode (multiple products per category with checkboxes)
+                        // Продукты (только для actionable приёма)
                         meal.isActionable && meal.groups && meal.groups.length > 0 ?
                             h('div', { className: 'meal-rec-card__grouped-products' },
                                 ...renderGroupedProducts(meal.groups)
                             )
                             :
-                            // Legacy: Flat suggestions mode (single products with + buttons)
                             meal.isActionable && meal.suggestions && meal.suggestions.length > 0 && h('div', { className: 'meal-rec-card__suggestions' },
                                 ...meal.suggestions.map((s, idx) =>
                                     h('div', { className: 'meal-rec-card__suggestion', key: idx },
@@ -1335,15 +1375,10 @@
                                 )
                             ),
 
-                        // Macros line: "Б 38г · У 8г · ккал 200"
-                        h('div', { className: 'meal-rec-card__meal-macros' },
-                            `Б ${Math.round(meal.macros.prot)}г · У ${Math.round(meal.macros.carbs)}г · ккал ${Math.round(meal.macros.kcal)}`
-                        ),
-
-                        // Wave info
+                        // Инсулиновая волна
                         h('div', { className: 'meal-rec-card__meal-wave' }, waveInfo),
 
-                        // Для не-actionable приёмов: hint
+                        // Для будущих приёмов: подсказка
                         !meal.isActionable && h('div', { className: 'meal-rec-card__meal-hint' }, '(добавить можно позже)')
                     );
                 });
@@ -1514,6 +1549,6 @@
         renderCard
     };
 
-    console.info(`${LOG_PREFIX} 📦 Module loaded (v27.5: Bulk add selected products + improved reasoning tags)`);
+    console.info(`${LOG_PREFIX} 📦 Module loaded (v27.6: Proper sub-card headers with bold title + macros in header)`);
 
 })(window);
