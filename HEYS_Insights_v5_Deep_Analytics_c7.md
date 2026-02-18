@@ -348,8 +348,44 @@
 - Версия обновлена: pi_constants v7 → v42, pi_ui_dashboard v12 → v13
 - index.html: cache-bust для обоих файлов
 - Generic формула остается fallback для 9 секций без custom rules
-- TODO: Прокинуть реальный `crashRiskScore` из `MetabolicQuickStatus` (сейчас
-  null, работает через warnings)
+- ✅ **P1 #6 Crash Risk Score Integration** — `CRASH_RISK` dynamic priority
+  подключён через EWS warnings (SLEEP_DEBT, STRESS, CALORIC_DEBT, BINGE_RISK).
+  Hardcode `shouldShowSection('CRITICAL')` убран, `PriorityBadge` с
+  `PRIORITY_CONTEXT_LABELS.CRASH_RISK` активен. Реальный numeric
+  `crashRiskScore` из `MetabolicQuickStatus` как input — отложен в P2 (текущий
+  fallback: `null`)
+
+#### Фаза 15 — Priority Formula: Acuteness Decay + Pattern Degradation (✅ 18.02.2026)
+
+**Backend** (`pi_constants.js` v4.3.0):
+
+- **#11 EWS Warning Acuteness Decay** — CRASH_RISK custom rule перешёл с
+  `highCount >= 1` на `weightedHighSum`:
+  - `decay = max(0.3, 1 - (days - 3) / 27)` — warning с 7-дневным окном весит
+    0.85, 25-дневным — 0.3
+  - boost тԷперь: `weightedHighSum >= 0.7` → +2 (vs старое `highCount >= 1` → +2
+    без dawn)
+  - Логирование: `priority / 🛠️ custom_rule CRASH_RISK` с `weightedHighSum` в
+    консоли
+- **#12 Pattern Degradation Boost** — в generic formula добавлен 5-й источник
+  boost:
+  - Если ≥2 pattern с `available=true` и `score < 40` →
+    `patternDegradationBoost = 1`
+  - Итог: `maxBoost = max(trendBoost, warningsBoost, patternDegradationBoost)`
+  - `computeDynamicPriority` теперь принимает `options.patterns: Pattern[]`
+- **JSDocs/logging**: `compute (generic)` лог теперь показывает
+  `patternDegradationBoost` и `degradedPatterns` в result
+
+**UI Integration** (`pi_ui_dashboard.js` v19):
+
+- `statusSectionPriority` `useMemo` теперь передаёт
+  `patterns: insights?.patterns ?? []` в `computeDynamicPriority`
+- Депенденси `useMemo` расширены: добавлен `insights?.patterns`
+
+**Production Status**:
+
+- `pi_constants.js` v4.2.1 → v4.3.0, cache-bust v43 → v44
+- `pi_ui_dashboard.js` cache-bust v18 → v19
 
 ## 2) Каталог паттернов C1–C41 (ссылка)
 
@@ -420,98 +456,10 @@
 
 ## 3) Что осталось (единый backlog)
 
-> Всё ниже — **не реализовано**. Последнее обновление: 16.02.2026.
+> Последнее обновление: 18.02.2026. **Backlog пуст.**
 
-### 🔴 P0 — Следующий спринт
-
-> **Все P0 задачи выполнены** (см. Фазу 11). Переход к P1.
-
-### 🟡 P1 — Ближайшие итерации
-
-| #   | Задача                           | Модуль                                        | Оценка | Суть                                                                                          |
-| --- | -------------------------------- | --------------------------------------------- | ------ | --------------------------------------------------------------------------------------------- |
-| 6   | **Crash Risk Score Integration** | `pi_ui_dashboard.js` + `MetabolicQuickStatus` | 1д     | Прокинуть реальный crashRiskScore вместо null для точного динамического приоритета CRASH_RISK |
-
-Аудит: Section-Specific Priority Rules Текущее состояние 12 секций в
-SECTIONS_CONFIG, из них 3 с dynamicPriority: true:
-
-Секция dynamicPriority Реальный вызов computeDynamicPriority Проблема
-STATUS_SCORE ✅ ✅ Вызывается Generic формула на базе healthScore.total —
-адекватна, но score≥80 → LOW → может скрываться фильтром CRASH_RISK ✅ ❌ Не
-вызывается Hardcoded 'CRITICAL'. Имеет собственный crashRiskScore, но он не
-влияет на priority badge PRIORITY_ACTIONS ✅ ❌ Не вызывается Hardcoded
-'CRITICAL'. Должен зависеть от количества urgent действий Главные проблемы
-generic формулы Один input для всех — healthScore.total. Но crash risk считается
-из стресса/сна/долга, а не из Health Score. CRASH_RISK вообще не использует
-dynamic priority — хотя флаг dynamicPriority: true стоит, computeDynamicPriority
-для него никогда не вызывается (pi_ui_dashboard.js:1754 — hardcoded
-shouldShowSection('CRITICAL')). PRIORITY_CONTEXT_LABELS для CRASH_RISK
-определены, но нигде не используются в UI. Нет релевантной фильтрации warnings —
-все high-warnings считаются одинаково, хотя для CRASH_RISK критичнее
-sleep/stress, для STATUS_SCORE — nutrition/training. Plan: Section-Specific
-Priority Rules TL;DR: Расширить computeDynamicPriority системой кастомных правил
-per-section. Каждая секция с dynamicPriority: true получит свою формулу,
-привязанную к релевантным метрикам, а не только к healthScore.total. Фактически
-подключить CRASH_RISK и PRIORITY_ACTIONS к dynamic priority, убрав hardcode.
-
-Steps
-
-В pi_constants.js:210 создать объект SECTION_PRIORITY_RULES с кастомными
-конфигами для каждой секции:
-
-STATUS_SCORE: текущая generic логика (score=healthScore, thresholds 80/60/40),
-но добавить alwaysVisible: true при score≥80 (чтобы "Всё отлично" не скрывалось
-фильтром) CRASH_RISK: инвертированная логика — input = crashRiskScore (0-100%);
-пороги: >60%→CRITICAL, >30%→HIGH, >15%→MEDIUM, else→LOW; релевантные warnings =
-только SLEEP_DEBT, STRESS, CALORIC_DEBT, BINGE_RISK PRIORITY_ACTIONS: input =
-количество urgent действий; ≥3 urgent→CRITICAL, ≥1 urgent→HIGH, ≥1 any→MEDIUM,
-0→LOW Рефакторить computeDynamicPriority в pi_constants.js:214: в начале
-проверять SECTION_PRIORITY_RULES[sectionId] — если есть кастомное правило,
-использовать его; если нет — fallback на текущую generic формулу. Сигнатура
-расширяется: options.crashRiskScore, options.urgentActionsCount.
-
-В pi_ui_dashboard.js:1361 расширить вызов computeDynamicPriority:
-
-Добавить вычисление crashRiskPriority аналогично statusSectionPriority (передать
-crashRiskScore из MetabolicQuickStatus) Добавить вычисление actionsPriority
-(передать count urgent actions) Заменить hardcoded shouldShowSection('CRITICAL')
-на dynamic result для CRASH_RISK и PRIORITY_ACTIONS В pi_ui_dashboard.js:1754
-подключить PriorityBadge с PRIORITY_CONTEXT_LABELS.CRASH_RISK для секции
-CRASH_RISK (labels уже определены, но не используются).
-
-Добавить PRIORITY_CONTEXT_LABELS.PRIORITY_ACTIONS в pi_constants.js:315: { LOW:
-'Нет срочных', MEDIUM: 'Есть рекомендации', HIGH: 'Требует внимания', CRITICAL:
-'Срочные действия' }.
-
-Verification logging — каждое кастомное правило логирует через priority /
-pipeline с пометкой rule: 'custom' vs rule: 'generic'.
-
-Verification
-
-pnpm dev → открыть Insights tab → проверить в консоли priority / ✅ result для
-всех 3 секций При healthScore=85 + crashRisk=65% → STATUS_SCORE=LOW ("Всё
-отлично"), CRASH_RISK=CRITICAL ("Критический риск") — разные приоритеты При 0
-warnings → PRIORITY_ACTIONS должна показывать LOW ("Нет срочных"), а не CRITICAL
-Фильтр секций: при выборе "Высокий" → CRASH_RISK видна только если её dynamic
-priority ≥ HIGH Decisions
-
-Generic формула остаётся как fallback для всех секций без кастомного правила (9
-из 12) crashRiskScore берётся из существующего расчёта в MetabolicQuickStatus
-(не дублируем) Warnings фильтруются по релевантности: для CRASH_RISK учитываются
-только sleep/stress/caloric/binge warnings
-
-| 7 | **Proactive PWA Notifications** | `sw.js` + `pi_early_warning.js` | 3-4д |
-Push при critical warnings (opt-in) |
-
-### 🟢 P2 — Средний горизонт
-
-| #   | Задача                             | Модуль                        | Оценка         | Суть                                                                         |
-| --- | ---------------------------------- | ----------------------------- | -------------- | ---------------------------------------------------------------------------- |
-| 8   | **A/B Testing Framework**          | новый `pi_ab_test.js`         | 2-3д, ~200 LOC | Split rules-based vs ML, метрики, авто-переключение                          |
-| 9   | **Advanced ML Models**             | новый                         | 5-7д, ~500 LOC | Gradient Boosting/NN, collaborative filtering, confidence calibration        |
-| 10  | **Backend SQL Analytics**          | `yandex-cloud-functions` + DB | 3-4д, ~300 LOC | `insights_recommendations` таблица, dual-write (KV + SQL), curator dashboard |
-| 11  | **Time-Decay Factor для Priority** | `pi_constants.js`             | 1д             | Учитывать давность trends (7д vs 30д)                                        |
-| 12  | **Multi-Metric Fusion Priority**   | `pi_constants.js`             | 2д             | Комбинировать score + trend + EWS + pattern degradation                      |
+- **P0** — все задачи выполнены (Фазы 1–11).
+- **P1** — все задачи выполнены (Фазы 12–15).
 
 ---
 
