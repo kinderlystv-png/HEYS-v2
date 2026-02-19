@@ -7,120 +7,131 @@
 
 ## 📋 Overview
 
-HEYS Platform provides a comprehensive RESTful API for diary tracking, nutrition
-management, training sessions, and analytics. The API is built on modern
-TypeScript/Node.js stack with Supabase backend integration.
+HEYS Platform предоставляет API для ведения дневника питания,
+нутрициологического анализа и управления клиентами. API реализован через **7
+Yandex Cloud Functions** (serverless, nodejs18).
 
-**Base URL:** `https://api.heys.app/v1`  
-**Authentication:** Bearer JWT tokens via Supabase Auth  
-**Content-Type:** `application/json`
+**Base URL:** `https://api.heyslab.ru`  
+**Authentication:** Клиенты: PIN → `session_token` | Кураторы: JWT (Bearer)  
+**Content-Type:** `application/json`  
+**CORS:** только `app.heyslab.ru`, `heyslab.ru`
 
 ## 🏗️ Architecture
 
 ### Core Components
 
-- **Legacy Core** - LocalStorage-based data management
-- **Modern Layer** - TypeScript/React with Supabase integration
-- **Security Layer** - Input validation and XSS protection
-- **Integration Layer** - Multi-service connectors
+- **Legacy Core** - LocalStorage-based data management (`heys_*.js` vanilla JS)
+- **Modern Layer** - TypeScript/React (`packages/`, `apps/web/src/`)
+- **API Layer** - 7 Yandex Cloud Functions at `api.heyslab.ru`
+- **Security Layer** - Input validation, XSS protection, session-based IDOR
+  protection
 
 ## 🔐 Authentication
 
-### Supabase Authentication
-
-All authenticated endpoints require a valid Supabase session.
+### Клиенты (phone + PIN)
 
 ```javascript
-// Sign in
-const { user, error } = await cloud.signIn(email, password);
+// PIN-авторизация — возвращает session_token
+await HEYS.YandexAPI.rpc('client_pin_auth', {
+  p_phone: '+7XXXXXXXXXX',
+  p_pin: '1234',
+});
+// Returns: { session_token, client_id, name, curator_id }
 
-// Get current user
-const user = cloud.getUser();
-
-// Sign out
-cloud.signOut();
+// Все последующие RPC вызовы используют session_token автоматически
+// (через HEYS.YandexAPI — не передавай client_id напрямую!)
 ```
+
+### Кураторы (email + password → JWT)
+
+```javascript
+// POST https://api.heyslab.ru/auth/curator
+fetch('https://api.heyslab.ru/auth/curator', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'curator@example.com', password: '...' }),
+});
+// Returns: { token: 'JWT...', curator_id, name }
+
+// Дальнейшие API запросы: Authorization: Bearer <JWT>
+```
+
+> **ПРАВИЛО:** Никогда не передавай `client_id` напрямую в RPC. Всегда используй
+> `*_by_session` pattern с `session_token`.
 
 ## 📊 Core APIs
 
-### 1. User Management
+### 1. YandexAPI — Главный API адаптер
 
-#### Authentication
-
-```javascript
-// POST /auth/signin
-cloud.signIn(email, password);
-// Returns: { user?, error? }
-
-// POST /auth/signout
-cloud.signOut();
-// Returns: void
-
-// GET /auth/user
-cloud.getUser();
-// Returns: SupabaseUser | null
-```
-
-#### User Data
+Всё взаимодействие с сервером идёт через `HEYS.YandexAPI`:
 
 ```javascript
-// GET /users/profile
-HEYS.User.getProfile();
-// Returns: UserProfile
+// RPC (вызов PostgreSQL функций)
+await HEYS.YandexAPI.rpc('function_name', { param: 'value' });
 
-// PUT /users/profile
-HEYS.User.updateProfile(data);
-// Returns: boolean
+// REST (GET запросы к таблицам)
+await HEYS.YandexAPI.rest('table_name', {
+  method: 'GET',
+  params: { limit: 100, order: 'created_at.desc' },
+});
 ```
 
 ### 2. Client Management
 
-#### Client CRUD Operations
-
 ```javascript
-// GET /clients
-fetchClientsFromCloud(curatorId);
-// Returns: Client[]
+// Список клиентов куратора
+await HEYS.YandexAPI.rpc('get_curator_clients_by_session', {
+  p_session_token: token,
+});
 
-// POST /clients
-addClientToCloud(name);
-// Returns: Client
+// Добавить клиента
+await HEYS.YandexAPI.rpc('add_client_by_session', {
+  p_session_token: token,
+  p_name: 'Иван Иванов',
+  p_phone: '+7XXXXXXXXXX',
+  p_pin: '1234',
+});
 
-// PUT /clients/:id
-renameClient(id, name);
-// Returns: boolean
+// Переименовать клиента
+await HEYS.YandexAPI.rpc('rename_client_by_session', {
+  p_session_token: token,
+  p_client_id: clientId,
+  p_name: 'Новое Имя',
+});
 
-// DELETE /clients/:id
-removeClient(id);
-// Returns: boolean
+// Удалить клиента
+await HEYS.YandexAPI.rpc('delete_client_by_session', {
+  p_session_token: token,
+  p_client_id: clientId,
+});
 ```
 
-### 3. Data Synchronization
-
-#### Key-Value Storage
+### 3. Data Synchronization (Key-Value Storage)
 
 ```javascript
-// Global Storage
-cloud.saveKey(key, value); // POST /kv/global
-cloud.getKey(key); // GET /kv/global/:key
-cloud.deleteKey(key); // DELETE /kv/global/:key
+// Bootstrap Sync (загрузить все данные клиента)
+await HEYS.cloud.syncClient(clientId); // автовыбор стратегии (curator / PIN)
 
-// Client-specific Storage
-cloud.saveClientKey(clientId, key, value); // POST /kv/client
-cloud.getClientKey(clientId, key); // GET /kv/client/:clientId/:key
-cloud.deleteClientKey(clientId, key); // DELETE /kv/client/:clientId/:key
-```
+// KV операции (глобальные ключи)
+await HEYS.YandexAPI.rpc('kv_set', {
+  p_key: 'settings',
+  p_value: JSON.stringify(data),
+});
+await HEYS.YandexAPI.rpc('kv_get', { p_key: 'settings' });
+await HEYS.YandexAPI.rpc('kv_delete', { p_key: 'settings' });
 
-#### Sync Operations
-
-```javascript
-// Full Bootstrap Sync
-cloud.bootstrapSync(); // GET /sync/bootstrap
-cloud.bootstrapClientSync(clientId); // GET /sync/client/:clientId
-
-// Incremental Sync
-cloud.syncToCloud(); // POST /sync/push
-cloud.syncFromCloud(); // POST /sync/pull
+// KV операции (ключи клиента)
+await HEYS.YandexAPI.rpc('client_kv_set_by_session', {
+  p_session_token: token,
+  p_client_id: clientId,
+  p_key: 'heys_products',
+  p_value: JSON.stringify(products),
+});
+await HEYS.YandexAPI.rpc('client_kv_get_by_session', {
+  p_session_token: token,
+  p_client_id: clientId,
+  p_key: 'heys_products',
+});
 ```
 
 ---
@@ -222,9 +233,9 @@ useEffect(
 **Files to Study:**
 
 - `apps/web/heys_app_sync_effects_v1.js` — React integration (v4.8.8)
-- `apps/web/public/heys_storage_supabase_v1.js` — Quality checks (v4.8.6)
-- `apps/web/public/heys_core_v12.js` — Store API implementation
-- `apps/web/public/heys_storage_layer_v1.js` — Scoping logic
+- `apps/web/heys_storage_supabase_v1.js` — Quality checks (v4.8.6)
+- `apps/web/heys_core_v12.js` — Store API implementation
+- `apps/web/heys_storage_layer_v1.js` — Scoping logic
 
 ---
 
@@ -304,128 +315,113 @@ get_effective_subscription_status(client_id);
 - `trial_queue_events.event_type` → CHECK:
   `('queued','offer_sent','claimed','offer_expired','canceled','canceled_by_purchase','purchased')`
 
-### 5. Nutrition Management
+### 5. Nutrition & Day Tracking
 
-#### Food Database
+Данные дня хранятся в KV storage под ключом `heys_dayv2_{date}`:
 
 ```javascript
-// GET /nutrition/foods
-HEYS.Food.search(query, options);
-// Returns: Food[]
+// Получить данные дня
+const dayData = await HEYS.YandexAPI.rpc('client_kv_get_by_session', {
+  p_session_token: token,
+  p_client_id: clientId,
+  p_key: 'heys_dayv2_2026-02-19',
+});
 
-// GET /nutrition/foods/:id
-HEYS.Food.getById(id);
-// Returns: Food
+// Сохранить данные дня
+await HEYS.YandexAPI.rpc('batch_upsert_client_kv_by_session', {
+  p_session_token: token,
+  p_client_id: clientId,
+  p_keys: ['heys_dayv2_2026-02-19'],
+  p_values: [JSON.stringify(dayData)],
+});
 
-// POST /nutrition/foods
-HEYS.Food.create(foodData);
-// Returns: Food
+// Получить продукты клиента
+const productsRaw = await HEYS.YandexAPI.rpc('client_kv_get_by_session', {
+  p_session_token: token,
+  p_client_id: clientId,
+  p_key: 'heys_products',
+});
+// Или через Store API (рекомендуется из React):
+const products = HEYS.products.getAll();
+
+// Данные дня (поля: dayTot.prot НЕ dayTot.protein!)
+// dayTot: { kcal, prot, fat, carb, ... }
+// Protein = 3 kcal/g (TEF-adjusted)
 ```
 
-#### Meal Tracking
+### 6. Shared Products
 
 ```javascript
-// POST /nutrition/meals
-HEYS.Nutrition.addMeal(mealData)
-// Returns: Meal
+// Получить базу продуктов (публично)
+await HEYS.YandexAPI.rpc('get_shared_products', {});
 
-// GET /nutrition/meals
-HEYS.Nutrition.getMeals(date?, clientId?)
-// Returns: Meal[]
+// Создать pending product (клиент)
+await HEYS.YandexAPI.rpc('create_pending_product_by_session', {
+  p_session_token: token,
+  p_name: 'Продукт',
+  p_kcal: 200,
+  p_prot: 15,
+  p_fat: 8,
+  p_carb: 20,
+});
 
-// GET /nutrition/summary
-HEYS.Nutrition.getDailySummary(date, clientId?)
-// Returns: NutritionSummary
+// Опубликовать продукт (куратор)
+await HEYS.YandexAPI.rpc('publish_shared_product_by_session', {
+  p_session_token: token,
+  p_product_id: productId,
+});
 ```
 
-### 5. Training Management
+### 7. Insights API
 
-#### Training Plans
+Insights работают на локальных данных (localStorage), без API-вызовов:
 
 ```javascript
-// GET /training/plans
-HEYS.Training.getPlans(clientId?)
-// Returns: TrainingPlan[]
+// Адаптивные пороги (pi_thresholds.js)
+const thresholds = await HEYS.thresholds.getAdaptiveThresholds(
+  30,
+  profile,
+  pIndex,
+);
+// Returns: { calories: { min, max, confidence }, protein: {...}, ... }
 
-// POST /training/plans
-HEYS.Training.createPlan(planData)
-// Returns: TrainingPlan
+// Early Warning System (pi_early_warning.js v4.2)
+const ews = HEYS.insights.getEarlyWarnings(historyData);
+// Returns: { warnings: [{ type, severity, message }], globalScore, phenotype }
 
-// PUT /training/plans/:id
-HEYS.Training.updatePlan(id, planData)
-// Returns: TrainingPlan
+// Статистика (pi_stats.js v3.5.0, 27 функций)
+const corr = HEYS.stats.bayesianCorrelation(x, y);
+const ci = HEYS.stats.confidenceIntervalForCorrelation(r, n);
 ```
 
-#### Workout Sessions
+## 🔌 External Integrations
+
+### SMS (SMSC.ru) — через `heys-api-sms`
 
 ```javascript
-// POST /training/sessions
-HEYS.Training.startSession(planId)
-// Returns: WorkoutSession
-
-// PUT /training/sessions/:id
-HEYS.Training.updateSession(id, sessionData)
-// Returns: WorkoutSession
-
-// GET /training/sessions
-HEYS.Training.getSessions(clientId?, date?)
-// Returns: WorkoutSession[]
+await HEYS.YandexAPI.rpc('send_verification_sms', {
+  p_phone: '+7XXXXXXXXXX',
+  p_code: '1234',
+});
 ```
 
-### 6. Analytics & Reporting
-
-#### Progress Tracking
+### Leads (с лендинга) — через `heys-api-leads`
 
 ```javascript
-// GET /analytics/progress
-HEYS.Analytics.getProgress(clientId, period);
-// Returns: ProgressData
-
-// GET /analytics/reports
-HEYS.Analytics.generateReport(type, filters);
-// Returns: Report
-
-// GET /analytics/metrics
-HEYS.Analytics.getMetrics(clientId);
-// Returns: MetricsData
+// POST https://api.heyslab.ru/leads
+// Body: { name, phone, messenger, utm_source }
+// Автоматически сохраняется в таблицу leads
 ```
 
-## 🔌 Integration Layer
-
-### External Service Connectors
-
-#### Supabase Integration
+### Payments (ЮKassa) — через `heys-api-payments`
 
 ```javascript
-// Connection Management
-IntegrationLayer.connectSupabase(credentials);
-IntegrationLayer.testSupabaseConnection(connection);
-IntegrationLayer.syncSupabase(connection, direction, filters);
-```
-
-#### REST API Integration
-
-```javascript
-// Generic REST API
-IntegrationLayer.connectRestAPI(credentials);
-IntegrationLayer.syncRestAPI(connection, direction, filters);
-IntegrationLayer.testRestAPIConnection(connection);
-```
-
-#### WebSocket Integration
-
-```javascript
-// Real-time Connections
-IntegrationLayer.connectWebSocket(credentials);
-IntegrationLayer.handleWebSocketMessage(connection, message);
-```
-
-#### File System Integration
-
-```javascript
-// Local File Operations
-IntegrationLayer.connectFileSystem(credentials);
-IntegrationLayer.syncFileSystem(connection, direction, filters);
+await HEYS.YandexAPI.rpc('create_payment_order', {
+  p_session_token: token,
+  p_amount: 2990,
+  p_description: 'Подписка HEYS на 30 дней',
+});
+// Returns: { payment_url, order_id }
 ```
 
 ## 🛡️ Security & Validation
@@ -449,25 +445,18 @@ SecurityValidator.sanitizeInput(data);
 - **Input Validation** - Schema-based validation
 - **Rate Limiting** - Automatic throttling
 
-## 📱 Platform-Specific APIs
+## 📱 Platform APIs
 
-### Web Application
+### PWA (`app.heyslab.ru`)
 
-- **Service Worker** - Offline functionality
-- **LocalStorage** - Client-side caching
+- **Service Worker** - Offline functionality (`apps/web/public/sw.js`)
+- **LocalStorage** - Client-side caching (namespaced via `U.lsSet/lsGet`)
 - **Progressive Web App** - Install capabilities
 
-### Mobile Application
+### Telegram Mini App
 
-- **Native Bridge** - Platform integration
-- **Push Notifications** - Real-time updates
-- **Offline Sync** - Background synchronization
-
-### Desktop Application
-
-- **System Integration** - File system access
-- **Background Services** - System tray functionality
-- **Auto-updater** - Seamless updates
+- `apps/tg-mini/` — отдельный Vite app
+- Использует тот же API backend (`api.heyslab.ru`)
 
 ## 🔍 Search & Discovery
 
@@ -510,33 +499,39 @@ HEYS.ErrorLogger.getRecentErrors();
 ### Complete User Flow Example
 
 ```javascript
-// 1. Authentication
-const { user } = await cloud.signIn('user@example.com', 'password');
+// 1. Авторизация клиента через PIN
+const authResult = await HEYS.YandexAPI.rpc('client_pin_auth', {
+  p_phone: '+79001234567',
+  p_pin: '1234',
+});
+const { session_token, client_id } = authResult;
 
-// 2. Load client data
-const clients = await fetchClientsFromCloud(user.id);
-const clientId = clients[0].id;
+// 2. Bootstrap sync (загрузка данных клиента)
+await HEYS.cloud.syncClient(client_id);
 
-// 3. Add nutrition data
-const meal = await HEYS.Nutrition.addMeal({
-  clientId,
-  foodId: 'food_123',
-  quantity: 150,
+// 3. Добавить продукт в дневник
+const meal = HEYS.day.addMeal({
+  date: '2026-02-19',
   mealType: 'breakfast',
+  productId: 'product_123',
+  weight: 150,
 });
 
-// 4. Track training
-const session = await HEYS.Training.startSession('plan_456');
-await HEYS.Training.updateSession(session.id, {
-  exercises: [{ name: 'Push-ups', sets: 3, reps: 15 }],
+// 4. Сохранить день в облако
+await HEYS.YandexAPI.rpc('client_kv_set_by_session', {
+  p_session_token: session_token,
+  p_client_id: client_id,
+  p_key: 'heys_dayv2_2026-02-19',
+  p_value: JSON.stringify(dayData),
 });
 
-// 5. Generate report
-const report = await HEYS.Analytics.generateReport('weekly', {
-  clientId,
-  startDate: '2025-08-25',
-  endDate: '2025-09-01',
-});
+// 5. Получить аналитику
+const thresholds = await HEYS.thresholds.getAdaptiveThresholds(
+  30,
+  profile,
+  pIndex,
+);
+const warnings = HEYS.insights.getEarlyWarnings(historyData);
 ```
 
 ## 🔧 Error Handling
@@ -591,4 +586,4 @@ For API support and questions:
 
 ---
 
-**© 2025 HEYS Development Team** | Licensed under [MIT License](../LICENSE)
+**© 2026 HEYS Development Team** | Licensed under [MIT License](../LICENSE)

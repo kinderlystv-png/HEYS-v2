@@ -1,462 +1,321 @@
 # 🛡️ Система безопасности HEYS
 
-## 📋 Обзор системы безопасности
+## 📋 Обзор
 
-HEYS использует многоуровневый подход к безопасности, включающий превентивные
-меры, активный мониторинг угроз и автоматическое реагирование на инциденты.
+HEYS использует многоуровневый подход к безопасности на базе **Yandex Cloud**
+(152-ФЗ, все данные в России).
 
 **Статус безопасности**: 🟢 Оптимальный  
-**Последняя проверка**: 2 сентября 2025  
-**Тесты безопасности**: ✅ Все пройдены
+**Последняя проверка**: 25 января 2026  
+**Версия**: 3.0.0 (Yandex Cloud Architecture)
 
 ---
 
 ## 🏛️ Архитектура безопасности
 
-### Уровни защиты
-
 ```
-1. 🌐 Perimeter Security    - WAF, DDoS protection, Rate limiting
-2. 🔐 Application Security  - Authentication, Authorization, Input validation
-3. 🗄️ Data Security         - Encryption, Field-level protection, Audit logs
-4. 🤖 Threat Detection      - ML-based anomaly detection, Real-time monitoring
-5. 📊 Security Analytics    - Event correlation, Incident response
+1. 🌐 Perimeter Security    — Nginx reverse proxy, CORS whitelist, rate limiting
+2. 🔐 Application Security  — Phone+PIN auth, JWT for curators, session_token pattern
+3. 🗄️ Data Security         — AES-256 шифрование health data в БД и localStorage
+4. 🛡️ Compliance            — 152-ФЗ, всё в Yandex Cloud ru-central1
+5. 📊 Monitoring            — GitHub Actions + Telegram алерты 24/7
 ```
 
 ---
 
 ## 🔐 Аутентификация и авторизация
 
-### Система аутентификации
+### Два типа пользователей
 
-- **Provider**: Supabase Auth
-- **Методы**: Email/password, OAuth (Google, GitHub)
-- **Токены**: JWT с configurable expiration (default: 1 hour)
-- **Refresh tokens**: Автоматическое обновление сессий
-- **Multi-factor authentication**: Поддержка TOTP (в разработке)
+| Тип                       | Метод                                  | Результат                                 |
+| ------------------------- | -------------------------------------- | ----------------------------------------- |
+| **Клиент** (пациент)      | Телефон + PIN → `client_pin_auth` RPC  | `session_token` (хранится в localStorage) |
+| **Куратор** (нутрициолог) | Email + Password → `heys-api-auth` YCF | JWT Bearer токен                          |
 
-### Авторизация (RBAC)
+### PIN-авторизация клиента
 
-```typescript
-// Роли пользователей
-enum UserRole {
-  GUEST = 'guest', // Ограниченный доступ
-  USER = 'user', // Стандартные функции
-  PREMIUM = 'premium', // Расширенные функции
-  MODERATOR = 'moderator', // Модерация контента
-  ADMIN = 'admin', // Полный доступ
-}
-
-// Права доступа
-interface Permissions {
-  read: boolean;
-  write: boolean;
-  delete: boolean;
-  admin: boolean;
-}
+```javascript
+// POST https://api.heyslab.ru/rpc?fn=client_pin_auth
+await HEYS.YandexAPI.rpc('client_pin_auth', {
+  p_phone: '+7XXXXXXXXXX',
+  p_pin: '1234',
+});
+// Returns: { session_token, client_id, name, curator_id }
+// Ошибки ВСЕГДА: "invalid_credentials" — защита от phone enumeration
 ```
 
-### Session Management
+**Безопасность PIN:**
 
-- **Storage**: Secure HttpOnly cookies + localStorage
-- **Timeout**: Автоматическое истечение неактивных сессий (30 минут)
-- **Concurrent sessions**: Ограничение на 5 активных устройств
-- **Device tracking**: Уникальные идентификаторы устройств
+- Хеширование: `pgcrypto.crypt(pin, gen_salt('bf'))` (bcrypt)
+- Rate limiting: таблица `pin_login_attempts` — 5 попыток → блокировка 15 мин
+- Phone enumeration blocked: единый ответ `invalid_credentials` для всех ошибок
 
----
+### JWT-авторизация куратора
 
-## 🛡️ Защита данных
-
-### Шифрование данных
-
-#### В покое (Data at Rest)
-
-```typescript
-// Полевое шифрование чувствительных данных
-interface EncryptedFields {
-  personalInfo: AES256;      // ФИО, адрес
-  healthData: AES256;        // Медицинские данные
-  financialData: AES256;     // Платежная информация
-}
-
-// Ключи шифрования
-- Master Key: HSM-protected, rotated quarterly
-- Data Encryption Keys: Per-user, derived from master key
-- Salt: Unique per field, cryptographically secure random
+```javascript
+// POST https://api.heyslab.ru/auth/curator
+fetch('https://api.heyslab.ru/auth/curator', {
+  method: 'POST',
+  body: JSON.stringify({ email: 'curator@example.com', password: '...' }),
+});
+// Returns: { token: 'JWT...', curator_id }
+// Дальнейшие запросы: Authorization: Bearer <token>
 ```
 
-#### В движении (Data in Transit)
+### IDOR-защита (session_token pattern)
 
-- **HTTPS/TLS 1.3**: Все API communications
-- **Certificate Pinning**: Mobile apps
-- **HSTS**: Strict Transport Security headers
-- **Perfect Forward Secrecy**: Ephemeral key exchange
+**Правило:** Никогда не передавать `client_id` напрямую в API. Использовать
+только `*_by_session` RPC-функции с `session_token`:
 
-### Защита базы данных
+```javascript
+// ❌ НЕБЕЗОПАСНО — прямой UUID, IDOR уязвимость
+await HEYS.YandexAPI.rpc('get_client_data', { p_client_id: clientId });
 
-```sql
--- Row Level Security (RLS) в PostgreSQL
-CREATE POLICY user_data_policy ON user_data
-  USING (auth.uid() = user_id);
+// ✅ БЕЗОПАСНО — сервер резолвит client_id из session_token
+await HEYS.YandexAPI.rpc('get_client_data_by_session', {
+  p_session_token: sessionToken,
+  p_client_id: clientId,
+});
+```
 
--- Функции безопасности
-- Connection pooling с ограничениями
-- Prepared statements против SQL injection
-- Database firewall rules
-- Encrypted backups с ротацией ключей
+**Заблокированные legacy-функции (IDOR):**
+
+```
+verify_client_pin, verify_client_pin_v2,
+get_client_data, upsert_client_kv, batch_upsert_client_kv,
+save_client_kv, get_client_kv, delete_client_kv,
+create_pending_product, create_client_with_pin,
+check_subscription_status
 ```
 
 ---
 
-## 🔍 Система обнаружения угроз
+## 🗄️ Схема БД (ключевые таблицы безопасности)
 
-### Компоненты Threat Detection
+| Таблица              | Ключ / Важные поля  | Примечание                                           |
+| -------------------- | ------------------- | ---------------------------------------------------- |
+| `pin_login_attempts` | `(phone, ip INET)`  | Rate limiting — 5 попыток → lockout 15 мин           |
+| `clients`            | `id UUID`           | `phone_normalized`, `pin_hash` (bcrypt), `name`      |
+| `client_sessions`    | `id UUID`           | `token_hash BYTEA` — сам токен НЕ хранится           |
+| `client_kv_store`    | `(client_id, k)`    | `v JSONB` (plaintext) + `v_encrypted BYTEA` (health) |
+| `consents`           | `(client_id, type)` | Согласия на обработку ПДн                            |
 
-#### 1. Anomaly Detection Engine
+---
 
-```typescript
-class AnomalyDetectionEngine {
-  // ML модель для обнаружения аномалий
-  private model: TensorFlow.Model;
+## 🔒 Шифрование данных
 
-  async detectAnomaly(event: SecurityEvent): Promise<AnomalyResult> {
-    // Анализ паттернов поведения
-    // Статистический анализ отклонений
-    // Real-time scoring (0.0 - 1.0)
-  }
+### Data at Rest — серверная БД
 
-  async trainModel(historicalData: SecurityEvent[]): Promise<void> {
-    // Обучение на исторических данных
-    // Adaptive learning от новых угроз
-  }
-}
+Строки `client_kv_store` с health-data шифруются автоматически:
+
+```
+Cloud Function (heys-api-rpc)
+    │
+    ├─ Читает HEYS_ENCRYPTION_KEY из env var
+    ├─ SET heys.encryption_key = '...' (per-connection)
+    │
+    └─ PostgreSQL RPC
+         ├─ encrypt_health_data() — при записи
+         └─ decrypt_health_data() — при чтении
 ```
 
-#### 2. Threat Intelligence Engine
+**Функции SQL:**
 
-```typescript
-class ThreatIntelligenceEngine {
-  // База индикаторов компрометации (IOC)
-  private iocDatabase: IOCDatabase;
+| Функция                      | Назначение                          |
+| ---------------------------- | ----------------------------------- |
+| `is_health_key(k)`           | Определяет, нужно ли шифровать ключ |
+| `encrypt_health_data(jsonb)` | AES-256 шифрование                  |
+| `decrypt_health_data(bytea)` | Расшифровка                         |
+| `read_client_kv_value()`     | Авто-расшифровка при чтении         |
+| `write_client_kv_value()`    | Авто-шифрование при записи          |
 
-  async checkIOCs(event: SecurityEvent): Promise<ThreatMatch[]> {
-    // Проверка IP адресов
-    // Анализ User-Agent strings
-    // Pattern matching в payload
-  }
+**Колонки `client_kv_store`:**
 
-  async updateThreatFeeds(): Promise<void> {
-    // Обновление из external threat feeds
-    // Community-based threat sharing
-  }
-}
+| Колонка       | Тип      | Описание                         |
+| ------------- | -------- | -------------------------------- |
+| `v`           | JSONB    | Plaintext (non-health ключи)     |
+| `v_encrypted` | BYTEA    | AES-256 зашифрованные данные     |
+| `key_version` | SMALLINT | NULL = plaintext, 1+ = encrypted |
+
+### Data at Rest — localStorage клиента (AES-256)
+
+| Ключ localStorage    | Описание                  | Шифрование   |
+| -------------------- | ------------------------- | ------------ |
+| `heys_{id}_profile`  | ПДн + health profile      | ✅ AES-256   |
+| `heys_{id}_dayv2_*`  | Дневник питания, сон, вес | ✅ AES-256   |
+| `heys_{id}_hr_zones` | Пульсовые зоны            | ✅ AES-256   |
+| `heys_{id}_products` | База продуктов питания    | ❌ Plaintext |
+| `heys_{id}_norms`    | Нормы питания             | ❌ Plaintext |
+
+### Data in Transit
+
+- **HTTPS/TLS 1.3** — все API-коммуникации
+- **HSTS** — принудительный HTTPS
+- **CORS whitelist** — только `app.heyslab.ru`, `heyslab.ru`
+
+---
+
+## 🌐 CORS и периметр
+
+```javascript
+// Разрешённые origins (heys-api-rpc/index.js)
+const ALLOWED_ORIGINS = ['https://app.heyslab.ru', 'https://heyslab.ru'];
+
+// Все остальные origins → 403 Forbidden
 ```
 
-#### 3. Real-time Event Processing
+**REST API (heys-api-rest):**
 
-```typescript
-// События безопасности
-interface SecurityEvent {
-  id: string;
-  type: 'login_attempt' | 'api_request' | 'data_access' | 'suspicious_activity';
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  source: {
-    ip: string;
-    userAgent: string;
-    userId?: string;
-    sessionId?: string;
-  };
-  metadata: Record<string, unknown>;
-  timestamp: Date;
-}
+- Поддерживает только GET запросы к public таблицам
+- PUT/POST/DELETE → 405 Method Not Allowed
+
+**Запрещённые таблицы через /rest:**
+
+- `clients`, `client_sessions`, `pin_login_attempts` → 404 Not Found
+
+---
+
+## 📋 Публичный RPC-allowlist
+
+Только эти функции доступны через `api.heyslab.ru/rpc`:
+
 ```
+# Auth
+get_client_salt, client_pin_auth, verify_client_pin_v3, revoke_session
 
-### Автоматические действия
+# Data (session-safe)
+get_client_data_by_session, get_client_kv_by_session,
+upsert_client_kv_by_session, batch_upsert_client_kv_by_session,
+delete_client_kv_by_session
 
-```typescript
-// Escalation rules
-const escalationRules = {
-  high_severity: {
-    actions: ['notify_security_team', 'temporary_account_lock'],
-    timeout: 5 * 60, // 5 минут
-  },
-  critical_severity: {
-    actions: ['immediate_account_suspension', 'alert_admin', 'log_incident'],
-    timeout: 0, // Немедленно
-  },
-};
+# Products & Consents
+get_shared_products, create_pending_product_by_session,
+publish_shared_product_by_session, log_consents
+
+# Subscription & Trial
+get_subscription_status_by_session, start_trial_by_session,
+get_public_trial_capacity, request_trial, get_trial_queue_status,
+admin_get_leads, admin_convert_lead, admin_activate_trial
 ```
 
 ---
 
-## 🚨 Мониторинг и оповещения
+## 🔑 Secrets Management
 
-### Security Analytics Dashboard
+**Правило:** Редактировать env vars **только через YC Console**. Никогда через
+CLI (`yc serverless function version create ... --environment`), т.к. CLI
+выводит их в stdout.
 
-- **Real-time threat feed**: Актуальные угрозы
-- **Attack patterns**: Визуализация паттернов атак
-- **Geolocation analytics**: Анализ географических аномалий
-- **User behavior analytics**: Профилирование поведения пользователей
+**Ключевые секреты (`.env` + YC Console):**
 
-### Системы оповещений
-
-```typescript
-// Каналы оповещений
-interface AlertChannels {
-  email: string[]; // Команда безопасности
-  slack: string; // #security-alerts канал
-  webhook: string; // External SIEM integration
-  sms: string[]; // Критические оповещения
-}
-
-// Типы инцидентов
-enum IncidentType {
-  BRUTE_FORCE = 'brute_force_attack',
-  DATA_BREACH = 'potential_data_breach',
-  SUSPICIOUS_LOGIN = 'suspicious_login_pattern',
-  API_ABUSE = 'api_rate_limit_exceeded',
-  MALWARE = 'malware_detection',
-}
-```
+| Переменная                       | Назначение                          |
+| -------------------------------- | ----------------------------------- |
+| `PG_PASSWORD`                    | Пароль PostgreSQL                   |
+| `JWT_SECRET`                     | Секрет для curator JWT              |
+| `HEYS_ENCRYPTION_KEY`            | Ключ AES-256 шифрования health data |
+| `SMS_API_KEY`                    | SMSC.ru API ключ                    |
+| `YOO_SHOP_ID` / `YOO_SECRET_KEY` | ЮKassa платежи                      |
+| `TELEGRAM_BOT_TOKEN`             | Telegram алерты                     |
 
 ---
 
-## 🔧 Penetration Testing Framework
+## 🚨 Мониторинг и реагирование
 
-### Встроенная система тестирования
+### Автоматический мониторинг (24/7)
 
-```typescript
-// Сканеры безопасности
-class SecurityScanners {
-  xssScanner: XSSScanner; // Cross-site scripting
-  sqlInjectionScanner: SQLScanner; // SQL injection
-  inputValidationScanner: InputScanner; // Input validation
-  authBypassScanner: AuthScanner; // Authentication bypass
-}
+- **GitHub Actions**: проверка API каждые 15 минут
+- **Auto-redeploy**: при 502 Bad Gateway → `./deploy-all.sh`
+- **Telegram алерты**: при сбое API → уведомление в канал
 
-// Автоматические тесты безопасности
-const penTestSuite = {
-  frequency: 'weekly',
-  scope: ['api_endpoints', 'frontend_forms', 'authentication'],
-  reporting: 'automated_to_security_team',
-};
+### Smoke Tests
+
+```bash
+./scripts/security-smoke-test.sh        # против production
+./scripts/security-smoke-test.sh local  # против localhost:4001
 ```
 
-### Vulnerability Assessment
+Что проверяется:
 
-- **OWASP Top 10**: Полная проверка на соответствие
-- **Dependency scanning**: Автоматическая проверка уязвимостей в зависимостях
-- **Code analysis**: Static analysis для обнаружения уязвимостей
-- **Infrastructure testing**: Network и configuration security
+- Phone enumeration fix (единый `invalid_credentials`)
+- Legacy/UUID-функции заблокированы
+- SQL injection защита
+- REST write methods возвращают 405
+- Forbidden tables возвращают 404
+- CORS whitelist работает
+
+### Red Flags
+
+| Симптом                     | Проблема          | Решение                                |
+| --------------------------- | ----------------- | -------------------------------------- |
+| `client_not_found` в ответе | Phone enumeration | Обновить `verify_client_pin_v3`        |
+| UUID-функция отвечает 200   | IDOR              | Убрать из CF allowlist                 |
+| `locked_until` всегда NULL  | Rate-limit сломан | Проверить `increment_pin_attempt`      |
+| 502 на всех endpoints       | CF упал           | `./deploy-all.sh && ./health-check.sh` |
 
 ---
 
-## 📊 Security Metrics & KPIs
+## 🛡️ 152-ФЗ Compliance
 
-### Ключевые метрики безопасности
+**Все данные хранятся в России (Yandex Cloud, ru-central1):**
 
-```typescript
-interface SecurityMetrics {
-  // Инциденты
-  totalIncidents: number;
-  resolvedIncidents: number;
-  meanTimeToDetection: number; // MTTD в минутах
-  meanTimeToResponse: number; // MTTR в минутах
+- PostgreSQL 16 — `rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net` (YC MDB)
+- Object Storage — Yandex S3 (ru-central1)
+- CDN — Yandex CDN
+- Cloud Functions — Yandex Cloud (московский регион)
+- Никаких данных в Vercel, Railway, Supabase, AWS или европейских DC
 
-  // Угрозы
-  blockedAttacks: number;
-  falsePositives: number;
-  threatDetectionAccuracy: number; // %
+**Аналитика отключена:**
 
-  // Compliance
-  encryptedDataPercentage: number; // %
-  auditLogsCoverage: number; // %
-  securityTestsPassed: number; // из общего количества
-}
-```
-
-### Reporting & Compliance
-
-- **Automated reports**: Еженедельные отчеты для команды
-- **Compliance dashboards**: GDPR, CCPA, SOC2 готовность
-- **Audit logs**: Immutable log storage для forensics
-- **Incident timeline**: Detailed incident reconstruction
+- GA4 — не используется
+- Meta Pixel — не используется
+- Sentry — не используется
 
 ---
 
-## 🔄 Incident Response Process
-
-### Этапы реагирования на инциденты
-
-#### 1. Detection (Обнаружение)
-
-```typescript
-// Автоматическое обнаружение
-- Real-time monitoring alerts
-- ML anomaly detection triggers
-- User reported incidents
-- External threat intelligence
-```
-
-#### 2. Analysis (Анализ)
-
-```typescript
-// Классификация инцидента
-- Severity assessment (low/medium/high/critical)
-- Impact analysis (affected users, data, systems)
-- Root cause identification
-- Evidence collection
-```
-
-#### 3. Containment (Локализация)
-
-```typescript
-// Немедленные действия
-- Isolate affected systems
-- Temporary access restrictions
-- Block malicious IPs/users
-- Preserve evidence
-```
-
-#### 4. Eradication (Устранение)
-
-```typescript
-// Устранение угрозы
-- Remove malware/backdoors
-- Patch vulnerabilities
-- Update security controls
-- Strengthen defenses
-```
-
-#### 5. Recovery (Восстановление)
-
-```typescript
-// Возвращение к нормальной работе
-- Restore systems from clean backups
-- Monitor for residual threats
-- Gradual service restoration
-- User communication
-```
-
-#### 6. Lessons Learned (Извлечение уроков)
-
-```typescript
-// Post-incident review
-- Document what happened
-- Identify improvement areas
-- Update procedures
-- Conduct training if needed
-```
-
----
-
-## 🛠️ Security Tools & Integration
-
-### Внутренние инструменты
-
-```typescript
-// Security utilities
-@heys/security-validator    // Input validation & sanitization
-@heys/encryption-service    // Data encryption utilities
-@heys/audit-logger         // Security event logging
-@heys/threat-detection     // ML-based threat detection
-@heys/penetration-testing  // Automated security testing
-```
-
-### Внешние интеграции
-
-- **Sentry**: Error tracking и performance monitoring
-- **Supabase Security**: Database RLS и authentication
-- **Cloudflare**: WAF, DDoS protection, rate limiting
-- **GitHub Security**: Dependency scanning, code analysis
-- **Let's Encrypt**: Automated SSL certificate management
-
----
-
-## 📋 Security Checklist
-
-### Pre-deployment Security Checklist
+## 📋 Security Checklist (перед деплоем)
 
 ```
 ✅ Authentication & Authorization
-  ✅ JWT token validation implemented
-  ✅ Role-based access control configured
-  ✅ Session management secure
-  ✅ Password policies enforced
+  ✅ PIN bcrypt хеши в БД
+  ✅ session_token pattern — нет прямых UUID
+  ✅ Legacy IDOR-функции заблокированы
+  ✅ JWT-секрет установлен и ротируется
 
 ✅ Data Protection
-  ✅ Sensitive data encrypted
-  ✅ Database RLS enabled
-  ✅ API input validation active
-  ✅ XSS protection implemented
+  ✅ HEYS_ENCRYPTION_KEY установлен
+  ✅ Health data ключи шифруются в БД
+  ✅ localStorage health keys зашифрованы AES-256
+  ✅ plaintext только для non-sensitive keys
 
-✅ Threat Detection
-  ✅ Anomaly detection trained
-  ✅ Threat intelligence updated
-  ✅ Security monitoring active
-  ✅ Incident response tested
+✅ Perimeter
+  ✅ CORS только app.heyslab.ru + heyslab.ru
+  ✅ REST write methods → 405
+  ✅ Rate limiting pin_login_attempts активен
+  ✅ Forbidden tables → 404
 
-✅ Infrastructure Security
-  ✅ HTTPS/TLS configured
-  ✅ Security headers set
-  ✅ Rate limiting active
-  ✅ Firewall rules configured
+✅ Compliance
+  ✅ Все данные в Yandex Cloud ru-central1
+  ✅ GA4/Meta Pixel отключены
+  ✅ Логи не содержат ПДн (профили, вес, еда)
 
-✅ Testing & Compliance
-  ✅ Penetration tests passed
-  ✅ Vulnerability scan clean
-  ✅ Security code review done
-  ✅ Compliance requirements met
+✅ Monitoring
+  ✅ GitHub Actions health monitor активен
+  ✅ Telegram алерты настроены
+  ✅ Smoke tests пройдены
 ```
 
 ---
 
-## 🎓 Security Training & Awareness
+## 📚 Связанные документы
 
-### Команда разработки
-
-- **Secure coding practices**: OWASP guidelines
-- **Threat modeling**: Systematic security analysis
-- **Incident response**: Response procedures training
-- **Security tools**: Training on security frameworks
-
-### Пользователи
-
-- **Password security**: Strong password guidelines
-- **Phishing awareness**: Recognition training
-- **Data privacy**: GDPR rights и responsibilities
-- **Safe browsing**: Security best practices
+- [SECURITY_RUNBOOK.md](./SECURITY_RUNBOOK.md) — краткий справочник + smoke
+  tests
+- [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) — деплой и мониторинг
+- `yandex-cloud-functions/INCIDENT_PREVENTION.md` — runbook инцидентов
+- `yandex-cloud-functions/.env` — секреты (не в git)
 
 ---
 
-## 📈 Roadmap безопасности
-
-### Q4 2025
-
-- 🟨 Multi-factor authentication (TOTP)
-- 🟨 Advanced threat hunting capabilities
-- 🟨 Zero-trust architecture implementation
-- 🟨 Enhanced mobile security (certificate pinning)
-
-### Q1 2026
-
-- 🟨 Security orchestration automation
-- 🟨 Behavioral biometrics для fraud detection
-- 🟨 Quantum-safe cryptography preparation
-- 🟨 Advanced API security (OAuth 2.1, FAPI)
-
----
-
-## 📞 Контакты команды безопасности
-
-**Security Team**: security@heys.app  
-**Incident Reporting**: incidents@heys.app  
-**Vulnerability Disclosure**: security-bugs@heys.app
-
-**Emergency Response**: +1-XXX-XXX-XXXX (24/7)
-
----
-
-_Документация системы безопасности обновлена: 2 сентября 2025_  
-_Версия: 2.0.0_  
-_Статус готовности: Production Ready_
+_Документация обновлена: 19 февраля 2026_  
+_Версия: 3.0.0 (Yandex Cloud Infrastructure)_  
+_Статус: Production Ready_

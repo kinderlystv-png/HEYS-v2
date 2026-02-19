@@ -1,313 +1,355 @@
-# 🏗️ Техническая Архитектура HEYS 2025
+# 🏗️ Техническая Архитектура HEYS
+
+> **Версия:** v16.0.0 **Дата обновления:** February 19, 2026 **Статус:** ✅
+> Production Ready — полностью переведено на Yandex Cloud
+
+---
 
 ## 📋 Обзор системы
 
-HEYS - это современная монолитно-модульная система с микросервисной
-архитектурой, построенная на принципах:
+HEYS — нутрициологическая PWA с моделью куратор→клиент. Монорепо (pnpm
+workspaces + Turborepo). Два мира кода сосуществуют:
 
-- **Domain-Driven Design (DDD)**
-- **Clean Architecture**
-- **SOLID принципы**
-- **Event-Driven Architecture**
+| Layer          | Расположение                   | Язык                      | Роль                    |
+| -------------- | ------------------------------ | ------------------------- | ----------------------- |
+| **Legacy v12** | `apps/web/` root (`heys_*.js`) | Vanilla JS + inline React | Production runtime      |
+| **Modern**     | `packages/*`, `apps/web/src/`  | TypeScript + React        | Новые фичи, shared libs |
+
+**152-ФЗ compliance**: все данные исключительно в Yandex Cloud (Россия,
+ru-central1). Supabase SDK удалён 2025-12-24.
 
 ---
 
 ## 🏛️ Архитектурные слои
 
-### 1. **Presentation Layer** (UI/Frontend)
+### 1. Presentation Layer (UI/Frontend)
 
 ```
-apps/web/          - Основное веб-приложение (Vite + React/Vue)
-apps/mobile/       - Мобильное приложение
-apps/desktop/      - Десктопное приложение
-packages/ui/       - Переиспользуемые UI компоненты
+apps/web/          - PWA (Vite + React 18), порт 3001
+apps/landing/      - Маркетинговый лендинг (Next.js 14), порт 3003
+apps/tg-mini/      - Telegram Mini App, порт 3002
+apps/mobile/       - ⚠️ ОТКЛЮЧЕНО (не в активной разработке)
 ```
 
-### 2. **Application Layer** (Business Logic)
+### 2. Application Layer (Business Logic)
 
 ```
-packages/core/     - Основная бизнес-логика и API
-packages/analytics/    - Аналитика и метрики
-packages/gaming/   - Игровая механика
-packages/search/   - Поиск и индексирование
+packages/core/         - Express API (порт 4001 локально), бизнес-логика
+packages/analytics/    - Аналитические модули
+packages/search/       - Умный поиск (typo-correction, fuzzy matching)
+packages/logger/       - Централизованное логирование
 ```
 
-### 3. **Domain Layer** (Domain Models)
+### 3. Domain Layer (Shared Models)
 
 ```
-packages/shared/   - Общие модели, утилиты и типы
-types/            - TypeScript определения
+packages/shared/   - Общие типы, DB-слой, day-logic, security, performance
+packages/ui/       - Переиспользуемые UI-компоненты
+packages/storage/  - Data persistence layer
 ```
 
-### 4. **Infrastructure Layer** (External Services)
+### 4. Infrastructure Layer (Serverless)
 
 ```
-packages/storage/     - Управление данными и хранилище
-packages/threat-detection/ - Безопасность и анализ угроз
-packages/analytics-dashboard/ - Дашборд аналитики
+yandex-cloud-functions/
+├── heys-api-rpc/      - RPC-вызовы PostgreSQL функций
+├── heys-api-rest/     - REST API для таблиц (GET-only)
+├── heys-api-auth/     - Аутентификация (куратор JWT + клиент PIN)
+├── heys-api-sms/      - SMS через SMSC.ru
+├── heys-api-leads/    - Обработка лидов с лендинга
+├── heys-api-health/   - Health check endpoint
+└── heys-api-payments/ - Платежи (ЮKassa)
 ```
 
 ---
 
 ## 🔧 Технологический стек
 
-### **Frontend Stack**
+### Frontend Stack
 
 - **Framework**: Vite 6.x + React 18.x
-- **TypeScript**: 5.9.x для типобезопасности
-- **State Management**: Zustand/Context API
-- **Styling**: Tailwind CSS + CSS Modules
-- **Testing**: Vitest + @testing-library
+- **TypeScript**: strict mode (`noUnusedLocals`, `exactOptionalPropertyTypes`,
+  `noUncheckedIndexedAccess`)
+- **State Management**: Vanilla JS HEYS global object + React hooks (scoped
+  store)
+- **Styling**: Tailwind CSS (приоритет) + BEM в `styles/heys-components.css`
+- **Testing**: Vitest (happy-dom env, 10s timeout, v8 coverage ≥ 80%)
+- **E2E**: Playwright
 
-### **Backend Stack**
+### Backend Stack
 
-- **Runtime**: Node.js 20.x
-- **API Framework**: Express.js 4.x
-- **Database**: PostgreSQL + Supabase
-- **ORM**: Prisma/Supabase Client
-- **Authentication**: Supabase Auth
+- **Runtime**: Node.js 18+ (Express.js 4.x на порту 4001 локально)
+- **Serverless**: Yandex Cloud Functions (Node.js 18 runtime, 9 функций: 7 API +
+  backup + maintenance)
+- **Database**: Yandex Cloud PostgreSQL 16
+  (`rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net:6432`)
+- **Auth**: `heys-api-auth` YCF → JWT (куратор) + phone+PIN → session_token
+  (клиент)
+- **ORM**: нет — прямые SQL запросы через `pg` (node-postgres)
 
-### **DevOps & Infrastructure**
+### DevOps & Infrastructure
 
-- **Package Manager**: PNPM (workspace)
+- **Package Manager**: pnpm 8.10+, Node >= 18
 - **Build System**: Turbo + Vite
-- **CI/CD**: GitHub Actions
-- **Containerization**: Docker + Docker Compose
-- **Deployment**: Vercel/Netlify (frontend), Railway/Heroku (backend)
+- **CI/CD**: GitHub Actions (lint, tests, API мониторинг каждые 15 мин)
+- **Frontend хостинг**: Nginx VM → Yandex S3 (PWA), Yandex CDN (лендинг)
+- **API хостинг**: Yandex Cloud Functions (9 функций, api.heyslab.ru)
+- **Секреты**: `yandex-cloud-functions/.env` → деплой через `deploy-all.sh`
 
-### **Security & Monitoring**
+### Security & Monitoring
 
-- **Security Headers**: Helmet.js
-- **Input Validation**: Zod schemas
-- **Threat Detection**: Custom ML-based system
-- **Monitoring**: Custom analytics + Sentry integration
-- **CORS**: Configured for production domains
+- **Клиент auth**: Телефон + PIN → `client_pin_auth` RPC → `session_token`
+- **Куратор auth**: Email + пароль → `heys-api-auth` → JWT
+- **Мониторинг**: GitHub Actions проверяет API каждые 15 минут (24/7)
+- **Алерты**: Telegram уведомления при сбоях API
+- **Health**: `./health-check.sh` проверяет все эндпоинты
+- **152-ФЗ**: Все данные в Yandex Cloud (Россия, ru-central1)
 
 ---
 
 ## 📊 Архитектура данных
 
-### **Database Schema**
+### Database Schema (реальные таблицы)
 
 ```sql
 -- Основные таблицы
-users               -- Пользователи
-days                -- Дневниковые записи
-food_entries        -- Записи о питании
-training_sessions   -- Тренировочные сессии
-achievements        -- Достижения в играх
-security_events     -- События безопасности
-audit_logs          -- Аудит действий
+clients              -- (id UUID, name, phone_normalized, pin_hash, curator_id, updated_at)
+kv_store             -- KV-хранилище кураторов (key, value, user_id)
+client_kv_store      -- KV клиентов (client_id, k, v JSONB, v_encrypted BYTEA, key_version SMALLINT)
+                     -- PRIMARY KEY (client_id, k)
+consents             -- ПЭП-согласия согласно 152-ФЗ
+shared_products      -- Общая база продуктов (~300+ позиций)
+
+-- Auth
+pin_login_attempts   -- Rate-limit PIN (phone, ip INET, attempts, locked_until)
+client_sessions      -- Сессии (token_hash BYTEA — сам токен НЕ хранится)
+
+-- Trial Machine v3.0
+leads                -- Лиды с лендинга (id UUID, name, phone, utm_source, status)
+trial_queue          -- status: queued|offer|assigned|canceled|canceled_by_purchase|expired
+trial_queue_events   -- queued|offer_sent|claimed|offer_expired|canceled|purchased
+
+-- Payments
+payment_orders, subscriptions (active_until)
 ```
 
-### **Data Flow**
+### LocalStorage Keys (namespace: clientId-scoped через U.lsSet/lsGet)
+
+| Ключ паттерн         | Описание                  | Шифрование   |
+| -------------------- | ------------------------- | ------------ |
+| `heys_profile`       | ПДн + health данные       | ✅ AES-256   |
+| `heys_dayv2_{date}`  | Дневник питания, сон, вес | ✅ AES-256   |
+| `heys_hr_zones`      | Пульсовые зоны            | ✅ AES-256   |
+| `heys_products`      | База продуктов            | ❌ Plaintext |
+| `heys_norms`         | Нормы питания             | ❌ Plaintext |
+| `heys_ews_weekly_v1` | EWS недельный прогресс    | ❌ Plaintext |
+
+**⚠️ ПРАВИЛО**: всегда используй `U.lsSet/lsGet` или Store API
+(`HEYS.products.getAll()`). Прямой `localStorage.setItem/getItem` нарушает
+namespacing.
+
+### Data Flow
 
 ```
-1. Frontend (UI) → API Gateway → Business Logic
-2. Business Logic → Domain Services → Data Layer
-3. Events → Analytics Pipeline → Dashboards
-4. Security Events → Threat Detection → Incident Response
+Event Source → Event Bus → Event Handlers → Side Effects
+1. Клиент → PIN auth → session_token → localStorage
+2. App start → syncClient(clientId) → batch RPC → localStorage (scoped)
+3. User action → Store API → localStorage (scoped) + cloud queue
+4. Cloud queue → background sync → batch_upsert_client_kv_by_session → PostgreSQL
+5. Insights → pi_thresholds → pi_early_warning → pi_constants → UI
 ```
 
 ---
 
 ## 🔐 Система безопасности
 
-### **Authentication & Authorization**
+### Аутентификация и авторизация
 
-- **JWT токены** через Supabase Auth
-- **Role-based access control** (RBAC)
-- **Session management** с автоматическим истечением
-- **Multi-factor authentication** (готовность)
-
-### **Data Protection**
-
-- **Field-level encryption** для чувствительных данных
-- **Input sanitization** через DOMPurify
-- **SQL injection protection** через parameterized queries
-- **XSS protection** через CSP headers
-
-### **Threat Detection Engine**
-
-```typescript
-// Компоненты системы безопасности
-AnomalyDetectionEngine; // ML-анализ аномалий
-ThreatIntelligenceEngine; // Анализ угроз
-SecurityAnalyticsService; // Агрегация событий безопасности
-PenetrationTestFramework; // Автоматическое тестирование безопасности
 ```
+Куратор (нутрициолог):
+  email+password → heys-api-auth (YCF) → bcrypt verify → JWT токен
+  Хранится: localStorage['heys_curator_session']
+  Передаётся: Authorization: Bearer <JWT>
+
+Клиент:
+  phone → get_client_salt RPC → PIN + bcrypt crypt() → client_pin_auth RPC → session_token (UUID)
+  Хранится: localStorage['heys_session_token']
+  Передаётся: X-Session-Token: <token>
+```
+
+### IDOR Protection
+
+- Все клиентские RPC используют паттерн `*_by_session` — `client_id` никогда не
+  передаётся напрямую
+- Заблокированные legacy функции: `verify_client_pin`, `get_client_data`,
+  `upsert_client_kv` и др.
+
+### Шифрование данных
+
+- **Health data at rest**: Cloud Function → `SET heys.encryption_key` →
+  PostgreSQL AES-256 (`v_encrypted` BYTEA)
+- **Client-side**: `heys_profile`, `heys_dayv2_*`, `heys_hr_zones` → AES-256 в
+  localStorage
+
+### CORS
+
+Только `app.heyslab.ru` и `heyslab.ru` — другие origins возвращают 403.
+
+### PIN Rate Limiting
+
+`pin_login_attempts` (phone, ip INET) — блокировка через `locked_until` после N
+попыток.
 
 ---
 
 ## ⚡ Производительность
 
-### **Frontend Optimizations**
+### Стратегия кэширования
 
-- **Code splitting** по маршрутам и компонентам
-- **Lazy loading** для тяжелых компонентов
-- **Bundle optimization** через Vite
-- **Service Workers** для кеширования
-- **Mobile performance optimizer** для мобильных устройств
+- **LocalStorage** (scoped по clientId) — мгновенный доступ, offline-first
+- **Adaptive Thresholds Cache** (`pi_thresholds.js`) — TTL 12-72ч на основе
+  поведенческой стабильности
+- **EWS Weekly Cache** (`heys_ews_weekly_v1`) — прогресс за неделю
+- **Yandex CDN** — статические ресурсы лендинга
+- **Service Worker** (PWA) — offline кэш + background sync
 
-### **Backend Optimizations**
+### Module Limits
 
-- **Connection pooling** для базы данных
-- **Redis caching** для часто запрашиваемых данных
-- **API response compression** (gzip/brotli)
-- **Database query optimization** с индексами
-- **Background job processing** для тяжелых операций
-
-### **Performance Metrics**
-
-- **Core Web Vitals**: LCP < 2.5s, FID < 100ms, CLS < 0.1
-- **Lighthouse Score**: 90+ баллов по всем категориям
-- **API Response Time**: < 200ms для основных endpoints
-- **Database Query Time**: < 50ms для простых запросов
+- LOC ≤ 2000 строк на модуль
+- Функции ≤ 80 строк
+- `HEYS.*` ссылок ≤ 50 на файл
 
 ---
 
-## 🔄 Event-Driven Architecture
+## 🧩 Insights-система (v5.x)
 
-### **Event Types**
+Все модули в `apps/web/insights/`:
 
-```typescript
-// Основные события системы
-UserEvents; // Регистрация, логин, обновление профиля
-ContentEvents; // Создание, обновление, удаление записей
-AnalyticsEvents; // Метрики использования, поведенческие данные
-SecurityEvents; // Подозрительная активность, нарушения безопасности
-SystemEvents; // Ошибки, мониторинг, health checks
-```
-
-### **Event Processing Pipeline**
-
-```
-Event Source → Event Bus → Event Handlers → Side Effects
-                    ↓
-           Analytics Storage → Dashboards & Reports
-```
+| Модуль                   | Версия | Назначение                                        |
+| ------------------------ | ------ | ------------------------------------------------- |
+| `pi_stats.js`            | v3.5.0 | 27 функций (Bayesian, CI, outliers) — 131 тест    |
+| `pi_thresholds.js`       | v2.0.0 | Адаптивные пороги (cascade, TTL 12-72h, Bayesian) |
+| `pi_early_warning.js`    | v4.2   | 25 предупреждений, Global Score 0-100, Dual-Mode  |
+| `pi_causal_chains.js`    | v1.0   | 6 причинно-следственных цепочек                   |
+| `pi_constants.js`        | v4.3.0 | Dynamic Priority Badge, SECTION_PRIORITY_RULES    |
+| `pi_phenotype.js`        | —      | Фенотипический профиль EWS (4 типа)               |
+| `pi_patterns.js`         | —      | Паттерны питания и корреляций                     |
+| `pi_meal_recommender.js` | —      | Рекомендатор приёмов пищи                         |
+| `pi_product_picker.js`   | —      | Подборка продуктов                                |
+| `pi_whatif.js`           | —      | What-if сценарии                                  |
+| `pi_feedback_loop.js`    | —      | Обратная связь (паттерны → рекомендации)          |
+| `pi_analytics_api.js`    | —      | Аналитический API                                 |
 
 ---
 
 ## 🧪 Тестирование
 
-### **Testing Strategy**
+```bash
+pnpm test:run     # vitest run (однократный прогон)
+pnpm test:all     # vitest + coverage
+pnpm test:e2e     # Playwright E2E
+pnpm arch:check   # Архитектурные правила
+```
 
-- **Unit Tests**: 80%+ покрытие кода
-- **Integration Tests**: API endpoints и database interactions
-- **E2E Tests**: Критические пользовательские сценарии
-- **Security Tests**: Penetration testing framework
-- **Performance Tests**: Load testing критических endpoints
+- **Покрытие**: v8 coverage ≥ 80%
+- **Ключевые тесты**: `apps/web/insights/pi_stats.test.js` — 131 тест, 100%
 
-### **Current Test Status**
+### CI/CD Pipeline (GitHub Actions)
+
+```
+1. Lint + TypeScript check
+2. Unit tests (vitest)
+3. Build check (pnpm build)
+4. API Health Monitor (каждые 15 мин + после каждого push)
+   → Health + RPC + REST endpoints
+   → Auto-redeploy при 502 ошибках
+   → Telegram алерты
+```
+
+---
+
+## 🚀 Архитектура деплоя
+
+### Production Infrastructure
+
+```
+┌────────────────────────────────────────────────────┐
+│                   PRODUCTION                       │
+├────────────────────────────────────────────────────┤
+│  app.heyslab.ru  → Nginx VM → Yandex S3 (PWA)     │
+│  heyslab.ru      → Yandex CDN → S3 (Landing)      │
+│  api.heyslab.ru  → Yandex Cloud Functions          │
+│  DB              → Yandex Cloud PostgreSQL 16      │
+│                    rc1b-obkgs83tnrd6a2m3 :6432     │
+└────────────────────────────────────────────────────┘
+```
+
+### Деплой Cloud Functions
 
 ```bash
-✅ Tests Passed: 450/457 (98.5% success rate)
-🟨 Failed Tests: 7 (dependency issues, being fixed)
-📊 Code Coverage: 85%+ across all packages
-🔐 Security Tests: All passing
+cd yandex-cloud-functions
+./validate-env.sh            # Проверить секреты перед деплоем
+./health-check.sh            # Текущее состояние endpoints
+./deploy-all.sh <function>   # Задеплоить одну или все функции
+sleep 15                     # Дождаться warmup
+./health-check.sh            # Убедиться, что деплой прошёл
 ```
+
+### При 502 Bad Gateway
+
+```bash
+cd yandex-cloud-functions
+./deploy-all.sh              # Передеплоить все функции
+./health-check.sh --watch    # Мониторить восстановление
+```
+
+**Важно**: секреты только в `yandex-cloud-functions/.env` + YC Console.
+**Никогда** не через YC CLI (утечка в stdout).
 
 ---
 
-## 🚀 Deployment Architecture
+## 📈 Мониторинг
 
-### **Environment Strategy**
+### Health Checks
 
-```
-Development   → Local + Docker Compose
-Staging       → Staging environment (production-like)
-Production    → Multi-zone deployment с failover
-```
+- `./health-check.sh` — проверяет все YCF эндпоинты
+- `./validate-env.sh` — валидирует секреты перед деплоем
+- GitHub Actions API Monitor — каждые 15 мин, автоматический redeploy при 502
+- Telegram алерты при сбоях
 
-### **CI/CD Pipeline**
-
-```yaml
-# GitHub Actions workflow
-1. Code Quality Check (ESLint, Prettier, TypeScript) 2. Security Scan
-(dependency vulnerabilities) 3. Unit & Integration Tests 4. Build & Bundle
-Optimization 5. E2E Tests on staging 6. Production Deployment (blue-green) 7.
-Post-deployment Health Checks
-```
-
-### **Infrastructure Components**
-
-- **Load Balancer**: NGINX/Cloudflare
-- **Application Servers**: Node.js clusters
-- **Database**: PostgreSQL with read replicas
-- **Cache Layer**: Redis for sessions & frequently accessed data
-- **File Storage**: Supabase Storage/S3 for static assets
-- **CDN**: Cloudflare для global content delivery
-
----
-
-## 📈 Мониторинг и observability
-
-### **Application Monitoring**
-
-- **Health Checks**: Automated endpoint monitoring
-- **Error Tracking**: Sentry integration для exception handling
-- **Performance Monitoring**: Custom metrics для key business processes
-- **User Analytics**: Behavioral tracking и usage patterns
-
-### **Data Quality Monitoring** (v4.8.8)
-
-**DEBUG Logs** (активны во время тестирования):
+### Data Quality Monitoring (v4.8.8)
 
 ```javascript
-// 1. Post-sync data verification
+// Post-sync verifications
 console.info(
   `[HEYS.sync] 🔍 After sync: loadedProducts.length=${x}, withIron=${y}`,
 );
-// Ожидаемое: withIron=290 (не 0 или 42)
+// Ожидаемое: withIron ≈ 290 (не 0 или 42)
 
-// 2. React state update tracking
-console.info(
-  `[HEYS.sync] 🔄 React state updated: ${prev}→${next} products, ${a}→${b} with iron`,
-);
-// OR: console.info(`[HEYS.sync] 🚫 React state NOT updated (same quality)`);
-
-// 3. Quality check blocks (критические)
-console.error(
-  `[HEYS.storage] 🚨 SAVE BLOCKED: only ${x} products with iron (expected 250+)`,
-);
+// Quality checks (critical)
+console.error(`[HEYS.storage] 🚨 SAVE BLOCKED: only ${x} products with iron`);
+// Не должно появляться в prod после v4.8.8
 ```
 
-**Monitoring Checklist**:
+**Мониторинг чеклист**:
 
-- ✅ `withIron=290` после каждого sync (не меньше)
-- ✅ `React state updated` должен быть редким (данные не меняются часто)
-- ✅ `SAVE BLOCKED` НЕ должен появляться после v4.8.8 fix
+- ✅ `withIron ≈ 290` после каждого sync
+- ✅ `SAVE BLOCKED` не появляется
 - ⚠️ Любой `withIron < 100` = ИНЦИДЕНТ → проверить namespacing
-
-**Purpose**: Раннее обнаружение регрессий защитного слоя (quality checks) и
-React state sync
-
-### **Infrastructure Monitoring**
-
-- **Server Metrics**: CPU, память, disk, network
-- **Database Performance**: Query performance, connection pools
-- **Cache Efficiency**: Redis hit rates и memory usage
-- **Security Monitoring**: Real-time threat detection и incident response
 
 ---
 
-## 📚 Документация и соответствие
+## 📚 Стандарты кода
 
-### **Documentation Standards**
-
-- **API Documentation**: OpenAPI 3.0 specifications
-- **Code Documentation**: JSDoc для всех public APIs
-- **Architecture Decisions**: ADR (Architecture Decision Records)
-- **Deployment Guides**: Step-by-step deployment procedures
-- **User Manuals**: End-user documentation и tutorials
-
-### **Compliance & Standards**
-
-- **GDPR Compliance**: Data protection и user privacy
-- **Security Standards**: OWASP Top 10 protection
-- **Code Quality**: ESLint, Prettier, TypeScript strict mode
-- **Performance Standards**: Web Vitals и accessibility guidelines
+- **Commit format**: `feat|fix|docs|refactor|perf|test|chore: message` (max 100
+  chars, commitlint enforced)
+- **Path aliases**: `@heys/core`, `@heys/shared`, `@heys/logger`,
+  `@heys/search`, `@heys/storage`, `@heys/ui`
+- **CSS**: Tailwind > BEM в `styles/heys-components.css` > inline styles ВСЕГДА
+  ЗАПРЕЩЕНЫ
+- **Logging**: `console.info('[HEYS.module] ✅ Action')` — никогда `console.log`
+  в коммитах
+- **GDPR/152-ФЗ**: никогда не логировать ПДн (профиль, питание, вес)
 
 ---
 
@@ -365,30 +407,25 @@ const products = window.HEYS?.products?.getAll?.() || [];
 **Файлы**:
 
 - `apps/web/heys_app_sync_effects_v1.js` (React hooks, v4.8.8)
-- `apps/web/public/heys_storage_supabase_v1.js` (sync + quality checks, v4.8.6)
-- `apps/web/public/heys_core_v12.js` (products API)
-- `apps/web/public/heys_storage_layer_v1.js` (Store implementation)
+- `apps/web/heys_storage_supabase_v1.js` (sync + quality checks)
+- `apps/web/heys_core_v12.js` (products API)
+- `apps/web/heys_storage_layer_v1.js` (Store implementation)
 
 ---
 
 ## �🔮 Будущее развитие
 
-### **Planned Enhancements**
+---
 
-- **Microservices Migration**: Постепенный переход к микросервисам
-- **GraphQL API**: Для более эффективных data fetching
-- **Real-time Features**: WebSockets для live updates
-- **AI/ML Integration**: Персонализация и recommendation engine
-- **Progressive Web App**: Enhanced mobile experience
+## 🔮 Будущее развитие
 
-### **Scalability Roadmap**
-
-- **Horizontal Scaling**: Multi-region deployment
-- **Database Sharding**: Для handling больших объемов данных
-- **Event Sourcing**: Для аудита и eventual consistency
-- **CQRS Pattern**: Separation of command и query responsibilities
+- **Adaptive Thresholds v2.1**: Инкрементальные rolling-window обновления
+  (отложено)
+- **Trial Machine v3.1**: Дополнительные опции активации триала
+- **Payments**: ЮKassa интеграция (`heys-api-payments`)
+- **SMS verification**: Усиление ПЭП при масштабировании (>50 клиентов)
 
 ---
 
-_Документ обновлен: 12 февраля 2026_  
-_Статус системы: 100% production ready (v4.8.8)_
+_Документ обновлен: February 19, 2026_ _Версия системы: v5.0.1 (production
+stable)_

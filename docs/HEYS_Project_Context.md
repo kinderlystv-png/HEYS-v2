@@ -1,3 +1,10 @@
+# HEYS Project Context - ⚠️ REFERENCE ONLY (Outdated)
+
+> **Status:** ARCHIVED / HISTORICAL  
+> **Relevance:** August 2025 snapshot. See `HEYS_BRIEF.md` for current context.
+
+---
+
 # HEYS Project Context - Актуализация 26.08.2025
 
 ## 🚀 НОВЕЙШИЕ СИСТЕМЫ (Август 2025):

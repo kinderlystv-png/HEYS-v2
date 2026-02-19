@@ -1,8 +1,7 @@
 # 🏗️ HEYS Platform Architecture
 
-> **System Architecture Overview**  
-> **Version:** 15.0.0 (v4.8.8 — React State Sync Fix)  
-> **Last Updated:** February 12, 2026
+> **System Architecture Overview** **Version:** 15.1.0 (Supabase → Yandex Cloud
+> migration documented) **Last Updated:** February 19, 2026
 
 ## 📊 High-Level Architecture Diagram
 
@@ -10,11 +9,11 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                      🌐 CLIENT LAYER                           │
 ├─────────────────────────────────────────────────────────────────┤
-│  📱 Web App        📱 Mobile App       🖥️ Desktop App         │
-│  (React 18)        (React Native)     (Electron)              │
-│  ├─ PWA            ├─ iOS/Android     ├─ Windows/macOS/Linux  │
-│  ├─ Service Worker ├─ Native Bridge   ├─ System Integration   │
-│  └─ Offline First  └─ Push Notifs     └─ Auto-updater        │
+│  📱 PWA (app.heyslab.ru)     💬 Telegram Mini App              │
+│  (React 18 + Vite)        (apps/tg-mini)                   │
+│  ├─ Service Worker           ├─ Vite app                       │
+│  ├─ Offline First            ├─ Telegram API               │
+│  └─ LocalStorage cache        └─ Same API backend            │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                         🔄 HTTPS/WSS
@@ -26,7 +25,7 @@
 │  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐      │
 │  │ 🧠 Core Logic │  │ 🔐 Security   │  │ 🔌 Integration│      │
 │  │               │  │               │  │               │      │
-│  │ • User Mgmt   │  │ • Auth Layer  │  │ • Supabase    │      │
+│  │ • User Mgmt   │  │ • Auth Layer  │  │ • Yandex Cloud│      │
 │  │ • Nutrition   │  │ • Validation  │  │ • REST APIs   │      │
 │  │ • Training    │  │ • XSS Guard   │  │ • WebSockets  │      │
 │  │ • Analytics   │  │ • Input San.  │  │ • File System │      │
@@ -52,7 +51,7 @@
 │                                                                 │
 │  ┌─────────────────┐           ┌─────────────────┐              │
 │  │ 🏛️ Legacy Core   │◄─────────►│ ☁️ Modern Cloud │              │
-│  │ (localStorage)  │  Sync     │ (Supabase)      │              │
+│  │ (localStorage)  │  Sync     │ (Yandex Cloud)  │              │
 │  │                 │           │                 │              │
 │  │ • Fast Access   │           │ • PostgreSQL    │              │
 │  │ • Offline Mode  │           │ • Real-time     │              │
@@ -65,14 +64,16 @@
 │  │ 📋 DATABASE SCHEMA                                          │ │
 │  │                                                             │ │
 │  │ Tables:                                                     │ │
-│  │ • clients (id, name, curator_id, timestamps)               │ │
+│  │ • clients (id, name, phone_normalized, pin_hash, curator_id)│ │
 │  │ • kv_store (id, user_id, k, v, timestamps)                 │ │
-│  │ • client_kv_store (user_id, client_id, k, v, ...)          │ │
-│  │   ↳ PRIMARY KEY (client_id, k) — клиент = 1 куратор        │ │
-│  │ • user_profiles (nutrition, training, preferences)         │ │
-│  │ • food_database (nutritional information)                  │ │
-│  │ • training_plans (workout routines, exercises)             │ │
-│  │ • analytics_data (performance metrics, reports)            │ │
+│  │ • client_kv_store (client_id, k, v, v_encrypted, ...)      │ │
+│  │   ⤵ PRIMARY KEY (client_id, k)                             │ │
+│  │ • client_sessions (id, client_id, token_hash BYTEA)        │ │
+│  │ • shared_products (id, name, nutrients, harm, ...)         │ │
+│  │ • consents (client_id, type, accepted_at)                  │ │
+│  │ • pin_login_attempts (phone, ip INET, locked_until)        │ │
+│  │ • leads (id UUID, name, phone, utm_source, status)         │ │
+│  │ • trial_queue + payment_orders + subscriptions             │ │
 │  └─────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -117,15 +118,15 @@ packages/core/
 
 ```
 apps/
-├── web/                 # React web application
+├── web/                 # React web application (PWA, port 3001)
 │   ├── src/
 │   │   ├── components/  # React components
 │   │   ├── pages/       # Application pages
 │   │   ├── hooks/       # Custom React hooks
 │   │   └── utils/       # Utility functions
 │   └── public/          # Static assets
-├── mobile/              # React Native mobile app
-└── desktop/             # Electron desktop app
+├── mobile/              # React Native mobile app (❌ DISABLED)
+└── tg-mini/             # Telegram Mini App (port 3002)
 ```
 
 ### 3. Shared Packages
@@ -154,7 +155,7 @@ packages/
 │  └── DDoS Protection                                           │
 │                                                                 │
 │  🔐 Authentication Layer                                        │
-│  ├── Supabase Auth (JWT tokens)                               │
+│  ├── Session-based Auth (PIN + Yandex Cloud Functions)        │
 │  ├── Session Management                                        │
 │  ├── Multi-factor Authentication                               │
 │  └── OAuth Integration                                         │
@@ -232,7 +233,7 @@ packages/
                         🔄 Bidirectional Sync
                                 │
 ┌─────────────────────────────────────────────────────────────────┐
-│                  ☁️ CLOUD STORAGE (Supabase)                   │
+│                  ☁️ CLOUD STORAGE (Yandex Cloud)              │
 ├─────────────────────────────────────────────────────────────────┤
 │ • Multi-device Access     • Real-time Updates                  │
 │ • Backup & Recovery        • Collaborative Features            │

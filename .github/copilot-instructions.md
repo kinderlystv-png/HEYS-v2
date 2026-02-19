@@ -75,8 +75,9 @@ Do NOT convert legacy to TypeScript unless explicitly asked.
 `packages/shared` (types, DB, day-logic, security, performance), `packages/ui`,
 `packages/analytics`, `packages/storage`, `packages/search`
 
-**Serverless**: 7 Yandex Cloud Functions at `api.heyslab.ru` — see
-`yandex-cloud-functions/` (rpc, rest, auth, sms, leads, health, payments)
+**Serverless**: 9 Yandex Cloud Functions at `api.heyslab.ru` — see
+`yandex-cloud-functions/` (rpc, rest, auth, sms, leads, health, payments +
+backup, maintenance)
 
 ---
 
@@ -255,14 +256,16 @@ localStorage.setItem('heys_products', …);  // ❌ Breaks namespacing
 
 ### Data model gotchas
 
-| Wrong                        | Correct                                     | Why                                               |
-| ---------------------------- | ------------------------------------------- | ------------------------------------------------- |
-| `dayTot.protein`             | `dayTot.prot`                               | Short form everywhere                             |
-| `item.category`              | `getProductFromItem(item, pIndex).category` | MealItem has NO category                          |
-| `heys_day_{date}`            | `heys_dayv2_{date}`                         | v2 prefix required                                |
-| `product.harmScore`          | `product.harm`                              | `harm` is canonical                               |
-| protein = 4 kcal/g           | protein = **3** kcal/g                      | TEF-adjusted formula                              |
-| `pi_stats.js` = 24 functions | `pi_stats.js` = **27** functions            | v3.5.0: added Bayesian, CI, outliers (15.02.2026) |
+| Wrong                             | Correct                                     | Why                                                                |
+| --------------------------------- | ------------------------------------------- | ------------------------------------------------------------------ |
+| `dayTot.protein`                  | `dayTot.prot`                               | Short form everywhere                                              |
+| `item.category`                   | `getProductFromItem(item, pIndex).category` | MealItem has NO category                                           |
+| `heys_day_{date}`                 | `heys_dayv2_{date}`                         | v2 prefix required                                                 |
+| `product.harmScore`               | `product.harm`                              | `harm` is canonical                                                |
+| protein = 4 kcal/g                | protein = **3** kcal/g                      | TEF-adjusted formula                                               |
+| `pi_stats.js` = 24 functions      | `pi_stats.js` = **27** functions            | v3.5.0: added Bayesian, CI, outliers (15.02.2026)                  |
+| `heys_advice_v1.js` = analytics   | **DEPRECATED shim** (42 LOC)                | Real logic in `advice/` module system                              |
+| `pi_early_warning.js` header v3.2 | Runtime dispatches **v4.2.0** event         | Header not updated, but has 25 warnings + Global Score + Phenotype |
 
 ### Adaptive Thresholds — v2.0 ✅
 
@@ -291,7 +294,7 @@ localStorage.setItem('heys_products', …);  // ❌ Breaks namespacing
   Section 8
 
 ```javascript
-// Core module: apps/web/insights/pi_thresholds.js (~1040 LOC, v2.0.0)
+// Core module: apps/web/insights/pi_thresholds.js (~1080 LOC, v2.0.0)
 getAdaptiveThresholds(days, profile, pIndex) {
   // 1. CACHE FIRST
   // 2. Adaptive TTL (12-72h) based on behavior stability
@@ -325,7 +328,8 @@ getAdaptiveThresholds(days, profile, pIndex) {
 
 ### Auth modes
 
-- **Curator** (nutritionist): Supabase user, full sync, `_rpcOnlyMode=false`
+- **Curator** (nutritionist): JWT via heys-api-auth, full sync,
+  `_rpcOnlyMode=false`
 - **PIN auth** (client): phone+PIN via session_token, `_rpcOnlyMode=true`
 - Universal: `await HEYS.cloud.syncClient(clientId)` auto-selects strategy
 
@@ -355,14 +359,14 @@ When API returns 502 or auth fails, redeploy production cloud functions:
 
 ```bash
 cd yandex-cloud-functions
-./deploy-all.sh                    # Deploy all 6 functions
+./deploy-all.sh                    # Deploy all API functions
 ./deploy-all.sh heys-api-auth      # Deploy single function
 ./health-check.sh                  # Verify all endpoints after deploy
 ```
 
 Secrets managed in `yandex-cloud-functions/.env` (PG_PASSWORD, JWT_SECRET, etc).
-Never edit env vars through YC Console — always use centralized `deploy-all.sh`
-script for consistency.
+Always use centralized `deploy-all.sh` script for deployments — it reads `.env`
+and passes secrets consistently to all functions.
 
 **Health monitoring**: `./health-check.sh` checks all endpoints,
 `./validate-env.sh` validates secrets before deploy. GitHub Actions monitors API
@@ -388,15 +392,33 @@ every 15 minutes. See
 
 ## Key Files
 
-| Category     | Files                                                    |
-| ------------ | -------------------------------------------------------- |
-| Core runtime | `heys_app_v12.js`, `heys_core_v12.js`, `heys_day_v12.js` |
-| Auth         | `heys_auth_v1.js`, `heys_storage_supabase_v1.js`         |
-| Analytics    | `heys_advice_v1.js`, `heys_insulin_wave_v1.js`           |
-| API          | `heys_yandex_api_v1.js`                                  |
-| PWA          | `public/sw.js`, `heys_day_offline_sync_v1.js`            |
-| API server   | `packages/core/src/server.js` (Express, port 4001)       |
-| Shared types | `packages/shared/src/types/`                             |
+| Category      | Files                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------- |
+| Entry points  | `heys_app_v12.js` (62 LOC proxy → AppEntry), `heys_day_v12.js` (14 LOC proxy → DayTab)                        |
+| Core runtime  | `heys_core_v12.js` (product search, localStorage, RationTab)                                                  |
+| Auth & Cloud  | `heys_auth_v1.js`, `heys_storage_supabase_v1.js` (v61, cloud sync + offline race fix)                         |
+| Bootstrap     | `heys_bootstrap_v1.js` (app init, dependency management)                                                      |
+| Widgets       | `heys_widgets_core_v1.js` (Grid Engine, D&D, State Manager)                                                   |
+| Paywall/Trial | `heys_paywall_v1.js`, `heys_trial_queue_v1.js`, `heys_subscriptions_v1.js`                                    |
+| Cascade Card  | `heys_cascade_card_v1.js` (v1.2.1, decision chain visualization)                                              |
+| Phenotype     | `heys_phenotype_v1.js` (metabolic phenotype + radar chart)                                                    |
+| Consents      | `heys_consents_v1.js` (ПЭП, 152-ФЗ compliance)                                                                |
+| Analytics     | `heys_insulin_wave_v1.js` (v4.2.2, orchestrator, 37 factors)                                                  |
+| Insights Core | `insights/pi_stats.js` (v3.5.0, 27 functions), `insights/pi_thresholds.js` (v2.0.0)                           |
+| Insights EWS  | `insights/pi_early_warning.js` (v4.2, 25 warnings, Global Score, Phenotype-Aware)                             |
+| Insights EWS  | `insights/pi_causal_chains.js` (v1.0, 6 Cross-Pattern Causal Chains)                                          |
+| Insights PI   | `insights/pi_constants.js` (Dynamic Priority Badge v4.3.0, SECTION_PRIORITY_RULES)                            |
+| Insights Pat  | `insights/pi_patterns.js` (v4.0, 22 analyzers), `insights/pi_advanced.js` (v3.0)                              |
+| Insights Rec  | `insights/pi_meal_recommender.js`, `insights/pi_product_picker.js`, `insights/pi_meal_rec_patterns.js`        |
+| Insights Rec  | `insights/pi_meal_planner.js` (v1.4.0), `insights/pi_meal_rec_feedback.js` (v1.0)                             |
+| Insights UI   | `insights/pi_ui_dashboard.js` (v3.0.1), `insights/pi_ui_cards.js` (v3.0.2), `insights/pi_ui_meal_rec_card.js` |
+| Insights Misc | `insights/pi_whatif.js`, `insights/pi_feedback_loop.js`, `insights/pi_analytics_api.js`                       |
+| Insights Misc | `insights/pi_phenotype.js`, `insights/pi_outcome_modal.js`, `insights/pi_ui_whatif_scenarios.js`              |
+| API           | `heys_yandex_api_v1.js` (v58, 1493 LOC)                                                                       |
+| Serverless    | `yandex-cloud-functions/heys-api-rpc/index.js` (v2.5.3)                                                       |
+| PWA           | `public/sw.js`, `heys_day_offline_sync_v1.js`                                                                 |
+| API server    | `packages/core/src/server.js` (Express, port 4001)                                                            |
+| Shared types  | `packages/shared/src/types/`                                                                                  |
 
 ---
 
@@ -414,3 +436,4 @@ every 15 minutes. See
 | Безопасность при деплое                  | [docs/SECURITY_RUNBOOK.md](../docs/SECURITY_RUNBOOK.md)                           |
 | Безопасность (документация)              | [docs/SECURITY_DOCUMENTATION.md](../docs/SECURITY_DOCUMENTATION.md)               |
 | Деплой гайд                              | [docs/DEPLOYMENT_GUIDE.md](../docs/DEPLOYMENT_GUIDE.md)                           |
+| Планировщик питания (алгоритмы)          | [docs/MEAL_PLANNER_DOCUMENTATION.md](../docs/MEAL_PLANNER_DOCUMENTATION.md)       |
