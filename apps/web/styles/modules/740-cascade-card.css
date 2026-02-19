@@ -1,0 +1,467 @@
+/* 740-cascade-card.css — «Ваш позитивный каскад» (standalone) */
+
+/* ─────────────────────────────────────────────────────
+   CASCADE CARD — обёртка
+───────────────────────────────────────────────────── */
+
+.cascade-card {
+  background: var(--card-bg, #fff);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.cascade-card:hover {
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.09);
+}
+
+/* ─────────────────────────────────────────────────────
+   HEADER (кнопка разворачивания)
+───────────────────────────────────────────────────── */
+
+.cascade-card__header {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 14px 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cascade-card__header:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+  border-radius: 16px;
+}
+
+/* ─────────────────────────────────────────────────────
+   TITLE ROW
+───────────────────────────────────────────────────── */
+
+.cascade-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 24px;
+  /* place for chevron */
+}
+
+.cascade-card__icon {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.cascade-card__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text, #1e293b);
+  flex: 1;
+}
+
+.cascade-card__badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────
+   SUBTITLE / HINT
+───────────────────────────────────────────────────── */
+
+.cascade-card__subtitle {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  padding-right: 24px;
+  line-height: 1.4;
+}
+
+.cascade-card__hint {
+  font-size: 11px;
+  color: var(--text-secondary, #64748b);
+  background: rgba(245, 158, 11, 0.08);
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin-top: 2px;
+}
+
+.cascade-card__hint--training {
+  background: rgba(245, 158, 11, 0.08);
+  color: #b45309;
+}
+
+/* ─────────────────────────────────────────────────────
+   CHEVRON
+───────────────────────────────────────────────────── */
+
+.cascade-card__chevron {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  transform: rotate(90deg);
+  transition: transform 0.2s ease;
+  line-height: 1;
+  user-select: none;
+}
+
+.cascade-card__chevron--open {
+  transform: rotate(-90deg);
+}
+
+/* ─────────────────────────────────────────────────────
+   PROGRESS BAR
+───────────────────────────────────────────────────── */
+
+.cascade-card__progress-track {
+  height: 3px;
+  background: rgba(0, 0, 0, 0.07);
+  border-radius: 2px;
+  margin: 6px 0 4px;
+  overflow: hidden;
+}
+
+.cascade-card__progress-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+/* ─────────────────────────────────────────────────────
+   EXPANDED BODY
+───────────────────────────────────────────────────── */
+
+.cascade-card__body {
+  padding: 0 16px 14px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* ─────────────────────────────────────────────────────
+   CHAIN DOTS
+───────────────────────────────────────────────────── */
+
+.cascade-chain-dots {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 8px 0 4px;
+  padding: 0 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  flex-wrap: nowrap;
+}
+
+.cascade-chain-dots::-webkit-scrollbar {
+  display: none;
+}
+
+.cascade-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Connectors (explicit elements in JS) */
+.cascade-dot-connector {
+  width: 12px;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.18);
+  flex-shrink: 0;
+  border-radius: 1px;
+  transition: background 0.3s ease;
+}
+
+.cascade-dot-connector--broken {
+  background: transparent;
+  border-top: 2px dashed #d1d5db;
+  height: 0;
+  margin-top: 1px;
+}
+
+/* Event-type colours */
+.cascade-dot--meal {
+  background: #22c55e;
+}
+
+.cascade-dot--training {
+  background: #f59e0b;
+}
+
+.cascade-dot--household {
+  background: #f97316;
+}
+
+.cascade-dot--sleep {
+  background: #6366f1;
+}
+
+.cascade-dot--checkin {
+  background: #14b8a6;
+}
+
+.cascade-dot--measurements {
+  background: #ec4899;
+}
+
+.cascade-dot--steps {
+  background: #8b5cf6;
+}
+
+.cascade-dot--supplements {
+  background: #0ea5e9;
+}
+
+.cascade-dot--insulin {
+  background: #ef4444;
+}
+
+.cascade-dot--break {
+  background: #d1d5db !important;
+  border: 1.5px dashed #9ca3af;
+  width: 10px;
+  height: 10px;
+}
+
+/* Pulse on newest positive dot */
+.cascade-dot--latest:not(.cascade-dot--break) {
+  animation: cascadePulse 2s ease-in-out infinite;
+}
+
+@keyframes cascadePulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.35);
+  }
+
+  50% {
+    box-shadow: 0 0 0 5px rgba(34, 197, 94, 0);
+  }
+}
+
+/* ─────────────────────────────────────────────────────
+   TIMELINE (expanded)
+───────────────────────────────────────────────────── */
+
+.cascade-timeline {
+  margin-top: 10px;
+}
+
+.cascade-timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.cascade-timeline-row:last-child {
+  border-bottom: none;
+}
+
+.cascade-timeline-icon {
+  font-size: 16px;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.cascade-timeline-time {
+  font-weight: 600;
+  color: var(--text, #1e293b);
+  min-width: 38px;
+  flex-shrink: 0;
+}
+
+.cascade-timeline-label {
+  flex: 1;
+  color: var(--text, #1e293b);
+}
+
+.cascade-timeline-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.cascade-timeline-row--positive .cascade-timeline-badge {
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+}
+
+.cascade-timeline-row--negative .cascade-timeline-badge {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  font-size: 10px;
+}
+
+/* Next step hint */
+.cascade-next-step {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: rgba(59, 130, 246, 0.06);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+.cascade-next-step-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────
+   BREAKS INFO + STATS
+───────────────────────────────────────────────────── */
+
+.cascade-card__breaks-info {
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: rgba(245, 158, 11, 0.07);
+  border-radius: 6px;
+}
+
+.cascade-card__breaks-label {
+  font-size: 11px;
+  color: #b45309;
+}
+
+.cascade-card__stats {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.cascade-card__stat {
+  font-size: 11px;
+  color: var(--text-secondary, #64748b);
+}
+
+.cascade-card__stat strong {
+  color: var(--text, #1e293b);
+  font-weight: 700;
+}
+
+/* ─────────────────────────────────────────────────────
+   STATE MODIFIERS
+───────────────────────────────────────────────────── */
+
+.cascade-card--strong .cascade-card__title {
+  color: #92400e;
+}
+
+.cascade-card--strong {
+  background: linear-gradient(135deg, #fff 85%, rgba(234, 179, 8, 0.06) 100%);
+}
+
+.cascade-card--recovery .cascade-card__title {
+  color: #0369a1;
+}
+
+/* ─────────────────────────────────────────────────────
+   DARK MODE
+───────────────────────────────────────────────────── */
+
+[data-theme="dark"] .cascade-card {
+  background: var(--card-bg, #1e293b);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .cascade-card__title {
+  color: var(--text, #f1f5f9);
+}
+
+[data-theme="dark"] .cascade-card__subtitle,
+[data-theme="dark"] .cascade-card__chevron {
+  color: var(--text-secondary, #94a3b8);
+}
+
+[data-theme="dark"] .cascade-card__body {
+  border-top-color: rgba(255, 255, 255, 0.07);
+}
+
+[data-theme="dark"] .cascade-card__progress-track {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .cascade-dot-connector {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .cascade-dot-connector--broken {
+  border-top-color: #475569;
+}
+
+[data-theme="dark"] .cascade-dot--break {
+  background: #4b5563 !important;
+  border-color: #6b7280;
+}
+
+[data-theme="dark"] .cascade-timeline-row {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .cascade-timeline-time,
+[data-theme="dark"] .cascade-timeline-label {
+  color: var(--text, #f1f5f9);
+}
+
+[data-theme="dark"] .cascade-timeline-row--positive .cascade-timeline-badge {
+  background: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
+}
+
+[data-theme="dark"] .cascade-timeline-row--negative .cascade-timeline-badge {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+}
+
+[data-theme="dark"] .cascade-next-step {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--text-secondary, #94a3b8);
+}
+
+[data-theme="dark"] .cascade-card__stats {
+  border-top-color: rgba(255, 255, 255, 0.07);
+}
+
+[data-theme="dark"] .cascade-card__stat {
+  color: var(--text-secondary, #94a3b8);
+}
+
+[data-theme="dark"] .cascade-card__stat strong {
+  color: var(--text, #f1f5f9);
+}
+
+[data-theme="dark"] .cascade-card__breaks-info {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+[data-theme="dark"] .cascade-card--strong {
+  background: linear-gradient(135deg, #1e293b 85%, rgba(234, 179, 8, 0.08) 100%);
+}
