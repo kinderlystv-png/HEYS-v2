@@ -1,8 +1,14 @@
 /**
  * Meal Recommender Card — Compact UI for Day View
- * v27.5 — Bulk add selected products
+ * v27.7 — Enhanced user-friendly prompt
  * Рендерит карточку рекомендации следующего приёма пищи в дневнике
  * Позиция: между refeedCard и supplementsCard (выше витаминов)
+ * 
+ * v27.7 changes (18.02.2026):
+ * - ENHANCED: Multi-meal subtitle now shows friendly prompt:
+ *   "Не знаете, что правильно поесть сегодня? Умный планировщик подскажет вам. 
+ *    Вы можете просто следовать его рекомендациям, и ваш день будет идеальным по питанию!"
+ * - REASONING: More engaging and informative introduction to the smart planner feature
  * 
  * v27.5 changes (17.02.2026):
  * - NEW: Bulk add button "Добавить выбранные" after grouped products
@@ -1220,6 +1226,7 @@
         const displayIcon = scenarioIcon || '🍽️';
 
         // 🆕 v26: Multi-meal header content
+        // v27.7 (2026-02-18): Enhanced prompt with user-friendly description
         let headerTitle, headerTimeRange, headerSubtitle;
 
         if (isMultiMeal) {
@@ -1227,7 +1234,7 @@
             const pluralMeals = mealsCount === 2 ? 'приёма' : mealsCount >= 5 ? 'приёмов' : 'приёма';
             headerTitle = `${mealsCount} ${pluralMeals} до сна`;
             headerTimeRange = `${mealsPlan.summary.timelineStart}-${mealsPlan.summary.timelineEnd}`;
-            headerSubtitle = 'Следуйте рекомендациям — и день будет идеальным';
+            headerSubtitle = 'Не знаете, что правильно поесть сегодня? Умный планировщик подскажет вам. Вы можете просто следовать его рекомендациям, и ваш день будет идеальным по питанию!';
         } else {
             headerTitle = scenarioTitle;
             headerTimeRange = !isGoalReached && timing?.ideal ? timing.ideal : null;
@@ -1549,6 +1556,6 @@
         renderCard
     };
 
-    console.info(`${LOG_PREFIX} 📦 Module loaded (v27.6: Proper sub-card headers with bold title + macros in header)`);
+    console.info(`${LOG_PREFIX} 📦 Module loaded (v27.7: Enhanced user-friendly prompt in multi-meal subtitle)`);
 
 })(window);

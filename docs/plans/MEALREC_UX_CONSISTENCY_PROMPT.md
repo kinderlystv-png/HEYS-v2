@@ -1,14 +1,12 @@
 # MealRec + Smart Planner — Development Roadmap
 
-> **Версия**: 4.0  
+> **Версия**: 4.1  
 > **Дата обновления**: 2026-02-18  
-> **Статус**: Sprint 1 ✅ завершён → Sprint 2 в очереди
+> **Статус**: Sprint 1 ✅ завершён + v27.7 prompt ✅ → Sprint 2 в очереди
 
 ---
 
 ## Текущее состояние (Production, Feb 18 2026)
-
-ц
 
 ### ✅ Реализовано
 
@@ -20,10 +18,17 @@
 | Premium sub-card redesign (white bg, colored badges) | v27.6  | ✅ production |
 | Physiological macro floors (carbs 20%, fat 15%)      | v1.4.1 | ✅ production |
 | Card header: "Умный планировщик" badge               | v27.6  | ✅ production |
+| **User-friendly prompt (multi-meal subtitle)**       | v27.7  | ✅ production |
 | ConfirmModal meal picker flow (кнопка "+")           | v15.0  | ✅ production |
 | Smart Grams Pre-fill (suggestion.grams → modal)      | v15.0  | ✅ production |
 | Toast after add + verification logging               | v15.0  | ✅ production |
 | Smart meal auto-select в ConfirmModal по времени     | v13.0  | ✅ production |
+
+**v27.7 Prompt (Feb 18 2026):**
+
+> "Не знаете, что правильно поесть сегодня? Умный планировщик подскажет вам. Вы
+> можете просто следовать его рекомендациям, и ваш день будет идеальным по
+> питанию!"
 
 ### 🏗️ Текущая архитектура `pi_meal_planner.js`
 
