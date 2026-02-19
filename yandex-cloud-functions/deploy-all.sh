@@ -76,7 +76,7 @@ get_function_config() {
         "heys-api-rpc")
             echo "nodejs18 index.handler 512m 30s" ;;
         "heys-api-rest")
-            echo "nodejs18 index.handler 256m 30s" ;;
+            echo "nodejs18 index.handler 512m 30s" ;;
         "heys-api-auth")
             echo "nodejs18 index.handler 256m 30s" ;;
         "heys-api-leads")

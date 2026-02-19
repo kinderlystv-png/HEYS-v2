@@ -35,6 +35,7 @@ const MIGRATIONS = [
     '2026-02-09_admin_functions_jwt_only.sql',  // 🔐 JWT-only авторизация для admin_* функций (v4.0)
     '2026-02-09_fix_get_client_data_by_session.sql', // 🐛 Fix: remove non-existent clients.created_at
     '2026-02-10_trial_chain_fixes.sql',         // 🔧 Trial chain fixes: JWT params, phone normalization, session management
+    '2026-02-19_fix_get_shared_products_extended.sql', // 🔧 Fix: get_shared_products returns vitamins/minerals/extended nutrients
 ];
 
 async function main() {
@@ -89,7 +90,8 @@ async function main() {
             'activate_trial_timer_by_session',
             'admin_activate_trial',
             'admin_get_leads',
-            'admin_convert_lead'
+            'admin_convert_lead',
+            'get_shared_products'
         ];
 
         for (const fn of functions) {

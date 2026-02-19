@@ -82,9 +82,8 @@ function parsePastedInWorker(text) {
   function computeDerived(p) {
     const carbs100 = toNum(p.simple100) + toNum(p.complex100);
     const fat100 = toNum(p.badFat100) + toNum(p.goodFat100) + toNum(p.trans100);
-    // v3.9.0: Standard Atwater factors (4/4/9). TEF is calculated separately in TDEE.
-    // Protein 4 kcal/g (was 3), Carbs 4 kcal/g, Fat 9 kcal/g
-    const kcal100 = 4 * toNum(p.protein100) + 4 * carbs100 + 9 * fat100;
+    // NET Atwater: protein 3 kcal/g (TEF 25% built-in: 4×0.75=3), carbs 4 kcal/g, fat 9 kcal/g
+    const kcal100 = 3 * toNum(p.protein100) + 4 * carbs100 + 9 * fat100;
     return { carbs100: round1(carbs100), fat100: round1(fat100), kcal100: round1(kcal100) };
   }
   function parsePastedSync(text) {
