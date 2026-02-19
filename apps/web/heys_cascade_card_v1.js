@@ -1,6 +1,6 @@
 // heys_cascade_card_v1.js — Cascade Card — «Ваш позитивный каскад»
 // Standalone компонент. Визуализация цепочки здоровых решений в реальном времени.
-// v2.0.0 | 2026-02-19 — 10-factor behavioral scoring (meals, household, training, sleep, checkin, measurements, steps, vitamins, insulin)
+// v2.2.0 | 2026-02-19 — Soft chain degradation + score-driven states
 // Фильтр в консоли: [HEYS.cascade]
 (function (global) {
   'use strict';
@@ -75,14 +75,15 @@
   };
 
   // ─────────────────────────────────────────────────────
-  // СИСТЕМА ВЕСОВ v2.0.0 — 10 поведенческих факторов
-  // Каждый фактор вносит взвешенный вклад в score.
-  // score определяет состояние и прогресс-бар.
-  // chain (стрик) остаётся для визуального таймлайна.
-  // Хороший день: 3 хор.еды(3.0) + трен60(2.5) + сон7ч(1.0) + онтайм(1.0) + шаги100(1.0) ≈ 8.5
-  // Отличный: 3 отл.еды(4.5) + трен60(2.5) + сон(2.0) + шаги(1.0) + чекин(0.5) ≈ 10.5
+  // СИСТЕМА СКОРИНГА v2.1.0 — Continuous Scientific Scoring
+  // 10 факторов с непрерывными функциями + 3 метасистемы.
+  // Personalized baselines (14-day median), confidence layer,
+  // day-type awareness, cross-factor synergies.
+  // Хороший день: meals(3.0) + training(2.5) + sleep(2.5) + steps(1.0) + synergies(0.9) ≈ 9.9
+  // Отличный: meals(4.5) + training(3.0) + sleep(3.0) + steps(1.3) + synergies(1.3) ≈ 13.1
   // ─────────────────────────────────────────────────────
 
+  // [LEGACY FALLBACK] — v2.0.0 step-function weights, used only in meal quality fallback
   const EVENT_WEIGHTS = {
     // Еда: вес через getMealQualityScore (0–100)
     meal_positive: 1.0,   // Фолбэк при недоступном getMealQualityScore
@@ -139,13 +140,49 @@
     insulin_overlap_low: -0.1
   };
 
+  // ─────────────────────────────────────────────────────
+  // v2.1.0 SCORING CONSTANTS
+  // ─────────────────────────────────────────────────────
+
+  const INTENSITY_MULTIPLIERS = {
+    hiit: 1.8, strength: 1.5, cardio: 1.2,
+    yoga: 0.8, stretching: 0.6, walk: 0.5
+  };
+
+  const CIRCADIAN_MEAL_MODIFIERS = [
+    { start: 360, end: 600, mult: 1.3 },    // 06:00–10:00 breakfast
+    { start: 600, end: 840, mult: 1.0 },    // 10:00–14:00 lunch
+    { start: 840, end: 1080, mult: 0.9 },   // 14:00–18:00 snack
+    { start: 1080, end: 1260, mult: 0.85 }, // 18:00–21:00 dinner
+    { start: 1260, end: 1380, mult: 0.7 }   // 21:00–23:00 late dinner
+  ];
+
+  const POPULATION_DEFAULTS = {
+    householdMin: 30,
+    sleepOnsetMins: 1380, // 23:00
+    sleepHours: 7.5,
+    steps: 7000,
+    weeklyTrainingLoad: 200
+  };
+
   const SCORE_THRESHOLDS = {
-    STRONG: 7.0,    // Мощный день
-    GROWING: 4.0,   // Каскад растёт
+    STRONG: 8.0,    // Мощный день
+    GROWING: 4.5,   // Каскад растёт
     BUILDING: 1.5   // Начало
   };
 
-  const MOMENTUM_TARGET = 10.0; // score при 100% прогресс-бара
+  const MOMENTUM_TARGET = 12.0; // score при 100% прогресс-бара
+
+  // v2.2.0: Soft chain — penalty tiers by event severity
+  // Minor (weight ≥ -0.5): -1 link, Medium (-1.5 ≤ w < -0.5): -2 links, Severe (w < -1.5): -3 links
+  const CHAIN_PENALTY = { MINOR: 1, MEDIUM: 2, SEVERE: 3 };
+  const CHAIN_PENALTY_THRESHOLDS = { MEDIUM: -0.5, SEVERE: -1.5 };
+
+  function getChainPenalty(weight) {
+    if (weight < CHAIN_PENALTY_THRESHOLDS.SEVERE) return CHAIN_PENALTY.SEVERE;
+    if (weight < CHAIN_PENALTY_THRESHOLDS.MEDIUM) return CHAIN_PENALTY.MEDIUM;
+    return CHAIN_PENALTY.MINOR;
+  }
 
   // ─────────────────────────────────────────────────────
   // УТИЛИТЫ
@@ -238,6 +275,90 @@
     return result; // array[0] = yesterday, array[n-1] = n days ago
   }
 
+  // ─────────────────────────────────────────────────────
+  // v2.1.0 MATH UTILITIES
+  // ─────────────────────────────────────────────────────
+
+  function clamp(val, lo, hi) {
+    return val < lo ? lo : val > hi ? hi : val;
+  }
+
+  function median(arr) {
+    if (!arr.length) return 0;
+    var sorted = arr.slice().sort(function (a, b) { return a - b; });
+    var mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+
+  function stdev(arr) {
+    if (arr.length < 2) return 0;
+    var m = arr.reduce(function (a, b) { return a + b; }, 0) / arr.length;
+    var variance = arr.reduce(function (s, v) { return s + (v - m) * (v - m); }, 0) / arr.length;
+    return Math.sqrt(variance);
+  }
+
+  function getPersonalBaseline(prevDays, extractor, defaultVal) {
+    var values = [];
+    for (var i = 0; i < prevDays.length; i++) {
+      if (!prevDays[i]) continue;
+      var val = extractor(prevDays[i]);
+      if (val != null && val > 0) values.push(val);
+    }
+    return values.length >= 3 ? median(values) : defaultVal;
+  }
+
+  function getFactorConfidence(prevDays, extractor) {
+    var count = 0;
+    for (var i = 0; i < prevDays.length; i++) {
+      if (!prevDays[i]) continue;
+      var val = extractor(prevDays[i]);
+      if (val != null && val > 0) count++;
+    }
+    if (count >= 10) return 1.0;
+    if (count >= 7) return 0.8;
+    if (count >= 3) return 0.5;
+    if (count >= 1) return 0.3;
+    return 0.1;
+  }
+
+  function countConsecutive(prevDays, predicate) {
+    var count = 0;
+    for (var i = 0; i < prevDays.length; i++) {
+      if (predicate(prevDays[i])) count++;
+      else break;
+    }
+    return count;
+  }
+
+  function getCircadianMultiplier(timeMins) {
+    if (timeMins === null || timeMins === undefined) return 1.0;
+    for (var i = 0; i < CIRCADIAN_MEAL_MODIFIERS.length; i++) {
+      var mod = CIRCADIAN_MEAL_MODIFIERS[i];
+      if (timeMins >= mod.start && timeMins < mod.end) return mod.mult;
+    }
+    return 1.0;
+  }
+
+  function getTrainingDuration(tr) {
+    var dur = 0;
+    if (tr && tr.z && Array.isArray(tr.z)) {
+      dur = tr.z.reduce(function (a, b) { return a + (b || 0); }, 0);
+    }
+    if (!dur && tr && tr.duration) dur = tr.duration;
+    if (!dur && tr && tr.type) {
+      var typeDefaults = { cardio: 40, strength: 50, hiit: 30, yoga: 60, stretching: 30 };
+      dur = typeDefaults[tr.type] || 40;
+    }
+    return dur || 40;
+  }
+
+  function getTrainingLoad(tr) {
+    var dur = getTrainingDuration(tr);
+    var type = (tr && tr.type) || '';
+    var mult = INTENSITY_MULTIPLIERS[type] || 1.0;
+    return dur * mult;
+  }
+
   function buildInputSignature(day, normAbs, prof) {
     var meals = (day && day.meals) || [];
     var trainings = (day && day.trainings) || [];
@@ -286,7 +407,8 @@
   function computeCascadeState(day, dayTot, normAbs, prof, pIndex) {
     var t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 
-    console.info('[HEYS.cascade] ─── computeCascadeState START ───────────────');
+    console.info('[HEYS.cascade] ─── computeCascadeState v2.2.0 START ────────');
+    console.info('[HEYS.cascade] 🧬 v2.2.0 features: soft chain degradation | score-driven states | continuous scoring | personal baselines | circadian awareness | confidence layer | day-type detection | cross-factor synergies');
     console.info('[HEYS.cascade] 📥 Input data:', {
       hasMeals: !!(day && day.meals && day.meals.length),
       mealsCount: (day && day.meals && day.meals.length) || 0,
@@ -294,11 +416,15 @@
       trainingsCount: (day && day.trainings && day.trainings.length) || 0,
       water: (day && day.water) || 0,
       steps: (day && day.steps) || 0,
+      sleepStart: (day && day.sleepStart) || null,
+      sleepHours: (day && day.sleepHours) || 0,
+      householdMin: (day && day.householdMin) || 0,
+      weightMorning: (day && day.weightMorning) || 0,
+      hasMeasurements: !!(day && day.measurements),
+      hasSupplements: !!(day && day.supplementsTaken),
       hasNormAbs: !!normAbs,
       kcalNorm: normAbs ? normAbs.kcal : null,
       hasProf: !!prof,
-      waterNorm: prof ? prof.water_norm : null,
-      stepsGoal: prof ? (prof.stepsGoal || prof.steps_goal) : null,
       hasPIndex: !!pIndex
     });
 
@@ -313,38 +439,50 @@
 
     var score = 0;
 
-    // ── ШАГ 1: Бытовая активность (householdMin) ────────
+    // v2.1.0: Load 14-day history ONCE for all baseline/confidence/streak calculations
+    var prevDays14 = getPreviousDays(14);
+    var confidenceMap = {};
+    var rawWeights = {};
+    var iwAvgGap = 0; // hoisted for synergy access
+
+    // ── ШАГ 1: Бытовая активность (adaptive baseline + log2) ──
     var householdMin = (day && day.householdMin) || 0;
+    var baselineNEAT = getPersonalBaseline(prevDays14, function (d) { return d.householdMin; }, POPULATION_DEFAULTS.householdMin);
+    var neatConfidence = getFactorConfidence(prevDays14, function (d) { return d.householdMin; });
+    confidenceMap.household = neatConfidence;
+
     if (householdMin > 0) {
-      var householdWeight = householdMin >= 60 ? EVENT_WEIGHTS.household_high
-        : householdMin >= 30 ? EVENT_WEIGHTS.household_mid
-          : householdMin >= 10 ? EVENT_WEIGHTS.household_low
-            : 0.0;
-      if (householdWeight > 0) {
-        score += householdWeight;
-        events.push({
-          type: 'household',
-          time: null,
-          positive: true,
-          icon: EVENT_ICONS.household,
-          label: 'Бытовая активность ' + householdMin + ' мин',
-          sortKey: 599,
-          weight: householdWeight
-        });
-        console.info('[HEYS.cascade] 🏠 [EVENT] household:', { householdMin: householdMin, weight: householdWeight });
-      }
+      var neatRatio = householdMin / baselineNEAT;
+      var householdWeight = clamp(Math.log2(neatRatio + 0.5) * 0.8, -0.5, 1.2);
+      var rawHousehold = householdWeight;
+      householdWeight *= neatConfidence;
+      rawWeights.household = rawHousehold;
+      score += householdWeight;
+      events.push({
+        type: 'household',
+        time: null,
+        positive: true,
+        icon: EVENT_ICONS.household,
+        label: 'Бытовая активность ' + householdMin + ' мин',
+        sortKey: 599,
+        weight: householdWeight
+      });
+      console.info('[HEYS.cascade] 🏠 [EVENT] household (v2.1.0 log2 adaptive):', {
+        householdMin: householdMin, baseline: Math.round(baselineNEAT),
+        ratio: +neatRatio.toFixed(2), formula: 'log2(' + +neatRatio.toFixed(2) + '+0.5)×0.8',
+        rawWeight: +rawHousehold.toFixed(2),
+        confidence: neatConfidence, adjustedWeight: +householdWeight.toFixed(2)
+      });
     } else {
-      var prevDaysHH = getPreviousDays(7);
-      var houseStreak = 0;
-      for (var ph = 0; ph < prevDaysHH.length; ph++) {
-        if (!prevDaysHH[ph] || !(prevDaysHH[ph].householdMin > 0)) houseStreak++;
-        else break;
-      }
+      var houseStreak = countConsecutive(prevDays14, function (d) { return !d || !(d.householdMin > 9); });
       if (houseStreak > 2) {
-        var hPenalty = Math.max(-0.3, -0.1 * (houseStreak - 2));
+        var hPenalty = Math.max(-0.5, -0.08 * Math.pow(houseStreak - 2, 0.7));
+        hPenalty *= neatConfidence;
+        rawWeights.household = hPenalty / (neatConfidence || 1);
         score += hPenalty;
-        console.info('[HEYS.cascade] 🏠 Household streak penalty:', { streakDays: houseStreak, penalty: hPenalty });
+        console.info('[HEYS.cascade] 🏠 Household streak penalty:', { streakDays: houseStreak, penalty: +hPenalty.toFixed(2), confidence: neatConfidence });
       } else {
+        rawWeights.household = 0;
         console.info('[HEYS.cascade] 🏠 No household data today, streak=' + houseStreak + ' (no penalty yet)');
       }
     }
@@ -376,11 +514,12 @@
       var timeMins = parseTime(meal && meal.time);
       var isLate = timeMins !== null && timeMins >= 1380;
 
-      // ─ Жёсткие ограничения (контекстуальные нарушения) ─
-      var positive = !overNorm && !hasHarm && !isLate;
-      var breakReason = overNorm ? 'Перебор ккал' : (hasHarm ? 'Вредный продукт' : (isLate ? 'Поздний приём' : null));
+      // ─ v2.1.0: Hard violations (harm ≥ 7, late > 23:00) ─
+      var hasHardViolation = hasHarm || isLate;
+      var positive = !hasHardViolation;
+      var breakReason = hasHarm ? 'Вредный продукт' : (isLate ? 'Поздний приём' : null);
 
-      // ─ Качество приёма через getMealQualityScore (0–100) ─
+      // ─ Quality scoring via getMealQualityScore (0–100) ─
       var mealQS = null;
       var mealScoringFn = (HEYS.mealScoring && typeof HEYS.mealScoring.getMealQualityScore === 'function')
         ? HEYS.mealScoring.getMealQualityScore.bind(HEYS.mealScoring)
@@ -390,34 +529,50 @@
         try {
           mealQS = mealScoringFn(meal, null, normKcal || 2000, pIndex, null);
         } catch (err) {
-          // Неблокирующий сбой — продолжаем с фолбэком
+          // Non-blocking — continue with fallback
         }
       }
 
-      // ─ Вес: quality score (0–100) → шкала каскада ─
+      // ─ v2.1.0: Continuous scoring (linear interpolation) ─
+      // 0→-1.0, 20→-0.5, 40→0.0, 60→+0.5, 80→+1.0, 100→+1.5
       var mealWeight;
       var qualityGrade = null;
 
       if (mealQS && mealQS.score != null) {
         var qs = mealQS.score; // 0–100
-        if (qs >= 80) { mealWeight = 1.5; qualityGrade = 'excellent'; }
-        else if (qs >= 60) { mealWeight = 1.0; qualityGrade = 'good'; }
-        else if (qs >= 40) { mealWeight = 0.5; qualityGrade = 'ok'; }
-        else if (qs >= 20) { mealWeight = 0.0; qualityGrade = 'poor'; }
-        else { mealWeight = -0.5; qualityGrade = 'bad'; }
+        mealWeight = clamp((qs - 40) / 40, -1.0, 1.5);
+        qualityGrade = qs >= 80 ? 'excellent' : qs >= 60 ? 'good' : qs >= 40 ? 'ok' : qs >= 20 ? 'poor' : 'bad';
 
-        // Плохое качество → разрыв цепочки (визуально)
-        if ((qualityGrade === 'poor' || qualityGrade === 'bad') && positive) {
+        // Poor/bad quality → break chain
+        if (qs < 20 && positive) {
           positive = false;
-          breakReason = breakReason || (qualityGrade === 'bad' ? 'Низкое качество' : 'Слабый приём');
-        }
-        // Жёсткие нарушения всегда перекрывают quality weight (-1.0)
-        if (!positive && mealWeight > EVENT_WEIGHTS.meal_negative) {
-          mealWeight = EVENT_WEIGHTS.meal_negative;
+          breakReason = breakReason || 'Низкое качество';
+        } else if (qs < 40 && positive) {
+          positive = false;
+          breakReason = breakReason || 'Слабый приём';
         }
       } else {
-        // Фолбэк — прежняя двоичная логика
+        // Fallback binary
         mealWeight = positive ? EVENT_WEIGHTS.meal_positive : EVENT_WEIGHTS.meal_negative;
+      }
+
+      // Circadian modifier: breakfast ×1.3, late dinner ×0.7
+      if (timeMins !== null && timeMins < 1380 && !hasHardViolation) {
+        var circMult = getCircadianMultiplier(timeMins);
+        mealWeight *= circMult;
+      }
+
+      // Progressive cumulative penalty (sigmoid, replaces binary 120% cutoff)
+      if (normKcal > 0 && cumulativeRatio > 1.0 && !hasHardViolation) {
+        var cumulPenalty = -Math.tanh((cumulativeRatio - 1.0) / 0.2) * 1.5;
+        mealWeight = Math.min(mealWeight, cumulPenalty);
+        positive = false;
+        breakReason = breakReason || 'Перебор ккал (' + Math.round(cumulativeRatio * 100) + '%)';
+      }
+
+      // Hard violations always force -1.0
+      if (hasHardViolation) {
+        mealWeight = -1.0;
       }
 
       score += mealWeight;
@@ -438,144 +593,258 @@
 
       // Явная строка — всегда читается без разворачивания объекта
       if (mealQS && mealQS.score != null) {
-        console.info('[HEYS.cascade] 🎯 Meal quality (' + getMealLabel(meal, i) + '): score=' + mealQS.score + ' grade=' + qualityGrade + ' weight=' + mealWeight + ' color=' + mealQS.color);
+        console.info('[HEYS.cascade] 🎯 Meal quality (' + getMealLabel(meal, i) + '): score=' + mealQS.score + ' grade=' + qualityGrade + ' weight=' + (+mealWeight).toFixed(2) + ' color=' + mealQS.color + ' scoring=v2.1.0-continuous');
       } else {
         console.warn('[HEYS.cascade] ⚠️ getMealQualityScore недоступен (' + getMealLabel(meal, i) + ') → fallback weight=' + mealWeight + ' | HEYS.mealScoring=' + (typeof (HEYS.mealScoring && HEYS.mealScoring.getMealQualityScore)) + ' pIndex=' + (!!pIndex));
       }
 
-      console.info('[HEYS.cascade] 🍽️ [MEAL ' + (i + 1) + '/' + meals.length + '] ' + getMealLabel(meal, i) + ':', {
+      console.info('[HEYS.cascade] 🍽️ [MEAL ' + (i + 1) + '/' + meals.length + '] ' + getMealLabel(meal, i) + ' (v2.1.0 continuous + circadian):', {
         time: (meal && meal.time) || null,
         mealKcal: Math.round(mealKcal),
         cumulativeKcal: Math.round(cumulativeKcal),
         normKcal: Math.round(normKcal),
         cumulativeRatio: +cumulativeRatio.toFixed(2),
-        overNorm: overNorm,
+        circadianModifier: (timeMins !== null && timeMins < 1380 && !hasHardViolation) ? +getCircadianMultiplier(timeMins).toFixed(2) : 'N/A',
         hasHarm: hasHarm,
         isLate: isLate,
         positive: positive,
         breakReason: breakReason,
         quality: mealQS
-          ? { score: mealQS.score, grade: qualityGrade, color: mealQS.color }
+          ? { score: mealQS.score, grade: qualityGrade, formula: 'clamp((' + mealQS.score + '-40)/40)' }
           : '(getMealQualityScore недоступен)',
-        weight: mealWeight
+        weight: +(mealWeight).toFixed(2)
       });
     });
 
-    // ── ШАГ 3: Тренировки (длительность + стрик-штраф) ──
+    // ── ШАГ 3: Тренировки (load × intensity, diminishing returns, recovery-aware) ──
     console.info('[HEYS.cascade] 💪 Processing', trainings.length, 'trainings...');
+    var todayTotalLoad = 0;
+    var trainingConfidence = getFactorConfidence(prevDays14, function (d) { return d && d.trainings && d.trainings.length; });
+    confidenceMap.training = trainingConfidence;
 
     if (trainings.length > 0) {
+      var sessionWeights = [];
       trainings.forEach(function (tr, ti) {
         var timeMins = parseTime(tr && tr.time);
-        var dur = 0;
-        if (tr && tr.z && Array.isArray(tr.z)) {
-          dur = tr.z.reduce(function (a, b) { return a + (b || 0); }, 0);
+        var dur = getTrainingDuration(tr);
+        var load = getTrainingLoad(tr);
+        todayTotalLoad += load;
+        // sqrt-curve: diminishing returns on load
+        var sessionWeight = clamp(Math.sqrt(load / 30) * 1.2, 0.3, 3.0);
+        sessionWeights.push(sessionWeight);
+        var trainingWeight;
+        if (ti === 0) {
+          trainingWeight = sessionWeight;
+        } else if (ti === 1) {
+          trainingWeight = sessionWeight * 0.5; // 2nd session: half credit
+        } else {
+          trainingWeight = sessionWeight * 0.25; // 3rd+: quarter credit
         }
-        if (!dur && tr && tr.duration) dur = tr.duration;
-        if (!dur && tr && tr.type) {
-          var typeDefaults = { cardio: 40, strength: 50, hiit: 30, yoga: 60, stretching: 30 };
-          dur = typeDefaults[tr.type] || 40;
-        }
-        if (!dur) dur = 40;
-        var trainingWeight = dur >= 60 ? EVENT_WEIGHTS.training_60plus
-          : dur >= 45 ? EVENT_WEIGHTS.training_45
-            : dur >= 30 ? EVENT_WEIGHTS.training_30
-              : dur >= 15 ? EVENT_WEIGHTS.training_15
-                : EVENT_WEIGHTS.training_short;
+        trainingWeight *= trainingConfidence;
+        rawWeights['training_' + ti] = sessionWeight;
         score += trainingWeight;
+        var trType = (tr && tr.type) || '';
         events.push({
           type: 'training',
           time: (tr && tr.time) || null,
           positive: true,
           icon: EVENT_ICONS.training,
-          label: 'Тренировка ' + dur + ' мин',
+          label: 'Тренировка ' + dur + ' мин' + (trType ? ' (' + trType + ')' : ''),
           sortKey: timeMins !== null ? timeMins : 700,
           weight: trainingWeight
         });
-        console.info('[HEYS.cascade] 💪 [TRAINING ' + (ti + 1) + '/' + trainings.length + ']:', {
-          time: (tr && tr.time) || null, duration: dur, weight: trainingWeight
+        console.info('[HEYS.cascade] 💪 [TRAINING ' + (ti + 1) + '/' + trainings.length + '] (v2.1.0 load×intensity + sqrt curve):', {
+          time: (tr && tr.time) || null, duration: dur, type: trType || 'unknown',
+          load: Math.round(load), formula: 'sqrt(' + Math.round(load) + '/30)×1.2',
+          sessionWeight: +sessionWeight.toFixed(2),
+          diminishingFactor: ti === 0 ? '1.0 (full)' : ti === 1 ? '0.5 (2nd session)' : '0.25 (3rd+)',
+          confidence: trainingConfidence, adjustedWeight: +trainingWeight.toFixed(2)
         });
       });
     } else {
-      var prevDaysTR = getPreviousDays(7);
-      var trainStreak = 0;
-      for (var pt = 0; pt < prevDaysTR.length; pt++) {
-        if (!prevDaysTR[pt] || !(prevDaysTR[pt].trainings && prevDaysTR[pt].trainings.length > 0)) trainStreak++;
-        else break;
+      // Recovery-aware: check if yesterday had intense training
+      var yesterdayLoad = 0;
+      if (prevDays14[0] && prevDays14[0].trainings) {
+        prevDays14[0].trainings.forEach(function (t) { yesterdayLoad += getTrainingLoad(t); });
       }
-      if (trainStreak > 2) {
-        var tPenalty = Math.max(-0.5, -0.15 * (trainStreak - 2));
-        score += tPenalty;
-        console.info('[HEYS.cascade] 💪 Training streak penalty:', { streakDays: trainStreak, penalty: tPenalty });
+      var isPlannedRecovery = yesterdayLoad > 60;
+      if (isPlannedRecovery) {
+        // Planned recovery after heavy training: small bonus instead of penalty
+        var recoveryBonus = 0.2 * trainingConfidence;
+        rawWeights.training_recovery = 0.2;
+        score += recoveryBonus;
+        console.info('[HEYS.cascade] 💪 Planned recovery day (yesterday load=' + Math.round(yesterdayLoad) + '):', { bonus: +recoveryBonus.toFixed(2) });
       } else {
-        console.info('[HEYS.cascade] 💪 No trainings today, streak=' + trainStreak + ' (no penalty yet)');
+        var trainStreak = countConsecutive(prevDays14, function (d) { return !d || !(d.trainings && d.trainings.length > 0); });
+        if (trainStreak > 2) {
+          var weeklyLoad = 0;
+          for (var wl = 0; wl < Math.min(7, prevDays14.length); wl++) {
+            if (prevDays14[wl] && prevDays14[wl].trainings) {
+              prevDays14[wl].trainings.forEach(function (t) { weeklyLoad += getTrainingLoad(t); });
+            }
+          }
+          var weeklyTarget = POPULATION_DEFAULTS.weeklyTrainingLoad;
+          var weeklyRatio = weeklyTarget > 0 ? weeklyLoad / weeklyTarget : 0;
+          if (weeklyRatio < 0.8) {
+            var tPenalty = Math.max(-0.5, -0.15 * (trainStreak - 2));
+            tPenalty *= trainingConfidence;
+            rawWeights.training_penalty = tPenalty / (trainingConfidence || 1);
+            score += tPenalty;
+            console.info('[HEYS.cascade] 💪 Training streak penalty:', {
+              streakDays: trainStreak, weeklyLoad: Math.round(weeklyLoad),
+              weeklyTarget: Math.round(weeklyTarget), weeklyRatio: +weeklyRatio.toFixed(2),
+              penalty: +tPenalty.toFixed(2), confidence: trainingConfidence
+            });
+          } else {
+            rawWeights.training_penalty = 0;
+            console.info('[HEYS.cascade] 💪 No trainings today, streak=' + trainStreak + ' but weekly load OK (' + weeklyRatio.toFixed(2) + ')');
+          }
+        } else {
+          rawWeights.training_penalty = 0;
+          console.info('[HEYS.cascade] 💪 No trainings today, streak=' + trainStreak + ' (no penalty yet)');
+        }
       }
     }
 
-    // ── ШАГ 4: Засыпание (sleepStart) ───────────────────
+    // ── ШАГ 4: Засыпание (chronotype-adaptive sigmoid + consistency) ──
     var sleepStart = (day && day.sleepStart) || '';
+    var sleepOnsetConfidence = getFactorConfidence(prevDays14, function (d) {
+      return d && d.sleepStart ? parseTime(d.sleepStart) : null;
+    });
+    confidenceMap.sleepOnset = sleepOnsetConfidence;
+
     if (sleepStart) {
       var sleepMins = parseTime(sleepStart);
       if (sleepMins !== null && sleepMins < 360) sleepMins += 1440; // after midnight
-      var sleepOnsetWeight = 0;
-      var sleepOnsetLabel = '';
       if (sleepMins !== null) {
-        if (sleepMins <= 1320) { sleepOnsetWeight = EVENT_WEIGHTS.sleep_onset_good; sleepOnsetLabel = 'Засыпание до 22:00'; }
-        else if (sleepMins <= 1380) { sleepOnsetWeight = EVENT_WEIGHTS.sleep_onset_ok; sleepOnsetLabel = 'Засыпание до 23:00'; }
-        else if (sleepMins <= 1440) { sleepOnsetWeight = EVENT_WEIGHTS.sleep_onset_neutral; sleepOnsetLabel = 'Засыпание до 00:00'; }
-        else if (sleepMins <= 1500) { sleepOnsetWeight = EVENT_WEIGHTS.sleep_onset_bad; sleepOnsetLabel = 'Засыпание до 01:00'; }
-        else if (sleepMins <= 1560) { sleepOnsetWeight = EVENT_WEIGHTS.sleep_onset_worse; sleepOnsetLabel = 'Засыпание до 02:00'; }
-        else { sleepOnsetWeight = EVENT_WEIGHTS.sleep_onset_worst; sleepOnsetLabel = 'Засыпание после 02:00'; }
-        score += sleepOnsetWeight;
+        // v2.1.0: Chronotype-adaptive baseline from 14-day history
+        var sleepOnsetValues = [];
+        for (var si = 0; si < prevDays14.length; si++) {
+          if (!prevDays14[si] || !prevDays14[si].sleepStart) continue;
+          var soVal = parseTime(prevDays14[si].sleepStart);
+          if (soVal !== null) {
+            if (soVal < 360) soVal += 1440;
+            sleepOnsetValues.push(soVal);
+          }
+        }
+        var personalOnset = sleepOnsetValues.length >= 3 ? median(sleepOnsetValues) : POPULATION_DEFAULTS.sleepOnsetMins;
+        var optimalOnset = Math.max(1290, Math.min(personalOnset, 1470)); // clamp 21:30–00:30
+
+        // Sigmoid scoring: deviation from personal optimal
+        var onsetDeviation = sleepMins - optimalOnset; // minutes (positive = later)
+        var rawSleepOnset = -Math.tanh(onsetDeviation / 45) * 2.0 + 0.5;
+        rawSleepOnset = clamp(rawSleepOnset, -2.5, 1.5);
+
+        // Consistency bonus (low variance in sleep onset → stable circadian rhythm)
+        var consistencyBonus = 0;
+        if (sleepOnsetValues.length >= 5) {
+          var onsetVariance = stdev(sleepOnsetValues);
+          if (onsetVariance < 30) consistencyBonus = 0.3;
+          else if (onsetVariance < 45) consistencyBonus = 0.15;
+        }
+
+        // Hard floor: after 03:00 = circadian catastrophe
+        if (sleepMins > 1620) { rawSleepOnset = -2.5; consistencyBonus = 0; }
+
+        var sleepOnsetWeightFinal = (rawSleepOnset + consistencyBonus) * sleepOnsetConfidence;
+        rawWeights.sleepOnset = rawSleepOnset + consistencyBonus;
+        score += sleepOnsetWeightFinal;
+
+        var sleepOnsetLabel = sleepMins <= 1320 ? 'Ранний сон' : sleepMins <= 1380 ? 'Сон до 23:00'
+          : sleepMins <= 1440 ? 'Сон до полуночи' : sleepMins <= 1500 ? 'Поздний сон' : 'Очень поздний сон';
         events.push({
           type: 'sleep',
           time: sleepStart,
-          positive: sleepOnsetWeight >= 0,
+          positive: rawSleepOnset >= 0,
           icon: EVENT_ICONS.sleep,
           label: sleepOnsetLabel,
           sortKey: 1300,
-          weight: sleepOnsetWeight
+          weight: sleepOnsetWeightFinal
         });
-        console.info('[HEYS.cascade] 😴 Sleep onset:', { sleepStart: sleepStart, sleepMins: sleepMins, weight: sleepOnsetWeight });
+        console.info('[HEYS.cascade] 😴 Sleep onset (v2.1.0 chronotype-adaptive sigmoid):', {
+          sleepStart: sleepStart, sleepMins: sleepMins,
+          personalOnset: Math.round(personalOnset), optimalOnset: Math.round(optimalOnset),
+          deviationMin: Math.round(onsetDeviation),
+          formula: '-tanh(' + Math.round(onsetDeviation) + '/45)×2.0+0.5',
+          rawWeight: +rawSleepOnset.toFixed(2), consistencyBonus: +consistencyBonus.toFixed(2),
+          onsetVariance: sleepOnsetValues.length >= 5 ? Math.round(stdev(sleepOnsetValues)) : 'N/A (need 5+ days)',
+          confidence: sleepOnsetConfidence, adjustedWeight: +sleepOnsetWeightFinal.toFixed(2)
+        });
       }
     } else {
       console.info('[HEYS.cascade] 😴 No sleepStart data — ШАГ 4 skipped');
     }
 
-    // ── ШАГ 5: Продолжительность сна (sleepHours) ───────
+    // ── ШАГ 5: Длительность сна (personalized bell-curve + training recovery) ──
     var sleepHours = (day && day.sleepHours) || 0;
     if (!sleepHours && (day && day.sleepStart) && (day && day.sleepEnd)) {
-      var sm = parseTime(day.sleepStart); var em = parseTime(day.sleepEnd);
-      if (sm !== null && em !== null) {
-        if (em < sm) em += 1440;
-        sleepHours = (em - sm) / 60;
+      var sdm = parseTime(day.sleepStart); var edm = parseTime(day.sleepEnd);
+      if (sdm !== null && edm !== null) {
+        if (edm < sdm) edm += 1440;
+        sleepHours = (edm - sdm) / 60;
       }
     }
+    var sleepDurConfidence = getFactorConfidence(prevDays14, function (d) { return d && d.sleepHours; });
+    confidenceMap.sleepDur = sleepDurConfidence;
+
     if (sleepHours > 0) {
-      var sleepDurWeight = 0;
-      if (sleepHours >= 7 && sleepHours <= 8.5) sleepDurWeight = EVENT_WEIGHTS.sleep_dur_ideal;
-      else if ((sleepHours >= 6 && sleepHours < 7) || (sleepHours > 8.5 && sleepHours <= 9.5)) sleepDurWeight = sleepHours < 7 ? EVENT_WEIGHTS.sleep_dur_ok : EVENT_WEIGHTS.sleep_dur_ok;
-      else if (sleepHours >= 5 && sleepHours < 6) sleepDurWeight = EVENT_WEIGHTS.sleep_dur_low;
-      else if (sleepHours > 9.5 && sleepHours <= 10.5) sleepDurWeight = EVENT_WEIGHTS.sleep_dur_over;
-      else if (sleepHours < 5) sleepDurWeight = EVENT_WEIGHTS.sleep_dur_very_low;
-      else sleepDurWeight = EVENT_WEIGHTS.sleep_dur_too_long;
+      // Personal optimal from 14-day median
+      var personalSleepOpt = getPersonalBaseline(prevDays14, function (d) { return d.sleepHours; }, POPULATION_DEFAULTS.sleepHours);
+      personalSleepOpt = clamp(personalSleepOpt, 6.0, 9.0);
+
+      // Training recovery: need +0.5h after intense training yesterday
+      var yesterdayTrainLoad = 0;
+      if (prevDays14[0] && prevDays14[0].trainings) {
+        prevDays14[0].trainings.forEach(function (t) { yesterdayTrainLoad += getTrainingLoad(t); });
+      }
+      if (yesterdayTrainLoad > 60) personalSleepOpt += 0.5;
+
+      // Bell-curve scoring: Gaussian around personal optimal
+      var sleepDev = Math.abs(sleepHours - personalSleepOpt);
+      var rawSleepDur = 1.5 * Math.exp(-(sleepDev * sleepDev) / (2 * 0.8 * 0.8)) - 0.5;
+
+      // Asymmetry: undersleep penalized 1.3x more than oversleep
+      if (sleepHours < personalSleepOpt) rawSleepDur *= 1.3;
+
+      // Hard limits
+      if (sleepHours < 4.0) rawSleepDur = -2.0;
+      else if (sleepHours > 12.0) rawSleepDur = -0.5;
+
+      rawSleepDur = clamp(rawSleepDur, -2.0, 1.5);
+      var sleepDurWeight = rawSleepDur * sleepDurConfidence;
+      rawWeights.sleepDur = rawSleepDur;
       score += sleepDurWeight;
-      console.info('[HEYS.cascade] 😴 Sleep duration:', { sleepHours: +sleepHours.toFixed(1), weight: sleepDurWeight });
+      console.info('[HEYS.cascade] 😴 Sleep duration (v2.1.0 Gaussian bell-curve):', {
+        sleepHours: +sleepHours.toFixed(1), personalOptimal: +personalSleepOpt.toFixed(1),
+        deviation: +sleepDev.toFixed(1), formula: '1.5×exp(-' + sleepDev.toFixed(1) + '²/(2×0.8²))-0.5',
+        asymmetry: sleepHours < personalSleepOpt ? '×1.3 (undersleep penalty)' : 'none',
+        yesterdayTrainLoad: Math.round(yesterdayTrainLoad),
+        trainingRecovery: yesterdayTrainLoad > 60 ? '+0.5h optimal shift' : 'none',
+        rawWeight: +rawSleepDur.toFixed(2), confidence: sleepDurConfidence,
+        adjustedWeight: +sleepDurWeight.toFixed(2)
+      });
     } else {
       console.info('[HEYS.cascade] 😴 No sleepHours data — ШАГ 5 skipped');
     }
 
-    // ── ШАГ 6: Шаги (ratio-based) ───────────────────────
-    var stepsGoal = (prof && (prof.stepsGoal || prof.steps_goal)) || 7000;
-    var stepsRatio = steps > 0 ? steps / stepsGoal : 0;
+    // ── ШАГ 6: Шаги (rolling adaptive goal + tanh continuous) ──
+    var stepsConfidence = getFactorConfidence(prevDays14, function (d) { return d && d.steps; });
+    confidenceMap.steps = stepsConfidence;
     var stepsWeight = 0;
+
     if (steps > 0) {
-      if (stepsRatio >= 1.2) stepsWeight = EVENT_WEIGHTS.steps_great;
-      else if (stepsRatio >= 1.0) stepsWeight = EVENT_WEIGHTS.steps_full;
-      else if (stepsRatio >= 0.7) stepsWeight = EVENT_WEIGHTS.steps_partial;
-      else if (stepsRatio >= 0.5) stepsWeight = EVENT_WEIGHTS.steps_half;
-      else stepsWeight = EVENT_WEIGHTS.steps_low;
+      // Adaptive goal: 14-day median × 1.05 (progressive overload)
+      var rollingStepsAvg = getPersonalBaseline(prevDays14, function (d) { return d.steps; },
+        (prof && (prof.stepsGoal || prof.steps_goal)) || POPULATION_DEFAULTS.steps);
+      var adaptiveGoal = Math.max(5000, rollingStepsAvg * 1.05);
+      var stepsRatio = steps / adaptiveGoal;
+
+      // Continuous tanh scoring
+      var rawSteps = clamp(Math.tanh((stepsRatio - 0.6) * 2.5) * 1.0 + 0.15, -0.5, 1.3);
+      stepsWeight = rawSteps * stepsConfidence;
+      rawWeights.steps = rawSteps;
       score += stepsWeight;
+
       var stepsLabel = stepsRatio >= 1.2
         ? ('Шаги — ' + Math.round(steps / 1000 * 10) / 10 + 'k (отлично!)')
         : stepsRatio >= 1.0
@@ -584,92 +853,201 @@
       events.push({
         type: 'steps',
         time: null,
-        positive: stepsWeight > 0,
+        positive: rawSteps > 0,
         icon: EVENT_ICONS.steps,
         label: stepsLabel,
         sortKey: 1100,
         weight: stepsWeight
       });
-      console.info('[HEYS.cascade] 🚶 Steps:', { steps: steps, goal: stepsGoal, ratio: +stepsRatio.toFixed(2), weight: stepsWeight });
+      console.info('[HEYS.cascade] 🚶 Steps (v2.1.0 rolling adaptive + tanh):', {
+        steps: steps, adaptiveGoal: Math.round(adaptiveGoal),
+        ratio: +stepsRatio.toFixed(2), formula: 'tanh((' + stepsRatio.toFixed(2) + '-0.6)×2.5)×1.0+0.15',
+        rawWeight: +rawSteps.toFixed(2),
+        confidence: stepsConfidence, adjustedWeight: +stepsWeight.toFixed(2)
+      });
     } else {
+      rawWeights.steps = 0;
       console.info('[HEYS.cascade] 🚶 No steps data — ШАГ 6 skipped');
     }
 
-    // ── ШАГ 7: Чекин веса (weightMorning) ───────────────
+    // ── ШАГ 7: Чекин веса (streak bonus + trend awareness) ──
     var weightMorning = (day && day.weightMorning) || 0;
+    var checkinConfidence = getFactorConfidence(prevDays14, function (d) { return d && d.weightMorning; });
+    confidenceMap.checkin = checkinConfidence;
+
     if (weightMorning > 0) {
-      score += EVENT_WEIGHTS.checkin;
+      var checkinBase = 0.3;
+      // Streak bonus: consecutive check-ins (+0.05/day, max +0.5)
+      var checkinStreak = countConsecutive(prevDays14, function (d) { return d && d.weightMorning > 0; });
+      var streakBonus = Math.min(0.5, checkinStreak * 0.05);
+
+      // Trend awareness: stability bonus if weight is stable ±50g/day
+      var trendBonus = 0;
+      var recentWeights = [];
+      for (var cw = 0; cw < Math.min(7, prevDays14.length); cw++) {
+        if (prevDays14[cw] && prevDays14[cw].weightMorning > 0) recentWeights.push(prevDays14[cw].weightMorning);
+      }
+      if (recentWeights.length >= 3) {
+        var wFirst = recentWeights[recentWeights.length - 1];
+        var wLast = recentWeights[0];
+        var slope = (wLast - wFirst) / recentWeights.length;
+        if (Math.abs(slope) < 0.05) trendBonus = 0.05; // stable weight
+      }
+
+      var rawCheckin = clamp(checkinBase + streakBonus + trendBonus, 0, 0.8);
+      var checkinWeight = rawCheckin * checkinConfidence;
+      rawWeights.checkin = rawCheckin;
+      score += checkinWeight;
       events.push({
         type: 'checkin',
         time: null,
         positive: true,
         icon: EVENT_ICONS.checkin,
-        label: 'Чекин веса: ' + weightMorning + ' кг',
+        label: 'Чекин веса: ' + weightMorning + ' кг' + (checkinStreak > 2 ? ' (' + (checkinStreak + 1) + ' д.)' : ''),
         sortKey: 540,
-        weight: EVENT_WEIGHTS.checkin
+        weight: checkinWeight
       });
-      console.info('[HEYS.cascade] ⚖️ Weight checkin:', { weight: weightMorning, delta: EVENT_WEIGHTS.checkin });
+      console.info('[HEYS.cascade] ⚖️ Weight checkin (v2.1.0 streak + trend):', {
+        weight: weightMorning, base: checkinBase,
+        streak: checkinStreak, streakBonus: +streakBonus.toFixed(2),
+        trendBonus: +trendBonus.toFixed(2),
+        formula: 'base(' + checkinBase + ') + streak(' + streakBonus.toFixed(2) + ') + trend(' + trendBonus.toFixed(2) + ')',
+        rawWeight: +rawCheckin.toFixed(2),
+        confidence: checkinConfidence, adjustedWeight: +checkinWeight.toFixed(2)
+      });
     } else {
-      console.info('[HEYS.cascade] ⚖️ No weight checkin today — ШАГ 7 skipped');
+      // Mild habit-break penalty if streak was active
+      var brokenStreak = countConsecutive(prevDays14, function (d) { return d && d.weightMorning > 0; });
+      if (brokenStreak >= 3) {
+        var breakPenalty = -0.1 * checkinConfidence;
+        rawWeights.checkin = -0.1;
+        score += breakPenalty;
+        console.info('[HEYS.cascade] ⚖️ Checkin streak broken (was ' + brokenStreak + ' days):', { penalty: +breakPenalty.toFixed(2) });
+      } else {
+        rawWeights.checkin = 0;
+        console.info('[HEYS.cascade] ⚖️ No weight checkin today — ШАГ 7 skipped');
+      }
     }
 
-    // ── ШАГ 8: Замеры (measurements) ────────────────────
+    // ── ШАГ 8: Замеры (smart cadence + completeness score) ──
     var measurements = (day && day.measurements) || null;
-    var hasMeasToday = measurements && Object.keys(measurements).some(function (k) { return measurements[k] > 0; });
+    var measKeys = measurements ? Object.keys(measurements).filter(function (k) { return measurements[k] > 0; }) : [];
+    var hasMeasToday = measKeys.length > 0;
+    var measConfidence = getFactorConfidence(prevDays14, function (d) {
+      return d && d.measurements && Object.keys(d.measurements).some(function (k) { return d.measurements[k] > 0; }) ? 1 : 0;
+    });
+    confidenceMap.measurements = measConfidence;
+
     if (hasMeasToday) {
-      score += EVENT_WEIGHTS.measurements_today;
+      var totalPossible = 4; // waist, hips, thigh, biceps
+      var completeness = measKeys.length / totalPossible;
+      var rawMeas = 0.5 + completeness * 0.7; // 1 part → +0.67, all 4 → +1.2
+
+      // Diminishing returns if measured yesterday too (weekly cadence is optimal)
+      var lastMeasDayIdx = -1;
+      for (var lm = 0; lm < prevDays14.length; lm++) {
+        var plm = prevDays14[lm];
+        if (plm && plm.measurements && Object.keys(plm.measurements).some(function (k) { return plm.measurements[k] > 0; })) {
+          lastMeasDayIdx = lm + 1; break;
+        }
+      }
+      if (lastMeasDayIdx !== -1 && lastMeasDayIdx <= 2) rawMeas *= 0.5;
+
+      rawMeas = clamp(rawMeas, 0, 1.2);
+      var measWeight = rawMeas * measConfidence;
+      rawWeights.measurements = rawMeas;
+      score += measWeight;
       events.push({
         type: 'measurements',
         time: null,
         positive: true,
         icon: EVENT_ICONS.measurements,
-        label: 'Замеры тела',
+        label: 'Замеры тела (' + measKeys.length + '/' + totalPossible + ')',
         sortKey: 545,
-        weight: EVENT_WEIGHTS.measurements_today
+        weight: measWeight
       });
-      console.info('[HEYS.cascade] 📏 Measurements taken today, delta:', EVENT_WEIGHTS.measurements_today);
+      console.info('[HEYS.cascade] 📏 Measurements (v2.1.0 completeness + cadence):', {
+        count: measKeys.length, completeness: +completeness.toFixed(2),
+        formula: '0.5 + ' + completeness.toFixed(2) + '×0.7',
+        lastMeasDay: lastMeasDayIdx, diminishing: lastMeasDayIdx !== -1 && lastMeasDayIdx <= 2 ? '×0.5 (recent)' : 'none',
+        rawWeight: +rawMeas.toFixed(2),
+        confidence: measConfidence, adjustedWeight: +measWeight.toFixed(2)
+      });
     } else {
-      var prevDaysMeas = getPreviousDays(30);
-      var lastMeasDay = -1;
-      for (var pm = 0; pm < prevDaysMeas.length; pm++) {
-        var pdm = prevDaysMeas[pm];
-        if (pdm && pdm.measurements && Object.keys(pdm.measurements).some(function (k) { return pdm.measurements[k] > 0; })) {
-          lastMeasDay = pm + 1; break;
+      // Penalty if too long since last measurement
+      var lastMeasSearch = -1;
+      for (var pms = 0; pms < prevDays14.length; pms++) {
+        var pds = prevDays14[pms];
+        if (pds && pds.measurements && Object.keys(pds.measurements).some(function (k) { return pds.measurements[k] > 0; })) {
+          lastMeasSearch = pms + 1; break;
         }
       }
-      if (lastMeasDay >= 0) {
-        var measPenalty = lastMeasDay > 14 ? EVENT_WEIGHTS.measurements_very_old : lastMeasDay > 7 ? EVENT_WEIGHTS.measurements_old : 0;
-        if (measPenalty !== 0) {
-          score += measPenalty;
-          console.info('[HEYS.cascade] 📏 Measurements penalty:', { lastMeasDay: lastMeasDay, delta: measPenalty });
-        }
+      if (lastMeasSearch > 7) {
+        var measPenalty = clamp(-0.05 * (lastMeasSearch - 7), -0.3, 0);
+        measPenalty *= measConfidence;
+        rawWeights.measurements = measPenalty / (measConfidence || 1);
+        score += measPenalty;
+        console.info('[HEYS.cascade] 📏 Measurements penalty:', { lastMeasDay: lastMeasSearch, penalty: +measPenalty.toFixed(2) });
+      } else {
+        rawWeights.measurements = 0;
       }
     }
 
-    // ── ШАГ 9: Витамины/добавки (supplements) ───────────
+    // ── ШАГ 9: Витамины (continuous + streak bonus) ─────
     var suppTaken = (day && day.supplementsTaken) ? day.supplementsTaken.length : 0;
     var suppPlanned = (day && day.supplementsPlanned) || (prof && prof.plannedSupplements) || 0;
+    var suppConfidence = getFactorConfidence(prevDays14, function (d) { return d && d.supplementsTaken && d.supplementsTaken.length; });
+    confidenceMap.supplements = suppConfidence;
+
     if (suppPlanned > 0) {
       var suppRatio = suppTaken / suppPlanned;
-      var suppWeight = suppRatio >= 1 ? EVENT_WEIGHTS.supplements_all
-        : suppRatio >= 0.5 ? EVENT_WEIGHTS.supplements_half
-          : EVENT_WEIGHTS.supplements_poor;
+      // Continuous scoring: ratio × 0.7 - 0.1
+      var rawSupp = clamp(suppRatio * 0.7 - 0.1, -0.3, 0.5);
+
+      // Streak bonus
+      var suppStreak = countConsecutive(prevDays14, function (d) {
+        if (!d || !d.supplementsTaken) return false;
+        var st = d.supplementsTaken.length || 0;
+        var sp = d.supplementsPlanned || (d.plannedSupplements || suppPlanned);
+        return sp > 0 && (st / sp) >= 0.8;
+      });
+      var suppStreakBonus = suppStreak >= 7 ? 0.2 : suppStreak >= 3 ? 0.1 : 0;
+
+      // Habit break penalty
+      if (suppTaken === 0 && suppStreak >= 3) {
+        rawSupp = -0.3;
+        suppStreakBonus = 0;
+      }
+
+      rawSupp = clamp(rawSupp + suppStreakBonus, -0.3, 0.7);
+      var suppWeight = rawSupp * suppConfidence;
+      rawWeights.supplements = rawSupp;
       score += suppWeight;
       events.push({
         type: 'supplements',
         time: null,
-        positive: suppWeight > 0,
+        positive: rawSupp > 0,
         icon: EVENT_ICONS.supplements,
         label: suppRatio >= 1 ? 'Добавки: всё' : ('Добавки: ' + suppTaken + '/' + suppPlanned),
         sortKey: 550,
         weight: suppWeight
       });
-      console.info('[HEYS.cascade] 💊 Supplements:', { taken: suppTaken, planned: suppPlanned, ratio: +suppRatio.toFixed(2), weight: suppWeight });
+      console.info('[HEYS.cascade] 💊 Supplements (v2.1.0 continuous + streak):', {
+        taken: suppTaken, planned: suppPlanned, ratio: +suppRatio.toFixed(2),
+        formula: 'clamp(' + suppRatio.toFixed(2) + '×0.7-0.1)',
+        streak: suppStreak, streakBonus: +suppStreakBonus.toFixed(2),
+        rawWeight: +rawSupp.toFixed(2), confidence: suppConfidence,
+        adjustedWeight: +suppWeight.toFixed(2)
+      });
     } else {
+      rawWeights.supplements = 0;
       console.info('[HEYS.cascade] 💊 No supplement plan configured — ШАГ 9 skipped');
     }
 
-    // ── ШАГ 10: Инсулиновые волны (InsulinWave) ─────────
+    // ── ШАГ 10: Инсулиновые волны (sigmoid overlap + log2 gap + post-training + night fasting) ──
+    var insulinConfidence = getFactorConfidence(prevDays14, function (d) { return d && d.meals && d.meals.length >= 2 ? 1 : 0; });
+    confidenceMap.insulin = insulinConfidence;
+
     if (meals.length >= 2 && HEYS.InsulinWave && typeof HEYS.InsulinWave.calculate === 'function') {
       try {
         var iw = HEYS.InsulinWave.calculate({
@@ -678,41 +1056,217 @@
           trainings: trainings, dayData: { profile: prof }
         });
         var overlaps = (iw && iw.overlaps) || [];
-        var avgGap = (iw && iw.avgGapToday) || 0;
+        var gaps = (iw && iw.gaps) || [];
+        iwAvgGap = (iw && iw.avgGapToday) || 0;
         var iwScore = 0;
+
+        // Sigmoid overlap penalty (severity-weighted, continuous)
         overlaps.forEach(function (ov) {
-          var ovW = ov.severity === 'high' ? EVENT_WEIGHTS.insulin_overlap_high
-            : ov.severity === 'medium' ? EVENT_WEIGHTS.insulin_overlap_med
-              : EVENT_WEIGHTS.insulin_overlap_low;
-          iwScore += ovW;
+          var overlapMins = ov.overlapMinutes || (ov.severity === 'high' ? 60 : ov.severity === 'medium' ? 40 : 15);
+          var ovPenalty = -(1 / (1 + Math.exp(-overlapMins / 30))) * 0.6;
+          iwScore += ovPenalty;
         });
-        iwScore = Math.max(-1.5, iwScore);
-        if (avgGap >= 240) iwScore += EVENT_WEIGHTS.insulin_gap_great;
-        else if (avgGap >= 180) iwScore += EVENT_WEIGHTS.insulin_gap_good;
-        else if (avgGap >= 120) iwScore += EVENT_WEIGHTS.insulin_gap_ok;
-        if (iwScore !== 0) {
-          score += iwScore;
-          console.info('[HEYS.cascade] ⚡ InsulinWave score:', { overlaps: overlaps.length, avgGap: avgGap, delta: iwScore });
+        iwScore = Math.max(-2.0, iwScore); // cap overlap penalty
+
+        // Log2 gap scoring (continuous)
+        if (gaps.length > 0) {
+          gaps.forEach(function (g) {
+            var gapMins = g.gapMinutes || g.gap || 0;
+            if (gapMins > 120) {
+              var gapBonus = clamp(Math.log2(gapMins / 120), 0, 1.0) * 0.4;
+              iwScore += gapBonus;
+            }
+          });
+        } else if (iwAvgGap > 0) {
+          // Fallback to avgGap if individual gaps not available
+          if (iwAvgGap > 120) iwScore += clamp(Math.log2(iwAvgGap / 120), 0, 1.0) * 0.4;
+        }
+
+        // Post-training meal timing bonus (anabolic window)
+        if (trainings.length > 0) {
+          trainings.forEach(function (tr) {
+            var trEnd = parseTime(tr && tr.time);
+            if (trEnd === null) return;
+            var trDur = getTrainingDuration(tr);
+            trEnd += trDur; // approximate end time
+            meals.forEach(function (m) {
+              var mTime = parseTime(m && m.time);
+              if (mTime === null) return;
+              var diff = mTime - trEnd;
+              if (diff >= 30 && diff <= 120) iwScore += 0.3; // anabolic window
+              else if (diff >= 0 && diff < 30) iwScore += 0.15; // too soon but ok
+            });
+          });
+        }
+
+        // Night fasting bonus (continuous)
+        var longestGap = 0;
+        if (gaps.length > 0) {
+          gaps.forEach(function (g) { longestGap = Math.max(longestGap, g.gapMinutes || g.gap || 0); });
+        }
+        if (longestGap > 0) {
+          var nightGapHours = longestGap / 60;
+          var nightBonus = clamp((nightGapHours - 10) * 0.15, 0, 0.5);
+          iwScore += nightBonus;
+        }
+
+        iwScore = clamp(iwScore, -2.0, 2.0);
+        var iwAdjusted = iwScore * insulinConfidence;
+        rawWeights.insulin = iwScore;
+        if (iwAdjusted !== 0) {
+          score += iwAdjusted;
+          events.push({
+            type: 'insulin',
+            time: null,
+            positive: iwScore > 0,
+            icon: EVENT_ICONS.insulin,
+            label: iwScore > 0 ? 'Инсулиновые промежутки ✓' : 'Наложение инсулиновых волн',
+            sortKey: 1200,
+            weight: iwAdjusted
+          });
+          console.info('[HEYS.cascade] ⚡ InsulinWave (v2.1.0 sigmoid overlap + log2 gap + night fasting):', {
+            overlaps: overlaps.length, avgGap: Math.round(iwAvgGap),
+            longestGap: Math.round(longestGap),
+            nightFasting: longestGap > 0 ? +(longestGap / 60).toFixed(1) + 'h' : 'N/A',
+            postTrainingMealBonus: trainings.length > 0 ? 'checked' : 'no training',
+            rawScore: +iwScore.toFixed(2), confidence: insulinConfidence,
+            adjustedScore: +iwAdjusted.toFixed(2)
+          });
         }
       } catch (e) {
         console.warn('[HEYS.cascade] ⚡ InsulinWave error (non-fatal):', e && e.message);
       }
     } else {
+      rawWeights.insulin = 0;
       console.info('[HEYS.cascade] ⚡ InsulinWave skipped:', { meals: meals.length, hasModule: !!(HEYS.InsulinWave && HEYS.InsulinWave.calculate) });
     }
 
-    // ── ШАГ 11: Сортировка ───────────────────────────────
+    // ── ШАГ 11: Scoring summary + Confidence ────────────
+    console.info('[HEYS.cascade] 📊 v2.2.0 Scoring summary (before synergies):', {
+      factorScores: rawWeights,
+      totalScore: +score.toFixed(2),
+      activeFactors: Object.keys(rawWeights).filter(function (k) { return rawWeights[k] !== 0; }).length,
+      skippedFactors: Object.keys(rawWeights).filter(function (k) { return rawWeights[k] === 0; }).length,
+      scoringMethod: 'v2.2.0 continuous (sigmoid/bell-curve/log2/tanh)'
+    });
+
+    var avgConfidence = 0;
+    var confKeys = Object.keys(confidenceMap);
+    if (confKeys.length > 0) {
+      var confSum = 0;
+      confKeys.forEach(function (k) { confSum += confidenceMap[k]; });
+      avgConfidence = confSum / confKeys.length;
+    }
+    console.info('[HEYS.cascade] 🎯 Confidence layer (v2.2.0):', {
+      factors: confidenceMap,
+      avgConfidence: +avgConfidence.toFixed(2),
+      dataQuality: avgConfidence >= 0.8 ? 'HIGH' : avgConfidence >= 0.5 ? 'MEDIUM' : 'LOW',
+      effect: 'weights × confidence = noise reduction with sparse data'
+    });
+
+    // ── ШАГ 12: Day-Type detection ──────────────────────
+    var dayType = 'normal';
+    if (todayTotalLoad > 60) {
+      dayType = 'training_day';
+    } else if (todayTotalLoad > 0 && todayTotalLoad <= 30) {
+      dayType = 'active_rest';
+    } else {
+      var yLoad = 0;
+      if (prevDays14[0] && prevDays14[0].trainings) {
+        prevDays14[0].trainings.forEach(function (t) { yLoad += getTrainingLoad(t); });
+      }
+      if (yLoad > 60 && todayTotalLoad === 0) {
+        dayType = 'rest_day';
+      }
+    }
+
+    // Day-type adjustments to score
+    if (dayType === 'training_day') {
+      // Training days: meal timing matters more, sleep recovery more important
+      // (already handled by per-factor logic, but add small bonus for high-effort days)
+      if (score > 0) score *= 1.05;
+    } else if (dayType === 'rest_day') {
+      // Rest days: no training penalty (already handled), sleep is king
+    }
+
+    console.info('[HEYS.cascade] 📅 Day-type (v2.1.0 context-aware):', {
+      dayType: dayType, todayTrainingLoad: Math.round(todayTotalLoad),
+      modifier: dayType === 'training_day' ? '×1.05 score bonus' : 'none',
+      effect: dayType === 'rest_day' ? 'no training penalty, recovery focus'
+        : dayType === 'active_rest' ? 'low-intensity encouraged'
+          : dayType === 'training_day' ? 'higher calorie tolerance, sleep importance'
+            : 'standard expectations'
+    });
+
+    // ── ШАГ 13: Cross-factor synergies ──────────────────
+    var synergies = [];
+
+    // 1. Sleep + Training Recovery: good sleep after training day
+    if (dayType === 'rest_day' && sleepHours >= 7.5 && rawWeights.sleepDur > 0) {
+      synergies.push({ name: 'sleep_training_recovery', bonus: 0.3, reason: 'Восстановительный сон после тренировки' });
+    }
+
+    // 2. NEAT + Steps: household activity pairs well with steps
+    if (rawWeights.household > 0 && rawWeights.steps > 0) {
+      synergies.push({ name: 'neat_steps', bonus: 0.2, reason: 'Высокая бытовая + шаговая активность' });
+    }
+
+    // 3. Meals + Insulin: quality meals with good insulin spacing
+    if (rawWeights.insulin > 0.2) {
+      var avgMealWeight = 0;
+      var mealCount = 0;
+      events.forEach(function (e) { if (e.type === 'meal') { avgMealWeight += e.weight; mealCount++; } });
+      if (mealCount > 0) avgMealWeight /= mealCount;
+      if (avgMealWeight > 0.3) {
+        synergies.push({ name: 'meals_insulin', bonus: 0.25, reason: 'Качественные приёмы + правильные промежутки' });
+      }
+    }
+
+    // 4. Morning Ritual: checkin + early meal/training before 10:00
+    var hasEarlyAction = events.some(function (e) {
+      return (e.type === 'meal' || e.type === 'training') && e.sortKey < 600;
+    });
+    if (rawWeights.checkin > 0 && hasEarlyAction) {
+      synergies.push({ name: 'morning_ritual', bonus: 0.2, reason: 'Утренний ритуал: чекин + ранняя активность' });
+    }
+
+    // 5. Full Recovery Day: rest day + good sleep + no overeating
+    if (dayType === 'rest_day' && rawWeights.sleepOnset > 0 && rawWeights.sleepDur > 0) {
+      var noOvereating = !events.some(function (e) { return e.type === 'meal' && !e.positive; });
+      if (noOvereating) {
+        synergies.push({ name: 'full_recovery', bonus: 0.35, reason: 'Полный день восстановления' });
+      }
+    }
+
+    // Apply synergy bonuses (max +1.3 total)
+    var totalSynergyBonus = 0;
+    synergies.forEach(function (s) { totalSynergyBonus += s.bonus; });
+    totalSynergyBonus = Math.min(1.3, totalSynergyBonus);
+    score += totalSynergyBonus;
+
+    if (synergies.length > 0) {
+      console.info('[HEYS.cascade] 🔗 Cross-factor synergies:', {
+        count: synergies.length,
+        synergies: synergies.map(function (s) { return s.name + ' (+' + s.bonus + ')'; }),
+        totalBonus: +totalSynergyBonus.toFixed(2),
+        capped: totalSynergyBonus === 1.3
+      });
+    }
+
+    // ── ШАГ 14: Сортировка ───────────────────────────────
     events.sort(function (a, b) { return (a.sortKey || 0) - (b.sortKey || 0); });
 
     console.info('[HEYS.cascade] 📋 Events sorted (' + events.length + ' total):', events.map(function (e) {
       return { type: e.type, time: e.time, positive: e.positive, label: e.label, sortKey: e.sortKey };
     }));
 
-    // ── ШАГ 12: Алгоритм цепочки ────────────────────────
+    // ── ШАГ 15: Алгоритм цепочки (v2.2.0 soft chain) ────
+    // v2.2.0: негативное событие уменьшает цепочку пропорционально тяжести,
+    // а не обнуляет. Одна ошибка не перечёркивает весь прогресс.
     var chain = 0;
     var maxChain = 0;
-    var breaks = [];
-    var hasBreak = false;
+    var warnings = [];
+    var totalPenalty = 0;
     var chainLog = [];
 
     for (var ei = 0; ei < events.length; ei++) {
@@ -721,67 +1275,75 @@
       if (ev.positive) {
         chain++;
         if (chain > maxChain) maxChain = chain;
+        chainLog.push({
+          type: ev.type, label: ev.label, positive: true,
+          chainBefore: prevChain, chainAfter: chain,
+          delta: '+1 → ' + chain
+        });
       } else {
-        if (chain > 0) {
-          breaks.push({
-            time: ev.time,
-            reason: ev.breakReason || 'Отклонение',
-            label: ev.label,
-            chainBefore: chain
-          });
-        }
-        hasBreak = true;
-        chain = 0;
+        var penalty = getChainPenalty(ev.weight || 0);
+        var chainBefore = chain;
+        chain = Math.max(0, chain - penalty);
+        totalPenalty += penalty;
+        warnings.push({
+          time: ev.time,
+          reason: ev.breakReason || 'Отклонение',
+          label: ev.label,
+          chainBefore: chainBefore,
+          chainAfter: chain,
+          penalty: penalty,
+          weight: +(ev.weight || 0).toFixed(2)
+        });
+        chainLog.push({
+          type: ev.type, label: ev.label, positive: false,
+          chainBefore: chainBefore, chainAfter: chain,
+          delta: '-' + penalty + ' → ' + chain + ' (weight=' + (ev.weight || 0).toFixed(2) + ', severity=' + (penalty === 3 ? 'SEVERE' : penalty === 2 ? 'MEDIUM' : 'MINOR') + ')'
+        });
       }
-      chainLog.push({
-        type: ev.type,
-        label: ev.label,
-        positive: ev.positive,
-        chainBefore: prevChain,
-        chainAfter: chain,
-        delta: ev.positive ? ('+1 → ' + chain) : ('BREAK (was ' + prevChain + ')')
-      });
     }
 
-    console.info('[HEYS.cascade] ⛓️ Chain algorithm trace:', chainLog);
+    console.info('[HEYS.cascade] ⛓️ Chain algorithm (v2.2.0 soft degradation):', chainLog);
     console.info('[HEYS.cascade] 🔗 Chain result:', {
       finalChainLength: chain,
       maxChainToday: maxChain,
-      hasBreak: hasBreak,
-      breaksCount: breaks.length,
-      breaks: breaks.map(function (b) { return { time: b.time, reason: b.reason, chainBefore: b.chainBefore }; })
+      warningsCount: warnings.length,
+      totalPenalty: totalPenalty,
+      model: 'v2.2.0 soft chain (penalty 1/2/3 by severity)',
+      warnings: warnings.map(function (w) { return { time: w.time, reason: w.reason, penalty: w.penalty, chain: w.chainBefore + '→' + w.chainAfter }; })
     });
 
-    // ── ШАГ 13: Определение состояния (по score) ─────────
-    // v1.3.0: состояние определяется взвешенным score, а не длиной стрика.
-    // chain остаётся для визуального таймлайна (точки, цепочка).
+    // ── ШАГ 16: Определение состояния (v2.2.0 score-driven) ───
+    // v2.2.0: состояние определяется ТОЛЬКО по score. warnings влияют на score
+    // (негативные веса уже учтены), но НЕ форсируют RECOVERY/BROKEN.
+    // RECOVERY = слабый импульс (0 < score < BUILDING)
+    // BROKEN = негативы перевесили (score ≤ 0)
     var state = STATES.EMPTY;
-    var positiveScore = Math.max(0, score); // score без учёта штрафов
 
     if (events.length === 0) {
       state = STATES.EMPTY;
-    } else if (hasBreak && positiveScore > 0) {
-      state = STATES.RECOVERY;
-    } else if (hasBreak && positiveScore <= 0) {
-      state = STATES.BROKEN;
     } else if (score >= SCORE_THRESHOLDS.STRONG) {
       state = STATES.STRONG;
     } else if (score >= SCORE_THRESHOLDS.GROWING) {
       state = STATES.GROWING;
     } else if (score >= SCORE_THRESHOLDS.BUILDING) {
       state = STATES.BUILDING;
+    } else if (score > 0) {
+      state = STATES.RECOVERY;
+    } else {
+      state = STATES.BROKEN;
     }
 
-    console.info('[HEYS.cascade] 🏷️ State determination:', {
+    console.info('[HEYS.cascade] 🏷️ State determination (v2.2.0 score-driven):', {
       eventsLength: events.length,
-      hasBreak: hasBreak,
+      warningsCount: warnings.length,
       chain: chain,
       score: +score.toFixed(2),
       thresholds: { STRONG: SCORE_THRESHOLDS.STRONG, GROWING: SCORE_THRESHOLDS.GROWING, BUILDING: SCORE_THRESHOLDS.BUILDING },
+      model: 'score-only (no hasBreak override)',
       detectedState: state
     });
 
-    // ── ШАГ 14: Post-training window ──────────────────────
+    // ── ШАГ 17: Post-training window ──────────────────────
     var lastTraining = trainings.length > 0 ? trainings[trainings.length - 1] : null;
     var postTrainingWindow = lastTraining && lastTraining.time ? isWithinHours(lastTraining.time, 2) : false;
 
@@ -792,7 +1354,7 @@
       effect: postTrainingWindow ? 'Пул: ANTI_LICENSING' : 'Обычный пул состояния'
     });
 
-    // ── ШАГ 15: Выбор сообщения ──────────────────────────
+    // ── ШАГ 18: Выбор сообщения ──────────────────────────
     var messagePoolKey;
     if (postTrainingWindow && state !== STATES.BROKEN && state !== STATES.EMPTY) {
       messagePoolKey = 'ANTI_LICENSING';
@@ -802,8 +1364,8 @@
     var messagePool = MESSAGES[messagePoolKey] || MESSAGES.BUILDING;
     var message = pickMessage(messagePool, messagePoolKey);
 
-    // ── ШАГ 16: Momentum score (по score) ───────────────
-    // v1.3.0: прогресс-бар = взвешенный score / MOMENTUM_TARGET (8.0)
+    // ── ШАГ 19: Momentum score (по score) ───────────────
+    // v2.1.0: прогресс-бар = взвешенный score / MOMENTUM_TARGET (12.0)
     var momentumScore = Math.min(1, Math.max(0, score) / MOMENTUM_TARGET);
 
     console.info('[HEYS.cascade] 📊 Momentum score:', {
@@ -814,7 +1376,7 @@
       progressBarPercent: Math.round(momentumScore * 100) + '%'
     });
 
-    // ── ШАГ 17: Next step hint ────────────────────────────
+    // ── ШАГ 20: Next step hint ────────────────────────────
     var nextStepHint = null;
     if (state !== STATES.EMPTY) {
       var hasMeal = events.some(function (e) { return e.type === 'meal'; });
@@ -847,18 +1409,45 @@
     // ── ИТОГОВЫЙ РЕЗУЛЬТАТ ────────────────────────────────
     var elapsed = ((typeof performance !== 'undefined') ? performance.now() : Date.now()) - t0;
 
-    console.info('[HEYS.cascade] ✅ computeCascadeState DONE:', {
+    console.info('[HEYS.cascade] ✅ computeCascadeState v2.2.0 DONE:', {
       state: state,
       score: +score.toFixed(2),
       chainLength: chain,
       maxChainToday: maxChain,
       momentumScore: +momentumScore.toFixed(2),
+      progressPercent: Math.round(momentumScore * 100) + '%',
       eventsCount: events.length,
-      breaksCount: breaks.length,
+      warningsCount: warnings.length,
+      totalPenalty: totalPenalty,
+      chainModel: 'soft (penalty 1/2/3)',
+      stateModel: 'score-driven',
       postTrainingWindow: postTrainingWindow,
       message: message.short,
       nextStepHint: nextStepHint,
       elapsed: elapsed.toFixed(2) + 'ms'
+    });
+    console.info('[HEYS.cascade] 🧬 v2.2.0 subsystems:', {
+      dayType: dayType,
+      synergies: synergies.length > 0
+        ? synergies.map(function (s) { return s.name + ' (+' + s.bonus + ': ' + s.reason + ')'; })
+        : '(none)',
+      synergiesBonus: +synergies.reduce(function (s, x) { return s + x.bonus; }, 0).toFixed(2),
+      confidenceLayer: {
+        avg: +avgConfidence.toFixed(2),
+        quality: avgConfidence >= 0.8 ? 'HIGH' : avgConfidence >= 0.5 ? 'MEDIUM' : 'LOW',
+        perFactor: confidenceMap
+      },
+      chainModel: {
+        type: 'soft degradation',
+        penalties: { MINOR: CHAIN_PENALTY.MINOR, MEDIUM: CHAIN_PENALTY.MEDIUM, SEVERE: CHAIN_PENALTY.SEVERE },
+        thresholds: CHAIN_PENALTY_THRESHOLDS,
+        totalPenalty: totalPenalty,
+        warningsCount: warnings.length
+      },
+      stateModel: 'score-only (STRONG≥8, GROWING≥4.5, BUILDING≥1.5, RECOVERY>0, BROKEN≤0)',
+      scoringMethod: 'continuous (sigmoid/bell-curve/log2/tanh)',
+      personalBaselines: '14-day rolling median',
+      thresholds: { STRONG: SCORE_THRESHOLDS.STRONG, GROWING: SCORE_THRESHOLDS.GROWING, BUILDING: SCORE_THRESHOLDS.BUILDING, MOMENTUM_TARGET: MOMENTUM_TARGET }
     });
     console.info('[HEYS.cascade] ─────────────────────────────────────────────');
 
@@ -867,12 +1456,17 @@
       chainLength: chain,
       maxChainToday: maxChain,
       score: +score.toFixed(2),
-      breaks: breaks,
+      warnings: warnings,
       state: state,
       momentumScore: momentumScore,
       postTrainingWindow: postTrainingWindow,
       message: message,
-      nextStepHint: nextStepHint
+      nextStepHint: nextStepHint,
+      dayType: dayType,
+      synergies: synergies,
+      confidence: confidenceMap,
+      avgConfidence: +avgConfidence.toFixed(2),
+      rawWeights: rawWeights
     };
   }
 
@@ -891,14 +1485,14 @@
       var dotClass = [
         'cascade-dot',
         'cascade-dot--' + ev.type,
-        !ev.positive ? 'cascade-dot--break' : null,
+        !ev.positive ? 'cascade-dot--warning' : null,
         (isLast && ev.positive) ? 'cascade-dot--latest' : null
       ].filter(Boolean).join(' ');
 
       if (i > 0) {
         children.push(React.createElement('div', {
           key: 'conn-' + i,
-          className: 'cascade-dot-connector' + (!ev.positive ? ' cascade-dot-connector--broken' : '')
+          className: 'cascade-dot-connector' + (!ev.positive ? ' cascade-dot-connector--warning' : '')
         }));
       }
       children.push(React.createElement('div', {
@@ -922,7 +1516,7 @@
     var rows = events.map(function (ev, i) {
       return React.createElement('div', {
         key: i,
-        className: 'cascade-timeline-row cascade-timeline-row--' + (ev.positive ? 'positive' : 'negative')
+        className: 'cascade-timeline-row cascade-timeline-row--' + (ev.positive ? 'positive' : 'warning')
       },
         React.createElement('span', { className: 'cascade-timeline-icon' }, ev.icon),
         React.createElement('span', { className: 'cascade-timeline-time' },
@@ -930,7 +1524,7 @@
         ),
         React.createElement('span', { className: 'cascade-timeline-label' }, ev.label),
         React.createElement('span', { className: 'cascade-timeline-badge' },
-          ev.positive ? '✓' : (ev.breakReason || '✗')
+          ev.positive ? '✓' : (ev.breakReason || '⚠')
         )
       );
     });
@@ -960,7 +1554,7 @@
     var postTrainingWindow = props.postTrainingWindow;
     var message = props.message;
     var nextStepHint = props.nextStepHint;
-    var breaks = props.breaks;
+    var warnings = props.warnings;
 
     var expandedState = React.useState(false);
     var expanded = expandedState[0];
@@ -1043,9 +1637,9 @@
           events: events,
           nextStepHint: nextStepHint
         }),
-        breaks && breaks.length > 0 && React.createElement('div', { className: 'cascade-card__breaks-info' },
+        warnings && warnings.length > 0 && React.createElement('div', { className: 'cascade-card__breaks-info' },
           React.createElement('span', { className: 'cascade-card__breaks-label' },
-            '⚠️ Разрывов цепочки сегодня: ' + breaks.length
+            '⚠️ Отклонений: ' + warnings.length + ' (−' + warnings.reduce(function (s, w) { return s + w.penalty; }, 0) + ' к цепочке)'
           )
         ),
         React.createElement('div', { className: 'cascade-card__stats' },
@@ -1185,9 +1779,9 @@
     STATES: STATES,
     STATE_CONFIG: STATE_CONFIG,
     MESSAGES: MESSAGES,
-    VERSION: '2.0.0'
+    VERSION: '2.2.0'
   };
 
-  console.info('[HEYS.cascade] ✅ Module loaded v2.0.0 | 10-factor behavioral scoring | Filter: [HEYS.cascade]');
+  console.info('[HEYS.cascade] ✅ Module loaded v2.2.0 | Soft chain degradation + score-driven states | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Filter: [HEYS.cascade]');
 
 })(typeof window !== 'undefined' ? window : global);
