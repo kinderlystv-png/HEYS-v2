@@ -1,5 +1,5 @@
 /**
- * HEYS Predictive Insights — Next Meal Recommender v3.5.0
+ * HEYS Predictive Insights — Next Meal Recommender v3.6.0
  * 
  * Context-aware meal guidance with 9 scenarios + 12 Pattern Integration (Phase A/B/C).
  * 
@@ -13,7 +13,18 @@
  * - PROTEIN_DEFICIT: protein <50% target
  * - STRESS_EATING: stress >3 OR mood <3
  * - BALANCED: default scenario
- * 
+ *
+ * v3.6.0 (19.02.2026):
+ * - FIX: calculateOptimalTiming() now respects active insulin wave (v4.0.6)
+ *   Before: timing was purely gap-based (lastMeal + 4h gap), completely ignoring wave
+ *   After: idealStart = max(gap-based, waveEnd + 30min fat burn)
+ *   — uses HEYS.InsulinWave.calculate() with last meal nutrients
+ * - FIX: After planner runs, timing sync — if planner first meal is later than recommender
+ *   timing, update timingRec with planner's computed start so card shows correct time
+ *   (was: card showed 22:44-23:00 naive gap time; now: card shows planner's 23:35-24:35)
+ * - LOG: [MEALREC / timing] 🌊 Insulin wave constraint: logs waveEnd, remaining, fatBurnEnd
+ * - LOG: [MEALREC.planner] 🔄 Timing sync: logs before/after when sync applied
+ *
  * v3.3.1 (20.02.2026):
  * - NEW: PRE_SLEEP scenario added to SCENARIOS constant + SCENARIO_ICONS
  * - NEW: idealGI=25 for PRE_SLEEP (was defaulting to 50)
@@ -328,7 +339,7 @@
      * @returns {object} - Recommendation result
      */
     function recommendNextMeal(context, profile, pIndex, days = []) {
-        console.info(`${LOG_PREFIX} 🍽️ recommendNextMeal v3.5.0 called:`, {
+        console.info(`${LOG_PREFIX} 🍽️ recommendNextMeal v3.6.0 called:`, {
             contextTime: context?.currentTime,
             lastMealTime: context?.lastMeal?.time,
             hasTraining: !!context?.training,
@@ -579,6 +590,29 @@
             console.info(`${LOG_PREFIX} [MEALREC.planner] ❌ Conditions NOT met for multi-meal planning`);
         }
 
+        // v4.0.6: Synchronize timing with planner's first meal if planner computed a later start
+        // This ensures the card header shows wave-aware timing instead of naive gap-based timing
+        if (mealsPlan?.available && mealsPlan.meals?.length > 0) {
+            const firstPlannedMeal = mealsPlan.meals[0];
+            if (firstPlannedMeal.timeStart) {
+                const plannerStartHours = parseTime(firstPlannedMeal.timeStart);
+                if (plannerStartHours > timingRec.idealStart) {
+                    const plannerEndHours = firstPlannedMeal.timeEnd ? parseTime(firstPlannedMeal.timeEnd) : plannerStartHours + 1;
+                    console.info(`${LOG_PREFIX} [MEALREC.planner] 🔄 Timing sync: planner start is later than recommender`, {
+                        recommenderTiming: timingRec.ideal,
+                        plannerStart: firstPlannedMeal.timeStart,
+                        plannerEnd: firstPlannedMeal.timeEnd,
+                        action: 'updating timingRec to planner timing'
+                    });
+                    timingRec.idealStart = plannerStartHours;
+                    timingRec.idealEnd = plannerEndHours;
+                    timingRec.ideal = `${formatTime(plannerStartHours)}-${formatTime(plannerEndHours)}`;
+                    timingRec.reason = `Планировщик: после инсулиновой волны + жиросжигание`;
+                    timingRec.plannerSynced = true;
+                }
+            }
+        }
+
         const result = {
             available: true,
             scenario: contextAnalysis.scenario,
@@ -593,7 +627,7 @@
             reasoning,
             confidence: 0.75, // Base confidence, will be enhanced below
             method: 'context_engine', // Context-aware pipeline
-            version: '3.3', // 🆕 Per-meal product generation
+            version: '3.6', // v3.6.0: wave-aware timing + timing sync after planner
             // 🆕 Multi-meal plan
             mealsPlan: mealsPlan?.available ? mealsPlan : null
         };
@@ -897,7 +931,7 @@
     }
 
     /**
-     * Calculate optimal meal timing (threshold-aware v2.4)
+     * Calculate optimal meal timing (threshold-aware v2.4, wave-aware v4.0.6)
      * @private
      */
     function calculateOptimalTiming(currentTime, lastMeal, training, sleepTarget, thresholds, patternHints, patternImpact = []) {
@@ -905,6 +939,38 @@
         const hasLastMeal = lastMeal && lastMeal.time;
         const lastMealTime = hasLastMeal ? parseTime(lastMeal.time) : 0;
         const hoursSinceLastMeal = hasLastMeal ? Math.max(0, currentTime - lastMealTime) : 0;
+
+        // v4.0.6: Calculate insulin wave end time for timing constraint
+        let waveEndHours = null;
+        const FAT_BURN_WINDOW_HOURS = 0.5; // 30 min fat burn after wave ends
+        if (hasLastMeal && HEYS.InsulinWave?.calculate) {
+            try {
+                const waveData = HEYS.InsulinWave.calculate({
+                    lastMealTime: lastMeal.time,
+                    nutrients: {
+                        kcal: lastMeal.totals?.kcal || 0,
+                        protein: lastMeal.totals?.prot || lastMeal.totals?.protein || 0,
+                        carbs: lastMeal.totals?.carbs || 0,
+                        fat: lastMeal.totals?.fat || 0,
+                        glycemicLoad: lastMeal.totals?.glycemicLoad || 0
+                    },
+                    profile: null, // minimal call — profile not always available here
+                    baseWaveHours: 3
+                });
+                if (waveData?.duration) {
+                    waveEndHours = lastMealTime + waveData.duration / 60;
+                    console.info(`${LOG_PREFIX} [MEALREC / timing] 🌊 Insulin wave constraint:`, {
+                        lastMeal: lastMeal.time,
+                        waveDuration: waveData.duration + 'min',
+                        waveEnd: formatTime(waveEndHours),
+                        waveRemaining: waveData.remaining + 'min',
+                        fatBurnEnd: formatTime(waveEndHours + FAT_BURN_WINDOW_HOURS)
+                    });
+                }
+            } catch (err) {
+                console.warn(`${LOG_PREFIX} [MEALREC / timing] ⚠️ InsulinWave calc failed:`, err.message);
+            }
+        }
 
         // Adaptive meal gap (v2.4)
         const idealGapMin = thresholds?.idealMealGapMin || 240; // fallback 4h
@@ -988,6 +1054,31 @@
                 after: `${formatTime(idealStart)}-${formatTime(idealEnd)}`,
                 reason: `Shift +${phaseATimingShiftMin}min (mealTiming/waveOverlap)`
             });
+        }
+
+        // v4.0.6: Enforce insulin wave constraint — don't suggest eating during active wave
+        if (waveEndHours !== null) {
+            const waveConstraintEnd = waveEndHours + FAT_BURN_WINDOW_HOURS;
+            if (idealStart < waveConstraintEnd) {
+                const prevStart = idealStart;
+                idealStart = waveConstraintEnd;
+                idealEnd = Math.max(idealEnd, idealStart + 0.5);
+                reason = `Ждём конец инсулиновой волны + жиросжигание (${formatTime(waveEndHours)})`;
+                console.info(`${LOG_PREFIX} [MEALREC / timing] 🌊 Wave constraint applied:`, {
+                    prevStart: formatTime(prevStart),
+                    waveEnd: formatTime(waveEndHours),
+                    fatBurnEnd: formatTime(waveConstraintEnd),
+                    newIdealStart: formatTime(idealStart),
+                    newIdealEnd: formatTime(idealEnd)
+                });
+                patternImpact.push({
+                    pattern: 'InsulinWave',
+                    area: 'timing',
+                    before: formatTime(prevStart),
+                    after: formatTime(idealStart),
+                    reason: `Wave ends ${formatTime(waveEndHours)} + 30min fat burn`
+                });
+            }
         }
 
         // P0 Fix: Ensure timing never in past
@@ -1868,6 +1959,6 @@
         recommend: recommendNextMeal
     };
 
-    console.info(`[${LOG_FILTER}][HEYS.InsightsPI.mealRecommender] ✅ Smart Meal Recommender v3.5.0 initialized (9 scenarios + Phase A/B/C + S9 phenotype auto-detect + R1/R3 last-meal protein fix)`);
+    console.info(`[${LOG_FILTER}][HEYS.InsightsPI.mealRecommender] ✅ Smart Meal Recommender v3.6.0 initialized (v3.6.0: wave-aware timing + timing sync after planner, 9 scenarios + Phase A/B/C + S9 phenotype auto-detect)`);
 
 })(typeof window !== 'undefined' ? window : global);

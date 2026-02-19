@@ -1,5 +1,5 @@
 /**
- * HEYS Predictive Insights — Multi-Meal Timeline Planner v2.1.0
+ * HEYS Predictive Insights — Multi-Meal Timeline Planner v2.2.0
  * 
  * Планирует все оставшиеся приёмы пищи до сна с учётом:
  * - Инсулиновых волн (HEYS.InsulinWave.calculate)
@@ -8,7 +8,13 @@
  * - Персонального паттерна сна (sleepStart из чек-ина)
  * - Распределения макросов между приёмами
  * - Hunger trade-off: большой дефицит → лучше поесть, чем лечь голодным
- * 
+ *
+ * v2.2.0 changes (19.02.2026):
+ * - FIX: waveMinutes → duration property name in InsulinWave.calculate() return object
+ *   (was always undefined → planner always used 3h fallback instead of real wave ~4.5h)
+ *   Real fix: currentWaveData.duration (minutes), currentWaveData.remaining (remaining minutes)
+ * - LOG: Added waveRemaining + endTimeDisplay to wave calculation log
+ *
  * v2.1.0 changes (19.02.2026):
  * - S8: Volume-adjusted personal wave for forceMultiMeal — smaller meal → shorter wave
  *   (Louis-Sylvestre & Le Magnen, 1980: meal size correlates with insulin response duration)
@@ -523,14 +529,16 @@
                 baseWaveHours: profile?.insulinWaveHours || 3
             });
 
-            if (currentWaveData?.waveMinutes) {
-                const waveEndMinutes = HEYS.utils?.timeToMinutes(lastMeal.time) + currentWaveData.waveMinutes;
+            if (currentWaveData?.duration) {
+                const waveEndMinutes = HEYS.utils?.timeToMinutes(lastMeal.time) + currentWaveData.duration;
                 currentWaveEnd = minutesToHours(waveEndMinutes);
                 console.info(`${LOG_PREFIX} [PLANNER.wave] 📊 Current insulin wave calculated:`, {
                     lastMeal: lastMeal.time,
-                    waveMinutes: currentWaveData.waveMinutes,
+                    waveDuration: currentWaveData.duration,
                     waveEnd: formatTime(currentWaveEnd),
-                    progress: currentWaveData.progressPct?.toFixed(1) + '%',
+                    remaining: currentWaveData.remaining,
+                    progress: currentWaveData.progress?.toFixed(1) + '%',
+                    endTimeDisplay: currentWaveData.endTimeDisplay,
                     nutrients: lastMealNutrients
                 });
             }
@@ -926,7 +934,7 @@
         minutesToHours
     };
 
-    console.info(`${LOG_PREFIX} 📦 Module loaded v2.1.0 (S8: volume-scaled personal wave for forceMultiMeal, S7: TEF-aware effectiveKcal, PRE_SLEEP threshold 5h, personal sleep pattern, MAX_MEAL_KCAL=${MAX_MEAL_KCAL})`);
+    console.info(`${LOG_PREFIX} 📦 Module loaded v2.2.0 (v2.2.0: wave.duration fix, S8: volume-scaled personal wave, S7: TEF-aware effectiveKcal, PRE_SLEEP threshold 5h, MAX_MEAL_KCAL=${MAX_MEAL_KCAL})`);
     console.info(`${LOG_PREFIX} ✅ Sprint 3 science engine active:`, {
         'S1-Chrono-Nutrition': `Garaulet & Gómez-Abellán, 2014 — MORNING=${CHRONO_RATIO_MORNING} LUNCH=${CHRONO_RATIO_LUNCH} SNACK=${CHRONO_RATIO_SNACK} EVENING=${CHRONO_RATIO_EVENING}`,
         'S2-MPS-Protein': `Areta et al., 2013 — ${MPS_PROT_PER_KG}г/кг на приём, ceiling ${MPS_PROT_MAX_G}г`,
