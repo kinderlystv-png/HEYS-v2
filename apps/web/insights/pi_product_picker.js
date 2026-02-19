@@ -1,5 +1,5 @@
 /**
- * HEYS Insights — Smart Product Picker v4.0.4
+ * HEYS Insights — Smart Product Picker v4.0.5
  * Персонализированный подбор продуктов на основе истории питания (30 дней)
  *
  * v4.0.0: S10 "Smart Scoring" Refactor (19.02.2026)
@@ -7,6 +7,11 @@
  * v4.0.2: Fix P0/C0/F0 — enrich history product macros from sharedProducts (MealItem has no prot/carb/fat)
  * v4.0.3: Fix enrichMacros field names — sharedProducts use protein100/simple100/complex100/badfat100 (not prot/carb/fat)
  * v4.0.4: Fix topFactors display — sort by weighted contribution (score×weight) so macro factors appear first
+ * v4.0.5: Fix LATE_EVENING — add category override (DAIRY+PROTEIN, no GRAINS) + extend sleepGIPenalty
+ *   - determineCategoryMix(): LATE_EVENING → [DAIRY, DAIRY, PROTEIN] (light dairy before sleep)
+ *   - sleepGIPenalty: now applies to LATE_EVENING too (GRAINS→0, DAIRY→100, PROTEIN→90)
+ *   - Bug: LATE_EVENING fell through to proportional calc → GRAINS slot appeared
+ *   - Bug: sleepGIPenalty only checked PRE_SLEEP → GRAINS scored neutral 50 in LATE_EVENING
  *   - Rebalanced Weights: Macro alignment 49% (prot 0.25+carb0.14+fat0.10+kcal0.10), Binary 6% (tie-breakers)
  *   - New Math: Alignments use Energy% (TEF-adj: prot×3, carb×4, fat×9) — same scale both sides
  *   - Fat Alignment: new factor 0.10 (was blind spot — zero weight on fat profile mismatch)
@@ -502,11 +507,12 @@
         // 11. Familiarity Boost (1%)
         scores.familiarityBoost = product.familiarityScore * 10; // 1-10 -> 10-100
 
-        // 12. Sleep GI Penalty (6%) - v3.3: PRE_SLEEP scenario avoids high-GI carbs (Halson 2014)
+        // 12. Sleep GI Penalty (6%) - v3.3+v4.0.5: PRE_SLEEP & LATE_EVENING avoid high-GI carbs (Halson 2014)
         // Casein/dairy pre-sleep → steady amino acid release without blood sugar spike
         // GRAINS (bread, pasta, rice) → rapid glucose → disrupts deep sleep architecture
+        // v4.0.5: Extended to LATE_EVENING — same sleep-disruption risk after 21:00
         const mealScenarioType = scenario.scenario || scenario.type;
-        const isPreSleepScenario = mealScenarioType === 'PRE_SLEEP';
+        const isPreSleepScenario = mealScenarioType === 'PRE_SLEEP' || mealScenarioType === 'LATE_EVENING';
         if (isPreSleepScenario) {
             const productCat = product.category || 'other';
             if (productCat === PRODUCT_CATEGORIES.GRAINS) {
@@ -743,6 +749,22 @@
                 limit
             });
             return sleepMix;
+        }
+
+        // v4.0.5: LATE_EVENING override — light dairy-protein mix (Halson 2014)
+        // Same rationale as PRE_SLEEP but with 2 dairy slots (more variety from yogurt/kefir/cottage cheese)
+        // "Лёгкий белок (творог, кефир) — лучше для сна / Избегай углеводов и больших порций"
+        if (scenarioType === 'LATE_EVENING') {
+            const eveningMix = [];
+            for (let i = 0; i < limit; i++) {
+                eveningMix.push(i < 2 ? PRODUCT_CATEGORIES.DAIRY : PRODUCT_CATEGORIES.PROTEIN);
+            }
+            console.info(`${LOG_PREFIX} 🌙 LATE_EVENING category override:`, {
+                categories: eveningMix,
+                reason: 'Halson 2014: light dairy-protein before sleep, avoid GRAINS',
+                limit
+            });
+            return eveningMix;
         }
         // Калории из макросов (с TEF adjustment: белок 3kcal/g)
         const protKcal = targetProteinG * 3;
@@ -1318,7 +1340,7 @@
         },
     };
 
-    console.info(`${LOG_PREFIX} ✅ Smart Product Picker v4.0.4 initialized (macro enrichment: protein100/carbs100/fat computed, scenario-ideal-profile, topFactors by weighted contribution)`);
+    console.info(`${LOG_PREFIX} ✅ Smart Product Picker v4.0.5 initialized (LATE_EVENING: DAIRY+PROTEIN category override, sleepGIPenalty extended)`);
     console.info(`${LOG_PREFIX} 📊 SCENARIO_IDEAL_MACRO_PROFILES loaded:`, Object.keys(SCENARIO_IDEAL_MACRO_PROFILES).join(', '));
     console.info(`${LOG_PREFIX} 📊 v4.0: Rebalanced scoring — macro alignment 49% (prot×3+carb×4+fat×9 Energy%), binary reduced to 6%, fat alignment added, kcalFit soft 0→1.2, neutral baselines 50`);
 })(typeof window !== 'undefined' ? window : global);

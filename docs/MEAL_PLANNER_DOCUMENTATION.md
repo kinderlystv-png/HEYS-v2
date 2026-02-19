@@ -1,6 +1,6 @@
 # HEYS Meal Planner — Техническая документация
 
-> **Версия**: v4.0.4 | **Дата**: 2026-02-19 | **Статус**: Production
+> **Версия**: v4.0.5 | **Дата**: 2026-02-19 | **Статус**: Production
 
 ## Оглавление
 
@@ -45,7 +45,7 @@
 | ------------------ | ------------------------- | --------- | ------ |
 | Оркестратор        | `pi_meal_recommender.js`  | 1874      | v3.5.0 |
 | Планировщик        | `pi_meal_planner.js`      | 942       | v2.1.0 |
-| Скоринг            | `pi_product_picker.js`    | 1325      | v4.0.4 |
+| Скоринг            | `pi_product_picker.js`    | 1347      | v4.0.5 |
 | Паттерны           | `pi_meal_rec_patterns.js` | 686       | v3.0   |
 | Feedback Loop (ML) | `pi_feedback_loop.js`     | 481       | v1.1   |
 | Feedback (оценки)  | `pi_meal_rec_feedback.js` | 535       | v1.1.0 |
@@ -555,8 +555,8 @@ const GL_TARGET_PRESLEEP = 10;
 
 ## 5. Модуль 3: Product Picker (Скоринг продуктов)
 
-**Файл**: `apps/web/insights/pi_product_picker.js` **Версия**: v4.0.4 | **LOC**:
-1325
+**Файл**: `apps/web/insights/pi_product_picker.js` **Версия**: v4.0.5 | **LOC**:
+1347
 
 ### 5.1 14-факторный скоринг
 
@@ -618,11 +618,11 @@ const GL_TARGET_PRESLEEP = 10;
 
 #### Группа 4: Сценарные факторы (13%)
 
-| #   | Фактор             | Вес  | Логика                                               |
-| --- | ------------------ | ---- | ---------------------------------------------------- |
-| 12  | `sleepGIPenalty`   | 0.05 | PRE_SLEEP: GRAINS→0, DAIRY→100, PROTEIN→90           |
-| 13  | `glPenalty`        | 0.04 | GL = GI×carbs/100 vs targetGL: ≤target→100, >2.5×→10 |
-| 14  | `workoutCarbBoost` | 0.04 | POST_WORKOUT: GRAINS→100, FRUITS→90, PROTEIN→85      |
+| #   | Фактор             | Вес  | Логика                                                  |
+| --- | ------------------ | ---- | ------------------------------------------------------- |
+| 12  | `sleepGIPenalty`   | 0.05 | PRE_SLEEP/LATE_EVENING: GRAINS→0, DAIRY→100, PROTEIN→90 |
+| 13  | `glPenalty`        | 0.04 | GL = GI×carbs/100 vs targetGL: ≤target→100, >2.5×→10    |
+| 14  | `workoutCarbBoost` | 0.04 | POST_WORKOUT: GRAINS→100, FRUITS→90, PROTEIN→85         |
 
 #### Итоговый скор
 
@@ -663,11 +663,12 @@ function enrichMacros(product) {
 
 **Специальные override-режимы:**
 
-| Сценарий       | Логика                           | Обоснование                                 |
-| -------------- | -------------------------------- | ------------------------------------------- |
-| `POST_WORKOUT` | 2/3 слотов — GRAINS              | Ivy 2004: гликоген → быстрые углеводы       |
-| `PRE_SLEEP`    | 1 слот DAIRY + остальные PROTEIN | Halson 2014: казеин + без всплеска инсулина |
-| Остальные      | По пропорциям P/C/F              | Стандартная балансировка                    |
+| Сценарий       | Логика                           | Обоснование                                      |
+| -------------- | -------------------------------- | ------------------------------------------------ |
+| `POST_WORKOUT` | 2/3 слотов — GRAINS              | Ivy 2004: гликоген → быстрые углеводы            |
+| `PRE_SLEEP`    | 1 слот DAIRY + остальные PROTEIN | Halson 2014: казеин + без всплеска инсулина      |
+| `LATE_EVENING` | 2 слота DAIRY + 1 слот PROTEIN   | Halson 2014: лёгкая молочка, без GRAINS (v4.0.5) |
+| Остальные      | По пропорциям P/C/F              | Стандартная балансировка                         |
 
 ### 5.4 Источники кандидатов
 
@@ -1274,6 +1275,7 @@ baseline=50 вне своего сценария. Это даёт **симмет
 | -------------------- | ---------- | ----------------------------------------------------------------------- |
 | v3.5.0 (recommender) | 2026-02-19 | S9 phenotype auto-detect, R1/R3 protein fix                             |
 | v2.1.0 (planner)     | 2026-02-19 | S8 volume-scaled wave + forceMultiMeal gap fix                          |
+| v4.0.5               | 2026-02-19 | LATE_EVENING: DAIRY+PROTEIN category override + sleepGIPenalty extended |
 | v4.0.4               | 2026-02-19 | topFactors отсортированы по weighted contribution                       |
 | v4.0.3               | 2026-02-19 | Исправлены field names в enrichMacros (protein100/simple100/complex100) |
 | v4.0.2               | 2026-02-19 | Добавлены enrichMacros + sharedIndex для lookup макросов                |
