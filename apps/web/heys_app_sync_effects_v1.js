@@ -47,11 +47,29 @@
                                 ? window.HEYS.products.getAll()
                                 : [];
 
-                            // 🔍 v4.8.7: DEBUG — что загрузилось из Store после sync
-                            const loadedIron = loadedProducts.filter(p => p?.iron && +p.iron > 0).length;
-                            console.info(`[HEYS.sync] 🔍 After sync: loadedProducts.length=${loadedProducts.length}, withIron=${loadedIron}`);
+                            // 🪦 FIX v4.8.9: применяем tombstone filter после cloud sync.
+                            // Без этого mergeProductsData возвращала deleted products (merge = union remote+local),
+                            // и setProducts устанавливал их обратно в React state → resurrection при page refresh.
+                            const _tombstones = window.HEYS?.store?.get?.('heys_deleted_ids') || [];
+                            const filteredProducts = (() => {
+                                if (!Array.isArray(_tombstones) || _tombstones.length === 0) return loadedProducts;
+                                const _deletedIds = new Set(_tombstones.map(t => t.id).filter(Boolean));
+                                const _deletedNames = new Set(_tombstones.map(t => (t.name || '').trim().toLowerCase()).filter(Boolean));
+                                const _result = loadedProducts.filter(p =>
+                                    !_deletedIds.has(p.id) &&
+                                    !_deletedNames.has((p.name || '').trim().toLowerCase())
+                                );
+                                if (_result.length < loadedProducts.length) {
+                                    console.info(`[HEYS.sync] 🪦 tombstone filter: убрано ${loadedProducts.length - _result.length} resurrection product(s) после sync`);
+                                }
+                                return _result;
+                            })();
 
-                            if (loadedProducts.length === 0 && Array.isArray(productsBeforeSync) && productsBeforeSync.length > 0) {
+                            // 🔍 v4.8.7: DEBUG — что загрузилось из Store после sync
+                            const loadedIron = filteredProducts.filter(p => p?.iron && +p.iron > 0).length;
+                            console.info(`[HEYS.sync] 🔍 After sync: loadedProducts.length=${loadedProducts.length} (${filteredProducts.length} after tombstone filter), withIron=${loadedIron}`);
+
+                            if (filteredProducts.length === 0 && Array.isArray(productsBeforeSync) && productsBeforeSync.length > 0) {
                                 // 🔇 v4.7.1: Лог отключён
                                 // 🛡️ v4.7.2: Перед fallback проверяем что productsBeforeSync не меньше текущих
                                 // Это предотвращает race condition когда новые продукты добавлены во время sync
@@ -83,20 +101,20 @@
                                 // Сравниваем количество продуктов с микронутриентами (iron) вместо общей длины
                                 setProducts(prev => {
                                     const prevIron = Array.isArray(prev) ? prev.filter(p => p?.iron && +p.iron > 0).length : 0;
-                                    const loadedIron = loadedProducts.filter(p => p?.iron && +p.iron > 0).length;
+                                    const loadedIron = filteredProducts.filter(p => p?.iron && +p.iron > 0).length;
 
                                     // 🔍 v4.8.7: DEBUG — какое состояние пытаемся обновить
                                     console.info(`[HEYS.sync] 🔍 setProducts callback: prev.length=${prev.length}, prevIron=${prevIron}, loadedIron=${loadedIron}`);
 
                                     // Если качество одинаковое — не обновляем (оптимизация)
                                     // Если качество разное — ВСЕГДА обновляем (42 Fe → 290 Fe)
-                                    if (Array.isArray(prev) && prev.length === loadedProducts.length && prevIron === loadedIron) {
+                                    if (Array.isArray(prev) && prev.length === filteredProducts.length && prevIron === loadedIron) {
                                         console.info(`[HEYS.sync] 🚫 React state NOT updated (same quality)`);
                                         return prev;
                                     }
 
-                                    console.info(`[HEYS.sync] 🔄 React state updated: ${prev.length}→${loadedProducts.length} products, ${prevIron}→${loadedIron} with iron`);
-                                    return loadedProducts;
+                                    console.info(`[HEYS.sync] 🔄 React state updated: ${prev.length}→${filteredProducts.length} products, ${prevIron}→${loadedIron} with iron`);
+                                    return filteredProducts;
                                 });
                             }
                             if (!clientSyncDoneRef.current) {
@@ -167,7 +185,19 @@
                     ? incoming
                     : (window.HEYS?.products?.getAll?.() || []);
 
-                setProducts(latest);
+                // 🪦 v4.8.10: Tombstone filter — предотвращает resurrection через event dispatch
+                const _ts = window.HEYS?.store?.get?.('heys_deleted_ids') || [];
+                let filtered = latest;
+                if (Array.isArray(_ts) && _ts.length > 0) {
+                    const _dIds = new Set(_ts.map(t => t.id).filter(Boolean));
+                    const _dNames = new Set(_ts.map(t => (t.name || '').trim().toLowerCase()).filter(Boolean));
+                    filtered = latest.filter(p =>
+                        !_dIds.has(p.id) &&
+                        !_dNames.has((p.name || '').trim().toLowerCase())
+                    );
+                }
+
+                setProducts(filtered);
                 if (!initialSyncDoneRef.current) return;
 
                 // Дедупликация: пропускаем если уже отреагировали в течение 300мс

@@ -1318,16 +1318,28 @@
 
       // 🔄 FIX v1.1: Слушаем событие heys:orphans-recovered — после восстановления orphan-продуктов
       // Это источник правды — recovery добавляет продукты в localStorage, UI должен подтянуться
+      // 🪦 FIX v4.9.1: Добавлена BLOCKED-защита — если recovery пуст (все orphans были tombstoned),
+      // не обновляем state чтобы не перезаписать правильное количество.
       const handleOrphansRecovered = () => {
         const latest = (window.HEYS.store?.get?.('heys_products', null)) ||
           (window.HEYS.utils?.lsGet?.('heys_products', [])) || [];
         const normalizedLatest = applyTombstoneFilter(normalizePersonalProducts(latest));
         if (Array.isArray(normalizedLatest) && normalizedLatest.length > 0) {
-          if (window.DEV) {
-            window.DEV.log('🔄 [RATION] Orphans recovered, updating state:', normalizedLatest.length, 'items');
-          }
-          // После recovery всегда обновляем state — это source of truth
-          setProducts(normalizedLatest);
+          setProducts((prev) => {
+            // 🛡️ BLOCKED-защита: не уменьшаем state через orphan recovery
+            if (Array.isArray(prev) && prev.length > normalizedLatest.length) {
+              console.warn('[RATION] 🚫 handleOrphansRecovered BLOCKED: prev=' + prev.length + ' > latest=' + normalizedLatest.length);
+              return prev;
+            }
+            // 🛡️ Не обновляем если количество одинаковое (нет реального recovery)
+            if (Array.isArray(prev) && prev.length === normalizedLatest.length) {
+              return prev;
+            }
+            if (window.DEV) {
+              window.DEV.log('🔄 [RATION] Orphans recovered, updating state:', normalizedLatest.length, 'items');
+            }
+            return normalizedLatest;
+          });
         }
       };
 
@@ -1949,6 +1961,13 @@
           console.info('[baza] 🪦 ШАГ 5.5/7 — tombstone записан:', { id: fingerprint.id, name: fingerprint.name, total_tombstones: updated.length });
         } else {
           console.warn('[baza] ⚠️ ШАГ 5.5/7 — tombstone: HEYS.store.set недоступен, tombstone не сохранён!');
+        }
+        // 🔗 FIX: синхронизируем с HEYS.deletedProducts чтобы mergeProductsData тоже знала о deletion.
+        // deleteRow писал только в heys_deleted_ids, а mergeProductsData проверяет HEYS.deletedProducts.isProductDeleted()
+        // → без этого вызова cloud merge не фильтровал удалённые продукты → resurrection при refresh.
+        if (window.HEYS?.deletedProducts?.add && fingerprint.name) {
+          window.HEYS.deletedProducts.add(fingerprint.name, fingerprint.id);
+          console.info('[baza] 🔗 ШАГ 5.5/7 — deletedProducts.add синхронизирован (защита от merge-resurrection):', fingerprint.name);
         }
       } catch (te) {
         console.warn('[baza] ⚠️ ШАГ 5.5/7 — tombstone save error:', te.message);
@@ -4495,10 +4514,12 @@
             'heys_products',
           ].filter(Boolean);
 
-          // Также ищем любой ключ с _products (на случай если clientId другой)
+          // Также ищем ключи вида heys_{clientId}_products (на случай если clientId другой)
+          // 🔧 FIX v4.8.9: Используем точный regex вместо includes('_products'),
+          // иначе heys_hidden_products (массив ID, 300 элементов) матчился и блокировал setAll
           for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && key.includes('_products') && !key.includes('_backup') && !key.includes('_deleted')) {
+            if (key && /^heys_[^_]+_products$/.test(key)) {
               keysToTry.push(key);
             }
           }
@@ -4552,6 +4573,21 @@
      */
     addFromShared: (sharedProduct) => {
       if (!sharedProduct) return null;
+
+      // 🪦 FIX v4.9.1: Проверяем tombstones (heys_deleted_ids) по NAME перед клонированием.
+      // Orphan recovery может вызвать addFromShared для удалённого продукта — он получит НОВЫЙ uuid,
+      // и id-only tombstone filter его не поймает → resurrection. Проверка по имени блокирует это.
+      try {
+        const _tombstonesAdd = window.HEYS?.store?.get?.('heys_deleted_ids') || [];
+        if (Array.isArray(_tombstonesAdd) && _tombstonesAdd.length > 0 && sharedProduct.name) {
+          const normName = (n) => String(n || '').toLowerCase().trim();
+          const deletedNames = new Set(_tombstonesAdd.map(t => normName(t.name)).filter(Boolean));
+          if (deletedNames.has(normName(sharedProduct.name))) {
+            console.info('[PRODUCTS.addFromShared] 🪦 BLOCKED — продукт в tombstones:', sharedProduct.name);
+            return null;
+          }
+        }
+      } catch (e) { /* ignore tombstone check errors */ }
 
       const products = HEYS.products.getAll();
       const mergeMissingFromShared = (existing) => {

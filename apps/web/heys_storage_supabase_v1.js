@@ -812,9 +812,17 @@
      * @param {Object} p
      * @returns {boolean}
      */
+    // 🔧 v4.8.10: Загружаем tombstones из ОБЕИХ систем один раз для merge
+    const _tombstonesForMerge = global.HEYS?.store?.get?.('heys_deleted_ids') || [];
+    const _tombstoneIdSetForMerge = new Set(Array.isArray(_tombstonesForMerge) ? _tombstonesForMerge.map(t => t.id).filter(Boolean) : []);
+    const _tombstoneNameSetForMerge = new Set(Array.isArray(_tombstonesForMerge) ? _tombstonesForMerge.map(t => (t.name || '').trim().toLowerCase()).filter(Boolean) : []);
+
     const isDeletedProduct = (p) => {
       if (!p) return false;
-      // Используем HEYS.deletedProducts API если доступен
+      // 1️⃣ Проверяем heys_deleted_ids (Store-based tombstones — выживают при очистке localStorage)
+      if (p.id && _tombstoneIdSetForMerge.has(p.id)) return true;
+      if (p.name && _tombstoneNameSetForMerge.has(String(p.name).trim().toLowerCase())) return true;
+      // 2️⃣ Проверяем HEYS.deletedProducts API (localStorage-based ignore list)
       if (global.HEYS?.deletedProducts?.isProductDeleted) {
         return global.HEYS.deletedProducts.isProductDeleted(p);
       }
@@ -4343,7 +4351,7 @@
             }
 
             // ЗАЩИТА И MERGE: Умное объединение продуктов (не затираем локальные)
-            if (key.includes('_products') && !key.includes('_products_backup')) {
+            if (key.includes('_products') && !key.includes('_products_backup') && !key.includes('_hidden_products') && !key.includes('_favorite_products') && !key.includes('_deleted_products')) {
               let remoteProducts;
               // 🔇 PERF: Отключено — много логов
               // console.log('📦 [PRODUCTS DEBUG] Processing products key:', key, 'raw row.k:', row.k, 'row.v length:', Array.isArray(row.v) ? row.v.length : 'not array');
@@ -4424,7 +4432,26 @@
               // 🔀 MERGE: Объединяем локальные и облачные продукты (уже отфильтрованные!)
               // Это решает проблему: новый продукт добавлен локально, но облако ещё не обновилось
               if (Array.isArray(currentLocal) && currentLocal.length > 0 && Array.isArray(remoteProducts) && remoteProducts.length > 0) {
-                const merged = mergeProductsData(currentLocal, remoteProducts);
+                let merged = mergeProductsData(currentLocal, remoteProducts);
+
+                // 🛡️ v4.8.10: Финальная tombstone-фильтрация merged результата ПЕРЕД setAll
+                // mergeProductsData фильтрует через HEYS.deletedProducts, но эта система может потерять данные
+                // при очистке localStorage. Дублируем проверку через heys_deleted_ids (Store, выживает в облаке).
+                const _tsForMerge = (typeof global !== 'undefined' ? global : window)?.HEYS?.store?.get?.('heys_deleted_ids') || [];
+                if (Array.isArray(_tsForMerge) && _tsForMerge.length > 0) {
+                  const _tsIds = new Set(_tsForMerge.map(t => t.id).filter(Boolean));
+                  const _tsNames = new Set(_tsForMerge.map(t => (t.name || '').trim().toLowerCase()).filter(Boolean));
+                  const beforeLen = merged.length;
+                  merged = merged.filter(p => {
+                    if (!p) return false;
+                    if (p.id && _tsIds.has(p.id)) return false;
+                    if (p.name && _tsNames.has(String(p.name).trim().toLowerCase())) return false;
+                    return true;
+                  });
+                  if (merged.length < beforeLen) {
+                    logCritical(`🪦 [MERGE TOMBSTONE] Removed ${beforeLen - merged.length} tombstoned product(s) from merge result (${beforeLen}→${merged.length})`);
+                  }
+                }
 
                 // 🔧 ИСПРАВЛЕНИЕ: Подсчитываем уникальные локальные продукты для корректного сравнения
                 // (т.к. mergeProductsData делает дедупликацию внутри, сравнение с raw currentLocal некорректно)
@@ -4432,8 +4459,21 @@
 
                 // 🛡️ ЗАЩИТА: Проверяем потерю УНИКАЛЬНЫХ продуктов (не дублей)
                 // Если уникальных локальных больше чем merged — значит sync "опоздал" и пытается удалить новые продукты
-                if (localUniqueCount > merged.length) {
-                  logCritical(`⚠️ [PRODUCTS SYNC] BLOCKED: localUnique (${localUniqueCount}) > merged (${merged.length}). Keeping local.`);
+                // 🔧 FIX v4.8.9: Если все "лишние" локальные — это tombstoned продукты, разрешаем merge.
+                // Иначе синхронизация навечно блокируется и удалённые продукты воскресают.
+                const _tombstonesSync = (typeof global !== 'undefined' ? global : window)?.HEYS?.store?.get?.('heys_deleted_ids') || [];
+                const _tombstoneIdsSync = new Set(Array.isArray(_tombstonesSync) ? _tombstonesSync.map(t => t.id).filter(Boolean) : []);
+                const _tombstoneNamesSync = new Set(Array.isArray(_tombstonesSync) ? _tombstonesSync.map(t => (t.name || '').trim().toLowerCase()).filter(Boolean) : []);
+                const _localWithoutTombstoned = currentLocal.filter(p => {
+                  if (!p) return false;
+                  if (p.id && _tombstoneIdsSync.has(p.id)) return false;
+                  if (p.name && _tombstoneNamesSync.has(String(p.name).trim().toLowerCase())) return false;
+                  return true;
+                });
+                const localEffectiveCount = new Set(_localWithoutTombstoned.filter(p => p && p.name).map(p => String(p.name).trim().toLowerCase())).size;
+
+                if (localEffectiveCount > merged.length) {
+                  logCritical(`⚠️ [PRODUCTS SYNC] BLOCKED: localEffective (${localEffectiveCount}, was ${localUniqueCount} before tombstone) > merged (${merged.length}). Keeping local.`);
                   // Отправляем локальные в облако чтобы синхронизировать (после дедупликации)
                   // Используем merged как источник — он содержит все уникальные продукты
                   const localDeduped = [];
@@ -4668,7 +4708,7 @@
             // Если дошли сюда — значит merge не произошёл (local пуст)
             // Используем remoteProducts которые уже отфильтрованы
             let valueToSave = row.v;
-            if (key.includes('_products') && !key.includes('_products_backup')) {
+            if (key.includes('_products') && !key.includes('_products_backup') && !key.includes('_hidden_products') && !key.includes('_favorite_products') && !key.includes('_deleted_products')) {
               // remoteProducts уже отфильтрован выше — используем его
               // Если он пустой и мы дошли сюда — значит recovery уже запущен выше
               // Но на всякий случай проверим ещё раз
@@ -4713,7 +4753,7 @@
               }
             }
 
-            if (key.includes('_products') && !key.includes('_products_backup') && global.HEYS?.products?.setAll) {
+            if (key.includes('_products') && !key.includes('_products_backup') && !key.includes('_hidden_products') && !key.includes('_favorite_products') && !key.includes('_deleted_products') && global.HEYS?.products?.setAll) {
               // �️ КРИТИЧНО: Если products уже обновлены в этом sync цикле — ПРОПУСКАЕМ
               // Это защита от случая когда в БД несколько записей с products (разные row.k)
               // которые все мапятся на один scoped key

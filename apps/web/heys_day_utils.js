@@ -191,7 +191,30 @@
       if (id) delete deletedProductsData.entries[String(id)];
       if (fingerprint) delete deletedProductsData.entries[String(fingerprint)];
       saveDeletedProductsData(deletedProductsData);
-      console.log(`[HEYS] ✅ Продукт восстановлен из игнор-листа: "${name}"`);
+      console.info(`[HEYS] ✅ Продукт восстановлен из игнор-листа: "${name}"`);
+
+      // 🪦 FIX v5.0.2: Также очищаем Store tombstone (heys_deleted_ids) при явном восстановлении.
+      // Без этого tombstone из Store блокирует orphan recovery и merge sync,
+      // и продукт не появляется в личной базе даже после восстановления из игнор-листа.
+      try {
+        const _storeTombstones = window.HEYS?.store?.get?.('heys_deleted_ids') || [];
+        if (Array.isArray(_storeTombstones) && _storeTombstones.length > 0) {
+          const normName = (n) => String(n || '').toLowerCase().trim();
+          const nameNorm = normName(name);
+          const before = _storeTombstones.length;
+          const cleaned = _storeTombstones.filter(t => {
+            if (id && t.id === id) return false;
+            if (nameNorm && normName(t.name) === nameNorm) return false;
+            return true;
+          });
+          if (cleaned.length < before) {
+            window.HEYS.store.set('heys_deleted_ids', cleaned);
+            console.info(`[HEYS] 🪦 Store tombstone очищен при восстановлении: "${name}" (${before}→${cleaned.length})`);
+          }
+        }
+      } catch (e) {
+        console.warn('[HEYS] ⚠️ Ошибка очистки Store tombstone:', e?.message);
+      }
 
       // Диспатчим событие для обновления UI
       if (typeof window !== 'undefined' && window.dispatchEvent) {
@@ -241,7 +264,17 @@
       const count = this.count();
       deletedProductsData = { entries: {}, version: DELETED_PRODUCTS_VERSION };
       saveDeletedProductsData(deletedProductsData);
-      console.log(`[HEYS] Игнор-лист удалённых продуктов очищен (было ${count})`);
+      console.info(`[HEYS] Игнор-лист удалённых продуктов очищен (было ${count})`);
+
+      // 🪦 FIX v5.0.2: При полной очистке тоже сбрасываем Store tombstones (heys_deleted_ids)
+      try {
+        if (window.HEYS?.store?.set) {
+          window.HEYS.store.set('heys_deleted_ids', []);
+          console.info('[HEYS] 🪦 Store tombstones (heys_deleted_ids) полностью очищены');
+        }
+      } catch (e) {
+        console.warn('[HEYS] ⚠️ Ошибка очистки heys_deleted_ids:', e?.message);
+      }
 
       // Диспатчим событие для обновления UI
       if (typeof window !== 'undefined' && window.dispatchEvent) {
@@ -768,13 +801,38 @@
       let skippedDeleted = 0; // 🆕 v4.8.0: Счётчик пропущенных удалённых
       const stillMissing = [];
 
+      // 🪦 FIX v4.9.1: Строим Set удалённых имён из heys_deleted_ids (Store-based, надёжный)
+      // HEYS.deletedProducts — localStorage-based, может потеряться при overflow/cleanup.
+      // heys_deleted_ids — Store-based, синхронизирован с облаком, НАДЁЖНЫЙ.
+      const _tombstonesRecovery = window.HEYS?.store?.get?.('heys_deleted_ids') || [];
+      const _deletedNamesSet = new Set();
+      const _deletedIdsSet = new Set();
+      if (Array.isArray(_tombstonesRecovery)) {
+        const _normTS = (n) => String(n || '').toLowerCase().trim();
+        _tombstonesRecovery.forEach(t => {
+          if (t.name) _deletedNamesSet.add(_normTS(t.name));
+          if (t.id) _deletedIdsSet.add(String(t.id));
+        });
+      }
+
+      // Хелпер: проверка tombstones (оба источника)
+      const _isProductTombstoned = (name, productId) => {
+        // 1️⃣ heys_deleted_ids (Store — надёжный)
+        const _normCheck = (n) => String(n || '').toLowerCase().trim();
+        if (name && _deletedNamesSet.has(_normCheck(name))) return true;
+        if (productId && _deletedIdsSet.has(String(productId))) return true;
+        // 2️⃣ HEYS.deletedProducts (localStorage — fallback)
+        if (HEYS.deletedProducts?.isDeleted?.(name)) return true;
+        if (HEYS.deletedProducts?.isDeleted?.(productId)) return true;
+        return false;
+      };
+
       // 3a. Восстановление из штампов
       for (const [key, data] of missingProducts) {
-        // 🆕 v4.8.0: Проверяем игнор-лист удалённых продуктов
-        if (HEYS.deletedProducts?.isDeleted(data.name) ||
-          HEYS.deletedProducts?.isDeleted(data.productId)) {
+        // 🆕 v4.9.1: Проверяем ОБА tombstone-источника (heys_deleted_ids + deletedProducts)
+        if (_isProductTombstoned(data.name, data.productId)) {
           skippedDeleted++;
-          if (verbose) console.log(`[HEYS] ⏭️ Пропускаю удалённый продукт: "${data.name}"`);
+          if (verbose) console.log(`[HEYS] ⏭️ Пропускаю удалённый продукт: "${data.name}" (tombstone)`);
           continue;
         }
 
@@ -819,11 +877,10 @@
             });
 
             for (const data of stillMissing) {
-              // 🆕 v4.8.0: Проверяем игнор-лист удалённых продуктов
-              if (HEYS.deletedProducts?.isDeleted(data.name) ||
-                HEYS.deletedProducts?.isDeleted(data.productId)) {
+              // 🆕 v4.9.1: Проверяем ОБА tombstone-источника (heys_deleted_ids + deletedProducts)
+              if (_isProductTombstoned(data.name, data.productId)) {
                 skippedDeleted++;
-                if (verbose) console.log(`[HEYS] ⏭️ Пропускаю удалённый продукт (shared): "${data.name}"`);
+                if (verbose) console.log(`[HEYS] ⏭️ Пропускаю удалённый продукт (shared): "${data.name}" (tombstone)`);
                 continue;
               }
 
