@@ -267,9 +267,9 @@
         // Диагностический лог для отладки расхождений между Днём и Отчётностью
         // console.* запрещён — оставляем только флаг (можно подключить аналитический трекер при необходимости)
 
-        const energy = totals.prot * 4 + totals.carbs * 4 + totals.fat * 9;
+        const energy = totals.prot * 3 + totals.carbs * 4 + totals.fat * 9; // NET Atwater
         const carbsPct = pct(totals.carbs * 4, energy);
-        const protPct = pct(totals.prot * 4, energy);
+        const protPct = pct(totals.prot * 3, energy);
         const fatPct = pct(totals.fat * 9, energy);
         const simplePct = pct(totals.simple, totals.carbs);
         const complexPct = pct(totals.complex, totals.carbs);

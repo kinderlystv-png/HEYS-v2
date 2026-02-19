@@ -1,6 +1,6 @@
 /**
  * Meal Recommender Card — Compact UI for Day View
- * v27.7 — Enhanced user-friendly prompt
+ * v27.8 — useMemo dep stabilization + render log throttle
  * Рендерит карточку рекомендации следующего приёма пищи в дневнике
  * Позиция: между refeedCard и supplementsCard (выше витаминов)
  * 
@@ -330,6 +330,9 @@
     /**
      * Компонент карточки рекомендации
      */
+    // P3-card: render counter for log throttle (suppresses duplicate card render logs)
+    var _mealRecCardRenderCount = 0;
+
     function MealRecommenderCard({ React, day, prof, pIndex, dayTot, normAbs, optimum }) {
         const [expanded, setExpanded] = useState(false);
         const [userFeedback, setUserFeedback] = useState(null); // null | 'positive' | 'negative'
@@ -340,6 +343,11 @@
 
         // R2.7: Store recommendation ID for ML feedback loop
         const recIdRef = useRef(null);
+
+        // v3.6: F4 — heys_profile has no .id; always inject currentClientId for feedbackLoop calls
+        const getProfileWithId = () => prof
+            ? { ...prof, id: prof?.id || global.HEYS?.currentClientId || 'default' }
+            : (global.HEYS?.currentClientId ? { id: global.HEYS.currentClientId } : null);
         const followedRef = useRef(false);
         const prevRecommendationRef = useRef(null);
 
@@ -395,7 +403,7 @@
                         global.HEYS.InsightsPI.feedbackLoop.submitFeedback(
                             recIdRef.current,
                             { quickRating: rating },
-                            prof
+                            getProfileWithId()
                         );
                         console.info(`${LOG_PREFIX} ✅ Quick feedback sent to ML loop:`, rating);
                     } catch (err) {
@@ -409,6 +417,23 @@
         // v24: Smart active meal detection (< 30 min) — no modal needed
         const handleAddSuggestion = (suggestion) => {
             if (!suggestion) return;
+
+            // Sprint 2 verification — filter in browser console: [MEALREC]
+            console.info(`${LOG_PREFIX} [sprint2] ▶ handleAddSuggestion triggered:`, {
+                product: suggestion.product,
+                grams: suggestion.grams,
+                productId: suggestion.productId,
+                isAlreadyProcessing: !!handleAddSuggestion._isProcessing
+            });
+
+            // 🆕 Sprint 2C: Race condition guard — prevent double-click
+            if (handleAddSuggestion._isProcessing) {
+                console.warn(`${LOG_PREFIX} ⚠️ Already processing, ignoring duplicate click`);
+                return;
+            }
+            handleAddSuggestion._isProcessing = true;
+            const _releaseProcessing = () => { handleAddSuggestion._isProcessing = false; };
+            setTimeout(_releaseProcessing, 8000); // auto-release safety net
 
             const { HEYS } = global;
 
@@ -433,7 +458,16 @@
                 productForSearch = pIndex.byName.get(normalizedName);
             }
 
-            const searchQuery = productForSearch?.name || suggestion.product || '';
+            // 🆕 Sprint 2A: Normalize search (ё→е, lowercase, trim) for better product match rate
+            const normalizeSearch = (name) =>
+                name.toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ').trim();
+            const _rawName = productForSearch?.name || suggestion.product || '';
+            const searchQuery = normalizeSearch(_rawName);
+            console.info(`${LOG_PREFIX} [sprint2A] 🔤 normalizeSearch:`, {
+                raw: _rawName,
+                normalized: searchQuery,
+                yoFixed: _rawName.toLowerCase().includes('ё')
+            });
 
             // Показать простую модалку: активный приём (< 30 мин) ИЛИ новый приём
             const showSmartMealPicker = (onMealSelected) => {
@@ -830,16 +864,37 @@
                     mealIndex: selectedMealIndex
                 });
 
+                // 🆕 Sprint 2B: Guard against empty products (race condition on first load)
+                const _products = HEYS?.products?.getAll?.() || [];
+                if (_products.length === 0) {
+                    console.warn(`${LOG_PREFIX} ⚠️ Products list empty — retrying in 1s`);
+                    _releaseProcessing();
+                    setTimeout(() => {
+                        const retryProducts = HEYS?.products?.getAll?.() || [];
+                        if (retryProducts.length === 0) {
+                            if (HEYS?.Toast?.error) {
+                                HEYS.Toast.error('Продукты ещё загружаются. Попробуйте через пару секунд.');
+                            }
+                            return;
+                        }
+                        handleAddSuggestion(suggestion);
+                    }, 1000);
+                    return;
+                }
+
+                console.info(`${LOG_PREFIX} [sprint2B] ✅ Products ready: ${_products.length} items, searchQuery="${searchQuery}"`);
+
                 // Открыть AddProductStep с предзаполненным поиском (Блокер 1 исправлен)
                 HEYS.AddProductStep.show({
                     mealIndex: selectedMealIndex,
                     multiProductMode: false,
-                    products: HEYS?.products?.getAll?.() || [],
+                    products: _products,
                     day: day,
                     dateKey: day?.date || new Date().toISOString().slice(0, 10),
                     initialSearch: searchQuery, // 🆕 Блокер 1: предзаполняем поиск
                     initialGrams: suggestion.grams || 100, // 🆕 v14: R6 (Sprint 1) — передаём рекомендованные ML граммы
                     onAdd: ({ product: addedProduct, grams, mealIndex }) => {
+                        _releaseProcessing();
                         console.info(`[MEAL] ✅ Product selected:`, addedProduct.name, `(${grams}г) to meal ${mealIndex}`);
 
                         // v25.8.6.7: Use HEYS.Day.addProductToMeal — direct setDay + item creation
@@ -858,7 +913,7 @@
 
                         // Feedback: markFollowed
                         if (recIdRef.current && !followedRef.current && HEYS?.InsightsPI?.feedbackLoop?.markFollowed) {
-                            HEYS.InsightsPI.feedbackLoop.markFollowed(recIdRef.current, true, prof);
+                            HEYS.InsightsPI.feedbackLoop.markFollowed(recIdRef.current, true, getProfileWithId());
                             followedRef.current = true;
                             console.info(`[MEAL] 🎯 Marked as followed: recId=${recIdRef.current}`);
                         }
@@ -875,6 +930,7 @@
                         }
                     },
                     onClose: () => {
+                        _releaseProcessing();
                         console.info(`[MEAL] ❌ AddProductStep cancelled (meal already created, product not added)`);
                         console.info(`${LOG_PREFIX} ❌ AddProductStep cancelled, markFollowed not called`);
 
@@ -1084,7 +1140,9 @@
                 console.error(`${LOG_PREFIX} ❌ Error:`, err);
                 return null;
             }
-        }, [mealsCount, lastMealTime, eatenKcal, eatenProt, targetKcal, targetProt, pIndex]);
+            // P1-card: pIndex is an object ref — use .length as stable primitive dep
+            // Prevents useMemo re-calc when parent re-renders with same pIndex contents
+        }, [mealsCount, lastMealTime, eatenKcal, eatenProt, targetKcal, targetProt, pIndex?.length || 0]);
 
         // R2.7 Step 2: Store recommendation in feedbackLoop when it's generated (new or changed)
         useEffect(() => {
@@ -1104,7 +1162,7 @@
                 const recId = global.HEYS.InsightsPI.feedbackLoop.storeRecommendation(
                     recommendation,
                     'meal',
-                    prof
+                    getProfileWithId()
                 );
                 recIdRef.current = recId;
                 followedRef.current = false;
@@ -1136,7 +1194,7 @@
 
                 if (matched && global.HEYS?.InsightsPI?.feedbackLoop?.markFollowed) {
                     try {
-                        global.HEYS.InsightsPI.feedbackLoop.markFollowed(recIdRef.current, true, prof);
+                        global.HEYS.InsightsPI.feedbackLoop.markFollowed(recIdRef.current, true, getProfileWithId());
                         followedRef.current = true;
                         console.info(`${LOG_PREFIX} ✅ Auto-tracked: user added recommended product:`, addedName);
                     } catch (err) {
@@ -1155,7 +1213,11 @@
             return null;
         }
 
-        console.info(`${LOG_PREFIX} 🎨 Rendering card UI...`);
+        // P2-card: throttle render logs — only first time per page session
+        _mealRecCardRenderCount++;
+        if (_mealRecCardRenderCount === 1) {
+            console.info(`${LOG_PREFIX} 🎨 Rendering card UI...`);
+        }
 
         // v27: Extract mode and groups for grouped product selection
         const { timing, macros, suggestions, reasoning, confidence, scenario, scenarioIcon, scenarioReason, mealsPlan, mode, groups } = recommendation;
@@ -1163,7 +1225,7 @@
         // 🆕 v26: Multi-meal mode detection
         const isMultiMeal = mealsPlan && mealsPlan.available && mealsPlan.meals && mealsPlan.meals.length > 1;
 
-        console.info(`${LOG_PREFIX} [CARD.mode] 🎨 Rendering mode:`, {
+        if (_mealRecCardRenderCount === 1) console.info(`${LOG_PREFIX} [CARD.mode] 🎨 Rendering mode:`, {
             isMultiMeal,
             mealsCount: mealsPlan?.meals?.length || 0,
             productMode: mode || 'legacy',
@@ -1189,7 +1251,7 @@
             });
         }
 
-        console.info(`${LOG_PREFIX} 🎨 Rendering mode:`, {
+        if (_mealRecCardRenderCount === 1) console.info(`${LOG_PREFIX} 🎨 Rendering mode:`, {
             isMultiMeal,
             mealsCount: isMultiMeal ? mealsPlan.meals.length : 1
         });
@@ -1201,13 +1263,28 @@
         const remainingKcal = macros?.remainingKcal || 0;
 
         if (!isGoalReached && (remainingKcal < 50 || (macros?.protein <= 0 && macros?.carbs <= 0))) {
-            console.info(`${LOG_PREFIX} ℹ️ Hiding card: insufficient remaining budget:`, {
+            console.info(`${LOG_PREFIX} ℹ️ Budget exhausted — showing water card:`, {
                 scenario,
                 remainingKcal,
                 protein: macros?.protein,
                 carbs: macros?.carbs
             });
-            return null;
+            // Show "goal complete, drink water" card instead of hiding
+            return h('div', { className: 'meal-rec-card p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100' },
+                h('div', { className: 'flex items-center gap-3 mb-2' },
+                    h('span', { className: 'text-3xl' }, '💧'),
+                    h('div', null,
+                        h('div', { className: 'meal-rec-card__badge mb-1' }, 'Умный планировщик'),
+                        h('div', { className: 'font-semibold text-blue-800 text-base' }, 'Цель дня выполнена!'),
+                    )
+                ),
+                h('div', { className: 'text-sm text-blue-700 leading-relaxed' },
+                    'Вы набрали достаточно калорий и нутриентов на сегодня. ',
+                    'Дальше — только вода ',
+                    h('span', { className: 'text-base' }, '💧'),
+                    '. Хороший день!'
+                )
+            );
         }
 
         // Scenario-aware header titles (v2.4)
@@ -1248,7 +1325,14 @@
         },
             h('div', { className: 'meal-rec-card__icon' }, displayIcon),
             h('div', { className: 'meal-rec-card__title' },
-                h('div', { className: 'meal-rec-card__badge' }, 'Умный планировщик'),
+                h('div', { className: 'meal-rec-card__badge-wrap' },
+                    h('div', { className: 'meal-rec-card__badge' }, 'Умный планировщик'),
+                    (() => {
+                        const InfoBtn = global.HEYS?.InsightsPI?.uiDashboard?.InfoButton;
+                        if (!InfoBtn) return null;
+                        return h(InfoBtn, { infoKey: 'SMART_PLANNER', size: 'small' });
+                    })()
+                ),
                 h('div', { className: 'meal-rec-card__time' },
                     headerTitle,
                     headerTimeRange && h('span', { className: 'meal-rec-card__time-value' },
@@ -1313,6 +1397,7 @@
             'BALANCED': { text: 'Баланс', mod: 'balanced' },
             'LIGHT_SNACK': { text: 'Перекус', mod: 'light' },
             'POST_WORKOUT': { text: 'Восст.', mod: 'sport' },
+            'PRE_SLEEP': { text: 'Пресон', mod: 'light' },
             'PRE_WORKOUT': { text: 'Перед Т', mod: 'sport' },
             'STRESS_EATING': { text: 'Антистресс', mod: 'balanced' },
         };
@@ -1526,8 +1611,9 @@
     // Memoized component — prevents 30+ re-renders per page load
     const MemoizedMealRecommenderCard = React.memo(MealRecommenderCard, (prev, next) => {
         // Return true = skip re-render (props are equal)
-        // P2 Fix: Removed pIndex reference check — parent may create new object each render
+        // P2 Fix: Added day.date check to detect date changes (prevents double recommendation cycle)
         return (
+            prev.day?.date === next.day?.date &&
             (prev.day?.meals?.length || 0) === (next.day?.meals?.length || 0) &&
             (prev.day?.meals?.[(prev.day?.meals?.length || 1) - 1]?.time || '') ===
             (next.day?.meals?.[(next.day?.meals?.length || 1) - 1]?.time || '') &&
@@ -1556,6 +1642,6 @@
         renderCard
     };
 
-    console.info(`${LOG_PREFIX} 📦 Module loaded (v27.7: Enhanced user-friendly prompt in multi-meal subtitle)`);
+    console.info(`${LOG_PREFIX} 📦 Module loaded (v27.8: useMemo pIndex dep fix + render log throttle)`);
 
 })(window);

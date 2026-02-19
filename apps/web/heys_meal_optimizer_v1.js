@@ -2,15 +2,15 @@
 // v1.0.0 | 2025-12-10
 // Контекстные рекомендации с 50+ научными правилами
 
-(function(global) {
+(function (global) {
   'use strict';
   const HEYS = global.HEYS = global.HEYS || {};
   const U = HEYS.utils || {};
-  
+
   // ═══════════════════════════════════════════════════════════════════════════
   // NUTRIENT_KEYWORDS — Детекция микронутриентов по названию продукта
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const NUTRIENT_KEYWORDS = {
     iron: {
       keywords: ['печень', 'печёнка', 'говядина', 'телятина', 'гречка', 'чечевица', 'шпинат', 'фасоль', 'горох', 'тофу', 'кунжут', 'какао', 'кровянка'],
@@ -77,7 +77,7 @@
   // ═══════════════════════════════════════════════════════════════════════════
   // RECOMMENDED_PORTIONS — Оптимальные порции для контекста
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const RECOMMENDED_PORTIONS = {
     // Белковые — полноценная порция
     protein: { grams: 150, label: '150г — порция' },
@@ -108,7 +108,7 @@
   // ═══════════════════════════════════════════════════════════════════════════
   // SYNERGY_RULES — 50+ научных правил синергий
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const SYNERGY_RULES = [
     // === IRON + VITAMIN C (усвоение железа) ===
     {
@@ -121,7 +121,7 @@
       science: 'Аскорбиновая кислота восстанавливает Fe³⁺ → Fe²⁺',
       recommend: { categories: ['vitaminC'], keywords: ['лимон', 'перец', 'апельсин'] }
     },
-    
+
     // === CALCIUM + VITAMIN D (усвоение кальция) ===
     {
       id: 'calcium_vitd',
@@ -133,7 +133,7 @@
       science: 'Витамин D регулирует транспорт Ca²⁺ в кишечнике',
       recommend: { categories: ['vitaminD'], keywords: ['яйцо', 'лосось', 'грибы'] }
     },
-    
+
     // === FAT + FAT-SOLUBLE VITAMINS (A, D, E, K) ===
     {
       id: 'fat_vitamins',
@@ -145,7 +145,7 @@
       science: 'Витамины A, D, E, K — жирорастворимые',
       recommend: { keywords: ['масло оливковое', 'масло', 'авокадо', 'орех'] }
     },
-    
+
     // === PROTEIN COMPLETENESS (растительный белок) ===
     {
       id: 'plant_protein',
@@ -157,7 +157,7 @@
       science: 'Злаки + бобовые = все незаменимые аминокислоты',
       recommend: { keywords: ['фасоль', 'чечевица', 'нут', 'горох'] }
     },
-    
+
     // === TURMERIC + BLACK PEPPER (куркумин) ===
     {
       id: 'turmeric_pepper',
@@ -169,7 +169,7 @@
       science: 'Пиперин блокирует метаболизм куркумина в печени',
       recommend: { keywords: ['перец чёрный'] }
     },
-    
+
     // === TOMATO + FAT (ликопин) ===
     {
       id: 'tomato_fat',
@@ -181,7 +181,7 @@
       science: 'Ликопин — жирорастворимый каротиноид',
       recommend: { keywords: ['масло оливковое', 'масло', 'авокадо'] }
     },
-    
+
     // === TEA + MILK BLOCKS ANTIOXIDANTS ===
     {
       id: 'tea_no_milk',
@@ -193,7 +193,7 @@
       science: 'Исследование European Heart Journal 2007',
       isWarning: true
     },
-    
+
     // === COFFEE BLOCKS IRON ===
     {
       id: 'coffee_iron',
@@ -205,7 +205,7 @@
       science: 'Танины связывают железо в нерастворимые соединения',
       isWarning: true
     },
-    
+
     // === FIBER + MINERALS ===
     {
       id: 'fiber_minerals',
@@ -218,7 +218,7 @@
       isWarning: true,
       mild: true
     },
-    
+
     // === PROTEIN + LEUCINE TRIGGER ===
     {
       id: 'protein_leucine',
@@ -230,7 +230,7 @@
       science: '~3г лейцина = максимальный анаболический ответ',
       recommend: { categories: ['protein'], keywords: ['яйцо', 'творог', 'курица'] }
     },
-    
+
     // === LOW GI + HIGH GI BALANCING ===
     {
       id: 'gi_balance',
@@ -242,7 +242,7 @@
       science: 'Клетчатка замедляет всасывание глюкозы',
       recommend: { categories: ['fiber'], keywords: ['овощи', 'салат', 'огурец'] }
     },
-    
+
     // === EVENING PROTEIN ===
     {
       id: 'evening_protein',
@@ -254,7 +254,7 @@
       science: 'Казеин переваривается 6-8 часов',
       recommend: { keywords: ['творог', 'казеин', 'сыр'] }
     },
-    
+
     // === PRE-WORKOUT CARBS ===
     {
       id: 'preworkout_carbs',
@@ -266,7 +266,7 @@
       science: 'Гликоген = топливо для мышц',
       recommend: { categories: ['grains'], keywords: ['банан', 'овсянка', 'рис'] }
     },
-    
+
     // === POST-WORKOUT PROTEIN ===
     {
       id: 'postworkout_protein',
@@ -278,7 +278,7 @@
       science: 'Синтез мышечного белка максимален после нагрузки',
       recommend: { categories: ['protein'], keywords: ['курица', 'яйцо', 'творог', 'протеин'] }
     },
-    
+
     // === CARBS + PROTEIN COMBO ===
     {
       id: 'carbs_protein_combo',
@@ -290,7 +290,7 @@
       science: 'Белок замедляет опорожнение желудка',
       recommend: { categories: ['protein'], keywords: ['яйцо', 'творог', 'курица', 'рыба'] }
     },
-    
+
     // === SIMPLE CARBS WARNING ===
     {
       id: 'simple_carbs_high',
@@ -302,7 +302,7 @@
       science: 'Замедлит скачок инсулина',
       recommend: { categories: ['protein', 'fiber'], keywords: ['орех', 'творог', 'овощи'] }
     },
-    
+
     // === BREAKFAST PROTEIN ===
     {
       id: 'breakfast_protein',
@@ -314,7 +314,7 @@
       science: 'Белок повышает PYY и снижает грелин',
       recommend: { keywords: ['яйцо', 'творог', 'йогурт греческий', 'сыр'] }
     },
-    
+
     // === OMEGA-3 + WORKOUT ===
     {
       id: 'omega3_recovery',
@@ -326,7 +326,7 @@
       science: 'EPA/DHA — противовоспалительные медиаторы',
       recommend: { categories: ['omega3'], keywords: ['лосось', 'скумбрия', 'льняное масло'] }
     },
-    
+
     // === MAGNESIUM + STRESS ===
     {
       id: 'magnesium_stress',
@@ -338,7 +338,7 @@
       science: 'Mg²⁺ регулирует HPA ось',
       recommend: { categories: ['magnesium'], keywords: ['миндаль', 'авокадо', 'шоколад тёмный', 'банан'] }
     },
-    
+
     // === VITAMIN K + FAT ===
     {
       id: 'leafy_greens_fat',
@@ -350,7 +350,7 @@
       science: 'Для свёртывания крови и костей',
       recommend: { keywords: ['масло', 'орех', 'авокадо', 'сыр'] }
     },
-    
+
     // === ALCOHOL WARNING ===
     {
       id: 'alcohol_nutrients',
@@ -362,7 +362,7 @@
       science: 'Этанол нарушает всасывание и метаболизм',
       isWarning: true
     },
-    
+
     // === CITRUS + MEDICATION (general awareness) ===
     {
       id: 'grapefruit_caution',
@@ -375,7 +375,7 @@
       isWarning: true,
       mild: true
     },
-    
+
     // === PROTEIN VARIETY ===
     {
       id: 'protein_variety',
@@ -387,7 +387,7 @@
       science: 'Курица, рыба, яйца, молочка — чередуй',
       recommend: { categories: ['protein'] }
     },
-    
+
     // === HYDRATION WITH FIBER ===
     {
       id: 'fiber_water',
@@ -399,7 +399,7 @@
       science: 'Клетчатка впитывает воду для продвижения',
       isWarning: true
     },
-    
+
     // === RESISTANT STARCH ===
     {
       id: 'resistant_starch',
@@ -411,7 +411,7 @@
       science: 'Ретроградация крахмала при охлаждении',
       isInfo: true
     },
-    
+
     // === PROBIOTICS + PREBIOTICS ===
     {
       id: 'probiotics_prebiotics',
@@ -423,7 +423,7 @@
       science: 'Инулин, FOS — субстрат для микробиоты',
       recommend: { keywords: ['лук', 'чеснок', 'банан', 'овсянка'] }
     },
-    
+
     // === COLLAGEN + VITAMIN C ===
     {
       id: 'collagen_vitc',
@@ -435,7 +435,7 @@
       science: 'Аскорбат — кофактор пролил-гидроксилазы',
       recommend: { categories: ['vitaminC'], keywords: ['лимон', 'киви', 'перец'] }
     },
-    
+
     // === BETA-CAROTENE + FAT ===
     {
       id: 'beta_carotene',
@@ -447,7 +447,7 @@
       science: 'Конвертируется в витамин A',
       recommend: { keywords: ['масло', 'сметана', 'орех'] }
     },
-    
+
     // === QUERCETIN + FAT ===
     {
       id: 'quercetin_fat',
@@ -459,7 +459,7 @@
       science: 'Биодоступность ×5 с липидами',
       recommend: { keywords: ['масло', 'орех'] }
     },
-    
+
     // === CRUCIFEROUS + IODINE ===
     {
       id: 'cruciferous_iodine',
@@ -472,7 +472,7 @@
       isInfo: true,
       mild: true
     },
-    
+
     // === PHYTATES IN LEGUMES ===
     {
       id: 'legumes_soaking',
@@ -485,7 +485,7 @@
       isInfo: true,
       mild: true
     },
-    
+
     // === SULFORAPHANE ACTIVATION ===
     {
       id: 'sulforaphane',
@@ -497,7 +497,7 @@
       science: 'Мирозиназа конвертирует глюкорафанин',
       isInfo: true
     },
-    
+
     // === LYCOPENE COOKING ===
     {
       id: 'lycopene_cooking',
@@ -509,7 +509,7 @@
       science: '+2.5x после 30мин при 100°C',
       isInfo: true
     },
-    
+
     // === PROTEIN TIMING (распределение) ===
     {
       id: 'protein_distribution',
@@ -521,7 +521,7 @@
       science: 'Muscle full effect при избытке за раз',
       isInfo: true
     },
-    
+
     // === ANTI-NUTRIENTS GENERAL ===
     {
       id: 'antinutrients_cooking',
@@ -534,11 +534,11 @@
       isInfo: true,
       mild: true
     },
-    
+
     // ═══════════════════════════════════════════════════════════════════════
     // НОВЫЕ НАУЧНЫЕ ПРАВИЛА (2025-12-10)
     // ═══════════════════════════════════════════════════════════════════════
-    
+
     // === VITAMIN D + FAT (жирная еда = время D3) ===
     {
       id: 'fat_meal_vitd',
@@ -551,7 +551,7 @@
       isSupplement: true,
       supplementType: 'vitaminD'
     },
-    
+
     // === EVENING MAGNESIUM ===
     {
       id: 'evening_magnesium',
@@ -564,7 +564,7 @@
       isSupplement: true,
       supplementType: 'magnesium'
     },
-    
+
     // === CALCIUM vs IRON CONFLICT ===
     {
       id: 'calcium_iron_conflict',
@@ -576,7 +576,7 @@
       science: 'Hallberg 1991: Ca²⁺ конкурирует с Fe²⁺ за DMT1 транспортёр',
       isWarning: true
     },
-    
+
     // === COFFEE vs CALCIUM ===
     {
       id: 'coffee_calcium_timing',
@@ -588,7 +588,7 @@
       science: 'Massey 1993: 6мг Ca теряется на каждые 100мг кофеина',
       isWarning: true
     },
-    
+
     // === MAGNESIUM + B6 SYNERGY ===
     {
       id: 'magnesium_b6',
@@ -600,7 +600,7 @@
       science: 'Pouteau 2018: пиридоксин увеличивает клеточный захват Mg²⁺',
       recommend: { keywords: ['курица', 'рыба', 'банан', 'картофель'] }
     },
-    
+
     // === ZINC + EMPTY STOMACH ===
     {
       id: 'zinc_empty_stomach',
@@ -613,7 +613,7 @@
       isWarning: true,
       mild: true
     },
-    
+
     // === FISH OIL + FATTY MEAL ===
     {
       id: 'omega3_with_fat',
@@ -626,7 +626,7 @@
       isSupplement: true,
       supplementType: 'omega3'
     },
-    
+
     // === IRON + MORNING ===
     {
       id: 'iron_morning_best',
@@ -638,7 +638,7 @@
       science: 'Гепсидин (блокатор Fe) минимален утром',
       isInfo: true
     },
-    
+
     // === LATE NIGHT PROTEIN vs FAT ===
     {
       id: 'late_night_fat',
@@ -650,7 +650,7 @@
       science: 'Жиры замедляют опорожнение желудка на 2-4ч',
       isWarning: true
     },
-    
+
     // === VITAMIN C + TIMING ===
     {
       id: 'vitc_with_meal',
@@ -663,7 +663,7 @@
       isInfo: true,
       mild: true
     },
-    
+
     // === PROTEIN + CREATINE ===
     {
       id: 'protein_creatine_timing',
@@ -676,7 +676,7 @@
       isSupplement: true,
       supplementType: 'creatine'
     },
-    
+
     // === TRYPTOPHAN + CARBS (для сна) ===
     {
       id: 'tryptophan_carbs',
@@ -688,7 +688,7 @@
       science: 'Углеводы → инсулин → LNAA из крови → триптофан проходит ГЭБ',
       isInfo: true
     },
-    
+
     // === COLLAGEN + GLYCINE TIMING ===
     {
       id: 'collagen_sleep',
@@ -700,7 +700,7 @@
       science: 'Bannai 2012: 3г глицина перед сном улучшает сон',
       isInfo: true
     },
-    
+
     // === PROBIOTICS + PREBIOTICS ===
     {
       id: 'probiotic_empty',
@@ -713,7 +713,7 @@
       isInfo: true,
       mild: true
     },
-    
+
     // === GREEN TEA + IRON BLOCK ===
     {
       id: 'green_tea_iron',
@@ -725,7 +725,7 @@
       science: 'Hurrell 1999: танины снижают абсорбцию Fe на 70%',
       isWarning: true
     },
-    
+
     // === EGGS + CHOLINE FOR BRAIN ===
     {
       id: 'eggs_morning_brain',
@@ -737,7 +737,7 @@
       science: 'Холин → ацетилхолин → память и фокус',
       isInfo: true
     },
-    
+
     // === SPINACH + LEMON ===
     {
       id: 'spinach_lemon',
@@ -749,7 +749,7 @@
       science: 'Витамин C конвертирует Fe³⁺ → Fe²⁺ для усвоения',
       recommend: { keywords: ['лимон', 'перец болгарский'] }
     },
-    
+
     // === BERRIES + CREAM ===
     {
       id: 'berries_fat',
@@ -761,7 +761,7 @@
       science: 'Lipophilic polyphenols лучше с липидами',
       recommend: { keywords: ['сливки', 'сметана', 'йогурт', 'орех'] }
     },
-    
+
     // === LIVER + AVOID EXCESS ===
     {
       id: 'liver_vita_excess',
@@ -774,7 +774,7 @@
       isWarning: true,
       mild: true
     },
-    
+
     // === AVOCADO + SALAD ===
     {
       id: 'avocado_salad',
@@ -786,7 +786,7 @@
       science: 'Unlu 2005: жиры авокадо увеличивают абсорбцию каротиноидов',
       isInfo: true
     },
-    
+
     // === BREAKFAST CORTISOL SPIKE ===
     {
       id: 'morning_cortisol',
@@ -798,7 +798,7 @@
       science: 'Cortisol awakening response + сахар = инсулиновые качели',
       isWarning: true
     },
-    
+
     // === NUTS + PHYTATES ===
     {
       id: 'nuts_soaking',
@@ -816,7 +816,7 @@
   // ═══════════════════════════════════════════════════════════════════════════
   // BALANCE_RULES — Правила балансировки макронутриентов
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const BALANCE_RULES = [
     {
       id: 'need_protein',
@@ -860,7 +860,7 @@
   // ═══════════════════════════════════════════════════════════════════════════
   // TIMING_RULES — Правила по времени суток
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const TIMING_RULES = [
     {
       id: 'late_carbs',
@@ -895,7 +895,7 @@
   // ═══════════════════════════════════════════════════════════════════════════
   // HELPER FUNCTIONS — Утилиты
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   /**
    * Детектировать нутриенты по названию продукта
    */
@@ -903,7 +903,7 @@
     if (!productName) return [];
     const name = productName.toLowerCase();
     const found = [];
-    
+
     for (const [nutrientId, config] of Object.entries(NUTRIENT_KEYWORDS)) {
       for (const keyword of config.keywords) {
         if (name.includes(keyword.toLowerCase())) {
@@ -912,7 +912,7 @@
         }
       }
     }
-    
+
     return found;
   }
 
@@ -922,11 +922,11 @@
   function detectCategories(product, existingCategories) {
     // Используем категории из heys_advice если доступны
     const adviceCategories = HEYS.advice?.PRODUCT_CATEGORIES || existingCategories || {};
-    
+
     if (!product?.name) return [];
     const name = product.name.toLowerCase();
     const found = [];
-    
+
     for (const [catId, config] of Object.entries(adviceCategories)) {
       if (!config.keywords) continue;
       for (const keyword of config.keywords) {
@@ -936,7 +936,7 @@
         }
       }
     }
-    
+
     return found;
   }
 
@@ -996,58 +996,58 @@
     const mealTextRaw = (meal?.items || []).map((it) => (it.name || '')).join(' ');
     const mealTextNorm = normalizeTextForKeywordMatch(mealTextRaw);
     const mealTokens = tokenizeNormalizedText(mealTextNorm);
-    
+
     // has: nutrient
     if (trigger.has) {
       const allNutrients = (context.mealNutrients || []);
       if (!allNutrients.includes(trigger.has)) return false;
     }
-    
+
     // has2: second nutrient (для конфликтов)
     if (trigger.has2) {
       const allNutrients = (context.mealNutrients || []);
       if (!allNutrients.includes(trigger.has2)) return false;
     }
-    
+
     // missing: nutrient
     if (trigger.missing) {
       const allNutrients = (context.mealNutrients || []);
       if (allNutrients.includes(trigger.missing)) return false;
     }
-    
+
     // hasCategory
     if (trigger.hasCategory) {
       const cats = context.mealCategories || [];
       if (!cats.includes(trigger.hasCategory)) return false;
     }
-    
+
     // missingCategory
     if (trigger.missingCategory) {
       const cats = context.mealCategories || [];
       if (cats.includes(trigger.missingCategory)) return false;
     }
-    
+
     // hasKeyword
     if (trigger.hasKeyword) {
       const keywords = Array.isArray(trigger.hasKeyword) ? trigger.hasKeyword : [trigger.hasKeyword];
       const hasAny = keywords.some((kw) => textHasKeyword(mealTokens, mealTextNorm, kw));
       if (!hasAny) return false;
     }
-    
+
     // missingKeyword
     if (trigger.missingKeyword) {
       const keywords = Array.isArray(trigger.missingKeyword) ? trigger.missingKeyword : [trigger.missingKeyword];
       const hasAny = keywords.some((kw) => textHasKeyword(mealTokens, mealTextNorm, kw));
       if (hasAny) return false;
     }
-    
+
     // hasKeyword2 — второй набор ключевых слов (для проверки конфликтов)
     if (trigger.hasKeyword2) {
       const keywords = Array.isArray(trigger.hasKeyword2) ? trigger.hasKeyword2 : [trigger.hasKeyword2];
       const hasAny = keywords.some((kw) => textHasKeyword(mealTokens, mealTextNorm, kw));
       if (!hasAny) return false;
     }
-    
+
     // missingMacro: 'fat' | 'protein' | 'carbs'
     if (trigger.missingMacro) {
       const t = mealTotals || {};
@@ -1055,57 +1055,57 @@
       if (trigger.missingMacro === 'protein' && t.prot > 10) return false;
       if (trigger.missingMacro === 'carbs' && t.carbs > 10) return false;
     }
-    
+
     // minGrams
     if (trigger.minGrams && (mealTotals?.grams || 0) < trigger.minGrams) return false;
-    
+
     // mealProtLow
     if (trigger.mealProtLow && (mealTotals?.prot || 0) >= 15) return false;
-    
+
     // mealCarbsLow
     if (trigger.mealCarbsLow && (mealTotals?.carbs || 0) >= 30) return false;
-    
+
     // mealProtein: { min, max }
     if (trigger.mealProtein) {
       const prot = mealTotals?.prot || 0;
       if (trigger.mealProtein.min !== undefined && prot < trigger.mealProtein.min) return false;
       if (trigger.mealProtein.max !== undefined && prot > trigger.mealProtein.max) return false;
     }
-    
+
     // mealKcal: { min, max }
     if (trigger.mealKcal) {
       const kcal = mealTotals?.kcal || 0;
       if (trigger.mealKcal.min !== undefined && kcal < trigger.mealKcal.min) return false;
       if (trigger.mealKcal.max !== undefined && kcal > trigger.mealKcal.max) return false;
     }
-    
+
     // mealGI: { min, max }
     if (trigger.mealGI) {
       const gi = context.avgGI || 50;
       if (trigger.mealGI.min !== undefined && gi < trigger.mealGI.min) return false;
       if (trigger.mealGI.max !== undefined && gi > trigger.mealGI.max) return false;
     }
-    
+
     // mealSimpleCarbs: { min }
     if (trigger.mealSimpleCarbs) {
       const simple = mealTotals?.simple || 0;
       if (trigger.mealSimpleCarbs.min !== undefined && simple < trigger.mealSimpleCarbs.min) return false;
     }
-    
+
     // mealProtPct: { max }
     if (trigger.mealProtPct) {
       const kcal = mealTotals?.kcal || 0;
       const prot = mealTotals?.prot || 0;
-      const protPct = kcal > 0 ? (prot * 4 / kcal * 100) : 0;
+      const protPct = kcal > 0 ? (prot * 3 / kcal * 100) : 0;
       if (trigger.mealProtPct.max !== undefined && protPct > trigger.mealProtPct.max) return false;
     }
-    
+
     // mealFiber: { max }
     if (trigger.mealFiber) {
       const fiber = mealTotals?.fiber || 0;
       if (trigger.mealFiber.max !== undefined && fiber > trigger.mealFiber.max) return false;
     }
-    
+
     // mealGoodFatPct: { max }
     if (trigger.mealGoodFatPct) {
       const fat = mealTotals?.fat || 0;
@@ -1113,7 +1113,7 @@
       const goodPct = fat > 0 ? (good / fat * 100) : 0;
       if (trigger.mealGoodFatPct.max !== undefined && goodPct > trigger.mealGoodFatPct.max) return false;
     }
-    
+
     // mealSimplePct: { min }
     if (trigger.mealSimplePct) {
       const carbs = mealTotals?.carbs || 0;
@@ -1121,19 +1121,19 @@
       const simplePct = carbs > 0 ? (simple / carbs * 100) : 0;
       if (trigger.mealSimplePct.min !== undefined && simplePct < trigger.mealSimplePct.min) return false;
     }
-    
+
     // mealCarbs: { min }
     if (trigger.mealCarbs) {
       const carbs = mealTotals?.carbs || 0;
       if (trigger.mealCarbs.min !== undefined && carbs < trigger.mealCarbs.min) return false;
     }
-    
+
     // mealFat: { min }
     if (trigger.mealFat) {
       const fat = mealTotals?.fat || 0;
       if (trigger.mealFat.min !== undefined && fat < trigger.mealFat.min) return false;
     }
-    
+
     // mealCarbsPct: { min }
     if (trigger.mealCarbsPct) {
       const kcal = mealTotals?.kcal || 0;
@@ -1141,7 +1141,7 @@
       const carbsPct = kcal > 0 ? (carbs * 4 / kcal * 100) : 0;
       if (trigger.mealCarbsPct.min !== undefined && carbsPct < trigger.mealCarbsPct.min) return false;
     }
-    
+
     // mealFatPct: { max }
     if (trigger.mealFatPct) {
       const kcal = mealTotals?.kcal || 0;
@@ -1149,13 +1149,13 @@
       const fatPct = kcal > 0 ? (fat * 9 / kcal * 100) : 0;
       if (trigger.mealFatPct.max !== undefined && fatPct > trigger.mealFatPct.max) return false;
     }
-    
+
     // time: { before, after }
     if (trigger.time) {
       const mealTime = time || meal?.time || '12:00';
       const [h, m] = mealTime.split(':').map(Number);
       const mealMinutes = h * 60 + m;
-      
+
       if (trigger.time.before) {
         const [bh, bm] = trigger.time.before.split(':').map(Number);
         if (mealMinutes >= bh * 60 + bm) return false;
@@ -1165,23 +1165,23 @@
         if (mealMinutes < ah * 60 + am) return false;
       }
     }
-    
+
     // hasTrainingToday — есть ли запланированная/выполненная тренировка сегодня
     if (trigger.hasTrainingToday) {
       const trainings = dayData?.trainings || [];
       if (trainings.length === 0) return false;
     }
-    
+
     // hadTrainingRecently — была ли тренировка в последние 2 часа
     if (trigger.hadTrainingRecently) {
       const trainings = dayData?.trainings || [];
       if (trainings.length === 0) return false;
-      
+
       // Проверяем время тренировки — должна быть в последние 2 часа
       const mealTime = time || meal?.time || '12:00';
       const [mealH, mealM] = mealTime.split(':').map(Number);
       const mealMinutes = mealH * 60 + mealM;
-      
+
       let hasRecentTraining = false;
       for (const tr of trainings) {
         if (!tr.time) continue;
@@ -1196,16 +1196,16 @@
       }
       if (!hasRecentTraining) return false;
     }
-    
+
     // hasTrainingAfterMeal — тренировка запланирована ПОСЛЕ текущего приёма (1-4 часа)
     if (trigger.hasTrainingAfterMeal) {
       const trainings = dayData?.trainings || [];
       if (trainings.length === 0) return false;
-      
+
       const mealTime = time || meal?.time || '12:00';
       const [mealH, mealM] = mealTime.split(':').map(Number);
       const mealMinutes = mealH * 60 + mealM;
-      
+
       let hasUpcomingTraining = false;
       for (const tr of trainings) {
         if (!tr.time) continue;
@@ -1220,33 +1220,33 @@
       }
       if (!hasUpcomingTraining) return false;
     }
-    
+
     // highFiber (дневной показатель)
     if (trigger.highFiber) {
       const dayFiber = dayData?.dayTot?.fiber || 0;
       if (dayFiber < 25) return false;
     }
-    
+
     // dayWaterLow
     if (trigger.dayWaterLow) {
       const waterMl = dayData?.waterMl || 0;
       const waterGoal = dayData?.waterGoal || 2000;
       if (waterMl >= waterGoal * 0.5) return false;
     }
-    
+
     // dayStressHigh
     if (trigger.dayStressHigh) {
       const stress = dayData?.stressAvg || 0;
       if (stress < 6) return false;
     }
-    
+
     // hasOnlyCarbs
     if (trigger.hasOnlyCarbs) {
       const t = mealTotals || {};
       if (t.prot > 5 || t.fat > 5) return false;
       if (t.carbs < 20) return false;
     }
-    
+
     return true;
   }
 
@@ -1255,10 +1255,10 @@
    */
   function findRecommendedProducts(recommend, products, currentItems, limit = 3) {
     if (!recommend || !products || products.length === 0) return [];
-    
+
     const currentIds = new Set((currentItems || []).map(it => it.product_id || it.id));
     const candidates = [];
-    
+
     // По ключевым словам
     if (recommend.keywords) {
       for (const product of products) {
@@ -1272,18 +1272,18 @@
         }
       }
     }
-    
+
     // По категориям (используем PRODUCT_CATEGORIES)
     if (recommend.categories) {
       const adviceCategories = HEYS.advice?.PRODUCT_CATEGORIES || {};
       for (const product of products) {
         if (currentIds.has(product.id)) continue;
         const name = (product.name || '').toLowerCase();
-        
+
         for (const catId of recommend.categories) {
           const cat = adviceCategories[catId] || NUTRIENT_KEYWORDS[catId];
           if (!cat?.keywords) continue;
-          
+
           for (const keyword of cat.keywords) {
             if (name.includes(keyword.toLowerCase())) {
               candidates.push({ product, score: 5 });
@@ -1293,7 +1293,7 @@
         }
       }
     }
-    
+
     // Убираем дубликаты и сортируем по score
     const seen = new Set();
     const unique = candidates.filter(c => {
@@ -1301,7 +1301,7 @@
       seen.add(c.product.id);
       return true;
     });
-    
+
     unique.sort((a, b) => b.score - a.score);
     return unique.slice(0, limit).map(c => c.product);
   }
@@ -1311,9 +1311,9 @@
    */
   function getSmartPortion(product) {
     if (!product) return RECOMMENDED_PORTIONS.default;
-    
+
     const name = (product.name || '').toLowerCase();
-    
+
     // Проверяем по ключевым словам
     if (/яйц|омлет|яичн/.test(name)) return RECOMMENDED_PORTIONS.eggs;
     if (/сыр|пармезан|моцарелла|брынза/.test(name)) return RECOMMENDED_PORTIONS.cheese;
@@ -1326,21 +1326,21 @@
     if (/салат|огурец|помидор|капуста|брокколи|шпинат/.test(name)) return RECOMMENDED_PORTIONS.vegetables;
     if (/укроп|петрушка|базилик|кинза|зелень/.test(name)) return RECOMMENDED_PORTIONS.greens;
     if (/соус|кетчуп|майонез/.test(name)) return RECOMMENDED_PORTIONS.sauce;
-    
+
     return RECOMMENDED_PORTIONS.default;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CONTEXTUAL RECOMMENDATIONS — Контекстные формулировки
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   /**
    * Сделать рекомендацию контекстной — с упоминанием конкретных продуктов
    */
   function makeContextualRecommendation(rule, context, recommendedProducts) {
     const { meal, mealTotals, mealNutrients } = context;
     const items = meal?.items || [];
-    
+
     // Получаем названия продуктов в приёме (первые 2 для краткости)
     const productNames = items.slice(0, 2).map(it => {
       const name = it.name || '';
@@ -1349,11 +1349,11 @@
     });
     const mainProduct = productNames[0] || 'приём';
     const hasMultiple = items.length > 1;
-    
+
     // Название рекомендуемого продукта
     const recProduct = recommendedProducts[0]?.name || '';
     const recShort = recProduct.length > 15 ? recProduct.substring(0, 13) + '...' : recProduct;
-    
+
     // Контекстные шаблоны для каждого правила
     const contextTemplates = {
       // SYNERGY
@@ -1393,7 +1393,7 @@
         title: `Много клетчатки = меньше цинка`,
         reason: `Фитаты связывают минералы`
       },
-      
+
       // BALANCE
       'need_protein': {
         title: `Мало белка в ${mainProduct}`,
@@ -1411,7 +1411,7 @@
         title: `${Math.round((mealTotals?.simple || 0) / (mealTotals?.carbs || 1) * 100)}% — простые углеводы`,
         reason: `Добавь ${recShort || 'белок/клетчатку'} — сгладит скачок сахара`
       },
-      
+
       // TIMING
       'protein_leucine': {
         title: `Ещё ${30 - Math.round(mealTotals?.prot || 0)}г белка до оптимума`,
@@ -1465,7 +1465,7 @@
         title: `Высокий ГИ после обеда`,
         reason: `${recShort || 'Орехи/белок'} — избежишь сонливости`
       },
-      
+
       // РАСПРЕДЕЛЕНИЕ БЕЛКА
       'protein_distribution': {
         title: `Распредели белок равномерно`,
@@ -1475,11 +1475,11 @@
         title: `Разнообразь источники белка`,
         reason: `${recShort || 'Рыба/яйца/молочка'} — разные аминокислоты`
       },
-      
+
       // ═══════════════════════════════════════════════════════════════════
       // НОВЫЕ НАУЧНЫЕ ПРАВИЛА (2025-12-10)
       // ═══════════════════════════════════════════════════════════════════
-      
+
       // ДОБАВКИ И ВИТАМИНЫ
       'fat_meal_vitd': {
         title: `Выпей витамин D с этим приёмом`,
@@ -1497,7 +1497,7 @@
         title: `Идеальное время для креатина`,
         reason: `${Math.round(mealTotals?.prot || 0)}г белка + тренировка — усвоение +60%`
       },
-      
+
       // КОНФЛИКТЫ
       'calcium_iron_conflict': {
         title: `⚠️ Кальций + железо — конфликт!`,
@@ -1511,7 +1511,7 @@
         title: `Зелёный чай блокирует железо`,
         reason: `Танины снижают Fe на 70% — пей через 1ч после ${mainProduct}`
       },
-      
+
       // ВРЕМЯ СУТОК
       'iron_morning_best': {
         title: `Утро — лучшее время для железа`,
@@ -1525,7 +1525,7 @@
         title: `Утром меньше сахара`,
         reason: `${Math.round(mealTotals?.simple || 0)}г простых + кортизол = инсулиновые качели`
       },
-      
+
       // СИНЕРГИИ МИКРОНУТРИЕНТОВ
       'magnesium_b6': {
         title: `Магний + B6 — синергия`,
@@ -1539,7 +1539,7 @@
         title: `К ягодам — жиры`,
         reason: `${recShort || 'Сливки/сметана'} — антоцианы усвоятся лучше`
       },
-      
+
       // СПЕЦИФИЧНЫЕ ПРОДУКТЫ
       'tryptophan_carbs': {
         title: `Триптофан + углеводы = мелатонин`,
@@ -1557,7 +1557,7 @@
         title: `Идеальная комбинация!`,
         reason: `Жиры авокадо ×4 усвоение каротиноидов из овощей`
       },
-      
+
       // ПРЕДУПРЕЖДЕНИЯ
       'zinc_empty_stomach': {
         title: `Цинк с едой, не натощак`,
@@ -1567,7 +1567,7 @@
         title: `Печень 1-2 раза в неделю`,
         reason: `Избыток витамина A токсичен при постоянном употреблении`
       },
-      
+
       // INFO
       'nuts_soaking': {
         title: `Замачивание орехов улучшает усвоение`,
@@ -1582,33 +1582,33 @@
         reason: `Аскорбиновая кислота — снизится раздражение желудка`
       }
     };
-    
+
     // Получаем контекстный шаблон или используем оригинал
     const template = contextTemplates[rule.id];
-    
+
     if (template) {
       return {
         title: template.title,
         reason: template.reason
       };
     }
-    
+
     // Fallback — оригинальные тексты с подстановкой переменных
     let title = rule.title || '';
     let reason = rule.reason || '';
-    
+
     // Подстановка переменных
     reason = reason.replace('{protPct}', Math.round((mealTotals?.prot || 0) * 4 / (mealTotals?.kcal || 1) * 100));
     reason = reason.replace('{fiber}', Math.round(mealTotals?.fiber || 0));
     reason = reason.replace('{simplePct}', Math.round((mealTotals?.simple || 0) / (mealTotals?.carbs || 1) * 100));
-    
+
     return { title, reason };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // MAIN API — getMealOptimization
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   /**
    * Получить рекомендации для приёма пищи
    * @param {Object} params
@@ -1622,25 +1622,25 @@
    */
   function getMealOptimization(params) {
     const { meal, mealTotals, dayData, profile, products, pIndex, avgGI } = params;
-    
+
     if (!meal?.items || meal.items.length === 0) return [];
-    
+
     // Собираем нутриенты и категории из всех продуктов в приёме
     const mealNutrients = new Set();
     const mealCategories = new Set();
-    
+
     for (const item of meal.items) {
       const name = item.name || '';
-      
+
       // Нутриенты
       const nutrients = detectNutrients(name);
       nutrients.forEach(n => mealNutrients.add(n));
-      
+
       // Категории
       const cats = detectCategories({ name });
       cats.forEach(c => mealCategories.add(c));
     }
-    
+
     const context = {
       meal,
       mealTotals: mealTotals || {},
@@ -1653,34 +1653,34 @@
       avgGI: avgGI || 50,
       time: meal.time
     };
-    
+
     const recommendations = [];
-    
+
     // Проверяем все правила
     const allRules = [...SYNERGY_RULES, ...BALANCE_RULES, ...TIMING_RULES];
-    
+
     for (const rule of allRules) {
       if (checkTrigger(rule.trigger, context)) {
         // Сначала находим продукты для рекомендации
         let recProducts = [];
         if (rule.recommend && products && products.length > 0) {
           recProducts = findRecommendedProducts(
-            rule.recommend, 
-            products, 
-            meal.items, 
+            rule.recommend,
+            products,
+            meal.items,
             3
           );
-          
+
           // Добавляем smart portion к каждому продукту
           recProducts = recProducts.map(p => ({
             ...p,
             smartPortion: getSmartPortion(p)
           }));
         }
-        
+
         // Получаем контекстные тексты
         const contextual = makeContextualRecommendation(rule, context, recProducts);
-        
+
         const rec = {
           id: rule.id,
           priority: rule.priority || 50,
@@ -1693,14 +1693,14 @@
           mild: rule.mild || false,
           products: recProducts
         };
-        
+
         recommendations.push(rec);
       }
     }
-    
+
     // Сортируем по приоритету (выше = важнее)
     recommendations.sort((a, b) => b.priority - a.priority);
-    
+
     // Ограничиваем количество (max 5 активных рекомендаций)
     return recommendations.slice(0, 5);
   }
@@ -1708,30 +1708,30 @@
   // ═══════════════════════════════════════════════════════════════════════════
   // USER ACTIONS TRACKING — Персонализация
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const ACTIONS_KEY = 'heys_meal_optimizer_actions';
   const MAX_ACTIONS = 1000; // Лимит записей
   const MAX_AGE_DAYS = 30; // Удаляем записи старше 30 дней
-  
+
   /**
    * Записать действие пользователя
    */
   function trackUserAction(action) {
     try {
       let actions = U.lsGet ? U.lsGet(ACTIONS_KEY, []) : JSON.parse(localStorage.getItem(ACTIONS_KEY) || '[]');
-      
+
       // Очистка старых записей (старше 30 дней)
       const cutoff = Date.now() - (MAX_AGE_DAYS * 24 * 60 * 60 * 1000);
       actions = actions.filter(a => (a.timestamp || 0) > cutoff);
-      
+
       actions.push({
         ...action,
         timestamp: Date.now()
       });
-      
+
       // Храним последние MAX_ACTIONS действий
       const trimmed = actions.slice(-MAX_ACTIONS);
-      
+
       if (U.lsSet) {
         U.lsSet(ACTIONS_KEY, trimmed);
       } else {
@@ -1748,7 +1748,7 @@
   function getActionStats() {
     try {
       const actions = U.lsGet ? U.lsGet(ACTIONS_KEY, []) : JSON.parse(localStorage.getItem(ACTIONS_KEY) || '[]');
-      
+
       const stats = {
         acceptedRules: {},
         dismissedRules: {},
@@ -1756,7 +1756,7 @@
         totalAccepted: 0,
         totalDismissed: 0
       };
-      
+
       for (const action of actions) {
         if (action.type === 'accept') {
           stats.acceptedRules[action.ruleId] = (stats.acceptedRules[action.ruleId] || 0) + 1;
@@ -1769,7 +1769,7 @@
           stats.totalDismissed++;
         }
       }
-      
+
       return stats;
     } catch (e) {
       return { acceptedRules: {}, dismissedRules: {}, addedProducts: {}, totalAccepted: 0, totalDismissed: 0 };
@@ -1783,41 +1783,41 @@
     const stats = getActionStats();
     const dismissed = stats.dismissedRules[ruleId] || 0;
     const accepted = stats.acceptedRules[ruleId] || 0;
-    
+
     // Если отклонено 5+ раз и принято меньше 20% — скрываем
     if (dismissed >= 5 && accepted / (dismissed + accepted) < 0.2) {
       return true;
     }
-    
+
     return false;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // EXPORT
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   HEYS.MealOptimizer = {
     // Main API
     getMealOptimization,
-    
+
     // Helpers
     detectNutrients,
     detectCategories,
     getSmartPortion,
     findRecommendedProducts,
-    
+
     // Tracking
     trackUserAction,
     getActionStats,
     shouldHideRecommendation,
-    
+
     // Constants (for debugging/extension)
     NUTRIENT_KEYWORDS,
     RECOMMENDED_PORTIONS,
     SYNERGY_RULES,
     BALANCE_RULES,
     TIMING_RULES,
-    
+
     // Version
     VERSION: '1.0.0'
   };

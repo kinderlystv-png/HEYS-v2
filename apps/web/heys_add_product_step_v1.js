@@ -197,6 +197,8 @@
     if (idx === -1) {
       nextProducts.push({
         ...product,
+        // 🆕 v4.8.6: Ensure new products have individual createdAt for sort order
+        createdAt: product.createdAt || product.created_at || Date.now(),
         user_modified: isUserEdit ? true : product.user_modified
       });
     } else {
@@ -870,9 +872,23 @@
     }
 
     if (updatedDays > 0) {
-      console.log(`[HEYS.sync] ✅ Batch cascade complete: ${updatedItems} items in ${updatedDays} days`);
+      console.info(`[HEYS.sync] ✅ Batch cascade complete: ${updatedItems} items in ${updatedDays} days`);
       // Clear caches to reflect changes
       HEYS.models?.clearMealTotalsCache?.();
+
+      // v5.0.2: Диспатчим heys:day-updated для СЕГОДНЯ, чтобы React state
+      // подхватил обновлённые kcal100/protein100 в items (ранее состояние не обновлялось).
+      // Задержка 80мс: даём clearMealTotalsCache завершиться и избегаем race с текущим рендером.
+      const _cascadeTodayDate =
+        (HEYS.models?.todayISO?.()) ||
+        new Date().toISOString().slice(0, 10);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('heys:day-updated', {
+          detail: { source: 'cascade-batch', date: _cascadeTodayDate }
+        }));
+        console.info('[HEYS.sync] 📅 Dispatched heys:day-updated for today after cascade batch:', _cascadeTodayDate);
+      }, 80);
+
       window.dispatchEvent(new CustomEvent('heys:mealitems-cascaded', {
         detail: { batchSize: changesMap.size, updatedDays, updatedItems }
       }));
@@ -1215,6 +1231,13 @@
       return 3;
     };
 
+    // Недавно созданные/обновлённые (48ч) — показываем вверху даже без истории
+    const recentWindowMs = 48 * 60 * 60 * 1000;
+    const isRecentlyTouched = (p) => {
+      const ts = Number(p.updatedAt || p.createdAt || 0);
+      return ts > 0 && (now - ts) < recentWindowMs;
+    };
+
     // Сортируем по комбинированному скору
     const sorted = [...products]
       .filter(p => {
@@ -1223,11 +1246,28 @@
         if (hiddenSet.has(pid)) return false; // Скрытые не показываем
         const freq = getFreq(pid, p.name);
         const isFav = favoritesSet.has(pid);
-        return isFav || freq > 0; // Использованные или избранные
+        return isFav || freq > 0 || isRecentlyTouched(p); // Использованные, избранные или недавно добавленные
       })
       .sort((a, b) => {
         const aId = String(a.id || a.product_id || a.name || '');
         const bId = String(b.id || b.product_id || b.name || '');
+
+        // Недавно добавленные — самый верх (группа -1)
+        const aNew = isRecentlyTouched(a);
+        const bNew = isRecentlyTouched(b);
+        const aFreq = getFreq(aId, a.name);
+        const bFreq = getFreq(bId, b.name);
+        // Только если нет истории использования — ставим вверх
+        if ((aNew && aFreq === 0) !== (bNew && bFreq === 0)) {
+          return (aNew && aFreq === 0) ? -1 : 1;
+        }
+        // Среди недавно добавленных — самые свежие сначала
+        if (aNew && aFreq === 0 && bNew && bFreq === 0) {
+          const aTs = Number(a.updatedAt || a.createdAt || 0);
+          const bTs = Number(b.updatedAt || b.createdAt || 0);
+          if (aTs !== bTs) return bTs - aTs;
+        }
+
         const aGroup = getGroupRank(aId, a.name);
         const bGroup = getGroupRank(bId, b.name);
         if (aGroup !== bGroup) return aGroup - bGroup;
@@ -1843,6 +1883,8 @@
         const fuzzyMatch = nameWords.some(w => isFuzzyMatch(w, lc));
         // Проверяем совпадение начала слова (3+ буквы) — спасает "савая" -> "савоярди" (совпадает "сав")
         const prefix3Match = lc.length >= 3 && nameWords.some(w => w.startsWith(lc.slice(0, 3)));
+        // Проверяем совпадение начала любого слова (для "ad" → "Admin" и т.п.)
+        const wordStartsWith = nameWords.some(w => w.startsWith(lc));
 
         // Базовый скор: используем relevance если есть + поправки
         let score = baseRel;
@@ -1851,8 +1893,15 @@
         else if (fuzzyMatch) score += 30; // Почти как точное, если похоже
         else if (prefix3Match) score += 20; // Начало совпадает — это уже неплохо
 
-        if (startsWith) score += 15;
+        // 🔧 startsWith (имя начинается с запроса) — сильный сигнал, перебивает relevance
+        if (startsWith) score += 70;
+        else if (wordStartsWith) score += 20; // слово в имени начинается с запроса
         if (exactWord) score += 10;
+
+        // 🆕 Буст недавно добавленных/обновлённых (48ч) — поднимаем вверх в поиске
+        const recentTs = Number(p.updatedAt || p.createdAt || 0);
+        const recentWindowMs = 48 * 60 * 60 * 1000;
+        if (recentTs > 0 && (Date.now() - recentTs) < recentWindowMs) score += 25;
 
         // Если вообще нет подстрочного совпадения, fuzzy и даже префикса — сильно штрафуем
         if (!hasSubstring && !fuzzyMatch && !prefix3Match) score -= 35;
@@ -3044,7 +3093,7 @@ NOVA: 1
       const carbs = toNum(p.carbs100 ?? (simple + complex), 0);
       const fat = toNum(p.fat100 ?? (bad + good + trans), 0);
       const protein = toNum(p.protein100, 0);
-      const kcal = toNum(p.kcal100 ?? (protein * 4 + carbs * 4 + fat * 9), 0);
+      const kcal = toNum(p.kcal100 ?? (protein * 3 + carbs * 4 + fat * 9), 0); // NET Atwater
       const harmVal = HEYS.models?.normalizeHarm?.(p) ?? toNum(p.harm, 0);
 
       return {
@@ -3096,7 +3145,7 @@ NOVA: 1
       const fatTotalInput = toNum(form.fat100, 0);
       const carbsTotal = carbsTotalInput || partsCarbs;
       const fatTotal = fatTotalInput || partsFat;
-      const kcalCalc = Math.round((protein * 4 + carbsTotal * 4 + fatTotal * 9) * 10) / 10;
+      const kcalCalc = Math.round((protein * 3 + carbsTotal * 4 + fatTotal * 9) * 10) / 10; // NET Atwater
       const kcalInput = toNum(form.kcal100, 0);
 
       const carbsDiff = carbsTotalInput > 0 ? Math.abs(carbsTotalInput - partsCarbs) : 0;
@@ -4178,6 +4227,13 @@ NOVA: 1
           console.log('[HarmSelectStep] ⚠️ Продукт уже есть в базе:', existingPersonal.name);
           // Используем существующий ID
           updatedProduct.id = existingPersonal.id;
+          // 🆕 Обновляем updatedAt чтобы продукт поднялся вверх в списке
+          const touchedExisting = { ...existingPersonal, updatedAt: Date.now() };
+          const touchedProducts = products.map(p => p.id === existingPersonal.id ? touchedExisting : p);
+          if (HEYS.products?.setAll) {
+            HEYS.products.setAll(touchedProducts);
+            console.info('[HarmSelectStep] 🔄 Обновлён updatedAt у продукта:', existingPersonal.name);
+          }
         }
 
         // 🔄 Orphan recovery

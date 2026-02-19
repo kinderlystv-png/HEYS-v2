@@ -90,10 +90,18 @@
         }) || null;
 
         if (mealRecCard) {
-            console.info('[HEYS.diary] ✅ Meal rec card rendered');
+            // P1 fix: throttle log to once per session (prevents 40+ identical lines on re-renders)
+            if (!window.__heysLoggedMealRecRendered) {
+                window.__heysLoggedMealRecRendered = true;
+                console.info('[HEYS.diary] ✅ Meal rec card rendered');
+            }
         } else {
             console.warn('[HEYS.diary] ⚠️ Meal rec card not rendered (returned null)');
         }
+
+        const cascadeCard = app.CascadeCard?.renderCard?.({
+            React, day, prof, pIndex, dayTot, normAbs
+        }) || null;
 
         const dateKey = date
             || day?.date
@@ -127,6 +135,7 @@
                 }
             }, 'ОСТАЛОСЬ НА СЕГОДНЯ'),
             goalProgressBar,
+            cascadeCard,
             refeedCard,
             mealRecCard,
             supplementsCard,

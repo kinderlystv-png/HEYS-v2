@@ -730,7 +730,7 @@
       }
     }
 
-    totals.kcal = totals.prot * 4 + totals.carbs * 4 + totals.fat * 9;
+    totals.kcal = totals.prot * 3 + totals.carbs * 4 + totals.fat * 9; // NET Atwater
 
     return totals;
   }
@@ -786,7 +786,7 @@
           dayTot, // Добавляем dayTot для прочих анализов
           // Проценты макросов (доля калорий от данного нутриента)
           carbsPct: totalKcal > 0 ? (dayTot.carbs * 4) / totalKcal : 0,
-          protPct: totalKcal > 0 ? (dayTot.prot * 4) / totalKcal : 0,
+          protPct: totalKcal > 0 ? (dayTot.prot * 3) / totalKcal : 0,
           fatPct: totalKcal > 0 ? (dayTot.fat * 9) / totalKcal : 0
         };
 

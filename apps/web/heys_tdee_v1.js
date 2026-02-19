@@ -169,7 +169,7 @@
           });
         });
       }
-      const proteinTEF = Math.round(totalProt * 4 * 0.25);
+      const proteinTEF = 0; // NET Atwater: TEF 25% built into 3 kcal/g coefficient
       const carbsTEF = Math.round(totalCarbs * 4 * 0.075);
       const fatTEF = Math.round(totalFat * 9 * 0.015);
       tefData = {

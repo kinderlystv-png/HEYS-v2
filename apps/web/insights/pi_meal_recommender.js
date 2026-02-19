@@ -1,18 +1,26 @@
 /**
- * HEYS Predictive Insights — Next Meal Recommender v3.3.0
+ * HEYS Predictive Insights — Next Meal Recommender v3.5.0
  * 
- * Context-aware meal guidance with 8 scenarios + 12 Pattern Integration (Phase A/B/C).
+ * Context-aware meal guidance with 9 scenarios + 12 Pattern Integration (Phase A/B/C).
  * 
  * Scenarios:
  * - GOAL_REACHED: day target met (<50 kcal remaining)
  * - LIGHT_SNACK: low budget (50-150 kcal) or late hour
  * - LATE_EVENING: after adaptive late_eating_hour threshold
+ * - PRE_SLEEP: last meal 4-5h before sleep (from planner) — v3.3.1
  * - PRE_WORKOUT: training in 1-2h
  * - POST_WORKOUT: training was 0-2h ago
  * - PROTEIN_DEFICIT: protein <50% target
  * - STRESS_EATING: stress >3 OR mood <3
  * - BALANCED: default scenario
  * 
+ * v3.3.1 (20.02.2026):
+ * - NEW: PRE_SLEEP scenario added to SCENARIOS constant + SCENARIO_ICONS
+ * - NEW: idealGI=25 for PRE_SLEEP (was defaulting to 50)
+ *        (Halson 2014: low-GI pre-sleep → sustains deep sleep architecture)
+ * - CONNECTS: pi_meal_planner.js v1.9.1 (PRE_SLEEP threshold 5h)
+ *           + pi_product_picker.js v3.3.0 (PRE_SLEEP category override)
+ *
  * v3.3.0 (18.02.2026):
  * - NEW: Per-meal product generation for multi-meal plans
  * - ISSUE: When planner returns 2+ meals, products were generated only for meal[0]
@@ -61,6 +69,7 @@
         GOAL_REACHED: 'GOAL_REACHED',
         LIGHT_SNACK: 'LIGHT_SNACK',
         LATE_EVENING: 'LATE_EVENING',
+        PRE_SLEEP: 'PRE_SLEEP',      // v3.3: from planner when hoursToSleep < 5h
         PRE_WORKOUT: 'PRE_WORKOUT',
         POST_WORKOUT: 'POST_WORKOUT',
         PROTEIN_DEFICIT: 'PROTEIN_DEFICIT',
@@ -73,6 +82,7 @@
         [SCENARIOS.GOAL_REACHED]: '🎯',
         [SCENARIOS.LIGHT_SNACK]: '☕',
         [SCENARIOS.LATE_EVENING]: '🌙',
+        [SCENARIOS.PRE_SLEEP]: '💤',   // v3.3
         [SCENARIOS.PRE_WORKOUT]: '⚡',
         [SCENARIOS.POST_WORKOUT]: '💪',
         [SCENARIOS.PROTEIN_DEFICIT]: '🥩',
@@ -318,11 +328,11 @@
      * @returns {object} - Recommendation result
      */
     function recommendNextMeal(context, profile, pIndex, days = []) {
-        console.info(`${LOG_PREFIX} 🍽️ recommendNextMeal v3.0 called:`, {
+        console.info(`${LOG_PREFIX} 🍽️ recommendNextMeal v3.5.0 called:`, {
             contextTime: context?.currentTime,
             lastMealTime: context?.lastMeal?.time,
             hasTraining: !!context?.training,
-            profileId: profile?.id,
+            profileId: profile?.id || profile?.clientId || global.HEYS?.currentClientId || 'n/a',
             daysCount: days?.length || 0,
             hasPatternsModule: !!HEYS.InsightsPI?.mealRecPatterns
         });
@@ -330,6 +340,26 @@
         if (!context || !profile) {
             console.warn(`${LOG_PREFIX} ❌ Missing context or profile`);
             return { available: false, error: 'Missing context or profile' };
+        }
+
+        // S9 (v3.5.0): Auto-detect phenotype if missing and sufficient data
+        // Phenotype enriches Phase A macro modifiers with metabolic/circadian/satiety adjustments
+        if (!profile.phenotype && days.length >= 30 && HEYS.InsightsPI?.phenotype?.autoDetect) {
+            try {
+                const detected = HEYS.InsightsPI.phenotype.autoDetect(days, profile, pIndex);
+                if (detected) {
+                    profile.phenotype = detected;
+                    console.info(`${LOG_PREFIX} 🧬 S9: Auto-detected phenotype:`, {
+                        metabolic: detected.metabolic,
+                        circadian: detected.circadian,
+                        satiety: detected.satiety,
+                        stress: detected.stress,
+                        confidence: detected.confidence
+                    });
+                }
+            } catch (e) {
+                console.warn(`${LOG_PREFIX} ⚠️ S9: Phenotype auto-detect failed:`, e.message);
+            }
         }
 
         // Extract context
@@ -447,6 +477,9 @@
                         // Это позволяет учесть реальный бюджет ккал/БЖУ каждого приёма
                         console.info(`${LOG_PREFIX} [MEALREC.planner] 🔄 Generating per-meal products for ${mealsPlan.meals.length} meals...`);
 
+                        // P3 fix: accumulate used product IDs to prevent identical products across meals
+                        const crossMealExcludeIds = new Set();
+
                         for (let mealIdx = 0; mealIdx < mealsPlan.meals.length; mealIdx++) {
                             const plannedMeal = mealsPlan.meals[mealIdx];
                             // Строим macrosRec из бюджета этого приёма (prot→protein, остальное совпадает)
@@ -459,7 +492,9 @@
                                 remainingKcal: plannedMeal.macros.kcal,
                                 remainingMeals: mealsPlan.meals.length - mealIdx,
                                 // Переопределяем isLastMeal — только последний приём легче
-                                isLastMeal: mealIdx === mealsPlan.meals.length - 1
+                                isLastMeal: mealIdx === mealsPlan.meals.length - 1,
+                                // v3.4: F2 — GL target from planner (20=day, 10=PRE_SLEEP, Ludwig 2002)
+                                targetGL: plannedMeal.targetGL ?? null,
                             };
                             // contextAnalysis для этого приёма — берём сценарий из планировщика
                             const mealContextAnalysis = {
@@ -474,17 +509,37 @@
                                     context,
                                     profile,
                                     pIndex,
-                                    patternHints || []
+                                    patternHints || [],
+                                    undefined, // patternImpact
+                                    crossMealExcludeIds // P3: pass exclusion set
                                 );
 
                                 if (mealProducts?.mode === 'grouped' && mealProducts.groups) {
                                     plannedMeal.groups = mealProducts.groups;
                                     plannedMeal.productMode = 'grouped';
-                                    console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Meal ${mealIdx + 1}: assigned ${mealProducts.groups.length} groups (${Math.round(mealMacrosRec.kcal)} kcal, scenario=${plannedMeal.scenario})`);
+                                    // P3: collect product IDs to exclude from next meal
+                                    mealProducts.groups.forEach(g =>
+                                        g.products.forEach(p => { if (p.productId) crossMealExcludeIds.add(p.productId); })
+                                    );
+                                    console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Meal ${mealIdx + 1}: assigned ${mealProducts.groups.length} groups (${Math.round(mealMacrosRec.kcal)} kcal, scenario=${plannedMeal.scenario}, targetGL=${plannedMeal.targetGL ?? 'n/a'}), excluded=${crossMealExcludeIds.size}`);
+                                } else if (mealProducts?.mode === 'flat' && mealProducts.suggestions?.length > 0) {
+                                    // flat mode object { mode, suggestions }
+                                    plannedMeal.suggestions = mealProducts.suggestions;
+                                    plannedMeal.productMode = 'flat';
+                                    mealProducts.suggestions.forEach(s => { if (s.productId) crossMealExcludeIds.add(s.productId); });
+                                    console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Meal ${mealIdx + 1}: assigned ${mealProducts.suggestions.length} flat suggestions (${Math.round(mealMacrosRec.kcal)} kcal), excluded=${crossMealExcludeIds.size}`);
                                 } else if (mealProducts?.suggestions) {
                                     plannedMeal.suggestions = mealProducts.suggestions;
                                     plannedMeal.productMode = 'flat';
-                                    console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Meal ${mealIdx + 1}: assigned ${mealProducts.suggestions.length} suggestions (${Math.round(mealMacrosRec.kcal)} kcal)`);
+                                    // P3: collect product IDs from flat suggestions
+                                    mealProducts.suggestions.forEach(s => { if (s.productId) crossMealExcludeIds.add(s.productId); });
+                                    console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Meal ${mealIdx + 1}: assigned ${mealProducts.suggestions.length} suggestions (${Math.round(mealMacrosRec.kcal)} kcal), excluded=${crossMealExcludeIds.size}`);
+                                } else if (Array.isArray(mealProducts) && mealProducts.length > 0) {
+                                    // legacy plain array return
+                                    plannedMeal.suggestions = mealProducts;
+                                    plannedMeal.productMode = 'flat';
+                                    mealProducts.forEach(s => { if (s.productId) crossMealExcludeIds.add(s.productId); });
+                                    console.info(`${LOG_PREFIX} [MEALREC.planner] 📋 Meal ${mealIdx + 1}: assigned ${mealProducts.length} legacy suggestions (${Math.round(mealMacrosRec.kcal)} kcal), excluded=${crossMealExcludeIds.size}`);
                                 } else {
                                     console.warn(`${LOG_PREFIX} [MEALREC.planner] ⚠️ Meal ${mealIdx + 1}: no products generated`);
                                 }
@@ -1035,67 +1090,119 @@
             case SCENARIOS.LIGHT_SNACK:
                 // Small snack: 50-150 kcal (or last meal override)
                 mealKcal = lastMealKcalTarget || Math.min(remainingKcal, 150);
-                mealProtein = Math.round(mealKcal * 0.3 / 3); // 30% from protein
-                mealCarbs = Math.round(mealKcal * 0.4 / 4); // 40% from carbs
-                mealFat = Math.round(mealKcal * 0.3 / 9); // 30% from fat
-                macroStrategy = isLastMeal
-                    ? `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), 30% protein, 40% carbs, 30% fat`
-                    : 'Light snack: max 150 kcal, 30% protein, 40% carbs, 30% fat';
+                if (isLastMeal) {
+                    // R4: use actual remaining protein need — avoids P5-cap trigger
+                    mealProtein = Math.round(Math.min(remainingProtein, 100));
+                    const _protKcalLS = mealProtein * 3;
+                    const _restKcalLS = Math.max(0, mealKcal - _protKcalLS);
+                    mealCarbs = Math.round(_restKcalLS * 0.57 / 4); // 57% of rest (original 40:30 carbs:fat)
+                    mealFat = Math.max(5, Math.round((_restKcalLS - mealCarbs * 4) / 9));
+                    macroStrategy = `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), protein=${mealProtein}g (actual need from ${Math.round(remainingProtein)}g deficit), carbs+fat fill rest`;
+                } else {
+                    mealProtein = Math.round(mealKcal * 0.3 / 3); // 30% from protein
+                    mealCarbs = Math.round(mealKcal * 0.4 / 4); // 40% from carbs
+                    mealFat = Math.round(mealKcal * 0.3 / 9); // 30% from fat
+                    macroStrategy = 'Light snack: max 150 kcal, 30% protein, 40% carbs, 30% fat';
+                }
                 break;
 
             case SCENARIOS.LATE_EVENING:
                 // Light evening meal: max 200 kcal, high protein (slow digestion) — OR last meal override
                 mealKcal = lastMealKcalTarget || Math.min(remainingKcal, 200);
-                mealProtein = Math.round(mealKcal * 0.6 / 3); // 60% from protein (casein)
-                mealCarbs = Math.round(mealKcal * 0.2 / 4); // 20% from carbs
-                mealFat = Math.round(mealKcal * 0.2 / 9); // 20% from fat
-                macroStrategy = isLastMeal
-                    ? `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), 60% protein, 20% carbs, 20% fat`
-                    : 'Late evening: max 200 kcal (sleep quality), 60% protein (casein), 20% carbs, 20% fat';
+                if (isLastMeal) {
+                    // R4: use actual remaining protein need — avoids P5-cap trigger
+                    mealProtein = Math.round(Math.min(remainingProtein, 100));
+                    const _protKcalLE = mealProtein * 3;
+                    const _restKcalLE = Math.max(0, mealKcal - _protKcalLE);
+                    // Evening: low carbs, moderate fat for slow digestion (original 20:20 = 1:1)
+                    mealCarbs = Math.round(_restKcalLE * 0.50 / 4); // 50% of rest
+                    mealFat = Math.max(5, Math.round((_restKcalLE - mealCarbs * 4) / 9));
+                    macroStrategy = `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), protein=${mealProtein}g (actual need from ${Math.round(remainingProtein)}g deficit), evening carbs+fat fill rest`;
+                } else {
+                    mealProtein = Math.round(mealKcal * 0.6 / 3); // 60% from protein (casein)
+                    mealCarbs = Math.round(mealKcal * 0.2 / 4); // 20% from carbs
+                    mealFat = Math.round(mealKcal * 0.2 / 9); // 20% from fat
+                    macroStrategy = 'Late evening: max 200 kcal (sleep quality), 60% protein (casein), 20% carbs, 20% fat';
+                }
                 break;
 
             case SCENARIOS.PRE_WORKOUT:
                 // Pre-workout: max 300 kcal, high carbs for energy (or last meal override)
                 mealKcal = lastMealKcalTarget || Math.min(remainingKcal, 300);
-                mealProtein = Math.round(mealKcal * 0.25 / 3); // 25% from protein
-                mealCarbs = Math.round(mealKcal * 0.60 / 4); // 60% from carbs (fast)
-                mealFat = Math.round(mealKcal * 0.15 / 9); // 15% from fat
-                macroStrategy = isLastMeal
-                    ? `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), 60% carbs, 25% protein, 15% fat`
-                    : 'Pre-workout: max 300 kcal, 60% fast carbs, 25% protein, 15% fat';
+                if (isLastMeal) {
+                    // R4: use actual remaining protein need — avoids P5-cap trigger
+                    mealProtein = Math.round(Math.min(remainingProtein, 100));
+                    const _protKcalPre = mealProtein * 3;
+                    const _restKcalPre = Math.max(0, mealKcal - _protKcalPre);
+                    // Pre-workout: carbs dominant for glycogen (original 60:15 = 4:1)
+                    mealCarbs = Math.round(_restKcalPre * 0.80 / 4); // 80% of rest
+                    mealFat = Math.max(5, Math.round((_restKcalPre - mealCarbs * 4) / 9));
+                    macroStrategy = `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), protein=${mealProtein}g (actual need from ${Math.round(remainingProtein)}g deficit), glycogen carbs fill rest`;
+                } else {
+                    mealProtein = Math.round(mealKcal * 0.25 / 3); // 25% from protein
+                    mealCarbs = Math.round(mealKcal * 0.60 / 4); // 60% from carbs (fast)
+                    mealFat = Math.round(mealKcal * 0.15 / 9); // 15% from fat
+                    macroStrategy = 'Pre-workout: max 300 kcal, 60% fast carbs, 25% protein, 15% fat';
+                }
                 break;
 
             case SCENARIOS.POST_WORKOUT:
                 // Post-workout: max 400 kcal, high protein + carbs (or last meal override)
                 mealKcal = lastMealKcalTarget || Math.min(remainingKcal, 400);
-                mealProtein = Math.round(mealKcal * 0.40 / 3); // 40% from protein (recovery)
-                mealCarbs = Math.round(mealKcal * 0.45 / 4); // 45% from carbs (glycogen)
-                mealFat = Math.round(mealKcal * 0.15 / 9); // 15% from fat
-                macroStrategy = isLastMeal
-                    ? `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), 40% protein, 45% carbs, 15% fat`
-                    : 'Post-workout: max 400 kcal, 40% protein (recovery), 45% carbs (glycogen), 15% fat';
+                if (isLastMeal) {
+                    // R1 fix (Sprint 6): use actual remaining protein need — avoids P5-cap trigger
+                    // Physiological ceiling: Areta et al., 2013 — ~100g absorbed per meal
+                    mealProtein = Math.round(Math.min(remainingProtein, 100));
+                    const _protKcalPW = mealProtein * 3;
+                    const _restKcalPW = Math.max(0, mealKcal - _protKcalPW);
+                    mealCarbs = Math.round(_restKcalPW * 0.75 / 4); // 75% of rest (glycogen priority, original 45:15 = 3:1 ratio)
+                    mealFat = Math.max(5, Math.round((_restKcalPW - mealCarbs * 4) / 9));
+                    macroStrategy = `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), protein=${mealProtein}g (actual need from ${Math.round(remainingProtein)}g deficit), glycogen carbs fill rest`;
+                } else {
+                    mealProtein = Math.round(mealKcal * 0.40 / 3); // 40% from protein (recovery)
+                    mealCarbs = Math.round(mealKcal * 0.45 / 4); // 45% from carbs (glycogen)
+                    mealFat = Math.round(mealKcal * 0.15 / 9); // 15% from fat
+                    macroStrategy = 'Post-workout: max 400 kcal, 40% protein (recovery), 45% carbs (glycogen), 15% fat';
+                }
                 break;
 
             case SCENARIOS.PROTEIN_DEFICIT:
                 // High protein meal: max 300 kcal (or last meal override)
                 mealKcal = lastMealKcalTarget || Math.min(remainingKcal, 300);
-                mealProtein = Math.round(mealKcal * 0.50 / 3); // 50% from protein
-                mealCarbs = Math.round(mealKcal * 0.30 / 4); // 30% from carbs
-                mealFat = Math.round(mealKcal * 0.20 / 9); // 20% from fat
-                macroStrategy = isLastMeal
-                    ? `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), 50% protein, 30% carbs, 20% fat`
-                    : 'Protein deficit: max 300 kcal, 50% protein, 30% carbs, 20% fat';
+                if (isLastMeal) {
+                    // R1 fix (Sprint 6): use actual remaining protein need — avoids P5-cap trigger
+                    // Physiological ceiling: Areta et al., 2013 — ~100g absorbed per meal
+                    mealProtein = Math.round(Math.min(remainingProtein, 100));
+                    const _protKcalPD = mealProtein * 3;
+                    const _restKcalPD = Math.max(0, mealKcal - _protKcalPD);
+                    mealCarbs = Math.round(_restKcalPD * 0.60 / 4); // 60% of rest (original 30:20 carbs:fat ratio)
+                    mealFat = Math.max(5, Math.round((_restKcalPD - mealCarbs * 4) / 9));
+                    macroStrategy = `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), protein=${mealProtein}g (actual need from ${Math.round(remainingProtein)}g deficit), carbs+fat fill rest`;
+                } else {
+                    mealProtein = Math.round(mealKcal * 0.50 / 3); // 50% from protein
+                    mealCarbs = Math.round(mealKcal * 0.30 / 4); // 30% from carbs
+                    mealFat = Math.round(mealKcal * 0.20 / 9); // 20% from fat
+                    macroStrategy = 'Protein deficit: max 300 kcal, 50% protein, 30% carbs, 20% fat';
+                }
                 break;
 
             case SCENARIOS.STRESS_EATING:
                 // Comfort food (healthy): max 250 kcal, balanced with omega-3 (or last meal override)
                 mealKcal = lastMealKcalTarget || Math.min(remainingKcal, 250);
-                mealProtein = Math.round(mealKcal * 0.30 / 3); // 30% from protein
-                mealCarbs = Math.round(mealKcal * 0.40 / 4); // 40% from carbs (serotonin)
-                mealFat = Math.round(mealKcal * 0.30 / 9); // 30% from fat (omega-3)
-                macroStrategy = isLastMeal
-                    ? `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), 40% carbs, 30% protein, 30% fat`
-                    : 'Stress eating: max 250 kcal, 40% carbs (serotonin), 30% protein, 30% fat (omega-3)';
+                if (isLastMeal) {
+                    // R1 fix (Sprint 6): use actual remaining protein need — avoids P5-cap trigger
+                    mealProtein = Math.round(Math.min(remainingProtein, 100));
+                    const _protKcalSE = mealProtein * 3;
+                    const _restKcalSE = Math.max(0, mealKcal - _protKcalSE);
+                    mealCarbs = Math.round(_restKcalSE * 0.57 / 4); // 57% of rest (carbs:fat ≈ 4:3, original serotonin+omega3)
+                    mealFat = Math.max(5, Math.round((_restKcalSE - mealCarbs * 4) / 9));
+                    macroStrategy = `Last meal: ${mealKcal} kcal (90% of ${remainingKcal} remaining), protein=${mealProtein}g (actual need from ${Math.round(remainingProtein)}g deficit), serotonin+omega-3 carbs/fat fill rest`;
+                } else {
+                    mealProtein = Math.round(mealKcal * 0.30 / 3); // 30% from protein
+                    mealCarbs = Math.round(mealKcal * 0.40 / 4); // 40% from carbs (serotonin)
+                    mealFat = Math.round(mealKcal * 0.30 / 9); // 30% from fat (omega-3)
+                    macroStrategy = 'Stress eating: max 250 kcal, 40% carbs (serotonin), 30% protein, 30% fat (omega-3)';
+                }
                 break;
 
             case SCENARIOS.BALANCED:
@@ -1221,14 +1328,18 @@
             const before = { protein: mealProtein, carbs: mealCarbs, fat: mealFat };
 
             // C15: insulin sensitivity low -> lower carbs, increase protein slightly
+            // Sprint 6 R3: skip protein boost for isLastMeal (protein already set from remainingProtein)
             if (patternHints?.insulinSensitivity?.score < 0.45) {
                 mealCarbs = Math.round(mealCarbs * 0.9);
-                mealProtein = Math.round(mealProtein * 1.08);
+                if (!isLastMeal) {
+                    mealProtein = Math.round(mealProtein * 1.08);
+                }
             }
 
             // C35: poor protein distribution -> stronger scenario-aware protein push
+            // Sprint 6 R3: skip protein boost for isLastMeal — protein already set from remainingProtein (R1 fix)
             const proteinDistributionScore = patternHints?.proteinDistribution?.score;
-            if (proteinDistributionScore !== undefined && mealProtein > 0) {
+            if (proteinDistributionScore !== undefined && mealProtein > 0 && !isLastMeal) {
                 let c35Multiplier = 1.0;
                 if (proteinDistributionScore < 0.35) c35Multiplier = 1.20;
                 else if (proteinDistributionScore < 0.5) c35Multiplier = 1.12;
@@ -1242,6 +1353,9 @@
                     c35Multiplier = Math.min(c35Multiplier, 1.3);
                     mealProtein = Math.round(mealProtein * c35Multiplier);
                 }
+            } else if (isLastMeal && proteinDistributionScore !== undefined) {
+                // R3: log that C35 was intentionally skipped for last meal
+                console.info(`${LOG_PREFIX} [MEALREC / macros] ✅ R3: C35 protein boost skipped (isLastMeal=true, protein already from remainingProtein: ${mealProtein}g)`);
             }
 
             // Recompute fat to maintain kcal budget approximation
@@ -1262,6 +1376,17 @@
                 after: `P${mealProtein}/C${mealCarbs}/F${mealFat}`,
                 reason: `insulin=${patternHints?.insulinSensitivity?.score ?? 'n/a'}, proteinDist=${patternHints?.proteinDistribution?.score ?? 'n/a'}`
             });
+        }
+
+        // P5 fix (v3.3.1): Physiological protein cap — max 100g absorbed per meal (Areta et al., 2013)
+        const PROTEIN_CAP_PER_MEAL_G = 100;
+        if (mealProtein > PROTEIN_CAP_PER_MEAL_G) {
+            const cappedFrom = mealProtein;
+            const protDeltaG = cappedFrom - PROTEIN_CAP_PER_MEAL_G;
+            mealProtein = PROTEIN_CAP_PER_MEAL_G;
+            // Transfer excess protein kcal to carbs (protein 3kcal/g → carbs 4kcal/g → 0.75 carb equivalent)
+            mealCarbs = Math.round(mealCarbs + protDeltaG * 0.75);
+            console.warn(`${LOG_PREFIX} ⚠️ P5-cap: Protein ${cappedFrom}g → ${PROTEIN_CAP_PER_MEAL_G}g (physiological max per meal), carbs compensated to ${mealCarbs}g`);
         }
 
         // FINAL SAFETY: Never exceed remaining kcal
@@ -1304,7 +1429,7 @@
      * Falls back to rule-based suggestions if Product Picker unavailable
      * @private
      */
-    function generateSmartMealSuggestions(contextAnalysis, macrosRec, context, profile, pIndex, patternHints, patternImpact = []) {
+    function generateSmartMealSuggestions(contextAnalysis, macrosRec, context, profile, pIndex, patternHints, patternImpact = [], excludeProductIds = null) {
         const scenario = contextAnalysis.scenario;
 
         // Extract currentTime from context for caffeine-awareness (v2.6)
@@ -1330,8 +1455,12 @@
             let idealGI = 50; // Medium by default
             if (scenario === SCENARIOS.PRE_WORKOUT) {
                 idealGI = 70; // High GI for quick energy
-            } else if (scenario === SCENARIOS.LATE_EVENING || scenario === SCENARIOS.POST_WORKOUT) {
+            } else if (scenario === SCENARIOS.POST_WORKOUT) {
+                idealGI = 65; // v3.5: moderate-high GI — fast carbs for glycogen (Ivy 2004)
+            } else if (scenario === SCENARIOS.LATE_EVENING) {
                 idealGI = 30; // Low GI for sustained release
+            } else if (scenario === SCENARIOS.PRE_SLEEP) {
+                idealGI = 25; // v3.3: very low GI pre-sleep (Halson 2014: casein/dairy)
             }
 
             // Phase A: C34 glycemic load → dynamic GI moderation
@@ -1391,6 +1520,7 @@
                 targetCarbsG: macrosRec.carbs,
                 targetFatG: macrosRec.fat,
                 idealGI,
+                targetGL: macrosRec.targetGL ?? null, // v3.4: F2 — GL target from planner (Ludwig 2002)
                 currentTime: currentTime, // v2.6: Pass time for caffeine-awareness
                 addedSugarScore: patternHints?.addedSugarDependency?.score, // Phase A: C37
                 sugarDependencyRisk: patternHints?.addedSugarDependency?.dependencyRisk, // Phase A: C37
@@ -1400,6 +1530,8 @@
                 lsGet: resolvedLsGet,
                 sharedProducts,
                 limit: 3,
+                excludeProductIds: excludeProductIds instanceof Set ? excludeProductIds : null, // P3: cross-meal dedup
+                profile, // v3.6: F4 — feedback weights (ML EMA multiplier per product+scenario)
             });
 
             // Handle both modes: flat (legacy) vs grouped (v3.1)
@@ -1736,6 +1868,6 @@
         recommend: recommendNextMeal
     };
 
-    console.info(`[${LOG_FILTER}][HEYS.InsightsPI.mealRecommender] ✅ Smart Meal Recommender v3.2.0 initialized (8 scenarios + Phase A/B/C: 12 patterns + last meal override)`);
+    console.info(`[${LOG_FILTER}][HEYS.InsightsPI.mealRecommender] ✅ Smart Meal Recommender v3.5.0 initialized (9 scenarios + Phase A/B/C + S9 phenotype auto-detect + R1/R3 last-meal protein fix)`);
 
 })(typeof window !== 'undefined' ? window : global);

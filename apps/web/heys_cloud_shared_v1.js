@@ -204,13 +204,35 @@
           error = rpcResult?.error;
         }
 
+        // [baza] диагностика: сырые данные из RPC
+        if (Array.isArray(data) && data.length > 0) {
+          const sample = data[0];
+          const vitKeys = ['vitamin_a', 'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k', 'vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12', 'vitaminA', 'vitaminC', 'vitaminD', 'vitaminB1', 'vitaminB6', 'vitaminB9', 'vitaminB12'];
+          const minKeys = ['calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'selenium', 'iodine'];
+          const extKeys = ['sodium100', 'omega3_100', 'omega6_100', 'nova_group', 'novaGroup', 'nutrient_density', 'nutrientDensity'];
+          const sampleVits = {}; vitKeys.forEach(k => { if (sample[k] !== undefined) sampleVits[k] = sample[k]; });
+          const sampleMins = {}; minKeys.forEach(k => { if (sample[k] !== undefined) sampleMins[k] = sample[k]; });
+          const sampleExt = {}; extKeys.forEach(k => { if (sample[k] !== undefined) sampleExt[k] = sample[k]; });
+          console.info('[baza] 📦 RPC raw data — first product:', sample.name, '| ALL KEYS:', Object.keys(sample).sort().join(', '));
+          console.info('[baza] 🧪 vitamins:', JSON.stringify(sampleVits));
+          console.info('[baza] 🧪 minerals:', JSON.stringify(sampleMins));
+          console.info('[baza] 🧪 extended:', JSON.stringify(sampleExt));
+          console.info('[baza] 📊 total products:', data.length, '| products with vitamin_c:', data.filter(p => p.vitamin_c != null || p.vitaminC != null).length);
+        } else {
+          console.warn('[baza] ⚠️ RPC returned:', { dataIsArray: Array.isArray(data), dataLength: data?.length, error });
+        }
+
         if (error || !Array.isArray(data)) {
+          console.warn('[baza] ⚠️ RPC failed, trying REST fallback. error:', error);
           const restResult = await YandexAPI.from('shared_products')
             .select('*')
             .order('created_at', { ascending: false })
             .limit(limit);
           data = restResult?.data;
           error = restResult?.error;
+          if (Array.isArray(data) && data.length > 0) {
+            console.info('[baza] 📦 REST fallback data — first product keys:', Object.keys(data[0]).sort().join(', '));
+          }
         }
 
         if (error) {
@@ -227,6 +249,14 @@
           }
         };
         let filtered = (data || []).map(safeNormalize).filter(Boolean);
+
+        // [baza] диагностика: после нормализации
+        if (filtered.length > 0) {
+          const s = filtered[0];
+          console.info('[baza] ✅ After normalize — first product:', s.name, '| keys:', Object.keys(s).sort().join(', '));
+          console.info('[baza] 🔬 vitaminC=', s.vitamin_c, '| vitaminC(camel)=', s.vitaminC, '| calcium=', s.calcium, '| sodium100=', s.sodium100, '| iron=', s.iron);
+        }
+
         filtered = await backfillSharedHarm(filtered);
         const user = getUser();
         if (excludeBlocklist && user) {
@@ -357,53 +387,55 @@
         const productData = {
           name: product.name,
           fingerprint,
-          simple100: product.simple100 || 0,
-          complex100: product.complex100 || 0,
-          protein100: product.protein100 || 0,
-          badFat100: product.badFat100 || 0,
-          goodFat100: product.goodFat100 || 0,
-          trans100: product.trans100 || 0,
-          fiber100: product.fiber100 || 0,
-          gi: product.gi,
-          harm: product.harm,
-          category: product.category,
-          portions: product.portions || null,
-          description: product.description || null,
-          // Extended fields (v4.4.0)
-          sodium100: product.sodium100 || null,
-          omega3_100: product.omega3_100 || null,
-          omega6_100: product.omega6_100 || null,
-          nova_group: product.nova_group || null,
-          additives: product.additives || null,
-          nutrient_density: product.nutrient_density || null,
-          is_organic: product.is_organic || false,
-          is_whole_grain: product.is_whole_grain || false,
-          is_fermented: product.is_fermented || false,
-          is_raw: product.is_raw || false,
-          // Vitamins
-          vitamin_a: product.vitamin_a || null,
-          vitamin_c: product.vitamin_c || null,
-          vitamin_d: product.vitamin_d || null,
-          vitamin_e: product.vitamin_e || null,
-          vitamin_k: product.vitamin_k || null,
-          vitamin_b1: product.vitamin_b1 || null,
-          vitamin_b2: product.vitamin_b2 || null,
-          vitamin_b3: product.vitamin_b3 || null,
-          vitamin_b6: product.vitamin_b6 || null,
-          vitamin_b9: product.vitamin_b9 || null,
-          vitamin_b12: product.vitamin_b12 || null,
+          simple100: product.simple100 ?? 0,
+          complex100: product.complex100 ?? 0,
+          protein100: product.protein100 ?? 0,
+          badFat100: product.badFat100 ?? product.badfat100 ?? 0,
+          goodFat100: product.goodFat100 ?? product.goodfat100 ?? 0,
+          trans100: product.trans100 ?? 0,
+          fiber100: product.fiber100 ?? 0,
+          gi: product.gi ?? null,
+          harm: product.harm ?? product.harmScore ?? null,
+          category: product.category ?? null,
+          portions: product.portions ?? null,
+          description: product.description ?? null,
+          // Extended fields (v4.4.0) — camelCase ↔ snake_case fallback
+          sodium100: product.sodium100 ?? null,
+          omega3_100: product.omega3_100 ?? null,
+          omega6_100: product.omega6_100 ?? null,
+          nova_group: product.nova_group ?? product.novaGroup ?? null,
+          additives: product.additives ?? null,
+          nutrient_density: product.nutrient_density ?? product.nutrientDensity ?? null,
+          is_organic: product.is_organic ?? product.isOrganic ?? false,
+          is_whole_grain: product.is_whole_grain ?? product.isWholeGrain ?? false,
+          is_fermented: product.is_fermented ?? product.isFermented ?? false,
+          is_raw: product.is_raw ?? product.isRaw ?? false,
+          // Vitamins — camelCase ↔ snake_case fallback
+          vitamin_a: product.vitamin_a ?? product.vitaminA ?? null,
+          vitamin_c: product.vitamin_c ?? product.vitaminC ?? null,
+          vitamin_d: product.vitamin_d ?? product.vitaminD ?? null,
+          vitamin_e: product.vitamin_e ?? product.vitaminE ?? null,
+          vitamin_k: product.vitamin_k ?? product.vitaminK ?? null,
+          vitamin_b1: product.vitamin_b1 ?? product.vitaminB1 ?? null,
+          vitamin_b2: product.vitamin_b2 ?? product.vitaminB2 ?? null,
+          vitamin_b3: product.vitamin_b3 ?? product.vitaminB3 ?? null,
+          vitamin_b6: product.vitamin_b6 ?? product.vitaminB6 ?? null,
+          vitamin_b9: product.vitamin_b9 ?? product.vitaminB9 ?? null,
+          vitamin_b12: product.vitamin_b12 ?? product.vitaminB12 ?? null,
           // Minerals
-          calcium: product.calcium || null,
-          iron: product.iron || null,
-          magnesium: product.magnesium || null,
-          phosphorus: product.phosphorus || null,
-          potassium: product.potassium || null,
-          zinc: product.zinc || null,
-          selenium: product.selenium || null,
-          iodine: product.iodine || null
+          calcium: product.calcium ?? null,
+          iron: product.iron ?? null,
+          magnesium: product.magnesium ?? null,
+          phosphorus: product.phosphorus ?? null,
+          potassium: product.potassium ?? null,
+          zinc: product.zinc ?? null,
+          selenium: product.selenium ?? null,
+          iodine: product.iodine ?? null
         };
 
         console.log('[SHARED] 📝 Publishing via RPC:', productData.name);
+        console.info('[baza] 📤 publishToShared input keys:', Object.keys(product).filter(k => k.match(/vitamin|calcium|iron|magnesium|sodium/i)).join(', '));
+        console.info('[baza] 📤 publishToShared output: vitamin_c=', productData.vitamin_c, '| calcium=', productData.calcium, '| iron=', productData.iron, '| sodium100=', productData.sodium100, '| vitamin_b1=', productData.vitamin_b1);
 
         const { data, error } = await YandexAPI.rpc('publish_shared_product_by_curator', {
           p_curator_id: curatorId,

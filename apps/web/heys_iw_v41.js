@@ -13,11 +13,11 @@
 //
 // Научная база: Kelley & Mandarino 2000, Holt 1995, Trexler 2014
 
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
-  
+
   // ========================================================================
   // 🧬 METABOLIC FLEXIBILITY INDEX — v4.1.0
   // ========================================================================
@@ -25,7 +25,7 @@
   // Метаболическая гибкость — способность переключаться между окислением
   // жиров и углеводов в зависимости от доступности субстратов
   // ========================================================================
-  
+
   const METABOLIC_FLEXIBILITY_CONFIG = {
     // Факторы влияющие на гибкость
     factors: {
@@ -86,23 +86,23 @@
       { min: 0, id: 'poor', name: 'Плохая', icon: '❌', color: '#ef4444' }
     ]
   };
-  
+
   /**
    * Расчёт индекса метаболической гибкости
    * @param {Object} options - параметры
    * @returns {Object} { score, level, factors, recommendations }
    */
-  const calculateMetabolicFlexibility = ({ 
-    recentDays = [], 
+  const calculateMetabolicFlexibility = ({
+    recentDays = [],
     profile = {},
     trainings7d = []
   }) => {
     const factorScores = {};
     const cfg = METABOLIC_FLEXIBILITY_CONFIG.factors;
-    
+
     // 1. Training frequency (за 7 дней)
     const trainingCount = trainings7d.length || recentDays.filter(d => d.trainings?.length > 0).length;
-    const trainingTier = cfg.trainingFrequency.tiers.find(t => trainingCount >= t.min) 
+    const trainingTier = cfg.trainingFrequency.tiers.find(t => trainingCount >= t.min)
       || cfg.trainingFrequency.tiers[cfg.trainingFrequency.tiers.length - 1];
     factorScores.training = {
       value: trainingTier.value,
@@ -110,11 +110,11 @@
       count: trainingCount,
       label: trainingTier.label
     };
-    
+
     // 2. Sleep quality (среднее за период)
     const sleepScores = recentDays.filter(d => d.sleepQuality > 0).map(d => d.sleepQuality);
-    const avgSleep = sleepScores.length > 0 
-      ? sleepScores.reduce((a, b) => a + b, 0) / sleepScores.length 
+    const avgSleep = sleepScores.length > 0
+      ? sleepScores.reduce((a, b) => a + b, 0) / sleepScores.length
       : 3;
     const sleepTier = cfg.sleepQuality.tiers.find(t => avgSleep >= t.min);
     factorScores.sleep = {
@@ -122,7 +122,7 @@
       weight: cfg.sleepQuality.weight,
       avg: avgSleep
     };
-    
+
     // 3. Stress level (среднее)
     const stressScores = recentDays.filter(d => d.stressAvg > 0).map(d => d.stressAvg);
     const avgStress = stressScores.length > 0
@@ -134,9 +134,9 @@
       weight: cfg.stressLevel.weight,
       avg: avgStress
     };
-    
+
     // 4. BMI score
-    const bmi = profile.weight && profile.height 
+    const bmi = profile.weight && profile.height
       ? profile.weight / Math.pow(profile.height / 100, 2)
       : 22;
     const bmiTier = cfg.bmiScore.tiers.find(t => bmi >= t.range[0] && bmi < t.range[1]);
@@ -145,7 +145,7 @@
       weight: cfg.bmiScore.weight,
       bmi: Math.round(bmi * 10) / 10
     };
-    
+
     // 5. Diet variety (стандартное отклонение макросов)
     // Высокая вариативность = лучшая адаптация
     let varietyScore = 0.5;
@@ -164,15 +164,15 @@
       value: varietyScore,
       weight: cfg.dietVariety.weight
     };
-    
+
     // Итоговый score (взвешенное среднее)
     const totalWeight = Object.values(factorScores).reduce((sum, f) => sum + f.weight, 0);
     const score = Object.values(factorScores).reduce((sum, f) => sum + f.value * f.weight, 0) / totalWeight;
-    
+
     // Определяем уровень
-    const level = METABOLIC_FLEXIBILITY_CONFIG.levels.find(l => score >= l.min) 
+    const level = METABOLIC_FLEXIBILITY_CONFIG.levels.find(l => score >= l.min)
       || METABOLIC_FLEXIBILITY_CONFIG.levels[METABOLIC_FLEXIBILITY_CONFIG.levels.length - 1];
-    
+
     // Рекомендации
     const recommendations = [];
     if (factorScores.training.value < 0.6) {
@@ -187,7 +187,7 @@
     if (factorScores.variety.value < 0.6) {
       recommendations.push({ icon: '🥗', text: 'Добавь вариативности в питание (разные соотношения БЖУ)' });
     }
-    
+
     return {
       score: Math.round(score * 100) / 100,
       level,
@@ -198,7 +198,7 @@
       description: `Метаболическая гибкость: ${level.name}`
     };
   };
-  
+
   // ========================================================================
   // 🍽️ SATIETY MODEL — v4.1.0  
   // ========================================================================
@@ -207,7 +207,7 @@
   // - Rolls Volumetrics 2000
   // - Blundell appetite cascade 1987
   // ========================================================================
-  
+
   const SATIETY_MODEL_CONFIG = {
     // Базовые коэффициенты насыщения (на 100 ккал)
     macroFactors: {
@@ -239,7 +239,7 @@
       { min: 0, id: 'starving', name: 'Очень голоден', icon: '😫', color: '#ef4444' }
     ]
   };
-  
+
   /**
    * Расчёт уровня насыщения
    * @param {Object} mealData - данные приёма { kcal, prot, carbs, simple, fat, fiber }
@@ -250,7 +250,7 @@
   const calculateSatietyScore = (mealData, hoursSinceMeal = 0, options = {}) => {
     const cfg = SATIETY_MODEL_CONFIG;
     const { kcal = 0, prot = 0, carbs = 0, simple = 0, fat = 0, fiber = 0 } = mealData;
-    
+
     if (kcal <= 0) {
       return {
         score: 0,
@@ -259,44 +259,44 @@
         nextHungerTime: 'сейчас'
       };
     }
-    
+
     // 1. Базовый индекс насыщения (на основе макросов)
     const complexCarbs = Math.max(0, carbs - simple);
-    const proteinContribution = (prot * 4 / kcal) * cfg.macroFactors.protein;
+    const proteinContribution = (prot * 3 / kcal) * cfg.macroFactors.protein;
     const fiberContribution = (fiber * 2 / kcal) * cfg.macroFactors.fiber;
     const complexCarbsContribution = (complexCarbs * 4 / kcal) * cfg.macroFactors.complexCarbs;
     const simpleCarbsContribution = (simple * 4 / kcal) * cfg.macroFactors.simpleCarbs;
     const fatContribution = (fat * 9 / kcal) * cfg.macroFactors.fat;
-    
+
     // Сырой индекс (0-2+)
-    const rawSatietyIndex = proteinContribution + fiberContribution + 
+    const rawSatietyIndex = proteinContribution + fiberContribution +
       complexCarbsContribution + simpleCarbsContribution + fatContribution;
-    
+
     // 2. Модификатор объёма (больше ккал = дольше сытость, но с diminishing returns)
     const volumeMultiplier = Math.min(1.5, 0.5 + Math.log10(kcal / 100 + 1) * 0.5);
-    
+
     // 3. Модификатор формы пищи
-    const formMultiplier = options.foodForm 
+    const formMultiplier = options.foodForm
       ? (cfg.foodFormFactors[options.foodForm] || 1.0)
       : 1.0;
-    
+
     // 4. Расчёт длительности насыщения (часы)
     const baseDuration = cfg.decayCurve.baseHours * rawSatietyIndex * volumeMultiplier * formMultiplier;
     const durationHours = Math.min(8, Math.max(1, baseDuration));
-    
+
     // 5. Текущий уровень с учётом времени
     const decayFactor = Math.exp(-hoursSinceMeal / cfg.decayCurve.halfLife);
     const currentScore = Math.min(1, rawSatietyIndex * volumeMultiplier * formMultiplier * decayFactor);
-    
+
     // 6. Определяем уровень
     const level = cfg.levels.find(l => currentScore >= l.min) || cfg.levels[cfg.levels.length - 1];
-    
+
     // 7. Время до голода
     const hoursUntilHungry = Math.max(0, durationHours - hoursSinceMeal);
     const nextHungerTime = hoursUntilHungry > 0
       ? `через ${Math.round(hoursUntilHungry * 60)} мин`
       : 'скоро';
-    
+
     return {
       score: Math.round(currentScore * 100) / 100,
       rawIndex: Math.round(rawSatietyIndex * 100) / 100,
@@ -313,7 +313,7 @@
       }
     };
   };
-  
+
   // ========================================================================
   // 📉 ADAPTIVE DEFICIT OPTIMIZER — v4.1.0
   // ========================================================================
@@ -322,7 +322,7 @@
   // - Byrne 2018: Intermittent energy restriction (PMID: 28925405)
   // - Dulloo 2015: Adaptive thermogenesis (PMID: 22535969)
   // ========================================================================
-  
+
   const ADAPTIVE_DEFICIT_CONFIG = {
     // Минимальный калораж (защита метаболизма)
     minimumKcal: {
@@ -354,7 +354,7 @@
       maxReduction: 0.15       // Максимум -15%
     }
   };
-  
+
   /**
    * Расчёт оптимального адаптивного дефицита
    * @param {Object} options - параметры
@@ -369,45 +369,45 @@
     hasRefeedThisWeek = false
   }) => {
     const cfg = ADAPTIVE_DEFICIT_CONFIG;
-    
+
     // 1. Базовый дефицит
     const targetKcal = tdee * (1 - targetDeficitPct / 100);
-    
+
     // 2. Адаптивное замедление метаболизма
     const adaptiveReduction = Math.min(
       cfg.adaptiveMultiplier.maxReduction,
       weeksInDeficit * cfg.adaptiveMultiplier.perWeekInDeficit
     );
     const adaptedTdee = tdee * (1 - adaptiveReduction);
-    
+
     // 3. Пересчёт дефицита с учётом адаптации
     const effectiveDeficitPct = targetDeficitPct * (1 - adaptiveReduction);
     const adaptiveKcal = adaptedTdee * (1 - effectiveDeficitPct / 100);
-    
+
     // 4. Проверка минимума
     const minKcal = cfg.minimumKcal[gender] || cfg.minimumKcal.male;
     const safeKcal = Math.max(minKcal, adaptiveKcal);
-    
+
     // 5. Проверка необходимости diet break
     const needsDietBreak = weeksInDeficit >= cfg.dietBreak.afterWeeks;
     const dietBreakKcal = needsDietBreak ? tdee * (1 + cfg.dietBreak.kcalBoost) : null;
-    
+
     // 6. Проверка необходимости refeed
     const avgRatio = recentRatios.length > 0
       ? recentRatios.reduce((a, b) => a + b, 0) / recentRatios.length
       : 1;
-    const needsRefeed = !hasRefeedThisWeek && 
-      recentRatios.length >= 5 && 
+    const needsRefeed = !hasRefeedThisWeek &&
+      recentRatios.length >= 5 &&
       avgRatio < 0.9 &&
       weeksInDeficit >= 1;
-    
+
     // 7. Tier текущего дефицита
     const actualDeficitPct = Math.round((1 - safeKcal / tdee) * 100);
     const tier = cfg.deficitTiers.find(t => actualDeficitPct <= t.pct) || cfg.deficitTiers[cfg.deficitTiers.length - 1];
-    
+
     // 8. Рекомендации
     const recommendations = [];
-    
+
     if (needsDietBreak) {
       recommendations.push({
         priority: 'high',
@@ -415,7 +415,7 @@
         text: `Diet break рекомендован! ${cfg.dietBreak.durationDays} дней на поддержании (${Math.round(dietBreakKcal)} ккал)`
       });
     }
-    
+
     if (needsRefeed) {
       recommendations.push({
         priority: 'medium',
@@ -423,7 +423,7 @@
         text: 'Refeed day поможет восстановить лептин и гликоген'
       });
     }
-    
+
     if (adaptiveReduction > 0.05) {
       recommendations.push({
         priority: 'info',
@@ -431,7 +431,7 @@
         text: `Метаболизм адаптировался на ${Math.round(adaptiveReduction * 100)}%`
       });
     }
-    
+
     if (!tier.sustainable) {
       recommendations.push({
         priority: 'warning',
@@ -439,7 +439,7 @@
         text: `${tier.label} дефицит — не более ${tier.maxWeeks} недель!`
       });
     }
-    
+
     return {
       originalTdee: tdee,
       adaptedTdee: Math.round(adaptedTdee),
@@ -457,7 +457,7 @@
       recommendations
     };
   };
-  
+
   // === ЭКСПОРТ ===
   HEYS.InsulinWave = HEYS.InsulinWave || {};
   HEYS.InsulinWave.V41 = {
@@ -470,5 +470,5 @@
     calculateSatietyScore,
     calculateAdaptiveDeficit
   };
-  
+
 })(typeof window !== 'undefined' ? window : global);

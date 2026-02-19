@@ -229,14 +229,14 @@
         });
       });
 
-      totalKcal = totalProtein * 4 + totalCarbs * 4 + totalFat * 9;
+      totalKcal = totalProtein * 3 + totalCarbs * 4 + totalFat * 9; // NET Atwater
       // 🔬 TEF v1.0.0: используем единый модуль HEYS.TEF с fallback
       let tefResult;
       if (HEYS.TEF?.calculate) {
         tefResult = HEYS.TEF.calculate(totalProtein, totalCarbs, totalFat);
       } else {
         // Fallback: inline расчёт если модуль не загружен (Westerterp 2004, Tappy 1996)
-        const proteinTEF = Math.round(totalProtein * 4 * 0.25);
+        const proteinTEF = 0; // NET Atwater: TEF 25% built into 3 kcal/g coefficient
         const carbsTEF = Math.round(totalCarbs * 4 * 0.075);
         const fatTEF = Math.round(totalFat * 9 * 0.015);
         tefResult = {

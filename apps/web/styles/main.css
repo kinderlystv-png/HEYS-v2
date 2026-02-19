@@ -18,6 +18,7 @@
  * 10. Predictive Insights ........ modules/720-predictive-insights.css
  * 11. Metabolic Intelligence ..... modules/725-metabolic-intelligence.css
  * 12. Widgets Dashboard .......... modules/730-widgets-dashboard.css
+ * 12a. Cascade Card .............. modules/740-cascade-card.css
  * 13. Meal Optimizer ............. modules/800-meal-optimizer.css
  */
 @import url("./modules/001-design-tokens.css");
@@ -34,6 +35,7 @@
 @import url("./modules/720-predictive-insights.css");
 @import url("./modules/725-metabolic-intelligence.css");
 @import url("./modules/730-widgets-dashboard.css");
+@import url("./modules/740-cascade-card.css");
 @import url("./modules/800-meal-optimizer.css");
 
 /* Component-specific styles (BEM) */

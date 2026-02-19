@@ -541,9 +541,8 @@
   function computeDerivedProduct(p) {
     const carbs = (+p.carbs100) || ((+p.simple100 || 0) + (+p.complex100 || 0));
     const fat = (+p.fat100) || ((+p.badFat100 || 0) + (+p.goodFat100 || 0) + (+p.trans100 || 0));
-    // v3.9.0: Standard Atwater factors (4/4/9). TEF is calculated separately in TDEE.
-    // Protein 4 kcal/g (was 3), Carbs 4 kcal/g, Fat 9 kcal/g
-    const kcal = 4 * (+p.protein100 || 0) + 4 * carbs + 9 * fat;
+    // NET Atwater: protein 3 kcal/g (TEF 25% built-in: 4×0.75=3), carbs 4 kcal/g, fat 9 kcal/g
+    const kcal = 3 * (+p.protein100 || 0) + 4 * carbs + 9 * fat;
 
     const derived = { carbs100: round1(carbs), fat100: round1(fat), kcal100: round1(kcal) };
 
@@ -1292,8 +1291,8 @@
 
     result.carbs100 = round1(derivedCarbs);
     result.fat100 = round1(derivedFat);
-    // v3.9.0: Standard Atwater factors (4/4/9). TEF is calculated separately.
-    result.kcal100 = round1(4 * (result.protein100 || 0) + 4 * derivedCarbs + 9 * derivedFat);
+    // NET Atwater: protein 3 kcal/g (TEF 25% built-in: 4×0.75=3), carbs 4 kcal/g, fat 9 kcal/g
+    result.kcal100 = round1(3 * (result.protein100 || 0) + 4 * derivedCarbs + 9 * derivedFat);
     result.createdAt = result.createdAt || Date.now();
 
     // v4.8.8: Normalize field names (badfat100 → badFat100 for app compatibility)
@@ -1574,7 +1573,7 @@ NOVA: 1-4
     const fat100 = (result.fat100 != null && result.fat100 > 0)
       ? Number(result.fat100)
       : (badFat + goodFat + trans);
-    const kcal100 = round1(protein * 4 + carbs100 * 4 + fat100 * 9);
+    const kcal100 = round1(protein * 3 + carbs100 * 4 + fat100 * 9); // NET Atwater: TEF 25% built-in
 
     result.carbs100 = round1(carbs100);
     result.fat100 = round1(fat100);

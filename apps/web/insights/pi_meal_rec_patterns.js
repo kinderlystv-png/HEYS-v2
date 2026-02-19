@@ -624,7 +624,7 @@
         let adjustedMacros = recommendation.macros;
         if (profile.phenotype) {
             const baseMacroRatios = {
-                proteinRatio: recommendation.macros.protein / recommendation.macros.kcal * 4, // protein = 4 kcal/g (not TEF-adjusted for ratio)
+                proteinRatio: recommendation.macros.protein / recommendation.macros.kcal * 3, // NET Atwater: protein 3 kcal/g (TEF built-in)
                 carbsRatio: recommendation.macros.carbs / recommendation.macros.kcal * 4,
                 fatRatio: recommendation.macros.fat / recommendation.macros.kcal * 9
             };
@@ -634,9 +634,10 @@
                 profile.phenotype
             );
 
-            // Recalculate macros from adjusted ratios
+            // Recalculate macros from adjusted ratios, preserving metadata fields
             const totalKcal = recommendation.macros.kcal;
             adjustedMacros = {
+                ...recommendation.macros, // preserve remainingKcal, remainingMeals, ranges
                 kcal: totalKcal,
                 protein: Math.round((totalKcal * adjustedRatios.proteinRatio) / 3), // TEF-adjusted 3 kcal/g
                 carbs: Math.round((totalKcal * adjustedRatios.carbsRatio) / 4),

@@ -2584,7 +2584,7 @@
                   kcal += (prod.kcal100 || 0) * g / 100;
                 });
               });
-              if (kcal > 500) proteinDays.push({ prot, kcal, protPct: prot * 4 / kcal });
+              if (kcal > 500) proteinDays.push({ prot, kcal, protPct: prot * 3 / kcal });
             }
           }
           if (proteinDays.length >= 2) {

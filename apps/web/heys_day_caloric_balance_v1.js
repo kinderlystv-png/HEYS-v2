@@ -478,7 +478,7 @@
           tefResult = HEYS.TEF.calculate(todayProtein, todayCarbs, todayFat);
         } else {
           // Fallback: inline расчёт если модуль не загружен (Westerterp 2004, Tappy 1996)
-          const proteinTEF = Math.round(todayProtein * 4 * 0.25);
+          const proteinTEF = 0; // NET Atwater: TEF 25% built into 3 kcal/g coefficient
           const carbsTEF = Math.round(todayCarbs * 4 * 0.075);
           const fatTEF = Math.round(todayFat * 9 * 0.015);
           tefResult = {
@@ -1450,7 +1450,7 @@
         // --- 25. 🆕 Низкий белок в среднем ---
         const daysWithProt = pastDays.filter((d) => d.prot > 0 && d.target > 0);
         const avgProtPct = daysWithProt.length > 0
-          ? daysWithProt.reduce((s, d) => s + (d.prot * 4 / d.target), 0) / daysWithProt.length
+          ? daysWithProt.reduce((s, d) => s + (d.prot * 3 / d.target), 0) / daysWithProt.length
           : 0;
         const proteinNormPct = 0.25; // 25% от калоража — норма
 
@@ -1616,7 +1616,7 @@
 
         const proteinDays = pastDays.filter((d) => d.prot > 0 && d.target > 0);
         if (proteinDays.length >= 2) {
-          const avgProtPct = proteinDays.reduce((s, d) => s + (d.prot * 4 / d.target), 0) / proteinDays.length;
+          const avgProtPct = proteinDays.reduce((s, d) => s + (d.prot * 3 / d.target), 0) / proteinDays.length;
           const targetPct = CFG.PROTEIN_TARGET_PCT;
           const deficitPct = targetPct - avgProtPct;
 

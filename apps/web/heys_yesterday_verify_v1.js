@@ -105,7 +105,7 @@
       // Типично для индейки/курицы: 25г белка → ~8г жира
       const estimatedFat = (prot > 0 && fat === 0 && carbs === 0) ? prot * 0.3 : fat;
 
-      const kcal = (prot * 4) + (carbs * 4) + (estimatedFat * 9);
+      const kcal = (prot * 3) + (carbs * 4) + (estimatedFat * 9); // NET Atwater
       return Number.isFinite(kcal) ? kcal : 0;
     };
 

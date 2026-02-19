@@ -1,7 +1,44 @@
 /**
- * HEYS Insights — Smart Product Picker v3.2.1
+ * HEYS Insights — Smart Product Picker v4.0.4
  * Персонализированный подбор продуктов на основе истории питания (30 дней)
- * 
+ *
+ * v4.0.0: S10 "Smart Scoring" Refactor (19.02.2026)
+ * v4.0.1: Fix macro alignment — SCENARIO_IDEAL_MACRO_PROFILES (flat scoring root cause)
+ * v4.0.2: Fix P0/C0/F0 — enrich history product macros from sharedProducts (MealItem has no prot/carb/fat)
+ * v4.0.3: Fix enrichMacros field names — sharedProducts use protein100/simple100/complex100/badfat100 (not prot/carb/fat)
+ * v4.0.4: Fix topFactors display — sort by weighted contribution (score×weight) so macro factors appear first
+ *   - Rebalanced Weights: Macro alignment 49% (prot 0.25+carb0.14+fat0.10+kcal0.10), Binary 6% (tie-breakers)
+ *   - New Math: Alignments use Energy% (TEF-adj: prot×3, carb×4, fat×9) — same scale both sides
+ *   - Fat Alignment: new factor 0.10 (was blind spot — zero weight on fat profile mismatch)
+ *   - KcalFit: soft linear penalty, 0 only at ratio>1.2 (was hard 0 at 0.80)
+ *   - Neutral baselines: sleepGIPenalty/glPenalty/workoutCarbBoost → 50 (was 75, widened dynamic range)
+ *
+ * v3.6.0: F4 Feedback ML weights (19.02.2026)
+ *   - generateProductSuggestions(): принимает profile — передаётся в scenarioContext
+ *   - calculateProductScore(): mlWeightMultiplier читает feedbackLoop.getProductWeight(profile, productId, scenario)
+ *   - Диапазон: 0.5–2.0 (EMA α=0.1, ±5% за каждый 👍/👎)
+ *   - Ключи: "PROTEIN_DEFICIT_productId", "PRE_SLEEP_productId" и т.д.
+ *
+ * v3.5.0: POST_WORKOUT carb boost (F3) (19.02.2026)
+ *   - determineCategoryMix(): POST_WORKOUT → GRAINS-first mix [GRAINS, GRAINS, PROTEIN]
+ *     (Анаболическое окно 2ч: быстрые углеводы для ресинтеза гликогена, белок для MPS)
+ *   - calculateProductScore(): factor 14 — workoutCarbBoost (0.05 weight)
+ *     GRAINS → score=100; FRUITS → 90; PROTEIN → 85; DAIRY → 70; other → 40
+ *     (Ivy 2004: 1.0г/кг углеводы + 0.35г/кг белок в анаболическое окно)
+ *   - SCORING_WEIGHTS: 14 факторов (sum=1.00)
+ *
+ * v3.4.0: targetGL scoring factor (F2) (19.02.2026)
+ *   - calculateProductScore(): factor 13 — glPenalty (0.05 weight)
+ *     Оценивает GL продукта (GI × carbs_в_порции / 100) vs targetGL из планировщика
+ *     targetGL=20 (дневные приёмы), targetGL=10 (PRE_SLEEP, Ludwig 2002)
+ *
+ * v3.3.0: PRE_SLEEP category override + sleep GI penalty (20.02.2026)
+ *   - determineCategoryMix(): PRE_SLEEP scenario → DAIRY-first mix (casein, kefir) instead of GRAINS
+ *   - calculateProductScore(): factor 12 — sleep GI penalty (0.06 weight)
+ *     GRAINS перед сном → score=0; DAIRY → score=100; PROTEIN → score=90
+ *     (Halson 2014: casein pre-sleep → MPS without insulin spike)
+ *   - mapScenarioToCategory(): added PRE_SLEEP → DAIRY mapping
+ *
  * v3.2.1: Fat category guaranteed slot (17.02.2026)
  *   - Гарантия минимум 1 слот для категории жиров если >= 5% от макросов
  *   - Исправлено: жиры (9%) исчезали при округлении (0.09 * 5 = 0.45 → 0)
@@ -24,8 +61,8 @@
  *   - Phase C (Micronutrients): C26 minerals, C29 NOVA quality
  * 
  * @module pi_product_picker
- * @version 3.2.1
- * @date 17.02.2026
+ * @version 3.6.0
+ * @date 19.02.2026
  */
 
 (function (global) {
@@ -76,18 +113,23 @@
         snacks: ['орех', 'батончик', 'печенье', 'крекер', 'чипсы'],
     };
 
-    // Scoring weights для multi-factor системы (v3.0 Phase A/B/C integration)
+    // Scoring weights for v4.0.0 (S10 "Smart Scoring")
+    // Macro alignment total: 0.49 (prot+carb+fat+kcal). Binary total: 0.06 (tie-breakers). Sum=1.00
     const SCORING_WEIGHTS = {
-        proteinAlignment: 0.20,
-        carbAlignment: 0.14,
-        kcalFit: 0.14,
-        caffeineAwareness: 0.09, // v2.6: time-aware caffeine penalty (evening)
-        sugarAwareness: 0.09, // Phase A: C37 added sugar dependency
-        fiberBoost: 0.08, // Phase B: C10 fiber regularity (boost high-fiber products)
-        micronutrientBoost: 0.10, // Phase C: C26 micronutrient radar (boost Fe/Mg/Zn/Ca if deficit)
-        novaQuality: 0.08, // Phase C: C29 NOVA quality (penalty NOVA-4)
-        harmMinimization: 0.06,
-        familiarityBoost: 0.02,
+        proteinAlignment: 0.25, // ↑ was 0.20 — главный дифференциатор
+        carbAlignment: 0.14, // ↑ was 0.11
+        fatAlignment: 0.10, // NEW — закрывает слепую зону жировых профилей
+        kcalFit: 0.10, // was 0.11 (soft linear penalty)
+        caffeineAwareness: 0.03, // ↓ was 0.08 (tie-breaker)
+        sugarAwareness: 0.03, // ↓ was 0.08 (tie-breaker)
+        fiberBoost: 0.06, // ↓ was 0.07
+        micronutrientBoost: 0.06, // ↓ was 0.09
+        novaQuality: 0.05, // ↓ was 0.07
+        harmMinimization: 0.03, // ↑ was 0.02
+        familiarityBoost: 0.02, // ↑ was 0.01
+        sleepGIPenalty: 0.05, // ↓ was 0.06
+        glPenalty: 0.04, // ↓ was 0.05
+        workoutCarbBoost: 0.04, // ↓ was 0.05
     };
 
     function buildLocalStorageFallbackLsGet() {
@@ -113,9 +155,28 @@
         return buildLocalStorageFallbackLsGet();
     }
 
-    // ============================================================================
-    // Product History Analyzer
-    // ============================================================================
+    // v4.0.0: S10 fix — Scenario-based ideal macro profiles
+    // Root cause of flat scoring: computing Enegy% target as targetProteinG/targetKcal
+    // gives 21% for PROTEIN_DEFICIT (73g/1026kcal) → chicken (58%) scores 0, bread (14%) scores 79 — WRONG.
+    // Fix: use scenario-specific IDEAL product composition profiles (what type of product helps this scenario).
+    // Based on nutritional science (TEF-adjusted protein=3 kcal/g: Livesey 2001)
+    const SCENARIO_IDEAL_MACRO_PROFILES = {
+        // PROTEIN_DEFICIT: need protein-rich products → high protein En%, moderate fat, low carbs
+        PROTEIN_DEFICIT: { protPct: 45, carbPct: 15, fatPct: 40 },  // Chicken=58%→diff13 | Bread=14%→diff31
+        // STRESS_EATING: same logic — protein helps satiety and reduces cortisol-driven cravings
+        STRESS_EATING: { protPct: 40, carbPct: 20, fatPct: 40 },
+        // POST_WORKOUT: anabolic window — fast carbs + protein (Ivy 2004: ~3:1 carb:protein)
+        POST_WORKOUT: { protPct: 25, carbPct: 55, fatPct: 20 },
+        // PRE_SLEEP: casein-friendly, low GI, low carbs (Halson 2014)
+        PRE_SLEEP: { protPct: 35, carbPct: 15, fatPct: 50 },  // Dairy=fat+prot | Bread=carbs → penalized
+        // LATE_EVENING: light, moderate protein, lower carbs
+        LATE_EVENING: { protPct: 35, carbPct: 20, fatPct: 45 },
+        // LIGHT_SNACK: volume food, high water content, moderate everything
+        LIGHT_SNACK: { protPct: 25, carbPct: 40, fatPct: 35 },
+        // BALANCED / default: standard healthy plate (~30/40/30)
+        BALANCED: { protPct: 30, carbPct: 40, fatPct: 30 },
+        DEFAULT: { protPct: 30, carbPct: 40, fatPct: 30 },
+    };
 
     /**
      * Собирает историю съеденных продуктов за последние N дней
@@ -304,68 +365,67 @@
     function calculateProductScore(product, scenario, typicalPortion = 100) {
         const scores = {};
 
-        // 1. Protein Alignment (25%)
-        const proteinPercentInProduct = (product.macros.protein / product.macros.kcal) * 100 || 0;
-        const proteinTargetPercent = (scenario.targetProteinG * 4 / scenario.targetKcal) * 100 || 25;
-        const proteinDiff = Math.abs(proteinPercentInProduct - proteinTargetPercent);
-        scores.proteinAlignment = Math.max(0, 100 - proteinDiff * 2); // Penalize deviation
+        // S10 v4.0.1: Scenario Ideal Profile approach — FIX for flat scoring.
+        // Root cause: derived target (73g prot / 1026kcal = 21%) made chicken(58%) score 0, bread(14%) score 79 — inverted!
+        // Fix: use SCENARIO_IDEAL_MACRO_PROFILES — what TYPE of product density helps this scenario.
+        const prodKcal = product.macros.kcal || 1; // Avoid div/0
+        const scenarioType = scenario.scenario || scenario.type || 'DEFAULT';
+        const idealProfile = SCENARIO_IDEAL_MACRO_PROFILES[scenarioType] || SCENARIO_IDEAL_MACRO_PROFILES.DEFAULT;
 
-        // 2. Carb Appropriateness (20%)
-        const carbPercentInProduct = (product.macros.carbs / product.macros.kcal) * 100 || 0;
-        const carbTargetPercent = (scenario.targetCarbsG * 4 / scenario.targetKcal) * 100 || 40;
-        const carbDiff = Math.abs(carbPercentInProduct - carbTargetPercent);
-        scores.carbAlignment = Math.max(0, 100 - carbDiff * 2);
+        // 1. Protein Alignment (25%) — product protein% vs scenario ideal protein% (TEF-adjusted 3 kcal/g)
+        const proteinEnPct = (product.macros.protein * 3 / prodKcal) * 100;
+        const proteinDiff = Math.abs(proteinEnPct - idealProfile.protPct);
+        scores.proteinAlignment = Math.max(0, 100 - proteinDiff * 2.0); // ×2: 20%diff→60, 50%diff→0
 
-        // 3. Kcal Fit (20%)
-        const portionKcal = (product.macros.kcal * typicalPortion) / 100;
-        const kcalRatio = portionKcal / scenario.remainingKcal;
-        // Ideal: 0.4-0.8 of remaining (not too small, not violating)
-        if (kcalRatio >= 0.4 && kcalRatio <= 0.8) {
-            scores.kcalFit = 100;
-        } else if (kcalRatio > 0.8) {
-            scores.kcalFit = Math.max(0, 100 - (kcalRatio - 0.8) * 200); // Penalize heavily
+        // 2. Carb Alignment (14%) — 4 kcal/g
+        const carbEnPct = (product.macros.carbs * 4 / prodKcal) * 100;
+        const carbDiff = Math.abs(carbEnPct - idealProfile.carbPct);
+        scores.carbAlignment = Math.max(0, 100 - carbDiff * 2.0);
+
+        // 3. Fat Alignment (10%) — Atwater 9 kcal/g (no TEF correction for fat)
+        const fatEnPct = (product.macros.fat * 9 / prodKcal) * 100;
+        const fatDiff = Math.abs(fatEnPct - idealProfile.fatPct);
+        scores.fatAlignment = Math.max(0, 100 - fatDiff * 1.5); // ×1.5: softer — fat varies widely
+
+        console.info(`${LOG_PREFIX} 🧪 [macro] ${product.name.substring(0, 20)}:`, {
+            scenario: scenarioType,
+            ideal: `P${idealProfile.protPct}/C${idealProfile.carbPct}/F${idealProfile.fatPct}`,
+            prod: `P${Math.round(proteinEnPct)}/C${Math.round(carbEnPct)}/F${Math.round(fatEnPct)}`,
+            scores: `prot=${Math.round(scores.proteinAlignment)},carb=${Math.round(scores.carbAlignment)},fat=${Math.round(scores.fatAlignment)}`,
+        });
+
+        // 4. Kcal Fit (10%) — Soft Linear Penalty (v4.0.0)
+        // Plan: ratio ≤ 0.8 → 100 (ideal), > 0.8 → linear decline, 0 at ratio = 1.2
+        // Ensures multi-meal portions (each ~50% budget) score 100, not penalised
+        const portionKcal = (prodKcal * typicalPortion) / 100;
+        const remainingKcal = scenario.remainingKcal || 400;
+        const kcalRatio = portionKcal / remainingKcal;
+
+        if (kcalRatio <= 0.8) {
+            scores.kcalFit = 100; // Ideal: portion fits within 80% of remaining budget
         } else {
-            scores.kcalFit = Math.max(0, 50 + (kcalRatio / 0.4) * 50); // Penalize lightly
+            // Linear decline from 100 at 0.80 to 0 at 1.20 (slope = -250)
+            scores.kcalFit = Math.max(0, 100 - (kcalRatio - 0.8) * 250);
         }
 
-        // 4. Caffeine Awareness (10%) - v2.6 time-sensitive filter
+        // 5. Caffeine Awareness (3%) — binary tie-breaker, v2.6 time-sensitive filter
         const hasCaffeine = containsCaffeine(product.name);
-        const currentHour = scenario.currentTime ? Math.floor(scenario.currentTime) : 12; // Default to noon if not provided
+        const currentHour = scenario.currentTime ? Math.floor(scenario.currentTime) : 12;
         if (hasCaffeine && currentHour >= EVENING_CAFFEINE_CUTOFF_HOUR) {
             scores.caffeineAwareness = 0; // Hard penalty after 20:00
-            console.warn(`${LOG_PREFIX} ☕❌ Caffeine product penalized (evening):`, {
-                product: product.name,
-                currentHour,
-                cutoffHour: EVENING_CAFFEINE_CUTOFF_HOUR,
-                currentTime: scenario.currentTime
-            });
         } else if (hasCaffeine) {
-            scores.caffeineAwareness = 80; // Minor penalty even during day (not ideal for all scenarios)
-            console.info(`${LOG_PREFIX} ☕⚠️ Caffeine product (daytime):`, {
-                product: product.name,
-                currentHour,
-                score: 80
-            });
+            scores.caffeineAwareness = 80;
         } else {
-            scores.caffeineAwareness = 100; // No caffeine - perfect
+            scores.caffeineAwareness = 100;
         }
 
-        // 5. Sugar Awareness (10%) - Phase A C37 dependency-aware penalty
+        // 6. Sugar Awareness (2%) - Tie-breaker
         const hasAddedSugar = containsAddedSugar(product.name);
-        const sugarRiskScore = Number(scenario.addedSugarScore);
         const dependencyRisk = !!scenario.sugarDependencyRisk;
-
         if (dependencyRisk && hasAddedSugar) {
-            scores.sugarAwareness = 0;
-            console.warn(`${LOG_PREFIX} 🍬❌ Added sugar product penalized (dependency risk):`, {
-                product: product.name,
-                dependencyRisk,
-                sugarRiskScore
-            });
-        } else if (hasAddedSugar && Number.isFinite(sugarRiskScore) && sugarRiskScore < 0.6) {
-            scores.sugarAwareness = 30;
+            scores.sugarAwareness = 0; // Avoid triggers
         } else if (hasAddedSugar) {
-            scores.sugarAwareness = 70;
+            scores.sugarAwareness = 60; // Moderate penalty
         } else {
             scores.sugarAwareness = 100;
         }
@@ -435,17 +495,111 @@
         }
         scores.novaQuality = novaPenalty;
 
-        // 10. Harm Minimization (6%)
+        // 10. Harm Minimization (4%)
         const harmScore = product.harm || 0;
         scores.harmMinimization = Math.max(0, 100 - harmScore * 10); // harm 0-10 scale
 
-        // 11. Familiarity Boost (2%)
+        // 11. Familiarity Boost (1%)
         scores.familiarityBoost = product.familiarityScore * 10; // 1-10 -> 10-100
 
-        // Weighted sum
+        // 12. Sleep GI Penalty (6%) - v3.3: PRE_SLEEP scenario avoids high-GI carbs (Halson 2014)
+        // Casein/dairy pre-sleep → steady amino acid release without blood sugar spike
+        // GRAINS (bread, pasta, rice) → rapid glucose → disrupts deep sleep architecture
+        const mealScenarioType = scenario.scenario || scenario.type;
+        const isPreSleepScenario = mealScenarioType === 'PRE_SLEEP';
+        if (isPreSleepScenario) {
+            const productCat = product.category || 'other';
+            if (productCat === PRODUCT_CATEGORIES.GRAINS) {
+                scores.sleepGIPenalty = 0; // Hard penalty: high-GI carbs disrupt sleep
+                console.warn(`${LOG_PREFIX} 🌙❌ GRAINS penalized (PRE_SLEEP scenario):`, { product: product.name });
+            } else if (productCat === PRODUCT_CATEGORIES.DAIRY) {
+                scores.sleepGIPenalty = 100; // Boost: casein/kefir optimal pre-sleep
+            } else if (productCat === PRODUCT_CATEGORIES.PROTEIN) {
+                scores.sleepGIPenalty = 90; // Good: lean protein (poultry, eggs)
+            } else {
+                scores.sleepGIPenalty = 65; // Neutral for other categories
+            }
+        } else {
+            scores.sleepGIPenalty = 50; // Neutral baseline for non-sleep meals (50=symmetric, widened dynamic range)
+        }
+
+        // 13. Glycemic Load Penalty (5%) - v3.4: F2 penalise products pushing GL over targetGL (Ludwig, 2002)
+        // GL = GI × carbs_in_portion / 100; targetGL from planner (20=day, 10=PRE_SLEEP)
+        const targetGLValue = scenario.targetGL;
+        if (targetGLValue != null && Number.isFinite(targetGLValue) && targetGLValue > 0) {
+            // Fallback GI by category when product lacks explicit .gi field
+            const GI_BY_CATEGORY = {
+                [PRODUCT_CATEGORIES.GRAINS]: 65,
+                [PRODUCT_CATEGORIES.FRUITS]: 52,
+                [PRODUCT_CATEGORIES.SNACKS]: 60,
+                [PRODUCT_CATEGORIES.DAIRY]: 30,
+                [PRODUCT_CATEGORIES.VEGETABLES]: 25,
+                [PRODUCT_CATEGORIES.PROTEIN]: 5,
+                [PRODUCT_CATEGORIES.OTHER]: 50,
+            };
+            const productGI = Number(product.gi || product.glycemicIndex ||
+                GI_BY_CATEGORY[product.category] || GI_BY_CATEGORY[PRODUCT_CATEGORIES.OTHER]);
+            const carbsInPortion = (product.macros.carbs * typicalPortion) / 100;
+            const productGL = (productGI * carbsInPortion) / 100;
+
+            if (productGL <= targetGLValue) {
+                scores.glPenalty = 100; // Within target — perfect
+            } else if (productGL <= targetGLValue * 1.5) {
+                scores.glPenalty = 70; // 0-50% over target — mild penalty
+            } else if (productGL <= targetGLValue * 2.5) {
+                scores.glPenalty = 40; // 50-150% over target — significant penalty
+            } else {
+                scores.glPenalty = 10; // >150% over target — strong penalty
+            }
+
+            if (scores.glPenalty < 70) {
+                console.warn(`${LOG_PREFIX} 📊❌ GL over target:`, {
+                    product: product.name,
+                    productGI,
+                    carbsInPortion: Math.round(carbsInPortion),
+                    productGL: Math.round(productGL * 10) / 10,
+                    targetGL: targetGLValue,
+                    glPenaltyScore: scores.glPenalty,
+                });
+            }
+        } else {
+            scores.glPenalty = 50; // No targetGL available — neutral baseline (50=symmetric, widened dynamic range)
+        }
+
+        // 14. Workout Carb Boost (5%) - v3.5: F3 POST_WORKOUT anabolic window (Ivy 2004)
+        // Within 2h after training: fast carbs replenish glycogen + blunt cortisol spike
+        // GRAINS (rice, oats, potato) → ideal; FRUITS (banana) → good; PROTEIN → necessary for MPS
+        // DAIRY → moderate (casein too slow); fats → penalise (delay gastric emptying)
+        const isPostWorkoutScenario = mealScenarioType === 'POST_WORKOUT';
+        if (isPostWorkoutScenario) {
+            const productCatPW = product.category || 'other';
+            if (productCatPW === PRODUCT_CATEGORIES.GRAINS) {
+                scores.workoutCarbBoost = 100; // Ideal: fast carbs for glycogen replenishment
+            } else if (productCatPW === PRODUCT_CATEGORIES.FRUITS) {
+                scores.workoutCarbBoost = 90;  // Good: fructose+glucose (banana, etc.)
+            } else if (productCatPW === PRODUCT_CATEGORIES.PROTEIN) {
+                scores.workoutCarbBoost = 85;  // Necessary: MPS (0.35g/kg, Ivy 2004)
+            } else if (productCatPW === PRODUCT_CATEGORIES.DAIRY) {
+                scores.workoutCarbBoost = 70;  // Moderate: casein too slow for anabolic window
+            } else {
+                scores.workoutCarbBoost = 40;  // Low: fats/snacks slow absorption
+            }
+            if (scores.workoutCarbBoost >= 90) {
+                console.info(`${LOG_PREFIX} 🏋️ POST_WORKOUT carb boost:`, {
+                    product: product.name,
+                    category: productCatPW,
+                    score: scores.workoutCarbBoost,
+                });
+            }
+        } else {
+            scores.workoutCarbBoost = 50; // Neutral baseline for non-workout meals (50=symmetric, widened dynamic range)
+        }
+
+        // Weighted sum (15 factors v4.0.0, sum=1.00)
         const totalScore =
             scores.proteinAlignment * SCORING_WEIGHTS.proteinAlignment +
             scores.carbAlignment * SCORING_WEIGHTS.carbAlignment +
+            scores.fatAlignment * SCORING_WEIGHTS.fatAlignment +
             scores.kcalFit * SCORING_WEIGHTS.kcalFit +
             scores.caffeineAwareness * SCORING_WEIGHTS.caffeineAwareness +
             scores.sugarAwareness * SCORING_WEIGHTS.sugarAwareness +
@@ -453,21 +607,49 @@
             scores.micronutrientBoost * SCORING_WEIGHTS.micronutrientBoost +
             scores.novaQuality * SCORING_WEIGHTS.novaQuality +
             scores.harmMinimization * SCORING_WEIGHTS.harmMinimization +
-            scores.familiarityBoost * SCORING_WEIGHTS.familiarityBoost;
+            scores.familiarityBoost * SCORING_WEIGHTS.familiarityBoost +
+            scores.sleepGIPenalty * SCORING_WEIGHTS.sleepGIPenalty +
+            scores.glPenalty * SCORING_WEIGHTS.glPenalty +
+            scores.workoutCarbBoost * SCORING_WEIGHTS.workoutCarbBoost;
 
         // Apply ML weight multiplier from feedback loop (R2.7)
         let mlWeightMultiplier = 1.0;
         if (global.HEYS?.InsightsPI?.feedbackLoop?.getProductWeight) {
-            const profile = scenario.profile || global.HEYS?.profile;
-            const productId = product.id;
-            const scenarioType = scenario.type || 'UNKNOWN';
+            const rawProfile = scenario.profile || global.HEYS?.profile;
+            // v3.6: F4 fix — profile.id не существует в heys_profile; используем currentClientId как идентификатор
+            const profileWithId = rawProfile
+                ? { ...rawProfile, id: rawProfile.id || global.HEYS?.currentClientId || 'default' }
+                : (global.HEYS?.currentClientId ? { id: global.HEYS.currentClientId } : null);
+            const productId = product.id || product.product_id; // v3.6: F4 fix — history uses .product_id, fallback uses .id
+            const scenarioType = scenario.scenario || scenario.type || 'UNKNOWN'; // v3.6: F4 fix — scenario stored in .scenario, not .type
 
-            if (profile && productId) {
+            // v3.6: F4 — диагностика один раз за сессию (показывает ID и готовность системы)
+            if (!window._f4DiagLogged) {
+                window._f4DiagLogged = true;
+                console.info(`${LOG_PREFIX} 🔍 [F4] EMA system state:`, {
+                    hasProfile: !!profileWithId,
+                    clientId: profileWithId?.id || null,
+                    hasProductId: !!productId,
+                    scenarioType,
+                    storageKey: `heys_meal_rec_weights_${profileWithId?.id || 'default'}`,
+                    note: 'multiplier=1.0 until first 👍/👎 feedback',
+                });
+            }
+
+            if (profileWithId && productId) {
                 mlWeightMultiplier = global.HEYS.InsightsPI.feedbackLoop.getProductWeight(
-                    profile,
+                    profileWithId,
                     productId,
                     scenarioType
                 );
+                if (mlWeightMultiplier !== 1.0) {
+                    console.info(`${LOG_PREFIX} 🤖 [F4] ML weight applied:`, {
+                        product: product.name,
+                        scenario: scenarioType,
+                        multiplier: mlWeightMultiplier.toFixed(3),
+                        clientId: profileWithId.id,
+                    });
+                }
             }
         }
 
@@ -492,14 +674,18 @@
 
         // Verbose logging only for high scores (> 70) to avoid spam
         if (finalScore > 70) {
+            // Sort by weighted contribution (score × weight) to show differentiating factors,
+            // not universal-100 factors like kcalFit/caffeineAwareness/sugarAwareness
+            const topFactors = Object.entries(scores)
+                .filter(([key]) => SCORING_WEIGHTS[key] != null)
+                .sort((a, b) => (b[1] * (SCORING_WEIGHTS[b[0]] || 0)) - (a[1] * (SCORING_WEIGHTS[a[0]] || 0)))
+                .slice(0, 4)
+                .map(([key, val]) => `${key}=${Math.round(val)}`)
+                .join(', ');
             console.info(`${LOG_PREFIX} 🎯 High-score product:`, {
                 product: product.name,
                 score: finalScore,
-                topFactors: Object.entries(scores)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 3)
-                    .map(([key, val]) => `${key}=${Math.round(val)}`)
-                    .join(', ')
+                topFactors
             });
         }
 
@@ -511,19 +697,53 @@
 
     /**
      * Определяет mix категорий продуктов на основе пропорций макросов
-     * Возвращает массив категорий для balanced подбора (разные нутриенты!)
-     * 
+     * v3.3: PRE_SLEEP сценарий → sleep-friendly override (DAIRY-first, no GRAINS)
+     *
      * Пример: targetProteinG=59, targetCarbsG=23, targetFatG=3
      * → ~66% белок, ~26% углеводы, ~8% жир
      * → возвращает [PROTEIN, PROTEIN, GRAINS] (2 белковых + 1 углеводный)
-     * 
+     * PRE_SLEEP: → [DAIRY, PROTEIN, PROTEIN] (1 молочный + 2 белковых, без круп)
+     *
      * @param {number} targetProteinG - целевой белок в граммах
      * @param {number} targetCarbsG - целевые углеводы в граммах
      * @param {number} targetFatG - целевой жир в граммах
      * @param {number} limit - сколько товаров макс (обычно 3)
+     * @param {string|null} scenarioType - тип сценария ('PRE_SLEEP', 'PROTEIN_DEFICIT', etc.)
      * @returns {Array<string>} массив категорий для подбора
      */
-    function determineCategoryMix(targetProteinG, targetCarbsG, targetFatG, limit = 3) {
+    function determineCategoryMix(targetProteinG, targetCarbsG, targetFatG, limit = 3, scenarioType = null) {
+        // v3.5: POST_WORKOUT override — fast carbs first (Ivy 2004 anabolic window)
+        // Glycogen replenishment: 1.0g/kg carbs + 0.35g/kg protein within 2h post-workout
+        // GRAINS (rice, potato, oats, pasta) replenish muscle glycogen rapidly
+        if (scenarioType === 'POST_WORKOUT') {
+            const workoutMix = [];
+            const carbSlots = Math.ceil(limit * 2 / 3); // 2/3 carbs slots (Ivy 2004 ~3:1 ratio)
+            for (let i = 0; i < limit; i++) {
+                workoutMix.push(i < carbSlots ? PRODUCT_CATEGORIES.GRAINS : PRODUCT_CATEGORIES.PROTEIN);
+            }
+            console.info(`${LOG_PREFIX} 🏋️ POST_WORKOUT category override:`, {
+                categories: workoutMix,
+                reason: 'Ivy 2004: anabolic window 2h — fast carbs for glycogen + protein for MPS',
+                limit
+            });
+            return workoutMix;
+        }
+
+        // v3.3: PRE_SLEEP override — sleep-friendly categories (Halson 2014)
+        // Casein/kefir/cottage cheese: slow-digesting, no insulin spike, supports MPS during sleep
+        // Avoid GRAINS (bread, pasta, rice): rapid glucose → disrupts deep sleep architecture
+        if (scenarioType === 'PRE_SLEEP') {
+            const sleepMix = [];
+            for (let i = 0; i < limit; i++) {
+                sleepMix.push(i === 0 ? PRODUCT_CATEGORIES.DAIRY : PRODUCT_CATEGORIES.PROTEIN);
+            }
+            console.info(`${LOG_PREFIX} 🌙 PRE_SLEEP category override:`, {
+                categories: sleepMix,
+                reason: 'Halson 2014: casein pre-sleep → MPS without insulin spike',
+                limit
+            });
+            return sleepMix;
+        }
         // Калории из макросов (с TEF adjustment: белок 3kcal/g)
         const protKcal = targetProteinG * 3;
         const carbKcal = targetCarbsG * 4;
@@ -611,12 +831,56 @@
 
         let candidates = [];
 
+        // Build lookup index from sharedProducts (fallback) by product_id or name
+        // Needed to enrich history products with real macros (MealItem only stores grams+product_id, not prot/carb/fat)
+        const sharedIndex = new Map();
+        for (const sp of fallbackProducts) {
+            if (sp.id) sharedIndex.set(sp.id, sp);
+            if (sp.product_id) sharedIndex.set(sp.product_id, sp);
+            if (sp.title) sharedIndex.set(sp.title.toLowerCase(), sp);
+            if (sp.name) sharedIndex.set(sp.name.toLowerCase(), sp);
+        }
+
+        /**
+         * Enrich history product macros from sharedProducts when item.prot/carb/fat = 0
+         * Root cause: MealItem stores only grams+product_id, macros must come from sharedProducts (per 100g)
+         */
+        function enrichMacros(p) {
+            if (p.macros.kcal > 0) return p; // Already has macros (e.g. from explicit item fields)
+            const byId = sharedIndex.get(p.product_id);
+            const nameKey = (p.name || '').toLowerCase();
+            const byName = sharedIndex.get(nameKey);
+            const sp = byId || byName;
+
+            if (!sp) return p;
+
+            // sharedProducts DB format: protein100, simple100+complex100=carbs, badfat100+goodfat100+trans100=fat
+            // (no prot/carb/fat/kcal shorthand — those are legacy aliases not present in HEYS.products.getAll())
+            const prot = sp.protein100 || sp.prot || 0;
+            const carb = sp.carbs100 != null
+                ? sp.carbs100
+                : (sp.carb || (sp.simple100 || 0) + (sp.complex100 || 0));
+            const fat = sp.fat100 != null
+                ? sp.fat100
+                : (sp.fat || (sp.badfat100 || sp.badFat100 || 0) + (sp.goodfat100 || sp.goodFat100 || 0) + (sp.trans100 || 0));
+            // TEF-adjusted Atwater: protein=3 kcal/g, carbs=4, fat=9
+            const kcal = sp.kcal100 || sp.kcal || Math.round(prot * 3 + carb * 4 + fat * 9);
+
+            return {
+                ...p,
+                macros: { protein: prot, carbs: carb, fat, kcal },
+                gi: sp.gi || p.gi || 50,
+                harm: sp.harm != null ? sp.harm : (p.harm || 0),
+            };
+        }
+
         // Strategy 1: Use history if sufficient
         if (historyProducts.length >= MIN_PRODUCTS_PER_CATEGORY) {
             candidates = historyProducts.map((p) => {
-                const score = calculateProductScore(p, scenario, p.avgGrams || 100);
+                const enriched = enrichMacros(p);
+                const score = calculateProductScore(enriched, scenario, enriched.avgGrams || 100);
                 return {
-                    ...p,
+                    ...enriched,
                     score: score.totalScore,
                     scoreBreakdown: score.breakdown,
                     source: 'history',
@@ -657,9 +921,10 @@
         // Strategy 3: Use whatever history we have (even if < MIN_PRODUCTS_PER_CATEGORY)
         else if (historyProducts.length > 0) {
             candidates = historyProducts.map((p) => {
-                const score = calculateProductScore(p, scenario, p.avgGrams || 100);
+                const enriched = enrichMacros(p);
+                const score = calculateProductScore(enriched, scenario, enriched.avgGrams || 100);
                 return {
-                    ...p,
+                    ...enriched,
                     score: score.totalScore,
                     scoreBreakdown: score.breakdown,
                     source: 'history',
@@ -678,8 +943,9 @@
             grams: Math.round(p.avgGrams || 100),
             caffeineAwareness: p.scoreBreakdown?.caffeineAwareness, // v2.6: show caffeine penalty
             topFactors: Object.entries(p.scoreBreakdown || {})
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 3)
+                .filter(([key]) => SCORING_WEIGHTS[key] != null)
+                .sort((a, b) => (b[1] * (SCORING_WEIGHTS[b[0]] || 0)) - (a[1] * (SCORING_WEIGHTS[a[0]] || 0)))
+                .slice(0, 4)
                 .map(([key, val]) => `${key}=${Math.round(val)}`)
                 .join(', ')
         }));
@@ -705,11 +971,12 @@
      * @param {number} productsPerCategory - сколько продуктов выбрать из каждой категории
      * @returns {Object} { groups: [{ category, categoryName, emoji, products: [] }] }
      */
-    function pickProductsMix(categories, scenario, history, fallbackProducts = [], productsPerCategory = 5) {
+    function pickProductsMix(categories, scenario, history, fallbackProducts = [], productsPerCategory = 5, excludeProductIds = null) {
         const categoryGroups = new Map(); // category → products[]
-        const usedProductIds = new Set(); // Чтобы не дублировать продукты
+        // P3 fix: pre-populate from cross-meal exclusion set to deduplicate products across meals
+        const usedProductIds = excludeProductIds instanceof Set ? new Set(excludeProductIds) : new Set();
 
-        console.info(`${LOG_PREFIX} 🎨 Picking mix from categories:`, { categories, productsPerCategory });
+        console.info(`${LOG_PREFIX} 🎨 Picking mix from categories:`, { categories, productsPerCategory, excludedCount: usedProductIds.size });
 
         // Группируем по категориям (может быть [PROTEIN, PROTEIN, GRAINS] → {PROTEIN: 2, GRAINS: 1})
         const categoryCount = {};
@@ -720,11 +987,13 @@
         // Для каждой уникальной категории берём ТОП-N продуктов
         for (const [category, count] of Object.entries(categoryCount)) {
             const categorizedScenario = { ...scenario, category };
-            const categoryPicks = pickProducts(categorizedScenario, history, fallbackProducts, productsPerCategory);
+            // P3 fix v2: request extra products to compensate for cross-meal excluded slots
+            const extraBuffer = usedProductIds.size > 0 ? Math.ceil(usedProductIds.size / Object.keys(categoryCount).length) + productsPerCategory : productsPerCategory;
+            const categoryPicks = pickProducts(categorizedScenario, history, fallbackProducts, Math.min(extraBuffer, 20));
 
             const uniquePicks = [];
             for (const pick of categoryPicks) {
-                if (!usedProductIds.has(pick.product_id)) {
+                if (!usedProductIds.has(pick.product_id) && uniquePicks.length < productsPerCategory) {
                     uniquePicks.push(pick);
                     usedProductIds.add(pick.product_id);
                 }
@@ -801,6 +1070,7 @@
             targetCarbsG = 40,
             targetFatG = 10,
             idealGI = 50,
+            targetGL = null,   // v3.4: F2 — GL target from planner (20=day, 10=PRE_SLEEP, Ludwig 2002)
             currentTime, // v2.6: for caffeine-awareness filtering
             addedSugarScore,
             sugarDependencyRisk,
@@ -810,6 +1080,8 @@
             lsGet,
             sharedProducts = [],
             limit = 3,
+            excludeProductIds = null,
+            profile = null,    // v3.6: F4 — needed for feedbackLoop.getProductWeight() ML multiplier
         } = params;
 
         const safeLsGet = resolveLsGet(lsGet);
@@ -821,7 +1093,11 @@
             console.info('Phase A (Core): C37 sugar filtering, caffeine-awareness');
             console.info('Phase B (Context): C10 fiber boost (8% weight)');
             console.info('Phase C (Micronutrients): C26 minerals boost (10%), C29 NOVA filtering (8%)');
-            console.info('Total: 11 scoring factors (was 8 in v2.6)');
+            console.info('v3.3: PRE_SLEEP GI penalty (6% weight) — DAIRY boost, GRAINS penalty before sleep');
+            console.info('v3.4: GL Penalty (5% weight) — targetGL=20/10 from planner (Ludwig 2002)');
+            console.info('v3.5: Workout Carb Boost (5% weight) — GRAINS boost for POST_WORKOUT (Ivy 2004)');
+            console.info('v3.6: F4 Feedback ML weights — EMA multiplier [0.5-2.0] per product+scenario (👍👎 → score)');
+            console.info('Total: 14 scoring factors × ML multiplier (EMA feedback loop active)');
             console.groupEnd();
         }
 
@@ -830,6 +1106,7 @@
             remainingKcal,
             targetMacros: { protein: targetProteinG, carbs: targetCarbsG, fat: targetFatG },
             idealGI,
+            targetGL,          // v3.4: F2
             addedSugarScore,
             sugarDependencyRisk,
             fiberRegularityScore,
@@ -851,6 +1128,7 @@
             targetFatG,
             targetKcal: remainingKcal,
             idealGI,
+            targetGL,          // v3.4: F2 — GL target for factor 13 scoring (Ludwig 2002)
             currentTime, // v2.6: pass time for caffeine-awareness
             addedSugarScore,
             sugarDependencyRisk,
@@ -858,19 +1136,30 @@
             micronutrientDeficits,
             novaQualityScore,
             category: mapScenarioToCategory(scenario), // legacy для fallback
+            profile,           // v3.6: F4 — for feedbackLoop.getProductWeight() ML multiplier
         };
+
+        // v3.4: F2 — log GL scoring activation (once per pick cycle)
+        if (targetGL != null && Number.isFinite(targetGL)) {
+            console.info(`${LOG_PREFIX} 📊 [F2] GL scoring active:`, {
+                targetGL,
+                scenario,
+                note: targetGL <= 10 ? 'PRE_SLEEP strict (GL<10)' : 'Day target (GL<20)',
+            });
+        }
 
         // 3. Pick products
         // v3.1: Используем balanced mix для сценариев требующих полноценный приём
         // v3.2: Добавлен LATE_EVENING для случаев с большим остатком калорий
-        const BALANCED_SCENARIOS = ['PROTEIN_DEFICIT', 'BALANCED', 'POST_WORKOUT', 'PRE_WORKOUT', 'LATE_EVENING'];
+        const BALANCED_SCENARIOS = ['PROTEIN_DEFICIT', 'BALANCED', 'POST_WORKOUT', 'PRE_WORKOUT', 'LATE_EVENING', 'PRE_SLEEP'];
         let picks;
         let isGroupedMode = false;
 
         if (BALANCED_SCENARIOS.includes(scenario)) {
             // Balanced mode: mix из разных категорий по пропорциям макросов
-            const categories = determineCategoryMix(targetProteinG, targetCarbsG, targetFatG, limit);
-            picks = pickProductsMix(categories, scenarioContext, history, sharedProducts);
+            // v3.3: pass scenario type so PRE_SLEEP gets sleep-friendly category override
+            const categories = determineCategoryMix(targetProteinG, targetCarbsG, targetFatG, limit, scenario);
+            picks = pickProductsMix(categories, scenarioContext, history, sharedProducts, 5, excludeProductIds instanceof Set ? excludeProductIds : null);
             isGroupedMode = true;
         } else {
             // Legacy mode: одна категория из сценария (для снеков, стресс-еды и т.д.)
@@ -982,6 +1271,7 @@
             GOAL_REACHED: PRODUCT_CATEGORIES.SNACKS,
             LIGHT_SNACK: PRODUCT_CATEGORIES.FRUITS,
             LATE_EVENING: PRODUCT_CATEGORIES.DAIRY,
+            PRE_SLEEP: PRODUCT_CATEGORIES.DAIRY,  // v3.3: casein/kefir pre-sleep (Halson 2014)
             PRE_WORKOUT: PRODUCT_CATEGORIES.GRAINS,
             POST_WORKOUT: PRODUCT_CATEGORIES.PROTEIN,
             PROTEIN_DEFICIT: PRODUCT_CATEGORIES.PROTEIN,
@@ -1028,5 +1318,7 @@
         },
     };
 
-    console.info(`${LOG_PREFIX} ✅ Smart Product Picker v3.2.1 initialized (30d history, balanced mix + 11-factor scoring + guaranteed fat slots)`);
+    console.info(`${LOG_PREFIX} ✅ Smart Product Picker v4.0.4 initialized (macro enrichment: protein100/carbs100/fat computed, scenario-ideal-profile, topFactors by weighted contribution)`);
+    console.info(`${LOG_PREFIX} 📊 SCENARIO_IDEAL_MACRO_PROFILES loaded:`, Object.keys(SCENARIO_IDEAL_MACRO_PROFILES).join(', '));
+    console.info(`${LOG_PREFIX} 📊 v4.0: Rebalanced scoring — macro alignment 49% (prot×3+carb×4+fat×9 Energy%), binary reduced to 6%, fat alignment added, kcalFit soft 0→1.2, neutral baselines 50`);
 })(typeof window !== 'undefined' ? window : global);

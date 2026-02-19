@@ -120,9 +120,8 @@
     const hasFat = p && p.fat100 != null;
     const carbs100 = hasCarbs ? toNum(p.carbs100) : (toNum(p.simple100) + toNum(p.complex100));
     const fat100 = hasFat ? toNum(p.fat100) : (toNum(p.badFat100) + toNum(p.goodFat100) + toNum(p.trans100));
-    // v3.9.0: Standard Atwater factors (4/4/9). TEF is calculated separately in TDEE.
-    // Protein 4 kcal/g (was 3), Carbs 4 kcal/g, Fat 9 kcal/g
-    const kcal100 = 4 * toNum(p.protein100) + 4 * carbs100 + 9 * fat100;
+    // NET Atwater: protein 3 kcal/g (TEF 25% built-in: 4×0.75=3), carbs 4 kcal/g, fat 9 kcal/g
+    const kcal100 = 3 * toNum(p.protein100) + 4 * carbs100 + 9 * fat100;
 
     const derived = {
       carbs100: round1(carbs100),
@@ -448,6 +447,7 @@
           (window.HEYS && window.HEYS.utils && window.HEYS.utils.lsGet && window.HEYS.utils.lsGet('heys_products', null));
         if (existingProducts && Array.isArray(existingProducts) && existingProducts.length > 0) {
           // Есть продукты в storage, не затираем их пустым массивом
+          console.info('[baza] 💾 useEffect[products]: SKIP — products=0 но localStorage=', existingProducts.length);
           return;
         }
       }
@@ -459,22 +459,16 @@
       if (existingProducts && Array.isArray(existingProducts) && existingProducts.length > products.length) {
         // Проверяем флаг намеренного удаления
         if (window.HEYS && window.HEYS._intentionalProductDelete) {
-          if (window.DEV) {
-            window.DEV.log('✅ [useEffect] ALLOWED: intentional delete', existingProducts.length, '→', products.length);
-          }
+          console.info('[baza] 💾 useEffect[products]: ALLOWED intentional delete', existingProducts.length, '→', products.length);
           // Сбрасываем флаг после использования
           window.HEYS._intentionalProductDelete = false;
         } else {
-          if (window.DEV) {
-            window.DEV.log('⚠️ [useEffect] BLOCKED: не уменьшаем', existingProducts.length, '→', products.length);
-          }
+          console.warn('[baza] 💾 useEffect[products]: ❌ BLOCKED — localStorage=', existingProducts.length, '> state=', products.length, '(нет флага _intentionalProductDelete)');
           return;
         }
       }
 
-      if (window.DEV) {
-        window.DEV.log('💾 [useEffect] Сохраняем products в localStorage:', products.length, 'items');
-      }
+      console.info('[baza] 💾 useEffect[products]: SAVE — products.length=', products.length);
 
       if (Array.isArray(products) && window.HEYS && window.HEYS.store && typeof window.HEYS.store.set === 'function') {
         window.HEYS.store.set('heys_products', products);
@@ -483,6 +477,84 @@
         window.HEYS.utils.lsSet('heys_products', products);
       }
     }, [products]);
+
+    // 🔴 FIX: миграция — назначаем id продуктам без id прямо в state
+    // (иначе deleteRow(undefined) удалит всех без id)
+    // ВАЖНО: сохраняем в localStorage СИНХРОННО, иначе useEffect([clientId])
+    // перечитает старый localStorage и сбросит назначенные id обратно в undefined
+    React.useEffect(() => {
+      const genId = () => ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+        (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)
+      );
+
+      // 🪦 Сначала отфильтруем tombstone-продукты БЕЗ id по имени.
+      // Если облако вернуло удалённый продукт без id — миграция назначит новый uuid,
+      // и tombstone по старому id уже не сработает. Поэтому ловим здесь по имени.
+      let cleaned = products;
+      try {
+        const tombstones = window.HEYS?.store?.get?.('heys_deleted_ids') || [];
+        if (Array.isArray(tombstones) && tombstones.length > 0) {
+          const deletedNames = new Set(tombstones.map(t => t.name).filter(Boolean));
+          if (deletedNames.size > 0) {
+            const noIdProducts = cleaned.filter(p => !p.id);
+            const zombies = noIdProducts.filter(p => p.name && deletedNames.has(p.name));
+            if (zombies.length > 0) {
+              console.info(`[baza] 🪦 migrate ids: убрано ${zombies.length} zombie product(s) без id по имени из tombstone`);
+              cleaned = cleaned.filter(p => !((!p.id) && p.name && deletedNames.has(p.name)));
+            }
+          }
+        }
+      } catch (_) { }
+
+      const missing = cleaned.filter(p => !p.id);
+      if (missing.length > 0) {
+        console.warn('[baza] 🆔 migrate ids: найдено', missing.length, 'продуктов без id — назначаем uuid');
+        const patched = cleaned.map(p => p.id ? p : { ...p, id: genId() });
+        console.info('[baza] 🆔 migrate ids: готово, примеры:', patched.slice(0, 3).map(p => ({ id: p.id, name: p.name })));
+        // Сохраняем в localStorage СИНХРОННО до setProducts
+        if (window.HEYS?.store?.set) {
+          window.HEYS.store.set('heys_products', patched);
+          console.info('[baza] 🆔 migrate ids: localStorage обновлён синхронно (HEYS.store.set)');
+        } else if (window.HEYS?.utils?.lsSet) {
+          window.HEYS.utils.lsSet('heys_products', patched);
+          console.info('[baza] 🆔 migrate ids: localStorage обновлён синхронно (lsSet)');
+        }
+        setProducts(patched);
+      } else if (cleaned.length < products.length) {
+        // Продукты были убраны zombie-фильтром, но id все на месте
+        if (window.HEYS?.store?.set) {
+          window.HEYS.store.set('heys_products', cleaned);
+        }
+        setProducts(cleaned);
+      } else {
+        console.info('[baza] 🆔 migrate ids: все', products.length, 'продуктов имеют id — миграция не нужна ✅');
+      }
+    }, []);  // eslint-disable-line react-hooks/exhaustive-deps — только при монтировании
+
+    // 🪦 TOMBSTONE FILTER — единая функция для всех точек входа данных
+    // Фильтрует продукты которые пользователь удалил, но облако пытается вернуть
+    function applyTombstoneFilter(productsList) {
+      try {
+        const tombstones = window.HEYS?.store?.get?.('heys_deleted_ids') || [];
+        if (!Array.isArray(tombstones) || tombstones.length === 0) return productsList;
+        // 🔑 Фильтруем ТОЛЬКО по id, НЕ по имени.
+        // Имя-фильтр блокировал повторное добавление продукта с тем же названием (новый id).
+        // Cloud sync возвращает продукт с ТЕМ ЖЕ id → tombstone его режет.
+        // Ручное добавление создаёт НОВЫЙ id → tombstone его пропускает.
+        const deletedIds = new Set(tombstones.map(t => t.id).filter(Boolean));
+        const before = productsList.length;
+        const filtered = productsList.filter(p => !(p.id && deletedIds.has(p.id)));
+        const removed = before - filtered.length;
+        if (removed > 0) {
+          console.info(`[baza] 🪦 tombstone filter: убрано ${removed} resurrection product(s)`);
+          try { if (window.HEYS?.store?.set) window.HEYS.store.set('heys_products', filtered); } catch (_) { }
+        }
+        return filtered;
+      } catch (_) {
+        return productsList;
+      }
+    }
+
     const [query, setQuery] = React.useState('');
     const [paste, setPaste] = React.useState('');
     const [showModal, setShowModal] = React.useState(false);
@@ -579,6 +651,16 @@
       if (product._normalizedPersonal) return product;
       try {
         let next = { ...product };
+        // 🔴 FIX: гарантируем id у каждого продукта (иначе deleteRow удалит ВСЕХ без id)
+        if (!next.id) {
+          const newId = (window.HEYS?.utils?.uuid?.() ||
+            window.HEYS?.models?.uuid?.() ||
+            ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+              (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)
+            ));
+          next.id = newId;
+          if (window.DEV) window.DEV.log('[baza] 🆔 normalizePersonalProduct: назначен новый id для "' + next.name + '":', newId);
+        }
         if (HEYS.features?.unifiedTables === false) {
           if (HEYS.models?.normalizeProductFields) {
             next = HEYS.models.normalizeProductFields(next);
@@ -681,16 +763,33 @@
       if (!force && Array.isArray(allSharedProducts) && allSharedProducts.length > 0) {
         const age = now - (lastSharedLoadRef.current || 0);
         if (age < SHARED_LOAD_TTL_MS) {
+          console.info('[baza] ⏭️ CACHE HIT — skip RPC, ttl remaining:', Math.round((SHARED_LOAD_TTL_MS - age) / 1000), 's, cached products:', allSharedProducts.length);
+          // [baza] проверяем что в кэше
+          if (allSharedProducts.length > 0) {
+            const s = allSharedProducts[0];
+            console.info('[baza] 🗃️ CACHED first product:', s?.name, '| keys:', Object.keys(s || {}).sort().join(', '));
+            console.info('[baza] 🗃️ CACHED vitamins: vitamin_c=', s?.vitamin_c, 'vitaminC=', s?.vitaminC, 'calcium=', s?.calcium, 'sodium100=', s?.sodium100);
+          }
           return;
         }
       }
 
+      console.info('[baza] 🚀 LOADING from RPC — force:', force, '| current count:', allSharedProducts?.length || 0);
       setAllSharedLoading(true);
       try {
         const result = await window.HEYS?.cloud?.getAllSharedProducts?.({ limit: 500 });
         if (result?.data) {
+          // [baza] диагностика: что вернул getAllSharedProducts
+          console.info('[baza] 📦 getAllSharedProducts returned', result.data.length, 'products');
+          if (result.data.length > 0) {
+            const s = result.data[0];
+            console.info('[baza] 📦 FIRST product:', s?.name, '| ALL KEYS:', Object.keys(s).sort().join(', '));
+            console.info('[baza] 🔬 vitamin_c=', s?.vitamin_c, '| vitaminC=', s?.vitaminC, '| calcium=', s?.calcium, '| iron=', s?.iron, '| sodium100=', s?.sodium100, '| vitamin_b1=', s?.vitamin_b1);
+          }
           setAllSharedProducts(result.data);
           lastSharedLoadRef.current = Date.now();
+        } else {
+          console.warn('[baza] ⚠️ getAllSharedProducts returned no data:', result);
         }
       } catch (err) {
         console.error('[SHARED ALL] Load error:', err);
@@ -761,6 +860,7 @@
 
       const missing = products
         .filter(p => (
+          isMissing(p?.createdAt) || // 🆕 v4.8.7: sort order
           isMissing(p?.sodium100) ||
           isMissing(p?.omega3_100) ||
           isMissing(p?.omega6_100) ||
@@ -887,11 +987,36 @@
             setIfMissing('selenium', sharedProduct.selenium);
             setIfMissing('iodine', sharedProduct.iodine);
 
+            // 🆕 v4.8.7: Backfill createdAt from shared product's created_at
+            // Allows correct sort order in personal list even without cloud sync
+            if (isMissing(next.createdAt)) {
+              const rawCreated = sharedProduct.created_at ?? sharedProduct.createdAt;
+              if (rawCreated) {
+                let tsCreated = typeof rawCreated === 'number' ? rawCreated : (() => {
+                  let parsed = Date.parse(rawCreated);
+                  if (!Number.isFinite(parsed)) {
+                    const norm = String(rawCreated)
+                      .replace(' ', 'T')
+                      .replace(/(\.(\d{3}))\d+/, '$1')
+                      .replace(/\+00$/, 'Z')
+                      .replace(/([+-]\d{2})(\d{2})$/, '$1:$2');
+                    parsed = Date.parse(norm);
+                  }
+                  return Number.isFinite(parsed) ? parsed : 0;
+                })();
+                if (tsCreated > 0) { next.createdAt = tsCreated; changed = true; }
+              }
+            }
+
             return changed ? next : p;
           });
 
           const changed = updated.some((p, i) => p !== products[i]);
-          if (changed) setProducts(updated);
+          if (changed) {
+            const withCreatedAt = updated.filter(p => p.createdAt).length;
+            console.info(`[baza] 📅 sharedBackfill: createdAt filled=${withCreatedAt}/${updated.length}, changed=${updated.filter((p, i) => p !== products[i]).length} products`);
+            setProducts(updated);
+          }
         } finally {
           sharedFieldsBackfillRef.current.inFlight = false;
         }
@@ -920,23 +1045,51 @@
       return index;
     }, [products]);
 
+    // Антиспам-ключ для логов сортировки personal
+    const personalSortLogRef = React.useRef('');
+
     // Лимит отображения последних продуктов (для скорости)
     const filtered = React.useMemo(() => {
       // Используем normalizeText из SmartSearch (единый источник)
       const normalizeSearchText = window.HEYS?.SmartSearchWithTypos?.utils?.normalizeText
         || ((text) => String(text || '').toLowerCase().replace(/ё/g, 'е'));
 
+      const toTs = (v) => {
+        if (v == null) return 0;
+        if (typeof v === 'number') return v;
+
+        const raw = String(v || '').trim();
+        if (!raw) return 0;
+
+        // 1) Пробуем как есть (ISO и стандартные форматы)
+        let parsed = Date.parse(raw);
+        if (Number.isFinite(parsed)) return parsed;
+
+        // 2) Fallback для PostgreSQL timestamptz: "YYYY-MM-DD HH:mm:ss.ffffff+00"
+        //    - пробел -> T
+        //    - микросекунды -> миллисекунды
+        //    - +00 / +0000 / +00:00 нормализуем
+        const normalized = raw
+          .replace(' ', 'T')
+          .replace(/(\.\d{3})\d+/, '$1')
+          .replace(/\+00$/, 'Z')
+          .replace(/([+-]\d{2})(\d{2})$/, '$1:$2');
+
+        parsed = Date.parse(normalized);
+        return Number.isFinite(parsed) ? parsed : 0;
+      };
       const sortByCreatedAtDesc = (list) => {
         return [...list].sort((a, b) => {
-          const aTs = Number(a?.createdAt || 0);
-          const bTs = Number(b?.createdAt || 0);
+          // ДОЛЖНО БЫТЬ КАК В shared: createdAt в приоритете, затем updatedAt
+          const aTs = toTs(a?.createdAt ?? a?.created_at ?? a?.updatedAt ?? a?.updated_at);
+          const bTs = toTs(b?.createdAt ?? b?.created_at ?? b?.updatedAt ?? b?.updated_at);
           return bTs - aTs;
         });
       };
 
       function performSearch() {
         const q = normalizeSearchText(query.trim());
-        if (!q) return products;
+        if (!q) return sortByCreatedAtDesc(products);
 
         // Если доступен умный поиск, используем его
         if (window.HEYS && window.HEYS.SmartSearchWithTypos) {
@@ -1008,7 +1161,34 @@
         window.HEYS.analytics.trackSearch(query, result.length, duration);
       }
 
-      return sortByCreatedAtDesc(result);
+      const sortedResult = sortByCreatedAtDesc(result);
+      if (!query) {
+        const preview = sortedResult.slice(0, 5).map((p, i) => {
+          const createdRaw = p?.createdAt ?? p?.created_at ?? null;
+          const updatedRaw = p?.updatedAt ?? p?.updated_at ?? null;
+          return {
+            rank: i + 1,
+            name: p?.name || null,
+            createdAt: createdRaw,
+            updatedAt: updatedRaw,
+            sortTs: toTs(createdRaw ?? updatedRaw)
+          };
+        });
+
+        const top = preview[0] || {};
+        const logKey = `${sortedResult.length}|${top.name || ''}|${top.sortTs || 0}`;
+        if (personalSortLogRef.current !== logKey) {
+          personalSortLogRef.current = logKey;
+          console.info('[baza][filter] ✅ Personal sort — count:', sortedResult.length);
+          preview.forEach(p => {
+            const tsFormatted = p.sortTs ? new Date(p.sortTs).toISOString() : 'NO_TS';
+            const createdStr = p.createdAt ? String(p.createdAt).slice(0, 19) : '—';
+            const updatedStr = p.updatedAt ? String(p.updatedAt).slice(0, 19) : '—';
+            console.info(`[baza][filter]   #${p.rank} "${p.name}" | created=${createdStr} | updated=${updatedStr} | sortTs=${tsFormatted}`);
+          });
+        }
+      }
+      return sortedResult;
     }, [products, query, searchIndex]);
 
     const personalRanges = React.useMemo(() => buildRangeOptions(filtered.length), [filtered.length]);
@@ -1087,7 +1267,8 @@
 
         const latest = (window.HEYS.store?.get?.('heys_products', null)) ||
           (window.HEYS.utils?.lsGet?.('heys_products', [])) || [];
-        const normalizedLatest = normalizePersonalProducts(latest);
+        let normalizedLatest = applyTombstoneFilter(normalizePersonalProducts(latest));
+
         if (Array.isArray(normalizedLatest) && normalizedLatest.length > 0) {
           if (window.DEV) {
             window.DEV.log('📦 [RATION] Products updated via event:', normalizedLatest.length, 'items');
@@ -1140,7 +1321,7 @@
       const handleOrphansRecovered = () => {
         const latest = (window.HEYS.store?.get?.('heys_products', null)) ||
           (window.HEYS.utils?.lsGet?.('heys_products', [])) || [];
-        const normalizedLatest = normalizePersonalProducts(latest);
+        const normalizedLatest = applyTombstoneFilter(normalizePersonalProducts(latest));
         if (Array.isArray(normalizedLatest) && normalizedLatest.length > 0) {
           if (window.DEV) {
             window.DEV.log('🔄 [RATION] Orphans recovered, updating state:', normalizedLatest.length, 'items');
@@ -1224,7 +1405,7 @@
                 window.HEYS.analytics.trackDataOperation('products-loaded', latest.length);
               }
             }
-            setProducts(getDeduplicatedProducts(latest));
+            setProducts(applyTombstoneFilter(getDeduplicatedProducts(latest)));
           }).catch((error) => {
             const duration = performance.now() - startTime;
             if (window.HEYS && window.HEYS.analytics) {
@@ -1252,7 +1433,7 @@
               window.HEYS.analytics.trackDataOperation('products-loaded', latest.length);
             }
           }
-          setProducts(getDeduplicatedProducts(latest));
+          setProducts(applyTombstoneFilter(getDeduplicatedProducts(latest)));
         }
       } else {
         const latest = (window.HEYS.store && window.HEYS.store.get && window.HEYS.store.get('heys_products', null)) || (window.HEYS.utils && window.HEYS.utils.lsGet && window.HEYS.utils.lsGet('heys_products', [])) || [];
@@ -1269,20 +1450,26 @@
           return;
         }
 
-        setProducts(getDeduplicatedProducts(latest));
+        setProducts(applyTombstoneFilter(getDeduplicatedProducts(latest)));
       }
     }, [window.HEYS && window.HEYS.currentClientId]);
 
     function resetDraft() { setDraft(INITIAL_DRAFT); setExpandedSections({ base: true, extra: false, vitamins: false, minerals: false, nova: false, flags: false }); }
     async function addProduct() {
+      console.group('[baza] ➕ addProduct — НАЧАЛО ДОБАВЛЕНИЯ');
       const name = (draft.name || '').trim();
+      console.info('[baza] ➕ Имя:', name, '| publishToShared:', publishToShared, '| isCurator:', isCurator);
       if (!name) {
+        console.warn('[baza] ➕ ОТМЕНА: пустое имя');
+        console.groupEnd();
         HEYS.Toast?.warning('Введите название продукта') || alert('Введите название продукта');
         return;
       }
       // Проверка уникальности названия в личной базе
       const existingProduct = products.find(p => p.name && p.name.trim().toLowerCase() === name.toLowerCase());
       if (existingProduct) {
+        console.warn('[baza] ➕ ОТМЕНА: дубликат в личной базе, id=', existingProduct.id);
+        console.groupEnd();
         HEYS.Toast?.warning(`Продукт "${name}" уже существует в базе! Используйте другое название.`) || alert(`Продукт "${name}" уже существует в базе!`);
         return;
       }
@@ -1337,6 +1524,8 @@
 
             if (existing) {
               // Показываем модалку мягкого merge
+              console.info('[baza] ➕ fingerprint match → merge modal | existing:', existing.id, existing.name);
+              console.groupEnd();
               setMergeModal({ show: true, existing, draft: newProduct });
               return; // Не закрываем модалку создания — ждём решения
             }
@@ -1371,12 +1560,44 @@
         }
       }
 
-      setProducts([...products, newProduct]);
+      const newList = [...products, newProduct];
+      console.info('[baza] ➕ setProducts: было', products.length, '→ стало', newList.length, '| новый id:', newProduct.id);
+      // 🪦 Проверяем: не в tombstone ли этот продукт?
+      try {
+        const tombstones = window.HEYS?.store?.get?.('heys_deleted_ids') || [];
+        if (Array.isArray(tombstones) && tombstones.length > 0) {
+          const inTombById = tombstones.find(t => t.id === newProduct.id);
+          const inTombByName = tombstones.find(t => t.name === newProduct.name);
+          if (inTombById || inTombByName) {
+            console.warn('[baza] ➕ ⚠️ ВНИМАНИЕ: продукт в tombstone!', { byId: !!inTombById, byName: !!inTombByName });
+            // Убираем из tombstone чтобы не блокировать
+            const cleaned = tombstones.filter(t => t.id !== newProduct.id && t.name !== newProduct.name);
+            window.HEYS.store.set('heys_deleted_ids', cleaned);
+            console.info('[baza] ➕ 🪦 tombstone очищен от этого продукта, осталось:', cleaned.length);
+          } else {
+            console.info('[baza] ➕ ✅ продукт НЕ в tombstone');
+          }
+        }
+      } catch (_) { }
+      setProducts(newList);
+      // Проверяем: сохранилось ли в localStorage?
+      setTimeout(() => {
+        try {
+          const lsCheck = window.HEYS?.store?.get?.('heys_products') || [];
+          const found = Array.isArray(lsCheck) && lsCheck.find(p => p.id === newProduct.id);
+          console.info('[baza] ➕ 🔍 POST-CHECK (50ms): localStorage length=', lsCheck.length, '| продукт найден:', !!found);
+          if (!found) {
+            console.error('[baza] ➕ ❌ КРИТИЧНО: продукт НЕ сохранился в localStorage! useEffect guard заблокировал?');
+          }
+        } catch (_) { }
+      }, 50);
       if (window.HEYS && window.HEYS.analytics) {
         window.HEYS.analytics.trackDataOperation('products-loaded', 1);
       }
       resetDraft();
       setShowModal(false);
+      console.info('[baza] ➕ addProduct ЗАВЕРШЁН');
+      console.groupEnd();
     }
 
     /**
@@ -1643,14 +1864,116 @@
       });
     }
     function deleteRow(id) {
-      // Устанавливаем флаг намеренного удаления, чтобы useEffect не заблокировал сохранение
+      console.group('[baza] 🗑️ deleteRow — НАЧАЛО УДАЛЕНИЯ из личной базы');
+      console.info('[baza] 🎯 id для удаления:', id);
+
+      // 🔴 GUARD: если id не задан — отказываем, иначе удалим ВСЕХ у кого id=undefined
+      if (id === undefined || id === null || id === '') {
+        console.error('[baza] ❌ ОТМЕНА deleteRow: передан невалидный id =', id, '— удаление прервано!');
+        console.error('[baza] ❌ Это означает что у продукта нет поля id. Нужна миграция localStorage.');
+        console.groupEnd();
+        return;
+      }
+
+      // --- ШАГ 1: найти продукт в state ---
+      const targetProduct = products.find(p => p.id === id);
+      console.info('[baza] 📦 ШАГИ 1/7 — Продукт найден в state:', targetProduct
+        ? { id: targetProduct.id, name: targetProduct.name, kcal100: targetProduct.kcal100, protein100: targetProduct.protein100 }
+        : '❌ НЕ НАЙДЕН (id не совпадает ни с одним продуктом!)');
+      console.info('[baza] 📊 Текущий React state: products.length =', products.length);
+
+      // --- ШАГ 2: фильтрация ---
+      const filtered = products.filter(p => p.id !== id);
+      console.info('[baza] ✂️ ШАГ 2/7 — После фильтрации:', filtered.length, 'продуктов (было:', products.length, ', удалено:', products.length - filtered.length, ')');
+      if (products.length === filtered.length) {
+        console.warn('[baza] ⚠️ ВНИМАНИЕ: количество не изменилось! Продукт с id', id, 'не найден в products[]');
+      }
+
+      // --- ШАГ 3: localStorage ДО записи ---
+      const lsBefore = (window.HEYS?.store?.get?.('heys_products', null))
+        || (window.HEYS?.utils?.lsGet?.('heys_products', null));
+      console.info('[baza] 💾 ШАГ 3/7 — localStorage ДО записи:', Array.isArray(lsBefore) ? lsBefore.length + ' продуктов' : '⚠️ null/не массив');
+
+      // --- ШАГ 4: флаг intentionalDelete ---
       if (window.HEYS) {
         window.HEYS._intentionalProductDelete = true;
+        console.info('[baza] 🚩 ШАГ 4/7 — Флаг _intentionalProductDelete установлен: true');
+      } else {
+        console.warn('[baza] ⚠️ ШАГ 4/7 — window.HEYS не доступен! Флаг не установлен — сохранение может быть заблокировано');
       }
-      setProducts(products.filter(p => p.id !== id));
+
+      // --- ШАГ 5: синхронная запись в localStorage ---
+      let lsWriteMethod = 'none';
+      // 🔴 FIX: сохраняем в localStorage СИНХРОННО перед setProducts,
+      // иначе гонка условий: handleProductsUpdated читает старый localStorage (N)
+      // и восстанавливает удалённый продукт из-за проверки "не уменьшаем"
+      if (window.HEYS) {
+        if (window.HEYS.store && typeof window.HEYS.store.set === 'function') {
+          window.HEYS.store.set('heys_products', filtered);
+          lsWriteMethod = 'HEYS.store.set';
+        } else if (window.HEYS.utils && typeof window.HEYS.utils.lsSet === 'function') {
+          window.HEYS.utils.lsSet('heys_products', filtered);
+          lsWriteMethod = 'HEYS.utils.lsSet';
+        }
+      }
+      const lsAfter = (window.HEYS?.store?.get?.('heys_products', null))
+        || (window.HEYS?.utils?.lsGet?.('heys_products', null));
+      console.info('[baza] 💾 ШАГ 5/7 — localStorage ПОСЛЕ записи:', {
+        метод: lsWriteMethod,
+        количество: Array.isArray(lsAfter) ? lsAfter.length : '⚠️ null',
+        совпадает_с_filtered: Array.isArray(lsAfter) && lsAfter.length === filtered.length ? '✅ ДА' : '❌ НЕТ',
+      });
+      if (Array.isArray(lsAfter) && lsAfter.find(p => p.id === id)) {
+        console.error('[baza] ❌ КРИТИЧНО: удалённый продукт ВСЁ ЕЩЁ есть в localStorage! id=', id);
+      } else {
+        console.info('[baza] ✅ Удалённый продукт отсутствует в localStorage');
+      }
+
+      // --- ШАГ 5.5: tombstone — защита от cloud-sync resurrection ---
+      // 🪦 Записываем id+name удалённого продукта в список tombstones.
+      // handleProductsUpdated фильтрует tombstoned продукты при каждом cloud sync событии,
+      // поэтому даже если облако вернёт продукт при refresh — он будет отфильтрован.
+      try {
+        const tombstoneKey = 'heys_deleted_ids';
+        const existing = window.HEYS?.store?.get?.(tombstoneKey) || [];
+        const validExisting = Array.isArray(existing) ? existing : [];
+        const fingerprint = {
+          id: targetProduct?.id ?? id,
+          name: targetProduct?.name ?? null,
+          ts: Date.now()
+        };
+        // Лимит: храним не больше 200 tombstones (старые — первыми вытесняем)
+        const updated = [...validExisting.filter(t => t.id !== id), fingerprint].slice(-200);
+        if (window.HEYS?.store?.set) {
+          window.HEYS.store.set(tombstoneKey, updated);
+          console.info('[baza] 🪦 ШАГ 5.5/7 — tombstone записан:', { id: fingerprint.id, name: fingerprint.name, total_tombstones: updated.length });
+        } else {
+          console.warn('[baza] ⚠️ ШАГ 5.5/7 — tombstone: HEYS.store.set недоступен, tombstone не сохранён!');
+        }
+      } catch (te) {
+        console.warn('[baza] ⚠️ ШАГ 5.5/7 — tombstone save error:', te.message);
+      }
+
+      // --- ШАГ 6: setProducts ---
+      console.info('[baza] ⚛️ ШАГ 6/7 — Вызов setProducts(filtered) — React state обновится асинхронно');
+      setProducts(filtered);
+
+      // --- ШАГ 7: аналитика ---
       if (window.HEYS && window.HEYS.analytics) {
         window.HEYS.analytics.trackDataOperation('storage-op');
+        console.info('[baza] 📈 ШАГ 7/7 — analytics.trackDataOperation("storage-op") вызван');
+      } else {
+        console.info('[baza] ℹ️ ШАГ 7/7 — analytics недоступен, пропущено');
       }
+
+      console.info('[baza] ✅ deleteRow ЗАВЕРШЁН — итог:', {
+        удалённый_id: id,
+        удалённый_продукт: targetProduct?.name ?? '❌ не найден',
+        было: products.length,
+        стало: filtered.length,
+        localStorage_обновлён: lsWriteMethod !== 'none' ? '✅' : '❌',
+      });
+      console.groupEnd();
     }
     // 🔄 Синхронизация продукта из личной базы в общую
     async function syncProductToShared(localProduct) {
@@ -2809,6 +3132,8 @@
       const isSharedClone = !!product?.shared_origin_id;
       const hasSharedUpdate = mode === 'personal' && isSharedClone && !product?.user_modified && sharedUpdatedAt > clonedAt;
 
+      // [baza] диагностика рендера — отключена (v5.0.1, была спам в консоли)
+
       const copyProductParams = async () => {
         const portionsValue = Array.isArray(product?.portions)
           ? (product.portions.length ? JSON.stringify(product.portions) : '—')
@@ -3174,7 +3499,24 @@
 
       // Добавляем в локальную базу
       const newProducts = [...products, withDerived];
+      console.info('[baza] 🔵 cloneSharedProduct: было', products.length, '→ стало', newProducts.length, '| id:', withDerived.id, '| имя:', cloneName);
+      // Сохраняем в localStorage СИНХРОННО до setProducts (защита от race с handleProductsUpdated)
+      try {
+        if (window.HEYS?.store?.set) {
+          window.HEYS.store.set('heys_products', newProducts);
+          console.info('[baza] 🔵 cloneSharedProduct: localStorage сохранён синхронно');
+        }
+      } catch (_) { }
       setProducts(newProducts);
+      // Post-check
+      setTimeout(() => {
+        try {
+          const ls = window.HEYS?.store?.get?.('heys_products') || [];
+          const found = ls.find(p => p.id === withDerived.id);
+          console.info('[baza] 🔵 cloneSharedProduct POST-CHECK (50ms): ls.length=', ls.length, '| найден:', !!found);
+          if (!found) console.error('[baza] 🔵 ❌ КРИТИЧНО: клон НЕ сохранился в localStorage!');
+        } catch (_) { }
+      }, 50);
 
       HEYS.Toast?.success(`Продукт "${cloneName}" добавлен в вашу базу!`) || alert(`✅ Продукт "${cloneName}" добавлен в вашу базу!`);
       return withDerived;
@@ -3285,8 +3627,19 @@
       const d = computeDerived(clone);
       const newProduct = { ...clone, ...d };
 
-      // Добавляем в products
-      setProducts(prev => [...prev, newProduct]);
+      // Добавляем в products (cloneSharedToPersonal)
+      console.info('[baza] 🔵 cloneSharedToPersonal: id:', newProduct.id, '| имя:', newProduct.name);
+      setProducts(prev => {
+        const newList = [...prev, newProduct];
+        // Сохраняем в localStorage СИНХРОННО (защита от race)
+        try {
+          if (window.HEYS?.store?.set) {
+            window.HEYS.store.set('heys_products', newList);
+            console.info('[baza] 🔵 cloneSharedToPersonal: localStorage синхронно, count:', newList.length);
+          }
+        } catch (_) { }
+        return newList;
+      });
 
       return newProduct;
     }
@@ -3320,7 +3673,18 @@
       if (!draftProduct) return;
 
       // Добавляем только в личную базу (без публикации в shared)
-      setProducts(prev => [...prev, draftProduct]);
+      console.info('[baza] 🟡 handleMergeCreateOwn: добавление в личную, id:', draftProduct.id, '| имя:', draftProduct.name);
+      setProducts(prev => {
+        const newList = [...prev, draftProduct];
+        // Сохраняем в localStorage СИНХРОННО (защита от race)
+        try {
+          if (window.HEYS?.store?.set) {
+            window.HEYS.store.set('heys_products', newList);
+            console.info('[baza] 🟡 handleMergeCreateOwn: localStorage синхронно, count:', newList.length);
+          }
+        } catch (_) { }
+        return newList;
+      });
 
       // Закрываем модалки
       setMergeModal({ show: false, existing: null, draft: null });

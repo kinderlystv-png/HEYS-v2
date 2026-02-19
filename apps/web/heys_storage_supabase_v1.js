@@ -1026,10 +1026,34 @@
     const beforeCa = merged.filter(p => p.calcium && +p.calcium > 0).length;
 
     merged.forEach(p => {
+      // 🆕 v4.8.6: Preserve individual createdAt for correct sort order in personal list.
+      // Priority: existing camelCase createdAt → DB created_at → existing updatedAt → now
+      // This way each product keeps its unique creation timestamp, not a batch sync time.
+      if (!p.createdAt) {
+        const dbCreated = p.created_at;
+        if (dbCreated) {
+          // Parse PostgreSQL timestamptz → millis
+          const ts = typeof dbCreated === 'number'
+            ? dbCreated
+            : (() => {
+              let parsed = Date.parse(dbCreated);
+              if (!Number.isFinite(parsed)) {
+                const norm = String(dbCreated).replace(' ', 'T').replace(/(\.\d{3})\d+/, '$1').replace(/\+00$/, 'Z').replace(/([+-]\d{2})(\d{2})$/, '$1:$2');
+                parsed = Date.parse(norm);
+              }
+              return Number.isFinite(parsed) ? parsed : 0;
+            })();
+          if (ts > 0) p.createdAt = ts;
+        }
+        // fallback: keep whatever was in updatedAt before (individual per-product, if existed)
+        // но не ставим now — иначе все новые получат одинаковый batch-timestamp
+      }
       p.updatedAt = now;
     });
 
     logCritical(`🕐 [MERGE TIMESTAMP] Set updatedAt=${now} (${new Date(now).toISOString()}) for all ${merged.length} products`);
+    const withCreatedAt = merged.filter(p => p.createdAt).length;
+    logCritical(`📅 [MERGE TIMESTAMP] Products with individual createdAt: ${withCreatedAt}/${merged.length} (used for sort order)`);
     logCritical(`   Micronutrients: Fe=${beforeIron}, VitC=${beforeVitC}, Ca=${beforeCa}`);
 
     return merged;
@@ -3724,11 +3748,39 @@
         }
 
         // Теперь загружаем полные данные только если есть обновления
-        log('🔄 [CLIENT_SYNC] Loading data for client:', client_id);
-        // YandexAPI имеет встроенный retry
-        const { data, error } = await YandexAPI.from('client_kv_store')
-          .select('k,v,updated_at')
-          .eq('client_id', client_id);
+        // 📦 PAGINATED FETCH — YC API Gateway limit ~3.5MB per response
+        // При 530+ записях один запрос превышает лимит → 502 Bad Gateway
+        // Загружаем порциями по 400 записей (безопасный порог ~2.8MB)
+        log('🔄 [CLIENT_SYNC] Loading data for client (paginated):', client_id);
+        const PAGE_SIZE = 400;
+        let allData = [];
+        let pageOffset = 0;
+        let fetchError = null;
+
+        while (true) {
+          const { data: pageData, error: pageError } = await YandexAPI.rest('client_kv_store', {
+            select: 'k,v,updated_at',
+            filters: { 'eq.client_id': client_id },
+            limit: PAGE_SIZE,
+            offset: pageOffset
+          });
+
+          if (pageError) {
+            fetchError = pageError;
+            break;
+          }
+
+          const rows = pageData || [];
+          allData = allData.concat(rows);
+          logCritical(`🔍 [SYNC PAGINATED] page offset=${pageOffset}, rows=${rows.length}, total=${allData.length}`);
+
+          // Если получили меньше PAGE_SIZE — это последняя страница
+          if (rows.length < PAGE_SIZE) break;
+          pageOffset += PAGE_SIZE;
+        }
+
+        const data = allData;
+        const error = fetchError;
 
         logCritical(`🔍 [SYNC DEBUG] main data query: rows=${data?.length}, error=${error?.message || 'none'}, isNetworkFailure=${error?.isNetworkFailure}`);
 
@@ -6659,16 +6711,53 @@
         simple100: product.simple100 || 0,
         complex100: product.complex100 || 0,
         protein100: product.protein100 || 0,
-        badFat100: product.badFat100 || 0,
-        goodFat100: product.goodFat100 || 0,
+        badFat100: product.badFat100 ?? product.badfat100 ?? 0,
+        goodFat100: product.goodFat100 ?? product.goodfat100 ?? 0,
         trans100: product.trans100 || 0,
         fiber100: product.fiber100 || 0,
-        gi: product.gi,
-        harm: product.harm,
-        category: product.category,
+        gi: product.gi ?? null,
+        harm: product.harm ?? product.harmScore ?? null,
+        category: product.category ?? null,
         portions: product.portions || null,
-        description: product.description || null
+        description: product.description || null,
+        // Extended fields (v4.4.0)
+        sodium100: product.sodium100 ?? null,
+        omega3_100: product.omega3_100 ?? null,
+        omega6_100: product.omega6_100 ?? null,
+        nova_group: product.nova_group ?? product.novaGroup ?? null,
+        additives: product.additives ?? null,
+        nutrient_density: product.nutrient_density ?? product.nutrientDensity ?? null,
+        is_organic: product.is_organic ?? product.isOrganic ?? false,
+        is_whole_grain: product.is_whole_grain ?? product.isWholeGrain ?? false,
+        is_fermented: product.is_fermented ?? product.isFermented ?? false,
+        is_raw: product.is_raw ?? product.isRaw ?? false,
+        // Vitamins
+        vitamin_a: product.vitamin_a ?? product.vitaminA ?? null,
+        vitamin_c: product.vitamin_c ?? product.vitaminC ?? null,
+        vitamin_d: product.vitamin_d ?? product.vitaminD ?? null,
+        vitamin_e: product.vitamin_e ?? product.vitaminE ?? null,
+        vitamin_k: product.vitamin_k ?? product.vitaminK ?? null,
+        vitamin_b1: product.vitamin_b1 ?? product.vitaminB1 ?? null,
+        vitamin_b2: product.vitamin_b2 ?? product.vitaminB2 ?? null,
+        vitamin_b3: product.vitamin_b3 ?? product.vitaminB3 ?? null,
+        vitamin_b6: product.vitamin_b6 ?? product.vitaminB6 ?? null,
+        vitamin_b9: product.vitamin_b9 ?? product.vitaminB9 ?? null,
+        vitamin_b12: product.vitamin_b12 ?? product.vitaminB12 ?? null,
+        // Minerals
+        calcium: product.calcium ?? null,
+        iron: product.iron ?? null,
+        magnesium: product.magnesium ?? null,
+        phosphorus: product.phosphorus ?? null,
+        potassium: product.potassium ?? null,
+        zinc: product.zinc ?? null,
+        selenium: product.selenium ?? null,
+        iodine: product.iodine ?? null
       };
+      console.info('[baza] 📤 publishToShared (supabase) vitamins:', {
+        vitamin_b6: productData.vitamin_b6, vitamin_b12: productData.vitamin_b12,
+        potassium: productData.potassium, calcium: productData.calcium,
+        sodium100: productData.sodium100
+      });
 
       const { data, error } = await YandexAPI.rpc('publish_shared_product_by_curator', {
         p_curator_id: curatorId,
@@ -6694,6 +6783,7 @@
 
         // Добавляем продукт в локальный кэш немедленно (чтобы не ждать re-fetch)
         const newSharedProduct = {
+          ...product,
           ...productData,
           id: data?.id,
           created_at: new Date().toISOString()

@@ -85,6 +85,31 @@
         try { localStorage.removeItem(key); } catch { }
     };
 
+    // NET Atwater migration: recompute kcal100 = 3×Б + 4×У + 9×Ж
+    // Fixes product list saved with old protein×4 formula (v3.9.0 regression)
+    const migrateProductsKcalNetAtwater = (list) => {
+        if (!Array.isArray(list) || list.length === 0) return list;
+        const toNum = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+        const round1 = (v) => Math.round(v * 10) / 10;
+        let changed = 0;
+        const result = list.map((p) => {
+            if (!p || p._kcalNetAtwater) return p;
+            const carbs = p.carbs100 != null
+                ? toNum(p.carbs100)
+                : toNum(p.simple100) + toNum(p.complex100);
+            const fat = p.fat100 != null
+                ? toNum(p.fat100)
+                : toNum(p.badFat100) + toNum(p.goodFat100) + toNum(p.trans100);
+            const newKcal = round1(3 * toNum(p.protein100) + 4 * carbs + 9 * fat);
+            if (newKcal !== toNum(p.kcal100)) changed++;
+            return { ...p, kcal100: newKcal, _kcalNetAtwater: true };
+        });
+        if (changed > 0) {
+            console.info('[HEYS.migration] ✅ NET Atwater kcal migration:', { changed, total: list.length });
+        }
+        return result;
+    };
+
     function useThemePreference() {
         const React = window.React;
         const { useState, useEffect, useMemo, useCallback } = React;
@@ -984,9 +1009,11 @@
                 // Не автовыбираем клиента — куратор должен выбрать сам через модалку
                 // clientId остаётся null → показывается модалка выбора клиента
 
-                const loadedProducts = Array.isArray(readStoredValue('heys_products', []))
+                const rawProducts = Array.isArray(readStoredValue('heys_products', []))
                     ? readStoredValue('heys_products', [])
                     : [];
+                const loadedProducts = migrateProductsKcalNetAtwater(rawProducts);
+                if (loadedProducts !== rawProducts) writeStoredValue('heys_products', loadedProducts);
                 setProducts(loadedProducts);
                 setSyncVer((v) => v + 1);
             } catch (e) {

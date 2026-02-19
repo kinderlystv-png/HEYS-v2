@@ -154,6 +154,11 @@
         }, []);
 
         React.useEffect(() => {
+            // v5.0.2: Дедупликация — heys_storage_supabase диспатчит оба события
+            // (heys:products-updated + heysProductsUpdated) последовательно.
+            // Без дедупликации setSyncVer вызывается дважды → 2 React-рендера на каждый sync.
+            let _lastProductsVerTs = 0;
+
             const handleProductsUpdate = (event) => {
                 const detail = event?.detail || {};
                 const incoming = detail.products;
@@ -164,6 +169,11 @@
 
                 setProducts(latest);
                 if (!initialSyncDoneRef.current) return;
+
+                // Дедупликация: пропускаем если уже отреагировали в течение 300мс
+                const now = Date.now();
+                if (now - _lastProductsVerTs < 300) return;
+                _lastProductsVerTs = now;
                 setSyncVer((v) => v + 1);
             };
 

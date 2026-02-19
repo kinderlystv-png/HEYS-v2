@@ -406,8 +406,8 @@
         const computeTEFKcal100 = (p) => {
           const carbs = (+p.carbs100) || ((+p.simple100 || 0) + (+p.complex100 || 0));
           const fat = (+p.fat100) || ((+p.badFat100 || 0) + (+p.goodFat100 || 0) + (+p.trans100 || 0));
-          // v3.9.0: Standard Atwater factors (4/4/9). TEF is calculated separately in TDEE.
-          return Math.round((4 * (+p.protein100 || 0) + 4 * carbs + 9 * fat) * 10) / 10;
+          // NET Atwater: protein 3 kcal/g (TEF 25% built-in: 4×0.75=3), carbs 4 kcal/g, fat 9 kcal/g
+          return Math.round((3 * (+p.protein100 || 0) + 4 * carbs + 9 * fat) * 10) / 10;
         };
         const additivesList = Array.isArray(finalProduct.additives) ? finalProduct.additives : undefined;
         const novaGroup = finalProduct.nova_group ?? finalProduct.novaGroup;

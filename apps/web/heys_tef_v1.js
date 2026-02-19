@@ -1,33 +1,33 @@
 // heys_tef_v1.js — Thermic Effect of Food (TEF) Module v1.0.0
 // Единый источник правды для расчёта TEF во всём приложении
 // Научное обоснование: Westerterp 2004, Tappy 1996
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
 
   // === КОНСТАНТЫ ===
-  
+
   /**
    * Коэффициенты TEF по макронутриентам
    * Научные диапазоны: Protein 20-30%, Carbs 5-10%, Fat 0-3%
    * Используем средние значения для точности
    */
   const TEF_COEFFICIENTS = {
-    protein: 0.25,    // 25% калорий белка уходит на переваривание
+    protein: 0,       // 0% — TEF уже встроен в коэффициент NET Atwater (3 kcal/g вместо 4)
     carbs: 0.075,     // 7.5% калорий углеводов
     fat: 0.015        // 1.5% калорий жиров
   };
-  
+
   /**
    * Atwater факторы (ккал на грамм)
    */
   const ATWATER = {
-    protein: 4,
+    protein: 3, // NET Atwater: TEF 25% built-in (4 × 0.75 = 3)
     carbs: 4,
     fat: 9
   };
-  
+
   /**
    * Научная информация для UI
    */
@@ -49,7 +49,7 @@
   };
 
   // === ФУНКЦИИ ===
-  
+
   /**
    * Рассчитать TEF из макронутриентов (в граммах)
    * @param {number} proteinG - граммы белка
@@ -61,11 +61,11 @@
     proteinG = proteinG || 0;
     carbsG = carbsG || 0;
     fatG = fatG || 0;
-    
+
     const proteinTEF = proteinG * ATWATER.protein * TEF_COEFFICIENTS.protein;
     const carbsTEF = carbsG * ATWATER.carbs * TEF_COEFFICIENTS.carbs;
     const fatTEF = fatG * ATWATER.fat * TEF_COEFFICIENTS.fat;
-    
+
     return {
       total: Math.round(proteinTEF + carbsTEF + fatTEF),
       breakdown: {
@@ -75,7 +75,7 @@
       }
     };
   }
-  
+
   /**
    * Рассчитать TEF из объекта с макросами
    * @param {Object} macros - { prot, carbs, fat } или { protein, carbs, fat }
@@ -83,14 +83,14 @@
    */
   function calculateFromMacros(macros) {
     if (!macros) return { total: 0, breakdown: { protein: 0, carbs: 0, fat: 0 } };
-    
+
     const prot = macros.prot || macros.protein || 0;
     const carbs = macros.carbs || macros.carbohydrates || 0;
     const fat = macros.fat || macros.fats || 0;
-    
+
     return calculate(prot, carbs, fat);
   }
-  
+
   /**
    * Рассчитать TEF из dayTot (суммы дня)
    * @param {Object} dayTot - { prot, carbs, fat, ... }
@@ -100,7 +100,7 @@
     if (!dayTot) return { total: 0, breakdown: { protein: 0, carbs: 0, fat: 0 } };
     return calculate(dayTot.prot || 0, dayTot.carbs || 0, dayTot.fat || 0);
   }
-  
+
   /**
    * Рассчитать TEF из meals через pIndex
    * @param {Array} meals - массив приёмов пищи
@@ -112,25 +112,25 @@
     if (!meals || !meals.length) {
       return { total: 0, breakdown: { protein: 0, carbs: 0, fat: 0 } };
     }
-    
+
     let totalProt = 0, totalCarbs = 0, totalFat = 0;
-    
+
     for (const meal of meals) {
       if (!meal.items) continue;
       for (const item of meal.items) {
         const product = getProductFromItem ? getProductFromItem(item, pIndex) : pIndex?.byId?.get(item.product_id);
         if (!product) continue;
-        
+
         const g = item.grams || 0;
         totalProt += (product.protein100 || 0) * g / 100;
         totalCarbs += ((product.simple100 || 0) + (product.complex100 || 0)) * g / 100;
         totalFat += ((product.badFat100 || 0) + (product.goodFat100 || 0) + (product.trans100 || 0)) * g / 100;
       }
     }
-    
+
     return calculate(totalProt, totalCarbs, totalFat);
   }
-  
+
   /**
    * Получить только число TEF (для простых случаев)
    * @param {number} proteinG
@@ -141,7 +141,7 @@
   function getTotal(proteinG, carbsG, fatG) {
     return calculate(proteinG, carbsG, fatG).total;
   }
-  
+
   /**
    * Форматировать TEF для отображения в UI
    * @param {Object} tefData - результат calculate()
@@ -151,9 +151,9 @@
     if (!tefData || !tefData.total) {
       return { label: 'TEF', value: '0', details: '', tooltip: '' };
     }
-    
+
     const { total, breakdown } = tefData;
-    
+
     return {
       label: '🔥 Переваривание пищи (TEF)',
       value: `${total}`,
@@ -161,7 +161,7 @@
       tooltip: `Термический эффект пищи:\n• Белок (25%): ${breakdown.protein} ккал\n• Углеводы (7.5%): ${breakdown.carbs} ккал\n• Жиры (1.5%): ${breakdown.fat} ккал`
     };
   }
-  
+
   /**
    * Проверить, значим ли TEF (> 50 ккал)
    * @param {number} tefTotal
@@ -172,24 +172,24 @@
   }
 
   // === ЭКСПОРТ ===
-  
+
   HEYS.TEF = {
     // Константы
     COEFFICIENTS: TEF_COEFFICIENTS,
     ATWATER: ATWATER,
     SCIENCE_INFO: SCIENCE_INFO,
-    
+
     // Функции расчёта
     calculate,
     calculateFromMacros,
     calculateFromDayTot,
     calculateFromMeals,
     getTotal,
-    
+
     // UI хелперы
     format,
     isSignificant,
-    
+
     // Версия
     VERSION: '1.0.0'
   };
