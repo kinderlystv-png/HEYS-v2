@@ -2,11 +2,11 @@
  * 🧪 Пример unit-теста для HEYS (Vitest)
  * Паттерн: describe → it → expect
  */
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Пример тестируемого модуля
 const calculateKcal = (protein: number, carbs: number, fat: number) => {
-  return protein * 4 + carbs * 4 + fat * 9;
+  return protein * 3 + carbs * 4 + fat * 9; // NET Atwater: protein 3 kcal/g (TEF 25% built-in)
 };
 
 const validateProduct = (product: { name: string; kcal100: number }) => {
@@ -23,15 +23,15 @@ describe('Nutrition Calculations', () => {
   describe('calculateKcal', () => {
     it('should calculate calories correctly', () => {
       // Arrange
-      const protein = 10; // 40 kcal
+      const protein = 10; // 30 kcal
       const carbs = 20;   // 80 kcal
       const fat = 5;      // 45 kcal
-      
+
       // Act
       const result = calculateKcal(protein, carbs, fat);
-      
+
       // Assert
-      expect(result).toBe(165);
+      expect(result).toBe(155);
     });
 
     it('should return 0 for zero macros', () => {
@@ -40,7 +40,7 @@ describe('Nutrition Calculations', () => {
 
     it('should handle decimal values', () => {
       const result = calculateKcal(10.5, 20.5, 5.5);
-      expect(result).toBeCloseTo(173.5, 1);
+      expect(result).toBeCloseTo(163, 1);
     });
   });
 
@@ -76,9 +76,9 @@ describe('Mocking Example', () => {
 
   it('should call API with correct params', async () => {
     mockFetch.mockResolvedValueOnce({ data: [] });
-    
+
     await mockFetch('/api/products', { method: 'GET' });
-    
+
     expect(mockFetch).toHaveBeenCalledWith('/api/products', { method: 'GET' });
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });

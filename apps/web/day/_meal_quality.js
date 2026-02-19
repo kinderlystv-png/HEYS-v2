@@ -533,7 +533,7 @@
         }
 
         if (kcal > 0) {
-            const protPct = (prot * 4) / kcal;
+            const protPct = (prot * 3) / kcal;
             const carbPct = (carbs * 4) / kcal;
             const fatPct = (fat * 9) / kcal;
             const deviation = Math.abs(protPct - ideal.protPct) + Math.abs(carbPct - ideal.carbPct) + Math.abs(fatPct - ideal.fatPct);
@@ -895,7 +895,7 @@
             positiveBadges.push({ type: '🌈', ok: true, label: 'Разнообразие' });
         }
 
-        const protCalRatio = kcal > 0 ? (prot * 4) / kcal : 0;
+        const protCalRatio = kcal > 0 ? (prot * 3) / kcal : 0;
         if (protCalRatio >= 0.20 && protCalRatio <= 0.40 && prot >= 10) {
             bonusPoints += 2;
             positiveBadges.push({ type: '💪', ok: true, label: 'Белок' });
@@ -1083,7 +1083,7 @@
                         issues.push('белок >' + 50 + 'г: -3');
                     }
                     if (totals.kcal > 0) {
-                        const protPct = (totals.prot * 4) / totals.kcal;
+                        const protPct = (totals.prot * 3) / totals.kcal;
                         const carbPct = (totals.carbs * 4) / totals.kcal;
                         const fatPct = (totals.fat * 9) / totals.kcal;
                         const deviation = Math.abs(protPct - 0.25) + Math.abs(carbPct - 0.45) + Math.abs(fatPct - 0.30);
