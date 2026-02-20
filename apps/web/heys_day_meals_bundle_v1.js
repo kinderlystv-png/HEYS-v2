@@ -3090,6 +3090,16 @@
                             if (c.includes('орех') || c.includes('семеч') || c.includes('миндал') || c.includes('фундук')) return 'snacks';
                             return 'other';
                         };
+                        const getGrainSubtype = (name) => {
+                            const _n = (name || '').toLowerCase();
+                            if (_n.includes('овсян') || _n.includes('каша') || _n.includes('мюсли') ||
+                                _n.includes('гранол') || _n.includes('хлопь') || _n.includes('отруб')) return 'breakfast_grain';
+                            if (_n.includes('блин') || _n.includes('оладь') || _n.includes('лепёшк') ||
+                                _n.includes('тортилья') || _n.includes('лаваш') || _n.includes('пицц')) return 'flatbread_grain';
+                            if (_n.includes('макарон') || _n.includes('паста') || _n.includes('лапша') ||
+                                _n.includes('спагет')) return 'pasta_grain';
+                            return 'generic_grain';
+                        };
                         const getDominantMacro = (prot, carbs, fat, kcal) => {
                             if (!kcal || kcal < 1) return 'macro_mixed';
                             if ((prot * 3) / kcal >= 0.35) return 'macro_protein';
@@ -3101,8 +3111,14 @@
                         const origMacroCat = origSemCat === 'other'
                             ? getDominantMacro(per.prot100 || 0, per.carbs100 || 0, per.fat100 || 0, currentKcal)
                             : null;
+                        const origGrainSubtype = origSemCat === 'grains' ? getGrainSubtype(prod.name) : null;
 
-                        console.info(_LOG, '🏷️ category detection', { catSource: _catSource, semCat: origSemCat, macroCat: origMacroCat || '—' });
+                        console.info(_LOG, '🏷️ category detection', {
+                            catSource: _catSource,
+                            semCat: origSemCat,
+                            macroCat: origMacroCat || '—',
+                            grainSubtype: origGrainSubtype || '—',
+                        });
 
                         const _sharedList = (() => {
                             const _paths = [
@@ -3234,6 +3250,20 @@
                                 const fiberBonus = altFiber > origFiber + 1 ? 10 : 0;
                                 const improvementScore = harmImprov + Math.min(35, savingPct * 0.45) + fiberBonus;
                                 const familiarBonus = alt._familiar ? 10 : 0;
+                                const altGrainSubtype = origSemCat === 'grains' ? getGrainSubtype(alt.name) : null;
+                                let grainSubtypeBonus = 0;
+                                if (origGrainSubtype && altGrainSubtype) {
+                                    if (origGrainSubtype === altGrainSubtype) {
+                                        grainSubtypeBonus = 8;
+                                    } else if (
+                                        (origGrainSubtype === 'breakfast_grain' && altGrainSubtype === 'flatbread_grain') ||
+                                        (origGrainSubtype === 'flatbread_grain' && altGrainSubtype === 'breakfast_grain')
+                                    ) {
+                                        grainSubtypeBonus = -12;
+                                    } else {
+                                        grainSubtypeBonus = -4;
+                                    }
+                                }
                                 let pickerScore = 50;
                                 if (_pickerFn && _pickerScenario) {
                                     try {
@@ -3253,12 +3283,19 @@
                                         pickerScore = 50;
                                     }
                                 }
-                                const composite = pickerScore * 0.35 + macroSimilarity * 0.30 + improvementScore * 0.25 + familiarBonus * 0.10 + portionPenalty;
+                                const composite = pickerScore * 0.35 + macroSimilarity * 0.30 + improvementScore * 0.25 + familiarBonus * 0.10 + portionPenalty + grainSubtypeBonus;
                                 scoredCandidates.push({
                                     name: alt.name, kcal: altKcal, harm: altHarm, saving: savingPct,
                                     familiar: alt._familiar, portionMode, typicalAltGrams, actualAltKcal,
-                                    scores: { picker: Math.round(pickerScore * 10) / 10, macroSim: Math.round(macroSimilarity * 10) / 10, improvement: Math.round(improvementScore * 10) / 10, familiarBonus, portionPenalty, composite: Math.round(composite * 10) / 10 },
-                                    breakdown: { harmImprov: Math.round(harmImprov * 10) / 10, savingBonus: Math.round(Math.min(35, savingPct * 0.45) * 10) / 10, fiberBonus },
+                                    scores: { picker: Math.round(pickerScore * 10) / 10, macroSim: Math.round(macroSimilarity * 10) / 10, improvement: Math.round(improvementScore * 10) / 10, familiarBonus, portionPenalty, grainSubtypeBonus, composite: Math.round(composite * 10) / 10 },
+                                    breakdown: {
+                                        harmImprov: Math.round(harmImprov * 10) / 10,
+                                        savingBonus: Math.round(Math.min(35, savingPct * 0.45) * 10) / 10,
+                                        fiberBonus,
+                                        grainSubtype: origSemCat === 'grains'
+                                            ? `${origGrainSubtype || '—'}→${altGrainSubtype || '—'}`
+                                            : '—',
+                                    },
                                 });
                                 if (composite > bestComposite) {
                                     bestComposite = composite;
@@ -3274,7 +3311,7 @@
                             name: c.name, kcal: c.kcal, saving: c.saving + '%', harm: c.harm, familiar: c.familiar, portionMode: c.portionMode,
                             portion: `${c.typicalAltGrams}г → ${c.actualAltKcal}ккал (orig ${actualCurrentKcal}ккал)`,
                             composite: c.scores.composite,
-                            breakdown: `picker=${c.scores.picker} | macroSim=${c.scores.macroSim} | improv=${c.scores.improvement}(harm=${c.breakdown.harmImprov},save=${c.breakdown.savingBonus},fiber=${c.breakdown.fiberBonus}) | fam=${c.scores.familiarBonus} | portionPenalty=${c.scores.portionPenalty}`,
+                            breakdown: `picker=${c.scores.picker} | macroSim=${c.scores.macroSim} | improv=${c.scores.improvement}(harm=${c.breakdown.harmImprov},save=${c.breakdown.savingBonus},fiber=${c.breakdown.fiberBonus}) | fam=${c.scores.familiarBonus} | grainSubtype=${c.scores.grainSubtypeBonus}(${c.breakdown.grainSubtype}) | portionPenalty=${c.scores.portionPenalty}`,
                         })));
 
                         if (!best || bestComposite < 28) {
@@ -3311,7 +3348,7 @@
                             original: prod.name, originalKcal: currentKcal, replacement: best.name,
                             saving: best.saving + '%', composite: best.score, portionMode: best.portionMode,
                             portion: `${G}г → ${best.actualCurrentKcal}ккал | замена ~${best.actualAltKcal}ккал`,
-                            semCat: origSemCat, macroCat: origMacroCat || '—', candidatesTotal: candidates.length,
+                            semCat: origSemCat, grainSubtype: origGrainSubtype || '—', macroCat: origMacroCat || '—', candidatesTotal: candidates.length,
                         });
                         return best;
                     };
