@@ -733,6 +733,27 @@
                             if (_isDoughy) return -5;
                             return 0;
                         };
+                        const getFoodFormFactor = (name, semCat) => {
+                            const _n = (name || '').toLowerCase();
+                            if (
+                                semCat === 'sauce' || semCat === 'oil' ||
+                                _n.includes('творожн') && _n.includes('сыр') ||
+                                _n.includes('сливочн') && _n.includes('сыр') ||
+                                _n.includes('крем-сыр') || _n.includes('плавлен') ||
+                                _n.includes('намазк') || _n.includes('паштет') ||
+                                _n.includes('хумус') || _n.includes('арахисов') && _n.includes('паста')
+                            ) return 'spreadable';
+                            if (semCat === 'drink' || _n.includes('кефир') || _n.includes('йогурт пить')) return 'liquid';
+                            if (
+                                _n.includes('суп') || _n.includes('котлет') || _n.includes('тефтел') ||
+                                _n.includes('куриц') || _n.includes('индейк') || _n.includes('говядин') ||
+                                _n.includes('свинин') || _n.includes('рыба') || _n.includes('лосос') ||
+                                _n.includes('минтай') || _n.includes('салат') || _n.includes('запек') ||
+                                _n.includes('туш') || _n.includes('шашлык') || _n.includes('плов') ||
+                                _n.includes('омлет') || _n.includes('жаркое')
+                            ) return 'solid_meal';
+                            return 'neutral';
+                        };
                         // Dominant macro fallback: for products where semantic cat = 'other'
                         const getDominantMacro = (prot, carbs, fat, kcal) => {
                             if (!kcal || kcal < 1) return 'macro_mixed';
@@ -742,6 +763,7 @@
                             return 'macro_mixed';
                         };
                         const origSemCat = getSemanticCat(prod.name, prod.category);
+                        const origFormFactor = getFoodFormFactor(prod.name, origSemCat);
                         const origMacroCat = origSemCat === 'other'
                             ? getDominantMacro(per.prot100 || 0, per.carbs100 || 0, per.fat100 || 0, currentKcal)
                             : null;
@@ -750,6 +772,7 @@
                         console.info(_LOG, '🏷️ category detection', {
                             catSource: _catSource,
                             semCat: origSemCat,
+                            formFactor: origFormFactor,
                             macroCat: origMacroCat || '—',
                             grainSubtype: origGrainSubtype || '—',
                         });
@@ -787,7 +810,7 @@
                         // #2 Adaptive noSaving threshold: low-kcal products need softer filter
                         const _noSavingThreshold = currentKcal < 200 ? 0.75 : 0.90;
                         // Filter: real food, category-compatible, meaningful saving
-                        const _rejectLog = { selfMatch: 0, mealItem: 0, lowKcal: 0, lowMacro: 0, noSaving: 0, tooLowKcal: 0, wrongCat: 0, passed: 0 };
+                        const _rejectLog = { selfMatch: 0, mealItem: 0, lowKcal: 0, lowMacro: 0, noSaving: 0, tooLowKcal: 0, wrongCat: 0, formMismatch: 0, passed: 0 };
                         const candidates = candidatePool.filter((alt) => {
                             if (alt.id === prod.id) { _rejectLog.selfMatch++; return false; }
                             if (_mealItemIds.has(alt.id) || _mealItemIds.has(alt.product_id)) { _rejectLog.mealItem++; return false; }
@@ -801,6 +824,7 @@
                             if (altKcal >= currentKcal * _noSavingThreshold) { _rejectLog.noSaving++; return false; } // adaptive: 75% for <200kcal, 90% otherwise
                             if (altKcal < currentKcal * 0.15) { _rejectLog.tooLowKcal++; return false; } // guard: cap at 85% saving
                             const altSemCat = getSemanticCat(alt.name, alt.category);
+                            const altFormFactor = getFoodFormFactor(alt.name, altSemCat);
                             if (origSemCat !== 'other') {
                                 if (altSemCat !== origSemCat) { _rejectLog.wrongCat++; return false; }
                             } else {
@@ -811,6 +835,11 @@
                                     altKcal,
                                 );
                                 if (origMacroCat !== 'macro_mixed' && altMacroCat !== 'macro_mixed' && origMacroCat !== altMacroCat) { _rejectLog.wrongCat++; return false; }
+                            }
+                            // Hard guard: spreadable products should not be replaced by solid meals
+                            if (origFormFactor === 'spreadable' && altFormFactor === 'solid_meal') {
+                                _rejectLog.formMismatch++;
+                                return false;
                             }
                             _rejectLog.passed++;
                             return true;
@@ -914,6 +943,7 @@
                                 const familiarBonus = alt._familiar ? 10 : 0;
                                 // 3.1 Grains subtype bias: keep breakfast grains close to breakfast grains
                                 const altSemCatForScore = getSemanticCat(alt.name, alt.category);
+                                const altFormFactor = getFoodFormFactor(alt.name, altSemCatForScore);
                                 const altGrainSubtype = origSemCat === 'grains' ? getGrainSubtype(alt.name) : null;
                                 let grainSubtypeBonus = 0;
                                 if (origGrainSubtype && altGrainSubtype) {
@@ -933,6 +963,12 @@
                                     _pickerScenario?.scenario,
                                     altSemCatForScore,
                                 );
+                                let formFactorBonus = 0;
+                                if (origFormFactor === 'spreadable' && altFormFactor !== 'spreadable') {
+                                    formFactorBonus = altFormFactor === 'solid_meal' ? -24 : -12;
+                                } else if (origFormFactor === altFormFactor && origFormFactor !== 'neutral') {
+                                    formFactorBonus = 6;
+                                }
                                 // 4. Product Picker contextual score (optional)
                                 // calculateProductScore returns { totalScore, breakdown } — extract number!
                                 let pickerScore = 50;
@@ -956,7 +992,7 @@
                                     }
                                 }
                                 // Composite: productPicker 35% + macroSimilarity 30% + improvement 25% + familiarity 10% + portionPenalty + grains subtype bias + late-evening preparation penalty
-                                const composite = pickerScore * 0.35 + macroSimilarity * 0.30 + improvementScore * 0.25 + familiarBonus * 0.10 + portionPenalty + grainSubtypeBonus + eveningPrepPenalty;
+                                const composite = pickerScore * 0.35 + macroSimilarity * 0.30 + improvementScore * 0.25 + familiarBonus * 0.10 + portionPenalty + grainSubtypeBonus + eveningPrepPenalty + formFactorBonus;
                                 scoredCandidates.push({
                                     name: alt.name,
                                     kcal: altKcal,
@@ -974,6 +1010,7 @@
                                         portionPenalty,
                                         grainSubtypeBonus,
                                         eveningPrepPenalty,
+                                        formFactorBonus,
                                         composite: Math.round(composite * 10) / 10,
                                     },
                                     breakdown: {
@@ -984,6 +1021,7 @@
                                             ? `${origGrainSubtype || '—'}→${altGrainSubtype || '—'}`
                                             : '—',
                                         prepPenaltyReason: eveningPrepPenalty < 0 ? 'late-evening fried/doughy' : 'none',
+                                        formFactor: `${origFormFactor}→${altFormFactor}`,
                                     },
                                 });
                                 if (composite > bestComposite) {
@@ -1006,7 +1044,7 @@
                             portionMode: c.portionMode,
                             portion: `${c.typicalAltGrams}г → ${c.actualAltKcal}ккал (orig ${actualCurrentKcal}ккал)`,
                             composite: c.scores.composite,
-                            breakdown: `picker=${c.scores.picker} | macroSim=${c.scores.macroSim} | improv=${c.scores.improvement}(harm=${c.breakdown.harmImprov},save=${c.breakdown.savingBonus},fiber=${c.breakdown.fiberBonus}) | fam=${c.scores.familiarBonus} | grainSubtype=${c.scores.grainSubtypeBonus}(${c.breakdown.grainSubtype}) | portionPenalty=${c.scores.portionPenalty} | eveningPrep=${c.scores.eveningPrepPenalty}(${c.breakdown.prepPenaltyReason})`,
+                            breakdown: `picker=${c.scores.picker} | macroSim=${c.scores.macroSim} | improv=${c.scores.improvement}(harm=${c.breakdown.harmImprov},save=${c.breakdown.savingBonus},fiber=${c.breakdown.fiberBonus}) | fam=${c.scores.familiarBonus} | grainSubtype=${c.scores.grainSubtypeBonus}(${c.breakdown.grainSubtype}) | portionPenalty=${c.scores.portionPenalty} | eveningPrep=${c.scores.eveningPrepPenalty}(${c.breakdown.prepPenaltyReason}) | form=${c.scores.formFactorBonus}(${c.breakdown.formFactor})`,
                         })));
 
                         if (!best || bestComposite < 28) {
