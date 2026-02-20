@@ -1311,7 +1311,7 @@
             const pluralMeals = mealsCount === 2 ? 'приёма' : mealsCount >= 5 ? 'приёмов' : 'приёма';
             headerTitle = `${mealsCount} ${pluralMeals} до сна`;
             headerTimeRange = `${mealsPlan.summary.timelineStart}-${mealsPlan.summary.timelineEnd}`;
-            headerSubtitle = 'Не знаете, что правильно поесть сегодня? Умный планировщик подскажет вам. Вы можете просто следовать его рекомендациям, и ваш день будет идеальным по питанию!';
+            headerSubtitle = 'Следуйте плану — и ваш день будет идеальным по питанию';
         } else {
             headerTitle = scenarioTitle;
             headerTimeRange = !isGoalReached && timing?.ideal ? timing.ideal : null;
@@ -1324,19 +1324,18 @@
             className: 'meal-rec-card__header',
             onClick: () => setExpanded(!expanded)
         },
-            h('div', { className: 'meal-rec-card__icon' }, displayIcon),
             h('div', { className: 'meal-rec-card__title' },
                 h('div', { className: 'meal-rec-card__badge-wrap' },
                     h('div', { className: 'meal-rec-card__badge' }, 'Умный планировщик')
+                ),
+                h('div', { className: 'meal-rec-card__subtitle' },
+                    headerSubtitle
                 ),
                 h('div', { className: 'meal-rec-card__time' },
                     headerTitle,
                     headerTimeRange && h('span', { className: 'meal-rec-card__time-value' },
                         ` · ${headerTimeRange}`
                     )
-                ),
-                h('div', { className: 'meal-rec-card__subtitle' },
-                    headerSubtitle
                 )
             ),
             h('div', { className: 'meal-rec-card__expand-icon' },
@@ -1348,8 +1347,8 @@
         const scienceBadge = (() => {
             const InfoBtn = global.HEYS?.InsightsPI?.uiDashboard?.InfoButton;
             if (!InfoBtn) return null;
-            
-            return h('div', { 
+
+            return h('div', {
                 className: 'meal-rec-card__science-corner',
                 onClick: (e) => e.stopPropagation() // Prevent card expansion
             },
@@ -1596,10 +1595,8 @@
                                 disabled: userFeedback !== null,
                                 title: 'Нет, не помогла'
                             }, '👎'),
-                            userFeedback &,
-            style: { position: 'relative' } // Ensure relative positioning for absolute badge
-        },
-            scienceBadge, // Top-right badge              )
+                            userFeedback && h('span', { className: 'meal-rec-card__feedback-thanks' }, '💚')
+                        )
                     )
                 );
             }
@@ -1608,8 +1605,10 @@
         // Main card container
         const cardElement = h('div', {
             className: `meal-rec-card ${expanded ? 'meal-rec-card--expanded' : ''}`,
-            'data-testid': 'meal-rec-card'
+            'data-testid': 'meal-rec-card',
+            style: { position: 'relative' }
         },
+            scienceBadge,
             cardHeader,
             macroChips,
             expandedDetails
