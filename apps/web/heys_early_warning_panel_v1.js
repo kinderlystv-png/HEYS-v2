@@ -7,7 +7,6 @@
  * Features:
  * - Severity-based grouping (🚨 HIGH → ⚠️ MEDIUM → ℹ️ LOW)
  * - WarningCard component с pattern details + actionable advice
- * - Dismiss functionality (persisted to localStorage)
  * - Navigate to Pattern Debugger для deep dive анализа
  * 
  * Dependencies: React, heys_utils
@@ -27,58 +26,6 @@
     }
 
     const h = React.createElement;
-
-    // Local storage key for dismissed warnings
-    const DISMISSED_WARNINGS_KEY = 'heys_dismissed_warnings';
-
-    /**
-     * Get dismissed warnings from localStorage
-     * @returns {Set<string>} Set of dismissed warning IDs
-     */
-    function getDismissedWarnings() {
-        try {
-            const U = global.HEYS?.utils || {};
-            const stored = U.lsGet ? U.lsGet(DISMISSED_WARNINGS_KEY) : localStorage.getItem(DISMISSED_WARNINGS_KEY);
-            if (!stored) return new Set();
-
-            const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored;
-            return new Set(Array.isArray(parsed) ? parsed : []);
-        } catch (err) {
-            console.warn('ews / panel ⚠️ failed to load dismissed warnings:', err);
-            return new Set();
-        }
-    }
-
-    /**
-     * Save dismissed warnings to localStorage
-     * @param {Set<string>} dismissed
-     */
-    function saveDismissedWarnings(dismissed) {
-        try {
-            const U = global.HEYS?.utils || {};
-            const arr = Array.from(dismissed);
-            if (U.lsSet) {
-                U.lsSet(DISMISSED_WARNINGS_KEY, arr);
-            } else {
-                localStorage.setItem(DISMISSED_WARNINGS_KEY, JSON.stringify(arr));
-            }
-        } catch (err) {
-            console.error('ews / panel ❌ failed to save dismissed warnings:', err);
-        }
-    }
-
-    /**
-     * Generate unique ID for warning (for dismiss tracking)
-     * @param {object} warning
-     * @returns {string}
-     */
-    function getWarningId(warning) {
-        if (!warning) return '';
-
-        // Create ID from type, pattern, and current date (warnings reset daily)
-        const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-        return `${warning.type}_${warning.pattern || 'generic'}_${date}`;
-    }
 
     /**
      * Severity config (emoji, color, priority)
@@ -124,14 +71,10 @@
      * 
      * Displays single warning with severity badge, message, detail, and actions
      */
-    function WarningCard({ warning, onDismiss, onViewDetails }) {
+    function WarningCard({ warning, onViewDetails }) {
         const [showScience, setShowScience] = useState(false);
         const severity = warning.severity || 'low';
         const config = SEVERITY_CONFIG[severity] || SEVERITY_CONFIG.low;
-
-        const handleDismiss = useCallback(() => {
-            onDismiss(warning);
-        }, [warning, onDismiss]);
 
         const toggleScience = useCallback(() => {
             setShowScience(prev => !prev);
@@ -140,7 +83,7 @@
         return h('div', {
             className: `early-warning-modal-card early-warning-modal-card--${severity}`
         },
-            // Header (severity badge + pattern name + dismiss)
+            // Header (severity badge + pattern name)
             h('div', { className: 'early-warning-modal-card__header' },
                 h('div', { className: 'early-warning-modal-card__header-left' },
                     h('span', {
@@ -155,13 +98,7 @@
                             className: 'early-warning-modal-card__severity-label'
                         }, config.label)
                     )
-                ),
-                h('button', {
-                    className: 'early-warning-modal-card__dismiss',
-                    onClick: handleDismiss,
-                    title: 'Скрыть предупреждение',
-                    'aria-label': 'Dismiss'
-                }, '×')
+                )
             ),
 
             // Main message (дружелюбное описание)
@@ -206,8 +143,6 @@
      * @param {string} props.mode - Detection mode: 'acute' (10 checks, 7d) or 'full' (25 checks, 30d)
      */
     function EarlyWarningPanel({ isOpen, onClose, warnings = [], mode = 'full' }) {
-        const [dismissed, setDismissed] = useState(() => getDismissedWarnings());
-
         // Block body scroll when modal is open
         useEffect(() => {
             if (isOpen) {
@@ -218,10 +153,7 @@
             }
         }, [isOpen]);
 
-        // Filter out dismissed warnings
-        const activeWarnings = useMemo(() => {
-            return warnings.filter(w => !dismissed.has(getWarningId(w)));
-        }, [warnings, dismissed]);
+        const activeWarnings = warnings;
 
         // Group warnings by severity
         const groupedWarnings = useMemo(() => {
@@ -251,17 +183,6 @@
             return () => document.removeEventListener('keydown', handleEscape);
         }, [isOpen, onClose]);
 
-        const handleDismiss = useCallback((warning) => {
-            const warningId = getWarningId(warning);
-            const newDismissed = new Set(dismissed);
-            newDismissed.add(warningId);
-
-            setDismissed(newDismissed);
-            saveDismissedWarnings(newDismissed);
-
-            console.info('ews / panel ✅ warning dismissed:', warningId);
-        }, [dismissed]);
-
         const handleViewDetails = useCallback((warning) => {
             if (!warning.pattern) return;
 
@@ -273,21 +194,6 @@
 
             console.info('ews / panel 🔍 navigate to pattern:', warning.pattern);
         }, [onClose]);
-
-        const handleDismissAll = useCallback(() => {
-            const newDismissed = new Set(dismissed);
-            activeWarnings.forEach(w => {
-                newDismissed.add(getWarningId(w));
-            });
-
-            setDismissed(newDismissed);
-            saveDismissedWarnings(newDismissed);
-
-            console.info('ews / panel ✅ all warnings dismissed');
-
-            // Close panel after dismissing all
-            setTimeout(onClose, 300);
-        }, [activeWarnings, dismissed, onClose]);
 
         if (!isOpen) return null;
 
@@ -366,7 +272,6 @@
                                     h(WarningCard, {
                                         key: idx,
                                         warning,
-                                        onDismiss: handleDismiss,
                                         onViewDetails: handleViewDetails
                                     })
                                 )
@@ -381,7 +286,6 @@
                                     h(WarningCard, {
                                         key: idx,
                                         warning,
-                                        onDismiss: handleDismiss,
                                         onViewDetails: handleViewDetails
                                     })
                                 )
@@ -396,7 +300,6 @@
                                     h(WarningCard, {
                                         key: idx,
                                         warning,
-                                        onDismiss: handleDismiss,
                                         onViewDetails: handleViewDetails
                                     })
                                 )
@@ -406,10 +309,6 @@
 
                 // Footer (actions)
                 activeWarnings.length > 0 && h('div', { className: 'early-warning-modal__footer' },
-                    h('button', {
-                        className: 'early-warning-modal__footer-btn early-warning-modal__footer-btn--dismiss',
-                        onClick: handleDismissAll
-                    }, 'Скрыть всё'),
                     h('button', {
                         className: 'early-warning-modal__footer-btn early-warning-modal__footer-btn--primary',
                         onClick: onClose
