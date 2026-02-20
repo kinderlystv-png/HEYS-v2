@@ -1319,6 +1319,7 @@
         }
 
         // Compact header (collapsed state)
+        // 🆕 v27.9: Extracted science badge to top-right corner
         const cardHeader = h('div', {
             className: 'meal-rec-card__header',
             onClick: () => setExpanded(!expanded)
@@ -1326,12 +1327,7 @@
             h('div', { className: 'meal-rec-card__icon' }, displayIcon),
             h('div', { className: 'meal-rec-card__title' },
                 h('div', { className: 'meal-rec-card__badge-wrap' },
-                    h('div', { className: 'meal-rec-card__badge' }, 'Умный планировщик'),
-                    (() => {
-                        const InfoBtn = global.HEYS?.InsightsPI?.uiDashboard?.InfoButton;
-                        if (!InfoBtn) return null;
-                        return h(InfoBtn, { infoKey: 'SMART_PLANNER', size: 'small' });
-                    })()
+                    h('div', { className: 'meal-rec-card__badge' }, 'Умный планировщик')
                 ),
                 h('div', { className: 'meal-rec-card__time' },
                     headerTitle,
@@ -1347,6 +1343,20 @@
                 expanded ? '▲' : '▼'
             )
         );
+
+        // 🆕 v27.9: Separate Scientific Approach Badge (Top Right)
+        const scienceBadge = (() => {
+            const InfoBtn = global.HEYS?.InsightsPI?.uiDashboard?.InfoButton;
+            if (!InfoBtn) return null;
+            
+            return h('div', { 
+                className: 'meal-rec-card__science-corner',
+                onClick: (e) => e.stopPropagation() // Prevent card expansion
+            },
+                h('span', { className: 'meal-rec-card__science-label' }, 'Научный подход'),
+                h(InfoBtn, { infoKey: 'SMART_PLANNER', size: 'small' })
+            );
+        })();
 
         // Макро-чипы (skip for GOAL_REACHED)
         // 🆕 v26: В multi-meal режиме показываем суммарные макросы из плана
@@ -1586,8 +1596,10 @@
                                 disabled: userFeedback !== null,
                                 title: 'Нет, не помогла'
                             }, '👎'),
-                            userFeedback && h('span', { className: 'meal-rec-card__feedback-thanks' }, '💚')
-                        )
+                            userFeedback &,
+            style: { position: 'relative' } // Ensure relative positioning for absolute badge
+        },
+            scienceBadge, // Top-right badge              )
                     )
                 );
             }

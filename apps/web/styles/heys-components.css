@@ -4637,6 +4637,7 @@ body.tour-active .ios-pwa-banner {
  * ══════════════════════════════════════════════════════════════ */
 
 .meal-rec-card {
+  position: relative; /* Ensure valid context for absolute badge */
   background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
   border: 1px solid #bbf7d0;
   border-radius: 10px;
@@ -4647,6 +4648,31 @@ body.tour-active .ios-pwa-banner {
 
 .meal-rec-card:hover {
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+}
+
+/* SPRINT 9: Science Badge (Top-Right) */
+.meal-rec-card__science-corner {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 10;
+  pointer-events: auto; /* Ensure clickable */
+}
+
+.meal-rec-card__science-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #047857; /* emerald-700 */
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+
+[data-theme="dark"] .meal-rec-card__science-label {
+  color: #34d399; /* emerald-400 */
 }
 
 .meal-rec-card--expanded {
