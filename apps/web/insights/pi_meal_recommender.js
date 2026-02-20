@@ -1,5 +1,5 @@
 /**
- * HEYS Predictive Insights — Next Meal Recommender v3.6.0
+ * HEYS Predictive Insights — Next Meal Recommender v3.7.0
  * 
  * Context-aware meal guidance with 9 scenarios + 12 Pattern Integration (Phase A/B/C).
  * 
@@ -10,9 +10,17 @@
  * - PRE_SLEEP: last meal 4-5h before sleep (from planner) — v3.3.1
  * - PRE_WORKOUT: training in 1-2h
  * - POST_WORKOUT: training was 0-2h ago
- * - PROTEIN_DEFICIT: protein <50% target
+ * - PROTEIN_DEFICIT: protein <50% target (only when meals already eaten)
  * - STRESS_EATING: stress >3 OR mood <3
  * - BALANCED: default scenario
+ *
+ * v3.7.0 (20.02.2026):
+ * - FIX: "First meal of day" — when eatenKcal < 100, PROTEIN_DEFICIT no longer fires
+ *   (every nutrient is at 0% when no meals eaten — this is NOT a protein deficit)
+ *   Falls through to BALANCED: proper kcal split (remainingKcal / mealsRemaining)
+ * - FIX: Planner now called even without lastMeal.time — enables multi-meal day planning
+ *   when opening app with 0 meals eaten (was: single 300 kcal "Добираем белок")
+ * - LOG: [MEALREC] noMealsEatenToday flag in scenario evaluation
  *
  * v3.6.0 (19.02.2026):
  * - FIX: calculateOptimalTiming() now respects active insulin wave (v4.0.6)
@@ -289,13 +297,16 @@
         }
 
         // 7. PROTEIN_DEFICIT (< 50% of daily target)
-        const proteinDeficitApplicable = proteinProgress < 0.5 && remainingProtein > 10;
+        // v3.7.0: When no meals eaten today (eatenKcal < 100), this is NOT a "protein deficit" —
+        // every nutrient is at 0%. Use BALANCED instead for proper meal sizing.
+        const noMealsEatenToday = eatenKcal < 100;
+        const proteinDeficitApplicable = proteinProgress < 0.5 && remainingProtein > 10 && !noMealsEatenToday;
         scenarioCandidates.push({
             priority: 7,
             scenario: SCENARIOS.PROTEIN_DEFICIT,
             applicable: proteinDeficitApplicable,
-            reason: proteinDeficitApplicable ? `Белок ${Math.round(proteinProgress * 100)}% от цели` : (proteinProgress >= 0.5 ? `Белок ${Math.round(proteinProgress * 100)}% >= 50%` : `Остаток белка ${remainingProtein}г <= 10г`),
-            metadata: { proteinProgress, remainingProtein }
+            reason: proteinDeficitApplicable ? `Белок ${Math.round(proteinProgress * 100)}% от цели` : (noMealsEatenToday ? `Нет приёмов сегодня (${Math.round(eatenKcal)} kcal) — используем BALANCED` : (proteinProgress >= 0.5 ? `Белок ${Math.round(proteinProgress * 100)}% >= 50%` : `Остаток белка ${remainingProtein}г <= 10г`)),
+            metadata: { proteinProgress, remainingProtein, noMealsEatenToday }
         });
         if (proteinDeficitApplicable) {
             scenarioCandidates[scenarioCandidates.length - 1].winner = true;
@@ -462,8 +473,16 @@
             remainingKcal: (dayTarget?.kcal || 0) - (dayEaten?.kcal || 0)
         });
 
-        if (HEYS.InsightsPI?.mealPlanner?.planRemainingMeals && lastMeal?.time && days.length >= 3) {
-            console.info(`${LOG_PREFIX} [MEALREC.planner] ✅ Calling planRemainingMeals...`);
+        // v3.7.0: Allow planner without lastMeal — "first meal of day" scenario
+        // When no meals eaten today, planner can still plan 3-4 meals from now to sleep
+        const hasEnoughHistory = days.length >= 3;
+        const hasPlanner = !!HEYS.InsightsPI?.mealPlanner?.planRemainingMeals;
+        const hasLastMealTime = !!lastMeal?.time;
+
+        if (hasPlanner && hasEnoughHistory) {
+            console.info(`${LOG_PREFIX} [MEALREC.planner] ✅ Calling planRemainingMeals...`, {
+                mode: hasLastMealTime ? 'wave-aware' : 'first-meal-of-day'
+            });
             try {
                 mealsPlan = HEYS.InsightsPI.mealPlanner.planRemainingMeals({
                     currentTime: context.currentTime || getCurrentTime(),

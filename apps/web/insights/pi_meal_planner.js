@@ -1,5 +1,5 @@
 /**
- * HEYS Predictive Insights — Multi-Meal Timeline Planner v2.2.0
+ * HEYS Predictive Insights — Multi-Meal Timeline Planner v2.3.0
  * 
  * Планирует все оставшиеся приёмы пищи до сна с учётом:
  * - Инсулиновых волн (HEYS.InsulinWave.calculate)
@@ -8,6 +8,13 @@
  * - Персонального паттерна сна (sleepStart из чек-ина)
  * - Распределения макросов между приёмами
  * - Hunger trade-off: большой дефицит → лучше поесть, чем лечь голодным
+ * - First meal of day: no lastMeal → no wave, start from now (v2.3.0)
+ *
+ * v2.3.0 changes (20.02.2026):
+ * - FIX: planRemainingMeals no longer requires lastMeal.time — supports "first meal of day"
+ *   When no meals eaten today, planner skips insulin wave and fat burn window,
+ *   starts planning from currentTime. Enables 3-4 meal day plans from first meal.
+ * - LOG: [PLANNER.wave] 🌅 First meal of day — no active insulin wave
  *
  * v2.2.0 changes (19.02.2026):
  * - FIX: waveMinutes → duration property name in InsulinWave.calculate() return object
@@ -495,10 +502,13 @@
         });
 
         // Validate
-        if (!currentTime || !lastMeal?.time) {
-            console.warn(`${LOG_PREFIX} ❌ Missing currentTime or lastMeal`);
+        if (!currentTime) {
+            console.warn(`${LOG_PREFIX} ❌ Missing currentTime`);
             return { available: false, error: 'Missing required data' };
         }
+
+        // v2.3.0: Support "first meal of day" — no lastMeal means no active wave
+        const hasLastMeal = !!lastMeal?.time;
 
         if (!HEYS.InsulinWave?.calculate) {
             console.warn(`${LOG_PREFIX} ❌ InsulinWave module not available`);
@@ -506,59 +516,65 @@
         }
 
         const currentTimeHours = parseTime(currentTime);
-        const lastMealTimeHours = parseTime(lastMeal.time);
+        const lastMealTimeHours = hasLastMeal ? parseTime(lastMeal.time) : null;
 
         // === Шаг 1: Рассчитать конец текущей инсулиновой волны ===
         let currentWaveEnd = null;
         let currentWaveData = null;
 
-        try {
-            // Подготовка нутриентов последнего приёма
-            const lastMealNutrients = {
-                kcal: lastMeal.totals?.kcal || 0,
-                protein: lastMeal.totals?.prot || 0,
-                carbs: lastMeal.totals?.carbs || 0,
-                fat: lastMeal.totals?.fat || 0,
-                glycemicLoad: lastMeal.totals?.glycemicLoad || 0
-            };
+        if (hasLastMeal) {
+            try {
+                // Подготовка нутриентов последнего приёма
+                const lastMealNutrients = {
+                    kcal: lastMeal.totals?.kcal || 0,
+                    protein: lastMeal.totals?.prot || 0,
+                    carbs: lastMeal.totals?.carbs || 0,
+                    fat: lastMeal.totals?.fat || 0,
+                    glycemicLoad: lastMeal.totals?.glycemicLoad || 0
+                };
 
-            currentWaveData = HEYS.InsulinWave.calculate({
-                lastMealTime: lastMeal.time,
-                nutrients: lastMealNutrients,
-                profile: profile,
-                baseWaveHours: profile?.insulinWaveHours || 3
-            });
+                currentWaveData = HEYS.InsulinWave.calculate({
+                    lastMealTime: lastMeal.time,
+                    nutrients: lastMealNutrients,
+                    profile: profile,
+                    baseWaveHours: profile?.insulinWaveHours || 3
+                });
 
-            if (currentWaveData?.duration) {
-                const waveEndMinutes = HEYS.utils?.timeToMinutes(lastMeal.time) + currentWaveData.duration;
-                currentWaveEnd = minutesToHours(waveEndMinutes);
-                console.info(`${LOG_PREFIX} [PLANNER.wave] 📊 Current insulin wave calculated:`, {
-                    lastMeal: lastMeal.time,
-                    waveDuration: currentWaveData.duration,
+                if (currentWaveData?.duration) {
+                    const waveEndMinutes = HEYS.utils?.timeToMinutes(lastMeal.time) + currentWaveData.duration;
+                    currentWaveEnd = minutesToHours(waveEndMinutes);
+                    console.info(`${LOG_PREFIX} [PLANNER.wave] 📊 Current insulin wave calculated:`, {
+                        lastMeal: lastMeal.time,
+                        waveDuration: currentWaveData.duration,
+                        waveEnd: formatTime(currentWaveEnd),
+                        remaining: currentWaveData.remaining,
+                        progress: currentWaveData.progress?.toFixed(1) + '%',
+                        endTimeDisplay: currentWaveData.endTimeDisplay,
+                        nutrients: lastMealNutrients
+                    });
+                }
+            } catch (err) {
+                console.warn(`${LOG_PREFIX} ⚠️ Failed to calculate current wave:`, err.message);
+            }
+
+            // Фоллбек: если не удалось рассчитать, берём базовую длину волны
+            if (!currentWaveEnd) {
+                const baseWave = profile?.insulinWaveHours || 3;
+                currentWaveEnd = lastMealTimeHours + baseWave;
+                console.info(`${LOG_PREFIX} 📊 Using fallback wave estimate:`, {
+                    lastMeal: formatTime(lastMealTimeHours),
                     waveEnd: formatTime(currentWaveEnd),
-                    remaining: currentWaveData.remaining,
-                    progress: currentWaveData.progress?.toFixed(1) + '%',
-                    endTimeDisplay: currentWaveData.endTimeDisplay,
-                    nutrients: lastMealNutrients
+                    baseWaveHours: baseWave
                 });
             }
-        } catch (err) {
-            console.warn(`${LOG_PREFIX} ⚠️ Failed to calculate current wave:`, err.message);
-        }
-
-        // Фоллбек: если не удалось рассчитать, берём базовую длину волны
-        if (!currentWaveEnd) {
-            const baseWave = profile?.insulinWaveHours || 3;
-            currentWaveEnd = lastMealTimeHours + baseWave;
-            console.info(`${LOG_PREFIX} 📊 Using fallback wave estimate:`, {
-                lastMeal: formatTime(lastMealTimeHours),
-                waveEnd: formatTime(currentWaveEnd),
-                baseWaveHours: baseWave
-            });
+        } else {
+            // v2.3.0: No last meal — first meal of day, no active insulin wave
+            console.info(`${LOG_PREFIX} [PLANNER.wave] 🌅 First meal of day — no active insulin wave, starting from now`);
         }
 
         // === Шаг 2: +30 мин жиросжигания ===
-        const fatBurnEnd = currentWaveEnd + minutesToHours(FAT_BURN_WINDOW_MIN);
+        // v2.3.0: When no lastMeal, skip fat burn window — just start from currentTime
+        const fatBurnEnd = currentWaveEnd ? currentWaveEnd + minutesToHours(FAT_BURN_WINDOW_MIN) : currentTimeHours;
         const nextMealEarliest = Math.max(currentTimeHours, fatBurnEnd);
 
         console.info(`${LOG_PREFIX} [PLANNER.fatburn] 🔥 Fat burn window calculated:`, {
