@@ -2,8 +2,11 @@
 // v59: Fix cache invalidation on cloud sync — UI now shows synced data when changing dates
 // v60: FIX dayv2 overwrite — БЛОКИРОВКА записи старых данных из cloud в localStorage (timestamp check)
 // v61: FIX offline→online race — flush before download + dayv2 backup + meals count guard
+// v62: [HEYS.sinhron] dayv2 sync diagnostics
+// v63: Fix backup keys in diagnostics, auto-cleanup old backups
 
 ; (function (global) {
+  (global.console || console).info('[HEYS.sinhron] 🚀 Storage v63 загружен — диагностика dayv2 активна');
   const HEYS = global.HEYS = global.HEYS || {};
   const cloud = HEYS.cloud = HEYS.cloud || {};
   const DEV = global.DEV || {};
@@ -1153,19 +1156,37 @@
     }
     tempKeys.forEach(k => global.localStorage.removeItem(k));
 
-    // 3. Очищаем pending queues
+    // 3. Очищаем pending queues и тяжёлые кэши insights
     global.localStorage.removeItem(PENDING_QUEUE_KEY);
     global.localStorage.removeItem(PENDING_CLIENT_QUEUE_KEY);
     global.localStorage.removeItem(SYNC_LOG_KEY);
+    // Очищаем кэши insights (восстановятся при следующем запуске)
+    const insightsKeys = [
+      'heys_adaptive_thresholds', 'heys_thresholds_rolling_stats',
+      'heys_ews_trends_v1', 'heys_ews_weekly_v1', 'heys_insights_cache'
+    ];
+    insightsKeys.forEach(k => global.localStorage.removeItem(k));
 
     // 4. Показываем размер после очистки
-    const sizeMB = getStorageSize();
+    let sizeMB = getStorageSize();
     logCritical(`📊 Размер после очистки: ${sizeMB.toFixed(2)} MB`);
 
-    // 5. Если всё ещё > 4MB — удаляем ещё старее (7 дней)
+    // 5. Если всё ещё > 4MB — удаляем ещё старее (7 дней) и insights
     if (sizeMB > 4) {
       cleanupOldData(7);
-      logCritical(`📊 После удаления >7 дней: ${getStorageSize().toFixed(2)} MB`);
+
+      // Самая агрессивная очистка - удаляем всё что можем восстановить
+      const aggressiveKeys = [];
+      for (let i = 0; i < global.localStorage.length; i++) {
+        const key = global.localStorage.key(i);
+        if (key && (key.includes('heys_ews_') || key.includes('heys_insights_') || key.includes('heys_adaptive_'))) {
+          aggressiveKeys.push(key);
+        }
+      }
+      aggressiveKeys.forEach(k => global.localStorage.removeItem(k));
+
+      sizeMB = getStorageSize();
+      logCritical(`📊 После ultra-aggressive очистки: ${sizeMB.toFixed(2)} MB`);
     }
   }
 
@@ -3819,14 +3840,32 @@
         const summary = Object.entries(stats).filter(([, v]) => v > 0).map(([k, v]) => `${k}: ${v}`).join(', ');
         log(`✅ [CLIENT_SYNC] Loaded ${data?.length || 0} keys (${summary})`);
 
-        // 🔍 ДИАГНОСТИКА: показать все ключи из базы (ОТКЛЮЧЕНО — слишком много логов)
-        // const allKeys = (data||[]).map(row => row.k);
-        // console.log('🔍 [SYNC DEBUG] Все ключи из базы:', allKeys);
-
         // ⏱️ TIMING: засекаем время обработки
         const syncStartTime = performance.now();
 
         const ls = global.localStorage;
+
+        // ── [HEYS.sinhron] ДИАГНОСТИКА dayv2 ─────────────────
+        const cloudDayKeys = (data || []).filter(r => r.k && r.k.includes('dayv2_')).map(r => {
+          const dm = r.k.match(/(\d{4}-\d{2}-\d{2})/);
+          return dm ? dm[1] : r.k;
+        }).sort();
+        const localDayKeys = [];
+        for (let lsi = 0; lsi < ls.length; lsi++) {
+          const lsk = ls.key(lsi);
+          if (lsk && lsk.includes('dayv2_') && !lsk.includes('dayv2_backup_') && (lsk.includes(client_id) || !client_id)) {
+            const ldm = lsk.match(/(\d{4}-\d{2}-\d{2})/);
+            if (ldm) localDayKeys.push(ldm[1]);
+          }
+        }
+        localDayKeys.sort();
+        window.console.info('[HEYS.sinhron] ☁️ dayv2 из облака (' + cloudDayKeys.length + '):', cloudDayKeys.join(', '));
+        window.console.info('[HEYS.sinhron] 💾 dayv2 в localStorage (' + localDayKeys.length + '):', localDayKeys.join(', '));
+        const onlyCloud = cloudDayKeys.filter(d => !localDayKeys.includes(d));
+        const onlyLocal = localDayKeys.filter(d => !cloudDayKeys.includes(d));
+        if (onlyCloud.length) window.console.warn('[HEYS.sinhron] ⚠️ Только в облаке (нет локально):', onlyCloud.join(', '));
+        if (onlyLocal.length) window.console.warn('[HEYS.sinhron] ⚠️ Только локально (нет в облаке):', onlyLocal.join(', '));
+        // ─────────────────────────────────────────────────────
         muteMirror = true;
         // ❌ КРИТИЧНО: НЕ ОЧИЩАЕМ ВСЁ ПРОСТРАНСТВО КЛИЕНТА
         // clearNamespace стирал все локальные данные, включая продукты!
@@ -3922,6 +3961,7 @@
 
         // Для каждой группы выбираем самый свежий по updated_at
         const deduped = [];
+        let dayv2DedupDropped = [];
         keyGroups.forEach((group, scopedKey) => {
           // 🔍 DEBUG: Логируем products ключи
           if (scopedKey.includes('_products') && !scopedKey.includes('_backup')) {
@@ -3943,9 +3983,23 @@
               const loser = group[1];
               logCritical(`🔀 [DEDUP] Key '${scopedKey}' has ${group.length} versions in DB. Using '${winner.originalKey}' (${new Date(winner.updated_at_ts).toISOString()}) over '${loser.originalKey}' (${new Date(loser.updated_at_ts).toISOString()})`);
               deduped.push({ scopedKey, row: winner.row });
+              // Трекаем отброшенные dayv2 дубли для [HEYS.sinhron]
+              if (scopedKey.includes('dayv2_')) {
+                const ddm = scopedKey.match(/(\d{4}-\d{2}-\d{2})/);
+                dayv2DedupDropped.push(ddm ? ddm[1] : scopedKey);
+              }
             }
           }
         });
+
+        if (dayv2DedupDropped.length > 0) {
+          window.console.warn('[HEYS.sinhron] 🔀 dayv2 дедупликация: ' + dayv2DedupDropped.length + ' дублей отброшено:', dayv2DedupDropped.join(', '));
+        }
+        const dayv2AfterDedup = deduped.filter(d => d.scopedKey.includes('dayv2_')).map(d => {
+          const dm = d.scopedKey.match(/(\d{4}-\d{2}-\d{2})/);
+          return dm ? dm[1] : d.scopedKey;
+        }).sort();
+        window.console.info('[HEYS.sinhron] 📦 dayv2 после дедупа (' + dayv2AfterDedup.length + '):', dayv2AfterDedup.join(', '));
 
         log(`📊 [DEDUP] ${data?.length || 0} DB keys → ${deduped.length} unique scoped keys`);
 
@@ -3993,6 +4047,7 @@
               if (!forceSync && typeof global.HEYS?.Day?.isBlockingCloudUpdates === 'function' && global.HEYS.Day.isBlockingCloudUpdates()) {
                 const remaining = (global.HEYS.Day.getBlockUntil?.() || 0) - Date.now();
                 log(`🔒 [SYNC BLOCKED] Skipping ${key} — local edit in progress (${remaining}ms remaining)`);
+                window.console.info('[HEYS.sinhron] 🔒 BLOCKED ' + key + ' — local edit, remaining ' + remaining + 'ms');
                 return; // Пропускаем этот ключ, НЕ затираем localStorage
               }
 
@@ -4004,6 +4059,7 @@
               const remoteMeaningful = isMeaningfulDayData(row.v);
               if (localMeaningful && !remoteMeaningful) {
                 logCritical(`🛡️ [DAYV2] KEEP LOCAL: meaningful local, empty remote for ${key}`);
+                window.console.info('[HEYS.sinhron] 🛡️ KEEP_LOCAL (empty remote) ' + key);
                 const pushObj = {
                   client_id: client_id,
                   k: normalizeKeyForSupabase(row.k, client_id),
@@ -4021,6 +4077,7 @@
                 const remoteMealsCount = Array.isArray(row.v?.meals) ? row.v.meals.length : 0;
                 if (localMealsCount > remoteMealsCount) {
                   logCritical(`🛡️ [DAYV2] KEEP LOCAL: local has MORE meals (${localMealsCount} > ${remoteMealsCount}) for ${key}`);
+                  window.console.info('[HEYS.sinhron] 🛡️ KEEP_LOCAL (more meals ' + localMealsCount + '>' + remoteMealsCount + ') ' + key);
                   const pushObj = {
                     client_id: client_id,
                     k: normalizeKeyForSupabase(row.k, client_id),
@@ -4108,6 +4165,7 @@
                 // 🧷 Backup перед возможной перезаписью dayv2
                 backupDayV2BeforeOverwrite(key, valueToSave, 'force-sync');
                 ls.setItem(key, JSON.stringify(valueToSave));
+                window.console.info('[HEYS.sinhron] ✅ FORCE_WRITE ' + key + ' meals=' + (valueToSave?.meals?.length || 0));
 
                 const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
                 if (dateMatch) {
@@ -4132,6 +4190,7 @@
                   // 🔇 PERF: Отключено
                   // logCritical(`🔀 [MERGE] Day conflict resolved | key: ${key} | local: ${new Date(localUpdatedAt).toLocaleTimeString()} | remote: ${new Date(remoteUpdatedAt).toLocaleTimeString()}`);
                   ls.setItem(key, JSON.stringify(merged));
+                  window.console.info('[HEYS.sinhron] ✅ MERGE ' + key + ' meals=' + (merged?.meals?.length || 0));
 
                   // Уведомляем UI об обновлении данных дня (для pull-to-refresh)
                   const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
@@ -4159,6 +4218,7 @@
               // Нет конфликта — просто берём более свежую версию
               if (localUpdatedAt > remoteUpdatedAt) {
                 log('conflict: keep local (by updatedAt)', key, localUpdatedAt, '>', remoteUpdatedAt);
+                window.console.info('[HEYS.sinhron] 🛡️ KEEP_LOCAL (newer ' + localUpdatedAt + '>' + remoteUpdatedAt + ') ' + key);
                 return;
               }
             } else {
@@ -4861,6 +4921,7 @@
               // 🧷 Backup перед возможной перезаписью dayv2
               if (key.includes('dayv2_')) {
                 backupDayV2BeforeOverwrite(key, valueToSave, 'cloud-sync');
+                window.console.info('[HEYS.sinhron] ✅ WRITE ' + key + ' meals=' + (valueToSave?.meals?.length || 0) + ' updatedAt=' + (valueToSave?.updatedAt || 0));
               }
               ls.setItem(key, JSON.stringify(valueToSave));
               log(`  ✅ Saved to localStorage: ${key}`);
@@ -4933,6 +4994,77 @@
         cloud._lastClientSync = { clientId: client_id, ts: now };
 
         const syncDuration = Math.round(performance.now() - syncStartTime);
+
+        // ── [HEYS.sinhron] ИТОГ: состояние dayv2 в localStorage ПОСЛЕ синхронизации ──
+        {
+          const postSyncDayKeys = [];
+          const postSyncDateCount = {};
+          const postSyncDuplicateDetails = [];
+          for (let lsi = 0; lsi < ls.length; lsi++) {
+            const lsk = ls.key(lsi);
+            if (lsk && lsk.includes('dayv2_') && !lsk.includes('dayv2_backup_') && lsk.includes(client_id)) {
+              const psdm = lsk.match(/(\d{4}-\d{2}-\d{2})/);
+              if (psdm) {
+                const dateStr = psdm[1];
+                try {
+                  const dayVal = JSON.parse(ls.getItem(lsk));
+                  const meals = dayVal?.meals?.length || 0;
+                  postSyncDayKeys.push(dateStr + '(' + meals + 'm)');
+                  postSyncDateCount[dateStr] = (postSyncDateCount[dateStr] || 0) + 1;
+                  if (postSyncDateCount[dateStr] > 1) {
+                    postSyncDuplicateDetails.push(lsk + ' meals=' + meals);
+                  }
+                } catch (_e) {
+                  postSyncDayKeys.push(dateStr + '(err)');
+                }
+              }
+            }
+          }
+          postSyncDayKeys.sort();
+          window.console.info('[HEYS.sinhron] 🏁 ИТОГ: dayv2 в localStorage ПОСЛЕ синхронизации (' + postSyncDayKeys.length + '):', postSyncDayKeys.join(', '));
+          if (postSyncDuplicateDetails.length > 0) {
+            window.console.warn('[HEYS.sinhron] 🐛 ДУБЛИКАТЫ dayv2 в localStorage (' + postSyncDuplicateDetails.length + '):', postSyncDuplicateDetails.join(' | '));
+            // Также логируем ВСЕ ключи с дублирующимися датами
+            const dupDates = Object.entries(postSyncDateCount).filter(([, c]) => c > 1).map(([d]) => d);
+            for (const dd of dupDates) {
+              const allKeysForDate = [];
+              for (let lsi = 0; lsi < ls.length; lsi++) {
+                const lsk = ls.key(lsi);
+                if (lsk && lsk.includes('dayv2_' + dd) && lsk.includes(client_id)) {
+                  try {
+                    const dv = JSON.parse(ls.getItem(lsk));
+                    allKeysForDate.push(lsk + ' meals=' + (dv?.meals?.length || 0) + ' updatedAt=' + (dv?.updatedAt || 0));
+                  } catch (_) {
+                    allKeysForDate.push(lsk + ' (parse error)');
+                  }
+                }
+              }
+              window.console.warn('[HEYS.sinhron] 🐛 Дата ' + dd + ' ключи:', allKeysForDate.join(' | '));
+            }
+          }
+        }
+        // ───────────────────────────────────────────────────────────────────────
+
+        // 🧹 Очистка старых backup-ключей dayv2 (старше 24ч)
+        try {
+          const backupMaxAge = 24 * 60 * 60 * 1000; // 24ч
+          const backupKeysToRemove = [];
+          for (let lsi = 0; lsi < ls.length; lsi++) {
+            const lsk = ls.key(lsi);
+            if (lsk && lsk.includes('dayv2_backup_') && lsk.includes(client_id)) {
+              try {
+                const bv = JSON.parse(ls.getItem(lsk));
+                if (bv?.ts && (Date.now() - bv.ts) > backupMaxAge) {
+                  backupKeysToRemove.push(lsk);
+                }
+              } catch (_) { backupKeysToRemove.push(lsk); }
+            }
+          }
+          if (backupKeysToRemove.length > 0) {
+            backupKeysToRemove.forEach(k => ls.removeItem(k));
+            window.console.info('[HEYS.sinhron] 🧹 Удалено ' + backupKeysToRemove.length + ' старых backup dayv2 ключей');
+          }
+        } catch (_) { }
 
         // 🧹 Очистка дублирующихся ключей после синхронизации
         cleanupDuplicateKeys();
