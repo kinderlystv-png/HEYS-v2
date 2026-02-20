@@ -2180,6 +2180,9 @@
             // Проходим по всем дням месяца
             const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+            // [HEYS.calendar] Диагностика: подсчёт статуса дней
+            let _diagNull = 0, _diagFiltered = 0, _diagActive = 0;
+
             for (let d = 1; d <= daysInMonth; d++) {
                 const dateStr = fmtDate(new Date(year, month, d));
                 const dayInfo = getDayData(dateStr, productsMap, profile);
@@ -2187,7 +2190,8 @@
                 // Пропускаем дни без данных. Если есть цикл или хотя бы один приём пищи — показываем даже при низких ккал
                 const hasCycleDay = dayInfo && dayInfo.cycleDay != null;
                 const hasMeals = !!(dayInfo && Array.isArray(dayInfo.meals) && dayInfo.meals.length > 0);
-                if (!dayInfo || (dayInfo.kcal < threshold && !hasCycleDay && !hasMeals)) continue;
+                if (!dayInfo) { _diagNull++; continue; }
+                if (dayInfo.kcal < threshold && !hasCycleDay && !hasMeals) { _diagFiltered++; continue; }
 
                 // Если день только с cycleDay (без еды) — добавляем минимальную запись
                 if (dayInfo.kcal < threshold && hasCycleDay) {
@@ -2284,10 +2288,22 @@
                     isFastingDay: dayInfo.isFastingDay || false,
                     isIncomplete: dayInfo.isIncomplete || false
                 });
+
+                _diagActive++;
             }
+
+            // [HEYS.calendar] Диагностика результатов
+            window.console.info('[HEYS.calendar] 📊 getActiveDaysForMonth: month=' + (month + 1)
+                + ' daysInMonth=' + daysInMonth
+                + ' null=' + _diagNull + ' filtered=' + _diagFiltered + ' active=' + _diagActive
+                + ' productsMap=' + productsMap.size
+                + ' threshold=' + threshold
+                + ' clientId=' + (window.HEYS?.currentClientId?.slice(0, 8) || 'none'));
+
         } catch (e) {
             // Тихий fallback — activeDays для календаря не критичны,
             // но ошибку стоит залогировать, иначе отладка невозможна.
+            window.console.error('[HEYS.calendar] ❌ getActiveDaysForMonth ошибка:', e?.message || e);
             try {
                 if (typeof HEYS !== 'undefined' && HEYS.analytics && HEYS.analytics.trackError) {
                     HEYS.analytics.trackError(e, {

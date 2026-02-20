@@ -4,9 +4,10 @@
 // v61: FIX offline→online race — flush before download + dayv2 backup + meals count guard
 // v62: [HEYS.sinhron] dayv2 sync diagnostics
 // v63: Fix backup keys in diagnostics, auto-cleanup old backups
+// v64: Fix null dayv2 values from cloud, cleanup "null" in LS, debounce double heysSyncCompleted
 
 ; (function (global) {
-  (global.console || console).info('[HEYS.sinhron] 🚀 Storage v63 загружен — диагностика dayv2 активна');
+  (global.console || console).info('[HEYS.sinhron] 🚀 Storage v64 загружен — защита от null dayv2 активна');
   const HEYS = global.HEYS = global.HEYS || {};
   const cloud = HEYS.cloud = HEYS.cloud || {};
   const DEV = global.DEV || {};
@@ -3359,8 +3360,15 @@
             }
           }
 
-          // 🛡️ v61 FIX: Защита dayv2 от перезатирания пустыми данными (аналогично bootstrapClientSync)
+          // 🛡️ v64 FIX: НЕ записываем null/undefined dayv2 в localStorage
+          // Cloud может вернуть row.v = null → JSON.stringify(null) = "null" → getDayData ломается
           const isDayKey = localKey.includes('dayv2_');
+          if (isDayKey && (valueToStore == null || valueToStore === 'null')) {
+            logCritical(`🛡️ [YANDEX SYNC] SKIP NULL dayv2: ${localKey}`);
+            return; // skip this row — null data corrupts getDayData
+          }
+
+          // 🛡️ v61 FIX: Защита dayv2 от перезатирания пустыми данными (аналогично bootstrapClientSync)
           if (isDayKey) {
             const existingRaw = ls.getItem(localKey);
             if (existingRaw) {
@@ -4036,7 +4044,13 @@
 
             // Для данных дня используем MERGE вместо "last write wins"
             if (key.includes('dayv2_')) {
-              // 🔒 КРИТИЧНО: Перечитываем localStorage свежим для dayv2!
+              // �️ v64 FIX: НЕ записываем null/undefined из cloud
+              if (row.v == null || row.v === 'null') {
+                logCritical(`🛡️ [BOOTSTRAP PHASE2] SKIP NULL dayv2: ${key}`);
+                return; // skip — null data corrupts getDayData
+              }
+
+              // �🔒 КРИТИЧНО: Перечитываем localStorage свежим для dayv2!
               // Проблема: `local` был прочитан в начале цикла, а store.set() мог записать позже
               try { local = JSON.parse(ls.getItem(key)); } catch (e) { local = null; }
 
@@ -4768,6 +4782,14 @@
             // Если дошли сюда — значит merge не произошёл (local пуст)
             // Используем remoteProducts которые уже отфильтрованы
             let valueToSave = row.v;
+
+            // 🛡️ v64 FIX: НЕ записываем null/undefined dayv2 в localStorage
+            // Cloud может вернуть row.v = null → JSON.stringify(null) = "null" → getDayData ломается
+            if (key.includes('dayv2_') && (valueToSave == null || valueToSave === 'null')) {
+              logCritical(`🛡️ [BOOTSTRAP] SKIP NULL dayv2: ${key}`);
+              return; // skip — null data corrupts getDayData
+            }
+
             if (key.includes('_products') && !key.includes('_products_backup') && !key.includes('_hidden_products') && !key.includes('_favorite_products') && !key.includes('_deleted_products')) {
               // remoteProducts уже отфильтрован выше — используем его
               // Если он пустой и мы дошли сюда — значит recovery уже запущен выше
@@ -5063,6 +5085,25 @@
           if (backupKeysToRemove.length > 0) {
             backupKeysToRemove.forEach(k => ls.removeItem(k));
             window.console.info('[HEYS.sinhron] 🧹 Удалено ' + backupKeysToRemove.length + ' старых backup dayv2 ключей');
+          }
+        } catch (_) { }
+
+        // 🛡️ v64 FIX: Очистка "null" значений dayv2 из localStorage
+        // Cloud иногда возвращает row.v = null → JSON.stringify(null) = "null" → getDayData ломается
+        try {
+          const nullKeysToRemove = [];
+          for (let lsi = 0; lsi < ls.length; lsi++) {
+            const lsk = ls.key(lsi);
+            if (lsk && lsk.includes('dayv2_') && !lsk.includes('dayv2_backup_') && lsk.includes(client_id)) {
+              const rawVal = ls.getItem(lsk);
+              if (rawVal === 'null' || rawVal === 'undefined' || rawVal === '') {
+                nullKeysToRemove.push(lsk);
+              }
+            }
+          }
+          if (nullKeysToRemove.length > 0) {
+            nullKeysToRemove.forEach(k => ls.removeItem(k));
+            window.console.info('[HEYS.sinhron] 🧹 Удалено ' + nullKeysToRemove.length + ' dayv2 ключей с null/undefined/empty значением:', nullKeysToRemove.join(', '));
           }
         } catch (_) { }
 

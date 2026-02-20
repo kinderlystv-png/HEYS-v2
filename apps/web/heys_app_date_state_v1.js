@@ -91,7 +91,86 @@
             try {
                 // Передаём effectiveProducts (с fallback) в функцию
                 const result = getActiveDaysForMonth(year, month, profile, effectiveProducts);
-                window.console.info('[HEYS.calendar] 🗓️ useDatePickerActiveDays пересчёт: calendarVer=' + calendarVer + ' month=' + (month + 1) + ' activeDays=' + (result?.size || 0));
+                window.console.info('[HEYS.calendar] 🗓️ useDatePickerActiveDays пересчёт: calendarVer=' + calendarVer + ' month=' + (month + 1) + ' activeDays=' + (result?.size || 0) + ' products=' + effectiveProducts.length);
+
+                // 🔍 ДИАГНОСТИКА: Сравниваем результат с localStorage напрямую
+                try {
+                    const cid = clientId || window.HEYS?.currentClientId || '';
+                    const cidShort = cid ? cid.slice(0, 8) : 'none';
+                    const daysInMonth = new Date(year, month + 1, 0).getDate();
+                    const missingDays = [];
+                    let lsDayCount = 0;
+                    let lsNullCount = 0;
+
+                    for (let d = 1; d <= daysInMonth; d++) {
+                        const dd = String(d).padStart(2, '0');
+                        const mm = String(month + 1).padStart(2, '0');
+                        const dateStr = year + '-' + mm + '-' + dd;
+                        const lsKey = cid ? ('heys_' + cid + '_dayv2_' + dateStr) : ('heys_dayv2_' + dateStr);
+                        const lsVal = localStorage.getItem(lsKey);
+
+                        if (lsVal) {
+                            // Проверяем на "null"/"undefined" значения (баг cloud sync)
+                            if (lsVal === 'null' || lsVal === 'undefined') {
+                                lsNullCount++;
+                                if (!result.has(dateStr)) {
+                                    missingDays.push(dateStr + '(null_value)');
+                                }
+                                continue;
+                            }
+
+                            lsDayCount++;
+                            if (!result.has(dateStr)) {
+                                // День есть в localStorage но НЕТ в результате!
+                                let reason = '?';
+                                try {
+                                    let valStr = lsVal;
+                                    // Обработка сжатых данных
+                                    if (valStr.startsWith('¤Z¤')) {
+                                        const decomp = window.HEYS?.store?.decompress;
+                                        if (decomp) {
+                                            const parsed = decomp(valStr.slice(3));
+                                            const mealsCount = (parsed?.meals || []).length;
+                                            const itemsCount = (parsed?.meals || []).reduce((s, m) => s + ((m && m.items) || []).length, 0);
+                                            reason = 'compressed meals=' + mealsCount + ' items=' + itemsCount;
+                                        } else {
+                                            reason = 'compressed_no_decompress';
+                                        }
+                                    } else {
+                                        const parsed = JSON.parse(valStr);
+                                        if (parsed == null) {
+                                            reason = 'parsed_to_null';
+                                        } else {
+                                            const mealsCount = (parsed?.meals || []).length;
+                                            const itemsCount = (parsed?.meals || []).reduce((s, m) => s + ((m && m.items) || []).length, 0);
+                                            reason = 'meals=' + mealsCount + ' items=' + itemsCount;
+                                        }
+                                    }
+                                } catch (pe) {
+                                    reason = 'parse_error: ' + (pe.message || '').slice(0, 50);
+                                }
+                                missingDays.push(dateStr + '(' + reason + ')');
+                            }
+                        }
+                    }
+
+                    // Всегда логируем localStorage count для диагностики
+                    window.console.info('[HEYS.calendar] 📊 localStorage dayv2: ' + lsDayCount + ' keys'
+                        + (lsNullCount > 0 ? ', nulls=' + lsNullCount : '')
+                        + ', activeDays=' + (result?.size || 0)
+                        + ', calendarVer=' + calendarVer);
+
+                    if (missingDays.length > 0) {
+                        window.console.warn('[HEYS.calendar] ⚠️ ПРОПУЩЕННЫЕ ДНИ: В localStorage=' + lsDayCount
+                            + ' в результате=' + result.size + ' пропущено=' + missingDays.length
+                            + ' productsCount=' + effectiveProducts.length
+                            + ' clientId=' + cidShort
+                            + '\n  → ' + missingDays.join(', '));
+                    }
+                } catch (_diagErr) {
+                    window.console.warn('[HEYS.calendar] diag error:', _diagErr?.message);
+                }
+
                 return result;
             } catch (e) {
                 // Тихий fallback — activeDays для календаря не критичны

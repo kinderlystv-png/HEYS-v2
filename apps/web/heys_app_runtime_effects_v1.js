@@ -87,13 +87,19 @@
 
     const useCalendarSync = ({ React, setCalendarVer }) => {
         const calendarDebounceRef = React.useRef(null);
+        // 🛡️ v64 FIX: Трекинг последнего calendarVer increment timestamp
+        // Предотвращает двойной increment от двух heysSyncCompleted событий
+        const lastIncrementRef = React.useRef(0);
 
         React.useEffect(() => {
             const handleCycleUpdate = (e) => {
                 const source = e.detail?.source;
                 const field = e.detail?.field;
 
-                if (field !== 'cycleDay' && !source?.startsWith('cycle')) return;
+                // Обновляем календарь при: cycleDay changes ИЛИ cloud-sync/force-sync/merge
+                const isCycleUpdate = field === 'cycleDay' || (source && source.startsWith('cycle'));
+                const isSyncUpdate = source === 'cloud-sync' || source === 'force-sync' || source === 'merge';
+                if (!isCycleUpdate && !isSyncUpdate) return;
 
                 if (calendarDebounceRef.current) {
                     clearTimeout(calendarDebounceRef.current);
@@ -101,12 +107,40 @@
                 calendarDebounceRef.current = setTimeout(() => {
                     setCalendarVer((v) => v + 1);
                     calendarDebounceRef.current = null;
-                }, 500);
+                }, isSyncUpdate ? 800 : 500); // Sync — дольше ждём (много событий подряд)
+            };
+
+            // Также слушаем heysSyncCompleted для гарантированного обновления после sync
+            const handleSyncComplete = (e) => {
+                const now = Date.now();
+                const sinceLastIncrement = now - lastIncrementRef.current;
+                window.console.info('[HEYS.calendar] 🔔 heysSyncCompleted получен, clientId=', e?.detail?.clientId?.slice(0, 8), 'sinceLastIncrement=' + sinceLastIncrement + 'ms');
+
+                // 🛡️ v64 FIX: Игнорируем дублирующееся событие (< 2 сек после предыдущего increment)
+                // Два sync path (syncClientViaRPC + bootstrapClientSync) могут оба стрелять heysSyncCompleted
+                if (sinceLastIncrement < 2000) {
+                    window.console.info('[HEYS.calendar] ⏭️ SKIP duplicate heysSyncCompleted (debounce=' + sinceLastIncrement + 'ms < 2000ms)');
+                    return;
+                }
+
+                if (calendarDebounceRef.current) {
+                    clearTimeout(calendarDebounceRef.current);
+                }
+                calendarDebounceRef.current = setTimeout(() => {
+                    lastIncrementRef.current = Date.now();
+                    setCalendarVer((v) => {
+                        window.console.info('[HEYS.calendar] 📈 calendarVer', v, '→', v + 1);
+                        return v + 1;
+                    });
+                    calendarDebounceRef.current = null;
+                }, 500); // 🛡️ v64: Увеличен с 300 до 500ms для лучшего debounce
             };
 
             window.addEventListener('heys:day-updated', handleCycleUpdate);
+            window.addEventListener('heysSyncCompleted', handleSyncComplete);
             return () => {
                 window.removeEventListener('heys:day-updated', handleCycleUpdate);
+                window.removeEventListener('heysSyncCompleted', handleSyncComplete);
                 if (calendarDebounceRef.current) {
                     clearTimeout(calendarDebounceRef.current);
                 }
