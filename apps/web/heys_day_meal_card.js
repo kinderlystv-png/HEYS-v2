@@ -525,10 +525,38 @@
             
             // Smart Alternative v1.0: semantic category + macro similarity + multi-factor scoring
             const findAlternative = (prod, allProducts) => {
-              if (!allProducts || allProducts.length < 2) return null;
+              // Smart Alternative v1.0: semantic category + macro similarity + multi-factor scoring
+              const _LOG = '[HEYS.prodRec]';
+              if (!allProducts || allProducts.length < 2) {
+                console.info(_LOG, '⛔ skip: allProducts empty or single', { product: prod?.name, poolSize: allProducts?.length });
+                return null;
+              }
               const currentKcal = per.kcal100 || 0;
-              if (currentKcal < 50) return null;
+              if (currentKcal < 50) {
+                console.info(_LOG, '⛔ skip: product kcal too low (< 50)', { product: prod?.name, kcal: currentKcal });
+                return null;
+              }
+              console.info(_LOG, '🔍 START findAlternative', {
+                product: prod.name, kcal: currentKcal, prot: per.prot100 || 0,
+                carbs: per.carbs100 || 0, fat: per.fat100 || 0, harm: prod.harm ?? harmVal ?? 0,
+                gi: prod.gi ?? 50, fiber: per.fiber100 || 0, category: prod.category || '—', poolSize: allProducts.length,
+              });
+              const origHarm = prod.harm ?? harmVal ?? 0;
+              if (origHarm <= 1 && currentKcal <= 200) {
+                console.info(_LOG, '⛔ skip: product already good (harm≤1 + kcal≤200)', { product: prod.name, harm: origHarm, kcal: currentKcal });
+                return null;
+              }
+              const actualCurrentKcal = Math.round(currentKcal * G / 100);
+              if (G > 0 && G < 20) {
+                console.info(_LOG, '⛔ skip: portion too small (< 20г) — swap makes no sense', { product: prod?.name, grams: G, actualKcal: actualCurrentKcal });
+                return null;
+              }
+              const getTypicalGrams = (altProd) => {
+                const sp = HEYS.MealOptimizer?.getSmartPortion?.(altProd);
+                return sp?.grams || 100;
+              };
               const _detectCat = HEYS.InsightsPI?.productPicker?._internal?.detectCategory;
+              const _catSource = _detectCat ? 'ProductPicker' : 'keyword-fallback';
               const getSemanticCat = (name, fallbackCat) => {
                 if (_detectCat) return _detectCat(name || '');
                 const c = (fallbackCat || name || '').toLowerCase();
@@ -550,26 +578,45 @@
               const origMacroCat = origSemCat === 'other'
                 ? getDominantMacro(per.prot100 || 0, per.carbs100 || 0, per.fat100 || 0, currentKcal)
                 : null;
-              const _sharedList = (HEYS.products?.shared && Array.isArray(HEYS.products.shared)) ? HEYS.products.shared : [];
-              const _clientIds = new Set(allProducts.map(ap => ap.id));
+              console.info(_LOG, '🏷️ category detection', { catSource: _catSource, semCat: origSemCat, macroCat: origMacroCat || '—' });
+              const _sharedList = (() => {
+                const _paths = [
+                  HEYS.products?.shared,
+                  HEYS.products?.getShared?.(),
+                  HEYS.products?.sharedProducts,
+                  HEYS.products?.all?.filter?.((p) => p._shared || p.shared),
+                ];
+                for (const _p of _paths) {
+                  if (Array.isArray(_p) && _p.length > 0) return _p;
+                }
+                return [];
+              })();
+              const _clientIds = new Set(allProducts.map((ap) => ap.id));
               const candidatePool = [
-                ...allProducts.map(ap => ({ ...ap, _familiar: true })),
-                ..._sharedList.filter(sp => sp && sp.id && !_clientIds.has(sp.id)).map(sp => ({ ...sp, _familiar: false })),
+                ...allProducts.map((ap) => ({ ...ap, _familiar: true })),
+                ..._sharedList.filter((sp) => sp && sp.id && !_clientIds.has(sp.id)).map((sp) => ({ ...sp, _familiar: false })),
               ];
+              console.info(_LOG, '📦 candidate pool built', { clientProducts: allProducts.length, sharedProducts: _sharedList.length, totalPool: candidatePool.length });
+              const _mealItemIds = new Set(
+                (meal?.items || []).map((mi) => mi.product_id || mi.id).filter(Boolean)
+              );
+              const _noSavingThreshold = currentKcal < 200 ? 0.75 : 0.90;
+              const _rejectLog = { selfMatch: 0, mealItem: 0, lowKcal: 0, lowMacro: 0, noSaving: 0, tooLowKcal: 0, wrongCat: 0, passed: 0 };
               const candidates = candidatePool.filter((alt) => {
-                if (alt.id === prod.id) return false;
+                if (alt.id === prod.id) { _rejectLog.selfMatch++; return false; }
+                if (_mealItemIds.has(alt.id) || _mealItemIds.has(alt.product_id)) { _rejectLog.mealItem++; return false; }
                 const altDer = computeDerivedProductFn(alt);
                 const altKcal = alt.kcal100 || altDer.kcal100 || 0;
-                if (altKcal < 30) return false;
+                if (altKcal < 30) { _rejectLog.lowKcal++; return false; }
                 const altMacroSum = (alt.prot100 || altDer.prot100 || 0)
                   + (alt.fat100 || altDer.fat100 || 0)
                   + ((alt.simple100 || 0) + (alt.complex100 || 0) || alt.carbs100 || altDer.carbs100 || 0);
-                if (altMacroSum < 5) return false;
-                if (altKcal >= currentKcal * 0.90) return false;
-                if (altKcal < currentKcal * 0.15) return false;
+                if (altMacroSum < 5) { _rejectLog.lowMacro++; return false; }
+                if (altKcal >= currentKcal * _noSavingThreshold) { _rejectLog.noSaving++; return false; }
+                if (altKcal < currentKcal * 0.15) { _rejectLog.tooLowKcal++; return false; }
                 const altSemCat = getSemanticCat(alt.name, alt.category);
                 if (origSemCat !== 'other') {
-                  if (altSemCat !== origSemCat) return false;
+                  if (altSemCat !== origSemCat) { _rejectLog.wrongCat++; return false; }
                 } else {
                   const altMacroCat = getDominantMacro(
                     alt.prot100 || altDer.prot100 || 0,
@@ -577,12 +624,16 @@
                     alt.fat100 || altDer.fat100 || 0,
                     altKcal,
                   );
-                  if (origMacroCat !== 'macro_mixed' && altMacroCat !== 'macro_mixed' && origMacroCat !== altMacroCat) return false;
+                  if (origMacroCat !== 'macro_mixed' && altMacroCat !== 'macro_mixed' && origMacroCat !== altMacroCat) { _rejectLog.wrongCat++; return false; }
                 }
+                _rejectLog.passed++;
                 return true;
               });
-              if (candidates.length === 0) return null;
-              const origHarm = prod.harm ?? harmVal ?? 0;
+              console.info(_LOG, '🔬 filter results', { ..._rejectLog, passedCandidates: candidates.map((c) => c.name) });
+              if (candidates.length === 0) {
+                console.info(_LOG, '❌ no candidates after filter — no recommendation');
+                return null;
+              }
               const origGI = prod.gi ?? 50;
               const origProtEn = (per.prot100 || 0) * 3 / currentKcal;
               const origCarbEn = (per.carbs100 || 0) * 4 / currentKcal;
@@ -605,10 +656,17 @@
                     novaQualityScore: 0.5,
                     targetGL: _mealHour >= 20 ? 10 : 20,
                   };
+                  console.info(_LOG, '⚙️ ProductPicker scenario', _pickerScenario);
+                } else {
+                  console.info(_LOG, '⚙️ ProductPicker unavailable — using neutral pickerScore=50', { hasFn: !!_pickerFn, mealTime: meal?.time || '—' });
                 }
-              } catch (e) { _pickerFn = null; }
+              } catch (e) {
+                _pickerFn = null;
+                console.warn(_LOG, '⚠️ ProductPicker scenario build failed:', e?.message);
+              }
               let best = null;
               let bestComposite = -Infinity;
+              const scoredCandidates = [];
               for (const alt of candidates) {
                 try {
                   const altDer = computeDerivedProductFn(alt);
@@ -619,6 +677,19 @@
                   const altFiber = alt.fiber100 || altDer.fiber100 || 0;
                   const altGI = alt.gi ?? 50;
                   const altHarm = alt.harm ?? 0;
+                  const typicalAltGrams = getTypicalGrams(alt);
+                  const actualAltKcal = Math.round(altKcal * typicalAltGrams / 100);
+                  const portionKcalRatio = actualAltKcal / Math.max(1, actualCurrentKcal);
+                  if (portionKcalRatio > 1.5) {
+                    console.info(_LOG, '🚫 portion skip (would eat more kcal in real serving):', { name: alt.name, typicalAltGrams, actualAltKcal, vs: actualCurrentKcal, ratio: Math.round(portionKcalRatio * 100) + '%' });
+                    continue;
+                  }
+                  let portionPenalty = 0;
+                  let portionMode = 'real_saving';
+                  if (portionKcalRatio > 1.0) {
+                    portionPenalty = -10;
+                    portionMode = 'composition';
+                  }
                   const macroSimilarity = Math.max(0,
                     100
                     - Math.abs(origProtEn - (altProt * 3 / altKcal)) * 150
@@ -627,34 +698,87 @@
                   );
                   const savingPct = Math.round((1 - altKcal / currentKcal) * 100);
                   const harmImprov = Math.min(50, Math.max(-20, (origHarm - altHarm) * 15));
-                  const improvementScore = harmImprov + Math.min(35, savingPct * 0.45) + (altFiber > origFiber + 1 ? 10 : 0);
+                  const fiberBonus = altFiber > origFiber + 1 ? 10 : 0;
+                  const improvementScore = harmImprov + Math.min(35, savingPct * 0.45) + fiberBonus;
                   const familiarBonus = alt._familiar ? 10 : 0;
                   let pickerScore = 50;
                   if (_pickerFn && _pickerScenario) {
                     try {
-                      pickerScore = _pickerFn({
+                      const _pickerResult = _pickerFn({
                         name: alt.name,
                         macros: { protein: altProt, carbs: altCarbs, fat: altFat, kcal: altKcal },
                         harm: altHarm, gi: altGI,
                         category: getSemanticCat(alt.name, alt.category),
                         familiarityScore: alt._familiar ? 7 : 3,
                         fiber: altFiber, nova_group: alt.novaGroup || 2,
-                      }, _pickerScenario) || 50;
-                    } catch (e) { pickerScore = 50; }
+                      }, _pickerScenario);
+                      pickerScore = typeof _pickerResult?.totalScore === 'number'
+                        ? _pickerResult.totalScore
+                        : (typeof _pickerResult === 'number' ? _pickerResult : 50);
+                    } catch (e) {
+                      console.warn(_LOG, '⚠️ pickerFn threw for', alt?.name, e?.message);
+                      pickerScore = 50;
+                    }
                   }
-                  const composite = pickerScore * 0.35 + macroSimilarity * 0.30 + improvementScore * 0.25 + familiarBonus * 0.10;
+                  const composite = pickerScore * 0.35 + macroSimilarity * 0.30 + improvementScore * 0.25 + familiarBonus * 0.10 + portionPenalty;
+                  scoredCandidates.push({
+                    name: alt.name, kcal: altKcal, harm: altHarm, saving: savingPct,
+                    familiar: alt._familiar, portionMode, typicalAltGrams, actualAltKcal,
+                    scores: { picker: Math.round(pickerScore * 10) / 10, macroSim: Math.round(macroSimilarity * 10) / 10, improvement: Math.round(improvementScore * 10) / 10, familiarBonus, portionPenalty, composite: Math.round(composite * 10) / 10 },
+                    breakdown: { harmImprov: Math.round(harmImprov * 10) / 10, savingBonus: Math.round(Math.min(35, savingPct * 0.45) * 10) / 10, fiberBonus },
+                  });
                   if (composite > bestComposite) {
                     bestComposite = composite;
-                    best = { name: alt.name, saving: savingPct, score: Math.round(composite) };
+                    best = { name: alt.name, saving: savingPct, score: Math.round(composite), portionMode, actualCurrentKcal, actualAltKcal, harmImproved: altHarm < origHarm - 0.5 };
                   }
-                } catch (e) { /* skip bad candidate */ }
+                } catch (e) {
+                  console.warn(_LOG, '⚠️ scoring error for candidate', alt?.name, e?.message);
+                }
               }
-if (!best || bestComposite < 28) return null;
-console.info('[HEYS.alternative] ✅ Smart replacement found:', {
-  original: prod.name, replacement: best.name,
-  saving: best.saving + '%', score: best.score, candidates: candidates.length,
-});
-return best;
+              const sortedLog = [...scoredCandidates].sort((a, b) => b.scores.composite - a.scores.composite);
+              console.info(_LOG, '📊 scoring table (desc)', sortedLog.map((c) => ({
+                name: c.name, kcal: c.kcal, saving: c.saving + '%', harm: c.harm, familiar: c.familiar, portionMode: c.portionMode,
+                portion: `${c.typicalAltGrams}г → ${c.actualAltKcal}ккал (orig ${actualCurrentKcal}ккал)`,
+                composite: c.scores.composite,
+                breakdown: `picker=${c.scores.picker} | macroSim=${c.scores.macroSim} | improv=${c.scores.improvement}(harm=${c.breakdown.harmImprov},save=${c.breakdown.savingBonus},fiber=${c.breakdown.fiberBonus}) | fam=${c.scores.familiarBonus} | portionPenalty=${c.scores.portionPenalty}`,
+              })));
+              if (!best || bestComposite < 28) {
+                if (origHarm >= 3) {
+                  const _harmPool = candidatePool.filter((alt) => {
+                    if (alt.id === prod.id || _mealItemIds.has(alt.id)) return false;
+                    const _altDer = computeDerivedProductFn(alt);
+                    const _altKcal2 = alt.kcal100 || _altDer.kcal100 || 0;
+                    const _altHarm2 = alt.harm ?? 0;
+                    if (_altKcal2 < 30) return false;
+                    if (_altHarm2 >= origHarm - 2) return false;
+                    const _typGrams2 = getTypicalGrams(alt);
+                    if (Math.round(_altKcal2 * _typGrams2 / 100) > actualCurrentKcal * 2) return false;
+                    const _altSemCat2 = getSemanticCat(alt.name, alt.category);
+                    if (origSemCat !== 'other' && _altSemCat2 !== origSemCat) return false;
+                    return true;
+                  });
+                  if (_harmPool.length > 0) {
+                    const _hBest = _harmPool.reduce((a, b) => (a.harm ?? 0) < (b.harm ?? 0) ? a : b);
+                    const _hDer = computeDerivedProductFn(_hBest);
+                    const _hKcal = _hBest.kcal100 || _hDer.kcal100 || 1;
+                    const _hHarm = _hBest.harm ?? 0;
+                    const _hGrams = getTypicalGrams(_hBest);
+                    const _hActKcal = Math.round(_hKcal * _hGrams / 100);
+                    const _hSaving = Math.round((1 - _hKcal / currentKcal) * 100);
+                    console.info(_LOG, '✅ harm-only fallback selected', { original: prod.name, origHarm, replacement: _hBest.name, altHarm: _hHarm, portion: `${_hGrams}г → ${_hActKcal}ккал`, harmOnlyPool: _harmPool.length });
+                    return { name: _hBest.name, saving: _hSaving, score: 0, portionMode: 'harm_only', actualCurrentKcal, actualAltKcal: _hActKcal, harmImproved: true, origHarm: Math.round(origHarm * 10) / 10, altHarm: _hHarm };
+                  }
+                }
+                console.info(_LOG, '❌ no recommendation — below threshold, no harm-only fallback', { bestName: best?.name || '—', bestComposite: Math.round(bestComposite * 10) / 10, origHarm });
+                return null;
+              }
+              console.info(_LOG, '✅ recommendation selected', {
+                original: prod.name, originalKcal: currentKcal, replacement: best.name,
+                saving: best.saving + '%', composite: best.score, portionMode: best.portionMode,
+                portion: `${G}г → ${best.actualCurrentKcal}ккал | замена ~${best.actualAltKcal}ккал`,
+                semCat: origSemCat, macroCat: origMacroCat || '—', candidatesTotal: candidates.length,
+              });
+              return best;
             };
 const alternative = findAlternative(p, products);
 
@@ -727,9 +851,16 @@ const cardContent = React.createElement('div', { className: 'mpc', style: { back
   alternative && React.createElement('div', { className: 'mpc-alternative' },
     React.createElement('span', null, '💡 Замени на '),
     React.createElement('strong', null, alternative.name),
-    React.createElement('span', null, alternative.saving >= 10
-      ? ' — на ' + alternative.saving + '% меньше ккал'
-      : ' — полезнее по составу')
+    React.createElement('span', null, (() => {
+      const _a = alternative;
+      if (_a.portionMode === 'harm_only') return ` — вред ${_a.origHarm} → ${_a.altHarm}`;
+      if (_a.portionMode === 'real_saving') {
+        const _t = ` — ~${_a.actualAltKcal} ккал вместо ~${_a.actualCurrentKcal} ккал`;
+        return _a.harmImproved ? _t + ', вред ниже' : _t;
+      }
+      return _a.harmImproved ? ' — полезнее по составу, вред ниже' : ' — полезнее по составу';
+    })()
+    )
   )
 );
 

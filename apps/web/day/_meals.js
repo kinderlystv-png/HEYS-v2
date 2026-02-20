@@ -643,6 +643,13 @@
                         });
 
                         // Actual calories consumed at the real portion the user ate (G = grams from closure)
+                        // Early harm eval — needed for good-product guard (#6) and harm-only fallback (#4)
+                        const origHarm = prod.harm ?? harmVal ?? 0;
+                        // #6 Guard: product already good — no value in recommending a swap
+                        if (origHarm <= 1 && currentKcal <= 200) {
+                            console.info(_LOG, '⛔ skip: product already good (harm≤1 + kcal≤200)', { product: prod.name, harm: origHarm, kcal: currentKcal });
+                            return null;
+                        }
                         const actualCurrentKcal = Math.round(currentKcal * G / 100);
                         // Tiny portion guard: swapping < 20g serving is nonsensical (e.g. 11g almonds)
                         if (G > 0 && G < 20) {
@@ -687,8 +694,19 @@
                             macroCat: origMacroCat || '—',
                         });
 
-                        // Candidate pool: client products + shared products
-                        const _sharedList = (HEYS.products?.shared && Array.isArray(HEYS.products.shared)) ? HEYS.products.shared : [];
+                        // Candidate pool: client products + shared products (#8 try multiple access paths)
+                        const _sharedList = (() => {
+                            const _paths = [
+                                HEYS.products?.shared,
+                                HEYS.products?.getShared?.(),
+                                HEYS.products?.sharedProducts,
+                                HEYS.products?.all?.filter?.((p) => p._shared || p.shared),
+                            ];
+                            for (const _p of _paths) {
+                                if (Array.isArray(_p) && _p.length > 0) return _p;
+                            }
+                            return [];
+                        })();
                         const _clientIds = new Set(allProducts.map((ap) => ap.id));
                         const candidatePool = [
                             ...allProducts.map((ap) => ({ ...ap, _familiar: true })),
@@ -701,10 +719,17 @@
                             totalPool: candidatePool.length,
                         });
 
+                        // #3 Exclude ALL products already in this meal (other items in same sitting)
+                        const _mealItemIds = new Set(
+                            (meal?.items || []).map((mi) => mi.product_id || mi.id).filter(Boolean)
+                        );
+                        // #2 Adaptive noSaving threshold: low-kcal products need softer filter
+                        const _noSavingThreshold = currentKcal < 200 ? 0.75 : 0.90;
                         // Filter: real food, category-compatible, meaningful saving
-                        const _rejectLog = { selfMatch: 0, lowKcal: 0, lowMacro: 0, noSaving: 0, tooLowKcal: 0, wrongCat: 0, passed: 0 };
+                        const _rejectLog = { selfMatch: 0, mealItem: 0, lowKcal: 0, lowMacro: 0, noSaving: 0, tooLowKcal: 0, wrongCat: 0, passed: 0 };
                         const candidates = candidatePool.filter((alt) => {
                             if (alt.id === prod.id) { _rejectLog.selfMatch++; return false; }
+                            if (_mealItemIds.has(alt.id) || _mealItemIds.has(alt.product_id)) { _rejectLog.mealItem++; return false; }
                             const altDer = computeDerivedProductFn(alt);
                             const altKcal = alt.kcal100 || altDer.kcal100 || 0;
                             if (altKcal < 30) { _rejectLog.lowKcal++; return false; } // exclude supplements/spices/teas
@@ -712,7 +737,7 @@
                                 + (alt.fat100 || altDer.fat100 || 0)
                                 + ((alt.simple100 || 0) + (alt.complex100 || 0) || alt.carbs100 || altDer.carbs100 || 0);
                             if (altMacroSum < 5) { _rejectLog.lowMacro++; return false; } // not real food
-                            if (altKcal >= currentKcal * 0.90) { _rejectLog.noSaving++; return false; } // must save calories
+                            if (altKcal >= currentKcal * _noSavingThreshold) { _rejectLog.noSaving++; return false; } // adaptive: 75% for <200kcal, 90% otherwise
                             if (altKcal < currentKcal * 0.15) { _rejectLog.tooLowKcal++; return false; } // guard: cap at 85% saving
                             const altSemCat = getSemanticCat(alt.name, alt.category);
                             if (origSemCat !== 'other') {
@@ -741,7 +766,7 @@
                         }
 
                         // Pre-compute original macro energy fractions
-                        const origHarm = prod.harm ?? harmVal ?? 0;
+                        // origHarm already declared above (early guard section)
                         const origGI = prod.gi ?? 50;
                         const origProtEn = (per.prot100 || 0) * 3 / currentKcal;
                         const origCarbEn = (per.carbs100 || 0) * 4 / currentKcal;
@@ -875,7 +900,7 @@
                                 });
                                 if (composite > bestComposite) {
                                     bestComposite = composite;
-                                    best = { name: alt.name, saving: savingPct, score: Math.round(composite), portionMode, actualCurrentKcal, actualAltKcal };
+                                    best = { name: alt.name, saving: savingPct, score: Math.round(composite), portionMode, actualCurrentKcal, actualAltKcal, harmImproved: altHarm < origHarm - 0.5 };
                                 }
                             } catch (e) {
                                 console.warn(_LOG, '⚠️ scoring error for candidate', alt?.name, e?.message);
@@ -897,10 +922,43 @@
                         })));
 
                         if (!best || bestComposite < 28) {
-                            console.info(_LOG, '❌ no recommendation — best score below threshold', {
+                            // #4 Harm-only fallback: original product is harmful — recommend cleaner option
+                            // even when no kcal saving is achievable (e.g. Краковская колбаса harm=8.5)
+                            if (origHarm >= 3) {
+                                const _harmPool = candidatePool.filter((alt) => {
+                                    if (alt.id === prod.id || _mealItemIds.has(alt.id)) return false;
+                                    const _altDer = computeDerivedProductFn(alt);
+                                    const _altKcal2 = alt.kcal100 || _altDer.kcal100 || 0;
+                                    const _altHarm2 = alt.harm ?? 0;
+                                    if (_altKcal2 < 30) return false;
+                                    if (_altHarm2 >= origHarm - 2) return false; // must be meaningfully cleaner
+                                    const _typGrams2 = getTypicalGrams(alt);
+                                    if (Math.round(_altKcal2 * _typGrams2 / 100) > actualCurrentKcal * 2) return false; // portion reality
+                                    const _altSemCat2 = getSemanticCat(alt.name, alt.category);
+                                    if (origSemCat !== 'other' && _altSemCat2 !== origSemCat) return false;
+                                    return true;
+                                });
+                                if (_harmPool.length > 0) {
+                                    const _hBest = _harmPool.reduce((a, b) => (a.harm ?? 0) < (b.harm ?? 0) ? a : b);
+                                    const _hDer = computeDerivedProductFn(_hBest);
+                                    const _hKcal = _hBest.kcal100 || _hDer.kcal100 || 1;
+                                    const _hHarm = _hBest.harm ?? 0;
+                                    const _hGrams = getTypicalGrams(_hBest);
+                                    const _hActKcal = Math.round(_hKcal * _hGrams / 100);
+                                    const _hSaving = Math.round((1 - _hKcal / currentKcal) * 100);
+                                    console.info(_LOG, '✅ harm-only fallback selected', {
+                                        original: prod.name, origHarm,
+                                        replacement: _hBest.name, altHarm: _hHarm,
+                                        portion: `${_hGrams}г → ${_hActKcal}ккал`,
+                                        harmOnlyPool: _harmPool.length,
+                                    });
+                                    return { name: _hBest.name, saving: _hSaving, score: 0, portionMode: 'harm_only', actualCurrentKcal, actualAltKcal: _hActKcal, harmImproved: true, origHarm: Math.round(origHarm * 10) / 10, altHarm: _hHarm };
+                                }
+                            }
+                            console.info(_LOG, '❌ no recommendation — below threshold, no harm-only fallback', {
                                 bestName: best?.name || '—',
                                 bestComposite: Math.round(bestComposite * 10) / 10,
-                                threshold: 28,
+                                origHarm,
                             });
                             return null;
                         }
@@ -984,9 +1042,15 @@
                         alternative && React.createElement('div', { className: 'mpc-alternative' },
                             React.createElement('span', null, '💡 Замени на '),
                             React.createElement('strong', null, alternative.name),
-                            React.createElement('span', null, alternative.portionMode === 'real_saving'
-                                ? ' — ~' + alternative.actualAltKcal + ' ккал вместо ~' + alternative.actualCurrentKcal + ' ккал'
-                                : ' — полезнее по составу'),
+                            React.createElement('span', null, (() => {
+                                const _a = alternative;
+                                if (_a.portionMode === 'harm_only') return ` — вред ${_a.origHarm} → ${_a.altHarm}`;
+                                if (_a.portionMode === 'real_saving') {
+                                    const _t = ` — ~${_a.actualAltKcal} ккал вместо ~${_a.actualCurrentKcal} ккал`;
+                                    return _a.harmImproved ? _t + ', вред ниже' : _t;
+                                }
+                                return _a.harmImproved ? ' — полезнее по составу, вред ниже' : ' — полезнее по составу';
+                            })()),
                         ),
                     );
 
