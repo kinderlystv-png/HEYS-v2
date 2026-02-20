@@ -3003,25 +3003,143 @@
                     const categoryIcon = getCategoryIcon(p.category);
 
                     const findAlternative = (prod, allProducts) => {
-                        if (!prod.category || !allProducts || allProducts.length < 2) return null;
+                        // Smart Alternative v1.0: semantic category + macro similarity + multi-factor scoring
+                        if (!allProducts || allProducts.length < 2) return null;
                         const currentKcal = per.kcal100 || 0;
                         if (currentKcal < 50) return null;
 
-                        const sameCategory = allProducts.filter((alt) =>
-                            alt.category === prod.category
-                            && alt.id !== prod.id
-                            && (alt.kcal100 || computeDerivedProductFn(alt).kcal100) < currentKcal * 0.7,
-                        );
-                        if (sameCategory.length === 0) return null;
+                        const _detectCat = HEYS.InsightsPI?.productPicker?._internal?.detectCategory;
+                        const getSemanticCat = (name, fallbackCat) => {
+                            if (_detectCat) return _detectCat(name || '');
+                            const c = (fallbackCat || name || '').toLowerCase();
+                            if (c.includes('молоч') || c.includes('кефир') || c.includes('творог') || c.includes('йогур') || c.includes('сыр')) return 'dairy';
+                            if (c.includes('мяс') || c.includes('птиц') || c.includes('курин') || c.includes('говяд') || c.includes('рыб') || c.includes('морепр') || c.includes('яйц')) return 'protein';
+                            if (c.includes('овощ') || c.includes('фрукт') || c.includes('ягод') || c.includes('зелен') || c.includes('салат')) return 'vegetables';
+                            if (c.includes('круп') || c.includes('каш') || c.includes('злак') || c.includes('хлеб') || c.includes('макарон')) return 'grains';
+                            if (c.includes('орех') || c.includes('семеч') || c.includes('миндал') || c.includes('фундук')) return 'snacks';
+                            return 'other';
+                        };
+                        const getDominantMacro = (prot, carbs, fat, kcal) => {
+                            if (!kcal || kcal < 1) return 'macro_mixed';
+                            if ((prot * 3) / kcal >= 0.35) return 'macro_protein';
+                            if ((fat * 9) / kcal >= 0.55) return 'macro_fat';
+                            if ((carbs * 4) / kcal >= 0.50) return 'macro_carb';
+                            return 'macro_mixed';
+                        };
+                        const origSemCat = getSemanticCat(prod.name, prod.category);
+                        const origMacroCat = origSemCat === 'other'
+                            ? getDominantMacro(per.prot100 || 0, per.carbs100 || 0, per.fat100 || 0, currentKcal)
+                            : null;
 
-                        const best = sameCategory.reduce((a, b) => {
-                            const aKcal = a.kcal100 || computeDerivedProductFn(a).kcal100;
-                            const bKcal = b.kcal100 || computeDerivedProductFn(b).kcal100;
-                            return aKcal < bKcal ? a : b;
+                        const _sharedList = (HEYS.products?.shared && Array.isArray(HEYS.products.shared)) ? HEYS.products.shared : [];
+                        const _clientIds = new Set(allProducts.map((ap) => ap.id));
+                        const candidatePool = [
+                            ...allProducts.map((ap) => ({ ...ap, _familiar: true })),
+                            ..._sharedList.filter((sp) => sp && sp.id && !_clientIds.has(sp.id)).map((sp) => ({ ...sp, _familiar: false })),
+                        ];
+
+                        const candidates = candidatePool.filter((alt) => {
+                            if (alt.id === prod.id) return false;
+                            const altDer = computeDerivedProductFn(alt);
+                            const altKcal = alt.kcal100 || altDer.kcal100 || 0;
+                            if (altKcal < 30) return false;
+                            const altMacroSum = (alt.prot100 || altDer.prot100 || 0)
+                                + (alt.fat100 || altDer.fat100 || 0)
+                                + ((alt.simple100 || 0) + (alt.complex100 || 0) || alt.carbs100 || altDer.carbs100 || 0);
+                            if (altMacroSum < 5) return false;
+                            if (altKcal >= currentKcal * 0.90) return false;
+                            if (altKcal < currentKcal * 0.15) return false;
+                            const altSemCat = getSemanticCat(alt.name, alt.category);
+                            if (origSemCat !== 'other') {
+                                if (altSemCat !== origSemCat) return false;
+                            } else {
+                                const altMacroCat = getDominantMacro(
+                                    alt.prot100 || altDer.prot100 || 0,
+                                    alt.carbs100 || altDer.carbs100 || 0,
+                                    alt.fat100 || altDer.fat100 || 0,
+                                    altKcal,
+                                );
+                                if (origMacroCat !== 'macro_mixed' && altMacroCat !== 'macro_mixed' && origMacroCat !== altMacroCat) return false;
+                            }
+                            return true;
                         });
-                        const bestKcal = best.kcal100 || computeDerivedProductFn(best).kcal100;
-                        const saving = Math.round((1 - bestKcal / currentKcal) * 100);
-                        return { name: best.name, saving };
+                        if (candidates.length === 0) return null;
+
+                        const origHarm = prod.harm ?? harmVal ?? 0;
+                        const origGI = prod.gi ?? 50;
+                        const origProtEn = (per.prot100 || 0) * 3 / currentKcal;
+                        const origCarbEn = (per.carbs100 || 0) * 4 / currentKcal;
+                        const origFatEn = (per.fat100 || 0) * 9 / currentKcal;
+                        const origFiber = per.fiber100 || 0;
+
+                        let _pickerFn = null;
+                        let _pickerScenario = null;
+                        try {
+                            _pickerFn = HEYS.InsightsPI?.productPicker?.calculateProductScore;
+                            if (_pickerFn && meal?.time) {
+                                const _mealHour = parseInt(meal.time.split(':')[0], 10);
+                                _pickerScenario = {
+                                    scenario: _mealHour >= 22 ? 'PRE_SLEEP' : _mealHour >= 20 ? 'LATE_EVENING' : 'BALANCED',
+                                    remainingKcal: optimum ? Math.max(0, optimum - currentKcal) : 500,
+                                    currentTime: _mealHour,
+                                    targetProtein: profile?.targetProtein || 100,
+                                    sugarDependencyRisk: false,
+                                    fiberRegularityScore: 0.5,
+                                    micronutrientDeficits: [],
+                                    novaQualityScore: 0.5,
+                                    targetGL: _mealHour >= 20 ? 10 : 20,
+                                };
+                            }
+                        } catch (e) { _pickerFn = null; }
+
+                        let best = null;
+                        let bestComposite = -Infinity;
+                        for (const alt of candidates) {
+                            try {
+                                const altDer = computeDerivedProductFn(alt);
+                                const altKcal = alt.kcal100 || altDer.kcal100 || 1;
+                                const altProt = alt.prot100 || altDer.prot100 || 0;
+                                const altCarbs = alt.carbs100 || altDer.carbs100 || 0;
+                                const altFat = alt.fat100 || altDer.fat100 || 0;
+                                const altFiber = alt.fiber100 || altDer.fiber100 || 0;
+                                const altGI = alt.gi ?? 50;
+                                const altHarm = alt.harm ?? 0;
+                                const macroSimilarity = Math.max(0,
+                                    100
+                                    - Math.abs(origProtEn - (altProt * 3 / altKcal)) * 150
+                                    - Math.abs(origCarbEn - (altCarbs * 4 / altKcal)) * 100
+                                    - Math.abs(origFatEn - (altFat * 9 / altKcal)) * 100,
+                                );
+                                const savingPct = Math.round((1 - altKcal / currentKcal) * 100);
+                                const harmImprov = Math.min(50, Math.max(-20, (origHarm - altHarm) * 15));
+                                const improvementScore = harmImprov + Math.min(35, savingPct * 0.45) + (altFiber > origFiber + 1 ? 10 : 0);
+                                const familiarBonus = alt._familiar ? 10 : 0;
+                                let pickerScore = 50;
+                                if (_pickerFn && _pickerScenario) {
+                                    try {
+                                        pickerScore = _pickerFn({
+                                            name: alt.name,
+                                            macros: { protein: altProt, carbs: altCarbs, fat: altFat, kcal: altKcal },
+                                            harm: altHarm, gi: altGI,
+                                            category: getSemanticCat(alt.name, alt.category),
+                                            familiarityScore: alt._familiar ? 7 : 3,
+                                            fiber: altFiber, nova_group: alt.novaGroup || 2,
+                                        }, _pickerScenario) || 50;
+                                    } catch (e) { pickerScore = 50; }
+                                }
+                                const composite = pickerScore * 0.35 + macroSimilarity * 0.30 + improvementScore * 0.25 + familiarBonus * 0.10;
+                                if (composite > bestComposite) {
+                                    bestComposite = composite;
+                                    best = { name: alt.name, saving: savingPct, score: Math.round(composite) };
+                                }
+                            } catch (e) { /* skip bad candidate */ }
+                        }
+                        if (!best || bestComposite < 28) return null;
+                        console.info('[HEYS.alternative] ✅ Smart replacement found:', {
+                            original: prod.name, replacement: best.name,
+                            saving: best.saving + '%', score: best.score, candidates: candidates.length,
+                        });
+                        return best;
                     };
                     const alternative = findAlternative(p, products);
 
@@ -3089,7 +3207,9 @@
                         alternative && React.createElement('div', { className: 'mpc-alternative' },
                             React.createElement('span', null, '💡 Замени на '),
                             React.createElement('strong', null, alternative.name),
-                            React.createElement('span', null, ' — на ' + alternative.saving + '% меньше ккал'),
+                            React.createElement('span', null, alternative.saving >= 10
+                                ? ' — на ' + alternative.saving + '% меньше ккал'
+                                : ' — полезнее по составу'),
                         ),
                     );
 
