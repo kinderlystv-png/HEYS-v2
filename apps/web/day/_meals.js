@@ -666,6 +666,17 @@
                         const _detectCat = HEYS.InsightsPI?.productPicker?._internal?.detectCategory;
                         const _catSource = _detectCat ? 'ProductPicker' : 'keyword-fallback';
                         const getSemanticCat = (name, fallbackCat) => {
+                            // Priority sub-categories — override ProductPicker for specific use-cases
+                            const _n = (name || '').toLowerCase();
+                            if (_n.includes('майонез') || _n.includes('кетчуп') || _n.includes('горчиц') ||
+                                _n.startsWith('соус') || _n.includes(' соус') || _n.includes('уксус') ||
+                                _n.includes('заправк') || _n.includes('аджик') || _n.includes('хрен') ||
+                                _n.includes('васаби') || _n.includes('песто') || _n.includes('тахини') ||
+                                _n.includes('ткемали')) return 'sauce';
+                            if (_n.includes('сгущён') || _n.includes('пудинг') || _n.includes('конфет') ||
+                                _n.includes('мармелад') || _n.includes('зефир') || _n.includes('халва') ||
+                                _n.includes('варень') || _n.includes('джем') || _n.includes('нутелл') ||
+                                _n.includes('карамел') || _n.includes('пастил') || _n.includes('трюфел')) return 'dessert_sweet';
                             if (_detectCat) return _detectCat(name || '');
                             const c = (fallbackCat || name || '').toLowerCase();
                             if (c.includes('молоч') || c.includes('кефир') || c.includes('творог') || c.includes('йогур') || c.includes('сыр')) return 'dairy';
