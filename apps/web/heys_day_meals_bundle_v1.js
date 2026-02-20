@@ -3113,23 +3113,25 @@
                         };
                         const getFoodFormFactor = (name, semCat) => {
                             const _n = (name || '').toLowerCase();
-                            if (
+                            const _isSpreadableToken =
                                 semCat === 'sauce' || semCat === 'oil' ||
                                 _n.includes('творожн') && _n.includes('сыр') ||
                                 _n.includes('сливочн') && _n.includes('сыр') ||
                                 _n.includes('крем-сыр') || _n.includes('плавлен') ||
                                 _n.includes('намазк') || _n.includes('паштет') ||
-                                _n.includes('хумус') || _n.includes('арахисов') && _n.includes('паста')
-                            ) return 'spreadable';
-                            if (semCat === 'drink' || _n.includes('кефир') || _n.includes('йогурт пить')) return 'liquid';
-                            if (
+                                _n.includes('хумус') || _n.includes('арахисов') && _n.includes('паста');
+                            const _isDishToken =
+                                _n.includes('ролл') || _n.includes('сэндвич') || _n.includes('бургер') ||
+                                _n.includes('шаурм') || _n.includes('брускет') || _n.includes('суши') ||
                                 _n.includes('суп') || _n.includes('котлет') || _n.includes('тефтел') ||
                                 _n.includes('куриц') || _n.includes('индейк') || _n.includes('говядин') ||
                                 _n.includes('свинин') || _n.includes('рыба') || _n.includes('лосос') ||
                                 _n.includes('минтай') || _n.includes('салат') || _n.includes('запек') ||
                                 _n.includes('туш') || _n.includes('шашлык') || _n.includes('плов') ||
-                                _n.includes('омлет') || _n.includes('жаркое')
-                            ) return 'solid_meal';
+                                _n.includes('омлет') || _n.includes('жаркое');
+                            if (_isDishToken) return 'solid_meal';
+                            if (_isSpreadableToken) return 'spreadable';
+                            if (semCat === 'drink' || _n.includes('кефир') || _n.includes('йогурт пить')) return 'liquid';
                             return 'neutral';
                         };
                         const getDominantMacro = (prot, carbs, fat, kcal) => {
@@ -3179,7 +3181,7 @@
                             (meal?.items || []).map((mi) => mi.product_id || mi.id).filter(Boolean)
                         );
                         const _noSavingThreshold = currentKcal < 200 ? 0.75 : 0.90;
-                        const _rejectLog = { selfMatch: 0, mealItem: 0, lowKcal: 0, lowMacro: 0, noSaving: 0, tooLowKcal: 0, wrongCat: 0, formMismatch: 0, passed: 0 };
+                        const _rejectLog = { selfMatch: 0, mealItem: 0, lowKcal: 0, lowMacro: 0, noSaving: 0, tooLowKcal: 0, wrongCat: 0, formMismatch: 0, grainSubtypeMismatch: 0, passed: 0 };
                         const candidates = candidatePool.filter((alt) => {
                             if (alt.id === prod.id) { _rejectLog.selfMatch++; return false; }
                             if (_mealItemIds.has(alt.id) || _mealItemIds.has(alt.product_id)) { _rejectLog.mealItem++; return false; }
@@ -3194,6 +3196,13 @@
                             if (altKcal < currentKcal * 0.15) { _rejectLog.tooLowKcal++; return false; }
                             const altSemCat = getSemanticCat(alt.name, alt.category);
                             const altFormFactor = getFoodFormFactor(alt.name, altSemCat);
+                            if (origSemCat === 'grains' && origGrainSubtype === 'breakfast_grain') {
+                                const altGrainSubtype = getGrainSubtype(alt.name);
+                                if (altGrainSubtype === 'flatbread_grain') {
+                                    _rejectLog.grainSubtypeMismatch++;
+                                    return false;
+                                }
+                            }
                             if (origSemCat !== 'other') {
                                 if (altSemCat !== origSemCat) { _rejectLog.wrongCat++; return false; }
                             } else {
@@ -3205,7 +3214,7 @@
                                 );
                                 if (origMacroCat !== 'macro_mixed' && altMacroCat !== 'macro_mixed' && origMacroCat !== altMacroCat) { _rejectLog.wrongCat++; return false; }
                             }
-                            if (origFormFactor === 'spreadable' && altFormFactor === 'solid_meal') {
+                            if (origFormFactor === 'spreadable' && altFormFactor !== 'spreadable') {
                                 _rejectLog.formMismatch++;
                                 return false;
                             }
