@@ -1902,6 +1902,21 @@
       }
 
       // --- ШАГ 3: localStorage ДО записи ---
+      // 🛡️ v4.8.8: Проверяем место перед удалением. Если localStorage полон, запись может упасть,
+      // и React state обновится, но диск — нет. При перезагрузке продукт вернётся.
+      try {
+        const testKey = '__test_storage_quota__';
+        localStorage.setItem(testKey, '1');
+        localStorage.removeItem(testKey);
+      } catch (e) {
+        console.warn('[baza] ⚠️ localStorage ПОЛОН перед удалением — пробуем освободить место...', e);
+        // Пытаемся вызвать aggressiveCleanup из storage слоя
+        if (window.HEYS?.cloud?.cleanupStorage) {
+          window.HEYS.cloud.cleanupStorage(30); // Удаляем старые дни (>30 дней)
+          console.info('[baza] 🧹 Cleanup executed to free space for deletion');
+        }
+      }
+
       const lsBefore = (window.HEYS?.store?.get?.('heys_products', null))
         || (window.HEYS?.utils?.lsGet?.('heys_products', null));
       console.info('[baza] 💾 ШАГ 3/7 — localStorage ДО записи:', Array.isArray(lsBefore) ? lsBefore.length + ' продуктов' : '⚠️ null/не массив');
