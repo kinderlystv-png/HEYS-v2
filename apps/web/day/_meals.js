@@ -669,9 +669,10 @@
                             // Priority sub-categories — override ProductPicker for specific use-cases
                             const _n = (name || '').toLowerCase();
                             // Guard: "блюдо в майонезе" — майонез как ингредиент, а не соус сам по себе
-                            const _sauceAsIngredient = _n.includes(' в майонезе') || _n.includes(' с майонезом') ||
-                                _n.includes(' в кетчупе') || _n.includes(' в горчиц') ||
-                                _n.includes(' в соусе') || _n.includes(' с соусом');
+                            // Note: '(в майонезе)' has '(' before 'в', not space — use includes without leading space
+                            const _sauceAsIngredient = _n.includes('в майонезе') || _n.includes('с майонезом') ||
+                                _n.includes('в кетчупе') || _n.includes('в горчиц') ||
+                                _n.includes('в соусе') || _n.includes('с соусом');
                             if (!_sauceAsIngredient && (
                                 _n.includes('майонез') || _n.includes('кетчуп') || _n.includes('горчиц') ||
                                 _n.startsWith('соус') || _n.includes(' соус') || _n.includes('уксус') ||
