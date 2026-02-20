@@ -734,11 +734,14 @@ dcs = clamp(dailyScore / MOMENTUM_TARGET, -0.3, 1.0)
 
 **Critical Violation Override** — обходит инерцию:
 
-| Критическое событие                        | DCS override | Обоснование                        |
-| :----------------------------------------- | :----------- | :--------------------------------- |
-| Еда после 00:00 с `harm ≥ 7`               | −0.8         | Ночной срыв = циркадная катастрофа |
-| Перебор ккал > 150% нормы                  | −0.6         | Массивное переедание               |
-| Комбинация (ночное + вредное + переедание) | −1.0         | Полный сброс дневного вклада       |
+| Критическое событие                        | DCS override | Обоснование                            |
+| :----------------------------------------- | :----------- | :------------------------------------- |
+| Еда после 00:00 с `harm ≥ 7`               | −0.8         | Ночной срыв = циркадная катастрофа     |
+| Перебор ккал > 150% нормы                  | −0.6         | Массивное переедание                   |
+| Комбинация (ночное + вредное + переедание) | −1.0         | Полный сброс дневного вклада           |
+| **Дефицит: >150% нормы** (v3.1.0)          | **−0.7**     | Критический перебор при цели похудения |
+| **Дефицит: >criticalOver (напр. >115%)**   | **−0.5**     | Нарушение при дефиците (level 2)       |
+| **Дефицит: >targetMax (напр. >105%)**      | clamp −0.4   | Мягкий перебор при дефиците (level 1)  |
 
 ```javascript
 // computeDailyContribution(dailyScore, day, normAbs)
@@ -951,7 +954,7 @@ v3.0.0:  📈 Импульс: 78/85%     ↑ Тренд: растёт
 ### 10. Логирование CRS
 
 ```javascript
-console.info('[HEYS.cascade.CRS] ✅ Cascade Rate Score:', {
+console.info('[HEYS.cascade.crs] ✅ Cascade Rate Score:', {
   crs: 0.78,
   ceiling: 0.85,
   dailyContribution: 0.72,
@@ -962,19 +965,29 @@ console.info('[HEYS.cascade.CRS] ✅ Cascade Rate Score:', {
   criticalViolation: false,
 });
 
-console.info('[HEYS.cascade.CRS] 📊 DCS history (last 7d):', {
+console.info('[HEYS.cascade.crs] 📊 DCS history (last 7d):', {
   scores: [0.72, 0.85, 0.68, 0.91, 0.73, 0.8, -0.15],
   avgDCS: 0.65,
   trend: 'stable',
 });
 
-console.info('[HEYS.cascade.CRS] 🎯 Ceiling computation:', {
+console.info('[HEYS.cascade.crs] 🏔️ Ceiling computation:', {
   base: 0.65,
   consistency: 1.22,
   diversity: 1.08,
   dataDepth: 0.06,
   ceiling: 0.85,
   activatedFactors: ['meal', 'sleep', 'training', 'checkin', 'steps'],
+});
+
+// v3.1.0: goal-aware DCS override (deficit mode)
+console.info('[HEYS.cascade.deficit] 📊 Goal-aware DCS override:', {
+  level: 2,
+  ratio: 1.18,
+  criticalOver: 1.15,
+  targetMax: 1.05,
+  appliedPenalty: -0.5,
+  violationType: 'deficit_overshoot',
 });
 ```
 
@@ -1014,6 +1027,10 @@ console.info('[HEYS.cascade.CRS] 🎯 Ceiling computation:', {
 | Ночной срыв (harm ≥ 7 после 00)  | DCS = −0.8, CRS падает заметно (−30..50%)    |
 | 4 недели стабильного поведения   | CRS → ceiling (до 1.0), STRONG               |
 | 2 недели хорошо + 1 неделя плохо | CRS плавно снижается, не обваливается        |
+| **Дефицит + 110% ккал** (v3.1.0) | DCS clamp ослаблен до −0.4 (level 1)         |
+| **Дефицит + 120% ккал** (v3.1.0) | DCS override −0.5, DEFICIT_OVERSHOOT (l2)    |
+| **Дефицит + 160% ккал** (v3.1.0) | DCS override −0.7, сильнее generic (l3)      |
+| **Набор + 140% ккал** (v3.1.0)   | Penalty снят (bulk exempt ≤ 180%)            |
 
 ```javascript
 // Консольная проверка:
@@ -1558,51 +1575,71 @@ mealRecCard,
 
 ## 12. Логирование и отладка
 
-**Фильтр в консоли:** `[HEYS.cascade]`
+**Фильтры в консоли:**
+
+- `[HEYS.cascade]` — основной фильтр, все события
+- `[HEYS.cascade.crs]` — только CRS-подсистема (DCS, EMA, ceiling)
+- `[HEYS.cascade.deficit]` — только goal-aware штрафы v3.1.0 (дефицит/набор)
 
 Все логи используют `console.info` (или `console.warn` для предупреждений).
 
-### Полная карта логов (v2.1.0)
+### Полная карта логов (v3.1.0)
 
-| Эмодзи              | Лог                             | Когда                                         |
-| ------------------- | ------------------------------- | --------------------------------------------- |
-| `─── v2.1.0 START`  | computeCascadeState START       | Начало расчёта + список фич v2.1.0            |
-| `🧬`                | v2.1.0 features                 | continuous/baselines/circadian/synergies      |
-| `📥`                | Input data                      | Входные параметры (расширенные)               |
-| `🏠 [EVENT]`        | Household (v2.1.0 log2)         | log2 adaptive scoring + baseline              |
-| `🍽️ [MEAL N/M]`     | Meal (v2.1.0 continuous)        | continuous + circadian modifier + formula     |
-| `💪 [TRAINING N/M]` | Training (v2.1.0 load×sqrt)     | load×intensity, diminishing, formula          |
-| `💪`                | Recovery / no training          | recovery-aware + weekly load check            |
-| `😴`                | Sleep onset (v2.1.0 sigmoid)    | chronotype-adaptive + consistency + variance  |
-| `😴`                | Sleep duration (v2.1.0 bell)    | Gaussian bell-curve + asymmetry + recovery    |
-| `🚶`                | Steps (v2.1.0 tanh)             | adaptive goal + tanh formula                  |
-| `⚖️`                | Checkin (v2.1.0 streak)         | base + streak + trend + formula               |
-| `📏`                | Measurements (v2.1.0 cadence)   | completeness + cadence + diminishing          |
-| `💊`                | Supplements (v2.1.0 continuous) | ratio + streak + formula                      |
-| `⚡`                | InsulinWave (v2.1.0 sigmoid)    | sigmoid overlap + log2 gap + fasting          |
-| `📊`                | v2.1.0 Scoring summary          | rawWeights + active/skipped + method          |
-| `🎯`                | Confidence layer (v2.1.0)       | per-factor confidence + avg + quality         |
-| `📅`                | Day-type (v2.1.0)               | training/rest/active_rest + effect            |
-| `🔗`                | Cross-factor synergies          | count + names + bonuses + capped              |
-| `📋`                | Events sorted (N total)         | финальный список событий                      |
-| `⛓️`                | Chain algorithm trace           | трейс каждого шага цепочки                    |
-| `🔗`                | Chain result                    | итог: chain, maxChain, warnings[]             |
-| `🏷️`                | State determination             | score-driven (v2.2.0)                         |
-| `⏰`                | Post-training window            | активно/не активно и эффект                   |
-| `💬`                | Message selected                | пул, индекс, текст сообщения                  |
-| `📊`                | Momentum score                  | формула и результат                           |
-| `💡`                | Next step hint                  | какой hint и почему                           |
-| `✅ v2.2.0 DONE`    | computeCascadeState DONE        | итоговый объект + elapsed                     |
-| `🧬 v2.2.0 subsys`  | v2.2.0 subsystems               | dayType + synergies + confidence + chainModel |
-| `─────────────`     | разделитель                     | конец расчёта                                 |
-| `📌`                | renderCard called               | вызов точки входа                             |
-| `⏭️`                | No activity / State=EMPTY       | карточка не показывается                      |
-| `🧠 Cache MISS`     | recompute triggered             | входные данные изменились, пересчёт           |
-| `⚡ Cache HIT`      | compute skipped                 | данные не изменились, кэш использован         |
-| `🚀`                | Rendering CascadeCard           | карточка рендерится                           |
-| `🎨`                | CascadeCard render              | каждый рендер компонента                      |
-| `🔄`                | Toggle expanded                 | раскрытие/закрытие                            |
-| `✅ Module loaded`  | загрузка модуля v2.1.0          | при загрузке скрипта                          |
+| Эмодзи и префикс                      | Лог                                    | Когда                                         |
+| ------------------------------------- | -------------------------------------- | --------------------------------------------- |
+| `[cascade] ─── v3.1.0 START`          | computeCascadeState START              | Начало расчёта + перечень фич v3.1.0          |
+| `[cascade] 🧬`                        | v3.1.0 features                        | continuous/baselines/synergies/goal-penalty   |
+| `[cascade] 📥`                        | Input data                             | Входные параметры                             |
+| `[cascade] 🏠 [EVENT]`                | Household (log2 adaptive)              | log2 adaptive scoring + baseline              |
+| `[cascade.deficit] 🎯`                | Goal mode for meal loop                | режим цели (deficit/bulk/maintenance), пороги |
+| `[cascade] 🥗 Processing N meals`     | начало цикла приёмов                   | количество приёмов                            |
+| `[cascade] 🎯 Meal quality`           | score + grade + weight + formula       | continuous scoring v2.1.0                     |
+| `[cascade] 🍽️ [MEAL N/M]`             | Meal (continuous + circadian)          | kcal, norm, ratio, penalty, mealWeight        |
+| `[cascade.deficit] 🔴`                | Критический перебор при дефиците       | finalRatio > criticalOver (напр. >115%)       |
+| `[cascade.deficit] ⚠️`                | Ощутимый перебор при дефиците          | finalRatio > targetRange.max (напр. >105%)    |
+| `[cascade.deficit] ✅ Deficit check`  | итог шага 2.5                          | флаг, рацио, goalLabel                        |
+| `[cascade] 💪 Processing N trainings` | начало цикла тренировок                | количество тренировок                         |
+| `[cascade] 💪 [TRAINING N/M]`         | Training (load×sqrt)                   | load×intensity, diminishing, formula          |
+| `[cascade] 💪 Recovery / no training` | recovery-aware + weekly check          | streak, penalty if needed                     |
+| `[cascade] 😴`                        | Sleep onset (sigmoid)                  | chronotype-adaptive + consistency + variance  |
+| `[cascade] 😴`                        | Sleep duration (bell-curve)            | Gaussian + asymmetry + recovery               |
+| `[cascade] 🚶`                        | Steps (tanh)                           | adaptive goal + tanh formula                  |
+| `[cascade] ⚖️`                        | Checkin (streak)                       | base + streak + trend                         |
+| `[cascade] 📏`                        | Measurements (cadence)                 | completeness + cadence + diminishing          |
+| `[cascade] 💊`                        | Supplements (continuous)               | ratio + streak + formula                      |
+| `[cascade] ⚡`                        | InsulinWave (sigmoid)                  | sigmoid overlap + log2 gap + fasting          |
+| `[cascade] 📊 Scoring summary`        | rawWeights + active/skipped            | scoringMethod v2.2.0                          |
+| `[cascade] 🎯 Confidence layer`       | per-factor confidence + avg            | quality: HIGH/MEDIUM/LOW                      |
+| `[cascade] 📅 Day-type`               | training/rest/active + effect          | context-aware day type                        |
+| `[cascade] 🔗 Cross-factor synergies` | count + names + bonuses                | до 5 синергий                                 |
+| `[cascade] 📋 Events sorted`          | финальный список событий (N total)     | перед цепочкой                                |
+| `[cascade] ⛓️ Chain algorithm`        | трейс каждого шага цепочки             | soft degradation v2.2.0                       |
+| `[cascade] 🔗 Chain result`           | chain, maxChain, warnings[]            | итог цепочки                                  |
+| `[cascade.crs] ─── START`             | CRS computation START                  | начало EMA-расчёта                            |
+| `[cascade.deficit] 📊 Goal-aware DCS` | DCS override по уровню (1/2/3)         | level, ratio, appliedPenalty                  |
+| `[cascade.deficit] 💪 Bulk exemption` | штраф снят (режим набора, ккал ≤ 180%) | ккал% ≤ 180% в bulk-режиме                    |
+| `[cascade.crs] 📊 DCS`                | DCS formula + result                   | baseDcs, hasCriticalViolation, violationType  |
+| `[cascade.crs] 🗂️`                    | Retroactive backfill                   | сколько дней заполнено                        |
+| `[cascade.crs] 🏔️ Ceiling`            | consistency × diversity × depth        | activatedFactors, daysWithData                |
+| `[cascade.crs] 📈 CRS`                | crs, ceiling, dcsToday, emaDecay       | финальный CRS                                 |
+| `[cascade.crs] 📊 CRS trend`          | up/down/flat                           | динамика за 7 дней                            |
+| `[cascade.crs] 🔥 Days at peak`       | консекутивные дни DCS ≥ 0.5            | streak сильных дней                           |
+| `[cascade.crs] ─── DONE`              | CRS computation DONE                   | конец EMA-расчёта                             |
+| `[cascade] 🏷️ State`                  | CRS-driven state                       | crs, eventsLength, thresholds                 |
+| `[cascade] ⏰ Post-training`          | окно 2ч после тренировки               | активно / не активно                          |
+| `[cascade] 💬 Message pool`           | выбранный пул                          | DEFICIT_OVERSHOOT / ANTI_LICENSING / state    |
+| `[cascade] 💬 Message selected`       | пул, индекс, текст сообщения           | финальное сообщение                           |
+| `[cascade] 📊 Momentum score`         | CRS в процентах                        | CRS-driven progress-bar                       |
+| `[cascade] 💡 Next step hint`         | hint и почему                          | спец. hint при deficitOvershoot               |
+| `[cascade] ✅ v3.1.0 DONE`            | computeCascadeState DONE               | state, crs, goalMode, hasDeficitOvershoot     |
+| `[cascade] 🧬 v3.1.0 subsystems`      | все подсистемы кратко                  | goalAwarePenalty + CRS + chainModel + ...     |
+| `[cascade] ───────`                   | разделитель                            | конец расчёта                                 |
+| `[cascade] 📌 renderCard called`      | вызов точки входа                      | перед всем                                    |
+| `[cascade] 🧠 Cache MISS`             | recompute triggered                    | входные данные изменились, пересчёт           |
+| `[cascade] ⚡ Cache HIT`              | compute skipped                        | данные не изменились, кэш использован         |
+| `[cascade] 🚀`                        | Rendering CascadeCard                  | React-компонент рендерится                    |
+| `[cascade] 🔄`                        | Toggle expanded                        | раскрытие / закрытие                          |
+| `[cascade] ✅ Module loaded v3.1.0`   | загрузка модуля                        | при загрузке скрипта, sub-префиксы            |
 
 ### Примеры запросов в консоли
 
@@ -1617,7 +1654,7 @@ HEYS.CascadeCard.computeCascadeState(
 );
 
 // Проверить версию:
-HEYS.CascadeCard.VERSION; // → "2.1.0"
+HEYS.CascadeCard.VERSION; // → "3.1.0"
 
 // Посмотреть все состояния:
 HEYS.CascadeCard.STATES;
@@ -1635,10 +1672,10 @@ HEYS.CascadeCard.MESSAGES;
 
 ```js
 HEYS.CascadeCard = {
-  VERSION:             '2.1.0',
+  VERSION:             '3.1.0',
   STATES:              { EMPTY, BUILDING, GROWING, STRONG, BROKEN, RECOVERY },
   STATE_CONFIG:        { [state]: { icon, color, label } },
-  MESSAGES:            { [poolKey]: [{ short }] },
+  MESSAGES:            { [poolKey]: [{ short }] },  // + DEFICIT_OVERSHOOT (v3.1.0)
   computeCascadeState: function(day, dayTot, normAbs, prof, pIndex) → cascadeState,
   renderCard:          function({ day, dayTot, normAbs, prof, pIndex, React? }) → ReactElement | null
 }

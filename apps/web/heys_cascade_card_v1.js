@@ -1,6 +1,6 @@
 // heys_cascade_card_v1.js — Cascade Card — «Ваш позитивный каскад»
 // Standalone компонент. Визуализация цепочки здоровых решений в реальном времени.
-// v3.0.0 | 2026-02-20 — Cascade Rate Score (CRS) cumulative momentum
+// v3.1.0 | 2026-02-20 — Cascade Rate Score (CRS) cumulative momentum + goal-aware calorie penalty
 // Фильтр в консоли: [HEYS.cascade]
 (function (global) {
   'use strict';
@@ -59,6 +59,14 @@
       { short: 'Тренировка — сама по себе победа. Не «награждай» себя едой.' },
       { short: 'После нагрузки организм лучше всего усвоит белок и овощи.' },
       { short: 'Классная тренировка! Выбери качество, а не количество.' }
+    ],
+    // v3.1.0: показывается при перебор калорий в режиме дефицита (похудение)
+    // Акцент — CRS защитил инерцию, один срыв не перечёркивает прогресс
+    DEFICIT_OVERSHOOT: [
+      { short: 'Перебор, но накопленный прогресс защищает тебя. Завтра — новый шанс.' },
+      { short: 'Один перебор не перечёркивает неделю дисциплины. Импульс сохранён.' },
+      { short: 'Перебрал — бывает. Посмотри на свою неделю: ты справляешься.' },
+      { short: 'Калории выше цели, но каскад инерции на твоей стороне.' }
     ]
   };
 
@@ -447,6 +455,48 @@
     return Math.sqrt(variance);
   }
 
+  // ─────────────────────────────────────────────────────
+  // v3.1.0: GOAL-AWARE CALORIE PENALTY HELPER
+  // Определяет режим цели по deficitPctTarget из профиля.
+  // Переиспользует логику getGoalMode из heys_advice_bundle_v1.js
+  // с приоритетом на HEYS.advice.getGoalMode при наличии.
+  // ─────────────────────────────────────────────────────
+
+  function getGoalMode(deficitPct) {
+    // Попробуем взять из advice bundle если доступен
+    if (HEYS.advice && typeof HEYS.advice.getGoalMode === 'function') {
+      return HEYS.advice.getGoalMode(deficitPct);
+    }
+    // Локальная копия (зеркало heys_advice_bundle_v1.js)
+    var pct = deficitPct || 0;
+    if (pct <= -10) {
+      return {
+        mode: 'deficit', label: 'Похудение', emoji: '🔥',
+        targetRange: { min: 0.90, max: 1.05 }, criticalOver: 1.15, criticalUnder: 0.80
+      };
+    } else if (pct <= -5) {
+      return {
+        mode: 'deficit', label: 'Лёгкое похудение', emoji: '🎯',
+        targetRange: { min: 0.92, max: 1.08 }, criticalOver: 1.20, criticalUnder: 0.75
+      };
+    } else if (pct >= 10) {
+      return {
+        mode: 'bulk', label: 'Набор массы', emoji: '💪',
+        targetRange: { min: 0.95, max: 1.10 }, criticalOver: 1.25, criticalUnder: 0.85
+      };
+    } else if (pct >= 5) {
+      return {
+        mode: 'bulk', label: 'Лёгкий набор', emoji: '💪',
+        targetRange: { min: 0.93, max: 1.12 }, criticalOver: 1.20, criticalUnder: 0.80
+      };
+    } else {
+      return {
+        mode: 'maintenance', label: 'Поддержание', emoji: '⚖️',
+        targetRange: { min: 0.90, max: 1.10 }, criticalOver: 1.25, criticalUnder: 0.70
+      };
+    }
+  }
+
   function getPersonalBaseline(prevDays, extractor, defaultVal) {
     var values = [];
     for (var i = 0; i < prevDays.length; i++) {
@@ -632,7 +682,7 @@
    * Normalizes to -1.0..+1.0 with inertia protection.
    * Critical Violation Override bypasses inertia for severe events.
    */
-  function computeDailyContribution(dailyScore, day, normAbs, pIndex) {
+  function computeDailyContribution(dailyScore, day, normAbs, pIndex, prof) {
     var dcs = clamp(dailyScore / MOMENTUM_TARGET, CRS_DCS_CLAMP_NEG, 1.0);
     var hasCriticalViolation = false;
     var violationType = null;
@@ -681,8 +731,52 @@
       dcs = -0.6; violationType = 'excess_kcal';
     }
 
+    // v3.1.0: Goal-aware DCS override for deficit/bulk users
+    var deficitContext = null;
+    var totalKcalRatio = normKcal > 0 ? totalKcal / normKcal : 0;
+    if (prof) {
+      var dcGoalMode = getGoalMode(prof.deficitPctTarget);
+      if (dcGoalMode.mode === 'deficit') {
+        if (totalKcalRatio > 1.5) {
+          // Level 3: >150% в дефиците — жёстче generic -0.6 (если нет ночного вреда)
+          if (!hasNightHarm) {
+            dcs = -0.7; violationType = 'deficit_critical_excess';
+          }
+          deficitContext = { goalMode: 'deficit', ratio: +totalKcalRatio.toFixed(2), appliedPenalty: dcs, level: 3 };
+        } else if (totalKcalRatio > dcGoalMode.criticalOver) {
+          // Level 2: e.g. >115%–150% — критическое нарушение, не покрытое generic
+          if (violationType === null) {
+            dcs = -0.5; violationType = 'deficit_overshoot';
+          }
+          deficitContext = { goalMode: 'deficit', ratio: +totalKcalRatio.toFixed(2), appliedPenalty: dcs, level: 2 };
+        } else if (totalKcalRatio > dcGoalMode.targetRange.max) {
+          // Level 1: e.g. >105%–115% — ослабляем инерционную защиту
+          if (violationType === null) {
+            dcs = Math.min(dcs, -0.4); // vs стандартный clamp -0.3
+          }
+          deficitContext = { goalMode: 'deficit', ratio: +totalKcalRatio.toFixed(2), appliedPenalty: dcs, level: 1 };
+        }
+        if (deficitContext) {
+          console.info('[HEYS.cascade.deficit] 📊 Goal-aware DCS override:', {
+            level: deficitContext.level,
+            ratio: deficitContext.ratio,
+            criticalOver: dcGoalMode.criticalOver,
+            targetMax: dcGoalMode.targetRange.max,
+            appliedPenalty: deficitContext.appliedPenalty,
+            violationType: violationType
+          });
+        }
+      } else if (dcGoalMode.mode === 'bulk' && totalKcalRatio <= 1.8 && violationType === 'excess_kcal') {
+        // Bulk: не штрафуем превышение до 180% (фаза набора)
+        violationType = null;
+        dcs = clamp(dailyScore / MOMENTUM_TARGET, CRS_DCS_CLAMP_NEG, 1.0);
+        deficitContext = { goalMode: 'bulk', ratio: +totalKcalRatio.toFixed(2), appliedPenalty: 0, bulkExempt: true };
+        console.info('[HEYS.cascade.deficit] 💪 Bulk exemption: kcal overage ' + (totalKcalRatio * 100).toFixed(0) + '% ≤ 180%, penalty removed');
+      }
+    }
+
     hasCriticalViolation = violationType !== null;
-    return { dcs: dcs, hasCriticalViolation: hasCriticalViolation, violationType: violationType };
+    return { dcs: dcs, hasCriticalViolation: hasCriticalViolation, violationType: violationType, deficitContext: deficitContext };
   }
 
   /**
@@ -822,8 +916,8 @@
   function computeCascadeState(day, dayTot, normAbs, prof, pIndex) {
     var t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 
-    console.info('[HEYS.cascade] ─── computeCascadeState v3.0.0 START ────────');
-    console.info('[HEYS.cascade] 🧬 v3.0.0 features: CRS cumulative momentum | soft chain degradation | continuous scoring | personal baselines | circadian awareness | confidence layer | day-type detection | cross-factor synergies');
+    console.info('[HEYS.cascade] ─── computeCascadeState v3.1.0 START ────────');
+    console.info('[HEYS.cascade] 🧬 v3.1.0 features: CRS cumulative momentum | soft chain degradation | continuous scoring | personal baselines | circadian awareness | confidence layer | day-type detection | cross-factor synergies | goal-aware calorie penalty (deficit/bulk/maintenance)');
     console.info('[HEYS.cascade] 📥 Input data:', {
       hasMeals: !!(day && day.meals && day.meals.length),
       mealsCount: (day && day.meals && day.meals.length) || 0,
@@ -883,7 +977,7 @@
         sortKey: 599,
         weight: householdWeight
       });
-      console.info('[HEYS.cascade] 🏠 [EVENT] household (v2.1.0 log2 adaptive):', {
+      console.info('[HEYS.cascade] 🏠 [EVENT] household (model v2.1.0 log2 adaptive):', {
         householdMin: householdMin, baseline: Math.round(baselineNEAT),
         ratio: +neatRatio.toFixed(2), formula: 'log2(' + +neatRatio.toFixed(2) + '+0.5)×0.8',
         rawWeight: +rawHousehold.toFixed(2),
@@ -905,6 +999,17 @@
 
     // ── ШАГ 2: Приёмы пищи ──────────────────────────────
     var cumulativeKcal = 0;
+
+    // v3.1.0: Goal-aware calorie penalty — определяем режим цели один раз до цикла
+    var mealGoalMode = getGoalMode(prof && prof.deficitPctTarget);
+    var hasDeficitOvershoot = false;
+    var deficitOvershootRatio = 0;
+    console.info('[HEYS.cascade.deficit] 🎯 Goal mode for meal loop:', {
+      mode: mealGoalMode.mode, label: mealGoalMode.label,
+      targetRange: mealGoalMode.targetRange, criticalOver: mealGoalMode.criticalOver,
+      deficitPctTarget: prof && prof.deficitPctTarget
+    });
+
     console.info('[HEYS.cascade] 🥗 Processing', meals.length, 'meals...');
 
     meals.forEach(function (meal, i) {
@@ -978,12 +1083,31 @@
         mealWeight *= circMult;
       }
 
-      // Progressive cumulative penalty (sigmoid, replaces binary 120% cutoff)
-      if (normKcal > 0 && cumulativeRatio > 1.0 && !hasHardViolation) {
-        var cumulPenalty = -Math.tanh((cumulativeRatio - 1.0) / 0.2) * 1.5;
-        mealWeight = Math.min(mealWeight, cumulPenalty);
-        positive = false;
-        breakReason = breakReason || 'Перебор ккал (' + Math.round(cumulativeRatio * 100) + '%)';
+      // Progressive cumulative penalty (sigmoid) — v3.1.0 goal-aware
+      if (normKcal > 0 && !hasHardViolation) {
+        var penaltyThreshold, penaltyStrength, penaltyLabel;
+        if (mealGoalMode.mode === 'bulk') {
+          // При наборе массы: штрафуем только при грубом переедании >130%
+          penaltyThreshold = 1.30;
+          penaltyStrength = 1.0;
+          penaltyLabel = 'Перебор ккал (' + Math.round(cumulativeRatio * 100) + '%)';
+        } else if (mealGoalMode.mode === 'deficit') {
+          // При дефиците: штраф начинается раньше (выше целевого максимума) и жёсче
+          penaltyThreshold = mealGoalMode.targetRange.max; // 1.05 или 1.08
+          penaltyStrength = 2.0; // строже стандартных 1.5
+          penaltyLabel = 'Перебор при дефиците (' + Math.round(cumulativeRatio * 100) + '%)';
+        } else {
+          // Maintenance: стандартная логика
+          penaltyThreshold = 1.0;
+          penaltyStrength = 1.5;
+          penaltyLabel = 'Перебор ккал (' + Math.round(cumulativeRatio * 100) + '%)';
+        }
+        if (cumulativeRatio > penaltyThreshold) {
+          var cumulPenalty = -Math.tanh((cumulativeRatio - penaltyThreshold) / 0.2) * penaltyStrength;
+          mealWeight = Math.min(mealWeight, cumulPenalty);
+          positive = false;
+          breakReason = breakReason || penaltyLabel;
+        }
       }
 
       // Hard violations always force -1.0
@@ -1009,12 +1133,12 @@
 
       // Явная строка — всегда читается без разворачивания объекта
       if (mealQS && mealQS.score != null) {
-        console.info('[HEYS.cascade] 🎯 Meal quality (' + getMealLabel(meal, i) + '): score=' + mealQS.score + ' grade=' + qualityGrade + ' weight=' + (+mealWeight).toFixed(2) + ' color=' + mealQS.color + ' scoring=v2.1.0-continuous');
+        console.info('[HEYS.cascade] 🎯 Meal quality (' + getMealLabel(meal, i) + '): score=' + mealQS.score + ' grade=' + qualityGrade + ' weight=' + (+mealWeight).toFixed(2) + ' color=' + mealQS.color + ' scoringModel=v2.1.0-continuous');
       } else {
         console.warn('[HEYS.cascade] ⚠️ getMealQualityScore недоступен (' + getMealLabel(meal, i) + ') → fallback weight=' + mealWeight + ' | HEYS.mealScoring=' + (typeof (HEYS.mealScoring && HEYS.mealScoring.getMealQualityScore)) + ' pIndex=' + (!!pIndex));
       }
 
-      console.info('[HEYS.cascade] 🍽️ [MEAL ' + (i + 1) + '/' + meals.length + '] ' + getMealLabel(meal, i) + ' (v2.1.0 continuous + circadian):', {
+      console.info('[HEYS.cascade] 🍽️ [MEAL ' + (i + 1) + '/' + meals.length + '] ' + getMealLabel(meal, i) + ' (model v2.1.0 continuous + circadian):', {
         time: (meal && meal.time) || null,
         mealKcal: Math.round(mealKcal),
         cumulativeKcal: Math.round(cumulativeKcal),
@@ -1031,6 +1155,64 @@
         weight: +(mealWeight).toFixed(2)
       });
     });
+
+    // ── ШАГ 2.5: Deficit Overshoot Summary (v3.1.0) ────────────
+    // После обработки всех приёмов пищи — итоговый срыв по калориям при цели похудения
+    if (mealGoalMode.mode === 'deficit' && normAbs && normAbs.kcal > 0) {
+      var finalKcalRatio = cumulativeKcal / normAbs.kcal;
+      if (finalKcalRatio > mealGoalMode.criticalOver) {
+        // Критический перебор (>115% при активном дефиците, >120% при лёгком)
+        var defCritPenalty = -1.5;
+        score += defCritPenalty;
+        hasDeficitOvershoot = true;
+        deficitOvershootRatio = finalKcalRatio;
+        events.push({
+          type: 'deficit_overshoot',
+          positive: false,
+          icon: '🔴',
+          label: 'Перебор при похудении — ' + Math.round(finalKcalRatio * 100) + '% от нормы',
+          sortKey: 1439,
+          breakReason: 'Критический перебор: ' + Math.round(finalKcalRatio * 100) + '% (цель: ' + mealGoalMode.label + ')',
+          weight: defCritPenalty
+        });
+        console.info('[HEYS.cascade.deficit] 🔴 Критический перебор при дефиците:', {
+          goalMode: mealGoalMode.mode, goalLabel: mealGoalMode.label,
+          criticalOver: mealGoalMode.criticalOver, actualRatio: +finalKcalRatio.toFixed(2),
+          overshootPct: '+' + Math.round((finalKcalRatio - 1) * 100) + '%',
+          penalty: defCritPenalty, crsNote: 'DCS override → -0.7 (через computeDailyContribution)'
+        });
+      } else if (finalKcalRatio > mealGoalMode.targetRange.max) {
+        // Ощутимый перебор (>105%/108%)
+        var defWarnPenalty = -0.5;
+        score += defWarnPenalty;
+        hasDeficitOvershoot = true;
+        deficitOvershootRatio = finalKcalRatio;
+        events.push({
+          type: 'deficit_warning',
+          positive: false,
+          icon: '⚠️',
+          label: 'Калории выше цели (' + Math.round(finalKcalRatio * 100) + '% от нормы)',
+          sortKey: 1438,
+          breakReason: 'Перебор при ' + mealGoalMode.label + ': ' + Math.round(finalKcalRatio * 100) + '%',
+          weight: defWarnPenalty
+        });
+        console.info('[HEYS.cascade.deficit] ⚠️ Ощутимый перебор при дефиците:', {
+          goalMode: mealGoalMode.mode, goalLabel: mealGoalMode.label,
+          targetMax: mealGoalMode.targetRange.max, actualRatio: +finalKcalRatio.toFixed(2),
+          overshootPct: '+' + Math.round((finalKcalRatio - 1) * 100) + '%',
+          penalty: defWarnPenalty, crsNote: 'DCS clamp → -0.4 (через computeDailyContribution)'
+        });
+      }
+    }
+    if (mealGoalMode.mode === 'deficit') {
+      console.info('[HEYS.cascade.deficit] ✅ Deficit calorie check complete:', {
+        hasDeficitOvershoot: hasDeficitOvershoot,
+        deficitRatio: deficitOvershootRatio ? +deficitOvershootRatio.toFixed(2) : null,
+        cumulativeKcal: Math.round(cumulativeKcal),
+        normKcal: (normAbs && normAbs.kcal) || 0,
+        goalLabel: mealGoalMode.label
+      });
+    }
 
     // ── ШАГ 3: Тренировки (load × intensity, diminishing returns, recovery-aware) ──
     console.info('[HEYS.cascade] 💪 Processing', trainings.length, 'trainings...');
@@ -1069,7 +1251,7 @@
           sortKey: timeMins !== null ? timeMins : 700,
           weight: trainingWeight
         });
-        console.info('[HEYS.cascade] 💪 [TRAINING ' + (ti + 1) + '/' + trainings.length + '] (v2.1.0 load×intensity + sqrt curve):', {
+        console.info('[HEYS.cascade] 💪 [TRAINING ' + (ti + 1) + '/' + trainings.length + '] (model v2.1.0 load×intensity + sqrt curve):', {
           time: (tr && tr.time) || null, duration: dur, type: trType || 'unknown',
           load: Math.round(load), formula: 'sqrt(' + Math.round(load) + '/30)×1.2',
           sessionWeight: +sessionWeight.toFixed(2),
@@ -1197,7 +1379,7 @@
           sortKey: sleepSortKey,
           weight: sleepOnsetWeightFinal
         });
-        console.info('[HEYS.cascade] 😴 Sleep onset (v2.1.0 chronotype-adaptive sigmoid):', {
+        console.info('[HEYS.cascade] 😴 Sleep onset (model v2.1.0 chronotype-adaptive sigmoid):', {
           sleepStart: sleepStart, sleepMins: sleepMins,
           personalOnset: Math.round(personalOnset), optimalOnset: Math.round(optimalOnset),
           deviationMin: Math.round(onsetDeviation),
@@ -1250,7 +1432,7 @@
       var sleepDurWeight = rawSleepDur * sleepDurConfidence;
       rawWeights.sleepDur = rawSleepDur;
       score += sleepDurWeight;
-      console.info('[HEYS.cascade] 😴 Sleep duration (v2.1.0 Gaussian bell-curve):', {
+      console.info('[HEYS.cascade] 😴 Sleep duration (model v2.1.0 Gaussian bell-curve):', {
         sleepHours: +sleepHours.toFixed(1), personalOptimal: +personalSleepOpt.toFixed(1),
         deviation: +sleepDev.toFixed(1), formula: '1.5×exp(-' + sleepDev.toFixed(1) + '²/(2×0.8²))-0.5',
         asymmetry: sleepHours < personalSleepOpt ? '×1.3 (undersleep penalty)' : 'none',
@@ -1295,7 +1477,7 @@
         sortKey: 1100,
         weight: stepsWeight
       });
-      console.info('[HEYS.cascade] 🚶 Steps (v2.1.0 rolling adaptive + tanh):', {
+      console.info('[HEYS.cascade] 🚶 Steps (model v2.1.0 rolling adaptive + tanh):', {
         steps: steps, adaptiveGoal: Math.round(adaptiveGoal),
         ratio: +stepsRatio.toFixed(2), formula: 'tanh((' + stepsRatio.toFixed(2) + '-0.6)×2.5)×1.0+0.15',
         rawWeight: +rawSteps.toFixed(2),
@@ -1343,7 +1525,7 @@
         sortKey: 540,
         weight: checkinWeight
       });
-      console.info('[HEYS.cascade] ⚖️ Weight checkin (v2.1.0 streak + trend):', {
+      console.info('[HEYS.cascade] ⚖️ Weight checkin (model v2.1.0 streak + trend):', {
         weight: weightMorning, base: checkinBase,
         streak: checkinStreak, streakBonus: +streakBonus.toFixed(2),
         trendBonus: +trendBonus.toFixed(2),
@@ -1402,7 +1584,7 @@
         sortKey: 545,
         weight: measWeight
       });
-      console.info('[HEYS.cascade] 📏 Measurements (v2.1.0 completeness + cadence):', {
+      console.info('[HEYS.cascade] 📏 Measurements (model v2.1.0 completeness + cadence):', {
         count: measKeys.length, completeness: +completeness.toFixed(2),
         formula: '0.5 + ' + completeness.toFixed(2) + '×0.7',
         lastMeasDay: lastMeasDayIdx, diminishing: lastMeasDayIdx !== -1 && lastMeasDayIdx <= 2 ? '×0.5 (recent)' : 'none',
@@ -1468,7 +1650,7 @@
         sortKey: 550,
         weight: suppWeight
       });
-      console.info('[HEYS.cascade] 💊 Supplements (v2.1.0 continuous + streak):', {
+      console.info('[HEYS.cascade] 💊 Supplements (model v2.1.0 continuous + streak):', {
         taken: suppTaken, planned: suppPlanned, ratio: +suppRatio.toFixed(2),
         formula: 'clamp(' + suppRatio.toFixed(2) + '×0.7-0.1)',
         streak: suppStreak, streakBonus: +suppStreakBonus.toFixed(2),
@@ -1560,7 +1742,7 @@
             sortKey: 1200,
             weight: iwAdjusted
           });
-          console.info('[HEYS.cascade] ⚡ InsulinWave (v2.1.0 sigmoid overlap + log2 gap + night fasting):', {
+          console.info('[HEYS.cascade] ⚡ InsulinWave (model v2.1.0 sigmoid overlap + log2 gap + night fasting):', {
             overlaps: overlaps.length, avgGap: Math.round(iwAvgGap),
             longestGap: Math.round(longestGap),
             nightFasting: longestGap > 0 ? +(longestGap / 60).toFixed(1) + 'h' : 'N/A',
@@ -1578,7 +1760,7 @@
     }
 
     // ── ШАГ 11: Scoring summary + Confidence ────────────
-    console.info('[HEYS.cascade] 📊 v2.2.0 Scoring summary (before synergies):', {
+    console.info('[HEYS.cascade] 📊 Scoring summary (model v2.2.0, before synergies):', {
       factorScores: rawWeights,
       totalScore: +score.toFixed(2),
       activeFactors: Object.keys(rawWeights).filter(function (k) { return rawWeights[k] !== 0; }).length,
@@ -1593,7 +1775,7 @@
       confKeys.forEach(function (k) { confSum += confidenceMap[k]; });
       avgConfidence = confSum / confKeys.length;
     }
-    console.info('[HEYS.cascade] 🎯 Confidence layer (v2.2.0):', {
+    console.info('[HEYS.cascade] 🎯 Confidence layer (model v2.2.0):', {
       factors: confidenceMap,
       avgConfidence: +avgConfidence.toFixed(2),
       dataQuality: avgConfidence >= 0.8 ? 'HIGH' : avgConfidence >= 0.5 ? 'MEDIUM' : 'LOW',
@@ -1625,7 +1807,7 @@
       // Rest days: no training penalty (already handled), sleep is king
     }
 
-    console.info('[HEYS.cascade] 📅 Day-type (v2.1.0 context-aware):', {
+    console.info('[HEYS.cascade] 📅 Day-type (model v2.1.0 context-aware):', {
       dayType: dayType, todayTrainingLoad: Math.round(todayTotalLoad),
       modifier: dayType === 'training_day' ? '×1.05 score bonus' : 'none',
       effect: dayType === 'rest_day' ? 'no training penalty, recovery focus'
@@ -1738,7 +1920,7 @@
       }
     }
 
-    console.info('[HEYS.cascade] ⛓️ Chain algorithm (v2.2.0 soft degradation):', chainLog);
+    console.info('[HEYS.cascade] ⛓️ Chain algorithm (model v2.2.0 soft degradation):', chainLog);
     console.info('[HEYS.cascade] 🔗 Chain result:', {
       finalChainLength: chain,
       maxChainToday: maxChain,
@@ -1748,11 +1930,11 @@
       warnings: warnings.map(function (w) { return { time: w.time, reason: w.reason, penalty: w.penalty, chain: w.chainBefore + '→' + w.chainAfter }; })
     });
 
-    // ── ШАГ 15b: CRS (Cascade Rate Score) v3.0.0 — кумулятивный импульс ──
-    console.info('[HEYS.cascade.crs] ─── CRS v1.0 computation START ────────');
+    // ── ШАГ 15b: CRS (Cascade Rate Score) v3.1.0 — кумулятивный импульс ──
+    console.info('[HEYS.cascade.crs] ─── CRS v3.1.0 computation START ────────');
 
     // 1. Compute Daily Contribution Score (DCS)
-    var dcsResult = computeDailyContribution(score, day, normAbs, pIndex);
+    var dcsResult = computeDailyContribution(score, day, normAbs, pIndex, prof);
     var todayDcs = dcsResult.dcs;
 
     console.info('[HEYS.cascade.crs] 📊 DCS (Daily Contribution Score):', {
@@ -1817,31 +1999,33 @@
       interpretation: crsTrend === 'up' ? 'Улучшение за 7 дней' : crsTrend === 'down' ? 'Снижение за 7 дней' : 'Стабильно'
     });
 
-    // 7. Compute daysAtPeak — consecutive days (back from today) with strong DCS ≥ 0.5
+    // 7. Compute daysAtPeak — consecutive days starting FROM today with DCS ≥ 0.5
+    // If today is weak, streak must be 0 (historical streak is considered broken).
     var daysAtPeak = 0;
-    var sortedHistoryDates = Object.keys(dcsHistory)
-      .filter(function (d) { return d !== todayStr; })
-      .sort()
-      .reverse();
-    for (var _pi = 0; _pi < sortedHistoryDates.length; _pi++) {
-      if (dcsHistory[sortedHistoryDates[_pi]] >= 0.5) {
-        daysAtPeak++;
-      } else {
-        break;
+    if (todayDcs >= 0.5) {
+      daysAtPeak = 1;
+      var sortedHistoryDates = Object.keys(dcsHistory)
+        .filter(function (d) { return d !== todayStr; })
+        .sort()
+        .reverse();
+      for (var _pi = 0; _pi < sortedHistoryDates.length; _pi++) {
+        if (dcsHistory[sortedHistoryDates[_pi]] >= 0.5) {
+          daysAtPeak++;
+        } else {
+          break;
+        }
       }
     }
-    // Include today if today's DCS is also strong
-    if (todayDcs >= 0.5) daysAtPeak++;
 
     console.info('[HEYS.cascade.crs] 🔥 Days at peak (DCS ≥ 0.5 consecutively):', {
       daysAtPeak: daysAtPeak,
       todayDcs: +todayDcs.toFixed(3)
     });
 
-    console.info('[HEYS.cascade.crs] ─── CRS v1.0 computation DONE ────────');
+    console.info('[HEYS.cascade.crs] ─── CRS v3.1.0 computation DONE ────────');
 
-    // ── ШАГ 16: Определение состояния (v3.0.0 CRS-driven) ───
-    // v3.0.0: состояние определяется по CRS (кумулятивный импульс),
+    // ── ШАГ 16: Определение состояния (v3.1.0 CRS-driven) ───
+    // v3.1.0: состояние определяется по CRS (кумулятивный импульс),
     // а не по дневному score. 14 дней хороших решений создают инерцию,
     // которую один плохой день не может разрушить.
     var state = STATES.EMPTY;
@@ -1860,7 +2044,7 @@
       state = STATES.BROKEN;
     }
 
-    console.info('[HEYS.cascade] 🏷️ State determination (v3.0.0 CRS-driven):', {
+    console.info('[HEYS.cascade] 🏷️ State determination (v3.1.0 CRS-driven):', {
       eventsLength: events.length,
       crs: +crs.toFixed(3),
       dailyScore: +score.toFixed(2),
@@ -1883,20 +2067,27 @@
 
     // ── ШАГ 18: Выбор сообщения ──────────────────────────
     var messagePoolKey;
-    if (postTrainingWindow && state !== STATES.BROKEN && state !== STATES.EMPTY) {
+    if (hasDeficitOvershoot && state !== STATES.BROKEN && state !== STATES.EMPTY) {
+      // v3.1.0: перебор калорий при дефиците — приоритет выше тренировочного окна
+      messagePoolKey = 'DEFICIT_OVERSHOOT';
+    } else if (postTrainingWindow && state !== STATES.BROKEN && state !== STATES.EMPTY) {
       messagePoolKey = 'ANTI_LICENSING';
     } else {
       messagePoolKey = state;
     }
+    console.info('[HEYS.cascade] 💬 Message pool selected:', {
+      pool: messagePoolKey, hasDeficitOvershoot: hasDeficitOvershoot,
+      postTrainingWindow: postTrainingWindow, state: state
+    });
     var messagePool = MESSAGES[messagePoolKey] || MESSAGES.BUILDING;
     var message = pickMessage(messagePool, messagePoolKey);
 
-    // ── ШАГ 19: Momentum score (v3.0.0 CRS-based) ────────
-    // v3.0.0: прогресс-бар = CRS (кумулятивный импульс), не дневной score
+    // ── ШАГ 19: Momentum score (v3.1.0 CRS-based) ────────
+    // v3.1.0: прогресс-бар = CRS (кумулятивный импульс), не дневной score
     var momentumScore = crs;
     var dailyMomentum = Math.min(1, Math.max(0, score) / MOMENTUM_TARGET);
 
-    console.info('[HEYS.cascade] 📊 Momentum score (v3.0.0 CRS):', {
+    console.info('[HEYS.cascade] 📊 Momentum score (v3.1.0 CRS):', {
       formula: 'CRS (cumulative momentum)',
       crs: +crs.toFixed(3),
       dailyScore: +score.toFixed(2),
@@ -1907,7 +2098,10 @@
 
     // ── ШАГ 20: Next step hint ────────────────────────────
     var nextStepHint = null;
-    if (state !== STATES.EMPTY) {
+    if (hasDeficitOvershoot) {
+      // v3.1.0: срыв по калориям при дефиците — специальная подсказка
+      nextStepHint = 'Завтра верни калории в норму — один день всегда можно компенсировать';
+    } else if (state !== STATES.EMPTY) {
       var hasMeal = events.some(function (e) { return e.type === 'meal'; });
       var hasTraining = events.some(function (e) { return e.type === 'training'; });
       var hasSleepEv = events.some(function (e) { return e.type === 'sleep'; });
@@ -1938,7 +2132,7 @@
     // ── ИТОГОВЫЙ РЕЗУЛЬТАТ ────────────────────────────────
     var elapsed = ((typeof performance !== 'undefined') ? performance.now() : Date.now()) - t0;
 
-    console.info('[HEYS.cascade] ✅ computeCascadeState v3.0.0 DONE:', {
+    console.info('[HEYS.cascade] ✅ computeCascadeState v3.1.0 DONE:', {
       state: state,
       crs: +crs.toFixed(3),
       crsTrend: crsTrend,
@@ -1955,11 +2149,16 @@
       chainModel: 'soft (penalty 1/2/3)',
       stateModel: 'CRS-driven (cumulative momentum)',
       postTrainingWindow: postTrainingWindow,
+      // v3.1.0: goal-aware calorie penalty result
+      goalMode: mealGoalMode ? mealGoalMode.mode : null,
+      hasDeficitOvershoot: hasDeficitOvershoot,
+      deficitOvershootRatio: deficitOvershootRatio ? +deficitOvershootRatio.toFixed(2) : null,
+      deficitViolationType: dcsResult.violationType,
       message: message.short,
       nextStepHint: nextStepHint,
       elapsed: elapsed.toFixed(2) + 'ms'
     });
-    console.info('[HEYS.cascade] 🧬 v3.0.0 subsystems:', {
+    console.info('[HEYS.cascade] 🧬 v3.1.0 subsystems:', {
       crs: {
         value: +crs.toFixed(3),
         ceiling: ceiling,
@@ -1990,7 +2189,16 @@
       stateModel: 'CRS-driven (STRONG≥0.75, GROWING≥0.45, BUILDING≥0.20, RECOVERY>0.05, BROKEN≤0.05)',
       scoringMethod: 'continuous (sigmoid/bell-curve/log2/tanh)',
       personalBaselines: '14-day rolling median → 30-day for CRS',
-      thresholds: { CRS: CRS_THRESHOLDS, daily: SCORE_THRESHOLDS, MOMENTUM_TARGET: MOMENTUM_TARGET }
+      thresholds: { CRS: CRS_THRESHOLDS, daily: SCORE_THRESHOLDS, MOMENTUM_TARGET: MOMENTUM_TARGET },
+      // v3.1.0: goal-aware calorie penalty sub-system
+      goalAwarePenalty: {
+        goalMode: mealGoalMode ? mealGoalMode.mode : null,
+        goalLabel: mealGoalMode ? mealGoalMode.label : null,
+        hasDeficitOvershoot: hasDeficitOvershoot,
+        deficitOvershootRatio: deficitOvershootRatio ? +deficitOvershootRatio.toFixed(2) : null,
+        dcsContext: dcsResult.deficitContext || null,
+        messagePool: hasDeficitOvershoot ? 'DEFICIT_OVERSHOOT' : null
+      }
     });
     console.info('[HEYS.cascade] ─────────────────────────────────────────────');
 
@@ -2052,7 +2260,7 @@
       confidence: confidenceMap,
       avgConfidence: +avgConfidence.toFixed(2),
       rawWeights: rawWeights,
-      // v3.0.0 CRS fields
+      // v3.1.0 CRS fields
       crs: +crs.toFixed(3),
       ceiling: ceiling,
       dailyContribution: +todayDcs.toFixed(3),
@@ -2061,7 +2269,11 @@
       crsTrend: crsTrend,
       daysAtPeak: daysAtPeak,
       dcsHistory: dcsHistory,
-      historicalDays: historicalDays
+      historicalDays: historicalDays,
+      // v3.1.0: Goal-aware overshoot fields
+      hasDeficitOvershoot: hasDeficitOvershoot,
+      deficitOvershootRatio: deficitOvershootRatio ? +deficitOvershootRatio.toFixed(2) : null,
+      goalMode: mealGoalMode ? mealGoalMode.mode : null
     };
   }
 
@@ -2145,7 +2357,7 @@
 
     // Секция «Сегодня»
     children.push(renderSectionHeader('📅 Сегодня', true, 'h-today'));
-    for (var ti = 0; ti < events.length; ti++) {
+    for (var ti = events.length - 1; ti >= 0; ti--) {
       children.push(renderEventRow(events[ti], 'today-' + ti));
     }
 
@@ -2153,7 +2365,7 @@
     for (var hi = 0; hi < historicalDays.length; hi++) {
       var hd = historicalDays[hi];
       children.push(renderSectionHeader(hd.label, false, 'h-sec-' + hi));
-      for (var hei = 0; hei < hd.events.length; hei++) {
+      for (var hei = hd.events.length - 1; hei >= 0; hei--) {
         children.push(renderEventRow(hd.events[hei], 'h-' + hi + '-' + hei));
       }
     }
@@ -2199,7 +2411,7 @@
     var setExpanded = expandedState[1];
 
     var config = STATE_CONFIG[state] || STATE_CONFIG.EMPTY;
-    // v3.0.0: Badge shows CRS progress with trend arrow
+    // v3.1.0: Badge shows CRS progress with trend arrow
     var trendArrow = crsTrend === 'up' ? ' ↑' : crsTrend === 'down' ? ' ↓' : '';
     var progressPct = Math.round(momentumScore * 100);
     var badgeText = progressPct > 0 ? (progressPct + '%' + trendArrow) : '—';
@@ -2440,9 +2652,9 @@
     STATE_CONFIG: STATE_CONFIG,
     MESSAGES: MESSAGES,
     CRS_THRESHOLDS: CRS_THRESHOLDS,
-    VERSION: '3.0.0'
+    VERSION: '3.1.0'
   };
 
-  console.info('[HEYS.cascade] ✅ Module loaded v3.0.0 | CRS (Cascade Rate Score) cumulative momentum | EMA α=0.92, 30-day window, individual ceiling | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Filter: [HEYS.cascade]');
+  console.info('[HEYS.cascade] ✅ Module loaded v3.1.0 | CRS (Cascade Rate Score) cumulative momentum | EMA α=0.92, 30-day window, individual ceiling | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Goal-aware calorie penalty (deficit/bulk) | Filter: [HEYS.cascade] | Sub-filter: [HEYS.cascade.crs] [HEYS.cascade.deficit]');
 
 })(typeof window !== 'undefined' ? window : global);
