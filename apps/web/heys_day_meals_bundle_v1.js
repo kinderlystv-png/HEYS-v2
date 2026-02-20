@@ -3100,6 +3100,17 @@
                                 _n.includes('спагет')) return 'pasta_grain';
                             return 'generic_grain';
                         };
+                        const getLateEveningPreparationPenalty = (name, scenario, semCat) => {
+                            if (!(scenario === 'LATE_EVENING' || scenario === 'PRE_SLEEP')) return 0;
+                            const _n = (name || '').toLowerCase();
+                            const _isFried = _n.includes('жарен') || _n.includes('фритюр');
+                            const _isDoughy = _n.includes('блин') || _n.includes('оладь') || _n.includes('пицц') ||
+                                _n.includes('лаваш') || _n.includes('лепёшк') || _n.includes('тортилья');
+                            if (_isFried) return -10;
+                            if (_isDoughy && semCat === 'grains') return -8;
+                            if (_isDoughy) return -5;
+                            return 0;
+                        };
                         const getDominantMacro = (prot, carbs, fat, kcal) => {
                             if (!kcal || kcal < 1) return 'macro_mixed';
                             if ((prot * 3) / kcal >= 0.35) return 'macro_protein';
@@ -3250,6 +3261,7 @@
                                 const fiberBonus = altFiber > origFiber + 1 ? 10 : 0;
                                 const improvementScore = harmImprov + Math.min(35, savingPct * 0.45) + fiberBonus;
                                 const familiarBonus = alt._familiar ? 10 : 0;
+                                const altSemCatForScore = getSemanticCat(alt.name, alt.category);
                                 const altGrainSubtype = origSemCat === 'grains' ? getGrainSubtype(alt.name) : null;
                                 let grainSubtypeBonus = 0;
                                 if (origGrainSubtype && altGrainSubtype) {
@@ -3264,6 +3276,11 @@
                                         grainSubtypeBonus = -4;
                                     }
                                 }
+                                const eveningPrepPenalty = getLateEveningPreparationPenalty(
+                                    alt.name,
+                                    _pickerScenario?.scenario,
+                                    altSemCatForScore,
+                                );
                                 let pickerScore = 50;
                                 if (_pickerFn && _pickerScenario) {
                                     try {
@@ -3283,11 +3300,11 @@
                                         pickerScore = 50;
                                     }
                                 }
-                                const composite = pickerScore * 0.35 + macroSimilarity * 0.30 + improvementScore * 0.25 + familiarBonus * 0.10 + portionPenalty + grainSubtypeBonus;
+                                const composite = pickerScore * 0.35 + macroSimilarity * 0.30 + improvementScore * 0.25 + familiarBonus * 0.10 + portionPenalty + grainSubtypeBonus + eveningPrepPenalty;
                                 scoredCandidates.push({
                                     name: alt.name, kcal: altKcal, harm: altHarm, saving: savingPct,
                                     familiar: alt._familiar, portionMode, typicalAltGrams, actualAltKcal,
-                                    scores: { picker: Math.round(pickerScore * 10) / 10, macroSim: Math.round(macroSimilarity * 10) / 10, improvement: Math.round(improvementScore * 10) / 10, familiarBonus, portionPenalty, grainSubtypeBonus, composite: Math.round(composite * 10) / 10 },
+                                    scores: { picker: Math.round(pickerScore * 10) / 10, macroSim: Math.round(macroSimilarity * 10) / 10, improvement: Math.round(improvementScore * 10) / 10, familiarBonus, portionPenalty, grainSubtypeBonus, eveningPrepPenalty, composite: Math.round(composite * 10) / 10 },
                                     breakdown: {
                                         harmImprov: Math.round(harmImprov * 10) / 10,
                                         savingBonus: Math.round(Math.min(35, savingPct * 0.45) * 10) / 10,
@@ -3295,6 +3312,7 @@
                                         grainSubtype: origSemCat === 'grains'
                                             ? `${origGrainSubtype || '—'}→${altGrainSubtype || '—'}`
                                             : '—',
+                                        prepPenaltyReason: eveningPrepPenalty < 0 ? 'late-evening fried/doughy' : 'none',
                                     },
                                 });
                                 if (composite > bestComposite) {
@@ -3311,7 +3329,7 @@
                             name: c.name, kcal: c.kcal, saving: c.saving + '%', harm: c.harm, familiar: c.familiar, portionMode: c.portionMode,
                             portion: `${c.typicalAltGrams}г → ${c.actualAltKcal}ккал (orig ${actualCurrentKcal}ккал)`,
                             composite: c.scores.composite,
-                            breakdown: `picker=${c.scores.picker} | macroSim=${c.scores.macroSim} | improv=${c.scores.improvement}(harm=${c.breakdown.harmImprov},save=${c.breakdown.savingBonus},fiber=${c.breakdown.fiberBonus}) | fam=${c.scores.familiarBonus} | grainSubtype=${c.scores.grainSubtypeBonus}(${c.breakdown.grainSubtype}) | portionPenalty=${c.scores.portionPenalty}`,
+                            breakdown: `picker=${c.scores.picker} | macroSim=${c.scores.macroSim} | improv=${c.scores.improvement}(harm=${c.breakdown.harmImprov},save=${c.breakdown.savingBonus},fiber=${c.breakdown.fiberBonus}) | fam=${c.scores.familiarBonus} | grainSubtype=${c.scores.grainSubtypeBonus}(${c.breakdown.grainSubtype}) | portionPenalty=${c.scores.portionPenalty} | eveningPrep=${c.scores.eveningPrepPenalty}(${c.breakdown.prepPenaltyReason})`,
                         })));
 
                         if (!best || bestComposite < 28) {

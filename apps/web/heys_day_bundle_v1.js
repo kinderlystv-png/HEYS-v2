@@ -4526,6 +4526,17 @@
                                 _n.includes('спагет')) return 'pasta_grain';
                             return 'generic_grain';
                         };
+                        const getLateEveningPreparationPenalty = (name, scenario, semCat) => {
+                            if (!(scenario === 'LATE_EVENING' || scenario === 'PRE_SLEEP')) return 0;
+                            const _n = (name || '').toLowerCase();
+                            const _isFried = _n.includes('жарен') || _n.includes('фритюр');
+                            const _isDoughy = _n.includes('блин') || _n.includes('оладь') || _n.includes('пицц') ||
+                                _n.includes('лаваш') || _n.includes('лепёшк') || _n.includes('тортилья');
+                            if (_isFried) return -10;
+                            if (_isDoughy && semCat === 'grains') return -8;
+                            if (_isDoughy) return -5;
+                            return 0;
+                        };
                         // Dominant macro fallback: for products where semantic cat = 'other'
                         const getDominantMacro = (prot, carbs, fat, kcal) => {
                             if (!kcal || kcal < 1) return 'macro_mixed';
@@ -4706,6 +4717,7 @@
                                 // 3. Familiarity bonus
                                 const familiarBonus = alt._familiar ? 10 : 0;
                                 // 3.1 Grains subtype bias: keep breakfast grains close to breakfast grains
+                                const altSemCatForScore = getSemanticCat(alt.name, alt.category);
                                 const altGrainSubtype = origSemCat === 'grains' ? getGrainSubtype(alt.name) : null;
                                 let grainSubtypeBonus = 0;
                                 if (origGrainSubtype && altGrainSubtype) {
@@ -4720,6 +4732,11 @@
                                         grainSubtypeBonus = -4;
                                     }
                                 }
+                                const eveningPrepPenalty = getLateEveningPreparationPenalty(
+                                    alt.name,
+                                    _pickerScenario?.scenario,
+                                    altSemCatForScore,
+                                );
                                 // 4. Product Picker contextual score (optional)
                                 // calculateProductScore returns { totalScore, breakdown } — extract number!
                                 let pickerScore = 50;
@@ -4742,8 +4759,8 @@
                                         pickerScore = 50;
                                     }
                                 }
-                                // Composite: productPicker 35% + macroSimilarity 30% + improvement 25% + familiarity 10% + portionPenalty + grains subtype bias
-                                const composite = pickerScore * 0.35 + macroSimilarity * 0.30 + improvementScore * 0.25 + familiarBonus * 0.10 + portionPenalty + grainSubtypeBonus;
+                                // Composite: productPicker 35% + macroSimilarity 30% + improvement 25% + familiarity 10% + portionPenalty + grains subtype bias + late-evening preparation penalty
+                                const composite = pickerScore * 0.35 + macroSimilarity * 0.30 + improvementScore * 0.25 + familiarBonus * 0.10 + portionPenalty + grainSubtypeBonus + eveningPrepPenalty;
                                 scoredCandidates.push({
                                     name: alt.name,
                                     kcal: altKcal,
@@ -4760,6 +4777,7 @@
                                         familiarBonus,
                                         portionPenalty,
                                         grainSubtypeBonus,
+                                        eveningPrepPenalty,
                                         composite: Math.round(composite * 10) / 10,
                                     },
                                     breakdown: {
@@ -4769,6 +4787,7 @@
                                         grainSubtype: origSemCat === 'grains'
                                             ? `${origGrainSubtype || '—'}→${altGrainSubtype || '—'}`
                                             : '—',
+                                        prepPenaltyReason: eveningPrepPenalty < 0 ? 'late-evening fried/doughy' : 'none',
                                     },
                                 });
                                 if (composite > bestComposite) {
@@ -4791,7 +4810,7 @@
                             portionMode: c.portionMode,
                             portion: `${c.typicalAltGrams}г → ${c.actualAltKcal}ккал (orig ${actualCurrentKcal}ккал)`,
                             composite: c.scores.composite,
-                            breakdown: `picker=${c.scores.picker} | macroSim=${c.scores.macroSim} | improv=${c.scores.improvement}(harm=${c.breakdown.harmImprov},save=${c.breakdown.savingBonus},fiber=${c.breakdown.fiberBonus}) | fam=${c.scores.familiarBonus} | grainSubtype=${c.scores.grainSubtypeBonus}(${c.breakdown.grainSubtype}) | portionPenalty=${c.scores.portionPenalty}`,
+                            breakdown: `picker=${c.scores.picker} | macroSim=${c.scores.macroSim} | improv=${c.scores.improvement}(harm=${c.breakdown.harmImprov},save=${c.breakdown.savingBonus},fiber=${c.breakdown.fiberBonus}) | fam=${c.scores.familiarBonus} | grainSubtype=${c.scores.grainSubtypeBonus}(${c.breakdown.grainSubtype}) | portionPenalty=${c.scores.portionPenalty} | eveningPrep=${c.scores.eveningPrepPenalty}(${c.breakdown.prepPenaltyReason})`,
                         })));
 
                         if (!best || bestComposite < 28) {
