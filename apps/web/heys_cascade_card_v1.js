@@ -1,6 +1,6 @@
 // heys_cascade_card_v1.js — Cascade Card — «Ваш позитивный каскад»
 // Standalone компонент. Визуализация цепочки здоровых решений в реальном времени.
-// v2.2.0 | 2026-02-19 — Soft chain degradation + score-driven states
+// v3.0.0 | 2026-02-20 — Cascade Rate Score (CRS) cumulative momentum
 // Фильтр в консоли: [HEYS.cascade]
 (function (global) {
   'use strict';
@@ -23,36 +23,36 @@
 
   const STATE_CONFIG = {
     EMPTY: { icon: '🌅', color: '#94a3b8', label: 'Начни день' },
-    BUILDING: { icon: '🔗', color: '#3b82f6', label: 'Начало' },
-    GROWING: { icon: '⚡', color: '#22c55e', label: 'Каскад растёт' },
-    STRONG: { icon: '🔥', color: '#eab308', label: 'Мощный день' },
-    BROKEN: { icon: '💪', color: '#f59e0b', label: 'Пауза' },
+    BUILDING: { icon: '🔗', color: '#3b82f6', label: 'Импульс формируется' },
+    GROWING: { icon: '⚡', color: '#22c55e', label: 'Каскад набирает силу' },
+    STRONG: { icon: '🔥', color: '#eab308', label: 'Устойчивый импульс' },
+    BROKEN: { icon: '💪', color: '#f59e0b', label: 'Начни с малого' },
     RECOVERY: { icon: '🌱', color: '#0ea5e9', label: 'Возвращение' }
   };
 
   const MESSAGES = {
     BUILDING: [
-      { short: 'Хорошее начало. Первый шаг уже сделан.' },
-      { short: 'Начало положено — проще всего продолжить, когда уже начал.' }
+      { short: 'Импульс формируется. Позитивные действия начинают складываться.' },
+      { short: 'Первые дни — самые важные. Каждое решение закладывает фундамент.' }
     ],
     GROWING: [
-      { short: 'Три решения подряд — ты набираешь ход.' },
-      { short: 'Хороший ритм. Следующий шаг даётся легче.' },
-      { short: 'Когда всё складывается, правильный выбор становится проще.' }
+      { short: 'Каскад набирает силу. Позитивные действия накапливаются день за днём.' },
+      { short: 'На восходящей. Каждый хороший день поднимает тебя выше.' },
+      { short: 'Прогресс виден. Ещё немного — и импульс станет устойчивым.' }
     ],
     STRONG: [
-      { short: 'Мощный день. Когда столько сделано — остановиться сложно.' },
-      { short: 'Сегодня всё работает. Такие дни строят привычки.' },
-      { short: 'Пять+ решений — это уже система. Тебе проще делать правильный выбор.' }
+      { short: 'Устойчивый импульс. Ты на пике — каждый день поддерживает привычку.' },
+      { short: 'Мощная инерция. Даже небольшой сбой не перечеркнёт твой прогресс.' },
+      { short: 'Система работает. Две+ недели позитивных решений — это уже фундамент.' }
     ],
     BROKEN: [
-      { short: 'Один шаг в сторону — не конец пути. Следующее решение уже может быть хорошим.' },
-      { short: 'Не всё или ничего. Даже 70% хороших решений — отличный день.' },
-      { short: 'Цепочка прервалась? Начни новую. Каждая цепочка из 2+ звеньев работает.' }
+      { short: 'Начни с малого — каждое действие запускает новый каскад.' },
+      { short: 'Нулевой импульс — это чистый старт. Первый день строит всё остальное.' },
+      { short: 'Не всё или ничего. Даже 70% хороших решений — отличный день.' }
     ],
     RECOVERY: [
-      { short: 'Новая цепочка начинается. Это важнее, чем быть идеальным.' },
-      { short: 'Ты вернулся в ритм. Первый шаг после паузы — самый важный.' },
+      { short: 'Один шаг назад не отменяет неделю прогресса. Ты уже возвращаешься.' },
+      { short: 'Импульс снизился, но не обнулился. Один хороший день — и ты на пути.' },
       { short: 'После перерыва каждое решение имеет значение. Ты уже на пути.' }
     ],
     ANTI_LICENSING: [
@@ -185,6 +185,23 @@
   }
 
   // ─────────────────────────────────────────────────────
+  // v3.0.0 CRS (Cascade Rate Score) CONSTANTS
+  // ─────────────────────────────────────────────────────
+
+  const CRS_DECAY = 0.92;            // EMA decay factor (α)
+  const CRS_WINDOW = 30;             // days for EMA computation
+  const CRS_DCS_CLAMP_NEG = -0.3;    // inertia protection for normal bad days
+  const CRS_CEILING_BASE = 0.65;     // starting ceiling for all users
+  const CRS_KEY_VERSION = 'v1';      // localStorage schema version
+
+  const CRS_THRESHOLDS = {
+    STRONG: 0.75,    // Устойчивый импульс
+    GROWING: 0.45,   // Каскад набирает силу
+    BUILDING: 0.20,  // Импульс формируется
+    RECOVERY: 0.05   // Возвращение (> 0.05)
+  };
+
+  // ─────────────────────────────────────────────────────
   // УТИЛИТЫ
   // ─────────────────────────────────────────────────────
 
@@ -254,6 +271,7 @@
   // Загружает N предыдущих дней из localStorage (для стрик-штрафов и истории измерений)
   function getPreviousDays(n) {
     var result = [];
+    var nullDates = [];
     var U = HEYS.utils;
     var clientId = (U && U.getCurrentClientId && U.getCurrentClientId()) || HEYS.currentClientId || '';
     for (var i = 1; i <= n; i++) {
@@ -267,12 +285,144 @@
           result.push(typeof raw === 'string' ? JSON.parse(raw) : raw);
         } else {
           result.push(null);
+          nullDates.push(ds);
         }
       } catch (e) {
         result.push(null);
+        nullDates.push(ds + '(err)');
       }
     }
+    if (nullDates.length > 0) {
+      console.warn('[HEYS.cascade] ⚠️ getPreviousDays: ' + nullDates.length + '/' + n + ' days missing from localStorage:', nullDates.join(', '));
+    }
     return result; // array[0] = yesterday, array[n-1] = n days ago
+  }
+
+  // ─────────────────────────────────────────────────────
+  // HELPER: buildDayEventsSimple — лёгкие события для истории
+  // Строит массив событий из любого day-объекта без сложного скоринга
+  // ─────────────────────────────────────────────────────
+
+  function buildDayEventsSimple(dayObj) {
+    var evts = [];
+    if (!dayObj) return evts;
+
+    // Checkin (вес)
+    if ((dayObj.weightMorning || 0) > 0) {
+      evts.push({
+        type: 'checkin', icon: EVENT_ICONS.checkin, positive: true, weight: 0.5,
+        time: null, sortKey: 0,
+        label: 'Вес ' + (+dayObj.weightMorning).toFixed(1) + ' кг'
+      });
+    }
+
+    // Приёмы пищи
+    var hMeals = dayObj.meals || [];
+    for (var hmi = 0; hmi < hMeals.length; hmi++) {
+      var hm = hMeals[hmi];
+      var hmt = parseTime(hm && hm.time);
+      var isLateMeal = hmt !== null && hmt >= 1380;
+      evts.push({
+        type: 'meal', icon: EVENT_ICONS.meal,
+        positive: !isLateMeal, weight: isLateMeal ? -0.5 : 0.4,
+        time: hm && hm.time, sortKey: hmt !== null ? hmt : 500,
+        label: (hm && hm.name) || 'Приём пищи',
+        breakReason: isLateMeal ? '⏰' : null
+      });
+    }
+
+    // Тренировки
+    var hTrains = dayObj.trainings || [];
+    for (var hti = 0; hti < hTrains.length; hti++) {
+      var htr = hTrains[hti];
+      var htrMin = (htr && htr.durationMin) || 0;
+      var htrSort = parseTime(htr && htr.startTime);
+      evts.push({
+        type: 'training', icon: EVENT_ICONS.training, positive: true, weight: 1.5,
+        time: htr && htr.startTime, sortKey: htrSort !== null ? htrSort : 600,
+        label: (htr && htr.type || 'Тренировка') + (htrMin ? ' ' + htrMin + ' мин' : '')
+      });
+    }
+
+    // Сон
+    if (dayObj.sleepStart) {
+      var hslh = dayObj.sleepHours || 0;
+      var hslEnd = dayObj.sleepEnd || null;
+      // Fallback: вычислить sleepHours из sleepEnd если не задан
+      if (!hslh && hslEnd) {
+        var hsdm = parseTime(dayObj.sleepStart); var hedm = parseTime(hslEnd);
+        if (hsdm !== null && hedm !== null) {
+          if (hsdm < 360) hsdm += 1440;
+          if (hedm <= hsdm) hedm += 1440;
+          hslh = Math.round((hedm - hsdm) / 60 * 10) / 10;
+        }
+      }
+      var hstRaw = parseTime(dayObj.sleepStart);
+      // Нормализация: after-midnight (00:xx–05:xx) → +1440 для корректного isLateSleep
+      var hst = hstRaw !== null ? (hstRaw < 360 ? hstRaw + 1440 : hstRaw) : null;
+      var isLateSleep = hst !== null && hst >= 1380; // >= 23:00
+      var goodSleep = hslh >= 6 && hslh <= 9;
+      // sortKey: after-midnight → отрицательный (до чекина)
+      var hstSort = hstRaw !== null ? (hstRaw < 360 ? hstRaw - 1440 : hstRaw) : 1440;
+      // Качественный лейбл + время конца + длительность
+      var hslOnsetLabel = hst === null ? 'Сон'
+        : hst <= 1320 ? 'Ранний сон'
+          : hst <= 1380 ? 'Сон до 23:00'
+            : hst <= 1440 ? 'Сон до полуночи'
+              : hst <= 1500 ? 'Поздний сон' : 'Очень поздний сон';
+      var hslLabel = hslOnsetLabel;
+      if (hslEnd) hslLabel += ' →' + hslEnd;
+      if (hslh > 0) hslLabel += ' (' + hslh.toFixed(1) + 'ч)';
+      evts.push({
+        type: 'sleep', icon: isLateSleep ? '🌙' : EVENT_ICONS.sleep,
+        positive: !isLateSleep && (hslh === 0 || goodSleep),
+        weight: isLateSleep ? -1.0 : (goodSleep ? 0.8 : -0.3),
+        time: dayObj.sleepStart, timeEnd: hslEnd, sleepHours: hslh,
+        sortKey: hstSort,
+        label: hslLabel,
+        breakReason: isLateSleep ? '⏰' : null
+      });
+    }
+
+    // Шаги
+    if ((dayObj.steps || 0) > 1000) {
+      evts.push({
+        type: 'steps', icon: EVENT_ICONS.steps,
+        positive: dayObj.steps >= 7500, weight: dayObj.steps >= 7500 ? 0.8 : 0.2,
+        time: null, sortKey: 650,
+        label: (+dayObj.steps).toLocaleString('ru') + ' шагов'
+      });
+    }
+
+    // Бытовая активность
+    if ((dayObj.householdMin || 0) > 0) {
+      evts.push({
+        type: 'household', icon: EVENT_ICONS.household, positive: true, weight: 0.4,
+        time: null, sortKey: 599,
+        label: 'Бытовая ' + dayObj.householdMin + ' мин'
+      });
+    }
+
+    // Измерения
+    if (dayObj.measurements && Object.keys(dayObj.measurements).some(function (k) { return dayObj.measurements[k] > 0; })) {
+      evts.push({
+        type: 'measurements', icon: EVENT_ICONS.measurements, positive: true, weight: 0.5,
+        time: null, sortKey: 1,
+        label: 'Замеры тела'
+      });
+    }
+
+    evts.sort(function (a, b) { return a.sortKey - b.sortKey; });
+    return evts;
+  }
+
+  function getDateLabel(offsetFromToday) {
+    if (offsetFromToday === 1) return 'Вчера';
+    var MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+    var DAYS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+    var d = new Date();
+    d.setDate(d.getDate() - offsetFromToday);
+    return DAYS[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()];
   }
 
   // ─────────────────────────────────────────────────────
@@ -401,14 +551,279 @@
   }
 
   // ─────────────────────────────────────────────────────
+  // v3.0.0 CRS (Cascade Rate Score) ENGINE
+  // ─────────────────────────────────────────────────────
+
+  function getCrsStorageKey(clientId) {
+    return clientId
+      ? 'heys_' + clientId + '_cascade_dcs_' + CRS_KEY_VERSION
+      : 'heys_cascade_dcs_' + CRS_KEY_VERSION;
+  }
+
+  function loadDcsHistory(clientId) {
+    var key = getCrsStorageKey(clientId);
+    try {
+      var raw = (HEYS.store && HEYS.store.get) ? HEYS.store.get(key, null) : localStorage.getItem(key);
+      if (raw) {
+        return typeof raw === 'string' ? JSON.parse(raw) : raw;
+      }
+    } catch (e) {
+      console.warn('[HEYS.cascade.crs] ⚠️ Failed to load DCS history:', e && e.message);
+    }
+    return {};
+  }
+
+  function saveDcsHistory(clientId, dcsMap) {
+    var key = getCrsStorageKey(clientId);
+    // Auto-cleanup: remove entries older than 35 days
+    var cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 35);
+    var cutoffStr = cutoff.toISOString().slice(0, 10);
+    var cleaned = {};
+    var dates = Object.keys(dcsMap);
+    for (var i = 0; i < dates.length; i++) {
+      if (dates[i] >= cutoffStr) {
+        cleaned[dates[i]] = dcsMap[dates[i]];
+      }
+    }
+    try {
+      var json = JSON.stringify(cleaned);
+      if (HEYS.store && HEYS.store.set) {
+        HEYS.store.set(key, json);
+      } else {
+        localStorage.setItem(key, json);
+      }
+    } catch (e) {
+      console.warn('[HEYS.cascade.crs] ⚠️ Failed to save DCS history:', e && e.message);
+    }
+    return cleaned;
+  }
+
+  /**
+   * Retroactive DCS estimation for days without full scoring.
+   * Simplified heuristic based on available day data fields.
+   * Used to backfill DCS history on first CRS computation.
+   */
+  function getRetroactiveDcs(day) {
+    if (!day) return null;
+    var score = 0;
+    // Meals: +0.15 per meal (capped at 4)
+    var mealCount = Math.min(4, (day.meals || []).length);
+    score += mealCount * 0.15;
+    // Training: +0.2 per training (capped at 2)
+    var trainCount = Math.min(2, (day.trainings || []).length);
+    score += trainCount * 0.2;
+    // Sleep onset data: +0.15
+    if (day.sleepStart) score += 0.15;
+    // Sleep duration: +0.1 if decent
+    if (day.sleepHours && day.sleepHours >= 6) score += 0.1;
+    // Weight checkin: +0.05
+    if (day.weightMorning > 0) score += 0.05;
+    // Steps: +0.1 if meaningful
+    if (day.steps > 3000) score += 0.1;
+    // Household activity: +0.05
+    if (day.householdMin > 10) score += 0.05;
+    // Normalize: max realistic ≈ 0.6+0.4+0.25+0.05+0.1+0.05 = 1.45
+    return clamp(score / 1.2, 0, 1.0);
+  }
+
+  /**
+   * Compute Daily Contribution Score (DCS) from daily score.
+   * Normalizes to -1.0..+1.0 with inertia protection.
+   * Critical Violation Override bypasses inertia for severe events.
+   */
+  function computeDailyContribution(dailyScore, day, normAbs, pIndex) {
+    var dcs = clamp(dailyScore / MOMENTUM_TARGET, CRS_DCS_CLAMP_NEG, 1.0);
+    var hasCriticalViolation = false;
+    var violationType = null;
+
+    var meals = (day && day.meals) || [];
+    var normKcal = (normAbs && normAbs.kcal) || 2000;
+    var hasNightHarm = false;
+    var hasExcessKcal = false;
+
+    // Night eating with harm ≥ 7 (00:00–06:00)
+    for (var i = 0; i < meals.length; i++) {
+      var mealTime = parseTime(meals[i] && meals[i].time);
+      if (mealTime !== null && mealTime >= 0 && mealTime < 360) {
+        if (checkMealHarm(meals[i], pIndex)) {
+          hasNightHarm = true;
+        }
+      }
+    }
+
+    // Excess kcal > 150% of norm
+    var totalKcal = 0;
+    for (var j = 0; j < meals.length; j++) {
+      var items = (meals[j] && meals[j].items) || [];
+      for (var k = 0; k < items.length; k++) {
+        var it = items[k];
+        var g = it.grams || it.g || 100;
+        var product = pIndex
+          ? ((HEYS.dayUtils && HEYS.dayUtils.getProductFromItem && HEYS.dayUtils.getProductFromItem(it, pIndex))
+            || (HEYS.models && HEYS.models.getProductFromItem && HEYS.models.getProductFromItem(it, pIndex)))
+          : null;
+        if (product) {
+          totalKcal += ((product.kcal || product.kcal100 || 0) * g / 100);
+        } else {
+          totalKcal += (it.kcal || 0);
+        }
+      }
+    }
+    if (normKcal > 0 && totalKcal > normKcal * 1.5) hasExcessKcal = true;
+
+    // Critical Violation Override — bypasses inertia protection
+    if (hasNightHarm && hasExcessKcal) {
+      dcs = -1.0; violationType = 'night_harm_excess';
+    } else if (hasNightHarm) {
+      dcs = -0.8; violationType = 'night_harm';
+    } else if (hasExcessKcal) {
+      dcs = -0.6; violationType = 'excess_kcal';
+    }
+
+    hasCriticalViolation = violationType !== null;
+    return { dcs: dcs, hasCriticalViolation: hasCriticalViolation, violationType: violationType };
+  }
+
+  /**
+   * Compute individual ceiling — max CRS for this user.
+   * Grows with consistency, factor diversity, and data depth.
+   * ceiling = min(1.0, base × consistency × diversity + dataDepth)
+   */
+  function computeIndividualCeiling(dcsByDate, prevDays, rawWeights) {
+    var dcsValues = [];
+    var dates = Object.keys(dcsByDate);
+    for (var i = 0; i < dates.length; i++) {
+      dcsValues.push(dcsByDate[dates[i]]);
+    }
+
+    // Consistency: 1 + clamp((1 - CV) × 0.3, 0, 0.3)
+    var consistency = 1.0;
+    if (dcsValues.length >= 5) {
+      var meanVal = dcsValues.reduce(function (a, b) { return a + b; }, 0) / dcsValues.length;
+      if (meanVal > 0) {
+        var cv = stdev(dcsValues) / meanVal;
+        consistency = 1 + clamp((1 - cv) * 0.3, 0, 0.3);
+      }
+    }
+
+    // Diversity: count unique factor types with data in 3+ of 30 days
+    var factorCounts = {
+      household: 0, sleepOnset: 0, sleepDur: 0, steps: 0,
+      checkin: 0, measurements: 0, supplements: 0, insulin: 0, training: 0
+    };
+    for (var di = 0; di < prevDays.length; di++) {
+      var d = prevDays[di];
+      if (!d) continue;
+      if (d.householdMin > 0) factorCounts.household++;
+      if (d.sleepStart) factorCounts.sleepOnset++;
+      if (d.sleepHours > 0) factorCounts.sleepDur++;
+      if (d.steps > 0) factorCounts.steps++;
+      if (d.weightMorning > 0) factorCounts.checkin++;
+      if (d.measurements && Object.keys(d.measurements).some(function (k) { return d.measurements[k] > 0; })) factorCounts.measurements++;
+      if (d.supplementsTaken && d.supplementsTaken.length > 0) factorCounts.supplements++;
+      if (d.meals && d.meals.length >= 2) factorCounts.insulin++;
+      if (d.trainings && d.trainings.length > 0) factorCounts.training++;
+    }
+    var activatedFactors = 0;
+    var ftKeys = Object.keys(factorCounts);
+    for (var fk = 0; fk < ftKeys.length; fk++) {
+      if (factorCounts[ftKeys[fk]] >= 3) activatedFactors++;
+    }
+    var diversity = 1 + (activatedFactors / 10) * 0.15;
+
+    // Data depth: +0.03 per full week (up to 4 weeks = +0.12)
+    var daysWithData = 0;
+    for (var dd = 0; dd < prevDays.length; dd++) {
+      if (prevDays[dd]) daysWithData++;
+    }
+    var fullWeeks = Math.min(4, Math.floor(daysWithData / 7));
+    var dataDepth = 0.03 * fullWeeks;
+
+    var ceiling = Math.min(1.0, CRS_CEILING_BASE * consistency * diversity + dataDepth);
+
+    return {
+      ceiling: +ceiling.toFixed(3),
+      consistency: +consistency.toFixed(3),
+      diversity: +diversity.toFixed(3),
+      dataDepth: +dataDepth.toFixed(3),
+      activatedFactors: activatedFactors,
+      daysWithData: daysWithData,
+      fullWeeks: fullWeeks
+    };
+  }
+
+  /**
+   * Compute CRS via Exponential Moving Average (EMA).
+   * 30-day window, α=0.92 decay. Days without data are skipped.
+   */
+  function computeCascadeRate(dcsByDate, ceiling, todayDate) {
+    var weights = [];
+    var values = [];
+    var today = todayDate ? new Date(todayDate + 'T12:00:00') : new Date();
+
+    for (var i = 0; i < CRS_WINDOW; i++) {
+      var d = new Date(today);
+      d.setDate(d.getDate() - i);
+      var dateKey = d.toISOString().slice(0, 10);
+      var dcsVal = dcsByDate[dateKey];
+
+      if (dcsVal !== undefined && dcsVal !== null) {
+        var weight = Math.pow(CRS_DECAY, i);
+        weights.push(weight);
+        values.push(dcsVal * weight);
+      }
+      // Days without data are skipped (not penalized)
+    }
+
+    if (weights.length === 0) return 0;
+
+    var totalWeight = weights.reduce(function (a, b) { return a + b; }, 0);
+    var crsRaw = values.reduce(function (a, b) { return a + b; }, 0) / totalWeight;
+
+    return +clamp(crsRaw, 0, ceiling).toFixed(3);
+  }
+
+  /**
+   * Compute CRS trend over last 7 days (up/down/flat).
+   * Compares recent 3-day avg DCS to prior 4-7 day avg DCS.
+   */
+  function getCrsTrend(dcsByDate, todayDate) {
+    var today = todayDate ? new Date(todayDate + 'T12:00:00') : new Date();
+    var recent = []; // last 3 days DCS
+    var prior = [];  // 4-7 days ago DCS
+
+    for (var i = 0; i < 7; i++) {
+      var d = new Date(today);
+      d.setDate(d.getDate() - i);
+      var dateKey = d.toISOString().slice(0, 10);
+      var val = dcsByDate[dateKey];
+      if (val !== undefined && val !== null) {
+        if (i < 3) recent.push(val);
+        else prior.push(val);
+      }
+    }
+
+    if (recent.length === 0 || prior.length === 0) return 'flat';
+
+    var recentAvg = recent.reduce(function (a, b) { return a + b; }, 0) / recent.length;
+    var priorAvg = prior.reduce(function (a, b) { return a + b; }, 0) / prior.length;
+    var diff = recentAvg - priorAvg;
+
+    if (diff > 0.05) return 'up';
+    if (diff < -0.05) return 'down';
+    return 'flat';
+  }
+
+  // ─────────────────────────────────────────────────────
   // ДВИЖОК: computeCascadeState
   // ─────────────────────────────────────────────────────
 
   function computeCascadeState(day, dayTot, normAbs, prof, pIndex) {
     var t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 
-    console.info('[HEYS.cascade] ─── computeCascadeState v2.2.0 START ────────');
-    console.info('[HEYS.cascade] 🧬 v2.2.0 features: soft chain degradation | score-driven states | continuous scoring | personal baselines | circadian awareness | confidence layer | day-type detection | cross-factor synergies');
+    console.info('[HEYS.cascade] ─── computeCascadeState v3.0.0 START ────────');
+    console.info('[HEYS.cascade] 🧬 v3.0.0 features: CRS cumulative momentum | soft chain degradation | continuous scoring | personal baselines | circadian awareness | confidence layer | day-type detection | cross-factor synergies');
     console.info('[HEYS.cascade] 📥 Input data:', {
       hasMeals: !!(day && day.meals && day.meals.length),
       mealsCount: (day && day.meals && day.meals.length) || 0,
@@ -439,8 +854,9 @@
 
     var score = 0;
 
-    // v2.1.0: Load 14-day history ONCE for all baseline/confidence/streak calculations
-    var prevDays14 = getPreviousDays(14);
+    // v3.0.0: Load 30-day history for CRS; first 14 for baseline/confidence/streak
+    var prevDays30 = getPreviousDays(CRS_WINDOW);
+    var prevDays14 = prevDays30.slice(0, 14);
     var confidenceMap = {};
     var rawWeights = {};
     var iwAvgGap = 0; // hoisted for synergy access
@@ -708,6 +1124,17 @@
 
     // ── ШАГ 4: Засыпание (chronotype-adaptive sigmoid + consistency) ──
     var sleepStart = (day && day.sleepStart) || '';
+    var sleepEndVal = (day && day.sleepEnd) || null;
+    // Pre-compute sleepHours для лейбла (ШАГ 5 пересчитает с full logic)
+    var sleepHoursForLabel = (day && day.sleepHours) || 0;
+    if (!sleepHoursForLabel && sleepStart && sleepEndVal) {
+      var slPre = parseTime(sleepStart); var elPre = parseTime(sleepEndVal);
+      if (slPre !== null && elPre !== null) {
+        if (slPre < 360) slPre += 1440;
+        if (elPre <= slPre) elPre += 1440;
+        sleepHoursForLabel = Math.round((elPre - slPre) / 60 * 10) / 10;
+      }
+    }
     var sleepOnsetConfidence = getFactorConfidence(prevDays14, function (d) {
       return d && d.sleepStart ? parseTime(d.sleepStart) : null;
     });
@@ -752,13 +1179,22 @@
 
         var sleepOnsetLabel = sleepMins <= 1320 ? 'Ранний сон' : sleepMins <= 1380 ? 'Сон до 23:00'
           : sleepMins <= 1440 ? 'Сон до полуночи' : sleepMins <= 1500 ? 'Поздний сон' : 'Очень поздний сон';
+        // sortKey: after-midnight sleep (sleepMins > 1440) → negative so it sorts
+        // before morning checkin (sortKey=0) and meals. Pre-midnight → use raw value.
+        var sleepSortKey = sleepMins > 1440 ? sleepMins - 2880 : sleepMins;
+        // Полный лейбл: качество + время конца + длительность
+        var sleepFullLabel = sleepOnsetLabel;
+        if (sleepEndVal) sleepFullLabel += ' →' + sleepEndVal;
+        if (sleepHoursForLabel > 0) sleepFullLabel += ' (' + sleepHoursForLabel.toFixed(1) + 'ч)';
         events.push({
           type: 'sleep',
           time: sleepStart,
+          timeEnd: sleepEndVal,
+          sleepHours: sleepHoursForLabel,
           positive: rawSleepOnset >= 0,
           icon: EVENT_ICONS.sleep,
-          label: sleepOnsetLabel,
-          sortKey: 1300,
+          label: sleepFullLabel,
+          sortKey: sleepSortKey,
           weight: sleepOnsetWeightFinal
         });
         console.info('[HEYS.cascade] 😴 Sleep onset (v2.1.0 chronotype-adaptive sigmoid):', {
@@ -1312,34 +1748,125 @@
       warnings: warnings.map(function (w) { return { time: w.time, reason: w.reason, penalty: w.penalty, chain: w.chainBefore + '→' + w.chainAfter }; })
     });
 
-    // ── ШАГ 16: Определение состояния (v2.2.0 score-driven) ───
-    // v2.2.0: состояние определяется ТОЛЬКО по score. warnings влияют на score
-    // (негативные веса уже учтены), но НЕ форсируют RECOVERY/BROKEN.
-    // RECOVERY = слабый импульс (0 < score < BUILDING)
-    // BROKEN = негативы перевесили (score ≤ 0)
+    // ── ШАГ 15b: CRS (Cascade Rate Score) v3.0.0 — кумулятивный импульс ──
+    console.info('[HEYS.cascade.crs] ─── CRS v1.0 computation START ────────');
+
+    // 1. Compute Daily Contribution Score (DCS)
+    var dcsResult = computeDailyContribution(score, day, normAbs, pIndex);
+    var todayDcs = dcsResult.dcs;
+
+    console.info('[HEYS.cascade.crs] 📊 DCS (Daily Contribution Score):', {
+      dailyScore: +score.toFixed(2),
+      formula: 'clamp(' + score.toFixed(2) + '/' + MOMENTUM_TARGET + ', ' + CRS_DCS_CLAMP_NEG + ', 1.0)',
+      baseDcs: +clamp(score / MOMENTUM_TARGET, CRS_DCS_CLAMP_NEG, 1.0).toFixed(3),
+      hasCriticalViolation: dcsResult.hasCriticalViolation,
+      violationType: dcsResult.violationType,
+      finalDcs: +todayDcs.toFixed(3)
+    });
+
+    // 2. Load DCS history and save today's DCS
+    var crsClientId = (HEYS.utils && HEYS.utils.getCurrentClientId && HEYS.utils.getCurrentClientId()) || HEYS.currentClientId || '';
+    var dcsHistory = loadDcsHistory(crsClientId);
+    var todayStr = new Date().toISOString().slice(0, 10);
+    dcsHistory[todayStr] = +todayDcs.toFixed(3);
+
+    // 3. Backfill retroactive DCS for days without cached values
+    var backfillCount = 0;
+    for (var bi = 0; bi < prevDays30.length; bi++) {
+      var bd = new Date();
+      bd.setDate(bd.getDate() - (bi + 1));
+      var bDateKey = bd.toISOString().slice(0, 10);
+      if (dcsHistory[bDateKey] === undefined && prevDays30[bi]) {
+        var retroDcs = getRetroactiveDcs(prevDays30[bi]);
+        if (retroDcs !== null) {
+          dcsHistory[bDateKey] = +retroDcs.toFixed(3);
+          backfillCount++;
+        }
+      }
+    }
+    if (backfillCount > 0) {
+      console.info('[HEYS.cascade.crs] 📋 Retroactive DCS backfill:', { backfilledDays: backfillCount });
+    }
+
+    // Save updated history
+    dcsHistory = saveDcsHistory(crsClientId, dcsHistory);
+
+    // 4. Compute individual ceiling
+    var ceilingResult = computeIndividualCeiling(dcsHistory, prevDays30, rawWeights);
+    var ceiling = ceilingResult.ceiling;
+
+    console.info('[HEYS.cascade.crs] 🏔️ Individual ceiling:', ceilingResult);
+
+    // 5. Compute CRS via EMA
+    var crs = computeCascadeRate(dcsHistory, ceiling, todayStr);
+
+    console.info('[HEYS.cascade.crs] 📈 CRS (Cascade Rate Score):', {
+      crs: +crs.toFixed(3),
+      ceiling: ceiling,
+      dcsToday: +todayDcs.toFixed(3),
+      dcsHistoryDays: Object.keys(dcsHistory).length,
+      emaDecay: CRS_DECAY,
+      window: CRS_WINDOW + ' days'
+    });
+
+    // 6. Compute CRS trend
+    var crsTrend = getCrsTrend(dcsHistory, todayStr);
+
+    console.info('[HEYS.cascade.crs] 📊 CRS trend:', {
+      trend: crsTrend,
+      interpretation: crsTrend === 'up' ? 'Улучшение за 7 дней' : crsTrend === 'down' ? 'Снижение за 7 дней' : 'Стабильно'
+    });
+
+    // 7. Compute daysAtPeak — consecutive days (back from today) with strong DCS ≥ 0.5
+    var daysAtPeak = 0;
+    var sortedHistoryDates = Object.keys(dcsHistory)
+      .filter(function (d) { return d !== todayStr; })
+      .sort()
+      .reverse();
+    for (var _pi = 0; _pi < sortedHistoryDates.length; _pi++) {
+      if (dcsHistory[sortedHistoryDates[_pi]] >= 0.5) {
+        daysAtPeak++;
+      } else {
+        break;
+      }
+    }
+    // Include today if today's DCS is also strong
+    if (todayDcs >= 0.5) daysAtPeak++;
+
+    console.info('[HEYS.cascade.crs] 🔥 Days at peak (DCS ≥ 0.5 consecutively):', {
+      daysAtPeak: daysAtPeak,
+      todayDcs: +todayDcs.toFixed(3)
+    });
+
+    console.info('[HEYS.cascade.crs] ─── CRS v1.0 computation DONE ────────');
+
+    // ── ШАГ 16: Определение состояния (v3.0.0 CRS-driven) ───
+    // v3.0.0: состояние определяется по CRS (кумулятивный импульс),
+    // а не по дневному score. 14 дней хороших решений создают инерцию,
+    // которую один плохой день не может разрушить.
     var state = STATES.EMPTY;
 
     if (events.length === 0) {
       state = STATES.EMPTY;
-    } else if (score >= SCORE_THRESHOLDS.STRONG) {
+    } else if (crs >= CRS_THRESHOLDS.STRONG) {
       state = STATES.STRONG;
-    } else if (score >= SCORE_THRESHOLDS.GROWING) {
+    } else if (crs >= CRS_THRESHOLDS.GROWING) {
       state = STATES.GROWING;
-    } else if (score >= SCORE_THRESHOLDS.BUILDING) {
+    } else if (crs >= CRS_THRESHOLDS.BUILDING) {
       state = STATES.BUILDING;
-    } else if (score > 0) {
+    } else if (crs > CRS_THRESHOLDS.RECOVERY) {
       state = STATES.RECOVERY;
     } else {
       state = STATES.BROKEN;
     }
 
-    console.info('[HEYS.cascade] 🏷️ State determination (v2.2.0 score-driven):', {
+    console.info('[HEYS.cascade] 🏷️ State determination (v3.0.0 CRS-driven):', {
       eventsLength: events.length,
-      warningsCount: warnings.length,
-      chain: chain,
-      score: +score.toFixed(2),
-      thresholds: { STRONG: SCORE_THRESHOLDS.STRONG, GROWING: SCORE_THRESHOLDS.GROWING, BUILDING: SCORE_THRESHOLDS.BUILDING },
-      model: 'score-only (no hasBreak override)',
+      crs: +crs.toFixed(3),
+      dailyScore: +score.toFixed(2),
+      thresholds: CRS_THRESHOLDS,
+      model: 'CRS-driven (cumulative momentum)',
+      crsTrend: crsTrend,
       detectedState: state
     });
 
@@ -1364,16 +1891,18 @@
     var messagePool = MESSAGES[messagePoolKey] || MESSAGES.BUILDING;
     var message = pickMessage(messagePool, messagePoolKey);
 
-    // ── ШАГ 19: Momentum score (по score) ───────────────
-    // v2.1.0: прогресс-бар = взвешенный score / MOMENTUM_TARGET (12.0)
-    var momentumScore = Math.min(1, Math.max(0, score) / MOMENTUM_TARGET);
+    // ── ШАГ 19: Momentum score (v3.0.0 CRS-based) ────────
+    // v3.0.0: прогресс-бар = CRS (кумулятивный импульс), не дневной score
+    var momentumScore = crs;
+    var dailyMomentum = Math.min(1, Math.max(0, score) / MOMENTUM_TARGET);
 
-    console.info('[HEYS.cascade] 📊 Momentum score:', {
-      formula: 'min(1, max(0, score) / ' + MOMENTUM_TARGET + ')',
-      score: +score.toFixed(2),
-      target: MOMENTUM_TARGET,
-      momentumScore: +momentumScore.toFixed(3),
-      progressBarPercent: Math.round(momentumScore * 100) + '%'
+    console.info('[HEYS.cascade] 📊 Momentum score (v3.0.0 CRS):', {
+      formula: 'CRS (cumulative momentum)',
+      crs: +crs.toFixed(3),
+      dailyScore: +score.toFixed(2),
+      dailyProgress: Math.round(dailyMomentum * 100) + '%',
+      crsProgress: Math.round(crs * 100) + '%',
+      crsTrend: crsTrend
     });
 
     // ── ШАГ 20: Next step hint ────────────────────────────
@@ -1409,24 +1938,38 @@
     // ── ИТОГОВЫЙ РЕЗУЛЬТАТ ────────────────────────────────
     var elapsed = ((typeof performance !== 'undefined') ? performance.now() : Date.now()) - t0;
 
-    console.info('[HEYS.cascade] ✅ computeCascadeState v2.2.0 DONE:', {
+    console.info('[HEYS.cascade] ✅ computeCascadeState v3.0.0 DONE:', {
       state: state,
-      score: +score.toFixed(2),
+      crs: +crs.toFixed(3),
+      crsTrend: crsTrend,
+      ceiling: ceiling,
+      dailyScore: +score.toFixed(2),
+      dailyContribution: +todayDcs.toFixed(3),
       chainLength: chain,
       maxChainToday: maxChain,
-      momentumScore: +momentumScore.toFixed(2),
+      momentumScore: +momentumScore.toFixed(3),
       progressPercent: Math.round(momentumScore * 100) + '%',
       eventsCount: events.length,
       warningsCount: warnings.length,
       totalPenalty: totalPenalty,
       chainModel: 'soft (penalty 1/2/3)',
-      stateModel: 'score-driven',
+      stateModel: 'CRS-driven (cumulative momentum)',
       postTrainingWindow: postTrainingWindow,
       message: message.short,
       nextStepHint: nextStepHint,
       elapsed: elapsed.toFixed(2) + 'ms'
     });
-    console.info('[HEYS.cascade] 🧬 v2.2.0 subsystems:', {
+    console.info('[HEYS.cascade] 🧬 v3.0.0 subsystems:', {
+      crs: {
+        value: +crs.toFixed(3),
+        ceiling: ceiling,
+        dcsToday: +todayDcs.toFixed(3),
+        trend: crsTrend,
+        emaDecay: CRS_DECAY,
+        window: CRS_WINDOW,
+        thresholds: CRS_THRESHOLDS,
+        hasCriticalViolation: dcsResult.hasCriticalViolation
+      },
       dayType: dayType,
       synergies: synergies.length > 0
         ? synergies.map(function (s) { return s.name + ' (+' + s.bonus + ': ' + s.reason + ')'; })
@@ -1444,12 +1987,54 @@
         totalPenalty: totalPenalty,
         warningsCount: warnings.length
       },
-      stateModel: 'score-only (STRONG≥8, GROWING≥4.5, BUILDING≥1.5, RECOVERY>0, BROKEN≤0)',
+      stateModel: 'CRS-driven (STRONG≥0.75, GROWING≥0.45, BUILDING≥0.20, RECOVERY>0.05, BROKEN≤0.05)',
       scoringMethod: 'continuous (sigmoid/bell-curve/log2/tanh)',
-      personalBaselines: '14-day rolling median',
-      thresholds: { STRONG: SCORE_THRESHOLDS.STRONG, GROWING: SCORE_THRESHOLDS.GROWING, BUILDING: SCORE_THRESHOLDS.BUILDING, MOMENTUM_TARGET: MOMENTUM_TARGET }
+      personalBaselines: '14-day rolling median → 30-day for CRS',
+      thresholds: { CRS: CRS_THRESHOLDS, daily: SCORE_THRESHOLDS, MOMENTUM_TARGET: MOMENTUM_TARGET }
     });
     console.info('[HEYS.cascade] ─────────────────────────────────────────────');
+
+    // ── ИСТОРИЧЕСКИЕ СОБЫТИЯ для multi-day timeline ──────
+    var historicalDays = [];
+    for (var hdi = 0; hdi < prevDays30.length; hdi++) {
+      var hDayRef = prevDays30[hdi];
+      if (!hDayRef) continue;
+      var hEvts = buildDayEventsSimple(hDayRef);
+      if (hEvts.length === 0) continue;
+      var hDateD = new Date();
+      hDateD.setDate(hDateD.getDate() - (hdi + 1));
+      historicalDays.push({
+        dateStr: hDateD.toISOString().slice(0, 10),
+        label: getDateLabel(hdi + 1),
+        events: hEvts
+      });
+    }
+    console.info('[HEYS.cascade] 📅 historicalDays built: ' + historicalDays.length + ' days');
+    if (historicalDays.length > 0) {
+      var histLogRows = historicalDays.map(function (hd) {
+        var evSummary = hd.events.map(function (ev) {
+          var w = ev.weight != null ? (ev.weight >= 0 ? '+' + ev.weight.toFixed(1) : ev.weight.toFixed(1)) : '—';
+          var b = ev.badge === 'warning' ? '⚠' : ev.badge === 'ok' ? '✓' : '';
+          return (ev.time || '—') + ' ' + ev.label + ' ' + w + b;
+        });
+        return hd.label + ' (' + hd.dateStr + '): ' + evSummary.join(' | ');
+      });
+      console.info('[HEYS.cascade] 📅 Last ' + historicalDays.length + ' days events:\n  ' + histLogRows.join('\n  '));
+      // Детальный по-дневной лог для удобного просмотра
+      historicalDays.forEach(function (hd) {
+        var evDetails = hd.events.map(function (ev) {
+          return {
+            time: ev.time || '—',
+            label: ev.label,
+            weight: ev.weight != null ? (ev.weight >= 0 ? '+' + ev.weight.toFixed(2) : ev.weight.toFixed(2)) : null,
+            badge: ev.badge,
+            severity: ev.severity || null,
+            icon: ev.icon
+          };
+        });
+        console.info('[HEYS.cascade] 📆 ' + hd.label + ' (' + hd.dateStr + '):', evDetails);
+      });
+    }
 
     return {
       events: events,
@@ -1466,7 +2051,17 @@
       synergies: synergies,
       confidence: confidenceMap,
       avgConfidence: +avgConfidence.toFixed(2),
-      rawWeights: rawWeights
+      rawWeights: rawWeights,
+      // v3.0.0 CRS fields
+      crs: +crs.toFixed(3),
+      ceiling: ceiling,
+      dailyContribution: +todayDcs.toFixed(3),
+      dailyMomentum: +dailyMomentum.toFixed(3),
+      hasCriticalViolation: dcsResult.hasCriticalViolation,
+      crsTrend: crsTrend,
+      daysAtPeak: daysAtPeak,
+      dcsHistory: dcsHistory,
+      historicalDays: historicalDays
     };
   }
 
@@ -1511,11 +2106,20 @@
 
   function CascadeTimeline(props) {
     var events = props.events;
+    var historicalDays = props.historicalDays || [];
     var nextStepHint = props.nextStepHint;
 
-    var rows = events.map(function (ev, i) {
+    function renderEventRow(ev, key) {
+      var w = ev.weight || 0;
+      var wAbs = Math.abs(w);
+      var wSign = w >= 0 ? '+' : '−';
+      var wLabel = wSign + (wAbs >= 0.05 ? (wAbs >= 10 ? Math.round(wAbs).toString() : wAbs.toFixed(1)) : '<0.1');
+      var wClass = w >= 0.05 ? 'cascade-timeline-weight--pos'
+        : w <= -0.05 ? 'cascade-timeline-weight--neg'
+          : 'cascade-timeline-weight--zero';
+
       return React.createElement('div', {
-        key: i,
+        key: key,
         className: 'cascade-timeline-row cascade-timeline-row--' + (ev.positive ? 'positive' : 'warning')
       },
         React.createElement('span', { className: 'cascade-timeline-icon' }, ev.icon),
@@ -1523,20 +2127,47 @@
           ev.time ? formatTimeShort(ev.time) : '—'
         ),
         React.createElement('span', { className: 'cascade-timeline-label' }, ev.label),
+        React.createElement('span', { className: 'cascade-timeline-weight ' + wClass }, wLabel),
         React.createElement('span', { className: 'cascade-timeline-badge' },
           ev.positive ? '✓' : (ev.breakReason || '⚠')
         )
       );
-    });
+    }
+
+    function renderSectionHeader(label, isToday, key) {
+      return React.createElement('div', {
+        key: key,
+        className: 'cascade-timeline-section' + (isToday ? ' cascade-timeline-section--today' : '')
+      }, label);
+    }
+
+    var children = [];
+
+    // Секция «Сегодня»
+    children.push(renderSectionHeader('📅 Сегодня', true, 'h-today'));
+    for (var ti = 0; ti < events.length; ti++) {
+      children.push(renderEventRow(events[ti], 'today-' + ti));
+    }
+
+    // Исторические секции
+    for (var hi = 0; hi < historicalDays.length; hi++) {
+      var hd = historicalDays[hi];
+      children.push(renderSectionHeader(hd.label, false, 'h-sec-' + hi));
+      for (var hei = 0; hei < hd.events.length; hei++) {
+        children.push(renderEventRow(hd.events[hei], 'h-' + hi + '-' + hei));
+      }
+    }
 
     if (nextStepHint) {
-      rows.push(React.createElement('div', { key: 'next', className: 'cascade-next-step' },
+      children.push(React.createElement('div', { key: 'next', className: 'cascade-next-step' },
         React.createElement('span', { className: 'cascade-next-step-icon' }, '💡'),
         React.createElement('span', null, nextStepHint)
       ));
     }
 
-    return React.createElement('div', { className: 'cascade-timeline' }, rows);
+    return React.createElement('div', { className: 'cascade-timeline-scroll' },
+      React.createElement('div', { className: 'cascade-timeline' }, children)
+    );
   }
 
   // ─────────────────────────────────────────────────────
@@ -1555,23 +2186,38 @@
     var message = props.message;
     var nextStepHint = props.nextStepHint;
     var warnings = props.warnings;
+    var crsTrend = props.crsTrend || 'flat';
+    var crs = props.crs || 0;
+    var ceiling = props.ceiling || 0;
+    var dailyMomentum = props.dailyMomentum || 0;
+    var daysAtPeak = props.daysAtPeak || 0;
+    var dcsHistory = props.dcsHistory || {};
+    var historicalDays = props.historicalDays || [];
 
     var expandedState = React.useState(false);
     var expanded = expandedState[0];
     var setExpanded = expandedState[1];
 
     var config = STATE_CONFIG[state] || STATE_CONFIG.EMPTY;
-    var badgeText = chainLength > 0 ? (chainLength + ' ⚡') : '—';
+    // v3.0.0: Badge shows CRS progress with trend arrow
+    var trendArrow = crsTrend === 'up' ? ' ↑' : crsTrend === 'down' ? ' ↓' : '';
     var progressPct = Math.round(momentumScore * 100);
+    var badgeText = progressPct > 0 ? (progressPct + '%' + trendArrow) : '—';
+    var ceilingPct = Math.round(ceiling * 100);
+    // Russian plural for дней подряд
+    var peakDaysLabel = daysAtPeak === 1 ? '1 день' : (daysAtPeak >= 2 && daysAtPeak <= 4) ? daysAtPeak + ' дня' : daysAtPeak + ' дней';
 
     // Throttle render log — once per session (same strategy as MealRec P1 fix)
     if (!window.__heysLoggedCascadeRender) {
       window.__heysLoggedCascadeRender = true;
       console.info('[HEYS.cascade] ✅ CascadeCard rendered:', {
         state: state,
+        crs: crs,
+        crsTrend: crsTrend,
         chainLength: chainLength,
         maxChainToday: maxChainToday,
-        progressPct: progressPct + '%',
+        progressPct: progressPct + '/' + ceilingPct + '%',
+        daysAtPeak: daysAtPeak,
         eventsCount: events.length
       });
     }
@@ -1597,7 +2243,7 @@
         React.createElement('div', { className: 'cascade-card__title-row' },
           React.createElement('span', { className: 'cascade-card__icon' }, config.icon),
           React.createElement('span', { className: 'cascade-card__title' }, 'Ваш позитивный каскад'),
-          chainLength > 0 && React.createElement('span', {
+          progressPct > 0 && React.createElement('span', {
             className: 'cascade-card__badge',
             style: { background: config.color }
           }, badgeText)
@@ -1635,6 +2281,7 @@
         React.createElement(ChainDots, { events: events }),
         React.createElement(CascadeTimeline, {
           events: events,
+          historicalDays: historicalDays,
           nextStepHint: nextStepHint
         }),
         warnings && warnings.length > 0 && React.createElement('div', { className: 'cascade-card__breaks-info' },
@@ -1644,10 +2291,17 @@
         ),
         React.createElement('div', { className: 'cascade-card__stats' },
           React.createElement('span', { className: 'cascade-card__stat' },
-            '🏆 Макс. цепочка: ', React.createElement('strong', null, maxChainToday)
+            '📈 Импульс: ', React.createElement('strong', null, progressPct + '/' + ceilingPct + '%'),
+            trendArrow ? (' ' + trendArrow) : null
           ),
           React.createElement('span', { className: 'cascade-card__stat' },
-            '⚡ Импульс: ', React.createElement('strong', null, progressPct + '%')
+            '🔗 Цепочка: ', React.createElement('strong', null, chainLength)
+          ),
+          React.createElement('span', { className: 'cascade-card__stat' },
+            '💎 Потолок: ', React.createElement('strong', null, ceilingPct + '%')
+          ),
+          React.createElement('span', { className: 'cascade-card__stat' },
+            '🔥 На пике: ', React.createElement('strong', null, peakDaysLabel)
           )
         )
       )
@@ -1665,6 +2319,12 @@
       prev.chainLength === next.chainLength &&
       prev.maxChainToday === next.maxChainToday &&
       prev.momentumScore === next.momentumScore &&
+      prev.crs === next.crs &&
+      prev.crsTrend === next.crsTrend &&
+      prev.ceiling === next.ceiling &&
+      prev.daysAtPeak === next.daysAtPeak &&
+      Object.keys(prev.dcsHistory || {}).length === Object.keys(next.dcsHistory || {}).length &&
+      (prev.historicalDays || []).length === (next.historicalDays || []).length &&
       prev.nextStepHint === next.nextStepHint &&
       prev.postTrainingWindow === next.postTrainingWindow &&
       (prev.events && prev.events.length) === (next.events && next.events.length);
@@ -1779,9 +2439,10 @@
     STATES: STATES,
     STATE_CONFIG: STATE_CONFIG,
     MESSAGES: MESSAGES,
-    VERSION: '2.2.0'
+    CRS_THRESHOLDS: CRS_THRESHOLDS,
+    VERSION: '3.0.0'
   };
 
-  console.info('[HEYS.cascade] ✅ Module loaded v2.2.0 | Soft chain degradation + score-driven states | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Filter: [HEYS.cascade]');
+  console.info('[HEYS.cascade] ✅ Module loaded v3.0.0 | CRS (Cascade Rate Score) cumulative momentum | EMA α=0.92, 30-day window, individual ceiling | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Filter: [HEYS.cascade]');
 
 })(typeof window !== 'undefined' ? window : global);
