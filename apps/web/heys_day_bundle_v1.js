@@ -4503,6 +4503,7 @@
                         // Candidate pool: client products + shared products (#8 try multiple access paths)
                         const _sharedList = (() => {
                             const _paths = [
+                                HEYS.cloud?.getCachedSharedProducts?.(),
                                 HEYS.products?.shared,
                                 HEYS.products?.getShared?.(),
                                 HEYS.products?.sharedProducts,

@@ -581,6 +581,7 @@
               console.info(_LOG, '🏷️ category detection', { catSource: _catSource, semCat: origSemCat, macroCat: origMacroCat || '—' });
               const _sharedList = (() => {
                 const _paths = [
+                  HEYS.cloud?.getCachedSharedProducts?.(),
                   HEYS.products?.shared,
                   HEYS.products?.getShared?.(),
                   HEYS.products?.sharedProducts,
@@ -1555,4 +1556,4 @@ HEYS.dayComponents = HEYS.dayComponents || {};
 HEYS.dayComponents.MealCard = MealCard;
     
   */
-}) (window);
+})(window);
