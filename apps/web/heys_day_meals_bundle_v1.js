@@ -3053,10 +3053,26 @@
                                 _n.includes('заправк') || _n.includes('аджик') || _n.includes('хрен') ||
                                 _n.includes('васаби') || _n.includes('песто') || _n.includes('тахини') ||
                                 _n.includes('ткемали')) return 'sauce';
-                            if (_n.includes('сгущён') || _n.includes('пудинг') || _n.includes('конфет') ||
+                            if (_n.includes('шоколад') || _n.includes('мороженое') || _n.includes('пломбир') ||
+                                _n.includes('сорбет') || _n.includes('тирамису') || _n.includes('торт') ||
+                                _n.includes('пирожн') || _n.includes('вафл') || _n.includes('круасс') ||
+                                _n.includes('суфле') || _n.includes('макарун') ||
+                                _n.includes('сгущён') || _n.includes('пудинг') || _n.includes('конфет') ||
                                 _n.includes('мармелад') || _n.includes('зефир') || _n.includes('халва') ||
                                 _n.includes('варень') || _n.includes('джем') || _n.includes('нутелл') ||
                                 _n.includes('карамел') || _n.includes('пастил') || _n.includes('трюфел')) return 'dessert_sweet';
+                            if (_n.includes('колбас') || _n.includes('сосис') || _n.includes('сарделька') ||
+                                _n.includes('ветчин') || _n.includes('бекон') || _n.includes('паштет') ||
+                                _n.includes('сервелат') || _n.includes('буженин') || _n.includes('балык') ||
+                                _n.includes('карбонад') || _n.includes('салями') || _n.includes('прошутто')) return 'processed_meat';
+                            if (_n.includes('газировк') || _n.includes('кола') || _n.includes('лимонад') ||
+                                _n.includes('компот') || _n.includes('морс') || _n.includes('нектар') ||
+                                _n.includes('квас')) return 'drink';
+                            if (_n.startsWith('масло ') || _n.includes(' масло ') ||
+                                _n.includes('масло сливочн') || _n.includes('масло растительн') ||
+                                _n.includes('масло оливков') || _n.includes('масло подсолнечн') ||
+                                _n.includes('масло кокосов') || _n.includes('масло кунжутн') ||
+                                _n.includes('масло льнян')) return 'oil';
                             if (_detectCat) return _detectCat(name || '');
                             const c = (fallbackCat || name || '').toLowerCase();
                             if (c.includes('молоч') || c.includes('кефир') || c.includes('творог') || c.includes('йогур') || c.includes('сыр')) return 'dairy';
