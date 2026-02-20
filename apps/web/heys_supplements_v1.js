@@ -773,8 +773,11 @@
       }
     }
 
+    dayData.updatedAt = Date.now(); // fix: ensure stale-guard passes in heys_day_effects
     saveDaySafe(dateKey, dayData);
-    window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { dateKey, field: 'supplements' } }));
+    window.dispatchEvent(new CustomEvent('heys:day-updated', {
+      detail: { date: dateKey, dateKey, field: 'supplements', forceReload: true }
+    }));
     if (taken && suppIds && suppIds.length > 0) {
       window.dispatchEvent(new CustomEvent('heysSupplementsTaken', {
         detail: { date: dateKey, suppIds: [...suppIds] }
