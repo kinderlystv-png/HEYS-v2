@@ -90,9 +90,12 @@
 
             try {
                 // Передаём effectiveProducts (с fallback) в функцию
-                return getActiveDaysForMonth(year, month, profile, effectiveProducts);
+                const result = getActiveDaysForMonth(year, month, profile, effectiveProducts);
+                window.console.info('[HEYS.calendar] 🗓️ useDatePickerActiveDays пересчёт: calendarVer=' + calendarVer + ' month=' + (month + 1) + ' activeDays=' + (result?.size || 0));
+                return result;
             } catch (e) {
                 // Тихий fallback — activeDays для календаря не критичны
+                window.console.info('[HEYS.calendar] ❌ useDatePickerActiveDays ошибка:', e?.message);
                 return new Map();
             }
         }, [selectedDate, clientId, products, isInitializing, calendarVer, U]);
