@@ -668,11 +668,16 @@
                         const getSemanticCat = (name, fallbackCat) => {
                             // Priority sub-categories — override ProductPicker for specific use-cases
                             const _n = (name || '').toLowerCase();
-                            if (_n.includes('майонез') || _n.includes('кетчуп') || _n.includes('горчиц') ||
+                            // Guard: "блюдо в майонезе" — майонез как ингредиент, а не соус сам по себе
+                            const _sauceAsIngredient = _n.includes(' в майонезе') || _n.includes(' с майонезом') ||
+                                _n.includes(' в кетчупе') || _n.includes(' в горчиц') ||
+                                _n.includes(' в соусе') || _n.includes(' с соусом');
+                            if (!_sauceAsIngredient && (
+                                _n.includes('майонез') || _n.includes('кетчуп') || _n.includes('горчиц') ||
                                 _n.startsWith('соус') || _n.includes(' соус') || _n.includes('уксус') ||
                                 _n.includes('заправк') || _n.includes('аджик') || _n.includes('хрен') ||
                                 _n.includes('васаби') || _n.includes('песто') || _n.includes('тахини') ||
-                                _n.includes('ткемали')) return 'sauce';
+                                _n.includes('ткемали'))) return 'sauce';
                             if (_n.includes('шоколад') || _n.includes('мороженое') || _n.includes('пломбир') ||
                                 _n.includes('сорбет') || _n.includes('тирамису') || _n.includes('торт') ||
                                 _n.includes('пирожн') || _n.includes('вафл') || _n.includes('круасс') ||
@@ -693,6 +698,10 @@
                                 _n.includes('масло оливков') || _n.includes('масло подсолнечн') ||
                                 _n.includes('масло кокосов') || _n.includes('масло кунжутн') ||
                                 _n.includes('масло льнян')) return 'oil';
+                            // Grains: ProductPicker пропускает блины/оладьи/лепёшки/овсяные хлопья
+                            if (_n.includes('блин') || _n.includes('оладь') || _n.includes('лепёшк') ||
+                                _n.includes('пицц') || _n.includes('тортилья') || _n.includes('лаваш') ||
+                                _n.startsWith('овсян') || _n.includes('овсяные') || _n.includes('овсяных')) return 'grains';
                             if (_detectCat) return _detectCat(name || '');
                             const c = (fallbackCat || name || '').toLowerCase();
                             if (c.includes('молоч') || c.includes('кефир') || c.includes('творог') || c.includes('йогур') || c.includes('сыр')) return 'dairy';
