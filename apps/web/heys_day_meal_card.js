@@ -649,779 +649,779 @@
                   }
                 } catch (e) { /* skip bad candidate */ }
               }
-              if (!best || bestComposite < 28) return null;
-              console.info('[HEYS.alternative] ✅ Smart replacement found:', {
-                original: prod.name, replacement: best.name,
-                saving: best.saving + '%', score: best.score, candidates: candidates.length,
-              });
-              return best;
+if (!best || bestComposite < 28) return null;
+console.info('[HEYS.alternative] ✅ Smart replacement found:', {
+  original: prod.name, replacement: best.name,
+  saving: best.saving + '%', score: best.score, candidates: candidates.length,
+});
+return best;
             };
-            const alternative = findAlternative(p, products);
-            
-            const cardContent = React.createElement('div', { className: 'mpc', style: { background: harmBg } },
-              // Row 1: category icon + name + badge + grams
-              React.createElement('div', { className: 'mpc-row1' },
-                categoryIcon && React.createElement('span', { className: 'mpc-category-icon' }, categoryIcon),
-                React.createElement('span', { className: 'mpc-name' }, p.name),
-                harmBadge && React.createElement('span', { 
-                  className: 'mpc-badge',
-                  style: { color: harmBadge.color }
-                }, harmBadge.emoji),
-                // На мобильных — кнопка открывает модалку со слайдером
-                React.createElement('button', {
-                  className: 'mpc-grams-btn ' + gramsClass,
-                  onClick: (e) => { e.stopPropagation(); openEditGramsModal(mealIndex, it.id, G, p); }
-                }, G + 'г')
-              ),
-              // Row 2: header labels (grid)
-              React.createElement('div', { className: 'mpc-grid mpc-header' },
-                React.createElement('span', null, 'ккал'),
-                React.createElement('span', null, 'У'),
-                React.createElement('span', { className: 'mpc-dim' }, 'пр/сл'),
-                React.createElement('span', null, 'Б'),
-                React.createElement('span', null, 'Ж'),
-                React.createElement('span', { className: 'mpc-dim' }, 'вр/пол/суп'),
-                React.createElement('span', null, 'Кл'),
-                React.createElement('span', null, 'ГИ'),
-                React.createElement('span', null, 'Вр')
-              ),
-              // Row 3: values (grid) - абсолютные значения в граммах с цветовой индикацией и tooltips
-              (() => {
-                const itemTotals = {
-                  kcal: scale(per.kcal100, G),
-                  carbs: scale(per.carbs100, G),
-                  simple: scale(per.simple100, G),
-                  complex: scale(per.complex100, G),
-                  prot: scale(per.prot100, G),
-                  fat: scale(per.fat100, G),
-                  bad: scale(per.bad100, G),
-                  good: scale(per.good100, G),
-                  trans: scale(per.trans100 || 0, G),
-                  fiber: scale(per.fiber100, G),
-                  gi: giVal || 0,
-                  harm: harmVal || 0
-                };
-                return React.createElement('div', { className: 'mpc-grid mpc-values' },
-                  React.createElement('span', { title: getNutrientTooltip('kcal', itemTotals.kcal, itemTotals), style: { color: getNutrientColor('kcal', itemTotals.kcal, itemTotals), fontWeight: getNutrientColor('kcal', itemTotals.kcal, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.kcal)),
-                  React.createElement('span', { title: getNutrientTooltip('carbs', itemTotals.carbs, itemTotals), style: { color: getNutrientColor('carbs', itemTotals.carbs, itemTotals), fontWeight: getNutrientColor('carbs', itemTotals.carbs, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.carbs)),
-                  React.createElement('span', { className: 'mpc-dim' },
-                    React.createElement('span', { title: getNutrientTooltip('simple', itemTotals.simple, itemTotals), style: { color: getNutrientColor('simple', itemTotals.simple, itemTotals), fontWeight: getNutrientColor('simple', itemTotals.simple, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.simple)),
-                    '/',
-                    React.createElement('span', { title: getNutrientTooltip('complex', itemTotals.complex, itemTotals), style: { color: getNutrientColor('complex', itemTotals.complex, itemTotals), cursor: 'help' } }, Math.round(itemTotals.complex))
-                  ),
-                  React.createElement('span', { title: getNutrientTooltip('prot', itemTotals.prot, itemTotals), style: { color: getNutrientColor('prot', itemTotals.prot, itemTotals), fontWeight: getNutrientColor('prot', itemTotals.prot, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.prot)),
-                  React.createElement('span', { title: getNutrientTooltip('fat', itemTotals.fat, itemTotals), style: { color: getNutrientColor('fat', itemTotals.fat, itemTotals), fontWeight: getNutrientColor('fat', itemTotals.fat, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.fat)),
-                  React.createElement('span', { className: 'mpc-dim' },
-                    React.createElement('span', { title: getNutrientTooltip('bad', itemTotals.bad, itemTotals), style: { color: getNutrientColor('bad', itemTotals.bad, itemTotals), fontWeight: getNutrientColor('bad', itemTotals.bad, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.bad)),
-                    '/',
-                    React.createElement('span', { title: getNutrientTooltip('good', itemTotals.good, itemTotals), style: { color: getNutrientColor('good', itemTotals.good, itemTotals), fontWeight: getNutrientColor('good', itemTotals.good, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.good)),
-                    '/',
-                    React.createElement('span', { title: getNutrientTooltip('trans', itemTotals.trans, itemTotals), style: { color: getNutrientColor('trans', itemTotals.trans, itemTotals), fontWeight: getNutrientColor('trans', itemTotals.trans, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.trans))
-                  ),
-                  React.createElement('span', { title: getNutrientTooltip('fiber', itemTotals.fiber, itemTotals), style: { color: getNutrientColor('fiber', itemTotals.fiber, itemTotals), fontWeight: getNutrientColor('fiber', itemTotals.fiber, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.fiber)),
-                  React.createElement('span', { title: getNutrientTooltip('gi', itemTotals.gi, itemTotals), style: { color: getNutrientColor('gi', itemTotals.gi, itemTotals), fontWeight: getNutrientColor('gi', itemTotals.gi, itemTotals) ? 600 : 400, cursor: 'help' } }, giVal != null ? Math.round(giVal) : '-'),
-                  React.createElement('span', { title: getNutrientTooltip('harm', itemTotals.harm, itemTotals), style: { color: getNutrientColor('harm', itemTotals.harm, itemTotals), fontWeight: getNutrientColor('harm', itemTotals.harm, itemTotals) ? 600 : 400, cursor: 'help' } }, harmVal != null ? fmtVal('harm', harmVal) : '-')
-                );
-              })(),
-              // Row 4: альтернатива (если есть)
-              alternative && React.createElement('div', { className: 'mpc-alternative' },
-                React.createElement('span', null, '💡 Замени на '),
-                React.createElement('strong', null, alternative.name),
-                React.createElement('span', null, alternative.saving >= 10
-                  ? ' — на ' + alternative.saving + '% меньше ккал'
-                  : ' — полезнее по составу')
-              )
-            );
-            
-            // На мобильных — оборачиваем в SwipeableRow
-            if (isMobile && HEYS.SwipeableRow) {
-              return React.createElement(HEYS.SwipeableRow, {
-                key: it.id,
-                onDelete: () => removeItem(mealIndex, it.id)
-              }, cardContent);
-            }
-            
-            // На десктопе — обычная карточка с кнопкой удаления
-            return React.createElement('div', { key: it.id, className: 'mpc', style: { marginBottom: '6px', background: harmBg } },
-              React.createElement('div', { className: 'mpc-row1' },
-                React.createElement('span', { className: 'mpc-name' }, p.name),
-                React.createElement('input', {
-                  type: 'number',
-                  className: 'mpc-grams',
-                  value: G,
-                  onChange: e => setGrams(mealIndex, it.id, e.target.value),
-                  onFocus: e => e.target.select(),
-                  onKeyDown: e => { if (e.key === 'Enter') e.target.blur(); },
-                  'data-grams-input': true,
-                  'data-meal-index': mealIndex,
-                  'data-item-id': it.id,
-                  inputMode: 'decimal'
-                }),
-                React.createElement('button', {
-                  className: 'mpc-delete',
-                  onClick: () => removeItem(mealIndex, it.id)
-                }, '×')
-              ),
-              React.createElement('div', { className: 'mpc-grid mpc-header' },
-                React.createElement('span', null, 'ккал'),
-                React.createElement('span', null, 'У'),
-                React.createElement('span', { className: 'mpc-dim' }, 'пр/сл'),
-                React.createElement('span', null, 'Б'),
-                React.createElement('span', null, 'Ж'),
-                React.createElement('span', { className: 'mpc-dim' }, 'вр/пол/суп'),
-                React.createElement('span', null, 'Кл'),
-                React.createElement('span', null, 'ГИ'),
-                React.createElement('span', null, 'Вр')
-              ),
-              (() => {
-                const itemTotals = {
-                  kcal: scale(per.kcal100, G),
-                  carbs: scale(per.carbs100, G),
-                  simple: scale(per.simple100, G),
-                  complex: scale(per.complex100, G),
-                  prot: scale(per.prot100, G),
-                  fat: scale(per.fat100, G),
-                  bad: scale(per.bad100, G),
-                  good: scale(per.good100, G),
-                  trans: scale(per.trans100 || 0, G),
-                  fiber: scale(per.fiber100, G),
-                  gi: giVal || 0,
-                  harm: harmVal || 0
-                };
-                return React.createElement('div', { className: 'mpc-grid mpc-values' },
-                  React.createElement('span', { title: getNutrientTooltip('kcal', itemTotals.kcal, itemTotals), style: { color: getNutrientColor('kcal', itemTotals.kcal, itemTotals), fontWeight: getNutrientColor('kcal', itemTotals.kcal, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.kcal)),
-                  React.createElement('span', { title: getNutrientTooltip('carbs', itemTotals.carbs, itemTotals), style: { color: getNutrientColor('carbs', itemTotals.carbs, itemTotals), fontWeight: getNutrientColor('carbs', itemTotals.carbs, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.carbs)),
-                  React.createElement('span', { className: 'mpc-dim' },
-                    React.createElement('span', { title: getNutrientTooltip('simple', itemTotals.simple, itemTotals), style: { color: getNutrientColor('simple', itemTotals.simple, itemTotals), fontWeight: getNutrientColor('simple', itemTotals.simple, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.simple)),
-                    '/',
-                    React.createElement('span', { title: getNutrientTooltip('complex', itemTotals.complex, itemTotals), style: { color: getNutrientColor('complex', itemTotals.complex, itemTotals), cursor: 'help' } }, Math.round(itemTotals.complex))
-                  ),
-                  React.createElement('span', { title: getNutrientTooltip('prot', itemTotals.prot, itemTotals), style: { color: getNutrientColor('prot', itemTotals.prot, itemTotals), fontWeight: getNutrientColor('prot', itemTotals.prot, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.prot)),
-                  React.createElement('span', { title: getNutrientTooltip('fat', itemTotals.fat, itemTotals), style: { color: getNutrientColor('fat', itemTotals.fat, itemTotals), fontWeight: getNutrientColor('fat', itemTotals.fat, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.fat)),
-                  React.createElement('span', { className: 'mpc-dim' },
-                    React.createElement('span', { title: getNutrientTooltip('bad', itemTotals.bad, itemTotals), style: { color: getNutrientColor('bad', itemTotals.bad, itemTotals), fontWeight: getNutrientColor('bad', itemTotals.bad, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.bad)),
-                    '/',
-                    React.createElement('span', { title: getNutrientTooltip('good', itemTotals.good, itemTotals), style: { color: getNutrientColor('good', itemTotals.good, itemTotals), fontWeight: getNutrientColor('good', itemTotals.good, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.good)),
-                    '/',
-                    React.createElement('span', { title: getNutrientTooltip('trans', itemTotals.trans, itemTotals), style: { color: getNutrientColor('trans', itemTotals.trans, itemTotals), fontWeight: getNutrientColor('trans', itemTotals.trans, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.trans))
-                  ),
-                  React.createElement('span', { title: getNutrientTooltip('fiber', itemTotals.fiber, itemTotals), style: { color: getNutrientColor('fiber', itemTotals.fiber, itemTotals), fontWeight: getNutrientColor('fiber', itemTotals.fiber, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.fiber)),
-                  React.createElement('span', { title: getNutrientTooltip('gi', itemTotals.gi, itemTotals), style: { color: getNutrientColor('gi', itemTotals.gi, itemTotals), fontWeight: getNutrientColor('gi', itemTotals.gi, itemTotals) ? 600 : 400, cursor: 'help' } }, giVal != null ? Math.round(giVal) : '-'),
-                  React.createElement('span', { title: getNutrientTooltip('harm', itemTotals.harm, itemTotals), style: { color: getNutrientColor('harm', itemTotals.harm, itemTotals), fontWeight: getNutrientColor('harm', itemTotals.harm, itemTotals) ? 600 : 400, cursor: 'help' } }, harmVal != null ? fmtVal('harm', harmVal) : '-')
-                );
-              })()
-            );
+const alternative = findAlternative(p, products);
+
+const cardContent = React.createElement('div', { className: 'mpc', style: { background: harmBg } },
+  // Row 1: category icon + name + badge + grams
+  React.createElement('div', { className: 'mpc-row1' },
+    categoryIcon && React.createElement('span', { className: 'mpc-category-icon' }, categoryIcon),
+    React.createElement('span', { className: 'mpc-name' }, p.name),
+    harmBadge && React.createElement('span', {
+      className: 'mpc-badge',
+      style: { color: harmBadge.color }
+    }, harmBadge.emoji),
+    // На мобильных — кнопка открывает модалку со слайдером
+    React.createElement('button', {
+      className: 'mpc-grams-btn ' + gramsClass,
+      onClick: (e) => { e.stopPropagation(); openEditGramsModal(mealIndex, it.id, G, p); }
+    }, G + 'г')
+  ),
+  // Row 2: header labels (grid)
+  React.createElement('div', { className: 'mpc-grid mpc-header' },
+    React.createElement('span', null, 'ккал'),
+    React.createElement('span', null, 'У'),
+    React.createElement('span', { className: 'mpc-dim' }, 'пр/сл'),
+    React.createElement('span', null, 'Б'),
+    React.createElement('span', null, 'Ж'),
+    React.createElement('span', { className: 'mpc-dim' }, 'вр/пол/суп'),
+    React.createElement('span', null, 'Кл'),
+    React.createElement('span', null, 'ГИ'),
+    React.createElement('span', null, 'Вр')
+  ),
+  // Row 3: values (grid) - абсолютные значения в граммах с цветовой индикацией и tooltips
+  (() => {
+    const itemTotals = {
+      kcal: scale(per.kcal100, G),
+      carbs: scale(per.carbs100, G),
+      simple: scale(per.simple100, G),
+      complex: scale(per.complex100, G),
+      prot: scale(per.prot100, G),
+      fat: scale(per.fat100, G),
+      bad: scale(per.bad100, G),
+      good: scale(per.good100, G),
+      trans: scale(per.trans100 || 0, G),
+      fiber: scale(per.fiber100, G),
+      gi: giVal || 0,
+      harm: harmVal || 0
+    };
+    return React.createElement('div', { className: 'mpc-grid mpc-values' },
+      React.createElement('span', { title: getNutrientTooltip('kcal', itemTotals.kcal, itemTotals), style: { color: getNutrientColor('kcal', itemTotals.kcal, itemTotals), fontWeight: getNutrientColor('kcal', itemTotals.kcal, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.kcal)),
+      React.createElement('span', { title: getNutrientTooltip('carbs', itemTotals.carbs, itemTotals), style: { color: getNutrientColor('carbs', itemTotals.carbs, itemTotals), fontWeight: getNutrientColor('carbs', itemTotals.carbs, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.carbs)),
+      React.createElement('span', { className: 'mpc-dim' },
+        React.createElement('span', { title: getNutrientTooltip('simple', itemTotals.simple, itemTotals), style: { color: getNutrientColor('simple', itemTotals.simple, itemTotals), fontWeight: getNutrientColor('simple', itemTotals.simple, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.simple)),
+        '/',
+        React.createElement('span', { title: getNutrientTooltip('complex', itemTotals.complex, itemTotals), style: { color: getNutrientColor('complex', itemTotals.complex, itemTotals), cursor: 'help' } }, Math.round(itemTotals.complex))
+      ),
+      React.createElement('span', { title: getNutrientTooltip('prot', itemTotals.prot, itemTotals), style: { color: getNutrientColor('prot', itemTotals.prot, itemTotals), fontWeight: getNutrientColor('prot', itemTotals.prot, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.prot)),
+      React.createElement('span', { title: getNutrientTooltip('fat', itemTotals.fat, itemTotals), style: { color: getNutrientColor('fat', itemTotals.fat, itemTotals), fontWeight: getNutrientColor('fat', itemTotals.fat, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.fat)),
+      React.createElement('span', { className: 'mpc-dim' },
+        React.createElement('span', { title: getNutrientTooltip('bad', itemTotals.bad, itemTotals), style: { color: getNutrientColor('bad', itemTotals.bad, itemTotals), fontWeight: getNutrientColor('bad', itemTotals.bad, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.bad)),
+        '/',
+        React.createElement('span', { title: getNutrientTooltip('good', itemTotals.good, itemTotals), style: { color: getNutrientColor('good', itemTotals.good, itemTotals), fontWeight: getNutrientColor('good', itemTotals.good, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.good)),
+        '/',
+        React.createElement('span', { title: getNutrientTooltip('trans', itemTotals.trans, itemTotals), style: { color: getNutrientColor('trans', itemTotals.trans, itemTotals), fontWeight: getNutrientColor('trans', itemTotals.trans, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.trans))
+      ),
+      React.createElement('span', { title: getNutrientTooltip('fiber', itemTotals.fiber, itemTotals), style: { color: getNutrientColor('fiber', itemTotals.fiber, itemTotals), fontWeight: getNutrientColor('fiber', itemTotals.fiber, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.fiber)),
+      React.createElement('span', { title: getNutrientTooltip('gi', itemTotals.gi, itemTotals), style: { color: getNutrientColor('gi', itemTotals.gi, itemTotals), fontWeight: getNutrientColor('gi', itemTotals.gi, itemTotals) ? 600 : 400, cursor: 'help' } }, giVal != null ? Math.round(giVal) : '-'),
+      React.createElement('span', { title: getNutrientTooltip('harm', itemTotals.harm, itemTotals), style: { color: getNutrientColor('harm', itemTotals.harm, itemTotals), fontWeight: getNutrientColor('harm', itemTotals.harm, itemTotals) ? 600 : 400, cursor: 'help' } }, harmVal != null ? fmtVal('harm', harmVal) : '-')
+    );
+  })(),
+  // Row 4: альтернатива (если есть)
+  alternative && React.createElement('div', { className: 'mpc-alternative' },
+    React.createElement('span', null, '💡 Замени на '),
+    React.createElement('strong', null, alternative.name),
+    React.createElement('span', null, alternative.saving >= 10
+      ? ' — на ' + alternative.saving + '% меньше ккал'
+      : ' — полезнее по составу')
+  )
+);
+
+// На мобильных — оборачиваем в SwipeableRow
+if (isMobile && HEYS.SwipeableRow) {
+  return React.createElement(HEYS.SwipeableRow, {
+    key: it.id,
+    onDelete: () => removeItem(mealIndex, it.id)
+  }, cardContent);
+}
+
+// На десктопе — обычная карточка с кнопкой удаления
+return React.createElement('div', { key: it.id, className: 'mpc', style: { marginBottom: '6px', background: harmBg } },
+  React.createElement('div', { className: 'mpc-row1' },
+    React.createElement('span', { className: 'mpc-name' }, p.name),
+    React.createElement('input', {
+      type: 'number',
+      className: 'mpc-grams',
+      value: G,
+      onChange: e => setGrams(mealIndex, it.id, e.target.value),
+      onFocus: e => e.target.select(),
+      onKeyDown: e => { if (e.key === 'Enter') e.target.blur(); },
+      'data-grams-input': true,
+      'data-meal-index': mealIndex,
+      'data-item-id': it.id,
+      inputMode: 'decimal'
+    }),
+    React.createElement('button', {
+      className: 'mpc-delete',
+      onClick: () => removeItem(mealIndex, it.id)
+    }, '×')
+  ),
+  React.createElement('div', { className: 'mpc-grid mpc-header' },
+    React.createElement('span', null, 'ккал'),
+    React.createElement('span', null, 'У'),
+    React.createElement('span', { className: 'mpc-dim' }, 'пр/сл'),
+    React.createElement('span', null, 'Б'),
+    React.createElement('span', null, 'Ж'),
+    React.createElement('span', { className: 'mpc-dim' }, 'вр/пол/суп'),
+    React.createElement('span', null, 'Кл'),
+    React.createElement('span', null, 'ГИ'),
+    React.createElement('span', null, 'Вр')
+  ),
+  (() => {
+    const itemTotals = {
+      kcal: scale(per.kcal100, G),
+      carbs: scale(per.carbs100, G),
+      simple: scale(per.simple100, G),
+      complex: scale(per.complex100, G),
+      prot: scale(per.prot100, G),
+      fat: scale(per.fat100, G),
+      bad: scale(per.bad100, G),
+      good: scale(per.good100, G),
+      trans: scale(per.trans100 || 0, G),
+      fiber: scale(per.fiber100, G),
+      gi: giVal || 0,
+      harm: harmVal || 0
+    };
+    return React.createElement('div', { className: 'mpc-grid mpc-values' },
+      React.createElement('span', { title: getNutrientTooltip('kcal', itemTotals.kcal, itemTotals), style: { color: getNutrientColor('kcal', itemTotals.kcal, itemTotals), fontWeight: getNutrientColor('kcal', itemTotals.kcal, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.kcal)),
+      React.createElement('span', { title: getNutrientTooltip('carbs', itemTotals.carbs, itemTotals), style: { color: getNutrientColor('carbs', itemTotals.carbs, itemTotals), fontWeight: getNutrientColor('carbs', itemTotals.carbs, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.carbs)),
+      React.createElement('span', { className: 'mpc-dim' },
+        React.createElement('span', { title: getNutrientTooltip('simple', itemTotals.simple, itemTotals), style: { color: getNutrientColor('simple', itemTotals.simple, itemTotals), fontWeight: getNutrientColor('simple', itemTotals.simple, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.simple)),
+        '/',
+        React.createElement('span', { title: getNutrientTooltip('complex', itemTotals.complex, itemTotals), style: { color: getNutrientColor('complex', itemTotals.complex, itemTotals), cursor: 'help' } }, Math.round(itemTotals.complex))
+      ),
+      React.createElement('span', { title: getNutrientTooltip('prot', itemTotals.prot, itemTotals), style: { color: getNutrientColor('prot', itemTotals.prot, itemTotals), fontWeight: getNutrientColor('prot', itemTotals.prot, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.prot)),
+      React.createElement('span', { title: getNutrientTooltip('fat', itemTotals.fat, itemTotals), style: { color: getNutrientColor('fat', itemTotals.fat, itemTotals), fontWeight: getNutrientColor('fat', itemTotals.fat, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.fat)),
+      React.createElement('span', { className: 'mpc-dim' },
+        React.createElement('span', { title: getNutrientTooltip('bad', itemTotals.bad, itemTotals), style: { color: getNutrientColor('bad', itemTotals.bad, itemTotals), fontWeight: getNutrientColor('bad', itemTotals.bad, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.bad)),
+        '/',
+        React.createElement('span', { title: getNutrientTooltip('good', itemTotals.good, itemTotals), style: { color: getNutrientColor('good', itemTotals.good, itemTotals), fontWeight: getNutrientColor('good', itemTotals.good, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.good)),
+        '/',
+        React.createElement('span', { title: getNutrientTooltip('trans', itemTotals.trans, itemTotals), style: { color: getNutrientColor('trans', itemTotals.trans, itemTotals), fontWeight: getNutrientColor('trans', itemTotals.trans, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.trans))
+      ),
+      React.createElement('span', { title: getNutrientTooltip('fiber', itemTotals.fiber, itemTotals), style: { color: getNutrientColor('fiber', itemTotals.fiber, itemTotals), fontWeight: getNutrientColor('fiber', itemTotals.fiber, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.fiber)),
+      React.createElement('span', { title: getNutrientTooltip('gi', itemTotals.gi, itemTotals), style: { color: getNutrientColor('gi', itemTotals.gi, itemTotals), fontWeight: getNutrientColor('gi', itemTotals.gi, itemTotals) ? 600 : 400, cursor: 'help' } }, giVal != null ? Math.round(giVal) : '-'),
+      React.createElement('span', { title: getNutrientTooltip('harm', itemTotals.harm, itemTotals), style: { color: getNutrientColor('harm', itemTotals.harm, itemTotals), fontWeight: getNutrientColor('harm', itemTotals.harm, itemTotals) ? 600 : 400, cursor: 'help' } }, harmVal != null ? fmtVal('harm', harmVal) : '-')
+    );
+  })()
+);
           }),
-          
-          // Фотографии приёма (если есть)
-          (meal.photos && meal.photos.length > 0) && React.createElement('div', { className: 'meal-photos' },
-            meal.photos.map((photo, photoIndex) => {
-              // Используем url если загружено, иначе data (для pending)
-              const photoSrc = photo.url || photo.data;
-              if (!photoSrc) return null;
-              
-              // Форматируем timestamp
-              const timeStr = photo.timestamp 
-                ? new Date(photo.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
-                : null;
-              
-              // Удаление фото
-              const handleDelete = async (e) => {
-                e.stopPropagation();
-                if (!confirm('Удалить это фото?')) return;
-                
-                // Удаляем из Supabase Storage если загружено
-                if (photo.path && photo.uploaded && window.HEYS?.cloud?.deletePhoto) {
-                  try {
-                    await window.HEYS.cloud.deletePhoto(photo.path);
-                  } catch (err) {
-                    console.warn('[MealCard] Failed to delete from storage:', err);
-                  }
-                }
-                
-                setDay((prevDay = {}) => {
-                  const meals = (prevDay.meals || []).map((m, i) => {
-                    if (i !== mealIndex || !m.photos) return m;
-                    return { ...m, photos: m.photos.filter(p => p.id !== photo.id) };
-                  });
-                  return { ...prevDay, meals, updatedAt: Date.now() };
-                });
-              };
-              
-              // Собираем классы
-              let thumbClass = 'meal-photo-thumb';
-              if (photo.pending) thumbClass += ' pending';
-              if (photo.uploading) thumbClass += ' uploading';
-              
-              return React.createElement(LazyPhotoThumb, { 
-                key: photo.id || photoIndex,
-                photo,
-                photoSrc,
-                thumbClass,
-                timeStr,
-                mealIndex,
-                photoIndex,
-                mealPhotos: meal.photos,
-                handleDelete,
-                setDay
-              });
-            })
-          ),
-  
-          // Инсулиновая волна в карточке приёма — единый блок
-          showWaveButton && React.createElement('div', {
-            className: 'meal-wave-block' + (waveExpanded ? ' expanded' : ''),
-            style: {
-              marginTop: '10px',
-              background: 'transparent',
-              borderRadius: '12px',
-              overflow: 'hidden'
-            }
-          },
-            // Заголовок (кликабельный toggle)
-            React.createElement('div', {
-              className: 'meal-wave-toggle',
-              onClick: toggleWave,
-              style: {
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '10px 12px',
-                cursor: 'pointer',
-                fontSize: '13px', fontWeight: 600,
-                color: hasAnyOverlap ? '#b91c1c' : '#1f2937'
-              }
-            },
-              React.createElement('span', null,
-                `📉 Волна ${(currentWave.duration / 60).toFixed(1)}ч • ` + (
-                  hasAnyOverlap
-                    ? `⚠️ перехлёст ${formatMinutes(overlapMinutes)}`
-                    : nextWave
-                      ? `✅ липолиз ${formatMinutes(lipolysisGapNext)}`
-                      : '🟢 последний приём'
-                )
-              ),
-              // Кнопка "расчёт" между названием и стрелочкой
-              React.createElement('button', {
-                onClick: (e) => {
-                  e.stopPropagation();
-                  setShowWaveCalcPopup(true);
-                },
-                style: {
-                  background: 'rgba(59, 130, 246, 0.12)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '3px 8px',
-                  fontSize: '11px',
-                  color: '#3b82f6',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  marginLeft: '8px'
-                }
-              }, 'расчёт'),
-              React.createElement('span', { className: 'toggle-arrow' }, waveExpanded ? '▴' : '▾')
-            ),
-            // Expand-секция (график) — внутри того же блока
-            waveExpanded && InsulinWave.MealWaveExpandSection && React.createElement(InsulinWave.MealWaveExpandSection, {
-              waveData: currentWave,
-              prevWave,
-              nextWave
-            }),
-            
-            // ⚡ v3.2.0: Предупреждение о реактивной гипогликемии
-            (() => {
-              const IW = HEYS.InsulinWave;
-              if (!IW || !IW.calculateHypoglycemiaRisk) return null;
-              
-              const hypoRisk = IW.calculateHypoglycemiaRisk(meal, pIndex, getProductFromItem);
-              if (!hypoRisk.hasRisk) return null;
-              
-              // Проверяем: мы в окне риска (2-4 часа после еды)?
-              const mealMinutes = IW.utils?.timeToMinutes?.(meal.time) || 0;
-              const now = new Date();
-              const nowMinutes = now.getHours() * 60 + now.getMinutes();
-              let minutesSinceMeal = nowMinutes - mealMinutes;
-              if (minutesSinceMeal < 0) minutesSinceMeal += 24 * 60;
-              
-              const inRiskWindow = minutesSinceMeal >= hypoRisk.riskWindow.start && minutesSinceMeal <= hypoRisk.riskWindow.end;
-              
-              return React.createElement('div', {
-                className: 'hypoglycemia-warning',
-                style: {
-                  margin: '8px 12px 10px 12px',
-                  padding: '8px 10px',
-                  background: inRiskWindow ? 'rgba(249,115,22,0.12)' : 'rgba(234,179,8,0.1)',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  color: inRiskWindow ? '#ea580c' : '#ca8a04'
-                }
-              },
-                React.createElement('div', { style: { fontWeight: '600', marginBottom: '2px' } },
-                  inRiskWindow 
-                    ? '⚡ Сейчас возможен спад энергии'
-                    : '⚡ Высокий GI — риск "сахарных качелей"'
-                ),
-                React.createElement('div', { style: { fontSize: '11px', color: '#64748b' } },
-                  inRiskWindow
-                    ? 'Это нормально! Съешь орехи или белок если устал'
-                    : `GI ~${Math.round(hypoRisk.details.avgGI)}, белок ${Math.round(hypoRisk.details.totalProtein)}г — через 2-3ч может "накрыть"`
-                )
-              );
-            })()
-          ),
-          
-          // Компактный блок: бейдж качества + оценки + удаление (перенесено под инсулиновую волну)
-          React.createElement('div', { 
-            className: 'meal-meta-row',
+
+// Фотографии приёма (если есть)
+(meal.photos && meal.photos.length > 0) && React.createElement('div', { className: 'meal-photos' },
+  meal.photos.map((photo, photoIndex) => {
+    // Используем url если загружено, иначе data (для pending)
+    const photoSrc = photo.url || photo.data;
+    if (!photoSrc) return null;
+
+    // Форматируем timestamp
+    const timeStr = photo.timestamp
+      ? new Date(photo.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+      : null;
+
+    // Удаление фото
+    const handleDelete = async (e) => {
+      e.stopPropagation();
+      if (!confirm('Удалить это фото?')) return;
+
+      // Удаляем из Supabase Storage если загружено
+      if (photo.path && photo.uploaded && window.HEYS?.cloud?.deletePhoto) {
+        try {
+          await window.HEYS.cloud.deletePhoto(photo.path);
+        } catch (err) {
+          console.warn('[MealCard] Failed to delete from storage:', err);
+        }
+      }
+
+      setDay((prevDay = {}) => {
+        const meals = (prevDay.meals || []).map((m, i) => {
+          if (i !== mealIndex || !m.photos) return m;
+          return { ...m, photos: m.photos.filter(p => p.id !== photo.id) };
+        });
+        return { ...prevDay, meals, updatedAt: Date.now() };
+      });
+    };
+
+    // Собираем классы
+    let thumbClass = 'meal-photo-thumb';
+    if (photo.pending) thumbClass += ' pending';
+    if (photo.uploading) thumbClass += ' uploading';
+
+    return React.createElement(LazyPhotoThumb, {
+      key: photo.id || photoIndex,
+      photo,
+      photoSrc,
+      thumbClass,
+      timeStr,
+      mealIndex,
+      photoIndex,
+      mealPhotos: meal.photos,
+      handleDelete,
+      setDay
+    });
+  })
+),
+
+  // Инсулиновая волна в карточке приёма — единый блок
+  showWaveButton && React.createElement('div', {
+    className: 'meal-wave-block' + (waveExpanded ? ' expanded' : ''),
+    style: {
+      marginTop: '10px',
+      background: 'transparent',
+      borderRadius: '12px',
+      overflow: 'hidden'
+    }
+  },
+    // Заголовок (кликабельный toggle)
+    React.createElement('div', {
+      className: 'meal-wave-toggle',
+      onClick: toggleWave,
+      style: {
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '10px 12px',
+        cursor: 'pointer',
+        fontSize: '13px', fontWeight: 600,
+        color: hasAnyOverlap ? '#b91c1c' : '#1f2937'
+      }
+    },
+      React.createElement('span', null,
+        `📉 Волна ${(currentWave.duration / 60).toFixed(1)}ч • ` + (
+          hasAnyOverlap
+            ? `⚠️ перехлёст ${formatMinutes(overlapMinutes)}`
+            : nextWave
+              ? `✅ липолиз ${formatMinutes(lipolysisGapNext)}`
+              : '🟢 последний приём'
+        )
+      ),
+      // Кнопка "расчёт" между названием и стрелочкой
+      React.createElement('button', {
+        onClick: (e) => {
+          e.stopPropagation();
+          setShowWaveCalcPopup(true);
+        },
+        style: {
+          background: 'rgba(59, 130, 246, 0.12)',
+          border: 'none',
+          borderRadius: '6px',
+          padding: '3px 8px',
+          fontSize: '11px',
+          color: '#3b82f6',
+          fontWeight: 500,
+          cursor: 'pointer',
+          marginLeft: '8px'
+        }
+      }, 'расчёт'),
+      React.createElement('span', { className: 'toggle-arrow' }, waveExpanded ? '▴' : '▾')
+    ),
+    // Expand-секция (график) — внутри того же блока
+    waveExpanded && InsulinWave.MealWaveExpandSection && React.createElement(InsulinWave.MealWaveExpandSection, {
+      waveData: currentWave,
+      prevWave,
+      nextWave
+    }),
+
+    // ⚡ v3.2.0: Предупреждение о реактивной гипогликемии
+    (() => {
+      const IW = HEYS.InsulinWave;
+      if (!IW || !IW.calculateHypoglycemiaRisk) return null;
+
+      const hypoRisk = IW.calculateHypoglycemiaRisk(meal, pIndex, getProductFromItem);
+      if (!hypoRisk.hasRisk) return null;
+
+      // Проверяем: мы в окне риска (2-4 часа после еды)?
+      const mealMinutes = IW.utils?.timeToMinutes?.(meal.time) || 0;
+      const now = new Date();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      let minutesSinceMeal = nowMinutes - mealMinutes;
+      if (minutesSinceMeal < 0) minutesSinceMeal += 24 * 60;
+
+      const inRiskWindow = minutesSinceMeal >= hypoRisk.riskWindow.start && minutesSinceMeal <= hypoRisk.riskWindow.end;
+
+      return React.createElement('div', {
+        className: 'hypoglycemia-warning',
+        style: {
+          margin: '8px 12px 10px 12px',
+          padding: '8px 10px',
+          background: inRiskWindow ? 'rgba(249,115,22,0.12)' : 'rgba(234,179,8,0.1)',
+          borderRadius: '8px',
+          fontSize: '12px',
+          color: inRiskWindow ? '#ea580c' : '#ca8a04'
+        }
+      },
+        React.createElement('div', { style: { fontWeight: '600', marginBottom: '2px' } },
+          inRiskWindow
+            ? '⚡ Сейчас возможен спад энергии'
+            : '⚡ Высокий GI — риск "сахарных качелей"'
+        ),
+        React.createElement('div', { style: { fontSize: '11px', color: '#64748b' } },
+          inRiskWindow
+            ? 'Это нормально! Съешь орехи или белок если устал'
+            : `GI ~${Math.round(hypoRisk.details.avgGI)}, белок ${Math.round(hypoRisk.details.totalProtein)}г — через 2-3ч может "накрыть"`
+        )
+      );
+    })()
+  ),
+
+  // Компактный блок: бейдж качества + оценки + удаление (перенесено под инсулиновую волну)
+  React.createElement('div', {
+    className: 'meal-meta-row',
+    style: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: '4px',
+      padding: '8px 0'
+    }
+  },
+    // Бейдж качества приёма (кликабельный для попапа)
+    mealQuality && React.createElement('button', {
+      className: 'meal-quality-badge',
+      onClick: (e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setMealQualityPopup({
+          meal,
+          quality: mealQuality,
+          mealTypeInfo,
+          x: rect.left + rect.width / 2,
+          y: rect.bottom + 8
+        });
+      },
+      title: 'Качество приёма — нажми для деталей',
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '2px 6px',
+        borderRadius: '8px',
+        border: 'none',
+        background: mealQuality.color + '20',
+        color: mealQuality.color,
+        cursor: 'pointer',
+        marginRight: '4px',
+        transition: 'transform 0.15s, box-shadow 0.15s',
+        flexShrink: 0,
+        minWidth: '28px'
+      }
+    },
+      React.createElement('span', { style: { fontSize: '12px' } },
+        mealQuality.score >= 80 ? '⭐' : mealQuality.score >= 50 ? '📊' : '⚠️'
+      ),
+      React.createElement('span', { style: { fontSize: '11px', fontWeight: 600 } }, mealQuality.score)
+    ),
+    // На мобильных — оценки вертикальные (эмодзи сверху, значение снизу)
+    isMobile
+      ? React.createElement('div', {
+        className: 'mobile-mood-btn',
+        onClick: () => openMoodEditor(mealIndex),
+        title: 'Изменить оценки',
+        style: {
+          display: 'flex',
+          gap: '6px',
+          cursor: 'pointer'
+        }
+      },
+        hasRatings ? React.createElement(React.Fragment, null,
+          moodEmoji && React.createElement('div', {
             style: {
               display: 'flex',
-              flexWrap: 'wrap',
+              flexDirection: 'column',
               alignItems: 'center',
-              gap: '4px',
-              padding: '8px 0'
+              padding: '2px 6px',
+              borderRadius: '8px',
+              background: '#fef3c7',
+              minWidth: '28px'
             }
           },
-            // Бейдж качества приёма (кликабельный для попапа)
-            mealQuality && React.createElement('button', {
-              className: 'meal-quality-badge',
-              onClick: (e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                setMealQualityPopup({
-                  meal,
-                  quality: mealQuality,
-                  mealTypeInfo,
-                  x: rect.left + rect.width / 2,
-                  y: rect.bottom + 8
-                });
-              },
-              title: 'Качество приёма — нажми для деталей',
-              style: {
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: '2px 6px',
-                borderRadius: '8px',
-                border: 'none',
-                background: mealQuality.color + '20',
-                color: mealQuality.color,
-                cursor: 'pointer',
-                marginRight: '4px',
-                transition: 'transform 0.15s, box-shadow 0.15s',
-                flexShrink: 0,
-                minWidth: '28px'
-              }
-            },
-              React.createElement('span', { style: { fontSize: '12px' } }, 
-                mealQuality.score >= 80 ? '⭐' : mealQuality.score >= 50 ? '📊' : '⚠️'
-              ),
-              React.createElement('span', { style: { fontSize: '11px', fontWeight: 600 } }, mealQuality.score)
-            ),
-            // На мобильных — оценки вертикальные (эмодзи сверху, значение снизу)
-            isMobile
-              ? React.createElement('div', {
-                  className: 'mobile-mood-btn',
-                  onClick: () => openMoodEditor(mealIndex),
-                  title: 'Изменить оценки',
-                  style: {
-                    display: 'flex',
-                    gap: '6px',
-                    cursor: 'pointer'
-                  }
-                },
-                  hasRatings ? React.createElement(React.Fragment, null,
-                    moodEmoji && React.createElement('div', { 
-                      style: { 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        alignItems: 'center',
-                        padding: '2px 6px',
-                        borderRadius: '8px',
-                        background: '#fef3c7',
-                        minWidth: '28px'
-                      } 
-                    }, 
-                      React.createElement('span', { style: { fontSize: '12px' } }, moodEmoji),
-                      React.createElement('span', { style: { fontSize: '11px', fontWeight: 600, color: '#b45309' } }, moodVal)
-                    ),
-                    wellbeingEmoji && React.createElement('div', { 
-                      style: { 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        alignItems: 'center',
-                        padding: '2px 6px',
-                        borderRadius: '8px',
-                        background: '#dcfce7',
-                        minWidth: '28px'
-                      } 
-                    }, 
-                      React.createElement('span', { style: { fontSize: '12px' } }, wellbeingEmoji),
-                      React.createElement('span', { style: { fontSize: '11px', fontWeight: 600, color: '#15803d' } }, wellbeingVal)
-                    ),
-                    stressEmoji && React.createElement('div', { 
-                      style: { 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        alignItems: 'center',
-                        padding: '2px 6px',
-                        borderRadius: '8px',
-                        background: '#fce7f3',
-                        minWidth: '28px'
-                      } 
-                    }, 
-                      React.createElement('span', { style: { fontSize: '12px' } }, stressEmoji),
-                      React.createElement('span', { style: { fontSize: '11px', fontWeight: 600, color: '#be185d' } }, stressVal)
-                    )
-                  ) : React.createElement('span', { 
-                    style: { 
-                      fontSize: '11px', 
-                      color: '#94a3b8',
-                      padding: '4px 8px',
-                      borderRadius: '8px',
-                      background: 'var(--bg-secondary, #f1f5f9)'
-                    } 
-                  }, '+ оценки')
-                )
-              // На десктопе — время + inputs для оценок
-              : React.createElement(React.Fragment, null,
-                  React.createElement('input', { className: 'compact-input time', type: 'time', title: 'Время приёма', value: meal.time || '', onChange: e => onChangeTime(mealIndex, e.target.value) }),
-                  React.createElement('span', { className: 'meal-meta-field' }, '😊', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Настроение', value: meal.mood || '', onChange: e => onChangeMood(mealIndex, +e.target.value || '') })),
-                  React.createElement('span', { className: 'meal-meta-field' }, '💪', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Самочувствие', value: meal.wellbeing || '', onChange: e => onChangeWellbeing(mealIndex, +e.target.value || '') })),
-                  React.createElement('span', { className: 'meal-meta-field' }, '😰', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Стресс', value: meal.stress || '', onChange: e => onChangeStress(mealIndex, +e.target.value || '') }))
-                ),
-            // Плашка "Общее КБЖУ" (голубая, компактная)
-            (meal.items || []).length > 0 && React.createElement('button', {
-              className: 'meal-totals-badge',
-              onClick: (e) => {
-                e.stopPropagation();
-                setTotalsExpanded(!totalsExpanded);
-              },
-              title: 'Показать итоговые КБЖУ приёма',
-              style: {
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '3px',
-                padding: '4px 8px',
-                borderRadius: '12px',
-                border: 'none',
-                background: '#dbeafe',
-                color: '#1d4ed8',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                marginRight: '4px',
-                transition: 'transform 0.15s, background 0.15s',
-                flexShrink: 0
-              }
-            },
-              'КБЖУ',
-              React.createElement('span', { style: { fontSize: '10px', opacity: 0.7, marginLeft: '2px' } }, totalsExpanded ? '▴' : '▾')
-            ),
-            // Плашка "Советы" с бейджем количества (между оценками и удалением)
-            optimizerRecsCount > 0 && React.createElement('button', {
-              className: 'meal-optimizer-badge',
-              onClick: () => setOptimizerPopupOpen(!optimizerPopupOpen),
-              title: 'Советы по улучшению приёма',
-              style: {
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '4px 8px',
-                borderRadius: '12px',
-                border: 'none',
-                background: '#fef3c7',
-                color: '#b45309',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                marginRight: '4px',
-                transition: 'transform 0.15s, background 0.15s',
-                flexShrink: 0
-              }
-            },
-              'Советы',
-              React.createElement('span', {
-                style: {
-                  background: '#f59e0b',
-                  color: '#fff',
-                  borderRadius: '8px',
-                  padding: '0 5px',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  marginLeft: '3px',
-                  lineHeight: '16px'
-                }
-              }, optimizerRecsCount),
-              React.createElement('span', { style: { fontSize: '10px', opacity: 0.7, marginLeft: '2px' } }, optimizerPopupOpen ? '▴' : '▾')
-            ),
-            React.createElement('button', { 
-              className: 'meal-delete-btn', 
-              onClick: () => onRemoveMeal(mealIndex), 
-              title: 'Удалить приём',
-              style: {
-                padding: '4px 6px',
-                fontSize: '14px',
-                lineHeight: 1,
-                flexShrink: 0
-              }
-            }, '🗑')
+            React.createElement('span', { style: { fontSize: '12px' } }, moodEmoji),
+            React.createElement('span', { style: { fontSize: '11px', fontWeight: 600, color: '#b45309' } }, moodVal)
           ),
-          
-          // === Раскрывающийся блок "Общее КБЖУ" ===
-          totalsExpanded && (meal.items || []).length > 0 && React.createElement('div', {
-            className: 'mpc-totals-wrap',
+          wellbeingEmoji && React.createElement('div', {
             style: {
-              marginTop: '10px',
-              padding: '12px',
-              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(96, 165, 250, 0.05) 100%)',
-              borderRadius: '12px',
-              border: '1px solid rgba(59, 130, 246, 0.2)',
-              animation: 'slideDown 0.2s ease-out'
-            }
-          },
-            React.createElement('div', { className: 'mpc-grid mpc-header' },
-              React.createElement('span', null, 'ккал'),
-              React.createElement('span', null, 'У'),
-              React.createElement('span', { className: 'mpc-dim' }, 'пр/сл'),
-              React.createElement('span', null, 'Б'),
-              React.createElement('span', null, 'Ж'),
-              React.createElement('span', { className: 'mpc-dim' }, 'вр/пол/суп'),
-              React.createElement('span', null, 'Кл'),
-              React.createElement('span', null, 'ГИ'),
-              React.createElement('span', null, 'Вр')
-            ),
-            React.createElement('div', { className: 'mpc-grid mpc-totals-values' },
-              React.createElement('span', { title: getNutrientTooltip('kcal', totals.kcal, totals), style: { color: getNutrientColor('kcal', totals.kcal, totals), fontWeight: getNutrientColor('kcal', totals.kcal, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.kcal)),
-              React.createElement('span', { title: getNutrientTooltip('carbs', totals.carbs, totals), style: { color: getNutrientColor('carbs', totals.carbs, totals), fontWeight: getNutrientColor('carbs', totals.carbs, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.carbs)),
-              React.createElement('span', { className: 'mpc-dim' }, 
-                React.createElement('span', { title: getNutrientTooltip('simple', totals.simple, totals), style: { color: getNutrientColor('simple', totals.simple, totals), fontWeight: getNutrientColor('simple', totals.simple, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.simple || 0)),
-                '/',
-                React.createElement('span', { title: getNutrientTooltip('complex', totals.complex, totals), style: { color: getNutrientColor('complex', totals.complex, totals), cursor: 'help' } }, Math.round(totals.complex || 0))
-              ),
-              React.createElement('span', { title: getNutrientTooltip('prot', totals.prot, totals), style: { color: getNutrientColor('prot', totals.prot, totals), fontWeight: getNutrientColor('prot', totals.prot, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.prot)),
-              React.createElement('span', { title: getNutrientTooltip('fat', totals.fat, totals), style: { color: getNutrientColor('fat', totals.fat, totals), fontWeight: getNutrientColor('fat', totals.fat, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.fat)),
-              React.createElement('span', { className: 'mpc-dim' }, 
-                React.createElement('span', { title: getNutrientTooltip('bad', totals.bad, totals), style: { color: getNutrientColor('bad', totals.bad, totals), fontWeight: getNutrientColor('bad', totals.bad, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.bad || 0)),
-                '/',
-                React.createElement('span', { title: getNutrientTooltip('good', totals.good, totals), style: { color: getNutrientColor('good', totals.good, totals), fontWeight: getNutrientColor('good', totals.good, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.good || 0)),
-                '/',
-                React.createElement('span', { title: getNutrientTooltip('trans', totals.trans, totals), style: { color: getNutrientColor('trans', totals.trans, totals), fontWeight: getNutrientColor('trans', totals.trans, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.trans || 0))
-              ),
-              React.createElement('span', { title: getNutrientTooltip('fiber', totals.fiber, totals), style: { color: getNutrientColor('fiber', totals.fiber, totals), fontWeight: getNutrientColor('fiber', totals.fiber, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.fiber || 0)),
-              React.createElement('span', { title: getNutrientTooltip('gi', totals.gi, totals), style: { color: getNutrientColor('gi', totals.gi, totals), fontWeight: getNutrientColor('gi', totals.gi, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.gi || 0)),
-              React.createElement('span', { title: getNutrientTooltip('harm', totals.harm, totals), style: { color: getNutrientColor('harm', totals.harm, totals), fontWeight: getNutrientColor('harm', totals.harm, totals) ? 600 : 400, cursor: 'help' } }, fmtVal('harm', totals.harm || 0))
-            )
-          ),
-          
-          // === MealOptimizer: Раскрывающийся блок советов ===
-          optimizerPopupOpen && optimizerRecsCount > 0 && HEYS.MealOptimizer && React.createElement('div', {
-            className: 'meal-optimizer-expanded',
-            style: {
-              marginTop: '12px',
-              padding: '12px',
-              background: 'linear-gradient(135deg, rgba(245, 158, 0, 0.08) 0%, rgba(251, 191, 36, 0.05) 100%)',
-              borderRadius: '12px',
-              border: '1px solid rgba(245, 158, 0, 0.2)',
-              animation: 'slideDown 0.2s ease-out'
-            }
-          }, React.createElement(MealOptimizerSection, {
-            meal,
-            totals,
-            dayData: dayData || {},
-            profile: profile || {},
-            products: products || [],
-            pIndex,
-            mealIndex,
-            addProductToMeal
-          })),
-          
-          // Popup расчёта волны
-          showWaveCalcPopup && currentWave && React.createElement('div', {
-            className: 'wave-details-overlay',
-            onClick: (e) => { if (e.target === e.currentTarget) setShowWaveCalcPopup(false); },
-            style: {
-              position: 'fixed',
-              top: 0, left: 0, right: 0, bottom: 0,
-              background: 'rgba(0,0,0,0.5)',
-              zIndex: 9999,
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              padding: '20px'
+              padding: '2px 6px',
+              borderRadius: '8px',
+              background: '#dcfce7',
+              minWidth: '28px'
             }
           },
-            React.createElement('div', {
-              className: 'wave-details-popup',
-              style: {
-                background: 'var(--card, #fff)',
-                borderRadius: '16px',
-                padding: '20px',
-                maxWidth: '360px',
-                width: '100%',
-                maxHeight: '80vh',
-                overflowY: 'auto',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-              }
-            },
-              // Заголовок
-              React.createElement('div', {
-                style: { 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  marginBottom: '16px'
-                }
-              },
-                React.createElement('h3', { 
-                  style: { margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text, #1f2937)' }
-                }, 'Расчёт волны'),
-                React.createElement('button', {
-                  onClick: () => setShowWaveCalcPopup(false),
-                  style: {
-                    background: 'none', border: 'none', fontSize: '20px', 
-                    cursor: 'pointer', color: '#9ca3af', padding: '4px'
-                  }
-                }, '×')
-              ),
-              
-              // Итоговая длина волны
-              React.createElement('div', {
-                style: {
-                  background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                  borderRadius: '12px',
-                  padding: '16px',
-                  marginBottom: '16px',
-                  textAlign: 'center',
-                  color: '#fff'
-                }
-              },
-                React.createElement('div', { style: { fontSize: '12px', opacity: 0.9, marginBottom: '4px' } }, 
-                  'Длина волны'
-                ),
-                React.createElement('div', { style: { fontSize: '28px', fontWeight: 700 } }, 
-                  (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'
-                ),
-                React.createElement('div', { style: { fontSize: '11px', opacity: 0.8, marginTop: '4px' } }, 
-                  currentWave.timeDisplay + ' → ' + currentWave.endTimeDisplay
-                )
-              ),
-              
-              // Формула
-              React.createElement('div', {
-                style: {
-                  background: 'var(--bg-secondary, #f8fafc)',
-                  borderRadius: '10px',
-                  padding: '12px',
-                  marginBottom: '16px',
-                  fontSize: '11px',
-                  fontFamily: 'monospace',
-                  color: '#64748b',
-                  textAlign: 'center'
-                }
-              }, 'База × Множитель = ' + (currentWave.baseWaveHours || 3).toFixed(1) + 'ч × ' + 
-                 (currentWave.finalMultiplier || 1).toFixed(2) + ' = ' +
-                 (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'
-              ),
-              
-              // Факторы еды
-              React.createElement('div', { style: { marginBottom: '12px' } },
-                React.createElement('div', { 
-                  style: { fontSize: '12px', fontWeight: 600, color: 'var(--text, #1f2937)', marginBottom: '8px' }
-                }, '🍽️ Факторы еды'),
-                
-                // GI
-                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                  React.createElement('span', { style: { color: '#64748b' } }, 'ГИ'),
-                  React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.gi || 0))
-                ),
-                // GL
-                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                  React.createElement('span', { style: { color: '#64748b' } }, 'GL (нагрузка)'),
-                  React.createElement('span', { style: { fontWeight: 500, color: currentWave.gl < 10 ? '#22c55e' : currentWave.gl > 20 ? '#ef4444' : '#1f2937' } }, 
-                    (currentWave.gl || 0).toFixed(1)
-                  )
-                ),
-                // Белок
-                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                  React.createElement('span', { style: { color: '#64748b' } }, 'Белок'),
-                  React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.protein || 0) + 'г')
-                ),
-                // Клетчатка
-                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                  React.createElement('span', { style: { color: '#64748b' } }, 'Клетчатка'),
-                  React.createElement('span', { style: { fontWeight: 500, color: currentWave.fiber >= 5 ? '#22c55e' : '#1f2937' } }, 
-                    Math.round(currentWave.fiber || 0) + 'г'
-                  )
-                ),
-                // Жиры
-                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                  React.createElement('span', { style: { color: '#64748b' } }, 'Жиры'),
-                  React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.fat || 0) + 'г')
-                ),
-                // Углеводы
-                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
-                  React.createElement('span', { style: { color: '#64748b' } }, 'Углеводы'),
-                  React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.carbs || 0) + 'г')
-                )
-              ),
-              
-              // Дневные факторы
-              React.createElement('div', { style: { marginBottom: '12px' } },
-                React.createElement('div', { 
-                  style: { fontSize: '12px', fontWeight: 600, color: 'var(--text, #1f2937)', marginBottom: '8px' }
-                }, '⏰ Дневные факторы'),
-                
-                // Циркадный ритм
-                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
-                  React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
-                  React.createElement('span', { style: { fontWeight: 500, color: currentWave.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } }, 
-                    '×' + (currentWave.circadianMultiplier || 1).toFixed(2)
-                  )
-                ),
-                // Активность
-                currentWave.activityBonus && currentWave.activityBonus !== 0 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
-                  React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
-                  React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } }, 
-                    (currentWave.activityBonus * 100).toFixed(0) + '%'
-                  )
-                )
-              ),
-              
-              // Кнопка закрытия
-              React.createElement('button', {
-                onClick: () => setShowWaveCalcPopup(false),
-                style: {
-                  width: '100%',
-                  background: '#3b82f6',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '12px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  marginTop: '8px'
-                }
-              }, 'Закрыть')
-            )
+            React.createElement('span', { style: { fontSize: '12px' } }, wellbeingEmoji),
+            React.createElement('span', { style: { fontSize: '11px', fontWeight: 600, color: '#15803d' } }, wellbeingVal)
+          ),
+          stressEmoji && React.createElement('div', {
+            style: {
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              padding: '2px 6px',
+              borderRadius: '8px',
+              background: '#fce7f3',
+              minWidth: '28px'
+            }
+          },
+            React.createElement('span', { style: { fontSize: '12px' } }, stressEmoji),
+            React.createElement('span', { style: { fontSize: '11px', fontWeight: 600, color: '#be185d' } }, stressVal)
           )
+        ) : React.createElement('span', {
+          style: {
+            fontSize: '11px',
+            color: '#94a3b8',
+            padding: '4px 8px',
+            borderRadius: '8px',
+            background: 'var(--bg-secondary, #f1f5f9)'
+          }
+        }, '+ оценки')
+      )
+      // На десктопе — время + inputs для оценок
+      : React.createElement(React.Fragment, null,
+        React.createElement('input', { className: 'compact-input time', type: 'time', title: 'Время приёма', value: meal.time || '', onChange: e => onChangeTime(mealIndex, e.target.value) }),
+        React.createElement('span', { className: 'meal-meta-field' }, '😊', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Настроение', value: meal.mood || '', onChange: e => onChangeMood(mealIndex, +e.target.value || '') })),
+        React.createElement('span', { className: 'meal-meta-field' }, '💪', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Самочувствие', value: meal.wellbeing || '', onChange: e => onChangeWellbeing(mealIndex, +e.target.value || '') })),
+        React.createElement('span', { className: 'meal-meta-field' }, '😰', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Стресс', value: meal.stress || '', onChange: e => onChangeStress(mealIndex, +e.target.value || '') }))
+      ),
+    // Плашка "Общее КБЖУ" (голубая, компактная)
+    (meal.items || []).length > 0 && React.createElement('button', {
+      className: 'meal-totals-badge',
+      onClick: (e) => {
+        e.stopPropagation();
+        setTotalsExpanded(!totalsExpanded);
+      },
+      title: 'Показать итоговые КБЖУ приёма',
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '3px',
+        padding: '4px 8px',
+        borderRadius: '12px',
+        border: 'none',
+        background: '#dbeafe',
+        color: '#1d4ed8',
+        fontSize: '12px',
+        fontWeight: 600,
+        cursor: 'pointer',
+        marginRight: '4px',
+        transition: 'transform 0.15s, background 0.15s',
+        flexShrink: 0
+      }
+    },
+      'КБЖУ',
+      React.createElement('span', { style: { fontSize: '10px', opacity: 0.7, marginLeft: '2px' } }, totalsExpanded ? '▴' : '▾')
+    ),
+    // Плашка "Советы" с бейджем количества (между оценками и удалением)
+    optimizerRecsCount > 0 && React.createElement('button', {
+      className: 'meal-optimizer-badge',
+      onClick: () => setOptimizerPopupOpen(!optimizerPopupOpen),
+      title: 'Советы по улучшению приёма',
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '4px 8px',
+        borderRadius: '12px',
+        border: 'none',
+        background: '#fef3c7',
+        color: '#b45309',
+        fontSize: '12px',
+        fontWeight: 600,
+        cursor: 'pointer',
+        marginRight: '4px',
+        transition: 'transform 0.15s, background 0.15s',
+        flexShrink: 0
+      }
+    },
+      'Советы',
+      React.createElement('span', {
+        style: {
+          background: '#f59e0b',
+          color: '#fff',
+          borderRadius: '8px',
+          padding: '0 5px',
+          fontSize: '10px',
+          fontWeight: 700,
+          marginLeft: '3px',
+          lineHeight: '16px'
+        }
+      }, optimizerRecsCount),
+      React.createElement('span', { style: { fontSize: '10px', opacity: 0.7, marginLeft: '2px' } }, optimizerPopupOpen ? '▴' : '▾')
+    ),
+    React.createElement('button', {
+      className: 'meal-delete-btn',
+      onClick: () => onRemoveMeal(mealIndex),
+      title: 'Удалить приём',
+      style: {
+        padding: '4px 6px',
+        fontSize: '14px',
+        lineHeight: 1,
+        flexShrink: 0
+      }
+    }, '🗑')
+  ),
+
+  // === Раскрывающийся блок "Общее КБЖУ" ===
+  totalsExpanded && (meal.items || []).length > 0 && React.createElement('div', {
+    className: 'mpc-totals-wrap',
+    style: {
+      marginTop: '10px',
+      padding: '12px',
+      background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(96, 165, 250, 0.05) 100%)',
+      borderRadius: '12px',
+      border: '1px solid rgba(59, 130, 246, 0.2)',
+      animation: 'slideDown 0.2s ease-out'
+    }
+  },
+    React.createElement('div', { className: 'mpc-grid mpc-header' },
+      React.createElement('span', null, 'ккал'),
+      React.createElement('span', null, 'У'),
+      React.createElement('span', { className: 'mpc-dim' }, 'пр/сл'),
+      React.createElement('span', null, 'Б'),
+      React.createElement('span', null, 'Ж'),
+      React.createElement('span', { className: 'mpc-dim' }, 'вр/пол/суп'),
+      React.createElement('span', null, 'Кл'),
+      React.createElement('span', null, 'ГИ'),
+      React.createElement('span', null, 'Вр')
+    ),
+    React.createElement('div', { className: 'mpc-grid mpc-totals-values' },
+      React.createElement('span', { title: getNutrientTooltip('kcal', totals.kcal, totals), style: { color: getNutrientColor('kcal', totals.kcal, totals), fontWeight: getNutrientColor('kcal', totals.kcal, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.kcal)),
+      React.createElement('span', { title: getNutrientTooltip('carbs', totals.carbs, totals), style: { color: getNutrientColor('carbs', totals.carbs, totals), fontWeight: getNutrientColor('carbs', totals.carbs, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.carbs)),
+      React.createElement('span', { className: 'mpc-dim' },
+        React.createElement('span', { title: getNutrientTooltip('simple', totals.simple, totals), style: { color: getNutrientColor('simple', totals.simple, totals), fontWeight: getNutrientColor('simple', totals.simple, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.simple || 0)),
+        '/',
+        React.createElement('span', { title: getNutrientTooltip('complex', totals.complex, totals), style: { color: getNutrientColor('complex', totals.complex, totals), cursor: 'help' } }, Math.round(totals.complex || 0))
+      ),
+      React.createElement('span', { title: getNutrientTooltip('prot', totals.prot, totals), style: { color: getNutrientColor('prot', totals.prot, totals), fontWeight: getNutrientColor('prot', totals.prot, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.prot)),
+      React.createElement('span', { title: getNutrientTooltip('fat', totals.fat, totals), style: { color: getNutrientColor('fat', totals.fat, totals), fontWeight: getNutrientColor('fat', totals.fat, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.fat)),
+      React.createElement('span', { className: 'mpc-dim' },
+        React.createElement('span', { title: getNutrientTooltip('bad', totals.bad, totals), style: { color: getNutrientColor('bad', totals.bad, totals), fontWeight: getNutrientColor('bad', totals.bad, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.bad || 0)),
+        '/',
+        React.createElement('span', { title: getNutrientTooltip('good', totals.good, totals), style: { color: getNutrientColor('good', totals.good, totals), fontWeight: getNutrientColor('good', totals.good, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.good || 0)),
+        '/',
+        React.createElement('span', { title: getNutrientTooltip('trans', totals.trans, totals), style: { color: getNutrientColor('trans', totals.trans, totals), fontWeight: getNutrientColor('trans', totals.trans, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.trans || 0))
+      ),
+      React.createElement('span', { title: getNutrientTooltip('fiber', totals.fiber, totals), style: { color: getNutrientColor('fiber', totals.fiber, totals), fontWeight: getNutrientColor('fiber', totals.fiber, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.fiber || 0)),
+      React.createElement('span', { title: getNutrientTooltip('gi', totals.gi, totals), style: { color: getNutrientColor('gi', totals.gi, totals), fontWeight: getNutrientColor('gi', totals.gi, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.gi || 0)),
+      React.createElement('span', { title: getNutrientTooltip('harm', totals.harm, totals), style: { color: getNutrientColor('harm', totals.harm, totals), fontWeight: getNutrientColor('harm', totals.harm, totals) ? 600 : 400, cursor: 'help' } }, fmtVal('harm', totals.harm || 0))
+    )
+  ),
+
+  // === MealOptimizer: Раскрывающийся блок советов ===
+  optimizerPopupOpen && optimizerRecsCount > 0 && HEYS.MealOptimizer && React.createElement('div', {
+    className: 'meal-optimizer-expanded',
+    style: {
+      marginTop: '12px',
+      padding: '12px',
+      background: 'linear-gradient(135deg, rgba(245, 158, 0, 0.08) 0%, rgba(251, 191, 36, 0.05) 100%)',
+      borderRadius: '12px',
+      border: '1px solid rgba(245, 158, 0, 0.2)',
+      animation: 'slideDown 0.2s ease-out'
+    }
+  }, React.createElement(MealOptimizerSection, {
+    meal,
+    totals,
+    dayData: dayData || {},
+    profile: profile || {},
+    products: products || [],
+    pIndex,
+    mealIndex,
+    addProductToMeal
+  })),
+
+  // Popup расчёта волны
+  showWaveCalcPopup && currentWave && React.createElement('div', {
+    className: 'wave-details-overlay',
+    onClick: (e) => { if (e.target === e.currentTarget) setShowWaveCalcPopup(false); },
+    style: {
+      position: 'fixed',
+      top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.5)',
+      zIndex: 9999,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px'
+    }
+  },
+    React.createElement('div', {
+      className: 'wave-details-popup',
+      style: {
+        background: 'var(--card, #fff)',
+        borderRadius: '16px',
+        padding: '20px',
+        maxWidth: '360px',
+        width: '100%',
+        maxHeight: '80vh',
+        overflowY: 'auto',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+      }
+    },
+      // Заголовок
+      React.createElement('div', {
+        style: {
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '16px'
+        }
+      },
+        React.createElement('h3', {
+          style: { margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text, #1f2937)' }
+        }, 'Расчёт волны'),
+        React.createElement('button', {
+          onClick: () => setShowWaveCalcPopup(false),
+          style: {
+            background: 'none', border: 'none', fontSize: '20px',
+            cursor: 'pointer', color: '#9ca3af', padding: '4px'
+          }
+        }, '×')
+      ),
+
+      // Итоговая длина волны
+      React.createElement('div', {
+        style: {
+          background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+          borderRadius: '12px',
+          padding: '16px',
+          marginBottom: '16px',
+          textAlign: 'center',
+          color: '#fff'
+        }
+      },
+        React.createElement('div', { style: { fontSize: '12px', opacity: 0.9, marginBottom: '4px' } },
+          'Длина волны'
+        ),
+        React.createElement('div', { style: { fontSize: '28px', fontWeight: 700 } },
+          (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'
+        ),
+        React.createElement('div', { style: { fontSize: '11px', opacity: 0.8, marginTop: '4px' } },
+          currentWave.timeDisplay + ' → ' + currentWave.endTimeDisplay
+        )
+      ),
+
+      // Формула
+      React.createElement('div', {
+        style: {
+          background: 'var(--bg-secondary, #f8fafc)',
+          borderRadius: '10px',
+          padding: '12px',
+          marginBottom: '16px',
+          fontSize: '11px',
+          fontFamily: 'monospace',
+          color: '#64748b',
+          textAlign: 'center'
+        }
+      }, 'База × Множитель = ' + (currentWave.baseWaveHours || 3).toFixed(1) + 'ч × ' +
+      (currentWave.finalMultiplier || 1).toFixed(2) + ' = ' +
+      (currentWave.waveHours || currentWave.duration / 60).toFixed(1) + 'ч'
+      ),
+
+      // Факторы еды
+      React.createElement('div', { style: { marginBottom: '12px' } },
+        React.createElement('div', {
+          style: { fontSize: '12px', fontWeight: 600, color: 'var(--text, #1f2937)', marginBottom: '8px' }
+        }, '🍽️ Факторы еды'),
+
+        // GI
+        React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+          React.createElement('span', { style: { color: '#64748b' } }, 'ГИ'),
+          React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.gi || 0))
+        ),
+        // GL
+        React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+          React.createElement('span', { style: { color: '#64748b' } }, 'GL (нагрузка)'),
+          React.createElement('span', { style: { fontWeight: 500, color: currentWave.gl < 10 ? '#22c55e' : currentWave.gl > 20 ? '#ef4444' : '#1f2937' } },
+            (currentWave.gl || 0).toFixed(1)
+          )
+        ),
+        // Белок
+        React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+          React.createElement('span', { style: { color: '#64748b' } }, 'Белок'),
+          React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.protein || 0) + 'г')
+        ),
+        // Клетчатка
+        React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+          React.createElement('span', { style: { color: '#64748b' } }, 'Клетчатка'),
+          React.createElement('span', { style: { fontWeight: 500, color: currentWave.fiber >= 5 ? '#22c55e' : '#1f2937' } },
+            Math.round(currentWave.fiber || 0) + 'г'
+          )
+        ),
+        // Жиры
+        React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+          React.createElement('span', { style: { color: '#64748b' } }, 'Жиры'),
+          React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.fat || 0) + 'г')
+        ),
+        // Углеводы
+        React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
+          React.createElement('span', { style: { color: '#64748b' } }, 'Углеводы'),
+          React.createElement('span', { style: { fontWeight: 500 } }, Math.round(currentWave.carbs || 0) + 'г')
+        )
+      ),
+
+      // Дневные факторы
+      React.createElement('div', { style: { marginBottom: '12px' } },
+        React.createElement('div', {
+          style: { fontSize: '12px', fontWeight: 600, color: 'var(--text, #1f2937)', marginBottom: '8px' }
+        }, '⏰ Дневные факторы'),
+
+        // Циркадный ритм
+        React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+          React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
+          React.createElement('span', { style: { fontWeight: 500, color: currentWave.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } },
+            '×' + (currentWave.circadianMultiplier || 1).toFixed(2)
+          )
+        ),
+        // Активность
+        currentWave.activityBonus && currentWave.activityBonus !== 0 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' } },
+          React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
+          React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } },
+            (currentWave.activityBonus * 100).toFixed(0) + '%'
+          )
+        )
+      ),
+
+      // Кнопка закрытия
+      React.createElement('button', {
+        onClick: () => setShowWaveCalcPopup(false),
+        style: {
+          width: '100%',
+          background: '#3b82f6',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '10px',
+          padding: '12px',
+          fontSize: '14px',
+          fontWeight: 600,
+          cursor: 'pointer',
+          marginTop: '8px'
+        }
+      }, 'Закрыть')
+    )
+  )
         )
       );
     }, (prevProps, nextProps) => {
-      // Custom comparison: ререндерим если изменились важные поля meal
-      if (prevProps.meal !== nextProps.meal) return false;
-      if (prevProps.meal?.mealType !== nextProps.meal?.mealType) return false;
-      if (prevProps.meal?.name !== nextProps.meal?.name) return false;
-      if (prevProps.meal?.time !== nextProps.meal?.time) return false;
-      if (prevProps.meal?.items?.length !== nextProps.meal?.items?.length) return false;
-      if (prevProps.meal?.photos?.length !== nextProps.meal?.photos?.length) return false;
-      if (prevProps.mealIndex !== nextProps.mealIndex) return false;
-      if (prevProps.displayIndex !== nextProps.displayIndex) return false;
-      if (prevProps.isExpanded !== nextProps.isExpanded) return false;
-      if (prevProps.allMeals !== nextProps.allMeals) return false;
-      return true;
-    });
-    
-    // Export to HEYS namespace
-    HEYS.dayComponents = HEYS.dayComponents || {};
-    HEYS.dayComponents.MealCard = MealCard;
+  // Custom comparison: ререндерим если изменились важные поля meal
+  if (prevProps.meal !== nextProps.meal) return false;
+  if (prevProps.meal?.mealType !== nextProps.meal?.mealType) return false;
+  if (prevProps.meal?.name !== nextProps.meal?.name) return false;
+  if (prevProps.meal?.time !== nextProps.meal?.time) return false;
+  if (prevProps.meal?.items?.length !== nextProps.meal?.items?.length) return false;
+  if (prevProps.meal?.photos?.length !== nextProps.meal?.photos?.length) return false;
+  if (prevProps.mealIndex !== nextProps.mealIndex) return false;
+  if (prevProps.displayIndex !== nextProps.displayIndex) return false;
+  if (prevProps.isExpanded !== nextProps.isExpanded) return false;
+  if (prevProps.allMeals !== nextProps.allMeals) return false;
+  return true;
+});
+
+// Export to HEYS namespace
+HEYS.dayComponents = HEYS.dayComponents || {};
+HEYS.dayComponents.MealCard = MealCard;
     
   */
-})(window);
+}) (window);
