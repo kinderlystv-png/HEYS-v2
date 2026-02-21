@@ -5434,8 +5434,62 @@ body:has(.offline-banner) .wrap {
   right: 0;
   z-index: 1000;
   box-shadow: 0 -1px 20px rgba(0, 0, 0, 0.06);
-  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-  min-height: 56px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  min-height: 58px;
+}
+
+/* CRS Progress Bar (v3.1.0) */
+.crs-bar-container {
+  position: absolute;
+  bottom: env(safe-area-inset-bottom, 0px);
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.05);
+  z-index: 1001;
+  pointer-events: none;
+}
+
+.crs-bar-green {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  /* background and box-shadow are set dynamically in JS */
+  transition: width 1.8s ease-in-out, right 1.8s ease-in-out, background 1.8s ease, box-shadow 1.8s ease;
+}
+
+.crs-bar-orange {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  /* background and box-shadow are set dynamically in JS */
+  transition: width 1.8s ease-in-out, left 1.8s ease-in-out, background 1.8s ease, box-shadow 1.8s ease;
+}
+
+.crs-bar-divider {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: left 1.8s ease-in-out, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 0 6px #fff, 0 0 12px rgba(255, 255, 255, 0.8);
+  animation: crs-pulse 2s infinite;
+}
+
+@keyframes crs-pulse {
+  0% {
+    box-shadow: 0 0 4px #fff, 0 0 8px rgba(255, 255, 255, 0.6);
+  }
+
+  50% {
+    box-shadow: 0 0 10px #fff, 0 0 18px rgba(255, 255, 255, 0.9), 0 0 25px rgba(255, 255, 255, 0.5);
+  }
+
+  100% {
+    box-shadow: 0 0 4px #fff, 0 0 8px rgba(255, 255, 255, 0.6);
+  }
 }
 
 /* Скрыть технические вкладки на мобилке */

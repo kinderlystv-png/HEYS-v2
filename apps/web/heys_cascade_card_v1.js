@@ -596,7 +596,9 @@
       (day && day.sleepHours) || 0,
       (day && (day.weightMorning > 0 ? 1 : 0)) || 0,
       (day && day.measurements) ? JSON.stringify(day.measurements) : '',
-      (day && day.supplementsTaken) ? day.supplementsTaken.length : 0
+      (day && day.supplementsTaken) ? day.supplementsTaken.length : 0,
+      (day && day.supplementsPlanned) ? (Array.isArray(day.supplementsPlanned) ? day.supplementsPlanned.length : day.supplementsPlanned) : 0,
+      (prof && prof.plannedSupplements) ? (Array.isArray(prof.plannedSupplements) ? prof.plannedSupplements.length : prof.plannedSupplements) : 0
     ].join('::');
   }
 
@@ -1613,7 +1615,14 @@
 
     // ── ШАГ 9: Витамины (continuous + streak bonus) ─────
     var suppTaken = (day && day.supplementsTaken) ? day.supplementsTaken.length : 0;
-    var suppPlanned = (day && day.supplementsPlanned) || (prof && prof.plannedSupplements) || 0;
+    var suppPlannedRaw = (day && day.supplementsPlanned) || (prof && prof.plannedSupplements) || 0;
+    var suppPlanned = Array.isArray(suppPlannedRaw) ? suppPlannedRaw.length : (typeof suppPlannedRaw === 'number' ? suppPlannedRaw : 0);
+
+    // Если плана нет, но витамины выпиты — считаем план выполненным на 100%
+    if (suppPlanned === 0 && suppTaken > 0) {
+      suppPlanned = suppTaken;
+    }
+
     var suppConfidence = getFactorConfidence(prevDays14, function (d) { return d && d.supplementsTaken && d.supplementsTaken.length; });
     confidenceMap.supplements = suppConfidence;
 
@@ -1626,7 +1635,9 @@
       var suppStreak = countConsecutive(prevDays14, function (d) {
         if (!d || !d.supplementsTaken) return false;
         var st = d.supplementsTaken.length || 0;
-        var sp = d.supplementsPlanned || (d.plannedSupplements || suppPlanned);
+        var spRaw = d.supplementsPlanned || d.plannedSupplements || suppPlanned;
+        var sp = Array.isArray(spRaw) ? spRaw.length : (typeof spRaw === 'number' ? spRaw : 0);
+        if (sp === 0 && st > 0) sp = st;
         return sp > 0 && (st / sp) >= 0.8;
       });
       var suppStreakBonus = suppStreak >= 7 ? 0.2 : suppStreak >= 3 ? 0.1 : 0;
@@ -2244,7 +2255,7 @@
       });
     }
 
-    return {
+    var result = {
       events: events,
       chainLength: chain,
       maxChainToday: maxChain,
@@ -2275,6 +2286,16 @@
       deficitOvershootRatio: deficitOvershootRatio ? +deficitOvershootRatio.toFixed(2) : null,
       goalMode: mealGoalMode ? mealGoalMode.mode : null
     };
+
+    // Сохраняем глобально для CrsProgressBar и диспатчим событие
+    window.HEYS = window.HEYS || {};
+    window.HEYS._lastCrs = result;
+
+    console.info('[dotcascade] ⚙️ computeCascadeState finished. New CRS:', result.crs, 'Events:', events.map(function (e) { return e.type + '(' + e.weight.toFixed(2) + ')'; }).join(', '));
+
+    window.dispatchEvent(new CustomEvent('heys:crs-updated', { detail: result }));
+
+    return result;
   }
 
   // ─────────────────────────────────────────────────────
@@ -2645,9 +2666,178 @@
     });
   }
 
+  // ─────────────────────────────────────────────────────
+  // SUB-КОМПОНЕНТ: CrsProgressBar (для нижнего меню)
+  // ─────────────────────────────────────────────────────
+  function CrsProgressBar() {
+    var [crsData, setCrsData] = React.useState(window.HEYS && window.HEYS._lastCrs ? window.HEYS._lastCrs : null);
+    var [isLoaded, setIsLoaded] = React.useState(false);
+    var [isSettled, setIsSettled] = React.useState(false);
+    var [loadingOffset, setLoadingOffset] = React.useState(0); // Смещение от центра во время загрузки
+
+    React.useEffect(function () {
+      // Запускаем анимацию появления после монтирования (разъезжаются из центра)
+      var timer1 = setTimeout(function () {
+        setIsLoaded(true);
+      }, 50);
+
+      var timer2;
+      var handleSyncComplete;
+      var loadingInterval;
+
+      var checkAndSettle = function (source) {
+        // Убираем логирование
+        var timeSinceSync = window.HEYS && window.HEYS.syncCompletedAt ? Date.now() - window.HEYS.syncCompletedAt : 0;
+        var delay = timeSinceSync > 1500 ? 400 : 1000;
+
+        timer2 = setTimeout(function () {
+          if (loadingInterval) clearInterval(loadingInterval);
+          setLoadingOffset(0);
+          setIsSettled(true);
+        }, delay);
+      };
+
+      // Если синхронизация уже завершилась
+      if (window.HEYS && (window.HEYS.initialSyncDone || window.HEYS.syncCompletedAt)) {
+        checkAndSettle('mount_sync_done');
+      } else {
+        // Запускаем маятник влево-вправо пока ждем данные из облака
+        var pendulumStep = 0;
+        var pendulumPositions = [-5, 5]; // небольшое чередование: влево, вправо...
+        loadingInterval = setInterval(function () {
+          setLoadingOffset(pendulumPositions[pendulumStep % 2]);
+          pendulumStep++;
+        }, 2000);
+
+        // Ждем события heysSyncCompleted, чтобы сместить в реальное значение CRS
+        handleSyncComplete = function (e) {
+          if (timer2) clearTimeout(timer2);
+
+          // Игнорируем heys:crs-updated, если синхронизация еще не завершена
+          if (e.type === 'heys:crs-updated' && !(window.HEYS && (window.HEYS.initialSyncDone || window.HEYS.syncCompletedAt))) {
+            return;
+          }
+
+          // Если это событие heys:crs-updated (и синхронизация уже завершена), то мы уже получили новые данные, можно смещать быстрее
+          if (e.type === 'heys:crs-updated') {
+            timer2 = setTimeout(function () {
+              if (loadingInterval) clearInterval(loadingInterval);
+              setLoadingOffset(0);
+              setIsSettled(true);
+            }, 400);
+          } else {
+            checkAndSettle('event_' + e.type);
+          }
+        };
+        window.addEventListener('heysSyncCompleted', handleSyncComplete);
+        // Также слушаем heys:crs-updated как запасной триггер, если CRS обновился до heysSyncCompleted
+        window.addEventListener('heys:crs-updated', handleSyncComplete);
+
+        // Фолбэк: если событие уже было или не пришло, смещаем через 3 секунды
+        timer2 = setTimeout(function () {
+          if (loadingInterval) clearInterval(loadingInterval);
+          setLoadingOffset(0);
+          setIsSettled(true);
+        }, 3000);
+      }
+
+      function handleCrsUpdate(e) {
+        if (e.detail) {
+          setCrsData(e.detail);
+        }
+      }
+      window.addEventListener('heys:crs-updated', handleCrsUpdate);
+
+      return function () {
+        clearTimeout(timer1);
+        if (timer2) clearTimeout(timer2);
+        if (loadingInterval) clearInterval(loadingInterval);
+        if (handleSyncComplete) {
+          window.removeEventListener('heysSyncCompleted', handleSyncComplete);
+          window.removeEventListener('heys:crs-updated', handleSyncComplete);
+        }
+        window.removeEventListener('heys:crs-updated', handleCrsUpdate);
+      };
+    }, []);
+
+    React.useEffect(function () {
+      var currentCrs = crsData ? crsData.crs : null;
+      var actualP = currentCrs !== null ? Math.max(0, Math.min(100, currentCrs * 100)) : 50;
+      var renderedP = isSettled ? actualP : 50;
+    }, [isLoaded, isSettled, crsData]);
+
+    if (!crsData || typeof crsData.crs !== 'number') {
+      return null;
+    }
+
+    // Если мы еще не "осели" (isSettled === false), то мы показываем 50% + loadingOffset
+    var actualPercent = Math.max(0, Math.min(100, crsData.crs * 100));
+    var crsPercent = isSettled ? actualPercent : (50 + loadingOffset); // Сначала "ищет", потом реальное значение
+
+    // --- Динамический цвет для левой (хорошей) линии ---
+    // Чем больше crsPercent, тем зеленее (и ярче) начало линии слева
+    var tGreen = crsPercent / 100;
+    var alphaLeft = (0.1 + tGreen * 0.9).toFixed(2); // от 0.1 до 1.0
+    var goodGrad = 'linear-gradient(90deg, rgba(52, 211, 153, ' + alphaLeft + '), rgb(16, 185, 129))';
+
+    // Тень тоже усиливается с ростом CRS
+    var shadowAlpha1 = (0.2 + tGreen * 0.6).toFixed(2);
+    var shadowAlpha2 = (0.1 + tGreen * 0.5).toFixed(2);
+    var shadowAlpha3 = (0.0 + tGreen * 0.4).toFixed(2);
+    var goodShadow = '0 0 4px rgba(52, 211, 153, ' + shadowAlpha1 + '), 0 0 10px rgba(16, 185, 129, ' + shadowAlpha2 + '), 0 0 16px rgba(5, 150, 105, ' + shadowAlpha3 + ')';
+
+    // --- Динамический цвет для правой (плохой) линии ---
+    // 0-50% -> Красный, 50-100% -> плавно переходит в Желтый
+    var tBad = Math.max(0, (crsPercent - 50) / 50); // 0 при <=50%, 1 при 100%
+
+    // Red: rgb(248, 113, 113) to rgb(220, 38, 38)
+    // Yellow: rgb(253, 224, 71) to rgb(245, 158, 11)
+    var r1 = Math.round(248 + tBad * (253 - 248));
+    var g1 = Math.round(113 + tBad * (224 - 113));
+    var b1 = Math.round(113 + tBad * (71 - 113));
+
+    var r2 = Math.round(220 + tBad * (245 - 220));
+    var g2 = Math.round(38 + tBad * (158 - 38));
+    var b2 = Math.round(38 + tBad * (11 - 38));
+
+    var badGrad = 'linear-gradient(90deg, rgb(' + r1 + ',' + g1 + ',' + b1 + '), rgb(' + r2 + ',' + g2 + ',' + b2 + '))';
+    var badShadow = '0 0 4px rgba(' + r1 + ',' + g1 + ',' + b1 + ', 0.8), 0 0 10px rgba(' + r2 + ',' + g2 + ',' + b2 + ', 0.6), 0 0 16px rgba(' + r2 + ',' + g2 + ',' + b2 + ', 0.4)';
+
+    return React.createElement(
+      'div',
+      { className: 'crs-bar-container' },
+      React.createElement('div', {
+        className: 'crs-bar-green',
+        style: {
+          right: (100 - crsPercent) + '%',
+          width: isLoaded ? crsPercent + '%' : '0%',
+          background: goodGrad,
+          boxShadow: goodShadow
+        }
+      }),
+      React.createElement('div', {
+        className: 'crs-bar-orange',
+        style: {
+          left: crsPercent + '%',
+          width: isLoaded ? (100 - crsPercent) + '%' : '0%',
+          background: badGrad,
+          boxShadow: badShadow
+        }
+      }),
+      React.createElement('div', {
+        className: 'crs-bar-divider',
+        style: {
+          left: crsPercent + '%',
+          transform: isLoaded ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -50%) scale(0)'
+        }
+      })
+    );
+  }
+
   HEYS.CascadeCard = {
     computeCascadeState: computeCascadeState,
     renderCard: renderCard,
+    CrsProgressBar: CrsProgressBar,
     STATES: STATES,
     STATE_CONFIG: STATE_CONFIG,
     MESSAGES: MESSAGES,
