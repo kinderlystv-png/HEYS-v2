@@ -640,7 +640,9 @@
    * Обновить статистику использования продукта
    */
   function trackProductUsage(productId) {
-    if (!CONFIG.enablePersonalization || !productId) return;
+    if (!CONFIG.enablePersonalization || !productId) {
+      return;
+    }
     const idKey = String(productId);
     const stats = userProductStats.get(idKey) || { count: 0, lastUsed: 0 };
     stats.count++;
@@ -683,7 +685,8 @@
   function loadUserStats() {
     try {
       // Prefer HEYS.store (cloud sync), then HEYS.utils.lsGet, fallback to localStorage
-      const storedObj = (HEYS.store && HEYS.store.get)
+      const storeAvailable = !!(HEYS.store && HEYS.store.get);
+      const storedObj = storeAvailable
         ? HEYS.store.get(USER_STATS_KEY, null)
         : (HEYS.utils && HEYS.utils.lsGet)
           ? HEYS.utils.lsGet(USER_STATS_KEY, null)
@@ -693,7 +696,9 @@
         // Ключи храним строками для совместимости (productId может быть number/string)
         userProductStats = new Map(Object.entries(storedObj));
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      console.warn('[HEYS.search] loadUserStats error:', e);
+    }
   }
 
   function normalizeClientId(raw) {
@@ -1042,10 +1047,20 @@
       finalStats = scanFromDayKeys();
     }
 
+    if (finalStats.size === 0) {
+      console.warn('[HEYS.search] syncUsageStatsFromDays: no stats found in', scannedDays, 'days');
+    }
+
     if (finalStats.size > 0) {
       userProductStats = new Map(finalStats);
       saveUserStats();
       setUsageStatsLastSync(Date.now());
+      console.info('[HEYS.search] ✅ Usage stats synced:', {
+        statsKeys: finalStats.size,
+        scannedDays,
+        foundItems,
+        sample: Array.from(finalStats.entries()).slice(0, 3).map(([k, v]) => `${k}: ${v.count}×`)
+      });
     }
 
     try {
@@ -2590,6 +2605,36 @@
       });
 
       suggestions.push(...Array.from(suggestionSet).slice(0, opts.maxSuggestions));
+    }
+
+    // === 🆕 v2.8.2 USAGE STATS BOOST (персональная история из opts.usageStats) ===
+    if (opts.usageStats instanceof Map && opts.usageStats.size > 0) {
+      const windowDays = Number(opts.usageWindowDays) || 21;
+      const nowMs = Date.now();
+      results.forEach((entry) => {
+        const pid = String(entry.id || entry.product_id || '');
+        const nameRaw = String(entry.name || '');
+        const nameNorm = normalizeText(nameRaw);
+        const stats = (pid && opts.usageStats.get(pid))
+          || opts.usageStats.get(nameNorm)
+          || opts.usageStats.get(nameRaw);
+        if (stats && stats.count > 0 && stats.lastUsed) {
+          const daysAgo = Math.floor((nowMs - stats.lastUsed) / (1000 * 60 * 60 * 24));
+          if (daysAgo <= windowDays) {
+            entry.relevance = (entry.relevance || 0) + Math.min(stats.count, 8);
+          }
+        }
+      });
+    }
+
+    // === 🆕 v2.8.2 FAVORITES BOOST (из opts.favorites — Set product ids) ===
+    if (opts.favorites instanceof Set && opts.favorites.size > 0) {
+      results.forEach((entry) => {
+        const pid = String(entry.id || entry.product_id || '');
+        if (pid && opts.favorites.has(pid)) {
+          entry.relevance = (entry.relevance || 0) + 15; // идентично calculateRelevance isFavorite bonus
+        }
+      });
     }
 
     // === ФИНАЛЬНАЯ СОРТИРОВКА ===

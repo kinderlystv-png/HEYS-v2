@@ -1228,6 +1228,7 @@
       if (isFav && freq > 0) return 0; // избранные + часто используемые
       if (freq > 0) return 1; // часто используемые
       if (isFav) return 2; // избранные, но без использования
+      // v2.8.3: недавно добавленные НИЖЕ используемых
       return 3;
     };
 
@@ -1239,6 +1240,7 @@
     };
 
     // Сортируем по комбинированному скору
+    // v2.8.3: используемые продукты ВСЕГДА выше недавно добавленных
     const sorted = [...products]
       .filter(p => {
         const pid = String(p.id || p.product_id || p.name || '');
@@ -1252,31 +1254,28 @@
         const aId = String(a.id || a.product_id || a.name || '');
         const bId = String(b.id || b.product_id || b.name || '');
 
-        // Недавно добавленные — самый верх (группа -1)
-        const aNew = isRecentlyTouched(a);
-        const bNew = isRecentlyTouched(b);
-        const aFreq = getFreq(aId, a.name);
-        const bFreq = getFreq(bId, b.name);
-        // Только если нет истории использования — ставим вверх
-        if ((aNew && aFreq === 0) !== (bNew && bFreq === 0)) {
-          return (aNew && aFreq === 0) ? -1 : 1;
-        }
-        // Среди недавно добавленных — самые свежие сначала
-        if (aNew && aFreq === 0 && bNew && bFreq === 0) {
+        // v2.8.3: группы сортировки —
+        // 0: избранные + часто используемые
+        // 1: часто используемые
+        // 2: избранные без использования
+        // 3: недавно добавленные (48ч) без использования
+        // 4: остальные (не должны пройти фильтр)
+        const aGroup = getGroupRank(aId, a.name);
+        const bGroup = getGroupRank(bId, b.name);
+        if (aGroup !== bGroup) return aGroup - bGroup;
+
+        // Среди недавно добавленных (группа 3) — самые свежие сначала
+        if (aGroup === 3) {
           const aTs = Number(a.updatedAt || a.createdAt || 0);
           const bTs = Number(b.updatedAt || b.createdAt || 0);
           if (aTs !== bTs) return bTs - aTs;
         }
 
-        const aGroup = getGroupRank(aId, a.name);
-        const bGroup = getGroupRank(bId, b.name);
-        if (aGroup !== bGroup) return aGroup - bGroup;
-
         const aScore = getScore(aId, a.name);
         const bScore = getScore(bId, b.name);
-        if (aGroup !== 2 && aScore !== bScore) return bScore - aScore;
+        if (aGroup <= 1 && aScore !== bScore) return bScore - aScore;
 
-        if (aGroup !== 2) {
+        if (aGroup <= 1) {
           const aLast = lastUsedDay.get(aId) ?? 999;
           const bLast = lastUsedDay.get(bId) ?? 999;
           if (aLast !== bLast) return aLast - bLast;
@@ -1544,7 +1543,7 @@
           setUsageStatsVersion(v => v + 1);
         }
       } catch (e) {
-        // no-op
+        console.error('[HEYS.search] syncUsageStatsFromDays error:', e);
       }
     }, [dateKey, usageWindowDays]);
 
@@ -1786,7 +1785,10 @@
               enablePhonetic: true,
               enableSynonyms: true,
               enableTranslit: true, // 🆕 рафа → rafa → Raffaello
-              maxSuggestions: 30
+              maxSuggestions: 30,
+              usageStats: effectiveUsageStats,   // 🆕 v2.8.2: персональный boost по истории
+              usageWindowDays: usageWindowDays,  // 🆕 v2.8.2: окно релевантности
+              favorites: favorites               // 🆕 v2.8.2: boost избранных в топ
             });
             if (result?.results?.length) results = result.results;
           } catch (e) {
@@ -1823,7 +1825,7 @@
       }
 
       return results.slice(0, 20);
-    }, [lc, latestProducts, selectedCategory]);
+    }, [lc, latestProducts, selectedCategory, effectiveUsageStats, usageWindowDays, favorites]);
 
     // 🌐 Объединённые результаты: личные + общая база (без дубликатов)
     const combinedResults = useMemo(() => {
@@ -2389,7 +2391,7 @@
               : (sharedLoading ? '⏳ Поиск...' : 'Ничего не найдено')
           ),
           combinedResults?.length > 0 && React.createElement('div', { className: 'aps-products-list' },
-            combinedResults.map(p => renderProductCard(p, true, false))
+            combinedResults.map(p => renderProductCard(p, true, false, true))
           ),
           // Пустой результат с "Возможно вы искали"
           combinedResults.length === 0 && !sharedLoading && React.createElement('div', { className: 'aps-empty' },
