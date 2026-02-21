@@ -161,8 +161,10 @@
 
         React.useEffect(() => {
             const markInitialSyncDone = () => {
+                if (window.HEYS) window.HEYS.syncCompletedAt = Date.now();
                 setTimeout(() => {
                     initialSyncDoneRef.current = true;
+                    if (window.HEYS) window.HEYS.initialSyncDone = true;
                 }, 1000);
             };
             window.addEventListener('heysSyncCompleted', markInitialSyncDone);

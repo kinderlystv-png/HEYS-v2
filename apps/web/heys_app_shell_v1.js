@@ -780,6 +780,8 @@
             widgetsEditMode,
             defaultTab,
             setDefaultTab,
+            clientId,
+            selectedDate,
         } = props;
 
         const [settingsMenuOpen, setSettingsMenuOpen] = React.useState(false);
@@ -787,6 +789,23 @@
         React.useEffect(() => {
             if (settingsMenuOpen) setSettingsMenuOpen(false);
         }, [tab]);
+
+        // Инициализация CRS для прогресс-бара, если он еще не был вычислен
+        React.useEffect(() => {
+            if (!window.HEYS?._lastCrs && window.HEYS?.CascadeCard?.computeCascadeState && clientId) {
+                try {
+                    const dateStr = selectedDate || window.HEYS.utils.getTodayStr();
+                    const day = window.HEYS.utils.lsGet('heys_dayv2_' + dateStr, {});
+                    const dayTot = window.HEYS.utils.lsGet('heys_dayTot_' + dateStr, {});
+                    const normAbs = window.HEYS.utils.lsGet('heys_normAbs', {});
+                    const prof = window.HEYS.utils.lsGet('heys_profile', {});
+                    const pIndex = window.HEYS.products?.getIndex ? window.HEYS.products.getIndex() : {};
+                    window.HEYS.CascadeCard.computeCascadeState(day, dayTot, normAbs, prof, pIndex);
+                } catch (e) {
+                    console.warn('[HEYS.AppTabsNav] Failed to init CRS:', e);
+                }
+            }
+        }, [clientId, selectedDate]);
 
         return React.createElement(
             'div',
@@ -956,6 +975,8 @@
                     )
                 )
             ),
+            // CRS Progress Bar (v3.1.0)
+            window.HEYS?.CascadeCard?.CrsProgressBar && React.createElement(window.HEYS.CascadeCard.CrsProgressBar)
         );
     }
 
