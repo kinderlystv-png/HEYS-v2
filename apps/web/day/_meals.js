@@ -2773,6 +2773,9 @@
                                         }
 
                                         const productId = finalProduct.id ?? finalProduct.product_id ?? finalProduct.name;
+                                        // 🆕 v2.8.2: Трекаем использование для сортировки по популярности
+                                        HEYS?.SmartSearchWithTypos?.trackProductUsage?.(String(productId));
+                                        console.info('[HEYS.search] ✅ Product usage tracked:', { productId: String(productId), name: finalProduct.name });
                                         const computeTEFKcal100 = (p) => {
                                             const carbs = (+p.carbs100) || ((+p.simple100 || 0) + (+p.complex100 || 0));
                                             const fat = (+p.fat100) || ((+p.badFat100 || 0) + (+p.goodFat100 || 0) + (+p.trans100 || 0));

@@ -243,6 +243,7 @@
                       multiProductMode: multiProductMode,
                       products: products,
                       dateKey: date,
+                      day: day,  // 🆕 v2.8.2: контекст для sessionUsageStats
                       onAdd: ({ product, grams, mealIndex: addMealIndex }) => {
                         // 🔧 FIX: Auto-clone shared product to personal base (prevents orphans)
                         let finalProduct = product;
@@ -255,6 +256,9 @@
                         }
 
                         const productId = finalProduct.id ?? finalProduct.product_id ?? finalProduct.name;
+                        // 🆕 v2.8.2: Трекаем использование для сортировки по популярности
+                        HEYS?.SmartSearchWithTypos?.trackProductUsage?.(String(productId));
+                        console.info('[HEYS.search] ✅ Product usage tracked:', { productId: String(productId), name: finalProduct.name });
                         // TEF-aware kcal100: пересчитываем по формуле 3*protein + 4*carbs + 9*fat
                         const computeTEFKcal100 = (p) => {
                           const carbs = (+p.carbs100) || ((+p.simple100 || 0) + (+p.complex100 || 0));
