@@ -5454,16 +5454,16 @@ body:has(.offline-banner) .wrap {
   position: absolute;
   top: 0;
   height: 100%;
-  /* background and box-shadow are set dynamically in JS */
-  transition: width 1.8s ease-in-out, right 1.8s ease-in-out, background 1.8s ease, box-shadow 1.8s ease;
+  /* background is set dynamically in JS; no color transition to avoid flicker */
+  transition: width 1.8s ease-in-out, right 1.8s ease-in-out;
 }
 
 .crs-bar-orange {
   position: absolute;
   top: 0;
   height: 100%;
-  /* background and box-shadow are set dynamically in JS */
-  transition: width 1.8s ease-in-out, left 1.8s ease-in-out, background 1.8s ease, box-shadow 1.8s ease;
+  /* background is set dynamically in JS; no color transition to avoid flicker */
+  transition: width 1.8s ease-in-out, left 1.8s ease-in-out;
 }
 
 .crs-bar-divider {

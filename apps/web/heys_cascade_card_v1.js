@@ -2302,6 +2302,15 @@
   // SUB-КОМПОНЕНТ: ChainDots
   // ─────────────────────────────────────────────────────
 
+  function getEventColor(w) {
+    if (w <= -0.5) return '#dc2626'; // Red (хуже)
+    if (w < 0) return '#f97316'; // Orange (негативное)
+    if (w === 0) return '#facc15'; // Yellow (нейтральное)
+    if (w <= 0.5) return '#84cc16'; // Light Green (хорошее)
+    if (w <= 1.5) return '#22c55e'; // Green (очень хорошее)
+    return '#10b981'; // Emerald (отличное)
+  }
+
   function ChainDots(props) {
     var events = props.events;
     if (!events || events.length === 0) return null;
@@ -2312,8 +2321,6 @@
       var isLast = i === events.length - 1;
       var dotClass = [
         'cascade-dot',
-        'cascade-dot--' + ev.type,
-        !ev.positive ? 'cascade-dot--warning' : null,
         (isLast && ev.positive) ? 'cascade-dot--latest' : null
       ].filter(Boolean).join(' ');
 
@@ -2323,10 +2330,15 @@
           className: 'cascade-dot-connector' + (!ev.positive ? ' cascade-dot-connector--warning' : '')
         }));
       }
+
+      var w = ev.weight || 0;
+      var wStr = (w > 0 ? '+' : '') + w.toFixed(1);
+
       children.push(React.createElement('div', {
         key: 'dot-' + i,
         className: dotClass,
-        title: (ev.time ? formatTimeShort(ev.time) + ' · ' : '') + ev.label
+        style: { background: getEventColor(w) },
+        title: (ev.time ? formatTimeShort(ev.time) + ' · ' : '') + ev.label + ' (' + wStr + ')'
       }));
     }
 
@@ -2774,34 +2786,14 @@
     var actualPercent = Math.max(0, Math.min(100, crsData.crs * 100));
     var crsPercent = isSettled ? actualPercent : (50 + loadingOffset); // Сначала "ищет", потом реальное значение
 
-    // --- Динамический цвет для левой (хорошей) линии ---
-    // Чем больше crsPercent, тем зеленее (и ярче) начало линии слева
-    var tGreen = crsPercent / 100;
-    var alphaLeft = (0.1 + tGreen * 0.9).toFixed(2); // от 0.1 до 1.0
-    var goodGrad = 'linear-gradient(90deg, rgba(52, 211, 153, ' + alphaLeft + '), rgb(16, 185, 129))';
+    // --- Цвет левой линии: фиксированный зелёный градиент (светлее у центра → насыщеннее у края) ---
+    var goodGrad = 'linear-gradient(90deg, #10b981, #34d399)';
+    var goodShadow = '0 0 4px rgba(52, 211, 153, 0.8), 0 0 10px rgba(16, 185, 129, 0.6), 0 0 16px rgba(5, 150, 105, 0.4)';
 
-    // Тень тоже усиливается с ростом CRS
-    var shadowAlpha1 = (0.2 + tGreen * 0.6).toFixed(2);
-    var shadowAlpha2 = (0.1 + tGreen * 0.5).toFixed(2);
-    var shadowAlpha3 = (0.0 + tGreen * 0.4).toFixed(2);
-    var goodShadow = '0 0 4px rgba(52, 211, 153, ' + shadowAlpha1 + '), 0 0 10px rgba(16, 185, 129, ' + shadowAlpha2 + '), 0 0 16px rgba(5, 150, 105, ' + shadowAlpha3 + ')';
-
-    // --- Динамический цвет для правой (плохой) линии ---
-    // 0-50% -> Красный, 50-100% -> плавно переходит в Желтый
-    var tBad = Math.max(0, (crsPercent - 50) / 50); // 0 при <=50%, 1 при 100%
-
-    // Red: rgb(248, 113, 113) to rgb(220, 38, 38)
-    // Yellow: rgb(253, 224, 71) to rgb(245, 158, 11)
-    var r1 = Math.round(248 + tBad * (253 - 248));
-    var g1 = Math.round(113 + tBad * (224 - 113));
-    var b1 = Math.round(113 + tBad * (71 - 113));
-
-    var r2 = Math.round(220 + tBad * (245 - 220));
-    var g2 = Math.round(38 + tBad * (158 - 38));
-    var b2 = Math.round(38 + tBad * (11 - 38));
-
-    var badGrad = 'linear-gradient(90deg, rgb(' + r1 + ',' + g1 + ',' + b1 + '), rgb(' + r2 + ',' + g2 + ',' + b2 + '))';
-    var badShadow = '0 0 4px rgba(' + r1 + ',' + g1 + ',' + b1 + ', 0.8), 0 0 10px rgba(' + r2 + ',' + g2 + ',' + b2 + ', 0.6), 0 0 16px rgba(' + r2 + ',' + g2 + ',' + b2 + ', 0.4)';
+    // --- Цвет правой линии: фиксированный градиент жёлтый → оранжевый → красный ---
+    // Цвет определяется позицией на шкале, а не значением CRS — не меняется при движении точки
+    var badGrad = 'linear-gradient(90deg, #dc2626, #f97316, #fde047)';
+    var badShadow = '0 0 4px rgba(253, 224, 71, 0.7), 0 0 10px rgba(249, 115, 22, 0.6), 0 0 16px rgba(220, 38, 38, 0.4)';
 
     return React.createElement(
       'div',
