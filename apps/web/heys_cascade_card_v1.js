@@ -2504,8 +2504,8 @@
           className: 'cascade-card__hint cascade-card__hint--training'
         }, '⏰ Окно после тренировки — выбери качество, а не количество'),
 
-        // Цепочка точек (свёрнутое)
-        !expanded && React.createElement(ChainDots, { events: events }),
+        // Цепочка точек (всегда показываем в шапке)
+        React.createElement(ChainDots, { events: events }),
 
         // Прогресс-бар
         React.createElement('div', { className: 'cascade-card__progress-track' },
@@ -2523,7 +2523,6 @@
 
       // ── Развёрнутый контент ──────────────────────────
       expanded && React.createElement('div', { className: 'cascade-card__body' },
-        React.createElement(ChainDots, { events: events }),
         React.createElement(CascadeTimeline, {
           events: events,
           historicalDays: historicalDays,
