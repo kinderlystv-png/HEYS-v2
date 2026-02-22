@@ -536,6 +536,7 @@ module.exports.handler = async function (event, context) {
     // Здесь собираем данные с DISTINCT ON (k) по updated_at.
     if (fnName === 'get_client_data_by_session') {
       const sessionToken = params.p_session_token;
+      const since = params.p_since || null; // 🚀 Delta Sync: ISO timestamp
       if (!sessionToken) {
         client.release();
         return {
@@ -566,8 +567,11 @@ module.exports.handler = async function (event, context) {
       }
 
       // 2) Собираем KV с защитой от дублей
-      // COALESCE: если decrypt_health_data вернёт NULL (неверный ключ / corrupt data)
-      // → фолбечим на plain-text колонку v (данные могут быть в обоих колонках)
+      // 🚀 Delta Sync: если передан p_since — возвращаем только обновлённые ключи
+      const queryParams = [clientId];
+      const sinceFilter = since ? `and updated_at > $2::timestamptz` : '';
+      if (since) queryParams.push(since);
+
       const dataRes = await client.query(
         `select jsonb_object_agg(
             k,
@@ -581,15 +585,18 @@ module.exports.handler = async function (event, context) {
            select distinct on (k)
              k, v, v_encrypted, key_version, updated_at
            from client_kv_store
-           where client_id = $1
+           where client_id = $1 ${sinceFilter}
            order by k, updated_at desc nulls last
          ) t`,
-        [clientId]
+        queryParams
       );
 
       const payload = dataRes.rows?.[0]?.payload || {};
+      const isDelta = !!since;
 
       client.release();
+
+      console.info(`[RPC] get_client_data_by_session: ${Object.keys(payload).length} keys${isDelta ? ' (delta since ' + since + ')' : ' (full)'}`);
 
       return {
         statusCode: 200,
@@ -597,7 +604,8 @@ module.exports.handler = async function (event, context) {
         body: JSON.stringify({
           success: true,
           client_id: clientId,
-          data: payload
+          data: payload,
+          delta: isDelta
         })
       };
     }
@@ -632,7 +640,8 @@ module.exports.handler = async function (event, context) {
         'p_key': '::text'
       },
       'get_client_data_by_session': {
-        'p_session_token': '::text'
+        'p_session_token': '::text',
+        'p_since': '::text'  // 🚀 Delta Sync: optional ISO timestamp
       },
       // 🔐 EWS Weekly Snapshots (Wave 3.1 cloud sync)
       'upsert_weekly_snapshot_by_session': {

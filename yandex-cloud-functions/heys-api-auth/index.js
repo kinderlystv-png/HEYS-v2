@@ -530,7 +530,8 @@ async function handleGetClientKv(curatorId, clientId, options = {}) {
 
     const prefix = options.prefix ? String(options.prefix) : null;
     const keys = Array.isArray(options.keys) ? options.keys : null;
-    console.info('[GetClientKv] ℹ️ filter:', { prefix, keys });
+    const since = options.since || null; // 🚀 Delta Sync: ISO timestamp
+    console.info('[GetClientKv] ℹ️ filter:', { prefix, keys, since });
 
     let query = `
       SELECT k,
@@ -545,17 +546,28 @@ async function handleGetClientKv(curatorId, clientId, options = {}) {
     `;
 
     const params = [clientId];
+    let paramIdx = 2;
 
     if (keys && keys.length > 0) {
-      query += ` AND k = ANY($2::text[])`;
+      query += ` AND k = ANY($${paramIdx}::text[])`;
       params.push(keys);
+      paramIdx++;
     } else if (prefix) {
-      query += ` AND k LIKE $2`;
+      query += ` AND k LIKE $${paramIdx}`;
       params.push(`${prefix}%`);
+      paramIdx++;
+    }
+
+    // 🚀 Delta Sync: фильтр по updated_at > since
+    if (since) {
+      query += ` AND updated_at > $${paramIdx}::timestamptz`;
+      params.push(since);
+      paramIdx++;
     }
 
     const result = await client.query(query, params);
-    console.info('[GetClientKv] ℹ️ result rows:', result.rows.length);
+    const isDelta = !!since;
+    console.info(`[GetClientKv] ℹ️ result rows: ${result.rows.length}${isDelta ? ' (delta since ' + since + ')' : ' (full)'}`);
 
     // Проверяем что v не null/пустой
     const sample = result.rows.slice(0, 3).map(r => ({ k: r.k, hasV: r.v != null, vType: typeof r.v }));
@@ -774,8 +786,9 @@ module.exports.handler = async function (event, context) {
             const keysFromQuery = qp.keys ? String(qp.keys).split(',').map((k) => k.trim()).filter(Boolean) : null;
             const keysFromBody = Array.isArray(body?.keys) ? body.keys : null;
             const prefix = body?.prefix || qp.prefix || null;
+            const since = body?.since || qp.since || null; // 🚀 Delta Sync
             const keys = keysFromBody || keysFromQuery;
-            result = await handleGetClientKv(curatorId, resourceId, { keys, prefix });
+            result = await handleGetClientKv(curatorId, resourceId, { keys, prefix, since });
             break;
           }
 

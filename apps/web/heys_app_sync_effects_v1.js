@@ -244,6 +244,13 @@
 
         React.useEffect(() => {
             if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+            // 🚀 PERF v2.5: Don't re-upload products that were just downloaded from cloud
+            // After sync, React state updates → this effect fires → 405KB upload back to cloud
+            // Grace period check: skip if sync completed within last 10 seconds
+            const cloud = window.HEYS?.cloud;
+            if (cloud?._syncCompletedAt && (Date.now() - cloud._syncCompletedAt) < 10000) {
+                return;
+            }
             saveTimerRef.current = setTimeout(() => {
                 try {
                     window.HEYS.saveClientKey('heys_products', products);

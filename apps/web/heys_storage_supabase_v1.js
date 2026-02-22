@@ -9,6 +9,10 @@
 ; (function (global) {
   (global.console || console).info('[HEYS.sinhron] 🚀 Storage v64 загружен — защита от null dayv2 активна');
   const HEYS = global.HEYS = global.HEYS || {};
+
+  // 🆕 Heartbeat для watchdog — storage загружен
+  if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
+
   const cloud = HEYS.cloud = HEYS.cloud || {};
   const DEV = global.DEV || {};
   const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
@@ -193,6 +197,7 @@
   // 🚨 Флаг блокировки сохранения до завершения первого sync
   let initialSyncCompleted = false;
   let failsafeTimerId = null;
+  let _syncEverStarted = false; // 🔄 v5: true после первого вызова bootstrapClientSync
   cloud.isInitialSyncCompleted = function () { return initialSyncCompleted; };
 
   // 🔧 Debug getters (для консоли) — только если ещё не определены
@@ -346,15 +351,25 @@
    * @returns {Promise<{ success?: boolean, authRequired?: boolean, error?: string }>}
    */
   let _syncInFlight = null; // { clientId, promise }
+  let _syncLastCompleted = {}; // 🚀 PERF: { clientId: timestamp } — cooldown after sync
 
   cloud.syncClient = async function (clientId, options = {}) {
-    logCritical('[syncClient] START clientId:', clientId?.slice(0, 8), 'user:', !!user, 'isPinAuth:', _rpcOnlyMode && _pinAuthClientId === clientId);
-
     // Deduplication: если sync для этого же клиента уже идёт — вернём тот же Promise
     if (_syncInFlight && _syncInFlight.clientId === clientId && !options.force) {
       log('🔄 [SYNC] Already in flight for', clientId.slice(0, 8) + '..., reusing promise');
       return _syncInFlight.promise;
     }
+
+    // 🚀 PERF: Cooldown — skip sync if completed < 5s ago (unless force)
+    if (!options.force && _syncLastCompleted[clientId]) {
+      const elapsed = Date.now() - _syncLastCompleted[clientId];
+      if (elapsed < 5000) {
+        console.info('[HEYS.sync] ⏳ syncClient cooldown: ' + Math.round(elapsed) + 'ms since last sync, skipping');
+        return { success: true, cached: true };
+      }
+    }
+
+    logCritical('[syncClient] START clientId:', clientId?.slice(0, 8), 'user:', !!user, 'isPinAuth:', _rpcOnlyMode && _pinAuthClientId === clientId);
 
     const isPinAuth = _rpcOnlyMode && _pinAuthClientId === clientId;
 
@@ -398,6 +413,8 @@
         if (_syncInFlight && _syncInFlight.clientId === clientId) {
           _syncInFlight = null;
         }
+        // 🚀 PERF: Record completion time for cooldown
+        _syncLastCompleted[clientId] = Date.now();
       }
     })();
 
@@ -452,16 +469,21 @@
   sanitizeStoredAuthToken__BOOT();
 
   // 🔄 FAILSAFE: Если sync не завершился за N секунд — разрешаем сохранения
-  // На localhost: 10 сек (быстрый dev режим)
+  // На localhost: 30 сек (throttled network may need more time)
   // В production: 45 сек (пользователю нужно время на ввод логина/пароля)
   const isLocalhostDev = typeof window !== 'undefined' &&
     (window.location?.hostname === 'localhost' || window.location?.hostname === '127.0.0.1');
-  const FAILSAFE_TIMEOUT_MS = isLocalhostDev ? 10000 : 45000;
+  const FAILSAFE_TIMEOUT_MS = isLocalhostDev ? 30000 : 45000;
 
   function startFailsafeTimer() {
     if (failsafeTimerId) clearTimeout(failsafeTimerId);
     failsafeTimerId = setTimeout(() => {
       if (!initialSyncCompleted) {
+        // 🔄 v5: Не стреляем если sync ещё не начинался (скрипты грузятся на медленной сети)
+        if (!_syncEverStarted) {
+          logCritical('⏳ [FAILSAFE] Timer fired but sync not started yet (scripts still loading) — deferring');
+          return;
+        }
         logCritical(`⚠️ [FAILSAFE] Sync timeout (${FAILSAFE_TIMEOUT_MS / 1000}s) — enabling offline mode`);
         initialSyncCompleted = true;
       }
@@ -2411,6 +2433,7 @@
           status = CONNECTION_STATUS.SYNC;
           logCritical('🔄 Сессия восстановлена:', user.email || user.id);
           logCritical('[AUTH] ✅ user установлен из restore:', user?.email, '| user:', !!user);
+          window.__heysPerfMark && window.__heysPerfMark('Auth session restored');
 
           // 🔐 v=35 FIX: После миграции на Yandex API — ВКЛЮЧАЕМ RPC режим!
           // Supabase SDK удалён, все операции через REST API
@@ -2436,15 +2459,19 @@
             logCritical('[restoreSession] setTimeout fired, clientId:', clientId ? clientId.slice(0, 8) + '...' : 'NULL');
             if (clientId) {
               logCritical('🔄 Запускаем bootstrap sync для клиента:', clientId.substring(0, 8) + '...');
+              window.__heysPerfMark && window.__heysPerfMark('Bootstrap sync started');
               cloud.syncClient(clientId).then(result => {
                 const errorText = result?.error || (result?.success === false ? 'unknown_error' : null);
                 if (errorText) {
                   logCritical('⚠️ Bootstrap sync failed:', errorText);
+                  window.__heysPerfMark && window.__heysPerfMark('Bootstrap sync FAILED: ' + errorText);
                 } else {
                   logCritical('✅ Bootstrap sync завершён');
+                  window.__heysPerfMark && window.__heysPerfMark('Bootstrap sync done');
                 }
               }).catch(e => {
                 logCritical('⚠️ Bootstrap sync error:', e?.message || e);
+                window.__heysPerfMark && window.__heysPerfMark('Bootstrap sync ERROR');
               });
             }
           }, 100);
@@ -3308,8 +3335,16 @@
         window.dispatchEvent(new CustomEvent('heysSyncStarting', { detail: { clientId } }));
       }
 
+      // 🚀 Delta Sync: если есть last_sync_ts — загружаем только изменения
+      const lastSyncKey = `heys_${clientId}_last_sync_ts`;
+      const lastSyncTs = ls.getItem(lastSyncKey);
+      const since = (lastSyncTs && !options?.force) ? lastSyncTs : null;
+      if (since) {
+        logCritical(`🚀 [DELTA SYNC] Using delta mode since ${since}`);
+      }
+
       // Вызываем Yandex REST API для получения данных (вместо Supabase RPC)
-      const { data, error } = await YandexAPI.getAllKV(clientId);
+      const { data, error, delta: isDelta } = await YandexAPI.getAllKV(clientId, { since });
 
       if (error) {
         logCritical(`❌ Ошибка загрузки: ${error}`);
@@ -3460,7 +3495,13 @@
 
       logCritical(`✅ Загружено ${loadedCount} ключей для клиента ${clientId.slice(0, 8)}`);
       const syncDuration = Math.round(performance.now() - syncStartTime);
-      logCritical(`✅ [SYNC DONE] client=${clientId.slice(0, 8)} keys=${loadedCount} ms=${syncDuration} via=rpc`);
+      logCritical(`✅ [SYNC DONE] client=${clientId.slice(0, 8)} keys=${loadedCount} ms=${syncDuration} via=rpc${isDelta ? ' (delta)' : ' (full)'}`);
+      window.__heysPerfMark && window.__heysPerfMark(`Sync done: ${loadedCount} keys in ${syncDuration}ms${isDelta ? ' (delta)' : ''}`);
+
+      // 🚀 Delta Sync: сохраняем timestamp для следующего delta sync
+      try {
+        ls.setItem(`heys_${clientId}_last_sync_ts`, new Date().toISOString());
+      } catch (_) { }
 
       // Уведомляем UI о завершении
       if (typeof window !== 'undefined' && window.dispatchEvent) {
@@ -3515,7 +3556,39 @@
 
       // 🔧 Для очень больших данных (>500KB) логируем и предупреждаем
       if (jsonSize > 500000) {
-        logCritical(`🚨 [YANDEX SAVE] VERY LARGE payload: ${jsonSizeKB}KB — may timeout!`);
+        logCritical(`🚨 [YANDEX SAVE] VERY LARGE payload: ${jsonSizeKB}KB — splitting into chunks`);
+      }
+
+      // 🚀 PERF: Split large payloads into chunks to prevent timeouts
+      const CHUNK_MAX_BYTES = 100 * 1024; // 100KB per chunk
+      if (jsonSize > CHUNK_MAX_BYTES) {
+        const chunks = [];
+        let currentChunk = [];
+        let currentSize = 2; // account for []
+        for (const item of yandexItems) {
+          const itemSize = JSON.stringify(item).length + 1; // +1 for comma
+          if (currentSize + itemSize > CHUNK_MAX_BYTES && currentChunk.length > 0) {
+            chunks.push(currentChunk);
+            currentChunk = [];
+            currentSize = 2;
+          }
+          currentChunk.push(item);
+          currentSize += itemSize;
+        }
+        if (currentChunk.length > 0) chunks.push(currentChunk);
+
+        logCritical(`📦 [YANDEX SAVE] Split ${jsonSizeKB}KB payload into ${chunks.length} chunks`);
+        let totalSaved = 0;
+        for (let ci = 0; ci < chunks.length; ci++) {
+          const chunkResult = await YandexAPI.batchSaveKV(clientId, chunks[ci]);
+          if (!chunkResult.success) {
+            logCritical(`❌ [YANDEX SAVE] Chunk ${ci + 1}/${chunks.length} failed: ${chunkResult.error}`);
+            return { success: false, error: chunkResult.error, saved: totalSaved };
+          }
+          totalSaved += chunkResult.saved || chunks[ci].length;
+        }
+        logCritical(`☁️ [YANDEX SAVE] Chunked save complete: ${totalSaved} records (${chunks.length} chunks, ${jsonSizeKB}KB) for ${clientId.slice(0, 8)}`);
+        return { success: true, saved: totalSaved };
       }
 
       // 🆕 Используем YandexAPI.batchSaveKV вместо RPC
@@ -3655,15 +3728,26 @@
       return _syncInProgress;
     }
 
-    // 🔄 Отменяем длинный failsafe — sync начался, запускаем короткий (20 сек на сам sync)
+    // 🔄 v5: Отмечаем что sync начался (для failsafe логики)
+    _syncEverStarted = true;
+
+    // 🔄 v5: Smart failsafe reset — если failsafe стрельнул во время загрузки скриптов
+    // (до начала sync), то initialSyncCompleted = true ошибочно.
+    // Сбрасываем и запускаем новый таймер для реального sync
     cancelFailsafeTimer();
+    if (initialSyncCompleted && !cloud._lastClientSync) {
+      // FAILSAFE fired during script loading (before any sync completed) → reset
+      logCritical('🔄 [FAILSAFE] Resetting premature failsafe (fired before sync started)');
+      initialSyncCompleted = false;
+    }
+    // Всегда запускаем sync-specific failsafe (30 сек на сам sync)
     if (!initialSyncCompleted) {
       failsafeTimerId = setTimeout(() => {
         if (!initialSyncCompleted) {
-          logCritical('⚠️ [FAILSAFE] Sync timeout (20s) — enabling saves');
+          logCritical('⚠️ [FAILSAFE] Sync timeout (30s) — enabling saves');
           initialSyncCompleted = true;
         }
-      }, 20000);
+      }, 30000);
     }
 
     // КРИТИЧЕСКАЯ ПРОВЕРКА: синхронизировать только текущего клиента
@@ -3699,95 +3783,192 @@
     // Устанавливаем флаг что sync в процессе
     _syncInProgress = (async () => {
       try {
+        const ls = global.localStorage; // 🚀 used for delta sync ts and key processing
+
         // 🔄 Уведомляем UI что sync начинается (для показа скелетона)
         if (typeof window !== 'undefined' && window.dispatchEvent) {
           window.dispatchEvent(new CustomEvent('heysSyncStarting', { detail: { clientId: client_id } }));
         }
 
-        // 🛡️ КРИТИЧНО: Перед загрузкой из облака — СНАЧАЛА отправляем pending изменения!
-        // Иначе локальные изменения будут затёрты при скачивании старых данных с сервера
-        const pendingCount = cloud.getPendingCount?.() || 0;
-        if (pendingCount > 0 || _uploadInProgress) {
-          logCritical(`🔄 [SYNC] Flushing ${pendingCount} pending items (uploadInProgress: ${_uploadInProgress}) BEFORE download...`);
-          const flushed = await cloud.flushPendingQueue(8000);
-          if (!flushed) {
-            if (forceSync) {
-              logCritical('⚠️ [FORCE SYNC] Queue flush timeout — proceeding with extra guards');
-            } else {
-              logCritical('⚠️ [SYNC] Queue flush timeout — aborting download to avoid overwrite');
-              return;
+        // � PARALLEL: Запускаем загрузку shared products ПАРАЛЛЕЛЬНО с sync (не после)
+        // Они грузятся в фоне пока sync скачивает данные клиента
+        let _sharedProductsPromise = null;
+        const cachedSharedEarly = cloud.getCachedSharedProducts?.() || [];
+        if (!cloud._sharedProductsLoaded && cachedSharedEarly.length === 0) {
+          cloud._sharedProductsLoaded = true;
+          _sharedProductsPromise = cloud.getAllSharedProducts({ limit: 1000, excludeBlocklist: true })
+            .then(result => {
+              if (result.data && result.data.length > 0) {
+                logCritical(`📦 [SHARED PRODUCTS] Parallel pre-loaded ${result.data.length} products`);
+                window.__heysPerfMark && window.__heysPerfMark(`Shared products loaded: ${result.data.length}`);
+              }
+            })
+            .catch(e => console.warn('[SHARED PRODUCTS] Parallel pre-load error:', e));
+        }
+
+
+        // DELTA FAST-PATH v2: check last_sync_ts IMMEDIATELY, before any other work
+        // If exists - skip flush/cleanup/ensureClient/meta/PhaseA -> direct fetch
+        // Saves 1.5-5 seconds (all heavy pre-work deferred after fetch)
+        const lastSyncKey = `heys_${client_id}_last_sync_ts`;
+        const lastSyncTs = ls.getItem(lastSyncKey);
+        const isDeltaFastPath = !!lastSyncTs && !forceSync;
+        const now = Date.now(); // needed for _lastClientSync and cloud cleanup
+
+        if (isDeltaFastPath) {
+          logCritical(`[DELTA FAST-PATH] Direct fetch, skipping all pre-work, since ${lastSyncTs}`);
+          window.__heysPerfMark && window.__heysPerfMark('Delta fast-path: direct fetch');
+        }
+
+        // === PRE-WORK: flush + cleanup + ensureClient (skipped in delta fast-path) ===
+        if (!isDeltaFastPath) {
+          // �🛡️ КРИТИЧНО: Перед загрузкой из облака — СНАЧАЛА отправляем pending изменения!
+          // Иначе локальные изменения будут затёрты при скачивании старых данных с сервера
+          const pendingCount = cloud.getPendingCount?.() || 0;
+          if (pendingCount > 0 || _uploadInProgress) {
+            logCritical(`🔄 [SYNC] Flushing ${pendingCount} pending items (uploadInProgress: ${_uploadInProgress}) BEFORE download...`);
+            const flushed = await cloud.flushPendingQueue(30000); // 🔄 v5: 30s (was 8s — too short for throttled network)
+            if (!flushed) {
+              if (forceSync) {
+                logCritical('⚠️ [FORCE SYNC] Queue flush timeout — proceeding with extra guards');
+              } else {
+                logCritical('⚠️ [SYNC] Queue flush timeout — aborting download to avoid overwrite');
+                return;
+              }
             }
           }
-        }
 
-        // 🧹 Очистка невалидных продуктов перед синхронизацией (локальные)
-        cloud.cleanupProducts();
+          // 🧹 Очистка невалидных продуктов перед синхронизацией (локальные)
+          cloud.cleanupProducts();
 
-        // 🧹 Очистка невалидных продуктов в ОБЛАКЕ (с дедупликацией, не чаще раз в 5 минут)
-        const now = Date.now();
-        if (!cloud._lastCloudCleanup || (now - cloud._lastCloudCleanup) > 300000) {
-          cloud._lastCloudCleanup = now;
-          cloud.cleanupCloudProducts().catch(e => console.warn('[CLOUD CLEANUP] Error:', e));
-        }
+          // 🧹 Очистка невалидных продуктов в ОБЛАКЕ (с дедупликацией, не чаще раз в 5 минут)
+          if (!cloud._lastCloudCleanup || (now - cloud._lastCloudCleanup) > 300000) {
+            cloud._lastCloudCleanup = now;
+            cloud.cleanupCloudProducts().catch(e => console.warn('[CLOUD CLEANUP] Error:', e));
+          }
 
-        // Проверяем что клиент существует (без автосоздания)
-        const _exists = await cloud.ensureClient(client_id);
-        logCritical(`🔍 [SYNC DEBUG] ensureClient result: ${_exists}, client_id: ${client_id}`);
-        if (!_exists) {
-          log('client bootstrap skipped (no such client)', client_id);
-          return;
-        }
-
-        // Проверяем, действительно ли нужна синхронизация
-        // Сначала пробуем загрузить только метаданные для проверки
-        // YandexAPI имеет встроенный retry
-        const { data: metaData, error: metaError } = await YandexAPI.from('client_kv_store')
-          .select('k,updated_at')
-          .eq('client_id', client_id)
-          .order('updated_at', { ascending: false })
-          .limit(5);
-
-        logCritical(`🔍 [SYNC DEBUG] meta query result: rows=${metaData?.length}, error=${metaError?.message || 'none'}`);
-
-        if (metaError) {
-          // Graceful degradation для сетевых ошибок
-          if (metaError.isNetworkFailure) {
-            console.warn('[HEYS.cloud] 📴 clientSync: сеть недоступна, работаем с локальными данными');
-            cloud._lastClientSync = { clientId: client_id, ts: now };
-            // Помечаем sync как завершённый чтобы разблокировать сохранение
-            if (!initialSyncCompleted) {
-              initialSyncCompleted = true;
-              logCritical('✅ [OFFLINE] Sync пропущен (сеть), локальные данные активны');
-            }
+          // Проверяем что клиент существует (без автосоздания)
+          const _exists = await cloud.ensureClient(client_id);
+          logCritical(`🔍 [SYNC DEBUG] ensureClient result: ${_exists}, client_id: ${client_id}`);
+          if (!_exists) {
+            log('client bootstrap skipped (no such client)', client_id);
             return;
           }
-          err('client bootstrap meta check', metaError);
-          throw new Error('Sync meta check failed: ' + (metaError.message || metaError));
         }
 
-        // Проверяем, изменились ли данные с последней синхронизации
-        // 🔄 При force=true (pull-to-refresh) — пропускаем эту проверку
-        const lastSyncTime = cloud._lastClientSync?.ts || 0;
-        const hasUpdates = (metaData || []).some(row =>
-          new Date(row.updated_at).getTime() > lastSyncTime
-        );
+        if (!isDeltaFastPath) {
+          // === FULL SYNC PATH: meta check + Phase A (only when no last_sync_ts) ===
 
-        logCritical(`🔍 [SYNC DEBUG] hasUpdates=${hasUpdates}, forceSync=${forceSync}, lastSyncTime=${lastSyncTime}, lastClientId=${cloud._lastClientSync?.clientId}`);
+          // Проверяем, действительно ли нужна синхронизация
+          const { data: metaData, error: metaError } = await YandexAPI.from('client_kv_store')
+            .select('k,updated_at')
+            .eq('client_id', client_id)
+            .order('updated_at', { ascending: false })
+            .limit(5);
 
-        if (!forceSync && !hasUpdates && cloud._lastClientSync?.clientId === client_id) {
-          log('client bootstrap skipped (no updates)', client_id);
-          cloud._lastClientSync.ts = now; // Обновляем timestamp для throttling
-          return;
-        }
+          logCritical(`🔍 [SYNC DEBUG] meta query result: rows=${metaData?.length}, error=${metaError?.message || 'none'}`);
 
-        if (forceSync) {
-          log('🔄 [FORCE SYNC] Pull-to-refresh — загружаем данные принудительно');
-        }
+          if (metaError) {
+            // Graceful degradation для сетевых ошибок
+            if (metaError.isNetworkFailure) {
+              console.warn('[HEYS.cloud] 📴 clientSync: сеть недоступна, работаем с локальными данными');
+              cloud._lastClientSync = { clientId: client_id, ts: now };
+              // Помечаем sync как завершённый чтобы разблокировать сохранение
+              if (!initialSyncCompleted) {
+                initialSyncCompleted = true;
+                logCritical('✅ [OFFLINE] Sync пропущен (сеть), локальные данные активны');
+              }
+              return;
+            }
+            err('client bootstrap meta check', metaError);
+            throw new Error('Sync meta check failed: ' + (metaError.message || metaError));
+          }
+
+          // Проверяем, изменились ли данные с последней синхронизации
+          // 🔄 При force=true (pull-to-refresh) — пропускаем эту проверку
+          const lastSyncTime = cloud._lastClientSync?.ts || 0;
+          const hasUpdates = (metaData || []).some(row =>
+            new Date(row.updated_at).getTime() > lastSyncTime
+          );
+
+          logCritical(`🔍 [SYNC DEBUG] hasUpdates=${hasUpdates}, forceSync=${forceSync}, lastSyncTime=${lastSyncTime}, lastClientId=${cloud._lastClientSync?.clientId}`);
+
+          if (!forceSync && !hasUpdates && cloud._lastClientSync?.clientId === client_id) {
+            log('client bootstrap skipped (no updates)', client_id);
+            cloud._lastClientSync.ts = now; // Обновляем timestamp для throttling
+            return;
+          }
+
+          if (forceSync) {
+            log('🔄 [FORCE SYNC] Pull-to-refresh — загружаем данные принудительно');
+          }
+
+          // 🚀 ФАЗА A: Быстрая загрузка 5 критичных ключей — разблокируем UI не дожидаясь полного sync
+          // Выполняется только при первой синхронизации (initialSyncCompleted === false)
+          if (!initialSyncCompleted) {
+            try {
+              const today = new Date().toISOString().slice(0, 10);
+              const criticalBaseKeys = [
+                'heys_profile', 'heys_norms', 'heys_products',
+                'heys_hr_zones', `heys_dayv2_${today}`
+              ];
+              const criticalScopedKeys = criticalBaseKeys.map(bk => `heys_${client_id}_${bk.slice('heys_'.length)}`);
+              const allCriticalKeys = [...criticalBaseKeys, ...criticalScopedKeys];
+
+              const { data: phaseAData, error: phaseAError } = await YandexAPI.from('client_kv_store')
+                .select('k,v,updated_at')
+                .eq('client_id', client_id)
+                .in('k', allCriticalKeys);
+
+              if (!phaseAError && phaseAData && phaseAData.length > 0) {
+                muteMirror = true;
+                const lsPhaseA = global.localStorage;
+                phaseAData.forEach(row => {
+                  if (row.v == null) return;
+                  let pKey = row.k;
+                  if (pKey.includes(client_id)) {
+                    pKey = pKey.replace(`heys_${client_id}_`, 'heys_');
+                  }
+                  if (pKey.startsWith('heys_') && !pKey.includes(client_id)) {
+                    pKey = 'heys_' + client_id + '_' + pKey.substring('heys_'.length);
+                  }
+                  try { lsPhaseA.setItem(pKey, JSON.stringify(row.v)); } catch (_) { }
+                });
+                muteMirror = false;
+
+                // 🔓 Разблокируем UI — критичные данные готовы
+                initialSyncCompleted = true;
+                cloud._syncCompletedAt = Date.now(); // ⏱️ Grace period: не пере-загружаем products
+                cloud._productsFingerprint = null; // 🔄 Delta-sync: сбрасываем чтобы первый реальный изменение прошло
+                cancelFailsafeTimer();
+                if (global.HEYS?.store?.flushMemory) global.HEYS.store.flushMemory();
+                if (typeof window !== 'undefined' && window.dispatchEvent) {
+                  window.dispatchEvent(new CustomEvent('heysSyncCompleted', {
+                    detail: { clientId: client_id, phaseA: true }
+                  }));
+                }
+                console.info(`[HEYS.sync] ✅ Фаза A: ${phaseAData.length} критичных ключей загружено, UI разблокирован`);
+              }
+            } catch (phaseAErr) {
+              muteMirror = false;
+              console.warn('[HEYS.sync] ⚠️ Фаза A не удалась, продолжаем полный sync:', phaseAErr?.message || phaseAErr);
+            }
+          }
+        } // end if (!isDeltaFastPath) — full sync path
 
         // Теперь загружаем полные данные только если есть обновления
+        // 🚀 Delta Sync: если есть last_sync_ts — загружаем только изменения
+        const deltaSince = (lastSyncTs && !forceSync) ? lastSyncTs : null;
+        const isDeltaSync = !!deltaSince;
+
+        if (isDeltaSync) {
+          logCritical(`🚀 [DELTA SYNC] Loading only changes since ${deltaSince}`);
+        }
+
         // 📦 PAGINATED FETCH — YC API Gateway limit ~3.5MB per response
         // При 530+ записях один запрос превышает лимит → 502 Bad Gateway
         // Загружаем порциями по 400 записей (безопасный порог ~2.8MB)
+        // 🚀 Delta Sync: при наличии since — фильтруем по updated_at на сервере
         log('🔄 [CLIENT_SYNC] Loading data for client (paginated):', client_id);
         const PAGE_SIZE = 400;
         let allData = [];
@@ -3795,9 +3976,15 @@
         let fetchError = null;
 
         while (true) {
+          const filters = { 'eq.client_id': client_id };
+          // 🚀 Delta: добавляем фильтр updated_at > since
+          if (deltaSince) {
+            filters['gt.updated_at'] = deltaSince;
+          }
+
           const { data: pageData, error: pageError } = await YandexAPI.rest('client_kv_store', {
             select: 'k,v,updated_at',
-            filters: { 'eq.client_id': client_id },
+            filters,
             limit: PAGE_SIZE,
             offset: pageOffset
           });
@@ -3819,7 +4006,8 @@
         const data = allData;
         const error = fetchError;
 
-        logCritical(`🔍 [SYNC DEBUG] main data query: rows=${data?.length}, error=${error?.message || 'none'}, isNetworkFailure=${error?.isNetworkFailure}`);
+        logCritical(`🔍 [SYNC DEBUG] main data query: rows=${data?.length}, error=${error?.message || 'none'}, isNetworkFailure=${error?.isNetworkFailure}${isDeltaSync ? ' (DELTA)' : ' (FULL)'}`);
+        window.__heysPerfMark && window.__heysPerfMark(`Data fetched: ${data?.length || 0} keys${isDeltaSync ? ' (delta)' : ' (full)'}`);
 
         if (error) {
           // Graceful degradation
@@ -3850,8 +4038,6 @@
 
         // ⏱️ TIMING: засекаем время обработки
         const syncStartTime = performance.now();
-
-        const ls = global.localStorage;
 
         // ── [HEYS.sinhron] ДИАГНОСТИКА dayv2 ─────────────────
         const cloudDayKeys = (data || []).filter(r => r.k && r.k.includes('dayv2_')).map(r => {
@@ -4019,6 +4205,8 @@
         // 🆕 v5.0: Snapshot of products BEFORE applying cloud-sync.
         // Used by UI to cascade historical MealItems updates correctly.
         let previousProducts = null;
+        // 🚀 PERF: Collect dayv2 writes and dispatch ONE event after loop
+        const batchedDayV2Writes = [];
 
         // 🔄 ФАЗ 2: ОБРАБОТКА дедуплицированных ключей
         deduped.forEach(({ scopedKey, row }) => {
@@ -4943,31 +5131,15 @@
               // 🧷 Backup перед возможной перезаписью dayv2
               if (key.includes('dayv2_')) {
                 backupDayV2BeforeOverwrite(key, valueToSave, 'cloud-sync');
-                window.console.info('[HEYS.sinhron] ✅ WRITE ' + key + ' meals=' + (valueToSave?.meals?.length || 0) + ' updatedAt=' + (valueToSave?.updatedAt || 0));
-              }
-              ls.setItem(key, JSON.stringify(valueToSave));
-              log(`  ✅ Saved to localStorage: ${key}`);
-
-              // 🔧 v59 FIX: Инвалидировать memory cache в Store.get для dayv2
-              // Иначе при смене даты UI получает кэшированное пустое значение
-              if (key.includes('dayv2_')) {
-                if (global.HEYS?.store?.invalidate) {
-                  global.HEYS.store.invalidate(key);
-                  log(`  🗑️ [CACHE] Invalidated memory cache for: ${key}`);
-                } else {
-                  logCritical(`  ⚠️ [CACHE] store.invalidate NOT available for: ${key}`);
-                }
+                // 🚀 PERF: Defer dayv2 write to batch — prevents N individual re-renders
+                batchedDayV2Writes.push({ key, valueToSave });
+              } else {
+                ls.setItem(key, JSON.stringify(valueToSave));
+                log(`  ✅ Saved to localStorage: ${key}`);
               }
             }
 
-            // 🔔 Dispatch event for dayv2 updates (для pull-to-refresh и UI refresh)
-            if (key.includes('dayv2_')) {
-              const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
-              if (dateMatch) {
-                window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: dateMatch[1], source: 'cloud-sync' } }));
-                log(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (cloud-sync)`);
-              }
-            }
+            // � PERF: dayv2 event dispatch moved to batch block after forEach
 
             // 🧩 Dispatch event for widget_layout updates (для виджетов)
             if (key.includes('widget_layout')) {
@@ -4982,24 +5154,30 @@
 
             // Уведомляем приложение об обновлении продуктов — после цикла (батч)
 
-            // Уведомляем UI об обновлении данных дня (когда облачные данные новее)
-            if (key.includes('dayv2_') && row.v) {
-              const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
-              if (dateMatch) {
-                window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: dateMatch[1], source: 'cloud' } }));
-                // 🔇 PERF: Отключено
-                // logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (cloud sync)`);
-              }
-
-              // 🔇 PERF: Отключено — слишком много логов
-              // 🔍 Диагностика: логируем загрузку данных дня с шагами
-              // const steps = row.v.steps || 0;
-              // if (steps > 0) {
-              //   logCritical(`📅 [DAY SYNC] Loaded day ${key} with steps: ${steps}`);
-              // }
-            }
+            // 🚀 PERF: duplicate dayv2 event dispatch removed (consolidated in batch block)
           } catch (e) { }
         });
+
+        // 🚀 PERF: Batch process all dayv2 writes at once — prevents skeleton flicker
+        if (batchedDayV2Writes.length > 0) {
+          const updatedDates = [];
+          batchedDayV2Writes.forEach(({ key, valueToSave }) => {
+            ls.setItem(key, JSON.stringify(valueToSave));
+            if (global.HEYS?.store?.invalidate) {
+              global.HEYS.store.invalidate(key);
+            }
+            const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+            if (dateMatch) updatedDates.push(dateMatch[1]);
+          });
+          window.console.info('[HEYS.sinhron] ✅ BATCH WRITE ' + batchedDayV2Writes.length + ' dayv2 records: ' + updatedDates.join(', '));
+          // 🔔 Dispatch ONE batched event instead of N individual events
+          if (updatedDates.length > 0) {
+            window.dispatchEvent(new CustomEvent('heys:day-updated', {
+              detail: { dates: updatedDates, date: updatedDates[updatedDates.length - 1], source: 'cloud-sync', batch: true }
+            }));
+            log('📅 [EVENT] heys:day-updated BATCH dispatched for ' + updatedDates.length + ' dates (cloud-sync)');
+          }
+        }
 
         if (productsUpdated && Array.isArray(latestProducts)) {
           if (typeof window !== 'undefined' && window.dispatchEvent) {
@@ -5119,7 +5297,16 @@
 
         // 🚨 Разрешаем сохранение после первого sync
         initialSyncCompleted = true;
+        cloud._syncCompletedAt = Date.now(); // ⏱️ Grace period: 10 сек без re-upload products
+        cloud._productsFingerprint = null; // 🔄 Delta-sync: сбрасываем чтобы первый реальный изменение прошло
         cancelFailsafeTimer(); // Отменяем failsafe — sync успешен
+
+        // 🧹 Deferred cleanup: при delta fast-path cleanup был пропущен — делаем после sync
+        if (isDeltaFastPath) {
+          setTimeout(() => {
+            try { cloud.cleanupProducts(); } catch (_) { }
+          }, 2000);
+        }
 
         // 🔄 КРИТИЧНО: Инвалидируем memory-кэш Store после прямой записи в localStorage
         // Иначе lsGet() вернёт устаревшие данные из кэша при pull-to-refresh
@@ -5141,27 +5328,11 @@
           }, 2000); // Задержка 2 сек чтобы не блокировать UI
         }
 
-        // 🔧 v3.19.1: Загружаем shared products в фоне для orphan check
-        // Это нужно чтобы orphan-трекер мог найти продукты из общей базы
-        // Проверяем кэш — если уже загружены (другим компонентом), не грузим повторно
-        const cachedShared = cloud.getCachedSharedProducts?.() || [];
-        if (!cloud._sharedProductsLoaded && cachedShared.length === 0) {
-          cloud._sharedProductsLoaded = true;
-          setTimeout(() => {
-            // Двойная проверка — за 1.5 сек кэш мог заполниться
-            const stillEmpty = (cloud.getCachedSharedProducts?.() || []).length === 0;
-            if (!stillEmpty) {
-              logCritical(`📦 [SHARED PRODUCTS] Already cached, skip pre-load`);
-              return;
-            }
-            cloud.getAllSharedProducts({ limit: 1000, excludeBlocklist: true }).then(result => {
-              if (result.data && result.data.length > 0) {
-                logCritical(`📦 [SHARED PRODUCTS] Pre-loaded ${result.data.length} products for orphan check`);
-              }
-            }).catch(e => {
-              console.warn('[SHARED PRODUCTS] Pre-load error:', e);
-            });
-          }, 1500); // Задержка 1.5 сек — после основных данных
+        // � v6: Shared products теперь грузятся ПАРАЛЛЕЛЬНО с sync (см. начало _syncInProgress)
+        // Здесь просто ждём если ещё не закончились
+        if (_sharedProductsPromise) {
+          await _sharedProductsPromise;
+          _sharedProductsPromise = null;
         }
 
         // 🆕 v4.8.0: Синхронизация игнор-листа удалённых продуктов с облаком
@@ -5210,6 +5381,11 @@
             window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id } }));
           }, 300);
         }
+
+        // 🚀 Delta Sync: сохраняем timestamp для следующего delta sync
+        try {
+          ls.setItem(`heys_${client_id}_last_sync_ts`, new Date().toISOString());
+        } catch (_) { }
       } catch (e) {
         // Критический лог ошибки синхронизации (всегда видим)
         logCritical('❌ Ошибка синхронизации:', e.message || e);
@@ -5437,6 +5613,17 @@
       return;
     }
 
+    // 🚀 PERF: Serialize uploads — prevent concurrent network congestion & timeouts
+    if (_uploadInProgress) {
+      clientUpsertQueue.push(...batch);
+      savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+      notifyPendingChange();
+      console.info('[HEYS.sync] ⏳ Upload serialized: ' + batch.length + ' items re-queued (in-flight: ' + _uploadInFlightCount + ')');
+      // Schedule retry after current upload finishes
+      scheduleClientPush();
+      return;
+    }
+
     // �️ v61 FIX: Исключаем heys_game из обычного sync
     // Gamification модуль синхронизирует свои данные сам с проверкой XP
     const gamificationKeys = ['heys_game', 'heys_gamification', 'heys_sound_settings'];
@@ -5562,6 +5749,10 @@
         // 🔄 Сбрасываем флаг и уведомляем о завершении
         _uploadInProgress = false;
         _uploadInFlightCount = 0;
+        // 🚀 PERF: Drain remaining queued items (from serialized uploads)
+        if (clientUpsertQueue.length > 0) {
+          scheduleClientPush();
+        }
         notifySyncCompletedIfDrained();
         return;
       }
@@ -5686,6 +5877,11 @@
     // 🔄 Сбрасываем флаг "в полёте" ПЕРЕД уведомлением о завершении
     _uploadInProgress = false;
     _uploadInFlightCount = 0;
+
+    // 🚀 PERF: Drain remaining queued items (from serialized uploads)
+    if (clientUpsertQueue.length > 0) {
+      scheduleClientPush();
+    }
 
     notifySyncCompletedIfDrained();
   }
@@ -5973,7 +6169,24 @@
       return; // Блокируем затирание реальных данных пустым массивом
     }
 
-    // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: Фильтруем невалидные продукты перед сохранением
+    // � v5.1: DELTA-SYNC: пропускаем upload products если данные не изменились
+    // Вычисляем быстрый fingerprint: длина + djb2-hash имён и timestamps
+    if (k === 'heys_products' && Array.isArray(value) && value.length > 0) {
+      const _fpArr = value.map(p => (p?.name || '') + (p?.updatedAt || '')).join('|');
+      let _fpHash = 0;
+      for (let _ci = 0; _ci < _fpArr.length; _ci++) {
+        _fpHash = ((_fpHash << 5) - _fpHash + _fpArr.charCodeAt(_ci)) | 0;
+      }
+      const _fingerprint = value.length + ':' + Math.abs(_fpHash);
+      if (cloud._productsFingerprint === _fingerprint) {
+        console.info('[HEYS.sync] 🔄 Delta-sync: products не изменились (fingerprint=' + _fingerprint + '), upload пропущен');
+        return;
+      }
+      cloud._productsFingerprint = _fingerprint;
+      console.info('[HEYS.sync] 🔄 Delta-sync: products изменились (new fingerprint=' + _fingerprint + '), upload разрешён');
+    }
+
+    // �🚨 КРИТИЧЕСКАЯ ЗАЩИТА: Фильтруем невалидные продукты перед сохранением
     if (k === 'heys_products' && Array.isArray(value)) {
       const validProducts = value.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
       if (validProducts.length !== value.length) {
@@ -6017,6 +6230,16 @@
     }
 
     log(`💾 [SAVE] ${dataType} | key: ${k} | items: ${itemsCount} | client: ${client_id.substring(0, 8)}...`);
+
+    // 🛡️ GRACE PERIOD v3: Сразу после sync не отправляем ЛЮБЫЕ ключи обратно в облако
+    // v3: НЕ push в очередь вообще — иначе savePendingQueue персистирует и на следующем входе
+    // flushPendingQueue отправит 405KB обратно (бесконечный цикл mirror)
+    const _graceAge = cloud._syncCompletedAt ? (Date.now() - cloud._syncCompletedAt) : Infinity;
+    const _inGracePeriod = _graceAge < 10000;
+    if (_inGracePeriod) {
+      // 🔇 Silent skip — data was just downloaded from cloud, no need to re-upload
+      return;
+    }
 
     // Добавляем в очередь вместо немедленной отправки
     clientUpsertQueue.push(upsertObj);
@@ -6199,6 +6422,10 @@
 
   cloud.saveKey = function (k, v) {
     if (!user || !k) return;
+
+    // 🛡️ GRACE PERIOD v3: Skip re-upload of data just downloaded from cloud
+    const _skGrace = cloud._syncCompletedAt ? (Date.now() - cloud._syncCompletedAt) : Infinity;
+    if (_skGrace < 10000) return;
 
     // Получаем client_id для client-level данных (products, days)
     const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
@@ -6656,12 +6883,28 @@
   let _sharedProductsCache = [];
   let _sharedProductsCacheTime = 0;
   const SHARED_PRODUCTS_CACHE_TTL = 5 * 60 * 1000; // 5 минут
+  const SHARED_PRODUCTS_LS_KEY = 'heys_shared_products_cache_v1';
+  const SHARED_PRODUCTS_LS_TTL = 30 * 60 * 1000; // 30 минут для localStorage
 
   /**
    * Получить shared products из кэша (синхронно)
    * @returns {Array} Массив продуктов или пустой массив
    */
   cloud.getCachedSharedProducts = function () {
+    // 🚀 Если memory cache пустой — попробовать восстановить из localStorage
+    if ((!_sharedProductsCache || _sharedProductsCache.length === 0)) {
+      try {
+        const cached = global.localStorage.getItem(SHARED_PRODUCTS_LS_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.ts && (Date.now() - parsed.ts) < SHARED_PRODUCTS_LS_TTL && Array.isArray(parsed.data)) {
+            _sharedProductsCache = parsed.data;
+            _sharedProductsCacheTime = parsed.ts;
+            logCritical(`📦 [SHARED PRODUCTS] Restored ${parsed.data.length} products from localStorage cache`);
+          }
+        }
+      } catch (_) { }
+    }
     return _sharedProductsCache || [];
   };
 
@@ -6773,6 +7016,14 @@
       _sharedProductsCache = filtered;
       _sharedProductsCacheTime = Date.now();
       log(`[SHARED PRODUCTS] Loaded ${filtered.length} products total, cached`);
+
+      // 🚀 Сохраняем в localStorage для быстрого восстановления при следующей загрузке
+      try {
+        global.localStorage.setItem(SHARED_PRODUCTS_LS_KEY, JSON.stringify({
+          ts: Date.now(),
+          data: filtered
+        }));
+      } catch (_) { /* localStorage может быть переполнен */ }
 
       return { data: filtered, error: null };
     } catch (e) {
