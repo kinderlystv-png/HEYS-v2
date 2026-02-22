@@ -358,10 +358,10 @@
 
     function useDayBootEffects() {
         const React = getReact();
-        // Twemoji: reparse emoji after render
+        // Twemoji: reparse emoji on mount only (subsequent reparses handled by useTwemojiEffect on tab change)
         React.useEffect(() => {
             if (global.scheduleTwemojiParse) global.scheduleTwemojiParse();
-        });
+        }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
         // Трекинг просмотра дня (только один раз)
         React.useEffect(() => {

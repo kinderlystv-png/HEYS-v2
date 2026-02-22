@@ -1,5 +1,5 @@
 // heys_day_page_shell.js — DayTab page shell renderer
-
+if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 ; (function (global) {
     const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;

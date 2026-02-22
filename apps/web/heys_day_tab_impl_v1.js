@@ -7,6 +7,9 @@
     const React = global.React;
     const HEYSRef = HEYS;
 
+    // 🆕 Heartbeat для watchdog — DayTab impl загружен (критический для dep check)
+    if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
+
     // === Import utilities from dayUtils module ===
     const U = HEYS.dayUtils || {};
 
@@ -251,11 +254,6 @@
         // но мы можем сделать return ДО первого хука
         const logoutScreen = dayGuards.getLogoutScreen({ React, HEYSRef: window.HEYS });
         if (logoutScreen) return logoutScreen;
-
-        console.log('[HEYS.DayTab] 📅 DayTab component mounting/rendering', {
-            hasProps: !!props,
-            propsKeys: props ? Object.keys(props).slice(0, 10).join(', ') : 'none'
-        });
 
         const { useState, useMemo, useEffect, useRef } = React;
 
@@ -1993,7 +1991,13 @@
 
     HEYS.DayTabImpl = HEYS.DayTabImpl || {};
     HEYS.DayTabImpl.createDayTab = function createDayTab() {
-        return HEYS.DayTab;
+        // Wrap in React.memo to skip re-renders when props haven't changed
+        if (!HEYS.DayTab._memoized && window.React?.memo) {
+            const MemoTab = React.memo(HEYS.DayTab);
+            MemoTab.displayName = 'DayTab';
+            HEYS.DayTab._memoized = MemoTab;
+        }
+        return HEYS.DayTab._memoized || HEYS.DayTab;
     };
 
 })(window);

@@ -9,17 +9,6 @@
         const React = ctx.React || global.React;
         const heysRef = ctx.HEYS || HEYS;
 
-        // Логируем вызов renderDayTabLayout
-        console.info('[HEYS.dayTabRender] 🎨 renderDayTabLayout called', {
-            isMobile: ctx.isMobile,
-            mobileSubTab: ctx.mobileSubTab,
-            hasProf: !!ctx.prof,
-            hasPIndex: ctx.pIndex !== undefined,
-            hasDayTot: !!ctx.dayTot,
-            hasNormAbs: !!ctx.normAbs,
-            hasDiaryRenderer: !!heysRef.dayDiarySection?.renderDiarySection
-        });
-
         // === SKELETON LOADER ===
         const skeletonLoader = React.createElement('div', { className: 'skeleton-page' },
             // Skeleton для СТАТИСТИКА
@@ -69,14 +58,6 @@
         const isReadOnly = subscriptionStatus.status === 'read_only';
 
         // === Diary Section (extracted) ===
-        console.info('[HEYS.dayTabRender] 🍽️ About to render diary section', {
-            hasDiaryModule: !!heysRef.dayDiarySection,
-            hasRenderer: !!heysRef.dayDiarySection?.renderDiarySection,
-            isMobile: ctx.isMobile,
-            mobileSubTab: ctx.mobileSubTab,
-            willRenderDiary: !ctx.isMobile || ctx.mobileSubTab === 'diary'
-        });
-
         const diarySection = heysRef.dayDiarySection?.renderDiarySection?.({
             React,
             isMobile: ctx.isMobile,
@@ -102,13 +83,6 @@
             normAbs: ctx.normAbs,
             HEYS: heysRef
         }) || null;
-
-        console.info('[HEYS.dayTabRender] ✅ Diary section result:', {
-            hasResult: !!diarySection,
-            resultType: typeof diarySection,
-            isNull: diarySection === null,
-            isUndefined: diarySection === undefined
-        });
 
         if (!heysRef.dayPageShell?.renderDayPage) {
             throw new Error('[heys_day_tab_render_v1] HEYS.dayPageShell not loaded before renderDayTabLayout');

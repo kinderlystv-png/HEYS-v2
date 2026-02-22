@@ -1,5 +1,6 @@
 // heys_add_product_step_v1.js — Шаг добавления продукта через StepModal
 // Двухшаговый flow: поиск → граммы/порции
+if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const { useState, useMemo, useCallback, useEffect, useRef, useContext } = React;
