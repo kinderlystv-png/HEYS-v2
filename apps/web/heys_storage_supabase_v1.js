@@ -6813,6 +6813,11 @@
 
       log('✅ Переключение завершено успешно');
 
+      // 🚀 FIX: Регистрируем cooldown чтобы sync effects useEffect не запускал дублирующий sync
+      // switchClient вызывает syncClientViaRPC напрямую (не через cloud.syncClient),
+      // поэтому _syncLastCompleted не выставлялся → sync effects делал повторный sync
+      _syncLastCompleted[newClientId] = Date.now();
+
       // Показываем итоговый размер storage
       const sizeMB = getStorageSize();
       log(`📊 Размер localStorage: ${sizeMB.toFixed(2)} MB`);
