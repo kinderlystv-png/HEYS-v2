@@ -110,6 +110,11 @@
 
           HEYS.modulePerf?.endLoad(moduleName, true);
 
+          // 🆕 Heartbeat для watchdog — модуль загружен, app ещё жив
+          if (typeof window !== 'undefined') {
+            window.__heysLoadingHeartbeat = Date.now();
+          }
+
           if (HEYS.featureFlags?.isEnabled('dev_module_logging')) {
             devLog(`[ModuleLoader] ✅ Loaded: ${moduleName}`);
           }

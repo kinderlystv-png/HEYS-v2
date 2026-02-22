@@ -4,6 +4,9 @@
     const HEYS = window.HEYS = window.HEYS || {};
     HEYS.AppRootImpl = HEYS.AppRootImpl || {};
 
+    // 🆕 Heartbeat для watchdog — AppRootImpl загружен (критический для dep check)
+    if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
+
     const getModule = HEYS._getModule || function (name, fallback) {
         return HEYS[name] || fallback || {};
     };
@@ -694,7 +697,8 @@
                     RationTabWithCloudSync: params.RationTabWithCloudSync,
                     UserTabWithCloudSync: params.UserTabWithCloudSync,
                 }));
-            const appShellProps = buildAppShellProps({
+            // useMemo prevents AppShell (React.memo) from re-rendering when unrelated state changes
+            const appShellProps = React.useMemo(() => buildAppShellProps({
                 isConsentBlocking,
                 isMorningCheckinBlocking,
                 clientId,
@@ -736,7 +740,12 @@
                 DayTabWithCloudSync,
                 RationTabWithCloudSync,
                 UserTabWithCloudSync,
-            });
+                // eslint-disable-next-line react-hooks/exhaustive-deps
+            }), [isConsentBlocking, isMorningCheckinBlocking, clientId, tab,
+                selectedDate, datePickerActiveDays, products, cachedProfile,
+                currentClientName, clients, showClientDropdown, isRpcMode,
+                cloudUser, cloudStatus, syncProgress, pendingCount, retryCountdown,
+                widgetsEditMode, defaultTab, slideDirection, edgeBounce, syncVer]);
 
             const buildOverlaysProps = AppOverlaysProps.buildOverlaysProps
                 || ((params) => ({
@@ -766,7 +775,8 @@
                     AppShell: params.AppShell,
                     appShellProps: params.appShellProps,
                 }));
-            const overlaysProps = buildOverlaysProps({
+            // useMemo prevents AppOverlays (React.memo) from re-rendering when unrelated state changes
+            const overlaysProps = React.useMemo(() => buildOverlaysProps({
                 gate,
                 desktopGate,
                 consentGate,
@@ -792,7 +802,11 @@
                 tab,
                 AppShell,
                 appShellProps,
-            });
+                // eslint-disable-next-line react-hooks/exhaustive-deps
+            }), [isConsentBlocking, isMorningCheckinBlocking, showMorningCheckin,
+                showOfflineBanner, showOnlineBanner, offlineDuration, pendingCount,
+                showPwaBanner, showIosPwaBanner, showUpdateToast, notification,
+                widgetsEditMode, tab, appShellProps]);
             return React.createElement(AppOverlays, overlaysProps);
         }
 

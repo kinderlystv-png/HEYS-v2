@@ -26,6 +26,9 @@
 
   const HEYS = window.HEYS = window.HEYS || {};
 
+  // 🆕 Heartbeat для watchdog — bootstrap загружен
+  window.__heysLoadingHeartbeat = Date.now();
+
   // Default feature flags (safe, local-only)
   HEYS.features = HEYS.features || {
     unifiedTables: true,

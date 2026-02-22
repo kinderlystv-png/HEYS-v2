@@ -302,6 +302,25 @@
 
         if (!clientId) return null;
 
+        // 🆕 v2.0: Network Status Indicator
+        const renderNetworkStatus = () => {
+            if (cloudStatus === 'offline') {
+                return React.createElement('div', { className: 'network-status network-status--offline', title: 'Офлайн (данные сохранены локально)' },
+                    React.createElement('span', { className: 'network-status__dot' }),
+                    React.createElement('span', { className: 'network-status__text' }, 'Офлайн')
+                );
+            }
+            if (syncProgress || pendingCount > 0) {
+                return React.createElement('div', { className: 'network-status network-status--syncing', title: `Синхронизация... Осталось: ${pendingCount}` },
+                    React.createElement('span', { className: 'network-status__dot network-status__dot--pulse' }),
+                    React.createElement('span', { className: 'network-status__text' }, 'Синхронизация')
+                );
+            }
+            return React.createElement('div', { className: 'network-status network-status--online', title: 'Синхронизировано' },
+                React.createElement('span', { className: 'network-status__icon' }, '✓')
+            );
+        };
+
         return React.createElement(
             'div',
             { className: 'hdr' },
@@ -318,7 +337,7 @@
                 // Информация о клиенте + DatePicker
                 React.createElement(
                     'div',
-                    { className: 'hdr-client', style: { position: 'relative' }, ref: clientDropdownAnchorRef },
+                    { className: 'hdr-client', style: { position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }, ref: clientDropdownAnchorRef },
                     // Кликабельный блок для dropdown
                     React.createElement(
                         'div',
@@ -366,6 +385,8 @@
                             }
                         }, '▼')
                     ),
+                    // Индикатор сети
+                    renderNetworkStatus(),
                     // Dropdown список клиентов
                     showClientDropdown && React.createElement(
                         'div',
@@ -1095,6 +1116,16 @@
         );
     }
 
+    // Memoize sub-components before AppShell uses them
+    const MemoAppHeader = React.memo(AppHeader);
+    MemoAppHeader.displayName = 'AppHeader';
+
+    const MemoAppTabsNav = React.memo(AppTabsNav);
+    MemoAppTabsNav.displayName = 'AppTabsNav';
+
+    const MemoAppTabContent = React.memo(AppTabContent);
+    MemoAppTabContent.displayName = 'AppTabContent';
+
     function AppShell(props) {
         const { hideContent, clientId } = props;
         const shouldRenderContent = !!clientId;
@@ -1105,9 +1136,9 @@
                 className: 'wrap',
                 style: hideContent ? { display: 'none' } : undefined
             },
-            shouldRenderContent && React.createElement(AppHeader, props),
-            shouldRenderContent && React.createElement(AppTabsNav, props),
-            shouldRenderContent && React.createElement(AppTabContent, props),
+            shouldRenderContent && React.createElement(MemoAppHeader, props),
+            shouldRenderContent && React.createElement(MemoAppTabsNav, props),
+            shouldRenderContent && React.createElement(MemoAppTabContent, props),
             shouldRenderContent && React.createElement(
                 'div',
                 { className: 'text-center text-[11px] text-slate-400 pb-6 pt-2' },
@@ -1116,10 +1147,13 @@
         );
     }
 
+    const MemoAppShell = React.memo(AppShell);
+    MemoAppShell.displayName = 'AppShell';
+
     HEYS.AppShell = {
-        AppShell,
-        AppHeader,
-        AppTabsNav,
-        AppTabContent,
+        AppShell: MemoAppShell,
+        AppHeader: MemoAppHeader,
+        AppTabsNav: MemoAppTabsNav,
+        AppTabContent: MemoAppTabContent,
     };
 })();

@@ -2124,7 +2124,12 @@
     HEYS.UserTab = UserTab;
     HEYS.UserTabImpl = HEYS.UserTabImpl || {};
     HEYS.UserTabImpl.createUserTab = function createUserTab() {
-        return HEYS.UserTab;
+        if (!HEYS.UserTab._memoized && window.React?.memo) {
+            const MemoTab = React.memo(HEYS.UserTab);
+            MemoTab.displayName = 'UserTab';
+            HEYS.UserTab._memoized = MemoTab;
+        }
+        return HEYS.UserTab._memoized || HEYS.UserTab;
     };
     HEYS.UserTabImpl.calcSleepNorm = calcSleepNorm;
     HEYS.UserTabImpl.calcAgeFromBirthDate = calcAgeFromBirthDate;

@@ -26,12 +26,14 @@
       AUTH_VERIFY: '/auth/verify'
     },
 
-    // Таймауты
+    // Таймауты (нарастающие: 1я попытка 15с, 2я 20с, 3я 30с)
     TIMEOUT_MS: 15000,
+    TIMEOUT_ESCALATION_MS: [15000, 20000, 30000],
 
-    // Retry логика
+    // Retry логика (exponential backoff: 1с → 3с → 7с)
     MAX_RETRIES: 2,
-    RETRY_DELAY_MS: 1000
+    RETRY_DELAY_MS: 1000,
+    RETRY_DELAY_ESCALATION_MS: [1000, 3000, 7000]
   };
 
   // ═══════════════════════════════════════════════════════════════════
@@ -86,21 +88,26 @@
   }
 
   /**
-   * Выполнить запрос с retry
+   * Выполнить запрос с retry (exponential backoff + нарастающий таймаут)
    */
   async function fetchWithRetry(url, options, retries = CONFIG.MAX_RETRIES) {
     let lastError;
 
     for (let i = 0; i <= retries; i++) {
+      // ⏱️ Нарастающий таймаут: 15с → 20с → 30с
+      const timeoutMs = CONFIG.TIMEOUT_ESCALATION_MS[i] || CONFIG.TIMEOUT_MS;
       try {
-        const response = await fetchWithTimeout(url, options);
+        const response = await fetchWithTimeout(url, options, timeoutMs);
         return response;
       } catch (e) {
         lastError = e;
-        err(`Attempt ${i + 1}/${retries + 1} failed:`, e.message);
+        err(`Attempt ${i + 1}/${retries + 1} failed (timeout=${timeoutMs}ms):`, e.message);
 
         if (i < retries) {
-          await new Promise(r => setTimeout(r, CONFIG.RETRY_DELAY_MS * (i + 1)));
+          // ⏱️ Exponential backoff: 1с → 3с → 7с
+          const delay = CONFIG.RETRY_DELAY_ESCALATION_MS[i] || CONFIG.RETRY_DELAY_MS;
+          console.info(`[HEYS.api] ↩️ Retry ${i + 1}/${retries} in ${delay}ms...`);
+          await new Promise(r => setTimeout(r, delay));
         }
       }
     }
@@ -289,13 +296,12 @@
     Object.entries(filters).forEach(([key, value]) => {
       // Пропускаем undefined значения
       if (value === undefined || value === 'undefined') return;
-      // Преобразуем формат: eq.id → id=eq.value
-      if (key.startsWith('eq.')) {
-        const col = key.slice(3);
-        params.set(col, `eq.${value}`);
-      } else if (key.startsWith('in.')) {
-        const col = key.slice(3);
-        params.set(col, `in.${value}`);
+      // Преобразуем формат: eq.id → id=eq.value, gt.updated_at → updated_at=gt.value
+      const dotIdx = key.indexOf('.');
+      if (dotIdx > 0) {
+        const op = key.slice(0, dotIdx);  // eq, in, gt, gte, lt, lte, like, neq
+        const col = key.slice(dotIdx + 1);
+        params.set(col, `${op}.${value}`);
       } else {
         params.set(key, String(value));
       }
@@ -862,15 +868,19 @@
   /**
    * Получить ВСЕ KV данные клиента для синхронизации
    * @param {string} clientId - ID клиента
-   * @returns {Promise<{data: Array<{k: string, v: any}>, error?: string}>}
+   * @param {Object} [options] - Опции
+   * @param {string} [options.since] - ISO timestamp для delta sync (только изменения после этого момента)
+   * @returns {Promise<{data: Array<{k: string, v: any}>, error?: string, delta?: boolean}>}
    */
-  async function getAllKV(clientId) {
+  async function getAllKV(clientId, options = {}) {
     if (!clientId) {
       return { data: [], error: 'No clientId provided' };
     }
 
+    const since = options.since || null;
+
     try {
-      log(`getAllKV: Loading all data for client ${clientId.slice(0, 8)}...`);
+      log(`getAllKV: Loading ${since ? 'delta' : 'all'} data for client ${clientId.slice(0, 8)}...${since ? ' (since ' + since + ')' : ''}`);
 
       const sessionToken = getSessionTokenForKV();
       if (!sessionToken) {
@@ -880,7 +890,11 @@
           return { data: [], error: 'No session token' };
         }
 
-        const url = `${CONFIG.API_URL}/auth/clients/${encodeURIComponent(clientId)}/kv`;
+        // 🚀 Delta Sync: добавляем since в query string
+        let url = `${CONFIG.API_URL}/auth/clients/${encodeURIComponent(clientId)}/kv`;
+        if (since) {
+          url += `?since=${encodeURIComponent(since)}`;
+        }
         const response = await fetchWithRetry(url, {
           method: 'GET',
           headers: {
@@ -895,13 +909,19 @@
         }
 
         const rows = Array.isArray(result?.data) ? result.data : [];
-        log(`getAllKV: Loaded ${rows.length} keys (curator)`);
-        return { data: rows, error: null };
+        log(`getAllKV: Loaded ${rows.length} keys (curator${since ? ', delta' : ', full'})`);
+        return { data: rows, error: null, delta: !!since };
       }
 
-      const { data, error } = await rpc('get_client_data_by_session', {
+      const rpcParams = {
         p_session_token: sessionToken,
-      });
+      };
+      // 🚀 Delta Sync: передаём p_since для RPC
+      if (since) {
+        rpcParams.p_since = since;
+      }
+
+      const { data, error } = await rpc('get_client_data_by_session', rpcParams);
 
       if (error) {
         err('getAllKV RPC error:', error.message || error);
@@ -915,8 +935,8 @@
       const payload = data?.data || {};
       const entries = Object.entries(payload).map(([k, v]) => ({ k, v }));
 
-      log(`getAllKV: Loaded ${entries.length} keys`);
-      return { data: entries, error: null };
+      log(`getAllKV: Loaded ${entries.length} keys${data?.delta ? ' (delta)' : ' (full)'}`);
+      return { data: entries, error: null, delta: !!data?.delta };
     } catch (e) {
       err('getAllKV failed:', e.message);
       return { data: [], error: e.message };

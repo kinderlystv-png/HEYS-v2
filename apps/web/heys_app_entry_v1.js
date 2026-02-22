@@ -6,6 +6,7 @@
 
     HEYS.AppEntry.start = function start() {
         console.info('[HEYS] 🚀 Приложение запущено');
+        window.__heysPerfMark && window.__heysPerfMark('App entry started');
 
         // Feature flags (local defaults)
         HEYS.features = HEYS.features || {

@@ -6,6 +6,9 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const U = HEYS.utils || {};
 
+  // 🆕 Heartbeat для watchdog — gamification загружен
+  if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
+
   const readStoredValue = (key, fallback) => {
     if (HEYS.store?.get) return HEYS.store.get(key, fallback);
     if (U.lsGet) return U.lsGet(key, fallback);
@@ -1108,11 +1111,11 @@
       // 0. Дождёмся отправки pending audit events
       await flushAuditQueue();
 
-      // 1. Получаем ВСЕ записи из аудит-лога (пагинация по 100)
+      // 1. Получаем ВСЕ записи из аудит-лога (пагинация по 500)
       const allEvents = [];
       let offset = 0;
-      const PAGE_SIZE = 100;
-      const MAX_PAGES = 20; // Безопасный лимит — 2000 записей
+      const PAGE_SIZE = 500;
+      const MAX_PAGES = 20; // Безопасный лимит — 10000 записей
 
       for (let page = 0; page < MAX_PAGES; page++) {
         const result = await fetchGamificationHistory({ limit: PAGE_SIZE, offset });
@@ -1418,8 +1421,45 @@
    * Загружает ОДНО последнее событие из аудита, сравнивает xp_after + total event count
    * с кэшированными данными. Full rebuild только при реальном расхождении.
    */
+  let _ensureAuditLastRun = 0; // ⏱️ v5.1: Throttle — не чаще 1 раза в 30 сек независимо от _auditRebuildDone
+
+  // 🚀 PERF: Local-only XP cache key (not synced to cloud, survives cloud overwrites)
+  function _getXPCacheKey() {
+    const cid = HEYS.utils?.getCurrentClientId?.() ||
+      localStorage.getItem('heys_client_current') ||
+      localStorage.getItem('heys_pin_auth_client');
+    const id = cid ? String(cid).replace(/"/g, '') : 'default';
+    return 'heys_xp_cache_' + id;
+  }
+
+  function _saveXPCache(totalXP, eventCount, opts) {
+    try {
+      const prev = _loadXPCache() || {};
+      const data = { xp: totalXP, count: eventCount, ts: Date.now() };
+      // 🚀 PERF v2.5: dailyRebuilt flag persists in local-only cache (NOT synced to cloud)
+      // Prevents full audit rebuild (1014 events, 3 RPC pages) on every app entry
+      if (opts && opts.dailyRebuilt) data.dailyRebuilt = true;
+      else if (prev.dailyRebuilt) data.dailyRebuilt = true; // preserve existing flag
+      localStorage.setItem(_getXPCacheKey(), JSON.stringify(data));
+    } catch (_) { /* quota exceeded — ignore */ }
+  }
+
+  function _loadXPCache() {
+    try {
+      const raw = localStorage.getItem(_getXPCacheKey());
+      if (raw) return JSON.parse(raw);
+    } catch (_) { }
+    return null;
+  }
+
   async function ensureAuditConsistency(trigger = 'auto') {
     if (_auditRebuildDone) return;
+    const _now = Date.now();
+    if (_now - _ensureAuditLastRun < 30000) {
+      console.info('[🎮 Gamification] ensureAuditConsistency throttled (', Math.round((_now - _ensureAuditLastRun) / 1000), 's ago), trigger:', trigger);
+      return;
+    }
+    _ensureAuditLastRun = _now;
     _auditRebuildDone = true;
 
     try {
@@ -1437,8 +1477,20 @@
       const lastEvent = result.items[0];
       const auditTotal = result.total || 0;
       const lastXPAfter = lastEvent?.xp_after ?? null;
-      const cachedXP = data.totalXP || 0;
-      const cachedEventCount = data._lastKnownEventCount || 0;
+      let cachedXP = data.totalXP || 0;
+      let cachedEventCount = data._lastKnownEventCount || 0;
+
+      // 🚀 PERF v2.4: Always prefer local XP cache if it has higher XP
+      // Game state in cloud can be overwritten with stale XP (e.g. 3761) after a rebuild
+      // set correct XP (e.g. 8629). XP only increases, so higher cache = correct.
+      const xpCache = _loadXPCache();
+      if (xpCache) {
+        if (xpCache.xp > cachedXP) {
+          console.info('[🎮 GAME SYNC]', trigger, '— XP cache override: game XP=' + cachedXP + ' → cache XP=' + xpCache.xp);
+          cachedXP = xpCache.xp;
+        }
+        if (xpCache.count > cachedEventCount) cachedEventCount = xpCache.count;
+      }
 
       // Проверяем консистентность:
       // 1. XP в последнем событии совпадает с кэшем?
@@ -1447,19 +1499,18 @@
       const countConsistent = cachedEventCount > 0 && cachedEventCount === auditTotal;
 
       if (xpConsistent && countConsistent) {
-        // Одноразовая миграция: восстановить историческую dailyXP из аудит-событий.
-        // dailyXP может содержать только сегодня (из реал-тайм _addXPInternal),
-        // но не иметь предыдущих дней. Rebuild восстановит ВСЁ из аудита.
-        // XP совпадает → rebuild НЕ создаст audit event (hasXPOrAchievementChanges=false).
-        if (!data._dailyXPRebuiltV1 && cachedXP > 0) {
+        // 🚀 PERF v2.5: Проверяем dailyRebuilt через XP cache (local-only, НЕ перезаписывается cloud sync)
+        // Раньше _dailyXPRebuiltV1 в game data стирался при cloud sync → rebuild 1014 events на КАЖДЫЙ вход
+        const _xpCacheDR = _loadXPCache();
+        if (!(_xpCacheDR && _xpCacheDR.dailyRebuilt) && cachedXP > 0) {
           console.info('[🎮 GAME SYNC]', trigger, '— XP consistent ✅ but dailyXP not yet rebuilt, restoring from audit...');
           await rebuildXPFromAudit({ force: true });
-          const d2 = loadData();
-          d2._dailyXPRebuiltV1 = true;
-          setStoredValue(STORAGE_KEY, d2);
+          _saveXPCache(cachedXP, auditTotal, { dailyRebuilt: true });
           return;
         }
         console.info('[🎮 GAME SYNC]', trigger, '— consistent ✅ (XP=' + cachedXP + ', events=' + auditTotal + ')');
+        // 🚀 PERF: Update local XP cache on consistent check
+        _saveXPCache(cachedXP, auditTotal);
         return;
       }
 
@@ -1471,13 +1522,14 @@
         const d = loadData();
         d._lastKnownEventCount = auditTotal;
         setStoredValue(STORAGE_KEY, d);
-        // Аналогично: одноразовая миграция dailyXP
-        if (!d._dailyXPRebuiltV1 && cachedXP > 0) {
+        // 🚀 PERF: Update local XP cache
+        _saveXPCache(cachedXP, auditTotal);
+        // 🚀 PERF v2.5: dailyXP rebuild через XP cache (local-only)
+        const _xpCacheDR2 = _loadXPCache();
+        if (!(_xpCacheDR2 && _xpCacheDR2.dailyRebuilt) && cachedXP > 0) {
           console.info('[🎮 GAME SYNC]', trigger, '— dailyXP not yet rebuilt, restoring from audit...');
           await rebuildXPFromAudit({ force: true });
-          const d3 = loadData();
-          d3._dailyXPRebuiltV1 = true;
-          setStoredValue(STORAGE_KEY, d3);
+          _saveXPCache(cachedXP, auditTotal, { dailyRebuilt: true });
         }
         return;
       }
@@ -1493,6 +1545,8 @@
       const updatedData = loadData();
       updatedData._lastKnownEventCount = rebuildResult?.rebuilt ? auditTotal + 1 : auditTotal;
       setStoredValue(STORAGE_KEY, updatedData);
+      // 🚀 PERF: Persist to local-only XP cache to survive cloud overwrites
+      _saveXPCache(updatedData.totalXP || 0, updatedData._lastKnownEventCount);
       console.info('[🎮 GAME SYNC]', trigger, '— rebuild done, eventCount saved:', updatedData._lastKnownEventCount,
         '(rebuilt:', rebuildResult?.rebuilt, ', reason:', rebuildResult?.reason, ')');
     } catch (err) {
@@ -1806,7 +1860,7 @@
         return data.dailyBonusClaimed === today;
       }
 
-      const PAGE_SIZE = 100;
+      const PAGE_SIZE = 500;
       const MAX_PAGES = 5;
       let offset = 0;
       let found = false;
@@ -4823,7 +4877,7 @@
         await flushAuditQueue();
         const allEvents = [];
         let offset = 0;
-        const PAGE_SIZE = 100;
+        const PAGE_SIZE = 500;
         for (let page = 0; page < 20; page++) {
           const result = await fetchGamificationHistory({ limit: PAGE_SIZE, offset });
           const items = result?.items || [];
@@ -5017,7 +5071,7 @@
       await flushAuditQueue();
       const allEvents = [];
       let offset = 0;
-      const PAGE_SIZE = 100;
+      const PAGE_SIZE = 500;
 
       for (let page = 0; page < 20; page++) {
         const result = await fetchGamificationHistory({ limit: PAGE_SIZE, offset });

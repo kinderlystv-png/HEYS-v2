@@ -82,6 +82,11 @@
             // 🔍 PWA Boot logging
 
             // Показываем минимальный loader если ждём больше 200мс
+            // 🆕 Heartbeat для watchdog — скрипты ещё грузятся
+            if (typeof window !== 'undefined') {
+                window.__heysLoadingHeartbeat = Date.now();
+            }
+
             if (reactCheckCount === 2 && !document.getElementById('heys-init-loader')) {
                 bootLog('showing loader (waiting for deps)');
                 const loader = document.createElement('div');
@@ -100,10 +105,14 @@
             }
 
             reactCheckCount++;
-            bootLog('waiting #' + reactCheckCount + ' React:' + checkReactReady() + ' HEYS:' + checkHeysReady());
+            // Логируем каждые 50 проверок чтобы не спамить консоль
+            if (reactCheckCount % 50 === 0) {
+                bootLog('waiting #' + reactCheckCount + ' React:' + checkReactReady() + ' HEYS:' + checkHeysReady());
+            }
 
-            // 🆕 Защита от зависания — макс 50 попыток (5 секунд) + детальная диагностика
-            if (reactCheckCount > 50) {
+            // 🆕 Защита от зависания — макс 300 попыток (30 секунд)
+            // На throttled сетях скрипты грузятся долго, 5s недостаточно
+            if (reactCheckCount > 300) {
                 console.error('[HEYS] ❌ Timeout waiting for dependencies!');
                 console.error('React ready:', checkReactReady());
                 console.error('HEYS ready:', checkHeysReady());

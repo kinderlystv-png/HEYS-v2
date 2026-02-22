@@ -3,6 +3,7 @@
 // v2.2.0: What-If Simulator — интерактивный симулятор еды
 // v2.2.1: Refactored - constants extracted to insights/pi_constants.js
 // v3.0.0: Major refactoring - extracted Layer B modules (stats, science, patterns, advanced, analytics_api)
+if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 //         Main file reduced from 10,206 to 3,557 lines (-65%)
 // v3.1.0: Final refactoring (Phases 10-12) - extracted calculations, removed UI duplicates
 //         Main file reduced to 1,005 lines (-90% from original, pure orchestration)

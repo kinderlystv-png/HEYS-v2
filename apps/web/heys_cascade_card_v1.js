@@ -2,6 +2,7 @@
 // Standalone компонент. Визуализация цепочки здоровых решений в реальном времени.
 // v3.1.0 | 2026-02-20 — Cascade Rate Score (CRS) cumulative momentum + goal-aware calorie penalty
 // Фильтр в консоли: [HEYS.cascade]
+if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 (function (global) {
   'use strict';
 
@@ -2228,31 +2229,9 @@
         events: hEvts
       });
     }
-    console.info('[HEYS.cascade] 📅 historicalDays built: ' + historicalDays.length + ' days');
+    // 🚀 PERF: Reduced cascade history logging — summary only instead of 30+ individual logs
     if (historicalDays.length > 0) {
-      var histLogRows = historicalDays.map(function (hd) {
-        var evSummary = hd.events.map(function (ev) {
-          var w = ev.weight != null ? (ev.weight >= 0 ? '+' + ev.weight.toFixed(1) : ev.weight.toFixed(1)) : '—';
-          var b = ev.badge === 'warning' ? '⚠' : ev.badge === 'ok' ? '✓' : '';
-          return (ev.time || '—') + ' ' + ev.label + ' ' + w + b;
-        });
-        return hd.label + ' (' + hd.dateStr + '): ' + evSummary.join(' | ');
-      });
-      console.info('[HEYS.cascade] 📅 Last ' + historicalDays.length + ' days events:\n  ' + histLogRows.join('\n  '));
-      // Детальный по-дневной лог для удобного просмотра
-      historicalDays.forEach(function (hd) {
-        var evDetails = hd.events.map(function (ev) {
-          return {
-            time: ev.time || '—',
-            label: ev.label,
-            weight: ev.weight != null ? (ev.weight >= 0 ? '+' + ev.weight.toFixed(2) : ev.weight.toFixed(2)) : null,
-            badge: ev.badge,
-            severity: ev.severity || null,
-            icon: ev.icon
-          };
-        });
-        console.info('[HEYS.cascade] 📆 ' + hd.label + ' (' + hd.dateStr + '):', evDetails);
-      });
+      console.info('[HEYS.cascade] 📅 historicalDays built: ' + historicalDays.length + ' days, events: ' + historicalDays.reduce(function (s, d) { return s + d.events.length; }, 0));
     }
 
     var result = {
@@ -2455,6 +2434,7 @@
     // Throttle render log — once per session (same strategy as MealRec P1 fix)
     if (!window.__heysLoggedCascadeRender) {
       window.__heysLoggedCascadeRender = true;
+      window.__heysPerfMark && window.__heysPerfMark('CascadeCard first render');
       console.info('[HEYS.cascade] ✅ CascadeCard rendered:', {
         state: state,
         crs: crs,
@@ -2630,12 +2610,11 @@
     if (_cascadeCache.signature === signature && _cascadeCache.result) {
       _cascadeCache.hits++;
       cascadeState = _cascadeCache.result;
-      if (_cascadeCache.hits === 1 || _cascadeCache.hits % 25 === 0) {
+      // 🚀 PERF: Log only on significant intervals to reduce console noise
+      if (_cascadeCache.hits === 1 || _cascadeCache.hits === 100) {
         console.info('[HEYS.cascade] ⚡ Cache HIT (compute skipped):', {
           hits: _cascadeCache.hits,
-          misses: _cascadeCache.misses,
-          state: cascadeState.state,
-          chainLength: cascadeState.chainLength
+          misses: _cascadeCache.misses
         });
       }
     } else {

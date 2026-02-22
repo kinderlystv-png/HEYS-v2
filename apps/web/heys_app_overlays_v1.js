@@ -189,7 +189,10 @@
         );
     }
 
+    const MemoAppOverlays = React.memo(AppOverlays);
+    MemoAppOverlays.displayName = 'AppOverlays';
+
     HEYS.AppOverlays = {
-        AppOverlays,
+        AppOverlays: MemoAppOverlays,
     };
 })();

@@ -4,6 +4,9 @@
     const HEYS = window.HEYS = window.HEYS || {};
     HEYS.AppRootComponent = HEYS.AppRootComponent || {};
 
+    // 🆕 Heartbeat для watchdog — AppRootComponent загружен
+    if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
+
     // 🆕 Recovery UI для критических ошибок загрузки
     function RecoveryScreen({ React, moduleName }) {
         const [clearing, setClearing] = React.useState(false);

@@ -155,6 +155,7 @@
 
             // Флаг для watchdog
             window.__heysAppReady = true;
+            window.__heysPerfMark && window.__heysPerfMark('React root rendered (appReady)');
         }
 
         const createApp = AppRoot.createApp

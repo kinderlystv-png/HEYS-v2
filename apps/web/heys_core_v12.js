@@ -4,6 +4,9 @@
   const React = global.React;
   const Store = (HEYS.store) || (HEYS.store = {});
 
+  // 🆕 Heartbeat для watchdog — core загружен
+  if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
+
   // ═══════════════════════════════════════════════════════════════════
   // 🔍 DEBUG MODE + MODULE FALLBACK LOGGER
   // ═══════════════════════════════════════════════════════════════════
