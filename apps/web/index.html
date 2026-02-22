@@ -3,7 +3,9 @@
 
 <head>
     <meta charset="UTF-8" />
-    <!-- 🔍 PWA Debug: Boot timing logger (saved to localStorage for mobile diagnosis) -->
+    <!-- � Preconnect: DNS+TCP+TLS ahead of time -->
+    <link rel="preconnect" href="https://api.heyslab.ru" crossorigin />
+    <!-- �🔍 PWA Debug: Boot timing logger (saved to localStorage for mobile diagnosis) -->
     <script>
         (function () {
             window.__heysBootLog = [];
@@ -26,14 +28,48 @@
             };
             window.__heysPerfMark('HTML parsing started');
 
-            // 🚀 WARM-UP: Предварительный запрос для прогрева Yandex Cloud Function
-            // Cold start CF занимает 1-2с — отправляем /health сразу при загрузке HTML
-            // чтобы к моменту sync контейнер уже был горячий
+            // 🚀 SPECULATIVE PREFETCH: запускаем НАСТОЯЩИЙ delta fetch при парсинге HTML
+            // Не ждём React (+0.9с) — начинаем запрос к API сразу → экономим ~1с
+            // Если clientId/lastSyncTs нет — fallback на тёплый /health
             try {
-                fetch('https://api.heyslab.ru/health', { mode: 'cors', cache: 'no-store' })
-                    .then(function () { window.__heysPerfMark && window.__heysPerfMark('CF warm-up done'); })
-                    .catch(function () { });
-            } catch (e) { }
+                var rawCid = localStorage.getItem('heys_client_current');
+                var cid = rawCid ? JSON.parse(rawCid) : null;
+                if (cid) {
+                    var syncTs = localStorage.getItem('heys_' + cid + '_last_sync_ts');
+                    if (syncTs) {
+                        var pfUrl = 'https://api.heyslab.ru/rest/v1/client_kv_store'
+                            + '?select=k%2Cv%2Cupdated_at'
+                            + '&client_id=eq.' + encodeURIComponent(cid)
+                            + '&updated_at=gt.' + encodeURIComponent(syncTs)
+                            + '&limit=400&offset=0';
+                        window.__heysPrefetch = {
+                            clientId: cid, since: syncTs,
+                            promise: fetch(pfUrl, { mode: 'cors', cache: 'no-store' })
+                                .then(function (r) {
+                                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                                    return r.json();
+                                })
+                                .then(function (d) {
+                                    window.__heysPerfMark && window.__heysPerfMark('Prefetch data ready: ' + (Array.isArray(d) ? d.length : 0) + ' keys');
+                                    return { data: d, ok: true };
+                                })
+                                .catch(function (e) {
+                                    return { data: null, ok: false, error: e.message };
+                                })
+                        };
+                    } else {
+                        fetch('https://api.heyslab.ru/health', { mode: 'cors', cache: 'no-store' })
+                            .then(function () { window.__heysPerfMark && window.__heysPerfMark('CF warm-up done'); })
+                            .catch(function () { });
+                    }
+                } else {
+                    fetch('https://api.heyslab.ru/health', { mode: 'cors', cache: 'no-store' })
+                        .then(function () { window.__heysPerfMark && window.__heysPerfMark('CF warm-up done'); })
+                        .catch(function () { });
+                }
+            } catch (e) {
+                try { fetch('https://api.heyslab.ru/health', { mode: 'cors', cache: 'no-store' }).catch(function () { }); } catch (e2) { }
+            }
 
             // Check if PWA standalone mode
             var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;

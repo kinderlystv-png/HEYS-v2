@@ -121,6 +121,7 @@
                                 clientSyncDoneRef.current = true;
                                 return;
                             }
+                            window.__heysPerfMark && window.__heysPerfMark('⚡ setSyncVer: clientId-sync-done');
                             setSyncVer((v) => v + 1);
                         })
                         .catch((err) => {
@@ -161,6 +162,7 @@
 
         React.useEffect(() => {
             const markInitialSyncDone = () => {
+                window.__heysPerfMark && window.__heysPerfMark('SyncEffects: heysSyncCompleted received');
                 if (window.HEYS) window.HEYS.syncCompletedAt = Date.now();
                 setTimeout(() => {
                     initialSyncDoneRef.current = true;
@@ -200,12 +202,16 @@
                 }
 
                 setProducts(filtered);
-                if (!initialSyncDoneRef.current) return;
+                if (!initialSyncDoneRef.current) {
+                    window.__heysPerfMark && window.__heysPerfMark('⏳ products-updated BLOCKED (initialSync not done)');
+                    return;
+                }
 
                 // Дедупликация: пропускаем если уже отреагировали в течение 300мс
                 const now = Date.now();
                 if (now - _lastProductsVerTs < 300) return;
                 _lastProductsVerTs = now;
+                window.__heysPerfMark && window.__heysPerfMark('⚡ setSyncVer: products-updated (source=' + (detail.source || 'unknown') + ')');
                 setSyncVer((v) => v + 1);
             };
 
@@ -219,7 +225,7 @@
 
         React.useEffect(() => {
             const IGNORED_SOURCES = [
-                'cloud', 'merge', 'step-modal',
+                'cloud', 'merge', 'step-modal', 'fetchDays',
                 'deficit-step', 'household-step', 'training-step', 'steps-step',
                 'measurements-step', 'cold-exposure-step',
                 'cycle-auto', 'cycle-clear', 'cycle-save', 'cycle-step'
@@ -233,8 +239,12 @@
                 if (source && IGNORED_SOURCES.includes(source)) {
                     return;
                 }
-                if (!initialSyncDoneRef.current) return;
+                if (!initialSyncDoneRef.current) {
+                    window.__heysPerfMark && window.__heysPerfMark('⏳ day-updated BLOCKED (initialSync not done, source=' + source + ')');
+                    return;
+                }
 
+                window.__heysPerfMark && window.__heysPerfMark('⚡ setSyncVer: day-updated (source=' + source + ', field=' + field + ')');
                 setSyncVer((v) => v + 1);
             };
 

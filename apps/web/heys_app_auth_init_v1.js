@@ -160,6 +160,7 @@
                 } catch (_) { }
             }
 
+            window.__heysPerfMark && window.__heysPerfMark('⚡ setSyncVer: auth-init (initLocalData)');
             setSyncVer((v) => v + 1);
         };
 

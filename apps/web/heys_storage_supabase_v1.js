@@ -3975,32 +3975,56 @@
         let pageOffset = 0;
         let fetchError = null;
 
-        while (true) {
-          const filters = { 'eq.client_id': client_id };
-          // 🚀 Delta: добавляем фильтр updated_at > since
-          if (deltaSince) {
-            filters['gt.updated_at'] = deltaSince;
+        // 🚀 SPECULATIVE PREFETCH: check if HTML-time prefetch matches current request
+        // If prefetch was fired at +0.0s and matches clientId+since → reuse data, save ~1s
+        let usedPrefetch = false;
+        if (isDeltaSync && typeof window !== 'undefined' && window.__heysPrefetch
+          && window.__heysPrefetch.clientId === client_id
+          && window.__heysPrefetch.since === deltaSince) {
+          try {
+            const prefetchResult = await window.__heysPrefetch.promise;
+            if (prefetchResult && prefetchResult.ok && Array.isArray(prefetchResult.data)) {
+              allData = prefetchResult.data;
+              usedPrefetch = true;
+              logCritical(`🚀 [PREFETCH HIT] Used pre-fetched delta data: ${allData.length} keys (saved ~1s)`);
+              window.__heysPerfMark && window.__heysPerfMark(`Prefetch hit: ${allData.length} keys`);
+            } else {
+              logCritical(`⚠️ [PREFETCH MISS] Prefetch failed: ${prefetchResult?.error || 'unknown'}, falling back`);
+            }
+          } catch (e) {
+            logCritical(`⚠️ [PREFETCH MISS] Error: ${e.message}, falling back`);
           }
+          window.__heysPrefetch = null; // clear to prevent reuse
+        }
 
-          const { data: pageData, error: pageError } = await YandexAPI.rest('client_kv_store', {
-            select: 'k,v,updated_at',
-            filters,
-            limit: PAGE_SIZE,
-            offset: pageOffset
-          });
+        if (!usedPrefetch) {
+          while (true) {
+            const filters = { 'eq.client_id': client_id };
+            // 🚀 Delta: добавляем фильтр updated_at > since
+            if (deltaSince) {
+              filters['gt.updated_at'] = deltaSince;
+            }
 
-          if (pageError) {
-            fetchError = pageError;
-            break;
+            const { data: pageData, error: pageError } = await YandexAPI.rest('client_kv_store', {
+              select: 'k,v,updated_at',
+              filters,
+              limit: PAGE_SIZE,
+              offset: pageOffset
+            });
+
+            if (pageError) {
+              fetchError = pageError;
+              break;
+            }
+
+            const rows = pageData || [];
+            allData = allData.concat(rows);
+            logCritical(`🔍 [SYNC PAGINATED] page offset=${pageOffset}, rows=${rows.length}, total=${allData.length}`);
+
+            // Если получили меньше PAGE_SIZE — это последняя страница
+            if (rows.length < PAGE_SIZE) break;
+            pageOffset += PAGE_SIZE;
           }
-
-          const rows = pageData || [];
-          allData = allData.concat(rows);
-          logCritical(`🔍 [SYNC PAGINATED] page offset=${pageOffset}, rows=${rows.length}, total=${allData.length}`);
-
-          // Если получили меньше PAGE_SIZE — это последняя страница
-          if (rows.length < PAGE_SIZE) break;
-          pageOffset += PAGE_SIZE;
         }
 
         const data = allData;
@@ -4023,6 +4047,119 @@
           err('client bootstrap select', error);
           throw new Error('Sync data fetch failed: ' + (error.message || error));
         }
+
+        // ════════════════════════════════════════════════════════════════
+        // 🚀 DELTA LIGHT PATH: при delta sync с <= 10 ключами — пропускаем
+        // ВСЮ тяжёлую обработку (dedup, diagnostics, cleanup, deleted sync).
+        // Сохраняет ~0.8s из post-fetch processing.
+        // ════════════════════════════════════════════════════════════════
+        const deltaKeyCount = data?.length || 0;
+        if (isDeltaSync && deltaKeyCount <= 10 && !forceSync) {
+          const lightStart = performance.now();
+          logCritical(`🚀 [DELTA LIGHT] ${deltaKeyCount} keys — fast processing, skip heavy ops`);
+
+          // Простая запись в LS без dedup/merge (delta не даёт дубликатов)
+          muteMirror = true;
+          let lightKeysWritten = 0;
+          const lightSyncedKeys = [];
+          (data || []).forEach(row => {
+            try {
+              let key = row.k;
+              // Нормализуем ключ: убираем и добавляем clientId
+              if (key.includes(client_id)) {
+                key = key.replace(`heys_${client_id}_`, 'heys_');
+                key = key.replace(`_${client_id}_`, '_');
+              }
+              if (key.startsWith('heys_') && !key.includes(client_id)) {
+                key = 'heys_' + client_id + '_' + key.substring('heys_'.length);
+              }
+
+              let valueToStore = row.v;
+              // Декомпрессия если нужно
+              if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) {
+                const Store = global.HEYS?.store;
+                if (Store && typeof Store.decompress === 'function') {
+                  valueToStore = Store.decompress(row.v);
+                }
+              }
+              // Пропускаем null dayv2
+              if (key.includes('dayv2_') && (valueToStore == null || valueToStore === 'null')) return;
+
+              ls.setItem(key, JSON.stringify(valueToStore));
+              lightSyncedKeys.push(row.k);
+              lightKeysWritten++;
+            } catch (_) { }
+          });
+          muteMirror = false;
+
+          // Инвалидируем кэш
+          if (global.HEYS?.store?.invalidate && lightSyncedKeys.length > 0) {
+            lightSyncedKeys.forEach(k => global.HEYS.store.invalidate(k));
+          }
+          if (global.HEYS?.store?.flushMemory) global.HEYS.store.flushMemory();
+
+          // Отмечаем sync как завершённый
+          if (!initialSyncCompleted) {
+            initialSyncCompleted = true;
+            cancelFailsafeTimer();
+          }
+          cloud._lastClientSync = { clientId: client_id, ts: now };
+          cloud._syncCompletedAt = Date.now();
+          cloud._productsFingerprint = null;
+
+          // Сохраняем timestamp для следующего delta sync
+          try { ls.setItem(`heys_${client_id}_last_sync_ts`, new Date().toISOString()); } catch (_) { }
+
+          const lightDuration = Math.round(performance.now() - lightStart);
+          logCritical(`✅ [DELTA LIGHT DONE] client=${client_id.slice(0, 8)} keys=${lightKeysWritten} ms=${lightDuration}`);
+
+          // Уведомляем UI НЕМЕДЛЕННО (без 300ms задержки)
+          if (typeof window !== 'undefined' && window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id, loaded: lightKeysWritten, viaYandex: true } }));
+          }
+
+          // Shared products: НЕ ждём — fire and forget
+          // Cleanup, diagnostics, deleted sync — defer на 3s
+          setTimeout(() => {
+            try { cleanupDuplicateKeys(); } catch (_) { }
+            if (isDeltaFastPath) {
+              try { cloud.cleanupProducts(); } catch (_) { }
+            }
+          }, 3000);
+
+          // 🧹 Deleted products sync — defer на 5s
+          setTimeout(() => {
+            if (global.HEYS?.deletedProducts?.exportForSync) {
+              try {
+                const deletedListKey = `heys_${client_id}_deleted_products`;
+                YandexAPI.from('client_kv_store')
+                  .select('v')
+                  .eq('client_id', client_id)
+                  .eq('k', deletedListKey)
+                  .then(({ data: cloudDeleted }) => {
+                    const deletedRow = Array.isArray(cloudDeleted) ? cloudDeleted[0] : cloudDeleted;
+                    if (deletedRow?.v) {
+                      global.HEYS.deletedProducts.importFromSync(deletedRow.v);
+                    }
+                    const localExport = global.HEYS.deletedProducts.exportForSync();
+                    if (Object.keys(localExport.entries).length > 0) {
+                      clientUpsertQueue.push({
+                        client_id: client_id,
+                        k: deletedListKey,
+                        v: localExport,
+                        updated_at: new Date().toISOString()
+                      });
+                      scheduleClientPush();
+                    }
+                  }).catch(() => { });
+              } catch (_) { }
+            }
+          }, 5000);
+
+          _syncInProgress = null;
+          return; // 🚀 Early return — skip ALL heavy processing below
+        }
+        // ════════════════════════════════════════════════════════════════
 
         // Компактная статистика вместо 81 строки логов
         const stats = { DAY: 0, PRODUCTS: 0, PROFILE: 0, NORMS: 0, OTHER: 0 };

@@ -136,6 +136,25 @@
       return renderGuardPlaceholder('Статистика недоступна', 'Компоненты UI ещё не инициализированы.');
     }
 
+    // ⏱️ PERF: track stats block re-renders (deduplicated — skip animation frames)
+    if (!window.__dayStatsRenderState) {
+      window.__dayStatsRenderState = { count: 0, firstTs: 0, lastLogTs: 0 };
+    }
+    const _rs = window.__dayStatsRenderState;
+    _rs.count++;
+    const _now = Date.now();
+    if (_rs.count === 1) {
+      _rs.firstTs = _now;
+      _rs.lastLogTs = _now;
+      window.__heysPerfMark && window.__heysPerfMark('DayStats FIRST render (remaining=' + vmComputed.displayHeroRemaining + ')');
+    } else if (_now - _rs.lastLogTs > 500) {
+      // Log re-renders only when >500ms gap (skip animation frames)
+      window.__heysPerfMark && window.__heysPerfMark('DayStats RE-RENDER #' + _rs.count + ' (remaining=' + vmComputed.displayHeroRemaining + ', gap=' + (_now - _rs.lastLogTs) + 'ms)');
+      _rs.lastLogTs = _now;
+    } else {
+      _rs.lastLogTs = _now;
+    }
+
     const optimum = vmEnergy.optimum;
     const displayOptimum = vmEnergy.displayOptimum;
     const displayRemainingKcal = vmEnergy.displayRemainingKcal;
