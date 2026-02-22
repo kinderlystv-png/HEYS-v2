@@ -2,6 +2,7 @@
 // pi_patterns.js — Pattern Analysis Functions v4.0.0
 // Extracted from heys_predictive_insights_v1.js (Phase 3)
 // 22 analyze* функций для анализа паттернов питания, сна, активности, цикла
+if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 (function (global) {
   'use strict';
 

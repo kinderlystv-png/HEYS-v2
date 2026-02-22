@@ -37,6 +37,72 @@
   }
 }
 
+/* === NETWORK STATUS INDICATOR === */
+.network-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--pi-bg-secondary);
+  border: 1px solid var(--pi-border);
+  transition: all 0.3s ease;
+}
+
+.network-status__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.network-status__text {
+  color: var(--pi-text-secondary);
+}
+
+.network-status--offline .network-status__dot {
+  background-color: var(--pi-warning);
+}
+
+.network-status--syncing .network-status__dot {
+  background-color: var(--pi-info);
+}
+
+.network-status__dot--pulse {
+  animation: network-pulse 1.5s infinite;
+}
+
+.network-status--online {
+  background: transparent;
+  border-color: transparent;
+  padding: 4px;
+}
+
+.network-status--online .network-status__icon {
+  color: var(--pi-success);
+  font-size: 12px;
+  font-weight: bold;
+}
+
+@keyframes network-pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* Apply dark mode to PI components */
 .pi-card {
   background: var(--pi-bg-primary);

@@ -949,6 +949,38 @@
                         requestedDays: days.length,
                         reason: age >= adaptiveTTL ? 'expired' : 'not_covered'
                     });
+
+                    // 🚀 v5.1: Stale-While-Revalidate (SWR)
+                    // Если есть старый кэш, мгновенно возвращаем его, а пересчёт запускаем в фоне
+                    if (cached && Object.keys(cached.thresholds || {}).length > 0) {
+                        console.log('[HEYS.thresholds] ⚡ SWR: Returning stale cache immediately, computing in background');
+
+                        // Запускаем фоновый пересчёт
+                        setTimeout(() => {
+                            try {
+                                console.log('[HEYS.thresholds] ⚡ SWR: Background compute started');
+                                const fresh = _computeAndCache(days, profile, pIndex, U);
+                                // Диспатчим событие, чтобы UI (MealRecommenderCard) обновился
+                                if (typeof window !== 'undefined' && window.dispatchEvent) {
+                                    window.dispatchEvent(new CustomEvent('heysThresholdsUpdated', { detail: fresh }));
+                                }
+                            } catch (e) {
+                                console.error('[HEYS.thresholds] ⚡ SWR: Background compute failed', e);
+                            }
+                        }, 0);
+
+                        // Возвращаем stale данные (с применением фенотипа если нужно)
+                        let result = cached;
+                        if (profile?.phenotype && global.HEYS.InsightsPI?.phenotype?.applyMultipliers) {
+                            const baseThresholds = { ...cached.thresholds };
+                            const adjustedThresholds = global.HEYS.InsightsPI.phenotype.applyMultipliers(
+                                baseThresholds,
+                                profile.phenotype
+                            );
+                            result = { ...cached, thresholds: adjustedThresholds, phenotypeApplied: true };
+                        }
+                        return result;
+                    }
                 }
             }
         }
@@ -980,6 +1012,13 @@
             console.warn('[HEYS.thresholds] ℹ️ Missing pIndex (some thresholds will be skipped)');
         }
 
+        return _computeAndCache(days, profile, pIndex, U);
+    }
+
+    /**
+     * Внутренняя функция для вычисления и кэширования (используется синхронно и в SWR)
+     */
+    function _computeAndCache(days, profile, pIndex, U) {
         // 🔬 Вычислить на основе доступных данных (3-tier cascade)
         let result;
 

@@ -396,7 +396,7 @@
         let thresholds = null;
         if (HEYS.InsightsPI?.thresholds?.getAdaptiveThresholds && days.length > 0) {
             try {
-                thresholds = HEYS.InsightsPI.thresholds.getAdaptiveThresholds(days.length, profile, pIndex);
+                thresholds = HEYS.InsightsPI.thresholds.getAdaptiveThresholds(days, profile, pIndex);
                 console.info(`${LOG_PREFIX} 📊 Adaptive thresholds loaded:`, {
                     lateEatingHour: thresholds.lateEatingHour,
                     mealGapHours: thresholds.idealMealGapMin / 60,

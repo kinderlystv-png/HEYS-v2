@@ -337,6 +337,17 @@
         const [expanded, setExpanded] = useState(false);
         const [userFeedback, setUserFeedback] = useState(null); // null | 'positive' | 'negative'
         const [checkedProducts, setCheckedProducts] = useState({}); // v27: { productId: boolean } for grouped mode
+        const [thresholdsUpdateTick, setThresholdsUpdateTick] = useState(0); // v28: SWR trigger
+
+        // Listen for SWR background updates
+        useEffect(() => {
+            const handleThresholdsUpdate = (e) => {
+                console.info(`${LOG_PREFIX} ⚡ SWR: Received heysThresholdsUpdated event, triggering re-render`);
+                setThresholdsUpdateTick(t => t + 1);
+            };
+            window.addEventListener('heysThresholdsUpdated', handleThresholdsUpdate);
+            return () => window.removeEventListener('heysThresholdsUpdated', handleThresholdsUpdate);
+        }, []);
 
         // v25.8.2: Use U.getProductFromItem if not passed in props
         const getProductFromItem = global.U?.getProductFromItem || global.HEYS?.getProductFromItem || (() => null);
@@ -1216,6 +1227,7 @@
         // P2-card: throttle render logs — only first time per page session
         _mealRecCardRenderCount++;
         if (_mealRecCardRenderCount === 1) {
+            window.__heysPerfMark && window.__heysPerfMark('MealRecCard first render');
             console.info(`${LOG_PREFIX} 🎨 Rendering card UI...`);
         }
 
@@ -1623,6 +1635,7 @@
     const MemoizedMealRecommenderCard = React.memo(MealRecommenderCard, (prev, next) => {
         // Return true = skip re-render (props are equal)
         // P2 Fix: Added day.date check to detect date changes (prevents double recommendation cycle)
+        // v28: SWR trigger is handled internally via state, so we don't need to check it here
         return (
             prev.day?.date === next.day?.date &&
             (prev.day?.meals?.length || 0) === (next.day?.meals?.length || 0) &&
