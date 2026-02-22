@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { syncInlineConfig } = require('./sync-iw-inline-config.cjs');
+const { syncConfig } = require('./sync-iw-inline-config.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
 const configPath = path.join(repoRoot, 'apps', 'web', 'config', 'insulin-wave-config.json');
@@ -17,7 +17,7 @@ const debounce = (fn, delay) => {
 
 const runSync = () => {
     try {
-        const result = syncInlineConfig();
+        const result = syncConfig();
         process.stdout.write(result.updated ? '[IW] inline config synced.\n' : '[IW] inline config already up to date.\n');
     } catch (error) {
         process.stderr.write(`[IW] sync failed: ${error.message}\n`);

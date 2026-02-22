@@ -1,5 +1,6 @@
 // heys_iw_config_loader.js — Insulin Wave config loader
-// Version: 1.0.0 | Date: 2026-01-16
+// Version: 1.1.0 | Date: 2026-01-16
+// v1.1.0: Inline JSON removed → async fetch from /heys-iw-config.json + localStorage cache
 
 (function (global) {
     'use strict';
@@ -119,21 +120,10 @@
         return cfg;
     };
 
-    const readInlineConfig = () => {
-        try {
-            const el = document.getElementById('heys-iw-config');
-            if (!el) return null;
-            const raw = el.textContent || '';
-            if (!raw.trim()) return null;
-            return JSON.parse(raw);
-        } catch (e) {
-            return null;
-        }
-    };
-
     const CONFIG_CACHE_KEY = 'heys_iw_config_cache_v1';
     const CONFIG_CACHE_META_KEY = 'heys_iw_config_cache_meta_v1';
     const CONFIG_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+    const CONFIG_JSON_URL = '/heys-iw-config.json';
 
     const loadConfigFromCache = () => {
         try {
@@ -151,43 +141,71 @@
         }
     };
 
-    const inlineConfig = readInlineConfig();
+    const saveConfigToCache = (rawConfig) => {
+        try {
+            localStorage.setItem(CONFIG_CACHE_KEY, JSON.stringify(rawConfig));
+            const meta = { ts: Date.now(), version: rawConfig?.version || 'unknown' };
+            localStorage.setItem(CONFIG_CACHE_META_KEY, JSON.stringify(meta));
+        } catch (e) {
+            // ignore cache write errors
+        }
+    };
+
+    const applyConfig = (rawConfig, source) => {
+        let config = reviveInfinity(rawConfig);
+        config = mergePatterns(config);
+
+        I._configSource = config;
+        I._loaded.config = true;
+        I._loaded.configError = false;
+        I._loaded.configFallback = false;
+        saveConfigToCache(rawConfig);
+        console.info('[HEYS.IW] ✅ Config loaded:', { source, version: rawConfig?.version });
+
+        // Notify modules waiting for async config
+        if (typeof CustomEvent !== 'undefined') {
+            document.dispatchEvent(new CustomEvent('heys-iw-config-ready', {
+                detail: { source, version: rawConfig?.version }
+            }));
+        }
+    };
+
+    const fetchConfigFromNetwork = () => {
+        fetch(CONFIG_JSON_URL)
+            .then(function (res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            })
+            .then(function (data) {
+                if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
+                applyConfig(data, 'network');
+            })
+            .catch(function (err) {
+                console.warn('[HEYS.IW] ⚠️ Config fetch failed:', err.message);
+                I._loaded.config = false;
+                I._loaded.configError = true;
+                I._loaded.configFallback = true;
+                I._configSource = null;
+            });
+    };
+
+    // Priority: global override → localStorage cache → async fetch
     const cachedConfig = loadConfigFromCache();
     const rawConfig = (global.__IW_CONFIG__ && typeof global.__IW_CONFIG__ === 'object')
         ? global.__IW_CONFIG__
-        : (inlineConfig || cachedConfig);
+        : cachedConfig;
 
-    if (inlineConfig && cachedConfig && inlineConfig.version && cachedConfig.version && inlineConfig.version !== cachedConfig.version) {
-        I._loaded.configVersionMismatch = true;
-        if (global.HEYS?.analytics?.trackError) {
-            global.HEYS.analytics.trackError('IW config version mismatch', {
-                inlineVersion: inlineConfig.version,
-                cachedVersion: cachedConfig.version
-            });
-        }
+    I._loaded.configVersionMismatch = false;
+
+    if (rawConfig) {
+        applyConfig(rawConfig, global.__IW_CONFIG__ ? 'global' : 'cache');
     } else {
-        I._loaded.configVersionMismatch = false;
-    }
-
-    if (!rawConfig) {
+        // No cached config — fetch async from network
         I._loaded.config = false;
-        I._loaded.configError = true;
+        I._loaded.configError = false;
         I._loaded.configFallback = true;
         I._configSource = null;
-        return;
-    }
-
-    let config = reviveInfinity(rawConfig);
-    config = mergePatterns(config);
-
-    I._configSource = config;
-    I._loaded.config = true;
-    I._loaded.configError = false;
-    try {
-        localStorage.setItem(CONFIG_CACHE_KEY, JSON.stringify(rawConfig));
-        const meta = { ts: Date.now(), version: rawConfig?.version || 'unknown' };
-        localStorage.setItem(CONFIG_CACHE_META_KEY, JSON.stringify(meta));
-    } catch (e) {
-        // ignore cache write errors
+        console.info('[HEYS.IW] ✅ No cached config, fetching from network...');
+        fetchConfigFromNetwork();
     }
 })(typeof window !== 'undefined' ? window : global);

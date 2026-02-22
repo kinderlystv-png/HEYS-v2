@@ -1,0 +1,1283 @@
+{
+  "version": "hash:af203be2cce1",
+  "GI_CATEGORIES": {
+    "low": {
+      "min": 0,
+      "max": 35,
+      "multiplier": 0.85,
+      "color": "#22c55e",
+      "text": "Низкий ГИ",
+      "desc": "короткая волна"
+    },
+    "medium": {
+      "min": 36,
+      "max": 55,
+      "multiplier": 1,
+      "color": "#eab308",
+      "text": "Средний ГИ",
+      "desc": "нормальная"
+    },
+    "high": {
+      "min": 56,
+      "max": 70,
+      "multiplier": 1.1,
+      "color": "#f97316",
+      "text": "Высокий ГИ",
+      "desc": "длиннее"
+    },
+    "veryHigh": {
+      "min": 71,
+      "max": 999,
+      "multiplier": 1.2,
+      "color": "#ef4444",
+      "text": "Очень высокий",
+      "desc": "долгая волна"
+    }
+  },
+  "STATUS_CONFIG": {
+    "lipolysis": {
+      "emoji": "🔥",
+      "color": "#22c55e",
+      "label": "Липолиз!"
+    },
+    "almost": {
+      "emoji": "⏳",
+      "color": "#f97316",
+      "label": null
+    },
+    "soon": {
+      "emoji": "🌊",
+      "color": "#eab308",
+      "label": null
+    },
+    "active": {
+      "emoji": "📈",
+      "color": "#3b82f6",
+      "label": null
+    }
+  },
+  "PROTEIN_BONUS": {
+    "veryHigh": {
+      "threshold": 50,
+      "bonus": 0.12
+    },
+    "high": {
+      "threshold": 35,
+      "bonus": 0.08
+    },
+    "medium": {
+      "threshold": 20,
+      "bonus": 0.05
+    }
+  },
+  "PROTEIN_BONUS_V2": {
+    "animal": {
+      "multiplier": 1.8,
+      "label": "🥩 Животный белок",
+      "desc": "Высокий BCAA → сильный инсулиновый ответ"
+    },
+    "plant": {
+      "multiplier": 1.3,
+      "label": "🌱 Растительный белок",
+      "desc": "Низкий leucine → умеренный ответ"
+    },
+    "whey": {
+      "multiplier": 2,
+      "label": "🥛 Сывороточный белок",
+      "desc": "Быстрое усвоение → пиковый инсулин"
+    },
+    "mixed": {
+      "multiplier": 1.5,
+      "label": "🍽️ Смешанный белок",
+      "desc": "Комбинация источников"
+    },
+    "thresholds": {
+      "veryHigh": 50,
+      "high": 35,
+      "medium": 20
+    },
+    "baseBonuses": {
+      "veryHigh": 0.07,
+      "high": 0.05,
+      "medium": 0.03
+    },
+    "categories": {
+      "animal": ["Мясо", "Рыба", "Птица", "Морепродукты", "Яйца", "Meat", "Fish", "Poultry", "Seafood", "Eggs"],
+      "plant": ["Бобовые", "Орехи", "Семена", "Legumes", "Nuts", "Seeds"],
+      "dairy": ["Молочные", "Dairy"]
+    }
+  },
+  "WAVE_SHAPE_V2": {
+    "components": {
+      "fast": {
+        "peakOffset": 0.15,
+        "sigma": 0.12,
+        "baseAmplitude": 0.6,
+        "giMultiplier": 1.3,
+        "liquidBoost": 1.5,
+        "fiberDamping": 0.7
+      },
+      "slow": {
+        "peakOffset": 0.45,
+        "sigma": 0.25,
+        "baseAmplitude": 0.35,
+        "proteinBoost": 1.4,
+        "fatBoost": 1.3,
+        "complexCarbBoost": 1.2
+      },
+      "hepatic": {
+        "peakOffset": 0.7,
+        "sigma": 0.35,
+        "baseAmplitude": 0.05,
+        "insulinResistanceBoost": 1.5,
+        "alcoholBoost": 1.3
+      }
+    },
+    "composition": {
+      "baselineLevel": 0.05,
+      "normalizeToOne": true,
+      "samplePoints": 100
+    },
+    "shapeCategories": {
+      "spike": {
+        "fastRatio": 0.7,
+        "desc": "Резкий пик (быстрые углеводы)"
+      },
+      "balanced": {
+        "fastRatio": 0.5,
+        "desc": "Сбалансированная волна"
+      },
+      "prolonged": {
+        "fastRatio": 0.3,
+        "desc": "Растянутая волна (много белка/жиров)"
+      }
+    }
+  },
+  "AUC_CONFIG": {
+    "methods": {
+      "trapezoidal": true,
+      "simpson": false,
+      "incremental": true
+    },
+    "segments": {
+      "early": {
+        "start": 0,
+        "end": 0.25,
+        "label": "Ранний (0-25%)"
+      },
+      "peak": {
+        "start": 0.15,
+        "end": 0.5,
+        "label": "Пиковый (15-50%)"
+      },
+      "late": {
+        "start": 0.5,
+        "end": 1,
+        "label": "Поздний (50-100%)"
+      }
+    },
+    "reference": {
+      "glucose50g": 1,
+      "whiteRice200g": 0.85,
+      "oatmeal100g": 0.45
+    }
+  },
+  "INSULIN_PREDICTOR_CONFIG": {
+    "timePoints": [15, 30, 60, 90, 120],
+    "levels": {
+      "peak": {
+        "min": 0.9,
+        "max": 1,
+        "label": "Пиковый уровень"
+      },
+      "high": {
+        "min": 0.6,
+        "max": 0.9,
+        "label": "Высокий уровень"
+      },
+      "moderate": {
+        "min": 0.3,
+        "max": 0.6,
+        "label": "Умеренный уровень"
+      },
+      "low": {
+        "min": 0.1,
+        "max": 0.3,
+        "label": "Низкий уровень"
+      },
+      "baseline": {
+        "min": 0,
+        "max": 0.1,
+        "label": "Базовый уровень"
+      }
+    },
+    "thresholds": {
+      "safeToEat": 0.3,
+      "fatBurning": 0.15,
+      "optimalWindow": 0.25
+    }
+  },
+  "WAVE_SCORING_V2": {
+    "weights": {
+      "peakHeight": 0.25,
+      "duration": 0.2,
+      "shape": 0.2,
+      "auc": 0.2,
+      "context": 0.15
+    },
+    "thresholds": {
+      "peakHeight": {
+        "excellent": 0.6,
+        "good": 0.75,
+        "fair": 0.9,
+        "poor": 1
+      },
+      "duration": {
+        "target": 180,
+        "tolerance": 30,
+        "maxPenalty": 60
+      },
+      "auc": {
+        "excellent": 0.5,
+        "good": 0.75,
+        "fair": 1,
+        "poor": 1.5
+      }
+    },
+    "levels": {
+      "excellent": {
+        "min": 85,
+        "label": "Отлично",
+        "icon": "🌟",
+        "color": "#22c55e"
+      },
+      "good": {
+        "min": 70,
+        "label": "Хорошо",
+        "icon": "✅",
+        "color": "#84cc16"
+      },
+      "fair": {
+        "min": 50,
+        "label": "Нормально",
+        "icon": "➖",
+        "color": "#eab308"
+      },
+      "poor": {
+        "min": 0,
+        "label": "Требует внимания",
+        "icon": "⚠️",
+        "color": "#ef4444"
+      }
+    }
+  },
+  "FIBER_BONUS": {
+    "veryHigh": {
+      "threshold": 15,
+      "bonus": -0.2
+    },
+    "high": {
+      "threshold": 10,
+      "bonus": -0.15
+    },
+    "medium": {
+      "threshold": 5,
+      "bonus": -0.08
+    }
+  },
+  "FAT_BONUS": {
+    "high": {
+      "threshold": 25,
+      "bonus": 0.15
+    },
+    "medium": {
+      "threshold": 15,
+      "bonus": 0.1
+    },
+    "low": {
+      "threshold": 8,
+      "bonus": 0.05
+    }
+  },
+  "LIQUID_FOOD": {
+    "waveMultiplier": 0.75,
+    "peakMultiplier": 1.35,
+    "categories": ["Напитки", "Соки", "Молочные напитки"]
+  },
+  "INSULINOGENIC_BONUS": {
+    "liquidDairy": {
+      "bonus": 0.15,
+      "categories": ["Молочные напитки"]
+    },
+    "softDairy": {
+      "bonus": 0.1,
+      "categories": []
+    },
+    "hardDairy": {
+      "bonus": 0.05,
+      "categories": []
+    },
+    "protein": {
+      "bonus": 0.08,
+      "categories": ["Мясо", "Рыба", "Птица", "Морепродукты", "Meat", "Fish"]
+    }
+  },
+  "GL_CATEGORIES": {
+    "micro": {
+      "max": 2,
+      "multiplier": 0.25,
+      "desc": "микро-инсулин"
+    },
+    "veryLow": {
+      "max": 5,
+      "multiplier": 0.4,
+      "desc": "минимальный инсулин"
+    },
+    "low": {
+      "max": 10,
+      "multiplier": 0.55,
+      "desc": "слабый инсулиновый ответ"
+    },
+    "medium": {
+      "max": 20,
+      "multiplier": 1,
+      "desc": "нормальный инсулин"
+    },
+    "high": {
+      "max": 30,
+      "multiplier": 1.15,
+      "desc": "сильный инсулиновый ответ"
+    },
+    "veryHigh": {
+      "max": "Infinity",
+      "multiplier": 1.25,
+      "desc": "максимальный инсулин"
+    }
+  },
+  "GL_CONTINUOUS": {
+    "minGL": 0,
+    "maxGL": 40,
+    "minMultiplier": 0.15,
+    "maxMultiplier": 1.3,
+    "exponent": 0.6
+  },
+  "PERSONAL_BASELINE": {
+    "defaultWaveHours": 3,
+    "minWaveHours": 1.5,
+    "maxWaveHours": 4.5,
+    "ageEffect": {
+      "startAge": 30,
+      "bonusPerYear": 0.004
+    },
+    "bmiEffect": {
+      "startBMI": 25,
+      "bonusPerUnit": 0.015
+    },
+    "genderEffect": {
+      "female": -0.05,
+      "male": 0.03,
+      "other": 0
+    }
+  },
+  "MEAL_STACKING": {
+    "enabled": true,
+    "maxStackBonus": -0.15,
+    "decayRate": 0.5
+  },
+  "WAVE_PHASES": {
+    "rise": {
+      "baseMinutes": 20,
+      "fiberBonus": 3,
+      "liquidPenalty": 0.6
+    },
+    "plateau": {
+      "basePct": 0.35,
+      "proteinBonus": 0.05,
+      "fatBonus": 0.08
+    },
+    "decline": {
+      "basePct": 0.45,
+      "activityBonus": -0.15
+    },
+    "colors": {
+      "rise": "#f97316",
+      "plateau": "#ef4444",
+      "decline": "#eab308",
+      "lipolysis": "#22c55e"
+    }
+  },
+  "INSULIN_INDEX_FACTORS": {
+    "liquidDairy": {
+      "glBoost": 1.5,
+      "peakMultiplier": 1.35,
+      "waveMultiplier": 0.85,
+      "desc": "Молоко, кефир — быстрый пик, короткая волна"
+    },
+    "softDairy": {
+      "glBoost": 1.3,
+      "peakMultiplier": 1.25,
+      "waveMultiplier": 0.9,
+      "desc": "Йогурт, творог"
+    },
+    "hardDairy": {
+      "glBoost": 1.1,
+      "peakMultiplier": 1.1,
+      "waveMultiplier": 0.95,
+      "desc": "Сыр — медленнее усваивается"
+    },
+    "pureProtein": {
+      "glBoost": 1.2,
+      "peakMultiplier": 1.15,
+      "waveMultiplier": 0.92,
+      "desc": "Мясо, рыба — умеренный II"
+    },
+    "highFiber": {
+      "glBoost": 0.8,
+      "peakMultiplier": 0.85,
+      "waveMultiplier": 1.1,
+      "desc": "Высокая клетчатка сглаживает ответ"
+    },
+    "maxGLBoost": 2
+  },
+  "WORKOUT_BONUS": {
+    "high": {
+      "threshold": 45,
+      "bonus": -0.15
+    },
+    "medium": {
+      "threshold": 20,
+      "bonus": -0.08
+    },
+    "intensityMultiplier": 1.5
+  },
+  "POSTPRANDIAL_EXERCISE": {
+    "maxWindow": 120,
+    "highIntensity": {
+      "threshold": 30,
+      "bonus": -0.5
+    },
+    "moderate": {
+      "threshold": 20,
+      "bonus": -0.35
+    },
+    "light": {
+      "threshold": 15,
+      "bonus": -0.2
+    },
+    "typeMultipliers": {
+      "cardio": 1.3,
+      "strength": 1,
+      "hobby": 0.8
+    },
+    "proximityBoost": {
+      "immediate": {
+        "maxGap": 15,
+        "boost": 1.5
+      },
+      "soon": {
+        "maxGap": 30,
+        "boost": 1.3
+      },
+      "medium": {
+        "maxGap": 60,
+        "boost": 1
+      },
+      "late": {
+        "maxGap": 120,
+        "boost": 0.7
+      }
+    }
+  },
+  "NEAT_BONUS": {
+    "high": {
+      "threshold": 60,
+      "bonus": -0.1
+    },
+    "medium": {
+      "threshold": 30,
+      "bonus": -0.05
+    },
+    "low": {
+      "threshold": 15,
+      "bonus": -0.02
+    }
+  },
+  "STEPS_BONUS": {
+    "high": {
+      "threshold": 8000,
+      "bonus": -0.08
+    },
+    "medium": {
+      "threshold": 5000,
+      "bonus": -0.04
+    },
+    "low": {
+      "threshold": 2000,
+      "bonus": -0.02
+    }
+  },
+  "CIRCADIAN_CONFIG": {
+    "peakHour": 8,
+    "nadirHour": 24,
+    "minMultiplier": 0.85,
+    "maxMultiplier": 1.2,
+    "descriptions": {
+      "earlyMorning": {
+        "from": 5,
+        "to": 7,
+        "desc": "Пробуждение 🌅"
+      },
+      "peakMorning": {
+        "from": 7,
+        "to": 10,
+        "desc": "Пик чувствительности 🌞"
+      },
+      "midday": {
+        "from": 10,
+        "to": 14,
+        "desc": "Обеденный период ☀️"
+      },
+      "afternoon": {
+        "from": 14,
+        "to": 18,
+        "desc": "Дневной баланс 🌤️"
+      },
+      "evening": {
+        "from": 18,
+        "to": 21,
+        "desc": "Вечерний спад 🌆"
+      },
+      "lateEvening": {
+        "from": 21,
+        "to": 24,
+        "desc": "Поздний вечер 🌙"
+      },
+      "night": {
+        "from": 0,
+        "to": 5,
+        "desc": "Ночной режим 🌑"
+      }
+    }
+  },
+  "CIRCADIAN_MULTIPLIERS": {
+    "morning": {
+      "from": 6,
+      "to": 10,
+      "multiplier": 0.9,
+      "desc": "Утренний метаболизм 🌅"
+    },
+    "midday": {
+      "from": 10,
+      "to": 14,
+      "multiplier": 0.95,
+      "desc": "Обеденный пик 🌞"
+    },
+    "afternoon": {
+      "from": 14,
+      "to": 18,
+      "multiplier": 1,
+      "desc": "Дневной баланс ☀️"
+    },
+    "evening": {
+      "from": 18,
+      "to": 22,
+      "multiplier": 1.1,
+      "desc": "Вечерний спад 🌆"
+    },
+    "night": {
+      "from": 22,
+      "to": 6,
+      "multiplier": 1.2,
+      "desc": "Ночной режим 🌙"
+    }
+  },
+  "FASTING_BONUS": {
+    "long": {
+      "threshold": 16,
+      "bonus": -0.15
+    },
+    "medium": {
+      "threshold": 12,
+      "bonus": -0.1
+    },
+    "short": {
+      "threshold": 8,
+      "bonus": -0.05
+    }
+  },
+  "SPICY_FOOD": {
+    "multiplier": 0.96
+  },
+  "ALCOHOL_BONUS": {
+    "high": {
+      "bonus": 0.25
+    },
+    "medium": {
+      "bonus": 0.18
+    },
+    "low": {
+      "bonus": 0.1
+    }
+  },
+  "ALCOHOL_MATCH": {
+    "strongExact": [
+      "водка",
+      "виски",
+      "whisky",
+      "whiskey",
+      "коньяк",
+      "cognac",
+      "текила",
+      "tequila",
+      "джин",
+      "gin",
+      "ром",
+      "rum"
+    ],
+    "mediumExact": ["вино", "wine", "шампанское", "champagne", "просекко", "мартини", "martini", "вермут", "vermouth"],
+    "weakExact": ["пиво", "beer", "сидр", "cider", "эль", "ale", "лагер", "lager", "ликер", "liqueur"],
+    "strongPrefix": ["алкогол", "alcohol"],
+    "mediumPrefix": [],
+    "weakPrefix": ["лагер"],
+    "comboAll": ["коктейл", "cocktail"]
+  },
+  "CAFFEINE_BONUS": {
+    "bonus": 0.06
+  },
+  "STRESS_BONUS": {
+    "high": {
+      "threshold": 7,
+      "bonus": 0.15
+    },
+    "medium": {
+      "threshold": 5,
+      "bonus": 0.08
+    },
+    "low": {
+      "threshold": 3,
+      "bonus": 0
+    }
+  },
+  "SLEEP_BONUS": {
+    "severe": {
+      "maxHours": 4,
+      "bonus": 0.2
+    },
+    "moderate": {
+      "maxHours": 5,
+      "bonus": 0.15
+    },
+    "mild": {
+      "maxHours": 6,
+      "bonus": 0.08
+    },
+    "normal": {
+      "maxHours": 24,
+      "bonus": 0
+    }
+  },
+  "SLEEP_QUALITY_BONUS": {
+    "poor": {
+      "maxQuality": 4,
+      "bonus": 0.08
+    },
+    "mediocre": {
+      "maxQuality": 6,
+      "bonus": 0.04
+    },
+    "good": {
+      "maxQuality": 10,
+      "bonus": 0
+    }
+  },
+  "HYDRATION_BONUS": {
+    "severe": {
+      "maxPct": 30,
+      "bonus": 0.08
+    },
+    "moderate": {
+      "maxPct": 50,
+      "bonus": 0.05
+    },
+    "mild": {
+      "maxPct": 70,
+      "bonus": 0.03
+    },
+    "normal": {
+      "maxPct": 100,
+      "bonus": 0
+    }
+  },
+  "AGE_BONUS": {
+    "senior": {
+      "minAge": 70,
+      "bonus": 0.4
+    },
+    "elderly": {
+      "minAge": 60,
+      "bonus": 0.25
+    },
+    "middle": {
+      "minAge": 45,
+      "bonus": 0.12
+    },
+    "adult": {
+      "minAge": 30,
+      "bonus": 0.06
+    },
+    "young": {
+      "minAge": 0,
+      "bonus": 0
+    }
+  },
+  "BMI_BONUS": {
+    "obese": {
+      "minBMI": 30,
+      "bonus": 0.2
+    },
+    "overweight": {
+      "minBMI": 25,
+      "bonus": 0.1
+    },
+    "normal": {
+      "minBMI": 0,
+      "bonus": 0
+    }
+  },
+  "GENDER_BONUS": {
+    "male": 0.05,
+    "female": -0.05,
+    "other": 0
+  },
+  "TRANS_FAT_BONUS": {
+    "high": {
+      "threshold": 2,
+      "bonus": 0.15
+    },
+    "medium": {
+      "threshold": 1,
+      "bonus": 0.08
+    },
+    "low": {
+      "threshold": 0.5,
+      "bonus": 0.04
+    },
+    "none": {
+      "threshold": 0,
+      "bonus": 0
+    }
+  },
+  "MEAL_ORDER_BONUS": {
+    "carbsLast": -0.25,
+    "carbsFirst": 0.1,
+    "mixed": 0
+  },
+  "FOOD_FORM_BONUS": {
+    "liquid": {
+      "multiplier": 1.3,
+      "desc": "Жидкое → +30% пик"
+    },
+    "processed": {
+      "multiplier": 1.15,
+      "desc": "Обработанное → +15%"
+    },
+    "whole": {
+      "multiplier": 0.85,
+      "desc": "Цельное → -15%"
+    },
+    "mixed": {
+      "multiplier": 1,
+      "desc": "Смешанное → без изменения"
+    }
+  },
+  "RESISTANT_STARCH_BONUS": {
+    "cooled": -0.15
+  },
+  "FOOD_TEMPERATURE_BONUS": {
+    "hot": {
+      "bonus": 0.08,
+      "peakBoost": 1.15,
+      "desc": "🔥 Горячее → быстрее пик"
+    },
+    "cold": {
+      "bonus": -0.05,
+      "peakBoost": 0.9,
+      "desc": "❄️ Холодное → плавнее волна"
+    },
+    "room": {
+      "bonus": 0,
+      "peakBoost": 1,
+      "desc": "Комнатная температура"
+    }
+  },
+  "LARGE_PORTION_BONUS": {
+    "thresholds": [
+      {
+        "minKcal": 1200,
+        "bonus": 0.25,
+        "peakReduction": 0.8,
+        "desc": ">1200 ккал → +25% волна, -20% пик"
+      },
+      {
+        "minKcal": 1000,
+        "bonus": 0.18,
+        "peakReduction": 0.85,
+        "desc": ">1000 ккал → +18% волна"
+      },
+      {
+        "minKcal": 800,
+        "bonus": 0.1,
+        "peakReduction": 0.9,
+        "desc": ">800 ккал → +10% волна"
+      },
+      {
+        "minKcal": 600,
+        "bonus": 0.05,
+        "peakReduction": 0.95,
+        "desc": ">600 ккал → +5% волна"
+      }
+    ],
+    "maxBonus": 0.3
+  },
+  "LIPOLYSIS_THRESHOLDS": {
+    "full": {
+      "insulinUIml": 5,
+      "lipolysisPct": 100,
+      "desc": "Полный липолиз"
+    },
+    "partial": {
+      "insulinUIml": 15,
+      "lipolysisPct": 50,
+      "desc": "~50% липолиза"
+    },
+    "suppressed": {
+      "insulinUIml": 50,
+      "lipolysisPct": 10,
+      "desc": "Липолиз подавлен"
+    },
+    "blocked": {
+      "insulinUIml": 100,
+      "lipolysisPct": 0,
+      "desc": "Липолиз заблокирован"
+    }
+  },
+  "REACTIVE_HYPOGLYCEMIA": {
+    "riskWindow": {
+      "start": 120,
+      "end": 240
+    },
+    "riskFactors": {
+      "highGI": {
+        "threshold": 70,
+        "weight": 0.4
+      },
+      "lowProtein": {
+        "threshold": 10,
+        "weight": 0.3
+      },
+      "lowFat": {
+        "threshold": 5,
+        "weight": 0.2
+      },
+      "fasted": {
+        "weight": 0.1
+      }
+    },
+    "warningThreshold": 0.6,
+    "ui": {
+      "warningEmoji": "⚡",
+      "warningColor": "#f97316",
+      "warningTitle": "Риск голода через 2-4 часа",
+      "warningDesc": "Высокий ГИ без белка/жира может вызвать резкий голод",
+      "advice": [
+        "Добавь белок (яйцо, творог, орехи) — замедлит усвоение",
+        "Добавь жиры (авокадо, масло) — сгладит пик инсулина",
+        "Планируй перекус через 2-3 часа"
+      ],
+      "symptoms": ["Резкий голод", "Слабость", "Раздражительность", "Потливость", "Тремор"]
+    }
+  },
+  "NDTE": {
+    "maxWindowHours": 48,
+    "kcalTiers": [
+      {
+        "minKcal": 900,
+        "tdeeBoost": 0.1,
+        "waveReduction": 0.25,
+        "peakReduction": 0.3,
+        "label": "🔥 Мощная тренировка"
+      },
+      {
+        "minKcal": 500,
+        "tdeeBoost": 0.07,
+        "waveReduction": 0.15,
+        "peakReduction": 0.2,
+        "label": "💪 Хорошая нагрузка"
+      },
+      {
+        "minKcal": 300,
+        "tdeeBoost": 0.04,
+        "waveReduction": 0.08,
+        "peakReduction": 0.1,
+        "label": "⚡ Лёгкая активность"
+      }
+    ],
+    "bmiMultiplier": {
+      "obese": {
+        "minBMI": 30,
+        "multiplier": 1.8
+      },
+      "overweight": {
+        "minBMI": 25,
+        "multiplier": 1.4
+      },
+      "normal": {
+        "minBMI": 18.5,
+        "multiplier": 1
+      },
+      "underweight": {
+        "minBMI": 0,
+        "multiplier": 0.8
+      }
+    },
+    "decay": {
+      "halfLifeHours": 16.6,
+      "tiers": [
+        {
+          "maxHours": 12,
+          "multiplier": 1
+        },
+        {
+          "maxHours": 24,
+          "multiplier": 0.8
+        },
+        {
+          "maxHours": 36,
+          "multiplier": 0.5
+        },
+        {
+          "maxHours": 48,
+          "multiplier": 0.25
+        }
+      ]
+    },
+    "typeMultiplier": {
+      "strength": {
+        "tdee": 1.2,
+        "wave": 0.9
+      },
+      "cardio": {
+        "tdee": 1,
+        "wave": 1.1
+      },
+      "hobby": {
+        "tdee": 0.8,
+        "wave": 0.8
+      }
+    },
+    "cumulative": {
+      "enabled": true,
+      "maxMultiplier": 1.5
+    },
+    "badge": "🔥 Эффект тренировки",
+    "badgeColor": "#10b981"
+  },
+  "TRAINING_CONTEXT": {
+    "periWorkout": {
+      "maxBonus": -0.6,
+      "harmMultiplier": 0.5,
+      "badge": "🏋️ Топливо",
+      "desc": "Еда во время тренировки → энергия напрямую в мышцы",
+      "intensityScaling": {
+        "HIIT": 1,
+        "MODERATE": 0.75,
+        "LISS": 0.5
+      }
+    },
+    "postWorkout": {
+      "baseGap": 120,
+      "kcalScaling": 60,
+      "maxGap": 360,
+      "tiers": [
+        {
+          "maxMin": 30,
+          "waveBonus": -0.4,
+          "label": "🔥 Анаболическое окно"
+        },
+        {
+          "maxMin": 60,
+          "waveBonus": -0.35,
+          "label": "🔄 Recovery"
+        },
+        {
+          "maxMin": 120,
+          "waveBonus": -0.25,
+          "label": "⏳ Гликогеновое окно"
+        },
+        {
+          "maxMin": 240,
+          "waveBonus": -0.15,
+          "label": "📉 Позднее окно"
+        },
+        {
+          "maxMin": 360,
+          "waveBonus": -0.08,
+          "label": "💨 Остаточный эффект"
+        }
+      ],
+      "nightPenaltyOverride": true,
+      "typeMultipliers": {
+        "cardio": 1.15,
+        "strength": 1,
+        "hobby": 0.8
+      },
+      "badge": "🔄 Recovery",
+      "desc": "Гликогеновое окно — еда идёт в восстановление"
+    },
+    "preWorkout": [
+      {
+        "maxGap": 45,
+        "waveBonus": -0.2,
+        "harmMultiplier": 0.6,
+        "label": "⚡ Топливо для тренировки"
+      },
+      {
+        "maxGap": 90,
+        "waveBonus": -0.1,
+        "harmMultiplier": 0.8,
+        "label": "🔋 Pre-workout"
+      }
+    ],
+    "stepsBonus": {
+      "tiers": [
+        {
+          "threshold": 12000,
+          "waveBonus": -0.12,
+          "harmMultiplier": 0.92,
+          "badge": "🚶 12k шагов"
+        },
+        {
+          "threshold": 10000,
+          "waveBonus": -0.1,
+          "harmMultiplier": 0.95,
+          "badge": "🚶 Активный"
+        },
+        {
+          "threshold": 7500,
+          "waveBonus": -0.06,
+          "harmMultiplier": 0.97,
+          "badge": "🚶 7.5k шагов"
+        },
+        {
+          "threshold": 5000,
+          "waveBonus": -0.04,
+          "harmMultiplier": 0.98,
+          "badge": "🚶 5k шагов"
+        }
+      ],
+      "eveningBoost": {
+        "afterHour": 18,
+        "multiplier": 1.3
+      }
+    },
+    "householdBonus": {
+      "tiers": [
+        {
+          "threshold": 90,
+          "waveBonus": -0.12,
+          "harmMultiplier": 0.9,
+          "badge": "🏠 Очень активный"
+        },
+        {
+          "threshold": 60,
+          "waveBonus": -0.1,
+          "harmMultiplier": 0.93,
+          "badge": "🏠 Активный быт"
+        },
+        {
+          "threshold": 30,
+          "waveBonus": -0.05,
+          "harmMultiplier": 0.96,
+          "badge": "🏠 Умеренный быт"
+        }
+      ]
+    },
+    "morningTraining": {
+      "beforeHour": 12,
+      "dayWaveBonus": -0.05,
+      "badge": "🌅 Morning boost",
+      "desc": "Утренняя тренировка → метаболизм ускорен весь день"
+    },
+    "doubleTraining": {
+      "minTrainings": 2,
+      "dayWaveBonus": -0.1,
+      "badge": "💪 Double Day",
+      "desc": "2+ тренировок → максимальная чувствительность к инсулину"
+    },
+    "fastedTraining": {
+      "minFastHours": 8,
+      "postWorkoutMultiplier": 1.3,
+      "badge": "⚡ Fasted boost",
+      "desc": "Тренировка натощак → усиленное восстановление"
+    },
+    "strengthProtein": {
+      "minProtein": 30,
+      "harmMultiplier": 0.8,
+      "badge": "💪 Muscle fuel",
+      "desc": "Белок после силовой → анаболизм"
+    },
+    "cardioSimple": {
+      "harmMultiplier": 0.5,
+      "glMultiplier": 0.7,
+      "badge": "🏃 Glycogen refuel",
+      "desc": "Простые углеводы после кардио → гликоген"
+    },
+    "nightOverride": {
+      "enabled": true,
+      "maxHoursAfterTraining": 4
+    },
+    "priority": {
+      "peri": 100,
+      "post": 80,
+      "pre": 60,
+      "steps": 20,
+      "household": 15,
+      "morning": 10,
+      "double": 10
+    },
+    "intensityMultiplier": {
+      "HIIT": 2,
+      "MODERATE": 1.5,
+      "LISS": 1
+    }
+  },
+  "IR_SCORE_CONFIG": {
+    "bmi": {
+      "thresholds": [25, 30, 35],
+      "factors": [1, 1.1, 1.25, 1.4],
+      "labels": ["Normal", "Overweight", "Obese I", "Obese II+"]
+    },
+    "sleep": {
+      "thresholds": [7, 6],
+      "factors": [1, 1.05, 1.15],
+      "labels": ["Optimal", "Moderate deficit", "Severe deficit"]
+    },
+    "stress": {
+      "thresholds": [3, 6],
+      "factors": [1, 1.08, 1.15],
+      "labels": ["Low", "Medium", "High"]
+    },
+    "age": {
+      "thresholds": [30, 45, 60],
+      "factors": [1, 1.06, 1.12, 1.25],
+      "labels": ["Young", "Adult", "Middle-age", "Senior"]
+    },
+    "colorRanges": [
+      {
+        "max": 1.1,
+        "color": "#22c55e",
+        "label": "🟢 Optimal"
+      },
+      {
+        "max": 1.25,
+        "color": "#eab308",
+        "label": "🟡 Moderate"
+      },
+      {
+        "max": 1.5,
+        "color": "#f97316",
+        "label": "🟠 Elevated"
+      },
+      {
+        "max": "Infinity",
+        "color": "#ef4444",
+        "label": "🔴 High"
+      }
+    ]
+  },
+  "SUPPLEMENTS_BONUS": {
+    "vinegar": {
+      "bonus": -0.2,
+      "desc": "Уксус → -20% волна"
+    },
+    "cinnamon": {
+      "bonus": -0.1,
+      "desc": "Корица → -10% волна"
+    },
+    "berberine": {
+      "bonus": -0.15,
+      "desc": "Берберин → -15% волна"
+    }
+  },
+  "COLD_EXPOSURE_BONUS": {
+    "coldShower": {
+      "bonus": -0.05,
+      "minutes": 3,
+      "desc": "🧊 Холодный душ → -5%"
+    },
+    "coldBath": {
+      "bonus": -0.1,
+      "minutes": 10,
+      "desc": "🧊 Ледяная ванна → -10%"
+    },
+    "coldSwim": {
+      "bonus": -0.12,
+      "minutes": 5,
+      "desc": "🧊 Моржевание → -12%"
+    },
+    "effectDurationHours": 5
+  },
+  "AUTOPHAGY_TIMER": {
+    "phases": {
+      "none": {
+        "minHours": 0,
+        "maxHours": 12,
+        "label": "Пищеварение",
+        "color": "#94a3b8",
+        "icon": "🍽️"
+      },
+      "early": {
+        "minHours": 12,
+        "maxHours": 16,
+        "label": "Переход к голоданию",
+        "color": "#eab308",
+        "icon": "⏳"
+      },
+      "active": {
+        "minHours": 16,
+        "maxHours": 24,
+        "label": "Аутофагия активна",
+        "color": "#22c55e",
+        "icon": "🔄"
+      },
+      "deep": {
+        "minHours": 24,
+        "maxHours": 48,
+        "label": "Глубокая аутофагия",
+        "color": "#10b981",
+        "icon": "✨"
+      },
+      "extended": {
+        "minHours": 48,
+        "maxHours": "Infinity",
+        "label": "Продлённый пост",
+        "color": "#3b82f6",
+        "icon": "🌟"
+      }
+    },
+    "minHoursToShow": 12,
+    "sensitivityBonus": {
+      "early": 0.05,
+      "active": 0.1,
+      "deep": 0.15,
+      "extended": 0.18
+    }
+  },
+  "GAP_HISTORY_KEY": "heys_meal_gaps_history",
+  "GAP_HISTORY_DAYS": 14,
+  "LIPOLYSIS_RECORD_KEY": "heys_lipolysis_record",
+  "LIPOLYSIS_STREAK_KEY": "heys_lipolysis_streak",
+  "LIPOLYSIS_HISTORY_KEY": "heys_lipolysis_history",
+  "MIN_LIPOLYSIS_FOR_STREAK": 240,
+  "KCAL_PER_MIN_BASE": 1
+}

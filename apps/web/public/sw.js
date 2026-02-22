@@ -4,13 +4,16 @@
 // Версия обновляется автоматически при билде
 // NOTE: Service Worker runs in isolated context - no access to @heys/logger
 
-const CACHE_VERSION = 'heys-1770745948240';
+const CACHE_VERSION = 'heys-1771772755281';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
 let updateRequiredNotified = false;
 
-// Ресурсы для предварительного кэширования (App Shell)
+// Ресурсы для предварительного кэширования (App Shell — минимальный набор)
+// После бандлинга: 73 отдельных JS-файла заменены на 3 бандла.
+// Бандлы (*.bundle.{hash}.js) кэшируются автоматически при первом запросе
+// через cacheFirst (хеш в имени = вечный кэш, новый деплой = новое имя файла).
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -28,65 +31,6 @@ const PRECACHE_URLS = [
   '/icon-192.png',
   '/icon-512.png',
   '/react-bundle.js',
-  // Core JS модули
-  '/heys_core_v12.js',
-  '/heys_models_v1.js',
-  '/heys_storage_layer_v1.js',
-  '/heys_day_v12.js',
-  '/heys_day_utils.js',
-  '/heys_day_hooks.js',
-  '/heys_day_pickers.js',
-  '/heys_day_trainings_v1.js',
-  '/heys_day_training_popups_v1.js',
-  '/heys_day_sleep_score_popups_v1.js',
-  '/heys_day_edit_grams_modal_v1.js',
-  '/heys_day_time_mood_picker_v1.js',
-  '/heys_day_bundle_v1.js',
-  '/heys_day_sparklines_v1.js',
-  '/heys_day_sparkline_data_v1.js',
-  '/heys_day_caloric_balance_v1.js',
-  '/heys_day_insights_data_v1.js',
-  '/heys_day_insulin_wave_data_v1.js',
-  '/heys_day_goal_progress_v1.js',
-  '/heys_day_daily_summary_v1.js',
-  '/heys_day_pull_refresh_v1.js',
-  '/heys_day_offline_sync_v1.js',
-  '/heys_day_insulin_wave_ui_v1.js',
-  '/heys_day_advice_list_ui_v1.js',
-  '/heys_day_advice_toast_ui_v1.js',
-  '/heys_day_advice_state_v1.js',
-  '/heys_day_measurements_v1.js',
-  '/heys_day_popups_state_v1.js',
-  '/heys_day_meals_chart_ui_v1.js',
-  '/heys_day_main_block_v1.js',
-  '/heys_day_side_block_v1.js',
-  '/heys_day_cycle_card_v1.js',
-  '/heys_day_weight_trends_v1.js',
-  '/heys_advice_rules_v1.js',
-  '/heys_advice_bundle_v1.js',
-  '/heys_advice_v1.js',
-  '/heys_user_v12.js',
-  '/heys_reports_v12.js',
-  '/heys_app_v12.js',
-  '/heys_simple_analytics.js',
-  '/heys_cloud_merge_v1.js',
-  '/heys_cloud_storage_utils_v1.js',
-  '/heys_cloud_shared_v1.js',
-  '/heys_cloud_queue_v1.js',
-  '/heys_storage_supabase_v1.js',
-  '/heys_wheel_picker.js',
-  '/heys_swipeable.js',
-  '/heys_pull_refresh.js',
-  '/heys_ratio_zones_v1.js',
-  '/heys_gamification_v1.js',
-  '/heys_data_overview_v1.js',
-  '/heys_dev_utils.js',
-  // Widgets Dashboard модули
-  '/heys_widgets_events_v1.js',
-  '/heys_widgets_registry_v1.js',
-  '/heys_widgets_core_v1.js',
-  '/heys_widgets_ui_v1.js',
-  '/widgets/widget_data.js'
 ];
 
 // CDN ресурсы (React, Supabase) — кэшируем при первом запросе
@@ -270,9 +214,15 @@ self.addEventListener('fetch', (event) => {
       return;
     }
 
-    // JS — Network First с no-store (чтобы не отдавать старый бандл)
+    // Бандлы с хешем в имени — Cache First (неизменяемые, хеш меняется при пересборке)
+    if (/\.bundle\.[a-f0-9]{8}\.js$/.test(url.pathname)) {
+      event.respondWith(cacheFirst(request, STATIC_CACHE));
+      return;
+    }
+
+    // Прочие JS — Stale While Revalidate (кэш + фоновое обновление)
     if (url.pathname.endsWith('.js')) {
-      event.respondWith(networkFirstNoStore(request));
+      event.respondWith(staleWhileRevalidate(request));
       return;
     }
 

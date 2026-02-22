@@ -1,12 +1,14 @@
 #!/usr/bin/env node
+// sync-iw-inline-config.cjs — Sync IW config to public/ for async loading
+// v2.0.0: No longer inlines in index.html. Writes to public/heys-iw-config.json
 
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
 const repoRoot = path.resolve(__dirname, '..');
-const indexPath = path.join(repoRoot, 'apps', 'web', 'index.html');
 const configPath = path.join(repoRoot, 'apps', 'web', 'config', 'insulin-wave-config.json');
+const publicConfigPath = path.join(repoRoot, 'apps', 'web', 'public', 'heys-iw-config.json');
 
 const readFile = (filePath) => fs.readFileSync(filePath, 'utf8');
 const writeFile = (filePath, content) => fs.writeFileSync(filePath, content, 'utf8');
@@ -32,35 +34,7 @@ const computeConfigHash = (config) => {
     return crypto.createHash('sha256').update(json).digest('hex').slice(0, 12);
 };
 
-const indentJson = (json, spaces) => {
-    const pad = ' '.repeat(spaces);
-    return json
-        .split('\n')
-        .map((line) => `${pad}${line}`)
-        .join('\n');
-};
-
-const buildInlineBlock = (json) => {
-    const indented = indentJson(json, 4);
-    return `  <script id="heys-iw-config" type="application/json">\n${indented}\n  </script>`;
-};
-
-const updateIndexHtml = (html, inlineBlock) => {
-    const blockRegex = /\s*<script id="heys-iw-config" type="application\/json">[\s\S]*?<\/script>/m;
-    if (blockRegex.test(html)) {
-        return html.replace(blockRegex, `\n${inlineBlock}`);
-    }
-
-    const headClose = '</head>';
-    const idx = html.indexOf(headClose);
-    if (idx === -1) {
-        throw new Error('Cannot find </head> in index.html');
-    }
-
-    return `${html.slice(0, idx)}\n${inlineBlock}\n${html.slice(idx)}`;
-};
-
-const syncInlineConfig = () => {
+const syncConfig = () => {
     const rawConfig = readFile(configPath);
     const parsed = JSON.parse(rawConfig);
     const { version: _version, ...content } = parsed || {};
@@ -73,27 +47,34 @@ const syncInlineConfig = () => {
     }
 
     const prettyJson = formatJson(updatedConfig);
-    const inlineBlock = buildInlineBlock(prettyJson);
 
-    const html = readFile(indexPath);
-    const updatedHtml = updateIndexHtml(html, inlineBlock);
+    // Write to public/ for async fetch by heys_iw_config_loader.js
+    let publicNeedsUpdate = true;
+    try {
+        const existing = readFile(publicConfigPath);
+        if (existing.trim() === prettyJson.trim()) {
+            publicNeedsUpdate = false;
+        }
+    } catch (e) {
+        // file doesn't exist yet
+    }
 
-    if (updatedHtml !== html) {
-        writeFile(indexPath, updatedHtml);
+    if (publicNeedsUpdate) {
+        writeFile(publicConfigPath, `${prettyJson}\n`);
         return { updated: true };
     }
 
     return { updated: false };
 };
 
-module.exports = { syncInlineConfig };
+module.exports = { syncConfig };
 
 if (require.main === module) {
     try {
-        const result = syncInlineConfig();
-        process.stdout.write(result.updated ? 'IW inline config synced.\n' : 'IW inline config already up to date.\n');
+        const result = syncConfig();
+        process.stdout.write(result.updated ? 'IW config synced to public/.\n' : 'IW config already up to date.\n');
     } catch (error) {
-        process.stderr.write(`IW inline config sync failed: ${error.message}\n`);
+        process.stderr.write(`IW config sync failed: ${error.message}\n`);
         process.exit(1);
     }
 }
