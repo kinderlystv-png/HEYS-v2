@@ -79,7 +79,14 @@
         }) || null;
 
 
-        const mealRecCard = app.MealRecCard?.renderCard?.({
+        // PERF v8.0: Separate module readiness from content — enables skeleton UX
+        const cascadeReady = !!app.CascadeCard?.renderCard;
+        const cascadeCard = cascadeReady ? (app.CascadeCard.renderCard({
+            React, day, prof, pIndex, dayTot, normAbs
+        }) || null) : null;
+
+        const mealRecReady = !!app.MealRecCard?.renderCard;
+        const mealRecCard = mealRecReady ? (app.MealRecCard.renderCard({
             React,
             day,
             prof,
@@ -87,32 +94,28 @@
             dayTot,
             normAbs,
             optimum: displayOptimum || optimum
-        }) || null;
+        }) || null) : null;
 
         if (mealRecCard) {
-            // P1 fix: throttle log to once per session (prevents 40+ identical lines on re-renders)
             if (!window.__heysLoggedMealRecRendered) {
                 window.__heysLoggedMealRecRendered = true;
                 console.info('[HEYS.diary] ✅ Meal rec card rendered');
             }
-        } else {
-            // PERF v7.1: throttle null warning — fires on every re-render (15+) when module deferred or no recommendation
+        } else if (mealRecReady) {
+            // Only log when module loaded but no recommendation (not when still loading)
             if (!window.__heysLoggedMealRecNull) {
                 window.__heysLoggedMealRecNull = true;
-                console.info('[HEYS.diary] ℹ️ Meal rec card not rendered (module not loaded or no recommendation)');
+                console.info('[HEYS.diary] ℹ️ Meal rec card: no recommendation');
             }
         }
-
-        const cascadeCard = app.CascadeCard?.renderCard?.({
-            React, day, prof, pIndex, dayTot, normAbs
-        }) || null;
 
         const dateKey = date
             || day?.date
             || app.models?.todayISO?.()
             || new Date().toISOString().slice(0, 10);
-        if (!app.Supplements?.renderCard) ensureSupplementsModule();
-        const supplementsCard = dateKey && app.Supplements?.renderCard?.({
+        const supplementsReady = !!app.Supplements?.renderCard;
+        if (!supplementsReady) ensureSupplementsModule();
+        const supplementsCard = supplementsReady && dateKey ? (app.Supplements.renderCard({
             dateKey,
             dayData: day,
             onForceUpdate: () => {
@@ -120,7 +123,24 @@
                     detail: { date: dateKey, source: 'supplements-update', forceReload: true }
                 }));
             }
-        }) || null;
+        }) || null) : null;
+
+        // PERF v8.0: Deferred card slot — stable keyed wrapper + skeleton while loading + fade-in
+        // Prevents full-page DOM thrashing when null→element shifts sibling positions
+        const deferredSlot = (ready, content, slotKey, skeletonH) => {
+            if (!ready) {
+                return React.createElement('div', { key: slotKey, className: 'deferred-card-slot deferred-card-slot--loading' },
+                    React.createElement('div', {
+                        className: 'deferred-card-skeleton',
+                        style: { height: skeletonH + 'px' }
+                    }, React.createElement('div', { className: 'deferred-card-skeleton__shimmer' }))
+                );
+            }
+            if (!content) {
+                return React.createElement('div', { key: slotKey, className: 'deferred-card-slot deferred-card-slot--empty' });
+            }
+            return React.createElement('div', { key: slotKey, className: 'deferred-card-slot deferred-card-slot--loaded' }, content);
+        };
 
         if (!showDiary) return insulinIndicator;
 
@@ -139,10 +159,10 @@
                 }
             }, 'ОСТАЛОСЬ НА СЕГОДНЯ'),
             goalProgressBar,
-            cascadeCard,
+            deferredSlot(cascadeReady, cascadeCard, 'slot-cascade', 140),
             refeedCard,
-            mealRecCard,
-            supplementsCard,
+            deferredSlot(mealRecReady, mealRecCard, 'slot-mealrec', 72),
+            deferredSlot(supplementsReady, supplementsCard, 'slot-supplements', 96),
             mealsChart,
             insulinIndicator,
             React.createElement('h2', {

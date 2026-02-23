@@ -37,72 +37,6 @@
   }
 }
 
-/* === NETWORK STATUS INDICATOR === */
-.network-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 500;
-  background: var(--pi-bg-secondary);
-  border: 1px solid var(--pi-border);
-  transition: all 0.3s ease;
-}
-
-.network-status__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.network-status__text {
-  color: var(--pi-text-secondary);
-}
-
-.network-status--offline .network-status__dot {
-  background-color: var(--pi-warning);
-}
-
-.network-status--syncing .network-status__dot {
-  background-color: var(--pi-info);
-}
-
-.network-status__dot--pulse {
-  animation: network-pulse 1.5s infinite;
-}
-
-.network-status--online {
-  background: transparent;
-  border-color: transparent;
-  padding: 4px;
-}
-
-.network-status--online .network-status__icon {
-  color: var(--pi-success);
-  font-size: 12px;
-  font-weight: bold;
-}
-
-@keyframes network-pulse {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 0.5;
-    transform: scale(1.2);
-  }
-
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
 /* Apply dark mode to PI components */
 .pi-card {
   background: var(--pi-bg-primary);
@@ -4716,6 +4650,90 @@ body.tour-active .ios-pwa-banner {
 .meal-rec-card:hover {
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PERF v8.0: Deferred card slot — stable key wrappers + skeleton + fade-in
+   Prevents full-page DOM thrashing when deferred modules load
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Slot wrapper — always present, stable position via React key */
+.deferred-card-slot {
+  position: relative;
+}
+
+/* Loading state: module not ready → skeleton visible */
+.deferred-card-slot--loading {
+  /* natural height from skeleton child */
+}
+
+/* Empty state: module ready, no content → collapse smoothly */
+.deferred-card-slot--empty {
+  height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  transition: height 0.3s ease-out, opacity 0.2s ease-out;
+}
+
+/* Loaded state: module ready + content → fade in */
+.deferred-card-slot--loaded {
+  animation: deferred-card-appear 0.35s ease-out;
+}
+
+/* Skeleton placeholder — mimics card shape */
+.deferred-card-skeleton {
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Shimmer sweep animation */
+.deferred-card-skeleton__shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent 100%);
+  background-size: 200% 100%;
+  animation: deferred-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes deferred-skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes deferred-card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dark theme */
+[data-theme="dark"] .deferred-card-skeleton {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border-color: #475569;
+}
+
+[data-theme="dark"] .deferred-card-skeleton__shimmer {
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    transparent 100%);
+  background-size: 200% 100%;
+  animation: deferred-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
 
 /* 🚀 PERF v6.0: Skeleton loader while async recommendation calculates */
 .meal-rec-card--skeleton {
