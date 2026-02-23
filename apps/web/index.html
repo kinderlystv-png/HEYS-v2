@@ -779,26 +779,17 @@
     <script defer src="heys_day_v12.js?v=54" fetchpriority="low"></script>
     <script defer src="heys_user_tab_impl_v1.js?v=1" fetchpriority="low"></script>
     <script defer src="heys_user_v12.js?v=20" fetchpriority="low"></script>
-    <script defer src="heys_monthly_reports_service_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_monthly_reports_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_reports_tab_impl_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_reports_v12.js?v=20" fetchpriority="low"></script>
-    <script defer src="heys_weekly_reports_v2.js?v=8" fetchpriority="low"></script>
-    <script defer src="heys_data_overview_v1.js?v=20" fetchpriority="low"></script>
-    <!-- Widgets Dashboard system -->
-    <script defer src="heys_widgets_events_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_widgets_registry_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_widgets_data_crash_risk_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_widgets_core_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="widgets/widget_data.js?v=6" fetchpriority="low"></script>
-    <script defer src="heys_widgets_ui_v1.js?v=4" fetchpriority="low"></script>
-    <!-- Auth + Login (client phone+PIN, curator email+password) -->
+    <!-- Auth + Login (client phone+PIN, curator email+password) — нужны до React render для gate логики -->
     <script defer src="heys_auth_v1.js?v=3"></script>
     <script defer src="heys_subscription_v1.js?v=1"></script>
     <script defer src="heys_trial_queue_v1.js?v=1"></script>
     <script defer src="heys_paywall_v1.js?v=2"></script>
     <script defer src="heys_login_screen_v1.js?v=2"></script>
     <script src="heys_ui_onboarding_v1.js"></script>
+    <!-- 🚀 PERF v7.0: Boot chain перемещён сюда (до reports/widgets).
+         React начинает рендер сразу как загружены DayTab/UserTab,
+         не дожидаясь ~11 некритичных скриптов (~10-15s экономии на mid-tier throttle).
+         Reports и Widgets грузятся после того как React уже работает. -->
     <script defer src="heys_app_hooks_v1.js?v=1"></script>
     <script defer src="heys_app_tabs_v1.js?v=1"></script>
     <script defer src="heys_early_warning_panel_v1.js?v=16"></script>
@@ -847,6 +838,22 @@
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: heys_app_entry_v1.js')"></script>
     <script defer src="heys_app_v12.js?v=2026.02.22.1805.8325fa69"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: heys_app_v12.js')"></script>
+
+    <!-- Non-critical modules: Reports и Widgets — грузятся ПОСЛЕ React.
+         Пользователь уже видит Day tab, пока эти скрипты загружаются в фоне. -->
+    <script defer src="heys_monthly_reports_service_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_monthly_reports_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_reports_tab_impl_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_reports_v12.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_weekly_reports_v2.js?v=8" fetchpriority="low"></script>
+    <script defer src="heys_data_overview_v1.js?v=20" fetchpriority="low"></script>
+    <!-- Widgets Dashboard system -->
+    <script defer src="heys_widgets_events_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_widgets_registry_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_widgets_data_crash_risk_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_widgets_core_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="widgets/widget_data.js?v=6" fetchpriority="low"></script>
+    <script defer src="heys_widgets_ui_v1.js?v=4" fetchpriority="low"></script>
 
     <!-- Service Worker регистрируется в heys_platform_apis_v1.js → registerServiceWorker() -->
 </body>
