@@ -2433,7 +2433,6 @@
           status = CONNECTION_STATUS.SYNC;
           logCritical('🔄 Сессия восстановлена:', user.email || user.id);
           logCritical('[AUTH] ✅ user установлен из restore:', user?.email, '| user:', !!user);
-          window.__heysPerfMark && window.__heysPerfMark('Auth session restored');
 
           // 🔐 v=35 FIX: После миграции на Yandex API — ВКЛЮЧАЕМ RPC режим!
           // Supabase SDK удалён, все операции через REST API
@@ -2459,19 +2458,15 @@
             logCritical('[restoreSession] setTimeout fired, clientId:', clientId ? clientId.slice(0, 8) + '...' : 'NULL');
             if (clientId) {
               logCritical('🔄 Запускаем bootstrap sync для клиента:', clientId.substring(0, 8) + '...');
-              window.__heysPerfMark && window.__heysPerfMark('Bootstrap sync started');
               cloud.syncClient(clientId).then(result => {
                 const errorText = result?.error || (result?.success === false ? 'unknown_error' : null);
                 if (errorText) {
                   logCritical('⚠️ Bootstrap sync failed:', errorText);
-                  window.__heysPerfMark && window.__heysPerfMark('Bootstrap sync FAILED: ' + errorText);
                 } else {
                   logCritical('✅ Bootstrap sync завершён');
-                  window.__heysPerfMark && window.__heysPerfMark('Bootstrap sync done');
                 }
               }).catch(e => {
                 logCritical('⚠️ Bootstrap sync error:', e?.message || e);
-                window.__heysPerfMark && window.__heysPerfMark('Bootstrap sync ERROR');
               });
             }
           }, 100);
@@ -3496,7 +3491,6 @@
       logCritical(`✅ Загружено ${loadedCount} ключей для клиента ${clientId.slice(0, 8)}`);
       const syncDuration = Math.round(performance.now() - syncStartTime);
       logCritical(`✅ [SYNC DONE] client=${clientId.slice(0, 8)} keys=${loadedCount} ms=${syncDuration} via=rpc${isDelta ? ' (delta)' : ' (full)'}`);
-      window.__heysPerfMark && window.__heysPerfMark(`Sync done: ${loadedCount} keys in ${syncDuration}ms${isDelta ? ' (delta)' : ''}`);
 
       // 🚀 Delta Sync: сохраняем timestamp для следующего delta sync
       try {
@@ -3800,7 +3794,6 @@
             .then(result => {
               if (result.data && result.data.length > 0) {
                 logCritical(`📦 [SHARED PRODUCTS] Parallel pre-loaded ${result.data.length} products`);
-                window.__heysPerfMark && window.__heysPerfMark(`Shared products loaded: ${result.data.length}`);
               }
             })
             .catch(e => console.warn('[SHARED PRODUCTS] Parallel pre-load error:', e));
@@ -3817,7 +3810,6 @@
 
         if (isDeltaFastPath) {
           logCritical(`[DELTA FAST-PATH] Direct fetch, skipping all pre-work, since ${lastSyncTs}`);
-          window.__heysPerfMark && window.__heysPerfMark('Delta fast-path: direct fetch');
         }
 
         // === PRE-WORK: flush + cleanup + ensureClient (skipped in delta fast-path) ===
@@ -3987,7 +3979,6 @@
               allData = prefetchResult.data;
               usedPrefetch = true;
               logCritical(`🚀 [PREFETCH HIT] Used pre-fetched delta data: ${allData.length} keys (saved ~1s)`);
-              window.__heysPerfMark && window.__heysPerfMark(`Prefetch hit: ${allData.length} keys`);
             } else {
               logCritical(`⚠️ [PREFETCH MISS] Prefetch failed: ${prefetchResult?.error || 'unknown'}, falling back`);
             }
@@ -4031,7 +4022,6 @@
         const error = fetchError;
 
         logCritical(`🔍 [SYNC DEBUG] main data query: rows=${data?.length}, error=${error?.message || 'none'}, isNetworkFailure=${error?.isNetworkFailure}${isDeltaSync ? ' (DELTA)' : ' (FULL)'}`);
-        window.__heysPerfMark && window.__heysPerfMark(`Data fetched: ${data?.length || 0} keys${isDeltaSync ? ' (delta)' : ' (full)'}`);
 
         if (error) {
           // Graceful degradation

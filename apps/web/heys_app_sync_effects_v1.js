@@ -121,7 +121,6 @@
                                 clientSyncDoneRef.current = true;
                                 return;
                             }
-                            window.__heysPerfMark && window.__heysPerfMark('⚡ setSyncVer: clientId-sync-done');
                             setSyncVer((v) => v + 1);
                         })
                         .catch((err) => {
@@ -162,7 +161,6 @@
 
         React.useEffect(() => {
             const markInitialSyncDone = () => {
-                window.__heysPerfMark && window.__heysPerfMark('SyncEffects: heysSyncCompleted received');
                 if (window.HEYS) window.HEYS.syncCompletedAt = Date.now();
                 setTimeout(() => {
                     initialSyncDoneRef.current = true;
@@ -203,7 +201,6 @@
 
                 setProducts(filtered);
                 if (!initialSyncDoneRef.current) {
-                    window.__heysPerfMark && window.__heysPerfMark('⏳ products-updated BLOCKED (initialSync not done)');
                     return;
                 }
 
@@ -211,7 +208,6 @@
                 const now = Date.now();
                 if (now - _lastProductsVerTs < 300) return;
                 _lastProductsVerTs = now;
-                window.__heysPerfMark && window.__heysPerfMark('⚡ setSyncVer: products-updated (source=' + (detail.source || 'unknown') + ')');
                 setSyncVer((v) => v + 1);
             };
 
@@ -240,11 +236,9 @@
                     return;
                 }
                 if (!initialSyncDoneRef.current) {
-                    window.__heysPerfMark && window.__heysPerfMark('⏳ day-updated BLOCKED (initialSync not done, source=' + source + ')');
                     return;
                 }
 
-                window.__heysPerfMark && window.__heysPerfMark('⚡ setSyncVer: day-updated (source=' + source + ', field=' + field + ')');
                 setSyncVer((v) => v + 1);
             };
 

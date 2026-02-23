@@ -2434,7 +2434,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Throttle render log — once per session (same strategy as MealRec P1 fix)
     if (!window.__heysLoggedCascadeRender) {
       window.__heysLoggedCascadeRender = true;
-      window.__heysPerfMark && window.__heysPerfMark('CascadeCard first render');
       console.info('[HEYS.cascade] ✅ CascadeCard rendered:', {
         state: state,
         crs: crs,

@@ -1227,7 +1227,6 @@
         // P2-card: throttle render logs — only first time per page session
         _mealRecCardRenderCount++;
         if (_mealRecCardRenderCount === 1) {
-            window.__heysPerfMark && window.__heysPerfMark('MealRecCard first render');
             console.info(`${LOG_PREFIX} 🎨 Rendering card UI...`);
         }
 

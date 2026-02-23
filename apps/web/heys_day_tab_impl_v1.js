@@ -810,36 +810,6 @@
 
         // mealChartHintShown/showFirstPerfectAchievement/newMealAnimatingIndex are in dayRuntimeUiState
 
-        // ⏱️ PERF: Track DayTab re-render causes (skip animation frames)
-        const _dtRenderRef = useRef({ count: 0, lastTs: 0, prevEaten: null, prevDate: null, prevProducts: null, prevDay: null, prevIsAnim: null, prevHydrated: null, prevMealsDeps: null });
-        (() => {
-            const _r = _dtRenderRef.current;
-            _r.count++;
-            const _now = Date.now();
-            const gap = _now - _r.lastTs;
-            // Skip animation-caused renders (gap < 200ms after first few)
-            if (_r.count === 1 || gap > 200) {
-                const changes = [];
-                if (_r.prevDate !== date) changes.push('date');
-                if (_r.prevEaten !== eatenKcal) changes.push('eatenKcal');
-                if (_r.prevProducts !== products) changes.push('products');
-                if (_r.prevDay !== day) changes.push('day');
-                if (_r.prevIsAnim !== isAnimating) changes.push('isAnimating=' + isAnimating);
-                if (_r.prevHydrated !== isHydrated) changes.push('isHydrated=' + isHydrated);
-                if (_r.prevMealsDeps !== mealsDepsReady) changes.push('mealsDeps=' + mealsDepsReady);
-                if (changes.length === 0 && _r.count > 1) changes.push('other-state');
-                window.__heysPerfMark && window.__heysPerfMark('DayTab render #' + _r.count + ' (changed: ' + changes.join('+') + ')');
-            }
-            _r.lastTs = _now;
-            _r.prevEaten = eatenKcal;
-            _r.prevDate = date;
-            _r.prevProducts = products;
-            _r.prevDay = day;
-            _r.prevIsAnim = isAnimating;
-            _r.prevHydrated = isHydrated;
-            _r.prevMealsDeps = mealsDepsReady;
-        })();
-
         // Emoji animation state handled by HEYS.dayPickerModals
 
         // Animation state handled by HEYS.dayAnimations

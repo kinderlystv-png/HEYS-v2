@@ -152,13 +152,11 @@
                     // 🔒 Блокируем события heys:day-updated во время синхронизации
                     // Это предотвращает множественные setDay() и мерцание UI
                     isSyncingRef.current = true;
-                    window.__heysPerfMark && window.__heysPerfMark('DayEffects: bootstrapClientSync called');
                     cloud.bootstrapClientSync(clientId)
                         .then(() => {
                             // После sync localStorage уже обновлён событиями heys:day-updated
                             // Просто загружаем финальные данные (без задержки!)
                             isSyncingRef.current = false;
-                            window.__heysPerfMark && window.__heysPerfMark('DayEffects: sync done → setDay');
                             doLocal();
                         })
                         .catch((err) => {
@@ -190,7 +188,6 @@
                 const updatedDate = e.detail?.date;
                 const source = e.detail?.source || 'unknown';
                 const forceReload = e.detail?.forceReload || false;
-                window.__heysPerfMark && window.__heysPerfMark('DayEffects: heys:day-updated (source=' + source + ', date=' + updatedDate + ')');
 
                 // 🔧 v3.19.1: Дедупликация событий — игнорируем одинаковые события в течение 100мс
                 const now = Date.now();
