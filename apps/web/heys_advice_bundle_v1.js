@@ -2661,7 +2661,7 @@
         const React = window.React;
 
         // Вычисляем контекст
-        const ctx = React.useMemo(() => {
+        const ctx = (() => {
             try {
             const now = new Date();
             const hour = now.getHours();
@@ -2732,10 +2732,10 @@
                     goal: 'maintenance', crashRisk: null
                 };
             }
-        }, [dayTot, normAbs, optimum, displayOptimum, caloricDebt, day, pIndex, currentStreak, prof, waterGoal]);
+        })();
 
         // Генерируем все советы
-        const allAdvices = React.useMemo(() => {
+        const allAdvices = (() => {
             try {
                 if (!ctx) return [];
                 const baseAdvices = generateAdvices(ctx);
@@ -2788,11 +2788,11 @@
                 console.error('[HEYS.advice] ❌ allAdvices useMemo crash:', e?.message);
                 return [];
             }
-        }, [ctx]);
+        })();
 
         // 🔧 Фильтруем по включённым категориям
         // 💊 Советы с isReminder: true (напоминания) показываются ВСЕГДА
-        const categoryFilteredAdvices = React.useMemo(() => {
+        const categoryFilteredAdvices = (() => {
             return allAdvices.filter(a => {
                 // Напоминания (витамины и т.д.) показываются всегда
                 if (a.isReminder === true) return true;
@@ -2801,20 +2801,20 @@
                 if (!a.category) return true;
                 return isCategoryEnabled(a.category);
             });
-        }, [allAdvices]);
+        })();
 
         // Применяем boost для goal-specific советов
-        const boostedAdvices = React.useMemo(() => {
+        const boostedAdvices = (() => {
             return applyGoalBoost(categoryFilteredAdvices, ctx.goal);
-        }, [categoryFilteredAdvices, ctx.goal]);
+        })();
 
         // Фильтруем по эмоциональному состоянию
-        const filteredAdvices = React.useMemo(() => {
+        const filteredAdvices = (() => {
             return filterByEmotionalState(boostedAdvices, ctx.emotionalState);
-        }, [boostedAdvices, ctx.emotionalState]);
+        })();
 
         // 🎭 Адаптируем тексты под настроение
-        const moodAdaptedAdvices = React.useMemo(() => {
+        const moodAdaptedAdvices = (() => {
             const avgMood = getAverageMoodToday(ctx.day);
             if (!avgMood || avgMood === 0) return filteredAdvices;
 
@@ -2823,11 +2823,11 @@
                 if (adaptedText === null) return null; // Фильтруем жёсткие советы при плохом настроении
                 return { ...advice, text: adaptedText };
             }).filter(Boolean);
-        }, [filteredAdvices, ctx.day]);
+        })();
 
         // Фильтруем по триггеру (для показа в развёрнутом виде — без canShowAdvice)
         // Спецтриггер 'manual' — показывает ВСЕ советы без фильтрации по триггеру
-        const allForTrigger = React.useMemo(() => {
+        const allForTrigger = (() => {
             if (!trigger) return [];
             if (isUserBusy(uiState)) return [];
 
@@ -2854,12 +2854,12 @@
             advices = limitByCategory(advices);
 
             return advices;
-        }, [moodAdaptedAdvices, trigger, uiState, ctx]);
+        })();
 
         // Советы которые можно показать (с проверкой cooldown)
-        const relevantAdvices = React.useMemo(() => {
+        const relevantAdvices = (() => {
             return allForTrigger.filter(a => canShowAdvice(a.id, { canSkipCooldown: a.canSkipCooldown }));
-        }, [allForTrigger]);
+        })();
 
         // Основной совет (первый доступный)
         const primary = relevantAdvices[0] || null;
@@ -2875,7 +2875,7 @@
 
         // 🔢 Badge advices — советы для FAB badge (как trigger='manual', но без зависимости от trigger)
         // Применяем ВСЕ фильтры
-        const badgeAdvices = React.useMemo(() => {
+        const badgeAdvices = (() => {
             if (isUserBusy(uiState)) return [];
 
             let advices = moodAdaptedAdvices;
@@ -2896,7 +2896,7 @@
             advices = limitByCategory(advices);
 
             return advices;
-        }, [moodAdaptedAdvices, uiState, ctx]);
+        })();
 
         // Количество отложенных
         const scheduledCount = getScheduledCount();
