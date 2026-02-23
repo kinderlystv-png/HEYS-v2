@@ -4696,16 +4696,21 @@ body.tour-active .ios-pwa-banner {
   position: absolute;
   inset: 0;
   background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.5) 50%,
-    transparent 100%);
+      transparent 0%,
+      rgba(255, 255, 255, 0.5) 50%,
+      transparent 100%);
   background-size: 200% 100%;
   animation: deferred-skeleton-shimmer 1.5s ease-in-out infinite;
 }
 
 @keyframes deferred-skeleton-shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @keyframes deferred-card-appear {
@@ -4713,6 +4718,7 @@ body.tour-active .ios-pwa-banner {
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -4727,9 +4733,9 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .deferred-card-skeleton__shimmer {
   background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.06) 50%,
-    transparent 100%);
+      transparent 0%,
+      rgba(255, 255, 255, 0.06) 50%,
+      transparent 100%);
   background-size: 200% 100%;
   animation: deferred-skeleton-shimmer 1.5s ease-in-out infinite;
 }

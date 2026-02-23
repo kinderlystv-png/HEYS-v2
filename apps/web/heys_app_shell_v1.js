@@ -90,6 +90,10 @@
         const [ewsData, setEWSData] = React.useState(null);
         const clientDropdownAnchorRef = React.useRef(null);
         const [clientDropdownMaxHeight, setClientDropdownMaxHeight] = React.useState(320);
+        // ☁️ Cloud Sync Badge State (v2.0): auto-fade synced→idle, lastSyncedAt tracking
+        const [displayStatus, setDisplayStatus] = React.useState(cloudStatus);
+        const lastSyncedAtRef = React.useRef(null);
+        const syncFadeTimerRef = React.useRef(null);
 
         React.useEffect(() => {
             if (!showClientDropdown) return;
@@ -278,7 +282,38 @@
             };
         }, [selectedDate, clientId]);
 
+        // ☁️ Auto-fade synced → idle after 2s + track last sync time (v2.0)
+        React.useEffect(() => {
+            if (cloudStatus === 'synced') {
+                lastSyncedAtRef.current = Date.now();
+                setDisplayStatus('synced');
+                clearTimeout(syncFadeTimerRef.current);
+                syncFadeTimerRef.current = setTimeout(() => setDisplayStatus('idle'), 2000);
+            } else {
+                clearTimeout(syncFadeTimerRef.current);
+                setDisplayStatus(cloudStatus);
+            }
+            return () => clearTimeout(syncFadeTimerRef.current);
+        }, [cloudStatus]);
+
         const haptic = HEYS?.haptic || (() => { });
+        const formatSyncAge = (ts) => {
+            if (!ts) return '';
+            const s = Math.floor((Date.now() - ts) / 1000);
+            if (s < 10) return 'только что';
+            if (s < 60) return `${s} сек назад`;
+            const m = Math.floor(s / 60);
+            if (m < 60) return `${m} мин назад`;
+            return `${Math.floor(m / 60)} ч назад`;
+        };
+        const handleSyncBadgeClick = () => {
+            if (displayStatus === 'syncing' || displayStatus === 'offline') return;
+            haptic('light');
+            if (HEYS?.cloud?.syncClient && clientIdValue) {
+                console.info('[HEYS.sync] 🔄 Manual force-sync triggered from badge');
+                HEYS.cloud.syncClient(clientIdValue, { force: true });
+            }
+        };
         const pad2 = (n) => String(n).padStart(2, '0');
         const formatLocalISO = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
         const shiftISO = (iso, delta) => {
@@ -651,40 +686,58 @@
                         onClick: () => setShowClientDropdown(false)
                     })
                 ),
-                // Cloud sync indicator
+                // ☁️ Cloud sync indicator (v2.0: forceSync on click, auto-fade, relative time tooltip)
                 React.createElement('div', {
-                    key: 'cloud-' + cloudStatus, // Force re-render on status change
-                    className: 'cloud-sync-indicator ' + cloudStatus,
+                    key: 'cloudsync',
+                    className: 'cloud-sync-indicator ' + displayStatus + (displayStatus !== 'syncing' && displayStatus !== 'offline' ? ' cloud-sync-indicator--clickable' : ''),
                     title: (() => {
                         const routingMode = HEYS?.cloud?.getRoutingStatus?.()?.mode || 'unknown';
                         const modeLabel = routingMode === 'direct' ? '🔗 Direct' : routingMode === 'proxy' ? '🔀 Proxy' : '';
-                        const baseTitle = cloudStatus === 'syncing'
-                            ? (syncProgress.total > 1
+                        let baseTitle;
+                        if (cloudStatus === 'syncing') {
+                            baseTitle = syncProgress?.total > 1
                                 ? `Синхронизация... ${syncProgress.synced}/${syncProgress.total}`
-                                : 'Синхронизация...')
-                            : cloudStatus === 'synced' ? 'Сохранено в облако'
-                                : cloudStatus === 'offline'
-                                    ? (pendingCount > 0
-                                        ? `Офлайн — ${pendingCount} изменений ожидают синхронизации`
-                                        : 'Офлайн — данные сохраняются локально')
-                                    : cloudStatus === 'error'
-                                        ? (retryCountdown > 0 ? `Ошибка. Повтор через ${retryCountdown}с` : 'Ошибка синхронизации')
-                                        : 'Подключено к облаку';
+                                : 'Синхронизация...';
+                        } else if (cloudStatus === 'offline') {
+                            baseTitle = pendingCount > 0
+                                ? `Офлайн — ${pendingCount} изменений ожидают синхронизации`
+                                : 'Офлайн — данные сохраняются локально';
+                        } else if (cloudStatus === 'error') {
+                            baseTitle = retryCountdown > 0
+                                ? `Ошибка. Повтор через ${retryCountdown}с — нажмите для повтора`
+                                : 'Ошибка синхронизации — нажмите для повтора';
+                        } else if (lastSyncedAtRef.current) {
+                            const age = formatSyncAge(lastSyncedAtRef.current);
+                            baseTitle = `Сохранено ${age} — нажмите для синхронизации`;
+                        } else {
+                            baseTitle = 'Нажмите для синхронизации';
+                        }
                         return modeLabel ? `${baseTitle} (${modeLabel})` : baseTitle;
                     })(),
-                    // Синее облако — сеть есть, зелёная галочка — синхронизировано
-                    dangerouslySetInnerHTML: {
-                        __html: cloudStatus === 'syncing'
-                            ? '<div class="sync-spinner"></div>' + (syncProgress.total > 1 ? '<span class="sync-progress">' + syncProgress.synced + '/' + syncProgress.total + '</span>' : '')
-                            : cloudStatus === 'synced'
-                                ? '<span class="cloud-icon synced">✓</span>'
-                                : cloudStatus === 'offline'
-                                    ? '<svg class="cloud-icon offline" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2"/></svg>' + (pendingCount > 0 ? '<span class="pending-badge">' + pendingCount + '</span>' : '')
-                                    : cloudStatus === 'error'
-                                        ? '<span class="cloud-icon error">⚠</span>' + (retryCountdown > 0 ? '<span class="retry-countdown">' + retryCountdown + '</span>' : '')
-                                        : '<svg class="cloud-icon idle" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>'
-                    }
-                }),                    // 🚨 EWS Badge (v1.3 - показывает актуальные предупреждения без ручного скрытия)
+                    onClick: handleSyncBadgeClick,
+                },
+                    displayStatus === 'syncing' ? [
+                        React.createElement('div', { key: 'spin', className: 'sync-spinner' }),
+                        syncProgress?.total > 1 && React.createElement('span', { key: 'prog', className: 'sync-progress' }, `${syncProgress.synced}/${syncProgress.total}`)
+                    ]
+                        : displayStatus === 'synced'
+                            ? React.createElement('span', { key: 'ok', className: 'cloud-icon synced' }, '✓')
+                            : displayStatus === 'offline' ? [
+                                React.createElement('svg', { key: 'ic', className: 'cloud-icon offline', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
+                                    React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' }),
+                                    React.createElement('line', { x1: '1', y1: '1', x2: '23', y2: '23', stroke: 'currentColor', strokeWidth: '2' })
+                                ),
+                                pendingCount > 0 && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
+                            ]
+                                : displayStatus === 'error' ? [
+                                    React.createElement('span', { key: 'warn', className: 'cloud-icon error' }, '⚠'),
+                                    retryCountdown > 0 && React.createElement('span', { key: 'cd', className: 'retry-countdown' }, retryCountdown)
+                                ]
+                                    : React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
+                                        React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
+                                    )
+                ),
+                // 🚨 EWS Badge (v1.3 - показывает актуальные предупреждения без ручного скрытия)
                 ewsData && React.createElement('div', {
                     className: 'ews-badge' + (
                         ewsData.count === 0 ? ' ews-badge--ok' :
