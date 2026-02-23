@@ -521,9 +521,30 @@
         }, [safeMeals, pIndex]);
     }
 
+    // PERF v8.1: Lightweight re-render trigger for deferred modules
+    // When deferred modules (CascadeCard, MealRecCard, Supplements) finish loading,
+    // they dispatch 'heys-deferred-module-loaded' instead of 'heys:day-updated'.
+    // This avoids full day data reload (setDay) — just triggers UI re-render
+    // so deferredSlot sees module readiness and swaps skeleton → content.
+    function useDeferredModuleEffect() {
+        const React = getReact();
+        const [, setDeferredTick] = React.useState(0);
+
+        React.useEffect(() => {
+            const handleModuleLoaded = (e) => {
+                const mod = e.detail?.module || 'unknown';
+                console.info('[HEYS.day] 🧩 Deferred module loaded:', mod);
+                setDeferredTick(c => c + 1);
+            };
+            window.addEventListener('heys-deferred-module-loaded', handleModuleLoaded);
+            return () => window.removeEventListener('heys-deferred-module-loaded', handleModuleLoaded);
+        }, []);
+    }
+
     HEYS.dayEffects = {
         useDaySyncEffects,
         useDayBootEffects,
+        useDeferredModuleEffect,
         useDayCurrentMinuteEffect,
         useDayThemeEffect,
         useDayExportsEffects

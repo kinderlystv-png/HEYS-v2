@@ -5617,8 +5617,8 @@
             script.async = true;
             script.onload = () => {
                 window.__heysSupplementsLoading = false;
-                window.dispatchEvent(new CustomEvent('heys:day-updated', {
-                    detail: { source: 'supplements-lazy', forceReload: true }
+                window.dispatchEvent(new CustomEvent('heys-deferred-module-loaded', {
+                    detail: { module: 'supplements' }
                 }));
             };
             script.onerror = () => {
@@ -5693,14 +5693,20 @@
             }
         }) || null) : null;
 
-        // PERF v8.0: Deferred card slot — stable keyed wrapper + skeleton while loading + fade-in
-        const deferredSlot = (ready, content, slotKey, skeletonH) => {
+        // PERF v8.1: Deferred card slot — rich skeleton with icon + label + shimmer
+        const deferredSlot = (ready, content, slotKey, skeletonH, skeletonIcon, skeletonLabel) => {
             if (!ready) {
                 return React.createElement('div', { key: slotKey, className: 'deferred-card-slot deferred-card-slot--loading' },
                     React.createElement('div', {
                         className: 'deferred-card-skeleton',
-                        style: { height: skeletonH + 'px' }
-                    }, React.createElement('div', { className: 'deferred-card-skeleton__shimmer' }))
+                        style: { minHeight: skeletonH + 'px' }
+                    },
+                        React.createElement('div', { className: 'deferred-card-skeleton__shimmer' }),
+                        React.createElement('div', { className: 'deferred-card-skeleton__content' },
+                            skeletonIcon && React.createElement('div', { className: 'deferred-card-skeleton__icon' }, skeletonIcon),
+                            skeletonLabel && React.createElement('div', { className: 'deferred-card-skeleton__label' }, skeletonLabel)
+                        )
+                    )
                 );
             }
             if (!content) {
@@ -5726,10 +5732,10 @@
                 }
             }, 'ОСТАЛОСЬ НА СЕГОДНЯ'),
             goalProgressBar,
-            deferredSlot(cascadeReady, cascadeCard, 'slot-cascade', 140),
+            deferredSlot(cascadeReady, cascadeCard, 'slot-cascade', 140, '🔬', 'Анализируем ваши данные, чтобы показать состояние поведенческого каскада'),
             refeedCard,
-            deferredSlot(mealRecReady, mealRecCard, 'slot-mealrec', 72),
-            deferredSlot(supplementsReady, supplementsCard, 'slot-supplements', 96),
+            deferredSlot(mealRecReady, mealRecCard, 'slot-mealrec', 72, '🍽️', 'Загружаем ваши данные, чтобы умный планировщик дал точные рекомендации на остаток дня'),
+            deferredSlot(supplementsReady, supplementsCard, 'slot-supplements', 96, '💊', 'Подготавливаем план добавок на сегодня'),
             mealsChart,
             insulinIndicator,
             React.createElement('h2', {

@@ -3329,10 +3329,12 @@
   loadCustomSupplements();
 
   // Триггерим перерендер DayTab после инициализации модуля
+  // PERF v8.1: Используем lightweight событие вместо heys:day-updated
+  // renderSupplementsCard читает из localStorage напрямую — setDay() не нужен
   try {
     if (typeof window !== 'undefined' && window.dispatchEvent) {
-      window.dispatchEvent(new CustomEvent('heys:day-updated', {
-        detail: { source: 'supplements-init', forceReload: true }
+      window.dispatchEvent(new CustomEvent('heys-deferred-module-loaded', {
+        detail: { module: 'supplements' }
       }));
     }
   } catch (e) {

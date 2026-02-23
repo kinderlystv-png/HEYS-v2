@@ -315,6 +315,12 @@
         }
         HEYS.dayEffects.useDayBootEffects();
 
+        // PERF v8.1: Lightweight re-render when deferred modules load
+        // Avoids full setDay() reload — just triggers render so deferredSlot swaps skeleton → content
+        if (HEYS.dayEffects.useDeferredModuleEffect) {
+            HEYS.dayEffects.useDeferredModuleEffect();
+        }
+
         // prodSig/pIndex/debug now handled by dayProductsContext
         const prof = getProfile();
         // date приходит из props (selectedDate из App header)

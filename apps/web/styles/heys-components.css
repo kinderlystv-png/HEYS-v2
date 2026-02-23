@@ -4703,6 +4703,39 @@ body.tour-active .ios-pwa-banner {
   animation: deferred-skeleton-shimmer 1.5s ease-in-out infinite;
 }
 
+/* Rich skeleton content — icon + descriptive label */
+.deferred-card-skeleton__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: inherit;
+  padding: 20px 16px;
+  text-align: center;
+}
+
+.deferred-card-skeleton__icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+  opacity: 0.5;
+  animation: deferred-skeleton-pulse 2s ease-in-out infinite;
+}
+
+.deferred-card-skeleton__label {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.5;
+  max-width: 280px;
+  font-weight: 400;
+}
+
+@keyframes deferred-skeleton-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
 @keyframes deferred-skeleton-shimmer {
   0% {
     background-position: -200% 0;
@@ -4738,6 +4771,10 @@ body.tour-active .ios-pwa-banner {
       transparent 100%);
   background-size: 200% 100%;
   animation: deferred-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+[data-theme="dark"] .deferred-card-skeleton__label {
+  color: #64748b;
 }
 
 
