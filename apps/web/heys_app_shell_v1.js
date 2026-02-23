@@ -137,32 +137,36 @@
         React.useEffect(() => {
             console.info('ews / badge 🔄 useEffect triggered');
 
+            let retryTimeoutId = null;
+            let ewsLoaded = false; // PERF v7.2: prevent duplicate detect calls
+
             const loadEWSData = async (retryCount = 0) => {
                 try {
-                    console.info('ews / badge 🚀 loadEWSData started', { attempt: retryCount + 1 });
-
-                    // Debug: проверка структуры HEYS объекта
-                    console.info('ews / badge 🔍 HEYS state:', {
-                        hasHEYS: typeof HEYS !== 'undefined',
-                        hasInsightsPI: typeof HEYS?.InsightsPI !== 'undefined',
-                        hasEarlyWarning: typeof HEYS?.InsightsPI?.earlyWarning !== 'undefined',
-                        hasDetect: typeof HEYS?.InsightsPI?.earlyWarning?.detect === 'function',
-                        version: HEYS?.InsightsPI?.earlyWarning?.version || 'unknown'
-                    });
+                    // PERF v7.2: skip if already loaded (prevents event + timer double-fire)
+                    if (ewsLoaded && retryCount > 0) return;
 
                     if (!HEYS?.InsightsPI?.earlyWarning?.detect) {
-                        // PERF v7.1: increased retries from 3→6 (deferred scripts load after boot chain)
-                        // Event listener 'heys-ews-ready' is the primary mechanism; polling is fallback
+                        // PERF v7.1: Event listener 'heys-ews-ready' is the primary mechanism; polling is fallback
                         if (retryCount < 6) {
                             const delay = Math.min(1000 * Math.pow(2, retryCount), 8000);
-                            console.info(`ews / badge ⏳ EWS module not ready, retry in ${delay}ms (attempt ${retryCount + 1}/6)`);
-                            setTimeout(() => loadEWSData(retryCount + 1), delay);
+                            // PERF v7.2: only log first and last retry to reduce noise
+                            if (retryCount === 0 || retryCount === 5) {
+                                console.info(`ews / badge ⏳ EWS module not ready, retry ${retryCount + 1}/6 (delay ${delay}ms)`);
+                            }
+                            retryTimeoutId = setTimeout(() => loadEWSData(retryCount + 1), delay);
                             return;
                         }
                         console.info('ews / badge ℹ️ EWS polling exhausted — event listener still active');
                         setEWSData(null);
                         return;
                     }
+
+                    // PERF v7.2: cancel pending retries — module is available
+                    if (retryTimeoutId) {
+                        clearTimeout(retryTimeoutId);
+                        retryTimeoutId = null;
+                    }
+                    ewsLoaded = true;
 
                     console.info('ews / badge ✅ EWS module detected');
 
@@ -233,6 +237,12 @@
             // Listen for EWS module ready event (fired by pi_early_warning.js on load)
             const handleEWSReady = (event) => {
                 console.info('ews / badge 📡 heys-ews-ready event received:', event.detail);
+                // PERF v7.2: cancel pending retries to prevent duplicate detect
+                if (retryTimeoutId) {
+                    clearTimeout(retryTimeoutId);
+                    retryTimeoutId = null;
+                }
+                ewsLoaded = false; // allow fresh load from event
                 loadEWSData(); // Immediately load data when module becomes available
             };
             window.addEventListener('heys-ews-ready', handleEWSReady);
@@ -240,19 +250,27 @@
             loadEWSData();
 
             // Reload on day-data-changed event
-            const handleDayDataChanged = () => loadEWSData();
+            const handleDayDataChanged = () => {
+                ewsLoaded = false; // allow reload on data change
+                loadEWSData();
+            };
             window.addEventListener('day-data-changed', handleDayDataChanged);
 
             // Reload after sync complete
             const handleSyncComplete = () => {
+                ewsLoaded = false; // allow reload after sync
                 setTimeout(loadEWSData, 500); // Small delay to ensure data is written
             };
             window.addEventListener('heys-sync-complete', handleSyncComplete);
 
             // Reload every 5 minutes
-            const interval = setInterval(loadEWSData, 5 * 60 * 1000);
+            const interval = setInterval(() => {
+                ewsLoaded = false;
+                loadEWSData();
+            }, 5 * 60 * 1000);
 
             return () => {
+                if (retryTimeoutId) clearTimeout(retryTimeoutId);
                 window.removeEventListener('heys-ews-ready', handleEWSReady);
                 window.removeEventListener('day-data-changed', handleDayDataChanged);
                 window.removeEventListener('heys-sync-complete', handleSyncComplete);
@@ -302,25 +320,6 @@
         const clientListMaxHeight = Math.max(120, clientDropdownMaxHeight - 128);
 
         if (!clientId) return null;
-
-        // 🆕 v2.0: Network Status Indicator
-        const renderNetworkStatus = () => {
-            if (cloudStatus === 'offline') {
-                return React.createElement('div', { className: 'network-status network-status--offline', title: 'Офлайн (данные сохранены локально)' },
-                    React.createElement('span', { className: 'network-status__dot' }),
-                    React.createElement('span', { className: 'network-status__text' }, 'Офлайн')
-                );
-            }
-            if (syncProgress || pendingCount > 0) {
-                return React.createElement('div', { className: 'network-status network-status--syncing', title: `Синхронизация... Осталось: ${pendingCount}` },
-                    React.createElement('span', { className: 'network-status__dot network-status__dot--pulse' }),
-                    React.createElement('span', { className: 'network-status__text' }, 'Синхронизация')
-                );
-            }
-            return React.createElement('div', { className: 'network-status network-status--online', title: 'Синхронизировано' },
-                React.createElement('span', { className: 'network-status__icon' }, '✓')
-            );
-        };
 
         return React.createElement(
             'div',
@@ -386,8 +385,6 @@
                             }
                         }, '▼')
                     ),
-                    // Индикатор сети
-                    renderNetworkStatus(),
                     // Dropdown список клиентов
                     showClientDropdown && React.createElement(
                         'div',
