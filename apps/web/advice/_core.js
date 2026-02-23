@@ -2148,13 +2148,17 @@
         for (const key of order) {
             const mod = modules[key];
             if (!mod) continue;
-            if (typeof mod === 'function') {
-                const list = mod(ctx, helpers) || [];
-                if (Array.isArray(list)) advices.push(...list);
-                continue;
-            }
-            if (Array.isArray(mod)) {
-                advices.push(...evaluateRules(mod, ctx, helpers));
+            try {
+                if (typeof mod === 'function') {
+                    const list = mod(ctx, helpers) || [];
+                    if (Array.isArray(list)) advices.push(...list);
+                    continue;
+                }
+                if (Array.isArray(mod)) {
+                    advices.push(...evaluateRules(mod, ctx, helpers));
+                }
+            } catch (e) {
+                console.error('[HEYS.advice] ❌ Module "' + key + '" error:', e?.message, e?.stack?.split('\n')[1]);
             }
         }
 
@@ -2716,52 +2720,57 @@
 
         // Генерируем все советы
         const allAdvices = React.useMemo(() => {
-            const baseAdvices = generateAdvices(ctx);
+            try {
+                const baseAdvices = generateAdvices(ctx);
 
-            // 🔗 Добавляем chain follow-ups
-            const chainAdvices = generateChainAdvices();
+                // 🔗 Добавляем chain follow-ups
+                const chainAdvices = generateChainAdvices();
 
-            // ⏰ Добавляем отложенные советы
-            const scheduledAdvices = getScheduledAdvices();
+                // ⏰ Добавляем отложенные советы
+                const scheduledAdvices = getScheduledAdvices();
 
-            // 🎯 Добавляем goal-specific советы
-            const goalAdvices = getGoalSpecificAdvices(ctx.goal);
+                // 🎯 Добавляем goal-specific советы
+                const goalAdvices = getGoalSpecificAdvices(ctx.goal);
 
-            // 🏆 Проверяем personal bests
-            const personalBestAdvices = [];
-            const todayISO = new Date().toISOString().slice(0, 10);
+                // 🏆 Проверяем personal bests
+                const personalBestAdvices = [];
+                const todayISO = new Date().toISOString().slice(0, 10);
 
-            // Проверяем рекорды по метрикам
-            const proteinPct = (ctx.dayTot?.prot || 0) / (ctx.normAbs?.prot || 100);
-            const proteinRecord = checkAndUpdatePersonalBest('proteinPct', proteinPct * 100, todayISO);
-            if (proteinRecord?.isNewRecord) {
-                const advice = createPersonalBestAdvice('proteinPct', proteinRecord);
-                if (advice) personalBestAdvices.push(advice);
-            }
-
-            const fiberPct = (ctx.dayTot?.fiber || 0) / (ctx.normAbs?.fiber || 25);
-            const fiberRecord = checkAndUpdatePersonalBest('fiberPct', fiberPct * 100, todayISO);
-            if (fiberRecord?.isNewRecord) {
-                const advice = createPersonalBestAdvice('fiberPct', fiberRecord);
-                if (advice) personalBestAdvices.push(advice);
-            }
-
-            // Streak record
-            if (ctx.currentStreak > 0) {
-                const streakRecord = checkAndUpdatePersonalBest('streak', ctx.currentStreak, todayISO);
-                if (streakRecord?.isNewRecord) {
-                    const advice = createPersonalBestAdvice('streak', streakRecord);
+                // Проверяем рекорды по метрикам
+                const proteinPct = (ctx.dayTot?.prot || 0) / (ctx.normAbs?.prot || 100);
+                const proteinRecord = checkAndUpdatePersonalBest('proteinPct', proteinPct * 100, todayISO);
+                if (proteinRecord?.isNewRecord) {
+                    const advice = createPersonalBestAdvice('proteinPct', proteinRecord);
                     if (advice) personalBestAdvices.push(advice);
                 }
-            }
 
-            return [
-                ...baseAdvices,
-                ...chainAdvices,
-                ...scheduledAdvices,
-                ...goalAdvices,
-                ...personalBestAdvices
-            ];
+                const fiberPct = (ctx.dayTot?.fiber || 0) / (ctx.normAbs?.fiber || 25);
+                const fiberRecord = checkAndUpdatePersonalBest('fiberPct', fiberPct * 100, todayISO);
+                if (fiberRecord?.isNewRecord) {
+                    const advice = createPersonalBestAdvice('fiberPct', fiberRecord);
+                    if (advice) personalBestAdvices.push(advice);
+                }
+
+                // Streak record
+                if (ctx.currentStreak > 0) {
+                    const streakRecord = checkAndUpdatePersonalBest('streak', ctx.currentStreak, todayISO);
+                    if (streakRecord?.isNewRecord) {
+                        const advice = createPersonalBestAdvice('streak', streakRecord);
+                        if (advice) personalBestAdvices.push(advice);
+                    }
+                }
+
+                return [
+                    ...(Array.isArray(baseAdvices) ? baseAdvices : []),
+                    ...(Array.isArray(chainAdvices) ? chainAdvices : []),
+                    ...(Array.isArray(scheduledAdvices) ? scheduledAdvices : []),
+                    ...(Array.isArray(goalAdvices) ? goalAdvices : []),
+                    ...personalBestAdvices
+                ];
+            } catch (e) {
+                console.error('[HEYS.advice] ❌ allAdvices useMemo crash:', e?.message);
+                return [];
+            }
         }, [ctx]);
 
         // 🔧 Фильтруем по включённым категориям
