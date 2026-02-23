@@ -17,19 +17,26 @@
 
                 // Пропускаем если нет clientId в событии
                 if (!eventClientId) {
+                    console.warn('[MorningCheckin] ⚠️ heysSyncCompleted без clientId — пропускаем');
                     return;
                 }
 
                 // Задержка чтобы React state (setClientId) успел обновиться
                 // и localStorage точно содержал данные нового клиента
                 setTimeout(() => {
-                    // 🛡️ FIX: Ждём пока React state (clientIdRef) совпадёт с событием
-                    // Без этого модалки могут появиться ДО того как gate (LoginScreen) снимется,
-                    // и мгновенно станут видны при следующем рендере
-                    if (!clientIdRef.current || clientIdRef.current !== eventClientId) {
-                        // React state ещё не обновился — пропускаем этот вызов.
-                        // Будет повторный heysSyncCompleted (от sync effects) когда clientId выставлен.
+                    // 🛡️ FIX v1.9.3: clientIdRef может быть пустым при первом switchClient —
+                    // heysSyncCompleted стреляет ДО того как React state обновит clientId.
+                    // Если ref пустой — принимаем eventClientId (первичный выбор клиента).
+                    // Если ref заполнен и отличается — это событие от другого клиента, пропускаем.
+                    if (clientIdRef.current && clientIdRef.current !== eventClientId) {
+                        console.warn('[MorningCheckin] ⚠️ clientIdRef.current !== eventClientId — пропускаем (другой клиент)', {
+                            ref: clientIdRef.current?.slice(0, 8),
+                            event: eventClientId?.slice(0, 8),
+                        });
                         return;
+                    }
+                    if (!clientIdRef.current) {
+                        console.info('[MorningCheckin] ℹ️ clientIdRef пустой (первый switchClient), используем eventClientId:', eventClientId?.slice(0, 8));
                     }
 
                     // 🔄 ВАЖНО: Для новых пользователей с незаполненным профилем
@@ -38,27 +45,50 @@
                     const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
                     const isProfileIncomplete = HEYS.ProfileSteps?.isProfileIncomplete?.(profile);
 
-                    // Пропускаем только если:
-                    // 1. Ещё идёт инициализации И
-                    // 2. Профиль УЖЕ заполнен (не новый пользователь)
-                    if (isInitializing && !isProfileIncomplete) return;
+                    // 🆕 v1.9.2 FIX: isInitializing=true у куратора означает ожидание getClients() —
+                    // сетевой запрос завершается ПОСЛЕ heysSyncCompleted и НЕ должен блокировать чекин.
+                    // Блокируем только если: isInitializing И профиль не заполнен (новый пользователь,
+                    // у которого данные ещё не загружены).
+                    // Если профиль ЗАПОЛНЕН — пользователь давно активен, isInitializing здесь не критичен.
+                    if (isInitializing && isProfileIncomplete) {
+                        // Новый пользователь, ещё загружается — ждём следующего события
+                        console.warn('[MorningCheckin] ⚠️ isInitializing=true & new user (no profile) — ждём следующего события');
+                        return;
+                    }
+                    if (isInitializing && !isProfileIncomplete) {
+                        // Уже знакомый пользователь — isInitializing = просто ожидание getClients()
+                        // Продолжаем показывать чекин как обычно
+                        console.info('[MorningCheckin] ℹ️ isInitializing=true но профиль заполнен — продолжаем');
+                    }
 
                     // Проверяем что clientId из события совпадает с текущим в localStorage
                     const lsClientId = HEYS.utils?.getCurrentClientId?.() || '';
                     if (eventClientId !== lsClientId) {
+                        console.warn('[MorningCheckin] ⚠️ eventClientId !== lsClientId — пропускаем', {
+                            event: eventClientId?.slice(0, 8),
+                            ls: lsClientId?.slice(0, 8),
+                        });
                         return;
                     }
 
                     if (HEYS.shouldShowMorningCheckin) {
                         const shouldShow = HEYS.shouldShowMorningCheckin();
+                        console.info('[MorningCheckin] 🔍 shouldShow результат:', shouldShow, {
+                            clientId: lsClientId?.slice(0, 8),
+                            isInitializing,
+                            suppressFlag: !!window.HEYS?.ui?.suppressMorningCheckin,
+                        });
 
                         // 🛑 Если активен флаг подавления (Onboarding Tour), не показываем чек-ин
                         if (window.HEYS?.ui?.suppressMorningCheckin) {
+                            console.warn('[MorningCheckin] 🛑 suppressMorningCheckin=true — подавляем');
                             return;
                         }
 
                         // 🔒 Не обновляем если значение то же (предотвращает ре-рендер)
                         setShowMorningCheckin((prev) => (prev === shouldShow ? prev : shouldShow));
+                    } else {
+                        console.warn('[MorningCheckin] ⚠️ HEYS.shouldShowMorningCheckin не определена!');
                     }
                 }, 200);
             };

@@ -127,7 +127,7 @@
       }
     } catch (_) { }
     if (sessionStorage.getItem(sessionKey) === 'true') {
-      // console.log('[MorningCheckin] Skip — already done/skipped this session');
+      console.info('[MorningCheckin] 🚫 Skip — sessionStorage флаг активен:', sessionKey);
       return false;
     }
 
@@ -149,8 +149,18 @@
     const hasWeightAlt = altDayData && altDayData.weightMorning != null && altDayData.weightMorning !== '' && altDayData.weightMorning !== 0;
     const hasWeight = hasWeightPrimary || hasWeightAlt;
 
-    // console.log('[MorningCheckin] Checking for clientId:', currentClientId.substring(0,8), '| ...');
-    debugDayStorage(todayKey, currentClientId, calendarKey);
+    console.info('[MorningCheckin] 🔍 shouldShowMorningCheckin check:', {
+      clientId: currentClientId?.slice(0, 8),
+      todayKey,
+      calendarKey,
+      weightMorningPrimary: dayData?.weightMorning,
+      weightMorningAlt: altDayData?.weightMorning,
+      hasWeightPrimary,
+      hasWeightAlt,
+      hasWeight,
+      sessionKey,
+      sessionFlag: sessionStorage.getItem(sessionKey),
+    });
 
     // Показываем, если ни в эффективном дне (до 3:00 = вчера), ни в календарном ключе нет веса
     return !hasWeight;
