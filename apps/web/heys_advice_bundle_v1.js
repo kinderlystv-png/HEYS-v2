@@ -2662,12 +2662,13 @@
 
         // Вычисляем контекст
         const ctx = React.useMemo(() => {
+            try {
             const now = new Date();
             const hour = now.getHours();
-            const meals = day?.meals || [];
-            const mealCount = meals.filter(m => m.items?.length > 0).length;
-            const trainings = day?.trainings || [];
-            const hasTraining = trainings.some(t => t.z && t.z.some(m => m > 0));
+            const meals = Array.isArray(day?.meals) ? day.meals : [];
+            const mealCount = meals.filter(m => m?.items?.length > 0).length;
+            const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
+            const hasTraining = trainings.some(t => t?.z && Array.isArray(t.z) && t.z.some(m => m > 0));
 
             // 🧠 Расширенный контекст
             const kcalPct = (dayTot?.kcal || 0) / (optimum || 2000);
@@ -2720,11 +2721,23 @@
                 goal,                        // 🎯 Goal режим (deficit/bulk/maintenance)
                 crashRisk                    // 🆕 Риск срыва из Metabolic Intelligence
             };
+            } catch (e) {
+                console.error('[HEYS.advice] ❌ ctx useMemo crash:', e?.message);
+                return {
+                    dayTot: {}, normAbs: {}, optimum: 2000, displayOptimum: 2000,
+                    caloricDebt: null, day: {}, pIndex: { byId: new Map(), byName: new Map() },
+                    currentStreak: 0, hour: new Date().getHours(), mealCount: 0,
+                    hasTraining: false, kcalPct: 0, tone: 'neutral', specialDay: null,
+                    emotionalState: 'normal', prof: {}, waterGoal: 2000,
+                    goal: 'maintenance', crashRisk: null
+                };
+            }
         }, [dayTot, normAbs, optimum, displayOptimum, caloricDebt, day, pIndex, currentStreak, prof, waterGoal]);
 
         // Генерируем все советы
         const allAdvices = React.useMemo(() => {
             try {
+                if (!ctx) return [];
                 const baseAdvices = generateAdvices(ctx);
 
                 // 🔗 Добавляем chain follow-ups
