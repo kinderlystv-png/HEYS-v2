@@ -5693,9 +5693,16 @@
             }
         }) || null) : null;
 
-        // PERF v8.1: Deferred card slot — rich skeleton with icon + label + shimmer
+        // PERF v8.2: Deferred card slot — rich skeleton with grace period
+        // Grace period: don't flash skeletons on fast networks (< 500ms since mount)
+        const SKELETON_GRACE_MS = 500;
         const deferredSlot = (ready, content, slotKey, skeletonH, skeletonIcon, skeletonLabel) => {
             if (!ready) {
+                // Grace period: if module loads within 500ms, user never sees skeleton
+                const elapsed = Date.now() - (window.__heysDayMountedAt || 0);
+                if (elapsed < SKELETON_GRACE_MS) {
+                    return null; // Invisible — no flash on fast networks
+                }
                 return React.createElement('div', { key: slotKey, className: 'deferred-card-slot deferred-card-slot--loading' },
                     React.createElement('div', {
                         className: 'deferred-card-skeleton',
