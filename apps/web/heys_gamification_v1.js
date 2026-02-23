@@ -1425,7 +1425,8 @@
 
   // 🚀 PERF: Local-only XP cache key (not synced to cloud, survives cloud overwrites)
   function _getXPCacheKey() {
-    const cid = HEYS.utils?.getCurrentClientId?.() ||
+    const cid = HEYS.currentClientId ||
+      HEYS.utils?.getCurrentClientId?.() ||
       localStorage.getItem('heys_client_current') ||
       localStorage.getItem('heys_pin_auth_client');
     const id = cid ? String(cid).replace(/"/g, '') : 'default';
@@ -5548,20 +5549,8 @@
     }));
 
     // 4. Запускаем облачную загрузку (полный цикл rebuild)
-    if (HEYS.game?.loadFromCloud) {
-      HEYS.game.loadFromCloud().then(loaded => {
-        if (loaded) {
-          console.info('[🎮 Gamification] ✅ Cloud data loaded for new client:', newClientId);
-        }
-      }).catch(err => {
-        console.warn('[🎮 Gamification] ⚠️ Cloud load error after client switch:', err?.message || err);
-      }).finally(() => {
-        _isLoadingPhase = false;
-        console.info('[🎮 Gamification] 🔓 Loading phase ended for client:', newClientId);
-      });
-    } else {
-      _isLoadingPhase = false;
-    }
+    // 🚀 PERF v6.0: Убрали loadFromCloud отсюда, так как heysSyncCompleted сработает сразу после смены клиента
+    // и вызовет loadFromCloud. Это предотвращает двойную загрузку.
   });
 
   // ========== ЭКСПОРТ ==========
@@ -5581,50 +5570,12 @@
         }
       }).catch(e => {
         // Ignore errors during recalculation
-      });
-
-      // 🔄 Загружаем данные из облака
-      // FIX v2.6: Для кураторов loadFromCloud грациозно использует storage sync layer
-      const hasAnyAuth = HEYS.YandexAPI && (
-        HEYS.auth?.getSessionToken?.() ||
-        localStorage.getItem('heys_curator_session') ||
-        localStorage.getItem('heys_session_token')
-      );
-
-      if (hasAnyAuth) {
-        console.log('[🎮 Gamification] Starting cloud load...');
-        HEYS.game.loadFromCloud().then(loaded => {
-          if (loaded) {
-            console.log('[🎮 Gamification] Cloud data loaded successfully');
-          } else {
-            console.log('[🎮 Gamification] No cloud data or already up to date');
-            _cloudLoaded = true;
-            if (_pendingCloudSync) {
-              _pendingCloudSync = false;
-              triggerImmediateSync('pending_sync');
-            }
-          }
-        }).catch(e => {
-          console.warn('[🎮 Gamification] Cloud load error:', e.message);
-          _cloudLoaded = true;
-          if (_pendingCloudSync) {
-            _pendingCloudSync = false;
-            triggerImmediateSync('pending_sync');
-          }
-        }).finally(() => {
-          _isLoadingPhase = false;
-          console.info('[🎮 Gamification] 🔓 Initial loading phase ended');
-        });
-      } else {
-        console.log('[🎮 Gamification] No session, skipping cloud load');
-        _cloudLoaded = true;
-        if (_pendingCloudSync) {
-          _pendingCloudSync = false;
-          triggerImmediateSync('pending_sync');
-        }
+      }).finally(() => {
+        // 🚀 PERF v6.0: Убрали loadFromCloud отсюда, так как heysSyncCompleted сработает и вызовет loadFromCloud.
+        // Это предотвращает двойную загрузку при старте.
         _isLoadingPhase = false;
-        console.info('[🎮 Gamification] 🔓 Initial loading phase ended (no auth)');
-      }
+        console.info('[🎮 Gamification] 🔓 Initial loading phase ended');
+      });
     }
   }, 2000); // Уменьшил до 2 сек чтобы успеть до первого sync
 

@@ -4717,6 +4717,52 @@ body.tour-active .ios-pwa-banner {
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
 }
 
+/* 🚀 PERF v6.0: Skeleton loader while async recommendation calculates */
+.meal-rec-card--skeleton {
+  height: 72px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.meal-rec-card__skeleton-pulse {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.55) 50%,
+      transparent 100%);
+  background-size: 200% 100%;
+  animation: meal-rec-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes meal-rec-skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+[data-theme="dark"] .meal-rec-card--skeleton {
+  background: linear-gradient(135deg, #052e16 0%, #064e3b 100%);
+  border-color: #065f46;
+}
+
+[data-theme="dark"] .meal-rec-card__skeleton-pulse {
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.08) 50%,
+      transparent 100%);
+  background-size: 200% 100%;
+  animation: meal-rec-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
 /* SPRINT 9: Science Badge (Top-Right) */
 .meal-rec-card__science-corner {
   position: absolute;

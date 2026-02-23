@@ -338,6 +338,8 @@
         const [userFeedback, setUserFeedback] = useState(null); // null | 'positive' | 'negative'
         const [checkedProducts, setCheckedProducts] = useState({}); // v27: { productId: boolean } for grouped mode
         const [thresholdsUpdateTick, setThresholdsUpdateTick] = useState(0); // v28: SWR trigger
+        const [recommendation, setRecommendation] = useState(null); // 🚀 PERF v6.0: Асинхронный расчет
+        const [isCalculating, setIsCalculating] = useState(true); // 🚀 PERF v6.0: Состояние загрузки
 
         // Listen for SWR background updates
         useEffect(() => {
@@ -1078,81 +1080,91 @@
             );
         };
 
-        // Собираем рекомендацию
-        const recommendation = useMemo(() => {
-            console.info(`${LOG_PREFIX} 🎬 useMemo triggered`);
+        // Собираем рекомендацию (🚀 PERF v6.0: Асинхронно через useEffect)
+        useEffect(() => {
+            setIsCalculating(true);
 
-            if (!global.HEYS?.InsightsPI?.mealRecommender?.recommend) {
-                console.warn(`${LOG_PREFIX} ❌ Backend not loaded`);
-                return null;
-            }
+            // Используем setTimeout чтобы дать React отрендерить Skeleton и не блокировать UI
+            const timerId = setTimeout(() => {
+                console.info(`${LOG_PREFIX} 🎬 useEffect triggered (async)`);
 
-            console.info(`${LOG_PREFIX} ✅ Backend available`);
+                if (!global.HEYS?.InsightsPI?.mealRecommender?.recommend) {
+                    console.warn(`${LOG_PREFIX} ❌ Backend not loaded`);
+                    setRecommendation(null);
+                    setIsCalculating(false);
+                    return;
+                }
 
-            const context = buildRecommendationContext(day, dayTot, normAbs, prof, optimum, pIndex);
-            if (!context) {
-                console.warn(`${LOG_PREFIX} ⚠️ Insufficient data for context`);
-                return null;
-            }
+                console.info(`${LOG_PREFIX} ✅ Backend available`);
 
-            console.info(`${LOG_PREFIX} 🚀 Calling recommend()...`);
+                const context = buildRecommendationContext(day, dayTot, normAbs, prof, optimum, pIndex);
+                if (!context) {
+                    console.warn(`${LOG_PREFIX} ⚠️ Insufficient data for context`);
+                    setRecommendation(null);
+                    setIsCalculating(false);
+                    return;
+                }
 
-            try {
-                // R2.6: Load historical days for Deep Insights enhancement
-                const historicalDays = [];
-                const today = new Date();
+                console.info(`${LOG_PREFIX} 🚀 Calling recommend()...`);
 
-                // Resolve lsGet (with fallback to direct localStorage access)
-                const safeLsGet = resolveLsGet();
+                try {
+                    // R2.6: Load historical days for Deep Insights enhancement
+                    const historicalDays = [];
+                    const today = new Date();
 
-                // Load last 30 days from localStorage (lsGet auto-scopes by HEYS.currentClientId)
-                for (let i = 0; i < 30; i++) {
-                    const date = new Date(today);
-                    date.setDate(date.getDate() - i);
-                    const dateStr = date.toISOString().split('T')[0];
-                    const dayKey = `heys_dayv2_${dateStr}`;
-                    const dayData = safeLsGet(dayKey); // lsGet auto-scopes by currentClientId
-                    if (dayData && dayData.date) {
-                        historicalDays.push(dayData);
+                    // Resolve lsGet (with fallback to direct localStorage access)
+                    const safeLsGet = resolveLsGet();
+
+                    // Load last 30 days from localStorage (lsGet auto-scopes by HEYS.currentClientId)
+                    for (let i = 0; i < 30; i++) {
+                        const date = new Date(today);
+                        date.setDate(date.getDate() - i);
+                        const dateStr = date.toISOString().split('T')[0];
+                        const dayKey = `heys_dayv2_${dateStr}`;
+                        const dayData = safeLsGet(dayKey); // lsGet auto-scopes by currentClientId
+                        if (dayData && dayData.date) {
+                            historicalDays.push(dayData);
+                        }
                     }
-                }
 
-                console.info(`${LOG_PREFIX} 📊 Historical days loaded:`, {
-                    count: historicalDays.length,
-                    currentClientId: global.HEYS?.currentClientId || 'none'
-                });
-
-                // Call recommend with historical days for R2.6 enhancement
-                // Signature: recommend(context, profile, pIndex, days)
-                const result = global.HEYS.InsightsPI.mealRecommender.recommend(
-                    context,
-                    prof,           // profile (required for validation)
-                    pIndex,         // product index (for smart suggestions)
-                    historicalDays  // days for R2.6 Deep Insights enhancement
-                );
-
-                if (!result || !result.available) {
-                    console.info(`${LOG_PREFIX} ⚠️ Hidden:`, {
-                        reason: result?.error || 'Not available'
+                    console.info(`${LOG_PREFIX} 📊 Historical days loaded:`, {
+                        count: historicalDays.length,
+                        currentClientId: global.HEYS?.currentClientId || 'none'
                     });
-                    return null;
+
+                    // Call recommend with historical days for R2.6 enhancement
+                    // Signature: recommend(context, profile, pIndex, days)
+                    const result = global.HEYS.InsightsPI.mealRecommender.recommend(
+                        context,
+                        prof,           // profile (required for validation)
+                        pIndex,         // product index (for smart suggestions)
+                        historicalDays  // days for R2.6 Deep Insights enhancement
+                    );
+
+                    if (!result || !result.available) {
+                        console.info(`${LOG_PREFIX} ⚠️ Hidden:`, {
+                            reason: result?.error || 'Not available'
+                        });
+                        setRecommendation(null);
+                    } else {
+                        console.info(`${LOG_PREFIX} ✅ Rendered:`, {
+                            idealTime: result.timing?.ideal || '—',
+                            protein: result.macros?.protein || 0,
+                            carbs: result.macros?.carbs || 0,
+                            kcal: result.macros?.kcal || 0,
+                            confidence: result.confidence || 0
+                        });
+                        setRecommendation(result);
+                    }
+                } catch (err) {
+                    console.error(`${LOG_PREFIX} ❌ Error:`, err);
+                    setRecommendation(null);
+                } finally {
+                    setIsCalculating(false);
                 }
+            }, 0);
 
-                console.info(`${LOG_PREFIX} ✅ Rendered:`, {
-                    idealTime: result.timing?.ideal || '—',
-                    protein: result.macros?.protein || 0,
-                    carbs: result.macros?.carbs || 0,
-                    kcal: result.macros?.kcal || 0,
-                    confidence: result.confidence || 0
-                });
-
-                return result;
-            } catch (err) {
-                console.error(`${LOG_PREFIX} ❌ Error:`, err);
-                return null;
-            }
-            // P1-card: pIndex is an object ref — use .length as stable primitive dep
-            // Prevents useMemo re-calc when parent re-renders with same pIndex contents
+            return () => clearTimeout(timerId);
         }, [mealsCount, lastMealTime, eatenKcal, eatenProt, targetKcal, targetProt, pIndex?.length || 0]);
 
         // R2.7 Step 2: Store recommendation in feedbackLoop when it's generated (new or changed)
@@ -1217,6 +1229,13 @@
             window.addEventListener('heysProductAdded', handleProductAdded);
             return () => window.removeEventListener('heysProductAdded', handleProductAdded);
         }, [recommendation, prof]);
+
+        // 🚀 PERF v6.0: Skeleton пока идёт async расчёт рекомендации (useEffect)
+        if (isCalculating) {
+            return h('div', { className: 'meal-rec-card meal-rec-card--skeleton', 'aria-busy': true },
+                h('div', { className: 'meal-rec-card__skeleton-pulse' })
+            );
+        }
 
         // Если рекомендация недоступна — не рендерим карточку
         if (!recommendation) {

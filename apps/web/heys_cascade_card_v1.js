@@ -2606,7 +2606,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var signature = buildInputSignature(day, normAbs, prof);
     var cascadeState;
 
-    if (_cascadeCache.signature === signature && _cascadeCache.result) {
+    // 🚀 PERF v6.0: Pre-sync guard — до завершения heysSyncCompleted профиль нестабилен
+    // (prof.plannedSupplements и др. ещё не пришли из облака), что вызывает cache MISS
+    // и двойной computeCascadeState. Если sync не завершён и кеш есть — держимся на нём.
+    var _cascadeSyncDone = !!(window.HEYS && (window.HEYS.initialSyncDone || window.HEYS.syncCompletedAt));
+    if (!_cascadeSyncDone && _cascadeCache.result) {
+      _cascadeCache.hits++;
+      cascadeState = _cascadeCache.result;
+      console.info('[HEYS.cascade] ⏳ Pre-sync guard: held on cached compute (profile unstable)');
+    } else if (_cascadeCache.signature === signature && _cascadeCache.result) {
       _cascadeCache.hits++;
       cascadeState = _cascadeCache.result;
       // 🚀 PERF: Log only on significant intervals to reduce console noise
