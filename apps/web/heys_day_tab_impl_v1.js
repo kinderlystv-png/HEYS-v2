@@ -321,12 +321,6 @@
             HEYS.dayEffects.useDeferredModuleEffect();
         }
 
-        // PERF v8.2: Grace period — don't flash skeletons on fast networks
-        // Record mount time so deferredSlot can suppress skeleton for first 500ms
-        React.useMemo(() => {
-            if (!window.__heysDayMountedAt) window.__heysDayMountedAt = Date.now();
-        }, []);
-
         // prodSig/pIndex/debug now handled by dayProductsContext
         const prof = getProfile();
         // date приходит из props (selectedDate из App header)
