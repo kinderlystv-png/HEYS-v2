@@ -5665,7 +5665,11 @@
                 console.info('[HEYS.diary] ✅ Meal rec card rendered');
             }
         } else {
-            console.warn('[HEYS.diary] ⚠️ Meal rec card not rendered (returned null)');
+            // PERF v7.1: throttle null warning — fires on every re-render (15+) when module deferred or no recommendation
+            if (!window.__heysLoggedMealRecNull) {
+                window.__heysLoggedMealRecNull = true;
+                console.info('[HEYS.diary] ℹ️ Meal rec card not rendered (module not loaded or no recommendation)');
+            }
         }
 
         const cascadeCard = app.CascadeCard?.renderCard?.({

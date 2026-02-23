@@ -316,6 +316,9 @@
   HEYS.MorningCheckin = MorningCheckin;
   HEYS.shouldShowMorningCheckin = shouldShowMorningCheckin;
 
+  // PERF v7.1: notify boot-chain hook that deferred module is ready
+  window.dispatchEvent(new CustomEvent('heys-morning-checkin-ready'));
+
   /**
    * Быстрый API для показа конкретных шагов
    */

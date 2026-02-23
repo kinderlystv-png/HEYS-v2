@@ -97,7 +97,16 @@
                         // 🔒 Не обновляем если значение то же (предотвращает ре-рендер)
                         setShowMorningCheckin((prev) => (prev === shouldShow ? prev : shouldShow));
                     } else {
-                        console.warn('[MorningCheckin] ⚠️ HEYS.shouldShowMorningCheckin не определена!');
+                        // PERF v7.1: module deferred after boot chain — wait for ready event
+                        console.info('[MorningCheckin] ℹ️ shouldShowMorningCheckin deferred — ожидаем загрузку модуля');
+                        const onModuleReady = () => {
+                            if (HEYS.shouldShowMorningCheckin) {
+                                const shouldShow = HEYS.shouldShowMorningCheckin();
+                                if (window.HEYS?.ui?.suppressMorningCheckin) return;
+                                setShowMorningCheckin((prev) => (prev === shouldShow ? prev : shouldShow));
+                            }
+                        };
+                        window.addEventListener('heys-morning-checkin-ready', onModuleReady, { once: true });
                     }
                 }, 200);
             };

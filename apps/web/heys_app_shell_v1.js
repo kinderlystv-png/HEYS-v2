@@ -151,14 +151,15 @@
                     });
 
                     if (!HEYS?.InsightsPI?.earlyWarning?.detect) {
-                        // Retry with exponential backoff (max 3 attempts)
-                        if (retryCount < 3) {
-                            const delay = Math.min(1000 * Math.pow(2, retryCount), 4000);
-                            console.warn(`ews / badge ⏳ EWS module not ready, retry in ${delay}ms (attempt ${retryCount + 1}/3)`);
+                        // PERF v7.1: increased retries from 3→6 (deferred scripts load after boot chain)
+                        // Event listener 'heys-ews-ready' is the primary mechanism; polling is fallback
+                        if (retryCount < 6) {
+                            const delay = Math.min(1000 * Math.pow(2, retryCount), 8000);
+                            console.info(`ews / badge ⏳ EWS module not ready, retry in ${delay}ms (attempt ${retryCount + 1}/6)`);
                             setTimeout(() => loadEWSData(retryCount + 1), delay);
                             return;
                         }
-                        console.error('ews / badge ❌ EWS module not available after 3 attempts');
+                        console.info('ews / badge ℹ️ EWS polling exhausted — event listener still active');
                         setEWSData(null);
                         return;
                     }
