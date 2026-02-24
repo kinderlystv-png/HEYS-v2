@@ -1,6 +1,6 @@
 # Cascade Card — «Ваш позитивный каскад»
 
-> Документация модуля `heys_cascade_card_v1.js` v3.3.0  
+> Документация модуля `heys_cascade_card_v1.js` v3.5.0  
 > Дата обновления: 2026-02-24
 
 ---
@@ -55,7 +55,7 @@ scoreFactor(raw, baseline, curveFn):
 ────────────────────────────────────────────────────────────────────
     Мета-шаги         —              —               Confidence + Day-Type + Synergies (+1.3 max)
     TOTAL               ~-8…~+11.5     ~-10…~+16.3
-    MOMENTUM_TARGET     10.0           10.0 (v3.2.0: снижен с 12.0)
+    MOMENTUM_TARGET     8.5            8.5 (v3.5.0: снижен с 10.0 для реалистичного DCS при 4-5 факторах)
 ```
 
 ---
@@ -76,12 +76,13 @@ scoreFactor(raw, baseline, curveFn):
   //  0 → -1.0,  20 → -0.5,  40 → 0.0,  60 → +0.5,  80 → +1.0, 100 → +1.5
 
 Циркадный модификатор (завтрак важнее ужина):
+  v3.5.0: Полосы сдвигаются на `mealBandShift = optimalOnset - 23:00` (адаптация к хронотипу)
   06:00–10:00 (завтрак) → weight × 1.3   — cortisol peak, GH sensitivity
   10:00–14:00 (обед)    → weight × 1.0   — baseline
   14:00–18:00 (перекус) → weight × 0.9   — slight discount
   18:00–21:00 (ужин)    → weight × 0.85  — insulin resistance rises
   21:00–23:00 (поздний) → weight × 0.7   — melatonin onset impairs glucose
-  > 23:00               → always -1.0    — hard violation (circadian disruption)
+  > 23:00 (сдвинуто)    → always -1.0    — hard violation (circadian disruption)
 
 Прогрессивный кумулятив (sigmoid вместо binary 120%):
   ratio = cumulativeKcal / normKcal
@@ -637,21 +638,22 @@ EMPTY:    нет событий   — начало дня
 
 ```
 Momentum = min(1, max(0, score) / MOMENTUM_TARGET)
-MOMENTUM_TARGET = 10.0  (v3.2.0: снижен с 12.0 для реалистичного потолка DCS)
+MOMENTUM_TARGET = 8.5  (v3.5.0: снижен с 10.0 для реалистичного DCS при 4-5 активных факторах)
 
-Хороший день (реалистичный):
-  3 хор. еды (×circadian +3.5) + тренировка 45м (+2.0) + сон (onset+dur +2.0)
-  + consistency +0.3 + чек-ин streak (+0.5) + шаги adaptive (+0.9)
-  + витамины streak (+0.6) + gaps 3ч (+0.5) + morning_ritual synergy (+0.3)
-  = 10.6 → прогресс-бар 88%
+Хороший день (реалистичный, 4-5 активных факторов):
+  3 хор. еды (×circadian +3.0) + тренировка 45м (+2.0) + сон (onset+dur +1.5)
+  + consistency +0.3 + чек-ин streak (+0.5) + шаги adaptive (+0.6)
+  + morning_ritual synergy (+0.3)
+  = 8.2 → прогресс-бар 96%  (score / MT=8.5)
+  // При MT=8.5 хороший 4-факторный день вплотную приближается к 100%
 
-Отличный день:
-  3 отл. еды (×circadian +5.0) + тренировка 60м (+2.5) + сон идеальный (+2.5)
+Отличный день (все 10 факторов):
+  3 отл. еды (×circadian +4.5) + тренировка 60м (+2.5) + сон идеальный (+2.5)
   + consistency +0.3 + чек-ин streak (+0.8) + замеры complete (+1.2)
   + шаги 120% adaptive (+1.15) + витамины streak (+0.7)
   + gaps 4ч (+1.0) + ночной 14ч (+0.5) + NEAT 60м relative (+1.0)
   + synergies (+1.0)
-  = 17.6 → прогресс-бар 100% (capped)
+  = 17.1 → прогресс-бар 100% (capped)
 ```
 
 ### Пост-тренировочное окно
@@ -933,7 +935,7 @@ ceiling = min(1.0, base × consistency × diversity + dataDepth)
 ### 4. Персистенция DCS в localStorage
 
 ```
-Ключ: heys_{clientId}_cascade_dcs_v4   (v3.4.0: полный пересчёт с аккуратной ретроактивной формулой)
+Ключ: heys_{clientId}_cascade_dcs_v7   (v3.5.0: chronotype-adaptive meals, MT=8.5)
 Формат: JSON { "2026-02-20": 0.72, "2026-02-19": 0.85, ... }
 ```
 
@@ -941,9 +943,11 @@ ceiling = min(1.0, base × consistency × diversity + dataDepth)
 - Автоочистка: записи старше 35 дней удаляются
 - **Не шифруется** — данные не содержат PII (аналогично `heys_products`)
 - Для дней без кэшированного DCS — ретроспективно вычисляется из `dayv2` данных
-  (**v3.4.0: аккуратная формула** — миррорит полный 10-факторный алгоритм:
-  sigmoid сна, bell-curve длительность, tanh шаги, циркадные штрафы приёмов,
-  training load, хронотип из окрестных дней, insulin gap proxy)
+  (**v3.5.0: хронотип-адаптивные полосы приёмов** — пороги сдвигаются на `mealBandShift = max(-30, optimalOnset - 1380)` мин;
+  breakfast 1.25, daytime 1.10, поздний (21:00+shift → 23:00+shift) 0.70, hard violation (≥23:00+shift) −1.0;
+  дефолт +0.3 для пропущенного сна; синергии 0.25/0.45/0.65/0.80;
+  streak-aware checkin, adaptive household, sigmoid сна, bell-curve длительность,
+  tanh шаги, insulin gap proxy, хронотип из окрестных дней)
 
 **История миграций кэша:**
 
@@ -951,7 +955,10 @@ ceiling = min(1.0, base × consistency × diversity + dataDepth)
 | :----- | :--------- | :------ |
 | v1→v2 | positive DCS ×1.2, negative kept | MOMENTUM_TARGET 12→10 |
 | v2→v3 | Инвалидация DCS в диапазоне (-0.6, 0) | Deficit penalties без training tolerance (v3.3.0) |
-| v3→v4 | **Полная очистка + пересчёт** | Ретроактивная формула v1-v3 завышала DCS на 50-100% (v3.4.0) |
+| v3→v4 | Полная очистка + пересчёт | Ретроактивная формула v1-v3 завышала DCS на 50-100% (v3.4.0) |
+| v4→v5 | Полная очистка + пересчёт | v4 ретро формула занижала DCS на ~30% (flat 0.65/meal, нет streak/synergy, v3.4.1) |
+| v5→v6 | Полная очистка + пересчёт | v5 meal weights занижены на ~10-15% (0.95 vs full algo 1.05-1.15), нет missing-sleep default (v3.4.2) |
+| v6→v7 | Полная очистка + пересчёт | v6 использовал фиксированный порог 23:00 для еды и MT=10.0. v7 вводит хронотип-адаптивные полосы и MT=8.5 (v3.5.0) |
 
 ### 5. CRS-driven состояния (замена score-driven)
 
@@ -1272,7 +1279,7 @@ computeCascadeState(day, dayTot, normAbs, prof, pIndex) → cascadeState
 ШАГ 16 — Определение состояния (v2.2.0 score-driven, без hasBreak)
 ШАГ 17 — Post-training window: lastTraining.time в пределах 2 часов?
 ШАГ 18 — Выбор пула сообщений (с учётом post-training)
-ШАГ 19 — Momentum score: min(1, max(0, score) / MOMENTUM_TARGET=10.0)
+ШАГ 19 — Momentum score: min(1, max(0, score) / MOMENTUM_TARGET=8.5)
 ШАГ 20 — Next step hint: следующий рекомендуемый шаг
 ```
 
@@ -1401,10 +1408,10 @@ else                          → BROKEN
 **Momentum score (ШАГ 19):**
 
 ```
-momentumScore = min(1.0, max(0, score) / MOMENTUM_TARGET)  // MOMENTUM_TARGET = 10.0
+momentumScore = min(1.0, max(0, score) / MOMENTUM_TARGET)  // MOMENTUM_TARGET = 8.5
 ```
 
-> Знаменатель 10 (v3.2.0) — расширенный диапазон v2.1.0 с синергиями и confidence
+> Знаменатель 8.5 (v3.5.0, было 10.0) — реалистичный потолок для пользователей с 4-5 активными факторами
 
 ---
 
@@ -1873,3 +1880,6 @@ HEYS.CascadeCard.computeCascadeState(
 | v3.2.0 | 2026-02-23 | **Chronotype-tolerant sigmoid + MOMENTUM_TARGET.** Сигмоид засыпания: `/45)×2.0` → `/60)×1.5` (мягче для поздних хронотипов). optimalOnset clamp: 00:30 → 01:30. Hard floor: 03:00 → 04:00. Диапазон: [−2.5,+1.5] → [−2.0,+1.2]. MOMENTUM_TARGET: 12.0 → 10.0. DCS cache migration v1→v2 (positive DCS ×1.2).                                                                                                                                                               |
 | v3.3.0 | 2026-02-24 | **EMA stabilization + training tolerance.** α: 0.92 → 0.95 (период полураспада ~14д вместо ~8д). Partial-day weighting: вес сегодняшнего дня × dayProgress. Deficit training tolerance: пороги ×1.2 для тренировочных дней. `buildDayEventsSimple`: graduated sleep buckets (6 уровней) + лейблы под chronotype clamp.                                                                                                                                |
 | v3.4.0 | 2026-02-24 | **Accurate retroactive DCS.** Полный пересчёт ретроактивной формулы: раньше `∑bonuses/1.2` (завышала DCS на 50-100%), теперь миррорит полный 10-факторный алгоритм: sigmoid сна с chronotype baseline из окрестных дней, bell-curve длительности, tanh шаги с adaptive goal, training load (sqrt-curve), циркадные штрафы приёмов, log2 household, insulin gap proxy. Кэш v3→v4: полная очистка + backfill с передачей `prevDays` для хронотипного baseline. |
+| v3.4.1 | 2026-02-24 | **Calibrated retroactive DCS.** v3.4.0 занижала DCS на ~30% (flat 0.65/meal vs 0.95–1.15 в full algo, flat checkin 0.4 вместо streak-aware 0.8, нет synergies/measurements). Исправлено: time-band meals (breakfast 1.15, daytime 0.95, 21–23:00 0.50, late/night −1.0), streak-aware checkin (0.3+streak×0.05), adaptive household baseline из prevDays, 3rd+ training ×0.25, synergy approximation (+0.15/+0.30/+0.50 по кол-ву положительных факторов), measurements. Кэш v4→v5: полная очистка + пересчёт. |
+| v3.4.2 | 2026-02-24 | **Meal weight calibration.** v3.4.1 meal weights на 10-15% ниже full algo output (верифицировано: сегодня full algo даёт 1.00-1.20/meal, retro давал 0.95). Калибровка: daytime 0.95→1.10, breakfast 1.15→1.25, evening 0.50→0.70. Missing-sleep default +0.3 (пропуск данных ≠ плохое поведение). Synergy бонусы: 0.25/0.45/0.65/0.80 (было 0.15/0.30/0.50). Кэш v5→v6: полная очистка + пересчёт. |
+| v3.5.0 | 2026-02-24 | **Chronotype-adaptive meals & Target calibration.** Сдвиг циркадных полос еды на основе `optimalOnset` (адаптация к хронотипу, защита сов от штрафа -1.0 за еду в 23:30). Снижение `MOMENTUM_TARGET` с 10.0 до 8.5 для реалистичного DCS при 4-5 активных факторах. Кэш v6→v7: полная очистка + пересчёт. |
