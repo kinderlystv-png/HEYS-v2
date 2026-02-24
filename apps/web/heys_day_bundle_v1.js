@@ -7116,12 +7116,48 @@
         // PERF v8.3: Deferred card slot — skeleton only after postboot completes
         // If postboot is still loading scripts, return null (invisible).
         // Skeleton only shows if postboot finished but module is STILL not ready (abnormal).
+        const DEFERRED_SKELETON_DELAY_MS = 260;
+        const deferredSlotLoadSince = window.__heysDeferredSlotLoadSince = window.__heysDeferredSlotLoadSince || Object.create(null);
+        const deferredSkeletonState = window.__heysDeferredSkeletonState = window.__heysDeferredSkeletonState || Object.create(null);
         const deferredSlot = (ready, content, slotKey, skeletonH, skeletonIcon, skeletonLabel) => {
+            const debugKey = slotKey || 'unknown-slot';
             if (!ready) {
                 // Don't show skeleton while postboot is still loading scripts
                 if (!window.__heysPostbootDone) {
+                    if (deferredSkeletonState[debugKey] !== 'wait_postboot') {
+                        console.info('[HEYS.sceleton] ⏳ wait_postboot', { slotKey: debugKey });
+                        deferredSkeletonState[debugKey] = 'wait_postboot';
+                    }
                     return null; // Invisible — postboot in progress, modules will arrive soon
                 }
+
+                // Anti-flicker: render skeleton only if module is still not ready after a small delay
+                const now = Date.now();
+                if (slotKey && !deferredSlotLoadSince[slotKey]) {
+                    deferredSlotLoadSince[slotKey] = now;
+                }
+                const waitStart = slotKey ? deferredSlotLoadSince[slotKey] : now;
+                if ((now - waitStart) < DEFERRED_SKELETON_DELAY_MS) {
+                    if (deferredSkeletonState[debugKey] !== 'wait_delay') {
+                        console.info('[HEYS.sceleton] ⏱️ wait_delay', {
+                            slotKey: debugKey,
+                            elapsedMs: now - waitStart,
+                            delayMs: DEFERRED_SKELETON_DELAY_MS
+                        });
+                        deferredSkeletonState[debugKey] = 'wait_delay';
+                    }
+                    return null;
+                }
+
+                if (deferredSkeletonState[debugKey] !== 'show_skeleton') {
+                    console.info('[HEYS.sceleton] 🦴 show_skeleton', {
+                        slotKey: debugKey,
+                        elapsedMs: now - waitStart,
+                        delayMs: DEFERRED_SKELETON_DELAY_MS
+                    });
+                    deferredSkeletonState[debugKey] = 'show_skeleton';
+                }
+
                 return React.createElement('div', { key: slotKey, className: 'deferred-card-slot deferred-card-slot--loading' },
                     React.createElement('div', {
                         className: 'deferred-card-skeleton',
@@ -7135,10 +7171,27 @@
                     )
                 );
             }
+
+            if (slotKey && deferredSlotLoadSince[slotKey]) {
+                delete deferredSlotLoadSince[slotKey];
+            }
+
             if (!content) {
+                if (deferredSkeletonState[debugKey] !== 'ready_empty') {
+                    console.info('[HEYS.sceleton] ℹ️ ready_empty', { slotKey: debugKey });
+                    deferredSkeletonState[debugKey] = 'ready_empty';
+                }
                 return React.createElement('div', { key: slotKey, className: 'deferred-card-slot deferred-card-slot--empty' });
             }
-            return React.createElement('div', { key: slotKey, className: 'deferred-card-slot deferred-card-slot--loaded' }, content);
+            if (deferredSkeletonState[debugKey] !== 'ready_content') {
+                console.info('[HEYS.sceleton] ✅ ready_content', { slotKey: debugKey });
+                deferredSkeletonState[debugKey] = 'ready_content';
+            }
+            const slotTypeClass = slotKey ? ('deferred-card-slot--' + String(slotKey).replace(/^slot-/, '')) : '';
+            return React.createElement('div', {
+                key: slotKey,
+                className: ('deferred-card-slot deferred-card-slot--loaded animate-always ' + slotTypeClass).trim()
+            }, content);
         };
 
         if (!showDiary) return insulinIndicator;

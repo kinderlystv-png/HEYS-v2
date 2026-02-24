@@ -8,6 +8,8 @@
         const bootLog = (msg) => window.__heysLog && window.__heysLog('[DEPS] ' + msg);
         bootLog('dependency loader start');
         const INIT_RETRY_DELAY = 100;
+        const INIT_LOADER_DELAY_MS = 420;
+        const depsWaitStartedAt = Date.now();
         let reactCheckCount = 0;
 
         const defaultIsReactReady = () => Boolean(window.React && window.ReactDOM);
@@ -81,14 +83,33 @@
         const waitForDependencies = (onReady) => {
             // 🔍 PWA Boot logging
 
-            // Показываем минимальный loader если ждём больше 200мс
+            // Показываем минимальный loader только если реально подождали достаточно,
+            // чтобы исключить micro-flash на быстрых сетях.
             // 🆕 Heartbeat для watchdog — скрипты ещё грузятся
             if (typeof window !== 'undefined') {
                 window.__heysLoadingHeartbeat = Date.now();
             }
 
-            if (reactCheckCount === 2 && !document.getElementById('heys-init-loader')) {
+            const depsElapsedMs = Date.now() - depsWaitStartedAt;
+            if (!document.getElementById('heys-init-loader') && depsElapsedMs < INIT_LOADER_DELAY_MS) {
+                if (window.__heysInitLoaderState !== 'wait_delay') {
+                    console.info('[HEYS.sceleton] ⏱️ init_wait_delay', {
+                        elapsedMs: depsElapsedMs,
+                        delayMs: INIT_LOADER_DELAY_MS
+                    });
+                    window.__heysInitLoaderState = 'wait_delay';
+                }
+            }
+
+            if (!document.getElementById('heys-init-loader') && depsElapsedMs >= INIT_LOADER_DELAY_MS) {
                 bootLog('showing loader (waiting for deps)');
+                if (window.__heysInitLoaderState !== 'show_loader') {
+                    console.info('[HEYS.sceleton] 🦴 init_show_loader', {
+                        elapsedMs: depsElapsedMs,
+                        delayMs: INIT_LOADER_DELAY_MS
+                    });
+                    window.__heysInitLoaderState = 'show_loader';
+                }
                 const loader = document.createElement('div');
                 loader.id = 'heys-init-loader';
                 loader.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:99999';
@@ -100,6 +121,12 @@
                 bootLog('deps ready, init app');
                 // Убираем loader если показывали
                 document.getElementById('heys-init-loader')?.remove();
+                if (window.__heysInitLoaderState !== 'ready') {
+                    console.info('[HEYS.sceleton] ✅ init_ready', {
+                        elapsedMs: depsElapsedMs
+                    });
+                    window.__heysInitLoaderState = 'ready';
+                }
                 onReady();
                 return;
             }

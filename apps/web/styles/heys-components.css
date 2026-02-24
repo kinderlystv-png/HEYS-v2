@@ -4661,9 +4661,26 @@ body.tour-active .ios-pwa-banner {
   position: relative;
 }
 
+/* Pending state: stable zero-height placeholder to avoid mount-time micro-shift */
+.deferred-card-slot--pending {
+  height: 0;
+  max-height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Loading state: module not ready → skeleton visible */
 .deferred-card-slot--loading {
-  /* natural height from skeleton child */
+  /* Visibility is now controlled by JS delayed mount to avoid first-paint flash */
+}
+
+.deferred-card-slot--loading .deferred-card-skeleton {
+  opacity: 1;
+  transform: none;
+  animation: none;
 }
 
 /* Empty state: module ready, no content → collapse smoothly */
@@ -4676,9 +4693,33 @@ body.tour-active .ios-pwa-banner {
   transition: height 0.3s ease-out, opacity 0.2s ease-out;
 }
 
-/* Loaded state: module ready + content → fade in */
+/* Loaded state: module ready + content → unfold from 0 height downward.
+   max-height approach avoids 0fr min-track one-line jump. */
 .deferred-card-slot--loaded {
-  animation: deferred-card-appear 0.35s ease-out;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  --deferred-unfold-max: 2200px;
+  will-change: max-height, opacity;
+  animation: deferred-card-unfold 2s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* Per-card limits prevent end-of-animation overexpansion artifacts */
+.deferred-card-slot--loaded.deferred-card-slot--cascade {
+  --deferred-unfold-max: 880px;
+}
+
+.deferred-card-slot--loaded.deferred-card-slot--mealrec {
+  --deferred-unfold-max: 980px;
+}
+
+.deferred-card-slot--loaded.deferred-card-slot--supplements {
+  --deferred-unfold-max: 560px;
+}
+
+/* Keep child from enforcing unexpected intrinsic minimums */
+.deferred-card-slot--loaded>* {
+  min-height: 0;
 }
 
 /* Skeleton placeholder — mimics card shape */
@@ -4732,8 +4773,17 @@ body.tour-active .ios-pwa-banner {
 }
 
 @keyframes deferred-skeleton-pulse {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.05); }
+
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
 }
 
 @keyframes deferred-skeleton-shimmer {
@@ -4746,15 +4796,18 @@ body.tour-active .ios-pwa-banner {
   }
 }
 
-@keyframes deferred-card-appear {
-  from {
+/* Разворачивание сверху вниз через max-height — старт строго с 0px без "одной строки". */
+@keyframes deferred-card-unfold {
+
+  0%,
+  16% {
+    max-height: 0;
     opacity: 0;
-    transform: translateY(8px);
   }
 
-  to {
+  100% {
+    max-height: var(--deferred-unfold-max);
     opacity: 1;
-    transform: translateY(0);
   }
 }
 

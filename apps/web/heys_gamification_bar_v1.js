@@ -23,9 +23,11 @@
         const React = window.React;
         const { useState, useEffect, useRef, useCallback, useMemo } = React;
         const AUDIT_LOG_PREFIX = '[HEYS.game.audit]';
+        const GAME_SYNC_LOG_PREFIX = '[GAMESYNH]';
         const logAuditInfo = (...args) => console.info(AUDIT_LOG_PREFIX, ...args);
         const logAuditWarn = (...args) => console.warn(AUDIT_LOG_PREFIX, ...args);
         const logAuditError = (...args) => console.error(AUDIT_LOG_PREFIX, ...args);
+        const logSyncInfo = (...args) => console.info(GAME_SYNC_LOG_PREFIX, ...args);
 
         const [stats, setStats] = useState(() => {
             return HEYS.game ? HEYS.game.getStats() : {
@@ -58,7 +60,20 @@
         const [xpHistory, setXpHistory] = useState(() => {
             return HEYS.game && HEYS.game.getXPHistory ? HEYS.game.getXPHistory() : [];
         });
+        const [levelGuardActive, setLevelGuardActive] = useState(true);
+        const levelGuardTimerRef = useRef(null);
         const prevLevelRef = useRef(stats.level);
+
+        // 🔍 DIAGLOG: логируем начальные значения — что было в localStorage при монтировании
+        useEffect(() => {
+            logSyncInfo('UI mount:initial-stats', {
+                totalXP: stats.totalXP,
+                level: stats.level,
+                guard: levelGuardActive,
+                gameReady: !!HEYS.game
+            });
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, []);
         const [storyAchId, setStoryAchId] = useState(null);
         const [levelUpModal, setLevelUpModal] = useState(null);
         const levelUpTimerRef = useRef(null);
@@ -173,7 +188,35 @@
                 }
             }
 
+            // 🔍 DIAGLOG: логируем момент регистрации слушателя
+            logSyncInfo('UI heysGameUpdate:listener-registered', { at: new Date().toISOString() });
+
             const handleUpdate = (e) => {
+                // 🔍 DIAGLOG + guard-release работают НЕЗАВИСИМО от HEYS.game
+                // RC fix v6.4: если gameReady:false (HEYS.game=null) — всё равно снимаем guard
+                // по событию cloud_load_complete, используя e.detail напрямую.
+                const _evtReason = typeof e?.detail?.reason === 'string' ? e.detail.reason : '(no reason)';
+                const _evtIsInitial = !!e?.detail?.isInitialLoad;
+                const _evtXP = typeof e?.detail?.totalXP === 'number' ? e.detail.totalXP : (HEYS.game?.getStats?.()?.totalXP ?? 0);
+                const _evtLevel = typeof e?.detail?.level === 'number' ? e.detail.level : (HEYS.game?.getStats?.()?.level ?? 1);
+                logSyncInfo('UI heysGameUpdate:received', {
+                    reason: _evtReason,
+                    totalXP: _evtXP,
+                    level: _evtLevel,
+                    isInitialLoad: _evtIsInitial,
+                    guardActive: levelGuardActive,
+                    gameReady: !!HEYS.game
+                });
+
+                // 🛡️ Level Guard: снимаем ВСЕГДА при нужных reason — даже если HEYS.game ещё null
+                const _hasXpGained = typeof e?.detail?.xpGained === 'number' && e.detail.xpGained > 0;
+                if (_evtReason === 'xp_fast_sync' || _evtReason === 'xp_rebuild' ||
+                    _evtReason === 'cloud_load_complete' || _evtReason === 'cloud_load_error' ||
+                    (_hasXpGained && !_evtIsInitial)) {
+                    logSyncInfo('UI guard:OFF', { reason: _evtReason, isInitialLoad: _evtIsInitial, hasXpGained: _hasXpGained });
+                    setLevelGuardActive(false);
+                }
+
                 if (HEYS.game) {
                     const newStats = HEYS.game.getStats();
 
@@ -234,6 +277,19 @@
                         }
                         return newStats;
                     });
+                } else if (e?.detail?.totalXP != null && e?.detail?.level != null) {
+                    // RC fix v6.4: HEYS.game ещё null (gameReady:false) — обновляем stats из e.detail
+                    // чтобы показать правильные данные после снятия guard
+                    const detailStats = {
+                        totalXP: e.detail.totalXP,
+                        level: e.detail.level,
+                        title: e.detail.title || { icon: '🌱', title: 'Новичок', color: '#94a3b8' },
+                        progress: e.detail.progress || { current: 0, required: 100, percent: 0 },
+                        unlockedCount: e.detail.unlockedCount || 0,
+                        totalAchievements: e.detail.totalAchievements || 25
+                    };
+                    logSyncInfo('UI stats:from-detail-fallback', { totalXP: detailStats.totalXP, level: detailStats.level });
+                    setStats(detailStats);
                 }
                 setDailyBonusAvailable(prev => {
                     const next = HEYS.game ? HEYS.game.canClaimDailyBonus() : false;
@@ -324,6 +380,7 @@
             };
 
             window.addEventListener('heysGameUpdate', handleUpdate);
+
             window.addEventListener('heysGameNotification', handleNotification);
             window.addEventListener('heysProductAdded', handleUpdate);
             window.addEventListener('heysWaterAdded', handleUpdate);
@@ -340,9 +397,47 @@
             };
         }, []);
 
+        // 🔒 Guard для первого рендера: не показываем потенциально устаревший уровень,
+        // пока не завершится первичная синхронизация.
+        // RC-1 fix: убран 1200ms timer из handleSyncCompleted — он снимал guard РАНЬШЕ
+        // чем loadFromCloud завершится (~1400-1640ms). Guard теперь снимается event-driven
+        // через reason: 'cloud_load_complete' в handleUpdate. Оставлен только 15s safety fallback.
+        useEffect(() => {
+            const handleSyncCompleted = () => {
+                logSyncInfo('UI event:heysSyncCompleted', { action: 'pipeline_started_data_driven_guard' });
+                // НЕ устанавливаем таймер здесь — guard снимется через heysGameUpdate(cloud_load_complete)
+            };
+
+            window.addEventListener('heysSyncCompleted', handleSyncCompleted);
+
+            // RC-4 fix: Fallback поднят с 8s до 15s — на случай сетевых задержек или зависшего pipeline.
+            if (levelGuardTimerRef.current) clearTimeout(levelGuardTimerRef.current);
+            levelGuardTimerRef.current = setTimeout(() => {
+                logSyncInfo('UI guard:OFF', { reason: 'fallback_timeout_15000ms' });
+                setLevelGuardActive(false);
+            }, 15000);
+
+            return () => {
+                window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
+                if (levelGuardTimerRef.current) {
+                    clearTimeout(levelGuardTimerRef.current);
+                    levelGuardTimerRef.current = null;
+                }
+            };
+        }, []);
+
         // 🔄 v3.1: Полный сброс UI при смене клиента куратором
         useEffect(() => {
             const handleClientChanged = () => {
+                logSyncInfo('UI guard:ON', { reason: 'client_changed' });
+                setLevelGuardActive(true);
+                // RC-4 fix: перезапускаем fallback-таймер при смене клиента.
+                // Guard включился, но pipeline стартует заново — нужен свежий safety timeout.
+                if (levelGuardTimerRef.current) clearTimeout(levelGuardTimerRef.current);
+                levelGuardTimerRef.current = setTimeout(() => {
+                    logSyncInfo('UI guard:OFF', { reason: 'client_changed_fallback_timeout_15000ms' });
+                    setLevelGuardActive(false);
+                }, 15000);
                 // Немедленно обнуляем все данные до дефолтов, пока грузятся новые
                 const freshStats = HEYS.game ? HEYS.game.getStats() : {
                     totalXP: 0, level: 1,
@@ -641,8 +736,20 @@
 
                 const text = lines.join('\n');
 
-                // Копируем в буфер обмена
-                await navigator.clipboard.writeText(text);
+                // RC-7 fix: clipboard API требует фокус документа.
+                // Добавлен fallback через execCommand для случая когда фокус потерян (развёрнутая панель).
+                try {
+                    await navigator.clipboard.writeText(text);
+                } catch (_clipErr) {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+                    document.body.appendChild(ta);
+                    ta.focus();
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
 
                 logAuditInfo('copy:success', {
                     events: allEvents.length,
@@ -931,8 +1038,16 @@
                     className: 'game-level-group',
                     style: { color: title.color }
                 },
-                    React.createElement('span', { className: 'game-level-text' }, `${title.icon} ${stats.level}`),
-                    HEYS.game && React.createElement('span', {
+                    levelGuardActive
+                        ? React.createElement('span', {
+                            className: 'game-level-sync-chip',
+                            title: 'Синхронизация XP…'
+                        },
+                            React.createElement('span', { className: 'game-level-sync-chip__dot' }),
+                            'Синхронизация XP…'
+                        )
+                        : React.createElement('span', { className: 'game-level-text' }, `${title.icon} ${stats.level}`),
+                    HEYS.game && !levelGuardActive && React.createElement('span', {
                         className: 'game-rank-badge',
                         style: {
                             background: `linear-gradient(135deg, ${HEYS.game.getRankBadge(stats.level).color}66 0%, ${HEYS.game.getRankBadge(stats.level).color} 100%)`,
@@ -940,7 +1055,7 @@
                         }
                     }, HEYS.game.getRankBadge(stats.level).rank),
                     // Level Roadmap Tooltip — все звания
-                    HEYS.game && HEYS.game.getAllTitles && React.createElement('div', {
+                    HEYS.game && HEYS.game.getAllTitles && !levelGuardActive && React.createElement('div', {
                         className: 'game-level-roadmap'
                     },
                         React.createElement('div', { className: 'roadmap-title' }, '🎮 Путь развития'),
@@ -1266,11 +1381,20 @@
                     // Stats section
                     React.createElement('div', { className: 'game-stats-section' },
                         React.createElement('div', { className: 'game-stat' },
-                            React.createElement('span', { className: 'stat-value' }, stats.totalXP),
+                            // 🛡️ levelGuard: скрываем протухший XP из localStorage пока pipeline не завершился
+                            React.createElement('span', { className: 'stat-value' },
+                                levelGuardActive
+                                    ? React.createElement('span', { className: 'stat-value--syncing', title: 'Синхронизация…' }, '…')
+                                    : stats.totalXP
+                            ),
                             React.createElement('span', { className: 'stat-label' }, 'Всего XP')
                         ),
                         React.createElement('div', { className: 'game-stat' },
-                            React.createElement('span', { className: 'stat-value' }, `${stats.level}`),
+                            React.createElement('span', { className: 'stat-value' },
+                                levelGuardActive
+                                    ? React.createElement('span', { className: 'stat-value--syncing', title: 'Синхронизация…' }, '…')
+                                    : `${stats.level}`
+                            ),
                             React.createElement('span', { className: 'stat-label' }, 'Уровень')
                         ),
                         React.createElement('div', { className: 'game-stat' },

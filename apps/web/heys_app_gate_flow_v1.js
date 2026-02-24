@@ -695,12 +695,42 @@
             setCuratorTab,
         } = props;
 
+        const GATE_SKELETON_DELAY_MS = 280;
+        const gateLoaderSinceKey = '__heysGateLoaderSince';
+
         const gate = !clientId
             ? (isInitializing
-                ? React.createElement(HEYS.AppLoader, {
-                    message: 'Загрузка...',
-                    subtitle: 'Подключение к серверу'
-                })
+                ? (() => {
+                    const now = Date.now();
+                    if (!window[gateLoaderSinceKey]) {
+                        window[gateLoaderSinceKey] = now;
+                    }
+                    const elapsedMs = now - window[gateLoaderSinceKey];
+
+                    if (elapsedMs < GATE_SKELETON_DELAY_MS) {
+                        if (window.__heysGateSkeletonState !== 'wait_delay') {
+                            console.info('[HEYS.sceleton] ⏱️ gate_wait_delay', {
+                                elapsedMs,
+                                delayMs: GATE_SKELETON_DELAY_MS,
+                            });
+                            window.__heysGateSkeletonState = 'wait_delay';
+                        }
+                        return null;
+                    }
+
+                    if (window.__heysGateSkeletonState !== 'show_loader') {
+                        console.info('[HEYS.sceleton] 🦴 gate_show_loader', {
+                            elapsedMs,
+                            delayMs: GATE_SKELETON_DELAY_MS,
+                        });
+                        window.__heysGateSkeletonState = 'show_loader';
+                    }
+
+                    return React.createElement(HEYS.AppLoader, {
+                        message: 'Загрузка...',
+                        subtitle: 'Подключение к серверу'
+                    });
+                })()
                 : !cloudUser
                     ? React.createElement(
                         HEYS.LoginScreen,
@@ -1180,6 +1210,14 @@
                     )
             )
             : null;
+
+        if (!isInitializing && window[gateLoaderSinceKey]) {
+            delete window[gateLoaderSinceKey];
+            if (window.__heysGateSkeletonState !== 'ready') {
+                console.info('[HEYS.sceleton] ✅ gate_ready');
+                window.__heysGateSkeletonState = 'ready';
+            }
+        }
 
         return gate;
     }

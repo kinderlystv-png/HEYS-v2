@@ -2668,109 +2668,340 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // ─────────────────────────────────────────────────────
   function CrsProgressBar() {
     var [crsData, setCrsData] = React.useState(window.HEYS && window.HEYS._lastCrs ? window.HEYS._lastCrs : null);
-    var [isLoaded, setIsLoaded] = React.useState(false);
+    var [introProgress, setIntroProgress] = React.useState(0);
     var [isSettled, setIsSettled] = React.useState(false);
-    var [loadingOffset, setLoadingOffset] = React.useState(0); // Смещение от центра во время загрузки
+    var [loadingOffset, setLoadingOffset] = React.useState(0); // Смещение от центра во время маятника
+    var [currentPercent, setCurrentPercent] = React.useState(50);
+
+    function getCrsNumber(data) {
+      if (!data) return null;
+      var raw = data.crs;
+      if (typeof raw === 'number' && isFinite(raw)) return raw;
+      if (typeof raw === 'string') {
+        var parsed = parseFloat(raw);
+        if (isFinite(parsed)) return parsed;
+      }
+      return null;
+    }
+
+    var isSettledRef = React.useRef(false);
+    var isSettlingRef = React.useRef(false);
+    var hasValidCrsRef = React.useRef(getCrsNumber(crsData) !== null);
+    var pendulumTicksRef = React.useRef(0);
+    var currentPercentRef = React.useRef(50);
+    var crsTargetRef = React.useRef(getCrsNumber(crsData));
+    var debugLastLogTsRef = React.useRef(0);
+    var debugLastReasonRef = React.useRef('');
+    var introProgressRef = React.useRef(0);
+    var greenRef = React.useRef(null);
+    var orangeRef = React.useRef(null);
+    var dividerRef = React.useRef(null);
+
+    function applyCascadeVisual(percent, introK) {
+      var p = Math.max(0, Math.min(100, percent));
+      var k = Math.max(0, Math.min(1, introK));
+      var gw = p * k;
+      var ow = (100 - p) * k;
+
+      if (greenRef.current) {
+        greenRef.current.style.right = (100 - p) + '%';
+        greenRef.current.style.width = gw + '%';
+      }
+      if (orangeRef.current) {
+        orangeRef.current.style.left = p + '%';
+        orangeRef.current.style.width = ow + '%';
+      }
+      if (dividerRef.current) {
+        dividerRef.current.style.left = p + '%';
+        dividerRef.current.style.transform = 'translate(-50%, -50%) scale(' + k + ')';
+      }
+    }
 
     React.useEffect(function () {
-      // Запускаем анимацию появления после монтирования (разъезжаются из центра)
-      var timer1 = setTimeout(function () {
-        setIsLoaded(true);
-      }, 50);
+      // Требуемый UX:
+      // 1) Точка по центру + линии плавно расходятся >= 1с
+      // 2) Потом минимум пару маятников
+      // 3) Затем плавный сдвиг в фактический CRS (когда данные готовы)
+      var INTRO_DURATION_MS = 1000; // По запросу: разъезд строго ~1 сек
+      var PENDULUM_PERIOD_MS = 1800;
+      var PENDULUM_AMPLITUDE = 3.5;
+      var MIN_PENDULUM_CYCLES = 2; // минимум 2 полных маятника
+      var MIN_PENDULUM_TIME_MS = MIN_PENDULUM_CYCLES * PENDULUM_PERIOD_MS;
+      var SETTLE_DURATION_MS = 1800;
 
-      var timer2;
-      var handleSyncComplete;
-      var loadingInterval;
+      var introRafId;
+      var settleCheckTimer;
+      var rafId;
+      var settleRafId;
+      var pendulumStartTs = 0;
 
-      var checkAndSettle = function (source) {
-        // Убираем логирование
-        var timeSinceSync = window.HEYS && window.HEYS.syncCompletedAt ? Date.now() - window.HEYS.syncCompletedAt : 0;
-        var delay = timeSinceSync > 1500 ? 400 : 1000;
+      // Инициализируем визуал строго в центре до старта интро.
+      applyCascadeVisual(50, 0);
 
-        timer2 = setTimeout(function () {
-          if (loadingInterval) clearInterval(loadingInterval);
-          setLoadingOffset(0);
-          setIsSettled(true);
-        }, delay);
+      var logCascadeBar = function (stage, payload, force, throttleMs) {
+        var now = Date.now();
+        var gap = typeof throttleMs === 'number' ? throttleMs : 1000;
+        if (!force && (now - debugLastLogTsRef.current) < gap) return;
+        debugLastLogTsRef.current = now;
+        console.info('[cascadebar] ' + stage, payload || {});
       };
 
-      // Если синхронизация уже завершилась
-      if (window.HEYS && (window.HEYS.initialSyncDone || window.HEYS.syncCompletedAt)) {
-        checkAndSettle('mount_sync_done');
-      } else {
-        // Запускаем маятник влево-вправо пока ждем данные из облака
-        var pendulumStep = 0;
-        var pendulumPositions = [-5, 5]; // небольшое чередование: влево, вправо...
-        loadingInterval = setInterval(function () {
-          setLoadingOffset(pendulumPositions[pendulumStep % 2]);
-          pendulumStep++;
-        }, 2000);
+      var easeInOutCubic = function (t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      };
 
-        // Ждем события heysSyncCompleted, чтобы сместить в реальное значение CRS
-        handleSyncComplete = function (e) {
-          if (timer2) clearTimeout(timer2);
+      var animateToPercent = function (targetPercent, durationMs, onDone) {
+        if (settleRafId) cancelAnimationFrame(settleRafId);
+        var from = currentPercentRef.current;
+        var to = Math.max(0, Math.min(100, targetPercent));
+        var startTs = 0;
 
-          // Игнорируем heys:crs-updated, если синхронизация еще не завершена
-          if (e.type === 'heys:crs-updated' && !(window.HEYS && (window.HEYS.initialSyncDone || window.HEYS.syncCompletedAt))) {
+        logCascadeBar('settle-start', {
+          from: +from.toFixed(2),
+          to: +to.toFixed(2),
+          durationMs: durationMs,
+          hasValidCrs: hasValidCrsRef.current,
+          targetCrs: crsTargetRef.current
+        }, true);
+
+        var step = function (ts) {
+          if (!startTs) startTs = ts;
+          var p = Math.max(0, Math.min(1, (ts - startTs) / durationMs));
+          var k = easeInOutCubic(p);
+          var nextPercent = from + (to - from) * k;
+          setLoadingOffset(nextPercent - 50);
+          setCurrentPercent(nextPercent);
+          currentPercentRef.current = nextPercent;
+          applyCascadeVisual(nextPercent, 1);
+
+          if (p < 1) {
+            logCascadeBar('settle-progress', {
+              p: +p.toFixed(3),
+              currentPercent: +nextPercent.toFixed(2)
+            }, false, 1200);
+            settleRafId = requestAnimationFrame(step);
             return;
           }
 
-          // Если это событие heys:crs-updated (и синхронизация уже завершена), то мы уже получили новые данные, можно смещать быстрее
-          if (e.type === 'heys:crs-updated') {
-            timer2 = setTimeout(function () {
-              if (loadingInterval) clearInterval(loadingInterval);
-              setLoadingOffset(0);
-              setIsSettled(true);
-            }, 400);
-          } else {
-            checkAndSettle('event_' + e.type);
+          logCascadeBar('settle-done', {
+            currentPercent: +nextPercent.toFixed(2)
+          }, true);
+
+          if (typeof onDone === 'function') onDone();
+        };
+        settleRafId = requestAnimationFrame(step);
+      };
+
+      var startPendulum = function () {
+        logCascadeBar('pendulum-start', {
+          periodMs: PENDULUM_PERIOD_MS,
+          amplitude: PENDULUM_AMPLITUDE
+        }, true);
+
+        // После интро запускаем плавный маятник (sin wave), без перескоков.
+        var animatePendulum = function (ts) {
+          if (!pendulumStartTs) pendulumStartTs = ts;
+          var elapsed = ts - pendulumStartTs;
+          pendulumTicksRef.current = elapsed;
+          var phase = (elapsed / PENDULUM_PERIOD_MS) * Math.PI * 2;
+          var next = Math.sin(phase) * PENDULUM_AMPLITUDE;
+          setLoadingOffset(next);
+          setCurrentPercent(50 + next);
+          currentPercentRef.current = 50 + next;
+          applyCascadeVisual(50 + next, 1);
+
+          logCascadeBar('pendulum-frame', {
+            elapsedMs: Math.round(elapsed),
+            offset: +next.toFixed(3),
+            currentPercent: +(50 + next).toFixed(2),
+            hasValidCrs: hasValidCrsRef.current,
+            targetCrs: crsTargetRef.current
+          }, false, 1200);
+
+          trySettleToActual();
+
+          if (!isSettledRef.current) {
+            rafId = requestAnimationFrame(animatePendulum);
           }
         };
-        window.addEventListener('heysSyncCompleted', handleSyncComplete);
-        // Также слушаем heys:crs-updated как запасной триггер, если CRS обновился до heysSyncCompleted
-        window.addEventListener('heys:crs-updated', handleSyncComplete);
+        rafId = requestAnimationFrame(animatePendulum);
+      };
 
-        // Фолбэк: если событие уже было или не пришло, смещаем через 3 секунды
-        timer2 = setTimeout(function () {
-          if (loadingInterval) clearInterval(loadingInterval);
+      var trySettleToActual = function () {
+        if (isSettledRef.current) return;
+        if (isSettlingRef.current) return;
+
+        // Если CRS появился в глобальном кеше позже — подхватываем его.
+        if (!hasValidCrsRef.current) {
+          var globalCrs = window.HEYS && window.HEYS._lastCrs;
+          var globalNum = getCrsNumber(globalCrs);
+          if (globalNum !== null) {
+            setCrsData(globalCrs);
+            hasValidCrsRef.current = true;
+          }
+        }
+
+        var elapsed = pendulumTicksRef.current;
+        var hasMinimumPendulum = elapsed >= MIN_PENDULUM_TIME_MS;
+
+        // Критично: не фиксируем центр без валидного CRS,
+        // иначе точка может "застрять" на 50%.
+        if (!hasValidCrsRef.current) {
+          if (debugLastReasonRef.current !== 'waiting-crs') {
+            debugLastReasonRef.current = 'waiting-crs';
+            logCascadeBar('settle-waiting-crs', {
+              elapsedMs: Math.round(elapsed),
+              currentPercent: +currentPercentRef.current.toFixed(2),
+              targetCrs: crsTargetRef.current
+            }, true);
+          }
+          return;
+        }
+        if (hasValidCrsRef.current && !hasMinimumPendulum) {
+          if (debugLastReasonRef.current !== 'waiting-min-pendulum') {
+            debugLastReasonRef.current = 'waiting-min-pendulum';
+            logCascadeBar('settle-waiting-pendulum', {
+              elapsedMs: Math.round(elapsed),
+              requiredMs: MIN_PENDULUM_TIME_MS,
+              currentPercent: +currentPercentRef.current.toFixed(2),
+              targetCrs: crsTargetRef.current
+            }, true);
+          }
+          return;
+        }
+
+        debugLastReasonRef.current = 'ready-to-settle';
+        logCascadeBar('settle-ready', {
+          elapsedMs: Math.round(elapsed),
+          currentPercent: +currentPercentRef.current.toFixed(2),
+          targetCrs: crsTargetRef.current
+        }, true);
+
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+          rafId = 0;
+        }
+
+        // Плавно доплываем к целевой позиции CRS.
+        isSettlingRef.current = true;
+        var settleTo = crsTargetRef.current !== null ? (crsTargetRef.current * 100) : currentPercentRef.current;
+
+        animateToPercent(settleTo, SETTLE_DURATION_MS, function () {
           setLoadingOffset(0);
+          isSettledRef.current = true;
+          isSettlingRef.current = false;
           setIsSettled(true);
-        }, 3000);
-      }
+        });
+      };
+
+      // Жёсткое интро: покадрово раскрываем линии из центра ровно 1 секунду.
+      var introStartTs = 0;
+      var animateIntro = function (ts) {
+        if (!introStartTs) introStartTs = ts;
+        var elapsed = ts - introStartTs;
+        var p = Math.max(0, Math.min(1, elapsed / INTRO_DURATION_MS));
+        setIntroProgress(p);
+        introProgressRef.current = p;
+        applyCascadeVisual(50, p);
+
+        logCascadeBar('intro-frame', {
+          p: +p.toFixed(3),
+          elapsedMs: Math.round(elapsed)
+        }, false, 1000);
+
+        if (p < 1) {
+          introRafId = requestAnimationFrame(animateIntro);
+          return;
+        }
+
+        logCascadeBar('intro-done', { durationMs: INTRO_DURATION_MS }, true);
+        startPendulum();
+      };
+      introRafId = requestAnimationFrame(animateIntro);
+
+      // Периодическая проверка на случай, если данные пришли без движения маятника.
+      settleCheckTimer = setInterval(function () {
+        trySettleToActual();
+      }, 120);
 
       function handleCrsUpdate(e) {
         if (e.detail) {
           setCrsData(e.detail);
+          var nextCrs = getCrsNumber(e.detail);
+          hasValidCrsRef.current = nextCrs !== null;
+          crsTargetRef.current = nextCrs;
+
+          logCascadeBar('crs-update', {
+            nextCrs: nextCrs,
+            currentPercent: +currentPercentRef.current.toFixed(2),
+            isSettled: isSettledRef.current,
+            isSettling: isSettlingRef.current
+          }, true);
+
+          // Уже в settled-состоянии: любые новые значения CRS двигаем плавно,
+          // а не резким прыжком.
+          if (isSettledRef.current && nextCrs !== null) {
+            animateToPercent(nextCrs * 100, 1600);
+          }
+
+          trySettleToActual();
         }
       }
+
+      function handleSyncCompleted() {
+        // Иногда CRS уже в window.HEYS._lastCrs, но событие обновления не прилетело.
+        var fallback = window.HEYS && window.HEYS._lastCrs;
+        var fallbackCrs = getCrsNumber(fallback);
+        if (fallbackCrs !== null) {
+          setCrsData(fallback);
+          hasValidCrsRef.current = true;
+          crsTargetRef.current = fallbackCrs;
+
+          if (isSettledRef.current) {
+            animateToPercent(fallbackCrs * 100, 1600);
+          }
+
+          logCascadeBar('sync-fallback-crs', {
+            fallbackCrs: fallbackCrs,
+            currentPercent: +currentPercentRef.current.toFixed(2),
+            isSettled: isSettledRef.current
+          }, true);
+
+          trySettleToActual();
+        }
+      }
+
+      logCascadeBar('mount', {
+        initialCrs: getCrsNumber(crsData),
+        initialPercent: +currentPercentRef.current.toFixed(2)
+      }, true);
+
       window.addEventListener('heys:crs-updated', handleCrsUpdate);
+      window.addEventListener('heysSyncCompleted', handleSyncCompleted);
 
       return function () {
-        clearTimeout(timer1);
-        if (timer2) clearTimeout(timer2);
-        if (loadingInterval) clearInterval(loadingInterval);
-        if (handleSyncComplete) {
-          window.removeEventListener('heysSyncCompleted', handleSyncComplete);
-          window.removeEventListener('heys:crs-updated', handleSyncComplete);
-        }
+        if (introRafId) cancelAnimationFrame(introRafId);
+        if (settleCheckTimer) clearInterval(settleCheckTimer);
+        if (rafId) cancelAnimationFrame(rafId);
+        if (settleRafId) cancelAnimationFrame(settleRafId);
         window.removeEventListener('heys:crs-updated', handleCrsUpdate);
+        window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
       };
     }, []);
 
     React.useEffect(function () {
-      var currentCrs = crsData ? crsData.crs : null;
-      var actualP = currentCrs !== null ? Math.max(0, Math.min(100, currentCrs * 100)) : 50;
-      var renderedP = isSettled ? actualP : 50;
-    }, [isLoaded, isSettled, crsData]);
+      var v = getCrsNumber(crsData);
+      hasValidCrsRef.current = v !== null;
+      crsTargetRef.current = v;
+    }, [crsData]);
 
-    if (!crsData || typeof crsData.crs !== 'number') {
-      return null;
-    }
+    // Даже если данных CRS ещё нет, держим линию видимой по центру (50%),
+    // чтобы нижний индикатор не пропадал из меню.
+    var crsValue = getCrsNumber(crsData);
+    var hasValidCrs = crsValue !== null;
 
-    // Если мы еще не "осели" (isSettled === false), то мы показываем 50% + loadingOffset
-    var actualPercent = Math.max(0, Math.min(100, crsData.crs * 100));
-    var crsPercent = isSettled ? actualPercent : (50 + loadingOffset); // Сначала "ищет", потом реальное значение
-
+    // Если CRS ещё нет — стартуем из 50/50, затем маятник до загрузки данных.
+    // Анимация появления из центра работает через isLoaded.
     // --- Цвет левой линии: фиксированный зелёный градиент (светлее у центра → насыщеннее у края) ---
     var goodGrad = 'linear-gradient(90deg, #10b981, #34d399)';
     var goodShadow = '0 0 4px rgba(52, 211, 153, 0.8), 0 0 10px rgba(16, 185, 129, 0.6), 0 0 16px rgba(5, 150, 105, 0.4)';
@@ -2785,27 +3016,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       { className: 'crs-bar-container' },
       React.createElement('div', {
         className: 'crs-bar-green',
+        ref: greenRef,
         style: {
-          right: (100 - crsPercent) + '%',
-          width: isLoaded ? crsPercent + '%' : '0%',
+          transition: 'none',
           background: goodGrad,
           boxShadow: goodShadow
         }
       }),
       React.createElement('div', {
         className: 'crs-bar-orange',
+        ref: orangeRef,
         style: {
-          left: crsPercent + '%',
-          width: isLoaded ? (100 - crsPercent) + '%' : '0%',
+          transition: 'none',
           background: badGrad,
           boxShadow: badShadow
         }
       }),
       React.createElement('div', {
         className: 'crs-bar-divider',
+        ref: dividerRef,
         style: {
-          left: crsPercent + '%',
-          transform: isLoaded ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -50%) scale(0)'
+          transition: 'none',
         }
       })
     );

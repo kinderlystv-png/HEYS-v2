@@ -1071,6 +1071,42 @@
             UserTabWithCloudSync,
         } = props;
 
+        const TAB_SKELETON_DELAY_MS = 240;
+        const tabSkeletonSince = window.__heysTabSkeletonSince = window.__heysTabSkeletonSince || Object.create(null);
+        const tabSkeletonState = window.__heysTabSkeletonState = window.__heysTabSkeletonState || Object.create(null);
+        const renderTabFallback = (fallbackKey, fallbackNode) => {
+            const now = Date.now();
+            if (!tabSkeletonSince[fallbackKey]) {
+                tabSkeletonSince[fallbackKey] = now;
+            }
+            const elapsedMs = now - tabSkeletonSince[fallbackKey];
+
+            if (elapsedMs < TAB_SKELETON_DELAY_MS) {
+                if (tabSkeletonState[fallbackKey] !== 'wait_delay') {
+                    console.info('[HEYS.sceleton] ⏱️ tab_wait_delay', {
+                        key: fallbackKey,
+                        elapsedMs,
+                        delayMs: TAB_SKELETON_DELAY_MS,
+                        tab,
+                    });
+                    tabSkeletonState[fallbackKey] = 'wait_delay';
+                }
+                return null;
+            }
+
+            if (tabSkeletonState[fallbackKey] !== 'show_skeleton') {
+                console.info('[HEYS.sceleton] 🦴 tab_show_skeleton', {
+                    key: fallbackKey,
+                    elapsedMs,
+                    delayMs: TAB_SKELETON_DELAY_MS,
+                    tab,
+                });
+                tabSkeletonState[fallbackKey] = 'show_skeleton';
+            }
+
+            return fallbackNode;
+        };
+
         return React.createElement(
             'div',
             {
@@ -1105,10 +1141,10 @@
                             optimum: null,
                             selectedDate: selectedDate,
                         })
-                        : React.createElement('div', { style: { padding: 16 } },
+                        : renderTabFallback('insights', React.createElement('div', { style: { padding: 16 } },
                             React.createElement('div', { className: 'skeleton-sparkline', style: { height: 160, marginBottom: 16 } }),
                             React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                        ))
+                        )))
                     : tab === 'month'
                         ? (window.HEYS?.ReportsTab
                             ? React.createElement(window.HEYS.ReportsTab, {
@@ -1117,10 +1153,10 @@
                                 setSelectedDate,
                                 clientId,
                             })
-                            : React.createElement('div', { style: { padding: 16 } },
+                            : renderTabFallback('month', React.createElement('div', { style: { padding: 16 } },
                                 React.createElement('div', { className: 'skeleton-sparkline', style: { height: 160, marginBottom: 16 } }),
                                 React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                            ))
+                            )))
                         : (tab === 'stats' || tab === 'diary')
                             ? React.createElement(DayTabWithCloudSync, {
                                 key: 'day' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
@@ -1143,10 +1179,10 @@
                                             setTab,
                                             setSelectedDate,
                                         })
-                                        : React.createElement('div', { style: { padding: 16 } },
+                                        : renderTabFallback('overview', React.createElement('div', { style: { padding: 16 } },
                                             React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
                                             React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                                        ))
+                                        )))
                                     : tab === 'widgets'
                                         ? (window.HEYS && window.HEYS.Widgets && window.HEYS.Widgets.WidgetsTab
                                             ? React.createElement(window.HEYS.Widgets.WidgetsTab, {
@@ -1156,14 +1192,14 @@
                                                 setTab,
                                                 setSelectedDate,
                                             })
-                                            : React.createElement('div', { style: { padding: 16 } },
+                                            : renderTabFallback('widgets', React.createElement('div', { style: { padding: 16 } },
                                                 React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
                                                 React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
-                                            ))
-                                        : React.createElement('div', { style: { padding: 16 } },
+                                            )))
+                                        : renderTabFallback('default_' + String(tab || 'unknown'), React.createElement('div', { style: { padding: 16 } },
                                             React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
                                             React.createElement('div', { className: 'skeleton-block', style: { height: 200 } })
-                                        )
+                                        ))
         );
     }
 

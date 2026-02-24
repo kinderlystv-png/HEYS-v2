@@ -5,6 +5,45 @@
     const React = window.React;
     if (!React) return;
 
+    const TAB_SKELETON_DELAY_MS = 260;
+
+    function useDelayedSkeleton(shouldShow, key) {
+        const [visible, setVisible] = React.useState(false);
+
+        React.useEffect(() => {
+            if (!shouldShow) {
+                if (window.__heysTabWrapSkeletonState?.[key] !== 'ready') {
+                    window.__heysTabWrapSkeletonState = window.__heysTabWrapSkeletonState || Object.create(null);
+                    window.__heysTabWrapSkeletonState[key] = 'ready';
+                    console.info('[HEYS.sceleton] ✅ tabwrap_ready', { key });
+                }
+                setVisible(false);
+                return;
+            }
+
+            window.__heysTabWrapSkeletonState = window.__heysTabWrapSkeletonState || Object.create(null);
+            if (window.__heysTabWrapSkeletonState[key] !== 'wait_delay') {
+                window.__heysTabWrapSkeletonState[key] = 'wait_delay';
+                console.info('[HEYS.sceleton] ⏱️ tabwrap_wait_delay', {
+                    key,
+                    delayMs: TAB_SKELETON_DELAY_MS
+                });
+            }
+
+            const t = setTimeout(() => {
+                setVisible(true);
+                if (window.__heysTabWrapSkeletonState[key] !== 'show_skeleton') {
+                    window.__heysTabWrapSkeletonState[key] = 'show_skeleton';
+                    console.info('[HEYS.sceleton] 🦴 tabwrap_show_skeleton', { key });
+                }
+            }, TAB_SKELETON_DELAY_MS);
+
+            return () => clearTimeout(t);
+        }, [shouldShow, key]);
+
+        return visible;
+    }
+
     // Skeleton для DayTab — показываем пока грузится
     function DayTabSkeleton() {
         return React.createElement('div', { className: 'day-tab-skeleton', style: { padding: 16 } },
@@ -32,6 +71,8 @@
     function DayTabWithCloudSync(props) {
         const { clientId, products, selectedDate, setSelectedDate, subTab } = props;
         const [loading, setLoading] = React.useState(true);
+        const needsSkeleton = !clientId || loading || !window.HEYS || !window.HEYS.DayTab;
+        const showSkeleton = useDelayedSkeleton(needsSkeleton, 'daytab');
 
         React.useEffect(() => {
             let cancelled = false;
@@ -63,11 +104,11 @@
 
         // 🔐 Не рендерим DayTab пока нет клиента — иначе advice показываются до входа!
         if (!clientId) {
-            return React.createElement(DayTabSkeleton);
+            return showSkeleton ? React.createElement(DayTabSkeleton) : null;
         }
 
         if (loading || !window.HEYS || !window.HEYS.DayTab) {
-            return React.createElement(DayTabSkeleton);
+            return showSkeleton ? React.createElement(DayTabSkeleton) : null;
         }
         return React.createElement(window.HEYS.DayTab, { products, selectedDate, setSelectedDate, subTab });
     }
@@ -95,6 +136,8 @@
         // Проверяем был ли sync для ЭТОГО клиента
         const alreadySynced = clientId && syncedClientsCache.has(clientId);
         const [loading, setLoading] = React.useState(!alreadySynced);
+        const needsSkeleton = !clientId || loading || !window.HEYS || !window.HEYS.Ration;
+        const showSkeleton = useDelayedSkeleton(needsSkeleton, 'rationtab');
         const getLatestProducts = (event) => {
             const fromEvent = event?.detail?.products;
             if (Array.isArray(fromEvent)) return fromEvent;
@@ -108,7 +151,7 @@
 
         // 🔐 Не рендерим Ration пока нет клиента
         if (!clientId) {
-            return React.createElement(RationSkeleton);
+            return showSkeleton ? React.createElement(RationSkeleton) : null;
         }
 
         // 📦 Слушатель событий для гарантированного обновления продуктов
@@ -279,7 +322,7 @@
             };
         }, [clientId]);
         if (loading || !window.HEYS || !window.HEYS.Ration) {
-            return React.createElement(RationSkeleton);
+            return showSkeleton ? React.createElement(RationSkeleton) : null;
         }
         return React.createElement(window.HEYS.Ration, { products, setProducts });
     }
@@ -297,10 +340,12 @@
     function UserTabWithCloudSync(props) {
         const { clientId } = props;
         const [loading, setLoading] = React.useState(true);
+        const needsSkeleton = !clientId || loading || !window.HEYS || !window.HEYS.UserTab;
+        const showSkeleton = useDelayedSkeleton(needsSkeleton, 'usertab');
 
         // 🔐 Не рендерим UserTab пока нет клиента
         if (!clientId) {
-            return React.createElement(UserSkeleton);
+            return showSkeleton ? React.createElement(UserSkeleton) : null;
         }
 
         React.useEffect(() => {
@@ -327,7 +372,7 @@
             };
         }, [clientId]);
         if (loading || !window.HEYS || !window.HEYS.UserTab) {
-            return React.createElement(UserSkeleton);
+            return showSkeleton ? React.createElement(UserSkeleton) : null;
         }
         return React.createElement(window.HEYS.UserTab, {});
     }

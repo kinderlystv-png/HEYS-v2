@@ -350,6 +350,47 @@
     return new Date().toISOString().slice(0, 10);
   }
 
+  // ========== GAMESYNH TRACE LOGGING ==========
+  const GAME_SYNC_LOG_PREFIX = '[GAMESYNH]';
+  let _gameSyncTraceSeq = 0;
+
+  function _gameSyncNow() {
+    return (typeof performance !== 'undefined' && typeof performance.now === 'function')
+      ? performance.now()
+      : Date.now();
+  }
+
+  function startGameSyncTrace(stage, meta = {}) {
+    const traceId = `gs-${Date.now().toString(36)}-${(++_gameSyncTraceSeq).toString(36)}`;
+    const trace = { traceId, stage, startedAt: _gameSyncNow() };
+    console.info(GAME_SYNC_LOG_PREFIX, '▶ start', stage, {
+      traceId,
+      at: new Date().toISOString(),
+      ...meta
+    });
+    return trace;
+  }
+
+  function gameSyncTraceStep(trace, step, meta = {}) {
+    const elapsedMs = Math.round(_gameSyncNow() - (trace?.startedAt || _gameSyncNow()));
+    console.info(GAME_SYNC_LOG_PREFIX, '• step', step, {
+      traceId: trace?.traceId || 'n/a',
+      stage: trace?.stage || 'n/a',
+      elapsedMs,
+      ...meta
+    });
+  }
+
+  function endGameSyncTrace(trace, status = 'ok', meta = {}) {
+    const elapsedMs = Math.round(_gameSyncNow() - (trace?.startedAt || _gameSyncNow()));
+    console.info(GAME_SYNC_LOG_PREFIX, '■ end', trace?.stage || 'unknown', {
+      traceId: trace?.traceId || 'n/a',
+      status,
+      elapsedMs,
+      ...meta
+    });
+  }
+
   function loadData() {
     if (_data) return _data;
 
@@ -1104,12 +1145,18 @@
   async function rebuildXPFromAudit(options = {}) {
     const { force = false, dryRun = false, trustAudit = false } = options;
     const LOG = '[🎮 GAME REBUILD]';
+    const syncTrace = startGameSyncTrace('rebuildXPFromAudit', {
+      force: Boolean(force),
+      dryRun: Boolean(dryRun),
+      trustAudit: Boolean(trustAudit)
+    });
 
     // 🔒 Блокируем выдачу ачивок пока идёт rebuild
     _isRebuilding = true;
     try {
       // 0. Дождёмся отправки pending audit events
       await flushAuditQueue();
+      gameSyncTraceStep(syncTrace, 'flush_audit_queue:done');
 
       // 1. Получаем ВСЕ записи из аудит-лога (пагинация по 500)
       const allEvents = [];
@@ -1126,9 +1173,14 @@
         // Если получили меньше чем запрошено — это последняя страница
         if (items.length < PAGE_SIZE) break;
       }
+      gameSyncTraceStep(syncTrace, 'fetch_audit_pages:done', {
+        pages: Math.ceil(allEvents.length / PAGE_SIZE),
+        totalEvents: allEvents.length
+      });
 
       if (allEvents.length === 0) {
         console.info(LOG, 'No audit events found — nothing to rebuild');
+        endGameSyncTrace(syncTrace, 'ok', { reason: 'no_events' });
         return { rebuilt: false, auditXP: 0, cachedXP: 0, delta: 0, events: 0, reason: 'no_events' };
       }
 
@@ -1204,6 +1256,11 @@
       const currentData = loadData();
       const cachedXP = currentData.totalXP || 0;
       const delta = auditXP - cachedXP;
+      gameSyncTraceStep(syncTrace, 'audit_math:done', {
+        auditXP,
+        cachedXP,
+        delta
+      });
       const currentAchievements = new Set(currentData.unlockedAchievements || []);
       const missingAchievements = [...auditAchievements].filter(a => !currentAchievements.has(a));
 
@@ -1258,11 +1315,13 @@
 
       if (!needsRebuild) {
         console.info(LOG, `Everything consistent — no rebuild needed`);
+        endGameSyncTrace(syncTrace, 'ok', { reason: 'consistent', auditXP, cachedXP, delta });
         return { rebuilt: false, auditXP, cachedXP, delta, events: xpGainCount, missingAchievements: [], reason: 'consistent' };
       }
 
       if (dryRun) {
         console.warn(LOG, `DRY RUN: XP ${cachedXP} → ${auditXP}, +${missingAchievements.length} achievements, stats update`);
+        endGameSyncTrace(syncTrace, 'ok', { reason: 'dry_run', auditXP, cachedXP, delta, missingAchievements: missingAchievements.length });
         return {
           rebuilt: false, auditXP, cachedXP, delta, events: xpGainCount,
           missingAchievements, auditStats, reason: 'dry_run'
@@ -1368,6 +1427,11 @@
         console.info(LOG, 'Rebuild verified consistency — no audit event needed (delta=0, no new achievements)' +
           (statsNeedRebuild ? ', stats updated locally' : ''));
       }
+      gameSyncTraceStep(syncTrace, 'rebuild_apply:done', {
+        rebuiltXP,
+        restoredAchievements: restoredAchievements.length,
+        hasXPOrAchievementChanges
+      });
 
       // 7. Синхронизируем в облако
       triggerImmediateSync('xp_rebuild');
@@ -1402,6 +1466,12 @@
         console.info(LOG, `Restored achievements:`, restoredAchievements.map(a => `${a.name} (+${a.xp} XP)`));
       }
 
+      endGameSyncTrace(syncTrace, 'ok', {
+        reason: hasXPOrAchievementChanges ? 'rebuilt' : (statsNeedRebuild ? 'stats_only' : 'verified_consistent'),
+        rebuiltXP,
+        level: currentData.level,
+        restoredAchievements: restoredAchievements.length
+      });
       return {
         rebuilt: hasXPOrAchievementChanges, auditXP, cachedXP, delta: rebuiltXP - cachedXP,
         events: xpGainCount, restoredAchievements,
@@ -1410,6 +1480,7 @@
 
     } catch (err) {
       console.error(LOG, '❌ Rebuild failed:', err.message);
+      endGameSyncTrace(syncTrace, 'error', { message: err.message });
       return { rebuilt: false, auditXP: 0, cachedXP: 0, delta: 0, events: 0, reason: 'error', error: err.message };
     } finally {
       _isRebuilding = false; // 🔓 Разблокируем выдачу ачивок
@@ -1454,10 +1525,15 @@
   }
 
   async function ensureAuditConsistency(trigger = 'auto') {
-    if (_auditRebuildDone) return;
+    const syncTrace = startGameSyncTrace('ensureAuditConsistency', { trigger });
+    if (_auditRebuildDone) {
+      endGameSyncTrace(syncTrace, 'skipped', { reason: 'already_done' });
+      return;
+    }
     const _now = Date.now();
     if (_now - _ensureAuditLastRun < 30000) {
       console.info('[🎮 Gamification] ensureAuditConsistency throttled (', Math.round((_now - _ensureAuditLastRun) / 1000), 's ago), trigger:', trigger);
+      endGameSyncTrace(syncTrace, 'skipped', { reason: 'throttled' });
       return;
     }
     _ensureAuditLastRun = _now;
@@ -1466,12 +1542,19 @@
     try {
       // Дождёмся отправки pending events
       await flushAuditQueue();
+      gameSyncTraceStep(syncTrace, 'flush_audit_queue:done');
 
       const data = loadData();
       const result = await fetchGamificationHistory({ limit: 1, offset: 0 });
+      gameSyncTraceStep(syncTrace, 'fetch_last_event:done', {
+        hasResult: Boolean(result),
+        items: result?.items?.length || 0,
+        total: result?.total || 0
+      });
 
       if (!result || !result.items || result.items.length === 0) {
         console.info('[🎮 GAME SYNC]', trigger, '— no audit events, skip');
+        endGameSyncTrace(syncTrace, 'ok', { reason: 'no_audit_events' });
         return;
       }
 
@@ -1498,6 +1581,14 @@
       // 2. Количество событий не изменилось?
       const xpConsistent = lastXPAfter === null || lastXPAfter === cachedXP;
       const countConsistent = cachedEventCount > 0 && cachedEventCount === auditTotal;
+      gameSyncTraceStep(syncTrace, 'consistency_evaluated', {
+        lastXPAfter,
+        cachedXP,
+        cachedEventCount,
+        auditTotal,
+        xpConsistent,
+        countConsistent
+      });
 
       if (xpConsistent && countConsistent) {
         // 🚀 PERF v2.5: Проверяем dailyRebuilt через XP cache (local-only, НЕ перезаписывается cloud sync)
@@ -1507,11 +1598,13 @@
           console.info('[🎮 GAME SYNC]', trigger, '— XP consistent ✅ but dailyXP not yet rebuilt, restoring from audit...');
           await rebuildXPFromAudit({ force: true });
           _saveXPCache(cachedXP, auditTotal, { dailyRebuilt: true });
+          endGameSyncTrace(syncTrace, 'ok', { reason: 'consistent_daily_rebuild' });
           return;
         }
         console.info('[🎮 GAME SYNC]', trigger, '— consistent ✅ (XP=' + cachedXP + ', events=' + auditTotal + ')');
         // 🚀 PERF: Update local XP cache on consistent check
         _saveXPCache(cachedXP, auditTotal);
+        endGameSyncTrace(syncTrace, 'ok', { reason: 'consistent', cachedXP, auditTotal });
         return;
       }
 
@@ -1532,6 +1625,7 @@
           await rebuildXPFromAudit({ force: true });
           _saveXPCache(cachedXP, auditTotal, { dailyRebuilt: true });
         }
+        endGameSyncTrace(syncTrace, 'ok', { reason: 'xp_consistent_count_update', cachedXP, auditTotal });
         return;
       }
 
@@ -1539,7 +1633,47 @@
       console.warn('[🎮 GAME SYNC]', trigger, '— XP DRIFT detected! Cached XP=' + cachedXP +
         ', audit xp_after=' + lastXPAfter + ', events: cached=' + cachedEventCount + ', actual=' + auditTotal);
 
+      // ⚡ FAST-FORWARD: Если в audit есть actuality XP (вверх или вниз),
+      // сразу обновляем UI/кэш, чтобы не ждать полный rebuild.
+      // RC-5 fix: было lastXPAfter > cachedXP — теперь !== чтобы покрывать уменьшение XP при смене клиента.
+      // Full rebuild ниже всё равно выполнится и восстановит dailyXP/stats/ачивки.
+      if (typeof lastXPAfter === 'number' && lastXPAfter !== cachedXP) {
+        const fastData = loadData();
+        const fastLevelBefore = fastData.level || calculateLevel(cachedXP);
+        fastData.totalXP = lastXPAfter;
+        fastData.level = calculateLevel(lastXPAfter);
+        fastData.updatedAt = Date.now();
+        fastData._lastKnownEventCount = Math.max(fastData._lastKnownEventCount || 0, auditTotal);
+        _data = fastData;
+        setStoredValue(STORAGE_KEY, fastData);
+        _saveXPCache(lastXPAfter, fastData._lastKnownEventCount);
+
+        window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+          detail: {
+            xpGained: lastXPAfter - cachedXP,
+            reason: 'xp_fast_sync',
+            totalXP: lastXPAfter,
+            level: fastData.level,
+            progress: game.getProgress(),
+            isInitialLoad: _isLoadingPhase
+          }
+        }));
+
+        console.info('[🎮 GAME SYNC]', trigger, '— fast-forward applied: XP=' + cachedXP + ' → ' + lastXPAfter +
+          ', level=' + fastLevelBefore + ' → ' + fastData.level);
+        gameSyncTraceStep(syncTrace, 'fast_forward_applied', {
+          fromXP: cachedXP,
+          toXP: lastXPAfter,
+          fromLevel: fastLevelBefore,
+          toLevel: fastData.level
+        });
+      }
+
       const rebuildResult = await rebuildXPFromAudit({ force: true });
+      gameSyncTraceStep(syncTrace, 'full_rebuild:done', {
+        rebuilt: Boolean(rebuildResult?.rebuilt),
+        reason: rebuildResult?.reason || null
+      });
 
       // Сохраняем event count после rebuild
       // +1 только если rebuild реально записал audit event (XP или ачивки изменились)
@@ -1550,8 +1684,14 @@
       _saveXPCache(updatedData.totalXP || 0, updatedData._lastKnownEventCount);
       console.info('[🎮 GAME SYNC]', trigger, '— rebuild done, eventCount saved:', updatedData._lastKnownEventCount,
         '(rebuilt:', rebuildResult?.rebuilt, ', reason:', rebuildResult?.reason, ')');
+      endGameSyncTrace(syncTrace, 'ok', {
+        reason: 'xp_drift_reconciled',
+        updatedEventCount: updatedData._lastKnownEventCount,
+        rebuilt: Boolean(rebuildResult?.rebuilt)
+      });
     } catch (err) {
       console.warn('[🎮 GAME SYNC] Consistency check failed:', err.message, { trigger });
+      endGameSyncTrace(syncTrace, 'error', { message: err.message });
     }
   }
 
@@ -4436,10 +4576,12 @@
      * 🔧 FIX v2.5: Правильные p_ параметры + unwrap ответа + error checking
      */
     async syncToCloud() {
+      const syncTrace = startGameSyncTrace('syncToCloud');
       try {
         // � Mutex: предотвращаем параллельные записи в облако
         if (_syncInProgress) {
           console.info('[🎮 Gamification] syncToCloud: already in progress, skipping');
+          endGameSyncTrace(syncTrace, 'skipped', { reason: 'already_in_progress' });
           return false;
         }
         _syncInProgress = true;
@@ -4449,12 +4591,15 @@
           if (this._isCuratorMode()) {
             // Куратор: данные синхронизируются через storage sync layer (heys_storage_supabase_v1.js)
             // который уже сохраняет heys_game в облако под scoped ключом
+            gameSyncTraceStep(syncTrace, 'curator_mode:skip_direct_rpc');
+            endGameSyncTrace(syncTrace, 'ok', { mode: 'curator' });
             return true;
           }
 
           const sessionToken = this._getSessionTokenForCloud();
 
           if (!HEYS.YandexAPI || !sessionToken) {
+            endGameSyncTrace(syncTrace, 'skipped', { reason: 'no_api_or_session' });
             return false;
           }
 
@@ -4464,6 +4609,7 @@
           // FIX v2.4: typeof check — XP=0 is valid, only skip if data is truly broken
           if (typeof data.totalXP !== 'number') {
             console.log('[🎮 Gamification] Skip cloud sync — no XP data');
+            endGameSyncTrace(syncTrace, 'skipped', { reason: 'invalid_local_data' });
             return false;
           }
 
@@ -4506,6 +4652,7 @@
               console.warn(`[🎮 Gamification] BLOCKED: cloud XP (${cloudXP}) > local (${data.totalXP}), not overwriting!`);
               // Вместо этого — загружаем из облака
               await HEYS.game.loadFromCloud();
+              endGameSyncTrace(syncTrace, 'ok', { reason: 'blocked_cloud_higher_xp', cloudXP, localXP: data.totalXP });
               return false;
             }
 
@@ -4513,17 +4660,20 @@
             if (cloudXP === data.totalXP && cloudIsRicher) {
               console.warn(`[🎮 Gamification] BLOCKED: cloud has richer data (achievements: ${cloudAchievements} vs ${localAchievements}, stats: ${cloudStatsCount} vs ${localStatsCount})`);
               await HEYS.game.loadFromCloud();
+              endGameSyncTrace(syncTrace, 'ok', { reason: 'blocked_cloud_richer' });
               return false;
             }
 
             if (cloudUpdatedAt && data.updatedAt && cloudUpdatedAt > data.updatedAt) {
               console.warn('[🎮 Gamification] BLOCKED: cloud data is newer, loading instead');
               await HEYS.game.loadFromCloud();
+              endGameSyncTrace(syncTrace, 'ok', { reason: 'blocked_cloud_newer' });
               return false;
             }
           } catch (checkErr) {
             // Если не удалось проверить — продолжаем синхронизацию (лучше чем ничего)
             console.warn('[🎮 Gamification] Cloud check failed, proceeding:', checkErr.message);
+            gameSyncTraceStep(syncTrace, 'cloud_precheck:failed_proceed', { message: checkErr.message });
           }
 
           const cloudData = {
@@ -4555,10 +4705,12 @@
 
           if (upsertResult?.error) {
             console.error('[🎮 Gamification] Cloud upsert FAILED:', upsertResult.error?.message || upsertResult.error);
+            endGameSyncTrace(syncTrace, 'error', { reason: 'upsert_failed', message: upsertResult.error?.message || upsertResult.error });
             return false;
           }
 
           console.info('[🎮 Gamification] ✅ Synced to cloud: XP=' + data.totalXP + ', level=' + data.level);
+          endGameSyncTrace(syncTrace, 'ok', { reason: 'upsert_success', xp: data.totalXP, level: data.level });
           return true;
         } finally {
           _syncInProgress = false;
@@ -4566,6 +4718,7 @@
       } catch (e) {
         _syncInProgress = false;
         console.warn('[🎮 Gamification] Cloud sync failed:', e.message);
+        endGameSyncTrace(syncTrace, 'error', { message: e.message });
         return false;
       }
     },
@@ -4589,6 +4742,7 @@
     },
 
     async _loadFromCloudImpl() {
+      const syncTrace = startGameSyncTrace('loadFromCloud');
       try {
         // 🔧 FIX v2.6: Для кураторов cloud sync через storage sync layer
         if (this._isCuratorMode()) {
@@ -4596,6 +4750,7 @@
           // который пишет game data в localStorage как heys_game
           // Данные уже в localStorage — просто помечаем как загруженные
           console.info('[🎮 Gamification] loadFromCloud: curator mode — using storage sync layer');
+          gameSyncTraceStep(syncTrace, 'mode:curator');
           _cloudLoaded = true;
           if (_pendingCloudSync) {
             _pendingCloudSync = false;
@@ -4610,12 +4765,34 @@
           } finally {
             _suppressUIUpdates = false;
           }
+          // RC fix v6.2: ensureAuditConsistency может вернуть 'consistent' без rebuild и без
+          // заполнения _data. В этом случае game.getStats() → loadData() читает сырой localStorage,
+          // который может содержать устаревший XP (например 3761 вместо 10739).
+          // Причина: XP cache (из прошлого pipeline) переопределяет cachedXP → false-consistent.
+          // Фикс: явно загружаем _data и применяем XP cache override если нужно.
+          if (!_data) {
+            _data = loadData();
+            const _xpCacheFinal = _loadXPCache();
+            if (_xpCacheFinal && typeof _xpCacheFinal.xp === 'number' && _xpCacheFinal.xp > (_data.totalXP || 0)) {
+              console.info('[🎮 Gamification] RC v6.2: XP cache override after consistent audit:',
+                (_data.totalXP || 0), '→', _xpCacheFinal.xp, '(localStorage was behind XP cache)');
+              gameSyncTraceStep(syncTrace, 'xp_cache_override_applied', {
+                localXP: _data.totalXP || 0,
+                cacheXP: _xpCacheFinal.xp
+              });
+              _data.totalXP = _xpCacheFinal.xp;
+              _data.level = calculateLevel(_xpCacheFinal.xp);
+              setStoredValue(STORAGE_KEY, _data);
+            }
+          }
           // Теперь диспатчим финальное обновление UI с полными данными
           // 🔒 v4.0: Помечаем как initial load — React не покажет модалки
+          // RC-2 fix: reason: 'cloud_load_complete' — снимает level guard event-driven
           const stats = game.getStats();
           window.dispatchEvent(new CustomEvent('heysGameUpdate', {
-            detail: { ...stats, isInitialLoad: true }
+            detail: { ...stats, isInitialLoad: true, reason: 'cloud_load_complete' }
           }));
+          endGameSyncTrace(syncTrace, 'ok', { mode: 'curator', reason: 'storage_layer_flow' });
           return true;
         }
 
@@ -4628,6 +4805,7 @@
             _pendingCloudSync = false;
             triggerImmediateSync('pending_sync');
           }
+          endGameSyncTrace(syncTrace, 'skipped', { reason: 'no_api_or_session' });
           return false;
         }
 
@@ -4642,6 +4820,7 @@
           p_session_token: sessionToken,
           p_key: STORAGE_KEY // 'heys_game'
         });
+        gameSyncTraceStep(syncTrace, 'rpc:get_heys_game:done', { hasError: Boolean(result1?.error) });
 
         if (result1?.error) {
           console.warn('[🎮 Gamification] loadFromCloud RPC error:', result1.error?.message || result1.error);
@@ -4660,6 +4839,7 @@
             p_session_token: sessionToken,
             p_key: 'heys_gamification'
           });
+          gameSyncTraceStep(syncTrace, 'rpc:get_heys_gamification:done', { hasError: Boolean(result2?.error) });
           const kv2 = this._unwrapKvResult(result2);
           if (kv2?.value) {
             const legacyData = typeof kv2.value === 'string' ? JSON.parse(kv2.value) : kv2.value;
@@ -4694,6 +4874,11 @@
           // Заменяет двойной rebuild (setTimeout + ensureAuditConsistency)
           ensureAuditConsistency('cloud-merge');
 
+          endGameSyncTrace(syncTrace, 'ok', {
+            reason: 'cloud_merge',
+            cloudXP: cloudData.totalXP,
+            mergedXP: _data?.totalXP || 0
+          });
           return true;
         }
 
@@ -4701,6 +4886,7 @@
         console.info('[🎮 Gamification] No cloud data, attempting audit rebuild...');
         ensureAuditConsistency('cloud-empty');
 
+        endGameSyncTrace(syncTrace, 'ok', { reason: 'cloud_empty_audit_consistency' });
         return false;
       } catch (e) {
         _cloudLoaded = true; // Помечаем даже при ошибке
@@ -4709,6 +4895,7 @@
           triggerImmediateSync('pending_sync');
         }
         console.warn('[🎮 Gamification] Cloud load failed:', e.message);
+        endGameSyncTrace(syncTrace, 'error', { message: e.message });
         return false;
       }
     },
@@ -5451,6 +5638,7 @@
   const SYNC_COOLDOWN_MS = 5000; // 5 секунд cooldown между реакциями на sync
 
   window.addEventListener('heysSyncCompleted', (e) => {
+    const syncTrace = startGameSyncTrace('event:heysSyncCompleted');
     const now = Date.now();
 
     // Запоминаем текущие stats ДО сброса кеша
@@ -5470,15 +5658,25 @@
 
       // 🔄 FIX v2.3: При первой синхронизации ОБЯЗАТЕЛЬНО загружаем из облака
       // Это гарантирует кросс-устройственную синхронизацию
+      // RC-6 fix: был fire-and-forget .catch(()=>{}). Теперь при ошибке диспатчим guard-release
+      // чтобы не показывать 'Синхронизация XP…' вечно при сетевой ошибке.
       if (HEYS.game?.loadFromCloud) {
-        HEYS.game.loadFromCloud().catch(() => { });
+        HEYS.game.loadFromCloud().catch(() => {
+          // Ошибка загрузки — снимаем guard с тем что есть в localStorage
+          const fallbackStats = game.getStats();
+          window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+            detail: { ...fallbackStats, isInitialLoad: true, reason: 'cloud_load_complete' }
+          }));
+        });
       }
+      endGameSyncTrace(syncTrace, 'ok', { reason: 'initial_sync_deferred_load' });
       return;
     }
 
     // 🔒 Cooldown: не реагируем на sync если прошло < 2 секунд
     // Оптимизация: уменьшили cooldown c 5 сек для быстрого отклика
     if (now - _lastSyncTime < 2000) {
+      endGameSyncTrace(syncTrace, 'skipped', { reason: 'cooldown' });
       return;
     }
     _lastSyncTime = now;
@@ -5494,6 +5692,7 @@
         if (oldStats &&
           newStats.totalXP === oldXP &&
           newStats.level === oldLevel) {
+          endGameSyncTrace(syncTrace, 'ok', { reason: 'no_ui_changes_after_load' });
           return;
         }
 
@@ -5501,6 +5700,13 @@
         window.dispatchEvent(new CustomEvent('heysGameUpdate', {
           detail: { ...newStats, isInitialLoad: _isLoadingPhase }
         }));
+        endGameSyncTrace(syncTrace, 'ok', {
+          reason: 'ui_updated_after_load',
+          oldXP,
+          newXP: newStats.totalXP,
+          oldLevel,
+          newLevel: newStats.level
+        });
       }).catch(() => {
         // При ошибке всё равно обновляем UI с локальными данными
         const newStats = game.getStats();
@@ -5509,6 +5715,7 @@
             detail: { ...newStats, isInitialLoad: _isLoadingPhase }
           }));
         }
+        endGameSyncTrace(syncTrace, 'error', { reason: 'load_failed_fallback_ui' });
       });
       return;
     }
@@ -5520,6 +5727,7 @@
         detail: { ...newStats, isInitialLoad: _isLoadingPhase }
       }));
     }
+    endGameSyncTrace(syncTrace, 'ok', { reason: 'fallback_without_loadFromCloud' });
   });
 
   // ========== CLIENT SWITCH (Bug fix v3.1 → v4.0) ==========
@@ -5538,6 +5746,12 @@
     _initialSyncDone = false;
     _pendingCloudSync = false;
     _suppressUIUpdates = false;
+    // RC fix v6.1: _ensureAuditLastRun НЕ сбрасывался при смене клиента!
+    // Throttle (30s) блокировал audit для нового клиента → cloud_load_complete с 0 XP из localStorage.
+    _ensureAuditLastRun = 0;
+    // RC fix v6.1: сбрасываем dedup-промис — иначе при быстрой смене клиентов
+    // новый heysSyncCompleted получает старый promise с данными предыдущего клиента.
+    _loadFromCloudPromise = null;
 
     // 2. Загружаем данные нового клиента из localStorage (будут свежие через storage layer)
     const freshData = loadData();
@@ -5551,6 +5765,22 @@
     // 4. Запускаем облачную загрузку (полный цикл rebuild)
     // 🚀 PERF v6.0: Убрали loadFromCloud отсюда, так как heysSyncCompleted сработает сразу после смены клиента
     // и вызовет loadFromCloud. Это предотвращает двойную загрузку.
+    //
+    // RC fix v6.3: На page-refresh heysSyncCompleted НЕ приходит повторно после client-changed —
+    // первый heysSyncCompleted уже обработан ДО того как auth переключил клиента.
+    // Диспатчим synthetic heysSyncCompleted с задержкой чтобы:
+    //   1. Дать React время смонтироваться и зарегистрировать listeners (≈50-100ms)
+    //   2. Не создавать двойной pipeline при обычной смене куратором:
+    //      там реальный heysSyncCompleted придёт за <200ms и установит _initialSyncDone=true
+    //      → наш таймер проверит _initialSyncDone и НЕ диспатчит дубликат.
+    setTimeout(() => {
+      if (!_initialSyncDone) {
+        console.info('[🎮 Gamification] RC v6.3: heysSyncCompleted не пришёл после client-changed — диспатчим synthetic (page-refresh case)');
+        window.dispatchEvent(new CustomEvent('heysSyncCompleted', {
+          detail: { synthetic: true, reason: 'client_changed_no_sync' }
+        }));
+      }
+    }, 200);
   });
 
   // ========== ЭКСПОРТ ==========
