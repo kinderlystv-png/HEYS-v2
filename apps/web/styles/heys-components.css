@@ -4704,6 +4704,16 @@ body.tour-active .ios-pwa-banner {
   animation: deferred-card-unfold 2s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
+/* PERF: instant display for returning users — skip 2s unfold animation
+   when local data already exists (profile cached in localStorage) */
+.deferred-card-slot--loaded.no-animate {
+  animation: none;
+  max-height: none;
+  opacity: 1;
+  overflow: visible;
+  will-change: auto;
+}
+
 /* Per-card limits prevent end-of-animation overexpansion artifacts */
 .deferred-card-slot--loaded.deferred-card-slot--cascade {
   --deferred-unfold-max: 880px;

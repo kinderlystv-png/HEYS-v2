@@ -1433,6 +1433,8 @@
     _lastValidPosition: null,
     _originalElement: null,
     _dropIntent: null,
+    _scrollIntent: false,
+    _touchDragReadyAt: 0,
 
     /**
      * Обработка начала касания/клика (для long press detection)
@@ -1458,6 +1460,10 @@
         x: event.clientX || event.touches?.[0]?.clientX || 0,
         y: event.clientY || event.touches?.[0]?.clientY || 0
       };
+      this._scrollIntent = false;
+      const isTouchEvent = !!(event?.touches || event?.changedTouches || event?.pointerType === 'touch');
+      // Touch grace: даём жесту шанс стать нативным scroll до старта drag.
+      this._touchDragReadyAt = isTouchEvent ? (Date.now() + 140) : 0;
 
       // Если уже в edit mode — сразу начинаем drag
       if (state.isEditMode()) {
@@ -1501,6 +1507,13 @@
       // Если drag активен — завершаем
       if (this._dragging) {
         this.end(event);
+        return;
+      }
+
+      // Если drag не стартовал, но был подготовлен (_prepareForDrag),
+      // обязательно чистим listeners/состояние.
+      if (this._draggedWidget) {
+        this._cleanup();
       }
     },
 
@@ -1510,6 +1523,11 @@
     handlePointerMove(event) {
       // CRITICAL: Если resize активен — НЕ обрабатываем move для DnD
       if (this._resizeActive) {
+        return;
+      }
+
+      // Если уже распознали намерение скролла (touch) — не перехватываем жесты
+      if (this._scrollIntent) {
         return;
       }
 
@@ -1527,10 +1545,10 @@
         const dx = Math.abs(cx - (this._startPos?.x || 0));
         const dy = Math.abs(cy - (this._startPos?.y || 0));
 
-        // Порог чуть выше, чем у старта drag, чтобы не мешать точному перетаскиванию.
-        // Если свайп вертикальный и заметный — считаем это скроллом.
-        if (dy > 14 && dy > dx * 1.4) {
-          this._cleanup();
+        // Если свайп вертикальный и заметный — считаем это скроллом
+        // и больше не перехватываем события до отпускания пальца.
+        if (dy > 10 && dy > dx * 1.15) {
+          this._scrollIntent = true;
           return;
         }
       }
@@ -1586,7 +1604,8 @@
 
       document.addEventListener('pointermove', this._boundMove);
       document.addEventListener('pointerup', this._boundUp);
-      document.addEventListener('touchmove', this._boundMove, { passive: false });
+      // touchmove НЕ добавляем здесь — он добавляется в start() только когда drag реально стартует.
+      // Пассивный drag-phase listener не нужен и блокирует нативный скролл до старта.
       document.addEventListener('touchend', this._boundUp);
     },
 
@@ -1626,6 +1645,12 @@
       this._dragging = true;
       this._draggedWidget = widget;
       this._dropIntent = null;
+
+      // Теперь drag реально стартовал — добавляем non-passive touchmove, чтобы
+      // предотвратить скролл страницы во время активного перетаскивания виджета.
+      if (this._boundMove) {
+        document.addEventListener('touchmove', this._boundMove, { passive: false });
+      }
 
       if (!this._startPos) {
         this._startPos = {
@@ -1767,11 +1792,21 @@
 
       // Если drag ещё не начался — проверяем порог движения
       if (!this._dragging) {
+        const isTouchEvent = !!(event?.touches || event?.changedTouches || event?.pointerType === 'touch');
+
+        // Для touch: не стартуем drag мгновенно, чтобы свайп вверх/вниз
+        // всегда оставался прокруткой.
+        if (isTouchEvent && this._touchDragReadyAt && Date.now() < this._touchDragReadyAt) {
+          return;
+        }
+
         const dx = Math.abs((event.clientX || event.touches?.[0]?.clientX || 0) - this._startPos.x);
         const dy = Math.abs((event.clientY || event.touches?.[0]?.clientY || 0) - this._startPos.y);
 
-        // Начинаем drag после 5px движения
-        if (dx > 5 || dy > 5) {
+        const dragThreshold = isTouchEvent ? 14 : 5;
+
+        // На touch ждём более уверенное движение, чтобы не ломать вертикальный скролл.
+        if (dx > dragThreshold || dy > dragThreshold) {
           this.start(this._draggedWidget.id, event);
         }
         return;
@@ -2022,6 +2057,8 @@
       this._originalElement = null;
       this._longPressTriggered = false;
       this._dropIntent = null;
+      this._scrollIntent = false;
+      this._touchDragReadyAt = 0;
       // Очищаем сохранённые размеры placeholder
       this._placeholderCols = null;
       this._placeholderRows = null;

@@ -739,11 +739,38 @@
     <script defer src="heys_app_root_v1.js?v=1"></script>
     <script defer src="heys_app_dependency_loader_v1.js?v=2026.02.08"></script>
     <script defer src="heys_app_ui_state_v1.js?v=1"></script>
+
+    <!-- 🏎️ PERF v8.4: Critical card scripts loaded BEFORE React render (initialize).
+         They depend only on window.HEYS + window.React (available from defer chain above).
+         For returning users, browser already has them in cache → parse+execute ~5-15ms.
+         This eliminates layout shift: cards render WITH the initial content.
+         They are also in POST_BOOT_SCRIPTS but skipped there (prioritySet).
+         NOTE: pi_ui_meal_rec_card.js NOT here — needs pi_meal_recommender.js (post-boot). -->
+    <script defer src="heys_cascade_card_v1.js?v=4"></script>
+    <script defer src="heys_supplements_v1.js?v=1"></script>
+
     <script defer src="heys_app_initialize_v1.js?v=2026.02.08"></script>
     <script defer src="heys_app_entry_v1.js?v=1"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: heys_app_entry_v1.js')"></script>
     <script defer src="heys_app_v12.js?v=2026.02.22.1805.8325fa69"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: heys_app_v12.js')"></script>
+
+    <!-- PERF: Detect returning user (localStorage has profile) → skip card unfold animations -->
+    <script>
+        (function () {
+            try {
+                var found = false;
+                for (var i = 0; i < localStorage.length; i++) {
+                    var k = localStorage.key(i);
+                    if (k && k.indexOf('heys_') === 0 && k.indexOf('profile') !== -1) {
+                        var v = localStorage.getItem(k);
+                        if (v && v.length > 10) { found = true; break; }
+                    }
+                }
+                if (found) window.__heysHasLocalData = true;
+            } catch (e) { /* private browsing / quota */ }
+        })();
+    </script>
 
     <!-- 🚀 PERF v8.0: Post-boot динамическая загрузка (было: v7.1 defer).
          ПРИЧИНА ИЗМЕНЕНИЯ: 70+ <script defer> выполнялись ПОСЛЕДОВАТЕЛЬНО на главном потоке,
@@ -758,6 +785,18 @@
          по-прежнему занимает ~15-20s — оптимизация в следующем спринте). -->
     <script>
         (function () {
+            // 🚀 PERF v8.4: Priority card scripts — loaded early via defer above.
+            // Only self-contained modules (no backend dependencies) go here.
+            // pi_ui_meal_rec_card.js excluded: depends on pi_meal_recommender.js (post-boot).
+            var PRIORITY_CARD_SCRIPTS = [
+                'heys_cascade_card_v1.js?v=4',
+                'heys_supplements_v1.js?v=1'
+            ];
+
+            // Build a Set of priority scripts for fast lookup
+            var prioritySet = {};
+            PRIORITY_CARD_SCRIPTS.forEach(function (s) { prioritySet[s] = true; });
+
             // Полный список post-boot модулей в порядке загрузки.
             // ВАЖНО: порядок сохранён из оригинального defer-списка (race conditions).
             var POST_BOOT_SCRIPTS = [
@@ -878,6 +917,10 @@
             // setTimeout(0) уступает управление event loop между каждым скриптом
             // → React эффекты, ввод пользователя, watchdog могут работать нормально.
             function loadNext() {
+                // Skip priority scripts in sequential chain (already loaded)
+                while (idx < total && prioritySet[POST_BOOT_SCRIPTS[idx]]) {
+                    idx++;
+                }
                 if (idx >= total) {
                     console.info('[HEYS.postboot] ✅ All ' + total + ' post-boot modules loaded');
                     window.__heysPerfMark && window.__heysPerfMark('PostBoot: all ' + total + ' modules loaded');
@@ -899,10 +942,11 @@
             function waitForAppReady() {
                 waitChecks++;
                 if (window.__heysAppReady) {
-                    console.info('[HEYS.postboot] 🚀 appReady detected, loading ' + total + ' post-boot scripts');
+                    var priorityCount = PRIORITY_CARD_SCRIPTS.length;
+                    console.info('[HEYS.postboot] 🚀 appReady detected, loading ' + priorityCount + ' priority + ' + total + ' post-boot scripts');
                     window.__heysPerfMark && window.__heysPerfMark('PostBoot: dynamic load started (' + total + ' scripts)');
-                    // Small delay to let React finish initial paint
-                    setTimeout(loadNext, 50);
+                    // Sequential chain starts (priority scripts already loaded or will be by first render)
+                    setTimeout(loadNext, window.__heysHasLocalData ? 0 : 50);
                     return;
                 }
                 // Timeout fallback: если appReady не установился за 60s — грузим всё равно

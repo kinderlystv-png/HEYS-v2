@@ -149,6 +149,40 @@
   border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
+.cascade-card__copy-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.cascade-card__copy-btn {
+  border: 1px solid rgba(100, 116, 139, 0.28);
+  background: transparent;
+  color: var(--text-secondary, #64748b);
+  font-size: 10px;
+  font-weight: 500;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  padding: 4px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  opacity: 0.72;
+}
+
+.cascade-card__copy-btn:hover {
+  background: rgba(100, 116, 139, 0.06);
+  border-color: rgba(100, 116, 139, 0.42);
+  color: var(--text, #1e293b);
+  opacity: 0.9;
+}
+
+.cascade-card__copy-btn:active {
+  transform: translateY(1px);
+  opacity: 1;
+}
+
 /* ─────────────────────────────────────────────────────
    CHAIN DOTS
 ───────────────────────────────────────────────────── */
@@ -610,6 +644,18 @@
 
 [data-theme="dark"] .cascade-card__body {
   border-top-color: rgba(255, 255, 255, 0.07);
+}
+
+[data-theme="dark"] .cascade-card__copy-btn {
+  border-color: rgba(148, 163, 184, 0.34);
+  background: transparent;
+  color: rgba(148, 163, 184, 0.92);
+}
+
+[data-theme="dark"] .cascade-card__copy-btn:hover {
+  background: rgba(148, 163, 184, 0.08);
+  border-color: rgba(148, 163, 184, 0.5);
+  color: var(--text, #f1f5f9);
 }
 
 [data-theme="dark"] .cascade-card__progress-track {

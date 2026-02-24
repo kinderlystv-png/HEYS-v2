@@ -131,31 +131,28 @@
     const [isResizeSnap, setIsResizeSnap] = useState(false);
     const snapTimerRef = useRef(0);
 
-    // Pointer event handlers for DnD
+    // DnD-хэндлеры — работают только в режиме редактирования
     const handlePointerDown = useCallback((e) => {
-      // Во время resize не должны стартовать DnD/long-press/prepareForDrag
-      // (на iOS есть микродвижения пальца → drag стартует «сам»).
+      if (!isEditMode) return;
       if (resizeDragRef.current?.active) return;
-
       const t = e?.target;
       if (t && typeof t.closest === 'function') {
-        // Клики/тачи по resize-хендлам и overlay не должны запускать drag
-        if (t.closest('.widget__resize-handle') || t.closest('.widget__size-badge')) {
-          return;
-        }
+        if (t.closest('.widget__resize-handle') || t.closest('.widget__size-badge')) return;
       }
       HEYS.Widgets.dnd?.handlePointerDown?.(widget.id, e, elementRef.current);
-    }, [widget.id]);
+    }, [isEditMode, widget.id]);
 
     const handlePointerMove = useCallback((e) => {
+      if (!isEditMode) return;
       if (resizeDragRef.current?.active) return;
       HEYS.Widgets.dnd?.handlePointerMove?.(e);
-    }, []);
+    }, [isEditMode]);
 
     const handlePointerUp = useCallback((e) => {
+      if (!isEditMode) return;
       if (resizeDragRef.current?.active) return;
       HEYS.Widgets.dnd?.handlePointerUp?.(widget.id, e);
-    }, [widget.id]);
+    }, [isEditMode, widget.id]);
 
     const handleClick = useCallback(() => {
       if (!isEditMode) {
@@ -762,8 +759,8 @@
         // 1-based линии в CSS Grid
         gridColumn: hasGridPos ? `${gridCol + 1} / span ${previewCols}` : `span ${previewCols}`,
         gridRow: hasGridPos ? `${gridRow + 1} / span ${previewRows}` : `span ${previewRows}`,
-        // В edit-mode оставляем вертикальный скролл, а сам drag защищён в core
-        touchAction: isResizing ? 'none' : (isEditMode ? 'pan-y' : 'auto'),
+        // В edit-mode оставляем вертикальный скролл, drag работает через pointer-хендлеры
+        touchAction: isResizing ? 'none' : 'pan-y',
         zIndex: isResizing ? 60 : undefined
       },
       onClick: handleClick,
@@ -2149,19 +2146,15 @@
       };
 
       return React.createElement('div', { className: 'widget-macros widget-macros--4x2' },
-        // Заголовок с общей статистикой
+        // Заголовок с калориями и балансом в одну строку
         React.createElement('div', { className: 'widget-macros__summary-4x2' },
-          React.createElement('div', { className: 'widget-macros__summary-item' },
-            React.createElement('span', { className: 'widget-macros__summary-label' }, '🔥 Калории'),
-            React.createElement('span', { className: 'widget-macros__summary-value' }, `${kcalEaten} / ${kcalTarget}`)
+          React.createElement('span', { className: 'widget-macros__kcal-line' },
+            `🔥 ${kcalEaten} / ${kcalTarget} ккал`
           ),
-          React.createElement('div', { className: 'widget-macros__summary-item' },
-            React.createElement('span', { className: 'widget-macros__summary-label' }, '📊 Баланс'),
-            React.createElement('span', {
-              className: 'widget-macros__summary-value',
-              style: { color: avgPct >= 80 && avgPct <= 120 ? '#22c55e' : avgPct < 80 ? '#ef4444' : '#eab308' }
-            }, `${avgPct}%`)
-          )
+          React.createElement('span', {
+            className: 'widget-macros__balance-line',
+            style: { color: avgPct >= 80 && avgPct <= 120 ? '#22c55e' : avgPct < 80 ? '#ef4444' : '#eab308' }
+          }, `📊 ${avgPct}%`)
         ),
         // Три бара БЖУ
         React.createElement(MacroRowExtended, { label: 'Белки', emoji: '🍖', value: protein || 0, target: proteinTarget || 100, pct: pctP, color: '#ef4444' }),
@@ -2917,6 +2910,7 @@
     const [settingsWidget, setSettingsWidget] = useState(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
     const [waterAnim, setWaterAnim] = useState(null); // '+200ml' или null
+    const [showGridOverlay, setShowGridOverlay] = useState(false); // Grid overlay toggle
     const containerRef = useRef(null);
     const gridRef = useRef(null);
 
@@ -3061,28 +3055,6 @@
       });
     }, []);
 
-    // Global pointer event handlers for DnD
-    useEffect(() => {
-      const handlePointerMove = (e) => {
-        HEYS.Widgets.dnd?.handlePointerMove?.(e);
-      };
-
-      const handlePointerUp = (e) => {
-        HEYS.Widgets.dnd?.handlePointerUp?.(null, e);
-      };
-
-      // Attach global listeners
-      document.addEventListener('pointermove', handlePointerMove);
-      document.addEventListener('pointerup', handlePointerUp);
-      document.addEventListener('pointercancel', handlePointerUp);
-
-      return () => {
-        document.removeEventListener('pointermove', handlePointerMove);
-        document.removeEventListener('pointerup', handlePointerUp);
-        document.removeEventListener('pointercancel', handlePointerUp);
-      };
-    }, []);
-
     // Handle catalog widget selection
     const handleCatalogSelect = useCallback((widgetType) => {
       if (!HEYS.Widgets.registry) {
@@ -3114,6 +3086,20 @@
     // Handle widget remove
     const handleRemove = useCallback((widgetId) => {
       HEYS.Widgets.state?.removeWidget(widgetId);
+    }, []);
+
+    // Global pointer event handlers for DnD (работают только в режиме редактирования — гейт в handlePointerMove/Up на карточке)
+    useEffect(() => {
+      const onMove = (e) => HEYS.Widgets.dnd?.handlePointerMove?.(e);
+      const onUp = (e) => HEYS.Widgets.dnd?.handlePointerUp?.(null, e);
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+      document.addEventListener('pointercancel', onUp);
+      return () => {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        document.removeEventListener('pointercancel', onUp);
+      };
     }, []);
 
     // Toggle edit mode
@@ -3206,6 +3192,20 @@
       HEYS.Widgets.redo?.();
     }, []);
 
+    // Сбрасываем overlay при выходе из edit mode
+    useEffect(() => {
+      if (!isEditMode) setShowGridOverlay(false);
+    }, [isEditMode]);
+
+    // Количество строк для grid overlay (максимальная занятая строка + запас)
+    const overlayRows = useMemo(() => {
+      if (!widgets.length) return 8;
+      const maxRow = widgets.reduce((max, w) => {
+        return Math.max(max, (w.position?.row || 1) + (w.rows || 1) - 1);
+      }, 4);
+      return Math.max(8, maxRow + 2);
+    }, [widgets]);
+
     // Render empty state (только после первичной гидратации layout)
     if (isLayoutHydrated && widgets.length === 0 && !isEditMode) {
       return React.createElement('div', { className: 'widgets-tab' },
@@ -3236,19 +3236,32 @@
       React.createElement('div', { className: 'widgets-header' }),
 
       // Widgets Grid
-      React.createElement('div', {
-        className: `widgets-grid ${isEditMode ? 'widgets-grid--editing' : ''}`,
-        ref: gridRef
-      },
-        widgets.map((widget, idx) =>
-          React.createElement(WidgetCard, {
-            key: widget.id,
-            widget,
-            isEditMode,
-            index: idx,
-            onRemove: handleRemove,
-            onSettings: setSettingsWidget
-          })
+      React.createElement('div', { className: 'widgets-grid-container' },
+        React.createElement('div', {
+          className: `widgets-grid ${isEditMode ? 'widgets-grid--editing' : ''}`,
+          ref: gridRef
+        },
+          widgets.map((widget, idx) =>
+            React.createElement(WidgetCard, {
+              key: widget.id,
+              widget,
+              isEditMode,
+              index: idx,
+              onRemove: handleRemove,
+              onSettings: setSettingsWidget
+            })
+          )
+        ),
+        isEditMode && showGridOverlay && React.createElement('div', {
+          className: 'widgets-grid-overlay',
+          style: { '--overlay-rows': overlayRows }
+        },
+          Array.from({ length: overlayRows * 4 }, (_, i) =>
+            React.createElement('div', {
+              className: 'widgets-grid-overlay__cell',
+              key: i
+            }, React.createElement('span', { className: 'widgets-grid-overlay__num' }, i + 1))
+          )
         )
       ),
 
@@ -3286,7 +3299,12 @@
             onClick: handleRedo,
             disabled: !historyInfo.canRedo,
             title: 'Повторить (Ctrl+Shift+Z)'
-          }, '↪')
+          }, '↪'),
+          React.createElement('button', {
+            className: `widgets-header__btn widgets-header__btn--grid ${showGridOverlay ? 'active' : ''}`,
+            onClick: () => setShowGridOverlay(prev => !prev),
+            title: 'Показать нумерацию ячеек сетки'
+          }, '⊞')
         ),
         // FAB кнопка редактирования - всегда видна (только на desktop)
         !isMobile && React.createElement('button', {

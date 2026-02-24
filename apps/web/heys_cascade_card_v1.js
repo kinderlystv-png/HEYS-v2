@@ -88,8 +88,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // 10 факторов с непрерывными функциями + 3 метасистемы.
   // Personalized baselines (14-day median), confidence layer,
   // day-type awareness, cross-factor synergies.
-  // Хороший день: meals(3.0) + training(2.5) + sleep(2.5) + steps(1.0) + synergies(0.9) ≈ 9.9
-  // Отличный: meals(4.5) + training(3.0) + sleep(3.0) + steps(1.3) + synergies(1.3) ≈ 13.1
+  // Хороший день: meals(3.0) + training(2.5) + sleep(1.5) + steps(1.0) + synergies(0.9) ≈ 8.9
+  // Отличный: meals(4.5) + training(3.0) + sleep(2.5) + steps(1.3) + synergies(1.3) ≈ 12.6
   // ─────────────────────────────────────────────────────
 
   // [LEGACY FALLBACK] — v2.0.0 step-function weights, used only in meal quality fallback
@@ -180,7 +180,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     BUILDING: 1.5   // Начало
   };
 
-  const MOMENTUM_TARGET = 12.0; // score при 100% прогресс-бара
+  const MOMENTUM_TARGET = 10.0; // score при 100% прогресс-бара (v3.2.0: снижен с 12 для реалистичного DCS)
 
   // v2.2.0: Soft chain — penalty tiers by event severity
   // Minor (weight ≥ -0.5): -1 link, Medium (-1.5 ≤ w < -0.5): -2 links, Severe (w < -1.5): -3 links
@@ -197,11 +197,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // v3.0.0 CRS (Cascade Rate Score) CONSTANTS
   // ─────────────────────────────────────────────────────
 
-  const CRS_DECAY = 0.92;            // EMA decay factor (α)
+  const CRS_DECAY = 0.95;            // EMA decay factor (α) (v3.3.0: 0.92→0.95, half-life 14d вместо 8d)
   const CRS_WINDOW = 30;             // days for EMA computation
   const CRS_DCS_CLAMP_NEG = -0.3;    // inertia protection for normal bad days
   const CRS_CEILING_BASE = 0.65;     // starting ceiling for all users
-  const CRS_KEY_VERSION = 'v1';      // localStorage schema version
+  const CRS_KEY_VERSION = 'v4';      // localStorage schema version (v4: full retroactive DCS recalculation with accurate algorithm)
+  const CRS_PREV_KEY_VERSION = 'v3';  // for migration detection
 
   const CRS_THRESHOLDS = {
     STRONG: 0.75,    // Устойчивый импульс
@@ -369,27 +370,40 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       var hstRaw = parseTime(dayObj.sleepStart);
       // Нормализация: after-midnight (00:xx–05:xx) → +1440 для корректного isLateSleep
       var hst = hstRaw !== null ? (hstRaw < 360 ? hstRaw + 1440 : hstRaw) : null;
-      var isLateSleep = hst !== null && hst >= 1380; // >= 23:00
       var goodSleep = hslh >= 6 && hslh <= 9;
       // sortKey: after-midnight → отрицательный (до чекина)
       var hstSort = hstRaw !== null ? (hstRaw < 360 ? hstRaw - 1440 : hstRaw) : 1440;
       // Качественный лейбл + время конца + длительность
+      // v3.3.0: labels aligned with v3.2.0 chronotype clamp (01:30)
       var hslOnsetLabel = hst === null ? 'Сон'
         : hst <= 1320 ? 'Ранний сон'
           : hst <= 1380 ? 'Сон до 23:00'
             : hst <= 1440 ? 'Сон до полуночи'
-              : hst <= 1500 ? 'Поздний сон' : 'Очень поздний сон';
+              : hst <= 1530 ? 'Поздний сон'  // 00:00-01:30: within chronotype clamp
+                : hst <= 1620 ? 'Очень поздний сон'  // 01:30-03:00
+                  : 'Критически поздний сон';  // >03:00 (hard floor zone)
       var hslLabel = hslOnsetLabel;
       if (hslEnd) hslLabel += ' →' + hslEnd;
       if (hslh > 0) hslLabel += ' (' + hslh.toFixed(1) + 'ч)';
+      // v3.3.0: graduated sleep weights matching v3.2.0 sigmoid direction
+      // instead of hardcoded -1.0 for everything ≥ 23:00
+      var hslWeight;
+      if (hst === null) { hslWeight = 0; }
+      else if (hst <= 1380) { hslWeight = goodSleep ? 0.8 : -0.3; }   // ≤23:00: early
+      else if (hst <= 1440) { hslWeight = goodSleep ? 0.3 : -0.1; }   // 23:00–00:00
+      else if (hst <= 1530) { hslWeight = goodSleep ? 0.0 : -0.2; }   // 00:00–01:30 (within chronotype clamp)
+      else if (hst <= 1620) { hslWeight = goodSleep ? -0.3 : -0.5; }  // 01:30–03:00
+      else if (hst <= 1680) { hslWeight = -1.0; }                      // 03:00–04:00 (near hard floor)
+      else { hslWeight = -2.0; }                                       // >04:00 catastrophe
+      var hslPositive = hslWeight >= 0;
       evts.push({
-        type: 'sleep', icon: isLateSleep ? '🌙' : EVENT_ICONS.sleep,
-        positive: !isLateSleep && (hslh === 0 || goodSleep),
-        weight: isLateSleep ? -1.0 : (goodSleep ? 0.8 : -0.3),
+        type: 'sleep', icon: hslPositive ? EVENT_ICONS.sleep : '🌙',
+        positive: hslPositive,
+        weight: hslWeight,
         time: dayObj.sleepStart, timeEnd: hslEnd, sleepHours: hslh,
         sortKey: hstSort,
         label: hslLabel,
-        breakReason: isLateSleep ? '⏰' : null
+        breakReason: hslWeight < -0.5 ? '⏰' : null
       });
     }
 
@@ -623,6 +637,41 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     } catch (e) {
       console.warn('[HEYS.cascade.crs] ⚠️ Failed to load DCS history:', e && e.message);
     }
+
+    // v4 migration: FULL PURGE — all entries invalidated and recalculated.
+    // Previous retroactive formula (v1-v3) over-estimated DCS by 50-100%
+    // (e.g. 0.875 retro vs 0.259 real-time for same day with late sleep).
+    // v4 retroactive formula mirrors the full 10-factor algorithm (sigmoid sleep,
+    // circadian meal penalties, tanh steps, etc.) producing honest estimates.
+    // All entries are purged so backfill recalculates with the accurate formula.
+    // Today's DCS is still computed real-time by the full algorithm.
+    var prevVersions = ['v3', 'v2', 'v1'];
+    for (var pvi = 0; pvi < prevVersions.length; pvi++) {
+      var oldKey = clientId
+        ? 'heys_' + clientId + '_cascade_dcs_' + prevVersions[pvi]
+        : 'heys_cascade_dcs_' + prevVersions[pvi];
+      try {
+        var oldRaw = (HEYS.store && HEYS.store.get) ? HEYS.store.get(oldKey, null) : localStorage.getItem(oldKey);
+        if (oldRaw) {
+          var oldData = typeof oldRaw === 'string' ? JSON.parse(oldRaw) : oldRaw;
+          var oldCount = Object.keys(oldData).length;
+          console.info('[HEYS.cascade.crs] 🔄 DCS ' + prevVersions[pvi] + '→v4 migration: purging ' + oldCount + ' entries for full recalculation (accurate retroactive formula)');
+          // Clean up old key
+          try {
+            if (HEYS.store && HEYS.store.set) {
+              HEYS.store.set(oldKey, null);
+            } else {
+              localStorage.removeItem(oldKey);
+            }
+          } catch (ignore) { }
+          // Return empty — backfill will recalculate all days
+          return {};
+        }
+      } catch (e) {
+        console.warn('[HEYS.cascade.crs] ⚠️ ' + prevVersions[pvi] + '→v4 migration failed:', e && e.message);
+      }
+    }
+
     return {};
   }
 
@@ -654,30 +703,252 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   /**
    * Retroactive DCS estimation for days without full scoring.
-   * Simplified heuristic based on available day data fields.
-   * Used to backfill DCS history on first CRS computation.
+   * v3.4.0: rewritten to approximate the full 10-factor algorithm —
+   *   uses same daily-score scale (0–10) normalized by MOMENTUM_TARGET.
+   *   Accounts for sleep onset sigmoid, late-meal penalties, training load,
+   *   steps tanh, and chronotype baseline from prevDays.
+   *
+   * @param {Object} day — day data object from localStorage (dayv2_*)
+   * @param {Array}  prevDays — up to 14 preceding days (for chronotype baseline)
+   * @returns {number|null} — estimated DCS (−0.3 … 1.0), or null if no data
    */
-  function getRetroactiveDcs(day) {
+  function getRetroactiveDcs(day, prevDays) {
     if (!day) return null;
-    var score = 0;
-    // Meals: +0.15 per meal (capped at 4)
-    var mealCount = Math.min(4, (day.meals || []).length);
-    score += mealCount * 0.15;
-    // Training: +0.2 per training (capped at 2)
-    var trainCount = Math.min(2, (day.trainings || []).length);
-    score += trainCount * 0.2;
-    // Sleep onset data: +0.15
-    if (day.sleepStart) score += 0.15;
-    // Sleep duration: +0.1 if decent
-    if (day.sleepHours && day.sleepHours >= 6) score += 0.1;
-    // Weight checkin: +0.05
-    if (day.weightMorning > 0) score += 0.05;
-    // Steps: +0.1 if meaningful
-    if (day.steps > 3000) score += 0.1;
-    // Household activity: +0.05
-    if (day.householdMin > 10) score += 0.05;
-    // Normalize: max realistic ≈ 0.6+0.4+0.25+0.05+0.1+0.05 = 1.45
-    return clamp(score / 1.2, 0, 1.0);
+    var estScore = 0; // estimated daily score on 0–10+ scale
+
+    // ── 1. Meals: time-band scoring (v3.4.1 — matches full algo scale) ──
+    // Full algo uses getMealQualityScore (0–100) → clamp((qs-40)/40) × circadian.
+    // Average quality ~75–85 → base weight ~0.9–1.1. With circadian modifiers:
+    //   breakfast <10:00 ×1.3 → ~1.15,  daytime ×1.0 → ~0.95,
+    //   21–23:00 ×0.6 → ~0.50,  ≥23:00 or 00–06:00 → hard violation −1.0
+    var meals = day.meals || [];
+    var retroMealCount = 0; // count positive meals for synergy check
+    for (var lmi = 0; lmi < meals.length; lmi++) {
+      var lmt = parseTime(meals[lmi] && meals[lmi].time);
+      var mealContrib;
+      if (lmt !== null) {
+        if (lmt >= 0 && lmt < 360) {
+          // After midnight 00:00–06:00: hard violation (full algo: −1.0)
+          mealContrib = -1.0;
+        } else if (lmt >= 1380) {
+          // ≥ 23:00: hard violation (full algo: −1.0)
+          mealContrib = -1.0;
+        } else if (lmt >= 1260) {
+          // 21:00–23:00: mild circadian discount
+          mealContrib = 0.50;
+          retroMealCount++;
+        } else if (lmt < 600) {
+          // Breakfast < 10:00: circadian bonus ×1.3
+          mealContrib = 1.15;
+          retroMealCount++;
+        } else {
+          // Normal daytime meal 10:00–21:00
+          mealContrib = 0.95;
+          retroMealCount++;
+        }
+      } else {
+        // No time data: assume average daytime meal
+        mealContrib = 0.80;
+        retroMealCount++;
+      }
+      estScore += mealContrib;
+    }
+
+    // ── 2. Training: load-aware scoring (approximate ШАГ 3) ──
+    var trains = day.trainings || [];
+    var retroHasTraining = trains.length > 0;
+    if (trains.length > 0) {
+      var firstLoad = getTrainingLoad(trains[0]);
+      // sqrt-curve like full algo: clamp(sqrt(load/30)*1.2, 0.3, 3.0)
+      estScore += clamp(Math.sqrt(Math.max(firstLoad, 30) / 30) * 1.2, 0.5, 2.5);
+      // Diminishing returns for additional sessions (v3.4.1: 3rd+ at ×0.25)
+      if (trains.length > 1) {
+        var secondLoad = getTrainingLoad(trains[1]);
+        estScore += clamp(Math.sqrt(Math.max(secondLoad, 20) / 30) * 0.6, 0.2, 1.0);
+      }
+      for (var rti = 2; rti < trains.length; rti++) {
+        var addLoad = getTrainingLoad(trains[rti]);
+        estScore += clamp(Math.sqrt(Math.max(addLoad, 20) / 30) * 0.3, 0.1, 0.5);
+      }
+    }
+
+    // ── 3. Sleep onset: sigmoid matching full ШАГ 4 ──
+    if (day.sleepStart) {
+      var slMins = parseTime(day.sleepStart);
+      if (slMins !== null) {
+        if (slMins < 360) slMins += 1440; // normalize after-midnight
+
+        // Compute chronotype baseline from prevDays (mirrors full algo)
+        var retroOnsetValues = [];
+        var rpd = prevDays || [];
+        for (var roi = 0; roi < rpd.length; roi++) {
+          if (!rpd[roi] || !rpd[roi].sleepStart) continue;
+          var roVal = parseTime(rpd[roi].sleepStart);
+          if (roVal !== null) {
+            if (roVal < 360) roVal += 1440;
+            retroOnsetValues.push(roVal);
+          }
+        }
+        // Also include current day in baseline estimate
+        retroOnsetValues.push(slMins);
+
+        var retroPersonalOnset = retroOnsetValues.length >= 3
+          ? median(retroOnsetValues)
+          : POPULATION_DEFAULTS.sleepOnsetMins;
+        var retroOptimalOnset = Math.max(1290, Math.min(retroPersonalOnset, 1530)); // clamp 21:30–01:30
+
+        // Same sigmoid formula as full algo v3.2.0
+        var retroOnsetDev = slMins - retroOptimalOnset;
+        var retroOnsetWeight = -Math.tanh(retroOnsetDev / 60) * 1.5 + 0.5;
+        retroOnsetWeight = clamp(retroOnsetWeight, -2.0, 1.2);
+
+        // Hard floor: > 04:00 = catastrophe
+        if (slMins > 1680) retroOnsetWeight = -2.0;
+
+        estScore += retroOnsetWeight;
+      }
+    }
+
+    // ── 4. Sleep duration: bell-curve matching full ШАГ 5 ──
+    var slH = day.sleepHours || 0;
+    // Fallback: compute from sleepStart + sleepEnd if available
+    if (!slH && day.sleepStart && day.sleepEnd) {
+      var sFm = parseTime(day.sleepStart);
+      var eFm = parseTime(day.sleepEnd);
+      if (sFm !== null && eFm !== null) {
+        if (eFm < sFm) eFm += 1440;
+        slH = (eFm - sFm) / 60;
+      }
+    }
+    if (slH > 0) {
+      // Personal optimal from prevDays median (mirrors full algo)
+      var retroSleepVals = [];
+      var rpds = prevDays || [];
+      for (var rsi = 0; rsi < rpds.length; rsi++) {
+        if (rpds[rsi] && rpds[rsi].sleepHours > 0) retroSleepVals.push(rpds[rsi].sleepHours);
+      }
+      var retroSleepOpt = retroSleepVals.length >= 3
+        ? clamp(median(retroSleepVals), 6.0, 9.0)
+        : POPULATION_DEFAULTS.sleepHours;
+
+      // Bell curve: 1.5 × exp(−dev²/(2×0.8²)) − 0.5
+      var slDev = Math.abs(slH - retroSleepOpt);
+      var slWeight = 1.5 * Math.exp(-(slDev * slDev) / (2 * 0.8 * 0.8)) - 0.5;
+      // Asymmetry: undersleep 1.3× worse
+      if (slH < retroSleepOpt) slWeight *= 1.3;
+      slWeight = clamp(slWeight, -2.0, 1.5);
+      // Hard limits
+      if (slH < 4.0) slWeight = -2.0;
+      else if (slH > 12.0) slWeight = -0.5;
+
+      estScore += slWeight;
+    }
+
+    // ── 5. Steps: tanh matching full ШАГ 6 ──
+    var retSteps = day.steps || 0;
+    if (retSteps > 0) {
+      var retStepsGoal = 8000; // population default
+      // Use prevDays rolling avg if available
+      var retStepVals = [];
+      var rpst = prevDays || [];
+      for (var sti = 0; sti < rpst.length; sti++) {
+        if (rpst[sti] && rpst[sti].steps > 0) retStepVals.push(rpst[sti].steps);
+      }
+      if (retStepVals.length >= 5) {
+        var retStepAvg = retStepVals.reduce(function (a, b) { return a + b; }, 0) / retStepVals.length;
+        retStepsGoal = Math.max(5000, retStepAvg * 1.05);
+      }
+      var stRatio = retSteps / retStepsGoal;
+      var stWeight = clamp(Math.tanh((stRatio - 0.6) * 2.5) * 1.0 + 0.15, -0.5, 1.3);
+      estScore += stWeight;
+    }
+
+    // ── 6. Checkin: streak-aware scoring (v3.4.1 — matches full ШАГ 7) ──
+    if (day.weightMorning > 0) {
+      var retroCheckinStreak = 0;
+      var rpdCk = prevDays || [];
+      for (var cki = 0; cki < rpdCk.length; cki++) {
+        if (rpdCk[cki] && rpdCk[cki].weightMorning > 0) retroCheckinStreak++;
+        else break;
+      }
+      var retroStreakBonus = Math.min(0.5, retroCheckinStreak * 0.05);
+      estScore += Math.min(0.8, 0.3 + retroStreakBonus);
+    }
+
+    // ── 7. Household: log2-relative with adaptive baseline (v3.4.1) ──
+    var retHM = day.householdMin || 0;
+    if (retHM > 0) {
+      // Use prevDays baseline if available (mirrors full algo getPersonalBaseline)
+      var retHMbaseline = 30; // population default
+      var hmHistVals = [];
+      var rpdHM = prevDays || [];
+      for (var hmi = 0; hmi < rpdHM.length; hmi++) {
+        if (rpdHM[hmi] && rpdHM[hmi].householdMin > 0) hmHistVals.push(rpdHM[hmi].householdMin);
+      }
+      if (hmHistVals.length >= 3) retHMbaseline = median(hmHistVals);
+      var retHMratio = retHM / retHMbaseline;
+      var hmWeight = clamp(Math.log2(retHMratio + 0.5) * 0.8, -0.5, 1.2);
+      estScore += hmWeight;
+    }
+
+    // ── 8. Supplements: simple ratio ──
+    var retSuppTaken = day.supplementsTaken || 0;
+    var retSuppPlanned = day.supplementsPlanned || 0;
+    if (retSuppPlanned > 0) {
+      var suppRatio = (typeof retSuppTaken === 'number' ? retSuppTaken : (Array.isArray(retSuppTaken) ? retSuppTaken.length : 0))
+        / (typeof retSuppPlanned === 'number' ? retSuppPlanned : (Array.isArray(retSuppPlanned) ? retSuppPlanned.length : 0));
+      estScore += clamp(suppRatio * 0.7 - 0.1, -0.3, 0.5);
+    }
+
+    // ── 9. Insulin wave approximation (meal gap proxy) ──
+    // Can approximate from meal times: good gaps → bonus
+    if (meals.length >= 2) {
+      var mealTimes = [];
+      for (var mti = 0; mti < meals.length; mti++) {
+        var mtVal = parseTime(meals[mti] && meals[mti].time);
+        if (mtVal !== null) mealTimes.push(mtVal);
+      }
+      mealTimes.sort(function (a, b) { return a - b; });
+      if (mealTimes.length >= 2) {
+        var avgGap = 0;
+        for (var gi = 1; gi < mealTimes.length; gi++) {
+          avgGap += mealTimes[gi] - mealTimes[gi - 1];
+        }
+        avgGap /= (mealTimes.length - 1);
+        // Good gaps (≥ 150 min) → small bonus, poor gaps → small penalty
+        var gapWeight = clamp((avgGap - 120) / 180 * 0.5, -0.3, 0.5);
+        estScore += gapWeight;
+      }
+    }
+
+    // ── 10. Measurements: approximate full algo ШАГ 8 ──
+    var retMeas = (day && day.measurements) || null;
+    var retMeasKeys = retMeas ? Object.keys(retMeas).filter(function (k) { return retMeas[k] > 0; }) : [];
+    if (retMeasKeys.length > 0) {
+      var retMeasCompleteness = retMeasKeys.length / 4; // 4 measurements: waist, hips, thigh, biceps
+      estScore += clamp(0.5 + retMeasCompleteness * 0.7, 0, 1.2);
+    }
+
+    // ── 11. Cross-factor synergy approximation (v3.4.1) ──
+    // Full algo awards up to +1.3 for synergies. Approximate with simple rules.
+    var retroPositiveFactors = 0;
+    if (retroMealCount >= 3) retroPositiveFactors++;
+    if (retroHasTraining) retroPositiveFactors++;
+    if (slH >= 6.5) retroPositiveFactors++;
+    if (retSteps > 0) retroPositiveFactors++;
+    if (day.weightMorning > 0) retroPositiveFactors++;
+    if (retHM > 0) retroPositiveFactors++;
+    var retroSynergyBonus = 0;
+    if (retroPositiveFactors >= 5) retroSynergyBonus = 0.5;
+    else if (retroPositiveFactors >= 4) retroSynergyBonus = 0.3;
+    else if (retroPositiveFactors >= 3) retroSynergyBonus = 0.15;
+    estScore += retroSynergyBonus;
+
+    // Normalize: estScore / MOMENTUM_TARGET → DCS
+    // Full algo can reach 10+ for great days with synergies; retro tops out ~8
+    var retroDcs = clamp(estScore / MOMENTUM_TARGET, CRS_DCS_CLAMP_NEG, 1.0);
+
+    return retroDcs;
   }
 
   /**
@@ -735,36 +1006,49 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     // v3.1.0: Goal-aware DCS override for deficit/bulk users
+    // v3.3.0: training-day calorie tolerance — training burns extra, don't penalize normal eating
     var deficitContext = null;
     var totalKcalRatio = normKcal > 0 ? totalKcal / normKcal : 0;
+    var dayTrainings = (day && day.trainings) || [];
+    var isTrainingDayForDeficit = dayTrainings.length > 0;
+    var deficitTolerance = isTrainingDayForDeficit ? 1.2 : 1.0; // +20% kcal allowance on training days
     if (prof) {
       var dcGoalMode = getGoalMode(prof.deficitPctTarget);
       if (dcGoalMode.mode === 'deficit') {
-        if (totalKcalRatio > 1.5) {
-          // Level 3: >150% в дефиците — жёстче generic -0.6 (если нет ночного вреда)
+        // v3.3.0: apply training-day tolerance to all deficit thresholds
+        var adjCriticalOver = dcGoalMode.criticalOver * deficitTolerance;
+        var adjTargetMax = dcGoalMode.targetRange.max * deficitTolerance;
+        var adjLevel3 = 1.5 * deficitTolerance;
+        if (totalKcalRatio > adjLevel3) {
+          // Level 3: >150% (×tolerance) в дефиците — жёстче generic -0.6 (если нет ночного вреда)
           if (!hasNightHarm) {
             dcs = -0.7; violationType = 'deficit_critical_excess';
           }
           deficitContext = { goalMode: 'deficit', ratio: +totalKcalRatio.toFixed(2), appliedPenalty: dcs, level: 3 };
-        } else if (totalKcalRatio > dcGoalMode.criticalOver) {
-          // Level 2: e.g. >115%–150% — критическое нарушение, не покрытое generic
+        } else if (totalKcalRatio > adjCriticalOver) {
+          // Level 2: e.g. >115%×tolerance — критическое нарушение, не покрытое generic
           if (violationType === null) {
             dcs = -0.5; violationType = 'deficit_overshoot';
           }
           deficitContext = { goalMode: 'deficit', ratio: +totalKcalRatio.toFixed(2), appliedPenalty: dcs, level: 2 };
-        } else if (totalKcalRatio > dcGoalMode.targetRange.max) {
-          // Level 1: e.g. >105%–115% — ослабляем инерционную защиту
+        } else if (totalKcalRatio > adjTargetMax) {
+          // Level 1: e.g. >105%×tolerance — ослабляем инерционную защиту
           if (violationType === null) {
             dcs = Math.min(dcs, -0.4); // vs стандартный clamp -0.3
           }
           deficitContext = { goalMode: 'deficit', ratio: +totalKcalRatio.toFixed(2), appliedPenalty: dcs, level: 1 };
         }
         if (deficitContext) {
+          deficitContext.trainingTolerance = deficitTolerance;
           console.info('[HEYS.cascade.deficit] 📊 Goal-aware DCS override:', {
             level: deficitContext.level,
             ratio: deficitContext.ratio,
-            criticalOver: dcGoalMode.criticalOver,
-            targetMax: dcGoalMode.targetRange.max,
+            criticalOver: +adjCriticalOver.toFixed(2),
+            targetMax: +adjTargetMax.toFixed(2),
+            rawCriticalOver: dcGoalMode.criticalOver,
+            rawTargetMax: dcGoalMode.targetRange.max,
+            trainingTolerance: deficitTolerance,
+            isTrainingDay: isTrainingDayForDeficit,
             appliedPenalty: deficitContext.appliedPenalty,
             violationType: violationType
           });
@@ -852,12 +1136,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   /**
    * Compute CRS via Exponential Moving Average (EMA).
-   * 30-day window, α=0.92 decay. Days without data are skipped.
+   * 30-day window, α=0.95 decay. Days without data are skipped.
+   * v3.3.0: today (i=0) is weighted by day completion fraction
+   * to avoid incomplete day dragging CRS down.
    */
   function computeCascadeRate(dcsByDate, ceiling, todayDate) {
     var weights = [];
     var values = [];
     var today = todayDate ? new Date(todayDate + 'T12:00:00') : new Date();
+
+    // v3.3.0: compute day progress fraction for today
+    var now = new Date();
+    var todayProgress = Math.max(0.2, Math.min(1.0,
+      (now.getHours() * 60 + now.getMinutes()) / 1440));
 
     for (var i = 0; i < CRS_WINDOW; i++) {
       var d = new Date(today);
@@ -867,6 +1158,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       if (dcsVal !== undefined && dcsVal !== null) {
         var weight = Math.pow(CRS_DECAY, i);
+        // v3.3.0: discount today's weight by day completion fraction
+        // At 8am weight ×0.33, at 17:00 ×0.71, at 23:59 ×1.0
+        if (i === 0) weight *= todayProgress;
         weights.push(weight);
         values.push(dcsVal * weight);
       }
@@ -919,8 +1213,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function computeCascadeState(day, dayTot, normAbs, prof, pIndex) {
     var t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 
-    console.info('[HEYS.cascade] ─── computeCascadeState v3.1.0 START ────────');
-    console.info('[HEYS.cascade] 🧬 v3.1.0 features: CRS cumulative momentum | soft chain degradation | continuous scoring | personal baselines | circadian awareness | confidence layer | day-type detection | cross-factor synergies | goal-aware calorie penalty (deficit/bulk/maintenance)');
+    console.info('[HEYS.cascade] ─── computeCascadeState v3.3.0 START ────────');
+    console.info('[HEYS.cascade] 🧬 v3.3.0 features: CRS cumulative momentum | soft chain degradation | continuous scoring | personal baselines | circadian awareness | confidence layer | day-type detection | cross-factor synergies | goal-aware calorie penalty | chronotype-tolerant sleep scoring | partial-day weighting');
     console.info('[HEYS.cascade] 📥 Input data:', {
       hasMeals: !!(day && day.meals && day.meals.length),
       mealsCount: (day && day.meals && day.meals.length) || 0,
@@ -1340,12 +1634,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }
         }
         var personalOnset = sleepOnsetValues.length >= 3 ? median(sleepOnsetValues) : POPULATION_DEFAULTS.sleepOnsetMins;
-        var optimalOnset = Math.max(1290, Math.min(personalOnset, 1470)); // clamp 21:30–00:30
+        var optimalOnset = Math.max(1290, Math.min(personalOnset, 1530)); // clamp 21:30–01:30 (v3.2.0: расширен для хронотипов-сов)
 
         // Sigmoid scoring: deviation from personal optimal
         var onsetDeviation = sleepMins - optimalOnset; // minutes (positive = later)
-        var rawSleepOnset = -Math.tanh(onsetDeviation / 45) * 2.0 + 0.5;
-        rawSleepOnset = clamp(rawSleepOnset, -2.5, 1.5);
+        // v3.2.0: смягчён sigmoid — длительность сна важнее точного времени засыпания
+        var rawSleepOnset = -Math.tanh(onsetDeviation / 60) * 1.5 + 0.5;
+        rawSleepOnset = clamp(rawSleepOnset, -2.0, 1.2);
 
         // Consistency bonus (low variance in sleep onset → stable circadian rhythm)
         var consistencyBonus = 0;
@@ -1355,15 +1650,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           else if (onsetVariance < 45) consistencyBonus = 0.15;
         }
 
-        // Hard floor: after 03:00 = circadian catastrophe
-        if (sleepMins > 1620) { rawSleepOnset = -2.5; consistencyBonus = 0; }
+        // Hard floor: after 04:00 = circadian catastrophe (v3.2.0: сдвинут с 03:00)
+        if (sleepMins > 1680) { rawSleepOnset = -2.0; consistencyBonus = 0; }
 
         var sleepOnsetWeightFinal = (rawSleepOnset + consistencyBonus) * sleepOnsetConfidence;
         rawWeights.sleepOnset = rawSleepOnset + consistencyBonus;
         score += sleepOnsetWeightFinal;
 
+        // v3.3.0: labels aligned with buildDayEventsSimple + v3.2.0 chronotype clamp (01:30)
         var sleepOnsetLabel = sleepMins <= 1320 ? 'Ранний сон' : sleepMins <= 1380 ? 'Сон до 23:00'
-          : sleepMins <= 1440 ? 'Сон до полуночи' : sleepMins <= 1500 ? 'Поздний сон' : 'Очень поздний сон';
+          : sleepMins <= 1440 ? 'Сон до полуночи' : sleepMins <= 1530 ? 'Поздний сон'
+            : sleepMins <= 1620 ? 'Очень поздний сон' : 'Критически поздний сон';
         // sortKey: after-midnight sleep (sleepMins > 1440) → negative so it sorts
         // before morning checkin (sortKey=0) and meals. Pre-midnight → use raw value.
         var sleepSortKey = sleepMins > 1440 ? sleepMins - 2880 : sleepMins;
@@ -1382,11 +1679,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           sortKey: sleepSortKey,
           weight: sleepOnsetWeightFinal
         });
-        console.info('[HEYS.cascade] 😴 Sleep onset (model v2.1.0 chronotype-adaptive sigmoid):', {
+        console.info('[HEYS.cascade] 😴 Sleep onset (model v3.2.0 chronotype-tolerant sigmoid):', {
           sleepStart: sleepStart, sleepMins: sleepMins,
           personalOnset: Math.round(personalOnset), optimalOnset: Math.round(optimalOnset),
           deviationMin: Math.round(onsetDeviation),
-          formula: '-tanh(' + Math.round(onsetDeviation) + '/45)×2.0+0.5',
+          formula: '-tanh(' + Math.round(onsetDeviation) + '/60)×1.5+0.5',
           rawWeight: +rawSleepOnset.toFixed(2), consistencyBonus: +consistencyBonus.toFixed(2),
           onsetVariance: sleepOnsetValues.length >= 5 ? Math.round(stdev(sleepOnsetValues)) : 'N/A (need 5+ days)',
           confidence: sleepOnsetConfidence, adjustedWeight: +sleepOnsetWeightFinal.toFixed(2)
@@ -1965,13 +2262,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     dcsHistory[todayStr] = +todayDcs.toFixed(3);
 
     // 3. Backfill retroactive DCS for days without cached values
+    // v3.4.0: pass surrounding days window for chronotype baseline computation
     var backfillCount = 0;
     for (var bi = 0; bi < prevDays30.length; bi++) {
       var bd = new Date();
       bd.setDate(bd.getDate() - (bi + 1));
       var bDateKey = bd.toISOString().slice(0, 10);
       if (dcsHistory[bDateKey] === undefined && prevDays30[bi]) {
-        var retroDcs = getRetroactiveDcs(prevDays30[bi]);
+        // Build surrounding window for this day's chronotype baseline:
+        // use days bi-7..bi+7 from prevDays30 (excluding current day bi)
+        var retroWindow = [];
+        for (var bwi = Math.max(0, bi - 7); bwi < Math.min(prevDays30.length, bi + 8); bwi++) {
+          if (bwi !== bi && prevDays30[bwi]) retroWindow.push(prevDays30[bwi]);
+        }
+        var retroDcs = getRetroactiveDcs(prevDays30[bi], retroWindow);
         if (retroDcs !== null) {
           dcsHistory[bDateKey] = +retroDcs.toFixed(3);
           backfillCount++;
@@ -1979,7 +2283,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     }
     if (backfillCount > 0) {
-      console.info('[HEYS.cascade.crs] 📋 Retroactive DCS backfill:', { backfilledDays: backfillCount });
+      console.info('[HEYS.cascade.crs] 📋 Retroactive DCS backfill (v3.4.0 accurate formula):', { backfilledDays: backfillCount });
     }
 
     // Save updated history
@@ -2144,7 +2448,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // ── ИТОГОВЫЙ РЕЗУЛЬТАТ ────────────────────────────────
     var elapsed = ((typeof performance !== 'undefined') ? performance.now() : Date.now()) - t0;
 
-    console.info('[HEYS.cascade] ✅ computeCascadeState v3.1.0 DONE:', {
+    console.info('[HEYS.cascade] ✅ computeCascadeState v3.3.0 DONE:', {
       state: state,
       crs: +crs.toFixed(3),
       crsTrend: crsTrend,
@@ -2414,6 +2718,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var crs = props.crs || 0;
     var ceiling = props.ceiling || 0;
     var dailyMomentum = props.dailyMomentum || 0;
+    var dailyContribution = props.dailyContribution || 0;
     var daysAtPeak = props.daysAtPeak || 0;
     var dcsHistory = props.dcsHistory || {};
     var historicalDays = props.historicalDays || [];
@@ -2430,6 +2735,164 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var ceilingPct = Math.round(ceiling * 100);
     // Russian plural for дней подряд
     var peakDaysLabel = daysAtPeak === 1 ? '1 день' : (daysAtPeak >= 2 && daysAtPeak <= 4) ? daysAtPeak + ' дня' : daysAtPeak + ' дней';
+
+    var copyCascadeHistory = async function (e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+
+      var startedAt = Date.now();
+      var dcsDates = Object.keys(dcsHistory || {}).sort().reverse();
+      var historicalEventsCount = (historicalDays || []).reduce(function (sum, day) {
+        return sum + (((day && day.events) || []).length);
+      }, 0);
+
+      console.info('[HEYS.cascade.copy] ✅ Start copy CRS history:', {
+        state: state,
+        crs: +crs.toFixed(3),
+        dcsDays: dcsDates.length,
+        todayEvents: (events || []).length,
+        historicalDays: (historicalDays || []).length,
+        historicalEvents: historicalEventsCount,
+        warnings: (warnings || []).length
+      });
+
+      try {
+        var lines = [
+          '═══════════════════════════════════════════════',
+          '📈 HEYS — История влияния на каскад (CRS)',
+          'Дата выгрузки: ' + new Date().toLocaleString('ru-RU'),
+          '═══════════════════════════════════════════════',
+          '',
+          'Сводка:',
+          '  • Состояние: ' + state,
+          '  • CRS: ' + progressPct + '% (' + (+crs.toFixed(3)) + ')',
+          '  • Потолок (ceiling): ' + ceilingPct + '% (' + (+ceiling.toFixed(3)) + ')',
+          '  • Тренд CRS: ' + crsTrend,
+          '  • Дней на пике (DCS ≥ 0.5): ' + daysAtPeak,
+          '  • Текущий score дня: ' + (+((props && props.score) || 0).toFixed(2)),
+          '  • Дневной вклад (DCS): ' + (+dailyContribution.toFixed(3)),
+          ''
+        ];
+
+        lines.push('DCS история (для расчёта CRS, свежие сверху):');
+        if (!dcsDates.length) {
+          lines.push('  (нет данных)');
+        } else {
+          for (var di = 0; di < dcsDates.length; di++) {
+            var dDate = dcsDates[di];
+            var dVal = dcsHistory[dDate];
+            var dSign = dVal >= 0 ? '+' : '';
+            lines.push('  ' + (di + 1) + '. ' + dDate + ' → ' + dSign + (+dVal).toFixed(3));
+          }
+        }
+
+        lines.push('');
+        lines.push('События сегодня (влияние на score):');
+        if (!events || events.length === 0) {
+          lines.push('  (нет событий)');
+        } else {
+          for (var ei = 0; ei < events.length; ei++) {
+            var ev = events[ei];
+            var w = typeof ev.weight === 'number' ? ev.weight : 0;
+            var wSign = w >= 0 ? '+' : '';
+            lines.push(
+              '  ' + (ei + 1) + '. ' +
+              (ev.time ? (formatTimeShort(ev.time) + ' | ') : '') +
+              (ev.type || 'event') +
+              ' | ' + (ev.label || '—') +
+              ' | вес=' + wSign + w.toFixed(2) +
+              ' | ' + (ev.positive ? 'positive' : 'warning') +
+              (ev.breakReason ? (' | причина: ' + ev.breakReason) : '')
+            );
+          }
+        }
+
+        lines.push('');
+        lines.push('История дней (ретроспектива влияния):');
+        if (!historicalDays || historicalDays.length === 0) {
+          lines.push('  (нет ретроспективы)');
+        } else {
+          for (var hi = 0; hi < historicalDays.length; hi++) {
+            var hd = historicalDays[hi];
+            lines.push('  [' + (hd.dateStr || hd.label || ('day_' + hi)) + '] ' + (hd.label || ''));
+            var hdEvents = (hd && hd.events) || [];
+            if (!hdEvents.length) {
+              lines.push('    • (нет событий)');
+              continue;
+            }
+            for (var hde = 0; hde < hdEvents.length; hde++) {
+              var hev = hdEvents[hde];
+              var hw = typeof hev.weight === 'number' ? hev.weight : 0;
+              var hwSign = hw >= 0 ? '+' : '';
+              lines.push(
+                '    • ' +
+                (hev.time ? (formatTimeShort(hev.time) + ' | ') : '') +
+                (hev.type || 'event') +
+                ' | ' + (hev.label || '—') +
+                ' | вес=' + hwSign + hw.toFixed(2) +
+                ' | ' + (hev.positive ? 'positive' : 'warning')
+              );
+            }
+          }
+        }
+
+        lines.push('');
+        lines.push('Предупреждения / штрафы цепочки:');
+        if (!warnings || warnings.length === 0) {
+          lines.push('  (нет)');
+        } else {
+          for (var wi = 0; wi < warnings.length; wi++) {
+            var wng = warnings[wi];
+            lines.push(
+              '  ' + (wi + 1) + '. ' +
+              (wng.time ? formatTimeShort(wng.time) + ' | ' : '') +
+              (wng.reason || 'Отклонение') +
+              ' | penalty=' + (wng.penalty || 0) +
+              ' | chain: ' + (wng.chainBefore == null ? '?' : wng.chainBefore) + '→' + (wng.chainAfter == null ? '?' : wng.chainAfter) +
+              (typeof wng.weight === 'number' ? (' | weight=' + wng.weight.toFixed(2)) : '')
+            );
+          }
+        }
+
+        lines.push('');
+        lines.push('═══════════════════════════════════════════════');
+
+        var text = lines.join('\n');
+
+        try {
+          if (!navigator || !navigator.clipboard || !navigator.clipboard.writeText) {
+            throw new Error('Clipboard API unavailable');
+          }
+          await navigator.clipboard.writeText(text);
+        } catch (_clipErr) {
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+
+        console.info('[HEYS.cascade.copy] ✅ CRS history copied:', {
+          chars: text.length,
+          dcsDays: dcsDates.length,
+          todayEvents: (events || []).length,
+          historicalDays: (historicalDays || []).length,
+          tookMs: Date.now() - startedAt
+        });
+        if (HEYS.Toast && HEYS.Toast.success) {
+          HEYS.Toast.success('История влияния CRS скопирована');
+        }
+      } catch (err) {
+        console.error('[HEYS.cascade.copy] ❌ Copy failed:', {
+          message: err && err.message ? err.message : String(err)
+        });
+        if (HEYS.Toast && HEYS.Toast.error) {
+          HEYS.Toast.error('Не удалось скопировать историю CRS');
+        }
+      }
+    };
 
     // Throttle render log — once per session (same strategy as MealRec P1 fix)
     if (!window.__heysLoggedCascadeRender) {
@@ -2526,6 +2989,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           React.createElement('span', { className: 'cascade-card__stat' },
             '🔥 На пике: ', React.createElement('strong', null, peakDaysLabel)
           )
+        ),
+        React.createElement('div', { className: 'cascade-card__copy-wrap' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'cascade-card__copy-btn',
+            onClick: copyCascadeHistory,
+            title: 'Скопировать всю историю влияния на CRS в буфер обмена'
+          }, 'copy CRS log')
         )
       )
     );
@@ -3218,9 +3689,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     STATE_CONFIG: STATE_CONFIG,
     MESSAGES: MESSAGES,
     CRS_THRESHOLDS: CRS_THRESHOLDS,
-    VERSION: '3.1.0'
+    VERSION: '3.3.0'
   };
 
-  console.info('[HEYS.cascade] ✅ Module loaded v3.1.0 | CRS (Cascade Rate Score) cumulative momentum | EMA α=0.92, 30-day window, individual ceiling | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Goal-aware calorie penalty (deficit/bulk) | Filter: [HEYS.cascade] | Sub-filter: [HEYS.cascade.crs] [HEYS.cascade.deficit]');
+  console.info('[HEYS.cascade] ✅ Module loaded v3.3.0 | CRS (Cascade Rate Score) cumulative momentum | EMA α=0.95, 30-day window, individual ceiling, partial-day weighting | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Goal-aware calorie penalty (deficit/bulk) | Filter: [HEYS.cascade] | Sub-filter: [HEYS.cascade.crs] [HEYS.cascade.deficit]');
 
 })(typeof window !== 'undefined' ? window : global);

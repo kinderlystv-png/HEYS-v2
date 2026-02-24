@@ -7074,7 +7074,7 @@
             React, day, prof, pIndex, dayTot, normAbs
         }) || null) : null;
 
-        const mealRecReady = !!app.MealRecCard?.renderCard;
+        const mealRecReady = !!app.MealRecCard?.renderCard && !!app.InsightsPI?.mealRecommender?.recommend;
         const mealRecCard = mealRecReady ? (app.MealRecCard.renderCard({
             React,
             day,
@@ -7188,9 +7188,12 @@
                 deferredSkeletonState[debugKey] = 'ready_content';
             }
             const slotTypeClass = slotKey ? ('deferred-card-slot--' + String(slotKey).replace(/^slot-/, '')) : '';
+            // PERF: skip unfold animation if user has cached local data (returning user)
+            // Meal rec card always uses smooth unfold (loads late, needs visual transition)
+            const animClass = (window.__heysHasLocalData && slotKey !== 'slot-mealrec') ? 'no-animate' : 'animate-always';
             return React.createElement('div', {
                 key: slotKey,
-                className: ('deferred-card-slot deferred-card-slot--loaded animate-always ' + slotTypeClass).trim()
+                className: ('deferred-card-slot deferred-card-slot--loaded ' + animClass + ' ' + slotTypeClass).trim()
             }, content);
         };
 

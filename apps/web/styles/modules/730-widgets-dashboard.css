@@ -132,29 +132,18 @@
   padding-left: 0 !important;
   padding-right: 0 !important;
   background-color: var(--bg-primary, #ffffff);
-  /* Разрешаем скролл на wrap */
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+  /* Скролл работает через body — как на всех остальных вкладках.
+     overflow-y НЕ блокируем. */
 }
 
 [data-theme="dark"] .wrap:has(.widgets-tab) {
   background-color: var(--bg-primary, #1a1a1a);
 }
 
-/* Плавный скролл для виджетов */
+/* tab-content-swipeable для виджетов — не переопределяем overflow.
+   Скролл работает через body нативно. */
 .tab-content-swipeable:has(.widgets-tab) {
-  /* Важно: переопределяем overflow для плавного скролла */
-  overflow-y: visible !important;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
-  scroll-behavior: smooth;
-  /* Убираем ограничение высоты — пусть контент определяет */
-  max-height: none;
-  height: auto;
-  /* Убираем padding родителя — widgets-tab сам управляет отступами */
   padding: 0 !important;
-  /* Фон на родителе для устранения белых полос */
   background-color: var(--bg-primary, #ffffff);
 }
 
@@ -373,9 +362,101 @@
   font-size: 16px;
 }
 
+.widgets-header__btn--grid {
+  padding: 8px 11px;
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.widgets-header__btn--grid.active {
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.12);
+  border-radius: 8px;
+}
+
+[data-theme="dark"] .widgets-header__btn--grid.active {
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.18);
+}
+
 
 [data-theme="dark"] .widgets-header {
   /* Пустой */
+}
+
+/* ===== Grid Container Wrapper (для overlay) ===== */
+.widgets-grid-container {
+  position: relative;
+  /* Создаём изолированный stacking context, чтобы overlay
+     гарантированно был поверх виджетов с анимацией */
+  isolation: isolate;
+}
+
+/* Явный порядок слоёв внутри контейнера */
+.widgets-grid {
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== Grid Overlay — нумерация ячеек ===== */
+.widgets-grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--widget-grid-columns, 4), minmax(0, 1fr));
+  grid-auto-rows: var(--widget-row-height, 76px);
+  gap: var(--widget-grid-gap, 12px);
+  padding: var(--widget-spacing-md, 16px);
+  padding-bottom: var(--widget-spacing-xl, 32px);
+  align-content: start;
+  pointer-events: none;
+  z-index: 200;
+  animation: widget-grid-overlay-in 0.18s ease;
+}
+
+@keyframes widget-grid-overlay-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.widgets-grid-overlay__cell {
+  border: 1.5px solid rgba(99, 102, 241, 0.35);
+  border-radius: var(--widget-radius-sm, 12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(99, 102, 241, 0.08);
+  transition: background 0.15s ease;
+}
+
+.widgets-grid-overlay__num {
+  font-size: 24px;
+  font-weight: 800;
+  color: rgba(99, 102, 241, 0.42);
+  line-height: 1;
+  user-select: none;
+  text-shadow: 0 1px 6px rgba(99, 102, 241, 0.18);
+  letter-spacing: -0.5px;
+}
+
+[data-theme="dark"] .widgets-grid-overlay__cell {
+  border-color: rgba(129, 140, 248, 0.28);
+  background: rgba(129, 140, 248, 0.06);
+}
+
+[data-theme="dark"] .widgets-grid-overlay__num {
+  color: rgba(129, 140, 248, 0.52);
+  text-shadow: 0 1px 6px rgba(129, 140, 248, 0.22);
 }
 
 /* ===== Grid Container — Premium Layout ===== */
@@ -3646,18 +3727,32 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 8px 12px 14px;
 }
 
 .widget-macros__summary-4x2 {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
+  padding: 5px 10px;
   background: var(--widget-surface-muted);
   border-radius: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
+.widget-macros__kcal-line {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.widget-macros__balance-line {
+  font-size: 12px;
+  font-weight: 700;
+  font-feature-settings: 'tnum' on;
+}
+
+/* kept for backwards compat (2x2 summary) */
 .widget-macros__summary-item {
   display: flex;
   flex-direction: column;
