@@ -201,8 +201,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const CRS_WINDOW = 30;             // days for EMA computation
   const CRS_DCS_CLAMP_NEG = -0.3;    // inertia protection for normal bad days
   const CRS_CEILING_BASE = 0.65;     // starting ceiling for all users
-  const CRS_KEY_VERSION = 'v4';      // localStorage schema version (v4: full retroactive DCS recalculation with accurate algorithm)
-  const CRS_PREV_KEY_VERSION = 'v3';  // for migration detection
+  const CRS_KEY_VERSION = 'v5';      // localStorage schema version (v5: calibrated retroactive DCS — time-band meals, streak checkin, synergies)
+  const CRS_PREV_KEY_VERSION = 'v4';  // for migration detection
 
   const CRS_THRESHOLDS = {
     STRONG: 0.75,    // Устойчивый импульс
@@ -638,14 +638,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       console.warn('[HEYS.cascade.crs] ⚠️ Failed to load DCS history:', e && e.message);
     }
 
-    // v4 migration: FULL PURGE — all entries invalidated and recalculated.
-    // Previous retroactive formula (v1-v3) over-estimated DCS by 50-100%
-    // (e.g. 0.875 retro vs 0.259 real-time for same day with late sleep).
-    // v4 retroactive formula mirrors the full 10-factor algorithm (sigmoid sleep,
-    // circadian meal penalties, tanh steps, etc.) producing honest estimates.
-    // All entries are purged so backfill recalculates with the accurate formula.
-    // Today's DCS is still computed real-time by the full algorithm.
-    var prevVersions = ['v3', 'v2', 'v1'];
+    // v5 migration: FULL PURGE — v4 retro formula underestimated DCS by ~30%
+    // (flat 0.65/meal vs actual ~1.0, missing streak checkin, no synergies).
+    // v5 formula: time-band meals, streak-aware checkin, synergy approximation,
+    // 3rd+ training, adaptive baselines, measurements.
+    var prevVersions = ['v4', 'v3', 'v2', 'v1'];
     for (var pvi = 0; pvi < prevVersions.length; pvi++) {
       var oldKey = clientId
         ? 'heys_' + clientId + '_cascade_dcs_' + prevVersions[pvi]
@@ -655,7 +652,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (oldRaw) {
           var oldData = typeof oldRaw === 'string' ? JSON.parse(oldRaw) : oldRaw;
           var oldCount = Object.keys(oldData).length;
-          console.info('[HEYS.cascade.crs] 🔄 DCS ' + prevVersions[pvi] + '→v4 migration: purging ' + oldCount + ' entries for full recalculation (accurate retroactive formula)');
+          console.info('[HEYS.cascade.crs] 🔄 DCS ' + prevVersions[pvi] + '→v5 migration: purging ' + oldCount + ' entries (v5 calibrated retro formula)');
           // Clean up old key
           try {
             if (HEYS.store && HEYS.store.set) {
@@ -668,7 +665,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           return {};
         }
       } catch (e) {
-        console.warn('[HEYS.cascade.crs] ⚠️ ' + prevVersions[pvi] + '→v4 migration failed:', e && e.message);
+        console.warn('[HEYS.cascade.crs] ⚠️ ' + prevVersions[pvi] + '→v5 migration failed:', e && e.message);
       }
     }
 
@@ -703,10 +700,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   /**
    * Retroactive DCS estimation for days without full scoring.
-   * v3.4.0: rewritten to approximate the full 10-factor algorithm —
-   *   uses same daily-score scale (0–10) normalized by MOMENTUM_TARGET.
-   *   Accounts for sleep onset sigmoid, late-meal penalties, training load,
-   *   steps tanh, and chronotype baseline from prevDays.
+   * v3.4.1: calibrated to match full algorithm output scale —
+   *   time-band meal scoring, streak-aware checkin, adaptive baselines,
+   *   3rd+ training sessions, cross-factor synergy, measurements.
+   *   Uses same daily-score scale (0–10) normalized by MOMENTUM_TARGET.
    *
    * @param {Object} day — day data object from localStorage (dayv2_*)
    * @param {Array}  prevDays — up to 14 preceding days (for chronotype baseline)
@@ -945,7 +942,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     estScore += retroSynergyBonus;
 
     // Normalize: estScore / MOMENTUM_TARGET → DCS
-    // Full algo can reach 10+ for great days with synergies; retro tops out ~8
+    // v3.4.1: with time-band meals + synergies, retro can reach 9–10+ for excellent days
     var retroDcs = clamp(estScore / MOMENTUM_TARGET, CRS_DCS_CLAMP_NEG, 1.0);
 
     return retroDcs;
