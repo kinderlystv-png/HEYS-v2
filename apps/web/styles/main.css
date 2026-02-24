@@ -40,3 +40,13 @@
 
 /* Component-specific styles (BEM) */
 @import url("./heys-components.css");
+
+/* ── Cascade chain-dots reveal (inline override — modules are cached without version) ── */
+.cascade-chain-dots {
+    clip-path: inset(0 100% 0 0) !important;
+    transition: clip-path 2.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.cascade-chain-dots.is-revealed {
+    clip-path: inset(0 0% 0 0) !important;
+}

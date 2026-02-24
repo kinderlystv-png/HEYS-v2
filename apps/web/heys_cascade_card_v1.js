@@ -180,7 +180,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     BUILDING: 1.5   // Начало
   };
 
-  const MOMENTUM_TARGET = 10.0; // score при 100% прогресс-бара (v3.2.0: снижен с 12 для реалистичного DCS)
+  const MOMENTUM_TARGET = 8.5; // score при 100% прогресс-бара (v3.5.0: снижен с 10.0 для реалистичного DCS при 4-5 факторах)
 
   // v2.2.0: Soft chain — penalty tiers by event severity
   // Minor (weight ≥ -0.5): -1 link, Medium (-1.5 ≤ w < -0.5): -2 links, Severe (w < -1.5): -3 links
@@ -201,8 +201,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const CRS_WINDOW = 30;             // days for EMA computation
   const CRS_DCS_CLAMP_NEG = -0.3;    // inertia protection for normal bad days
   const CRS_CEILING_BASE = 0.65;     // starting ceiling for all users
-  const CRS_KEY_VERSION = 'v5';      // localStorage schema version (v5: calibrated retroactive DCS — time-band meals, streak checkin, synergies)
-  const CRS_PREV_KEY_VERSION = 'v4';  // for migration detection
+  const CRS_KEY_VERSION = 'v7';      // localStorage schema version (v7: chronotype-adaptive meals, MT=8.5)
+  const CRS_PREV_KEY_VERSION = 'v6';  // for migration detection
 
   const CRS_THRESHOLDS = {
     STRONG: 0.75,    // Устойчивый импульс
@@ -313,9 +313,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // Строит массив событий из любого day-объекта без сложного скоринга
   // ─────────────────────────────────────────────────────
 
-  function buildDayEventsSimple(dayObj) {
+  function buildDayEventsSimple(dayObj, mealBandShift) {
     var evts = [];
     if (!dayObj) return evts;
+    var shift = mealBandShift || 0;
 
     // Checkin (вес)
     if ((dayObj.weightMorning || 0) > 0) {
@@ -331,13 +332,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     for (var hmi = 0; hmi < hMeals.length; hmi++) {
       var hm = hMeals[hmi];
       var hmt = parseTime(hm && hm.time);
-      var isLateMeal = hmt !== null && hmt >= 1380;
+      var normalizedHmt = hmt;
+      if (normalizedHmt !== null && normalizedHmt < 360) normalizedHmt += 1440;
+      var isHardViolation = normalizedHmt !== null && normalizedHmt >= (1380 + shift);
+      var isLateMeal = normalizedHmt !== null && normalizedHmt >= (1260 + shift) && !isHardViolation;
+
+      var weight = 0.4;
+      if (isHardViolation) weight = -1.0;
+      else if (isLateMeal) weight = 0.7;
+
       evts.push({
         type: 'meal', icon: EVENT_ICONS.meal,
-        positive: !isLateMeal, weight: isLateMeal ? -0.5 : 0.4,
+        positive: !isHardViolation, weight: weight,
         time: hm && hm.time, sortKey: hmt !== null ? hmt : 500,
         label: (hm && hm.name) || 'Приём пищи',
-        breakReason: isLateMeal ? '⏰' : null
+        breakReason: isHardViolation ? '⏰' : null
       });
     }
 
@@ -545,11 +554,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return count;
   }
 
-  function getCircadianMultiplier(timeMins) {
+  function getCircadianMultiplier(timeMins, mealBandShift) {
     if (timeMins === null || timeMins === undefined) return 1.0;
+    var shift = mealBandShift || 0;
+    var normalizedTime = timeMins;
+    if (normalizedTime < 360) normalizedTime += 1440;
     for (var i = 0; i < CIRCADIAN_MEAL_MODIFIERS.length; i++) {
       var mod = CIRCADIAN_MEAL_MODIFIERS[i];
-      if (timeMins >= mod.start && timeMins < mod.end) return mod.mult;
+      if (normalizedTime >= (mod.start + shift) && normalizedTime < (mod.end + shift)) return mod.mult;
     }
     return 1.0;
   }
@@ -638,11 +650,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       console.warn('[HEYS.cascade.crs] ⚠️ Failed to load DCS history:', e && e.message);
     }
 
-    // v5 migration: FULL PURGE — v4 retro formula underestimated DCS by ~30%
-    // (flat 0.65/meal vs actual ~1.0, missing streak checkin, no synergies).
-    // v5 formula: time-band meals, streak-aware checkin, synergy approximation,
-    // 3rd+ training, adaptive baselines, measurements.
-    var prevVersions = ['v4', 'v3', 'v2', 'v1'];
+    // v7 migration: FULL PURGE — v6 used fixed 23:00 meal penalty and MT=10.0.
+    // v7: chronotype-adaptive meal bands (optimalOnset shift) and MT=8.5.
+    var prevVersions = ['v6', 'v5', 'v4', 'v3', 'v2', 'v1'];
     for (var pvi = 0; pvi < prevVersions.length; pvi++) {
       var oldKey = clientId
         ? 'heys_' + clientId + '_cascade_dcs_' + prevVersions[pvi]
@@ -652,7 +662,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (oldRaw) {
           var oldData = typeof oldRaw === 'string' ? JSON.parse(oldRaw) : oldRaw;
           var oldCount = Object.keys(oldData).length;
-          console.info('[HEYS.cascade.crs] 🔄 DCS ' + prevVersions[pvi] + '→v5 migration: purging ' + oldCount + ' entries (v5 calibrated retro formula)');
+          console.info('[HEYS.cascade.crs] 🔄 DCS ' + prevVersions[pvi] + '→v7 migration: purging ' + oldCount + ' entries (v7 chronotype meals + MT=8.5)');
           // Clean up old key
           try {
             if (HEYS.store && HEYS.store.set) {
@@ -665,7 +675,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           return {};
         }
       } catch (e) {
-        console.warn('[HEYS.cascade.crs] ⚠️ ' + prevVersions[pvi] + '→v5 migration failed:', e && e.message);
+        console.warn('[HEYS.cascade.crs] ⚠️ ' + prevVersions[pvi] + '→v6 migration failed:', e && e.message);
       }
     }
 
@@ -700,9 +710,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   /**
    * Retroactive DCS estimation for days without full scoring.
-   * v3.4.1: calibrated to match full algorithm output scale —
-   *   time-band meal scoring, streak-aware checkin, adaptive baselines,
-   *   3rd+ training sessions, cross-factor synergy, measurements.
+   * v3.4.2: meal weights calibrated to match full algo output —
+   *   daytime 1.10 (was 0.95), breakfast 1.25 (was 1.15), evening 0.70 (was 0.50).
+   *   Missing-sleep default +0.3, calibrated synergy bonuses.
    *   Uses same daily-score scale (0–10) normalized by MOMENTUM_TARGET.
    *
    * @param {Object} day — day data object from localStorage (dayv2_*)
@@ -713,39 +723,62 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (!day) return null;
     var estScore = 0; // estimated daily score on 0–10+ scale
 
-    // ── 1. Meals: time-band scoring (v3.4.1 — matches full algo scale) ──
+    // ── 0. Chronotype Baseline (for sleep and meals) ──
+    var retroOnsetValues = [];
+    var rpd = prevDays || [];
+    for (var roi = 0; roi < rpd.length; roi++) {
+      if (!rpd[roi] || !rpd[roi].sleepStart) continue;
+      var roVal = parseTime(rpd[roi].sleepStart);
+      if (roVal !== null) {
+        if (roVal < 360) roVal += 1440;
+        retroOnsetValues.push(roVal);
+      }
+    }
+    if (day.sleepStart) {
+      var slMins = parseTime(day.sleepStart);
+      if (slMins !== null) {
+        if (slMins < 360) slMins += 1440;
+        retroOnsetValues.push(slMins);
+      }
+    }
+    var retroPersonalOnset = retroOnsetValues.length >= 3
+      ? median(retroOnsetValues)
+      : POPULATION_DEFAULTS.sleepOnsetMins;
+    var retroOptimalOnset = Math.max(1290, Math.min(retroPersonalOnset, 1530)); // clamp 21:30–01:30
+    var mealBandShift = Math.max(-30, retroOptimalOnset - 1380); // clamp lower bound to 22:30
+
+    // ── 1. Meals: time-band scoring (v3.5.0 — chronotype-adaptive) ──
     // Full algo uses getMealQualityScore (0–100) → clamp((qs-40)/40) × circadian.
-    // Average quality ~75–85 → base weight ~0.9–1.1. With circadian modifiers:
-    //   breakfast <10:00 ×1.3 → ~1.15,  daytime ×1.0 → ~0.95,
-    //   21–23:00 ×0.6 → ~0.50,  ≥23:00 or 00–06:00 → hard violation −1.0
+    // Verified: today full algo gives ~1.05–1.20 per quality meal.
+    // v3.5.0: chronotype-adaptive bands (shifted by mealBandShift).
     var meals = day.meals || [];
     var retroMealCount = 0; // count positive meals for synergy check
     for (var lmi = 0; lmi < meals.length; lmi++) {
       var lmt = parseTime(meals[lmi] && meals[lmi].time);
       var mealContrib;
       if (lmt !== null) {
-        if (lmt >= 0 && lmt < 360) {
-          // After midnight 00:00–06:00: hard violation (full algo: −1.0)
+        var normalizedLmt = lmt;
+        if (normalizedLmt < 360) normalizedLmt += 1440;
+
+        if (normalizedLmt >= 1380 + mealBandShift) {
+          // ≥ 23:00 (shifted): hard violation
           mealContrib = -1.0;
-        } else if (lmt >= 1380) {
-          // ≥ 23:00: hard violation (full algo: −1.0)
-          mealContrib = -1.0;
-        } else if (lmt >= 1260) {
-          // 21:00–23:00: mild circadian discount
-          mealContrib = 0.50;
+        } else if (normalizedLmt >= 1260 + mealBandShift) {
+          // 21:00–23:00 (shifted): circadian ×0.7
+          mealContrib = 0.70;
           retroMealCount++;
-        } else if (lmt < 600) {
-          // Breakfast < 10:00: circadian bonus ×1.3
-          mealContrib = 1.15;
+        } else if (normalizedLmt < 600 + mealBandShift) {
+          // Breakfast < 10:00 (shifted): circadian ×1.3
+          mealContrib = 1.25;
           retroMealCount++;
         } else {
-          // Normal daytime meal 10:00–21:00
-          mealContrib = 0.95;
+          // Normal daytime meal
+          mealContrib = 1.10;
           retroMealCount++;
         }
       } else {
-        // No time data: assume average daytime meal
-        mealContrib = 0.80;
+        // No time data: assume decent-quality daytime meal
+        mealContrib = 0.90;
         retroMealCount++;
       }
       estScore += mealContrib;
@@ -775,25 +808,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (slMins !== null) {
         if (slMins < 360) slMins += 1440; // normalize after-midnight
 
-        // Compute chronotype baseline from prevDays (mirrors full algo)
-        var retroOnsetValues = [];
-        var rpd = prevDays || [];
-        for (var roi = 0; roi < rpd.length; roi++) {
-          if (!rpd[roi] || !rpd[roi].sleepStart) continue;
-          var roVal = parseTime(rpd[roi].sleepStart);
-          if (roVal !== null) {
-            if (roVal < 360) roVal += 1440;
-            retroOnsetValues.push(roVal);
-          }
-        }
-        // Also include current day in baseline estimate
-        retroOnsetValues.push(slMins);
-
-        var retroPersonalOnset = retroOnsetValues.length >= 3
-          ? median(retroOnsetValues)
-          : POPULATION_DEFAULTS.sleepOnsetMins;
-        var retroOptimalOnset = Math.max(1290, Math.min(retroPersonalOnset, 1530)); // clamp 21:30–01:30
-
+        // v3.5.0: Chronotype baseline pre-calculated at step 0
         // Same sigmoid formula as full algo v3.2.0
         var retroOnsetDev = slMins - retroOptimalOnset;
         var retroOnsetWeight = -Math.tanh(retroOnsetDev / 60) * 1.5 + 0.5;
@@ -804,6 +819,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         estScore += retroOnsetWeight;
       }
+    } else {
+      // v3.4.2: missing sleep data — user probably slept but data gap.
+      // Give small neutral default instead of 0 (data gap ≠ bad behavior).
+      estScore += 0.3;
     }
 
     // ── 4. Sleep duration: bell-curve matching full ШАГ 5 ──
@@ -926,8 +945,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       estScore += clamp(0.5 + retMeasCompleteness * 0.7, 0, 1.2);
     }
 
-    // ── 11. Cross-factor synergy approximation (v3.4.1) ──
-    // Full algo awards up to +1.3 for synergies. Approximate with simple rules.
+    // ── 11. Cross-factor synergy approximation (v3.4.2) ──
+    // Full algo awards up to +1.3 for specific combos (sleep_recovery, neat_steps,
+    // meals_insulin, morning_ritual, full_recovery). Approximate by factor count.
     var retroPositiveFactors = 0;
     if (retroMealCount >= 3) retroPositiveFactors++;
     if (retroHasTraining) retroPositiveFactors++;
@@ -936,13 +956,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (day.weightMorning > 0) retroPositiveFactors++;
     if (retHM > 0) retroPositiveFactors++;
     var retroSynergyBonus = 0;
-    if (retroPositiveFactors >= 5) retroSynergyBonus = 0.5;
-    else if (retroPositiveFactors >= 4) retroSynergyBonus = 0.3;
-    else if (retroPositiveFactors >= 3) retroSynergyBonus = 0.15;
+    if (retroPositiveFactors >= 6) retroSynergyBonus = 0.80;
+    else if (retroPositiveFactors >= 5) retroSynergyBonus = 0.65;
+    else if (retroPositiveFactors >= 4) retroSynergyBonus = 0.45;
+    else if (retroPositiveFactors >= 3) retroSynergyBonus = 0.25;
     estScore += retroSynergyBonus;
 
     // Normalize: estScore / MOMENTUM_TARGET → DCS
-    // v3.4.1: with time-band meals + synergies, retro can reach 9–10+ for excellent days
+    // v3.4.2: calibrated meal weights + synergies, retro can reach 9–10+ for excellent days
     var retroDcs = clamp(estScore / MOMENTUM_TARGET, CRS_DCS_CLAMP_NEG, 1.0);
 
     return retroDcs;
@@ -1245,6 +1266,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // v3.0.0: Load 30-day history for CRS; first 14 for baseline/confidence/streak
     var prevDays30 = getPreviousDays(CRS_WINDOW);
     var prevDays14 = prevDays30.slice(0, 14);
+
+    // ── 0. Chronotype Baseline (for sleep and meals) ──
+    var sleepOnsetValues = [];
+    for (var si = 0; si < prevDays14.length; si++) {
+      if (!prevDays14[si] || !prevDays14[si].sleepStart) continue;
+      var soVal = parseTime(prevDays14[si].sleepStart);
+      if (soVal !== null) {
+        if (soVal < 360) soVal += 1440;
+        sleepOnsetValues.push(soVal);
+      }
+    }
+    var sleepStart = (day && day.sleepStart) || '';
+    if (sleepStart) {
+      var sleepMins = parseTime(sleepStart);
+      if (sleepMins !== null) {
+        if (sleepMins < 360) sleepMins += 1440;
+        sleepOnsetValues.push(sleepMins);
+      }
+    }
+    var personalOnset = sleepOnsetValues.length >= 3 ? median(sleepOnsetValues) : POPULATION_DEFAULTS.sleepOnsetMins;
+    var optimalOnset = Math.max(1290, Math.min(personalOnset, 1530)); // clamp 21:30–01:30
+    var mealBandShift = Math.max(-30, optimalOnset - 1380); // clamp lower bound to 22:30
+
     var confidenceMap = {};
     var rawWeights = {};
     var iwAvgGap = 0; // hoisted for synergy access
@@ -1327,7 +1371,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       var overNorm = normKcal ? cumulativeRatio > 1.2 : false;
       var hasHarm = checkMealHarm(meal, pIndex);
       var timeMins = parseTime(meal && meal.time);
-      var isLate = timeMins !== null && timeMins >= 1380;
+      var normalizedTime = timeMins;
+      if (normalizedTime !== null && normalizedTime < 360) normalizedTime += 1440;
+      var isLate = normalizedTime !== null && normalizedTime >= (1380 + mealBandShift);
 
       // ─ v2.1.0: Hard violations (harm ≥ 7, late > 23:00) ─
       var hasHardViolation = hasHarm || isLate;
@@ -1372,8 +1418,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
 
       // Circadian modifier: breakfast ×1.3, late dinner ×0.7
-      if (timeMins !== null && timeMins < 1380 && !hasHardViolation) {
-        var circMult = getCircadianMultiplier(timeMins);
+      if (normalizedTime !== null && normalizedTime < (1380 + mealBandShift) && !hasHardViolation) {
+        var circMult = getCircadianMultiplier(timeMins, mealBandShift);
         mealWeight *= circMult;
       }
 
@@ -1620,19 +1666,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       var sleepMins = parseTime(sleepStart);
       if (sleepMins !== null && sleepMins < 360) sleepMins += 1440; // after midnight
       if (sleepMins !== null) {
-        // v2.1.0: Chronotype-adaptive baseline from 14-day history
-        var sleepOnsetValues = [];
-        for (var si = 0; si < prevDays14.length; si++) {
-          if (!prevDays14[si] || !prevDays14[si].sleepStart) continue;
-          var soVal = parseTime(prevDays14[si].sleepStart);
-          if (soVal !== null) {
-            if (soVal < 360) soVal += 1440;
-            sleepOnsetValues.push(soVal);
-          }
-        }
-        var personalOnset = sleepOnsetValues.length >= 3 ? median(sleepOnsetValues) : POPULATION_DEFAULTS.sleepOnsetMins;
-        var optimalOnset = Math.max(1290, Math.min(personalOnset, 1530)); // clamp 21:30–01:30 (v3.2.0: расширен для хронотипов-сов)
-
+        // v3.5.0: Chronotype-adaptive baseline pre-calculated at step 0
         // Sigmoid scoring: deviation from personal optimal
         var onsetDeviation = sleepMins - optimalOnset; // minutes (positive = later)
         // v3.2.0: смягчён sigmoid — длительность сна важнее точного времени засыпания
@@ -2259,7 +2293,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     dcsHistory[todayStr] = +todayDcs.toFixed(3);
 
     // 3. Backfill retroactive DCS for days without cached values
-    // v3.4.0: pass surrounding days window for chronotype baseline computation
+    // v3.4.2: pass surrounding days window for chronotype baseline computation
     var backfillCount = 0;
     for (var bi = 0; bi < prevDays30.length; bi++) {
       var bd = new Date();
@@ -2280,7 +2314,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     }
     if (backfillCount > 0) {
-      console.info('[HEYS.cascade.crs] 📋 Retroactive DCS backfill (v3.4.0 accurate formula):', { backfilledDays: backfillCount });
+      console.info('[HEYS.cascade.crs] 📋 Retroactive DCS backfill (v3.4.2 calibrated formula):', { backfilledDays: backfillCount });
     }
 
     // Save updated history
@@ -2520,7 +2554,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     for (var hdi = 0; hdi < prevDays30.length; hdi++) {
       var hDayRef = prevDays30[hdi];
       if (!hDayRef) continue;
-      var hEvts = buildDayEventsSimple(hDayRef);
+      var hEvts = buildDayEventsSimple(hDayRef, mealBandShift);
       if (hEvts.length === 0) continue;
       var hDateD = new Date();
       hDateD.setDate(hDateD.getDate() - (hdi + 1));
@@ -2593,6 +2627,44 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   function ChainDots(props) {
     var events = props.events;
+    var [isRevealed, setIsRevealed] = React.useState(false);
+    var containerRef = React.useRef(null);
+
+    React.useEffect(function () {
+      var t0 = performance.now();
+      console.info('[HEYS.cascadeDots] ⏱ mount, dots=' + (events ? events.length : 0) + ', t=0ms');
+
+      // Two rAFs: first paint with clip hidden, then start reveal animation.
+      var raf = requestAnimationFrame(function () {
+        var t1 = performance.now();
+        console.info('[HEYS.cascadeDots] ⏱ rAF1 (first paint), Δ=' + (t1 - t0).toFixed(1) + 'ms');
+
+        requestAnimationFrame(function () {
+          var t2 = performance.now();
+          console.info('[HEYS.cascadeDots] ⏱ rAF2 → setIsRevealed(true), Δ=' + (t2 - t0).toFixed(1) + 'ms');
+          setIsRevealed(true);
+
+          // Check computed clip-path after class is applied
+          requestAnimationFrame(function () {
+            var el = containerRef.current;
+            if (el) {
+              var cs = getComputedStyle(el);
+              var clip = cs.clipPath || cs.webkitClipPath || 'n/a';
+              var trans = cs.transition || cs.webkitTransition || 'n/a';
+              var transDur = cs.transitionDuration || 'n/a';
+              console.info('[HEYS.cascadeDots] 🎨 post-reveal computed:', {
+                clipPath: clip,
+                transition: trans.slice(0, 80),
+                transitionDuration: transDur,
+                classList: el.className
+              });
+            }
+          });
+        });
+      });
+      return function () { cancelAnimationFrame(raf); };
+    }, []);
+
     if (!events || events.length === 0) return null;
 
     var children = [];
@@ -2622,7 +2694,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }));
     }
 
-    return React.createElement('div', { className: 'cascade-chain-dots' }, children);
+    return React.createElement('div', {
+      ref: containerRef,
+      className: 'cascade-chain-dots animate-always' + (isRevealed ? ' is-revealed' : '')
+    }, children);
   }
 
   // ─────────────────────────────────────────────────────

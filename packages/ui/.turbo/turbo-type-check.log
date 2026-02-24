@@ -1,0 +1,12 @@
+
+> @heys/ui@14.0.0 type-check C:\Users\Ant\HEYS-v2\packages\ui
+> tsc --noEmit
+
+../shared/src/logging/AppLogger.ts(61,5): error TS2375: Type '{ msg: string; meta: LogMeta | undefined; }' is not assignable to type '{ msg: string; meta?: LogMeta; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'meta' are incompatible.
+    Type 'LogMeta | undefined' is not assignable to type 'LogMeta'.
+      Type 'undefined' is not assignable to type 'LogMeta'.
+../shared/src/security/validation.ts(69,20): error TS6133: 'dompurify' is declared but its value is never read.
+../shared/src/security/validation.ts(75,5): error TS2412: Type '((input: string, config?: Config | undefined) => unknown) | undefined' is not assignable to type '(input: string, config?: Config | undefined) => unknown' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target.
+  Type 'undefined' is not assignable to type '(input: string, config?: Config | undefined) => unknown'.
+ ELIFECYCLE  Command failed with exit code 2.

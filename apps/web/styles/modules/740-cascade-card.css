@@ -197,6 +197,16 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
   flex-wrap: nowrap;
+  /* Hidden until JS adds .is-revealed; transition does the L→R sweep */
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 2.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* When JS adds .is-revealed, transition animates clip-path → fully visible.
+   transition is reliable: it fires from the current value at the moment the
+   class lands, so no keyframe timing issues. */
+.cascade-chain-dots.is-revealed {
+  clip-path: inset(0 0% 0 0);
 }
 
 .cascade-chain-dots::-webkit-scrollbar {
@@ -272,10 +282,15 @@
   height: 11px;
 }
 
-/* Pulse on newest positive dot */
-.cascade-dot--latest:not(.cascade-dot--warning) {
+/* Pulse on newest positive dot — chains after reveal */
+.is-revealed .cascade-dot--latest:not(.cascade-dot--warning) {
   animation: cascadePulse 2s ease-in-out infinite;
+  animation-delay: 2.2s;
+  /* Wait for chain reveal transition to finish */
+  animation-fill-mode: backwards;
 }
+
+/* cascadeChainReveal removed — replaced by clip-path transition on .cascade-chain-dots */
 
 @keyframes cascadePulse {
 
