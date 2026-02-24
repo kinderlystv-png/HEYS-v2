@@ -1780,11 +1780,34 @@ td:first-child input {
   }
 }
 
-/* ── Skeleton loading state: guardа активен, XP ещё грузится ── */
-.game-xp.syncing {
-  opacity: 0.75;
+/* ────────────────────────────────────────────────────────────────
+   Smooth loading / no-CLS state:
+   Все элементы ВСЕГДА в DOM. При guard → opacity:0/пульс.
+   При загрузке → плавный transition opacity/transform 0.4s.
+   ──────────────────────────────────────────────────────────────── */
+
+/* ─── 0. Контейнер правых слотов (streak, XP, mult…) ─── */
+.game-bar-slots {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  transition: opacity 0.45s ease, transform 0.45s ease;
 }
 
+.game-bar-slots.is-loading {
+  opacity: 0;
+  transform: scale(0.92);
+  pointer-events: none;
+}
+
+.game-bar-slots.is-loaded {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ─── 1. XP счётчик ─── */
 .game-xp__skeleton {
   display: inline-block;
   font-style: italic;
@@ -1796,7 +1819,7 @@ td:first-child input {
 
   0%,
   100% {
-    opacity: 0.4;
+    opacity: 0.45;
   }
 
   50% {
@@ -1804,7 +1827,69 @@ td:first-child input {
   }
 }
 
-/* Shimmer-sweep по всей ширине progress track */
+/* ─── 2. Level text: плавная смена содержимого ─── */
+.game-level-text {
+  transition: opacity 0.35s ease, color 0.35s ease;
+}
+
+.game-level-group.is-syncing .game-level-text {
+  opacity: 0.35;
+}
+
+/* ─── 3. Rank badge: всегда в DOM; opacity transition ─── */
+.game-rank-badge {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.game-rank-badge.guard-hidden {
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.game-rank-badge:not(.guard-hidden) {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ─── 4. Dot-индикатор загрузки (absolute, 0 layout impact) ─── */
+.game-level-sync-dot {
+  position: absolute;
+  top: -3px;
+  right: -5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.5);
+}
+
+.game-level-group.is-syncing .game-level-sync-dot {
+  opacity: 1;
+  animation: syncDotPing 1.2s ease-in-out infinite;
+}
+
+@keyframes syncDotPing {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.5);
+    transform: scale(1);
+  }
+
+  50% {
+    box-shadow: 0 0 0 5px rgba(255, 255, 255, 0);
+    transform: scale(1.1);
+  }
+}
+
+/* ─── 5. Progress bar: плавный resize + shimmer при guard ─── */
+.game-progress {
+  transition: flex 0.5s ease;
+}
+
 .game-progress.syncing {
   overflow: hidden;
 }

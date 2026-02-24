@@ -137,6 +137,113 @@
         workoutCarbBoost: 0.04, // ↓ was 0.05
     };
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // Spam-safe grouped logging for hottest paths (macro + GL warnings)
+    // ──────────────────────────────────────────────────────────────────────────
+    let _activePickerLogCycle = null;
+
+    function startPickerLogCycle(meta) {
+        _activePickerLogCycle = {
+            meta: meta || {},
+            macroRows: [],
+            glWarnings: [],
+            highScoreRows: [],
+            pickedRows: [],
+        };
+    }
+
+    function pushPickerLogRow(type, payload) {
+        if (!_activePickerLogCycle) return;
+        if (type === 'macro') {
+            _activePickerLogCycle.macroRows.push(payload);
+            return;
+        }
+        if (type === 'glWarning') {
+            _activePickerLogCycle.glWarnings.push(payload);
+            return;
+        }
+        if (type === 'highScore') {
+            _activePickerLogCycle.highScoreRows.push(payload);
+            return;
+        }
+        if (type === 'picked') {
+            _activePickerLogCycle.pickedRows.push(payload);
+        }
+    }
+
+    function flushPickerLogCycle() {
+        if (!_activePickerLogCycle) return;
+        const cycle = _activePickerLogCycle;
+        _activePickerLogCycle = null;
+
+        // 1) Macro rows: very noisy. Group by scenario and print compact top set.
+        if (cycle.macroRows.length > 0) {
+            const byScenario = {};
+            cycle.macroRows.forEach((row) => {
+                const key = row.scenario || 'UNKNOWN';
+                byScenario[key] = byScenario[key] || { count: 0, rows: [] };
+                byScenario[key].count += 1;
+                if (byScenario[key].rows.length < 8) byScenario[key].rows.push(row);
+            });
+
+            const summary = Object.entries(byScenario).map(([scenario, info]) => ({
+                scenario,
+                total: info.count,
+                shown: info.rows.length,
+            }));
+            console.info(`${LOG_PREFIX} 🧪 [macro] grouped summary:`, {
+                groups: summary,
+                cycle: cycle.meta,
+            });
+
+            Object.entries(byScenario).forEach(([scenario, info]) => {
+                console.group(`${LOG_PREFIX} 🧪 [macro] ${scenario}: showing ${info.rows.length}/${info.count}`);
+                console.table(info.rows);
+                console.groupEnd();
+            });
+        }
+
+        // 2) GL warnings: keep signal, collapse duplicates.
+        if (cycle.glWarnings.length > 0) {
+            const top = cycle.glWarnings
+                .slice()
+                .sort((a, b) => b.glOverflow - a.glOverflow)
+                .slice(0, 10)
+                .map((w) => ({
+                    product: w.product,
+                    scenario: w.scenario,
+                    productGL: w.productGL,
+                    targetGL: w.targetGL,
+                    overflow: w.glOverflow,
+                    glPenaltyScore: w.glPenaltyScore,
+                }));
+            console.warn(`${LOG_PREFIX} 📊 [GL] grouped warnings:`, {
+                total: cycle.glWarnings.length,
+                shown: top.length,
+                cycle: cycle.meta,
+            });
+            console.table(top);
+        }
+
+        // 3) Picked tables: collapse repeated per-category dumps into one compact summary.
+        if (cycle.pickedRows.length > 0) {
+            const grouped = cycle.pickedRows.map((r) => ({
+                scenario: r.scenario,
+                category: r.category,
+                strategy: r.strategy,
+                evaluated: r.evaluated,
+                selected: r.selected,
+                sampleTop: r.sampleTop,
+            }));
+
+            console.info(`${LOG_PREFIX} 🥇 [picked] grouped summary:`, {
+                totalGroups: grouped.length,
+                cycle: cycle.meta,
+            });
+            console.table(grouped);
+        }
+    }
+
     function buildLocalStorageFallbackLsGet() {
         return function (key, fallback = null) {
             try {
@@ -392,7 +499,8 @@
         const fatDiff = Math.abs(fatEnPct - idealProfile.fatPct);
         scores.fatAlignment = Math.max(0, 100 - fatDiff * 1.5); // ×1.5: softer — fat varies widely
 
-        console.info(`${LOG_PREFIX} 🧪 [macro] ${product.name.substring(0, 20)}:`, {
+        pushPickerLogRow('macro', {
+            product: product.name.substring(0, 32),
             scenario: scenarioType,
             ideal: `P${idealProfile.protPct}/C${idealProfile.carbPct}/F${idealProfile.fatPct}`,
             prod: `P${Math.round(proteinEnPct)}/C${Math.round(carbEnPct)}/F${Math.round(fatEnPct)}`,
@@ -559,12 +667,15 @@
             }
 
             if (scores.glPenalty < 70) {
-                console.warn(`${LOG_PREFIX} 📊❌ GL over target:`, {
+                const roundedGL = Math.round(productGL * 10) / 10;
+                pushPickerLogRow('glWarning', {
                     product: product.name,
+                    scenario: mealScenarioType || 'UNKNOWN',
                     productGI,
                     carbsInPortion: Math.round(carbsInPortion),
-                    productGL: Math.round(productGL * 10) / 10,
+                    productGL: roundedGL,
                     targetGL: targetGLValue,
+                    glOverflow: Math.round((roundedGL - targetGLValue) * 10) / 10,
                     glPenaltyScore: scores.glPenalty,
                 });
             }
@@ -688,10 +799,11 @@
                 .slice(0, 4)
                 .map(([key, val]) => `${key}=${Math.round(val)}`)
                 .join(', ');
-            console.info(`${LOG_PREFIX} 🎯 High-score product:`, {
+            pushPickerLogRow('highScore', {
                 product: product.name,
                 score: finalScore,
-                topFactors
+                topFactors,
+                scenario: scenarioType,
             });
         }
 
@@ -972,12 +1084,18 @@
                 .join(', ')
         }));
 
-        // Log with expanded topPicks (more readable in console)
-        console.group(
-            `${LOG_PREFIX} 🥇 Products picked: [${scenario.scenario}] ${targetCategory.toUpperCase()} | Strategy: ${historyProducts.length >= MIN_PRODUCTS_PER_CATEGORY ? 'HISTORY' : (fallbackProducts.length > 0 ? 'FALLBACK' : 'LIMITED_HISTORY')} | Evaluated: ${candidates.length}`
-        );
-        console.table(topPicks);
-        console.groupEnd();
+        const strategy = historyProducts.length >= MIN_PRODUCTS_PER_CATEGORY
+            ? 'HISTORY'
+            : (fallbackProducts.length > 0 ? 'FALLBACK' : 'LIMITED_HISTORY');
+
+        pushPickerLogRow('picked', {
+            scenario: scenario.scenario || scenario.type || 'UNKNOWN',
+            category: targetCategory.toUpperCase(),
+            strategy,
+            evaluated: candidates.length,
+            selected: picked.length,
+            sampleTop: topPicks.slice(0, 3).map((p) => `${p.name} (${p.score})`).join(' | '),
+        });
 
         return picked;
     }
@@ -1108,6 +1226,8 @@
 
         const safeLsGet = resolveLsGet(lsGet);
 
+        startPickerLogCycle({ scenario, limit, targetGL: targetGL ?? null });
+
         // Phase B/C Integration Summary (logged once per session)
         if (!window._mealRecPhaseSummaryLogged) {
             window._mealRecPhaseSummaryLogged = true;
@@ -1226,6 +1346,7 @@
                 breakdown: formattedGroups.map(g => `${g.categoryName}: ${g.products.length}`),
             });
 
+            flushPickerLogCycle();
             return {
                 mode: 'grouped',
                 groups: formattedGroups,
@@ -1275,6 +1396,7 @@
             products: suggestions.map(s => `${s.product} (${s.grams}г, score=${s.score})`)
         });
 
+        flushPickerLogCycle();
         return {
             mode: 'flat',
             suggestions,

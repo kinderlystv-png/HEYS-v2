@@ -2697,6 +2697,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var greenRef = React.useRef(null);
     var orangeRef = React.useRef(null);
     var dividerRef = React.useRef(null);
+    var debugEnabledRef = React.useRef(!!(window && window.__HEYS_DEBUG_CASCADEBAR));
 
     function applyCascadeVisual(percent, introK) {
       var p = Math.max(0, Math.min(100, percent));
@@ -2746,7 +2747,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             el.style.setProperty('display', 'none', 'important');
           }
         });
-        console.info('[cascadebar] duplicate-bars-hidden', { count: bars.length });
+        if (debugEnabledRef.current) {
+          console.info('[cascadebar] duplicate-bars-hidden', { count: bars.length });
+        }
       };
 
       // Инициализируем визуал строго в центре до старта интро.
@@ -2754,6 +2757,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       ensureSingleBar();
 
       var logCascadeBar = function (stage, payload, force, throttleMs) {
+        if (!debugEnabledRef.current && !force) return;
         var now = Date.now();
         var gap = typeof throttleMs === 'number' ? throttleMs : 1000;
         if (!force && (now - debugLastLogTsRef.current) < gap) return;
@@ -2813,11 +2817,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         };
       };
 
-      window.__cascadebarDump = function () {
-        var snap = getDomSnapshot();
-        console.info('[cascadebar] manual-dump', Object.assign({ instanceId: instanceIdRef.current }, snap));
-        return snap;
-      };
+      if (debugEnabledRef.current) {
+        window.__cascadebarDump = function () {
+          var snap = getDomSnapshot();
+          console.info('[cascadebar] manual-dump', Object.assign({ instanceId: instanceIdRef.current }, snap));
+          return snap;
+        };
+      }
 
       var easeInOutCubic = function (t) {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -2853,6 +2859,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         var from = currentPercentRef.current;
         var to = Math.max(0, Math.min(100, targetPercent));
         var startTs = 0;
+
+        if (Math.abs(to - from) < 0.05) {
+          currentPercentRef.current = to;
+          applyCascadeVisual(to, 1);
+          if (typeof onDone === 'function') onDone();
+          return;
+        }
 
         logCascadeBar('settle-start', {
           from: +from.toFixed(2),
@@ -2982,15 +2995,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
 
         debugLastReasonRef.current = 'ready-to-settle';
-        logCascadeBar('settle-ready', {
-          elapsedMs: Math.round(elapsed),
-          currentPercent: +currentPercentRef.current.toFixed(2),
-          targetCrs: crsTargetRef.current
-        }, true);
-
         // Вооружаем settle и ждём левый экстремум маятника,
         // чтобы не было замирания в центре.
         if (!settleArmedRef.current) {
+          logCascadeBar('settle-ready', {
+            elapsedMs: Math.round(elapsed),
+            currentPercent: +currentPercentRef.current.toFixed(2),
+            targetCrs: crsTargetRef.current
+          }, true);
           settleArmedRef.current = true;
           logCascadeBar('settle-armed', {
             strategy: 'start-after-left-swing',
@@ -3028,51 +3040,53 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         trySettleToActual();
       }, 120);
 
-      domDebugTimer = setInterval(function () {
-        var snap = getDomSnapshot();
-        if (!snap.ready) return;
+      if (debugEnabledRef.current) {
+        domDebugTimer = setInterval(function () {
+          var snap = getDomSnapshot();
+          if (!snap.ready) return;
 
-        var stateP = currentPercentRef.current;
-        var domP = typeof snap.actualPercentFromDom === 'number' ? snap.actualPercentFromDom : null;
-        var targetP = crsTargetRef.current === null ? null : (crsTargetRef.current * 100);
+          var stateP = currentPercentRef.current;
+          var domP = typeof snap.actualPercentFromDom === 'number' ? snap.actualPercentFromDom : null;
+          var targetP = crsTargetRef.current === null ? null : (crsTargetRef.current * 100);
 
-        logCascadeBar('dom-brief', {
-          statePercent: +stateP.toFixed(2),
-          domPercent: domP === null ? null : +domP.toFixed(2),
-          targetPercent: targetP === null ? null : +targetP.toFixed(2),
-          intro: +introProgressRef.current.toFixed(3),
-          settled: isSettledRef.current,
-          settling: isSettlingRef.current,
-          barsInDocument: snap.barsInDocument,
-          barsInParent: snap.barsInParent
-        }, false, 900);
-
-        // Если DOM визуально уехал от расчётного state — принудительно синхронизируем.
-        if (domP !== null && Math.abs(domP - stateP) > 2.5) {
-          applyCascadeVisual(stateP, 1);
-          logCascadeBar('dom-desync-corrected', {
+          logCascadeBar('dom-brief', {
             statePercent: +stateP.toFixed(2),
-            domPercentBefore: +domP.toFixed(2),
-            delta: +(stateP - domP).toFixed(2)
-          }, true);
-        }
+            domPercent: domP === null ? null : +domP.toFixed(2),
+            targetPercent: targetP === null ? null : +targetP.toFixed(2),
+            intro: +introProgressRef.current.toFixed(3),
+            settled: isSettledRef.current,
+            settling: isSettlingRef.current,
+            barsInDocument: snap.barsInDocument,
+            barsInParent: snap.barsInParent
+          }, false, 900);
 
-        // Если после settle DOM застрял возле центра, но target далеко — жёстко дотягиваем к target.
-        if (
-          isSettledRef.current &&
-          !isSettlingRef.current &&
-          targetP !== null &&
-          domP !== null &&
-          Math.abs(domP - 50) <= 2 &&
-          Math.abs(targetP - 50) >= 6
-        ) {
-          animateToPercent(targetP, 1400);
-          logCascadeBar('center-stuck-force-target', {
-            domPercentBefore: +domP.toFixed(2),
-            targetPercent: +targetP.toFixed(2)
-          }, true);
-        }
-      }, 900);
+          // Если DOM визуально уехал от расчётного state — принудительно синхронизируем.
+          if (domP !== null && Math.abs(domP - stateP) > 2.5) {
+            applyCascadeVisual(stateP, 1);
+            logCascadeBar('dom-desync-corrected', {
+              statePercent: +stateP.toFixed(2),
+              domPercentBefore: +domP.toFixed(2),
+              delta: +(stateP - domP).toFixed(2)
+            }, true);
+          }
+
+          // Если после settle DOM застрял возле центра, но target далеко — жёстко дотягиваем к target.
+          if (
+            isSettledRef.current &&
+            !isSettlingRef.current &&
+            targetP !== null &&
+            domP !== null &&
+            Math.abs(domP - 50) <= 2 &&
+            Math.abs(targetP - 50) >= 6
+          ) {
+            animateToPercent(targetP, 1400);
+            logCascadeBar('center-stuck-force-target', {
+              domPercentBefore: +domP.toFixed(2),
+              targetPercent: +targetP.toFixed(2)
+            }, true);
+          }
+        }, 900);
+      }
 
       function handleCrsUpdate(e) {
         if (e.detail) {
@@ -3124,7 +3138,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       logCascadeBar('mount', {
         initialCrs: getCrsNumber(crsData),
         initialPercent: +currentPercentRef.current.toFixed(2)
-      }, true);
+      }, debugEnabledRef.current);
 
       window.addEventListener('heys:crs-updated', handleCrsUpdate);
       window.addEventListener('heysSyncCompleted', handleSyncCompleted);

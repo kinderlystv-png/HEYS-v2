@@ -214,6 +214,11 @@
                     _evtReason === 'cloud_load_complete' || _evtReason === 'cloud_load_error' ||
                     (_hasXpGained && !_evtIsInitial)) {
                     logSyncInfo('UI guard:OFF', { reason: _evtReason, isInitialLoad: _evtIsInitial, hasXpGained: _hasXpGained });
+                    // Отменяем fallback-таймер — guard снят event-driven, таймер больше не нужен
+                    if (levelGuardTimerRef.current) {
+                        clearTimeout(levelGuardTimerRef.current);
+                        levelGuardTimerRef.current = null;
+                    }
                     setLevelGuardActive(false);
                 }
 
@@ -445,6 +450,7 @@
                     progress: { current: 0, required: 100, percent: 0 },
                     unlockedCount: 0, totalAchievements: 25
                 };
+                logSyncInfo('UI client_changed:freshStats', { totalXP: freshStats.totalXP, level: freshStats.level, gameReady: !!HEYS.game });
                 setStats(freshStats);
                 setStreak(safeGetStreak());
                 setXpHistory(HEYS.game?.getXPHistory ? HEYS.game.getXPHistory() : []);
@@ -783,7 +789,7 @@
         };
 
         const { title, progress } = stats;
-        const progressPercent = Math.max(5, progress.percent); // Minimum 5% для визуального feedback
+        const progressPercent = levelGuardActive ? 0 : Math.max(5, progress.percent); // Minimum 5% для визуального feedback
         const avgDailyXP = xpHistory?.length
             ? Math.round(xpHistory.reduce((sum, d) => sum + (d?.xp || 0), 0) / xpHistory.length)
             : 0;
@@ -1034,26 +1040,25 @@
                 onClick: toggleExpanded
             },
                 // Level + Rank Badge (горизонтально, компактно)
+                // Всегда рендерим text + badge — только меняем opacity/visibility, без layout shift
                 React.createElement('div', {
-                    className: 'game-level-group',
-                    style: { color: title.color }
+                    className: `game-level-group${levelGuardActive ? ' is-syncing' : ''}`,
+                    style: { color: levelGuardActive ? 'rgba(255,255,255,0.5)' : title.color }
                 },
-                    levelGuardActive
-                        ? React.createElement('span', {
-                            className: 'game-level-sync-chip',
-                            title: 'Синхронизация XP…'
-                        },
-                            React.createElement('span', { className: 'game-level-sync-chip__dot' }),
-                            'Синхронизация XP…'
-                        )
-                        : React.createElement('span', { className: 'game-level-text' }, `${title.icon} ${stats.level}`),
-                    HEYS.game && !levelGuardActive && React.createElement('span', {
-                        className: 'game-rank-badge',
-                        style: {
+                    // Маленький dot-индикатор (absolute, не меняет размер group)
+                    React.createElement('span', { className: 'game-level-sync-dot' }),
+                    // Level text — всегда в DOM; skeleton-текст во время guard
+                    React.createElement('span', { className: 'game-level-text' },
+                        levelGuardActive ? '· · ·' : `${title.icon} ${stats.level}`
+                    ),
+                    // Rank badge — всегда в DOM; opacity:0 во время guard → нет скачка
+                    React.createElement('span', {
+                        className: `game-rank-badge${levelGuardActive ? ' guard-hidden' : ''}`,
+                        style: !levelGuardActive && HEYS.game ? {
                             background: `linear-gradient(135deg, ${HEYS.game.getRankBadge(stats.level).color}66 0%, ${HEYS.game.getRankBadge(stats.level).color} 100%)`,
                             color: stats.level >= 10 ? '#000' : '#fff'
-                        }
-                    }, HEYS.game.getRankBadge(stats.level).rank),
+                        } : undefined
+                    }, !levelGuardActive && HEYS.game ? HEYS.game.getRankBadge(stats.level).rank : '···'),
                     // Level Roadmap Tooltip — все звания
                     HEYS.game && HEYS.game.getAllTitles && !levelGuardActive && React.createElement('div', {
                         className: 'game-level-roadmap'
@@ -1082,14 +1087,14 @@
 
                 // Progress bar
                 React.createElement('div', {
-                    className: `game-progress ${isGlowing ? 'glowing' : ''} ${isShimmering ? 'shimmer' : ''} ${isPulsing ? 'pulse' : ''} ${progress.percent >= 85 && progress.percent < 100 ? 'near-goal' : ''}`,
+                    className: `game-progress ${levelGuardActive ? 'syncing' : ''} ${isGlowing ? 'glowing' : ''} ${isShimmering ? 'shimmer' : ''} ${isPulsing ? 'pulse' : ''} ${!levelGuardActive && progress.percent >= 85 && progress.percent < 100 ? 'near-goal' : ''}`,
                     onClick: handleProgressClick
                 },
                     React.createElement('div', {
                         className: 'game-progress-fill',
                         style: {
                             width: `${progressPercent}%`,
-                            background: getProgressGradient(progress.percent)
+                            background: levelGuardActive ? 'transparent' : getProgressGradient(progress.percent)
                         }
                     }),
                     React.createElement('div', {
@@ -1108,74 +1113,83 @@
                             'data-step': '75'
                         })
                     ),
-                    // Tooltip
-                    React.createElement('span', { className: 'game-progress-tooltip' },
+                    // Tooltip — скрываем пока guard активен
+                    !levelGuardActive && React.createElement('span', { className: 'game-progress-tooltip' },
                         `Ещё ${progress.required - progress.current} XP до ур.${stats.level + 1}`
                     )
                 ),
 
-                // Daily Multiplier
-                dailyMultiplier.actions > 0 && React.createElement('span', {
-                    className: `game-daily-mult ${dailyMultiplier.multiplier >= 2 ? 'high' : dailyMultiplier.multiplier > 1 ? 'active' : ''}`,
-                    title: dailyMultiplier.nextThreshold
-                        ? `${dailyMultiplier.actions} действий сегодня. Ещё ${dailyMultiplier.nextThreshold - dailyMultiplier.actions} до ${dailyMultiplier.nextMultiplier}x!`
-                        : `${dailyMultiplier.actions} действий сегодня. Максимальный бонус!`
+                // ═══ Правая часть бара: слоты ВСЕГДА в DOM, плавная анимация при загрузке ═══
+                // Обёрнуты в game-bar-slots — резервирует место, opacity 0→1 через CSS transition
+                React.createElement('div', {
+                    className: `game-bar-slots${levelGuardActive ? ' is-loading' : ' is-loaded'}`
                 },
-                    dailyMultiplier.multiplier > 1
-                        ? React.createElement('span', { className: 'game-daily-mult-value' }, `${dailyMultiplier.multiplier}x`)
-                        : `⚡${dailyMultiplier.actions}`
-                ),
-
-                // Streak
-                streak > 0 && React.createElement('span', {
-                    className: `game-streak ${getStreakClass(streak)}${streakJustGrew ? ' just-grew' : ''}`,
-                    title: `${streak} дней подряд в норме (считаем только завершённые дни)`
-                },
-                    React.createElement('span', {
-                        className: `game-streak__flame ${getStreakFlameClass(streak)}`
-                    }, '🔥'),
-                    React.createElement('span', { className: 'game-streak__count' }, streak)
-                ),
-
-                // Personal Best
-                HEYS.game && HEYS.game.isNewStreakRecord() && streak > 0 && React.createElement('span', {
-                    className: `game-personal-best${personalBestPulse ? ' pulse' : ''}`,
-                    title: 'Новый рекорд streak!'
-                }, '🏆'),
-
-                // Daily Bonus
-                dailyBonusAvailable && React.createElement('button', {
-                    className: 'game-daily-bonus',
-                    onClick: async (e) => {
-                        e.stopPropagation();
-                        if (!HEYS.game || dailyBonusLoading) return;
-                        setDailyBonusLoading(true);
-                        try {
-                            const claimed = await HEYS.game.claimDailyBonus();
-                            if (claimed) {
-                                setDailyBonusAvailable(false);
-                                return;
-                            }
-                            setDailyBonusAvailable(HEYS.game.canClaimDailyBonus());
-                        } finally {
-                            setDailyBonusLoading(false);
-                        }
+                    // Daily Multiplier
+                    dailyMultiplier.actions > 0 && React.createElement('span', {
+                        className: `game-daily-mult ${dailyMultiplier.multiplier >= 2 ? 'high' : dailyMultiplier.multiplier > 1 ? 'active' : ''}`,
+                        title: dailyMultiplier.nextThreshold
+                            ? `${dailyMultiplier.actions} действий сегодня. Ещё ${dailyMultiplier.nextThreshold - dailyMultiplier.actions} до ${dailyMultiplier.nextMultiplier}x!`
+                            : `${dailyMultiplier.actions} действий сегодня. Максимальный бонус!`
                     },
-                    title: 'Забрать ежедневный бонус!'
-                }, '🎁'),
+                        dailyMultiplier.multiplier > 1
+                            ? React.createElement('span', { className: 'game-daily-mult-value' }, `${dailyMultiplier.multiplier}x`)
+                            : `⚡${dailyMultiplier.actions}`
+                    ),
 
-                // XP counter
-                React.createElement('span', {
-                    className: `game-xp ${isXPCounting ? 'counting' : ''} ${bigXpGlow ? 'big-gain' : ''}`
-                }, `${progress.current}/${progress.required}`),
+                    // Streak
+                    streak > 0 && React.createElement('span', {
+                        className: `game-streak ${getStreakClass(streak)}${streakJustGrew ? ' just-grew' : ''}`,
+                        title: `${streak} дней подряд в норме (считаем только завершённые дни)`
+                    },
+                        React.createElement('span', {
+                            className: `game-streak__flame ${getStreakFlameClass(streak)}`
+                        }, '🔥'),
+                        React.createElement('span', { className: 'game-streak__count' }, streak)
+                    ),
 
-                // Expand button
+                    // Personal Best
+                    HEYS.game && HEYS.game.isNewStreakRecord() && streak > 0 && React.createElement('span', {
+                        className: `game-personal-best${personalBestPulse ? ' pulse' : ''}`,
+                        title: 'Новый рекорд streak!'
+                    }, '🏆'),
+
+                    // Daily Bonus
+                    dailyBonusAvailable && React.createElement('button', {
+                        className: 'game-daily-bonus',
+                        onClick: async (e) => {
+                            e.stopPropagation();
+                            if (!HEYS.game || dailyBonusLoading) return;
+                            setDailyBonusLoading(true);
+                            try {
+                                const claimed = await HEYS.game.claimDailyBonus();
+                                if (claimed) {
+                                    setDailyBonusAvailable(false);
+                                    return;
+                                }
+                                setDailyBonusAvailable(HEYS.game.canClaimDailyBonus());
+                            } finally {
+                                setDailyBonusLoading(false);
+                            }
+                        },
+                        title: 'Забрать ежедневный бонус!'
+                    }, '🎁'),
+
+                    // XP counter
+                    React.createElement('span', {
+                        className: `game-xp ${!levelGuardActive && isXPCounting ? 'counting' : ''} ${!levelGuardActive && bigXpGlow ? 'big-gain' : ''}`
+                    }, levelGuardActive
+                        ? React.createElement('span', { className: 'game-xp__skeleton' }, '?/?')
+                        : `${progress.current}/${progress.required}`
+                    )
+                ),
+
+                // Expand button — всегда виден
                 React.createElement('button', {
                     className: `game-expand-btn ${expanded ? 'expanded' : ''} ${notifPulse ? 'has-notif' : ''}`,
                     title: expanded ? 'Свернуть' : 'Подробнее'
                 }, expanded ? '▲' : '▼'),
 
-                // Theme toggle button
+                // Theme toggle button — всегда виден
                 React.createElement('button', {
                     className: 'hdr-theme-btn',
                     onClick: (e) => {

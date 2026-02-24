@@ -5787,6 +5787,26 @@
 
   HEYS.game = game;
 
+  // RC fix v6.5: Гарантируем запуск pipeline даже если heysSyncCompleted сработал ДО того,
+  // как gamification_v1.js зарегистрировал свой listener (большой файл, 6000+ строк).
+  // Симптом: UI mount:initial-stats {gameReady: false}, затем heysSyncCompleted логируется баром
+  // (его listener работает), но loadFromCloud() не вызывается — и guard висит 15 секунд.
+  // Механизм: если через 300ms после HEYS.game = game _initialSyncDone всё ещё false,
+  // значит heysSyncCompleted либо уже пришёл до нас (и мы его пропустили) либо ещё не придёт —
+  // в обоих случаях запускаем loadFromCloud() вручную.
+  setTimeout(() => {
+    if (!_initialSyncDone && HEYS.game) {
+      console.info('[🎮 Gamification] RC v6.5: missed heysSyncCompleted (fired before listener registered) — triggering loadFromCloud');
+      _initialSyncDone = true;
+      HEYS.game.loadFromCloud().catch(() => {
+        const fallbackStats = game.getStats();
+        window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+          detail: { ...fallbackStats, isInitialLoad: true, reason: 'cloud_load_complete' }
+        }));
+      });
+    }
+  }, 300);
+
   // 🔄 Автозапуск: ретроактивная проверка пропущенных достижений
   // Запускается один раз при загрузке страницы (с задержкой для инициализации)
   setTimeout(() => {
