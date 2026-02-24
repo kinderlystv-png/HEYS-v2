@@ -1780,6 +1780,59 @@ td:first-child input {
   }
 }
 
+/* ── Skeleton loading state: guardа активен, XP ещё грузится ── */
+.game-xp.syncing {
+  opacity: 0.75;
+}
+
+.game-xp__skeleton {
+  display: inline-block;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  animation: xpSkeletonPulse 1.3s ease-in-out infinite;
+}
+
+@keyframes xpSkeletonPulse {
+
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Shimmer-sweep по всей ширине progress track */
+.game-progress.syncing {
+  overflow: hidden;
+}
+
+.game-progress.syncing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.22) 35%,
+      rgba(255, 255, 255, 0.42) 50%,
+      rgba(255, 255, 255, 0.22) 65%,
+      transparent 100%);
+  animation: progressSyncSweep 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes progressSyncSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(400%);
+  }
+}
+
 /* Level up rainbow flash */
 .game-bar-container.level-up-flash {
   animation: rainbowFlash 1s ease-out;

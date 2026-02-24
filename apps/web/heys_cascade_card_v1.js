@@ -2668,10 +2668,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // ─────────────────────────────────────────────────────
   function CrsProgressBar() {
     var [crsData, setCrsData] = React.useState(window.HEYS && window.HEYS._lastCrs ? window.HEYS._lastCrs : null);
-    var [introProgress, setIntroProgress] = React.useState(0);
     var [isSettled, setIsSettled] = React.useState(false);
-    var [loadingOffset, setLoadingOffset] = React.useState(0); // Смещение от центра во время маятника
-    var [currentPercent, setCurrentPercent] = React.useState(50);
 
     function getCrsNumber(data) {
       if (!data) return null;
@@ -2688,11 +2685,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var isSettlingRef = React.useRef(false);
     var hasValidCrsRef = React.useRef(getCrsNumber(crsData) !== null);
     var pendulumTicksRef = React.useRef(0);
+    var settleArmedRef = React.useRef(false);
+    var lastPendulumOffsetRef = React.useRef(null);
     var currentPercentRef = React.useRef(50);
     var crsTargetRef = React.useRef(getCrsNumber(crsData));
     var debugLastLogTsRef = React.useRef(0);
     var debugLastReasonRef = React.useRef('');
     var introProgressRef = React.useRef(0);
+    var instanceIdRef = React.useRef('cb-' + Math.random().toString(36).slice(2, 8));
+    var containerRef = React.useRef(null);
     var greenRef = React.useRef(null);
     var orangeRef = React.useRef(null);
     var dividerRef = React.useRef(null);
@@ -2704,16 +2705,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       var ow = (100 - p) * k;
 
       if (greenRef.current) {
-        greenRef.current.style.right = (100 - p) + '%';
-        greenRef.current.style.width = gw + '%';
+        greenRef.current.style.setProperty('right', (100 - p) + '%', 'important');
+        greenRef.current.style.setProperty('width', gw + '%', 'important');
       }
       if (orangeRef.current) {
-        orangeRef.current.style.left = p + '%';
-        orangeRef.current.style.width = ow + '%';
+        orangeRef.current.style.setProperty('left', p + '%', 'important');
+        orangeRef.current.style.setProperty('width', ow + '%', 'important');
       }
       if (dividerRef.current) {
-        dividerRef.current.style.left = p + '%';
-        dividerRef.current.style.transform = 'translate(-50%, -50%) scale(' + k + ')';
+        dividerRef.current.style.setProperty('left', p + '%', 'important');
+        dividerRef.current.style.setProperty('transform', 'translate(-50%, -50%) scale(' + k + ')', 'important');
       }
     }
 
@@ -2731,23 +2732,120 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       var introRafId;
       var settleCheckTimer;
+      var domDebugTimer;
       var rafId;
       var settleRafId;
       var pendulumStartTs = 0;
 
+      var ensureSingleBar = function () {
+        if (!containerRef.current || !containerRef.current.parentElement) return;
+        var bars = containerRef.current.parentElement.querySelectorAll('.crs-bar-container');
+        if (bars.length <= 1) return;
+        bars.forEach(function (el) {
+          if (el !== containerRef.current) {
+            el.style.setProperty('display', 'none', 'important');
+          }
+        });
+        console.info('[cascadebar] duplicate-bars-hidden', { count: bars.length });
+      };
+
       // Инициализируем визуал строго в центре до старта интро.
       applyCascadeVisual(50, 0);
+      ensureSingleBar();
 
       var logCascadeBar = function (stage, payload, force, throttleMs) {
         var now = Date.now();
         var gap = typeof throttleMs === 'number' ? throttleMs : 1000;
         if (!force && (now - debugLastLogTsRef.current) < gap) return;
         debugLastLogTsRef.current = now;
-        console.info('[cascadebar] ' + stage, payload || {});
+        console.info('[cascadebar] ' + stage, Object.assign({ instanceId: instanceIdRef.current }, payload || {}));
+      };
+
+      var getDomSnapshot = function () {
+        var c = containerRef.current;
+        var g = greenRef.current;
+        var o = orangeRef.current;
+        var d = dividerRef.current;
+        if (!c || !g || !o || !d) return { ready: false };
+
+        var cRect = c.getBoundingClientRect();
+        var dRect = d.getBoundingClientRect();
+        var gRect = g.getBoundingClientRect();
+        var oRect = o.getBoundingClientRect();
+        var cw = cRect.width || 0;
+        var dividerCenterPx = (dRect.left + dRect.width / 2) - cRect.left;
+        var actualPercentFromDom = cw > 0 ? (dividerCenterPx / cw) * 100 : null;
+
+        var gcs = window.getComputedStyle(g);
+        var ocs = window.getComputedStyle(o);
+        var dcs = window.getComputedStyle(d);
+
+        return {
+          ready: true,
+          barsInDocument: document.querySelectorAll('.crs-bar-container').length,
+          barsInParent: c.parentElement ? c.parentElement.querySelectorAll('.crs-bar-container').length : 0,
+          containerWidth: +cw.toFixed(2),
+          dividerCenterPx: +dividerCenterPx.toFixed(2),
+          actualPercentFromDom: actualPercentFromDom === null ? null : +actualPercentFromDom.toFixed(2),
+          currentPercentState: +currentPercentRef.current.toFixed(2),
+          targetPercent: crsTargetRef.current === null ? null : +(crsTargetRef.current * 100).toFixed(2),
+          introProgress: +introProgressRef.current.toFixed(3),
+          isSettled: isSettledRef.current,
+          isSettling: isSettlingRef.current,
+          computed: {
+            greenRight: gcs.right,
+            greenWidth: gcs.width,
+            orangeLeft: ocs.left,
+            orangeWidth: ocs.width,
+            dividerLeft: dcs.left,
+            dividerTransform: dcs.transform
+          },
+          rects: {
+            containerLeft: +cRect.left.toFixed(2),
+            containerRight: +cRect.right.toFixed(2),
+            dividerLeft: +dRect.left.toFixed(2),
+            dividerRight: +dRect.right.toFixed(2),
+            greenLeft: +gRect.left.toFixed(2),
+            greenRight: +gRect.right.toFixed(2),
+            orangeLeft: +oRect.left.toFixed(2),
+            orangeRight: +oRect.right.toFixed(2)
+          }
+        };
+      };
+
+      window.__cascadebarDump = function () {
+        var snap = getDomSnapshot();
+        console.info('[cascadebar] manual-dump', Object.assign({ instanceId: instanceIdRef.current }, snap));
+        return snap;
       };
 
       var easeInOutCubic = function (t) {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      };
+
+      var beginSettleTransition = function (reason) {
+        if (isSettlingRef.current || isSettledRef.current) return;
+
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+          rafId = 0;
+        }
+
+        isSettlingRef.current = true;
+        settleArmedRef.current = false;
+        var settleTo = crsTargetRef.current !== null ? (crsTargetRef.current * 100) : currentPercentRef.current;
+
+        logCascadeBar('settle-begin', {
+          reason: reason,
+          from: +currentPercentRef.current.toFixed(2),
+          to: +settleTo.toFixed(2)
+        }, true);
+
+        animateToPercent(settleTo, SETTLE_DURATION_MS, function () {
+          isSettledRef.current = true;
+          isSettlingRef.current = false;
+          setIsSettled(true);
+        });
       };
 
       var animateToPercent = function (targetPercent, durationMs, onDone) {
@@ -2769,8 +2867,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           var p = Math.max(0, Math.min(1, (ts - startTs) / durationMs));
           var k = easeInOutCubic(p);
           var nextPercent = from + (to - from) * k;
-          setLoadingOffset(nextPercent - 50);
-          setCurrentPercent(nextPercent);
           currentPercentRef.current = nextPercent;
           applyCascadeVisual(nextPercent, 1);
 
@@ -2793,6 +2889,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       };
 
       var startPendulum = function () {
+        settleArmedRef.current = false;
+        lastPendulumOffsetRef.current = null;
+
         logCascadeBar('pendulum-start', {
           periodMs: PENDULUM_PERIOD_MS,
           amplitude: PENDULUM_AMPLITUDE
@@ -2805,8 +2904,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           pendulumTicksRef.current = elapsed;
           var phase = (elapsed / PENDULUM_PERIOD_MS) * Math.PI * 2;
           var next = Math.sin(phase) * PENDULUM_AMPLITUDE;
-          setLoadingOffset(next);
-          setCurrentPercent(50 + next);
+          var prevOffset = lastPendulumOffsetRef.current;
+          lastPendulumOffsetRef.current = next;
+
           currentPercentRef.current = 50 + next;
           applyCascadeVisual(50 + next, 1);
 
@@ -2819,6 +2919,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }, false, 1200);
 
           trySettleToActual();
+
+          // Старт settle НЕ в центре, а сразу после последнего качания влево:
+          // когда прошли левый экстремум и начали движение вправо.
+          if (settleArmedRef.current && prevOffset !== null) {
+            var nearLeftExtreme = prevOffset <= (-PENDULUM_AMPLITUDE * 0.88);
+            var turnedRight = next > prevOffset;
+            if (nearLeftExtreme && turnedRight) {
+              beginSettleTransition('left-extremum');
+              return;
+            }
+          }
 
           if (!isSettledRef.current) {
             rafId = requestAnimationFrame(animatePendulum);
@@ -2877,21 +2988,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           targetCrs: crsTargetRef.current
         }, true);
 
-        if (rafId) {
-          cancelAnimationFrame(rafId);
-          rafId = 0;
+        // Вооружаем settle и ждём левый экстремум маятника,
+        // чтобы не было замирания в центре.
+        if (!settleArmedRef.current) {
+          settleArmedRef.current = true;
+          logCascadeBar('settle-armed', {
+            strategy: 'start-after-left-swing',
+            currentPercent: +currentPercentRef.current.toFixed(2)
+          }, true);
         }
-
-        // Плавно доплываем к целевой позиции CRS.
-        isSettlingRef.current = true;
-        var settleTo = crsTargetRef.current !== null ? (crsTargetRef.current * 100) : currentPercentRef.current;
-
-        animateToPercent(settleTo, SETTLE_DURATION_MS, function () {
-          setLoadingOffset(0);
-          isSettledRef.current = true;
-          isSettlingRef.current = false;
-          setIsSettled(true);
-        });
       };
 
       // Жёсткое интро: покадрово раскрываем линии из центра ровно 1 секунду.
@@ -2900,7 +3005,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (!introStartTs) introStartTs = ts;
         var elapsed = ts - introStartTs;
         var p = Math.max(0, Math.min(1, elapsed / INTRO_DURATION_MS));
-        setIntroProgress(p);
         introProgressRef.current = p;
         applyCascadeVisual(50, p);
 
@@ -2923,6 +3027,52 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       settleCheckTimer = setInterval(function () {
         trySettleToActual();
       }, 120);
+
+      domDebugTimer = setInterval(function () {
+        var snap = getDomSnapshot();
+        if (!snap.ready) return;
+
+        var stateP = currentPercentRef.current;
+        var domP = typeof snap.actualPercentFromDom === 'number' ? snap.actualPercentFromDom : null;
+        var targetP = crsTargetRef.current === null ? null : (crsTargetRef.current * 100);
+
+        logCascadeBar('dom-brief', {
+          statePercent: +stateP.toFixed(2),
+          domPercent: domP === null ? null : +domP.toFixed(2),
+          targetPercent: targetP === null ? null : +targetP.toFixed(2),
+          intro: +introProgressRef.current.toFixed(3),
+          settled: isSettledRef.current,
+          settling: isSettlingRef.current,
+          barsInDocument: snap.barsInDocument,
+          barsInParent: snap.barsInParent
+        }, false, 900);
+
+        // Если DOM визуально уехал от расчётного state — принудительно синхронизируем.
+        if (domP !== null && Math.abs(domP - stateP) > 2.5) {
+          applyCascadeVisual(stateP, 1);
+          logCascadeBar('dom-desync-corrected', {
+            statePercent: +stateP.toFixed(2),
+            domPercentBefore: +domP.toFixed(2),
+            delta: +(stateP - domP).toFixed(2)
+          }, true);
+        }
+
+        // Если после settle DOM застрял возле центра, но target далеко — жёстко дотягиваем к target.
+        if (
+          isSettledRef.current &&
+          !isSettlingRef.current &&
+          targetP !== null &&
+          domP !== null &&
+          Math.abs(domP - 50) <= 2 &&
+          Math.abs(targetP - 50) >= 6
+        ) {
+          animateToPercent(targetP, 1400);
+          logCascadeBar('center-stuck-force-target', {
+            domPercentBefore: +domP.toFixed(2),
+            targetPercent: +targetP.toFixed(2)
+          }, true);
+        }
+      }, 900);
 
       function handleCrsUpdate(e) {
         if (e.detail) {
@@ -2982,10 +3132,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return function () {
         if (introRafId) cancelAnimationFrame(introRafId);
         if (settleCheckTimer) clearInterval(settleCheckTimer);
+        if (domDebugTimer) clearInterval(domDebugTimer);
         if (rafId) cancelAnimationFrame(rafId);
         if (settleRafId) cancelAnimationFrame(settleRafId);
         window.removeEventListener('heys:crs-updated', handleCrsUpdate);
         window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
+        if (window.__cascadebarDump) {
+          try { delete window.__cascadebarDump; } catch (_) { window.__cascadebarDump = undefined; }
+        }
       };
     }, []);
 
@@ -3013,7 +3167,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     return React.createElement(
       'div',
-      { className: 'crs-bar-container' },
+      { className: 'crs-bar-container', ref: containerRef },
       React.createElement('div', {
         className: 'crs-bar-green',
         ref: greenRef,
