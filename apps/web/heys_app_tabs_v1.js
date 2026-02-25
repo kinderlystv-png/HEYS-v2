@@ -70,8 +70,11 @@
 
     // v9.3: Non-blocking sync — DayTab renders immediately, sync updates reactively
     // Previously: DayTab blocked on full syncClient (5-15s skeleton in incognito)
-    // Now: fire-and-forget sync + heysSyncCompleted listener + 800ms fallback
-    const DAYTAB_SYNC_FALLBACK_MS = 800;
+    // Now: fire-and-forget sync + heysSyncCompleted listener + fallback safety net
+    // v9.5: Increased from 800ms to 5000ms — Phase A (profile+products+dayv2_today)
+    // typically arrives in 3-5s. 800ms fired BEFORE Phase A, causing empty render
+    // followed by jarring full re-render. 5000ms lets Phase A unlock DayTab with real data.
+    const DAYTAB_SYNC_FALLBACK_MS = 5000;
 
     function DayTabWithCloudSync(props) {
         const { clientId, products, selectedDate, setSelectedDate, subTab } = props;
