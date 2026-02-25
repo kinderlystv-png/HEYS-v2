@@ -980,7 +980,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var violationType = null;
 
     var meals = (day && day.meals) || [];
-    var normKcal = (normAbs && normAbs.kcal) || 2000;
+    // v3.5.1 fix: fallback 0 → kcal overrides are skipped when normAbs is unavailable
+    // (avoids false deficit_overshoot penalty when normKcal falls back to 2000)
+    var normKcal = (normAbs && normAbs.kcal) || 0;
     var hasNightHarm = false;
     var hasExcessKcal = false;
 
@@ -2299,7 +2301,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       var bd = new Date();
       bd.setDate(bd.getDate() - (bi + 1));
       var bDateKey = bd.toISOString().slice(0, 10);
-      if (dcsHistory[bDateKey] === undefined && prevDays30[bi]) {
+      // v3.5.1: also re-evaluate days with exact -0.500 value — these were likely
+      // set with the wrong normKcal=2000 fallback (deficit_overshoot false positive).
+      // getRetroactiveDcs does NOT use normKcal so it is immune to that bug.
+      var isWrongOverride = (dcsHistory[bDateKey] === -0.5);
+      if ((dcsHistory[bDateKey] === undefined || isWrongOverride) && prevDays30[bi]) {
         // Build surrounding window for this day's chronotype baseline:
         // use days bi-7..bi+7 from prevDays30 (excluding current day bi)
         var retroWindow = [];
@@ -2314,7 +2320,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     }
     if (backfillCount > 0) {
-      console.info('[HEYS.cascade.crs] 📋 Retroactive DCS backfill (v3.4.2 calibrated formula):', { backfilledDays: backfillCount });
+      console.info('[HEYS.cascade.crs] 📋 Retroactive DCS backfill/correction (v3.5.1):', { backfilledDays: backfillCount });
     }
 
     // Save updated history
@@ -2628,42 +2634,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function ChainDots(props) {
     var events = props.events;
     var [isRevealed, setIsRevealed] = React.useState(false);
-    var containerRef = React.useRef(null);
 
     React.useEffect(function () {
-      var t0 = performance.now();
-      console.info('[HEYS.cascadeDots] ⏱ mount, dots=' + (events ? events.length : 0) + ', t=0ms');
+      // Reset to hidden first, then double-rAF to reveal (so animation replays on data change)
+      setIsRevealed(false);
 
-      // Two rAFs: first paint with clip hidden, then start reveal animation.
       var raf = requestAnimationFrame(function () {
-        var t1 = performance.now();
-        console.info('[HEYS.cascadeDots] ⏱ rAF1 (first paint), Δ=' + (t1 - t0).toFixed(1) + 'ms');
-
         requestAnimationFrame(function () {
-          var t2 = performance.now();
-          console.info('[HEYS.cascadeDots] ⏱ rAF2 → setIsRevealed(true), Δ=' + (t2 - t0).toFixed(1) + 'ms');
           setIsRevealed(true);
-
-          // Check computed clip-path after class is applied
-          requestAnimationFrame(function () {
-            var el = containerRef.current;
-            if (el) {
-              var cs = getComputedStyle(el);
-              var clip = cs.clipPath || cs.webkitClipPath || 'n/a';
-              var trans = cs.transition || cs.webkitTransition || 'n/a';
-              var transDur = cs.transitionDuration || 'n/a';
-              console.info('[HEYS.cascadeDots] 🎨 post-reveal computed:', {
-                clipPath: clip,
-                transition: trans.slice(0, 80),
-                transitionDuration: transDur,
-                classList: el.className
-              });
-            }
-          });
         });
       });
       return function () { cancelAnimationFrame(raf); };
-    }, []);
+    }, [events ? events.length : 0]);
 
     if (!events || events.length === 0) return null;
 
@@ -2695,7 +2677,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     return React.createElement('div', {
-      ref: containerRef,
       className: 'cascade-chain-dots animate-always' + (isRevealed ? ' is-revealed' : '')
     }, children);
   }
@@ -2807,6 +2788,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var ceilingPct = Math.round(ceiling * 100);
     // Russian plural for дней подряд
     var peakDaysLabel = daysAtPeak === 1 ? '1 день' : (daysAtPeak >= 2 && daysAtPeak <= 4) ? daysAtPeak + ' дня' : daysAtPeak + ' дней';
+
+    // Animate progress bar 0 → progressPct on mount via CSS transition (double-rAF pump)
+    var animBarState = React.useState(0);
+    var animBarWidth = animBarState[0];
+    var setAnimBarWidth = animBarState[1];
+    var animBarReadyState = React.useState(false);
+    var animBarReady = animBarReadyState[0];
+    var setAnimBarReady = animBarReadyState[1];
+    var animBarRafRef = React.useRef(null);
+
+    React.useEffect(function () {
+      setAnimBarWidth(0);
+      setAnimBarReady(false);
+      if (animBarRafRef.current) cancelAnimationFrame(animBarRafRef.current);
+
+      // Two rAFs: first paint shows 0%, then enable CSS transition and jump to target
+      var raf1 = requestAnimationFrame(function () {
+        animBarRafRef.current = requestAnimationFrame(function () {
+          setAnimBarReady(true);    // remove no-transition → CSS transition kicks in
+          setAnimBarWidth(progressPct); // CSS handles 1.4s ease-out
+        });
+      });
+      return function () {
+        cancelAnimationFrame(raf1);
+        if (animBarRafRef.current) cancelAnimationFrame(animBarRafRef.current);
+      };
+    }, [progressPct]);
 
     var copyCascadeHistory = async function (e) {
       if (e && e.stopPropagation) e.stopPropagation();
@@ -3021,11 +3029,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // Цепочка точек (всегда показываем в шапке)
         React.createElement(ChainDots, { events: events }),
 
-        // Прогресс-бар
-        React.createElement('div', { className: 'cascade-card__progress-track' },
+        // Прогресс-бар (анимируется от 0 → progressPct за 1.4с)
+        React.createElement('div', { className: 'cascade-card__progress-track animate-always' },
           React.createElement('div', {
-            className: 'cascade-card__progress-bar',
-            style: { width: progressPct + '%', background: config.color }
+            className: 'cascade-card__progress-bar animate-always' + (animBarReady ? '' : ' no-transition'),
+            style: { width: animBarWidth + '%', background: config.color }
           })
         ),
 

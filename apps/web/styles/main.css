@@ -50,3 +50,20 @@
 .cascade-chain-dots.is-revealed {
     clip-path: inset(0 0% 0 0) !important;
 }
+
+/* ── Progress bar clip wrapper — clips fill/markers to rounded track shape (badge stays outside) ── */
+.goal-progress-bar-clip {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    overflow: hidden;
+}
+
+/* ── Cascade card progress bar — smooth 1.4s fill (override cached module) ── */
+.cascade-card__progress-bar {
+    transition: width 1.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.cascade-card__progress-bar.no-transition {
+    transition: none !important;
+}

@@ -70,7 +70,7 @@
             const timeoutId = setTimeout(() => {
                 setIsAnimating(false); // Включаем transition обратно
 
-                const duration = 800;
+                const duration = 1400;
                 const startTime = performance.now();
                 const targetKcal = eatenKcal; // Целевое значение калорий
                 const targetRatioPct = Math.round((eatenKcal / (optimum || 1)) * 100); // Целевой % для бэджа
@@ -109,7 +109,7 @@
                     cancelAnimationFrame(animationRef.current);
                 }
             };
-        }, [eatenKcal, optimum, mobileSubTab]); // mobileSubTab — для анимации при переключении вкладок
+        }, [eatenKcal, optimum, mobileSubTab, date]); // date — сброс анимации при смене дня
 
         // 🔔 Shake после завершения анимации sparkline (последовательно: Съедено → Перебор)
         const shakeTimerRef = useRef(null);
