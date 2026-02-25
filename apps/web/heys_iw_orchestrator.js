@@ -11,22 +11,22 @@
 // - buildWaveHistory() - построение истории волн за день
 // - determineWaveStatus() - определение статуса волны
 
-(function(global) {
+(function (global) {
   'use strict';
-  
+
   const HEYS = global.HEYS = global.HEYS || {};
-  
+
   // === MODULE VERSION ===
   const MODULE_VERSION = '1.0.0';
   const MODULE_NAME = 'InsulinWave.Orchestrator';
-  
+
   // === ИМПОРТ ИЗ ДРУГИХ МОДУЛЕЙ ===
   const I = HEYS.InsulinWave?.__internals;
   const utils = HEYS.InsulinWave?.utils;
   const Calc = HEYS.InsulinWave?.Calc;
   const V30 = HEYS.InsulinWave?.V30;
   const STATUS_CONFIG = I?.STATUS_CONFIG;
-  
+
   /**
    * Подготовка данных для расчёта волны
    * @param {Object} params - параметры
@@ -35,7 +35,7 @@
   const prepareWaveData = ({ meals, profile, dayData, baseWaveHours }) => {
     // Фильтруем приёмы с временем
     const mealsWithTime = meals.filter(m => m.time);
-    
+
     // Персональная базовая волна
     const personalBaseline = V30?.calculatePersonalBaselineWave(profile);
     let effectiveBaseWaveHours = baseWaveHours;
@@ -45,18 +45,18 @@
     if (!effectiveBaseWaveHours || isNaN(effectiveBaseWaveHours)) {
       effectiveBaseWaveHours = 3;
     }
-    
+
     // IR Score
     const irScore = I?.calculateIRScore(profile, dayData);
     const irScoreMultiplier = irScore?.waveMultiplier || 1.0;
-    
+
     // Сортируем по времени (последний первый)
     const sorted = [...mealsWithTime].sort((a, b) => {
       const timeA = (a.time || '').replace(':', '');
       const timeB = (b.time || '').replace(':', '');
       return timeB.localeCompare(timeA);
     });
-    
+
     return {
       mealsWithTime,
       sorted,
@@ -65,7 +65,7 @@
       personalBaseline
     };
   };
-  
+
   /**
    * Расчёт волны для одного приёма
    * @param {Object} params - параметры расчёта
@@ -90,10 +90,10 @@
       const currentMealTime = utils.timeToMinutes(meal.time);
       mealStackingResult = V30?.calculateMealStackingBonus(prevWaveEnd, currentMealTime, prevNutrients?.glycemicLoad);
     }
-    
+
     // Расчёт нутриентов
     const nutrients = Calc?.calculateMealNutrients(meal, pIndex, getProductFromItem);
-    
+
     // Форма пищи
     const getFoodForm = I?.getFoodForm;
     const hasResistantStarch = I?.hasResistantStarch;
@@ -107,41 +107,42 @@
       else if (itemForm === 'whole' && !mealFoodForm) mealFoodForm = 'whole';
       if (hasResistantStarch(prod)) hasResistantStarchInMeal = true;
     }
-    
+
     // Multipliers
     const multipliers = Calc?.calculateMultiplier(
-      nutrients.avgGI, 
-      nutrients.totalProtein, 
-      nutrients.totalFiber, 
+      nutrients.avgGI,
+      nutrients.totalProtein,
+      nutrients.totalFiber,
       nutrients.totalCarbs,
       nutrients.totalFat,
       nutrients.glycemicLoad,
       nutrients.hasLiquid,
       nutrients.insulinogenicBonus,
-      mealFoodForm
+      mealFoodForm,
+      nutrients.dominantProteinType || 'mixed'
     );
-    
+
     // Workout bonus
     const workoutBonus = Calc?.calculateWorkoutBonus(trainings);
-    
+
     // Activity context
     const calculateActivityContext = I?.calculateActivityContext;
-    const activityContext = calculateActivityContext ? 
+    const activityContext = calculateActivityContext ?
       calculateActivityContext({
         trainings,
         mealTime: meal.time,
         dayData,
         waveMinutes: effectiveBaseWaveHours * 60
       }) : { type: 'none', waveBonus: 0 };
-    
+
     // Circadian multiplier
     const mealHour = parseFloat(meal.time.split(':')[0]) + parseFloat(meal.time.split(':')[1]) / 60;
     const circadianData = Calc?.calculateCircadianMultiplier(mealHour);
-    
+
     // Wave phases
     const approxWaveMinutes = effectiveBaseWaveHours * 60 * multipliers.total * circadianData.multiplier;
     const wavePhases = V30?.calculateWavePhases(approxWaveMinutes, nutrients, activityContext.type !== 'none');
-    
+
     return {
       nutrients,
       multipliers,
@@ -155,7 +156,7 @@
       mealHour
     };
   };
-  
+
   /**
    * Построение истории волн за день
    * @param {Object} params - параметры
@@ -163,7 +164,7 @@
    */
   const buildWaveHistory = ({ sorted, waveData, pIndex, getProductFromItem, effectiveBaseWaveHours }) => {
     const waveHistory = [];
-    
+
     for (const meal of sorted) {
       const nutrients = Calc?.calculateMealNutrients(meal, pIndex, getProductFromItem);
       const mealHour = parseFloat(meal.time.split(':')[0]) + parseFloat(meal.time.split(':')[1]) / 60;
@@ -176,13 +177,15 @@
         nutrients.totalFat,
         nutrients.glycemicLoad,
         nutrients.hasLiquid,
-        nutrients.insulinogenicBonus
+        nutrients.insulinogenicBonus,
+        null,
+        nutrients.dominantProteinType || 'mixed'
       );
-      
+
       const duration = Math.round(effectiveBaseWaveHours * 60 * mult.total * circadian.multiplier);
       const startMin = utils.timeToMinutes(meal.time);
       const endMin = startMin + duration;
-      
+
       waveHistory.push({
         time: meal.time,
         startMin,
@@ -193,10 +196,10 @@
         mealName: meal.name || 'Приём пищи'
       });
     }
-    
+
     return waveHistory.reverse();
   };
-  
+
   /**
    * Определение статуса волны
    * @param {Object} params - параметры
@@ -207,11 +210,11 @@
     const totalMinutes = Math.round(insulinWaveHours * 60);
     const elapsed = totalMinutes - minutesRemaining;
     const progress = elapsed / totalMinutes;
-    
+
     let status = 'active';
     let statusLabel = STATUS_CONFIG?.active?.label || 'Активная волна';
     let statusColor = STATUS_CONFIG?.active?.color || '#3b82f6';
-    
+
     if (progress < 0.25) {
       status = 'rise';
       statusLabel = STATUS_CONFIG?.rise?.label || 'Подъём';
@@ -229,10 +232,10 @@
       statusLabel = STATUS_CONFIG?.lipolysis?.label || 'Липолиз';
       statusColor = STATUS_CONFIG?.lipolysis?.color || '#10b981';
     }
-    
+
     return { status, statusLabel, statusColor, progress };
   };
-  
+
   // === ЭКСПОРТ ===
   HEYS.InsulinWave = HEYS.InsulinWave || {};
   HEYS.InsulinWave.Orchestrator = {
@@ -244,5 +247,5 @@
     __version: MODULE_VERSION,
     __name: MODULE_NAME
   };
-  
+
 })(typeof window !== 'undefined' ? window : global);

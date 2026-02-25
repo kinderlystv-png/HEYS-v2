@@ -1,5 +1,5 @@
 // heys_day_insulin_wave_data_v1.js — insulin wave data computation for DayTab
-(function(global) {
+(function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.dayInsulinWaveData = HEYS.dayInsulinWaveData || {};
 
@@ -19,6 +19,19 @@
 
     const HEYSRef = heysGlobal || global.HEYS || {};
     const safeDay = day || {};
+
+    // Версионный счётчик: увеличивается когда InsulinWave-модуль загружается
+    // (postboot-1-game грузится позже boot-бандлов — нужен re-render при готовности модуля)
+    const [iwVersion, setIwVersion] = React.useState(() => HEYSRef.InsulinWave?.calculate ? 1 : 0);
+    React.useEffect(function () {
+      if (HEYSRef.InsulinWave?.calculate) return; // уже загружен
+      function onIWReady() {
+        setIwVersion(function (v) { return v + 1; });
+        console.info('[HEYS.dayInsulinWaveData] ✅ InsulinWave ready, re-computing wave data');
+      }
+      document.addEventListener('heys-insulinwave-ready', onIWReady, { once: true });
+      return function () { document.removeEventListener('heys-insulinwave-ready', onIWReady); };
+    }, []);
 
     return React.useMemo(() => {
       const prof = typeof getProfile === 'function' ? getProfile() : (HEYSRef.utils?.lsGet?.('heys_profile', {}) || {});
@@ -120,11 +133,12 @@
         subtext = '📈 Инсулин высокий, жир запасается';
       }
 
-      return { status, emoji, text, color, subtext, progress: progressPct, remaining: remainingMinutes,
+      return {
+        status, emoji, text, color, subtext, progress: progressPct, remaining: remainingMinutes,
         lastMealTime, lastMealTimeDisplay: lastMealTime, endTime, insulinWaveHours: baseWaveHours * giMultiplier, baseWaveHours, isNightTime,
         avgGI, giCategory: { color: giMultiplier === 1.2 ? '#22c55e' : giMultiplier === 1.0 ? '#eab308' : giMultiplier === 0.85 ? '#f97316' : '#ef4444', text: giCategory }, giMultiplier,
         waveHistory: [], overlaps: [], hasOverlaps: false, gapQuality: 'unknown'
       };
-    }, [safeDay.meals, safeDay.trainings, safeDay.sleepHours, safeDay.sleepQuality, safeDay.stressAvg, safeDay.waterMl, safeDay.householdMin, safeDay.steps, safeDay.cycleDay, safeDay.date, pIndex, getProductFromItem, currentMinute]);
+    }, [safeDay.meals, safeDay.trainings, safeDay.sleepHours, safeDay.sleepQuality, safeDay.stressAvg, safeDay.waterMl, safeDay.householdMin, safeDay.steps, safeDay.cycleDay, safeDay.date, pIndex, getProductFromItem, currentMinute, iwVersion]);
   };
 })(window);
