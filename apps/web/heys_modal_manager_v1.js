@@ -1,3 +1,4 @@
+window.__heysPerfMark && window.__heysPerfMark('postboot-3-ui: execute start');
 // heys_modal_manager_v1.js — Централизованное управление всеми модалками
 // Обеспечивает:
 // 1. Автоматическое закрытие других модалок при открытии новой

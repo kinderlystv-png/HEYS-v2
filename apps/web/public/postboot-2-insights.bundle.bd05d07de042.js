@@ -1,5 +1,6 @@
 
 /* ===== insights/pi_constants.js ===== */
+window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute start');
 (function () {
   if (typeof window === 'undefined') return;
 
@@ -36370,13 +36371,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // 🔧 Динамический пересчет insights при смене таба
     const insights = useMemo(() => {
       const daysBack = activeTab === 'today' ? 7 : 30;
-      return HEYS.PredictiveInsights.analyze({
+      // Optional chaining: postboot-3-ui (PredictiveInsights) может ещё не загрузиться при parallel postboot
+      return HEYS.PredictiveInsights?.analyze?.({
         daysBack,
         lsGet,
         profile,
         pIndex,
         optimum
-      });
+      }) || { patterns: [], healthScore: 0 };
     }, [activeTab, lsGet, profile, pIndex, optimum]);
 
     const patterns = insights.patterns || [];

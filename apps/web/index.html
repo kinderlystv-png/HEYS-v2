@@ -28,6 +28,10 @@
             };
             window.__heysPerfMark('HTML parsing started');
 
+            // 🦴 Skeleton timing: запоминаем момент первого paint
+            window.__heysSkelStart = Date.now();
+            window.__heysSkelVisible = true;
+
             // 🚀 SPECULATIVE PREFETCH: запускаем НАСТОЯЩИЙ delta fetch при парсинге HTML
             // Не ждём React (+0.9с) — начинаем запрос к API сразу → экономим ~1с
             // Если clientId/lastSyncTs нет — fallback на тёплый /health
@@ -302,7 +306,7 @@
     <link rel="preload" href="boot-calc.bundle.bb8a3a4c781b.js" as="script" />
     <link rel="preload" href="boot-day.bundle.7320c50778ec.js" as="script" />
     <link rel="preload" href="boot-app.bundle.bc6fb633ba7c.js" as="script" />
-    <link rel="preload" href="boot-init.bundle.01e94cb6ddd3.js" as="script" />
+    <link rel="preload" href="boot-init.bundle.fb89d1287524.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
 
@@ -352,7 +356,163 @@
             }
         })();
     </script>
-    <div id="root"></div>
+    <div id="root">
+        <!-- 🦴 Skeleton UI v1.0: показывается мгновенно (0ms) пока грузятся JS-бандлы.
+             React.render() автоматически перезаписывает содержимое <div id="root">.
+             Никакого JS не нужно — чистый HTML/CSS. -->
+        <div class="heys-skeleton"
+            style="max-width:480px;margin:0 auto;padding:16px;font-family:system-ui,-apple-system,sans-serif">
+            <!-- Header bar -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 16px">
+                <div style="width:90px;height:18px;background:#e5e7eb;border-radius:6px"></div>
+                <div style="display:flex;gap:8px">
+                    <div style="width:28px;height:28px;background:#e5e7eb;border-radius:50%"></div>
+                    <div style="width:28px;height:28px;background:#e5e7eb;border-radius:50%"></div>
+                </div>
+            </div>
+            <!-- Date selector -->
+            <div style="display:flex;justify-content:center;gap:6px;margin-bottom:16px">
+                <div style="width:36px;height:36px;background:#f3f4f6;border-radius:50%"></div>
+                <div style="width:36px;height:36px;background:#f3f4f6;border-radius:50%"></div>
+                <div style="width:36px;height:36px;background:#dbeafe;border-radius:50%;border:2px solid #93c5fd"></div>
+                <div style="width:36px;height:36px;background:#f3f4f6;border-radius:50%"></div>
+                <div style="width:36px;height:36px;background:#f3f4f6;border-radius:50%"></div>
+            </div>
+            <!-- Hero metrics card -->
+            <div style="background:#f9fafb;border-radius:16px;padding:20px;margin-bottom:12px">
+                <div style="display:flex;justify-content:space-between;margin-bottom:16px">
+                    <div style="text-align:center;flex:1">
+                        <div
+                            style="width:48px;height:48px;margin:0 auto 6px;background:linear-gradient(135deg,#dbeafe,#bfdbfe);border-radius:50%">
+                        </div>
+                        <div style="width:60px;height:10px;margin:0 auto;background:#e5e7eb;border-radius:4px"></div>
+                    </div>
+                    <div style="text-align:center;flex:1">
+                        <div
+                            style="width:48px;height:48px;margin:0 auto 6px;background:linear-gradient(135deg,#dcfce7,#bbf7d0);border-radius:50%">
+                        </div>
+                        <div style="width:60px;height:10px;margin:0 auto;background:#e5e7eb;border-radius:4px"></div>
+                    </div>
+                    <div style="text-align:center;flex:1">
+                        <div
+                            style="width:48px;height:48px;margin:0 auto 6px;background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:50%">
+                        </div>
+                        <div style="width:60px;height:10px;margin:0 auto;background:#e5e7eb;border-radius:4px"></div>
+                    </div>
+                </div>
+                <div style="width:100%;height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden">
+                    <div class="heys-skeleton__progress"
+                        style="width:0%;height:100%;background:linear-gradient(90deg,#93c5fd,#60a5fa);border-radius:4px">
+                    </div>
+                </div>
+            </div>
+            <!-- Meal cards -->
+            <div style="display:flex;flex-direction:column;gap:10px">
+                <div
+                    style="background:#fff;border:1px solid #f3f4f6;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px">
+                    <div style="width:32px;height:32px;background:#dbeafe;border-radius:8px"></div>
+                    <div style="flex:1">
+                        <div style="width:70px;height:10px;background:#e5e7eb;border-radius:4px;margin-bottom:6px">
+                        </div>
+                        <div style="width:120px;height:8px;background:#f3f4f6;border-radius:4px"></div>
+                    </div>
+                    <div style="width:40px;height:16px;background:#f3f4f6;border-radius:4px"></div>
+                </div>
+                <div
+                    style="background:#fff;border:1px solid #f3f4f6;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px">
+                    <div style="width:32px;height:32px;background:#dcfce7;border-radius:8px"></div>
+                    <div style="flex:1">
+                        <div style="width:50px;height:10px;background:#e5e7eb;border-radius:4px;margin-bottom:6px">
+                        </div>
+                        <div style="width:100px;height:8px;background:#f3f4f6;border-radius:4px"></div>
+                    </div>
+                    <div style="width:40px;height:16px;background:#f3f4f6;border-radius:4px"></div>
+                </div>
+                <div
+                    style="background:#fff;border:1px solid #f3f4f6;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px">
+                    <div style="width:32px;height:32px;background:#fef3c7;border-radius:8px"></div>
+                    <div style="flex:1">
+                        <div style="width:80px;height:10px;background:#e5e7eb;border-radius:4px;margin-bottom:6px">
+                        </div>
+                        <div style="width:90px;height:8px;background:#f3f4f6;border-radius:4px"></div>
+                    </div>
+                    <div style="width:40px;height:16px;background:#f3f4f6;border-radius:4px"></div>
+                </div>
+            </div>
+            <!-- Bottom tab bar -->
+            <div
+                style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #f3f4f6;padding:8px 0 env(safe-area-inset-bottom,0);display:flex;justify-content:space-around">
+                <div style="text-align:center;padding:4px 12px">
+                    <div style="width:22px;height:22px;margin:0 auto 3px;background:#93c5fd;border-radius:4px"></div>
+                    <div style="width:24px;height:6px;margin:0 auto;background:#bfdbfe;border-radius:3px"></div>
+                </div>
+                <div style="text-align:center;padding:4px 12px">
+                    <div style="width:22px;height:22px;margin:0 auto 3px;background:#e5e7eb;border-radius:4px"></div>
+                    <div style="width:24px;height:6px;margin:0 auto;background:#f3f4f6;border-radius:3px"></div>
+                </div>
+                <div style="text-align:center;padding:4px 12px">
+                    <div style="width:22px;height:22px;margin:0 auto 3px;background:#e5e7eb;border-radius:4px"></div>
+                    <div style="width:24px;height:6px;margin:0 auto;background:#f3f4f6;border-radius:3px"></div>
+                </div>
+                <div style="text-align:center;padding:4px 12px">
+                    <div style="width:22px;height:22px;margin:0 auto 3px;background:#e5e7eb;border-radius:4px"></div>
+                    <div style="width:24px;height:6px;margin:0 auto;background:#f3f4f6;border-radius:3px"></div>
+                </div>
+            </div>
+        </div>
+        <style>
+            .heys-skeleton__progress {
+                animation: heys-skel-progress 3s ease-out forwards;
+            }
+
+            @keyframes heys-skel-progress {
+                0% {
+                    width: 0%
+                }
+
+                30% {
+                    width: 40%
+                }
+
+                60% {
+                    width: 65%
+                }
+
+                100% {
+                    width: 85%
+                }
+            }
+
+            @media(prefers-color-scheme:dark) {
+                .heys-skeleton {
+                    background: #111827 !important;
+                    color: #f9fafb !important
+                }
+
+                .heys-skeleton div[style*="background:#f9fafb"] {
+                    background: #1f2937 !important
+                }
+
+                .heys-skeleton div[style*="background:#fff"] {
+                    background: #1f2937 !important;
+                    border-color: #374151 !important
+                }
+
+                .heys-skeleton div[style*="background:#e5e7eb"] {
+                    background: #374151 !important
+                }
+
+                .heys-skeleton div[style*="background:#f3f4f6"] {
+                    background: #374151 !important
+                }
+
+                .heys-skeleton div[style*="border-top:1px solid #f3f4f6"] {
+                    background: #111827 !important;
+                    border-color: #374151 !important
+                }
+            }
+        </style>
+    </div>
 
     <!-- Emoji style initialization - runs BEFORE twemoji loads -->
     <script>
@@ -581,7 +741,7 @@
     <script defer src="boot-calc.bundle.bb8a3a4c781b.js"></script>
     <script defer src="boot-day.bundle.7320c50778ec.js"></script>
     <script defer src="boot-app.bundle.bc6fb633ba7c.js"></script>
-    <script defer src="boot-init.bundle.01e94cb6ddd3.js"
+    <script defer src="boot-init.bundle.fb89d1287524.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
     <!-- PERF: Detect returning user (localStorage has profile) → skip card unfold animations -->
@@ -601,48 +761,178 @@
         })();
     </script>
 
-    <!-- 🚀 PERF v9.0 (2026-02-25): Post-boot → 3 бандла вместо 93 файлов.
+    <!-- 🚀 PERF v10.0 (2026-02-25): Post-boot → 3 бандла ПАРАЛЛЕЛЬНО.
          93 файла → postboot-1-game + postboot-2-insights + postboot-3-ui
-         Загрузка: sequential onload-chain после window.__heysAppReady
+         Загрузка: Promise.all after window.__heysAppReady (30.6s → ~10s).
+         Event-driven architecture (Session 4) гарантирует корректную коммуникацию
+         между бандлами независимо от порядка загрузки.
          Хеш в имени = вечный кэш (cache-first SW). -->
     <script>
         (function () {
             var POST_BOOT_BUNDLES = [
-                'postboot-1-game.bundle.3981d9991b03.js',
-                'postboot-2-insights.bundle.15ce93090754.js',
-                'postboot-3-ui.bundle.d0c9bf9edcdc.js'
+                'postboot-1-game.bundle.2f462b58293d.js',
+                'postboot-2-insights.bundle.bd05d07de042.js',
+                'postboot-3-ui.bundle.5115341c9cfc.js'
             ];
-            var idx = 0;
             var total = POST_BOOT_BUNDLES.length;
 
-            function loadNext() {
-                if (idx >= total) {
-                    console.info('[HEYS.postboot] ✅ All ' + total + ' post-boot bundles loaded');
-                    window.__heysPerfMark && window.__heysPerfMark('PostBoot: all bundles loaded');
-                    window.__heysPostbootDone = true;
-                    return;
+            var pbStartTime = 0;
+            var pbBundleTimes = {};
+
+            function loadAllParallel() {
+                var loaded = 0;
+                var failed = 0;
+                pbStartTime = Date.now();
+
+                POST_BOOT_BUNDLES.forEach(function (src) {
+                    var bundleStart = Date.now();
+                    var s = document.createElement('script');
+                    s.src = src;
+                    s.async = true; // parallel download + execute
+                    s.onload = function () {
+                        loaded++;
+                        var elapsed = Date.now() - bundleStart;
+                        var shortName = src.replace(/\.bundle\.[a-f0-9]+\.js$/, '');
+                        pbBundleTimes[shortName] = elapsed;
+                        window.__heysPerfMark && window.__heysPerfMark('PostBoot: ' + shortName + ' loaded (' + elapsed + 'ms)');
+                        if (loaded + failed === total) onAllDone();
+                    };
+                    s.onerror = function () {
+                        failed++;
+                        var shortName = src.replace(/\.bundle\.[a-f0-9]+\.js$/, '');
+                        pbBundleTimes[shortName] = -1;
+                        console.error('[HEYS.postboot] ❌ Failed to load: ' + src);
+                        if (loaded + failed === total) onAllDone();
+                    };
+                    document.head.appendChild(s);
+                });
+            }
+
+            function onAllDone() {
+                var totalMs = Date.now() - pbStartTime;
+                console.info('[HEYS.postboot] ✅ All ' + total + ' post-boot bundles loaded (parallel) in ' + totalMs + 'ms');
+                window.__heysPerfMark && window.__heysPerfMark('PostBoot: all bundles loaded (' + totalMs + 'ms parallel)');
+                window.__heysPostbootDone = true;
+
+                // 📊 Per-bundle timing summary
+                console.info('[HEYS.postboot] 📊 Per-bundle timing:', JSON.stringify(pbBundleTimes));
+
+                // 📊 Resource Timing API: real network metrics (gzip sizes, TTFB, etc.)
+                logResourceTimings();
+            }
+
+            // 📊 Log boot bundle Resource Timing at appReady (before postboot starts)
+            function logBootResourceTimings() {
+                try {
+                    if (!window.performance || !performance.getEntriesByType) return;
+                    var entries = performance.getEntriesByType('resource');
+                    var bootTotal = 0;
+                    var bootDecoded = 0;
+                    console.info('[PERF] 📦 Boot Resource Timing (at appReady):');
+                    entries.forEach(function (e) {
+                        if (e.name.indexOf('boot-') === -1 && e.name.indexOf('react-bundle') === -1) return;
+                        if (e.name.indexOf('postboot') !== -1) return;
+                        var shortName = e.name.split('/').pop().replace(/\.bundle\.[a-f0-9]+\.js.*$/, '').replace('.js', '');
+                        bootTotal += e.transferSize;
+                        bootDecoded += e.decodedBodySize;
+                        if (e.transferSize === 0) {
+                            console.info('[PERF]   💾 ' + shortName + ': CACHE HIT (' + (e.decodedBodySize / 1024).toFixed(0) + 'KB)');
+                        } else {
+                            var ratio = ((1 - e.transferSize / e.decodedBodySize) * 100).toFixed(0);
+                            console.info('[PERF]   📥 ' + shortName + ': ' + (e.transferSize / 1024).toFixed(0) + 'KB → ' + (e.decodedBodySize / 1024).toFixed(0) + 'KB (gzip ' + ratio + '%) | TTFB ' + Math.round(e.responseStart - e.requestStart) + 'ms, dl ' + Math.round(e.responseEnd - e.responseStart) + 'ms');
+                        }
+                    });
+                    if (bootTotal > 0) {
+                        console.info('[PERF] 📊 Boot total: ' + (bootTotal / 1024).toFixed(0) + 'KB wire / ' + (bootDecoded / 1024).toFixed(0) + 'KB decoded');
+                    } else if (bootDecoded > 0) {
+                        console.info('[PERF] 📊 Boot total: ALL FROM CACHE (' + (bootDecoded / 1024).toFixed(0) + 'KB decoded)');
+                    }
+                } catch (e) { /* Resource Timing unavailable */ }
+            }
+
+            // 📊 Resource Timing API: gzip transfer sizes, TTFB, download duration
+            function logResourceTimings() {
+                try {
+                    if (!window.performance || !performance.getEntriesByType) return;
+                    var entries = performance.getEntriesByType('resource');
+                    var bootBundles = [];
+                    var postbootBundles = [];
+                    var totalTransfer = 0;
+                    var totalDecoded = 0;
+
+                    entries.forEach(function (e) {
+                        if (e.name.indexOf('.bundle.') === -1 && e.name.indexOf('react-bundle') === -1) return;
+                        var shortName = e.name.split('/').pop().replace(/\.bundle\.[a-f0-9]+\.js.*$/, '').replace('.js', '');
+                        var info = {
+                            name: shortName,
+                            transferKB: (e.transferSize / 1024).toFixed(1),
+                            decodedKB: (e.decodedBodySize / 1024).toFixed(1),
+                            ratio: e.transferSize > 0 ? ((1 - e.transferSize / e.decodedBodySize) * 100).toFixed(0) + '%' : 'cache',
+                            ttfbMs: Math.round(e.responseStart - e.requestStart),
+                            downloadMs: Math.round(e.responseEnd - e.responseStart),
+                            totalMs: Math.round(e.responseEnd - e.startTime),
+                            cached: e.transferSize === 0
+                        };
+                        totalTransfer += e.transferSize;
+                        totalDecoded += e.decodedBodySize;
+
+                        if (shortName.indexOf('boot-') === 0) bootBundles.push(info);
+                        else if (shortName.indexOf('postboot-') === 0) postbootBundles.push(info);
+                        else bootBundles.unshift(info); // react-bundle
+                    });
+
+                    if (bootBundles.length > 0) {
+                        console.info('[PERF] 📦 Boot bundles (Resource Timing):');
+                        bootBundles.forEach(function (b) {
+                            if (b.cached) {
+                                console.info('[PERF]   💾 ' + b.name + ': FROM CACHE (' + b.decodedKB + 'KB decoded)');
+                            } else {
+                                console.info('[PERF]   📥 ' + b.name + ': ' + b.transferKB + 'KB wire → ' + b.decodedKB + 'KB decoded (gzip ' + b.ratio + ') | TTFB ' + b.ttfbMs + 'ms, download ' + b.downloadMs + 'ms, total ' + b.totalMs + 'ms');
+                            }
+                        });
+                    }
+                    if (postbootBundles.length > 0) {
+                        console.info('[PERF] 📦 PostBoot bundles (Resource Timing):');
+                        postbootBundles.forEach(function (b) {
+                            if (b.cached) {
+                                console.info('[PERF]   💾 ' + b.name + ': FROM CACHE (' + b.decodedKB + 'KB decoded)');
+                            } else {
+                                console.info('[PERF]   📥 ' + b.name + ': ' + b.transferKB + 'KB wire → ' + b.decodedKB + 'KB decoded (gzip ' + b.ratio + ') | TTFB ' + b.ttfbMs + 'ms, download ' + b.downloadMs + 'ms, total ' + b.totalMs + 'ms');
+                            }
+                        });
+                    }
+
+                    var comprRatio = totalTransfer > 0 ? ((1 - totalTransfer / totalDecoded) * 100).toFixed(0) : '100';
+                    console.info('[PERF] 📊 TOTAL: ' + (totalTransfer / 1024).toFixed(0) + 'KB wire / ' + (totalDecoded / 1024).toFixed(0) + 'KB decoded (gzip savings: ' + comprRatio + '%) | cached: ' + (totalTransfer === 0 ? 'ALL' : 'partial'));
+
+                    // 📊 Full session summary
+                    var bootTime = window.__heysBootStart ? ((Date.now() - window.__heysBootStart) / 1000).toFixed(1) : '?';
+                    var skelDuration = window.__heysSkelReplacedAt && window.__heysSkelStart
+                        ? ((window.__heysSkelReplacedAt - window.__heysSkelStart) / 1000).toFixed(1)
+                        : '?';
+                    console.info('[PERF] 🏁 SESSION SUMMARY: total=' + bootTime + 's, skeleton=' + skelDuration + 's visible, transfer=' + (totalTransfer / 1024).toFixed(0) + 'KB');
+                } catch (e) {
+                    console.warn('[PERF] ⚠️ Resource Timing unavailable:', e.message);
                 }
-                var src = POST_BOOT_BUNDLES[idx++];
-                var s = document.createElement('script');
-                s.src = src;
-                s.onload = s.onerror = function () {
-                    setTimeout(loadNext, 0);
-                };
-                document.head.appendChild(s);
             }
 
             var waitChecks = 0;
             function waitForAppReady() {
                 waitChecks++;
                 if (window.__heysAppReady) {
-                    console.info('[HEYS.postboot] 🚀 appReady detected, loading ' + total + ' post-boot bundles');
+                    var appReadyMs = window.__heysBootStart ? (Date.now() - window.__heysBootStart) : 0;
+                    console.info('[HEYS.postboot] 🚀 appReady detected after ' + (appReadyMs / 1000).toFixed(1) + 's, loading ' + total + ' post-boot bundles (parallel)');
                     window.__heysPerfMark && window.__heysPerfMark('PostBoot: bundle load started');
-                    setTimeout(loadNext, window.__heysHasLocalData ? 0 : 50);
+
+                    // 📊 Log boot bundle Resource Timing immediately (before postboot starts)
+                    logBootResourceTimings();
+
+                    setTimeout(loadAllParallel, window.__heysHasLocalData ? 0 : 50);
                     return;
                 }
                 if (waitChecks > 600) {
                     console.warn('[HEYS.postboot] ⚠️ appReady timeout, loading post-boot bundles anyway');
-                    setTimeout(loadNext, 0);
+                    setTimeout(loadAllParallel, 0);
                     return;
                 }
                 setTimeout(waitForAppReady, 100);

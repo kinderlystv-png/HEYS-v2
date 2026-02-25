@@ -1,3 +1,4 @@
+window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute start');
 (function () {
   if (typeof window === 'undefined') return;
 

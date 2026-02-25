@@ -727,7 +727,10 @@
       const liquidDairyCompensation = (mealNutrients.hasLiquid && mealNutrients.insulinogenicType === 'liquidDairy') ? 1.08 : 1.0;
 
       // Единая формула — идентична основному расчёту (v4.2.4)
-      const finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier * mealInsIndexWaveMult * mealSimpleRatioMult * irScoreMultiplier * liquidDairyCompensation;
+      let finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier * mealInsIndexWaveMult * mealSimpleRatioMult * irScoreMultiplier * liquidDairyCompensation;
+
+      // 🆕 v4.2.5: MAX_MULTIPLIER cap для waveHistory (ранее применялся только к основному расчёту)
+      if (finalMultiplier > 1.50) finalMultiplier = 1.50;
 
       // 🔬 DEBUG v3.2.2: детальный расчёт для последнего приёма (отключено для production)
       // Раскомментировать для отладки:

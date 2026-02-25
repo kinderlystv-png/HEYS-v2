@@ -1,6 +1,7 @@
 // heys_daily_missions_v1.js — Daily Missions Pool & Selection Engine
 // Отдельный модуль миссий дня. Загружается ДО heys_gamification_v1.js
 // v1.0.0
+window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start');
 (function (global) {
     'use strict';
 

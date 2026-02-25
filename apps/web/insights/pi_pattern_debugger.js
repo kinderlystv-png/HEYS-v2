@@ -196,13 +196,14 @@
     // 🔧 Динамический пересчет insights при смене таба
     const insights = useMemo(() => {
       const daysBack = activeTab === 'today' ? 7 : 30;
-      return HEYS.PredictiveInsights.analyze({
+      // Optional chaining: postboot-3-ui (PredictiveInsights) может ещё не загрузиться при parallel postboot
+      return HEYS.PredictiveInsights?.analyze?.({
         daysBack,
         lsGet,
         profile,
         pIndex,
         optimum
-      });
+      }) || { patterns: [], healthScore: 0 };
     }, [activeTab, lsGet, profile, pIndex, optimum]);
 
     const patterns = insights.patterns || [];

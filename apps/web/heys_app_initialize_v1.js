@@ -144,6 +144,14 @@
             if (!rootElement) {
                 return;
             }
+            // 🦴 Log skeleton replacement
+            if (window.__heysSkelVisible) {
+                var skelDur = window.__heysSkelStart ? (Date.now() - window.__heysSkelStart) : 0;
+                window.__heysSkelReplacedAt = Date.now();
+                window.__heysSkelVisible = false;
+                window.__heysPerfMark && window.__heysPerfMark('Skeleton: replaced after ' + skelDur + 'ms visible');
+                console.info('[HEYS.skeleton] 🦴 Skeleton was visible for ' + (skelDur / 1000).toFixed(1) + 's → React takes over');
+            }
             window.__heysPerfMark && window.__heysPerfMark('ReactDOM.createRoot: begin');
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(ErrorBoundary, null, React.createElement(AppComponent)));
