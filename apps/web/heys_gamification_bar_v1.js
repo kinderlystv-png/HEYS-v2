@@ -242,7 +242,8 @@
                     const hasReason = reason.length > 0;
                     // 🔒 v4.0: isInitialLoad — полностью подавляем модалки при загрузке/синке/смене клиента
                     const isInitialLoad = !!e?.detail?.isInitialLoad;
-                    const isSyncUpdate = isInitialLoad || (!hasXpGained && (!hasReason || reason === 'client_changed' || reason === 'xp_rebuild'));
+                    // 🔒 v4.1: xp_fast_sync — reconciliation при несоответствии XP-кеша, всегда suppress
+                    const isSyncUpdate = isInitialLoad || reason === 'xp_fast_sync' || (!hasXpGained && (!hasReason || reason === 'client_changed' || reason === 'xp_rebuild'));
 
                     if (newStats.level > prevLevel) {
                         if (!isSyncUpdate) {
@@ -418,9 +419,9 @@
             // RC-4 fix: Fallback поднят с 8s до 15s — на случай сетевых задержек или зависшего pipeline.
             if (levelGuardTimerRef.current) clearTimeout(levelGuardTimerRef.current);
             levelGuardTimerRef.current = setTimeout(() => {
-                logSyncInfo('UI guard:OFF', { reason: 'fallback_timeout_15000ms' });
+                logSyncInfo('UI guard:OFF', { reason: 'fallback_timeout_45000ms' });
                 setLevelGuardActive(false);
-            }, 15000);
+            }, 45000);
 
             return () => {
                 window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
@@ -440,9 +441,9 @@
                 // Guard включился, но pipeline стартует заново — нужен свежий safety timeout.
                 if (levelGuardTimerRef.current) clearTimeout(levelGuardTimerRef.current);
                 levelGuardTimerRef.current = setTimeout(() => {
-                    logSyncInfo('UI guard:OFF', { reason: 'client_changed_fallback_timeout_15000ms' });
+                    logSyncInfo('UI guard:OFF', { reason: 'client_changed_fallback_timeout_45000ms' });
                     setLevelGuardActive(false);
-                }, 15000);
+                }, 45000);
                 // Немедленно обнуляем все данные до дефолтов, пока грузятся новые
                 const freshStats = HEYS.game ? HEYS.game.getStats() : {
                     totalXP: 0, level: 1,

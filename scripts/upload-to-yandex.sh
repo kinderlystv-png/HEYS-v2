@@ -2,7 +2,7 @@
 # Upload script for Yandex Object Storage
 
 DIST_DIR="/Users/poplavskijanton/HEYS-v2/apps/web/dist"
-BUCKET="heys-static"
+BUCKET="heys-app"
 
 cd "$DIST_DIR"
 

@@ -303,9 +303,9 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
     <link rel="preload" href="boot-core.bundle.e0cfd58e1796.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.bb8a3a4c781b.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.35b159a72e66.js" as="script" />
     <link rel="preload" href="boot-day.bundle.7320c50778ec.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.bc6fb633ba7c.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.b5569296c11a.js" as="script" />
     <link rel="preload" href="boot-init.bundle.fb89d1287524.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
@@ -484,32 +484,59 @@
             }
 
             @media(prefers-color-scheme:dark) {
-                .heys-skeleton {
+                html:not([data-theme]) .heys-skeleton {
                     background: #111827 !important;
                     color: #f9fafb !important
                 }
 
-                .heys-skeleton div[style*="background:#f9fafb"] {
+                html:not([data-theme]) .heys-skeleton div[style*="background:#f9fafb"] {
                     background: #1f2937 !important
                 }
 
-                .heys-skeleton div[style*="background:#fff"] {
+                html:not([data-theme]) .heys-skeleton div[style*="background:#fff"] {
                     background: #1f2937 !important;
                     border-color: #374151 !important
                 }
 
-                .heys-skeleton div[style*="background:#e5e7eb"] {
+                html:not([data-theme]) .heys-skeleton div[style*="background:#e5e7eb"] {
                     background: #374151 !important
                 }
 
-                .heys-skeleton div[style*="background:#f3f4f6"] {
+                html:not([data-theme]) .heys-skeleton div[style*="background:#f3f4f6"] {
                     background: #374151 !important
                 }
 
-                .heys-skeleton div[style*="border-top:1px solid #f3f4f6"] {
+                html:not([data-theme]) .heys-skeleton div[style*="border-top:1px solid #f3f4f6"] {
                     background: #111827 !important;
                     border-color: #374151 !important
                 }
+            }
+
+            [data-theme="dark"] .heys-skeleton {
+                background: #111827 !important;
+                color: #f9fafb !important
+            }
+
+            [data-theme="dark"] .heys-skeleton div[style*="background:#f9fafb"] {
+                background: #1f2937 !important
+            }
+
+            [data-theme="dark"] .heys-skeleton div[style*="background:#fff"] {
+                background: #1f2937 !important;
+                border-color: #374151 !important
+            }
+
+            [data-theme="dark"] .heys-skeleton div[style*="background:#e5e7eb"] {
+                background: #374151 !important
+            }
+
+            [data-theme="dark"] .heys-skeleton div[style*="background:#f3f4f6"] {
+                background: #374151 !important
+            }
+
+            [data-theme="dark"] .heys-skeleton div[style*="border-top:1px solid #f3f4f6"] {
+                background: #111827 !important;
+                border-color: #374151 !important
             }
         </style>
     </div>
@@ -738,9 +765,9 @@
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
     <script defer src="boot-core.bundle.e0cfd58e1796.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.bb8a3a4c781b.js"></script>
+    <script defer src="boot-calc.bundle.35b159a72e66.js"></script>
     <script defer src="boot-day.bundle.7320c50778ec.js"></script>
-    <script defer src="boot-app.bundle.bc6fb633ba7c.js"></script>
+    <script defer src="boot-app.bundle.b5569296c11a.js"></script>
     <script defer src="boot-init.bundle.fb89d1287524.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
@@ -770,7 +797,7 @@
     <script>
         (function () {
             var POST_BOOT_BUNDLES = [
-                'postboot-1-game.bundle.2f462b58293d.js',
+                'postboot-1-game.bundle.1b16a058a8f9.js',
                 'postboot-2-insights.bundle.bd05d07de042.js',
                 'postboot-3-ui.bundle.5115341c9cfc.js'
             ];
