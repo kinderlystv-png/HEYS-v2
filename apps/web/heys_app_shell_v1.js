@@ -869,8 +869,19 @@
                     const dateStr = selectedDate || window.HEYS.utils.getTodayStr();
                     const day = window.HEYS.utils.lsGet('heys_dayv2_' + dateStr, {});
                     const dayTot = window.HEYS.utils.lsGet('heys_dayTot_' + dateStr, {});
-                    const normAbs = window.HEYS.utils.lsGet('heys_normAbs', {});
                     const prof = window.HEYS.utils.lsGet('heys_profile', {});
+                    // v3.5.1: compute normAbs properly (same as buildNutritionState in day tab)
+                    // heys_normAbs key is never written → was always {}, causing normKcal fallback
+                    // to 2000 and triggering false deficit_overshoot penalties for users eating
+                    // within their real TDEE-based goal.
+                    const normPerc = window.HEYS.utils.lsGet('heys_norms', {});
+                    const optimumInfo = window.HEYS.dayUtils?.getOptimumForDay?.(day, prof) || {};
+                    const normAbs = (window.HEYS.dayCalculations?.computeDailyNorms && optimumInfo.optimum)
+                        ? window.HEYS.dayCalculations.computeDailyNorms(optimumInfo.optimum, normPerc)
+                        : { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0, gi: 0, harm: 0 };
+                    console.info('[HEYS.AppTabsNav] ✅ CRS init normAbs:', {
+                        optimum: optimumInfo.optimum, normKcal: normAbs.kcal
+                    });
                     const pIndex = window.HEYS.products?.getIndex ? window.HEYS.products.getIndex() : {};
                     window.HEYS.CascadeCard.computeCascadeState(day, dayTot, normAbs, prof, pIndex);
                 } catch (e) {

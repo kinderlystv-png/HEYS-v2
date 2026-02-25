@@ -57,6 +57,33 @@
     } catch { }
   };
 
+  function resolveDateKey(rawDateKey) {
+    const isIsoDate = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+    if (isIsoDate(rawDateKey)) return rawDateKey;
+
+    if (rawDateKey instanceof Date && !Number.isNaN(rawDateKey.getTime())) {
+      return rawDateKey.toISOString().slice(0, 10);
+    }
+
+    if (typeof rawDateKey === 'number') {
+      const d = new Date(rawDateKey);
+      if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+    }
+
+    if (rawDateKey && typeof rawDateKey === 'object') {
+      if (isIsoDate(rawDateKey.dateKey)) return rawDateKey.dateKey;
+      if (isIsoDate(rawDateKey.date)) return rawDateKey.date;
+      if (rawDateKey.value instanceof Date && !Number.isNaN(rawDateKey.value.getTime())) {
+        return rawDateKey.value.toISOString().slice(0, 10);
+      }
+    }
+
+    const today = getTodayKey?.();
+    if (isIsoDate(today)) return today;
+    return new Date().toISOString().slice(0, 10);
+  }
+
   // ============================================================
   // WEIGHT STEP
   // ============================================================
@@ -438,9 +465,10 @@
     icon: '🛏️',
     component: SleepTimeStepComponent,
     getInitialData: (context) => {
+      const dateKey = resolveDateKey(context?.dateKey);
       // Если есть dateKey в context — берём данные из того дня
-      if (context && context.dateKey) {
-        const dayData = lsGet(`heys_dayv2_${context.dateKey}`, {}) || {};
+      if (dateKey) {
+        const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
         if (dayData.sleepStart && dayData.sleepEnd) {
           const sleepStartH = parseInt(dayData.sleepStart.split(':')[0], 10);
           const sleepStartM = parseInt(dayData.sleepStart.split(':')[1], 10);
@@ -475,7 +503,7 @@
       };
     },
     save: (data, context) => {
-      const dateKey = (context && context.dateKey) || getTodayKey();
+      const dateKey = resolveDateKey(context?.dateKey);
       const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
       const sleepStart = `${String(data.sleepStartH).padStart(2, '0')}:${String(data.sleepStartM).padStart(2, '0')}`;
       const sleepEnd = `${String(data.sleepEndH).padStart(2, '0')}:${String(data.sleepEndM).padStart(2, '0')}`;
@@ -487,6 +515,10 @@
       dayData.sleepHours = Math.round(sleepHours * 10) / 10;
       dayData.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, dayData);
+      console.info('[HEYS.sleepTime] ✅ Saved:', { dateKey, sleepStart, sleepEnd, sleepHours: dayData.sleepHours });
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: { date: dateKey, field: 'sleep', source: 'sleep-step', forceReload: true }
+      }));
     },
     xpAction: 'sleep_logged'
   });
@@ -646,9 +678,10 @@
     icon: '✨',
     component: SleepQualityStepComponent,
     getInitialData: (context) => {
+      const dateKey = resolveDateKey(context?.dateKey);
       // Если есть dateKey в context — берём данные из того дня
-      if (context && context.dateKey) {
-        const dayData = lsGet(`heys_dayv2_${context.dateKey}`, {}) || {};
+      if (dateKey) {
+        const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
         if (dayData.sleepQuality !== undefined) {
           return {
             sleepQuality: dayData.sleepQuality,
@@ -663,10 +696,19 @@
         sleepNote: ''
       };
     },
-    save: (data, context) => {
-      const dateKey = (context && context.dateKey) || getTodayKey();
+    save: (data, context, allStepData) => {
+      const dateKey = resolveDateKey(context?.dateKey);
       const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
       dayData.sleepQuality = data.sleepQuality;
+
+      // Убеждаемся, что не затираем данные времени сна из sleepTime-шага
+      // (HEYS.store может вернуть закэшированную версию без sleepStart)
+      if (allStepData?.sleepTime) {
+        const st = allStepData.sleepTime;
+        if (st.sleepStart) dayData.sleepStart = st.sleepStart;
+        if (st.sleepEnd) dayData.sleepEnd = st.sleepEnd;
+        if (st.sleepHours !== undefined) dayData.sleepHours = st.sleepHours;
+      }
 
       if (data.sleepNote && data.sleepNote.trim()) {
         const now = new Date();
@@ -679,6 +721,10 @@
 
       dayData.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, dayData);
+      console.info('[HEYS.sleepQuality] ✅ Saved:', { dateKey, sleepQuality: dayData.sleepQuality, sleepStart: dayData.sleepStart, sleepEnd: dayData.sleepEnd });
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: { date: dateKey, field: 'sleep', source: 'sleep-quality-step', forceReload: true }
+      }));
     }
   });
 

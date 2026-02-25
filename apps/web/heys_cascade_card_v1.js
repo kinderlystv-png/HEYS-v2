@@ -1,6 +1,6 @@
 // heys_cascade_card_v1.js — Cascade Card — «Ваш позитивный каскад»
 // Standalone компонент. Визуализация цепочки здоровых решений в реальном времени.
-// v3.1.0 | 2026-02-20 — Cascade Rate Score (CRS) cumulative momentum + goal-aware calorie penalty
+// v3.6.0 | 2026-02-25 — CRS base+todayBoost, goal-aware calorie penalty, chronotype-adaptive
 // Фильтр в консоли: [HEYS.cascade]
 if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 (function (global) {
@@ -200,6 +200,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const CRS_DECAY = 0.95;            // EMA decay factor (α) (v3.3.0: 0.92→0.95, half-life 14d вместо 8d)
   const CRS_WINDOW = 30;             // days for EMA computation
   const CRS_DCS_CLAMP_NEG = -0.3;    // inertia protection for normal bad days
+  const CRS_TODAY_BOOST = 0.03;      // v3.6.0: today's DCS contribution to display CRS (max +3%)
   const CRS_CEILING_BASE = 0.65;     // starting ceiling for all users
   const CRS_KEY_VERSION = 'v7';      // localStorage schema version (v7: chronotype-adaptive meals, MT=8.5)
   const CRS_PREV_KEY_VERSION = 'v6';  // for migration detection
@@ -1155,32 +1156,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   /**
-   * Compute CRS via Exponential Moving Average (EMA).
-   * 30-day window, α=0.95 decay. Days without data are skipped.
-   * v3.3.0: today (i=0) is weighted by day completion fraction
-   * to avoid incomplete day dragging CRS down.
+   * Compute CRS base via Exponential Moving Average (EMA).
+   * v3.6.0: only completed days (i≥1). Today's DCS is added as
+   * todayBonus = DCS × CRS_TODAY_BOOST in computeCascadeState.
+   * This prevents incomplete day from suppressing CRS while
+   * still giving instant feedback via the boost term.
    */
   function computeCascadeRate(dcsByDate, ceiling, todayDate) {
     var weights = [];
     var values = [];
     var today = todayDate ? new Date(todayDate + 'T12:00:00') : new Date();
 
-    // v3.3.0: compute day progress fraction for today
-    var now = new Date();
-    var todayProgress = Math.max(0.2, Math.min(1.0,
-      (now.getHours() * 60 + now.getMinutes()) / 1440));
-
-    for (var i = 0; i < CRS_WINDOW; i++) {
+    // v3.6.0: start from i=1 (yesterday) — today excluded from base EMA
+    for (var i = 1; i < CRS_WINDOW; i++) {
       var d = new Date(today);
       d.setDate(d.getDate() - i);
       var dateKey = d.toISOString().slice(0, 10);
       var dcsVal = dcsByDate[dateKey];
 
       if (dcsVal !== undefined && dcsVal !== null) {
-        var weight = Math.pow(CRS_DECAY, i);
-        // v3.3.0: discount today's weight by day completion fraction
-        // At 8am weight ×0.33, at 17:00 ×0.71, at 23:59 ×1.0
-        if (i === 0) weight *= todayProgress;
+        var weight = Math.pow(CRS_DECAY, i - 1); // yesterday = α⁰ = 1.0
         weights.push(weight);
         values.push(dcsVal * weight);
       }
@@ -1233,8 +1228,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function computeCascadeState(day, dayTot, normAbs, prof, pIndex) {
     var t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 
-    console.info('[HEYS.cascade] ─── computeCascadeState v3.3.0 START ────────');
-    console.info('[HEYS.cascade] 🧬 v3.3.0 features: CRS cumulative momentum | soft chain degradation | continuous scoring | personal baselines | circadian awareness | confidence layer | day-type detection | cross-factor synergies | goal-aware calorie penalty | chronotype-tolerant sleep scoring | partial-day weighting');
+    console.info('[HEYS.cascade] ─── computeCascadeState v3.6.0 START ────────');
+    console.info('[HEYS.cascade] 🧬 v3.6.0 features: CRS = base(EMA completed days) + DCS×0.03 | soft chain degradation | continuous scoring | personal baselines | circadian awareness | confidence layer | day-type detection | cross-factor synergies | goal-aware calorie penalty | chronotype-tolerant sleep scoring');
     console.info('[HEYS.cascade] 📥 Input data:', {
       hasMeals: !!(day && day.meals && day.meals.length),
       mealsCount: (day && day.meals && day.meals.length) || 0,
@@ -2273,7 +2268,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     });
 
     // ── ШАГ 15b: CRS (Cascade Rate Score) v3.1.0 — кумулятивный импульс ──
-    console.info('[HEYS.cascade.crs] ─── CRS v3.1.0 computation START ────────');
+    console.info('[HEYS.cascade.crs] ─── CRS v3.6.0 computation START ────────');
 
     // 1. Compute Daily Contribution Score (DCS)
     var dcsResult = computeDailyContribution(score, day, normAbs, pIndex, prof);
@@ -2332,16 +2327,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     console.info('[HEYS.cascade.crs] 🏔️ Individual ceiling:', ceilingResult);
 
-    // 5. Compute CRS via EMA
-    var crs = computeCascadeRate(dcsHistory, ceiling, todayStr);
+    // 5. Compute CRS via EMA (base = completed days only) + today's boost
+    var crsBase = computeCascadeRate(dcsHistory, ceiling, todayStr);
+    // v3.6.0: today's actions give instant visible boost to CRS
+    // DCS 0→1 maps to 0→+3% on top of base. Clamped to ceiling.
+    var todayBoost = Math.max(0, todayDcs) * CRS_TODAY_BOOST;
+    var crs = +clamp(crsBase + todayBoost, 0, ceiling).toFixed(3);
 
-    console.info('[HEYS.cascade.crs] 📈 CRS (Cascade Rate Score):', {
-      crs: +crs.toFixed(3),
+    console.info('[HEYS.cascade.crs] 📈 CRS (Cascade Rate Score) v3.6.0:', {
+      crsBase: +crsBase.toFixed(3),
+      todayBoost: +todayBoost.toFixed(4),
+      crs: crs,
+      formula: 'CRS_base(' + crsBase.toFixed(3) + ') + DCS(' + todayDcs.toFixed(3) + ') × ' + CRS_TODAY_BOOST + ' = ' + crs,
       ceiling: ceiling,
       dcsToday: +todayDcs.toFixed(3),
       dcsHistoryDays: Object.keys(dcsHistory).length,
       emaDecay: CRS_DECAY,
-      window: CRS_WINDOW + ' days'
+      window: CRS_WINDOW + ' days (completed only)'
     });
 
     // 6. Compute CRS trend
@@ -2375,7 +2377,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       todayDcs: +todayDcs.toFixed(3)
     });
 
-    console.info('[HEYS.cascade.crs] ─── CRS v3.1.0 computation DONE ────────');
+    console.info('[HEYS.cascade.crs] ─── CRS v3.6.0 computation DONE ────────');
 
     // ── ШАГ 16: Определение состояния (v3.1.0 CRS-driven) ───
     // v3.1.0: состояние определяется по CRS (кумулятивный импульс),
@@ -2485,9 +2487,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // ── ИТОГОВЫЙ РЕЗУЛЬТАТ ────────────────────────────────
     var elapsed = ((typeof performance !== 'undefined') ? performance.now() : Date.now()) - t0;
 
-    console.info('[HEYS.cascade] ✅ computeCascadeState v3.3.0 DONE:', {
+    console.info('[HEYS.cascade] ✅ computeCascadeState v3.6.0 DONE:', {
       state: state,
       crs: +crs.toFixed(3),
+      crsBase: +crsBase.toFixed(3),
+      todayBoost: +todayBoost.toFixed(4),
       crsTrend: crsTrend,
       ceiling: ceiling,
       dailyScore: +score.toFixed(2),
@@ -2511,14 +2515,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       nextStepHint: nextStepHint,
       elapsed: elapsed.toFixed(2) + 'ms'
     });
-    console.info('[HEYS.cascade] 🧬 v3.1.0 subsystems:', {
+    console.info('[HEYS.cascade] 🧬 v3.6.0 subsystems:', {
       crs: {
         value: +crs.toFixed(3),
+        base: +crsBase.toFixed(3),
+        todayBoost: +todayBoost.toFixed(4),
+        formula: 'base + DCS × ' + CRS_TODAY_BOOST,
         ceiling: ceiling,
         dcsToday: +todayDcs.toFixed(3),
         trend: crsTrend,
         emaDecay: CRS_DECAY,
-        window: CRS_WINDOW,
+        window: CRS_WINDOW + ' (completed days only)',
         thresholds: CRS_THRESHOLDS,
         hasCriticalViolation: dcsResult.hasCriticalViolation
       },
@@ -2539,7 +2546,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         totalPenalty: totalPenalty,
         warningsCount: warnings.length
       },
-      stateModel: 'CRS-driven (STRONG≥0.75, GROWING≥0.45, BUILDING≥0.20, RECOVERY>0.05, BROKEN≤0.05)',
+      stateModel: 'CRS = base(EMA completed days) + DCS×0.03 (STRONG≥0.75, GROWING≥0.45, BUILDING≥0.20, RECOVERY>0.05, BROKEN≤0.05)',
       scoringMethod: 'continuous (sigmoid/bell-curve/log2/tanh)',
       personalBaselines: '14-day rolling median → 30-day for CRS',
       thresholds: { CRS: CRS_THRESHOLDS, daily: SCORE_THRESHOLDS, MOMENTUM_TARGET: MOMENTUM_TARGET },
@@ -2593,6 +2600,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       rawWeights: rawWeights,
       // v3.1.0 CRS fields
       crs: +crs.toFixed(3),
+      crsBase: +crsBase.toFixed(3),        // v3.6.0: EMA of completed days only
+      todayBoost: +todayBoost.toFixed(4),   // v3.6.0: DCS × 0.03
       ceiling: ceiling,
       dailyContribution: +todayDcs.toFixed(3),
       dailyMomentum: +dailyMomentum.toFixed(3),
@@ -2611,7 +2620,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     window.HEYS = window.HEYS || {};
     window.HEYS._lastCrs = result;
 
-    console.info('[dotcascade] ⚙️ computeCascadeState finished. New CRS:', result.crs, 'Events:', events.map(function (e) { return e.type + '(' + e.weight.toFixed(2) + ')'; }).join(', '));
+    console.info('[HEYS.cascade] ⚙️ computeCascadeState finished. New CRS:', result.crs, 'Events:', events.map(function (e) { return e.type + '(' + e.weight.toFixed(2) + ')'; }).join(', '));
 
     window.dispatchEvent(new CustomEvent('heys:crs-updated', { detail: result }));
 
@@ -2769,6 +2778,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var warnings = props.warnings;
     var crsTrend = props.crsTrend || 'flat';
     var crs = props.crs || 0;
+    var crsBase = props.crsBase || 0;         // v3.6.0
+    var todayBoost = props.todayBoost || 0;    // v3.6.0
     var ceiling = props.ceiling || 0;
     var dailyMomentum = props.dailyMomentum || 0;
     var dailyContribution = props.dailyContribution || 0;
@@ -2845,6 +2856,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           'Сводка:',
           '  • Состояние: ' + state,
           '  • CRS: ' + progressPct + '% (' + (+crs.toFixed(3)) + ')',
+          '  • CRS база: ' + Math.round(crsBase * 100) + '% | бонус дня: +' + (todayBoost * 100).toFixed(1) + '%',
           '  • Потолок (ceiling): ' + ceilingPct + '% (' + (+ceiling.toFixed(3)) + ')',
           '  • Тренд CRS: ' + crsTrend,
           '  • Дней на пике (DCS ≥ 0.5): ' + daysAtPeak,
@@ -3769,9 +3781,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     STATE_CONFIG: STATE_CONFIG,
     MESSAGES: MESSAGES,
     CRS_THRESHOLDS: CRS_THRESHOLDS,
-    VERSION: '3.3.0'
+    VERSION: '3.6.0'
   };
 
-  console.info('[HEYS.cascade] ✅ Module loaded v3.3.0 | CRS (Cascade Rate Score) cumulative momentum | EMA α=0.95, 30-day window, individual ceiling, partial-day weighting | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Goal-aware calorie penalty (deficit/bulk) | Filter: [HEYS.cascade] | Sub-filter: [HEYS.cascade.crs] [HEYS.cascade.deficit]');
+  console.info('[HEYS.cascade] ✅ Module loaded v3.6.0 | CRS = base(EMA completed days) + DCS×0.03 | EMA α=0.95, 30-day window, individual ceiling | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Goal-aware calorie penalty (deficit/bulk) | Filter: [HEYS.cascade] | Sub-filter: [HEYS.cascade.crs] [HEYS.cascade.deficit]');
 
 })(typeof window !== 'undefined' ? window : global);
