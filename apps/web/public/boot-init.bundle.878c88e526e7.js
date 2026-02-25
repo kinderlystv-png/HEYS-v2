@@ -3642,6 +3642,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     function getCrsNumber(data) {
       if (!data) return null;
+      // v3.6.1: Don't trust CRS computed from empty data (no synced days yet).
+      // Bar stays in pendulum mode until real data with historicalDays >= 1 arrives.
+      if (!data.historicalDays || data.historicalDays < 1) return null;
       var raw = data.crs;
       if (typeof raw === 'number' && isFinite(raw)) return raw;
       if (typeof raw === 'string') {
@@ -4188,10 +4191,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     STATE_CONFIG: STATE_CONFIG,
     MESSAGES: MESSAGES,
     CRS_THRESHOLDS: CRS_THRESHOLDS,
-    VERSION: '3.6.0'
+    VERSION: '3.6.1'
   };
 
-  console.info('[HEYS.cascade] ✅ Module loaded v3.6.0 | CRS = base(EMA completed days) + DCS×0.03 | EMA α=0.95, 30-day window, individual ceiling | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Goal-aware calorie penalty (deficit/bulk) | Filter: [HEYS.cascade] | Sub-filter: [HEYS.cascade.crs] [HEYS.cascade.deficit]');
+  console.info('[HEYS.cascade] ✅ Module loaded v3.6.1 | CRS = base(EMA completed days) + DCS×0.03 | EMA α=0.95, 30-day window, individual ceiling | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Goal-aware calorie penalty (deficit/bulk) | Filter: [HEYS.cascade] | Sub-filter: [HEYS.cascade.crs] [HEYS.cascade.deficit]');
 
 })(typeof window !== 'undefined' ? window : global);
 

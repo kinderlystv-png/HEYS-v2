@@ -20107,8 +20107,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         if (!isDeltaFastPath) {
           // �🛡️ КРИТИЧНО: Перед загрузкой из облака — СНАЧАЛА отправляем pending изменения!
           // Иначе локальные изменения будут затёрты при скачивании старых данных с сервера
+          // 🛡️ Перед загрузкой из облака — отправляем pending изменения
+          // Иначе локальные изменения будут затёрты при скачивании старых данных с сервера
           const pendingCount = cloud.getPendingCount?.() || 0;
-          if (pendingCount > 0 || _uploadInProgress) {
+
+          // v9.4: Skip flush for fresh client syncs (no previous sync for this client)
+          // Pending items are from old client or empty-data system writes (CRS=0, cascade empty)
+          // They will be recomputed after real data is downloaded — flushing is wasteful
+          const hasPreviousSync = cloud._lastClientSync?.clientId === client_id;
+          const shouldFlush = hasPreviousSync && (pendingCount > 0 || _uploadInProgress);
+
+          if (shouldFlush) {
             logCritical(`🔄 [SYNC] Flushing ${pendingCount} pending items (uploadInProgress: ${_uploadInProgress}) BEFORE download...`);
             const flushed = await cloud.flushPendingQueue(30000); // 🔄 v5: 30s (was 8s — too short for throttled network)
             if (!flushed) {
@@ -20119,6 +20128,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                 return;
               }
             }
+          } else if (pendingCount > 0) {
+            logCritical(`⏭️ [SYNC] Skip flush for fresh client sync (${pendingCount} pending items from previous context)`);
           }
 
           // 🧹 Очистка невалидных продуктов перед синхронизацией (локальные)

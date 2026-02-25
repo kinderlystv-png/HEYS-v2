@@ -68,6 +68,11 @@
         );
     }
 
+    // v9.3: Non-blocking sync — DayTab renders immediately, sync updates reactively
+    // Previously: DayTab blocked on full syncClient (5-15s skeleton in incognito)
+    // Now: fire-and-forget sync + heysSyncCompleted listener + 800ms fallback
+    const DAYTAB_SYNC_FALLBACK_MS = 800;
+
     function DayTabWithCloudSync(props) {
         const { clientId, products, selectedDate, setSelectedDate, subTab } = props;
         const [loading, setLoading] = React.useState(true);
@@ -76,29 +81,68 @@
 
         React.useEffect(() => {
             let cancelled = false;
+            let fallbackTimer = null;
             const cloud = window.HEYS && window.HEYS.cloud;
-            const finish = () => {
-                if (!cancelled) setLoading(false);
+
+            const finish = (reason) => {
+                if (cancelled) return;
+                cancelled = true; // prevent double-fire from event + timer + catch
+                if (fallbackTimer) clearTimeout(fallbackTimer);
+                window.removeEventListener('heysSyncCompleted', onSyncCompleted);
+                console.info('[HEYS.sceleton] ✅ DayTab unlocked:', reason);
+                setLoading(false);
             };
-            if (clientId && cloud && typeof cloud.syncClient === 'function') {
-                const need =
-                    typeof cloud.shouldSyncClient === 'function'
-                        ? cloud.shouldSyncClient(clientId, 4000)
-                        : true;
-                if (need) {
-                    setLoading(true);
-                    cloud.syncClient(clientId)
-                        .then(finish)
-                        .catch((err) => {
-                            console.warn('[HEYS] Sync failed, using local cache:', err?.message || err);
-                            finish();
-                        });
-                } else finish();
-            } else {
-                finish();
+
+            // Listen for heysSyncCompleted — dispatched by Phase A (critical keys)
+            // or by full sync completion. Either way, data is ready to render.
+            // v9.4: Filter by clientId — ignore synthetic events from Gamification (no clientId)
+            const onSyncCompleted = (event) => {
+                const evClientId = event?.detail?.clientId;
+                if (!evClientId) return; // synthetic event without clientId — skip
+                if (evClientId !== clientId && !clientId.startsWith(evClientId)) return; // different client
+                finish('heysSyncCompleted (Phase A or full)');
+            };
+
+            if (!clientId || !cloud || typeof cloud.syncClient !== 'function') {
+                finish('no cloud or clientId');
+                return;
             }
+
+            const need =
+                typeof cloud.shouldSyncClient === 'function'
+                    ? cloud.shouldSyncClient(clientId, 4000)
+                    : true;
+
+            // Fast path: sync not needed (completed < 4s ago)
+            if (!need) {
+                finish('sync not needed (cooldown)');
+                return;
+            }
+
+            // Quick check: sync already completed for this client
+            if (cloud._lastClientSync && cloud._lastClientSync.clientId === clientId) {
+                finish('sync already completed');
+                return;
+            }
+
+            setLoading(true);
+            window.addEventListener('heysSyncCompleted', onSyncCompleted);
+
+            // Fallback: don't block forever — show DayTab with local data after timeout
+            fallbackTimer = setTimeout(() => finish('fallback timeout (' + DAYTAB_SYNC_FALLBACK_MS + 'ms)'), DAYTAB_SYNC_FALLBACK_MS);
+
+            // Fire sync non-blocking (switchClient may already have started it via bootstrapClientSync)
+            cloud.syncClient(clientId).catch((err) => {
+                console.warn('[HEYS] Sync failed, using local cache:', err?.message || err);
+                finish('sync error');
+            });
+
             return () => {
-                cancelled = true;
+                if (!cancelled) {
+                    cancelled = true;
+                    if (fallbackTimer) clearTimeout(fallbackTimer);
+                    window.removeEventListener('heysSyncCompleted', onSyncCompleted);
+                }
             };
         }, [clientId]);
 
@@ -285,26 +329,46 @@
                 typeof window.HEYS.cloud.syncClient === 'function'
             ) {
                 setLoading(true);
-                window.HEYS.cloud.syncClient(clientId)
-                    .then(() => {
-                        if (!cancelled) {
-                            syncedClientsCache.add(clientId);
-                            const loadedProducts = getLatestProducts();
-                            safeSetProducts(loadedProducts);
-                            setLoading(false);
 
-                            // 🔄 Автоматическое восстановление orphan-продуктов (в фоне)
-                            runOrphanRecovery();
-                        }
-                    })
+                // v9.4: Non-blocking sync for Ration tab — filter by clientId
+                const onSyncDone = (event) => {
+                    const evClientId = event?.detail?.clientId;
+                    if (!evClientId) return; // synthetic event — skip
+                    if (evClientId !== clientId && !clientId.startsWith(evClientId)) return;
+                    if (!cancelled) {
+                        syncedClientsCache.add(clientId);
+                        const loadedProducts = getLatestProducts();
+                        safeSetProducts(loadedProducts);
+                        setLoading(false);
+                        runOrphanRecovery();
+                        window.removeEventListener('heysSyncCompleted', onSyncDone);
+                        clearTimeout(rationFallback);
+                    }
+                };
+
+                window.addEventListener('heysSyncCompleted', onSyncDone);
+
+                const rationFallback = setTimeout(() => {
+                    if (!cancelled) {
+                        console.info('[HEYS.sceleton] ⏱️ RationTab fallback timeout — showing with local data');
+                        syncedClientsCache.add(clientId);
+                        const loadedProducts = getLatestProducts();
+                        safeSetProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
+                        setLoading(false);
+                        runOrphanRecovery({ tryShared: false });
+                        window.removeEventListener('heysSyncCompleted', onSyncDone);
+                    }
+                }, DAYTAB_SYNC_FALLBACK_MS);
+
+                window.HEYS.cloud.syncClient(clientId)
                     .catch((err) => {
                         console.warn('[HEYS] Sync failed, using local cache:', err?.message || err);
                         if (!cancelled) {
+                            clearTimeout(rationFallback);
+                            window.removeEventListener('heysSyncCompleted', onSyncDone);
                             const loadedProducts = getLatestProducts();
                             safeSetProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
                             setLoading(false);
-
-                            // 🔄 Автоматическое восстановление orphan-продуктов (в фоне)
                             runOrphanRecovery({ tryShared: false });
                         }
                     });
@@ -356,19 +420,49 @@
                 typeof window.HEYS.cloud.syncClient === 'function'
             ) {
                 setLoading(true);
+
+                // v9.4: Non-blocking sync for UserTab — filter by clientId
+                const onSyncDone = (event) => {
+                    const evClientId = event?.detail?.clientId;
+                    if (!evClientId) return; // synthetic event — skip
+                    if (evClientId !== clientId && !clientId.startsWith(evClientId)) return;
+                    if (!cancelled) {
+                        cancelled = true;
+                        setLoading(false);
+                        window.removeEventListener('heysSyncCompleted', onSyncDone);
+                        clearTimeout(userFallback);
+                    }
+                };
+
+                window.addEventListener('heysSyncCompleted', onSyncDone);
+
+                const userFallback = setTimeout(() => {
+                    if (!cancelled) {
+                        console.info('[HEYS.sceleton] ⏱️ UserTab fallback timeout — showing with local data');
+                        cancelled = true;
+                        setLoading(false);
+                        window.removeEventListener('heysSyncCompleted', onSyncDone);
+                    }
+                }, DAYTAB_SYNC_FALLBACK_MS);
+
                 window.HEYS.cloud.syncClient(clientId)
-                    .then(() => {
-                        if (!cancelled) setLoading(false);
-                    })
                     .catch((err) => {
                         console.warn('[HEYS] Sync failed, using local cache:', err?.message || err);
-                        if (!cancelled) setLoading(false);
+                        if (!cancelled) {
+                            cancelled = true;
+                            clearTimeout(userFallback);
+                            window.removeEventListener('heysSyncCompleted', onSyncDone);
+                            setLoading(false);
+                        }
                     });
             } else {
                 setLoading(false);
             }
             return () => {
-                cancelled = true;
+                if (!cancelled) {
+                    cancelled = true;
+                    // cleanup listeners if still active
+                }
             };
         }, [clientId]);
         if (loading || !window.HEYS || !window.HEYS.UserTab) {
