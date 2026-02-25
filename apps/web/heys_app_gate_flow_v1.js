@@ -1055,19 +1055,24 @@
                                                                     transition: 'all 0.2s',
                                                                     animation: `fadeSlideIn 0.3s ease ${idx * 0.05}s both`
                                                                 },
-                                                                onClick: async () => {
+                                                                onClick: () => {
                                                                     console.info('[HEYS.gate] 👤 Выбор клиента', { clientId: c.id, clientName: c.name });
-                                                                    // Безопасное переключение с синхронизацией
-                                                                    if (HEYS.cloud && HEYS.cloud.switchClient) {
-                                                                        await HEYS.cloud.switchClient(c.id);
-                                                                    } else {
-                                                                        U.lsSet('heys_client_current', c.id);
-                                                                    }
-                                                                    // Сохраняем как последнего выбранного
+
+                                                                    // ✅ FIX: Сразу закрываем gate — не ждём syncClient (10-15сек)
+                                                                    // Компоненты покажут скелетоны, heysSyncCompleted перерисует после sync
                                                                     writeGlobalValue('heys_last_client_id', c.id);
                                                                     setClientId(c.id);
                                                                     console.info('[HEYS.gate] ✅ Клиент переключён', { clientId: c.id });
                                                                     window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
+
+                                                                    // switchClient в фоне — загружает данные и диспатчит heysSyncCompleted
+                                                                    if (HEYS.cloud && HEYS.cloud.switchClient) {
+                                                                        HEYS.cloud.switchClient(c.id).catch(err => {
+                                                                            console.error('[HEYS.gate] ❌ Ошибка синхронизации клиента:', err);
+                                                                        });
+                                                                    } else {
+                                                                        U.lsSet('heys_client_current', c.id);
+                                                                    }
                                                                 }
                                                             },
                                                             // Аватар с цветом по букве

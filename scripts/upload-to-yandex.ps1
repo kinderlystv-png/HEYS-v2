@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # Upload script for Yandex Object Storage (PowerShell version)
 # Mirrors the CI deploy-yandex.yml golden standard caching strategy:
 #   - Gzipped bundles: .gz uploaded AS .js with Content-Encoding: gzip (78% savings)
@@ -44,11 +44,11 @@ $errors = 0
 $totalRaw = 0
 $totalGz = 0
 
-# ═══════════════════════════════════════════════════════════════════
-# STEP 1: Gzipped bundles — upload .gz AS .js with Content-Encoding: gzip
+# ===================================================================
+# STEP 1: Gzipped bundles - upload .gz AS .js with Content-Encoding: gzip
 # This is the critical step that provides 78% transfer savings.
-# ═══════════════════════════════════════════════════════════════════
-Write-Host "`n🗜️  STEP 1: Uploading gzipped bundles with Content-Encoding: gzip..."
+# ===================================================================
+Write-Host "`n[GZIP] STEP 1: Uploading gzipped bundles with Content-Encoding: gzip..."
 $gzFiles = Get-ChildItem "$distDir\*.bundle.*.js.gz" -ErrorAction SilentlyContinue
 $gzFiles += Get-ChildItem "$distDir\react-bundle.js.gz" -ErrorAction SilentlyContinue
 $gzUploaded = 0
@@ -64,17 +64,23 @@ foreach ($gz in $gzFiles) {
         $pct = [math]::Round(100 - ($gzSize / $rawSize * 100))
         $totalRaw += $rawSize
         $totalGz += $gzSize
-        Write-Host "  [$($gzUploaded+1)/$($gzFiles.Count)] $jsName ($([math]::Round($rawSize/1024))KB → $([math]::Round($gzSize/1024))KB, ${pct}% saved)"
+        $rawKB = [math]::Round($rawSize / 1024)
+        $gzKB = [math]::Round($gzSize / 1024)
+        $idx = $gzUploaded + 1
+        $cnt = $gzFiles.Count
+        Write-Host "  [$idx/$cnt] $jsName (${rawKB}KB -> ${gzKB}KB, ${pct}% saved)"
     }
     else {
-        Write-Host "  [$($gzUploaded+1)/$($gzFiles.Count)] $jsName (gz only)"
+        $idx = $gzUploaded + 1
+        $cnt = $gzFiles.Count
+        Write-Host "  [$idx/$cnt] $jsName (gz only)"
     }
 
     $result = yc storage s3api put-object --bucket $bucket --key $jsName --body $gz.FullName `
         --acl public-read --content-type "application/javascript" `
         --content-encoding "gzip" --cache-control $cacheControl 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Warning "FAILED: $jsName — $result"
+        Write-Warning "FAILED: $jsName - $result"
         $errors++
     }
     $gzUploaded++
@@ -83,13 +89,15 @@ foreach ($gz in $gzFiles) {
 
 if ($totalRaw -gt 0) {
     $totalPct = [math]::Round(100 - ($totalGz / $totalRaw * 100))
-    Write-Host "  ✅ $gzUploaded gzipped bundles ($([math]::Round($totalRaw/1024))KB → $([math]::Round($totalGz/1024))KB, ${totalPct}% saved)"
+    $trKB = [math]::Round($totalRaw / 1024)
+    $tgKB = [math]::Round($totalGz / 1024)
+    Write-Host "  OK: $gzUploaded gzipped bundles (${trKB}KB -> ${tgKB}KB, ${totalPct}% saved)"
 }
 
-# ═══════════════════════════════════════════════════════════════════
+# ===================================================================
 # STEP 2: All other files (skip raw .js that have .gz versions, skip .gz files)
-# ═══════════════════════════════════════════════════════════════════
-Write-Host "`n📦 STEP 2: Uploading remaining files..."
+# ===================================================================
+Write-Host "`n[FILES] STEP 2: Uploading remaining files..."
 # Build a set of files that were already uploaded via gzip
 $gzippedJsNames = @{}
 foreach ($gz in $gzFiles) {
@@ -117,7 +125,7 @@ foreach ($f in $files) {
     $result = yc storage s3api put-object --bucket $bucket --key $key --body $f.FullName `
         --acl public-read --content-type $ct --cache-control $cc 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Warning "FAILED: $key — $result"
+        Write-Warning "FAILED: $key - $result"
         $errors++
     }
     $totalUploaded++

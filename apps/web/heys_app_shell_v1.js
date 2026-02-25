@@ -565,17 +565,21 @@
                                                         transition: 'background 0.15s',
                                                         background: c.id === clientIdValue ? 'rgba(102, 126, 234, 0.1)' : 'transparent'
                                                     },
-                                                    onClick: async () => {
+                                                    onClick: () => {
                                                         if (c.id !== clientIdValue) {
                                                             console.info(`[HEYS.store] 🔄 Выбор клиента: ${c.name} (${c.id.slice(0, 8)}...)`);
-                                                            if (HEYS.cloud && HEYS.cloud.switchClient) {
-                                                                await HEYS.cloud.switchClient(c.id);
-                                                            } else {
-                                                                U.lsSet('heys_client_current', c.id);
-                                                            }
+                                                            // ✅ FIX: Сразу переключаем UI — sync в фоне
                                                             writeGlobalValue('heys_last_client_id', c.id);
                                                             setClientId(c.id);
                                                             window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
+
+                                                            if (HEYS.cloud && HEYS.cloud.switchClient) {
+                                                                HEYS.cloud.switchClient(c.id).catch(err => {
+                                                                    console.error('[HEYS.store] ❌ Ошибка синхронизации клиента:', err);
+                                                                });
+                                                            } else {
+                                                                U.lsSet('heys_client_current', c.id);
+                                                            }
                                                         }
                                                         setShowClientDropdown(false);
                                                     }

@@ -276,7 +276,7 @@
         (function () {
             var t = localStorage.getItem('heys_theme');
             var isDark = t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-            if (isDark) document.documentElement.setAttribute('data-theme', 'dark');
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
             window.__heysLog && window.__heysLog('Theme applied: ' + (isDark ? 'dark' : 'light'));
         })();
     </script>
@@ -305,7 +305,7 @@
     <link rel="preload" href="boot-core.bundle.e0cfd58e1796.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.35b159a72e66.js" as="script" />
     <link rel="preload" href="boot-day.bundle.7320c50778ec.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.b5569296c11a.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.6402be9117f5.js" as="script" />
     <link rel="preload" href="boot-init.bundle.fb89d1287524.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
@@ -767,7 +767,7 @@
     <script defer src="boot-core.bundle.e0cfd58e1796.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.35b159a72e66.js"></script>
     <script defer src="boot-day.bundle.7320c50778ec.js"></script>
-    <script defer src="boot-app.bundle.b5569296c11a.js"></script>
+    <script defer src="boot-app.bundle.6402be9117f5.js"></script>
     <script defer src="boot-init.bundle.fb89d1287524.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
