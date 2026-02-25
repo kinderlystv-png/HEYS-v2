@@ -1,8 +1,14 @@
 /**
- * HEYS Predictive Insights — Feedback Loop v1.1
+ * HEYS Predictive Insights — Feedback Loop v1.2.1
  * 
  * Outcome learning: collect user feedback on recommendations and patterns.
  * ML weight adjustment via exponential moving average (EMA).
+ * 
+ * v1.2.1: extractProductIds handles flat/grouped/multi-meal formats.
+ *         Fixes empty productIds in grouped mode (groups[] not extracted).
+ * v1.2: Trimmed storage — only scenario + productIds stored (not full products).
+ *       Max history reduced 100→50. Size guard: prune if > 200KB.
+ *       Fixes localStorage overflow (693KB single key).
  * 
  * Flow:
  * 1. Recommendation given → store with ID
@@ -22,6 +28,70 @@
     HEYS.InsightsPI = HEYS.InsightsPI || {};
 
     const STORAGE_KEY_PREFIX = 'heys_insights_feedback_';
+    const MAX_HISTORY = 50; // v1.2: was 100, trimmed for localStorage budget
+    const MAX_STORAGE_KB = 200; // Max size per feedback key in KB
+
+    /**
+     * v1.2.1: Extract product IDs from any recommendation format.
+     * Handles flat suggestions, grouped mode, and multi-meal plans.
+     * @private
+     * @param {object} rec - Recommendation (or recommendation sub-object)
+     * @returns {string[]} - Unique product IDs (max 20)
+     */
+    function extractProductIds(rec) {
+        if (!rec) return [];
+        var ids = [];
+
+        // Flat suggestions / products
+        var suggestions = rec.suggestions || rec.products;
+        if (Array.isArray(suggestions)) {
+            suggestions.forEach(function (s) {
+                var id = s && (s.id || s.product_id || s.productId);
+                if (id) ids.push(id);
+            });
+        }
+
+        // Grouped mode: groups[].products[]
+        if (Array.isArray(rec.groups)) {
+            rec.groups.forEach(function (g) {
+                var prods = g && (g.products || g.items);
+                if (Array.isArray(prods)) {
+                    prods.forEach(function (p) {
+                        var id = p && (p.id || p.product_id || p.productId);
+                        if (id) ids.push(id);
+                    });
+                }
+            });
+        }
+
+        // Multi-meal: mealPlan[].groups[].products[]
+        var mealPlan = rec.mealPlan || rec.meals;
+        if (Array.isArray(mealPlan)) {
+            mealPlan.forEach(function (meal) {
+                if (!meal) return;
+                var mGroups = meal.groups;
+                if (Array.isArray(mGroups)) {
+                    mGroups.forEach(function (g) {
+                        var prods = g && (g.products || g.items);
+                        if (Array.isArray(prods)) {
+                            prods.forEach(function (p) {
+                                var id = p && (p.id || p.product_id || p.productId);
+                                if (id) ids.push(id);
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        // Deduplicate & cap
+        var seen = {};
+        return ids.filter(function (id) {
+            if (seen[id]) return false;
+            seen[id] = true;
+            return true;
+        }).slice(0, 20);
+    }
 
     /**
      * Store recommendation for tracking
@@ -40,12 +110,20 @@
         const recId = generateRecommendationId(type);
         const timestamp = new Date().toISOString();
 
+        // v1.2.1: Extract product IDs from any format (flat, grouped, multi-meal)
+        const productIds = extractProductIds(recommendation);
+
         const record = {
             id: recId,
             type,
             timestamp,
             clientId: profile?.id || 'unknown',
-            recommendation,
+            recommendation: {
+                scenario: recommendation?.scenario || 'UNKNOWN',
+                productIds: productIds,
+                score: recommendation?.score,
+                mealType: recommendation?.mealType || recommendation?.meal_type
+            },
             followed: null, // Will be updated later
             outcome: null,  // Will be updated later
             context: {
@@ -231,20 +309,14 @@
         }
 
         const scenario = recommendation.scenario || 'UNKNOWN';
-        const suggestions = recommendation.suggestions || [];
-
-        if (suggestions.length === 0) {
-            console.warn('[MEALREC][FeedbackLoop] ⚠️ No products in recommendation');
-            return;
+        // v1.2.1: Support trimmed (productIds), flat (suggestions), grouped, multi-meal
+        var productIds = recommendation.productIds;
+        if (!productIds || productIds.length === 0) {
+            productIds = extractProductIds(recommendation);
         }
 
-        // Get product IDs from suggestions
-        const productIds = suggestions
-            .map(s => s.id || s.product_id || s.productId)
-            .filter(Boolean);
-
         if (productIds.length === 0) {
-            console.warn('[MEALREC][FeedbackLoop] ⚠️ Cannot extract product IDs from suggestions');
+            console.warn('[MEALREC][FeedbackLoop] ⚠️ Cannot extract product IDs from recommendation');
             return;
         }
 
@@ -382,6 +454,39 @@
     }
 
     /**
+     * v1.2: Trim legacy records that stored full recommendation objects.
+     * Converts them to trimmed format (scenario + productIds only).
+     * @private
+     */
+    function trimLegacyRecords(history) {
+        var trimmed = false;
+        for (var i = 0; i < history.length; i++) {
+            var rec = history[i];
+            if (!rec.recommendation) continue;
+            var r = rec.recommendation;
+            // Detect legacy format: has full product objects in suggestions/groups/mealPlan
+            var hasLegacySug = Array.isArray(r.suggestions) && r.suggestions.length > 0 && typeof r.suggestions[0] === 'object' && r.suggestions[0] !== null;
+            var hasLegacyGroups = Array.isArray(r.groups) && r.groups.length > 0;
+            var hasLegacyMealPlan = Array.isArray(r.mealPlan || r.meals);
+            var hasLegacyProducts = Array.isArray(r.products) && r.products.length > 0 && typeof r.products[0] === 'object' && r.products[0] !== null;
+            if (hasLegacySug || hasLegacyGroups || hasLegacyMealPlan || hasLegacyProducts) {
+                var productIds = extractProductIds(r);
+                rec.recommendation = {
+                    scenario: r.scenario || 'UNKNOWN',
+                    productIds: productIds,
+                    score: r.score,
+                    mealType: r.mealType || r.meal_type
+                };
+                trimmed = true;
+            }
+        }
+        if (trimmed) {
+            console.info('[MEALREC][FeedbackLoop] ✅ Migrated legacy records to trimmed format');
+        }
+        return history;
+    }
+
+    /**
      * Save recommendation record to localStorage
      * @private
      */
@@ -393,7 +498,10 @@
         }
 
         const storageKey = getStorageKey(profile);
-        const history = U.lsGet(storageKey) || [];
+        var history = U.lsGet(storageKey) || [];
+
+        // v1.2: One-time migration — trim legacy bloated records
+        history = trimLegacyRecords(history);
 
         // Update existing record or add new
         const existingIndex = history.findIndex(r => r.id === record.id);
@@ -403,9 +511,17 @@
             history.push(record);
         }
 
-        // Keep last 100 recommendations
-        if (history.length > 100) {
-            history.splice(0, history.length - 100);
+        // v1.2: Keep last MAX_HISTORY recommendations (was 100)
+        if (history.length > MAX_HISTORY) {
+            history.splice(0, history.length - MAX_HISTORY);
+        }
+
+        // v1.2: Size guard — if serialized > MAX_STORAGE_KB, prune oldest half
+        var serialized = JSON.stringify(history);
+        if (serialized.length > MAX_STORAGE_KB * 1024) {
+            var pruneCount = Math.ceil(history.length / 2);
+            history.splice(0, pruneCount);
+            console.warn('[MEALREC][FeedbackLoop] ⚠️ Pruned ' + pruneCount + ' old records (size guard: ' + Math.round(serialized.length / 1024) + 'KB)');
         }
 
         U.lsSet(storageKey, history);
@@ -475,6 +591,6 @@
         resetWeights
     };
 
-    console.info('[MEALREC][HEYS.InsightsPI.feedbackLoop] ✅ Feedback Loop v1.1 initialized (client-side + ML weights)');
+    console.info('[MEALREC][HEYS.InsightsPI.feedbackLoop] ✅ Feedback Loop v1.2.1 initialized (trimmed storage + size guard)');
 
 })(typeof window !== 'undefined' ? window : global);

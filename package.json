@@ -22,6 +22,8 @@
     "build:analyze": "tsx scripts/analyze-bundle.ts",
     "build:apps": "turbo run build --filter='./apps/*'",
     "build:packages": "pnpm -r --filter=packages/* run build",
+    "bundle:legacy": "node scripts/bundle-legacy.mjs",
+    "bundle:legacy:dry": "node scripts/bundle-legacy.mjs --dry-run",
     "changeset": "changeset",
     "changeset:publish": "changeset publish",
     "changeset:version": "changeset version",

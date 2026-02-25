@@ -259,15 +259,30 @@ packages/
 +3.0–5.0s  Post-animation state updates (invisible to user)
 ```
 
-**Boot timeline (Mid-tier mobile, 246 files):**
+**Boot timeline (Mid-tier mobile, baseline — 244 individual files):**
 
 ```
 +0.0s   HTML parsed, prefetch starts
-+~63s   Last JS file loaded (critical bottleneck: 246 <script defer>)
++~63s   Last JS file loaded (244 <script defer> + postboot, pre-optimisation)
 +63.3s  React boot
 +63.9s  Sync complete
-+65.2s  DayStats first render  ← bundling would reduce this to ~5–6s
++65.2s  DayStats first render
 ```
+
+**Boot timeline (post-optimisation v9.0, 2026-02-25 — 8 bundles):**
+
+```
++0.0s   HTML parsed, preload hints sent (boot-core, boot-init)
++?s     5 boot bundles loaded (244 → 8 requests, ~5.3 MB total)
++?s     React boot
++?s     Sync complete → window.__heysAppReady
++?s     3 postboot bundles loaded sequentially (4.38 MB total)
+Target: appReady ≤ 18s on mid-tier
+```
+
+> Конкатенация 2026-02-25: 151 `<script defer>` → 5 boot-бандлов, 93 postboot →
+> 3 бандла. Замер baseline до/после: см.
+> `docs/plans/LOAD_OPTIMIZATION_PLAN_2026-02-25.md`.
 
 To achieve sub-2s boot times on WiFi, the sync architecture employs several
 advanced techniques:

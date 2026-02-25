@@ -89,7 +89,26 @@
 
 ## PWA
 
-| File                          | Role               |
-| ----------------------------- | ------------------ |
-| `public/sw.js`                | Service Worker     |
-| `heys_day_offline_sync_v1.js` | Offline sync logic |
+| File                          | Role                                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------- |
+| `public/sw.js`                | Service Worker (CDN_URLS: только twemoji; boot-бандлы кешируются cache-first по hash) |
+| `heys_day_offline_sync_v1.js` | Offline sync logic                                                                    |
+
+## Load Optimisation (v9.0, 2026-02-25)
+
+> 244 legacy JS-файла конкатенированы в 8 бандлов. Запросов при старте: 244 → 8.
+
+| File                                              | Role                                                                                                  |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `scripts/bundle-legacy.mjs` _(repo root)_         | Генератор бандлов: конкатенация + content-hash + `bundle-manifest.json`. Запуск: `pnpm bundle:legacy` |
+| `bundle-manifest.json`                            | Сгенерированный артефакт с именами и хешами 8 бандлов                                                 |
+| `public/boot-core.bundle.{hash}.js`               | Boot-бандл 1: dev_utils, platform, yandex_api, models, storage (1.14 MB)                              |
+| `public/boot-calc.bundle.{hash}.js`               | Boot-бандл 2: ratio_zones, tef, tdee, harm, day core (893 KB)                                         |
+| `public/boot-day.bundle.{hash}.js`                | Boot-бандл 3: все heys*day*\* компоненты (896 KB)                                                     |
+| `public/boot-app.bundle.{hash}.js`                | Boot-бандл 4: auth, subscription, paywall, app_shell (1.05 MB)                                        |
+| `public/boot-init.bundle.{hash}.js`               | Boot-бандл 5: app_root, initialize, entry, app_v12 (340 KB)                                           |
+| `public/postboot-1-game.bundle.{hash}.js`         | Postboot 1: gamification, advice, insulin_wave, cycle (1.35 MB)                                       |
+| `public/postboot-2-insights.bundle.{hash}.js`     | Postboot 2: все insights/pi\_\*.js (1.75 MB)                                                          |
+| `public/postboot-3-ui.bundle.{hash}.js`           | Postboot 3: modals, steps, reports, widgets (1.28 MB)                                                 |
+| `vite.config.ts`                                  | `bundleLegacy()` плагин **отключён** (2026-02-25) — заменён на статические бандлы в `public/`         |
+| `docs/plans/LOAD_OPTIMIZATION_PLAN_2026-02-25.md` | Полный план, аудит и журнал внедрения                                                                 |

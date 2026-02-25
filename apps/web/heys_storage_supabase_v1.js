@@ -3498,6 +3498,8 @@
       } catch (_) { }
 
       // Уведомляем UI о завершении
+      // 🆕 PERF v9.2: Yandex full sync завершён
+      window.__heysPerfMark && window.__heysPerfMark('heysSyncCompleted: viaYandex dispatch');
       if (typeof window !== 'undefined' && window.dispatchEvent) {
         window.dispatchEvent(new CustomEvent('heysSyncCompleted', {
           detail: { clientId, loaded: loadedCount, viaYandex: true }
@@ -3934,6 +3936,8 @@
                 cloud._productsFingerprint = null; // 🔄 Delta-sync: сбрасываем чтобы первый реальный изменение прошло
                 cancelFailsafeTimer();
                 if (global.HEYS?.store?.flushMemory) global.HEYS.store.flushMemory();
+                // 🆕 PERF v9.2: Фаза A завершена — первый sync done
+                window.__heysPerfMark && window.__heysPerfMark('heysSyncCompleted: phaseA dispatch');
                 if (typeof window !== 'undefined' && window.dispatchEvent) {
                   window.dispatchEvent(new CustomEvent('heysSyncCompleted', {
                     detail: { clientId: client_id, phaseA: true }

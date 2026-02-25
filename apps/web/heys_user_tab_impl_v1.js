@@ -1,4 +1,6 @@
 // heys_user_tab_impl_v1.js — User profile, BMI/BMR calculations, HR zones (extracted)
+// 🆕 PERF v9.2: Метка момента когда boot-app начал исполняться
+window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 (function (global) {
     const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;

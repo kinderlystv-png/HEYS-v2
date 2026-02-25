@@ -195,6 +195,7 @@ jobs:
 
           # === STEP 1: Immutable Assets (1 year cache) ===
           # Images, fonts, hashed assets in assets/ folder
+          # Excludes: bundles (uploaded gzipped in Step 2.0), JS files (Step 2), entry points (Step 3)
           echo "📦 Uploading immutable assets..."
           aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_PWA }}/ \
             --endpoint-url=${{ env.YC_ENDPOINT }} \
@@ -205,9 +206,33 @@ jobs:
             --exclude "manifest.webmanifest" \
             --exclude "heys_*.js" \
             --exclude "react-bundle.js" \
+            --exclude "react-bundle.js.gz" \
+            --exclude "*.bundle.*.js" \
+            --exclude "*.bundle.*.js.gz" \
             --exclude "day/*" \
             --exclude "advice/*" \
             --cache-control "public, max-age=31536000, immutable"
+
+          # === STEP 1.5: Gzipped Bundles (immutable, Content-Encoding: gzip) ===
+          # Pre-compressed .gz files uploaded AS .js with Content-Encoding: gzip header.
+          # Browsers decompress transparently; SW caches decompressed response.
+          # Savings: 8.65MB → 1.90MB (78%), boot 29s → ~6s at same speed.
+          echo "🗜️ Uploading gzipped bundles with Content-Encoding: gzip..."
+          GZ_UPLOAD_COUNT=0
+          for gzfile in apps/web/dist/*.bundle.*.js.gz; do
+            if [ -f "$gzfile" ]; then
+              # boot-core.bundle.abc123.js.gz → boot-core.bundle.abc123.js
+              jsname=$(basename "${gzfile%.gz}")
+              aws s3 cp "$gzfile" s3://${{ env.YC_BUCKET_PWA }}/$jsname \
+                --endpoint-url=${{ env.YC_ENDPOINT }} \
+                --cache-control "public, max-age=31536000, immutable" \
+                --content-type "application/javascript" \
+                --content-encoding "gzip" &
+              GZ_UPLOAD_COUNT=$((GZ_UPLOAD_COUNT + 1))
+            fi
+          done
+          wait
+          echo "✅ Uploaded $GZ_UPLOAD_COUNT gzipped bundles"
 
           # === STEP 2: Mutable JS Files (0 cache, must-revalidate) ===
           # These files change often but keep the same name
@@ -233,9 +258,16 @@ jobs:
           fi
           echo "✅ Uploaded $JS_UPLOAD_COUNT heys_*.js files"
 
-          # === STEP 2.1: React bundle (critical, no cache) ===
-          if [ -f "apps/web/dist/react-bundle.js" ]; then
-            echo "⚛️ Uploading react-bundle.js..."
+          # === STEP 2.1: React bundle (critical, gzipped, no cache) ===
+          if [ -f "apps/web/dist/react-bundle.js.gz" ]; then
+            echo "⚛️ Uploading react-bundle.js (gzipped: 139KB → 45KB)..."
+            aws s3 cp apps/web/dist/react-bundle.js.gz s3://${{ env.YC_BUCKET_PWA }}/react-bundle.js \
+              --endpoint-url=${{ env.YC_ENDPOINT }} \
+              --cache-control "public, max-age=0, must-revalidate" \
+              --content-type "application/javascript" \
+              --content-encoding "gzip"
+          elif [ -f "apps/web/dist/react-bundle.js" ]; then
+            echo "⚛️ Uploading react-bundle.js (uncompressed fallback)..."
             aws s3 cp apps/web/dist/react-bundle.js s3://${{ env.YC_BUCKET_PWA }}/react-bundle.js \
               --endpoint-url=${{ env.YC_ENDPOINT }} \
               --cache-control "public, max-age=0, must-revalidate" \

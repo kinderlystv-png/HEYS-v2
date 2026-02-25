@@ -3,8 +3,10 @@
 // Стратегия: Cache-First для статики, Network-First для API
 // Версия обновляется автоматически при билде
 // NOTE: Service Worker runs in isolated context - no access to @heys/logger
+// Boot-бандлы (*.bundle.{hash}.js) кэшируются автоматически через cache-first
+// при первом запросе — хеш в имени обеспечивает вечный кэш без ручного precache.
 
-const CACHE_VERSION = 'heys-1771772755281';
+const CACHE_VERSION = 'heys-1772023118991';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
@@ -33,11 +35,10 @@ const PRECACHE_URLS = [
   '/react-bundle.js',
 ];
 
-// CDN ресурсы (React, Supabase) — кэшируем при первом запросе
+// CDN ресурсы — кэшируем при первом запросе.
+// React/Supabase CDN удалены: React грузится из локального react-bundle.js,
+// Supabase SDK удалён (152-ФЗ, замена — YandexAPI).
 const CDN_URLS = [
-  'https://unpkg.com/react@18/umd/react.production.min.js',
-  'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
-  'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js',
   'https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js'
 ];
 
@@ -75,6 +76,30 @@ self.addEventListener('install', (event) => {
                   })
                 )
               );
+            })
+            .then(() => {
+              // 🚀 Proactive boot bundle precache из bundle-manifest.json
+              // На СЛЕДУЮЩИЙ визит пользователь получит все boot-бандлы из кэша (~0ms vs 30s)
+              return fetch('/bundle-manifest.json', { cache: 'no-store' })
+                .then(r => r.ok ? r.json() : Promise.reject(new Error('manifest HTTP ' + r.status)))
+                .then(manifest => {
+                  const bootUrls = Object.entries(manifest)
+                    .filter(([name]) => name.startsWith('boot-'))
+                    .map(([, entry]) => '/' + entry.file);
+                  console.log('[SW] 📦 Precaching boot bundles:', bootUrls.length, bootUrls);
+                  return caches.open(STATIC_CACHE).then(c =>
+                    Promise.allSettled(
+                      bootUrls.map(url =>
+                        Promise.race([
+                          c.add(url),
+                          new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), 60000))
+                        ]).catch(err => console.warn('[SW] ⚠️ Boot cache skip:', url, err.message))
+                      )
+                    )
+                  );
+                })
+                .then(() => console.log('[SW] ✅ Boot bundles precached'))
+                .catch(err => console.warn('[SW] ⚠️ Boot precache failed (non-fatal):', err.message));
             })
             .then(() => console.log('[SW] ✅ Background precache complete'))
             .catch(err => console.warn('[SW] Precache error:', err));
@@ -215,7 +240,7 @@ self.addEventListener('fetch', (event) => {
     }
 
     // Бандлы с хешем в имени — Cache First (неизменяемые, хеш меняется при пересборке)
-    if (/\.bundle\.[a-f0-9]{8}\.js$/.test(url.pathname)) {
+    if (/\.bundle\.[a-f0-9]{12}\.js$/.test(url.pathname)) {
       event.respondWith(cacheFirst(request, STATIC_CACHE));
       return;
     }

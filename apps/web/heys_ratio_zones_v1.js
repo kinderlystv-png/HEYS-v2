@@ -1,8 +1,10 @@
+// 🆕 PERF v9.2: Метка момента когда boot-calc начал исполняться
+window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 // heys_ratio_zones_v1.js — Централизованная логика цветов ratio (калории/норма)
 // Единый источник правды для всех компонентов: sparkline, heatmap, datepicker, advice
-(function(global) {
+(function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
-  
+
   // === Дефолтные зоны ratio ===
   const DEFAULT_RATIO_ZONES = [
     { id: 'crash', name: 'Срыв (недоел)', from: 0, to: 0.5, color: '#ef4444', textColor: '#fff' },
@@ -91,7 +93,7 @@
     getZone(ratio) {
       const zones = this.getZones();
       if (!ratio || ratio <= 0) return zones[0]; // crash
-      
+
       for (const zone of zones) {
         if (ratio >= zone.from && ratio < zone.to) {
           return zone;
@@ -154,10 +156,10 @@
       if (!ratio || ratio <= 0) {
         return rgbToRgba(COLORS.red, alpha);
       }
-      
+
       // Расширяем зелёную зону на bonusPct (например, при долге 1.1→1.35 = зелёный)
       const bonusEnd = 1.1 + bonusPct;
-      
+
       // Находим позицию ratio и интерполируем
       if (ratio < 0.5) {
         // 0 → 0.5: красный (без градиента, это crash)
@@ -205,7 +207,7 @@
       switch (status) {
         case 'crash': return 'red';
         case 'low': return 'yellow';
-        case 'good': 
+        case 'good':
         case 'perfect': return 'green';
         case 'over': return 'yellow';
         case 'binge': return 'red';
@@ -234,19 +236,19 @@
      */
     getEmotionalCategory(ratio, currentStreak = 0) {
       const status = this.getStatus(ratio);
-      
+
       // Срыв — важнее всего
       if (status === 'crash' || status === 'binge') return 'crashed';
-      
+
       // Успех — streak или хороший день
       if (currentStreak >= 3 || status === 'perfect' || status === 'good') return 'success';
-      
+
       // Лёгкий перебор — returning
       if (status === 'over') return 'returning';
-      
+
       // Маловато — stressed
       if (status === 'low') return 'stressed';
-      
+
       return 'normal';
     },
 
@@ -268,7 +270,7 @@
     },
 
     // === REFEED DAY SUPPORT ===
-    
+
     /**
      * Получить зону с учётом refeed дня
      * @param {number} ratio - значение kcal/optimum
@@ -311,7 +313,7 @@
       }
       return this.isSuccess(ratio);
     },
-    
+
     /**
      * 🆕 Единый метод определения успешности дня (с учётом refeed)
      * Возвращает всё что нужно UI: статус, цвет, streak, tooltip
@@ -321,13 +323,13 @@
      */
     getDaySuccess(ratio, dayData) {
       const isRefeedDay = dayData?.isRefeedDay === true;
-      
+
       // Получаем зону (с учётом refeed)
       const zone = this.getDayZone(ratio, dayData);
-      
+
       // Определяем streak
       const isStreak = this.isStreakDayWithRefeed(ratio, dayData);
-      
+
       // Heatmap статус
       let heatmapStatus;
       if (isRefeedDay) {
@@ -339,17 +341,17 @@
         // Обычный день: стандартная логика
         heatmapStatus = this.getHeatmapStatus(ratio);
       }
-      
+
       // Определяем успешность
       const isSuccess = heatmapStatus === 'green';
-      
+
       // Tooltip
       let tooltip = zone.name;
       if (isRefeedDay) {
         const reasonLabel = HEYS.Refeed?.getReasonLabel?.(dayData.refeedReason)?.label || '';
         tooltip = `🍕 ${zone.name}\n${reasonLabel ? reasonLabel + '\n' : ''}${isStreak ? '✅ Streak сохранён' : '⚠️ Вне диапазона streak'}`;
       }
-      
+
       return {
         isSuccess,
         isStreak,

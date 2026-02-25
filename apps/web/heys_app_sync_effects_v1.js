@@ -161,6 +161,8 @@
 
         React.useEffect(() => {
             const markInitialSyncDone = () => {
+                // 🆕 PERF v9.2: React-слушатель поймал heysSyncCompleted
+                window.__heysPerfMark && window.__heysPerfMark('markInitialSyncDone: React listener fired');
                 if (window.HEYS) window.HEYS.syncCompletedAt = Date.now();
                 setTimeout(() => {
                     initialSyncDoneRef.current = true;

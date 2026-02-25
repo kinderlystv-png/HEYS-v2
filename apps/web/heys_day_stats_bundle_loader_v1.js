@@ -1,5 +1,6 @@
 // heys_day_stats_bundle_loader_v1.js — loader bundle for stats/water/activity modules
-
+// 🆕 PERF v9.2: Метка момента когда boot-day начал исполняться
+window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 ; (function (global) {
     const HEYS = (global.HEYS = global.HEYS || {});
 

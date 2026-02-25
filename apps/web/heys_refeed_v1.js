@@ -621,18 +621,35 @@
    * Регистрация шага в системе чек-инов
    */
   let _registerRetries = 0;
+  let _registerEventBound = false;
+  let _refeedStepRegistered = false;
   function registerRefeedStep() {
+    if (_refeedStepRegistered) return; // guard от двойной регистрации
     // registerStep находится в HEYS.StepModal, не в HEYS.Steps!
     if (!HEYS.StepModal?.registerStep) {
-      if (_registerRetries < 20) { // Max 10 seconds
+      // При первом вызове — подписываемся на событие: StepModal может загрузиться позже
+      // (postboot-1-game грузится раньше postboot-3-ui, который содержит StepModal)
+      if (!_registerEventBound) {
+        _registerEventBound = true;
+        document.addEventListener('heys-stepmodal-ready', function _onStepModalReady() {
+          document.removeEventListener('heys-stepmodal-ready', _onStepModalReady);
+          console.info('[Refeed] ✅ StepModal ready via event, registering step');
+          registerRefeedStep();
+        }, { once: true });
+        console.info('[Refeed] ⏳ StepModal not ready, waiting for heys-stepmodal-ready event...');
+      }
+      // Polling как запасной вариант на случай если событие уже было до subscribe
+      if (_registerRetries < 60) { // Max 30 seconds fallback
         _registerRetries++;
         setTimeout(registerRefeedStep, 500);
       } else {
-        console.warn('[Refeed] HEYS.StepModal not found after 10s, giving up');
+        console.warn('[Refeed] ⚠️ HEYS.StepModal not found after 30s, giving up');
       }
       return;
     }
 
+    _refeedStepRegistered = true;
+    console.info('[Refeed] ✅ Registering refeedDay step in StepModal');
     HEYS.StepModal.registerStep('refeedDay', {
       title: 'Загрузочный день',
       hint: 'Контролируемое превышение',

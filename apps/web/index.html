@@ -187,6 +187,14 @@
             // и ждём до 120s пока есть heartbeat (скрипты загружаются)
             // 🔄 v5: увеличено с 60s до 120s для throttled-сетей
             window.__heysLoadingHeartbeat = Date.now();
+            // 🆕 v9.1: Автообновление heartbeat из HTML (не зависит от загрузки бандлов).
+            // С бандлами boot-init скачивается ~30s на throttled-сети,
+            // поэтому heartbeat из waitForDependencies не успевает обновиться до watchdog.
+            (function autoHeartbeat() {
+                if (window.__heysAppReady) return;
+                window.__heysLoadingHeartbeat = Date.now();
+                setTimeout(autoHeartbeat, 2000);
+            })();
             var watchdogChecks = 0;
             var WATCHDOG_INTERVAL = 5000;
             var WATCHDOG_MAX_CHECKS = 24; // 120s максимум (was 12/60s — слишком мало для slow 3G)
@@ -289,6 +297,12 @@
     <!-- cdn.jsdelivr.net оставлен для Twemoji (emoji SVG) -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+    <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
+    <link rel="preload" href="boot-core.bundle.e0cfd58e1796.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.bb8a3a4c781b.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.7320c50778ec.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.bc6fb633ba7c.js" as="script" />
+    <link rel="preload" href="boot-init.bundle.01e94cb6ddd3.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
 
@@ -559,201 +573,16 @@
          Замена: YandexAPI (heys_yandex_api_v1.js) → api.heyslab.ru
     -->
 
-    <!-- app modules with defer and optimized priority -->
-    <script defer src="heys_dev_utils.js"></script>
-    <!-- Refactoring Infrastructure (v1.0) -->
-    <script defer src="heys_feature_flags_v1.js?v=1"></script>
-    <script defer src="heys_module_perf_v1.js?v=1"></script>
-    <script defer src="heys_module_loader_v1.js?v=1"></script>
-    <!-- Modular App Components (Phase 2) -->
-    <script defer src="heys_bootstrap_v1.js?v=1" fetchpriority="high"></script>
-    <script defer src="heys_platform_apis_v1.js?v=1"></script>
-    <script defer src="heys_pwa_module_v1.js?v=1"></script>
-    <script defer src="heys_simple_analytics.js"></script>
-    <!-- Smart search with typo correction, synonyms, phonetic (ё→е) -->
-    <script defer src="heys_smart_search_v2.js?v=1"></script>
-    <script defer src="heys_shared_products_export_fields_v1.js?v=1"></script>
-    <script defer src="heys_export_utils_v1.js?v=1"></script>
-    <script defer src="heys_core_v12.js?v=2" fetchpriority="high"></script>
-    <!-- Yandex Cloud API adapter (152-ФЗ compliant) - должен быть ДО supabase для auth -->
-    <script defer src="heys_yandex_api_v1.js?v=6"></script>
-    <!-- Cloud sync modularization (Phase refactor) -->
-    <script defer src="heys_cloud_merge_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_cloud_storage_utils_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_cloud_shared_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_cloud_queue_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_storage_photos_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_storage_supabase_v1.js?v=63" fetchpriority="low"></script>
-    <script defer src="heys_models_v1.js?v=20" fetchpriority="low"></script>
-    <script defer src="heys_storage_layer_v1.js?v=20" fetchpriority="low"></script>
-    <script defer src="heys_wheel_picker.js?v=20" fetchpriority="low"></script>
-    <script defer src="heys_swipeable.js?v=20" fetchpriority="low"></script>
-    <script defer src="heys_pull_refresh.js?v=20" fetchpriority="low"></script>
-    <!-- Toast Notification System (universal replacement for browser alerts) -->
-    <script defer src="heys_toast_v1.js?v=1" fetchpriority="low"></script>
-    <!-- Centralized ratio zones logic -->
-    <script defer src="heys_ratio_zones_v1.js?v=20" fetchpriority="low"></script>
-    <!-- TEF (Thermic Effect of Food) calculation module -->
-    <script defer src="heys_tef_v1.js?v=1" fetchpriority="low"></script>
-    <!-- TDEE calculation module -->
-    <script defer src="heys_tdee_v1.js?v=6" fetchpriority="low"></script>
-    <!-- Harm Score v2.0: Scientific Food Harm Assessment System -->
-    <script defer src="heys_harm_v1.js?v=1" fetchpriority="low"></script>
-    <!-- Sparkline utilities (curves, regression, caching) -->
-    <script defer src="heys_sparkline_utils_v1.js?v=20" fetchpriority="low"></script>
-    <!-- Shared mini-sparklines -->
-    <script defer src="heys_sparklines_shared_v1.js?v=6" fetchpriority="low"></script>
-    <!-- Day module split (Phase 2-5) -->
-    <script defer src="heys_day_core_bundle_v1.js?v=3" fetchpriority="low"></script>
-    <script defer src="heys_day_utils.js?v=3" fetchpriority="low"></script>
-    <script defer src="heys_day_pickers.js?v=20" fetchpriority="low"></script>
-    <script defer src="heys_day_popups.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_gallery.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_bundle_v1.js?v=3" fetchpriority="low"></script>
-    <script defer src="heys_day_add_product.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_storage_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_sound_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_guards_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_init_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_sleep_effects_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_global_exports_v1.js?v=1" fetchpriority="low"></script>
-    <!-- Day module handlers (Phase 10) -->
-
-    <!-- End Day module handlers -->
-    <!-- Day helper functions (Phase 11) -->
-    <!-- Day effects (Phase 12) -->
-    <!-- End Day helper functions -->
-    <!-- Day render components (Phase 13A) -->
-    <!-- End Day render components -->
-    <!-- Day Stats/Water/Activity modules (PR #29 extractions) -->
-    <script defer src="heys_day_stats_bundle_loader_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_edit_grams_modal_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_time_mood_picker_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_sparklines_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_sparkline_data_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_caloric_balance_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_insights_data_v1.js?v=5" fetchpriority="low"></script>
-    <script defer src="heys_day_insulin_wave_data_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_goal_progress_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_daily_summary_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_pull_refresh_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_offline_sync_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_insulin_wave_ui_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_measurements_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_popups_state_v1.js?v=1" fetchpriority="low"></script>
-
-    <script defer src="heys_day_main_block_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_side_block_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_cycle_card_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_weight_trends_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_picker_modals.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_animations.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_hero_metrics.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_water_state.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_daily_table.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_steps_ui.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_sparkline_state.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_edit_grams_state.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_caloric_display_state.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_page_shell.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_engagement_effects.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_calendar_metrics.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_calendar_block_v1.js?v=2" fetchpriority="low"></script>
-    <script defer src="heys_day_mood_sparkline_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_stats_block_v1.js?v=1" fetchpriority="low"></script>
-
-    <script defer src="heys_day_orphan_state_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_nutrition_state_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_runtime_ui_state_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_water_card_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_activity_card_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_energy_context_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_bottom_sheet_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_hero_display_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_rating_averages_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_advice_integration_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_products_context_v1.js?v=1" fetchpriority="low"></script>
-    <!-- Diary section (ПР #2.3: meal rec card integration) -->
-    <script defer src="heys_day_diary_section.js?v=3" fetchpriority="low"></script>
-    <script defer src="heys_day_tab_render_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_day_cycle_state.js" fetchpriority="low"></script>
-    <!-- End PR #29 extractions -->
-    <!-- Day module: consolidated meals (card/list/display/chart/state/handlers) -->
-    <script defer src="day/_meals.js?v=4" fetchpriority="low"></script>
-    <!-- End Day module split -->
-    <script defer src="heys_day_tab_impl_v1.js?v=7" fetchpriority="low"></script>
-    <script defer src="heys_day_v12.js?v=54" fetchpriority="low"></script>
-    <script defer src="heys_user_tab_impl_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_user_v12.js?v=20" fetchpriority="low"></script>
-    <!-- Auth + Login (client phone+PIN, curator email+password) — нужны до React render для gate логики -->
-    <script defer src="heys_auth_v1.js?v=3"></script>
-    <script defer src="heys_subscription_v1.js?v=1"></script>
-    <script defer src="heys_trial_queue_v1.js?v=1"></script>
-    <script defer src="heys_paywall_v1.js?v=2"></script>
-    <script defer src="heys_login_screen_v1.js?v=2"></script>
-    <script defer src="heys_ui_onboarding_v1.js"></script>
-    <!-- 🚀 PERF v7.0: Boot chain перемещён сюда (до reports/widgets).
-         React начинает рендер сразу как загружены DayTab/UserTab,
-         не дожидаясь ~11 некритичных скриптов (~10-15s экономии на mid-tier throttle).
-         Reports и Widgets грузятся после того как React уже работает. -->
-    <script defer src="heys_app_hooks_v1.js?v=1"></script>
-    <script defer src="heys_app_tabs_v1.js?v=1"></script>
-    <script defer src="heys_early_warning_panel_v1.js?v=16"></script>
-    <script defer src="heys_gamification_bar_v1.js?v=1"></script>
-    <script defer src="heys_app_gates_v1.js?v=1"></script>
-    <script defer src="heys_app_shell_v1.js?v=12"></script>
-    <script defer src="heys_app_overlays_v1.js?v=1"></script>
-    <script defer src="heys_app_gate_flow_v1.js?v=1"></script>
-    <script defer src="heys_app_backup_v1.js?v=1"></script>
-    <script defer src="heys_app_shortcuts_v1.js?v=1"></script>
-    <script defer src="heys_app_onboarding_v1.js?v=1"></script>
-    <script defer src="heys_app_auth_init_v1.js?v=1"></script>
-    <script defer src="heys_app_client_helpers_v1.js?v=1"></script>
-    <script defer src="heys_app_desktop_gate_v1.js?v=1"></script>
-    <script defer src="heys_app_morning_checkin_v1.js?v=1"></script>
-    <script defer src="heys_app_swipe_nav_v1.js?v=1"></script>
-    <script defer src="heys_app_runtime_effects_v1.js?v=1"></script>
-    <script defer src="heys_app_sync_effects_v1.js?v=3"></script>
-    <script defer src="heys_app_tab_state_v1.js?v=1"></script>
-    <script defer src="heys_app_client_management_v1.js?v=1"></script>
-    <script defer src="heys_app_backup_actions_v1.js?v=1"></script>
-    <script defer src="heys_app_backup_export_v1.js?v=2"></script>
-    <script defer src="heys_app_update_checks_v1.js?v=1"></script>
-    <script defer src="heys_app_update_notifications_v1.js?v=1"></script>
-    <script defer src="heys_app_cloud_init_v1.js?v=1"></script>
-    <script defer src="heys_app_client_state_manager_v1.js?v=1"></script>
-    <script defer src="heys_app_date_state_v1.js?v=1"></script>
-    <script defer src="heys_app_derived_state_v1.js?v=1"></script>
-    <script defer src="heys_app_shell_props_v1.js?v=1"></script>
-    <script defer src="heys_app_overlays_props_v1.js?v=1"></script>
-    <script defer src="heys_app_gate_state_v1.js?v=1"></script>
-    <script defer src="heys_app_global_bindings_v1.js?v=1"></script>
-    <script defer src="heys_app_backup_state_v1.js?v=1"></script>
-    <script defer src="heys_app_banner_state_v1.js?v=1"></script>
-    <script defer src="heys_app_client_init_v1.js?v=1"></script>
-    <script defer src="heys_app_twemoji_effect_v1.js?v=1"></script>
-    <script defer src="heys_app_runtime_state_v1.js?v=1"></script>
-    <script defer src="heys_app_core_state_v1.js?v=1"></script>
-    <script defer src="heys_app_root_impl_v1.js?v=1"></script>
-    <script defer src="heys_app_root_component_v1.js?v=1"></script>
-    <script defer src="heys_app_root_v1.js?v=1"></script>
-    <script defer src="heys_app_dependency_loader_v1.js?v=2026.02.08"></script>
-    <script defer src="heys_app_ui_state_v1.js?v=1"></script>
-
-    <!-- 🏎️ PERF v8.4: Critical card scripts loaded BEFORE React render (initialize).
-         They depend only on window.HEYS + window.React (available from defer chain above).
-         For returning users, browser already has them in cache → parse+execute ~5-15ms.
-         This eliminates layout shift: cards render WITH the initial content.
-         They are also in POST_BOOT_SCRIPTS but skipped there (prioritySet).
-         NOTE: pi_ui_meal_rec_card.js NOT here — needs pi_meal_recommender.js (post-boot). -->
-    <script defer src="heys_cascade_card_v1.js?v=4"></script>
-    <script defer src="heys_supplements_v1.js?v=1"></script>
-
-    <script defer src="heys_app_initialize_v1.js?v=2026.02.08"></script>
-    <script defer src="heys_app_entry_v1.js?v=1"
-        onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: heys_app_entry_v1.js')"></script>
-    <script defer src="heys_app_v12.js?v=2026.02.22.1805.8325fa69"
-        onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: heys_app_v12.js')"></script>
+    <!-- 🚀 BOOT BUNDLES v9.0 (2026-02-25): 151 defer-файл → 5 bundle-тегов
+         Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
+         Состав и хеши: bundle-manifest.json
+         Хеш в имени = вечный кэш (cache-first SW). -->
+    <script defer src="boot-core.bundle.e0cfd58e1796.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.bb8a3a4c781b.js"></script>
+    <script defer src="boot-day.bundle.7320c50778ec.js"></script>
+    <script defer src="boot-app.bundle.bc6fb633ba7c.js"></script>
+    <script defer src="boot-init.bundle.01e94cb6ddd3.js"
+        onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
     <!-- PERF: Detect returning user (localStorage has profile) → skip card unfold animations -->
     <script>
@@ -772,192 +601,52 @@
         })();
     </script>
 
-    <!-- 🚀 PERF v8.0: Post-boot динамическая загрузка (было: v7.1 defer).
-         ПРИЧИНА ИЗМЕНЕНИЯ: 70+ <script defer> выполнялись ПОСЛЕДОВАТЕЛЬНО на главном потоке,
-         блокируя event loop на ~15s ПОСЛЕ установки __heysAppReady. setTimeout-watchdog
-         и React эффекты не могли сработать до завершения всей defer-очереди → appReady +35s.
-
-         РЕШЕНИЕ: Динамически инжектируем <script> теги ПОСЛЕ React рендера (window.__heysAppReady).
-         Динамические теги = async по умолчанию, загружаются по одному через onload-цепочку.
-         setTimeout(0) между скриптами уступает управление event loop (React, watchdog, ввод).
-
-         ОЖИДАЕМЫЙ РЕЗУЛЬТАТ: appReady ~15-20s вместо 35s (boot chain ~100 defer скриптов
-         по-прежнему занимает ~15-20s — оптимизация в следующем спринте). -->
+    <!-- 🚀 PERF v9.0 (2026-02-25): Post-boot → 3 бандла вместо 93 файлов.
+         93 файла → postboot-1-game + postboot-2-insights + postboot-3-ui
+         Загрузка: sequential onload-chain после window.__heysAppReady
+         Хеш в имени = вечный кэш (cache-first SW). -->
     <script>
         (function () {
-            // 🚀 PERF v8.4: Priority card scripts — loaded early via defer above.
-            // Only self-contained modules (no backend dependencies) go here.
-            // pi_ui_meal_rec_card.js excluded: depends on pi_meal_recommender.js (post-boot).
-            var PRIORITY_CARD_SCRIPTS = [
-                'heys_cascade_card_v1.js?v=4',
-                'heys_supplements_v1.js?v=1'
+            var POST_BOOT_BUNDLES = [
+                'postboot-1-game.bundle.3981d9991b03.js',
+                'postboot-2-insights.bundle.15ce93090754.js',
+                'postboot-3-ui.bundle.d0c9bf9edcdc.js'
             ];
-
-            // Build a Set of priority scripts for fast lookup
-            var prioritySet = {};
-            PRIORITY_CARD_SCRIPTS.forEach(function (s) { prioritySet[s] = true; });
-
-            // Полный список post-boot модулей в порядке загрузки.
-            // ВАЖНО: порядок сохранён из оригинального defer-списка (race conditions).
-            var POST_BOOT_SCRIPTS = [
-                // Daily missions & Gamification
-                'heys_daily_missions_v1.js?v=1',
-                'heys_gamification_v1.js?v=22',
-                // Advice engine & Meals
-                'heys_advice_rules_v1.js?v=1',
-                'heys_advice_bundle_v1.js?v=4',
-                'heys_meal_optimizer_v1.js?v=20',
-                'heys_sounds_v1.js?v=20',
-                'heys_expandable_card_v1.js?v=20',
-                // Insulin Wave Modules (v4.2.2)
-                'heys_iw_shim.js?v=25',
-                'heys_iw_patterns.js?v=25',
-                'heys_iw_config_loader.js?v=25',
-                'heys_iw_constants.js?v=25',
-                'heys_iw_utils.js?v=25',
-                'heys_iw_lipolysis.js?v=25',
-                'heys_iw_v30.js?v=25',
-                'heys_iw_v41.js?v=25',
-                'heys_iw_calc.js?v=25',
-                'heys_iw_orchestrator.js?v=25',
-                'heys_iw_graph.js?v=25',
-                'heys_iw_ndte.js?v=25',
-                'heys_iw_ui.js?v=25',
-                'heys_insulin_wave_v1.js?v=25',
-                'heys_iw_version_info.js?v=25',
-                // Cycle, Refeed, Cascade, Misc
-                'heys_cycle_v1.js?v=20',
-                'heys_refeed_v1.js?v=20',
-                'heys_cascade_card_v1.js?v=4',
-                'heys_yesterday_verify_v1.js?v=4',
-                'heys_sms_v1.js?v=2',
-                'heys_consents_v1.js?v=5',
-                'heys_subscriptions_v1.js?v=1',
-                'heys_status_v1.js?v=1',
-                // Predictive Insights (split modules) v6
-                'insights/pi_constants.js?v=44',
-                'insights/pi_stats.js?v=7',
-                'insights/pi_thresholds.js?v=1',
-                'insights/pi_science_info.js?v=7',
-                // Pattern modules MUST load before pi_patterns.js (race condition fix)
-                'insights/patterns/timing.js?v=2',
-                'insights/patterns/sleep.js?v=5',
-                'insights/patterns/psychology.js?v=3',
-                'insights/patterns/activity.js?v=5',
-                'insights/patterns/lifestyle.js?v=4',
-                'insights/patterns/body.js?v=2',
-                'insights/patterns/training_nutrition.js?v=2',
-                'insights/patterns/metabolic.js?v=3',
-                'insights/patterns/quality.js?v=3',
-                'insights/patterns/micronutrients.js?v=4',
-                'insights/pi_patterns.js?v=10',
-                'insights/pi_advanced.js?v=12',
-                'insights/pi_cache.js?v=1',
-                'insights/pi_analytics_api.js?v=7',
-                'insights/pi_calculations.js?v=8',
-                // Modal Management System
-                'heys_modal_manager_v1.js?v=2',
-                'heys_step_modal_v1.js?v=20',
-                'heys_steps_v1.js?v=21',
-                'heys_add_product_step_v1.js?v=25.3',
-                'heys_confirm_modal_v1.js?v=20',
-                // Insights PI v3.5.0+ Advanced Modules
-                'insights/pi_phenotype.js?v=1',
-                'insights/pi_causal_chains.js?v=1',
-                'insights/pi_early_warning.js?v=44',
-                'insights/pi_whatif.js?v=2',
-                'insights/pi_ui_phenotype.js?v=1',
-                'insights/pi_ui_whatif_scenarios.js?v=6',
-                'insights/pi_product_picker.js?v=3.6.0',
-                'insights/pi_meal_rec_patterns.js?v=1',
-                'insights/pi_meal_planner.js?v=1.3.1',
-                'insights/pi_meal_recommender.js?v=3.1',
-                'insights/pi_feedback_loop.js?v=3',
-                'insights/pi_outcome_modal.js?v=2',
-                'insights/pi_meal_rec_feedback.js?v=3',
-                'insights/pi_ui_meal_rec_card.js?v=27.5',
-                'insights/pi_ui_helpers.js?v=1',
-                'insights/pi_ui_rings.js?v=6',
-                'insights/pi_ui_cards.js?v=8',
-                'insights/pi_ui_whatif.js?v=6',
-                'insights/pi_ui_dashboard.js?v=19',
-                'insights/pi_pattern_debugger.js?v=27',
-                // Predictive Insights bridge + Phenotype + Supplements
-                'heys_predictive_insights_v1.js?v=6',
-                'heys_phenotype_v1.js?v=2',
-                'heys_metabolic_intelligence_v1.js?v=3',
-                'heys_supplements_v1.js?v=1',
-                'heys_supplements_science_v1.js?v=1',
-                // StepModal components + Morning Checkin
-                'heys_profile_step_v1.js?v=20',
-                'heys_meal_step_v1.js?v=20',
-                'heys_training_step_v1.js?v=20',
-                'heys_morning_checkin_v1.js?v=20',
-                // Reports & Widgets (non-critical)
-                'heys_monthly_reports_service_v1.js?v=1',
-                'heys_monthly_reports_v1.js?v=1',
-                'heys_reports_tab_impl_v1.js?v=1',
-                'heys_reports_v12.js?v=20',
-                'heys_weekly_reports_v2.js?v=8',
-                'heys_data_overview_v1.js?v=20',
-                // Widgets Dashboard system
-                'heys_widgets_events_v1.js?v=1',
-                'heys_widgets_registry_v1.js?v=1',
-                'heys_widgets_data_crash_risk_v1.js?v=1',
-                'heys_widgets_core_v1.js?v=1',
-                'widgets/widget_data.js?v=6',
-                'heys_widgets_ui_v1.js?v=4'
-            ];
-
             var idx = 0;
-            var total = POST_BOOT_SCRIPTS.length;
+            var total = POST_BOOT_BUNDLES.length;
 
-            // Загружаем скрипты по одному через onload-цепочку.
-            // onload гарантирует: скрипт загружен И выполнен перед следующим.
-            // setTimeout(0) уступает управление event loop между каждым скриптом
-            // → React эффекты, ввод пользователя, watchdog могут работать нормально.
             function loadNext() {
-                // Skip priority scripts in sequential chain (already loaded)
-                while (idx < total && prioritySet[POST_BOOT_SCRIPTS[idx]]) {
-                    idx++;
-                }
                 if (idx >= total) {
-                    console.info('[HEYS.postboot] ✅ All ' + total + ' post-boot modules loaded');
-                    window.__heysPerfMark && window.__heysPerfMark('PostBoot: all ' + total + ' modules loaded');
+                    console.info('[HEYS.postboot] ✅ All ' + total + ' post-boot bundles loaded');
+                    window.__heysPerfMark && window.__heysPerfMark('PostBoot: all bundles loaded');
                     window.__heysPostbootDone = true;
                     return;
                 }
-                var src = POST_BOOT_SCRIPTS[idx++];
+                var src = POST_BOOT_BUNDLES[idx++];
                 var s = document.createElement('script');
                 s.src = src;
                 s.onload = s.onerror = function () {
-                    // Yield to event loop, then load next script
                     setTimeout(loadNext, 0);
                 };
                 document.head.appendChild(s);
             }
 
-            // Ждём window.__heysAppReady (React отрендерился), потом запускаем загрузку
             var waitChecks = 0;
             function waitForAppReady() {
                 waitChecks++;
                 if (window.__heysAppReady) {
-                    var priorityCount = PRIORITY_CARD_SCRIPTS.length;
-                    console.info('[HEYS.postboot] 🚀 appReady detected, loading ' + priorityCount + ' priority + ' + total + ' post-boot scripts');
-                    window.__heysPerfMark && window.__heysPerfMark('PostBoot: dynamic load started (' + total + ' scripts)');
-                    // Sequential chain starts (priority scripts already loaded or will be by first render)
+                    console.info('[HEYS.postboot] 🚀 appReady detected, loading ' + total + ' post-boot bundles');
+                    window.__heysPerfMark && window.__heysPerfMark('PostBoot: bundle load started');
                     setTimeout(loadNext, window.__heysHasLocalData ? 0 : 50);
                     return;
                 }
-                // Timeout fallback: если appReady не установился за 60s — грузим всё равно
                 if (waitChecks > 600) {
-                    console.warn('[HEYS.postboot] ⚠️ appReady timeout, loading post-boot anyway');
+                    console.warn('[HEYS.postboot] ⚠️ appReady timeout, loading post-boot bundles anyway');
                     setTimeout(loadNext, 0);
                     return;
                 }
                 setTimeout(waitForAppReady, 100);
             }
-            // Начинаем проверку через 200ms (даём boot chain время завершиться)
             setTimeout(waitForAppReady, 200);
         })();
     </script>

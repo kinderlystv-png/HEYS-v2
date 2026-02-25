@@ -1,3 +1,6 @@
+// 🆕 PERF v9.2: Метка момента когда boot-core начал исполняться
+window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
+
 /**
  * HEYS Development Utils v1.1
  * =============================

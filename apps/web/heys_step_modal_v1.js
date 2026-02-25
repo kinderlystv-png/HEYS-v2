@@ -976,4 +976,10 @@
     }
   };
 
+  // Уведомляем другие модули что StepModal готов (в т.ч. те что загрузились раньше)
+  try {
+    document.dispatchEvent(new CustomEvent('heys-stepmodal-ready'));
+    console.info('[HEYS.StepModal] ✅ heys-stepmodal-ready dispatched');
+  } catch (_) { }
+
 })(typeof window !== 'undefined' ? window : global);

@@ -144,8 +144,10 @@
             if (!rootElement) {
                 return;
             }
+            window.__heysPerfMark && window.__heysPerfMark('ReactDOM.createRoot: begin');
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(ErrorBoundary, null, React.createElement(AppComponent)));
+            window.__heysPerfMark && window.__heysPerfMark('root.render: called → __heysAppReady');
 
             // 🆕 Уведомляем SW об успешной загрузке (сбрасывает счётчик boot failures)
             if (navigator.serviceWorker?.controller) {

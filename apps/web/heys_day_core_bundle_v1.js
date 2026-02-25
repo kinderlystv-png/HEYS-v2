@@ -3554,7 +3554,12 @@
                                     prevDay.stressMorning === newDay.stressMorning &&
                                     // Витамины/добавки
                                     prevSupplementsPlanned === newSupplementsPlanned &&
-                                    prevSupplementsTaken === newSupplementsTaken;
+                                    prevSupplementsTaken === newSupplementsTaken &&
+                                    // Данные сна — без проверки state не обновляется при сохранении через StepModal
+                                    prevDay.sleepStart === newDay.sleepStart &&
+                                    prevDay.sleepEnd === newDay.sleepEnd &&
+                                    prevDay.sleepHours === newDay.sleepHours &&
+                                    prevDay.sleepQuality === newDay.sleepQuality;
 
                                 if (isSameContent) {
                                     return prevDay;

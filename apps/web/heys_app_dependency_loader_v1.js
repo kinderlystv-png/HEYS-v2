@@ -1,5 +1,8 @@
 // heys_app_dependency_loader_v1.js — dependency wait & init loader extracted from heys_app_v12.js
 
+// 🆕 PERF v9.2: Метка момента когда boot-init начал исполняться (не скачиваться)
+window.__heysPerfMark && window.__heysPerfMark('boot-init: execute start');
+
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
     HEYS.AppDependencyLoader = HEYS.AppDependencyLoader || {};
@@ -7,10 +10,13 @@
     HEYS.AppDependencyLoader.start = function ({ initializeApp, isReactReady, isHeysReady }) {
         const bootLog = (msg) => window.__heysLog && window.__heysLog('[DEPS] ' + msg);
         bootLog('dependency loader start');
+        window.__heysPerfMark && window.__heysPerfMark('boot-init: AppDependencyLoader.start');
         const INIT_RETRY_DELAY = 100;
         const INIT_LOADER_DELAY_MS = 420;
         const depsWaitStartedAt = Date.now();
         let reactCheckCount = 0;
+        let _reactReadyLogged = false;
+        let _heysReadyLogged = false;
 
         const defaultIsReactReady = () => Boolean(window.React && window.ReactDOM);
 
@@ -117,17 +123,35 @@
                 document.body.appendChild(loader);
             }
 
+            // 🆕 PERF v9.2: логируем первый момент готовности React и HEYS независимо
+            if (!_reactReadyLogged && checkReactReady()) {
+                _reactReadyLogged = true;
+                window.__heysPerfMark && window.__heysPerfMark('React ready (retries=' + reactCheckCount + ')');
+            }
+            if (!_heysReadyLogged && checkHeysReady()) {
+                _heysReadyLogged = true;
+                window.__heysPerfMark && window.__heysPerfMark('HEYS deps ready (retries=' + reactCheckCount + ')');
+            }
+
             if (checkReactReady() && checkHeysReady()) {
                 bootLog('deps ready, init app');
                 // Убираем loader если показывали
                 document.getElementById('heys-init-loader')?.remove();
                 if (window.__heysInitLoaderState !== 'ready') {
                     console.info('[HEYS.sceleton] ✅ init_ready', {
-                        elapsedMs: depsElapsedMs
+                        elapsedMs: depsElapsedMs,
+                        retries: reactCheckCount
                     });
                     window.__heysInitLoaderState = 'ready';
                 }
                 onReady();
+                // 🆕 Держим watchdog heartbeat живым пока app не готов (sync/bootstrap могут занять >10s)
+                // Без этого watchdog через 10s показывает recovery UI несмотря на активную загрузку
+                (function keepHeartbeat() {
+                    if (window.__heysAppReady) return;
+                    window.__heysLoadingHeartbeat = Date.now();
+                    setTimeout(keepHeartbeat, 2000);
+                })();
                 return;
             }
 

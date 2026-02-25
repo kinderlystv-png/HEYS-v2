@@ -4,7 +4,9 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
-import bundleLegacy from './scripts/vite-plugin-bundle-legacy.js';
+// bundleLegacy ОТКЛЮЧЁН (2026-02-25): заменён на scripts/bundle-legacy.mjs (repo root)
+// Бандлы уже сгенерированы в public/ до сборки: pnpm bundle:legacy
+// import bundleLegacy from './scripts/vite-plugin-bundle-legacy.js';
 import vitePluginVersionHash from './scripts/vite-plugin-version-hash.js';
 
 export default defineConfig({
@@ -12,8 +14,8 @@ export default defineConfig({
     react(),
     // Auto-versioning: заменяет ?v=N на ?v=CONTENTHASH для cache busting
     vitePluginVersionHash({ verbose: true }),
-    // Post-build: конкатенирует 246 legacy JS-файлов в 3 бандла
-    bundleLegacy(),
+    // bundleLegacy() ОТКЛЮЧЁН: бандлы уже в public/ (см. bundle-manifest.json, pnpm bundle:legacy)
+    // bundleLegacy(),
     // Bundle analyzer отключен из-за конфликта версий rollup
     // Используем отдельный скрипт для анализа
     // Копирование CSS модулей в dist для production
