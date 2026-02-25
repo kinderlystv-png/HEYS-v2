@@ -1174,7 +1174,7 @@
                             )))
                         : (tab === 'stats' || tab === 'diary')
                             ? React.createElement(DayTabWithCloudSync, {
-                                key: 'day' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                                key: 'day_' + String(clientId || '') + '_' + selectedDate,
                                 products,
                                 clientId,
                                 selectedDate,

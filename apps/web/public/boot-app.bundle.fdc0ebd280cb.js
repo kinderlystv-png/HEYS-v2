@@ -12153,6 +12153,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const needsSkeleton = !clientId || loading || !window.HEYS || !window.HEYS.DayTab;
         const showSkeleton = useDelayedSkeleton(needsSkeleton, 'daytab');
 
+        // Mount/remount diagnostic log
+        React.useEffect(() => {
+            console.info('[HEYS.sceleton] 🔁 DayTabWithCloudSync MOUNTED', {
+                clientId: clientId ? String(clientId).slice(0, 8) : null,
+                selectedDate,
+                subTab,
+            });
+            return () => {
+                console.info('[HEYS.sceleton] 💀 DayTabWithCloudSync UNMOUNTED');
+            };
+        }, []);
+
         React.useEffect(() => {
             let cancelled = false;
             let fallbackTimer = null;
@@ -16755,7 +16767,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             )))
                         : (tab === 'stats' || tab === 'diary')
                             ? React.createElement(DayTabWithCloudSync, {
-                                key: 'day' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                                key: 'day_' + String(clientId || '') + '_' + selectedDate,
                                 products,
                                 clientId,
                                 selectedDate,

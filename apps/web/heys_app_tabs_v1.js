@@ -82,6 +82,18 @@
         const needsSkeleton = !clientId || loading || !window.HEYS || !window.HEYS.DayTab;
         const showSkeleton = useDelayedSkeleton(needsSkeleton, 'daytab');
 
+        // Mount/remount diagnostic log
+        React.useEffect(() => {
+            console.info('[HEYS.sceleton] 🔁 DayTabWithCloudSync MOUNTED', {
+                clientId: clientId ? String(clientId).slice(0, 8) : null,
+                selectedDate,
+                subTab,
+            });
+            return () => {
+                console.info('[HEYS.sceleton] 💀 DayTabWithCloudSync UNMOUNTED');
+            };
+        }, []);
+
         React.useEffect(() => {
             let cancelled = false;
             let fallbackTimer = null;
