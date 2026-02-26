@@ -326,6 +326,35 @@
         <link rel="stylesheet" href="styles/main.css?v=38" />
     </noscript>
 
+    <!-- v9.9: CSS load detection fallback — catches cases where onload event missed
+         (e.g., after PWA cache clear, SW staleWhileRevalidate race) -->
+    <script>
+        (function () {
+            if (window.__heysMainCSSLoaded) return;
+            var checks = 0, maxChecks = 15; // 15 × 200ms = 3s max
+            var timer = setInterval(function () {
+                checks++;
+                if (window.__heysMainCSSLoaded) { clearInterval(timer); return; }
+                var sheets = document.styleSheets;
+                for (var i = 0; i < sheets.length; i++) {
+                    try {
+                        if (sheets[i].href && sheets[i].href.indexOf('main.css') !== -1) {
+                            clearInterval(timer);
+                            window.__heysMainCSSLoaded = true;
+                            window.dispatchEvent(new CustomEvent('heysMainCSSLoaded'));
+                            console.info('[HEYS.css] ✅ main.css detected via polling (' + (checks * 200) + 'ms)');
+                            return;
+                        }
+                    } catch (e) { } // CORS sheets throw SecurityError
+                }
+                if (checks >= maxChecks) {
+                    clearInterval(timer);
+                    console.warn('[HEYS.css] ⚠️ main.css polling exhausted (3s) — onload will handle it');
+                }
+            }, 200);
+        })();
+    </script>
+
     <!-- PWA Manifest and Meta Tags -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#2563eb" />

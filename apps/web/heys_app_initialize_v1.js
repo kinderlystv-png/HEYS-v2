@@ -172,6 +172,19 @@
             };
 
             // CSS gate: wait for main.css before destroying skeleton
+            // v9.9: styleSheets fallback — detect CSS even if onload event was missed
+            if (!window.__heysMainCSSLoaded) {
+                try {
+                    for (var si = 0; si < document.styleSheets.length; si++) {
+                        if (document.styleSheets[si].href && document.styleSheets[si].href.indexOf('main.css') !== -1) {
+                            window.__heysMainCSSLoaded = true;
+                            console.info('[HEYS.init] ✅ main.css detected via styleSheets (onload missed)');
+                            break;
+                        }
+                    }
+                } catch (e) { /* SecurityError on CORS sheets — skip */ }
+            }
+
             if (window.__heysMainCSSLoaded) {
                 console.info('[HEYS.init] ✅ main.css already loaded — mounting React immediately');
                 doRender();
@@ -184,12 +197,13 @@
                     doRender();
                 };
                 window.addEventListener('heysMainCSSLoaded', onCSS, { once: true });
-                // Safety timeout: 10s — mount anyway to avoid stuck skeleton
+                // v9.9: Reduced from 10s to 3s — index.html has polling fallback,
+                // and CSS Gate #2 in DayTab was removed (no cumulative penalty)
                 cssTimer = setTimeout(function () {
                     window.removeEventListener('heysMainCSSLoaded', onCSS);
-                    console.warn('[HEYS.init] ⚠️ CSS timeout (10s) — mounting React without main.css');
+                    console.warn('[HEYS.init] ⚠️ CSS timeout (3s) — mounting React without main.css');
                     doRender();
-                }, 10000);
+                }, 3000);
             }
         }
 

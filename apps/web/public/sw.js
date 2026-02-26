@@ -21,6 +21,7 @@ const PRECACHE_URLS = [
   '/index.html',
   '/styles/critical.css',
   '/styles/main.css',
+  '/styles/modules/001-design-tokens.css',
   '/styles/modules/000-base-and-gamification.css',
   '/styles/modules/100-metrics-and-graphs.css',
   '/styles/modules/200-dark-and-effects.css',
@@ -28,7 +29,15 @@ const PRECACHE_URLS = [
   '/styles/modules/400-water-and-hydration.css',
   '/styles/modules/500-pwa-and-offline.css',
   '/styles/modules/600-steps-and-aps.css',
+  '/styles/modules/700-profile-wizard.css',
+  '/styles/modules/710-refeed.css',
+  '/styles/modules/715-yesterday-verify.css',
+  '/styles/modules/720-predictive-insights.css',
+  '/styles/modules/725-metabolic-intelligence.css',
   '/styles/modules/730-widgets-dashboard.css',
+  '/styles/modules/740-cascade-card.css',
+  '/styles/modules/800-meal-optimizer.css',
+  '/styles/heys-components.css',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
@@ -46,26 +55,50 @@ const CDN_URLS = [
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing...', CACHE_VERSION);
 
-  // 🔥 КРИТИЧНО: Сначала skipWaiting, потом кэшируем в фоне
-  // Не блокируем установку долгим precache — иначе чёрный экран при первом запуске
+  // v9.9: Two-phase install:
+  //   Phase 1 (blocking): CSS precache — prevents FOUC after cache clear
+  //   Phase 2 (background): HTML, icons, boot bundles — non-blocking
   event.waitUntil(
-    self.skipWaiting()
+    // Phase 1: Cache all CSS files BEFORE skipWaiting
+    // Old caches are cleared on activate, so CSS must be in new cache
+    // before the new SW takes control. Without this, main.css requests
+    // hit network (staleWhileRevalidate finds no cache) → 10s FOUC.
+    caches.open(STATIC_CACHE)
+      .then((cache) => {
+        const cssUrls = PRECACHE_URLS.filter(url => url.endsWith('.css'));
+        console.log('[SW] 📦 Phase 1: Blocking CSS precache (' + cssUrls.length + ' files)');
+        return Promise.allSettled(
+          cssUrls.map(url =>
+            Promise.race([
+              cache.add(url),
+              new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Timeout')), 5000)
+              )
+            ]).catch(err => {
+              console.warn('[SW] ⚠️ CSS cache skip:', url, err.message);
+            })
+          )
+        );
+      })
       .then(() => {
-        console.log('[SW] ✅ skipWaiting done — SW now active');
+        console.log('[SW] ✅ CSS precached — calling skipWaiting');
+        return self.skipWaiting();
+      })
+      .then(() => {
+        console.log('[SW] ✅ skipWaiting done — SW now active (CSS in cache)');
 
-        // Кэшируем App Shell в ФОНЕ с timeout
-        // Не используем waitUntil чтобы не блокировать активацию
+        // Phase 2: Non-CSS assets + boot bundles in BACKGROUND
         setTimeout(() => {
           caches.open(STATIC_CACHE)
             .then((cache) => {
-              console.log('[SW] 📦 Background precaching started...');
-              const precacheUrls = PRECACHE_URLS.filter((url) =>
+              console.log('[SW] 📦 Phase 2: Background precaching started...');
+              const nonCssUrls = PRECACHE_URLS.filter(url =>
+                !url.endsWith('.css') &&
                 url !== '/version.json' && url !== '/build-meta.json'
               );
 
-              // Параллельно кэшируем с timeout на каждый файл
               return Promise.allSettled(
-                precacheUrls.map(url =>
+                nonCssUrls.map(url =>
                   Promise.race([
                     cache.add(url),
                     new Promise((_, reject) =>
