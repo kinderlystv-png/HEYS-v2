@@ -43,20 +43,59 @@ passing client_id to RPC     → Use *_by_session pattern with session_token
 
 For detailed context, read the relevant file before starting work:
 
-| Topic                      | File                                    |
-| -------------------------- | --------------------------------------- |
-| Full AI instructions       | `.github/copilot-instructions.md`       |
-| Architecture & files       | `docs/ARCHITECTURE.md`                  |
-| Key files & entry points   | `docs/AI_KEY_FILES.md`                  |
-| API & RPC                  | `docs/API_DOCUMENTATION.md`             |
-| **Data model (core)**      | `docs/DATA_MODEL_REFERENCE.md`          |
-| **Data model (nutrition)** | `docs/DATA_MODEL_NUTRITION.md`          |
-| **Data model (analytics)** | `docs/DATA_MODEL_ANALYTICS.md`          |
-| Insulin wave (full)        | `docs/INSULIN_WAVE_DOCUMENTATION.md`    |
-| Trial Machine              | `docs/AI_TRIAL_MACHINE.md`              |
-| Insights & analytics       | `HEYS_Insights_v5_Deep_Analytics_c7.md` |
-| Security                   | `docs/SECURITY_RUNBOOK.md`              |
-| Meal planner               | `docs/MEAL_PLANNER_DOCUMENTATION.md`    |
-| Sync architecture          | `docs/SYNC_REFERENCE.md`                |
-| Sync & performance         | `docs/SYNC_PERFORMANCE_REPORT.md`       |
-| Storage patterns           | `docs/dev/STORAGE_PATTERNS.md`          |
+| Topic                      | File                                       |
+| -------------------------- | ------------------------------------------ |
+| Full AI instructions       | `.github/copilot-instructions.md`          |
+| Architecture & files       | `docs/ARCHITECTURE.md`                     |
+| Key files & entry points   | `docs/AI_KEY_FILES.md`                     |
+| API & RPC                  | `docs/API_DOCUMENTATION.md`                |
+| **Data model (core)**      | `docs/DATA_MODEL_REFERENCE.md`             |
+| **Data model (nutrition)** | `docs/DATA_MODEL_NUTRITION.md`             |
+| **Data model (analytics)** | `docs/DATA_MODEL_ANALYTICS.md`             |
+| **Scoring (full)**         | `docs/SCORING_REFERENCE.md`                |
+| **App systems**            | `docs/APP_SYSTEMS_REFERENCE.md`            |
+| **Data model changelog**   | `docs/CHANGELOG_DATA_MODEL.md`             |
+| Insulin wave (full)        | `docs/INSULIN_WAVE_DOCUMENTATION.md`       |
+| Trial Machine              | `docs/AI_TRIAL_MACHINE.md`                 |
+| Insights & analytics       | `HEYS_Insights_v5_Deep_Analytics_c7.md`    |
+| Security                   | `docs/SECURITY_RUNBOOK.md`                 |
+| Meal planner               | `docs/MEAL_PLANNER_DOCUMENTATION.md`       |
+| **Sync architecture**      | `docs/SYNC_REFERENCE.md`                   |
+| **Sync performance**       | `docs/SYNC_PERFORMANCE_REPORT.md`          |
+| **Sync sessions log**      | `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md`    |
+| **Storage patterns**       | `docs/dev/STORAGE_PATTERNS.md`             |
+| **Data loss protection**   | `docs/DATA_LOSS_PROTECTION.md`             |
+| **EWS cloud sync**         | `docs/EWS_WEEKLY_CLOUD_SYNC_DEPLOYMENT.md` |
+
+### Data Model Documentation Complex
+
+When working on **metrics, models, analytics, scoring, or nutrition
+algorithms**, read ALL of these docs together — they form a unified complex with
+cross-references:
+
+1. `docs/DATA_MODEL_REFERENCE.md` — core schemas, DayRecord, Product,
+   localStorage
+2. `docs/DATA_MODEL_NUTRITION.md` — caloric debt/excess, MQS, insulin wave, TDEE
+3. `docs/DATA_MODEL_ANALYTICS.md` — 41 patterns, EWS, gamification, phenotype
+4. `docs/SCORING_REFERENCE.md` — Status Score, Day Score, CRS v7 (full
+   algorithms)
+5. `docs/APP_SYSTEMS_REFERENCE.md` — widgets, cascade, search, export, trial,
+   merge
+6. `docs/CHANGELOG_DATA_MODEL.md` — version history across all data model docs
+
+### Sync & Storage Documentation Complex
+
+When working on **sync, cloud storage, localStorage, data flow, or
+performance**, read ALL of these docs together — they form a unified complex
+with cross-references:
+
+1. `docs/SYNC_REFERENCE.md` — core sync architecture, data flow, auth modes,
+   events
+2. `docs/SYNC_PERFORMANCE_REPORT.md` — 5 optimization phases, metrics, incidents
+3. `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md` — implementation details, session
+   journals
+4. `docs/dev/STORAGE_PATTERNS.md` — localStorage API, Store API, namespacing
+   rules
+5. `docs/DATA_LOSS_PROTECTION.md` — SQL guards, overwrite protection at all
+   levels
+6. `docs/EWS_WEEKLY_CLOUD_SYNC_DEPLOYMENT.md` — EWS weekly snapshots cloud sync

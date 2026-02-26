@@ -248,6 +248,9 @@ console.error('[HEYS.module] ❌ Failed:', { error, retryIn });
 | **Data model (core: dayTot, normAbs, schema)**  | `docs/DATA_MODEL_REFERENCE.md`                                       |
 | **Data model (nutrition: debt, refeed, wave)**  | `docs/DATA_MODEL_NUTRITION.md`                                       |
 | **Data model (analytics: insights, EWS, harm)** | `docs/DATA_MODEL_ANALYTICS.md`                                       |
+| **Scoring (Status, Day, CRS algorithms)**       | `docs/SCORING_REFERENCE.md`                                          |
+| **App systems (widgets, cascade, export)**      | `docs/APP_SYSTEMS_REFERENCE.md`                                      |
+| **Data model changelog**                        | `docs/CHANGELOG_DATA_MODEL.md`                                       |
 | Insulin wave (full technical)                   | `docs/INSULIN_WAVE_DOCUMENTATION.md`                                 |
 | Trial Machine, onboarding                       | `docs/AI_TRIAL_MACHINE.md`                                           |
 | Insights, patterns, statistics                  | `HEYS_Insights_v5_Deep_Analytics_c7.md`                              |
@@ -256,5 +259,44 @@ console.error('[HEYS.module] ❌ Failed:', { error, retryIn });
 | Deployment guide                                | `docs/DEPLOYMENT_GUIDE.md`                                           |
 | Business context                                | `docs/HEYS_BRIEF.md`                                                 |
 | Technical architecture (detailed)               | `docs/ARCHITECTURE.md` (v18.0.0, merged from TECHNICAL_ARCHITECTURE) |
+| **Sync architecture**                           | `docs/SYNC_REFERENCE.md`                                             |
+| **Sync performance**                            | `docs/SYNC_PERFORMANCE_REPORT.md`                                    |
+| **Sync sessions log**                           | `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md`                              |
+| **Storage patterns**                            | `docs/dev/STORAGE_PATTERNS.md`                                       |
+| **Data loss protection**                        | `docs/DATA_LOSS_PROTECTION.md`                                       |
+| **EWS cloud sync**                              | `docs/EWS_WEEKLY_CLOUD_SYNC_DEPLOYMENT.md`                           |
 | Monitoring                                      | `yandex-cloud-functions/MONITORING_QUICK_REF.md`                     |
 | Incident prevention                             | `yandex-cloud-functions/INCIDENT_PREVENTION.md`                      |
+
+### Data Model Documentation Complex
+
+When working on **metrics, models, analytics, scoring, or nutrition
+algorithms**, read ALL of these docs together — they form a unified complex with
+cross-references:
+
+1. `docs/DATA_MODEL_REFERENCE.md` — core schemas, DayRecord, Product,
+   localStorage
+2. `docs/DATA_MODEL_NUTRITION.md` — caloric debt/excess, MQS, insulin wave, TDEE
+3. `docs/DATA_MODEL_ANALYTICS.md` — 41 patterns, EWS, gamification, phenotype
+4. `docs/SCORING_REFERENCE.md` — Status Score, Day Score, CRS v7 (full
+   algorithms)
+5. `docs/APP_SYSTEMS_REFERENCE.md` — widgets, cascade, search, export, trial,
+   merge
+6. `docs/CHANGELOG_DATA_MODEL.md` — version history across all data model docs
+
+### Sync & Storage Documentation Complex
+
+When working on **sync, cloud storage, localStorage, data flow, or
+performance**, read ALL of these docs together — they form a unified complex
+with cross-references:
+
+1. `docs/SYNC_REFERENCE.md` — core sync architecture, data flow, auth modes,
+   events
+2. `docs/SYNC_PERFORMANCE_REPORT.md` — 5 optimization phases, metrics, incidents
+3. `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md` — implementation details, session
+   journals
+4. `docs/dev/STORAGE_PATTERNS.md` — localStorage API, Store API, namespacing
+   rules
+5. `docs/DATA_LOSS_PROTECTION.md` — SQL guards, overwrite protection at all
+   levels
+6. `docs/EWS_WEEKLY_CLOUD_SYNC_DEPLOYMENT.md` — EWS weekly snapshots cloud sync
