@@ -7330,84 +7330,84 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 /* ===== heys_shared_products_export_fields_v1.js ===== */
 // heys_shared_products_export_fields_v1.js — shared products export field descriptions
 (function () {
-    const HEYS = window.HEYS = window.HEYS || {};
-    HEYS.SharedProductsExportFields = HEYS.SharedProductsExportFields || {};
+  const HEYS = window.HEYS = window.HEYS || {};
+  HEYS.SharedProductsExportFields = HEYS.SharedProductsExportFields || {};
 
-    const FIELD_DESCRIPTIONS = {
-        id: 'Уникальный идентификатор продукта (UUID)',
-        name: 'Название продукта',
-        simple100: 'Простые углеводы (сахара) на 100г, граммы',
-        complex100: 'Сложные углеводы на 100г, граммы',
-        protein100: 'Белок на 100г, граммы',
-        badFat100: 'Насыщенные (вредные) жиры на 100г, граммы',
-        goodFat100: 'Ненасыщенные (полезные) жиры на 100г, граммы',
-        trans100: 'Транс-жиры на 100г, граммы (самые вредные)',
-        fiber100: 'Клетчатка на 100г, граммы',
-        gi: 'Гликемический индекс (0-100). Низкий <55, средний 55-70, высокий >70',
-        harm: 'Индекс вредности (0-10). 0=суперполезный, 10=супервредный. Формула учитывает транс-жиры, сахар, насыщенные жиры vs клетчатку, белок',
-        category: 'Категория продукта (молочные, мясо, овощи и т.д.)',
-        portions: 'Порции продукта в формате JSON [{name: "1 шт", grams: 50}]',
-        sodium100: 'Натрий (соль) на 100г, миллиграммы. Норма <2000мг/день. Избыток вызывает гипертензию',
-        nova_group: 'NOVA классификация переработки (1-4). 1=натуральный, 2=кулинарный ингредиент, 3=переработанный, 4=ультрапереработанный (вредно!)',
-        vitamin_a: 'Витамин A, % от суточной нормы. Зрение, иммунитет',
-        vitamin_c: 'Витамин C, % от суточной нормы. Иммунитет, антиоксидант',
-        vitamin_d: 'Витамин D, % от суточной нормы. Кости, иммунитет',
-        vitamin_e: 'Витамин E, % от суточной нормы. Антиоксидант',
-        vitamin_k: 'Витамин K, % от суточной нормы. Свёртываемость крови',
-        vitamin_b1: 'Витамин B1 (тиамин), % от суточной нормы. Энергетический метаболизм',
-        vitamin_b2: 'Витамин B2 (рибофлавин), % от суточной нормы. Метаболизм',
-        vitamin_b3: 'Витамин B3 (ниацин), % от суточной нормы. Энергия, нервная система',
-        vitamin_b6: 'Витамин B6 (пиридоксин), % от суточной нормы. Белковый метаболизм',
-        vitamin_b9: 'Витамин B9 (фолат), % от суточной нормы. Кроветворение, беременность',
-        vitamin_b12: 'Витамин B12 (кобаламин), % от суточной нормы. Нервная система, кровь',
-        calcium: 'Кальций, % от суточной нормы. Кости, зубы',
-        iron: 'Железо, % от суточной нормы. Кровь, энергия',
-        magnesium: 'Магний, % от суточной нормы. Мышцы, нервы, сон',
-        phosphorus: 'Фосфор, % от суточной нормы. Кости, энергия',
-        potassium: 'Калий, % от суточной нормы. Сердце, давление',
-        zinc: 'Цинк, % от суточной нормы. Иммунитет, кожа',
-        selenium: 'Селен, % от суточной нормы. Антиоксидант, щитовидка',
-        iodine: 'Йод, % от суточной нормы. Щитовидная железа',
-        is_organic: 'Органический продукт (true/false). Без пестицидов и ГМО',
-        is_whole_grain: 'Цельнозерновой (true/false). Из цельного зерна, больше клетчатки',
-        is_fermented: 'Ферментированный (true/false). Квашеный, содержит пробиотики',
-        is_raw: 'Сырой/необработанный термически (true/false)',
-    };
+  const FIELD_DESCRIPTIONS = {
+    id: 'Уникальный идентификатор продукта (UUID)',
+    name: 'Название продукта',
+    simple100: 'Простые углеводы (сахара) на 100г, граммы',
+    complex100: 'Сложные углеводы на 100г, граммы',
+    protein100: 'Белок на 100г, граммы',
+    badFat100: 'Насыщенные (вредные) жиры на 100г, граммы',
+    goodFat100: 'Ненасыщенные (полезные) жиры на 100г, граммы',
+    trans100: 'Транс-жиры на 100г, граммы (самые вредные)',
+    fiber100: 'Клетчатка на 100г, граммы',
+    gi: 'Гликемический индекс (0-100). Низкий <55, средний 55-70, высокий >70',
+    harm: 'Индекс вредности (0-10). 0=суперполезный, 10=супервредный. Формула учитывает транс-жиры, сахар, насыщенные жиры vs клетчатку, белок',
+    category: 'Категория продукта (молочные, мясо, овощи и т.д.)',
+    portions: 'Порции продукта в формате JSON [{name: "1 шт", grams: 50}]',
+    sodium100: 'Натрий (соль) на 100г, миллиграммы. Норма <2000мг/день. Избыток вызывает гипертензию',
+    nova_group: 'NOVA классификация переработки (1-4). 1=натуральный, 2=кулинарный ингредиент, 3=переработанный, 4=ультрапереработанный (вредно!)',
+    vitamin_a: 'Витамин A, % от суточной нормы. Зрение, иммунитет',
+    vitamin_c: 'Витамин C, % от суточной нормы. Иммунитет, антиоксидант',
+    vitamin_d: 'Витамин D, % от суточной нормы. Кости, иммунитет',
+    vitamin_e: 'Витамин E, % от суточной нормы. Антиоксидант',
+    vitamin_k: 'Витамин K, % от суточной нормы. Свёртываемость крови',
+    vitamin_b1: 'Витамин B1 (тиамин), % от суточной нормы. Энергетический метаболизм',
+    vitamin_b2: 'Витамин B2 (рибофлавин), % от суточной нормы. Метаболизм',
+    vitamin_b3: 'Витамин B3 (ниацин), % от суточной нормы. Энергия, нервная система',
+    vitamin_b6: 'Витамин B6 (пиридоксин), % от суточной нормы. Белковый метаболизм',
+    vitamin_b9: 'Витамин B9 (фолат), % от суточной нормы. Кроветворение, беременность',
+    vitamin_b12: 'Витамин B12 (кобаламин), % от суточной нормы. Нервная система, кровь',
+    calcium: 'Кальций, % от суточной нормы. Кости, зубы',
+    iron: 'Железо, % от суточной нормы. Кровь, энергия',
+    magnesium: 'Магний, % от суточной нормы. Мышцы, нервы, сон',
+    phosphorus: 'Фосфор, % от суточной нормы. Кости, энергия',
+    potassium: 'Калий, % от суточной нормы. Сердце, давление',
+    zinc: 'Цинк, % от суточной нормы. Иммунитет, кожа',
+    selenium: 'Селен, % от суточной нормы. Антиоксидант, щитовидка',
+    iodine: 'Йод, % от суточной нормы. Щитовидная железа',
+    is_organic: 'Органический продукт (true/false). Без пестицидов и ГМО',
+    is_whole_grain: 'Цельнозерновой (true/false). Из цельного зерна, больше клетчатки',
+    is_fermented: 'Ферментированный (true/false). Квашеный, содержит пробиотики',
+    is_raw: 'Сырой/необработанный термически (true/false)',
+  };
 
-    HEYS.SharedProductsExportFields.getFieldDescriptions = function () {
-        return { ...FIELD_DESCRIPTIONS };
-    };
+  HEYS.SharedProductsExportFields.getFieldDescriptions = function () {
+    return { ...FIELD_DESCRIPTIONS };
+  };
 })();
 
 
 /* ===== heys_export_utils_v1.js ===== */
 // heys_export_utils_v1.js — shared export helpers
 (function () {
-    const HEYS = window.HEYS = window.HEYS || {};
-    HEYS.ExportUtils = HEYS.ExportUtils || {};
+  const HEYS = window.HEYS = window.HEYS || {};
+  HEYS.ExportUtils = HEYS.ExportUtils || {};
 
-    const getIsoDate = (date) => {
-        const d = date instanceof Date ? date : new Date();
-        return d.toISOString().slice(0, 10);
-    };
+  const getIsoDate = (date) => {
+    const d = date instanceof Date ? date : new Date();
+    return d.toISOString().slice(0, 10);
+  };
 
-    HEYS.ExportUtils.buildDatedFileName = function (prefix, date) {
-        return `${prefix}-${getIsoDate(date)}.json`;
-    };
+  HEYS.ExportUtils.buildDatedFileName = function (prefix, date) {
+    return `${prefix}-${getIsoDate(date)}.json`;
+  };
 
-    HEYS.ExportUtils.downloadJSON = function ({ data, fileName }) {
-        const payload = JSON.stringify(data, null, 2);
-        const blob = new Blob([payload], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
+  HEYS.ExportUtils.downloadJSON = function ({ data, fileName }) {
+    const payload = JSON.stringify(data, null, 2);
+    const blob = new Blob([payload], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
 
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 })();
 
 
@@ -15901,388 +15901,388 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 /* ===== heys_storage_photos_v1.js ===== */
 // heys_storage_photos_v1.js — Photo storage (Yandex backend + pending queue)
 ; (function (global) {
-    const HEYS = global.HEYS = global.HEYS || {};
-    const Photos = HEYS.StoragePhotos = HEYS.StoragePhotos || {};
+  const HEYS = global.HEYS = global.HEYS || {};
+  const Photos = HEYS.StoragePhotos = HEYS.StoragePhotos || {};
 
-    const PENDING_PHOTOS_KEY = 'heys_pending_photos';
-    const DEFAULT_BUCKET = 'meal-photos';
-    let _cloud = null;
+  const PENDING_PHOTOS_KEY = 'heys_pending_photos';
+  const DEFAULT_BUCKET = 'meal-photos';
+  let _cloud = null;
 
-    const isDebug = () => {
-        try {
-            return global.localStorage.getItem('heys_debug_photos') === 'true' ||
-                global.localStorage.getItem('heys_debug_sync') === 'true';
-        } catch (_) {
-            return false;
-        }
+  const isDebug = () => {
+    try {
+      return global.localStorage.getItem('heys_debug_photos') === 'true' ||
+        global.localStorage.getItem('heys_debug_sync') === 'true';
+    } catch (_) {
+      return false;
+    }
+  };
+
+  function log() {
+    if (!isDebug()) return;
+    try {
+      console.log.apply(console, ['[HEYS.photos]'].concat([].slice.call(arguments)));
+    } catch (_) { }
+  }
+
+  function logCritical() {
+    if (!isDebug()) return;
+    try {
+      console.info.apply(console, ['[HEYS.photos]'].concat([].slice.call(arguments)));
+    } catch (_) { }
+  }
+
+  function getBucket() {
+    return HEYS?.config?.photosBucket || DEFAULT_BUCKET;
+  }
+
+  function getSessionToken() {
+    try {
+      const fromAuth = HEYS?.Auth?.getSessionToken?.() || HEYS?.auth?.getSessionToken?.();
+      if (fromAuth) return fromAuth;
+      const raw = global.localStorage.getItem('heys_session_token');
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch (_) {
+        return raw;
+      }
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function getCuratorToken() {
+    try {
+      const curatorSession = global.localStorage.getItem('heys_curator_session');
+      if (curatorSession) return curatorSession;
+      const supabaseAuth = global.localStorage.getItem('heys_supabase_auth_token');
+      if (supabaseAuth) {
+        const parsed = JSON.parse(supabaseAuth);
+        return parsed?.access_token || null;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function base64ToBlob(base64Data) {
+    const response = await fetch(base64Data);
+    return response.blob();
+  }
+
+  async function uploadViaYandex({ base64Data, clientId, date, mealId, blob }) {
+    const api = HEYS?.YandexAPI;
+    if (!api) {
+      return { error: 'YandexAPI not available' };
+    }
+
+    if (typeof api.uploadPhoto === 'function') {
+      return api.uploadPhoto({
+        base64Data,
+        clientId,
+        date,
+        mealId,
+        bucket: getBucket()
+      });
+    }
+
+    const apiBase = api.CONFIG?.API_URL || 'https://api.heyslab.ru';
+    const sessionToken = getSessionToken();
+    const curatorToken = getCuratorToken();
+
+    const headers = {
+      'Content-Type': 'application/json'
     };
 
-    function log() {
-        if (!isDebug()) return;
-        try {
-            console.log.apply(console, ['[HEYS.photos]'].concat([].slice.call(arguments)));
-        } catch (_) { }
+    if (curatorToken) {
+      headers['Authorization'] = `Bearer ${curatorToken}`;
     }
 
-    function logCritical() {
-        if (!isDebug()) return;
-        try {
-            console.info.apply(console, ['[HEYS.photos]'].concat([].slice.call(arguments)));
-        } catch (_) { }
-    }
-
-    function getBucket() {
-        return HEYS?.config?.photosBucket || DEFAULT_BUCKET;
-    }
-
-    function getSessionToken() {
-        try {
-            const fromAuth = HEYS?.Auth?.getSessionToken?.() || HEYS?.auth?.getSessionToken?.();
-            if (fromAuth) return fromAuth;
-            const raw = global.localStorage.getItem('heys_session_token');
-            if (!raw) return null;
-            try {
-                return JSON.parse(raw);
-            } catch (_) {
-                return raw;
-            }
-        } catch (_) {
-            return null;
-        }
-    }
-
-    function getCuratorToken() {
-        try {
-            const curatorSession = global.localStorage.getItem('heys_curator_session');
-            if (curatorSession) return curatorSession;
-            const supabaseAuth = global.localStorage.getItem('heys_supabase_auth_token');
-            if (supabaseAuth) {
-                const parsed = JSON.parse(supabaseAuth);
-                return parsed?.access_token || null;
-            }
-            return null;
-        } catch (_) {
-            return null;
-        }
-    }
-
-    async function base64ToBlob(base64Data) {
-        const response = await fetch(base64Data);
-        return response.blob();
-    }
-
-    async function uploadViaYandex({ base64Data, clientId, date, mealId, blob }) {
-        const api = HEYS?.YandexAPI;
-        if (!api) {
-            return { error: 'YandexAPI not available' };
-        }
-
-        if (typeof api.uploadPhoto === 'function') {
-            return api.uploadPhoto({
-                base64Data,
-                clientId,
-                date,
-                mealId,
-                bucket: getBucket()
-            });
-        }
-
-        const apiBase = api.CONFIG?.API_URL || 'https://api.heyslab.ru';
-        const sessionToken = getSessionToken();
-        const curatorToken = getCuratorToken();
-
-        const headers = {
-            'Content-Type': 'application/json'
-        };
-
-        if (curatorToken) {
-            headers['Authorization'] = `Bearer ${curatorToken}`;
-        }
-
-        const payload = {
-            bucket: getBucket(),
-            client_id: clientId,
-            date,
-            meal_id: mealId,
-            session_token: sessionToken || undefined,
-            data: base64Data
-        };
-
-        const response = await fetch(`${apiBase}/photos/upload`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(payload)
-        });
-
-        let result;
-        try {
-            result = await response.json();
-        } catch (_) {
-            result = null;
-        }
-
-        if (!response.ok || result?.error) {
-            return { error: result?.error || `Upload failed (${response.status})` };
-        }
-
-        if (result?.uploadUrl) {
-            const uploadHeaders = result?.uploadHeaders || { 'Content-Type': 'image/jpeg' };
-            const uploadResponse = await fetch(result.uploadUrl, {
-                method: result.uploadMethod || 'PUT',
-                headers: uploadHeaders,
-                body: blob
-            });
-            if (!uploadResponse.ok) {
-                return { error: `Upload PUT failed (${uploadResponse.status})` };
-            }
-        }
-
-        return {
-            url: result?.url || result?.publicUrl || null,
-            path: result?.path || result?.key || null
-        };
-    }
-
-    async function deleteViaYandex(path) {
-        const api = HEYS?.YandexAPI;
-        if (!api) {
-            return { error: 'YandexAPI not available' };
-        }
-
-        if (typeof api.deletePhoto === 'function') {
-            return api.deletePhoto({ path, bucket: getBucket() });
-        }
-
-        const apiBase = api.CONFIG?.API_URL || 'https://api.heyslab.ru';
-        const curatorToken = getCuratorToken();
-        const sessionToken = getSessionToken();
-
-        const headers = {
-            'Content-Type': 'application/json'
-        };
-
-        if (curatorToken) {
-            headers['Authorization'] = `Bearer ${curatorToken}`;
-        }
-
-        const payload = {
-            bucket: getBucket(),
-            path,
-            session_token: sessionToken || undefined
-        };
-
-        const response = await fetch(`${apiBase}/photos/delete`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(payload)
-        });
-
-        let result;
-        try {
-            result = await response.json();
-        } catch (_) {
-            result = null;
-        }
-
-        if (!response.ok || result?.error) {
-            return { error: result?.error || `Delete failed (${response.status})` };
-        }
-
-        return { success: true };
-    }
-
-    function savePendingPhoto(base64Data, clientId, date, mealId) {
-        try {
-            const pending = JSON.parse(global.localStorage.getItem(PENDING_PHOTOS_KEY) || '[]');
-            const photoId = 'photo_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-
-            pending.push({
-                id: photoId,
-                data: base64Data,
-                clientId,
-                date,
-                mealId,
-                createdAt: Date.now()
-            });
-
-            global.localStorage.setItem(PENDING_PHOTOS_KEY, JSON.stringify(pending));
-            log('📷 Photo saved to pending:', photoId);
-
-            return {
-                id: photoId,
-                data: base64Data,
-                pending: true,
-                uploaded: false
-            };
-        } catch (e) {
-            logCritical('📷 savePendingPhoto error:', e?.message || e);
-            return {
-                data: base64Data,
-                pending: true,
-                uploaded: false
-            };
-        }
-    }
-
-    async function updatePhotoUrlInDay(clientId, date, photoId, newUrl) {
-        const utils = HEYS?.utils;
-        if (!utils?.lsGet || !utils?.lsSet) return;
-
-        const dayKey = 'heys_dayv2_' + date;
-        const day = utils.lsGet(dayKey, null);
-        if (!day?.meals) return;
-
-        let updated = false;
-        day.meals = day.meals.map((meal) => {
-            if (!meal.photos) return meal;
-            meal.photos = meal.photos.map((photo) => {
-                if (photo.id === photoId || photo.pending) {
-                    updated = true;
-                    return {
-                        ...photo,
-                        url: newUrl,
-                        data: undefined,
-                        pending: false,
-                        uploaded: true
-                    };
-                }
-                return photo;
-            });
-            return meal;
-        });
-
-        if (updated) {
-            utils.lsSet(dayKey, day);
-            log('📷 Updated photo URL in day:', date, photoId);
-        }
-    }
-
-    Photos.uploadPhoto = async function (base64Data, clientId, date, mealId) {
-        if (!clientId) {
-            log('📷 uploadPhoto: нет клиента, сохраняем в pending');
-            return savePendingPhoto(base64Data, clientId, date, mealId);
-        }
-
-        if (!navigator.onLine) {
-            log('📷 uploadPhoto: offline, сохраняем в pending');
-            return savePendingPhoto(base64Data, clientId, date, mealId);
-        }
-
-        try {
-            const blob = await base64ToBlob(base64Data);
-            const result = await uploadViaYandex({ base64Data, clientId, date, mealId, blob });
-
-            if (result?.error) {
-                logCritical('📷 uploadPhoto error:', result.error);
-                return savePendingPhoto(base64Data, clientId, date, mealId);
-            }
-
-            log('📷 Photo uploaded:', result?.path || '(no path)');
-            return {
-                url: result?.url || null,
-                path: result?.path || null,
-                uploaded: true
-            };
-        } catch (e) {
-            logCritical('📷 uploadPhoto exception:', e?.message || e);
-            return savePendingPhoto(base64Data, clientId, date, mealId);
-        }
+    const payload = {
+      bucket: getBucket(),
+      client_id: clientId,
+      date,
+      meal_id: mealId,
+      session_token: sessionToken || undefined,
+      data: base64Data
     };
 
-    Photos.uploadPendingPhotos = async function () {
-        if (!navigator.onLine) return;
+    const response = await fetch(`${apiBase}/photos/upload`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
 
-        try {
-            const pending = JSON.parse(global.localStorage.getItem(PENDING_PHOTOS_KEY) || '[]');
-            if (pending.length === 0) return;
+    let result;
+    try {
+      result = await response.json();
+    } catch (_) {
+      result = null;
+    }
 
-            log('📷 Uploading', pending.length, 'pending photos...');
+    if (!response.ok || result?.error) {
+      return { error: result?.error || `Upload failed (${response.status})` };
+    }
 
-            const stillPending = [];
+    if (result?.uploadUrl) {
+      const uploadHeaders = result?.uploadHeaders || { 'Content-Type': 'image/jpeg' };
+      const uploadResponse = await fetch(result.uploadUrl, {
+        method: result.uploadMethod || 'PUT',
+        headers: uploadHeaders,
+        body: blob
+      });
+      if (!uploadResponse.ok) {
+        return { error: `Upload PUT failed (${uploadResponse.status})` };
+      }
+    }
 
-            for (const photo of pending) {
-                try {
-                    const result = await Photos.uploadPhoto(
-                        photo.data,
-                        photo.clientId,
-                        photo.date,
-                        photo.mealId
-                    );
+    return {
+      url: result?.url || result?.publicUrl || null,
+      path: result?.path || result?.key || null
+    };
+  }
 
-                    if (result?.uploaded) {
-                        await updatePhotoUrlInDay(photo.clientId, photo.date, photo.id, result.url);
-                        log('📷 Pending photo uploaded:', photo.id);
-                    } else {
-                        stillPending.push(photo);
-                    }
-                } catch (_) {
-                    stillPending.push(photo);
-                }
-            }
+  async function deleteViaYandex(path) {
+    const api = HEYS?.YandexAPI;
+    if (!api) {
+      return { error: 'YandexAPI not available' };
+    }
 
-            global.localStorage.setItem(PENDING_PHOTOS_KEY, JSON.stringify(stillPending));
+    if (typeof api.deletePhoto === 'function') {
+      return api.deletePhoto({ path, bucket: getBucket() });
+    }
 
-            if (stillPending.length < pending.length) {
-                log('📷 Uploaded', pending.length - stillPending.length, 'photos,', stillPending.length, 'still pending');
-            }
-        } catch (e) {
-            logCritical('📷 uploadPendingPhotos error:', e?.message || e);
-        }
+    const apiBase = api.CONFIG?.API_URL || 'https://api.heyslab.ru';
+    const curatorToken = getCuratorToken();
+    const sessionToken = getSessionToken();
+
+    const headers = {
+      'Content-Type': 'application/json'
     };
 
-    Photos.deletePhoto = async function (path) {
-        if (!path) {
-            log('📷 deletePhoto: нет пути');
-            return false;
-        }
+    if (curatorToken) {
+      headers['Authorization'] = `Bearer ${curatorToken}`;
+    }
 
-        if (!navigator.onLine) {
-            log('📷 deletePhoto: offline');
-            return false;
-        }
-
-        try {
-            const result = await deleteViaYandex(path);
-            if (result?.error) {
-                logCritical('📷 deletePhoto error:', result.error);
-                return false;
-            }
-
-            log('📷 Photo deleted from storage:', path);
-            return true;
-        } catch (e) {
-            logCritical('📷 deletePhoto exception:', e?.message || e);
-            return false;
-        }
+    const payload = {
+      bucket: getBucket(),
+      path,
+      session_token: sessionToken || undefined
     };
 
-    Photos.getPendingPhotos = function () {
+    const response = await fetch(`${apiBase}/photos/delete`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+
+    let result;
+    try {
+      result = await response.json();
+    } catch (_) {
+      result = null;
+    }
+
+    if (!response.ok || result?.error) {
+      return { error: result?.error || `Delete failed (${response.status})` };
+    }
+
+    return { success: true };
+  }
+
+  function savePendingPhoto(base64Data, clientId, date, mealId) {
+    try {
+      const pending = JSON.parse(global.localStorage.getItem(PENDING_PHOTOS_KEY) || '[]');
+      const photoId = 'photo_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+      pending.push({
+        id: photoId,
+        data: base64Data,
+        clientId,
+        date,
+        mealId,
+        createdAt: Date.now()
+      });
+
+      global.localStorage.setItem(PENDING_PHOTOS_KEY, JSON.stringify(pending));
+      log('📷 Photo saved to pending:', photoId);
+
+      return {
+        id: photoId,
+        data: base64Data,
+        pending: true,
+        uploaded: false
+      };
+    } catch (e) {
+      logCritical('📷 savePendingPhoto error:', e?.message || e);
+      return {
+        data: base64Data,
+        pending: true,
+        uploaded: false
+      };
+    }
+  }
+
+  async function updatePhotoUrlInDay(clientId, date, photoId, newUrl) {
+    const utils = HEYS?.utils;
+    if (!utils?.lsGet || !utils?.lsSet) return;
+
+    const dayKey = 'heys_dayv2_' + date;
+    const day = utils.lsGet(dayKey, null);
+    if (!day?.meals) return;
+
+    let updated = false;
+    day.meals = day.meals.map((meal) => {
+      if (!meal.photos) return meal;
+      meal.photos = meal.photos.map((photo) => {
+        if (photo.id === photoId || photo.pending) {
+          updated = true;
+          return {
+            ...photo,
+            url: newUrl,
+            data: undefined,
+            pending: false,
+            uploaded: true
+          };
+        }
+        return photo;
+      });
+      return meal;
+    });
+
+    if (updated) {
+      utils.lsSet(dayKey, day);
+      log('📷 Updated photo URL in day:', date, photoId);
+    }
+  }
+
+  Photos.uploadPhoto = async function (base64Data, clientId, date, mealId) {
+    if (!clientId) {
+      log('📷 uploadPhoto: нет клиента, сохраняем в pending');
+      return savePendingPhoto(base64Data, clientId, date, mealId);
+    }
+
+    if (!navigator.onLine) {
+      log('📷 uploadPhoto: offline, сохраняем в pending');
+      return savePendingPhoto(base64Data, clientId, date, mealId);
+    }
+
+    try {
+      const blob = await base64ToBlob(base64Data);
+      const result = await uploadViaYandex({ base64Data, clientId, date, mealId, blob });
+
+      if (result?.error) {
+        logCritical('📷 uploadPhoto error:', result.error);
+        return savePendingPhoto(base64Data, clientId, date, mealId);
+      }
+
+      log('📷 Photo uploaded:', result?.path || '(no path)');
+      return {
+        url: result?.url || null,
+        path: result?.path || null,
+        uploaded: true
+      };
+    } catch (e) {
+      logCritical('📷 uploadPhoto exception:', e?.message || e);
+      return savePendingPhoto(base64Data, clientId, date, mealId);
+    }
+  };
+
+  Photos.uploadPendingPhotos = async function () {
+    if (!navigator.onLine) return;
+
+    try {
+      const pending = JSON.parse(global.localStorage.getItem(PENDING_PHOTOS_KEY) || '[]');
+      if (pending.length === 0) return;
+
+      log('📷 Uploading', pending.length, 'pending photos...');
+
+      const stillPending = [];
+
+      for (const photo of pending) {
         try {
-            return JSON.parse(global.localStorage.getItem(PENDING_PHOTOS_KEY) || '[]');
+          const result = await Photos.uploadPhoto(
+            photo.data,
+            photo.clientId,
+            photo.date,
+            photo.mealId
+          );
+
+          if (result?.uploaded) {
+            await updatePhotoUrlInDay(photo.clientId, photo.date, photo.id, result.url);
+            log('📷 Pending photo uploaded:', photo.id);
+          } else {
+            stillPending.push(photo);
+          }
         } catch (_) {
-            return [];
+          stillPending.push(photo);
         }
-    };
+      }
 
-    Photos.attachToCloud = function (cloud) {
-        if (!cloud) return;
-        _cloud = cloud;
-        cloud.uploadPhoto = Photos.uploadPhoto;
-        cloud.uploadPendingPhotos = Photos.uploadPendingPhotos;
-        cloud.deletePhoto = Photos.deletePhoto;
-        cloud.getPendingPhotos = Photos.getPendingPhotos;
-    };
+      global.localStorage.setItem(PENDING_PHOTOS_KEY, JSON.stringify(stillPending));
 
-    if (HEYS.cloud) {
-        Photos.attachToCloud(HEYS.cloud);
+      if (stillPending.length < pending.length) {
+        log('📷 Uploaded', pending.length - stillPending.length, 'photos,', stillPending.length, 'still pending');
+      }
+    } catch (e) {
+      logCritical('📷 uploadPendingPhotos error:', e?.message || e);
+    }
+  };
+
+  Photos.deletePhoto = async function (path) {
+    if (!path) {
+      log('📷 deletePhoto: нет пути');
+      return false;
     }
 
-    if (typeof global.addEventListener === 'function') {
-        global.addEventListener('online', () => {
-            log('🌐 Online detected, uploading pending photos...');
-            setTimeout(() => Photos.uploadPendingPhotos(), 2000);
-        });
+    if (!navigator.onLine) {
+      log('📷 deletePhoto: offline');
+      return false;
     }
+
+    try {
+      const result = await deleteViaYandex(path);
+      if (result?.error) {
+        logCritical('📷 deletePhoto error:', result.error);
+        return false;
+      }
+
+      log('📷 Photo deleted from storage:', path);
+      return true;
+    } catch (e) {
+      logCritical('📷 deletePhoto exception:', e?.message || e);
+      return false;
+    }
+  };
+
+  Photos.getPendingPhotos = function () {
+    try {
+      return JSON.parse(global.localStorage.getItem(PENDING_PHOTOS_KEY) || '[]');
+    } catch (_) {
+      return [];
+    }
+  };
+
+  Photos.attachToCloud = function (cloud) {
+    if (!cloud) return;
+    _cloud = cloud;
+    cloud.uploadPhoto = Photos.uploadPhoto;
+    cloud.uploadPendingPhotos = Photos.uploadPendingPhotos;
+    cloud.deletePhoto = Photos.deletePhoto;
+    cloud.getPendingPhotos = Photos.getPendingPhotos;
+  };
+
+  if (HEYS.cloud) {
+    Photos.attachToCloud(HEYS.cloud);
+  }
+
+  if (typeof global.addEventListener === 'function') {
+    global.addEventListener('online', () => {
+      log('🌐 Online detected, uploading pending photos...');
+      setTimeout(() => Photos.uploadPendingPhotos(), 2000);
+    });
+  }
 })(typeof window !== 'undefined' ? window : global);
 
 
@@ -16658,7 +16658,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       }
     }
 
-    logCritical('[syncClient] START clientId:', clientId?.slice(0, 8), 'user:', !!user, 'isPinAuth:', _rpcOnlyMode && _pinAuthClientId === clientId);
+    logCritical('[syncClient] START clientId:', clientId?.slice(0, 8), 'user:', !!user, 'isPinAuth:', _rpcOnlyMode && _pinAuthClientId === clientId, window.__heysClientSwitchT0 ? '[Δt=' + Math.round(performance.now() - window.__heysClientSwitchT0) + 'ms]' : '');
 
     const isPinAuth = _rpcOnlyMode && _pinAuthClientId === clientId;
 
@@ -19791,7 +19791,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       window.__heysPerfMark && window.__heysPerfMark('heysSyncCompleted: viaYandex dispatch');
       if (typeof window !== 'undefined' && window.dispatchEvent) {
         window.dispatchEvent(new CustomEvent('heysSyncCompleted', {
-          detail: { clientId, loaded: loadedCount, viaYandex: true }
+          detail: { clientId, loaded: loadedCount, viaYandex: true, phase: 'full' }
         }));
       }
 
@@ -20243,7 +20243,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                     detail: { clientId: client_id, phaseA: true }
                   }));
                 }
-                console.info(`[HEYS.sync] ✅ Фаза A: ${phaseAData.length} критичных ключей загружено, UI разблокирован`);
+                console.info(`[HEYS.sync] ✅ Фаза A: ${phaseAData.length} критичных ключей загружено, UI разблокирован`, window.__heysClientSwitchT0 ? `[Δt=${Math.round(performance.now() - window.__heysClientSwitchT0)}ms]` : '');
               }
             } catch (phaseAErr) {
               muteMirror = false;
@@ -20409,7 +20409,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
           // Уведомляем UI НЕМЕДЛЕННО (без 300ms задержки)
           if (typeof window !== 'undefined' && window.dispatchEvent) {
-            window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id, loaded: lightKeysWritten, viaYandex: true } }));
+            window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id, loaded: lightKeysWritten, viaYandex: true, phase: 'full' } }));
           }
 
           // Shared products: НЕ ждём — fire and forget
@@ -21600,7 +21600,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
             if (dateMatch) updatedDates.push(dateMatch[1]);
           });
-          window.console.info('[HEYS.sinhron] ✅ BATCH WRITE ' + batchedDayV2Writes.length + ' dayv2 records: ' + updatedDates.join(', '));
+          window.console.info('[HEYS.sinhron] ✅ BATCH WRITE ' + batchedDayV2Writes.length + ' dayv2 records ' + (window.__heysClientSwitchT0 ? '[Δt=' + Math.round(performance.now() - window.__heysClientSwitchT0) + 'ms]' : '') + ': ' + updatedDates.join(', '));
           // 🔔 Dispatch ONE batched event instead of N individual events
           if (updatedDates.length > 0) {
             window.dispatchEvent(new CustomEvent('heys:day-updated', {
@@ -21724,7 +21724,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           console.info(`[HEYS.sync] ✅ Синхронизация завершена: ${data?.length || 0} ключей для клиента ${client_id.slice(0, 8)}***`);
         }
 
-        logCritical(`✅ [SYNC DONE] client=${client_id.slice(0, 8)} keys=${data?.length || 0} ms=${syncDuration} force=${!!forceSync}`);
+        logCritical(`✅ [SYNC DONE] client=${client_id.slice(0, 8)} keys=${data?.length || 0} ms=${syncDuration} force=${!!forceSync}`, window.__heysClientSwitchT0 ? `[Δt=${Math.round(performance.now() - window.__heysClientSwitchT0)}ms]` : '');
 
         // 🚨 Разрешаем сохранение после первого sync
         initialSyncCompleted = true;
@@ -21805,12 +21805,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         }
 
         // Уведомляем приложение о завершении синхронизации (для обновления stepsGoal и т.д.)
-        // Задержка 300мс чтобы localStorage успел обновиться и React перечитал данные
         // ВСЕГДА отправляем событие — дедупликация на стороне получателя (проверка clientId)
+        // v6.0: phase:'full' — Adaptive Render Gate отличает полный sync от Phase A
         if (typeof window !== 'undefined' && window.dispatchEvent) {
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id } }));
-          }, 300);
+          window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id, phase: 'full' } }));
         }
 
         // 🚀 Delta Sync: сохраняем timestamp для следующего delta sync
@@ -26291,10 +26289,10 @@ NOVA: 1-4
 // heys_wheel_picker.js — iOS-style Wheel Picker компонент
 // Универсальный компонент для выбора значений прокруткой (время, граммы, порции и т.д.)
 
-;(function(global){
+; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
-  
+
   // === Haptic Feedback ===
   const haptic = {
     light: () => {
@@ -26307,7 +26305,7 @@ NOVA: 1-4
       if (navigator.vibrate) navigator.vibrate(3);
     }
   };
-  
+
   // === Click Sound (lazy-loaded) ===
   let tickSound = null;
   const playTick = () => {
@@ -26319,16 +26317,16 @@ NOVA: 1-4
       }
       const ctx = tickSound.ctx;
       if (ctx.state === 'suspended') ctx.resume();
-      
+
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
-      
+
       osc.frequency.value = 1200; // Высокий тон
       gain.gain.setValueAtTime(0.03, ctx.currentTime); // Тихо
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
-      
+
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 0.05);
     } catch (e) {
@@ -26351,15 +26349,15 @@ NOVA: 1-4
     const len = values.length;
     const [offset, setOffset] = React.useState(-selected * itemHeight);
     const offsetRef = React.useRef(offset);
-    
+
     // Циклический индекс
     const wrapIndex = (i) => ((i % len) + len) % len;
-    
+
     // Синхронизация ref с state
     React.useEffect(() => {
       offsetRef.current = offset;
     }, [offset]);
-    
+
     // Tracking для momentum
     const touchState = React.useRef({
       startY: 0,
@@ -26371,12 +26369,12 @@ NOVA: 1-4
       animationId: null,
       lastTickIndex: selected // Для отслеживания пересечения элементов
     });
-    
+
     // Синхронизация offset с selected при открытии
     React.useEffect(() => {
       setOffset(-selected * itemHeight);
     }, []);
-    
+
     // Вычисление index из offset
     const getIndexFromOffset = React.useCallback((off) => {
       const idx = Math.round(-off / itemHeight);
@@ -26385,12 +26383,12 @@ NOVA: 1-4
       }
       return Math.max(0, Math.min(len - 1, idx));
     }, [len, wrap]);
-    
+
     // Snap к ближайшему элементу с анимацией
     const snapToIndex = React.useCallback((targetIndex, animated = true) => {
       let clampedIndex;
       let targetOffset;
-      
+
       if (wrap) {
         clampedIndex = wrapIndex(targetIndex);
         // Для циклического режима — находим кратчайший путь к целевому индексу
@@ -26405,20 +26403,20 @@ NOVA: 1-4
         clampedIndex = Math.max(0, Math.min(len - 1, targetIndex));
         targetOffset = -clampedIndex * itemHeight;
       }
-      
+
       if (animated) {
         const startOffset = offsetRef.current;
         const startTime = Date.now();
         const duration = 300;
-        
+
         const animateSnap = () => {
           const elapsed = Date.now() - startTime;
           const progress = Math.min(1, elapsed / duration);
           const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
           const currentOffset = startOffset + (targetOffset - startOffset) * eased;
-          
+
           setOffset(currentOffset);
-          
+
           if (progress < 1) {
             touchState.current.animationId = requestAnimationFrame(animateSnap);
           } else {
@@ -26429,7 +26427,7 @@ NOVA: 1-4
             }
           }
         };
-        
+
         touchState.current.animationId = requestAnimationFrame(animateSnap);
       } else {
         setOffset(targetOffset);
@@ -26439,19 +26437,19 @@ NOVA: 1-4
         }
       }
     }, [len, selected, onChange, wrap]);
-    
+
     // Регистрация touch handlers с passive: false
     React.useEffect(() => {
       const el = containerRef.current;
       if (!el) return;
-      
+
       const handleTouchStart = (e) => {
         e.preventDefault();
         if (touchState.current.animationId) {
           cancelAnimationFrame(touchState.current.animationId);
           touchState.current.animationId = null;
         }
-        
+
         const touch = e.touches[0];
         const now = Date.now();
         touchState.current = {
@@ -26464,22 +26462,22 @@ NOVA: 1-4
           animationId: null
         };
       };
-      
+
       const handleTouchMove = (e) => {
         e.preventDefault();
         if (!touchState.current.isTracking) return;
-        
+
         const touch = e.touches[0];
         const now = Date.now();
         const deltaY = touch.clientY - touchState.current.lastY;
         const deltaTime = now - touchState.current.lastTime;
-        
+
         if (deltaTime > 0) {
           touchState.current.velocityY = deltaY / deltaTime;
         }
-        
+
         const newOffset = touchState.current.startOffset + (touch.clientY - touchState.current.startY);
-        
+
         let clampedOffset = newOffset;
         if (wrap) {
           // В циклическом режиме — без ограничений, просто обновляем offset
@@ -26494,9 +26492,9 @@ NOVA: 1-4
             clampedOffset = minOffset + (newOffset - minOffset) * 0.3;
           }
         }
-        
+
         setOffset(clampedOffset);
-        
+
         // Проверяем пересечение границы элемента
         const currentIndex = getIndexFromOffset(clampedOffset);
         if (currentIndex !== touchState.current.lastTickIndex) {
@@ -26504,33 +26502,33 @@ NOVA: 1-4
           haptic.tick();
           playTick();
         }
-        
+
         touchState.current.lastY = touch.clientY;
         touchState.current.lastTime = now;
       };
-      
+
       const handleTouchEnd = (e) => {
         e.preventDefault();
         if (!touchState.current.isTracking) return;
         touchState.current.isTracking = false;
-        
+
         const velocity = touchState.current.velocityY;
-        
+
         // Если скорость маленькая — просто snap
         if (Math.abs(velocity) < 0.3) {
           snapToIndex(getIndexFromOffset(offsetRef.current));
           return;
         }
-        
+
         // Momentum animation
         let currentOffset = offsetRef.current;
         let currentVelocity = velocity * 15; // Усиление
         const friction = 0.95;
-        
+
         const animate = () => {
           currentVelocity *= friction;
           currentOffset += currentVelocity;
-          
+
           // Границы (только для не-циклического режима)
           if (!wrap) {
             const minOffset = -(len - 1) * itemHeight;
@@ -26543,9 +26541,9 @@ NOVA: 1-4
               currentVelocity = 0;
             }
           }
-          
+
           setOffset(currentOffset);
-          
+
           // Tick при пересечении элемента во время momentum
           const currentIndex = getIndexFromOffset(currentOffset);
           if (currentIndex !== touchState.current.lastTickIndex) {
@@ -26553,21 +26551,21 @@ NOVA: 1-4
             haptic.tick();
             playTick();
           }
-          
+
           if (Math.abs(currentVelocity) > 0.5) {
             touchState.current.animationId = requestAnimationFrame(animate);
           } else {
             snapToIndex(getIndexFromOffset(currentOffset));
           }
         };
-        
+
         touchState.current.animationId = requestAnimationFrame(animate);
       };
-      
+
       el.addEventListener('touchstart', handleTouchStart, { passive: false });
       el.addEventListener('touchmove', handleTouchMove, { passive: false });
       el.addEventListener('touchend', handleTouchEnd, { passive: false });
-      
+
       return () => {
         el.removeEventListener('touchstart', handleTouchStart);
         el.removeEventListener('touchmove', handleTouchMove);
@@ -26577,18 +26575,18 @@ NOVA: 1-4
         }
       };
     }, [len, wrap, snapToIndex, getIndexFromOffset]);
-    
+
     // Вычисляем текущий центральный индекс из offset
     const currentCenterIndex = getIndexFromOffset(offset);
-    
+
     return React.createElement('div', { className: 'wheel-column' },
       label && React.createElement('div', { className: 'wheel-label' }, label),
-      React.createElement('div', { 
+      React.createElement('div', {
         className: 'wheel-viewport',
         ref: containerRef
       },
         React.createElement('div', { className: 'wheel-highlight' }),
-        React.createElement('div', { 
+        React.createElement('div', {
           className: 'wheel-track',
           style: { transform: `translateY(${offset + itemHeight * 2}px)` }
         },
@@ -26596,11 +26594,11 @@ NOVA: 1-4
             // Вычисляем расстояние от центра для эффекта затухания
             const distanceFromCenter = Math.abs(i - (-offset / itemHeight));
             const opacity = Math.max(0.3, 1 - distanceFromCenter * 0.3);
-            
+
             return React.createElement('div', {
               key: i,
               className: 'wheel-item' + (i === currentCenterIndex ? ' selected' : ''),
-              style: { 
+              style: {
                 height: itemHeight,
                 opacity: i === currentCenterIndex ? 1 : opacity
               },
@@ -26614,8 +26612,8 @@ NOVA: 1-4
 
   // Предустановленные значения
   WheelColumn.presets = {
-    hours: Array.from({length: 24}, (_, i) => String(i).padStart(2, '0')),
-    minutes: Array.from({length: 60}, (_, i) => String(i).padStart(2, '0')),
+    hours: Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')),
+    minutes: Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')),
     rating: ['—', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
     grams: ['10', '25', '50', '75', '100', '125', '150', '175', '200', '250', '300', '400', '500']
   };
@@ -26630,7 +26628,7 @@ NOVA: 1-4
 // heys_swipeable.js — Swipeable компонент для удаления свайпом влево
 // Используется для карточек продуктов на мобильных устройствах
 
-;(function(global){
+; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
 
@@ -26645,7 +26643,7 @@ NOVA: 1-4
     const rowRef = React.useRef(null);
     const [translateX, setTranslateX] = React.useState(0);
     const [isDeleting, setIsDeleting] = React.useState(false);
-    
+
     const touchState = React.useRef({
       startX: 0,
       startY: 0,
@@ -26653,14 +26651,14 @@ NOVA: 1-4
       isTracking: false,
       isVerticalScroll: null // null = не определено, true = вертикальный скролл
     });
-    
+
     const DELETE_THRESHOLD = 100; // Порог для показа кнопки удаления (увеличен для меньшей чувствительности)
     const DELETE_FULL_THRESHOLD = 180; // Порог для автоматического удаления
-    
+
     React.useEffect(() => {
       const el = rowRef.current;
       if (!el) return;
-      
+
       const handleTouchStart = (e) => {
         if (isDeleting) return;
         const touch = e.touches[0];
@@ -26672,51 +26670,51 @@ NOVA: 1-4
           isVerticalScroll: null
         };
       };
-      
+
       const handleTouchMove = (e) => {
         if (!touchState.current.isTracking || isDeleting) return;
-        
+
         const touch = e.touches[0];
         const deltaX = touch.clientX - touchState.current.startX;
         const deltaY = touch.clientY - touchState.current.startY;
-        
+
         // Определяем направление скролла при первом движении (увеличен порог 5→15)
         if (touchState.current.isVerticalScroll === null && (Math.abs(deltaX) > 15 || Math.abs(deltaY) > 15)) {
           touchState.current.isVerticalScroll = Math.abs(deltaY) > Math.abs(deltaX);
         }
-        
+
         // Если вертикальный скролл — не мешаем
         if (touchState.current.isVerticalScroll) return;
-        
+
         // Горизонтальный swipe — предотвращаем скролл страницы
         e.preventDefault();
-        
+
         touchState.current.currentX = touch.clientX;
-        
+
         // Только влево (отрицательные значения)
         let newX = deltaX;
         if (newX > 0) newX = 0; // Не даём свайпить вправо
         if (newX < -DELETE_FULL_THRESHOLD * 1.2) {
           newX = -DELETE_FULL_THRESHOLD * 1.2; // Ограничиваем максимум
         }
-        
+
         setTranslateX(newX);
       };
-      
+
       const handleTouchEnd = (e) => {
         if (!touchState.current.isTracking || isDeleting) return;
         touchState.current.isTracking = false;
-        
+
         const finalX = translateX;
-        
+
         if (finalX < -DELETE_FULL_THRESHOLD) {
           // Полный свайп — удаляем
           setIsDeleting(true);
           setTranslateX(-window.innerWidth);
-          
+
           // Haptic feedback
           if (navigator.vibrate) navigator.vibrate(20);
-          
+
           setTimeout(() => {
             onDelete();
           }, 200);
@@ -26728,18 +26726,18 @@ NOVA: 1-4
           setTranslateX(0);
         }
       };
-      
+
       el.addEventListener('touchstart', handleTouchStart, { passive: true });
       el.addEventListener('touchmove', handleTouchMove, { passive: false });
       el.addEventListener('touchend', handleTouchEnd, { passive: true });
-      
+
       return () => {
         el.removeEventListener('touchstart', handleTouchStart);
         el.removeEventListener('touchmove', handleTouchMove);
         el.removeEventListener('touchend', handleTouchEnd);
       };
     }, [translateX, isDeleting, onDelete]);
-    
+
     // Клик по кнопке удаления
     const handleDeleteClick = () => {
       setIsDeleting(true);
@@ -26749,29 +26747,29 @@ NOVA: 1-4
         onDelete();
       }, 200);
     };
-    
+
     // Клик на контент — закрыть если открыто
     const handleContentClick = () => {
       if (translateX < 0) {
         setTranslateX(0);
       }
     };
-    
-    return React.createElement('div', { 
+
+    return React.createElement('div', {
       className: 'swipeable-container ' + className,
       ref: rowRef
     },
       // Фон с кнопкой удаления
       React.createElement('div', { className: 'swipeable-background' },
-        React.createElement('button', { 
+        React.createElement('button', {
           className: 'swipeable-delete-btn',
           onClick: handleDeleteClick
         }, 'Удалить')
       ),
       // Контент
-      React.createElement('div', { 
+      React.createElement('div', {
         className: 'swipeable-content' + (isDeleting ? ' deleting' : ''),
-        style: { 
+        style: {
           transform: `translateX(${translateX}px)`,
           transition: touchState.current.isTracking ? 'none' : 'transform 0.2s ease-out'
         },
@@ -26779,17 +26777,17 @@ NOVA: 1-4
       }, children)
     );
   }
-  
+
   // Экспорт
   HEYS.SwipeableRow = SwipeableRow;
-  
+
 })(window);
 
 
 /* ===== heys_pull_refresh.js ===== */
 // heys_pull_refresh.js — Pull-to-refresh component for mobile
 
-;(function(global) {
+; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
 
@@ -26799,18 +26797,18 @@ NOVA: 1-4
 
   function PullToRefresh({ onRefresh, children }) {
     const { useState, useRef, useCallback, useEffect } = React;
-    
+
     const [pullDistance, setPullDistance] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const containerRef = useRef(null);
     const startYRef = useRef(0);
     const isPullingRef = useRef(false);
-    
+
     // Haptic feedback
     const vibrate = useCallback((ms) => {
       if (navigator.vibrate) navigator.vibrate(ms);
     }, []);
-    
+
     const handleTouchStart = useCallback((e) => {
       // Только если скролл в начале
       if (containerRef.current && containerRef.current.scrollTop === 0) {
@@ -26818,37 +26816,37 @@ NOVA: 1-4
         isPullingRef.current = true;
       }
     }, []);
-    
+
     const handleTouchMove = useCallback((e) => {
       if (!isPullingRef.current || isRefreshing) return;
-      
+
       const currentY = e.touches[0].clientY;
       const diff = currentY - startYRef.current;
-      
+
       if (diff > 0) {
         // Используем easing для более нативного ощущения
         const easedDiff = Math.min(MAX_PULL, diff * 0.4);
         setPullDistance(easedDiff);
-        
+
         // Haptic при достижении threshold
         if (easedDiff >= PULL_THRESHOLD && pullDistance < PULL_THRESHOLD) {
           vibrate(10);
         }
-        
+
         // Предотвращаем скролл браузера (увеличен порог)
         if (diff > 20) {
           e.preventDefault();
         }
       }
     }, [isRefreshing, pullDistance, vibrate]);
-    
+
     const handleTouchEnd = useCallback(() => {
       isPullingRef.current = false;
-      
+
       if (pullDistance >= PULL_THRESHOLD && !isRefreshing) {
         setIsRefreshing(true);
         vibrate(20);
-        
+
         // Вызываем onRefresh
         if (onRefresh) {
           Promise.resolve(onRefresh()).finally(() => {
@@ -26866,31 +26864,31 @@ NOVA: 1-4
         setPullDistance(0);
       }
     }, [pullDistance, isRefreshing, onRefresh, vibrate]);
-    
+
     // Touch event listeners
     useEffect(() => {
       const container = containerRef.current;
       if (!container) return;
-      
+
       container.addEventListener('touchstart', handleTouchStart, { passive: true });
       container.addEventListener('touchmove', handleTouchMove, { passive: false });
       container.addEventListener('touchend', handleTouchEnd, { passive: true });
-      
+
       return () => {
         container.removeEventListener('touchstart', handleTouchStart);
         container.removeEventListener('touchmove', handleTouchMove);
         container.removeEventListener('touchend', handleTouchEnd);
       };
     }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
-    
+
     // Прогресс (0-1)
     const progress = Math.min(1, pullDistance / PULL_THRESHOLD);
     const isReady = pullDistance >= PULL_THRESHOLD;
-    
+
     return React.createElement('div', {
       ref: containerRef,
       className: 'pull-refresh-container',
-      style: { 
+      style: {
         position: 'relative',
         overflow: 'auto',
         height: '100%'
@@ -26922,7 +26920,7 @@ NOVA: 1-4
           }
         })
       ),
-      
+
       // Контент с отступом при pull
       React.createElement('div', {
         style: {

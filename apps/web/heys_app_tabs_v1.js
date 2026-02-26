@@ -74,7 +74,11 @@
     // v9.5: Increased from 800ms to 5000ms — Phase A (profile+products+dayv2_today)
     // typically arrives in 3-5s. 800ms fired BEFORE Phase A, causing empty render
     // followed by jarring full re-render. 5000ms lets Phase A unlock DayTab with real data.
+    // v6.0: Adaptive Render Gate — when connection is fast, wait for full sync (phase:full)
+    // so DayTab + cascade + planner + supplements all render in ONE frame.
+    // On slow connections (gate timeout exceeded), fallback to Phase A progressive render.
     const DAYTAB_SYNC_FALLBACK_MS = 5000;
+    const DAYTAB_GATE_AFTER_PHASE_A_MS = 4000; // max wait for full sync AFTER Phase A arrives
 
     function DayTabWithCloudSync(props) {
         const { clientId, products, selectedDate, setSelectedDate, subTab } = props;
@@ -97,29 +101,57 @@
         React.useEffect(() => {
             let cancelled = false;
             let fallbackTimer = null;
+            let gateTimer = null;
+            let phaseAReceived = false;
             const cloud = window.HEYS && window.HEYS.cloud;
 
-            const finish = (reason) => {
+            const finish = (reason, gated) => {
                 if (cancelled) return;
-                cancelled = true; // prevent double-fire from event + timer + catch
+                cancelled = true;
                 if (fallbackTimer) clearTimeout(fallbackTimer);
+                if (gateTimer) clearTimeout(gateTimer);
                 window.removeEventListener('heysSyncCompleted', onSyncCompleted);
+                // v6.0: Mark gated render — deferredSlot uses this to skip unfold animation
+                if (gated) {
+                    window.__heysGatedRender = true;
+                    console.info('[HEYS.gate] 🚀 Gated render: all data ready, rendering DayTab + cards in one frame');
+                } else {
+                    window.__heysGatedRender = false;
+                }
                 console.info('[HEYS.sceleton] ✅ DayTab unlocked:', reason);
                 setLoading(false);
             };
 
-            // Listen for heysSyncCompleted — dispatched by Phase A (critical keys)
-            // or by full sync completion. Either way, data is ready to render.
-            // v9.4: Filter by clientId — ignore synthetic events from Gamification (no clientId)
+            // v6.0: Adaptive Gate — listen for Phase A AND full sync separately
             const onSyncCompleted = (event) => {
                 const evClientId = event?.detail?.clientId;
-                if (!evClientId) return; // synthetic event without clientId — skip
-                if (evClientId !== clientId && !clientId.startsWith(evClientId)) return; // different client
-                finish('heysSyncCompleted (Phase A or full)');
+                if (!evClientId) return;
+                if (evClientId !== clientId && !clientId.startsWith(evClientId)) return;
+
+                const phase = event?.detail?.phase || (event?.detail?.phaseA ? 'A' : 'unknown');
+
+                if (phase === 'full') {
+                    if (gateTimer) clearTimeout(gateTimer);
+                    finish('full sync completed (gated)', true);
+                    return;
+                }
+
+                if (!phaseAReceived) {
+                    phaseAReceived = true;
+                    var modulesReady = !!(window.HEYS?.CascadeCard?.renderCard);
+                    console.info('[HEYS.gate] ⏳ Phase A received, waiting up to ' + DAYTAB_GATE_AFTER_PHASE_A_MS + 'ms for full sync', {
+                        modulesReady: modulesReady,
+                        postbootDone: !!window.__heysPostbootDone
+                    });
+
+                    gateTimer = setTimeout(function () {
+                        finish('gate timeout — Phase A fallback (' + DAYTAB_GATE_AFTER_PHASE_A_MS + 'ms)', false);
+                    }, DAYTAB_GATE_AFTER_PHASE_A_MS);
+                }
             };
 
             if (!clientId || !cloud || typeof cloud.syncClient !== 'function') {
-                finish('no cloud or clientId');
+                finish('no cloud or clientId', false);
                 return;
             }
 
@@ -130,13 +162,13 @@
 
             // Fast path: sync not needed (completed < 4s ago)
             if (!need) {
-                finish('sync not needed (cooldown)');
+                finish('sync not needed (cooldown)', true);
                 return;
             }
 
             // Quick check: sync already completed for this client
             if (cloud._lastClientSync && cloud._lastClientSync.clientId === clientId) {
-                finish('sync already completed');
+                finish('sync already completed', true);
                 return;
             }
 
@@ -144,18 +176,19 @@
             window.addEventListener('heysSyncCompleted', onSyncCompleted);
 
             // Fallback: don't block forever — show DayTab with local data after timeout
-            fallbackTimer = setTimeout(() => finish('fallback timeout (' + DAYTAB_SYNC_FALLBACK_MS + 'ms)'), DAYTAB_SYNC_FALLBACK_MS);
+            fallbackTimer = setTimeout(() => finish('fallback timeout (' + DAYTAB_SYNC_FALLBACK_MS + 'ms)', false), DAYTAB_SYNC_FALLBACK_MS);
 
             // Fire sync non-blocking (switchClient may already have started it via bootstrapClientSync)
             cloud.syncClient(clientId).catch((err) => {
                 console.warn('[HEYS] Sync failed, using local cache:', err?.message || err);
-                finish('sync error');
+                finish('sync error', false);
             });
 
             return () => {
                 if (!cancelled) {
                     cancelled = true;
                     if (fallbackTimer) clearTimeout(fallbackTimer);
+                    if (gateTimer) clearTimeout(gateTimer);
                     window.removeEventListener('heysSyncCompleted', onSyncCompleted);
                 }
             };

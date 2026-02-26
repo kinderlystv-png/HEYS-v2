@@ -3502,7 +3502,7 @@
       window.__heysPerfMark && window.__heysPerfMark('heysSyncCompleted: viaYandex dispatch');
       if (typeof window !== 'undefined' && window.dispatchEvent) {
         window.dispatchEvent(new CustomEvent('heysSyncCompleted', {
-          detail: { clientId, loaded: loadedCount, viaYandex: true }
+          detail: { clientId, loaded: loadedCount, viaYandex: true, phase: 'full' }
         }));
       }
 
@@ -4120,7 +4120,7 @@
 
           // Уведомляем UI НЕМЕДЛЕННО (без 300ms задержки)
           if (typeof window !== 'undefined' && window.dispatchEvent) {
-            window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id, loaded: lightKeysWritten, viaYandex: true } }));
+            window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id, loaded: lightKeysWritten, viaYandex: true, phase: 'full' } }));
           }
 
           // Shared products: НЕ ждём — fire and forget
@@ -5520,12 +5520,10 @@
         }
 
         // Уведомляем приложение о завершении синхронизации (для обновления stepsGoal и т.д.)
-        // Задержка 300мс чтобы localStorage успел обновиться и React перечитал данные
         // ВСЕГДА отправляем событие — дедупликация на стороне получателя (проверка clientId)
+        // v6.0: phase:'full' — Adaptive Render Gate отличает полный sync от Phase A
         if (typeof window !== 'undefined' && window.dispatchEvent) {
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id } }));
-          }, 300);
+          window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id, phase: 'full' } }));
         }
 
         // 🚀 Delta Sync: сохраняем timestamp для следующего delta sync

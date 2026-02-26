@@ -30,7 +30,7 @@
         // === Confetti при достижении цели ===
         const [showConfetti, setShowConfetti] = useState(false);
         const confettiShownRef = useRef(false);
-        const prevKcalRef = useRef(0);
+        const prevKcalRef = useRef(null);
 
         // === Анимации карточек при превышении/успехе ===
         const [shakeEaten, setShakeEaten] = useState(false);   // карточка "Съедено" — shake при превышении
@@ -44,12 +44,40 @@
         const [animatedMarkerPos, setAnimatedMarkerPos] = useState(0); // Позиция бейджа (всегда до 100%)
         const [isAnimating, setIsAnimating] = useState(false);
 
+        // Refs для определения «реального» действия (добавили еду/рефид/сменили день)
+        const prevDateTabRef = useRef(null); // "date|mobileSubTab"
+
         // === Анимация прогресса калорий при загрузке и при переключении на вкладку ===
         const animationRef = useRef(null);
         useEffect(() => {
             // Отменяем предыдущую анимацию
             if (animationRef.current) {
                 cancelAnimationFrame(animationRef.current);
+            }
+
+            const dateTabKey = date + '|' + mobileSubTab;
+            const isRealAction = (eatenKcal !== prevKcalRef.current) || (dateTabKey !== prevDateTabRef.current);
+
+            // Обновляем refs
+            prevKcalRef.current = eatenKcal;
+            prevDateTabRef.current = dateTabKey;
+
+            if (!isRealAction) {
+                // Только optimum изменился (forceReload/normAbs пересчёт) — не сбрасываем бар,
+                // просто пересчитываем финальную позицию мгновенно без transition
+                const isOver = eatenKcal > optimum;
+                const target = isOver
+                    ? (optimum / eatenKcal) * 100
+                    : (eatenKcal / optimum) * 100;
+                const targetRatioPct = Math.round((eatenKcal / (optimum || 1)) * 100);
+                const targetMarkerPos = isOver ? 100 : Math.min(target, 100);
+                setIsAnimating(true); // Отключаем transition на время телепорта
+                setAnimatedProgress(target);
+                setAnimatedKcal(eatenKcal);
+                setAnimatedRatioPct(targetRatioPct);
+                setAnimatedMarkerPos(targetMarkerPos);
+                requestAnimationFrame(() => setIsAnimating(false));
+                return;
             }
 
             // Шаг 1: Сбрасываем к 0 мгновенно

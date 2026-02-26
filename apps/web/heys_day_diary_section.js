@@ -207,7 +207,11 @@
             const slotTypeClass = slotKey ? ('deferred-card-slot--' + String(slotKey).replace(/^slot-/, '')) : '';
             // PERF: skip unfold animation if user has cached local data (returning user)
             // Meal rec card always uses smooth unfold (loads late, needs visual transition)
-            const animClass = (window.__heysHasLocalData && slotKey !== 'slot-mealrec') ? 'no-animate' : 'animate-always';
+            // v6.0: Adaptive Render Gate — when __heysGatedRender is true (full sync arrived
+            // before DayTab unlock), ALL cards render instantly in one frame, no animation
+            const animClass = window.__heysGatedRender
+                ? 'no-animate'
+                : ((window.__heysHasLocalData && slotKey !== 'slot-mealrec') ? 'no-animate' : 'animate-always');
             return React.createElement('div', {
                 key: slotKey,
                 className: ('deferred-card-slot deferred-card-slot--loaded ' + animClass + ' ' + slotTypeClass).trim()

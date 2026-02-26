@@ -3209,6 +3209,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       });
     }
 
+    // v5.2.0: History guard — suppress render with 0 historical days until batch-sync loads them.
+    // Prevents 1% CRS flash on client switch before full sync completes.
+    // 15s timeout fallback handles new users with no cloud history.
+    if (cascadeState.historicalDays && cascadeState.historicalDays.length === 0 && !window.__heysCascadeBatchSyncReceived) {
+      window.__heysCascadeGuardCount = (window.__heysCascadeGuardCount || 0) + 1;
+      if (window.__heysCascadeGuardCount === 1) {
+        console.info('[HEYS.cascade] ⏳ History guard: waiting for batch-sync (0 historical days, suppressing BROKEN render)');
+      } else if (window.__heysCascadeGuardCount === 50) {
+        console.info('[HEYS.cascade] ⏳ History guard: still waiting (' + window.__heysCascadeGuardCount + ' renders suppressed)');
+      }
+      return null;
+    }
+
     if (cascadeState.state === STATES.EMPTY) {
       console.info('[HEYS.cascade] ⏭️ State = EMPTY — card not shown');
       return null;
@@ -3243,10 +3256,42 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     window.addEventListener('heys:day-updated', function (e) {
       var detail = (e && e.detail) || {};
       if (detail.batch) {
+        window.__heysCascadeBatchSyncReceived = true;
         _cascadeCache.signature = null;
         console.info('[HEYS.cascade] 🔄 Cache invalidated by batch-sync (' + ((detail.dates && detail.dates.length) || 0) + ' days written → historicalDays will update)');
       }
     });
+
+    // v5.3.0: Reset guard on client switch — flag and timer must restart per-client.
+    // Without this, the 15s timeout registered at page boot fires too early after client click,
+    // causing BROKEN flash before BATCH WRITE arrives.
+    window.addEventListener('heys:client-changed', function () {
+      window.__heysCascadeBatchSyncReceived = false;
+      window.__heysCascadeGuardCount = 0;
+      window.__heysCascadeLastRenderKey = null;
+      window.__heysGatedRender = false; // v6.0: reset gate flag per client switch
+      _cascadeCache.signature = null;
+      if (window.__heysCascadeGuardTimer) {
+        clearTimeout(window.__heysCascadeGuardTimer);
+      }
+      window.__heysCascadeGuardTimer = setTimeout(function () {
+        if (!window.__heysCascadeBatchSyncReceived) {
+          window.__heysCascadeBatchSyncReceived = true;
+          _cascadeCache.signature = null;
+          console.info('[HEYS.cascade] ⏱️ Batch-sync timeout: unblocking history guard (15s after client switch, likely new user)');
+        }
+      }, 15000);
+      console.info('[HEYS.cascade] 🔄 Client changed: guard reset, 15s timeout restarted');
+    });
+
+    // v5.2.0 → v5.3.0: Initial timeout fallback for page-boot (first load, no client switch).
+    window.__heysCascadeGuardTimer = setTimeout(function () {
+      if (!window.__heysCascadeBatchSyncReceived) {
+        window.__heysCascadeBatchSyncReceived = true;
+        _cascadeCache.signature = null;
+        console.info('[HEYS.cascade] ⏱️ Batch-sync timeout: unblocking history guard (15s, likely new user)');
+      }
+    }, 15000);
   }
 
   // ─────────────────────────────────────────────────────
