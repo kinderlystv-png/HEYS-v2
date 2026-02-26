@@ -1,4 +1,6 @@
+import { createReadStream, existsSync, statSync } from 'fs';
 import path from 'path';
+import { createGzip } from 'zlib';
 
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
@@ -11,6 +13,50 @@ import vitePluginVersionHash from './scripts/vite-plugin-version-hash.js';
 
 export default defineConfig({
   plugins: [
+    // Gzip compression for dev server (static bundles in public/ are 8.5MB uncompressed)
+    // Vite uses sirv for public/ files, which bypasses connect/compression middleware
+    // because sirv pipes files directly with Content-Length already set.
+    // Solution: custom middleware that intercepts .js/.css requests to public/ and
+    // serves them gzip-compressed via stream before sirv gets a chance.
+    {
+      name: 'vite-plugin-gzip-public',
+      configureServer(server) {
+        // This runs BEFORE Vite's internal middlewares (returns void = pre-middleware)
+        server.middlewares.use((req, res, next) => {
+          const url = req.url || '';
+          // Only compress .js and .css files from public/
+          if (!/\.(js|css)(\?.*)?$/.test(url)) return next();
+          // Skip HMR and Vite internal paths
+          if (url.startsWith('/@') || url.startsWith('/__')) return next();
+
+          const cleanUrl = url.split('?')[0];
+          const filePath = path.join(__dirname, 'public', cleanUrl);
+
+          if (!existsSync(filePath)) return next();
+
+          const acceptEncoding = (req.headers['accept-encoding'] || '') as string;
+          if (!acceptEncoding.includes('gzip')) return next();
+
+          const stat = statSync(filePath);
+          const ext = path.extname(filePath);
+          const contentType = ext === '.js' ? 'application/javascript' : 'text/css';
+
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Content-Encoding', 'gzip');
+          res.setHeader('Vary', 'Accept-Encoding');
+          res.setHeader('Cache-Control', 'public, max-age=0');
+          // Don't set Content-Length — we're streaming gzipped data
+          res.statusCode = 200;
+
+          const fileStream = createReadStream(filePath);
+          const gzip = createGzip({ level: 6 });
+          fileStream.pipe(gzip).pipe(res);
+
+          fileStream.on('error', () => { res.statusCode = 500; res.end(); });
+          gzip.on('error', () => { res.statusCode = 500; res.end(); });
+        });
+      },
+    },
     react(),
     // Auto-versioning: заменяет ?v=N на ?v=CONTENTHASH для cache busting
     vitePluginVersionHash({ verbose: true }),
