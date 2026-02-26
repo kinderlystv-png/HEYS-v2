@@ -1,7 +1,7 @@
 # HEYS Infrastructure — Yandex Cloud
 
 > **Источники правды для CDN/Storage/VM конфигурации**  
-> Обновлено: 2025-12-24
+> Обновлено: 2026-02-25
 
 ---
 
@@ -32,8 +32,17 @@ app.heyslab.ru → A → 158.160.53.194
 **SSH доступ:**
 
 ```bash
-ssh yc-user@158.160.53.194
+# Ключ генерировался через ssh-keygen + cloud-init bootcmd user-data
+# Приватный ключ: ~/.ssh/yc_key (ed25519, без пассфразы)
+ssh -i ~/.ssh/yc_key -o IdentitiesOnly=yes yc-user@158.160.53.194
 ```
+
+> ⚠️ Стандартный `add-metadata ssh-keys` + restart **не работает** (cloud-init
+> обрабатывает `user-data` только при первом запуске). Единственный способ
+> добавить SSH ключ после создания VM — через `bootcmd` в user-data (выполняется
+> при каждом старте):  
+> `yc compute instance add-metadata --name app-heyslab-proxy --metadata-from-file "user-data=bootcmd.yaml"`
+> + stop/start.
 
 ### Почему Nginx вместо CDN?
 
@@ -71,8 +80,8 @@ www.heyslab.ru → CNAME → e1e14e1dabe6ab92.a.yccdn.cloud.yandex.net
 ### PWA (Nginx VM)
 
 ```bash
-# SSH на VM
-ssh yc-user@158.160.53.194
+# SSH на VM (ключ ~/.ssh/yc_key, см. раздел выше)
+ssh -i ~/.ssh/yc_key -o IdentitiesOnly=yes yc-user@158.160.53.194
 
 # Проверить конфиг nginx
 sudo nginx -t
@@ -99,11 +108,16 @@ curl -sI https://app.heyslab.ru/sw.js | grep -iE "cache-control|pragma"
 curl -sI https://app.heyslab.ru/index.html | grep -iE "cache-control|pragma"
 
 # Должно быть: no-cache, must-revalidate
-curl -sI https://app.heyslab.ru/heys_app_v12.js | grep -iE "cache-control"
+curl -sI https://app.heyslab.ru/heys_products_v2.js | grep -iE "cache-control"
 
-# Должно быть: max-age=31536000, immutable
+# Должно быть: public, max-age=31536000, immutable
+curl -sI https://app.heyslab.ru/boot-core.bundle.e0cfd58e1796.js | grep -iE "cache-control"
 curl -sI "https://app.heyslab.ru/assets/index-*.js" | grep -iE "cache-control"
 ```
+
+> ✅ Fix 2026-02-25: добавлено правило `location ~ \.(bundle|chunk)\.[a-f0-9]+\.(js|css)$`
+> в nginx конфиг → хешированные бандлы получили `immutable` вместо `no-cache`.  
+> **Результат:** скорость загрузки при повторном визите: `~30s → мгновенно`.
 
 ### Landing (CDN)
 

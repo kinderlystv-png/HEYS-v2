@@ -6,10 +6,22 @@
 
 ## 📁 Archive Structure
 
-| Directory              | Priority | Contents                                    |
-| ---------------------- | -------- | ------------------------------------------- |
-| **[legacy/](legacy/)** | ⭐⭐⭐   | Superseded documentation (moved 2025-08-30) |
-| **[2024/](2024/)**     | ⭐⭐     | Year-based archive for historical reference |
+| Directory | Priority | Contents |
+| --- | --- | --- |
+| **[legacy/](legacy/)** | ⭐⭐⭐ | Superseded documentation (moved 2025-08-30) |
+| **[2024/](2024/)** | ⭐⭐ | Year-based archive for historical reference |
+
+## 📦 Performance & Loading (Sept 2025, Supabase-эпоха)
+
+Файлы из спринта оптимизации Sept 2025. Устарели после перехода на
+`bundle-legacy.mjs` и удаления Supabase SDK.
+
+| Файл | Дата | Почему архивировано |
+| --- | --- | --- |
+| [performance-baseline-2025-09.md](performance-baseline-2025-09.md) | 04.09.2025 | 189KB Vite-бандл (Supabase-эпоха). Текущий baseline — 8.65MB raw / 1.95MB gzip (9 бандлов) |
+| [bundle-splitting-report-2025-09.md](bundle-splitting-report-2025-09.md) | 04.09.2025 | Vite `manualChunks` + Supabase. Заменён на `scripts/bundle-legacy.mjs` |
+
+**Актуальная документация:** [docs/SYNC_PERFORMANCE_REPORT.md](../SYNC_PERFORMANCE_REPORT.md)
 
 ## 🗃️ Legacy Archive
 

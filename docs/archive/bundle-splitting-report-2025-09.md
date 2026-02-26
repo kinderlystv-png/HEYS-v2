@@ -1,3 +1,17 @@
+<!--
+  ⚠️ АРХИВ — Документ от сентября 2025.
+  Описывает Vite manualChunks для Supabase-эпохи.
+  Неактуален: Supabase SDK удалён, Vite-бандлы заменены на bundle-legacy.mjs.
+  Актуальная информация → docs/SYNC_PERFORMANCE_REPORT.md
+-->
+
+> **⚠️ АРХИВ.** Документ от 04.09.2025. Описывает Vite `manualChunks`
+> конфигурацию (Supabase-эпоха). Неактуален: Supabase SDK удалён, стратегия
+> чанков заменена на `bundle-legacy.mjs` (9 бандлов, 246 файлов).  
+> Актуальная информация: [SYNC_PERFORMANCE_REPORT.md](../SYNC_PERFORMANCE_REPORT.md)
+
+---
+
 # 📦 Bundle Splitting Optimization Report
 
 **Date:** 04.09.2025  
@@ -5,21 +19,19 @@
 
 ## 🎯 Optimization Summary
 
-### Current State
+### Current State (на тот момент)
 
 - **Chunks configured:** 0
 - **Total JS size:** 138.23KB
 - **Average chunk size:** 15.36KB
 
-### Optimized Configuration
+### Optimized Configuration (на тот момент)
 
 - **New chunks:** 8
 - **Chunk strategy:** Feature-based + vendor separation
 - **Expected improvement:** Better caching, parallel loading
 
-## 📊 Chunk Configuration
-
-### Optimized Manual Chunks
+## 📊 Chunk Configuration (Supabase-эпоха, устарело)
 
 ```typescript
 manualChunks: {
@@ -29,12 +41,12 @@ manualChunks: {
   analytics: ['@heys/analytics'],
   search: ['@heys/search'],
   gaming: ['@heys/gaming'],
-  storage: ['@heys/storage', '@supabase/supabase-js'],
+  storage: ['@heys/storage', '@supabase/supabase-js'],  // Supabase удалён
   utils: ['zod', 'date-fns']
 }
 ```
 
-## 🎯 Recommendations
+## 🎯 Recommendations (на тот момент)
 
 1. Implement optimized manual chunks configuration
 2. Separate vendor libraries for better caching
@@ -44,7 +56,7 @@ manualChunks: {
 6. Add route-based code splitting
 7. Implement dynamic imports for heavy features
 
-## 🚀 Implementation Steps
+## 🚀 Implementation Steps (на тот момент)
 
 1. Update `apps/web/vite.config.ts` with new manual chunks
 2. Test build with `pnpm --filter @heys/web run build`
@@ -54,5 +66,5 @@ manualChunks: {
 
 ---
 
-**Status:** Ready for implementation  
+**Status:** Ready for implementation (на тот момент)  
 **Next Phase:** Code Splitting & Lazy Loading (Day 3-4)
