@@ -3235,6 +3235,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     });
   }
 
+  // v5.1.0: Инвалидировать кэш при batch-sync (BATCH WRITE записал исторические дни в localStorage).
+  // Без этого signature не меняется (сегодняшний day-объект неизменён), кэш даёт HIT,
+  // computeCascadeState не вызывается, historicalDays остаётся [] → getCrsNumber → null → маятник вечный.
+  if (typeof window !== 'undefined' && !window.__heysCascadeBatchSyncInvalidator) {
+    window.__heysCascadeBatchSyncInvalidator = true;
+    window.addEventListener('heys:day-updated', function (e) {
+      var detail = (e && e.detail) || {};
+      if (detail.batch) {
+        _cascadeCache.signature = null;
+        console.info('[HEYS.cascade] 🔄 Cache invalidated by batch-sync (' + ((detail.dates && detail.dates.length) || 0) + ' days written → historicalDays will update)');
+      }
+    });
+  }
+
   // ─────────────────────────────────────────────────────
   // SUB-КОМПОНЕНТ: CrsProgressBar (для нижнего меню)
   // ─────────────────────────────────────────────────────
@@ -3707,6 +3721,32 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }, true);
 
           trySettleToActual();
+        } else {
+          // 🔧 FIX v65: fallback CRS ещё null — значит heys:day-updated triggered renderCard
+          // который обновит HEYS._lastCrs через computeCascadeState. Повторная проверка через 600ms.
+          logCascadeBar('sync-fallback-null', {
+            willRetryMs: 600,
+            currentPercent: +currentPercentRef.current.toFixed(2)
+          }, true);
+          setTimeout(function () {
+            if (isSettledRef.current) return; // уже settled — не нужно
+            var retryFallback = window.HEYS && window.HEYS._lastCrs;
+            var retryNum = getCrsNumber(retryFallback);
+            if (retryNum !== null) {
+              setCrsData(retryFallback);
+              hasValidCrsRef.current = true;
+              crsTargetRef.current = retryNum;
+              logCascadeBar('sync-fallback-retry-ok', {
+                fallbackCrs: retryNum,
+                currentPercent: +currentPercentRef.current.toFixed(2)
+              }, true);
+              trySettleToActual();
+            } else {
+              logCascadeBar('sync-fallback-retry-still-null', {
+                currentPercent: +currentPercentRef.current.toFixed(2)
+              }, true);
+            }
+          }, 600);
         }
       }
 
