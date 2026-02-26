@@ -3570,11 +3570,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return null;
     }
 
-    // v6.1: Pre-compute history guard — prevent _lastCrs contamination before batch-sync arrives.
+    // v6.2: Pre-compute history guard — prevent _lastCrs contamination before batch-sync arrives.
     // Problem: calling computeCascadeState with 0 historical days sets window.HEYS._lastCrs with
     // historicalDays=[], causing CrsProgressBar.getCrsNumber to return null → permanent pendulum.
     // Fix: suppress entire compute + render until __heysCascadeBatchSyncReceived is true.
-    // Flag is set by: heys:day-updated(batch), heysSyncCompleted(with clientId), or 3s timeout.
+    // Flag is set by: heys:day-updated(batch), heysSyncCompleted(full, with clientId, NOT phaseA), or 5s timeout.
     if (!window.__heysCascadeBatchSyncReceived) {
       window.__heysCascadeGuardCount = (window.__heysCascadeGuardCount || 0) + 1;
       if (window.__heysCascadeGuardCount === 1) {
@@ -3628,15 +3628,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       });
     }
 
-    // v5.2.0: History guard — suppress render with 0 historical days until batch-sync loads them.
-    // Prevents 1% CRS flash on client switch before full sync completes.
-    // 15s timeout fallback handles new users with no cloud history.
-    if (cascadeState.historicalDays && cascadeState.historicalDays.length === 0 && !window.__heysCascadeBatchSyncReceived) {
+    // v6.2: History guard — suppress render with 0 historical days REGARDLESS of batch flag.
+    // This is the safety net: even if __heysCascadeBatchSyncReceived was prematurely set,
+    // empty history means we haven't received real data yet → hide cascade card.
+    // Bypass via __heysCascadeAllowEmptyHistory (8s timer) for genuinely new users with no cloud data.
+    if (cascadeState.historicalDays && cascadeState.historicalDays.length === 0 && !window.__heysCascadeAllowEmptyHistory) {
       window.__heysCascadeGuardCount = (window.__heysCascadeGuardCount || 0) + 1;
       if (window.__heysCascadeGuardCount === 1) {
-        console.info('[HEYS.cascade] ⏳ History guard: waiting for batch-sync (0 historical days, suppressing BROKEN render)');
-      } else if (window.__heysCascadeGuardCount === 50) {
-        console.info('[HEYS.cascade] ⏳ History guard: still waiting (' + window.__heysCascadeGuardCount + ' renders suppressed)');
+        console.info('[HEYS.cascade] ⏳ History guard v6.2: 0 historical days — suppressing render (waiting for sync or 8s bypass)');
+      } else if (window.__heysCascadeGuardCount % 50 === 0) {
+        console.info('[HEYS.cascade] ⏳ History guard v6.2: still waiting (' + window.__heysCascadeGuardCount + ' renders suppressed)');
       }
       return null;
     }
@@ -3682,6 +3683,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       // Path A: cloud-sync batch event (batch:true) — немедленная инвалидация
       if (detail.batch) {
         window.__heysCascadeBatchSyncReceived = true;
+        window.__heysCascadeAllowEmptyHistory = true; // v6.2: batch data arrived, allow any state
         _cascadeCache.signature = null;
         _cascadeDayUpdateVersion++;
         console.info('[HEYS.cascade] 🔄 Cache invalidated by batch-sync (' + ((detail.dates && detail.dates.length) || 0) + ' days written → historicalDays will update)');
@@ -3711,21 +3713,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     });
 
-    // v5.4.0 → v6.1: Unblock history guard on heysSyncCompleted with clientId.
-    // v6.1 FIX: Only unblock on REAL sync completions that carry a clientId in the event detail.
-    // Synthetic heysSyncCompleted events (RC v6.3 Phase A, DayTabWithCloudSync markInitialSyncDone)
-    // fire BEFORE batch sync writes historical days and have NO clientId — they would prematurely
-    // unblock the guard with zero historical days, causing CrsProgressBar permanent pendulum mode.
+    // v6.2: Unblock history guard on heysSyncCompleted — ONLY on full sync with clientId.
+    // Phase A events carry clientId + phaseA:true but have NO historical days yet → must be rejected.
+    // Full sync events carry clientId + phase:'full' (or no phaseA flag) → safe to unblock.
+    // Synthetic events (RC v6.3 timeout) have no clientId at all → also rejected.
     window.addEventListener('heysSyncCompleted', function (e) {
       if (!window.__heysCascadeBatchSyncReceived) {
         var detail = e && e.detail;
-        if (detail && detail.clientId) {
+        if (detail && detail.clientId && !detail.phaseA) {
           window.__heysCascadeBatchSyncReceived = true;
           _cascadeCache.signature = null;
-          console.info('[HEYS.cascade] ⚡ heysSyncCompleted: unblocking history guard (real sync, clientId: ' + String(detail.clientId).slice(0, 8) + ')');
+          console.info('[HEYS.cascade] ⚡ heysSyncCompleted: unblocking history guard (full sync, clientId: ' + String(detail.clientId).slice(0, 8) + ')');
+        } else if (detail && detail.phaseA) {
+          // Phase A has clientId but only 5 critical keys — no historical dayv2 yet.
+          console.info('[HEYS.cascade] ⏳ heysSyncCompleted: Phase A (clientId: ' + String((detail.clientId || '').slice(0, 8)) + ') — guard stays locked, waiting for full sync');
         } else {
-          // Synthetic event (Phase A / RC timeout) — no clientId, batch sync not yet done.
-          // Keep guard locked; heys:day-updated(batch) will unblock when real data arrives.
+          // Synthetic event (RC timeout) — no clientId, batch sync not yet done.
           console.info('[HEYS.cascade] ⚠️ heysSyncCompleted: synthetic event (no clientId) — guard stays locked, waiting for batch-sync');
         }
       }
@@ -3736,6 +3739,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // causing BROKEN flash before BATCH WRITE arrives.
     window.addEventListener('heys:client-changed', function () {
       window.__heysCascadeBatchSyncReceived = false;
+      window.__heysCascadeAllowEmptyHistory = false; // v6.2: reset empty-history bypass
       window.__heysCascadeGuardCount = 0;
       window.__heysCascadeLastRenderKey = null;
       window.__heysGatedRender = false; // v6.0: reset gate flag per client switch
@@ -3743,27 +3747,47 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (window.__heysCascadeGuardTimer) {
         clearTimeout(window.__heysCascadeGuardTimer);
       }
-      // v5.4.0: Reduced 15s → 3s. heysSyncCompleted is now the primary unblock path.
-      // 3s fallback covers edge cases where sync event is missed (new users with no cloud history).
+      if (window.__heysCascadeHistoryBypassTimer) {
+        clearTimeout(window.__heysCascadeHistoryBypassTimer);
+      }
+      // v6.2: Increased 3s → 5s. Full sync on fast internet takes 3-4s, 3s was too close.
+      // This is a fallback for edge cases where sync event is missed (new users with no cloud history).
       window.__heysCascadeGuardTimer = setTimeout(function () {
         if (!window.__heysCascadeBatchSyncReceived) {
           window.__heysCascadeBatchSyncReceived = true;
           _cascadeCache.signature = null;
-          console.info('[HEYS.cascade] ⏱️ Batch-sync timeout: unblocking history guard (3s after client switch, likely new user)');
+          console.info('[HEYS.cascade] ⏱️ Batch-sync timeout: unblocking history guard (5s after client switch, likely new user)');
         }
-      }, 3000);
-      console.info('[HEYS.cascade] 🔄 Client changed: guard reset, 3s timeout restarted');
+      }, 5000);
+      // v6.2: Empty-history bypass — 8s fallback for genuinely new users with 0 days in cloud.
+      // Even if batch guard opens at 5s, empty history guard (v6.2) blocks render until this fires.
+      window.__heysCascadeHistoryBypassTimer = setTimeout(function () {
+        if (!window.__heysCascadeAllowEmptyHistory) {
+          window.__heysCascadeAllowEmptyHistory = true;
+          _cascadeCache.signature = null;
+          console.info('[HEYS.cascade] ⏱️ Empty-history bypass: allowing render with 0 historical days (8s, genuinely new user)');
+        }
+      }, 8000);
+      console.info('[HEYS.cascade] 🔄 Client changed: guard reset, 5s/8s timeouts restarted');
     });
 
-    // v5.2.0 → v5.4.0: Initial timeout fallback for page-boot (first load, no client switch).
-    // Reduced 15s → 3s. heysSyncCompleted is the primary fast-path.
+    // v6.2: Initial timeout fallback for page-boot (first load, no client switch).
+    // Increased 3s → 5s — full sync on fast internet takes 3-4s.
     window.__heysCascadeGuardTimer = setTimeout(function () {
       if (!window.__heysCascadeBatchSyncReceived) {
         window.__heysCascadeBatchSyncReceived = true;
         _cascadeCache.signature = null;
-        console.info('[HEYS.cascade] ⏱️ Batch-sync timeout: unblocking history guard (3s, likely new user)');
+        console.info('[HEYS.cascade] ⏱️ Batch-sync timeout: unblocking history guard (5s, likely new user)');
       }
-    }, 3000);
+    }, 5000);
+    // v6.2: Empty-history bypass — 8s fallback for genuinely new users.
+    window.__heysCascadeHistoryBypassTimer = setTimeout(function () {
+      if (!window.__heysCascadeAllowEmptyHistory) {
+        window.__heysCascadeAllowEmptyHistory = true;
+        _cascadeCache.signature = null;
+        console.info('[HEYS.cascade] ⏱️ Empty-history bypass: allowing render with 0 historical days (8s, genuinely new user)');
+      }
+    }, 8000);
   }
 
   // v10.0: Listener для heys:cascade-recompute — вызывается после debounce force-sync.

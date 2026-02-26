@@ -28,11 +28,11 @@
     "builtAt": "2026-02-26T17:45:00.000Z"
   },
   "boot-init": {
-    "file": "boot-init.bundle.82e8e5c885dc.js",
-    "hash": "82e8e5c885dc",
+    "file": "boot-init.bundle.965ff6f2560f.js",
+    "hash": "965ff6f2560f",
     "fileCount": 8,
-    "size": 354909,
-    "builtAt": "2026-02-26T18:20:00.000Z"
+    "size": 357990,
+    "builtAt": "2026-02-27T12:00:00.000Z"
   },
   "postboot-1-game": {
     "file": "postboot-1-game.bundle.1b16a058a8f9.js",
