@@ -5312,7 +5312,11 @@
             if (dateMatch) updatedDates.push(dateMatch[1]);
           });
           window.console.info('[HEYS.sinhron] ✅ BATCH WRITE ' + batchedDayV2Writes.length + ' dayv2 records: ' + updatedDates.join(', '));
-          // 🔔 Dispatch ONE batched event instead of N individual events
+          // � FIX v65: Помечаем sync завершённым ДО heys:day-updated, чтобы cascade pre-sync guard
+          // не блокировал recompute: когда renderCard вызывается из day-updated обработчика,
+          // _cascadeSyncDone=true → cache MISS → computeCascadeState с реальной историей → CRS ≠ null → bar settling
+          cloud._syncCompletedAt = cloud._syncCompletedAt || Date.now();
+          // �🔔 Dispatch ONE batched event instead of N individual events
           if (updatedDates.length > 0) {
             window.dispatchEvent(new CustomEvent('heys:day-updated', {
               detail: { dates: updatedDates, date: updatedDates[updatedDates.length - 1], source: 'cloud-sync', batch: true }
