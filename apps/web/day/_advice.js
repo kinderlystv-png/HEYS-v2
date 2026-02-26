@@ -1076,15 +1076,73 @@
         }, [haptic, setShowConfetti]);
 
         useEffect(() => {
-            const timer = setTimeout(() => {
+            // Cold-start guard (v1.0): if heys_advice_settings is absent from localStorage
+            // (incognito / first visit), the user's toastsEnabled=false setting hasn't loaded
+            // yet at 1500ms. Wait for Phase B sync (which carries CLIENT_SPECIFIC_KEYS incl.
+            // heys_advice_settings) before firing tab_open.
+            // Phase A is explicitly ignored — it has no dayv2 or advice settings.
+            // Fallback: 5s if sync never arrives (offline, error, new user with no cloud data).
+            const isColdStart = (() => {
+                try {
+                    if (HEYSRef.store?.get) {
+                        const fromStore = HEYSRef.store.get('heys_advice_settings', null);
+                        if (fromStore !== null) return false;
+                    }
+                    const raw = localStorage.getItem('heys_advice_settings');
+                    return raw === null;
+                } catch (_) {
+                    return false;
+                }
+            })();
+
+            if (!isColdStart) {
+                // Normal path: settings already in localStorage (returning user)
+                const timer = setTimeout(() => {
+                    setToastsEnabled((currentVal) => {
+                        console.info('[HEYS.advice] 🔔 tab_open timer fired: toastsEnabled =', currentVal);
+                        return currentVal;
+                    });
+                    setAdviceTrigger('tab_open');
+                }, 1500);
+                return () => clearTimeout(timer);
+            }
+
+            // Cold-start path: wait for Phase B before triggering tab_open toast
+            console.info('[HEYS.advice] 🛡️ cold-start guard: waiting for Phase B sync before tab_open');
+            let fired = false;
+            let fallbackTimer;
+
+            const fireTabOpen = () => {
+                if (fired) return;
+                fired = true;
+                clearTimeout(fallbackTimer);
                 setToastsEnabled((currentVal) => {
-                    console.info('[HEYS.advice] 🔔 tab_open timer fired: toastsEnabled =', currentVal);
+                    console.info('[HEYS.advice] 🔔 tab_open (cold-start) fired: toastsEnabled =', currentVal);
                     return currentVal;
                 });
                 setAdviceTrigger('tab_open');
-            }, 1500);
-            return () => clearTimeout(timer);
-        }, [date]);
+            };
+
+            const handlePhaseB = (e) => {
+                if (e && e.detail && e.detail.phaseA) return; // Phase A has no heys_advice_settings
+                // 100ms buffer so setToastsEnabled from the sibling heysSyncCompleted
+                // listener has time to commit before advicePrimary effect evaluates it
+                setTimeout(fireTabOpen, 100);
+            };
+
+            window.addEventListener('heysSyncCompleted', handlePhaseB);
+
+            // Fallback: offline / error / new user with zero cloud data
+            fallbackTimer = setTimeout(() => {
+                console.info('[HEYS.advice] 🛡️ cold-start fallback (5s): firing tab_open');
+                fireTabOpen();
+            }, 5000);
+
+            return () => {
+                window.removeEventListener('heysSyncCompleted', handlePhaseB);
+                clearTimeout(fallbackTimer);
+            };
+        }, [date]); // eslint-disable-line react-hooks/exhaustive-deps
 
         useEffect(() => {
             if (!advicePrimary) return;

@@ -11612,8 +11612,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     }, [haptic, setShowConfetti]);
 
     useEffect(() => {
-      const timer = setTimeout(() => setAdviceTrigger('tab_open'), 1500);
-      return () => clearTimeout(timer);
+      // Cold-start guard v1.0: wait for Phase B if heys_advice_settings absent
+      const isColdStart = (() => {
+        try {
+          if (HEYSRef.store?.get) { const s = HEYSRef.store.get('heys_advice_settings', null); if (s !== null) return false; }
+          return localStorage.getItem('heys_advice_settings') === null;
+        } catch (_) { return false; }
+      })();
+      if (!isColdStart) {
+        const timer = setTimeout(() => setAdviceTrigger('tab_open'), 1500);
+        return () => clearTimeout(timer);
+      }
+      console.info('[HEYS.advice] \uD83D\uDEE1\uFE0F cold-start guard: waiting for Phase B sync before tab_open');
+      let fired = false; let fallbackTimer;
+      const fire = () => { if (fired) return; fired = true; clearTimeout(fallbackTimer); setAdviceTrigger('tab_open'); };
+      const onSync = (e) => { if (e && e.detail && e.detail.phaseA) return; setTimeout(fire, 100); };
+      window.addEventListener('heysSyncCompleted', onSync);
+      fallbackTimer = setTimeout(() => { console.info('[HEYS.advice] \uD83D\uDEE1\uFE0F cold-start fallback (5s)'); fire(); }, 5000);
+      return () => { window.removeEventListener('heysSyncCompleted', onSync); clearTimeout(fallbackTimer); };
     }, [date]);
 
     useEffect(() => {
