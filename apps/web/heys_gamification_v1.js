@@ -4758,40 +4758,59 @@
           }
           // Перечитываем данные из localStorage (storage sync мог обновить)
           _data = null; // сбросим кеш
-          // v3.1: Подавляем промежуточные UI-обновления — финальный dispatch будет после rebuild
-          _suppressUIUpdates = true;
-          try {
-            await ensureAuditConsistency('curator-load');
-          } finally {
-            _suppressUIUpdates = false;
+
+          // 🚀 PERF v7.0: Dispatch bar update IMMEDIATELY from localStorage,
+          // defer heavy audit (3-6 RPC calls, ~2-4s) to avoid competing with DayTab sync
+          _data = loadData();
+          const _xpCacheQuick = _loadXPCache();
+          if (_xpCacheQuick && typeof _xpCacheQuick.xp === 'number' && _xpCacheQuick.xp > (_data.totalXP || 0)) {
+            _data.totalXP = _xpCacheQuick.xp;
+            _data.level = calculateLevel(_xpCacheQuick.xp);
+            setStoredValue(STORAGE_KEY, _data);
           }
-          // RC fix v6.2: ensureAuditConsistency может вернуть 'consistent' без rebuild и без
-          // заполнения _data. В этом случае game.getStats() → loadData() читает сырой localStorage,
-          // который может содержать устаревший XP (например 3761 вместо 10739).
-          // Причина: XP cache (из прошлого pipeline) переопределяет cachedXP → false-consistent.
-          // Фикс: явно загружаем _data и применяем XP cache override если нужно.
-          if (!_data) {
-            _data = loadData();
+          const immediateStats = game.getStats();
+          // 🔒 v4.0: isInitialLoad — React не покажет модалки
+          // RC-2 fix: reason: 'cloud_load_complete' — снимает level guard event-driven
+          window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+            detail: { ...immediateStats, isInitialLoad: true, reason: 'cloud_load_complete' }
+          }));
+
+          // 🚀 PERF v7.0: Defer audit — runs AFTER DayTab sync finishes (5s)
+          // ensureAuditConsistency does 3-6 sequential RPC calls (~2-4s)
+          // competing with bootstrapClientSync for API bandwidth
+          console.info('[🎮 Gamification] 🚀 PERF v7.0: Audit deferred 5s (not blocking DayTab sync)');
+          setTimeout(async () => {
+            const auditTrace = startGameSyncTrace('deferredAudit');
+            _suppressUIUpdates = true;
+            try {
+              await ensureAuditConsistency('curator-load');
+            } catch (e) {
+              console.error('[🎮 Gamification] ❌ Deferred audit failed:', e);
+              endGameSyncTrace(auditTrace, 'error', { error: String(e) });
+              return;
+            } finally {
+              _suppressUIUpdates = false;
+            }
+            // RC fix v6.2: XP cache override after audit
+            if (!_data) _data = loadData();
             const _xpCacheFinal = _loadXPCache();
             if (_xpCacheFinal && typeof _xpCacheFinal.xp === 'number' && _xpCacheFinal.xp > (_data.totalXP || 0)) {
-              console.info('[🎮 Gamification] RC v6.2: XP cache override after consistent audit:',
-                (_data.totalXP || 0), '→', _xpCacheFinal.xp, '(localStorage was behind XP cache)');
-              gameSyncTraceStep(syncTrace, 'xp_cache_override_applied', {
-                localXP: _data.totalXP || 0,
-                cacheXP: _xpCacheFinal.xp
-              });
+              console.info('[🎮 Gamification] RC v6.2: XP cache override post-audit:',
+                (_data.totalXP || 0), '→', _xpCacheFinal.xp);
               _data.totalXP = _xpCacheFinal.xp;
               _data.level = calculateLevel(_xpCacheFinal.xp);
               setStoredValue(STORAGE_KEY, _data);
             }
-          }
-          // Теперь диспатчим финальное обновление UI с полными данными
-          // 🔒 v4.0: Помечаем как initial load — React не покажет модалки
-          // RC-2 fix: reason: 'cloud_load_complete' — снимает level guard event-driven
-          const stats = game.getStats();
-          window.dispatchEvent(new CustomEvent('heysGameUpdate', {
-            detail: { ...stats, isInitialLoad: true, reason: 'cloud_load_complete' }
-          }));
+            const auditStats = game.getStats();
+            if (auditStats.totalXP !== immediateStats.totalXP || auditStats.level !== immediateStats.level) {
+              console.info('[🎮 Gamification] 🔄 Audit reconciliation: XP', immediateStats.totalXP, '→', auditStats.totalXP);
+              window.dispatchEvent(new CustomEvent('heysGameUpdate', {
+                detail: { ...auditStats, isInitialLoad: true, reason: 'audit_reconciliation' }
+              }));
+            }
+            endGameSyncTrace(auditTrace, 'ok', { reason: 'deferred_audit_complete' });
+          }, 5000);
+
           endGameSyncTrace(syncTrace, 'ok', { mode: 'curator', reason: 'storage_layer_flow' });
           return true;
         }

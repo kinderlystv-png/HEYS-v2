@@ -27,12 +27,20 @@
             }
         }, [products.length, setProducts]);
 
+        // 🚀 PERF v7.0: Track last dispatched clientId to avoid duplicate heys:client-changed events
+        // Gate flow (heys_app_gate_flow_v1.js) already dispatches this event on click
+        const _lastDispatchedClientRef = React.useRef(null);
+
         React.useEffect(() => {
             if (clientId) {
                 U.lsSet('heys_client_current', clientId);
                 window.HEYS = window.HEYS || {};
                 window.HEYS.currentClientId = clientId;
-                window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId } }));
+                // 🚀 PERF v7.0: Only dispatch if this is a NEW clientId (not already dispatched by gate flow)
+                if (_lastDispatchedClientRef.current !== clientId) {
+                    _lastDispatchedClientRef.current = clientId;
+                    window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId } }));
+                }
                 // 🔇 v4.7.1: Лог клиента отключён
 
                 if (cloud && typeof cloud.syncClient === 'function') {

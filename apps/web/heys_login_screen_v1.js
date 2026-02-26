@@ -38,6 +38,13 @@
   }
 
   function LoginScreen(props) {
+    // 🚀 LOGIN-FIRST BOOT: Если статичный логин-оверлей уже выполнил вход,
+    // не показываем React LoginScreen — данные уже в localStorage, React подхватит их.
+    // Таймаут 30s на случай если React mount занял слишком много времени.
+    if (window.__heysPreAuth && (Date.now() - (window.__heysPreAuth.timestamp || 0) < 30000)) {
+      return null;
+    }
+
     const {
       onClientLogin,
       onCuratorLogin,

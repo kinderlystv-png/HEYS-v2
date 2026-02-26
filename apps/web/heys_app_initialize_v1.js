@@ -144,27 +144,53 @@
             if (!rootElement) {
                 return;
             }
-            // 🦴 Log skeleton replacement
-            if (window.__heysSkelVisible) {
-                var skelDur = window.__heysSkelStart ? (Date.now() - window.__heysSkelStart) : 0;
-                window.__heysSkelReplacedAt = Date.now();
-                window.__heysSkelVisible = false;
-                window.__heysPerfMark && window.__heysPerfMark('Skeleton: replaced after ' + skelDur + 'ms visible');
-                console.info('[HEYS.skeleton] 🦴 Skeleton was visible for ' + (skelDur / 1000).toFixed(1) + 's → React takes over');
-            }
-            window.__heysPerfMark && window.__heysPerfMark('ReactDOM.createRoot: begin');
-            const root = ReactDOM.createRoot(rootElement);
-            root.render(React.createElement(ErrorBoundary, null, React.createElement(AppComponent)));
-            window.__heysPerfMark && window.__heysPerfMark('root.render: called → __heysAppReady');
 
-            // 🆕 Уведомляем SW об успешной загрузке (сбрасывает счётчик boot failures)
-            if (navigator.serviceWorker?.controller) {
-                navigator.serviceWorker.controller.postMessage({ type: 'BOOT_SUCCESS' });
-                window.__heysLog && window.__heysLog('SW notified: BOOT_SUCCESS');
-            }
+            // v10.1 FOUC fix: delay React mount until main.css loaded
+            // HTML skeleton stays visible → clean transition to styled app
+            const doRender = () => {
+                // 🦴 Log skeleton replacement
+                if (window.__heysSkelVisible) {
+                    var skelDur = window.__heysSkelStart ? (Date.now() - window.__heysSkelStart) : 0;
+                    window.__heysSkelReplacedAt = Date.now();
+                    window.__heysSkelVisible = false;
+                    window.__heysPerfMark && window.__heysPerfMark('Skeleton: replaced after ' + skelDur + 'ms visible');
+                    console.info('[HEYS.skeleton] 🦴 Skeleton was visible for ' + (skelDur / 1000).toFixed(1) + 's → React takes over');
+                }
+                window.__heysPerfMark && window.__heysPerfMark('ReactDOM.createRoot: begin');
+                const root = ReactDOM.createRoot(rootElement);
+                root.render(React.createElement(ErrorBoundary, null, React.createElement(AppComponent)));
+                window.__heysPerfMark && window.__heysPerfMark('root.render: called → __heysAppReady');
 
-            // Флаг для watchdog
-            window.__heysAppReady = true;
+                // 🆕 Уведомляем SW об успешной загрузке (сбрасывает счётчик boot failures)
+                if (navigator.serviceWorker?.controller) {
+                    navigator.serviceWorker.controller.postMessage({ type: 'BOOT_SUCCESS' });
+                    window.__heysLog && window.__heysLog('SW notified: BOOT_SUCCESS');
+                }
+
+                // Флаг для watchdog
+                window.__heysAppReady = true;
+            };
+
+            // CSS gate: wait for main.css before destroying skeleton
+            if (window.__heysMainCSSLoaded) {
+                console.info('[HEYS.init] ✅ main.css already loaded — mounting React immediately');
+                doRender();
+            } else {
+                console.info('[HEYS.init] ⏳ Waiting for main.css before React mount (skeleton stays visible)');
+                var cssTimer = null;
+                var onCSS = function () {
+                    clearTimeout(cssTimer);
+                    console.info('[HEYS.init] ✅ main.css loaded — mounting React');
+                    doRender();
+                };
+                window.addEventListener('heysMainCSSLoaded', onCSS, { once: true });
+                // Safety timeout: 10s — mount anyway to avoid stuck skeleton
+                cssTimer = setTimeout(function () {
+                    window.removeEventListener('heysMainCSSLoaded', onCSS);
+                    console.warn('[HEYS.init] ⚠️ CSS timeout (10s) — mounting React without main.css');
+                    doRender();
+                }, 10000);
+            }
         }
 
         const createApp = AppRoot.createApp

@@ -626,7 +626,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       (day && day.measurements) ? JSON.stringify(day.measurements) : '',
       (day && day.supplementsTaken) ? day.supplementsTaken.length : 0,
       (day && day.supplementsPlanned) ? (Array.isArray(day.supplementsPlanned) ? day.supplementsPlanned.length : day.supplementsPlanned) : 0,
-      (prof && prof.plannedSupplements) ? (Array.isArray(prof.plannedSupplements) ? prof.plannedSupplements.length : prof.plannedSupplements) : 0
+      (prof && prof.plannedSupplements) ? (Array.isArray(prof.plannedSupplements) ? prof.plannedSupplements.length : prof.plannedSupplements) : 0,
+      // v10.0: day-update version — инвалидирует кэш после sync записал исторические дни
+      _cascadeDayUpdateVersion
     ].join('::');
   }
 
@@ -3118,6 +3120,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   // P1-cascade fix: throttle renderCard log to once per session (mirrors mealRec P1)
   var _cascadeRenderCount = 0;
+  // v10.0: day-update version counter — инкрементируется при каждом batch/force-sync invalidation.
+  // Включён в buildInputSignature чтобы кэш гарантированно промазывал после записи исторических дней,
+  // даже если сегодняшний day-объект не изменился.
+  var _cascadeDayUpdateVersion = 0;
   var _cascadeCache = {
     signature: null,
     result: null,
@@ -3163,6 +3169,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     if (!hasMeals && !hasTrainings && !hasSteps && !hasHousehold && !hasWeightCheckin && !hasSleepData && !hasMeasData && !hasSupplements) {
       console.info('[HEYS.cascade] ⏭️ No activity data yet — card not shown');
+      return null;
+    }
+
+    // v6.1: Pre-compute history guard — prevent _lastCrs contamination before batch-sync arrives.
+    // Problem: calling computeCascadeState with 0 historical days sets window.HEYS._lastCrs with
+    // historicalDays=[], causing CrsProgressBar.getCrsNumber to return null → permanent pendulum.
+    // Fix: suppress entire compute + render until __heysCascadeBatchSyncReceived is true.
+    // Flag is set by: heys:day-updated(batch), heysSyncCompleted(with clientId), or 3s timeout.
+    if (!window.__heysCascadeBatchSyncReceived) {
+      window.__heysCascadeGuardCount = (window.__heysCascadeGuardCount || 0) + 1;
+      if (window.__heysCascadeGuardCount === 1) {
+        console.info('[HEYS.cascade] ⏳ Pre-compute guard: waiting for batch-sync (cascade hidden, no _lastCrs contamination)');
+      } else if (window.__heysCascadeGuardCount % 50 === 0) {
+        console.info('[HEYS.cascade] ⏳ Pre-compute guard: still waiting (' + window.__heysCascadeGuardCount + ' renders suppressed)');
+      }
       return null;
     }
 
@@ -3248,17 +3269,67 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     });
   }
 
-  // v5.1.0: Инвалидировать кэш при batch-sync (BATCH WRITE записал исторические дни в localStorage).
-  // Без этого signature не меняется (сегодняшний day-объект неизменён), кэш даёт HIT,
-  // computeCascadeState не вызывается, historicalDays остаётся [] → getCrsNumber → null → маятник вечный.
+  // v5.1.0 → v10.0: Инвалидировать кэш при batch-sync ИЛИ force-sync.
+  // Проблема v5.1: слушатель проверял detail.batch, но force-sync (pull-to-refresh) шлёт
+  // ИНДИВИДУАЛЬНЫЕ события {date, source:'force-sync', forceReload:true} БЕЗ batch:true.
+  // Результат: кэш НИКОГДА не инвалидировался при force-sync → historicalDays=[] → CRS null → маятник вечный.
+  // Fix v10.0: обрабатываем ОБА формата — batch (cloud-sync) и debounced force-sync.
   if (typeof window !== 'undefined' && !window.__heysCascadeBatchSyncInvalidator) {
     window.__heysCascadeBatchSyncInvalidator = true;
+    var _forceSyncDebounce = null;
+    var _forceSyncCount = 0;
     window.addEventListener('heys:day-updated', function (e) {
       var detail = (e && e.detail) || {};
+
+      // Path A: cloud-sync batch event (batch:true) — немедленная инвалидация
       if (detail.batch) {
         window.__heysCascadeBatchSyncReceived = true;
         _cascadeCache.signature = null;
+        _cascadeDayUpdateVersion++;
         console.info('[HEYS.cascade] 🔄 Cache invalidated by batch-sync (' + ((detail.dates && detail.dates.length) || 0) + ' days written → historicalDays will update)');
+        return;
+      }
+
+      // Path B: force-sync individual events — debounce 500ms чтобы дождаться завершения всех записей
+      if (detail.source === 'force-sync' || detail.source === 'cloud-sync') {
+        _forceSyncCount++;
+        if (_forceSyncDebounce) clearTimeout(_forceSyncDebounce);
+        _forceSyncDebounce = setTimeout(function () {
+          window.__heysCascadeBatchSyncReceived = true;
+          _cascadeCache.signature = null;
+          _cascadeDayUpdateVersion++;
+          console.info('[HEYS.cascade] 🔄 Cache invalidated by force-sync debounce (' + _forceSyncCount + ' day-updated events → historicalDays will refresh)');
+          _forceSyncCount = 0;
+          _forceSyncDebounce = null;
+          // Trigger re-render: dispatch heys:day-updated for today so DayTab re-reads data
+          // → renderCard → cache MISS (signature=null) → computeCascadeState with real history → CRS valid
+          try {
+            var today = new Date().toISOString().slice(0, 10);
+            window.dispatchEvent(new CustomEvent('heys:cascade-recompute', {
+              detail: { source: 'force-sync-debounce', date: today }
+            }));
+          } catch (_) { }
+        }, 500);
+      }
+    });
+
+    // v5.4.0 → v6.1: Unblock history guard on heysSyncCompleted with clientId.
+    // v6.1 FIX: Only unblock on REAL sync completions that carry a clientId in the event detail.
+    // Synthetic heysSyncCompleted events (RC v6.3 Phase A, DayTabWithCloudSync markInitialSyncDone)
+    // fire BEFORE batch sync writes historical days and have NO clientId — they would prematurely
+    // unblock the guard with zero historical days, causing CrsProgressBar permanent pendulum mode.
+    window.addEventListener('heysSyncCompleted', function (e) {
+      if (!window.__heysCascadeBatchSyncReceived) {
+        var detail = e && e.detail;
+        if (detail && detail.clientId) {
+          window.__heysCascadeBatchSyncReceived = true;
+          _cascadeCache.signature = null;
+          console.info('[HEYS.cascade] ⚡ heysSyncCompleted: unblocking history guard (real sync, clientId: ' + String(detail.clientId).slice(0, 8) + ')');
+        } else {
+          // Synthetic event (Phase A / RC timeout) — no clientId, batch sync not yet done.
+          // Keep guard locked; heys:day-updated(batch) will unblock when real data arrives.
+          console.info('[HEYS.cascade] ⚠️ heysSyncCompleted: synthetic event (no clientId) — guard stays locked, waiting for batch-sync');
+        }
       }
     });
 
@@ -3274,24 +3345,57 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (window.__heysCascadeGuardTimer) {
         clearTimeout(window.__heysCascadeGuardTimer);
       }
+      // v5.4.0: Reduced 15s → 3s. heysSyncCompleted is now the primary unblock path.
+      // 3s fallback covers edge cases where sync event is missed (new users with no cloud history).
       window.__heysCascadeGuardTimer = setTimeout(function () {
         if (!window.__heysCascadeBatchSyncReceived) {
           window.__heysCascadeBatchSyncReceived = true;
           _cascadeCache.signature = null;
-          console.info('[HEYS.cascade] ⏱️ Batch-sync timeout: unblocking history guard (15s after client switch, likely new user)');
+          console.info('[HEYS.cascade] ⏱️ Batch-sync timeout: unblocking history guard (3s after client switch, likely new user)');
         }
-      }, 15000);
-      console.info('[HEYS.cascade] 🔄 Client changed: guard reset, 15s timeout restarted');
+      }, 3000);
+      console.info('[HEYS.cascade] 🔄 Client changed: guard reset, 3s timeout restarted');
     });
 
-    // v5.2.0 → v5.3.0: Initial timeout fallback for page-boot (first load, no client switch).
+    // v5.2.0 → v5.4.0: Initial timeout fallback for page-boot (first load, no client switch).
+    // Reduced 15s → 3s. heysSyncCompleted is the primary fast-path.
     window.__heysCascadeGuardTimer = setTimeout(function () {
       if (!window.__heysCascadeBatchSyncReceived) {
         window.__heysCascadeBatchSyncReceived = true;
         _cascadeCache.signature = null;
-        console.info('[HEYS.cascade] ⏱️ Batch-sync timeout: unblocking history guard (15s, likely new user)');
+        console.info('[HEYS.cascade] ⏱️ Batch-sync timeout: unblocking history guard (3s, likely new user)');
       }
-    }, 15000);
+    }, 3000);
+  }
+
+  // v10.0: Listener для heys:cascade-recompute — вызывается после debounce force-sync.
+  // Читает сегодняшний day из localStorage и вызывает computeCascadeState напрямую,
+  // чтобы обновить _lastCrs с реальной историей и отправить heys:crs-updated → CrsProgressBar settle.
+  if (typeof window !== 'undefined' && !window.__heysCascadeRecomputeListener) {
+    window.__heysCascadeRecomputeListener = true;
+    window.addEventListener('heys:cascade-recompute', function () {
+      try {
+        var U = HEYS.utils;
+        var clientId = (U && U.getCurrentClientId && U.getCurrentClientId()) || HEYS.currentClientId || '';
+        var today = new Date().toISOString().slice(0, 10);
+        var dayKey = clientId ? 'heys_' + clientId + '_dayv2_' + today : 'heys_dayv2_' + today;
+        var raw = (HEYS.store && HEYS.store.get) ? HEYS.store.get(dayKey, null) : localStorage.getItem(dayKey);
+        var day = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : null;
+        if (!day || !day.meals || !day.meals.length) {
+          console.info('[HEYS.cascade] ⚠️ cascade-recompute: no day data for today — skipping');
+          return;
+        }
+        var normAbsRaw = (HEYS.store && HEYS.store.get) ? HEYS.store.get('heys_normAbs', null) : localStorage.getItem('heys_normAbs');
+        var normAbs = normAbsRaw ? (typeof normAbsRaw === 'string' ? JSON.parse(normAbsRaw) : normAbsRaw) : {};
+        var profRaw = (HEYS.store && HEYS.store.get) ? HEYS.store.get('heys_profile', null) : localStorage.getItem('heys_profile');
+        var prof = profRaw ? (typeof profRaw === 'string' ? JSON.parse(profRaw) : profRaw) : {};
+        console.info('[HEYS.cascade] 🔄 cascade-recompute: re-running computeCascadeState with fresh historical data');
+        // computeCascadeState dispatches heys:crs-updated → CrsProgressBar updates automatically
+        computeCascadeState(day, null, normAbs, prof, null);
+      } catch (err) {
+        console.warn('[HEYS.cascade] ⚠️ cascade-recompute error:', err && err.message);
+      }
+    });
   }
 
   // ─────────────────────────────────────────────────────

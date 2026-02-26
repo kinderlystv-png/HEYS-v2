@@ -373,27 +373,27 @@
 
     const isPinAuth = _rpcOnlyMode && _pinAuthClientId === clientId;
 
-    // 🔄 AUTO REFRESH: Проверяем и обновляем токен перед sync (только для куратора)
-    if (!isPinAuth && typeof cloud.ensureValidToken === 'function') {
-      const tokenResult = await cloud.ensureValidToken();
-      if (!tokenResult.valid) {
-        logCritical('🔐 [SYNC] Токен недействителен:', tokenResult.error);
-        // 🚨 КРИТИЧНО: Возвращаем authRequired чтобы UI мог показать экран логина
-        // user уже установлен в null в ensureValidToken
-        return {
-          success: false,
-          authRequired: true,
-          error: tokenResult.error
-        };
-      }
-      if (tokenResult.refreshed) {
-        logCritical('🔄 [SYNC] Токен обновлён перед синхронизацией');
-      }
-    }
-
-    // Создаём Promise и сохраняем его для deduplication
+    // � PERF v7.0: Set _syncInFlight IMMEDIATELY (before async ensureValidToken)
+    // to prevent race condition: DayTabWithCloudSync and syncEffects can call syncClient
+    // before ensureValidToken resolves, slipping past the dedup check.
     const syncPromise = (async () => {
       try {
+        // 🔄 AUTO REFRESH: Проверяем и обновляем токен перед sync (только для куратора)
+        if (!isPinAuth && typeof cloud.ensureValidToken === 'function') {
+          const tokenResult = await cloud.ensureValidToken();
+          if (!tokenResult.valid) {
+            logCritical('🔐 [SYNC] Токен недействителен:', tokenResult.error);
+            return {
+              success: false,
+              authRequired: true,
+              error: tokenResult.error
+            };
+          }
+          if (tokenResult.refreshed) {
+            logCritical('🔄 [SYNC] Токен обновлён перед синхронизацией');
+          }
+        }
+
         let result;
         if (isPinAuth && typeof cloud.syncClientViaRPC === 'function') {
           result = await cloud.syncClientViaRPC(clientId);
@@ -2513,6 +2513,38 @@
 
         // Также синхронизируем при focus окна (для десктопа)
         window.addEventListener('focus', syncOnFocus);
+
+        // 🚀 v10.1: Горячий подхват сессии после логина без reload
+        // LoginGate в index.html диспатчит это событие вместо location.reload()
+        window.addEventListener('heys-auth-ready', function onAuthReady(e) {
+          try {
+            var detail = e && e.detail || {};
+            logCritical('[AUTH] 🔑 heys-auth-ready received:', detail.mode);
+
+            // Повторяем restoreSessionFromStorage чтобы подхватить новые данные
+            var restored = restoreSessionFromStorage();
+            if (restored.user) {
+              user = restored.user;
+              status = CONNECTION_STATUS.ONLINE;
+              _rpcOnlyMode = true;
+              logCritical('[AUTH] ✅ Hot session restore:', user.email || user.id);
+
+              // Уведомляем React через глобальное событие
+              try {
+                window.dispatchEvent(new CustomEvent('heys-session-restored', {
+                  detail: { user: user, mode: detail.mode }
+                }));
+              } catch (_) { }
+            } else {
+              // Данные не найдены — fallback reload
+              logCritical('[AUTH] ⚠️ No session data found after login, reloading');
+              window.location.reload();
+            }
+          } catch (err) {
+            logCritical('[AUTH] ❌ heys-auth-ready handler error:', err);
+            window.location.reload();
+          }
+        }, { once: true });
       }
 
     } catch (e) { err('init failed', e); }
@@ -6910,7 +6942,9 @@
         _pinAuthClientId = null; // Очищаем PIN auth
         log('🔐 [SWITCH] CURATOR path: _pinAuthClientId = null');
         try { global.localStorage.removeItem('heys_pin_auth_client'); } catch (_) { }
-        await cloud.bootstrapClientSync(newClientId);
+        // 🚀 PERF v7.0: Use syncClient for dedup — prevents double sync
+        // when DayTabWithCloudSync also calls syncClient on client change
+        await cloud.syncClient(newClientId, { force: true });
       } else {
         logCritical('🔐 [SWITCH] Нет Supabase сессии — используем RPC sync');
         _rpcOnlyMode = true; // Клиент по PIN — RPC режим для сохранений

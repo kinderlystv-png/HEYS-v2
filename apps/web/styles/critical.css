@@ -48,3 +48,331 @@ body {
   flex: 1;
   padding: 1rem;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+ * v9.8: DayTab skeleton — минимальные стили для отображения
+ * до загрузки main.css (особенно при throttling).
+ * Намеренно дублирует часть 300-modals-and-day.css с literal-
+ * цветами (без CSS var) — независимость от design tokens.
+ * ═══════════════════════════════════════════════════════════════ */
+
+@keyframes heys-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.day-tab-skeleton {
+  padding: 16px;
+}
+
+.skeleton-sparkline,
+.skeleton-card,
+.skeleton-progress,
+.skeleton-macros .skeleton-ring {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: heys-skeleton-shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+.skeleton-sparkline {
+  height: 80px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+}
+
+.skeleton-card {
+  border-radius: 12px;
+  min-height: 60px;
+}
+
+.skeleton-progress {
+  height: 48px;
+  margin-bottom: 16px;
+}
+
+.skeleton-macros {
+  display: flex;
+  justify-content: space-around;
+  gap: 16px;
+}
+
+.skeleton-macros .skeleton-ring {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * v10.1: AppShell critical CSS — стили для header, tabs, wrap
+ * чтобы при timeout fallback (10s) React-rendered AppShell
+ * выглядел прилично даже без main.css.
+ * Literal-цвета — независимость от design tokens.
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* Layout wrapper — отступ сверху для fixed header */
+.wrap {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 12px 18px 80px;
+  box-sizing: border-box;
+  padding-top: 110px;
+}
+
+/* Fixed header */
+.hdr {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #f8f9fa;
+  padding: 12px 18px 0;
+  max-width: 100%;
+}
+
+/* Header top: blue gradient bar */
+.hdr-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #4285f4 0%, #2563eb 100%);
+  border-radius: 16px 16px 0 0;
+  border: 1px solid #4285f4;
+  border-bottom: none;
+  color: white;
+}
+
+/* Header bottom: client info bar */
+.hdr-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #f0f0f0;
+  border: 1px solid #4285f4;
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  min-height: 40px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Client avatar */
+.hdr-client {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.hdr-client-avatar {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.hdr-client-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  line-height: 1.1;
+  min-width: 0;
+}
+
+.hdr-client-firstname,
+.hdr-client-lastname,
+.hdr-client-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Date group in header */
+.hdr-date-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Fixed bottom tabs */
+.tabs {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 0;
+  padding: 8px 12px;
+  margin: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 0.5px solid rgba(0, 0, 0, 0.1);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  box-shadow: 0 -1px 20px rgba(0, 0, 0, 0.06);
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  min-height: 58px;
+}
+
+/* Tab item */
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.tab-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.tab-text {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* iOS switch group for stats/diary tabs */
+.tab-switch-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(120, 120, 128, 0.12);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 0;
+  height: 40px;
+}
+
+.tab-switch-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 160px;
+  margin: 0 12px;
+}
+
+.tab.tab-switch {
+  flex: 1;
+  min-width: 48px;
+  min-height: 32px;
+  padding: 4px 8px;
+  background: transparent;
+  color: #666;
+  gap: 1px;
+}
+
+.tab.tab-switch:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.tab.tab-switch:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+.tab.tab-switch.active {
+  background: linear-gradient(135deg, #007aff 0%, #0056d6 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * v10.1: Dark mode overrides for critical AppShell CSS
+ * ═══════════════════════════════════════════════════════════════ */
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) .hdr {
+    background: #111827;
+  }
+
+  html:not([data-theme]) .hdr-bottom {
+    background: #2a2a2a;
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  html:not([data-theme]) .hdr-client-firstname,
+  html:not([data-theme]) .hdr-client-lastname,
+  html:not([data-theme]) .hdr-client-name {
+    color: #f9fafb;
+  }
+
+  html:not([data-theme]) .tabs {
+    background: #1c1c1e;
+    border-top-color: #3a3a3c;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  html:not([data-theme]) .tab-switch-group {
+    background: #3a3a3c;
+  }
+
+  html:not([data-theme]) .tab.tab-switch {
+    color: #8e8e93;
+  }
+
+  html:not([data-theme]) .tab.tab-switch.active {
+    background: #0a84ff;
+    color: white;
+  }
+}
+
+[data-theme="dark"] .hdr {
+  background: #111827;
+}
+
+[data-theme="dark"] .hdr-bottom {
+  background: #2a2a2a;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .hdr-client-firstname,
+[data-theme="dark"] .hdr-client-lastname,
+[data-theme="dark"] .hdr-client-name {
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .tabs {
+  background: #1c1c1e;
+  border-top-color: #3a3a3c;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .tab-switch-group {
+  background: #3a3a3c;
+}
+
+[data-theme="dark"] .tab.tab-switch {
+  color: #8e8e93;
+}
+
+[data-theme="dark"] .tab.tab-switch.active {
+  background: #0a84ff;
+  color: white;
+}

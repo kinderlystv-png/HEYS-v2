@@ -68,17 +68,13 @@
         );
     }
 
-    // v9.3: Non-blocking sync — DayTab renders immediately, sync updates reactively
-    // Previously: DayTab blocked on full syncClient (5-15s skeleton in incognito)
-    // Now: fire-and-forget sync + heysSyncCompleted listener + fallback safety net
-    // v9.5: Increased from 800ms to 5000ms — Phase A (profile+products+dayv2_today)
-    // typically arrives in 3-5s. 800ms fired BEFORE Phase A, causing empty render
-    // followed by jarring full re-render. 5000ms lets Phase A unlock DayTab with real data.
-    // v6.0: Adaptive Render Gate — when connection is fast, wait for full sync (phase:full)
-    // so DayTab + cascade + planner + supplements all render in ONE frame.
-    // On slow connections (gate timeout exceeded), fallback to Phase A progressive render.
+    // v9.7: Phase A Immediate Render — DayTab appears as soon as today's data ready (~4s on cold login)
+    // Previously v6.0–v9.3: Adaptive Gate waited up to 2500ms after Phase A for full sync (gated=true)
+    // Now: render immediately on Phase A (gated=false) → cascade/planner show skeleton → fill in via
+    // heys:day-updated batch:true when full sync arrives. On refresh sync is not needed (cooldown) →
+    // fast path gated=true → instant render unchanged.
     const DAYTAB_SYNC_FALLBACK_MS = 5000;
-    const DAYTAB_GATE_AFTER_PHASE_A_MS = 4000; // max wait for full sync AFTER Phase A arrives
+    // DAYTAB_GATE_AFTER_PHASE_A_MS removed — Phase A triggers immediate render (gated=false)
 
     function DayTabWithCloudSync(props) {
         const { clientId, products, selectedDate, setSelectedDate, subTab } = props;
@@ -103,23 +99,58 @@
             let fallbackTimer = null;
             let gateTimer = null;
             let phaseAReceived = false;
+            // v9.8: CSS gate — храним в outer scope для корректного cleanup при анмаунте
+            let cssUnlockTimer = null;
+            let onCSSLoaded = null;
             const cloud = window.HEYS && window.HEYS.cloud;
 
             const finish = (reason, gated) => {
                 if (cancelled) return;
+                // Немедленно помечаем как завершённый чтобы не вызвать дважды
+                // (например Phase A + full sync конкурируют)
                 cancelled = true;
-                if (fallbackTimer) clearTimeout(fallbackTimer);
-                if (gateTimer) clearTimeout(gateTimer);
-                window.removeEventListener('heysSyncCompleted', onSyncCompleted);
-                // v6.0: Mark gated render — deferredSlot uses this to skip unfold animation
-                if (gated) {
-                    window.__heysGatedRender = true;
-                    console.info('[HEYS.gate] 🚀 Gated render: all data ready, rendering DayTab + cards in one frame');
+
+                // v9.8: CSS Gate — не показываем DayTab пока main.css не загружен.
+                // При throttling Phase A может сработать до окончания загрузки CSS →
+                // DayTab рендерится без стилей, выглядит некрасиво.
+                // Решение: если CSS ещё не загружен — ждём событие heysMainCSSLoaded,
+                // скелетон при этом остаётся видимым.
+                const unlock = () => {
+                    if (fallbackTimer) clearTimeout(fallbackTimer);
+                    if (gateTimer) clearTimeout(gateTimer);
+                    window.removeEventListener('heysSyncCompleted', onSyncCompleted);
+                    // v6.0: Mark gated render — deferredSlot uses this to skip unfold animation
+                    if (gated) {
+                        window.__heysGatedRender = true;
+                        console.info('[HEYS.gate] 🚀 Gated render: all data ready, rendering DayTab + cards in one frame');
+                    } else {
+                        window.__heysGatedRender = false;
+                    }
+                    console.info('[HEYS.sceleton] ✅ DayTab unlocked:', reason);
+                    setLoading(false);
+                };
+
+                if (window.__heysMainCSSLoaded) {
+                    unlock();
                 } else {
-                    window.__heysGatedRender = false;
+                    // CSS ещё загружается — ждём событие
+                    console.info('[HEYS.gate] ⏳ Waiting for main.css before rendering DayTab (throttled connection)');
+                    onCSSLoaded = () => {
+                        if (cssUnlockTimer) { clearTimeout(cssUnlockTimer); cssUnlockTimer = null; }
+                        onCSSLoaded = null;
+                        console.info('[HEYS.gate] ✅ main.css loaded — proceeding with DayTab render');
+                        unlock();
+                    };
+                    window.addEventListener('heysMainCSSLoaded', onCSSLoaded, { once: true });
+                    // Safety: если событие уже прошло или CSS загружен через <noscript> fallback
+                    // — принудительно разблокируем через 10s чтобы не зависнуть на медленных соединениях
+                    cssUnlockTimer = setTimeout(() => {
+                        cssUnlockTimer = null;
+                        if (onCSSLoaded) { window.removeEventListener('heysMainCSSLoaded', onCSSLoaded); onCSSLoaded = null; }
+                        console.warn('[HEYS.gate] ⚠️ CSS load timeout (10s) — forcing DayTab render anyway');
+                        unlock();
+                    }, 10000);
                 }
-                console.info('[HEYS.sceleton] ✅ DayTab unlocked:', reason);
-                setLoading(false);
             };
 
             // v6.0: Adaptive Gate — listen for Phase A AND full sync separately
@@ -138,15 +169,10 @@
 
                 if (!phaseAReceived) {
                     phaseAReceived = true;
-                    var modulesReady = !!(window.HEYS?.CascadeCard?.renderCard);
-                    console.info('[HEYS.gate] ⏳ Phase A received, waiting up to ' + DAYTAB_GATE_AFTER_PHASE_A_MS + 'ms for full sync', {
-                        modulesReady: modulesReady,
-                        postbootDone: !!window.__heysPostbootDone
-                    });
-
-                    gateTimer = setTimeout(function () {
-                        finish('gate timeout — Phase A fallback (' + DAYTAB_GATE_AFTER_PHASE_A_MS + 'ms)', false);
-                    }, DAYTAB_GATE_AFTER_PHASE_A_MS);
+                    // v9.7: Render immediately at Phase A — today's data (profile+products+dayv2) is ready.
+                    // Cascade/planner will use skeleton → fill in via heys:day-updated batch:true when full sync arrives (~2s later).
+                    console.info('[HEYS.gate] ⚡ Phase A received — rendering DayTab immediately (progressive reveal)');
+                    finish('Phase A — immediate render', false);
                 }
             };
 
@@ -191,6 +217,10 @@
                     if (gateTimer) clearTimeout(gateTimer);
                     window.removeEventListener('heysSyncCompleted', onSyncCompleted);
                 }
+                // v9.8: всегда чистим CSS-ожидание — cancelled мог быть установлен в finish()
+                // до загрузки CSS, но компонент анмаунтился пока ждали
+                if (cssUnlockTimer) { clearTimeout(cssUnlockTimer); cssUnlockTimer = null; }
+                if (onCSSLoaded) { window.removeEventListener('heysMainCSSLoaded', onCSSLoaded); onCSSLoaded = null; }
             };
         }, [clientId]);
 

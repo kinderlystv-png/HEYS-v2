@@ -284,11 +284,12 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>HEYS Nutrition Tracker - Production</title>
 
-    <!-- Tailwind CSS (production-friendly через Vite/PostCSS) -->
+    <!-- Tailwind CSS — render-blocking (69KB, нужен для skeleton/app UI) -->
+    <!-- Login gate имеет inline стили и не зависит от Tailwind -->
     <link rel="stylesheet" href="/styles/tailwind.css" />
 
     <!-- Critical CSS for instant rendering -->
-    <link rel="stylesheet" href="styles/critical.css" />
+    <link rel="stylesheet" href="styles/critical.css?v=2" />
 
     <!-- Pattern Debugger CSS (отладочная модалка — загружаем async, не нужен для FCP) -->
     <link rel="preload" href="insights/pi_pattern_debugger.css?v=2" as="style"
@@ -302,11 +303,11 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.574f738d3e52.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.11e1203df3d1.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.35b159a72e66.js" as="script" />
     <link rel="preload" href="boot-day.bundle.7320c50778ec.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.fdc0ebd280cb.js" as="script" />
-    <link rel="preload" href="boot-init.bundle.878c88e526e7.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.82f8201d13bf.js" as="script" />
+    <link rel="preload" href="boot-init.bundle.82e8e5c885dc.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
 
@@ -316,8 +317,11 @@
     <!-- heys_storage_supabase_v1.js — prefetch удалён, файл локальный, SDK удалён -->
     <link rel="prefetch" href="heys_models_v1.js" />
 
-    <!-- Load non-critical CSS asynchronously -->
-    <link rel="preload" href="styles/main.css?v=38" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <!-- Main CSS — async load (1.19MB via @import, не нужен для login gate) -->
+    <!-- v12: Login gate имеет inline стили, main.css нужен только после загрузки бандлов -->
+    <!-- v9.8: флаг __heysMainCSSLoaded + событие heysMainCSSLoaded для gate DayTab -->
+    <link rel="preload" href="styles/main.css?v=38" as="style"
+        onload="this.onload=null;this.rel='stylesheet';window.__heysMainCSSLoaded=true;window.dispatchEvent(new CustomEvent('heysMainCSSLoaded'))" />
     <noscript>
         <link rel="stylesheet" href="styles/main.css?v=38" />
     </noscript>
@@ -540,6 +544,913 @@
             }
         </style>
     </div>
+
+    <!-- 🚀 LOGIN-FIRST BOOT: Статичный HTML логин поверх скелетона.
+         Появляется мгновенно (0ms) для разлогиненных пользователей.
+         Бандлы грузятся в фоне пока пользователь вводит данные.
+         После успешного входа оверлей скрывается → скелетон/приложение. -->
+
+    <!-- Шаг 1: Детекция сессии (выполняется мгновенно при парсинге) -->
+    <script>
+        (function () {
+            try {
+                var hasPinAuth = !!localStorage.getItem('heys_pin_auth_client');
+                var hasCuratorSession = !!localStorage.getItem('heys_curator_session');
+                var hasSupabaseToken = (function () {
+                    try {
+                        var raw = localStorage.getItem('heys_supabase_auth_token');
+                        if (!raw) return false;
+                        var parsed = JSON.parse(raw);
+                        if (!parsed) return false;
+                        // Проверяем expires_at — если истёк, считаем нет сессии
+                        var expiresAt = parsed.expires_at;
+                        if (expiresAt && expiresAt * 1000 < Date.now()) return false;
+                        return !!(parsed.user && parsed.user.id);
+                    } catch (_) { return false; }
+                })();
+                window.__heysHasSession = hasPinAuth || hasCuratorSession || hasSupabaseToken;
+            } catch (_) {
+                window.__heysHasSession = false;
+            }
+            window.__heysLog && window.__heysLog('Session detected: ' + window.__heysHasSession);
+        })();
+    </script>
+
+    <!-- Шаг 2: Статичный HTML логин-оверлей -->
+    <div id="heys-login-gate"
+        style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#3b82f6,#1d4ed8);padding:20px 20px 40px;overflow-y:auto">
+
+        <!-- Экран: client (телефон + PIN) — показывается сразу -->
+        <div id="hlg-screen-client">
+            <div
+                style="width:100%;max-width:360px;border-radius:16px;background:rgba(255,255,255,0.95);padding:28px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);margin:0 auto">
+                <div style="text-align:center;margin-bottom:28px">
+                    <div
+                        style="font-size:28px;font-weight:800;letter-spacing:-0.5px;color:#0f172a;font-family:system-ui,-apple-system,sans-serif">
+                        👋 Привет!</div>
+                    <div
+                        style="margin-top:4px;font-size:15px;color:#64748b;font-family:system-ui,-apple-system,sans-serif">
+                        Вход для клиентов</div>
+                </div>
+                <!-- Телефон -->
+                <div style="margin-bottom:20px">
+                    <div
+                        style="text-align:center;font-size:15px;font-weight:600;color:#334155;margin-bottom:10px;font-family:system-ui,-apple-system,sans-serif">
+                        Телефон</div>
+                    <div id="hlg-phone-wrap"
+                        style="display:flex;align-items:center;justify-content:center;gap:8px;border-radius:1rem;border:2px solid #e2e8f0;padding:12px 16px;background:white;transition:border-color 0.2s">
+                        <span class="phone-prefix-large"
+                            style="font-weight:700;color:#334155;flex-shrink:0;font-family:system-ui,-apple-system,sans-serif;user-select:none">+7</span>
+                        <input id="hlg-phone" type="tel" inputmode="numeric" autocomplete="tel"
+                            placeholder="(999) 123-45-67" maxlength="15" class="phone-input-large"
+                            style="width:195px;font-weight:700;color:#334155;font-family:system-ui,-apple-system,sans-serif" />
+                    </div>
+                </div>
+                <!-- PIN -->
+                <div style="margin-bottom:20px">
+                    <div
+                        style="text-align:center;font-size:15px;font-weight:600;color:#334155;margin-bottom:10px;font-family:system-ui,-apple-system,sans-serif">
+                        PIN-код</div>
+                    <div style="display:flex;justify-content:center;gap:12px">
+                        <div style="position:relative;width:56px;height:72px">
+                            <input id="hlg-pin-0" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1"
+                                autocomplete="one-time-code"
+                                style="width:100%;height:100%;border-radius:16px;border:2px solid #e2e8f0;background:white;text-align:center;font-size:32px;line-height:1;font-weight:700;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif;caret-color:transparent" />
+                            <span id="hlg-pin-ov-0"
+                                style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#1e293b;font-family:system-ui,-apple-system,sans-serif;pointer-events:none"></span>
+                        </div>
+                        <div style="position:relative;width:56px;height:72px">
+                            <input id="hlg-pin-1" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1"
+                                autocomplete="off"
+                                style="width:100%;height:100%;border-radius:16px;border:2px solid #e2e8f0;background:white;text-align:center;font-size:32px;line-height:1;font-weight:700;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif;caret-color:transparent" />
+                            <span id="hlg-pin-ov-1"
+                                style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#1e293b;font-family:system-ui,-apple-system,sans-serif;pointer-events:none"></span>
+                        </div>
+                        <div style="position:relative;width:56px;height:72px">
+                            <input id="hlg-pin-2" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1"
+                                autocomplete="off"
+                                style="width:100%;height:100%;border-radius:16px;border:2px solid #e2e8f0;background:white;text-align:center;font-size:32px;line-height:1;font-weight:700;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif;caret-color:transparent" />
+                            <span id="hlg-pin-ov-2"
+                                style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#1e293b;font-family:system-ui,-apple-system,sans-serif;pointer-events:none"></span>
+                        </div>
+                        <div style="position:relative;width:56px;height:72px">
+                            <input id="hlg-pin-3" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1"
+                                autocomplete="off"
+                                style="width:100%;height:100%;border-radius:16px;border:2px solid #e2e8f0;background:white;text-align:center;font-size:32px;line-height:1;font-weight:700;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif;caret-color:transparent" />
+                            <span id="hlg-pin-ov-3"
+                                style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#1e293b;font-family:system-ui,-apple-system,sans-serif;pointer-events:none"></span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Ошибка -->
+                <div id="hlg-client-err"
+                    style="display:none;border-radius:12px;background:#fef2f2;border:1px solid #fee2e2;padding:12px 16px;text-align:center;font-size:14px;color:#dc2626;margin-bottom:16px;font-family:system-ui,-apple-system,sans-serif">
+                </div>
+                <!-- Кнопка -->
+                <button id="hlg-client-submit" onclick="hlgClientLogin()" disabled
+                    style="width:100%;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;padding:14px 16px;font-size:16px;font-weight:600;color:white;cursor:pointer;box-shadow:0 4px 14px rgba(59,130,246,0.4);opacity:0.5;font-family:system-ui,-apple-system,sans-serif;transition:opacity 0.2s">Войти
+                    →</button>
+                <div style="margin-top:20px;text-align:center">
+                    <div
+                        style="font-size:13px;color:#94a3b8;margin-bottom:6px;font-family:system-ui,-apple-system,sans-serif">
+                        Нет доступа? Обратитесь:</div>
+                    <a href="tel:+79624556111"
+                        style="display:block;font-size:14px;font-weight:600;color:#3b82f6;text-decoration:none;font-family:system-ui,-apple-system,sans-serif">+7
+                        962 455-61-11</a>
+                    <button onclick="hlgShowScreen('curator')"
+                        style="margin-top:10px;background:none;border:none;font-size:14px;font-weight:500;color:#3b82f6;cursor:pointer;font-family:system-ui,-apple-system,sans-serif">Вход
+                        для куратора →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Экран: curator (email + пароль) -->
+        <div id="hlg-screen-curator" style="display:none">
+            <div
+                style="width:100%;max-width:360px;border-radius:16px;background:rgba(255,255,255,0.95);padding:28px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);margin:0 auto">
+                <div style="text-align:center;margin-bottom:24px">
+                    <div style="font-size:36px;margin-bottom:6px">🍎</div>
+                    <div
+                        style="font-size:24px;font-weight:800;letter-spacing:-0.5px;color:#0f172a;font-family:system-ui,-apple-system,sans-serif">
+                        HEYS</div>
+                    <div
+                        style="margin-top:4px;font-size:14px;color:#64748b;font-family:system-ui,-apple-system,sans-serif">
+                        Вход куратора</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
+                    <input id="hlg-curator-email" type="email" autocomplete="email" placeholder="Email"
+                        style="width:100%;box-sizing:border-box;border-radius:12px;border:2px solid #e2e8f0;background:white;padding:12px 16px;font-size:16px;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif" />
+                    <input id="hlg-curator-pass" type="password" autocomplete="current-password" placeholder="Пароль"
+                        style="width:100%;box-sizing:border-box;border-radius:12px;border:2px solid #e2e8f0;background:white;padding:12px 16px;font-size:16px;color:#1e293b;outline:none;font-family:system-ui,-apple-system,sans-serif" />
+                </div>
+                <!-- Ошибка -->
+                <div id="hlg-curator-err"
+                    style="display:none;border-radius:12px;background:#fef2f2;border:1px solid #fee2e2;padding:12px 16px;text-align:center;font-size:14px;color:#dc2626;margin-bottom:12px;font-family:system-ui,-apple-system,sans-serif">
+                </div>
+                <button id="hlg-curator-submit" onclick="hlgCuratorLogin()"
+                    style="width:100%;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;padding:14px 16px;font-size:16px;font-weight:600;color:white;cursor:pointer;box-shadow:0 4px 14px rgba(59,130,246,0.4);font-family:system-ui,-apple-system,sans-serif">Войти
+                    →</button>
+                <div style="margin-top:20px;text-align:center">
+                    <div id="hlg-greeting-curator"
+                        style="font-size:14px;color:#94a3b8;margin-bottom:8px;font-family:system-ui,-apple-system,sans-serif">
+                    </div>
+                    <button onclick="hlgShowScreen('client')"
+                        style="background:none;border:none;font-size:14px;color:#3b82f6;cursor:pointer;font-family:system-ui,-apple-system,sans-serif">←
+                        Назад</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Версия внизу -->
+        <div id="hlg-version"
+            style="margin-top:20px;font-size:11px;color:rgba(255,255,255,0.3);font-family:monospace;letter-spacing:0.05em">
+        </div>
+    </div>
+
+    <!-- Dark mode стили для логин-оверлея -->
+    <style>
+        @keyframes hlg-fadeout {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
+        }
+
+        @keyframes hlg-pin-appear {
+            0% {
+                opacity: 1;
+                transform: scale(1.15);
+            }
+
+            60% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            100% {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+        }
+
+        /* PIN overlay — анимированная цифра поверх поля */
+        .hlg-pin-ov-active {
+            display: flex !important;
+            animation: hlg-pin-appear 1.2s ease forwards;
+        }
+
+        /* Подсветка активного PIN поля */
+        #hlg-pin-0:focus,
+        #hlg-pin-1:focus,
+        #hlg-pin-2:focus,
+        #hlg-pin-3:focus {
+            border-color: #60a5fa !important;
+            box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.25);
+        }
+
+        /* Готовый телефон */
+        #hlg-phone-wrap.phone-complete {
+            border-color: #22c55e !important;
+            background: #f0fdf4 !important;
+        }
+
+        /* Готовый PIN */
+        .hlg-pin-complete {
+            border-color: #22c55e !important;
+            background: #f0fdf4 !important;
+        }
+
+        /* Фокус телефон */
+        #hlg-phone-wrap:focus-within {
+            border-color: #60a5fa !important;
+        }
+
+        /* Placeholder телефона */
+        #hlg-phone::placeholder {
+            color: #94a3b8;
+            font-weight: 700;
+        }
+
+        /* Принудительный размер шрифта телефона (перебивает глобальные !important) */
+        #hlg-phone {
+            font-size: clamp(16px, 5.2vw, 28px) !important;
+            line-height: clamp(22px, 6.2vw, 34px) !important;
+            height: clamp(22px, 6.2vw, 34px) !important;
+            letter-spacing: -0.01em !important;
+            padding: 0 !important;
+            min-height: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+
+        #hlg-phone-wrap>span {
+            font-size: clamp(16px, 5.2vw, 28px) !important;
+            line-height: clamp(22px, 6.2vw, 34px) !important;
+        }
+
+        /* Disabled submit spin */
+        #hlg-client-submit:not([disabled]) {
+            opacity: 1 !important;
+            cursor: pointer;
+        }
+
+        #hlg-client-submit.loading,
+        #hlg-curator-submit.loading {
+            opacity: 0.7 !important;
+            cursor: not-allowed;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            html:not([data-theme]) #heys-login-gate {
+                background: linear-gradient(135deg, #1e3a8a, #1e1b4b) !important;
+            }
+        }
+
+        [data-theme="dark"] #heys-login-gate {
+            background: linear-gradient(135deg, #1e3a8a, #1e1b4b) !important;
+        }
+    </style>
+
+    <!-- Шаг 3: Returning user → loader на gate (v12: НЕ скрываем, бандлы грузятся параллельно) -->
+    <script>
+        if (window.__heysHasSession) {
+            // 🚀 PERF v7.1: Для returning user — прячем gate, показываем skeleton из #root.
+            // Если авторизация невалидна — boot-app восстановит gate (__heysShowGateLogin).
+            window.__heysReturningUser = true;
+            var _gate = document.getElementById('heys-login-gate');
+            if (_gate) _gate.style.display = 'none';
+            window.__heysLog && window.__heysLog('Returning user — gate hidden, skeleton visible');
+        }
+    </script>
+    <script>
+        (function () {
+            var API = 'https://api.heyslab.ru';
+            var AUTH_RATE_KEY = 'heys_auth_rate_limit_v1';
+
+            // ─── Утилиты localStorage ───────────────────────────────────────
+            function lsGet(k, def) {
+                try { var v = localStorage.getItem(k); return v == null ? def : JSON.parse(v); } catch (_) { return def; }
+            }
+            function lsSet(k, v) {
+                try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) { }
+            }
+            function lsRaw(k, v) {
+                try { localStorage.setItem(k, v); } catch (_) { }
+            }
+            function lsDel(k) {
+                try { localStorage.removeItem(k); } catch (_) { }
+            }
+
+            // ─── Форматирование телефона ────────────────────────────────────
+            // Форматирует 10 цифр в (XXX) XXX-XX-XX
+            function formatPhoneBody(digits) {
+                var d = String(digits || '').slice(0, 10);
+                if (!d) return '';
+                var r = '';
+                if (d.length > 0) r += '(' + d.slice(0, 3);
+                if (d.length >= 3) r += ') ';
+                if (d.length > 3) r += d.slice(3, 6);
+                if (d.length >= 6) r += '-';
+                if (d.length > 6) r += d.slice(6, 8);
+                if (d.length >= 8) r += '-';
+                if (d.length > 8) r += d.slice(8, 10);
+                return r;
+            }
+
+            // ─── Rate limiting (порт из heys_auth_v1.js) ───────────────────
+            function canAttempt(kind, phone) {
+                try {
+                    var st = lsGet(AUTH_RATE_KEY, { byKey: {} });
+                    var key = kind + ':' + (phone || '');
+                    var rec = (st.byKey && st.byKey[key]) || { count: 0, resetAt: 0, lockedUntil: 0 };
+                    var t = Date.now();
+                    var WINDOW = 10 * 60 * 1000;
+                    if (rec.lockedUntil && t < rec.lockedUntil) return { ok: false, retryAfterMs: rec.lockedUntil - t };
+                    if (!rec.resetAt || t > rec.resetAt) { rec.count = 0; rec.resetAt = t + WINDOW; }
+                    if (rec.count >= 10) {
+                        rec.lockedUntil = t + WINDOW;
+                        if (!st.byKey) st.byKey = {};
+                        st.byKey[key] = rec;
+                        lsSet(AUTH_RATE_KEY, st);
+                        return { ok: false, retryAfterMs: WINDOW };
+                    }
+                    return { ok: true };
+                } catch (_) { return { ok: true }; }
+            }
+            function registerFail(kind, phone) {
+                try {
+                    var st = lsGet(AUTH_RATE_KEY, { byKey: {} });
+                    var key = kind + ':' + (phone || '');
+                    var t = Date.now();
+                    var WINDOW = 10 * 60 * 1000;
+                    var rec = (st.byKey && st.byKey[key]) || { count: 0, resetAt: 0, lockedUntil: 0 };
+                    if (!rec.resetAt || t > rec.resetAt) { rec.count = 0; rec.resetAt = t + WINDOW; }
+                    rec.count += 1;
+                    if (rec.count >= 10) rec.lockedUntil = t + WINDOW;
+                    if (!st.byKey) st.byKey = {};
+                    st.byKey[key] = rec;
+                    lsSet(AUTH_RATE_KEY, st);
+                } catch (_) { }
+            }
+
+            // ─── Состояние ─────────────────────────────────────────────────
+            var phoneDigits = ''; // 10 цифр без 7
+            var pinDigits = ['', '', '', ''];
+            var currentScreen = 'start';
+            var isBusy = false;
+
+            // ─── Экраны ─────────────────────────────────────────────────────
+            window.hlgShowScreen = function (screen) {
+                document.getElementById('hlg-screen-client').style.display = screen === 'client' ? '' : 'none';
+                document.getElementById('hlg-screen-curator').style.display = screen === 'curator' ? '' : 'none';
+                currentScreen = screen;
+                // Фокус
+                if (screen === 'client') {
+                    setTimeout(function () {
+                        var ph = document.getElementById('hlg-phone');
+                        if (ph && !phoneDigits) ph.focus();
+                        else if (ph && phoneDigits.length === 10) {
+                            var p0 = document.getElementById('hlg-pin-0');
+                            if (p0) p0.focus();
+                        } else if (ph) ph.focus();
+                    }, 50);
+                }
+                if (screen === 'curator') {
+                    setTimeout(function () {
+                        var em = document.getElementById('hlg-curator-email');
+                        if (em) em.focus();
+                    }, 50);
+                }
+            };
+
+            // ─── Приветствие по времени суток ───────────────────────────────
+            function getGreeting() {
+                var h = new Date().getHours();
+                if (h >= 5 && h < 12) return '🌅 Доброе утро!';
+                if (h >= 12 && h < 18) return '☀️ Добрый день!';
+                if (h >= 18 && h < 23) return '🌆 Добрый вечер!';
+                return '🌙 Доброй ночи!';
+            }
+
+            // ─── Обновление кнопки Войти ────────────────────────────────────
+            function updateClientSubmit() {
+                var btn = document.getElementById('hlg-client-submit');
+                if (!btn) return;
+                var phoneOk = phoneDigits.length === 10;
+                var pinOk = pinDigits.every(function (d) { return d.length === 1; });
+                var canLogin = phoneOk && pinOk && !isBusy;
+                btn.disabled = !canLogin;
+            }
+
+            // ─── PIN overlay (цифра видна ~1.2s, потом исчезает) ──────────
+            var pinOverlayTimers = [null, null, null, null];
+            function showPinOverlay(idx, digit) {
+                var ov = document.getElementById('hlg-pin-ov-' + idx);
+                var inp = document.getElementById('hlg-pin-' + idx);
+                if (!ov || !inp) return;
+                // Скрываем текст input пока показывается overlay
+                inp.style.color = 'transparent';
+                ov.textContent = digit;
+                ov.classList.remove('hlg-pin-ov-active');
+                // Перезапуск анимации через reflow
+                void ov.offsetWidth;
+                ov.classList.add('hlg-pin-ov-active');
+                // Сброс — восстанавливаем цвет и скрываем overlay
+                if (pinOverlayTimers[idx]) clearTimeout(pinOverlayTimers[idx]);
+                pinOverlayTimers[idx] = setTimeout(function () {
+                    ov.classList.remove('hlg-pin-ov-active');
+                    ov.style.display = 'none';
+                    inp.style.color = '#1e293b';
+                }, 1350);
+            }
+            function clearPinOverlay(idx) {
+                if (pinOverlayTimers[idx]) { clearTimeout(pinOverlayTimers[idx]); pinOverlayTimers[idx] = null; }
+                var ov = document.getElementById('hlg-pin-ov-' + idx);
+                var inp = document.getElementById('hlg-pin-' + idx);
+                if (ov) { ov.classList.remove('hlg-pin-ov-active'); ov.style.display = 'none'; }
+                if (inp) inp.style.color = '#1e293b';
+            }
+
+            // ─── Обновление стилей PIN полей ────────────────────────────────
+            function updatePinStyles() {
+                var allFilled = pinDigits.every(function (d) { return d.length === 1; });
+                for (var i = 0; i < 4; i++) {
+                    var el = document.getElementById('hlg-pin-' + i);
+                    if (!el) continue;
+                    if (allFilled) el.style.borderColor = '#22c55e';
+                    else if (pinDigits[i]) el.style.borderColor = '#cbd5e1';
+                    else el.style.borderColor = '#e2e8f0';
+                    if (allFilled) el.style.background = '#f0fdf4';
+                    else el.style.background = 'white';
+                }
+            }
+
+            // ─── Инициализация телефонного поля ────────────────────────────
+            function initPhoneInput() {
+                var inp = document.getElementById('hlg-phone');
+                var wrap = document.getElementById('hlg-phone-wrap');
+                if (!inp) return;
+
+                inp.addEventListener('input', function (e) {
+                    var raw = inp.value.replace(/\D/g, '').slice(0, 10);
+                    phoneDigits = raw;
+                    inp.value = formatPhoneBody(raw);
+                    // Стиль обёртки
+                    if (raw.length === 10) {
+                        wrap.style.borderColor = '#22c55e';
+                        wrap.style.background = '#f0fdf4';
+                    } else {
+                        wrap.style.borderColor = '#e2e8f0';
+                        wrap.style.background = 'white';
+                    }
+                    // Сбрасываем ошибку
+                    hlgSetClientErr('');
+                    updateClientSubmit();
+                    // Авто-переход на PIN
+                    if (raw.length === 10) {
+                        setTimeout(function () {
+                            var p0 = document.getElementById('hlg-pin-0');
+                            if (p0) p0.focus();
+                        }, 50);
+                    }
+                });
+
+                inp.addEventListener('keydown', function (e) {
+                    if (e.key === 'Backspace' && phoneDigits.length > 0) {
+                        e.preventDefault();
+                        phoneDigits = phoneDigits.slice(0, -1);
+                        inp.value = formatPhoneBody(phoneDigits);
+                        var wrap2 = document.getElementById('hlg-phone-wrap');
+                        if (wrap2) { wrap2.style.borderColor = '#e2e8f0'; wrap2.style.background = 'white'; }
+                        updateClientSubmit();
+                    }
+                });
+            }
+
+            // ─── Инициализация PIN полей ────────────────────────────────────
+            function initPinInputs() {
+                for (var i = 0; i < 4; i++) {
+                    (function (idx) {
+                        var inp = document.getElementById('hlg-pin-' + idx);
+                        if (!inp) return;
+
+                        inp.addEventListener('input', function (e) {
+                            var v = inp.value.replace(/\D/g, '').slice(0, 1);
+                            inp.value = v;
+                            pinDigits[idx] = v;
+                            hlgSetClientErr('');
+                            if (v) {
+                                showPinOverlay(idx, v);
+                            } else {
+                                clearPinOverlay(idx);
+                            }
+                            updatePinStyles();
+                            updateClientSubmit();
+                            // Авто-переход вперёд
+                            if (v && idx < 3) {
+                                var next = document.getElementById('hlg-pin-' + (idx + 1));
+                                if (next) next.focus();
+                            }
+                            // Авто-войти после последней цифры
+                            if (v && idx === 3) {
+                                var phoneOk = phoneDigits.length === 10;
+                                var pinFull = pinDigits.every(function (d) { return d.length === 1; });
+                                if (phoneOk && pinFull && !isBusy) {
+                                    setTimeout(function () { window.hlgClientLogin(); }, 100);
+                                }
+                            }
+                        });
+
+                        inp.addEventListener('keydown', function (e) {
+                            if (e.key === 'Backspace') {
+                                if (!pinDigits[idx] && idx > 0) {
+                                    e.preventDefault();
+                                    pinDigits[idx - 1] = '';
+                                    var prev = document.getElementById('hlg-pin-' + (idx - 1));
+                                    if (prev) { prev.value = ''; prev.focus(); }
+                                    updatePinStyles();
+                                    updateClientSubmit();
+                                    return;
+                                }
+                                if (pinDigits[idx]) {
+                                    e.preventDefault();
+                                    pinDigits[idx] = '';
+                                    inp.value = '';
+                                    clearPinOverlay(idx);
+                                    updatePinStyles();
+                                    updateClientSubmit();
+                                    return;
+                                }
+                            }
+                            if (e.key === 'ArrowLeft' && idx > 0) {
+                                e.preventDefault();
+                                var pl = document.getElementById('hlg-pin-' + (idx - 1));
+                                if (pl) pl.focus();
+                            }
+                            if (e.key === 'ArrowRight' && idx < 3) {
+                                e.preventDefault();
+                                var pr = document.getElementById('hlg-pin-' + (idx + 1));
+                                if (pr) pr.focus();
+                            }
+                            if (e.key === 'Enter') {
+                                var phoneOk2 = phoneDigits.length === 10;
+                                var pinFull2 = pinDigits.every(function (d) { return d.length === 1; });
+                                if (phoneOk2 && pinFull2 && !isBusy) window.hlgClientLogin();
+                            }
+                        });
+
+                        inp.addEventListener('paste', function (e) {
+                            try {
+                                var txt = (e.clipboardData && e.clipboardData.getData('text')) || '';
+                                var digits = txt.replace(/\D/g, '').slice(0, 4);
+                                if (digits) {
+                                    e.preventDefault();
+                                    hlgSetClientErr('');
+                                    for (var k = 0; k < 4; k++) {
+                                        pinDigits[k] = digits[k] || '';
+                                        var el = document.getElementById('hlg-pin-' + k);
+                                        if (el) el.value = pinDigits[k];
+                                    }
+                                    updatePinStyles();
+                                    updateClientSubmit();
+                                    var nextIdx = Math.min(3, digits.length);
+                                    var nextEl = document.getElementById('hlg-pin-' + nextIdx);
+                                    if (nextEl) nextEl.focus();
+                                }
+                            } catch (_) { }
+                        });
+                    })(i);
+                }
+            }
+
+            // ─── Показ ошибок ──────────────────────────────────────────────
+            function hlgSetClientErr(msg) {
+                var el = document.getElementById('hlg-client-err');
+                if (!el) return;
+                if (msg) { el.textContent = msg; el.style.display = ''; }
+                else { el.style.display = 'none'; el.textContent = ''; }
+            }
+            function hlgSetCuratorErr(msg) {
+                var el = document.getElementById('hlg-curator-err');
+                if (!el) return;
+                if (msg) { el.textContent = msg; el.style.display = ''; }
+                else { el.style.display = 'none'; el.textContent = ''; }
+            }
+
+            // ─── setBusy ───────────────────────────────────────────────────
+            function hlgSetBusy(busy, submitId, label) {
+                isBusy = busy;
+                var btn = document.getElementById(submitId);
+                if (!btn) return;
+                if (busy) {
+                    btn.classList.add('loading');
+                    btn.disabled = true;
+                    btn.textContent = '⏳ Вход...';
+                } else {
+                    btn.classList.remove('loading');
+                    btn.textContent = label || 'Войти →';
+                    updateClientSubmit();
+                }
+            }
+
+            // ─── Скрытие оверлея ───────────────────────────────────────────
+            function hlgHideOverlay(doReload) {
+                var gate = document.getElementById('heys-login-gate');
+                if (!gate) return;
+                console.info('[HEYS.entry] 🚪 hlgHideOverlay start, preAuth:', JSON.stringify(window.__heysPreAuth || {}));
+                gate.style.animation = 'hlg-fadeout 0.3s ease forwards';
+                setTimeout(function () {
+                    gate.style.display = 'none';
+                    // v10.1: НЕ делаем reload — бандлы уже загружены/загружаются.
+                    // Устанавливаем __heysHasSession и диспатчим событие для React.
+                    window.__heysHasSession = true;
+                    console.info('[HEYS.entry] 🔔 dispatching heys-auth-ready, mode:', (window.__heysPreAuth || {}).mode);
+                    // Уведомляем boot-core/sync о новой сессии
+                    try {
+                        window.dispatchEvent(new CustomEvent('heys-auth-ready', {
+                            detail: window.__heysPreAuth || { mode: 'unknown', timestamp: Date.now() }
+                        }));
+                    } catch (_) { }
+                    // v11: NO fallback reload — event handoff to React handles fast network case.
+                    // React listens to 'heys-auth-ready' in heys_app_auth_init_v1.js.
+                    // Slow network (React not yet mounted): runAuthInit reads localStorage on mount.
+                }, 320);
+            }
+
+            // ─── Статус загрузки бандлов ──────────────────────────────────────
+            var BOOT_BUNDLES = ['react-bundle', 'boot-core', 'boot-calc', 'boot-day', 'boot-app', 'boot-init'];
+            var POST_BUNDLES = ['postboot-1-game', 'postboot-2-insights', 'postboot-3-ui'];
+
+            function hlgLogBundleStatus(trigger) {
+                var entries = (performance && performance.getEntriesByType) ? performance.getEntriesByType('resource') : [];
+                var loaded = {};
+                var totalBytes = 0;
+                for (var i = 0; i < entries.length; i++) {
+                    var e = entries[i];
+                    for (var j = 0; j < BOOT_BUNDLES.length; j++) {
+                        if (e.name.indexOf(BOOT_BUNDLES[j]) !== -1) {
+                            loaded[BOOT_BUNDLES[j]] = Math.round(e.transferSize / 1024);
+                            totalBytes += e.transferSize;
+                        }
+                    }
+                    for (var k = 0; k < POST_BUNDLES.length; k++) {
+                        if (e.name.indexOf(POST_BUNDLES[k]) !== -1) {
+                            loaded[POST_BUNDLES[k]] = Math.round(e.transferSize / 1024);
+                            totalBytes += e.transferSize;
+                        }
+                    }
+                }
+                var bootDone = BOOT_BUNDLES.filter(function (b) { return loaded[b]; });
+                var postDone = POST_BUNDLES.filter(function (b) { return loaded[b]; });
+                var bootPending = BOOT_BUNDLES.filter(function (b) { return !loaded[b]; });
+                var postPending = POST_BUNDLES.filter(function (b) { return !loaded[b]; });
+                var appReady = !!window.__heysAppReady;
+                var elapsedSec = ((performance.now()) / 1000).toFixed(1);
+
+                console.info('[HEYS.loginGate] 📦 Bundle status at "' + trigger + '" (+' + elapsedSec + 's):');
+                console.info('[HEYS.loginGate]   Boot:    ' + bootDone.length + '/' + BOOT_BUNDLES.length +
+                    ' loaded (' + Math.round(totalBytes / 1024) + 'KB total)');
+                if (bootDone.length > 0) {
+                    console.info('[HEYS.loginGate]   ✅ ' + bootDone.map(function (b) { return b + ' (' + loaded[b] + 'KB)'; }).join(', '));
+                }
+                if (bootPending.length > 0) {
+                    console.info('[HEYS.loginGate]   ⏳ Pending: ' + bootPending.join(', '));
+                }
+                console.info('[HEYS.loginGate]   PostBoot: ' + postDone.length + '/' + POST_BUNDLES.length + ' loaded');
+                console.info('[HEYS.loginGate]   React mounted: ' + appReady);
+            }
+
+            // ─── Клиентский логин ──────────────────────────────────────────
+            window.hlgClientLogin = function () {
+                if (isBusy) return;
+                hlgLogBundleStatus('Клиент: Войти');
+                var phone = '7' + phoneDigits; // 11 цифр: 7 + 10
+                var pin = pinDigits.join('');
+
+                // Валидация
+                if (phoneDigits.length !== 10) { hlgSetClientErr('Введите номер телефона'); return; }
+                if (!/^\d{4}$/.test(pin)) { hlgSetClientErr('Введите PIN-код из 4 цифр'); return; }
+
+                // Offline
+                if (!navigator.onLine) { hlgSetClientErr('Нет подключения к интернету'); return; }
+
+                // Rate limit
+                var rate = canAttempt('login', phone);
+                if (!rate.ok) {
+                    var sec = Math.ceil((rate.retryAfterMs || 10000) / 1000);
+                    hlgSetClientErr('Слишком много попыток. Подождите ' + sec + 'с');
+                    return;
+                }
+
+                hlgSetBusy(true, 'hlg-client-submit', 'Войти →');
+
+                // Anti-timing delay (350-600ms, как в heys_auth_v1.js)
+                var delay = 350 + Math.floor(Math.random() * 250);
+                setTimeout(function () {
+                    fetch(API + '/rpc?fn=verify_client_pin_v3', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ p_phone: phone, p_pin: pin }),
+                        mode: 'cors',
+                        cache: 'no-store'
+                    })
+                        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, status: r.status, data: d }; }); })
+                        .then(function (res) {
+                            // YandexAPI оборачивает ответ: { verify_client_pin_v3: {...} }
+                            var raw = res.data;
+                            var row = (raw && raw.verify_client_pin_v3) || (Array.isArray(raw) ? raw[0] : raw);
+
+                            if (!res.ok || !row || !row.success) {
+                                registerFail('login', phone);
+                                var serverErr = row && row.error;
+                                if (serverErr === 'rate_limited') {
+                                    hlgSetClientErr('Слишком много попыток. Попробуйте позже.');
+                                } else {
+                                    hlgSetClientErr('Телефон или PIN неверные');
+                                }
+                                hlgSetBusy(false, 'hlg-client-submit', 'Войти →');
+                                return;
+                            }
+
+                            var clientId = row.client_id;
+                            var sessionToken = row.session_token;
+                            var clientName = row.name || row.client_name || '';
+
+                            if (!clientId || !sessionToken) {
+                                registerFail('login', phone);
+                                hlgSetClientErr('Телефон или PIN неверные');
+                                hlgSetBusy(false, 'hlg-client-submit', 'Войти →');
+                                return;
+                            }
+
+                            // Сохраняем сессию (те же ключи что heys_auth_v1.js:loginClient)
+                            lsDel('heys_supabase_auth_token');
+                            lsRaw('heys_session_token', sessionToken);
+                            lsRaw('heys_pin_auth_client', clientId);
+                            if (clientName) lsRaw('heys_pending_client_name', JSON.stringify(clientName));
+
+                            // Передаём данные в React через глобальную переменную
+                            window.__heysPreAuth = {
+                                mode: 'client',
+                                clientId: clientId,
+                                sessionToken: sessionToken,
+                                timestamp: Date.now()
+                            };
+
+                            window.__heysLog && window.__heysLog('[LoginGate] Client login ok: ' + clientId.slice(0, 8));
+                            console.info('[HEYS.loginGate] ✅ Клиент вошёл: ' + clientId.slice(0, 8) + '***');
+
+                            hlgHideOverlay(true);
+                        })
+                        .catch(function (e) {
+                            registerFail('login', phone);
+                            hlgSetClientErr(navigator.onLine ? 'Ошибка соединения. Попробуйте ещё раз.' : 'Нет подключения к интернету');
+                            hlgSetBusy(false, 'hlg-client-submit', 'Войти →');
+                        });
+                }, delay);
+            };
+
+            // ─── Кураторский логин ─────────────────────────────────────────
+            window.hlgCuratorLogin = function () {
+                if (isBusy) return;
+                hlgLogBundleStatus('Куратор: Войти');
+                var email = (document.getElementById('hlg-curator-email') || {}).value || '';
+                var password = (document.getElementById('hlg-curator-pass') || {}).value || '';
+                email = email.trim();
+
+                if (!email || !password) { hlgSetCuratorErr('Введите email и пароль'); return; }
+                if (!navigator.onLine) { hlgSetCuratorErr('Нет подключения к интернету'); return; }
+
+                hlgSetBusy(true, 'hlg-curator-submit', 'Войти →');
+                hlgSetCuratorErr('');
+
+                fetch(API + '/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, password: password }),
+                    mode: 'cors',
+                    cache: 'no-store'
+                })
+                    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, status: r.status, data: d }; }); })
+                    .then(function (res) {
+                        if (!res.ok || res.data.error) {
+                            var msg = (res.data && (res.data.error || res.data.message)) || 'Неверный email или пароль';
+                            hlgSetCuratorErr(typeof msg === 'string' ? msg : 'Неверный email или пароль');
+                            hlgSetBusy(false, 'hlg-curator-submit', 'Войти →');
+                            return;
+                        }
+
+                        var d = res.data;
+                        if (!d || !d.access_token || !d.user) {
+                            hlgSetCuratorErr('Неверный email или пароль');
+                            hlgSetBusy(false, 'hlg-curator-submit', 'Войти →');
+                            return;
+                        }
+
+                        // Сохраняем (те же ключи что heys_yandex_api_v1.js:curatorLogin)
+                        lsDel('heys_pin_auth_client');
+                        lsDel('heys_session_token');
+                        var tokenData = {
+                            access_token: d.access_token,
+                            expires_in: d.expires_in || 86400,
+                            expires_at: Math.floor(Date.now() / 1000) + (d.expires_in || 86400),
+                            user: d.user
+                        };
+                        lsRaw('heys_supabase_auth_token', JSON.stringify(tokenData));
+                        lsRaw('heys_curator_session', d.access_token);
+
+                        // Передаём данные в React
+                        window.__heysPreAuth = {
+                            mode: 'curator',
+                            accessToken: d.access_token,
+                            user: d.user,
+                            timestamp: Date.now()
+                        };
+
+                        window.__heysLog && window.__heysLog('[LoginGate] Curator login ok: ' + (d.user.email || ''));
+                        console.info('[HEYS.loginGate] ✅ Куратор вошёл: ' + (d.user.email || ''));
+
+                        hlgHideOverlay(true);
+                    })
+                    .catch(function (e) {
+                        hlgSetCuratorErr(navigator.onLine ? 'Ошибка соединения. Попробуйте ещё раз.' : 'Нет подключения к интернету');
+                        hlgSetBusy(false, 'hlg-curator-submit', 'Войти →');
+                    });
+            };
+
+            // ─── Инициализация Enter для куратора ──────────────────────────
+            function initCuratorEnter() {
+                var passEl = document.getElementById('hlg-curator-pass');
+                if (passEl) {
+                    passEl.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter') window.hlgCuratorLogin();
+                    });
+                }
+            }
+
+            // ─── Watchdog совместимость ────────────────────────────────────
+            // Если сработает recovery UI — скрываем логин-оверлей
+            (function patchRecoveryUI() {
+                var orig = window.__heysShowRecoveryUI;
+                window.__heysShowRecoveryUI = function (msg) {
+                    try {
+                        var gate = document.getElementById('heys-login-gate');
+                        if (gate) gate.style.display = 'none';
+                    } catch (_) { }
+                    if (typeof orig === 'function') orig(msg);
+                };
+            })();
+
+            // ─── Инициализация при загрузке DOM ────────────────────────────
+            function init() {
+                // v12: НЕ скрываем gate для returning users — boot-app сам закроет после проверки сессии
+                // Для returning users gate показывает loader, для новых — форму логина
+                if (window.__heysHasSession && window.__heysReturningUser) {
+                    // 🚀 PERF v7.1: Gate скрыт, skeleton видим — boot-app закроет через __heysDismissGate
+                    return;
+                }
+                if (window.__heysHasSession) {
+                    // Сессия появилась после логина через gate (hlgClientLogin/hlgCuratorLogin)
+                    // Gate уже скрывается через hlgHideOverlay
+                    return;
+                }
+
+                // Приветствие
+                var greeting = getGreeting();
+                var grCur = document.getElementById('hlg-greeting-curator');
+                if (grCur) grCur.textContent = greeting;
+
+                // Версия
+                var verEl = document.getElementById('hlg-version');
+                if (verEl) {
+                    try {
+                        var v = (window.HEYS && window.HEYS.version) || '';
+                        if (v) verEl.textContent = 'v' + v;
+                    } catch (_) { }
+                }
+
+                // Показываем форму клиента сразу
+                hlgShowScreen('client');
+
+                // Инициализируем вводы
+                initPhoneInput();
+                initPinInputs();
+                initCuratorEnter();
+            }
+
+            // Запускаем сразу или после DOMContentLoaded
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+    </script>
 
     <!-- Emoji style initialization - runs BEFORE twemoji loads -->
     <script>
@@ -764,11 +1675,11 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.574f738d3e52.js" fetchpriority="high"></script>
+    <script defer src="boot-core.bundle.11e1203df3d1.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.35b159a72e66.js"></script>
     <script defer src="boot-day.bundle.7320c50778ec.js"></script>
-    <script defer src="boot-app.bundle.fdc0ebd280cb.js"></script>
-    <script defer src="boot-init.bundle.878c88e526e7.js"
+    <script defer src="boot-app.bundle.82f8201d13bf.js"></script>
+    <script defer src="boot-init.bundle.82e8e5c885dc.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
     <!-- PERF: Detect returning user (localStorage has profile) → skip card unfold animations -->
@@ -797,7 +1708,7 @@
     <script>
         (function () {
             var POST_BOOT_BUNDLES = [
-                'postboot-1-game.bundle.1b16a058a8f9.js',
+                'postboot-1-game.bundle.7f1c5f112d43.js',
                 'postboot-2-insights.bundle.bd05d07de042.js',
                 'postboot-3-ui.bundle.5115341c9cfc.js'
             ];

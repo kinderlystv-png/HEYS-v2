@@ -224,6 +224,42 @@
         const storedUser = readStoredAuthUser();
         const savedEmail = storedUser?.email || readGlobalValue('heys_remember_email', null) || readGlobalValue('heys_saved_email', null);
 
+        // v12: Helper для авто-закрытия гейта (returning user)
+        function __heysDismissGate() {
+            var gate = document.getElementById('heys-login-gate');
+            if (!gate) return;
+            // 🚀 PERF v7.1: Gate уже скрыт (skeleton mode) — просто удаляем из DOM
+            if (gate.style.display === 'none') {
+                console.info('[HEYS.entry] 🚪 Gate already hidden (skeleton mode) — removing');
+                try { gate.remove(); } catch (_) { }
+                return;
+            }
+            console.info('[HEYS.entry] 🚪 Auto-dismissing gate for returning user');
+            gate.style.animation = 'hlg-fadeout 0.3s ease forwards';
+            setTimeout(function () {
+                gate.style.display = 'none';
+                try { gate.remove(); } catch (_) { }
+            }, 320);
+        }
+
+        // v12: Если __heysReturningUser но сессия невалидна — показываем форму логина
+        function __heysShowGateLogin() {
+            if (!window.__heysReturningUser) return;
+            console.info('[HEYS.entry] ⚠️ Returning user session invalid — showing login form');
+            // 🚀 PERF v7.1: Gate был скрыт для skeleton — восстанавливаем
+            var gate = document.getElementById('heys-login-gate');
+            if (gate && gate.style.display === 'none') {
+                gate.style.display = 'flex';
+            }
+            var rl = document.getElementById('hlg-returning');
+            if (rl) rl.remove();
+            var cs = document.getElementById('hlg-screen-client');
+            var cu = document.getElementById('hlg-screen-curator');
+            if (cs) cs.style.display = '';
+            if (cu) cu.style.display = '';
+            window.__heysReturningUser = false;
+        }
+
         // 🔐 FIX v52: PIN auth имеет ПРИОРИТЕТ над куратором!
         // Если есть PIN-сессия — НЕ восстанавливаем куратора (предотвращает ререндер)
         const pinAuthClient = readGlobalValue('heys_pin_auth_client', null);
@@ -245,11 +281,16 @@
             HEYS.YandexAPI.getClients(storedUser.id)
                 .then((clients) => {
                     if (!clients || clients.error) {
-                        // Сессия невалидна — требуется вход
+                        // Сессия невалидна — показываем форму логина
+                        __heysShowGateLogin();
+                    } else {
+                        // v12: Сессия валидна — убираем гейт
+                        __heysDismissGate();
                     }
                 })
                 .catch(() => {
-                    // Сессия невалидна — требуется вход
+                    // Сессия невалидна — показываем форму логина
+                    __heysShowGateLogin();
                 })
                 .finally(() => {
                     setIsInitializing(false);
@@ -272,13 +313,14 @@
             cloudRef.syncClient(pinAuthClient)
                 .then(() => {
                     devLog('[App] ✅ PIN-сессия восстановлена');
-                    // НЕ отправляем heysSyncCompleted здесь — оно уже отправлено внутри syncClient
-                    // после фактической записи данных в localStorage
+                    // v12: Сессия валидна — убираем гейт
+                    __heysDismissGate();
                 })
                 .catch((err) => {
                     devWarn('[App] ❌ Ошибка восстановления PIN-сессии:', err);
                     trackError(err, { scope: 'AppAuthInit', action: 'restore_pin_session' });
                     // При ошибке показываем экран логина
+                    __heysShowGateLogin();
                     removeGlobalValue('heys_pin_auth_client');
                     setClientId(null);
                 })
@@ -286,13 +328,73 @@
                     setIsInitializing(false);
                 });
         } else {
+            console.info('[HEYS.entry] ➡️ Branch: no session (show login)');
             // Нет сохранённой сессии — показываем экран логина
             initLocalData();
             setStatus('offline');
-            setIsInitializing(false);
+
+            // v12: Если __heysReturningUser но сессия пропала — восстанавливаем форму
+            __heysShowGateLogin();
+
+            // Anti-flash guard: if HTML gate is still fading out (curator/client just logged in),
+            // keep isInitializing=true so React doesn't flash LoginScreen during fade.
+            // staticLoginHandler (below) calls setIsInitializing(false) after heys-auth-ready.
+            var _loginGate = document.getElementById('heys-login-gate');
+            if (!_loginGate || _loginGate.style.display === 'none') {
+                setIsInitializing(false);
+            } else {
+                // Gate still visible — auth completing or user logging in. Safety fallback after 2s.
+                var _safetyTimer = setTimeout(function () { setIsInitializing(false); }, 2000);
+                window.addEventListener('heys-auth-ready', function () { clearTimeout(_safetyTimer); }, { once: true });
+            }
         }
 
-        return undefined;
+        // ─── Static Login Handoff (v11: no-reload) ──────────────────────────────
+        // Listens for 'heys-auth-ready' dispatched by hlgHideOverlay() in index.html
+        // after successful static login. Handles the case where React is already
+        // mounted (fast network) — re-evaluates auth state without page reload.
+        // Slow network: React mounts AFTER login → runAuthInit already reads localStorage → no-op.
+        var staticLoginHandler = function (e) {
+            var detail = (e && e.detail) || {};
+            var mode = detail.mode;
+            devLog('[AuthInit] heys-auth-ready received, mode:', mode);
+
+            if (mode === 'client') {
+                // PIN auth: same logic as hasPinSession branch (lines 257-287)
+                var cid = detail.clientId || readGlobalValue('heys_pin_auth_client', null);
+                if (!cid || !cloudRef) return;
+                if (cloudRef.setPinAuthClient) cloudRef.setPinAuthClient(cid);
+                initLocalData();
+                setStatus('online');
+                setClientId(cid);
+                window.HEYS = window.HEYS || {};
+                window.HEYS.currentClientId = cid;
+                cloudRef.syncClient(cid)
+                    .then(function () { devLog('[AuthInit] static client login synced'); })
+                    .catch(function (err) {
+                        devWarn('[AuthInit] static client login sync error:', err);
+                        removeGlobalValue('heys_pin_auth_client');
+                        setClientId(null);
+                    })
+                    .finally(function () { setIsInitializing(false); });
+
+            } else if (mode === 'curator') {
+                // Curator auth: same logic as storedUser branch (lines 232-256)
+                var user = detail.user || readStoredAuthUser();
+                if (!user || !cloudRef) return;
+                var email = user.email || readGlobalValue('heys_remember_email', null) || '';
+                if (email) setEmail(email);
+                setCloudUser(user);
+                setStatus('online');
+                initLocalData({ skipClientRestore: false, skipPinAuthRestore: true });
+                setIsInitializing(false);
+            }
+        };
+        window.addEventListener('heys-auth-ready', staticLoginHandler);
+
+        return function () {
+            window.removeEventListener('heys-auth-ready', staticLoginHandler);
+        };
     };
 
     HEYS.AppAuthInit = {

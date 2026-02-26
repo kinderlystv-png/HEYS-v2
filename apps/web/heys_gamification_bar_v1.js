@@ -150,13 +150,16 @@
 
             if (HEYS.game) {
                 setDailyBonusAvailable(HEYS.game.canClaimDailyBonus());
-                if (HEYS.game.refreshDailyBonusFromAudit) {
-                    HEYS.game.refreshDailyBonusFromAudit()
-                        .then(() => {
-                            setDailyBonusAvailable(HEYS.game.canClaimDailyBonus());
-                        })
-                        .catch(() => { });
-                }
+                // 🚀 PERF v7.1: Defer audit RPC 8s — don't compete with initial sync
+                setTimeout(() => {
+                    if (HEYS.game?.refreshDailyBonusFromAudit) {
+                        HEYS.game.refreshDailyBonusFromAudit()
+                            .then(() => {
+                                setDailyBonusAvailable(HEYS.game.canClaimDailyBonus());
+                            })
+                            .catch(() => { });
+                    }
+                }, 8000);
             }
 
             // Пробуем сразу
@@ -458,12 +461,17 @@
                 setWeeklyChallenge(HEYS.game ? HEYS.game.getWeeklyChallenge() : { earned: 0, target: 500, percent: 0, completed: false });
                 setDailyMultiplier(HEYS.game ? HEYS.game.getDailyMultiplier() : { multiplier: 1, actions: 0, label: '' });
                 setDailyBonusAvailable(HEYS.game ? HEYS.game.canClaimDailyBonus() : false);
+                // 🚀 PERF v7.0: Defer refreshDailyBonusFromAudit 6s — let sync finish first
+                // (fetches 500 audit events via RPC, competing with bootstrapClientSync)
                 if (HEYS.game?.refreshDailyBonusFromAudit) {
-                    HEYS.game.refreshDailyBonusFromAudit()
-                        .then(() => {
-                            setDailyBonusAvailable(HEYS.game.canClaimDailyBonus());
-                        })
-                        .catch(() => { });
+                    setTimeout(() => {
+                        if (!HEYS.game?.refreshDailyBonusFromAudit) return;
+                        HEYS.game.refreshDailyBonusFromAudit()
+                            .then(() => {
+                                setDailyBonusAvailable(HEYS.game.canClaimDailyBonus());
+                            })
+                            .catch(() => { });
+                    }, 6000);
                 }
                 setDailyMissions(HEYS.game?.getDailyMissions ? HEYS.game.getDailyMissions() : null);
                 prevLevelRef.current = freshStats.level;

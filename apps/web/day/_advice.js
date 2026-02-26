@@ -663,11 +663,57 @@
         const toastAppearedAtRef = useRef(0);
         const [displayedAdvice, setDisplayedAdvice] = useState(null);
         const [displayedAdviceList, setDisplayedAdviceList] = useState([]);
+        const readAdviceSettings = useCallback(() => {
+            try {
+                // 1. Try store (may return null if cloud sync not yet complete)
+                if (HEYSRef.store?.get) {
+                    const fromStore = HEYSRef.store.get('heys_advice_settings', null);
+                    if (fromStore !== null) {
+                        console.info('[HEYS.advice] ✅ readAdviceSettings: source=store', fromStore);
+                        return fromStore;
+                    }
+                    console.info('[HEYS.advice] ⚠️ readAdviceSettings: store returned null, trying lsGet');
+                }
+                // 2. Fallback to lsGet (encrypted localStorage, always available locally)
+                if (utils.lsGet) {
+                    const fromLs = utils.lsGet('heys_advice_settings', null);
+                    if (fromLs !== null) {
+                        console.info('[HEYS.advice] ✅ readAdviceSettings: source=lsGet', fromLs);
+                        return fromLs;
+                    }
+                    console.info('[HEYS.advice] ⚠️ readAdviceSettings: lsGet returned null, trying raw localStorage');
+                }
+                // 3. Last resort: direct localStorage (for non-encrypted fallback)
+                try {
+                    const raw = localStorage.getItem('heys_advice_settings');
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        console.info('[HEYS.advice] ✅ readAdviceSettings: source=rawLocalStorage', parsed);
+                        return parsed;
+                    }
+                } catch (_) { }
+            } catch (e) { }
+            console.warn('[HEYS.advice] ⚠️ readAdviceSettings: no settings found, returning {}');
+            return {};
+        }, [HEYSRef.store, utils.lsGet]);
+
         const [toastsEnabled, setToastsEnabled] = useState(() => {
             try {
-                const settings = HEYSRef.store?.get
-                    ? (HEYSRef.store.get('heys_advice_settings', null) || {})
-                    : (utils.lsGet ? utils.lsGet('heys_advice_settings', {}) : {});
+                const settings = (() => {
+                    try {
+                        if (HEYSRef.store?.get) {
+                            const fromStore = HEYSRef.store.get('heys_advice_settings', null);
+                            if (fromStore !== null) return fromStore;
+                        }
+                        if (utils.lsGet) {
+                            const fromLs = utils.lsGet('heys_advice_settings', null);
+                            if (fromLs !== null) return fromLs;
+                        }
+                        const raw = localStorage.getItem('heys_advice_settings');
+                        if (raw) return JSON.parse(raw);
+                    } catch (_) { }
+                    return {};
+                })();
                 return settings.toastsEnabled !== false;
             } catch (e) {
                 return true;
@@ -675,26 +721,60 @@
         });
         const [adviceSoundEnabled, setAdviceSoundEnabled] = useState(() => {
             try {
-                const settings = HEYSRef.store?.get
-                    ? (HEYSRef.store.get('heys_advice_settings', null) || {})
-                    : (utils.lsGet ? utils.lsGet('heys_advice_settings', {}) : {});
+                const settings = (() => {
+                    try {
+                        if (HEYSRef.store?.get) {
+                            const fromStore = HEYSRef.store.get('heys_advice_settings', null);
+                            if (fromStore !== null) return fromStore;
+                        }
+                        if (utils.lsGet) {
+                            const fromLs = utils.lsGet('heys_advice_settings', null);
+                            if (fromLs !== null) return fromLs;
+                        }
+                        const raw = localStorage.getItem('heys_advice_settings');
+                        if (raw) return JSON.parse(raw);
+                    } catch (_) { }
+                    return {};
+                })();
                 return settings.adviceSoundEnabled !== false;
             } catch (e) {
                 return true;
             }
         });
 
+        // On mount: re-read settings early (before 1500ms tab_open timer) in case
+        // store was not ready during useState initializer (slow network race condition)
+        useEffect(() => {
+            const settings = readAdviceSettings();
+            const newToastsEnabled = Object.prototype.hasOwnProperty.call(settings, 'toastsEnabled')
+                ? settings.toastsEnabled !== false
+                : null;
+            const newSoundEnabled = Object.prototype.hasOwnProperty.call(settings, 'adviceSoundEnabled')
+                ? settings.adviceSoundEnabled !== false
+                : null;
+            console.info('[HEYS.advice] 🔍 mount useEffect: settings read', {
+                settings,
+                newToastsEnabled,
+                newSoundEnabled,
+                hasStore: !!HEYSRef.store?.get,
+                hasLsGet: !!utils.lsGet,
+            });
+            if (newToastsEnabled !== null) setToastsEnabled(newToastsEnabled);
+            if (newSoundEnabled !== null) setAdviceSoundEnabled(newSoundEnabled);
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, []);
+
         useEffect(() => {
             const handleSyncCompleted = () => {
                 try {
-                    const settings = HEYSRef.store?.get
-                        ? (HEYSRef.store.get('heys_advice_settings', null) || {})
-                        : (utils.lsGet ? utils.lsGet('heys_advice_settings', {}) : {});
+                    const settings = readAdviceSettings();
                     setToastsEnabled((prev) => {
+                        if (!Object.prototype.hasOwnProperty.call(settings, 'toastsEnabled')) return prev;
                         const cloudVal = settings.toastsEnabled !== false;
                         return prev !== cloudVal ? cloudVal : prev;
                     });
                     setAdviceSoundEnabled((prev) => {
+                        if (!Object.prototype.hasOwnProperty.call(settings, 'adviceSoundEnabled')) return prev;
                         const cloudVal = settings.adviceSoundEnabled !== false;
                         return prev !== cloudVal ? cloudVal : prev;
                     });
@@ -705,7 +785,7 @@
 
             window.addEventListener('heysSyncCompleted', handleSyncCompleted);
             return () => window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
-        }, [HEYSRef.analytics, utils.lsGet]);
+        }, [HEYSRef.analytics, readAdviceSettings]);
 
         const [dismissedAdvices, setDismissedAdvices] = useState(() => {
             try {
@@ -996,7 +1076,13 @@
         }, [haptic, setShowConfetti]);
 
         useEffect(() => {
-            const timer = setTimeout(() => setAdviceTrigger('tab_open'), 1500);
+            const timer = setTimeout(() => {
+                setToastsEnabled((currentVal) => {
+                    console.info('[HEYS.advice] 🔔 tab_open timer fired: toastsEnabled =', currentVal);
+                    return currentVal;
+                });
+                setAdviceTrigger('tab_open');
+            }, 1500);
             return () => clearTimeout(timer);
         }, [date]);
 
@@ -1009,12 +1095,15 @@
             }
 
             if (!isManualTrigger && !toastsEnabled) {
+                console.info('[HEYS.advice] 🚫 Toast BLOCKED: toastsEnabled=false, adviceTrigger=' + adviceTrigger);
                 setDisplayedAdvice(advicePrimary);
                 setDisplayedAdviceList(safeAdviceRelevant);
+                setToastVisible(false);
                 if (markShown) markShown(advicePrimary.id);
                 return;
             }
 
+            console.info('[HEYS.advice] ✅ Toast SHOWN: toastsEnabled=' + toastsEnabled + ', adviceTrigger=' + adviceTrigger);
             setDisplayedAdvice(advicePrimary);
             setDisplayedAdviceList(safeAdviceRelevant);
             setAdviceExpanded(false);
