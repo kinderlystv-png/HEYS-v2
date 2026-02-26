@@ -196,7 +196,20 @@
 - **Решение:** `syncVer` удалён из `key`. До: `key='day'+syncVer+clientId+date`.
   После: `key='day_'+clientId+'_'+date`.
 
-### Шаг 20. Оптимизация кэша и CRS (✅)
+### Шаг 20. Устранение double-fill анимации прогресс-бара (✅)
+
+- **Файлы:** `heys_day_animations.js`, `boot-day.bundle.*.js`
+- **Проблема:** При фоновой синхронизации (Phase B) или `forceReload` пересчёт
+  `normAbs` менял `optimum`, что приводило к сбросу анимации прогресс-бара в 0 и
+  повторному заполнению, даже если `eatenKcal` не менялся.
+- **Решение:** В `useDayAnimations` добавлены `prevKcalRef` и `prevDateTabRef`
+  для дискриминации "реальных действий" пользователя от "фоновых обновлений".
+  При фоновом обновлении бар мгновенно телепортируется в новую позицию без
+  сброса в 0.
+- **Результат:** Стабильный UI на throttled-сети, отсутствие визуальных глитчей
+  при получении `heys:day-updated` (batch).
+
+### Шаг 21. Оптимизация кэша и CRS (✅)
 
 - Пропуск `flush` для свежих клиентов.
 - Исправлена `getCrsNumber` для пустой истории (возвращает `null`).
@@ -355,6 +368,19 @@ U.lsSet(key, value)
 - [x] `getCrsNumber` — корректная обработка пустой истории (return null)
 - [x] Удалён `syncVer` из `key` `DayTabWithCloudSync` — устранено моргание
 - [x] Диагностические логи mount/unmount в `DayTabWithCloudSync`
+
+### v9.7 Animation Stability (26.02.2026)
+
+- [x] `useDayAnimations` — добавлены `prevKcalRef` + `prevDateTabRef` для
+      дискриминации реальных действий от фоновых обновлений
+- [x] double-fill animation устранён: фоновый sync/forceReload не сбрасывает
+      прогресс-бар в 0
+- [x] `boot-day.bundle.7320c50778ec.js` — пересобрана с фиксом (хеш бандла
+      прежний)
+- [x] Верифицировано на нормальной сети: бар телепортируется без re-animate при
+      `heys:day-updated` (batch)
+- [x] Верифицировано на throttled-сети (Mid-tier mobile): History Guard +
+      CascadeCard STRONG — без глитчей
 
 ### Будущие спринты
 

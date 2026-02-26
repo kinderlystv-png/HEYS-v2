@@ -1,6 +1,6 @@
 # HEYS Platform Architecture
 
-> **System Architecture Overview** **Version:** 18.0.0 (merged with
+> **System Architecture Overview** **Version:** 18.1.0 (merged with
 > TECHNICAL_ARCHITECTURE) **Last Updated:** February 26, 2026
 
 ## System Overview
@@ -227,10 +227,11 @@ attempts.
 
 ## Performance Architecture
 
-### JS Bundling & Load Performance (v9.6, February 2026)
+### JS Bundling & Load Performance (v9.7, February 2026)
 
 > **Before:** 246 `<script defer>` files — 63s on Mid-tier mobile. **After:** 9
-> GZIP bundles in Yandex Object Storage — FCP **2.6s** on mobile.
+> GZIP bundles in Yandex Object Storage — FCP **~0ms** (Skeleton) / full UI
+> **2.6s** on mobile.
 
 | Bundle                | Contents                                | Size (GZIP) |
 | --------------------- | --------------------------------------- | ----------- |
@@ -328,11 +329,13 @@ Direct `localStorage.setItem/getItem` breaks namespacing.
 **Boot timeline (Mid-tier mobile, 4x CPU slowdown, Fast 3G):**
 
 ```
-+0.0s   HTML parsed, prefetch starts
++0.0s   HTML parsed -> Skeleton UI shown instantly (HTML/CSS, no JS)
++0.0s   Speculative Prefetch starts (REST delta fetch)
 +~1.5s  9 GZIP bundles loaded (was 246 files taking 63s)
-+1.8s   React boot
-+2.4s   Sync complete
++1.8s   React boot -> Skeleton replaced
++2.4s   Sync complete (Phase A: profile, products, today)
 +2.6s   DayStats first render
++5.0s+  Phase B background sync (history, other keys)
 ```
 
 Key techniques:
@@ -354,6 +357,10 @@ Key techniques:
    props and `heys:day-updated` events.
 8. **Non-blocking UI Fallback**: 5000ms fallback timer prevents infinite
    skeletons.
+9. **Animation Stability**: `useDayAnimations` discriminates real user actions
+   from background sync via `prevKcalRef`/`prevDateTabRef`. Background
+   sync/`forceReload` teleports progress bar to new position instantly instead
+   of resetting to 0 (eliminates double-fill flicker on throttled networks).
 
 **PERF diagnostic markers** (remain in code for ongoing monitoring):
 

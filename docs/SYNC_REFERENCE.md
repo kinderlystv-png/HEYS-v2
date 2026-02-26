@@ -262,6 +262,32 @@ auth state. Prevents data loss.
 - **5000ms fallback timer:** unblocks UI if event never arrives
 - **No syncVer in React key:** prevents unmount/remount flash
 
+### Progress Bar Animation Stability
+
+`useDayAnimations` (in `heys_day_animations.js`) discriminates between user
+actions and background sync:
+
+- **Real action** (`eatenKcal` or `date/tab` changed): full 0→target animation
+- **Background update** (only `optimum` changed via sync/forceReload): instant
+  teleport to new position, no reset to 0
+
+This prevents the **double-fill flicker** caused by `normAbs` recalculation
+after `heys:day-updated` (batch).
+
+```javascript
+// Key logic in useDayAnimations
+const isRealAction =
+  eatenKcal !== prevKcalRef.current || dateTabKey !== prevDateTabRef.current;
+if (!isRealAction) {
+  // Teleport only — no animation reset
+  setBarWidth(finalPct);
+  setIsAnimating(true);
+  requestAnimationFrame(() => setIsAnimating(false));
+  return;
+}
+// Otherwise: full 0 → target animation
+```
+
 ---
 
 ## 9. Service Worker & PWA
@@ -297,6 +323,7 @@ SW handles `sync` events from `heys-sync` registration. Posts
 | `heys_storage_layer_v1.js`    | Store API (cache, watchers, namespacing)            |
 | `heys_yandex_api_v1.js`       | YandexAPI wrapper (RPC, REST, retry, backoff)       |
 | `heys_app_sync_effects_v1.js` | React sync hooks (post-sync load, event listeners)  |
+| `heys_day_animations.js`      | Progress bar animation hook (double-fill guard)     |
 | `heys_cloud_queue_v1.js`      | Cloud queue management                              |
 | `heys_cloud_merge_v1.js`      | Cloud merge logic                                   |
 | `heys_core_v12.js`            | Legacy storage API (U.lsSet/lsGet)                  |
