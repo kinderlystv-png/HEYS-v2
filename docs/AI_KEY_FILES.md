@@ -94,21 +94,33 @@
 | `public/sw.js`                | Service Worker (CDN_URLS: только twemoji; boot-бандлы кешируются cache-first по hash) |
 | `heys_day_offline_sync_v1.js` | Offline sync logic                                                                    |
 
-## Load Optimisation (v9.0, 2026-02-25)
+## Load Optimisation (v9.6, обновлено 26.02.2026)
 
-> 244 legacy JS-файла конкатенированы в 8 бандлов. Запросов при старте: 244 → 8.
+> 246 legacy JS-файлов конкатенированы в 9 бандлов. Все бандлы отдаются с GZIP
+> (Yandex Object Storage). Запросов при старте: 246 → 9. Время загрузки JS на
+> Mid-tier mobile: 63с → **1.5с**.
 
 | File                                              | Role                                                                                                  |
 | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `scripts/bundle-legacy.mjs` _(repo root)_         | Генератор бандлов: конкатенация + content-hash + `bundle-manifest.json`. Запуск: `pnpm bundle:legacy` |
-| `bundle-manifest.json`                            | Сгенерированный артефакт с именами и хешами 8 бандлов                                                 |
-| `public/boot-core.bundle.{hash}.js`               | Boot-бандл 1: dev_utils, platform, yandex_api, models, storage (1.14 MB)                              |
-| `public/boot-calc.bundle.{hash}.js`               | Boot-бандл 2: ratio_zones, tef, tdee, harm, day core (893 KB)                                         |
-| `public/boot-day.bundle.{hash}.js`                | Boot-бандл 3: все heys*day*\* компоненты (896 KB)                                                     |
-| `public/boot-app.bundle.{hash}.js`                | Boot-бандл 4: auth, subscription, paywall, app_shell (1.05 MB)                                        |
-| `public/boot-init.bundle.{hash}.js`               | Boot-бандл 5: app_root, initialize, entry, app_v12 (340 KB)                                           |
-| `public/postboot-1-game.bundle.{hash}.js`         | Postboot 1: gamification, advice, insulin_wave, cycle (1.35 MB)                                       |
-| `public/postboot-2-insights.bundle.{hash}.js`     | Postboot 2: все insights/pi\_\*.js (1.75 MB)                                                          |
-| `public/postboot-3-ui.bundle.{hash}.js`           | Postboot 3: modals, steps, reports, widgets (1.28 MB)                                                 |
+| `bundle-manifest.json`                            | Сгенерированный артефакт с именами и хешами 9 бандлов                                                 |
+| `public/boot-core.bundle.{hash}.js`               | Boot-бандл 1: dev_utils, platform, yandex_api, models, storage (1.14 MB raw / ~230 KB GZIP)           |
+| `public/boot-calc.bundle.{hash}.js`               | Boot-бандл 2: ratio_zones, tef, tdee, harm, day core (893 KB raw)                                     |
+| `public/boot-day.bundle.{hash}.js`                | Boot-бандл 3: все heys*day*\* компоненты (896 KB raw)                                                 |
+| `public/boot-app.bundle.{hash}.js`                | Boot-бандл 4: auth, subscription, paywall, app_shell, app_tabs (1.05 MB raw / ~204 KB GZIP)           |
+| `public/boot-init.bundle.{hash}.js`               | Boot-бандл 5: app_root, initialize, entry, app_v12 (340 KB raw)                                       |
+| `public/postboot-1-game.bundle.{hash}.js`         | Postboot 1: gamification, advice, insulin_wave, cycle (1.35 MB raw)                                   |
+| `public/postboot-2-insights.bundle.{hash}.js`     | Postboot 2: все insights/pi\_\*.js (1.75 MB raw)                                                      |
+| `public/postboot-3-ui.bundle.{hash}.js`           | Postboot 3: modals, steps, reports, widgets (1.28 MB raw)                                             |
 | `vite.config.ts`                                  | `bundleLegacy()` плагин **отключён** (2026-02-25) — заменён на статические бандлы в `public/`         |
 | `docs/plans/LOAD_OPTIMIZATION_PLAN_2026-02-25.md` | Полный план, аудит и журнал внедрения                                                                 |
+
+> **Ключевые файлы для стабильности загрузки (v9.6):**
+>
+> - `heys_app_tabs_v1.js` — `DayTabWithCloudSync`: non-blocking + 5000ms
+>   fallback + clientId-фильтрация. `syncVer` убран из `key` (иначе full remount
+>   таба при каждом фул-синке).
+> - `heys_app_shell_v1.js` — React `key` у `DayTabWithCloudSync`: должен быть
+>   `'day_' + clientId + '_' + date` (без syncVer).
+> - `upload-to-yandex.ps1` — загружает `public/` в Yandex Object Storage с
+>   автоматическим GZIP для `.js` файлов.

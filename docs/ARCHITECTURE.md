@@ -241,12 +241,11 @@ packages/
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Sync Performance Optimizations (v4, updated 23.02.2026)
+### Sync Performance Optimizations (v5, updated 26.02.2026)
 
 > **Measured results (WiFi, curator mode):** Boot 7.2s → **1.0–1.2s**. DayTab
-> remount: eliminated.  
-> **Critical remaining work (mobile):** 246 JS files take ~63s on Mid-tier
-> mobile. Bundling (Шаг 1) is the only remaining optimization for mobile users.
+> remounts: 1 → **0**. **Measured results (Mid-tier mobile):** Boot 65s →
+> **~2.6s**.
 
 **Boot timeline (WiFi, warm cache):**
 
@@ -259,53 +258,43 @@ packages/
 +3.0–5.0s  Post-animation state updates (invisible to user)
 ```
 
-**Boot timeline (Mid-tier mobile, baseline — 244 individual files):**
+**Boot timeline (Mid-tier mobile, 4x CPU slowdown, Fast 3G):**
 
 ```
 +0.0s   HTML parsed, prefetch starts
-+~63s   Last JS file loaded (244 <script defer> + postboot, pre-optimisation)
-+63.3s  React boot
-+63.9s  Sync complete
-+65.2s  DayStats first render
++~1.5s  9 GZIP bundles loaded (was 246 files taking 63s)
++1.8s   React boot
++2.4s   Sync complete
++2.6s   DayStats first render
 ```
 
-**Boot timeline (post-optimisation v9.0, 2026-02-25 — 8 bundles):**
-
-```
-+0.0s   HTML parsed, preload hints sent (boot-core, boot-init)
-+?s     5 boot bundles loaded (244 → 8 requests, ~5.3 MB total)
-+?s     React boot
-+?s     Sync complete → window.__heysAppReady
-+?s     3 postboot bundles loaded sequentially (4.38 MB total)
-Target: appReady ≤ 18s on mid-tier
-```
-
-> Конкатенация 2026-02-25: 151 `<script defer>` → 5 boot-бандлов, 93 postboot →
-> 3 бандла. Замер baseline до/после: см.
-> `docs/plans/LOAD_OPTIMIZATION_PLAN_2026-02-25.md`.
-
-To achieve sub-2s boot times on WiFi, the sync architecture employs several
+To achieve sub-2.6s boot times on mobile, the sync architecture employs several
 advanced techniques:
 
-1. **Speculative Prefetch**: The `index.html` file initiates a real REST API
+1. **JS Bundling & GZIP**: 246 individual `<script defer>` files were
+   concatenated into 9 bundles and served with GZIP from Yandex Object Storage,
+   reducing network time from 63s to 1.5s.
+2. **Speculative Prefetch**: The `index.html` file initiates a real REST API
    delta fetch _before_ React loads, saving ~0.8–1.0s. Note: a warm-up ping to
    `/health` was tried first but did not help — `/health` is a separate Cloud
    Function that doesn't warm the data CF.
-2. **Delta Fast-Path**: If the server reports 0 changed keys since the last
+3. **Delta Fast-Path**: If the server reports 0 changed keys since the last
    sync, the sync process terminates immediately without processing.
-3. **Delta Light Path**: For small updates (≤10 keys), data is written directly
+4. **Delta Light Path**: For small updates (≤10 keys), data is written directly
    to `localStorage` and the UI is notified instantly. Heavy cleanup tasks are
    deferred via `setTimeout`.
-4. **Two-Phase Sync**: Critical keys (`heys_profile`, `heys_products`, today's
+5. **Two-Phase Sync**: Critical keys (`heys_profile`, `heys_products`, today's
    day) are fetched first to unblock the UI, while historical data is fetched in
    the background.
-5. **Upload Debouncing & Grace Period**: Prevents the client from immediately
+6. **Upload Debouncing & Grace Period**: Prevents the client from immediately
    re-uploading data it just downloaded from the cloud.
-6. **DayTab remount fix**: `fetchDays` (background load of 7 dates) dispatched
-   7× `heys:day-updated` → 7× `setSyncVer++` → DayTab `key` changed → React full
-   unmount/remount (visible flicker). Fixed by adding `'fetchDays'` to
-   `IGNORED_SOURCES` in `heys_app_sync_effects_v1.js`. `heys_day_effects.js`
-   already updates `day` state internally — no remount needed.
+7. **DayTab remount fix**: `syncVer` was removed from the `DayTabWithCloudSync`
+   React key. Previously, completing a full sync incremented `syncVer`, causing
+   a full unmount/remount of the tab and a visible white flash. Now, data
+   updates reactively via props and `heys:day-updated` events.
+8. **Non-blocking UI Fallback**: `DayTabWithCloudSync` uses a 5000ms fallback
+   timer. If `heysSyncCompleted` doesn't arrive in time, the UI unblocks
+   automatically to prevent infinite skeletons.
 
 **PERF diagnostic markers** (remain in code for ongoing monitoring):
 
@@ -314,6 +303,8 @@ advanced techniques:
   props)
 - `heys_day_stats_v1.js`: first render + re-renders with gap >500ms
 - `heys_app_auth_init_v1.js`: `setSyncVer` on auth-init
+- `heys_app_tabs_v1.js`: `DayTabWithCloudSync` mount/unmount (`🔁 MOUNTED` /
+  `💀 UNMOUNTED`)
 
 ### Conflict Resolution
 
