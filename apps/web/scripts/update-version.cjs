@@ -17,6 +17,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const APP_FILE = path.join(__dirname, '..', 'heys_app_v12.js');
+const PWA_MODULE_FILE = path.join(__dirname, '..', 'heys_pwa_module_v1.js');
 const SW_FILE = path.join(__dirname, '..', 'public', 'sw.js');
 const VERSION_JSON = path.join(__dirname, '..', 'public', 'version.json');
 const BUILD_META_JSON = path.join(__dirname, '..', 'public', 'build-meta.json');
@@ -64,6 +65,19 @@ function updateVersion() {
     console.log(`✅ APP_VERSION updated to: ${newVersion}`);
   } else {
     console.log('⚠️ APP_VERSION not found in file');
+  }
+
+  // 1b. Обновляем APP_VERSION в heys_pwa_module_v1.js (источник HEYS.version у рантайма)
+  if (fs.existsSync(PWA_MODULE_FILE)) {
+    let pwaContent = fs.readFileSync(PWA_MODULE_FILE, 'utf8');
+    const pwaVersionRegex = /const APP_VERSION = '[^']+'/;
+    if (pwaVersionRegex.test(pwaContent)) {
+      pwaContent = pwaContent.replace(pwaVersionRegex, `const APP_VERSION = '${newVersion}'`);
+      fs.writeFileSync(PWA_MODULE_FILE, pwaContent);
+      console.log(`✅ heys_pwa_module_v1.js APP_VERSION updated to: ${newVersion}`);
+    } else {
+      console.log('⚠️ APP_VERSION not found in heys_pwa_module_v1.js');
+    }
   }
 
   // 2. Создаём build-meta.json (единый источник версии)

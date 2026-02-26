@@ -47,7 +47,7 @@
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.01.08.1630.tourfix17'; // v1.17: tooltip vertical boundary fix + scroll to top after InsightsTour
+  const APP_VERSION = '2026.02.25.1637.3fe6383f'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
