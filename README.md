@@ -125,8 +125,8 @@ const products = window.HEYS?.products?.getAll?.() || [];
 
 #### 📚 Documentation Updated
 
-- [TECHNICAL_ARCHITECTURE.md](docs/TECHNICAL_ARCHITECTURE.md) — Added
-  "Критические архитектурные решения" section
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) — Merged from TECHNICAL_ARCHITECTURE
+  (v18.0.0), "Critical Architecture Evolution" section
 - [API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md) — Added "Store API Best
   Practices" section
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) — Added "Critical Architecture
@@ -136,7 +136,7 @@ const products = window.HEYS?.products?.getAll?.() || [];
 #### 🔗 Learn More
 
 - [Store API Best Practices](docs/API_DOCUMENTATION.md#🛡️-store-api-best-practices-v488)
-- [React State Sync Fix](docs/TECHNICAL_ARCHITECTURE.md#🛡️-критические-архитектурные-решения)
+- [React State Sync Fix](docs/ARCHITECTURE.md#critical-architecture-evolution)
 - [Architecture Evolution](docs/ARCHITECTURE.md#🛡️-critical-architecture-evolution)
 
 ---

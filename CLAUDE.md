@@ -43,14 +43,20 @@ passing client_id to RPC     → Use *_by_session pattern with session_token
 
 For detailed context, read the relevant file before starting work:
 
-| Topic                    | File                                    |
-| ------------------------ | --------------------------------------- |
-| Full AI instructions     | `.github/copilot-instructions.md`       |
-| Architecture & files     | `docs/ARCHITECTURE.md`                  |
-| Key files & entry points | `docs/AI_KEY_FILES.md`                  |
-| API & RPC                | `docs/API_DOCUMENTATION.md`             |
-| Data model               | `docs/DATA_MODEL_REFERENCE.md`          |
-| Trial Machine            | `docs/AI_TRIAL_MACHINE.md`              |
-| Insights & analytics     | `HEYS_Insights_v5_Deep_Analytics_c7.md` |
-| Security                 | `docs/SECURITY_RUNBOOK.md`              |
-| Meal planner             | `docs/MEAL_PLANNER_DOCUMENTATION.md`    |
+| Topic                      | File                                    |
+| -------------------------- | --------------------------------------- |
+| Full AI instructions       | `.github/copilot-instructions.md`       |
+| Architecture & files       | `docs/ARCHITECTURE.md`                  |
+| Key files & entry points   | `docs/AI_KEY_FILES.md`                  |
+| API & RPC                  | `docs/API_DOCUMENTATION.md`             |
+| **Data model (core)**      | `docs/DATA_MODEL_REFERENCE.md`          |
+| **Data model (nutrition)** | `docs/DATA_MODEL_NUTRITION.md`          |
+| **Data model (analytics)** | `docs/DATA_MODEL_ANALYTICS.md`          |
+| Insulin wave (full)        | `docs/INSULIN_WAVE_DOCUMENTATION.md`    |
+| Trial Machine              | `docs/AI_TRIAL_MACHINE.md`              |
+| Insights & analytics       | `HEYS_Insights_v5_Deep_Analytics_c7.md` |
+| Security                   | `docs/SECURITY_RUNBOOK.md`              |
+| Meal planner               | `docs/MEAL_PLANNER_DOCUMENTATION.md`    |
+| Sync architecture          | `docs/SYNC_REFERENCE.md`                |
+| Sync & performance         | `docs/SYNC_PERFORMANCE_REPORT.md`       |
+| Storage patterns           | `docs/dev/STORAGE_PATTERNS.md`          |

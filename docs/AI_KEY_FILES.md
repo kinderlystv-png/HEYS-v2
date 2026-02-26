@@ -14,11 +14,12 @@
 
 ## Auth & Cloud Sync
 
-| File                          | Role                          |
-| ----------------------------- | ----------------------------- |
-| `heys_auth_v1.js`             | Authentication (JWT + PIN)    |
-| `heys_storage_supabase_v1.js` | Cloud sync + offline race fix |
-| `heys_yandex_api_v1.js`       | YandexAPI wrapper (rpc/rest)  |
+| File                          | Role                                                                              |
+| ----------------------------- | --------------------------------------------------------------------------------- |
+| `heys_auth_v1.js`             | Authentication (JWT + PIN)                                                        |
+| `heys_storage_supabase_v1.js` | Cloud sync + offline race fix                                                     |
+| `heys_yandex_api_v1.js`       | YandexAPI wrapper (rpc/rest)                                                      |
+| `heys_storage_layer_v1.js`    | Store API (cache, watchers, scoped keys). See [SYNC_REFERENCE](SYNC_REFERENCE.md) |
 
 ## UI Components
 
@@ -100,21 +101,21 @@
 > (Yandex Object Storage). Запросов при старте: 246 → 9. Время загрузки JS на
 > Mid-tier mobile: 63с → **1.5с**.
 
-| File                                              | Role                                                                                                  |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `scripts/bundle-legacy.mjs` _(repo root)_         | Генератор бандлов: конкатенация + content-hash + `bundle-manifest.json`. Запуск: `pnpm bundle:legacy` |
-| `bundle-manifest.json`                            | Сгенерированный артефакт с именами и хешами 9 бандлов                                                 |
-| `public/boot-core.bundle.{hash}.js`               | Boot-бандл 1: dev_utils, platform, yandex_api, models, storage (1.14 MB raw / ~230 KB GZIP)           |
-| `public/boot-calc.bundle.{hash}.js`               | Boot-бандл 2: ratio_zones, tef, tdee, harm, day core (893 KB raw)                                     |
-| `public/boot-day.bundle.{hash}.js`                | Boot-бандл 3: все heys*day*\* компоненты (896 KB raw)                                                 |
-| `public/boot-app.bundle.{hash}.js`                | Boot-бандл 4: auth, subscription, paywall, app_shell, app_tabs (1.05 MB raw / ~204 KB GZIP)           |
-| `public/boot-init.bundle.{hash}.js`               | Boot-бандл 5: app_root, initialize, entry, app_v12 (340 KB raw)                                       |
-| `public/postboot-1-game.bundle.{hash}.js`         | Postboot 1: gamification, advice, insulin_wave, cycle (1.35 MB raw)                                   |
-| `public/postboot-2-insights.bundle.{hash}.js`     | Postboot 2: все insights/pi\_\*.js (1.75 MB raw)                                                      |
-| `public/postboot-3-ui.bundle.{hash}.js`           | Postboot 3: modals, steps, reports, widgets (1.28 MB raw)                                             |
-| `vite.config.ts`                                  | `bundleLegacy()` плагин **отключён** (2026-02-25) — заменён на статические бандлы в `public/`         |
-| `docs/SYNC_PERFORMANCE_REPORT.md` | Сводный отчёт: цели, метрики, фазы 1–5, инцидент, чеклист |
-| `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md` | Детали реализации: маппинг 246 файлов по бандлам, журнал сессий 1–6 |
+| File                                          | Role                                                                                                  |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `scripts/bundle-legacy.mjs` _(repo root)_     | Генератор бандлов: конкатенация + content-hash + `bundle-manifest.json`. Запуск: `pnpm bundle:legacy` |
+| `bundle-manifest.json`                        | Сгенерированный артефакт с именами и хешами 9 бандлов                                                 |
+| `public/boot-core.bundle.{hash}.js`           | Boot-бандл 1: dev_utils, platform, yandex_api, models, storage (1.14 MB raw / ~230 KB GZIP)           |
+| `public/boot-calc.bundle.{hash}.js`           | Boot-бандл 2: ratio_zones, tef, tdee, harm, day core (893 KB raw)                                     |
+| `public/boot-day.bundle.{hash}.js`            | Boot-бандл 3: все heys*day*\* компоненты (896 KB raw)                                                 |
+| `public/boot-app.bundle.{hash}.js`            | Boot-бандл 4: auth, subscription, paywall, app_shell, app_tabs (1.05 MB raw / ~204 KB GZIP)           |
+| `public/boot-init.bundle.{hash}.js`           | Boot-бандл 5: app_root, initialize, entry, app_v12 (340 KB raw)                                       |
+| `public/postboot-1-game.bundle.{hash}.js`     | Postboot 1: gamification, advice, insulin_wave, cycle (1.35 MB raw)                                   |
+| `public/postboot-2-insights.bundle.{hash}.js` | Postboot 2: все insights/pi\_\*.js (1.75 MB raw)                                                      |
+| `public/postboot-3-ui.bundle.{hash}.js`       | Postboot 3: modals, steps, reports, widgets (1.28 MB raw)                                             |
+| `vite.config.ts`                              | `bundleLegacy()` плагин **отключён** (2026-02-25) — заменён на статические бандлы в `public/`         |
+| `docs/SYNC_PERFORMANCE_REPORT.md`             | Сводный отчёт: цели, метрики, фазы 1–5, инцидент, чеклист                                             |
+| `docs/SYNC_PERFORMANCE_SESSIONS_LOG.md`       | Детали реализации: маппинг 246 файлов по бандлам, журнал сессий 1–6                                   |
 
 > **Ключевые файлы для стабильности загрузки (v9.6):**
 >

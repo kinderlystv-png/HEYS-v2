@@ -255,8 +255,8 @@ healthScore: 71+ ✅ (not 66- ❌)
 
 ## 📚 Further Reading
 
-- [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md#🛡️-критические-архитектурные-решения)
-  — Full technical explanation
+- [ARCHITECTURE.md](ARCHITECTURE.md#critical-architecture-evolution) — Full
+  technical explanation (merged from TECHNICAL_ARCHITECTURE, v18.0.0)
 - [API_DOCUMENTATION.md](API_DOCUMENTATION.md#🛡️-store-api-best-practices-v488)
   — API reference
 - [ARCHITECTURE.md](ARCHITECTURE.md#🛡️-critical-architecture-evolution) — System

@@ -1,11 +1,11 @@
 # 🔄 Рефакторинг heys_storage_supabase_v1.js
 
-> **Версия документа:** 1.0  
-> **Дата:** 2026-01-10  
-> **Файл:** `apps/web/heys_storage_supabase_v1.js`  
-> **Размер:** 6,010 строк (25,545 слов, 238,872 символов)  
-> **Версия модуля:** v58  
-> **Экспорт:** `HEYS.cloud` (строки 5-6, IIFE паттерн)
+> **Версия документа:** 1.0 **Дата:** 2026-01-10 **Файл:**
+> `apps/web/heys_storage_supabase_v1.js` **Размер:** 6,010 строк (25,545 слов,
+> 238,872 символов) **Версия модуля:** v58 **Экспорт:** `HEYS.cloud` (строки
+> 5-6, IIFE паттерн)
+>
+> **Note (26.02.2026):** Файл сейчас v63 (~6500+ строк). План валиден, не начат.
 
 ---
 
@@ -14,6 +14,7 @@
 **Цель:** Разбить монолит 6,010 строк на 8 модулей по 300-1400 строк каждый
 
 **Что делаем:**
+
 1. Выделяем config + logging в отдельный модуль (~300 строк)
 2. Auth система (tokens, PIN auth, sign in/out) → ~700 строк
 3. Sync логика (merge, bootstrap, RPC sync) → ~1400 строк
@@ -24,6 +25,7 @@
 8. Shared Products API → ~620 строк
 
 **Зачем:**
+
 - Текущий файл невозможно поддерживать (6k строк!)
 - `bootstrapClientSync` занимает 930 строк — нужно разбить
 - Shared Products вообще отдельная подсистема
@@ -37,43 +39,45 @@
 
 ### Функциональные секции (30 блоков)
 
-| # | Секция | Строки | ~Размер | Описание |
-|---|--------|--------|---------|----------|
-| 1 | Константы и конфигурация | 1-65 | 65 | `KEY_PREFIXES`, `CLIENT_SPECIFIC_KEYS`, `CONNECTION_STATUS` |
-| 2 | Утилиты (normalizeKey) | 66-90 | 25 | Нормализация ключей для Supabase |
-| 3 | Глобальное состояние | 91-140 | 50 | `_client`, `_user`, `_rpcOnlyMode`, `_pinAuthClientId` |
-| 4 | Auto Token Refresh | 141-290 | 150 | `ensureValidToken`, `scheduleAutoRefresh` |
-| 5 | Auth Token Sanitize (RTR-safe) | 291-360 | 70 | Ранняя очистка токенов, failsafe таймеры |
-| 6 | Merge логика | 361-700 | 340 | `mergeItemsById`, `mergeDayData`, `mergeProductsData` |
-| 7 | Quota Management | 701-900 | 200 | `getStorageSize`, `estimateQuota`, `checkQuota`, `cleanup` |
-| 8 | Pending Queue | 901-1100 | 200 | `loadPendingQueue`, `savePendingQueue`, `addToPending` |
-| 9 | Sync History Log | 1100-1260 | 160 | `logSyncEvent`, `getSyncHistory`, `clearSyncHistory` |
-| 10 | Auth Failure Handler | 1260-1340 | 80 | `handleAuthFailure`, RTR/RLS ошибки |
-| 11 | Exponential Backoff | 1340-1380 | 40 | `getBackoffDelay`, `resetBackoff`, `incrementBackoff` |
-| 12 | Logging utilities | 1380-1440 | 60 | `log`, `err`, `logCritical`, `isNetworkError` |
-| 13 | fetchWithRetry + Routing | 1440-1700 | 260 | `fetchWithRetry`, `switchToDirectConnection`, `switchToProxyConnection` |
-| 14 | withTimeout + tryParse | 1700-1780 | 80 | `withTimeout`, `tryParse`, `tryParseJSON` |
-| 15 | Перехват localStorage | 1780-1970 | 190 | `interceptSetItem`, дедупликация, `maybeInitSync` |
-| 16 | cloud.init() | 1970-2200 | 230 | Инициализация, health-check, PIN auth восстановление |
-| 17 | cloud.signIn() / signOut() | 2200-2360 | 160 | Авторизация через Yandex Cloud Auth |
-| 18 | Force Push утилиты | 2360-2550 | 190 | `forcePushProducts`, `forcePushDay`, `forceReupload` |
-| 19 | Cleanup утилиты | 2550-2770 | 220 | `cleanupProducts`, `cleanupOrphanMealItems`, `cleanupCloudProducts` |
-| 20 | cloud.bootstrapSync() | 2770-2870 | 100 | Синхронизация kv_store (глобальные данные) |
-| 21 | syncClientViaRPC | 2870-3070 | 200 | Yandex API sync для PIN-клиентов |
-| 22 | saveClientViaRPC | 3070-3150 | 80 | Сохранение через Yandex API |
-| 23 | **cloud.bootstrapClientSync()** | 3150-4080 | **930** | ⚠️ ГИГАНТ — синхронизация клиента |
-| 24 | cloud.fetchDays() | 4080-4250 | 170 | Загрузка данных за диапазон дат |
-| 25 | Client Upload Queue | 4250-4600 | 350 | `doClientUpload`, `scheduleClientPush`, RPC режим |
-| 26 | cloud.saveClientKey() | 4600-4850 | 250 | Основная функция сохранения |
-| 27 | cloud.ensureClient() / upsert() | 4850-4950 | 100 | Проверка клиента, generic upsert |
-| 28 | User-level Queue (kv_store) | 4950-5080 | 130 | `schedulePush`, `flushPendingQueue` |
-| 29 | Диагностика Storage | 5080-5250 | 170 | `diagnoseStorage`, `cleanupDuplicates`, `checkIntegrity` |
-| 30 | Photo Storage | 5250-5500 | 250 | `uploadPhoto`, `deletePhoto`, `getPendingPhotos` |
-| 31 | Shared Products API | 5500-6010 | 510 | `getAllSharedProducts`, `searchSharedProducts`, pending/blocklist |
+| #   | Секция                          | Строки    | ~Размер | Описание                                                                |
+| --- | ------------------------------- | --------- | ------- | ----------------------------------------------------------------------- |
+| 1   | Константы и конфигурация        | 1-65      | 65      | `KEY_PREFIXES`, `CLIENT_SPECIFIC_KEYS`, `CONNECTION_STATUS`             |
+| 2   | Утилиты (normalizeKey)          | 66-90     | 25      | Нормализация ключей для Supabase                                        |
+| 3   | Глобальное состояние            | 91-140    | 50      | `_client`, `_user`, `_rpcOnlyMode`, `_pinAuthClientId`                  |
+| 4   | Auto Token Refresh              | 141-290   | 150     | `ensureValidToken`, `scheduleAutoRefresh`                               |
+| 5   | Auth Token Sanitize (RTR-safe)  | 291-360   | 70      | Ранняя очистка токенов, failsafe таймеры                                |
+| 6   | Merge логика                    | 361-700   | 340     | `mergeItemsById`, `mergeDayData`, `mergeProductsData`                   |
+| 7   | Quota Management                | 701-900   | 200     | `getStorageSize`, `estimateQuota`, `checkQuota`, `cleanup`              |
+| 8   | Pending Queue                   | 901-1100  | 200     | `loadPendingQueue`, `savePendingQueue`, `addToPending`                  |
+| 9   | Sync History Log                | 1100-1260 | 160     | `logSyncEvent`, `getSyncHistory`, `clearSyncHistory`                    |
+| 10  | Auth Failure Handler            | 1260-1340 | 80      | `handleAuthFailure`, RTR/RLS ошибки                                     |
+| 11  | Exponential Backoff             | 1340-1380 | 40      | `getBackoffDelay`, `resetBackoff`, `incrementBackoff`                   |
+| 12  | Logging utilities               | 1380-1440 | 60      | `log`, `err`, `logCritical`, `isNetworkError`                           |
+| 13  | fetchWithRetry + Routing        | 1440-1700 | 260     | `fetchWithRetry`, `switchToDirectConnection`, `switchToProxyConnection` |
+| 14  | withTimeout + tryParse          | 1700-1780 | 80      | `withTimeout`, `tryParse`, `tryParseJSON`                               |
+| 15  | Перехват localStorage           | 1780-1970 | 190     | `interceptSetItem`, дедупликация, `maybeInitSync`                       |
+| 16  | cloud.init()                    | 1970-2200 | 230     | Инициализация, health-check, PIN auth восстановление                    |
+| 17  | cloud.signIn() / signOut()      | 2200-2360 | 160     | Авторизация через Yandex Cloud Auth                                     |
+| 18  | Force Push утилиты              | 2360-2550 | 190     | `forcePushProducts`, `forcePushDay`, `forceReupload`                    |
+| 19  | Cleanup утилиты                 | 2550-2770 | 220     | `cleanupProducts`, `cleanupOrphanMealItems`, `cleanupCloudProducts`     |
+| 20  | cloud.bootstrapSync()           | 2770-2870 | 100     | Синхронизация kv_store (глобальные данные)                              |
+| 21  | syncClientViaRPC                | 2870-3070 | 200     | Yandex API sync для PIN-клиентов                                        |
+| 22  | saveClientViaRPC                | 3070-3150 | 80      | Сохранение через Yandex API                                             |
+| 23  | **cloud.bootstrapClientSync()** | 3150-4080 | **930** | ⚠️ ГИГАНТ — синхронизация клиента                                       |
+| 24  | cloud.fetchDays()               | 4080-4250 | 170     | Загрузка данных за диапазон дат                                         |
+| 25  | Client Upload Queue             | 4250-4600 | 350     | `doClientUpload`, `scheduleClientPush`, RPC режим                       |
+| 26  | cloud.saveClientKey()           | 4600-4850 | 250     | Основная функция сохранения                                             |
+| 27  | cloud.ensureClient() / upsert() | 4850-4950 | 100     | Проверка клиента, generic upsert                                        |
+| 28  | User-level Queue (kv_store)     | 4950-5080 | 130     | `schedulePush`, `flushPendingQueue`                                     |
+| 29  | Диагностика Storage             | 5080-5250 | 170     | `diagnoseStorage`, `cleanupDuplicates`, `checkIntegrity`                |
+| 30  | Photo Storage                   | 5250-5500 | 250     | `uploadPhoto`, `deletePhoto`, `getPendingPhotos`                        |
+| 31  | Shared Products API             | 5500-6010 | 510     | `getAllSharedProducts`, `searchSharedProducts`, pending/blocklist       |
 
 ### ⚠️ Критический участок: bootstrapClientSync (930 строк!)
 
-Функция `bootstrapClientSync` (строки 3150-4080) — это **930 строк** в одной функции! Она содержит:
+Функция `bootstrapClientSync` (строки 3150-4080) — это **930 строк** в одной
+функции! Она содержит:
+
 - Дедупликацию продуктов
 - Merge локальных и cloud данных
 - Миграции legacy данных
@@ -131,6 +135,7 @@
 ### Модуль 1: heys_storage_config_v1.js (~300 строк)
 
 **Содержимое:**
+
 - Константы: `KEY_PREFIXES`, `CLIENT_SPECIFIC_KEYS`, `CONNECTION_STATUS`
 - Утилиты: `normalizeKeyForSupabase`, `isOurKey`, `clearNamespace`, `tryParse`
 - Глобальное состояние (экспорт для других модулей)
@@ -139,6 +144,7 @@
 **Строки из оригинала:** 1-65, 66-90, 91-140, 1380-1440, 1700-1780
 
 **Экспорт:**
+
 ```javascript
 HEYS.StorageConfig = {
   KEY_PREFIXES,
@@ -155,19 +161,28 @@ HEYS.StorageConfig = {
   isNetworkError,
   // Shared state getters/setters
   getClient: () => _client,
-  setClient: (c) => { _client = c; },
+  setClient: (c) => {
+    _client = c;
+  },
   getUser: () => _user,
-  setUser: (u) => { _user = u; },
+  setUser: (u) => {
+    _user = u;
+  },
   getRpcOnlyMode: () => _rpcOnlyMode,
-  setRpcOnlyMode: (v) => { _rpcOnlyMode = v; },
+  setRpcOnlyMode: (v) => {
+    _rpcOnlyMode = v;
+  },
   getPinAuthClientId: () => _pinAuthClientId,
-  setPinAuthClientId: (id) => { _pinAuthClientId = id; }
+  setPinAuthClientId: (id) => {
+    _pinAuthClientId = id;
+  },
 };
 ```
 
 ### Модуль 2: heys_storage_auth_v1.js (~700 строк)
 
 **Содержимое:**
+
 - Auto Token Refresh: `ensureValidToken`, `scheduleAutoRefresh`
 - Auth Token Sanitize (RTR-safe)
 - Auth Failure Handler: `handleAuthFailure`
@@ -178,6 +193,7 @@ HEYS.StorageConfig = {
 **Строки из оригинала:** 141-360, 1260-1340, 1970-2360
 
 **Экспорт:**
+
 ```javascript
 HEYS.StorageAuth = {
   ensureValidToken,
@@ -189,13 +205,14 @@ HEYS.StorageAuth = {
   signOut: cloud.signOut,
   // PIN auth
   restorePinAuth,
-  clearPinAuth
+  clearPinAuth,
 };
 ```
 
 ### Модуль 3: heys_storage_sync_v1.js (~1400 строк)
 
 **Содержимое:**
+
 - Merge логика: `mergeItemsById`, `mergeDayData`, `mergeProductsData`
 - `cloud.syncClient()` (универсальный sync)
 - `cloud.bootstrapSync()` (kv_store)
@@ -207,17 +224,19 @@ HEYS.StorageAuth = {
 **Строки из оригинала:** 361-700, 2770-4250
 
 **Разбиение bootstrapClientSync (930 строк):**
+
 ```javascript
 // Разбить на 5 helper-функций:
-_deduplicateProducts()      // ~150 строк
-_mergeLocalAndCloud()       // ~200 строк
-_migrateLegacyData()        // ~150 строк
-_validateAndSanitize()      // ~200 строк
-_applyMergeResults()        // ~230 строк
-bootstrapClientSync()       // ~100 строк (оркестратор)
+_deduplicateProducts(); // ~150 строк
+_mergeLocalAndCloud(); // ~200 строк
+_migrateLegacyData(); // ~150 строк
+_validateAndSanitize(); // ~200 строк
+_applyMergeResults(); // ~230 строк
+bootstrapClientSync(); // ~100 строк (оркестратор)
 ```
 
 **Экспорт:**
+
 ```javascript
 HEYS.StorageSync = {
   mergeItemsById,
@@ -228,13 +247,14 @@ HEYS.StorageSync = {
   bootstrapClientSync: cloud.bootstrapClientSync,
   syncClientViaRPC,
   saveClientViaRPC,
-  fetchDays: cloud.fetchDays
+  fetchDays: cloud.fetchDays,
 };
 ```
 
 ### Модуль 4: heys_storage_queue_v1.js (~800 строк)
 
 **Содержимое:**
+
 - Pending Queue: `loadPendingQueue`, `savePendingQueue`, `addToPending`
 - Quota Management: `getStorageSize`, `estimateQuota`, `checkQuota`, `cleanup`
 - Client Upload Queue: `doClientUpload`, `scheduleClientPush`
@@ -245,6 +265,7 @@ HEYS.StorageSync = {
 **Строки из оригинала:** 701-1100, 1340-1380, 4250-5080
 
 **Экспорт:**
+
 ```javascript
 HEYS.StorageQueue = {
   // Pending
@@ -266,13 +287,14 @@ HEYS.StorageQueue = {
   resetBackoff,
   // Save
   saveClientKey: cloud.saveClientKey,
-  saveKey: cloud.saveKey
+  saveKey: cloud.saveKey,
 };
 ```
 
 ### Модуль 5: heys_storage_network_v1.js (~400 строк)
 
 **Содержимое:**
+
 - `fetchWithRetry()`
 - Routing: `switchToDirectConnection`, `switchToProxyConnection`
 - `withTimeout()`
@@ -282,6 +304,7 @@ HEYS.StorageQueue = {
 **Строки из оригинала:** 1440-1700, 1780-1970
 
 **Экспорт:**
+
 ```javascript
 HEYS.StorageNetwork = {
   fetchWithRetry,
@@ -289,13 +312,14 @@ HEYS.StorageNetwork = {
   switchToProxyConnection,
   withTimeout,
   interceptSetItem,
-  setupOnlineOfflineListeners
+  setupOnlineOfflineListeners,
 };
 ```
 
 ### Модуль 6: heys_storage_utils_v1.js (~600 строк)
 
 **Содержимое:**
+
 - Sync History Log: `logSyncEvent`, `getSyncHistory`, `clearSyncHistory`
 - Диагностика: `diagnoseStorage`, `cleanupDuplicates`, `checkIntegrity`
 - Cleanup: `cleanupProducts`, `cleanupOrphanMealItems`, `cleanupCloudProducts`
@@ -305,6 +329,7 @@ HEYS.StorageNetwork = {
 **Строки из оригинала:** 1100-1260, 2360-2770, 5080-5250
 
 **Экспорт:**
+
 ```javascript
 HEYS.StorageUtils = {
   // Sync log
@@ -324,13 +349,14 @@ HEYS.StorageUtils = {
   forcePushDay: cloud.forcePushDay,
   forceReupload: cloud.forceReupload,
   // Client
-  switchClient: cloud.switchClient
+  switchClient: cloud.switchClient,
 };
 ```
 
 ### Модуль 7: heys_storage_photos_v1.js (~300 строк)
 
 **Содержимое:**
+
 - Photo upload/delete
 - Pending photos
 - beforeunload handler
@@ -338,18 +364,20 @@ HEYS.StorageUtils = {
 **Строки из оригинала:** 5250-5500
 
 **Экспорт:**
+
 ```javascript
 HEYS.StoragePhotos = {
   uploadPhoto: cloud.uploadPhoto,
   deletePhoto: cloud.deletePhoto,
   getPendingPhotos: cloud.getPendingPhotos,
-  retryPendingPhotos
+  retryPendingPhotos,
 };
 ```
 
 ### Модуль 8: heys_storage_shared_v1.js (~620 строк)
 
 **Содержимое:**
+
 - `getAllSharedProducts`, `searchSharedProducts`
 - `publishToShared`, `deleteSharedProduct`
 - Pending products: `createPendingProduct`, approve/reject
@@ -358,6 +386,7 @@ HEYS.StoragePhotos = {
 **Строки из оригинала:** 5500-6010
 
 **Экспорт:**
+
 ```javascript
 HEYS.StorageShared = {
   getAllSharedProducts: cloud.getAllSharedProducts,
@@ -372,7 +401,7 @@ HEYS.StorageShared = {
   // Blocklist
   addToBlocklist: cloud.addToBlocklist,
   removeFromBlocklist: cloud.removeFromBlocklist,
-  getBlocklist: cloud.getBlocklist
+  getBlocklist: cloud.getBlocklist,
 };
 ```
 
@@ -421,7 +450,10 @@ await HEYS.cloud.signIn('test@example.com', 'password');
 console.assert(HEYS.cloud.getStatus() === 'online', 'Auth failed');
 
 // 2. PIN Auth
-const result = await HEYS.YandexAPI.rpc('client_pin_auth', { phone: '+7...', pin: '1234' });
+const result = await HEYS.YandexAPI.rpc('client_pin_auth', {
+  phone: '+7...',
+  pin: '1234',
+});
 console.assert(result.success, 'PIN auth failed');
 
 // 3. Sync
@@ -443,16 +475,16 @@ console.assert(Array.isArray(products), 'Shared products failed');
 
 ### Регрессионные тесты
 
-| Сценарий | Ожидание | Модуль |
-|----------|----------|--------|
-| Авторизация куратора | Успешный signIn, токен сохранён | auth |
-| PIN авторизация клиента | Успешный auth, session token | auth |
-| Синхронизация при первом входе | Данные загружены в localStorage | sync |
-| Сохранение приёма пищи | Данные в localStorage + pending queue | queue |
-| Offline → Online | Pending queue отправлен | queue |
-| Merge конфликт | Более новые данные побеждают | sync |
-| Поиск shared products | Возвращает массив | shared |
-| Upload фото | Файл загружен, URL получен | photos |
+| Сценарий                       | Ожидание                              | Модуль |
+| ------------------------------ | ------------------------------------- | ------ |
+| Авторизация куратора           | Успешный signIn, токен сохранён       | auth   |
+| PIN авторизация клиента        | Успешный auth, session token          | auth   |
+| Синхронизация при первом входе | Данные загружены в localStorage       | sync   |
+| Сохранение приёма пищи         | Данные в localStorage + pending queue | queue  |
+| Offline → Online               | Pending queue отправлен               | queue  |
+| Merge конфликт                 | Более новые данные побеждают          | sync   |
+| Поиск shared products          | Возвращает массив                     | shared |
+| Upload фото                    | Файл загружен, URL получен            | photos |
 
 ---
 
@@ -479,6 +511,7 @@ console.assert(Array.isArray(products), 'Shared products failed');
 ## 📋 Чеклист выполнения
 
 ### Этап 1: Config модуль
+
 - [ ] Создать `heys_storage_config_v1.js`
 - [ ] Перенести константы (KEY_PREFIXES и др.)
 - [ ] Перенести утилиты (normalizeKey, tryParse)
@@ -487,6 +520,7 @@ console.assert(Array.isArray(products), 'Shared products failed');
 - [ ] Тест: `HEYS.StorageConfig.KEY_PREFIXES` существует
 
 ### Этап 2: Network модуль
+
 - [ ] Создать `heys_storage_network_v1.js`
 - [ ] Перенести fetchWithRetry
 - [ ] Перенести routing (switchToDirectConnection)
@@ -494,6 +528,7 @@ console.assert(Array.isArray(products), 'Shared products failed');
 - [ ] Тест: `HEYS.StorageNetwork.fetchWithRetry` работает
 
 ### Этап 3: Auth модуль
+
 - [ ] Создать `heys_storage_auth_v1.js`
 - [ ] Перенести token refresh
 - [ ] Перенести signIn/signOut
@@ -501,6 +536,7 @@ console.assert(Array.isArray(products), 'Shared products failed');
 - [ ] Тест: авторизация работает
 
 ### Этап 4: Utils модуль
+
 - [ ] Создать `heys_storage_utils_v1.js`
 - [ ] Перенести sync history
 - [ ] Перенести diagnostics
@@ -508,6 +544,7 @@ console.assert(Array.isArray(products), 'Shared products failed');
 - [ ] Тест: diagnoseStorage работает
 
 ### Этап 5: Sync модуль (СЛОЖНЫЙ!)
+
 - [ ] Создать `heys_storage_sync_v1.js`
 - [ ] Перенести merge логику
 - [ ] **Разбить bootstrapClientSync на helpers!**
@@ -515,6 +552,7 @@ console.assert(Array.isArray(products), 'Shared products failed');
 - [ ] Тест: полный цикл sync работает
 
 ### Этап 6: Queue модуль
+
 - [ ] Создать `heys_storage_queue_v1.js`
 - [ ] Перенести pending queue
 - [ ] Перенести quota management
@@ -522,23 +560,27 @@ console.assert(Array.isArray(products), 'Shared products failed');
 - [ ] Тест: сохранение в offline работает
 
 ### Этап 7: Photos модуль
+
 - [ ] Создать `heys_storage_photos_v1.js`
 - [ ] Перенести upload/delete
 - [ ] Тест: загрузка фото работает
 
 ### Этап 8: Shared модуль
+
 - [ ] Создать `heys_storage_shared_v1.js`
 - [ ] Перенести search/get products
 - [ ] Перенести publish/pending
 - [ ] Тест: поиск продуктов работает
 
 ### Этап 9: Core Facade
+
 - [ ] Создать `heys_storage_core_v1.js`
 - [ ] Собрать все экспорты в `HEYS.cloud`
 - [ ] Тест: **ВСЕ старые методы работают!**
 - [ ] Обновить `index.html` с новым порядком загрузки
 
 ### Финал
+
 - [ ] Удалить старый `heys_storage_supabase_v1.js`
 - [ ] Полный регрессионный тест
 - [ ] Тест offline → online sync
@@ -565,13 +607,13 @@ rm apps/web/heys_storage_*_v1.js
 
 ## 📊 Ожидаемые метрики
 
-| Метрика | До | После |
-|---------|-----|-------|
-| Строк в главном файле | 6,010 | ~200 (facade) |
-| Макс. строк в модуле | 6,010 | ~1,400 (sync) |
-| Количество файлов | 1 | 9 |
-| Тестируемость | Низкая | Высокая |
-| Время понимания кода | ~2 часа | ~30 мин |
+| Метрика               | До      | После         |
+| --------------------- | ------- | ------------- |
+| Строк в главном файле | 6,010   | ~200 (facade) |
+| Макс. строк в модуле  | 6,010   | ~1,400 (sync) |
+| Количество файлов     | 1       | 9             |
+| Тестируемость         | Низкая  | Высокая       |
+| Время понимания кода  | ~2 часа | ~30 мин       |
 
 ---
 
@@ -582,7 +624,6 @@ rm apps/web/heys_storage_*_v1.js
 1. **Два типа авторизации:**
    - Curator auth (email + password → JWT)
    - PIN auth (phone + PIN → session token)
-   
 2. **Два API endpoint:**
    - Yandex Cloud Functions (`api.heyslab.ru`)
    - Legacy Supabase (отключён, но код остался)
@@ -613,6 +654,6 @@ rm apps/web/heys_storage_*_v1.js
 
 ## Changelog
 
-| Версия | Дата | Изменения |
-|--------|------|-----------|
-| 1.0 | 2026-01-10 | Первоначальный документ |
+| Версия | Дата       | Изменения               |
+| ------ | ---------- | ----------------------- |
+| 1.0    | 2026-01-10 | Первоначальный документ |

@@ -1,6 +1,11 @@
-# 🗄️ HEYS Storage Patterns
+# HEYS Storage Patterns
 
+> **Version:** v2.0.0 | **Updated:** 26.02.2026
+>
 > Правила работы с localStorage и cloud sync
+>
+> См. также: [SYNC_REFERENCE.md](../SYNC_REFERENCE.md) |
+> [SYNC_PERFORMANCE_REPORT.md](../SYNC_PERFORMANCE_REPORT.md)
 
 ---
 
@@ -30,14 +35,16 @@ localStorage.setItem('heys_client_current', clientId);
 
 ## localStorage ключи
 
-| Ключ                  | Описание             | Namespace     |
-| --------------------- | -------------------- | ------------- |
-| `heys_dayv2_{date}`   | Данные дня           | ✅ clientId   |
-| `heys_products`       | База продуктов       | ✅ clientId   |
-| `heys_profile`        | Профиль пользователя | ✅ clientId   |
-| `heys_norms`          | Нормы питания        | ✅ clientId   |
-| `heys_hr_zones`       | Пульсовые зоны       | ✅ clientId   |
-| `heys_client_current` | Текущий клиент       | ❌ глобальный |
+| Ключ                        | Описание              | Namespace     |
+| --------------------------- | --------------------- | ------------- |
+| `heys_dayv2_{date}`         | Данные дня            | ✅ clientId   |
+| `heys_products`             | База продуктов        | ✅ clientId   |
+| `heys_profile`              | Профиль пользователя  | ✅ clientId   |
+| `heys_norms`                | Нормы питания         | ✅ clientId   |
+| `heys_hr_zones`             | Пульсовые зоны        | ✅ clientId   |
+| `heys_pending_client_queue` | Очередь синхронизации | ❌ глобальный |
+| `heys_session_token`        | Сессия клиента        | ❌ глобальный |
+| `heys_client_current`       | Текущий клиент        | ❌ глобальный |
 
 ---
 
@@ -77,10 +84,10 @@ const data = await HEYS.YandexAPI.rest('clients', { method: 'GET' });
 
 ## PIN-авторизация vs Curator auth
 
-| Режим        | Кто использует        | Supabase user | Sync метод            | Флаг                 |
+| Режим        | Кто использует        | Cloud auth    | Sync метод            | Флаг                 |
 | ------------ | --------------------- | ------------- | --------------------- | -------------------- |
-| **Curator**  | Нутрициолог (куратор) | ✅ Есть       | `bootstrapClientSync` | `_rpcOnlyMode=false` |
-| **PIN auth** | Клиент (телефон+PIN)  | ❌ Нет        | `syncClientViaRPC`    | `_rpcOnlyMode=true`  |
+| **Curator**  | Нутрициолог (куратор) | JWT           | `bootstrapClientSync` | `_rpcOnlyMode=false` |
+| **PIN auth** | Клиент (телефон+PIN)  | session_token | `syncClientViaRPC`    | `_rpcOnlyMode=true`  |
 
 ### Универсальный sync
 
@@ -116,4 +123,36 @@ HEYS.products.getAll().length;
 
 // Найти продукт по имени
 HEYS.products.getAll().find((p) => p.name.includes('Гранола'));
+```
+
+---
+
+## Pending Queue (Cloud Upload)
+
+Все изменения через `Store.set()` → `saveClientKey()` попадают в очередь:
+
+```javascript
+// Цепочка: Store.set → saveClientKey → clientUpsertQueue.push → savePendingQueue
+// savePendingQueue сохраняет в localStorage['heys_pending_client_queue']
+// Debounce 500ms → doClientUpload → batch_upsert_client_kv_by_session RPC
+```
+
+| Параметр            | Значение                                         |
+| ------------------- | ------------------------------------------------ |
+| Debounce            | 500ms                                            |
+| Persistence         | `heys_pending_client_queue` в localStorage       |
+| Pre-logout flush    | `cloud.flushPendingQueue(5000)` — до 5с ожидания |
+| Backoff при ошибках | `[15s, 20s, 30s]` (escalation)                   |
+
+---
+
+## Delta Sync (Products Fingerprint)
+
+`heys_products` (~404KB) использует djb2 fingerprint:
+`length:hash(name+updatedAt)`.
+
+```javascript
+// Если fingerprint совпадает с cloud._productsFingerprint → upload пропускается
+// Grace period: 10с после syncCompleted → uploadheys_products блокируется
+// Предотвращает паразитный re-upload только что скачанных данных
 ```

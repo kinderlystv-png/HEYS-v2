@@ -240,18 +240,21 @@ console.error('[HEYS.module] ❌ Failed:', { error, retryIn });
 
 **Read these docs when working on related areas** (use `read_file` tool):
 
-| When working on…                  | Read this file                                   |
-| --------------------------------- | ------------------------------------------------ |
-| File structure, architecture      | `docs/ARCHITECTURE.md`                           |
-| Key files, entry points           | `docs/AI_KEY_FILES.md`                           |
-| API, RPC functions                | `docs/API_DOCUMENTATION.md`                      |
-| Data model (dayTot, normAbs)      | `docs/DATA_MODEL_REFERENCE.md`                   |
-| Trial Machine, onboarding         | `docs/AI_TRIAL_MACHINE.md`                       |
-| Insights, patterns, statistics    | `HEYS_Insights_v5_Deep_Analytics_c7.md`          |
-| Meal planner algorithms           | `docs/MEAL_PLANNER_DOCUMENTATION.md`             |
-| Security, deployment              | `docs/SECURITY_RUNBOOK.md`                       |
-| Deployment guide                  | `docs/DEPLOYMENT_GUIDE.md`                       |
-| Business context                  | `docs/HEYS_BRIEF.md`                             |
-| Technical architecture (detailed) | `docs/TECHNICAL_ARCHITECTURE.md`                 |
-| Monitoring                        | `yandex-cloud-functions/MONITORING_QUICK_REF.md` |
-| Incident prevention               | `yandex-cloud-functions/INCIDENT_PREVENTION.md`  |
+| When working on…                                | Read this file                                                       |
+| ----------------------------------------------- | -------------------------------------------------------------------- |
+| File structure, architecture                    | `docs/ARCHITECTURE.md`                                               |
+| Key files, entry points                         | `docs/AI_KEY_FILES.md`                                               |
+| API, RPC functions                              | `docs/API_DOCUMENTATION.md`                                          |
+| **Data model (core: dayTot, normAbs, schema)**  | `docs/DATA_MODEL_REFERENCE.md`                                       |
+| **Data model (nutrition: debt, refeed, wave)**  | `docs/DATA_MODEL_NUTRITION.md`                                       |
+| **Data model (analytics: insights, EWS, harm)** | `docs/DATA_MODEL_ANALYTICS.md`                                       |
+| Insulin wave (full technical)                   | `docs/INSULIN_WAVE_DOCUMENTATION.md`                                 |
+| Trial Machine, onboarding                       | `docs/AI_TRIAL_MACHINE.md`                                           |
+| Insights, patterns, statistics                  | `HEYS_Insights_v5_Deep_Analytics_c7.md`                              |
+| Meal planner algorithms                         | `docs/MEAL_PLANNER_DOCUMENTATION.md`                                 |
+| Security, deployment                            | `docs/SECURITY_RUNBOOK.md`                                           |
+| Deployment guide                                | `docs/DEPLOYMENT_GUIDE.md`                                           |
+| Business context                                | `docs/HEYS_BRIEF.md`                                                 |
+| Technical architecture (detailed)               | `docs/ARCHITECTURE.md` (v18.0.0, merged from TECHNICAL_ARCHITECTURE) |
+| Monitoring                                      | `yandex-cloud-functions/MONITORING_QUICK_REF.md`                     |
+| Incident prevention                             | `yandex-cloud-functions/INCIDENT_PREVENTION.md`                      |

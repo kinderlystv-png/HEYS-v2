@@ -1,261 +1,328 @@
-# 🏗️ HEYS Platform Architecture
+# HEYS Platform Architecture
 
-> **System Architecture Overview** **Version:** 17.0.0 (JS bundling complete,
-> FCP mobile 2.6s) **Last Updated:** February 26, 2026
+> **System Architecture Overview** **Version:** 18.0.0 (merged with
+> TECHNICAL_ARCHITECTURE) **Last Updated:** February 26, 2026
 
-## 📊 High-Level Architecture Diagram
+## System Overview
+
+HEYS is a nutritional PWA with a curator-to-client model. Monorepo (pnpm
+workspaces + Turborepo). Two code worlds coexist:
+
+| Layer          | Location                       | Language                  | Role                      |
+| -------------- | ------------------------------ | ------------------------- | ------------------------- |
+| **Legacy v12** | `apps/web/` root (`heys_*.js`) | Vanilla JS + inline React | Production runtime        |
+| **Modern**     | `packages/*`, `apps/web/src/`  | TypeScript + React        | New features, shared libs |
+
+**152-FZ compliance**: all data exclusively in Yandex Cloud (Russia,
+ru-central1). Supabase SDK removed 2025-12-24.
+
+---
+
+## High-Level Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      🌐 CLIENT LAYER                           │
+│                      CLIENT LAYER                               │
 ├─────────────────────────────────────────────────────────────────┤
-│  📱 PWA (app.heyslab.ru)     💬 Telegram Mini App              │
-│  (React 18 + Vite)        (apps/tg-mini)                   │
-│  ├─ Service Worker           ├─ Vite app                       │
-│  ├─ Offline First            ├─ Telegram API               │
-│  └─ LocalStorage cache        └─ Same API backend            │
+│  PWA (app.heyslab.ru)          Telegram Mini App                │
+│  (React 18 + Vite)             (apps/tg-mini)                   │
+│  ├─ Service Worker             ├─ Vite app                      │
+│  ├─ Offline First              ├─ Telegram API                  │
+│  └─ LocalStorage cache         └─ Same API backend              │
 └─────────────────────────────────────────────────────────────────┘
                                 │
-                        🔄 HTTPS/WSS
+                        HTTPS (api.heyslab.ru)
                                 │
 ┌─────────────────────────────────────────────────────────────────┐
-│                     🚀 APPLICATION LAYER                       │
+│                     APPLICATION LAYER                            │
 ├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐      │
-│  │ 🧠 Core Logic │  │ 🔐 Security   │  │ 🔌 Integration│      │
-│  │               │  │               │  │               │      │
-│  │ • User Mgmt   │  │ • Auth Layer  │  │ • Yandex Cloud│      │
-│  │ • Nutrition   │  │ • Validation  │  │ • REST APIs   │      │
-│  │ • Training    │  │ • XSS Guard   │  │ • WebSockets  │      │
-│  │ • Analytics   │  │ • Input San.  │  │ • File System │      │
-│  │ • Reports     │  │ • Rate Limit  │  │ • External    │      │
-│  └───────────────┘  └───────────────┘  └───────────────┘      │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐ │
-│  │ 🎯 SMART FEATURES ENGINE                                 │ │
-│  │                                                           │ │
-│  │ • 🔍 Smart Search (typo correction, fuzzy matching)     │ │
-│  │ • 🎮 Gamification (achievements, progress tracking)     │ │
-│  │ • 🚀 Universal Anchors (auto-navigation system)        │ │
-│  │ • 📊 Enhanced Analytics (real-time insights)           │ │
-│  │ • 🤖 AI-powered Recommendations                         │ │
-│  └───────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐       │
+│  │ Core Logic    │  │ Security      │  │ Integration   │       │
+│  │               │  │               │  │               │       │
+│  │ • User Mgmt   │  │ • Auth Layer  │  │ • Yandex Cloud│       │
+│  │ • Nutrition   │  │ • Validation  │  │ • REST APIs   │       │
+│  │ • Training    │  │ • XSS Guard   │  │ • RPC Calls   │       │
+│  │ • Analytics   │  │ • Input San.  │  │ • SMS (SMSC)  │       │
+│  │ • Reports     │  │ • Rate Limit  │  │ • Payments    │       │
+│  └───────────────┘  └───────────────┘  └───────────────┘       │
+│                                                                  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ SMART FEATURES ENGINE                                     │  │
+│  │ • Smart Search (typo correction, fuzzy matching)          │  │
+│  │ • Gamification (achievements, progress tracking)          │  │
+│  │ • Universal Anchors (auto-navigation system)              │  │
+│  │ • Enhanced Analytics (real-time insights)                 │  │
+│  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
                                 │
-                        🔄 API Calls
+                        API Calls (RPC + REST)
                                 │
 ┌─────────────────────────────────────────────────────────────────┐
-│                      💾 DATA LAYER                             │
+│                      DATA LAYER                                  │
 ├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
+│                                                                  │
 │  ┌─────────────────┐           ┌─────────────────┐              │
-│  │ 🏛️ Legacy Core   │◄─────────►│ ☁️ Modern Cloud │              │
+│  │ Legacy Core     │◄─────────►│ Modern Cloud    │              │
 │  │ (localStorage)  │  Sync     │ (Yandex Cloud)  │              │
-│  │                 │           │                 │              │
-│  │ • Fast Access   │           │ • PostgreSQL    │              │
-│  │ • Offline Mode  │           │ • Real-time     │              │
-│  │ • Client Cache  │           │ • Auth System   │              │
-│  │ • Day Records   │           │ • Row Security  │              │
-│  │ • Settings      │           │ • Backups       │              │
+│  │                 │           │                  │              │
+│  │ • Fast Access   │           │ • PostgreSQL 16  │              │
+│  │ • Offline Mode  │           │ • Cloud Functions│              │
+│  │ • Client Cache  │           │ • Auth System    │              │
+│  │ • Day Records   │           │ • Row Security   │              │
+│  │ • Settings      │           │ • Backups        │              │
 │  └─────────────────┘           └─────────────────┘              │
-│                                                                 │
+│                                                                  │
 │  ┌─────────────────────────────────────────────────────────────┐ │
-│  │ 📋 DATABASE SCHEMA                                          │ │
-│  │                                                             │ │
-│  │ Tables:                                                     │ │
-│  │ • clients (id, name, phone_normalized, pin_hash, curator_id)│ │
-│  │ • kv_store (id, user_id, k, v, timestamps)                 │ │
-│  │ • client_kv_store (client_id, k, v, v_encrypted, ...)      │ │
-│  │   ⤵ PRIMARY KEY (client_id, k)                             │ │
-│  │ • client_sessions (id, client_id, token_hash BYTEA)        │ │
-│  │ • shared_products (id, name, nutrients, harm, ...)         │ │
-│  │ • consents (client_id, type, accepted_at)                  │ │
-│  │ • pin_login_attempts (phone, ip INET, locked_until)        │ │
-│  │ • leads (id UUID, name, phone, utm_source, status)         │ │
-│  │ • trial_queue + payment_orders + subscriptions             │ │
+│  │ DATABASE SCHEMA                                              │ │
+│  │                                                              │ │
+│  │ clients (id UUID, name, phone_normalized, pin_hash,          │ │
+│  │          curator_id, updated_at)                              │ │
+│  │ kv_store (id, user_id, k, v, timestamps)                    │ │
+│  │ client_kv_store (client_id, k, v JSONB, v_encrypted BYTEA,  │ │
+│  │   key_version SMALLINT) — PRIMARY KEY (client_id, k)         │ │
+│  │ client_sessions (id, client_id, token_hash BYTEA)           │ │
+│  │ shared_products (id, name, nutrients, harm, ...)            │ │
+│  │ consents (client_id, type, accepted_at)                     │ │
+│  │ pin_login_attempts (phone, ip INET, locked_until)           │ │
+│  │ leads (id UUID, name, phone, utm_source, status)            │ │
+│  │ trial_queue + payment_orders + subscriptions                │ │
 │  └─────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## 🔄 Data Flow Architecture
+---
+
+## Tech Stack
+
+### Frontend
+
+- **Framework**: Vite 6.x + React 18.x
+- **TypeScript**: strict mode (`noUnusedLocals`, `exactOptionalPropertyTypes`,
+  `noUncheckedIndexedAccess`)
+- **State Management**: Vanilla JS HEYS global object + React hooks (scoped
+  store)
+- **Styling**: Tailwind CSS (priority) + BEM in `styles/heys-components.css`
+- **Testing**: Vitest (happy-dom env, 10s timeout, v8 coverage >= 80%)
+- **E2E**: Playwright
+
+### Backend
+
+- **Runtime**: Node.js 18+ (Express.js 4.x on port 4001 locally)
+- **Serverless**: Yandex Cloud Functions (Node.js 18 runtime, 9 functions: 7
+  API + backup + maintenance)
+- **Database**: Yandex Cloud PostgreSQL 16
+  (`rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net:6432`)
+- **Auth**: `heys-api-auth` YCF -> JWT (curator) + phone+PIN -> session_token
+  (client)
+- **ORM**: none — direct SQL queries via `pg` (node-postgres)
+
+### DevOps & Infrastructure
+
+- **Package Manager**: pnpm 8.10+, Node >= 18
+- **Build System**: Turbo + Vite
+- **CI/CD**: GitHub Actions (lint, tests, API monitoring every 15 min)
+- **Frontend hosting**: Nginx VM -> Yandex S3 (PWA), Yandex CDN (landing)
+- **API hosting**: Yandex Cloud Functions (9 functions, api.heyslab.ru)
+- **Secrets**: `yandex-cloud-functions/.env` -> deploy via `deploy-all.sh`
+
+---
+
+## Architecture Layers
+
+### 1. Presentation Layer (UI/Frontend)
 
 ```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│    USER     │───►│   CLIENT    │───►│ APPLICATION │───►│   DATABASE  │
-│ Interaction │    │    LAYER    │    │    LAYER    │    │    LAYER    │
-└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-                           │                   │                   │
-                           ▼                   ▼                   ▼
-                   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-                   │ UI Component│    │ Core Logic  │    │ Data Store  │
-                   │ State Mgmt  │    │ Validation  │    │ Sync Layer  │
-                   │ User Events │    │ Business    │    │ Persistence │
-                   └─────────────┘    └─────────────┘    └─────────────┘
-                           │                   │                   │
-                           ▼                   ▼                   ▼
-                   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-                   │ Service     │    │ Integration │    │ External    │
-                   │ Worker      │    │ Layer       │    │ Services    │
-                   │ Cache       │    │ API Calls   │    │ Third-party │
-                   └─────────────┘    └─────────────┘    └─────────────┘
+apps/web/          - PWA (Vite + React 18), port 3001
+apps/landing/      - Marketing landing (Next.js 14), port 3003
+apps/tg-mini/      - Telegram Mini App, port 3002
+apps/mobile/       - DISABLED (not in active development)
 ```
 
-## 🎯 Module Architecture
-
-### 1. Core Modules
+### 2. Application Layer (Business Logic)
 
 ```
-packages/core/
-├── src/
-│   ├── models/          # Data models (User, Food, Training)
-│   ├── services/        # Business logic services
-│   ├── security/        # Security & validation
-│   └── integration/     # External service connectors
+packages/core/         - Express API (port 4001 locally), business logic
+packages/analytics/    - Analytics modules
+packages/search/       - Smart search (typo-correction, fuzzy matching)
+packages/logger/       - Centralized logging
 ```
 
-### 2. Application Modules
+### 3. Domain Layer (Shared Models)
 
 ```
-apps/
-├── web/                 # React web application (PWA, port 3001)
-│   ├── src/
-│   │   ├── components/  # React components
-│   │   ├── pages/       # Application pages
-│   │   ├── hooks/       # Custom React hooks
-│   │   └── utils/       # Utility functions
-│   └── public/          # Static assets
-├── mobile/              # React Native mobile app (❌ DISABLED)
-└── tg-mini/             # Telegram Mini App (port 3002)
+packages/shared/   - Shared types, DB layer, day-logic, security, performance
+packages/ui/       - Reusable UI components
+packages/storage/  - Data persistence layer
 ```
 
-### 3. Shared Packages
+### 4. Infrastructure Layer (Serverless)
 
 ```
-packages/
-├── shared/              # Shared utilities and types
-├── ui/                  # Reusable UI components
-├── storage/             # Data persistence layer
-├── analytics/           # Analytics and tracking
-├── search/              # Smart search engine
-└── gaming/              # Gamification features
+yandex-cloud-functions/
+├── heys-api-rpc/      - RPC calls to PostgreSQL functions
+├── heys-api-rest/     - REST API for tables (GET-only)
+├── heys-api-auth/     - Authentication (curator JWT + client PIN)
+├── heys-api-sms/      - SMS via SMSC.ru
+├── heys-api-leads/    - Landing page leads processing
+├── heys-api-health/   - Health check endpoint
+└── heys-api-payments/ - Payments (YooKassa)
 ```
 
-## 🔐 Security Architecture
+---
+
+## Data Flow Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    🛡️ SECURITY LAYERS                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  🌐 Network Layer                                               │
-│  ├── HTTPS/TLS Encryption                                      │
-│  ├── CORS Policy                                               │
-│  ├── Rate Limiting                                             │
-│  └── DDoS Protection                                           │
-│                                                                 │
-│  🔐 Authentication Layer                                        │
-│  ├── Session-based Auth (PIN + Yandex Cloud Functions)        │
-│  ├── Session Management                                        │
-│  ├── Multi-factor Authentication                               │
-│  └── OAuth Integration                                         │
-│                                                                 │
-│  ✅ Validation Layer                                           │
-│  ├── Input Sanitization                                        │
-│  ├── Schema Validation                                         │
-│  ├── XSS Prevention                                            │
-│  └── SQL Injection Protection                                  │
-│                                                                 │
-│  🗃️ Data Protection Layer                                      │
-│  ├── Row Level Security (RLS)                                  │
-│  ├── Encrypted Storage                                         │
-│  ├── Data Anonymization                                        │
-│  └── GDPR Compliance                                           │
-└─────────────────────────────────────────────────────────────────┘
+Event Source -> Event Bus -> Event Handlers -> Side Effects
+1. Client -> PIN auth -> session_token -> localStorage
+2. App start -> syncClient(clientId) -> batch RPC -> localStorage (scoped)
+3. User action -> Store API -> localStorage (scoped) + cloud queue
+4. Cloud queue -> background sync -> batch_upsert_client_kv_by_session -> PostgreSQL
+5. Insights -> pi_thresholds -> pi_early_warning -> pi_constants -> UI
 ```
 
-## ⚡ Performance Architecture
+---
+
+## Security Architecture
+
+### Authentication & Authorization
+
+```
+Curator (nutritionist):
+  email+password -> heys-api-auth (YCF) -> bcrypt verify -> JWT token
+  Stored: localStorage['heys_curator_session']
+  Transmitted: Authorization: Bearer <JWT>
+
+Client:
+  phone -> get_client_salt RPC -> PIN + bcrypt crypt() -> client_pin_auth RPC -> session_token (UUID)
+  Stored: localStorage['heys_session_token']
+  Transmitted: X-Session-Token: <token>
+```
+
+### IDOR Protection
+
+- All client RPCs use `*_by_session` pattern — `client_id` is never passed
+  directly
+- Blocked legacy functions: `verify_client_pin`, `get_client_data`,
+  `upsert_client_kv`, etc.
+
+### Data Encryption
+
+- **Health data at rest**: Cloud Function -> `SET heys.encryption_key` ->
+  PostgreSQL AES-256 (`v_encrypted` BYTEA)
+- **Client-side**: `heys_profile`, `heys_dayv2_*`, `heys_hr_zones` -> AES-256 in
+  localStorage
+
+### CORS
+
+Only `app.heyslab.ru` and `heyslab.ru` — other origins return 403.
+
+### PIN Rate Limiting
+
+`pin_login_attempts` (phone, ip INET) — lockout via `locked_until` after N
+attempts.
+
+---
+
+## Performance Architecture
+
+### JS Bundling & Load Performance (v9.6, February 2026)
+
+> **Before:** 246 `<script defer>` files — 63s on Mid-tier mobile. **After:** 9
+> GZIP bundles in Yandex Object Storage — FCP **2.6s** on mobile.
+
+| Bundle                | Contents                                | Size (GZIP) |
+| --------------------- | --------------------------------------- | ----------- |
+| `boot-core`           | platform, yandex_api, models, storage   | ~230 KB     |
+| `boot-calc`           | ratio_zones, tef, tdee, harm            | ~180 KB     |
+| `boot-day`            | all heys_day\_\*                        | ~180 KB     |
+| `boot-app`            | auth, subscription, app_shell, app_tabs | ~204 KB     |
+| `boot-init`           | app_root, initialize, entry             | ~68 KB      |
+| `postboot-1-game`     | gamification, advice                    | ~270 KB     |
+| `postboot-2-insights` | all pi\_\*.js                           | ~350 KB     |
+| `postboot-3-ui`       | modals, reports, widgets                | ~256 KB     |
+| `boot-app-tabs`       | app_tabs additional                     | ~35 KB      |
+
+Rebuild: `node scripts/bundle-legacy.mjs` ->
+`upload-to-yandex.ps1 -distDir apps/web/public`.
 
 ### Caching Strategy
 
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│ Browser     │    │ Service     │    │ Application │    │ Database    │
-│ Cache       │    │ Worker      │    │ Cache       │    │ Cache       │
-├─────────────┤    ├─────────────┤    ├─────────────┤    ├─────────────┤
-│ • Static    │    │ • API Resp. │    │ • Memory    │    │ • Query     │
-│ • Assets    │    │ • Offline   │    │ • Redis     │    │ • Indexes   │
-│ • Images    │    │ • Background│    │ • Sessions  │    │ • Views     │
-│ • Scripts   │    │ • Sync      │    │ • Objects   │    │ • Triggers  │
-└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-      │                    │                    │                    │
-      └────────────────────┼────────────────────┼────────────────────┘
-                           │                    │
-                    ⚡ Fast Access        💾 Persistent Storage
-```
+- **LocalStorage** (scoped by clientId) — instant access, offline-first
+- **Adaptive Thresholds Cache** (`pi_thresholds.js`) — TTL 12-72h based on
+  behavioral stability
+- **EWS Weekly Cache** (`heys_ews_weekly_v1`) — weekly progress
+- **Yandex CDN** — static landing resources
+- **Service Worker** (PWA) — offline cache + background sync
 
-### Load Balancing
+### Module Limits
 
-```
-        ┌─────────────┐
-        │ Load        │
-        │ Balancer    │
-        └─────────────┘
-               │
-        ┌──────┴──────┐
-        │             │
-  ┌─────────┐   ┌─────────┐
-  │ Server  │   │ Server  │
-  │ Node 1  │   │ Node 2  │
-  └─────────┘   └─────────┘
-        │             │
-        └──────┬──────┘
-               │
-    ┌─────────────────┐
-    │   Database      │
-    │   Cluster       │
-    └─────────────────┘
-```
+- LOC <= 2000 lines per module
+- Functions <= 80 lines
+- `HEYS.*` references <= 50 per file
 
-## 🔄 Synchronization Architecture
+---
+
+## LocalStorage Keys
+
+Namespace: clientId-scoped via `U.lsSet/lsGet`.
+
+| Key pattern          | Description                       | Encryption |
+| -------------------- | --------------------------------- | ---------- |
+| `heys_profile`       | PII + health data                 | AES-256    |
+| `heys_dayv2_{date}`  | Day record (meals, sleep, weight) | AES-256    |
+| `heys_hr_zones`      | Heart rate zones                  | AES-256    |
+| `heys_products`      | Products database                 | Plaintext  |
+| `heys_norms`         | Nutrition norms                   | Plaintext  |
+| `heys_ews_weekly_v1` | EWS weekly progress               | Plaintext  |
+
+**Rule**: always use `U.lsSet/lsGet` or Store API (`HEYS.products.getAll()`).
+Direct `localStorage.setItem/getItem` breaks namespacing.
+
+---
+
+## Synchronization Architecture
+
+> **Full sync reference:** [SYNC_REFERENCE.md](SYNC_REFERENCE.md)
 
 ### Dual-Layer Sync
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                 💾 LOCAL STORAGE (Legacy Core)                 │
+│                 LOCAL STORAGE (Legacy Core)                      │
 ├─────────────────────────────────────────────────────────────────┤
-│ • Instant Access          • Offline Capability                 │
-│ • Client Caching          • Fast Read/Write                    │
-│ • Day Records             • Settings Storage                   │
+│ • Instant Access          • Offline Capability                  │
+│ • Client Caching          • Fast Read/Write                     │
+│ • Day Records             • Settings Storage                    │
 └─────────────────────────────────────────────────────────────────┘
                                 │
-                        🔄 Bidirectional Sync
+                        Bidirectional Sync
                                 │
 ┌─────────────────────────────────────────────────────────────────┐
-│                  ☁️ CLOUD STORAGE (Yandex Cloud)              │
+│                  CLOUD STORAGE (Yandex Cloud)                   │
 ├─────────────────────────────────────────────────────────────────┤
-│ • Multi-device Access     • Real-time Updates                  │
-│ • Backup & Recovery        • Collaborative Features            │
-│ • Analytics & Reporting    • Admin Dashboard                   │
+│ • Multi-device Access     • Real-time Updates                   │
+│ • Backup & Recovery       • Collaborative Features              │
+│ • Analytics & Reporting   • Admin Dashboard                     │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Sync Performance Optimizations (v5, updated 26.02.2026)
 
-> **Measured results (WiFi, curator mode):** Boot 7.2s → **1.0–1.2s**. DayTab
-> remounts: 1 → **0**. **Measured results (Mid-tier mobile):** Boot 65s →
+> **Measured results (WiFi, curator mode):** Boot 7.2s -> **1.0-1.2s**. DayTab
+> remounts: 1 -> **0**. **Measured results (Mid-tier mobile):** Boot 65s ->
 > **~2.6s**.
 
 **Boot timeline (WiFi, warm cache):**
 
 ```
-+0.0s  HTML parsed → Speculative Prefetch starts (REST delta fetch)
-+0.3s  React hydrated → auth-init setSyncVer
-+0.5–0.9s  Delta data arrives (parallelized with JS parse)
-+1.0–1.2s  DayStats first render ✅ (target was <2s)
-+1.5–1.8s  DayTab animation render (invisible to user)
-+3.0–5.0s  Post-animation state updates (invisible to user)
++0.0s  HTML parsed -> Speculative Prefetch starts (REST delta fetch)
++0.3s  React hydrated -> auth-init setSyncVer
++0.5-0.9s  Delta data arrives (parallelized with JS parse)
++1.0-1.2s  DayStats first render (target was <2s)
++1.5-1.8s  DayTab animation render (invisible to user)
++3.0-5.0s  Post-animation state updates (invisible to user)
 ```
 
 **Boot timeline (Mid-tier mobile, 4x CPU slowdown, Fast 3G):**
@@ -268,33 +335,25 @@ packages/
 +2.6s   DayStats first render
 ```
 
-To achieve sub-2.6s boot times on mobile, the sync architecture employs several
-advanced techniques:
+Key techniques:
 
-1. **JS Bundling & GZIP**: 246 individual `<script defer>` files were
-   concatenated into 9 bundles and served with GZIP from Yandex Object Storage,
-   reducing network time from 63s to 1.5s.
-2. **Speculative Prefetch**: The `index.html` file initiates a real REST API
-   delta fetch _before_ React loads, saving ~0.8–1.0s. Note: a warm-up ping to
-   `/health` was tried first but did not help — `/health` is a separate Cloud
-   Function that doesn't warm the data CF.
-3. **Delta Fast-Path**: If the server reports 0 changed keys since the last
-   sync, the sync process terminates immediately without processing.
-4. **Delta Light Path**: For small updates (≤10 keys), data is written directly
-   to `localStorage` and the UI is notified instantly. Heavy cleanup tasks are
-   deferred via `setTimeout`.
-5. **Two-Phase Sync**: Critical keys (`heys_profile`, `heys_products`, today's
-   day) are fetched first to unblock the UI, while historical data is fetched in
-   the background.
-6. **Upload Debouncing & Grace Period**: Prevents the client from immediately
-   re-uploading data it just downloaded from the cloud.
-7. **DayTab remount fix**: `syncVer` was removed from the `DayTabWithCloudSync`
-   React key. Previously, completing a full sync incremented `syncVer`, causing
-   a full unmount/remount of the tab and a visible white flash. Now, data
-   updates reactively via props and `heys:day-updated` events.
-8. **Non-blocking UI Fallback**: `DayTabWithCloudSync` uses a 5000ms fallback
-   timer. If `heysSyncCompleted` doesn't arrive in time, the UI unblocks
-   automatically to prevent infinite skeletons.
+1. **JS Bundling & GZIP**: 246 individual `<script defer>` files concatenated
+   into 9 bundles, served with GZIP from Yandex Object Storage. Network time 63s
+   -> 1.5s.
+2. **Speculative Prefetch**: `index.html` initiates a real REST API delta fetch
+   _before_ React loads, saving ~0.8-1.0s.
+3. **Delta Fast-Path**: 0 changed keys since last sync -> terminates
+   immediately.
+4. **Delta Light Path**: <=10 keys -> written directly to localStorage, heavy
+   cleanup deferred via `setTimeout`.
+5. **Two-Phase Sync**: Critical keys first (profile, products, today's day),
+   historical data in the background.
+6. **Upload Debouncing & Grace Period**: Prevents re-uploading just-downloaded
+   data.
+7. **DayTab remount fix**: `syncVer` removed from React key, data updates via
+   props and `heys:day-updated` events.
+8. **Non-blocking UI Fallback**: 5000ms fallback timer prevents infinite
+   skeletons.
 
 **PERF diagnostic markers** (remain in code for ongoing monitoring):
 
@@ -303,126 +362,155 @@ advanced techniques:
   props)
 - `heys_day_stats_v1.js`: first render + re-renders with gap >500ms
 - `heys_app_auth_init_v1.js`: `setSyncVer` on auth-init
-- `heys_app_tabs_v1.js`: `DayTabWithCloudSync` mount/unmount (`🔁 MOUNTED` /
-  `💀 UNMOUNTED`)
+- `heys_app_tabs_v1.js`: `DayTabWithCloudSync` mount/unmount
 
 ### Conflict Resolution
 
 ```
 Local Change    Cloud Change    Resolution Strategy
 ─────────────   ─────────────   ──────────────────
-Timestamp A  ┌─ Timestamp B  ─► Last Writer Wins
+Timestamp A  ┌─ Timestamp B  -> Last Writer Wins
 Value X      │  Value Y
              │
-User Action  └─ Server Action ─► User Priority
+User Action  └─ Server Action -> User Priority
 
-Offline Mode ┌─ Online Sync  ─► Merge Strategy
+Offline Mode ┌─ Online Sync  -> Merge Strategy
 Queue        │  Real-time
-```
-
-## 🚀 Deployment Architecture
-
-### Development Environment
-
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│ Development │    │ Staging     │    │ Production  │
-│ Environment │    │ Environment │    │ Environment │
-├─────────────┤    ├─────────────┤    ├─────────────┤
-│ • Hot Reload│    │ • Testing   │    │ • Optimized │
-│ • Debug     │    │ • QA        │    │ • Monitoring│
-│ • Local DB  │    │ • Review    │    │ • Scaling   │
-└─────────────┘    └─────────────┘    └─────────────┘
-       │                   │                   │
-       └───────────────────┼───────────────────┘
-                           │
-                   ┌─────────────┐
-                   │   CI/CD     │
-                   │  Pipeline   │
-                   │             │
-                   │ • Tests     │
-                   │ • Build     │
-                   │ • Deploy    │
-                   └─────────────┘
-```
-
-### Container Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      🐳 DOCKER CONTAINERS                      │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │    Web      │  │   Mobile    │  │  Desktop    │             │
-│  │    App      │  │    App      │  │    App      │             │
-│  │  (React)    │  │ (RN Bundle) │  │ (Electron)  │             │
-│  └─────────────┘  └─────────────┘  └─────────────┘             │
-│                                                                 │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │   API       │  │   Worker    │  │   Monitor   │             │
-│  │  Server     │  │  Services   │  │  Services   │             │
-│  │  (Node.js)  │  │ (Background)│  │ (Analytics) │             │
-│  └─────────────┘  └─────────────┘  └─────────────┘             │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │ 🗄️ Shared Volumes (Config, Logs, Cache)                   │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## 📊 Monitoring & Observability
-
-### System Health Dashboard
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    📈 SYSTEM METRICS                           │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│ Performance Metrics   │  Error Tracking      │  User Analytics │
-│ ├── Response Time     │  ├── Error Rate      │  ├── DAU/MAU    │
-│ ├── Throughput        │  ├── Error Types     │  ├── Retention  │
-│ ├── CPU Usage         │  ├── Stack Traces    │  ├── Features   │
-│ └── Memory Usage      │  └── Resolution      │  └── Conversion │
-│                       │                      │                 │
-│ Database Metrics      │  Security Metrics    │  Business KPIs  │
-│ ├── Query Time        │  ├── Failed Logins   │  ├── Revenue    │
-│ ├── Connection Pool   │  ├── Blocked IPs     │  ├── Growth     │
-│ ├── Storage Usage     │  ├── Vulnerability   │  ├── Engagement │
-│ └── Backup Status     │  └── Compliance      │  └── Support    │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## 🔧 Development Tools & Workflows
-
-### Build Pipeline
-
-```
-📝 Code → 🔍 Lint → 🧪 Test → 📦 Build → 🚀 Deploy
-   │         │         │         │         │
-   │         │         │         │         └── Production
-   │         │         │         └── Bundle Optimization
-   │         │         └── Unit/Integration Tests
-   │         └── ESLint + Prettier
-   └── TypeScript + React
-```
-
-### Quality Gates
-
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│ Code Review │    │   Testing   │    │ Performance │
-├─────────────┤    ├─────────────┤    ├─────────────┤
-│ • PR Review │    │ • Unit      │    │ • Lighthouse│
-│ • Standards │    │ • E2E       │    │ • Bundle    │
-│ • Security  │    │ • Visual    │    │ • Memory    │
-└─────────────┘    └─────────────┘    └─────────────┘
 ```
 
 ---
 
-## 🛡️ Critical Architecture Evolution
+## Deployment Architecture
+
+### Production Infrastructure
+
+```
+┌────────────────────────────────────────────────────┐
+│                   PRODUCTION                       │
+├────────────────────────────────────────────────────┤
+│  app.heyslab.ru  -> Nginx VM -> Yandex S3 (PWA)   │
+│  heyslab.ru      -> Yandex CDN -> S3 (Landing)    │
+│  api.heyslab.ru  -> Yandex Cloud Functions         │
+│  DB              -> Yandex Cloud PostgreSQL 16     │
+│                    rc1b-obkgs83tnrd6a2m3 :6432     │
+└────────────────────────────────────────────────────┘
+```
+
+### Cloud Functions Deployment
+
+```bash
+cd yandex-cloud-functions
+./validate-env.sh            # Verify secrets before deploy
+./health-check.sh            # Current endpoint status
+./deploy-all.sh <function>   # Deploy one or all functions
+sleep 15                     # Wait for warmup
+./health-check.sh            # Verify deployment succeeded
+```
+
+### On 502 Bad Gateway
+
+```bash
+cd yandex-cloud-functions
+./deploy-all.sh              # Redeploy all functions
+./health-check.sh --watch    # Monitor recovery
+```
+
+**Important**: secrets only in `yandex-cloud-functions/.env` + YC Console.
+**Never** via YC CLI (leaks to stdout).
+
+---
+
+## Monitoring & Health Checks
+
+- `./health-check.sh` — checks all YCF endpoints
+- `./validate-env.sh` — validates secrets before deploy
+- GitHub Actions API Monitor — every 15 min, auto-redeploy on 502
+- Telegram alerts on failures
+
+### Data Quality Monitoring (v4.8.8)
+
+```javascript
+// Post-sync verifications
+console.info(
+  `[HEYS.sync] After sync: loadedProducts.length=${x}, withIron=${y}`,
+);
+// Expected: withIron ~ 290 (not 0 or 42)
+
+// Quality checks (critical)
+console.error(`[HEYS.storage] SAVE BLOCKED: only ${x} products with iron`);
+// Should not appear in prod after v4.8.8
+```
+
+**Monitoring checklist**:
+
+- `withIron ~ 290` after each sync
+- `SAVE BLOCKED` does not appear
+- Any `withIron < 100` = INCIDENT -> check namespacing
+
+---
+
+## Testing
+
+```bash
+pnpm test:run     # vitest run (single pass)
+pnpm test:all     # vitest + coverage
+pnpm test:e2e     # Playwright E2E
+pnpm arch:check   # Architecture rules
+```
+
+- **Coverage**: v8 coverage >= 80%
+- **Key tests**: `apps/web/insights/pi_stats.test.js` — 131 tests, 100%
+
+### CI/CD Pipeline (GitHub Actions)
+
+```
+1. Lint + TypeScript check
+2. Unit tests (vitest)
+3. Build check (pnpm build)
+4. API Health Monitor (every 15 min + after each push)
+   -> Health + RPC + REST endpoints
+   -> Auto-redeploy on 502 errors
+   -> Telegram alerts
+```
+
+---
+
+## Insights System (v5.x)
+
+All modules in `apps/web/insights/`:
+
+| Module                   | Version | Purpose                                             |
+| ------------------------ | ------- | --------------------------------------------------- |
+| `pi_stats.js`            | v3.5.0  | 27 functions (Bayesian, CI, outliers) — 131 tests   |
+| `pi_thresholds.js`       | v2.0.0  | Adaptive thresholds (cascade, TTL 12-72h, Bayesian) |
+| `pi_early_warning.js`    | v4.2    | 25 warnings, Global Score 0-100, Dual-Mode          |
+| `pi_causal_chains.js`    | v1.0    | 6 causal chains                                     |
+| `pi_constants.js`        | v4.3.0  | Dynamic Priority Badge, SECTION_PRIORITY_RULES      |
+| `pi_phenotype.js`        | —       | Phenotypic EWS profile (4 types)                    |
+| `pi_patterns.js`         | —       | Nutrition patterns and correlations                 |
+| `pi_meal_recommender.js` | —       | Meal recommender                                    |
+| `pi_product_picker.js`   | —       | Product picker                                      |
+| `pi_whatif.js`           | —       | What-if scenarios                                   |
+| `pi_feedback_loop.js`    | —       | Feedback loop (patterns -> recommendations)         |
+| `pi_analytics_api.js`    | —       | Analytics API                                       |
+
+---
+
+## Code Standards
+
+- **Commit format**: `feat|fix|docs|refactor|perf|test|chore: message` (max 100
+  chars, commitlint enforced)
+- **Path aliases**: `@heys/core`, `@heys/shared`, `@heys/logger`,
+  `@heys/search`, `@heys/storage`, `@heys/ui`
+- **CSS**: Tailwind > BEM in `styles/heys-components.css` > inline styles ALWAYS
+  FORBIDDEN
+- **Logging**: `console.info('[HEYS.module] Action')` — never `console.log` in
+  commits
+- **GDPR/152-FZ**: never log PII (profile, nutrition, weight)
+
+---
+
+## Critical Architecture Evolution
 
 ### **v4.8.8: React State Synchronization Fix** (February 2026)
 
@@ -431,10 +519,10 @@ Queue        │  Real-time
 React components displayed **42 products** with micronutrients instead of
 **290** despite:
 
-- ✅ Database: 292 products with Fe/VitC/Ca
-- ✅ Yandex Cloud KV: 290 products with micronutrients + timestamps
-- ✅ localStorage scoped key `heys_{clientId}_products`: 290 products
-- ❌ React state via `products.getAll()`: **42 products**
+- Database: 292 products with Fe/VitC/Ca
+- Yandex Cloud KV: 290 products with micronutrients + timestamps
+- localStorage scoped key `heys_{clientId}_products`: 290 products
+- React state via `products.getAll()`: **42 products**
 
 **Root Cause:**
 
@@ -446,12 +534,12 @@ React components displayed **42 products** with micronutrients instead of
    keys** via `utils.lsGet('heys_products')`
 
 ```javascript
-// ❌ PROBLEM (v4.8.7 and earlier)
-// React: reads unscoped key → empty array → fallback to stale state
+// PROBLEM (v4.8.7 and earlier)
+// React: reads unscoped key -> empty array -> fallback to stale state
 const products = window.HEYS.utils.lsGet('heys_products', []);
 
-// Storage Layer: writes scoped key → data never seen by React
-Store.set('heys_products', data); // → heys_{clientId}_products
+// Storage Layer: writes scoped key -> data never seen by React
+Store.set('heys_products', data); // -> heys_{clientId}_products
 ```
 
 **Impact:**
@@ -468,12 +556,12 @@ Store.set('heys_products', data); // → heys_{clientId}_products
 directly:
 
 ```javascript
-// ✅ SOLUTION v4.8.8
+// SOLUTION v4.8.8
 // React: ALWAYS reads via Store API (handles scoping internally)
 const products = window.HEYS?.products?.getAll?.() || [];
 
 // Store API: automatically resolves scoped keys
-HEYS.products.getAll() → Store.get('heys_products') → heys_{clientId}_products
+HEYS.products.getAll() -> Store.get('heys_products') -> heys_{clientId}_products
 ```
 
 **3 Critical Changes** (all in `heys_app_sync_effects_v1.js`):
@@ -504,7 +592,7 @@ HEYS.products.getAll() → Store.get('heys_products') → heys_{clientId}_produc
 // Layer 1: PRIMARY Quality Check (v4.8.6) — heys_storage_supabase_v1.js:5625
 const savingWithIron = value.filter((p) => p && p.iron && +p.iron > 0).length;
 if (savingWithIron < 50) {
-  logCritical(`🚨 SAVE BLOCKED: ${savingWithIron} products (expected 250+)`);
+  logCritical(`SAVE BLOCKED: ${savingWithIron} products (expected 250+)`);
   return; // Prevents stale saves immediately
 }
 // Result: 100% effectiveness, 0 stale saves post-v4.8.8
@@ -527,36 +615,23 @@ if (prevIron === loadedIron && prev.length === loaded.length) {
 ```javascript
 // User console command:
 HEYS.products.getAll().filter(x => x.iron > 0).length
-// Result: 290 ✅ (was 42 ❌)
+// Result: 290 (was 42)
 
 // Console output after sync:
-[HEYS.sync] 🔍 After sync: loadedProducts.length=293, withIron=290
+[HEYS.sync] After sync: loadedProducts.length=293, withIron=290
 // Patterns activated:
-micronutrient_radar: 0 → 100 ✅
-antioxidant_defense: 21 → 79 ✅
-heart_health: 55 → 70 ✅
-electrolyte_homeostasis: 11 → 89 ✅
-nutrient_density: 30 → 73 ✅
-healthScore: 66 → 71 ✅
-```
-
-**DEBUG Monitoring** (active during testing phase):
-
-```javascript
-// Post-sync verification (Line 52)
-console.info(
-  `[HEYS.sync] 🔍 After sync: loadedProducts.length=${x}, withIron=${y}`,
-);
-// Expected: withIron=290 (not 0 or 42)
-
-// React state update tracking (Lines 89-100)
-console.info(`[HEYS.sync] 🔄 React state updated: ${prev}→${next} products`);
+micronutrient_radar: 0 -> 100
+antioxidant_defense: 21 -> 79
+heart_health: 55 -> 70
+electrolyte_homeostasis: 11 -> 89
+nutrient_density: 30 -> 73
+healthScore: 66 -> 71
 ```
 
 **Architectural Lesson:**
 
-> ⚠️ **NEVER bypass abstractions.** Direct localStorage access breaks scoping.
-> ✅ **ALWAYS use Store API** as the single source of truth for data access. 🛡️
+> **NEVER bypass abstractions.** Direct localStorage access breaks scoping.
+> **ALWAYS use Store API** as the single source of truth for data access.
 > **Quality checks work** when architectural patterns are followed.
 
 **Modified Files:**
@@ -569,43 +644,32 @@ console.info(`[HEYS.sync] 🔄 React state updated: ${prev}→${next} products`)
 
 ---
 
-## 🎯 Future Architecture Considerations
+## Future Architecture Considerations
 
-### Microservices Evolution
-
-```
-Current Monolith          Future Microservices
-┌─────────────┐          ┌───┐ ┌───┐ ┌───┐ ┌───┐
-│             │          │API│ │USR│ │NUT│ │TRN│
-│    HEYS     │    ───►  │GW │ │SVC│ │SVC│ │SVC│
-│   Platform  │          └───┘ └───┘ └───┘ └───┘
-│             │              │     │     │     │
-└─────────────┘              └─────┼─────┼─────┘
-                                   │     │
-                             ┌───┐ │ ┌───┐ ┌───┐
-                             │ANA│ │ │GAM│ │INT│
-                             │SVC│ │ │SVC│ │SVC│
-                             └───┘   └───┘ └───┘
-```
-
-### Scalability Roadmap
-
-- **Phase 1**: Optimize current monolith
-- **Phase 2**: Extract core services
-- **Phase 3**: Implement microservices
-- **Phase 4**: Auto-scaling infrastructure
-- **Phase 5**: Global CDN deployment
+- **Adaptive Thresholds v2.1**: Incremental rolling-window updates (deferred)
+- **Trial Machine v3.1**: Additional trial activation options
+- ~~**Payments**: YooKassa integration~~ — `heys-api-payments` deployed to
+  production
+- **SMS verification**: Enhanced PEP for scaling (>50 clients)
+- **EWS**: move to `requestIdleCallback` (low priority)
+- **Network Waterfall**: audit `Promise.all` on init
 
 ---
 
-## 📚 Additional Documentation
+## Additional Documentation
 
-- [**API Documentation**](./API_DOCUMENTATION.md) - Comprehensive API reference
-- [**Security Guide**](../SECURITY.md) - Security implementation details
-- [**Development Guide**](../CONTRIBUTING.md) - Development setup and guidelines
-- [**Deployment Guide**](./guides/DEPLOYMENT.md) - Production deployment
+- [**API Documentation**](./API_DOCUMENTATION.md) — Comprehensive API reference
+- [**Sync Reference**](./SYNC_REFERENCE.md) — Full sync architecture reference
+- [**Sync Performance Report**](./SYNC_PERFORMANCE_REPORT.md) — Optimization
+  history
+- [**Security Runbook**](./SECURITY_RUNBOOK.md) — Security implementation
+  details
+- [**Deployment Guide**](./DEPLOYMENT_GUIDE.md) — Production deployment
   instructions
+- [**Storage Patterns**](./dev/STORAGE_PATTERNS.md) — localStorage & cloud sync
+  patterns
 
 ---
 
-**© 2026 HEYS Development Team** | Architecture by @system-architects
+_Document updated: February 26, 2026_ _System version: v9.6.0 (production stable
+— JS bundling complete)_

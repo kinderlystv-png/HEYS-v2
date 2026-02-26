@@ -7,12 +7,13 @@
 
 ## 📋 Документация серии
 
-| Документ | Назначение |
-| --- | --- |
-| [SYNC_PERFORMANCE_REPORT.md](./SYNC_PERFORMANCE_REPORT.md) | Сводный отчёт: цели, метрики, фазы 1–5, инцидент, чеклист |
-| **SYNC_PERFORMANCE_SESSIONS_LOG.md** ← текущий файл | Детали реализации: маппинг файлов, журнал сессий 1–6 |
-| [archive/performance-baseline-2025-09.md](./archive/performance-baseline-2025-09.md) | ⚠️ Архив: baseline Sept 2025 (Supabase-эпоха) |
-| [archive/bundle-splitting-report-2025-09.md](./archive/bundle-splitting-report-2025-09.md) | ⚠️ Архив: отчёт о bundle splitting Sept 2025 |
+| Документ                                                                                   | Назначение                                                |
+| ------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| [SYNC_PERFORMANCE_REPORT.md](./SYNC_PERFORMANCE_REPORT.md)                                 | Сводный отчёт: цели, метрики, фазы 1–5, инцидент, чеклист |
+| **SYNC_PERFORMANCE_SESSIONS_LOG.md** ← текущий файл                                        | Детали реализации: маппинг файлов, журнал сессий 1–6      |
+| [archive/performance-baseline-2025-09.md](./archive/performance-baseline-2025-09.md)       | ⚠️ Архив: baseline Sept 2025 (Supabase-эпоха)             |
+| [archive/bundle-splitting-report-2025-09.md](./archive/bundle-splitting-report-2025-09.md) | ⚠️ Архив: отчёт о bundle splitting Sept 2025              |
+| [SYNC_REFERENCE.md](./SYNC_REFERENCE.md)                                                   | Справочник sync-архитектуры                               |
 
 ---
 
@@ -375,25 +376,25 @@ Pre-build gzip -9 сжатие в `bundle-legacy.mjs`. CI deploy: upload `.gz` �
 
 ## Статус этапов (итог)
 
-| # | Этап | Статус | Результат |
-| --- | --- | --- | --- |
-| A | `scripts/bundle-legacy.mjs` — бандлер | ✅ Выполнен | 9 бандлов, 8.65 MB суммарно |
-| B | `index.html` — 5+3 bundle тегов | ✅ Выполнен | 246→8 запросов, HTML −33% |
-| C | `sw.js` — precache + CDN cleanup | ✅ Выполнен | 3 мёртвых CDN удалены, boot precache |
-| D | Smoke-test dev-сервер | ✅ Выполнен | Все 8 бандлов → 200 OK |
-| E | Vite-плагин bundleLegacy отключён | ✅ Выполнен | Конфликт устранён |
-| F | Recovery UI watchdog fix | ✅ Выполнен | keepHeartbeat() loop |
-| G | PERF Instrumentation + pre-sync guard | ✅ Выполнен | PERF marks в 5 boot + sync |
-| H | Race conditions: registerRefeedStep + InsulinWave | ✅ Выполнен | Event-driven, verified in prod logs |
-| I | SW proactive precache boot bundles | ✅ Выполнен | install event caches 5 bundles |
-| J | localStorage overflow fix | ✅ Выполнен | 693KB→<10KB per feedback key |
-| J.1 | Feedback groups extraction fix | ✅ Выполнен | extractProductIds handles flat/grouped/multi-meal |
-| K | PERF timing analysis (prod logs) | ✅ Выполнен | Network=29s, parse/exec=0.2s, sync=0.3s |
-| L | Параллельная загрузка postboot | ✅ Выполнен | Sequential→parallel async, verified safe |
-| M | Code splitting boot-core | ❌ Отменён | Parse/exec 0.2s — не bottleneck |
-| N | gzip pre-compression | ✅ Выполнен | 8.79MB → 1.90MB (78%), CI deploy updated |
-| N.1 | Skeleton UI (HTML/CSS) | ✅ Выполнен | FCP ~0ms, dark mode, auto-overwrite by React |
-| O | ESM миграция | ⏳ Следующий спринт | ~200 файлов |
+| #   | Этап                                              | Статус              | Результат                                         |
+| --- | ------------------------------------------------- | ------------------- | ------------------------------------------------- |
+| A   | `scripts/bundle-legacy.mjs` — бандлер             | ✅ Выполнен         | 9 бандлов, 8.65 MB суммарно                       |
+| B   | `index.html` — 5+3 bundle тегов                   | ✅ Выполнен         | 246→8 запросов, HTML −33%                         |
+| C   | `sw.js` — precache + CDN cleanup                  | ✅ Выполнен         | 3 мёртвых CDN удалены, boot precache              |
+| D   | Smoke-test dev-сервер                             | ✅ Выполнен         | Все 8 бандлов → 200 OK                            |
+| E   | Vite-плагин bundleLegacy отключён                 | ✅ Выполнен         | Конфликт устранён                                 |
+| F   | Recovery UI watchdog fix                          | ✅ Выполнен         | keepHeartbeat() loop                              |
+| G   | PERF Instrumentation + pre-sync guard             | ✅ Выполнен         | PERF marks в 5 boot + sync                        |
+| H   | Race conditions: registerRefeedStep + InsulinWave | ✅ Выполнен         | Event-driven, verified in prod logs               |
+| I   | SW proactive precache boot bundles                | ✅ Выполнен         | install event caches 5 bundles                    |
+| J   | localStorage overflow fix                         | ✅ Выполнен         | 693KB→<10KB per feedback key                      |
+| J.1 | Feedback groups extraction fix                    | ✅ Выполнен         | extractProductIds handles flat/grouped/multi-meal |
+| K   | PERF timing analysis (prod logs)                  | ✅ Выполнен         | Network=29s, parse/exec=0.2s, sync=0.3s           |
+| L   | Параллельная загрузка postboot                    | ✅ Выполнен         | Sequential→parallel async, verified safe          |
+| M   | Code splitting boot-core                          | ❌ Отменён          | Parse/exec 0.2s — не bottleneck                   |
+| N   | gzip pre-compression                              | ✅ Выполнен         | 8.79MB → 1.90MB (78%), CI deploy updated          |
+| N.1 | Skeleton UI (HTML/CSS)                            | ✅ Выполнен         | FCP ~0ms, dark mode, auto-overwrite by React      |
+| O   | ESM миграция                                      | ⏳ Следующий спринт | ~200 файлов                                       |
 
 ---
 
@@ -417,17 +418,18 @@ Pre-build gzip -9 сжатие в `bundle-legacy.mjs`. CI deploy: upload `.gz` �
 - ✅ Skeleton UI: FCP ~0ms (HTML/CSS, no JS).
 - ✅ SW precache: boot bundles → instant on 2nd visit.
 - ✅ localStorage overflow: feedback key 693KB → <10KB.
-- ⬜ Целевой `appReady ≤ 18s` — ожидается ~9s после деплоя gzip (измерить в Session 7).
+- ⬜ Целевой `appReady ≤ 18s` — ожидается ~9s после деплоя gzip (измерить в
+  Session 7).
 
 ---
 
 ## Риски и меры
 
-| Риск | Мера |
-| --- | --- |
-| Нарушение порядка инициализации | Строгий порядок файлов внутри групп, staged rollout |
-| Скрытые зависимости post-boot | Сначала последовательная загрузка 3 бандлов, параллельность — только после проверки |
-| Stale-cache после релиза | Hash-имена + обновлённый precache + проверка SW lifecycle |
+| Риск                            | Мера                                                                                |
+| ------------------------------- | ----------------------------------------------------------------------------------- |
+| Нарушение порядка инициализации | Строгий порядок файлов внутри групп, staged rollout                                 |
+| Скрытые зависимости post-boot   | Сначала последовательная загрузка 3 бандлов, параллельность — только после проверки |
+| Stale-cache после релиза        | Hash-имена + обновлённый precache + проверка SW lifecycle                           |
 
 ---
 
@@ -461,26 +463,26 @@ top-level инициализацию.
 
 ### ✅ Безопасно (подтверждено)
 
-| Проверка | Результат |
-| --- | --- |
-| **Defer: количество** | HTML=151, План=151 — идеальное совпадение |
-| **Defer: порядок** | Позиционное сравнение 151 vs 151 — ни одного расхождения |
-| **Defer: файлы на диске** | Все 151 файл найдены в `apps/web/` |
-| **Postboot: количество** | HTML=95, effective=93 (−2 prioritySet), Маппинг=29+39+25=93 — совпадение |
-| **Postboot: полнота** | Все 93 эффективных скрипта присутствуют ровно по 1 разу |
-| **prioritySet дубли** | `heys_cascade_card_v1.js` и `heys_supplements_v1.js` — в `boot-init.bundle`, корректно исключены из postboot |
-| **react-bundle.js** | Остаётся sync-скриптом, план не трогает — корректно |
-| **Порядок внутри каждого бандла** | Сохранён относительно оригинала |
+| Проверка                          | Результат                                                                                                    |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Defer: количество**             | HTML=151, План=151 — идеальное совпадение                                                                    |
+| **Defer: порядок**                | Позиционное сравнение 151 vs 151 — ни одного расхождения                                                     |
+| **Defer: файлы на диске**         | Все 151 файл найдены в `apps/web/`                                                                           |
+| **Postboot: количество**          | HTML=95, effective=93 (−2 prioritySet), Маппинг=29+39+25=93 — совпадение                                     |
+| **Postboot: полнота**             | Все 93 эффективных скрипта присутствуют ровно по 1 разу                                                      |
+| **prioritySet дубли**             | `heys_cascade_card_v1.js` и `heys_supplements_v1.js` — в `boot-init.bundle`, корректно исключены из postboot |
+| **react-bundle.js**               | Остаётся sync-скриптом, план не трогает — корректно                                                          |
+| **Порядок внутри каждого бандла** | Сохранён относительно оригинала                                                                              |
 
 ### ⚠️ Предупреждения (безопасно, требует внимания)
 
 **1. Перестановка модалей относительно insights (БЕЗОПАСНО)**
 
 В плане модали перенесены в `postboot-3-ui`, а все insights — в
-`postboot-2-insights`. Это значит insights part2 выполнится ДО модалей. Проверено:
-ни один файл insights part2 не вызывает `HEYS.ModalManager` при top-level
-инициализации. Единственная ссылка — в `pi_outcome_modal.js` через optional
-chaining (`HEYS.ModalManager?.register?.()`) в `useEffect`.
+`postboot-2-insights`. Это значит insights part2 выполнится ДО модалей.
+Проверено: ни один файл insights part2 не вызывает `HEYS.ModalManager` при
+top-level инициализации. Единственная ссылка — в `pi_outcome_modal.js` через
+optional chaining (`HEYS.ModalManager?.register?.()`) в `useEffect`.
 
 **2. Мёртвые CDN_URLS в sw.js (исправлено в этапе C)**
 
@@ -489,7 +491,8 @@ chaining (`HEYS.ModalManager?.register?.()`) в `useEffect`.
 
 **3. Query-строки в именах файлов**
 
-`bundle-legacy.mjs` корректно стрипает `?v=...` при чтении файлов: `src.split('?')[0]`.
+`bundle-legacy.mjs` корректно стрипает `?v=...` при чтении файлов:
+`src.split('?')[0]`.
 
 ### ❌ Блокеры
 
@@ -510,16 +513,16 @@ chaining (`HEYS.ModalManager?.register?.()`) в `useEffect`.
 
 **Результат — 9 бандлов, суммарно 8.64 MB:**
 
-| Бандл | Первый хеш (A/B) | Размер |
-| --- | --- | --- |
-| boot-core | 64e7a18e3a99 | 1.14 MB |
-| boot-calc | 66658187fed5 | 893.6 KB |
-| boot-day | f881938d3698 | 895.9 KB |
-| boot-app | a6074ce3df73 | 1.05 MB |
-| boot-init | 6f4c5d4f73fa | 339.7 KB |
-| postboot-1-game | 7409c6731313 | 1.35 MB |
-| postboot-2-insights | 6398449943db | 1.75 MB |
-| postboot-3-ui | 0372eed5a1e9 | 1.28 MB |
+| Бандл               | Первый хеш (A/B) | Размер   |
+| ------------------- | ---------------- | -------- |
+| boot-core           | 64e7a18e3a99     | 1.14 MB  |
+| boot-calc           | 66658187fed5     | 893.6 KB |
+| boot-day            | f881938d3698     | 895.9 KB |
+| boot-app            | a6074ce3df73     | 1.05 MB  |
+| boot-init           | 6f4c5d4f73fa     | 339.7 KB |
+| postboot-1-game     | 7409c6731313     | 1.35 MB  |
+| postboot-2-insights | 6398449943db     | 1.75 MB  |
+| postboot-3-ui       | 0372eed5a1e9     | 1.28 MB  |
 
 **index.html:** 971 строк → 646 строк (−33%). Весь defer-блок (~190 строк)
 заменён на 5 bundle-тегов. POST_BOOT_SCRIPTS (~180 строк) → loader 50 строк.
@@ -535,8 +538,8 @@ bundle-тегов.
 **Smoke-test (этап D):** все 8 бандлов → 200 OK. `__heysAppReady` встаёт,
 postboot-бандлы загружаются.
 
-**Обнаруженный баг:** Recovery UI через 10 секунд. Причина: `checkHeysReady()`
-в dependency_loader с бандлами возвращает `true` немедленно, `waitForDependencies`
+**Обнаруженный баг:** Recovery UI через 10 секунд. Причина: `checkHeysReady()` в
+dependency_loader с бандлами возвращает `true` немедленно, `waitForDependencies`
 завершается, heartbeat перестаёт обновляться, watchdog срабатывает на +10s.
 
 **Исправление (этап F):** добавлен `keepHeartbeat()` loop после `onReady()` в
@@ -562,21 +565,21 @@ postboot-бандлы загружаются.
 
 **Новые хеши (Session 3):**
 
-| Бандл | Хеш |
-| --- | --- |
+| Бандл     | Хеш          |
+| --------- | ------------ |
 | boot-core | e0cfd58e1796 |
 | boot-calc | bb8a3a4c781b |
-| boot-day | 7320c50778ec |
-| boot-app | bc6fb633ba7c |
+| boot-day  | 7320c50778ec |
+| boot-app  | bc6fb633ba7c |
 | boot-init | 01e94cb6ddd3 |
 
 ---
 
 ### Session 4 — Race Conditions + localStorage + SW Precache (2026-02-25)
 
-**Контекст:** анализ prod-логов выявил 3 проблемы: `registerRefeedStep`
-21-deep setTimeout stack, InsulinWave useMemo не пересчитывался, localStorage
-feedback key = 693KB.
+**Контекст:** анализ prod-логов выявил 3 проблемы: `registerRefeedStep` 21-deep
+setTimeout stack, InsulinWave useMemo не пересчитывался, localStorage feedback
+key = 693KB.
 
 **Изменённые файлы:**
 
@@ -594,27 +597,27 @@ feedback key = 693KB.
 
 **Результаты (prod-verified):**
 
-| Метрика | До | После |
-| --- | --- | --- |
-| registerRefeedStep | 21-deep setTimeout, 10s timeout | 1 event listener → instant |
-| InsulinWave в MealCard | Skipped | Re-computes after postboot-1-game |
-| Cascade activeFactors | 5 | 6 (с InsulinWave) |
-| CRS | 5.95 | 6.35 |
-| localStorage feedback key | ~693KB | <10KB (ожидаемый) |
-| SW precache | lazy cache-first | proactive (install event) |
+| Метрика                   | До                              | После                             |
+| ------------------------- | ------------------------------- | --------------------------------- |
+| registerRefeedStep        | 21-deep setTimeout, 10s timeout | 1 event listener → instant        |
+| InsulinWave в MealCard    | Skipped                         | Re-computes after postboot-1-game |
+| Cascade activeFactors     | 5                               | 6 (с InsulinWave)                 |
+| CRS                       | 5.95                            | 6.35                              |
+| localStorage feedback key | ~693KB                          | <10KB (ожидаемый)                 |
+| SW precache               | lazy cache-first                | proactive (install event)         |
 
 **Хеши после Session 4:**
 
-| Бандл | Хеш |
-| --- | --- |
-| boot-core | e0cfd58e1796 |
-| boot-calc | bb8a3a4c781b |
-| boot-day | 7320c50778ec |
-| boot-app | bc6fb633ba7c |
-| boot-init | 01e94cb6ddd3 |
-| postboot-1-game | a30c81cb6660 |
+| Бандл               | Хеш          |
+| ------------------- | ------------ |
+| boot-core           | e0cfd58e1796 |
+| boot-calc           | bb8a3a4c781b |
+| boot-day            | 7320c50778ec |
+| boot-app            | bc6fb633ba7c |
+| boot-init           | 01e94cb6ddd3 |
+| postboot-1-game     | a30c81cb6660 |
 | postboot-2-insights | 15ce93090754 |
-| postboot-3-ui | d0c9bf9edcdc |
+| postboot-3-ui       | d0c9bf9edcdc |
 
 `CACHE_VERSION: heys-1772022301203`
 
@@ -655,10 +658,10 @@ universal extractor для flat/grouped/multi-meal.
 
 **Хеши после Session 5:**
 
-| Бандл | Хеш |
-| --- | --- |
+| Бандл               | Хеш                                |
+| ------------------- | ---------------------------------- |
 | postboot-2-insights | 15ce93090754 → (Session 6 изменил) |
-| все остальные | без изменений |
+| все остальные       | без изменений                      |
 
 ---
 
@@ -668,42 +671,43 @@ universal extractor для flat/grouped/multi-meal.
 postboot при ~150KB/s mid-tier). gzip сжимает payload на 78% → appReady ~9s.
 
 **Почему gzip, а не code splitting:**  
-`defer` уже качает 5 boot-бандлов параллельно. Bottleneck = total bytes.
-gzip уменьшает bytes без изменения кода, без риска, поддерживается с 1999 года.
+`defer` уже качает 5 boot-бандлов параллельно. Bottleneck = total bytes. gzip
+уменьшает bytes без изменения кода, без риска, поддерживается с 1999 года.
 
 **Компрессия (измерения gzip level 9):**
 
-| Бандл | Raw KB | gzip KB | Savings |
-| --- | --- | --- | --- |
-| boot-core | 1169 | 265 | 77% |
-| boot-calc | 894 | 184 | 79% |
-| boot-day | 897 | 180 | 80% |
-| boot-app | 1071 | 203 | 81% |
-| boot-init | 342 | 82 | 76% |
-| postboot-1-game | 1350 | 311 | 78% |
-| postboot-2-insights | 1750 | 389 | 78% |
-| postboot-3-ui | 1280 | 286 | 78% |
-| react-bundle.js | 139 | 45 | 68% |
-| **ИТОГО** | **8794** | **1947** | **78%** |
+| Бандл               | Raw KB   | gzip KB  | Savings |
+| ------------------- | -------- | -------- | ------- |
+| boot-core           | 1169     | 265      | 77%     |
+| boot-calc           | 894      | 184      | 79%     |
+| boot-day            | 897      | 180      | 80%     |
+| boot-app            | 1071     | 203      | 81%     |
+| boot-init           | 342      | 82       | 76%     |
+| postboot-1-game     | 1350     | 311      | 78%     |
+| postboot-2-insights | 1750     | 389      | 78%     |
+| postboot-3-ui       | 1280     | 286      | 78%     |
+| react-bundle.js     | 139      | 45       | 68%     |
+| **ИТОГО**           | **8794** | **1947** | **78%** |
 
 **Ожидаемое время загрузки (150KB/s mid-tier):**
 
 - Boot: 4371KB → 915KB gzip = **6.1s** (было 29s)
-- Postboot: 4380KB → 987KB gzip, параллельно = **max(одного) ≈ 2.6s** (было 30.6s)
+- Postboot: 4380KB → 987KB gzip, параллельно = **max(одного) ≈ 2.6s** (было
+  30.6s)
 - **Total appReady ≈ 9s** (было 61.5s, −85%, цель ≤18s ✅✅)
 
 **Изменённые файлы:**
 
-| Файл | Изменение |
-| --- | --- |
-| `scripts/bundle-legacy.mjs` | Добавлен gzip step (`gzipSync`, level 9), `cleanOldBundles` regex учитывает `.gz` |
-| `.github/workflows/deploy-yandex.yml` | `--exclude "*.bundle.*.js.gz"` + отдельный step upload с `Content-Encoding: gzip` |
-| `apps/web/index.html` | Skeleton UI + parallel postboot loader v10.0 (loadAllParallel) |
-| `apps/web/insights/pi_pattern_debugger.js` | Optional chaining `HEYS.PredictiveInsights?.analyze?.()` для parallel safety |
+| Файл                                       | Изменение                                                                         |
+| ------------------------------------------ | --------------------------------------------------------------------------------- |
+| `scripts/bundle-legacy.mjs`                | Добавлен gzip step (`gzipSync`, level 9), `cleanOldBundles` regex учитывает `.gz` |
+| `.github/workflows/deploy-yandex.yml`      | `--exclude "*.bundle.*.js.gz"` + отдельный step upload с `Content-Encoding: gzip` |
+| `apps/web/index.html`                      | Skeleton UI + parallel postboot loader v10.0 (loadAllParallel)                    |
+| `apps/web/insights/pi_pattern_debugger.js` | Optional chaining `HEYS.PredictiveInsights?.analyze?.()` для parallel safety      |
 
 **Skeleton UI:** HTML/CSS в `<div id="root">` — header, date selector, hero
-metrics rings, 3 meal cards, tab bar. Dark mode (`prefers-color-scheme`). React.render()
-автоматически перезаписывает. Нет JS.
+metrics rings, 3 meal cards, tab bar. Dark mode (`prefers-color-scheme`).
+React.render() автоматически перезаписывает. Нет JS.
 
 **Parallel postboot (Stage L):** заменён `loadNext()` chain на
 `loadAllParallel()` с `s.async = true` per bundle. Cross-bundle safety verified:
@@ -711,34 +715,34 @@ metrics rings, 3 meal cards, tab bar. Dark mode (`prefers-color-scheme`). React.
 
 **Хеши после Session 6 (актуальные):**
 
-| Бандл | Хеш | Изменился? |
-| --- | --- | --- |
-| boot-core | e0cfd58e1796 | — |
-| boot-calc | bb8a3a4c781b 해 | — |
-| boot-day | 7320c50778ec | — |
-| boot-app | bc6fb633ba7c | — |
-| boot-init | 01e94cb6ddd3 | — |
-| postboot-1-game | b13ba92f95e6 | ✅ |
-| postboot-2-insights | f91927f0634f | ✅ |
-| postboot-3-ui | d0c9bf9edcdc | — |
+| Бандл               | Хеш             | Изменился? |
+| ------------------- | --------------- | ---------- |
+| boot-core           | e0cfd58e1796    | —          |
+| boot-calc           | bb8a3a4c781b 해 | —          |
+| boot-day            | 7320c50778ec    | —          |
+| boot-app            | bc6fb633ba7c    | —          |
+| boot-init           | 01e94cb6ddd3    | —          |
+| postboot-1-game     | b13ba92f95e6    | ✅         |
+| postboot-2-insights | f91927f0634f    | ✅         |
+| postboot-3-ui       | d0c9bf9edcdc    | —          |
 
 `CACHE_VERSION: heys-1772023550136`
 
 **gzip-файлы в `public/`:**
 
-| Файл | Размер |
-| --- | --- |
-| boot-core.bundle.e0cfd58e1796.js.gz | 271 KB |
-| boot-calc.bundle.bb8a3a4c781b.js.gz | 189 KB |
-| boot-day.bundle.7320c50778ec.js.gz | 185 KB |
-| boot-app.bundle.bc6fb633ba7c.js.gz | 208 KB |
-| boot-init.bundle.01e94cb6ddd3.js.gz | 84 KB |
-| postboot-1-game.bundle.b13ba92f95e6.js.gz | 319 KB |
+| Файл                                          | Размер |
+| --------------------------------------------- | ------ |
+| boot-core.bundle.e0cfd58e1796.js.gz           | 271 KB |
+| boot-calc.bundle.bb8a3a4c781b.js.gz           | 189 KB |
+| boot-day.bundle.7320c50778ec.js.gz            | 185 KB |
+| boot-app.bundle.bc6fb633ba7c.js.gz            | 208 KB |
+| boot-init.bundle.01e94cb6ddd3.js.gz           | 84 KB  |
+| postboot-1-game.bundle.b13ba92f95e6.js.gz     | 319 KB |
 | postboot-2-insights.bundle.f91927f0634f.js.gz | 398 KB |
-| postboot-3-ui.bundle.d0c9bf9edcdc.js.gz | 293 KB |
-| react-bundle.js.gz | 45 KB |
+| postboot-3-ui.bundle.d0c9bf9edcdc.js.gz       | 293 KB |
+| react-bundle.js.gz                            | 45 KB  |
 
 ---
 
-*Следующий спринт — ESM миграция (~200 файлов) и измерение реального appReady
-после деплоя gzip (Session 7).*
+_Следующий спринт — ESM миграция (~200 файлов) и измерение реального appReady
+после деплоя gzip (Session 7)._
