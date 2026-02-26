@@ -3,64 +3,64 @@
 // heys_app_root_v1.js — App component extracted from heys_app_v12.js
 
 (function () {
-  const HEYS = window.HEYS = window.HEYS || {};
-  HEYS.AppRoot = HEYS.AppRoot || {};
+    const HEYS = window.HEYS = window.HEYS || {};
+    HEYS.AppRoot = HEYS.AppRoot || {};
 
-  HEYS.AppRoot.createApp = function createApp({ React }) {
-    const AppRootComponent = HEYS.AppRootComponent || {};
-    const createComponent = AppRootComponent.createApp;
+    HEYS.AppRoot.createApp = function createApp({ React }) {
+        const AppRootComponent = HEYS.AppRootComponent || {};
+        const createComponent = AppRootComponent.createApp;
 
-    // 🆕 Если AppRootComponent отсутствует — используем RecoveryScreen
-    if (!createComponent) {
-      // Уведомляем SW о boot failure
-      if (navigator.serviceWorker?.controller) {
-        navigator.serviceWorker.controller.postMessage({ type: 'BOOT_FAILURE' });
-      }
-      window.__heysLog && window.__heysLog('[CRITICAL] AppRootComponent missing!');
+        // 🆕 Если AppRootComponent отсутствует — используем RecoveryScreen
+        if (!createComponent) {
+            // Уведомляем SW о boot failure
+            if (navigator.serviceWorker?.controller) {
+                navigator.serviceWorker.controller.postMessage({ type: 'BOOT_FAILURE' });
+            }
+            window.__heysLog && window.__heysLog('[CRITICAL] AppRootComponent missing!');
 
-      // Пробуем использовать RecoveryScreen если он уже доступен
-      const RecoveryScreen = AppRootComponent.RecoveryScreen;
-      if (RecoveryScreen) {
-        return function AppWithRecovery() {
-          return React.createElement(RecoveryScreen, { React, moduleName: 'AppRootComponent' });
-        };
-      }
+            // Пробуем использовать RecoveryScreen если он уже доступен
+            const RecoveryScreen = AppRootComponent.RecoveryScreen;
+            if (RecoveryScreen) {
+                return function AppWithRecovery() {
+                    return React.createElement(RecoveryScreen, { React, moduleName: 'AppRootComponent' });
+                };
+            }
 
-      // Минимальный fallback если RecoveryScreen тоже недоступен
-      return function AppFallback() {
-        return React.createElement('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '100vh',
-            fontFamily: 'system-ui',
-            textAlign: 'center',
-            padding: '20px'
-          }
-        }, [
-          React.createElement('div', { key: 'content' }, [
-            React.createElement('div', { key: 'icon', style: { fontSize: '48px', marginBottom: '16px' } }, '⚠️'),
-            React.createElement('h2', { key: 'title', style: { margin: '0 0 16px' } }, 'Ошибка загрузки'),
-            React.createElement('button', {
-              key: 'reload',
-              onClick: () => window.location.reload(),
-              style: {
-                padding: '12px 24px',
-                borderRadius: '8px',
-                border: 'none',
-                background: '#10b981',
-                color: 'white',
-                cursor: 'pointer'
-              }
-            }, '🔄 Обновить')
-          ])
-        ]);
-      };
-    }
+            // Минимальный fallback если RecoveryScreen тоже недоступен
+            return function AppFallback() {
+                return React.createElement('div', {
+                    style: {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: '100vh',
+                        fontFamily: 'system-ui',
+                        textAlign: 'center',
+                        padding: '20px'
+                    }
+                }, [
+                    React.createElement('div', { key: 'content' }, [
+                        React.createElement('div', { key: 'icon', style: { fontSize: '48px', marginBottom: '16px' } }, '⚠️'),
+                        React.createElement('h2', { key: 'title', style: { margin: '0 0 16px' } }, 'Ошибка загрузки'),
+                        React.createElement('button', {
+                            key: 'reload',
+                            onClick: () => window.location.reload(),
+                            style: {
+                                padding: '12px 24px',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: '#10b981',
+                                color: 'white',
+                                cursor: 'pointer'
+                            }
+                        }, '🔄 Обновить')
+                    ])
+                ]);
+            };
+        }
 
-    return createComponent({ React });
-  };
+        return createComponent({ React });
+    };
 })();
 
 
@@ -72,54 +72,54 @@
 window.__heysPerfMark && window.__heysPerfMark('boot-init: execute start');
 
 (function () {
-  const HEYS = window.HEYS = window.HEYS || {};
-  HEYS.AppDependencyLoader = HEYS.AppDependencyLoader || {};
+    const HEYS = window.HEYS = window.HEYS || {};
+    HEYS.AppDependencyLoader = HEYS.AppDependencyLoader || {};
 
-  HEYS.AppDependencyLoader.start = function ({ initializeApp, isReactReady, isHeysReady }) {
-    const bootLog = (msg) => window.__heysLog && window.__heysLog('[DEPS] ' + msg);
-    bootLog('dependency loader start');
-    window.__heysPerfMark && window.__heysPerfMark('boot-init: AppDependencyLoader.start');
-    const INIT_RETRY_DELAY = 100;
-    const INIT_LOADER_DELAY_MS = 420;
-    const depsWaitStartedAt = Date.now();
-    let reactCheckCount = 0;
-    let _reactReadyLogged = false;
-    let _heysReadyLogged = false;
+    HEYS.AppDependencyLoader.start = function ({ initializeApp, isReactReady, isHeysReady }) {
+        const bootLog = (msg) => window.__heysLog && window.__heysLog('[DEPS] ' + msg);
+        bootLog('dependency loader start');
+        window.__heysPerfMark && window.__heysPerfMark('boot-init: AppDependencyLoader.start');
+        const INIT_RETRY_DELAY = 100;
+        const INIT_LOADER_DELAY_MS = 420;
+        const depsWaitStartedAt = Date.now();
+        let reactCheckCount = 0;
+        let _reactReadyLogged = false;
+        let _heysReadyLogged = false;
 
-    const defaultIsReactReady = () => Boolean(window.React && window.ReactDOM);
+        const defaultIsReactReady = () => Boolean(window.React && window.ReactDOM);
 
-    // 🆕 Расширенная проверка HEYS модулей (включая критические для рендеринга)
-    const defaultIsHeysReady = () => Boolean(
-      HEYS &&
-      HEYS.DayTab &&
-      HEYS.Ration &&
-      HEYS.UserTab &&
-      // 🆕 Добавлены критические модули для рендеринга App
-      HEYS.AppRootImpl &&
-      HEYS.AppRootImpl.createApp &&
-      HEYS.AppRootComponent &&
-      HEYS.AppRootComponent.createApp
-    );
+        // 🆕 Расширенная проверка HEYS модулей (включая критические для рендеринга)
+        const defaultIsHeysReady = () => Boolean(
+            HEYS &&
+            HEYS.DayTab &&
+            HEYS.Ration &&
+            HEYS.UserTab &&
+            // 🆕 Добавлены критические модули для рендеринга App
+            HEYS.AppRootImpl &&
+            HEYS.AppRootImpl.createApp &&
+            HEYS.AppRootComponent &&
+            HEYS.AppRootComponent.createApp
+        );
 
-    const checkReactReady = isReactReady || defaultIsReactReady;
-    const checkHeysReady = isHeysReady || defaultIsHeysReady;
+        const checkReactReady = isReactReady || defaultIsReactReady;
+        const checkHeysReady = isHeysReady || defaultIsHeysReady;
 
-    const retryInit = () => {
-      reactCheckCount++;
-      setTimeout(initializeApp, INIT_RETRY_DELAY);
-    };
+        const retryInit = () => {
+            reactCheckCount++;
+            setTimeout(initializeApp, INIT_RETRY_DELAY);
+        };
 
-    // 🆕 Recovery UI с кнопками
-    const showRecoveryUI = (reason) => {
-      bootLog('showing recovery UI: ' + reason);
+        // 🆕 Recovery UI с кнопками
+        const showRecoveryUI = (reason) => {
+            bootLog('showing recovery UI: ' + reason);
 
-      // Уведомляем SW о boot failure
-      if (navigator.serviceWorker?.controller) {
-        navigator.serviceWorker.controller.postMessage({ type: 'BOOT_FAILURE' });
-      }
+            // Уведомляем SW о boot failure
+            if (navigator.serviceWorker?.controller) {
+                navigator.serviceWorker.controller.postMessage({ type: 'BOOT_FAILURE' });
+            }
 
-      document.getElementById('heys-init-loader')?.remove();
-      document.body.innerHTML = `
+            document.getElementById('heys-init-loader')?.remove();
+            document.body.innerHTML = `
                 <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;padding:20px;background:#f3f4f6">
                     <div style="background:white;padding:32px;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.1);max-width:400px;text-align:center">
                         <div style="font-size:48px;margin-bottom:16px">⚠️</div>
@@ -133,141 +133,141 @@ window.__heysPerfMark && window.__heysPerfMark('boot-init: execute start');
                 </div>
             `;
 
-      document.getElementById('clear-cache-btn')?.addEventListener('click', async () => {
-        const btn = document.getElementById('clear-cache-btn');
-        if (btn) {
-          btn.textContent = '⏳ Очистка...';
-          btn.disabled = true;
+            document.getElementById('clear-cache-btn')?.addEventListener('click', async () => {
+                const btn = document.getElementById('clear-cache-btn');
+                if (btn) {
+                    btn.textContent = '⏳ Очистка...';
+                    btn.disabled = true;
+                }
+                try {
+                    if ('caches' in window) {
+                        const names = await caches.keys();
+                        await Promise.all(names.map(n => caches.delete(n)));
+                    }
+                    if ('serviceWorker' in navigator) {
+                        const regs = await navigator.serviceWorker.getRegistrations();
+                        await Promise.all(regs.map(r => r.unregister()));
+                    }
+                    sessionStorage.clear();
+                } catch (e) { console.error(e); }
+                location.reload();
+            });
+        };
+
+        const waitForDependencies = (onReady) => {
+            // 🔍 PWA Boot logging
+
+            // Показываем минимальный loader только если реально подождали достаточно,
+            // чтобы исключить micro-flash на быстрых сетях.
+            // 🆕 Heartbeat для watchdog — скрипты ещё грузятся
+            if (typeof window !== 'undefined') {
+                window.__heysLoadingHeartbeat = Date.now();
+            }
+
+            const depsElapsedMs = Date.now() - depsWaitStartedAt;
+            if (!document.getElementById('heys-init-loader') && depsElapsedMs < INIT_LOADER_DELAY_MS) {
+                if (window.__heysInitLoaderState !== 'wait_delay') {
+                    console.info('[HEYS.sceleton] ⏱️ init_wait_delay', {
+                        elapsedMs: depsElapsedMs,
+                        delayMs: INIT_LOADER_DELAY_MS
+                    });
+                    window.__heysInitLoaderState = 'wait_delay';
+                }
+            }
+
+            if (!document.getElementById('heys-init-loader') && depsElapsedMs >= INIT_LOADER_DELAY_MS) {
+                bootLog('showing loader (waiting for deps)');
+                if (window.__heysInitLoaderState !== 'show_loader') {
+                    console.info('[HEYS.sceleton] 🦴 init_show_loader', {
+                        elapsedMs: depsElapsedMs,
+                        delayMs: INIT_LOADER_DELAY_MS
+                    });
+                    window.__heysInitLoaderState = 'show_loader';
+                }
+                const loader = document.createElement('div');
+                loader.id = 'heys-init-loader';
+                loader.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:99999';
+                loader.innerHTML = '<div style="width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
+                document.body.appendChild(loader);
+            }
+
+            // 🆕 PERF v9.2: логируем первый момент готовности React и HEYS независимо
+            if (!_reactReadyLogged && checkReactReady()) {
+                _reactReadyLogged = true;
+                window.__heysPerfMark && window.__heysPerfMark('React ready (retries=' + reactCheckCount + ')');
+            }
+            if (!_heysReadyLogged && checkHeysReady()) {
+                _heysReadyLogged = true;
+                window.__heysPerfMark && window.__heysPerfMark('HEYS deps ready (retries=' + reactCheckCount + ')');
+            }
+
+            if (checkReactReady() && checkHeysReady()) {
+                bootLog('deps ready, init app');
+                // Убираем loader если показывали
+                document.getElementById('heys-init-loader')?.remove();
+                if (window.__heysInitLoaderState !== 'ready') {
+                    console.info('[HEYS.sceleton] ✅ init_ready', {
+                        elapsedMs: depsElapsedMs,
+                        retries: reactCheckCount
+                    });
+                    window.__heysInitLoaderState = 'ready';
+                }
+                onReady();
+                // 🆕 Держим watchdog heartbeat живым пока app не готов (sync/bootstrap могут занять >10s)
+                // Без этого watchdog через 10s показывает recovery UI несмотря на активную загрузку
+                (function keepHeartbeat() {
+                    if (window.__heysAppReady) return;
+                    window.__heysLoadingHeartbeat = Date.now();
+                    setTimeout(keepHeartbeat, 2000);
+                })();
+                return;
+            }
+
+            reactCheckCount++;
+            // Логируем каждые 50 проверок чтобы не спамить консоль
+            if (reactCheckCount % 50 === 0) {
+                bootLog('waiting #' + reactCheckCount + ' React:' + checkReactReady() + ' HEYS:' + checkHeysReady());
+            }
+
+            // 🆕 Защита от зависания — макс 300 попыток (30 секунд)
+            // На throttled сетях скрипты грузятся долго, 5s недостаточно
+            if (reactCheckCount > 300) {
+                console.error('[HEYS] ❌ Timeout waiting for dependencies!');
+                console.error('React ready:', checkReactReady());
+                console.error('HEYS ready:', checkHeysReady());
+
+                // Детальная диагностика отсутствующих модулей
+                const missing = [];
+                if (!HEYS.DayTab) missing.push('DayTab');
+                if (!HEYS.Ration) missing.push('Ration');
+                if (!HEYS.UserTab) missing.push('UserTab');
+                if (!HEYS.AppRootImpl) missing.push('AppRootImpl');
+                if (!HEYS.AppRootComponent) missing.push('AppRootComponent');
+                console.error('Missing modules:', missing.join(', ') || 'none');
+
+                bootLog('TIMEOUT! Missing: ' + (missing.join(', ') || 'unknown'));
+
+                showRecoveryUI(missing.length
+                    ? `Не загружены модули: ${missing.join(', ')}`
+                    : 'Превышено время ожидания загрузки'
+                );
+                return;
+            }
+
+            setTimeout(() => waitForDependencies(onReady), INIT_RETRY_DELAY);
+        };
+
+        if (!checkReactReady()) {
+            retryInit();
+            return;
         }
-        try {
-          if ('caches' in window) {
-            const names = await caches.keys();
-            await Promise.all(names.map(n => caches.delete(n)));
-          }
-          if ('serviceWorker' in navigator) {
-            const regs = await navigator.serviceWorker.getRegistrations();
-            await Promise.all(regs.map(r => r.unregister()));
-          }
-          sessionStorage.clear();
-        } catch (e) { console.error(e); }
-        location.reload();
-      });
+        if (!checkHeysReady()) {
+            retryInit();
+            return;
+        }
+
+        waitForDependencies(initializeApp);
     };
-
-    const waitForDependencies = (onReady) => {
-      // 🔍 PWA Boot logging
-
-      // Показываем минимальный loader только если реально подождали достаточно,
-      // чтобы исключить micro-flash на быстрых сетях.
-      // 🆕 Heartbeat для watchdog — скрипты ещё грузятся
-      if (typeof window !== 'undefined') {
-        window.__heysLoadingHeartbeat = Date.now();
-      }
-
-      const depsElapsedMs = Date.now() - depsWaitStartedAt;
-      if (!document.getElementById('heys-init-loader') && depsElapsedMs < INIT_LOADER_DELAY_MS) {
-        if (window.__heysInitLoaderState !== 'wait_delay') {
-          console.info('[HEYS.sceleton] ⏱️ init_wait_delay', {
-            elapsedMs: depsElapsedMs,
-            delayMs: INIT_LOADER_DELAY_MS
-          });
-          window.__heysInitLoaderState = 'wait_delay';
-        }
-      }
-
-      if (!document.getElementById('heys-init-loader') && depsElapsedMs >= INIT_LOADER_DELAY_MS) {
-        bootLog('showing loader (waiting for deps)');
-        if (window.__heysInitLoaderState !== 'show_loader') {
-          console.info('[HEYS.sceleton] 🦴 init_show_loader', {
-            elapsedMs: depsElapsedMs,
-            delayMs: INIT_LOADER_DELAY_MS
-          });
-          window.__heysInitLoaderState = 'show_loader';
-        }
-        const loader = document.createElement('div');
-        loader.id = 'heys-init-loader';
-        loader.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:99999';
-        loader.innerHTML = '<div style="width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
-        document.body.appendChild(loader);
-      }
-
-      // 🆕 PERF v9.2: логируем первый момент готовности React и HEYS независимо
-      if (!_reactReadyLogged && checkReactReady()) {
-        _reactReadyLogged = true;
-        window.__heysPerfMark && window.__heysPerfMark('React ready (retries=' + reactCheckCount + ')');
-      }
-      if (!_heysReadyLogged && checkHeysReady()) {
-        _heysReadyLogged = true;
-        window.__heysPerfMark && window.__heysPerfMark('HEYS deps ready (retries=' + reactCheckCount + ')');
-      }
-
-      if (checkReactReady() && checkHeysReady()) {
-        bootLog('deps ready, init app');
-        // Убираем loader если показывали
-        document.getElementById('heys-init-loader')?.remove();
-        if (window.__heysInitLoaderState !== 'ready') {
-          console.info('[HEYS.sceleton] ✅ init_ready', {
-            elapsedMs: depsElapsedMs,
-            retries: reactCheckCount
-          });
-          window.__heysInitLoaderState = 'ready';
-        }
-        onReady();
-        // 🆕 Держим watchdog heartbeat живым пока app не готов (sync/bootstrap могут занять >10s)
-        // Без этого watchdog через 10s показывает recovery UI несмотря на активную загрузку
-        (function keepHeartbeat() {
-          if (window.__heysAppReady) return;
-          window.__heysLoadingHeartbeat = Date.now();
-          setTimeout(keepHeartbeat, 2000);
-        })();
-        return;
-      }
-
-      reactCheckCount++;
-      // Логируем каждые 50 проверок чтобы не спамить консоль
-      if (reactCheckCount % 50 === 0) {
-        bootLog('waiting #' + reactCheckCount + ' React:' + checkReactReady() + ' HEYS:' + checkHeysReady());
-      }
-
-      // 🆕 Защита от зависания — макс 300 попыток (30 секунд)
-      // На throttled сетях скрипты грузятся долго, 5s недостаточно
-      if (reactCheckCount > 300) {
-        console.error('[HEYS] ❌ Timeout waiting for dependencies!');
-        console.error('React ready:', checkReactReady());
-        console.error('HEYS ready:', checkHeysReady());
-
-        // Детальная диагностика отсутствующих модулей
-        const missing = [];
-        if (!HEYS.DayTab) missing.push('DayTab');
-        if (!HEYS.Ration) missing.push('Ration');
-        if (!HEYS.UserTab) missing.push('UserTab');
-        if (!HEYS.AppRootImpl) missing.push('AppRootImpl');
-        if (!HEYS.AppRootComponent) missing.push('AppRootComponent');
-        console.error('Missing modules:', missing.join(', ') || 'none');
-
-        bootLog('TIMEOUT! Missing: ' + (missing.join(', ') || 'unknown'));
-
-        showRecoveryUI(missing.length
-          ? `Не загружены модули: ${missing.join(', ')}`
-          : 'Превышено время ожидания загрузки'
-        );
-        return;
-      }
-
-      setTimeout(() => waitForDependencies(onReady), INIT_RETRY_DELAY);
-    };
-
-    if (!checkReactReady()) {
-      retryInit();
-      return;
-    }
-    if (!checkHeysReady()) {
-      retryInit();
-      return;
-    }
-
-    waitForDependencies(initializeApp);
-  };
 })();
 
 
@@ -275,123 +275,123 @@ window.__heysPerfMark && window.__heysPerfMark('boot-init: execute start');
 // heys_app_ui_state_v1.js — consolidated UI state (auth + dropdown + shortcuts)
 
 (function () {
-  const HEYS = window.HEYS = window.HEYS || {};
-  HEYS.AppUIState = HEYS.AppUIState || {};
+    const HEYS = window.HEYS = window.HEYS || {};
+    HEYS.AppUIState = HEYS.AppUIState || {};
 
-  const U = HEYS.utils || {};
+    const U = HEYS.utils || {};
 
-  const readGlobalValue = (key, fallback) => {
-    try {
-      if (HEYS.store?.get) {
-        const stored = HEYS.store.get(key, null);
-        if (stored !== null && stored !== undefined) return stored;
-      }
-      const raw = localStorage.getItem(key);
-      if (raw !== null && raw !== undefined) return raw;
-      if (U.lsGet) return U.lsGet(key, fallback);
-      return fallback;
-    } catch {
-      return fallback;
-    }
-  };
-
-  const getModule = HEYS._getModule || function (name, fallback) {
-    return HEYS[name] || fallback || {};
-  };
-
-  HEYS.AppUIState.useAppUIState = function ({
-    React,
-    cloudSignIn,
-    cloudSignOut,
-    setTab,
-    setNotification,
-    skipTabSwitchRef,
-  }) {
-    const { useState, useEffect, useCallback } = React;
-    const shortcutsModule = getModule('AppShortcuts');
-
-    // Login form state (нужно до gate!)
-    const [email, setEmail] = useState('');
-    const [pwd, setPwd] = useState('');
-    const [rememberMe, setRememberMe] = useState(() => {
-      // Восстанавливаем checkbox из localStorage
-      return readGlobalValue('heys_remember_me', 'false') === 'true';
-    });
-
-    const handleSignIn = useCallback(() => {
-      return cloudSignIn(email, pwd, { rememberMe });
-    }, [cloudSignIn, email, pwd, rememberMe]);
-
-    const handleSignOut = useCallback(async () => {
-      try {
-        if (window.HEYS) {
-          window.HEYS._isLoggingOut = true;
-        }
-        if (window.HEYS?.cloud?.isPinAuthClient?.() && window.HEYS?.auth?.logout) {
-          await window.HEYS.auth.logout();
-        }
-      } catch (e) {
-        console.warn('[HEYS] Logout failed:', e);
-      } finally {
+    const readGlobalValue = (key, fallback) => {
         try {
-          await cloudSignOut();
-        } catch (e) {
-          console.warn('[HEYS] Cloud signOut failed:', e);
+            if (HEYS.store?.get) {
+                const stored = HEYS.store.get(key, null);
+                if (stored !== null && stored !== undefined) return stored;
+            }
+            const raw = localStorage.getItem(key);
+            if (raw !== null && raw !== undefined) return raw;
+            if (U.lsGet) return U.lsGet(key, fallback);
+            return fallback;
+        } catch {
+            return fallback;
         }
-        if (window.HEYS) {
-          window.HEYS._isLoggingOut = false;
-        }
-      }
-    }, [cloudSignOut]);
+    };
 
-    const [clientSearch, setClientSearch] = useState(''); // Поиск клиентов
-    const [showClientDropdown, setShowClientDropdown] = useState(false); // Dropdown в шапке
-    const [newPhone, setNewPhone] = useState('');
-    const [newPin, setNewPin] = useState('');
+    const getModule = HEYS._getModule || function (name, fallback) {
+        return HEYS[name] || fallback || {};
+    };
 
-    // Закрытие dropdown по Escape
-    useEffect(() => {
-      const handleEscape = (e) => {
-        if (e.key === 'Escape' && showClientDropdown) {
-          setShowClientDropdown(false);
-        }
-      };
-      if (showClientDropdown) {
-        document.addEventListener('keydown', handleEscape);
-        return () => document.removeEventListener('keydown', handleEscape);
-      }
-    }, [showClientDropdown]);
-
-    useEffect(() => {
-      if (!shortcutsModule.handleShortcuts) return;
-      return shortcutsModule.handleShortcuts({
+    HEYS.AppUIState.useAppUIState = function ({
+        React,
+        cloudSignIn,
+        cloudSignOut,
         setTab,
         setNotification,
         skipTabSwitchRef,
-      });
-    }, [setTab, setNotification, skipTabSwitchRef, shortcutsModule]);
+    }) {
+        const { useState, useEffect, useCallback } = React;
+        const shortcutsModule = getModule('AppShortcuts');
 
-    const uiState = {
-      email,
-      setEmail,
-      pwd,
-      setPwd,
-      rememberMe,
-      setRememberMe,
-      handleSignIn,
-      handleSignOut,
-      clientSearch,
-      setClientSearch,
-      showClientDropdown,
-      setShowClientDropdown,
-      newPhone,
-      setNewPhone,
-      newPin,
-      setNewPin,
+        // Login form state (нужно до gate!)
+        const [email, setEmail] = useState('');
+        const [pwd, setPwd] = useState('');
+        const [rememberMe, setRememberMe] = useState(() => {
+            // Восстанавливаем checkbox из localStorage
+            return readGlobalValue('heys_remember_me', 'false') === 'true';
+        });
+
+        const handleSignIn = useCallback(() => {
+            return cloudSignIn(email, pwd, { rememberMe });
+        }, [cloudSignIn, email, pwd, rememberMe]);
+
+        const handleSignOut = useCallback(async () => {
+            try {
+                if (window.HEYS) {
+                    window.HEYS._isLoggingOut = true;
+                }
+                if (window.HEYS?.cloud?.isPinAuthClient?.() && window.HEYS?.auth?.logout) {
+                    await window.HEYS.auth.logout();
+                }
+            } catch (e) {
+                console.warn('[HEYS] Logout failed:', e);
+            } finally {
+                try {
+                    await cloudSignOut();
+                } catch (e) {
+                    console.warn('[HEYS] Cloud signOut failed:', e);
+                }
+                if (window.HEYS) {
+                    window.HEYS._isLoggingOut = false;
+                }
+            }
+        }, [cloudSignOut]);
+
+        const [clientSearch, setClientSearch] = useState(''); // Поиск клиентов
+        const [showClientDropdown, setShowClientDropdown] = useState(false); // Dropdown в шапке
+        const [newPhone, setNewPhone] = useState('');
+        const [newPin, setNewPin] = useState('');
+
+        // Закрытие dropdown по Escape
+        useEffect(() => {
+            const handleEscape = (e) => {
+                if (e.key === 'Escape' && showClientDropdown) {
+                    setShowClientDropdown(false);
+                }
+            };
+            if (showClientDropdown) {
+                document.addEventListener('keydown', handleEscape);
+                return () => document.removeEventListener('keydown', handleEscape);
+            }
+        }, [showClientDropdown]);
+
+        useEffect(() => {
+            if (!shortcutsModule.handleShortcuts) return;
+            return shortcutsModule.handleShortcuts({
+                setTab,
+                setNotification,
+                skipTabSwitchRef,
+            });
+        }, [setTab, setNotification, skipTabSwitchRef, shortcutsModule]);
+
+        const uiState = {
+            email,
+            setEmail,
+            pwd,
+            setPwd,
+            rememberMe,
+            setRememberMe,
+            handleSignIn,
+            handleSignOut,
+            clientSearch,
+            setClientSearch,
+            showClientDropdown,
+            setShowClientDropdown,
+            newPhone,
+            setNewPhone,
+            newPin,
+            setNewPin,
+        };
+
+        return uiState;
     };
-
-    return uiState;
-  };
 })();
 
 
@@ -1024,7 +1024,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       (day && day.measurements) ? JSON.stringify(day.measurements) : '',
       (day && day.supplementsTaken) ? day.supplementsTaken.length : 0,
       (day && day.supplementsPlanned) ? (Array.isArray(day.supplementsPlanned) ? day.supplementsPlanned.length : day.supplementsPlanned) : 0,
-      (prof && prof.plannedSupplements) ? (Array.isArray(prof.plannedSupplements) ? prof.plannedSupplements.length : prof.plannedSupplements) : 0
+      (prof && prof.plannedSupplements) ? (Array.isArray(prof.plannedSupplements) ? prof.plannedSupplements.length : prof.plannedSupplements) : 0,
+      // v10.0: day-update version — инвалидирует кэш после sync записал исторические дни
+      _cascadeDayUpdateVersion
     ].join('::');
   }
 
@@ -3516,6 +3518,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   // P1-cascade fix: throttle renderCard log to once per session (mirrors mealRec P1)
   var _cascadeRenderCount = 0;
+  // v10.0: day-update version counter — инкрементируется при каждом batch/force-sync invalidation.
+  // Включён в buildInputSignature чтобы кэш гарантированно промазывал после записи исторических дней,
+  // даже если сегодняшний day-объект не изменился.
+  var _cascadeDayUpdateVersion = 0;
   var _cascadeCache = {
     signature: null,
     result: null,
@@ -3561,6 +3567,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     if (!hasMeals && !hasTrainings && !hasSteps && !hasHousehold && !hasWeightCheckin && !hasSleepData && !hasMeasData && !hasSupplements) {
       console.info('[HEYS.cascade] ⏭️ No activity data yet — card not shown');
+      return null;
+    }
+
+    // v6.1: Pre-compute history guard — prevent _lastCrs contamination before batch-sync arrives.
+    // Problem: calling computeCascadeState with 0 historical days sets window.HEYS._lastCrs with
+    // historicalDays=[], causing CrsProgressBar.getCrsNumber to return null → permanent pendulum.
+    // Fix: suppress entire compute + render until __heysCascadeBatchSyncReceived is true.
+    // Flag is set by: heys:day-updated(batch), heysSyncCompleted(with clientId), or 3s timeout.
+    if (!window.__heysCascadeBatchSyncReceived) {
+      window.__heysCascadeGuardCount = (window.__heysCascadeGuardCount || 0) + 1;
+      if (window.__heysCascadeGuardCount === 1) {
+        console.info('[HEYS.cascade] ⏳ Pre-compute guard: waiting for batch-sync (cascade hidden, no _lastCrs contamination)');
+      } else if (window.__heysCascadeGuardCount % 50 === 0) {
+        console.info('[HEYS.cascade] ⏳ Pre-compute guard: still waiting (' + window.__heysCascadeGuardCount + ' renders suppressed)');
+      }
       return null;
     }
 
@@ -3613,7 +3634,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (cascadeState.historicalDays && cascadeState.historicalDays.length === 0 && !window.__heysCascadeBatchSyncReceived) {
       window.__heysCascadeGuardCount = (window.__heysCascadeGuardCount || 0) + 1;
       if (window.__heysCascadeGuardCount === 1) {
-        console.info('[HEYS.cascade] ⏳ History guard: waiting for batch-sync (0 historical days, suppressing BROKEN render)', window.__heysClientSwitchT0 ? '[Δt=' + Math.round(performance.now() - window.__heysClientSwitchT0) + 'ms]' : '');
+        console.info('[HEYS.cascade] ⏳ History guard: waiting for batch-sync (0 historical days, suppressing BROKEN render)');
       } else if (window.__heysCascadeGuardCount === 50) {
         console.info('[HEYS.cascade] ⏳ History guard: still waiting (' + window.__heysCascadeGuardCount + ' renders suppressed)');
       }
@@ -3628,7 +3649,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var renderKey = [cascadeState.state, cascadeState.chainLength, cascadeState.maxChainToday, cascadeState.momentumScore].join('|');
     if (window.__heysCascadeLastRenderKey !== renderKey) {
       window.__heysCascadeLastRenderKey = renderKey;
-      console.info('[HEYS.cascade] 🚀 Rendering CascadeCard, state:', cascadeState.state, window.__heysClientSwitchT0 ? '[Δt=' + Math.round(performance.now() - window.__heysClientSwitchT0) + 'ms]' : '');
+      console.info('[HEYS.cascade] 🚀 Rendering CascadeCard, state:', cascadeState.state);
     }
     return React.createElement(MemoizedCascadeCard, cascadeState);
   }
@@ -3646,17 +3667,67 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     });
   }
 
-  // v5.1.0: Инвалидировать кэш при batch-sync (BATCH WRITE записал исторические дни в localStorage).
-  // Без этого signature не меняется (сегодняшний day-объект неизменён), кэш даёт HIT,
-  // computeCascadeState не вызывается, historicalDays остаётся [] → getCrsNumber → null → маятник вечный.
+  // v5.1.0 → v10.0: Инвалидировать кэш при batch-sync ИЛИ force-sync.
+  // Проблема v5.1: слушатель проверял detail.batch, но force-sync (pull-to-refresh) шлёт
+  // ИНДИВИДУАЛЬНЫЕ события {date, source:'force-sync', forceReload:true} БЕЗ batch:true.
+  // Результат: кэш НИКОГДА не инвалидировался при force-sync → historicalDays=[] → CRS null → маятник вечный.
+  // Fix v10.0: обрабатываем ОБА формата — batch (cloud-sync) и debounced force-sync.
   if (typeof window !== 'undefined' && !window.__heysCascadeBatchSyncInvalidator) {
     window.__heysCascadeBatchSyncInvalidator = true;
+    var _forceSyncDebounce = null;
+    var _forceSyncCount = 0;
     window.addEventListener('heys:day-updated', function (e) {
       var detail = (e && e.detail) || {};
+
+      // Path A: cloud-sync batch event (batch:true) — немедленная инвалидация
       if (detail.batch) {
         window.__heysCascadeBatchSyncReceived = true;
         _cascadeCache.signature = null;
+        _cascadeDayUpdateVersion++;
         console.info('[HEYS.cascade] 🔄 Cache invalidated by batch-sync (' + ((detail.dates && detail.dates.length) || 0) + ' days written → historicalDays will update)');
+        return;
+      }
+
+      // Path B: force-sync individual events — debounce 500ms чтобы дождаться завершения всех записей
+      if (detail.source === 'force-sync' || detail.source === 'cloud-sync') {
+        _forceSyncCount++;
+        if (_forceSyncDebounce) clearTimeout(_forceSyncDebounce);
+        _forceSyncDebounce = setTimeout(function () {
+          window.__heysCascadeBatchSyncReceived = true;
+          _cascadeCache.signature = null;
+          _cascadeDayUpdateVersion++;
+          console.info('[HEYS.cascade] 🔄 Cache invalidated by force-sync debounce (' + _forceSyncCount + ' day-updated events → historicalDays will refresh)');
+          _forceSyncCount = 0;
+          _forceSyncDebounce = null;
+          // Trigger re-render: dispatch heys:day-updated for today so DayTab re-reads data
+          // → renderCard → cache MISS (signature=null) → computeCascadeState with real history → CRS valid
+          try {
+            var today = new Date().toISOString().slice(0, 10);
+            window.dispatchEvent(new CustomEvent('heys:cascade-recompute', {
+              detail: { source: 'force-sync-debounce', date: today }
+            }));
+          } catch (_) { }
+        }, 500);
+      }
+    });
+
+    // v5.4.0 → v6.1: Unblock history guard on heysSyncCompleted with clientId.
+    // v6.1 FIX: Only unblock on REAL sync completions that carry a clientId in the event detail.
+    // Synthetic heysSyncCompleted events (RC v6.3 Phase A, DayTabWithCloudSync markInitialSyncDone)
+    // fire BEFORE batch sync writes historical days and have NO clientId — they would prematurely
+    // unblock the guard with zero historical days, causing CrsProgressBar permanent pendulum mode.
+    window.addEventListener('heysSyncCompleted', function (e) {
+      if (!window.__heysCascadeBatchSyncReceived) {
+        var detail = e && e.detail;
+        if (detail && detail.clientId) {
+          window.__heysCascadeBatchSyncReceived = true;
+          _cascadeCache.signature = null;
+          console.info('[HEYS.cascade] ⚡ heysSyncCompleted: unblocking history guard (real sync, clientId: ' + String(detail.clientId).slice(0, 8) + ')');
+        } else {
+          // Synthetic event (Phase A / RC timeout) — no clientId, batch sync not yet done.
+          // Keep guard locked; heys:day-updated(batch) will unblock when real data arrives.
+          console.info('[HEYS.cascade] ⚠️ heysSyncCompleted: synthetic event (no clientId) — guard stays locked, waiting for batch-sync');
+        }
       }
     });
 
@@ -3672,24 +3743,57 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (window.__heysCascadeGuardTimer) {
         clearTimeout(window.__heysCascadeGuardTimer);
       }
+      // v5.4.0: Reduced 15s → 3s. heysSyncCompleted is now the primary unblock path.
+      // 3s fallback covers edge cases where sync event is missed (new users with no cloud history).
       window.__heysCascadeGuardTimer = setTimeout(function () {
         if (!window.__heysCascadeBatchSyncReceived) {
           window.__heysCascadeBatchSyncReceived = true;
           _cascadeCache.signature = null;
-          console.info('[HEYS.cascade] ⏱️ Batch-sync timeout: unblocking history guard (15s after client switch, likely new user)');
+          console.info('[HEYS.cascade] ⏱️ Batch-sync timeout: unblocking history guard (3s after client switch, likely new user)');
         }
-      }, 15000);
-      console.info('[HEYS.cascade] 🔄 Client changed: guard reset, 15s timeout restarted');
+      }, 3000);
+      console.info('[HEYS.cascade] 🔄 Client changed: guard reset, 3s timeout restarted');
     });
 
-    // v5.2.0 → v5.3.0: Initial timeout fallback for page-boot (first load, no client switch).
+    // v5.2.0 → v5.4.0: Initial timeout fallback for page-boot (first load, no client switch).
+    // Reduced 15s → 3s. heysSyncCompleted is the primary fast-path.
     window.__heysCascadeGuardTimer = setTimeout(function () {
       if (!window.__heysCascadeBatchSyncReceived) {
         window.__heysCascadeBatchSyncReceived = true;
         _cascadeCache.signature = null;
-        console.info('[HEYS.cascade] ⏱️ Batch-sync timeout: unblocking history guard (15s, likely new user)');
+        console.info('[HEYS.cascade] ⏱️ Batch-sync timeout: unblocking history guard (3s, likely new user)');
       }
-    }, 15000);
+    }, 3000);
+  }
+
+  // v10.0: Listener для heys:cascade-recompute — вызывается после debounce force-sync.
+  // Читает сегодняшний day из localStorage и вызывает computeCascadeState напрямую,
+  // чтобы обновить _lastCrs с реальной историей и отправить heys:crs-updated → CrsProgressBar settle.
+  if (typeof window !== 'undefined' && !window.__heysCascadeRecomputeListener) {
+    window.__heysCascadeRecomputeListener = true;
+    window.addEventListener('heys:cascade-recompute', function () {
+      try {
+        var U = HEYS.utils;
+        var clientId = (U && U.getCurrentClientId && U.getCurrentClientId()) || HEYS.currentClientId || '';
+        var today = new Date().toISOString().slice(0, 10);
+        var dayKey = clientId ? 'heys_' + clientId + '_dayv2_' + today : 'heys_dayv2_' + today;
+        var raw = (HEYS.store && HEYS.store.get) ? HEYS.store.get(dayKey, null) : localStorage.getItem(dayKey);
+        var day = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : null;
+        if (!day || !day.meals || !day.meals.length) {
+          console.info('[HEYS.cascade] ⚠️ cascade-recompute: no day data for today — skipping');
+          return;
+        }
+        var normAbsRaw = (HEYS.store && HEYS.store.get) ? HEYS.store.get('heys_normAbs', null) : localStorage.getItem('heys_normAbs');
+        var normAbs = normAbsRaw ? (typeof normAbsRaw === 'string' ? JSON.parse(normAbsRaw) : normAbsRaw) : {};
+        var profRaw = (HEYS.store && HEYS.store.get) ? HEYS.store.get('heys_profile', null) : localStorage.getItem('heys_profile');
+        var prof = profRaw ? (typeof profRaw === 'string' ? JSON.parse(profRaw) : profRaw) : {};
+        console.info('[HEYS.cascade] 🔄 cascade-recompute: re-running computeCascadeState with fresh historical data');
+        // computeCascadeState dispatches heys:crs-updated → CrsProgressBar updates automatically
+        computeCascadeState(day, null, normAbs, prof, null);
+      } catch (err) {
+        console.warn('[HEYS.cascade] ⚠️ cascade-recompute error:', err && err.message);
+      }
+    });
   }
 
   // ─────────────────────────────────────────────────────
@@ -4164,6 +4268,32 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }, true);
 
           trySettleToActual();
+        } else {
+          // 🔧 FIX v65: fallback CRS ещё null — значит heys:day-updated triggered renderCard
+          // который обновит HEYS._lastCrs через computeCascadeState. Повторная проверка через 600ms.
+          logCascadeBar('sync-fallback-null', {
+            willRetryMs: 600,
+            currentPercent: +currentPercentRef.current.toFixed(2)
+          }, true);
+          setTimeout(function () {
+            if (isSettledRef.current) return; // уже settled — не нужно
+            var retryFallback = window.HEYS && window.HEYS._lastCrs;
+            var retryNum = getCrsNumber(retryFallback);
+            if (retryNum !== null) {
+              setCrsData(retryFallback);
+              hasValidCrsRef.current = true;
+              crsTargetRef.current = retryNum;
+              logCascadeBar('sync-fallback-retry-ok', {
+                fallbackCrs: retryNum,
+                currentPercent: +currentPercentRef.current.toFixed(2)
+              }, true);
+              trySettleToActual();
+            } else {
+              logCascadeBar('sync-fallback-retry-still-null', {
+                currentPercent: +currentPercentRef.current.toFixed(2)
+              }, true);
+            }
+          }, 600);
         }
       }
 
@@ -7611,179 +7741,205 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 // heys_app_initialize_v1.js — initializeApp extracted from heys_app_entry_v1.js
 
 (function () {
-  const HEYS = window.HEYS = window.HEYS || {};
-  HEYS.AppInitializer = HEYS.AppInitializer || {};
+    const HEYS = window.HEYS = window.HEYS || {};
+    HEYS.AppInitializer = HEYS.AppInitializer || {};
 
-  const getModule = HEYS._getModule || function (name, fallback) {
-    return HEYS[name] || fallback || {};
-  };
+    const getModule = HEYS._getModule || function (name, fallback) {
+        return HEYS[name] || fallback || {};
+    };
 
-  HEYS.AppInitializer.initializeApp = function initializeApp() {
-    // Логи инициализации отключены для чистой консоли
-    const React = window.React,
-      ReactDOM = window.ReactDOM;
+    HEYS.AppInitializer.initializeApp = function initializeApp() {
+        // Логи инициализации отключены для чистой консоли
+        const React = window.React,
+            ReactDOM = window.ReactDOM;
 
-    // Централизованная проверка day-модулей (без логов в консоль)
-    if (HEYS.moduleLoader?.checkDayDeps) {
-      HEYS.moduleLoader.checkDayDeps();
-    }
-    const { useState, useEffect, useRef, useCallback, useMemo } = React;
-    HEYS.Gates?.initReactGates?.(React);
-    const ErrorBoundary = window.HEYS.ErrorBoundary;
-    const DesktopGateScreen = window.HEYS.DesktopGateScreen;
-    const AppLoader = window.HEYS.AppLoader;
-    const GamificationBar = window.HEYS.GamificationBar;
-    const AppShellModule = getModule('AppShell');
-    const AppOverlaysModule = getModule('AppOverlays');
-    const AppShell = AppShellModule && AppShellModule.AppShell;
-    const AppOverlays = AppOverlaysModule && AppOverlaysModule.AppOverlays;
-    const AppGateFlow = getModule('AppGateFlow');
-    const AppBackup = getModule('AppBackup');
-    const AppShortcuts = getModule('AppShortcuts');
-    const AppAuthInit = getModule('AppAuthInit');
-    const AppClientHelpers = getModule('AppClientHelpers');
-    const AppDesktopGate = getModule('AppDesktopGate');
-    const AppMorningCheckin = getModule('AppMorningCheckin');
-    const AppSwipeNav = getModule('AppSwipeNav');
-    const AppRuntimeEffects = getModule('AppRuntimeEffects');
-    const AppSyncEffects = getModule('AppSyncEffects');
-    const AppTabState = getModule('AppTabState');
-    const AppClientManagement = getModule('AppClientManagement');
-    const AppBackupActions = getModule('AppBackupActions');
-    const AppUpdateNotifications = getModule('AppUpdateNotifications');
-    const AppUIState = getModule('AppUIState');
-    const AppCloudInit = getModule('AppCloudInit');
-    const AppClientStateManager = getModule('AppClientStateManager');
-    const AppDateState = getModule('AppDateState');
-    const AppDerivedState = getModule('AppDerivedState');
-    const AppShellProps = getModule('AppShellProps');
-    const AppOverlaysProps = getModule('AppOverlaysProps');
-    const AppGateState = getModule('AppGateState');
-    const AppGlobalBindings = getModule('AppGlobalBindings');
-    const AppBackupState = getModule('AppBackupState');
-    const AppBannerState = getModule('AppBannerState');
-    const AppClientInit = getModule('AppClientInit');
-    const AppTwemojiEffect = getModule('AppTwemojiEffect');
-    const AppRuntimeState = getModule('AppRuntimeState');
-    const AppCoreState = getModule('AppCoreState');
-    const AppRoot = getModule('AppRoot');
-
-    const AppHooks = getModule('AppHooks');
-    const {
-      useThemePreference,
-      usePwaPrompts,
-      useWakeLock,
-      useCloudSyncStatus,
-      useClientState,
-      useCloudClients,
-    } = AppHooks;
-
-    // init cloud (safe if no cloud module)
-    // 🇷🇺 Основной трафик идёт через Yandex Cloud API (api.heyslab.ru)
-    // Legacy cloud модуль оставлен для обратной совместимости
-    if (AppCloudInit.initCloud) {
-      AppCloudInit.initCloud();
-    } else if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
-      // 🔥 Warm-up ping — прогреваем Yandex Cloud Functions
-      fetch('https://api.heyslab.ru/health', { method: 'GET' })
-        .catch(() => { }); // Warm-up ping
-
-      // 🆕 v2025-12-22: На production используем ТОЛЬКО Yandex Cloud API
-      // Supabase SDK инициализируется для совместимости cloud.signIn/signOut,
-      // но основной трафик идёт через HEYS.YandexAPI
-      const supabaseUrl = 'https://api.heyslab.ru';  // Yandex Cloud API для всех сред
-
-      HEYS.cloud.init({
-        url: supabaseUrl,
-        anonKey:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds',
-        // localhost fallback больше не нужен — используем Yandex API везде
-        localhostProxyUrl: undefined
-      });
-    }
-
-    const AppTabs = getModule('AppTabs');
-    const {
-      DayTabWithCloudSync,
-      RationTabWithCloudSync,
-      UserTabWithCloudSync,
-      AnalyticsTab,
-    } = AppTabs;
-
-    /* ═══════════════════════════════════════════════════════════════════════════════
-     * 🚀 ГЛАВНЫЙ КОМПОНЕНТ: App (строки 482-1140)
-     * ───────────────────────────────────────────────────────────────────────────────
-     * Корневой компонент приложения с управлением состоянием
-     *
-     * STATE MANAGEMENT:
-     *   - tab: текущая активная вкладка ('stats'|'diary'|'insights'|'widgets'|'ration'|'user'|'overview')
-     *   - products: массив продуктов для текущего клиента
-     *   - clients: список клиентов куратора
-     *   - clientId: ID выбранного клиента
-     *   - cloudUser: авторизованный пользователь Supabase
-     *   - status: состояние подключения ('online'|'offline')
-     *
-     * MAIN FEATURES:
-     *   - Автологин в Supabase (ONE_CURATOR_MODE)
-     *   - Модальное окно выбора клиента
-     *   - Синхронизация данных с облаком
-     *   - Локальный режим (localStorage fallback)
-     *
-     * DEPENDENCIES: window.HEYS.cloud, window.HEYS.utils
-     * ═══════════════════════════════════════════════════════════════════════════════
-     */
-    // Hooks moved to apps/web/heys_app_hooks_v1.js (HEYS.AppHooks)
-
-    function renderRoot(AppComponent) {
-      const getRootElement = () => {
-        const existingRoot = document.getElementById('root');
-        if (existingRoot && existingRoot.nodeType === 1) {
-          return existingRoot;
+        // Централизованная проверка day-модулей (без логов в консоль)
+        if (HEYS.moduleLoader?.checkDayDeps) {
+            HEYS.moduleLoader.checkDayDeps();
         }
-        if (!document.body) {
-          console.error('[HEYS.app] ❌ Root element is missing and document.body is not ready.');
-          return null;
+        const { useState, useEffect, useRef, useCallback, useMemo } = React;
+        HEYS.Gates?.initReactGates?.(React);
+        const ErrorBoundary = window.HEYS.ErrorBoundary;
+        const DesktopGateScreen = window.HEYS.DesktopGateScreen;
+        const AppLoader = window.HEYS.AppLoader;
+        const GamificationBar = window.HEYS.GamificationBar;
+        const AppShellModule = getModule('AppShell');
+        const AppOverlaysModule = getModule('AppOverlays');
+        const AppShell = AppShellModule && AppShellModule.AppShell;
+        const AppOverlays = AppOverlaysModule && AppOverlaysModule.AppOverlays;
+        const AppGateFlow = getModule('AppGateFlow');
+        const AppBackup = getModule('AppBackup');
+        const AppShortcuts = getModule('AppShortcuts');
+        const AppAuthInit = getModule('AppAuthInit');
+        const AppClientHelpers = getModule('AppClientHelpers');
+        const AppDesktopGate = getModule('AppDesktopGate');
+        const AppMorningCheckin = getModule('AppMorningCheckin');
+        const AppSwipeNav = getModule('AppSwipeNav');
+        const AppRuntimeEffects = getModule('AppRuntimeEffects');
+        const AppSyncEffects = getModule('AppSyncEffects');
+        const AppTabState = getModule('AppTabState');
+        const AppClientManagement = getModule('AppClientManagement');
+        const AppBackupActions = getModule('AppBackupActions');
+        const AppUpdateNotifications = getModule('AppUpdateNotifications');
+        const AppUIState = getModule('AppUIState');
+        const AppCloudInit = getModule('AppCloudInit');
+        const AppClientStateManager = getModule('AppClientStateManager');
+        const AppDateState = getModule('AppDateState');
+        const AppDerivedState = getModule('AppDerivedState');
+        const AppShellProps = getModule('AppShellProps');
+        const AppOverlaysProps = getModule('AppOverlaysProps');
+        const AppGateState = getModule('AppGateState');
+        const AppGlobalBindings = getModule('AppGlobalBindings');
+        const AppBackupState = getModule('AppBackupState');
+        const AppBannerState = getModule('AppBannerState');
+        const AppClientInit = getModule('AppClientInit');
+        const AppTwemojiEffect = getModule('AppTwemojiEffect');
+        const AppRuntimeState = getModule('AppRuntimeState');
+        const AppCoreState = getModule('AppCoreState');
+        const AppRoot = getModule('AppRoot');
+
+        const AppHooks = getModule('AppHooks');
+        const {
+            useThemePreference,
+            usePwaPrompts,
+            useWakeLock,
+            useCloudSyncStatus,
+            useClientState,
+            useCloudClients,
+        } = AppHooks;
+
+        // init cloud (safe if no cloud module)
+        // 🇷🇺 Основной трафик идёт через Yandex Cloud API (api.heyslab.ru)
+        // Legacy cloud модуль оставлен для обратной совместимости
+        if (AppCloudInit.initCloud) {
+            AppCloudInit.initCloud();
+        } else if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
+            // 🔥 Warm-up ping — прогреваем Yandex Cloud Functions
+            fetch('https://api.heyslab.ru/health', { method: 'GET' })
+                .catch(() => { }); // Warm-up ping
+
+            // 🆕 v2025-12-22: На production используем ТОЛЬКО Yandex Cloud API
+            // Supabase SDK инициализируется для совместимости cloud.signIn/signOut,
+            // но основной трафик идёт через HEYS.YandexAPI
+            const supabaseUrl = 'https://api.heyslab.ru';  // Yandex Cloud API для всех сред
+
+            HEYS.cloud.init({
+                url: supabaseUrl,
+                anonKey:
+                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds',
+                // localhost fallback больше не нужен — используем Yandex API везде
+                localhostProxyUrl: undefined
+            });
         }
-        const newRoot = document.createElement('div');
-        newRoot.id = 'root';
-        document.body.appendChild(newRoot);
-        return newRoot;
-      };
 
-      const rootElement = getRootElement();
-      if (!rootElement) {
-        return;
-      }
-      // 🦴 Log skeleton replacement
-      if (window.__heysSkelVisible) {
-        var skelDur = window.__heysSkelStart ? (Date.now() - window.__heysSkelStart) : 0;
-        window.__heysSkelReplacedAt = Date.now();
-        window.__heysSkelVisible = false;
-        window.__heysPerfMark && window.__heysPerfMark('Skeleton: replaced after ' + skelDur + 'ms visible');
-        console.info('[HEYS.skeleton] 🦴 Skeleton was visible for ' + (skelDur / 1000).toFixed(1) + 's → React takes over');
-      }
-      window.__heysPerfMark && window.__heysPerfMark('ReactDOM.createRoot: begin');
-      const root = ReactDOM.createRoot(rootElement);
-      root.render(React.createElement(ErrorBoundary, null, React.createElement(AppComponent)));
-      window.__heysPerfMark && window.__heysPerfMark('root.render: called → __heysAppReady');
+        const AppTabs = getModule('AppTabs');
+        const {
+            DayTabWithCloudSync,
+            RationTabWithCloudSync,
+            UserTabWithCloudSync,
+            AnalyticsTab,
+        } = AppTabs;
 
-      // 🆕 Уведомляем SW об успешной загрузке (сбрасывает счётчик boot failures)
-      if (navigator.serviceWorker?.controller) {
-        navigator.serviceWorker.controller.postMessage({ type: 'BOOT_SUCCESS' });
-        window.__heysLog && window.__heysLog('SW notified: BOOT_SUCCESS');
-      }
+        /* ═══════════════════════════════════════════════════════════════════════════════
+         * 🚀 ГЛАВНЫЙ КОМПОНЕНТ: App (строки 482-1140)
+         * ───────────────────────────────────────────────────────────────────────────────
+         * Корневой компонент приложения с управлением состоянием
+         *
+         * STATE MANAGEMENT:
+         *   - tab: текущая активная вкладка ('stats'|'diary'|'insights'|'widgets'|'ration'|'user'|'overview')
+         *   - products: массив продуктов для текущего клиента
+         *   - clients: список клиентов куратора
+         *   - clientId: ID выбранного клиента
+         *   - cloudUser: авторизованный пользователь Supabase
+         *   - status: состояние подключения ('online'|'offline')
+         *
+         * MAIN FEATURES:
+         *   - Автологин в Supabase (ONE_CURATOR_MODE)
+         *   - Модальное окно выбора клиента
+         *   - Синхронизация данных с облаком
+         *   - Локальный режим (localStorage fallback)
+         *
+         * DEPENDENCIES: window.HEYS.cloud, window.HEYS.utils
+         * ═══════════════════════════════════════════════════════════════════════════════
+         */
+        // Hooks moved to apps/web/heys_app_hooks_v1.js (HEYS.AppHooks)
 
-      // Флаг для watchdog
-      window.__heysAppReady = true;
-    }
+        function renderRoot(AppComponent) {
+            const getRootElement = () => {
+                const existingRoot = document.getElementById('root');
+                if (existingRoot && existingRoot.nodeType === 1) {
+                    return existingRoot;
+                }
+                if (!document.body) {
+                    console.error('[HEYS.app] ❌ Root element is missing and document.body is not ready.');
+                    return null;
+                }
+                const newRoot = document.createElement('div');
+                newRoot.id = 'root';
+                document.body.appendChild(newRoot);
+                return newRoot;
+            };
 
-    const createApp = AppRoot.createApp
-      || (({ React: HookReact }) => function AppFallback() {
-        return HookReact.createElement('div', null);
-      });
-    const App = createApp({ React });
-    renderRoot(App);
-  };
+            const rootElement = getRootElement();
+            if (!rootElement) {
+                return;
+            }
+
+            // v10.1 FOUC fix: delay React mount until main.css loaded
+            // HTML skeleton stays visible → clean transition to styled app
+            const doRender = () => {
+                // 🦴 Log skeleton replacement
+                if (window.__heysSkelVisible) {
+                    var skelDur = window.__heysSkelStart ? (Date.now() - window.__heysSkelStart) : 0;
+                    window.__heysSkelReplacedAt = Date.now();
+                    window.__heysSkelVisible = false;
+                    window.__heysPerfMark && window.__heysPerfMark('Skeleton: replaced after ' + skelDur + 'ms visible');
+                    console.info('[HEYS.skeleton] 🦴 Skeleton was visible for ' + (skelDur / 1000).toFixed(1) + 's → React takes over');
+                }
+                window.__heysPerfMark && window.__heysPerfMark('ReactDOM.createRoot: begin');
+                const root = ReactDOM.createRoot(rootElement);
+                root.render(React.createElement(ErrorBoundary, null, React.createElement(AppComponent)));
+                window.__heysPerfMark && window.__heysPerfMark('root.render: called → __heysAppReady');
+
+                // 🆕 Уведомляем SW об успешной загрузке (сбрасывает счётчик boot failures)
+                if (navigator.serviceWorker?.controller) {
+                    navigator.serviceWorker.controller.postMessage({ type: 'BOOT_SUCCESS' });
+                    window.__heysLog && window.__heysLog('SW notified: BOOT_SUCCESS');
+                }
+
+                // Флаг для watchdog
+                window.__heysAppReady = true;
+            };
+
+            // CSS gate: wait for main.css before destroying skeleton
+            if (window.__heysMainCSSLoaded) {
+                console.info('[HEYS.init] ✅ main.css already loaded — mounting React immediately');
+                doRender();
+            } else {
+                console.info('[HEYS.init] ⏳ Waiting for main.css before React mount (skeleton stays visible)');
+                var cssTimer = null;
+                var onCSS = function () {
+                    clearTimeout(cssTimer);
+                    console.info('[HEYS.init] ✅ main.css loaded — mounting React');
+                    doRender();
+                };
+                window.addEventListener('heysMainCSSLoaded', onCSS, { once: true });
+                // Safety timeout: 10s — mount anyway to avoid stuck skeleton
+                cssTimer = setTimeout(function () {
+                    window.removeEventListener('heysMainCSSLoaded', onCSS);
+                    console.warn('[HEYS.init] ⚠️ CSS timeout (10s) — mounting React without main.css');
+                    doRender();
+                }, 10000);
+            }
+        }
+
+        const createApp = AppRoot.createApp
+            || (({ React: HookReact }) => function AppFallback() {
+                return HookReact.createElement('div', null);
+            });
+        const App = createApp({ React });
+        renderRoot(App);
+    };
 })();
 
 
@@ -7791,56 +7947,56 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 // heys_app_entry_v1.js — App entry orchestration extracted from heys_app_v12.js
 
 (function () {
-  const HEYS = window.HEYS = window.HEYS || {};
-  HEYS.AppEntry = HEYS.AppEntry || {};
+    const HEYS = window.HEYS = window.HEYS || {};
+    HEYS.AppEntry = HEYS.AppEntry || {};
 
-  HEYS.AppEntry.start = function start() {
-    console.info('[HEYS] 🚀 Приложение запущено');
+    HEYS.AppEntry.start = function start() {
+        console.info('[HEYS] 🚀 Приложение запущено');
 
-    // Feature flags (local defaults)
-    HEYS.features = HEYS.features || {
-      unifiedTables: true,
-      extendedNutrients: true
-    };
+        // Feature flags (local defaults)
+        HEYS.features = HEYS.features || {
+            unifiedTables: true,
+            extendedNutrients: true
+        };
 
-    // 🔍 PWA Boot logging
-    const bootLog = (msg) => window.__heysLog && window.__heysLog('[APP] ' + msg);
-    bootLog('heys_app_entry_v1.js started');
+        // 🔍 PWA Boot logging
+        const bootLog = (msg) => window.__heysLog && window.__heysLog('[APP] ' + msg);
+        bootLog('heys_app_entry_v1.js started');
 
-    // 🔍 EARLY DEBUG: Проверяем auth token ДО любого кода
-    try {
-      const _earlyToken = localStorage.getItem('heys_supabase_auth_token');
-      bootLog('auth token: ' + (_earlyToken ? 'YES' : 'NO'));
-    } catch (e) {
-      bootLog('auth check error: ' + e.message);
-    }
-
-    // Onboarding tour helpers moved to heys_app_onboarding_v1.js
-    // Update checks moved to heys_app_update_checks_v1.js
-    // Full backup export moved to heys_app_backup_export_v1.js
-    // Debug panel + badge API moved to heys_app_gates_v1.js
-
-    const AppInitializer = HEYS.AppInitializer;
-    const initializeApp = AppInitializer?.initializeApp || (() => {
-      window.__heysLog && window.__heysLog('[APP] AppInitializer missing, init skipped');
-    });
-
-    // Start initialization
-    const startDependencyLoader = HEYS.AppDependencyLoader?.start;
-    if (startDependencyLoader) {
-      startDependencyLoader({ initializeApp });
-    } else {
-      setTimeout(() => {
-        const retryStart = HEYS.AppDependencyLoader?.start;
-        if (retryStart) {
-          retryStart({ initializeApp });
-          return;
+        // 🔍 EARLY DEBUG: Проверяем auth token ДО любого кода
+        try {
+            const _earlyToken = localStorage.getItem('heys_supabase_auth_token');
+            bootLog('auth token: ' + (_earlyToken ? 'YES' : 'NO'));
+        } catch (e) {
+            bootLog('auth check error: ' + e.message);
         }
-        window.__heysLog && window.__heysLog('[DEPS] dependency loader missing, fallback start');
-        initializeApp();
-      }, 100);
-    }
-  };
+
+        // Onboarding tour helpers moved to heys_app_onboarding_v1.js
+        // Update checks moved to heys_app_update_checks_v1.js
+        // Full backup export moved to heys_app_backup_export_v1.js
+        // Debug panel + badge API moved to heys_app_gates_v1.js
+
+        const AppInitializer = HEYS.AppInitializer;
+        const initializeApp = AppInitializer?.initializeApp || (() => {
+            window.__heysLog && window.__heysLog('[APP] AppInitializer missing, init skipped');
+        });
+
+        // Start initialization
+        const startDependencyLoader = HEYS.AppDependencyLoader?.start;
+        if (startDependencyLoader) {
+            startDependencyLoader({ initializeApp });
+        } else {
+            setTimeout(() => {
+                const retryStart = HEYS.AppDependencyLoader?.start;
+                if (retryStart) {
+                    retryStart({ initializeApp });
+                    return;
+                }
+                window.__heysLog && window.__heysLog('[DEPS] dependency loader missing, fallback start');
+                initializeApp();
+            }, 100);
+        }
+    };
 })();
 
 
