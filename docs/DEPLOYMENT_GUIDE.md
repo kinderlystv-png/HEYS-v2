@@ -4,14 +4,14 @@
 
 HEYS развёрнут полностью в Yandex Cloud (152-ФЗ compliance). Платформа:
 
-| Компонент         | Где                              | URL                                              |
-| ----------------- | -------------------------------- | ------------------------------------------------ |
-| PWA (фронтенд)    | Nginx VM → Yandex Object Storage | `app.heyslab.ru`                                 |
-| Landing           | Yandex CDN → S3                  | `heyslab.ru`                                     |
-| API Functions (7) | Yandex Cloud Functions           | `api.heyslab.ru`                                 |
-| База данных       | Yandex Cloud PostgreSQL 16       | `rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net:6432` |
-| SMS               | SMSC.ru API (через YCF)          | —                                                |
-| Платежи           | ЮKassa (через YCF)               | —                                                |
+| Компонент           | Где                                    | URL                                              |
+| ------------------- | -------------------------------------- | ------------------------------------------------ |
+| PWA (фронтенд)      | Yandex Object Storage (9 бандлов GZIP) | `app.heyslab.ru`                                 |
+| Landing             | Yandex CDN → S3                        | `heyslab.ru`                                     |
+| Cloud Functions (9) | Yandex Cloud Functions                 | `api.heyslab.ru`                                 |
+| База данных         | Yandex Cloud PostgreSQL 16             | `rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net:6432` |
+| SMS                 | SMSC.ru API (через YCF)                | —                                                |
+| Платежи             | ЮKassa (через YCF)                     | —                                                |
 
 ---
 
@@ -213,16 +213,26 @@ steps:
 
 ### 1. Frontend (PWA — `app.heyslab.ru`)
 
-PWA разворачивается на Nginx VM с отдачей из Yandex Object Storage:
+PWA — статические файлы в Yandex Object Storage. JS-код состоит из **9
+GZIP-бандлов** (246 файлов → 9, 63с → 1.5с на mobile):
 
 ```bash
-# Сборка
-cd apps/web
-pnpm build
+# Шаг 1: Production build legacy бандлов
+node scripts/bundle-legacy.mjs   # пересобрать все 9 бандлов с новым hash
 
-# dist/ → загрузить в Yandex S3 bucket
-# Nginx настроен на проксирование к S3
+# Шаг 2: Загрузить в Yandex Object Storage
+# (скрипт автоматически сжимает .js в GZIP, устанавливает Content-Encoding: gzip)
+.\upload-to-yandex.ps1 -distDir apps/web/public
+
+# Шаг 3: Отдельно загрузить index.html (не входит в public/)
+yc storage s3api put-object --bucket heys-app --key index.html --body apps/web/index.html
+
+# Быстрая проверка
+curl -sI https://app.heyslab.ru/index.html | grep -i etag
 ```
+
+> **Важно**: `apps/web/index.html` обновляется автоматически при бандлинге
+> (новый hash). Всегда загружайте его отдельной командой после бандлов.
 
 ### 2. Landing (`heyslab.ru`)
 
@@ -469,6 +479,6 @@ yc serverless function version get-by-tag \
 
 ---
 
-_Руководство по развертыванию обновлено: 19 февраля 2026_  
-_Версия: 4.0.0 (Yandex Cloud Infrastructure)_  
+_Руководство по развертыванию обновлено: 26 февраля 2026_  
+_Версия: 5.0.0 (Yandex Cloud Infrastructure + JS Bundling)_  
 _Готовность к production: ✅ Проверено_

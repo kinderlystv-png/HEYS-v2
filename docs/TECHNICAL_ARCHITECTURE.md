@@ -1,7 +1,8 @@
 # 🏗️ Техническая Архитектура HEYS
 
-> **Версия:** v16.0.0 **Дата обновления:** February 19, 2026 **Статус:** ✅
-> Production Ready — полностью переведено на Yandex Cloud
+> **Версия:** v17.0.0 **Дата обновления:** February 26, 2026 **Статус:** ✅
+> Production Ready — JS бандлинг завершён (246 → 9 файлов, FCP mobile 65s →
+> 2.6s)
 
 ---
 
@@ -203,6 +204,34 @@ Event Source → Event Bus → Event Handlers → Side Effects
 ---
 
 ## ⚡ Производительность
+
+### JS Bundling & Load Performance (v9.6, февраль 2026)
+
+> **До:** 246 `<script defer>` файлов — 63с на Mid-tier mobile.  
+> **После:** 9 GZIP-бандлов в Yandex Object Storage — FCP **2.6с** на mobile.
+
+| Бандл                 | Содержимое                              | Размер (GZIP) |
+| --------------------- | --------------------------------------- | ------------- |
+| `boot-core`           | platform, yandex_api, models, storage   | ~230 KB       |
+| `boot-calc`           | ratio_zones, tef, tdee, harm            | ~180 KB       |
+| `boot-day`            | все heys*day*\*                         | ~180 KB       |
+| `boot-app`            | auth, subscription, app_shell, app_tabs | ~204 KB       |
+| `boot-init`           | app_root, initialize, entry             | ~68 KB        |
+| `postboot-1-game`     | gamification, advice                    | ~270 KB       |
+| `postboot-2-insights` | все pi\_\*.js                           | ~350 KB       |
+| `postboot-3-ui`       | modals, reports, widgets                | ~256 KB       |
+| `boot-app-tabs`       | app_tabs дополнительный                 | ~35 KB        |
+
+Пересборка: `node scripts/bundle-legacy.mjs` →
+`upload-to-yandex.ps1 -distDir apps/web/public`.
+
+**Ключевые оптимизации загрузки (v9.5–v9.6):**
+
+- `DayTabWithCloudSync`: non-blocking + 5000ms fallback. `syncVer` убран из
+  React `key` → устранено моргание таба после full sync.
+- clientId-фильтрация в `heysSyncCompleted` — чужие события не разблокируют UI.
+- `getCrsNumber` возвращает `null` при пустой истории (не падает).
+- skip flush для fresh-клиентов.
 
 ### Стратегия кэширования
 
@@ -415,17 +444,16 @@ const products = window.HEYS?.products?.getAll?.() || [];
 
 ## �🔮 Будущее развитие
 
----
-
-## 🔮 Будущее развитие
-
 - **Adaptive Thresholds v2.1**: Инкрементальные rolling-window обновления
   (отложено)
 - **Trial Machine v3.1**: Дополнительные опции активации триала
-- **Payments**: ЮKassa интеграция (`heys-api-payments`)
+- ✅ ~~**Payments**: ЮKassa интеграция~~ — `heys-api-payments` задеплоен в
+  production
 - **SMS verification**: Усиление ПЭП при масштабировании (>50 клиентов)
+- **EWS**: перенос на `requestIdleCallback` (низкий приоритет)
+- **Network Waterfall**: аудит `Promise.all` при init
 
 ---
 
-_Документ обновлен: February 19, 2026_ _Версия системы: v5.0.1 (production
-stable)_
+_Документ обновлен: February 26, 2026_ _Версия системы: v9.6.0 (production
+stable — JS bundling complete)_

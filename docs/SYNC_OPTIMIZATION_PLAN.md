@@ -225,15 +225,16 @@
   - `useMemo` для `appShellProps` и `overlaysProps` с перечислением реальных
     deps.
 
-### Шаг 14. fetchpriority cleanup (✅)
+### Шаг 14. fetchpriority cleanup (✅ Устаревшее — решено бандлингом)
 
-- **Где:** `apps/web/index.html` — 243 `<script defer>` тега с
-  `fetchpriority="high"`.
-- **Проблема:** Когда ВСЕ ресурсы имеют `fetchpriority="high"`, приоритизация не
-  работает — браузер игнорирует hint.
-- **Решение:** Только `heys-critical.bundle.*.js` → `fetchpriority="high"`.
-  Features bundle → `fetchpriority="low"`. Lazy bundle → без hint. (Это
-  актуально для production dist, после бандлинга.)
+- **Историческая проблема:** `apps/web/index.html` содержал 243 `<script defer>`
+  тега с `fetchpriority="high"`. Когда ВСЕ ресурсы имеют `fetchpriority="high"`,
+  приоритизация не работает — браузер игнорирует hint.
+- **Итоговое решение (v9.0):** JS-файлы объединены в 9 бандлов через
+  `scripts/bundle-legacy.mjs`. Проблема приоритизации 243 файлов полностью
+  устранена: теперь только 5 boot-бандлов + 3 postboot + 1 app-tabs тег в
+  `index.html`. Бандлы не используют `fetchpriority` — браузер сам правильно
+  расставляет приоритеты для 9 запросов.
 
 ---
 

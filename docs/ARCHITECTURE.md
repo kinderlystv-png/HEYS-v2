@@ -1,7 +1,7 @@
 # 🏗️ HEYS Platform Architecture
 
-> **System Architecture Overview** **Version:** 15.1.0 (Supabase → Yandex Cloud
-> migration documented) **Last Updated:** February 19, 2026
+> **System Architecture Overview** **Version:** 17.0.0 (JS bundling complete,
+> FCP mobile 2.6s) **Last Updated:** February 26, 2026
 
 ## 📊 High-Level Architecture Diagram
 
@@ -608,4 +608,4 @@ Current Monolith          Future Microservices
 
 ---
 
-**© 2025 HEYS Development Team** | Architecture by @system-architects
+**© 2026 HEYS Development Team** | Architecture by @system-architects
