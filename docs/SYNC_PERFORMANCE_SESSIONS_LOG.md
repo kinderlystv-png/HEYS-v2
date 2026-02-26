@@ -782,5 +782,74 @@ React.render() автоматически перезаписывает. Нет J
 
 ---
 
-_Следующий спринт — ESM миграция (~200 файлов) и измерение реального appReady
-после деплоя gzip (Session 8)._
+---
+
+### Session 8 — Cascade Guard v6.2: устранение BROKEN flash (26.02.2026)
+
+**Контекст:** Верифицирован на fast-internet: после Guard v6.1 карточка каскада
+мгновенно показывала BROKEN/CRS=0 (flash ~0.5s), затем STRONG. Причина: Phase A
+`heysSyncCompleted` запускал `computeCascadeState` до прихода Phase B с
+историческими данными.
+
+**Корневая причина:**
+
+1. `heysSyncCompleted` теперь диспатчится **дважды**: Phase A (`phaseA:true`) и
+   Phase B (`phase:'full'`). Guard слушал оба — Phase A открывал флаг, Phase B
+   приходил позже.
+2. При `computeCascadeState` с `historicalDays=[]` записывался
+   `window.HEYS._lastCrs` с пустой историей → `getCrsNumber()` возвращал `null`
+   → маятник навсегда.
+
+**Решение: двухуровневый guard**
+
+```
+Layer 1: __heysCascadeBatchSyncReceived
+  Открывается: batch heys:day-updated, heysSyncCompleted{phase:'full'}, 5s fallback
+  Закрыто при: heysSyncCompleted{phaseA:true} — explicit reject
+
+Layer 2: __heysCascadeAllowEmptyHistory
+  Открывается: batch heys:day-updated, 8s fallback (new user)
+  Назначение: safety-net даже если Layer 1 открылся
+```
+
+**Изменённые файлы:**
+
+- `apps/web/heys_cascade_card_v1.js` — Guard v6.2; phase-filtering в
+  `heysSyncCompleted` listener; двойной setTimeout (5s + 8s); client-switch
+  reset
+- `apps/web/public/boot-init.bundle.965ff6f2560f.js` — пересобран с Guard v6.2
+  (hash сменился: `01e94cb6ddd3` → `965ff6f2560f`)
+
+**Актуальные хеши бандлов (Session 8):**
+
+| Бандл               | Хеш          | Изменился? |
+| ------------------- | ------------ | ---------- |
+| boot-core           | 11e1203df3d1 | ✅         |
+| boot-calc           | 35b159a72e66 | ✅         |
+| boot-day            | 7320c50778ec | —          |
+| boot-app            | 82f8201d13bf | ✅         |
+| boot-init           | 965ff6f2560f | ✅ (Guard) |
+| postboot-1-game     | 7f1c5f112d43 | ✅         |
+| postboot-2-insights | bd05d07de042 | ✅         |
+| postboot-3-ui       | 5115341c9cfc | ✅         |
+
+**Поведение (верифицировано консольными логами):**
+
+| Сеть         | Путь                                    | Результат                |
+| ------------ | --------------------------------------- | ------------------------ |
+| Fast WiFi    | hidden → Phase A отклонён → Phase B OK  | STRONG 90%, без flash ✅ |
+| Throttled 3G | hidden → 5s fallback → BROKEN → Phase B | STRONG 90%, flash ~5s ⚠️ |
+
+Throttled flash — **принятый компромисс**: на реальных условиях интернета flash
+полностью устранён.
+
+**Результат:**
+
+- `__heysCascadeBatchSyncReceived`: false на старте → true только при Phase B
+- `__heysCascadeAllowEmptyHistory`: false → true при batch или 8s
+- CrsProgressBar: маятник до `getCrsNumber() !== null` (historicalDays ≥ 1)
+- Верифицировано: Phase A rejected ✅, guard holds ✅, renders STRONG ✅
+
+---
+
+_Следующий спринт — ESM миграция (~200 файлов)._

@@ -1,6 +1,6 @@
 # HEYS Storage Patterns
 
-> **Version:** v2.0.0 | **Updated:** 26.02.2026
+> **Version:** v3.0.0 | **Updated:** 26.02.2026
 >
 > Правила работы с localStorage и cloud sync
 >
@@ -35,16 +35,21 @@ localStorage.setItem('heys_client_current', clientId);
 
 ## localStorage ключи
 
-| Ключ                        | Описание              | Namespace     |
-| --------------------------- | --------------------- | ------------- |
-| `heys_dayv2_{date}`         | Данные дня            | ✅ clientId   |
-| `heys_products`             | База продуктов        | ✅ clientId   |
-| `heys_profile`              | Профиль пользователя  | ✅ clientId   |
-| `heys_norms`                | Нормы питания         | ✅ clientId   |
-| `heys_hr_zones`             | Пульсовые зоны        | ✅ clientId   |
-| `heys_pending_client_queue` | Очередь синхронизации | ❌ глобальный |
-| `heys_session_token`        | Сессия клиента        | ❌ глобальный |
-| `heys_client_current`       | Текущий клиент        | ❌ глобальный |
+| Ключ                        | Описание                | Namespace     |
+| --------------------------- | ----------------------- | ------------- |
+| `heys_dayv2_{date}`         | Данные дня              | ✅ clientId   |
+| `heys_products`             | База продуктов          | ✅ clientId   |
+| `heys_profile`              | Профиль пользователя    | ✅ clientId   |
+| `heys_norms`                | Нормы питания           | ✅ clientId   |
+| `heys_hr_zones`             | Пульсовые зоны          | ✅ clientId   |
+| `heys_ews_weekly_v1`        | EWS еженедельные данные | ✅ clientId   |
+| `heys_pending_client_queue` | Очередь синхронизации   | ❌ глобальный |
+| `heys_session_token`        | Сессия клиента          | ❌ глобальный |
+| `heys_client_current`       | Текущий клиент          | ❌ глобальный |
+
+> ⚠️ **Версионированные ключи**: `heys_dayv2_{date}` (не `heys_day_{date}`!) и
+> `heys_ews_weekly_v1` (не `heys_ews_weekly`). Всегда используйте точные имена,
+> иначе данные не синхронизируются.
 
 ---
 
@@ -62,6 +67,70 @@ U.lsSet('heys_products', newProducts); // БЕЗ cloud sync!
 
 // ❌ НЕПРАВИЛЬНО — неверный ключ
 HEYS.store.set('products', newProducts); // Создаст heys_<clientId>_products!
+```
+
+---
+
+## heysSyncCompleted — двухфазный dispatch
+
+`heysSyncCompleted` генерируется **дважды** на каждый холодный старт:
+
+| Фаза        | detail                                         | Что загружено                        |
+| ----------- | ---------------------------------------------- | ------------------------------------ |
+| **Phase A** | `{ clientId, phaseA: true }`                   | 5 критичных ключей (без истории)     |
+| **Phase B** | `{ clientId, phase: 'full', viaYandex: true }` | 530+ ключей (включая `heys_dayv2_*`) |
+
+```javascript
+// ✅ Правильно: оставлять только Phase B (full sync)
+window.addEventListener('heysSyncCompleted', function (e) {
+  var detail = e && e.detail;
+  if (!detail || !detail.clientId || detail.phaseA) return; // отклоняем Phase A
+  // ... код, которому нужны все исторические данные
+});
+
+// ✅ Правильно: принять любой приход (DayTab, достаточно Phase A)
+window.addEventListener('heysSyncCompleted', function (e) {
+  var detail = e && e.detail;
+  if (!detail || !detail.clientId) return; // отклоняем synthetic events
+  setDayTabReady(true);
+});
+
+// ❌ НЕПРАВИЛЬНО: не фильтруют Phase A — получают пустую историю
+window.addEventListener('heysSyncCompleted', computeHistoricalAnalytics);
+```
+
+> ⚠️ **Cascade Guard v6.2** в `heys_cascade_card_v1.js` является эталоном
+> Phase-фильтрации. См. [SYNC_REFERENCE.md §12](../SYNC_REFERENCE.md) для полной
+> документации guard.
+
+---
+
+## window.\_\_heysCascade\* — глобальные флаги Cascade Guard
+
+Эти безсерверные флаги создаются `heys_cascade_card_v1.js`. Нельзя устанавливать
+вручную без чёткого понимания последствий.
+
+| Флаг                                | Тип     | Описание                                   |
+| ----------------------------------- | ------- | ------------------------------------------ |
+| `__heysCascadeBatchSyncReceived`    | boolean | Layer 1: разрешает `computeCascadeState()` |
+| `__heysCascadeAllowEmptyHistory`    | boolean | Layer 2: разрешает render с 0 ист. днями   |
+| `__heysCascadeGuardCount`           | number  | Счётчик подавленных рендеров               |
+| `__heysCascadeGuardTimer`           | timeout | 5s фоллбэк для Layer 1                     |
+| `__heysCascadeHistoryBypassTimer`   | timeout | 8s фоллбэк для Layer 2                     |
+| `__heysCascadeLastRenderKey`        | string  | Дедупликация render по state key           |
+| `__heysCascadeBatchSyncInvalidator` | boolean | Гард ординарной регистрации                |
+| `__heysCascadeCacheInvalidator`     | boolean | Гард ординарной регистрации                |
+
+```javascript
+// Диагностика guard в консоли:
+console.log({
+  layer1: window.__heysCascadeBatchSyncReceived,
+  layer2: window.__heysCascadeAllowEmptyHistory,
+  suppressed: window.__heysCascadeGuardCount,
+});
+// Сброс для отладки (не использовать в prod):
+window.__heysCascadeBatchSyncReceived = true;
+window.__heysCascadeAllowEmptyHistory = true;
 ```
 
 ---
