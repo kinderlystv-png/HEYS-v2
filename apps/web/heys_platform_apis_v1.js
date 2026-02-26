@@ -877,7 +877,7 @@
 
         // Небольшая задержка для завершения кэширования, затем reload
         setTimeout(() => {
-          console.log('[SW] Reloading page with new SW...');
+          console.log('[SW] 🔄 Reloading page with new SW... (triggered by controllerchange)');
           window.location.reload();
         }, 500);
       } else {
@@ -933,7 +933,7 @@
       // 5. Fallback таймер (если controllerchange не сработает)
       setTimeout(() => {
         if (sessionStorage.getItem('heys_pending_update') === 'true') {
-          console.log('[SW] ⚡ Fallback reload after', fallbackMs, 'ms');
+          console.log('[SW] ⚡ Fallback reload after', fallbackMs, 'ms (triggered by triggerSkipWaiting fallback)');
           const url = new URL(window.location.href);
           url.searchParams.set('_v', Date.now().toString());
           window.location.href = url.toString();
