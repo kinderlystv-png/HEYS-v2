@@ -2166,13 +2166,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         refreshing = true;
         showUpdateModal('reloading');
 
-        // Небольшая задержка для завершения кэширования, затем cache-busted reload
-        setTimeout(() => {
+        // v61: Defer reload until active sync completes (prevents mid-sync page interruption)
+        const doReload = () => {
           console.log('[SW] 🔄 Reloading page with new SW... (triggered by controllerchange)');
           const url = new URL(window.location.href);
           url.searchParams.set('_v', Date.now().toString());
           window.location.href = url.toString();
-        }, 500);
+        };
+        const syncInFlight = typeof HEYS !== 'undefined' && HEYS.cloud && typeof HEYS.cloud.isSyncing === 'function'
+          ? HEYS.cloud.isSyncing()
+          : null;
+        if (syncInFlight) {
+          console.log('[SW] ⏳ Sync in progress — deferring reload until sync completes (max 15s)...');
+          Promise.race([
+            syncInFlight,
+            new Promise(resolve => setTimeout(resolve, 15000))
+          ]).finally(doReload);
+        } else {
+          setTimeout(doReload, 500);
+        }
       } else {
         // Первичная установка SW — НЕ делаем reload, страница уже загружена
         console.log('[SW] First-time controller activation, no reload needed');
@@ -3672,7 +3684,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.02.27.1522.69f859aa'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.02.27.1525.69f859aa'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
@@ -16723,6 +16735,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           result = await cloud.syncClientViaRPC(clientId);
         }
 
+        // v61: Guard against undefined result (no sync method available yet at cold boot)
+        if (!result) {
+          result = { success: false, error: 'No sync method available at boot time' };
+        }
+
         // ⚡ v5.2.0: Invalidate pattern cache after successful sync
         if (result?.success && HEYS.InsightsPI?.cache?.invalidateCache) {
           HEYS.InsightsPI.cache.invalidateCache('all');
@@ -16743,6 +16760,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     _syncInFlight = { clientId, promise: syncPromise };
     return syncPromise;
   };
+
+  // v61: Expose sync-in-flight state for PWA reload deferral (heys_platform_apis_v1.js checks this)
+  cloud.isSyncing = () => (_syncInFlight ? _syncInFlight.promise : null);
 
   // ═══════════════════════════════════════════════════════════════════
   // 🔐 AUTH TOKEN SANITIZE (RTR-safe)
@@ -18678,10 +18698,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           // Это позволяет deduplication работать если App useEffect тоже вызовет syncClient
           cloud.syncClient(pinAuthClient).then(result => {
             _rpcSyncInProgress = false;
-            if (result.success) {
+            if (result?.success) {
               logCritical('✅ [YANDEX RESTORE] Sync завершён:', result.loaded, 'ключей');
             } else {
-              logCritical('⚠️ [YANDEX RESTORE] Sync failed:', result.error);
+              logCritical('⚠️ [YANDEX RESTORE] Sync failed:', result?.error || 'no result');
             }
           }).catch(e => {
             _rpcSyncInProgress = false;

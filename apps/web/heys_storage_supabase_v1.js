@@ -406,6 +406,11 @@
           result = await cloud.syncClientViaRPC(clientId);
         }
 
+        // v61: Guard against undefined result (no sync method available yet at cold boot)
+        if (!result) {
+          result = { success: false, error: 'No sync method available at boot time' };
+        }
+
         // ⚡ v5.2.0: Invalidate pattern cache after successful sync
         if (result?.success && HEYS.InsightsPI?.cache?.invalidateCache) {
           HEYS.InsightsPI.cache.invalidateCache('all');
@@ -426,6 +431,9 @@
     _syncInFlight = { clientId, promise: syncPromise };
     return syncPromise;
   };
+
+  // v61: Expose sync-in-flight state for PWA reload deferral (heys_platform_apis_v1.js checks this)
+  cloud.isSyncing = () => (_syncInFlight ? _syncInFlight.promise : null);
 
   // ═══════════════════════════════════════════════════════════════════
   // 🔐 AUTH TOKEN SANITIZE (RTR-safe)
@@ -2361,10 +2369,10 @@
           // Это позволяет deduplication работать если App useEffect тоже вызовет syncClient
           cloud.syncClient(pinAuthClient).then(result => {
             _rpcSyncInProgress = false;
-            if (result.success) {
+            if (result?.success) {
               logCritical('✅ [YANDEX RESTORE] Sync завершён:', result.loaded, 'ключей');
             } else {
-              logCritical('⚠️ [YANDEX RESTORE] Sync failed:', result.error);
+              logCritical('⚠️ [YANDEX RESTORE] Sync failed:', result?.error || 'no result');
             }
           }).catch(e => {
             _rpcSyncInProgress = false;

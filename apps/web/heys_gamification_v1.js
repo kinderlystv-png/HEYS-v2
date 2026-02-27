@@ -1735,6 +1735,8 @@
       _isProcessingWatch = true;
       try {
         setStoredValue(STORAGE_KEY, _data);
+        // v61: Sync XP cache after watch merge to prevent drift
+        _saveXPCache(_data.totalXP || 0, _data._lastKnownEventCount || 0);
       } finally {
         _isProcessingWatch = false;
       }
@@ -4883,6 +4885,8 @@
 
           _data = merged;
           setStoredValue(STORAGE_KEY, _data);
+          // v61: Persist merged XP to cache immediately to prevent drift in ensureAuditConsistency
+          _saveXPCache(merged.totalXP || 0, merged._lastKnownEventCount || 0);
           _cloudLoaded = true;
 
           window.dispatchEvent(new CustomEvent('heysGameUpdate', {

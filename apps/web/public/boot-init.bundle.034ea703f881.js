@@ -3812,8 +3812,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         var profRaw = (HEYS.store && HEYS.store.get) ? HEYS.store.get('heys_profile', null) : localStorage.getItem('heys_profile');
         var prof = profRaw ? (typeof profRaw === 'string' ? JSON.parse(profRaw) : profRaw) : {};
         console.info('[HEYS.cascade] 🔄 cascade-recompute: re-running computeCascadeState with fresh historical data');
+        // v61: Build pIndex from products so getMealQualityScore is available during recompute
+        var productsRaw = (HEYS.store && HEYS.store.get)
+          ? HEYS.store.get('heys_products', null)
+          : localStorage.getItem('heys_products');
+        var products = productsRaw
+          ? (typeof productsRaw === 'string' ? JSON.parse(productsRaw) : productsRaw)
+          : null;
+        var pIndex = (products && HEYS.dayUtils && HEYS.dayUtils.buildProductIndex)
+          ? HEYS.dayUtils.buildProductIndex(products)
+          : null;
         // computeCascadeState dispatches heys:crs-updated → CrsProgressBar updates automatically
-        computeCascadeState(day, null, normAbs, prof, null);
+        computeCascadeState(day, null, normAbs, prof, pIndex);
       } catch (err) {
         console.warn('[HEYS.cascade] ⚠️ cascade-recompute error:', err && err.message);
       }

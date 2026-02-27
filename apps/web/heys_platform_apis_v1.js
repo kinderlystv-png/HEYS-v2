@@ -886,13 +886,25 @@
         refreshing = true;
         showUpdateModal('reloading');
 
-        // Небольшая задержка для завершения кэширования, затем cache-busted reload
-        setTimeout(() => {
+        // v61: Defer reload until active sync completes (prevents mid-sync page interruption)
+        const doReload = () => {
           console.log('[SW] 🔄 Reloading page with new SW... (triggered by controllerchange)');
           const url = new URL(window.location.href);
           url.searchParams.set('_v', Date.now().toString());
           window.location.href = url.toString();
-        }, 500);
+        };
+        const syncInFlight = typeof HEYS !== 'undefined' && HEYS.cloud && typeof HEYS.cloud.isSyncing === 'function'
+          ? HEYS.cloud.isSyncing()
+          : null;
+        if (syncInFlight) {
+          console.log('[SW] ⏳ Sync in progress — deferring reload until sync completes (max 15s)...');
+          Promise.race([
+            syncInFlight,
+            new Promise(resolve => setTimeout(resolve, 15000))
+          ]).finally(doReload);
+        } else {
+          setTimeout(doReload, 500);
+        }
       } else {
         // Первичная установка SW — НЕ делаем reload, страница уже загружена
         console.log('[SW] First-time controller activation, no reload needed');

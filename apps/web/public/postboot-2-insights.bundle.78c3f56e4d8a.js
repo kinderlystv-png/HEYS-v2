@@ -27147,11 +27147,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
     }
 
-    // Initial cloud bootstrap (non-blocking): pull+merge+push once on module load
-    setTimeout(() => {
+    // v61: Wait for main sync to complete before bootstrap so profile/clientId are loaded.
+    // Falls back to 10s timeout if heys:sync-complete never fires (e.g. session already cached).
+    var _fbBootstrapDone = false;
+    function _doBootstrapSync() {
+        if (_fbBootstrapDone) return;
+        _fbBootstrapDone = true;
         syncWithCloud({ reason: 'bootstrap' })
             .catch((err) => console.warn(`${LOG_PREFIX} ⚠️ Bootstrap sync failed:`, err?.message));
-    }, 0);
+    }
+    globalObj.addEventListener('heys:sync-complete', function _onSyncComplete() {
+        globalObj.removeEventListener('heys:sync-complete', _onSyncComplete);
+        _doBootstrapSync();
+    });
+    // Fallback: if heys:sync-complete never fires within 10s, try anyway
+    setTimeout(_doBootstrapSync, 10000);
 
     // Публичное API
     globalObj.HEYS.InsightsPI.mealRecFeedback = {

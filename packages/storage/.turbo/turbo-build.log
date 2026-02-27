@@ -11,9 +11,9 @@ CLI Cleaning output folder
 CJS Build start
 ESM Build start
 Entry module "dist/index.cjs" is using named and default exports together. Consumers of your bundle will have to use `chunk.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
-ESM dist/index.js     71.67 KB
-ESM dist/index.js.map 272.54 KB
-ESM ⚡️ Build success in 713ms
 CJS dist/index.cjs     71.78 KB
 CJS dist/index.cjs.map 272.54 KB
-CJS ⚡️ Build success in 713ms
+CJS ⚡️ Build success in 1065ms
+ESM dist/index.js     71.67 KB
+ESM dist/index.js.map 272.54 KB
+ESM ⚡️ Build success in 1068ms
