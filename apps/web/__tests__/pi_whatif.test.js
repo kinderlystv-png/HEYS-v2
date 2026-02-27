@@ -255,7 +255,8 @@ describe('What-If Scenarios', () => {
             result.sideBenefits.forEach(benefit => {
                 expect(benefit).toHaveProperty('pattern');
                 expect(benefit).toHaveProperty('improvement');
-                expect(benefit.improvement).toMatch(/^\+\d+%$/);
+                // v3.6+: format is '+N баллов'
+                expect(benefit.improvement).toMatch(/^\+\d+ баллов$/);
             });
         });
 

@@ -116,7 +116,7 @@
         fiberTarget: {
             insulin_resistant: 1.2,     // Need more for blood sugar control
             low_satiety: 1.3,           // Maximize volume/satiety
-            gut_health_risk: 1.25,      // (Future phenotype)
+            // gut_health_risk: 1.25,   // TODO: add gut_health_risk to PHENOTYPES taxonomy first
             neutral: 1.0
         },
 

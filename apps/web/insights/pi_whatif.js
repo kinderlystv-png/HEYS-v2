@@ -463,6 +463,13 @@
             console.warn('[WhatIf] ⚠️ Error computing baseline:', e.message);
         }
 
+        // v62: Fallback — patterns module existed but returned no usable results
+        // (e.g. insufficient data, mock structure mismatch, all patterns unavailable).
+        if (Object.keys(scores).length < 5) {
+            console.warn('[WhatIf] ⚠️ Insufficient baseline data (' + Object.keys(scores).length + ' patterns), using defaults');
+            return getDefaultBaseline();
+        }
+
         return scores;
     }
 

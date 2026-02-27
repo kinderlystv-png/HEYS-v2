@@ -228,7 +228,7 @@ describe('Smart Product Picker v2.5', () => {
 
             const score = HEYS.InsightsPI.productPicker.calculateProductScore(mockProduct, scenario, 100);
 
-            expect(score.totalScore).toBeLessThan(50); // Should score poorly (violates budget)
+            expect(score.totalScore).toBeLessThan(75); // v4.0.0 soft penalty: kcalFit=0 but other factors still score
             expect(score.breakdown.kcalFit).toBeLessThan(50);
         });
 
@@ -277,12 +277,15 @@ describe('Smart Product Picker v2.5', () => {
 
             const suggestions = HEYS.InsightsPI.productPicker.generateProductSuggestions(params);
 
-            expect(suggestions).toBeInstanceOf(Array);
-            expect(suggestions.length).toBeGreaterThan(0);
-            expect(suggestions.length).toBeLessThanOrEqual(3);
+            // v3.2: generateProductSuggestions returns { mode: 'grouped', groups, ... } for balanced scenarios
+            expect(suggestions).toHaveProperty('mode', 'grouped');
+            expect(suggestions.groups).toBeInstanceOf(Array);
+            expect(suggestions.groups.length).toBeGreaterThan(0);
 
-            // Check structure
-            suggestions.forEach(sugg => {
+            // Check structure of items inside groups
+            const allProducts = suggestions.groups.flatMap(g => g.products || []);
+            expect(allProducts.length).toBeGreaterThan(0);
+            allProducts.forEach(sugg => {
                 expect(sugg).toHaveProperty('product');
                 expect(sugg).toHaveProperty('grams');
                 expect(sugg).toHaveProperty('reason');
@@ -307,11 +310,13 @@ describe('Smart Product Picker v2.5', () => {
 
             const suggestions = HEYS.InsightsPI.productPicker.generateProductSuggestions(params);
 
-            expect(suggestions).toBeInstanceOf(Array);
-            expect(suggestions.length).toBeGreaterThan(0);
+            // v3.2: grouped response
+            expect(suggestions).toHaveProperty('mode', 'grouped');
+            const lateProducts = suggestions.groups.flatMap(g => g.products || []);
+            expect(lateProducts.length).toBeGreaterThan(0);
 
             // Check that suggestions have low kcal (appropriate for late evening)
-            suggestions.forEach(sugg => {
+            lateProducts.forEach(sugg => {
                 expect(sugg.macros.kcal).toBeLessThanOrEqual(300);
             });
         });
@@ -339,11 +344,13 @@ describe('Smart Product Picker v2.5', () => {
 
             const suggestions = HEYS.InsightsPI.productPicker.generateProductSuggestions(params);
 
-            expect(suggestions).toBeInstanceOf(Array);
+            // v3.2: grouped response
+            expect(suggestions).toHaveProperty('mode', 'grouped');
 
             // All should be from fallback
-            if (suggestions.length > 0) {
-                expect(suggestions.every(s => s.source === 'fallback' || s.source === 'history')).toBe(true);
+            const fallbackSuggested = suggestions.groups.flatMap(g => g.products || []);
+            if (fallbackSuggested.length > 0) {
+                expect(fallbackSuggested.every(s => s.source === 'fallback' || s.source === 'history')).toBe(true);
             }
         });
 
@@ -375,7 +382,9 @@ describe('Smart Product Picker v2.5', () => {
             const suggestions = HEYS.InsightsPI.productPicker.generateProductSuggestions(params);
 
             // Total kcal from suggestions should not grossly exceed remaining
-            const totalKcal = suggestions.reduce((sum, s) => sum + s.macros.kcal, 0);
+            // v3.2: grouped response — flatten groups first
+            const balancedProducts = suggestions.groups.flatMap(g => g.products || []);
+            const totalKcal = balancedProducts.reduce((sum, s) => sum + s.macros.kcal, 0);
             expect(totalKcal).toBeLessThanOrEqual(params.remainingKcal * 1.5); // Allow some flexibility
         });
 
@@ -395,7 +404,9 @@ describe('Smart Product Picker v2.5', () => {
             const suggestions = HEYS.InsightsPI.productPicker.generateProductSuggestions(params);
 
             // Check that at least one suggestion has high protein
-            const hasHighProtein = suggestions.some(s => s.macros.protein >= 20);
+            // v3.2: grouped response — flatten groups first
+            const proteinProducts = suggestions.groups.flatMap(g => g.products || []);
+            const hasHighProtein = proteinProducts.some(s => s.macros.protein >= 20);
             expect(hasHighProtein).toBe(true);
         });
     });

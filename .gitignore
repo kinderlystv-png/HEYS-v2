@@ -192,3 +192,7 @@ tsup.config.bundled_*.mjs
 # Cloud Functions local bundle (shared/ MUST be tracked — required for deploy!)
 # yandex-cloud-functions/heys-api-rpc/shared/  # ← НЕ игнорировать! Нужен для деплоя
 heys_shared_products_export_backup.json
+
+# Accidental log/temp files in .github
+.github/log*.yml
+.github/Untitled*.yml

@@ -14003,7 +14003,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         fiberTarget: {
             insulin_resistant: 1.2,     // Need more for blood sugar control
             low_satiety: 1.3,           // Maximize volume/satiety
-            gut_health_risk: 1.25,      // (Future phenotype)
+            // gut_health_risk: 1.25,   // TODO: add gut_health_risk to PHENOTYPES taxonomy first
             neutral: 1.0
         },
 
@@ -19001,7 +19001,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     });
 
     // === PHENOTYPE QUICK HELPERS (console API) ===
-    if (!HEYS.InsightsPI.phenotype.set) {
+    if (HEYS.InsightsPI.phenotype && !HEYS.InsightsPI.phenotype.set) {
         const PRESETS = {
             IR_EVENING: { metabolic: 'insulin_resistant', circadian: 'evening_type', satiety: 'low_satiety', stress: 'stress_eater' },
             IR_MORNING: { metabolic: 'insulin_resistant', circadian: 'morning_type', satiety: 'high_satiety', stress: 'neutral' },
@@ -19542,6 +19542,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             });
         } catch (e) {
             console.warn('[WhatIf] ⚠️ Error computing baseline:', e.message);
+        }
+
+        // v62: Fallback — patterns module existed but returned no usable results
+        // (e.g. insufficient data, mock structure mismatch, all patterns unavailable).
+        if (Object.keys(scores).length < 5) {
+            console.warn('[WhatIf] ⚠️ Insufficient baseline data (' + Object.keys(scores).length + ' patterns), using defaults');
+            return getDefaultBaseline();
         }
 
         return scores;

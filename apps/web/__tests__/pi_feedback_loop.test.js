@@ -146,9 +146,13 @@ describe('Feedback Loop', () => {
         const lastCall = HEYS.dayUtils.lsSet.mock.calls[HEYS.dayUtils.lsSet.mock.calls.length - 1];
         const storedData = lastCall[1];
 
-        expect(storedData[0].recommendation.suggestions).toHaveLength(2);
-        expect(storedData[0].recommendation.suggestions[0].productId).toBe(123);
-        expect(storedData[0].recommendation.suggestions[1].productId).toBe(456);
+        // v1.2.1: storeRecommendation compresses to productIds (not full suggestions)
+        const storedRecord = lastCall[1][0];
+        expect(storedRecord.recommendation).toBeDefined();
+        // productIds extracted from suggestions
+        expect(storedRecord.recommendation.productIds).toBeDefined();
+        expect(storedRecord.recommendation.productIds).toContain(123);
+        expect(storedRecord.recommendation.productIds).toContain(456);
     });
 
     it('handles suggestions without productId gracefully', () => {

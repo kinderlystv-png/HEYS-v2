@@ -22,6 +22,12 @@ beforeEach(() => {
   (global.console as any).error = vi.fn();
   (global.console as any).log = vi.fn();
 
+  // Полифил console.group*, console.table — могут отсутствовать в happy-dom среде Vitest
+  (global.console as any).group = vi.fn();
+  (global.console as any).groupEnd = vi.fn();
+  (global.console as any).groupCollapsed = vi.fn();
+  (global.console as any).table = vi.fn();
+
   // Keep native eval behavior for legacy tests that intentionally execute script payloads.
   // Blocking eval globally causes unrelated suites to fail during module bootstrap.
 

@@ -192,6 +192,9 @@
   let _cloudLoaded = false; // 🛡️ Флаг что облако проверено
   let _pendingCloudSync = false; // 🔄 Отложенный sync до загрузки облака
   let _auditRebuildDone = false; // 🧾 Одноразовый пересчёт из аудит-лога за сессию
+  // v62: set to true when ensureAuditConsistency fast-forwards XP DOWNWARD (cloud has stale higher value).
+  // Allows syncToCloud to do one-time force write to correct stale cloud XP.
+  let _auditDowngradedXP = false;
   let _syncInProgress = false; // 🔒 Mutex для syncToCloud — предотвращает параллельные записи
   let _isRebuilding = false; // 🔒 Блокировка ачивок во време rebuild (предотвращает дубли стриков)
   let _unlockingAchievements = new Set(); // 🔒 Mutex для unlockAchievement — Set ID достижений в процессе разблокировки
@@ -1667,6 +1670,11 @@
           fromLevel: fastLevelBefore,
           toLevel: fastData.level
         });
+        // v62: Flag downgraded XP drift so syncToCloud can force-correct stale cloud value
+        if (lastXPAfter < cachedXP) {
+          _auditDowngradedXP = true;
+          console.info('[🎮 GAME SYNC] ⚠️ XP was downgraded by audit (' + cachedXP + ' → ' + lastXPAfter + ') — will force-sync to cloud on next syncToCloud');
+        }
       }
 
       const rebuildResult = await rebuildXPFromAudit({ force: true });
@@ -4651,11 +4659,19 @@
             );
 
             if (cloudXP > data.totalXP) {
-              console.warn(`[🎮 Gamification] BLOCKED: cloud XP (${cloudXP}) > local (${data.totalXP}), not overwriting!`);
-              // Вместо этого — загружаем из облака
-              await HEYS.game.loadFromCloud();
-              endGameSyncTrace(syncTrace, 'ok', { reason: 'blocked_cloud_higher_xp', cloudXP, localXP: data.totalXP });
-              return false;
+              // v62: If audit has already reconciled XP downward (drift correction from cloud to audit-correct),
+              // allow one-time force write to overwrite stale cloud value instead of loading stale data back.
+              if (_auditRebuildDone && _auditDowngradedXP) {
+                console.info(`[🎮 Gamification] AUDIT RECONCILE: cloud XP (${cloudXP}) > local (${data.totalXP}), but audit downgraded — force-writing corrected XP to cloud`);
+                _auditDowngradedXP = false; // One-time override consumed
+                // Fall through to write local (audit-correct) data to cloud
+              } else {
+                console.warn(`[🎮 Gamification] BLOCKED: cloud XP (${cloudXP}) > local (${data.totalXP}), not overwriting!`);
+                // Вместо этого — загружаем из облака
+                await HEYS.game.loadFromCloud();
+                endGameSyncTrace(syncTrace, 'ok', { reason: 'blocked_cloud_higher_xp', cloudXP, localXP: data.totalXP });
+                return false;
+              }
             }
 
             // 🛡️ v2.2: Блокируем если облако богаче деталями при равном XP

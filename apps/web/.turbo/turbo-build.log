@@ -9,12 +9,12 @@
 IW config already up to date.
 [bundle-meals] ✅ Generated /Users/poplavskijanton/HEYS-v2/apps/web/heys_day_meals_bundle_v1.js (6 modules)
 ⚠️ APP_VERSION not found in file
-✅ heys_pwa_module_v1.js APP_VERSION updated to: 2026.02.27.1906.57ec6544
-✅ build-meta.json created: 2026.02.27.1906.57ec6544
-✅ version.json created: 2026.02.27.1906.57ec6544
-✅ SW CACHE_VERSION updated to: heys-1772208396319
+✅ heys_pwa_module_v1.js APP_VERSION updated to: 2026.02.27.2029.265d2754
+✅ build-meta.json created: 2026.02.27.2029.265d2754
+✅ version.json created: 2026.02.27.2029.265d2754
+✅ SW CACHE_VERSION updated to: heys-1772213359690
 ⚠️ heys_app_v12.js not found in index.html (looking for src="heys_app_v12.js?v=...")
-SW version: 1772208396386
+SW version: 1772213359760
 
 > @heys/web@13.0.1 build:react /Users/poplavskijanton/HEYS-v2/apps/web
 > npx esbuild src/react-globals-sync.ts --bundle --format=iife --minify --outfile=react-bundle.js --target=es2020
@@ -22,7 +22,7 @@ SW version: 1772208396386
 
   react-bundle.js  138.8kb
 
-⚡ Done in 51ms
+⚡ Done in 53ms
 polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 vite v4.5.14 building for production...
 <script src="react-bundle.js"> in "/index.html" can't be bundled without type="module" attribute
@@ -50,7 +50,7 @@ dist/index.html                                  102.33 kB │ gzip:  22.54 kB
 dist/assets/heys_core_v12-fd1229e4.js            251.24 kB
 dist/assets/index-c3d985c8.css                 1,026.43 kB │ gzip: 164.70 kB
 [vite-plugin-static-copy] Copied 6 items.
-✓ built in 1.27s
+✓ built in 1.28s
 [strip-console] Removed 59 console.log statements:
   - pi_early_warning.js: 24
   - pi_feedback_loop.js: 4

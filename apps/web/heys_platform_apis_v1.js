@@ -886,9 +886,9 @@
         refreshing = true;
         showUpdateModal('reloading');
 
-        // v61: Defer reload until active sync completes (prevents mid-sync page interruption)
+        // v61/v62: Defer reload until active sync completes (prevents mid-sync page interruption)
         const doReload = () => {
-          console.log('[SW] 🔄 Reloading page with new SW... (triggered by controllerchange)');
+          console.info('[SW] 🔄 Reloading page with new SW... (triggered by controllerchange)');
           const url = new URL(window.location.href);
           url.searchParams.set('_v', Date.now().toString());
           window.location.href = url.toString();
@@ -896,12 +896,36 @@
         const syncInFlight = typeof HEYS !== 'undefined' && HEYS.cloud && typeof HEYS.cloud.isSyncing === 'function'
           ? HEYS.cloud.isSyncing()
           : null;
+        // v62: Also check _authSyncPending — set SYNCHRONOUSLY in PIN auth restore BEFORE
+        // cloud.syncClient() is called (covers the race window where _syncInFlight isn't set yet).
+        const authPending = typeof HEYS !== 'undefined' && HEYS.cloud && typeof HEYS.cloud.isAuthSyncPending === 'function'
+          ? HEYS.cloud.isAuthSyncPending()
+          : false;
         if (syncInFlight) {
-          console.log('[SW] ⏳ Sync in progress — deferring reload until sync completes (max 15s)...');
+          console.info('[SW] ⏳ Sync in progress — deferring reload until sync completes (max 15s)...');
           Promise.race([
             syncInFlight,
             new Promise(resolve => setTimeout(resolve, 15000))
           ]).finally(doReload);
+        } else if (authPending) {
+          // v62: Auth sync is about to start (PIN restore fire-and-forget race).
+          // Poll until syncClient creates _syncInFlight, then defer to it.
+          console.info('[SW] ⏳ Auth sync pending — polling for sync start (max 15s)...');
+          const deadline = Date.now() + 15000;
+          const pollId = setInterval(() => {
+            const inflightNow = typeof HEYS !== 'undefined' && HEYS.cloud?.isSyncing?.();
+            if (inflightNow) {
+              clearInterval(pollId);
+              console.info('[SW] ⏳ Sync detected after auth — deferring reload...');
+              Promise.race([
+                inflightNow,
+                new Promise(resolve => setTimeout(resolve, 15000))
+              ]).finally(doReload);
+            } else if (!HEYS.cloud?.isAuthSyncPending?.() || Date.now() > deadline) {
+              clearInterval(pollId);
+              doReload();
+            }
+          }, 200);
         } else {
           setTimeout(doReload, 500);
         }

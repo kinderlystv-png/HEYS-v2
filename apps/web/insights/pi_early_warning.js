@@ -4430,7 +4430,7 @@
     });
 
     // === PHENOTYPE QUICK HELPERS (console API) ===
-    if (!HEYS.InsightsPI.phenotype.set) {
+    if (HEYS.InsightsPI.phenotype && !HEYS.InsightsPI.phenotype.set) {
         const PRESETS = {
             IR_EVENING: { metabolic: 'insulin_resistant', circadian: 'evening_type', satiety: 'low_satiety', stress: 'stress_eater' },
             IR_MORNING: { metabolic: 'insulin_resistant', circadian: 'morning_type', satiety: 'high_satiety', stress: 'neutral' },

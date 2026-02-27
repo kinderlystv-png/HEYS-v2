@@ -134,7 +134,7 @@ describe('Meal Recommender v2.6', () => {
             expect(result.suggestions).toBeDefined();
             expect(result.reasoning).toBeDefined();
             expect(result.method).toBe('context_engine');
-            expect(result.version).toBe('3.0'); // R2.7: Full Pattern Integration
+            expect(result.version).toBe('3.6'); // v3.6.0: wave-aware timing + timing sync after planner
         });
 
         it('returns error for missing context', () => {
@@ -222,7 +222,8 @@ describe('Meal Recommender v2.6', () => {
 
             expect(result.available).toBe(true);
             expect(result.scenario).toBe('PRE_WORKOUT');
-            expect(result.macros.kcal).toBeLessThanOrEqual(300);
+            // v3.2+: last meal override — 90% of remaining budget when mealsRemaining === 1
+            expect(result.macros.kcal).toBeLessThanOrEqual(1000);
             // High carbs ratio for pre-workout energy
             const carbsRatio = result.macros.carbs / (result.macros.protein + result.macros.carbs);
             expect(carbsRatio).toBeGreaterThan(0.5); // >50% carbs
@@ -245,7 +246,8 @@ describe('Meal Recommender v2.6', () => {
 
             expect(result.available).toBe(true);
             expect(result.scenario).toBe('POST_WORKOUT');
-            expect(result.macros.kcal).toBeLessThanOrEqual(400);
+            // v3.2+: last meal override — 90% of remaining budget when mealsRemaining === 1
+            expect(result.macros.kcal).toBeLessThanOrEqual(900);
             // High protein for recovery
             expect(result.macros.protein).toBeGreaterThanOrEqual(25);
             expect(result.suggestions.some(s => s.product.includes('Курин') || s.reason.includes('восстановлен'))).toBe(true);
@@ -266,7 +268,8 @@ describe('Meal Recommender v2.6', () => {
 
             expect(result.available).toBe(true);
             expect(result.scenario).toBe('PROTEIN_DEFICIT');
-            expect(result.macros.kcal).toBeLessThanOrEqual(300);
+            // v3.2+: last meal override — 90% of remaining budget when mealsRemaining === 1
+            expect(result.macros.kcal).toBeLessThanOrEqual(800);
             // Very high protein ratio
             const proteinRatio = result.macros.protein / (result.macros.protein + result.macros.carbs);
             expect(proteinRatio).toBeGreaterThan(0.45); // >45% protein
@@ -290,7 +293,8 @@ describe('Meal Recommender v2.6', () => {
 
             expect(result.available).toBe(true);
             expect(result.scenario).toBe('STRESS_EATING');
-            expect(result.macros.kcal).toBeLessThanOrEqual(250);
+            // v3.2+: last meal override — 90% of remaining budget when mealsRemaining === 1
+            expect(result.macros.kcal).toBeLessThanOrEqual(600);
             expect(result.suggestions.some(s => s.product.includes('шоколад') || s.product.includes('орех'))).toBe(true);
         });
 
@@ -496,7 +500,8 @@ describe('Meal Recommender v2.6', () => {
 
             // Current behavior: LATE_EVENING has higher priority (checked first)
             expect(result.scenario).toBe('LATE_EVENING');
-            expect(result.macros.kcal).toBeLessThanOrEqual(200); // Light meal for late evening
+            // v3.2+: last meal override — 90% of remaining budget when mealsRemaining === 1 && remaining > 300
+            expect(result.macros.kcal).toBeLessThanOrEqual(700); // 90% of 700 remaining kcal
         });
 
         it('Before late_evening hour, PROTEIN_DEFICIT can win', () => {

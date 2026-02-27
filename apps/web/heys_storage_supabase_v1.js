@@ -191,7 +191,9 @@
 
   // 🔄 Флаг для предотвращения race condition между автовосстановлением и явным signIn
   let _signInInProgress = false;
-  let _rpcSyncInProgress = false; // 🔐 Флаг RPC sync в процессе
+  // v62: replaces dead _rpcSyncInProgress — set SYNCHRONOUSLY before fire-and-forget cloud.syncClient()
+  // in PIN auth restore so controllerchange can detect this window and defer PWA reload.
+  let _authSyncPending = false;
   let originalSetItem = null;
 
   // 🚨 Флаг блокировки сохранения до завершения первого sync
@@ -203,7 +205,7 @@
   // 🔧 Debug getters (для консоли) — только если ещё не определены
   if (!Object.getOwnPropertyDescriptor(cloud, '_rpcOnlyMode')) {
     Object.defineProperty(cloud, '_initialSyncCompleted', { get: () => initialSyncCompleted });
-    Object.defineProperty(cloud, '_rpcSyncInProgress', { get: () => _rpcSyncInProgress });
+    Object.defineProperty(cloud, '_authSyncPending', { get: () => _authSyncPending });
     Object.defineProperty(cloud, '_rpcOnlyMode', { get: () => _rpcOnlyMode });
     Object.defineProperty(cloud, '_pinAuthClientId', { get: () => _pinAuthClientId });
   }
@@ -434,6 +436,8 @@
 
   // v61: Expose sync-in-flight state for PWA reload deferral (heys_platform_apis_v1.js checks this)
   cloud.isSyncing = () => (_syncInFlight ? _syncInFlight.promise : null);
+  // v62: Expose pre-sync auth pending flag — set BEFORE _syncInFlight is created (PIN auth race window)
+  cloud.isAuthSyncPending = () => _authSyncPending;
 
   // ═══════════════════════════════════════════════════════════════════
   // 🔐 AUTH TOKEN SANITIZE (RTR-safe)
@@ -2362,20 +2366,22 @@
           // Нет сессии куратора — восстанавливаем PIN auth режим
           _pinAuthClientId = pinAuthClient;
           _rpcOnlyMode = true;
-          // v60: _rpcSyncInProgress guard removed — PIN now uses bootstrapClientSync
           logCritical('🔐 PIN auth восстановлен для клиента:', pinAuthClient.substring(0, 8) + '...');
 
           // 🔄 v53 FIX: Используем cloud.syncClient() вместо прямого syncClientViaRPC
           // Это позволяет deduplication работать если App useEffect тоже вызовет syncClient
+          // v62: _authSyncPending = true SYNCHRONOUSLY before async call so that
+          // controllerchange (PWA reload) can detect this race window and defer reload.
+          _authSyncPending = true;
           cloud.syncClient(pinAuthClient).then(result => {
-            _rpcSyncInProgress = false;
+            _authSyncPending = false;
             if (result?.success) {
               logCritical('✅ [YANDEX RESTORE] Sync завершён:', result.loaded, 'ключей');
             } else {
               logCritical('⚠️ [YANDEX RESTORE] Sync failed:', result?.error || 'no result');
             }
           }).catch(e => {
-            _rpcSyncInProgress = false;
+            _authSyncPending = false;
             logCritical('❌ [YANDEX RESTORE] Error:', e.message);
           });
         } else if (pinAuthClient && hasCuratorSession) {
@@ -2454,7 +2460,6 @@
           if (_pinAuthClientId) {
             logCritical('🔐 Куратор восстановлен — сбрасываем PIN auth clientId, но RPC mode остаётся ON');
             _pinAuthClientId = null;
-            _rpcSyncInProgress = false;
             try { global.localStorage.removeItem('heys_pin_auth_client'); } catch (_) { }
           }
           // 🔄 RPC режим ВКЛЮЧЁН для куратора (Yandex API)
@@ -7020,8 +7025,8 @@
       log('✅ Переключение завершено успешно');
 
       // 🚀 FIX: Регистрируем cooldown чтобы sync effects useEffect не запускал дублирующий sync
-      // switchClient вызывает syncClientViaRPC напрямую (не через cloud.syncClient),
-      // поэтому _syncLastCompleted не выставлялся → sync effects делал повторный sync
+      // v58+: switchClient использует cloud.syncClient() — _syncLastCompleted выставляется автоматически.
+      // Cooldown ниже — дополнительная страховка от race с React useEffect после client switch.
       _syncLastCompleted[newClientId] = Date.now();
 
       // Показываем итоговый размер storage
