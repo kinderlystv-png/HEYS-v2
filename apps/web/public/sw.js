@@ -6,7 +6,7 @@
 // Boot-бандлы (*.bundle.{hash}.js) кэшируются автоматически через cache-first
 // при первом запросе — хеш в имени обеспечивает вечный кэш без ручного precache.
 
-const CACHE_VERSION = 'heys-1772133898688';
+const CACHE_VERSION = 'heys-1772182012755';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
@@ -266,9 +266,10 @@ self.addEventListener('fetch', (event) => {
 
   // === Локальные статические файлы ===
   if (url.origin === self.location.origin) {
-    // HTML — Network First (чтобы обновления были видны)
+    // HTML — Network First с no-store (обходит HTTP-кэш браузера,
+    // гарантирует свежий index.html с актуальными хешами бандлов после деплоя)
     if (request.headers.get('accept')?.includes('text/html')) {
-      event.respondWith(networkFirst(request));
+      event.respondWith(networkFirstNoStore(request));
       return;
     }
 
@@ -359,6 +360,13 @@ async function networkFirstNoStore(request) {
   // 🔧 НЕ игнорируем query params (версия в URL важна для cache-busting)
   const cached = await caches.match(request);
   if (cached) return cached;
+
+  // Для HTML — возвращаем закэшированную главную страницу (SPA fallback)
+  if (request.headers.get('accept')?.includes('text/html')) {
+    const fallback = await caches.match('/index.html');
+    if (fallback) return fallback;
+  }
+
   return new Response('Offline', { status: 503 });
 }
 
@@ -587,8 +595,29 @@ self.addEventListener('message', (event) => {
           })
         );
       }).then(() => {
-        console.log('[SW] ✅ All caches cleared!');
-        // Уведомляем клиента что кэши очищены
+        console.log('[SW] ✅ All caches cleared — re-precaching CSS...');
+        // 🔒 Re-precache CSS immediately after clearing so staleWhileRevalidate
+        // finds cached CSS on next page load (prevents 10s FOUC).
+        // Same pattern as Phase 1 install handler.
+        const cssUrls = PRECACHE_URLS.filter(url => url.endsWith('.css'));
+        return caches.open(STATIC_CACHE).then(cache =>
+          Promise.allSettled(
+            cssUrls.map(url =>
+              Promise.race([
+                cache.add(url),
+                new Promise((_, reject) =>
+                  setTimeout(() => reject(new Error('Timeout')), 5000)
+                )
+              ]).catch(err => {
+                console.warn('[SW] ⚠️ CSS re-cache skip:', url, err.message);
+              })
+            )
+          ).then(() => {
+            console.log('[SW] ✅ CSS re-precached after cache clear (' + cssUrls.length + ' files)');
+          })
+        );
+      }).then(() => {
+        // Уведомляем клиента что кэши очищены (CSS уже в кэше)
         return self.clients.matchAll().then(clients => {
           clients.forEach(client => {
             client.postMessage({ type: 'CACHES_CLEARED' });
@@ -596,6 +625,12 @@ self.addEventListener('message', (event) => {
         });
       }).catch(err => {
         console.error('[SW] ❌ Error clearing caches:', err);
+        // Уведомляем клиента даже при ошибке, чтобы не зависнуть
+        return self.clients.matchAll().then(clients => {
+          clients.forEach(client => {
+            client.postMessage({ type: 'CACHES_CLEARED' });
+          });
+        });
       })
     );
     return;

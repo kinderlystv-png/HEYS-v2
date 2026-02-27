@@ -717,6 +717,15 @@
             }
           }
           if (event.data?.type === 'CACHES_CLEARED') {
+            // 🔒 Guard: если update_checks управляет lifecycle, не делаем reload отсюда.
+            // update_checks сам вызовет triggerSkipWaiting → controllerchange → cache-busted reload.
+            const managedByChecks = sessionStorage.getItem('heys_update_managed_by_checks') === 'true';
+            if (managedByChecks) {
+              console.log('[SW] ✅ Caches cleared — lifecycle managed by update_checks, skipping reload here');
+              try { sessionStorage.removeItem('heys_update_managed_by_checks'); } catch (e) { }
+              return;
+            }
+
             const requiresLogout = sessionStorage.getItem('heys_update_requires_logout') === 'true';
             console.log('[SW] ✅ Caches cleared — resetting session for fresh data from cloud');
 
@@ -767,9 +776,11 @@
               sessionStorage.removeItem('heys_update_requires_logout');
             } catch (e) { }
 
-            // 4. Перезагружаем страницу — пользователь увидит экран входа
+            // 4. Перезагружаем страницу с cache-busting — пользователь увидит экран входа
             setTimeout(() => {
-              location.reload();
+              const url = new URL(window.location.href);
+              url.searchParams.set('_v', Date.now().toString());
+              window.location.href = url.toString();
             }, 100);
           }
         });
@@ -875,10 +886,12 @@
         refreshing = true;
         showUpdateModal('reloading');
 
-        // Небольшая задержка для завершения кэширования, затем reload
+        // Небольшая задержка для завершения кэширования, затем cache-busted reload
         setTimeout(() => {
           console.log('[SW] 🔄 Reloading page with new SW... (triggered by controllerchange)');
-          window.location.reload();
+          const url = new URL(window.location.href);
+          url.searchParams.set('_v', Date.now().toString());
+          window.location.href = url.toString();
         }, 500);
       } else {
         // Первичная установка SW — НЕ делаем reload, страница уже загружена

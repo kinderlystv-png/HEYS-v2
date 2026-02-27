@@ -12177,9 +12177,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             let fallbackTimer = null;
             let gateTimer = null;
             let phaseAReceived = false;
-            // v9.8: CSS gate — храним в outer scope для корректного cleanup при анмаунте
-            let cssUnlockTimer = null;
-            let onCSSLoaded = null;
             const cloud = window.HEYS && window.HEYS.cloud;
 
             const finish = (reason, gated) => {
@@ -12208,27 +12205,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     setLoading(false);
                 };
 
-                if (window.__heysMainCSSLoaded) {
-                    unlock();
-                } else {
-                    // CSS ещё загружается — ждём событие
-                    console.info('[HEYS.gate] ⏳ Waiting for main.css before rendering DayTab (throttled connection)');
-                    onCSSLoaded = () => {
-                        if (cssUnlockTimer) { clearTimeout(cssUnlockTimer); cssUnlockTimer = null; }
-                        onCSSLoaded = null;
-                        console.info('[HEYS.gate] ✅ main.css loaded — proceeding with DayTab render');
-                        unlock();
-                    };
-                    window.addEventListener('heysMainCSSLoaded', onCSSLoaded, { once: true });
-                    // Safety: если событие уже прошло или CSS загружен через <noscript> fallback
-                    // — принудительно разблокируем через 10s чтобы не зависнуть на медленных соединениях
-                    cssUnlockTimer = setTimeout(() => {
-                        cssUnlockTimer = null;
-                        if (onCSSLoaded) { window.removeEventListener('heysMainCSSLoaded', onCSSLoaded); onCSSLoaded = null; }
-                        console.warn('[HEYS.gate] ⚠️ CSS load timeout (10s) — forcing DayTab render anyway');
-                        unlock();
-                    }, 10000);
-                }
+                // v9.9: CSS Gate #2 removed — CSS Gate #1 (heys_app_initialize_v1.js)
+                // already ensures main.css is loaded before React mounts.
+                // Duplicate gate here caused cumulative 20s delay on PWA cache clear.
+                unlock();
             };
 
             // v6.0: Adaptive Gate — listen for Phase A AND full sync separately
@@ -12295,10 +12275,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     if (gateTimer) clearTimeout(gateTimer);
                     window.removeEventListener('heysSyncCompleted', onSyncCompleted);
                 }
-                // v9.8: всегда чистим CSS-ожидание — cancelled мог быть установлен в finish()
-                // до загрузки CSS, но компонент анмаунтился пока ждали
-                if (cssUnlockTimer) { clearTimeout(cssUnlockTimer); cssUnlockTimer = null; }
-                if (onCSSLoaded) { window.removeEventListener('heysMainCSSLoaded', onCSSLoaded); onCSSLoaded = null; }
+
             };
         }, [clientId]);
 
@@ -21027,6 +21004,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
                 // 3. Принудительная очистка всех кэшей через SW
                 if (navigator.serviceWorker?.controller) {
+                    // 🔒 Guard: сообщаем platform_apis что update_checks управляет lifecycle
+                    // Без этого флага CACHES_CLEARED handler в platform_apis сделает
+                    // location.reload() через 100ms, не дождавшись triggerSkipWaiting
+                    try {
+                        sessionStorage.setItem('heys_update_managed_by_checks', 'true');
+                    } catch (e) { }
+
                     console.log('[PWA Update] 🗑️ Clearing all caches...');
                     navigator.serviceWorker.controller.postMessage('clearAllCaches');
 

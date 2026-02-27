@@ -91,6 +91,13 @@
 
                 // 3. Принудительная очистка всех кэшей через SW
                 if (navigator.serviceWorker?.controller) {
+                    // 🔒 Guard: сообщаем platform_apis что update_checks управляет lifecycle
+                    // Без этого флага CACHES_CLEARED handler в platform_apis сделает
+                    // location.reload() через 100ms, не дождавшись triggerSkipWaiting
+                    try {
+                        sessionStorage.setItem('heys_update_managed_by_checks', 'true');
+                    } catch (e) { }
+
                     console.log('[PWA Update] 🗑️ Clearing all caches...');
                     navigator.serviceWorker.controller.postMessage('clearAllCaches');
 
