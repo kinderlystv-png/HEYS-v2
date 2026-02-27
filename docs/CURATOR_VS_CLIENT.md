@@ -1,6 +1,6 @@
 # HEYS Curator vs Client (PIN) — Sync & Functional Differences
 
-> **Version:** v2.0.0 | **Updated:** 27.02.2026
+> **Version:** v2.1.0 | **Updated:** 27.02.2026
 >
 > Единый справочник различий между режимами **Curator** и **Client (PIN auth)**.
 
@@ -8,20 +8,22 @@
 
 ## 1. Быстрый summary
 
-| Aspect                      | Curator                                           | Client (PIN auth)                         |
-| --------------------------- | ------------------------------------------------- | ----------------------------------------- |
-| Auth credential             | JWT (`heys_supabase_auth_token`)                  | `session_token` (`heys_session_token`)    |
-| HTML gate форма             | Email + Password (`hlg-screen-curator`)           | Phone + 4-digit PIN (`hlg-screen-client`) |
-| Primary sync path           | `bootstrapClientSync`                             | `syncClientViaRPC`                        |
-| Phase A/B                   | ✅ Есть (2 фазы)                                  | ❌ Нет (single full sync)                 |
-| `heysSyncCompleted` payload | `phaseA: true` + `phase: 'full', viaYandex: true` | `phase: 'full'`                           |
-| `switchClient`              | ✅ Да (multi-client)                              | ⚠️ Логика ограничена own profile          |
-| Gamification cloud sync     | Через storage sync layer                          | Прямые `*_by_session` RPC                 |
-| Client management RPC       | ✅ `*_by_session` curator endpoints               | ❌ Недоступно                             |
-| Token refresh               | `YandexAPI.verifyCuratorToken()`                  | Пропускается (`_rpcOnlyMode` → valid)     |
-| Anti-timing delay           | ❌ Нет                                            | ✅ 350-600ms random delay при login       |
-| Consent gate                | ❌ Не показывается                                | ✅ Показывается (`needsConsent`)          |
-| Desktop gate                | ❌ Не показывается                                | ✅ Показывается (`!desktopAllowed`)       |
+| Aspect                      | Curator                                           | Client (PIN auth)                                         |
+| --------------------------- | ------------------------------------------------- | --------------------------------------------------------- |
+| Auth credential             | JWT (`heys_supabase_auth_token`)                  | `session_token` (`heys_session_token`)                    |
+| HTML gate форма             | Email + Password (`hlg-screen-curator`)           | Phone + 4-digit PIN (`hlg-screen-client`)                 |
+| Primary sync path           | `bootstrapClientSync`                             | `syncClientViaRPC`                                        |
+| Phase A/B                   | ✅ Есть (2 фазы)                                  | ❌ Нет (single full sync)                                 |
+| `heysSyncCompleted` payload | `phaseA: true` + `phase: 'full', viaYandex: true` | `phase: 'full'`                                           |
+| `switchClient`              | ✅ Да (multi-client)                              | ⚠️ Логика ограничена own profile                          |
+| Gamification cloud sync     | Через storage sync layer                          | Прямые `*_by_session` RPC                                 |
+| Client management RPC       | ✅ `*_by_session` curator endpoints               | ❌ Недоступно                                             |
+| Token refresh               | `YandexAPI.verifyCuratorToken()`                  | Пропускается (`_rpcOnlyMode` → valid)                     |
+| Anti-timing delay           | ❌ Нет                                            | ✅ 350-600ms random delay при login                       |
+| Consent gate                | ❌ Не показывается                                | ✅ Показывается (`needsConsent`)                          |
+| Desktop gate                | ❌ Не показывается                                | ✅ Показывается (`!desktopAllowed`)                       |
+| `_authSyncPending` guard    | ❌ Не устанавливается                             | ✅ v62: блокирует SW reload во время sync (15s polling)   |
+| `_auditDowngradedXP`        | ❌ Нет                                            | ✅ v62: force-reconcile XP после обнаруженного даунгрейда |
 
 ---
 
@@ -163,11 +165,23 @@ HTML gate submit
 1. `index.html`: `heys_pin_auth_client` детектируется →
    `__heysHasSession = true` → gate hidden, skeleton виден
 2. `heys_storage_supabase_v1.js`: `_pinAuthClientId = pinAuthClient`,
-   `_rpcOnlyMode = true` → `cloud.syncClient(pinAuthClient)` (async)
-3. `heys_app_auth_init_v1.js`: `hasPinSession` → `setPinAuthClient`,
+   `_rpcOnlyMode = true` → **`_authSyncPending = true`** (v62: флаг set ДО
+   вызова sync) → `cloud.syncClient(pinAuthClient)` (async)
+3. `syncClient` завершается → флаг `_authSyncPending = false` (в `.then()` или
+   `.catch()`)
+4. `heys_app_auth_init_v1.js`: `hasPinSession` → `setPinAuthClient`,
    `initLocalData`, `syncClient` → `__heysDismissGate()`
-4. **Token refresh:** `ensureValidToken()` пропускается (`_rpcOnlyMode` →
+5. **Token refresh:** `ensureValidToken()` пропускается (`_rpcOnlyMode` →
    `return { valid: true }`)
+
+**v62 PWA Reload Guard:** Если во время PIN restore обнаруживается новый SW
+(`controllerchange`), `heys_platform_apis_v1.js` опрашивает
+`HEYS.cloud.isAuthSyncPending()` каждые 200ms (макс. 75 попыток = 15s). Reload
+задерживается до завершения sync. Это предотвращает потерю данных при получении
+PWA-обновления одновременно с первым входом клиента.
+
+> **Куратор НЕ устанавливает `_authSyncPending`** — флаг специфичен только для
+> PIN restore path. `controllerchange` без активного флага → немедленный reload.
 
 ### 4.3 Приоритет: PIN > Curator (v52 FIX)
 
@@ -301,6 +315,38 @@ window.addEventListener('heysSyncCompleted', (e) => {
 - Прямые `*_by_session` RPC для `heys_game` и audit событий
 - Fallback логика отличается от curator flow
 
+#### `_auditDowngradedXP` (v62, только PIN)
+
+После синхронизации могут возникнуть ситуации, когда XP клиента оказывается
+больше допустимого уровня уровня (`audit` обнаруживает даунгрейд через
+`ensureAuditConsistency`). По умолчанию `syncToCloud` использует
+cloud-wins-стратегию и не перезаписывает cloud-данные.
+
+**Механизм обхода (v62):**
+
+```javascript
+// heys_gamification_v1.js
+function ensureAuditConsistency() {
+  // ... обнаруживает XP > допустимый максимум ...
+  _auditDowngradedXP = true; // ← установить bypass-флаг
+}
+
+function syncToCloud() {
+  if (_auditDowngradedXP) {
+    _auditDowngradedXP = false; // ← one-time bypass
+    // force-write XP в cloud, игнорируя cloud-wins guard
+  }
+  // обычная cloud-wins логика
+}
+```
+
+| Флаг                 | Тип     | Кто устанавливает              | Кто сбрасывает        |
+| -------------------- | ------- | ------------------------------ | --------------------- |
+| `_auditDowngradedXP` | boolean | `ensureAuditConsistency` (PIN) | `syncToCloud` (1 раз) |
+
+> **Куратор:** не использует `_auditDowngradedXP` — его gamification path идёт
+> через storage sync layer, где cloud-wins обход не нужен.
+
 ---
 
 ## 11. Switch client и scope
@@ -312,6 +358,8 @@ window.addEventListener('heysSyncCompleted', (e) => {
 - Использует curator management APIs
 - **При смене клиента:** явно удаляет `heys_pin_auth_client` и сбрасывает
   `_pinAuthClientId = null`
+- **SW reload:** если во время curator sync обнаруживается новый SW — reload
+  немедленный (`isAuthSyncPending()` = `false` для curator)
 
 ### PIN
 
@@ -321,6 +369,8 @@ window.addEventListener('heysSyncCompleted', (e) => {
   через `cloud.isPinAuthClient()`)
 - Контекст клиента сохраняется в `heys_pin_auth_client` localStorage
 - **При PIN-switch:** `heys_pin_auth_client` обновляется в localStorage
+- **SW reload (v62):** `_authSyncPending = true` во время PIN restore;
+  `controllerchange` задерживает reload до завершения sync (макс. 15s)
 
 ---
 
@@ -409,6 +459,16 @@ gate очищает `heys_pin_auth_client`, flush memory, reload.
 
 ## Change Log
 
+- **v2.1.0 (27.02.2026 — v62):** Обновлены разделы с учётом v62 изменений
+  - **Section 1 (Quick Summary):** добавлены строки `_authSyncPending` guard и
+    `_auditDowngradedXP` для наглядного сравнения режимов
+  - **Section 4.2 (PIN restore):** добавлен шаг `_authSyncPending = true` перед
+    `syncClient()`, описан PWA Reload Guard (15s polling на
+    `isAuthSyncPending()`)
+  - **Section 10 (Gamification):** добавлена подсекция `_auditDowngradedXP`
+    (v62) с механизмом обхода cloud-wins guard для one-time XP reconciliation
+  - **Section 11 (Switch client):** добавлено описание поведения SW reload для
+    curator (немедленный) vs PIN (отложенный с polling)
 - **v2.0.0 (27.02.2026):** Полная переработка документа:
   - Добавлен раздел 3: HTML Login Gate (двухуровневая система, curator/PIN
     формы, event chain, v9.11 handover fix, `__heysPreAuth` guard)

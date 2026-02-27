@@ -1,6 +1,6 @@
 # HEYS Sync Architecture Reference
 
-> **Version:** v2.3.0 | **Updated:** 27.02.2026 **Status:** Production Reference
+> **Version:** v2.4.0 | **Updated:** 27.02.2026 **Status:** Production Reference
 
 ---
 
@@ -371,6 +371,51 @@ SW handles `sync` events from `heys-sync` registration. Posts
 > **Note:** Background Sync is NOT supported on iOS Safari. Fallback: sync on
 > `online`/`visibilitychange` events.
 
+### PIN Auth Reload Guard (v62)
+
+**File:** `heys_platform_apis_v1.js` | **Introduced:** v62
+
+Fixes a race condition where SW `controllerchange` fired during an active PIN
+auth sync — causing a PWA reload that terminated the in-flight `syncClient` call
+and left the user with stale data.
+
+#### Mechanism
+
+```
+PIN auth restore path:
+  heys_storage_supabase_v1.js: restoreSessionFromStorage()
+    → _authSyncPending = true                ← flag SET before sync starts
+    → cloud.syncClient(pinAuthClient)
+      .then()  → _authSyncPending = false    ← flag CLEARED on success
+      .catch() → _authSyncPending = false    ← flag CLEARED on error
+
+heys_platform_apis_v1.js: navigator.serviceWorker.addEventListener('controllerchange')
+  → if (HEYS.cloud.isAuthSyncPending())
+      → poll every 200ms (max 75 attempts = 15s)
+      → on _authSyncPending cleared → window.location.reload()
+  → else → window.location.reload() immediately
+```
+
+#### Key numbers
+
+| Parameter     | Value                    |
+| ------------- | ------------------------ |
+| Poll interval | 200ms                    |
+| Max attempts  | 75                       |
+| Max wait time | 15s                      |
+| Guard scope   | PIN auth only (flag set) |
+
+**Only PIN auth sets `_authSyncPending`** — curator restore does not use this
+flag. If `isAuthSyncPending()` returns `false`, `controllerchange` reloads
+immediately (unchanged behavior).
+
+#### Public API
+
+```javascript
+// heys_storage_supabase_v1.js
+HEYS.cloud.isAuthSyncPending(); // returns _authSyncPending boolean
+```
+
 ---
 
 ## 12. Cascade Guard v6.2
@@ -457,19 +502,23 @@ function getCrsNumber(data) {
 
 ## 10. Key Implementation Files
 
-| File                          | Role                                                                |
-| ----------------------------- | ------------------------------------------------------------------- |
-| `heys_storage_supabase_v1.js` | Main sync engine (6000+ LOC monolith)                               |
-| `heys_storage_layer_v1.js`    | Store API (cache, watchers, namespacing)                            |
-| `heys_yandex_api_v1.js`       | YandexAPI wrapper (RPC, REST, retry, backoff)                       |
-| `heys_app_sync_effects_v1.js` | React sync hooks (post-sync load, event listeners)                  |
-| `heys_day_animations.js`      | Progress bar animation hook (double-fill guard)                     |
-| `heys_cascade_card_v1.js`     | CascadeCard + CrsProgressBar + Cascade Guard v6.2 + CRS computation |
-| `heys_cloud_queue_v1.js`      | Cloud queue management                                              |
-| `heys_cloud_merge_v1.js`      | Cloud merge logic                                                   |
-| `heys_core_v12.js`            | Legacy storage API (U.lsSet/lsGet)                                  |
-| `sw.js`                       | Service Worker (precache, caching, background sync)                 |
-| `index.html`                  | Speculative prefetch, bundle loader v10.0, skeleton UI              |
+| File                          | Role                                                                                    |
+| ----------------------------- | --------------------------------------------------------------------------------------- |
+| `heys_storage_supabase_v1.js` | Main sync engine (6000+ LOC monolith); `_authSyncPending` flag + `isAuthSyncPending()`  |
+| `heys_storage_layer_v1.js`    | Store API (cache, watchers, namespacing)                                                |
+| `heys_yandex_api_v1.js`       | YandexAPI wrapper (RPC, REST, retry, backoff)                                           |
+| `heys_app_sync_effects_v1.js` | React sync hooks (post-sync load, event listeners)                                      |
+| `heys_day_animations.js`      | Progress bar animation hook (double-fill guard)                                         |
+| `heys_cascade_card_v1.js`     | CascadeCard + CrsProgressBar + Cascade Guard v6.2 + CRS computation                     |
+| `heys_platform_apis_v1.js`    | SW `controllerchange` handler; PIN Auth Reload Guard (v62): polls `isAuthSyncPending()` |
+| `heys_gamification_v1.js`     | XP sync; `_auditDowngradedXP` one-time bypass for XP reconciliation (v62)               |
+| `heys_cloud_queue_v1.js`      | Cloud queue management                                                                  |
+| `heys_cloud_merge_v1.js`      | Cloud merge logic                                                                       |
+| `heys_core_v12.js`            | Legacy storage API (U.lsSet/lsGet)                                                      |
+| `sw.js`                       | Service Worker (precache, caching, background sync)                                     |
+| `index.html`                  | Speculative prefetch, bundle loader v10.0, skeleton UI                                  |
+
+---
 
 ---
 
@@ -490,3 +539,32 @@ function getCrsNumber(data) {
 > ⚠️ **Key versioning:** always use exactly `heys_dayv2_{date}` (v2 prefix
 > required), `heys_ews_weekly_v1` (versioned suffix required). Never use bare
 > `heys_day_{date}` or `heys_ews_weekly`.
+
+---
+
+## Change Log
+
+- **v2.4.0 (27.02.2026 — v62):** PIN Auth Reload Guard + XP reconciliation
+  - **Section 9 NEW — PIN Auth Reload Guard:** `controllerchange` handler в
+    `heys_platform_apis_v1.js` теперь опрашивает
+    `HEYS.cloud.isAuthSyncPending()` каждые 200ms (макс. 75 попыток = 15s) перед
+    перезагрузкой PWA. Устраняет race condition, когда обновление SW прерывало
+    активный PIN-auth sync.
+  - **`_authSyncPending` flag:** добавлен в `heys_storage_supabase_v1.js`;
+    устанавливается до вызова `syncClient()` при PIN restore; сбрасывается в
+    `.then()` / `.catch()`. Публичный геттер: `HEYS.cloud.isAuthSyncPending()`.
+  - **`_auditDowngradedXP` flag** в `heys_gamification_v1.js`: после
+    `ensureAuditConsistency` обнаруживает даунгрейд XP → устанавливает флаг →
+    следующий `syncToCloud` обходит защиту cloud-wins для одноразовой
+    force-reconciliation. Устраняет зависание XP UI после sync.
+  - **Section 10 обновлён:** добавлены строки для `heys_platform_apis_v1.js` и
+    `heys_gamification_v1.js`.
+  - **Dead code удалён:** `_rpcSyncInProgress` полностью удалён из
+    `heys_storage_supabase_v1.js`.
+- **v2.3.0 (27.02.2026):** Cascade Guard v6.2 (Section 12), Progress Bar
+  animation stability (Section 8), double-fill guard
+- **v2.2.0 (27.02.2026):** visibilitychange sync refinements, upload controls
+  v59 retry delays, RPC warm-up
+- **v2.1.0 (27.02.2026):** Events table extended (PIN-auth failed path v59 Fix
+  G)
+- **v2.0.0 (27.02.2026):** Документ создан, полный pipeline описан
