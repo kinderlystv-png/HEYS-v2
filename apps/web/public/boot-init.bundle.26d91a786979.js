@@ -7936,17 +7936,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             };
 
             // CSS gate: wait for main.css before destroying skeleton
-            // v9.9: styleSheets fallback — detect CSS even if onload event was missed
+            // v9.10: styleSheets fallback — detect CSS even if onload event was missed
+            // Also detects Vite production build: main.css → /assets/index-HASH.css
             if (!window.__heysMainCSSLoaded) {
                 try {
                     for (var si = 0; si < document.styleSheets.length; si++) {
-                        if (document.styleSheets[si].href && document.styleSheets[si].href.indexOf('main.css') !== -1) {
+                        var sheetHref = document.styleSheets[si].href;
+                        if (sheetHref && (sheetHref.indexOf('main.css') !== -1 ||
+                            (sheetHref.indexOf('/assets/') !== -1 && sheetHref.indexOf('.css') !== -1))) {
                             window.__heysMainCSSLoaded = true;
-                            console.info('[HEYS.init] ✅ main.css detected via styleSheets (onload missed)');
+                            console.info('[HEYS.init] ✅ main.css detected via styleSheets:', sheetHref.split('/').pop());
                             break;
                         }
                     }
                 } catch (e) { /* SecurityError on CORS sheets — skip */ }
+                // Also check for Vite <link> element directly
+                if (!window.__heysMainCSSLoaded && document.querySelector('link[rel="stylesheet"][href*="/assets/"]')) {
+                    window.__heysMainCSSLoaded = true;
+                    console.info('[HEYS.init] ✅ Vite CSS detected via link element');
+                }
             }
 
             if (window.__heysMainCSSLoaded) {

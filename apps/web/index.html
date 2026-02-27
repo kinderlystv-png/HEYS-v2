@@ -307,7 +307,7 @@
     <link rel="preload" href="boot-calc.bundle.9701e1633ac1.js" as="script" />
     <link rel="preload" href="boot-day.bundle.0f10e7bf96dc.js" as="script" />
     <link rel="preload" href="boot-app.bundle.e539ebd7a716.js" as="script" />
-    <link rel="preload" href="boot-init.bundle.d7f2ba085f85.js" as="script" />
+    <link rel="preload" href="boot-init.bundle.26d91a786979.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
 
@@ -326,11 +326,36 @@
         <link rel="stylesheet" href="styles/main.css?v=38" />
     </noscript>
 
-    <!-- v9.9: CSS load detection fallback — catches cases where onload event missed
-         (e.g., after PWA cache clear, SW staleWhileRevalidate race) -->
+    <!-- v9.10: CSS load detection — detects both dev (main.css) and Vite production build
+         (/assets/index-*.css where Vite processes main.css into a blocking stylesheet) -->
     <script>
         (function () {
             if (window.__heysMainCSSLoaded) return;
+            // v9.10: Vite production build processes main.css → /assets/index-HASH.css
+            // (blocking <link rel="stylesheet">), so CSS is already loaded when this runs.
+            // Detect it immediately instead of waiting 3s for a 'main.css' that doesn't exist.
+            var sheets = document.styleSheets;
+            for (var i = 0; i < sheets.length; i++) {
+                try {
+                    var href = sheets[i].href;
+                    if (href && (href.indexOf('main.css') !== -1 ||
+                        (href.indexOf('/assets/') !== -1 && href.indexOf('.css') !== -1))) {
+                        window.__heysMainCSSLoaded = true;
+                        window.dispatchEvent(new CustomEvent('heysMainCSSLoaded'));
+                        console.info('[HEYS.css] ✅ main.css detected (immediate): ' + href.split('/').pop());
+                        return;
+                    }
+                } catch (e) { }
+            }
+            // Fallback: also check for <link> element directly (covers edge cases)
+            var viteCssLink = document.querySelector('link[rel="stylesheet"][href*="/assets/"]');
+            if (viteCssLink) {
+                window.__heysMainCSSLoaded = true;
+                window.dispatchEvent(new CustomEvent('heysMainCSSLoaded'));
+                console.info('[HEYS.css] ✅ Vite CSS already loaded (link element detected)');
+                return;
+            }
+            // Polling fallback for dev mode or delayed CSS loading
             var checks = 0, maxChecks = 15; // 15 × 200ms = 3s max
             var timer = setInterval(function () {
                 checks++;
@@ -338,7 +363,9 @@
                 var sheets = document.styleSheets;
                 for (var i = 0; i < sheets.length; i++) {
                     try {
-                        if (sheets[i].href && sheets[i].href.indexOf('main.css') !== -1) {
+                        var href = sheets[i].href;
+                        if (href && (href.indexOf('main.css') !== -1 ||
+                            (href.indexOf('/assets/') !== -1 && href.indexOf('.css') !== -1))) {
                             clearInterval(timer);
                             window.__heysMainCSSLoaded = true;
                             window.dispatchEvent(new CustomEvent('heysMainCSSLoaded'));
@@ -1708,7 +1735,7 @@
     <script defer src="boot-calc.bundle.9701e1633ac1.js"></script>
     <script defer src="boot-day.bundle.0f10e7bf96dc.js"></script>
     <script defer src="boot-app.bundle.e539ebd7a716.js"></script>
-    <script defer src="boot-init.bundle.d7f2ba085f85.js"
+    <script defer src="boot-init.bundle.26d91a786979.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
     <!-- PERF: Detect returning user (localStorage has profile) → skip card unfold animations -->
