@@ -1,6 +1,6 @@
 # HEYS Sync Architecture Reference
 
-> **Version:** v2.1.0 | **Updated:** 27.02.2026 **Status:** Production Reference
+> **Version:** v2.3.0 | **Updated:** 27.02.2026 **Status:** Production Reference
 
 ---
 
@@ -60,9 +60,9 @@ On client load, sync is split into two phases to unblock UI faster.
 4. `heys_hr_zones`
 5. `heys_dayv2_{today}`
 
-UI shows skeleton (loads in ~0.2s) until Phase A completes. Fires `heysSyncCompleted` with
-`{ clientId, phaseA: true }` to unblock DayTab. **Does NOT contain historical
-day records** — cascade guard must reject this event.
+UI shows skeleton (loads in ~0.2s) until Phase A completes. Fires
+`heysSyncCompleted` with `{ clientId, phaseA: true }` to unblock DayTab. **Does
+NOT contain historical day records** — cascade guard must reject this event.
 
 ### Phase B (Background, Full Sync) -- 530+ keys
 
@@ -123,13 +123,13 @@ blocked to prevent parasitic re-upload of just-downloaded data.
 
 ## 4. Auth Modes & Sync Strategies
 
-| Mode         | Who                | Cloud auth    | Sync method           | Flag                 |
-| ------------ | ------------------ | ------------- | --------------------- | -------------------- |
-| **Curator**  | Nutritionist       | JWT           | `bootstrapClientSync` | `_rpcOnlyMode=true*` |
-| **PIN auth** | Client (phone+PIN) | session_token | `syncClientViaRPC`    | `_rpcOnlyMode=true`  |
+| Mode         | Who                | Cloud auth    | Sync method                                            | Flag                 |
+| ------------ | ------------------ | ------------- | ------------------------------------------------------ | -------------------- |
+| **Curator**  | Nutritionist       | JWT           | `bootstrapClientSync`                                  | `_rpcOnlyMode=true*` |
+| **PIN auth** | Client (phone+PIN) | session_token | `syncClientViaRPC` via `cloud.syncClient` (v58: dedup) | `_rpcOnlyMode=true`  |
 
-\* `_rpcOnlyMode=true` актуален после миграции на Yandex API. Реальное
-ветвление идет по признаку PIN-клиента (`_pinAuthClientId`), см.
+\* `_rpcOnlyMode=true` актуален после миграции на Yandex API. Реальное ветвление
+идет по признаку PIN-клиента (`_pinAuthClientId`), см.
 `docs/CURATOR_VS_CLIENT.md`.
 
 ### Universal sync
@@ -246,10 +246,35 @@ For auth/network failures:
 
 ```javascript
 TIMEOUT_ESCALATION_MS: [15000, 20000, 30000];
-RETRY_DELAY_ESCALATION_MS: [1000, 3000, 7000];
+RETRY_DELAY_ESCALATION_MS: [2000, 5000, 10000]; // v59: increased from [1000,3000,7000]
 ```
 
 **Implementation:** `heys_yandex_api_v1.js:30`
+
+> **v58:** `fetchWithRetry` также повторяет запрос при HTTP **502/503/504**
+> (cold start / Gateway Timeout). Каждая попытка использует тот же таймаут из
+> `TIMEOUT_ESCALATION_MS` (15→20→30s).
+>
+> **v59 (Fix I):** Retry delays увеличены с `[1000, 3000, 7000]` на
+> `[2000, 5000, 10000]`. 502 возвращается мгновенно (не timeout), поэтому
+> реальное окно retry = сумма delays. Старое окно 4с было короче cold start CF
+> (>4с). Новое окно 7с — достаточно для прогрева.
+
+### RPC Cloud Function Warm-up (v59)
+
+`index.html` при загрузке отправляет fire-and-forget запрос:
+
+```javascript
+// Warm up /health (lightweight stub)
+fetch('https://api.heyslab.ru/health', { mode: 'cors', cache: 'no-store' });
+// v59 FIX H: Warm up /rpc (heavy function: PG pool, certs, crypto)
+fetch('https://api.heyslab.ru/rpc', { method: 'POST', mode: 'cors', ... });
+```
+
+> `/health` и `/rpc` — **разные Cloud Functions** с разными `function_id`.
+> Прогрев `/health` НЕ прогревает `/rpc`. POST без параметра `fn` возвращает
+> 400, но триггерит cold start (загрузка PG-пула, сертификатов, crypto). К
+> моменту ввода PIN (~5-10с) функция уже warm.
 
 ### Pre-logout Sync
 
@@ -260,22 +285,23 @@ auth state. Prevents data loss.
 
 ## 8. Events
 
-| Event                     | Payload                                        | When                             |
-| ------------------------- | ---------------------------------------------- | -------------------------------- |
-| `heys:pending-change`     | `{ count }`                                    | Queue changed                    |
-| `heys:sync-progress`      | `{ total, done }`                              | Upload progress                  |
-| `heys:sync-error`         | `{ error, retryIn? }`                          | Push failed                      |
-| `heysSyncCompleted`       | `{ clientId, phaseA: true }`                   | **Phase A complete** (5 keys)    |
-| `heysSyncCompleted`       | `{ clientId, phase: 'full', viaYandex: true }` | **Phase B complete** (530+ keys) |
-| `heysSyncCompleted`       | `{ clientId, phase: 'full' }`                  | **PIN-auth** full sync           |
-| `heys:day-updated`        | `{ date, source }`                             | Day data changed                 |
-| `heys:day-updated`        | `{ dates: string[], batch: true, source }`     | Batch write (cloud-sync)         |
-| `heys:data-saved`         | `{}`                                           | Data saved locally               |
-| `heys:network-restored`   | `{}`                                           | Connectivity back                |
-| `heys:cascade-recompute`  | `{ source, date }`                             | Force cascade recompute          |
-| `heys:crs-updated`        | `{ crs, state, historicalDays }`               | CRS recomputed → bar settle      |
-| `heys:client-changed`     | `{}`                                           | Curator switched client          |
-| `heys:mealitems-cascaded` | `{}`                                           | Cascade batch nutrient update    |
+| Event                     | Payload                                                                | When                                                                                                          |
+| ------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `heys:pending-change`     | `{ count }`                                                            | Queue changed                                                                                                 |
+| `heys:sync-progress`      | `{ total, done }`                                                      | Upload progress                                                                                               |
+| `heys:sync-error`         | `{ error, retryIn? }`                                                  | Push failed                                                                                                   |
+| `heysSyncCompleted`       | `{ clientId, phaseA: true }`                                           | **Phase A complete** (5 keys)                                                                                 |
+| `heysSyncCompleted`       | `{ clientId, phase: 'full', viaYandex: true }`                         | **Phase B complete** (530+ keys)                                                                              |
+| `heysSyncCompleted`       | `{ clientId, phase: 'full', viaYandex: true }`                         | **PIN-auth** full sync (v58)                                                                                  |
+| `heysSyncCompleted`       | `{ clientId, error: true, loaded: 0, viaYandex: true, phase: 'full' }` | **PIN-auth** sync failed — UI разблокируется (v59: Fix G — dispatches from early-return path, not just catch) |
+| `heys:day-updated`        | `{ date, source }`                                                     | Day data changed                                                                                              |
+| `heys:day-updated`        | `{ dates: string[], batch: true, source }`                             | Batch write (cloud-sync)                                                                                      |
+| `heys:data-saved`         | `{}`                                                                   | Data saved locally                                                                                            |
+| `heys:network-restored`   | `{}`                                                                   | Connectivity back                                                                                             |
+| `heys:cascade-recompute`  | `{ source, date }`                                                     | Force cascade recompute                                                                                       |
+| `heys:crs-updated`        | `{ crs, state, historicalDays }`                                       | CRS recomputed → bar settle                                                                                   |
+| `heys:client-changed`     | `{}`                                                                   | Curator switched client                                                                                       |
+| `heys:mealitems-cascaded` | `{}`                                                                   | Cascade batch nutrient update                                                                                 |
 
 > ⚠️ **`heysSyncCompleted` fires TWICE on cold start**: Phase A at ~+1s, Phase B
 > at ~+3–5s (fast internet) or ~+7–15s (throttled). Cascade Guard **must filter

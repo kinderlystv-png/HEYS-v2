@@ -3672,7 +3672,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.02.27.1219.98ecb08c'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.02.27.1314.96423c19'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
@@ -12302,10 +12302,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     TIMEOUT_MS: 15000,
     TIMEOUT_ESCALATION_MS: [15000, 20000, 30000],
 
-    // Retry логика (exponential backoff: 1с → 3с → 7с)
+    // Retry логика (exponential backoff: 2с → 5с → 10с)
+    // v59 FIX I: Increased delays for cold-start resilience.
+    // 502 returns instantly (not timeout), so retry window = sum of delays.
+    // Old [1000,3000,7000] gave only 4s — less than CF cold start (>4s).
+    // New [2000,5000,10000] gives 7s — enough for CF warm-up.
     MAX_RETRIES: 2,
-    RETRY_DELAY_MS: 1000,
-    RETRY_DELAY_ESCALATION_MS: [1000, 3000, 7000]
+    RETRY_DELAY_MS: 2000,
+    RETRY_DELAY_ESCALATION_MS: [2000, 5000, 10000]
   };
 
   // ═══════════════════════════════════════════════════════════════════
@@ -12370,6 +12374,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       const timeoutMs = CONFIG.TIMEOUT_ESCALATION_MS[i] || CONFIG.TIMEOUT_MS;
       try {
         const response = await fetchWithTimeout(url, options, timeoutMs);
+
+        // 🔄 v58 FIX: Retry on server errors (502/503/504) — cold start recovery
+        // Yandex API Gateway returns 502 when cloud function times out on cold start.
+        // Without this check, fetchWithRetry returns 502 as valid response (no retry).
+        const retryableStatuses = [502, 503, 504];
+        if (retryableStatuses.includes(response.status)) {
+          const msg = `Server error ${response.status} (retryable)`;
+          err(`Attempt ${i + 1}/${retries + 1}: ${msg}`);
+          throw new Error(msg);
+        }
+
         return response;
       } catch (e) {
         lastError = e;
@@ -19677,6 +19692,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
       if (error) {
         logCritical(`❌ Ошибка загрузки: ${error}`);
+
+        // 🔔 v59 FIX G: Dispatch heysSyncCompleted on early-return error path
+        // getAllKV catches 502 internally and returns { error } — catch block never fires.
+        // Without this dispatch, UI (cascade, skeleton) stays in loading state forever.
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('heysSyncCompleted', {
+            detail: { clientId, error: true, loaded: 0, viaYandex: true, phase: 'full' }
+          }));
+        }
+
         return { success: false, error: error };
       }
 
@@ -19845,6 +19870,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     } catch (e) {
       muteMirror = false;
       logCritical(`❌ [YANDEX SYNC] Exception: ${e.message}`);
+
+      // 🔔 v58 FIX: Dispatch heysSyncCompleted even on error
+      // Without this, UI (cascade, skeleton) stays in loading state forever
+      // when sync fails — it only received the event on success path.
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heysSyncCompleted', {
+          detail: { clientId, error: true, loaded: 0, viaYandex: true, phase: 'full' }
+        }));
+      }
+
       return { success: false, error: e.message };
     }
   };
@@ -23254,9 +23289,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         log(`🔐 [SWITCH] PIN path: _pinAuthClientId = "${newClientId}"`);
         // 🔐 Сохраняем флаг PIN auth в localStorage для восстановления после перезагрузки
         try { global.localStorage.setItem('heys_pin_auth_client', newClientId); } catch (_) { }
-        const rpcResult = await cloud.syncClientViaRPC(newClientId);
-        if (!rpcResult.success) {
-          throw new Error(rpcResult.error || 'RPC sync failed');
+        // 🚀 v58 FIX: Use syncClient for dedup — same pattern as curator path (L6948)
+        // Previously called syncClientViaRPC directly, bypassing _syncInFlight dedup.
+        // This caused double sync when cloud.init PIN restore also calls syncClient.
+        const rpcResult = await cloud.syncClient(newClientId, { force: true });
+        if (!rpcResult?.success) {
+          throw new Error(rpcResult?.error || 'RPC sync failed');
         }
       }
       // ✅ Sync завершён — теперь безопасно чистить старые данные
@@ -23310,12 +23348,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       return true;
     } catch (e) {
       logCritical('❌ Ошибка загрузки данных нового клиента:', e);
-      // 🔁 Откатываем client_current на старого клиента, чтобы не оставаться в пустом состоянии
-      if (oldClientId) {
-        try {
-          global.localStorage.setItem('heys_client_current', JSON.stringify(oldClientId));
-        } catch (_) { }
-      }
+      // 🔁 v59 FIX J: Do NOT rollback client_current on sync failure.
+      // PIN auth already succeeded — client is valid. Rolling back creates
+      // inconsistency: client_current → old, but _pinAuthClientId → new.
+      // Keep new clientId active — bootstrapClientSync will load data on retry.
+      // Old behavior rolled back to oldClientId, breaking subsequent sync attempts.
+      logCritical('⚠️ [SWITCH] Sync failed but auth valid — keeping client_current =', newClientId?.slice(0, 8));
       return false;
     }
   };

@@ -62,17 +62,31 @@
                                 })
                         };
                     } else {
+                        // v59 FIX H: Warm up BOTH /health AND /rpc Cloud Functions
+                        // /health and /rpc are SEPARATE Yandex Cloud Functions (different function IDs).
+                        // Old code only warmed /health — RPC function stayed cold → 3×502 on first PIN login.
+                        // POST /rpc without fn param returns 400 but triggers CF cold start (PG pool, certs).
                         fetch('https://api.heyslab.ru/health', { mode: 'cors', cache: 'no-store' })
-                            .then(function () { window.__heysPerfMark && window.__heysPerfMark('CF warm-up done'); })
+                            .then(function () { window.__heysPerfMark && window.__heysPerfMark('CF health warm-up done'); })
+                            .catch(function () { });
+                        fetch('https://api.heyslab.ru/rpc', { method: 'POST', mode: 'cors', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+                            .then(function () { window.__heysPerfMark && window.__heysPerfMark('CF rpc warm-up done'); })
                             .catch(function () { });
                     }
                 } else {
+                    // v59 FIX H: Same dual warm-up when no clientId (first PIN login)
                     fetch('https://api.heyslab.ru/health', { mode: 'cors', cache: 'no-store' })
-                        .then(function () { window.__heysPerfMark && window.__heysPerfMark('CF warm-up done'); })
+                        .then(function () { window.__heysPerfMark && window.__heysPerfMark('CF health warm-up done'); })
+                        .catch(function () { });
+                    fetch('https://api.heyslab.ru/rpc', { method: 'POST', mode: 'cors', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+                        .then(function () { window.__heysPerfMark && window.__heysPerfMark('CF rpc warm-up done'); })
                         .catch(function () { });
                 }
             } catch (e) {
-                try { fetch('https://api.heyslab.ru/health', { mode: 'cors', cache: 'no-store' }).catch(function () { }); } catch (e2) { }
+                try {
+                    fetch('https://api.heyslab.ru/health', { mode: 'cors', cache: 'no-store' }).catch(function () { });
+                    fetch('https://api.heyslab.ru/rpc', { method: 'POST', mode: 'cors', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(function () { });
+                } catch (e2) { }
             }
 
             // Check if PWA standalone mode
@@ -303,7 +317,7 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.dffe9b518737.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.021cf9a50103.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.9701e1633ac1.js" as="script" />
     <link rel="preload" href="boot-day.bundle.0f10e7bf96dc.js" as="script" />
     <link rel="preload" href="boot-app.bundle.8f833e7623d1.js" as="script" />
@@ -1733,7 +1747,7 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.dffe9b518737.js" fetchpriority="high"></script>
+    <script defer src="boot-core.bundle.021cf9a50103.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.9701e1633ac1.js"></script>
     <script defer src="boot-day.bundle.0f10e7bf96dc.js"></script>
     <script defer src="boot-app.bundle.8f833e7623d1.js"></script>

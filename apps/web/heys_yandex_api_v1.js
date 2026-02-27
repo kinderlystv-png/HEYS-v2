@@ -30,10 +30,14 @@
     TIMEOUT_MS: 15000,
     TIMEOUT_ESCALATION_MS: [15000, 20000, 30000],
 
-    // Retry логика (exponential backoff: 1с → 3с → 7с)
+    // Retry логика (exponential backoff: 2с → 5с → 10с)
+    // v59 FIX I: Increased delays for cold-start resilience.
+    // 502 returns instantly (not timeout), so retry window = sum of delays.
+    // Old [1000,3000,7000] gave only 4s — less than CF cold start (>4s).
+    // New [2000,5000,10000] gives 7s — enough for CF warm-up.
     MAX_RETRIES: 2,
-    RETRY_DELAY_MS: 1000,
-    RETRY_DELAY_ESCALATION_MS: [1000, 3000, 7000]
+    RETRY_DELAY_MS: 2000,
+    RETRY_DELAY_ESCALATION_MS: [2000, 5000, 10000]
   };
 
   // ═══════════════════════════════════════════════════════════════════
@@ -98,6 +102,17 @@
       const timeoutMs = CONFIG.TIMEOUT_ESCALATION_MS[i] || CONFIG.TIMEOUT_MS;
       try {
         const response = await fetchWithTimeout(url, options, timeoutMs);
+
+        // 🔄 v58 FIX: Retry on server errors (502/503/504) — cold start recovery
+        // Yandex API Gateway returns 502 when cloud function times out on cold start.
+        // Without this check, fetchWithRetry returns 502 as valid response (no retry).
+        const retryableStatuses = [502, 503, 504];
+        if (retryableStatuses.includes(response.status)) {
+          const msg = `Server error ${response.status} (retryable)`;
+          err(`Attempt ${i + 1}/${retries + 1}: ${msg}`);
+          throw new Error(msg);
+        }
+
         return response;
       } catch (e) {
         lastError = e;

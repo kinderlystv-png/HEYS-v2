@@ -3375,6 +3375,16 @@
 
       if (error) {
         logCritical(`❌ Ошибка загрузки: ${error}`);
+
+        // 🔔 v59 FIX G: Dispatch heysSyncCompleted on early-return error path
+        // getAllKV catches 502 internally and returns { error } — catch block never fires.
+        // Without this dispatch, UI (cascade, skeleton) stays in loading state forever.
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('heysSyncCompleted', {
+            detail: { clientId, error: true, loaded: 0, viaYandex: true, phase: 'full' }
+          }));
+        }
+
         return { success: false, error: error };
       }
 
@@ -3543,6 +3553,16 @@
     } catch (e) {
       muteMirror = false;
       logCritical(`❌ [YANDEX SYNC] Exception: ${e.message}`);
+
+      // 🔔 v58 FIX: Dispatch heysSyncCompleted even on error
+      // Without this, UI (cascade, skeleton) stays in loading state forever
+      // when sync fails — it only received the event on success path.
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heysSyncCompleted', {
+          detail: { clientId, error: true, loaded: 0, viaYandex: true, phase: 'full' }
+        }));
+      }
+
       return { success: false, error: e.message };
     }
   };
@@ -6952,9 +6972,12 @@
         log(`🔐 [SWITCH] PIN path: _pinAuthClientId = "${newClientId}"`);
         // 🔐 Сохраняем флаг PIN auth в localStorage для восстановления после перезагрузки
         try { global.localStorage.setItem('heys_pin_auth_client', newClientId); } catch (_) { }
-        const rpcResult = await cloud.syncClientViaRPC(newClientId);
-        if (!rpcResult.success) {
-          throw new Error(rpcResult.error || 'RPC sync failed');
+        // 🚀 v58 FIX: Use syncClient for dedup — same pattern as curator path (L6948)
+        // Previously called syncClientViaRPC directly, bypassing _syncInFlight dedup.
+        // This caused double sync when cloud.init PIN restore also calls syncClient.
+        const rpcResult = await cloud.syncClient(newClientId, { force: true });
+        if (!rpcResult?.success) {
+          throw new Error(rpcResult?.error || 'RPC sync failed');
         }
       }
       // ✅ Sync завершён — теперь безопасно чистить старые данные
@@ -7008,12 +7031,12 @@
       return true;
     } catch (e) {
       logCritical('❌ Ошибка загрузки данных нового клиента:', e);
-      // 🔁 Откатываем client_current на старого клиента, чтобы не оставаться в пустом состоянии
-      if (oldClientId) {
-        try {
-          global.localStorage.setItem('heys_client_current', JSON.stringify(oldClientId));
-        } catch (_) { }
-      }
+      // 🔁 v59 FIX J: Do NOT rollback client_current on sync failure.
+      // PIN auth already succeeded — client is valid. Rolling back creates
+      // inconsistency: client_current → old, but _pinAuthClientId → new.
+      // Keep new clientId active — bootstrapClientSync will load data on retry.
+      // Old behavior rolled back to oldClientId, breaking subsequent sync attempts.
+      logCritical('⚠️ [SWITCH] Sync failed but auth valid — keeping client_current =', newClientId?.slice(0, 8));
       return false;
     }
   };
